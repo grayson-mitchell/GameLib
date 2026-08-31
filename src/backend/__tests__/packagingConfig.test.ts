@@ -88,6 +88,9 @@ interface TauriConfig {
   bundle: {
     resources?: unknown
     externalBin?: string[]
+    macOS?: {
+      files?: unknown
+    }
   }
 }
 
@@ -112,6 +115,43 @@ function mergedResourceMap(platform: OverlayPlatform): Record<string, string> {
   const overlay = parsePlatformOverlay(platform).bundle
     .resources as Record<string, string>
   return { ...base, ...overlay }
+}
+
+// quick-260901-e7o: the darwin bin/ trees (arm64/darwin, x64/darwin) no longer ship via
+// `bundle.resources` -- that copier (tauri_utils::resources::copy_resources) DEREFERENCES
+// symlinks, which silently corrupted the PyInstaller Python.framework symlink layout for
+// legendary/gogdl/nile. They ship via `bundle.macOS.files` instead, which Tauri copies with
+// `fs_utils::copy_dir` (symlink-preserving) one step before codesigning
+// (src-tauri: macos/app.rs). The SET of files macOS ships is unchanged from quick-260901-8rm --
+// only the MECHANISM moved. Only macOS declares a `bundle.macOS` block; base/windows/linux have
+// none, so this returns `{}` for those platforms rather than throwing.
+function mergedMacFilesMap(platform: OverlayPlatform): Record<string, string> {
+  const overlay = parsePlatformOverlay(platform).bundle.macOS?.files as
+    | Record<string, string>
+    | undefined
+  return overlay ?? {}
+}
+
+// True if `relPath` (relative to `build/bin/`) ships on `platform`, whether via the
+// symlink-dereferencing `bundle.resources` map or the symlink-preserving `bundle.macOS.files`
+// map. macOS's darwin trees moved to the latter in quick-260901-e7o specifically because they
+// contain symlinks the former would silently break -- this predicate treats both maps as
+// equally authoritative for a "does platform X ship path Y" question so that the positive
+// coverage assertions below don't have to know which mechanism the darwin trees currently use.
+function platformShipsBinPath(
+  platform: OverlayPlatform,
+  relPath: string
+): boolean {
+  if (mergedMapCoversBinPath(platform, relPath)) {
+    return true
+  }
+  if (platform !== 'macos') {
+    return false
+  }
+  const fullSource = `../build/bin/${relPath}`
+  return Object.values(mergedMacFilesMap(platform)).some(
+    (source) => source === fullSource || fullSource.startsWith(`${source}/`)
+  )
 }
 
 const OVERLAY_PLATFORMS: readonly OverlayPlatform[] = [
@@ -295,8 +335,18 @@ describe('R-34.5-G1-PKG half (a): bundle.resources targets a path publicDir can 
  * carry only the darwin runner trees plus the two Windows exes it genuinely executes under
  * Wine (legendary/games.ts:919-937, launcher.ts:927 -- neither has a platform guard), and
  * should never carry arm64/win32, x64/linux or arm64/linux.
+ *
+ * quick-260901-e7o: the SET macOS ships is unchanged from the above -- still just the darwin
+ * runner trees plus the two Wine exes. Only the MECHANISM moved: `arm64/darwin` and
+ * `x64/darwin` now ship via `bundle.macOS.files` (symlink-preserving `copy_dir`) instead of
+ * `bundle.resources` (symlink-dereferencing `copy_resources`), because the latter was silently
+ * corrupting the PyInstaller Python.framework symlinks inside `arm64/darwin`. Tests below that
+ * assert on "what macOS ships" therefore consult both maps via `platformShipsBinPath` /
+ * `mergedMacFilesMap`; tests that assert on "what `bundle.resources` alone contains" still use
+ * `mergedResourceMap` directly, since a `bundle.macOS.files` regression back into
+ * `bundle.resources` is exactly the defect the disjointness test below exists to catch.
  */
-describe('bin-tree narrowing: base carries no wholesale bin/ key, overlays carry exactly what each platform needs (quick-260901-8rm)', () => {
+describe('bin-tree narrowing: base carries no wholesale bin/ key, overlays carry exactly what each platform needs (quick-260901-8rm, quick-260901-e7o)', () => {
   test('NEGATIVE: no key in the base map matches bin/ -- if this regresses, every overlay below becomes decorative', () => {
     const base = parseTauriConfig().bundle.resources as Record<string, string>
     for (const key of Object.keys(base)) {
@@ -337,21 +387,78 @@ describe('bin-tree narrowing: base carries no wholesale bin/ key, overlays carry
     }
   )
 
-  test('macOS merged map carries no linux/ tree and no arm64/win32 tree', () => {
-    const keys = Object.keys(mergedResourceMap('macos'))
-    expect(keys.some((k) => k.includes('linux'))).toBe(false)
-    expect(keys.some((k) => k.includes('arm64/win32'))).toBe(false)
+  test('macOS merged map carries no linux/ tree and no arm64/win32 tree, across both bundle.resources and bundle.macOS.files', () => {
+    const resourceKeys = Object.keys(mergedResourceMap('macos'))
+    const macFilesValues = Object.values(mergedMacFilesMap('macos'))
+    const allEntries = [...resourceKeys, ...macFilesValues]
+    expect(allEntries.some((k) => k.includes('linux'))).toBe(false)
+    expect(allEntries.some((k) => k.includes('arm64/win32'))).toBe(false)
   })
 
-  test('windows merged map carries no darwin/ tree and no linux/ tree', () => {
+  test('windows merged map carries no darwin/ tree and no linux/ tree, and declares no bundle.macOS key', () => {
     const keys = Object.keys(mergedResourceMap('windows'))
     expect(keys.some((k) => k.includes('darwin'))).toBe(false)
     expect(keys.some((k) => k.includes('linux'))).toBe(false)
+    expect(parsePlatformOverlay('windows').bundle.macOS).toBeUndefined()
   })
 
-  test('linux merged map carries no darwin/ tree', () => {
+  test('linux merged map carries no darwin/ tree, and declares no bundle.macOS key', () => {
     const keys = Object.keys(mergedResourceMap('linux'))
     expect(keys.some((k) => k.includes('darwin'))).toBe(false)
+    expect(parsePlatformOverlay('linux').bundle.macOS).toBeUndefined()
+  })
+
+  // quick-260901-e7o: positive coverage. Nothing above asserts macOS actually SHIPS the darwin
+  // trees -- a regression that deleted `bundle.macOS.files` entirely would pass every negative
+  // guard above while shipping a Python-framework-less runner tree. `platformShipsBinPath`
+  // checks both `bundle.resources` and `bundle.macOS.files` so this stays correct regardless of
+  // which map macOS uses to ship a given path.
+  test.each([
+    'arm64/darwin/legendary/legendary',
+    'arm64/darwin/gogdl/gogdl',
+    'arm64/darwin/nile/nile',
+    'x64/darwin'
+  ])('macOS ships %s', (relPath) => {
+    expect(platformShipsBinPath('macos', relPath)).toBe(true)
+  })
+
+  test('windows and linux do not ship arm64/darwin or x64/darwin via either map', () => {
+    for (const platform of ['windows', 'linux'] as const) {
+      expect(platformShipsBinPath(platform, 'arm64/darwin')).toBe(false)
+      expect(platformShipsBinPath(platform, 'x64/darwin')).toBe(false)
+    }
+  })
+
+  // quick-260901-e7o: disjointness. `bundle.macOS.files` exists specifically because
+  // `bundle.resources` dereferences symlinks and corrupted the darwin trees -- if a future edit
+  // re-added a darwin key to `bundle.resources` (on any platform, base included), the same
+  // corruption would recur even with `bundle.macOS.files` still present and passing every other
+  // test in this file.
+  test.each(['base', ...OVERLAY_PLATFORMS] as const)(
+    'platform=%s bundle.resources contains no darwin/ key (darwin ships only via bundle.macOS.files)',
+    (platform) => {
+      const resources = (
+        platform === 'base'
+          ? parseTauriConfig()
+          : parsePlatformOverlay(platform)
+      ).bundle.resources as Record<string, string> | undefined
+      const keys = Object.keys(resources ?? {})
+      expect(keys.some((k) => k.includes('darwin'))).toBe(false)
+    }
+  )
+
+  // quick-260901-e7o: no-nesting. `bundle.macOS.files` keys become directory entries under
+  // Contents/; if one key were a path prefix of another (e.g. `Resources/build/bin` and
+  // `Resources/build/bin/arm64/darwin` both present), `fs_utils::copy_dir` iteration order over
+  // a HashMap is nondeterministic, so which copy "wins" is unstable across builds.
+  test('macOS.files keys are pairwise non-nesting', () => {
+    const keys = Object.keys(mergedMacFilesMap('macos'))
+    for (const a of keys) {
+      for (const b of keys) {
+        if (a === b) continue
+        expect(b.startsWith(`${a}/`)).toBe(false)
+      }
+    }
   })
 })
 

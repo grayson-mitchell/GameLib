@@ -75,7 +75,7 @@ below** — their removal is "stop emitting the .pdb/.lib at build time", a
 the macOS overlay carries wholesale) because narrowing WHICH platform ships a
 directory is a different mechanism from narrowing WHAT that directory contains.
 
-### Cause 3 — Tauri's resource copy DEREFERENCES SYMLINKS (found 2026-09-01, NOT YET FIXED)
+### Cause 3 — Tauri's resource copy DEREFERENCES SYMLINKS (found 2026-09-01, FIXED 2026-09-01, quick-260901-e7o)
 
 Measured on the quick-260901-8rm packaged DMG, after fix (1) landed. Independent of both
 fixes above; worth ~45MB on every macOS bundle.
@@ -84,7 +84,22 @@ fixes above; worth ~45MB on every macOS bundle.
 present in the old bundle too, NOT a shortfall in fix (1). An earlier revision of this file said
 it explained why fix (1) saved ~124.7MB instead of ~162MB; that was wrong — fix (1) saved
 161.2 MiB and met its estimate. See the corrected fix (1) numbers below. All four trees fix (1)
-removed carry 0 symlinks, so only the kept `arm64/darwin` and `x64/darwin` trees are affected.
+removed carry 0 symlinks, so only the kept `arm64/darwin` and `x64/darwin` trees could in
+principle be affected.
+
+**Correction (2026-09-01, quick-260901-e7o): only `arm64/darwin` is actually affected.**
+An earlier revision of this file claimed both kept trees were affected — that was wrong.
+Independently re-measured on the standing OLD-artifact control (`/tmp/e7o-OLD.dmg`, mounted
+read-only): `x64/darwin` is 4 files / 0 symlinks / 46,423,272 B, **byte-identical repo-to-shipped**
+— it carries no PyInstaller Python.framework symlinks to begin with (its runner trees use a
+different, non-onedir layout), so `bundle.resources`'s dereferencing copier has nothing to
+dereference there. Only `arm64/darwin` (legendary/gogdl/nile, all onedir PyInstaller builds)
+carries the 12 symlinks this cause describes.
+
+**STALE — the table below predates a real release build and used the WRONG comparison pair
+(repo tree vs. shipped tree, not old-shipped vs. new-shipped). Superseded 2026-09-01 by
+quick-260901-e7o's "Cause 3 — CLOSED" section further down this file. Left in place for the
+design record, not deleted.**
 
 ```
 build/bin/arm64/darwin  (repo)      147,024 KB   12 symlinks   461 files
@@ -106,11 +121,110 @@ This is **F-34.9-01's failure mode on the Tauri side**. `preserveRunnerSymlinksP
 vite's publicDir copy dereferences these same symlinks — but nothing performs the equivalent
 repair after `bundle.resources` is copied into the artifact.
 
-Two things to check when this is planned, neither yet investigated:
+Two things to check when this is planned, neither yet investigated as of the original
+2026-09-01 writeup:
 - Whether a signed RELEASE build hits the "bundle format is ambiguous" codesign rejection
   F-34.9-01 describes. This run was `--debug` and unsigned, so it proves nothing either way.
 - Whether Tauri exposes a copy mode that preserves symlinks, or whether this needs a
   post-bundle repair hook analogous to the vite plugin.
+
+#### Cause 3 — CLOSED, quick-260901-e7o (2026-09-01)
+
+**Mechanism.** Tauri's `bundle.resources` copier (`tauri_utils::resources::copy_resources`,
+called from `copy_resources` in the Tauri CLI's macOS bundler) dereferences symlinks while
+copying — the same class of defect `preserveRunnerSymlinksPlugin` exists to repair on the vite
+side, but nothing repaired it on the Tauri side. Fix: moved both darwin trees
+(`arm64/darwin`, `x64/darwin`) from `bundle.resources` to `bundle.macOS.files` in
+`src-tauri/tauri.macos.conf.json`. `bundle.macOS.files` is copied via `fs_utils::copy_dir`
+(symlink-preserving), one step before codesigning (`macos/app.rs:113` → `:200`, signing at
+`:115`). Only `arm64/darwin` actually carries symlinks (see the correction above); `x64/darwin`
+moved too for consistency but its bytes are unaffected by the fix (its content is identical
+files/bytes shipped through either mechanism).
+
+**Measured, OLD SHIPPED vs. NEW SHIPPED** (never repo-tree vs. shipped-tree — that was the
+Q1/Q2 pre-existing-overhead mistake corrected above). OLD is `/tmp/e7o-OLD.dmg` (the
+pre-quick-260901-e7o release DMG, preserved as a standing control); NEW is a real release DMG
+built after the fix, both independently mounted read-only and censused via `find` +
+`stat -f %z` summed (apparent bytes, never `du`):
+
+```
+shipped arm64/darwin  BEFORE  285 files /  0 symlinks / 148,688,545 B
+shipped arm64/darwin  AFTER   279 files / 12 symlinks / 100,707,073 B   (= repo tree, exactly)
+shipped x64/darwin    AFTER     4 files /  0 symlinks /  46,423,272 B   (unchanged)
+all 12 links resolve; DANGLING_COUNT = 0
+real non-link files named 'Python': 3 x 7,996,912 B  (was 9 — the 4-per-runner Python.framework
+  layout collapsed from 4 real-file copies to 1 real file + 3 symlinks, per runner, across
+  legendary/gogdl/nile)
+previously-DROPPED dirs restored: Python.framework/Resources and
+  Python.framework/Versions/Current on all 3 runners, all islink=True
+installed .app  384,357,326 -> 336,375,854 B   (-47,981,472 B, matching the plan's arithmetic
+  prediction to the byte)
+DMG             155,175,396 -> 141,158,181 B   (-14,017,215 B — DATA ONLY, DMG compression makes
+  this delta unrelated to the correctness fix; never used as a pass condition)
+```
+
+`pnpm verify:runner-bundle` (hardened this same quick task with a Resources-alias check, an
+`_internal` sibling-stub check, and exact `censusTree` `--expect-*` assertions): **FAILs against
+the OLD-artifact control** (proves the hardened gate can see the real field defect, not just a
+synthetic fixture) and **PASSes against the NEW artifact**. `codesign --force -s -` on a
+writable copy of the shipped legendary `Python.framework` also exits 0 post-fix.
+
+**Live human/direct-execution verification — partially met, partially substituted.** The
+plan's Task 3 checkpoint asked for a full library re-sync through the app UI for one game per
+runner (legendary/gogdl/nile), from the real installed `/Applications/GameLib.app`. This was
+**not achieved as a clean 3/3 UI pass**:
+
+- **gogdl (GOG) — PROVEN, full-strength, human-verified.** Real library re-sync through the
+  app UI, logged in. This also demonstrates the app→helper spawn path is intact.
+- **legendary (Epic) — NOT PROVEN, deferred.** UI gesture not performed: the user could not
+  complete an Epic login (blank page) while on a work network that likely blocks Epic. Not a
+  failure of the runner — the gesture was never reachable in that environment. Worth
+  re-checking on a home network; very unlikely to be related to this fix (e7o only moved
+  darwin `bin` trees between two Tauri config keys, and the Epic login window loads a remote
+  `epicgames.com` URL), but not diagnosed here.
+- **nile (Amazon) — NOT PROVEN, deferred.** UI gesture not performed: the user owns no Amazon
+  games, so there is no library to re-sync.
+
+To close the gap for legendary and nile at the layer this change can actually break (Python
+interpreter boot from the restored framework, not the network-dependent login/library-sync
+layer), direct helper execution was run against the installed `/Applications/GameLib.app`
+(confirmed to be the new build: 336,375,854 B, 12 symlinks present in
+`Contents/Resources/build/bin/arm64/darwin`):
+
+```
+legendary  rc=0   legendary version "0.21.0", codename "Lowlife"
+gogdl      rc=0   1.3.0
+nile       rc=0   1.2.0 Robert Speedwagon
+comet      rc=0   comet 0.2.0
+```
+
+This `--version` gesture was mutation-proven non-vacuous (a naive `--version` handled before
+the interpreter loads would prove nothing) — performed on a `copytree(symlinks=True)` copy in a
+scratch directory, never on the installed app, copy deleted afterward:
+
+```
+CONTROL  (unmodified copy)              rc=0    stdout='1.3.0'
+MUTATED  (_internal/Python -> dangling) rc=255  [PYI-7129:ERROR] Failed to load Python shared library
+RESTORED                                rc=0    stdout='1.3.0'
+```
+
+Breaking exactly the symlink this fix restores makes the binary fail (PYI-7129); restoring it
+makes it pass again. So **PROVEN**: all three PyInstaller runners boot their Python interpreter
+from the restored framework in the installed artifact, via a gesture shown non-vacuous by
+mutation — this is the complete failure mode this fix could have introduced, since the fix
+changed nothing but the on-disk framework layout. What is **NOT PROVEN** is the legendary/nile
+end-to-end UI path (login → library re-sync); both paths are untouched by this fix and the gap
+is environmental (work-network Epic block, no owned Amazon games), not a defect surfaced by
+this change.
+
+**Q3 (signing) — measured, not a signing blocker.** `codesign --force -s -` (ad-hoc) on the
+shipped `Python.framework` exits 0 after the fix. Full-identity notarization remains untestable
+in this environment (0 codesigning identities available), unchanged from the pre-existing
+constraint — this fix does not newly block or newly clear notarization.
+
+Full derivation, gate output, and both build/census logs: `260901-e7o-MEASUREMENTS.md` (Task 1
+baseline + OLD-artifact control, Task 2 fix + NEW-artifact build/census, Task 3 checkpoint
+resolution, Task 4 gate results).
 
 ## Solution
 
@@ -218,11 +332,14 @@ an exact byte match. **The fix (1) section above's "~233.8 MiB" figure is theref
 — treat 195,358,418 B (~186.3 MiB) as the current correct shipped `Resources/build/bin` figure
 for both fix (1) and fix (2) going forward.
 
-Two things this fix deliberately did NOT touch, so they remain the open remainder of this todo
-(see below): Cause 3 (Tauri's resource copy dereferencing symlinks, ~45 MB) and the
-`steam_api.pdb`/`steam_api_shim.lib` item (~2.7 MB, a `buildSteamBridgeShims.ts` compile-flag
-change). Both were explicitly out of scope for quick-260901-b8z's `scoped_out` frontmatter block
-and neither is resolved by the work above.
+Two things this fix deliberately did NOT touch. Cause 3 (Tauri's resource copy dereferencing
+symlinks, ~45 MB) is now **CLOSED** — see "Cause 3 — CLOSED, quick-260901-e7o (2026-09-01)"
+above. The `steam_api.pdb`/`steam_api_shim.lib` item (~2.7 MB, a `buildSteamBridgeShims.ts`
+compile-flag change) remains the **open remainder of this todo** — this is why the file stays
+in `.planning/todos/pending/` rather than moving to `done/`. Both were explicitly out of scope
+for quick-260901-b8z's `scoped_out` frontmatter block; the pdb/lib item was also explicitly
+out of scope for quick-260901-e7o (see that plan's own scope boundary) and is not resolved by
+any of the work above.
 
 ---
 
