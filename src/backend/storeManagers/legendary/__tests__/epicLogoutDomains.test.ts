@@ -176,7 +176,14 @@ function makeMockSeam(
   return {
     open: jest.fn().mockResolvedValue('window-label-1'),
     cookies: jest.fn(),
-    cookiesForDomain: jest.fn(),
+    // A LIVE jar (total=9) holding no Epic-owned cookies — what production
+    // looks like once Epic's have been removed from a shared jar that still
+    // holds other runners' sessions. Previously a bare `jest.fn()`, i.e. every
+    // census read rejected; that is the pre-9106ccbea production shape, and the
+    // post-clear verification sweep now treats an unreadable jar as fatal
+    // rather than silently certifying "0 remain" (see epicCookieCensus.test.ts
+    // (e2)-(e4)). Tests in this file that are ABOUT a failing read override it.
+    cookiesForDomain: jest.fn().mockResolvedValue({ total: 9, matched: [] }),
     takeEvents: jest.fn(),
     close: jest.fn().mockResolvedValue(true),
     clearCookies: jest.fn().mockResolvedValue(3),
@@ -391,6 +398,13 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
 
   it('a ZERO TOTAL across every domain REJECTS the logout', async () => {
     const seam = makeMockSeam({
+      // The census reads are left UNREADABLE here on purpose. This test's
+      // subject is the legacy fail-closed path for a zero total, and that path
+      // is only reachable when the jar does NOT prove itself Epic-empty. With
+      // the file's live-jar default the three-case rule would (correctly)
+      // classify every host SUPPORTED_BUT_EMPTY and resolve instead — which is
+      // Task 2 case (1)'s subject, not this one.
+      cookiesForDomain: jest.fn(),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
     setLoginWindowSeam(seam)
@@ -405,6 +419,13 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
     // sign-out that revoked the CLI session but left `userInfo` behind is
     // worse than one that left a stray cookie behind.
     const seam = makeMockSeam({
+      // The census reads are left UNREADABLE here on purpose. This test's
+      // subject is the legacy fail-closed path for a zero total, and that path
+      // is only reachable when the jar does NOT prove itself Epic-empty. With
+      // the file's live-jar default the three-case rule would (correctly)
+      // classify every host SUPPORTED_BUT_EMPTY and resolve instead — which is
+      // Task 2 case (1)'s subject, not this one.
+      cookiesForDomain: jest.fn(),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
     setLoginWindowSeam(seam)
@@ -416,6 +437,13 @@ describe('the per-domain deltas are summed, and only a ZERO TOTAL fails (T-35-39
 
   it('a zero total does not stop the LATER wipe steps from running', async () => {
     const seam = makeMockSeam({
+      // The census reads are left UNREADABLE here on purpose. This test's
+      // subject is the legacy fail-closed path for a zero total, and that path
+      // is only reachable when the jar does NOT prove itself Epic-empty. With
+      // the file's live-jar default the three-case rule would (correctly)
+      // classify every host SUPPORTED_BUT_EMPTY and resolve instead — which is
+      // Task 2 case (1)'s subject, not this one.
+      cookiesForDomain: jest.fn(),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
     setLoginWindowSeam(seam)
@@ -450,6 +478,13 @@ describe('logs carry counts and domains only — never a cookie name or value (T
 
   it('the failure path logs no cookie name or value either', async () => {
     const seam = makeMockSeam({
+      // The census reads are left UNREADABLE here on purpose. This test's
+      // subject is the legacy fail-closed path for a zero total, and that path
+      // is only reachable when the jar does NOT prove itself Epic-empty. With
+      // the file's live-jar default the three-case rule would (correctly)
+      // classify every host SUPPORTED_BUT_EMPTY and resolve instead — which is
+      // Task 2 case (1)'s subject, not this one.
+      cookiesForDomain: jest.fn(),
       clearCookies: jest.fn().mockResolvedValue(0)
     })
     setLoginWindowSeam(seam)

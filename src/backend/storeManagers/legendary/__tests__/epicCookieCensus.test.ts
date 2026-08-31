@@ -258,7 +258,17 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     // A healthy nonzero clear on every host — this test's subject is the
     // CALL COUNT/SHAPE of the census reads, not the fatality decision
     // (covered separately under Task 2), so the fixture stays clear of it.
-    const seam = makeMockSeam({ clearCookies: jest.fn().mockResolvedValue(1) })
+    // The jar reads LIVE (total=9) with no Epic-owned cookies matched. That
+    // combination is what production actually looks like: a shared jar holding
+    // other runners' sessions, from which Epic's have been removed. The earlier
+    // fixture used `makeMockSeam`'s total=0 default while `clearCookies`
+    // reported nonzero deltas — internally inconsistent (you cannot clear N
+    // cookies out of a jar containing zero records), and it only passed because
+    // the residual sweep used to accept an unproven read. See (e2)-(e4).
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(9, 0)),
+      clearCookies: jest.fn().mockResolvedValue(1)
+    })
     setLoginWindowSeam(seam)
 
     await LegendaryUser.logout()
@@ -326,7 +336,12 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
       cookiesForDomain: jest
         .fn()
         .mockRejectedValueOnce(new Error('rust-side census read failed')) // epicgames.com before
-        .mockResolvedValue(cookieRead(0, 0)),
+        // Every LATER read resolves against a live jar (total=9) with no
+        // Epic-owned matches. Keeping these at total=0 would make the whole
+        // channel UNDECIDABLE and the logout would fail at the verification
+        // sweep for that reason instead — which is correct behaviour (see (e4))
+        // but a different subject from this test's.
+        .mockResolvedValue(cookieRead(9, 0)),
       clearCookies: jest.fn().mockResolvedValue(2)
     })
     setLoginWindowSeam(seam)
@@ -453,9 +468,95 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
     expect(logged).not.toContain('sentinel-cookie-')
   })
 
+  /**
+   * (e2)-(e4): the residual sweep must not be FAIL-OPEN.
+   *
+   * Found by independent adjudication AFTER the first version of this sweep
+   * shipped, and it is the recorded `fixing-a-fail-open-gate-can-create-its-
+   * sibling` shape exactly: the sweep was added to close a report that claimed
+   * success without a confirming read, and its own first version could do the
+   * same thing one level over. `readHostCensus` is deliberately non-fatal — it
+   * catches a rejecting read and returns `matched: 0` — so a loop consuming
+   * `matched` alone printed "0 Epic-owned cookie(s) remain" when NOTHING had
+   * been read.
+   *
+   * Not an exotic branch: all-reads-reject was 100% of production behaviour on
+   * every Epic logout from plan 35-23's landing until commit 9106ccbea
+   * (D-35-29-01), and it is the most likely off-macOS shape.
+   */
+  it('(e2) five REJECTING verification reads are FATAL — a jar nothing could read is never reported as clean', async () => {
+    // The sweep's own before/after pair resolves normally so the clear itself
+    // succeeds and reaches the verification step; only the final five reads
+    // reject. This isolates the verification sweep as the subject.
+    let readCall = 0
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockImplementation(async () => {
+        readCall += 1
+        if (readCall <= 2 * EPIC_HOSTS_UNDER_TEST.length)
+          return cookieRead(9, 0)
+        throw new Error('rust-side census read failed')
+      }),
+      clearCookies: jest.fn().mockResolvedValue(3)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /post-clear verification could not read the cookie jar/
+    )
+  })
+
+  it('(e3) an unreadable verification NEVER emits the affirmative "0 ... remain" wording', async () => {
+    // The assertion that matters most. A thrown error is recoverable; a log line
+    // asserting a clean jar is a durable false record, and this repo greps these
+    // lines to score live gates.
+    let readCall = 0
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockImplementation(async () => {
+        readCall += 1
+        if (readCall <= 2 * EPIC_HOSTS_UNDER_TEST.length)
+          return cookieRead(9, 0)
+        throw new Error('rust-side census read failed')
+      }),
+      clearCookies: jest.fn().mockResolvedValue(3)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow()
+
+    const logged = allLoggedText()
+    expect(logged).not.toContain('Epic-owned cookie(s) remain')
+    expect(logged).toContain('COULD NOT CONFIRM')
+    for (const host of EPIC_HOSTS_UNDER_TEST) {
+      // Recorded as unconfirmed, never as a zero count.
+      expect(logged).toContain(`${host}=unconfirmed`)
+      expect(logged).not.toContain(`${host}=0,`)
+    }
+  })
+
+  it('(e4) an UNDECIDABLE verification read (jar resolves empty, channel never once proven live) is ALSO fatal', async () => {
+    // The subtler half. Nothing rejects here — every read RESOLVES, with
+    // total=0. But `everProvedLive` was never set, so an empty jar is
+    // indistinguishable from a read channel that silently does nothing
+    // (navigator-clipboard-noops-under-tauri, applied to cookies). A zero from
+    // an unproven channel must not certify anything either.
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(0, 0)),
+      clearCookies: jest.fn().mockResolvedValue(3)
+    })
+    setLoginWindowSeam(seam)
+
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      /post-clear verification could not read the cookie jar/
+    )
+    expect(allLoggedText()).not.toContain('Epic-owned cookie(s) remain')
+  })
+
   it('(g) on macOS the cookie step opens NO window and passes a label that cannot resolve to one', async () => {
     mockIsMac = true
-    const seam = makeMockSeam({ clearCookies: jest.fn().mockResolvedValue(1) })
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(9, 0)),
+      clearCookies: jest.fn().mockResolvedValue(1)
+    })
     setLoginWindowSeam(seam)
 
     await LegendaryUser.logout()
@@ -473,7 +574,10 @@ describe('Task 1: per-host cookie census (REQ-35-07, D-35-19-15)', () => {
 
   it('(h) off macOS the cookie step still opens exactly one window, and it is NOT pointed at Epic', async () => {
     mockIsMac = false
-    const seam = makeMockSeam({ clearCookies: jest.fn().mockResolvedValue(1) })
+    const seam = makeMockSeam({
+      cookiesForDomain: jest.fn().mockResolvedValue(cookieRead(9, 0)),
+      clearCookies: jest.fn().mockResolvedValue(1)
+    })
     setLoginWindowSeam(seam)
 
     await LegendaryUser.logout()

@@ -513,12 +513,66 @@ export class LegendaryUser {
               // is `FATAL_WIPE_STEP`, so throwing here is what makes logout report
               // the failure (and, via plan 35-22, raise the user-visible dialog)
               // instead of certifying a removal that did not hold.
+              //
+              // A zero here only means "clean" if a read actually HAPPENED and
+              // can be trusted. `readHostCensus` is deliberately non-fatal — it
+              // catches a rejecting read and returns `matched: 0` with a
+              // `UNSUPPORTED_OR_ERROR` verdict — so consuming `matched` alone
+              // would let five rejecting reads print "0 Epic-owned cookie(s)
+              // remain", an AFFIRMATIVE certification of something nothing
+              // measured. That is the literal negation of the clause this sweep
+              // exists to satisfy, and it is the recorded
+              // `fixing-a-fail-open-gate-can-create-its-sibling` shape: the first
+              // version of this very sweep, added to close a fail-open report,
+              // re-created one a level over. It is also not an exotic branch —
+              // all-reads-reject was 100% of production behaviour on every Epic
+              // logout from plan 35-23's landing until commit 9106ccbea
+              // (D-35-29-01), and it is the most likely off-macOS shape, since
+              // the Rust default-data-store fallback is macOS-only and the
+              // window those platforms still need now points at a deliberately
+              // non-resolving host.
+              //
+              // So each host must clear TWO independent bars: its verdict proves
+              // the read is trustworthy (`SUPPORTED_*` — never
+              // `UNSUPPORTED_OR_ERROR`, which is a rejected read, and never
+              // `UNDECIDABLE`, which is an empty jar the channel has never once
+              // proven alive), AND its domain-scoped count is zero. This reuses
+              // the same `classifyCookieRead`/`everProvedLive` machinery the
+              // before/after pair fifteen lines above already trusts for exactly
+              // this judgement, rather than inventing a second, weaker rule.
               const residualPerHost: string[] = []
+              const unconfirmedHosts: string[] = []
               let residualTotal = 0
               for (const host of EPIC_COOKIE_HOSTS) {
                 const verify = await readHostCensus(host)
+                const trustworthy =
+                  verify.verdict === 'SUPPORTED_NONEMPTY' ||
+                  verify.verdict === 'SUPPORTED_BUT_EMPTY'
+                if (!trustworthy) {
+                  // Recorded as `unconfirmed`, never as `0` — the log line must
+                  // not be able to say "none remain" about a host nothing read.
+                  unconfirmedHosts.push(host)
+                  residualPerHost.push(`${host}=unconfirmed(${verify.verdict})`)
+                  continue
+                }
                 residualTotal += verify.matched
                 residualPerHost.push(`${host}=${verify.matched}`)
+              }
+              // The affirmative "none remain" wording is emitted ONLY when every
+              // host was genuinely read. Any other outcome gets a warning whose
+              // text cannot be mistaken for a clean bill of health.
+              if (unconfirmedHosts.length > 0) {
+                logWarning(
+                  `Legendary logout: post-clear verification COULD NOT CONFIRM the jar for ` +
+                    `${unconfirmedHosts.length} of ${EPIC_COOKIE_HOSTS.length} domain(s) — ` +
+                    residualPerHost.join(', '),
+                  LogPrefix.Legendary
+                )
+                throw new Error(
+                  `Legendary logout: post-clear verification could not read the cookie jar for ` +
+                    `${unconfirmedHosts.join(', ')} — the clear cannot be confirmed and must not ` +
+                    `be reported as successful (${residualPerHost.join(', ')})`
+                )
               }
               logInfo(
                 `Legendary logout: post-clear verification — ${residualTotal} Epic-owned ` +
