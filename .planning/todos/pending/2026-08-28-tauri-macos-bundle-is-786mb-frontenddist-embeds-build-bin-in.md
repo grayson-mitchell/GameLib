@@ -62,31 +62,156 @@ app: `arm64/darwin` 189M, `x64/win32` 52M, `x64/darwin` 44M, `arm64/win32` 38M,
 
 ### Minor
 
-`build/bin/arm64/darwin/` contains Windows artifacts: `steam_api.pdb` (2.7M),
-`steam_api.dll` (788K), `steam_api_shim.lib`.
+`build/bin/arm64/darwin/` contains Windows artifacts: `steam_api.pdb` (2.7M / measured
+2,818,048 B in the quick-260901-8rm packaged-artifact census),
+`steam_api.dll` (788K), `steam_api_shim.lib` (4,160 B). These are Windows build
+byproducts of `meta/buildSteamBridgeShims.ts`, emitted alongside the arm64 helper
+because the shim DLL itself is cross-compiled PE32 (it runs inside a Wine bottle,
+not natively) even though the surrounding directory is otherwise a native-arm64
+tree. **Kept as a SEPARATE follow-up item, deliberately not folded into fix (2)
+below** — their removal is "stop emitting the .pdb/.lib at build time", a
+`buildSteamBridgeShims.ts` compile-flag change, not a resource-mapping change. Fix
+(1) below still ships them (they live inside the `arm64/darwin` directory entry
+the macOS overlay carries wholesale) because narrowing WHICH platform ships a
+directory is a different mechanism from narrowing WHAT that directory contains.
 
 ## Solution
 
 Two independent fixes. Sizes are uncompressed installed-footprint deltas.
 
-**(1) Narrow `bundle.resources` to the host platform — ~208MB. Small, self-contained.**
-Tauri v2 merges `tauri.<platform>.conf.json`, so the `build/bin/` resource map can
-name only `arm64/darwin` (and `x64/darwin` if that leg ever returns — note
-`phase-34-16-closed-partial-x64-retired`, Intel was dropped). Do this one first;
-it does not touch any path-resolution code.
+### Fix (1) — DONE, closed by quick-260901-8rm (2026-09-01)
 
-**(2) Repoint `frontendDist` at a renderer-only directory — ~212MB. Needs its own plan.**
-Move `vite.config.ts:104`'s `outDir` from `build` to something like `build/renderer`
-and point `frontendDist` there, so Tauri walks only the renderer output.
+Narrowed `bundle.resources` to per-platform overlays: the wholesale
+`"../build/bin/": "build/bin"` entry was deleted from the base `tauri.conf.json`
+(a platform overlay can only ADD/OVERRIDE a key onto the base, never remove one,
+so shadowing it would not have worked) and replaced with three sibling files —
+`src-tauri/tauri.macos.conf.json`, `tauri.windows.conf.json`, `tauri.linux.conf.json`
+— each carrying only the `bin/{arch}/{platform}` trees that platform needs, plus
+the two `x64/win32` Wine exes macOS and Linux copy into a Wine prefix with no
+platform guard (`legendary/games.ts:919-937`, `launcher.ts:927`).
 
-This is exactly the `publicDir` / `getAppPath` / chunking seam that has bitten this
-project four times (the fourth killed Phase 34.5 — see the
-`publicdir-getapppath-chunking` memory). `emptyOutDir: false` and
-`preserveRunnerSymlinksPlugin()` at `vite.config.ts:106,125` exist because of that
-sharing and must both be re-reasoned, not just carried across. Runtime helper-path
-resolution lives in `src/backend/constants/paths.ts:67,108` and assumes `build/bin`.
+**Proof, on a real packaged artifact** (`pnpm tauri:dev:packaged`, DMG mounted
+read-only since Tauri deletes the intermediate `.app` when only the `dmg` target
+is requested — see `260901-8rm-MEASUREMENTS.md`):
 
-**Target after both: ~330MB installed, roughly 150–200MB DMG.**
+- Shipped `Contents/Resources/build/bin`: 239,444 KB vs the repo's own unnarrowed
+  `build/bin` at 367,160 KB — **saved ~124.7MB** on this run (below the plan's
+  ~162MB estimate because this run's `arm64/darwin` also carries the freshly-built
+  steam-bridge shim, which inflates the KEPT tree, not the removed one).
+- `arm64/win32`, `x64/linux`, `arm64/linux` confirmed ABSENT from the shipped tree.
+  `bin/x64/win32/` contains exactly the two Wine exes, nothing else.
+- **The Tauri platform-config merge is confirmed a DEEP merge, not a shallow
+  replace**: the base's `locales`/`changelog.json`/`webviewPreload.js`/`icon.png`
+  all survived being merged with the bin-only-carrying macOS overlay.
+- `__const` stayed at 235,074,112 bytes and `strings <shell> | grep -c
+  'bin/x64/win32/gogdl.exe'` returned 1 — fix (1) demonstrably did not touch the
+  `frontendDist` embedding fix (2) addresses below; the two fixes are independently
+  attributable.
+- Full numbers, including the 250MB `tauri-codegen-assets` staging-directory
+  baseline that fix (2) must shrink: `260901-8rm-MEASUREMENTS.md`.
+- Windows and Linux overlays are unexercised by any real build in this run —
+  covered only by `packagingConfig.test.ts`'s merged-map config-level assertions.
+  A real CI matrix run on those platforms has not happened yet.
+
+### Fix (2) — Repoint `frontendDist` at a renderer-only directory — ~212MB, NOT YET PLANNED
+
+This is a phase, not a quick task — see below for why. It is deliberately NOT
+implemented by quick-260901-8rm; that plan's `scoped_out` frontmatter block
+records the reasoning this section restates in full.
+
+**Why the original one-line framing of this fix ("point `frontendDist` at a
+renderer-only `build/renderer`") is FALSE as written.** `frontendDist` is not
+merely "where index.html lives" — two live consumers resolve assets RELATIVE to
+it, and would break silently in a packaged artifact only (a `pnpm tauri:dev` run
+serves over `devUrl` and cannot see either failure — this is the same defect
+shape as R-34.5-G1-PKG, paid for twice already):
+
+- (a) `src/frontend/index.tsx:116` (this todo's original write-up cited
+  `index.tsx:114`; the plan-checker's citation pass did not catch the 2-line
+  drift) — i18next `HttpApi` `loadPath: 'locales/{{lng}}/{{ns}}.json'`, a relative
+  URL served over `tauri://localhost/` from `frontendDist`. Move `frontendDist`
+  without keeping `locales/` reachable from the new root and the packaged app
+  loses EVERY translation.
+- (b) `src/preload/api/tauriChildWindows.ts:177` — the About window is a
+  `WebviewWindow` whose `url` is `'about.html?v=' + encodeURIComponent(version)`,
+  also relative to `frontendDist`. `about.html` is a `public/` file that only
+  reaches `build/` today via vite's implicit `publicDir` copy.
+
+A "renderer-only" directory must therefore carry `index.html`, `assets/`,
+`locales/` AND `about.html` at minimum. Whoever plans this must first enumerate
+EVERY webview-reachable relative URL (i18n `loadPath`, every `WebviewWindow` url,
+any relative `fetch` in renderer/preload, and anything `index.html` or
+`about.html` themselves reference) rather than assuming that set is closed —
+the two named above are the ones measured, not necessarily the only two.
+
+**Why `publicDir` cannot simply move.** `build/bin`, `build/locales`,
+`build/changelog.json`, `build/webviewPreload.js` and `build/icon.png` are the
+SOURCE paths of `bundle.resources`, and they exist only because vite's implicit
+`public/` -> `outDir` copy puts them there. Moving `outDir` moves that ~300MB
+copy too. The mechanism, precisely: `paths.ts`'s runtime `publicDir` resolution
+is NOT itself broken by an `outDir` move (packaged, it resolves
+`Contents/Resources/build`, which `bundle.resources` populates by explicit
+target regardless of where `frontendDist` points) — what breaks is the
+repo-side `build/` tree those resource SOURCES read from at bundle time.
+
+**Two candidate designs — pick by measurement, not by preference:**
+
+- **D1 (the original framing):** `publicDir: false`, `outDir: build/renderer`,
+  `frontendDist: ../build/renderer`, plus an explicit copy step producing BOTH
+  the full `build/` tree (for `bundle.resources`, unchanged) and the
+  webview-reachable subset inside `build/renderer/` (for the embed). Saves the
+  full ~212MB. Largest blast radius — touches the outDir, the copy step, AND
+  every consumer of the old `build/` root as a webview-relative base.
+- **D2 (narrower, not yet costed):** leave `frontendDist: "../build"` alone and
+  simply stop putting `bin/` into `build/` in the first place — `publicDir: false`
+  plus an explicit copy that excludes `bin/`, with `bundle.resources` sourcing the
+  runner trees straight from `../public/bin/...` while keeping the
+  `build/bin/...` TARGET paths unchanged (so `paths.ts`'s packaged `publicDir`
+  resolution needs no change at all). Nothing webview-reachable moves, so
+  consumers (a) and (b) above cannot fire — smaller blast radius, but the open
+  question that decides feasibility: **does Tauri's resource copier preserve
+  symlinks?** `public/bin/*/darwin/*/` contains Python.framework symlinks, and
+  Apple's framework layout requires `Versions/Current` to be a link or codesign
+  fails with "bundle format is ambiguous". Under D2, `preserveRunnerSymlinksPlugin`
+  (which currently runs as part of the vite build that populates `build/`,
+  restoring symlinks vite's copy would otherwise flatten — 12 restored on the
+  quick-260901-8rm packaging run) would no longer run over the `bin/` tree at
+  all, since `bin/` would never pass through vite's `outDir` copy. Whether
+  Tauri's own `bundle.resources` copier preserves symlinks when copying straight
+  from `public/bin/` needs to be measured before D2 can be chosen.
+
+**Five pinned assertions the fix must update** (each currently green; each would
+go red under either design):
+
+- `meta/__tests__/viteRendererConfig.test.ts:87-88` — pins
+  `config.build?.outDir === 'build'` and `config.build?.emptyOutDir === false`.
+- `src/backend/__tests__/packagingConfig.test.ts:257-277` (that region moved to
+  `:388-404` after quick-260901-8rm's Task 1 added the merged-map assertions
+  above it in the same file — re-locate by searching for the describe title
+  `'vite.config.ts registers the runner-symlink preservation plugin (F-34.9-01)'`
+  rather than trusting either line number) — pins that `vite.config.ts` imports
+  AND calls `preserveRunnerSymlinksPlugin()` (F-34.9-01, deliberately still live).
+- `src/backend/__tests__/releaseWorkflow.test.ts:437-530` — EXECUTES the release
+  workflow's prune step (`PRUNE_STEP_NAME`, the describe block spans
+  `:436-564`) against a synthetic fixture and asserts `build/index.html` survives.
+- `.github/workflows/release-tauri.yml:422-428` — the prune step's own
+  `test -f build/index.html` guard (line 425), which hard-fails the release job
+  if `index.html` moves out from under `build/`.
+- `vite.config.ts:106` — `emptyOutDir: false` exists only because `build/` is
+  shared with non-renderer output today; re-reason it under whichever design is
+  chosen (D1 changes what `outDir` even is; D2 changes what gets copied into it).
+
+**How it must be proven:** `pnpm tauri:dev:packaged` (or a real release bundle),
+never plain `tauri:dev` — the latter serves over `devUrl` and resolves no bundled
+resource at all, so it cannot see either consumer (a) or (b) break. Baseline
+recorded by quick-260901-8rm in `260901-8rm-MEASUREMENTS.md`: `__const` =
+235,074,112 bytes, `strings <shell> | grep -c 'bin/x64/win32/gogdl.exe'` = 1,
+`tauri-codegen-assets` staging dir = 250MB. Success = `__const` drops below
+~30,000,000, the gogdl `strings` count becomes 0, and the packaged app still
+renders a non-English locale AND opens the About window (both webview-reachable
+consumers verified live, not just config-level).
+
+**Target after both fixes: ~330MB installed, roughly 150–200MB DMG.**
 
 Below that the floor is architectural, not a defect: the Node sidecar (162MB) and
 the PyInstaller onedir helpers (legendary 47M, nile 44M, gogdl 40M, comet 10M).
@@ -100,3 +225,5 @@ sidecar for native Rust.
   the runtime itself.
 - Steam's 11MB installer is not a comparable baseline — that is a bootstrapper that
   downloads its runtime on first launch. The comparable target is Heroic's 160MB.
+- Do NOT fold the `steam_api.pdb` / `steam_api_shim.lib` removal into fix (2). See
+  "Minor" above — different mechanism, separate item.
