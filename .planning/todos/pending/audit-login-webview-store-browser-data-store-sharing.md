@@ -49,3 +49,30 @@ Read `git show 68eb1adde` first for the shape of the upstream bug (Heroic upstre
 If the audit finds the surfaces are already unified and logout genuinely clears, close this with
 the evidence recorded — a negative result is worth writing down, since this question keeps
 resurfacing.
+
+## PARTIAL ANSWERS from the Phase 35 live-gate re-run, 2026-08-31 (plan 35-29, criterion 21)
+
+Measured while running criterion 21. These do not close this audit, but they remove guesswork from
+parts of it.
+
+1. **The store-browser half of the question is currently MOOT.** The Tauri build embeds no browser
+   view for store/wiki pages at all (`WebviewUnavailablePanel.tsx:43`); it offers only a
+   system-browser handoff. So there is no in-app store webview whose data store could be shared or
+   not shared. This question becomes live again only when the embedded browser returns.
+
+2. **The jar that logout clears is bundle-id keyed:**
+   `~/Library/HTTPStorages/com.gamelib.shell.binarycookies`. Confirmed live — it was written by the
+   running packaged instance, while the process-name-keyed `gamelib-shell.binarycookies` stayed
+   stale. Note this holds even when the binary is launched directly from a terminal rather than via
+   `open`, because the executable sits inside the `.app` and `CFBundleIdentifier` still resolves.
+
+3. **"Does logout clear it?" — PARTIALLY. Authentication yes, cookies not entirely.** After Epic
+   logout, credentials WERE required again (no silent re-auth), but an independent read of that jar
+   still showed `_epicSID`, `_tald`, `EPIC_DEVICE`, `EPIC_LOGIN_ID` on `epicgames.com` hosts. Cause
+   not established. Filed as `D-35-29-02` in
+   `.planning/phases/35-electron-cutover-remove-the-electron-build/deferred-items.md`.
+
+4. **The in-product probe that would answer this properly is currently inert.** The Epic cookie
+   census cannot read the jar during logout — it requires a login window and logout has none
+   (`D-35-29-01`). Fixing that is a prerequisite for auditing this cleanly from inside the product;
+   until then, use the on-disk jar read.

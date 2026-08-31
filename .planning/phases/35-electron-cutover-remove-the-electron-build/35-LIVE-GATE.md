@@ -2,12 +2,13 @@
 phase: 35-electron-cutover-remove-the-electron-build
 plan: 19
 type: live-gate
-status: run
+status: rerun-pass
 blocking: true
 created: 2026-08-30
 criteria_total: 21 # sum of criteria 1-21 below; grep -c "^Verdict:" must equal this once run
-verdict: FAIL — 17 PASS / 4 FAIL / 0 NOT ATTEMPTED (21 of 21 measured). Criteria 6, 10, 14, 16 FAIL. Criterion 17 was measured 2026-08-30 on the debug-packaged build and scored PASS ON SUBSTANCE — plugin registration and the `updater:default` capability grant are verified (`window.__TAURI__.updater.check` is a `function`, the invoke reaches `plugin:updater|check`, a real HTTP fetch runs); it throws `ReleaseNotFound` only because the configured endpoint 404s (no `latest.json` published at the `updater` tag), and this criterion's own "does not throw" clause is itself wrong for a 404 endpoint — only a 204 resolves to `null`. That clause is therefore recorded as a CONTRACT-EXPECTATION DEFECT, not a code defect. NOTE: all four FAILs trace to pre-existing or upstream-inherited code, NOT to the Electron cutover.
+verdict: PASS AFTER RE-RUN — 21 of 21 measured. ORIGINAL RUN 2026-08-30: 17 PASS / 4 FAIL (criteria 6, 10, 14, 16). RE-RUN 2026-08-31 (plan 35-29, see the "RE-RUN" section at the end of this file): all four FAILs CLEARED, plus criterion 21 re-measured and regression checks 4, 5, 15 held — 8 measured, 8 PASS, 0 FAIL. Net: 21 PASS / 0 FAIL. QUALIFICATIONS THAT SURVIVE THE PASS AND MUST NOT BE READ AS DISCHARGED: criterion 10 proves the argv delivery path only (LaunchServices AppleEvent path unverified); criterion 14's visible re-render was UNOBSERVED (backend + origin=push push proven); criterion 21 passes its contract but D-35-19-15 is NOT closed — both closure routes were unavailable (no embedded browser exists on the Tauri build to seed a non-primary Epic domain, and plan 35-23's census is inert at logout, D-35-29-01). Criterion 17 unchanged from the original run: PASS ON SUBSTANCE, its "does not throw" clause recorded as a CONTRACT-EXPECTATION DEFECT for a 404 endpoint, not a code defect. New items raised BY the re-run: D-35-29-01, D-35-29-02, D-35-29-03, and a criterion 5 contract defect (its Sink: line names gamelib-shell.log, which its eprintln!-only call sites cannot write to).
 run_date: 2026-08-30
+rerun_date: 2026-08-31 # plan 35-29; criteria 4,5,6,10,14,15,16,21 only
 runner: Claude Opus 5 session (gesture execution by the human operator at the keyboard; contract authored by a different session per standing rule D-E)
 session_dir: MULTIPLE — see per-criterion notes. /tmp/gamelib-35-19-gate-9XTqHx (criteria 1-9); app relaunched via `open -a` for criteria 10-12 (no stderr capture — see D-35-19-02); /tmp/gamelib-35-19-c13-jaiski (criteria 13-17 window); /tmp/gamelib-35-19-c18-lo8xI8 (criterion 18 restart); /tmp/gamelib-35-19-c20-hXvo5l (criteria 20, 21, 19). ORIGINAL NOTE: app pid 23589 launched 08:50:00, stdout+stderr tee'd. Criterion 1 was observed on an EARLIER instance (pid 21484, 08:34:31, /tmp/gamelib-35-19-gate-sFpgKb) before four relaunches during the Keychain diagnosis in D-35-19-01; criteria 2-21 run on this instance.
 ---
@@ -1510,3 +1511,283 @@ re-observation (that document's own closing section: "Plan 35-19's gate therefor
 blocking item from this document"). Criterion 13 above re-discharges it specifically against the
 packaged release artifact, which the prior discharge was not measured against — recorded here so the
 carry-in is traceable rather than silently dropped.
+
+---
+
+# RE-RUN — plan 35-29, 2026-08-31
+
+**Scope: the four FAIL criteria (6, 10, 14, 16), criterion 21's re-measure, and the three
+regression checks (4, 5, 15). The other 13 criteria are NOT re-measured and their original
+verdicts stand.** Authored by plan `35-29` Task 1; measured by the orchestrating session with
+gesture execution by the human operator at the keyboard.
+
+## Re-run build identity
+
+- **Artifact:** `/Applications/GameLib.app` (packaged release)
+- **`CFBundleShortVersionString` / `CFBundleVersion`:** `0.7.0` / `0.7.0`
+- **`gamelib-shell` bundle mtime:** `Aug 31 07:54:39 2026`
+- **Instance A** (criteria 4, 6, 10, 14, 15, 16): shell pid `56206`, sidecar `56212`, launched
+  via deep link `gamelib://launch?appName=1124300`
+- **Instance B** (criteria 5, 21): shell pid `59427`, sidecar `59443`, launched **directly from a
+  terminal** (`/Applications/GameLib.app/Contents/MacOS/gamelib-shell`) with stdout+stderr
+  redirected, specifically to give criterion 5 the stderr sink its original run lacked. Verified
+  this did NOT change the cookie jar: the bundle-id-keyed jar
+  `~/Library/HTTPStorages/com.gamelib.shell.binarycookies` was written at `18:05:52` by this
+  instance, while the process-name-keyed `gamelib-shell.binarycookies` stayed stale at
+  `Aug 31 00:37`. The binary lives inside the `.app`, so `CFBundleIdentifier` still resolves.
+
+## Method correction adopted for criteria 15 and 16 — score by OWNER, never by the counter
+
+The system-wide `PreventUserIdleSystemSleep` counter is **unusable** on this machine. Across the
+run it was held continuously by `powerd` ("Prevent sleep while display is on") and by a
+`caffeinate` process belonging to the orchestrating agent's own tooling, which **respawned on a
+~300s cycle** under four different pids (`56484`, `57126`, `57622`, `57775`, `57893`). Scoring
+either criterion from the top-level counter would have produced a false FAIL repeatedly. Every
+verdict below is scored from the **"Listed by owning process"** section, matching on
+`gamelib-shell` / `gamelib-sidecar`.
+
+## Criterion 4 (regression) — PASS
+
+Humankind (Steam, appId 1124300) launched from the Library.
+```
+(17:43:13) [INFO]: [Steam]: SteamGame: launching appId 1124300 via steam://rungameid/1124300
+```
+`pid 57357` live from `Steam/steamapps/common/Humankind/Humankind.app`. Plan `35-21`'s
+`OPEN_EXTERNAL_ALLOWED_SCHEMES` allow-list did not break `steam://`.
+
+## Criterion 5 (regression) — PASS, **both halves**, for the first time
+
+Operator observed: tray menu opened with the expected rows; **About GameLib opened**, showing v0.7
+(matching `CFBundleShortVersionString 0.7.0` exactly — not a staleness defect).
+
+**The log half is no longer vacuous.** The original run could not score it because
+`gamelib-shell.log` had never been appended to by a packaged build, giving an absence-check with no
+positive control. Instance B's stderr capture supplies one: **10 `[shell]` lines at boot**,
+including `[shell] spawning sidecar (packaged)`, and the count rose **10 -> 11 across the
+measurement window**, proving the sink was live *during* the gesture rather than merely at start.
+Against that live sink: **zero `tray About` WARN lines**.
+
+**CONTRACT DEFECT FOUND — this criterion's `Sink:` line is wrong.** It names `gamelib-shell.log`.
+Both failure-path warnings are `eprintln!("[shell] WARN: tray About: ...")` at
+`src-tauri/src/main.rs:725` and `:730` — **stderr only, not `shell_diag()`** — so they can never
+reach that file. This also RESOLVES the original run's open question in the opposite direction from
+what it suspected: `shell_diag()` *does* reach the file in packaged builds (this session's deep-link
+runs appended to it at `Aug 30 23:34`); these two call sites simply do not use it.
+
+**NEW DEFECT, out of scope, filed separately:** the About window opens **without taking focus**, on
+a secondary display, requiring Mission Control to surface. Reported by the operator. The contract's
+`Expected` says only "About window appears", which it does, so the verdict stands at PASS.
+
+## Criterion 6 — PASS (was FAIL)
+
+Both halves required by T-35-137 (storage is not execution):
+- **Storage:** `store/config.json` -> `games.recent` contains
+  `{"appName":"1124300","title":"HUMANKIND™","runner":"steam"}`, written at position 1 at
+  measurement time. (It has since been displaced to position 2 by the Endless Sky launches for
+  criteria 15/16 — expected, and recorded so the later read is not mistaken for a regression.)
+- **Execution:** the tray submenu entry launched the title.
+
+Cause of the original FAIL (`addRecentGame` never running on the Steam path) is closed by plan
+`35-20` Task 2's `dispatchSteamLaunch`.
+
+## Criterion 10 — PASS, QUALIFIED (was FAIL)
+
+Cold-start deep link, full chain, verbatim:
+```
+(17:30:10) [INFO]: [Backend]:         [bootstrap] startup protocol URL present
+(17:30:10) [INFO]: [ProtocolHandler]: Received gamelib://launch?appName=1124300
+(17:30:10) [INFO]: [Steam]:           SteamGame: launching appId 1124300 via steam://rungameid/1124300
+```
+Cause of the original FAIL (`steam` absent from `RUNNERS` in `protocol.ts`) is closed by plan
+`35-20` Task 1.
+
+**QUALIFICATION, recorded rather than absorbed:** this proves delivery via the **argv** path. Of
+the three delivery paths (argv, single-instance socket, LaunchServices AppleEvent), the
+**AppleEvent path was not verified on this machine**. The criterion is scored PASS because its
+`Expected` is that the deep link launches the title on cold start, which it does; the untested
+path is named so a future regression there is not assumed covered.
+
+## Criterion 14 — PASS on the backend and push halves; visible repaint UNOBSERVED
+
+`touch` on `legendaryConfig/legendary/installed.json` (backed up first; sha256 prefix
+`cceb6b0bf6ad1dab` byte-identical afterwards — `touch` moved only mtime):
+```
+(17:35:57) [INFO]: [Legendary]: installed.json updated, refreshing library
+(17:35:58) [INFO]: [Frontend]:  [refreshLibrary] runner=legendary origin=push
+(17:35:58) [INFO]: [Legendary]: Refreshing library...
+(17:36:00) [INFO]: [Legendary]: Game list updated, got 15 games & DLCs
+(17:36:00) [INFO]: [Legendary]: refreshLibrary complete runner=legendary managers=1
+```
+**`origin=push` is the decisive token.** The same session's boot line reads
+`[refreshLibrary] runner=all origin=mount` — a different origin. So this was pushed from the
+backend, which is exactly plan `35-20` Task 3's `sendFrontendMessage('refreshLibrary','legendary')`
+reaching the renderer. Pre-fix the chain stopped at the first line.
+
+**NOT claimed:** the operator was not watching the Library closely and did not observe a visible
+re-render. A message arriving is not proof a surface repainted. The UI half is recorded UNOBSERVED,
+not PASS. Scored PASS overall because the contract's failing half was the missing frontend message,
+which is now positively evidenced.
+
+## Criterion 15 (regression) — PASS
+
+**Fixture substituted, same reason as the original run:** the contract says reuse criterion 4's
+title, which is HUMANKIND (Steam). Re-derived independently before consulting the original note —
+`dispatchSteamLaunch`'s own header states it deliberately bypasses `launcher.ts`'s
+`launchEventCallback`, and `launcher.ts:896-899` is where `gameStatusUpdate`/`'launching'` is
+emitted; the Steam manager's only `gameStatusUpdate` calls (`games.ts:1462`, `:1495`) are
+install/uninstall `'done'`. The wake lock derives from `libraryStatus` via
+`classifySleepAssertionKind`, so a Steam title can never be seen as `'playing'`. Confirmed live:
+with Humankind running, **zero** GameLib-owned assertions existed and the whole log contained no
+`lock|playing|powersave|assertion|wake` hit. **Endless Sky (GOG) used instead.**
+
+**Clean baseline first** (the original run's first attempt was voided by an orphaned game process):
+zero game processes, PPID-1 check empty, zero GameLib-owned assertions,
+`PreventUserIdleDisplaySleep 0`.
+
+**Correct parentage verified:** `gogdl 57763 -> parent 56212` (the sidecar under test),
+`Endless Sky 57764 -> parent 57763`.
+
+**HELD (17:47:33):**
+```
+pid 56206(gamelib-shell): [0x0005173200058c54] 00:00:12 PreventUserIdleDisplaySleep named: "GameLib: a game is running"
+pid 56206(gamelib-shell): [0x0005173200058c53] 00:00:12 PreventUserIdleDisplaySleep named: "GameLib: a game is running"
+```
+Backend logged `(17:47:20) Preventing display from sleep` one second prior.
+
+**RELEASED (17:48:52):** both processes exited; **zero** GameLib-owned assertions;
+`DISPLAY_COUNTER=0`. Assertion block byte-identical to the pre-launch baseline.
+
+**LABEL VERIFIED BY BYTE DUMP.** An intermediate reading suggested the emitted label omitted the
+article ("GameLib: game is running") and that the contract's `Expected` was therefore wrong. That
+was an artifact of inconsistent output relaying, not a real difference. `od -c` on the live
+assertion gives `"GameLib: a game is running"` — the contract's wording is **correct** and the
+match is exact. Recorded so the false reading is not mistaken for a finding.
+
+**Observation, not a FAIL:** the display assertion is acquired **twice** for **one** logged
+`Preventing display from sleep` line, and no release line is logged at all. The original run's
+held state shows the same duplicate pair (`0x0003d4d3000593ff`, `0x0003d4d2000593fd`), so it is
+pre-existing. It is also **not deterministic** — the criterion-16 run produced a single assertion
+(`0x000518f900058ce9`) from the same gesture, indicating a status-transition artifact rather than a
+leak. Both were released cleanly.
+
+## Criterion 16 — PASS (was FAIL / F-35-08-A)
+
+Scored from the two exposing configurations the plan prescribes. The banned simultaneous
+game+download capture is NOT used as evidence.
+
+**(a) Game running, NO download — PASS.** Endless Sky running alone (held state above): exactly the
+display assertion, and **ZERO** `PreventUserIdleSystemSleep` named `"GameLib: a download is in
+progress"`.
+
+**(b) Download finishes while the game keeps running — PASS.** Sampled every 5s by a background
+poller (`assertions-16b.log`), verified alive and writing before the gesture.
+
+**ORDER DEVIATION, recorded:** the operator launched the game first, then started the download; the
+plan specifies the reverse. Accepted as valid and, if anything, MORE exposing — F-35-08-A was
+`unlock()` gated on the entire pending set being empty, so a game already running when the download
+ends is precisely the state that used to keep the counter non-zero.
+
+| time | state |
+| --- | --- |
+| 17:55:55 | display only — `0x000518f900058ce9` (00:00:59) |
+| 17:55:59 | *log:* `Phoenix Point Content was added to the download queue`; `Installing IrisContent` |
+| **17:56:00** | **BOTH** — system `0x0005193800018d19` (00:00:01) `"GameLib: a download is in progress"` + display `0x000518f900058ce9` (00:01:04) |
+| **17:56:04** | *log:* `Finished Installation of IrisContent` |
+| **17:56:05** | **system assertion GONE**; display persists |
+| 17:57:54 | display only `0x0005193e00058d1e` (00:01:49); game 58243->58245 **still running** |
+
+The download-labelled system assertion appeared in **exactly one** 5s sample and was gone by the
+next, i.e. it cleared within 1-5s of `Finished Installation`, and stayed gone through **110
+seconds** with the game still running (contract floor: 60s). Under the pre-`35-27` shared
+`pendingOps` counter it would have survived until game-quit.
+
+**HANDLE IDENTITY EARNED ITS KEEP — a finding counts alone would hide.** The display assertion's
+handle CHANGED across the transition: `0x000518f900058ce9` -> `0x0005193e00058d1e`, elapsed reset to
+`00:00:00`. That is the fingerprint of `unlock()` having no per-kind selector (documented at
+`GlobalState.tsx:275`): download-end issues `unlock()`, dropping BOTH assertions, then re-issues
+`lock(true)` to restore the game's. **There is therefore a sub-second window at download-end in
+which display-sleep prevention lapses while a game is still running.** Harmless in practice
+(display-sleep timers are minutes) and not a regression, but real, invisible to a count-based
+reading, and recorded here rather than left unremarked.
+
+## Criterion 21 — PASS on its contract; D-35-19-15 **NOT CLOSED**
+
+**Precondition (criterion 20) satisfied:** the Epic session survived a full quit + relaunch —
+`user.json` present at 6218 B, sha256 prefix `738f6ed0e093e364bc146c29`, library repopulated to 15
+games. (Same byte size as the original run's pre-logout file, different hash: tokens rotated.)
+
+**PRE-LOGOUT INDEPENDENT JAR READ** (`com.gamelib.shell.binarycookies`, read with `strings` —
+external to the product, so it does not rely on the code under test to validate itself):
+```
+epicgames.com = 6    fortnite.com = 0    unrealengine.com = 0
+twinmotion.com = 0   metahuman.com = 0
+```
+This **reproduces D-35-19-15's condition before the gesture**: logging out in this state was
+guaranteed to reproduce the four vacuous zeros.
+
+**SEEDING STEP — BLOCKED, NO VEHICLE EXISTS ON THIS BUILD.** D-35-19-15 prescribes driving the
+webview to a non-primary Epic domain. The Tauri build embeds **no browser view**:
+`WebviewUnavailablePanel.tsx:43` — "GameLib's Tauri build does not yet embed a browser view for the
+store and wiki pages" — and offers only a system-browser handoff, which seeds Safari's jar, not
+GameLib's. `35-AB-RETEST`'s original multi-domain finding necessarily came from an **Electron-era**
+session, when the embedded store browser existed. **On this build no user action can create a
+non-primary Epic cookie**, so the `EPIC_COOKIE_HOSTS` widening is currently
+unreachable-by-construction: correct defensive code awaiting the browser's return. This is a
+stronger and more durable explanation of the four zeros than "a short-lived session".
+
+**CENSUS FALLBACK — INERT. This is a defect in plan `35-23`'s own delivered fix.** D-35-19-15
+explicitly sanctioned the census as the way to close the gap without seeding, and `35-23`
+implemented it. At logout it returned, on **all five hosts**:
+```
+Legendary logout: <host> cookie census read failed (non-fatal, evidence unavailable for this side):
+  Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+Legendary logout: cleared N <host> cookie(s) (measured post-removal delta) — cookie census
+  before(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)
+  after(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)
+```
+`humble_login_cookies_for_domain` requires a login window; **at logout there is none**. The CLEAR
+path has a pristine-window fallback; the CENSUS path does not. So the census cannot execute in the
+one path it was written for, and the zeros remain exactly as uninterpretable as before `35-23`.
+Filed as **D-35-29-01**.
+
+**LOGOUT RESULT.** `user.json` **REMOVED**. Per-domain:
+```
+(18:15:15) Legendary logout: Epic cookie clear removed 5 cookie(s) across 5 Epic-owned domain(s)
+           — epicgames.com=5, fortnite.com=0, unrealengine.com=0, twinmotion.com=0, metahuman.com=0
+(18:15:16) Legendary logout: cleared storage — localStorage=4, sessionStorage=0, indexedDB=0,
+           caches=0, serviceWorkers=0
+```
+All five domains were attempted at runtime, so the paired list is wired through, not merely
+declared.
+
+**EXPECTED MET:** the operator re-opened the Epic login flow and it **required credential entry**.
+No silent re-auth. This is the criterion's `Expected`, and it discharges the standing `34.6` Step 8
+FAIL as the original run did.
+
+**RESIDUAL COOKIES SURVIVE ON THE PRIMARY DOMAIN — filed as D-35-29-02.** The post-logout
+independent jar read (jar rewritten at `18:15:19`, after the `18:15:15` clear; total strings fell
+297 -> 145, so it was genuinely rewritten) still contains:
+```
+_epicSID   _tald   EPIC_DEVICE   EPIC_LOGIN_ID
+on: A.epicgames.com (x4), A.www.epicgames.com, A.ecosec.on.epicgames.com
+```
+These are the exact four names `35-AB-RETEST` Item 7 flagged. They are **inert for
+authentication** — credentials were required — so the criterion passes. Two competing explanations
+are NOT distinguished by this run and neither is asserted: (i) the clear did not remove them, or
+(ii) they were re-created in the ~3s between the clear and the file write. `strings` on a binary
+format is also a proxy and could in principle surface unreferenced remnants.
+
+## Re-run tally
+
+**8 criteria measured, 8 PASS, 0 FAIL, 0 NOT ATTEMPTED.**
+4 PASS · 5 PASS · 6 PASS · 10 PASS (qualified) · 14 PASS (UI half unobserved) · 15 PASS ·
+16 PASS · 21 PASS on contract.
+
+**All four original FAILs (6, 10, 14, 16) are cleared.** `REQ-35-20`'s zero-FAIL condition is met
+by this re-run for the criteria it covers.
+
+**Not closed by this run, and not to be read as closed:** `D-35-19-15` (multi-domain widening still
+unproven live, both closure routes unavailable), plus new items `D-35-29-01` (census inert at
+logout), `D-35-29-02` (residual primary-domain cookies), `D-35-29-03` (About window opens
+unfocused), and this criterion 5 contract defect (`Sink:` names a file its call sites cannot write
+to).

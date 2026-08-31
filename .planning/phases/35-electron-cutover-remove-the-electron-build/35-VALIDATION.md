@@ -106,9 +106,9 @@ sampling mechanism, not the closure mechanism.
 | 35-18-01 | 18 | 12 | REQ-35-02 | T-35-84/87/88 | inverted guard; mock proven to still apply | build+unit | `pnpm build:sidecar && pnpm build:decompress-worker-dev && pnpm test --selectProjects Meta Backend` | ✅ | ⬜ pending |
 | 35-18-02 | 18 | 12 | REQ-35-02 | T-35-85/86 | reference-form gate, mutation-proven 4 ways | unit | `pnpm test --selectProjects Meta -- electronAbsence` | ❌ W0 | ⬜ pending |
 | 35-18-03 | 18 | 12 | REQ-35-21 | T-35-89 | every accepted gap stated in user language | structural | `node -e` release-notes structure check | ❌ W0 (`35-RELEASE-NOTES.md`) | ⬜ pending |
-| 35-19-01 | 19 | 13 | REQ-35-20 | T-35-91/92 | contract passes the 7 defect-class tests | structural | `node -e` contract structure check | ❌ W0 (`35-LIVE-GATE.md`) | ⬜ pending |
-| 35-19-02 | 19 | 13 | REQ-35-20 | T-35-96 | "plus a smoke launch" has a named owner | manual | human decision checkpoint | n/a | ⬜ pending |
-| 35-19-03 | 19 | 13 | REQ-35-20 | T-35-90/93/94/95/97 | measured on the packaged artifact; FAIL stays FAIL | manual | human-check + `node -e` completeness assertion | n/a | ⬜ pending |
+| 35-19-01 | 19 | 13 | REQ-35-20 | T-35-91/92 | contract passes the 7 defect-class tests | structural | `node -e` contract structure check | ❌ W0 (`35-LIVE-GATE.md`) | ✅ run + re-run |
+| 35-19-02 | 19 | 13 | REQ-35-20 | T-35-96 | "plus a smoke launch" has a named owner | manual | human decision checkpoint | n/a | ✅ run + re-run |
+| 35-19-03 | 19 | 13 | REQ-35-20 | T-35-90/93/94/95/97 | measured on the packaged artifact; FAIL stays FAIL | manual | human-check + `node -e` completeness assertion | n/a | ✅ run + re-run |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -174,3 +174,50 @@ all present in the tree today. The list, grouped by owner:
 - [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** approved 2026-08-28
+
+---
+
+## RE-RUN VALIDATION — plan 35-29, 2026-08-31
+
+The three `35-19-*` rows above are marked `✅ run + re-run`: the gate was executed once
+(2026-08-30, verdict FAIL — 17 PASS / 4 FAIL) and its four FAIL criteria re-executed
+(2026-08-31, 8 measured / 8 PASS / 0 FAIL). **`FAIL stays FAIL` was honoured — no `Expected` was
+softened to clear a criterion.** The FAILs cleared because code landed in plans `35-20`, `35-21`,
+`35-23` and `35-27`, not because the contract moved.
+
+| ID | plan | REQ | threat | what it proves | mode | verification | artifact | status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 35-29-01 | 29 | REQ-35-20 | T-35-135 | criterion 16 scored from the two EXPOSING configurations, never the banned simultaneous game+download capture | manual | live `pmset` capture, assertion HANDLES + elapsed recorded | `35-LIVE-GATE.md` RE-RUN | ✅ pass |
+| 35-29-02 | 29 | REQ-35-20 | T-35-136 | criterion 21 not scored PASS off a vacuous zero | manual | independent on-disk jar read taken BEFORE the gesture | `35-LIVE-GATE.md` RE-RUN | ✅ pass — recorded NOT CLOSED, see note |
+| 35-29-03 | 29 | REQ-35-20 | T-35-137 | criterion 6 scored on BOTH halves, storage ≠ execution | manual | `games.recent` entry with `runner: "steam"` AND tray submenu launch | `35-LIVE-GATE.md` RE-RUN | ✅ pass |
+
+### T-35-135 discharged, and it mattered
+
+The threat was "criterion 16 scored PASS from a blind gesture". Two independent traps were live:
+
+1. The **banned configuration** was avoided — configuration (b) captured `110s` after
+   `Finished Installation`, not during the overlap.
+2. A trap the threat register did **not** anticipate: the system-wide `PreventUserIdleSystemSleep`
+   counter was permanently non-zero from `powerd` plus a **`caffeinate` belonging to the measuring
+   agent's own tooling**, respawning on a ~300s cycle across four pids. Scoring from the counter
+   would have produced a **false FAIL**. Every verdict was taken from the "Listed by owning process"
+   section instead. **This method correction is now written into the gate document and should be
+   treated as standing practice for any future power-assertion criterion.**
+
+### T-35-136 — discharged, but the outcome is NOT CLOSED
+
+The threat was "criterion 21 reproducing a vacuous zero". It was detected **in advance** rather
+than after the fact: an independent on-disk read of `com.gamelib.shell.binarycookies` taken before
+the logout showed `epicgames.com = 6` and all four non-primary domains `= 0`, proving the vacuous
+condition was already present. The prescribed remedy (seeding) was then found to have **no vehicle
+on this build**, and the sanctioned alternative (plan `35-23`'s census) was found **inert**
+(`D-35-29-01`). Criterion 21 is therefore scored PASS on its own contract while `D-35-19-15` is
+explicitly recorded as still OPEN. The threat did its job: it stopped a vacuous zero being read as
+proof.
+
+### Coverage note
+
+`REQ-35-20`'s closure condition (a zero-FAIL run on the packaged macOS arm64 artifact) is met.
+`UNMEASURED` is recorded separately from `FAIL` throughout, per the plan's instruction: criterion
+10's AppleEvent delivery path and criterion 14's visible repaint are **unmeasured**, not failed,
+and are named as such in both `35-LIVE-GATE.md` and `35-VERIFICATION.md`.

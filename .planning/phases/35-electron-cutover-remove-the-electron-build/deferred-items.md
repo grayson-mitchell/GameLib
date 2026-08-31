@@ -1867,6 +1867,31 @@ distinction from outside the product. Emitting the same census per Epic domain w
 run of criterion 21 self-validating and close this gap without needing the seeding step described
 above — though seeding is still the stronger test.
 
+**RE-RUN 2026-08-31 (plan 35-29): STILL OPEN. NOT CLOSED. Both prescribed closure routes were
+found unavailable, and the reason is now structural rather than circumstantial.**
+
+- **Seeding route — no vehicle exists.** This item prescribed "drive the login webview to at least
+  one non-primary Epic domain". The Tauri build embeds **no browser view at all**
+  (`WebviewUnavailablePanel.tsx:43`); the only offer is a system-browser handoff, which seeds
+  Safari's jar, not `com.gamelib.shell.binarycookies`. **No user action on this build can create a
+  non-primary Epic cookie.** `35-AB-RETEST`'s original finding therefore came from an
+  **Electron-era** session, when the embedded store browser still existed — a better explanation
+  than this item's own guess of "a longer-lived session". The `EPIC_COOKIE_HOSTS` widening is
+  currently **unreachable-by-construction**: correct, defensive, and waiting for the browser to
+  return.
+- **Census route — implemented, and inert.** This item's own text offered the census as a way to
+  "close this gap without needing the seeding step". Plan `35-23` implemented it correctly and it
+  returns `UNSUPPORTED_OR_ERROR` on all five hosts at logout, because the census read requires a
+  login window that logout does not have. See **[[D-35-29-01]]**.
+
+An independent on-disk jar read taken before the gesture confirmed the vacuous-zero condition was
+present in advance (`epicgames.com = 6`, all four non-primary `= 0`), so the re-run could not have
+exercised the widening no matter how it was driven.
+
+**This item cannot be closed until either an embedded browser returns (restoring the seeding
+vehicle) or [[D-35-29-01]] is fixed (restoring the census).** Do not mark it closed on the strength
+of criterion 21 passing — the criterion tests credential re-entry, which is a different question.
+
 ## D-35-19-16 — GOG macOS move records a DOUBLED install path, so the game will not launch
 
 Found: live verification of the D-35-19-07 fix, 2026-08-30. Status: **FIXED AND LIVE-VERIFIED ON A
@@ -2080,3 +2105,98 @@ did nothing wrong; the ORDERING did. This is not a one-off: expect it to recur e
 re-baseline plan is scheduled before other fork-touching plans in the same wave, and plan
 accordingly (e.g. sequence the re-baseline last in its wave, or accept it may need one more
 follow-up pass). Not a redesign of the gate itself — that remains out of scope here.
+
+## D-35-29-01 — plan 35-23's Epic cookie census is INERT at logout: it needs a login window, and logout has none
+
+Found: criterion 21 re-run, 2026-08-31. Status: **OPEN — a defect in this gap-closure cycle's own
+delivered fix, found only by running it live.**
+
+`D-35-19-15` prescribed porting Humble's cookie census to the Epic logout path so that a
+`cleared 0` line would become self-interpreting — distinguishing "the jar was live and this host
+genuinely had no cookies" from "the probe was broken". Plan `35-23` implemented it faithfully:
+per-host `before(...)`/`after(...)` with a `CookieReadVerdict`, classifying on `matched` rather
+than `jarTotal` precisely so an Epic-empty host in a live shared jar would read
+`SUPPORTED_BUT_EMPTY` rather than `SUPPORTED_NONEMPTY`. The construction is correct.
+
+**It cannot execute.** Measured at logout, on all five hosts:
+```
+Legendary logout: <host> cookie census read failed (non-fatal, evidence unavailable for this side):
+  Error: humble_login_cookies_for_domain:no-window:loginwin-0-18d0cf3d9b97abd0-7652f0f6
+... cookie census before(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)
+                  after(total=unavailable, matched=unavailable, verdict=UNSUPPORTED_OR_ERROR)
+```
+
+Cause: `humble_login_cookies_for_domain` resolves against an existing login window. **During logout
+there is no login window** — the user is logged in, not authenticating. The CLEAR path survives
+this because it has a pristine-window fallback (`humble_login_clear_cookies`, see
+`EPIC_COOKIE_DOMAINS`' own comment); the CENSUS path has no such fallback.
+
+Consequence: `35-23` shipped evidence-gathering that produces `UNSUPPORTED_OR_ERROR` in the only
+path it exists to serve. The zeros are exactly as uninterpretable as before the plan ran, so
+`D-35-19-15` is NOT closed by it.
+
+**Why unit tests did not catch this.** The census is exercised where a window exists; the
+no-window branch is the non-fatal error path, which is asserted to *not throw* rather than asserted
+to *produce evidence*. A test proving "the census never breaks logout" passes while the census
+never works. This is the project's recurring shape: a prescribed fix carrying the defect it was
+prescribed to remove ([[review-prescribed-fix-can-carry-the-same-defect]]), and a gate gesture
+blind to its own defect ([[gate-gesture-can-be-blind-to-its-own-defect]]).
+
+**Fix direction (not prescribed as correct — measure first):** give the census read the same
+pristine-window fallback the clear already has, so both sides resolve against the same store. Any
+fix must be verified by a live logout showing a `verdict` other than `UNSUPPORTED_OR_ERROR`; a
+passing unit test must not be accepted as evidence.
+
+## D-35-29-02 — four Epic auth cookies survive logout on the PRIMARY domain (inert for re-auth)
+
+Found: criterion 21 re-run, 2026-08-31. Status: **OPEN — cause NOT established; two competing
+explanations, neither asserted.**
+
+The product reported `cleared 5 epicgames.com cookie(s) (measured post-removal delta)` and the
+logout is genuinely effective — `user.json` was REMOVED and re-opening the Epic login flow
+**required credentials**, so there is no silent re-auth and criterion 21 passes its contract.
+
+However, an independent read of `~/Library/HTTPStorages/com.gamelib.shell.binarycookies` (external
+to the product, so it does not rely on the code under test) taken after the clear still shows:
+```
+_epicSID   _tald   EPIC_DEVICE   EPIC_LOGIN_ID
+on: A.epicgames.com (x4), A.www.epicgames.com, A.ecosec.on.epicgames.com
+```
+These are the exact four names `35-AB-RETEST.md` Item 7 identified as the residual set the
+`EPIC_COOKIE_HOSTS` work exists to remove.
+
+The jar was rewritten at `18:15:19`, after the `18:15:15` clear, and its total string count fell
+297 -> 145, so this is not a stale read.
+
+**Two explanations, NOT distinguished by this run:**
+1. the clear did not actually remove them (cf. [[wry-cookie-delete-lies-about-deleting]] — a delete
+   that reports success without deleting is a known behaviour in this stack); or
+2. they were re-created in the ~3s between the clear and the file write.
+
+**Caveat on the evidence:** `strings` over a binary format is a proxy and could in principle
+surface unreferenced remnants rather than live cookies. A conclusive read needs a proper
+binarycookies parse, or a `cookies_for_url` read taken with a window present (blocked today by
+[[D-35-29-01]]).
+
+Severity is bounded by the behavioural result: authentication is NOT restored by these cookies.
+
+## D-35-29-03 — the tray "About GameLib" window opens WITHOUT focus, on a secondary display
+
+Found: criterion 5 re-run, 2026-08-31, reported by the operator. Status: **OPEN, out of Phase 35's
+gap-closure scope fence — filed, not absorbed.**
+
+Clicking **About GameLib** from the tray menu opens the About window, but **focus does not move to
+it**. On a multi-display setup it appeared on another screen and required Mission Control to
+surface. The window is created but never activated.
+
+Criterion 5's `Expected` says only "About window appears", which it does, so the criterion is
+scored PASS and this is recorded separately rather than used to fail it.
+
+`open_about_window_from_tray` (`src-tauri/src/main.rs:722`) evaluates
+`window.eval("window.api?.showAboutWindow?.()")` and does nothing further — there is no
+`set_focus()` / activation call on the resulting window. **Hypothesis only, not measured.**
+
+This project has a FIXED sibling in the same class —
+[[reveal-in-finder-does-not-select-when-tauri-window-frontmost]] — where a cross-display action
+succeeded but the focus/selection half silently did not. Check that fix's approach before
+designing this one.

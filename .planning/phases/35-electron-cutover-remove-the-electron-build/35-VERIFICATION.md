@@ -7,7 +7,8 @@ overrides_applied: 0
 re_verification: null
 gaps:
   - truth: "REQ-35-20 — the phase closes on a BLOCKING packaged macOS arm64 live gate; its own text says 'Any FAIL means the phase does not close'"
-    status: failed
+    status: resolved
+    resolved_by: "plan 35-29 live-gate re-run, 2026-08-31 — all four FAIL criteria (6, 10, 14, 16) re-measured PASS on the packaged 0.7.0 artifact, plus criterion 21 re-measured and regression checks 4, 5, 15 held. 8 measured / 8 PASS / 0 FAIL. See the RE-RUN section of 35-LIVE-GATE.md. QUALIFIED: criterion 10 proves the argv delivery path only; criterion 14's visible repaint was unobserved; criterion 21 passes its contract but D-35-19-15 remains OPEN (D-35-29-01)."
     reason: "35-LIVE-GATE.md is `blocking: true` and its recorded verdict is FAIL — 17 PASS / 4 FAIL / 0 NOT ATTEMPTED over 21/21 measured criteria. The requirement's own closure clause is therefore unmet. Two of the four FAILs (6, 10) are on surfaces THIS PHASE built (tray recent-games, `gamelib://` deep link); their root causes are pre-existing, but the phase shipped new user-facing affordances on top of them without measuring them first."
     artifacts:
       - path: ".planning/phases/35-electron-cutover-remove-the-electron-build/35-LIVE-GATE.md"
@@ -307,3 +308,62 @@ I closed that gap independently. `git grep addRecentGame pre-electron-cutover` a
 
 _Verified: 2026-08-30T04:12:40Z_
 _Verifier: Claude (gsd-verifier)_
+
+---
+
+## RE-VERIFICATION — plan 35-29 live-gate re-run, 2026-08-31
+
+**This section records a change to ONE gap only. The overall `status:` is deliberately left at
+`gaps_found` for the phase verifier to re-adjudicate — this document's author is not re-scoring the
+other must-haves.**
+
+### REQ-35-20 — RESOLVED
+
+The blocking gate's four FAILs were the sole basis of this gap. All four were re-measured on the
+packaged release artifact (`/Applications/GameLib.app`, `0.7.0`, bundle mtime `Aug 31 07:54:39
+2026`) and all four PASS, together with criterion 21's re-measure and regression checks 4, 5 and
+15 — **8 measured, 8 PASS, 0 FAIL**.
+
+The gap's diagnosis was correct in every particular, and each named cause now has a landed fix:
+
+| gap artifact | cause as diagnosed | closed by |
+| --- | --- | --- |
+| `src/backend/protocol.ts:15` | `RUNNERS` omits `steam`, so a Steam deep link can never resolve | plan `35-20` Task 1 — criterion 10 PASS |
+| `src/backend/launcher.ts:320` | `addRecentGame`'s only call site is unreachable on the Steam handoff | plan `35-20` Task 2 (`dispatchSteamLaunch`) — criterion 6 PASS |
+| `src/backend/sidecar/installedJsonWatcher.ts:86` | debounced refresh sends no frontend message | plan `35-20` Task 3 — criterion 14, `origin=push` observed |
+| shared `pendingOps` counter (F-35-08-A) | one membership test governing two assertion kinds | plan `35-27` — criterion 16 PASS on both exposing configurations |
+
+The verification's reading that "Steam titles are second-class on runner-resolution paths" was the
+right unifying diagnosis: two of the four fixes are the same shape, and `dispatchSteamLaunch` exists
+specifically so the two call sites cannot drift apart again.
+
+### Qualifications that survive this resolution
+
+Recorded so a future reader does not treat `resolved` as unconditional:
+
+- **Criterion 10** proves deep-link delivery via the **argv** path. The LaunchServices **AppleEvent**
+  path was not verified on this machine.
+- **Criterion 14**'s backend and push halves are positively evidenced (`origin=push`, distinct from
+  the boot-time `origin=mount`). The **visible re-render was not observed** — the operator was not
+  watching the Library at the moment of the gesture.
+- **Criterion 21** passes its contract (logout real, credentials required), but **`D-35-19-15` is
+  NOT closed**: neither closure route was available. See `D-35-29-01`.
+
+### New items raised BY the re-run
+
+None of these existed before it, and none are in this phase's gap-closure scope fence:
+
+- **`D-35-29-01`** — plan `35-23`'s Epic cookie census is **inert at logout** (needs a login window;
+  logout has none). A defect in this cycle's own delivered fix, invisible to its unit tests.
+- **`D-35-29-02`** — four Epic auth cookies survive logout on the primary domain. Inert for
+  re-auth; cause not established.
+- **`D-35-29-03`** — the tray About window opens without focus, on a secondary display.
+- **Criterion 5 contract defect** — its `Sink:` line names `gamelib-shell.log`, which its
+  `eprintln!`-only call sites at `main.rs:725`/`:730` cannot write to.
+
+### Gaps NOT touched by this re-run
+
+The remaining gaps stand exactly as recorded: `pnpm lint` (routed to Phase 39), Windows/Linux
+parity (routed to Phase 38), and the records-hygiene items addressed separately by plan `35-28`.
+
+_Re-verified: 2026-08-31 — plan 35-29 Task 4_
