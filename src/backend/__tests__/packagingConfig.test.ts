@@ -39,6 +39,19 @@ const TAURI_CONF_PATH = join(
   'src-tauri',
   'tauri.conf.json'
 )
+type OverlayPlatform = 'macos' | 'windows' | 'linux'
+const PLATFORM_CONF_PATHS: Record<OverlayPlatform, string> = {
+  macos: join(__dirname, '..', '..', '..', 'src-tauri', 'tauri.macos.conf.json'),
+  windows: join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'src-tauri',
+    'tauri.windows.conf.json'
+  ),
+  linux: join(__dirname, '..', '..', '..', 'src-tauri', 'tauri.linux.conf.json')
+}
 const VITE_CONFIG_PATH = join(__dirname, '..', '..', '..', 'vite.config.ts')
 const PACKAGING_LIMITATIONS_PATH = join(
   __dirname,
@@ -82,6 +95,47 @@ function parseTauriConfig(): TauriConfig {
   return JSON.parse(readFileSync(TAURI_CONF_PATH, 'utf-8')) as TauriConfig
 }
 
+// quick-260901-8rm: the base tauri.conf.json no longer carries a wholesale `bin` resource
+// entry (Tauri platform overlays can only ADD/OVERRIDE a key onto the base, never remove one --
+// so the wholesale key had to go, not just be shadowed). Each platform's bin/ tree instead
+// lives in its own tauri.{platform}.conf.json overlay, deep-merged onto the base at build time.
+// `mergedResourceMap` reproduces that merge in-test so the shape invariants below can run
+// against what actually ships, not just against the base's now-bin-less map.
+function parsePlatformOverlay(platform: OverlayPlatform): TauriConfig {
+  return JSON.parse(
+    readFileSync(PLATFORM_CONF_PATHS[platform], 'utf-8')
+  ) as TauriConfig
+}
+
+function mergedResourceMap(platform: OverlayPlatform): Record<string, string> {
+  const base = parseTauriConfig().bundle.resources as Record<string, string>
+  const overlay = parsePlatformOverlay(platform).bundle
+    .resources as Record<string, string>
+  return { ...base, ...overlay }
+}
+
+const OVERLAY_PLATFORMS: readonly OverlayPlatform[] = [
+  'macos',
+  'windows',
+  'linux'
+]
+
+// Windows ships the whole `x64/win32/` DIRECTORY entry (which already contains
+// EpicGamesLauncher.exe and GalaxyCommunication.exe alongside legendary/gogdl/nile/comet),
+// while macOS and Linux ship those two exes as explicit FILE entries without the rest of the
+// win32 tree. A plain substring match on the exe's own name only catches the file-entry case --
+// this walks the merge the same way tauri_utils::resources does (directory entries take the
+// walkdir branch and cover every path beneath them) so the check is correct for both shapes.
+function mergedMapCoversBinPath(
+  platform: OverlayPlatform,
+  relPath: string
+): boolean {
+  const fullSource = `../build/bin/${relPath}`
+  return Object.keys(mergedResourceMap(platform)).some((source) =>
+    source.endsWith('/') ? fullSource.startsWith(source) : source === fullSource
+  )
+}
+
 // The four `electron-builder.yml` describes (macOS onedir glob, Windows-stays-flat and
 // Linux-stays-flat negative guards, and the unrelated-blocks-unchanged pin) were REMOVED by
 // Phase 35 Plan 14: that file was deleted with the Electron packaging path. They asserted how
@@ -100,14 +154,13 @@ describe('src-tauri/tauri.conf.json runner-tree staging (Phase 34.9 Plan 07)', (
     ).toBeGreaterThan(0)
   })
 
-  test('bundle.resources references the bin tree', () => {
-    const config = parseTauriConfig()
-    const resources = config.bundle.resources
-    const asText = Array.isArray(resources)
-      ? resources.join(',')
-      : JSON.stringify(resources)
-    expect(asText).toContain('bin')
-  })
+  test.each(OVERLAY_PLATFORMS)(
+    "platform=%s's merged bundle.resources references the bin tree (base itself no longer does -- quick-260901-8rm)",
+    (platform) => {
+      const asText = JSON.stringify(mergedResourceMap(platform))
+      expect(asText).toContain('bin')
+    }
+  )
 
   test('bundle.externalBin is exactly ["binaries/gamelib-sidecar"] (regression guard for tauri-apps/tauri#11992)', () => {
     const config = parseTauriConfig()
@@ -169,48 +222,55 @@ describe('R-34.5-G1-PKG half (a): bundle.resources targets a path publicDir can 
     expect(Array.isArray(parseTauriConfig().bundle.resources)).toBe(false)
   })
 
-  test('every target subpath begins with "build/" so it lands at Contents/Resources/build/...', () => {
-    for (const target of Object.values(resourceMap())) {
-      expect(target.startsWith('build/')).toBe(true)
-    }
-  })
+  // quick-260901-8rm: these four shape invariants used to run against the base map alone. Now
+  // that the base map's own `bin` entry is gone (narrowed into three per-platform overlays,
+  // see the merge helper above), running them against the base alone would only prove the
+  // four non-bin entries are well-formed -- it would say nothing about what an overlay adds.
+  // They now run against what actually SHIPS: the base merged with each platform's overlay.
+  describe.each(OVERLAY_PLATFORMS)('merged map for platform=%s', (platform) => {
+    test('every target subpath begins with "build/" so it lands at Contents/Resources/build/...', () => {
+      for (const target of Object.values(mergedResourceMap(platform))) {
+        expect(target.startsWith('build/')).toBe(true)
+      }
+    })
 
-  test('no target contains ".." -- resource_relpath would turn it back into an "_up_" segment', () => {
-    for (const target of Object.values(resourceMap())) {
-      expect(target.split('/')).not.toContain('..')
-    }
-  })
+    test('no target contains ".." -- resource_relpath would turn it back into an "_up_" segment', () => {
+      for (const target of Object.values(mergedResourceMap(platform))) {
+        expect(target.split('/')).not.toContain('..')
+      }
+    })
 
-  test('every publicDir-resolved asset class is carried, not only bin/', () => {
-    // Derived from the measured publicDir consumer sweep in 35-04-PLAN.md: paths.ts (bin/,
-    // webviewPreload.js, icon.png), utils.ts (bin/, changelog.json), main.ts + the sidecar i18n
-    // path (locales/). Locales are named explicitly because they are what the DMG probe proved
-    // missing -- but the defect class is the whole publicDir tree, not the locales alone.
-    const keys = Object.keys(resourceMap()).join(' ')
-    for (const required of [
-      'bin',
-      'locales',
-      'changelog.json',
-      'webviewPreload.js',
-      'icon.png'
-    ]) {
-      expect(keys).toContain(required)
-    }
-  })
+    test('every publicDir-resolved asset class is carried, not only bin/', () => {
+      // Derived from the measured publicDir consumer sweep in 35-04-PLAN.md: paths.ts (bin/,
+      // webviewPreload.js, icon.png), utils.ts (bin/, changelog.json), main.ts + the sidecar i18n
+      // path (locales/). Locales are named explicitly because they are what the DMG probe proved
+      // missing -- but the defect class is the whole publicDir tree, not the locales alone.
+      const keys = Object.keys(mergedResourceMap(platform)).join(' ')
+      for (const required of [
+        'bin',
+        'locales',
+        'changelog.json',
+        'webviewPreload.js',
+        'icon.png'
+      ]) {
+        expect(keys).toContain(required)
+      }
+    })
 
-  test('T-35-14: Electron main/preload output and build intermediates are NEVER bundled', () => {
-    // build/main/ and build/preload/ are Electron main-process code. Shipping them inside the
-    // Tauri artifact would be executable code with no live loader and no owner. sea-config.json
-    // and sidecar-prep.blob are build intermediates.
-    const keys = Object.keys(resourceMap()).join(' ')
-    for (const forbidden of [
-      '/main',
-      '/preload',
-      'sea-config',
-      'sidecar-prep'
-    ]) {
-      expect(keys).not.toContain(forbidden)
-    }
+    test('T-35-14: Electron main/preload output and build intermediates are NEVER bundled', () => {
+      // build/main/ and build/preload/ are Electron main-process code. Shipping them inside the
+      // Tauri artifact would be executable code with no live loader and no owner. sea-config.json
+      // and sidecar-prep.blob are build intermediates.
+      const keys = Object.keys(mergedResourceMap(platform)).join(' ')
+      for (const forbidden of [
+        '/main',
+        '/preload',
+        'sea-config',
+        'sidecar-prep'
+      ]) {
+        expect(keys).not.toContain(forbidden)
+      }
+    })
   })
 
   test('locales are carried as a DIRECTORY entry, never a glob (a glob flattens and collides)', () => {
@@ -225,6 +285,73 @@ describe('R-34.5-G1-PKG half (a): bundle.resources targets a path publicDir can 
     expect(localeKeys.length).toBe(1)
     expect(localeKeys[0]).not.toContain('*')
     expect(localeKeys[0].endsWith('/')).toBe(true)
+  })
+})
+
+/**
+ * quick-260901-8rm: narrows `bundle.resources` from a single wholesale
+ * `"../build/bin/": "build/bin"` entry (shipping all six `bin/{arch}/{platform}` runner trees
+ * inside EVERY platform's artifact) into three per-platform overlays. A macOS artifact should
+ * carry only the darwin runner trees plus the two Windows exes it genuinely executes under
+ * Wine (legendary/games.ts:919-937, launcher.ts:927 -- neither has a platform guard), and
+ * should never carry arm64/win32, x64/linux or arm64/linux.
+ */
+describe('bin-tree narrowing: base carries no wholesale bin/ key, overlays carry exactly what each platform needs (quick-260901-8rm)', () => {
+  test('NEGATIVE: no key in the base map matches bin/ -- if this regresses, every overlay below becomes decorative', () => {
+    const base = parseTauriConfig().bundle.resources as Record<string, string>
+    for (const key of Object.keys(base)) {
+      expect(key).not.toMatch(/bin\//)
+    }
+  })
+
+  test.each(OVERLAY_PLATFORMS)(
+    'platform=%s overlay file parses and its bundle.resources is the map form',
+    (platform) => {
+      const overlay = parsePlatformOverlay(platform)
+      expect(overlay.bundle.resources).toBeDefined()
+      expect(Array.isArray(overlay.bundle.resources)).toBe(false)
+      expect(typeof overlay.bundle.resources).toBe('object')
+    }
+  )
+
+  test.each(OVERLAY_PLATFORMS)(
+    'platform=%s merged map has strictly more keys than the base map (anti-vacuity: a typo\'d/unreadable overlay must not read as clean)',
+    (platform) => {
+      const baseKeyCount = Object.keys(
+        parseTauriConfig().bundle.resources as Record<string, string>
+      ).length
+      const mergedKeyCount = Object.keys(mergedResourceMap(platform)).length
+      expect(mergedKeyCount).toBeGreaterThan(baseKeyCount)
+    }
+  )
+
+  test.each(OVERLAY_PLATFORMS)(
+    'platform=%s merged map covers both x64/win32 Wine exes, as a file entry or via an enclosing directory entry (F1: macOS AND Linux copy them into a Wine prefix with no platform guard; Windows runs them natively as part of its x64/win32 directory)',
+    (platform) => {
+      expect(
+        mergedMapCoversBinPath(platform, 'x64/win32/EpicGamesLauncher.exe')
+      ).toBe(true)
+      expect(
+        mergedMapCoversBinPath(platform, 'x64/win32/GalaxyCommunication.exe')
+      ).toBe(true)
+    }
+  )
+
+  test('macOS merged map carries no linux/ tree and no arm64/win32 tree', () => {
+    const keys = Object.keys(mergedResourceMap('macos'))
+    expect(keys.some((k) => k.includes('linux'))).toBe(false)
+    expect(keys.some((k) => k.includes('arm64/win32'))).toBe(false)
+  })
+
+  test('windows merged map carries no darwin/ tree and no linux/ tree', () => {
+    const keys = Object.keys(mergedResourceMap('windows'))
+    expect(keys.some((k) => k.includes('darwin'))).toBe(false)
+    expect(keys.some((k) => k.includes('linux'))).toBe(false)
+  })
+
+  test('linux merged map carries no darwin/ tree', () => {
+    const keys = Object.keys(mergedResourceMap('linux'))
+    expect(keys.some((k) => k.includes('darwin'))).toBe(false)
   })
 })
 

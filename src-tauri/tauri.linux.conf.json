@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "resources": {
+      "../build/bin/x64/linux/": "build/bin/x64/linux",
+      "../build/bin/arm64/linux/": "build/bin/arm64/linux",
+      "../build/bin/x64/win32/EpicGamesLauncher.exe": "build/bin/x64/win32/EpicGamesLauncher.exe",
+      "../build/bin/x64/win32/GalaxyCommunication.exe": "build/bin/x64/win32/GalaxyCommunication.exe",
+      "../build/bin/legendary.LICENSE": "build/bin/legendary.LICENSE"
+    }
+  }
+}
