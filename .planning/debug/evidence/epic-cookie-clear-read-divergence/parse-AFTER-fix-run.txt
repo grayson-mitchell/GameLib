@@ -1,0 +1,66 @@
+FILE: .planning/debug/evidence/epic-cookie-clear-read-divergence/jar-AFTER-fix-run.binarycookies
+pages: 16 LIVE COOKIE RECORDS: 51
+
+login.gog.com                    galaxy-login-s         path=/    vlen=   26 exp=2027-03-07T10:04:49 created=2026-08-19T10:04:49
+login.gog.com                    galaxy-login-al        path=/    vlen=  150 exp=2027-08-19T10:05:27 created=2026-08-19T10:05:27
+login.gog.com                    galaxy-login-tsa       path=/    vlen=  150 exp=2027-01-27T23:15:44 created=2026-07-31T23:15:44
+.applegamingwiki.com             _ga_10XTTXMB7R         path=/    vlen=   45 exp=2027-09-26T04:53:32 created=2026-08-22T04:53:32
+.applegamingwiki.com             _ga                    path=/    vlen=   27 exp=2027-09-26T04:51:28 created=2026-08-22T04:51:28
+.applegamingwiki.com             at_gd                  path=/    vlen=   40 exp=2027-08-22T04:51:22 created=2026-08-22T04:51:22
+.youtube.com                     __Secure-YNID          path=/    vlen=  348 exp=2027-02-02T07:53:26 created=2026-08-06T07:53:26
+.youtube.com                     VISITOR_INFO1_LIVE     path=/    vlen=   11 exp=2027-01-28T11:15:59 created=2026-08-01T11:15:59
+.youtube.com                     VISITOR_PRIVACY_METADATA path=/    vlen=   20 exp=2027-01-28T11:15:59 created=2026-08-01T11:15:59
+.youtube.com                     __Secure-ROLLOUT_TOKEN path=/    vlen=   42 exp=2027-02-02T07:53:26 created=2026-08-06T07:53:26
+www.applegamingwiki.com          _pk_id.53.96c6         path=/    vlen=   52 exp=2027-09-19T04:51:22 created=2026-08-22T04:51:28
+.amazon.com                      session-id             path=/    vlen=   19 exp=2027-08-19T10:17:33 created=2026-08-19T10:17:33
+.amazon.com                      session-id-time        path=/    vlen=   11 exp=2027-08-19T10:17:33 created=2026-08-19T10:17:33
+.amazon.com                      sst-main               path=/    vlen=  265 exp=2027-08-19T10:17:33 created=2026-08-19T10:17:33
+.amazon.com                      ubid-main              path=/    vlen=   19 exp=2027-08-19T10:17:33 created=2026-08-19T10:17:33
+.amazon.com                      session-token          path=/    vlen=  224 exp=2027-08-19T10:17:33 created=2026-08-19T10:17:33
+.amazon.com                      i18n-prefs             path=/    vlen=    3 exp=2027-08-19T10:17:33 created=2026-08-19T10:17:33
+.amazon.com                      lc-main                path=/    vlen=    5 exp=2027-08-19T10:17:33 created=2026-08-19T10:17:33
+.amazon.com                      sp-cdn                 path=/    vlen=    9 exp=2027-07-31T23:10:09 created=2026-07-31T23:10:09
+.www.codeweavers.com             cw                     path=/    vlen=   26 exp=2026-09-21T04:50:18 created=2026-08-22T04:50:18
+.applegamingwiki.com             cf_clearance           path=/    vlen=  426 exp=2027-08-22T04:51:22 created=2026-08-22T04:51:22
+.metacritic.com                  cf_clearance           path=/    vlen=  426 exp=2027-08-22T22:52:23 created=2026-08-22T22:52:23
+.gog.com                         gog_lc                 path=/    vlen=    9 exp=2027-08-19T10:05:28 created=2026-08-19T10:05:28
+.gog.com                         gog-al                 path=/    vlen=  150 exp=2027-05-19T10:05:28 created=2026-08-19T10:05:28
+.rtb.mx                          amuid2_p               path=/    vlen=   36 exp=2027-08-22T22:52:35 created=2026-08-22T22:52:35
+.rtb.mx                          amdt_t_p               path=/    vlen=   16 exp=2027-08-22T22:52:35 created=2026-08-22T22:52:35
+www.amazon.com                   csm-hit                path=/    vlen=   68 exp=2027-08-04T10:17:33 created=2026-08-19T10:17:33
+api.hcaptcha.com                 hmt_id                 path=/    vlen=   36 exp=2026-09-30T09:02:41 created=2026-08-31T09:02:41
+www.humblebundle.com             fu                     path=/    vlen=    1 exp=2026-09-22T03:45:27 created=2026-08-23T03:45:27
+.www.humblebundle.com            __lt__cid              path=/    vlen=   36 exp=2027-09-27T04:14:01 created=2026-08-23T04:14:01
+.metacritic.com                  exp_bucket             path=/    vlen=    5 exp=2027-09-26T22:52:20 created=2026-08-22T22:52:20
+.metacritic.com                  exp_bucket_2           path=/    vlen=    5 exp=2027-09-26T22:52:20 created=2026-08-22T22:52:20
+.humblebundle.com                csrf_cookie            path=/    vlen=   29 exp=2027-02-19T03:43:55 created=2026-08-23T03:43:55
+.humblebundle.com                _simpleauth_sess       path=/    vlen=  208 exp=2026-11-21T04:14:02 created=2026-08-23T04:14:02
+.humblebundle.com                optimizelyEndUserId    path=/    vlen=   36 exp=2027-02-19T04:14:01 created=2026-08-23T04:14:01
+.humblebundle.com                OPTY$$oeu1787456635653r0.6940192004432958$$5860319721947136$$VMAP path=/    vlen=   50 exp=2027-02-19T03:43:55 created=2026-08-23T03:43:55
+.humblebundle.com                OPTY$$oeu1787456635653r0.6940192004432958$$5860319721947136$$VPROF path=/    vlen=   85 exp=2027-02-19T03:43:55 created=2026-08-23T03:43:55
+.humblebundle.com                OPTY$$oeu1787456158192r0.43296436807365735$$5860319721947136$$VMAP path=/    vlen=   50 exp=2027-02-19T04:14:01 created=2026-08-23T04:14:01
+.humblebundle.com                OPTY$$oeu1787456158192r0.43296436807365735$$5860319721947136$$VPROF path=/    vlen=  121 exp=2027-02-19T04:14:01 created=2026-08-23T04:14:01
+.humblebundle.com                optimizelySession      path=/    vlen=    1 exp=2027-02-19T04:14:01 created=2026-08-23T04:14:01
+.humblebundle.com                OTGPPConsent           path=/    vlen=   22 exp=2027-08-23T04:14:01 created=2026-08-23T04:14:01
+.humblebundle.com                _gcl_au                path=/    vlen=   25 exp=2026-11-21T03:45:27 created=2026-08-23T03:45:27
+.humblebundle.com                v2_humblebundlelive    path=/    vlen=   54 exp=2027-08-23T04:14:01 created=2026-08-23T04:14:01
+.humblebundle.com                _ga_521T2JFWQS         path=/    vlen=   54 exp=2027-09-27T03:45:27 created=2026-08-23T03:45:27
+.humblebundle.com                _ga                    path=/    vlen=   27 exp=2027-09-27T03:45:27 created=2026-08-23T03:45:27
+.humblebundle.com                _fbp                   path=/    vlen=   36 exp=2026-11-21T04:14:01 created=2026-08-23T04:14:01
+.humblebundle.com                IR_PI                  path=/    vlen=   52 exp=2027-08-23T04:14:02 created=2026-08-23T04:14:02
+.humblebundle.com                _clck                  path=/    vlen=   28 exp=2027-08-23T03:45:27 created=2026-08-23T03:45:27
+.humblebundle.com                OptanonConsent         path=/    vlen=  413 exp=2027-08-23T04:14:01 created=2026-08-23T04:14:01
+.humblebundle.com                _rdt_uuid              path=/    vlen=   50 exp=2026-11-21T04:14:01 created=2026-08-23T04:14:01
+.humblebundle.com                _uetvid                path=/    vlen=   32 exp=2027-09-17T04:14:02 created=2026-08-23T04:14:02
+
+=== EPIC-OWNED LIVE RECORDS: 0 ===
+=== D-35-29-02 NAMED FOUR, live-record presence ===
+  _epicSID         live records: 0
+  _tald            live records: 0
+  EPIC_DEVICE      live records: 0
+  EPIC_LOGIN_ID    live records: 0
+=== raw strings() occurrences of the four names ===
+  _epicSID         byte occurrences in file: 0
+  _tald            byte occurrences in file: 0
+  EPIC_DEVICE      byte occurrences in file: 0
+  EPIC_LOGIN_ID    byte occurrences in file: 0

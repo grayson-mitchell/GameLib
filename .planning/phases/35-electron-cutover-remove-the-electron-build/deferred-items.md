@@ -2297,6 +2297,36 @@ checked.
 
 ## D-35-29-02 — four Epic auth cookies survive logout on the PRIMARY domain (inert for re-auth)
 
+**RESOLVED 2026-08-31 21:03 — debug session `epic-cookie-clear-read-divergence` (`.planning/debug/resolved/`). Live-verified PASS. Both competing explanations above are FALSIFIED; the cause is a third one.**
+
+**The cookies never survived. The logout re-created them, using its own hidden webviews.**
+
+`clearEpicCookies` called `seam.open(EPIC_LOGIN_ORIGIN, {visible:false})` — a hidden webview on Epic's LIVE login page — solely to obtain a window handle that the macOS path then never uses. `main.rs` states this outright: the pristine Epic webview is never Tauri-registered, so `app.get_webview_window(label)` is `None` for ANY label, and both cookie arms take their `WKWebsiteDataStore::defaultDataStore()` fallback *because* of that `None` ("deliberately label-independent, taking only the domain to filter on"). The window bought nothing — and its page load is real network traffic that Epic and Cloudflare answer by setting `__cf_bm`, `EPIC_DEVICE`, `EPIC_LOGIN_ID`, `_epicSID` and `_tald`, concurrently with the clear loop and for ~1-2s after its last census. `clearEpicStorage` then opened a SECOND live window at the same URL, AFTER the cookie step, with no sweep behind it.
+
+**How this was settled, after the item stood undistinguished for two runs:** the parser emits UTC; this machine and `gamelib.log` are UTC+12. Converted, every surviving record's `created` second lands on its own clear — dev clear 19:27:14-15 -> records created 19:27:14/:15/:15/:15/:15/:16; packaged clear 18:15:15 -> records created 18:15:16/:16/:16/:16/:17. Corroborated independently: both `__cf_bm` records carried an expiry exactly 30 minutes after creation, Cloudflare's bot-management TTL, which only a live HTTPS round trip can mint. Explanation 2 above ("re-created in the ~3s before the file write") was directionally right and never tested; explanation 1 (`wry-cookie-delete-lies-about-deleting`) is wrong here — the delete deletes, and the jar total falls monotonically 57->54->54->53->52->51 across the sweep.
+
+**The "two jars" framing was also a red herring.** They are ONE shared store: the dev jar held 56 live records of which exactly 2 were expired, and 56-2 = 54 = the census's own reported `after(total=54)`.
+
+**`EPIC_SESSION_AP` was a timezone misread, not a fifth survivor.** `2026-08-31T06:17:18Z` = **18:17:18 LOCAL** — two minutes *after* the 18:15:15 clear, not nine hours before it. The packaged log shows a deliberate re-login at 18:16:34 with `status=captured` at 18:17:19; the cookie was minted one second before that capture completed. It is that login's own session credential.
+
+**Fix** (`src/backend/storeManagers/legendary/user.ts`): (1) macOS opens NO window for the cookie step — it passes a label that cannot resolve, which is exactly the precondition the Rust fallback already requires, so the same Rust code runs with the page load removed; off macOS a window is still needed and is pointed at `https://gamelib.invalid/`. (2) `clearEpicStorage` now runs BEFORE `clearEpicCookies` — the storage step must load Epic's origin (origin-scoped storage), so the cookie sweep has to come after it. (3) A final post-clear verification census over all five hosts decides the reported outcome; a residual is fatal (REQ-35-07's literal contract).
+
+**Live gate, 2026-08-31 21:03** (dev build pid 85098; jar identified by which mtime moved — `gamelib-shell.binarycookies` 20:48->21:03, packaged jar untouched at 18:17):
+- product: `post-clear verification — 0 Epic-owned cookie(s) remain across 5 domain(s)`
+- independent index-walking parse of the same jar: **0** Epic-owned live records, 0 by domain substring, 0 by cookie-name substring, and **0 raw byte occurrences** of `EPIC_SESSION_AP`, `_epicSID`, `_tald`, `EPIC_DEVICE`, `EPIC_LOGIN_ID`
+- **0 `__cf_bm` anywhere** — no Cloudflare receipt, so no page load happens in teardown at all
+- all four arithmetic reconciliations that the pre-fix run FAILED now hold: jar total 59->51 = 8 = reported cleared 8; per-host deltas sum to 8; every per-host delta matches its own census; 51 live records - 0 expired = census `after(total=51)`
+- not vacuous: BEFORE census measured `matched=8` (pre-fix baseline was 3); all 8 removed
+- no collateral damage: 0 non-Epic records lost; Humble/GOG/Amazon sessions intact
+
+**Residual, and it is NOT closed by this:** [[D-35-19-15]]'s sibling-domain sub-criterion is still unexercised — all four of fortnite/unrealengine/twinmotion/metahuman reported `before(matched=0)`. Note the reason, which is a consequence of the fix: pre-fix each showed `before(matched=1)`, and those cookies were set by the logout's OWN hidden window. Removing the window removed the only thing that had ever populated them during a logout. Proving they clear now needs a deliberately seeded fixture.
+
+**Also worth knowing before the next `grep`:** an `api.hcaptcha.com`/`hmt_id` cookie PARTITIONED to `https://epicgames.com` survives logout, so the string `epicgames` still appears once in the jar's bytes after a clean logout. It is correctly out of scope (hcaptcha.com is not Epic-owned; clearing it is the REQ-34.4.1-06 harm) and carries no Epic session.
+
+---
+
+
+
 Found: criterion 21 re-run, 2026-08-31. Status: **OPEN, and now REPRODUCED on a second,
 differently-keyed jar (2026-08-31 19:27, quick task `260831-q93` Task 3). Cause still NOT
 established; the two competing explanations below remain undistinguished and neither is
