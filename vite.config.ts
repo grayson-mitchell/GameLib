@@ -60,6 +60,7 @@ import path from 'path'
 import type { Plugin } from 'vite'
 
 import { preserveRunnerSymlinksPlugin } from './meta/preserveRunnerSymlinks'
+import { pruneStaleHelperBinariesPlugin } from './meta/pruneStaleHelperBinaries'
 
 // Copied, not imported, from `electron.vite.config.ts` on purpose: plan 35-14
 // deletes that file, and an import would take this config down with it.
@@ -104,6 +105,10 @@ export default defineConfig(({ mode }) => ({
     outDir: 'build',
     // MUST stay false. `build/` also holds `bin/`, `locales/`, the SEA prep
     // blob and the sidecar output, all written by other build steps.
+    // Quick task 260901-a2w: this is also why build/bin can accumulate
+    // stale entries across builds -- do NOT "fix" that by flipping this to
+    // true. The fix is `pruneStaleHelperBinariesPlugin()` in the plugins
+    // array below, a targeted mirror-prune, not a wholesale empty.
     emptyOutDir: false,
     minify: true,
     modulePreload: { polyfill: false },
@@ -115,6 +120,24 @@ export default defineConfig(({ mode }) => ({
     react(),
     svgr(),
     mode !== 'production' && vite_plugin_react_dev_tools,
+    // Quick task 260901-a2w: `emptyOutDir` stays false above so vite's
+    // publicDir copy only ever ADDS to build/bin -- nothing in this
+    // pipeline ever deleted a stale entry, which is how build/bin ended up
+    // shipping 182 files (46.64 MiB) of a superseded helper release that no
+    // longer exists in public/bin. This plugin supplies the missing
+    // subtraction as a MIRROR-PRUNE (delete only what's absent from
+    // public/bin) rather than an `rm -rf build/bin` -- an unconditional
+    // wipe is unsafe because `download-helper-binaries` decides what to
+    // (re)download from a stored tag, not from what's on disk, so a wipe is
+    // not undone by re-running it. Runs at `buildStart`, which fires at
+    // rollup input resolution -- strictly before vite's publicDir copy and
+    // therefore strictly before `preserveRunnerSymlinksPlugin`'s
+    // `closeBundle` below. The two plugins share no hook, so this ordering
+    // is a property of vite's build lifecycle, not of array position, and
+    // cannot race the symlink restore. It also refuses to run at all -- and
+    // deletes nothing -- when public/bin is not fully populated. See
+    // meta/pruneStaleHelperBinaries.ts for the full guard.
+    pruneStaleHelperBinariesPlugin(),
     // F-34.9-01: vite's copyDir (publicDir -> outDir) dereferences
     // symlinks -- every Python.framework symlink inside the onedir
     // runners becomes a real file/directory in build/, which codesign

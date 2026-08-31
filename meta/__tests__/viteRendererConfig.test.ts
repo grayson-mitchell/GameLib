@@ -123,6 +123,47 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
         )
       })
 
+      // Quick task 260901-a2w.
+      it('keeps pruneStaleHelperBinariesPlugin in the plugin set', () => {
+        expect(pluginNames(config)).toContain(
+          'gamelib-prune-stale-helper-binaries'
+        )
+      })
+
+      // 260901-a2w F4 safety argument: the prune plugin must run at
+      // buildStart (before vite's publicDir copy) and must NOT be moved
+      // onto closeBundle (where the symlink plugin lives) -- that would
+      // reopen the exact race this task's ordering comment rules out.
+      // Asserted by HOOK IDENTITY, not array index, so a re-order cannot
+      // make this vacuous and it WOULD fail if someone "simplified" the
+      // prune into closeBundle.
+      it('runs the prune plugin at buildStart, strictly before the symlink plugin at closeBundle', () => {
+        const flattened: Plugin[] = []
+        const walk = (entry: unknown): void => {
+          if (!entry) return
+          if (Array.isArray(entry)) {
+            entry.forEach(walk)
+            return
+          }
+          flattened.push(entry as Plugin)
+        }
+        walk(config.plugins)
+
+        const prunePlugin = flattened.find(
+          (p) => p.name === 'gamelib-prune-stale-helper-binaries'
+        )
+        const symlinkPlugin = flattened.find(
+          (p) => p.name === 'gamelib-preserve-runner-symlinks'
+        )
+
+        expect(prunePlugin).toBeDefined()
+        expect(prunePlugin?.buildStart).toBeDefined()
+        expect(prunePlugin?.closeBundle).toBeUndefined()
+
+        expect(symlinkPlugin).toBeDefined()
+        expect(symlinkPlugin?.closeBundle).toBeDefined()
+      })
+
       it('serves the dev server on the port tauri.conf.json devUrl hardcodes', () => {
         expect(config.server?.port).toBe(5173)
         expect(config.server?.strictPort).toBe(true)
