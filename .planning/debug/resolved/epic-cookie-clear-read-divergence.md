@@ -157,6 +157,33 @@ Survivors: `_epicSID`, `_tald`, `EPIC_DEVICE`, `EPIC_LOGIN_ID`, and `EPIC_SESSIO
   found: it is inside the VALUE of `api.hcaptcha.com` / `hmt_id`, in a WebKit bplist carrying `StoragePartition` + `AccessTime` + `https://epicgames.com`. It is a partitioned third-party cookie whose PARTITION KEY is Epic — the record's own domain is `api.hcaptcha.com` and its name is `hmt_id`. It carries no Epic session; it is an hCaptcha device identifier.
   implication: NOT in scope and correctly left alone — hcaptcha.com is not Epic-owned, and clearing it would sign the user out of hCaptcha across every other site that uses it, precisely the REQ-34.4.1-06 harm D-09-CORRECTED forbids. Recorded here so a future `grep epicgames` over this jar does not re-open a closed defect.
 
+- timestamp: 2026-08-31T21:45Z
+  checked: FOLLOW-UP DEFECT, found by independent adjudication (35-VERIFICATION 4th pass) in the verification sweep THIS SESSION ADDED
+  found: |
+    The residual sweep was FAIL-OPEN on a rejecting read. `readHostCensus` is
+    deliberately non-fatal — it catches a rejecting `seam.cookiesForDomain` and returns
+    `{ jarTotal: null, matched: 0, verdict: UNSUPPORTED_OR_ERROR }` — and the residual
+    loop consumed only `verify.matched`, ignoring `verify.verdict`. With all five
+    verification reads rejecting, `residualTotal` was 0 and the product emitted
+    `post-clear verification — 0 Epic-owned cookie(s) remain across 5 domain(s)`:
+    an AFFIRMATIVE certification of a fact no read ever measured.
+    Not exotic — all-reads-reject was 100% of production behaviour on every Epic logout
+    from plan 35-23's landing until commit 9106ccbea (D-35-29-01), and it is the most
+    likely off-macOS shape.
+  implication: |
+    This is the recorded `fixing-a-fail-open-gate-can-create-its-sibling` shape, and I
+    committed it. The sweep existed to stop the product reporting success without a
+    confirming read, and its first version could do exactly that one level over — the
+    same defect class, in the fix for that defect class. Two lessons stand: a
+    non-fatal read helper's DEFAULT return value is a silent policy decision at every
+    consumer, and my own RED proof did not catch it because I only ever mutated the
+    code, never the fixture — the all-reads-reject branch was never in any test.
+
+- timestamp: 2026-08-31T21:50Z
+  checked: why a 50/50 green suite could not see it
+  found: `epicLogoutDomains.test.ts` and `user.test.ts` both defaulted `makeMockSeam`'s `cookiesForDomain` to a bare `jest.fn()` returning `undefined` — every census read rejecting, the exact pre-9106ccbea production shape — while `clearCookies` reported nonzero deltas. That combination is internally inconsistent (nothing can clear N cookies out of a jar holding zero records), and it meant most of the suite was exercising the fail-open branch and scoring it green.
+  implication: an inconsistent fixture does not merely fail to test a branch — it can make the WRONG branch the one under test everywhere, and report it as passing. Both files now default to a live jar with no Epic cookies; the five tests whose subject genuinely IS the legacy fail-closed zero-total path keep the unreadable fixture, stated explicitly at each site.
+
 ## Resolution
 
 verdict: PASS — live-verified 2026-08-31 21:03. Reported state matches an independent parse.
@@ -179,7 +206,13 @@ residuals: |
      survives logout. Correctly out of scope (hcaptcha.com is not Epic-owned; clearing it
      is the REQ-34.4.1-06 harm) and it carries no Epic session — but it means the string
      `epicgames` still appears once in the jar's bytes after a clean logout.
-  4. A residual race remains in principle: a cookie written by the storage window
+  4. FIXED IN FOLLOW-UP (commit bea07cd17), recorded because I shipped it: the
+     verification sweep this session added was itself FAIL-OPEN on a rejecting read —
+     it consumed `verify.matched` and ignored `verify.verdict`, so five rejecting reads
+     certified "0 Epic-owned cookie(s) remain". Found by independent adjudication, not
+     by me. Each host now needs a trustworthy verdict (`SUPPORTED_*`) AND a zero count,
+     and an unconfirmed host is logged as `unconfirmed(VERDICT)`, never as `0`.
+  5. A residual race remains in principle: a cookie written by the storage window
      microseconds before its close could land after the final census. The verification
      sweep is what would surface it, loudly, as a failed logout rather than a false
      success.
