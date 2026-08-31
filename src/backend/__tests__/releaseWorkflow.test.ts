@@ -446,6 +446,11 @@ describeOnPosix(
       touch(root, join('build', 'index.html'), '<!doctype html>')
       touch(root, join('build', 'assets', 'index-abc123.js'))
       touch(root, join('build', 'assets', 'index-abc123.css'))
+      touch(root, join('build', 'renderer', 'index.html'), '<!doctype html>')
+      touch(
+        root,
+        join('build', 'renderer', 'assets', 'index-abc123.js')
+      )
       touch(root, join('build', 'node-dist', 'node-v26.2.0-darwin-x64.tar.gz'))
       touch(
         root,
@@ -514,6 +519,8 @@ describeOnPosix(
         join('build', 'index.html'),
         join('build', 'assets', 'index-abc123.js'),
         join('build', 'assets', 'index-abc123.css'),
+        join('build', 'renderer', 'index.html'),
+        join('build', 'renderer', 'assets', 'index-abc123.js'),
         join('build', 'bin', 'x64', 'darwin', 'steam-bridge-helper'),
         join('build', 'bin', 'x64', 'darwin', 'steam_api.dll')
       ]) {
@@ -524,6 +531,20 @@ describeOnPosix(
     test('it fails loudly if the prune ate the renderer entrypoint', () => {
       seedBuildTree(workdir, { withBridge: true })
       rmSync(join(workdir, 'build', 'index.html'))
+      const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
+        IS_MACOS: 'true'
+      })
+      expect(result.status).not.toBe(0)
+    })
+
+    // Quick task 260901-b8z: an additive guard alongside the one above.
+    // frontendDist now points at build/renderer, not build -- a build whose
+    // build/index.html survives but whose build/renderer/index.html is
+    // missing or empty would previously sail through this step and ship a
+    // white screen. This guard, and this test, are what close that gap.
+    test('it fails loudly if build/renderer/index.html is missing (frontendDist repoint guard)', () => {
+      seedBuildTree(workdir, { withBridge: true })
+      rmSync(join(workdir, 'build', 'renderer', 'index.html'))
       const result = runStepScript(extractRunBlock(PRUNE_STEP_NAME), workdir, {
         IS_MACOS: 'true'
       })

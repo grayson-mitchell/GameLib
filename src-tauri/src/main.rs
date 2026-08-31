@@ -1,7 +1,7 @@
 // GameLib Tauri v2 shell — Phase 27 walking skeleton.
 //
 // Responsibilities (all additive; the Electron build is untouched):
-//   1. Host the electron-vite renderer output (../build, via tauri.conf.json frontendDist).
+//   1. Host the plain-Vite renderer output (../build/renderer, via tauri.conf.json frontendDist).
 //   2. Spawn the Node sidecar (the existing backend behind a stdio JSON-RPC loop, produced
 //      by 27-02's `build:sidecar`) and hold its stdin/stdout.
 //   3. Expose four Tauri #[command]s that relay renderer↔sidecar traffic per the shared

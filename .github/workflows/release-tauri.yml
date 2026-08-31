@@ -423,6 +423,7 @@ jobs:
           rm -rf build/main build/preload build/node-dist
           rm -f build/sea-config.json build/sidecar-prep.blob
           test -f build/index.html
+          test -f build/renderer/index.html
           if [ "$IS_MACOS" = "true" ]; then
             test -d build/bin
           fi

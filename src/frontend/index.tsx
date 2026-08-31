@@ -112,7 +112,14 @@ applyFramelessDecorations()
 const DEFAULT_THEME = 'midnightMirage'
 
 const Backend = new HttpApi(null, {
-  addPath: 'build/locales/{{lng}}/{{ns}}',
+  // Quick task 260901-b8z: `addPath` used to live here as
+  // 'build/locales/{{lng}}/{{ns}}'. It is reached only via
+  // `backendConnector.saveMissing`, which is nowhere set in this repo, so it
+  // never executed -- and its `build/...` prefix would have been actively
+  // wrong once frontendDist repointed at build/renderer (it resolved
+  // relative to the OLD frontendDist root, not the new one). Removed rather
+  // than "fixed", since a dead option pointing at a plausible-looking path
+  // is a trap for the next reader. `loadPath` below is LIVE -- do not touch.
   loadPath: 'locales/{{lng}}/{{ns}}.json'
 })
 
