@@ -75,6 +75,37 @@ below** — their removal is "stop emitting the .pdb/.lib at build time", a
 the macOS overlay carries wholesale) because narrowing WHICH platform ships a
 directory is a different mechanism from narrowing WHAT that directory contains.
 
+### Cause 3 — Tauri's resource copy DEREFERENCES SYMLINKS (found 2026-09-01, NOT YET FIXED)
+
+Measured on the quick-260901-8rm packaged DMG, after fix (1) landed. Independent of both
+fixes above; worth ~45MB on every macOS bundle.
+
+```
+build/bin/arm64/darwin  (repo)      147,024 KB   12 symlinks   461 files
+   .../arm64/darwin     (shipped)   193,860 KB    0 symlinks   467 files
+                        inflation    46,836 KB
+```
+
+The 12 symlinks are PyInstaller's Python.framework layout, 4 per runner across
+legendary/nile/gogdl (`_internal/Python -> Python.framework/Versions/3.12/Python`,
+`Python.framework/Python -> Versions/Current/Python`,
+`Python.framework/Resources -> Versions/Current/Resources`,
+`Python.framework/Versions/Current -> 3.12`). In the shipped tree every one is a REAL FILE, so
+each runner carries the same 7,996,912-byte `Python` binary **four times** instead of once plus
+three links. Per-runner inflation 15,612 KB × 3 runners = 46,836 KB — accounting for the gap
+between the ~162MB estimate and the ~124.7MB measured saving exactly.
+
+This is **F-34.9-01's failure mode on the Tauri side**. `preserveRunnerSymlinksPlugin`
+(`meta/preserveRunnerSymlinks.ts`, wired at `vite.config.ts:126`) exists precisely because
+vite's publicDir copy dereferences these same symlinks — but nothing performs the equivalent
+repair after `bundle.resources` is copied into the artifact.
+
+Two things to check when this is planned, neither yet investigated:
+- Whether a signed RELEASE build hits the "bundle format is ambiguous" codesign rejection
+  F-34.9-01 describes. This run was `--debug` and unsigned, so it proves nothing either way.
+- Whether Tauri exposes a copy mode that preserves symlinks, or whether this needs a
+  post-bundle repair hook analogous to the vite plugin.
+
 ## Solution
 
 Two independent fixes. Sizes are uncompressed installed-footprint deltas.
@@ -95,9 +126,10 @@ read-only since Tauri deletes the intermediate `.app` when only the `dmg` target
 is requested — see `260901-8rm-MEASUREMENTS.md`):
 
 - Shipped `Contents/Resources/build/bin`: 239,444 KB vs the repo's own unnarrowed
-  `build/bin` at 367,160 KB — **saved ~124.7MB** on this run (below the plan's
-  ~162MB estimate because this run's `arm64/darwin` also carries the freshly-built
-  steam-bridge shim, which inflates the KEPT tree, not the removed one).
+  `build/bin` at 367,160 KB — **saved ~124.7MB** on this run, below the plan's ~162MB
+  estimate. **The reason is Cause 3 below, not a shortfall in fix (1)** — the executor's
+  first explanation (the freshly-built steam-bridge shim) was wrong and has been corrected
+  in `260901-8rm-MEASUREMENTS.md`.
 - `arm64/win32`, `x64/linux`, `arm64/linux` confirmed ABSENT from the shipped tree.
   `bin/x64/win32/` contains exactly the two Wine exes, nothing else.
 - **The Tauri platform-config merge is confirmed a DEEP merge, not a shallow

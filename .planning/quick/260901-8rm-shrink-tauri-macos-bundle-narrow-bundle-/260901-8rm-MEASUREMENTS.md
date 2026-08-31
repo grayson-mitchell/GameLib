@@ -59,22 +59,44 @@ x64/win32 extras=0
 | **Saved** | **127,716 KB (~124.7 MB)** |
 | Whole `.app` total (`du -sk`) | 691,684 KB (~675.5 MB) |
 
-The saving (~124.7MB) is below the plan's own "expected ~162MB" estimate. Two measured reasons,
-both visible in the file counts above and neither a fix (1) defect:
+The saving (~124.7MB) is below the plan's own "expected ~162MB" estimate.
 
-1. `arm64/darwin` grew from the plan-time baseline (93MB, `comet`/`gogdl`/`legendary`/`nile`
-   only) to 467 files / a larger footprint here because this run's `pnpm build-steam-bridge`
-   step added `steam_api.dll`, `steam_api.pdb` (2,818,048 B), `steam_api_shim.lib` (4,160 B),
-   `steam-bridge-helper` and `steam_appid.txt` into that same directory -- exactly as the plan's
-   interfaces block says it must (`public/bin/arm64/darwin/` is a directory entry precisely
-   because the build step adds to it). This inflates the KEPT tree, not the removed one, so it
-   narrows the delta between "shipped" and "repo build/bin" without indicating anything was
-   left unnarrowed.
-2. The repo's own `build/bin` (367,160 KB) is itself smaller than the plan-time `du -sh` estimate
-   of "build/bin total 351M" would suggest at first glance because that figure predates this
-   run's `build-steam-bridge` addition too -- both sides of the delta shifted together. The
-   saved-`124.7MB` figure is the correct one for THIS run; it is not evidence of a narrower
-   overlay than Task 1 built.
+**CORRECTED 2026-09-01 by the orchestrator, after the executor reported this task green.** The
+executor's original explanation here -- that `pnpm build-steam-bridge` inflated the KEPT
+`arm64/darwin` tree -- is WRONG TWICE OVER, and is retained only in this note so the error is not
+silently laundered. (a) Magnitude: the shim files total ~3.6MB (`steam_api.dll` 805,888 B +
+`steam_api.pdb` 2,818,048 B + `steam_api_shim.lib` 4,160 B + `steam-bridge-helper` 35,008 B), an
+order of magnitude short of the ~39MB gap. (b) Direction: those files land in the repo's
+`build/bin` too, so they appear on BOTH sides of the `repo - shipped` subtraction and CANCEL. They
+cannot move the delta at all.
+
+**The measured cause is that Tauri's resource copy DEREFERENCES SYMLINKS.**
+
+```
+build/bin/arm64/darwin  (repo)      147,024 KB   12 symlinks   461 files
+   .../arm64/darwin     (shipped)   193,860 KB    0 symlinks   467 files
+                        inflation    46,836 KB
+```
+
+The 12 symlinks are PyInstaller's Python.framework layout, 4 per runner across
+legendary/nile/gogdl: `_internal/Python -> Python.framework/Versions/3.12/Python`,
+`Python.framework/Python -> Versions/Current/Python`,
+`Python.framework/Resources -> Versions/Current/Resources`, and
+`Python.framework/Versions/Current -> 3.12`. In the shipped tree all of these are REAL FILES, so
+each runner carries the same 7,996,912-byte `Python` binary FOUR times instead of once plus three
+links. Per-runner inflation is 15,612 KB (legendary 47,640 -> 63,252; nile 44,860 -> 60,472;
+gogdl 40,516 -> 56,128); 15,612 x 3 = 46,836 KB, which accounts for the gap EXACTLY.
+
+This is F-34.9-01's failure mode reappearing on the Tauri side. `preserveRunnerSymlinksPlugin`
+(`meta/preserveRunnerSymlinks.ts`, `vite.config.ts:126`) restores symlinks after vite's publicDir
+copy dereferences them, but nothing performs the equivalent repair after `bundle.resources` is
+copied into the artifact. Roughly 45MB is recoverable on every macOS bundle, independently of both
+fix (1) and fix (2). Logged as a follow-up todo; NOT fixed here, because it is a third mechanism
+and folding it into this task would have made the size gate un-attributable.
+
+The saved-`124.7MB` figure remains the correct measurement for THIS run. It is not evidence that
+Task 1's overlay is narrower than intended -- the NEGATIVE half of the gate independently proves
+all three unreachable trees are absent.
 
 Anti-vacuity: shipped tree (239,444 KB, ~234MB) is far above the 100MB floor; the artifact is not
 an empty/near-empty tree passing the size check by accident.
