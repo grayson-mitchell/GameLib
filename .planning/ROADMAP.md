@@ -4633,8 +4633,8 @@ gap-closure plans `35-20`..`35-29` should land first: `35-24` touches the i18n g
 **Plans:** 9 plans
 
 Plans:
-- [ ] 39-01-PLAN.md — preload-surface gate: re-derive the stale 217 floor to the measured 206 and fix the masked 225-vs-224 Totals defect in the same edit (REQ-39-02)
-- [ ] 39-02-PLAN.md — add `getLoginWindowSeamOrThrow()`, collapse `oauthLoginCapture.ts`'s early return, correct two stale doc comments (REQ-39-03)
+- [x] 39-01-PLAN.md — preload-surface gate: re-derive the stale 217 floor to the measured 206 and fix the masked 225-vs-224 Totals defect in the same edit (REQ-39-02)
+- [x] 39-02-PLAN.md — add `getLoginWindowSeamOrThrow()`, collapse `oauthLoginCapture.ts`'s early return, correct two stale doc comments (REQ-39-03)
 - [ ] 39-03-PLAN.md — collapse `adapter.ts`'s transport ternary and its orphaned 74-line electron-net function, plus `library.ts`'s label ternary, and re-point three test files (REQ-39-03)
 - [ ] 39-04-PLAN.md — collapse both `disconnect()` wipe-step sites (Humble + Epic) and disposition `seamBranchParity.test.ts` (REQ-39-03)
 - [ ] 39-05-PLAN.md — collapse `getLiveCsrfToken()`'s inverted guard and the health-check csrf backfill (REQ-39-03)
