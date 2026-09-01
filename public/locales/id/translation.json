@@ -218,7 +218,8 @@
             "scroll": "Menggulir",
             "select": "Pilih",
             "space": "Spasi",
-            "update_game": "Perbarui gim"
+            "update_game": "Perbarui gim",
+            "exit": "Keluar"
         }
     },
     "docs": "Dokumentasi",
@@ -1119,7 +1120,6 @@
     },
     "wineExplanation": {
         "proton-ge": "GE-Proton adalah varian Proton yang dibuat oleh Glorious Eggroll. Versi ini dirancang untuk digunakan bersama peluncur umu (default di Heroic).",
-        "wine-ge": "Wine-GE-Proton adalah varian Wine yang dibuat oleh Glorious Eggroll. Versi ini sudah tidak digunakan lagi dan digantikan oleh GE-Proton dengan peluncur umu.",
         "gpt": "Game Porting Toolkit dikembangkan oleh Apple dan direkomendasikan untuk Mac Apple Silicon dengan chip M1 ke atas serta paling baik digunakan untuk game terbaru yang menggunakan DX12.",
         "wine-crossover": "Wine-Crossover didasarkan pada proyek Wine OpenSource Crossover dan direkomendasikan untuk Mac Intel serta untuk game DX11 atau yang lebih lama.",
         "wine-staging-macos": "Wine-Staging-macOS didasarkan pada proyek Wine utama dan direkomendasikan untuk Mac Intel serta untuk game DX11 atau yang lebih lama, terutama bila dipasangkan dengan alat DXMT."
@@ -1184,7 +1184,8 @@
             "pageSize": "Per halaman",
             "releaseYear": "Tahun rilis",
             "hideOwned": "Sembunyikan yang Dimiliki",
-            "wishlistOnly": "Daftar Keinginan Saja"
+            "wishlistOnly": "Daftar Keinginan Saja",
+            "platform": "Platform"
         },
         "sidebar": "Penawaran",
         "sort": {
@@ -1208,7 +1209,11 @@
         "title": "Penawaran GOG",
         "pagination": {
             "prev": "Sebelumnya"
-        }
+        },
+        "tabs": {
+            "label": "Toko"
+        },
+        "titleMulti": "Penawaran"
     },
     "steamgriddb": {
         "error": {

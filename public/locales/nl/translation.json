@@ -218,7 +218,8 @@
             "scroll": "Scroll",
             "select": "Select",
             "space": "Space",
-            "update_game": "Update game"
+            "update_game": "Update game",
+            "exit": "Afsluiten"
         }
     },
     "docs": "Documentation",
@@ -261,7 +262,7 @@
         "library": {
             "refresh": "Refresh Library"
         },
-        "abort": "",
+        "abort": "Over",
         "install": "Install",
         "uninstall": "Uninstall"
     },
@@ -1116,7 +1117,6 @@
     },
     "wineExplanation": {
         "proton-ge": "GE-Proton is een Proton variant gemaakt door Glorious Eggrol. Het is bedoelt in gebruikt te worden met de umu launcher (standaard in Heroic).",
-        "wine-ge": "Wine-GE-Proton is een Wine variant gemaakt door Glorious Eggrol. Het is verouderd en vervangen voor GE-Proton met de umu launcher.",
         "gpt": "",
         "wine-crossover": "",
         "wine-staging-macos": ""
@@ -1180,9 +1180,10 @@
             "featuresPlaceholder": "",
             "ageRatingAll": "Allemaal",
             "pageSize": "",
-            "releaseYear": ""
+            "releaseYear": "",
+            "platform": "Platform"
         },
-        "sidebar": "",
+        "sidebar": "Details",
         "sort": {
             "priceDesc": "",
             "trending": "",
@@ -1204,17 +1205,21 @@
         "title": "",
         "pagination": {
             "prev": ""
-        }
+        },
+        "tabs": {
+            "label": "Winkel"
+        },
+        "titleMulti": "Details"
     },
     "steamgriddb": {
         "error": {
             "no-games": "Geen spellen gevonden",
-            "no-grids": "",
+            "no-grids": "Geen Log was gevonden voor dit spel",
             "search": "",
             "grids": ""
         },
         "picker": {
-            "search": "",
+            "search": "Spelen zoeken",
             "title": "",
             "select-game": ""
         }
@@ -1257,7 +1262,9 @@
         "install": {
             "platform": "Platform",
             "title": "Install game",
-            "wineLoading": "Loading"
+            "wineLoading": "Loading",
+            "path": "Installeer op",
+            "wineMissing": "Geen pad geselecteerd"
         }
     },
     "next": "Volgende"

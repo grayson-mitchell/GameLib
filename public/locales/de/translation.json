@@ -225,7 +225,8 @@
             "scroll": "Scrollen",
             "select": "Auswählen",
             "space": "Leertaste",
-            "update_game": "Spiel aktualisieren"
+            "update_game": "Spiel aktualisieren",
+            "exit": "Beenden"
         }
     },
     "docs": "Dokumentation",
@@ -1051,7 +1052,6 @@
         "restore": "Fenster wiederherstellen"
     },
     "wineExplanation": {
-        "wine-ge": "Wine-GE-Proton ist eine von Glorious Eggroll entwickelte Wine-Variante. Sie wurde zugunsten von GE-Proton mit dem umu-Launcher eingestellt.",
         "proton-ge": "GE-Proton ist eine von Glorious Eggroll entwickelte Variante von Proton. Es ist für die Verwendung mit dem umu-Launcher vorgesehen (Standard in Heroic).",
         "gpt": "Das Game Porting Toolkit wird von Apple entwickelt und für Apple Silicon Macs mit den M1+ Chips empfohlen. Es funktioniert am besten für neuere Spiele, die DX12 verwenden.",
         "wine-crossover": "Wine-Crossover basiert auf dem Crossover OpenSource Wine Projekt und wird für Intel Macs und für DX11 und ältere Spiele empfohlen.",
@@ -1206,7 +1206,8 @@
             "pageSize": "je Seite",
             "releaseYear": "Erscheinungsjahr",
             "hideOwned": "bereits im Besitz ausblenden",
-            "wishlistOnly": "Nur Wunschliste"
+            "wishlistOnly": "Nur Wunschliste",
+            "platform": "Platform"
         },
         "sidebar": "Angebote",
         "sort": {
@@ -1230,7 +1231,11 @@
         "title": "GOG Angebote",
         "pagination": {
             "prev": "Vorherige"
-        }
+        },
+        "tabs": {
+            "label": "Store"
+        },
+        "titleMulti": "Angebote"
     },
     "steamgriddb": {
         "error": {

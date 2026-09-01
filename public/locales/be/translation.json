@@ -226,7 +226,8 @@
             "scroll": "Scroll",
             "select": "Выбраць",
             "space": "Прабел",
-            "update_game": "Абнавіць гульню"
+            "update_game": "Абнавіць гульню",
+            "exit": "Выхад"
         }
     },
     "docs": "Дакументацыя",
@@ -269,7 +270,7 @@
         "library": {
             "refresh": "Абнавіць бібліятэку"
         },
-        "abort": "",
+        "abort": "Аб праграме",
         "install": "Усталяванне",
         "uninstall": "Выдаліць"
     },
@@ -1048,7 +1049,6 @@
     },
     "wineExplanation": {
         "proton-ge": "GE-Proton - гэта варыянт Proton, створаны Glorious Eggroll. Ён прызначаны для выкарыстання ў Steam, але некаторыя гульні па-за Steam могуць працаваць лепш з гэтым варыянтам. Ён дае ў асноўным бескарысныя часопісы для выпраўлення непаладак.",
-        "wine-ge": "Wine-GE-Proton - гэта варыянт Wine, створаны Glorious Eggroll. Яго адмянілі на карысць GE-Proton з пускавой устаноўкай umu.",
         "gpt": "",
         "wine-crossover": "",
         "wine-staging-macos": ""
@@ -1198,11 +1198,12 @@
             "genresPlaceholder": "",
             "features": "",
             "featuresPlaceholder": "",
-            "ageRatingAll": "",
+            "ageRatingAll": "Усе",
             "pageSize": "",
-            "releaseYear": ""
+            "releaseYear": "",
+            "platform": "Platform"
         },
-        "sidebar": "",
+        "sidebar": "Падрабязнасці",
         "sort": {
             "priceDesc": "",
             "trending": "",
@@ -1224,7 +1225,11 @@
         "title": "",
         "pagination": {
             "prev": ""
-        }
+        },
+        "tabs": {
+            "label": "Крама"
+        },
+        "titleMulti": "Падрабязнасці"
     },
     "steamgriddb": {
         "error": {
@@ -1234,7 +1239,7 @@
             "grids": ""
         },
         "picker": {
-            "search": "",
+            "search": "Пошук гульняў",
             "title": "",
             "select-game": ""
         }
@@ -1265,7 +1270,7 @@
         },
         "filter": {
             "sideload": "Other",
-            "all": ""
+            "all": "Усе"
         },
         "empty": "",
         "games": "Усталяваныя гульні",
@@ -1277,7 +1282,9 @@
         "install": {
             "platform": "Platform",
             "title": "Усталяваць гульню",
-            "wineLoading": "Загрузка"
+            "wineLoading": "Загрузка",
+            "path": "Усталяванне",
+            "wineMissing": "Шлях не выбраны"
         }
     },
     "next": "Далей"

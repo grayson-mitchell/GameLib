@@ -927,7 +927,8 @@
         "installing": "Εγκατάσταση",
         "logging": "Σύνδεση...",
         "processing": "Επεξεργασία αρχείων, παρακαλώ περιμένετε",
-        "preparing_login": "Προετοιμασία σύνδεσης... "
+        "preparing_login": "Προετοιμασία σύνδεσης... ",
+        "installed": "Εγκατάσταση"
     },
     "store": "Κατάστημα Epic",
     "stores": "Καταστήματα",
@@ -1116,7 +1117,6 @@
     "amazon-luna": "Amazon Luna",
     "wineExplanation": {
         "proton-ge": "Το GE-Proton είναι μια παραλλαγή του Proton που δημιουργήθηκε από το Glorious Eggroll. Προορίζεται για χρήση μαζί με τον umu launcher (προεπιλογή στο Heroic).",
-        "wine-ge": "Το Wine-GE-Proton είναι μια παραλλαγή του Wine που δημιουργήθηκε από την Glorious Eggroll. Έχει καταργηθεί υπέρ του GE-Proton με τον umu launcher.",
         "gpt": "",
         "wine-crossover": "",
         "wine-staging-macos": ""
@@ -1177,9 +1177,10 @@
             "genresPlaceholder": "",
             "features": "",
             "featuresPlaceholder": "",
-            "ageRatingAll": "",
+            "ageRatingAll": "Όλα",
             "pageSize": "",
-            "releaseYear": ""
+            "releaseYear": "",
+            "platform": "Platform"
         },
         "sidebar": "Προσφορές",
         "sort": {
@@ -1203,17 +1204,21 @@
         "title": "Προσφορές GOG",
         "pagination": {
             "prev": ""
-        }
+        },
+        "tabs": {
+            "label": "Κατάστημα"
+        },
+        "titleMulti": "Προσφορές"
     },
     "steamgriddb": {
         "error": {
             "no-games": "",
-            "no-grids": "",
+            "no-grids": "Δεν βρέθηκαν αρχεία καταγραφής για το παιχνίδι",
             "search": "",
             "grids": ""
         },
         "picker": {
-            "search": "",
+            "search": "Αναζήτηση για Παιχνίδια",
             "title": "",
             "select-game": ""
         }
@@ -1253,7 +1258,9 @@
         "install": {
             "platform": "Platform",
             "title": "Εγκατάσταση παιχνιδιού",
-            "wineLoading": "Φόρτωση"
+            "wineLoading": "Φόρτωση",
+            "path": "Εγκατάσταση",
+            "wineMissing": "No path selected"
         }
     },
     "next": "Επόμενο"

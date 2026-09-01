@@ -218,7 +218,8 @@
             "scroll": "Scroll",
             "select": "Select",
             "space": "Space",
-            "update_game": "Update game"
+            "update_game": "Update game",
+            "exit": "Exit"
         }
     },
     "docs": "Documentation",
@@ -261,7 +262,7 @@
         "library": {
             "refresh": "Obnoviť Knižnicu"
         },
-        "abort": "",
+        "abort": "About",
         "install": "Inštalácia",
         "uninstall": "Odinštalovať"
     },
@@ -1037,7 +1038,6 @@
     },
     "wineExplanation": {
         "proton-ge": "GE-Proton je variant Proton vytvorený spoločnosťou Glorious Eggroll. Je určený na použitie v službe Steam, ale niektoré hry mimo služby Steam môžu s týmto variantom fungovať lepšie. Poskytuje väčšinou zbytočné protokoly na riešenie problémov.",
-        "wine-ge": "Wine-GE-Proton je variant Winu vytvorený spoločnosťou Glorious Eggroll. Je to odporúčaný Wine na použitie mimo služby Steam. To poskytuje užitočné protokoly pri riešení problémov.",
         "gpt": "",
         "wine-crossover": "",
         "wine-staging-macos": ""
@@ -1182,9 +1182,10 @@
             "featuresPlaceholder": "",
             "ageRatingAll": "Všetky",
             "pageSize": "",
-            "releaseYear": ""
+            "releaseYear": "",
+            "platform": "Platform"
         },
-        "sidebar": "",
+        "sidebar": "Podrobnosti",
         "sort": {
             "priceDesc": "",
             "trending": "",
@@ -1206,7 +1207,11 @@
         "title": "",
         "pagination": {
             "prev": ""
-        }
+        },
+        "tabs": {
+            "label": "Store"
+        },
+        "titleMulti": "Podrobnosti"
     },
     "steamgriddb": {
         "error": {
@@ -1216,7 +1221,7 @@
             "grids": ""
         },
         "picker": {
-            "search": "",
+            "search": "Vyhľadajte hry",
             "title": "",
             "select-game": ""
         }
@@ -1235,7 +1240,7 @@
         },
         "quit": "",
         "hints": {
-            "launch": "",
+            "launch": "Spúšťam",
             "sort": "",
             "navigate": "",
             "quit": "Quit",
@@ -1256,7 +1261,9 @@
         "install": {
             "platform": "Platform",
             "title": "Install game",
-            "wineLoading": "Načítavam…"
+            "wineLoading": "Načítavam…",
+            "path": "Inštalácia",
+            "wineMissing": "Žiadna cesta nie je vybraná"
         }
     },
     "next": ""

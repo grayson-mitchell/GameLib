@@ -226,7 +226,8 @@
             "scroll": "Przewiń",
             "select": "Wybierz",
             "space": "Spacja",
-            "update_game": "Zaktualizuj grę"
+            "update_game": "Zaktualizuj grę",
+            "exit": "Wyjście"
         }
     },
     "docs": "Dokumentacja",
@@ -1058,7 +1059,6 @@
     },
     "wineExplanation": {
         "proton-ge": "GE-Proton to wersja Proton stworzona przez Glorious Eggroll. Jest przeznaczona do użycia razem z launcherem umu (domyślnym dla Heroic).",
-        "wine-ge": "Wine-GE-Proton to wersja Wine stworzona przez Glorious Eggroll. Jest przestarzała i zamiast niej powinno używać się GE-Proton z launcherem umu.",
         "gpt": "Game Porting Toolkit jest rozwijany przez Apple i rekomendowany dla Maców Apple Silicon z procesorem M1+. Działa najlepiej dla nowszych gier, które używają DX12.",
         "wine-crossover": "Wine-Crossover bazowany jest na projekcie Crossover OpenSource Wine. Rekomendowany jest dla Maców z procesorem Intel i gier używających DX11 lub starszych.",
         "wine-staging-macos": "Wine-Staging-macOS bazowany jest na głównym projekcie Wine. Rekomendowany jest dla Maców z procesorem Intel i gier używających DX11 lub starszych, w szczególności gdy używane jest też narzędzie DXMT."
@@ -1212,7 +1212,8 @@
             "pageSize": "Na stronie",
             "releaseYear": "Rok wydania",
             "hideOwned": "Ukryj posiadane",
-            "wishlistOnly": "Tylko lista życzeń"
+            "wishlistOnly": "Tylko lista życzeń",
+            "platform": "Platform"
         },
         "sidebar": "Promocje",
         "sort": {
@@ -1236,7 +1237,11 @@
         "title": "Promocje GOG",
         "pagination": {
             "prev": "Poprzednia"
-        }
+        },
+        "tabs": {
+            "label": "Sklep"
+        },
+        "titleMulti": "Przeceny"
     },
     "steamgriddb": {
         "error": {

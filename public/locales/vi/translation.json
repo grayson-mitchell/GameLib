@@ -218,7 +218,8 @@
             "scroll": "Cuộn",
             "select": "Chọn",
             "space": "Phím Cách",
-            "update_game": "Cập nhật trò chơi"
+            "update_game": "Cập nhật trò chơi",
+            "exit": "Thoát"
         }
     },
     "docs": "Tài Liệu",
@@ -261,7 +262,7 @@
         "library": {
             "refresh": "Làm Mới Thư Viện"
         },
-        "abort": "",
+        "abort": "Giới thiệu",
         "install": "Install",
         "uninstall": "Uninstall"
     },
@@ -1112,7 +1113,6 @@
     },
     "wineExplanation": {
         "proton-ge": "GE-Proton là một biến thể Proton được tạo ra bởi Glorious Eggroll. Nó được sử dụng cùng với trình khởi chạy umu (mặc định trong Heroic).",
-        "wine-ge": "Wine-GE-Proton là một biến thể của Wine được tạo ra bởi Glorious Eggroll. Nó không được dùng nữa để ủng hộ GE-Proton với trình khởi chạy umu.",
         "gpt": "",
         "wine-crossover": "",
         "wine-staging-macos": ""
@@ -1175,9 +1175,10 @@
             "featuresPlaceholder": "",
             "ageRatingAll": "Tất cả",
             "pageSize": "",
-            "releaseYear": ""
+            "releaseYear": "",
+            "platform": "Platform"
         },
-        "sidebar": "",
+        "sidebar": "Chi tiết",
         "sort": {
             "priceDesc": "",
             "trending": "",
@@ -1199,7 +1200,11 @@
         "title": "",
         "pagination": {
             "prev": ""
-        }
+        },
+        "tabs": {
+            "label": "Cửa hàng"
+        },
+        "titleMulti": "Chi tiết"
     },
     "steamgriddb": {
         "error": {
@@ -1209,7 +1214,7 @@
             "grids": ""
         },
         "picker": {
-            "search": "",
+            "search": "Tìm kiếm game",
             "title": "",
             "select-game": ""
         }
@@ -1249,7 +1254,9 @@
         "install": {
             "platform": "Platform",
             "title": "Install game",
-            "wineLoading": "Loading"
+            "wineLoading": "Loading",
+            "path": "Install",
+            "wineMissing": "Chưa chọn thư mục"
         }
     },
     "next": "Tiếp"
