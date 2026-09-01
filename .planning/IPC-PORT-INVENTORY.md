@@ -27,6 +27,13 @@ the zero is a measurement and not a vacuous pass. **Blocker and invariant record
 this repo — three recorded instances — so this line carries a date, a commit and a count, and any
 re-verification must replace all three together.**
 
+**Superseded 2026-09-02 (Phase 39, plan 39-01, working tree `ed1fdf71d`) — the 220 above is now
+stale.** The live union today is **206** (invoke 154 / send 52), confirmed by both the gate's own
+`check_coverage` (clean, 0 unbucketed) and this plan's dated note under `## Totals` below, which
+re-derived `AUDITED_UNION_FLOOR` and the `Unique channels` row together. The gap between 220 and
+206 is the same 18-name window-chrome cluster documented there, not a fresh finding — this line is
+not a new audit, only a pointer so the two numbers on this page never disagree with each other.
+
 Every channel exposed via `makeHandlerInvoker`/`makeListenerCaller` under `src/preload/` appears
 in exactly one bucket line of this document. Enforcement: `preload-surface-gate.py`
 (`.planning/phases/34.5-.../preload-surface-gate.py`), which re-derives the surface from source
@@ -41,7 +48,7 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 225 |
+| Unique channels | 206 |
 | Ported to sidecar | 52 |
 | **Unported** | **159** |
 
@@ -85,9 +92,42 @@ per-phase Electron-only backlog this document's other sections enumerate. The `P
 that split is a frozen Phase 34.1-era snapshot, not re-tallied per phase; recording that explicitly
 here rather than leaving an apparent, unexplained arithmetic gap.
 
+**Unique channels lowered 225 → 206 (Phase 39, plan 39-01, 2026-09-02) — RE-DERIVE, not a new
+audit.** `preload-surface-gate.py`'s `AUDITED_UNION_FLOOR` had gone stale at 217 (pre-Phase-35);
+the live extractor measures 206 (invoke 154 / send 52) against the working tree at `ed1fdf71d`.
+`check_coverage` in the code→doc direction was and remains clean — zero live channels are
+undocumented. The gap ran the other way: 18 names were documented but absent from `src/preload/`
+today, a coherent window-chrome cluster retired when Tauri took over native window decoration —
+deliberately listed here WITHOUT backticks (closeWindow, createNewWindow, gamepadAction,
+getEpicGamesStatus, health, isFrameless, isFullscreen, isMaximized, isMinimized, maximizeWindow,
+minimizeWindow, openPatreonPage, openReleases, openWikiLink, setFullscreen, setZoomFactor,
+showAboutWindow, unmaximizeWindow), so this retrospective note itself can never be mistaken for a
+bucket line by `parse_bucket_names`'s >=5-backtick-name rule — this matches Phase 35's own record
+(`main.ts`'s deletion removed 136 IPC channel registrations). Those 18 names were deleted from the
+bucket lines that
+carried them, and the `## Totals` → `Unique channels` row above was set to 206 to match, in the
+same edit as the floor change, so a subsequent run cannot land on a fresh-looking
+`check_totals_reconciliation` failure. **Only the `Unique channels` row was re-derived.** The
+`Ported to sidecar` (52) and `Unported` (159) rows above remain the Phase 34.1-era snapshot they
+already describe themselves as — this phase measured neither, and did not attempt to re-tally
+them. One side effect worth naming rather than leaving as a silent surprise for the next reader:
+the pre-existing `Ported + Unported` vs `Unique channels` discrepancy noted directly above (a
++14 gap, when `Unique channels` was 225) now reads as a −5 gap (52 + 159 = 211 against 206) —
+the sign flipped because only the `Unique channels` side moved. This is the same
+pre-existing, not-this-phase's-to-fix accounting gap as before, now on the other side of zero;
+whoever re-tallies the baseline should read both notes together.
+
+A second, masked defect was found and fixed in this same edit: `## Totals` had stated 225 unique
+channels while the bucket lines themselves (before this edit) contained only 224 distinct names —
+`check_totals_reconciliation` had never executed to catch this, because `check_multiline_awareness`
+(the 206-vs-217 floor check) called `fail()` and exited first. Fixing the floor without also
+reconciling this row would have moved the gate from "fails on check 2" to "fails on check 5" —
+a fresh-looking red that this edit closes instead of creating. See
+`39-GATE-DISPOSITIONS.md` (phase 39) for the full disposition record.
+
 ## Already ported (34)
 
-`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `health`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
+`cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
 
 `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see the Phase 34.3 list
 below, which now excludes it, and `34.2-PORTED-CHANNELS.md`'s gap-cycle-2 subsection for the full
@@ -136,7 +176,7 @@ was reassigned to Phase 34.5 by Phase 34.1 CONTEXT decision D-14 on 2026-07-25, 
 Wine tooling and was in this slice only because the inventory grouped channels by file; see
 the Phase 34.5 list below for its new home.
 
-`abort`, `changeLanguage`, `changeTrayColor`, `closeWindow`, `createNewWindow`, `gamepadAction`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getThemeCSS`, `getWebviewPreloadPath`, `isFrameless`, `isFullscreen`, `isMaximized`, `isMinimized`, `lock`, `maximizeWindow`, `minimizeWindow`, `notify`, `openCustomThemesWiki`, `openReleases`, `openWebviewPage`, `quit`, `set-connectivity-online`, `setFullscreen`, `setTitleBarOverlay`, `setZoomFactor`, `showAboutWindow`, `unlock`, `unmaximizeWindow`
+`abort`, `changeLanguage`, `changeTrayColor`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getThemeCSS`, `getWebviewPreloadPath`, `lock`, `notify`, `openCustomThemesWiki`, `openWebviewPage`, `quit`, `set-connectivity-online`, `setTitleBarOverlay`, `unlock`
 
 ## Phase 34.2 — Slice 5 — game details, settings and overrides (26 channels)
 
@@ -144,7 +184,7 @@ the Phase 34.5 list below for its new home.
 
 ## Phase 34.3 — Slice 6 — shell, files, logs and diagnostics (29 channels)
 
-`checkDiskSpace`, `clearAchievementCache`, `clearCache`, `clipboardReadText`, `clipboardWriteText`, `copySystemInfoToClipboard`, `deleteUploadedLogFile`, `getShellPath`, `getUploadedLogFiles`, `logInfo`, `openDiscordLink`, `openExternalUrl`, `openFolder`, `openGithubSponsorsPage`, `openKofiPage`, `openLoginPage`, `openPatreonPage`, `openSidInfoPage`, `openSupportPage`, `openWeblate`, `openWikiLink`, `openWinePrefixFAQ`, `pathExists`, `removeFolder`, `resetHeroic`, `showConfigFileInFolder`, `showItemInFolder`, `showLogFileInFolder`, `uploadLogFile`
+`checkDiskSpace`, `clearAchievementCache`, `clearCache`, `clipboardReadText`, `clipboardWriteText`, `copySystemInfoToClipboard`, `deleteUploadedLogFile`, `getShellPath`, `getUploadedLogFiles`, `logInfo`, `openDiscordLink`, `openExternalUrl`, `openFolder`, `openGithubSponsorsPage`, `openKofiPage`, `openLoginPage`, `openSidInfoPage`, `openSupportPage`, `openWeblate`, `openWinePrefixFAQ`, `pathExists`, `removeFolder`, `resetHeroic`, `showConfigFileInFolder`, `showItemInFolder`, `showLogFileInFolder`, `uploadLogFile`
 
 Note: `logError` was ported early by Phase 34.2 gap cycle 2 (plan 34.2-16) — see "Already ported"
 above. It is NOT counted in this slice's 29 and must not be registered again by whichever plan
@@ -229,7 +269,7 @@ logins depend on the same seam.
 
 Gained `isLoggedIn` from slice 7 on 2026-07-27 (34.4 **D-03**) — 56 → 57.
 
-`addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getEpicGamesStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getInstallInfo`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
+`addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getInstallInfo`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
 
 **Status (2026-08-02): the blocking live gate has now run THREE times and FAILED all three —
 channel membership and the 38/3/16 split above are unchanged by any of them.** The first run

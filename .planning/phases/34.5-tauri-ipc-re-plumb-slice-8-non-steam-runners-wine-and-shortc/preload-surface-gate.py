@@ -32,11 +32,12 @@ REPO_ROOT = PHASE_DIR.parent.parent.parent
 PRELOAD_ROOT = REPO_ROOT / "src" / "preload"
 INVENTORY_PATH = REPO_ROOT / ".planning" / "IPC-PORT-INVENTORY.md"
 
-# The audited floor established by 34.5-PRELOAD-SURFACE-AUDIT.md (plan 34.5-49) on the tree this
-# gate was authored against: 157 distinct invoke + 60 distinct send = 217 union. A regression to a
-# single-line-only regex measures 206 on this same tree (11 fewer, all Prettier-wrapped). This
+# The audited floor, re-derived 2026-09-02 from the live extractor against the working tree at
+# ed1fdf71d: invoke 154 distinct + send 52 distinct = 206 union. The prior 217 floor predated
+# Phase 35's removal of the window-chrome IPC channels (main.ts's deletion removed 136 IPC channel
+# registrations); 206 is a real reduction, not a regression to a single-line-only regex. This
 # gate's own check 2 fails if the LIVE extraction ever drops below this floor.
-AUDITED_UNION_FLOOR = 217
+AUDITED_UNION_FLOOR = 206
 
 # ---------------------------------------------------------------------------
 # Extraction — multi-line-aware, comment-stripping. Reproduces
@@ -152,7 +153,9 @@ def check_coverage(invoke: set, send: set, bucket_names: set) -> None:
 
 # ---------------------------------------------------------------------------
 # Check 2 — Multi-line awareness: the extracted union must not regress below the audited floor.
-# A regression to a single-line-only regex measures 206 on the audited tree (11 fewer).
+# The floor (206) was re-derived 2026-09-02 from the live extractor after Phase 35 retired the
+# window-chrome IPC channels; a further drop below 206 is what a single-line-only-regex
+# regression (or a genuine channel loss) would look like.
 # ---------------------------------------------------------------------------
 
 
@@ -161,8 +164,10 @@ def check_multiline_awareness(invoke: set, send: set) -> None:
     if union_size < AUDITED_UNION_FLOOR:
         fail(
             f"extracted union has only {union_size} distinct channel(s), below the audited floor "
-            f"of {AUDITED_UNION_FLOOR} — this is the exact signature of a regression to a "
-            "single-line-only regex (measured at 206 on the audited tree, 11 short)"
+            f"of {AUDITED_UNION_FLOOR} — the floor was re-derived 2026-09-02 from the live "
+            "extractor (invoke 154, send 52, union 206) after Phase 35 retired the window-chrome "
+            "IPC channels; a union below this floor is the signature of a genuine channel loss or "
+            "a regression to a single-line-only regex, not an expected fluctuation"
         )
 
 
