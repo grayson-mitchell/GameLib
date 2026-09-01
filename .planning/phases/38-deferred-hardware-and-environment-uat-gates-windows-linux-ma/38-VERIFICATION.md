@@ -2,7 +2,7 @@
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 verified: null
 status: human_needed
-score: N/A — collection phase, no must-haves. 29 relocated items, 0 discharged.
+score: N/A — collection phase, no must-haves. 30 relocated items, 0 discharged. (Was 29 until 2026-09-01, when quick `260901-vuy` relocated `38-W06`, the off-macOS Epic-logout observation, out of Phase 35's resolved debug session. Confirmed at the tool: `audit-uat` moved 29 -> 30 and 54 -> 55 total, which is the check that the array still parses — a FLAT count after an insert would mean the item was silently dropped.)
 audit_tool_note: >
   `status` MUST stay `human_needed`. `gsd-sdk query audit-uat` admits a VERIFICATION.md when
   status is `human_needed` OR `gaps_found`, but `parseVerificationItems` only emits items when
@@ -164,6 +164,44 @@ human_verification:
     prior_state: >
       Never attempted. Same `35-PREFLIGHT.md` OQ-4 / D-00c basis as 38-W04.
 
+  - id: "38-W06"
+    test: "Epic LOGOUT on Windows or Linux. Sign in to Epic, confirm the library populates, then sign OUT via Manage Accounts. Watch for an error DIALOG, and afterwards read `gamelib.log` for the `post-clear verification` line."
+    expected: >
+      The logout completes and reports success, with a log line reading
+      `post-clear verification — 0 Epic-owned cookie(s) remain across 5 domain(s)` carrying five
+      NUMERIC zeroes. NO error dialog appears. THE FAILING SHAPE IS EQUALLY INFORMATIVE AND MUST BE
+      RECORDED VERBATIM RATHER THAN RETRIED: a `post-clear verification COULD NOT CONFIRM the jar
+      for N of 5 domain(s)` warning, any `unconfirmed(UNSUPPORTED_OR_ERROR)` token, or a
+      user-visible sign-out error dialog. Either outcome discharges this item; only "I did not
+      perform a logout" does not.
+    why_human: >
+      THE OUTCOME OFF-macOS IS GENUINELY UNKNOWN, AND THE COST OF BEING WRONG CHANGED ON
+      2026-08-31. Commit `bea07cd17` made an unreadable cookie jar THROW rather than fail open
+      (`legendary/user.ts:571-575`), and plan `35-22` routes a failed Epic logout to `gamelib.log`
+      plus a user-visible `showDialogModal` ERROR. So if the census reads reject off-macOS, every
+      Epic logout on Windows and Linux ends in a visible error dialog. Whether they reject is the
+      unverified part: macOS opens NO window and uses the Rust default-data-store fallback, but
+      that fallback is `#[cfg(target_os = "macos")]`, so Windows and Linux still open a REAL window
+      — now pointed at `https://gamelib.invalid/` rather than Epic's live login page. Whether
+      `cookies_for_domain` succeeds against a window whose page never resolves has never been
+      observed on either platform. Both outcomes are plausible and neither is asserted here.
+      NOT COVERED BY 38-W04/38-W05: both are smoke-launch items — download the artifact, confirm a
+      window appears, confirm the process survives 10 seconds. A Windows or Linux operator passes
+      both verbatim without ever signing in to Epic, let alone signing out.
+    blocked_by: "machine switch -- boot the Windows or the Linux machine (both OWNED and available; the cost is the switch, not the hardware), plus a real Epic account to sign in and out of"
+    platform_gate: "src-tauri/src/main.rs — the default-data-store fallback that lets the macOS cookie path run WITHOUT a window is `#[cfg(target_os = \"macos\")]`. Off macOS the pre-existing window path is taken instead, so the code under test here is a DIFFERENT branch from the one the 2026-08-31 22:54 release-artifact gate exercised. On macOS this branch is unreachable by construction, not by accident. FALSIFIABLE: if that cfg attribute is ever widened past macOS, this item becomes observable here and must move back."
+    origin_phase: "35"
+    origin_item: "debug session `epic-cookie-clear-read-divergence`, Resolution residual 2 (`NON-MACOS IS UNVERIFIED`); relocated by quick `260901-vuy`"
+    prior_state: >
+      Never attempted, and until 2026-09-01 never ledgered anywhere Phase 38 would find it — the
+      residual lived only in the debug session's prose. The behaviour it covers did not exist
+      before 2026-08-31: pre-`bea07cd17` the sweep was FAIL-OPEN, consuming `verify.matched` while
+      ignoring `verify.verdict`, so five rejecting reads produced an AFFIRMATIVE
+      `0 Epic-owned cookie(s) remain` — a certification of a fact no read ever measured. That
+      all-reads-reject shape was 100% of production behaviour on every Epic logout from plan
+      35-23's landing until commit `9106ccbea`, and it is recorded as the most likely off-macOS
+      shape. So this item did not merely go unobserved; before the fix it was UNOBSERVABLE, because
+      the failure it looks for was being reported as success.
   - id: "38-C01"
     test: "Gamepad — directional focus. With a controller connected, navigate the /console routes using the d-pad and the left stick, in all four directions."
     expected: "Focus moves in the expected direction with no wrap. Specifically includes Up/Left from a COLD START with nothing focused — broken as WR-02/WR-03 and fixed unit-only during code review, never observed live."

@@ -6,9 +6,10 @@ status: rerun-pass
 blocking: true
 created: 2026-08-30
 criteria_total: 21 # sum of criteria 1-21 below; grep -c "^Verdict:" must equal this once run
-verdict: PASS AFTER RE-RUN — 21 of 21 measured. ORIGINAL RUN 2026-08-30: 17 PASS / 4 FAIL (criteria 6, 10, 14, 16). RE-RUN 2026-08-31 (plan 35-29, see the "RE-RUN" section at the end of this file): all four FAILs CLEARED, plus criterion 21 re-measured and regression checks 4, 5, 15 held — 8 measured, 8 PASS, 0 FAIL. Net: 21 PASS / 0 FAIL. QUALIFICATIONS THAT SURVIVE THE PASS AND MUST NOT BE READ AS DISCHARGED: criterion 10 proves the argv delivery path only (LaunchServices AppleEvent path unverified); criterion 14's visible re-render was UNOBSERVED (backend + origin=push push proven); criterion 21 passes its contract but D-35-19-15 is NOT closed — both closure routes were unavailable (no embedded browser exists on the Tauri build to seed a non-primary Epic domain, and plan 35-23's census is inert at logout, D-35-29-01). Criterion 17 unchanged from the original run: PASS ON SUBSTANCE, its "does not throw" clause recorded as a CONTRACT-EXPECTATION DEFECT for a 404 endpoint, not a code defect. New items raised BY the re-run: D-35-29-01, D-35-29-02, D-35-29-03, and a criterion 5 contract defect (its Sink: line names gamelib-shell.log, which its eprintln!-only call sites cannot write to).
+verdict: PASS AFTER RE-RUN — 21 of 21 measured. ORIGINAL RUN 2026-08-30: 17 PASS / 4 FAIL (criteria 6, 10, 14, 16). RE-RUN 2026-08-31 (plan 35-29, see the "RE-RUN" section at the end of this file): all four FAILs CLEARED, plus criterion 21 re-measured and regression checks 4, 5, 15 held — 8 measured, 8 PASS, 0 FAIL. Net: 21 PASS / 0 FAIL. QUALIFICATIONS THAT SURVIVE THE PASS AND MUST NOT BE READ AS DISCHARGED: criterion 10 proves the argv delivery path only (LaunchServices AppleEvent path unverified); criterion 14's visible re-render was UNOBSERVED (backend + origin=push push proven); criterion 21 passes its contract but D-35-19-15 is NOT closed — both closure routes were unavailable (no embedded browser exists on the Tauri build to seed a non-primary Epic domain, and plan 35-23's census is inert at logout, D-35-29-01). Criterion 17 unchanged from the original run: PASS ON SUBSTANCE, its "does not throw" clause recorded as a CONTRACT-EXPECTATION DEFECT for a 404 endpoint, not a code defect. New items raised BY the re-run: D-35-29-01, D-35-29-02, D-35-29-03, and a criterion 5 contract defect (its Sink: line names gamelib-shell.log, which its eprintln!-only call sites cannot write to). ⚠ WRITTEN BACK 2026-09-01 — SEE THE "POST-FIX ADDENDUM" SECTION AT THE END OF THIS FILE. Until then this document's criterion-21 record described an artifact predating TWO behaviour-changing product commits (b5b3464bd, bea07cd17), which is the R-34.5-G1-PKG failure this gate exists to catch, occurring inside the gate itself. Criterion 21 is RE-MEASURED on a GENUINE RELEASE ARTIFACT (/Applications/GameLib.app, 22:54, bundled SEA sidecar confirmed running by ps — NOT the debug-packaged build, which per F-5-01 structurally never executes the SEA): before(total=31, matched=8) -> after(total=23, matched=0), post-clear verification 0 remaining across 5 domains with five SUPPORTED_NONEMPTY verdicts, corroborated by an independently-written index-walking jar parse whose BEFORE/AFTER set difference is EMPTY IN BOTH DIRECTIONS. Verdict still PASS; what changed is that it is now recorded against the artifact users receive. D-35-29-02 is RESOLVED there (the logout's own hidden webview was re-seeding the cookies it deleted). D-35-19-15 is STILL OPEN and now unreproducible-by-construction, criterion 14's repaint is STILL UNOBSERVED, and non-macOS moved to Phase 38 as 38-W06 — none of those is closed by the addendum.
 run_date: 2026-08-30
 rerun_date: 2026-08-31 # plan 35-29; criteria 4,5,6,10,14,15,16,21 only
+addendum_date: 2026-09-01 # quick 260901-vuy; criterion 21 written back to the release artifact. Appended, never rewritten — the 18:15 record stands as measured.
 runner: Claude Opus 5 session (gesture execution by the human operator at the keyboard; contract authored by a different session per standing rule D-E)
 session_dir: MULTIPLE — see per-criterion notes. /tmp/gamelib-35-19-gate-9XTqHx (criteria 1-9); app relaunched via `open -a` for criteria 10-12 (no stderr capture — see D-35-19-02); /tmp/gamelib-35-19-c13-jaiski (criteria 13-17 window); /tmp/gamelib-35-19-c18-lo8xI8 (criterion 18 restart); /tmp/gamelib-35-19-c20-hXvo5l (criteria 20, 21, 19). ORIGINAL NOTE: app pid 23589 launched 08:50:00, stdout+stderr tee'd. Criterion 1 was observed on an EARLIER instance (pid 21484, 08:34:31, /tmp/gamelib-35-19-gate-sFpgKb) before four relaunches during the Keychain diagnosis in D-35-19-01; criteria 2-21 run on this instance.
 ---
@@ -1791,3 +1792,104 @@ unproven live, both closure routes unavailable), plus new items `D-35-29-01` (ce
 logout), `D-35-29-02` (residual primary-domain cookies), `D-35-29-03` (About window opens
 unfocused), and this criterion 5 contract defect (`Sink:` names a file its call sites cannot write
 to).
+
+---
+
+## POST-FIX ADDENDUM — criterion 21 re-measured on a GENUINE RELEASE ARTIFACT (2026-08-31 22:54)
+
+**Written back 2026-09-01 by quick `260901-vuy`.** This document is `blocking: true`, and until now
+its criterion-21 record described an artifact predating **two behaviour-changing product commits**
+— exactly the `R-34.5-G1-PKG` failure this gate exists to catch, occurring inside the gate itself.
+**Nothing above this line is rewritten.** The 18:15 run is the honest record of what was measured
+that day, and this phase's history is evidence.
+
+### What landed after the 18:15 run
+
+| Commit | Change |
+|---|---|
+| `b5b3464bd` | Stop the Epic logout re-creating the cookies it deletes. macOS now opens **NO window** for the cookie step, and `clearEpicStorage` runs BEFORE `clearEpicCookies`. |
+| `bea07cd17` | Close the fail-open post-clear verification sweep — an unconfirmed host is now `unconfirmed(VERDICT)`, never `0`, and an unreadable jar **throws**. |
+
+### The artifact — build identity closed at the RUNNING PROCESS, not a file on disk
+
+The fourth pass's identity check was defeated by `F-5-01`: `pnpm tauri:dev:packaged` is
+`tauri build --debug`, which structurally **never executes the SEA sidecar** (`use_dev_sidecar()`
+keys on `cfg!(debug_assertions)` alone, `main.rs:6746-6748`). This run closed the chain from the
+other end:
+
+```
+PID 9781  /Applications/GameLib.app/Contents/MacOS/gamelib-shell    (started 22:52:34)
+PID 9787   └─ /Applications/GameLib.app/Contents/MacOS/gamelib-sidecar  (22:52:37)
+```
+
+The **bundled SEA**, not `node …/build/main/sidecar.js`. Installed `gamelib-shell` sha256
+`be820645…7fe961c` is byte-identical to `src-tauri/target/release/gamelib-shell` (built 22:49:54);
+installed `gamelib-sidecar` sha256 `6d63ed17…d92c611` byte-identical to
+`src-tauri/binaries/gamelib-sidecar-aarch64-apple-darwin` (22:48).
+
+### The measurement — `gamelib.log`, read directly
+
+```
+line 61  cleared storage — localStorage=3, sessionStorage=0, indexedDB=0, caches=0, serviceWorkers=0
+line 62  epicgames.com  before(total=31, matched=8, verdict=SUPPORTED_NONEMPTY)
+                        after (total=23, matched=0, verdict=SUPPORTED_NONEMPTY)
+lines 63-67  fortnite.com / unrealengine.com / twinmotion.com / metahuman.com — cleared 0
+line 68  post-clear verification — 0 Epic-owned cookie(s) remain across 5 domain(s) —
+         epicgames.com=0, fortnite.com=0, unrealengine.com=0, twinmotion.com=0, metahuman.com=0
+```
+
+The storage step at line 61 **precedes** the five clear lines — `b5b3464bd`'s load-bearing wipeStep
+reorder, live-exercised under the SEA for the first time. Line 68 is five **numeric** zeroes with
+five `SUPPORTED_NONEMPTY` verdicts, i.e. it clears the trustworthiness bar `bea07cd17` shipped.
+
+Counted in the log, **ZERO each**: `unconfirmed(`, `COULD NOT CONFIRM`, `census read failed`,
+`UNSUPPORTED_OR_ERROR`, `UNDECIDABLE`, `[ERROR]`, `Sign-out incomplete`, `build/main/sidecar.js`.
+
+### Independent corroboration
+
+Decoded with a **purpose-written page/offset index-walking parser** — never `strings`, never the
+orchestrator's `bc.js`. Live jar `com.gamelib.shell.binarycookies` (mtime 22:54:10) sha256
+`6d5b47dd…bb2c06b`.
+
+- `BEFORE-release` = **23 records, all live, ZERO Epic**
+- `AFTER-release` = **23 records**
+- Record-level set difference over (domain, value-length, …) — **EMPTY IN BOTH DIRECTIONS**
+- Arithmetic: 23 baseline + 8 login = 31 = the census's `before(total=31)`; 31 − 8 = 23 = AFTER
+- Name-agnostic byte scan for `EPIC`, `__cf_bm`, `SESSION_AP`, `epicSID`, `EPIC_DEVICE`,
+  `EPIC_LOGIN_ID` — **all zero**
+
+`BEFORE-release` is byte-identical to `AFTER-packaged`, which independently chains the two runs:
+the 22:23 packaged run's end state IS the 22:54 release run's start state.
+
+### `D-35-29-02` — RESOLVED
+
+The original record above left two explanations undistinguished and asserted neither: (i) the clear
+did not remove them, or (ii) they were re-created between the clear and the file write. **(ii) was
+correct.** `clearEpicCookies` opened a hidden webview at Epic's LIVE login page purely to obtain a
+window handle the macOS path never uses, and that page load re-seeded the very cookies the sweep
+had just removed — every surviving record's `created` second landed on its own clear, and both
+`__cf_bm` records carried Cloudflare's 30-minute TTL from that instant. Fixed by `b5b3464bd`.
+Full trace: `.planning/debug/resolved/epic-cookie-clear-read-divergence.md`.
+
+### What this addendum does NOT close
+
+- **`D-35-19-15` remains OPEN and is now unreproducible-by-construction.** All four non-primary
+  hosts reported `before(matched=0)` because the cookies that used to populate them during a logout
+  were set by the window `b5b3464bd` removed. The domain-*suffix* half IS exercised (one
+  `epicgames.com` step sweeps `.epicgames.com`, `.www.epicgames.com`, `.ecosec.on.epicgames.com`);
+  only the four sibling *apexes* are not. Proving them needs a deliberately seeded fixture.
+  **Do not read this addendum as closing it.**
+- **Criterion 14's visible repaint stays UNOBSERVED** — backend + `origin=push` proven only.
+- **Criterion 10** still proves the argv path only; AppleEvent delivery unverified.
+- **Non-macOS is UNVERIFIED** and is now consequential — relocated to Phase 38 as **`38-W06`**.
+
+### Two standing records this run FALSIFIED
+
+1. **A local release rebuild is NOT blocked by `createUpdaterArtifacts: true` or a missing signing
+   key.** Two STATE.md records claimed it was. `src-tauri/` is git-clean, the flag is still `true`,
+   and a full release build completed anyway on 2026-08-31.
+2. **STATE.md's YAML error is `All collection items must start at the same column`**, not the
+   recorded "unescaped quote" hypothesis. Different diagnosis; the hypothesis was never proven.
+
+**Criterion 21 verdict is unchanged — PASS.** What changed is that it is now recorded against the
+artifact users actually receive.
