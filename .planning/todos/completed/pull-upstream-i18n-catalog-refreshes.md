@@ -1,10 +1,10 @@
 ---
 created: 2026-08-15T08:50:00.000Z
 updated: 2026-09-01T00:00:00.000Z
-title: "Pull upstream i18n catalog refreshes (Heroic v2.22.1) — unblocked 2026-09-01"
+title: "Pull upstream i18n catalog refreshes (Heroic v2.22.1) — DONE 2026-09-01"
 area: i18n
 needs: port
-status: pending
+status: "RESOLVED 2026-09-01 via Option A in quick task 260901-ncb (commit 5973d4448) — 74 non-English files taken wholesale at c39d40174. Unblocked first by the drift triage in 260901-n60."
 severity: minor
 unblocked_by: "Quick task 260901-n60 — the `pnpm i18n` drift was triaged and proven disjoint from this pull"
 upstream:
@@ -19,7 +19,7 @@ files:
 Two upstream Weblate translation refreshes landed in Heroic v2.22.1. GameLib has not pulled
 either.
 
-## Status: unblocked
+## Status: DONE
 
 This was held as `BLOCKED` from 2026-08-15 on the theory that pulling 1000+ lines of catalog
 churn on top of unresolved `pnpm i18n` drift would mask the drift. **That triage is now
@@ -113,3 +113,44 @@ Reference: `git show c39d40174`, `git show 270353382`. Heroic upstream is git re
 
 Related: [[2026-08-06-phase-34-8-i18n-context-fork-namespace-llm-machine-fill-defe]] — the
 fork-namespace decision that defines which catalogs are fork-owned vs upstream-owned.
+
+---
+
+## Outcome (2026-09-01, quick task `260901-ncb`, commit `5973d4448`)
+
+**Option A taken.** 74 files across 46 locales — 46 `translation.json`, 28 `gamepage.json`,
+zero `login.json`. **+1167 / −628.** Locale `uz` is included; it comes from an intermediate
+commit, not from either named refresh.
+
+Written with `git show c39d40174:<path> > <path>`, never `git checkout` (fires
+`.husky/post-checkout`).
+
+Every constraint above held, verified rather than assumed:
+
+| check | result |
+|---|---|
+| all 74 byte-identical to their `c39d40174` blobs | PASS |
+| changed set is exactly the 74 intended, nothing more | PASS |
+| files touched under `public/locales/en/` | **0** |
+| `gamelib.json` / `gamelib.mt.json` touched, any locale | **0** |
+| anything changed outside `public/locales/` | none |
+| all 74 parse as JSON | PASS |
+| `pnpm lint-translations` | exit 0 |
+| `pnpm i18n-churn-guard` after commit | exit 0 |
+| `meta/__tests__/i18nCatalogChurnGuard.test.ts` | 9/9 pass |
+| `pnpm i18n --fail-on-update` | still exactly 78 `en/`-only keys (71/4/2/1) — **unchanged** |
+
+That last row is the empirical proof of the disjointness the triage predicted: a 1795-line
+refresh moved the drift number by zero.
+
+**Claim 3 above was also confirmed empirically.** `pnpm i18n-churn-guard` exited **1** while
+the 74 files sat unstaged, and **0** the moment they were committed — because it reads
+`git diff --name-only`, which sees neither staged nor committed changes. It never had any
+ability to distinguish a refresh replay from a fork edit; it simply cannot see either one
+once committed.
+
+**One thing this pull deliberately did not fix:** the 74 files it touched carry **2117**
+occurrences of "Heroic" and **zero** of "GameLib" (2096 before the pull, so +21). Across
+*all* non-English catalogs the figure is **2274 over 89 files, still zero "GameLib"**. That
+rebranding gap is pre-existing and out of scope here. Tracked as
+[[2026-09-01-non-english-catalogs-are-unrebranded-2117-heroic-strings]].
