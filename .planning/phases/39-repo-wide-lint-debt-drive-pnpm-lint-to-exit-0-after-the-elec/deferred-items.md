@@ -28,3 +28,19 @@ started.
 
 Both are out of scope for 39-02 (Scope Boundary rule) and were not fixed. Recorded here so a
 later phase-39 plan (or a dedicated fix) picks them up rather than re-discovering them.
+
+## From Plan 39-03
+
+Both items above reproduced identically during 39-03's verification (same 3 + 1 failures,
+same files, unchanged). One additional failure appeared ONLY under the full
+`pnpm test --selectProjects Backend` run and did not reproduce standalone:
+
+3. **`src/backend/sidecar/__tests__/enrichmentFlows.test.ts`** — 1 failing assertion in the full
+   run only: `REQ-34.2-14/SEAM Invariant B › REQ-34.2-14 channel "getAnticheatInfo" does not
+   return UNPORTED_CHANNEL_MARKER and is present in the handler registry` (`response` was
+   `undefined`). Run in isolation (`npx jest src/backend/sidecar/__tests__/enrichmentFlows.test.ts`)
+   this file is 41/41 green. This file has zero pending changes from this plan
+   (`git status`/`git log` both confirm it untouched) — this is the known
+   full-suite-run-manufactures-a-different-failure-set class of flake (load/ordering-sensitive),
+   not a regression introduced by 39-03. Not fixed here (out of scope: unrelated file, plan
+   39-03 touches only `adapter.test.ts`/`library.test.ts`/`netStub.test.ts`).
