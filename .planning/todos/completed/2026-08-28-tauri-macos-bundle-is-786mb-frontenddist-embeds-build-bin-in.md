@@ -9,6 +9,17 @@ files:
   - electron.vite.config.ts:56,68,82 (build/main, build/preload, build)
 ---
 
+## STATUS: ALL SIX ITEMS CLOSED (2026-09-01, quick-260901-kl2)
+
+The frontmatter title above ("786MB installed / 529MB DMG") is the historical record of the
+problem as found on 2026-08-28 and is kept verbatim — it is NOT the current size. Final
+measured numbers after all six items (fix (1) resource narrowing, fix (2) `frontendDist`
+repoint, Cause 3 symlink-dereferencing fix, the `x64/darwin` intel-tree removal, and this
+item — `steam_api.pdb`/`steam_api_shim.lib` removal): packaged `.app` **287,130,374 B**
+(this item's own before/after: 289,952,582 B -> 287,130,374 B, a 2,822,208 B reduction);
+shipped `Resources/build/bin/arm64/darwin` **277 files / 12 symlinks / 97,884,865 B**. See
+"Minor" below and `260901-kl2-MEASUREMENTS.md` for the final item's full derivation.
+
 ## Problem
 
 Measured on `src-tauri/target/release/bundle/dmg/GameLib_0.7.0_aarch64.dmg`
@@ -74,6 +85,52 @@ below** — their removal is "stop emitting the .pdb/.lib at build time", a
 (1) below still ships them (they live inside the `arm64/darwin` directory entry
 the macOS overlay carries wholesale) because narrowing WHICH platform ships a
 directory is a different mechanism from narrowing WHAT that directory contains.
+
+**Annotation 2026-09-01 (quick-260901-kl2): the "compile-flag change" mechanism prediction
+above was REFUTED by measurement, and item 6 is now DONE.** No `zig cc` flag suppresses both
+byproducts without perturbing the DLL: `-g0` suppresses neither, `--strip` is not a valid
+driver flag, `-Wl,-s` drops the `.pdb` but rewrites 455,308 bytes of the `steam_api.dll`
+(805,888 -> 511,488 B), and `-Wl,--out-implib` redirects only the `.lib` while still
+perturbing the DLL. The actual mechanism that shipped is a **post-compile-gate unlink** —
+`pruneShimBuildByproducts()` in `meta/buildSteamBridgeShims.ts`, called strictly after both
+`COMPILE GATE FAILED` throws, so a broken compile still aborts loudly before either file can
+be removed. Proven non-vacuous by seeded mutation (M1/M2/M3, `260901-kl2-MEASUREMENTS.md`),
+not by reading the code.
+
+**DONE 2026-09-01 (quick-260901-kl2).** Measured: 2,822,208 B (`steam_api.pdb` 2,818,048 B +
+`steam_api_shim.lib` 4,160 B) stopped shipping. Shipped `arm64/darwin`: 279 files / 12 symlinks
+/ 100,707,073 B -> **277 files / 12 symlinks / 97,884,865 B**. Packaged `.app`: 289,952,582 B ->
+**287,130,374 B** — exactly the predicted i8i-minus-2,822,208 subtraction, no residual. Real
+mounted DMG census, `steam_api.dll` unchanged at sha256 `2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960`
+(805,888 B) and `steam-bridge-helper`/`steam_appid.txt` still present. Full derivation, the
+seeded-mutation proof, and the packaged-DMG census: `260901-kl2-MEASUREMENTS.md`.
+
+This is now the **second** refuted claim recorded against this single item — see also the
+r1-vs-r5 determinism correction below. Both are annotated in `260901-kl2-MEASUREMENTS.md`
+rather than silently reworked.
+
+**Second refuted claim on this item (2026-09-01, quick-260901-kl2): the byte-identity
+determinism premise.** An early revision of the quick-260901-kl2 plan (r1) asserted that
+`zig cc -target x86-windows-gnu -shared` produces a byte-identical `steam_api.dll` across
+consecutive same-path rebuilds, and set that byte-identity as the acceptance bar for proving
+the byproduct removal safe. This was WRONG and was refuted by measurement: `zig cc`'s `lld`
+backend stamps a wall-clock `TimeDateStamp` into the PE header on every invocation — three
+consecutive scratch builds more than a second apart produced three different hashes — and the
+shipped baseline DLL itself decodes to `TimeDateStamp` = `2026-08-31T18:38:25Z`, a build
+timestamp, not a content hash. `.github/workflows/release-tauri.yml:158` also rebuilds this DLL
+on every CI release, so production has never had rebuild byte-identity and does not need it.
+The plan was revised (r3/r4/r5) to a four-part proof instead: **P1** structural (the unlink
+runs after both compile-gate throws and touches only the two non-DLL byproduct paths — never
+the DLL itself), **P2** same-build hash equality either side of the prune within one build
+(unit test B7 plus end-to-end check E1, both hash the DLL before and after invoking the prune
+without any recompile in between), **P3** the real `public/bin`/`build/bin` trees are never
+rebuilt by this task at all (all rebuild exercise happens on scratch copies; the real DLL's
+sha256 stays pinned at `2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960`
+throughout), and **P4** a masked rebuild comparison (`maskPeVolatile.py` zeroes the four
+volatile PE spans — COFF `TimeDateStamp`, `CheckSum`, debug-directory `TimeDateStamp`, RSDS
+GUID+Age — before hashing, confirming the compile is deterministic modulo exactly those four
+spans: `cc3e8b4a1fba55b9ab9cb69927b9c76d` on both sides). Full derivation:
+`260901-kl2-MEASUREMENTS.md`.
 
 ### Cause 3 — Tauri's resource copy DEREFERENCES SYMLINKS (found 2026-09-01, FIXED 2026-09-01, quick-260901-e7o)
 
@@ -469,3 +526,10 @@ sidecar for native Rust.
   downloads its runtime on first launch. The comparable target is Heroic's 160MB.
 - Do NOT fold the `steam_api.pdb` / `steam_api_shim.lib` removal into fix (2). See
   "Minor" above — different mechanism, separate item.
+
+**Annotation 2026-09-01 (quick-260901-kl2):** the "different mechanism" referenced above was
+originally predicted to be a `buildSteamBridgeShims.ts` compile-flag change. That prediction
+was REFUTED by measurement — no flag suppresses both byproducts without perturbing the DLL.
+The item was closed instead by a post-compile-gate unlink (`pruneShimBuildByproducts()`). See
+the "Minor" section's DONE note above and `260901-kl2-MEASUREMENTS.md` for the full flag
+experiment table and the refutation.

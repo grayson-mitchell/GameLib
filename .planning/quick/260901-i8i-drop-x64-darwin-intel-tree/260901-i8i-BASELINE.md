@@ -60,3 +60,7 @@ This subtraction is OLD SHIPPED minus the REMOVED SHIPPED SUBTREE — both terms
 measured on the same artifact above, which is the legitimate pair. Any shortfall
 must first be re-checked as an arithmetic/pairing error before any mechanism is
 invented to explain it.
+
+**Superseded 2026-09-01 by quick-260901-kl2: 277 files / 12 symlinks / 97,884,865 B after
+`steam_api.pdb` + `steam_api_shim.lib` (2,822,208 B) stopped shipping. The figure above
+remains the correct record for its own date.**

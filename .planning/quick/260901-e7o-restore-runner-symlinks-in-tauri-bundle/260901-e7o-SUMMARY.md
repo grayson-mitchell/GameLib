@@ -116,6 +116,7 @@ None. This task changes only which Tauri config key a set of already-shipped fil
 ## Next Phase Readiness
 
 - The macOS bundle-size todo's Cause 3 is closed; the only remaining open item in that todo is the `steam_api.pdb`/`steam_api_shim.lib` (~2.7 MB) Windows-build-byproduct cleanup, which needs a `buildSteamBridgeShims.ts` compile-flag change in a future task.
+  **Annotation 2026-09-01 (quick-260901-kl2): the compile-flag prediction was REFUTED by measurement.** No `zig cc` flag suppresses both byproducts — `-g0` suppresses neither, `--strip` is not a valid driver flag, `-Wl,-s` drops the `.pdb` but rewrites 455,308 bytes of the DLL, and `-Wl,--out-implib` redirects only the `.lib` while still perturbing the DLL. The item was closed by a post-compile-gate unlink instead.
 - legendary and nile UI-level library re-sync verification (blocked by Epic-on-work-network and no-owned-Amazon-games respectively) should be re-attempted on a home network before this fix is considered fully UI-verified end-to-end; the direct-execution/mutation-proof evidence stands in the interim as proof the fix itself is correct.
 
 ---

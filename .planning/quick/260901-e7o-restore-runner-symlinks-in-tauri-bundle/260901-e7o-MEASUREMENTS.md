@@ -180,6 +180,10 @@ confirming no regression on the tree this task did not need to fix.
 Recovered exactly 47,981,472 B (45.76 MiB) per macOS bundle, matching this task's `<objective>`
 prediction exactly.
 
+**Superseded 2026-09-01 by quick-260901-kl2: 277 files / 12 symlinks / 97,884,865 B after
+`steam_api.pdb` + `steam_api_shim.lib` (2,822,208 B) stopped shipping. The figure above
+remains the correct record for its own date.**
+
 ### All 12 links verified by name (legendary, gogdl, nile × 4 links each)
 
 For every runner, all four of `_internal/Python`, `_internal/Python.framework/Python`,

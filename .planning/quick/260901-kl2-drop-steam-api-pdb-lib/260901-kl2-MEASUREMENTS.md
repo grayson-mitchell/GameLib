@@ -704,3 +704,99 @@ apart from the 3 known `decompressPool.test.ts` failures and 2 known
 `lzmaNativeSeaRealBuild.test.ts` skips (one transient, unrelated
 `enrichmentFlows.test.ts` flake did not reproduce on re-run). `maskPeVolatile.py`
 committed alongside this task's MEASUREMENTS.md update.
+
+---
+
+## Task 3 — packaged DMG census
+
+Build command sequence (verbatim, per `260901-i8i-MEASUREMENTS.md:26-30`):
+
+```
+pnpm exec vite build
+pnpm build:sidecar-sea
+pnpm exec tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'
+```
+
+`TAURI_SIGNING_PRIVATE_KEY` unset; `createUpdaterArtifacts:false` passed on the command line
+only, no repo edit. 0 codesigning identities on this machine — build produced an unsigned/
+ad-hoc bundle, expected and not a failure.
+
+Artifact: `src-tauri/target/release/bundle/dmg/GameLib_0.7.0_aarch64.dmg` (100,674,126 B on
+disk, DMG container — not a size claimed against any success criterion).
+
+Mounted: `hdiutil attach -nobrowse -readonly src-tauri/target/release/bundle/dmg/GameLib_0.7.0_aarch64.dmg`
+-> `/Volumes/GameLib`. GPT/HFS checksums all verified during attach.
+
+### C1 — `steam_api.pdb` absent
+
+`test ! -e /Volumes/GameLib/GameLib.app/Contents/Resources/build/bin/arm64/darwin/steam_api.pdb`
+-> **PASS, absent.**
+
+### C2 — `steam_api_shim.lib` absent
+
+`test ! -e /Volumes/GameLib/GameLib.app/Contents/Resources/build/bin/arm64/darwin/steam_api_shim.lib`
+-> **PASS, absent.**
+
+### C3 — `steam_api.dll` present and byte-identical to baseline; siblings present
+
+```
+/Volumes/GameLib/GameLib.app/Contents/Resources/build/bin/arm64/darwin/steam_api.dll
+size: 805888
+sha256: 2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960
+```
+
+Exact match to the pinned shipped baseline — the packaged DLL was NEVER rebuilt by this task
+(it was already on disk from before this session's scratch-only work; this build reuses the
+existing `public/bin/arm64/darwin/steam_api.dll`, which Task 1/2 never touched). `steam-bridge-helper`
+present, `steam_appid.txt` present.
+
+### C4 — `verify:runner-bundle`
+
+```
+$ pnpm verify:runner-bundle /Volumes/GameLib/GameLib.app --arch=arm64 --expect-files=277 --expect-symlinks=12 --expect-bytes=97884865
+...
+Runner       Exists  Exec   Mach-O  Files  Mach-O files
+legendary    true    true   true    110    98
+gogdl        true    true   true    61     56
+nile         true    true   true    102    97
+...
+Frameworks (structural integrity ENFORCED, F-34.9-01):
+  legendary: Python.framework Versions/Current symlink=true target=3.12 Resources symlink=true target=Versions/Current/Resources codesign=adhoc
+  gogdl: Python.framework Versions/Current symlink=true target=3.12 Resources symlink=true target=Versions/Current/Resources codesign=adhoc
+  nile: Python.framework Versions/Current symlink=true target=3.12 Resources symlink=true target=Versions/Current/Resources codesign=adhoc
+
+Census: 277 files, 12 symlinks, 97884865 apparent bytes (sum(stat -f %z), never du)
+
+PASS: all three onedir runners present, executable and Mach-O; tree sizes above the floor.
+EXIT: 0
+```
+
+Tool prints no explicit `DANGLING=` line, so dangling status was verified directly: iterated
+all 12 symlinks under `build/bin/arm64/darwin` with `test -e "$link"` (post-resolution) — zero
+reported dangling. **DANGLING=0.**
+
+### C5 — non-goal survivors unchanged
+
+`build/bin/x64/win32`: `EpicGamesLauncher.exe` + `GalaxyCommunication.exe`, 2 files, 211,452 B
+— unchanged from i8i's baseline. `build/bin/x64/darwin`: still absent (removed by i8i, not
+reintroduced by this change).
+
+### C6 — `.app` total apparent bytes
+
+```
+$ find /Volumes/GameLib/GameLib.app -type f -exec stat -f %z {} + | awk '{s+=$1} END {print s}'
+287130374
+```
+
+**287,130,374 B** — exactly the predicted value (i8i's 289,952,582 minus 2,822,208). No
+residual to explain; the subtraction landed exactly.
+
+### Detach
+
+`hdiutil detach /Volumes/GameLib` -> `"disk4" ejected.` Clean detach, no force flag needed.
+
+### Task 3 summary
+
+All of C1-C6 PASS with no deviation from prediction. `steam_api.dll` on the mounted, packaged
+artifact is byte-identical to the pinned shipped baseline (`2da072ba…`, 805,888 B) — confirming
+this task never rebuilt the real DLL, on the actual shipped artifact, not just the repo tree.

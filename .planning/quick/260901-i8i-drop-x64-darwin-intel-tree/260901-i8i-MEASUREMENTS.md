@@ -59,6 +59,10 @@ Frameworks (structural integrity ENFORCED, F-34.9-01) verified for legendary, go
 all three report `Python.framework Versions/Current symlink=true target=3.12 Resources
 symlink=true target=Versions/Current/Resources codesign=adhoc`.
 
+**Superseded 2026-09-01 by quick-260901-kl2: 277 files / 12 symlinks / 97,884,865 B after
+`steam_api.pdb` + `steam_api_shim.lib` (2,822,208 B) stopped shipping. The figure above
+remains the correct record for its own date.**
+
 ### Criterion 4 — SIZE
 
 ```
@@ -76,6 +80,11 @@ a CI-produced `.app` would be `289,952,582 + 46,423,272 − 11,213,032 = 325,162
 smaller by only the comet-key removal (11,213,032 B) relative to a pre-change CI release,
 since the other three fossil files (35,210,240 B) were never present in CI output to begin
 with.
+
+**Superseded 2026-09-01 by quick-260901-kl2: 277 files / 12 symlinks / 97,884,865 B after
+`steam_api.pdb` + `steam_api_shim.lib` (2,822,208 B) stopped shipping. The figure above
+remains the correct record for its own date.** (The `.app` total itself is also superseded:
+289,952,582 -> 287,130,374 B, the same 2,822,208 B delta.)
 
 ### Criterion 5 — ANTI-VACUITY
 
