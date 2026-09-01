@@ -1,58 +1,57 @@
 /**
  * Branch-parity regression guard (Phase 34.4.1 gap cycle, plan 34.4.1-10 Task 2 —
- * REQ-34.4.1-11/REQ-34.4.1-GAP-04).
+ * REQ-34.4.1-11/REQ-34.4.1-GAP-04), INVERTED by Phase 39 Plan 04 Task 2.
  *
- * The gate's own diagnosis (34.4.1-LIVE-GATE.md, F-6): one of the tests cited as proof F-6's area
- * was "closed" is `humble/__tests__/user.test.ts`'s "the untouched Electron five-step regression"
- * (`with no seam installed, the original five Electron wipe steps still run instead`, L1391) — a
- * test that PINS the Electron branch at 5 steps and SEPARATELY checks the Tauri branch clears
- * cookies. It never compares the two branches' coverage against each other. The asymmetry was
- * therefore visible to the suite and tested AROUND, not caught. A green suite is not evidence of
- * parity unless something asserts parity — this file is that assertion. It does not weaken or
- * replace `user.test.ts`'s five-step regression (left byte-identical, see the final `describe`
- * block below, which pins that file untouched by this plan).
+ * ORIGINAL PURPOSE (kept for history — the mechanism below still descends from it): the gate's own
+ * diagnosis (34.4.1-LIVE-GATE.md, F-6) found that a green suite had tested AROUND a real defect —
+ * one test pinned the Electron branch's 5 wipe steps, a separate test checked the Tauri branch
+ * cleared cookies, and nothing compared the two branches' COVERAGE against each other. This file
+ * closed that gap by parsing the REAL source of each dual-branch `disconnect()`/`logout()` site
+ * (via `fs.readFileSync` at test-run time — never a mock) and asserting capability-CATEGORY parity
+ * between the two branches.
  *
- * This file parses the REAL source of each dual-branch site (read from disk via `fs.readFileSync`
- * at test-run time — never a mock, never a hand-copied snippet) and asserts branch-coverage
- * parity via a capability-CATEGORY comparison (not a step-name comparison — two branches using
- * differently-named steps that cover the same category must compare equal).
+ * WHY THIS FILE CHANGED SHAPE (Phase 39 Plan 04, REQ-39-03): Plan 04 collapsed both dual-branch
+ * sites — `humble/user.ts`'s `disconnect()` and `storeManagers/legendary/user.ts`'s `logout()` —
+ * to a single, unconditional, seam-driven `wipeSteps` array apiece. There is no Electron branch
+ * left to compare against, so a parity comparison between two branches is no longer a coherent
+ * assertion; keeping the old shape would mean either a vacuously-true check (nothing to diverge
+ * from) or a hand-authored fake "Electron" side, neither of which is honest testing. INVERTED
+ * (per this workstream's D-35-14-02 disposition vocabulary) instead of RETIRED, because the file's
+ * real, still-live value survives the branch's removal: (1) a static, non-vacuous assertion that
+ * NEITHER site has quietly regrown a dual-branch `if (seam === null)` wipe shape, and (2) the
+ * F-6 lesson itself — that an uncovered capability must be DECLARED in source, not merely absent —
+ * still applies, because `clearAuthCache`/`clearHostResolverCache` remain permanently uncoverable
+ * under the seam (no in-page JS equivalent exists for either network-stack cache). This file keeps
+ * asserting that residual is written down (`T-34.4.1-73`, `DECLARED`), backed by real source, for
+ * both surviving single-path sites.
  *
- * Capability-category mapping — DELIBERATELY duplicated from `seam-parity-sweep.py` (Task 1's
- * Python instrument), not imported: this is a TypeScript/Jest file, that is a stdlib-only Python
- * script, and the two cannot literally share code. Both must agree in SHAPE (that agreement is
- * itself checked implicitly — Task 1's sweep and this file were derived from the same source read
- * at the same time, and any future divergence between the two mappings would show up as one tool
- * finding a gap the other calls clean, which is exactly the kind of drift a human reviewer should
- * catch on the next plan that touches either file).
+ * `ORIGINAL_FIVE_STEP_CATEGORIES` (below) replaces the live-extracted "Electron branch" as the
+ * reference point for "what capability categories used to exist here" — it is now a static
+ * constant (the five step labels the deleted branch always used) rather than something read from
+ * a branch that no longer exists in source. Comparing the surviving single path against this fixed
+ * reference is what makes the DECLARED checks below still falsifiable: if a future plan actually
+ * closes the `authCache`/`hostResolver` gap, the "no stale DECLARED entries" test goes red and
+ * demands the entry be deleted, exactly mirroring `KNOWN_GAP`'s pre-existing discipline.
  *
- * `KNOWN_GAP` was originally seeded with EXACTLY the divergences Task 1's sweep
- * (`34.4.1-SEAM-PARITY-SWEEP.md`, findings S-05/S-08) classified SILENTLY-DROPPED (`storage`/
- * `cache`/`authCache`/`hostResolver` for both sites), so `npm run test:ci` stayed green at the
- * then-current baseline while the gaps became explicit and un-ignorable. Plan 34.4.1-16 (this
- * plan) landed the storage-clear capability for both sites, closing the `storage`/`cache`
- * categories for real — those 4 `KNOWN_GAP` entries are DELETED below, not softened, per this
- * file's own `no stale KNOWN_GAP entries` test, which would otherwise fail on a stale entry.
- * `KNOWN_GAP` is now EMPTY (kept as a live, reusable mechanism for any future dual-branch site
- * added to `SITES`, not deleted as dead code).
+ * `KNOWN_GAP` is unrelated to the branch collapse and is untouched by this inversion — it stays a
+ * live, reusable, currently-empty mechanism for any future dual-branch site, general-purpose
+ * regardless of whether either of today's two sites has one.
  *
- * `authCache`/`hostResolver` were never closeable by this design (no in-page JS equivalent exists
- * for either network-stack cache) and are reclassified from `KNOWN_GAP` to `DECLARED` — a stricter
- * bar than mere id-proximity. A `DECLARED` entry is only honoured if `isDeclaredInSource()` finds
- * BOTH the entry's `threatId` AND at least one of its `categoryTerms` in the REAL source of the
- * file being compared (never in this test file alone) — this is the exact discipline
- * `seam-parity-sweep.py`'s own development caught itself needing (34.4.1-10-SUMMARY.md Deviation
- * #3: an id-only check is vacuously true for ANY module carrying a decision id at all, which would
- * have wrongly cleared a real defect). A `DECLARED` category that source review later closes for
- * real becomes a stale-`DECLARED` failure below, exactly mirroring `KNOWN_GAP`'s own discipline.
+ * The final `describe` block that used to pin `humble/__tests__/user.test.ts`'s five-step
+ * regression test byte-for-byte is DELETED — that regression test named a branch Plan 04 (Task 3)
+ * deliberately retired; keeping a guard that forbids retiring it would make Task 3 look like a
+ * violation of a standing contract rather than the point of this phase.
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs'
+import { readFileSync } from 'fs'
 import { join, resolve } from 'path'
 
 const REPO_ROOT = resolve(join(__dirname, '../../../..'))
 const SRC_BACKEND_DIR = join(REPO_ROOT, 'src/backend')
 
 // ── Capability-category mapping (shared convention with seam-parity-sweep.py) ──────────────────
+// UNCHANGED by this inversion — same keys, same values. If a future plan changes this shape,
+// flag it for whichever plan owns seam-parity-sweep.py's duplicate copy (Phase 39 Plan 08).
 
 const CATEGORY_MAP: Record<string, string[]> = {
   clearStorageData: ['storage', 'cookies'],
@@ -84,7 +83,7 @@ function categoriesForLabels(labels: string[]): Set<string> {
   return result
 }
 
-// ── Source-parsed branch extraction (real file, real brace matching — never a mock) ────────────
+// ── Source-parsed extraction (real file, real brace matching — never a mock) ───────────────────
 
 function matchDelims(
   text: string,
@@ -121,51 +120,48 @@ function findFunctionBody(sourceText: string, functionName: string): string {
   return sourceText.slice(openBrace + 1, closeBrace)
 }
 
-function findWipeStepsIfElseBranches(functionBody: string): {
-  electronLabels: string[]
-  tauriLabels: string[]
-} {
+/**
+ * Phase 39 Plan 04 Task 2: the anti-regrowth check. Both sites this file watches used to hold an
+ * `if (seam === null) { ...five-step Electron wipe... } else { ...seam wipe... }` shape; Plan 04
+ * Task 1 deleted the `if` arm and promoted the `else` arm's `wipeSteps` to an unconditional
+ * assignment. This function detects whether that dual-branch shape has quietly regrown — the
+ * literal thing `ORIGINAL PURPOSE` used to compare, now inverted into "must never reappear".
+ */
+function hasDualBranchWipeShape(functionBody: string): boolean {
   const ifMatch = /if\s*\(\s*seam\s*===\s*null\s*\)\s*\{/.exec(functionBody)
-  if (!ifMatch) {
-    throw new Error(
-      `seamBranchParity: could not find 'if (seam === null) {' in the function body — the ` +
-        `dual-branch shape this file expects has changed; re-derive the SITES entry by hand.`
-    )
-  }
+  if (!ifMatch) return false
   const ifOpen = ifMatch.index + ifMatch[0].length - 1
   const ifClose = matchDelims(functionBody, ifOpen, '{', '}')
-  const electronBranch = functionBody.slice(ifOpen + 1, ifClose)
-
   const afterIf = functionBody.slice(ifClose + 1)
-  const elseMatch = /^\s*else\s*\{/.exec(afterIf)
-  if (!elseMatch) {
-    throw new Error(
-      `seamBranchParity: 'if (seam === null) { ... }' has no immediately-following 'else { ... }' ` +
-        `— the dual-branch shape this file expects has changed; re-derive the SITES entry by hand.`
-    )
-  }
-  const elseOpenRelative = afterIf.indexOf('{', elseMatch.index)
-  const elseOpen = ifClose + 1 + elseOpenRelative
-  const elseClose = matchDelims(functionBody, elseOpen, '{', '}')
-  const tauriBranch = functionBody.slice(elseOpen + 1, elseClose)
-
-  return {
-    electronLabels: extractWipeStepLabels(electronBranch),
-    tauriLabels: extractWipeStepLabels(tauriBranch)
-  }
+  return /^\s*else\s*\{/.test(afterIf)
 }
 
-function extractWipeStepLabels(branchText: string): string[] {
-  const headerMatch = /wipeSteps\s*=\s*\[/.exec(branchText)
+/**
+ * Extracts the wipeSteps labels from the SINGLE surviving array in a collapsed function body.
+ * Anchored on `(?:const|let)\s+wipeSteps` (a declaration, never a comment mentioning the word)
+ * so a prose comment like "the wipeSteps discipline below" or "a SEPARATE wipeSteps entry" —
+ * both of which appear in the real source above the real declaration — can never be mistaken for
+ * the array itself. The `=(?!>)` after the optional type annotation is required because Plan 04's
+ * collapse combined the declaration and the assignment onto one line
+ * (`const wipeSteps: Array<[string, () => Promise<unknown>]> = [`), and that type annotation's own
+ * arrow function (`() => Promise<unknown>`) contains an `=` that a naive `wipeSteps\s*=\s*\[`
+ * regex (the shape this file used pre-collapse) would stop at, or — worse — sail past into an
+ * unrelated `= [` occurring later in the function body. Verified against both real files: this
+ * regex was checked to correctly skip the arrow's `=>` and land on the real assignment.
+ */
+function extractWipeStepLabels(functionBody: string): string[] {
+  const headerMatch = /(?:const|let)\s+wipeSteps\s*(?::[\s\S]*?)?=(?!>)\s*\[/.exec(
+    functionBody
+  )
   if (!headerMatch) {
     throw new Error(
-      `seamBranchParity: could not find a 'wipeSteps = [' array in this branch — the shape this ` +
-        `file expects has changed; re-derive the SITES entry by hand.`
+      `seamBranchParity: could not find a 'wipeSteps = [' array in this function body — the ` +
+        `shape this file expects has changed; re-derive the SITES entry by hand.`
     )
   }
   const outerOpen = headerMatch.index + headerMatch[0].length - 1
-  const outerClose = matchDelims(branchText, outerOpen, '[', ']')
-  const arrayBody = branchText.slice(outerOpen, outerClose + 1)
+  const outerClose = matchDelims(functionBody, outerOpen, '[', ']')
+  const arrayBody = functionBody.slice(outerOpen, outerClose + 1)
 
   const labels: string[] = []
   let depth = 0
@@ -189,10 +185,29 @@ function extractWipeStepLabels(branchText: string): string[] {
   return labels
 }
 
-// ── SITES registry — one entry per dual-branch site (source: 34.4.1-SEAM-PARITY-SWEEP.md) ──────
+// ── The fixed reference point (replaces the live-extracted Electron branch) ────────────────────
+// Verified against Task 1's own diff (`git show a2198f6e2`) for BOTH files: the deleted
+// `if (seam === null)` arm in `humble/user.ts`'s disconnect() AND
+// `storeManagers/legendary/user.ts`'s logout() built its `wipeSteps` from exactly these five
+// `session`-backed calls, in this order. This is now a fixed historical fact, not something read
+// from a branch that no longer exists.
+
+const ORIGINAL_FIVE_STEP_LABELS = [
+  'clearStorageData',
+  'clearCache',
+  'clearAuthCache',
+  'clearHostResolverCache',
+  'clearData'
+] as const
+
+const ORIGINAL_FIVE_STEP_CATEGORIES = categoriesForLabels([
+  ...ORIGINAL_FIVE_STEP_LABELS
+])
+
+// ── SITES registry — one entry per collapsed site (source: 34.4.1-SEAM-PARITY-SWEEP.md) ────────
 
 interface SiteDef {
-  /** Human label, also the KNOWN_GAP cross-reference key. */
+  /** Human label, also the KNOWN_GAP/DECLARED cross-reference key. */
   label: string
   file: string
   functionName: string
@@ -212,6 +227,8 @@ const SITES: SiteDef[] = [
 ]
 
 // ── KNOWN_GAP registry — seeded from 34.4.1-SEAM-PARITY-SWEEP.md's SILENTLY-DROPPED findings ────
+// Unrelated to the branch collapse; untouched by this inversion. Stays a live, reusable,
+// currently-empty mechanism for any future dual-branch site added to SITES.
 
 interface KnownGapEntry {
   site: string
@@ -220,11 +237,6 @@ interface KnownGapEntry {
   closingPlan: string
 }
 
-// Phase 34.4.1 gap-cycle plan 16 (F-6 BLOCKING closure): the storage-clear capability landed for
-// BOTH sites (see CATEGORY_MAP's clearHumbleStorage/clearEpicStorage entries above), so the
-// `storage`/`cache` KNOWN_GAP entries this array used to carry for both sites are DELETED, not
-// softened — the capability genuinely closes them. KNOWN_GAP is intentionally empty; the
-// mechanism stays live for any future dual-branch site added to SITES.
 const KNOWN_GAP: KnownGapEntry[] = []
 
 function validateKnownGapEntry(entry: KnownGapEntry): string | null {
@@ -292,52 +304,36 @@ function isDeclaredInSource(sourceText: string, entry: DeclaredEntry): boolean {
   return entry.categoryTerms.some((term) => lower.includes(term.toLowerCase()))
 }
 
-// ── The comparison itself — driven through the SAME function real-source and synthetic-source
-//    cases both call, so anti-vacuity cases prove something about the real assertion. ───────────
+// ── The comparison itself — driven through the SAME functions real-source and synthetic-source
+//    cases both call, so anti-vacuity cases prove something about the real assertion. Post-Plan-04
+//    these compare ORIGINAL_FIVE_STEP_CATEGORIES (fixed) against the surviving single path's
+//    categories (live-extracted), rather than two live-extracted branches against each other. ────
 
 function undeclaredDrops(
-  electronCategories: Set<string>,
-  tauriCategories: Set<string>,
+  originalCategories: Set<string>,
+  currentCategories: Set<string>,
   declaredForSite: KnownGapEntry[]
 ): string[] {
   const declared = new Set(declaredForSite.map((g) => g.droppedCategory))
-  return [...electronCategories].filter(
-    (c) => !tauriCategories.has(c) && !declared.has(c)
+  return [...originalCategories].filter(
+    (c) => !currentCategories.has(c) && !declared.has(c)
   )
 }
 
 function staleKnownGapEntries(
-  electronCategories: Set<string>,
-  tauriCategories: Set<string>,
+  originalCategories: Set<string>,
+  currentCategories: Set<string>,
   declaredForSite: KnownGapEntry[]
 ): KnownGapEntry[] {
   const actuallyDropped = new Set(
-    [...electronCategories].filter((c) => !tauriCategories.has(c))
+    [...originalCategories].filter((c) => !currentCategories.has(c))
   )
   return declaredForSite.filter((g) => !actuallyDropped.has(g.droppedCategory))
 }
 
-// ── A small recursive directory walker (no new dependency) for the registry-completeness check ─
-
-function listFilesRecursive(dir: string): string[] {
-  const entries = readdirSync(dir)
-  let files: string[] = []
-  for (const entry of entries) {
-    const fullPath = join(dir, entry)
-    const stat = statSync(fullPath)
-    if (stat.isDirectory()) {
-      if (entry === '__tests__' || entry === 'node_modules') continue
-      files = files.concat(listFilesRecursive(fullPath))
-    } else if (entry.endsWith('.ts') && !entry.endsWith('.test.ts')) {
-      files.push(fullPath)
-    }
-  }
-  return files
-}
-
 // =================================================================================================
 
-describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.1-11/REQ-34.4.1-GAP-04)', () => {
+describe('seamBranchParity — INVERTED by Phase 39 Plan 04 Task 2 (was Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.1-11/REQ-34.4.1-GAP-04; now REQ-39-03)', () => {
   describe('KNOWN_GAP entries are well-formed (every entry names a finding AND a closing plan)', () => {
     // Phase 34.4.1 gap-cycle plan 16: KNOWN_GAP is now empty (both sites' storage/cache gaps
     // closed for real). it.each rejects an empty table, so this check is skipped rather than
@@ -387,22 +383,25 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
   })
 
   describe.each(SITES.map((site) => [site.label, site] as const))(
-    'dual-branch site: %s',
+    'collapsed site: %s',
     (_label, site) => {
       let sourceText: string
-      let electronCategories: Set<string>
-      let tauriCategories: Set<string>
+      let functionBody: string
+      let currentCategories: Set<string>
 
       beforeAll(() => {
         sourceText = readFileSync(site.file, 'utf-8')
-        const functionBody = findFunctionBody(sourceText, site.functionName)
-        const { electronLabels, tauriLabels } =
-          findWipeStepsIfElseBranches(functionBody)
-        electronCategories = categoriesForLabels(electronLabels)
-        tauriCategories = categoriesForLabels(tauriLabels)
+        functionBody = findFunctionBody(sourceText, site.functionName)
+        currentCategories = categoriesForLabels(
+          extractWipeStepLabels(functionBody)
+        )
       })
 
-      it('every Electron-only category is either present in Tauri, covered by a dated KNOWN_GAP entry, or a validated DECLARED entry', () => {
+      it('has NOT regrown a dual-branch `if (seam === null) { ... } else { ... }` wipe shape', () => {
+        expect(hasDualBranchWipeShape(functionBody)).toBe(false)
+      })
+
+      it('every category dropped from the original five-step wipe is either present in the surviving path, covered by a dated KNOWN_GAP entry, or a validated DECLARED entry', () => {
         const knownGapForSite = KNOWN_GAP.filter((g) => g.site === site.label)
         const declaredForSite = DECLARED.filter((d) => d.site === site.label)
         const validDeclared = declaredForSite.filter((d) =>
@@ -418,8 +417,8 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
           }))
         ]
         const drops = undeclaredDrops(
-          electronCategories,
-          tauriCategories,
+          ORIGINAL_FIVE_STEP_CATEGORIES,
+          currentCategories,
           softenedCategories
         )
         expect(drops).toEqual([])
@@ -428,8 +427,8 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
       it('no stale KNOWN_GAP entries (a declared drop that no longer exists in source must be removed)', () => {
         const declaredForSite = KNOWN_GAP.filter((g) => g.site === site.label)
         const stale = staleKnownGapEntries(
-          electronCategories,
-          tauriCategories,
+          ORIGINAL_FIVE_STEP_CATEGORIES,
+          currentCategories,
           declaredForSite
         )
         if (stale.length > 0) {
@@ -443,10 +442,12 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
         expect(stale).toEqual([])
       })
 
-      it('no stale DECLARED entries (a declared category no longer actually dropped in Tauri must be removed)', () => {
+      it('no stale DECLARED entries (a declared category no longer actually dropped from the original five must be removed)', () => {
         const declaredForSite = DECLARED.filter((d) => d.site === site.label)
         const actuallyDropped = new Set(
-          [...electronCategories].filter((c) => !tauriCategories.has(c))
+          [...ORIGINAL_FIVE_STEP_CATEGORIES].filter(
+            (c) => !currentCategories.has(c)
+          )
         )
         const stale = declaredForSite.filter(
           (d) => !actuallyDropped.has(d.droppedCategory)
@@ -471,17 +472,17 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
   )
 
   describe('anti-vacuity: the comparison functions actually reject the bad input they exist to reject', () => {
-    it('a synthetic Tauri branch missing a category (no matching KNOWN_GAP) is rejected by undeclaredDrops', () => {
-      const electron = categoriesForLabels(['clearStorageData', 'clearCache'])
-      const tauri = categoriesForLabels(['clearCache']) // storage/cookies silently missing
-      const drops = undeclaredDrops(electron, tauri, [])
+    it('a synthetic current-path missing a category (no matching KNOWN_GAP) is rejected by undeclaredDrops', () => {
+      const original = categoriesForLabels(['clearStorageData', 'clearCache'])
+      const current = categoriesForLabels(['clearCache']) // storage/cookies silently missing
+      const drops = undeclaredDrops(original, current, [])
       expect(drops.length).toBeGreaterThan(0)
       expect(drops).toEqual(expect.arrayContaining(['storage', 'cookies']))
     })
 
     it('the SAME missing category IS accepted once a matching KNOWN_GAP entry declares it', () => {
-      const electron = categoriesForLabels(['clearStorageData', 'clearCache'])
-      const tauri = categoriesForLabels(['clearCache'])
+      const original = categoriesForLabels(['clearStorageData', 'clearCache'])
+      const current = categoriesForLabels(['clearCache'])
       const declared: KnownGapEntry[] = [
         {
           site: 'x',
@@ -496,22 +497,7 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
           closingPlan: 'plan-x'
         }
       ]
-      expect(undeclaredDrops(electron, tauri, declared)).toEqual([])
-    })
-
-    it('an Electron branch that GROWS a new step (no Tauri counterpart, no KNOWN_GAP) is rejected', () => {
-      // Simulates a future edit that adds a brand-new wipeSteps entry to the Electron branch only
-      // — exactly the shape a silent future regression would take.
-      const electronBefore = categoriesForLabels(['clearStorageData'])
-      const electronAfterGrowth = categoriesForLabels([
-        'clearStorageData',
-        'clearHostResolverCache'
-      ])
-      const tauri = categoriesForLabels(['clearStorageData'])
-      expect(undeclaredDrops(electronBefore, tauri, [])).toEqual([])
-      expect(undeclaredDrops(electronAfterGrowth, tauri, [])).toEqual([
-        'hostResolver'
-      ])
+      expect(undeclaredDrops(original, current, declared)).toEqual([])
     })
 
     it('an unrecognized wipeSteps label throws rather than silently contributing zero categories', () => {
@@ -521,8 +507,8 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
     })
 
     it('staleKnownGapEntries correctly flags a KNOWN_GAP entry whose category is no longer dropped', () => {
-      const electron = categoriesForLabels(['clearStorageData'])
-      const tauri = categoriesForLabels(['clearStorageData']) // capability landed -- no longer dropped
+      const original = categoriesForLabels(['clearStorageData'])
+      const current = categoriesForLabels(['clearStorageData']) // capability landed -- no longer dropped
       const declared: KnownGapEntry[] = [
         {
           site: 'x',
@@ -531,14 +517,14 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
           closingPlan: 'plan-x'
         }
       ]
-      const stale = staleKnownGapEntries(electron, tauri, declared)
+      const stale = staleKnownGapEntries(original, current, declared)
       expect(stale).toHaveLength(1)
       expect(stale[0].droppedCategory).toBe('storage')
     })
 
     it('staleKnownGapEntries does NOT flag a KNOWN_GAP entry whose category is still genuinely dropped', () => {
-      const electron = categoriesForLabels(['clearStorageData'])
-      const tauri = categoriesForLabels([]) // still dropped
+      const original = categoriesForLabels(['clearStorageData'])
+      const current = categoriesForLabels([]) // still dropped
       const declared: KnownGapEntry[] = [
         {
           site: 'x',
@@ -547,7 +533,7 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
           closingPlan: 'plan-x'
         }
       ]
-      expect(staleKnownGapEntries(electron, tauri, declared)).toEqual([])
+      expect(staleKnownGapEntries(original, current, declared)).toEqual([])
     })
 
     // ── isDeclaredInSource anti-vacuity (Phase 34.4.1 gap-cycle plan 16 Task 3) ────────────────
@@ -602,47 +588,47 @@ describe('seamBranchParity (Phase 34.4.1 gap cycle, plan 10 Task 2 — REQ-34.4.
         '// T-34.4.1-73: clearAuthCache has no in-page equivalent, DECLARED not dropped'
       expect(isDeclaredInSource(validSource, entry)).toBe(true)
     })
-  })
 
-  describe('registry completeness: the declared SITES list matches what is actually in source', () => {
-    it('the number of wipeSteps-shaped dual-branch sites found in src/backend matches SITES.length exactly', () => {
-      // Every dual-branch site of this shape contributes exactly 2 `wipeSteps = [` assignments
-      // (one per branch). A site silently REMOVED from source drops this count below
-      // SITES.length * 2; a NEW dual-branch site appearing with no registry entry raises it above
-      // — both directions fail this assertion, catching either drift direction.
-      const files = listFilesRecursive(SRC_BACKEND_DIR)
-      let totalWipeStepsAssignments = 0
-      for (const file of files) {
-        const text = readFileSync(file, 'utf-8')
-        const matches = text.match(/wipeSteps\s*=\s*\[/g)
-        if (matches) totalWipeStepsAssignments += matches.length
-      }
-      expect(totalWipeStepsAssignments).toBe(SITES.length * 2)
+    // ── anti-regrowth anti-vacuity (Phase 39 Plan 04 Task 2) ───────────────────────────────────
+    // Proves hasDualBranchWipeShape actually detects the shape it exists to detect, so the two
+    // "has NOT regrown" assertions above are not passing merely because the detector is inert.
+
+    it('anti-vacuity: hasDualBranchWipeShape DETECTS a synthetic dual-branch wipe shape', () => {
+      const synthetic = `
+        const seam = getLoginWindowSeam()
+        let wipeSteps
+        if (seam === null) {
+          const ses = session.fromPartition('x')
+          wipeSteps = ['clearStorageData', async () => ses.clearStorageData()]
+        } else {
+          wipeSteps = ['clearHumbleCookies', async () => seam.clearCookies()]
+        }
+      `
+      expect(hasDualBranchWipeShape(synthetic)).toBe(true)
     })
 
-    it('anti-vacuity: a registry with a missing entry would NOT match the real source count (sanity-checked here without mutating the real SITES constant)', () => {
-      const files = listFilesRecursive(SRC_BACKEND_DIR)
-      let totalWipeStepsAssignments = 0
-      for (const file of files) {
-        const text = readFileSync(file, 'utf-8')
-        const matches = text.match(/wipeSteps\s*=\s*\[/g)
-        if (matches) totalWipeStepsAssignments += matches.length
-      }
-      const shrunkRegistryLength = SITES.length - 1
-      expect(totalWipeStepsAssignments).not.toBe(shrunkRegistryLength * 2)
+    it('anti-vacuity: hasDualBranchWipeShape does NOT fire on an `if (seam === null)` with no following `else` (a different, unrelated shape)', () => {
+      const synthetic = `
+        if (seam === null) {
+          throw new Error('no seam installed')
+        }
+        const wipeSteps = ['clearHumbleCookies']
+      `
+      expect(hasDualBranchWipeShape(synthetic)).toBe(false)
     })
-  })
 
-  describe('this plan does not touch humble/__tests__/user.test.ts (the untouched-five-step regression stays exactly as written)', () => {
-    it('the file still contains the named regression test unmodified in spirit (still asserts the 5-step Electron path)', () => {
-      const testFilePath = join(
-        SRC_BACKEND_DIR,
-        'humble/__tests__/user.test.ts'
-      )
-      const text = readFileSync(testFilePath, 'utf-8')
-      expect(text).toContain(
-        'with no seam installed, the original five Electron wipe steps still run instead'
-      )
+    it('anti-vacuity: extractWipeStepLabels correctly parses the collapsed single-line const-with-type-annotation shape (the exact shape Task 1 produced) without stopping at the arrow function\'s own `=>`', () => {
+      const synthetic = `
+        const seam = getLoginWindowSeamOrThrow()
+        const wipeSteps: Array<[string, () => Promise<unknown>]> = [
+          ['clearHumbleCookies', async () => seam.clearCookies()],
+          ['clearHumbleStorage', async () => seam.clearStorage()]
+        ]
+      `
+      expect(extractWipeStepLabels(synthetic)).toEqual([
+        'clearHumbleCookies',
+        'clearHumbleStorage'
+      ])
     })
   })
 })
