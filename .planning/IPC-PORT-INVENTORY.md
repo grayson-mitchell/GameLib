@@ -28,11 +28,16 @@ this repo — three recorded instances — so this line carries a date, a commit
 re-verification must replace all three together.**
 
 **Superseded 2026-09-02 (Phase 39, plan 39-01, working tree `ed1fdf71d`) — the 220 above is now
-stale.** The live union today is **206** (invoke 154 / send 52), confirmed by both the gate's own
-`check_coverage` (clean, 0 unbucketed) and this plan's dated note under `## Totals` below, which
-re-derived `AUDITED_UNION_FLOOR` and the `Unique channels` row together. The gap between 220 and
-206 is the same 18-name window-chrome cluster documented there, not a fresh finding — this line is
-not a new audit, only a pointer so the two numbers on this page never disagree with each other.
+stale.** The live `src/preload/` union today is **206** (invoke 154 / send 52), confirmed by the
+gate's own `check_coverage` (clean, 0 unbucketed) and by `AUDITED_UNION_FLOOR`, re-derived to 206
+in this plan's edit. The `## Totals` → `Unique channels` row below reads **207**, not 206 —
+one channel higher than the true live union, deliberately: `getEpicGamesStatus` has zero
+`src/preload/` exposure but is pinned into this page's Phase 34.5 bucket line by
+`ported-channels-gate.py`'s own declared-channel list, so it stays documented here even though
+`preload-surface-gate.py`'s union excludes it. The gap between 220 and 206 is the other 17 names
+of the same 18-name window-chrome/misc cluster documented under `## Totals` below, not a fresh
+finding — this line is a pointer, not a new audit; the two numbers on this page (206 live union,
+207 documented bucket total) are expected to differ by exactly this one channel going forward.
 
 Every channel exposed via `makeHandlerInvoker`/`makeListenerCaller` under `src/preload/` appears
 in exactly one bucket line of this document. Enforcement: `preload-surface-gate.py`
@@ -48,7 +53,7 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 206 |
+| Unique channels | 207 |
 | Ported to sidecar | 52 |
 | **Unported** | **159** |
 
@@ -92,7 +97,7 @@ per-phase Electron-only backlog this document's other sections enumerate. The `P
 that split is a frozen Phase 34.1-era snapshot, not re-tallied per phase; recording that explicitly
 here rather than leaving an apparent, unexplained arithmetic gap.
 
-**Unique channels lowered 225 → 206 (Phase 39, plan 39-01, 2026-09-02) — RE-DERIVE, not a new
+**Unique channels lowered 225 → 207 (Phase 39, plan 39-01, 2026-09-02) — RE-DERIVE, not a new
 audit.** `preload-surface-gate.py`'s `AUDITED_UNION_FLOOR` had gone stale at 217 (pre-Phase-35);
 the live extractor measures 206 (invoke 154 / send 52) against the working tree at `ed1fdf71d`.
 `check_coverage` in the code→doc direction was and remains clean — zero live channels are
@@ -103,16 +108,26 @@ getEpicGamesStatus, health, isFrameless, isFullscreen, isMaximized, isMinimized,
 minimizeWindow, openPatreonPage, openReleases, openWikiLink, setFullscreen, setZoomFactor,
 showAboutWindow, unmaximizeWindow), so this retrospective note itself can never be mistaken for a
 bucket line by `parse_bucket_names`'s >=5-backtick-name rule — this matches Phase 35's own record
-(`main.ts`'s deletion removed 136 IPC channel registrations). Those 18 names were deleted from the
-bucket lines that
-carried them, and the `## Totals` → `Unique channels` row above was set to 206 to match, in the
-same edit as the floor change, so a subsequent run cannot land on a fresh-looking
-`check_totals_reconciliation` failure. **Only the `Unique channels` row was re-derived.** The
+(`main.ts`'s deletion removed 136 IPC channel registrations). 17 of those 18 names were deleted
+from the bucket lines that carried them; **`getEpicGamesStatus` was put back.** It genuinely has
+zero `src/preload/` exposure today (confirmed live: `runnerAuthFlowRegistration.ts` still
+registers `ipcMain.handle('getEpicGamesStatus', ...)` in the sidecar, but nothing in
+`src/preload/` or `src/frontend/` calls it), so `preload-surface-gate.py`'s 206-channel union
+correctly excludes it. But `ported-channels-gate.py` (Phase 34.5's own gate, a different script
+with its own hardcoded declared-channel list) requires `getEpicGamesStatus` to remain in this
+page's Phase 34.5 Slice 8 bucket line for an orthogonal reason: it tracks whether a channel was
+ported to the sidecar during that phase's IPC re-plumb, independent of whether it is exposed via
+`src/preload/` today. Removing it broke that previously-passing gate; restoring it fixed the
+regression without touching `ported-channels-gate.py` itself. The net effect: 17 names left the
+bucket lines, `getEpicGamesStatus` did not, so the `## Totals` → `Unique channels` row above was
+set to **207**, not 206, in the same edit as the floor change — one channel higher than the true
+live preload union (206) documented below, and that one-channel gap is intentional and permanent
+until Phase 34.5's own gate is revised. **Only the `Unique channels` row was re-derived.** The
 `Ported to sidecar` (52) and `Unported` (159) rows above remain the Phase 34.1-era snapshot they
 already describe themselves as — this phase measured neither, and did not attempt to re-tally
 them. One side effect worth naming rather than leaving as a silent surprise for the next reader:
 the pre-existing `Ported + Unported` vs `Unique channels` discrepancy noted directly above (a
-+14 gap, when `Unique channels` was 225) now reads as a −5 gap (52 + 159 = 211 against 206) —
++14 gap, when `Unique channels` was 225) now reads as a −4 gap (52 + 159 = 211 against 207) —
 the sign flipped because only the `Unique channels` side moved. This is the same
 pre-existing, not-this-phase's-to-fix accounting gap as before, now on the other side of zero;
 whoever re-tallies the baseline should read both notes together.
@@ -269,7 +284,7 @@ logins depend on the same seam.
 
 Gained `isLoggedIn` from slice 7 on 2026-07-27 (34.4 **D-03**) — 56 → 57.
 
-`addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getInstallInfo`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
+`addShortcut`, `addToSteam`, `authAmazon`, `authGOG`, `authZoom`, `callTool`, `disableEosOverlay`, `downloadRuntime`, `egsSync`, `enableEosOverlay`, `getAlternativeWine`, `getAmazonLoginData`, `getAmazonUserInfo`, `getCometVersion`, `getEosOverlayStatus`, `getEpicGamesStatus`, `getGOGLinuxInstallersLangs`, `getGogdlVersion`, `getInstallInfo`, `getLatestEosOverlayVersion`, `getLegendaryVersion`, `getNileVersion`, `getUserInfo`, `getZoomUserInfo`, `installEosOverlay`, `installWineVersion`, `isAddedToSteam`, `isEosOverlayEnabled`, `isLoggedIn`, `isRuntimeInstalled`, `login`, `logoutAmazon`, `logoutGOG`, `logoutLegendary`, `logoutZoom`, `processShortcut`, `refreshWineVersionInfo`, `removeEosOverlay`, `removeFromSteam`, `removeShortcut`, `removeWineVersion`, `runWineCommand`, `shortcutsExists`, `steamgriddb.getGrids`, `steamgriddb.getHeroes`, `steamgriddb.hasApiKey`, `steamgriddb.searchGame`, `steamgriddb.setApiKey`, `syncGOGSaves`, `syncSaves`, `toggleDXVK`, `toggleDXVKNVAPI`, `toggleVKD3D`, `updateEosOverlayInfo`, `wine.isValidVersion`, `winetricksAvailable`, `winetricksInstall`, `winetricksInstalled`
 
 **Status (2026-08-02): the blocking live gate has now run THREE times and FAILED all three —
 channel membership and the 38/3/16 split above are unchanged by any of them.** The first run
