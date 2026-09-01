@@ -325,7 +325,6 @@ class GlobalConfigV0 extends GlobalConfig {
     const defaultWine: WineInstallation = isWindows ? {} : getDefaultWine()
 
     const settings: Partial<AppSettings> = {
-      analyticsOptIn: false,
       notifyHumbleExpirations: true,
       checkUpdatesInterval: 10,
       enableUpdates: false,
