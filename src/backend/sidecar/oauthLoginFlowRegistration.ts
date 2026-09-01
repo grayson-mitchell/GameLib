@@ -20,14 +20,11 @@
  * code, it does not authenticate — Humble's own six browser-auth channels are a completely
  * separate concern registered by their own dedicated module).
  *
- * This channel is Tauri-only by construction: the Electron renderer never reaches it, because
- * `WebView/index.tsx` still renders its `<webview>` there and never calls
- * `window.api.oauthCaptureLogin` on that build (Task 3's hook guards on Tauri-context detection
- * first). Under
- * Electron, `captureOAuthLogin()`'s own `getLoginWindowSeam() === null` check resolves
- * `{ status: 'unsupported' }` immediately regardless — this handler would be harmless even if
- * somehow invoked there, but it is registered in the sidecar's curated module graph only, which
- * never runs under Electron's main process at all.
+ * This channel is Tauri-only by construction: it is registered in the sidecar's curated module
+ * graph only — the module that installs it (`registerOAuthLoginFlows`, below) never runs anywhere
+ * else. `captureOAuthLogin()` calls `getLoginWindowSeamOrThrow()`, which is always satisfied here
+ * because `registerHumbleLoginFlows()` installs the seam unconditionally at sidecar startup,
+ * before any IPC handler can be reached.
  *
  * D-04/REQ-34.4.1-08 boundary (do not blur this): this channel captures a redirect code — it does
  * NOT authenticate. `login`, `authGOG`, `authAmazon` and `authZoom` remain unported and still

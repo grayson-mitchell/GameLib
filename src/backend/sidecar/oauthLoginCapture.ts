@@ -31,7 +31,7 @@
  * value.
  */
 
-import { getLoginWindowSeam } from '../humble/loginWindowSeam'
+import { getLoginWindowSeamOrThrow } from '../humble/loginWindowSeam'
 import { logInfo, logWarning, LogPrefix } from '../logger'
 // Defined in common/types/ (not here) so common/types/ipc.ts's AsyncIPCFunctions.
 // oauthCaptureLogin entry (Task 2) can reference both without common/ importing FROM
@@ -192,17 +192,7 @@ export function captureOAuthLogin(
   loginUrl: string,
   options?: { deadlineMs?: number; pollMs?: number }
 ): Promise<OAuthCaptureOutcome> {
-  const seam = getLoginWindowSeam()
-  if (seam === null) {
-    // The Electron build's answer — cheap and total, nothing opened.
-    return Promise.resolve({ status: 'unsupported' })
-  }
-
-  // Re-bound to a non-null local: TS's control-flow narrowing of `seam` above does not persist
-  // into the nested `settle`/`poll` function declarations below, since it cannot prove the outer
-  // closure variable is never reassigned to null by the time they run (it is `const`, so it
-  // actually can't be, but this rebinding makes that explicit rather than fighting the checker).
-  const activeSeam = seam
+  const seam = getLoginWindowSeamOrThrow()
   const deadlineMs = options?.deadlineMs ?? DEFAULT_DEADLINE_MS
   const pollMs = options?.pollMs ?? DEFAULT_POLL_MS
 
@@ -232,7 +222,7 @@ export function captureOAuthLogin(
       if (label !== null) {
         const labelToClose = label
         try {
-          await activeSeam.close(labelToClose)
+          await seam.close(labelToClose)
         } catch (err) {
           logWarning(
             [
@@ -255,7 +245,7 @@ export function captureOAuthLogin(
       if (settled || label === null || pollInFlight) return
       pollInFlight = true
       try {
-        const events = await activeSeam.takeEvents(label)
+        const events = await seam.takeEvents(label)
         if (settled) return
         for (const event of events) {
           // Quick task 260803-eee Task 5: a real close (`WindowEvent::Destroyed` on the Rust
@@ -269,7 +259,7 @@ export function captureOAuthLogin(
           // close that arrived first (before any redirect) correctly wins here. This can only
           // observe a GENUINE user-initiated close: `captureOAuthLogin`'s own `settle()` always
           // clears `pollInterval` (stopping further polling) BEFORE it ever calls
-          // `activeSeam.close()`, so a close this function itself triggered can never be read
+          // `seam.close()`, so a close this function itself triggered can never be read
           // back through this loop.
           if (event.event === 'closed') {
             await settle({ status: 'cancelled' }, 'window-closed')
@@ -319,13 +309,13 @@ export function captureOAuthLogin(
       void settle({ status: 'timeout' })
     }, deadlineMs)
 
-    activeSeam
+    seam
       .open(loginUrl, { visible: true, userAgent: resolveUserAgent(runner) })
       .then((openedLabel) => {
         if (settled) {
           // The capture already settled (e.g. the deadline fired) before open() resolved —
           // close the now-orphaned window immediately rather than leaking it.
-          activeSeam.close(openedLabel).catch((err) => {
+          seam.close(openedLabel).catch((err) => {
             logWarning(
               [
                 `[oauthLoginCapture] runner=${runner} close failed (non-fatal):`,
