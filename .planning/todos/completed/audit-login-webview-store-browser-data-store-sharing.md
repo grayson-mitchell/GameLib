@@ -88,7 +88,7 @@ parts of it.
 
 Both questions answered with evidence. **This audit produced no fix of its own**; it produced one
 new defect, filed separately as
-`.planning/todos/pending/2026-09-02-gog-nile-zoom-logout-never-clear-the-shared-cookie-jar.md`.
+`.planning/todos/pending/2026-09-02-gog-and-amazon-logout-never-clear-the-shared-cookie-jar.md`.
 
 ### Q1 — "one shared `WKWebsiteDataStore`, or separate ones?" → **ONE. Shared.**
 
@@ -121,7 +121,7 @@ therefore **structurally absent** in GameLib — unless whoever builds the brows
 into a custom store. The risk here is the mirror image of Heroic's: not partition splitting, but
 that everything shares one jar whether or not that was intended.
 
-### Q2 — "does logout actually clear it, observed not reported?" → **Epic and Humble yes; GOG, Amazon and Zoom NO.**
+### Q2 — "does logout actually clear it, observed not reported?" → **Epic and Humble yes; GOG and Amazon NO.**
 
 - **Epic: YES — answer 3 above is superseded.** `D-35-29-02` is **RESOLVED**, live-verified PASS
   2026-08-31 21:03 (debug session `epic-cookie-clear-read-divergence`). The four "surviving"
@@ -131,18 +131,27 @@ that everything shares one jar whether or not that was intended.
   That is the "observed, not reported" standard this todo demanded, met.
 - **Humble: YES** — `seam.clearCookies` + `seam.clearStorage` at `src/backend/humble/user.ts:1127`
   and `:1212`.
-- **GOG, Amazon (nile), Zoom: NO.** Repo-wide there are exactly **six** non-test
+- **GOG, Amazon (nile): NO.** Repo-wide there are exactly **six** non-test
   `.clearCookies(` / `.clearStorage(` call sites and all six are in those two files
   (`humble/user.ts:1011,1127,1212`; `legendary/user.ts:199,259,408`). `GOGUser.logout()`
-  (`gog/user.ts:263`), `NileUser.logout()` (`nile/user.ts:171`) and `ZoomUser.logout()`
-  (`zoom/user.ts:90`) clear `configStore`, `clearCache()` and on-disk token files only — nothing
-  reaches the cookie jar. All three nonetheless open a real login webview into it
+  (`gog/user.ts:263`) and `NileUser.logout()` (`nile/user.ts:171`) clear `configStore`,
+  `clearCache()` and on-disk token files only — nothing reaches the cookie jar. Both nonetheless
+  open a real login webview into it
   (`sidecar/oauthLoginCapture.ts` covers `legendary`/`gog`/`nile`/`zoom`, `seam.open(...)` at
   `:323`), and their session cookies are in the dev jar right now.
 
 This is upstream defect #2 — the half of `68eb1adde` this todo was filed to look for — present in
-GameLib for three of the five login surfaces. It was invisible to every prior investigation
-because all of them scoped to Epic.
+GameLib for two of its live login surfaces. It was invisible to every prior investigation because
+all of them scoped to Epic.
+
+**Correction, same day.** This record first named THREE runners, adding Zoom. Zoom's
+`ZoomUser.logout()` (`zoom/user.ts:90`) is the same shape and clears no cookies either, but it is
+**unreachable**: `authZoom`/`getZoomUserInfo`/`logoutZoom` have preload invokers and **zero**
+backend registrations, dropped permanently by Phase 34.5 D-02 — already recorded at
+`STATE.md:2711` and at `runnerMiscFlowRegistration.ts:25`. Zoom cannot log in under Tauri, so it
+cannot deposit the cookies at issue. Demoted to a documented non-finding in the new todo, which
+notes it becomes real the moment those three channels are ported. The lesson this audit is about
+bit the audit itself: **reachability is part of a call-site census, not a follow-up to it.**
 
 **What is NOT established:** whether the surviving `galaxy-login-*` / Amazon `session-token`
 records actually permit a silent re-auth with no credential prompt. Nobody has run that gesture.

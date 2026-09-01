@@ -32,23 +32,40 @@ absent** when the browser returns, unless it opts into a custom store. GameLib's
 mirror image of Heroic's: not partitions splitting apart, but everything sharing one jar whether
 or not that was intended.
 
-## Q2 — does logout clear it? **Epic and Humble yes; GOG, Amazon and Zoom no**
+## Q2 — does logout clear it? **Epic and Humble yes; GOG and Amazon no**
 
 Exactly six non-test `.clearCookies(` / `.clearStorage(` call sites exist repo-wide, all in
-`humble/user.ts` and `legendary/user.ts`. `GOGUser.logout()`, `NileUser.logout()` and
-`ZoomUser.logout()` clear only `configStore`, `clearCache()` and on-disk tokens; all three open
-real login webviews into the shared store via `oauthLoginCapture.ts`, and their session cookies
-are in the dev jar now.
+`humble/user.ts` and `legendary/user.ts`. `GOGUser.logout()` and `NileUser.logout()` clear only
+`configStore`, `clearCache()` and on-disk tokens; both open real login webviews into the shared
+store via `oauthLoginCapture.ts`, and their session cookies are in the dev jar now.
 
 This is upstream `68eb1adde`'s defect #2 — the thing the todo was filed to look for — present for
 three of five login surfaces. **It was invisible to every prior investigation because all of them
 scoped to Epic** (`D-35-29-01`, `D-35-29-02`, `35-AB-RETEST`, the `epic-cookie-clear-read-divergence`
 debug session). Filed as
-`.planning/todos/pending/2026-09-02-gog-nile-zoom-logout-never-clear-the-shared-cookie-jar.md`.
+`.planning/todos/pending/2026-09-02-gog-and-amazon-logout-never-clear-the-shared-cookie-jar.md`.
 
 The todo's own 2026-08-31 answer 3 ("PARTIALLY — cookies not entirely") is marked **superseded in
 place, not deleted**: `D-35-29-02` was resolved and live-verified at 21:03 that night, so the
 answer is now wrong while remaining the record of what was believed.
+
+## Correction, hours after filing — Zoom was wrong
+
+The first version of this task named **three** runners. Zoom is a non-finding:
+`authZoom`/`getZoomUserInfo`/`logoutZoom` have preload invokers but **zero** backend
+registrations (against 1-2 each for the GOG/Amazon/Epic equivalents), dropped permanently by
+Phase 34.5 D-02 — recorded at `runnerMiscFlowRegistration.ts:25` and `STATE.md:2711`, neither of
+which the filing checked. `ZoomUser.logout()` is real code nothing under Tauri can reach, so Zoom
+cannot deposit the cookies at issue. The runner itself is otherwise live (1564 LOC, registered in
+`storeManagers/index.ts:19`, gated on `experimentalFeatures.zoomPlatform`); it is the auth
+channels specifically that are gone, and the defect becomes real if they are ever ported.
+
+The GOG and Amazon findings are unaffected — both have live auth and logout channels.
+
+**This is the task's own lesson recurring inside the task.** It was filed on the premise that a
+call-site census beats going deep on one instance; the census then counted a call site that no
+caller can reach. **Reachability is part of the census, not a follow-up to it** — a `logout()` that
+exists and a `logout()` that runs are different facts, and only the second one can hold a defect.
 
 ## What was deliberately not done
 

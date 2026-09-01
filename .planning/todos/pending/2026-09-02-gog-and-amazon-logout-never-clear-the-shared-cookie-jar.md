@@ -1,6 +1,6 @@
 ---
 created: 2026-09-02T18:20:00.000Z
-title: "GOG, Amazon (nile) and Zoom logout never clear the shared cookie jar their login webviews write to"
+title: "GOG and Amazon (nile) logout never clear the shared cookie jar their login webviews write to"
 area: auth/webview
 needs: test-then-fix
 status: OPEN
@@ -11,14 +11,20 @@ upstream:
 files:
   - src/backend/storeManagers/gog/user.ts
   - src/backend/storeManagers/nile/user.ts
-  - src/backend/storeManagers/zoom/user.ts
   - src/backend/sidecar/oauthLoginCapture.ts
 ---
 
 ## Problem
 
-**Three of GameLib's five login surfaces write session cookies into the process-wide
+**Two of GameLib's live login surfaces write session cookies into the process-wide
 `WKWebsiteDataStore::defaultDataStore()` and never remove them on logout.**
+
+> **CORRECTED 2026-09-02, hours after filing.** This todo was filed naming THREE runners. Zoom is
+> **not** a live defect and has been demoted to the non-finding at the bottom of this file:
+> `authZoom` / `getZoomUserInfo` / `logoutZoom` have preload invokers but **zero** backend handler
+> registrations — dropped permanently by Phase 34.5 D-02, a fact `STATE.md:2711` already recorded
+> ("Zoom's 3 dropped permanently") and the original filing failed to check. `ZoomUser.logout()` is
+> real code that nothing under Tauri can reach. The GOG and Amazon findings are unaffected.
 
 Every login runner opens a real webview into the one shared default data store —
 `src/backend/sidecar/oauthLoginCapture.ts` covers `legendary`/`gog`/`nile`/`zoom` and calls
@@ -38,7 +44,6 @@ The other three logouts touch only local credential state:
 |---|---|---|---|
 | GOG | `gog/user.ts:263` | `clearCache('gog')`, `configStore.clear()`, unlinks `gogdlAuthConfig`, resets the credentials cache | **untouched** |
 | Amazon | `nile/user.ts:171` | `nile auth --logout`, `configStore.delete('userData')`, `clearCache('nile')` | **untouched** |
-| Zoom | `zoom/user.ts:90` | `clearCache('zoom')`, `configStore.clear()`, unlinks `tokenPath` | **untouched** |
 
 Live corroboration — index-walking parse of `~/Library/HTTPStorages/gamelib-shell.binarycookies`,
 2026-09-02, 51 live records:
@@ -68,8 +73,7 @@ whether that *matters* is untested. Do not write it up either way until this is 
   (stale third-party session cookies surviving an explicit logout), and the fix is still probably
   right but is no longer urgent.
 
-Repeat for Amazon. Zoom is lowest priority — check whether its login webview sets cookies at all
-before assuming it has the same exposure.
+Repeat for Amazon. **Do not spend time on Zoom** — see the non-finding below.
 
 Verify by re-reading the jar with an index-walking binarycookies parse, **never `strings`**
 (a byte match over a binary format can surface unreferenced remnants as if they were live records
@@ -103,6 +107,26 @@ The Epic work already paid for these. Ignoring either one recreates `D-35-29-02`
 `legendary/user.ts` is the worked reference for all four. Follow its shape rather than reinventing
 it — but note it is Epic-shaped (five hosts, a FATAL_WIPE_STEP), so lift the structure, not the
 host list.
+
+## NON-FINDING: Zoom — real code, unreachable logout
+
+`ZoomUser.logout()` (`src/backend/storeManagers/zoom/user.ts:90`) has the same shape as GOG's and
+clears no cookies either. It is **not** a defect, because nothing can call it under Tauri:
+
+- `src/preload/api/zoom.ts` exports `authZoom`, `getZoomUserInfo` and `logoutZoom`, but a
+  registration count across `src/backend/` gives **0** for all three, against 1-2 each for
+  `authGOG` / `authAmazon` / `logoutGOG` / `logoutAmazon` / `logoutLegendary`.
+- `runnerMiscFlowRegistration.ts:25` and `:119` state it outright: "Zoom is exactly three channels
+  (`authZoom`, `getZoomUserInfo`, `logoutZoom`), all DROPPED permanently by D-02".
+  `STATE.md:2711` records the same as a scope decision — "Zoom's 3 dropped permanently".
+
+So Zoom cannot log in under Tauri, and therefore cannot deposit the cookies whose removal would be
+at issue. The rest of the runner is live (1564 LOC, registered in `storeManagers/index.ts:19`, in
+the `Runner` union at `common/types.ts:28`, with a login tile gated on
+`experimentalFeatures.zoomPlatform`) — it is the auth channels specifically that are gone.
+
+**This becomes a real defect the moment those three channels are ported.** Whoever restores Zoom
+login inherits this todo's fix as a precondition, not as follow-up work.
 
 ## Deliberately out of scope
 
