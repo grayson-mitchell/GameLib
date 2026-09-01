@@ -2,166 +2,182 @@
 phase: quick-260901-kl2
 plan: 01
 subsystem: build
-tags: [zig, lld, tauri, macos, reproducible-builds, steam-bridge, gate-defect]
+tags: [zig, lld, tauri, macos, reproducible-builds, steam-bridge, gate-defect, mutation-testing]
 
 requires:
   - phase: quick-260901-i8i
     provides: "x64/darwin removal — the arm64/darwin tree this plan targets"
-provides: []
-affects: [".planning/todos/pending/2026-08-28-tauri-macos-bundle-is-786mb-frontenddist-embeds-build-bin-in.md item 6"]
+provides: ["item 6 closed — the 2026-08-28 bundle-size todo, all six items done"]
+affects: [".planning/todos/completed/2026-08-28-tauri-macos-bundle-is-786mb-frontenddist-embeds-build-bin-in.md"]
 
 tech-stack:
   added: []
-  patterns: []
+  patterns:
+    - "seeded-mutation testing to prove call-site ORDERING behaviourally, replacing a fragile source-text regex gate"
+    - "PE32 volatile-span masking (maskPeVolatile.py) to compare cross-invocation zig cc/lld output modulo wall-clock stamps"
 
 key-files:
   created: []
   modified:
+    - meta/buildSteamBridgeShims.ts
+    - meta/__tests__/buildSteamBridgeShims.test.ts
+    - public/bin/.gitignore
     - .planning/quick/260901-kl2-drop-steam-api-pdb-lib/260901-kl2-MEASUREMENTS.md
+    - .planning/todos/pending/2026-08-28-tauri-macos-bundle-is-786mb-frontenddist-embeds-build-bin-in.md (moved to completed/)
+    - .planning/quick/260901-i8i-drop-x64-darwin-intel-tree/260901-i8i-MEASUREMENTS.md
+    - .planning/quick/260901-i8i-drop-x64-darwin-intel-tree/260901-i8i-BASELINE.md
+    - .planning/quick/260901-e7o-restore-runner-symlinks-in-tauri-bundle/260901-e7o-MEASUREMENTS.md
+    - .planning/quick/260901-e7o-restore-runner-symlinks-in-tauri-bundle/260901-e7o-SUMMARY.md
+  created-untracked:
+    - .planning/quick/260901-kl2-drop-steam-api-pdb-lib/maskPeVolatile.py
 
 key-decisions:
-  - "r4's byte-identity proof strategy (P1 structural / P2 same-build hash / P3 never rebuild / P4 masked comparison) is sound and unaffected by this halt."
-  - "Completed Task 1 Step 0 (pinned pre-change script two ways) and Step 1 (rm'd the two byproducts from the real tree without rebuilding; DLL verified unchanged; dev census matches the plan's expected 277/12/97,884,865) before halting."
-  - "Halted at Step 2/3, before any code or test was written, on a FOURTH gate defect: Task 1's own embedded ordering-guard verify script cannot pass against the implementation Step 3 itself mandates, because the exported pruneShimBuildByproducts must take an arch parameter (required by B7) but the script's definition-locator regex assumes literally-empty parens."
-  - "No workaround applied, per the executor brief's explicit instruction to stop and report on a fourth vacuous/false gate rather than patch around it."
+  - "Approach A (post-compile-gate unlink) shipped, not a zig cc flag: measurement refuted every candidate flag — none suppresses both byproducts without perturbing the DLL bytes (-Wl,-s alone rewrites 455,308 bytes)."
+  - "r1's rebuild byte-identity premise was retracted (zig cc's lld backend stamps wall-clock TimeDateStamp on every invocation) and replaced with a four-part proof: P1 structural, P2 same-build hash (unit B7 + end-to-end E1), P3 never rebuild the real tree, P4 masked comparison (maskPeVolatile.py)."
+  - "r5 deleted the source-text ordering-guard regex (and its unit-test twin B4) rather than patching it a second time, after it produced a fourth false-RED on the plan's own mandated parameterized signature. Replaced with seeded M1/M2/M3 mutation testing that proves ordering behaviourally and is empirically equal-or-better coverage."
+  - "Four gate defects were found and corrected across this item's full history (r1/r2, r4, and two prior sessions) before this session's clean r5 resume — documented per the standing 'stop and report, do not work around' instruction. No fifth defect was found this session; all of Task 1 and Task 2's gates matched their predicted behavior exactly."
 
-requirements-completed: []
+requirements-completed: [TODO-2026-08-28-ITEM-6]
 
-duration: ~20min
+duration: ~2h across two sessions (r4 halt + r5 resume/completion)
 completed: 2026-09-01
-status: incomplete
+status: complete
 ---
 
 # Quick Task 260901-kl2: Drop steam_api.pdb / steam_api_shim.lib Summary
 
-**Second execution attempt. Task 1 Step 0 and Step 1 completed cleanly (script
-pinned, byproducts removed from the real tree without rebuilding, DLL verified
-unchanged, dev census matches expected 277/12/97,884,865). Halted before Step 2/3 —
-found a fourth gate defect in Task 1's own embedded verify script: it false-REDs the
-implementation Step 3 itself instructs writing. No code or test file was touched, no
-commit was made.**
+**Stopped shipping the two Windows linker byproducts (`steam_api.pdb`, `steam_api_shim.lib`,
+2,822,208 B combined) that `zig cc -target x86-windows-gnu -shared` drops next to
+`steam_api.dll` in `public/bin/${arch}/darwin/`, via a post-compile-gate unlink proven unable
+to alter the DLL four independent ways and proven unable to weaken the compile gate by seeded
+mutation. This is item 6 — the last open item — of the 2026-08-28 bundle-size todo, now closed
+and moved to `.planning/todos/completed/`.**
 
 ## Performance
 
-- **Duration:** ~20 min
+- **Duration:** ~2h across two sessions (this session resumed cleanly at r5 after a prior
+  session halted at a fourth gate defect)
 - **Completed:** 2026-09-01
-- **Tasks:** 0/3 completed (Task 1 halted mid-way, at Step 2/3; Tasks 2–3 never started, both depend on Task 1)
-- **Files modified:** 0 tracked/git files (two gitignored byproduct files removed from `public/bin/arm64/darwin/`; one planning doc updated)
+- **Tasks:** 3/3 completed
+- **Commits this session:** `d9aa7c5ee` (Task 1), `9c36e0fda` (Task 2), `4fc65603e` (Task 3)
 
 ## What happened
 
-This is the second execution attempt on this quick task. The first attempt (r1/r2 of
-the plan) halted at Task 1 Step 1 because the plan's original acceptance bar — "a
-same-path rebuild reproduces `steam_api.dll` byte-for-byte" — did not hold (`zig
-cc`'s `lld` backend stamps wall-clock time into the PE header). That premise was
-retracted and replaced in plan revisions r3/r4 with a four-part proof (P1 structural,
-P2 same-build hash either side of the prune, P3 never rebuild the real tree, P4
-masked comparison) that does not depend on rebuild determinism. That fix is sound and
-was not the issue this session.
+This item went through five plan revisions and four halted-and-corrected gate defects before
+landing cleanly. Two prior sessions are summarized here for the record; this session executed
+Task 1 Steps 2-5 through Task 3 without incident.
 
-This session followed r4's Task 1 exactly:
+**r1/r2 (first session, historical):** Halted at Task 1 Step 1. The original acceptance bar —
+"a same-path rebuild reproduces `steam_api.dll` byte-for-byte" — did not hold. `zig cc`'s `lld`
+backend stamps a wall-clock `TimeDateStamp` into the PE header on every invocation; three
+consecutive scratch builds produced three different hashes. Retracted and replaced (r3/r4) with
+a four-part proof (P1 structural / P2 same-build hash / P3 never rebuild the real tree / P4
+masked comparison) that does not depend on rebuild determinism.
 
-- **Step 0 (done):** pinned the pre-change script two ways — copied
-  `meta/buildSteamBridgeShims.ts` to `<scratchpad>/prechange/` and recorded
-  `git rev-parse HEAD` = `19f56777d2b60e9d145da700f27ae3372d646424`. Verified the
-  saved copy does NOT already contain `pruneShimBuildByproducts` (the negative
-  assertion the plan requires, guarding against a repeat of r4's own headline fix —
-  E1 consuming an already-pruned script).
-- **Step 1 (done):** plain `rm` of `public/bin/arm64/darwin/steam_api.pdb` and
-  `steam_api_shim.lib` — no rebuild of the real tree. `steam_api.dll` verified
-  unchanged at sha256 `2da072ba…`, 805,888 B. Dev tree census after removal: 277
-  files / 12 symlinks / 97,884,865 B, matching the plan's expected numbers exactly.
-  `steam-bridge-helper` and `steam_appid.txt` both survive. `build/bin/arm64/darwin`
-  was left untouched (its mirror-prune is Task 2's job via `vite build`).
+**r4 (second session, historical):** Completed Task 1 Step 0 (pinned the pre-change script two
+ways) and Step 1 (removed the two byproducts from the real tree without rebuilding; DLL verified
+unchanged). Halted before Step 2/3 on a **fourth** gate defect: Task 1's own embedded
+ordering-guard verify script located `pruneShimBuildByproducts()`'s definition with a regex
+assuming literally-empty parens (`\(\)`), which false-REDs against the parameterized signature
+(`pruneShimBuildByproducts(arch: string = resolveBridgeArch())`) that Step 3 itself mandates
+(required for unit test B7). No workaround was applied, per the standing "stop and report a
+fourth defect rather than patch around it" instruction.
 
-**Before writing Step 2's RED tests**, Task 1's second `<verify><automated>` block
-(the Python ordering-guard script) was dry-run against the exact implementation Step
-3 instructs writing, per the standing lesson on this item ("every prior defect here
-was found by RUNNING a gate, never by reading it" — and the brief's explicit
-instruction to assume a fourth exists). It failed on the correct implementation:
+**r5 (plan revision, applied this session):** The coordinator confirmed the fourth-defect
+finding and revised the plan: the ordering-guard regex and its unit-test twin B4 were **deleted
+outright**, not patched a second time — a gate that has twice convicted correct code trains an
+executor to reshape working code to satisfy it. In its place, Task 2's M1/M2/M3 mutation harness
+was redesigned to prove call-site ordering **behaviourally**: seed the output directory with
+stale sentinel byproducts before each mutation run, then assert survival (correct ordering) or
+deletion (misordering, caught) — verified during planning against all three possible prune
+positions to be equal-or-better coverage than the deleted regex.
 
-- B7 requires calling the exported prune helper with an explicit arch argument:
-  `pruneShimBuildByproducts('arm64')`.
-- Step 3 explicitly mandates the matching signature:
-  `pruneShimBuildByproducts(arch: string = resolveBridgeArch()): void`.
-- Task 1's verify script locates the definition with
-  `re.search(r'function pruneShimBuildByproducts\(\)', stripped)` — literal,
-  immediately-adjacent empty parens. A parameterized signature never contains that
-  substring (its parens are never empty), so the script reports
-  `'FAIL: pruneShimBuildByproducts() is not defined in the comment-stripped source'`
-  on a correct, plan-mandated implementation.
+**This session, resuming at r5 Task 1 Step 2:**
 
-Reproduced empirically (not just reasoned about): inserted the exact Step-3-mandated
-signature and call site into a copy of the real source and ran the plan's own verify
-script verbatim against it. `defn` returned `None`; the CALL site was located
-correctly and its position was correctly after the gate; both `COMPILE GATE FAILED`
-throws were intact. Only the definition-locator regex is wrong — it was written
-against B4's illustrative, parameterless prose example rather than against the
-parameterized signature Step 3 actually mandates. Full transcript and byte offsets in
-`260901-kl2-MEASUREMENTS.md`.
-
-This is the same class of defect as r2's B-1 fix (a false RED on correct code) and
-the executor brief's already-catalogued failure #2 — found here a fourth time on this
-item, in the definition half of the same check rather than the call half this time.
-
-**No workaround was applied.** Per the executor brief's explicit instruction ("If you
-find a fourth vacuous gate, STOP and report rather than working around it"), this
-halts the plan here rather than being patched inline — e.g. loosening the regex
-myself, or writing `pruneShimBuildByproducts` without a parameter and threading arch
-through some other mechanism purely to dodge the string match. Either would be
-shaping the implementation around a broken gate instead of fixing the gate, and the
-fix is to the plan's own verification script, not to application code — outside an
-autonomous inline fix's remit here.
-
-## Repo state at halt
-
-- `public/bin/arm64/darwin/steam_api.dll` — unchanged, sha `2da072ba…`, 805,888 B.
-- `public/bin/arm64/darwin/steam_api.pdb`, `steam_api_shim.lib` — REMOVED (Step 1,
-  intentional, matches the plan's target end-state; both gitignored/untracked, so
-  `git status --short` shows no tracked-file change from this).
-- `public/bin/arm64/darwin` census: 277 files / 12 symlinks / 97,884,865 B.
-- `build/bin/arm64/darwin` — untouched (279 / 12 / 100,707,073, DLL sha `2da072ba…`);
-  Task 2's job to mirror-prune, not reached.
-- `meta/buildSteamBridgeShims.ts`, `meta/__tests__/buildSteamBridgeShims.test.ts` —
-  byte-identical to `HEAD`. No test added. No code changed.
-- No task commit was made this session. This docs-only commit (MEASUREMENTS +
-  SUMMARY) is the only commit from this session.
+- **Task 1 (commit `d9aa7c5ee`):** RED tests written for `SHIM_BUILD_BYPRODUCTS`,
+  `shimByproductPaths()`, `pruneShimBuildByproducts()` (B1-B3, B5, B6, B7 — B4 intentionally
+  omitted per r5). GREEN implementation: `pruneShimBuildByproducts()` called in
+  `compileShim()` immediately after the `Compile gate PASSED` log line, strictly after both
+  `COMPILE GATE FAILED` throws. `public/bin/.gitignore` annotated (rules kept as
+  belt-and-braces, not removed). 26/26 tests pass. Task 1's automated verify (now a single
+  block, the ordering-guard script removed) passes: `TASK1-PASS`.
+- **Task 2 (commit `9c36e0fda`):** Seeded-mutation proof on scratch copies only (never the
+  real tree). M1 (zig exits non-zero via a hard C syntax error) and M2 (zig exits 0 but no
+  `.dll`, via a conditional `spawnArgv` stub that does not interfere with the real helper
+  compile) both leave seeded byproducts intact at the correct prune position. M3 mutated the
+  prune's call-site position twice (before throw A, between throw A and B) and reproduced the
+  plan's predicted three-position coverage matrix exactly — every misordering caught by at
+  least one mutation. E1 proved P2 end-to-end: hashing a real compiled DLL before and after a
+  prune-only invocation (no recompile in between, `JEST_WORKER_ID=1` used to suppress the
+  module's own auto-`main()` side effect) gave `S1 === S2`, with both byproducts gone after.
+  P4's masked comparison (`maskPeVolatile.py`) matched the real shipped baseline exactly at
+  `cc3e8b4a1fba55b9ab9cb69927b9c76d`. Real-repo mirror re-certification: `pnpm
+  check:build-bin-mirror` failed pre-`vite build` (both byproducts named as stale in
+  `build/bin`) and passed post-build with delta=0; both trees census 277/12/97,884,865. Meta
+  and backend jest suites green apart from 3 known `decompressPool.test.ts` failures and 2
+  known `lzmaNativeSeaRealBuild.test.ts` skips (one transient `enrichmentFlows.test.ts` flake
+  did not reproduce on rerun).
+- **Task 3 (commit `4fc65603e`):** Built a real release DMG (`vite build` -> `build:sidecar-sea`
+  -> `tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'`, 0 codesigning
+  identities on this machine, unsigned/ad-hoc as expected), mounted read-only. C1-C6 all
+  matched prediction exactly with no residual: `steam_api.pdb`/`steam_api_shim.lib` absent;
+  `steam_api.dll` present, unchanged, sha256 `2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960`
+  (805,888 B); `steam-bridge-helper`/`steam_appid.txt` present; `verify:runner-bundle
+  --expect-files=277 --expect-symlinks=12 --expect-bytes=97884865` exited 0, 0 dangling
+  symlinks (verified manually — the tool prints no explicit `DANGLING=` line); `x64/win32`
+  survivor intact at 2 files/211,452 B, `x64/darwin` still absent; `.app` total = **287,130,374
+  B**, exactly `289,952,582 - 2,822,208`. Detached clean. Closed all four documentation
+  sub-steps: appended the packaged census to `260901-kl2-MEASUREMENTS.md`; marked the todo's
+  item 6 DONE with real numbers, corrected the refuted "compile-flag change" mechanism claim
+  and the r1 determinism premise via dated annotation (originals kept verbatim), kept the
+  historical title unchanged, `git mv`'d the todo to `.planning/todos/completed/`; annotated
+  (never rewrote) the superseded 279/12/100,707,073 figures in three prior quick-tasks'
+  measurement docs and the specific refuted-mechanism line at `260901-e7o-SUMMARY.md:118`.
 
 ## Files Created/Modified
 
-- `.planning/quick/260901-kl2-drop-steam-api-pdb-lib/260901-kl2-MEASUREMENTS.md` — updated. Adds an r4-attempt section (Step 0/Step 1 evidence, the flag-experiment table, the determinism retraction summary, and the fourth-gate reproduction with full transcript) above the preserved r1/r2 historical record, which is kept verbatim and marked superseded.
-- `public/bin/arm64/darwin/steam_api.pdb`, `public/bin/arm64/darwin/steam_api_shim.lib` — removed (gitignored, not tracked; matches the plan's Step 1 and the todo item's target end-state).
+- `meta/buildSteamBridgeShims.ts` — added `SHIM_BUILD_BYPRODUCTS`, `shimByproductPaths()`,
+  `pruneShimBuildByproducts()`; wired into `compileShim()` strictly after both compile-gate
+  throws.
+- `meta/__tests__/buildSteamBridgeShims.test.ts` — 6 new tests (B1, B2, B3, B5, B6, B7; B4
+  intentionally omitted per r5), 26/26 total passing.
+- `public/bin/.gitignore` — dated comment explaining the ignore rules are now belt-and-braces
+  only, since the byproducts are actively unlinked at build time.
+- `.planning/quick/260901-kl2-drop-steam-api-pdb-lib/maskPeVolatile.py` — validated tool
+  (previously untracked scratch artifact), now committed alongside Task 2.
+- `.planning/quick/260901-kl2-drop-steam-api-pdb-lib/260901-kl2-MEASUREMENTS.md` — full
+  before/after census, flag-experiment table, determinism retraction, seeded-mutation results,
+  E1/P4 proofs, mirror re-certification, and the packaged DMG census.
+- The 2026-08-28 bundle-size todo — DONE note, two dated mechanism-refutation annotations,
+  moved `.planning/todos/pending/` -> `.planning/todos/completed/`.
+- Three prior quick-tasks' measurement docs — dated supersession annotations, originals intact.
 
 ## Deviations from Plan
 
-None in the Rule 1-3 sense (nothing was auto-fixed). The plan's own Task 1 verify
-script was found to false-RED the implementation the plan itself mandates; per
-explicit executor-brief instruction for this class of finding, execution halted
-rather than auto-patching the gate.
+None in the Rule 1-3 sense. No fifth gate defect was found this session — every automated
+verify block in Task 1, Task 2, and Task 3 behaved exactly as the r5 plan predicted, including
+the M3 three-position coverage matrix reproducing cell-for-cell and Task 3's C6 landing on the
+predicted `.app` size with zero residual to explain.
 
-## What remains for a human/planner decision
+## Known Stubs
 
-The application-code plan (Approach A, post-build unlink; P1–P4 proof strategy) is
-unaffected and does not need to change. What needs a decision is Task 1's own
-embedded ordering-guard verify script. A sketch of the fix (not applied — a plan/gate
-edit, not code):
+None.
 
-- Widen the `defn` regex the same way `call`'s regex already tolerates the file's
-  define-before-use convention and parameters — e.g.
-  `re.search(r'function pruneShimBuildByproducts\(', stripped)` (open paren only,
-  not `\(\)`), distinguishing definition from call the same way `call` already does
-  rather than requiring literally-empty parens.
+## Threat Flags
 
-Once that regex is corrected, Task 1 Step 0 and Step 1 do not need to be redone —
-the pinned pre-change script/SHA and the removed byproducts are both still valid and
-recorded in `260901-kl2-MEASUREMENTS.md`.
+None. All threats identified in the plan's `<threat_model>` (T-kl2-01 through T-kl2-05) were
+mitigated exactly as specified; no new security-relevant surface was introduced.
 
 ## Self-Check
 
-- `.planning/quick/260901-kl2-drop-steam-api-pdb-lib/260901-kl2-MEASUREMENTS.md` — FOUND (updated this session, verified present with both new and historical sections).
-- `public/bin/arm64/darwin/steam_api.dll` sha256 == `2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960` — FOUND (verified by `shasum`).
-- `public/bin/arm64/darwin/steam_api.pdb`, `steam_api_shim.lib` — both ABSENT (verified by `ls`/`test`).
-- `public/bin/arm64/darwin` census 277/12/97,884,865 — FOUND (verified by `find`/`stat`).
-- `meta/buildSteamBridgeShims.ts` and its test file unchanged from `HEAD` — FOUND (verified by `git status --short`, `git diff`).
+- `meta/buildSteamBridgeShims.ts` contains `pruneShimBuildByproducts` — FOUND.
+- `public/bin/arm64/darwin/steam_api.dll` sha256 ==
+  `2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960` — FOUND (verified on the
+  real tree and again on the mounted packaged DMG).
+- `public/bin/arm64/darwin/steam_api.pdb`, `steam_api_shim.lib` — both ABSENT on the real tree,
+  `build/bin/arm64/darwin`, and the mounted `.app`.
+- `.planning/todos/completed/2026-08-28-tauri-macos-bundle-is-786mb-frontenddist-embeds-build-bin-in.md`
+  — FOUND; `.planning/todos/pending/` no longer contains it.
+- Commits `d9aa7c5ee`, `9c36e0fda`, `4fc65603e` — all FOUND in `git log --oneline`.
 
 ## Self-Check: PASSED
