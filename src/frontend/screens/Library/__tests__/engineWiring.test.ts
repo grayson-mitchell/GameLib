@@ -420,7 +420,7 @@ describe('collectionIsStale (WR-09)', () => {
   it.each<[string, string | null, Record<string, string[]>, boolean]>([
     ['null (no collection constraint) is never stale', null, {}, false],
     [
-      "the Uncategorized sentinel is never stale even with an empty customCategories map",
+      'the Uncategorized sentinel is never stale even with an empty customCategories map',
       'preset_uncategorized',
       {},
       false

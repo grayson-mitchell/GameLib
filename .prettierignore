@@ -29,3 +29,8 @@ src-tauri/gen
 .planning
 .claude
 graphify-out
+
+# Downloaded helper-binary output (download-helper-binaries), not source. Formatting this
+# would be reintroduced on every re-download since the download is tag-idempotent, not
+# presence-idempotent -- see [[download-helper-binaries-is-tag-idempotent-not-presence-idempotent]].
+public/bin

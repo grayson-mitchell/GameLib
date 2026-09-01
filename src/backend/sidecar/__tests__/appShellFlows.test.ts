@@ -637,13 +637,15 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
      * above uses) cannot distinguish "released the system id" from "released the display id". */
     function mockAscendingWakeLockIds(startAt: number) {
       let nextId = startAt
-      mockRequestRustInvoke.mockReset().mockImplementation((channel: string) => {
-        if (channel === RUST_WAKE_LOCK_START) {
-          nextId += 1
-          return Promise.resolve(nextId)
-        }
-        return Promise.resolve(null)
-      })
+      mockRequestRustInvoke
+        .mockReset()
+        .mockImplementation((channel: string) => {
+          if (channel === RUST_WAKE_LOCK_START) {
+            nextId += 1
+            return Promise.resolve(nextId)
+          }
+          return Promise.resolve(null)
+        })
     }
 
     it('case (a) RED->GREEN: a solo game LAUNCH with no download must not take a download-labelled system assertion', async () => {
@@ -749,18 +751,19 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       expect(greenStopCalls.length).toBeGreaterThanOrEqual(1)
       // And display continuity is maintained: a fresh 'prevent-display-sleep' start follows the
       // stop, rather than the game being left unprotected.
-      const startCallsAfterDownloadEnd = mockRequestRustInvoke.mock.calls.filter(
-        ([channel, args]) =>
-          channel === RUST_WAKE_LOCK_START &&
-          (args as unknown[])[0] === 'prevent-display-sleep'
-      )
+      const startCallsAfterDownloadEnd =
+        mockRequestRustInvoke.mock.calls.filter(
+          ([channel, args]) =>
+            channel === RUST_WAKE_LOCK_START &&
+            (args as unknown[])[0] === 'prevent-display-sleep'
+        )
       expect(startCallsAfterDownloadEnd.length).toBeGreaterThanOrEqual(1)
 
       writeSend(input, 'case-b-green-quit', 'unlock', [])
       await flush()
     })
 
-    it('case (d) inverse over-correction: the game quitting must not permanently drop a concurrently-live download\'s assertion', async () => {
+    it("case (d) inverse over-correction: the game quitting must not permanently drop a concurrently-live download's assertion", async () => {
       const { input } = startSidecar()
       mockAscendingWakeLockIds(9200)
 
@@ -932,7 +935,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         const isolatedModule = require('../appShellFlowRegistration')
         isolatedModule.registerAppShellFlows()
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedListenerRegistry = require('../../platform').listenerRegistry
+        const isolatedPlatform = require('../../platform')
+        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
         ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
       })
 
@@ -1005,7 +1009,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         const { registerAppShellFlows } = require('../appShellFlowRegistration')
         registerAppShellFlows()
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedListenerRegistry = require('../../platform').listenerRegistry
+        const isolatedPlatform = require('../../platform')
+        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
         ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
       })
 
@@ -1067,42 +1072,45 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           const isolatedEnv = require('backend/constants/environment')
           isolatedEnv.isSnap = true
           isolatedEnvRef = isolatedEnv
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedConfigGet = require('backend/config').GlobalConfig
-          .get as jest.Mock
-        isolatedConfigGet.mockReturnValue({
-          getSettings: () => ({ language: 'en' }),
-          setSetting: jest.fn(),
-          set: jest.fn(),
-          flush: jest.fn()
-        })
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        isolatedRequestRustInvoke = require('../sidecarRpc')
-          .requestRustInvoke as jest.Mock
-        isolatedRequestRustInvoke.mockResolvedValue(undefined)
-        // Forces the `showSnapWarning` branch open on BOTH deliveries regardless of
-        // whatever this fresh, tmp-dir-backed store instance already has on disk from an
-        // earlier test -- the property under test is the repeat COUNT, not the store's
-        // own persistence semantics.
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedConfigStore = require('../../constants/key_value_stores')
-          .configStore
-        jest.spyOn(isolatedConfigStore, 'get').mockImplementation(((
-          key: string,
-          defaultValue?: unknown
-        ) => (key === 'showSnapWarning' ? true : defaultValue)) as never)
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const isolatedConfigGet = require('backend/config').GlobalConfig
+            .get as jest.Mock
+          isolatedConfigGet.mockReturnValue({
+            getSettings: () => ({ language: 'en' }),
+            setSetting: jest.fn(),
+            set: jest.fn(),
+            flush: jest.fn()
+          })
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          isolatedRequestRustInvoke = require('../sidecarRpc')
+            .requestRustInvoke as jest.Mock
+          isolatedRequestRustInvoke.mockResolvedValue(undefined)
+          // Forces the `showSnapWarning` branch open on BOTH deliveries regardless of
+          // whatever this fresh, tmp-dir-backed store instance already has on disk from an
+          // earlier test -- the property under test is the repeat COUNT, not the store's
+          // own persistence semantics.
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const kvStoresModule = require('../../constants/key_value_stores')
+          const isolatedConfigStore = kvStoresModule.configStore
+          jest
+            .spyOn(isolatedConfigStore, 'get')
+            .mockImplementation(((key: string, defaultValue?: unknown) =>
+              key === 'showSnapWarning' ? true : defaultValue) as never)
 
-        // See the "Phase 35 plan 11" test above for why this is required: `frontendReady`
-        // calls `logInfo()` unconditionally, which needs `heroicLogWriter` assigned.
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require('../../logger').initHeadless()
+          // See the "Phase 35 plan 11" test above for why this is required: `frontendReady`
+          // calls `logInfo()` unconditionally, which needs `heroicLogWriter` assigned.
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require('../../logger').initHeadless()
 
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { registerAppShellFlows } = require('../appShellFlowRegistration')
-        registerAppShellFlows()
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const isolatedListenerRegistry = require('../../platform').listenerRegistry
-        ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const flowRegModule = require('../appShellFlowRegistration')
+          const { registerAppShellFlows } = flowRegModule
+          registerAppShellFlows()
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const isolatedPlatform = require('../../platform')
+          const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+          ;[frontendReadyListener] =
+            isolatedListenerRegistry.get('frontendReady')
         })
 
         // `isolatedEnv.isSnap = true` above was set on the module instance obtained

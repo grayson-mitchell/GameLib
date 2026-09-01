@@ -104,7 +104,6 @@ describe('appShellImportGate (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-12)', 
   // and that process no longer exists. The appshell/* modules themselves and the
   // Electron-free import gates above are untouched. See D-35-14-02.
 
-
   // ── Gate 5: D-02 — appShellFlowRegistration.ts registers none of the ten
   // D-01 window-chrome channels (the preload short-circuit already owns them
   // — a sidecar registration here would be unreachable dead code) ───────────

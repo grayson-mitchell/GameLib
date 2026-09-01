@@ -33,7 +33,8 @@ const LIBRARY_CSS = 'src/frontend/screens/Library/index.css'
 const HEADER_TSX = 'src/frontend/components/UI/Header/index.tsx'
 const HEADER_CSS = 'src/frontend/components/UI/Header/index.css'
 const SETTINGS_CSS = 'src/frontend/screens/Settings/index.css'
-const ERROR_COMPONENT_CSS = 'src/frontend/components/UI/ErrorComponent/index.css'
+const ERROR_COMPONENT_CSS =
+  'src/frontend/components/UI/ErrorComponent/index.css'
 
 /**
  * Returns the declaration body of the FIRST top-level rule whose selector

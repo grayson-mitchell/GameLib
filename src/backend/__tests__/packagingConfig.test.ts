@@ -23,7 +23,14 @@ const TAURI_CONF_PATH = join(
 )
 type OverlayPlatform = 'macos' | 'windows' | 'linux'
 const PLATFORM_CONF_PATHS: Record<OverlayPlatform, string> = {
-  macos: join(__dirname, '..', '..', '..', 'src-tauri', 'tauri.macos.conf.json'),
+  macos: join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'src-tauri',
+    'tauri.macos.conf.json'
+  ),
   windows: join(
     __dirname,
     '..',
@@ -74,8 +81,10 @@ function parsePlatformOverlay(platform: OverlayPlatform): TauriConfig {
 
 function mergedResourceMap(platform: OverlayPlatform): Record<string, string> {
   const base = parseTauriConfig().bundle.resources as Record<string, string>
-  const overlay = parsePlatformOverlay(platform).bundle
-    .resources as Record<string, string>
+  const overlay = parsePlatformOverlay(platform).bundle.resources as Record<
+    string,
+    string
+  >
   return { ...base, ...overlay }
 }
 
@@ -327,7 +336,7 @@ describe('bin-tree narrowing: base carries no wholesale bin/ key, overlays carry
   )
 
   test.each(OVERLAY_PLATFORMS)(
-    'platform=%s merged map has strictly more keys than the base map (anti-vacuity: a typo\'d/unreadable overlay must not read as clean)',
+    "platform=%s merged map has strictly more keys than the base map (anti-vacuity: a typo'd/unreadable overlay must not read as clean)",
     (platform) => {
       const baseKeyCount = Object.keys(
         parseTauriConfig().bundle.resources as Record<string, string>

@@ -77,7 +77,9 @@ function writeSymlink(path: string, target: string): void {
  */
 function populateValidPublicBin(
   publicBinDir: string,
-  options?: { filesPerRunner?: Partial<Record<(typeof RUNNERS)[number], number>> }
+  options?: {
+    filesPerRunner?: Partial<Record<(typeof RUNNERS)[number], number>>
+  }
 ): void {
   writeFile(
     join(publicBinDir, '.release_tags'),
@@ -159,7 +161,10 @@ describe('computePruneSet', () => {
     mkdirSync(publicBinPath(), { recursive: true })
     // public/bin's "thing" is a symlink, not a directory
     writeFile(join(workDir, 'symlink-target.txt'))
-    writeSymlink(join(publicBinPath(), 'thing'), join(workDir, 'symlink-target.txt'))
+    writeSymlink(
+      join(publicBinPath(), 'thing'),
+      join(workDir, 'symlink-target.txt')
+    )
 
     const set = computePruneSet(buildBinPath(), publicBinPath())
 
@@ -205,7 +210,9 @@ describe('assessPublicBin', () => {
     populateValidPublicBin(publicBinPath())
     const tagsPath = join(publicBinPath(), '.release_tags')
     const parsed = JSON.parse(readFileSync(tagsPath, 'utf-8'))
-    parsed.__darwin_layout = parsed.__darwin_layout.slice(0, -1) + (parsed.__darwin_layout.endsWith('a') ? 'b' : 'a')
+    parsed.__darwin_layout =
+      parsed.__darwin_layout.slice(0, -1) +
+      (parsed.__darwin_layout.endsWith('a') ? 'b' : 'a')
     writeFileSync(tagsPath, JSON.stringify(parsed))
 
     const result = assessPublicBin(publicBinPath())
@@ -227,7 +234,13 @@ describe('assessPublicBin', () => {
 
   it('T14 a runner binary present but with no exec bit -> ok: false', () => {
     populateValidPublicBin(publicBinPath())
-    const binaryPath = join(publicBinPath(), 'arm64', 'darwin', 'legendary', 'legendary')
+    const binaryPath = join(
+      publicBinPath(),
+      'arm64',
+      'darwin',
+      'legendary',
+      'legendary'
+    )
     chmodSync(binaryPath, 0o644)
 
     const result = assessPublicBin(publicBinPath())
@@ -306,7 +319,14 @@ describe('pruneStaleHelperBinaries', () => {
     const staleContent = 'stale-payload-12345'
     writeFile(join(buildBinPath(), 'stale.dylib'), staleContent)
     writeFile(
-      join(buildBinPath(), 'arm64', 'darwin', 'nile', '_internal', 'ghost.dylib'),
+      join(
+        buildBinPath(),
+        'arm64',
+        'darwin',
+        'nile',
+        '_internal',
+        'ghost.dylib'
+      ),
       'ghost-payload'
     )
 
@@ -318,7 +338,16 @@ describe('pruneStaleHelperBinaries', () => {
     )
     expect(existsSync(join(buildBinPath(), 'stale.dylib'))).toBe(false)
     expect(
-      existsSync(join(buildBinPath(), 'arm64', 'darwin', 'nile', '_internal', 'ghost.dylib'))
+      existsSync(
+        join(
+          buildBinPath(),
+          'arm64',
+          'darwin',
+          'nile',
+          '_internal',
+          'ghost.dylib'
+        )
+      )
     ).toBe(false)
 
     // Shared entries survive.

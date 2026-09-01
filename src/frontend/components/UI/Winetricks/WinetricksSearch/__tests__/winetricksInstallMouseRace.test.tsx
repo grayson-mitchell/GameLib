@@ -177,7 +177,9 @@ function findInstallButton(tree: ElementLike): ElementLike {
 }
 
 describe('WinetricksSearchBar Install button mouse-click race (Phase 35 Plan 25)', () => {
-  function driveToSuggestion(onInstallClicked: (c: string) => void): ElementLike {
+  function driveToSuggestion(
+    onInstallClicked: (c: string) => void
+  ): ElementLike {
     const props: Props = {
       allComponents: ['vcrun', 'corefonts'],
       installed: [],

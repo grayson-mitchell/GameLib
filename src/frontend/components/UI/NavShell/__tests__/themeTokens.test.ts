@@ -384,7 +384,7 @@ describe('Header background override was removed alongside the background it neu
     expect(portalBlock).toMatch(/overflow-y:\s*auto/)
   })
 
-  it('Header/index.css no longer declares a background on .Header -- 34.11-09\'s `> .Header { background: transparent }` neutraliser existed only to cancel that declaration, so both were removed together rather than leaving the neutraliser orphaned', () => {
+  it("Header/index.css no longer declares a background on .Header -- 34.11-09's `> .Header { background: transparent }` neutraliser existed only to cancel that declaration, so both were removed together rather than leaving the neutraliser orphaned", () => {
     const headerBlock = cssBlock(headerCss, '.Header')
     expect(headerBlock).not.toMatch(/background:/)
   })

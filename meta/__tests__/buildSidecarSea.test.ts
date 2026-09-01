@@ -351,9 +351,9 @@ describe('SEA tool resolution is Windows-spawnable (CR-02 / GAP-2 regression gua
   // file instead of silently passing.
   test('buildEsbuildArgv(...).args no longer carries an --alias:electron flag (Phase 35 Plan 18)', () => {
     const esbuildArgv = buildEsbuildArgv()
-    expect(
-      esbuildArgv.args.some((a) => a.startsWith('--alias:electron'))
-    ).toBe(false)
+    expect(esbuildArgv.args.some((a) => a.startsWith('--alias:electron'))).toBe(
+      false
+    )
   })
 
   // Phase 23.1 Plan 03: lzma-native resolves its native binding through

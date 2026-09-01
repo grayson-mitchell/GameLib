@@ -29,11 +29,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createInstance } from 'i18next'
 import Backend from 'i18next-fs-backend'
-import {
-  chipLabelSpec,
-  resolveLabel,
-  type TFunc
-} from '../chipLabels'
+import { chipLabelSpec, resolveLabel, type TFunc } from '../chipLabels'
 import { PRESET_UNCATEGORIZED } from '../../../filterEngine'
 import type { ActiveFilterDescriptor } from 'frontend/types'
 
@@ -69,7 +65,8 @@ async function initInstance(
   const instance = createInstance()
   await instance.use(Backend).init({
     backend: {
-      loadPath: overrides.loadPath ?? join(LOCALES_DIR, '{{lng}}', '{{ns}}.json')
+      loadPath:
+        overrides.loadPath ?? join(LOCALES_DIR, '{{lng}}', '{{ns}}.json')
     },
     lng: 'en',
     fallbackLng: 'en',
@@ -197,9 +194,14 @@ describe('chipLabelSpec / resolveLabel against a REAL i18next instance (WR-16)',
       }
     })
 
-    it('a plural-variant-only key silently discards its catalog value through resolveLabel\'s two-argument shape (the failure this gate prevents)', async () => {
+    it("a plural-variant-only key silently discards its catalog value through resolveLabel's two-argument shape (the failure this gate prevents)", async () => {
       const instance = await initInstance(['translation', 'gamelib'])
-      instance.addResource('en', 'gamelib', '__wr16spec.plural_one', 'ONE variant text')
+      instance.addResource(
+        'en',
+        'gamelib',
+        '__wr16spec.plural_one',
+        'ONE variant text'
+      )
       instance.addResource(
         'en',
         'gamelib',
@@ -212,14 +214,17 @@ describe('chipLabelSpec / resolveLabel against a REAL i18next instance (WR-16)',
       // no `count` passed, so i18next has no plural rule to select a
       // variant with, and (per the corrected fact in the plan) falls back
       // to the inline default instead of either variant's catalog text.
-      const resolved = instance.t('gamelib:__wr16spec.plural', DEFAULT_THAT_MUST_NOT_WIN)
+      const resolved = instance.t(
+        'gamelib:__wr16spec.plural',
+        DEFAULT_THAT_MUST_NOT_WIN
+      )
 
       expect(resolved).toBe(DEFAULT_THAT_MUST_NOT_WIN)
     })
   })
 
   describe('broken-interpolation specimen', () => {
-    it('a typo\'d interpolation token is observable through this harness, not silently swallowed', async () => {
+    it("a typo'd interpolation token is observable through this harness, not silently swallowed", async () => {
       const instance = await initInstance(['translation', 'gamelib'])
       instance.addResource(
         'en',

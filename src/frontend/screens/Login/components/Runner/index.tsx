@@ -66,7 +66,10 @@ export default function Runner(props: RunnerProps) {
       showDialogModal({
         showDialog: true,
         type: 'ERROR',
-        title: tGamelib('gamelib:login.logoutFailedTitle', 'Sign-out incomplete'),
+        title: tGamelib(
+          'gamelib:login.logoutFailedTitle',
+          'Sign-out incomplete'
+        ),
         message: tGamelib(
           'gamelib:login.logoutFailedMessage',
           "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible."

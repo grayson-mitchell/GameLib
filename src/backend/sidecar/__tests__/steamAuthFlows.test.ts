@@ -730,7 +730,6 @@ describe('sidecar Steam QR-login flows (Phase 30 Plan 01)', () => {
     // the handlers actually respond rather than that a source file mentions them. What is
     // gone is the registration-ORDER pin, which had no behavioural equivalent.
     // See D-35-14-02.
-
   })
 
   // ── Guided Steam-client install pair (Phase 34.4 Plan 02, REQ-34.4-04) ───────

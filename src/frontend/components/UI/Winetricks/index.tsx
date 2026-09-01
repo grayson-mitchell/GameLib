@@ -92,10 +92,7 @@ export default function Winetricks({ onClose, runner }: Props) {
   }
 
   useEffect(() => {
-    async function onInstallingChange(
-      e: IpcRendererEvent,
-      component: string
-    ) {
+    async function onInstallingChange(e: IpcRendererEvent, component: string) {
       if (component === '') {
         listInstalled()
       }

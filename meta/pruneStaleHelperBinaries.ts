@@ -400,8 +400,10 @@ export function pruneStaleHelperBinariesPlugin(options?: {
   buildBinDir?: string
   publicBinDir?: string
 }): Plugin {
-  const buildBinDir = options?.buildBinDir ?? join(__dirname, '..', 'build', 'bin')
-  const publicBinDir = options?.publicBinDir ?? join(__dirname, '..', 'public', 'bin')
+  const buildBinDir =
+    options?.buildBinDir ?? join(__dirname, '..', 'build', 'bin')
+  const publicBinDir =
+    options?.publicBinDir ?? join(__dirname, '..', 'public', 'bin')
 
   return {
     name: 'gamelib-prune-stale-helper-binaries',

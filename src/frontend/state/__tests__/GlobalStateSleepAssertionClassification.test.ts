@@ -123,7 +123,10 @@ function extractFunctionSource(source: string, startMarker: string): string {
 /** Strips the leading `export` (so `ts.transpileModule` treats it as a plain script, not a
  * module needing an `exports` object it won't have in a `new Function` scope), transpiles away
  * all TypeScript-only syntax, and evaluates the result to return a real, callable function. */
-function compileExtractedFunction<T>(rawSource: string, functionName: string): T {
+function compileExtractedFunction<T>(
+  rawSource: string,
+  functionName: string
+): T {
   const bare = rawSource.replace(/^export\s+/, '')
   const { outputText } = ts.transpileModule(bare, {
     compilerOptions: { target: ts.ScriptTarget.ES2019 }
@@ -216,7 +219,7 @@ describe('reconcileSleepAssertionCalls (REQ-35-20/D-35-08-02, extracted from the
   // Acceptance criterion bullet (b), pure-function level: the download's kind ending while the
   // game's kind is still active must unlock-then-relock the surviving kind, in the SAME pass --
   // not defer the release to some later, unrelated transition.
-  it("case (b): system kind ending while display kind stays active releases system IMMEDIATELY and re-asserts display in the same call list", () => {
+  it('case (b): system kind ending while display kind stays active releases system IMMEDIATELY and re-asserts display in the same call list', () => {
     const reconcile = loadReconcileSleepAssertionCalls()
     const calls = reconcile(
       { display: true, system: true },
@@ -283,10 +286,9 @@ export function classifySleepAssertionKind(status: Status): SleepAssertionKind {
       regressedSource,
       'export function classifySleepAssertionKind(status: Status): SleepAssertionKind {'
     )
-    const classify = compileExtractedFunction<(status: string) => string | null>(
-      raw,
-      'classifySleepAssertionKind'
-    )
+    const classify = compileExtractedFunction<
+      (status: string) => string | null
+    >(raw, 'classifySleepAssertionKind')
 
     // Proves this harness actually detects the regression (would fail this expectation's
     // opposite if the harness were blind to source content, e.g. if it always returned a

@@ -561,9 +561,7 @@ describe('protocol.ts --no-gui behavior', () => {
     })
 
     test('a GOG protocol launch calls launchEventCallback and never dispatchSteamLaunch (inverse case)', async () => {
-      await handleProtocol([
-        'gamelib://launch?appName=gog-appid-1&runner=gog'
-      ])
+      await handleProtocol(['gamelib://launch?appName=gog-appid-1&runner=gog'])
 
       expect(launchEventCallback).toHaveBeenCalled()
       expect(dispatchSteamLaunch).not.toHaveBeenCalled()

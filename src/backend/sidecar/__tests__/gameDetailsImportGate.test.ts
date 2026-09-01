@@ -56,7 +56,6 @@ function listTsFiles(dir: string): string[] {
     .map((entry) => entry.name)
 }
 
-
 describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/REQ-34.2-10/REQ-34.2-14)', () => {
   // ── Gate 1: no file directly under src/backend/sidecar/ imports the real
   // 'electron' module ─────────────────────────────────────────────────────
@@ -280,8 +279,19 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // byte-identity comparisons are untouched. Verified by
   // `git diff --stat -- src/backend/sidecar/__tests__/electronUntouched.test.ts`: 1 deletion.
   // Prior digest: 132822ebc76da7db0ea8974e93547fd27ef6e04d5b095c6911878f09806d0335
+  //
+  // Re-pinned 2026-09-01 by quick task 260901-ud5 (Task 2, clearing the pre-push prettier
+  // gate). The ONLY change to the pinned file is `prettier --write`'s reformatting — line
+  // wraps and indentation only, applied because this file was one of the 46 flagged by
+  // `prettier --check .`. No assertion, fixture or proof was altered, weakened or
+  // repurposed: the `safeStorage.isEncryptionAvailable` "always true" regression detector
+  // and the configStore byte-identity comparisons are untouched. Verified by
+  // `git diff --stat -- src/backend/sidecar/__tests__/electronUntouched.test.ts`: 4
+  // insertions, 1 deletion, and a byte-for-byte review of the diff (whitespace/line-break
+  // only). Prior digest:
+  // 39e68ed1845d05a1cbc74739b0e86b5289531914c384fbad6638efefb060ce91
   const ELECTRON_UNTOUCHED_SHA256 =
-    '39e68ed1845d05a1cbc74739b0e86b5289531914c384fbad6638efefb060ce91'
+    '5e8bbe4f27c24d29910a1aa63ecb99e577451da900a65515f5fbd52722d4871b'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')

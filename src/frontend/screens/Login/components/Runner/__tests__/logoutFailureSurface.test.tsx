@@ -25,7 +25,9 @@ const mockShowDialogModal = jest.fn()
 // WebviewUnavailablePanel.test.tsx's convention) because this project's `testEnvironment:
 // 'node'` jest config provides no `window` global otherwise.
 ;(
-  globalThis as unknown as { window: { api: { logError: typeof mockLogError } } }
+  globalThis as unknown as {
+    window: { api: { logError: typeof mockLogError } }
+  }
 ).window = {
   api: { logError: mockLogError }
 }
@@ -166,7 +168,9 @@ describe('Runner: logout failure surface (Phase 35 gap closure, plan 35-22, CR-0
   })
 
   it('a rejecting logoutAction calls window.api.logError exactly once, with the runner identifier in the message', async () => {
-    const logoutAction = jest.fn().mockRejectedValue(new Error('cookie clear failed'))
+    const logoutAction = jest
+      .fn()
+      .mockRejectedValue(new Error('cookie clear failed'))
     const tree = mount(makeProps({ class: 'epic', logoutAction }))
 
     await clickLogout(tree)
@@ -177,7 +181,9 @@ describe('Runner: logout failure surface (Phase 35 gap closure, plan 35-22, CR-0
   })
 
   it('a rejecting logoutAction calls showDialogModal exactly once with type ERROR and both new gamelib keys requested from the translator', async () => {
-    const logoutAction = jest.fn().mockRejectedValue(new Error('cookie clear failed'))
+    const logoutAction = jest
+      .fn()
+      .mockRejectedValue(new Error('cookie clear failed'))
     const tree = mount(makeProps({ logoutAction }))
 
     await clickLogout(tree)
@@ -194,7 +200,9 @@ describe('Runner: logout failure surface (Phase 35 gap closure, plan 35-22, CR-0
   })
 
   it('a rejecting logoutAction still releases the "Logging out..." button (the G-30-01 guarantee)', async () => {
-    const logoutAction = jest.fn().mockRejectedValue(new Error('cookie clear failed'))
+    const logoutAction = jest
+      .fn()
+      .mockRejectedValue(new Error('cookie clear failed'))
     const tree = mount(makeProps({ logoutAction }))
 
     await clickLogout(tree)
@@ -222,7 +230,10 @@ describe('Runner: logout failure surface (Phase 35 gap closure, plan 35-22, CR-0
     const fs = jest.requireActual<typeof import('fs')>('fs')
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const path = jest.requireActual<typeof import('path')>('path')
-    const source = fs.readFileSync(path.join(__dirname, '../index.tsx'), 'utf-8')
+    const source = fs.readFileSync(
+      path.join(__dirname, '../index.tsx'),
+      'utf-8'
+    )
 
     expect(source).not.toContain('console.error')
   })

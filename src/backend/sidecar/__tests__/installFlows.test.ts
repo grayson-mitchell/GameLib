@@ -919,9 +919,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
       'utf-8'
     )
     expect(source).toContain(GAMELIB_CATALOG.installFlows.pathRejectedTitle)
-    expect(source).toContain(
-      GAMELIB_CATALOG.installFlows.pathRejectedBodyMove
-    )
+    expect(source).toContain(GAMELIB_CATALOG.installFlows.pathRejectedBodyMove)
     expect(source).toContain(
       GAMELIB_CATALOG.installFlows.pathRejectedBodyImport
     )

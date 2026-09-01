@@ -32,7 +32,6 @@ import {
 const PACKAGE_JSON_PATH = join(__dirname, '..', '..', 'package.json')
 const CLEAN_DIST_SOURCE_PATH = join(__dirname, '..', 'cleanDist.ts')
 
-
 // The five macOS artifact files a real dist:mac run leaves behind, per the
 // 2026-08-11 gate's real `dist/` listing (34.9-14-PLAN.md <interfaces>).
 const MAC_FILES = [

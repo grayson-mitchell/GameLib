@@ -248,7 +248,6 @@ describe('AdvancedSettings: EOS overlay Remove confirmation (Phase 35 plan 26, R
     const tree = mount({ [EOS_OVERLAY_INSTALLED_SLOT]: true })
     const removeButton = findButtonByText(tree, 'Uninstall')
     expect(removeButton).toBeDefined()
-
     ;(removeButton!.props as unknown as { onClick: () => void }).onClick()
 
     expect(mockShowDialogModal).toHaveBeenCalledTimes(1)
@@ -261,7 +260,8 @@ describe('AdvancedSettings: EOS overlay Remove confirmation (Phase 35 plan 26, R
 
     ;(removeButton.props as unknown as { onClick: () => void }).onClick()
 
-    const options = mockShowDialogModal.mock.calls[0][0] as CapturedDialogOptions
+    const options = mockShowDialogModal.mock
+      .calls[0][0] as CapturedDialogOptions
     expect(options.type).toBe('MESSAGE')
     expect(options.title).toBe('Confirm overlay removal')
     expect(options.message).toBe(
@@ -275,7 +275,8 @@ describe('AdvancedSettings: EOS overlay Remove confirmation (Phase 35 plan 26, R
     const removeButton = findButtonByText(tree, 'Uninstall')!
     ;(removeButton.props as unknown as { onClick: () => void }).onClick()
 
-    const options = mockShowDialogModal.mock.calls[0][0] as CapturedDialogOptions
+    const options = mockShowDialogModal.mock
+      .calls[0][0] as CapturedDialogOptions
     await options.buttons[0].onClick!()
 
     expect(mockRemoveEosOverlay).toHaveBeenCalledTimes(1)
@@ -287,7 +288,8 @@ describe('AdvancedSettings: EOS overlay Remove confirmation (Phase 35 plan 26, R
     const removeButton = findButtonByText(tree, 'Uninstall')!
     ;(removeButton.props as unknown as { onClick: () => void }).onClick()
 
-    const options = mockShowDialogModal.mock.calls[0][0] as CapturedDialogOptions
+    const options = mockShowDialogModal.mock
+      .calls[0][0] as CapturedDialogOptions
     // `t('box.no')` passes no default value in the real component, so this file's `t` mock
     // (`defaultValue ?? key`) resolves it to the raw key -- not asserting a display string here
     // on purpose, only that a SECOND, distinct button exists with no handler.
@@ -303,7 +305,8 @@ describe('AdvancedSettings: EOS overlay Remove confirmation (Phase 35 plan 26, R
     const removeButton = findButtonByText(tree, 'Uninstall')!
     ;(removeButton.props as unknown as { onClick: () => void }).onClick()
 
-    const options = mockShowDialogModal.mock.calls[0][0] as CapturedDialogOptions
+    const options = mockShowDialogModal.mock
+      .calls[0][0] as CapturedDialogOptions
     await options.buttons[0].onClick!()
 
     const slots = harness().__getSlots()

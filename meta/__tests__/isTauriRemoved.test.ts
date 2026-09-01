@@ -68,7 +68,13 @@ describe('D-01/D-00b: isTauri static zero-match completeness gate', () => {
     // same file (`src/preload/tauriTransport.ts`) the deleted predicate used to.
     const result = spawnSync(
       'grep',
-      ['-rn', 'isWritableStoreField', SRC_ROOT, '--include=*.ts', '--include=*.tsx'],
+      [
+        '-rn',
+        'isWritableStoreField',
+        SRC_ROOT,
+        '--include=*.ts',
+        '--include=*.tsx'
+      ],
       { encoding: 'utf8' }
     )
 

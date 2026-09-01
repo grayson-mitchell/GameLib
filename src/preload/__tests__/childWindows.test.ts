@@ -343,5 +343,4 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     expect(label).not.toContain('www')
     expect(label).not.toContain('store')
   })
-
 })

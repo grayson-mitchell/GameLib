@@ -249,7 +249,9 @@ describe('sidecar Steam flows — runner-aware launch dispatch (gap cycle 6, pla
     ])
     await flush()
 
-    const response = frames.find((frame) => frame.id === 'launch-steam-recent-1')
+    const response = frames.find(
+      (frame) => frame.id === 'launch-steam-recent-1'
+    )
     expect(response).toMatchObject({
       id: 'launch-steam-recent-1',
       ok: true,

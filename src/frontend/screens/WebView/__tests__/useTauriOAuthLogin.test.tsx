@@ -547,7 +547,6 @@ describe('useTauriOAuthLogin — captured -> auth channel -> completion (Phase 3
     )
     expect(matching).toHaveLength(1)
   })
-
 })
 
 describe('useTauriOAuthLogin — completion callback drives the real GlobalState-shaped wiring (Task 2)', () => {

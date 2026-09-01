@@ -157,9 +157,8 @@ async function handleLaunch(url: URL) {
     // `await import('backend/storeManagers')` at `launcher.ts`, so no new static edge is added
     // to this module's import graph.
     if (gameInfo.runner === 'steam') {
-      const { dispatchSteamLaunch } = await import(
-        'backend/storeManagers/steam/launchDispatch'
-      )
+      const { dispatchSteamLaunch } =
+        await import('backend/storeManagers/steam/launchDispatch')
       const launched = await dispatchSteamLaunch(appName)
       return { status: launched ? 'done' : 'error' }
     }

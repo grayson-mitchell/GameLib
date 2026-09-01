@@ -68,7 +68,10 @@ const openNewBrowserGameWindow = async ({
     ) => {
       setMenu: (menu: unknown) => void
       webContents: {
-        on: (event: string, cb: (event: { preventDefault: () => void }) => void) => void
+        on: (
+          event: string,
+          cb: (event: { preventDefault: () => void }) => void
+        ) => void
         setWindowOpenHandler: (handler: unknown) => void
         userAgent: string
       }

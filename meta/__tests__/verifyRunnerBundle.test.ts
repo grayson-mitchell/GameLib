@@ -829,10 +829,7 @@ describe('_internal sibling stub structural integrity (F-34.9-01/quick-260901-e7
     chmodSync(join(versionDir, 'Python'), 0o755)
     writeFileSync(join(resourcesDir, 'dummy.txt'), 'resource')
     symlinkSync('Versions/Current/Python', join(frameworkDir, 'Python'))
-    symlinkSync(
-      'Versions/Current/Resources',
-      join(frameworkDir, 'Resources')
-    )
+    symlinkSync('Versions/Current/Resources', join(frameworkDir, 'Resources'))
     symlinkSync('3.14', join(versionsDir, 'Current'))
     // Deliberately NO sibling stub planted at notInternalDir/Python -- since
     // this framework's parent is not "_internal", siblingStubApplicable
@@ -846,9 +843,7 @@ describe('_internal sibling stub structural integrity (F-34.9-01/quick-260901-e7
     expect(fw?.siblingStubExists).toBe(false)
 
     const summary = summarise(results)
-    expect(summary.failures.join(' ')).not.toContain(
-      '_internal sibling stub'
-    )
+    expect(summary.failures.join(' ')).not.toContain('_internal sibling stub')
     expect(summary.ok).toBe(true)
   })
 })
@@ -914,14 +909,23 @@ describe('CLI --expect-* census flags (quick-260901-e7o)', () => {
   })
 
   it.each([
-    ['files', (c: TreeCensus): TreeCensus => ({ ...c, fileCount: c.fileCount + 1 })],
+    [
+      'files',
+      (c: TreeCensus): TreeCensus => ({ ...c, fileCount: c.fileCount + 1 })
+    ],
     [
       'symlinks',
-      (c: TreeCensus): TreeCensus => ({ ...c, symlinkCount: c.symlinkCount + 1 })
+      (c: TreeCensus): TreeCensus => ({
+        ...c,
+        symlinkCount: c.symlinkCount + 1
+      })
     ],
     [
       'bytes',
-      (c: TreeCensus): TreeCensus => ({ ...c, apparentBytes: c.apparentBytes + 1 })
+      (c: TreeCensus): TreeCensus => ({
+        ...c,
+        apparentBytes: c.apparentBytes + 1
+      })
     ]
   ])(
     'off-by-one on %s: exit 1, printed output contains "census mismatch"',

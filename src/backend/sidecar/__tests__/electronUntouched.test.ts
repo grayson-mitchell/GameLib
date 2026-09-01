@@ -308,7 +308,10 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
   })
 
   it('by-construction gate: electronStub.ts safeStorage.isEncryptionAvailable never regresses to the "always true" lie (comments stripped)', () => {
-    const src = readFileSync(join(__dirname, '../../platform/index.ts'), 'utf-8')
+    const src = readFileSync(
+      join(__dirname, '../../platform/index.ts'),
+      'utf-8'
+    )
     const stripped = stripComments(src)
     expect(stripped).not.toMatch(
       /isEncryptionAvailable:\s*\(\):\s*boolean\s*=>\s*true/

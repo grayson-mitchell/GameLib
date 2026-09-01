@@ -1,10 +1,4 @@
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync
-} from 'fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -314,9 +308,7 @@ describe('buildSteamBridgeShims', () => {
         process.chdir(tmp)
         pruneShimBuildByproducts('arm64')
 
-        expect(() =>
-          readFileSync(join(darwinDir, 'steam_api.pdb'))
-        ).toThrow()
+        expect(() => readFileSync(join(darwinDir, 'steam_api.pdb'))).toThrow()
         expect(() =>
           readFileSync(join(darwinDir, 'steam_api_shim.lib'))
         ).toThrow()
@@ -325,9 +317,9 @@ describe('buildSteamBridgeShims', () => {
         expect(
           readFileSync(join(darwinDir, 'steam-bridge-helper'), 'utf-8')
         ).toBe('helper-sentinel')
-        expect(
-          readFileSync(join(darwinDir, 'steam_appid.txt'), 'utf-8')
-        ).toBe('480')
+        expect(readFileSync(join(darwinDir, 'steam_appid.txt'), 'utf-8')).toBe(
+          '480'
+        )
       } finally {
         process.chdir(previousCwd)
         rmSync(tmp, { recursive: true, force: true })

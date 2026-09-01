@@ -336,30 +336,28 @@ describe('installed.json watcher — the renderer refresh signal (D-35-19-09)', 
     // happens); it only gives THIS TEST a handle to observe-and-swallow it, exactly once,
     // scoped to calls made while this spy is installed.
     const realSetTimeout = global.setTimeout
-    const setTimeoutSpy = jest
-      .spyOn(global, 'setTimeout')
-      .mockImplementation(((
-        fn: (...fnArgs: unknown[]) => unknown,
-        ms?: number,
-        ...schedArgs: unknown[]
-      ) => {
-        const wrapped = (...cbArgs: unknown[]) => {
-          const result = fn(...cbArgs)
-          if (
-            result &&
-            typeof (result as Promise<unknown>).catch === 'function'
-          ) {
-            ;(result as Promise<unknown>).catch(() => {
-              /* expected: refreshInstalledMock rejects below; production adds no catch here
+    const setTimeoutSpy = jest.spyOn(global, 'setTimeout').mockImplementation(((
+      fn: (...fnArgs: unknown[]) => unknown,
+      ms?: number,
+      ...schedArgs: unknown[]
+    ) => {
+      const wrapped = (...cbArgs: unknown[]) => {
+        const result = fn(...cbArgs)
+        if (
+          result &&
+          typeof (result as Promise<unknown>).catch === 'function'
+        ) {
+          ;(result as Promise<unknown>).catch(() => {
+            /* expected: refreshInstalledMock rejects below; production adds no catch here
                  by design (see this module's own comment) — this exists only so the rejection
                  is observed rather than left genuinely unhandled in the test process. */
-            })
-          }
-          return result
+          })
         }
-        return realSetTimeout(wrapped as never, ms, ...schedArgs)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      }) as any)
+        return result
+      }
+      return realSetTimeout(wrapped as never, ms, ...schedArgs)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any)
 
     try {
       refreshInstalledMock.mockRejectedValueOnce(

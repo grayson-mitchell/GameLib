@@ -155,5 +155,4 @@ describe('main_window', () => {
   // geometry, frameless/titleBarOverlay behaviour and screen-size clamping -- none of which
   // has a Tauri equivalent here. The `sendFrontendMessage` describes above cover the half of
   // the module that survives (`getMainWindow`). See D-35-15-01.
-
 })

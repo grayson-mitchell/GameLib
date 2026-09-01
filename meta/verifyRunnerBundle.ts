@@ -703,8 +703,11 @@ export function summarise(results: RunnerInspection[]): Summary {
             `"${fw.topLevelStubTarget}" escapes the runner tree (T-e7o-01)`
         )
       }
-      if (fw.versionsCurrentIsSymlink && fw.resolvedVersionDirExists &&
-          !fw.versionsCurrentTargetContained) {
+      if (
+        fw.versionsCurrentIsSymlink &&
+        fw.resolvedVersionDirExists &&
+        !fw.versionsCurrentTargetContained
+      ) {
         failures.push(
           `${r.runner}: framework ${fw.path} is UNSAFE -- Versions/Current ` +
             `symlink target "${fw.versionsCurrentTarget}" escapes the ` +
@@ -815,7 +818,14 @@ function parseCliArgs(argv: string[]): {
   const expectSymlinks = parseExpect('--expect-symlinks')
   const expectBytes = parseExpect('--expect-bytes')
 
-  return { root: positional, arch, json, expectFiles, expectSymlinks, expectBytes }
+  return {
+    root: positional,
+    arch,
+    json,
+    expectFiles,
+    expectSymlinks,
+    expectBytes
+  }
 }
 
 function printTable(results: RunnerInspection[], census?: TreeCensus): void {
@@ -921,7 +931,9 @@ export function main(argv: string[] = process.argv.slice(2)): number {
   }
 
   if (json) {
-    console.log(JSON.stringify({ root, arch, results, summary, census }, null, 2))
+    console.log(
+      JSON.stringify({ root, arch, results, summary, census }, null, 2)
+    )
   } else {
     printTable(results, census)
     console.log('')

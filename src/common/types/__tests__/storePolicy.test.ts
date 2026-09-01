@@ -95,9 +95,9 @@ describe('allow-list', () => {
   // missed when comparing two policies by their field lists.
   describe('D-08 convergence: every SECRET_STORE_KEYS field, blocked by name AND by nested path', () => {
     it('blocks humbleConfigStore.sessionCookie by name', () => {
-      expect(
-        isAllowedStoreField('humbleConfigStore', 'sessionCookie')
-      ).toBe(false)
+      expect(isAllowedStoreField('humbleConfigStore', 'sessionCookie')).toBe(
+        false
+      )
     })
 
     it('blocks a nested path under humbleConfigStore.sessionCookie', () => {
@@ -107,15 +107,13 @@ describe('allow-list', () => {
     })
 
     it('blocks humbleConfigStore.csrfToken by name', () => {
-      expect(isAllowedStoreField('humbleConfigStore', 'csrfToken')).toBe(
-        false
-      )
+      expect(isAllowedStoreField('humbleConfigStore', 'csrfToken')).toBe(false)
     })
 
     it('blocks a nested path under humbleConfigStore.csrfToken', () => {
-      expect(
-        isAllowedStoreField('humbleConfigStore', 'csrfToken.value')
-      ).toBe(false)
+      expect(isAllowedStoreField('humbleConfigStore', 'csrfToken.value')).toBe(
+        false
+      )
     })
 
     it('blocks steamConfigStore.refreshToken by name', () => {
@@ -131,9 +129,7 @@ describe('allow-list', () => {
     })
 
     it('blocks gogConfigStore.credentials by name', () => {
-      expect(isAllowedStoreField('gogConfigStore', 'credentials')).toBe(
-        false
-      )
+      expect(isAllowedStoreField('gogConfigStore', 'credentials')).toBe(false)
     })
 
     it('blocks a nested path under gogConfigStore.credentials', () => {
@@ -143,9 +139,7 @@ describe('allow-list', () => {
     })
 
     it('blocks zoomConfigStore.credentials by name', () => {
-      expect(isAllowedStoreField('zoomConfigStore', 'credentials')).toBe(
-        false
-      )
+      expect(isAllowedStoreField('zoomConfigStore', 'credentials')).toBe(false)
     })
 
     it('blocks a nested path under zoomConfigStore.credentials', () => {

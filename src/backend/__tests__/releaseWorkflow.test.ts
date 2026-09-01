@@ -413,10 +413,7 @@ describeOnPosix(
       touch(root, join('build', 'assets', 'index-abc123.js'))
       touch(root, join('build', 'assets', 'index-abc123.css'))
       touch(root, join('build', 'renderer', 'index.html'), '<!doctype html>')
-      touch(
-        root,
-        join('build', 'renderer', 'assets', 'index-abc123.js')
-      )
+      touch(root, join('build', 'renderer', 'assets', 'index-abc123.js'))
       touch(root, join('build', 'node-dist', 'node-v26.2.0-darwin-x64.tar.gz'))
       touch(
         root,

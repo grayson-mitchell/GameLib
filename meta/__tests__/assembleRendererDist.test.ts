@@ -168,9 +168,7 @@ describe('assembleRendererDist -- copy correctness (both directions)', () => {
 
     assembleRendererDist(outDir, rendererDir, bundleKeys)
 
-    expect(existsSync(join(rendererDir, 'from-a-previous-run.js'))).toBe(
-      false
-    )
+    expect(existsSync(join(rendererDir, 'from-a-previous-run.js'))).toBe(false)
   })
 })
 
@@ -217,9 +215,9 @@ describe('assembleRendererDist -- fail-loud post-conditions (each throws)', () =
     const bundleKeys = seedValidOutDir(outDir)
     rmSync(join(outDir, 'about.html'))
 
-    expect(() =>
-      assembleRendererDist(outDir, rendererDir, bundleKeys)
-    ).toThrow(/required static file 'about\.html' is missing/)
+    expect(() => assembleRendererDist(outDir, rendererDir, bundleKeys)).toThrow(
+      /required static file 'about\.html' is missing/
+    )
   })
 
   test('Test 10: icon.png missing from outDir throws', () => {
@@ -228,9 +226,9 @@ describe('assembleRendererDist -- fail-loud post-conditions (each throws)', () =
     const bundleKeys = seedValidOutDir(outDir)
     rmSync(join(outDir, 'icon.png'))
 
-    expect(() =>
-      assembleRendererDist(outDir, rendererDir, bundleKeys)
-    ).toThrow(/required static file 'icon\.png' is missing/)
+    expect(() => assembleRendererDist(outDir, rendererDir, bundleKeys)).toThrow(
+      /required static file 'icon\.png' is missing/
+    )
   })
 
   test('Test 11a: locales/ absent from outDir throws', () => {
@@ -241,9 +239,9 @@ describe('assembleRendererDist -- fail-loud post-conditions (each throws)', () =
     // outDir/locales at all -- directory is genuinely absent, not empty.
     expect(existsSync(join(outDir, 'locales'))).toBe(false)
 
-    expect(() =>
-      assembleRendererDist(outDir, rendererDir, bundleKeys)
-    ).toThrow(/required static directory 'locales' is missing/)
+    expect(() => assembleRendererDist(outDir, rendererDir, bundleKeys)).toThrow(
+      /required static directory 'locales' is missing/
+    )
   })
 
   test('Test 11b: locales/ present but containing no *.json throws (distinct from 11a)', () => {
@@ -256,9 +254,9 @@ describe('assembleRendererDist -- fail-loud post-conditions (each throws)', () =
     writeFile(join(outDir, 'locales', 'en', 'README.md'), 'not json')
     expect(existsSync(join(outDir, 'locales'))).toBe(true)
 
-    expect(() =>
-      assembleRendererDist(outDir, rendererDir, bundleKeys)
-    ).toThrow(/is missing, or contains no \*\.json files/)
+    expect(() => assembleRendererDist(outDir, rendererDir, bundleKeys)).toThrow(
+      /is missing, or contains no \*\.json files/
+    )
   })
 })
 

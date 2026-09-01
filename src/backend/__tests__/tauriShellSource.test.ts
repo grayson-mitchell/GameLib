@@ -383,7 +383,9 @@ describe('main.rs TRAY_SETTINGS has exactly one initialiser (Phase 35 Plan 06 ta
   test('exactly one get_or_init, and it is the real loader', () => {
     const code = loadMainRsCode()
     expect(countOf(code, 'TRAY_SETTINGS.get_or_init')).toBe(1)
-    expect(countOf(code, 'TRAY_SETTINGS.get_or_init(load_tray_settings)')).toBe(1)
+    expect(countOf(code, 'TRAY_SETTINGS.get_or_init(load_tray_settings)')).toBe(
+      1
+    )
     expect(countOf(code, 'static TRAY_SETTINGS')).toBe(1)
   })
 
@@ -391,11 +393,13 @@ describe('main.rs TRAY_SETTINGS has exactly one initialiser (Phase 35 Plan 06 ta
     // Non-vacuity proof for the assertions above. This exact string is what shipped and what
     // made the race lossy: a second initialiser that latches all-false and never errors.
     const code = loadMainRsCode()
-    expect(code).not.toContain('TRAY_SETTINGS.get_or_init(TraySettingsSnapshot::default)')
+    expect(code).not.toContain(
+      'TRAY_SETTINGS.get_or_init(TraySettingsSnapshot::default)'
+    )
   })
 })
 
-describe("main.rs main-window devtools is gated on visibility (Phase 35 Plan 06 task 3, live-gate defect 2)", () => {
+describe('main.rs main-window devtools is gated on visibility (Phase 35 Plan 06 task 3, live-gate defect 2)', () => {
   // The defect: `open_devtools()` FORCES a window visible. Gated only on
   // `#[cfg(debug_assertions)]`, it ran after `startInTray`'s hide and put the window straight
   // back on screen. The operator's terminal showed both lines in sequence:
@@ -423,9 +427,7 @@ describe("main.rs main-window devtools is gated on visibility (Phase 35 Plan 06 
     // silently stops working in dev builds again -- and, worse, the live gate's step 5c becomes
     // vacuous, because a visible window then appears whether or not the noTrayIcon override works.
     const code = collapse(loadMainRsCode())
-    expect(code).not.toContain(
-      'Some(window) => { window.open_devtools();'
-    )
+    expect(code).not.toContain('Some(window) => { window.open_devtools();')
   })
 })
 

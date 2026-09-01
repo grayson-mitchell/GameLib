@@ -370,7 +370,6 @@ const BASELINE_ELECTRON_REACHING_MODULES: string[] = [
   // FOR PLAN 35-18's D-03 GREP GATE: the length is 2, NOT 0. D-03's success test therefore
   // carries a documented asterisk rather than being a clean single grep, and 35-18 must
   // expect these two until 35-16 clears them. Recorded here because 35-18 reads this number.
-
 ]
 
 interface ElectronReachResult {

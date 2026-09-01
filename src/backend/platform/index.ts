@@ -910,7 +910,10 @@ export interface SidecarIncomingMessage {
 }
 
 export const net = {
-  request: (_options?: unknown, _callback?: (response: SidecarIncomingMessage) => void) => {
+  request: (
+    _options?: unknown,
+    _callback?: (response: SidecarIncomingMessage) => void
+  ) => {
     const handlers: Record<string, (arg?: unknown) => void> = {}
     setImmediate(() => {
       handlers['error']?.(
@@ -927,7 +930,10 @@ export const net = {
       on: ((event: string, cb: (arg?: never) => void): void => {
         handlers[event] = cb as (arg?: unknown) => void
       }) as {
-        (event: 'response', cb: (response: SidecarIncomingMessage) => void): void
+        (
+          event: 'response',
+          cb: (response: SidecarIncomingMessage) => void
+        ): void
         (event: 'error', cb: (error: Error) => void): void
         (event: string, cb: (arg?: unknown) => void): void
       },
@@ -952,7 +958,10 @@ export const Menu = {
 export const protocol = {
   registerFileProtocol: (): void => {},
   registerHttpProtocol: (): void => {},
-  handle: (_scheme?: string, _handler?: (request: { url: string }) => unknown): void => {}
+  handle: (
+    _scheme?: string,
+    _handler?: (request: { url: string }) => unknown
+  ): void => {}
 }
 
 // D-08 (Phase 35 Plan 08, REQ-35-06): REAL as of the Phase 35 cutover this comment's earlier

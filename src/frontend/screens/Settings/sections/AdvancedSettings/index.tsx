@@ -249,7 +249,10 @@ export default function AdvancedSetting() {
   // this codebase's house pattern (see AllowInstallationBrokenAnticheat.tsx).
   function confirmRemoveEosOverlay() {
     showDialogModal({
-      title: t('setting.eosOverlay.removeConfirmTitle', 'Confirm overlay removal'),
+      title: t(
+        'setting.eosOverlay.removeConfirmTitle',
+        'Confirm overlay removal'
+      ),
       message: t(
         'setting.eosOverlay.removeConfirm',
         'Are you sure you want to uninstall the EOS Overlay?'

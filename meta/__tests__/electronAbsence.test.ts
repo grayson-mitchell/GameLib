@@ -95,7 +95,9 @@ interface Hit {
  * lines and would misalign this gate's `file:line` failure reporting.
  */
 function stripBlockCommentsPreservingLines(text: string): string {
-  return text.replace(/\/\*[\s\S]*?\*\//g, (match) => match.replace(/[^\n]/g, ' '))
+  return text.replace(/\/\*[\s\S]*?\*\//g, (match) =>
+    match.replace(/[^\n]/g, ' ')
+  )
 }
 
 /** Second stage: blank out (not delete) any line whose trimmed form starts with a comment marker. */
@@ -103,7 +105,9 @@ function blankLineCommentMarkers(lines: string[]): string[] {
   return lines.map((line) => {
     const trimmed = line.trim()
     const isCommentLine =
-      trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('*') ||
+      trimmed.startsWith('/*')
     return isCommentLine ? line.replace(/[^\n]/g, ' ') : line
   })
 }
@@ -127,12 +131,14 @@ function collectTsFiles(root: string): string[] {
 const TOLERATED_HITS: Array<{ file: string; trimmedContent: string }> = [
   {
     file: 'src/backend/sidecar/__tests__/externalDynamicImportGate.test.ts',
-    trimmedContent: "import { app } from 'electron'",
-  },
+    trimmedContent: "import { app } from 'electron'"
+  }
 ]
 
 function isTolerated(file: string, content: string): boolean {
-  const relPath = relative(join(__dirname, '..', '..'), file).split('\\').join('/')
+  const relPath = relative(join(__dirname, '..', '..'), file)
+    .split('\\')
+    .join('/')
   const trimmed = content.trim()
   return TOLERATED_HITS.some(
     (t) => t.file === relPath && t.trimmedContent === trimmed
@@ -162,7 +168,10 @@ function findHits(pattern: RegExp): Hit[] {
 
 function formatHits(hits: Hit[]): string {
   return hits
-    .map((h) => `  ${relative(join(__dirname, '..', '..'), h.file)}:${h.line}: ${h.content}`)
+    .map(
+      (h) =>
+        `  ${relative(join(__dirname, '..', '..'), h.file)}:${h.line}: ${h.content}`
+    )
     .join('\n')
 }
 
@@ -204,7 +213,8 @@ describe('D-03: electron package absence -- mechanized, mutation-proven gate', (
     }
     const allKeys = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })
     const offenders = allKeys.filter(
-      (k) => k === 'electron' || k === '@types/electron' || k.startsWith('electron-')
+      (k) =>
+        k === 'electron' || k === '@types/electron' || k.startsWith('electron-')
     )
     if (offenders.length > 0) {
       throw new Error(

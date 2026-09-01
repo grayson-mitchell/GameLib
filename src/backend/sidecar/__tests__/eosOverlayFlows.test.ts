@@ -220,17 +220,12 @@ describe('idempotence — calling registerEosOverlayFlows() twice does not throw
 })
 
 // ── Describe 5: Fail-closed gate proof (Phase 35 plan 26, REQ-35-17, T-35-122) ─────────────────
-describe('fail-closed gate — real remove()/enable() from eos_overlay.ts (bypasses this file\'s top-level mock)', () => {
-  const {
-    remove: realRemove,
-    enable: realEnable
-  } = jest.requireActual<
+describe("fail-closed gate — real remove()/enable() from eos_overlay.ts (bypasses this file's top-level mock)", () => {
+  const { remove: realRemove, enable: realEnable } = jest.requireActual<
     typeof import('../../storeManagers/legendary/eos_overlay/eos_overlay')
   >('../../storeManagers/legendary/eos_overlay/eos_overlay')
 
-  const {
-    libraryManagerMap: mockLibraryManagerMap
-  } = jest.requireMock<{
+  const { libraryManagerMap: mockLibraryManagerMap } = jest.requireMock<{
     libraryManagerMap: { legendary: { runRunnerCommand: jest.Mock } }
   }>('../../storeManagers/index')
   const mockRunRunnerCommand = mockLibraryManagerMap.legendary.runRunnerCommand

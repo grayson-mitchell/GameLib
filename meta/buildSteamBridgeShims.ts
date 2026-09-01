@@ -171,7 +171,10 @@ export function shimOutputPath(arch: string = resolveBridgeArch()): string {
  * the `.lib` (the `.pdb` still lands) while still perturbing the DLL's
  * CodeView build-id. Do not re-attempt either.
  */
-export const SHIM_BUILD_BYPRODUCTS = ['steam_api.pdb', 'steam_api_shim.lib'] as const
+export const SHIM_BUILD_BYPRODUCTS = [
+  'steam_api.pdb',
+  'steam_api_shim.lib'
+] as const
 
 /** The two `SHIM_BUILD_BYPRODUCTS` names, joined under this arch's bundled darwin dir. */
 export function shimByproductPaths(
