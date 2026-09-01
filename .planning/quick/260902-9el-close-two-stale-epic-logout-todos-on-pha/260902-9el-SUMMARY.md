@@ -4,7 +4,8 @@ title: "Close two stale Epic-logout todos on Phase 35 release-artifact evidence"
 date: 2026-09-02
 status: complete
 commits:
-  - docs(quick-260902-9el): close two stale Epic-logout todos on Phase 35 release-artifact evidence
+  - a2bf55687 docs(quick-260902-9el): close two stale Epic-logout todos on Phase 35 release-artifact evidence
+  - 7d99e4b3d docs(quick-260902-9el): correct self-referential commit hash in SUMMARY
 ---
 
 # Summary
