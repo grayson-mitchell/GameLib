@@ -21,35 +21,6 @@
             "uncheckRunSteam": "On the final Steam installer screen, UNTICK \"Run Steam\" before clicking Finish — GameLib will start Steam itself once the bottle is ready."
         }
     },
-    "bridge": {
-        "setup": {
-            "cancel": "Cancel",
-            "fallback": "Fall back to bottled Steam",
-            "fallbackError": "Falling back to bottled Steam failed: {{error}}",
-            "fallbackNotFound": "Could not find this game to fall back to bottled Steam.",
-            "fallingBack": "Falling back...",
-            "message": "GameLib could not use the native Steam bridge for this game. You can fall back to the proven bottled-Steam path (a full Windows Steam client running in a dedicated CrossOver/Wine bottle) instead.",
-            "reason": "Reason: {{reason}}",
-            "title": "Steam bridge unavailable"
-        }
-    },
-    "clientSetup": {
-        "consent": {
-            "title": "Set up the Steam client",
-            "body": "GameLib could not find the Steam client on this computer. Downloading this game requires the official Steam client to adopt and manage the install afterward. GameLib will download the official Steam installer and run it — you complete the install yourself in the window that opens.",
-            "confirm": "Install Steam",
-            "cancel": "Not now"
-        },
-        "installing": {
-            "message": "Installing the Steam client — finish the installer window that opened, then GameLib will continue automatically."
-        },
-        "launchOnce": {
-            "message": "Steam is installed but has not been launched yet. Open Steam once — GameLib will continue the install automatically once it detects Steam is ready."
-        },
-        "errorMessage": "Steam setup could not start: {{error}}",
-        "retry": "Try again",
-        "done": "Done"
-    },
     "box": {
         "change": {
             "message": "This will change the install location of this game, are you sure?",
@@ -122,6 +93,18 @@
         "wineprefix": "Select WinePrefix Folder",
         "yes": "YES"
     },
+    "bridge": {
+        "setup": {
+            "cancel": "Cancel",
+            "fallback": "Fall back to bottled Steam",
+            "fallbackError": "Falling back to bottled Steam failed: {{error}}",
+            "fallbackNotFound": "Could not find this game to fall back to bottled Steam.",
+            "fallingBack": "Falling back...",
+            "message": "GameLib could not use the native Steam bridge for this game. You can fall back to the proven bottled-Steam path (a full Windows Steam client running in a dedicated CrossOver/Wine bottle) instead.",
+            "reason": "Reason: {{reason}}",
+            "title": "Steam bridge unavailable"
+        }
+    },
     "button": {
         "add_to_favourites": "Add To Favourites",
         "browse_files": "Browse Files",
@@ -152,6 +135,23 @@
         "unhide_game": "Unhide Game",
         "uninstall": "Uninstall",
         "update": "Update"
+    },
+    "clientSetup": {
+        "consent": {
+            "body": "GameLib could not find the Steam client on this computer. Downloading this game requires the official Steam client to adopt and manage the install afterward. GameLib will download the official Steam installer and run it — you complete the install yourself in the window that opens.",
+            "cancel": "Not now",
+            "confirm": "Install Steam",
+            "title": "Set up the Steam client"
+        },
+        "done": "Done",
+        "errorMessage": "Steam setup could not start: {{error}}",
+        "installing": {
+            "message": "Installing the Steam client — finish the installer window that opened, then GameLib will continue automatically."
+        },
+        "launchOnce": {
+            "message": "Steam is installed but has not been launched yet. Open Steam once — GameLib will continue the install automatically once it detects Steam is ready."
+        },
+        "retry": "Try again"
     },
     "cloud_save_unsupported": "Unsupported",
     "disabled": "Disabled",
