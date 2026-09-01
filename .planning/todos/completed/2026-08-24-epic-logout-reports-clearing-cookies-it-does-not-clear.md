@@ -2,11 +2,13 @@
 created: 2026-08-24T00:00:00.000Z
 title: "Epic logout REPORTS clearing 8 cookies and clears ZERO — every Epic cookie survives with its full value, including the 219-byte `EPIC_SESSION_AP` session token"
 area: tauri-shell
-status: OPEN
+status: CLOSED
 severity: major
 files:
   - src-tauri/src/main.rs
   - src/backend/storeManagers/legendary/user.ts
+closed: 2026-09-02
+closed_by: "quick task 260902-9el"
 ---
 
 ## Observed
@@ -98,3 +100,59 @@ D-13 rather than by count — a count-only check would have accepted the app's o
 
 Related: [[wry-cookie-delete-lies-about-deleting]] · [[cookie-domain-leading-dot-blindness]] ·
 [[tauri-cookies-for-url-drops-cookies]]
+
+## CLOSURE RECORD — 2026-09-02, quick task 260902-9el
+
+**`title:` is kept verbatim.** It records the problem as found and measured on 2026-08-24 (0 of 7
+Epic cookies removed) and is NOT a current claim about app behaviour — see the fix below.
+
+**The defect is FIXED and live-verified.** REQ-35-07 ("Logging out clears the embedded browser's
+persisted state — cookies, localStorage, IndexedDB and disk cache — and the app does not report
+success unless a post-clear read confirms it") was marked Complete 2026-09-01 by quick task
+`260901-vuy`, at `REQUIREMENTS.md:429` (status table) and `REQUIREMENTS.md:1143` (body checkbox).
+BOTH clauses were proven on a GENUINE RELEASE ARTIFACT at 22:52–22:54 on 2026-08-31 — Phase 35's
+sixth adjudication pass, the first verified against a release build rather than a debug-packaged
+one. Measured result:
+`epicgames.com before(total=31, matched=8, verdict=SUPPORTED_NONEMPTY) -> after(total=23,
+matched=0)`, and `post-clear verification — 0 Epic-owned cookie(s) remain across 5 domain(s)`,
+corroborated by an independently-written index-walking jar parse.
+
+**This todo's own diagnosis is REFUTED.** This file filed the defect under
+`[[wry-cookie-delete-lies-about-deleting]]`. That diagnosis does not hold. The real cause:
+`clearEpicCookies` opened a hidden webview on Epic's LIVE login page purely to obtain a window
+handle the macOS path never used; building a WKWebView on an `https` URL IS a navigation, and
+Epic/Cloudflare answered it by re-minting `__cf_bm`, `EPIC_DEVICE`, `EPIC_LOGIN_ID`, `_epicSID` and
+`_tald`, concurrently with and for ~1–2s after the clear loop. **The census's `matched=0` was
+ACCURATE about an instant that had stopped being true before anyone read it.** Fixed by commit
+`b5b3464bd` ("fix(35): stop the Epic logout re-creating the cookies it deletes") — macOS now opens
+no window for the cookie step; the deliberately-unresolvable label IS the Rust fallback's
+precondition, so the same Rust code runs with the page load gone.
+
+**The second half of REQ-35-07** — the app reporting success without a confirming read — was a
+fail-open in the post-clear census, closed by commit `bea07cd17` ("fix(35): close the fail-open
+post-clear verification sweep"), RED-proved with four mutations against the real file.
+
+**This todo's own "Not yet determined" open question is ANSWERED.** That section asked why the
+app counted 8 removed while the jar held 7 in-scope, and whether that gap was an
+in-memory-vs-disk divergence in wry's cookie API. It was not. The app's delta was measured across
+a window in which cookies were actively being re-minted by the live-page navigation described
+above; the mismatch is explained by that re-minting, not by the removal API's view diverging from
+the persistent store. The in-memory-vs-disk hypothesis this section recorded is explicitly
+retired.
+
+**Carve-out 1 — off-macOS Epic logout is NOT covered by this closure.** All evidence above is
+macOS-only, already routed to **Phase 38** — ledgered as **`38-W06`** in `38-VERIFICATION.md`'s
+`human_verification` array. Commit `b5b3464bd` deliberately KEEPS a hidden window off macOS
+(pointed at `https://gamelib.invalid/`) — exactly the leg nobody has exercised. Commit `bea07cd17`
+additionally made an unreadable jar throw, so a rejecting read off-macOS surfaces as a
+user-visible sign-out error. **Phase 38 owns this.**
+
+**Carve-out 2 — `D-35-19-15` SURVIVES OPEN, no owning phase.** `D-35-19-15`'s sibling-apex seeding
+remains UNEXERCISED and is unreproducible by construction — `b5b3464bd` removed the hidden window
+that was the only thing ever seeding those four sibling apexes during a logout. Two independent
+adjudication passes ruled it is `D-35-19-15`'s own sub-criterion and NOT a clause of REQ-35-07,
+which is why REQ-35-07 could close without it. It is not described as closed here.
+
+**Back-reference.** Closed alongside this todo, by the same quick task, is its predecessor:
+`2026-08-23-epic-logout-cookie-clear-unobserved-and-unowned.md`, which had stayed pending pending
+resolution of exactly the defect this file records.
