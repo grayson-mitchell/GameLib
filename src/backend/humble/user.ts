@@ -19,6 +19,7 @@ import { HumbleUserData } from 'common/types/humble'
 import { standardBrowserUserAgent } from './userAgent'
 import {
   getLoginWindowSeam,
+  getLoginWindowSeamOrThrow,
   classifyCookieRead,
   type CookieReadVerdict
 } from './loginWindowSeam'
@@ -987,244 +988,222 @@ export class HumbleUser {
     // thrown) — the disconnect itself already succeeded once the credential
     // store is cleared.
     //
-    // Phase 34.4.1 Plan 06 (D-08, closes 34.4 D-05's declared partial): under
-    // Electron this is the ORIGINAL, untouched five-step session.fromPartition
-    // wipe. Under Tauri there is no session.fromPartition() shape at all — the
-    // login cookies live in the sidecar's app-wide webview jar, which is only
-    // reachable through a live webview handle (tauri-login-webview-cookies.md
-    // § "Persistence and isolation"). A single 'clearHumbleCookies' step opens
-    // a HIDDEN window (no visible UI flash on disconnect), clears ONLY
-    // humblebundle.com cookies through the domain-scoped Rust arm (T-34.4.1-30
-    // — the jar will hold Epic/GOG/Amazon cookies once Phase 34.5 lands, so a
-    // blanket wipe would sign the user out of storefronts they never touched),
-    // and closes the window in a `finally` so no path — success, rejection, or
-    // a thrown open() — ever leaves it open.
+    // Phase 34.4.1 Plans 06/16 (D-08, closes 34.4 D-05's declared partial; F-6
+    // BLOCKING closure): the login cookies live in the sidecar's app-wide
+    // webview jar, which is only reachable through a live webview handle
+    // (tauri-login-webview-cookies.md § "Persistence and isolation"). A
+    // single 'clearHumbleCookies' step opens a HIDDEN window (no visible UI
+    // flash on disconnect), clears ONLY humblebundle.com cookies through the
+    // domain-scoped Rust arm (T-34.4.1-30 — the jar holds Epic/GOG/Amazon
+    // cookies too since Phase 34.5, so a blanket wipe would sign the user out
+    // of storefronts they never touched), and closes the window in a
+    // `finally` so no path — success, rejection, or a thrown open() — ever
+    // leaves it open.
     //
-    // Phase 34.4.1 Plan 16 (F-6 BLOCKING closure): the cookie-only step above
-    // left the Tauri branch covering only 1 of Electron's 5 wipe categories
-    // (`cookies` vs `storage`/`cache`/`authCache`/`hostResolver`/`cookies` via
-    // `clearStorageData`/`clearCache`/`clearAuthCache`/`clearHostResolverCache`/
-    // `clearData`) — a genuine functional AND privacy regression: localStorage/
-    // IndexedDB/service workers survived a disconnect, so the very next login
-    // window auto-signed the next person on a shared machine straight back in.
-    // A second, INDEPENDENT 'clearHumbleStorage' step now calls Plan 15's
+    // A second, INDEPENDENT 'clearHumbleStorage' step calls Plan 15's
     // `seam.clearStorage(HUMBLE_BASE_URL, ...)`, which clears localStorage,
     // sessionStorage, IndexedDB, Cache Storage and service-worker registrations
     // for Humble's own origin only — same-origin policy scopes it structurally,
     // the same discipline `clearCookies`'s domain-suffix filter already
-    // achieves for cookies (T-34.4.1-66). This closes the `storage`/`cache`
-    // categories. It is a SEPARATE wipeSteps entry rather than folded into the
-    // cookie step, specifically so the guarded loop below keeps treating the
-    // two independently — one failing must never take the other down, which is
-    // the entire reason that loop exists. The window this capability opens is
-    // opened AND closed entirely inside the Rust arm itself
-    // (`humble_login_clear_storage`, Plan 15) — this call site never holds a
-    // window handle of its own to leak.
+    // achieves for cookies (T-34.4.1-66). It is a SEPARATE wipeSteps entry
+    // rather than folded into the cookie step, specifically so the guarded
+    // loop below keeps treating the two independently — one failing must
+    // never take the other down, which is the entire reason that loop
+    // exists. The window this capability opens is opened AND closed entirely
+    // inside the Rust arm itself (`humble_login_clear_storage`, Plan 15) —
+    // this call site never holds a window handle of its own to leak.
     //
     // `clearAuthCache`/`clearHostResolverCache` have NO in-page JavaScript
     // equivalent — they are network-stack (HTTP auth / DNS resolver) caches,
     // not web storage, and no Tauri/wry API exposes them to injected JS. This
-    // is DECLARED rather than silently dropped (T-34.4.1-73, STRIDE Repudiation,
-    // accepted): the residual risk is a cached HTTP auth credential or a DNS
-    // cache entry surviving a disconnect, and NEITHER carries a Humble session
-    // — the actual F-6 harm (auto-signed-back-in re-login) is fully closed by
-    // the cookie + storage steps above. `seamBranchParity.test.ts`'s DECLARED
-    // check (Plan 16 Task 3) requires this exact paragraph to name both
-    // categories and this threat ID before it will accept the classification.
-    const seam = getLoginWindowSeam()
-    let wipeSteps: Array<[string, () => Promise<unknown>]>
-    if (seam === null) {
-      const ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
-      wipeSteps = [
-        ['clearStorageData', async () => ses.clearStorageData()],
-        ['clearCache', async () => ses.clearCache()],
-        ['clearAuthCache', async () => ses.clearAuthCache()],
-        ['clearHostResolverCache', async () => ses.clearHostResolverCache()],
-        ['clearData', async () => ses.clearData()]
-      ]
-    } else {
-      wipeSteps = [
-        [
-          'clearHumbleCookies',
-          async () => {
-            const label = await seam.open(HUMBLE_BASE_URL, {
-              visible: false,
-              userAgent: standardBrowserUserAgent()
-            })
-            try {
-              // Phase 34.4.1 gap-cycle plan 17 (F-5, item 3(b)): a paired
-              // before/after jar census, taken INSIDE this step against the
-              // SAME still-open window label the clear itself uses. F-7's
-              // process lesson: a measurement scheduled AROUND an operation
-              // cannot be reconstructed after the NEXT operation destroys its
-              // "after" — so the paired reads live here, not in a later
-              // diagnostic plan. The name filter is EMPTY (not just
-              // '_simpleauth_sess') so `matched` counts every humblebundle.com
-              // cookie — the domain-scope proof needs the whole Humble jar,
-              // not one cookie. Only integers/fixed text are ever logged —
-              // never a cookie name, domain, or value (T-34.4.1-34/-39,
-              // T-34.4.1-75).
-              //
-              // Phase 34.4.1 Plan 22 (F-6 Defect A, REQ-34.4.1-GAP-07): this
-              // call site previously read through the seam's OTHER cookie
-              // method (the one `watchForLogin()`'s poll below correctly
-              // keeps using) — the SAME page-host-first direction. That
-              // direction is wrong here: with a FIXED apex
-              // ('humblebundle.com') passed as the "host" argument,
-              // `cookie_domain_matches`'s suffix branch can never fire, so it
-              // only ever matched cookies whose domain attribute was the bare
-              // string 'humblebundle.com' — every leading-dot- and
-              // subdomain-scoped Humble cookie was silently excluded from
-              // `matched`, and the three equalities below were being
-              // evaluated against undercounted numbers (spike 016, live:
-              // total=33, that direction=29, the correct direction=33 — see
-              // `34.4.1-SPIKE-016-FINDINGS.md`). `cookiesForDomain` below asks
-              // the correctly-directed question instead — the cookie's own
-              // domain first, the fixed target second, mirroring
-              // `clearCookies`'s own filter exactly.
-              let everProvedLive = false
-              interface Census {
-                total: number | null
-                matched: number
-                verdict: CookieReadVerdict
-              }
-              const readCensus = async (): Promise<Census> => {
-                try {
-                  const read = await seam.cookiesForDomain(
-                    label,
-                    'humblebundle.com',
-                    []
-                  )
-                  if (read.total > 0) everProvedLive = true
-                  return {
-                    total: read.total,
-                    matched: read.matched.length,
-                    verdict: classifyCookieRead({
-                      total: read.total,
-                      everProvedLive
-                    })
-                  }
-                } catch (err) {
-                  // A rejecting census read must NEVER block the clear or
-                  // throw out of disconnect() — the clear is the
-                  // user-visible operation; the census is evidence about it.
-                  logWarning(
-                    [
-                      'Humble disconnect: cookie census read failed (non-fatal, evidence unavailable for this side):',
-                      err
-                    ],
-                    LogPrefix.Backend
-                  )
-                  return {
-                    total: null,
-                    matched: 0,
-                    verdict: classifyCookieRead({ total: null, everProvedLive })
-                  }
-                }
-              }
-
-              const before = await readCensus()
-              const deleted = await seam.clearCookies(label, 'humblebundle.com')
-              const after = await readCensus()
-
-              const fmtSide = (c: Census) =>
-                c.total === null
-                  ? 'total=unavailable, matched=unavailable, verdict=' +
-                    c.verdict
-                  : `total=${c.total}, matched=${c.matched}, verdict=${c.verdict}`
-              const survivingNonHumble =
-                after.total === null
-                  ? 'unavailable'
-                  : after.total - after.matched
-
-              // The one census log line plan 20's gate greps for. Exact
-              // format recorded verbatim in this plan's SUMMARY.
-              logInfo(
-                `Humble disconnect: cookie census before(${fmtSide(before)}) ` +
-                  `after(${fmtSide(after)}) deleted=${deleted} ` +
-                  `survivingNonHumble=${survivingNonHumble}`,
-                LogPrefix.Backend
-              )
-
-              // Domain-scoped <=> M1 == 0 AND (T0 - T1) == M0 AND D == M0.
-              // An UNDECIDABLE/unavailable side (either census read failed,
-              // or the jar was never proven live) can never PASS this check —
-              // it is reported as incomplete, never silently as a clean pass.
-              if (before.total === null || after.total === null) {
-                logWarning(
-                  'Humble disconnect: cookie census incomplete — domain-scope arithmetic cannot be verified (a census read was unavailable)',
-                  LogPrefix.Backend
+    // remains a DECLARED, standing residual limitation of this single wipe
+    // path (T-34.4.1-73, STRIDE Repudiation, accepted) rather than a silent
+    // drop: the residual risk is a cached HTTP auth credential or a DNS cache
+    // entry surviving a disconnect, and NEITHER carries a Humble session —
+    // the actual F-6 harm (auto-signed-back-in re-login) is fully closed by
+    // the cookie + storage steps above. This paragraph naming both categories
+    // and this threat ID is the durable record of that acceptance (see
+    // Phase 39 Plan 04's SUMMARY for how the branch-comparison test that used
+    // to validate it was dispositioned).
+    const seam = getLoginWindowSeamOrThrow()
+    const wipeSteps: Array<[string, () => Promise<unknown>]> = [
+      [
+        'clearHumbleCookies',
+        async () => {
+          const label = await seam.open(HUMBLE_BASE_URL, {
+            visible: false,
+            userAgent: standardBrowserUserAgent()
+          })
+          try {
+            // Phase 34.4.1 gap-cycle plan 17 (F-5, item 3(b)): a paired
+            // before/after jar census, taken INSIDE this step against the
+            // SAME still-open window label the clear itself uses. F-7's
+            // process lesson: a measurement scheduled AROUND an operation
+            // cannot be reconstructed after the NEXT operation destroys its
+            // "after" — so the paired reads live here, not in a later
+            // diagnostic plan. The name filter is EMPTY (not just
+            // '_simpleauth_sess') so `matched` counts every humblebundle.com
+            // cookie — the domain-scope proof needs the whole Humble jar,
+            // not one cookie. Only integers/fixed text are ever logged —
+            // never a cookie name, domain, or value (T-34.4.1-34/-39,
+            // T-34.4.1-75).
+            //
+            // Phase 34.4.1 Plan 22 (F-6 Defect A, REQ-34.4.1-GAP-07): this
+            // call site previously read through the seam's OTHER cookie
+            // method (the one `watchForLogin()`'s poll below correctly
+            // keeps using) — the SAME page-host-first direction. That
+            // direction is wrong here: with a FIXED apex
+            // ('humblebundle.com') passed as the "host" argument,
+            // `cookie_domain_matches`'s suffix branch can never fire, so it
+            // only ever matched cookies whose domain attribute was the bare
+            // string 'humblebundle.com' — every leading-dot- and
+            // subdomain-scoped Humble cookie was silently excluded from
+            // `matched`, and the three equalities below were being
+            // evaluated against undercounted numbers (spike 016, live:
+            // total=33, that direction=29, the correct direction=33 — see
+            // `34.4.1-SPIKE-016-FINDINGS.md`). `cookiesForDomain` below asks
+            // the correctly-directed question instead — the cookie's own
+            // domain first, the fixed target second, mirroring
+            // `clearCookies`'s own filter exactly.
+            let everProvedLive = false
+            interface Census {
+              total: number | null
+              matched: number
+              verdict: CookieReadVerdict
+            }
+            const readCensus = async (): Promise<Census> => {
+              try {
+                const read = await seam.cookiesForDomain(
+                  label,
+                  'humblebundle.com',
+                  []
                 )
-              } else {
-                const failures: string[] = []
-                if (after.matched !== 0) {
-                  failures.push(`matched-after=${after.matched} (expected 0)`)
+                if (read.total > 0) everProvedLive = true
+                return {
+                  total: read.total,
+                  matched: read.matched.length,
+                  verdict: classifyCookieRead({
+                    total: read.total,
+                    everProvedLive
+                  })
                 }
-                const jarDelta = before.total - after.total
-                if (jarDelta !== before.matched) {
-                  failures.push(
-                    `jar shrank by ${jarDelta}, expected exactly matched-before=${before.matched}`
-                  )
-                }
-                if (deleted !== before.matched) {
-                  failures.push(
-                    `deleted=${deleted}, expected matched-before=${before.matched}`
-                  )
-                }
-                if (failures.length > 0) {
-                  // A blanket wipe (or any other non-domain-scoped clear) must
-                  // be LOUD, never inferred later from an absent line.
-                  logWarning(
-                    `Humble disconnect: cookie census discrepancy — clear may not have been domain-scoped: ${failures.join('; ')}`,
-                    LogPrefix.Backend
-                  )
-                }
-              }
-
-              // Only the COUNT is logged — never a cookie name, domain, or
-              // value (T-34.4.1-34, the removed-getFullCookieHeader discipline
-              // this file already enforces elsewhere).
-              logInfo(
-                `Humble disconnect: cleared ${deleted} humblebundle.com cookie(s)`,
-                LogPrefix.Backend
-              )
-            } finally {
-              // Closed unconditionally — even when clearCookies rejects —
-              // so a failed clear never leaks the hidden window.
-              await seam.close(label).catch((err) => {
+              } catch (err) {
+                // A rejecting census read must NEVER block the clear or
+                // throw out of disconnect() — the clear is the
+                // user-visible operation; the census is evidence about it.
                 logWarning(
                   [
-                    'Humble disconnect: cookie-clear window close failed (non-fatal):',
+                    'Humble disconnect: cookie census read failed (non-fatal, evidence unavailable for this side):',
                     err
                   ],
                   LogPrefix.Backend
                 )
-              })
+                return {
+                  total: null,
+                  matched: 0,
+                  verdict: classifyCookieRead({ total: null, everProvedLive })
+                }
+              }
             }
-          }
-        ],
-        [
-          'clearHumbleStorage',
-          async () => {
-            // Plan 15's clearStorage() opens and closes its OWN hidden window
-            // inside the Rust arm (humble_login_clear_storage) — no label is
-            // needed or returned here, unlike the cookie step above.
-            const report = await seam.clearStorage(
-              HUMBLE_BASE_URL,
-              standardBrowserUserAgent()
-            )
-            // Only COUNTS are logged — never a storage key or value
-            // (T-34.4.1-34 discipline, same as the cookie step above).
+
+            const before = await readCensus()
+            const deleted = await seam.clearCookies(label, 'humblebundle.com')
+            const after = await readCensus()
+
+            const fmtSide = (c: Census) =>
+              c.total === null
+                ? 'total=unavailable, matched=unavailable, verdict=' + c.verdict
+                : `total=${c.total}, matched=${c.matched}, verdict=${c.verdict}`
+            const survivingNonHumble =
+              after.total === null ? 'unavailable' : after.total - after.matched
+
+            // The one census log line plan 20's gate greps for. Exact
+            // format recorded verbatim in this plan's SUMMARY.
             logInfo(
-              `Humble disconnect: cleared storage — localStorage=${report.localStorage}, ` +
-                `sessionStorage=${report.sessionStorage}, indexedDB=${report.indexedDB}, ` +
-                `caches=${report.caches}, serviceWorkers=${report.serviceWorkers}`,
+              `Humble disconnect: cookie census before(${fmtSide(before)}) ` +
+                `after(${fmtSide(after)}) deleted=${deleted} ` +
+                `survivingNonHumble=${survivingNonHumble}`,
               LogPrefix.Backend
             )
+
+            // Domain-scoped <=> M1 == 0 AND (T0 - T1) == M0 AND D == M0.
+            // An UNDECIDABLE/unavailable side (either census read failed,
+            // or the jar was never proven live) can never PASS this check —
+            // it is reported as incomplete, never silently as a clean pass.
+            if (before.total === null || after.total === null) {
+              logWarning(
+                'Humble disconnect: cookie census incomplete — domain-scope arithmetic cannot be verified (a census read was unavailable)',
+                LogPrefix.Backend
+              )
+            } else {
+              const failures: string[] = []
+              if (after.matched !== 0) {
+                failures.push(`matched-after=${after.matched} (expected 0)`)
+              }
+              const jarDelta = before.total - after.total
+              if (jarDelta !== before.matched) {
+                failures.push(
+                  `jar shrank by ${jarDelta}, expected exactly matched-before=${before.matched}`
+                )
+              }
+              if (deleted !== before.matched) {
+                failures.push(
+                  `deleted=${deleted}, expected matched-before=${before.matched}`
+                )
+              }
+              if (failures.length > 0) {
+                // A blanket wipe (or any other non-domain-scoped clear) must
+                // be LOUD, never inferred later from an absent line.
+                logWarning(
+                  `Humble disconnect: cookie census discrepancy — clear may not have been domain-scoped: ${failures.join('; ')}`,
+                  LogPrefix.Backend
+                )
+              }
+            }
+
+            // Only the COUNT is logged — never a cookie name, domain, or
+            // value (T-34.4.1-34, the removed-getFullCookieHeader discipline
+            // this file already enforces elsewhere).
+            logInfo(
+              `Humble disconnect: cleared ${deleted} humblebundle.com cookie(s)`,
+              LogPrefix.Backend
+            )
+          } finally {
+            // Closed unconditionally — even when clearCookies rejects —
+            // so a failed clear never leaks the hidden window.
+            await seam.close(label).catch((err) => {
+              logWarning(
+                [
+                  'Humble disconnect: cookie-clear window close failed (non-fatal):',
+                  err
+                ],
+                LogPrefix.Backend
+              )
+            })
           }
-        ]
+        }
+      ],
+      [
+        'clearHumbleStorage',
+        async () => {
+          // Plan 15's clearStorage() opens and closes its OWN hidden window
+          // inside the Rust arm (humble_login_clear_storage) — no label is
+          // needed or returned here, unlike the cookie step above.
+          const report = await seam.clearStorage(
+            HUMBLE_BASE_URL,
+            standardBrowserUserAgent()
+          )
+          // Only COUNTS are logged — never a storage key or value
+          // (T-34.4.1-34 discipline, same as the cookie step above).
+          logInfo(
+            `Humble disconnect: cleared storage — localStorage=${report.localStorage}, ` +
+              `sessionStorage=${report.sessionStorage}, indexedDB=${report.indexedDB}, ` +
+              `caches=${report.caches}, serviceWorkers=${report.serviceWorkers}`,
+            LogPrefix.Backend
+          )
+        }
       ]
-    }
+    ]
     for (const [name, step] of wipeSteps) {
       try {
         await step()
