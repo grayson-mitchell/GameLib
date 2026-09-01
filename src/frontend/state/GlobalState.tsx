@@ -966,9 +966,12 @@ class GlobalState extends PureComponent<Props> {
             'than reloading into a possibly-still-signed-in session.'
         )
         this.handleShowDialogModal({
-          title: t('login.steam_logout_failed_title', 'Sign-out failed'),
+          title: t(
+            'gamelib:login.steam_logout_failed_title',
+            'Sign-out failed'
+          ),
           message: t(
-            'login.steam_logout_failed_message',
+            'gamelib:login.steam_logout_failed_message',
             "Steam sign-out didn't finish in time. Please try again."
           ),
           buttons: [{ text: t('box.ok', 'OK') }]

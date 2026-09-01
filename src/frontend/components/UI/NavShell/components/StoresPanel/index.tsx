@@ -29,6 +29,7 @@ import NavItem from '../NavItem'
  */
 export default function StoresPanel() {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { humble, steam, handleRedeemKeyDialog } = useContext(ContextProvider)
 
   return (
@@ -59,7 +60,7 @@ export default function StoresPanel() {
           elementType="button"
           onClick={() => handleRedeemKeyDialog(true)}
           icon={faKey}
-          label={t('sidebar.redeemSteamKey', 'Redeem a Steam key')}
+          label={tGamelib('sidebar.redeemSteamKey', 'Redeem a Steam key')}
         />
       )}
     </div>

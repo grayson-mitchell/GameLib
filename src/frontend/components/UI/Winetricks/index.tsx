@@ -21,6 +21,7 @@ interface Props {
 export default function Winetricks({ onClose, runner }: Props) {
   const { appName } = useContext(SettingsContext)
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
 
   const [loadingInstalled, setLoadingInstalled] = useState(true)
   const [loadingAvailable, setLoadingAvailable] = useState(true)
@@ -143,7 +144,7 @@ export default function Winetricks({ onClose, runner }: Props) {
       {declined && (
         <div className="installWrapper">
           <span>
-            {t(
+            {tGamelib(
               'winetricks.unavailable',
               'Winetricks component management is unavailable on this build'
             )}
@@ -197,7 +198,7 @@ export default function Winetricks({ onClose, runner }: Props) {
         <b>{t('winetricks.installed', 'Installed components:')}</b>
         {declined && (
           <span>
-            {t(
+            {tGamelib(
               'winetricks.unavailableDetail',
               'Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build.'
             )}

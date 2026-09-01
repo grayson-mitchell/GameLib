@@ -10,6 +10,7 @@ import {
 
 export default function SteamGridDbApiKey() {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const [value, setValue] = useState('')
   const [hasKey, setHasKey] = useState(false)
   // True once either site below declines under Tauri -- the field then renders disabled with an
@@ -54,7 +55,10 @@ export default function SteamGridDbApiKey() {
   }
 
   const placeholder = unavailable
-    ? t('settings.steamgriddb.apikey.unavailable', 'Unavailable on this build')
+    ? tGamelib(
+        'settings.steamgriddb.apikey.unavailable',
+        'Unavailable on this build'
+      )
     : hasKey
       ? t(
           'settings.steamgriddb.apikey.placeholder_saved',
@@ -78,7 +82,7 @@ export default function SteamGridDbApiKey() {
         <InfoBox text={t('settings.advanced.details', 'Details')}>
           <span style={{ userSelect: 'text' }}>
             {unavailable
-              ? t(
+              ? tGamelib(
                   'settings.steamgriddb.help.unavailableDetail',
                   'SteamGridDB artwork support is deferred to a future release (D-03, Phase 34.6) and cannot be configured from this build.'
                 )

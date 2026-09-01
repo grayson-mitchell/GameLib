@@ -14,12 +14,13 @@ import { GameInfo } from 'common/types'
 import { redeemOutcomeCopy } from './copy'
 
 export default function RedeemSteamKeyDialog() {
-  const { t } = useTranslation()
-  // Phase 34.8-07 (REQ-34.8-12/-13): a second, aliased useTranslation() call
-  // for the `gamelib` namespace, passed into redeemOutcomeCopy() so it
-  // inherits a Suspense-resolved `t` rather than a module-scope binding that
-  // could race i18next initialisation. Same two-hook-with-alias pattern as
-  // GameCard/index.tsx.
+  // Phase 34.8-07 (REQ-34.8-12/-13): a `gamelib`-namespaced useTranslation()
+  // call, passed into redeemOutcomeCopy() so it inherits a Suspense-resolved
+  // `t` rather than a module-scope binding that could race i18next
+  // initialisation. Same pattern as GameCard/index.tsx. 260901-ud5 bucket R:
+  // every string in this file is fork-authored, so the second, default-
+  // namespace `t` hook this component used to also hold is gone -- all call
+  // sites now route through `tGamelib`.
   const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
   const { showRedeemKeyDialog, handleRedeemKeyDialog, steam, refreshLibrary } =
@@ -112,7 +113,7 @@ export default function RedeemSteamKeyDialog() {
   return (
     <Dialog onClose={resetAndClose} showCloseButton>
       <DialogHeader onClose={resetAndClose}>
-        {t('redeemSteamKey.title', 'Redeem a Steam key')}
+        {tGamelib('redeemSteamKey.title', 'Redeem a Steam key')}
       </DialogHeader>
       <DialogContent>
         {outcome !== 'success' && (
@@ -122,7 +123,7 @@ export default function RedeemSteamKeyDialog() {
             autoFocus
             disabled={busy}
             value={key}
-            placeholder={t(
+            placeholder={tGamelib(
               'redeemSteamKey.placeholder',
               'Enter your Steam key'
             )}
@@ -147,7 +148,7 @@ export default function RedeemSteamKeyDialog() {
         )}
         {outcome === 'success' && matchedGame && (
           <button className="button is-secondary" onClick={onViewInLibrary}>
-            {t('redeemSteamKey.viewInLibrary', 'View in library')}
+            {tGamelib('redeemSteamKey.viewInLibrary', 'View in library')}
           </button>
         )}
       </DialogContent>
@@ -159,12 +160,12 @@ export default function RedeemSteamKeyDialog() {
             onClick={onRedeem}
           >
             {busy
-              ? t('redeemSteamKey.redeeming', 'Redeeming...')
-              : t('redeemSteamKey.redeem', 'Redeem')}
+              ? tGamelib('redeemSteamKey.redeeming', 'Redeeming...')
+              : tGamelib('redeemSteamKey.redeem', 'Redeem')}
           </button>
         )}
         <button className="button is-secondary" onClick={resetAndClose}>
-          {t('button.close', 'Close')}
+          {tGamelib('button.close', 'Close')}
         </button>
       </DialogFooter>
     </Dialog>

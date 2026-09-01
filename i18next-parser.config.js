@@ -28,7 +28,17 @@ module.exports = {
   indentation: 4,
   // Indentation of the catalog files
 
-  input: ['src/**/*.{ts,tsx}'],
+  input: [
+    'src/**/*.{ts,tsx}',
+    // 260901-ud5 bucket T: test files are not shipped runtime call sites -- excluding them
+    // stops test-local sentinel keys (e.g. a deliberately-wrong `bottle.setup.done` default
+    // in a __tests__ fixture) from shadowing the real production default because the parser
+    // sorts test files after their production counterpart. Negation globs are supported
+    // natively by vinyl-fs/glob-stream, which is what the `i18next` CLI feeds `config.input`
+    // into (see node_modules/i18next-parser/bin/cli.js).
+    '!src/**/__tests__/**',
+    '!src/**/*.test.{ts,tsx}'
+  ],
   // An array of globs that describe where to look for source files
   // relative to the location of the configuration file
 

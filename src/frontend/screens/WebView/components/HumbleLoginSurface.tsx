@@ -29,7 +29,7 @@ const trueAsStr = 'true' as unknown as boolean | undefined
  * `<webview>` itself.
  */
 export default function HumbleLoginSurface({ onDone, onCancelled }: Props) {
-  const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const { humble } = useContext(ContextProvider)
   const webviewRef = useRef<WebviewTag>(null)
 
@@ -106,7 +106,7 @@ export default function HumbleLoginSurface({ onDone, onCancelled }: Props) {
         )
         setHumbleLoginState({
           phase: 'error',
-          message: t(
+          message: tGamelib(
             'webview.login.humble.error.window_unreachable',
             'the Humble sign-in window closed or could not be reached'
           )

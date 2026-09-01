@@ -445,7 +445,7 @@ export default function SideloadDialog({
                 )}
                 {sgdbUnavailable && (
                   <WarningMessage>
-                    {t(
+                    {tGamelib(
                       'edit-game.sgdb.unavailable',
                       'SteamGridDB artwork search is unavailable on this build.'
                     )}

@@ -154,7 +154,7 @@ export default function AdvancedSetting() {
 
   function getMainEosText() {
     if (eosOverlayUnavailable)
-      return t(
+      return tGamelib(
         'setting.eosOverlay.unavailable',
         'The EOS Overlay is unavailable in this build'
       )
@@ -532,7 +532,7 @@ export default function AdvancedSetting() {
           )}
           {eosOverlayUnavailable && (
             <div>
-              {t(
+              {tGamelib(
                 'setting.eosOverlay.unavailableDetail',
                 'EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.'
               )}

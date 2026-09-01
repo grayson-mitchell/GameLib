@@ -86,6 +86,7 @@ const displayNameFor = (runner?: string): string | undefined => {
  */
 const TauriLoginPanel = ({ runner, state }: Props) => {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
 
   // Hoisted above the humble branch (F-34.4.2-19 fix) so 'error'/'timeout' can be checked
   // BEFORE deciding whether humble takes its own static in-progress branch below -- those two
@@ -98,14 +99,14 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
   const runnerLabel = displayNameFor(runner)
   const channelLabel = channel
     ? `\`${channel}\``
-    : t('webview.login.oauth.genericChannel', 'the sign-in channel')
+    : tGamelib('webview.login.oauth.genericChannel', 'the sign-in channel')
 
   if (runner === 'humble' && phase !== 'error' && phase !== 'timeout') {
-    const heading = t(
+    const heading = tGamelib(
       'webview.login.humble.heading',
       'Signing in to Humble Bundle'
     )
-    const body = t(
+    const body = tGamelib(
       'webview.login.humble.body',
       'A sign-in window has opened. Complete sign-in there — this ' +
         'page updates automatically once it succeeds.'
@@ -125,7 +126,7 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
       className="WebView__unavailablePanel-retry"
       onClick={() => window.location.reload()}
     >
-      {t('webview.login.oauth.retry', 'Retry')}
+      {tGamelib('webview.login.oauth.retry', 'Retry')}
     </button>
   )
 
@@ -138,15 +139,18 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     // passed `runner` prop, mirroring the `finalizing`/`blocked` branches above.
     const preparingRunnerLabel = displayNameFor(state.runner) ?? runnerLabel
     const heading = preparingRunnerLabel
-      ? t(
+      ? tGamelib(
           'webview.login.oauth.preparing.heading',
           'Preparing {{runner}} sign-in…',
           {
             runner: preparingRunnerLabel
           }
         )
-      : t('webview.login.oauth.preparing.headingGeneric', 'Preparing sign-in…')
-    const body = t(
+      : tGamelib(
+          'webview.login.oauth.preparing.headingGeneric',
+          'Preparing sign-in…'
+        )
+    const body = tGamelib(
       'webview.login.oauth.preparing.body',
       "The store's sign-in window is being prepared and will open shortly."
     )
@@ -168,11 +172,15 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
 
   if (phase === 'awaiting') {
     const heading = runnerLabel
-      ? t('webview.login.oauth.awaiting.heading', 'Signing in to {{runner}}', {
-          runner: runnerLabel
-        })
-      : t('webview.login.oauth.awaiting.headingGeneric', 'Signing in')
-    const body = t(
+      ? tGamelib(
+          'webview.login.oauth.awaiting.heading',
+          'Signing in to {{runner}}',
+          {
+            runner: runnerLabel
+          }
+        )
+      : tGamelib('webview.login.oauth.awaiting.headingGeneric', 'Signing in')
+    const body = tGamelib(
       'webview.login.oauth.awaiting.body',
       'A sign-in window has opened. Complete sign-in there.'
     )
@@ -191,16 +199,16 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     // single source of truth for which runner this transient phase belongs to.
     const finalizingRunnerLabel = displayNameFor(state.runner) ?? runnerLabel
     const heading = finalizingRunnerLabel
-      ? t(
+      ? tGamelib(
           'webview.login.oauth.finalizing.heading',
           'Finalizing sign-in with {{runner}}…',
           { runner: finalizingRunnerLabel }
         )
-      : t(
+      : tGamelib(
           'webview.login.oauth.finalizing.headingGeneric',
           'Finalizing sign-in…'
         )
-    const body = t(
+    const body = tGamelib(
       'webview.login.oauth.finalizing.body',
       'Sign-in captured. Completing the exchange with the store — this can take a few seconds.'
     )
@@ -222,16 +230,16 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
 
   if (phase === 'cancelled') {
     const heading = runnerLabel
-      ? t(
+      ? tGamelib(
           'webview.login.oauth.cancelled.heading',
           'Signing in to {{runner}} was cancelled',
           { runner: runnerLabel }
         )
-      : t(
+      : tGamelib(
           'webview.login.oauth.cancelled.headingGeneric',
           'Sign-in was cancelled'
         )
-    const body = t(
+    const body = tGamelib(
       'webview.login.oauth.cancelled.body',
       'The sign-in window was closed before completing. You can try again.'
     )
@@ -249,13 +257,16 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
 
   if (phase === 'timeout') {
     const heading = runnerLabel
-      ? t(
+      ? tGamelib(
           'webview.login.oauth.timeout.heading',
           'Signing in to {{runner}} timed out',
           { runner: runnerLabel }
         )
-      : t('webview.login.oauth.timeout.headingGeneric', 'Sign-in timed out')
-    const body = t(
+      : tGamelib(
+          'webview.login.oauth.timeout.headingGeneric',
+          'Sign-in timed out'
+        )
+    const body = tGamelib(
       'webview.login.oauth.timeout.body',
       'The sign-in window took too long to complete. You can try again.'
     )
@@ -273,15 +284,15 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
 
   if (phase === 'error') {
     const heading = runnerLabel
-      ? t(
+      ? tGamelib(
           'webview.login.oauth.error.heading',
           'Signing in to {{runner}} failed',
           {
             runner: runnerLabel
           }
         )
-      : t('webview.login.oauth.error.headingGeneric', 'Sign-in failed')
-    const body = t(
+      : tGamelib('webview.login.oauth.error.headingGeneric', 'Sign-in failed')
+    const body = tGamelib(
       'webview.login.oauth.error.body',
       'Something went wrong while signing in: {{message}}',
       {
@@ -307,16 +318,16 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
     // happened at all. Once a real capture has succeeded and the backend channel is what
     // rejected it, the copy must say so -- never implying nothing was attempted.
     const heading = runnerLabel
-      ? t(
+      ? tGamelib(
           'webview.login.oauth.blocked.heading',
           "Signing in to {{runner}} was captured, but can't finish yet",
           { runner: runnerLabel }
         )
-      : t(
+      : tGamelib(
           'webview.login.oauth.blocked.headingGeneric',
           "Sign-in was captured, but can't finish yet"
         )
-    const body = t(
+    const body = tGamelib(
       'webview.login.oauth.blocked.body',
       'Your sign-in was captured successfully, but the {{channel}} backend channel is not ' +
         'ported to this build yet. This lands in Phase 34.5.',
@@ -345,16 +356,16 @@ const TauriLoginPanel = ({ runner, state }: Props) => {
   )
 
   const heading = runnerLabel
-    ? t(
+    ? tGamelib(
         'webview.login.blocked.heading',
         'Signing in to {{runner}} is not wired up yet',
         { runner: runnerLabel }
       )
-    : t(
+    : tGamelib(
         'webview.login.blocked.headingGeneric',
         'Signing in is not wired up yet'
       )
-  const body = t(
+  const body = tGamelib(
     'webview.login.blocked.body',
     'Your sign-in cannot be completed yet: {{channel}} is not ported ' +
       'to this build. This lands in Phase 34.5.',

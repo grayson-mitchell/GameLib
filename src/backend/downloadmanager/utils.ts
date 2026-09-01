@@ -263,7 +263,7 @@ async function installQueueElement(params: InstallParams): Promise<{
       const windowMinutes = Math.round(INSTALL_NO_PROGRESS_TIMEOUT_MS / 60000)
       status = 'error'
       installErrorReason = i18next.t(
-        'box.error.install.stalled',
+        'gamelib:box.error.install.stalled',
         'No download progress for {{minutes}} minutes — the install was stopped',
         { minutes: windowMinutes }
       )
@@ -384,7 +384,7 @@ async function installQueueElement(params: InstallParams): Promise<{
           ? [
               {
                 text: i18next.t(
-                  'box.error.install.signInToSteam',
+                  'gamelib:box.error.install.signInToSteam',
                   'Sign in to Steam'
                 ),
                 action: 'steamSignIn'
@@ -394,7 +394,7 @@ async function installQueueElement(params: InstallParams): Promise<{
       showDialogBoxModalAuto({
         title: i18next.t('box.error.title', 'Error'),
         message: i18next.t(
-          'box.error.install.failed',
+          'gamelib:box.error.install.failed',
           'The installation of {{title}} failed: {{error}}',
           { title, error: installErrorReason || 'Unknown error' }
         ),

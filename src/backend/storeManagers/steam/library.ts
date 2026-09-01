@@ -822,7 +822,7 @@ export default class SteamLibraryManager implements LibraryManager {
         notify({
           title: existing?.title ?? '',
           body: i18next.t(
-            'steam.resumeAvailable.notify',
+            'gamelib:steam.resumeAvailable.notify',
             'An interrupted install for {{game}} is ready to resume — click Install to continue',
             { game: existing?.title ?? '' }
           )
@@ -1771,16 +1771,19 @@ export async function verifyMacArchGroundTruth(
 export async function promptI386Recovery(appId: string): Promise<void> {
   const { response } = await dialog.showMessageBox({
     title: i18next.t(
-      'box.steam.mac32Detected.title',
+      'gamelib:box.steam.mac32Detected.title',
       '32-bit macOS build detected'
     ),
     message: i18next.t(
-      'box.steam.mac32Detected.message',
+      'gamelib:box.steam.mac32Detected.message',
       "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version."
     ),
     buttons: [
-      i18next.t('box.steam.mac32Detected.confirm', 'Reinstall via CrossOver'),
-      i18next.t('box.cancel', 'Cancel')
+      i18next.t(
+        'gamelib:box.steam.mac32Detected.confirm',
+        'Reinstall via CrossOver'
+      ),
+      i18next.t('gamelib:box.cancel', 'Cancel')
     ],
     // D-07 fail-safe (Phase 33 Plan 03): buttons[0] ("Reinstall via CrossOver") is the
     // destructive branch (force-uninstall + reinstall) -- an explicit cancelId declares

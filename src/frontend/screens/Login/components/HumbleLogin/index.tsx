@@ -18,7 +18,7 @@ interface Props {
  * that ever closes this surface.
  */
 export default function HumbleLogin({ dismiss }: Props) {
-  const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
 
   return (
     <Dialog
@@ -27,7 +27,7 @@ export default function HumbleLogin({ dismiss }: Props) {
       className="humbleLoginDialog"
     >
       <DialogHeader onClose={dismiss}>
-        {t('login.humble_dialog_title', 'Sign in to Humble Bundle')}
+        {tGamelib('login.humble_dialog_title', 'Sign in to Humble Bundle')}
       </DialogHeader>
       <div className="humbleLoginBody">
         <HumbleLoginSurface onDone={dismiss} onCancelled={dismiss} />

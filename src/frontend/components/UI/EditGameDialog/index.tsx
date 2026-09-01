@@ -33,6 +33,7 @@ type SgdbTarget = 'cover' | 'square' | null
 
 export default function EditGameDialog({ gameInfo, backdropClick }: Props) {
   const { t } = useTranslation('gamepage')
+  const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
   const goToAdvancedSettings = () => {
     backdropClick()
@@ -177,7 +178,7 @@ export default function EditGameDialog({ gameInfo, backdropClick }: Props) {
             )}
             {sgdbUnavailable && (
               <WarningMessage>
-                {t(
+                {tGamelib(
                   'edit-game.sgdb.unavailable',
                   'SteamGridDB artwork search is unavailable on this build.'
                 )}

@@ -128,8 +128,8 @@ const AppleWikiInfo = ({ gameInfo }: Props) => {
             color="inherit"
             disabled={refreshing}
             onClick={onClickRefresh}
-            title={t('info.refresh-rating', 'Refresh rating')}
-            aria-label={t('info.refresh-rating', 'Refresh rating')}
+            title={tGamelib('info.refresh-rating', 'Refresh rating')}
+            aria-label={tGamelib('info.refresh-rating', 'Refresh rating')}
           >
             <Refresh fontSize="small" />
           </IconButton>

@@ -2,6 +2,27 @@
     "app": {
         "routeError": "Something went wrong: {{detail}}"
     },
+    "box": {
+        "cancel": "Cancel",
+        "error": {
+            "install": {
+                "failed": "The installation of {{title}} failed: {{error}}",
+                "signInToSteam": "Sign in to Steam",
+                "stalled": "No download progress for {{minutes}} minutes — the install was stopped"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Reinstall via CrossOver",
+                "message": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version.",
+                "title": "32-bit macOS build detected"
+            }
+        }
+    },
+    "button": {
+        "close": "Close",
+        "paste": "Paste"
+    },
     "consoleMode": {
         "installNext": "Next",
         "installPrevious": "Previous",
@@ -16,6 +37,11 @@
     },
     "downloadManager": {
         "progressPaused": "Paused"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "SteamGridDB artwork search is unavailable on this build."
+        }
     },
     "gamepage": {
         "appleRatingUnrated": "Unrated",
@@ -37,17 +63,20 @@
         "activateConfirmBody": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
         "activateConfirmBodyRevealed": "This redeems your already-revealed key on your Steam account. There's no undo.",
         "activateConfirmTitle": "Activate this key on Steam?",
-        "activateDismiss": "Cancel",
-        "activateWizardTitle": "Activate this key",
         "activatedDone": "Done",
+        "activateDismiss": "Cancel",
         "activatedTitle": "Activated",
+        "activateWizardTitle": "Activate this key",
         "activatingBody": "Revealing your key and redeeming it on Steam — this only takes a moment.",
         "activatingTitle": "Activating on Steam…"
     },
+    "info": {
+        "refresh-rating": "Refresh rating"
+    },
     "installFlows": {
-        "pathRejectedTitle": "Can't use that location",
+        "pathRejectedBodyImport": "GameLib couldn't import from that location. The source has to be a full folder path with no \"..\" steps in it. Pick the game's folder again.",
         "pathRejectedBodyMove": "GameLib couldn't move this game there. The destination has to be a full folder path with no \"..\" steps in it. Pick the destination folder again.",
-        "pathRejectedBodyImport": "GameLib couldn't import from that location. The source has to be a full folder path with no \"..\" steps in it. Pick the game's folder again."
+        "pathRejectedTitle": "Can't use that location"
     },
     "library": {
         "filterPanel": {
@@ -84,8 +113,8 @@
         "header": {
             "filteredOfTotal": "{{shown}} of {{total}}"
         },
-        "noStorePage": "No store page",
         "no_no_store_page_games": "No games without a store page in your library",
+        "noStorePage": "No store page",
         "steamSync": {
             "failedBody": "Your other libraries are still available. Try again, or check that Steam is reachable.",
             "failedTitle": "Couldn't sync your Steam library",
@@ -99,13 +128,22 @@
     },
     "login": {
         "connected": "Connected",
+        "humble_dialog_title": "Sign in to Humble Bundle",
         "logoutFailedMessage": "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
         "logoutFailedTitle": "Sign-out incomplete",
+        "steam_logout_failed_message": "Steam sign-out didn't finish in time. Please try again.",
+        "steam_logout_failed_title": "Sign-out failed",
         "steamReconnect": "Sign-in expired — Reconnect"
     },
     "pathSelectionBox": {
         "saved": "Saved",
         "unsaved": "Not saved yet — press Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Failed",
+            "retry": "Retry"
+        }
     },
     "redeemKey": {
         "alreadyOwned": "",
@@ -114,6 +152,19 @@
         "rateLimited": "",
         "successNoPackage": "",
         "successWithPackage": ""
+    },
+    "redeemSteamKey": {
+        "placeholder": "Enter your Steam key",
+        "redeem": "Redeem",
+        "redeeming": "Redeeming...",
+        "title": "Redeem a Steam key",
+        "viewInLibrary": "View in library"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "The EOS Overlay is unavailable in this build",
+            "unavailableDetail": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build."
+        }
     },
     "settings": {
         "eosOverlayInstallConfirmBody": "Install the EOS Overlay now?",
@@ -126,8 +177,19 @@
         "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
         "gamescopeUpscaleMethod": "Upscale Method",
         "gamescopeWindowType": "Window Type",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Unavailable on this build"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB artwork support is deferred to a future release (D-03, Phase 34.6) and cannot be configured from this build."
+            }
+        },
         "wineDefaultLabel": "Wine Default",
         "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Redeem a Steam key"
     },
     "sideload": {
         "filter": {
@@ -149,6 +211,14 @@
         "bottle": {
             "statusPollTimeout": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again."
         },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam servers dropped the connection.",
+                "decodeFailed": "Downloaded game data could not be unpacked. This is not a network problem.",
+                "genericV2": "The Steam download failed.",
+                "notSignedIn": "You are not signed in to Steam, so this download could not start."
+            }
+        },
         "install": {
             "bottleNameReadonlyHelper": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
             "contentLightNotice": "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib.",
@@ -164,6 +234,9 @@
             "sharedBottleNotice": "The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.",
             "withOptionsLabel": "Install with options…"
         },
+        "resumeAvailable": {
+            "notify": "An interrupted install for {{game}} is ready to resume — click Install to continue"
+        },
         "status": {
             "resumeInstall": "Resume Install",
             "resumeInstallHint": "Install incomplete — resume the download in GameLib"
@@ -172,6 +245,11 @@
             "removeAllCopiesConfirmMessage": "This removes every installed copy of this game across all install locations. This cannot be undone.",
             "removeAllCopiesConfirmTitle": "Remove all copies?",
             "removeAllCopiesLabel": "Remove all copies…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB artwork is unavailable on this build"
         }
     },
     "themeSelector": {
@@ -189,5 +267,70 @@
         "sweet": "Sweet",
         "zombie": "Zombie",
         "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Your sign-in cannot be completed yet: {{channel}} is not ported to this build. This lands in Phase 34.5.",
+                "heading": "Signing in to {{runner}} is not wired up yet",
+                "headingGeneric": "Signing in is not wired up yet"
+            },
+            "humble": {
+                "body": "A sign-in window has opened. Complete sign-in there — this page updates automatically once it succeeds.",
+                "error": {
+                    "window_unreachable": "the Humble sign-in window closed or could not be reached"
+                },
+                "heading": "Signing in to Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "A sign-in window has opened. Complete sign-in there.",
+                    "heading": "Signing in to {{runner}}",
+                    "headingGeneric": "Signing in"
+                },
+                "blocked": {
+                    "body": "Your sign-in was captured successfully, but the {{channel}} backend channel is not ported to this build yet. This lands in Phase 34.5.",
+                    "heading": "Signing in to {{runner}} was captured, but can't finish yet",
+                    "headingGeneric": "Sign-in was captured, but can't finish yet"
+                },
+                "cancelled": {
+                    "body": "The sign-in window was closed before completing. You can try again.",
+                    "heading": "Signing in to {{runner}} was cancelled",
+                    "headingGeneric": "Sign-in was cancelled"
+                },
+                "error": {
+                    "body": "Something went wrong while signing in: {{message}}",
+                    "heading": "Signing in to {{runner}} failed",
+                    "headingGeneric": "Sign-in failed"
+                },
+                "finalizing": {
+                    "body": "Sign-in captured. Completing the exchange with the store — this can take a few seconds.",
+                    "heading": "Finalizing sign-in with {{runner}}…",
+                    "headingGeneric": "Finalizing sign-in…"
+                },
+                "genericChannel": "the sign-in channel",
+                "preparing": {
+                    "body": "The store's sign-in window is being prepared and will open shortly.",
+                    "heading": "Preparing {{runner}} sign-in…",
+                    "headingGeneric": "Preparing sign-in…"
+                },
+                "retry": "Retry",
+                "timeout": {
+                    "body": "The sign-in window took too long to complete. You can try again.",
+                    "heading": "Signing in to {{runner}} timed out",
+                    "headingGeneric": "Sign-in timed out"
+                }
+            }
+        },
+        "unavailable": {
+            "body": "GameLib's Tauri build does not yet embed a browser view for the store and wiki pages.",
+            "heading": "In-app store and wiki browsing is not available on this build",
+            "next-step": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+            "open-in-browser": "Open in browser"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Winetricks component management is unavailable on this build",
+        "unavailableDetail": "Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build."
     }
 }

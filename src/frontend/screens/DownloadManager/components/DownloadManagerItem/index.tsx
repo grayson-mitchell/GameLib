@@ -47,6 +47,7 @@ const DownloadManagerItem = ({
     useContext(ContextProvider)
   const { t } = useTranslation('gamepage')
   const { t: t2 } = useTranslation('translation')
+  const { t: tGamelib } = useTranslation('gamelib')
   const isPaused = state && ['idle', 'paused'].includes(state)
 
   const navigate = useNavigate()
@@ -223,7 +224,7 @@ const DownloadManagerItem = ({
     // the (pre-existing, gog/epic/amazon-unchanged) "Open" title below,
     // which makes no sense for a failed, never-installed item.
     if (isSteamError) {
-      return t('queue.label.retry', 'Retry')
+      return tGamelib('queue.label.retry', 'Retry')
     }
     if (status === 'done' || status === 'error') {
       return t('Open')
@@ -292,7 +293,7 @@ const DownloadManagerItem = ({
             {size ?? ''} |{' '}
             {platformToInstall === 'osx' ? 'Mac' : platformToInstall}
             {isSteamError
-              ? ` (${t('queue.label.failed', 'Failed')})`
+              ? ` (${tGamelib('queue.label.failed', 'Failed')})`
               : canceled
                 ? ` (${t('queue.label.canceled', 'Canceled')})`
                 : ''}

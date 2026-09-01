@@ -168,7 +168,7 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
     return {
       key: 'steam.download.error.notSignedIn',
       message: i18next.t(
-        'steam.download.error.notSignedIn',
+        'gamelib:steam.download.error.notSignedIn',
         'You are not signed in to Steam, so this download could not start.'
       ),
       action: 'signIn'
@@ -223,7 +223,7 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
     return {
       key: 'steam.download.error.decodeFailed',
       message: i18next.t(
-        'steam.download.error.decodeFailed',
+        'gamelib:steam.download.error.decodeFailed',
         'Downloaded game data could not be unpacked. This is not a network problem.'
       ),
       action: 'retry'
@@ -260,7 +260,7 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
       // test/analytics consumer — this V2 split is purely a locale-lookup
       // detail, invisible outside this function.
       message: i18next.t(
-        'steam.download.error.connectionDroppedV2',
+        'gamelib:steam.download.error.connectionDroppedV2',
         'Steam servers dropped the connection.'
       ),
       action: 'retry'
@@ -273,7 +273,7 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
     // as connectionDropped above — public/locales/en/translation.json's
     // existing `generic` entry still carries "Retry to continue."
     message: i18next.t(
-      'steam.download.error.genericV2',
+      'gamelib:steam.download.error.genericV2',
       'The Steam download failed.'
     ),
     action: 'retry'

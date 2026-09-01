@@ -39,6 +39,7 @@ export default function SteamGridDBPicker({
   styles
 }: Props) {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const [query, setQuery] = useState(initialTitle)
   const [games, setGames] = useState<SGDBGame[]>([])
   const [grids, setGrids] = useState<SGDBGrid[]>([])
@@ -77,7 +78,7 @@ export default function SteamGridDBPicker({
       setLoading(false)
       if (!result.ok) {
         setError(
-          t(
+          tGamelib(
             'steamgriddb.error.unavailable',
             'SteamGridDB artwork is unavailable on this build'
           )
@@ -91,7 +92,7 @@ export default function SteamGridDBPicker({
         )
       }
     },
-    [t, mode, dimensions, styles]
+    [t, tGamelib, mode, dimensions, styles]
   )
 
   const searchGames = useCallback(
@@ -111,7 +112,7 @@ export default function SteamGridDBPicker({
       setLoading(false)
       if (!result.ok) {
         setError(
-          t(
+          tGamelib(
             'steamgriddb.error.unavailable',
             'SteamGridDB artwork is unavailable on this build'
           )
@@ -126,7 +127,7 @@ export default function SteamGridDBPicker({
         setError(t('steamgriddb.error.no-games', 'No games found.'))
       }
     },
-    [t, handleSelectGame]
+    [t, tGamelib, handleSelectGame]
   )
 
   const goBack = () => {

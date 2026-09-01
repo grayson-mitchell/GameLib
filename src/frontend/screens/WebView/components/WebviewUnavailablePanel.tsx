@@ -31,26 +31,26 @@ interface Props {
  * `shell.openExternal` call) -- T-34.4.1-26.
  */
 const WebviewUnavailablePanel = ({ url }: Props) => {
-  const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
 
-  const heading = t(
+  const heading = tGamelib(
     'webview.unavailable.heading',
     'In-app store and wiki browsing is not available on this build'
   )
 
-  const body = t(
+  const body = tGamelib(
     'webview.unavailable.body',
     "GameLib's Tauri build does not yet embed a browser view for the " +
       'store and wiki pages.'
   )
 
-  const nextStep = t(
+  const nextStep = tGamelib(
     'webview.unavailable.next-step',
     'This is tracked as its own future work -- for now, use the button ' +
       'below to open it in your system browser instead.'
   )
 
-  const openInBrowserLabel = t(
+  const openInBrowserLabel = tGamelib(
     'webview.unavailable.open-in-browser',
     'Open in browser'
   )

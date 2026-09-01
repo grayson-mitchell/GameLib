@@ -19,6 +19,7 @@ export default function SIDLogin({ backdropClick }: Props) {
 
   const { epic } = useContext(ContextProvider)
   const { t } = useTranslation('login')
+  const { t: tGamelib } = useTranslation('gamelib')
   const [input, setInput] = useState('')
   const [status, setStatus] = useState({
     loading: false,
@@ -170,7 +171,7 @@ export default function SIDLogin({ backdropClick }: Props) {
             size="small"
             variant="outlined"
           >
-            {t('button.paste', 'Paste')}
+            {tGamelib('button.paste', 'Paste')}
           </Button>
         </Stack>
         {loading && (

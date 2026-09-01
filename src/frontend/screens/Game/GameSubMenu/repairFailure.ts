@@ -135,7 +135,14 @@ export function reportRepairFailure({
   let message = 'Repair failed. See the log for details.'
   try {
     title = t('box.error.title', title)
-    message = t('box.repair.error', message)
+    // 260901-ud5 bucket E: the i18next-parser lexer can only resolve a
+    // default value when the second argument is a literal -- passing the
+    // `message` variable (even though it held this exact literal at this
+    // point) made the lexer emit an unresolvable empty default (`""`) for
+    // this key. Passing the literal directly is behaviourally identical
+    // (message is not reassigned between its declaration above and this
+    // call) and lets the catalogue capture the real English default.
+    message = t('box.repair.error', 'Repair failed. See the log for details.')
   } catch (tErr) {
     // WR-03 (gap cycle 4): never silent. A throwing `t` means the translation
     // catalogue is broken -- the user still gets a rendered dialog thanks to
