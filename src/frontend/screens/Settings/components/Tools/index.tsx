@@ -8,6 +8,7 @@ import { getGameInfo } from 'frontend/helpers'
 
 import SettingsContext from '../../SettingsContext'
 import ContextProvider from 'frontend/state/ContextProvider'
+import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import { Winetricks } from 'frontend/components/UI'
 
 export default function Tools() {
@@ -17,6 +18,7 @@ export default function Tools() {
   const [runExeRunning, setRunExeRunning] = useState(false)
   const { appName, runner, isDefault } = useContext(SettingsContext)
   const { platform } = useContext(ContextProvider)
+  const openDialog = useOpenDialog()
   const isWindows = platform === 'win32'
 
   if (isDefault || isWindows || !runner) {
@@ -52,7 +54,7 @@ export default function Tools() {
     const defaultPath =
       gameinfo.runner === 'sideload' ? undefined : gameinfo.install.install_path
 
-    const path = await window.api.openDialog({
+    const path = await openDialog({
       buttonLabel: t('box.select.button', 'Select'),
       properties: ['openFile'],
       title: t('box.runexe.title', 'Select EXE to Run'),

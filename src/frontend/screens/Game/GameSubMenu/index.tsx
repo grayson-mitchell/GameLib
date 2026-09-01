@@ -20,6 +20,7 @@ import { showSteamSubMenuInstallOptions } from 'frontend/helpers/steamInstallOpt
 import useGlobalState from 'frontend/state/GlobalStateV2'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
 import { reportRepairFailure } from './repairFailure'
+import useOpenDialog from 'frontend/hooks/useOpenDialog'
 
 import {
   ArrowUpward as ArrowUpwardIcon,
@@ -73,6 +74,7 @@ export default function GamesSubmenu({
 }: Props) {
   const { refresh, platform, libraryStatus, showDialogModal } =
     useContext(ContextProvider)
+  const openDialog = useOpenDialog()
   const { openGameCategoriesModal } = useGlobalState.keys(
     'openGameCategoriesModal'
   )
@@ -102,7 +104,7 @@ export default function GamesSubmenu({
 
   async function onMoveInstallYesClick() {
     const { defaultInstallPath } = await window.api.requestAppSettings()
-    const path = await window.api.openDialog({
+    const path = await openDialog({
       buttonLabel: t('box.choose'),
       properties: ['openDirectory'],
       title: t('box.move.path'),
@@ -127,7 +129,7 @@ export default function GamesSubmenu({
 
   async function onChangeInstallYesClick() {
     const { defaultInstallPath } = await window.api.requestAppSettings()
-    const path = await window.api.openDialog({
+    const path = await openDialog({
       buttonLabel: t('box.choose'),
       properties: ['openDirectory'],
       title: t('box.change.path'),

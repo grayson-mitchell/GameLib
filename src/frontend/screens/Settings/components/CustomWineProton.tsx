@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SelectField, SvgButton } from 'frontend/components/UI'
 import ContextProvider from 'frontend/state/ContextProvider'
+import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import useSetting from 'frontend/hooks/useSetting'
 import SettingsContext from '../SettingsContext'
 import { MenuItem, Tooltip } from '@mui/material'
@@ -12,6 +13,7 @@ export default function CustomWineProton() {
   const { t } = useTranslation()
   const { isDefault } = useContext(SettingsContext)
   const { platform } = useContext(ContextProvider)
+  const openDialog = useOpenDialog()
   const isWin = platform === 'win32'
 
   const [customWinePaths, setCustomWinePaths] = useSetting(
@@ -26,17 +28,17 @@ export default function CustomWineProton() {
   }, [customWinePaths])
 
   function selectCustomPath() {
-    window.api
-      .openDialog({
-        buttonLabel: t('box.choose'),
-        properties: ['openFile'],
-        title: t('box.customWine', 'Select the Wine or Proton Binary')
-      })
-      .then((path) => {
-        if (path && !customWinePaths.includes(path)) {
-          setCustomWinePaths([...customWinePaths, path])
-        }
-      })
+    // `void`: useOpenDialog is total (see PathSelectionBox for the full note) -- it resolves
+    // `false` on failure rather than rejecting, so there is nothing here to catch.
+    void openDialog({
+      buttonLabel: t('box.choose'),
+      properties: ['openFile'],
+      title: t('box.customWine', 'Select the Wine or Proton Binary')
+    }).then((path) => {
+      if (path && !customWinePaths.includes(path)) {
+        setCustomWinePaths([...customWinePaths, path])
+      }
+    })
   }
 
   function removeCustomPath() {

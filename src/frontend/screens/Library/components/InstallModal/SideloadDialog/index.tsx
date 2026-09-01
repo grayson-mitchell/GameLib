@@ -24,6 +24,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import { AvailablePlatforms } from '..'
 import fallbackImage from 'frontend/assets/gamelib_card.svg?url'
 import ContextProvider from 'frontend/state/ContextProvider'
+import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import classNames from 'classnames'
 import axios from 'axios'
 import { NavLink, useNavigate } from 'react-router-dom'
@@ -83,6 +84,7 @@ export default function SideloadDialog({
   const editMode = Boolean(appName)
 
   const { refreshLibrary, platform } = useContext(ContextProvider)
+  const openDialog = useOpenDialog()
   const navigate = useNavigate()
   const goToAdvancedSettings = () => {
     backdropClick()
@@ -184,7 +186,7 @@ export default function SideloadDialog({
   }
 
   async function handleSelectLocalImage(target: 'cover' | 'square') {
-    const path = await window.api.openDialog({
+    const path = await openDialog({
       buttonLabel: t('box.select.button', 'Select'),
       properties: ['openFile'],
       title: t('box.select.image', 'Select Image'),
@@ -227,7 +229,7 @@ export default function SideloadDialog({
 
   const handleRunExe = async () => {
     let exeToRun = ''
-    const path = await window.api.openDialog({
+    const path = await openDialog({
       buttonLabel: t('box.select.button', 'Select'),
       properties: ['openFile'],
       title: t('box.runexe.title', 'Select EXE to Run'),

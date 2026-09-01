@@ -34,6 +34,19 @@ jest.mock('../../SvgButton/index.css', () => ({}))
 // same CSS-stub pattern as StoreSearchRow.test.tsx:32.
 jest.mock('../index.css', () => ({}))
 
+// PathSelectionBox now reaches the file picker through `useOpenDialog` (quick task
+// 260902-8wc), which calls useContext(ContextProvider) + useCallback. The `react` mock below
+// spreads the REAL react, so those two hooks would run outside any renderer and throw on a
+// null dispatcher. Stubbing the hook module keeps that out of this harness entirely: no case
+// in this file exercises handleIconClick's picker branch, and modelling a context provider
+// here would add a second, unrelated fiction to a harness that already documents exactly
+// which hooks it fakes and why.
+const openDialogMock = jest.fn(async () => false as const)
+jest.mock('frontend/hooks/useOpenDialog', () => ({
+  __esModule: true,
+  default: () => openDialogMock
+}))
+
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     // PathSelectionBox calls t('box.choose') with a single argument inside

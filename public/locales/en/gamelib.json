@@ -11,6 +11,12 @@
                 "stalled": "No download progress for {{minutes}} minutes — the install was stopped"
             }
         },
+        "filePicker": {
+            "error": {
+                "message": "GameLib could not open the system file picker, so nothing was selected and no changes were made. ({{error}})",
+                "title": "Could not open the file picker"
+            }
+        },
         "steam": {
             "mac32Detected": {
                 "confirm": "Reinstall via CrossOver",

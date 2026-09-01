@@ -4,6 +4,7 @@ import Folder from '@mui/icons-material/Folder'
 import { ReactNode, useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FileFilter } from 'backend/platform'
+import useOpenDialog from 'frontend/hooks/useOpenDialog'
 import './index.css'
 
 interface Props {
@@ -52,6 +53,7 @@ const PathSelectionBox = ({
   // `gamelib:` prefix kept even though the hook is already namespace-scoped
   // -- belt-and-suspenders convention from RedeemSteamKeyDialog/copy.ts.
   const { t: tGamelib } = useTranslation('gamelib')
+  const openDialog = useOpenDialog()
   // We only send `onPathChange` updates when the user is done editing, so we
   // have to store the partially-edited path *somewhere*
   const [tmpPath, setTmpPath] = useState(path)
@@ -141,21 +143,24 @@ const PathSelectionBox = ({
       return
     }
 
-    // "Folder" icon was pressed
-    window.api
-      .openDialog({
-        buttonLabel: t('box.choose'),
-        properties: type === 'directory' ? ['openDirectory'] : ['openFile'],
-        title: pathDialogTitle,
-        filters: pathDialogFilters,
-        defaultPath: pathDialogDefaultPath
-      })
-      .then((selectedPath) => {
-        if (selectedPath) {
-          commitPath(selectedPath)
-          setTmpPath(path)
-        }
-      })
+    // "Folder" icon was pressed.
+    //
+    // `void` rather than a `.catch()`: `useOpenDialog` is total -- it handles its own failure
+    // (logs it, shows the user an error dialog) and resolves `false`, so there is no rejection
+    // left for a handler here to catch. This retires a pre-existing no-floating-promises
+    // warning that the old bare `window.api.openDialog(...).then(...)` carried.
+    void openDialog({
+      buttonLabel: t('box.choose'),
+      properties: type === 'directory' ? ['openDirectory'] : ['openFile'],
+      title: pathDialogTitle,
+      filters: pathDialogFilters,
+      defaultPath: pathDialogDefaultPath
+    }).then((selectedPath) => {
+      if (selectedPath) {
+        commitPath(selectedPath)
+        setTmpPath(path)
+      }
+    })
   }
 
   // REQ-34.17-03: `justSaved` wins over `isUnsaved` for the one render
