@@ -37,7 +37,9 @@ import type { Readable, Writable } from 'node:stream'
 import { randomUUID } from 'node:crypto'
 import {
   OPEN_EXTERNAL,
+  RUST_DIALOG_MESSAGE,
   RUST_DIALOG_OPEN,
+  RUST_DIALOG_SAVE,
   RUST_INVOKE_CHANNELS,
   UNPORTED_CHANNEL_MARKER,
   type RustInvokeChannel,
@@ -70,8 +72,32 @@ const RUST_INVOKE_TIMEOUT_MS = 60_000
  *
  * Head-of-line blocking is not a concern: Rust dispatches every `rustInvoke` on its own worker
  * thread (T-28-05), and an unanswered entry here holds only a Map entry and an unref'd promise.
+ *
+ * Quick task 260902-8wc extends the list to the two SIBLING dialog channels. The folded todo
+ * `2026-08-24-opendialog-is-missing-from-long-running-channels-...` asked for exactly this audit
+ * ("check `showSaveDialog`/`dialog_save` and `dialog_message` for the same omission — all three
+ * are human-in-the-loop, and only `dialog_open` got the inner exemption"), and both fail in the
+ * same shape `dialog_open` did — a WRONG answer, not a visible error:
+ *
+ * - `dialog_message` — on timeout `platform/index.ts`'s `showMessageBox` catch resolves
+ *   `{ response: safeIndex }`, the DECLINED branch. Someone who deliberates for 60s on a native
+ *   confirm has it answered "no" on their behalf while the panel is still on screen; their real
+ *   click then arrives for an id already deleted from `rustPending` and is dropped.
+ *   `showErrorBox` swallows the same timeout.
+ * - `dialog_save` — on timeout `showSaveDialog` resolves `{ canceled: true }`, i.e. it claims
+ *   the user cancelled while the save panel is still open.
+ *
+ * Membership is granted on shape, not on a measurement: unlike the shell-side
+ * `LONG_RUNNING_CHANNELS` (whose stated rule is that the bound comes back on a MEASUREMENT),
+ * this list's rule is the one in the heading above — completion gated on a human rather than on
+ * machine work. All three of these block on an OS panel that stays open exactly as long as the
+ * person in front of it deliberates, so no wall-clock value is ever correct for them.
  */
-const UNBOUNDED_RUST_CHANNELS: readonly string[] = [RUST_DIALOG_OPEN]
+const UNBOUNDED_RUST_CHANNELS: readonly string[] = [
+  RUST_DIALOG_OPEN,
+  RUST_DIALOG_MESSAGE,
+  RUST_DIALOG_SAVE
+]
 
 /**
  * id -> the pending Promise's settle functions + its timeout handle, for `rustInvoke`.
