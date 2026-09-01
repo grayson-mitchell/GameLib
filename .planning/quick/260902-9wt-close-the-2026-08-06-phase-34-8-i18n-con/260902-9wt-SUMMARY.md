@@ -51,9 +51,11 @@ completed: 2026-09-02
 
 ## Task Commits
 
-1. **Task 1 (close 2026-08-06 todo) + Task 2 (widen 2026-08-28 todo) + Task 3 (prepared-index commit)** — `eadaae560` (docs) — all three tasks landed in a single commit by design (Task 3's prepared-index technique required the todo edits to already be in the working tree/index before the STATE.md blob was built and the bare commit run; the plan's own Task 3 action stages Task 1's `git mv` output and Task 2's edit together with the prepared STATE.md).
+1. **Task 1 (close 2026-08-06 todo) + Task 2 (widen 2026-08-28 todo) + Task 3 (prepared-index commit)** — `eadaae560` (docs) — all three tasks landed in one intended commit by design (Task 3's prepared-index technique required the todo edits to already be in the working tree/index before the STATE.md blob was built and the bare commit run). This commit correctly included Task 2's full edit but — see Deviation 1 below — omitted Task 1's closure-record edit because that file's index entry (staged by `git mv`) was never refreshed before the commit.
+2. **Fix for Task 1's omitted edit** — `033c6470c` (fix) — re-staged the completed todo's working-tree content (which already carried the correct closure record, per Task 1's own `<verify>` gate) and committed it alone, bringing HEAD in line with what Task 1 actually produced.
+3. **Summary** — `05085dd80` (docs) — added this SUMMARY.md, committed separately per the plan's output instructions, predating the fix commit above (fix discovered during final post-commit review, after the summary's first draft).
 
-No separate per-task commits were made because Task 3's action explicitly builds one commit containing Task 1's rename (both sides), Task 2's edit, the prepared `.planning/STATE.md`, and the plan file — verified by the plan's own Task 3 `<verify>` block, which asserts all four paths appear in `git show --stat --no-renames HEAD~1..HEAD` output as a single commit.
+No separate STATE.md-only commit was needed beyond `eadaae560`: the prepared-index technique in that commit already installed the correct STATE.md blob (verified: `260902-9wt` count 1, `Phase 40 added` count 0, `git diff HEAD~1 HEAD --numstat` = `1 0`), and neither follow-up commit touched `.planning/STATE.md`.
 
 ## Files Created/Modified
 
@@ -63,7 +65,21 @@ No separate per-task commits were made because Task 3's action explicitly builds
 
 ## Deviations from Plan
 
-None — plan executed exactly as written. One clarification: Task 3's `<action>` block explicitly names staging only `.planning/STATE.md` (via prepared index) and the plan file, but its own `<verify>` block requires the 2026-08-28 todo's edit to be present in the commit. Staged that file by explicit path (`git add .planning/todos/pending/2026-08-28-gamelib-json-de-fr-missing-five-keys-machine-fill-401s.md`) to satisfy the verify block, consistent with the plan's own success criteria ("Exactly one commit, containing … the widened todo …") and the task-commit protocol's "stage task-related files individually" rule. Not logged as a Rule 1-4 deviation since it does not change plan behavior or introduce new scope — it closes a gap between the action text and the verify block, both authored in the same plan.
+### Auto-fixed Issues
+
+**1. [Rule 1 - Bug] Task 3's commit omitted the closure-record edits to the 2026-08-06 todo**
+- **Found during:** post-commit sanity check (`git status --porcelain` still showed the completed todo as modified after the commit that was supposed to include it).
+- **Issue:** `git mv` (Task 1) stages a file's *pre-edit* content in the index. The closure-record frontmatter and section were then added to the file via edits to the working tree, but Task 3's action sequence never re-staged that file before building the prepared STATE.md blob and running the bare commit — it only explicitly names staging `.planning/STATE.md` and the plan file. The commit `eadaae560` therefore contained the bare rename (`pending/` → `completed/`) with none of the `status: CLOSED` frontmatter or the `## CLOSURE RECORD` section, even though the working tree and Task 1's `<verify>` gate (run against the working tree) both showed the edits present.
+- **Fix:** Staged the completed file's current working-tree content by explicit path (`git add .planning/todos/completed/2026-08-06-phase-34-8-i18n-context-fork-namespace-llm-machine-fill-defe.md`) and committed it alone, so HEAD now matches the working tree exactly and contains the full closure record.
+- **Files modified:** `.planning/todos/completed/2026-08-06-phase-34-8-i18n-context-fork-namespace-llm-machine-fill-defe.md`
+- **Commit:** `033c6470c`
+- **Verification:** `git show HEAD:<path>` now greps clean for every string the Task 1 `<verify>` gate checks (`gamelib.json`, `machineFillGamelib.ts`, `gamelib.mt.json`, `Weblate`, `i18nGlossary.json`, `COVERAGE, not a decision`, `34.8-VALIDATION.md`, the successor filename, `210`, `204`, `80`, `46`, `Anthropic API key`), and `diff <(git show HEAD:<path>) <(cat <path>)` is empty. The STATE.md checks (`260902-9wt` count = 1, `Phase 40 added` count = 0) still pass unchanged, since this fix commit touched only the one todo file.
+
+**2. [Rule 3 - Blocking] Task 3's staging list was incomplete relative to its own `<verify>` block**
+- **Found during:** Task 3 execution — `<action>` names staging only `.planning/STATE.md` (via prepared index) and the plan file, but `<verify>` asserts the 2026-08-28 todo's path appears in the commit.
+- **Fix:** Staged that file by explicit path (`git add .planning/todos/pending/2026-08-28-gamelib-json-de-fr-missing-five-keys-machine-fill-401s.md`) before the bare commit, so it landed correctly in `eadaae560` on the first attempt (confirmed by content diff against HEAD — no follow-up fix needed for this file).
+- **Files modified:** none beyond the staging step itself.
+- **Commit:** `eadaae560` (same commit as the main Task 3 action).
 
 ## Verification (gate output, verbatim)
 
