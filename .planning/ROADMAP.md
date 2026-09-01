@@ -4613,10 +4613,131 @@ the dead-seam census are each re-measured.
 **Depends on:** **Phase 35** (Electron cutover) — see the sequencing rationale above. Phase 35's
 gap-closure plans `35-20`..`35-29` should land first: `35-24` touches the i18n gate scope and
 `35-22` touches `tauriAttach.ts`, both of which move the numbers this phase measures.
+**Requirements minted at plan time (2026-09-02):** `REQ-39-01` lint regression prevention ·
+`REQ-39-02` planning-gate dispositions · `REQ-39-03` dead `getLoginWindowSeam()` branch collapse.
+`REQ-39-02` was NOT split into `02a`/`02b`; both gates carry the one ID across plans `39-01` and
+`39-08`.
+
+**Planning-time corrections to this section's own figures** — all three snapshots above are stale:
+- `pnpm lint` **already exits 0** (0 errors, 4190 warnings, measured 2026-09-02). Phase 35's
+  deletions took the error-generating files with them. `REQ-39-01` is therefore a verification and
+  regression-prevention requirement, not a bug-fixing one, and a zero-WARNING bar is out of scope.
+- The dead-seam census is **13 sites, not 7** — 12 in `39-RESEARCH.md` plus a 13th found by
+  `39-PATTERNS.md`. One further match (`humbleLoginFlowRegistration.ts:457`'s smoke-test guard) is
+  deliberately kept.
+- The gate workstream is **NOT independent of the seam collapse**, contrary to `39-RESEARCH.md`'s
+  ordering section. `34.4.1/seam-parity-sweep-gate.py` pins seven of the sites `REQ-39-03` deletes in
+  its `EXPECTED_AXIS_A_SITES` floor, and `src/backend/sidecar/__tests__/seamBranchParity.test.ts`
+  exists solely to compare the two branches the collapse removes. Both are sequenced accordingly.
+
+**Plans:** 9 plans
+
+Plans:
+- [ ] 39-01-PLAN.md — preload-surface gate: re-derive the stale 217 floor to the measured 206 and fix the masked 225-vs-224 Totals defect in the same edit (REQ-39-02)
+- [ ] 39-02-PLAN.md — add `getLoginWindowSeamOrThrow()`, collapse `oauthLoginCapture.ts`'s early return, correct two stale doc comments (REQ-39-03)
+- [ ] 39-03-PLAN.md — collapse `adapter.ts`'s transport ternary and its orphaned 74-line electron-net function, plus `library.ts`'s label ternary, and re-point three test files (REQ-39-03)
+- [ ] 39-04-PLAN.md — collapse both `disconnect()` wipe-step sites (Humble + Epic) and disposition `seamBranchParity.test.ts` (REQ-39-03)
+- [ ] 39-05-PLAN.md — collapse `getLiveCsrfToken()`'s inverted guard and the health-check csrf backfill (REQ-39-03)
+- [ ] 39-06-PLAN.md — collapse the `watchForLogin()` closure cluster and `finishLogin()`, dropping the last `session`/`HUMBLE_LOGIN_PARTITION` dependency (REQ-39-03)
+- [ ] 39-07-PLAN.md — the zero-match predicate gate with a per-root vacuity control and a pre-collapse RED proof, plus the seam disposition record (REQ-39-03)
+- [ ] 39-08-PLAN.md — seam-parity gate: re-point the moved artifact and disposition the Axis A census this phase invalidated; reach 7/7 (REQ-39-02)
+- [ ] 39-09-PLAN.md — re-measure lint on the post-collapse tree and install a proven `--max-warnings` ratchet in its own commit (REQ-39-01)
+
+### Phase 40: In-app store and wiki browsing under Tauri — embedded child webview (D-05 / REQ-34.4.1-07)
+
+**Goal:** Restore the store and wiki browsing surface that the Tauri rearchitecture left showing an
+honest apology panel. Today `/store/epic|gog|amazon|zoom|steam`, `/wiki` and
+`store-page?store-url=` deep links all fall through `WebView/index.tsx`'s `!webviewPreloadPath`
+guard (`:501`) and render `WebviewUnavailablePanel` (`:528`) — "In-app store and wiki browsing is
+not available on this build", plus an Open-in-browser escape hatch. Replace that panel with a real
+embedded child webview so the store tab works in-app again, and unwind the now-dead Electron
+`<webview>` path it stands in front of.
+
+**This is NOT a missed port — it is a deferral that was never given an owner.** Phase 34.4.1
+decided **D-05** (`34.4.1-CONTEXT.md:129`) that in-app store/wiki browsing was out of scope for the
+login seam, because it has genuinely different requirements from login, and shipped **D-06** — the
+reworded panel — specifically so the deferral stayed visible to *users* rather than only to the
+roadmap. That was the right call. What did not happen is the follow-up: 34.4.1 named its natural
+home as "its own small phase after 34.5, or Phase 35's `<webview>` unwind"
+(`34.4.1-CONTEXT.md:520`), Phase 35 came and went without absorbing it, and nothing routed it into
+38 or 39. Until this phase was filed on **2026-09-02** the item existed in exactly three prose
+locations — `34.4.1-CONTEXT.md:520`, `34.4.1-PORTED-CHANNELS.md:420` and `REQUIREMENTS.md:693`
+(REQ-34.4.1-07) — and in **zero** queues: no todo, no seed, no backlog row, no `D-35-*` ledger
+entry. **This phase exists so the deferral has a destination that resolves to something real**,
+which is the same failure mode Phase 38's preamble records against 34.9's eight orphaned items.
+
+**The research is already done and it is unusually strong.** Spikes **016**, **017** and **018**
+(2026-07-31, macOS-only evidence, all packaged into the `spike-findings-gamelib` project skill)
+were run as the kill-shot for this exact question, and `spikes/MANIFEST.md:345-378` carries a
+ready-made requirements block, **"Requirements (Idea C — in-app store browser / embedded child
+webviews)"**. A planner should start there, not from scratch. The load-bearing findings:
+
+- **Spike 016 — VALIDATED.** `Window::add_child(WebviewBuilder, Position, Size)`
+  (`tauri-2.11.5/src/window/mod.rs:1129`, gated on the `unstable` cargo feature) composites the
+  **real Steam store inside the main window** with the app's own UI live around it, in 42–51 ms,
+  on the existing config-created main window — no window restructuring. The `unstable` feature
+  recompiles only `tauri` + `tauri-runtime-wry` (10.8 s with the shared target dir) and is
+  compile-time only: no config or capability changes to the existing app surface. **An `<iframe>`
+  was rejected outright** — store sites send `X-Frame-Options`/`frame-ancestors`. A separate
+  `WebviewWindow` (spike 013's shape) remains the fallback.
+- **Spike 017 — the renderer must be the ONLY owner of the embed's geometry.** JS
+  `getBoundingClientRect()` → `set_position`/`set_size` in logical px lands exactly. **Two writers
+  (backend + renderer) silently last-write-wins with no error.** And **overlay UI cannot render
+  above the embed** — it is a native subview, so any modal or dropdown over the store region must
+  `hide()` the embed first or avoid its rect. That constraint shapes the UX, not just the code.
+- **Spike 018 — one default cookie jar per PROCESS**, shared by all windows and all children.
+  Per-store isolation is available on children via `data_store_identifier` (macOS 14+). Quick task
+  `260902-8i2` (2026-09-02) confirmed this **live** against both real cookie jars, which has a
+  direct consequence for this phase: **upstream Heroic's defect #1 — a store page not carrying the
+  user's login session — is STRUCTURALLY ABSENT here**, because the login windows and the main
+  webview already share one jar. Do not "fix" it by opting into a custom data store without
+  deciding that deliberately.
+- **All 013–015 rules carry over to embeds unchanged:** `cookies()` never `cookies_for_url()`
+  (wry compares domains with string `==`); `on_page_load` not `on_navigation` for deadline-armed
+  relays; per-child `.user_agent()` is mandatory and does reach the network; the handle dies with
+  the webview, so anchor any poller to a survivor.
+
+**Scope.** Six route families plus the chrome around them: the `WebviewControls` back / forward /
+reload / open-in-browser bar, the `sessionStorage` last-url restore and its `validStoredUrl` host
+check, and the adtraction redirect workaround (`WebView/index.tsx:275-300`). **Plus the Electron
+`<webview>` unwind that 34.4.1 predicted and Phase 35 did not perform** — the else-branch at
+`WebView/index.tsx:548` is unreachable dead code post-cutover, and the hand-rolled `WebviewTag`
+shim kept alive for it lives at `backend/platform/types.ts:167` (re-exported at
+`backend/platform/index.ts:1128`, pinned by `platform/__tests__/types.usage.test.ts`) with three
+consumers: `WebView/index.tsx:18,69`, `WebviewControls/index.tsx:11,15` and
+`HumbleLoginSurface.tsx:7,34`. **Note the 34.4.1 deferred list's third bullet is now partly stale
+and must be re-derived, not copied:** it named `Sidebar/index.tsx:92,103`, and that file no longer
+exists — Phase 34.10's NavShell replaced it. Re-census by predicate at plan time.
+
+**Read before planning — five open questions the spikes deliberately did not close** (all from
+`MANIFEST.md:376`): input and scroll *feel* inside the embed (needs a human on the interactive
+harness, not a screenshot); retina behaviour at `scale_factor` 2.0; drag-resize latency; the
+Windows and Linux wry backends, where **none of this evidence applies** — every spike above is
+macOS-only; and **Epic's anti-bot posture inside an embed**, whose pre-auth 403 is a known parked
+blocker. Treat the last two as scoping inputs, not as things to discover mid-execution.
+
+**One security item is a precondition, not a nice-to-have.** Spike 014b found the **Tauri global is
+injected into `https://www.humblebundle.com`** — remote origins get remote-IPC eligibility but not
+ACL access to `#[tauri::command]`s. `MANIFEST.md:340-343` says in terms: *"threat-model that before
+shipping a store browser."* This phase is the first time GameLib would point a webview at arbitrary
+third-party store pages by design, so that threat model is in scope here and nowhere else.
+
+**Requirements**: TBD — mint `REQ-40-*` at `/gsd-plan-phase 40` from `spikes/MANIFEST.md:345-378`
+(Idea C) plus REQ-34.4.1-07's deferral text. Do not re-derive them from the panel's copy.
+
+**Depends on:** **Phase 35** (Electron cutover) — already complete; the `<webview>` unwind half is
+only meaningful once the Electron branch is genuinely dead, which it now is. **Independent of
+Phases 38 and 39** despite following them in number: 38 is a hardware collection phase and 39 is CI
+debt, and neither gates a line of this work. The Windows/Linux backend questions above may generate
+items *for* Phase 38's ledger — that is a downstream contribution, not a dependency.
+
 **Plans:** 0 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 39 to break down — re-measure `pnpm lint`, `python3 meta/runPlanningGates.py`, and the `getLoginWindowSeam() === null` census first; do not plan before Phase 35's gap-closure cycle lands)
+- [ ] TBD (run /gsd-plan-phase 40 to break down — read `spikes/MANIFEST.md:345-378` and the
+  `spike-findings-gamelib` skill BEFORE planning; the API questions this phase turns on were
+  already answered against vendored crate sources and live hardware, and re-deriving them from
+  docs will get different answers)
 
 ---
 
