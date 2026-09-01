@@ -477,3 +477,230 @@ never-rebuild-the-real-tree / masked comparison) — see `260901-kl2-PLAN.md`
 `<revision_log>` r3. Do not re-litigate this; it is preserved here only as the
 historical record of what was measured under the old (now-superseded) acceptance
 bar.
+
+---
+
+## Task 2 — mutation-prove the compile gate, re-certify the mirror
+
+Scratch root: `<scratchpad>/gatemut*` (never the repo). Setup per copy: `meta/`,
+`native/`, `package.json`, `tsconfig.json`, `.build-tools/zig/` copied; `node_modules`
+symlinked (`ln -s <repo>/node_modules node_modules`) — required per plan r2's B-2
+fix, since `meta/runTs.cjs:303-310` symlinks `node_modules` from
+`path.join(__dirname, '..', 'node_modules')` under an `existsSync` guard that
+otherwise no-ops silently and dies at `:319` on `esbuild` resolution.
+
+### Blocking checkpoint — unmutated scratch copy builds GREEN
+
+```
+$ cd <scratchpad>/gatemut && node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildSteamBridgeShims.ts
+Compiling native arm64 helper: clang ...
+Helper compiled -> public/bin/arm64/darwin/steam-bridge-helper
+Staged steam_appid.txt -> public/bin/arm64/darwin/steam_appid.txt (finding #4)
+zig 0.16.0 already present at .build-tools/zig/zig, skipping download
+Compile gate: .build-tools/zig/zig cc -target x86-windows-gnu -shared -o public/bin/arm64/darwin/steam_api.dll ...
+Compile gate PASSED -> public/bin/arm64/darwin/steam_api.dll
+EXIT: 0
+```
+
+Output dir after: `steam_api.dll`, `steam_appid.txt`, `steam-bridge-helper` only —
+`steam_api.pdb` and `steam_api_shim.lib` absent (pruned). DLL sha256 of this fresh
+scratch build: `1122043b25f6ae678e9f669214a187bb2c1039f0dc0e806e40483b0ab77efaa6` —
+different from the shipped baseline's `2da072ba…`, confirming (again, consistent
+with the r3 retraction) that a rebuild is never byte-identical; this scratch DLL is
+reused below for P4.
+
+Checkpoint PASSED. Proceeding to mutations.
+
+### Seeded byproducts — the mandatory pre-mutation step
+
+Every mutation run below seeds `public/bin/arm64/darwin/steam_api.pdb` and
+`steam_api_shim.lib` with sentinel content and asserts both present BEFORE
+invoking the build (`seed_byproducts()` helper, `<scratchpad>/setup_scratch.sh`).
+
+### M1 — zig exits non-zero (correct position: after both throws)
+
+Introduced a hard syntax error (`this is not c;` appended) to the scratch copy of
+`native/steam-bridge/generated/steam_api_shim.c`. Seeded, then ran the scratch
+build.
+
+```
+exit=1
+message: "COMPILE GATE FAILED (finding #5a): zig cc exited 1 -- the generated shim source does not assemble:"
+steam_api.dll: ABSENT
+steam_api.pdb: SURVIVED (sentinel content unchanged)
+steam_api_shim.lib: SURVIVED (sentinel content unchanged)
+```
+
+M1 PASS.
+
+### M2 — zig exits 0 but no `.dll` lands (correct position)
+
+Stubbing technique: patched the scratch copy's `spawnArgv()` to short-circuit to
+`{ code: 0, stdout: '', stderr: '' }` ONLY when `args.includes('x86-windows-gnu')`
+(the shim-compile invocation) — NOT unconditionally, because `compileHelper()`
+also calls `spawnArgv()` and then `chmod()`s the (real) output; an unconditional
+stub would throw ENOENT on the helper step before `compileShim()` ever ran, which
+would test the wrong thing. Seeded, then ran.
+
+```
+exit=1
+message: "COMPILE GATE FAILED (finding #5a): zig cc exited 0 but no .dll was emitted at public/bin/arm64/darwin/steam_api.dll"
+steam_api.dll: ABSENT
+steam_api.pdb: SURVIVED (correct — the assertion that would have caught a prune placed between the two throws)
+steam_api_shim.lib: SURVIVED
+```
+
+M2 PASS.
+
+### M3 — prove the behavioural gate is NON-VACUOUS (mutate the prune position)
+
+Two source mutations to `compileShim()`'s prune-call position, each re-run against
+BOTH the M1-style (C syntax error) and M2-style (`spawnArgv` stub) mutations —
+four combinations total, each independently seeded:
+
+| position | via M1 (zig fails) | via M2 (code 0, no .dll) |
+|---|---|---|
+| before throw A (prune moved to the top of `compileShim()`, before the missing-source check) | exit=1, seeded pdb/lib **DELETED** | exit=1, seeded pdb/lib **DELETED** |
+| between throw A and throw B (prune moved right after the `result.code !== 0` throw, before the `existsSync(shimOutputPath())` check) | exit=1, seeded pdb/lib **SURVIVED** | exit=1, seeded pdb/lib **DELETED** |
+
+This is an EXACT reproduction of the coverage matrix predicted in the plan
+(`260901-kl2-PLAN.md` Task 2 action, and the r5 revision-log entry): every
+misordering is caught by at least one mutation (`beforeA` caught by both; `betweenAB`
+caught by M2 alone, since M1's compile failure happens before that code path is
+even reached), and the correct position (verified by M1/M2 above) survives both.
+A gate that never ran the prune at all would show identical "survival" results to
+the correct position on M1/M2 alone — M3 is what rules that out, by showing the
+SAME harness DOES report deletion when the prune position is wrong.
+
+M3 PASS — behavioural gate confirmed non-vacuous.
+
+### E1 — P2 end-to-end: the prune cannot alter a REAL compiled DLL
+
+**Pre-change provenance** (Task 1 Step 0, reused here): `<scratchpad>/prechange/buildSteamBridgeShims.ts`
+(cross-verified byte-identical to `git show 19f56777d:meta/buildSteamBridgeShims.ts`
+in this session), confirmed via `grep -q pruneShimBuildByproducts` finding NOTHING
+in both — genuinely pre-change on two independent bases.
+
+1. Copied the pinned pre-change script into a fresh scratch copy
+   (`<scratchpad>/gatemut-e1`). Gate: `grep -q pruneShimBuildByproducts` on the
+   copied file found NOTHING — confirmed the correct (un-pruning) revision was
+   fetched before building.
+   Ran the scratch build — real `zig cc` compile, exit 0. Confirmed BOTH
+   `steam_api.pdb` and `steam_api_shim.lib` present (not just the `.dll`) before
+   continuing, so step 2 is a real transition and not a no-op over an
+   already-empty directory.
+   **S1** = `271d04d6bbe4afb3b445e5d47545efaa5bb9aaa4707ae7763df528bb4249c4d8`
+2. WITHOUT recompiling, copied the CHANGED (current, committed) script into the
+   SAME directory, and invoked ONLY the exported `pruneShimBuildByproducts('arm64')`
+   via a small dedicated entry point (`meta/e1PruneOnly.ts`), run with
+   `JEST_WORKER_ID=1` set — required, because `buildSteamBridgeShims.ts`'s own
+   `if (!process.env.JEST_WORKER_ID) { main().catch(...) }` guard at the bottom of
+   the module fires a full recompile on plain import otherwise, which would have
+   silently contaminated E1's "no recompile between the hashes" premise. Confirmed
+   the step-2 log contains no `zig cc` / `clang` / "Compile gate" line (the sole
+   "compil" substring hit was the deliberate word "recompile" in this run's own
+   console.log, not build activity).
+   **S2** = `271d04d6bbe4afb3b445e5d47545efaa5bb9aaa4707ae7763df528bb4249c4d8`
+3. `S1 === S2`: **TRUE**. Both byproducts — verified present at the end of step 1
+   — are now gone (`steam_api.pdb` / `steam_api_shim.lib` both absent after the
+   prune-only invocation).
+
+E1 PASS — no compile happened between the two hashes, so `zig cc`'s wall-clock
+stamping cannot confound this result; this is the empirical half of the P2 proof.
+
+### P4 — masked rebuild comparison
+
+```
+$ python3 .planning/quick/260901-kl2-drop-steam-api-pdb-lib/maskPeVolatile.py \
+    <scratchpad>/gatemut/public/bin/arm64/darwin/steam_api.dll \
+    /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/steam_api.dll
+cc3e8b4a1fba55b9ab9cb69927b9c76d  masked-spans=[(128, 4), (208, 4), (729092, 4), (729120, 20)]  <scratchpad>/gatemut/.../steam_api.dll
+cc3e8b4a1fba55b9ab9cb69927b9c76d  masked-spans=[(128, 4), (208, 4), (729092, 4), (729120, 20)]  .../public/bin/arm64/darwin/steam_api.dll
+ALL MASKED HASHES EQUAL: True
+```
+
+Both sides at `cc3e8b4a1fba55b9ab9cb69927b9c76d`, exactly the expected value.
+Same-basename precondition satisfied — both files were linked as `steam_api.dll`
+(the CHANGED build's fresh scratch DLL from the blocking-checkpoint run above,
+compared against the real shipped baseline). Spans masked, as printed by the
+tool: COFF `TimeDateStamp` `(128,4)`, OptionalHeader `CheckSum` `(208,4)`, debug-directory
+`TimeDateStamp` `(729092,4)`, RSDS GUID+Age `(729120,20)`.
+
+P4 PASS.
+
+### Mirror re-certification (real repo)
+
+**Before** `pnpm exec vite build`:
+
+```
+$ pnpm check:build-bin-mirror
+[check-build-bin-mirror] FAILED -- 3 issue(s):
+  - only in build/bin (regular file): arm64/darwin/steam_api.pdb
+  - only in build/bin (regular file): arm64/darwin/steam_api_shim.lib
+  - apparent-byte total mismatch: build/bin=271544540, public/bin=268722717, delta=2821823
+```
+
+Expected failure, naming both stale byproducts in `build/bin` — evidence the gate
+would have caught a half-done change (Task 1 committed without Task 2's mirror
+step).
+
+```
+$ pnpm exec vite build
+✓ built in 6.41s
+[preserve-runner-symlinks] restored 12 symlink(s), skipped 0, rejected 0
+[assemble-renderer-dist] assembled 79 bundle key(s) + static files into .../build/renderer
+```
+
+**After**:
+
+```
+$ pnpm check:build-bin-mirror
+[check-build-bin-mirror] OK -- files: build=301 public=301, symlinks: build=12 public=12, apparent bytes: build=268722717 public=268722717 delta=0
+```
+
+`build/bin/arm64/darwin` census after: 277 files / 12 symlinks / 97,884,865 B —
+identical to `public/bin/arm64/darwin`'s 277 files / 12 symlinks / 97,884,865 B.
+`checkBuildBinMirror`'s anti-vacuity guard (`public/bin` >= 1 regular file) stays
+satisfied at 301 regular files overall, well above its floor.
+
+Mirror re-certification PASS.
+
+### Test suites
+
+`pnpm exec jest --config meta/jest.config.js`:
+
+```
+Test Suites: 34 passed, 34 total
+Tests:       1 skipped, 702 passed, 703 total
+```
+
+`pnpm exec jest --config src/backend/jest.config.js` — first run showed a 4th
+failure (`enrichmentFlows.test.ts`, `REQ-34.2-14` channel-registry assertion)
+alongside the 3 known `decompressPool.test.ts` failures; re-ran the FULL suite a
+second time and `enrichmentFlows.test.ts` passed cleanly with ONLY the 3 known
+failures reproducing — consistent with this project's documented
+full-suite-under-load flake pattern (unrelated to this change: `enrichmentFlows.test.ts`
+exercises sidecar IPC channel registration, nothing touched by
+`buildSteamBridgeShims.ts`). Second (clean) run:
+
+```
+Test Suites: 1 failed, 188 passed, 189 total
+Tests:       3 failed, 2 skipped, 4386 passed, 4391 total
+```
+
+The 3 failures are exactly the known `decompressPool.test.ts` native-lzma
+environment failures (`lzmaLoader ... loadLzmaModule() resolves an LzmaModule
+whose decompressChunk output is byte-identical...`, `lzmaDecoderKind() reports
+"native"...`, `setNativeLzmaDecodeEnabledForTests(true) overrides...`). The 2
+skips are confirmed in `lzmaNativeSeaRealBuild.test.ts` (isolated re-run:
+`Tests: 2 skipped, 1 passed, 3 total`) — both explicitly marked
+"KNOWN FAILING ... do not un-skip without real fix". No regression from this
+change in either suite.
+
+### Task 2 summary
+
+M1, M2, M3, E1, P4, and the mirror re-certification all PASS. Test suites green
+apart from the 3 known `decompressPool.test.ts` failures and 2 known
+`lzmaNativeSeaRealBuild.test.ts` skips (one transient, unrelated
+`enrichmentFlows.test.ts` flake did not reproduce on re-run). `maskPeVolatile.py`
+committed alongside this task's MEASUREMENTS.md update.
