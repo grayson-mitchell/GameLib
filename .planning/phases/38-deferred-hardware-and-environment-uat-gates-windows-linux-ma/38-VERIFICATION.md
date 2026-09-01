@@ -28,7 +28,30 @@ audit_tool_note: >
   item. Adding an item to this array renumbers every position after it; the IDs never move.
 purpose: >
   A collection phase. Every item below was relocated from a phase that could otherwise not close,
-  because the item needs hardware or an OS this project does not have. Nothing here ships code.
+  because the item cannot be observed on the macOS development machine — it needs a different OS,
+  or a game controller. Nothing here ships code.
+
+  THE HARDWARE IS OWNED AND AVAILABLE. Corrected 2026-09-01 (quick `260901-vm1`): a Windows
+  machine, a Linux machine and an Xbox controller (plus a second controller) are all on hand.
+  NOT ONE of the 29 items below is blocked on an acquisition. The only reason they are batched is
+  the SWITCHING COST — booting another machine, pairing a controller, and on four items
+  registering a second Steam library. This phase is schedulable at will.
+
+  This correction matters because the two framings behave differently. "Needs an OS this project
+  does not have" reads as indefinitely blocked and unfalsifiable, so it is never scheduled and
+  never re-examined; "costs a machine switch" is a known price that competes for time like any
+  other task. The prior text asserted the former, and it was wrong.
+deferral_note: >
+  The `blocked_by:` KEY NAME IS HISTORICAL. Its values no longer name a missing capability — as of
+  2026-09-01 each one states the COST of running that item (a machine switch, a controller
+  pairing, or a two-library Steam setup step). The key was deliberately NOT renamed: `audit-uat`
+  does not read it, but origin-phase `human_verification_relocated` receipts reference the
+  concept, so a rename has a wider blast radius than the correction warranted. Read `blocked_by`
+  as "deferral cost", not as "blocker".
+
+  Relocation rule (2) below is what caught this. Its own cautionary example — an unfalsifiable
+  prose blocker that "rots without anyone noticing" — is precisely what all 29 values had become.
+  The rule was right and the ledger had violated it 29 times.
 created: 2026-08-22
 relocation_rules: >
   (1) The destination must exist in ROADMAP.md BEFORE an item is relocated into it — Phase 34.9
@@ -47,7 +70,7 @@ human_verification:
     test: "Tray — Windows/Linux dark/light tray icon swap. With GameLib running, toggle Settings > 'Use Dark Tray Icon' and watch the tray/notification-area image."
     expected: "The visible tray image swaps within ~500ms: ON gives a BLACK glyph (for a light taskbar), OFF gives a WHITE one. Both must be a legible cat silhouette, not a smudge."
     why_human: "Requires a Windows or Linux tray/notification area to render into. The asset-level property (the two files differ, and are a black and a white glyph respectively) is already gated without hardware by trayIconAssets.test.ts; what cannot be automated is whether the swap is VISIBLE and LEGIBLE at real tray size against a real taskbar."
-    blocked_by: "a Windows or Linux machine"
+    blocked_by: "machine switch -- boot the Windows or the Linux machine (both OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src-tauri/src/main.rs — `tray_image` returns TRAY_ICON_TEMPLATE on macOS REGARDLESS of the `dark` argument (AppKit tints template images itself), so `darkTrayIcon` is vestigial on macOS BY DESIGN. The toggle is therefore unobservable on this project's hardware for a documented reason, not an accidental one."
     origin_phase: "34.1"
     origin_item: "6d / Gap G3"
@@ -68,7 +91,7 @@ human_verification:
     test: "Window buttons — Windows/Linux. With framelessWindow ON, GameLib's own custom-titlebar buttons sit at the window's top edge and minimize/maximize/restore/close the real OS window."
     expected: "Each click causes the real OS window to minimize / maximize / restore / close, exactly as the equivalent native title-bar button would."
     why_human: "Live Tauri webview window-manager behaviour against a real OS window; jest cannot run one."
-    blocked_by: "a Windows or Linux machine"
+    blocked_by: "machine switch -- boot the Windows or the Linux machine (both OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/App.tsx:79 — WindowControls is rendered under an unconditional !isMac gate, so the component structurally cannot render on this project's macOS-only hardware."
     origin_phase: "34.1"
     origin_item: "1a"
@@ -78,7 +101,7 @@ human_verification:
     test: "Login window provisional title — Windows/Linux. Open any store login (Manage Accounts → Humble/GOG/Epic/Amazon) and watch the window's TITLE BAR from the instant it appears."
     expected: "The title bar NEVER reads the framework default 'Tauri app'. It shows the ORIGIN (e.g. https://www.humblebundle.com) from the moment the window is presented, and is then REPLACED by the loaded document's own title (e.g. 'Humble Bundle - Log In'). Both halves matter: an origin that never gives way to the document title is a WR-07 REGRESSION introduced by the fix itself, not a pass."
     why_human: "A sub-second, one-way visual transition on a real OS title bar. Source can prove the title ARGUMENT is origin-derived — main.rs's own WR-07 CORRECTION records that a grep gate can establish the ABSENCE of a prohibited hard-coded title but structurally CANNOT establish the PRESENCE of the required one. Only a human watching the bar can."
-    blocked_by: "a Windows or Linux machine"
+    blocked_by: "machine switch -- boot the Windows or the Linux machine (both OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src-tauri/src/main.rs — on macOS the login window is presented as an AppKit SHEET (`present_login_window_as_sheet`, live-confirmed `sheet_presented=true attached=true` on 2026-08-23), and main.rs:1551 states it outright: 'AppKit sheets structurally render NO title bar UI at all, so that string is never user-visible on macOS' (F-34.5-G6-16). The `.title(login_window_title(&origin, None))` call added by plan 34.4.1-33 therefore sets an NSWindow title this project's hardware never displays. FALSIFIABLE: if the login window ever stops being presented as a sheet on macOS, this item becomes observable here and must move back."
     origin_phase: "34.4.1"
     origin_item: "D-29-05 (gap cycle 3)"
@@ -106,7 +129,7 @@ human_verification:
     test: "Smoke-launch the CI-produced WINDOWS installer artifact. Download the NSIS installer from the `release-tauri.yml` workflow run for the commit under gate, install it, and launch the resulting GameLib.exe."
     expected: "The installer completes without error. GameLib launches, a window appears, and the process survives at least 10 seconds without crashing — the same bar `35-LIVE-GATE.md` criterion 1 applies to the macOS artifact."
     why_human: "Requires a Windows host. `.github/workflows/release-tauri.yml` builds and uploads the NSIS installer to a draft release (`tauri-apps/tauri-action@v1`, last step at :429) but performs no runtime check of its own — the artifact has never been executed by anything, human or CI, since the Tauri rearchitecture began."
-    blocked_by: "a Windows machine"
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src-tauri/tauri.conf.json `bundle.targets` includes `nsis` — an `.exe`/NSIS installer cannot execute on macOS at all; this is a binary-format boundary, not an unreached code branch."
     origin_phase: "35"
     origin_item: "35-19 Task 2, option-c"
@@ -129,7 +152,7 @@ human_verification:
     test: "Smoke-launch the CI-produced LINUX installer artifact. Download the AppImage from the `release-tauri.yml` workflow run for the commit under gate, mark it executable, and launch it."
     expected: "The AppImage launches directly (no separate install step, per D-11/D-12's AppImage-only decision). A window appears, and the process survives at least 10 seconds without crashing — the same bar `35-LIVE-GATE.md` criterion 1 applies to the macOS artifact."
     why_human: "Requires a Linux host. Same gap as 38-W04: `release-tauri.yml` builds and uploads the AppImage but never executes it."
-    blocked_by: "a Linux machine"
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src-tauri/tauri.conf.json `bundle.targets` includes `appimage` — an AppImage binary cannot execute on macOS at all; this is a binary-format boundary, not an unreached code branch."
     origin_phase: "35"
     origin_item: "35-19 Task 2, option-c"
@@ -145,7 +168,7 @@ human_verification:
     test: "Gamepad — directional focus. With a controller connected, navigate the /console routes using the d-pad and the left stick, in all four directions."
     expected: "Focus moves in the expected direction with no wrap. Specifically includes Up/Left from a COLD START with nothing focused — broken as WR-02/WR-03 and fixed unit-only during code review, never observed live."
     why_human: "Requires a physical controller; the Gamepad API polling loop is the only dispatch path."
-    blocked_by: "a game controller"
+    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
     platform_gate: "src/frontend/helpers/gamepad.ts:559,678 — window.api.gamepadAction is dispatched ONLY from the navigator.getGamepads() polling loop (rAF-driven at :593,628, gated on the gamepadconnected event). There is no keyboard entry point into src/preload/api/tauriGamepadInput.ts."
     origin_phase: "34.1"
     origin_item: "7 (split)"
@@ -154,7 +177,7 @@ human_verification:
     test: "Gamepad — right-stick scroll sign convention."
     expected: "The page scrolls in the SAME direction the stick is pushed, not the reverse. The phase ledger names this as the single case most likely to be inverted."
     why_human: "Requires a physical controller."
-    blocked_by: "a game controller"
+    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
     platform_gate: "src/frontend/helpers/gamepad.ts:559,678 — see 38-C01."
     origin_phase: "34.1"
     origin_item: "7 (split)"
@@ -163,7 +186,7 @@ human_verification:
     test: "Gamepad — Tab / Shift+Tab traversal, driven FROM THE CONTROLLER."
     expected: "The mapped controller inputs traverse focusable elements forward and backward."
     why_human: "Requires a physical controller."
-    blocked_by: "a game controller"
+    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
     cannot_be_discharged_at_a_keyboard: >
       READ THIS BEFORE RUNNING. Phase 34.1's item 7 listed 'Tab/Shift+Tab' among the things to
       exercise, which reads keyboard-runnable. It is NOT. `gamepadAction` is dispatched only from
@@ -180,7 +203,7 @@ human_verification:
     test: "Gamepad — B/back navigation and stick clicks (activate)."
     expected: "B/back navigates back. Left/right stick clicks (the click-equivalents) activate the element currently under focus or cursor."
     why_human: "Requires a physical controller."
-    blocked_by: "a game controller"
+    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
     platform_gate: "src/frontend/helpers/gamepad.ts:559,678 — see 38-C01."
     origin_phase: "34.1"
     origin_item: "7 (split)"
@@ -189,7 +212,7 @@ human_verification:
     test: "Gamepad — focus-scroll regression: scrollCardIntoView still works after the scroll-container relocation."
     expected: "Controller-driven focus movement through the library scrolls the focused card into view, against the post-34.10 scroll container rather than the retired sidebar-era one."
     why_human: "Requires a physical controller."
-    blocked_by: "a game controller"
+    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
     platform_gate: "src/frontend/helpers/gamepad.ts:559,678 — see 38-C01."
     origin_phase: "34.10"
     origin_item: "deferred[0] — 'Gamepad focus-scroll regression (scrollCardIntoView) survives the scroll-container relocation'"
@@ -208,7 +231,7 @@ human_verification:
     test: "Gamepad — focus traversal INTO and WITHIN the tier-2 filter panel, and whether a focused row below the fold is scrolled into view."
     expected: "Controller-driven focus reaches the panel's rows (views, collections, the three collapsed facet groups and their checkboxes), moves within an expanded group, and a row that sits below the panel's visible area is scrolled into view rather than left clipped."
     why_human: "Requires a physical controller."
-    blocked_by: "a game controller"
+    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
     platform_gate: >
       `.NavShell__tier2Portal` (src/frontend/components/UI/NavShell/index.scss:499-505) is the
       panel's OWN scroll container -- `overflow-y: auto`, nested inside `.NavShell__tier2`'s
@@ -243,7 +266,7 @@ human_verification:
     test: "Gamepad — the D-21 Steam install-options caret is controller-reachable, on ELECTRON. Two surfaces, both required: (a) the split-button caret beside the primary Install half on the game page's MainButton, and (b) the 'Install with options…' entry in the GameCard context menu."
     expected: "The caret is reachable by controller-driven focus; reaching it does NOT make the primary install half unreachable (the split button's two halves are both focusable, in a stable order); and the focus order around the caret is stable across repeated traversals in both directions."
     why_human: "Requires a physical controller. Focus dispatch has no keyboard entry point."
-    blocked_by: "a game controller"
+    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
     surface_note: >
       READ THIS BEFORE RECORDING A FAIL. The two surfaces do NOT look alike. On MainButton the
       affordance IS a caret — `className="SteamInstallCaret"`
@@ -273,7 +296,7 @@ human_verification:
     test: "Gamepad — the D-21 Steam install-options caret is controller-reachable, on TAURI (`pnpm tauri:dev`, never bare `tauri dev`). Same two surfaces as 38-C07."
     expected: "Same as 38-C07: caret reachable, the primary install half is not lost, focus order stable across repeated traversals."
     why_human: "Requires a physical controller."
-    blocked_by: "a game controller"
+    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
     not_covered_by_c07: >
       READ THIS BEFORE MARKING IT DUPLICATE. An Electron PASS is NOT evidence for this cell, and
       34.13's ledger says so explicitly on the row itself. Tauri does not use the webview's native
@@ -296,7 +319,7 @@ human_verification:
     test: "Steam quick install on a WINDOWS host, electron runtime — native install ON and >1 registered Steam library. Click the PRIMARY half of Install (the button face, not the caret)."
     expected: "NOTHING opens — no dialog, modal, overlay or picker, and no flash-and-close — and the install lands in the PRIMARY Steam library. Verify the landing ON DISK (content plus appmanifest_<appId>.acf in the primary), not from the badge."
     why_human: "Requires a Windows host. The equivalent macOS row (G-QUICK-DEFAULT) is PASS on both runtimes, but the Windows path takes a different platformRow branch."
-    blocked_by: "a Windows machine"
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-QUICK-WIN / electron (34.13-UAT.md)"
@@ -309,7 +332,7 @@ human_verification:
     test: "Steam quick install on a WINDOWS host, tauri runtime — native install ON and >1 registered Steam library. Click the PRIMARY half of Install (the button face, not the caret)."
     expected: "NOTHING opens — no dialog, modal, overlay or picker, and no flash-and-close — and the install lands in the PRIMARY Steam library. Verify the landing ON DISK (content plus appmanifest_<appId>.acf in the primary), not from the badge."
     why_human: "Requires a Windows host. The equivalent macOS row (G-QUICK-DEFAULT) is PASS on both runtimes, but the Windows path takes a different platformRow branch."
-    blocked_by: "a Windows machine"
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-QUICK-WIN / tauri (34.13-UAT.md)"
@@ -322,7 +345,7 @@ human_verification:
     test: "Steam quick install on a LINUX host, electron runtime — native installs OFF, or ON with <=1 library. Click the PRIMARY half of Install."
     expected: "NOTHING opens — no dialog, modal, overlay or picker, no flash-and-close."
     why_human: "Requires a Linux host. On Linux the platform row does not render at all (D-18), a branch unreachable on macOS."
-    blocked_by: "a Linux machine"
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-QUICK-LINUX / electron (34.13-UAT.md)"
@@ -335,7 +358,7 @@ human_verification:
     test: "Steam quick install on a LINUX host, tauri runtime — native installs OFF, or ON with <=1 library. Click the PRIMARY half of Install."
     expected: "NOTHING opens — no dialog, modal, overlay or picker, no flash-and-close."
     why_human: "Requires a Linux host. On Linux the platform row does not render at all (D-18), a branch unreachable on macOS."
-    blocked_by: "a Linux machine"
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-QUICK-LINUX / tauri (34.13-UAT.md)"
@@ -348,7 +371,7 @@ human_verification:
     test: "Section-gating matrix row 5 on a WINDOWS host, electron runtime — native installs OFF, or ON with <=1 library."
     expected: "A read-only 'Windows' platform row (D-19); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). Check each of the four independently — an absent section inferred from another is exactly what this matrix exists to prevent."
     why_human: "Requires a Windows host for the readonly-windows branch."
-    blocked_by: "a Windows machine"
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-5 / electron (34.13-UAT.md)"
@@ -361,7 +384,7 @@ human_verification:
     test: "Section-gating matrix row 5 on a WINDOWS host, tauri runtime — native installs OFF, or ON with <=1 library."
     expected: "A read-only 'Windows' platform row (D-19); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). Check each of the four independently — an absent section inferred from another is exactly what this matrix exists to prevent."
     why_human: "Requires a Windows host for the readonly-windows branch."
-    blocked_by: "a Windows machine"
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-5 / tauri (34.13-UAT.md)"
@@ -374,7 +397,7 @@ human_verification:
     test: "Section-gating matrix row 6 on a WINDOWS host, electron runtime — hasChoice (native installs ON and >1 library)."
     expected: "A read-only 'Windows' platform row (D-19); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
     why_human: "Requires a Windows host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
-    blocked_by: "a Windows machine with TWO registered Steam libraries"
+    blocked_by: "machine switch + setup -- boot the Windows machine (OWNED and available), then register a SECOND Steam library on it"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-6 / electron (34.13-UAT.md)"
@@ -387,7 +410,7 @@ human_verification:
     test: "Section-gating matrix row 6 on a WINDOWS host, tauri runtime — hasChoice (native installs ON and >1 library)."
     expected: "A read-only 'Windows' platform row (D-19); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
     why_human: "Requires a Windows host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
-    blocked_by: "a Windows machine with TWO registered Steam libraries"
+    blocked_by: "machine switch + setup -- boot the Windows machine (OWNED and available), then register a SECOND Steam library on it"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-6 / tauri (34.13-UAT.md)"
@@ -400,7 +423,7 @@ human_verification:
     test: "Section-gating matrix row 7 on a LINUX host, electron runtime — native installs OFF, or ON with <=1 library."
     expected: "The platform row does NOT render at all (D-18); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). All four checked independently."
     why_human: "Requires a Linux host. 'Platform row absent' is a distinct state from 'platform row present but read-only' and cannot be produced on macOS or Windows."
-    blocked_by: "a Linux machine"
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-7 / electron (34.13-UAT.md)"
@@ -413,7 +436,7 @@ human_verification:
     test: "Section-gating matrix row 7 on a LINUX host, tauri runtime — native installs OFF, or ON with <=1 library."
     expected: "The platform row does NOT render at all (D-18); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). All four checked independently."
     why_human: "Requires a Linux host. 'Platform row absent' is a distinct state from 'platform row present but read-only' and cannot be produced on macOS or Windows."
-    blocked_by: "a Linux machine"
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-7 / tauri (34.13-UAT.md)"
@@ -426,7 +449,7 @@ human_verification:
     test: "Section-gating matrix row 8 on a LINUX host, electron runtime — hasChoice (native installs ON and >1 library)."
     expected: "The platform row does NOT render (D-18); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
     why_human: "Requires a Linux host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
-    blocked_by: "a Linux machine with TWO registered Steam libraries"
+    blocked_by: "machine switch + setup -- boot the Linux machine (OWNED and available), then register a SECOND Steam library on it"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-8 / electron (34.13-UAT.md)"
@@ -439,7 +462,7 @@ human_verification:
     test: "Section-gating matrix row 8 on a LINUX host, tauri runtime — hasChoice (native installs ON and >1 library)."
     expected: "The platform row does NOT render (D-18); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
     why_human: "Requires a Linux host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
-    blocked_by: "a Linux machine with TWO registered Steam libraries"
+    blocked_by: "machine switch + setup -- boot the Linux machine (OWNED and available), then register a SECOND Steam library on it"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-8 / tauri (34.13-UAT.md)"
@@ -452,7 +475,7 @@ human_verification:
     test: "Content-light dialog on a WINDOWS host with no library choice, electron runtime — matrix row 5. Run BOTH sub-cases: (a) native installs OFF at any library count, (b) native installs ON with <=1 library."
     expected: "One read-only 'Windows' row, the content-light notice, Cancel + Install, and NOTHING else — no empty-state illustration or heading. Install completes normally. The two sub-cases must render DIFFERENT COPY: (a) gamelib:steam.install.contentLightNotice, (b) gamelib:steam.install.contentLightSingleLibraryNotice. Identical rendering is a FAIL."
     why_human: "Requires a Windows host."
-    blocked_by: "a Windows machine"
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-D20-CONTENTLIGHT / electron (34.13-UAT.md)"
@@ -468,7 +491,7 @@ human_verification:
     test: "Content-light dialog on a WINDOWS host with no library choice, tauri runtime — matrix row 5. Run BOTH sub-cases: (a) native installs OFF at any library count, (b) native installs ON with <=1 library."
     expected: "One read-only 'Windows' row, the content-light notice, Cancel + Install, and NOTHING else — no empty-state illustration or heading. Install completes normally. The two sub-cases must render DIFFERENT COPY: (a) gamelib:steam.install.contentLightNotice, (b) gamelib:steam.install.contentLightSingleLibraryNotice. Identical rendering is a FAIL."
     why_human: "Requires a Windows host."
-    blocked_by: "a Windows machine"
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-D20-CONTENTLIGHT / tauri (34.13-UAT.md)"
@@ -484,7 +507,7 @@ human_verification:
     test: "Content-light notice COPY and container, electron runtime — scored per branch, on BOTH matrix row 5 (Windows) and row 7 (Linux)."
     expected: "The notice renders in an `.infoBox`, NOT in ThirdPartyDialog's `.noticeIcon`/`.noticeInfo`. Copy must match the catalogue EXACTLY, per branch: native installs OFF -> gamelib:steam.install.contentLightNotice; native installs ON with <=1 library -> gamelib:steam.install.contentLightSingleLibraryNotice. Verify against public/locales/en/gamelib.json, never by eye."
     why_human: "Requires BOTH a Windows and a Linux host, since the row is scored on matrix rows 5 and 7."
-    blocked_by: "BOTH a Windows and a Linux machine (scored on matrix rows 5 and 7)"
+    blocked_by: "machine switch x2 -- boot BOTH the Windows and the Linux machine (both OWNED and available); scored on matrix rows 5 and 7"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-D20-Q6-COPY / electron (34.13-UAT.md)"
@@ -499,7 +522,7 @@ human_verification:
     test: "Content-light notice COPY and container, tauri runtime — scored per branch, on BOTH matrix row 5 (Windows) and row 7 (Linux)."
     expected: "The notice renders in an `.infoBox`, NOT in ThirdPartyDialog's `.noticeIcon`/`.noticeInfo`. Copy must match the catalogue EXACTLY, per branch: native installs OFF -> gamelib:steam.install.contentLightNotice; native installs ON with <=1 library -> gamelib:steam.install.contentLightSingleLibraryNotice. Verify against public/locales/en/gamelib.json, never by eye."
     why_human: "Requires BOTH a Windows and a Linux host, since the row is scored on matrix rows 5 and 7."
-    blocked_by: "BOTH a Windows and a Linux machine (scored on matrix rows 5 and 7)"
+    blocked_by: "machine switch x2 -- boot BOTH the Windows and the Linux machine (both OWNED and available); scored on matrix rows 5 and 7"
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-D20-Q6-COPY / tauri (34.13-UAT.md)"
