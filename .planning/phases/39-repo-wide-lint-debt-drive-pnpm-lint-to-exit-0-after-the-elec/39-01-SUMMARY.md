@@ -39,7 +39,7 @@ key-decisions:
 patterns-established:
   - "39-GATE-DISPOSITIONS.md is a growing table: later plans (39-08) APPEND a row rather than rewriting prose"
 
-requirements-completed: [REQ-39-02]
+requirements-completed: []  # REQ-39-02 is NOT complete — it requires 7/7 and spans plans 39-01 AND 39-08 (see REQUIREMENTS.md); this plan delivers half (the preload-surface-gate.py disposition only)
 
 # Metrics
 duration: ~50min
@@ -175,6 +175,7 @@ None - no external service configuration required.
 - `meta/runPlanningGates.py` is at 6/7, matching this plan's stated goal exactly (not 7/7 — deliberately).
 - `seam-parity-sweep-gate.py` remains red, with its full disposition reasoning (including all 8 `EXPECTED_AXIS_A_SITES` call sites and which 7 REQ-39-03 removes) recorded in `39-GATE-DISPOSITIONS.md`, ready for plan `39-08` to append its own disposition row after the dead-seam collapse lands.
 - `ported-channels-gate.py` for Phase 34.5 remains green and untouched — a future reader repairing `seam-parity-sweep-gate.py` or working on REQ-39-03 should be aware `getEpicGamesStatus` is intentionally still pinned in `IPC-PORT-INVENTORY.md`'s Phase 34.5 bucket for that gate's sake, independent of live preload exposure.
+- **REQ-39-02 is NOT marked complete in `.planning/REQUIREMENTS.md`.** Its stated acceptance criteria require `python3 meta/runPlanningGates.py` to print `7/7 planning gates passed.`, and REQUIREMENTS.md itself explicitly assigns this requirement to "Plans `39-01` and `39-08`" together. This plan delivers exactly one of the two dispositions the requirement names (`34.5/preload-surface-gate.py`, RE-DERIVE); `34.4.1/seam-parity-sweep-gate.py`'s disposition is plan `39-08`'s to deliver. The checkbox should be marked only after `39-08` lands and the suite reports `7/7`.
 
 ---
 *Phase: 39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec*
