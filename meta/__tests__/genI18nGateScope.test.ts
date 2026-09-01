@@ -116,6 +116,16 @@ const FIXTURE_DIFF_LINES = [
  *
  *   Winetricks/WinetricksSearch/index.tsx -- touched by 35-25 (`366e719bb`,
  *   the mousedown-capture fix for the mouse-dead Winetricks Install button).
+ *
+ * 2026-09-01 (quick `260901-w9e`, the FIRST shrink rather than a widening):
+ * two entries REMOVED from both artifacts because the files themselves were
+ * deleted -- `Settings/components/AnalyticsDialog.tsx` and
+ * `Settings/components/AnalyticsOptIn.tsx`, the Plausible consent surfaces.
+ * Scope 163 -> 161, fork-touched 206 -> 204. Hand-edited surgically, NOT
+ * regenerated (a regen here is measured to take this suite from 1 failure to
+ * 5). The A-03 unscanned set is unchanged at 43 because both files were in
+ * BOTH lists, so `forkTouched - scope` never contained either of them --
+ * `DECLARED_UNSCANNED_DEBT` deliberately needs no edit.
  *   35-25 landed in the SAME wave as, but AFTER, 35-24's re-baseline commit
  *   (`ee86b3442`), so the artifact 35-24 regenerated was stale again before
  *   the wave finished. This is the `i18n-fork-pin-regen-cascades` shape from
@@ -600,7 +610,7 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 206 files of
+   * The snapshot a real regeneration would produce TODAY: the 204 files of
    * the committed fork-touched artifact (35-24: 199 -> 205, six files that
    * phase touched -- `PathSelectionBox/index.tsx`, `WebviewControls/index.tsx`,
    * `DownloadManager/index.tsx`, `CategoriesManager/index.tsx`,
@@ -608,7 +618,7 @@ describe('--rewrite-scope guard', () => {
    * gap-closure follow-up: 205 -> 206, `Winetricks/WinetricksSearch/index.tsx`,
    * touched by 35-25's `366e719bb` after 35-24's re-baseline had already
    * landed). Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 163 -> 206 delta this task exists to
+   * so the specs below assert the REAL 161 -> 204 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -634,10 +644,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 163-file hand-curated snapshot and the fresh snapshot is the REAL 206', () => {
-    expect(scopeSnapshot.files.length).toBe(163)
-    expect(forkTouchedSnapshot.files.length).toBe(206)
-    expect(freshSnapshot().files.length).toBe(206)
+  it('A0 fixture sanity: the seeded scope is the REAL 161-file hand-curated snapshot and the fresh snapshot is the REAL 204', () => {
+    expect(scopeSnapshot.files.length).toBe(161)
+    expect(forkTouchedSnapshot.files.length).toBe(204)
+    expect(freshSnapshot().files.length).toBe(204)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -663,7 +673,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 163 -> 206 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 161 -> 204 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -686,7 +696,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 206', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 204', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -699,12 +709,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(206)
+    expect(rewritten.files.length).toBe(204)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 206 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 204 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -717,7 +727,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(206)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(204)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

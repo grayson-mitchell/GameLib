@@ -26,7 +26,6 @@ import UploadedLogFilesList from './screens/Settings/sections/LogSettings/compon
 import { TourProvider } from './state/TourContext'
 import { InstallGameWrapper } from './screens/Library/components/InstallModal'
 import { SettingsModalWrapper } from './screens/Settings/components/SettingsModal'
-import AnalyticsDialog from './screens/Settings/components/AnalyticsDialog'
 import HumbleExpiryToast from './components/UI/HumbleExpiryToast'
 import SteamBottleSetup from './screens/Game/GamePage/components/SteamBottleSetup'
 import SteamClientSetup from './screens/Game/GamePage/components/SteamClientSetup'
@@ -144,7 +143,6 @@ function Root() {
                 <LogFileUploadDialog />
                 <UploadedLogFilesList />
                 <Outlet />
-                <AnalyticsDialog />
                 <HumbleExpiryToast />
               </main>
               <div className="controller">

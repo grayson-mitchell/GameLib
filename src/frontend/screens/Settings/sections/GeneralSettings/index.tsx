@@ -22,7 +22,6 @@ import {
   UseFramelessWindow,
   WinePrefixesBasePath,
   PlaytimeSync,
-  AnalyticsOptIn,
   NotifyHumbleExpirations
 } from '../../components'
 
@@ -72,8 +71,6 @@ export default function GeneralSettings() {
       <NotifyHumbleExpirations />
 
       <DisableController />
-
-      <AnalyticsOptIn />
 
       <LibraryTopSection />
 

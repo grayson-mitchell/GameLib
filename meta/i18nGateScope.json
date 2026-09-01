@@ -125,8 +125,6 @@
     "src/frontend/screens/Login/components/Runner/index.tsx",
     "src/frontend/screens/Login/components/SIDLogin/index.tsx",
     "src/frontend/screens/Login/index.tsx",
-    "src/frontend/screens/Settings/components/AnalyticsDialog.tsx",
-    "src/frontend/screens/Settings/components/AnalyticsOptIn.tsx",
     "src/frontend/screens/Settings/components/CheckUpdatesOnStartup.tsx",
     "src/frontend/screens/Settings/components/ClearCache.tsx",
     "src/frontend/screens/Settings/components/CrossoverBottle.tsx",
