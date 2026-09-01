@@ -3,7 +3,7 @@ created: 2026-08-15T08:50:00.000Z
 title: "Disable Plausible telemetry — GameLib is reporting into Heroic's analytics property"
 area: telemetry/privacy
 needs: decision-then-code-fix
-status: OPEN
+status: RESOLVED
 severity: major
 deferred_until: "post-Phase 35 (electron-cutover-remove-the-electron-build)"
 upstream:
@@ -71,3 +71,42 @@ Operator intent as of 2026-08-18, for when this is eventually built out (not jus
 This is new feature work (own consent UX, own backend, own privacy-policy language for opt-out),
 not a continuation of the current Plausible integration — treat it as a fresh design pass rather
 than un-disabling the existing code path.
+
+## Resolution (260901-w9e, 2026-09-01)
+
+**Removed outright.** Commits `9a1147e7c` (consent surfaces) + `d79cea014` (integration).
+Net −298 lines; `src/backend/utils/plausible.ts`,
+`src/frontend/screens/Settings/components/AnalyticsDialog.tsx` and `.../AnalyticsOptIn.tsx` all
+deleted, `AppSettings.analyticsOptIn` and its factory default removed.
+
+**The OPEN SUB-DECISION resolved to *removed*, because the evidence moved after Phase 35.** When
+this todo posed removed-vs-hard-wired-off on 2026-08-18 it read as balanced. It no longer is:
+`startPlausible()` had lost its only caller in `5643c7583` (plan 35-14), so it had **zero
+importers** and even its module-level `settingChanged` listener never registered, and
+`build/main/sidecar.js` carried **0** occurrences of `heroic-games-client.com`. The leak this todo
+was filed for was therefore already closed as a side effect of the cutover — and "kept, hard-wired
+off" was not a hypothetical, it was the *live state*: a first-launch modal asking for consent to
+collection naming Plausible, GDPR/CCPA/PECR and "the data we collect", none of which could happen.
+That is precisely the [[uploaded-log-delete-button-lies]] failure mode this todo cited as the
+argument against hard-wiring off.
+
+**The i18n sub-question was already settled by precedent, twice.** All 12 keys live in
+upstream-owned `translation.json`, not `gamelib.json` — measured. `meta/i18nCatalogChurnGuard.ts`
+throws `UpstreamChurnError` on any non-`gamelib.json` change under `public/locales/`, asserted
+against the live working tree in `pnpm test:ci`. Keys left inert across all 49 catalogs, matching
+`260810-tr4` (D-01) and `260805-rwy`.
+
+**"Check for other outbound endpoints while in here" — done.** Swept every `http(s)://` literal in
+`src/` and `src-tauri/src/` outside tests. **No second Heroic-owned analytics property exists.**
+Two sinks remain, both deliberately untouched and named in the summary so nobody re-derives them:
+`dpaste.com` (log upload — already owned by [[log-upload-has-no-redaction]]) and
+`heroic.legendary.gl` (Heroic's Legendary metadata API, **read-only**: a fetch, not a report).
+
+**The "Future direction" section below is NOT implemented and remains future work** — no
+GameLib-owned destination, no opt-in → opt-out reversal, no Steam in the provider props. It stays
+here as the record of operator intent. Note that the reversal to opt-out is worth re-examining
+before it is built: Steam's opt-out model rests on Valve's position as the platform the user
+already trusts with their account, which a third-party launcher holding Epic/GOG/Amazon/Steam
+credentials is not in.
+
+Full record: `.planning/quick/260901-w9e-remove-plausible-telemetry-and-its-consent-surfaces/`.
