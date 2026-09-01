@@ -1,27 +1,26 @@
 /**
- * Dual-build login-window seam (Phase 34.4.1 Plan 02, D-01/D-02, REQ-34.4.1-02/REQ-34.4.1-13).
+ * Login-window seam (Phase 34.4.1 Plan 02, D-01/D-02, REQ-34.4.1-02/REQ-34.4.1-13; header rewritten
+ * Phase 39 Plan 02, REQ-39-03, once the single-shell reality replaced the dual-build one this header
+ * used to describe).
  *
- * `humble/user.ts` (`watchForLogin()`/`getLiveCsrfToken()`/`notifyLoginNavigated()`) is compiled
- * into BOTH the Electron main process and the Tauri Node sidecar. Under Electron it keeps calling
- * `session.fromPartition(HUMBLE_LOGIN_PARTITION)` completely untouched. Under Tauri there is no
- * `session.fromPartition()` shape at all (`tauri-login-webview-cookies.md` § "Requirements" #7) --
- * jar access requires a live `Webview` handle reached only via a `rustInvoke` round-trip.
+ * `humble/user.ts` (`watchForLogin()`/`getLiveCsrfToken()`/`notifyLoginNavigated()`) needs
+ * platform-specific access to a login window's cookie jar and navigation events. There is one
+ * shipped build -- the Tauri Node sidecar -- and it has no `session.fromPartition()` shape at all
+ * (`tauri-login-webview-cookies.md` § "Requirements" #7); jar access requires a live `Webview`
+ * handle reached only via a `rustInvoke` round-trip.
  *
- * This module is the seam that reconciles the two: a plain interface + a module-scoped holder +
- * a pure classifier, with NOTHING platform-specific in it. `user.ts` must never import sidecar RPC
- * directly -- `backend/sidecar/sidecarRpc` runs a Node `readline`/stdio loop that does not exist in
- * the Electron main process, so importing it from a dual-build file would break Electron's build
- * (or silently pull sidecar transport machinery into a process that has no Rust counterpart to talk
- * to). Instead, `backend/sidecar/humbleLoginFlowRegistration.ts` (Tauri-only, imported from the
- * sidecar's own curated module graph) constructs a `rustInvoke`-backed implementation and installs
- * it here via `setLoginWindowSeam()` at sidecar startup. The Electron build never calls
- * `setLoginWindowSeam()` at all, so `getLoginWindowSeam()` always returns `null` there and
- * `user.ts`'s existing `session.fromPartition` path is exercised exactly as before -- additive and
- * reversible, per the phase's own invariant.
+ * This module is the seam: a plain interface + a module-scoped holder + a pure classifier, with
+ * NOTHING platform-specific in it. `user.ts` must never import sidecar RPC directly --
+ * `backend/sidecar/sidecarRpc` runs a Node `readline`/stdio loop that only exists inside the
+ * sidecar process, so importing it from this shared module would pull sidecar transport machinery
+ * into code that does not need to know about it. Instead, `backend/sidecar/humbleLoginFlowRegistration.ts`
+ * (imported from the sidecar's own curated module graph) constructs a `rustInvoke`-backed
+ * implementation and installs it here via `setLoginWindowSeam()` unconditionally at sidecar
+ * startup, before any IPC handler can be reached. `getLoginWindowSeamOrThrow()` is the accessor
+ * every production call site uses as a result -- see its own doc comment below.
  *
- * Constraints that keep this file safe to import from BOTH builds: it imports nothing from
- * `'electron'` and nothing from `backend/sidecar` -- it is pure types, a module-level holder, and a
- * pure function.
+ * Constraints that keep this file safe to import broadly: it imports nothing from `'electron'` and
+ * nothing from `backend/sidecar` -- it is pure types, a module-level holder, and a pure function.
  */
 
 /** A single cookie read back from the login window's jar. */
@@ -199,8 +198,8 @@ export interface LoginWindowSeam {
   ): Promise<LoginWindowStorageClearResult>
 }
 
-// Module-scoped holder. `null` in the Electron build (nothing ever calls setLoginWindowSeam there)
-// and in the Tauri sidecar BEFORE registerHumbleLoginFlows() runs at startup.
+// Module-scoped holder. `null` before registerHumbleLoginFlows() runs at sidecar startup, and
+// whenever a test explicitly clears it via setLoginWindowSeam(null).
 let installed: LoginWindowSeam | null = null
 
 /** Installs (or clears, via `null`) the active login-window seam implementation. */
@@ -208,8 +207,37 @@ export function setLoginWindowSeam(seam: LoginWindowSeam | null): void {
   installed = seam
 }
 
-/** Returns the active login-window seam implementation, or `null` if none is installed. */
+/**
+ * Returns the active login-window seam implementation, or `null` if none is installed.
+ *
+ * Survives only for `setLoginWindowSeam(null)`-driven tests and for the deliberately-kept
+ * smoke-test guard in `humbleLoginFlowRegistration.ts` (gated behind
+ * `process.env.GAMELIB_LOGIN_SEAM_SMOKE === '1'`). Every production call site should use
+ * `getLoginWindowSeamOrThrow()` instead.
+ */
 export function getLoginWindowSeam(): LoginWindowSeam | null {
+  return installed
+}
+
+/**
+ * Returns the active login-window seam implementation, throwing instead of returning `null`.
+ *
+ * This is the accessor every production call site uses. `registerHumbleLoginFlows()`
+ * (`src/backend/sidecar/humbleLoginFlowRegistration.ts`) installs the seam unconditionally at
+ * sidecar startup, before any IPC handler can be reached -- so by the time any handler-reachable
+ * code runs, a seam is always installed. Reaching this accessor before that happens is a wiring
+ * bug, not a supported state, so it fails loudly here rather than at whichever seam member a
+ * caller happens to touch first.
+ */
+export function getLoginWindowSeamOrThrow(): LoginWindowSeam {
+  if (installed === null) {
+    throw new Error(
+      'getLoginWindowSeamOrThrow(): no login-window seam is installed. ' +
+        'registerHumbleLoginFlows() (src/backend/sidecar/humbleLoginFlowRegistration.ts) installs ' +
+        'the seam at sidecar startup -- reaching this accessor before that has run is a wiring bug, ' +
+        'not a supported state.'
+    )
+  }
   return installed
 }
 
