@@ -1,17 +1,18 @@
 import axios from 'axios'
-import { net } from 'backend/platform'
 import { z } from 'zod'
 
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { AdapterResult, HumbleUserData } from 'common/types/humble'
 import {
   HUMBLE_BASE_URL,
-  HUMBLE_LOGIN_PARTITION,
   HUMBLE_REDEEM_PATH,
   HUMBLE_REQUIRED_HEADERS
 } from './constants'
 import { standardBrowserUserAgent } from './userAgent'
-import { getLoginWindowSeam, type LoginWindowSeam } from './loginWindowSeam'
+import {
+  getLoginWindowSeamOrThrow,
+  type LoginWindowSeam
+} from './loginWindowSeam'
 
 /**
  * C5 isolation wall: every outgoing Humble HTTP call and every incoming
@@ -191,11 +192,13 @@ async function humbleRequest(
 
 /**
  * Debug session humble-reveal-key-fails (round 6): thrown by
- * `humblePostRequest` for any non-2xx HTTP response. `net.request` (unlike
- * axios) never rejects on a non-2xx status — it always resolves a response,
- * status code and all — so this class exists purely to give `mapAxiosError`
- * a single, transport-agnostic shape (`.response.{status,headers,data}`) to
- * pattern-match against, alongside axios's own `AxiosError`.
+ * `humblePostRequest` for any non-2xx HTTP response from the login-window
+ * seam transport. The seam's `revealPost()` result never rejects on a
+ * non-2xx status — it always resolves a response, status code and all — so
+ * this class exists purely to give `mapAxiosError` a single,
+ * transport-agnostic shape (`.response.{status,headers,data}`) to
+ * pattern-match against, alongside axios's own `AxiosError` (still used by
+ * `humbleRequest`'s GET path).
  */
 class HumbleTransportHttpError extends Error {
   response: {
@@ -224,18 +227,12 @@ function coerceJsonBody(raw: string): unknown {
   }
 }
 
-function firstHeaderValue(value: string | string[] | undefined): string | null {
-  if (typeof value === 'string') return value
-  if (Array.isArray(value)) return value[0] ?? null
-  return null
-}
-
 /**
  * POST transport sibling to `humbleRequest` (D-14 revised, TRANSPORT SWAPPED
- * round 6, DUAL-BUILD BRANCH Phase 34.4.1 Plan 04): the codebase's one
- * write-style Humble call (Phase 14 HCLAIM-01, reveal/redeem) routes through
- * this single function, which now branches on whether a Tauri login-window
- * seam is installed (`getLoginWindowSeam()`).
+ * round 6): the codebase's one write-style Humble call (Phase 14 HCLAIM-01,
+ * reveal/redeem) routes through this single function, which always uses the
+ * Tauri login-window seam's own `fetch()` (`humblePostRequestViaSeam`) —
+ * there is no alternate transport to select between.
  *
  * Debug session humble-reveal-key-fails, round 6: rounds 1-5 iterated on the
  * request's CONTENT (CSRF header, csrf_cookie double-submit, dropping
@@ -250,21 +247,15 @@ function firstHeaderValue(value: string | string[] | undefined): string | null {
  * no header or cookie content, however correct, can fix a transport-level
  * fingerprint mismatch from inside axios's plain Node.js HTTPS stack.
  *
- * Under Electron (`humblePostRequestViaElectronNet`, unchanged): routes
- * through Electron's own Chromium network stack (`net.request`) on the same
- * `persist:humble` partition the login flow already uses — a genuine
- * Chromium TLS/HTTP2 fingerprint, indistinguishable from a real browser tab.
- *
- * Under Tauri (`humblePostRequestViaSeam`, Phase 34.4.1 Plan 04 D-07): there
- * is no `net.request`/partition equivalent at all (no Tauri `session`
- * shape), so the ONE structurally-new option is the login window's OWN
- * `fetch()` — a genuine WKWebView network stack, real in kind, not merely
- * UA-spoofed. This branch does NOT re-run rounds 1-5 of
- * `humble-reveal-key-fails`: cookie/header fidelity was already falsified as
- * the cause under axios; only the TRANSPORT differs here too. Whatever
- * Cloudflare returns against this genuine browser stack — pass or another
- * 403 — is a DECLARABLE outcome (D-07), fed through the SAME
- * `RevealResponseSchema`/error-mapping path either branch uses; see
+ * The login window's `fetch()` (`humblePostRequestViaSeam`, Phase 34.4.1
+ * Plan 04 D-07) is a genuine WKWebView network stack, real in kind, not
+ * merely UA-spoofed — there is no Tauri `session`/`net.request` equivalent
+ * to fall back to, and none is needed. This transport does NOT re-run
+ * rounds 1-5 of `humble-reveal-key-fails`: cookie/header fidelity was
+ * already falsified as the cause under axios; only the TRANSPORT differs
+ * here too. Whatever Cloudflare returns against this genuine browser stack
+ * — pass or another 403 — is a DECLARABLE outcome (D-07), fed through the
+ * SAME `RevealResponseSchema`/error-mapping path; see
  * `humblePostRequestViaSeam`'s own doc comment below.
  */
 function humblePostRequest(
@@ -272,28 +263,27 @@ function humblePostRequest(
   body: string,
   csrfToken?: string
 ): Promise<HumbleRawResponse> {
-  const seam = getLoginWindowSeam()
-  return seam
-    ? humblePostRequestViaSeam(seam, path, body, csrfToken)
-    : humblePostRequestViaElectronNet(path, body, csrfToken)
+  return humblePostRequestViaSeam(
+    getLoginWindowSeamOrThrow(),
+    path,
+    body,
+    csrfToken
+  )
 }
 
 /**
- * D-07 Tauri transport branch: the webview's own `fetch()` replaces
- * axios/`net.request`, but the request's CONTENT (csrf header, form body)
- * and the response's SCHEMA (`RevealResponseSchema`, consumed by `revealKey`
- * below) are byte-identical to the Electron path — this function's only job
- * is to shape the seam's `{status, body}` result into the SAME
- * `HumbleRawResponse`/`HumbleTransportHttpError` contract
- * `humblePostRequestViaElectronNet` already produces, so every downstream
- * caller is unchanged.
+ * D-07 Tauri transport: the login window's own `fetch()` is the sole POST
+ * transport for Humble's reveal/redeem call. The request's CONTENT (csrf
+ * header, form body) and the response's SCHEMA (`RevealResponseSchema`,
+ * consumed by `revealKey` below) match `humbleRequest`'s GET path — this
+ * function's only job is to shape the seam's `{status, body}` result into
+ * the `HumbleRawResponse`/`HumbleTransportHttpError` contract every
+ * downstream caller expects.
  *
- * Keeps `REQUEST_TIMEOUT_MS`'s existing semantics on this path too: the Rust
- * arm's own 20s `recv_timeout` (`main.rs`) is a backstop, not a replacement
- * — a hung seam call (a wedged `rustInvoke` round-trip) must still surface
- * as the SAME recognizable timeout error `humblePostRequestViaElectronNet`
- * has always thrown, rather than hanging the reveal indefinitely on this
- * branch specifically.
+ * Keeps `REQUEST_TIMEOUT_MS`'s existing semantics: the Rust arm's own 20s
+ * `recv_timeout` (`main.rs`) is a backstop, not a replacement — a hung seam
+ * call (a wedged `rustInvoke` round-trip) must still surface as a
+ * recognizable timeout error, rather than hanging the reveal indefinitely.
  */
 async function humblePostRequestViaSeam(
   seam: LoginWindowSeam,
@@ -336,99 +326,6 @@ async function humblePostRequestViaSeam(
   }
 }
 
-/**
- * Electron transport branch (D-14 revised, TRANSPORT SWAPPED round 6):
- * routes through Electron's own Chromium network stack (`net.request`) on
- * the same `persist:humble` partition the login flow already uses — a
- * genuine Chromium TLS/HTTP2 fingerprint, indistinguishable from a real
- * browser tab, because it IS the same network stack a real browser tab
- * uses. `partition` + `useSessionCookies: true` + `credentials: 'include'`
- * make Chromium attach the partition's live cookie jar NATIVELY
- * (superseding round 5's hand-built HumbleUser.getFullCookieHeader — see
- * that removal's comment in user.ts) — no manual Cookie header is set here
- * at all. `csrf-prevention-token` remains a manually-set header (round 1/3,
- * LIVE-CONFIRMED CORRECT by round 5's csrfTokenPresent=true evidence) since
- * real Humble page JS also derives it from `document.cookie` and sets it
- * explicitly, rather than relying on it being an automatically-attached
- * header. GET paths (`humbleRequest`, still axios) are UNCHANGED — round 4/5
- * evidence shows Cloudflare scores this write endpoint far more
- * aggressively than the read endpoints, so only the one endpoint that has
- * ever failed needs the swap.
- */
-function humblePostRequestViaElectronNet(
-  path: string,
-  body: string,
-  csrfToken?: string
-): Promise<HumbleRawResponse> {
-  return new Promise((resolve, reject) => {
-    const request = net.request({
-      method: 'POST',
-      url: `${HUMBLE_BASE_URL}${path}`,
-      partition: HUMBLE_LOGIN_PARTITION,
-      credentials: 'include',
-      useSessionCookies: true
-    })
-
-    // WR-04 parity: humbleRequest's axios timeout applies per-call; net's
-    // ClientRequest has no built-in timeout option, so it is armed manually
-    // and tears the request down explicitly on expiry — a hung transport
-    // must become a transient (rethrown) error, never a silent stall.
-    const timeoutHandle = setTimeout(() => {
-      request.abort()
-      reject(
-        new Error(
-          `Humble reveal request timed out after ${REQUEST_TIMEOUT_MS}ms`
-        )
-      )
-    }, REQUEST_TIMEOUT_MS)
-    const clearRequestTimeout = () => clearTimeout(timeoutHandle)
-
-    request.setHeader('Accept', HUMBLE_REQUIRED_HEADERS.Accept)
-    request.setHeader('Content-Type', 'application/x-www-form-urlencoded')
-    // Presents the same Chrome-shaped UA as the login window/partition
-    // (user.ts's watchForLogin already calls ses.setUserAgent with this
-    // exact value) — Cloudflare correlates UA against TLS fingerprint, so a
-    // mismatched UA on an otherwise-genuine Chromium connection is itself a
-    // signal worth avoiding, even though this transport's TLS fingerprint is
-    // already self-consistent by construction.
-    request.setHeader('User-Agent', standardBrowserUserAgent())
-    if (csrfToken) {
-      request.setHeader('csrf-prevention-token', csrfToken)
-    }
-
-    request.on('response', (response) => {
-      const chunks: Buffer[] = []
-      response.on('data', (chunk: Buffer) => chunks.push(chunk))
-      response.on('end', () => {
-        clearRequestTimeout()
-        const data = coerceJsonBody(Buffer.concat(chunks).toString('utf8'))
-        const contentType = firstHeaderValue(response.headers?.['content-type'])
-        if (response.statusCode >= 200 && response.statusCode < 300) {
-          resolve({ data, contentType })
-          return
-        }
-        reject(
-          new HumbleTransportHttpError({
-            status: response.statusCode,
-            headers: response.headers,
-            data
-          })
-        )
-      })
-      response.on('error', (err: Error) => {
-        clearRequestTimeout()
-        reject(err)
-      })
-    })
-
-    request.on('error', (err: Error) => {
-      clearRequestTimeout()
-      reject(err)
-    })
-
-    request.end(body)
-  })
-}
 
 // Debug session humble-reveal-key-fails (round 5): access_denied currently
 // collapses TWO very different failure shapes into one status — a genuine
@@ -711,13 +608,13 @@ export async function getAccountIdentity(
  * only status/length, matching describeSchemaFailure's redaction discipline.
  *
  * Debug session humble-reveal-key-fails (round 6): no longer takes a `cookie`
- * or `fullCookieHeader` argument — humblePostRequest's electron-net transport
- * sources the live `persist:humble` partition's cookie jar NATIVELY
- * (`useSessionCookies`/`credentials: 'include'`), so a hand-passed session
- * cookie value has nothing left to do here. The caller (library.ts) still
- * independently gates on `HumbleUser.getCredentials()` being present before
- * ever reaching this function — that "are we logged in at all" precondition
- * is unrelated to what this function sends on the wire.
+ * or `fullCookieHeader` argument — humblePostRequest's login-window seam
+ * transport carries the seam's own live cookie jar with each `revealPost()`
+ * call, so a hand-passed session cookie value has nothing left to do here.
+ * The caller (library.ts) still independently gates on
+ * `HumbleUser.getCredentials()` being present before ever reaching this
+ * function — that "are we logged in at all" precondition is unrelated to
+ * what this function sends on the wire.
  */
 export async function revealKey(
   csrfToken: string | undefined,
@@ -788,11 +685,11 @@ export async function revealKey(
     // NO HTTP STATUS, deliberately, and this is a scope decision not an
     // oversight: `HumbleRawResponse` carries only `{ data, contentType }` —
     // there is no status field to read. Adding one means widening the shared
-    // transport type across BOTH branches (`humblePostRequestViaSeam` and the
-    // electron-net path), which is precisely the seam-parity surface F-1 and
-    // F-6 hid in, for an observability nicety. Duration plus an explicit
-    // success marker satisfies what D-29-03 actually needs; the status code
-    // does not, on its own, tell a gate anything the marker does not.
+    // transport type `humblePostRequestViaSeam` returns, which is precisely
+    // the seam-parity surface F-1 and F-6 hid in, for an observability
+    // nicety. Duration plus an explicit success marker satisfies what
+    // D-29-03 actually needs; the status code does not, on its own, tell a
+    // gate anything the marker does not.
     logInfo(
       [
         `Humble adapter: ${HUMBLE_REDEEM_PATH} reveal succeeded`,
