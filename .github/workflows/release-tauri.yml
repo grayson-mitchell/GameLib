@@ -52,9 +52,6 @@ jobs:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
             sidecar_triple: 'aarch64-apple-darwin'
-          - platform: 'macos-latest'
-            args: '--target x86_64-apple-darwin'
-            sidecar_triple: 'x86_64-apple-darwin'
           - platform: 'ubuntu-24.04'
             args: ''
             sidecar_triple: 'x86_64-unknown-linux-gnu'
@@ -79,7 +76,7 @@ jobs:
       # tauri.conf.json sets `createUpdaterArtifacts: true` with a committed
       # `plugins.updater.pubkey`, and `tauri build` then ERRORS OUT rather
       # than skipping when the private key is absent. That failure hits all
-      # four matrix legs, produces no latest.json for
+      # three matrix legs, produces no latest.json for
       # promote-updater-feed.yml to promote, and surfaces as an opaque tauri
       # error late in the run. Secret enrolment is not inspectable from the
       # repo, so this preflight is the only way the asymmetry is visible:
@@ -140,21 +137,24 @@ jobs:
       # build/bin/... and the bridge is unusable. Precedes the renderer
       # build below to match that ordering.
       #
-      # CR-01 (gap cycle 2 review): meta/buildSteamBridgeShims.ts used to emit
-      # to `public/bin/${process.arch}/darwin/` -- the BUILD HOST's arch.
-      # macos-latest runners are Apple Silicon, so the
-      # `--target x86_64-apple-darwin` leg emitted bin/arm64/... while its own
-      # x86_64 sidecar resolves bin/x64/... at runtime, shipping a bundle
-      # whose Steam bridge could never be found. GAMELIB_BRIDGE_TARGET_ARCH
-      # makes the bridge build target-driven exactly like
-      # GAMELIB_SIDECAR_TARGET_TRIPLE does for the SEA sidecar below, and the
-      # script now passes a matching `clang -arch` so the emitted Mach-O
-      # really is the architecture its path claims.
+      # CR-01 (gap cycle 2 review, historical): meta/buildSteamBridgeShims.ts used
+      # to emit to `public/bin/${process.arch}/darwin/` -- the BUILD HOST's arch.
+      # macos-latest runners are Apple Silicon, so the (now-retired) Intel
+      # Mac leg (`--target` `x86_64-apple-darwin`) emitted bin/arm64/... while
+      # its own x86_64 sidecar resolved bin/x64/... at runtime, shipping a bundle whose
+      # Steam bridge could never be found. GAMELIB_BRIDGE_TARGET_ARCH made the
+      # bridge build target-driven exactly like GAMELIB_SIDECAR_TARGET_TRIPLE
+      # does for the SEA sidecar below, and the script passed a matching
+      # `clang -arch` so the emitted Mach-O really was the architecture its
+      # path claimed. quick-260901-i8i: the Intel leg is gone, so the arch is
+      # now a literal -- the env var stays wired (defensive; the step is
+      # macOS-only and this preserves the CR-01 guard if runner arch ever
+      # changes) rather than removed.
       - name: Build steam bridge shims (macOS only)
         if: startsWith(matrix.platform, 'macos')
         shell: bash
         env:
-          GAMELIB_BRIDGE_TARGET_ARCH: ${{ matrix.sidecar_triple == 'x86_64-apple-darwin' && 'x64' || 'arm64' }}
+          GAMELIB_BRIDGE_TARGET_ARCH: 'arm64'
         run: pnpm build-steam-bridge
 
       # GAP-1 (34-VERIFICATION.md failed truth #5 / 34-REVIEW.md CR-01):
@@ -170,7 +170,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -181,14 +181,14 @@ jobs:
       # bundles it as an externalBin -- no cross-job artifact hand-off
       # window (T-34-07: sidecar substitution mitigation).
       #
-      # CR-01: macos-latest runners are Apple-Silicon native, so without an
-      # explicit per-leg triple below the SEA build script (meta/
+      # CR-01 (historical): macos-latest runners are Apple-Silicon native, so
+      # without an explicit per-leg triple below the SEA build script (meta/
       # buildSidecarSea.ts resolveTriple()) would resolve the HOST triple on
-      # both macOS legs -- the `--target x86_64-apple-darwin` leg would then
-      # emit an aarch64-named, aarch64-arch sidecar that tauri-action's
-      # externalBin resolution cannot find/use for the x86_64 bundle. Each
-      # matrix leg's `sidecar_triple` field makes the SEA build
-      # target-driven instead of host-driven via the env var set below.
+      # both macOS legs -- the (now-retired) Intel Mac leg (`--target`
+      # `x86_64-apple-darwin`) would then emit an aarch64-named, aarch64-arch sidecar that
+      # tauri-action's externalBin resolution could not find/use for the
+      # x86_64 bundle. Each matrix leg's `sidecar_triple` field makes the SEA
+      # build target-driven instead of host-driven via the env var set below.
       - name: Build self-contained sidecar (Node SEA)
         env:
           GAMELIB_SIDECAR_TARGET_TRIPLE: ${{ matrix.sidecar_triple }}

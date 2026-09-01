@@ -379,7 +379,6 @@ async function downloadComet() {
     downloadGithubAssets('comet', 'imLinguin/comet', RELEASE_TAGS['comet'], {
       x64: {
         linux: 'comet-x86_64-unknown-linux-gnu',
-        darwin: 'comet-x86_64-apple-darwin',
         win32: 'comet-x86_64-pc-windows-msvc.exe'
       },
       arm64: {

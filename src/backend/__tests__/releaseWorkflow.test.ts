@@ -167,18 +167,17 @@ describe('release-tauri.yml per-leg sidecar target triple (CR-01 regression guar
     )
   })
 
-  test('declares all four target triples across the matrix legs', () => {
+  test('declares all three target triples across the matrix legs', () => {
     const source = loadReleaseWorkflow()
     expect(source).toContain("sidecar_triple: 'aarch64-apple-darwin'")
-    expect(source).toContain("sidecar_triple: 'x86_64-apple-darwin'")
     expect(source).toContain("sidecar_triple: 'x86_64-unknown-linux-gnu'")
     expect(source).toContain("sidecar_triple: 'x86_64-pc-windows-msvc'")
   })
 
-  test('declares exactly four sidecar_triple matrix entries', () => {
+  test('declares exactly three sidecar_triple matrix entries', () => {
     const source = loadReleaseWorkflow()
     const matches = source.match(/sidecar_triple: '/g) ?? []
-    expect(matches).toHaveLength(4)
+    expect(matches).toHaveLength(3)
   })
 
   test('the SEA build step carries the GAMELIB_SIDECAR_TARGET_TRIPLE env wiring', () => {
@@ -349,57 +348,24 @@ describe('release-tauri.yml renderer + asset build steps (CR-01 / GAP-1 regressi
   })
 })
 
-// 34-REVIEW.md (gap cycle 2) CR-01: GAP-1's new `pnpm build-steam-bridge` step was
-// host-arch-driven -- meta/buildSteamBridgeShims.ts emitted to
+// 34-REVIEW.md (gap cycle 2) CR-01 (historical): GAP-1's new `pnpm build-steam-bridge`
+// step was host-arch-driven -- meta/buildSteamBridgeShims.ts emitted to
 // public/bin/${process.arch}/darwin/, and both macos-latest legs are Apple Silicon, so
-// the `--target x86_64-apple-darwin` bundle shipped bin/arm64/... while its own x64
-// sidecar resolves bin/x64/... at runtime. Rather than asserting the raw expression
-// string, these tests EVALUATE the workflow's GitHub-expression ternary for each macOS
-// matrix leg and assert the arch it actually yields.
+// the (now-retired) `--target x86_64-apple-darwin` bundle shipped bin/arm64/... while its
+// own x64 sidecar resolved bin/x64/... at runtime. quick-260901-i8i: the Intel leg is
+// gone and GAMELIB_BRIDGE_TARGET_ARCH is now a literal ('arm64'), so the ternary-eval
+// helpers that used to parse the expression are gone too -- these tests assert the
+// literal and its absence-of-Intel-branch directly.
 describe('release-tauri.yml steam-bridge target arch (CR-01 regression guard)', () => {
-  /** The `${{ ... }}` expression the bridge step assigns to GAMELIB_BRIDGE_TARGET_ARCH. */
-  function bridgeArchExpression(): string {
+  test('the bridge step targets arm64 via a literal, not a per-leg ternary', () => {
     const source = loadReleaseWorkflow()
-    const line = source
-      .split('\n')
-      .find((l) => l.includes('GAMELIB_BRIDGE_TARGET_ARCH:'))
-    expect(line).toBeDefined()
-    return (line as string).split('GAMELIB_BRIDGE_TARGET_ARCH:')[1].trim()
-  }
-
-  /**
-   * Evaluates the GitHub Actions `<lhs> == '<literal>' && '<a>' || '<b>'`
-   * ternary idiom for a concrete matrix.sidecar_triple value. Deliberately
-   * strict: an expression shape this cannot parse fails the test rather than
-   * silently returning a default.
-   */
-  function evaluateBridgeArch(
-    expression: string,
-    sidecarTriple: string
-  ): string {
-    const match = expression.match(
-      /^\$\{\{\s*matrix\.sidecar_triple\s*==\s*'([^']+)'\s*&&\s*'([^']+)'\s*\|\|\s*'([^']+)'\s*\}\}$/
-    )
-    expect(match).not.toBeNull()
-    const [, comparedTriple, whenTrue, whenFalse] = match as RegExpMatchArray
-    return sidecarTriple === comparedTriple ? whenTrue : whenFalse
-  }
-
-  test('the x86_64-apple-darwin leg builds an x64-pathed bridge, not arm64', () => {
-    const expression = bridgeArchExpression()
-    expect(evaluateBridgeArch(expression, 'x86_64-apple-darwin')).toBe('x64')
+    expect(source).toContain("GAMELIB_BRIDGE_TARGET_ARCH: 'arm64'")
   })
 
-  test('the aarch64-apple-darwin leg still builds an arm64-pathed bridge', () => {
-    const expression = bridgeArchExpression()
-    expect(evaluateBridgeArch(expression, 'aarch64-apple-darwin')).toBe('arm64')
-  })
-
-  test('the two macOS legs never resolve to the same arch', () => {
-    const expression = bridgeArchExpression()
-    expect(evaluateBridgeArch(expression, 'x86_64-apple-darwin')).not.toBe(
-      evaluateBridgeArch(expression, 'aarch64-apple-darwin')
-    )
+  test('no sidecar_triple matrix leg or --target arg names the retired Intel Mac triple', () => {
+    const source = loadReleaseWorkflow()
+    expect(source).not.toContain("sidecar_triple: 'x86_64-apple-darwin'")
+    expect(source).not.toContain('--target x86_64-apple-darwin')
   })
 
   test('the env var the workflow sets is the one the build script actually reads', () => {
@@ -467,9 +433,9 @@ describeOnPosix(
       if (withBridge) {
         touch(
           root,
-          join('build', 'bin', 'x64', 'darwin', 'steam-bridge-helper')
+          join('build', 'bin', 'arm64', 'darwin', 'steam-bridge-helper')
         )
-        touch(root, join('build', 'bin', 'x64', 'darwin', 'steam_api.dll'))
+        touch(root, join('build', 'bin', 'arm64', 'darwin', 'steam_api.dll'))
       }
     }
 
@@ -521,8 +487,8 @@ describeOnPosix(
         join('build', 'assets', 'index-abc123.css'),
         join('build', 'renderer', 'index.html'),
         join('build', 'renderer', 'assets', 'index-abc123.js'),
-        join('build', 'bin', 'x64', 'darwin', 'steam-bridge-helper'),
-        join('build', 'bin', 'x64', 'darwin', 'steam_api.dll')
+        join('build', 'bin', 'arm64', 'darwin', 'steam-bridge-helper'),
+        join('build', 'bin', 'arm64', 'darwin', 'steam_api.dll')
       ]) {
         expect(existsSync(join(workdir, kept))).toBe(true)
       }
@@ -687,7 +653,7 @@ describe('release-tauri.yml Windows signing gate requires BOTH secrets (WR-03 / 
 // conditional on its secret and that the secrets-absent default is "skip, warn, ship
 // unsigned, job green". That holds for APPLE_CERTIFICATE and WINDOWS_CERTIFICATE but NOT
 // for TAURI_SIGNING_PRIVATE_KEY: with `createUpdaterArtifacts: true` and a committed
-// pubkey, `tauri build` errors out instead of skipping, killing all four legs. The
+// pubkey, `tauri build` errors out instead of skipping, killing all three legs. The
 // coupling below is the invariant -- it is expressed as a conditional so that flipping
 // createUpdaterArtifacts to false legitimately retires the guard.
 describe('release-tauri.yml updater signing key preflight (WR-03 regression guard)', () => {
@@ -915,10 +881,10 @@ describeOnPosix(
           WINDOWS_CERTIFICATE_PASSWORD: 'hunter2'
         },
         'macos-latest',
-        '--target x86_64-apple-darwin'
+        '--target aarch64-apple-darwin'
       )
       expect(result.status).toBe(0)
-      expect(result.args.trim()).toBe('--target x86_64-apple-darwin')
+      expect(result.args.trim()).toBe('--target aarch64-apple-darwin')
       expect(result.args).not.toContain('certificateThumbprint')
     })
 

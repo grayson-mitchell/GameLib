@@ -416,17 +416,18 @@ describe('bin-tree narrowing: base carries no wholesale bin/ key, overlays carry
   test.each([
     'arm64/darwin/legendary/legendary',
     'arm64/darwin/gogdl/gogdl',
-    'arm64/darwin/nile/nile',
-    'x64/darwin'
+    'arm64/darwin/nile/nile'
   ])('macOS ships %s', (relPath) => {
     expect(platformShipsBinPath('macos', relPath)).toBe(true)
   })
 
-  test('windows and linux do not ship arm64/darwin or x64/darwin via either map', () => {
+  // quick-260901-i8i: Intel Mac support dropped -- macOS no longer ships x64/darwin either.
+  test('windows, linux, and macOS do not ship arm64/darwin via non-macOS maps; none ship x64/darwin', () => {
     for (const platform of ['windows', 'linux'] as const) {
       expect(platformShipsBinPath(platform, 'arm64/darwin')).toBe(false)
       expect(platformShipsBinPath(platform, 'x64/darwin')).toBe(false)
     }
+    expect(platformShipsBinPath('macos', 'x64/darwin')).toBe(false)
   })
 
   // quick-260901-e7o: disjointness. `bundle.macOS.files` exists specifically because

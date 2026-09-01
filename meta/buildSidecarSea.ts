@@ -209,15 +209,20 @@ const LZMA_NATIVE_PREBUILDS_ROOT = join(
 /**
  * The shipping sidecar triples for which a MISSING lzma-native prebuild is
  * a hard build failure rather than a silent throughput degrade. Populated
- * from the intersection of the four shipping sidecar triples and 23.1-01's
+ * from the intersection of the three shipping sidecar triples and 23.1-01's
  * reconciled prebuild inventory (Task 1 of this plan) -- every one of the
- * four has a reconciled prebuild, so none are excluded. If a future
+ * three has a reconciled prebuild, so none are excluded. If a future
  * shipping triple's prebuild ever went missing from that inventory, it
  * would be named here as excluded rather than added to this list.
+ *
+ * quick-260901-i8i: the Intel Mac triple was removed from this array --
+ * GameLib no longer publishes that leg. This is a shipping-inventory
+ * declaration, not build-time triple-handling capability; the capability
+ * (sidecarOutputPath, nodeDistUrls, triplePlatform, expectedMachoArch, etc.)
+ * still supports that triple for ad-hoc/local builds elsewhere in this file.
  */
 export const NATIVE_LZMA_REQUIRED_TRIPLES: readonly string[] = [
   'aarch64-apple-darwin',
-  'x86_64-apple-darwin',
   'x86_64-unknown-linux-gnu',
   'x86_64-pc-windows-msvc'
 ]

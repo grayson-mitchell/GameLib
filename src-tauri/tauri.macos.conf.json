@@ -8,8 +8,7 @@
     },
     "macOS": {
       "files": {
-        "Resources/build/bin/arm64/darwin": "../build/bin/arm64/darwin",
-        "Resources/build/bin/x64/darwin": "../build/bin/x64/darwin"
+        "Resources/build/bin/arm64/darwin": "../build/bin/arm64/darwin"
       }
     }
   }

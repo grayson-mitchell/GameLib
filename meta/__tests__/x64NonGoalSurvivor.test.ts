@@ -135,5 +135,8 @@ describe('D-07/D-08: x64 non-goal survivor gate', () => {
       'GalaxyCommunication-dummy.exe'
     )
     expect(DOWNLOAD_HELPER_BINARIES_SOURCE).toContain('EpicGamesLauncher.exe')
+    expect(DOWNLOAD_HELPER_BINARIES_SOURCE).not.toContain(
+      'comet-x86_64-apple-darwin'
+    )
   })
 })

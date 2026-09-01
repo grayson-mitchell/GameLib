@@ -463,7 +463,6 @@ describe('regression: win32/linux sourcing unchanged for legendary/gogdl/nile', 
 
 describe('regression: comet/epic-integration untouched', () => {
   it.each([
-    'comet-x86_64-apple-darwin',
     'comet-aarch64-apple-darwin',
     'comet-x86_64-unknown-linux-gnu',
     'comet-aarch64-unknown-linux-gnu',
@@ -473,6 +472,12 @@ describe('regression: comet/epic-integration untouched', () => {
     'EpicGamesLauncher.exe'
   ])('still contains the literal %s', (literal) => {
     expect(DOWNLOAD_HELPER_BINARIES_SOURCE).toContain(literal)
+  })
+
+  it('no longer contains the darwin x64 comet key (quick-260901-i8i: Intel Mac support dropped)', () => {
+    expect(DOWNLOAD_HELPER_BINARIES_SOURCE).not.toContain(
+      'comet-x86_64-apple-darwin'
+    )
   })
 })
 

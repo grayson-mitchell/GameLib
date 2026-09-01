@@ -638,16 +638,15 @@ describe('lzmaNativePrebuildPath (pure, triple-driven, no process.platform/proce
 })
 
 describe('NATIVE_LZMA_REQUIRED_TRIPLES (reconciled against the 23.1-01 prebuild inventory)', () => {
-  test('contains all four shipping sidecar triples -- every one has a reconciled prebuild', () => {
+  test('contains all three shipping sidecar triples -- every one has a reconciled prebuild', () => {
     expect(NATIVE_LZMA_REQUIRED_TRIPLES).toEqual(
       expect.arrayContaining([
         'aarch64-apple-darwin',
-        'x86_64-apple-darwin',
         'x86_64-unknown-linux-gnu',
         'x86_64-pc-windows-msvc'
       ])
     )
-    expect(NATIVE_LZMA_REQUIRED_TRIPLES).toHaveLength(4)
+    expect(NATIVE_LZMA_REQUIRED_TRIPLES).toHaveLength(3)
   })
 })
 
