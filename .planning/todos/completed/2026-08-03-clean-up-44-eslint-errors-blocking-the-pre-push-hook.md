@@ -1,9 +1,9 @@
 ---
 created: 2026-08-03T05:51:50.702Z
-revised: 2026-08-21
+revised: 2026-09-01
 title: "Unblock the pre-push hook — eslint half DONE, prettier partly fixed, i18n still red"
 area: tooling
-status: OPEN
+status: RESOLVED
 severity: minor
 files:
   - .prettierignore
@@ -90,3 +90,43 @@ there, once, not in two places.
    after the fork PR merges — it churns `git blame` across 253 source files).
 2. Triage the i18n drift under [[pull-upstream-i18n-catalog-refreshes]].
 3. Then confirm `git push` passes the hook without `--no-verify`.
+
+
+## RESOLVED 2026-09-01 — quick task `260901-ud5`
+
+All four `.husky/pre-push` legs are green; `git push` no longer needs `--no-verify`.
+
+Re-measured at `f04dcbb66` before starting — **both numbers in this todo were stale**:
+lint had regressed to **12 errors** (this todo and the
+`prettier-gate-is-red-repo-wide` record both said 0/GREEN), and prettier was
+**46 files**, not the 280 recorded above.
+
+| leg | before | after |
+|---|---|---|
+| codecheck | PASS | PASS |
+| lint | 12 errors | **0 errors** (4195 warnings, not a gate) |
+| prettier | 46 files | **clean** |
+| i18n | 78 added keys | **0 added** |
+
+Commits: `c84546d7b` (eslint), `267375a7c` (prettier sweep), `c2f567064` (i18n),
+`9091fb092` (D-05 fixpoint correction).
+
+**The step-1 warning above about `git blame` churn was moot** — the sweep was 46 files,
+not 253, because `.prettierignore` fixes landed in the interim.
+
+**Step 2 (i18n triage) was completed under its own todo**, which is also now closed.
+
+**A finding this todo's section 3 got backwards:** it warned that letting the extractor
+drop dynamically-built keys would break rendering silently. Correct in principle, but the
+actual hazard turned out to be the opposite direction — `pnpm i18n --fail-on-update`
+*writes* when it passes (the "writes nothing" note was measured while it was failing and
+exiting early), which silently violated D-05 on every run until `9091fb092` normalised the
+key order to the parser's fixpoint.
+
+Both config landmines recorded above were deliberately left alone and remain open as
+standalone decisions: `src/preload/.prettierrc`'s `printWidth: 120` (no preload non-test
+file was in the 46, so the sweep did not widen its blast radius) and `.editorconfig`'s
+`[{*.ts, *.tsx, *.js}]` space-after-comma bug.
+
+The NUL byte in `crossover_index/__tests__/normalize.test.ts` is still there and still
+legitimate — nobody "fixed" it.

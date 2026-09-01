@@ -2,7 +2,7 @@
 created: 2026-09-01T00:00:00.000Z
 title: "`pnpm i18n` is RED with 78 uncommitted `en/` keys — 4 are test sentinels, and the fix collides with the D-05 churn guard"
 area: i18n
-status: pending
+status: resolved
 severity: medium
 resolves_phase: ""
 found_by: "Quick task 260901-n60 (triage that unblocked pull-upstream-i18n-catalog-refreshes)"
@@ -126,3 +126,46 @@ have caught bucket R the day each key landed. Same fix the de/fr todo asks for.
 That coupling was wrong: the drift is 100% under `en/` and the two upstream refreshes touch
 73 files across 45 locales with **zero** under `en/`. The file sets are disjoint. Do not
 re-block either on the other.
+
+
+## RESOLVED 2026-09-01 — quick task `260901-ud5`, commits `c2f567064` + `9091fb092`
+
+`pnpm i18n --fail-on-update` now exits 0 with `Added keys: 0` in all four namespaces, and
+`pnpm i18n-churn-guard` exits 0. All five "what done looks like" steps were done:
+
+1. **Bucket T — done.** `i18next-parser.config.js` `input` gained `!src/**/__tests__/**`
+   and `!src/**/*.test.{ts,tsx}`. Verified: both sentinels are gone, and
+   `bottle.setup.done` **survives correctly** in `gamepage.json` with its real production
+   default `'Done'` — exactly as this todo predicted, the exclusion fixed the key rather
+   than deleting it.
+2. **Bucket R — done.** 67 fork-authored strings moved into `en/gamelib.json` with
+   `gamelib:`-prefixed / `tGamelib` call sites across 21 files.
+3. **Bucket P — decided on the merits, and this todo's hypothesis was WRONG.** Tested
+   against the real installed `i18next@22.5.1`: the three base keys already render
+   correctly today, so there is **no live plural bug**. The `_one`/`_other` variants were
+   still added (mirroring the existing `activeCount_one`/`_other` precedent) so the parser
+   stops reporting them as pending. Note the generated `expiringBodyPlural_one` reads
+   "1 Humble keys …" — grammatically wrong but unreachable, since callers use
+   `expiringBodySingle` for the singular case. Worth tidying if that key ever moves.
+4. **Bucket E — done.** `box.repair.error` given a literal default in `repairFailure.ts`.
+5. **D-05 satisfied — but only after a correction this todo could not have foreseen.**
+
+### The measurement note in this todo is wrong, and it mattered
+
+> "**`pnpm i18n --fail-on-update` writes nothing.** Verified twice."
+
+**It writes.** That verification was made while the gate was *failing*, where it exits 1
+before reaching the write step. Once the gate passes it runs to completion and rewrites
+`en/gamepage.json`, so leg 4 left the tree dirty on every run and
+`pnpm i18n-churn-guard` exited 1 — a live D-05 violation sitting behind a green gate.
+
+The guard's own message blames "a `t()` call missing its `gamelib:` namespace prefix" and
+says to revert rather than hand-edit. Measurement refutes that diagnosis here: **290 keys
+before and after, 0 added, 0 removed, 0 values changed** — pure case-insensitive re-sort
+against a hand-ordered catalog. Fixed in `9091fb092` by committing the parser's own
+ordering, making it a true fixpoint (proved by two further no-op runs). No key or value was
+touched, only serialisation order.
+
+**Still open, deliberately:** the suggestion to teach `meta/lintTranslations.ts` a presence
+check against `en/`. It remains structurally blind to a key absent from English too, so it
+could not have caught bucket R and cannot confirm this fix. Tracked with the de/fr todo.
