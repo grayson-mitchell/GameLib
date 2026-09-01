@@ -4719,9 +4719,27 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // cover images, GameSubMenu) which then received a path that can never be a valid
         // binary/image. Default stays "folder" so the plan-30-03 install-location path is
         // unchanged when no properties are supplied.
+        //
+        // Quick task 260902-8wc (closes item 2 of the folded todo
+        // `2026-08-24-opendialog-is-missing-from-long-running-channels-...`): `properties` used
+        // to be the ONLY key read here, so `title`, `defaultPath` and `filters` crossed the wire
+        // and were dropped on the floor. That made this the one dialog arm in this file that
+        // discards its caller's options -- `dialog_save` below already honours defaultPath and
+        // filters, and `dialog_message` already honours title and buttons.
+        //
+        // It was also an aggravating factor for the timeout bug that todo was filed for: with no
+        // start directory the picker opens wherever macOS last left it, so the user must navigate
+        // manually, which is exactly what pushed the interaction past the (since-removed) 60s
+        // bound on the outer `openDialog` channel.
+        //
+        // `buttonLabel` is received and still cannot be honoured: tauri-plugin-dialog 2.7.2's
+        // `FileDialogBuilder` exposes add_filter / set_directory / set_file_name / set_title /
+        // set_can_create_directories and NO confirm-button-label setter. Recorded here so the
+        // next reader does not re-derive it -- the callers that send it (PathSelectionBox,
+        // SideloadDialog, Tools, GameSubMenu) get the OS default label.
         "dialog_open" => {
-            let wants_file = args
-                .first()
+            let options = args.first();
+            let wants_file = options
                 .and_then(|v| v.get("properties"))
                 .and_then(|v| v.as_array())
                 .map(|props| {
@@ -4730,10 +4748,57 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     has_file && !has_dir
                 })
                 .unwrap_or(false);
+            let mut builder = app.dialog().file();
+            if let Some(title) = options
+                .and_then(|v| v.get("title"))
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+            {
+                builder = builder.set_title(title);
+            }
+            // Electron's `defaultPath` may name either a directory or a file; AppKit/rfd only
+            // accepts a DIRECTORY as the start location. Resolve to the nearest existing
+            // directory and pass nothing when there isn't one -- handing the panel a path that
+            // does not exist is worse than handing it none, because rfd then falls back
+            // inconsistently across platforms rather than to the OS's last-used location.
+            if let Some(default_path) = options
+                .and_then(|v| v.get("defaultPath"))
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+            {
+                let candidate = std::path::Path::new(default_path);
+                let start_dir = if candidate.is_dir() {
+                    Some(candidate)
+                } else {
+                    candidate.parent().filter(|parent| parent.is_dir())
+                };
+                if let Some(start_dir) = start_dir {
+                    builder = builder.set_directory(start_dir);
+                }
+            }
+            // File pickers only. A folder picker ignores extension filters, so forwarding them
+            // there would be noise. The parse mirrors `dialog_save`'s below verbatim -- same
+            // wire shape, same `name`/`extensions` keys.
+            if wants_file {
+                if let Some(filters) = options
+                    .and_then(|v| v.get("filters"))
+                    .and_then(|v| v.as_array())
+                {
+                    for filter in filters {
+                        let name = filter.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                        let extensions: Vec<&str> = filter
+                            .get("extensions")
+                            .and_then(|v| v.as_array())
+                            .map(|arr| arr.iter().filter_map(|e| e.as_str()).collect())
+                            .unwrap_or_default();
+                        builder = builder.add_filter(name, &extensions);
+                    }
+                }
+            }
             let picked = if wants_file {
-                app.dialog().file().blocking_pick_file()
+                builder.blocking_pick_file()
             } else {
-                app.dialog().file().blocking_pick_folder()
+                builder.blocking_pick_folder()
             };
             match picked {
                 Some(path) => Ok(Value::String(path.to_string())),
