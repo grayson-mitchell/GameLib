@@ -194,6 +194,120 @@ No further tasks were attempted. See `260901-kl2-SUMMARY.md`.
 
 ---
 
+## r5 attempt — 2026-09-01, third session (resumed after the ordering-guard fix)
+
+Coordinator confirmed the fourth-defect finding above was correct and fixed the
+plan to r5 by **deleting** Task 1's ordering-guard verify script and its B4 twin
+(rather than patching the regex), and by rewriting Task 2's M1/M2/M3 into a
+seeded-mutation design that carries the ordering property behaviourally. See
+`260901-kl2-PLAN.md`'s `<revision_log>` r5 entry for the full rationale. Step 0
+and Step 1 from the r4 attempt above are unchanged and were NOT redone — this
+session resumed at Task 1 Step 2.
+
+### Step 2 — RED tests written and confirmed failing for the right reason
+
+Added `describe('shim build byproducts (todo item 6, quick-260901-kl2)', ...)`
+to `meta/__tests__/buildSteamBridgeShims.test.ts` covering B1, B2, B3, B5, B6,
+B7, B8 (B4 removed per r5 — the ordering property moved to Task 2's seeded
+M1/M2). Imported `pruneShimBuildByproducts`, `SHIM_BUILD_BYPRODUCTS`,
+`shimByproductPaths` from `../buildSteamBridgeShims` — none existed yet.
+
+`pnpm exec jest --config meta/jest.config.js buildSteamBridgeShims` before
+implementation:
+
+```
+Tests:       6 failed, 20 passed, 26 total
+```
+
+The 6 new-behaviour tests failed for the correct reason — missing exports, not
+a typo:
+- B1, B2: `TypeError: (0 , buildSteamBridgeShims_1.shimByproductPaths) is not a function`
+- B3: `SHIM_BUILD_BYPRODUCTS` undefined, `.not.toContain` against `undefined`
+- B6: `stripped` did not yet match the fail-loud post-condition regex (prune
+  function did not exist in source)
+- B7, B8: `TypeError: (0 , buildSteamBridgeShims_1.pruneShimBuildByproducts) is not a function`
+
+B5 (both `COMPILE GATE FAILED` throws survive, no try/catch inside
+`compileShim`) already PASSED before implementation — expected, since neither
+throw nor a try/catch was touched by this change; B5 is a structural invariant
+that holds before and after, not a new-behaviour RED.
+
+### Step 3 — implemented in `meta/buildSteamBridgeShims.ts`
+
+- Added `rmSync` to the existing `node:fs` import.
+- Added `SHIM_BUILD_BYPRODUCTS = ['steam_api.pdb', 'steam_api_shim.lib'] as const`,
+  placed immediately after `shimOutputPath()`, with a docblock naming the
+  rejected flag candidates (`-Wl,-s`: 805,888 -> 511,488 B, 455,308 bytes
+  changed; `-Wl,--out-implib`: does not suppress `.pdb`, still perturbs the
+  DLL's CodeView build-id) so a future reader does not re-attempt them.
+- Added `shimByproductPaths(arch = resolveBridgeArch()): string[]`, mapping
+  each name through `join(bundledBinDir(arch), name)`.
+- Added exported `pruneShimBuildByproducts(arch = resolveBridgeArch()): void`
+  — iterates `shimByproductPaths(arch)`, `rmSync(path, { force: true })`
+  (tolerant of absence, B8), then asserts the post-condition with
+  `existsSync(path)` and throws naming the surviving path if removal did not
+  take (B6).
+- Called `pruneShimBuildByproducts()` in `compileShim()` on the line
+  immediately after `console.log(\`Compile gate PASSED -> ...\`)` — i.e.
+  strictly after both `COMPILE GATE FAILED` throws. Neither throw was moved,
+  reworded or wrapped.
+- Updated the module docblock's compile-gate paragraph with one sentence
+  naming the new unlink step.
+
+### Step 4 — GREEN
+
+```
+pnpm exec jest --config meta/jest.config.js buildSteamBridgeShims
+Test Suites: 1 passed, 1 total
+Tests:       26 passed, 26 total
+```
+
+`ls public/bin/arm64/darwin/` after the test run (tests operate on a
+`mkdtemp` fixture with `process.chdir`, never the real tree — confirmed the
+real tree was untouched):
+
+```
+comet
+gogdl
+legendary
+nile
+steam-bridge-helper
+steam_api.dll
+steam_appid.txt
+```
+
+`steam_api.dll` sha256 after the test run:
+`2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960` — unchanged
+from Step 1 and from the pre-existing baseline.
+
+### Step 5 — `.gitignore` annotated
+
+Extended the comment above `public/bin/.gitignore:17-21` with a dated note
+(2026-09-01, quick-260901-kl2, todo item 6) that `buildSteamBridgeShims.ts` now
+unlinks both files immediately after the compile gate passes via
+`pruneShimBuildByproducts()`, and that the ignore rules stay only as
+belt-and-braces against a future toolchain re-emitting them mid-build. The
+`**/steam_api.pdb` / `**/steam_api_shim.lib` rules themselves were NOT
+removed, per the plan.
+
+### Task 1 verify (automated block)
+
+```
+ACT=2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960
+EXP=2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960 (match)
+pdb absent: confirmed
+lib absent: confirmed
+steam-bridge-helper present: confirmed
+steam_appid.txt present: confirmed
+dev census: 277 files / 12 symlinks / 97,884,865 B (matches 277/12/97884865)
+jest buildSteamBridgeShims: 26/26 passed
+TASK1-PASS
+```
+
+Task 1 committed. See `260901-kl2-SUMMARY.md` for the commit hash.
+
+---
+
 ## r1/r2 attempt (historical, superseded by r3/r4) — BLOCKED at Task 1 Step 1
 
 Status: the plan's own primary safety gate at the time (Task 1, Step 1 — "MEASURE

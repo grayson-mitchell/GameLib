@@ -1,4 +1,11 @@
-import { readFileSync } from 'fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from 'fs'
+import { tmpdir } from 'os'
 import { join } from 'path'
 
 import {
@@ -6,7 +13,10 @@ import {
   buildShimCompileArgv,
   helperOutputPath,
   machoArchFlag,
+  pruneShimBuildByproducts,
   resolveBridgeArch,
+  SHIM_BUILD_BYPRODUCTS,
+  shimByproductPaths,
   shimOutputPath,
   steamAppIdOutputPath
 } from '../buildSteamBridgeShims'
@@ -202,6 +212,145 @@ describe('buildSteamBridgeShims', () => {
   describe('downloadZig.ts is a build-tooling download, never bundled (structural)', () => {
     it('imports downloadZig from ./downloadZig rather than assuming zig is on PATH', () => {
       expect(sourceText).toMatch(/from '\.\/downloadZig'/)
+    })
+  })
+
+  // todo item 6 (quick-260901-kl2): stop shipping zig cc -shared's own
+  // steam_api.pdb / steam_api_shim.lib linker byproducts. B4's source-text
+  // ordering regex was REMOVED in r5 -- it false-RED'd twice on correct code
+  // (r2: matched the definition instead of the call; r4: assumed empty
+  // parens against the plan's own mandated parameterised signature). The
+  // ordering property is now carried BEHAVIOURALLY by seeded M1/M2 in Task 2
+  // (scratchpad mutation harness), not by a regex here.
+  describe('shim build byproducts (todo item 6, quick-260901-kl2)', () => {
+    it('B1: shimByproductPaths(arm64) returns exactly the .pdb and .lib paths', () => {
+      const paths = shimByproductPaths('arm64')
+      expect(paths).toHaveLength(2)
+      expect(paths).toEqual(
+        expect.arrayContaining([
+          join('public', 'bin', 'arm64', 'darwin', 'steam_api.pdb'),
+          join('public', 'bin', 'arm64', 'darwin', 'steam_api_shim.lib')
+        ])
+      )
+    })
+
+    it('B2: arch-parameterized, including the GAMELIB_BRIDGE_TARGET_ARCH default-argument path', () => {
+      expect(shimByproductPaths('x64')).toEqual(
+        expect.arrayContaining([
+          join('public', 'bin', 'x64', 'darwin', 'steam_api.pdb'),
+          join('public', 'bin', 'x64', 'darwin', 'steam_api_shim.lib')
+        ])
+      )
+
+      const previous = process.env.GAMELIB_BRIDGE_TARGET_ARCH
+      process.env.GAMELIB_BRIDGE_TARGET_ARCH = 'x64'
+      try {
+        expect(shimByproductPaths()).toEqual(
+          expect.arrayContaining([
+            join('public', 'bin', 'x64', 'darwin', 'steam_api.pdb'),
+            join('public', 'bin', 'x64', 'darwin', 'steam_api_shim.lib')
+          ])
+        )
+      } finally {
+        if (previous === undefined) {
+          delete process.env.GAMELIB_BRIDGE_TARGET_ARCH
+        } else {
+          process.env.GAMELIB_BRIDGE_TARGET_ARCH = previous
+        }
+      }
+    })
+
+    it('B3: OVER-REACH GUARD -- neither the byproduct list nor its paths ever name a keeper file', () => {
+      expect(SHIM_BUILD_BYPRODUCTS).not.toContain('steam_api.dll')
+      expect(SHIM_BUILD_BYPRODUCTS).not.toContain('steam-bridge-helper')
+      expect(SHIM_BUILD_BYPRODUCTS).not.toContain('steam_appid.txt')
+
+      const paths = shimByproductPaths('arm64')
+      expect(paths).not.toContain(shimOutputPath('arm64'))
+      expect(paths).not.toContain(helperOutputPath('arm64'))
+      expect(paths).not.toContain(steamAppIdOutputPath('arm64'))
+    })
+
+    it('B5: both COMPILE GATE FAILED throws survive, and the prune is not wrapped in try/catch inside compileShim', () => {
+      const stripped = sourceText
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(stripped.match(/COMPILE GATE FAILED/g) ?? []).toHaveLength(2)
+
+      const fnStart = stripped.indexOf('async function compileShim')
+      expect(fnStart).toBeGreaterThan(-1)
+      // Slice just the compileShim body (from its declaration to the next
+      // top-level export) and assert no try/catch lives inside it.
+      const nextFnIndex = stripped.indexOf(
+        '\nexport async function main',
+        fnStart
+      )
+      expect(nextFnIndex).toBeGreaterThan(fnStart)
+      const compileShimBody = stripped.slice(fnStart, nextFnIndex)
+      expect(compileShimBody).not.toMatch(/try\s*{/)
+      expect(compileShimBody).not.toMatch(/catch\s*[({]/)
+    })
+
+    it('B6: the prune has a fail-loud post-condition naming a surviving byproduct', () => {
+      const stripped = sourceText
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+      expect(stripped).toMatch(/throw new Error\(\s*`[^`]*\$\{path\}[^`]*`/)
+    })
+
+    it('B7: P2 -- the prune cannot alter the DLL (temp-dir fixture, Buffer equality, no compiler involved)', () => {
+      const tmp = mkdtempSync(join(tmpdir(), 'gamelib-shim-prune-'))
+      const previousCwd = process.cwd()
+      try {
+        const darwinDir = join(tmp, 'public', 'bin', 'arm64', 'darwin')
+        mkdirSync(darwinDir, { recursive: true })
+        const dllBytes = Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        writeFileSync(join(darwinDir, 'steam_api.dll'), dllBytes)
+        writeFileSync(join(darwinDir, 'steam_api.pdb'), 'pdb-sentinel')
+        writeFileSync(join(darwinDir, 'steam_api_shim.lib'), 'lib-sentinel')
+        writeFileSync(join(darwinDir, 'steam-bridge-helper'), 'helper-sentinel')
+        writeFileSync(join(darwinDir, 'steam_appid.txt'), '480')
+
+        process.chdir(tmp)
+        pruneShimBuildByproducts('arm64')
+
+        expect(() =>
+          readFileSync(join(darwinDir, 'steam_api.pdb'))
+        ).toThrow()
+        expect(() =>
+          readFileSync(join(darwinDir, 'steam_api_shim.lib'))
+        ).toThrow()
+        const dllAfter = readFileSync(join(darwinDir, 'steam_api.dll'))
+        expect(Buffer.compare(dllAfter, dllBytes)).toBe(0)
+        expect(
+          readFileSync(join(darwinDir, 'steam-bridge-helper'), 'utf-8')
+        ).toBe('helper-sentinel')
+        expect(
+          readFileSync(join(darwinDir, 'steam_appid.txt'), 'utf-8')
+        ).toBe('480')
+      } finally {
+        process.chdir(previousCwd)
+        rmSync(tmp, { recursive: true, force: true })
+      }
+    })
+
+    it('B8: calling pruneShimBuildByproducts twice in a row is a no-op the second time and does not throw', () => {
+      const tmp = mkdtempSync(join(tmpdir(), 'gamelib-shim-prune-idem-'))
+      const previousCwd = process.cwd()
+      try {
+        const darwinDir = join(tmp, 'public', 'bin', 'arm64', 'darwin')
+        mkdirSync(darwinDir, { recursive: true })
+        writeFileSync(join(darwinDir, 'steam_api.dll'), 'dll-sentinel')
+        writeFileSync(join(darwinDir, 'steam_api.pdb'), 'pdb-sentinel')
+        writeFileSync(join(darwinDir, 'steam_api_shim.lib'), 'lib-sentinel')
+
+        process.chdir(tmp)
+        pruneShimBuildByproducts('arm64')
+        expect(() => pruneShimBuildByproducts('arm64')).not.toThrow()
+      } finally {
+        process.chdir(previousCwd)
+        rmSync(tmp, { recursive: true, force: true })
+      }
     })
   })
 })

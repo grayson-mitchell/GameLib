@@ -14,6 +14,11 @@
 # packaging time -- never committed (mirrors the other binaries above).
 # steam_api.pdb / steam_api_shim.lib are zig cc -shared's own debug-symbol
 # and import-library byproducts of the steam_api.dll compile gate.
+# Updated 2026-09-01 (quick-260901-kl2, todo item 6): buildSteamBridgeShims.ts
+# now unlinks steam_api.pdb and steam_api_shim.lib immediately after the
+# compile gate passes (pruneShimBuildByproducts()), so neither should ever be
+# present on disk. The rules below stay as belt-and-braces only, so a future
+# toolchain change that re-emits them mid-build cannot be silently committed.
 **/steam-bridge-helper
 **/steam_api.dll
 **/steam_api.pdb

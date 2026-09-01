@@ -40,7 +40,10 @@
  * non-zero `zig cc` exit OR a missing `.dll` output FAILS the build. This is
  * the earliest, cheapest proof that gen_vtables.ts's hand-authored
  * `__thiscall`/`ret N`/sret ABI actually assembles under a real PE32
- * toolchain -- far before Plan 24-10's human hardware gate.
+ * toolchain -- far before Plan 24-10's human hardware gate. The gate itself
+ * is unchanged; the two linker byproducts it also emits (`steam_api.pdb`,
+ * `steam_api_shim.lib`, todo item 6 / quick-260901-kl2) are unlinked
+ * immediately after it passes -- see `pruneShimBuildByproducts()` below.
  *
  * Also stages `steam_appid.txt`=480 next to the built helper (finding #4) --
  * the helper's runtime cwd (set by Plan 24-06 to that directory) resolves
@@ -54,7 +57,7 @@
  */
 
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync } from 'node:fs'
 import { chmod, copyFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -155,6 +158,48 @@ export function helperOutputPath(arch: string = resolveBridgeArch()): string {
  */
 export function shimOutputPath(arch: string = resolveBridgeArch()): string {
   return join(bundledBinDir(arch), 'steam_api.dll')
+}
+
+/**
+ * `zig cc -shared`'s OWN debug-symbol (`.pdb`) and import-library (`.lib`)
+ * linker byproducts -- not build output this repo or its runtime ever reads.
+ * They added 2,822,208 B to every shipped macOS `.app` (todo item 6,
+ * quick-260901-kl2). Removal is a POST-BUILD unlink, not a compile flag:
+ * every flag candidate was measured and rejected during planning --
+ * `-Wl,-s` suppresses the `.pdb` but rewrites 455,308 of the DLL's 805,888
+ * bytes (805,888 -> 511,488 B), and `-Wl,--out-implib=<sink>` redirects only
+ * the `.lib` (the `.pdb` still lands) while still perturbing the DLL's
+ * CodeView build-id. Do not re-attempt either.
+ */
+export const SHIM_BUILD_BYPRODUCTS = ['steam_api.pdb', 'steam_api_shim.lib'] as const
+
+/** The two `SHIM_BUILD_BYPRODUCTS` names, joined under this arch's bundled darwin dir. */
+export function shimByproductPaths(
+  arch: string = resolveBridgeArch()
+): string[] {
+  return SHIM_BUILD_BYPRODUCTS.map((name) => join(bundledBinDir(arch), name))
+}
+
+/**
+ * Unlinks the two zig-cc linker byproducts. Exported (not module-private) so
+ * unit tests can call it directly against a fixture, without instrumenting a
+ * real compile -- that is what makes the P2 same-build proof (prune cannot
+ * alter the DLL) possible. `force: true` tolerates absence, so re-running
+ * after a partial failure is safe (a no-op the second time). Fails loud if a
+ * byproduct survives its own removal -- a real fs error (e.g. EACCES) must
+ * still surface, not be swallowed.
+ */
+export function pruneShimBuildByproducts(
+  arch: string = resolveBridgeArch()
+): void {
+  for (const path of shimByproductPaths(arch)) {
+    rmSync(path, { force: true })
+    if (existsSync(path)) {
+      throw new Error(
+        `Failed to remove shim build byproduct -- still present at ${path}`
+      )
+    }
+  }
 }
 
 /** Staged next to the built helper (finding #4 -- helper cwd resolution). */
@@ -300,6 +345,7 @@ async function compileShim(): Promise<void> {
     )
   }
   console.log(`Compile gate PASSED -> ${shimOutputPath()}`)
+  pruneShimBuildByproducts()
 }
 
 export async function main(): Promise<void> {
