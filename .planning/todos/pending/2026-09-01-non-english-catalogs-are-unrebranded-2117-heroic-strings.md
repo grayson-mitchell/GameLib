@@ -84,3 +84,6 @@ record it, because the next refresh will then need a real merge instead of a cop
 - [[pull-upstream-i18n-catalog-refreshes]] — the pull that measured this (completed).
 - [[2026-09-01-pnpm-i18n-reports-78-uncommitted-en-keys-4-of-them-test-sentinels]] — the
   `en/`-side i18n debt, independent of this.
+- [[2026-09-02-46-locales-have-zero-gamelib-json-fork-string-coverage]] — a different
+  defect: FORK strings absent entirely from `gamelib.json`, not upstream strings carrying
+  the wrong product name.

@@ -1,6 +1,6 @@
 ---
 created: 2026-08-28T00:10:00.000Z
-title: "gamelib.json fork strings are unfilled in 48 of 49 locales — 80 keys missing from de/fr, 46 locales have no gamelib.json at all, machine-fill 401s, and the lint gate is structurally blind to all of it"
+title: "de/fr gamelib.json are missing 80 translatable keys each, machine-fill 401s, and the lint gate is structurally blind to an absent key"
 area: i18n
 severity: low
 status: pending
@@ -14,7 +14,7 @@ files:
   - public/locales/
   - meta/i18nGlossary.json
 amended: 2026-09-02
-amended_by: "quick task 260902-9wt"
+amended_by: "quick tasks 260902-9wt, then 260902-ad5"
 ---
 
 `public/locales/en/gamelib.json` has **210** keys, of which **204 are translatable** (the
@@ -65,17 +65,14 @@ here; `machineFillGamelib.ts:824` reads `process.env.ANTHROPIC_API_KEY` and pass
 straight through). The failed run wrote **nothing** — both catalogs verified byte-unchanged
 afterwards, so the D-09 contract held.
 
-## Widened 2026-09-02 — 46 locales have ZERO fork-string coverage
+## Split out 2026-09-02
 
-`public/locales/` holds 49 locale directories; only `en`, `de` and `fr` carry a
-`gamelib.json` at all. 46 locales have never had a single fork string filled — 204
-translatable keys x 46 locales. Decision 2 of the now-closed
-`.planning/todos/completed/2026-08-06-phase-34-8-i18n-context-fork-namespace-llm-machine-fill-defe.md`
-said "an LLM covers all Heroic locales," sized at "a few hundred keys x 50 locales"; that
-clause was never executed beyond `de` and `fr`. Until this amendment the 46-locale gap was
-owned by NOBODY — the 2026-08-06 todo closed on its five decisions each having a built
-artifact, and this todo, until now, only knew about two locales. This todo now owns the
-full 46-locale residue.
+The 46-locale zero-fork-string-coverage gap has MOVED to
+`.planning/todos/pending/2026-09-02-46-locales-have-zero-gamelib-json-fork-string-coverage.md`.
+This todo now owns `de`/`fr` ONLY. The move deliberately reverses the widening quick
+`260902-9wt` performed one hour earlier, at the operator's request, via quick task
+`260902-ad5`. **`260902-9wt` was not wrong** — it re-homed a residue that until then had no
+owner at all, and the operator subsequently asked for the larger gap as its own record.
 
 ## The only blocker is a valid raw Anthropic API key — an OPERATOR action
 
@@ -85,9 +82,8 @@ Every engineering prerequisite is built and tested: `meta/machineFillGamelib.ts`
 by `meta/__tests__/i18nGlossary.test.ts`, and the MT-origin sidecar manifest written to
 `public/locales/<locale>/gamelib.mt.json`. Nothing here needs engineering. It needs a key.
 
-**How to apply:** export a real Anthropic API key and re-run `pnpm machine-fill-gamelib`
-with `GAMELIB_MT_LOCALES` naming the full locale set (or omitted, if the script defaults to
-all locales) — this is no longer a de/fr-only run. Then verify the fill actually
+**How to apply:** export a real Anthropic API key and re-run
+`GAMELIB_MT_LOCALES=de,fr pnpm machine-fill-gamelib`. Then verify the fill actually
 happened — count the keys, do not trust exit 0; a batch translation job on this project has
 previously returned zero results and still exited cleanly. Verify by counting keys per
 locale afterwards. Do **not** hand-translate these in isolation: `emptyAlphabetLetter` is
@@ -108,3 +104,9 @@ preserved here as history rather than erased. The old title ("de/fr gamelib.json
 5 translatable keys …") is superseded by the title above; the filename is deliberately left
 unchanged, since the closed 2026-08-06 todo's closure record already cross-links to it by
 filename.
+
+**Later addition, 2026-09-02, quick task 260902-ad5.** Quick `260902-9wt`'s widened title
+("gamelib.json fork strings are unfilled in 48 of 49 locales — 80 keys missing from de/fr,
+46 locales have no gamelib.json at all, machine-fill 401s, and the lint gate is structurally
+blind to all of it") is itself now superseded — see `## Split out 2026-09-02` above. This
+todo reverts to owning `de`/`fr` only; the 46-locale gap has its own record.

@@ -9,6 +9,8 @@ files:
 status: CLOSED
 closed: 2026-09-02
 closed_by: "quick task 260902-9wt"
+amended: 2026-09-02
+amended_by: "quick task 260902-ad5"
 ---
 
 ## Problem
@@ -90,3 +92,14 @@ item it actually is, and which STAYS PENDING.
 - The one thing still blocking the residue is a valid raw Anthropic API key — an OPERATOR
   action, not an engineering one. The script, its tests, the glossary and the sidecar-manifest
   mechanism are all built and tested already.
+
+## Later addition — 2026-09-02, quick task 260902-ad5
+
+This is a later addition to a closed record, NOT a correction of it — the CLOSURE RECORD
+above was accurate on the day it was written and is unchanged. The residue it handed on has
+since been SPLIT: the 46-locale half moved to
+`.planning/todos/pending/2026-09-02-46-locales-have-zero-gamelib-json-fork-string-coverage.md`,
+and the `2026-08-28` todo now owns the de/fr half only. The split was made at the operator's
+request; `260902-9wt` was not wrong — it re-homed a residue that until then had no owner at
+all. None of the five decisions above is reopened or re-adjudicated; this record stays
+CLOSED.
