@@ -111,6 +111,6 @@ None — plan executed exactly as written. No auto-fixes, no architectural decis
 - `.planning/todos/completed/2026-08-24-epic-logout-reports-clearing-cookies-it-does-not-clear.md` — FOUND
 - `.planning/todos/pending/2026-08-23-epic-logout-cookie-clear-unobserved-and-unowned.md` — CONFIRMED ABSENT
 - `.planning/todos/pending/2026-08-24-epic-logout-reports-clearing-cookies-it-does-not-clear.md` — CONFIRMED ABSENT
-- Commit `40c8e2fac` — FOUND in `git log --oneline`
+- Commit `a2bf55687` — FOUND in `git log --oneline`
 - `.planning/ROADMAP.md` and `.planning/STATE.md` absent from `git show --stat --no-renames HEAD` — CONFIRMED
 - `.planning/ROADMAP.md` and `.planning/STATE.md` still dirty in `git status --porcelain` — CONFIRMED
