@@ -42,7 +42,6 @@ import {
 } from './constants'
 import { currentSyncGeneration } from './syncFence'
 import { HumbleUser } from './user'
-import { getLoginWindowSeam } from './loginWindowSeam'
 import { steamLibraryStore } from 'backend/storeManagers/steam/electronStores'
 import { SteamUser } from 'backend/storeManagers/steam/user'
 import { GameInfo } from 'common/types'
@@ -1165,8 +1164,8 @@ async function doRevealKey(
   // Debug session humble-reveal-key-fails: this gate only asks "did we ever
   // successfully log in / do we have a stored session at all" — the actual
   // cookie VALUE is no longer threaded into the adapter call (round 6: the
-  // reveal POST's electron-net transport sources the live `persist:humble`
-  // partition's cookie jar natively; see adapterRevealKey/humblePostRequest).
+  // reveal POST's login-window seam transport carries its own live cookie
+  // jar with each call; see adapterRevealKey/humblePostRequest).
   if (!(await HumbleUser.getCredentials())) {
     logWarning(
       ['Humble reveal: failed (no stored credentials):', gamekey, machineName],
@@ -1192,25 +1191,20 @@ async function doRevealKey(
   // Debug session humble-reveal-key-fails: presence-only (never the token
   // value) — the open question of whether a given reveal attempt actually
   // carried the csrf-prevention-token header can otherwise only be answered
-  // by re-deriving it from unrelated config.json timestamps. Round 6:
-  // "electron-net transport" was originally stamped into this line so the
+  // by re-deriving it from unrelated config.json timestamps. Round 6: the
+  // original Electron-transport label was stamped into this line so the
   // NEXT gamelib.log capture would be unambiguous about which round's fix
   // actually ran (round 5's fullCookieJarPresent field is retired along with
   // getFullCookieHeader — superseded by the transport's native cookie
   // attachment, see user.ts).
   //
-  // Phase 34.4.1 gap-cycle plan 17 (F-8): that literal was correct when
-  // written and became FALSE the moment Plan 04's seam transport landed —
-  // under Tauri the POST goes through `humblePostRequestViaSeam`
-  // (`adapter.ts`), not `net.request`, so the hardcoded string misreported
-  // its own capture. The label below is now DERIVED from
-  // `getLoginWindowSeam()` at the moment of logging — the exact same
-  // condition `humblePostRequest` (`adapter.ts`) branches its dispatch on —
-  // so the log line can never again contradict which transport actually ran.
-  const revealTransportLabel =
-    getLoginWindowSeam() !== null
-      ? 'login-window seam transport'
-      : 'electron-net transport'
+  // Phase 34.4.1 gap-cycle plan 17 (F-8) made that literal conditional,
+  // DERIVED from `getLoginWindowSeam()` at the moment of logging, because
+  // `humblePostRequest` (`adapter.ts`) itself branched on the same
+  // condition. Phase 39 Plan 03 collapsed that branch: `humblePostRequest`
+  // now always uses the login-window seam, so this label is unconditional
+  // too — there is no other transport left for it to name.
+  const revealTransportLabel = 'login-window seam transport'
   logInfo(
     [
       `Humble reveal: calling adapter (${revealTransportLabel}), csrfTokenPresent=` +
