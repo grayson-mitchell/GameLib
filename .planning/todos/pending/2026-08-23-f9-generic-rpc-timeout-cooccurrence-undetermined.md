@@ -1,5 +1,6 @@
 ---
 created: 2026-08-23
+title: "F-9 — a generic RPC timeout fired live; co-occurrence with a cookie op is UNDETERMINED"
 source: 34.4.1 gap cycle 3, plan 34 (from D-29-06 / F-9, open since gate run 2)
 status: pending
 severity: low

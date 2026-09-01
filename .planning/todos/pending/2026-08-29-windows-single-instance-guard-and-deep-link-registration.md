@@ -1,5 +1,6 @@
 ---
 created: 2026-08-29
+title: "Windows has no single-instance guard, so `gamelib://` is deliberately NOT registered there"
 found_during: phase 35 plan 07 decision gate (deep-link registration)
 severity: medium
 area: src-tauri/shell

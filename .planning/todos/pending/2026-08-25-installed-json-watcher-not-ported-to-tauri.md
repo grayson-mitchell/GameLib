@@ -1,5 +1,6 @@
 ---
 created: 2026-08-25
+title: "`main.ts`'s `installed.json` file-watcher never fires under Tauri"
 source: 34.6-LIVE-GATE.md Step 7 (plan 34.6-12, 2026-08-24) -- "a todo is owed for this but not filed by this task, per instruction"; treated as owed to the phase's closing-artefacts plan (34.6-14), no other plan named it
 status: pending
 severity: medium

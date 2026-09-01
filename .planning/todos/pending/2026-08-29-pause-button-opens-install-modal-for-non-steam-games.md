@@ -1,5 +1,6 @@
 ---
 created: 2026-08-29
+title: "The Pause/Cancel button opens the install modal instead of pausing (non-Steam games)"
 found_during: phase 35 plan 11, Task 3 live gate (boot auto-resume verification)
 severity: high
 area: frontend/game-page

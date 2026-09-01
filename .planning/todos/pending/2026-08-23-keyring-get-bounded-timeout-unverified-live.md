@@ -1,5 +1,6 @@
 ---
 created: 2026-08-23
+title: "`keyring_get`'s bounded, classified timeout is UNVERIFIED live"
 source: 34.4.1 gap cycle 3 (REQ-34.4.1-GAP-11); un-checked 2026-08-23 by plan 30
 status: pending
 severity: medium

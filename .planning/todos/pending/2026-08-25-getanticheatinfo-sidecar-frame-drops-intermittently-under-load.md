@@ -1,5 +1,6 @@
 ---
 created: 2026-08-25
+title: "`getAnticheatInfo`'s sidecar response frame goes missing intermittently under full-project load"
 source: /gsd-execute-phase 34.6 regression gate (wave 8, after plan 34.6-14)
 severity: unknown
 status: pending

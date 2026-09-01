@@ -1,5 +1,6 @@
 ---
 created: 2026-08-25
+title: "`GameSubMenu`'s three EOS overlay call sites bypass `callOrDeclare` entirely"
 source: 34.6-LIVE-GATE.md Step 2, FINDING 2 (plan 34.6-12, 2026-08-24) -- disposition explicitly assigned to plan 34.6-14
 status: pending
 severity: medium

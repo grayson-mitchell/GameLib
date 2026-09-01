@@ -1,5 +1,6 @@
 ---
 created: 2026-08-23
+title: "Humble's post-login `/api/v1/user/info` returns a 232-byte HTML 404"
 source: 34.4.1 gap cycle 3, plan 32 (from D-29-02, observed gate run 4)
 status: pending
 severity: low
