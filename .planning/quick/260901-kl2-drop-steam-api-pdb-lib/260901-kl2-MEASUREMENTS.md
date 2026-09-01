@@ -1,11 +1,209 @@
-# 260901-kl2 Measurements — BLOCKED at Task 1 Step 1
+# 260901-kl2 Measurements
 
-Status: the plan's own primary safety gate (Task 1, Step 1 — "MEASURE the premise
-before writing any code") was executed exactly as written and **failed**. Per the
-plan's explicit instruction, execution stopped there: no code was changed, no test
-was added, no commit was made. This file records what was measured.
+Status: **BLOCKED again, on r4, at Task 1 Step 3 — before any code or test file was
+written.** This is the SECOND halt on this quick task. The first halt (r1/r2, below)
+was refuted and superseded by plan revisions r3/r4 (byte-identity rebuild comparison
+replaced with P1–P4; see `260901-kl2-PLAN.md` `<revision_log>`). This second halt is
+a DIFFERENT defect, found while preparing Task 1 Step 3's implementation, before
+Step 0/Step 1 needed any redo. Per the executor brief's explicit instruction ("If you
+find a fourth vacuous gate, STOP and report rather than working around it"), execution
+stopped here. No code was modified, no test was added, no commit was made.
 
-## What the plan required
+## r4 attempt — 2026-09-01, second session
+
+### Step 0 — pre-change script pinned (done, per plan)
+
+```
+$ mkdir -p <scratchpad>/prechange
+$ cp meta/buildSteamBridgeShims.ts <scratchpad>/prechange/buildSteamBridgeShims.ts
+$ git rev-parse HEAD
+19f56777d2b60e9d145da700f27ae3372d646424
+```
+
+Negative assertion (pre-change copy must NOT already contain the prune):
+
+```
+$ grep -q pruneShimBuildByproducts <scratchpad>/prechange/buildSteamBridgeShims.ts \
+    && echo "NOT the pre-change script" || echo "pre-change copy OK"
+pre-change copy OK
+```
+
+**E1 pre-change provenance:** saved file =
+`<scratchpad>/prechange/buildSteamBridgeShims.ts`; pinned SHA =
+`19f56777d2b60e9d145da700f27ae3372d646424` (state immediately before this task's
+first commit — none has been made yet, so `HEAD` is still this SHA at halt time).
+
+### Step 1 — byproducts removed from the real tree WITHOUT rebuilding (done, per plan)
+
+```
+$ rm public/bin/arm64/darwin/steam_api.pdb public/bin/arm64/darwin/steam_api_shim.lib
+$ shasum -a 256 public/bin/arm64/darwin/steam_api.dll
+2da072ba8fc455e9afc3dcce73ac631d0075f35deb3f19cd34b521c725f1d960  public/bin/arm64/darwin/steam_api.dll
+```
+
+DLL untouched — matches the required baseline. Dev tree census after removal:
+
+```
+files   = 277
+symlinks = 12
+bytes   = 97,884,865
+```
+
+Matches the plan's expected 277 / 12 / 97,884,865 exactly. `steam-bridge-helper` and
+`steam_appid.txt` both survive. `build/bin/arm64/darwin` was left untouched at this
+point (still 279 / 12 / 100,707,073, DLL sha `2da072ba…`) — its mirror-prune is
+Task 2's job, run via `pnpm exec vite build`, not Task 1's.
+
+**Current repo state at halt:** the two byproducts ARE removed from
+`public/bin/arm64/darwin/` (gitignored, untracked, non-destructive, idempotent — a
+future `rm` of already-absent files is a no-op). `build/bin/arm64/darwin` still has
+its stale copies, unchanged. No git-tracked file has been modified.
+`meta/buildSteamBridgeShims.ts` and `meta/__tests__/buildSteamBridgeShims.test.ts`
+are both byte-identical to `HEAD` — no code or test changes were made.
+
+### Flag-experiment table (measured during planning, recorded here per Step 1)
+
+| Flag | Result | Verdict |
+|------|--------|---------|
+| `-g0` | rc=0, still emits **both** `.pdb` and `.lib` | useless |
+| `--strip` | **rc=1, build fails** — not a valid clang driver flag | invalid |
+| `-Wl,-s` | suppresses `.pdb`, keeps `.lib`, and mutilates the DLL: 805,888 -> 511,488 B, 455,308 bytes differ | violates the byte-identical bar |
+| `-Wl,--out-implib=<sink>` | rc=0, redirects `.lib` out of the dir, `.pdb` still emitted, and the DLL sha CHANGED at the same output path | not byte-neutral, does not solve `.pdb` |
+
+No flag or combination suppresses both byproducts. Approach (A), post-build unlink,
+is forced.
+
+### Determinism retraction (measured during planning, recorded here per Step 1)
+
+`zig cc -target x86-windows-gnu -shared`'s `lld` backend is NOT deterministic across
+same-path rebuilds — see the r1/r2 historical record below for the full
+`TimeDateStamp` decode table (`2026-09-01T03:19:24Z`, `:25Z`, `:27Z`) and the
+`SOURCE_DATE_EPOCH` experiment. The shipped baseline's stamp decodes to
+`2026-08-31T18:38:25Z`. Task 1 therefore never rebuilds the real tree (P3); proof of
+inertness is P1 (structural), P2 (same-build hash, B7/E1), and P4 (masked
+comparison), not rebuild byte-identity.
+
+### Step 2/3 — HALTED: a fourth gate is a false RED on the plan's own mandated implementation
+
+Before writing the RED tests, Task 1's second `<verify><automated>` block (the
+ordering-guard Python script) was dry-run against what Step 3 explicitly instructs
+implementing, to confirm the gate would go GREEN on a correct implementation (the
+lesson from r2's B-1 and the executor brief's "assume a fourth exists" — every prior
+defect on this item was found by RUNNING a gate, never by reading it).
+
+**The plan's own two instructions conflict:**
+
+- B7 requires calling the exported prune function WITH an explicit arch argument:
+  `pruneShimBuildByproducts('arm64')`.
+- Step 3 explicitly mandates the corresponding signature: `pruneShimBuildByproducts(arch: string = resolveBridgeArch()): void`.
+- But Task 1's second automated verify script locates the DEFINITION with
+  `re.search(r'function pruneShimBuildByproducts\(\)', stripped)` — literal empty
+  parens immediately after the name. A parameterized signature
+  (`pruneShimBuildByproducts(arch: string = resolveBridgeArch())`) does NOT contain
+  the substring `pruneShimBuildByproducts()` anywhere (the definition's parens are
+  never empty), so `defn` is `None` and the script exits
+  `'FAIL: pruneShimBuildByproducts() is not defined in the comment-stripped source'`
+  — on a correct, plan-mandated implementation.
+
+**Reproduced independently** (not just reasoned about) by inserting the exact
+Step-3-mandated signature and the exact Step-3-mandated call site into a copy of the
+real source, then running the plan's own verify script verbatim against it:
+
+```
+$ python3 -c "
+import re
+src = open('meta/buildSteamBridgeShims.ts').read()
+addition = '''
+export function pruneShimBuildByproducts(arch: string = resolveBridgeArch()): void {
+  for (const path of [1,2]) {
+    // ...
+  }
+}
+'''
+src2 = src.replace(
+  'console.log(\`Compile gate PASSED -> \${shimOutputPath()}\`)',
+  'console.log(\`Compile gate PASSED -> \${shimOutputPath()}\`)\n  pruneShimBuildByproducts()'
+) + addition
+stripped = re.sub(r'/\*[\s\S]*?\*/', '', src2)
+stripped = re.sub(r'^\s*//.*\$', '', stripped, flags=re.M)
+defn = re.search(r'function pruneShimBuildByproducts\(\)', stripped)
+call = re.search(r'(?<!function )pruneShimBuildByproducts\(\)(?!\s*:)', stripped)
+gate = stripped.find('no .dll was emitted')
+gates = len(re.findall('COMPILE GATE FAILED', stripped))
+print('defn:', defn); print('call:', call); print('gate index:', gate); print('gates count:', gates)
+"
+defn: None
+call: <re.Match object; span=(4835, 4861), match='pruneShimBuildByproducts()'>
+gate index: 4719
+gates count: 2
+RESULT: FAIL - pruneShimBuildByproducts() is not defined in the comment-stripped source
+```
+
+The CALL site is located correctly and its position (4835) is correctly AFTER the
+gate (4719) — the ordering logic itself is sound once `defn` is found. Both
+`COMPILE GATE FAILED` throws survive (`gates count: 2`). Only the `defn` regex is
+wrong: it was written against the illustrative, parameterless prose in B4
+("the helper is declared as `function pruneShimBuildByproducts(): void {`"), not
+against the actual signature Step 3 instructs (with an `arch` parameter, required by
+B7). This is the same class of defect as r2's B-1 (an ordering-style gate false-RED
+on correct code) and the executor brief's finding #2 — found here for a fourth time
+on this same item, in the `defn` half of the check rather than the `call` half this
+time.
+
+**No workaround was applied.** Per explicit instruction, this halts the plan rather
+than being patched inline (e.g. loosening the regex, or writing
+`pruneShimBuildByproducts` without a parameter and threading arch through some other
+mechanism to dodge the string match — either would be shaping the implementation
+around a broken gate instead of fixing the gate).
+
+**What a fix looks like (not applied — a plan/gate edit, not code):** the `defn`
+regex needs the same tolerance the `call` regex already has for the file's
+define-before-use convention and for parameters, e.g.
+`re.search(r'function pruneShimBuildByproducts\(', stripped)` (open paren only,
+not `\(\)`), with the definition vs. call distinguished the same way `call` already
+is (`(?<!function )` / `(?!\s*:)`) rather than by requiring literally-empty parens.
+
+## Repo state at halt (r4 attempt)
+
+- `public/bin/arm64/darwin/steam_api.dll` — unchanged, sha `2da072ba…`, 805,888 B.
+- `public/bin/arm64/darwin/steam_api.pdb`, `steam_api_shim.lib` — REMOVED (Step 1,
+  intentional, matches the plan's target end-state, gitignored/untracked).
+- `public/bin/arm64/darwin` census: 277 files / 12 symlinks / 97,884,865 B.
+- `build/bin/arm64/darwin` — untouched, still 279 / 12 / 100,707,073, DLL sha
+  `2da072ba…` (Task 2's job to mirror-prune, not reached).
+- `meta/buildSteamBridgeShims.ts`, `meta/__tests__/buildSteamBridgeShims.test.ts` —
+  byte-identical to `HEAD` (`19f56777d`). No test added. No commit made.
+- Tasks 2 and 3 not started (both depend on Task 1 completing).
+
+## What this means for the plan
+
+Approach (A) (post-build unlink) and the P1–P4 proof strategy from r3/r4 remain
+sound — nothing here contradicts them. What's blocked is Task 1's OWN embedded
+automated ordering-guard script, which cannot pass against the implementation the
+plan's own Step 3 instructs writing, because the exported prune function must take
+an `arch` parameter (for B7) but the verify script's definition-locator regex
+assumes empty parens. This needs a plan/gate correction — widening the `defn` regex
+per the sketch above, in the same spirit as r2's B-1 fix to the `call` regex — before
+Task 1 can proceed. It is not an architectural change to the code (Rule 4 in the
+narrow sense of "new table/service/framework") but it is a change to the plan's own
+verification script, which per the executor brief ("If you find a fourth vacuous
+gate, STOP and report rather than working around it") is explicitly out of scope for
+an autonomous inline fix here.
+
+No further tasks were attempted. See `260901-kl2-SUMMARY.md`.
+
+---
+
+## r1/r2 attempt (historical, superseded by r3/r4) — BLOCKED at Task 1 Step 1
+
+Status: the plan's own primary safety gate at the time (Task 1, Step 1 — "MEASURE
+the premise before writing any code") was executed exactly as written and **failed**.
+Per the plan's explicit instruction, execution stopped there: no code was changed, no
+test was added, no commit was made. This section records what was measured. It is
+kept verbatim as the historical record; r3/r4 replaced the acceptance bar it
+describes (see `<revision_log>` in `260901-kl2-PLAN.md`) — do not re-litigate it.
+
+### What the plan required (r1/r2 wording)
 
 > Run `pnpm build-steam-bridge` on the tree exactly as it stands, then
 > `shasum -a 256 public/bin/arm64/darwin/steam_api.dll`.
@@ -13,7 +211,7 @@ was added, no commit was made. This file records what was measured.
 >   the same-path rebuild is reproducible ... proceed.
 > - If it does NOT equal that value, STOP and report.
 
-## Baseline (pre-existing, before any rebuild this session)
+### Baseline (pre-existing, before any rebuild that session)
 
 ```
 public/bin/arm64/darwin/steam_api.dll
@@ -31,7 +229,7 @@ remove files, only overwrite the three build outputs in place):
 `.build-tools/zig/zig version` = `0.16.0`, matching `ZIG_VERSION` in
 `meta/downloadZig.ts` — toolchain matches what the plan assumed.
 
-## Step 1 result: REPRODUCIBILITY PREMISE REFUTED
+### Step 1 result: REPRODUCIBILITY PREMISE REFUTED
 
 Ran `pnpm build-steam-bridge` on the unmodified tree (no code touched):
 
@@ -80,7 +278,7 @@ solely to **output path** ("Path is the sole variable"). That attribution is
 incomplete: this session shows the same two offsets vary **at a fixed, identical
 path**, run over run.
 
-### Root cause identified (diagnostic only — not a fix, not applied to the repo)
+#### Root cause identified (diagnostic only — not a fix, not applied to the repo)
 
 Offset 129 (0-indexed 128 = `0x80`) is inside the PE COFF file header. Decoding it:
 
@@ -133,14 +331,14 @@ the same wall-clock second (`TimeDateStamp` — and by chance the PDB GUID-deriv
 bytes too), which is exactly the kind of coincidence a `TimeDateStamp`-driven field
 would produce and is not something a rebuild can be relied on to repeat.
 
-### Byproduct sizes (unchanged, informational — matches plan's stated figures)
+#### Byproduct sizes (unchanged, informational — matches plan's stated figures)
 
 ```
 steam_api.pdb      = 2,818,048 B
 steam_api_shim.lib = 4,160 B
 ```
 
-## Repo state after this session
+### Repo state after r1/r2 session
 
 `public/bin/arm64/darwin/steam_api.dll` was restored from the scratchpad backup
 before returning:
@@ -159,34 +357,9 @@ No code was modified. No test was added. No task commit was made. Task 2 (mutati
 proof) and Task 3 (packaged DMG) were not started — both depend on Task 1
 completing, and the plan is explicit that a failed Step 1 stops the whole plan.
 
-## What this means for the plan
-
-The plan's forced choice of Approach (A) — post-build unlink — rests on the premise
-that a same-path rebuild reproduces `steam_api.dll` byte-for-byte, so that
-"before" and "after" trees can be diffed to prove the byproduct removal is inert.
-That premise does not hold on this machine with this toolchain: **the DLL is not
-byte-reproducible even with zero code change**, because `zig cc -shared`'s LLD
-backend embeds a wall-clock `TimeDateStamp` (not pinned by any flag currently
-passed) and a second non-deterministic field in the debug directory that survives
-even `SOURCE_DATE_EPOCH`.
-
-This is not a defect introduced by this plan and nothing in `meta/buildSteamBridgeShims.ts`
-was changed to cause it — it is a pre-existing property of the toolchain invocation
-that the plan's safety argument depends on and that was not true when re-measured.
-
-Re-deciding the approach needs a developer decision, not an autonomous fix, because
-the options change the plan's core safety argument:
-- Accept that same-path rebuilds are inherently non-reproducible and find a
-  different way to prove inertness (e.g. diff the DLL's actual code/data sections
-  while ignoring the known-volatile `TimeDateStamp` + debug-directory bytes,
-  rather than requiring whole-file sha equality).
-- Add linker flags that pin both the timestamp and the debug-directory content
-  (if `zig cc`/`lld` exposes one — not investigated further here, out of scope for
-  an autonomous stop-and-report).
-- Treat the currently-committed `steam_api.dll` as the one-and-only artifact and
-  never rebuild it as part of this change (i.e. do not run `pnpm build-steam-bridge`
-  at all in Task 1 — just unlink the byproducts from the existing tree). This
-  sidesteps the whole reproducibility question but changes what Task 1's "before
-  rebuild / after rebuild" comparison actually proves.
-
-No further tasks were attempted. See `260901-kl2-SUMMARY.md`.
+**This premise (byte-identity across rebuilds) was subsequently retracted and
+replaced by r3/r4** with the P1–P4 proof strategy (structural / same-build hash /
+never-rebuild-the-real-tree / masked comparison) — see `260901-kl2-PLAN.md`
+`<revision_log>` r3. Do not re-litigate this; it is preserved here only as the
+historical record of what was measured under the old (now-superseded) acceptance
+bar.
