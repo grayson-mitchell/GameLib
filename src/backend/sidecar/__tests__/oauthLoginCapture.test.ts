@@ -245,15 +245,12 @@ describe('captureOAuthLogin — seam-driven, deadline-bounded, close-guaranteed'
     setLoginWindowSeam(null)
   })
 
-  it('resolves { status: "unsupported" } WITHOUT opening anything when no seam is installed', async () => {
+  it('throws synchronously when no seam is installed (wiring bug, not a supported state)', () => {
     setLoginWindowSeam(null)
 
-    const result = await captureOAuthLogin(
-      'legendary',
-      'https://www.epicgames.com/id/login'
-    )
-
-    expect(result).toEqual({ status: 'unsupported' })
+    expect(() =>
+      captureOAuthLogin('legendary', 'https://www.epicgames.com/id/login')
+    ).toThrow(/no login-window seam is installed/)
     expect(mockSeamOpen).not.toHaveBeenCalled()
   })
 
@@ -862,16 +859,48 @@ describe('registerOAuthLoginFlows() — registration kind (REQ-34.4.1-08)', () =
     })
   })
 
-  it('forwards a valid { runner, url } pair to captureOAuthLogin (unsupported when no seam installed)', async () => {
-    setLoginWindowSeam(null)
-    const handler = handlerRegistry.get('oauthCaptureLogin')
+  it('forwards a valid { runner, url } pair to captureOAuthLogin, opening a login window with that url', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+    try {
+      const mockOpen = jest.fn<
+        ReturnType<LoginWindowSeam['open']>,
+        Parameters<LoginWindowSeam['open']>
+      >()
+      mockOpen.mockResolvedValue('oauth-registration-forward-0')
+      const fakeSeam: LoginWindowSeam = {
+        open: (...args: Parameters<LoginWindowSeam['open']>) =>
+          mockOpen(...args),
+        cookies: jest.fn(),
+        cookiesForDomain: jest.fn(),
+        takeEvents: jest.fn().mockResolvedValue([]),
+        close: jest.fn().mockResolvedValue(true),
+        clearCookies: jest.fn(),
+        revealPost: jest.fn(),
+        clearStorage: jest.fn()
+      }
+      setLoginWindowSeam(fakeSeam)
 
-    const result = await handler?.(undefined, {
-      runner: 'gog',
-      url: 'https://auth.gog.com/auth'
-    })
+      const handler = handlerRegistry.get('oauthCaptureLogin')
+      const resultPromise = handler?.(undefined, {
+        runner: 'gog',
+        url: 'https://auth.gog.com/auth'
+      })
+      await flushAsync()
 
-    expect(result).toEqual({ status: 'unsupported' })
+      expect(mockOpen).toHaveBeenCalledWith(
+        'https://auth.gog.com/auth',
+        expect.objectContaining({ visible: true })
+      )
+
+      // Settle the capture via its deadline so the test leaves no pending timer.
+      jest.advanceTimersByTime(300_000)
+      await flushAsync()
+      await resultPromise
+
+      setLoginWindowSeam(null)
+    } finally {
+      jest.useRealTimers()
+    }
   })
 })
 
