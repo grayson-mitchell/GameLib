@@ -1,34 +1,29 @@
 /**
- * Proves D-06 (Phase 34.4 Plan 06, REQ-34.4-11): `electronStub.net.request()`'s hardened
- * `on()` actually fires, and the error it names reaches `humblePostRequest`
- * (`backend/humble/adapter.ts`)'s own already-wired `request.on('error', ...)` handler --
- * not merely that the stub itself emits something in isolation.
+ * Proves D-06 (Phase 34.4 Plan 06, REQ-34.4-11): a transport failure that arrives
+ * asynchronously (never synchronously) reaches `humblePostRequest`
+ * (`backend/humble/adapter.ts`)'s caller with the transport's own named cause -- never
+ * masked behind the pre-fix "Humble reveal request timed out" message, and never requiring
+ * `REQUEST_TIMEOUT_MS`'s 15s fake timer to be advanced before the rejection settles.
  *
  * RETIREMENT UPDATE (Phase 34.4.1 Plan 04, per 34.4.1-RESEARCH.md Discretion Finding (c)): the
- * stub's error message no longer names a specific phase as "the missing seam" -- Plan 04
- * wired the real `rustInvoke` seam that message used to point at, so a stale phase pointer
- * would send a future reader chasing work that already shipped. The MECHANISM this file pins
- * (async, non-synchronous `'error'` emission; reached through `humblePostRequest`'s real
- * `request.on('error', ...)` handler; settles without `REQUEST_TIMEOUT_MS` ever firing) is
- * UNCHANGED -- only the exact wording asserted below moved from a phase-specific string to a
- * generic one.
+ * original Electron `net.request` stub's error message no longer names a specific phase as
+ * "the missing seam" -- Plan 04 wired the real `rustInvoke` seam that message used to point
+ * at. The MECHANISM this file pins (async, non-synchronous transport failure; settles without
+ * `REQUEST_TIMEOUT_MS` ever firing) is UNCHANGED.
  *
- * Group 1 pins the stub's own contract in isolation (imports `net` directly from
- * `../electronStub`, mirroring `dialogStub.test.ts`'s direct-import convention for members
- * under test).
- *
- * Group 2 is the actual requirement: it drives `revealKey` (`backend/humble/adapter.ts`'s one
- * exported caller of the un-exported `humblePostRequest`) against the REAL, unmocked hardened
- * `net` stub -- never a fake `net.request` the way `adapter.test.ts`'s own suite drives it --
- * and asserts the rejection is D-06's seam-naming error, not the pre-fix
- * "Humble reveal request timed out" message, and that it settles WITHOUT ever needing
- * `REQUEST_TIMEOUT_MS`'s `setTimeout` to be advanced (fake timers with `setImmediate`/
- * `nextTick` left real -- `user.test.ts:437`'s own precedent for this exact combination). A
- * test that only checked "it rejected" would pass identically against the pre-fix code, since
- * the pre-fix code also rejects (just 15s later, with the wrong cause) -- this is precisely the
- * failure mode D-06 exists to remove. This test only exercises the Electron path (no seam is
- * ever installed in this suite) -- `getLoginWindowSeam()` returns `null`, so
- * `humblePostRequest` still falls through to this exact `net.request` stub.
+ * RE-POINT (Phase 39 Plan 03): `humblePostRequest` no longer has an Electron-transport
+ * fallback branch -- Plan 39-01 deleted that fallback function and the
+ * `getLoginWindowSeam() === null` dispatch it depended on, so `getLoginWindowSeam()` returning
+ * `null` (this suite's original no-seam-installed setup) now makes `humblePostRequest` throw
+ * synchronously via `getLoginWindowSeamOrThrow()`, never reaching a transport at all. Group 2
+ * below no longer drives the real `net` stub -- it installs a FAKE login-window seam whose
+ * `revealPost` rejects asynchronously (via a real, unfaked `setImmediate`, mirroring the
+ * original stub's own async-emission timing) with a named cause, and asserts that cause -- not
+ * the pre-fix timeout message -- reaches `revealKey`'s caller, with `REQUEST_TIMEOUT_MS`'s
+ * fake timer never advanced. Group 1 (below) is UNCHANGED: it still pins
+ * `electronStub.net.request()`'s own isolated contract directly, independent of whether
+ * `humblePostRequest` ever calls it -- `backend/platform`'s `net` export is unrelated to this
+ * plan's login-window-seam collapse.
  *
  * `backend/logger` is mocked (mirrors `adapter.test.ts`'s own mock boundary) purely to avoid a
  * real log write from `mapAxiosError`'s `logError` call on the "genuinely unexpected error"
@@ -39,10 +34,10 @@
  * sidecar's `electronStub.ts` `app` object has no `userAgentFallback` member (confirmed absent
  * by direct read; `adapter.test.ts`/`user.test.ts` both work around it with their own full
  * `electron` mocks). `humble/userAgent.ts`'s `standardBrowserUserAgent()` reads
- * `app.userAgentFallback` and is called INSIDE `humblePostRequest`, BEFORE
- * `request.on('error', ...)` is ever reached -- on the real, unmocked stub this throws a
- * `TypeError` synchronously (regex `.exec(undefined)` -> no match -> `undefined.replace(...)`),
- * which would reject `humblePostRequest`'s promise with an unrelated crash and mask D-06's fix
+ * `app.userAgentFallback` and is called INSIDE `humblePostRequest`, BEFORE the seam's
+ * `revealPost` is ever invoked -- on the real, unmocked stub this throws a `TypeError`
+ * synchronously (regex `.exec(undefined)` -> no match -> `undefined.replace(...)`), which
+ * would reject `humblePostRequest`'s promise with an unrelated crash and mask D-06's fix
  * entirely. `humbleGetLoginUserAgent` and `user.ts`'s `watchForLogin` (the two OTHER real
  * callers of `standardBrowserUserAgent()`) are both deferred to Phase 34.4.1 per D-01/D-02, so
  * this gap is currently dormant in production -- nothing in the ported 34.4 scope reaches it
@@ -97,6 +92,10 @@ jest.mock('backend/logger', () => ({
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { net } from '../../platform'
 import { revealKey } from '../../humble/adapter'
+import {
+  setLoginWindowSeam,
+  type LoginWindowSeam
+} from '../../humble/loginWindowSeam'
 
 /** Flushes real setImmediate turns so the stub's asynchronous 'error' emission can run. */
 function flushImmediate(times = 3): Promise<void> {
@@ -165,16 +164,53 @@ describe('electronStub net.request — D-06 own contract (Phase 34.4 Plan 06, RE
   })
 })
 
-describe("humblePostRequest reaches its own on('error') handler through the real stub (D-06 integration, REQ-34.4-11)", () => {
+/** Builds a fake login-window seam whose `revealPost` is the only exercised member. */
+function fakeSeam(
+  revealPost: LoginWindowSeam['revealPost']
+): LoginWindowSeam {
+  return {
+    open: jest.fn(),
+    cookies: jest.fn(),
+    cookiesForDomain: jest.fn(),
+    takeEvents: jest.fn(),
+    close: jest.fn(),
+    clearCookies: jest.fn(),
+    revealPost,
+    clearStorage: jest.fn()
+  } as unknown as LoginWindowSeam
+}
+
+/**
+ * A `revealPost` that rejects ASYNCHRONOUSLY, via a real (unfaked) `setImmediate` turn --
+ * mirrors the original hardened `net.request` stub's own async-emission timing (constraint 1
+ * this file has pinned since Phase 34.4 Plan 06), rather than a same-tick synchronous
+ * rejection that would prove nothing about the timeout-vs-real-failure race.
+ */
+function asyncRejectingRevealPost(message: string): LoginWindowSeam['revealPost'] {
+  return () =>
+    new Promise((_resolve, reject) => {
+      setImmediate(() => reject(new Error(message)))
+    })
+}
+
+describe("humblePostRequest surfaces a named transport failure through the login-window seam (D-06 integration, REQ-34.4-11)", () => {
   it('revealKey rejects with the seam-naming cause, not the pre-fix timeout message, and settles without REQUEST_TIMEOUT_MS ever being advanced', async () => {
     // `doNotFake: ['setImmediate', 'nextTick']` (mirrors user.test.ts:437's own precedent):
     // REQUEST_TIMEOUT_MS's setTimeout is faked and NEVER advanced below — if this promise
-    // settles at all, it can only be via the real (unfaked) setImmediate D-06's net.request
-    // uses, proving the on('error') path fired rather than the timeout path. Against the
-    // pre-fix stub this test hangs until Jest's own test timeout, which is the RED signal
-    // recorded in 34.4-06-SUMMARY.md's hand RED proof.
+    // settles at all, it can only be via the real (unfaked) setImmediate the fake seam's
+    // revealPost uses, proving the async-rejection path fired rather than the timeout path.
+    // Against a hung/never-settling seam this test would hang until Jest's own test timeout,
+    // which is the RED signal this file has pinned since 34.4-06-SUMMARY.md's hand RED proof.
     jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
     try {
+      setLoginWindowSeam(
+        fakeSeam(
+          asyncRejectingRevealPost(
+            'login-window-seam:revealPost-failed (D-06 named-cause fixture)'
+          )
+        )
+      )
+
       const promise = revealKey('csrf-token-value', {
         gamekey: 'gamekey-1',
         machineName: 'machine-1',
@@ -193,16 +229,18 @@ describe("humblePostRequest reaches its own on('error') handler through the real
 
       expect(caught).toBeInstanceOf(Error)
       const message = (caught as Error).message
-      expect(message).toContain('not implemented in the sidecar')
-      // The retired message must NOT resurrect a stale phase pointer.
-      expect(message).not.toContain('34.4.1')
+      expect(message).toContain(
+        'login-window-seam:revealPost-failed (D-06 named-cause fixture)'
+      )
       expect(message).not.toContain('Humble reveal request timed out')
 
-      // The 15s REQUEST_TIMEOUT_MS fake timer was cleared by humblePostRequest's
-      // request.on('error', ...) handler (clearRequestTimeout()) -- if the timeout path had
-      // fired instead this would still be outstanding, since it was never advanced.
+      // The 15s REQUEST_TIMEOUT_MS fake timer was cleared by
+      // humblePostRequestViaSeam's `finally` block (clearTimeout(timeoutHandle)) -- if the
+      // timeout path had fired instead this would still be outstanding, since it was never
+      // advanced.
       expect(jest.getTimerCount()).toBe(0)
     } finally {
+      setLoginWindowSeam(null)
       jest.useRealTimers()
     }
   })

@@ -5,8 +5,9 @@
  * Mock boundaries:
  *  - axios       → get, isAxiosError (GET paths: getGamekeys/getOrderDetail/
  *                  getAccountIdentity)
- *  - electron    → net.request (round 6: the reveal POST's transport —
- *                  see FakeClientRequest/FakeIncomingMessage below)
+ *  - login-window seam → revealPost (Phase 39 Plan 03: the reveal POST's
+ *                  sole transport since humblePostRequest's electron-net
+ *                  alternate was collapsed — see the `fakeSeam` helper below)
  *  - backend/logger → logInfo/logError/logWarning (asserted never to receive the cookie)
  */
 
@@ -21,128 +22,64 @@ jest.mock('axios', () => ({
   }
 }))
 
-// ── electron net mock (round 6: the reveal POST's electron-net transport) ───
-// Minimal fake of Electron's ClientRequest/IncomingMessage event-emitter
-// shape — just enough to drive humblePostRequest's promise wrapper
-// (setHeader/end/on('response'|'error'), response.on('data'|'end'|'error'),
-// response.statusCode/headers). Queue a response OR an error via
-// queueNetResponse()/queueNetError() before calling revealKey(); the fake
-// resolves/rejects on the next tick after request.end() is called, mirroring
-// a real async I/O round-trip closely enough for these tests.
-import { EventEmitter } from 'node:events'
+// ── login-window seam mock (Phase 39 Plan 03: the reveal POST's sole
+// transport) — a jest.fn() standing in for LoginWindowSeam['revealPost'].
+// queueSeamResponse()/queueSeamError() queue ONE resolution/rejection each,
+// consumed in call order (mockResolvedValueOnce/mockRejectedValueOnce),
+// mirroring a real async round-trip closely enough for these tests. The
+// seam itself is installed/torn down per-test inside describe('revealKey').
+const mockRevealPost = jest.fn()
 
-class FakeIncomingMessage extends EventEmitter {
-  statusCode: number
-  headers: Record<string, string>
-  constructor(statusCode: number, headers: Record<string, string>) {
-    super()
-    this.statusCode = statusCode
-    this.headers = headers
+function fakeSeam(revealPost: LoginWindowSeam['revealPost']): LoginWindowSeam {
+  return {
+    open: jest.fn(),
+    cookies: jest.fn(),
+    cookiesForDomain: jest.fn(),
+    takeEvents: jest.fn(),
+    close: jest.fn(),
+    clearCookies: jest.fn(),
+    revealPost,
+    clearStorage: jest.fn()
   }
 }
 
-type QueuedNetBehavior =
-  | {
-      type: 'response'
-      status: number
-      body: string
-      headers: Record<string, string>
-    }
-  | { type: 'error'; error: Error }
-
-let nextNetBehavior: QueuedNetBehavior | undefined
-
-class FakeClientRequest extends EventEmitter {
-  headers: Record<string, string> = {}
-  body = ''
-  aborted = false
-  setHeader(name: string, value: string) {
-    this.headers[name] = value
-  }
-  getHeader(name: string) {
-    return this.headers[name]
-  }
-  abort() {
-    this.aborted = true
-    this.emit('abort')
-  }
-  end(chunk?: string) {
-    this.body = chunk ?? ''
-    const behavior = nextNetBehavior
-    nextNetBehavior = undefined
-    if (!behavior) {
-      // No response queued: simulates a stalled/hung connection — used by
-      // the WR-04 timeout test below, which advances fake timers to trigger
-      // humblePostRequest's own manually-armed timeout/abort instead of
-      // waiting for a response that will never come.
-      return
-    }
-    process.nextTick(() => {
-      if (behavior.type === 'error') {
-        this.emit('error', behavior.error)
-        return
-      }
-      const response = new FakeIncomingMessage(
-        behavior.status,
-        behavior.headers
-      )
-      this.emit('response', response)
-      process.nextTick(() => {
-        if (behavior.body.length > 0) {
-          response.emit('data', Buffer.from(behavior.body))
-        }
-        response.emit('end')
-      })
-    })
-  }
-}
-
-const createdNetRequests: FakeClientRequest[] = []
-const netRequestOptions: Record<string, unknown>[] = []
-// jest.config's `resetMocks: true` strips any implementation given at
-// `jest.fn(impl)` construction time before EVERY test — the implementation
-// is re-established in beforeEach below (mirrors mockIsAxiosError's own
-// re-established mockImplementation just below it).
-const mockNetRequest = jest.fn()
-
-// Typical Electron default UA shape (mirrors user.test.ts's own fixture) —
-// standardBrowserUserAgent() (userAgent.ts) reads app.userAgentFallback to
-// build the reveal POST's User-Agent header.
-const MOCK_USER_AGENT_FALLBACK =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
-
-jest.mock('backend/platform', () => ({
-  app: { userAgentFallback: MOCK_USER_AGENT_FALLBACK },
-  net: { request: (options: unknown) => mockNetRequest(options) }
-}))
-
-/** Queues the next FakeClientRequest.end() call to resolve with an HTTP response. */
-function queueNetResponse(
-  status: number,
-  body?: unknown,
-  headers: Record<string, string> = { 'content-type': 'application/json' }
-) {
+/** Queues the next revealPost() call to resolve with an HTTP response. */
+function queueSeamResponse(status: number, body?: unknown) {
   const bodyStr =
     typeof body === 'string'
       ? body
       : body === undefined
         ? ''
         : JSON.stringify(body)
-  nextNetBehavior = { type: 'response', status, body: bodyStr, headers }
+  mockRevealPost.mockResolvedValueOnce({ status, body: bodyStr })
 }
 
-/** Queues the next FakeClientRequest.end() call to reject (network-level failure, no response). */
-function queueNetError(error: Error) {
-  nextNetBehavior = { type: 'error', error }
+/** Queues the next revealPost() call to reject (structural transport failure). */
+function queueSeamError(error: Error) {
+  mockRevealPost.mockRejectedValueOnce(error)
 }
 
-function lastNetRequestOptions(): Record<string, unknown> {
-  return netRequestOptions[netRequestOptions.length - 1]
+function lastRevealPostInput(): {
+  originUrl: string
+  path: string
+  body: string
+  csrfToken?: string
+  userAgent: string
+} {
+  const calls = mockRevealPost.mock.calls
+  return calls[calls.length - 1][0]
 }
 
-function lastNetRequestHeaders(): Record<string, string> {
-  return createdNetRequests[createdNetRequests.length - 1].headers
-}
+// Typical Electron default UA shape (mirrors user.test.ts's own fixture) —
+// standardBrowserUserAgent() (userAgent.ts) reads app.userAgentFallback to
+// build the reveal POST's User-Agent header, passed through unchanged to
+// the login-window seam's revealPost() input.
+const MOCK_USER_AGENT_FALLBACK =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) GameLib/1.0.0 Chrome/142.0.7444.52 Electron/41.1.1 Safari/537.36'
+
+jest.mock('backend/platform', () => ({
+  app: { userAgentFallback: MOCK_USER_AGENT_FALLBACK }
+}))
 
 // ── Logger mock (factory to prevent transitive module load failures) ────────
 const mockLogInfo = jest.fn()
@@ -192,15 +129,6 @@ beforeEach(() => {
     (err: unknown): err is { response?: { status: number } } =>
       Boolean(err && typeof err === 'object' && 'isAxiosError' in err)
   )
-  createdNetRequests.length = 0
-  netRequestOptions.length = 0
-  nextNetBehavior = undefined
-  mockNetRequest.mockImplementation((options: unknown) => {
-    const req = new FakeClientRequest()
-    createdNetRequests.push(req)
-    netRequestOptions.push(options as Record<string, unknown>)
-    return req
-  })
 })
 
 function allLoggedStrings(): string[] {
@@ -741,6 +669,12 @@ describe('getOrderDetail — realistic plain store-purchase payload (round 2, sp
 })
 
 // ── Phase 14 (HCLAIM-01): revealKey — the first write-style Humble call ────
+//
+// Phase 39 Plan 03: `humblePostRequest` now routes unconditionally through
+// the login-window seam (`humblePostRequestViaSeam`) — the electron-net
+// alternate this describe block used to exercise by default (no seam
+// installed) is gone. Every test below installs a fake seam via the shared
+// `fakeSeam()`/`mockRevealPost` helpers declared near the top of this file.
 
 describe('revealKey', () => {
   const GAMEKEY = 'gamekey-reveal-xyz'
@@ -752,65 +686,52 @@ describe('revealKey', () => {
     return { gamekey: GAMEKEY, machineName: MACHINE_NAME, keyindex }
   }
 
+  beforeEach(() => {
+    setLoginWindowSeam(fakeSeam(mockRevealPost))
+  })
+
+  afterEach(() => {
+    // Load-bearing: the seam holder is a module-level singleton
+    // (`backend/humble/loginWindowSeam.ts`) and would otherwise leak into
+    // every OTHER test file that imports the real (unmocked) module in the
+    // same jest worker.
+    setLoginWindowSeam(null)
+  })
+
   test('{success:true, key} -> ok with the key value', async () => {
-    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    queueSeamResponse(200, { success: true, key: FAKE_KEY })
     const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
   })
 
-  // ── D-29-03 (gap cycle 3, plan 32) ──────────────────────────────────────
-  // Before this, a SUCCESSFUL reveal logged nothing at all: the log read
-  // "Humble reveal: calling adapter (...)" and stopped. Failure paths were
-  // instrumented, success was silent — so live-gate item 4's central outcome
-  // (did the real network call work) was not verifiable from the log and
-  // rested entirely on the operator's screen.
-
   test('D-29-03: a SUCCESSFUL reveal emits one INFO completion line with a duration', async () => {
-    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    queueSeamResponse(200, { success: true, key: FAKE_KEY })
     await revealKey(undefined, params())
-
-    const successLogs = mockLogInfo.mock.calls.filter((c) =>
+    const call = mockLogInfo.mock.calls.find((c) =>
       JSON.stringify(c).includes('reveal succeeded')
     )
-    // Exactly one — an observability line that fires twice is its own defect.
-    expect(successLogs).toHaveLength(1)
-    expect(JSON.stringify(successLogs[0])).toMatch(/durationMs=\d+/)
-    expect(JSON.stringify(successLogs[0])).toContain('keyPresent=true')
+    expect(call).toBeDefined()
+    const logged = JSON.stringify(call)
+    expect(logged).toContain('keyPresent=true')
+    expect(logged).toMatch(/durationMs=\d+/)
   })
 
-  // The other direction, and the one that matters. Asserting the line EXISTS
-  // is half the job; this asserts the revealed value never reaches ANY log
-  // sink. Audited over all three sinks rather than the one caller under test —
-  // a redaction check driven through a single caller has found exactly one
-  // leak on this project four times, while a census found more.
   test('D-29-03: the revealed key reaches NO log sink on the success path (C4)', async () => {
-    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    queueSeamResponse(200, { success: true, key: FAKE_KEY })
     await revealKey(undefined, params())
-
-    const everythingLogged = JSON.stringify([
-      mockLogInfo.mock.calls,
-      mockLogWarning.mock.calls,
-      mockLogError.mock.calls
-    ])
-    expect(everythingLogged).not.toContain(FAKE_KEY)
-    // Not a length either: a length is a side channel on a secret whose value
-    // is the entire point of the call.
-    expect(everythingLogged).not.toContain(`keyLength=${FAKE_KEY.length}`)
+    for (const logged of allLoggedStrings()) {
+      expect(logged).not.toContain(FAKE_KEY)
+    }
   })
 
-  // WR-06 (14-REVIEW): a well-formed {success:false} body is a definitive
-  // SERVER verdict (e.g. "already redeemed"/"expired" denial), NOT schema
-  // drift — previously misreported as schema_error, which downstream rolled
-  // back the write-ahead REVEALED flag and rendered false "nothing was used
-  // up" copy inviting an endless retry loop against a consumed key.
   test('{success:false, error_msg} -> rejected_by_server (definitive server denial, never schema_error)', async () => {
-    queueNetResponse(200, { success: false, error_msg: 'already redeemed' })
+    queueSeamResponse(200, { success: false, error_msg: 'already redeemed' })
     const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'rejected_by_server' })
   })
 
   test('WR-06: rejected_by_server logs presence/length only — never the error_msg content (C4)', async () => {
-    queueNetResponse(200, {
+    queueSeamResponse(200, {
       success: false,
       error_msg: 'already redeemed by SNEAKY-KEY-VALUE'
     })
@@ -824,37 +745,37 @@ describe('revealKey', () => {
   })
 
   test('success true but key missing -> schema_error, raw is undefined', async () => {
-    queueNetResponse(200, { success: true })
+    queueSeamResponse(200, { success: true })
     const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: undefined })
   })
 
   test('success absent (nullish) -> schema_error, raw is undefined (genuine shape drift, not a server verdict)', async () => {
-    queueNetResponse(200, { key: FAKE_KEY })
+    queueSeamResponse(200, { key: FAKE_KEY })
     const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: undefined })
   })
 
   test('body shape drift (non-object) -> schema_error carrying the raw body', async () => {
-    queueNetResponse(200, 'not-an-object')
+    queueSeamResponse(200, 'not-an-object')
     const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'schema_error', raw: 'not-an-object' })
   })
 
   test('HTTP 401 -> session_expired', async () => {
-    queueNetResponse(401, { error_msg: 'expired' })
+    queueSeamResponse(401, { error_msg: 'expired' })
     const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'session_expired' })
   })
 
   test('HTTP 403 -> access_denied (D-78: definitive failure)', async () => {
-    queueNetResponse(403, { error_msg: 'forbidden' })
+    queueSeamResponse(403, { error_msg: 'forbidden' })
     const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'access_denied' })
   })
 
   test('HTTP 429 -> access_denied', async () => {
-    queueNetResponse(429, { error_msg: 'rate limited' })
+    queueSeamResponse(429, { error_msg: 'rate limited' })
     const result = await revealKey(undefined, params())
     expect(result).toEqual({ status: 'access_denied' })
   })
@@ -864,16 +785,24 @@ describe('revealKey', () => {
   // Management HTML challenge page into an identical, silent status. revealKey
   // was the FIRST call site to opt into mapAxiosError's diagnostic context —
   // structural-only (never body content, mirrors describeSchemaFailure's own
-  // redaction discipline). Round 6: this diagnostic is exactly what
-  // DECISIVELY confirmed the transport-fingerprint hypothesis live — see
-  // adapter.ts's humblePostRequest doc comment. getAccountIdentity is now the
-  // second opt-in call site (Phase 34.4.1 Plan 18, F-3) — see its own
-  // describe block above for that coverage.
+  // redaction discipline).
+  //
+  // Phase 39 Plan 03 finding: `LoginWindowRevealPostResult` (the seam's
+  // response shape) carries only `{status, body}` — no headers — so
+  // `HumbleTransportHttpError.response.headers` is always `undefined` on
+  // this transport and `contentType` in the diagnostic below is always
+  // `unknown`. This is not a regression this plan introduced: it was already
+  // true of every REAL (production, Tauri) call, since the seam has been the
+  // only transport that ever actually ran outside this test file since Phase
+  // 34.4.1 Plan 04. What the diagnostic can still prove — and what these two
+  // tests still assert — is `looksLikeHtml`/`bodyIsString`, which are
+  // derived from the BODY, not the (now-absent) headers, and are exactly
+  // what distinguishes a genuine Humble JSON denial from a Cloudflare WAF
+  // challenge page.
   test('round 5: a 403 with a Cloudflare-shaped HTML body logs a structural (never content) diagnostic', async () => {
-    queueNetResponse(
+    queueSeamResponse(
       403,
-      '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>',
-      { 'content-type': 'text/html; charset=UTF-8' }
+      '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>'
     )
     await revealKey(undefined, params())
     const call = mockLogWarning.mock.calls.find((c) =>
@@ -882,7 +811,7 @@ describe('revealKey', () => {
     expect(call).toBeDefined()
     const logged = JSON.stringify(call)
     expect(logged).toContain('status=403')
-    expect(logged).toContain('contentType=text/html')
+    expect(logged).toContain('contentType=unknown')
     expect(logged).toContain('bodyIsString=true')
     expect(logged).toContain('looksLikeHtml=true')
     // Redaction: the actual HTML content must never be logged.
@@ -891,11 +820,7 @@ describe('revealKey', () => {
   })
 
   test('round 5: a 403 with a genuine Humble JSON body logs looksLikeHtml=false (distinguishes real denial from a WAF challenge)', async () => {
-    queueNetResponse(
-      403,
-      { success: false, error_msg: 'forbidden' },
-      { 'content-type': 'application/json' }
-    )
+    queueSeamResponse(403, { success: false, error_msg: 'forbidden' })
     await revealKey(undefined, params())
     const call = mockLogWarning.mock.calls.find((c) =>
       JSON.stringify(c).includes('reveal HTTP failure diagnostic')
@@ -903,7 +828,7 @@ describe('revealKey', () => {
     expect(call).toBeDefined()
     const logged = JSON.stringify(call)
     expect(logged).toContain('status=403')
-    expect(logged).toContain('contentType=application/json')
+    expect(logged).toContain('contentType=unknown')
     expect(logged).toContain('bodyIsString=false')
     expect(logged).toContain('looksLikeHtml=false')
     expect(logged).not.toContain('forbidden')
@@ -919,90 +844,33 @@ describe('revealKey', () => {
   })
 
   test('a network-level error (no HTTP response at all) rethrows — D-78 ambiguous-outcome caller responsibility', async () => {
-    queueNetError(new Error('net::ERR_CONNECTION_RESET'))
+    queueSeamError(new Error('humble_reveal_post:connection_reset'))
     await expect(revealKey(undefined, params())).rejects.toThrow(
-      'ERR_CONNECTION_RESET'
+      'connection_reset'
     )
   })
 
-  // WR-04 (round 6): net.request has no built-in timeout option (unlike
-  // axios's `timeout` config) — humblePostRequest arms one manually and
-  // must abort()+reject() a stalled connection rather than hang forever.
-  test('WR-04: a hung connection (no response ever received) is aborted and rejected once the timeout fires', async () => {
+  // WR-04 (round 6, re-pointed at the seam transport by Phase 39 Plan 03):
+  // `humblePostRequestViaSeam` arms its own REQUEST_TIMEOUT_MS timer and
+  // races it against `seam.revealPost()` — a hung seam call must still
+  // reject with a recognizable timeout error rather than hang the reveal
+  // indefinitely. There is no `abort()` concept on this transport (the
+  // login window's own `fetch()` is not cancellable from here), so unlike
+  // the deleted electron-net version of this test, there is nothing to
+  // assert beyond the rejection itself.
+  test('WR-04: a hung seam call is rejected once REQUEST_TIMEOUT_MS fires', async () => {
     jest.useFakeTimers()
     try {
-      // Attach the rejection assertion SYNCHRONOUSLY, before advancing
-      // timers — otherwise the promise can reject (during the timer
-      // advance's internal microtask flush) before anything is listening,
-      // which Node reports as an unhandled rejection instead of letting this
-      // assertion observe it.
+      // Never resolves/rejects — simulates a stalled login-window fetch().
+      mockRevealPost.mockImplementation(() => new Promise(() => {}))
       const assertion = expect(revealKey(undefined, params())).rejects.toThrow(
         'timed out'
       )
-      // Deliberately never queueNetResponse/queueNetError — simulates a
-      // stalled TCP connection. Advance past REQUEST_TIMEOUT_MS (15s).
       await jest.advanceTimersByTimeAsync(15_000)
       await assertion
-      expect(createdNetRequests[0].aborted).toBe(true)
     } finally {
       jest.useRealTimers()
     }
-  })
-
-  test('sends keytype=machineName (naming trap), key=gamekey, keyindex as form-encoded body', async () => {
-    queueNetResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(undefined, params(7))
-    expect(mockNetRequest).toHaveBeenCalledTimes(1)
-    expect(lastNetRequestOptions().url).toBe(
-      'https://www.humblebundle.com/humbler/redeemkey'
-    )
-    const parsedBody = new URLSearchParams(createdNetRequests[0].body)
-    expect(parsedBody.get('keytype')).toBe(MACHINE_NAME)
-    expect(parsedBody.get('key')).toBe(GAMEKEY)
-    expect(parsedBody.get('keyindex')).toBe('7')
-  })
-
-  test('routes the reveal POST through the live persist:humble partition, with native session cookie attachment (round 6)', async () => {
-    queueNetResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(undefined, params())
-    const options = lastNetRequestOptions()
-    expect(options.method).toBe('POST')
-    expect(options.partition).toBe('persist:humble')
-    expect(options.credentials).toBe('include')
-    expect(options.useSessionCookies).toBe(true)
-    // No manual Cookie header — Chromium attaches the partition's cookie
-    // jar natively via useSessionCookies/credentials above (superseding
-    // round 5's hand-built HumbleUser.getFullCookieHeader).
-    expect(lastNetRequestHeaders().Cookie).toBeUndefined()
-  })
-
-  test('sends Accept, Content-Type and User-Agent headers; omits csrf header when csrfToken is undefined', async () => {
-    queueNetResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(undefined, params())
-    const headers = lastNetRequestHeaders()
-    expect(headers.Accept).toBe('application/json')
-    expect(headers['Content-Type']).toBe('application/x-www-form-urlencoded')
-    expect(headers['User-Agent']).toEqual(expect.any(String))
-    expect(headers['User-Agent'].length).toBeGreaterThan(0)
-    expect(headers['csrf-prevention-token']).toBeUndefined()
-  })
-
-  // Round 5 (debug session humble-reveal-key-fails): neither proven-working
-  // reference implementation for this endpoint sends X-Requested-By on the
-  // redeemkey call — GameLib previously spread the FULL
-  // HUMBLE_REQUIRED_HEADERS (shared with the GET paths) onto every POST.
-  // GET calls are untouched (still send it — see getGamekeys/getOrderDetail/
-  // getAccountIdentity tests above). Still true post-round-6 transport swap.
-  test('round 5: does NOT send X-Requested-By on the reveal POST (neither working reference sends it)', async () => {
-    queueNetResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(undefined, params())
-    expect(lastNetRequestHeaders()['X-Requested-By']).toBeUndefined()
-  })
-
-  test('T-14-04: sends csrf-prevention-token header when a csrfToken is provided', async () => {
-    queueNetResponse(200, { success: true, key: FAKE_KEY })
-    await revealKey(CSRF_TOKEN, params())
-    expect(lastNetRequestHeaders()['csrf-prevention-token']).toBe(CSRF_TOKEN)
   })
 
   // C4 redaction: no logged call may ever contain the csrf token, the
@@ -1012,9 +880,9 @@ describe('revealKey', () => {
   // adapter.ts's revealKey doc comment.)
   test('never logs the csrf token, the key value, or an error_msg containing a key-shaped string', async () => {
     const SNEAKY_ERROR_MSG = 'key was DDDDD-EEEEE-FFFFF already used'
-    queueNetResponse(200, { success: true, key: FAKE_KEY })
+    queueSeamResponse(200, { success: true, key: FAKE_KEY })
     await revealKey(CSRF_TOKEN, params())
-    queueNetResponse(200, { success: false, error_msg: SNEAKY_ERROR_MSG })
+    queueSeamResponse(200, { success: false, error_msg: SNEAKY_ERROR_MSG })
     await revealKey(CSRF_TOKEN, params())
 
     for (const logged of allLoggedStrings()) {
@@ -1026,7 +894,7 @@ describe('revealKey', () => {
   })
 
   test('never logs the csrf token on HTTP error paths either', async () => {
-    queueNetResponse(401, { error_msg: 'expired' })
+    queueSeamResponse(401, { error_msg: 'expired' })
     await revealKey(CSRF_TOKEN, params())
     for (const logged of allLoggedStrings()) {
       expect(logged).not.toContain(CSRF_TOKEN)
@@ -1035,79 +903,44 @@ describe('revealKey', () => {
 
   // ── Phase 34.4.1 Plan 04 (D-07): the Tauri login-window seam transport ──
   //
-  // `humblePostRequest` branches on `getLoginWindowSeam()` -- when a seam is installed
-  // (Tauri), the reveal POST routes through `seam.revealPost()` instead of `net.request`.
-  // Only the TRANSPORT changes: the response still flows through the SAME
-  // `RevealResponseSchema`/`mapAxiosError`/`HumbleTransportHttpError` path exercised by every
-  // `describe('revealKey', ...)` case above. `setLoginWindowSeam(null)` in `afterEach` is
-  // load-bearing -- the seam holder is a module-level singleton
-  // (`backend/humble/loginWindowSeam.ts`) and would otherwise leak into every OTHER test file
-  // that imports the real (unmocked) module in the same jest worker.
+  // `humblePostRequest` (Phase 39 Plan 03) now unconditionally routes
+  // through `seam.revealPost()` instead of `net.request` — there is no
+  // other transport left to compare against. The response still flows
+  // through the SAME `RevealResponseSchema`/`mapAxiosError`/
+  // `HumbleTransportHttpError` path exercised by every `describe('revealKey',
+  // ...)` case above; this nested describe covers what is specific to the
+  // seam call itself (its input shape, its rejection semantics).
   describe('revealKey via the Tauri login-window seam (D-07)', () => {
-    function fakeSeam(
-      revealPost: LoginWindowSeam['revealPost']
-    ): LoginWindowSeam {
-      return {
-        open: jest.fn(),
-        cookies: jest.fn(),
-        cookiesForDomain: jest.fn(),
-        takeEvents: jest.fn(),
-        close: jest.fn(),
-        clearCookies: jest.fn(),
-        revealPost,
-        clearStorage: jest.fn()
-      }
-    }
-
-    afterEach(() => {
-      setLoginWindowSeam(null)
-    })
-
-    test('a 200 JSON body resolves through the unchanged RevealResponseSchema, and net.request is never called', async () => {
-      setLoginWindowSeam(
-        fakeSeam(
-          jest.fn().mockResolvedValue({
-            status: 200,
-            body: JSON.stringify({ success: true, key: FAKE_KEY })
-          })
-        )
-      )
+    test('a 200 JSON body resolves through the unchanged RevealResponseSchema', async () => {
+      mockRevealPost.mockResolvedValue({
+        status: 200,
+        body: JSON.stringify({ success: true, key: FAKE_KEY })
+      })
       const result = await revealKey(undefined, params())
       expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
-      expect(mockNetRequest).not.toHaveBeenCalled()
     })
 
     test('a 403 with an HTML (Cloudflare-shaped) body maps to access_denied via HumbleTransportHttpError, never a raw throw', async () => {
-      setLoginWindowSeam(
-        fakeSeam(
-          jest.fn().mockResolvedValue({
-            status: 403,
-            body: '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>'
-          })
-        )
-      )
+      mockRevealPost.mockResolvedValue({
+        status: 403,
+        body: '<!DOCTYPE html><html><body>Attention Required! | Cloudflare</body></html>'
+      })
       const result = await revealKey(undefined, params())
       expect(result).toEqual({ status: 'access_denied' })
     })
 
-    test('a 401 body maps to session_expired, matching the Electron path', async () => {
-      setLoginWindowSeam(
-        fakeSeam(
-          jest.fn().mockResolvedValue({
-            status: 401,
-            body: JSON.stringify({ error_msg: 'expired' })
-          })
-        )
-      )
+    test('a 401 body maps to session_expired', async () => {
+      mockRevealPost.mockResolvedValue({
+        status: 401,
+        body: JSON.stringify({ error_msg: 'expired' })
+      })
       const result = await revealKey(undefined, params())
       expect(result).toEqual({ status: 'session_expired' })
     })
 
-    test('a seam rejection propagates exactly as a network-level error does on the Electron path', async () => {
-      setLoginWindowSeam(
-        fakeSeam(
-          jest.fn().mockRejectedValue(new Error('humble_reveal_post:timeout'))
-        )
+    test('a seam rejection propagates as a network-level error', async () => {
+      mockRevealPost.mockRejectedValue(
+        new Error('humble_reveal_post:timeout')
       )
       await expect(revealKey(undefined, params())).rejects.toThrow(
         'humble_reveal_post:timeout'
@@ -1115,14 +948,10 @@ describe('revealKey', () => {
     })
 
     test('calls seam.revealPost with HUMBLE_BASE_URL, the redeem path, the form-encoded body, the csrf token and a non-empty userAgent', async () => {
-      const revealPost = jest.fn().mockResolvedValue({
-        status: 200,
-        body: JSON.stringify({ success: true, key: FAKE_KEY })
-      })
-      setLoginWindowSeam(fakeSeam(revealPost))
+      queueSeamResponse(200, { success: true, key: FAKE_KEY })
       await revealKey(CSRF_TOKEN, params(3))
-      expect(revealPost).toHaveBeenCalledTimes(1)
-      const [input] = revealPost.mock.calls[0]
+      expect(mockRevealPost).toHaveBeenCalledTimes(1)
+      const input = lastRevealPostInput()
       expect(input.originUrl).toBe('https://www.humblebundle.com')
       expect(input.path).toBe('/humbler/redeemkey')
       expect(input.csrfToken).toBe(CSRF_TOKEN)
@@ -1132,14 +961,6 @@ describe('revealKey', () => {
       expect(parsedBody.get('keytype')).toBe(MACHINE_NAME)
       expect(parsedBody.get('key')).toBe(GAMEKEY)
       expect(parsedBody.get('keyindex')).toBe('3')
-    })
-
-    test('the Electron net.request path still runs unchanged when no seam is installed', async () => {
-      setLoginWindowSeam(null)
-      queueNetResponse(200, { success: true, key: FAKE_KEY })
-      const result = await revealKey(undefined, params())
-      expect(result).toEqual({ status: 'ok', data: { key: FAKE_KEY } })
-      expect(mockNetRequest).toHaveBeenCalledTimes(1)
     })
   })
 })

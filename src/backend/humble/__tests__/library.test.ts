@@ -207,8 +207,8 @@ jest.mock('../adapter', () => ({
 
 // ── user mock (credentials/csrf only — auth flows are Plan 02's caller) ─────
 // Round 6 (debug session humble-reveal-key-fails): getFullCookieHeader() was
-// removed from HumbleUser — the reveal POST's electron-net transport now
-// sources the live partition's cookie jar natively (see adapter.ts).
+// removed from HumbleUser — the reveal POST's login-window seam transport now
+// sources the live seam's own cookie jar natively (see adapter.ts).
 
 const mockGetCredentials = jest.fn(() => 'cookie-value')
 const mockGetCsrfToken = jest.fn(() => 'csrf-token-value')
@@ -262,7 +262,6 @@ import {
   HUMBLE_CLASSIFIER_VERSION
 } from '../constants'
 import { selectKeysWaiting } from 'common/humble/viewFilters'
-import { setLoginWindowSeam, type LoginWindowSeam } from '../loginWindowSeam'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
 
@@ -2441,7 +2440,7 @@ describe('HumbleLibrary', () => {
       expect(outcome).toEqual({ status: 'revealed', key: 'REAL-KEY-VALUE' })
       expect(mockAdapterRevealKey).toHaveBeenCalledTimes(1)
       // Round 6: no cookie/fullCookieHeader argument — the reveal POST's
-      // electron-net transport sources the live partition's cookie jar
+      // login-window seam transport sources the live seam's own cookie jar
       // natively (see adapter.ts).
       expect(mockAdapterRevealKey).toHaveBeenCalledWith('csrf-token-value', {
         gamekey: 'gk1',
@@ -2750,11 +2749,11 @@ describe('HumbleLibrary', () => {
 
     // Round 6 (debug session humble-reveal-key-fails): round 5's
     // fullCookieJarPresent log field and HumbleUser.getFullCookieHeader()
-    // mechanism were both removed — the reveal POST's electron-net transport
-    // sources the live partition's cookie jar natively (see adapter.ts's
-    // humblePostRequest doc comment). This asserts the log line's new,
-    // simpler shape and that the adapter call no longer carries a 3rd/4th
-    // cookie-shaped argument.
+    // mechanism were both removed — the reveal POST's login-window seam
+    // transport sources the live seam's own cookie jar natively (see
+    // adapter.ts's humblePostRequest doc comment). This asserts the log
+    // line's new, simpler shape and that the adapter call no longer carries
+    // a 3rd/4th cookie-shaped argument.
     test('WR-03: the adapter receives the LIVE partition csrf token, never the stale stored snapshot', async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
       mockGetCsrfToken.mockReturnValue('stale-stored-token')
@@ -2773,7 +2772,23 @@ describe('HumbleLibrary', () => {
       })
     })
 
-    test('round 6: calling-adapter log line names the electron-net transport and carries no fullCookieJarPresent field', async () => {
+    // ── Phase 34.4.1 gap-cycle plan 17 (F-8), collapsed in 39-03 ──────────
+    // F-8 originally proved the label was DERIVED from `getLoginWindowSeam()`
+    // at log time, with a seam-installed case and a no-seam-installed
+    // "regression" case asserting the OPPOSITE label. Plan 39-01 deleted the
+    // seam's null-return dispatch branch in `humblePostRequest` (adapter.ts)
+    // that this depended on — the label is now the fixed string
+    // 'login-window seam transport' unconditionally, so:
+    //   - the former no-seam "regression" case asserted a branch that can no
+    //     longer be reached and is deleted outright (no seam-optional path
+    //     exists to regress to);
+    //   - the former seam-installed control case is folded into this test,
+    //     since asserting the label does NOT contain the old (pre-39-01)
+    //     electron-net-labeled string is now tautological (that string is
+    //     unreachable dead text, not a live alternate branch) rather than a
+    //     meaningful negative assertion — dropped rather than kept as a
+    //     no-op check.
+    test('round 6: calling-adapter log line names the login-window seam transport and carries no fullCookieJarPresent field', async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
       mockAdapterRevealKey.mockResolvedValue({
         status: 'ok',
@@ -2783,7 +2798,7 @@ describe('HumbleLibrary', () => {
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
       const call = mockLogInfo.mock.calls.find((c) =>
-        String(c[0][0]).includes('electron-net transport')
+        String(c[0][0]).includes('login-window seam transport')
       )
       expect(call).toBeDefined()
       expect(String(call?.[0][0])).not.toContain('fullCookieJarPresent')
@@ -2792,56 +2807,6 @@ describe('HumbleLibrary', () => {
         machineName: 'gk1_key',
         keyindex: 'idx-1'
       })
-    })
-
-    // ── Phase 34.4.1 gap-cycle plan 17 (F-8) ──────────────────────────────
-    // The literal "electron-net transport" used to be stamped unconditionally.
-    // These two cases prove the label is now DERIVED from
-    // `getLoginWindowSeam()` at log time — the same condition
-    // `humblePostRequest` (`adapter.ts`) branches its dispatch on — so the
-    // log can never again contradict which transport actually ran.
-
-    test('F-8: with a login-window seam installed, the calling-adapter log line names the seam transport, not electron-net', async () => {
-      // adapterRevealKey is mocked in this file (see jest.mock('../adapter', ...)
-      // above) — this test only proves library.ts's LOG LABEL derivation,
-      // not the real adapter.ts dispatch (covered by adapter.test.ts).
-      setLoginWindowSeam({} as LoginWindowSeam)
-      try {
-        libraryData.set(
-          'gk1',
-          makeRevealableEntry('gk1', { keyindex: 'idx-1' })
-        )
-        mockAdapterRevealKey.mockResolvedValue({
-          status: 'ok',
-          data: { key: 'K' }
-        })
-
-        await HumbleLibrary.revealKey('gk1', 'gk1_key')
-
-        const call = mockLogInfo.mock.calls.find((c) =>
-          String(c[0][0]).includes('login-window seam transport')
-        )
-        expect(call).toBeDefined()
-        expect(String(call?.[0][0])).not.toContain('electron-net transport')
-      } finally {
-        setLoginWindowSeam(null)
-      }
-    })
-
-    test('F-8: with no seam installed, the calling-adapter log line still names the electron-net transport (regression)', async () => {
-      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
-      mockAdapterRevealKey.mockResolvedValue({
-        status: 'ok',
-        data: { key: 'K' }
-      })
-
-      await HumbleLibrary.revealKey('gk1', 'gk1_key')
-
-      const call = mockLogInfo.mock.calls.find((c) =>
-        String(c[0][0]).includes('electron-net transport')
-      )
-      expect(call).toBeDefined()
-      expect(String(call?.[0][0])).not.toContain('login-window seam transport')
     })
 
     test('definitive failure (access_denied) logs the exact adapter status — the previously-silent 401/403/429 mapAxiosError gap', async () => {
