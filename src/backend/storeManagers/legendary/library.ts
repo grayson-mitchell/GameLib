@@ -815,8 +815,10 @@ export default class LegendaryLibraryManager implements LibraryManager {
       logError(['Failed to toggle EGS-Sync', error], LogPrefix.Legendary)
       return 'Error'
     } else {
+      // log-secret-gate-exempt: stdout of legendary toggle-sync (EGS save sync), not an auth command
       logInfo(`${stdout}`, LogPrefix.Legendary)
       if (stderr.includes('ERROR') || stderr.includes('error')) {
+        // log-secret-gate-exempt: stderr of legendary toggle-sync (EGS save sync), not an auth command
         logError(`${stderr}`, LogPrefix.Legendary)
         return 'Error'
       }

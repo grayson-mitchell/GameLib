@@ -1984,6 +1984,7 @@ async function getWinePath({
 
   const result = stdout.trim()
   if (!result) {
+    // log-secret-gate-exempt: stderr of `cmd /c winepath` (path translation), not an auth command
     logError(
       `Couldn't get wine path for ${path}.\n${stderr}`,
       LogPrefix.Backend

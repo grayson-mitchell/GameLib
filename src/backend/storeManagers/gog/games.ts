@@ -693,6 +693,7 @@ export default class GOGGame implements Game {
             startFolder
           })
         }
+        // log-secret-gate-exempt: stdout of the REDmod deploy command, not an auth command
         logInfo(result.stdout, { prefix: LogPrefix.Gog })
         logWriter.writeString(
           `\nMods deploy log:\n${result.stdout}\n\n${result.stderr}\n\n\n`

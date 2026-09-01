@@ -797,6 +797,7 @@ export async function provisionBottle(opts?: {
         'win10_64'
       ])
       if (!isBottleProvisioned(bottleName)) {
+        // log-secret-gate-exempt: stderr of cxbottle create (bottle provisioning), not an auth command
         logError(
           [
             'provisionBottle: cxbottle create did not produce cxbottle.conf for',
@@ -1205,6 +1206,7 @@ export async function provisionBridgeBottle(opts?: {
       'win10_64'
     ])
     if (!isBottleProvisioned(bottleName)) {
+      // log-secret-gate-exempt: stderr of cxbottle create (bridge bottle provisioning), not an auth command
       logError(
         [
           'provisionBridgeBottle: cxbottle create did not produce cxbottle.conf for',

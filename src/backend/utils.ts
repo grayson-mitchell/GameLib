@@ -837,6 +837,7 @@ function detectVCRedist(mainWindow: BrowserWindowType) {
 
   child.on('close', async (code: number) => {
     if (code) {
+      // log-secret-gate-exempt: stderr of the powershell Get-ItemProperty VCRuntime probe
       logError(
         `Failed to check for VCRuntime installations\n${stderr}`,
         LogPrefix.Backend
@@ -1189,6 +1190,7 @@ export async function moveOnWindows(
   if (code !== 0) {
     logInfo(`Finished Moving ${title}`, LogPrefix.Backend)
   } else {
+    // log-secret-gate-exempt: stderr of robocopy (install move), not an auth command
     logError(`Error: ${stderr}`, LogPrefix.Backend)
   }
   return { status: 'done', installPath: newInstallPath }
@@ -1319,6 +1321,7 @@ export async function moveOnUnix(
       // remove the old install path
       await spawnAsync('rm', ['-rf', install_path])
     } else {
+      // log-secret-gate-exempt: stderr of rsync (install move), not an auth command
       logError(`Error: ${stderr}`, LogPrefix.Backend)
       return { status: 'error', error: stderr }
     }
@@ -1333,6 +1336,7 @@ export async function moveOnUnix(
     if (code === 0) {
       return { status: 'done', installPath: destination }
     } else {
+      // log-secret-gate-exempt: stderr of mv -f (install move), not an auth command
       logError(`Error: ${stderr}`, LogPrefix.Backend)
       return { status: 'error', error: stderr }
     }
@@ -1696,6 +1700,7 @@ async function extractTarFile({
     `--strip-components=${strip}`
   ])
   if (code !== 0) {
+    // log-secret-gate-exempt: stderr of tar -xf (archive extraction), not an auth command
     logError(`Extracting Error: ${stderr}`, LogPrefix.Backend)
     return { status: 'error', error: stderr }
   }

@@ -732,6 +732,7 @@ export default class ZoomGame implements Game {
       const hasError = result.code !== 0 && result.stderr
 
       if (hasError) {
+        // log-secret-gate-exempt: stderr of the game launch command, not an auth command
         logError(['Error launching game:', result.stderr], LogPrefix.Zoom)
       }
 
