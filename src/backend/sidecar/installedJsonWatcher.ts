@@ -103,6 +103,12 @@ export function startInstalledJsonWatcher(
   const refresh =
     options.refresh ??
     (async () => {
+      // refreshInstalled() is synchronous in production (library.ts:131, no `async`), but the
+      // `await` is load-bearing for the test contract: installedJsonWatcher.test.ts:365 does
+      // `refreshInstalledMock.mockRejectedValueOnce(...)` and :353 asserts production adds no
+      // catch. Dropping the `await` would let `sendFrontendMessage('refreshLibrary')` fire on a
+      // failed rebuild and turn the rejection into an unhandled one.
+      // eslint-disable-next-line @typescript-eslint/await-thenable
       await libraryManagerMap['legendary'].refreshInstalled()
       sendFrontendMessage('refreshLibrary', 'legendary')
     })

@@ -64,9 +64,7 @@ export default function WebView() {
     refresh: true,
     message: t('loading.website', 'Loading Website')
   }))
-  const [amazonLoginData, setAmazonLoginData] = useState<NileLoginData | null>(
-    null
-  )
+  const [amazonLoginData] = useState<NileLoginData | null>(null)
   const navigate = useNavigate()
   const webviewRef = useRef<WebviewTag>(null)
 

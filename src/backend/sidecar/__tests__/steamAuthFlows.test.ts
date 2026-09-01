@@ -149,8 +149,6 @@ import {
   RUST_KEYRING_SET
 } from 'common/types/sidecarTransport'
 
-const MAIN_TS_PATH = join(__dirname, '../../main.ts')
-
 /** Waits a couple of microtask/macrotask turns for async invoke handlers to resolve. */
 async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve))

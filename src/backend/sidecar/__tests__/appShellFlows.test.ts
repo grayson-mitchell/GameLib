@@ -1076,6 +1076,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           set: jest.fn(),
           flush: jest.fn()
         })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         isolatedRequestRustInvoke = require('../sidecarRpc')
           .requestRustInvoke as jest.Mock
         isolatedRequestRustInvoke.mockResolvedValue(undefined)

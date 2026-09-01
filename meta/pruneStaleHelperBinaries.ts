@@ -43,7 +43,6 @@ import {
   lstatSync,
   readFileSync,
   readdirSync,
-  readlinkSync,
   rmSync,
   statSync,
   type Dirent

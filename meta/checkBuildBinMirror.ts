@@ -35,7 +35,7 @@
  * main() guard needed here (unlike `meta/pruneStaleHelperBinaries.ts` and
  * `meta/downloadHelperBinaries.ts`, which ARE imported by other code).
  */
-import { lstatSync, readdirSync, readlinkSync } from 'node:fs'
+import { lstatSync, readlinkSync } from 'node:fs'
 import { join } from 'node:path'
 
 import { collectEntries } from './pruneStaleHelperBinaries'

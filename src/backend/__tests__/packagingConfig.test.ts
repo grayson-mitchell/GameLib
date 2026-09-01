@@ -6,31 +6,13 @@
  * to fail if some future change extends onedir beyond macOS, which
  * 34.9-CONTEXT.md locks as out of scope.
  *
- * `electron-builder.yml` is parsed structurally with `js-yaml` (the
- * precedent established by runnersOnedirWorkflow.test.ts, typed via
- * src/common/typedefs/js-yaml.d.ts), not regexed, so comment text --
- * which necessarily mentions `**`, `linux` and `win32` while explaining
- * why they're absent -- cannot influence any assertion. Where a raw-text
- * assertion on the packaging-limitations doc is used, none of the strings
- * checked for are ones a comment in that doc would need to explain away,
- * so no stripHashComments pass is needed there; `stripHashComments` is
- * still applied where a negative "contains no **" check runs against the
- * YAML's `win`/`linux` blocks, following releaseWorkflow.test.ts's
- * documented discipline.
+ * Where a raw-text assertion on the packaging-limitations doc is used,
+ * none of the strings checked for are ones a comment in that doc would
+ * need to explain away, so no comment-stripping pass is needed there.
  */
-import { load as loadYaml } from 'js-yaml'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { stripHashComments } from './helpers/workflowSteps'
-
-const ELECTRON_BUILDER_PATH = join(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'electron-builder.yml'
-)
 const TAURI_CONF_PATH = join(
   __dirname,
   '..',
@@ -63,26 +45,6 @@ const PACKAGING_LIMITATIONS_PATH = join(
   '34.9-macos-runner-onedir-repackaging-eliminate-the-pyinstaller-co',
   '34.9-PACKAGING-LIMITATIONS.md'
 )
-
-interface ElectronBuilderConfig {
-  files: string[]
-  asarUnpack: string[]
-  mac: { files: string[] }
-  win: { files: string[] }
-  linux: { files: string[] }
-}
-
-function loadElectronBuilderRaw(): string {
-  return readFileSync(ELECTRON_BUILDER_PATH, 'utf-8')
-}
-
-function parseElectronBuilder(): ElectronBuilderConfig {
-  return loadYaml(loadElectronBuilderRaw()) as ElectronBuilderConfig
-}
-
-function loadStrippedElectronBuilder(): string {
-  return stripHashComments(loadElectronBuilderRaw())
-}
 
 interface TauriConfig {
   bundle: {
@@ -472,9 +434,8 @@ describe('34.9-PACKAGING-LIMITATIONS.md exists and names its owner', () => {
 
 /**
  * Removes `/* ... *\/` block comments and `// ...` line comments from a JS/TS
- * source string. Deliberately NOT `stripHashComments` above, which only
- * strips `#`-led YAML comments. Local to this file -- no other suite in this
- * repo currently needs a JS-comment stripper.
+ * source string. Local to this file -- no other suite in this repo
+ * currently needs a JS-comment stripper.
  */
 function stripJsComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')

@@ -128,7 +128,7 @@ function compileExtractedFunction<T>(rawSource: string, functionName: string): T
   const { outputText } = ts.transpileModule(bare, {
     compilerOptions: { target: ts.ScriptTarget.ES2019 }
   })
-  // eslint-disable-next-line no-new-func -- deliberate: see file docstring.
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval -- deliberate: see file docstring.
   const factory = new Function(`${outputText}\nreturn ${functionName};`)
   return factory() as T
 }

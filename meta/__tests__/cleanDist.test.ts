@@ -9,16 +9,7 @@
  * runs on macOS arm64 (Darwin 25.5.0), so there is no live win/linux build
  * to clean. Nothing here should be read as proof of live win/linux
  * behaviour -- see meta/cleanDist.ts's header comment.
- *
- * `electron-builder.yml` is parsed structurally with `js-yaml` (the
- * precedent established by src/backend/__tests__/packagingConfig.test.ts,
- * typed via src/common/typedefs/js-yaml.d.ts), not regexed -- the file
- * carries a multi-line explanatory comment above `mac.files` that itself
- * mentions "Windows and Linux" and "macOS-specific", so a raw-text/regex
- * check on the whole file could be satisfied by comment prose alone rather
- * than the actual `artifactName` values.
  */
-import { load as loadYaml } from 'js-yaml'
 import {
   existsSync,
   mkdirSync,
