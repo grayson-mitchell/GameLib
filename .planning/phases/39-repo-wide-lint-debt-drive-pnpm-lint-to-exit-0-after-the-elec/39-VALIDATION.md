@@ -1,8 +1,8 @@
 ---
 phase: 39
 slug: repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-09-02
 ---
@@ -48,17 +48,28 @@ actually collected the intended suites before reading its exit code as proof.
 
 ## Per-Task Verification Map
 
-Plans do not exist yet — rows are requirement-level and will be refined to task IDs by the planner.
+Refined against the 9 plans written 2026-09-02. Rows are plan-level; task-level status is tracked
+in each PLAN.md.
 
-| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | TBD | REQ-39-01 | — | N/A | lint gate | `pnpm lint` → exit 0, `--max-warnings <N>` present | ✅ | ⬜ pending |
-| TBD | TBD | TBD | REQ-39-02 | — | N/A | script gate | `python3 meta/runPlanningGates.py` → `7/7 planning gates passed.`, exit 0 | ✅ | ⬜ pending |
-| TBD | TBD | TBD | REQ-39-03 | — | N/A | source gate | zero-match seam-predicate test under `src/backend/humble` + `src/backend/storeManagers`, **with vacuity control** | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-39-03 (regression) | — | N/A | unit | `pnpm test --selectProjects Backend` → pass count matches pre-collapse baseline, modulo 3 rewritten `user.test.ts` blocks | ✅ | ⬜ pending |
-| TBD | TBD | TBD | REQ-39-01/03 (compile) | — | N/A | typecheck | `pnpm codecheck` → exit 0 | ✅ | ⬜ pending |
+| Plan | Wave | Requirement | Threat Ref | Test Type | Automated Command | File Exists | Status |
+|------|------|-------------|------------|-----------|-------------------|-------------|--------|
+| 39-01 | 1 | REQ-39-02 | verification-integrity | script gate | `python3 meta/runPlanningGates.py` → preload gate green; **6/7 expected here, not 7/7** | ✅ | ⬜ pending |
+| 39-02 | 1 | REQ-39-03 | verification-integrity | unit | `pnpm test --selectProjects Backend` + collected-suite assertion | ✅ | ⬜ pending |
+| 39-03 | 2 | REQ-39-03 | verification-integrity | unit | `pnpm test --selectProjects Backend` + collected-suite assertion | ✅ | ⬜ pending |
+| 39-04 | 2 | REQ-39-03 | verification-integrity | unit | `pnpm test --selectProjects Backend` + collected-suite assertion | ✅ | ⬜ pending |
+| 39-05 | 3 | REQ-39-03 | verification-integrity | unit | `pnpm test --selectProjects Backend` + collected-suite assertion | ✅ | ⬜ pending |
+| 39-06 | 4 | REQ-39-03 | verification-integrity | unit | `pnpm test --selectProjects Backend` + collected-suite assertion | ✅ | ⬜ pending |
+| 39-07 | 5 | REQ-39-03 | vacuous-pass | source gate | new zero-match predicate gate, **two per-root vacuity controls** + pre-collapse RED proof | ❌ W0 | ⬜ pending |
+| 39-08 | 6 | REQ-39-02 | verification-integrity | script gate | `python3 meta/runPlanningGates.py` → `7/7 planning gates passed.`, exit 0 | ✅ | ⬜ pending |
+| 39-09 | 7 | REQ-39-01 | ratchet-above-true-count | lint gate | `pnpm lint` → exit 0; `--max-warnings N` present **and proven to bite at N-1** | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+**Why 39-01 lands at 6/7, deliberately.** `seam-parity-sweep-gate.py` carries `EXPECTED_AXIS_A_SITES`,
+a floor listing eight `getLoginWindowSeam()` call sites that REQ-39-03 deletes seven of. Repairing
+that gate in wave 1 would make it pass and then this phase's own collapse would break it again — a
+red that reads as a regression the collapse introduced. Its disposition is therefore in wave 6,
+after the collapse. Do not treat the interim 6/7 as a failure.
 
 **`pnpm codecheck` is `tsc --noEmit` and says nothing about lint** (ROADMAP hazard 1). It is listed
 here only as a compile guard for the seam collapse's removed imports — never as lint evidence.

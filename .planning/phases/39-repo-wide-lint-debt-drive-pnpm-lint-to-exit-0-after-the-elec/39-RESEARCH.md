@@ -511,7 +511,7 @@ The planner may further split `REQ-39-02` into `REQ-39-02a`/`REQ-39-02b` (one pe
 commit-hygiene is easier to enforce that way — both gates are small enough that either grouping
 works; this research has no strong preference.
 
-## Risks and open questions
+## Risks and open questions (RESOLVED — every item is owned by a plan; see resolution notes inline)
 
 1. **Gate 1's post-repoint behavior is unverified.** The `FileNotFoundError` is a hard crash, not a
    `fail()` — nothing downstream of `parse_electron_stub_safestorage()` in `classify_axis_b()` has
