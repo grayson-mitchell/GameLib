@@ -179,3 +179,13 @@ None - no external service configuration required.
 ---
 *Phase: 39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+All claimed files exist on disk and all claimed commit hashes exist in `git log --oneline --all`:
+
+- FOUND: `.planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/preload-surface-gate.py`
+- FOUND: `.planning/IPC-PORT-INVENTORY.md`
+- FOUND: `.planning/phases/39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec/39-GATE-DISPOSITIONS.md`
+- FOUND: `.planning/phases/39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec/39-01-SUMMARY.md`
+- FOUND: `c54cf96ef`, `d888ca1f8`, `41f2cddd8`, `417b17631`
