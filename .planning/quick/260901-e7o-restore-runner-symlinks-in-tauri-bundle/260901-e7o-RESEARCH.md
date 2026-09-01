@@ -17,6 +17,14 @@ sources below were fetched at tag **`tauri-cli-v2.11.4`**, whose `crates/tauri-c
 
 **One correction to the existing record, confirmed:** the todo says "only the KEPT `arm64/darwin` and `x64/darwin` trees are affected". **`x64/darwin` carries ZERO symlinks and is byte-identical repo-to-shipped.** Only `arm64/darwin` is affected. (The `x64/darwin` tree is 4 files — it is the Steam-bridge shim leg, not a PyInstaller onedir tree.)
 
+**Annotation 2026-09-01 (quick-260901-i8i):** the parenthetical above mischaracterizes the
+`x64/darwin` tree — it was the download-helper-binary set (comet, gogdl, legendary, nile),
+NOT the Steam-bridge shim leg (`steam_api.pdb`/`steam_api_shim.lib`, which lives under
+`arm64/darwin` and is a different, still-open mechanism, item 6 in the parent todo). The
+`x64/darwin` tree has since been removed entirely (Intel Mac support dropped); this
+correction is recorded here rather than editing the line above, per the annotate-don't-rewrite
+convention. See `../260901-i8i-drop-x64-darwin-intel-tree/260901-i8i-MEASUREMENTS.md`.
+
 **A second, previously unrecorded finding — the defect is worse than "duplicated files":** two of the four symlinks per runner are **DROPPED ENTIRELY** from the shipped bundle, not dereferenced. The shipped `Python.framework` has **no `Resources` entry and no `Versions/Current` entry at all**. See Q1 for the mechanism and Q3 for the measurement.
 
 ---

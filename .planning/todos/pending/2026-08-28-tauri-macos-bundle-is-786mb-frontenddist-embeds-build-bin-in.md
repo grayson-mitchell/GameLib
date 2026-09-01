@@ -252,12 +252,22 @@ is requested — see `260901-8rm-MEASUREMENTS.md`):
   | tree | old (MiB) | new (MiB) | |
   |---|---|---|---|
   | `arm64/darwin` | 189 | 189.3 | kept |
-  | `x64/darwin` | 44 | 44.3 | kept |
+  | `x64/darwin` | 44 | 44.3 | **DONE 2026-09-01 (quick-260901-i8i): removed.** Dev-machine basis 46,423,272 B (4 fossil files); fresh-CI basis 11,213,032 B (comet only, the sole re-downloadable file — see `260901-i8i-MEASUREMENTS.md`). |
   | `x64/win32` | 52 | 0.2 | narrowed to the 2 Wine exes |
   | `arm64/win32` | 38 | 0.0 | removed |
   | `x64/linux` | 37 | 0.0 | removed |
   | `arm64/linux` | 35 | 0.0 | removed |
   | **total** | **395** | **233.8** | **-161.2** |
+
+  **Annotation 2026-09-01 (quick-260901-i8i):** the `x64/darwin` row above is now DONE — the
+  tree was removed entirely, not merely kept. Packaged-artifact census on a fresh DMG build
+  confirms: `.app` total dropped to 289,952,582 B on this machine (exact match to the
+  46,423,272 B dev-machine-basis prediction), `x64/darwin` absent from
+  `Resources/build/bin`, `arm64/darwin` unchanged (279 files / 12 symlinks / 100,707,073 B),
+  all four helpers still execute (legendary 0.21.0, gogdl 1.3.0, nile 1.2.0, comet 0.2.0).
+  Item 6 (`steam_api.pdb` / `steam_api_shim.lib`, ~2.7 MB) remains OPEN — explicitly out of
+  scope for quick-260901-i8i, a different mechanism (`buildSteamBridgeShims.ts`), not moved
+  or touched. Full numbers: `260901-i8i-MEASUREMENTS.md`.
 
   Two earlier explanations in this file were WRONG and are retracted: the executor's
   "steam-bridge shim" (~3.6MB, and it cancels on both sides of the subtraction), and the

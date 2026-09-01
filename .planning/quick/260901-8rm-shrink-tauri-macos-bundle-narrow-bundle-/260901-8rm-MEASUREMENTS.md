@@ -163,7 +163,7 @@ shipped. The meaningful comparison is OLD SHIPPED vs NEW SHIPPED:
 ```
 tree            old(MiB)   new(MiB)
   arm64/darwin      189      189.3     <- kept, IDENTICAL
-  x64/darwin         44       44.3     <- kept, IDENTICAL
+  x64/darwin         44       44.3     <- kept, IDENTICAL (removed 2026-09-01, quick-260901-i8i — see note below)
   x64/win32          52        0.2     <- narrowed to the 2 Wine exes
   arm64/win32        38        0.0     <- removed
   x64/linux          37        0.0     <- removed
@@ -175,6 +175,13 @@ The kept trees being byte-for-byte identical old-to-new is the proof: **the ~46,
 symlink dereferencing was present in the OLD bundle too** (the todo recorded old `arm64/darwin`
 as 189M against a 147,024 KiB repo tree — the same ~45MB inflation). It is pre-existing overhead
 that fix (1) neither caused nor was expected to remove.
+
+**Annotation 2026-09-01 (quick-260901-i8i):** the 44 MB `x64/darwin` figure recorded above is
+the dev-machine basis (4 files including 3 fossils not shipped by CI since 2026-08-27). The
+`x64/darwin` tree has since been removed entirely (Intel Mac support dropped). The honest
+release-basis figure for that removal is 11,213,032 B (comet only — the sole re-downloadable
+file at the time); do not read the 44 MB figure here as a CI-release saving. Full numbers in
+`../260901-i8i-drop-x64-darwin-intel-tree/260901-i8i-MEASUREMENTS.md`.
 
 **Cause 3 (symlink dereferencing) remains TRUE and remains worth ~45MB.** All four removed trees
 carry 0 symlinks, so only the kept darwin trees are affected. What is retracted is solely the
