@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 207 |
-| Ported to sidecar | 52 |
+| Unique channels | 208 |
+| Ported to sidecar | 53 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -140,6 +140,26 @@ reconciling this row would have moved the gate from "fails on check 2" to "fails
 a fresh-looking red that this edit closes instead of creating. See
 `39-GATE-DISPOSITIONS.md` (phase 39) for the full disposition record.
 
+**Unique channels raised 207 → 208 (quick `260902-wbd`, 2026-09-02):** `getLoginBackground`
+is a BRAND NEW channel, not a late-discovered pre-existing one -- it backs the user-selectable
+Manage Accounts background artwork ported out of the `wip/login-background-260815` stash. It is
+`makeHandlerInvoker`-exposed in `src/preload/api/helpers.ts` and registered on the Tauri sidecar
+in `appShellFlowRegistration.ts` (there is no Electron leg to register: the Electron entry points
+were deleted by `5643c7583`), so it lands in the Phase 34.1 app-shell bucket alongside its
+`getCustomThemes`/`getThemeCSS`/`getCustomCSS` siblings, whose handler bodies it shares a module
+with. That bucket's own header count goes 32 → 33 and `Ported to sidecar` goes 52 → 53.
+
+The live `src/preload/` union re-derived by `preload-surface-gate.py` is now **207** (invoke 155 /
+send 52), so the 206-vs-207 pair described further up this page is today a **207-vs-208** pair. The
+one-channel offset is unchanged and has the same cause (`getEpicGamesStatus` is bucket-pinned with
+no preload exposure); only both numbers moved, together, by this one addition.
+
+**This is the THIRD channel to reach `src/preload/` via a quick task rather than a phase**, after
+`steamRemoveAllCopies` (`quick-260821-le0`) and `oauthCaptureLogin`. Quick tasks run no
+inventory-reconciliation step, so the omission is structural, not an oversight by any one task:
+`preload-surface-gate.py` went RED here and was the only thing that caught it -- the full 377-suite
+run, lint, tsc and prettier were all green with the channel unlisted.
+
 ## Already ported (34)
 
 `cancelDownload`, `checkGameUpdates`, `checkSteamInstalled`, `connectivity-changed`, `getDMQueueInformation`, `get-connectivity-status`, `getLogContent`, `getMaxCpus`, `getSystemInfo`, `hasExecutable`, `install`, `isNative`, `isSteamBottleEligible`, `launch`, `listSteamLibraryTargets`, `logError`, `oauthCaptureLogin`, `openDialog`, `pauseCurrentDownload`, `persistBottleWineVersion`, `refreshLibrary`, `removeFromDMQueue`, `requestAppSettings`, `requestGameSettings`, `resumeCurrentDownload`, `setSetting`, `showUpdateSetting`, `steamPollQR`, `steamRemoveAllCopies`, `steamStartQR`, `uninstall`, `updateGame`, `writeConfig`
@@ -177,7 +197,7 @@ preload-surface audit — 28 → 31:**
   `34.5/preload-surface-gate.py`, which had never been wired into CI and so had never run
   outside the session that wrote it.
 
-## Phase 34.1 — Slice 4 — app shell and window chrome (32 channels)
+## Phase 34.1 — Slice 4 — app shell and window chrome (33 channels)
 
 **Retired 2026-08-27 (Phase 34.18):** `isIntelMac` was dropped from this slice's channel list —
 an arm64-only macOS build cannot run on an Intel Mac, so the channel exposed a capability the app
@@ -191,7 +211,7 @@ was reassigned to Phase 34.5 by Phase 34.1 CONTEXT decision D-14 on 2026-07-25, 
 Wine tooling and was in this slice only because the inventory grouped channels by file; see
 the Phase 34.5 list below for its new home.
 
-`abort`, `changeLanguage`, `changeTrayColor`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getThemeCSS`, `getWebviewPreloadPath`, `lock`, `notify`, `openCustomThemesWiki`, `openWebviewPage`, `quit`, `set-connectivity-online`, `setTitleBarOverlay`, `unlock`
+`abort`, `changeLanguage`, `changeTrayColor`, `getCurrentChangelog`, `getCustomCSS`, `getCustomThemes`, `getHeroicVersion`, `getLatestReleases`, `getLoginBackground`, `getThemeCSS`, `getWebviewPreloadPath`, `lock`, `notify`, `openCustomThemesWiki`, `openWebviewPage`, `quit`, `set-connectivity-online`, `setTitleBarOverlay`, `unlock`
 
 ## Phase 34.2 — Slice 5 — game details, settings and overrides (26 channels)
 
