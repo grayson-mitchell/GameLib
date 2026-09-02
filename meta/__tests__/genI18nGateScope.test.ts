@@ -132,6 +132,35 @@ const FIXTURE_DIFF_LINES = [
  *   MEMORY.md recurring: a re-baseline performed early in a wave is
  *   near-guaranteed to be stale by its end. 35-24 did nothing wrong -- the
  *   ordering did. Not a redesign of the gate; noted for whoever owns it next.
+ *
+ * 2026-09-02 (quick `260902-qs4`): fork-touched 204 -> 207, unscanned 43 -> 46.
+ * Commit `24cdae047` ("surface a failed file picker instead of an unhandled
+ * rejection") added `hooks/useOpenDialog.ts` and touched
+ * `Settings/components/CustomWineProton.tsx` and
+ * `Settings/components/Tools/index.tsx`. Hand-edited surgically again, NOT
+ * regenerated. `meta/i18nGateScope.json` is deliberately untouched at 161, so
+ * all three land in the unscanned set and must be declared below.
+ *
+ * READ THIS BEFORE TREATING ALL 46 AS EQUAL DEBT. Measured with audit mode
+ * (`scanScope({ extraFiles: [...] })`, which never mutates the committed
+ * artifacts) at the time of this edit:
+ *   - `hooks/useOpenDialog.ts` -- ZERO violations. Fork-authored, and every
+ *     user-facing string already goes through `t()` on the `gamelib`
+ *     namespace. This is a genuine SCOPE candidate, not debt.
+ *   - `Settings/components/CustomWineProton.tsx` -- ZERO violations. Also a
+ *     scope candidate; the fork's edit here is an import plus a call-site
+ *     swap.
+ *   - `Settings/components/Tools/index.tsx` -- TWO violations, `'Winecfg'`
+ *     (:89) and `'Winetricks'` (:96). Both are upstream tool names and are
+ *     arguably do-not-translate glossary terms rather than real debt, but
+ *     they are hits today, so this file is the only one of the three that
+ *     genuinely belongs here on the evidence.
+ * The first two sit in this register ONLY because widening the hand-curated
+ * blocking scope is a curation decision this fix deliberately did not make on
+ * the gate owner's behalf. Promoting them into `meta/i18nGateScope.json`
+ * costs nothing measurable and would shrink this list to 44 -- left as a
+ * follow-up so the widening is a deliberate act, not a side effect of an
+ * unrelated red-suite fix.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ActionIcons/index.tsx',
@@ -149,6 +178,7 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/helpers/declaredUnavailable.ts',
   'src/frontend/helpers/gamepad.ts',
   'src/frontend/helpers/gamepad_layouts/nintendo.ts',
+  'src/frontend/hooks/useOpenDialog.ts',
   'src/frontend/screens/ConsoleMode/components/ConfirmDialog/index.tsx',
   'src/frontend/screens/ConsoleMode/controller.ts',
   'src/frontend/screens/ConsoleMode/selectors.ts',
@@ -164,10 +194,12 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Library/filterEngine.ts',
   'src/frontend/screens/Login/components/HumbleLogin/index.tsx',
   'src/frontend/screens/Login/steamTileState.ts',
+  'src/frontend/screens/Settings/components/CustomWineProton.tsx',
   'src/frontend/screens/Settings/components/EgsSettings.tsx',
   'src/frontend/screens/Settings/components/GamePadDelayRepeat.tsx',
   'src/frontend/screens/Settings/components/LauncherArgs.tsx',
   'src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx',
+  'src/frontend/screens/Settings/components/Tools/index.tsx',
   'src/frontend/screens/Settings/components/UseDarkTrayIcon.tsx',
   'src/frontend/screens/Settings/components/UseFramelessWindow.tsx',
   'src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx',
@@ -610,7 +642,7 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 204 files of
+   * The snapshot a real regeneration would produce TODAY: the 207 files of
    * the committed fork-touched artifact (35-24: 199 -> 205, six files that
    * phase touched -- `PathSelectionBox/index.tsx`, `WebviewControls/index.tsx`,
    * `DownloadManager/index.tsx`, `CategoriesManager/index.tsx`,
@@ -618,7 +650,7 @@ describe('--rewrite-scope guard', () => {
    * gap-closure follow-up: 205 -> 206, `Winetricks/WinetricksSearch/index.tsx`,
    * touched by 35-25's `366e719bb` after 35-24's re-baseline had already
    * landed). Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 161 -> 204 delta this task exists to
+   * so the specs below assert the REAL 161 -> 207 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -644,10 +676,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 161-file hand-curated snapshot and the fresh snapshot is the REAL 204', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 161-file hand-curated snapshot and the fresh snapshot is the REAL 207', () => {
     expect(scopeSnapshot.files.length).toBe(161)
-    expect(forkTouchedSnapshot.files.length).toBe(204)
-    expect(freshSnapshot().files.length).toBe(204)
+    expect(forkTouchedSnapshot.files.length).toBe(207)
+    expect(freshSnapshot().files.length).toBe(207)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -673,7 +705,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 161 -> 204 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 161 -> 207 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -696,7 +728,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 204', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 207', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -709,12 +741,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(204)
+    expect(rewritten.files.length).toBe(207)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 204 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 207 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -727,7 +759,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(204)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(207)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
