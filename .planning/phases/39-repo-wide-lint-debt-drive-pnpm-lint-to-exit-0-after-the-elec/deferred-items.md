@@ -115,6 +115,17 @@ previously recorded, neither touching Humble/seam code, and both reproducing sta
    (204 -> 207), all 10 literal count pins, and `DECLARED_UNSCANNED_DEBT` (43 -> 46) moved in one
    commit; `meta/i18nGateScope.json` deliberately untouched at 161.
 
+   **FOLLOW-UP CLOSED 2026-09-02 by quick `260902-rpa` (commit `90c999829`).** The two
+   measured-clean paths, `hooks/useOpenDialog.ts` and `Settings/components/CustomWineProton.tsx`,
+   were promoted out of `DECLARED_UNSCANNED_DEBT` and into `meta/i18nGateScope.json` (161 -> 163,
+   unscanned 46 -> 44, so 207 - 163 = 44 keeps the A-03 ratchet exact). The zero-violation
+   measurement was RE-TAKEN against the post-`21dd66e4c` gate rather than trusted, since that
+   commit widened Pattern 3 and could have flipped any verdict: 0 violations each, 0 collateral,
+   and the gate now reports `scannedFiles = 163`, so the widening is not vacuous.
+   `Settings/components/Tools/index.tsx` deliberately REMAINS deferred -- its `'Winecfg'` (:89)
+   and `'Winetricks'` (:96) hits are live, so promoting it would turn the blocking gate red until
+   the do-not-translate glossary question is settled. That is the one piece of item 5 still open.
+
 Also observed once, in the full-suite run only:
 
 6. **`meta/__tests__/runTsSignals.test.ts`** — failed once under the full 5-project run; re-run
