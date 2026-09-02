@@ -70,7 +70,12 @@ PHASE_DIR = Path(__file__).parent
 REPO_ROOT = PHASE_DIR.parent.parent.parent
 SRC_DIR = REPO_ROOT / "src"
 OUTPUT_PATH = PHASE_DIR / "34.4.1-SEAM-PARITY-SWEEP.md"
-ELECTRON_STUB_PATH = SRC_DIR / "backend" / "sidecar" / "electronStub.ts"
+# RE-POINTED Phase 39 Plan 08 (D-35-14-02 vocabulary): this file was `git mv`'d by Phase 35 plans
+# 35-13/35-15 from `src/backend/sidecar/electronStub.ts` to `src/backend/platform/index.ts` --
+# `git log --follow -- src/backend/platform/index.ts` carries the continuous history. The
+# `safeStorage` export block this script parses (parse_electron_stub_safestorage()) survives
+# unchanged at the new path, same hardcoded-false/throws shape.
+ELECTRON_STUB_PATH = SRC_DIR / "backend" / "platform" / "index.ts"
 
 # The expected-answer sites from 34.4.1-10-PLAN.md <interfaces> — checked against, never
 # substituted for the live walk. If the live walk finds fewer than this, the walk is broken.
