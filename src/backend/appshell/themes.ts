@@ -75,8 +75,8 @@ const LOGIN_BACKGROUND_MIME_BY_EXTENSION: Record<string, string> = {
  */
 // Kept async to match the addHandler signature of the sibling
 // getCustomThemes/getThemeCSS/getCustomCSS exports in this file; the read is
-// synchronous internally.
-// eslint-disable-next-line @typescript-eslint/require-await
+// synchronous internally. Those three carry the same unawaited-async lint
+// warning rather than a suppression, so this one does too.
 export async function getLoginBackground(): Promise<string> {
   const { loginBackgroundPath } = GlobalConfig.get().getSettings()
 
