@@ -3,7 +3,7 @@ created: 2026-08-25T02:35:00.000Z
 title: "LibraryTour targets two `data-tour` anchors that no longer exist — CategoryFilter and LibraryFilters were deleted by Phase 34.11, and the tour still steps through them"
 area: frontend
 severity: low
-status: pending
+status: completed
 resolves_phase: "34.12"
 found_by: "Quick task 260825-k5k, while proving 34.10-REVIEW.md's IN-01 moot before closing the review"
 source: ".planning/phases/34.10-navigation-shell-horizontal-card-tabs-replace-the-sidebar/34.10-REVIEW.md (IN-01 disposition)"
@@ -77,3 +77,37 @@ than another directory-scoped grep.
 
 Note the related standing decision: `Sidebar/components/SidebarTour.tsx` is **kept on purpose** as
 34.12's work-list (decision D-13) and must not be deleted.
+
+---
+
+## CLOSED 2026-09-02 (quick `260902-ur1`) — by landing Phase 34.12, not by new work
+
+The fix already existed. Phase 34.12 plan 02 ("re-anchor LibraryTour's two dead steps onto live
+filter groups", `556a7f8e6`, 2026-08-22) resolved this **three days before this todo was written**
+— but it lived only on the `wt/Other` worktree branch and had never been merged into
+`fix/steam-native-install-stability`. Merging 34.12 closes it.
+
+**Both dead anchors are gone, and every live one resolves.** Measured at close:
+
+| anchor | source files |
+|---|---|
+| `library-categories` (dead, named by this todo) | **0** |
+| `library-filters` (dead, named by this todo) | **0** |
+| `library-views-collections` (its replacement) | 2 |
+| `library-facets` (its replacement) | 2 |
+
+All nine anchors `LibraryTour.tsx` targets now resolve to at least one non-test source file:
+`add-game`, `facets`, `game-card`, `refresh`, `search`, `sort-az`, `sort-installed`,
+`view-toggle`, `views-collections`.
+
+The replacements wrap the **post-34.11** filter components — `FilterViewList`/
+`FilterCollectionList` and `FilterStoreFacet`/`FilterRunnabilityFacet`/`FilterMoreGroup` — so
+they anchor what the Header actually renders today, not what it rendered in August.
+
+Standing coverage: 34.12-06 also landed `navTourAnchorCensus.test.ts`, a census that fails if any
+tour step targets an anchor no component renders. That gate is green, and it is what stops this
+defect class recurring silently rather than being caught by a human three days later.
+
+**Process note worth keeping.** This todo sat open for eight days describing a broken UI whose fix
+was already written. It was not a missing fix; it was unmerged work on a worktree branch nobody
+pulled back. See quick `260902-ur1` for the wider sweep that found it.
