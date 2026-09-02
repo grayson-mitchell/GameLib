@@ -442,7 +442,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-35-20 | Phase 35 | Partial (2026-08-30 -- gap-closure plan `35-20` landed, closing the CODE-LEVEL root causes behind live-gate criteria 6/10/14 (`D-35-19-05`/`-06`/`-09`): `RUNNERS` widened to include `steam`, a shared `dispatchSteamLaunch` helper now records `games.recent` for both the sidecar `launch` handler and the deep-link path, and the `installed.json` watcher sends `refreshLibrary` after refresh. Gap-closure plan `35-21` also landed 2026-08-30, closing BOTH `35-REVIEW.md` code-review criticals CR-01 (`open_external` scheme allow-list) and CR-02 (`frontendReady` once-semantics), both RED-proven -- see `35-21-SUMMARY.md`. Gap-closure plan `35-22` also landed 2026-08-30, closing CR-03 (`window.platform` gains a reachable `'win32'` arm, single-sourced in `platformDetect.ts`) and the renderer half of CR-04 (a failed logout now reaches `gamelib.log` and a user-visible dialog instead of a `console.error` invisible under Tauri); `src/preload/index.ts` deleted as dead code; both RED-proofs recorded verbatim -- see `35-22-SUMMARY.md`. Gap-closure plan `35-24` also landed 2026-08-30, closing `35-VERIFICATION.md` gap 4 (A-17 ANTI-ROT): re-measured the fork-touch drift from scratch (real delta 199 -> 205 files, not the plan's stale 199/163 baseline), regenerated `meta/i18nForkTouchedFiles.json` and re-baselined every dependent `--rewrite-scope guard` fixture and the `DECLARED_UNSCANNED_DEBT` list in the same commit -- see `35-24-SUMMARY.md`; this is test-infrastructure hygiene, not a live-gate criterion, so it does not move this requirement toward Complete on its own. Gap-closure plan `35-27` also landed 2026-08-31, closing criterion 16's code-level cause (`D-35-08-02`): `allowedPendingOps` conflated "is an operation pending?" with "which sleep kind should it block?", so a running game kept `pendingOps > 0` and the download's `prevent-app-suspension` assertion was never released while the game kept playing (measured ~108s on the packaged gate). Option-a split the two questions via an exhaustive, throw-on-unknown `classifySleepAssertionKind` plus a pure `reconcileSleepAssertionCalls` reconciler in `GlobalState.tsx`; `appShellFlowRegistration.ts` needed no change. Both exposing faces (spurious acquire, delayed release) RED-proven separately -- see `35-27-SUMMARY.md`. This closes the CODE cause only; the live re-measure of criterion 16 against a packaged build is deferred to plan `35-29`, same as `35-20`/`-21`/`-22`/`-24` before it. Requirement stays OPEN, not Complete -- "Any FAIL means phase not close" is only satisfied by a re-run of the blocking live gate with 0 FAILs, which none of these plans perform) |
 | REQ-35-21 | Phase 35 | Complete (2026-08-30 -- plan `35-18`: `35-RELEASE-NOTES.md` covers all 8 required user-facing areas plus a maintainer decision-trace appendix; the logout item was correctly sourced from `35-09`'s actual observed behaviour rather than the superseded decision text. `35-VERIFICATION.md`'s Requirements Coverage row scores this `✓ SATISFIED`. Status-table correction applied 2026-08-31 by records-hygiene plan `35-28`.) |
 | REQ-39-01 | Phase 39 | Planned (minted 2026-09-02 at `/gsd-plan-phase 39`; plan `39-09`) |
-| REQ-39-02 | Phase 39 | Planned (minted 2026-09-02 at `/gsd-plan-phase 39`; plans `39-01` and `39-08`) |
+| REQ-39-02 | Phase 39 | Complete (2026-09-02 -- plans `39-01` and `39-08` landed; `python3 meta/runPlanningGates.py` prints `7/7 planning gates passed.` with zero `[FAIL]` lines; `39-GATE-DISPOSITIONS.md` records both gates' labelled dispositions and their mutation-RED proofs) |
 | REQ-39-03 | Phase 39 | Complete (2026-09-02 -- plans `39-02` through `39-07` landed; `meta/__tests__/loginWindowSeamPredicateRemoved.test.ts` is the static zero-match gate, mutation-proven RED at all 3 scan targets and reverted, collected by the "Meta" jest project; `39-SEAM-DISPOSITIONS.md` records the 13-site table, the deliberate `humbleLoginFlowRegistration.ts:457` exclusion, and the 12-vs-13 census correction) |
 | REQ-34.10-01 | Phase 34.10 | Complete |
 | REQ-34.10-02 | Phase 34.10 | Complete |
@@ -1276,7 +1276,7 @@ re-measured. `REQ-39-02` was deliberately NOT split into `02a`/`02b`.
   means either typing every mock (large, diffuse, outside the scope fence) or suppressing the rule
   for tests (which would mask genuine `any` bugs in the ~28% that are production code). Plan `39-09`.
 
-- [ ] **REQ-39-02**: `python3 meta/runPlanningGates.py` prints `7/7 planning gates passed.` and exits
+- [x] **REQ-39-02**: `python3 meta/runPlanningGates.py` prints `7/7 planning gates passed.` and exits
   0, with each repaired gate carrying a labelled disposition from the D-35-14-02 vocabulary
   (RE-POINT / RE-DERIVE / INVERT / RETIRE) and a demonstrated mutation-RED proving it can still fail.
   Two gates: `34.5/preload-surface-gate.py` (RE-DERIVE — floor 217 to the measured 206, together with
@@ -1284,7 +1284,15 @@ re-measured. `REQ-39-02` was deliberately NOT split into `02a`/`02b`.
   had never reached because check 2 exits first) and `34.4.1/seam-parity-sweep-gate.py` (RE-POINT for
   the `git mv`'d `electronStub.ts`, plus a disposition for the Axis A census REQ-39-03 invalidates).
   `runPlanningGates.py` hard-fails below `MINIMUM_EXPECTED_GATES = 7`, so RETIRE-by-deletion is
-  unavailable — any retirement is in place. Plans `39-01` and `39-08`.
+  unavailable — any retirement is in place. Plans `39-01` and `39-08`. **COMPLETE 2026-09-02** —
+  plan `39-08` re-pointed `ELECTRON_STUB_PATH`, INVERTed the Axis A floor to a one-site survivor set
+  naming `humbleLoginFlowRegistration.ts:457`, RETIREd two `EXPECTED_SILENT_DROP_SITES` entries
+  whose comparison mechanism no longer runs (keeping S-12 `steamgrid/secureKey.ts`), and RE-POINTed
+  a third, previously-hidden defect in the Axis B import-detection regex (Phase 35 moved every real
+  `safeStorage` importer from `'electron'` to `'backend/platform'`). `39-GATE-DISPOSITIONS.md`
+  records all four/five dispositions with mutation-RED evidence for each kept or inverted assertion.
+  `meta/runPlanningGates.py`'s final line reads `7/7 planning gates passed.` with zero `[FAIL]`
+  lines and zero tracebacks.
 
 - [x] **REQ-39-03**: No `getLoginWindowSeam()` predicate branch survives under `src/backend/humble`
   or `src/backend/storeManagers`, nor in `src/backend/sidecar/oauthLoginCapture.ts`, proven by a
