@@ -484,14 +484,18 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
     await assertion
   })
 
-  it('honest copy: a stall trip uses box.error.install.stalled and the dialog does not say "connection may be stale"', async () => {
+  // 260902-qgd: the key is pinned WITH its `gamelib:` namespace, matching
+  // utils.ts:266. Quick 260901-ud5 (Bucket R) moved every fork-authored
+  // string into the gamelib namespace to satisfy D-05, and this assertion --
+  // written earlier, in 260817-dib -- was left pinning the bare key.
+  it('honest copy: a stall trip uses gamelib:box.error.install.stalled and the dialog does not say "connection may be stale"', async () => {
     jest.useFakeTimers()
     installMock.mockReturnValue(new Promise(() => {}))
 
     const resultPromise = installQueueElement(makeParams())
     const assertion = resultPromise.then(() => {
       expect(mockT).toHaveBeenCalledWith(
-        'box.error.install.stalled',
+        'gamelib:box.error.install.stalled',
         expect.any(String),
         expect.objectContaining({ minutes: expect.any(Number) })
       )
