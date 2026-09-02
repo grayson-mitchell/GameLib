@@ -161,6 +161,32 @@ const FIXTURE_DIFF_LINES = [
  * costs nothing measurable and would shrink this list to 44 -- left as a
  * follow-up so the widening is a deliberate act, not a side effect of an
  * unrelated red-suite fix.
+ *
+ * 2026-09-02 (quick `260902-rpa`, THE FOLLOW-UP DIRECTLY ABOVE, now taken):
+ * scope 161 -> 163, unscanned 46 -> 44. `hooks/useOpenDialog.ts` and
+ * `Settings/components/CustomWineProton.tsx` moved OUT of this register and
+ * INTO `meta/i18nGateScope.json`, so the BLOCKING gate now scans them on
+ * every run instead of a comment vouching for them. The paragraph above is
+ * left standing as the record of the decision being DEFERRED; this one
+ * records it being MADE -- deliberately, on its own, rather than as a side
+ * effect of an unrelated red-suite fix, which is exactly the sequencing that
+ * paragraph asked for.
+ *
+ * Re-measured immediately before the edit against the gate as it stands
+ * AFTER `21dd66e4c` (which widened Pattern 3 and so could in principle have
+ * changed any file's verdict), rather than trusting the `260902-qs4`
+ * numbers: baseline `scanScope()` = 161 files / 0 violations; audit
+ * `scanScope({ extraFiles: [both] })` = 163 files / 0 violations -- 0 for
+ * each of the two files individually, and 0 collateral anywhere else. The
+ * promotion therefore costs nothing measurable and buys real coverage: a
+ * hardcoded literal added to either file now fails CI by name instead of
+ * sitting in a register nothing enforces.
+ *
+ * `Settings/components/Tools/index.tsx` deliberately STAYS below. Its two
+ * hits (`'Winecfg'` :89, `'Winetricks'` :96) are live today, so promoting it
+ * would turn the blocking gate red; whether upstream tool names are
+ * do-not-translate glossary terms has to be settled first. That is a real
+ * remaining follow-up, and a different one from the one this entry closes.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ActionIcons/index.tsx',
@@ -178,7 +204,6 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/helpers/declaredUnavailable.ts',
   'src/frontend/helpers/gamepad.ts',
   'src/frontend/helpers/gamepad_layouts/nintendo.ts',
-  'src/frontend/hooks/useOpenDialog.ts',
   'src/frontend/screens/ConsoleMode/components/ConfirmDialog/index.tsx',
   'src/frontend/screens/ConsoleMode/controller.ts',
   'src/frontend/screens/ConsoleMode/selectors.ts',
@@ -194,7 +219,6 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Library/filterEngine.ts',
   'src/frontend/screens/Login/components/HumbleLogin/index.tsx',
   'src/frontend/screens/Login/steamTileState.ts',
-  'src/frontend/screens/Settings/components/CustomWineProton.tsx',
   'src/frontend/screens/Settings/components/EgsSettings.tsx',
   'src/frontend/screens/Settings/components/GamePadDelayRepeat.tsx',
   'src/frontend/screens/Settings/components/LauncherArgs.tsx',
@@ -650,7 +674,7 @@ describe('--rewrite-scope guard', () => {
    * gap-closure follow-up: 205 -> 206, `Winetricks/WinetricksSearch/index.tsx`,
    * touched by 35-25's `366e719bb` after 35-24's re-baseline had already
    * landed). Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 161 -> 207 delta this task exists to
+   * so the specs below assert the REAL 163 -> 207 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -676,8 +700,8 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 161-file hand-curated snapshot and the fresh snapshot is the REAL 207', () => {
-    expect(scopeSnapshot.files.length).toBe(161)
+  it('A0 fixture sanity: the seeded scope is the REAL 163-file hand-curated snapshot and the fresh snapshot is the REAL 207', () => {
+    expect(scopeSnapshot.files.length).toBe(163)
     expect(forkTouchedSnapshot.files.length).toBe(207)
     expect(freshSnapshot().files.length).toBe(207)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
@@ -705,7 +729,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 161 -> 207 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 163 -> 207 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
