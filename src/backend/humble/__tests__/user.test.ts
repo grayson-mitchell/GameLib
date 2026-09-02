@@ -1461,9 +1461,7 @@ describe('HumbleUser', () => {
         key === 'csrfToken' ? STORED_SECRET : undefined
       )
 
-      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
-        STORED_SECRET
-      )
+      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(STORED_SECRET)
 
       const loggerCalls = [
         ...mockLogInfo.mock.calls,
@@ -2370,7 +2368,11 @@ describe('HumbleUser', () => {
       mockSeamCookies.mockResolvedValue({
         total: 1,
         matched: [
-          { name: '_simpleauth_sess', domain: 'humblebundle.com', value: SECRET }
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: SECRET
+          }
         ]
       })
 

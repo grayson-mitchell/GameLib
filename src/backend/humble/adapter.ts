@@ -326,7 +326,6 @@ async function humblePostRequestViaSeam(
   }
 }
 
-
 // Debug session humble-reveal-key-fails (round 5): access_denied currently
 // collapses TWO very different failure shapes into one status — a genuine
 // Humble JSON denial (real, correctly-authenticated 403) and a Cloudflare

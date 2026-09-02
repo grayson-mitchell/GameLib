@@ -939,9 +939,7 @@ describe('revealKey', () => {
     })
 
     test('a seam rejection propagates as a network-level error', async () => {
-      mockRevealPost.mockRejectedValue(
-        new Error('humble_reveal_post:timeout')
-      )
+      mockRevealPost.mockRejectedValue(new Error('humble_reveal_post:timeout'))
       await expect(revealKey(undefined, params())).rejects.toThrow(
         'humble_reveal_post:timeout'
       )

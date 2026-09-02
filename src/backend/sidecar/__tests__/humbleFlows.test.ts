@@ -1075,12 +1075,13 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       // SAME fresh instance `user.ts`'s own `import` resolves to above,
       // which is why `setLoginWindowSeam()` called through this binding is
       // visible to the real `disconnect()` call below.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { setLoginWindowSeam } = require('../../humble/loginWindowSeam') as {
-        setLoginWindowSeam: (
-          seam: import('../../humble/loginWindowSeam').LoginWindowSeam | null
-        ) => void
-      }
+      const { setLoginWindowSeam } =
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../humble/loginWindowSeam') as {
+          setLoginWindowSeam: (
+            seam: import('../../humble/loginWindowSeam').LoginWindowSeam | null
+          ) => void
+        }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const realStores = require('../../humble/electronStores') as {
         configStore: {

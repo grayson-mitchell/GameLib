@@ -151,7 +151,10 @@ function runGrep(
     ['-rnE', regex, ...targets, '--include=*.ts', '--include=*.tsx'],
     { encoding: 'utf8' }
   )
-  return { status: result.status, matches: parseGrepStdout(result.stdout ?? '') }
+  return {
+    status: result.status,
+    matches: parseGrepStdout(result.stdout ?? '')
+  }
 }
 
 function sweepForOffenders(targets: string[]): string[] {
@@ -227,7 +230,7 @@ describe('REQ-39-03: getLoginWindowSeam() predicate-family static zero-match com
     it('filters a line-comment mention of a removed predicate', () => {
       expect(
         isCommentOnlyMention(
-          "  // `if (seam === null)` Electron branch Task 1 removed from disconnect()."
+          '  // `if (seam === null)` Electron branch Task 1 removed from disconnect().'
         )
       ).toBe(true)
     })
@@ -251,9 +254,9 @@ describe('REQ-39-03: getLoginWindowSeam() predicate-family static zero-match com
         'if (activeSeam === null)'
       ]) {
         expect(
-          new RegExp(PREDICATE_PATTERNS[0].regex.replace(/\[\[:space:\]\]/g, '\\s')).test(
-            line
-          )
+          new RegExp(
+            PREDICATE_PATTERNS[0].regex.replace(/\[\[:space:\]\]/g, '\\s')
+          ).test(line)
         ).toBe(true)
       }
     })
@@ -265,7 +268,9 @@ describe('REQ-39-03: getLoginWindowSeam() predicate-family static zero-match com
     })
 
     it('the ternary/optional-chaining regex matches same-line forms but NOT the seam?: type-annotation position', () => {
-      const re = new RegExp(PREDICATE_PATTERNS[3].regex.replace(/\[\[:space:\]\]/g, '\\s'))
+      const re = new RegExp(
+        PREDICATE_PATTERNS[3].regex.replace(/\[\[:space:\]\]/g, '\\s')
+      )
       expect(re.test('seam ? seamLabel : null')).toBe(true)
       expect(re.test('seam?.close()')).toBe(true)
       expect(re.test('function f(seam?: LoginWindowSeam) {}')).toBe(false)

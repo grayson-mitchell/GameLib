@@ -150,9 +150,8 @@ function hasDualBranchWipeShape(functionBody: string): boolean {
  * regex was checked to correctly skip the arrow's `=>` and land on the real assignment.
  */
 function extractWipeStepLabels(functionBody: string): string[] {
-  const headerMatch = /(?:const|let)\s+wipeSteps\s*(?::[\s\S]*?)?=(?!>)\s*\[/.exec(
-    functionBody
-  )
+  const headerMatch =
+    /(?:const|let)\s+wipeSteps\s*(?::[\s\S]*?)?=(?!>)\s*\[/.exec(functionBody)
   if (!headerMatch) {
     throw new Error(
       `seamBranchParity: could not find a 'wipeSteps = [' array in this function body — the ` +
@@ -617,7 +616,7 @@ describe('seamBranchParity — INVERTED by Phase 39 Plan 04 Task 2 (was Phase 34
       expect(hasDualBranchWipeShape(synthetic)).toBe(false)
     })
 
-    it('anti-vacuity: extractWipeStepLabels correctly parses the collapsed single-line const-with-type-annotation shape (the exact shape Task 1 produced) without stopping at the arrow function\'s own `=>`', () => {
+    it("anti-vacuity: extractWipeStepLabels correctly parses the collapsed single-line const-with-type-annotation shape (the exact shape Task 1 produced) without stopping at the arrow function's own `=>`", () => {
       const synthetic = `
         const seam = getLoginWindowSeamOrThrow()
         const wipeSteps: Array<[string, () => Promise<unknown>]> = [

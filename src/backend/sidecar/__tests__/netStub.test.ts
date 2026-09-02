@@ -165,9 +165,7 @@ describe('electronStub net.request — D-06 own contract (Phase 34.4 Plan 06, RE
 })
 
 /** Builds a fake login-window seam whose `revealPost` is the only exercised member. */
-function fakeSeam(
-  revealPost: LoginWindowSeam['revealPost']
-): LoginWindowSeam {
+function fakeSeam(revealPost: LoginWindowSeam['revealPost']): LoginWindowSeam {
   return {
     open: jest.fn(),
     cookies: jest.fn(),
@@ -186,14 +184,16 @@ function fakeSeam(
  * this file has pinned since Phase 34.4 Plan 06), rather than a same-tick synchronous
  * rejection that would prove nothing about the timeout-vs-real-failure race.
  */
-function asyncRejectingRevealPost(message: string): LoginWindowSeam['revealPost'] {
+function asyncRejectingRevealPost(
+  message: string
+): LoginWindowSeam['revealPost'] {
   return () =>
     new Promise((_resolve, reject) => {
       setImmediate(() => reject(new Error(message)))
     })
 }
 
-describe("humblePostRequest surfaces a named transport failure through the login-window seam (D-06 integration, REQ-34.4-11)", () => {
+describe('humblePostRequest surfaces a named transport failure through the login-window seam (D-06 integration, REQ-34.4-11)', () => {
   it('revealKey rejects with the seam-naming cause, not the pre-fix timeout message, and settles without REQUEST_TIMEOUT_MS ever being advanced', async () => {
     // `doNotFake: ['setImmediate', 'nextTick']` (mirrors user.test.ts:437's own precedent):
     // REQUEST_TIMEOUT_MS's setTimeout is faked and NEVER advanced below — if this promise
