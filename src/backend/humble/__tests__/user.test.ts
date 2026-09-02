@@ -133,12 +133,18 @@ const flushAsync = async () => new Promise((r) => setImmediate(r))
 // partition wipe' describe (which predates the seam and never installed one)
 // needs the SAME fixture the 'login window seam path' describe already used,
 // not a second hand-rolled copy. `installFakeSeamDefaults()` sets the
-// healthy defaults; each describe that needs the fixture calls
-// `setLoginWindowSeam(fakeSeam)` / `setLoginWindowSeam(null)` in its OWN
-// scoped beforeEach/afterEach — never a file-level beforeEach, because the
-// startLogin()/reconnect() describes above still exercise the pre-collapse
-// watchForLogin() path (plan 39-06's territory) and must not have a seam
-// silently installed underneath them.
+// healthy defaults.
+//
+// Phase 39 Plan 06: watchForLogin()/finishLogin() (startLogin()/reconnect()'s
+// only implementation) are now seam-only too — there is no Electron branch
+// left anywhere in humble/user.ts. The outer 'HumbleUser' describe's own
+// beforeEach/afterEach now installs/tears down this fixture file-wide, so
+// EVERY describe in this file runs against the surviving seam path by
+// default. Describes that need their own seam behaviour per-test (e.g.
+// 'login window seam path' overriding mockSeamCookies per test) still keep
+// their own scoped beforeEach — calling installFakeSeamDefaults() /
+// setLoginWindowSeam(fakeSeam) twice is harmless and simply re-applies the
+// same healthy defaults after the file-level beforeEach already did.
 const mockSeamOpen = jest.fn()
 const mockSeamCookies = jest.fn()
 const mockSeamTakeEvents = jest.fn()
@@ -212,14 +218,20 @@ describe('HumbleUser', () => {
     mockHumbleSyncStore.clear.mockImplementation(() => {})
     mockHumbleRevealedStore.clear.mockImplementation(() => {})
 
-    mockFromPartition.mockImplementation(() => mockSessionInstance)
-    mockCookiesGet.mockResolvedValue([])
-
     mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
     mockGetAccountIdentity.mockResolvedValue({
       status: 'ok',
       data: { username: 'tester' }
     })
+
+    // Phase 39 Plan 06: watchForLogin()/finishLogin() are seam-only now, so
+    // every describe in this file needs a seam installed by default.
+    installFakeSeamDefaults()
+    setLoginWindowSeam(fakeSeam)
+  })
+
+  afterEach(() => {
+    setLoginWindowSeam(null)
   })
 
   // ── isLoggedIn / getUserDetails ───────────────────────────────────────────
@@ -248,8 +260,9 @@ describe('HumbleUser', () => {
 
   describe('startLogin() — D-06 silent cancel', () => {
     test('stopLogin() resolves { status: "waiting" } and stays disconnected when no cookie was ever accepted', async () => {
-      mockCookiesGet.mockResolvedValue([])
-
+      // No mockSeamCookies override needed: stopLogin() settles
+      // synchronously via `stop: () => settle({ status: 'waiting' })`,
+      // before any cookie read can occur.
       const loginPromise = HumbleUser.startLogin()
       HumbleUser.stopLogin()
       const result = await loginPromise
@@ -271,13 +284,25 @@ describe('HumbleUser', () => {
     })
 
     test('WR-03: stopLogin() DURING an in-flight validation prevents ALL store writes even when the validation then succeeds (D-06 cancel race)', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      // total: 1 (a live jar) with the candidate cookie present — mirrors
+      // the retired mockCookiesGet.mockResolvedValue([{ value: '...' }]).
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'raw-cookie-value'
+          }
+        ]
+      })
       let resolveGamekeys!: (v: unknown) => void
       mockGetGamekeys.mockImplementation(
         async () => new Promise((r) => (resolveGamekeys = r))
       )
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await flushAsync()
       expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
@@ -302,7 +327,10 @@ describe('HumbleUser', () => {
     test('WR-03 (Phase 11): the watch deadline settles { status: "waiting" } with no store writes when the login never completes', async () => {
       jest.useFakeTimers({ doNotFake: ['setImmediate'] })
       try {
-        mockCookiesGet.mockResolvedValue([])
+        // The deadline settle in armDeadline()'s callback is fully
+        // synchronous and fires regardless of the seam/cookie state — this
+        // test never depends on what mockSeamCookies resolves.
+        mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
 
         const loginPromise = HumbleUser.startLogin()
         jest.advanceTimersByTime(LOGIN_WATCH_TIMEOUT_MS)
@@ -311,9 +339,9 @@ describe('HumbleUser', () => {
         expect(mockConfigStore.set).not.toHaveBeenCalled()
 
         // The watch is fully torn down — no further poll ticks fire.
-        mockCookiesGet.mockClear()
+        mockSeamCookies.mockClear()
         jest.advanceTimersByTime(60_000)
-        expect(mockCookiesGet).not.toHaveBeenCalled()
+        expect(mockSeamCookies).not.toHaveBeenCalled()
       } finally {
         jest.useRealTimers()
       }
@@ -322,7 +350,10 @@ describe('HumbleUser', () => {
     test('WR-03 (Phase 11): notifyLoginNavigated() re-arms the deadline so an actively-navigating user is never cut off', async () => {
       jest.useFakeTimers({ doNotFake: ['setImmediate'] })
       try {
-        mockCookiesGet.mockResolvedValue([])
+        // forceRevalidate() calls armDeadline() unconditionally, before
+        // checkCookie()'s seamLabel guard — the re-arm behaviour under test
+        // does not depend on the cookie mock at all.
+        mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
 
         const loginPromise = HumbleUser.startLogin()
 
@@ -353,9 +384,19 @@ describe('HumbleUser', () => {
   describe('startLogin() — cookie capture + encryption', () => {
     test('accepts on gamekeys "ok", encrypts the cookie, and stores it under HUMBLE_TOKEN_STORE_KEY with the HUMBLE_TOKEN_PREFIX (not raw plaintext) when encryption is available', async () => {
       mockIsEncryptionAvailable.mockReturnValue(true)
-      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'raw-cookie-value'
+          }
+        ]
+      })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
@@ -381,9 +422,19 @@ describe('HumbleUser', () => {
     })
 
     test('WR-06: a successful login pushes the authoritative humbleAuthState so the renderer converges even if the login route already unmounted', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'raw-cookie-value'
+          }
+        ]
+      })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await loginPromise
 
@@ -399,10 +450,20 @@ describe('HumbleUser', () => {
 
   describe('startLogin() — best-effort identity after gamekeys acceptance (D-02/D-16)', () => {
     test('gamekeys "ok" but getAccountIdentity resolves non-ok: login still resolves done with no username and NO userData written', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'raw-cookie-value'
+          }
+        ]
+      })
       mockGetAccountIdentity.mockResolvedValue({ status: 'schema_error' })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
@@ -415,10 +476,20 @@ describe('HumbleUser', () => {
     })
 
     test('gamekeys "ok" but getAccountIdentity throws: login still resolves done with no username and NO userData written', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'raw-cookie-value'
+          }
+        ]
+      })
       mockGetAccountIdentity.mockRejectedValue(new Error('network down'))
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       const result = await loginPromise
 
@@ -445,15 +516,15 @@ describe('HumbleUser', () => {
       expect(ua).not.toContain('GameLib')
     })
 
-    test('the persist:humble partition session receives the standard UA when the watch starts', async () => {
-      const loginPromise = HumbleUser.startLogin()
-
-      expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
-      expect(mockSetUserAgent).toHaveBeenCalledWith(standardBrowserUserAgent())
-
-      HumbleUser.stopLogin()
-      await loginPromise
-    })
+    // RETIRED by Phase 39 Plan 06: 'the persist:humble partition session
+    // receives the standard UA when the watch starts' asserted the
+    // Electron-only session.fromPartition(...).setUserAgent(...) call —
+    // watchForLogin() no longer has that branch at all (seam-only now).
+    // Covering twin: 'login window seam path (Phase 34.4.1 Plan 03)' ->
+    // 'opens the login window once with HUMBLE_LOGIN_URL, visible: true,
+    // and the standard Chrome UA' asserts the SAME guarantee (the watch
+    // opens the window with standardBrowserUserAgent()) via
+    // seam.open(...)'s userAgent argument, the only surviving path.
   })
 
   // ── HACCT-01: startLogin() — anonymous-cookie validation ─────────────────
@@ -464,10 +535,20 @@ describe('HumbleUser', () => {
 
   describe('startLogin() — anonymous-cookie validation (HACCT-01/D-16)', () => {
     test('anonymous cookie on first forced revalidation does NOT complete login: nothing stored, watch stays active', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'anon-cookie-value'
+          }
+        ]
+      })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await flushAsync()
 
@@ -485,10 +566,20 @@ describe('HumbleUser', () => {
       // Humble may keep the identical _simpleauth_sess value across the
       // anonymous → authenticated transition. A permanent value-blacklist
       // made the login window never close (UAT failure 2026-07-05 #3).
-      mockCookiesGet.mockResolvedValue([{ value: 'same-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'same-cookie-value'
+          }
+        ]
+      })
       mockGetGamekeys.mockResolvedValueOnce({ status: 'session_expired' })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await flushAsync()
       expect(mockConfigStore.set).not.toHaveBeenCalled()
@@ -511,10 +602,20 @@ describe('HumbleUser', () => {
     test('poll ticks within the throttle window do NOT re-validate an unchanged rejected value; a later tick outside the window does', async () => {
       jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
       try {
-        mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+        mockSeamCookies.mockResolvedValue({
+          total: 1,
+          matched: [
+            {
+              name: '_simpleauth_sess',
+              domain: 'humblebundle.com',
+              value: 'anon-cookie-value'
+            }
+          ]
+        })
         mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
         const loginPromise = HumbleUser.startLogin()
+        await flushAsync() // seam.open() resolves, seamLabel gets set
 
         // Forced validation via navigation relay → rejected, throttle
         // starts.
@@ -540,13 +641,23 @@ describe('HumbleUser', () => {
     })
 
     test('overlapping checks are deduped while a validation is in flight', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'cookie-value'
+          }
+        ]
+      })
       let resolveGamekeys!: (v: unknown) => void
       mockGetGamekeys.mockImplementation(
         async () => new Promise((r) => (resolveGamekeys = r))
       )
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       HumbleUser.notifyLoginNavigated()
       await flushAsync()
@@ -562,16 +673,35 @@ describe('HumbleUser', () => {
 
     test('a CHANGED cookie value (anonymous → authenticated) is re-checked and completes login when gamekeys is ok', async () => {
       // First tick: anonymous value, rejected.
-      mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'anon-cookie-value'
+          }
+        ]
+      })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await flushAsync()
       expect(mockConfigStore.set).not.toHaveBeenCalledWith('isLoggedIn', true)
 
       // User logs in for real: cookie VALUE changes, gamekeys now validates.
-      mockCookiesGet.mockResolvedValue([{ value: 'authed-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'authed-cookie-value'
+          }
+        ]
+      })
       mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
 
       HumbleUser.notifyLoginNavigated()
@@ -585,10 +715,20 @@ describe('HumbleUser', () => {
     })
 
     test('a thrown gamekeys validation error is transient: nothing stored, same value retried on the next check', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'cookie-value-x' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'cookie-value-x'
+          }
+        ]
+      })
       mockGetGamekeys.mockRejectedValueOnce(new Error('network down'))
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await flushAsync()
 
@@ -609,10 +749,20 @@ describe('HumbleUser', () => {
 
   describe('startLogin() — rejection-log collapse (F-2, Phase 34.4.1 Plan 18)', () => {
     test('N consecutive identical-status rejections produce ONE warning, not N', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'anon-cookie-value'
+          }
+        ]
+      })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await flushAsync()
       HumbleUser.notifyLoginNavigated()
@@ -632,10 +782,20 @@ describe('HumbleUser', () => {
     })
 
     test('a status CHANGE logs again, reporting the suppressed count from the PREVIOUS status', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'anon-cookie-value'
+          }
+        ]
+      })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       // Three identical rejections under 'session_expired' — one logged,
       // two suppressed.
       HumbleUser.notifyLoginNavigated()
@@ -669,10 +829,20 @@ describe('HumbleUser', () => {
     test('a long wait under the SAME status still produces periodic liveness evidence instead of total silence', async () => {
       jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
       try {
-        mockCookiesGet.mockResolvedValue([{ value: 'still-anon-value' }])
+        mockSeamCookies.mockResolvedValue({
+          total: 1,
+          matched: [
+            {
+              name: '_simpleauth_sess',
+              domain: 'humblebundle.com',
+              value: 'still-anon-value'
+            }
+          ]
+        })
         mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
         const loginPromise = HumbleUser.startLogin()
+        await flushAsync() // seam.open() resolves, seamLabel gets set
         HumbleUser.notifyLoginNavigated()
         await flushAsync()
 
@@ -697,10 +867,20 @@ describe('HumbleUser', () => {
     })
 
     test('acceptance is unaffected — a subsequent "ok" validation still completes login normally after prior suppressed rejections', async () => {
-      mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'anon-cookie-value'
+          }
+        ]
+      })
       mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await flushAsync()
       HumbleUser.notifyLoginNavigated()
@@ -717,10 +897,20 @@ describe('HumbleUser', () => {
     test('the forced-revalidation path still bypasses the throttle even with the collapsed logging', async () => {
       jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] })
       try {
-        mockCookiesGet.mockResolvedValue([{ value: 'anon-cookie-value' }])
+        mockSeamCookies.mockResolvedValue({
+          total: 1,
+          matched: [
+            {
+              name: '_simpleauth_sess',
+              domain: 'humblebundle.com',
+              value: 'anon-cookie-value'
+            }
+          ]
+        })
         mockGetGamekeys.mockResolvedValue({ status: 'session_expired' })
 
         const loginPromise = HumbleUser.startLogin()
+        await flushAsync() // seam.open() resolves, seamLabel gets set
         HumbleUser.notifyLoginNavigated()
         await flushAsync()
         expect(mockGetGamekeys).toHaveBeenCalledTimes(1)
@@ -751,9 +941,19 @@ describe('HumbleUser', () => {
   describe('startLogin() — degraded encryption (Pitfall 5 / success criterion 5)', () => {
     test('when encryption is unavailable, records a user-visible encryptionDegraded flag AND calls logWarning, then still stores the session', async () => {
       mockIsEncryptionAvailable.mockReturnValue(false)
-      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'raw-cookie-value'
+          }
+        ]
+      })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await loginPromise
 
@@ -766,9 +966,19 @@ describe('HumbleUser', () => {
 
     test('WR-07: a later login with encryption available clears the sticky encryptionDegraded flag', async () => {
       mockIsEncryptionAvailable.mockReturnValue(true)
-      mockCookiesGet.mockResolvedValue([{ value: 'raw-cookie-value' }])
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          {
+            name: '_simpleauth_sess',
+            domain: 'humblebundle.com',
+            value: 'raw-cookie-value'
+          }
+        ]
+      })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await loginPromise
 
@@ -906,22 +1116,24 @@ describe('HumbleUser', () => {
 
   describe('reconnect() — D-11 partition kept', () => {
     test('watches the persist:humble partition WITHOUT clearing it', async () => {
-      mockCookiesGet.mockResolvedValue([])
-
       const reconnectPromise = HumbleUser.reconnect()
       HumbleUser.stopLogin()
       await reconnectPromise
 
-      expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
-      // The five session.clear*() assertions this test used to make here
-      // (clearStorageData/clearCache/clearAuthCache/clearHostResolverCache/
-      // clearData) were removed: Task 1 deleted the only call sites for
-      // those methods anywhere in src/backend, so asserting
-      // `.not.toHaveBeenCalled()` against them would be vacuously true
-      // regardless of what reconnect() does. The D-11 invariant this test
-      // protects — reconnect() opens the partition without wiping it — is
-      // still meaningfully covered by the mockFromPartition assertion
-      // above plus the "seam path" describe's own D-11-equivalent coverage.
+      // Phase 39 Plan 06: reconnect() is watchForLogin()'s only
+      // implementation, now seam-only. There is no "clear before open"
+      // branch left to instrument via mockFromPartition/session.clear*()
+      // (those were removed from src/backend entirely by earlier plans in
+      // this collapse series) — the D-11 guarantee ("reconnect() watches
+      // WITHOUT clearing") is re-expressed here as: reconnect() actually
+      // opens a real login window (proving it runs the genuine watch, not
+      // a no-op) AND never calls either seam wipe method first.
+      expect(mockSeamOpen).toHaveBeenCalledWith(
+        HUMBLE_LOGIN_URL,
+        expect.any(Object)
+      )
+      expect(mockSeamClearCookies).not.toHaveBeenCalled()
+      expect(mockSeamClearStorage).not.toHaveBeenCalled()
     })
   })
 
@@ -1031,16 +1243,39 @@ describe('HumbleUser', () => {
 
   describe('csrf_cookie capture + getCsrfToken() (Phase 14)', () => {
     test('captures csrf_cookie at the same login moment as _simpleauth_sess, encrypted under a new csrfToken key', async () => {
-      mockCookiesGet.mockImplementation(
-        async (opts: { name: string; url: string }) => {
-          if (opts.name === 'csrf_cookie') {
-            return [{ value: 'raw-csrf-value' }]
+      // _simpleauth_sess and csrf_cookie now both route through the SAME
+      // seam.cookies(label, host, names) method — branch on which cookie
+      // name was requested, mirroring the old mockCookiesGet dual-purpose
+      // mock (opts.name === 'csrf_cookie').
+      mockSeamCookies.mockImplementation(
+        async (_label: string, _host: string, names: string[]) => {
+          if (names.includes('csrf_cookie')) {
+            return {
+              total: 1,
+              matched: [
+                {
+                  name: 'csrf_cookie',
+                  domain: 'humblebundle.com',
+                  value: 'raw-csrf-value'
+                }
+              ]
+            }
           }
-          return [{ value: 'raw-cookie-value' }]
+          return {
+            total: 1,
+            matched: [
+              {
+                name: '_simpleauth_sess',
+                domain: 'humblebundle.com',
+                value: 'raw-cookie-value'
+              }
+            ]
+          }
         }
       )
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       const result = await loginPromise
       expect(result.status).toBe('done')
@@ -1061,14 +1296,24 @@ describe('HumbleUser', () => {
     })
 
     test('csrf_cookie absent at login: nothing stored, login still completes, getCsrfToken() returns undefined (no crash)', async () => {
-      mockCookiesGet.mockImplementation(
-        async (opts: { name: string; url: string }) => {
-          if (opts.name === 'csrf_cookie') return []
-          return [{ value: 'raw-cookie-value' }]
+      mockSeamCookies.mockImplementation(
+        async (_label: string, _host: string, names: string[]) => {
+          if (names.includes('csrf_cookie')) return { total: 0, matched: [] }
+          return {
+            total: 1,
+            matched: [
+              {
+                name: '_simpleauth_sess',
+                domain: 'humblebundle.com',
+                value: 'raw-cookie-value'
+              }
+            ]
+          }
         }
       )
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       const result = await loginPromise
       expect(result.status).toBe('done')
@@ -1111,15 +1356,42 @@ describe('HumbleUser', () => {
     })
 
     test('never logs the raw csrf cookie value', async () => {
+      // Phase 39 Plan 06: was a FALSE PASS before this re-point — the
+      // retired mockCookiesGet mock was never reachable once watchForLogin()
+      // collapsed to seam-only, so CSRF_SECRET never entered any code path
+      // and every `.not.toContain(CSRF_SECRET)` assertion below passed
+      // vacuously. Wiring the secret through mockSeamCookies makes this
+      // test actually exercise the surface it claims to guard.
       const CSRF_SECRET = 'super-secret-csrf-value-xyz'
-      mockCookiesGet.mockImplementation(
-        async (opts: { name: string; url: string }) => {
-          if (opts.name === 'csrf_cookie') return [{ value: CSRF_SECRET }]
-          return [{ value: 'raw-cookie-value' }]
+      mockSeamCookies.mockImplementation(
+        async (_label: string, _host: string, names: string[]) => {
+          if (names.includes('csrf_cookie')) {
+            return {
+              total: 1,
+              matched: [
+                {
+                  name: 'csrf_cookie',
+                  domain: 'humblebundle.com',
+                  value: CSRF_SECRET
+                }
+              ]
+            }
+          }
+          return {
+            total: 1,
+            matched: [
+              {
+                name: '_simpleauth_sess',
+                domain: 'humblebundle.com',
+                value: 'raw-cookie-value'
+              }
+            ]
+          }
         }
       )
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await loginPromise
 
@@ -1581,17 +1853,20 @@ describe('HumbleUser', () => {
       }
     })
 
-    test('Electron regression: with NO seam installed, the existing session-based watch still runs unchanged', async () => {
+    // RETIRED by Phase 39 Plan 06: 'Electron regression: with NO seam
+    // installed, the existing session-based watch still runs unchanged'
+    // asserted a session.fromPartition(...) fallback that no longer
+    // exists — Task 1 collapsed watchForLogin() to call
+    // getLoginWindowSeamOrThrow() unconditionally, so "no seam installed"
+    // is now a hard failure, never a silent Electron fallback. Covering
+    // twin (re-expressing the new invariant, not the retired one):
+    test('with NO seam installed, startLogin() rejects loudly instead of silently falling back (Phase 39 Plan 06)', async () => {
       setLoginWindowSeam(null)
-      mockCookiesGet.mockResolvedValue([])
 
-      const loginPromise = HumbleUser.startLogin()
-
-      expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
+      await expect(HumbleUser.startLogin()).rejects.toThrow(
+        /no login-window seam is installed/
+      )
       expect(mockSeamOpen).not.toHaveBeenCalled()
-
-      HumbleUser.stopLogin()
-      await expect(loginPromise).resolves.toEqual({ status: 'waiting' })
     })
 
     // ── S-09 fix (Phase 34.4.1 Plan 18 gap-cycle closure, D-GAP-03) ─────────
@@ -2082,9 +2357,25 @@ describe('HumbleUser', () => {
   describe('cookie secrecy (Pitfall 4)', () => {
     test('no logger call and no configStore.set call ever receives the raw cookie value', async () => {
       const SECRET = 'super-secret-cookie-value-xyz'
-      mockCookiesGet.mockResolvedValue([{ value: SECRET }])
+      // Phase 39 Plan 06: was a FALSE PASS before this re-point -- the
+      // retired mockCookiesGet mock was never reachable once
+      // watchForLogin() collapsed to seam-only, so SECRET never entered
+      // any code path and every `.not.toContain(SECRET)` assertion below
+      // passed vacuously (the default installFakeSeamDefaults() cookie
+      // read is {total:0, matched:[]}, which settles as an immediate
+      // UNDECIDABLE error before SECRET is ever touched). Route SECRET
+      // through the real seam.cookies() read so the login actually
+      // completes and the secret genuinely flows through the code this
+      // test claims to guard.
+      mockSeamCookies.mockResolvedValue({
+        total: 1,
+        matched: [
+          { name: '_simpleauth_sess', domain: 'humblebundle.com', value: SECRET }
+        ]
+      })
 
       const loginPromise = HumbleUser.startLogin()
+      await flushAsync() // seam.open() resolves, seamLabel gets set
       HumbleUser.notifyLoginNavigated()
       await loginPromise
 
