@@ -171,6 +171,7 @@
     "src/frontend/screens/Settings/components/Gamescope.tsx",
     "src/frontend/screens/Settings/components/HideWindowOnProtocolLaunch.tsx",
     "src/frontend/screens/Settings/components/LauncherArgs.tsx",
+    "src/frontend/screens/Settings/components/LoginBackground.tsx",
     "src/frontend/screens/Settings/components/MinimizeOnGameLaunch.tsx",
     "src/frontend/screens/Settings/components/NotifyHumbleExpirations.tsx",
     "src/frontend/screens/Settings/components/PreferedLanguage.tsx",
