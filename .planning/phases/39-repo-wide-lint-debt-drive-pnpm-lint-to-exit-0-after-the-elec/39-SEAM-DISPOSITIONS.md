@@ -3,8 +3,8 @@
 This file is the disposition record for the `getLoginWindowSeam()` predicate-family collapse
 (REQ-39-03, plans 39-02 through 39-07). It is a DIFFERENT file from
 `39-GATE-DISPOSITIONS.md` (plan 39-01's planning-gate disposition record) — do not confuse the
-two, and do not treat this file as covering `pnpm lint` figures (plan 39-09's territory) or
-`AUDITED_UNION_FLOOR`/preload-surface arithmetic (plan 39-01/39-08's territory).
+two, and do not treat this file as covering `pnpm lint` figures (plan 39-09's territory) or the
+preload-surface floor-constant arithmetic that plans 39-01/39-08 own.
 
 ## 1. RED proof — every predicate pattern proven capable of matching, pre-collapse
 
@@ -110,3 +110,99 @@ THREE of the lines above are excluded, and the current-tree sweep of both scoped
 genuinely, contentfully zero. See `meta/__tests__/loginWindowSeamPredicateRemoved.test.ts`'s
 `isCommentOnlyMention` helper and its own three unit-level `it`s proving the filter neither over-
 nor under-excludes.
+
+## 2. Per-site disposition table (all 13 sites)
+
+Sites are named by file plus enclosing function, not by line number — line numbers drift, and that
+drift is itself part of this phase's story (see section 3 below). "Root sweep" means the site is
+now guarded by `loginWindowSeamPredicateRemoved.test.ts`'s zero-match sweep of
+`src/backend/humble` or `src/backend/storeManagers`. "Single-file assertion" means the same gate's
+dedicated `oauthLoginCapture.ts`-only `it`. "Not directly gated" is stated plainly, never left blank.
+
+| # | Site (file : enclosing function) | Predicate form | What the removed branch did | Collapsed by | Now guarded by |
+|---|---|---|---|---|---|
+| 1 | `humble/user.ts` : `getLiveCsrfToken()` | `if (seam !== null)` | `else` arm called `session.fromPartition(...)` to read the csrf cookie directly | 39-05 | root sweep (`src/backend/humble`) |
+| 2 | `humble/user.ts` : `watchForLogin()` declaration | `if (seam === null)` | built `ses = session.fromPartition(...)` and called `setUserAgent` on it | 39-06 | root sweep |
+| 3 | `humble/user.ts` : `checkCookie()` (nested inside `watchForLogin()`) | `if (seam === null) {...} else {...}` | `seam === null` arm called `ses!.cookies.get(...)` on the closure-scoped Electron session | 39-06 | root sweep |
+| 4 | `humble/user.ts` : `watchForLogin()` (ternary) | `seam !== null ? seamLabel : null` | `: null` alternate — cosmetic, no distinct behavior of its own | 39-06 | root sweep |
+| 5 | `humble/user.ts` : `watchForLogin()` (window-open guard) | `if (seam !== null) seam.open(...)` (always-true once seam is guaranteed) | no live Electron sibling — this was already a guard, not a dual-build branch | 39-06 | root sweep |
+| 6 | `humble/user.ts` : `finishLogin()` (csrf capture) | `if (seam === null) {...} else {...}` | `seam === null` arm called `session.fromPartition(...)` for the csrf capture | 39-06 | root sweep |
+| 7 | `humble/user.ts` : `checkHealthAndFlagExpiry()` health-check backfill | `if (seam === null) {...} else {...}` | `seam === null` arm called `session.fromPartition(...)` to backfill the csrf token | 39-05 | root sweep |
+| 8 | `humble/user.ts` : `disconnect()` | `if (seam === null) {...} else {...}` | `seam === null` arm ran the 5-step Electron session wipe (`session.fromPartition`, `clearStorageData`, `clearCache`, `clearAuthCache`, `clearHostResolverCache`) | 39-04 | root sweep |
+| 9 | `humble/adapter.ts` : `humblePostRequest()` | `return seam ? viaSeam(...) : viaElectronNet(...)` | `: viaElectronNet(...)` alternate, and the entire now-unreachable 74-line `humblePostRequestViaElectronNet` function it called | 39-03 | root sweep |
+| 10 | `humble/library.ts` (transport-label ternary) | `getLoginWindowSeam() !== null ? 'login-window seam transport' : 'electron-net transport'` | cosmetic log-label string — never printed, no behavior of its own | 39-03 | root sweep |
+| 11 | `storeManagers/legendary/user.ts` : `logout()` | `if (seam === null) {...} else {...}` | `seam === null` arm ran the same 5-step Electron session wipe shape as site #8, for Epic | 39-04 | root sweep (`src/backend/storeManagers`) |
+| 12 | `sidecar/oauthLoginCapture.ts` : `captureOAuthLogin()` | `if (seam === null) return Promise.resolve({ status: 'unsupported' })` | early-return arm, behaviorally real (not cosmetic) even though its own doc comment frames it as defensive (see section 4 below) | 39-02 | single-file assertion (`oauthLoginCapture.ts`), NOT the root sweep — `src/backend/sidecar/` is outside the two scoped roots |
+| 13 | `humble/user.ts` : `watchForLogin()`'s nested `settle()` (RESEARCH.md's 12-site census missed this one; see section 3) | `if (seam !== null && seamLabel !== null)` | always-true guard, structurally identical to site #5, gating the `seam.close(labelToClose)` call on the same closure-scoped `seam`/`seamLabel` locals declared at site #2 | 39-06 (automatically, by collapsing site #2's declaration — the SAME local, not a separate collapse task) | root sweep |
+
+## 3. The deliberate exclusion
+
+`src/backend/sidecar/humbleLoginFlowRegistration.ts:457` was FOUND, CONSIDERED, and DELIBERATELY
+KEPT. Its predicate:
+
+```typescript
+const seam = getLoginWindowSeam()
+if (!seam) {
+  smokeLog(
+    'no seam installed — aborting (this is a FAIL, not a skip)',
+    true
+  )
+  return
+}
+```
+
+sits inside a block gated by `process.env.GAMELIB_LOGIN_SEAM_SMOKE === '1'`. This is not a
+dual-build discriminator — it never chooses between an Electron path and a Tauri path, because
+there is no Electron path here to choose. It is a defensive "did registration actually run" check
+inside a diagnostic smoke-test harness, and its own comment frames it as the cheapest available
+reproduction harness for a future window-construction regression: if the seam was never installed
+by the time this smoke path runs, the harness fails loudly rather than silently no-opping. This is
+exactly why the root sweep in `loginWindowSeamPredicateRemoved.test.ts` stops at two directories
+(`src/backend/humble`, `src/backend/storeManagers`) rather than widening to `src/backend`: widening
+the sweep would make the gate permanently red against a guard the phase chose to keep, and the
+natural "fix" for that false red would be to weaken the gate's pattern — which is worse than not
+having the gate at all. Without this paragraph on record, a future re-audit running the same
+predicate search over a wider `src/backend` scope would find this live match and could
+misread it as an incomplete sweep rather than a deliberately kept diagnostic.
+
+## 4. The census correction
+
+RESEARCH.md's own 12-site table is the ground-truth census this phase's collapse plans (39-02
+through 39-06) were sized against. PATTERNS.md, produced later in the same phase, independently
+found a 13th site at `src/backend/humble/user.ts:429`, inside `watchForLogin()`'s nested `settle()`
+function — sharing the same closure-scoped `seam`/`seamLabel` locals that site #2's declaration
+(`user.ts:274`) introduces. The 13th site did **not** change the collapse task count: because it
+references the SAME local as site #2, collapsing site #2's declaration in plan 39-06 automatically
+resolved the 13th site's guard too, exactly the same mechanism that already resolved sites #3, #4,
+and #5's uses of that one declaration. A reader checking RESEARCH.md's `12` against a fresh grep of
+the live tree (or against this phase's own `13`-row table above) will find a discrepancy; it is
+resolved here rather than requiring re-derivation.
+
+PATTERNS.md also corrected one drifted citation while re-verifying every line number against the
+live tree: RESEARCH.md cited site #11 (`storeManagers/legendary/user.ts`'s `logout()`) at
+`167-177`. On the live tree at the time PATTERNS.md was written, the same code was at `221-235` — a
+54-line drift, accumulated from earlier phases' edits to files above that function. This drift is
+recorded rather than quietly fixed, because it is itself the direct evidence for the standing
+lesson this whole plan exists to enforce: a census keyed on a file-and-line list goes stale the
+moment any earlier line in the file changes, while a census keyed on the predicate itself does not.
+WR-01's own original undercount (7 sites named vs. 12 actually present) was caused by exactly this
+same failure mode — a census taken over "the files WR-01 happened to read" rather than "every call
+site of the predicate."
+
+## 5. Framing note for `oauthLoginCapture.ts` (site #12)
+
+Site #12's removed branch is described in the disposition table above as "behaviorally real (not
+cosmetic)," which is accurate but must not be read as equivalent to the `user.ts` sites' removed
+branches. The `user.ts` and `legendary/user.ts` sites (1, 2, 3, 6, 7, 8, 11, 13) removed branches
+that ran REAL, LIVE Electron code during the dual-build era — `session.fromPartition(...)` calls
+that executed whenever the Tauri seam was not installed, because Electron was a genuinely supported
+build target at the time those branches were written. Site #12 is different in kind: its own
+sibling doc comment already framed the Electron early-return case as hypothetical and defensive —
+`oauthLoginCapture.ts` was registered exclusively in the Tauri-only sidecar module graph, so the
+`seam === null` branch it guarded against "would be harmless even if somehow invoked there" (its
+own words, predating this phase). Collapsing it in plan 39-02 was still the correct move — dead
+code that can never execute should still be removed, and a defensive check against an impossible
+state is not free (it is a branch a reader must reason about) — but describing its removed branch
+in the same language as the `user.ts` sites' removed branches would misstate what the code was ever
+actually for. The `user.ts` sites removed working dual-build behavior; site #12 removed a
+belt-and-braces check against a state its own author already believed was unreachable.
