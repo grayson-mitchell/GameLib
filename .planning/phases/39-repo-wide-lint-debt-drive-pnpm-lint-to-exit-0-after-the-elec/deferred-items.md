@@ -38,6 +38,16 @@ started.
    (`'box.error.install.stalled'`) — looks like an i18next namespace-prefix convention drift
    versus this test's expectation, unrelated to any file plan 39-02 modified.
 
+   **RESOLVED 2026-09-02 by quick `260902-qgd` (commit `348d3e42a`).** The "convention drift"
+   read was right, and the drift was in the **test**, not production. Quick `260901-ud5`
+   (`c2f567064`) deliberately re-namespaced 67 fork-authored strings into the `gamelib`
+   namespace under its Bucket R (D-05: `pnpm i18n` must write only `gamelib.json`), updated
+   `utils.ts:266`, and left this assertion pinning the bare key. Confirmed NOT an absent-key
+   defect — `en/gamelib.json` holds the key and both its siblings. Fixed by re-pinning to
+   `'gamelib:box.error.install.stalled'`, kept as an exact key pin rather than loosened.
+   A bidirectional census (335 test files × 147 prefixed keys, both directions) found this
+   was the sweep's **only** stranded assertion. 34/34.
+
 Both are out of scope for 39-02 (Scope Boundary rule) and were not fixed. Recorded here so a
 later phase-39 plan (or a dedicated fix) picks them up rather than re-discovering them.
 
