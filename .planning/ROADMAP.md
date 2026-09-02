@@ -4643,6 +4643,58 @@ Plans:
 - [x] 39-08-PLAN.md — seam-parity gate: re-point the moved artifact and disposition the Axis A census this phase invalidated; reach 7/7 (REQ-39-02)
 - [x] 39-09-PLAN.md — re-measure lint on the post-collapse tree and install a proven `--max-warnings` ratchet in its own commit (REQ-39-01)
 
+**EXECUTED 2026-09-02 — 9/9 plans, all three requirements Complete, `39-VERIFICATION.md`
+`status: human_needed` with ONE open item. DO NOT read this as a clean pass.**
+
+- **REQ-39-01 (lint):** `pnpm lint` exits 0 at **4157 problems (0 errors, 4157 warnings)**.
+  **The ROADMAP's `3544 problems (53 errors, 3491 warnings)` above is SUPERSEDED** — errors were
+  already at ZERO before this phase began, because Phase 35's cutover deleted the
+  error-generating files and quick `260901-ud5` cleared 12 more. The phase's headline premise
+  ("`pnpm lint` exits non-zero repo-wide") no longer described reality at execution time; the
+  standing instruction to re-measure rather than trust the snapshot is what caught it.
+  `package.json`'s script is now `eslint --cache --max-warnings 4157 .`, landed in its own
+  commit (`e981740324`), mutation-proven both directions by the executor, by the orchestrator
+  and again by the verifier (`--max-warnings 4156` exits 1). Task 2's auto-fix slice was a
+  RECORDED SKIP (71 fixable / ~1.7%), not an omission.
+- **REQ-39-02 (planning gates):** `python3 meta/runPlanningGates.py` prints
+  **`7/7 planning gates passed.`** — the first 7/7 since the cutover. Both gates were
+  dispositioned, not merely silenced, and BOTH were mutation-proven still capable of failing
+  (independently, by the orchestrator and the verifier). Plan 39-01 RE-DERIVED the
+  preload-surface floor 217→206 and found that deleting `getEpicGamesStatus` broke a *different*
+  gate, so the inventory Totals sit deliberately at **207**, one above the union.
+- **REQ-39-03 (dead-seam collapse):** 13 sites collapsed behind the new throwing
+  `getLoginWindowSeamOrThrow()`. Exactly ONE predicate survives by design —
+  `humbleLoginFlowRegistration.ts:458`'s smoke-test guard — independently re-swept and confirmed.
+  `meta/__tests__/loginWindowSeamPredicateRemoved.test.ts` makes it permanent and is confirmed
+  COLLECTED by the Meta jest project and non-vacuous. `seamBranchParity.test.ts` was
+  **INVERTED, not retired** (plan 39-04): it no longer compares two branches — it asserts neither
+  wipe site has regrown one, and keeps the `authCache`/`hostResolver` residual DECLARED.
+
+**OPEN — `CR-01`, a regression THIS PHASE introduced, found by code review and independently
+confirmed twice:** `LegendaryUser.logout()` (`storeManagers/legendary/user.ts:210`) acquires the
+seam via the throwing accessor BEFORE the credential cleanup at `:652-653` that the function's own
+comment says "MUST run unconditionally" (T-34.5-19, ASVS V3). Pre-collapse the nullable accessor
+fell through to that cleanup; the mechanical substitution turned a fall-through into an abort. The
+sibling `humble/user.ts` `disconnect()` is NOT affected — it clears its credential FIRST
+(`configStore.clear()`, `:866`) and acquires the seam after. **A naive hoist was tried and
+REVERTED: it fails the pinned `REQ-34.5-04` ordering test** (cookie steps must precede
+`configStore.delete`), so Epic and Humble differ BY REQUIREMENT, not by oversight. A correct fix
+must satisfy both constraints at once — the reviewer's shape is a try/finally with the credential
+cleanup in the `finally`. Left to a human deliberately rather than restructuring a security path
+unilaterally at phase close. **No test currently drives `logout()` with no seam installed**, and
+neither seam instrument can see an ORDERING defect — a follow-up test is part of the fix.
+
+**`status: human_needed` was chosen DELIBERATELY over `gaps_found`**, because `gaps_found` makes a
+phase vanish from `gsd-sdk query audit-uat` entirely, taking its open item with it. Verified live:
+phase 39 now reports to that audit with 1 item.
+
+**Known-red baseline, unchanged by this phase and NOT its regressions:** 5 failing suites /
+9 tests (`decompressPool` native-LZMA 'pure-js', `downloadmanager/utils` i18n key,
+`hardcodedStringGate`, `genI18nGateScope` A-17 drift, `runTsSignals` load flake). All five map
+one-to-one onto the phase's own `deferred-items.md`, and **Phase 39 touched ZERO
+`src/frontend/**` files** — the scope fence held. The `prettier --check` gate remains red and
+remains explicitly OUT of scope; that is correct behaviour, not a gap.
+
 ### Phase 40: In-app store and wiki browsing under Tauri — embedded child webview (D-05 / REQ-34.4.1-07)
 
 **Goal:** Restore the store and wiki browsing surface that the Tauri rearchitecture left showing an
