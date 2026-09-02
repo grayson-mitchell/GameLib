@@ -207,7 +207,15 @@ export class LegendaryUser {
     // paragraph naming both categories and this threat ID is the durable
     // record of that acceptance (see Phase 39 Plan 04's SUMMARY for how the
     // branch-comparison test that used to validate it was dispositioned).
-    const seam = getLoginWindowSeamOrThrow()
+    // Phase 39 CR-01 (T-34.5-19, ASVS V3): the seam is acquired inside EACH
+    // wipe step below, not once here, so a missing seam is caught by the
+    // guarded loop's own try/catch and can never skip the credential-side
+    // cleanup at :652-653. Before this fix, a bare `const seam =
+    // getLoginWindowSeamOrThrow()` at this exact spot threw outside the
+    // loop's guard, aborting logout() before the cleanup ran — the pinned
+    // no-seam test above proves it. This leaves the `wipeSteps` declaration
+    // and the guarded loop as the only statements between CLI success and
+    // that cleanup, and neither can throw outside the guard.
     const wipeSteps: Array<[string, () => Promise<unknown>]> = [
       // ORDER IS LOAD-BEARING (debug session `epic-cookie-clear-read-divergence`).
       // `clearEpicStorage` MUST run FIRST and `clearEpicCookies` MUST run LAST.
@@ -230,6 +238,9 @@ export class LegendaryUser {
       [
         'clearEpicStorage',
         async () => {
+          // Seam acquired here, not once above (CR-01 — see the comment
+          // ahead of `wipeSteps`).
+          const seam = getLoginWindowSeamOrThrow()
           // Plan 15's clearStorage() opens and closes its OWN hidden
           // window inside the Rust arm (humble_login_clear_storage) — no
           // label is needed or returned here, unlike the cookie step
@@ -251,6 +262,9 @@ export class LegendaryUser {
       [
         'clearEpicCookies',
         async () => {
+          // Seam acquired here, not once above (CR-01 — see the comment
+          // ahead of `wipeSteps`).
+          const seam = getLoginWindowSeamOrThrow()
           // Phase 34.4.1 Plan 23 (F-6 Defect B, deliberate cross-phase edit into open
           // Phase 34.5 -- see this plan's own SUMMARY): `seam.clearCookies` routes to
           // the exact SAME `humble_login_clear_cookies` Rust arm `humble/user.ts`'s
