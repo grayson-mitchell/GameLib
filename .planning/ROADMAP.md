@@ -4670,8 +4670,8 @@ Plans:
   **INVERTED, not retired** (plan 39-04): it no longer compares two branches — it asserts neither
   wipe site has regrown one, and keeps the `authCache`/`hostResolver` residual DECLARED.
 
-**OPEN — `CR-01`, a regression THIS PHASE introduced, found by code review and independently
-confirmed twice:** `LegendaryUser.logout()` (`storeManagers/legendary/user.ts:210`) acquires the
+**`CR-01` — CLOSED 2026-09-02 by quick task `260902-ofu` (`27ecd7920` test, `ca7473bb2` fix). Recorded in full because the FIX SHAPE is the useful part.** A regression THIS PHASE introduced,
+found by code review and independently confirmed twice before it was fixed: `LegendaryUser.logout()` (`storeManagers/legendary/user.ts:210`) acquires the
 seam via the throwing accessor BEFORE the credential cleanup at `:652-653` that the function's own
 comment says "MUST run unconditionally" (T-34.5-19, ASVS V3). Pre-collapse the nullable accessor
 fell through to that cleanup; the mechanical substitution turned a fall-through into an abort. The
@@ -4680,11 +4680,20 @@ sibling `humble/user.ts` `disconnect()` is NOT affected — it clears its creden
 REVERTED: it fails the pinned `REQ-34.5-04` ordering test** (cookie steps must precede
 `configStore.delete`), so Epic and Humble differ BY REQUIREMENT, not by oversight. A correct fix
 must satisfy both constraints at once — the reviewer's shape is a try/finally with the credential
-cleanup in the `finally`. Left to a human deliberately rather than restructuring a security path
-unilaterally at phase close. **No test currently drives `logout()` with no seam installed**, and
-neither seam instrument can see an ORDERING defect — a follow-up test is part of the fix.
+cleanup in the `finally`. **The shape actually shipped is neither the hoist nor the try/finally** the review proposed: the
+seam acquisition MOVED INTO each of the two `wipeSteps` closures, so a missing seam now throws
+INSIDE the loop's existing `try/catch`, `clearEpicCookies` being `FATAL_WIPE_STEP` captures it,
+the cleanup runs, and the SAME `Error` is rethrown after it. Three-line diff, no re-indent. The
+try/finally was ruled out by a constraint neither the review nor the orchestrator had surfaced:
+`seamBranchParity.test.ts:394` locates `wipeSteps` INSIDE `logout()`'s own extracted function
+body, so extracting that block into a helper makes that gate throw. A 12th test now drives
+`logout()` with NO seam installed — proven RED against the unfixed tree and GREEN after, re-proven independently by the orchestrator.
 
-**`status: human_needed` was chosen DELIBERATELY over `gaps_found`**, because `gaps_found` makes a
+**`39-VERIFICATION.md` is now `status: passed`** — it was `human_needed` while CR-01 stood, and
+was flipped when the quick task closed it, because `audit-uat` reads that STATUS field and NOT the
+item-level `resolved: true`; leaving it would have reported a closed item as open forever.
+Verified live: phase 39 now returns ZERO open items to that audit.
+**`human_needed` had been chosen DELIBERATELY over `gaps_found`**, because `gaps_found` makes a
 phase vanish from `gsd-sdk query audit-uat` entirely, taking its open item with it. Verified live:
 phase 39 now reports to that audit with 1 item.
 

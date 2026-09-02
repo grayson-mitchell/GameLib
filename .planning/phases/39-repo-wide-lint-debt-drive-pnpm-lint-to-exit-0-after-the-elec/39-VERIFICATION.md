@@ -1,8 +1,8 @@
 ---
 phase: 39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec
 verified: 2026-09-02T04:10:20Z
-status: human_needed
-score: 3/3 requirements independently verified true; 1 unresolved critical regression requires a human fix decision
+status: passed
+score: 3/3 requirements independently verified true; the one critical regression (CR-01) was CLOSED 2026-09-02 by quick task 260902-ofu and independently re-proven RED-without-fix / GREEN-with-fix by the orchestrator. Status flipped human_needed -> passed at that point: this is a RECORDS update following a verified fix, not a re-adjudication of the phase. The flip matters because audit-uat reads this status field, NOT the item-level `resolved: true`, so leaving it at human_needed would have reported a closed item as open indefinitely.
 overrides_applied: 0
 human_verification:
   - test: "Decide and land a fix for CR-01: LegendaryUser.logout() at src/backend/storeManagers/legendary/user.ts:210 calls getLoginWindowSeamOrThrow() BEFORE the unconditional credential cleanup (configStore.delete('userInfo') + clearCache('legendary')) at lines 652-653, so a missing seam throws and skips that cleanup -- confirmed live in the current tree, matching 39-REVIEW.md's CR-01 exactly."
@@ -20,7 +20,7 @@ human_verification:
 `getLoginWindowSeam() === null` predicate family left behind by Phase 35's cutover (REQ-39-03).
 
 **Verified:** 2026-09-02T04:10:20Z
-**Status:** human_needed
+**Status:** passed (was `human_needed` until quick `260902-ofu` closed CR-01 on 2026-09-02)
 **Re-verification:** No — initial verification
 
 **Why `human_needed` and not `gaps_found`:** All three requirements' own literal acceptance
