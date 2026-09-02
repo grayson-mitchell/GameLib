@@ -56,7 +56,11 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   // to its Runner for the tray's recent-game launch. This gate did its job: it
   // reddened the moment the channel landed unledgered, which is exactly the
   // tripwire the header describes. Send count unchanged.
-  'appShellFlowRegistration.ts': { invoke: 8, send: 12 },
+  //
+  // Quick 260902-wbd (2026-09-02): invoke 8 -> 9 -- `getLoginBackground`, the
+  // Manage Accounts background picker's IPC read, backed by `appshell/themes.ts`.
+  // Send count unchanged.
+  'appShellFlowRegistration.ts': { invoke: 9, send: 12 },
   'clipboardFlowRegistration.ts': { invoke: 1, send: 2 },
   'dialogFlowRegistration.ts': { invoke: 1, send: 0 },
   'downloadQueueFlowRegistration.ts': { invoke: 1, send: 4 },

@@ -224,7 +224,7 @@ function syncTrayIcon(): void {
 }
 
 /**
- * Registers the 20 app-shell channels (8 invoke + 12 send). Called once from
+ * Registers the 21 app-shell channels (9 invoke + 12 send). Called once from
  * `handlers.ts` — this
  * module owns no side effects at import time beyond the imports above; the
  * caller decides when registration onto the handler registry happens.
