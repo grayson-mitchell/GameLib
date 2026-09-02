@@ -851,47 +851,16 @@ describe('HumbleUser', () => {
       }
     })
 
-    // Debug session humble-reveal-key-fails: csrf_cookie was previously only
-    // ever captured inside finishLogin() — an account already connected
-    // before that capture code existed would permanently have no csrfToken.
-    // checkHealthAndFlagExpiry() now backfills it opportunistically on a
-    // confirmed-healthy ('ok') session.
-    test('backfills a missing csrfToken from the partition when the session is healthy (ok)', async () => {
-      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
-        if (key === 'sessionCookie') {
-          return 'humble:v1:' + Buffer.from('cookie').toString('base64')
-        }
-        // csrfToken never seen — models a pre-Phase-14 account.
-        return undefined
-      })
-      mockDecryptString.mockReturnValue('cookie')
-      mockGetGamekeys.mockResolvedValue({ status: 'ok' })
-      mockCookiesGet.mockImplementation(
-        async (opts: { name: string; url: string }) => {
-          if (opts.name === 'csrf_cookie') {
-            return [{ value: 'backfilled-csrf-value' }]
-          }
-          return []
-        }
-      )
-
-      await HumbleUser.checkHealthAndFlagExpiry()
-
-      const csrfCall = mockConfigStore.set.mock.calls.find(
-        ([key]) => key === 'csrfToken'
-      )
-      expect(csrfCall).toBeDefined()
-      expect(csrfCall![1]).toMatch(/^humble:v1:/)
-      expect(csrfCall![1]).not.toBe('backfilled-csrf-value')
-
-      // Redaction: the raw token value must never reach a log call.
-      for (const call of [
-        ...mockLogWarning.mock.calls,
-        ...mockLogInfo.mock.calls
-      ]) {
-        expect(JSON.stringify(call)).not.toContain('backfilled-csrf-value')
-      }
-    })
+    // Phase 39 Plan 05: 'backfills a missing csrfToken from the partition
+    // when the session is healthy (ok)' DELETED — it drove the backfill
+    // via mockCookiesGet with no seam installed, a shape the collapsed
+    // checkHealthAndFlagExpiry() can no longer reach (it now always calls
+    // getLoginWindowSeamOrThrow(), which throws with none installed). The
+    // exact invariant it guarded (a healthy session backfills a missing
+    // csrfToken, encrypted, never the raw value, never logged) survives
+    // unweakened in 'checkHealthAndFlagExpiry() — csrf_cookie backfill seam
+    // path (S-09, Plan 18)' → 'opens a temporary hidden window, reads
+    // csrf_cookie through the seam, stores it, and closes the window'.
 
     test('does NOT re-fetch/overwrite csrfToken when one is already cached', async () => {
       mockConfigStore.get_nodefault.mockImplementation((key: string) => {
@@ -918,25 +887,19 @@ describe('HumbleUser', () => {
       )
     })
 
-    test('backfill is non-fatal when the partition has no csrf_cookie or the read throws', async () => {
-      mockConfigStore.get_nodefault.mockImplementation((key: string) => {
-        if (key === 'sessionCookie') {
-          return 'humble:v1:' + Buffer.from('cookie').toString('base64')
-        }
-        return undefined
-      })
-      mockDecryptString.mockReturnValue('cookie')
-      mockGetGamekeys.mockResolvedValue({ status: 'ok' })
-      mockCookiesGet.mockRejectedValue(new Error('partition unavailable'))
-
-      await expect(
-        HumbleUser.checkHealthAndFlagExpiry()
-      ).resolves.toBeUndefined()
-      expect(mockConfigStore.set).not.toHaveBeenCalledWith(
-        'csrfToken',
-        expect.anything()
-      )
-    })
+    // Phase 39 Plan 05: 'backfill is non-fatal when the partition has no
+    // csrf_cookie or the read throws' DELETED — it drove the backfill's
+    // rejecting-cookie-read path via mockCookiesGet with no seam installed,
+    // a shape the collapsed function can no longer reach. The invariant
+    // (a rejecting cookie read is non-fatal, no csrfToken is stored) survives
+    // unweakened, with a stronger assertion (the window is still closed
+    // exactly once), in 'checkHealthAndFlagExpiry() — csrf_cookie backfill
+    // seam path (S-09, Plan 18)' → 'a rejecting cookie read is non-fatal,
+    // and the window is still closed exactly once'. That same describe's
+    // 'a rejecting seam.open() is non-fatal and never attempts a close (no
+    // window to leak)' covers the open-failure half this deleted test's
+    // title referenced but never actually exercised (it only ever mocked
+    // mockCookiesGet.mockRejectedValue, never an empty-cookie-array case).
   })
 
   // ── HACCT-02: reconnect() — D-11 partition kept ──────────────────────────
@@ -1181,68 +1144,54 @@ describe('HumbleUser', () => {
   // snapshot only as a fallback.
 
   describe('getLiveCsrfToken() (WR-03)', () => {
-    test('returns the live partition csrf_cookie value when present (never the stored snapshot)', async () => {
-      // A stale stored snapshot exists...
-      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
-        key === 'csrfToken' ? 'stale-stored-token' : undefined
-      )
-      // ...but the live partition carries a rotated value.
-      mockCookiesGet.mockImplementation(
-        async (opts: { name: string; url: string }) => {
-          if (opts.name === 'csrf_cookie') {
-            return [{ value: 'live-rotated-value' }]
-          }
-          return []
-        }
-      )
-
-      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
-        'live-rotated-value'
-      )
+    // Phase 39 Plan 05: getLiveCsrfToken() now calls
+    // getLoginWindowSeamOrThrow() unconditionally, so every test here needs
+    // a seam installed or it rejects before any assertion runs. Scoped to
+    // this describe only — matches the disconnect()/checkHealthAndFlagExpiry
+    // seam-path describes' own established pattern (see the module-scope
+    // fixture comment above 'HumbleUser').
+    beforeEach(() => {
+      installFakeSeamDefaults()
+      setLoginWindowSeam(fakeSeam)
     })
 
-    test('falls back to the stored snapshot when the partition has no csrf_cookie', async () => {
-      mockCookiesGet.mockResolvedValue([])
-      // Stored snapshot round-trips through decryptCookie's plaintext
-      // fallback (no humble:v1: prefix).
-      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
-        key === 'csrfToken' ? 'stored-snapshot-token' : undefined
-      )
-
-      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
-        'stored-snapshot-token'
-      )
+    afterEach(() => {
+      setLoginWindowSeam(null)
     })
 
-    test('falls back to the stored snapshot when the partition read throws (non-fatal)', async () => {
-      mockCookiesGet.mockRejectedValue(new Error('partition gone'))
-      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
-        key === 'csrfToken' ? 'stored-snapshot-token' : undefined
-      )
+    // Three tests formerly here — 'returns the live partition csrf_cookie
+    // value when present (never the stored snapshot)', 'falls back to the
+    // stored snapshot when the partition has no csrf_cookie', and 'falls
+    // back to the stored snapshot when the partition read throws
+    // (non-fatal)' — all drove mockCookiesGet/session.fromPartition
+    // directly. That entire live-partition-read code path is now DEAD:
+    // getLiveCsrfToken() no longer branches on whether a live cookie is
+    // present, throws, or is absent — with a seam always installed it
+    // unconditionally returns the stored snapshot. DELETED, not re-pointed:
+    // the one surviving invariant (a seam-installed call returns the stored
+    // snapshot, never touching session.fromPartition) is already covered,
+    // unweakened, by 'login window seam path (Phase 34.4.1 Plan 03)' →
+    // 'getLiveCsrfToken() returns the stored snapshot directly when a seam
+    // is installed, without touching session.fromPartition'. Re-pointing
+    // these three here would have duplicated that test three times over
+    // with mocks (mockCookiesGet return values) the collapsed function can
+    // no longer reach.
 
-      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
-        'stored-snapshot-token'
-      )
-      expect(mockLogWarning).toHaveBeenCalled()
-    })
-
-    test('returns undefined when neither a live cookie nor a stored snapshot exists', async () => {
-      mockCookiesGet.mockResolvedValue([])
+    test('returns undefined when no stored snapshot exists', async () => {
       mockConfigStore.get_nodefault.mockReturnValue(undefined)
 
       await expect(HumbleUser.getLiveCsrfToken()).resolves.toBeUndefined()
     })
 
-    test('never logs the live csrf value — even on the throwing fallback path', async () => {
-      const LIVE_SECRET = 'live-csrf-secret-abc'
-      mockCookiesGet.mockImplementation(
-        async (opts: { name: string; url: string }) => {
-          if (opts.name === 'csrf_cookie') return [{ value: LIVE_SECRET }]
-          return []
-        }
+    test('never logs the stored csrf value it returns', async () => {
+      const STORED_SECRET = 'live-csrf-secret-abc'
+      mockConfigStore.get_nodefault.mockImplementation((key: string) =>
+        key === 'csrfToken' ? STORED_SECRET : undefined
       )
 
-      await HumbleUser.getLiveCsrfToken()
+      await expect(HumbleUser.getLiveCsrfToken()).resolves.toBe(
+        STORED_SECRET
+      )
 
       const loggerCalls = [
         ...mockLogInfo.mock.calls,
@@ -1250,7 +1199,7 @@ describe('HumbleUser', () => {
         ...mockLogWarning.mock.calls
       ]
       for (const call of loggerCalls) {
-        expect(JSON.stringify(call)).not.toContain(LIVE_SECRET)
+        expect(JSON.stringify(call)).not.toContain(STORED_SECRET)
       }
     })
   })
