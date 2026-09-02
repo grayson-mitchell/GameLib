@@ -11,11 +11,16 @@ import './index.scss'
  * Tier-2 row primitive (34.10-02 Task 1). A 1:1 port of the retired left
  * navigation's row-item primitive's props and NavLink/button switch --
  * only the CSS class names change (see `index.scss`'s header comment for
- * why the old ancestor selector could not simply be reused). The old
- * onboarding-tour anchor prop is dropped entirely: per D-13 the onboarding
- * tour is disabled by this phase, so its string-keyed tour-anchor
- * attribute is not carried over -- re-adding it would ship anchors for a
- * tour that does not run.
+ * why the old ancestor selector could not simply be reused).
+ *
+ * The `'data-tour'` anchor prop, dropped by the 34.10 port because D-13
+ * disabled the onboarding tour, is re-added by phase 34.12 -- the tour is
+ * rebuilt against this shell and four of D-05's twelve anchors land on
+ * `NavItem` rows: Wine Manager, Accessibility, Documentation and Ko-fi
+ * (all NavLink-branch rows), plus D-01's launcher row (button branch).
+ * The literal hyphenated key matches the repo's existing convention
+ * (`AddGameButton/index.tsx`, `ActionIcons/index.tsx`) rather than a
+ * camelCase `dataTour` prop.
  *
  * The button branch gained `className` merging and an `active` class
  * (34.11-02 Task 1) because Views and Collections in the Games tier-2
@@ -34,6 +39,7 @@ interface NavItemProps {
   className?: string
   elementType?: 'a' | 'button'
   active?: boolean
+  'data-tour'?: string
 }
 
 export default function NavItem({
@@ -45,7 +51,8 @@ export default function NavItem({
   onClick,
   className,
   elementType,
-  active
+  active,
+  'data-tour': dataTour
 }: NavItemProps) {
   const itemContent = (
     <>
@@ -64,6 +71,7 @@ export default function NavItem({
         <button
           className={classNames('NavItem', className, { active })}
           onClick={onClick}
+          data-tour={dataTour}
         >
           {itemContent}
         </button>
@@ -78,6 +86,7 @@ export default function NavItem({
           }
           to={url}
           onClick={onClick}
+          data-tour={dataTour}
         >
           {itemContent}
         </NavLink>

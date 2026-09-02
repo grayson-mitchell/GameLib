@@ -1143,7 +1143,7 @@ export default React.memo(function Library(): JSX.Element {
 
         {showFavourites && !showFavouritesLibrary && (
           <>
-            <div className="library-section-header" data-tour="library-header">
+            <div className="library-section-header">
               <h3 className="libraryHeader">{t('favourites', 'Favourites')}</h3>
             </div>
             <GamesList

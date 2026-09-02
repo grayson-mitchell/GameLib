@@ -281,6 +281,40 @@ describe('DownloadsRing', () => {
 
     expect(harness().__getEffectCleanups()[0]).toBe(unsubscribe)
   })
+
+  // Onboarding-tour anchor (34.12-03, D-05). The retired sidebar carried
+  // TWO elements tagged `sidebar-downloads` -- a historical duplicate-
+  // selector defect. `DownloadsRing` has exactly one `<Link>` root, so
+  // there is nothing to fix here, only to confirm.
+  it('the root Link carries data-tour="nav-downloads"', () => {
+    const tree = mount() as AnyElement
+
+    expect(tree.type).toBe(Link)
+    expect(tree.props['data-tour']).toBe('nav-downloads')
+  })
+
+  it('exactly one element in the tree carries data-tour="nav-downloads" (the historical duplicate-selector defect does not reproduce here)', async () => {
+    // A populated queue so the DownloadsRing__count badge span is actually
+    // present in the tree -- otherwise this assertion could pass vacuously
+    // against a tree that never renders the second element the historical
+    // sidebar-downloads defect duplicated onto.
+    mockApi.getDMQueueInformation.mockResolvedValue({
+      elements: [makeElement('game-a'), makeElement('game-b')],
+      finished: [],
+      state: 'idle'
+    })
+
+    mount()
+    await Promise.resolve()
+    await Promise.resolve()
+    const tree = reinvoke() as AnyElement
+
+    const allElements = [tree, ...collectElements(tree.props.children)]
+    const tagged = allElements.filter(
+      (el) => el.props?.['data-tour'] === 'nav-downloads'
+    )
+    expect(tagged).toHaveLength(1)
+  })
 })
 
 /**

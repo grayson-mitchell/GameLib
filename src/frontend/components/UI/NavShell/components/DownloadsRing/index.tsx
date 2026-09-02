@@ -80,6 +80,7 @@ export default function DownloadsRing() {
       })}
       aria-label={t('download-manager.link', 'Downloads')}
       aria-current={isActive ? 'page' : undefined}
+      data-tour="nav-downloads"
     >
       <RingProgress
         key={head?.params.appName ?? 'idle'}

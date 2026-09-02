@@ -32,6 +32,10 @@ function makeContextValue(
 let contextValue: MockContextValue = makeContextValue()
 let storedPreference: string | null = null
 
+const startTourMock = jest.fn()
+const resetTourMock = jest.fn()
+const hasTourCompletedMock = jest.fn()
+
 jest.mock('react', () => ({
   ...jest.requireActual<typeof import('react')>('react'),
   useContext: () => contextValue
@@ -45,6 +49,28 @@ jest.mock('react-i18next', () => ({
 
 jest.mock('frontend/components/UI/ExternalLinkDialog', () => ({
   SHOW_EXTERNAL_LINK_DIALOG_STORAGE_KEY: 'show_external_link_dialog'
+}))
+
+// `useTour()` is mocked directly rather than relying on the `react` mock's
+// `useContext` override above -- that override answers every `useContext`
+// call with the Settings/ExternalLinkDialog-shaped `contextValue`
+// regardless of which context object is passed, which would make
+// `startTour`/`resetTour`/`hasTourCompleted` silently `undefined`.
+jest.mock('frontend/state/TourContext', () => ({
+  useTour: () => ({
+    startTour: startTourMock,
+    resetTour: resetTourMock,
+    hasTourCompleted: hasTourCompletedMock
+  })
+}))
+
+jest.mock('../components/NavShellTour', () => ({
+  __esModule: true,
+  NAV_TOUR_ID: 'nav-tour',
+  default: (props: Record<string, unknown>) => ({
+    type: 'mock-navshelltour',
+    props
+  })
 }))
 
 jest.mock('../components/NavItem', () => ({
@@ -148,7 +174,7 @@ describe('SettingsPanel', () => {
     )
   })
 
-  it('renders all twelve entries in the settled order for a non-Windows context', () => {
+  it('renders all thirteen entries in the settled order for a non-Windows context', () => {
     contextValue = makeContextValue({ platform: 'linux' })
 
     const tree = SettingsPanel() as unknown as ReactElement
@@ -165,7 +191,8 @@ describe('SettingsPanel', () => {
       'System Information',
       'Documentation',
       'About',
-      'Ko-fi'
+      'Ko-fi',
+      'App Tour'
     ])
 
     const children = topLevelChildren(tree)
@@ -261,5 +288,88 @@ describe('SettingsPanel', () => {
     const children = topLevelChildren(tree)
 
     expect(children[children.length - 1].type).toBe(QuitButton)
+  })
+
+  describe('D-05 tour anchors', () => {
+    it('the Wine Manager row carries data-tour="nav-wine" on a non-Windows platform', () => {
+      contextValue = makeContextValue({ platform: 'linux' })
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const row = findNavItem(tree, 'Wine Manager')
+
+      expect(row?.props['data-tour']).toBe('nav-wine')
+    })
+
+    it('the Accessibility row carries data-tour="nav-accessibility"', () => {
+      contextValue = makeContextValue()
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const row = findNavItem(tree, 'Accessibility')
+
+      expect(row?.props['data-tour']).toBe('nav-accessibility')
+    })
+
+    it('the Documentation row carries data-tour="nav-docs"', () => {
+      contextValue = makeContextValue()
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const row = findNavItem(tree, 'Documentation')
+
+      expect(row?.props['data-tour']).toBe('nav-docs')
+    })
+
+    it('the Ko-fi row carries data-tour="nav-community"', () => {
+      contextValue = makeContextValue()
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const row = findNavItem(tree, 'Ko-fi')
+
+      expect(row?.props['data-tour']).toBe('nav-community')
+    })
+
+    it('on win32, no element carries data-tour="nav-wine" -- the row guard and the tour step guard agree', () => {
+      contextValue = makeContextValue({ platform: 'win32' })
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const elements = collectElements(tree)
+
+      expect(
+        elements.some((el) => el.props?.['data-tour'] === 'nav-wine')
+      ).toBe(false)
+    })
+  })
+
+  describe('D-01 launcher row', () => {
+    it('starts the tour without resetting when it has not been completed', () => {
+      contextValue = makeContextValue()
+      hasTourCompletedMock.mockReturnValue(false)
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const launcher = findNavItem(tree, 'App Tour')
+      expect(launcher?.props['data-tour']).toBe('nav-launcher')
+      ;(launcher?.props.onClick as () => void)()
+
+      expect(startTourMock).toHaveBeenCalledTimes(1)
+      expect(startTourMock).toHaveBeenCalledWith('nav-tour')
+      expect(resetTourMock).not.toHaveBeenCalled()
+    })
+
+    it('resets then starts the tour, in that order, when it was already completed', () => {
+      contextValue = makeContextValue()
+      hasTourCompletedMock.mockReturnValue(true)
+
+      const tree = SettingsPanel() as unknown as ReactElement
+      const launcher = findNavItem(tree, 'App Tour')
+      ;(launcher?.props.onClick as () => void)()
+
+      expect(resetTourMock).toHaveBeenCalledTimes(1)
+      expect(resetTourMock).toHaveBeenCalledWith('nav-tour')
+      expect(startTourMock).toHaveBeenCalledTimes(1)
+      expect(startTourMock).toHaveBeenCalledWith('nav-tour')
+
+      const resetOrder = resetTourMock.mock.invocationCallOrder[0]
+      const startOrder = startTourMock.mock.invocationCallOrder[0]
+      expect(resetOrder).toBeLessThan(startOrder)
+    })
   })
 })

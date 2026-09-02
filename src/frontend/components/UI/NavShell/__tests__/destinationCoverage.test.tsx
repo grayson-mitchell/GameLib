@@ -152,6 +152,19 @@ jest.mock('../components/HeroicVersion', () => ({
   __esModule: true,
   default: () => ({ type: 'mock-heroicversion', props: {} })
 }))
+jest.mock('../components/NavShellTour', () => ({
+  __esModule: true,
+  NAV_TOUR_ID: 'nav-tour',
+  default: () => ({ type: 'mock-navshelltour', props: {} })
+}))
+
+jest.mock('frontend/state/TourContext', () => ({
+  useTour: () => ({
+    startTour: jest.fn(),
+    resetTour: jest.fn(),
+    hasTourCompleted: jest.fn().mockReturnValue(false)
+  })
+}))
 ;(globalThis as unknown as { sessionStorage: Storage }).sessionStorage = {
   getItem: jest.fn().mockReturnValue(null),
   setItem: jest.fn(),
@@ -268,7 +281,8 @@ describe('Destination coverage -- the settled tree', () => {
       'System Information',
       'Documentation',
       'About',
-      'Ko-fi'
+      'Ko-fi',
+      'App Tour'
     ])
   })
 

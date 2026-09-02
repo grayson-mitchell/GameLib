@@ -127,7 +127,7 @@ export default function HumbleKeys() {
   const showBanner = !!humble.syncError && humble.syncError !== 'none'
 
   return (
-    <div className="humbleKeysScreen" data-tour="humble-keys">
+    <div className="humbleKeysScreen">
       <div className="humbleKeysHeader">
         <div className="humbleKeysHeaderTop">
           <h4 className="humbleKeysTitle">

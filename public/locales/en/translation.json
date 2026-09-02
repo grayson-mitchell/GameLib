@@ -1303,6 +1303,7 @@
                 "intro": "That's it! Enjoy your games and have fun!",
                 "title": "Enjoy your games!"
             },
+            "facets": "Narrow your games by store, runnability or open More filters for additional options.",
             "filters": "Filter your games by store, platform, favorites and more using these options.",
             "gameCard": "Left-Click on the game card to navigate to the game page and to see details and adjust settings or Right-click to open the context menu.",
             "refresh": "Refresh your library to check for new games or updates.",
@@ -1310,11 +1311,20 @@
             "sortInstalled": "Sort games by installed status.",
             "sortOptions": "Click here to sort games alphabetically.",
             "viewToggle": "Switch between grid and list view for your games.",
+            "viewsCollections": "Switch between Views like All games, Installed, Recently played and Favourites, or browse your custom Collections.",
             "welcome": {
                 "intro": "Welcome to the GameLib Library! This is where you can see all your games across different stores.",
                 "intro2": "If the library is empty, make sure to login with your accounts using the Manage accounts on the sidebar or add your own games using the Add Game button above.",
                 "title": "Welcome to GameLib!",
                 "title2": "Managing the library!"
+            }
+        },
+        "nav": {
+            "launcher": "App Tour",
+            "version": "Check your current GameLib version -- click it to see the latest changelog. You can restart this tour anytime from the Settings panel.",
+            "welcome": {
+                "intro": "Welcome to GameLib! This nav bar contains all the navigation options to explore the app.",
+                "title": "Nav Bar"
             }
         },
         "next": "Next",

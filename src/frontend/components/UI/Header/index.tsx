@@ -12,11 +12,18 @@ export default function Header() {
       <div className="Header__search">
         <LibrarySearchBar />
       </div>
-      <FilterViewList />
-      <FilterCollectionList />
-      <FilterStoreFacet />
-      <FilterRunnabilityFacet />
-      <FilterMoreGroup />
+      <div
+        className="Header__categoriesGroup"
+        data-tour="library-views-collections"
+      >
+        <FilterViewList />
+        <FilterCollectionList />
+      </div>
+      <div className="Header__filtersGroup" data-tour="library-facets">
+        <FilterStoreFacet />
+        <FilterRunnabilityFacet />
+        <FilterMoreGroup />
+      </div>
     </div>
   )
 }

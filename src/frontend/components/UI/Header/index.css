@@ -14,3 +14,15 @@
 .Header__search .FormControl {
   width: 100%;
 }
+
+.Header__categoriesGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.Header__filtersGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}

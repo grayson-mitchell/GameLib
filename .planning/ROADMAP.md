@@ -4175,10 +4175,10 @@ sidebar tour under decision D-13 and deliberately did not rebuild it; this phase
 34.10 has owed since it closed. Each of `SidebarTour.tsx`'s twelve `data-tour="sidebar-*"` steps
 must be re-anchored to a surface that still exists in the new shell, or dropped with a reason.
 
-**Requirements**: TBD (run `/gsd-discuss-phase 34.12`)
+**Requirements**: No REQ-IDs are minted for this phase. Its requirement set is `34.12-CONTEXT.md`'s decision IDs **D-01 through D-09** plus **IN-01** (the dead-`data-tour` sweep inherited from 34.10). Every one of those ten appears in at least one plan's `requirements` frontmatter field.
 **Depends on:** Phase 34.10 (the two-tier shell the steps must anchor to) and Phase 34.11 (the
 filter panel — several retired steps pointed at library surfaces that 34.11 replaced)
-**Plans:** 0 plans
+**Plans:** 7 plans in 5 waves
 
 **Why this phase exists — captured 2026-08-13.** It was referenced in three places but had never
 been created: ROADMAP.md listed "the deferred onboarding-tour rework phase" in Phase 34.10's
@@ -4198,21 +4198,72 @@ created the state.
   wrapper and the "Downloads" row inside the retired `SidebarLinks`. A selector matching two
   elements is ambiguous; whichever the tour library picked first was never guaranteed to be the
   intended one.
-- **34.10 IN-01** — dead `data-tour` props in `CategoryFilter`/`LibraryFilters` that `Dropdown`
-  never reads. Fold in here rather than leaving them as permanent noise.
+- **34.10 IN-01** — originally described as dead `data-tour` props in `CategoryFilter`/
+  `LibraryFilters` that `Dropdown` never reads. Re-verified at 34.12-06 execution time: neither
+  component exists at HEAD — phase 34.11 deleted both outright rather than leaving dead props on
+  them, so the literal item named here had nothing left to clean. The surviving IN-01-shaped
+  cleanup was a duplicated dead `data-tour="library-header"` (two occurrences,
+  `LibraryHeader/index.tsx` and `Library/index.tsx`) plus a previously uncatalogued dead
+  `data-tour="humble-keys"` (`Humble/Keys/index.tsx`). All three were removed by plan 34.12-06.
 
 **Gate that must be retired as part of this phase:** `NavShell/__tests__/tourDisabled.test.ts`
 asserts the tour CANNOT start (no NavShell file references `SidebarTour`/`SIDEBAR_TOUR_ID`/
 `TourButton`/`data-tour`, and nothing imports `SidebarTour`). Re-enabling the tour necessarily
 falsifies it. Replace it with a positive gate — do not simply delete it, and do not let it become
-vacuously true, which is what deleting `SidebarTour.tsx` alone would have done.
+vacuously true, which is what deleting `SidebarTour.tsx` alone would have done. **Replacement
+landed by plan 34.12-06:** `NavShell/__tests__/navTourAnchorCensus.test.ts`. The replacement is
+two-layer, not one file carrying the whole gate — per-component correctness assertions
+distributed across the anchor sites (`NavItem.test.tsx`, `SettingsPanel.test.tsx`,
+`NavTabsComponent.test.tsx`, `DownloadsRing.test.tsx`, `libraryTourAnchors.test.tsx` and similar,
+landed across plans 02–05) plus this repo-wide uniqueness census (Layer B, landed 34.12-06). A
+future reader should not go looking for a single file that carries both halves.
 
 **Note on the `(INSERTED)` marker:** carried from the `phase.insert` tooling, which stamps every
 insertion as urgent. This phase is NOT urgent — it is deferred UI polish with no user-facing
 breakage while the tour stays disabled and unreachable.
 
 Plans:
-- [ ] TBD (run `/gsd-discuss-phase 34.12`, then `/gsd-plan-phase 34.12`)
+
+**Wave 1** *(no dependencies — run in parallel)*
+
+- [x] 34.12-01-PLAN.md — `NavItem` gains a `data-tour` passthrough; the tour-disabled gate is narrowed to a `sidebar-*` selector ban so it survives the phase
+- [x] 34.12-02-PLAN.md — D-09: `LibraryTour`'s two dead steps re-anchored onto two new filter-panel wrappers, with the `.Header` flex gap preserved on each
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [x] 34.12-03-PLAN.md — the eight non-`SettingsPanel` anchors (`NavTabs` x5, `DownloadsRing`, `QuitButton`, `HeroicVersion`), plus the repo's first `QuitButton` and `HeroicVersion` unit suites
+- [x] 34.12-04-PLAN.md — `SidebarTour` moved and rewritten into `NavShellTour`: twelve `nav-*` selectors, `disableInteraction: true`, three new `tour.nav.*` keys, mounted in the shell, fork-scope manifests repointed
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [x] 34.12-05-PLAN.md — D-01: the four `SettingsPanel` anchors and the "App Tour" launcher row, plus a defensive read of the persisted tour state the launcher newly makes reachable
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [x] 34.12-06-PLAN.md — IN-01 sweep (`library-header` x2, `humble-keys`), the `navTourAnchorCensus` uniqueness gate, deletion of `tourDisabled.test.ts`, and this ROADMAP's IN-01 correction
+
+**Wave 5** *(blocked on Wave 4)*
+
+- [ ] 34.12-07-PLAN.md — blocking manual verification: twelve individually-recorded step outcomes, the D-04 interaction lock, the no-auto-start guarantee, three-theme spacing, and the German stale-copy check *(not autonomous)*
+
+**Cross-cutting constraints** *(hold across plans — no single plan owns them)*
+
+- **HEAD is never red at a plan boundary.** `tourDisabled.test.ts` trips on the first `data-tour`
+  *token*, not the first anchor, so plan 01 narrows it in the same plan that introduces the token,
+  plan 04 strips the blocks that go vacuous on the move, and plan 06 deletes it only once the
+  census replacement is green. Verified by walking all five waves.
+- **`NavItem`'s passthrough gates four anchors.** Wine Manager, Accessibility, Documentation and
+  Ko-fi cannot carry an anchor until plan 01 lands; enforced structurally by plan 05's `depends_on`.
+- **The vacuous gate form is banned.** "All twelve `nav-*` strings appear somewhere in the tree" is
+  named and excluded by an explicit acceptance criterion in plans 03 and 06. The gate is a composed
+  two-layer proof — per-component correctness (Layer A) *plus* uniqueness census (Layer B) *plus*
+  the `NavItem` forwarding bridge — because each layer alone misses a different failure mode.
+- **Every gate carries a RED-proof** naming both the assertion that must fail and the assertions
+  that must stay green; a proof that reddens everything would show the assertions were not
+  independent. 19 across plans 01–06.
+- **Wave-2 note for the dispatcher:** plans 03 and 04 share `tourDisabled.test.ts` — 03 reads it,
+  04 rewrites it. If wave-2 execution is literally concurrent against one working tree, re-run
+  plan 03's check on that file only after plan 04 has fully landed.
 
 ### Phase 35: Electron cutover — remove the Electron build
 
