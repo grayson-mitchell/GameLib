@@ -89,11 +89,31 @@ previously recorded, neither touching Humble/seam code, and both reproducing sta
    ("fix(quick-260901-ud5): resolve i18n catalog drift blocking pre-push leg 4"), unrelated to
    any phase-39 plan.
 
+   **RESOLVED 2026-09-02 by quick `260902-qs4` (commit `21dd66e4c`) — and the description above
+   is WRONG on its key point.** The string IS routed through `t()`: `repairFailure.ts:145` calls
+   `t('box.repair.error', ...)`. The literal at :135 is the documented last-resort English
+   fallback used only if `t()` itself throws, and it is UNCHANGED — `git show c2f567064` renders
+   line 135 as pure context. `c2f567064` is not merely the file's last toucher, it is the
+   CAUSE: its Bucket E rewrote :145 from `t(key, message)` to `t(key, '<literal>')`, because the
+   i18next-parser lexer resolves a default only from a literal second argument. That removed the
+   only reference of `message` reaching `t()`, so `hardcodedStringGate.ts`'s Pattern 3 exemption
+   (`isAssignedThenPassedToT` — whose doc comment names this very file as the case it exists
+   for) stopped firing. Fixed in the GATE, not the frontend file, and not by an allowlist entry:
+   Pattern 3 now also recognises a binding reassigned from a `t()` call whose literal default
+   matches the declaration literal. Non-vacuity proven 0 -> 1 -> 0 by mutating that default.
+
 5. **`meta/__tests__/genI18nGateScope.test.ts`** — 1 failing assertion: `[...forkTouchedSnapshot.files]`
    vs `[...freshSnapshotFiles()]` diverge by several `src/frontend/screens/Settings/components/*`
    entries (e.g. `CustomWineProton.tsx`, `Tools/index.tsx` present in one snapshot but not the
    other) — a stale i18n-gate-scope snapshot artifact versus the current file tree. Reproduces
    in isolation. Zero relation to Humble/seam files.
+
+   **RESOLVED 2026-09-02 by quick `260902-qs4` (commit `aa16be95f`).** Exactly 3 stale paths,
+   all from commit `24cdae047` (the `useOpenDialog` file-picker fix): `hooks/useOpenDialog.ts`,
+   `Settings/components/CustomWineProton.tsx`, `Settings/components/Tools/index.tsx`. Hand-edited
+   surgically, NOT regenerated — a regen is measured to turn this 1 failure into 5. The artifact
+   (204 -> 207), all 10 literal count pins, and `DECLARED_UNSCANNED_DEBT` (43 -> 46) moved in one
+   commit; `meta/i18nGateScope.json` deliberately untouched at 161.
 
 Also observed once, in the full-suite run only:
 
