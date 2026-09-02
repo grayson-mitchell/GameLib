@@ -18,6 +18,18 @@ started.
    is not built/available in this dev sandbox, not a logic defect — but that is a hypothesis, not
    confirmed here.
 
+   **RESOLVED 2026-09-02 by quick `260902-pwy` (commit `b79765af2`) — and the hypothesis above
+   was WRONG.** The addon *was* built and importable (`node_modules/lzma-native/build/Release/
+   lzma_native.node`, and a bare `import('lzma-native')` succeeds). The real cause: lzma-native
+   8.0.6 bundles **liblzma 5.2.3**, whose `lzma_alone_decoder` rejects a stream that declares a
+   KNOWN uncompressed size while also carrying an end-of-stream marker (`Data is corrupt`);
+   system `xz 5.8.3` decodes the identical bytes fine. Known-size + EOS is the only shape this
+   codebase produces — both the pure-JS `lzma` package and `decompress.ts`'s real VZ branch —
+   so `smokeTest()` was correctly refusing the native module and correctly falling back. **It
+   was a genuine logic defect after all, and a latent production one**: every real Steam VZ
+   chunk would have failed to decode natively the moment `NATIVE_LZMA_DECODE_ENABLED` was
+   flipped on. Fixed in `createNativeAdapter()`; 41/41 with zero test files changed.
+
 2. **`src/backend/downloadmanager/__tests__/utils.test.ts`** — 1 failing assertion:
    `installQueueElement — 260817-dib: no-progress (stall) install watchdog › honest copy: a
    stall trip uses box.error.install.stalled and the dialog does not say "connection may be
