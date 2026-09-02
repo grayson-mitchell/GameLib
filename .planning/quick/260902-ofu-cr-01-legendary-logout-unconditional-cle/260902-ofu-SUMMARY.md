@@ -178,3 +178,14 @@ this task.
 None — this task closes an existing, already-registered threat (T-34.5-19) and does not
 introduce new network endpoints, auth paths, file-access patterns, or trust-boundary schema
 changes.
+
+## Self-Check: PASSED
+
+- FOUND: `src/backend/storeManagers/legendary/__tests__/user.test.ts`
+- FOUND: `src/backend/storeManagers/legendary/user.ts`
+- FOUND: `.planning/phases/39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec/39-VERIFICATION.md`
+- FOUND: `.planning/quick/260902-ofu-cr-01-legendary-logout-unconditional-cle/260902-ofu-SUMMARY.md`
+- FOUND commit: `27ecd7920` (test)
+- FOUND commit: `ca7473bb2` (fix)
+- FOUND commit: `f0d93fddb` (docs)
+- Confirmed `.planning/STATE.md` and `.planning/ROADMAP.md` absent from the three-commit diff (`git diff --name-only HEAD~3 HEAD`)
