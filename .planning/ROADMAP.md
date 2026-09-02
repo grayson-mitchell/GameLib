@@ -4639,7 +4639,7 @@ Plans:
 - [x] 39-04-PLAN.md — collapse both `disconnect()` wipe-step sites (Humble + Epic) and disposition `seamBranchParity.test.ts` (REQ-39-03)
 - [x] 39-05-PLAN.md — collapse `getLiveCsrfToken()`'s inverted guard and the health-check csrf backfill (REQ-39-03)
 - [x] 39-06-PLAN.md — collapse the `watchForLogin()` closure cluster and `finishLogin()`, dropping the last `session`/`HUMBLE_LOGIN_PARTITION` dependency (REQ-39-03)
-- [ ] 39-07-PLAN.md — the zero-match predicate gate with a per-root vacuity control and a pre-collapse RED proof, plus the seam disposition record (REQ-39-03)
+- [x] 39-07-PLAN.md — the zero-match predicate gate with a per-root vacuity control and a pre-collapse RED proof, plus the seam disposition record (REQ-39-03)
 - [ ] 39-08-PLAN.md — seam-parity gate: re-point the moved artifact and disposition the Axis A census this phase invalidated; reach 7/7 (REQ-39-02)
 - [ ] 39-09-PLAN.md — re-measure lint on the post-collapse tree and install a proven `--max-warnings` ratchet in its own commit (REQ-39-01)
 
