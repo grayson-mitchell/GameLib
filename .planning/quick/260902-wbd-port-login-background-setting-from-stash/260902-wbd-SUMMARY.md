@@ -200,3 +200,38 @@ skipped**; `themes` + `appShellFlows` + `flowRegistrationCensus` **3/3 suites,
 
 So the correct repo lint figure for this task is **4148 → 4149**, not the
 "4148 unchanged" recorded in the Verification table above.
+
+---
+
+## Human re-test COMPLETE -- 2026-09-03
+
+**Verdict and provenance.** All five steps of the gesture recorded above passed. The
+operator ran the re-test on 2026-09-03 against a Tauri dev build. The build was cold:
+`src-tauri/target` had just been removed by `cargo clean`, so this exercised a
+from-scratch compile of the shipped code, not a stale incremental artifact.
+
+**This discharges the `## Human re-test required` section above.** That section opens
+with "**Yes.**" -- a reader landing there should treat this section as the answer and
+stop reading at the older section's "Yes.", not at its open question. The requirement
+recorded there is now met; the section's own words are left untouched as the historical
+record of what was asked for.
+
+**What only a human could prove.** The section above notes that this feature's
+`data:`-URL delivery path had never been exercised under a real Tauri WebView -- the
+stash was authored and tested against the pre-Tauri Electron build, and no automated
+gate here mounts a real WebView. Step 4 of the gesture (the picked image rendering as
+the Manage Accounts background) is the only evidence anywhere that the `data:`-URL
+delivery path renders correctly in a real WKWebView.
+
+**What step 5 proves.** The operator's step 5 (clearing the field and confirming Manage
+Accounts reverts to the bundled default) exercises the empty-path reset-to-default
+branch. This is exactly why `PathSelectionBox` is used without `noDeleteButton` in
+`LoginBackground.tsx` -- that file's own doc comment states the reason: the Backspace
+icon shown once a path is set IS the reset-to-default action, so no separate delete
+button is needed. This re-test step is what confirms that documented behavior in a real
+build.
+
+**What remains unknown.** The section above also speculates that a very large source
+image could exceed some WKWebView/Tauri inline-style size limit for the `data:` URL.
+That was not encountered during this re-test, but it remains **UNTESTED** -- it is not
+cleared, ruled out, or disproven by this pass.
