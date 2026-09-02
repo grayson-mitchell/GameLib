@@ -1,5 +1,3 @@
-import { session } from 'backend/platform'
-
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { sendFrontendMessage } from 'backend/ipc'
 
@@ -8,17 +6,12 @@ import {
   humbleLibraryStore,
   humbleSyncStore
 } from './electronStores'
-import {
-  HUMBLE_BASE_URL,
-  HUMBLE_LOGIN_PARTITION,
-  HUMBLE_LOGIN_URL
-} from './constants'
+import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from './constants'
 import { getAccountIdentity, getGamekeys } from './adapter'
 import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
 import { standardBrowserUserAgent } from './userAgent'
 import {
-  getLoginWindowSeam,
   getLoginWindowSeamOrThrow,
   classifyCookieRead,
   type CookieReadVerdict
@@ -175,7 +168,7 @@ export class HumbleUser {
   // is no live login window at reveal time to read through (the login watch
   // already settled and closed its window, T-34.4.1-18), so this always
   // returns the stored snapshot instead (Phase 39 Plan 05 collapse — the
-  // session.fromPartition live read this comment used to describe is gone).
+  // live per-partition session read this comment used to describe is gone).
   // Main-process-only, same secrecy discipline as getCsrfToken(): the value
   // must NEVER be logged or included in any sendFrontendMessage payload.
   static async getLiveCsrfToken(): Promise<string | undefined> {
@@ -244,24 +237,13 @@ export class HumbleUser {
       HumbleUser.activeWatch = null
     }
 
-    // D-01/D-02 (Phase 34.4.1 Plan 03): under Electron, `getLoginWindowSeam()`
-    // always returns null (nothing in the Electron build ever calls
-    // setLoginWindowSeam) — the `seam === null` branches below are the
-    // ORIGINAL, untouched session.fromPartition() behavior. Under the Tauri
-    // sidecar there is no session.fromPartition() shape at all
-    // (tauri-login-webview-cookies.md § "Requirements" #7), so a seam is
-    // installed at sidecar startup and drives a real Rust-owned login window
-    // instead.
-    const seam = getLoginWindowSeam()
-
-    let ses: ReturnType<typeof session.fromPartition> | null = null
-    if (seam === null) {
-      ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
-      // Reinforcement UA set (Task 2's webview `useragent` attribute is the
-      // primary application point) so any main-process-initiated request on
-      // this partition also presents a standard Chrome UA.
-      ses.setUserAgent(standardBrowserUserAgent())
-    }
+    // D-01/D-02 (Phase 34.4.1 Plan 03): there is no per-partition Electron
+    // session shape under the Tauri sidecar (tauri-login-webview-cookies.md §
+    // "Requirements" #7), so a seam is installed at sidecar startup and
+    // drives a real Rust-owned login window instead. getLoginWindowSeamOrThrow()
+    // enforces that precondition — if registerHumbleLoginFlows() has not yet
+    // run, this throws rather than silently falling back to a dead path.
+    const seam = getLoginWindowSeamOrThrow()
 
     return new Promise<LoginResult>((resolve) => {
       let settled = false
@@ -407,7 +389,7 @@ export class HumbleUser {
         // every exit path (done, waiting, error, stop, deadline). Floated —
         // a close() rejection must never throw out of settle() and strand
         // this promise (WR-06 float discipline).
-        if (seam !== null && seamLabel !== null) {
+        if (seamLabel !== null) {
           const labelToClose = seamLabel
           seam.close(labelToClose).catch((err) => {
             logWarning(
@@ -423,17 +405,7 @@ export class HumbleUser {
         try {
           let cookieValue: string | undefined
 
-          if (seam === null) {
-            // ── Electron path (unchanged) ─────────────────────────────────
-            const cookies = await ses!.cookies.get({
-              url: HUMBLE_BASE_URL,
-              name: '_simpleauth_sess'
-            })
-            if (settled || validationInFlight) return
-            if (cookies.length === 0) return
-            cookieValue = cookies[0].value
-          } else {
-            // ── Tauri seam path ─────────────────────────────────────────────
+          {
             if (seamLabel === null) return // window not open yet
 
             // REQ-34.4.1-03: drain main-frame-only nav events (Rust's
@@ -568,7 +540,7 @@ export class HumbleUser {
               cookieValue,
               settle,
               () => settled,
-              seam !== null ? seamLabel : null,
+              seamLabel,
               logRejectionStatus
             )
             if (outcome === 'rejected') {
@@ -618,41 +590,38 @@ export class HumbleUser {
         }
       }
 
-      if (seam !== null) {
-        // Tauri path: open the Rust-owned login window with the standard
-        // Chrome UA (tauri-login-webview-cookies.md § "Why the UA is
-        // mandatory"). The window must stay open for the whole poll —
-        // closing it destroys the cookie handle even though the cookies
-        // survive (spike 015) — and is closed exactly once, inside settle()
-        // above.
-        seam
-          .open(HUMBLE_LOGIN_URL, {
-            visible: true,
-            userAgent: standardBrowserUserAgent()
-          })
-          .then((openedLabel) => {
-            if (settled) {
-              // The watch already settled (e.g. stopLogin() fired) before
-              // open() resolved — close the now-orphaned window immediately
-              // rather than leaking it.
-              seam.close(openedLabel).catch((err) => {
-                logWarning(
-                  ['Humble login window close failed (non-fatal):', err],
-                  LogPrefix.Backend
-                )
-              })
-              return
-            }
-            seamLabel = openedLabel
-          })
-          .catch((err) => {
-            logWarning(
-              ['Humble login window open failed:', err],
-              LogPrefix.Backend
-            )
-            settle({ status: 'error' })
-          })
-      }
+      // Open the Rust-owned login window with the standard Chrome UA
+      // (tauri-login-webview-cookies.md § "Why the UA is mandatory"). The
+      // window must stay open for the whole poll — closing it destroys the
+      // cookie handle even though the cookies survive (spike 015) — and is
+      // closed exactly once, inside settle() above.
+      seam
+        .open(HUMBLE_LOGIN_URL, {
+          visible: true,
+          userAgent: standardBrowserUserAgent()
+        })
+        .then((openedLabel) => {
+          if (settled) {
+            // The watch already settled (e.g. stopLogin() fired) before
+            // open() resolved — close the now-orphaned window immediately
+            // rather than leaking it.
+            seam.close(openedLabel).catch((err) => {
+              logWarning(
+                ['Humble login window close failed (non-fatal):', err],
+                LogPrefix.Backend
+              )
+            })
+            return
+          }
+          seamLabel = openedLabel
+        })
+        .catch((err) => {
+          logWarning(
+            ['Humble login window open failed:', err],
+            LogPrefix.Backend
+          )
+          settle({ status: 'error' })
+        })
     })
   }
 
@@ -718,26 +687,18 @@ export class HumbleUser {
     // actually required. Same encryption treatment as the session cookie.
     // Main-process-only: NEVER included in sendFrontendMessage/HumbleAuthState.
     try {
-      const seam = getLoginWindowSeam()
-      if (seam !== null && seamLabel !== null) {
-        // Tauri path: read csrf_cookie from the SAME live login window whose
-        // _simpleauth_sess candidate was just accepted, via the seam rather
-        // than session.fromPartition (which has no shape under Tauri).
+      const seam = getLoginWindowSeamOrThrow()
+      if (seamLabel !== null) {
+        // Read csrf_cookie from the SAME live login window whose
+        // _simpleauth_sess candidate was just accepted — cookie-jar identity
+        // matters here, so this must come from that specific window, not any
+        // other seam-driven read.
         const csrfRead = await seam.cookies(seamLabel, 'www.humblebundle.com', [
           'csrf_cookie'
         ])
         const match = csrfRead.matched.find((c) => c.name === 'csrf_cookie')
         if (match && match.value) {
           await storeHumbleSecret('csrfToken', match.value)
-        }
-      } else {
-        const csrfSes = session.fromPartition(HUMBLE_LOGIN_PARTITION)
-        const csrfCookies = await csrfSes.cookies.get({
-          url: HUMBLE_BASE_URL,
-          name: 'csrf_cookie'
-        })
-        if (csrfCookies.length > 0 && csrfCookies[0].value) {
-          await storeHumbleSecret('csrfToken', csrfCookies[0].value)
         }
       }
     } catch (err) {
