@@ -353,6 +353,28 @@ describe('LegendaryUser.logout()', () => {
     expect(logError).toHaveBeenCalled()
   })
 
+  it('CR-01 (T-34.5-19): with NO seam installed, the credential-side cleanup still runs and the wiring diagnostic still reaches the caller', async () => {
+    // Phase 39 CR-01: `beforeEach` above already leaves the seam unset
+    // (`setLoginWindowSeam(null)`) and arms `mockRunRunnerCommand` with a
+    // success result, so this test installs NOTHING — that absence is its
+    // whole subject. This is the FIRST test in this file to drive logout()
+    // past the CLI-success point with no seam installed at all.
+    //
+    // Neither existing seam instrument can catch this defect class:
+    // `src/backend/sidecar/__tests__/seamBranchParity.test.ts` compares
+    // wipe-step capability SHAPE by parsing source, and
+    // `meta/__tests__/loginWindowSeamPredicateRemoved.test.ts` matches
+    // predicate TEXT. Statement ORDERING — whether the seam is acquired
+    // before or after the credential-side cleanup — is invisible to both,
+    // which is why this defect shipped through a green Phase 39.
+    await expect(LegendaryUser.logout()).rejects.toThrow(
+      'no login-window seam is installed'
+    )
+
+    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+    expect(clearCache).toHaveBeenCalledWith('legendary')
+  })
+
   it('F-6 twin: a rejecting clearStorage step still leaves logout() resolving, and the cookie step ran anyway', async () => {
     const seam = makeMockSeam({
       clearStorage: jest
