@@ -41,7 +41,7 @@
     "test": "jest",
     "test-watch": "jest --watch --maxWorkers=25%",
     "test:ci": "jest --runInBand --silent",
-    "lint": "eslint --cache .",
+    "lint": "eslint --cache --max-warnings 4157 .",
     "lint-fix": "eslint --fix --ext .tsx,ts ./src",
     "i18n": "i18next --silent",
     "prepare": "husky install",

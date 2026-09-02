@@ -177,3 +177,103 @@ did not touch any of the files carrying these particular findings.
 No files were modified for Task 2. The ratchet in the section below is therefore set against the
 same 4157 figure measured earlier in this document — nothing intervened between that measurement
 and the ratchet commit except this document's own edits.
+
+---
+
+## Task 3: the `--max-warnings` ratchet
+
+Re-measured one final time, on the exact tree this commit sits on (only this document's own two
+prior edits — the baseline census and the Task 2 skip decision — landed since the 4157 figure was
+first measured; no code changed):
+
+```
+$ pnpm lint
+✖ 4157 problems (0 errors, 4157 warnings)
+  0 errors and 71 warnings potentially fixable with the `--fix` option.
+```
+
+Unchanged. **Ratchet value: `--max-warnings 4157`**, measured against commit `142d85b73` (the
+Task-2-skip-decision commit, the tip of `fix/steam-native-install-stability` at the moment this
+number was taken).
+
+`package.json`'s `lint` script changes from:
+
+```
+"lint": "eslint --cache .",
+```
+
+to:
+
+```
+"lint": "eslint --cache --max-warnings 4157 .",
+```
+
+### Where this binds
+
+- `package.json:44` — the script itself.
+- `.github/workflows/lint.yml:17` — `run: pnpm lint`. Bare invocation of the same script; CI now
+  fails a PR that raises the warning count above 4157.
+- `.husky/pre-push` — `pnpm codecheck && pnpm lint && pnpm prettier && pnpm i18n --fail-on-update`.
+  Bare invocation of the same script. **From this commit forward, a local `git push` that
+  introduces even one net-new lint warning above 4157 is rejected before it reaches CI**, exactly
+  the same way a `severity === 2` error would already have been rejected. This is a deliberate
+  behavioural change to the push gate, recorded here rather than left as a silent side effect of
+  editing one script line.
+
+### Mutation proof — the ratchet is proven to bite
+
+**Red at N-1 (4156):**
+
+```
+$ sed -i '' 's/--max-warnings 4157/--max-warnings 4156/' package.json
+$ pnpm lint > /tmp/lint-red.log 2>&1; echo "exit=$?"
+...
+✖ 4157 problems (0 errors, 4157 warnings)
+  0 errors and 71 warnings potentially fixable with the `--fix` option.
+
+ESLint found too many warnings (maximum: 4156).
+ ELIFECYCLE  Command failed with exit code 1.
+exit=1
+```
+
+**Green restored at N (4157):**
+
+```
+$ cp package.json.ratchet-backup package.json   # restores --max-warnings 4157
+$ pnpm lint > /tmp/lint-green2.log 2>&1; echo "exit=$?"
+...
+✖ 4157 problems (0 errors, 4157 warnings)
+  0 errors and 71 warnings potentially fixable with the `--fix` option.
+exit=0
+```
+
+Both runs used the exact `--max-warnings` flag on the exact same tree (no warnings were added or
+removed between the two runs — only the flag's own value changed, verified via `git diff
+package.json` showing a single-line change before restoring), so the ratchet is proven to
+distinguish 4156 from 4157 rather than being a value that happens to sit above the true count with
+slack underneath it. This is the specific failure mode named in `T-39-40`: a ratchet set above the
+true count is "inert ... indistinguishable from a working control" until something exercises it.
+This one has been exercised, in both directions, on this tree.
+
+### How the ratchet is legitimately changed
+
+- **Lowering it** (the expected direction over time): fix warnings, re-run both measurement paths
+  from this document to get the new true count, lower `<N>` in `package.json`'s `lint` script to
+  that new count, in its own commit that cites the new number and the commit sha it was measured
+  against — the same discipline this plan followed.
+- **Raising it**: requires the same deliberate act — a commit that explicitly states why the count
+  needs to go up (e.g., a large necessary refactor that transiently adds `any`-typed surface before
+  it can be typed properly) and cites the freshly measured number. It must never happen by drift;
+  there is no code path in this repo, after this commit, by which the warning ceiling moves without
+  someone editing this exact line in `package.json` on purpose.
+
+### Planning gates unaffected
+
+```
+$ python3 meta/runPlanningGates.py
+...
+7/7 planning gates passed.
+```
+
+Unchanged by this plan's work — this plan added no gate script and touched no gate. Confirmed
+rather than assumed, per this phase's own recorded lesson about collateral breaks going unnoticed.
