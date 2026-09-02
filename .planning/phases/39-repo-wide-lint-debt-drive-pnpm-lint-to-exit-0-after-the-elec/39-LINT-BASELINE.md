@@ -148,3 +148,32 @@ means one of two things, both rejected:
 The honest, scoped target for REQ-39-01 is: **zero errors, plus a documented, ratcheted warning
 count that can only go down.** That ratchet is installed in a later section of this document, in
 its own commit, once the auto-fix decision below is recorded.
+
+---
+
+## Task 2 decision: mechanical auto-fix slice SKIPPED
+
+Post-collapse counts (Path B, above): **71** findings carry a `fix` property; **69** findings have
+no `ruleId` (unused eslint-disable directives). These numbers are unchanged from the pre-collapse
+figures `39-RESEARCH.md` cited (71 and 69 respectively) — the REQ-39-03 collapse plans' deletions
+did not touch any of the files carrying these particular findings.
+
+**Decision: skip Task 2.** Reasoning:
+
+- The overlap between "fixable" (71) and "unused directive" (69) means the mechanically-safe slice
+  is small relative to the 4157 total (~1.7%) and would not materially move the ratchet.
+- A repo-wide `eslint . --fix` is a blast-radius-unknowable operation across `src/**` and
+  `meta/**` per this plan's own frontmatter caveat. Reviewing every one of ~71-140 hunks
+  (accounting for overlap) for "did this change logic" carries real risk of a mis-scoped
+  auto-accept, for a benefit of a few dozen warnings off a total that is explicitly NOT being
+  driven to zero.
+- This phase's scope fence and the prettier-gate boundary (T-39-44) make any additional
+  file-touching work in this last plan of the phase higher-risk than valuable: REQ-39-01's
+  acceptance criteria do not require the count to shrink, only that it be measured and ratcheted.
+  A ratchet holds regardless of whether Task 2 ran.
+- Per the plan's own text: "skipping is a legitimate outcome ... but skipping must be a recorded
+  decision, not an omission." This is that record.
+
+No files were modified for Task 2. The ratchet in the section below is therefore set against the
+same 4157 figure measured earlier in this document — nothing intervened between that measurement
+and the ratchet commit except this document's own edits.
