@@ -291,3 +291,20 @@ confirmed unchanged (no flag for plan 39-08). No blockers for plans 39-05 throug
 ---
 *Phase: 39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+All files confirmed present:
+- `src/backend/humble/user.ts`
+- `src/backend/storeManagers/legendary/user.ts`
+- `src/backend/sidecar/__tests__/seamBranchParity.test.ts`
+- `src/backend/humble/__tests__/user.test.ts`
+- `src/backend/sidecar/__tests__/humbleFlows.test.ts`
+- `src/backend/storeManagers/legendary/__tests__/user.test.ts`
+- `.planning/phases/39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec/39-04-SUMMARY.md`
+
+All commits confirmed present in `git log --oneline --all`:
+- `a2198f6e2` (Task 1, inherited)
+- `1c2a24df1` (Task 2, inherited)
+- `a5bedaada` (Task 3)
+- `af19f1cd3` (plan metadata / this SUMMARY)
