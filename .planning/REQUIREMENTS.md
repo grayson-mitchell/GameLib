@@ -443,7 +443,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-35-21 | Phase 35 | Complete (2026-08-30 -- plan `35-18`: `35-RELEASE-NOTES.md` covers all 8 required user-facing areas plus a maintainer decision-trace appendix; the logout item was correctly sourced from `35-09`'s actual observed behaviour rather than the superseded decision text. `35-VERIFICATION.md`'s Requirements Coverage row scores this `✓ SATISFIED`. Status-table correction applied 2026-08-31 by records-hygiene plan `35-28`.) |
 | REQ-39-01 | Phase 39 | Planned (minted 2026-09-02 at `/gsd-plan-phase 39`; plan `39-09`) |
 | REQ-39-02 | Phase 39 | Planned (minted 2026-09-02 at `/gsd-plan-phase 39`; plans `39-01` and `39-08`) |
-| REQ-39-03 | Phase 39 | Planned (minted 2026-09-02 at `/gsd-plan-phase 39`; plans `39-02` through `39-07`) |
+| REQ-39-03 | Phase 39 | Complete (2026-09-02 -- plans `39-02` through `39-07` landed; `meta/__tests__/loginWindowSeamPredicateRemoved.test.ts` is the static zero-match gate, mutation-proven RED at all 3 scan targets and reverted, collected by the "Meta" jest project; `39-SEAM-DISPOSITIONS.md` records the 13-site table, the deliberate `humbleLoginFlowRegistration.ts:457` exclusion, and the 12-vs-13 census correction) |
 | REQ-34.10-01 | Phase 34.10 | Complete |
 | REQ-34.10-02 | Phase 34.10 | Complete |
 | REQ-34.10-03 | Phase 34.10 | Complete |
@@ -1286,7 +1286,7 @@ re-measured. `REQ-39-02` was deliberately NOT split into `02a`/`02b`.
   `runPlanningGates.py` hard-fails below `MINIMUM_EXPECTED_GATES = 7`, so RETIRE-by-deletion is
   unavailable — any retirement is in place. Plans `39-01` and `39-08`.
 
-- [ ] **REQ-39-03**: No `getLoginWindowSeam()` predicate branch survives under `src/backend/humble`
+- [x] **REQ-39-03**: No `getLoginWindowSeam()` predicate branch survives under `src/backend/humble`
   or `src/backend/storeManagers`, nor in `src/backend/sidecar/oauthLoginCapture.ts`, proven by a
   static zero-match gate with a per-root vacuity control and a pre-collapse RED proof.
   **13 sites, not the ROADMAP's 7** — `39-RESEARCH.md` re-derived 12 by keying on the predicate
@@ -1294,7 +1294,21 @@ re-measured. `REQ-39-02` was deliberately NOT split into `02a`/`02b`.
   `settle()`. `src/backend/sidecar/humbleLoginFlowRegistration.ts:457`'s smoke-test guard was found,
   considered and DELIBERATELY KEPT (a `GAMELIB_LOGIN_SEAM_SMOKE`-gated diagnostic, not a dual-build
   discriminator) and is why the sweep is scoped to two roots plus one named file. Plans `39-02`
-  through `39-07`.
+  through `39-07`. **COMPLETE 2026-09-02** — plan `39-07`'s
+  `meta/__tests__/loginWindowSeamPredicateRemoved.test.ts` implements the gate: two zero-match root
+  sweeps (`src/backend/humble`, `src/backend/storeManagers`) plus one single-file assertion
+  (`oauthLoginCapture.ts`), each with its own per-root vacuity control, collected by the "Meta"
+  jest project (11/11 passing). Non-vacuity proven three ways: the `status !== 1 || stdout !== ''`
+  conjunction, the per-root vacuity controls, and a pre-collapse RED proof against baseline sha
+  `ed1fdf71d` recorded in `39-SEAM-DISPOSITIONS.md`. Mutation-tested in both directions at all 3
+  scan targets (`humble/adapter.ts`, `legendary/user.ts`, `oauthLoginCapture.ts`) — each confirmed
+  RED with exact `file:line`, then cleanly reverted. The gate does NOT convict the deliberately-kept
+  guard at `humbleLoginFlowRegistration.ts:457` (outside all three scan targets, named explicitly in
+  both the gate's own header and `39-SEAM-DISPOSITIONS.md`). `39-SEAM-DISPOSITIONS.md` (208 lines,
+  a file distinct from plan `39-01`'s `39-GATE-DISPOSITIONS.md`) carries the 13-site disposition
+  table, the deliberate-exclusion writeup, the 12-vs-13 census correction with the `167-177` ->
+  `221-235` line-drift citation, and the `oauthLoginCapture.ts` framing note. `pnpm lint` holds flat
+  at 4157 warnings (0 errors) and `pnpm codecheck` exits 0 — no new warnings introduced.
 
 **Planning-time findings recorded against this phase's own research** (all three were absent from
 `39-RESEARCH.md` and `39-PATTERNS.md`, and all three change plan sequencing):
