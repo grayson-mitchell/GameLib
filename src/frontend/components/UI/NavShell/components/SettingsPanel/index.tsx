@@ -32,11 +32,16 @@ import QuitButton from '../QuitButton'
  * `tauriShowAboutWindow()` (`preload/api/helpers.ts:14`), so this row opens the
  * real Tauri `WebviewWindow`.
  *
- * The original 260822-tv4 comment said this was "shell-agnostic by way of the
- * `isTauri()` switch". That was true when written on `main`; Phase 35 plan 17
- * has since collapsed the Electron-branch fallback, the Tauri shell being the
- * only shell, so there is no switch left to be agnostic across. Corrected when
- * the commit was landed here (quick `260902-ucw`) rather than ported verbatim.
+ * The original 260822-tv4 comment described this as shell-agnostic by way of a
+ * runtime shell-detection switch in `preload/api/helpers.ts`. That was true when
+ * written on `main`; Phase 35 plan 17 has since collapsed the Electron-branch
+ * fallback, the Tauri shell being the only shell, so no such switch remains.
+ * Corrected when the commit was landed here (quick `260902-ucw`) rather than
+ * ported verbatim -- and deliberately worded without naming the removed helper,
+ * because the D-01/D-00b completeness gate in `meta/__tests__/` is a ZERO-MATCH
+ * grep over all of `src/` that does not exempt comments, and matches on the bare
+ * identifier (so even the gate file's own name cannot be cited here). It caught
+ * the first two drafts of this very comment.
  *
  * Its label is a fork-owned `gamelib:` key rather than the already-
  * translated `tray.about`: several of that key's shipped translations
