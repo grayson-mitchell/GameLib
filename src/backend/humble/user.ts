@@ -170,45 +170,25 @@ export class HumbleUser {
   // attaches the LIVE `persist:humble` cookie jar natively. If Humble
   // rotates `csrf_cookie`, every reveal thereafter sends a header that no
   // longer matches the cookie — a genuine 403 → 15-minute cooldown that
-  // never self-heals. This reads the live partition cookie at reveal time so
-  // header and cookie agree by construction; the stored snapshot is only a
-  // fallback cache for when the partition read fails/finds nothing.
+  // never self-heals. Electron used to read the live partition cookie at
+  // reveal time to close that gap; under the single Tauri-seam build there
+  // is no live login window at reveal time to read through (the login watch
+  // already settled and closed its window, T-34.4.1-18), so this always
+  // returns the stored snapshot instead (Phase 39 Plan 05 collapse — the
+  // session.fromPartition live read this comment used to describe is gone).
   // Main-process-only, same secrecy discipline as getCsrfToken(): the value
   // must NEVER be logged or included in any sendFrontendMessage payload.
   static async getLiveCsrfToken(): Promise<string | undefined> {
-    const seam = getLoginWindowSeam()
-    if (seam !== null) {
-      // Under the Tauri seam there is no live login window at reveal time —
-      // the login watch already settled and closed its window (T-34.4.1-18).
-      // Reading via the seam here would require a label this call never has,
-      // and would otherwise hit the sidecar's `{}` electronStub session shape
-      // if it fell through to session.fromPartition below. Return the stored
-      // snapshot directly rather than throwing a TypeError into the catch.
-      // Electron behavior (below) is unchanged.
-      logInfo(
-        'Humble live csrf read: seam installed, no live login window at reveal time — using stored snapshot',
-        LogPrefix.Backend
-      )
-      return HumbleUser.getCsrfToken()
-    }
-    try {
-      const ses = session.fromPartition(HUMBLE_LOGIN_PARTITION)
-      const cookies = await ses.cookies.get({
-        url: HUMBLE_BASE_URL,
-        name: 'csrf_cookie'
-      })
-      if (cookies.length > 0 && cookies[0].value) {
-        return cookies[0].value
-      }
-    } catch (err) {
-      logWarning(
-        [
-          'Humble live csrf_cookie read failed (falling back to stored snapshot):',
-          err
-        ],
-        LogPrefix.Backend
-      )
-    }
+    // Requires the login-window seam to be installed — see
+    // getLoginWindowSeamOrThrow()'s own doc comment. The returned seam is
+    // not otherwise used here: there is no live login window at reveal time
+    // to read through, so this always falls straight through to the stored
+    // snapshot.
+    getLoginWindowSeamOrThrow()
+    logInfo(
+      'Humble live csrf read: no live login window at reveal time — using stored snapshot',
+      LogPrefix.Backend
+    )
     return HumbleUser.getCsrfToken()
   }
 
@@ -860,79 +840,48 @@ export class HumbleUser {
     // reconnect. Best-effort/non-fatal, mirrors finishLogin's own capture
     // exactly (never blocks the health check, never logs the value).
     if (result.status === 'ok' && !(await HumbleUser.getCsrfToken())) {
-      // S-09 fix (Phase 34.4.1 Plan 18 gap-cycle closure, D-GAP-03): this
-      // backfill previously called session.fromPartition() unconditionally,
-      // with NO getLoginWindowSeam() guard anywhere in this function. Under
-      // Tauri that hit electronStub.ts's {}-returning stub, threw into the
-      // catch below, and the self-heal silently no-op'd on every health
-      // check -- an account that connected before csrf capture shipped (or
-      // whose opportunistic finishLogin() capture missed) never healed, so
-      // every reveal POST omitted the csrf-prevention-token header
-      // (RESEARCH.md Pitfall A). Live-gate item 4 passed only because that
-      // account already held a token from finishLogin -- the defect was
-      // masked, not absent.
-      const seam = getLoginWindowSeam()
-      if (seam === null) {
-        // ── Electron path (unchanged) ─────────────────────────────────────
-        try {
-          const csrfSes = session.fromPartition(HUMBLE_LOGIN_PARTITION)
-          const csrfCookies = await csrfSes.cookies.get({
-            url: HUMBLE_BASE_URL,
-            name: 'csrf_cookie'
-          })
-          if (csrfCookies.length > 0 && csrfCookies[0].value) {
-            await storeHumbleSecret('csrfToken', csrfCookies[0].value)
-          }
-        } catch (err) {
-          logWarning(
-            ['Humble csrf_cookie backfill failed (non-fatal, optional):', err],
-            LogPrefix.Backend
-          )
+      // S-09 (Phase 34.4.1 Plan 18 gap-cycle closure, D-GAP-03) / Phase 39
+      // Plan 05 collapse: this backfill opens a temporary HIDDEN window
+      // through the login-window seam -- the same shape disconnect()'s
+      // clearHumbleCookies wipe step uses -- reads csrf_cookie through it,
+      // and closes it in a `finally` so no path (success, rejection, or a
+      // thrown open()) ever leaves it open. There is no LIVE login window
+      // during a health check (unlike finishLogin's own csrf capture, which
+      // runs during an active login), so a temporary one is the only way to
+      // reach the jar. Best-effort/non-fatal, mirrors finishLogin's own
+      // capture exactly: never blocks the health check, never logs the
+      // value.
+      const seam = getLoginWindowSeamOrThrow()
+      let label: string | null = null
+      try {
+        label = await seam.open(HUMBLE_BASE_URL, {
+          visible: false,
+          userAgent: standardBrowserUserAgent()
+        })
+        const csrfRead = await seam.cookies(label, 'www.humblebundle.com', [
+          'csrf_cookie'
+        ])
+        const match = csrfRead.matched.find((c) => c.name === 'csrf_cookie')
+        if (match && match.value) {
+          await storeHumbleSecret('csrfToken', match.value)
         }
-      } else {
-        // ── Tauri seam path ────────────────────────────────────────────────
-        // There is no LIVE login window during a health check (unlike
-        // finishLogin's own csrf capture, which runs during an active
-        // login) -- the seam has no session.fromPartition() shape at all
-        // (tauri-login-webview-cookies.md), so the read requires a live
-        // webview handle. The seam CAN serve one outside a login flow: open
-        // a TEMPORARY hidden window the same way disconnect()'s
-        // clearHumbleCookies wipe step already does, read csrf_cookie
-        // through it, and close it in a `finally` -- never leaked,
-        // regardless of outcome. Best-effort/non-fatal, matching the
-        // Electron branch and finishLogin's own capture exactly (never
-        // blocks the health check, never logs the value).
-        let label: string | null = null
-        try {
-          label = await seam.open(HUMBLE_BASE_URL, {
-            visible: false,
-            userAgent: standardBrowserUserAgent()
+      } catch (err) {
+        logWarning(
+          ['Humble csrf_cookie backfill failed (non-fatal, optional):', err],
+          LogPrefix.Backend
+        )
+      } finally {
+        if (label !== null) {
+          const labelToClose = label
+          await seam.close(labelToClose).catch((closeErr) => {
+            logWarning(
+              [
+                'Humble csrf_cookie backfill window close failed (non-fatal):',
+                closeErr
+              ],
+              LogPrefix.Backend
+            )
           })
-          const csrfRead = await seam.cookies(label, 'www.humblebundle.com', [
-            'csrf_cookie'
-          ])
-          const match = csrfRead.matched.find((c) => c.name === 'csrf_cookie')
-          if (match && match.value) {
-            await storeHumbleSecret('csrfToken', match.value)
-          }
-        } catch (err) {
-          logWarning(
-            ['Humble csrf_cookie backfill failed (non-fatal, optional):', err],
-            LogPrefix.Backend
-          )
-        } finally {
-          if (label !== null) {
-            const labelToClose = label
-            await seam.close(labelToClose).catch((closeErr) => {
-              logWarning(
-                [
-                  'Humble csrf_cookie backfill window close failed (non-fatal):',
-                  closeErr
-                ],
-                LogPrefix.Backend
-              )
-            })
-          }
         }
       }
     }
