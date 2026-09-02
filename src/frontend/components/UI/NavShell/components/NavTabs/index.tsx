@@ -86,11 +86,7 @@ export default function NavTabs() {
   }
 
   return (
-    <Tabs
-      className="NavTabs"
-      value={activeTab ?? false}
-      data-tour="nav-menu"
-    >
+    <Tabs className="NavTabs" value={activeTab ?? false} data-tour="nav-menu">
       <Tab
         component={NavLink}
         to="/login"

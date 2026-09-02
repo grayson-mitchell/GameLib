@@ -187,6 +187,23 @@ const FIXTURE_DIFF_LINES = [
  * would turn the blocking gate red; whether upstream tool names are
  * do-not-translate glossary terms has to be settled first. That is a real
  * remaining follow-up, and a different one from the one this entry closes.
+ *
+ * 2026-09-02 (quick `260902-ur1`, merging Phase 34.12 from `wt/Other`): fork-touched
+ * 207 -> 208, unscanned 44 -> 45, scope UNCHANGED at 163. Three moves, all forced by
+ * the merge rather than chosen:
+ *   - `Sidebar/components/SidebarTour.tsx` OUT -- 34.12-04 deletes the file. Same
+ *     precedent as `260901-w9e`: a deleted file leaves the artifact.
+ *   - `NavShell/components/NavShellTour/index.tsx` IN -- its replacement. It was
+ *     ALREADY in `i18nGateScope.json`, because 34.12-04's own commit `848b58f84`
+ *     repointed the fork-scope manifests; the scope count therefore did not move.
+ *   - `state/TourContext.tsx` IN, and declared below -- 34.12-05 hardened its
+ *     persisted-state read, which makes it fork-touched. This one was MISSED on the
+ *     first pass (the swap above nets to zero, so the count still read 207 and looked
+ *     right) and was caught only by A-17 comparing against the live derivation. A
+ *     count that does not move is not evidence that the SET did not move.
+ * Not measured for violations here: `TourContext.tsx` is declared as unscanned debt,
+ * not promoted into the blocking scope, because this was a merge-conflict resolution
+ * and not a curation decision -- the same reasoning `260902-qs4` recorded above.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ActionIcons/index.tsx',
@@ -232,7 +249,8 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Settings/sections/SyncSaves/legendary.tsx',
   'src/frontend/screens/WebView/components/HumbleLoginSurface.tsx',
   'src/frontend/screens/WebView/components/humbleLoginChromeCss.ts',
-  'src/frontend/state/InstallProgress.ts'
+  'src/frontend/state/InstallProgress.ts',
+  'src/frontend/state/TourContext.tsx'
 ]
 
 /**
@@ -666,7 +684,7 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 207 files of
+   * The snapshot a real regeneration would produce TODAY: the 208 files of
    * the committed fork-touched artifact (35-24: 199 -> 205, six files that
    * phase touched -- `PathSelectionBox/index.tsx`, `WebviewControls/index.tsx`,
    * `DownloadManager/index.tsx`, `CategoriesManager/index.tsx`,
@@ -674,7 +692,7 @@ describe('--rewrite-scope guard', () => {
    * gap-closure follow-up: 205 -> 206, `Winetricks/WinetricksSearch/index.tsx`,
    * touched by 35-25's `366e719bb` after 35-24's re-baseline had already
    * landed). Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 163 -> 207 delta this task exists to
+   * so the specs below assert the REAL 163 -> 208 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -700,10 +718,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 163-file hand-curated snapshot and the fresh snapshot is the REAL 207', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 163-file hand-curated snapshot and the fresh snapshot is the REAL 208', () => {
     expect(scopeSnapshot.files.length).toBe(163)
-    expect(forkTouchedSnapshot.files.length).toBe(207)
-    expect(freshSnapshot().files.length).toBe(207)
+    expect(forkTouchedSnapshot.files.length).toBe(208)
+    expect(freshSnapshot().files.length).toBe(208)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -729,7 +747,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 163 -> 207 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 163 -> 208 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -752,7 +770,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 207', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 208', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -765,12 +783,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(207)
+    expect(rewritten.files.length).toBe(208)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 207 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 208 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -783,7 +801,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(207)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(208)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

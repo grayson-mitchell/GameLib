@@ -210,7 +210,9 @@ describe('HeroicVersion', () => {
     const root = mount()
 
     const allElements = [root, ...collectElements(root.props.children)]
-    const tagged = allElements.filter((el) => el.props?.['data-tour'] !== undefined)
+    const tagged = allElements.filter(
+      (el) => el.props?.['data-tour'] !== undefined
+    )
     expect(tagged).toHaveLength(1)
   })
 })

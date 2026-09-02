@@ -211,6 +211,7 @@
     "src/frontend/state/SteamBridgeSetup.ts",
     "src/frontend/state/SteamClientSetup.ts",
     "src/frontend/state/SteamSignOut.ts",
+    "src/frontend/state/TourContext.tsx",
     "src/frontend/types.ts"
   ]
 }

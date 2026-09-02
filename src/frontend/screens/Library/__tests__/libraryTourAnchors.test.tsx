@@ -60,9 +60,7 @@ type TourStepLike = { element?: string }
 type AnyElement = ReactElement<{ steps: TourStepLike[] }>
 
 function renderedSteps(): TourStepLike[] {
-  const tree = (
-    LibraryTour as unknown as () => AnyElement
-  )()
+  const tree = (LibraryTour as unknown as () => AnyElement)()
   return tree.props.steps
 }
 

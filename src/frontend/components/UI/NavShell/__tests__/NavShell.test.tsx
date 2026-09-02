@@ -268,9 +268,9 @@ describe('NavShell', () => {
     expect(directTourChildren).toHaveLength(1)
 
     const nestedInAside = collectElements(
-      kids.find((el) => String(el.props?.className ?? '').includes(
-        'NavShell__tier2'
-      ))?.props.children
+      kids.find((el) =>
+        String(el.props?.className ?? '').includes('NavShell__tier2')
+      )?.props.children
     ).filter((el) => el.type === NavShellTour)
     expect(nestedInAside).toHaveLength(0)
   })

@@ -1310,8 +1310,8 @@
             "search": "Use the Search bar to search for your games.",
             "sortInstalled": "Sort games by installed status.",
             "sortOptions": "Click here to sort games alphabetically.",
-            "viewToggle": "Switch between grid and list view for your games.",
             "viewsCollections": "Switch between Views like All games, Installed, Recently played and Favourites, or browse your custom Collections.",
+            "viewToggle": "Switch between grid and list view for your games.",
             "welcome": {
                 "intro": "Welcome to the GameLib Library! This is where you can see all your games across different stores.",
                 "intro2": "If the library is empty, make sure to login with your accounts using the Manage accounts on the sidebar or add your own games using the Add Game button above.",

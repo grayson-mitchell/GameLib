@@ -122,9 +122,7 @@ function topLevelChildren(tree: ReactNode): AnyElement[] {
 }
 
 function findByDataTour(tree: ReactNode, value: string): AnyElement[] {
-  return collectElements(tree).filter(
-    (el) => el.props?.['data-tour'] === value
-  )
+  return collectElements(tree).filter((el) => el.props?.['data-tour'] === value)
 }
 
 const HEADER_CSS_PATH = join(__dirname, '..', 'index.css')

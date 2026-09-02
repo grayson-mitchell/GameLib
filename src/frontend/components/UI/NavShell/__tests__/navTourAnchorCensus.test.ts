@@ -200,7 +200,10 @@ describe('nav/library tour anchor census (Layer B: uniqueness, not correctness)'
   it.each(NAV_TOUR_STEP_IDS)(
     'nav tour step id %s is defined on exactly one element in src/frontend',
     (id) => {
-      const matches = filesContaining(elementDefinitionFiles, `data-tour="${id}"`)
+      const matches = filesContaining(
+        elementDefinitionFiles,
+        `data-tour="${id}"`
+      )
       expect(matches).toHaveLength(1)
     }
   )
@@ -216,7 +219,10 @@ describe('nav/library tour anchor census (Layer B: uniqueness, not correctness)'
   it.each(LIBRARY_TOUR_ANCHOR_IDS)(
     'library tour anchor id %s is defined on exactly one element in src/frontend',
     (id) => {
-      const matches = filesContaining(elementDefinitionFiles, `data-tour="${id}"`)
+      const matches = filesContaining(
+        elementDefinitionFiles,
+        `data-tour="${id}"`
+      )
       expect(matches).toHaveLength(1)
     }
   )
