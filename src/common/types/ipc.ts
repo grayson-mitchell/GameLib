@@ -565,6 +565,9 @@ interface AsyncIPCFunctions {
   deleteUploadedLogFile: (url: string) => Promise<boolean>
   getUploadedLogFiles: () => Promise<Record<string, UploadedLogData>>
   getCustomCSS: () => Promise<string>
+  // Resolves a `data:` URL for the configured Manage Accounts background, or
+  // '' to mean "use the bundled default artwork".
+  getLoginBackground: () => Promise<string>
   getGogDiscounts: (
     locale: CatalogLocaleSettings,
     hideOwned?: boolean,

@@ -8,9 +8,9 @@
  * / `settingsFlowRegistration.ts`'s own objective — prove the real logic runs
  * behind the new transport, not a reimplementation):
  *
- *   invoke (8, `ipcMain.handle`):
- *     - `getCustomThemes`/`getThemeCSS`/`getCustomCSS` -> `appshell/themes.ts`
- *       (`main.ts:1512-1516`)
+ *   invoke (9, `ipcMain.handle`):
+ *     - `getCustomThemes`/`getThemeCSS`/`getCustomCSS`/`getLoginBackground`
+ *       -> `appshell/themes.ts`
  *     - `getHeroicVersion` -> `electronStub`'s `app.getVersion()` — Electron
  *       parity is the BARE `app.getVersion()` (`main.ts:754`), not the
  *       decorated `utils/systeminfo/heroicVersion.ts` form; do not "improve"
@@ -146,7 +146,12 @@ import i18next from 'i18next'
 import { ipcMain, app, powerSaveBlocker, dialog } from '../platform'
 import { isSnap, isCLINoGui } from '../constants/environment'
 import { heroicGithubURL, customThemesWikiLink } from '../constants/urls'
-import { getCustomThemes, getThemeCSS, getCustomCSS } from '../appshell/themes'
+import {
+  getCustomThemes,
+  getThemeCSS,
+  getCustomCSS,
+  getLoginBackground
+} from '../appshell/themes'
 import {
   getLatestReleasesForStartup,
   getCurrentChangelogEntry
@@ -232,7 +237,9 @@ function syncTrayIcon(): void {
 export function registerAppShellFlows(
   options: { skipInitialTraySync?: boolean } = {}
 ): void {
-  // ── invoke (8) ────────────────────────────────────────────────────────
+  // ── invoke (9) ────────────────────────────────────────────────────────
+  // Was 8 under the original Phase 34.1 D-01 set; `getLoginBackground` is a
+  // later addition (user-selectable Manage Accounts background artwork).
 
   ipcMain.handle('getCustomThemes', async () => getCustomThemes())
 
@@ -241,6 +248,8 @@ export function registerAppShellFlows(
   )
 
   ipcMain.handle('getCustomCSS', async () => getCustomCSS())
+
+  ipcMain.handle('getLoginBackground', async () => getLoginBackground())
 
   // Electron parity is the bare app.getVersion() (main.ts:754) — do not
   // decorate with the versionNames form from heroicVersion.ts.

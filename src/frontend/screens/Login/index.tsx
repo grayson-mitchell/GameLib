@@ -122,6 +122,14 @@ export default React.memo(function NewLogin() {
 
   const systemInfo = useAwaited(window.api.systemInfo.get)
 
+  // User-selectable background artwork (Settings -> General -> Manage Accounts
+  // background). The backend hands back a `data:` URL rather than a path --
+  // under Tauri the UI is served from `tauri://localhost` with no asset
+  // protocol configured, so a `file://` source would simply not load. '' (or
+  // still-loading `undefined`) leaves the bundled default from index.scss in
+  // place, which is also the fallback when the chosen file is unreadable.
+  const customBackground = useAwaited(window.api.getLoginBackground)
+
   let oldMac = false
   let oldMacMessage = ''
   if (systemInfo?.OS.platform === 'darwin') {
@@ -229,7 +237,14 @@ export default React.memo(function NewLogin() {
           }}
         />
       )}
-      <div className="loginBackground"></div>
+      <div
+        className="loginBackground"
+        style={
+          customBackground
+            ? { backgroundImage: `url("${customBackground}")` }
+            : undefined
+        }
+      ></div>
       {mountedOverlay === 'steam' && (
         <SteamLogin key={overlayMountKey} dismiss={dismissLoginOverlay} />
       )}

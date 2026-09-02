@@ -12,6 +12,7 @@ import {
   EnableSteamNativeInstall,
   HideChangelogOnStartup,
   LibraryTopSection,
+  LoginBackground,
   MaxRecentGames,
   MaxWorkers,
   MinimizeOnGameLaunch,
@@ -35,6 +36,8 @@ export default function GeneralSettings() {
       <LanguageSelector />
 
       <ThemeSelector />
+
+      <LoginBackground />
 
       <DefaultInstallPath />
 
