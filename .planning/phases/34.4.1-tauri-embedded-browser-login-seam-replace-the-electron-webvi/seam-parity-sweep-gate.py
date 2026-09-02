@@ -77,46 +77,38 @@ OUTPUT_PATH = PHASE_DIR / "34.4.1-SEAM-PARITY-SWEEP.md"
 # unchanged at the new path, same hardcoded-false/throws shape.
 ELECTRON_STUB_PATH = SRC_DIR / "backend" / "platform" / "index.ts"
 
-# The expected-answer sites from 34.4.1-10-PLAN.md <interfaces> — checked against, never
-# substituted for the live walk. If the live walk finds fewer than this, the walk is broken.
+# INVERTED Phase 39 Plan 08 (D-35-14-02 disposition vocabulary: INVERT, not RE-DERIVE). This list
+# used to be a FLOOR asserting eight `getLoginWindowSeam()` dual-branch call sites still exist
+# (34.4.1-10-PLAN.md's <interfaces>, refreshed for line drift by Plans 18/31 -- see git history of
+# this comment block for the two prior refreshes). REQ-39-03 (Phase 39, plans 39-02 through 39-06)
+# deliberately COLLAPSED seven of those eight: every dual-branch `if (seam === null) {...} else
+# {...}` predicate in humble/user.ts, humble/adapter.ts, humble/library.ts,
+# storeManagers/legendary/user.ts, and sidecar/oauthLoginCapture.ts was removed, replaced by an
+# unconditional seam-only path (see 39-SEAM-DISPOSITIONS.md's 13-site disposition table for the
+# full per-site account, and meta/__tests__/loginWindowSeamPredicateRemoved.test.ts for the
+# companion static zero-match sweep over the same two directories). A floor that still asserted
+# "these 8 exist" would have failed the moment that collapse landed -- and that failure would look
+# like a regression the collapse introduced, when it is exactly what REQ-39-03 was for.
 #
-# Line numbers refreshed Phase 34.4.1 Plan 18 (first regeneration since Plan 10 wrote this
-# script): plans 11-17 (already committed) and this plan's own Task 1-3/S-09 edits shifted every
-# one of these lines. This is a LINE NUMBER refresh only, matching the SAME real call sites —
-# `git log -p` on each file confirms no site was added, removed, or moved to a different function
-# by this renumbering. The one genuinely NEW getLoginWindowSeam() call this plan adds
-# (checkHealthAndFlagExpiry's S-09 guard, user.ts:776) is deliberately NOT added here — this list
-# is a FLOOR against 34.4.1-10-PLAN.md's original <interfaces>, not an exhaustive site list; the
-# new site still surfaces in the real findings table below without needing a floor entry.
-# Line numbers refreshed AGAIN 2026-08-23 (gap cycle 3, plan 31 — NEW-01). LINE NUMBERS ONLY: every
-# entry below was re-located by its ENCLOSING FUNCTION, not by position, and each resolves to the
-# SAME call site in the SAME function as before. No site was added to, removed from, or moved
-# within this floor. Verified against the live walk's own `site_paths_seen` rather than by hand:
+# The gate is INVERTED, not RETIRED, because there is still something real and falsifiable left to
+# assert: exactly ONE `getLoginWindowSeam()` call site survives anywhere in `src/` --
+# `sidecar/humbleLoginFlowRegistration.ts`'s smoke-test guard (line 457; unchanged this cycle,
+# never drifted). It is a defensive `if (!seam)` check inside a
+# `process.env.GAMELIB_LOGIN_SEAM_SMOKE === '1'`-gated diagnostic harness, not a dual-build
+# discriminator -- it was FOUND, CONSIDERED, and DELIBERATELY KEPT by this phase's collapse (see
+# 39-SEAM-DISPOSITIONS.md's "deliberate exclusion" section). Following the `artifactTargets.test.ts`
+# precedent (deferred-items.md:1164, D-35-14-02: "Plan 35-14 owns these. If they vanish, someone
+# must have planned doing it deliberately."): **Phase 39 / REQ-39-03 owns the deletion of the other
+# seven. If any of them reappears, or if the survivor vanishes, someone must have planned doing it
+# deliberately** -- this is now an anti-regrowth/anti-silent-loss assertion, not a floor.
 #
-#   :272 -> :275   adapter.ts            humblePostRequest()
-#   :168 -> :178   humble/user.ts        getLiveCsrfToken()
-#   :264 -> :274   humble/user.ts        watchForLogin() (seam install)
-#   :646 -> :740   humble/user.ts        finishLogin()'s csrf capture
-#   :943 -> :1034  humble/user.ts        disconnect()'s wipeSteps
-#   :157 -> :195   oauthLoginCapture.ts  captureOAuthLogin()
-#   :436 -> :457   humbleLoginFlowRegistration.ts  smokeHook
-#   :137 -> :137   legendary/user.ts     UNCHANGED (this one never drifted)
-#
-# The walk now finds a FIFTH humble/user.ts site at :873 that is not in this floor. That is
-# correct and deliberate: it is checkHealthAndFlagExpiry's S-09 guard, recorded by Plan 18 at
-# :776 as "deliberately NOT added here — this list is a FLOOR ... not an exhaustive site list".
-# It still surfaces in the findings table without a floor entry. Adding it here would quietly
-# convert a floor into an inventory and make the next drift harder to reason about.
-EXPECTED_AXIS_A_SITES = [
-    "src/backend/humble/adapter.ts:275",  # was :272 (humblePostRequest)
-    "src/backend/humble/user.ts:178",  # was :168, :185 (getLiveCsrfToken)
-    "src/backend/humble/user.ts:274",  # was :264, :281 (watchForLogin)
-    "src/backend/humble/user.ts:740",  # was :646, :614 (finishLogin's csrf capture)
-    "src/backend/humble/user.ts:1034",  # was :943, :794 (disconnect's wipeSteps)
-    "src/backend/sidecar/oauthLoginCapture.ts:195",  # was :157
-    "src/backend/storeManagers/legendary/user.ts:137",  # was :107 — unchanged this cycle
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts:457",  # was :436, :407, :358
-]
+# EXPECTED_AXIS_A_SURVIVOR_SET is checked for EXACT equality against the live walk's
+# `site_paths_seen` (both directions -- a missing survivor AND an unexpected extra site both fail),
+# not merely "contains", because "contains" alone would silently tolerate any of the seven deleted
+# predicates regrowing elsewhere in `src/` without ever being noticed by this check.
+EXPECTED_AXIS_A_SURVIVOR_SET = {
+    "src/backend/sidecar/humbleLoginFlowRegistration.ts:457",  # the deliberately-kept smoke guard
+}
 # Updated Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12 (already committed,
 # F-1/S-10 closure) moved the safeStorage import OUT of humble/user.ts entirely, into a new
 # dedicated seam module (secretStore.ts) that plan 13 installs a keyring-backed implementation
@@ -136,8 +128,8 @@ EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS = [
 # capability at the seam would have sailed through green. Non-vacuous, and measuring the wrong
 # property.
 #
-# These three are KNOWN, PRE-EXISTING, and deliberately unresolved -- they predate the pin and
-# closing them is not this task's job. S-07/S-10 are F-6 and its verbatim Epic twin (authCache +
+# These were KNOWN, PRE-EXISTING, and deliberately unresolved -- they predate the pin and closing
+# them was not that task's job. S-07/S-10 were F-6 and its verbatim Epic twin (authCache +
 # hostResolver dropped by the Tauri wipe path); S-12 is F-1's steamgrid leg.
 #
 # PINNED BY PATH, deliberately, and NOT by `S-NN` and NOT by `path:line`:
@@ -145,12 +137,34 @@ EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS = [
 #     inserting any finding earlier renumbers everything after it. An ID is a display artifact,
 #     not an identity. ID renumbering is caught independently by the report-content check.
 #   - `path:line` would be a SECOND place needing a line-number refresh on every unrelated edit,
-#     on top of EXPECTED_AXIS_A_SITES. One such treadmill is enough.
+#     on top of EXPECTED_AXIS_A_SURVIVOR_SET. One such treadmill is enough.
 # The path set is the property that actually matters: WHICH FILES silently drop a capability.
+#
+# RETIRED-IN-PLACE Phase 39 Plan 08 (D-35-14-02 vocabulary: RETIRE, applied to the two entries
+# individually, not to the whole list -- S-12 is untouched). S-07 (`humble/user.ts`) and S-10
+# (`storeManagers/legendary/user.ts`) are REMOVED from this pin because REQ-39-03's plan 39-04
+# collapsed both `disconnect()`/`logout()` sites to a single, unconditional,
+# `getLoginWindowSeamOrThrow()`-driven `wipeSteps` array -- there is no longer an `if (seam ===
+# null) {...} else {...}` branch pair in EITHER file for `classify_wipesteps_site()` to compare,
+# and no literal `getLoginWindowSeam()` call remains in either file at all (confirmed: `grep -c
+# 'getLoginWindowSeam()' src/backend/humble/user.ts src/backend/storeManagers/legendary/user.ts`
+# both return 0). This script's Axis A machinery therefore produces NO finding whatsoever for
+# either file any more -- not a DECLARED finding, not a SILENTLY-DROPPED one, nothing -- so keeping
+# either path pinned here would make `silent_drop_violations()` hard-fail FOREVER with "silent
+# drop(s) NO LONGER present", a technically-true but permanently-red complaint about a comparison
+# mechanism that no longer runs at all.
+#
+# The underlying residual this pin used to track -- `clearAuthCache`/`clearHostResolverCache` have
+# no in-page JS equivalent under the seam, so that capability category is still genuinely
+# uncovered on both surviving single paths -- is REAL and UNCLOSED. It has NOT been silently
+# dropped from the record: it is now carried by `seamBranchParity.test.ts`'s `DECLARED` registry
+# (four entries, each requiring BOTH the `T-34.4.1-73` threat id AND a matching category term to be
+# present in the ACTUAL file, `isDeclaredInSource()`-verified against real source at test-run time)
+# and by `39-SEAM-DISPOSITIONS.md`'s own disposition record. This gate is not the only, or even the
+# primary, place that residual is enforced -- and it cannot be, once there is no branch comparison
+# left to run.
 EXPECTED_SILENT_DROP_SITES = [
-    "src/backend/humble/user.ts",  # S-07 — F-6: authCache + hostResolver dropped
-    "src/backend/storeManagers/legendary/user.ts",  # S-10 — F-6's verbatim Epic twin
-    "src/backend/steamgrid/secureKey.ts",  # S-12 — F-1/F-1b: safeStorage throws under Tauri
+    "src/backend/steamgrid/secureKey.ts",  # S-12 — F-1/F-1b: safeStorage throws under Tauri (Axis B; untouched by this phase)
 ]
 
 
@@ -568,27 +582,19 @@ class Finding:
 # array literal, no configStore sink, not a two-named-function ternary — see module docstring).
 # Each entry is verified against the LIVE file at run time via an anchor-substring assertion, so a
 # source change that invalidates the classification fails loudly instead of reporting stale text.
+# RETIRED-IN-PLACE Phase 39 Plan 08 (D-35-14-02 vocabulary: RETIRE): two of the three entries this
+# dict used to carry -- "src/backend/humble/user.ts::watchForLogin" (line_hint 274) and
+# "src/backend/humble/library.ts::revealTransportLabel" (line_hint 1211) -- named
+# getLoginWindowSeam() call sites that REQ-39-03 (plans 39-03/39-06) deleted outright. Neither site
+# has a literal getLoginWindowSeam() call left in source (confirmed:
+# `grep -c 'getLoginWindowSeam()' src/backend/humble/user.ts src/backend/humble/library.ts` both
+# return 0 for a live call, `library.ts:1202` is a comment mentioning the removed call, not a
+# call), so `run_axis_a()`'s `abs(profile["line_hint"] - line_no) <= 5` matcher can never reach
+# either entry again -- find_axis_a_call_sites() never visits these files' now-deleted call sites
+# at all. Keeping the entries would leave two anchor-count checks that can never run, silently
+# masquerading as coverage. Only the entry for the ONE surviving site
+# (`humbleLoginFlowRegistration.ts::smokeHook`, see EXPECTED_AXIS_A_SURVIVOR_SET above) remains.
 SITE_PROFILES = {
-    "src/backend/humble/user.ts::watchForLogin": {
-        # Line hint updated Phase 34.4.1 Plan 18 (F-2): the site itself is unchanged, but Plan
-        # 18's Task 2 (rejection-log collapse) inserted ~17 lines above it (a new
-        # LOGIN_WATCH_LIVENESS_LOG_INTERVAL_MS constant + doc comment) -- the +/-5 line-window
-        # match in run_axis_a() needs the hint kept current, exactly the kind of drift this
-        # profile's own anchor-count check exists to catch loudly rather than silently.
-        # Refreshed AGAIN 2026-08-23 (gap cycle 3, plan 31): 264 -> 274.
-        "line_hint": 274,
-        "anchors": [
-            "standardBrowserUserAgent()",  # must appear on BOTH the Electron ses.setUserAgent
-            # call and the Tauri seam.open({userAgent: ...}) call -- 2+ occurrences is the
-            # mechanical proxy for "same UA delivered on both paths".
-        ],
-        "min_anchor_occurrences": {"standardBrowserUserAgent()": 2},
-        "id_anchor": "D-01/D-02",
-        "electron_capability": "ses.setUserAgent(standardBrowserUserAgent()) on the persist:humble partition",
-        "tauri_capability": "seam.open(url, { userAgent: standardBrowserUserAgent() }) -- same UA string, different delivery API",
-        "classification": "DECLARED",
-        "disposition": "correct — no action (D-01/D-02; UA parity verified by anchor count, not a capability drop)",
-    },
     "src/backend/sidecar/humbleLoginFlowRegistration.ts::smokeHook": {
         # Line hint refreshed Phase 34.4.1 Plan 18 (first regeneration since Plan 10) — same site,
         # shifted by intervening plans' additions to this file.
@@ -610,51 +616,13 @@ SITE_PROFILES = {
         "classification": "DECLARED",
         "disposition": "correct — no action (env-gated diagnostic harness; no production capability on either branch to drop)",
     },
-    # Added Phase 34.4.1 Plan 18 (F-2/F-3/F-4/S-09 gap-cycle closure). Plan 17 (already committed,
-    # landed AFTER this script was written in Plan 10) added a NEW getLoginWindowSeam() call site —
-    # a plain ternary EXPRESSION choosing a LOG LABEL STRING, not a two-named-function dispatch
-    # (so classify_ternary_site's find_function_body_by_name lookup does not match it) and not a
-    # wipeSteps/configStore sink either. Regenerating this document for S-09 hit this site as a
-    # hard stop (GATE FAILED) before any S-09-related change was made — fixing the SCRIPT (never
-    # hand-editing the generated .md) to classify a genuinely new site is exactly what this file's
-    # own docstring instructs.
-    "src/backend/humble/library.ts::revealTransportLabel": {
-        # Line hint refreshed 2026-08-23 (gap cycle 3, plan 31): 1202 -> 1211. NEW-01.
-        #
-        # The site, its anchors and its classification are ALL unchanged -- pure line drift. ALL
-        # THREE profiles in this dict drifted at once (264->274, 436->457, 1202->1211), together
-        # with all seven EXPECTED_AXIS_A_SITES entries.
-        #
-        # ATTRIBUTION, stated carefully: ~8 commits touched these files between the Plan 18
-        # refresh and today -- 34.4.2 and 34.5 behavioural work (63ae6c818, f3b9e6da5, e1cef86e4,
-        # dea15578f, 688a216de, ff298d657, 08ae387ff, af42d10ac) plus a repo-wide prettier sweep
-        # (fbbfa852e). The drift is attributable to that set COLLECTIVELY. An earlier draft of
-        # this comment blamed the prettier commit alone, on the strength of `git diff -w` showing
-        # changes; that test is invalid, because -w ignores whitespace WITHIN a line and does not
-        # ignore reflowing, so it cannot distinguish a formatting sweep from real work either way.
-        #
-        # Nobody noticed for 23 days because THIS SCRIPT IS NOT WIRED INTO CI -- `pnpm
-        # planning-gates` runs 6 gates and this is not one of them. The failure surfaced only
-        # because gap cycle 3 ran it by hand.
-        #
-        # WARNING for plan 32 (D-29-03): that plan adds a success-path INFO line to this same
-        # function. If it lands ABOVE line 1211 this hint drifts AGAIN and the gate goes red a
-        # third time. Add the success line AFTER the adapter call (it is a completion log, so
-        # that is also where it belongs semantically), and re-run this script before committing.
-        "line_hint": 1211,
-        "anchors": [
-            "revealTransportLabel",
-            "login-window seam transport",
-            "electron-net transport",
-        ],
-        "min_anchor_occurrences": {},
-        "id_anchor": None,
-        "electron_capability": "logs the fixed 'electron-net transport' label on the reveal-POST diagnostic line",
-        "tauri_capability": "logs 'login-window seam transport' -- a LABEL choice derived from the SAME getLoginWindowSeam() condition humblePostRequest (adapter.ts) branches its REAL dispatch on; this line does not itself dispatch anything",
-        "classification": "DECLARED",
-        "disposition": "correct — no action (Phase 34.4.1 gap-cycle plan 17, F-8: a diagnostic label choice, not a dropped capability -- the reveal POST's actual transport dispatch lives in adapter.ts's own getLoginWindowSeam() branch, unaffected by this line)",
-    },
 }
+# RETIRED (Phase 39 Plan 08): the "src/backend/humble/library.ts::revealTransportLabel" profile
+# (line_hint 1211, F-8) formerly lived here. REQ-39-03 deleted `revealTransportLabel`'s
+# getLoginWindowSeam() call site outright (confirmed:
+# `grep -c 'getLoginWindowSeam()' src/backend/humble/library.ts` returns 0), so the profile can
+# never be reached by find_axis_a_call_sites() again. See the RETIRED-IN-PLACE comment above
+# SITE_PROFILES for the sibling watchForLogin retirement and the reasoning shared by both.
 
 
 def classify_wipesteps_site(site_label: str, branch: dict) -> Finding | None:
@@ -946,7 +914,21 @@ def find_unguarded_session_calls() -> list[Finding]:
 # Axis B — safeStorage importers
 # ---------------------------------------------------------------------------------------------
 
-ELECTRON_IMPORT_RE = re.compile(r"import\s*\{([^}]*)\}\s*from\s*'electron'")
+# RE-POINTED Phase 39 Plan 08 (D-35-14-02 vocabulary: RE-POINT — a third, independent instance,
+# discovered only after Task 1 cleared the FileNotFoundError that had been masking it since Phase
+# 35). This regex used to match ONLY `from 'electron'`, but Phase 35 plans 35-13/35-15's
+# rearchitecture also rewrote every REAL `safeStorage` importer's specifier to `from
+# 'backend/platform'` (confirmed: `grep -rn "^import.*safeStorage" src/backend` shows all of
+# secretStore.ts, secureKey.ts and tokenStore.ts now import from 'backend/platform', none from
+# 'electron'). Before this fix, `secretStore.ts` and `tokenStore.ts` were silently missed by the
+# live walk entirely — the run only "found" `secureKey.ts` by accident, because its own
+# explanatory doc comment at line 3 happens to contain the literal substring
+# `import { safeStorage } from 'electron'`, which this same over-broad regex matched as if it were
+# a real import. The three-entry `EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS` floor itself is
+# unchanged and un-invalidated by this phase (per the plan's own T-39-38: Axis B is untouched) —
+# this is "fix the walk, never the expectation," exactly as the gate's own under-enumeration
+# fail() message instructs.
+ELECTRON_IMPORT_RE = re.compile(r"import\s*\{([^}]*)\}\s*from\s*'(?:electron|backend/platform)'")
 
 
 def find_safestorage_importers() -> list[Path]:
@@ -1072,6 +1054,27 @@ def steamgrid_reachability_evidence() -> str:
     ]
     in_handlers = "steamgrid" in handlers_text
     in_ledger_baseline = "steamgrid" in ledger_text
+    # RE-DERIVED Phase 39 Plan 08 (D-35-14-02 vocabulary: RE-DERIVE — the prose used to
+    # unconditionally assert `src/backend/main.ts` as the one reachability path, which was true
+    # when this function was written but Phase 35 plan 35-14's "POINT OF NO RETURN" commit
+    # (5643c7583) deleted `src/backend/main.ts` outright, along with every other Electron entry
+    # point — confirmed: `find src -iname "main.ts"` finds nothing under `src/backend`. The
+    # mechanical check (`steamgrid_ipc_importers`) already correctly reported "(none found)" once
+    # main.ts was gone; only the hardcoded conclusion sentence still named a defunct file as if it
+    # were live. Branching this on the file's actual existence keeps the number (0 importers) and
+    # its prose explanation moving together, instead of a true count paired with a false story.
+    main_ts_path = SRC_DIR / "backend" / "main.ts"
+    if main_ts_path.exists():
+        reachability_clause = (
+            "it is only reached from `src/backend/main.ts` (Electron's own entry point, never "
+            "imported by the sidecar's `bootstrap.ts`/`handlers.ts` chain)"
+        )
+    else:
+        reachability_clause = (
+            "it has no importer at all -- `src/backend/main.ts` (Electron's own entry point) was "
+            "deleted outright by Phase 35 plan 35-14's Electron-cutover commit (5643c7583), and no "
+            "other module imports it"
+        )
     return (
         f"`steamgrid/ipc_handler.ts` (the only importer of `secureKey.ts`'s `encryptApiKey`/"
         f"`decryptApiKey`) is imported by: {steamgrid_ipc_importers or '(none found)'}. "
@@ -1082,8 +1085,7 @@ def steamgrid_reachability_evidence() -> str:
         f"reach measurement from all sidecar entry points) {'DOES' if in_ledger_baseline else 'does NOT'} "
         f"contain any `steamgrid/*` path. "
         f"**Conclusion: `steamgrid/secureKey.ts` is NOT reachable from the sidecar's curated import "
-        f"graph today** — it is only reached from `src/backend/main.ts` (Electron's own entry point, "
-        f"never imported by the sidecar's `bootstrap.ts`/`handlers.ts` chain). F-1b therefore stays "
+        f"graph today** — {reachability_clause}. F-1b therefore stays "
         f"dormant, not live, under the current Tauri build; it becomes live the moment any future "
         f"plan wires `steamgrid` into a sidecar registration module without first migrating it off "
         f"direct `safeStorage` (this is exactly D-GAP-02's stated reason for planning F-1/F-1b's "
@@ -1139,7 +1141,9 @@ def build_report(
     lines.append("")
     lines.append(
         f"Axis A live walk found {site_count} `getLoginWindowSeam()` call site(s) "
-        f"(expected >= {len(EXPECTED_AXIS_A_SITES)} from 34.4.1-10-PLAN.md `<interfaces>`)."
+        f"(expected == {sorted(EXPECTED_AXIS_A_SURVIVOR_SET)} -- INVERTED Phase 39 Plan 08, "
+        "REQ-39-03 owns the other seven's deletion; see EXPECTED_AXIS_A_SURVIVOR_SET's own "
+        "comment)."
     )
     lines.append(
         f"Axis B live walk found {len(axis_b_findings)} non-test `safeStorage` importer(s) "
@@ -1549,13 +1553,28 @@ def main() -> None:
     supplementary_findings = find_unguarded_session_calls()
     axis_b_findings = classify_axis_b()
 
-    missing_axis_a = [s for s in EXPECTED_AXIS_A_SITES if s not in site_paths_seen]
-    if missing_axis_a:
-        fail(
-            f"the live Axis A walk did NOT find these expected sites from 34.4.1-10-PLAN.md "
-            f"<interfaces>: {missing_axis_a} — the instrument is under-enumerating; fix the walk, "
-            "never the expectation"
-        )
+    # INVERTED Phase 39 Plan 08 (see EXPECTED_AXIS_A_SURVIVOR_SET's own comment): EXACT-SET
+    # equality, not a floor. Checked in BOTH directions -- a missing survivor means the
+    # deliberately-kept smoke guard was removed without anyone planning that; an unexpected extra
+    # site means one of REQ-39-03's seven deleted predicates regrew somewhere, or a genuinely new
+    # dual-branch getLoginWindowSeam() call site appeared uninspected.
+    if site_paths_seen != EXPECTED_AXIS_A_SURVIVOR_SET:
+        missing_survivor = sorted(EXPECTED_AXIS_A_SURVIVOR_SET - site_paths_seen)
+        unexpected_new = sorted(site_paths_seen - EXPECTED_AXIS_A_SURVIVOR_SET)
+        parts = []
+        if missing_survivor:
+            parts.append(
+                f"the deliberately-kept smoke guard is MISSING: {missing_survivor} -- someone "
+                "removed it without going through REQ-39-03's own deliberate-exclusion review "
+                "(see 39-SEAM-DISPOSITIONS.md's 'deliberate exclusion' section)"
+            )
+        if unexpected_new:
+            parts.append(
+                f"UNEXPECTED getLoginWindowSeam() call site(s) found: {unexpected_new} -- either "
+                "one of REQ-39-03's seven deleted dual-branch predicates has regrown, or a "
+                "genuinely new call site was added without updating EXPECTED_AXIS_A_SURVIVOR_SET"
+            )
+        fail("Axis A survivor set changed. " + " ".join(parts))
 
     axis_b_importer_paths = {f.site for f in axis_b_findings}
     missing_axis_b = [s for s in EXPECTED_AXIS_B_SAFESTORAGE_IMPORTERS if s not in axis_b_importer_paths]
