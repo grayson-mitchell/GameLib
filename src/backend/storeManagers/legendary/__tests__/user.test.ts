@@ -2,15 +2,23 @@
  * Unit tests for LegendaryUser.logout() (Phase 34.5 Plan 06, T-34.5-19/T-34.5-20,
  * REQ-34.5-04).
  *
- * No test file existed for this module before this plan. These tests cover the defect this
- * plan fixes: under the Tauri sidecar, `session.fromPartition('persist:epicstore')` resolves
- * the sidecar's `{}` stub (electronStub.ts) which has no `clear*` methods, so the FIRST
- * `ses.clearStorageData()` call used to throw a TypeError and abort logout() before
- * `configStore.delete('userInfo')`/`clearCache('legendary')` ever ran — leaving the stored
- * profile behind despite CLI credential revocation succeeding.
+ * No test file existed for this module before Phase 34.5 Plan 06. These tests originally
+ * covered the defect that plan fixed: under the Tauri sidecar, `session.fromPartition(
+ * 'persist:epicstore')` resolved the sidecar's `{}` stub (electronStub.ts) which had no
+ * `clear*` methods, so the FIRST `ses.clearStorageData()` call used to throw a TypeError and
+ * abort logout() before `configStore.delete('userInfo')`/`clearCache('legendary')` ever ran —
+ * leaving the stored profile behind despite CLI credential revocation succeeding.
+ *
+ * Phase 39 Plan 04 Task 1 collapsed logout()'s `if (seam === null) { ...5-step
+ * session.fromPartition wipe... } else { ...seam-driven wipe... }` shape into a single,
+ * unconditional, seam-driven `wipeSteps` array — the `session.fromPartition('persist:
+ * epicstore')` branch this file used to mock no longer exists in source at all (`user.ts` no
+ * longer imports `session` from `backend/platform`). The tests that drove that branch directly
+ * (the deleted five-clear-call-order tests, and the "no clear* methods" defect-fix test) were
+ * either deleted as duplicates of an equivalent seam-based test or re-pointed at the seam — see
+ * Phase 39 Plan 04's SUMMARY for exactly which and why.
  *
  * Mock boundaries:
- *  - electron                          -> session.fromPartition (electron-shaped)
  *  - backend/logger                    -> logInfo/logError/logWarning
  *  - ../../../utils                    -> clearCache
  *  - backend/constants/key_value_stores -> configStore
@@ -21,35 +29,6 @@
  * pure classifier (no platform imports), so tests drive it directly via
  * `setLoginWindowSeam(seam | null)`/`getLoginWindowSeam()`, exactly as production code does.
  */
-
-// ── electron mock ──────────────────────────────────────────────────────────────────────────
-// NOTE: jest.config.js sets `resetMocks: true` project-wide, which strips BOTH the calls
-// history AND any implementation (including one supplied at `jest.fn(impl)` construction time)
-// before every test. All default behavior below is therefore (re-)established in `beforeEach`,
-// never at module scope — see the "Re-arm default mock behavior" block.
-const mockClearStorageData = jest.fn()
-const mockClearCache = jest.fn()
-const mockClearAuthCache = jest.fn()
-const mockClearHostResolverCache = jest.fn()
-const mockClearData = jest.fn()
-
-// Default: a session object shaped like real Electron's Session (all 5 clear* methods
-// present). Individual tests reassign this to simulate the sidecar's `{}` stub.
-let mockFromPartitionReturn: Record<string, unknown> = {
-  clearStorageData: mockClearStorageData,
-  clearCache: mockClearCache,
-  clearAuthCache: mockClearAuthCache,
-  clearHostResolverCache: mockClearHostResolverCache,
-  clearData: mockClearData
-}
-
-const mockFromPartition = jest.fn()
-
-jest.mock('backend/platform', () => ({
-  session: {
-    fromPartition: (...args: unknown[]) => mockFromPartition(...args)
-  }
-}))
 
 // `./constants` transitively pulls in `backend/constants/paths.ts`, which
 // reads `app.getPath`/`app.getAppPath`/`app.isPackaged` at MODULE SCOPE
@@ -175,19 +154,6 @@ describe('LegendaryUser.logout()', () => {
     // everything the module-under-test needs a resolved value/return value for must be
     // (re-)established here, not relied on from module-scope `jest.fn(impl)`/`mockResolvedValue`
     // calls (those are stripped too).
-    mockFromPartitionReturn = {
-      clearStorageData: mockClearStorageData,
-      clearCache: mockClearCache,
-      clearAuthCache: mockClearAuthCache,
-      clearHostResolverCache: mockClearHostResolverCache,
-      clearData: mockClearData
-    }
-    mockFromPartition.mockImplementation(() => mockFromPartitionReturn)
-    mockClearStorageData.mockResolvedValue(undefined)
-    mockClearCache.mockResolvedValue(undefined)
-    mockClearAuthCache.mockResolvedValue(undefined)
-    mockClearHostResolverCache.mockResolvedValue(undefined)
-    mockClearData.mockResolvedValue(undefined)
     setLoginWindowSeam(null)
     mockRunRunnerCommand.mockResolvedValue({
       stdout: '',
@@ -215,24 +181,19 @@ describe('LegendaryUser.logout()', () => {
       ['Failed to logout:', 'boom'],
       'Legendary'
     )
-    expect(mockFromPartition).not.toHaveBeenCalled()
     expect(mockConfigStore.delete).not.toHaveBeenCalled()
     expect(clearCache).not.toHaveBeenCalled()
   })
 
-  it('REQ-34.5-04 (T-34.5-19, the defect this task fixes): with a session object exposing no clear* methods, logout() does NOT throw and configStore.delete("userInfo") STILL runs', async () => {
-    // Simulates electronStub.ts's session.fromPartition() stub under the sidecar: `{}`, no
-    // clear* methods at all. Reverting the fix (removing the guarded step loop / moving
-    // configStore.delete back above an unguarded call) makes this test fail with an unhandled
-    // TypeError.
-    mockFromPartitionReturn = {}
-
-    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
-
-    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
-    expect(clearCache).toHaveBeenCalledWith('legendary')
-    expect(logWarning).toHaveBeenCalled()
-  })
+  // Phase 39 Plan 04 Task 3: the test that used to live here — "with a session object exposing
+  // no clear* methods, logout() does NOT throw and configStore.delete('userInfo') STILL runs" —
+  // drove the now-deleted `if (seam === null)` Electron branch directly (it simulated
+  // electronStub.ts's `{}` session stub). Task 1 removed that branch from source entirely, so
+  // the scenario is unreachable. Its invariant — the credential-side cleanup
+  // (configStore.delete('userInfo') + clearCache('legendary')) runs even when the ENTIRE
+  // partition wipe fails — survives, unweakened, in "F-6 twin: the credential-side cleanup runs
+  // even when BOTH the cookie step and the storage step reject" below, which exercises the same
+  // property through the surviving seam path instead.
 
   it('REQ-34.5-04: asserts call ORDER — auth --delete runs before any cookie step, and cookie steps run before configStore.delete', async () => {
     const callOrder: string[] = []
@@ -240,9 +201,18 @@ describe('LegendaryUser.logout()', () => {
       callOrder.push('auth-delete')
       return { stdout: '', stderr: '', error: undefined, abort: false }
     })
-    mockClearStorageData.mockImplementation(async () => {
-      callOrder.push('clearStorageData')
+    // Phase 39 Plan 04 Task 3: this test used to drive the deleted Electron
+    // `session.fromPartition('persist:epicstore').clearStorageData()` call to prove the
+    // ordering; the seam-driven `clearCookies` step is the surviving equivalent "a cookie-side
+    // wipe step ran" signal (it is also the LAST wipeSteps entry per the ORDER-IS-LOAD-BEARING
+    // comment in user.ts, so proving it precedes configStore.delete proves the whole loop does).
+    const seam = makeMockSeam({
+      clearCookies: jest.fn().mockImplementation(async () => {
+        callOrder.push('clearCookies')
+        return 3
+      })
     })
+    setLoginWindowSeam(seam)
     mockConfigStore.delete.mockImplementation((key: string) => {
       callOrder.push(`configStore.delete:${key}`)
     })
@@ -250,7 +220,7 @@ describe('LegendaryUser.logout()', () => {
     await LegendaryUser.logout()
 
     const authIdx = callOrder.indexOf('auth-delete')
-    const cookieIdx = callOrder.indexOf('clearStorageData')
+    const cookieIdx = callOrder.indexOf('clearCookies')
     const deleteIdx = callOrder.indexOf('configStore.delete:userInfo')
 
     expect(authIdx).toBeGreaterThanOrEqual(0)
@@ -258,35 +228,18 @@ describe('LegendaryUser.logout()', () => {
     expect(deleteIdx).toBeGreaterThan(cookieIdx)
   })
 
-  it('REQ-34.5-04: with a full Electron-shaped session, all five clear calls run in order', async () => {
-    const callOrder: string[] = []
-    mockClearStorageData.mockImplementation(async () => {
-      callOrder.push('clearStorageData')
-    })
-    mockClearCache.mockImplementation(async () => {
-      callOrder.push('clearCache')
-    })
-    mockClearAuthCache.mockImplementation(async () => {
-      callOrder.push('clearAuthCache')
-    })
-    mockClearHostResolverCache.mockImplementation(async () => {
-      callOrder.push('clearHostResolverCache')
-    })
-    mockClearData.mockImplementation(async () => {
-      callOrder.push('clearData')
-    })
-
-    await LegendaryUser.logout()
-
-    expect(mockFromPartition).toHaveBeenCalledWith('persist:epicstore')
-    expect(callOrder).toEqual([
-      'clearStorageData',
-      'clearCache',
-      'clearAuthCache',
-      'clearHostResolverCache',
-      'clearData'
-    ])
-  })
+  // Phase 39 Plan 04 Task 3: the test that used to live here — "with a full Electron-shaped
+  // session, all five clear calls run in order" — asserted the exact call order of the FIVE
+  // deleted `session.fromPartition()` clear methods (clearStorageData/clearCache/
+  // clearAuthCache/clearHostResolverCache/clearData). Task 1 deleted the only call site for all
+  // five; the assertion has nothing left to check. The NEW two-step wipe order
+  // (`clearEpicStorage` before `clearEpicCookies`) is deliberately covered by a SOURCE gate, not
+  // a live call-order test, in `epicLogoutDomains.test.ts`'s "wipe-step ORDER: the storage step
+  // runs BEFORE the cookie sweep" describe — its own header comment explains why a live/mocked
+  // test cannot observe this property (a mocked `clearStorage` never re-seeds cookies the way
+  // the real Epic origin load does, so a live test would stay green even with the steps
+  // reversed — exactly the blind spot that caused this ordering bug in production the first
+  // time). That gate is untouched by this plan and was green before and after Task 1.
 
   it('REQ-34.5-04 (T-34.5-20): with a seam installed, clearCookies is called with the Epic host, and off macOS the window is closed even when the clear rejects', async () => {
     // Driven off macOS deliberately: this test's subject is the window
@@ -311,7 +264,10 @@ describe('LegendaryUser.logout()', () => {
       'rust-side clear failed'
     )
 
-    expect(mockFromPartition).not.toHaveBeenCalled()
+    // Phase 39 Plan 04 Task 3: this used to also assert
+    // `expect(mockFromPartition).not.toHaveBeenCalled()` — session.fromPartition() has no
+    // remaining call site anywhere in user.ts (Task 1 deleted it), so that assertion would be
+    // vacuously true regardless of what logout() does and was removed.
     // The url must NOT be Epic's. Opening this hidden window at Epic's live
     // login page is the root cause recorded in
     // `.planning/debug/resolved/epic-cookie-clear-read-divergence.md`: the load
@@ -432,34 +388,11 @@ describe('LegendaryUser.logout()', () => {
     )
   })
 
-  it('REQ-34.5-04: with a full Electron-shaped session, all five clear calls still run in order (unchanged by plan 16)', async () => {
-    const callOrder: string[] = []
-    mockClearStorageData.mockImplementation(async () => {
-      callOrder.push('clearStorageData')
-    })
-    mockClearCache.mockImplementation(async () => {
-      callOrder.push('clearCache')
-    })
-    mockClearAuthCache.mockImplementation(async () => {
-      callOrder.push('clearAuthCache')
-    })
-    mockClearHostResolverCache.mockImplementation(async () => {
-      callOrder.push('clearHostResolverCache')
-    })
-    mockClearData.mockImplementation(async () => {
-      callOrder.push('clearData')
-    })
-
-    await LegendaryUser.logout()
-
-    expect(callOrder).toEqual([
-      'clearStorageData',
-      'clearCache',
-      'clearAuthCache',
-      'clearHostResolverCache',
-      'clearData'
-    ])
-  })
+  // Phase 39 Plan 04 Task 3: "with a full Electron-shaped session, all five clear calls still
+  // run in order (unchanged by plan 16)" — a byte-identical duplicate of the deleted
+  // "all five clear calls run in order" test above — was removed for the same reason: Task 1
+  // deleted the only call site for all five Electron session clear methods. See the comment
+  // above the first deletion for the surviving coverage of the new two-step order.
 
   // ── Phase 34.4.1 Plan 23 (F-6 Defect B): Epic's clearEpicCookies step is the second, ──────
   // already-shipped caller of the SAME humble_login_clear_cookies Rust arm humble/user.ts's

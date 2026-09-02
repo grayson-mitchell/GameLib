@@ -1013,26 +1013,38 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   // ───────────────────────────────────────────────────────────────────────────
   // This suite automocks `../../humble/user` file-wide so every OTHER test in
   // this file proves registration/transport, not Humble logic. D-05's claim --
-  // that the three store clears happen even when the session.fromPartition wipe
-  // loop no-ops or rejects -- is a claim about the REAL disconnect() body
-  // (user.ts:566-608), which an automocked HumbleUser.disconnect cannot prove.
+  // that the three store clears happen even when every login-window-seam wipe
+  // step rejects -- is a claim about the REAL disconnect() body (user.ts, the
+  // `wipeSteps` loop), which an automocked HumbleUser.disconnect cannot prove.
   // This describe block bypasses the file-wide automock for ONE test via
   // `jest.resetModules()` + a dynamic, unmocked `require`, mirroring
-  // `user.test.ts`'s own sanctioned mock boundary (electron -> session, but here
-  // routed at the REAL electronStub per this file's own top-level
-  // `jest.mock('electron', () => jest.requireActual('../../platform'))` --
-  // deliberately NOT overridden, so `session.fromPartition()` below is the REAL,
-  // accepted Phase 29 D-09 no-op, never a fabricated one; backend/logger ->
-  // log* per user.test.ts's own boundary; ../electronStores is left REAL and
-  // spied on directly, since `jest.setupContainment.ts` already redirects
-  // HOME/XDG structurally for this whole file (Phase 34.2 gap cycle 4), so the
-  // real store files this touches are disposable, never real developer data.
-  // Placed as the LAST describe block in this file: `jest.resetModules()` only
-  // affects FUTURE dynamic `require()` calls, never the already-bound
+  // `user.test.ts`'s own sanctioned mock boundaries: backend/logger -> log*
+  // per user.test.ts's own boundary; ../electronStores is left REAL and spied
+  // on directly, since `jest.setupContainment.ts` already redirects HOME/XDG
+  // structurally for this whole file (Phase 34.2 gap cycle 4), so the real
+  // store files this touches are disposable, never real developer data.
+  //
+  // Phase 39 Plan 04 Task 1 collapsed disconnect()'s old Electron
+  // `session.fromPartition()` branch into a single, unconditional,
+  // seam-driven `wipeSteps` array -- `getLoginWindowSeamOrThrow()` now throws
+  // if no seam is installed, so this test can no longer rely on the real
+  // electronStub's `session.fromPartition()` returning `{}` to fabricate
+  // failing wipe steps for free. Instead it installs an all-rejecting fake
+  // `LoginWindowSeam` (every method rejects) via `setLoginWindowSeam()`
+  // before calling the real `disconnect()`, and clears it again in a
+  // `finally` so a later test in this file never inherits it. Both surviving
+  // wipeSteps entries (`clearHumbleCookies`, `clearHumbleStorage`) call a
+  // seam method before doing anything else, so an all-rejecting seam fails
+  // both steps at their very first await -- exactly the "every partition
+  // step fails" case this test exists to prove, with zero fabrication of
+  // Humble-specific behaviour.
+  //
+  // Placed as the LAST describe block in this file: `jest.resetModules()`
+  // only affects FUTURE dynamic `require()` calls, never the already-bound
   // top-of-file `import` bindings every other test in this file uses -- but
   // keeping it last avoids any risk of ordering interaction regardless.
   describe('humbleDisconnect — D-05 ordering proof (real disconnect(), not automocked)', () => {
-    it('REQ-34.4-09 the three Humble store clears happen, and independently of every session.fromPartition wipe step failing against the real electronStub D-09 no-op', async () => {
+    it('REQ-34.4-09 the three Humble store clears happen, and independently of every login-window-seam wipe step rejecting', async () => {
       jest.resetModules()
 
       const warnSpy = jest.fn()
@@ -1058,6 +1070,17 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       }: {
         HumbleUser: { disconnect: () => Promise<void> }
       } = jest.requireActual('../../humble/user')
+      // Not mocked anywhere in this file, so a plain `require` after
+      // `jest.resetModules()` already returns a fresh, real module -- the
+      // SAME fresh instance `user.ts`'s own `import` resolves to above,
+      // which is why `setLoginWindowSeam()` called through this binding is
+      // visible to the real `disconnect()` call below.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { setLoginWindowSeam } = require('../../humble/loginWindowSeam') as {
+        setLoginWindowSeam: (
+          seam: import('../../humble/loginWindowSeam').LoginWindowSeam | null
+        ) => void
+      }
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const realStores = require('../../humble/electronStores') as {
         configStore: {
@@ -1083,29 +1106,46 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
       const clearLibrarySpy = jest.spyOn(realStores.humbleLibraryStore, 'clear')
       const clearSyncSpy = jest.spyOn(realStores.humbleSyncStore, 'clear')
 
-      // The real electronStub `session.fromPartition()` (D-09, accepted no-op)
-      // returns `{}` -- calling ANY of the 5 best-effort wipe methods on it
-      // throws "is not a function", which `disconnect()`'s own per-step
-      // try/catch (user.ts:588) converts into a logged warning, never a thrown
-      // exception -- so this exercises the real "every partition step fails"
-      // case with zero fabrication.
-      await expect(RealHumbleUser.disconnect()).resolves.toBeUndefined()
+      // All eight LoginWindowSeam methods reject -- both surviving wipeSteps
+      // entries (clearHumbleCookies via seam.open(), clearHumbleStorage via
+      // seam.clearStorage()) call a seam method as their very first await,
+      // so this is sufficient to fail both steps structurally without
+      // fabricating any Humble-specific response shape.
+      const rejectAlways = () =>
+        Promise.reject(new Error('D-05 fake seam: intentionally rejecting'))
+      try {
+        setLoginWindowSeam({
+          open: rejectAlways,
+          cookies: rejectAlways,
+          cookiesForDomain: rejectAlways,
+          takeEvents: rejectAlways,
+          close: rejectAlways,
+          clearCookies: rejectAlways,
+          revealPost: rejectAlways,
+          clearStorage: rejectAlways
+        })
 
-      // (a) all three store clears happened.
-      expect(clearConfigSpy).toHaveBeenCalledTimes(1)
-      expect(clearLibrarySpy).toHaveBeenCalledTimes(1)
-      expect(clearSyncSpy).toHaveBeenCalledTimes(1)
-      expect(
-        realStores.configStore.get_nodefault('sessionCookie')
-      ).toBeUndefined()
+        await expect(RealHumbleUser.disconnect()).resolves.toBeUndefined()
 
-      // (b) they happened even though every one of the 5 partition wipe steps
-      // failed against the real D-09 stub -- proving the credential wipe is
-      // NOT contingent on the partition steps succeeding (user.ts:588).
-      expect(warnSpy).toHaveBeenCalledTimes(5)
-      for (const call of warnSpy.mock.calls) {
-        const message = Array.isArray(call[0]) ? call[0].join(' ') : call[0]
-        expect(String(message)).toMatch(/wipe step/i)
+        // (a) all three store clears happened.
+        expect(clearConfigSpy).toHaveBeenCalledTimes(1)
+        expect(clearLibrarySpy).toHaveBeenCalledTimes(1)
+        expect(clearSyncSpy).toHaveBeenCalledTimes(1)
+        expect(
+          realStores.configStore.get_nodefault('sessionCookie')
+        ).toBeUndefined()
+
+        // (b) they happened even though both surviving wipeSteps entries
+        // (clearHumbleCookies, clearHumbleStorage) rejected against the
+        // all-rejecting fake seam -- proving the credential wipe is NOT
+        // contingent on either partition step succeeding.
+        expect(warnSpy).toHaveBeenCalledTimes(2)
+        for (const call of warnSpy.mock.calls) {
+          const message = Array.isArray(call[0]) ? call[0].join(' ') : call[0]
+          expect(String(message)).toMatch(/wipe step/i)
+        }
+      } finally {
+        setLoginWindowSeam(null)
       }
 
       clearConfigSpy.mockRestore()

@@ -31,19 +31,16 @@ const mockUserAgentFallback =
 
 const mockCookiesGet = jest.fn()
 const mockSetUserAgent = jest.fn()
-const mockClearStorageData = jest.fn()
-const mockClearCache = jest.fn()
-const mockClearAuthCache = jest.fn()
-const mockClearHostResolverCache = jest.fn()
-const mockClearData = jest.fn()
+// Phase 39 Plan 04 Task 1 collapsed disconnect()'s five-step Electron
+// session.clearStorageData()/clearCache()/clearAuthCache()/
+// clearHostResolverCache()/clearData() wipe into a single seam-driven
+// wipeSteps array — nothing in src/backend calls those five Session
+// methods anymore, so their mocks were removed from this fixture (they
+// would only ever assert `.not.toHaveBeenCalled()`, which is vacuous once
+// no code path can call them at all).
 const mockSessionInstance = {
   cookies: { get: mockCookiesGet },
-  setUserAgent: mockSetUserAgent,
-  clearStorageData: mockClearStorageData,
-  clearCache: mockClearCache,
-  clearAuthCache: mockClearAuthCache,
-  clearHostResolverCache: mockClearHostResolverCache,
-  clearData: mockClearData
+  setUserAgent: mockSetUserAgent
 }
 const mockFromPartition = jest.fn(() => mockSessionInstance)
 
@@ -129,6 +126,73 @@ import { setLoginWindowSeam, type LoginWindowSeam } from '../loginWindowSeam'
 import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from '../constants'
 
 const flushAsync = async () => new Promise((r) => setImmediate(r))
+
+// ── Fake LoginWindowSeam fixture (Phase 34.4.1 Plan 03) ──────────────────────
+// Lifted to module scope by Phase 39 Plan 04 Task 3: after Task 1 collapsed
+// disconnect() to a single seam-driven path, the 'disconnect() — D-07 full
+// partition wipe' describe (which predates the seam and never installed one)
+// needs the SAME fixture the 'login window seam path' describe already used,
+// not a second hand-rolled copy. `installFakeSeamDefaults()` sets the
+// healthy defaults; each describe that needs the fixture calls
+// `setLoginWindowSeam(fakeSeam)` / `setLoginWindowSeam(null)` in its OWN
+// scoped beforeEach/afterEach — never a file-level beforeEach, because the
+// startLogin()/reconnect() describes above still exercise the pre-collapse
+// watchForLogin() path (plan 39-06's territory) and must not have a seam
+// silently installed underneath them.
+const mockSeamOpen = jest.fn()
+const mockSeamCookies = jest.fn()
+const mockSeamTakeEvents = jest.fn()
+const mockSeamClose = jest.fn()
+const mockSeamClearCookies = jest.fn()
+// Phase 34.4.1 Plan 04 (D-07): LoginWindowSeam gained revealPost. Most
+// describes below never exercise it directly — the mock exists purely so
+// this fake object still satisfies the (now five-plus-one-method) interface
+// at compile time.
+const mockSeamRevealPost = jest.fn()
+// 34.4.1 gap cycle plan 15 (F-6): LoginWindowSeam gained clearStorage.
+const mockSeamClearStorage = jest.fn()
+// Phase 34.4.1 Plan 22 (F-6 Defect A): LoginWindowSeam gained cookiesForDomain.
+const mockSeamCookiesForDomain = jest.fn()
+
+const fakeSeam: LoginWindowSeam = {
+  open: (...args: Parameters<LoginWindowSeam['open']>) => mockSeamOpen(...args),
+  cookies: (...args: Parameters<LoginWindowSeam['cookies']>) =>
+    mockSeamCookies(...args),
+  cookiesForDomain: (
+    ...args: Parameters<LoginWindowSeam['cookiesForDomain']>
+  ) => mockSeamCookiesForDomain(...args),
+  takeEvents: (...args: Parameters<LoginWindowSeam['takeEvents']>) =>
+    mockSeamTakeEvents(...args),
+  close: (...args: Parameters<LoginWindowSeam['close']>) =>
+    mockSeamClose(...args),
+  clearCookies: (...args: Parameters<LoginWindowSeam['clearCookies']>) =>
+    mockSeamClearCookies(...args),
+  revealPost: (...args: Parameters<LoginWindowSeam['revealPost']>) =>
+    mockSeamRevealPost(...args),
+  clearStorage: (...args: Parameters<LoginWindowSeam['clearStorage']>) =>
+    mockSeamClearStorage(...args)
+}
+
+function installFakeSeamDefaults(): void {
+  // resetMocks:true already cleared these (top-of-file convention) —
+  // re-establish default implementations.
+  mockSeamOpen.mockResolvedValue('login-humble-0')
+  mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
+  mockSeamCookiesForDomain.mockResolvedValue({ total: 0, matched: [] })
+  mockSeamTakeEvents.mockResolvedValue([])
+  mockSeamClose.mockResolvedValue(true)
+  mockSeamClearCookies.mockResolvedValue(0)
+  // Phase 34.4.1 gap-cycle plan 16 (F-6): default a healthy, fully-numeric
+  // report so tests that don't care about clearStorage's exact shape still
+  // exercise a realistic resolved value rather than undefined.
+  mockSeamClearStorage.mockResolvedValue({
+    localStorage: 0,
+    sessionStorage: 0,
+    indexedDB: 0,
+    caches: 0,
+    serviceWorkers: 0
+  })
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 describe('HumbleUser', () => {
@@ -886,54 +950,48 @@ describe('HumbleUser', () => {
       await reconnectPromise
 
       expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
-      expect(mockClearStorageData).not.toHaveBeenCalled()
-      expect(mockClearCache).not.toHaveBeenCalled()
-      expect(mockClearAuthCache).not.toHaveBeenCalled()
-      expect(mockClearHostResolverCache).not.toHaveBeenCalled()
-      expect(mockClearData).not.toHaveBeenCalled()
+      // The five session.clear*() assertions this test used to make here
+      // (clearStorageData/clearCache/clearAuthCache/clearHostResolverCache/
+      // clearData) were removed: Task 1 deleted the only call sites for
+      // those methods anywhere in src/backend, so asserting
+      // `.not.toHaveBeenCalled()` against them would be vacuously true
+      // regardless of what reconnect() does. The D-11 invariant this test
+      // protects — reconnect() opens the partition without wiping it — is
+      // still meaningfully covered by the mockFromPartition assertion
+      // above plus the "seam path" describe's own D-11-equivalent coverage.
     })
   })
 
   // ── HACCT-03: disconnect() — D-07 full partition wipe ────────────────────
 
   describe('disconnect() — D-07 full partition wipe', () => {
-    test('clears all five partition caches and clears configStore', async () => {
-      await HumbleUser.disconnect()
-
-      expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
-      expect(mockClearStorageData).toHaveBeenCalled()
-      expect(mockClearCache).toHaveBeenCalled()
-      expect(mockClearAuthCache).toHaveBeenCalled()
-      expect(mockClearHostResolverCache).toHaveBeenCalled()
-      expect(mockClearData).toHaveBeenCalled()
-      expect(mockConfigStore.clear).toHaveBeenCalled()
+    // Phase 39 Plan 04 Task 3: disconnect() now reaches getLoginWindowSeamOrThrow()
+    // unconditionally (Task 1 collapse), so every test in this describe needs a
+    // seam installed or it rejects before any assertion runs. Scoped to this
+    // describe only — see the module-scope fixture comment above.
+    beforeEach(() => {
+      installFakeSeamDefaults()
+      setLoginWindowSeam(fakeSeam)
     })
 
-    test('WR-02: credential store is cleared FIRST, and a rejected partition-clear step neither aborts the remaining steps nor rejects disconnect()', async () => {
-      const callOrder: string[] = []
-      mockConfigStore.clear.mockImplementation(() => {
-        callOrder.push('configStore.clear')
-      })
-      mockClearStorageData.mockImplementation(async () => {
-        callOrder.push('clearStorageData')
-        throw new Error('session API failure')
-      })
-      mockClearCache.mockImplementation(async () => {
-        callOrder.push('clearCache')
-      })
-
-      await expect(HumbleUser.disconnect()).resolves.toBeUndefined()
-
-      // Credential wipe cannot be skipped: it runs before any partition step.
-      expect(callOrder[0]).toBe('configStore.clear')
-      // The failed step did not abort the rest of the wipe.
-      expect(mockClearCache).toHaveBeenCalled()
-      expect(mockClearAuthCache).toHaveBeenCalled()
-      expect(mockClearHostResolverCache).toHaveBeenCalled()
-      expect(mockClearData).toHaveBeenCalled()
-      // Partial failure is logged, not thrown.
-      expect(mockLogWarning).toHaveBeenCalled()
+    afterEach(() => {
+      setLoginWindowSeam(null)
     })
+
+    // Two tests formerly here — 'clears all five partition caches and clears
+    // configStore' and 'WR-02: credential store is cleared FIRST, and a
+    // rejected partition-clear step neither aborts the remaining steps nor
+    // rejects disconnect()' — asserted the deleted `session.fromPartition`
+    // five-step Electron wipe (clearStorageData/clearCache/clearAuthCache/
+    // clearHostResolverCache/clearData on the Electron `session` object).
+    // DELETED, not re-pointed: both invariants they guarded are already
+    // covered by 'disconnect() — seam path' below —
+    // 'credential store is cleared BEFORE the cookie step runs' covers
+    // configStore-cleared-first, and 'F-6: a rejecting clearCookies step does
+    // not prevent the storage step from running' plus 'a rejecting
+    // clearCookies does not throw out of disconnect()' cover partial-failure
+    // non-abort. Re-pointing them here would have duplicated those tests
+    // verbatim against the same single surviving path.
 
     test('HSYNC-02/D-04/D-30: clears humbleLibraryStore + humbleSyncStore but NEVER humbleRevealedStore', async () => {
       await HumbleUser.disconnect()
@@ -1069,13 +1127,24 @@ describe('HumbleUser', () => {
     })
 
     test('csrfToken lives on configStore and is wiped by disconnect() alongside the session cookie', async () => {
-      await HumbleUser.disconnect()
-      // csrfToken is not a separate CacheStore (Pitfall 1 exclusion list is
-      // for humbleRevealedStore/humbleOwnershipOverrideStore/
-      // humbleGiftedAtStore — none of which apply here) — it is a
-      // session-scoped secret on configStore, which disconnect() already
-      // clears wholesale.
-      expect(mockConfigStore.clear).toHaveBeenCalled()
+      // disconnect() now unconditionally requires a login-window seam
+      // (Phase 39 Plan 04 Task 1 collapsed the Electron branch); this test
+      // only cares about the configStore.clear() assertion, so it installs
+      // and tears down the fake seam locally rather than depending on the
+      // sibling "login window seam path" describe's shared beforeEach.
+      installFakeSeamDefaults()
+      setLoginWindowSeam(fakeSeam)
+      try {
+        await HumbleUser.disconnect()
+        // csrfToken is not a separate CacheStore (Pitfall 1 exclusion list is
+        // for humbleRevealedStore/humbleOwnershipOverrideStore/
+        // humbleGiftedAtStore — none of which apply here) — it is a
+        // session-scoped secret on configStore, which disconnect() already
+        // clears wholesale.
+        expect(mockConfigStore.clear).toHaveBeenCalled()
+      } finally {
+        setLoginWindowSeam(null)
+      }
     })
 
     test('never logs the raw csrf cookie value', async () => {
@@ -1192,67 +1261,19 @@ describe('HumbleUser', () => {
   // instead of session.fromPartition (Electron). A fake seam is installed
   // via setLoginWindowSeam() for this describe block only, and cleared in
   // afterEach so it can never leak into the Electron-path tests above/below.
+  //
+  // Phase 39 Plan 04 Task 3: the fixture (`fakeSeam`, `installFakeSeamDefaults`)
+  // is now declared at MODULE scope (see top of file) rather than inside this
+  // describe, because the 'disconnect() — D-07 full partition wipe' describe
+  // ABOVE this one also needs it now that disconnect() always reaches the
+  // throwing `getLoginWindowSeamOrThrow()` accessor. Each describe still
+  // installs/clears it in its OWN scoped beforeEach/afterEach — never a
+  // file-level beforeEach — so the startLogin()/reconnect() describes that
+  // still exercise the pre-collapse watchForLogin() path are unaffected.
 
   describe('login window seam path (Phase 34.4.1 Plan 03)', () => {
-    const mockSeamOpen = jest.fn()
-    const mockSeamCookies = jest.fn()
-    const mockSeamTakeEvents = jest.fn()
-    const mockSeamClose = jest.fn()
-    const mockSeamClearCookies = jest.fn()
-    // Phase 34.4.1 Plan 04 (D-07): LoginWindowSeam gained revealPost. This describe block
-    // never exercises it (that path is covered by adapter.test.ts's seam-path describe) — the
-    // mock exists purely so this fake object still satisfies the (now five-plus-one-method)
-    // interface at compile time.
-    const mockSeamRevealPost = jest.fn()
-    // 34.4.1 gap cycle plan 15 (F-6): LoginWindowSeam gained clearStorage. Same reasoning as
-    // mockSeamRevealPost above — this describe block never exercises it (plan 16 wires the real
-    // call site), the mock exists purely so this fixture still satisfies the widened interface.
-    const mockSeamClearStorage = jest.fn()
-    // Phase 34.4.1 Plan 22 (F-6 Defect A): LoginWindowSeam gained cookiesForDomain. The
-    // disconnect-census tests below (Plan 22 Task 3) drive this directly; every other test in
-    // this describe block gets the same healthy default `mockSeamCookies` already gets.
-    const mockSeamCookiesForDomain = jest.fn()
-
-    const fakeSeam: LoginWindowSeam = {
-      open: (...args: Parameters<LoginWindowSeam['open']>) =>
-        mockSeamOpen(...args),
-      cookies: (...args: Parameters<LoginWindowSeam['cookies']>) =>
-        mockSeamCookies(...args),
-      cookiesForDomain: (
-        ...args: Parameters<LoginWindowSeam['cookiesForDomain']>
-      ) => mockSeamCookiesForDomain(...args),
-      takeEvents: (...args: Parameters<LoginWindowSeam['takeEvents']>) =>
-        mockSeamTakeEvents(...args),
-      close: (...args: Parameters<LoginWindowSeam['close']>) =>
-        mockSeamClose(...args),
-      clearCookies: (...args: Parameters<LoginWindowSeam['clearCookies']>) =>
-        mockSeamClearCookies(...args),
-      revealPost: (...args: Parameters<LoginWindowSeam['revealPost']>) =>
-        mockSeamRevealPost(...args),
-      clearStorage: (...args: Parameters<LoginWindowSeam['clearStorage']>) =>
-        mockSeamClearStorage(...args)
-    }
-
     beforeEach(() => {
-      // resetMocks:true already cleared these (top-of-file convention) —
-      // re-establish default implementations the same way the outer
-      // beforeEach does for the Electron-path mocks.
-      mockSeamOpen.mockResolvedValue('login-humble-0')
-      mockSeamCookies.mockResolvedValue({ total: 0, matched: [] })
-      mockSeamCookiesForDomain.mockResolvedValue({ total: 0, matched: [] })
-      mockSeamTakeEvents.mockResolvedValue([])
-      mockSeamClose.mockResolvedValue(true)
-      mockSeamClearCookies.mockResolvedValue(0)
-      // Phase 34.4.1 gap-cycle plan 16 (F-6): default a healthy, fully-numeric
-      // report so tests that don't care about clearStorage's exact shape
-      // still exercise a realistic resolved value rather than undefined.
-      mockSeamClearStorage.mockResolvedValue({
-        localStorage: 0,
-        sessionStorage: 0,
-        indexedDB: 0,
-        caches: 0,
-        serviceWorkers: 0
-      })
+      installFakeSeamDefaults()
       setLoginWindowSeam(fakeSeam)
     })
 
@@ -1825,16 +1846,13 @@ describe('HumbleUser', () => {
         expect(mockLogWarning).toHaveBeenCalled()
       })
 
-      test('with no seam installed, the original five Electron wipe steps still run instead', async () => {
-        setLoginWindowSeam(null)
-
-        await HumbleUser.disconnect()
-
-        expect(mockFromPartition).toHaveBeenCalledWith('persist:humble')
-        expect(mockClearStorageData).toHaveBeenCalled()
-        expect(mockSeamOpen).not.toHaveBeenCalled()
-        expect(mockSeamClearCookies).not.toHaveBeenCalled()
-      })
+      // 'with no seam installed, the original five Electron wipe steps still run
+      // instead' DELETED (Phase 39 Plan 04 Task 3): it pinned the exact
+      // `if (seam === null)` Electron branch Task 1 removed from disconnect().
+      // There is no longer a "no seam installed" case to test at this call
+      // site — getLoginWindowSeamOrThrow() throws instead, and no test needs
+      // to pin a throw here (the accessor's own throw behaviour is
+      // loginWindowSeam.test.ts's concern, not disconnect()'s).
 
       // ── Phase 34.4.1 gap-cycle plan 16 (F-6 BLOCKING closure) ───────────────
       // The Tauri wipeSteps array now has MORE THAN ONE entry — the direct
