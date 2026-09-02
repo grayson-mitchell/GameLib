@@ -1148,6 +1148,62 @@ function findAssignedBindingNameNode(node: Node): Node | undefined {
  *     function already makes: the literal, through this one binding, is
  *     never rendered as untranslated prose.
  */
+/**
+ * Quick 260902-qs4: the SAME claim `isAssignedThenPassedToT` makes, reached
+ * through the one syntax its reference walk cannot see.
+ *
+ * `repairFailure.ts` — the very file Pattern 3 was written for — used to read
+ * `message = t('box.repair.error', message)`, so the binding WAS a `t()`
+ * argument and `isTCallArgument` matched. Quick `260901-ud5`'s Bucket E
+ * rewrote it to `t('box.repair.error', 'Repair failed. See the log for
+ * details.')`, because the i18next-parser lexer can only resolve a default
+ * value from a LITERAL second argument — passing the variable made it emit an
+ * unresolvable empty default for that key. Behaviour is identical, the
+ * fallback idiom is identical, and the literal at the declaration is
+ * identical; the binding simply stopped appearing inside the call.
+ *
+ * So this recognises the post-Bucket-E shape directly: the binding is the
+ * assignment TARGET of a t-alias call whose default-text (2nd) argument is a
+ * literal with the SAME text as the declaration literal being judged. That
+ * pairing says precisely "this literal is the declared English fallback for
+ * this very translated string" — the identical claim, just evidenced by the
+ * call's default rather than by the binding's presence in the argument list.
+ *
+ * Deliberately narrow, so it cannot become a general escape hatch: it
+ * requires an exact text match against the flagged literal (not merely "some
+ * `t()` call assigns this binding"), and it still runs only after
+ * `findAssignedBindingNameNode` has proven the literal is a binding's
+ * initialiser. A literal that differs from the call's default by even one
+ * character stays flagged — which is what the non-vacuity check for this
+ * function mutates to prove.
+ */
+function isReassignedFromTCallWithMatchingDefault(
+  reference: Node,
+  aliases: Set<string>,
+  literalText: string
+): boolean {
+  const parent = reference.getParent()
+  if (
+    !parent ||
+    !Node.isBinaryExpression(parent) ||
+    parent.getOperatorToken().getText() !== '=' ||
+    parent.getLeft() !== reference
+  ) {
+    return false
+  }
+  const right = parent.getRight()
+  if (!Node.isCallExpression(right)) return false
+  const callee = right.getExpression()
+  if (!Node.isIdentifier(callee) || !aliases.has(callee.getText())) return false
+
+  const defaultArgument = right.getArguments()[1]
+  return (
+    !!defaultArgument &&
+    Node.isStringLiteral(defaultArgument) &&
+    defaultArgument.getLiteralText() === literalText
+  )
+}
+
 function isAssignedThenPassedToT(
   node: Node,
   aliases: Set<string>,
@@ -1156,12 +1212,20 @@ function isAssignedThenPassedToT(
   const bindingNameNode = findAssignedBindingNameNode(node)
   if (!bindingNameNode) return false
 
-  const references = bindingNameNode.findReferencesAsNodes()
-  return references.some((reference) => {
+  const literalText = Node.isStringLiteral(node) ? node.getLiteralText() : ''
+
+  const references: Node[] = bindingNameNode.findReferencesAsNodes()
+  return references.some((reference: Node) => {
     if (reference.getSourceFile() !== sourceFile) return false
     return (
       isTCallArgument(reference, aliases) ||
       isComposedTCallArgument(reference, aliases) ||
+      (!!literalText &&
+        isReassignedFromTCallWithMatchingDefault(
+          reference,
+          aliases,
+          literalText
+        )) ||
       isConsoleArgument(reference) ||
       isWindowApiLogArgument(reference) ||
       isNestedInExcludedJsxAttribute(reference) ||
