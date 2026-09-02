@@ -190,28 +190,120 @@ const SMOKE_TEST_COMPRESSED = Buffer.from(
  * double-fire would resolve AND reject the same downstream promise and
  * surface as an unhandled rejection, an easy way for this adapter to look
  * correct in the happy path while being unsafe on a malformed stream.
+ *
+ * ── THE KNOWN-SIZE HEADER REWRITE (2026-09-02) ─────────────────────────────
+ * `lzma-native@8.0.6` bundles **liblzma 5.2.3** (read back at runtime via
+ * `lzman.versionString()`), and that version's `lzma_alone_decoder` REJECTS
+ * an lzma_alone stream that declares a KNOWN uncompressed size while ALSO
+ * carrying an end-of-stream marker -- it fails the whole stream with
+ * `Data is corrupt`. A newer liblzma does not: the system `xz 5.8.3`
+ * decodes the very same bytes correctly, so the stream is valid and this is
+ * purely a bundled-library version difference.
+ *
+ * That shape is not exotic here -- it is the ONLY shape this codebase
+ * produces. The pure-JS `lzma` package writes known-size + EOS (the
+ * module-scope SMOKE_TEST_COMPRESSED fixture below was re-derived from it
+ * and is byte-identical, so the fixture is correct, not stale), and
+ * `decompress.ts`'s real VZ branch rebuilds its alone header as
+ * `props(5) + uncompressed size(8, LE)` -- also known-size. So without the
+ * rewrite below, EVERY real Steam VZ chunk would fail to decode natively.
+ *
+ * Why this hid for so long: lzma-native's OWN `aloneEncoder` emits an
+ * UNKNOWN size (`5d 00 00 10 00 ff ff ff ff ff ff ff ff`), so the library's
+ * self-round-trip passes and never touches the rejecting path. Only a
+ * stream from a DIFFERENT encoder reaches it.
+ *
+ * The fix is to hand liblzma the shape it does accept: rewrite the 8-byte
+ * size field to "unknown" (0xFF x 8) on a COPY -- never through to the
+ * caller's buffer -- and bound the output with the size we read out first.
+ * Verified by bisection: flipping that field alone makes the identical
+ * payload decode; the dictionary-size field is not a factor.
+ *
+ * The `'error'` recovery covers the remaining case, a known-size stream
+ * with NO end marker: liblzma emits every decodable byte BEFORE erroring
+ * (`No progress is possible`), so once `collected >= declaredSize` the
+ * bytes we need are already in hand. Measured on a 30-byte fixture:
+ * trimming 2/4/5 bytes of the end marker still yielded all 30; trimming 6
+ * yielded 29 and is correctly still surfaced as an error. That threshold is
+ * what keeps this a recovery and not a way to pad or invent output.
  */
 function createNativeAdapter(native: {
   createStream: (coder: string) => LzmaNativeStream
 }): LzmaModule {
   return {
     decompress(input, callback) {
+      // lzma_alone header: props(1) + dictSize(4) + uncompressedSize(8) = 13.
+      // Only the low 4 bytes of the size are ever populated by this codebase
+      // (`decompress.ts` writes `size.writeUInt32LE(outSize, 0)`), and a
+      // >4 GiB chunk is not a shape Steam depots produce.
+      const ALONE_HEADER_SIZE = 13
+      const SIZE_FIELD_OFFSET = 5
+      const SIZE_FIELD_LENGTH = 8
+
+      let stream = input
+      let declaredSize: number | undefined
+
+      if (input.length >= ALONE_HEADER_SIZE) {
+        const sizeField = input.subarray(
+          SIZE_FIELD_OFFSET,
+          SIZE_FIELD_OFFSET + SIZE_FIELD_LENGTH
+        )
+        const alreadyUnknown = sizeField.every((byte) => byte === 0xff)
+        if (!alreadyUnknown) {
+          declaredSize = input.readUInt32LE(SIZE_FIELD_OFFSET)
+          stream = Buffer.from(input)
+          stream.fill(
+            0xff,
+            SIZE_FIELD_OFFSET,
+            SIZE_FIELD_OFFSET + SIZE_FIELD_LENGTH
+          )
+        }
+      }
+
       const decoder = native.createStream('aloneDecoder')
       const chunks: Buffer[] = []
+      let decodedLength = 0
       let settled = false
 
-      decoder.on('data', (chunk: Buffer) => chunks.push(chunk))
+      decoder.on('data', (chunk: Buffer) => {
+        chunks.push(chunk)
+        decodedLength += chunk.length
+      })
       decoder.on('end', () => {
         if (settled) return
         settled = true
-        callback(Buffer.concat(chunks))
+        if (declaredSize === undefined) {
+          callback(Buffer.concat(chunks))
+          return
+        }
+        // Rewriting the size field to "unknown" above hands liblzma a stream
+        // it will decode, but it also hands away the length check that field
+        // was buying -- a short/truncated payload would otherwise reach the
+        // EOS marker early and be reported as a clean success. Re-assert it
+        // here so the known-size guarantee survives the rewrite intact.
+        if (decodedLength < declaredSize) {
+          callback(
+            Buffer.alloc(0),
+            new Error(
+              `lzma_alone stream declared ${declaredSize} uncompressed bytes ` +
+                `but the payload decoded to only ${decodedLength} -- ` +
+                'truncated or malformed chunk'
+            )
+          )
+          return
+        }
+        callback(Buffer.concat(chunks).subarray(0, declaredSize))
       })
       decoder.on('error', (err: Error) => {
         if (settled) return
         settled = true
+        if (declaredSize !== undefined && decodedLength >= declaredSize) {
+          callback(Buffer.concat(chunks).subarray(0, declaredSize))
+          return
+        }
         callback(Buffer.alloc(0), err)
       })
-      decoder.end(input)
+      decoder.end(stream)
     }
   }
 }
