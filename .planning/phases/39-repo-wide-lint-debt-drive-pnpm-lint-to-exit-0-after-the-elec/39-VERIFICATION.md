@@ -8,6 +8,8 @@ human_verification:
   - test: "Decide and land a fix for CR-01: LegendaryUser.logout() at src/backend/storeManagers/legendary/user.ts:210 calls getLoginWindowSeamOrThrow() BEFORE the unconditional credential cleanup (configStore.delete('userInfo') + clearCache('legendary')) at lines 652-653, so a missing seam throws and skips that cleanup -- confirmed live in the current tree, matching 39-REVIEW.md's CR-01 exactly."
     expected: "A fix that satisfies BOTH the documented 'MUST run unconditionally' invariant (T-34.5-19, ASVS V3) AND the existing pinned REQ-34.5-04 ordering test (cookie steps before configStore.delete). A naive hoist of the credential cleanup above the seam acquisition was tried and reverted because it fails REQ-34.5-04. The review's own suggested shape is a try/finally around the seam-acquisition + wipe-steps block, placing configStore.delete/clearCache in the finally so both invariants hold simultaneously. This decision was explicitly left to a human at phase close rather than applied unilaterally."
     why_human: "Two documented, non-overlapping requirements (an unconditional-cleanup security invariant and a call-order-pinned regression test) constrain the fix simultaneously, and the correct resolution shape (try/finally vs. restructuring the wipeSteps loop) is an architectural choice that was deliberately not made unilaterally by the executor. This also needs a follow-up test (setLoginWindowSeam(null) then logout() past the CLI-success point, asserting the credential wipe still ran) since none currently exists -- confirmed independently: every test in describe('LegendaryUser.logout()') that reaches past the CLI-error early return calls setLoginWindowSeam(seam) with a real fake seam; the beforeEach default of setLoginWindowSeam(null) is only ever exercised by the CLI-error test, which returns before line 210 is reached."
+    resolved: true
+    resolution: "Closed by quick task 260902-ofu (27ecd7920, ca7473bb2): the seam acquisition moved from a bare statement at user.ts:210 into the two wipeSteps closures, so a missing seam is caught by the loop's existing try/catch, the credential-side cleanup runs, and the same Error is rethrown after it. Both T-34.5-19 and the pinned REQ-34.5-04 ordering test hold. The naive hoist named in `expected` was NOT used -- it fails REQ-34.5-04. A new 12th test in legendary/__tests__/user.test.ts drives logout() with no seam installed and was proven RED before the fix and GREEN after."
 ---
 
 # Phase 39: Post-cutover CI honesty — Verification Report
@@ -30,6 +32,41 @@ requires a human architectural decision (two documented invariants constrain the
 simultaneously, and a naive fix breaks a different pinned test — see below). `gaps_found` would
 remove this phase from `gsd-sdk query audit-uat` entirely, taking this open item out of view with
 it; `human_needed` was chosen deliberately so CR-01 stays visible and actionable.
+
+### CR-01 resolution
+
+Closed by quick task `260902-ofu` (test commit `27ecd7920`, fix commit `ca7473bb2`). The seam
+acquisition moved from the single bare, unguarded `const seam = getLoginWindowSeamOrThrow()` at
+`user.ts:210` into the FIRST statement of each of the two `wipeSteps` closures
+(`clearEpicStorage`, `clearEpicCookies`). A missing seam now throws inside a step, where the
+guarded loop's own try/catch already lives: `clearEpicCookies` is `FATAL_WIPE_STEP`, so its
+throw is captured into `fatalWipeFailure`, the credential-side cleanup
+(`configStore.delete('userInfo')` + `clearCache('legendary')`) runs unconditionally, and the
+same `Error` instance is rethrown afterwards — the caller still sees the wiring diagnostic
+rather than a silently-resolved logout. REQ-34.5-04's pinned call-order test (cookie steps
+before `configStore.delete`) holds unmodified. The naive hoist named in this item's `expected`
+field above was NOT the shape that shipped — a `try/finally` around the whole
+seam-acquisition-and-wipe-steps block was named as the fallback if any pinned gate forced a
+switch, but no gate did, so the lower-footprint per-closure acquisition (a three-line diff, zero
+re-indentation) shipped instead. A new 12th test,
+`CR-01 (T-34.5-19): with NO seam installed, the credential-side cleanup still runs and the
+wiring diagnostic still reaches the caller`, was added to
+`src/backend/storeManagers/legendary/__tests__/user.test.ts` and proven RED against the unfixed
+tree (12 total, 11 passed, 1 failed — `configStore.delete('userInfo')` asserted with 0 calls)
+before the fix commit, and GREEN (12/12) after it.
+
+**Accepted residual:** this fix's durability against a FUTURE eager throw added between the
+seam-acquisition point and the credential cleanup is weaker than a structural `try/finally`
+would give — it rests on the new no-seam test as the standing guard for the seam-missing case
+specifically, not on a shape that would also catch some other, not-yet-introduced throwing
+statement in that region. This tradeoff was named explicitly in the quick task's plan rather
+than left implicit.
+
+This closes the phase's sole open `human_verification` item at the ITEM level. It does not
+re-verify the phase as a whole — `**Status:** human_needed` below is left unchanged
+deliberately: flipping phase status is `/gsd-verify-phase 39`'s call, not a quick task's, and
+`human_needed` (rather than `gaps_found`) is what keeps this phase visible to
+`gsd-sdk query audit-uat` in the meantime.
 
 ## Goal Achievement — Distinguishing "plans completed" from "goal achieved"
 
