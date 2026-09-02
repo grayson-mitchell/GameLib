@@ -44,3 +44,46 @@ same files, unchanged). One additional failure appeared ONLY under the full
    full-suite-run-manufactures-a-different-failure-set class of flake (load/ordering-sensitive),
    not a regression introduced by 39-03. Not fixed here (out of scope: unrelated file, plan
    39-03 touches only `adapter.test.ts`/`library.test.ts`/`netStub.test.ts`).
+
+## From Plan 39-06
+
+Items 1 and 2 above (decompressPool `'pure-js'` vs `'native'`, downloadmanager/utils.test.ts
+i18n-namespace-prefix mismatch) reproduced identically in `pnpm test --selectProjects Backend`
+after this plan's commit, confirmed via `git log --oneline -- <file>` that neither file has
+been touched since the commits already cited in the 39-02 entry — still unrelated to
+`src/backend/humble/user.ts`/`user.test.ts`, this plan's only touched files.
+
+The full (all-5-project) `pnpm test` run surfaced two ADDITIONAL genuine failures, neither
+previously recorded, neither touching Humble/seam code, and both reproducing standalone
+(NOT the load-flake class):
+
+4. **`meta/__tests__/hardcodedStringGate.test.ts`** — 2 failing assertions (`scans the whole
+   committed scope and finds zero violations outside the allowlist (D-12: blocking, no advisory
+   grace period)`; `measured ratchet over facetLabels.ts / chipLabels.ts ... W4: no collateral`),
+   both citing the same offender: `src/frontend/screens/Game/GameSubMenu/repairFailure.ts:135:17`
+   — a hardcoded string `"Repair failed. See the log for details."` not routed through `t()`.
+   Reproduces in isolation (`pnpm test --selectProjects Meta -- meta/__tests__/hardcodedStringGate.test.ts`
+   → 2 failed, 131 passed). `git log -1 -- <file>` attributes the file to commit `c2f567064`
+   ("fix(quick-260901-ud5): resolve i18n catalog drift blocking pre-push leg 4"), unrelated to
+   any phase-39 plan.
+
+5. **`meta/__tests__/genI18nGateScope.test.ts`** — 1 failing assertion: `[...forkTouchedSnapshot.files]`
+   vs `[...freshSnapshotFiles()]` diverge by several `src/frontend/screens/Settings/components/*`
+   entries (e.g. `CustomWineProton.tsx`, `Tools/index.tsx` present in one snapshot but not the
+   other) — a stale i18n-gate-scope snapshot artifact versus the current file tree. Reproduces
+   in isolation. Zero relation to Humble/seam files.
+
+Also observed once, in the full-suite run only:
+
+6. **`meta/__tests__/runTsSignals.test.ts`** — failed once under the full 5-project run; re-run
+   standalone (`pnpm test --selectProjects Meta -- meta/__tests__/runTsSignals.test.ts`) is
+   8/8 green. Matches the documented full-suite-run-manufactures-a-different-failure-set flake
+   class (item 3 above) — a process-signal-timing test sensitive to system load under a large
+   concurrent test run. Not a regression.
+
+Items 4 and 5 are new pre-existing repo-hygiene gate failures (not previously catalogued in this
+file) discovered while verifying 39-06's full-suite baseline. Both are out of scope for 39-06
+(Scope Boundary rule: neither file is Humble/seam-related, neither was touched by this plan) and
+were not fixed here. Recorded for a future plan/triage — `hardcodedStringGate` in particular is
+a blocking gate (D-12, no advisory grace period) and should be prioritized ahead of any phase-39
+plan that depends on `pnpm test` being fully green.
