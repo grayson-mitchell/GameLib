@@ -137,3 +137,12 @@ Both `getLiveCsrfToken()` and `checkHealthAndFlagExpiry()`'s csrf backfill are n
 ---
 *Phase: 39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec*
 *Completed: 2026-09-02*
+
+## Self-Check: PASSED
+
+- FOUND: commit `3ddfef7d5` (feat -- collapse getLiveCsrfToken/checkHealthAndFlagExpiry)
+- FOUND: commit `3b33a2177` (test -- re-point tests broken by the collapse)
+- FOUND: `src/backend/humble/user.ts`
+- FOUND: `src/backend/humble/__tests__/user.test.ts`
+- Verified: no diff to `.planning/STATE.md`, `.planning/ROADMAP.md`, or `.planning/REQUIREMENTS.md` since before this plan started
+- Verified: `git status --short` shows no unintended changes (only the pre-existing, unrelated `.planning/phases/40-.../` untracked directory)
