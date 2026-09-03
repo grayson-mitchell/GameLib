@@ -7,6 +7,7 @@
   "files": [
     "src/frontend/App.tsx",
     "src/frontend/bootErrorSurface.ts",
+    "src/frontend/components/Tour/Tour.tsx",
     "src/frontend/components/UI/ActionIcons/index.tsx",
     "src/frontend/components/UI/CachedImage/index.tsx",
     "src/frontend/components/UI/Dialog/components/Dialog.tsx",

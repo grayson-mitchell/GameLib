@@ -215,8 +215,21 @@ const FIXTURE_DIFF_LINES = [
  * `scanScope({ extraFiles: ['src/frontend/screens/Settings/components/LoginBackground.tsx'] })`
  * in audit mode BEFORE promotion: 164 files scanned, 0 violations. Hand-edited
  * surgically, NOT regenerated via `pnpm gen-i18n-gate-scope`.
+ *
+ * 2026-09-03 (quick `260903-w73`): fork-touched 209 -> 210, unscanned 45 -> 46,
+ * scope UNCHANGED at 164. `components/Tour/Tour.tsx` became fork-touched earlier
+ * the same day via `f8b432b7e` (the intro.js memoization committed during the
+ * blank-tooltip debug), and A-17 caught it. The commit that caused it ran only
+ * the Frontend jest project, so the red Meta suite went unseen for three
+ * commits -- a project-scoped run is not evidence about the gates.
+ * Declared as debt rather than promoted into scope, and NOT because the call
+ * was close: `Tour.tsx` imports `./Tour.scss`, and .scss-importing files are
+ * unparseable by this jsdom-less jest config, so it is not scope-eligible at
+ * all. Hand-edited surgically, NOT regenerated -- the regen is measured to take
+ * this suite from 1 failure to 5, and it did not recur here (36/36 green).
  */
 const DECLARED_UNSCANNED_DEBT = [
+  'src/frontend/components/Tour/Tour.tsx',
   'src/frontend/components/UI/ActionIcons/index.tsx',
   'src/frontend/components/UI/Dialog/components/Dialog.tsx',
   'src/frontend/components/UI/DialogHandler/index.tsx',
@@ -695,7 +708,7 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 209 files of
+   * The snapshot a real regeneration would produce TODAY: the 210 files of
    * the committed fork-touched artifact (35-24: 199 -> 205, six files that
    * phase touched -- `PathSelectionBox/index.tsx`, `WebviewControls/index.tsx`,
    * `DownloadManager/index.tsx`, `CategoriesManager/index.tsx`,
@@ -703,7 +716,7 @@ describe('--rewrite-scope guard', () => {
    * gap-closure follow-up: 205 -> 206, `Winetricks/WinetricksSearch/index.tsx`,
    * touched by 35-25's `366e719bb` after 35-24's re-baseline had already
    * landed). Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 164 -> 209 delta this task exists to
+   * so the specs below assert the REAL 164 -> 210 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -729,10 +742,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 164-file hand-curated snapshot and the fresh snapshot is the REAL 209', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 164-file hand-curated snapshot and the fresh snapshot is the REAL 210', () => {
     expect(scopeSnapshot.files.length).toBe(164)
-    expect(forkTouchedSnapshot.files.length).toBe(209)
-    expect(freshSnapshot().files.length).toBe(209)
+    expect(forkTouchedSnapshot.files.length).toBe(210)
+    expect(freshSnapshot().files.length).toBe(210)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -758,7 +771,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 164 -> 209 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 164 -> 210 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -781,7 +794,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 209', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 210', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -794,12 +807,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(209)
+    expect(rewritten.files.length).toBe(210)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 209 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 210 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -812,7 +825,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(209)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(210)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
