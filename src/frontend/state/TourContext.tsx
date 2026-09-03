@@ -14,6 +14,13 @@ type TourState = {
   completedTours: string[]
 }
 
+/**
+ * The subset of `TourState` that survives a restart. `activeTour` is
+ * excluded by construction rather than by convention, so a future field
+ * added to `TourState` has to be considered here explicitly.
+ */
+type PersistedTourState = Omit<TourState, 'activeTour'>
+
 // Define the context value shape
 type TourContextType = {
   tourState: TourState
@@ -44,6 +51,17 @@ const defaultState: TourState = {
  * `isTourActive`/`hasTourCompleted` keep their current one-line shapes.
  * Exported as a pure function, independent of `useState`/`localStorage`,
  * so it is directly unit-testable in a jest project with no jsdom.
+ *
+ * `activeTour` is ALWAYS returned as `null`, whatever the persisted value
+ * says. It is session-only state: a pointer to a live intro.js overlay
+ * bound to DOM nodes in this window, meaningless outside the session that
+ * created it. It used to round-trip, and because `NavShellTour` /
+ * `LibraryTour` gate purely on `isTourActive(TOUR_ID)`, a restored id was
+ * indistinguishable from a real `startTour()` -- so any session that ended
+ * with a tour on screen (crash, `pkill`, force-quit; anything that is not a
+ * clean `endTour`) reopened that tour on the NEXT launch with no user
+ * click. `TourProvider` no longer persists the field at all, but dropping
+ * it here too is what heals blobs already written to disk.
  */
 export function readPersistedTourState(raw: string | null): TourState {
   if (!raw) {
@@ -63,11 +81,6 @@ export function readPersistedTourState(raw: string | null): TourState {
 
   const candidate = parsed as Partial<TourState>
 
-  const activeTour =
-    typeof candidate.activeTour === 'string' || candidate.activeTour === null
-      ? candidate.activeTour
-      : defaultState.activeTour
-
   const tourProgress =
     typeof candidate.tourProgress === 'object' &&
     candidate.tourProgress !== null &&
@@ -79,7 +92,8 @@ export function readPersistedTourState(raw: string | null): TourState {
     ? candidate.completedTours
     : defaultState.completedTours
 
-  return { activeTour, tourProgress, completedTours }
+  // `activeTour` is deliberately NOT read back -- see the docstring above.
+  return { activeTour: defaultState.activeTour, tourProgress, completedTours }
 }
 
 // Create the context with a default value
@@ -101,9 +115,14 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     readPersistedTourState(localStorage.getItem('heroic-tour-state'))
   )
 
-  // Save state to localStorage whenever it changes
+  // Save state to localStorage whenever it changes -- minus `activeTour`,
+  // which is session-only (see `readPersistedTourState`). This is the half
+  // that stops NEW poison; the read boundary is the half that heals blobs
+  // already on disk. Neither alone closes the defect.
   React.useEffect(() => {
-    localStorage.setItem('heroic-tour-state', JSON.stringify(tourState))
+    const { tourProgress, completedTours } = tourState
+    const persisted: PersistedTourState = { tourProgress, completedTours }
+    localStorage.setItem('heroic-tour-state', JSON.stringify(persisted))
   }, [tourState])
 
   // FIX (introjs-tooltip-not-rendering): this was a fresh object literal on

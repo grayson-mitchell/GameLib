@@ -52,15 +52,51 @@ describe('readPersistedTourState', () => {
     expect(readPersistedTourState('[]')).toEqual(defaultState)
   })
 
-  it('returns a well-formed round-trip value unchanged, field for field', () => {
+  it('round-trips the persistable fields of a well-formed value', () => {
     const wellFormed = {
-      activeTour: 'nav-tour',
       tourProgress: { 'nav-tour': true },
       completedTours: ['library-tour']
     }
 
-    expect(readPersistedTourState(JSON.stringify(wellFormed))).toEqual(
-      wellFormed
-    )
+    const result = readPersistedTourState(JSON.stringify(wellFormed))
+
+    expect(result.tourProgress).toEqual(wellFormed.tourProgress)
+    expect(result.completedTours).toEqual(wellFormed.completedTours)
+  })
+
+  /**
+   * Regression pin for quick-260903-ut6. `activeTour` used to round-trip,
+   * and `NavShellTour` / `LibraryTour` gate purely on
+   * `isTourActive(TOUR_ID)` -- so any session that ended with a tour on
+   * screen (crash, `pkill`, force-quit) reopened that tour on the next
+   * launch with no user click. It also contaminated the 34.12-07 "no tour
+   * on launch" observation whenever the previous run was torn down with
+   * `pkill` mid-tour.
+   *
+   * `TourProvider` no longer writes the field, but this boundary must
+   * still drop it, because it is what heals blobs already on disk.
+   */
+  it('never restores activeTour, even from a valid tour id', () => {
+    const midTour = JSON.stringify({
+      activeTour: 'nav-tour',
+      tourProgress: { 'nav-tour': true },
+      completedTours: ['library-tour']
+    })
+
+    expect(readPersistedTourState(midTour).activeTour).toBeNull()
+  })
+
+  it('drops activeTour without disturbing the other fields', () => {
+    const midTour = JSON.stringify({
+      activeTour: 'library-tour',
+      tourProgress: { 'library-tour': true },
+      completedTours: ['nav-tour']
+    })
+
+    expect(readPersistedTourState(midTour)).toEqual({
+      activeTour: null,
+      tourProgress: { 'library-tour': true },
+      completedTours: ['nav-tour']
+    })
   })
 })
