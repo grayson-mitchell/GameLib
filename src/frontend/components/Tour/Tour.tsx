@@ -34,21 +34,44 @@ const Tour: React.FC<TourProps> = ({
 
   const isActive = enabled || isTourActive(tourId)
 
-  const defaultOptions = {
-    nextLabel: t('tour.next', 'Next'),
-    prevLabel: t('tour.back', 'Back'),
-    skipLabel: t('tour.skip', 'Skip'),
-    doneLabel: t('tour.done', 'Done'),
-    showStepNumbers: false,
-    showBullets: true,
-    exitOnOverlayClick: true,
-    disableInteraction: false,
-    highlightClass: 'heroic-tour-highlight',
-    tooltipClass: 'heroic-tour-tooltip',
-    overlayOpacity: 0.7,
-    scrollToElement: false,
-    scrollPadding: 0
-  }
+  // FIX (introjs-tooltip-not-rendering): intro.js-react's Steps.componentDidUpdate
+  // re-runs configureIntroJs()+renderSteps() (which re-enters intro.js's show-step
+  // path, resetting the tooltip's opacity) whenever `options` changes BY REFERENCE.
+  // Without memoization this object was a fresh literal on every render, so the
+  // guard was always-true and the tooltip's debounced 350ms opacity restore was
+  // starved by any render faster than that. Memoized here so identity is stable
+  // across renders that don't actually change the translated labels.
+  const defaultOptions = React.useMemo(
+    () => ({
+      nextLabel: t('tour.next', 'Next'),
+      prevLabel: t('tour.back', 'Back'),
+      skipLabel: t('tour.skip', 'Skip'),
+      doneLabel: t('tour.done', 'Done'),
+      showStepNumbers: false,
+      showBullets: true,
+      exitOnOverlayClick: true,
+      disableInteraction: false,
+      highlightClass: 'heroic-tour-highlight',
+      tooltipClass: 'heroic-tour-tooltip',
+      overlayOpacity: 0.7,
+      scrollToElement: false,
+      scrollPadding: 0
+    }),
+    [t]
+  )
+
+  // Also memoized for the same reason: this merged object is what actually
+  // reaches <Steps options={...}>, so its identity must be stable too. This is
+  // NOT sufficient on its own if the `options` prop itself is a fresh literal at
+  // the call site (see NavShellTour) or if `steps` is unstable (see NavShellTour /
+  // LibraryTour) -- both are fixed alongside this change.
+  const mergedOptions = React.useMemo(
+    () => ({
+      ...defaultOptions,
+      ...options
+    }),
+    [defaultOptions, options]
+  )
 
   const handleComplete = () => {
     endTour(tourId, true)
@@ -68,10 +91,7 @@ const Tour: React.FC<TourProps> = ({
       onExit={handleExit}
       onComplete={handleComplete}
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      options={{
-        ...defaultOptions,
-        ...options
-      }}
+      options={mergedOptions}
     />
   )
 }

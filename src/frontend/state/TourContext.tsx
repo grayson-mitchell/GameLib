@@ -1,4 +1,11 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react'
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useCallback,
+  useMemo,
+  ReactNode
+} from 'react'
 
 // Define the shape of our tour state
 type TourState = {
@@ -99,14 +106,29 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     localStorage.setItem('heroic-tour-state', JSON.stringify(tourState))
   }, [tourState])
 
-  const startTour = (tourId: string) => {
+  // FIX (introjs-tooltip-not-rendering): this was a fresh object literal on
+  // every TourProvider render, so every useTour() consumer (every mounted
+  // <Tour>, i.e. NavShellTour + LibraryTour) re-rendered whenever ANY tour
+  // state changed anywhere in the app. That alone doesn't blank the tooltip
+  // (componentDidUpdate's !isVisible guard no-ops the start()/goToStepNumber()
+  // call while a tour is already visible), but combined with the always-true
+  // options/steps reference guards this WAS one of the re-render sources
+  // feeding the churn -- so it's fixed here too, necessary but (as documented
+  // in the debug session) not sufficient on its own.
+  //
+  // startTour/endTour/resetTour use the functional setState form already, so
+  // they don't close over `tourState` and can have a stable identity forever
+  // ([] deps). isTourActive/hasTourCompleted read `tourState` directly, so
+  // their identity (and therefore the value object's identity) only changes
+  // when tourState actually changes -- which is real state change, not churn.
+  const startTour = useCallback((tourId: string) => {
     setTourState((prev) => ({
       ...prev,
       activeTour: tourId
     }))
-  }
+  }, [])
 
-  const endTour = (tourId: string, completed = false) => {
+  const endTour = useCallback((tourId: string, completed = false) => {
     setTourState((prev) => ({
       ...prev,
       activeTour: null,
@@ -114,34 +136,38 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
         ? [...prev.completedTours, tourId]
         : prev.completedTours
     }))
-  }
+  }, [])
 
-  const resetTour = (tourId: string) => {
+  const resetTour = useCallback((tourId: string) => {
     setTourState((prev) => ({
       ...prev,
       completedTours: prev.completedTours.filter((id) => id !== tourId)
     }))
-  }
+  }, [])
 
-  const isTourActive = (tourId: string) => tourState.activeTour === tourId
-
-  const hasTourCompleted = (tourId: string) =>
-    tourState.completedTours.includes(tourId)
-
-  return (
-    <TourContext.Provider
-      value={{
-        tourState,
-        startTour,
-        endTour,
-        resetTour,
-        isTourActive,
-        hasTourCompleted
-      }}
-    >
-      {children}
-    </TourContext.Provider>
+  const isTourActive = useCallback(
+    (tourId: string) => tourState.activeTour === tourId,
+    [tourState]
   )
+
+  const hasTourCompleted = useCallback(
+    (tourId: string) => tourState.completedTours.includes(tourId),
+    [tourState]
+  )
+
+  const value = useMemo(
+    () => ({
+      tourState,
+      startTour,
+      endTour,
+      resetTour,
+      isTourActive,
+      hasTourCompleted
+    }),
+    [tourState, startTour, endTour, resetTour, isTourActive, hasTourCompleted]
+  )
+
+  return <TourContext.Provider value={value}>{children}</TourContext.Provider>
 }
 
 // Custom hook to use the tour context

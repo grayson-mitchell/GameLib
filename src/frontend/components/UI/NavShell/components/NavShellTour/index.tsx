@@ -21,13 +21,20 @@
  * `Sidebar/components/` tree as a git-detected rename in the prior
  * commit; this commit is the rewrite.
  */
-import React, { useContext } from 'react'
+import React, { useContext, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import Tour, { TourStep } from 'frontend/components/Tour/Tour'
 import { useTour } from 'frontend/state/TourContext'
 import ContextProvider from 'frontend/state/ContextProvider'
 
 export const NAV_TOUR_ID = 'nav-tour'
+
+// FIX (introjs-tooltip-not-rendering): `options` reaches Tour.tsx's
+// `<Steps options={...}>` and intro.js-react's componentDidUpdate compares
+// this prop BY REFERENCE. A module-level constant never changes identity, so
+// (combined with Tour.tsx's own options memoization) this no longer forces a
+// re-run of intro.js's show-step path on every NavShellTour render.
+const NAV_TOUR_OPTIONS = { disableInteraction: true }
 
 const NavShellTour: React.FC = () => {
   const { t } = useTranslation()
@@ -39,118 +46,125 @@ const NavShellTour: React.FC = () => {
   // Set position based on RTL
   const position = isRTL ? 'left' : 'right'
 
-  // Create base steps first
-  const baseSteps: TourStep[] = [
-    {
-      element: '[data-tour="nav-menu"]',
-      intro: t(
-        'tour.nav.welcome.intro',
-        'Welcome to GameLib! This nav bar contains all the navigation options to explore the app.'
-      ),
-      title: t('tour.nav.welcome.title', 'Nav Bar')
-    },
-    {
-      element: '[data-tour="nav-library"]',
-      intro: t(
-        'tour.sidebar.library',
-        'Access your game library from different stores in one place.'
-      ),
-      position
-    },
-    {
-      element: '[data-tour="nav-stores"]',
-      intro: t(
-        'tour.sidebar.stores',
-        'Browse and shop for games in different stores including Epic, GOG, Amazon, and Zoom.'
-      ),
-      position
-    },
-    {
-      element: '[data-tour="nav-settings"]',
-      intro: t(
-        'tour.sidebar.settings',
-        "Configure GameLib's settings, game defaults, and more."
-      ),
-      position
-    },
-    {
-      element: '[data-tour="nav-downloads"]',
-      intro: t(
-        'tour.sidebar.downloads',
-        'Track and manage your game downloads and installations.'
-      ),
-      position
-    }
-  ]
+  // FIX (introjs-tooltip-not-rendering): intro.js-react's componentDidUpdate
+  // compares `steps` BY REFERENCE. This array was rebuilt fresh on every
+  // render, so the guard was always-true and re-triggered intro.js's
+  // show-step path continuously, starving the tooltip's opacity restore.
+  // Memoized on the actual inputs used to build it below.
+  const steps: TourStep[] = useMemo(() => {
+    // Create base steps first
+    const baseSteps: TourStep[] = [
+      {
+        element: '[data-tour="nav-menu"]',
+        intro: t(
+          'tour.nav.welcome.intro',
+          'Welcome to GameLib! This nav bar contains all the navigation options to explore the app.'
+        ),
+        title: t('tour.nav.welcome.title', 'Nav Bar')
+      },
+      {
+        element: '[data-tour="nav-library"]',
+        intro: t(
+          'tour.sidebar.library',
+          'Access your game library from different stores in one place.'
+        ),
+        position
+      },
+      {
+        element: '[data-tour="nav-stores"]',
+        intro: t(
+          'tour.sidebar.stores',
+          'Browse and shop for games in different stores including Epic, GOG, Amazon, and Zoom.'
+        ),
+        position
+      },
+      {
+        element: '[data-tour="nav-settings"]',
+        intro: t(
+          'tour.sidebar.settings',
+          "Configure GameLib's settings, game defaults, and more."
+        ),
+        position
+      },
+      {
+        element: '[data-tour="nav-downloads"]',
+        intro: t(
+          'tour.sidebar.downloads',
+          'Track and manage your game downloads and installations.'
+        ),
+        position
+      }
+    ]
 
-  // Wine Manager step is for Linux and macOS (non-Windows platforms)
-  if (!isWin) {
+    // Wine Manager step is for Linux and macOS (non-Windows platforms)
+    if (!isWin) {
+      baseSteps.push({
+        element: '[data-tour="nav-wine"]',
+        intro: t(
+          'tour.sidebar.wine',
+          'Manage your Wine/Proton versions for running Windows games on Linux.'
+        ),
+        position
+      })
+    }
+
     baseSteps.push({
-      element: '[data-tour="nav-wine"]',
+      element: '[data-tour="nav-manage-accounts"]',
       intro: t(
-        'tour.sidebar.wine',
-        'Manage your Wine/Proton versions for running Windows games on Linux.'
+        'tour.sidebar.accounts',
+        'Manage your connected store accounts and sign in to new stores.'
       ),
       position
     })
-  }
 
-  baseSteps.push({
-    element: '[data-tour="nav-manage-accounts"]',
-    intro: t(
-      'tour.sidebar.accounts',
-      'Manage your connected store accounts and sign in to new stores.'
-    ),
-    position
-  })
+    // Add the remaining steps
+    const remainingSteps: TourStep[] = [
+      {
+        element: '[data-tour="nav-accessibility"]',
+        intro: t(
+          'tour.sidebar.accessibility',
+          'Access accessibility features to customize your experience.'
+        ),
+        position
+      },
+      {
+        element: '[data-tour="nav-docs"]',
+        intro: t(
+          'tour.sidebar.docs',
+          'Read documentation for help with using GameLib.'
+        ),
+        position
+      },
+      {
+        element: '[data-tour="nav-community"]',
+        intro: t('tour.sidebar.community', "Support GameLib's development."),
+        position
+      },
+      {
+        element: '[data-tour="nav-quit"]',
+        intro: t('tour.sidebar.quit', 'Exit the application safely.'),
+        position
+      },
+      {
+        element: '[data-tour="nav-version"]',
+        intro: t(
+          'tour.nav.version',
+          'Check your current GameLib version -- click it to see the latest changelog. You can restart this tour anytime from the Settings panel.'
+        ),
+        position: 'top'
+      }
+    ]
 
-  // Add the remaining steps
-  const remainingSteps: TourStep[] = [
-    {
-      element: '[data-tour="nav-accessibility"]',
-      intro: t(
-        'tour.sidebar.accessibility',
-        'Access accessibility features to customize your experience.'
-      ),
-      position
-    },
-    {
-      element: '[data-tour="nav-docs"]',
-      intro: t(
-        'tour.sidebar.docs',
-        'Read documentation for help with using GameLib.'
-      ),
-      position
-    },
-    {
-      element: '[data-tour="nav-community"]',
-      intro: t('tour.sidebar.community', "Support GameLib's development."),
-      position
-    },
-    {
-      element: '[data-tour="nav-quit"]',
-      intro: t('tour.sidebar.quit', 'Exit the application safely.'),
-      position
-    },
-    {
-      element: '[data-tour="nav-version"]',
-      intro: t(
-        'tour.nav.version',
-        'Check your current GameLib version -- click it to see the latest changelog. You can restart this tour anytime from the Settings panel.'
-      ),
-      position: 'top'
-    }
-  ]
-
-  // Combine the base steps with the remaining steps
-  const steps = [...baseSteps, ...remainingSteps]
+    // Combine the base steps with the remaining steps
+    return [...baseSteps, ...remainingSteps]
+  }, [t, isWin, position])
 
   return (
     <Tour
       tourId={NAV_TOUR_ID}
       steps={steps}
       enabled={isTourActive(NAV_TOUR_ID)}
-      options={{ disableInteraction: true }}
+      options={NAV_TOUR_OPTIONS}
     />
   )
 }

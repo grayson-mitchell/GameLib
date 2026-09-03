@@ -26,7 +26,16 @@ const contextValue = {
 
 jest.mock('react', () => ({
   ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue
+  useContext: () => contextValue,
+  // LibraryTour now memoizes its `steps` array (introjs-tooltip-not-rendering
+  // fix -- intro.js-react's componentDidUpdate compares `steps` by reference,
+  // so an unmemoized array re-triggered intro.js's show-step path on every
+  // render). No dispatcher is installed here (component is invoked as a
+  // plain function, not rendered), so the real `useMemo` would throw; this
+  // test only cares about the STRUCTURAL content of the memoized value, not
+  // memoization behaviour itself, so a passthrough that always recomputes is
+  // sufficient and keeps the "invoke as a plain function" pattern working.
+  useMemo: <T,>(factory: () => T) => factory()
 }))
 
 jest.mock('react-i18next', () => ({
