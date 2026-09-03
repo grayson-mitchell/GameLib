@@ -53,6 +53,23 @@ The `community` string has a **second, independent defect**: it promises a Disco
 while the English source string is just "Support GameLib's development." That is content drift,
 not only branding — translated users are told about a channel the English copy never mentions.
 
+## Update 2026-09-03: step 10's anchor row was renamed
+
+Quick `260903-vwi` renamed the settings row this tour step points at from the bare literal
+**"Ko-fi"** to a translated **"Donate"** (`gamelib:donate.navLabel`). The row keeps its
+`data-tour="nav-community"` anchor, its handler and its ko-fi.com destination -- only the visible
+word changed.
+
+That gives `tour.sidebar.community` a **third** problem, on top of the Heroic branding and the
+English/translation Discord drift already recorded above: the English source string
+("Support GameLib's development.") and all 28 translations describe a row that no longer carries
+the name they were written against. Whatever copy is chosen for step 10 should be decided against
+the renamed row, not the old one.
+
+Nothing detected this coupling -- the anchor is a `data-tour` attribute, and no gate relates a tour
+step's copy to the label of the element it points at. It was noticed only because the rename
+happened to touch the same file.
+
 ## Second surface, found the same way: the version LABEL itself
 
 `HeroicVersion/index.tsx:102` renders `t('info.heroic.version', 'GameLib Version')`. The English
