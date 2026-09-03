@@ -1,6 +1,6 @@
 ---
 slug: introjs-tooltip-not-rendering
-status: fix-applied-unverified
+status: fix-applied-REFUTED-live
 trigger: "intro.js tooltip renders nothing in both GameLib tours — no title, body, or Next/Back/Skip controls; dim overlay and highlight box do render. Intermittent and session-stateful across runs. Found during 34.12-07 live gate."
 created: 2026-09-03
 updated: 2026-09-03T08:06:14Z
@@ -595,3 +595,56 @@ files_changed:
   - src/frontend/state/TourContext.tsx
   - src/frontend/components/UI/NavShell/__tests__/NavShellTour.test.tsx
   - src/frontend/screens/Library/__tests__/libraryTourAnchors.test.tsx
+
+
+## LIVE VERIFICATION 2026-09-03 — THE FIX DOES NOT WORK
+
+Run: commit f8b432b7e (memoization fix, all diagnostics reverted), clean `pnpm tauri:dev`
+launch. Crucially the vite log shows NO dep re-optimisation and NO forced reload this time, so
+the confound that spoiled the previous attempt did not recur — this run is trustworthy.
+
+**Operator, verbatim: "did not work, both tours broken".** Both LibraryTour and NavShellTour
+still show dim overlay + highlight box and no tooltip.
+
+### What this refutes
+
+The commit's stated root cause is REFUTED AS A COMPLETE EXPLANATION. Closing the always-true
+reference guards in `intro.js-react`'s `Steps.componentDidUpdate` does NOT restore the tooltip.
+The memoizations are still correct in themselves (the reference-identity problem was real and
+is genuinely fixed), but they are NOT sufficient, and may not be the operative cause at all.
+
+The measured facts from the earlier timeline REMAIN TRUE and are not in question:
+  - tooltip enters the DOM correctly sized/positioned/populated, container at opacity 0
+  - a broken run showed opacity=1 at +359ms, knocked to 0 at +839ms, then churn every ~260ms
+  - deltas 350/277/266/267/233/248/218/217, all below intro.js's 350ms restore delay
+What is now open is WHAT DRIVES that churn. `componentDidUpdate`'s reference guards were an
+inference about the driver, never a measurement of it.
+
+### Live candidates, NONE verified — do not act on these without measuring
+
+1. `t` from `useTranslation()` is not reference-stable across renders. Every memo in the fix
+   depends on `t` (`[t]`, `[t, isWin, position]`), so an unstable `t` would defeat ALL of them
+   simultaneously and reproduce the exact prior behaviour. This is the cheapest to test and the
+   best fit for "the fix changed nothing".
+2. The churn driver is not `componentDidUpdate` at all, and the whole reference-identity chain
+   was a plausible but incorrect inference from source reading.
+3. A second independent cause exists alongside the reference issue.
+
+### The single discriminating measurement to run next
+
+Reinstate ONLY the v2 MutationObserver timeline (not v3) and answer one question:
+**is the ~260ms churn still present after the fix?**
+  - churn GONE but tooltip still blank -> the reference-identity chain was right and there is a
+    SECOND, independent cause. Stop looking at re-renders.
+  - churn STILL PRESENT -> the memoizations did not stop the driver; instrument `t`'s identity
+    and the render cause directly (log a render counter + `t === prevT` per render).
+Do not attempt another fix before this question is answered. Three inferential fixes have now
+been proposed in this session and two are refuted; the only steps that produced real progress
+were measurements.
+
+### Process note for whoever continues
+
+This is the second time in this session that a confident source-derived mechanism failed live.
+The pattern to avoid: a chain that is verifiable in source (the guards ARE always-true, that
+part is fact) can still be the wrong explanation for the observed symptom, because being real
+is not the same as being operative. Measure the driver, do not infer it.
