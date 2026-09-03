@@ -241,6 +241,105 @@ describe('glossary preservation', () => {
     expect(problems.join(' ')).toMatch(/Browser/)
   })
 
+  // 260903-ly4: `containsTermVerbatim`'s trailing `(?![A-Za-z0-9_])` lookahead
+  // forbade a glossed term from taking ANY suffix. English brands do not
+  // inflect, so the defect is invisible in English; Estonian attaches case
+  // suffixes directly onto a foreign proper noun with no separator --
+  // "Steami" (genitive/partitive), "Steamis" (inessive), "Steamiga"
+  // (comitative) -- each of which is a CORRECT translation that the strict
+  // trailing boundary rejected. These are RED against the unmodified
+  // validator; going GREEN is the proof the fix is non-vacuous.
+  it('validateTranslation accepts the Estonian genitive/partitive inflection "Steami"', () => {
+    const problems = validateTranslation(
+      'Connect your Steam account',
+      'Ühenda oma Steami konto',
+      ['Steam']
+    )
+    expect(problems).toEqual([])
+  })
+
+  it('validateTranslation accepts the Estonian inessive inflection "Steamis"', () => {
+    const problems = validateTranslation(
+      'Connect your Steam account',
+      'Sinu konto on Steamis',
+      ['Steam']
+    )
+    expect(problems).toEqual([])
+  })
+
+  it('validateTranslation accepts the Estonian comitative inflection "Steamiga"', () => {
+    const problems = validateTranslation(
+      'Connect your Steam account',
+      'Ühenda konto Steamiga',
+      ['Steam']
+    )
+    expect(problems).toEqual([])
+  })
+
+  // 260903-ly4, Finnish: the illative/genitive suffix "-n" attaches directly
+  // onto "Steam" with no separator -- "Steamin" is a correct translation the
+  // strict trailing boundary rejected.
+  it('validateTranslation accepts the Finnish inflection "Steamin"', () => {
+    const problems = validateTranslation(
+      'Connect your Steam account',
+      'Yhdistä Steamin tilisi',
+      ['Steam']
+    )
+    expect(problems).toEqual([])
+  })
+
+  // 260903-ly4, Hungarian: the accusative suffix "-et" attaches directly onto
+  // "Steam" with no separator -- "Steamet" is a correct translation the
+  // strict trailing boundary rejected.
+  it('validateTranslation accepts the Hungarian inflection "Steamet"', () => {
+    const problems = validateTranslation(
+      'Connect your Steam account',
+      'Csatlakoztasd a Steamet',
+      ['Steam']
+    )
+    expect(problems).toEqual([])
+  })
+
+  // 260903-ly4, North Germanic bare-s genitive: da/nb_NO/sv all form the
+  // possessive with a bare trailing "-s" and no apostrophe, so "GameLibs" is
+  // the correct rendering of the English "GameLib's" -- the strict trailing
+  // boundary rejected it. The source string is the real
+  // `webview.unavailable.body` English text shared by all three locales.
+  it('validateTranslation accepts the Scandinavian bare-s genitive "GameLibs"', () => {
+    const problems = validateTranslation(
+      "GameLib's Tauri build does not yet embed a browser view for the store and wiki pages.",
+      'GameLibs Tauri-bygge inneholder ennå ikke en nettleservisning for butikk- og wikisidene.',
+      ['GameLib']
+    )
+    expect(problems).toEqual([])
+  })
+
+  // 260903-ly4 regression pin: a target that genuinely TRANSLATES the term
+  // (rather than merely inflecting it) must still be rejected. Must stay
+  // GREEN before and after the fix.
+  it('validateTranslation still rejects a translation that localises the glossed term "Steam" away entirely', () => {
+    const problems = validateTranslation(
+      'Connect your Steam account',
+      'Підключіть свій обліковий запис Пар',
+      ['Steam']
+    )
+    expect(problems.length).toBe(1)
+    expect(problems.join(' ')).toMatch(/Steam/)
+  })
+
+  // 260903-ly4 regression pin: the leading `(?<![A-Za-z0-9_])` lookbehind
+  // must still reject a term that appears only as the TAIL of an unrelated
+  // word. Must stay GREEN before and after the fix -- mutation-proven in
+  // Task 2 by deleting the lookbehind and confirming this goes RED.
+  it('validateTranslation still rejects a target where the glossed term appears only as the tail of an unrelated word', () => {
+    const problems = validateTranslation(
+      'Connect your Steam account',
+      'Verbinde dein MegaSteam-Konto',
+      ['Steam']
+    )
+    expect(problems.length).toBe(1)
+  })
+
   it('a run whose TranslateFn fails validateTranslation leaves that key UNFILLED and records the problem', async () => {
     const target = {}
     const translate: TranslateFn = async (batch) =>
