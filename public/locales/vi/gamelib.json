@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Đăng xuất chưa hoàn tất",
         "steam_logout_failed_message": "Đăng xuất Steam không hoàn tất kịp thời. Vui lòng thử lại.",
         "steam_logout_failed_title": "Đăng xuất thất bại",
-        "steamReconnect": "Phiên đăng nhập đã hết hạn — Kết nối lại"
+        "steamReconnect": "Phiên đăng nhập đã hết hạn — Kết nối lại",
+        "logoutFailedMessage": "Tài khoản của bạn đã được đăng xuất trên thiết bị này, nhưng phiên trình duyệt không thể được xóa hoàn toàn. Trên máy tính dùng chung, hãy đăng xuất lại hoặc xóa dữ liệu trình duyệt cho trang này để đảm bảo phiên của bạn không còn bị truy cập được."
     },
     "pathSelectionBox": {
         "saved": "Đã lưu",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Duyệt cửa hàng và wiki trong ứng dụng không khả dụng trên bản dựng này"
+            "heading": "Duyệt cửa hàng và wiki trong ứng dụng không khả dụng trên bản dựng này",
+            "body": "Bản dựng Tauri của GameLib chưa tích hợp khung xem trình duyệt cho các trang cửa hàng và wiki.",
+            "next-step": "Đây được ghi nhận là một hạng mục công việc riêng trong tương lai -- hiện tại, hãy dùng nút bên dưới để mở trong trình duyệt hệ thống thay thế.",
+            "open-in-browser": "Mở trong trình duyệt"
         }
     },
     "winetricks": {

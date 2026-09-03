@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Atsijungimas nebaigtas",
         "steam_logout_failed_message": "Steam atsijungimas nebuvo baigtas laiku. Bandykite dar kartą.",
         "steam_logout_failed_title": "Atsijungti nepavyko",
-        "steamReconnect": "Prisijungimo galiojimas baigėsi — prisijungti iš naujo"
+        "steamReconnect": "Prisijungimo galiojimas baigėsi — prisijungti iš naujo",
+        "logoutFailedMessage": "Jūsų paskyra buvo atjungta šiame įrenginyje, tačiau naršyklės sesijos nepavyko iki galo išvalyti. Jei naudojatės bendru kompiuteriu, atsijunkite dar kartą arba išvalykite šios svetainės naršyklės duomenis, kad įsitikintumėte, jog jūsų sesija nebus pasiekiama kitiems."
     },
     "pathSelectionBox": {
         "saved": "Išsaugota",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Šioje versijoje parduotuvės ir wiki naršymas programoje negalimas"
+            "heading": "Šioje versijoje parduotuvės ir wiki naršymas programoje negalimas",
+            "body": "„GameLib“ „Tauri“ versijoje dar nėra integruoto naršyklės lango parduotuvės ir wiki puslapiams.",
+            "next-step": "Tai numatyta kaip atskiras būsimas darbas -- kol kas naudokite žemiau esantį mygtuką, kad atidarytumėte tai savo sistemos naršyklėje.",
+            "open-in-browser": "Atidaryti naršyklėje"
         }
     },
     "winetricks": {

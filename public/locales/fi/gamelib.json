@@ -133,7 +133,8 @@
         "logoutFailedTitle": "Uloskirjautuminen jäi kesken",
         "steam_logout_failed_message": "Steam-uloskirjautuminen ei valmistunut ajoissa. Yritä uudelleen.",
         "steam_logout_failed_title": "Uloskirjautuminen epäonnistui",
-        "steamReconnect": "Kirjautuminen vanhentunut — Yhdistä uudelleen"
+        "steamReconnect": "Kirjautuminen vanhentunut — Yhdistä uudelleen",
+        "logoutFailedMessage": "Tilisi kirjattiin ulos tällä laitteella, mutta selainistuntoa ei voitu tyhjentää kokonaan. Jaetulla tietokoneella kirjaudu ulos uudelleen tai tyhjennä tämän sivuston selaintiedot varmistaaksesi, ettei istuntosi jää saataville."
     },
     "pathSelectionBox": {
         "saved": "Tallennettu",
@@ -314,7 +315,9 @@
             }
         },
         "unavailable": {
-            "heading": "Sovelluksen sisäinen kauppa- ja wiki-selailu ei ole käytettävissä tässä versiossa"
+            "heading": "Sovelluksen sisäinen kauppa- ja wiki-selailu ei ole käytettävissä tässä versiossa",
+            "next-step": "Tämä on kirjattu omaksi tulevaksi kehitystyöksi -- käytä toistaiseksi alla olevaa painiketta avataksesi sen järjestelmäsi selaimessa.",
+            "open-in-browser": "Avaa selaimessa"
         }
     },
     "winetricks": {

@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Oturum kapatma tamamlanamadı",
         "steam_logout_failed_message": "Steam oturumu kapatma işlemi zamanında tamamlanamadı. Lütfen tekrar deneyin.",
         "steam_logout_failed_title": "Oturum kapatma başarısız",
-        "steamReconnect": "Oturum süresi doldu — Yeniden bağlan"
+        "steamReconnect": "Oturum süresi doldu — Yeniden bağlan",
+        "logoutFailedMessage": "Hesabınızın bu cihazdaki oturumu kapatıldı, ancak tarayıcı oturumu tamamen temizlenemedi. Paylaşılan bir bilgisayarda, oturumunuzun erişilebilir kalmadığından emin olmak için tekrar oturumu kapatın veya bu site için tarayıcı verilerinizi temizleyin."
     },
     "pathSelectionBox": {
         "saved": "Kaydedildi",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Uygulama içi mağaza ve wiki tarama bu sürümde kullanılamıyor"
+            "heading": "Uygulama içi mağaza ve wiki tarama bu sürümde kullanılamıyor",
+            "body": "GameLib'in Tauri sürümü, mağaza ve wiki sayfaları için henüz gömülü bir tarayıcı görünümü içermiyor.",
+            "next-step": "Bu, ayrı bir gelecek çalışma olarak takip ediliyor -- şimdilik, bunun yerine sistem tarayıcınızda açmak için aşağıdaki düğmeyi kullanın.",
+            "open-in-browser": "Tarayıcıda aç"
         }
     },
     "winetricks": {

@@ -125,7 +125,8 @@
         "humble_dialog_title": "Logi sisse Humble Bundle'isse",
         "logoutFailedTitle": "Väljalogimine pole lõpetatud",
         "steam_logout_failed_title": "Väljalogimine ebaõnnestus",
-        "steamReconnect": "Sisselogimine aegunud — Ühenda uuesti"
+        "steamReconnect": "Sisselogimine aegunud — Ühenda uuesti",
+        "logoutFailedMessage": "Sinu konto logiti sellest seadmest välja, kuid veebilehitseja seanssi ei õnnestunud täielikult tühjendada. Jagatud arvutis logi uuesti välja või kustuta selle saidi andmed oma veebilehitsejast, et tagada, et sinu seanss ei jää kättesaadavaks."
     },
     "pathSelectionBox": {
         "saved": "Salvestatud",
@@ -290,7 +291,10 @@
             }
         },
         "unavailable": {
-            "heading": "Rakendusesisene poe ja wiki sirvimine pole selles versioonis saadaval"
+            "heading": "Rakendusesisene poe ja wiki sirvimine pole selles versioonis saadaval",
+            "body": "GameLib'i Tauri versioon ei toeta veel sisseehitatud veebilehitsejat poe- ja wikilehtede jaoks.",
+            "next-step": "See on eraldi tulevase töö nimekirjas — praegu kasuta allolevat nuppu, et avada see hoopis oma süsteemi veebilehitsejas.",
+            "open-in-browser": "Ava veebilehitsejas"
         }
     },
     "winetricks": {

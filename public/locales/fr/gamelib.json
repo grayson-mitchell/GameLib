@@ -98,7 +98,8 @@
         "humble_dialog_title": "Se connecter à Humble Bundle",
         "logoutFailedTitle": "Déconnexion incomplète",
         "steam_logout_failed_message": "La déconnexion de Steam n'a pas pu se terminer à temps. Veuillez réessayer.",
-        "steam_logout_failed_title": "Échec de la déconnexion"
+        "steam_logout_failed_title": "Échec de la déconnexion",
+        "logoutFailedMessage": "Votre compte a été déconnecté sur cet appareil, mais la session du navigateur n'a pas pu être entièrement effacée. Sur un ordinateur partagé, déconnectez-vous à nouveau ou effacez les données de votre navigateur pour ce site afin de vous assurer que votre session ne reste pas accessible."
     },
     "pathSelectionBox": {
         "saved": "Enregistré",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "La navigation dans la boutique intégrée et le wiki n'est pas disponible sur cette version"
+            "heading": "La navigation dans la boutique intégrée et le wiki n'est pas disponible sur cette version",
+            "body": "La version Tauri de GameLib n'intègre pas encore de vue navigateur pour les pages de boutique et de wiki.",
+            "next-step": "Ceci fait l'objet d'un travail futur distinct -- pour l'instant, utilisez le bouton ci-dessous pour l'ouvrir dans votre navigateur système.",
+            "open-in-browser": "Ouvrir dans un navigateur"
         }
     },
     "winetricks": {

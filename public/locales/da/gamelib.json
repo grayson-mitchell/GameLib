@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Log ud ikke fuldført",
         "steam_logout_failed_message": "Log ud fra Steam blev ikke fuldført i tide. Prøv igen.",
         "steam_logout_failed_title": "Log ud mislykkedes",
-        "steamReconnect": "Login udløbet — Genopret forbindelse"
+        "steamReconnect": "Login udløbet — Genopret forbindelse",
+        "logoutFailedMessage": "Din konto blev logget ud på denne enhed, men browsersessionen kunne ikke ryddes helt. På en delt computer skal du logge ud igen eller rydde dine browserdata for dette websted for at sikre, at din session ikke forbliver tilgængelig."
     },
     "pathSelectionBox": {
         "saved": "Gemt",
@@ -327,7 +328,9 @@
             }
         },
         "unavailable": {
-            "heading": "Visning af butik og wiki i appen er ikke tilgængelig i denne build"
+            "heading": "Visning af butik og wiki i appen er ikke tilgængelig i denne build",
+            "next-step": "Dette er registreret som fremtidigt arbejde -- brug for nu knappen nedenfor til at åbne det i din systembrowser i stedet.",
+            "open-in-browser": "Åbn i browser"
         }
     },
     "winetricks": {

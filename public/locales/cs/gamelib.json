@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Odhlášení nedokončeno",
         "steam_logout_failed_message": "Odhlášení ze Steam se včas nedokončilo. Zkuste to prosím znovu.",
         "steam_logout_failed_title": "Odhlášení se nezdařilo",
-        "steamReconnect": "Platnost přihlášení vypršela — Připojit znovu"
+        "steamReconnect": "Platnost přihlášení vypršela — Připojit znovu",
+        "logoutFailedMessage": "Váš účet byl na tomto zařízení odhlášen, ale relaci prohlížeče se nepodařilo zcela vymazat. Pokud používáte sdílený počítač, odhlaste se znovu nebo vymažte data prohlížeče pro tento web, aby vaše relace nezůstala přístupná."
     },
     "pathSelectionBox": {
         "saved": "Uloženo",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Procházení obchodu a wiki v aplikaci není v tomto sestavení k dispozici"
+            "heading": "Procházení obchodu a wiki v aplikaci není v tomto sestavení k dispozici",
+            "body": "Sestavení GameLib pro Tauri zatím neobsahuje vestavěné zobrazení prohlížeče pro stránky obchodu a wiki.",
+            "next-step": "Toto je sledováno jako samostatný budoucí úkol -- prozatím použijte tlačítko níže a otevřete stránku v systémovém prohlížeči.",
+            "open-in-browser": "Otevřít v prohlížeči"
         }
     },
     "winetricks": {

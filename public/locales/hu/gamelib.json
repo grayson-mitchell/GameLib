@@ -10,7 +10,8 @@
         "error": {
             "install": {
                 "failed": "A {{title}} telepítése sikertelen: {{error}}",
-                "stalled": "{{minutes}} perce nincs letöltési folyamat — a telepítés leállítva"
+                "stalled": "{{minutes}} perce nincs letöltési folyamat — a telepítés leállítva",
+                "signInToSteam": "Jelentkezz be a Steam-be"
             }
         },
         "filePicker": {
@@ -126,7 +127,8 @@
             "retry": "Steam szinkronizálás újra",
             "signedOutBody": "Jelentkezz be újra a Steam könyvtárad szinkronizálásához. A többi könyvtárad továbbra is elérhető.",
             "signedOutTitle": "A Steam bejelentkezésed lejárt",
-            "syncing": "Steam könyvtár szinkronizálása…"
+            "syncing": "Steam könyvtár szinkronizálása…",
+            "signedOutAction": "Jelentkezz be a Steam-be"
         },
         "storeOther": "Egyéb"
     },
@@ -135,7 +137,8 @@
         "humble_dialog_title": "Bejelentkezés a Humble Bundle-be",
         "logoutFailedTitle": "A kijelentkezés nem fejeződött be",
         "steam_logout_failed_title": "A kijelentkezés sikertelen",
-        "steamReconnect": "A bejelentkezés lejárt — Újracsatlakozás"
+        "steamReconnect": "A bejelentkezés lejárt — Újracsatlakozás",
+        "logoutFailedMessage": "A fiókod ki lett jelentkeztetve ezen az eszközön, de a böngésző munkamenetét nem sikerült teljesen törölni. Ha megosztott számítógépet használsz, jelentkezz ki újra, vagy töröld a böngésződ adatait erre az oldalra vonatkozóan, hogy a munkameneted ne maradjon elérhető."
     },
     "pathSelectionBox": {
         "saved": "Mentve",
@@ -213,7 +216,8 @@
             "error": {
                 "connectionDroppedV2": "A Steam szerverek megszakították a kapcsolatot.",
                 "decodeFailed": "A letöltött játékadatokat nem sikerült kicsomagolni. Ez nem hálózati probléma.",
-                "genericV2": "A Steam letöltés sikertelen volt."
+                "genericV2": "A Steam letöltés sikertelen volt.",
+                "notSignedIn": "Nem vagy bejelentkezve a Steam-be, ezért a letöltés nem indulhatott el."
             }
         },
         "install": {
@@ -320,7 +324,10 @@
             }
         },
         "unavailable": {
-            "heading": "Az alkalmazáson belüli áruház- és wikibongészés nem érhető el ebben a build-ben"
+            "heading": "Az alkalmazáson belüli áruház- és wikibongészés nem érhető el ebben a build-ben",
+            "body": "A GameLib Tauri build még nem tartalmaz beágyazott böngészőnézetet az áruház és a wiki oldalakhoz.",
+            "next-step": "Ezt külön jövőbeli feladatként tartjuk nyilván -- addig is használd az alábbi gombot, hogy a rendszer böngésződben nyisd meg.",
+            "open-in-browser": "Megnyitás böngészőben"
         }
     },
     "winetricks": {

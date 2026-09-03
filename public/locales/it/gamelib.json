@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Disconnessione incompleta",
         "steam_logout_failed_message": "La disconnessione da Steam non è stata completata in tempo. Riprova.",
         "steam_logout_failed_title": "Disconnessione non riuscita",
-        "steamReconnect": "Accesso scaduto — Riconnetti"
+        "steamReconnect": "Accesso scaduto — Riconnetti",
+        "logoutFailedMessage": "Il tuo account è stato disconnesso su questo dispositivo, ma non è stato possibile ripulire completamente la sessione del browser. Su un computer condiviso, disconnettiti di nuovo o cancella i dati del browser per questo sito per assicurarti che la tua sessione non rimanga accessibile."
     },
     "pathSelectionBox": {
         "saved": "Salvato",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "La navigazione in-app di store e wiki non è disponibile in questa build"
+            "heading": "La navigazione in-app di store e wiki non è disponibile in questa build",
+            "body": "La build Tauri di GameLib non integra ancora una vista browser per le pagine dello store e della wiki.",
+            "next-step": "Questo è tracciato come attività futura a sé stante -- per ora, usa il pulsante qui sotto per aprirla nel browser di sistema.",
+            "open-in-browser": "Apri nel browser"
         }
     },
     "winetricks": {

@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Çıxış tam başa çatmadı",
         "steam_logout_failed_message": "Steam çıxışı vaxtında başa çatmadı. Zəhmət olmasa yenidən cəhd edin.",
         "steam_logout_failed_title": "Çıxış uğursuz oldu",
-        "steamReconnect": "Giriş müddəti bitib — Yenidən qoşul"
+        "steamReconnect": "Giriş müddəti bitib — Yenidən qoşul",
+        "logoutFailedMessage": "Hesabınız bu cihazda hesabdan çıxarıldı, lakin brauzer sessiyası tam təmizlənə bilmədi. Ortaq istifadə olunan kompüterdə hesabınızın əlçatan qalmadığından əmin olmaq üçün yenidən çıxış edin və ya bu sayt üçün brauzer məlumatlarınızı təmizləyin."
     },
     "pathSelectionBox": {
         "saved": "Yadda saxlanıldı",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Tətbiq daxilində mağaza və wiki brauzeri bu versiyada mövcud deyil"
+            "heading": "Tətbiq daxilində mağaza və wiki brauzeri bu versiyada mövcud deyil",
+            "body": "GameLib-in Tauri quruluşu hələ mağaza və wiki səhifələri üçün brauzer görünüşünü daxil etmir.",
+            "next-step": "Bu ayrıca gələcək iş kimi izlənilir -- hələlik onu sistem brauzerinizdə açmaq üçün aşağıdakı düymədən istifadə edin.",
+            "open-in-browser": "Brauzerdə açın"
         }
     },
     "winetricks": {

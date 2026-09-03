@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Tancament de sessió incomplet",
         "steam_logout_failed_message": "El tancament de sessió de Steam no s'ha completat a temps. Torna-ho a provar.",
         "steam_logout_failed_title": "El tancament de sessió ha fallat",
-        "steamReconnect": "Sessió caducada — Reconnecta"
+        "steamReconnect": "Sessió caducada — Reconnecta",
+        "logoutFailedMessage": "S'ha tancat la sessió del vostre compte en aquest dispositiu, però no s'ha pogut esborrar completament la sessió del navegador. En un ordinador compartit, torneu a tancar la sessió o esborreu les dades del navegador per a aquest lloc per assegurar-vos que la sessió no quedi accessible."
     },
     "pathSelectionBox": {
         "saved": "Desat",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "La navegació per la botiga i el wiki dins de l'aplicació no està disponible en aquesta versió"
+            "heading": "La navegació per la botiga i el wiki dins de l'aplicació no està disponible en aquesta versió",
+            "body": "La compilació Tauri de GameLib encara no incorpora una vista de navegador per a les pàgines de la botiga i la wiki.",
+            "next-step": "Això es fa un seguiment com a feina futura pròpia -- de moment, useu el botó de sota per obrir-ho al navegador del sistema.",
+            "open-in-browser": "Obre al navegador"
         }
     },
     "winetricks": {

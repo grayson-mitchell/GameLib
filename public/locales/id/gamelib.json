@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Keluar tidak selesai",
         "steam_logout_failed_message": "Proses keluar dari Steam tidak selesai tepat waktu. Silakan coba lagi.",
         "steam_logout_failed_title": "Gagal keluar",
-        "steamReconnect": "Sesi masuk berakhir — Hubungkan ulang"
+        "steamReconnect": "Sesi masuk berakhir — Hubungkan ulang",
+        "logoutFailedMessage": "Akun Anda telah keluar di perangkat ini, tetapi sesi peramban tidak dapat sepenuhnya dihapus. Pada komputer bersama, keluar lagi atau hapus data peramban untuk situs ini guna memastikan sesi Anda tidak tetap dapat diakses."
     },
     "pathSelectionBox": {
         "saved": "Tersimpan",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Penjelajahan toko dan wiki dalam aplikasi tidak tersedia pada build ini"
+            "heading": "Penjelajahan toko dan wiki dalam aplikasi tidak tersedia pada build ini",
+            "body": "Build Tauri GameLib belum menyematkan tampilan peramban untuk halaman toko dan wiki.",
+            "next-step": "Ini dicatat sebagai pekerjaan mendatang tersendiri -- untuk saat ini, gunakan tombol di bawah untuk membukanya di peramban sistem Anda.",
+            "open-in-browser": "Buka di peramban"
         }
     },
     "winetricks": {

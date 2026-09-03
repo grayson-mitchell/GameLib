@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Odhlásenie nedokončené",
         "steam_logout_failed_message": "Odhlásenie zo Steam sa nedokončilo včas. Skúste to prosím znova.",
         "steam_logout_failed_title": "Odhlásenie zlyhalo",
-        "steamReconnect": "Platnosť prihlásenia vypršala — Znova pripojiť"
+        "steamReconnect": "Platnosť prihlásenia vypršala — Znova pripojiť",
+        "logoutFailedMessage": "Váš účet bol na tomto zariadení odhlásený, ale reláciu prehliadača sa nepodarilo úplne vymazať. Na zdieľanom počítači sa znova odhláste alebo vymažte údaje prehliadača pre túto stránku, aby ste zaistili, že vaša relácia nezostane prístupná."
     },
     "pathSelectionBox": {
         "saved": "Uložené",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Prehliadanie obchodu a wiki v aplikácii nie je v tomto builde dostupné"
+            "heading": "Prehliadanie obchodu a wiki v aplikácii nie je v tomto builde dostupné",
+            "body": "Tauri verzia GameLib zatiaľ neobsahuje vstavané zobrazenie prehliadača pre stránky obchodu a wiki.",
+            "next-step": "Toto je sledované ako samostatná budúca úloha -- zatiaľ použite tlačidlo nižšie na otvorenie v systémovom prehliadači.",
+            "open-in-browser": "Otvoriť v prehliadači"
         }
     },
     "winetricks": {

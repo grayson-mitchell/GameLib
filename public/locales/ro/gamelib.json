@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Deconectare incompletă",
         "steam_logout_failed_message": "Deconectarea de la Steam nu s-a finalizat la timp. Te rugăm să încerci din nou.",
         "steam_logout_failed_title": "Deconectare eșuată",
-        "steamReconnect": "Sesiune expirată — Reconectează-te"
+        "steamReconnect": "Sesiune expirată — Reconectează-te",
+        "logoutFailedMessage": "Contul tău a fost deconectat pe acest dispozitiv, dar sesiunea browserului nu a putut fi complet ștearsă. Pe un computer partajat, deconectează-te din nou sau șterge datele browserului pentru acest site pentru a te asigura că sesiunea ta nu rămâne accesibilă."
     },
     "pathSelectionBox": {
         "saved": "Salvat",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Navigarea în magazin și wiki din aplicație nu este disponibilă în această versiune"
+            "heading": "Navigarea în magazin și wiki din aplicație nu este disponibilă în această versiune",
+            "body": "Build-ul Tauri al GameLib nu încorporează încă o vizualizare de browser pentru paginile magazinului și wiki.",
+            "next-step": "Aceasta este urmărită ca o activitate viitoare separată -- deocamdată, folosește butonul de mai jos pentru a o deschide în browserul sistemului.",
+            "open-in-browser": "Deschide în browser"
         }
     },
     "winetricks": {

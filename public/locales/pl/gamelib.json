@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Wylogowanie niepełne",
         "steam_logout_failed_message": "Wylogowanie ze Steam nie zakończyło się w wyznaczonym czasie. Spróbuj ponownie.",
         "steam_logout_failed_title": "Wylogowanie nie powiodło się",
-        "steamReconnect": "Logowanie wygasło — Połącz ponownie"
+        "steamReconnect": "Logowanie wygasło — Połącz ponownie",
+        "logoutFailedMessage": "Twoje konto zostało wylogowane na tym urządzeniu, ale sesja przeglądarki nie mogła zostać w pełni wyczyszczona. Na współdzielonym komputerze wyloguj się ponownie lub wyczyść dane przeglądarki dla tej strony, aby mieć pewność, że Twoja sesja nie pozostanie dostępna."
     },
     "pathSelectionBox": {
         "saved": "Zapisano",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Przeglądanie sklepu i wiki w aplikacji jest niedostępne w tym buildzie"
+            "heading": "Przeglądanie sklepu i wiki w aplikacji jest niedostępne w tym buildzie",
+            "body": "Build GameLib dla Tauri nie ma jeszcze wbudowanego widoku przeglądarki dla stron sklepu i wiki.",
+            "next-step": "Jest to śledzone jako osobne zadanie na przyszłość -- na razie użyj poniższego przycisku, aby otworzyć to w przeglądarce systemowej.",
+            "open-in-browser": "Otwórz w przeglądarce"
         }
     },
     "winetricks": {

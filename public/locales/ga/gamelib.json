@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Síniú amach neamhiomlán",
         "steam_logout_failed_message": "Níor chríochnaigh síniú amach Steam in am. Bain triail eile as le do thoil.",
         "steam_logout_failed_title": "Theip ar an síniú amach",
-        "steamReconnect": "Síniú isteach in éag — Ceangail arís"
+        "steamReconnect": "Síniú isteach in éag — Ceangail arís",
+        "logoutFailedMessage": "Síníodh amach do chuntas ar an ngléas seo, ach níorbh fhéidir seisiún an bhrabhsálaí a ghlanadh go hiomlán. Ar ríomhaire roinnte, sínigh amach arís nó glan sonraí do bhrabhsálaí don suíomh seo lena chinntiú nach mbeidh do sheisiún inrochtana a thuilleadh."
     },
     "pathSelectionBox": {
         "saved": "Sábháilte",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Níl brabhsáil an tsiopa agus an vicí laistigh den aip ar fáil sa tógáil seo"
+            "heading": "Níl brabhsáil an tsiopa agus an vicí laistigh den aip ar fáil sa tógáil seo",
+            "body": "Ní chuimsíonn tógáil Tauri de GameLib radharc brabhsálaí do leathanaigh an stóir agus na vicí go fóill.",
+            "next-step": "Táthar ag rianú seo mar obair ar leithligh amach anseo -- go dtí sin, úsáid an cnaipe thíos chun é a oscailt i mbrabhsálaí do chórais ina ionad.",
+            "open-in-browser": "Oscail sa bhrabhsálaí"
         }
     },
     "winetricks": {

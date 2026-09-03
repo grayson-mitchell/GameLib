@@ -139,7 +139,8 @@
         "humble_dialog_title": "Prijavite se na Humble Bundle",
         "logoutFailedTitle": "Odjava nije dovršena",
         "steam_logout_failed_title": "Odjava nije uspjela",
-        "steamReconnect": "Prijava je istekla — Ponovo se povežite"
+        "steamReconnect": "Prijava je istekla — Ponovo se povežite",
+        "logoutFailedMessage": "Vaš račun je odjavljen na ovom uređaju, ali sesija preglednika nije mogla biti u potpunosti očišćena. Na dijeljenom računalu ponovno se odjavite ili izbrišite podatke preglednika za ovu stranicu kako biste bili sigurni da vaša sesija ne ostane dostupna."
     },
     "pathSelectionBox": {
         "saved": "Spremljeno",
@@ -325,7 +326,10 @@
             }
         },
         "unavailable": {
-            "heading": "Pregledavanje trgovine i wikija unutar aplikacije nije dostupno u ovoj inačici"
+            "heading": "Pregledavanje trgovine i wikija unutar aplikacije nije dostupno u ovoj inačici",
+            "body": "Tauri izdanje aplikacije GameLib još ne uključuje ugrađeni prikaz preglednika za stranice trgovine i wikija.",
+            "next-step": "Ovo je zabilježeno kao zaseban budući zadatak -- za sada koristite gumb ispod kako biste to otvorili u sistemskom pretraživaču.",
+            "open-in-browser": "Otvori u pretraživaću"
         }
     },
     "winetricks": {

@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Digevreañ diglok",
         "steam_logout_failed_message": "N'eo ket echu bet digevreañ Steam a-walc'h buan. Klaskit en-dro mar plij.",
         "steam_logout_failed_title": "C'hwitet ar digevreañ",
-        "steamReconnect": "Aet da get ar c'hevreañ — Adkevreañ"
+        "steamReconnect": "Aet da get ar c'hevreañ — Adkevreañ",
+        "logoutFailedMessage": "Kont eo bet digevreet diwar an trevnad-mañ, met ne oa ket tu da skarzhañ penn-da-benn dalc'h ar merdeer. War un urzhiataer rannet, digevreit adarre pe skarzhit roadennoù ho merdeer evit al lec'hienn-mañ evit bezañ sur na chomo ket hoc'h estez a-vremañ hegerz."
     },
     "pathSelectionBox": {
         "saved": "Enrollet",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "N'eo ket hegerz merdeiñ er stal hag ar wiki diabarzh war ar savadur-mañ"
+            "heading": "N'eo ket hegerz merdeiñ er stal hag ar wiki diabarzh war ar savadur-mañ",
+            "body": "N'eo ket enframmet c'hoazh ur gwel merdeer evit pajennoù ar stal hag ar wiki e savadur Tauri GameLib.",
+            "next-step": "Heuliet eo an dra-se evel ul labour dazont a-se -- evit ar mare, implijit an afell dindan evit e zigeriñ er merdeer reizhiad kentoc'h.",
+            "open-in-browser": "Digeriñ er merdeer"
         }
     },
     "winetricks": {

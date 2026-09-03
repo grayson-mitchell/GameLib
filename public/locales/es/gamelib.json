@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Cierre de sesión incompleto",
         "steam_logout_failed_message": "El cierre de sesión de Steam no terminó a tiempo. Inténtalo de nuevo.",
         "steam_logout_failed_title": "Error al cerrar sesión",
-        "steamReconnect": "Inicio de sesión expirado — Reconectar"
+        "steamReconnect": "Inicio de sesión expirado — Reconectar",
+        "logoutFailedMessage": "Tu cuenta se cerró en este dispositivo, pero la sesión del navegador no pudo eliminarse por completo. En un ordenador compartido, vuelve a cerrar sesión o borra los datos del navegador para este sitio para asegurarte de que tu sesión no siga siendo accesible."
     },
     "pathSelectionBox": {
         "saved": "Guardado",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "La navegación de tienda y wiki dentro de la app no está disponible en esta compilación"
+            "heading": "La navegación de tienda y wiki dentro de la app no está disponible en esta compilación",
+            "body": "La compilación de Tauri de GameLib aún no incluye una vista de navegador integrada para las páginas de la tienda y la wiki.",
+            "next-step": "Esto se está gestionando como un trabajo futuro independiente; por ahora, usa el botón de abajo para abrirlo en tu navegador del sistema.",
+            "open-in-browser": "Abrir en el navegador"
         }
     },
     "winetricks": {

@@ -141,7 +141,8 @@
         "logoutFailedTitle": "로그아웃 미완료",
         "steam_logout_failed_message": "Steam 로그아웃이 제시간에 완료되지 않았습니다. 다시 시도해 주세요.",
         "steam_logout_failed_title": "로그아웃 실패",
-        "steamReconnect": "로그인 만료됨 — 다시 연결"
+        "steamReconnect": "로그인 만료됨 — 다시 연결",
+        "logoutFailedMessage": "이 기기에서 계정이 로그아웃되었지만, 브라우저 세션은 완전히 지워지지 않았습니다. 공용 컴퓨터를 사용 중이라면 다시 로그아웃하거나 이 사이트에 대한 브라우저 데이터를 삭제하여 세션에 접근할 수 없도록 하세요."
     },
     "pathSelectionBox": {
         "saved": "저장됨",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "이 빌드에서는 앱 내 스토어 및 위키 탐색을 사용할 수 없습니다"
+            "heading": "이 빌드에서는 앱 내 스토어 및 위키 탐색을 사용할 수 없습니다",
+            "body": "GameLib의 Tauri 빌드에는 아직 스토어 및 위키 페이지용 브라우저 뷰가 내장되어 있지 않습니다.",
+            "next-step": "이는 별도의 향후 작업으로 추적되고 있습니다. 지금은 아래 버튼을 사용해 시스템 브라우저에서 열어주세요.",
+            "open-in-browser": "브라우저에서 열기"
         }
     },
     "winetricks": {

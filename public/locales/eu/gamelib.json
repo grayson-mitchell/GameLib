@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Saioa ez da erabat itxi",
         "steam_logout_failed_message": "Steam-eko saioa itxiek ez du garaiz amaitu. Mesedez, saiatu berriro.",
         "steam_logout_failed_title": "Saioa ixtea huts egin du",
-        "steamReconnect": "Saioa iraungi da — Berrkonektatu"
+        "steamReconnect": "Saioa iraungi da — Berrkonektatu",
+        "logoutFailedMessage": "Zure kontua gailu honetatik desekonektatu da, baina ezin izan da arakatze-saioa erabat garbitu. Ordenagailu partekatu batean bazaude, saioa berriro itxi edo gune honetarako arakatzailearen datuak garbitu, zure saioa eskuragarri gera ez dadin ziurtatzeko."
     },
     "pathSelectionBox": {
         "saved": "Gordeta",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Aplikazio barneko denda eta wiki arakatzea ez dago erabilgarri bertsio honetan"
+            "heading": "Aplikazio barneko denda eta wiki arakatzea ez dago erabilgarri bertsio honetan",
+            "body": "GameLib-en Tauri bertsioak oraindik ez du arakatzaile-ikuspegirik txertatzen dendarako eta wiki-orrialdeetarako.",
+            "next-step": "Hau etorkizuneko lan gisa jasota dago -- oraingoz, erabili beheko botoia zure sistemako arakatzailean irekitzeko.",
+            "open-in-browser": "Ireki arakatzailean"
         }
     },
     "winetricks": {

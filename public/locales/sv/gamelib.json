@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Utloggning ofullständig",
         "steam_logout_failed_message": "Utloggningen från Steam slutfördes inte i tid. Försök igen.",
         "steam_logout_failed_title": "Utloggning misslyckades",
-        "steamReconnect": "Inloggning har gått ut — Återanslut"
+        "steamReconnect": "Inloggning har gått ut — Återanslut",
+        "logoutFailedMessage": "Ditt konto loggades ut på den här enheten, men webbläsarsessionen kunde inte rensas helt. På en delad dator, logga ut igen eller rensa webbläsardata för den här webbplatsen för att säkerställa att din session inte förblir åtkomlig."
     },
     "pathSelectionBox": {
         "saved": "Sparad",
@@ -219,7 +220,8 @@
             "error": {
                 "decodeFailed": "Nedladdad speldata kunde inte packas upp. Detta är inte ett nätverksproblem.",
                 "genericV2": "Steam-nedladdningen misslyckades.",
-                "notSignedIn": "Du är inte inloggad på Steam, så nedladdningen kunde inte starta."
+                "notSignedIn": "Du är inte inloggad på Steam, så nedladdningen kunde inte starta.",
+                "connectionDroppedV2": "Steam-servrarna avbröt anslutningen."
             }
         },
         "install": {
@@ -326,7 +328,9 @@
             }
         },
         "unavailable": {
-            "heading": "Bläddring i butik och wiki i appen är inte tillgänglig i denna version"
+            "heading": "Bläddring i butik och wiki i appen är inte tillgänglig i denna version",
+            "next-step": "Detta spåras som ett separat framtida arbete -- använd knappen nedan för att öppna det i din systemwebbläsare istället.",
+            "open-in-browser": "Öppna i webbläsare"
         }
     },
     "winetricks": {

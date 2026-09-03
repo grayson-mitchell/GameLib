@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Peche de sesión incompleto",
         "steam_logout_failed_message": "O peche de sesión de Steam non rematou a tempo. Téntao de novo.",
         "steam_logout_failed_title": "Fallou o peche de sesión",
-        "steamReconnect": "Sesión caducada — Reconectar"
+        "steamReconnect": "Sesión caducada — Reconectar",
+        "logoutFailedMessage": "A túa conta pechou sesión neste dispositivo, pero non foi posible borrar completamente a sesión do navegador. Nun computador compartido, pecha sesión de novo ou borra os datos do navegador para este sitio para asegurarte de que a túa sesión non quede accesible."
     },
     "pathSelectionBox": {
         "saved": "Gardado",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "A navegación pola tenda e a wiki desde a app non está dispoñible nesta compilación"
+            "heading": "A navegación pola tenda e a wiki desde a app non está dispoñible nesta compilación",
+            "body": "A versión Tauri de GameLib aínda non integra unha vista de navegador para as páxinas da tenda e do wiki.",
+            "next-step": "Isto está rexistrado como traballo futuro por separado -- por agora, usa o botón de abaixo para abrilo no teu navegador do sistema.",
+            "open-in-browser": "Abrir no navegador"
         }
     },
     "winetricks": {

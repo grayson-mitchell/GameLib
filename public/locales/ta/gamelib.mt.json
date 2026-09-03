@@ -1,7 +1,7 @@
 {
   "locale": "ta",
   "model": "claude-sonnet-5",
-  "filledAt": "2026-09-02T22:24:07.800Z",
+  "filledAt": "2026-09-03T02:32:18.875Z",
   "keys": [
     "about.navLabel",
     "app.routeError",
@@ -93,6 +93,7 @@
     "library.storeOther",
     "login.connected",
     "login.humble_dialog_title",
+    "login.logoutFailedMessage",
     "login.logoutFailedTitle",
     "login.steamReconnect",
     "login.steam_logout_failed_message",

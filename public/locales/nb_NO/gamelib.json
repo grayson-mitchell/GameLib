@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Utlogging ikke fullført",
         "steam_logout_failed_message": "Utlogging fra Steam ble ikke fullført i tide. Prøv igjen.",
         "steam_logout_failed_title": "Utlogging mislyktes",
-        "steamReconnect": "Innlogging utløpt — Koble til på nytt"
+        "steamReconnect": "Innlogging utløpt — Koble til på nytt",
+        "logoutFailedMessage": "Kontoen din ble logget ut på denne enheten, men nettleserøkten kunne ikke tømmes helt. På en delt datamaskin bør du logge ut på nytt eller slette nettleserdataene for dette nettstedet for å sikre at økten din ikke fortsatt er tilgjengelig."
     },
     "pathSelectionBox": {
         "saved": "Lagret",
@@ -327,7 +328,9 @@
             }
         },
         "unavailable": {
-            "heading": "Bla­dring i butikk og wiki i appen er ikke tilgjengelig i dette bygget"
+            "heading": "Bla­dring i butikk og wiki i appen er ikke tilgjengelig i dette bygget",
+            "next-step": "Dette er registrert som eget fremtidig arbeid -- inntil videre kan du bruke knappen under for å åpne det i systemets nettleser i stedet.",
+            "open-in-browser": "Åpne i nettleseren"
         }
     },
     "winetricks": {

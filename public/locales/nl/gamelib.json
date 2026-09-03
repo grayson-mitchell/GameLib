@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Afmelden niet volledig voltooid",
         "steam_logout_failed_message": "Afmelden bij Steam is niet op tijd voltooid. Probeer het opnieuw.",
         "steam_logout_failed_title": "Afmelden mislukt",
-        "steamReconnect": "Aanmelding verlopen — Opnieuw verbinden"
+        "steamReconnect": "Aanmelding verlopen — Opnieuw verbinden",
+        "logoutFailedMessage": "Je account is op dit apparaat afgemeld, maar de browsersessie kon niet volledig worden gewist. Meld je op een gedeelde computer opnieuw af of wis je browsergegevens voor deze site om er zeker van te zijn dat je sessie niet toegankelijk blijft."
     },
     "pathSelectionBox": {
         "saved": "Opgeslagen",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Winkel- en wikiweergave in de app is niet beschikbaar in deze build"
+            "heading": "Winkel- en wikiweergave in de app is niet beschikbaar in deze build",
+            "body": "De Tauri-build van GameLib bevat nog geen ingebouwde browserweergave voor de store- en wikipagina's.",
+            "next-step": "Dit wordt bijgehouden als apart toekomstig werk -- gebruik voorlopig de knop hieronder om het in je systeembrowser te openen.",
+            "open-in-browser": "Openen in de browser"
         }
     },
     "winetricks": {

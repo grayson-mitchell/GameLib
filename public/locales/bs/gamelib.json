@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Odjava nije završena",
         "steam_logout_failed_message": "Odjava sa Steam-a nije završena na vrijeme. Pokušajte ponovo.",
         "steam_logout_failed_title": "Odjava nije uspjela",
-        "steamReconnect": "Prijava je istekla — Ponovo poveži"
+        "steamReconnect": "Prijava je istekla — Ponovo poveži",
+        "logoutFailedMessage": "Vaš račun je odjavljen na ovom uređaju, ali sesija u pretraživaču nije mogla biti u potpunosti očišćena. Na dijeljenom računaru ponovo se odjavite ili očistite podatke pretraživača za ovu stranicu kako biste bili sigurni da vaša sesija ne ostane dostupna."
     },
     "pathSelectionBox": {
         "saved": "Sačuvano",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Pregled trgovine i wikija u aplikaciji nije dostupan u ovoj verziji"
+            "heading": "Pregled trgovine i wikija u aplikaciji nije dostupan u ovoj verziji",
+            "body": "Tauri verzija GameLib-a još uvijek ne sadrži ugrađeni prikaz pretraživača za stranice prodavnice i wiki-ja.",
+            "next-step": "Ovo je zabilježeno kao poseban budući zadatak -- za sada koristite dugme ispod da to otvorite u sistemskom pretraživaču.",
+            "open-in-browser": "Otvorite u pretraživaču"
         }
     },
     "winetricks": {

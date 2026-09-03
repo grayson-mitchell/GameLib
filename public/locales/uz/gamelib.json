@@ -141,7 +141,8 @@
         "logoutFailedTitle": "Tizimdan chiqish to'liq bajarilmadi",
         "steam_logout_failed_message": "Steam'dan chiqish belgilangan vaqtda tugallanmadi. Iltimos, qayta urinib ko'ring.",
         "steam_logout_failed_title": "Tizimdan chiqib bo'lmadi",
-        "steamReconnect": "Kirish muddati tugadi — Qayta ulanish"
+        "steamReconnect": "Kirish muddati tugadi — Qayta ulanish",
+        "logoutFailedMessage": "Hisobingiz ushbu qurilmada tizimdan chiqarildi, ammo brauzer seansini toʻliq tozalab boʻlmadi. Umumiy kompyuterda ishlayotgan boʻlsangiz, seansingiz boshqalarga ochiq qolmasligi uchun yana tizimdan chiqing yoki ushbu sayt uchun brauzer maʼlumotlarini tozalang."
     },
     "pathSelectionBox": {
         "saved": "Saqlandi",
@@ -327,7 +328,10 @@
             }
         },
         "unavailable": {
-            "heading": "Ushbu qurilmada dastur ichida do'kon va vikini ko'rish mavjud emas"
+            "heading": "Ushbu qurilmada dastur ichida do'kon va vikini ko'rish mavjud emas",
+            "body": "GameLib'ning Tauri versiyasi hali doʻkon va wiki sahifalari uchun brauzer view'ini oʻz ichiga olmaydi.",
+            "next-step": "Bu alohida kelajakdagi ish sifatida rejalashtirilgan -- hozircha, uni tizim brauzeringizda ochish uchun quyidagi tugmadan foydalaning.",
+            "open-in-browser": "Brauzerda oching"
         }
     },
     "winetricks": {
