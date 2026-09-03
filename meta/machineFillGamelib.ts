@@ -233,12 +233,46 @@ function containsTermSourcePresence(text: string, term: string): boolean {
   return re.test(text)
 }
 
-// Verbatim (case-sensitive) presence check -- glossed terms must survive
-// translation EXACTLY, not just case-insensitively.
+// 260903-ly4: the strict trailing `(?![A-Za-z0-9_])` lookahead this function
+// used to share with `containsTermSourcePresence` forbade a glossed term
+// from taking ANY suffix at all. English brands do not inflect, so the
+// defect was invisible in English; it was not invisible elsewhere. Measured
+// 2026-09-02 against the real catalogs, after the 2026-09-03 +185 batch: 57
+// fills remained outstanding, and ZERO of the 57 have a glossary-term-free
+// English source. Per-locale evidence: Estonian misses 31 of its 33
+// Steam-bearing strings vs 2 of 176 others (94% vs 1%); Finnish 9 of 33 vs 5
+// of 176; Hungarian 4 of 33 vs 0; Croatian 2 vs 0; Slovenian 1 vs 0; and
+// Danish, Norwegian-Bokmål and Swedish each miss the exact SAME single
+// string, `webview.unavailable.body`, whose English source opens with the
+// genitive `GameLib's` -- three independent North Germanic locales failing
+// on one English possessive. Estonian attaches case suffixes directly onto
+// a foreign proper noun with no separator (`Steami`, `Steamis`,
+// `Steamiga`); Finnish and Hungarian do the same (`Steamin`, `Steamet`);
+// the North Germanic languages form the possessive with a bare trailing
+// `-s` and no apostrophe (`GameLibs`). Each of these is the CORRECT
+// translation, and the strict trailing boundary rejected every one of them
+// while the fill run still exited 0 -- the same root shape as the
+// `containsTermLoose`/`Browser` defect fixed above under `260903-itr`, just
+// on the opposite side: that fix TIGHTENED the SOURCE-side matcher, this
+// one RELAXES the TARGET-side matcher.
+//
+// The fix: drop the trailing lookahead from this function only, keeping the
+// leading `(?<![A-Za-z0-9_])` lookbehind. `containsTermSourcePresence`
+// above is untouched -- it stays strict on both sides, because English does
+// not inflect and an apostrophe (not in `[A-Za-z0-9_]`) already lets
+// `GameLib's` match the term `GameLib` under the strict form.
+//
+// ACCEPTED COST, stated plainly, not waved away as harmless: a relaxed
+// trailing boundary makes this survival check weaker for short glossary
+// terms -- `Mac` is now also satisfied by German `Macht`/`Machen`, and `GE`
+// by any all-caps word starting `GE`. This deliberately trades a
+// FALSE-REJECT (silently discards a correct translation while the run
+// exits 0 -- the failure mode that has now bitten this project twice) for a
+// FALSE-PASS on the survival check (at worst, one bad translation reaches a
+// catalog already labelled MT-origin by its `gamelib.mt.json` sidecar). The
+// direction is chosen, not accidental.
 function containsTermVerbatim(text: string, term: string): boolean {
-  const re = new RegExp(
-    `(?<![A-Za-z0-9_])${escapeRegExp(term)}(?![A-Za-z0-9_])`
-  )
+  const re = new RegExp(`(?<![A-Za-z0-9_])${escapeRegExp(term)}`)
   return re.test(text)
 }
 
