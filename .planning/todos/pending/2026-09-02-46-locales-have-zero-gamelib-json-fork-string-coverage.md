@@ -1,18 +1,20 @@
 ---
 created: 2026-09-02
-title: "46 of 49 locales have ZERO fork-string coverage — `gamelib.json` exists only for en/de/fr, leaving 204 translatable keys x 46 locales unfilled"
+title: "242 of 10032 fork strings (48 locales x 209 translatable keys) remain outstanding after the 260903-itr machine-fill + glossary-matcher fix; 185 need only a re-run, 57 are undiagnosed"
 area: i18n
 status: pending
 severity: medium
 resolves_phase: ""
 found_by: "Quick task 260902-9wt (the 2026-08-06 Phase-34.8 i18n closure), split out into its own record by quick 260902-ad5 at the operator's request"
-blocked_by: "OPERATOR ACTION, not engineering — a valid RAW Anthropic API key. `ANTHROPIC_API_KEY` is set but 401s; an OAuth/subscription token will not work."
+blocked_by: "Nothing operator-side any more. The prior API-key blocker was resolved when quick 260903-itr ran the fill on 2026-09-03 (commit 3b3d813f2). The dominant remaining blocker was meta/machineFillGamelib.ts containsTermLoose/containsTermVerbatim case asymmetry, fixed by the same quick task (commit c198c1021) -- a pnpm machine-fill-gamelib re-run is now required to collect the 185 fills that fix unblocks. The other 57 outstanding fills are undiagnosed and need separate investigation."
 files:
   - public/locales/
   - public/locales/en/gamelib.json
   - meta/machineFillGamelib.ts
   - meta/i18nGlossary.json
   - meta/lintTranslations.ts
+  - meta/hardcodedStringGate.ts
+  - meta/__tests__/gamelibCatalogParity.test.ts
 ---
 
 # 46 of 49 locales have zero fork-string coverage
@@ -27,14 +29,73 @@ owned by nobody; the operator simply wants the larger gap tracked separately.
 
 **Sole owner:** this todo OWNS the 46-locale x 204-key fork-string coverage gap.
 
-## What the gap actually is
+## 2026-09-03 update (quick 260903-itr) — coverage landed, glossary matcher was the real blocker
 
-- `public/locales/` holds **49** locale directories. Only **en**, **de** and **fr** carry a
-  `gamelib.json` at all. **46 locales have never had a single fork string filled.**
-- `en/gamelib.json` has **210** keys, of which **204 are translatable**. The other 6 are
-  empty in English too — a separate, pre-existing English AUTHORING gap (the `redeemKey.*`
-  one), and it is owned by the `2026-08-28` todo, not by this one.
-- Scale of this gap: **204 translatable keys x 46 locales.**
+The API-key blocker recorded below is now HISTORICAL. On 2026-09-03, quick task `260903-itr`:
+
+1. Committed the machine fill for all 48 non-en locales (`3b3d813f2`): every one of the **49**
+   locale directories now carries a `gamelib.json`, and 48 carry a `gamelib.mt.json`
+   MT-provenance sidecar. **48 locales x 209 translatable English keys = 10032.** Measured:
+   **9790 filled**, **242 outstanding**, 0 interpolation-placeholder mismatches, 2749
+   brand-term occurrences preserved and 0 dropped. `de` is the only locale at full 209/209
+   coverage.
+2. While proving the glossary-consumer gates for a planned glossary edit, measured that
+   `meta/machineFillGamelib.ts`'s glossary validator applied its "does the source use this
+   term" check (`containsTermLoose`) case-INsensitively while its "does the translation keep
+   the term" check (`containsTermVerbatim`) stayed case-SENSITIVE. `Browser` is the one
+   glossary entry that is also an everyday English common noun, so any source string
+   containing lowercase "browser" demanded the literal ASCII `Browser` survive into the
+   translation — something no genuine translation of the word can do. This silently rejected
+   **185 of the 242** outstanding fills across 46 languages while the fill run still exited 0;
+   `de` passed only because "Browser" happens to also be the German noun.
+3. Fixed the root cause (commit `c198c1021`): the check is now symmetric with
+   `containsTermVerbatim` (renamed `containsTermSourcePresence`). Measured blast radius:
+   exactly 4 English strings change behaviour (`login.logoutFailedMessage`,
+   `webview.unavailable.body`, `webview.unavailable.next-step`,
+   `webview.unavailable.open-in-browser`), zero collateral across the other 27 glossary terms.
+   `Browser` was deliberately kept IN the glossary (not removed — see "Provenance of the
+   glossary-removal alternative" below); `meta/hardcodedStringGate.ts` is therefore unaffected
+   and stayed green throughout.
+
+**What is left, now that this todo is current:**
+
+- A `pnpm machine-fill-gamelib` re-run is required to actually COLLECT the 185 fills the fix
+  unblocks — the fix only stops future rejections, it does not retroactively fill anything.
+- The other **57** of the 242 outstanding fills are **NOT** browser-caused and **NOT yet
+  diagnosed** — they need separate investigation. Worst-affected locales by outstanding count:
+  **et 37**, **fi 17**, **hu 11**, **hr 6**, **sl 5**, **sv 5**, **sk 4**, **ta 1**.
+- This todo **stays `status: pending`** — the gap is smaller (242, not 10032, and half of that
+  242 has a known fix awaiting only a re-run), not closed.
+
+## Provenance of the glossary-removal alternative (considered, rejected)
+
+`260903-itr`'s original plan proposed removing `Browser` from
+`meta/i18nGlossary.json` instead of fixing the matcher. That was measured, at execution time,
+to flip `meta/hardcodedStringGate.ts` — a BLOCKING gate — RED at **8 sites across 6 files**
+(`InstallModal/index.tsx` x2, `InstalledInfo.tsx`, `GamePage/index.tsx`, `GameCard/index.tsx`,
+`SideloadDialog/filters.ts`, `SideloadDialog/index.tsx` x2), not the 1 site originally
+anticipated. A declaration-scoped `i18n-gate-exempt:` marker exempts an entire top-level
+statement, not a single literal — for 4 of those 6 files that statement is a large React
+component, so covering all 8 sites this way would have opened a materially wider hole in a
+blocking gate than the coverage gap was worth. The root-cause fix above (making
+`containsTermLoose` case-sensitive) was chosen instead: `Browser` stays in the glossary, no
+`src/` file is touched, and `hardcodedStringGate` stays green and unchanged.
+
+
+## What the gap actually is (as filed 2026-09-02 — see the 2026-09-03 update above for
+current reality)
+
+- `public/locales/` holds **49** locale directories. As filed, only **en**, **de** and **fr**
+  carried a `gamelib.json` at all, leaving **46 locales** with never a single fork string
+  filled. **As of 2026-09-03 this is resolved:** all 49 directories carry a `gamelib.json`
+  and 48 carry a `gamelib.mt.json` sidecar (see the update section above).
+- `en/gamelib.json` had **210** keys, of which **204** were translatable, at filing time. It
+  has since grown to **215** keys (**209 translatable**, still **6** empty — the same
+  pre-existing `redeemKey.*` English-authoring gap, still owned by the `2026-08-28` todo, not
+  this one).
+- Scale of the gap **as filed**: 204 translatable keys x 46 locales = 9384 unfilled strings.
+  Scale **now**: 242 of 10032 (48 locales x 209 keys) remain outstanding, 185 with a known
+  fix awaiting only a re-run, 57 undiagnosed (see the update section above).
 
 ## Provenance — this is coverage, not a decision
 
@@ -59,7 +120,7 @@ upstream strings carrying the wrong product name; **this one is about FORK strin
 glossary-aware machine fill, and that shared tooling is exactly why they are easy to
 conflate.
 
-## The only blocker is a valid raw Anthropic API key — an OPERATOR action
+## The only blocker was a valid raw Anthropic API key — an OPERATOR action (RESOLVED 2026-09-03, see the update section above)
 
 Every engineering prerequisite is built and tested: `meta/machineFillGamelib.ts`; the
 `pnpm machine-fill-gamelib` task (`package.json:57`); hermetic tests at
