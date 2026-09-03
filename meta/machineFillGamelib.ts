@@ -227,7 +227,9 @@ function escapeRegExp(value: string): string {
 // merely contains the term's lowercase common-word form no longer trips
 // the rule at all.
 function containsTermSourcePresence(text: string, term: string): boolean {
-  const re = new RegExp(`(?<![A-Za-z0-9_])${escapeRegExp(term)}(?![A-Za-z0-9_])`)
+  const re = new RegExp(
+    `(?<![A-Za-z0-9_])${escapeRegExp(term)}(?![A-Za-z0-9_])`
+  )
   return re.test(text)
 }
 
