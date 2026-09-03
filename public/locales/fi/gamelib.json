@@ -10,7 +10,8 @@
         "error": {
             "install": {
                 "failed": "Pelin {{title}} asennus epäonnistui: {{error}}",
-                "stalled": "Ei latauksen etenemistä {{minutes}} minuuttiin — asennus pysäytettiin"
+                "stalled": "Ei latauksen etenemistä {{minutes}} minuuttiin — asennus pysäytettiin",
+                "signInToSteam": "Kirjaudu Steamiin"
             }
         },
         "filePicker": {
@@ -21,7 +22,9 @@
         },
         "steam": {
             "mac32Detected": {
-                "title": "32-bittinen macOS-versio havaittu"
+                "title": "32-bittinen macOS-versio havaittu",
+                "confirm": "Asenna uudelleen CrossOverin kautta",
+                "message": "Tämän pelin macOS-versio on vain 32-bittinen, eikä se toimi tässä macOS-versiossa. GameLib voi asentaa sen sen sijaan uudelleen CrossOverin kautta, mikä lataa Windows-version uudelleen."
             }
         }
     },
@@ -71,7 +74,10 @@
         "activatedDone": "Valmis",
         "activateDismiss": "Peruuta",
         "activatedTitle": "Aktivoitu",
-        "activateWizardTitle": "Aktivoi tämä avain"
+        "activateWizardTitle": "Aktivoi tämä avain",
+        "activateConfirmTitle": "Aktivoidaanko tämä avain Steamissa?",
+        "activatingBody": "Avaimesi paljastetaan ja lunastetaan Steamissa — tämä kestää vain hetken.",
+        "activatingTitle": "Aktivoidaan Steamissa…"
     },
     "info": {
         "refresh-rating": "Päivitä arvostelu"
@@ -124,7 +130,8 @@
             "retry": "Yritä Steam-synkronointia uudelleen",
             "signedOutBody": "Kirjaudu uudelleen sisään synkronoidaksesi Steam-kirjastosi. Muut kirjastosi ovat yhä käytettävissä.",
             "signedOutTitle": "Steam-kirjautumisesi on vanhentunut",
-            "syncing": "Synkronoidaan Steam-kirjastoasi…"
+            "syncing": "Synkronoidaan Steam-kirjastoasi…",
+            "signedOutAction": "Kirjaudu Steamiin"
         },
         "storeOther": "Muu"
     },
@@ -134,7 +141,8 @@
         "steam_logout_failed_message": "Steam-uloskirjautuminen ei valmistunut ajoissa. Yritä uudelleen.",
         "steam_logout_failed_title": "Uloskirjautuminen epäonnistui",
         "steamReconnect": "Kirjautuminen vanhentunut — Yhdistä uudelleen",
-        "logoutFailedMessage": "Tilisi kirjattiin ulos tällä laitteella, mutta selainistuntoa ei voitu tyhjentää kokonaan. Jaetulla tietokoneella kirjaudu ulos uudelleen tai tyhjennä tämän sivuston selaintiedot varmistaaksesi, ettei istuntosi jää saataville."
+        "logoutFailedMessage": "Tilisi kirjattiin ulos tällä laitteella, mutta selainistuntoa ei voitu tyhjentää kokonaan. Jaetulla tietokoneella kirjaudu ulos uudelleen tai tyhjennä tämän sivuston selaintiedot varmistaaksesi, ettei istuntosi jää saataville.",
+        "humble_dialog_title": "Kirjaudu Humble Bundleen"
     },
     "pathSelectionBox": {
         "saved": "Tallennettu",
@@ -211,7 +219,9 @@
         "download": {
             "error": {
                 "decodeFailed": "Latattua pelidataa ei voitu purkaa. Kyse ei ole verkko-ongelmasta.",
-                "genericV2": "Steam-lataus epäonnistui."
+                "genericV2": "Steam-lataus epäonnistui.",
+                "connectionDroppedV2": "Steamin palvelimet katkaisivat yhteyden.",
+                "notSignedIn": "Et ole kirjautunut Steamiin, joten latausta ei voitu aloittaa."
             }
         },
         "install": {
@@ -225,13 +235,16 @@
             "libraryPrimarySuffix": "oletus",
             "noCrossoverEngine": "CrossOver-asennusta ei löytynyt. GameLib asentaa sen, kun asennus käynnistyy.",
             "sharedBottleNotice": "Tässä valitsemaasi wine-versiota käytetään kaikissa Steam-peleissä, jotka tarvitsevat bottlen — ei vain tässä. Sen muuttaminen myöhemmin vaikuttaa myös niiden muiden pelien toimintaan.",
-            "withOptionsLabel": "Asenna asetuksin…"
+            "withOptionsLabel": "Asenna asetuksin…",
+            "bottleNameReadonlyHelper": "GameLib hallinnoi yhtä jaettua CrossOver-pulloa Steamille. Erillisen pullon nimeäminen jokaiselle pelille ei ole vielä tuettu.",
+            "contentLightNotice": "Tämä asennetaan Steamin oman asiakasohjelman kautta, joten täällä ei ole mitään valittavaa. Ota natiivit Steam-asennukset käyttöön asetuksista hallitaksesi asennussijaintia ja Windows-yhteensopivuutta GameLibistä."
         },
         "resumeAvailable": {
             "notify": "Keskeytynyt asennus pelille {{game}} on valmis jatkettavaksi — jatka napsauttamalla Asenna"
         },
         "status": {
-            "resumeInstall": "Jatka asennusta"
+            "resumeInstall": "Jatka asennusta",
+            "resumeInstallHint": "Asennus kesken — jatka latausta GameLibissä"
         },
         "uninstall": {
             "removeAllCopiesConfirmMessage": "Tämä poistaa kaikki tämän pelin asennetut kopiot kaikista asennussijainneista. Tätä ei voi kumota.",
@@ -317,7 +330,8 @@
         "unavailable": {
             "heading": "Sovelluksen sisäinen kauppa- ja wiki-selailu ei ole käytettävissä tässä versiossa",
             "next-step": "Tämä on kirjattu omaksi tulevaksi kehitystyöksi -- käytä toistaiseksi alla olevaa painiketta avataksesi sen järjestelmäsi selaimessa.",
-            "open-in-browser": "Avaa selaimessa"
+            "open-in-browser": "Avaa selaimessa",
+            "body": "GameLibin Tauri-versio ei vielä sisällä upotettua selainnäkymää kauppa- ja wiki-sivuille."
         }
     },
     "winetricks": {

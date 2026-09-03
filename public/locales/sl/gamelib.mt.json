@@ -1,7 +1,7 @@
 {
   "locale": "sl",
   "model": "claude-sonnet-5",
-  "filledAt": "2026-09-03T02:31:59.879Z",
+  "filledAt": "2026-09-03T05:01:52.002Z",
   "keys": [
     "about.navLabel",
     "app.routeError",
@@ -40,6 +40,7 @@
     "humbleKeys.activate",
     "humbleKeys.activateConfirmBody",
     "humbleKeys.activateConfirmBodyRevealed",
+    "humbleKeys.activateConfirmTitle",
     "humbleKeys.activateDismiss",
     "humbleKeys.activateWizardTitle",
     "humbleKeys.activatedDone",

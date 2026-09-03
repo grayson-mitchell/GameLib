@@ -10,7 +10,8 @@
         "error": {
             "install": {
                 "failed": "{{title}} paigaldamine ebaõnnestus: {{error}}",
-                "stalled": "{{minutes}} minuti jooksul pole allalaadimine edenenud — paigaldamine peatati"
+                "stalled": "{{minutes}} minuti jooksul pole allalaadimine edenenud — paigaldamine peatati",
+                "signInToSteam": "Logi Steami sisse"
             }
         },
         "filePicker": {
@@ -22,7 +23,8 @@
         "steam": {
             "mac32Detected": {
                 "title": "Tuvastati 32-bitine macOS versioon",
-                "confirm": "Installi uuesti CrossOver kaudu"
+                "confirm": "Installi uuesti CrossOver kaudu",
+                "message": "Selle mängu macOS versioon on ainult 32-bitine ega tööta selle macOS versiooniga. GameLib saab selle asemel uuesti paigaldada CrossOver kaudu, mis laadib alla Windowsi versiooni."
             }
         }
     },
@@ -35,7 +37,9 @@
         "installPrevious": "Eelmine",
         "sortAscending": "A → Z",
         "sortDescending": "Z → A",
-        "steamInstallBlockedTitle": "Selle paigaldamist ei saa alustada"
+        "steamInstallBlockedTitle": "Selle paigaldamist ei saa alustada",
+        "steamInstallLibraryFull": "Sinu Steami teegikaustas pole piisavalt vaba ruumi. Vabasta ruumi ja proovi uuesti.",
+        "steamInstallLibraryMissing": "Sinu Steami teegikaust pole hetkel kättesaadav. Ühenda draiv uuesti ja proovi uuesti."
     },
     "discounts": {
         "pegiPrefix": "PEGI ≤ {{value}}"
@@ -68,7 +72,12 @@
         "activatedDone": "Valmis",
         "activateDismiss": "Tühista",
         "activatedTitle": "Aktiveeritud",
-        "activateWizardTitle": "Aktiveeri see võti"
+        "activateWizardTitle": "Aktiveeri see võti",
+        "activateConfirmBody": "See paljastab võtme — eemaldades selle jäädavalt kinkimiseks sobivate hulgast — ja lunastab selle sinu Steami kontol. Seda ei saa tagasi võtta.",
+        "activateConfirmBodyRevealed": "See lunastab sinu juba paljastatud võtme sinu Steami kontol. Seda ei saa tagasi võtta.",
+        "activateConfirmTitle": "Aktiveerida see võti Steamis?",
+        "activatingBody": "Sinu võtme paljastamine ja lunastamine Steamis — see võtab vaid hetke.",
+        "activatingTitle": "Aktiveerimine Steamis…"
     },
     "info": {
         "refresh-rating": "Värskenda hinnangut"
@@ -116,7 +125,13 @@
         "no_no_store_page_games": "Sinu teegis pole ühtegi mängu ilma poeleheta",
         "noStorePage": "Poeleht puudub",
         "steamSync": {
-            "failedBody": "Teie teised teegid on endiselt saadaval. Proovige uuesti või kontrollige, kas Steam on kättesaadav."
+            "failedBody": "Teie teised teegid on endiselt saadaval. Proovige uuesti või kontrollige, kas Steam on kättesaadav.",
+            "failedTitle": "Sinu Steami teeki ei õnnestunud sünkida",
+            "retry": "Proovi Steami sünki uuesti",
+            "signedOutAction": "Logi Steami sisse",
+            "signedOutBody": "Logi uuesti sisse, et sünkida oma Steami teeki. Sinu teised teegid on endiselt saadaval.",
+            "signedOutTitle": "Sinu Steami sisselogimine aegus",
+            "syncing": "Sinu Steami teegi sünkimine…"
         },
         "storeOther": "Muu"
     },
@@ -126,7 +141,8 @@
         "logoutFailedTitle": "Väljalogimine pole lõpetatud",
         "steam_logout_failed_title": "Väljalogimine ebaõnnestus",
         "steamReconnect": "Sisselogimine aegunud — Ühenda uuesti",
-        "logoutFailedMessage": "Sinu konto logiti sellest seadmest välja, kuid veebilehitseja seanssi ei õnnestunud täielikult tühjendada. Jagatud arvutis logi uuesti välja või kustuta selle saidi andmed oma veebilehitsejast, et tagada, et sinu seanss ei jää kättesaadavaks."
+        "logoutFailedMessage": "Sinu konto logiti sellest seadmest välja, kuid veebilehitseja seanssi ei õnnestunud täielikult tühjendada. Jagatud arvutis logi uuesti välja või kustuta selle saidi andmed oma veebilehitsejast, et tagada, et sinu seanss ei jää kättesaadavaks.",
+        "steam_logout_failed_message": "Steamist väljalogimine ei lõppenud õigeaegselt. Palun proovi uuesti."
     },
     "pathSelectionBox": {
         "saved": "Salvestatud",
@@ -141,7 +157,9 @@
     "redeemSteamKey": {
         "redeem": "Aktiveeri",
         "redeeming": "Aktiveerimine...",
-        "viewInLibrary": "Vaata teegis"
+        "viewInLibrary": "Vaata teegis",
+        "placeholder": "Sisesta oma Steami võti",
+        "title": "Lunasta Steami võti"
     },
     "setting": {
         "eosOverlay": {
@@ -194,13 +212,26 @@
     "steam": {
         "download": {
             "error": {
-                "decodeFailed": "Allalaaditud mänguandmeid ei õnnestunud lahti pakkida. See ei ole võrguprobleem."
+                "decodeFailed": "Allalaaditud mänguandmeid ei õnnestunud lahti pakkida. See ei ole võrguprobleem.",
+                "connectionDroppedV2": "Steami serverid katkestasid ühenduse.",
+                "genericV2": "Steami allalaadimine ebaõnnestus.",
+                "notSignedIn": "Sa ei ole Steami sisse loginud, seega ei saanud see allalaadimine alata."
             }
         },
         "install": {
             "libraryPrimarySuffix": "vaikimisi",
             "noCrossoverEngine": "CrossOver paigaldust ei leitud. GameLib seadistab selle paigaldamise alguses.",
-            "withOptionsLabel": "Paigalda valikutega…"
+            "withOptionsLabel": "Paigalda valikutega…",
+            "bottleNameReadonlyHelper": "GameLib haldab Steami jaoks ühte jagatud CrossOver pudelit. Iga mängu jaoks eraldi pudeli nimetamine pole veel toetatud.",
+            "contentLightNotice": "See paigaldatakse Steami enda kliendi kaudu, seega pole siin midagi valida. Lülita seadetes sisse Steami natiivsed installid, et hallata paigalduskohta ja Windowsi ühilduvust GameLibist.",
+            "contentLightSingleLibraryNotice": "Selles süsteemis on ainult üks Steami teek, seega pole siin midagi valida — GameLib paigaldab selle mängu sellesse.",
+            "forceWindowsHelp": "Sellel mängul on natiivne macOS versioon, kuid selle asemel saad paigaldada Windowsi versiooni Wine pudeli kaudu — kasulik, kui natiivsel versioonil puuduvad funktsioonid või see töötab halvemini.",
+            "libraryFullNotice": "Sinu Steami teegis pole piisavalt ruumi — vali allpool teine või vabasta ruumi.",
+            "libraryFullOnlyNotice": "Sinu Steami teegis pole piisavalt ruumi. Vabasta ruumi ja proovi siis uuesti.",
+            "libraryMissingNotice": "Sinu Steami teeki ei õnnestunud kätte saada — vali allpool teine.",
+            "libraryMissingOnlyNotice": "Sinu Steami teeki ei õnnestunud kätte saada. Ühenda draiv uuesti ja proovi siis uuesti.",
+            "libraryPickerLabel": "Vali Steami teek",
+            "sharedBottleNotice": "Siin valitud wine versiooni kasutatakse iga Steami mängu jaoks, mis vajab pudelit — mitte ainult selle jaoks. Selle hilisem muutmine mõjutab ka nende mängude tööd."
         },
         "resumeAvailable": {
             "notify": "Katkestatud paigaldus mängule {{game}} on valmis jätkamiseks — jätkamiseks klõpsa „Paigalda“"
@@ -213,6 +244,9 @@
             "removeAllCopiesConfirmMessage": "See eemaldab kõik selle mängu paigaldatud koopiad kõigist paigalduskohtadest. Seda ei saa tagasi võtta.",
             "removeAllCopiesConfirmTitle": "Eemaldada kõik koopiad?",
             "removeAllCopiesLabel": "Eemalda kõik koopiad…"
+        },
+        "bottle": {
+            "statusPollTimeout": "GameLib lõpetas Steami pudeli seadistuse kohta teadete ootamise. See võib siiski töötada — kontrolli, kas Steami installiakent on näha, ja proovi siis uuesti."
         }
     },
     "steamgriddb": {
@@ -300,5 +334,8 @@
     "winetricks": {
         "unavailable": "Winetricks komponentide haldamine pole selles versioonis saadaval",
         "unavailableDetail": "Winetricks tugi on lükatud edasi järgmisesse väljalaskesse (D-03, faas 34.6) ja seda ei saa selles versioonis loetleda ega paigaldada."
+    },
+    "sidebar": {
+        "redeemSteamKey": "Lunasta Steami võti"
     }
 }

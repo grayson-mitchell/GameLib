@@ -76,7 +76,8 @@
         "activatedTitle": "Aktivirano",
         "activateWizardTitle": "Aktiviraj ovaj ključ",
         "activatingBody": "Otkrivamo vaš ključ i unosimo ga na Steam — ovo traje samo trenutak.",
-        "activatingTitle": "Aktiviranje na Steam…"
+        "activatingTitle": "Aktiviranje na Steam…",
+        "activateConfirmTitle": "Aktivirati ovaj ključ na Steamu?"
     },
     "info": {
         "refresh-rating": "Osvježi ocjenu"
@@ -140,7 +141,8 @@
         "logoutFailedTitle": "Odjava nije dovršena",
         "steam_logout_failed_title": "Odjava nije uspjela",
         "steamReconnect": "Prijava je istekla — Ponovo se povežite",
-        "logoutFailedMessage": "Vaš račun je odjavljen na ovom uređaju, ali sesija preglednika nije mogla biti u potpunosti očišćena. Na dijeljenom računalu ponovno se odjavite ili izbrišite podatke preglednika za ovu stranicu kako biste bili sigurni da vaša sesija ne ostane dostupna."
+        "logoutFailedMessage": "Vaš račun je odjavljen na ovom uređaju, ali sesija preglednika nije mogla biti u potpunosti očišćena. Na dijeljenom računalu ponovno se odjavite ili izbrišite podatke preglednika za ovu stranicu kako biste bili sigurni da vaša sesija ne ostane dostupna.",
+        "steam_logout_failed_message": "Odjava sa Steama nije završena na vrijeme. Pokušajte ponovno."
     },
     "pathSelectionBox": {
         "saved": "Spremljeno",

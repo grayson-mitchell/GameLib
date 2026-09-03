@@ -1,7 +1,7 @@
 {
   "locale": "hr",
   "model": "claude-sonnet-5",
-  "filledAt": "2026-09-03T02:30:09.797Z",
+  "filledAt": "2026-09-03T05:01:49.052Z",
   "keys": [
     "about.navLabel",
     "app.routeError",
@@ -40,6 +40,7 @@
     "humbleKeys.activate",
     "humbleKeys.activateConfirmBody",
     "humbleKeys.activateConfirmBodyRevealed",
+    "humbleKeys.activateConfirmTitle",
     "humbleKeys.activateDismiss",
     "humbleKeys.activateWizardTitle",
     "humbleKeys.activatedDone",
@@ -95,6 +96,7 @@
     "login.logoutFailedMessage",
     "login.logoutFailedTitle",
     "login.steamReconnect",
+    "login.steam_logout_failed_message",
     "login.steam_logout_failed_title",
     "pathSelectionBox.saved",
     "pathSelectionBox.unsaved",

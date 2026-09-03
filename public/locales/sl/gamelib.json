@@ -76,7 +76,8 @@
         "activatedTitle": "Aktivirano",
         "activateWizardTitle": "Aktiviraj ta ključ",
         "activatingBody": "Razkrivamo vaš ključ in ga unovčujemo na Steam — to traja le trenutek.",
-        "activatingTitle": "Aktiviranje na Steam …"
+        "activatingTitle": "Aktiviranje na Steam …",
+        "activateConfirmTitle": "Aktiviraj ta ključ na Steam?"
     },
     "info": {
         "refresh-rating": "Osveži oceno"

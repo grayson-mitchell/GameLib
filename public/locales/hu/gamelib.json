@@ -74,7 +74,10 @@
         "activatedDone": "Kész",
         "activateDismiss": "Mégse",
         "activatedTitle": "Aktiválva",
-        "activateWizardTitle": "Kulcs aktiválása"
+        "activateWizardTitle": "Kulcs aktiválása",
+        "activateConfirmTitle": "Aktiválod ezt a kulcsot a Steamen?",
+        "activatingBody": "Kulcsod felfedése és beváltása a Steamen — ez csak egy pillanatot vesz igénybe.",
+        "activatingTitle": "Aktiválás a Steamen…"
     },
     "info": {
         "refresh-rating": "Értékelés frissítése"
@@ -138,7 +141,8 @@
         "logoutFailedTitle": "A kijelentkezés nem fejeződött be",
         "steam_logout_failed_title": "A kijelentkezés sikertelen",
         "steamReconnect": "A bejelentkezés lejárt — Újracsatlakozás",
-        "logoutFailedMessage": "A fiókod ki lett jelentkeztetve ezen az eszközön, de a böngésző munkamenetét nem sikerült teljesen törölni. Ha megosztott számítógépet használsz, jelentkezz ki újra, vagy töröld a böngésződ adatait erre az oldalra vonatkozóan, hogy a munkameneted ne maradjon elérhető."
+        "logoutFailedMessage": "A fiókod ki lett jelentkeztetve ezen az eszközön, de a böngésző munkamenetét nem sikerült teljesen törölni. Ha megosztott számítógépet használsz, jelentkezz ki újra, vagy töröld a böngésződ adatait erre az oldalra vonatkozóan, hogy a munkameneted ne maradjon elérhető.",
+        "steam_logout_failed_message": "A Steam kijelentkezés nem fejeződött be időben. Kérjük, próbáld újra."
     },
     "pathSelectionBox": {
         "saved": "Mentve",

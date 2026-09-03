@@ -330,7 +330,8 @@
         "unavailable": {
             "heading": "Visning af butik og wiki i appen er ikke tilgængelig i denne build",
             "next-step": "Dette er registreret som fremtidigt arbejde -- brug for nu knappen nedenfor til at åbne det i din systembrowser i stedet.",
-            "open-in-browser": "Åbn i browser"
+            "open-in-browser": "Åbn i browser",
+            "body": "GameLibs Tauri-build indlejrer endnu ikke en browservisning til butiks- og wikisiderne."
         }
     },
     "winetricks": {
