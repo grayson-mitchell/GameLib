@@ -211,6 +211,36 @@ describe('glossary preservation', () => {
     expect(problems).toEqual([])
   })
 
+  // 260903-itr, revised Task 1 (option C): `containsTermLoose` used to be
+  // case-INsensitive while `containsTermVerbatim` stayed case-SENSITIVE, so
+  // any English string containing the ordinary common noun "browser" (not
+  // the glossed brand/identifier `Browser`) demanded the literal ASCII
+  // `Browser` survive into the translation -- something no genuine
+  // translation of the word can do. This test is RED against the
+  // pre-fix asymmetric matcher; it going GREEN is the proof the fix is
+  // non-vacuous.
+  it('validateTranslation accepts a genuine translation of the common noun "browser" (not the glossed brand)', () => {
+    const problems = validateTranslation(
+      'Open in browser',
+      'Ouvrir dans le navigateur',
+      ['Browser']
+    )
+    expect(problems).toEqual([])
+  })
+
+  // The brand/identifier sense must still be enforced verbatim: a source
+  // that uses `Browser` as the capitalised platform/brand term must still
+  // reject a translation that localises it away.
+  it('validateTranslation still rejects a translation that localises the glossed brand term "Browser"', () => {
+    const problems = validateTranslation(
+      'Install via Browser',
+      'Installer via navigateur',
+      ['Browser']
+    )
+    expect(problems.length).toBeGreaterThan(0)
+    expect(problems.join(' ')).toMatch(/Browser/)
+  })
+
   it('a run whose TranslateFn fails validateTranslation leaves that key UNFILLED and records the problem', async () => {
     const target = {}
     const translate: TranslateFn = async (batch) =>

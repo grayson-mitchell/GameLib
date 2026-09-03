@@ -207,13 +207,27 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-// Loose (case-insensitive) presence check, used to decide whether a
-// glossary rule even applies to this source string.
-function containsTermLoose(text: string, term: string): boolean {
-  const re = new RegExp(
-    `(?<![A-Za-z0-9_])${escapeRegExp(term)}(?![A-Za-z0-9_])`,
-    'i'
-  )
+// 260903-itr (option C): renamed from `containsTermLoose`. The old name
+// described a case-INsensitive presence check while `containsTermVerbatim`
+// below stayed case-SENSITIVE -- an asymmetric pair. Under that asymmetry,
+// any source string containing a glossary term's ordinary lowercase word
+// form (e.g. "browser" in "Open in browser") counted as "the glossary rule
+// applies", then demanded the literal capitalised glossary term survive
+// verbatim into the translation -- something no genuine translation of an
+// ordinary word can do. `Browser` is both a brand/identifier and an
+// everyday English noun, so this silently rejected 185 of 242 outstanding
+// machine-fill translations across 46 languages while the run still
+// exited 0; German passed only because "Browser" happens to also be the
+// capitalised German noun. The same trap is latent for `Mac`, `GE` and
+// `Zoom`.
+//
+// The fix, applied here: this check is now symmetric with
+// `containsTermVerbatim` -- if the source contains the glossary term
+// verbatim, the translation must contain it verbatim too. A source that
+// merely contains the term's lowercase common-word form no longer trips
+// the rule at all.
+function containsTermSourcePresence(text: string, term: string): boolean {
+  const re = new RegExp(`(?<![A-Za-z0-9_])${escapeRegExp(term)}(?![A-Za-z0-9_])`)
   return re.test(text)
 }
 
@@ -259,7 +273,7 @@ export function validateTranslation(
 
   for (const term of glossary) {
     if (
-      containsTermLoose(source, term) &&
+      containsTermSourcePresence(source, term) &&
       !containsTermVerbatim(target, term)
     ) {
       problems.push(
