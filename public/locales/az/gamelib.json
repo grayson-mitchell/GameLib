@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Haqqında"
+    },
+    "app": {
+        "routeError": "Nəsə səhv getdi: {{detail}}"
+    },
+    "box": {
+        "cancel": "Ləğv et",
+        "error": {
+            "install": {
+                "failed": "{{title}} quraşdırılması uğursuz oldu: {{error}}",
+                "signInToSteam": "Steam-ə daxil olun",
+                "stalled": "{{minutes}} dəqiqədir yükləmə irəliləməyib — quraşdırma dayandırıldı"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib sistem fayl seçicisini aça bilmədi, ona görə heç nə seçilmədi və dəyişiklik edilmədi. ({{error}})",
+                "title": "Fayl seçicisi açıla bilmədi"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "CrossOver ilə yenidən quraşdır",
+                "message": "Bu oyunun macOS versiyası yalnız 32-bit-dir və bu macOS versiyasında işləyə bilməz. GameLib bunun əvəzinə onu CrossOver vasitəsilə yenidən quraşdıra bilər, bu da Windows versiyasını yenidən yükləyəcək.",
+                "title": "32-bit macOS versiyası aşkarlandı"
+            }
+        }
+    },
+    "button": {
+        "close": "Bağla",
+        "paste": "Yapışdır"
+    },
+    "consoleMode": {
+        "installNext": "Növbəti",
+        "installPrevious": "Əvvəlki",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Bu quraşdırma başladıla bilmir",
+        "steamInstallLibraryFull": "Steam kitabxana qovluğunuzda kifayət qədər boş yer yoxdur. Yer boşaldıb yenidən cəhd edin.",
+        "steamInstallLibraryMissing": "Steam kitabxana qovluğunuz hazırda əlçatan deyil. Diski yenidən qoşub yenidən cəhd edin."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Fasilədə"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "SteamGridDB qrafika axtarışı bu versiyada əlçatan deyil."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Reytinqsiz",
+        "etaPrefix": "ETA: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic və HowLongToBeat bu başlıq üçün heç nə tapmadı.",
+        "extraInfoEmptyTitle": "Əlavə məlumat tapılmadı",
+        "extraInfoErrorBody": "Axtarış uğursuz oldu, bu isə oyunun məlumatı olmaması demək deyil. Yenidən cəhd edin.",
+        "extraInfoErrorTitle": "Əlavə məlumat yüklənə bilmədi",
+        "extraInfoRetry": "Yenidən cəhd et",
+        "extraInfoStaleBody": "Bu nəticə yükləmə nəticələri qeydə alınmazdan əvvəl keşlənib, ona görə köhnəlmiş ola bilər. Yoxlamaq üçün yeniləyin.",
+        "tabsAriaLabel": "gameinfo tabs",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "bir dəqiqədən az"
+    },
+    "humbleKeys": {
+        "activate": "Aktivləşdir",
+        "activateConfirmBody": "Bu, açarı aşkarlayır — onu Giftable ehtiyatlardan həmişəlik çıxarır — və Steam hesabınızda aktivləşdirir. Geri qaytarıla bilməz.",
+        "activateConfirmBodyRevealed": "Bu, artıq aşkarlanmış açarınızı Steam hesabınızda aktivləşdirir. Geri qaytarıla bilməz.",
+        "activateConfirmTitle": "Bu açar Steam-də aktivləşdirilsin?",
+        "activatedDone": "Hazırdır",
+        "activateDismiss": "Ləğv et",
+        "activatedTitle": "Aktivləşdirildi",
+        "activateWizardTitle": "Bu açarı aktivləşdir",
+        "activatingBody": "Açarınız üzə çıxarılır və Steam-də aktivləşdirilir — bu bir anlıq çəkir.",
+        "activatingTitle": "Steam-də aktivləşdirilir…"
+    },
+    "info": {
+        "refresh-rating": "Reytinqi yenilə"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib həmin yerdən idxal edə bilmədi. Mənbə \"..\" addımı olmayan tam qovluq yolu olmalıdır. Oyunun qovluğunu yenidən seçin.",
+        "pathRejectedBodyMove": "GameLib bu oyunu ora köçürə bilmədi. Hədəf \"..\" addımı olmayan tam qovluq yolu olmalıdır. Hədəf qovluğu yenidən seçin.",
+        "pathRejectedTitle": "Bu yer istifadə edilə bilməz"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Gizlədilənlər daxil",
+            "chipHiddenOnly": "Yalnız gizlədilənlər",
+            "chipNonAvailableIncluded": "Mövcud olmayanlar daxil",
+            "chipNonAvailableOnly": "Yalnız mövcud olmayanlar",
+            "chipNoStorePageHidden": "Mağaza səhifəsi olmayanlar gizlədilir",
+            "chipNoStorePageOnly": "Yalnız mağaza səhifəsi olmayanlar",
+            "clearAll": "Hamısını təmizlə",
+            "collections": "Kolleksiyalar",
+            "emptyAlphabetLetter": "\"{{letter}}\" ilə başlayan",
+            "emptyAlphabetNumber": "Rəqəmlə başlayan",
+            "emptyBody": "{{filters}} ilə uyğun heç bir oyun yoxdur.",
+            "emptyClearAll": "Bütün filtrləri təmizlə",
+            "emptyHeading": "Filtrlərinizə uyğun heç bir oyun yoxdur",
+            "groupSelectedCount": "{{selected}} seçilib",
+            "manageCollections": "Kolleksiyaları idarə et",
+            "moreFilters": "Daha çox filtr",
+            "newCollection": "+ Yeni kolleksiya",
+            "noStorePage": "Mağaza səhifəsi yoxdur",
+            "notYetChecked": "Hələ yoxlanılmayıb",
+            "removeFilter": "{{filterLabel}} filtrini sil",
+            "runnabilityGroup": "İşləmə qabiliyyəti",
+            "runsNatively": "Doğma şəkildə işləyir",
+            "runsViaBottle": "Bottle vasitəsilə işləyir",
+            "storeGroup": "Mağaza",
+            "viewAll": "Bütün oyunlar",
+            "viewFavourites": "Sevimlilər",
+            "viewInstalled": "Quraşdırılıb",
+            "viewRecentlyPlayed": "Yaxınlarda oynanılan",
+            "wontRun": "İşləməyəcək"
+        },
+        "header": {
+            "filteredOfTotal": "{{total}} arasından {{shown}}"
+        },
+        "no_no_store_page_games": "Kitabxananızda mağaza səhifəsi olmayan oyun yoxdur",
+        "noStorePage": "Mağaza səhifəsi yoxdur",
+        "steamSync": {
+            "failedBody": "Digər kitabxanalarınız hələ də əlçatandır. Yenidən cəhd edin və ya Steam-in əlçatan olduğunu yoxlayın.",
+            "failedTitle": "Steam kitabxananız sinxronlaşdırıla bilmədi",
+            "retry": "Steam sinxronizasiyasını yenidən cəhd et",
+            "signedOutAction": "Steam-ə daxil ol",
+            "signedOutBody": "Steam kitabxananızı sinxronlaşdırmaq üçün yenidən daxil olun. Digər kitabxanalarınız hələ də əlçatandır.",
+            "signedOutTitle": "Steam girişinizin müddəti bitdi",
+            "syncing": "Steam kitabxananız sinxronlaşdırılır…"
+        },
+        "storeOther": "Digər"
+    },
+    "login": {
+        "connected": "Qoşulub",
+        "humble_dialog_title": "Humble Bundle-a daxil ol",
+        "logoutFailedTitle": "Çıxış tam başa çatmadı",
+        "steam_logout_failed_message": "Steam çıxışı vaxtında başa çatmadı. Zəhmət olmasa yenidən cəhd edin.",
+        "steam_logout_failed_title": "Çıxış uğursuz oldu",
+        "steamReconnect": "Giriş müddəti bitib — Yenidən qoşul"
+    },
+    "pathSelectionBox": {
+        "saved": "Yadda saxlanıldı",
+        "unsaved": "Hələ yadda saxlanılmayıb — Enter düyməsini basın"
+    },
+    "queue": {
+        "label": {
+            "failed": "Uğursuz oldu",
+            "retry": "Yenidən cəhd et"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Steam açarınızı daxil edin",
+        "redeem": "Aktivləşdir",
+        "redeeming": "Aktivləşdirilir...",
+        "title": "Steam açarını aktivləşdir",
+        "viewInLibrary": "Kitabxanada göstər"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay bu versiyada əlçatan deyil",
+            "unavailableDetail": "EOS Overlay dəstəyi gələcək buraxılışa təxirə salınıb (D-03, Faza 34.6) və bu versiyada quraşdırıla, yenilənə və ya silinə bilməz."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "EOS Overlay indi quraşdırılsın?",
+        "eosOverlayInstallConfirmTitle": "Overlay quraşdırılmasını təsdiqlə",
+        "eosOverlayUpdateConfirmBody": "EOS Overlay ən son versiyaya yenilənsin?",
+        "eosOverlayUpdateConfirmTitle": "Overlay yenilənməsini təsdiqlə",
+        "framelessWindowDescription": "Çərçivəsiz pəncərədən istifadə et",
+        "gamepadInitialRepeatDelay": "Gamepad girişinin ilkin təkrar gecikməsi",
+        "gamepadRepeatFrequency": "Gamepad girişinin təkrar tezliyi",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Böyütmə Metodu",
+        "gamescopeWindowType": "Pəncərə Növü",
+        "loginBackground": "Hesabları İdarə Et fon şəkli",
+        "loginBackgroundDialogTitle": "Fon şəkli seçin",
+        "loginBackgroundFilterName": "Şəkillər",
+        "loginBackgroundHelp": "Hesabları İdarə Et ekranının arxasında göstərilən şəkil. Daxil edilmiş qrafikaya qayıtmaq üçün sahəni təmizləyin. PNG, JPEG, WebP, AVIF və GIF dəstəklənir.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Bu builddə mövcud deyil"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB qrafika dəstəyi gələcək buraxılışa saxlanılıb (D-03, Faza 34.6) və bu buildən konfiqurasiya edilə bilməz."
+            }
+        },
+        "wineDefaultLabel": "Wine Standart",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Steam açarını aktivləşdir"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Hamısı",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImage-lər",
+            "apps": "Tətbiqlər",
+            "executables": "İcra edilə bilənlər",
+            "images": "Şəkillər",
+            "otherBinaries": "Digər İkili Fayllar",
+            "scripts": "Skriptlər"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Quraşdırma seçimləri yoxlanılır…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib Steam bottle qurulumu haqqında məlumat almağı dayandırdı. Hələ də işləyə bilər — Steam quraşdırıcı pəncərəsini yoxlayın, sonra yenidən cəhd edin."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam serverləri bağlantını kəsdi.",
+                "decodeFailed": "Yüklənmiş oyun məlumatları açıla bilmədi. Bu şəbəkə problemi deyil.",
+                "genericV2": "Steam yükləməsi uğursuz oldu.",
+                "notSignedIn": "Steam-də daxil olmamısınız, ona görə bu yükləmə başlaya bilmədi."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib Steam üçün bir paylaşılan CrossOver bottle-ı idarə edir. Hər oyun üçün ayrı bottle adlandırmaq hələ dəstəklənmir.",
+            "contentLightNotice": "Bu, Steam-in öz klienti vasitəsilə quraşdırılır, ona görə burada seçiləcək heç nə yoxdur. Quraşdırma yerini və Windows uyğunluğunu GameLib-dən idarə etmək üçün Ayarlar-da native Steam quraşdırmalarını aktivləşdirin.",
+            "contentLightSingleLibraryNotice": "Bu sistemdə yalnız bir Steam kitabxanası var, ona görə burada seçiləcək heç nə yoxdur — GameLib bu oyunu ora quraşdıracaq.",
+            "forceWindowsHelp": "Bu oyunun native macOS versiyası var, lakin Wine bottle vasitəsilə Windows versiyasını da quraşdıra bilərsiniz — native build-də funksiyalar əskikdirsə və ya performans zəifdirsə faydalıdır.",
+            "libraryFullNotice": "Steam kitabxananızda kifayət qədər yer yoxdur — aşağıda başqasını seçin və ya yer boşaldın.",
+            "libraryFullOnlyNotice": "Steam kitabxananızda kifayət qədər yer yoxdur. Yer boşaldın, sonra yenidən cəhd edin.",
+            "libraryMissingNotice": "Steam kitabxananıza çatmaq mümkün olmadı — aşağıda başqasını seçin.",
+            "libraryMissingOnlyNotice": "Steam kitabxananıza çatmaq mümkün olmadı. Diski yenidən qoşun, sonra yenidən cəhd edin.",
+            "libraryPickerLabel": "Steam kitabxanasını seçin",
+            "libraryPrimarySuffix": "standart",
+            "noCrossoverEngine": "Heç bir CrossOver quraşdırması tapılmadı. Quraşdırma başlayanda GameLib bir tanə quracaq.",
+            "sharedBottleNotice": "Burada seçdiyiniz wine versiyası bottle tələb edən hər Steam oyunu üçün istifadə olunur — təkcə bu oyun üçün deyil. Bunu sonradan dəyişmək həmin oyunların işləmə tərzini də dəyişəcək.",
+            "withOptionsLabel": "Seçimlərlə quraşdır…"
+        },
+        "resumeAvailable": {
+            "notify": "{{game}} üçün fasiləyə uğramış quraşdırma davam etməyə hazırdır — davam etmək üçün Quraşdır düyməsinə basın"
+        },
+        "status": {
+            "resumeInstall": "Quraşdırmanı Davam Etdir",
+            "resumeInstallHint": "Quraşdırma tamamlanmayıb — yükləməni GameLib-də davam etdirin"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Bu, bütün quraşdırma yerlərindəki bu oyunun hər bir quraşdırılmış nüsxəsini siləcək. Bu geri qaytarıla bilməz.",
+            "removeAllCopiesConfirmTitle": "Bütün nüsxələr silinsin?",
+            "removeAllCopiesLabel": "Bütün nüsxələri sil…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB qrafikası bu buildə mövcud deyil"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Kibermekan Vahəsi",
+        "cyberSpaceOasisAlt": "Kibermekan Vahəsi Klassik",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Tünd",
+        "highContrast": "Yüksək Kontrast",
+        "marine": "Dəniz",
+        "marineClassic": "Dəniz Klassik",
+        "midnightMirage": "Gecəyarısı Sərabı",
+        "nordDark": "Nord Tünd",
+        "nordLight": "Nord Açıq",
+        "oldSchool": "Köhnə Məktəb GameLib",
+        "sweet": "Şirin",
+        "zombie": "Zombi",
+        "zombieClassic": "Zombi Klassik"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Girişiniz hələ tamamlana bilməz: {{channel}} bu buraxılışa köçürülməyib. Bu, Faza 34.5-də ediləcək.",
+                "heading": "{{runner}} hesabına giriş hələ qoşulmayıb",
+                "headingGeneric": "Giriş hələ qoşulmayıb"
+            },
+            "humble": {
+                "body": "Giriş pəncərəsi açıldı. Girişi orada tamamlayın — uğurlu olduqda bu səhifə avtomatik yenilənəcək.",
+                "error": {
+                    "window_unreachable": "Humble giriş pəncərəsi bağlandı və ya ona çatmaq mümkün olmadı"
+                },
+                "heading": "Humble Bundle hesabına giriş"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Giriş pəncərəsi açıldı. Girişi orada tamamlayın.",
+                    "heading": "{{runner}} hesabına giriş",
+                    "headingGeneric": "Giriş edilir"
+                },
+                "blocked": {
+                    "body": "Girişiniz uğurla tutuldu, lakin {{channel}} arxa plan kanalı hələ bu buraxılışa köçürülməyib. Bu, Faza 34.5-də ediləcək.",
+                    "heading": "{{runner}} hesabına giriş tutuldu, lakin hələ tamamlana bilmir",
+                    "headingGeneric": "Giriş tutuldu, lakin hələ tamamlana bilmir"
+                },
+                "cancelled": {
+                    "body": "Giriş pəncərəsi tamamlanmadan bağlandı. Yenidən cəhd edə bilərsiniz.",
+                    "heading": "{{runner}} hesabına giriş ləğv edildi",
+                    "headingGeneric": "Giriş ləğv edildi"
+                },
+                "error": {
+                    "body": "Giriş zamanı xəta baş verdi: {{message}}",
+                    "heading": "{{runner}} hesabına giriş uğursuz oldu",
+                    "headingGeneric": "Giriş uğursuz oldu"
+                },
+                "finalizing": {
+                    "body": "Giriş tutuldu. Mağaza ilə mübadilə tamamlanır — bu bir neçə saniyə çəkə bilər.",
+                    "heading": "{{runner}} ilə giriş tamamlanır…",
+                    "headingGeneric": "Giriş tamamlanır…"
+                },
+                "genericChannel": "giriş kanalı",
+                "preparing": {
+                    "body": "Mağazanın giriş pəncərəsi hazırlanır və tezliklə açılacaq.",
+                    "heading": "{{runner}} girişi hazırlanır…",
+                    "headingGeneric": "Giriş hazırlanır…"
+                },
+                "retry": "Yenidən cəhd et",
+                "timeout": {
+                    "body": "Giriş pəncərəsinin tamamlanması çox vaxt aldı. Yenidən cəhd edə bilərsiniz.",
+                    "heading": "{{runner}} hesabına giriş vaxtı bitdi",
+                    "headingGeneric": "Girişin vaxtı bitdi"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Tətbiq daxilində mağaza və wiki brauzeri bu versiyada mövcud deyil"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Winetricks komponent idarəetməsi bu versiyada mövcud deyil",
+        "unavailableDetail": "Winetricks dəstəyi gələcək buraxılış üçün təxirə salınıb (D-03, Faza 34.6) və bu versiyadan siyahıya alına və ya quraşdırıla bilməz."
+    }
+}

@@ -72,7 +72,9 @@
             "viewFavourites": "Favoris",
             "viewInstalled": "Installé",
             "viewRecentlyPlayed": "Joués récemment",
-            "wontRun": "Ne s'exécute pas"
+            "wontRun": "Ne s'exécute pas",
+            "emptyAlphabetLetter": "Commençant par \"{{letter}}\"",
+            "emptyAlphabetNumber": "Commençant par un chiffre"
         },
         "header": {
             "filteredOfTotal": "{{shown}} sur {{total}}"
@@ -92,7 +94,11 @@
     },
     "login": {
         "connected": "Connecté",
-        "steamReconnect": "Connexion expirée — Reconnecter"
+        "steamReconnect": "Connexion expirée — Reconnecter",
+        "humble_dialog_title": "Se connecter à Humble Bundle",
+        "logoutFailedTitle": "Déconnexion incomplète",
+        "steam_logout_failed_message": "La déconnexion de Steam n'a pas pu se terminer à temps. Veuillez réessayer.",
+        "steam_logout_failed_title": "Échec de la déconnexion"
     },
     "pathSelectionBox": {
         "saved": "Enregistré",
@@ -106,7 +112,23 @@
         "gamescopeUpscaleMethod": "Méthode de mise à l'échelle",
         "gamescopeWindowType": "Type de fenêtre",
         "wineDefaultLabel": "Wine par défaut",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "eosOverlayInstallConfirmBody": "Installer l'overlay EOS maintenant ?",
+        "eosOverlayInstallConfirmTitle": "Confirmer l'installation de l'overlay",
+        "eosOverlayUpdateConfirmBody": "Mettre à jour l'overlay EOS vers la dernière version ?",
+        "eosOverlayUpdateConfirmTitle": "Confirmer la mise à jour de l'overlay",
+        "loginBackground": "Arrière-plan de gestion des comptes",
+        "loginBackgroundDialogTitle": "Sélectionner une image d'arrière-plan",
+        "loginBackgroundFilterName": "Images",
+        "loginBackgroundHelp": "Image affichée derrière l'écran Gérer les comptes. Videz le champ pour revenir à l'illustration intégrée. PNG, JPEG, WebP, AVIF et GIF sont pris en charge.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Indisponible sur cette version"
+            },
+            "help": {
+                "unavailableDetail": "La prise en charge des illustrations SteamGridDB est reportée à une version future (D-03, Phase 34.6) et ne peut pas être configurée depuis cette version."
+            }
+        }
     },
     "sideload": {
         "filter": {
@@ -151,6 +173,17 @@
             "removeAllCopiesConfirmMessage": "Ceci supprime toutes les copies installées de ce jeu, quel que soit l'emplacement d'installation. Cette action est irréversible.",
             "removeAllCopiesConfirmTitle": "Supprimer toutes les copies ?",
             "removeAllCopiesLabel": "Supprimer toutes les copies…"
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Les serveurs Steam ont interrompu la connexion.",
+                "decodeFailed": "Les données du jeu téléchargées n'ont pas pu être décompressées. Ce n'est pas un problème réseau.",
+                "genericV2": "Le téléchargement Steam a échoué.",
+                "notSignedIn": "Vous n'êtes pas connecté à Steam, ce téléchargement n'a donc pas pu démarrer."
+            }
+        },
+        "resumeAvailable": {
+            "notify": "Une installation interrompue pour {{game}} est prête à reprendre — cliquez sur Installer pour continuer"
         }
     },
     "themeSelector": {
@@ -168,5 +201,137 @@
         "sweet": "Sucré",
         "zombie": "Zombie",
         "zombieClassic": "Zombie Classique"
+    },
+    "about": {
+        "navLabel": "À propos"
+    },
+    "box": {
+        "cancel": "Annuler",
+        "error": {
+            "install": {
+                "failed": "L'installation de {{title}} a échoué : {{error}}",
+                "signInToSteam": "Se connecter à Steam",
+                "stalled": "Aucune progression du téléchargement depuis {{minutes}} minutes — l'installation a été arrêtée"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib n'a pas pu ouvrir le sélecteur de fichiers du système, donc rien n'a été sélectionné et aucune modification n'a été apportée. ({{error}})",
+                "title": "Impossible d'ouvrir le sélecteur de fichiers"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Réinstaller via CrossOver",
+                "message": "La version macOS de ce jeu est en 32 bits uniquement et ne peut pas fonctionner sur cette version de macOS. GameLib peut plutôt le réinstaller via CrossOver, ce qui retéléchargera la version Windows.",
+                "title": "Version macOS 32 bits détectée"
+            }
+        }
+    },
+    "button": {
+        "close": "Fermer",
+        "paste": "Coller"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "La recherche d'illustrations SteamGridDB n'est pas disponible sur cette version."
+        }
+    },
+    "info": {
+        "refresh-rating": "Actualiser la note"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib n'a pas pu importer depuis cet emplacement. La source doit être un chemin de dossier complet sans étapes \"..\". Sélectionnez à nouveau le dossier du jeu.",
+        "pathRejectedBodyMove": "GameLib n'a pas pu déplacer ce jeu à cet endroit. La destination doit être un chemin de dossier complet sans étapes \"..\". Sélectionnez à nouveau le dossier de destination.",
+        "pathRejectedTitle": "Impossible d'utiliser cet emplacement"
+    },
+    "queue": {
+        "label": {
+            "failed": "Échoué",
+            "retry": "Réessayer"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Entrez votre clé Steam",
+        "redeem": "Activer",
+        "redeeming": "Activation en cours...",
+        "title": "Activer une clé Steam",
+        "viewInLibrary": "Voir dans la bibliothèque"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "L'overlay EOS n'est pas disponible dans cette version",
+            "unavailableDetail": "La prise en charge de l'overlay EOS est reportée à une version future (D-03, Phase 34.6) et ne peut pas être installée, mise à jour ou supprimée dans cette version."
+        }
+    },
+    "sidebar": {
+        "redeemSteamKey": "Utiliser une clé Steam"
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Les illustrations SteamGridDB sont indisponibles sur cette version"
+        }
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Votre connexion ne peut pas encore être finalisée : {{channel}} n'est pas encore porté sur cette version. Cela arrivera en Phase 34.5.",
+                "heading": "La connexion à {{runner}} n'est pas encore implémentée",
+                "headingGeneric": "La connexion n'est pas encore implémentée"
+            },
+            "humble": {
+                "body": "Une fenêtre de connexion s'est ouverte. Terminez-y la connexion — cette page se met à jour automatiquement une fois réussie.",
+                "error": {
+                    "window_unreachable": "la fenêtre de connexion Humble Bundle s'est fermée ou est devenue inaccessible"
+                },
+                "heading": "Connexion à Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Une fenêtre de connexion s'est ouverte. Terminez-y la connexion.",
+                    "heading": "Connexion à {{runner}}",
+                    "headingGeneric": "Connexion en cours"
+                },
+                "blocked": {
+                    "body": "Votre connexion a bien été capturée, mais le canal backend {{channel}} n'est pas encore porté sur cette version. Cela arrivera en Phase 34.5.",
+                    "heading": "La connexion à {{runner}} a été capturée, mais ne peut pas encore être finalisée",
+                    "headingGeneric": "La connexion a été capturée, mais ne peut pas encore être finalisée"
+                },
+                "cancelled": {
+                    "body": "La fenêtre de connexion a été fermée avant la fin. Vous pouvez réessayer.",
+                    "heading": "La connexion à {{runner}} a été annulée",
+                    "headingGeneric": "La connexion a été annulée"
+                },
+                "error": {
+                    "body": "Une erreur s'est produite lors de la connexion : {{message}}",
+                    "heading": "La connexion à {{runner}} a échoué",
+                    "headingGeneric": "Échec de la connexion"
+                },
+                "finalizing": {
+                    "body": "Connexion capturée. Finalisation de l'échange avec la boutique — cela peut prendre quelques secondes.",
+                    "heading": "Finalisation de la connexion à {{runner}}…",
+                    "headingGeneric": "Finalisation de la connexion…"
+                },
+                "genericChannel": "le canal de connexion",
+                "preparing": {
+                    "body": "La fenêtre de connexion de la boutique est en cours de préparation et s'ouvrira sous peu.",
+                    "heading": "Préparation de la connexion à {{runner}}…",
+                    "headingGeneric": "Préparation de la connexion…"
+                },
+                "retry": "Réessayer",
+                "timeout": {
+                    "body": "La fenêtre de connexion a mis trop de temps à se terminer. Vous pouvez réessayer.",
+                    "heading": "Le délai de connexion à {{runner}} a expiré",
+                    "headingGeneric": "Le délai de connexion a expiré"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "La navigation dans la boutique intégrée et le wiki n'est pas disponible sur cette version"
+        }
+    },
+    "winetricks": {
+        "unavailable": "La gestion des composants Winetricks n'est pas disponible sur cette version",
+        "unavailableDetail": "La prise en charge de Winetricks est reportée à une version future (D-03, Phase 34.6) et ne peut pas être listée ou installée depuis cette version."
     }
 }

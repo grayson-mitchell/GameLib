@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "关于"
+    },
+    "app": {
+        "routeError": "出现错误：{{detail}}"
+    },
+    "box": {
+        "cancel": "取消",
+        "error": {
+            "install": {
+                "failed": "{{title}} 安装失败：{{error}}",
+                "signInToSteam": "登录 Steam",
+                "stalled": "{{minutes}} 分钟内下载没有进展 — 安装已停止"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib 无法打开系统文件选择器，因此未作任何选择，也未进行任何更改。（{{error}}）",
+                "title": "无法打开文件选择器"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "通过 CrossOver 重新安装",
+                "message": "此游戏的 macOS 版本仅支持 32 位，无法在此版本的 macOS 上运行。GameLib 可以改为通过 CrossOver 重新安装，这将重新下载 Windows 版本。",
+                "title": "检测到 32 位 macOS 版本"
+            }
+        }
+    },
+    "button": {
+        "close": "关闭",
+        "paste": "粘贴"
+    },
+    "consoleMode": {
+        "installNext": "下一步",
+        "installPrevious": "上一步",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "无法开始此安装",
+        "steamInstallLibraryFull": "您的 Steam 库文件夹空间不足。请清理空间后重试。",
+        "steamInstallLibraryMissing": "您的 Steam 库文件夹目前不可用。请重新连接驱动器后重试。"
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "已暂停"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "此版本不支持 SteamGridDB 图片搜索。"
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "未评级",
+        "etaPrefix": "预计剩余：{{eta}}",
+        "extraInfoEmptyBody": "Metacritic、OpenCritic 和 HowLongToBeat 均未找到此标题的信息。",
+        "extraInfoEmptyTitle": "未找到额外信息",
+        "extraInfoErrorBody": "查询失败，这不等于此游戏没有数据。请重试。",
+        "extraInfoErrorTitle": "无法加载额外信息",
+        "extraInfoRetry": "重试",
+        "extraInfoStaleBody": "此结果是在记录加载结果之前缓存的，可能已过期。请刷新以检查。",
+        "tabsAriaLabel": "游戏信息标签页",
+        "wineLabel": "Wine："
+    },
+    "humble": {
+        "lessThanAMinute": "不到一分钟"
+    },
+    "humbleKeys": {
+        "activate": "激活",
+        "activateConfirmBody": "此操作将显示密钥——从可赠送备用密钥中永久移除——并在您的 Steam 账户上兑换。此操作无法撤销。",
+        "activateConfirmBodyRevealed": "此操作将在您的 Steam 账户上兑换已显示的密钥。此操作无法撤销。",
+        "activateConfirmTitle": "要在 Steam 上激活此密钥吗？",
+        "activatedDone": "完毕",
+        "activateDismiss": "取消",
+        "activatedTitle": "已激活",
+        "activateWizardTitle": "激活此密钥",
+        "activatingBody": "正在显示您的密钥并在 Steam 上兑换 — 这只需片刻。",
+        "activatingTitle": "正在 Steam 上激活…"
+    },
+    "info": {
+        "refresh-rating": "刷新评分"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib 无法从该位置导入。来源必须是完整的文件夹路径，且不能包含“..”步骤。请重新选择游戏文件夹。",
+        "pathRejectedBodyMove": "GameLib 无法将此游戏移动到那里。目标必须是完整的文件夹路径，且不能包含“..”步骤。请重新选择目标文件夹。",
+        "pathRejectedTitle": "无法使用该位置"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "包含已隐藏",
+            "chipHiddenOnly": "仅隐藏项",
+            "chipNonAvailableIncluded": "包含不可用",
+            "chipNonAvailableOnly": "仅不可用项",
+            "chipNoStorePageHidden": "隐藏无商店页面",
+            "chipNoStorePageOnly": "仅无商店页面",
+            "clearAll": "清除全部",
+            "collections": "收藏集",
+            "emptyAlphabetLetter": "以“{{letter}}”开头",
+            "emptyAlphabetNumber": "以数字开头",
+            "emptyBody": "没有游戏符合 {{filters}}。",
+            "emptyClearAll": "清除所有筛选项",
+            "emptyHeading": "没有游戏符合您的筛选条件",
+            "groupSelectedCount": "已选择 {{selected}} 项",
+            "manageCollections": "管理收藏集",
+            "moreFilters": "更多筛选项",
+            "newCollection": "+ 新建收藏集",
+            "noStorePage": "无商店页面",
+            "notYetChecked": "尚未检查",
+            "removeFilter": "移除 {{filterLabel}} 筛选项",
+            "runnabilityGroup": "可运行性",
+            "runsNatively": "原生运行",
+            "runsViaBottle": "通过容器运行",
+            "storeGroup": "商店",
+            "viewAll": "所有游戏",
+            "viewFavourites": "最爱",
+            "viewInstalled": "已安装",
+            "viewRecentlyPlayed": "最近玩过",
+            "wontRun": "无法运行"
+        },
+        "header": {
+            "filteredOfTotal": "{{total}} 中的 {{shown}}"
+        },
+        "no_no_store_page_games": "您的资料库中没有无商店页面的游戏",
+        "noStorePage": "无商店页面",
+        "steamSync": {
+            "failedBody": "你的其他库仍然可用。请重试，或检查 Steam 是否可以访问。",
+            "failedTitle": "无法同步你的 Steam 库",
+            "retry": "重试 Steam 同步",
+            "signedOutAction": "登录 Steam",
+            "signedOutBody": "请重新登录以同步你的 Steam 库。你的其他库仍然可用。",
+            "signedOutTitle": "你的 Steam 登录已过期",
+            "syncing": "正在同步你的 Steam 库…"
+        },
+        "storeOther": "其他"
+    },
+    "login": {
+        "connected": "已连接",
+        "humble_dialog_title": "登录 Humble Bundle",
+        "logoutFailedTitle": "退出登录未完成",
+        "steam_logout_failed_message": "Steam 退出登录未能及时完成。请重试。",
+        "steam_logout_failed_title": "退出登录失败",
+        "steamReconnect": "登录已过期 — 重新连接"
+    },
+    "pathSelectionBox": {
+        "saved": "已保存",
+        "unsaved": "尚未保存 — 按 Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "失败",
+            "retry": "重试"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "输入你的 Steam 密钥",
+        "redeem": "兑换",
+        "redeeming": "正在兑换…",
+        "title": "兑换 Steam 密钥",
+        "viewInLibrary": "在库中查看"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS 悬浮层在此版本中不可用",
+            "unavailableDetail": "EOS 悬浮层支持已推迟到未来版本（D-03，第 34.6 阶段），在此版本中无法安装、更新或移除。"
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "现在安装 EOS 悬浮层吗？",
+        "eosOverlayInstallConfirmTitle": "确认安装悬浮层",
+        "eosOverlayUpdateConfirmBody": "将 EOS 悬浮层更新到最新版本吗？",
+        "eosOverlayUpdateConfirmTitle": "确认更新悬浮层",
+        "framelessWindowDescription": "使用无边框窗口",
+        "gamepadInitialRepeatDelay": "手柄输入初始重复延迟",
+        "gamepadRepeatFrequency": "手柄输入重复频率",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "放大方法",
+        "gamescopeWindowType": "窗口类型",
+        "loginBackground": "账户管理背景",
+        "loginBackgroundDialogTitle": "选择背景图片",
+        "loginBackgroundFilterName": "图片",
+        "loginBackgroundHelp": "在账户管理界面后显示的图片。清空此字段可恢复为内置图片。支持 PNG、JPEG、WebP、AVIF 和 GIF 格式。",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "此版本不可用"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB 美术资源支持将在未来版本中推出（D-03，第 34.6 阶段），此版本暂无法配置。"
+            }
+        },
+        "wineDefaultLabel": "Wine 默认",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam（Steam Flatpak）"
+    },
+    "sidebar": {
+        "redeemSteamKey": "兑换 Steam 密钥"
+    },
+    "sideload": {
+        "filter": {
+            "all": "全部",
+            "appExtension": "应用",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "应用",
+            "executables": "可执行文件",
+            "images": "镜像",
+            "otherBinaries": "其他二进制文件",
+            "scripts": "脚本"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "正在检查安装选项…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib 未能收到 Steam 容器设置的响应。它可能仍在运行——请检查是否有 Steam 安装程序窗口，然后重试。"
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam 服务器中断了连接。",
+                "decodeFailed": "下载的游戏数据无法解包。这不是网络问题。",
+                "genericV2": "Steam 下载失败。",
+                "notSignedIn": "你尚未登录 Steam，因此无法开始此下载。"
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib 为 Steam 管理一个共享的 CrossOver 容器。目前尚不支持为每个游戏单独命名容器。",
+            "contentLightNotice": "此安装通过 Steam 自己的客户端完成，这里无需选择。在设置中启用原生 Steam 安装，即可从 GameLib 管理安装位置和 Windows 兼容性。",
+            "contentLightSingleLibraryNotice": "此系统上只有一个 Steam 库，这里无需选择——GameLib 会将此游戏安装到该库中。",
+            "forceWindowsHelp": "此游戏有原生 macOS 版本，但你也可以通过 Wine 容器安装 Windows 版本——如果原生版本缺少功能或性能较差，这会很有用。",
+            "libraryFullNotice": "你的 Steam 库空间不足——请在下方选择其他库，或释放空间。",
+            "libraryFullOnlyNotice": "你的 Steam 库空间不足。请释放空间后重试。",
+            "libraryMissingNotice": "无法访问你的 Steam 库——请在下方选择其他库。",
+            "libraryMissingOnlyNotice": "无法访问你的 Steam 库。请重新连接驱动器后重试。",
+            "libraryPickerLabel": "选择 Steam 库",
+            "libraryPrimarySuffix": "默认",
+            "noCrossoverEngine": "未找到 CrossOver 安装。安装开始时，GameLib 会自动设置一个。",
+            "sharedBottleNotice": "你在此处选择的 wine 版本将用于所有需要容器的 Steam 游戏——而不仅仅是这一个。之后更改此设置也会影响那些游戏的运行方式。",
+            "withOptionsLabel": "使用选项安装…"
+        },
+        "resumeAvailable": {
+            "notify": "{{game}} 的中断安装已可恢复——点击安装以继续"
+        },
+        "status": {
+            "resumeInstall": "恢复安装",
+            "resumeInstallHint": "安装未完成——请在 GameLib 中恢复下载"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "这将删除此游戏在所有安装位置上的每个已安装副本。此操作无法撤销。",
+            "removeAllCopiesConfirmTitle": "删除所有副本？",
+            "removeAllCopiesLabel": "删除所有副本…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "此版本不支持 SteamGridDB 美术资源"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "赛博空间绿洲",
+        "cyberSpaceOasisAlt": "赛博空间绿洲经典版",
+        "dracula": "德古拉",
+        "gruvboxDark": "Gruvbox 暗色",
+        "highContrast": "高对比度",
+        "marine": "海洋",
+        "marineClassic": "海洋经典版",
+        "midnightMirage": "午夜幻影",
+        "nordDark": "北欧暗色",
+        "nordLight": "北欧亮色",
+        "oldSchool": "复古 GameLib",
+        "sweet": "甜美",
+        "zombie": "僵尸",
+        "zombieClassic": "僵尸经典版"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "暂时无法完成登录：{{channel}} 尚未移植到此构建版本。此功能将在第 34.5 阶段上线。",
+                "heading": "登录 {{runner}} 的功能尚未接入",
+                "headingGeneric": "登录功能尚未接入"
+            },
+            "humble": {
+                "body": "登录窗口已打开，请在其中完成登录——成功后此页面会自动更新。",
+                "error": {
+                    "window_unreachable": "Humble Bundle 登录窗口已关闭或无法访问"
+                },
+                "heading": "正在登录 Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "登录窗口已打开，请在其中完成登录。",
+                    "heading": "正在登录 {{runner}}",
+                    "headingGeneric": "正在登录"
+                },
+                "blocked": {
+                    "body": "已成功捕获您的登录信息，但 {{channel}} 后端通道尚未移植到此构建版本。此功能将在第 34.5 阶段上线。",
+                    "heading": "已捕获登录 {{runner}} 的信息，但暂时无法完成",
+                    "headingGeneric": "已捕获登录信息，但暂时无法完成"
+                },
+                "cancelled": {
+                    "body": "登录窗口在完成前已关闭。您可以重试。",
+                    "heading": "登录 {{runner}} 已取消",
+                    "headingGeneric": "登录已取消"
+                },
+                "error": {
+                    "body": "登录时出现问题：{{message}}",
+                    "heading": "登录 {{runner}} 失败",
+                    "headingGeneric": "登录失败"
+                },
+                "finalizing": {
+                    "body": "登录信息已捕获。正在与商店完成交换——这可能需要几秒钟。",
+                    "heading": "正在完成与 {{runner}} 的登录…",
+                    "headingGeneric": "正在完成登录…"
+                },
+                "genericChannel": "登录通道",
+                "preparing": {
+                    "body": "商店的登录窗口正在准备中，即将打开。",
+                    "heading": "正在准备 {{runner}} 登录…",
+                    "headingGeneric": "正在准备登录…"
+                },
+                "retry": "重试",
+                "timeout": {
+                    "body": "登录窗口耗时过长未能完成。您可以重试。",
+                    "heading": "登录 {{runner}} 超时",
+                    "headingGeneric": "登录超时"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "此版本不支持应用内商店和 wiki 浏览"
+        }
+    },
+    "winetricks": {
+        "unavailable": "此版本不支持 Winetricks 组件管理",
+        "unavailableDetail": "Winetricks 支持已推迟至未来版本（D-03，第 34.6 阶段），此版本无法列出或安装。"
+    }
+}

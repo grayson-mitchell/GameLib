@@ -1,0 +1,300 @@
+{
+    "about": {
+        "navLabel": "Info"
+    },
+    "app": {
+        "routeError": "Midagi läks valesti: {{detail}}"
+    },
+    "box": {
+        "cancel": "Tühista",
+        "error": {
+            "install": {
+                "failed": "{{title}} paigaldamine ebaõnnestus: {{error}}",
+                "stalled": "{{minutes}} minuti jooksul pole allalaadimine edenenud — paigaldamine peatati"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib ei suutnud avada süsteemi failivalijat, seetõttu ei valitud midagi ja muudatusi ei tehtud. ({{error}})",
+                "title": "Failivalijat ei saanud avada"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "title": "Tuvastati 32-bitine macOS versioon",
+                "confirm": "Installi uuesti CrossOver kaudu"
+            }
+        }
+    },
+    "button": {
+        "close": "Sulge",
+        "paste": "Kleebi"
+    },
+    "consoleMode": {
+        "installNext": "Järgmine",
+        "installPrevious": "Eelmine",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Selle paigaldamist ei saa alustada"
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Peatatud"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "SteamGridDB kujunduse otsing pole selle versiooniga saadaval."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Hindamata",
+        "etaPrefix": "Hinnanguline aeg: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic ja HowLongToBeat ei leidnud selle mängu kohta midagi.",
+        "extraInfoEmptyTitle": "Lisainfot ei leitud",
+        "extraInfoErrorBody": "Otsing ebaõnnestus, mis ei tähenda, et mängul andmed puuduvad. Proovi uuesti.",
+        "extraInfoErrorTitle": "Lisainfo laadimine ebaõnnestus",
+        "extraInfoRetry": "Proovi uuesti",
+        "extraInfoStaleBody": "See tulemus salvestati vahemällu enne laadimistulemuste registreerimist, seega võib see olla vananenud. Värskenda kontrollimiseks.",
+        "tabsAriaLabel": "mänguinfo vahekaardid",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "vähem kui minut"
+    },
+    "humbleKeys": {
+        "activate": "Aktiveeri",
+        "activatedDone": "Valmis",
+        "activateDismiss": "Tühista",
+        "activatedTitle": "Aktiveeritud",
+        "activateWizardTitle": "Aktiveeri see võti"
+    },
+    "info": {
+        "refresh-rating": "Värskenda hinnangut"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib ei saanud sellest asukohast importida. Allikas peab olema täielik kaustatee, milles pole \"..\" samme. Vali mängu kaust uuesti.",
+        "pathRejectedBodyMove": "GameLib ei saanud mängu sinna teisaldada. Sihtkoht peab olema täielik kaustatee, milles pole \"..\" samme. Vali sihtkaust uuesti.",
+        "pathRejectedTitle": "Seda asukohta ei saa kasutada"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Kaasa arvatud peidetud",
+            "chipHiddenOnly": "Ainult peidetud",
+            "chipNonAvailableIncluded": "Kaasa arvatud mittesaadaolevad",
+            "chipNonAvailableOnly": "Ainult mittesaadaolevad",
+            "chipNoStorePageHidden": "Peidab poelehe puudumisega",
+            "chipNoStorePageOnly": "Ainult ilma poelehata",
+            "clearAll": "Tühjenda kõik",
+            "collections": "Kogud",
+            "emptyAlphabetLetter": "Algab tähega \"{{letter}}\"",
+            "emptyAlphabetNumber": "Algab numbriga",
+            "emptyBody": "Ükski mäng ei vasta filtritele {{filters}}.",
+            "emptyClearAll": "Tühjenda kõik filtrid",
+            "emptyHeading": "Ükski mäng ei vasta sinu filtritele",
+            "groupSelectedCount": "{{selected}} valitud",
+            "manageCollections": "Halda kogusid",
+            "moreFilters": "Rohkem filtreid",
+            "newCollection": "+ Uus kogu",
+            "noStorePage": "Poeleht puudub",
+            "notYetChecked": "Veel kontrollimata",
+            "removeFilter": "Eemalda filter {{filterLabel}}",
+            "runnabilityGroup": "Käivitatavus",
+            "runsNatively": "Töötab natiivselt",
+            "runsViaBottle": "Töötab bottle'i kaudu",
+            "storeGroup": "Pood",
+            "viewAll": "Kõik mängud",
+            "viewFavourites": "Lemmikud",
+            "viewInstalled": "Paigaldatud",
+            "viewRecentlyPlayed": "Hiljuti mängitud",
+            "wontRun": "Ei käivitu"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} / {{total}}"
+        },
+        "no_no_store_page_games": "Sinu teegis pole ühtegi mängu ilma poeleheta",
+        "noStorePage": "Poeleht puudub",
+        "steamSync": {
+            "failedBody": "Teie teised teegid on endiselt saadaval. Proovige uuesti või kontrollige, kas Steam on kättesaadav."
+        },
+        "storeOther": "Muu"
+    },
+    "login": {
+        "connected": "Ühendatud",
+        "humble_dialog_title": "Logi sisse Humble Bundle'isse",
+        "logoutFailedTitle": "Väljalogimine pole lõpetatud",
+        "steam_logout_failed_title": "Väljalogimine ebaõnnestus",
+        "steamReconnect": "Sisselogimine aegunud — Ühenda uuesti"
+    },
+    "pathSelectionBox": {
+        "saved": "Salvestatud",
+        "unsaved": "Veel salvestamata — vajutage Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Ebaõnnestus",
+            "retry": "Proovi uuesti"
+        }
+    },
+    "redeemSteamKey": {
+        "redeem": "Aktiveeri",
+        "redeeming": "Aktiveerimine...",
+        "viewInLibrary": "Vaata teegis"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay pole selles versioonis saadaval",
+            "unavailableDetail": "EOS Overlay tugi on lükatud edasi järgmisesse versiooni (D-03, Phase 34.6) ning seda ei saa selles versioonis paigaldada, uuendada ega eemaldada."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Paigaldada EOS Overlay kohe?",
+        "eosOverlayInstallConfirmTitle": "Kinnita overlay paigaldamine",
+        "eosOverlayUpdateConfirmBody": "Uuendada EOS Overlay uusimale versioonile?",
+        "eosOverlayUpdateConfirmTitle": "Kinnita overlay uuendamine",
+        "framelessWindowDescription": "Kasuta raamita akent",
+        "gamepadInitialRepeatDelay": "Mängupuldi sisendi esmase kordamise viivitus",
+        "gamepadRepeatFrequency": "Mängupuldi sisendi kordamise sagedus",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Suurendamise meetod",
+        "gamescopeWindowType": "Akna tüüp",
+        "loginBackground": "Kontode haldamise taustapilt",
+        "loginBackgroundDialogTitle": "Vali taustapilt",
+        "loginBackgroundFilterName": "Pildid",
+        "loginBackgroundHelp": "Pilt, mis kuvatakse kontode haldamise ekraani taga. Tühjendage väli, et naasta kaasasoleva pildi juurde. Toetatud on PNG, JPEG, WebP, AVIF ja GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Pole selle versiooniga saadaval"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB kujunduse tugi lisatakse tulevases versioonis (D-03, faas 34.6) ning seda ei saa selles versioonis seadistada."
+            }
+        },
+        "wineDefaultLabel": "Wine vaikeversioon",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Kõik",
+            "appExtension": "Rakendus",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImage failid",
+            "apps": "Rakendused",
+            "executables": "Käivitatavad failid",
+            "images": "Pildid",
+            "otherBinaries": "Muud binaarfailid",
+            "scripts": "Skriptid"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Paigaldusvalikute kontrollimine…"
+    },
+    "steam": {
+        "download": {
+            "error": {
+                "decodeFailed": "Allalaaditud mänguandmeid ei õnnestunud lahti pakkida. See ei ole võrguprobleem."
+            }
+        },
+        "install": {
+            "libraryPrimarySuffix": "vaikimisi",
+            "noCrossoverEngine": "CrossOver paigaldust ei leitud. GameLib seadistab selle paigaldamise alguses.",
+            "withOptionsLabel": "Paigalda valikutega…"
+        },
+        "resumeAvailable": {
+            "notify": "Katkestatud paigaldus mängule {{game}} on valmis jätkamiseks — jätkamiseks klõpsa „Paigalda“"
+        },
+        "status": {
+            "resumeInstall": "Jätka paigaldamist",
+            "resumeInstallHint": "Paigaldamine pooleli — jätkake allalaadimist GameLib'is"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "See eemaldab kõik selle mängu paigaldatud koopiad kõigist paigalduskohtadest. Seda ei saa tagasi võtta.",
+            "removeAllCopiesConfirmTitle": "Eemaldada kõik koopiad?",
+            "removeAllCopiesLabel": "Eemalda kõik koopiad…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB kujundus pole selle versiooniga saadaval"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oaas",
+        "cyberSpaceOasisAlt": "Cyberspace Oaas Klassikaline",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Suur kontrastsus",
+        "marine": "Marine",
+        "marineClassic": "Marine Klassikaline",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Vana Kooli GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Klassikaline"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Sisselogimist ei saa veel lõpetada: {{channel}} pole sellesse versiooni üle kantud. See lisandub faasis 34.5.",
+                "heading": "Sisselogimine teenusesse {{runner}} pole veel ühendatud",
+                "headingGeneric": "Sisselogimine pole veel ühendatud"
+            },
+            "humble": {
+                "body": "Sisselogimisaken on avatud. Lõpeta sisselogimine seal — see leht uueneb automaatselt pärast õnnestumist.",
+                "error": {
+                    "window_unreachable": "Humble Bundle'i sisselogimisaken sulgus või polnud ligipääsetav"
+                },
+                "heading": "Sisselogimine Humble Bundle'isse"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Sisselogimisaken on avatud. Lõpeta sisselogimine seal.",
+                    "heading": "Sisselogimine teenusesse {{runner}}",
+                    "headingGeneric": "Sisselogimine"
+                },
+                "blocked": {
+                    "body": "Sinu sisselogimine salvestati edukalt, kuid {{channel}} taustakanal pole sellesse versiooni üle kantud. See lisandub faasis 34.5.",
+                    "heading": "Sisselogimine teenusesse {{runner}} salvestati, kuid ei saa veel lõpetada",
+                    "headingGeneric": "Sisselogimine salvestati, kuid ei saa veel lõpetada"
+                },
+                "cancelled": {
+                    "body": "Sisselogimisaken suleti enne lõpetamist. Võid uuesti proovida.",
+                    "heading": "Sisselogimine teenusesse {{runner}} tühistati",
+                    "headingGeneric": "Sisselogimine tühistati"
+                },
+                "error": {
+                    "body": "Sisselogimisel läks midagi valesti: {{message}}",
+                    "heading": "Sisselogimine teenusesse {{runner}} ebaõnnestus",
+                    "headingGeneric": "Sisselogimine ebaõnnestus"
+                },
+                "finalizing": {
+                    "body": "Sisselogimine salvestatud. Vahetuse lõpuleviimine poega — see võib võtta paar sekundit.",
+                    "heading": "Sisselogimise lõpuleviimine teenusega {{runner}}…",
+                    "headingGeneric": "Sisselogimise lõpuleviimine…"
+                },
+                "genericChannel": "sisselogimiskanal",
+                "preparing": {
+                    "body": "Poe sisselogimisakent valmistatakse ette ja see avaneb varsti.",
+                    "heading": "Sisselogimise ettevalmistamine teenusega {{runner}}…",
+                    "headingGeneric": "Sisselogimise ettevalmistamine…"
+                },
+                "retry": "Proovi uuesti",
+                "timeout": {
+                    "body": "Sisselogimisaken võttis lõpuleviimiseks liiga kaua aega. Võid uuesti proovida.",
+                    "heading": "Sisselogimine {{runner}} kontole aegus",
+                    "headingGeneric": "Sisselogimine aegus"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Rakendusesisene poe ja wiki sirvimine pole selles versioonis saadaval"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Winetricks komponentide haldamine pole selles versioonis saadaval",
+        "unavailableDetail": "Winetricks tugi on lükatud edasi järgmisesse väljalaskesse (D-03, faas 34.6) ja seda ei saa selles versioonis loetleda ega paigaldada."
+    }
+}

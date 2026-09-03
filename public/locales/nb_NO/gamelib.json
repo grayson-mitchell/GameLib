@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Om"
+    },
+    "app": {
+        "routeError": "Noe gikk feil: {{detail}}"
+    },
+    "box": {
+        "cancel": "Avbryt",
+        "error": {
+            "install": {
+                "failed": "Installasjonen av {{title}} mislyktes: {{error}}",
+                "signInToSteam": "Logg inn på Steam",
+                "stalled": "Ingen nedlastingsfremgang på {{minutes}} minutter — installasjonen ble stoppet"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib kunne ikke åpne systemets filvelger, så ingenting ble valgt og ingen endringer ble gjort. ({{error}})",
+                "title": "Kunne ikke åpne filvelgeren"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Installer på nytt via CrossOver",
+                "message": "Dette spillets macOS-versjon er kun 32-bit og kan ikke kjøres på denne versjonen av macOS. GameLib kan installere det på nytt via CrossOver i stedet, noe som laster ned Windows-versjonen på nytt.",
+                "title": "32-bit macOS-versjon oppdaget"
+            }
+        }
+    },
+    "button": {
+        "close": "Lukk",
+        "paste": "Lim inn"
+    },
+    "consoleMode": {
+        "installNext": "Neste",
+        "installPrevious": "Forrige",
+        "sortAscending": "A → Å",
+        "sortDescending": "Å → A",
+        "steamInstallBlockedTitle": "Kan ikke starte denne installasjonen",
+        "steamInstallLibraryFull": "Det er ikke nok ledig plass i Steam-biblioteksmappen din. Frigjør plass og prøv igjen.",
+        "steamInstallLibraryMissing": "Steam-biblioteksmappen din er ikke tilgjengelig akkurat nå. Koble til stasjonen igjen og prøv på nytt."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Pauset"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "SteamGridDB-bildesøk er ikke tilgjengelig i denne versjonen."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Ikke vurdert",
+        "etaPrefix": "Estimert tid: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic og HowLongToBeat hadde ingenting om denne titlen.",
+        "extraInfoEmptyTitle": "Ingen tilleggsinfo funnet",
+        "extraInfoErrorBody": "Oppslaget mislyktes, noe som ikke er det samme som at spillet ikke har data. Prøv igjen.",
+        "extraInfoErrorTitle": "Kunne ikke laste tilleggsinfo",
+        "extraInfoRetry": "Prøv igjen",
+        "extraInfoStaleBody": "Dette resultatet ble hurtiglagret før lasteutfall ble registrert, så det kan være utdatert. Oppdater for å kontrollere.",
+        "tabsAriaLabel": "faner for spillinfo",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "mindre enn ett minutt"
+    },
+    "humbleKeys": {
+        "activate": "Aktiver",
+        "activateConfirmBody": "Dette avslører nøkkelen — og fjerner den for godt fra Giftable-reservene — og løser den inn på Steam-kontoen din. Dette kan ikke angres.",
+        "activateConfirmBodyRevealed": "Dette løser inn den allerede avslørte nøkkelen på Steam-kontoen din. Dette kan ikke angres.",
+        "activateConfirmTitle": "Aktivere denne nøkkelen på Steam?",
+        "activatedDone": "Ferdig",
+        "activateDismiss": "Avbryt",
+        "activatedTitle": "Aktivert",
+        "activateWizardTitle": "Aktiver denne nøkkelen",
+        "activatingBody": "Avslører nøkkelen din og løser den inn på Steam — dette tar bare et øyeblikk.",
+        "activatingTitle": "Aktiverer på Steam …"
+    },
+    "info": {
+        "refresh-rating": "Oppdater vurdering"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib kunne ikke importere fra den plasseringen. Kilden må være en fullstendig mappebane uten \"..\"-steg i seg. Velg spillets mappe på nytt.",
+        "pathRejectedBodyMove": "GameLib kunne ikke flytte dette spillet dit. Målet må være en fullstendig mappebane uten \"..\"-steg i seg. Velg målmappen på nytt.",
+        "pathRejectedTitle": "Kan ikke bruke den plasseringen"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Inkluderer skjulte",
+            "chipHiddenOnly": "Kun skjulte",
+            "chipNonAvailableIncluded": "Inkluderer ikke-tilgjengelige",
+            "chipNonAvailableOnly": "Kun ikke-tilgjengelige",
+            "chipNoStorePageHidden": "Skjuler uten butikkside",
+            "chipNoStorePageOnly": "Kun uten butikkside",
+            "clearAll": "Fjern alle",
+            "collections": "Samlinger",
+            "emptyAlphabetLetter": "Begynner med \"{{letter}}\"",
+            "emptyAlphabetNumber": "Begynner med et tall",
+            "emptyBody": "Ingen spill samsvarer med {{filters}}.",
+            "emptyClearAll": "Fjern alle filtre",
+            "emptyHeading": "Ingen spill samsvarer med filtrene dine",
+            "groupSelectedCount": "{{selected}} valgt",
+            "manageCollections": "Administrer samlinger",
+            "moreFilters": "Flere filtre",
+            "newCollection": "+ Ny samling",
+            "noStorePage": "Ingen butikkside",
+            "notYetChecked": "Ikke sjekket ennå",
+            "removeFilter": "Fjern filteret {{filterLabel}}",
+            "runnabilityGroup": "Kjørbarhet",
+            "runsNatively": "Kjører nativt",
+            "runsViaBottle": "Kjører via bottle",
+            "storeGroup": "Butikk",
+            "viewAll": "Alle spill",
+            "viewFavourites": "Favoritter",
+            "viewInstalled": "Installert",
+            "viewRecentlyPlayed": "Nylig spilt",
+            "wontRun": "Vil ikke kjøre"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} av {{total}}"
+        },
+        "no_no_store_page_games": "Ingen spill uten butikkside i biblioteket ditt",
+        "noStorePage": "Ingen butikkside",
+        "steamSync": {
+            "failedBody": "Dine andre biblioteker er fremdeles tilgjengelige. Prøv igjen, eller sjekk at Steam er tilgjengelig.",
+            "failedTitle": "Kunne ikke synkronisere Steam-biblioteket ditt",
+            "retry": "Prøv Steam-synkronisering på nytt",
+            "signedOutAction": "Logg inn på Steam",
+            "signedOutBody": "Logg inn igjen for å synkronisere Steam-biblioteket ditt. Dine andre biblioteker er fremdeles tilgjengelige.",
+            "signedOutTitle": "Steam-innloggingen din er utløpt",
+            "syncing": "Synkroniserer Steam-biblioteket ditt …"
+        },
+        "storeOther": "Annen"
+    },
+    "login": {
+        "connected": "Tilkoblet",
+        "humble_dialog_title": "Logg inn på Humble Bundle",
+        "logoutFailedTitle": "Utlogging ikke fullført",
+        "steam_logout_failed_message": "Utlogging fra Steam ble ikke fullført i tide. Prøv igjen.",
+        "steam_logout_failed_title": "Utlogging mislyktes",
+        "steamReconnect": "Innlogging utløpt — Koble til på nytt"
+    },
+    "pathSelectionBox": {
+        "saved": "Lagret",
+        "unsaved": "Ikke lagret ennå — trykk Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Mislyktes",
+            "retry": "Prøv igjen"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Skriv inn Steam-nøkkelen din",
+        "redeem": "Løs inn",
+        "redeeming": "Løser inn …",
+        "title": "Løs inn en Steam-nøkkel",
+        "viewInLibrary": "Vis i biblioteket"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS-overlegget er ikke tilgjengelig i denne utgaven",
+            "unavailableDetail": "Støtte for EOS-overlegg er utsatt til en fremtidig utgivelse (D-03, fase 34.6) og kan ikke installeres, oppdateres eller fjernes fra denne utgaven."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Installere EOS-overlegget nå?",
+        "eosOverlayInstallConfirmTitle": "Bekreft installasjon av overlegg",
+        "eosOverlayUpdateConfirmBody": "Oppdatere EOS-overlegget til nyeste versjon?",
+        "eosOverlayUpdateConfirmTitle": "Bekreft oppdatering av overlegg",
+        "framelessWindowDescription": "Bruk vindu uten ramme",
+        "gamepadInitialRepeatDelay": "Innledende gjentakelsesforsinkelse for kontrollerinndata",
+        "gamepadRepeatFrequency": "Gjentakelsesfrekvens for kontrollerinndata",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Oppskaleringsmetode",
+        "gamescopeWindowType": "Vindustype",
+        "loginBackground": "Bakgrunn for kontobehandling",
+        "loginBackgroundDialogTitle": "Velg et bakgrunnsbilde",
+        "loginBackgroundFilterName": "Bilder",
+        "loginBackgroundHelp": "Bilde som vises bak skjermen for kontobehandling. Tøm feltet for å gå tilbake til det medfølgende bildet. PNG, JPEG, WebP, AVIF og GIF støttes.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Utilgjengelig i denne versjonen"
+            },
+            "help": {
+                "unavailableDetail": "Støtte for SteamGridDB-illustrasjoner er utsatt til en senere utgivelse (D-03, fase 34.6) og kan ikke konfigureres i denne versjonen."
+            }
+        },
+        "wineDefaultLabel": "Wine-standard",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Løs inn en Steam-nøkkel"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Alle",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Apper",
+            "executables": "Kjørbare filer",
+            "images": "Bilder",
+            "otherBinaries": "Andre binærfiler",
+            "scripts": "Skript"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Sjekker installasjonsalternativer…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib fikk ikke lenger svar om oppsettet av Steam-flasken. Den kan fortsatt kjøre — se etter et Steam-installasjonsvindu, og prøv deretter igjen."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam-serverne avbrøt tilkoblingen.",
+                "decodeFailed": "Nedlastede spilldata kunne ikke pakkes ut. Dette er ikke et nettverksproblem.",
+                "genericV2": "Steam-nedlastingen mislyktes.",
+                "notSignedIn": "Du er ikke logget inn på Steam, så denne nedlastingen kunne ikke starte."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib administrerer én delt CrossOver-flaske for Steam. Å navngi en egen flaske per spill støttes ikke ennå.",
+            "contentLightNotice": "Dette installeres gjennom Steams egen klient, så det er ingenting å velge her. Slå på native Steam-installasjoner i Innstillinger for å administrere installasjonssted og Windows-kompatibilitet fra GameLib.",
+            "contentLightSingleLibraryNotice": "Det finnes bare ett Steam-bibliotek på dette systemet, så det er ingenting å velge her — GameLib installerer dette spillet i det.",
+            "forceWindowsHelp": "Dette spillet har en native macOS-versjon, men du kan installere Windows-versjonen i stedet gjennom en Wine-flaske — nyttig hvis den native versjonen mangler funksjoner eller yter dårligere.",
+            "libraryFullNotice": "Ikke nok plass i Steam-biblioteket ditt — velg et annet nedenfor eller frigjør plass.",
+            "libraryFullOnlyNotice": "Ikke nok plass i Steam-biblioteket ditt. Frigjør plass, og prøv deretter igjen.",
+            "libraryMissingNotice": "Steam-biblioteket ditt kunne ikke nås — velg et annet nedenfor.",
+            "libraryMissingOnlyNotice": "Steam-biblioteket ditt kunne ikke nås. Koble til stasjonen på nytt, og prøv deretter igjen.",
+            "libraryPickerLabel": "Velg Steam-bibliotek",
+            "libraryPrimarySuffix": "standard",
+            "noCrossoverEngine": "Ingen CrossOver-installasjon ble funnet. GameLib setter opp én når installasjonen starter.",
+            "sharedBottleNotice": "Wine-versjonen du velger her, brukes for hvert Steam-spill som trenger en flaske — ikke bare dette. Å endre den senere endrer også hvordan disse spillene kjører.",
+            "withOptionsLabel": "Installer med alternativer…"
+        },
+        "resumeAvailable": {
+            "notify": "En avbrutt installasjon for {{game}} er klar til å gjenopptas — klikk Installer for å fortsette"
+        },
+        "status": {
+            "resumeInstall": "Gjenoppta installasjon",
+            "resumeInstallHint": "Installasjon ufullstendig — gjenoppta nedlastingen i GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Dette fjerner alle installerte kopier av dette spillet på alle installasjonssteder. Dette kan ikke angres.",
+            "removeAllCopiesConfirmTitle": "Fjerne alle kopier?",
+            "removeAllCopiesLabel": "Fjern alle kopier…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB-illustrasjoner er utilgjengelig i denne versjonen"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Høy kontrast",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Gammeldags GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Innloggingen din kan ikke fullføres ennå: {{channel}} er ikke portet til denne versjonen. Dette kommer i fase 34.5.",
+                "heading": "Innlogging til {{runner}} er ikke koblet opp ennå",
+                "headingGeneric": "Innlogging er ikke koblet opp ennå"
+            },
+            "humble": {
+                "body": "Et innloggingsvindu har åpnet seg. Fullfør innloggingen der — denne siden oppdateres automatisk når det lykkes.",
+                "error": {
+                    "window_unreachable": "Humble Bundle-innloggingsvinduet ble lukket eller kunne ikke nås"
+                },
+                "heading": "Logger inn på Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Et innloggingsvindu har åpnet seg. Fullfør innloggingen der.",
+                    "heading": "Logger inn på {{runner}}",
+                    "headingGeneric": "Logger inn"
+                },
+                "blocked": {
+                    "body": "Innloggingen din ble registrert, men backend-kanalen {{channel}} er ikke portet til denne versjonen ennå. Dette kommer i fase 34.5.",
+                    "heading": "Innlogging til {{runner}} ble registrert, men kan ikke fullføres ennå",
+                    "headingGeneric": "Innlogging ble registrert, men kan ikke fullføres ennå"
+                },
+                "cancelled": {
+                    "body": "Innloggingsvinduet ble lukket før innloggingen ble fullført. Du kan prøve igjen.",
+                    "heading": "Innlogging til {{runner}} ble avbrutt",
+                    "headingGeneric": "Innlogging ble avbrutt"
+                },
+                "error": {
+                    "body": "Noe gikk galt under innloggingen: {{message}}",
+                    "heading": "Innlogging til {{runner}} mislyktes",
+                    "headingGeneric": "Innlogging mislyktes"
+                },
+                "finalizing": {
+                    "body": "Innlogging registrert. Fullfører utvekslingen med butikken — dette kan ta noen sekunder.",
+                    "heading": "Fullfører innlogging med {{runner}}…",
+                    "headingGeneric": "Fullfører innlogging…"
+                },
+                "genericChannel": "innloggingskanalen",
+                "preparing": {
+                    "body": "Butikkens innloggingsvindu blir klargjort og åpnes snart.",
+                    "heading": "Klargjør innlogging til {{runner}}…",
+                    "headingGeneric": "Klargjør innlogging…"
+                },
+                "retry": "Prøv igjen",
+                "timeout": {
+                    "body": "Innloggingsvinduet brukte for lang tid på å fullføres. Du kan prøve igjen.",
+                    "heading": "Innlogging til {{runner}} ble tidsavbrutt",
+                    "headingGeneric": "Innlogging ble tidsavbrutt"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Bla­dring i butikk og wiki i appen er ikke tilgjengelig i dette bygget"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Håndtering av Winetricks-komponenter er ikke tilgjengelig i dette bygget",
+        "unavailableDetail": "Støtte for Winetricks er utsatt til en fremtidig utgivelse (D-03, fase 34.6) og kan ikke listes eller installeres fra dette bygget."
+    }
+}

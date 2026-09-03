@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "შესახებ"
+    },
+    "app": {
+        "routeError": "რაღაც შეცდომა მოხდა: {{detail}}"
+    },
+    "box": {
+        "cancel": "გაუქმება",
+        "error": {
+            "install": {
+                "failed": "{{title}}-ის ინსტალაცია ვერ მოხერხდა: {{error}}",
+                "signInToSteam": "შედით Steam-ში",
+                "stalled": "ჩამოტვირთვა არ მიმდინარეობს {{minutes}} წუთის განმავლობაში — ინსტალაცია შეჩერდა"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib-მა ვერ გახსნა სისტემური ფაილის ამომრჩევი, ამიტომ არაფერი შეირჩა და ცვლილებები არ განხორციელებულა. ({{error}})",
+                "title": "ფაილის ამომრჩევის გახსნა ვერ მოხერხდა"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "ხელახლა დაინსტალირება CrossOver-ის მეშვეობით",
+                "message": "ამ თამაშის macOS ვერსია მხოლოდ 32-ბიტიანია და ვერ გაეშვება macOS-ის ამ ვერსიაზე. GameLib-ს შეუძლია მისი ხელახლა დაინსტალირება CrossOver-ის მეშვეობით, რაც თავიდან ჩამოტვირთავს Windows ვერსიას.",
+                "title": "აღმოჩენილია 32-ბიტიანი macOS ვერსია"
+            }
+        }
+    },
+    "button": {
+        "close": "დახურვა",
+        "paste": "ჩასმა"
+    },
+    "consoleMode": {
+        "installNext": "შემდეგი",
+        "installPrevious": "წინა",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "ამ ინსტალაციის დაწყება შეუძლებელია",
+        "steamInstallLibraryFull": "თქვენს Steam ბიბლიოთეკის საქაღალდეში საკმარისი თავისუფალი ადგილი არ არის. გაათავისუფლეთ ადგილი და სცადეთ ხელახლა.",
+        "steamInstallLibraryMissing": "თქვენი Steam ბიბლიოთეკის საქაღალდე ამჟამად ხელმისაწვდომი არ არის. დააკავშირეთ დისკი და სცადეთ ხელახლა."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "შეჩერებულია"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "SteamGridDB-ის გრაფიკის ძიება მიუწვდომელია ამ ვერსიაზე."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "არარეიტინგული",
+        "etaPrefix": "დარჩენილია: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic-ს, OpenCritic-ს და HowLongToBeat-ს ამ სათაურზე არაფერი ჰქონდა.",
+        "extraInfoEmptyTitle": "დამატებითი ინფორმაცია ვერ მოიძებნა",
+        "extraInfoErrorBody": "ძიება ვერ მოხერხდა, რაც არ ნიშნავს, რომ ამ თამაშს მონაცემები არ გააჩნია. სცადეთ ხელახლა.",
+        "extraInfoErrorTitle": "დამატებითი ინფორმაციის ჩატვირთვა ვერ მოხერხდა",
+        "extraInfoRetry": "ხელახლა ცდა",
+        "extraInfoStaleBody": "ეს შედეგი ქეშირებულია ჩატვირთვის შედეგების ჩაწერამდე, ამიტომ შეიძლება მოძველებული იყოს. განაახლეთ შესამოწმებლად.",
+        "tabsAriaLabel": "თამაშის ინფორმაციის ჩანართები",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "ერთ წუთზე ნაკლები"
+    },
+    "humbleKeys": {
+        "activate": "გააქტიურება",
+        "activateConfirmBody": "ეს ჩვენებს გასაღებს — სამუდამოდ ხსნის მას Giftable სათადარიგოებიდან — და ააქტიურებს თქვენს Steam ანგარიშზე. გაუქმება შეუძლებელია.",
+        "activateConfirmBodyRevealed": "ეს ააქტიურებს თქვენს უკვე გამოჩენილ გასაღებს თქვენს Steam ანგარიშზე. გაუქმება შეუძლებელია.",
+        "activateConfirmTitle": "გავააქტიუროთ ეს გასაღები Steam-ზე?",
+        "activatedDone": "მზადაა",
+        "activateDismiss": "გაუქმება",
+        "activatedTitle": "გააქტიურებულია",
+        "activateWizardTitle": "ამ გასაღების გააქტიურება",
+        "activatingBody": "თქვენი გასაღების გამოვლენა და Steam-ზე გამოსყიდვა — ეს მხოლოდ ერთ წამს წაიღებს.",
+        "activatingTitle": "Steam-ზე გააქტიურება…"
+    },
+    "info": {
+        "refresh-rating": "რეიტინგის განახლება"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib-მა ვერ შეძლო ამ მდებარეობიდან იმპორტი. წყარო უნდა იყოს სრული საქაღალდის ბილიკი, რომელშიც არ არის \"..\" ნაბიჯები. კვლავ აირჩიეთ თამაშის საქაღალდე.",
+        "pathRejectedBodyMove": "GameLib-მა ვერ შეძლო ამ თამაშის იქ გადატანა. დანიშნულების ადგილი უნდა იყოს სრული საქაღალდის ბილიკი, რომელშიც არ არის \"..\" ნაბიჯები. კვლავ აირჩიეთ დანიშნულების საქაღალდე.",
+        "pathRejectedTitle": "ამ მდებარეობის გამოყენება შეუძლებელია"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "დამალულის ჩათვლით",
+            "chipHiddenOnly": "მხოლოდ დამალული",
+            "chipNonAvailableIncluded": "მიუწვდომელის ჩათვლით",
+            "chipNonAvailableOnly": "მხოლოდ მიუწვდომელი",
+            "chipNoStorePageHidden": "მაღაზიის გვერდის გარეშეების დამალვა",
+            "chipNoStorePageOnly": "მხოლოდ მაღაზიის გვერდის გარეშე",
+            "clearAll": "ყველას გასუფთავება",
+            "collections": "კოლექციები",
+            "emptyAlphabetLetter": "იწყება \"{{letter}}\"-ით",
+            "emptyAlphabetNumber": "იწყება ციფრით",
+            "emptyBody": "არცერთი თამაში არ ემთხვევა {{filters}}.",
+            "emptyClearAll": "ყველა ფილტრის გასუფთავება",
+            "emptyHeading": "არცერთი თამაში არ ემთხვევა თქვენს ფილტრებს",
+            "groupSelectedCount": "არჩეულია {{selected}}",
+            "manageCollections": "კოლექციების მართვა",
+            "moreFilters": "მეტი ფილტრი",
+            "newCollection": "+ ახალი კოლექცია",
+            "noStorePage": "მაღაზიის გვერდის გარეშე",
+            "notYetChecked": "ჯერ არ არის შემოწმებული",
+            "removeFilter": "{{filterLabel}} ფილტრის წაშლა",
+            "runnabilityGroup": "გაშვების შესაძლებლობა",
+            "runsNatively": "მუშაობს ბუნებრივად",
+            "runsViaBottle": "მუშაობს bottle-ის საშუალებით",
+            "storeGroup": "მაღაზია",
+            "viewAll": "ყველა თამაში",
+            "viewFavourites": "რჩეულები",
+            "viewInstalled": "დაყენებულია",
+            "viewRecentlyPlayed": "ბოლოს ნათამაშები",
+            "wontRun": "არ გაეშვება"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} / {{total}}"
+        },
+        "no_no_store_page_games": "თქვენს ბიბლიოთეკაში მაღაზიის გვერდის გარეშე თამაშები არ არის",
+        "noStorePage": "მაღაზიის გვერდის გარეშე",
+        "steamSync": {
+            "failedBody": "თქვენი სხვა ბიბლიოთეკები კვლავ ხელმისაწვდომია. სცადეთ ხელახლა ან შეამოწმეთ, ხელმისაწვდომია თუ არა Steam.",
+            "failedTitle": "თქვენი Steam ბიბლიოთეკის სინქრონიზაცია ვერ მოხერხდა",
+            "retry": "Steam სინქრონიზაციის გამეორება",
+            "signedOutAction": "შედით Steam-ში",
+            "signedOutBody": "შედით ხელახლა, რომ დაასინქრონოთ თქვენი Steam ბიბლიოთეკა. თქვენი სხვა ბიბლიოთეკები კვლავ ხელმისაწვდომია.",
+            "signedOutTitle": "თქვენი Steam შესვლის ვადა ამოიწურა",
+            "syncing": "თქვენი Steam ბიბლიოთეკის სინქრონიზაცია…"
+        },
+        "storeOther": "სხვა"
+    },
+    "login": {
+        "connected": "დაკავშირებულია",
+        "humble_dialog_title": "შედით Humble Bundle-ში",
+        "logoutFailedTitle": "გამოსვლა ბოლომდე არ დასრულებულა",
+        "steam_logout_failed_message": "Steam-იდან გამოსვლა დროულად ვერ დასრულდა. გთხოვთ, სცადოთ ხელახლა.",
+        "steam_logout_failed_title": "გამოსვლა ვერ მოხერხდა",
+        "steamReconnect": "შესვლის ვადა ამოიწურა — ხელახლა დაკავშირება"
+    },
+    "pathSelectionBox": {
+        "saved": "შენახულია",
+        "unsaved": "ჯერ არ არის შენახული — დააჭირეთ Enter-ს"
+    },
+    "queue": {
+        "label": {
+            "failed": "ვერ შესრულდა",
+            "retry": "გამეორება"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "შეიყვანეთ თქვენი Steam გასაღები",
+        "redeem": "გააქტიურება",
+        "redeeming": "ხდება გააქტიურება...",
+        "title": "Steam გასაღების გააქტიურება",
+        "viewInLibrary": "ბიბლიოთეკაში ნახვა"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay ხელმისაწვდომი არ არის ამ ვერსიაში",
+            "unavailableDetail": "EOS Overlay-ის მხარდაჭერა გადატანილია მომავალ გამოშვებაზე (D-03, Phase 34.6) და მისი დაყენება, განახლება ან წაშლა ამ ვერსიაში შეუძლებელია."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "დავაყენოთ EOS Overlay ახლა?",
+        "eosOverlayInstallConfirmTitle": "დაადასტურეთ overlay-ის დაყენება",
+        "eosOverlayUpdateConfirmBody": "განვაახლოთ EOS Overlay უახლეს ვერსიამდე?",
+        "eosOverlayUpdateConfirmTitle": "დაადასტურეთ overlay-ის განახლება",
+        "framelessWindowDescription": "ჩარჩოს გარეშე ფანჯრის გამოყენება",
+        "gamepadInitialRepeatDelay": "გეიმპედის შეყვანის საწყისი გამეორების დაყოვნება",
+        "gamepadRepeatFrequency": "გეიმპედის შეყვანის გამეორების სიხშირე",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "აღრმავების მეთოდი",
+        "gamescopeWindowType": "ფანჯრის ტიპი",
+        "loginBackground": "ანგარიშების მართვის ფონი",
+        "loginBackgroundDialogTitle": "აირჩიეთ ფონის სურათი",
+        "loginBackgroundFilterName": "სურათები",
+        "loginBackgroundHelp": "სურათი, რომელიც ჩანს ანგარიშების მართვის ეკრანის უკან. გაასუფთავეთ ველი, რომ დაუბრუნდეთ ჩაშენებულ გრაფიკას. მხარდაჭერილია PNG, JPEG, WebP, AVIF და GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "მიუწვდომელია ამ ბილდზე"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB-ის საილუსტრაციო მასალის მხარდაჭერა გადატანილია მომავალ ვერსიაზე (D-03, ფაზა 34.6) და ამ ბილდიდან მისი კონფიგურირება შეუძლებელია."
+            }
+        },
+        "wineDefaultLabel": "Wine-ის ნაგულისხმევი",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Steam-ის გასაღების გააქტიურება"
+    },
+    "sideload": {
+        "filter": {
+            "all": "ყველა",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImage ფაილები",
+            "apps": "აპლიკაციები",
+            "executables": "გამშვები ფაილები",
+            "images": "სურათები",
+            "otherBinaries": "სხვა ბინარული ფაილები",
+            "scripts": "სკრიპტები"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "ინსტალაციის ვარიანტების შემოწმება…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib-მა შეწყვიტა Steam bottle-ის დაყენების პასუხების მიღება. შესაძლოა ის ჯერ კიდევ მუშაობს — შეამოწმეთ Steam-ის ინსტალერის ფანჯარა და კვლავ სცადეთ."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam-ის სერვერებმა კავშირი გაწყვიტეს.",
+                "decodeFailed": "ჩამოტვირთული თამაშის მონაცემების გახსნა ვერ მოხერხდა. ეს ქსელის პრობლემა არ არის.",
+                "genericV2": "Steam-იდან ჩამოტვირთვა ვერ შესრულდა.",
+                "notSignedIn": "თქვენ არ ხართ შესული Steam-ში, ამიტომ ეს ჩამოტვირთვა ვერ დაიწყო."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib მართავს ერთ საერთო CrossOver bottle-ს Steam-ისთვის. ცალკე bottle-ის დასახელება თითოეული თამაშისთვის ჯერ არ არის მხარდაჭერილი.",
+            "contentLightNotice": "ეს ინსტალაცია ხდება Steam-ის საკუთარი კლიენტის საშუალებით, ამიტომ აქ არჩევანი არ არსებობს. ჩართეთ Steam-ის ნატიური ინსტალაცია პარამეტრებში, რომ დაყენების მდებარეობა და Windows-თან თავსებადობა GameLib-იდან მართოთ.",
+            "contentLightSingleLibraryNotice": "ამ სისტემაზე მხოლოდ ერთი Steam-ის ბიბლიოთეკაა, ამიტომ აქ არჩევანი არ არსებობს — GameLib დააინსტალირებს ამ თამაშს მასში.",
+            "forceWindowsHelp": "ამ თამაშს აქვს ნატიური macOS ვერსია, მაგრამ შეგიძლიათ ამის ნაცვლად დააინსტალიროთ Windows ვერსია Wine bottle-ის საშუალებით — ეს სასარგებლოა, თუ ნატიურ ვერსიას აკლია ფუნქციები ან უარესად მუშაობს.",
+            "libraryFullNotice": "თქვენს Steam-ის ბიბლიოთეკაში საკმარისი ადგილი არ არის — აირჩიეთ სხვა ქვემოთ ან გაათავისუფლეთ ადგილი.",
+            "libraryFullOnlyNotice": "თქვენს Steam-ის ბიბლიოთეკაში საკმარისი ადგილი არ არის. გაათავისუფლეთ ადგილი და კვლავ სცადეთ.",
+            "libraryMissingNotice": "თქვენს Steam-ის ბიბლიოთეკასთან წვდომა ვერ მოხერხდა — აირჩიეთ სხვა ქვემოთ.",
+            "libraryMissingOnlyNotice": "თქვენს Steam-ის ბიბლიოთეკასთან წვდომა ვერ მოხერხდა. თავიდან დააკავშირეთ დისკი და კვლავ სცადეთ.",
+            "libraryPickerLabel": "აირჩიეთ Steam-ის ბიბლიოთეკა",
+            "libraryPrimarySuffix": "ნაგულისხმევი",
+            "noCrossoverEngine": "CrossOver-ის ინსტალაცია ვერ მოიძებნა. GameLib დააყენებს მას ინსტალაციის დაწყებისას.",
+            "sharedBottleNotice": "აქ არჩეული wine-ის ვერსია გამოიყენება ყველა Steam-ის თამაშისთვის, რომელსაც bottle სჭირდება — არა მხოლოდ ამისთვის. მისი შეცვლა მოგვიანებით ასევე შეცვლის იმ თამაშების მუშაობის წესსაც.",
+            "withOptionsLabel": "ინსტალაცია პარამეტრებით…"
+        },
+        "resumeAvailable": {
+            "notify": "{{game}}-ის შეწყვეტილი ინსტალაცია მზადაა გასაგრძელებლად — გასაგრძელებლად დააჭირეთ „დაინსტალირება“"
+        },
+        "status": {
+            "resumeInstall": "ინსტალაციის გაგრძელება",
+            "resumeInstallHint": "ინსტალაცია არასრულია — გააგრძელეთ ჩამოტვირთვა GameLib-ში"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "ეს წაშლის ამ თამაშის ყველა დაინსტალირებულ ასლს ყველა ინსტალაციის მდებარეობიდან. ამის დაბრუნება შეუძლებელია.",
+            "removeAllCopiesConfirmTitle": "წავშალო ყველა ასლი?",
+            "removeAllCopiesLabel": "ყველა ასლის წაშლა…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB-ის საილუსტრაციო მასალა მიუწვდომელია ამ ბილდზე"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "კიბერსივრცის ოაზისი",
+        "cyberSpaceOasisAlt": "კიბერსივრცის ოაზისი კლასიკური",
+        "dracula": "დრაკულა",
+        "gruvboxDark": "Gruvbox მუქი",
+        "highContrast": "მაღალი კონტრასტი",
+        "marine": "საზღვაო",
+        "marineClassic": "საზღვაო კლასიკური",
+        "midnightMirage": "შუაღამის მირაჟი",
+        "nordDark": "Nord მუქი",
+        "nordLight": "Nord ღია",
+        "oldSchool": "ძველებური GameLib",
+        "sweet": "ტკბილი",
+        "zombie": "ზომბი",
+        "zombieClassic": "ზომბი კლასიკური"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "თქვენი შესვლის დასრულება ჯერ არ არის შესაძლებელი: {{channel}} ჯერ არ არის პორტირებული ამ ვერსიაზე. ეს დაემატება ეტაპ 34.5-ში.",
+                "heading": "{{runner}}-ში შესვლა ჯერ არ არის მოწყობილი",
+                "headingGeneric": "შესვლა ჯერ არ არის მოწყობილი"
+            },
+            "humble": {
+                "body": "შესვლის ფანჯარა გაიხსნა. დაასრულეთ შესვლა იქ — ეს გვერდი ავტომატურად განახლდება წარმატების შემდეგ.",
+                "error": {
+                    "window_unreachable": "Humble-ის შესვლის ფანჯარა დაიხურა ან მიუწვდომელი აღმოჩნდა"
+                },
+                "heading": "Humble Bundle-ში შესვლა"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "შესვლის ფანჯარა გაიხსნა. დაასრულეთ შესვლა იქ.",
+                    "heading": "{{runner}}-ში შესვლა",
+                    "headingGeneric": "შესვლა მიმდინარეობს"
+                },
+                "blocked": {
+                    "body": "თქვენი შესვლა წარმატებით დაფიქსირდა, მაგრამ {{channel}} ბექენდის არხი ჯერ არ არის პორტირებული ამ ვერსიაზე. ეს დაემატება ეტაპ 34.5-ში.",
+                    "heading": "{{runner}}-ში შესვლა დაფიქსირდა, მაგრამ ვერ დასრულდება ჯერ",
+                    "headingGeneric": "შესვლა დაფიქსირდა, მაგრამ ვერ დასრულდება ჯერ"
+                },
+                "cancelled": {
+                    "body": "შესვლის ფანჯარა დაიხურა დასრულებამდე. შეგიძლიათ ხელახლა სცადოთ.",
+                    "heading": "{{runner}}-ში შესვლა გაუქმდა",
+                    "headingGeneric": "შესვლა გაუქმდა"
+                },
+                "error": {
+                    "body": "შესვლისას რაღაც შეცდომა მოხდა: {{message}}",
+                    "heading": "{{runner}}-ში შესვლა ვერ მოხერხდა",
+                    "headingGeneric": "შესვლა ვერ მოხერხდა"
+                },
+                "finalizing": {
+                    "body": "შესვლა დაფიქსირდა. მიმდინარეობს მაღაზიასთან გაცვლის დასრულება — ამას შეიძლება რამდენიმე წამი დასჭირდეს.",
+                    "heading": "{{runner}}-თან შესვლის დასრულება…",
+                    "headingGeneric": "შესვლის დასრულება…"
+                },
+                "genericChannel": "შესვლის არხი",
+                "preparing": {
+                    "body": "მაღაზიის შესვლის ფანჯარა მზადდება და მალე გაიხსნება.",
+                    "heading": "{{runner}}-ში შესვლის მომზადება…",
+                    "headingGeneric": "შესვლის მომზადება…"
+                },
+                "retry": "ხელახლა ცდა",
+                "timeout": {
+                    "body": "შესვლის ფანჯარამ დასრულებას მეტისმეტად დიდი დრო მოანდომა. შეგიძლიათ ხელახლა სცადოთ.",
+                    "heading": "{{runner}}-ში შესვლის დრო ამოიწურა",
+                    "headingGeneric": "შესვლის დრო ამოიწურა"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "აპლიკაციაში მაღაზიისა და ვიკის დათვალიერება ამ ვერსიაზე მიუწვდომელია"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Winetricks კომპონენტების მართვა ამ ვერსიაზე მიუწვდომელია",
+        "unavailableDetail": "Winetricks-ის მხარდაჭერა გადადებულია მომავალ გამოშვებამდე (D-03, ფაზა 34.6) და ამ ვერსიიდან მისი ჩამონათვალის ნახვა ან დაყენება შეუძლებელია."
+    }
+}

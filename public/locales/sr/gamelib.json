@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "О томе"
+    },
+    "app": {
+        "routeError": "Нешто је пошло по злу: {{detail}}"
+    },
+    "box": {
+        "cancel": "Откажи",
+        "error": {
+            "install": {
+                "failed": "Инсталација {{title}} није успела: {{error}}",
+                "signInToSteam": "Пријави се на Steam",
+                "stalled": "Нема напретка преузимања {{minutes}} минута — инсталација је заустављена"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib није могао да отвори системски бирач датотека, тако да ништа није изабрано и нису направљене никакве измене. ({{error}})",
+                "title": "Није могуће отворити бирач датотека"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Реинсталирај преко CrossOver",
+                "message": "macOS издање ове игре је искључиво 32-битно и не може да ради на овој верзији macOS. GameLib уместо тога може да је реинсталира преко CrossOver, што ће поново преузети Windows верзију.",
+                "title": "Откривено 32-битно macOS издање"
+            }
+        }
+    },
+    "button": {
+        "close": "Затвори",
+        "paste": "Налепи"
+    },
+    "consoleMode": {
+        "installNext": "Следеће",
+        "installPrevious": "Претходно",
+        "sortAscending": "А → Ш",
+        "sortDescending": "Ш → А",
+        "steamInstallBlockedTitle": "Ова инсталација не може да се покрене",
+        "steamInstallLibraryFull": "Нема довољно слободног простора у фасцикли Steam библиотеке. Ослободите простор и покушајте поново.",
+        "steamInstallLibraryMissing": "Фасцикла ваше Steam библиотеке тренутно није доступна. Поново повежите диск и покушајте поново."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Паузирано"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Претрага графике SteamGridDB није доступна у овом издању."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Без оцене",
+        "etaPrefix": "Преостало време: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic и HowLongToBeat нису имали ништа за овај наслов.",
+        "extraInfoEmptyTitle": "Нема додатних информација",
+        "extraInfoErrorBody": "Претрага није успела, што није исто као да игра нема податке. Покушајте поново.",
+        "extraInfoErrorTitle": "Није могуће учитати додатне информације",
+        "extraInfoRetry": "Покушај поново",
+        "extraInfoStaleBody": "Овај резултат је кеширан пре него што су резултати учитавања забележени, па може бити застарео. Освежите да бисте проверили.",
+        "tabsAriaLabel": "картице информација о игри",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "мање од минута"
+    },
+    "humbleKeys": {
+        "activate": "Активирај",
+        "activateConfirmBody": "Ово открива кључ — трајно га уклањајући из Giftable резерви — и искоришћава га на вашем Steam налогу. Нема повратка.",
+        "activateConfirmBodyRevealed": "Ово искоришћава ваш већ откривени кључ на вашем Steam налогу. Нема повратка.",
+        "activateConfirmTitle": "Активирати овај кључ на Steam-у?",
+        "activatedDone": "Готово",
+        "activateDismiss": "Откажи",
+        "activatedTitle": "Активирано",
+        "activateWizardTitle": "Активирај овај кључ",
+        "activatingBody": "Откривамо ваш кључ и активирамо га на Steam-у — ово траје само тренутак.",
+        "activatingTitle": "Активирање на Steam-у…"
+    },
+    "info": {
+        "refresh-rating": "Освежи оцену"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib није успео да увезе са те локације. Извор мора бити пуна путања до фасцикле без \"..\" корака у њој. Изаберите фасциклу игре поново.",
+        "pathRejectedBodyMove": "GameLib није успео да premesti ovu igru tamo. Одредиште мора бити пуна путања до фасцикле без \"..\" корака у њој. Изаберите одредишну фасциклу поново.",
+        "pathRejectedTitle": "Ta lokacija ne može da se koristi"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Укључујући скривене",
+            "chipHiddenOnly": "Само скривене",
+            "chipNonAvailableIncluded": "Укључујући недоступне",
+            "chipNonAvailableOnly": "Само недоступне",
+            "chipNoStorePageHidden": "Скривање без странице продавнице",
+            "chipNoStorePageOnly": "Само без странице продавнице",
+            "clearAll": "Обриши све",
+            "collections": "Колекције",
+            "emptyAlphabetLetter": "Почиње на „{{letter}}”",
+            "emptyAlphabetNumber": "Почиње бројем",
+            "emptyBody": "Ниједна игра се не подудара са {{filters}}.",
+            "emptyClearAll": "Обриши све филтере",
+            "emptyHeading": "Ниједна игра се не подудара са вашим филтерима",
+            "groupSelectedCount": "Изабрано: {{selected}}",
+            "manageCollections": "Управљај колекцијама",
+            "moreFilters": "Још филтера",
+            "newCollection": "+ Нова колекција",
+            "noStorePage": "Без странице продавнице",
+            "notYetChecked": "Још није проверено",
+            "removeFilter": "Уклони филтер {{filterLabel}}",
+            "runnabilityGroup": "Могућност покретања",
+            "runsNatively": "Покреће се природно",
+            "runsViaBottle": "Покреће се преко bottle-а",
+            "storeGroup": "Продавница",
+            "viewAll": "Све игре",
+            "viewFavourites": "Омиљено",
+            "viewInstalled": "Инсталирано",
+            "viewRecentlyPlayed": "Недавно играно",
+            "wontRun": "Неће се покренути"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} од {{total}}"
+        },
+        "no_no_store_page_games": "Нема игара без странице продавнице у вашој библиотеци",
+        "noStorePage": "Без странице продавнице",
+        "steamSync": {
+            "failedBody": "Ваше остале библиотеке су и даље доступне. Покушајте поново или проверите да ли је Steam доступан.",
+            "failedTitle": "Синхронизација Steam библиотеке није успела",
+            "retry": "Понови синхронизацију Steam-а",
+            "signedOutAction": "Пријавите се на Steam",
+            "signedOutBody": "Пријавите се поново да бисте синхронизовали Steam библиотеку. Ваше остале библиотеке су и даље доступне.",
+            "signedOutTitle": "Пријава на Steam је истекла",
+            "syncing": "Синхронизација Steam библиотеке…"
+        },
+        "storeOther": "Остало"
+    },
+    "login": {
+        "connected": "Повезано",
+        "humble_dialog_title": "Пријавите се на Humble Bundle",
+        "logoutFailedTitle": "Одјава није потпуна",
+        "steam_logout_failed_message": "Одјава са Steam-а није завршена на време. Молимо покушајте поново.",
+        "steam_logout_failed_title": "Одјава није успела",
+        "steamReconnect": "Пријава је истекла — Поново се повежите"
+    },
+    "pathSelectionBox": {
+        "saved": "Сачувано",
+        "unsaved": "Није још сачувано — притисните Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Није успело",
+            "retry": "Понови"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Унесите ваш Steam кључ",
+        "redeem": "Искористи",
+        "redeeming": "Коришћење у току...",
+        "title": "Искористите Steam кључ",
+        "viewInLibrary": "Погледај у библиотеци"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay није доступан у овој верзији",
+            "unavailableDetail": "Подршка за EOS Overlay је одложена за будуће издање (D-03, Phase 34.6) и не може се инсталирати, ажурирати нити уклонити у овој верзији."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Инсталирати EOS Overlay сада?",
+        "eosOverlayInstallConfirmTitle": "Потврди инсталацију overlay-а",
+        "eosOverlayUpdateConfirmBody": "Ажурирати EOS Overlay на најновију верзију?",
+        "eosOverlayUpdateConfirmTitle": "Потврди ажурирање overlay-а",
+        "framelessWindowDescription": "Користи прозор без оквира",
+        "gamepadInitialRepeatDelay": "Почетно кашњење понављања уноса гамепада",
+        "gamepadRepeatFrequency": "Учесталост понављања уноса гамепада",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Метод повећања резолуције",
+        "gamescopeWindowType": "Тип прозора",
+        "loginBackground": "Позадина екрана за управљање налозима",
+        "loginBackgroundDialogTitle": "Изаберите позадинску слику",
+        "loginBackgroundFilterName": "Слике",
+        "loginBackgroundHelp": "Слика приказана иза екрана за управљање налозима. Обришите поље да бисте се вратили на уграђену графику. Подржани су PNG, JPEG, WebP, AVIF и GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Nedostupno u ovoj verziji"
+            },
+            "help": {
+                "unavailableDetail": "Podrška za SteamGridDB grafiku je odložena za buduće izdanje (D-03, faza 34.6) i ne može se podesiti u ovoj verziji."
+            }
+        },
+        "wineDefaultLabel": "Podrazumevani Wine",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Iskoristi Steam ključ"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Све",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImage fajlovi",
+            "apps": "Aplikacije",
+            "executables": "Izvršni fajlovi",
+            "images": "Slike",
+            "otherBinaries": "Ostali binarni fajlovi",
+            "scripts": "Skripte"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Proveravanje opcija instalacije…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib je prestao da prima odgovore o podešavanju Steam bočice. Možda se i dalje izvršava — proverite da li postoji prozor Steam instalacije, pa pokušajte ponovo."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam serveri su prekinuli vezu.",
+                "decodeFailed": "Preuzeti podaci igre nisu mogli da se raspakuju. Ovo nije problem sa mrežom.",
+                "genericV2": "Preuzimanje sa Steam-a nije uspelo.",
+                "notSignedIn": "Niste prijavljeni na Steam, pa ovo preuzimanje nije moglo da počne."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib upravlja jednom deljenom CrossOver bočicom za Steam. Imenovanje posebne bočice za svaku igru još uvek nije podržano.",
+            "contentLightNotice": "Ovo se instalira preko sopstvenog Steam klijenta, tako da ovde nema ničega za biranje. Uključite izvorne Steam instalacije u Podešavanjima da biste upravljali lokacijom instalacije i Windows kompatibilnošću iz GameLib-a.",
+            "contentLightSingleLibraryNotice": "Na ovom sistemu postoji samo jedna Steam biblioteka, tako da ovde nema ničega za biranje — GameLib će instalirati ovu igru u nju.",
+            "forceWindowsHelp": "Ova igra ima izvornu macOS verziju, ali možete instalirati Windows verziju umesto nje kroz Wine bočicu — korisno ako izvorna verzija nema neke funkcije ili radi lošije.",
+            "libraryFullNotice": "Nema dovoljno prostora u vašoj Steam biblioteci — izaberite drugu ispod ili oslobodite prostor.",
+            "libraryFullOnlyNotice": "Nema dovoljno prostora u vašoj Steam biblioteci. Oslobodite prostor, pa pokušajte ponovo.",
+            "libraryMissingNotice": "Vašoj Steam biblioteci nije moguće pristupiti — izaberite drugu ispod.",
+            "libraryMissingOnlyNotice": "Vašoj Steam biblioteci nije moguće pristupiti. Ponovo povežite disk, pa pokušajte ponovo.",
+            "libraryPickerLabel": "Izaberite Steam biblioteku",
+            "libraryPrimarySuffix": "podrazumevano",
+            "noCrossoverEngine": "Nije pronađena CrossOver instalacija. GameLib će je podesiti kada instalacija počne.",
+            "sharedBottleNotice": "Verzija wine-a koju ovde izaberete koristi se za svaku Steam igru kojoj je potrebna bočica — ne samo za ovu. Kasnija izmena će uticati i na rad tih igara.",
+            "withOptionsLabel": "Instaliraj sa opcijama…"
+        },
+        "resumeAvailable": {
+            "notify": "Prekinuta instalacija za {{game}} je spremna za nastavak — kliknite na Instaliraj da nastavite"
+        },
+        "status": {
+            "resumeInstall": "Nastavi instalaciju",
+            "resumeInstallHint": "Instalacija nije završena — nastavite preuzimanje u GameLib-u"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Ovo uklanja svaku instaliranu kopiju ove igre na svim lokacijama instalacije. Ovo se ne može poništiti.",
+            "removeAllCopiesConfirmTitle": "Ukloniti sve kopije?",
+            "removeAllCopiesLabel": "Ukloni sve kopije…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB grafika nije dostupna u ovoj verziji"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Visok kontrast",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Prijava još uvek ne može da se završi: {{channel}} nije portovan u ovu verziju. Ovo stiže u Fazi 34.5.",
+                "heading": "Prijava na {{runner}} još uvek nije omogućena",
+                "headingGeneric": "Prijava još uvek nije omogućena"
+            },
+            "humble": {
+                "body": "Otvoren je prozor za prijavu. Završite prijavu tamo — ova stranica će se automatski ažurirati kada prijava uspe.",
+                "error": {
+                    "window_unreachable": "prozor za prijavu na Humble Bundle je zatvoren ili mu se nije moglo pristupiti"
+                },
+                "heading": "Prijavljivanje na Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Otvoren je prozor za prijavu. Završite prijavu tamo.",
+                    "heading": "Prijavljivanje na {{runner}}",
+                    "headingGeneric": "Prijavljivanje"
+                },
+                "blocked": {
+                    "body": "Vaša prijava je uspešno zabeležena, ali pozadinski kanal {{channel}} još uvek nije portovan u ovu verziju. Ovo stiže u Fazi 34.5.",
+                    "heading": "Prijava na {{runner}} je zabeležena, ali još uvek ne može da se završi",
+                    "headingGeneric": "Prijava je zabeležena, ali još uvek ne može da se završi"
+                },
+                "cancelled": {
+                    "body": "Prozor za prijavu je zatvoren pre nego što je prijava završena. Možete ponovo da pokušate.",
+                    "heading": "Prijava na {{runner}} je otkazana",
+                    "headingGeneric": "Prijava je otkazana"
+                },
+                "error": {
+                    "body": "Došlo je do greške prilikom prijave: {{message}}",
+                    "heading": "Prijava na {{runner}} nije uspela",
+                    "headingGeneric": "Prijava nije uspela"
+                },
+                "finalizing": {
+                    "body": "Prijava je zabeležena. Dovršava se razmena sa prodavnicom — ovo može potrajati nekoliko sekundi.",
+                    "heading": "Dovršavanje prijave na {{runner}}…",
+                    "headingGeneric": "Dovršavanje prijave…"
+                },
+                "genericChannel": "kanal za prijavu",
+                "preparing": {
+                    "body": "Prozor za prijavu prodavnice se priprema i uskoro će biti otvoren.",
+                    "heading": "Pripremanje prijave na {{runner}}…",
+                    "headingGeneric": "Pripremanje prijave…"
+                },
+                "retry": "Pokušaj ponovo",
+                "timeout": {
+                    "body": "Прозор за пријаву је предуго учитавао. Можете покушати поново.",
+                    "heading": "Пријава на {{runner}} је истекла",
+                    "headingGeneric": "Пријава је истекла"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Прегледање продавнице и викија у апликацији није доступно у овом издању"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Управљање Winetricks компонентама није доступно у овом издању",
+        "unavailableDetail": "Подршка за Winetricks је одложена за будуће издање (D-03, фаза 34.6) и не може се приказати нити инсталирати из овог издања."
+    }
+}

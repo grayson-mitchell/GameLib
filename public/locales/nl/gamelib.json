@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Over"
+    },
+    "app": {
+        "routeError": "Er is iets misgegaan: {{detail}}"
+    },
+    "box": {
+        "cancel": "Annuleren",
+        "error": {
+            "install": {
+                "failed": "De installatie van {{title}} is mislukt: {{error}}",
+                "signInToSteam": "Aanmelden bij Steam",
+                "stalled": "Geen downloadvoortgang gedurende {{minutes}} minuten — de installatie is gestopt"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib kon de systeembestandskiezer niet openen, dus er is niets geselecteerd en er zijn geen wijzigingen aangebracht. ({{error}})",
+                "title": "Kon de bestandskiezer niet openen"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Opnieuw installeren via CrossOver",
+                "message": "De macOS-build van deze game is alleen 32-bit en kan niet worden uitgevoerd op deze versie van macOS. GameLib kan de game in plaats daarvan opnieuw installeren via CrossOver, waarbij de Windows-versie opnieuw wordt gedownload.",
+                "title": "32-bit macOS-build gedetecteerd"
+            }
+        }
+    },
+    "button": {
+        "close": "Sluit",
+        "paste": "Plakken"
+    },
+    "consoleMode": {
+        "installNext": "Volgende",
+        "installPrevious": "Vorige",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Kan deze installatie niet starten",
+        "steamInstallLibraryFull": "Er is niet genoeg vrije ruimte in je Steam-bibliotheekmap. Maak ruimte vrij en probeer het opnieuw.",
+        "steamInstallLibraryMissing": "Je Steam-bibliotheekmap is momenteel niet beschikbaar. Sluit de schijf opnieuw aan en probeer het opnieuw."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Gepauzeerd"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "SteamGridDB-afbeeldingenzoekfunctie is niet beschikbaar in deze build."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Niet beoordeeld",
+        "etaPrefix": "Verwacht: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic en HowLongToBeat hadden niets voor deze titel.",
+        "extraInfoEmptyTitle": "Geen extra informatie gevonden",
+        "extraInfoErrorBody": "De zoekopdracht is mislukt, wat niet hetzelfde is als dat deze game geen gegevens heeft. Probeer het opnieuw.",
+        "extraInfoErrorTitle": "Kon extra informatie niet laden",
+        "extraInfoRetry": "Opnieuw proberen",
+        "extraInfoStaleBody": "Dit resultaat is gecachet voordat laadresultaten werden geregistreerd, dus het kan verouderd zijn. Vernieuw om te controleren.",
+        "tabsAriaLabel": "gameinfo-tabbladen",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "minder dan een minuut"
+    },
+    "humbleKeys": {
+        "activate": "Activeren",
+        "activateConfirmBody": "Dit onthult de key — waardoor deze permanent uit Giftable spares wordt verwijderd — en wisselt deze in op je Steam-account. Dit kan niet ongedaan worden gemaakt.",
+        "activateConfirmBodyRevealed": "Dit wisselt je reeds onthulde key in op je Steam-account. Dit kan niet ongedaan worden gemaakt.",
+        "activateConfirmTitle": "Deze key activeren op Steam?",
+        "activatedDone": "Klaar",
+        "activateDismiss": "Annuleren",
+        "activatedTitle": "Geactiveerd",
+        "activateWizardTitle": "Activeer deze key",
+        "activatingBody": "Je key wordt onthuld en verzilverd op Steam — dit duurt maar even.",
+        "activatingTitle": "Activeren op Steam…"
+    },
+    "info": {
+        "refresh-rating": "Beoordeling vernieuwen"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib kon niet importeren vanaf die locatie. De bron moet een volledig mappad zijn zonder \"..\"-stappen. Kies de map van het spel opnieuw.",
+        "pathRejectedBodyMove": "GameLib kon dit spel niet daarheen verplaatsen. De bestemming moet een volledig mappad zijn zonder \"..\"-stappen. Kies de bestemmingsmap opnieuw.",
+        "pathRejectedTitle": "Kan die locatie niet gebruiken"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Inclusief verborgen",
+            "chipHiddenOnly": "Alleen verborgen",
+            "chipNonAvailableIncluded": "Inclusief niet-beschikbaar",
+            "chipNonAvailableOnly": "Alleen niet-beschikbaar",
+            "chipNoStorePageHidden": "Zonder winkelpagina verbergen",
+            "chipNoStorePageOnly": "Alleen zonder winkelpagina",
+            "clearAll": "Alles wissen",
+            "collections": "Collecties",
+            "emptyAlphabetLetter": "Beginnend met \"{{letter}}\"",
+            "emptyAlphabetNumber": "Beginnend met een cijfer",
+            "emptyBody": "Geen spellen komen overeen met {{filters}}.",
+            "emptyClearAll": "Alle filters wissen",
+            "emptyHeading": "Geen spellen komen overeen met je filters",
+            "groupSelectedCount": "{{selected}} geselecteerd",
+            "manageCollections": "Collecties beheren",
+            "moreFilters": "Meer filters",
+            "newCollection": "+ Nieuwe collectie",
+            "noStorePage": "Geen winkelpagina",
+            "notYetChecked": "Nog niet gecontroleerd",
+            "removeFilter": "Verwijder filter {{filterLabel}}",
+            "runnabilityGroup": "Uitvoerbaarheid",
+            "runsNatively": "Werkt native",
+            "runsViaBottle": "Werkt via bottle",
+            "storeGroup": "Store",
+            "viewAll": "Alle Spellen",
+            "viewFavourites": "Favourites",
+            "viewInstalled": "Geïnstalleerd",
+            "viewRecentlyPlayed": "Onlangs gespeeld",
+            "wontRun": "Werkt niet"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} van {{total}}"
+        },
+        "no_no_store_page_games": "Geen spellen zonder winkelpagina in je bibliotheek",
+        "noStorePage": "Geen winkelpagina",
+        "steamSync": {
+            "failedBody": "Je andere bibliotheken zijn nog steeds beschikbaar. Probeer het opnieuw of controleer of Steam bereikbaar is.",
+            "failedTitle": "Kon je Steam-bibliotheek niet synchroniseren",
+            "retry": "Steam-synchronisatie opnieuw proberen",
+            "signedOutAction": "Aanmelden bij Steam",
+            "signedOutBody": "Meld je opnieuw aan om je Steam-bibliotheek te synchroniseren. Je andere bibliotheken zijn nog steeds beschikbaar.",
+            "signedOutTitle": "Je Steam-aanmelding is verlopen",
+            "syncing": "Je Steam-bibliotheek wordt gesynchroniseerd…"
+        },
+        "storeOther": "Overig"
+    },
+    "login": {
+        "connected": "Verbonden",
+        "humble_dialog_title": "Aanmelden bij Humble Bundle",
+        "logoutFailedTitle": "Afmelden niet volledig voltooid",
+        "steam_logout_failed_message": "Afmelden bij Steam is niet op tijd voltooid. Probeer het opnieuw.",
+        "steam_logout_failed_title": "Afmelden mislukt",
+        "steamReconnect": "Aanmelding verlopen — Opnieuw verbinden"
+    },
+    "pathSelectionBox": {
+        "saved": "Opgeslagen",
+        "unsaved": "Nog niet opgeslagen — druk op Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Mislukt",
+            "retry": "Opnieuw proberen"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Voer je Steam-key in",
+        "redeem": "Inwisselen",
+        "redeeming": "Inwisselen...",
+        "title": "Een Steam-key inwisselen",
+        "viewInLibrary": "Bekijken in bibliotheek"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "De EOS Overlay is niet beschikbaar in deze build",
+            "unavailableDetail": "Ondersteuning voor EOS Overlay is uitgesteld tot een toekomstige release (D-03, Fase 34.6) en kan in deze build niet worden geïnstalleerd, bijgewerkt of verwijderd."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "De EOS Overlay nu installeren?",
+        "eosOverlayInstallConfirmTitle": "Installatie van overlay bevestigen",
+        "eosOverlayUpdateConfirmBody": "De EOS Overlay bijwerken naar de nieuwste versie?",
+        "eosOverlayUpdateConfirmTitle": "Update van overlay bevestigen",
+        "framelessWindowDescription": "Vensterloos venster gebruiken",
+        "gamepadInitialRepeatDelay": "Initiële herhalingsvertraging voor gamepadinvoer",
+        "gamepadRepeatFrequency": "Herhalingsfrequentie voor gamepadinvoer",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Upscale-methode",
+        "gamescopeWindowType": "Venstertype",
+        "loginBackground": "Achtergrond voor Accounts beheren",
+        "loginBackgroundDialogTitle": "Selecteer een achtergrondafbeelding",
+        "loginBackgroundFilterName": "Afbeeldingen",
+        "loginBackgroundHelp": "Afbeelding die achter het scherm Accounts beheren wordt weergegeven. Maak het veld leeg om terug te gaan naar de meegeleverde afbeelding. PNG, JPEG, WebP, AVIF en GIF worden ondersteund.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Niet beschikbaar in deze build"
+            },
+            "help": {
+                "unavailableDetail": "Ondersteuning voor SteamGridDB-artwork wordt uitgesteld naar een toekomstige release (D-03, Fase 34.6) en kan niet worden geconfigureerd vanuit deze build."
+            }
+        },
+        "wineDefaultLabel": "Wine-standaard",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Een Steam-key inwisselen"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Allemaal",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Apps",
+            "executables": "Uitvoerbare bestanden",
+            "images": "Afbeeldingen",
+            "otherBinaries": "Overige binaries",
+            "scripts": "Scripts"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Installatieopties controleren…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib heeft geen update meer ontvangen over de Steam-bottle-installatie. Deze draait mogelijk nog — controleer of er een Steam-installatievenster is en probeer het opnieuw."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "De Steam-servers hebben de verbinding verbroken.",
+                "decodeFailed": "De gedownloade gamegegevens konden niet worden uitgepakt. Dit is geen netwerkprobleem.",
+                "genericV2": "De Steam-download is mislukt.",
+                "notSignedIn": "Je bent niet aangemeld bij Steam, dus deze download kon niet starten."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib beheert één gedeelde CrossOver-bottle voor Steam. Een aparte bottle per game benoemen wordt nog niet ondersteund.",
+            "contentLightNotice": "Dit installeert via Steams eigen client, dus hier valt niets te kiezen. Schakel native Steam-installaties in bij Instellingen om de installatielocatie en Windows-compatibiliteit vanuit GameLib te beheren.",
+            "contentLightSingleLibraryNotice": "Er is maar één Steam-bibliotheek op dit systeem, dus hier valt niets te kiezen — GameLib installeert deze game daarin.",
+            "forceWindowsHelp": "Deze game heeft een native macOS-versie, maar je kunt in plaats daarvan de Windows-versie installeren via een Wine-bottle — handig als de native build functies mist of slechter presteert.",
+            "libraryFullNotice": "Niet genoeg ruimte in je Steam-bibliotheek — kies hieronder een andere of maak ruimte vrij.",
+            "libraryFullOnlyNotice": "Niet genoeg ruimte in je Steam-bibliotheek. Maak ruimte vrij en probeer het opnieuw.",
+            "libraryMissingNotice": "Je Steam-bibliotheek kon niet worden bereikt — kies hieronder een andere.",
+            "libraryMissingOnlyNotice": "Je Steam-bibliotheek kon niet worden bereikt. Sluit de schijf opnieuw aan en probeer het dan opnieuw.",
+            "libraryPickerLabel": "Steam-bibliotheek kiezen",
+            "libraryPrimarySuffix": "standaard",
+            "noCrossoverEngine": "Er is geen CrossOver-installatie gevonden. GameLib stelt er een in zodra de installatie start.",
+            "sharedBottleNotice": "De wine-versie die je hier kiest, wordt gebruikt voor elke Steam-game die een bottle nodig heeft — niet alleen deze. Als je dit later wijzigt, verandert dat ook hoe die andere games werken.",
+            "withOptionsLabel": "Installeren met opties…"
+        },
+        "resumeAvailable": {
+            "notify": "Een onderbroken installatie voor {{game}} kan worden hervat — klik op Installeren om verder te gaan"
+        },
+        "status": {
+            "resumeInstall": "Installatie hervatten",
+            "resumeInstallHint": "Installatie onvolledig — hervat de download in GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Dit verwijdert elke geïnstalleerde kopie van deze game op alle installatielocaties. Dit kan niet ongedaan worden gemaakt.",
+            "removeAllCopiesConfirmTitle": "Alle kopieën verwijderen?",
+            "removeAllCopiesLabel": "Alle kopieën verwijderen…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB-artwork is niet beschikbaar in deze build"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Hoog Contrast",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Je aanmelding kan nog niet worden voltooid: {{channel}} is niet overgezet naar deze build. Dit komt in Fase 34.5.",
+                "heading": "Aanmelden bij {{runner}} is nog niet aangesloten",
+                "headingGeneric": "Aanmelden is nog niet aangesloten"
+            },
+            "humble": {
+                "body": "Er is een aanmeldvenster geopend. Rond het aanmelden daar af — deze pagina wordt automatisch bijgewerkt zodra het is gelukt.",
+                "error": {
+                    "window_unreachable": "het Humble Bundle-aanmeldvenster is gesloten of kon niet worden bereikt"
+                },
+                "heading": "Aanmelden bij Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Er is een aanmeldvenster geopend. Rond het aanmelden daar af.",
+                    "heading": "Aanmelden bij {{runner}}",
+                    "headingGeneric": "Aanmelden"
+                },
+                "blocked": {
+                    "body": "Je aanmelding is succesvol vastgelegd, maar het {{channel}}-backendkanaal is nog niet overgezet naar deze build. Dit komt in Fase 34.5.",
+                    "heading": "Aanmelden bij {{runner}} is vastgelegd, maar kan nog niet worden afgerond",
+                    "headingGeneric": "Aanmelding is vastgelegd, maar kan nog niet worden afgerond"
+                },
+                "cancelled": {
+                    "body": "Het aanmeldvenster is gesloten voordat het aanmelden was voltooid. Je kunt het opnieuw proberen.",
+                    "heading": "Aanmelden bij {{runner}} is geannuleerd",
+                    "headingGeneric": "Aanmelding is geannuleerd"
+                },
+                "error": {
+                    "body": "Er is iets misgegaan tijdens het aanmelden: {{message}}",
+                    "heading": "Aanmelden bij {{runner}} is mislukt",
+                    "headingGeneric": "Aanmelden is mislukt"
+                },
+                "finalizing": {
+                    "body": "Aanmelding vastgelegd. De uitwisseling met de winkel wordt afgerond — dit kan enkele seconden duren.",
+                    "heading": "Aanmelding bij {{runner}} wordt afgerond…",
+                    "headingGeneric": "Aanmelding wordt afgerond…"
+                },
+                "genericChannel": "het aanmeldkanaal",
+                "preparing": {
+                    "body": "Het aanmeldvenster van de winkel wordt voorbereid en zal binnenkort openen.",
+                    "heading": "Aanmelding bij {{runner}} wordt voorbereid…",
+                    "headingGeneric": "Aanmelding wordt voorbereid…"
+                },
+                "retry": "Opnieuw proberen",
+                "timeout": {
+                    "body": "Het inlogvenster deed er te lang over. Je kunt het opnieuw proberen.",
+                    "heading": "Inloggen bij {{runner}} verlopen",
+                    "headingGeneric": "Inloggen verlopen"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Winkel- en wikiweergave in de app is niet beschikbaar in deze build"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Winetricks-componentbeheer is niet beschikbaar in deze build",
+        "unavailableDetail": "Ondersteuning voor Winetricks is uitgesteld naar een toekomstige release (D-03, fase 34.6) en kan in deze build niet worden weergegeven of geïnstalleerd."
+    }
+}

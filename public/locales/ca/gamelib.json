@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Quant a"
+    },
+    "app": {
+        "routeError": "S'ha produït un error: {{detail}}"
+    },
+    "box": {
+        "cancel": "Cancel·la",
+        "error": {
+            "install": {
+                "failed": "La instal·lació de {{title}} ha fallat: {{error}}",
+                "signInToSteam": "Inicia sessió a Steam",
+                "stalled": "Sense progrés de baixada durant {{minutes}} minuts — s'ha aturat la instal·lació"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib no ha pogut obrir el selector de fitxers del sistema, per la qual cosa no s'ha seleccionat res i no s'ha fet cap canvi. ({{error}})",
+                "title": "No s'ha pogut obrir el selector de fitxers"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Reinstal·la mitjançant CrossOver",
+                "message": "La versió per a macOS d'aquest joc és només de 32 bits i no es pot executar en aquesta versió de macOS. GameLib pot reinstal·lar-lo mitjançant CrossOver, cosa que tornarà a baixar la versió per a Windows.",
+                "title": "S'ha detectat una versió de macOS de 32 bits"
+            }
+        }
+    },
+    "button": {
+        "close": "Tanca",
+        "paste": "Enganxa"
+    },
+    "consoleMode": {
+        "installNext": "Següent",
+        "installPrevious": "Previs",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "No es pot iniciar aquesta instal·lació",
+        "steamInstallLibraryFull": "No hi ha prou espai lliure a la carpeta de biblioteca de Steam. Allibereu espai i torneu-ho a provar.",
+        "steamInstallLibraryMissing": "La carpeta de biblioteca de Steam no està disponible ara mateix. Torneu a connectar la unitat i torneu-ho a provar."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "En pausa"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "La cerca d'imatges de SteamGridDB no està disponible en aquesta versió."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Sense qualificar",
+        "etaPrefix": "Temps restant: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic i HowLongToBeat no tenien res sobre aquest títol.",
+        "extraInfoEmptyTitle": "No s'ha trobat informació addicional",
+        "extraInfoErrorBody": "La cerca ha fallat, cosa que no és el mateix que aquest joc no tingui dades. Torneu-ho a provar.",
+        "extraInfoErrorTitle": "No s'ha pogut carregar la informació addicional",
+        "extraInfoRetry": "Torna-ho a provar",
+        "extraInfoStaleBody": "Aquest resultat es va desar en memòria cau abans de registrar els resultats de la càrrega, per la qual cosa pot estar desactualitzat. Actualitza-ho per comprovar-ho.",
+        "tabsAriaLabel": "pestanyes d'informació del joc",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "menys d'un minut"
+    },
+    "humbleKeys": {
+        "activate": "Activa",
+        "activateConfirmBody": "Això revela la clau — eliminant-la de les reserves obsequiables per sempre — i la bescanvia al vostre compte de Steam. No es pot desfer.",
+        "activateConfirmBodyRevealed": "Això bescanvia la vostra clau ja revelada al vostre compte de Steam. No es pot desfer.",
+        "activateConfirmTitle": "Voleu activar aquesta clau a Steam?",
+        "activatedDone": "Fet",
+        "activateDismiss": "Cancel·la",
+        "activatedTitle": "Activada",
+        "activateWizardTitle": "Activa aquesta clau",
+        "activatingBody": "Revelant la teva clau i bescanviant-la a Steam — només trigarà un moment.",
+        "activatingTitle": "Activant a Steam…"
+    },
+    "info": {
+        "refresh-rating": "Actualitza la valoració"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib no ha pogut importar des d'aquesta ubicació. L'origen ha de ser un camí de carpeta complet sense passos \"..\". Torna a triar la carpeta del joc.",
+        "pathRejectedBodyMove": "GameLib no ha pogut moure aquest joc allà. La destinació ha de ser un camí de carpeta complet sense passos \"..\". Torna a triar la carpeta de destinació.",
+        "pathRejectedTitle": "No es pot utilitzar aquesta ubicació"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Incloent-hi els ocults",
+            "chipHiddenOnly": "Només ocults",
+            "chipNonAvailableIncluded": "Incloent-hi els no disponibles",
+            "chipNonAvailableOnly": "Només no disponibles",
+            "chipNoStorePageHidden": "Amagant els sense pàgina de botiga",
+            "chipNoStorePageOnly": "Només sense pàgina de botiga",
+            "clearAll": "Neteja-ho tot",
+            "collections": "Col·leccions",
+            "emptyAlphabetLetter": "Comença per \"{{letter}}\"",
+            "emptyAlphabetNumber": "Comença per un número",
+            "emptyBody": "Cap joc coincideix amb {{filters}}.",
+            "emptyClearAll": "Neteja tots els filtres",
+            "emptyHeading": "Cap joc coincideix amb els teus filtres",
+            "groupSelectedCount": "{{selected}} seleccionats",
+            "manageCollections": "Gestiona les col·leccions",
+            "moreFilters": "Més filtres",
+            "newCollection": "+ Col·lecció nova",
+            "noStorePage": "Sense pàgina de botiga",
+            "notYetChecked": "Encara no comprovat",
+            "removeFilter": "Elimina el filtre {{filterLabel}}",
+            "runnabilityGroup": "Executabilitat",
+            "runsNatively": "S'executa nativament",
+            "runsViaBottle": "S'executa mitjançant una bottle",
+            "storeGroup": "Botiga",
+            "viewAll": "Tots els jocs",
+            "viewFavourites": "Preferits",
+            "viewInstalled": "Instal·lat",
+            "viewRecentlyPlayed": "Jugats recentment",
+            "wontRun": "No s'executarà"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} de {{total}}"
+        },
+        "no_no_store_page_games": "No hi ha jocs sense pàgina de botiga a la teva biblioteca",
+        "noStorePage": "Sense pàgina de botiga",
+        "steamSync": {
+            "failedBody": "Les teves altres biblioteques encara estan disponibles. Torna-ho a provar o comprova que Steam sigui accessible.",
+            "failedTitle": "No s'ha pogut sincronitzar la teva biblioteca de Steam",
+            "retry": "Reintenta la sincronització de Steam",
+            "signedOutAction": "Inicia sessió a Steam",
+            "signedOutBody": "Torna a iniciar sessió per sincronitzar la teva biblioteca de Steam. Les teves altres biblioteques encara estan disponibles.",
+            "signedOutTitle": "La teva sessió de Steam ha caducat",
+            "syncing": "Sincronitzant la teva biblioteca de Steam…"
+        },
+        "storeOther": "Altres"
+    },
+    "login": {
+        "connected": "Connectat",
+        "humble_dialog_title": "Inicia sessió a Humble Bundle",
+        "logoutFailedTitle": "Tancament de sessió incomplet",
+        "steam_logout_failed_message": "El tancament de sessió de Steam no s'ha completat a temps. Torna-ho a provar.",
+        "steam_logout_failed_title": "El tancament de sessió ha fallat",
+        "steamReconnect": "Sessió caducada — Reconnecta"
+    },
+    "pathSelectionBox": {
+        "saved": "Desat",
+        "unsaved": "Encara no desat — prem Retorn"
+    },
+    "queue": {
+        "label": {
+            "failed": "Ha fallat",
+            "retry": "Reintenta"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Introdueix la teva clau de Steam",
+        "redeem": "Bescanvia",
+        "redeeming": "Bescanviant...",
+        "title": "Bescanvia una clau de Steam",
+        "viewInLibrary": "Mostra a la biblioteca"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "L'overlay d'EOS no està disponible en aquesta versió",
+            "unavailableDetail": "El suport de l'overlay d'EOS s'ha ajornat a una versió futura (D-03, Fase 34.6) i no es pot instal·lar, actualitzar ni eliminar en aquesta versió."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Vols instal·lar l'overlay d'EOS ara?",
+        "eosOverlayInstallConfirmTitle": "Confirma la instal·lació de l'overlay",
+        "eosOverlayUpdateConfirmBody": "Vols actualitzar l'overlay d'EOS a l'última versió?",
+        "eosOverlayUpdateConfirmTitle": "Confirma l'actualització de l'overlay",
+        "framelessWindowDescription": "Utilitza finestra sense marc",
+        "gamepadInitialRepeatDelay": "Retard inicial de repetició del comandament",
+        "gamepadRepeatFrequency": "Freqüència de repetició del comandament",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Mètode d'escalat",
+        "gamescopeWindowType": "Tipus de finestra",
+        "loginBackground": "Fons de Gestiona comptes",
+        "loginBackgroundDialogTitle": "Selecciona una imatge de fons",
+        "loginBackgroundFilterName": "Imatges",
+        "loginBackgroundHelp": "Imatge mostrada al fons de la pantalla Gestiona comptes. Buida el camp per tornar a l'imatge inclosa per defecte. S'admeten PNG, JPEG, WebP, AVIF i GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "No disponible en aquesta versió"
+            },
+            "help": {
+                "unavailableDetail": "El suport d'il·lustracions de SteamGridDB s'ha ajornat a una versió futura (D-03, Fase 34.6) i no es pot configurar des d'aquesta versió."
+            }
+        },
+        "wineDefaultLabel": "Wine predefinit",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Bescanvia una clau de Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Tots",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Aplicacions",
+            "executables": "Executables",
+            "images": "Imatges",
+            "otherBinaries": "Altres binaris",
+            "scripts": "Scripts"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "S'estan comprovant les opcions d'instal·lació…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib ha deixat de rebre resposta sobre la configuració de la bottle de Steam. Pot ser que encara s'estigui executant — comprova si hi ha una finestra de l'instal·lador de Steam i torna-ho a provar."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Els servidors de Steam han tallat la connexió.",
+                "decodeFailed": "No s'han pogut desempaquetar les dades del joc descarregades. Això no és un problema de xarxa.",
+                "genericV2": "La descàrrega de Steam ha fallat.",
+                "notSignedIn": "No has iniciat sessió a Steam, per la qual cosa aquesta descàrrega no s'ha pogut iniciar."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib gestiona una única bottle de CrossOver compartida per a Steam. Encara no es pot anomenar una bottle diferent per a cada joc.",
+            "contentLightNotice": "Això s'instal·la a través del propi client de Steam, així que no hi ha res a triar aquí. Activa les instal·lacions natives de Steam a Configuració per gestionar la ubicació d'instal·lació i la compatibilitat amb Windows des de GameLib.",
+            "contentLightSingleLibraryNotice": "Només hi ha una biblioteca de Steam en aquest sistema, així que no hi ha res a triar aquí — GameLib hi instal·larà aquest joc.",
+            "forceWindowsHelp": "Aquest joc té una versió nativa per a macOS, però pots instal·lar la versió de Windows a través d'una bottle de Wine — útil si la versió nativa li falten funcions o rendeix pitjor.",
+            "libraryFullNotice": "No hi ha prou espai a la teva biblioteca de Steam — tria'n una altra a continuació o allibera espai.",
+            "libraryFullOnlyNotice": "No hi ha prou espai a la teva biblioteca de Steam. Allibera espai i torna-ho a provar.",
+            "libraryMissingNotice": "No s'ha pogut accedir a la teva biblioteca de Steam — tria'n una altra a continuació.",
+            "libraryMissingOnlyNotice": "No s'ha pogut accedir a la teva biblioteca de Steam. Reconnecta la unitat i torna-ho a provar.",
+            "libraryPickerLabel": "Tria la biblioteca de Steam",
+            "libraryPrimarySuffix": "predefinida",
+            "noCrossoverEngine": "No s'ha trobat cap instal·lació de CrossOver. GameLib en configurarà una quan comenci la instal·lació.",
+            "sharedBottleNotice": "La versió de wine que triïs aquí s'utilitza per a tots els jocs de Steam que necessitin una bottle — no només aquest. Si la canvies més endavant, també canviarà com funcionen aquells jocs.",
+            "withOptionsLabel": "Instal·la amb opcions…"
+        },
+        "resumeAvailable": {
+            "notify": "Hi ha una instal·lació interrompuda de {{game}} llesta per reprendre — fes clic a Instal·la per continuar"
+        },
+        "status": {
+            "resumeInstall": "Reprèn la instal·lació",
+            "resumeInstallHint": "Instal·lació incompleta — reprèn la descàrrega a GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Això elimina totes les còpies instal·lades d'aquest joc a totes les ubicacions d'instal·lació. Aquesta acció no es pot desfer.",
+            "removeAllCopiesConfirmTitle": "Vols eliminar totes les còpies?",
+            "removeAllCopiesLabel": "Elimina totes les còpies…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Les il·lustracions de SteamGridDB no estan disponibles en aquesta versió"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Oasi Ciberespacial",
+        "cyberSpaceOasisAlt": "Oasi Ciberespacial Clàssic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Fosc",
+        "highContrast": "Alt Contrast",
+        "marine": "Marí",
+        "marineClassic": "Marí Clàssic",
+        "midnightMirage": "Miratge de Mitjanit",
+        "nordDark": "Nord Fosc",
+        "nordLight": "Nord Clar",
+        "oldSchool": "GameLib a l'Antiga",
+        "sweet": "Dolç",
+        "zombie": "Zombi",
+        "zombieClassic": "Zombi Clàssic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "El teu inici de sessió encara no es pot completar: {{channel}} no està adaptat a aquesta compilació. Això arribarà a la Fase 34.5.",
+                "heading": "L'inici de sessió a {{runner}} encara no està implementat",
+                "headingGeneric": "L'inici de sessió encara no està implementat"
+            },
+            "humble": {
+                "body": "S'ha obert una finestra d'inici de sessió. Completa l'inici de sessió allà — aquesta pàgina s'actualitzarà automàticament un cop hagi tingut èxit.",
+                "error": {
+                    "window_unreachable": "la finestra d'inici de sessió de Humble Bundle s'ha tancat o no s'hi ha pogut accedir"
+                },
+                "heading": "Iniciant sessió a Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "S'ha obert una finestra d'inici de sessió. Completa l'inici de sessió allà.",
+                    "heading": "Iniciant sessió a {{runner}}",
+                    "headingGeneric": "Iniciant sessió"
+                },
+                "blocked": {
+                    "body": "El teu inici de sessió s'ha capturat correctament, però el canal de rerefons de {{channel}} encara no està adaptat a aquesta compilació. Això arribarà a la Fase 34.5.",
+                    "heading": "L'inici de sessió a {{runner}} s'ha capturat, però encara no es pot completar",
+                    "headingGeneric": "L'inici de sessió s'ha capturat, però encara no es pot completar"
+                },
+                "cancelled": {
+                    "body": "La finestra d'inici de sessió s'ha tancat abans de completar-se. Pots tornar-ho a provar.",
+                    "heading": "L'inici de sessió a {{runner}} s'ha cancel·lat",
+                    "headingGeneric": "L'inici de sessió s'ha cancel·lat"
+                },
+                "error": {
+                    "body": "S'ha produït un error en iniciar sessió: {{message}}",
+                    "heading": "L'inici de sessió a {{runner}} ha fallat",
+                    "headingGeneric": "L'inici de sessió ha fallat"
+                },
+                "finalizing": {
+                    "body": "Inici de sessió capturat. Completant l'intercanvi amb la botiga — això pot trigar uns segons.",
+                    "heading": "Finalitzant l'inici de sessió amb {{runner}}…",
+                    "headingGeneric": "Finalitzant l'inici de sessió…"
+                },
+                "genericChannel": "el canal d'inici de sessió",
+                "preparing": {
+                    "body": "S'està preparant la finestra d'inici de sessió de la botiga i s'obrirà en breu.",
+                    "heading": "Preparant l'inici de sessió de {{runner}}…",
+                    "headingGeneric": "Preparant l'inici de sessió…"
+                },
+                "retry": "Torna-ho a provar",
+                "timeout": {
+                    "body": "La finestra d'inici de sessió ha trigat massa a completar-se. Pots tornar-ho a provar.",
+                    "heading": "S'ha esgotat el temps d'espera en iniciar sessió a {{runner}}",
+                    "headingGeneric": "S'ha esgotat el temps d'espera de l'inici de sessió"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "La navegació per la botiga i el wiki dins de l'aplicació no està disponible en aquesta versió"
+        }
+    },
+    "winetricks": {
+        "unavailable": "La gestió de components de Winetricks no està disponible en aquesta versió",
+        "unavailableDetail": "El suport de Winetricks s'ha ajornat a una versió futura (D-03, Fase 34.6) i no es pot llistar ni instal·lar des d'aquesta versió."
+    }
+}

@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "О программе"
+    },
+    "app": {
+        "routeError": "Что-то пошло не так: {{detail}}"
+    },
+    "box": {
+        "cancel": "Отмена",
+        "error": {
+            "install": {
+                "failed": "Установка {{title}} не удалась: {{error}}",
+                "signInToSteam": "Войти в Steam",
+                "stalled": "Нет прогресса загрузки в течение {{minutes}} мин. — установка остановлена"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib не удалось открыть системный выбор файлов, поэтому ничего не выбрано и изменения не внесены. ({{error}})",
+                "title": "Не удалось открыть выбор файлов"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Переустановить через CrossOver",
+                "message": "Сборка этой игры для macOS только 32-битная и не может работать на этой версии macOS. GameLib может переустановить её через CrossOver, что приведёт к повторной загрузке версии для Windows.",
+                "title": "Обнаружена 32-битная сборка macOS"
+            }
+        }
+    },
+    "button": {
+        "close": "Закрыть",
+        "paste": "Вставить"
+    },
+    "consoleMode": {
+        "installNext": "Следующий",
+        "installPrevious": "Предыдущая",
+        "sortAscending": "А → Я",
+        "sortDescending": "Я → А",
+        "steamInstallBlockedTitle": "Не удаётся начать установку",
+        "steamInstallLibraryFull": "В папке библиотеки Steam недостаточно свободного места. Освободите место и повторите попытку.",
+        "steamInstallLibraryMissing": "Папка библиотеки Steam сейчас недоступна. Переподключите диск и повторите попытку."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Приостановлено"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Поиск артворка SteamGridDB недоступен в этой сборке."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Без рейтинга",
+        "etaPrefix": "Осталось: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic и HowLongToBeat не нашли данных по этой игре.",
+        "extraInfoEmptyTitle": "Дополнительная информация не найдена",
+        "extraInfoErrorBody": "Запрос не удался, что не означает отсутствие данных у игры. Попробуйте снова.",
+        "extraInfoErrorTitle": "Не удалось загрузить дополнительную информацию",
+        "extraInfoRetry": "Повторить",
+        "extraInfoStaleBody": "Этот результат был закэширован до того, как стали фиксироваться итоги загрузки, поэтому он может быть устаревшим. Обновите, чтобы проверить.",
+        "tabsAriaLabel": "вкладки информации об игре",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "менее минуты"
+    },
+    "humbleKeys": {
+        "activate": "Активировать",
+        "activateConfirmBody": "Это раскроет ключ — он будет безвозвратно удалён из подарочных запасов — и активирует его на вашем аккаунте Steam. Отменить нельзя.",
+        "activateConfirmBodyRevealed": "Это активирует уже раскрытый ключ на вашем аккаунте Steam. Отменить нельзя.",
+        "activateConfirmTitle": "Активировать этот ключ в Steam?",
+        "activatedDone": "Готово",
+        "activateDismiss": "Отмена",
+        "activatedTitle": "Активировано",
+        "activateWizardTitle": "Активировать этот ключ",
+        "activatingBody": "Раскрываем ваш ключ и активируем его в Steam — это займёт всего мгновение.",
+        "activatingTitle": "Активация в Steam…"
+    },
+    "info": {
+        "refresh-rating": "Обновить рейтинг"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib не удалось импортировать из этого места. Источник должен быть полным путём к папке без шагов «..». Выберите папку игры заново.",
+        "pathRejectedBodyMove": "GameLib не удалось переместить игру туда. Место назначения должно быть полным путём к папке без шагов «..». Выберите папку назначения заново.",
+        "pathRejectedTitle": "Нельзя использовать это расположение"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Включая скрытые",
+            "chipHiddenOnly": "Только скрытые",
+            "chipNonAvailableIncluded": "Включая недоступные",
+            "chipNonAvailableOnly": "Только недоступные",
+            "chipNoStorePageHidden": "Скрывать без страницы магазина",
+            "chipNoStorePageOnly": "Только без страницы магазина",
+            "clearAll": "Сбросить всё",
+            "collections": "Коллекции",
+            "emptyAlphabetLetter": "Начинается на «{{letter}}»",
+            "emptyAlphabetNumber": "Начинается с цифры",
+            "emptyBody": "Нет игр, соответствующих {{filters}}.",
+            "emptyClearAll": "Сбросить все фильтры",
+            "emptyHeading": "Нет игр, соответствующих вашим фильтрам",
+            "groupSelectedCount": "Выбрано: {{selected}}",
+            "manageCollections": "Управление коллекциями",
+            "moreFilters": "Больше фильтров",
+            "newCollection": "+ Новая коллекция",
+            "noStorePage": "Нет страницы магазина",
+            "notYetChecked": "Ещё не проверено",
+            "removeFilter": "Убрать фильтр «{{filterLabel}}»",
+            "runnabilityGroup": "Работоспособность",
+            "runsNatively": "Запускается нативно",
+            "runsViaBottle": "Запускается через bottle",
+            "storeGroup": "Магазин",
+            "viewAll": "Все игры",
+            "viewFavourites": "Избранное",
+            "viewInstalled": "Установлено",
+            "viewRecentlyPlayed": "Недавно запущенные",
+            "wontRun": "Не запустится"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} из {{total}}"
+        },
+        "no_no_store_page_games": "В вашей библиотеке нет игр без страницы магазина",
+        "noStorePage": "Нет страницы магазина",
+        "steamSync": {
+            "failedBody": "Ваши другие библиотеки по-прежнему доступны. Повторите попытку или проверьте доступность Steam.",
+            "failedTitle": "Не удалось синхронизировать библиотеку Steam",
+            "retry": "Повторить синхронизацию Steam",
+            "signedOutAction": "Войти в Steam",
+            "signedOutBody": "Войдите снова, чтобы синхронизировать библиотеку Steam. Ваши другие библиотеки по-прежнему доступны.",
+            "signedOutTitle": "Срок входа в Steam истёк",
+            "syncing": "Синхронизация библиотеки Steam…"
+        },
+        "storeOther": "Другое"
+    },
+    "login": {
+        "connected": "Подключено",
+        "humble_dialog_title": "Войти в Humble Bundle",
+        "logoutFailedTitle": "Выход выполнен не полностью",
+        "steam_logout_failed_message": "Выход из Steam не завершился вовремя. Попробуйте ещё раз.",
+        "steam_logout_failed_title": "Не удалось выполнить выход",
+        "steamReconnect": "Срок входа истёк — Переподключиться"
+    },
+    "pathSelectionBox": {
+        "saved": "Сохранено",
+        "unsaved": "Ещё не сохранено — нажмите Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Ошибка",
+            "retry": "Повторить"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Введите ключ Steam",
+        "redeem": "Активировать",
+        "redeeming": "Активация...",
+        "title": "Активировать ключ Steam",
+        "viewInLibrary": "Открыть в библиотеке"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "Оверлей EOS недоступен в этой сборке",
+            "unavailableDetail": "Поддержка оверлея EOS отложена до будущего выпуска (D-03, этап 34.6) и не может быть установлена, обновлена или удалена в этой сборке."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Установить оверлей EOS сейчас?",
+        "eosOverlayInstallConfirmTitle": "Подтвердите установку оверлея",
+        "eosOverlayUpdateConfirmBody": "Обновить оверлей EOS до последней версии?",
+        "eosOverlayUpdateConfirmTitle": "Подтвердите обновление оверлея",
+        "framelessWindowDescription": "Использовать окно без рамки",
+        "gamepadInitialRepeatDelay": "Начальная задержка повтора ввода геймпада",
+        "gamepadRepeatFrequency": "Частота повтора ввода геймпада",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Метод масштабирования",
+        "gamescopeWindowType": "Тип окна",
+        "loginBackground": "Фон экрана управления аккаунтами",
+        "loginBackgroundDialogTitle": "Выберите фоновое изображение",
+        "loginBackgroundFilterName": "Изображения",
+        "loginBackgroundHelp": "Изображение, отображаемое за экраном управления аккаунтами. Очистите поле, чтобы вернуться к встроенному изображению. Поддерживаются PNG, JPEG, WebP, AVIF и GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Недоступно в этой сборке"
+            },
+            "help": {
+                "unavailableDetail": "Поддержка обложек SteamGridDB отложена до будущего релиза (D-03, этап 34.6) и не может быть настроена в этой сборке."
+            }
+        },
+        "wineDefaultLabel": "Wine по умолчанию",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Активировать ключ Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Все",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImage-файлы",
+            "apps": "Приложения",
+            "executables": "Исполняемые файлы",
+            "images": "Изображения",
+            "otherBinaries": "Другие двоичные файлы",
+            "scripts": "Скрипты"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Проверка параметров установки…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib перестал получать ответ о настройке бутылки Steam. Процесс может ещё выполняться — проверьте, не открылось ли окно установщика Steam, и попробуйте снова."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Серверы Steam разорвали соединение.",
+                "decodeFailed": "Не удалось распаковать загруженные данные игры. Это не проблема сети.",
+                "genericV2": "Загрузка через Steam завершилась ошибкой.",
+                "notSignedIn": "Вы не выполнили вход в Steam, поэтому загрузка не может начаться."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib управляет одной общей бутылкой CrossOver для Steam. Задание отдельной бутылки для каждой игры пока не поддерживается.",
+            "contentLightNotice": "Установка выполняется через собственный клиент Steam, поэтому здесь нечего выбирать. Включите нативную установку Steam в настройках, чтобы управлять местом установки и совместимостью с Windows из GameLib.",
+            "contentLightSingleLibraryNotice": "В системе есть только одна библиотека Steam, поэтому здесь нечего выбирать — GameLib установит игру в неё.",
+            "forceWindowsHelp": "У этой игры есть нативная версия для macOS, но вы можете вместо неё установить версию для Windows через бутылку Wine — это полезно, если в нативной сборке не хватает функций или она работает хуже.",
+            "libraryFullNotice": "Недостаточно места в библиотеке Steam — выберите другую ниже или освободите место.",
+            "libraryFullOnlyNotice": "Недостаточно места в библиотеке Steam. Освободите место и попробуйте снова.",
+            "libraryMissingNotice": "Не удалось получить доступ к библиотеке Steam — выберите другую ниже.",
+            "libraryMissingOnlyNotice": "Не удалось получить доступ к библиотеке Steam. Переподключите диск и попробуйте снова.",
+            "libraryPickerLabel": "Выбрать библиотеку Steam",
+            "libraryPrimarySuffix": "по умолчанию",
+            "noCrossoverEngine": "Установка CrossOver не найдена. GameLib настроит её при начале установки.",
+            "sharedBottleNotice": "Версия Wine, выбранная здесь, используется для всех игр Steam, которым нужна бутылка, а не только для этой. Изменив её позже, вы измените работу и других игр.",
+            "withOptionsLabel": "Установить с параметрами…"
+        },
+        "resumeAvailable": {
+            "notify": "Прерванная установка {{game}} готова к возобновлению — нажмите «Установить», чтобы продолжить"
+        },
+        "status": {
+            "resumeInstall": "Возобновить установку",
+            "resumeInstallHint": "Установка не завершена — возобновите загрузку в GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Это удалит все установленные копии этой игры во всех местах установки. Действие нельзя отменить.",
+            "removeAllCopiesConfirmTitle": "Удалить все копии?",
+            "removeAllCopiesLabel": "Удалить все копии…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Обложки SteamGridDB недоступны в этой сборке"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Кибероазис",
+        "cyberSpaceOasisAlt": "Кибероазис (классика)",
+        "dracula": "Дракула",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Высокая контрастность",
+        "marine": "Морская",
+        "marineClassic": "Морская (классика)",
+        "midnightMirage": "Полночный мираж",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Старая школа GameLib",
+        "sweet": "Sweet",
+        "zombie": "Зомби",
+        "zombieClassic": "Зомби (классика)"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Вход пока нельзя завершить: {{channel}} ещё не перенесён в эту сборку. Это появится в Фазе 34.5.",
+                "heading": "Вход через {{runner}} пока не реализован",
+                "headingGeneric": "Вход пока не реализован"
+            },
+            "humble": {
+                "body": "Открылось окно входа. Завершите вход в нём — эта страница обновится автоматически после успешного входа.",
+                "error": {
+                    "window_unreachable": "окно входа Humble Bundle закрылось или недоступно"
+                },
+                "heading": "Вход в Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Открылось окно входа. Завершите вход в нём.",
+                    "heading": "Вход через {{runner}}",
+                    "headingGeneric": "Вход в систему"
+                },
+                "blocked": {
+                    "body": "Вход был успешно перехвачен, но канал бэкенда {{channel}} ещё не перенесён в эту сборку. Это появится в Фазе 34.5.",
+                    "heading": "Вход через {{runner}} перехвачен, но пока не может быть завершён",
+                    "headingGeneric": "Вход перехвачен, но пока не может быть завершён"
+                },
+                "cancelled": {
+                    "body": "Окно входа было закрыто до завершения. Вы можете попробовать снова.",
+                    "heading": "Вход через {{runner}} отменён",
+                    "headingGeneric": "Вход отменён"
+                },
+                "error": {
+                    "body": "Что-то пошло не так при входе: {{message}}",
+                    "heading": "Не удалось выполнить вход через {{runner}}",
+                    "headingGeneric": "Не удалось выполнить вход"
+                },
+                "finalizing": {
+                    "body": "Вход перехвачен. Завершается обмен данными с магазином — это может занять несколько секунд.",
+                    "heading": "Завершение входа через {{runner}}…",
+                    "headingGeneric": "Завершение входа…"
+                },
+                "genericChannel": "канал входа",
+                "preparing": {
+                    "body": "Окно входа магазина готовится и скоро откроется.",
+                    "heading": "Подготовка входа через {{runner}}…",
+                    "headingGeneric": "Подготовка входа…"
+                },
+                "retry": "Повторить",
+                "timeout": {
+                    "body": "Окно входа слишком долго не завершало работу. Попробуйте ещё раз.",
+                    "heading": "Истекло время ожидания входа в {{runner}}",
+                    "headingGeneric": "Истекло время ожидания входа"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Просмотр магазина и вики в приложении недоступен в этой сборке"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Управление компонентами Winetricks недоступно в этой сборке",
+        "unavailableDetail": "Поддержка Winetricks отложена до будущего релиза (D-03, этап 34.6) и не может быть отображена или установлена из этой сборки."
+    }
+}

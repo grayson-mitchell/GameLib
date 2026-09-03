@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Acerca"
+    },
+    "app": {
+        "routeError": "Algo salió mal: {{detail}}"
+    },
+    "box": {
+        "cancel": "Cancelar",
+        "error": {
+            "install": {
+                "failed": "La instalación de {{title}} falló: {{error}}",
+                "signInToSteam": "Iniciar sesión en Steam",
+                "stalled": "Sin progreso de descarga durante {{minutes}} minutos — la instalación se detuvo"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib no pudo abrir el selector de archivos del sistema, por lo que no se seleccionó nada y no se realizaron cambios. ({{error}})",
+                "title": "No se pudo abrir el selector de archivos"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Reinstalar mediante CrossOver",
+                "message": "La versión de macOS de este juego es solo de 32 bits y no puede ejecutarse en esta versión de macOS. GameLib puede reinstalarlo mediante CrossOver, lo que descargará de nuevo la versión de Windows.",
+                "title": "Se detectó una compilación de macOS de 32 bits"
+            }
+        }
+    },
+    "button": {
+        "close": "Cerrar",
+        "paste": "Pegar"
+    },
+    "consoleMode": {
+        "installNext": "Siguiente",
+        "installPrevious": "Previo",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "No se puede iniciar esta instalación",
+        "steamInstallLibraryFull": "No hay suficiente espacio libre en la carpeta de tu biblioteca de Steam. Libera espacio e inténtalo de nuevo.",
+        "steamInstallLibraryMissing": "La carpeta de tu biblioteca de Steam no está disponible en este momento. Vuelve a conectar la unidad e inténtalo de nuevo."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Pausado"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "La búsqueda de ilustraciones de SteamGridDB no está disponible en esta compilación."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Sin clasificar",
+        "etaPrefix": "Tiempo restante: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic y HowLongToBeat no tenían nada para este título.",
+        "extraInfoEmptyTitle": "No se encontró información adicional",
+        "extraInfoErrorBody": "La búsqueda falló, lo cual no es lo mismo que este juego no tenga datos. Inténtalo de nuevo.",
+        "extraInfoErrorTitle": "No se pudo cargar información adicional",
+        "extraInfoRetry": "Reintentar",
+        "extraInfoStaleBody": "Este resultado se almacenó en caché antes de que se registraran los resultados de carga, por lo que puede estar desactualizado. Actualiza para comprobarlo.",
+        "tabsAriaLabel": "pestañas de información del juego",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "menos de un minuto"
+    },
+    "humbleKeys": {
+        "activate": "Activar",
+        "activateConfirmBody": "Esto revela la clave — eliminándola de las reservas Regalables para siempre — y la canjea en tu cuenta de Steam. No se puede deshacer.",
+        "activateConfirmBodyRevealed": "Esto canjea tu clave ya revelada en tu cuenta de Steam. No se puede deshacer.",
+        "activateConfirmTitle": "¿Activar esta clave en Steam?",
+        "activatedDone": "Listo",
+        "activateDismiss": "Cancelar",
+        "activatedTitle": "Activada",
+        "activateWizardTitle": "Activar esta clave",
+        "activatingBody": "Revelando tu clave y canjeándola en Steam. Esto solo tomará un momento.",
+        "activatingTitle": "Activando en Steam…"
+    },
+    "info": {
+        "refresh-rating": "Actualizar valoración"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib no pudo importar desde esa ubicación. El origen debe ser una ruta de carpeta completa sin pasos \"..\". Selecciona la carpeta del juego de nuevo.",
+        "pathRejectedBodyMove": "GameLib no pudo mover este juego allí. El destino debe ser una ruta de carpeta completa sin pasos \"..\". Selecciona la carpeta de destino de nuevo.",
+        "pathRejectedTitle": "No se puede usar esa ubicación"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Incluyendo ocultos",
+            "chipHiddenOnly": "Solo ocultos",
+            "chipNonAvailableIncluded": "Incluyendo no disponibles",
+            "chipNonAvailableOnly": "Solo no disponibles",
+            "chipNoStorePageHidden": "Ocultando sin página de tienda",
+            "chipNoStorePageOnly": "Solo sin página de tienda",
+            "clearAll": "Borrar todo",
+            "collections": "Colecciones",
+            "emptyAlphabetLetter": "Empieza con \"{{letter}}\"",
+            "emptyAlphabetNumber": "Empieza con un número",
+            "emptyBody": "Ningún juego coincide con {{filters}}.",
+            "emptyClearAll": "Borrar todos los filtros",
+            "emptyHeading": "Ningún juego coincide con tus filtros",
+            "groupSelectedCount": "{{selected}} seleccionados",
+            "manageCollections": "Gestionar colecciones",
+            "moreFilters": "Más filtros",
+            "newCollection": "+ Nueva colección",
+            "noStorePage": "Sin página de tienda",
+            "notYetChecked": "Aún no comprobado",
+            "removeFilter": "Eliminar filtro {{filterLabel}}",
+            "runnabilityGroup": "Ejecutabilidad",
+            "runsNatively": "Se ejecuta de forma nativa",
+            "runsViaBottle": "Se ejecuta mediante bottle",
+            "storeGroup": "Tienda",
+            "viewAll": "Todos los juegos",
+            "viewFavourites": "Favoritos",
+            "viewInstalled": "Instalado",
+            "viewRecentlyPlayed": "Jugados recientemente",
+            "wontRun": "No se ejecutará"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} de {{total}}"
+        },
+        "no_no_store_page_games": "No hay juegos sin página de tienda en tu biblioteca",
+        "noStorePage": "Sin página de tienda",
+        "steamSync": {
+            "failedBody": "Tus otras bibliotecas siguen disponibles. Inténtalo de nuevo o comprueba que Steam esté accesible.",
+            "failedTitle": "No se pudo sincronizar tu biblioteca de Steam",
+            "retry": "Reintentar sincronización de Steam",
+            "signedOutAction": "Iniciar sesión en Steam",
+            "signedOutBody": "Inicia sesión de nuevo para sincronizar tu biblioteca de Steam. Tus otras bibliotecas siguen disponibles.",
+            "signedOutTitle": "Tu inicio de sesión de Steam ha expirado",
+            "syncing": "Sincronizando tu biblioteca de Steam…"
+        },
+        "storeOther": "Otros"
+    },
+    "login": {
+        "connected": "Conectado",
+        "humble_dialog_title": "Iniciar sesión en Humble Bundle",
+        "logoutFailedTitle": "Cierre de sesión incompleto",
+        "steam_logout_failed_message": "El cierre de sesión de Steam no terminó a tiempo. Inténtalo de nuevo.",
+        "steam_logout_failed_title": "Error al cerrar sesión",
+        "steamReconnect": "Inicio de sesión expirado — Reconectar"
+    },
+    "pathSelectionBox": {
+        "saved": "Guardado",
+        "unsaved": "Aún no guardado — pulsa Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Fallido",
+            "retry": "Reintentar"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Introduce tu clave de Steam",
+        "redeem": "Canjear",
+        "redeeming": "Canjeando...",
+        "title": "Canjear una clave de Steam",
+        "viewInLibrary": "Ver en la biblioteca"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "El EOS Overlay no está disponible en esta versión",
+            "unavailableDetail": "El soporte de EOS Overlay se ha diferido a una futura versión (D-03, Fase 34.6) y no se puede instalar, actualizar ni eliminar en esta versión."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "¿Instalar el EOS Overlay ahora?",
+        "eosOverlayInstallConfirmTitle": "Confirmar instalación del overlay",
+        "eosOverlayUpdateConfirmBody": "¿Actualizar el EOS Overlay a la última versión?",
+        "eosOverlayUpdateConfirmTitle": "Confirmar actualización del overlay",
+        "framelessWindowDescription": "Usar ventana sin bordes",
+        "gamepadInitialRepeatDelay": "Retraso inicial de repetición del mando",
+        "gamepadRepeatFrequency": "Frecuencia de repetición del mando",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Método de escalado",
+        "gamescopeWindowType": "Tipo de ventana",
+        "loginBackground": "Fondo de Gestionar cuentas",
+        "loginBackgroundDialogTitle": "Selecciona una imagen de fondo",
+        "loginBackgroundFilterName": "Imágenes",
+        "loginBackgroundHelp": "Imagen mostrada detrás de la pantalla de Gestionar cuentas. Borra el campo para volver a la imagen incluida. Se admiten PNG, JPEG, WebP, AVIF y GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "No disponible en esta versión"
+            },
+            "help": {
+                "unavailableDetail": "La compatibilidad con imágenes de SteamGridDB se ha aplazado a una versión futura (D-03, Fase 34.6) y no se puede configurar en esta versión."
+            }
+        },
+        "wineDefaultLabel": "Wine por defecto",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Canjear una clave de Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Todos",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Apps",
+            "executables": "Ejecutables",
+            "images": "Imágenes",
+            "otherBinaries": "Otros binarios",
+            "scripts": "Scripts"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Comprobando opciones de instalación…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib dejó de recibir noticias sobre la configuración del bottle de Steam. Puede que siga en curso: busca una ventana del instalador de Steam y vuelve a intentarlo."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Los servidores de Steam interrumpieron la conexión.",
+                "decodeFailed": "No se pudieron desempaquetar los datos del juego descargados. Esto no es un problema de red.",
+                "genericV2": "La descarga de Steam falló.",
+                "notSignedIn": "No has iniciado sesión en Steam, así que esta descarga no pudo comenzar."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib gestiona un único bottle de CrossOver compartido para Steam. Todavía no se admite asignar un bottle distinto por juego.",
+            "contentLightNotice": "Esto se instala mediante el propio cliente de Steam, así que aquí no hay nada que elegir. Activa las instalaciones nativas de Steam en Ajustes para gestionar la ubicación de instalación y la compatibilidad con Windows desde GameLib.",
+            "contentLightSingleLibraryNotice": "Solo hay una biblioteca de Steam en este sistema, así que aquí no hay nada que elegir: GameLib instalará este juego en ella.",
+            "forceWindowsHelp": "Este juego tiene una versión nativa de macOS, pero puedes instalar la versión de Windows en su lugar mediante un bottle de Wine, útil si a la versión nativa le faltan funciones o rinde peor.",
+            "libraryFullNotice": "No hay suficiente espacio en tu biblioteca de Steam: elige otra a continuación o libera espacio.",
+            "libraryFullOnlyNotice": "No hay suficiente espacio en tu biblioteca de Steam. Libera espacio y vuelve a intentarlo.",
+            "libraryMissingNotice": "No se pudo acceder a tu biblioteca de Steam: elige otra a continuación.",
+            "libraryMissingOnlyNotice": "No se pudo acceder a tu biblioteca de Steam. Reconecta la unidad y vuelve a intentarlo.",
+            "libraryPickerLabel": "Elegir biblioteca de Steam",
+            "libraryPrimarySuffix": "por defecto",
+            "noCrossoverEngine": "No se encontró ninguna instalación de CrossOver. GameLib configurará una cuando comience la instalación.",
+            "sharedBottleNotice": "La versión de wine que elijas aquí se usa para todos los juegos de Steam que necesiten un bottle, no solo para este. Cambiarla más adelante también afectará al funcionamiento de esos juegos.",
+            "withOptionsLabel": "Instalar con opciones…"
+        },
+        "resumeAvailable": {
+            "notify": "Una instalación interrumpida de {{game}} está lista para reanudarse: haz clic en Instalar para continuar"
+        },
+        "status": {
+            "resumeInstall": "Reanudar instalación",
+            "resumeInstallHint": "Instalación incompleta: reanuda la descarga en GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Esto elimina todas las copias instaladas de este juego en todas las ubicaciones de instalación. Esta acción no se puede deshacer.",
+            "removeAllCopiesConfirmTitle": "¿Eliminar todas las copias?",
+            "removeAllCopiesLabel": "Eliminar todas las copias…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Las imágenes de SteamGridDB no están disponibles en esta versión"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Oasis Cibernético",
+        "cyberSpaceOasisAlt": "Oasis Cibernético Clásico",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Oscuro",
+        "highContrast": "Alto Contraste",
+        "marine": "Marino",
+        "marineClassic": "Marino Clásico",
+        "midnightMirage": "Espejismo de Medianoche",
+        "nordDark": "Nord Oscuro",
+        "nordLight": "Nord Claro",
+        "oldSchool": "GameLib Old School",
+        "sweet": "Dulce",
+        "zombie": "Zombi",
+        "zombieClassic": "Zombi Clásico"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Tu inicio de sesión no se puede completar todavía: {{channel}} no está portado a esta compilación. Esto llegará en la Fase 34.5.",
+                "heading": "El inicio de sesión en {{runner}} aún no está implementado",
+                "headingGeneric": "El inicio de sesión aún no está implementado"
+            },
+            "humble": {
+                "body": "Se ha abierto una ventana de inicio de sesión. Completa el inicio de sesión allí; esta página se actualizará automáticamente en cuanto se complete.",
+                "error": {
+                    "window_unreachable": "la ventana de inicio de sesión de Humble Bundle se cerró o no se pudo acceder a ella"
+                },
+                "heading": "Iniciando sesión en Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Se ha abierto una ventana de inicio de sesión. Completa el inicio de sesión allí.",
+                    "heading": "Iniciando sesión en {{runner}}",
+                    "headingGeneric": "Iniciando sesión"
+                },
+                "blocked": {
+                    "body": "Tu inicio de sesión se capturó correctamente, pero el canal backend de {{channel}} aún no está portado a esta compilación. Esto llegará en la Fase 34.5.",
+                    "heading": "El inicio de sesión en {{runner}} se capturó, pero aún no puede finalizarse",
+                    "headingGeneric": "El inicio de sesión se capturó, pero aún no puede finalizarse"
+                },
+                "cancelled": {
+                    "body": "La ventana de inicio de sesión se cerró antes de completarse. Puedes intentarlo de nuevo.",
+                    "heading": "Se canceló el inicio de sesión en {{runner}}",
+                    "headingGeneric": "Se canceló el inicio de sesión"
+                },
+                "error": {
+                    "body": "Algo salió mal al iniciar sesión: {{message}}",
+                    "heading": "Error al iniciar sesión en {{runner}}",
+                    "headingGeneric": "Error al iniciar sesión"
+                },
+                "finalizing": {
+                    "body": "Inicio de sesión capturado. Completando el intercambio con la tienda; esto puede tardar unos segundos.",
+                    "heading": "Finalizando el inicio de sesión con {{runner}}…",
+                    "headingGeneric": "Finalizando el inicio de sesión…"
+                },
+                "genericChannel": "el canal de inicio de sesión",
+                "preparing": {
+                    "body": "La ventana de inicio de sesión de la tienda se está preparando y se abrirá en breve.",
+                    "heading": "Preparando el inicio de sesión de {{runner}}…",
+                    "headingGeneric": "Preparando el inicio de sesión…"
+                },
+                "retry": "Reintentar",
+                "timeout": {
+                    "body": "La ventana de inicio de sesión tardó demasiado en completarse. Puedes intentarlo de nuevo.",
+                    "heading": "El inicio de sesión en {{runner}} agotó el tiempo de espera",
+                    "headingGeneric": "El inicio de sesión agotó el tiempo de espera"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "La navegación de tienda y wiki dentro de la app no está disponible en esta compilación"
+        }
+    },
+    "winetricks": {
+        "unavailable": "La gestión de componentes de Winetricks no está disponible en esta compilación",
+        "unavailableDetail": "El soporte de Winetricks se ha diferido a una versión futura (D-03, Fase 34.6) y no se puede listar ni instalar desde esta compilación."
+    }
+}

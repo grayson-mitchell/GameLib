@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "เกี่ยวกับ"
+    },
+    "app": {
+        "routeError": "เกิดข้อผิดพลาด: {{detail}}"
+    },
+    "box": {
+        "cancel": "ยกเลิก",
+        "error": {
+            "install": {
+                "failed": "การติดตั้ง {{title}} ล้มเหลว: {{error}}",
+                "signInToSteam": "ลงชื่อเข้าใช้ Steam",
+                "stalled": "ไม่มีความคืบหน้าในการดาวน์โหลดเป็นเวลา {{minutes}} นาที — การติดตั้งถูกหยุด"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib ไม่สามารถเปิดตัวเลือกไฟล์ของระบบได้ จึงไม่มีการเลือกใดๆ และไม่มีการเปลี่ยนแปลงเกิดขึ้น ({{error}})",
+                "title": "ไม่สามารถเปิดตัวเลือกไฟล์ได้"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "ติดตั้งใหม่ผ่าน CrossOver",
+                "message": "เกมนี้เวอร์ชัน macOS เป็นแบบ 32 บิตเท่านั้น และไม่สามารถทำงานบน macOS เวอร์ชันนี้ได้ GameLib สามารถติดตั้งใหม่ผ่าน CrossOver แทนได้ ซึ่งจะดาวน์โหลดเวอร์ชัน Windows ใหม่",
+                "title": "ตรวจพบ macOS เวอร์ชัน 32 บิต"
+            }
+        }
+    },
+    "button": {
+        "close": "ปิด",
+        "paste": "วาง"
+    },
+    "consoleMode": {
+        "installNext": "ถัดไป",
+        "installPrevious": "ก่อนหน้า",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "ไม่สามารถเริ่มการติดตั้งนี้ได้",
+        "steamInstallLibraryFull": "พื้นที่ว่างในโฟลเดอร์ไลบรารี Steam ของคุณไม่เพียงพอ กรุณาเพิ่มพื้นที่ว่างแล้วลองอีกครั้ง",
+        "steamInstallLibraryMissing": "โฟลเดอร์ไลบรารี Steam ของคุณไม่พร้อมใช้งานในขณะนี้ กรุณาเชื่อมต่อไดรฟ์ใหม่แล้วลองอีกครั้ง"
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "หยุดชั่วคราว"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "การค้นหาภาพจาก SteamGridDB ไม่พร้อมใช้งานในบิลด์นี้"
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "ไม่มีการจัดเรต",
+        "etaPrefix": "เวลาที่คาดว่าจะเสร็จ: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic และ HowLongToBeat ไม่มีข้อมูลสำหรับเกมนี้",
+        "extraInfoEmptyTitle": "ไม่พบข้อมูลเพิ่มเติม",
+        "extraInfoErrorBody": "การค้นหาล้มเหลว ซึ่งไม่เหมือนกับการที่เกมนี้ไม่มีข้อมูล ลองอีกครั้ง",
+        "extraInfoErrorTitle": "ไม่สามารถโหลดข้อมูลเพิ่มเติมได้",
+        "extraInfoRetry": "ลองอีกครั้ง",
+        "extraInfoStaleBody": "ผลลัพธ์นี้ถูกแคชไว้ก่อนที่จะมีการบันทึกผลการโหลด จึงอาจไม่เป็นข้อมูลล่าสุด รีเฟรชเพื่อตรวจสอบ",
+        "tabsAriaLabel": "แท็บข้อมูลเกม",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "น้อยกว่าหนึ่งนาที"
+    },
+    "humbleKeys": {
+        "activate": "เปิดใช้งาน",
+        "activateConfirmBody": "การดำเนินการนี้จะเปิดเผยคีย์ — ทำให้คีย์ถูกนำออกจากสำรอง Giftable อย่างถาวร — และแลกใช้กับบัญชี Steam ของคุณ ไม่สามารถย้อนกลับได้",
+        "activateConfirmBodyRevealed": "การดำเนินการนี้จะแลกใช้คีย์ที่เปิดเผยแล้วของคุณกับบัญชี Steam ไม่สามารถย้อนกลับได้",
+        "activateConfirmTitle": "เปิดใช้งานคีย์นี้บน Steam หรือไม่?",
+        "activatedDone": "เสร็จสิ้น",
+        "activateDismiss": "ยกเลิก",
+        "activatedTitle": "เปิดใช้งานแล้ว",
+        "activateWizardTitle": "เปิดใช้งานคีย์นี้",
+        "activatingBody": "กำลังเปิดเผยคีย์ของคุณและแลกใช้บน Steam — ใช้เวลาสักครู่เท่านั้น",
+        "activatingTitle": "กำลังเปิดใช้งานบน Steam…"
+    },
+    "info": {
+        "refresh-rating": "รีเฟรชคะแนน"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib ไม่สามารถนำเข้าจากตำแหน่งนั้นได้ ต้นทางต้องเป็นเส้นทางโฟลเดอร์แบบเต็มที่ไม่มีขั้นตอน \"..\" อยู่ในนั้น กรุณาเลือกโฟลเดอร์ของเกมอีกครั้ง",
+        "pathRejectedBodyMove": "GameLib ไม่สามารถย้ายเกมนี้ไปที่นั่นได้ ปลายทางต้องเป็นเส้นทางโฟลเดอร์แบบเต็มที่ไม่มีขั้นตอน \"..\" อยู่ในนั้น กรุณาเลือกโฟลเดอร์ปลายทางอีกครั้ง",
+        "pathRejectedTitle": "ไม่สามารถใช้ตำแหน่งนั้นได้"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "รวมที่ซ่อนอยู่",
+            "chipHiddenOnly": "เฉพาะที่ซ่อนอยู่",
+            "chipNonAvailableIncluded": "รวมที่ไม่พร้อมใช้งาน",
+            "chipNonAvailableOnly": "เฉพาะที่ไม่พร้อมใช้งาน",
+            "chipNoStorePageHidden": "ซ่อนที่ไม่มีหน้าร้านค้า",
+            "chipNoStorePageOnly": "เฉพาะที่ไม่มีหน้าร้านค้า",
+            "clearAll": "ล้างทั้งหมด",
+            "collections": "คอลเลกชัน",
+            "emptyAlphabetLetter": "ขึ้นต้นด้วย \"{{letter}}\"",
+            "emptyAlphabetNumber": "ขึ้นต้นด้วยตัวเลข",
+            "emptyBody": "ไม่มีเกมที่ตรงกับ {{filters}}",
+            "emptyClearAll": "ล้างตัวกรองทั้งหมด",
+            "emptyHeading": "ไม่มีเกมที่ตรงกับตัวกรองของคุณ",
+            "groupSelectedCount": "เลือกแล้ว {{selected}} รายการ",
+            "manageCollections": "จัดการคอลเลกชัน",
+            "moreFilters": "ตัวกรองเพิ่มเติม",
+            "newCollection": "+ คอลเลกชันใหม่",
+            "noStorePage": "ไม่มีหน้าร้านค้า",
+            "notYetChecked": "ยังไม่ได้ตรวจสอบ",
+            "removeFilter": "ลบตัวกรอง {{filterLabel}}",
+            "runnabilityGroup": "ความสามารถในการเรียกใช้",
+            "runsNatively": "รันได้แบบเนทีฟ",
+            "runsViaBottle": "รันผ่านบอตเทิล",
+            "storeGroup": "ร้านค้า",
+            "viewAll": "เกมทั้งหมด",
+            "viewFavourites": "รายการโปรด",
+            "viewInstalled": "ติดตั้งแล้ว",
+            "viewRecentlyPlayed": "เล่นล่าสุด",
+            "wontRun": "ไม่สามารถรันได้"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} จาก {{total}}"
+        },
+        "no_no_store_page_games": "ไม่มีเกมที่ไม่มีหน้าร้านค้าในไลบรารีของคุณ",
+        "noStorePage": "ไม่มีหน้าร้านค้า",
+        "steamSync": {
+            "failedBody": "ไลบรารีอื่นของคุณยังคงใช้งานได้ ลองใหม่อีกครั้ง หรือตรวจสอบว่าเชื่อมต่อกับ Steam ได้หรือไม่",
+            "failedTitle": "ซิงค์ไลบรารี Steam ของคุณไม่สำเร็จ",
+            "retry": "ลองซิงค์ Steam อีกครั้ง",
+            "signedOutAction": "ลงชื่อเข้าใช้ Steam",
+            "signedOutBody": "ลงชื่อเข้าใช้อีกครั้งเพื่อซิงค์ไลบรารี Steam ของคุณ ไลบรารีอื่นของคุณยังคงใช้งานได้",
+            "signedOutTitle": "การลงชื่อเข้าใช้ Steam ของคุณหมดอายุแล้ว",
+            "syncing": "กำลังซิงค์ไลบรารี Steam ของคุณ…"
+        },
+        "storeOther": "อื่นๆ"
+    },
+    "login": {
+        "connected": "เชื่อมต่อแล้ว",
+        "humble_dialog_title": "ลงชื่อเข้าใช้ Humble Bundle",
+        "logoutFailedTitle": "การลงชื่อออกไม่สมบูรณ์",
+        "steam_logout_failed_message": "การลงชื่อออกจาก Steam ไม่เสร็จสิ้นภายในเวลาที่กำหนด กรุณาลองใหม่อีกครั้ง",
+        "steam_logout_failed_title": "ลงชื่อออกไม่สำเร็จ",
+        "steamReconnect": "การลงชื่อเข้าใช้หมดอายุ — เชื่อมต่อใหม่"
+    },
+    "pathSelectionBox": {
+        "saved": "บันทึกแล้ว",
+        "unsaved": "ยังไม่ได้บันทึก — กด Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "ล้มเหลว",
+            "retry": "ลองใหม่"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "กรอกคีย์ Steam ของคุณ",
+        "redeem": "แลกใช้งาน",
+        "redeeming": "กำลังแลกใช้งาน...",
+        "title": "แลกใช้งานคีย์ Steam",
+        "viewInLibrary": "ดูในไลบรารี"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay ไม่พร้อมใช้งานในบิลด์นี้",
+            "unavailableDetail": "การรองรับ EOS Overlay ถูกเลื่อนออกไปในเวอร์ชันถัดไป (D-03, Phase 34.6) และไม่สามารถติดตั้ง อัปเดต หรือลบออกจากบิลด์นี้ได้"
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "ติดตั้ง EOS Overlay ตอนนี้เลยหรือไม่?",
+        "eosOverlayInstallConfirmTitle": "ยืนยันการติดตั้ง overlay",
+        "eosOverlayUpdateConfirmBody": "อัปเดต EOS Overlay เป็นเวอร์ชันล่าสุดหรือไม่?",
+        "eosOverlayUpdateConfirmTitle": "ยืนยันการอัปเดต overlay",
+        "framelessWindowDescription": "ใช้หน้าต่างแบบไม่มีกรอบ",
+        "gamepadInitialRepeatDelay": "ความล่าช้าก่อนเริ่มทำซ้ำของอินพุตเกมแพด",
+        "gamepadRepeatFrequency": "ความถี่ในการทำซ้ำของอินพุตเกมแพด",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "วิธีอัปสเกล",
+        "gamescopeWindowType": "ประเภทหน้าต่าง",
+        "loginBackground": "พื้นหลังหน้าจัดการบัญชี",
+        "loginBackgroundDialogTitle": "เลือกภาพพื้นหลัง",
+        "loginBackgroundFilterName": "รูปภาพ",
+        "loginBackgroundHelp": "ภาพที่แสดงด้านหลังหน้าจอจัดการบัญชี ล้างช่องนี้เพื่อกลับไปใช้ภาพที่มาพร้อมโปรแกรม รองรับไฟล์ PNG, JPEG, WebP, AVIF และ GIF",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "ไม่พร้อมใช้งานในบิลด์นี้"
+            },
+            "help": {
+                "unavailableDetail": "การรองรับภาพปกจาก SteamGridDB ถูกเลื่อนไปยังรุ่นถัดไป (D-03, Phase 34.6) และไม่สามารถตั้งค่าได้จากบิลด์นี้"
+            }
+        },
+        "wineDefaultLabel": "ค่าเริ่มต้นของ Wine",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "แลกรหัส Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "ทั้งหมด",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "แอป",
+            "executables": "ไฟล์สั่งทำงาน",
+            "images": "รูปภาพ",
+            "otherBinaries": "ไฟล์ไบนารีอื่น ๆ",
+            "scripts": "สคริปต์"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "กำลังตรวจสอบตัวเลือกการติดตั้ง…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib ไม่ได้รับการตอบกลับเกี่ยวกับการตั้งค่า Steam bottle อีกต่อไป อาจยังทำงานอยู่ — ลองตรวจสอบหน้าต่างตัวติดตั้ง Steam แล้วลองอีกครั้ง"
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "เซิร์ฟเวอร์ Steam ตัดการเชื่อมต่อ",
+                "decodeFailed": "ไม่สามารถแตกไฟล์ข้อมูลเกมที่ดาวน์โหลดได้ ปัญหานี้ไม่ได้เกิดจากเครือข่าย",
+                "genericV2": "การดาวน์โหลดจาก Steam ล้มเหลว",
+                "notSignedIn": "คุณยังไม่ได้เข้าสู่ระบบ Steam จึงไม่สามารถเริ่มการดาวน์โหลดนี้ได้"
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib จัดการ CrossOver bottle แบบใช้ร่วมกันเพียงหนึ่งเดียวสำหรับ Steam การตั้งชื่อ bottle แยกตามแต่ละเกมยังไม่รองรับ",
+            "contentLightNotice": "การติดตั้งนี้ทำผ่านไคลเอนต์ของ Steam เอง จึงไม่มีอะไรให้เลือกที่นี่ เปิดใช้งานการติดตั้งแบบเนทีฟของ Steam ในการตั้งค่าเพื่อจัดการตำแหน่งติดตั้งและความเข้ากันได้กับ Windows จาก GameLib",
+            "contentLightSingleLibraryNotice": "มีคลัง Steam เพียงแห่งเดียวในระบบนี้ จึงไม่มีอะไรให้เลือกที่นี่ — GameLib จะติดตั้งเกมนี้ลงในคลังนั้น",
+            "forceWindowsHelp": "เกมนี้มีเวอร์ชันเนทีฟสำหรับ macOS แต่คุณสามารถติดตั้งเวอร์ชัน Windows แทนผ่าน Wine bottle ได้ — มีประโยชน์หากบิลด์เนทีฟขาดฟีเจอร์หรือทำงานได้แย่กว่า",
+            "libraryFullNotice": "พื้นที่ในคลัง Steam ของคุณไม่เพียงพอ — เลือกคลังอื่นด้านล่างหรือเพิ่มพื้นที่ว่าง",
+            "libraryFullOnlyNotice": "พื้นที่ในคลัง Steam ของคุณไม่เพียงพอ เพิ่มพื้นที่ว่างแล้วลองอีกครั้ง",
+            "libraryMissingNotice": "ไม่สามารถเข้าถึงคลัง Steam ของคุณได้ — เลือกคลังอื่นด้านล่าง",
+            "libraryMissingOnlyNotice": "ไม่สามารถเข้าถึงคลัง Steam ของคุณได้ เชื่อมต่อไดรฟ์ใหม่แล้วลองอีกครั้ง",
+            "libraryPickerLabel": "เลือกคลัง Steam",
+            "libraryPrimarySuffix": "ค่าเริ่มต้น",
+            "noCrossoverEngine": "ไม่พบการติดตั้ง CrossOver GameLib จะตั้งค่าให้เมื่อเริ่มการติดตั้ง",
+            "sharedBottleNotice": "เวอร์ชัน wine ที่คุณเลือกที่นี่จะถูกใช้กับทุกเกม Steam ที่ต้องใช้ bottle — ไม่ใช่แค่เกมนี้ การเปลี่ยนแปลงในภายหลังจะส่งผลต่อการทำงานของเกมเหล่านั้นด้วย",
+            "withOptionsLabel": "ติดตั้งพร้อมตัวเลือก…"
+        },
+        "resumeAvailable": {
+            "notify": "การติดตั้งของ {{game}} ที่ถูกขัดจังหวะพร้อมที่จะดำเนินการต่อ — คลิกติดตั้งเพื่อดำเนินการต่อ"
+        },
+        "status": {
+            "resumeInstall": "ดำเนินการติดตั้งต่อ",
+            "resumeInstallHint": "ติดตั้งไม่เสร็จสมบูรณ์ — ดำเนินการดาวน์โหลดต่อใน GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "การดำเนินการนี้จะลบสำเนาที่ติดตั้งไว้ของเกมนี้ทั้งหมดในทุกตำแหน่งติดตั้ง ไม่สามารถย้อนกลับได้",
+            "removeAllCopiesConfirmTitle": "ลบทุกสำเนาหรือไม่?",
+            "removeAllCopiesLabel": "ลบทุกสำเนา…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "ภาพปกจาก SteamGridDB ไม่พร้อมใช้งานในบิลด์นี้"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis คลาสสิก",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "คอนทราสต์สูง",
+        "marine": "Marine",
+        "marineClassic": "Marine คลาสสิก",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie คลาสสิก"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "ยังไม่สามารถเข้าสู่ระบบให้เสร็จสมบูรณ์ได้: {{channel}} ยังไม่ได้ถูกพอร์ตมายังบิลด์นี้ ฟีเจอร์นี้จะมาพร้อมกับ Phase 34.5",
+                "heading": "การเข้าสู่ระบบ {{runner}} ยังไม่พร้อมใช้งาน",
+                "headingGeneric": "การเข้าสู่ระบบยังไม่พร้อมใช้งาน"
+            },
+            "humble": {
+                "body": "หน้าต่างเข้าสู่ระบบได้เปิดขึ้นแล้ว โปรดเข้าสู่ระบบที่นั่น — หน้านี้จะอัปเดตอัตโนมัติเมื่อสำเร็จ",
+                "error": {
+                    "window_unreachable": "หน้าต่างเข้าสู่ระบบของ Humble Bundle ถูกปิดไปแล้วหรือไม่สามารถเข้าถึงได้"
+                },
+                "heading": "กำลังเข้าสู่ระบบ Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "หน้าต่างเข้าสู่ระบบได้เปิดขึ้นแล้ว โปรดเข้าสู่ระบบที่นั่น",
+                    "heading": "กำลังเข้าสู่ระบบ {{runner}}",
+                    "headingGeneric": "กำลังเข้าสู่ระบบ"
+                },
+                "blocked": {
+                    "body": "การเข้าสู่ระบบของคุณถูกบันทึกสำเร็จแล้ว แต่ช่องทางแบ็กเอนด์ {{channel}} ยังไม่ได้ถูกพอร์ตมายังบิลด์นี้ ฟีเจอร์นี้จะมาพร้อมกับ Phase 34.5",
+                    "heading": "บันทึกการเข้าสู่ระบบ {{runner}} แล้ว แต่ยังดำเนินการต่อไม่ได้",
+                    "headingGeneric": "บันทึกการเข้าสู่ระบบแล้ว แต่ยังดำเนินการต่อไม่ได้"
+                },
+                "cancelled": {
+                    "body": "หน้าต่างเข้าสู่ระบบถูกปิดก่อนดำเนินการเสร็จสิ้น คุณสามารถลองใหม่อีกครั้งได้",
+                    "heading": "ยกเลิกการเข้าสู่ระบบ {{runner}} แล้ว",
+                    "headingGeneric": "ยกเลิกการเข้าสู่ระบบแล้ว"
+                },
+                "error": {
+                    "body": "เกิดข้อผิดพลาดขณะเข้าสู่ระบบ: {{message}}",
+                    "heading": "เข้าสู่ระบบ {{runner}} ล้มเหลว",
+                    "headingGeneric": "เข้าสู่ระบบล้มเหลว"
+                },
+                "finalizing": {
+                    "body": "บันทึกการเข้าสู่ระบบแล้ว กำลังดำเนินการแลกเปลี่ยนข้อมูลกับร้านค้า — อาจใช้เวลาสักครู่",
+                    "heading": "กำลังดำเนินการเข้าสู่ระบบ {{runner}} ให้เสร็จสมบูรณ์…",
+                    "headingGeneric": "กำลังดำเนินการเข้าสู่ระบบให้เสร็จสมบูรณ์…"
+                },
+                "genericChannel": "ช่องทางเข้าสู่ระบบ",
+                "preparing": {
+                    "body": "กำลังเตรียมหน้าต่างเข้าสู่ระบบของร้านค้า และจะเปิดขึ้นในไม่ช้า",
+                    "heading": "กำลังเตรียมการเข้าสู่ระบบ {{runner}}…",
+                    "headingGeneric": "กำลังเตรียมการเข้าสู่ระบบ…"
+                },
+                "retry": "ลองใหม่",
+                "timeout": {
+                    "body": "หน้าต่างลงชื่อเข้าใช้ใช้เวลานานเกินไป คุณสามารถลองใหม่ได้",
+                    "heading": "การลงชื่อเข้าใช้ {{runner}} หมดเวลา",
+                    "headingGeneric": "การลงชื่อเข้าใช้หมดเวลา"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "การเรียกดูร้านค้าและวิกิในแอปไม่พร้อมใช้งานในบิลด์นี้"
+        }
+    },
+    "winetricks": {
+        "unavailable": "การจัดการคอมโพเนนต์ Winetricks ไม่พร้อมใช้งานในบิลด์นี้",
+        "unavailableDetail": "การรองรับ Winetricks ถูกเลื่อนไปเป็นรุ่นถัดไป (D-03, Phase 34.6) และไม่สามารถแสดงรายการหรือติดตั้งได้จากบิลด์นี้"
+    }
+}

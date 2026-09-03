@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Tentang"
+    },
+    "app": {
+        "routeError": "Terjadi kesalahan: {{detail}}"
+    },
+    "box": {
+        "cancel": "Batalkan",
+        "error": {
+            "install": {
+                "failed": "Pemasangan {{title}} gagal: {{error}}",
+                "signInToSteam": "Masuk ke Steam",
+                "stalled": "Tidak ada progres unduhan selama {{minutes}} menit — pemasangan dihentikan"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib tidak dapat membuka pemilih berkas sistem, sehingga tidak ada yang dipilih dan tidak ada perubahan yang dibuat. ({{error}})",
+                "title": "Tidak dapat membuka pemilih berkas"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Pasang ulang melalui CrossOver",
+                "message": "Build macOS game ini hanya 32-bit dan tidak dapat berjalan pada versi macOS ini. Sebagai gantinya, GameLib dapat memasangnya ulang melalui CrossOver, yang akan mengunduh ulang versi Windows.",
+                "title": "Build macOS 32-bit terdeteksi"
+            }
+        }
+    },
+    "button": {
+        "close": "Tutup",
+        "paste": "Tempel"
+    },
+    "consoleMode": {
+        "installNext": "Berikutnya",
+        "installPrevious": "Sebelumnya",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Tidak dapat memulai pemasangan ini",
+        "steamInstallLibraryFull": "Ruang kosong di folder pustaka Steam Anda tidak cukup. Kosongkan ruang dan coba lagi.",
+        "steamInstallLibraryMissing": "Folder pustaka Steam Anda tidak tersedia saat ini. Sambungkan kembali drive dan coba lagi."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Dijeda"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Pencarian artwork SteamGridDB tidak tersedia pada build ini."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Belum dinilai",
+        "etaPrefix": "ETA: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic, dan HowLongToBeat tidak memiliki data untuk judul ini.",
+        "extraInfoEmptyTitle": "Tidak ada info tambahan yang ditemukan",
+        "extraInfoErrorBody": "Pencarian gagal, yang berbeda dengan game ini tidak memiliki data. Coba lagi.",
+        "extraInfoErrorTitle": "Tidak dapat memuat info tambahan",
+        "extraInfoRetry": "Coba Lagi",
+        "extraInfoStaleBody": "Hasil ini disimpan dalam cache sebelum hasil pemuatan dicatat, sehingga mungkin sudah kedaluwarsa. Segarkan untuk memeriksanya.",
+        "tabsAriaLabel": "tab info game",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "kurang dari satu menit"
+    },
+    "humbleKeys": {
+        "activate": "Aktifkan",
+        "activateConfirmBody": "Ini akan mengungkap kunci — menghapusnya secara permanen dari cadangan Giftable — dan menukarkannya pada akun Steam Anda. Tidak dapat dibatalkan.",
+        "activateConfirmBodyRevealed": "Ini akan menukarkan kunci yang sudah terungkap pada akun Steam Anda. Tidak dapat dibatalkan.",
+        "activateConfirmTitle": "Aktifkan kunci ini di Steam?",
+        "activatedDone": "Selesai",
+        "activateDismiss": "Batalkan",
+        "activatedTitle": "Diaktifkan",
+        "activateWizardTitle": "Aktifkan kunci ini",
+        "activatingBody": "Mengungkap kunci Anda dan menukarkannya di Steam — ini hanya butuh waktu sebentar.",
+        "activatingTitle": "Mengaktifkan di Steam…"
+    },
+    "info": {
+        "refresh-rating": "Segarkan rating"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib tidak dapat mengimpor dari lokasi tersebut. Sumbernya harus berupa jalur folder lengkap tanpa langkah \"..\" di dalamnya. Pilih kembali folder gim tersebut.",
+        "pathRejectedBodyMove": "GameLib tidak dapat memindahkan gim ini ke sana. Tujuan harus berupa jalur folder lengkap tanpa langkah \"..\" di dalamnya. Pilih kembali folder tujuan.",
+        "pathRejectedTitle": "Tidak dapat menggunakan lokasi tersebut"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Termasuk yang disembunyikan",
+            "chipHiddenOnly": "Hanya yang disembunyikan",
+            "chipNonAvailableIncluded": "Termasuk yang tidak tersedia",
+            "chipNonAvailableOnly": "Hanya yang tidak tersedia",
+            "chipNoStorePageHidden": "Menyembunyikan yang tanpa halaman toko",
+            "chipNoStorePageOnly": "Hanya yang tanpa halaman toko",
+            "clearAll": "Hapus semua",
+            "collections": "Koleksi",
+            "emptyAlphabetLetter": "Diawali dengan \"{{letter}}\"",
+            "emptyAlphabetNumber": "Diawali dengan angka",
+            "emptyBody": "Tidak ada gim yang cocok dengan {{filters}}.",
+            "emptyClearAll": "Hapus semua filter",
+            "emptyHeading": "Tidak ada gim yang cocok dengan filter Anda",
+            "groupSelectedCount": "{{selected}} dipilih",
+            "manageCollections": "Kelola koleksi",
+            "moreFilters": "Filter lebih banyak",
+            "newCollection": "+ Koleksi baru",
+            "noStorePage": "Tanpa halaman toko",
+            "notYetChecked": "Belum diperiksa",
+            "removeFilter": "Hapus filter {{filterLabel}}",
+            "runnabilityGroup": "Kemampuan berjalan",
+            "runsNatively": "Berjalan secara native",
+            "runsViaBottle": "Berjalan melalui bottle",
+            "storeGroup": "Toko",
+            "viewAll": "Semua Gim",
+            "viewFavourites": "Favorit",
+            "viewInstalled": "Terinstal",
+            "viewRecentlyPlayed": "Baru dimainkan",
+            "wontRun": "Tidak dapat berjalan"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} dari {{total}}"
+        },
+        "no_no_store_page_games": "Tidak ada gim tanpa halaman toko di perpustakaan Anda",
+        "noStorePage": "Tanpa halaman toko",
+        "steamSync": {
+            "failedBody": "Pustaka lainnya masih tersedia. Coba lagi, atau periksa apakah Steam dapat dijangkau.",
+            "failedTitle": "Gagal menyinkronkan pustaka Steam Anda",
+            "retry": "Coba lagi sinkronisasi Steam",
+            "signedOutAction": "Masuk ke Steam",
+            "signedOutBody": "Masuk kembali untuk menyinkronkan pustaka Steam Anda. Pustaka lainnya masih tersedia.",
+            "signedOutTitle": "Sesi masuk Steam Anda telah berakhir",
+            "syncing": "Menyinkronkan pustaka Steam Anda…"
+        },
+        "storeOther": "Lainnya"
+    },
+    "login": {
+        "connected": "Terhubung",
+        "humble_dialog_title": "Masuk ke Humble Bundle",
+        "logoutFailedTitle": "Keluar tidak selesai",
+        "steam_logout_failed_message": "Proses keluar dari Steam tidak selesai tepat waktu. Silakan coba lagi.",
+        "steam_logout_failed_title": "Gagal keluar",
+        "steamReconnect": "Sesi masuk berakhir — Hubungkan ulang"
+    },
+    "pathSelectionBox": {
+        "saved": "Tersimpan",
+        "unsaved": "Belum disimpan — tekan Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Gagal",
+            "retry": "Coba lagi"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Masukkan kunci Steam Anda",
+        "redeem": "Tukarkan",
+        "redeeming": "Menukarkan...",
+        "title": "Tukarkan kunci Steam",
+        "viewInLibrary": "Lihat di pustaka"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay tidak tersedia di build ini",
+            "unavailableDetail": "Dukungan EOS Overlay ditunda ke rilis mendatang (D-03, Fase 34.6) dan tidak dapat dipasang, diperbarui, atau dihapus dari build ini."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Pasang EOS Overlay sekarang?",
+        "eosOverlayInstallConfirmTitle": "Konfirmasi pemasangan overlay",
+        "eosOverlayUpdateConfirmBody": "Perbarui EOS Overlay ke versi terbaru?",
+        "eosOverlayUpdateConfirmTitle": "Konfirmasi pembaruan overlay",
+        "framelessWindowDescription": "Gunakan jendela tanpa bingkai",
+        "gamepadInitialRepeatDelay": "Penundaan pengulangan awal input gamepad",
+        "gamepadRepeatFrequency": "Frekuensi pengulangan input gamepad",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Metode Upscale",
+        "gamescopeWindowType": "Tipe Jendela",
+        "loginBackground": "Latar belakang Kelola Akun",
+        "loginBackgroundDialogTitle": "Pilih gambar latar belakang",
+        "loginBackgroundFilterName": "Gambar",
+        "loginBackgroundHelp": "Gambar yang ditampilkan di belakang layar Kelola Akun. Kosongkan kolom untuk kembali ke gambar bawaan. PNG, JPEG, WebP, AVIF, dan GIF didukung.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Tidak tersedia pada build ini"
+            },
+            "help": {
+                "unavailableDetail": "Dukungan artwork SteamGridDB ditunda hingga rilis mendatang (D-03, Fase 34.6) dan tidak dapat dikonfigurasi dari build ini."
+            }
+        },
+        "wineDefaultLabel": "Wine Bawaan",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Tukarkan kunci Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Semua",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Aplikasi",
+            "executables": "Executable",
+            "images": "Gambar",
+            "otherBinaries": "Biner Lainnya",
+            "scripts": "Skrip"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Memeriksa opsi instalasi…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib berhenti menerima kabar tentang pengaturan bottle Steam. Proses ini mungkin masih berjalan — periksa jendela installer Steam, lalu coba lagi."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Server Steam memutus koneksi.",
+                "decodeFailed": "Data game yang diunduh tidak dapat dibongkar. Ini bukan masalah jaringan.",
+                "genericV2": "Unduhan Steam gagal.",
+                "notSignedIn": "Anda belum masuk ke akun Steam, sehingga unduhan ini tidak dapat dimulai."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib mengelola satu bottle CrossOver bersama untuk Steam. Memberi nama bottle terpisah per game belum didukung.",
+            "contentLightNotice": "Ini terpasang melalui klien Steam sendiri, jadi tidak ada yang perlu dipilih di sini. Aktifkan instalasi Steam native di Pengaturan untuk mengelola lokasi instalasi dan kompatibilitas Windows dari GameLib.",
+            "contentLightSingleLibraryNotice": "Hanya ada satu library Steam di sistem ini, jadi tidak ada yang perlu dipilih di sini — GameLib akan memasang game ini ke dalamnya.",
+            "forceWindowsHelp": "Game ini memiliki versi macOS native, tetapi Anda dapat menginstal versi Windows sebagai gantinya melalui bottle Wine — berguna jika build native tersebut kekurangan fitur atau performanya lebih buruk.",
+            "libraryFullNotice": "Ruang di library Steam Anda tidak cukup — pilih yang lain di bawah atau kosongkan ruang.",
+            "libraryFullOnlyNotice": "Ruang di library Steam Anda tidak cukup. Kosongkan ruang, lalu coba lagi.",
+            "libraryMissingNotice": "Library Steam Anda tidak dapat dijangkau — pilih yang lain di bawah.",
+            "libraryMissingOnlyNotice": "Library Steam Anda tidak dapat dijangkau. Sambungkan kembali drive-nya, lalu coba lagi.",
+            "libraryPickerLabel": "Pilih library Steam",
+            "libraryPrimarySuffix": "bawaan",
+            "noCrossoverEngine": "Tidak ditemukan instalasi CrossOver. GameLib akan menyiapkannya saat instalasi dimulai.",
+            "sharedBottleNotice": "Versi wine yang Anda pilih di sini digunakan untuk setiap game Steam yang memerlukan bottle — bukan hanya game ini. Mengubahnya nanti juga akan mengubah cara game-game tersebut berjalan.",
+            "withOptionsLabel": "Instal dengan opsi…"
+        },
+        "resumeAvailable": {
+            "notify": "Instalasi {{game}} yang terhenti siap dilanjutkan — klik Instal untuk melanjutkan"
+        },
+        "status": {
+            "resumeInstall": "Lanjutkan Instalasi",
+            "resumeInstallHint": "Instalasi belum selesai — lanjutkan unduhan di GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Ini akan menghapus setiap salinan game yang terpasang di semua lokasi instalasi. Tindakan ini tidak dapat dibatalkan.",
+            "removeAllCopiesConfirmTitle": "Hapus semua salinan?",
+            "removeAllCopiesLabel": "Hapus semua salinan…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Artwork SteamGridDB tidak tersedia pada build ini"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Kontras Tinggi",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Proses masuk Anda belum dapat diselesaikan: {{channel}} belum diportasi ke build ini. Ini akan hadir di Phase 34.5.",
+                "heading": "Proses masuk ke {{runner}} belum tersambung",
+                "headingGeneric": "Proses masuk belum tersambung"
+            },
+            "humble": {
+                "body": "Jendela masuk telah terbuka. Selesaikan proses masuk di sana — halaman ini akan diperbarui otomatis setelah berhasil.",
+                "error": {
+                    "window_unreachable": "jendela masuk Humble tertutup atau tidak dapat dijangkau"
+                },
+                "heading": "Masuk ke Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Jendela masuk telah terbuka. Selesaikan proses masuk di sana.",
+                    "heading": "Masuk ke {{runner}}",
+                    "headingGeneric": "Sedang masuk"
+                },
+                "blocked": {
+                    "body": "Proses masuk Anda berhasil ditangkap, tetapi saluran backend {{channel}} belum diportasi ke build ini. Ini akan hadir di Phase 34.5.",
+                    "heading": "Proses masuk ke {{runner}} berhasil ditangkap, tetapi belum dapat diselesaikan",
+                    "headingGeneric": "Proses masuk berhasil ditangkap, tetapi belum dapat diselesaikan"
+                },
+                "cancelled": {
+                    "body": "Jendela masuk ditutup sebelum selesai. Anda dapat mencoba lagi.",
+                    "heading": "Proses masuk ke {{runner}} dibatalkan",
+                    "headingGeneric": "Proses masuk dibatalkan"
+                },
+                "error": {
+                    "body": "Terjadi kesalahan saat masuk: {{message}}",
+                    "heading": "Gagal masuk ke {{runner}}",
+                    "headingGeneric": "Proses masuk gagal"
+                },
+                "finalizing": {
+                    "body": "Proses masuk berhasil ditangkap. Menyelesaikan pertukaran dengan toko — ini bisa memakan waktu beberapa detik.",
+                    "heading": "Menyelesaikan proses masuk dengan {{runner}}…",
+                    "headingGeneric": "Menyelesaikan proses masuk…"
+                },
+                "genericChannel": "saluran masuk",
+                "preparing": {
+                    "body": "Jendela masuk toko sedang dipersiapkan dan akan segera terbuka.",
+                    "heading": "Mempersiapkan proses masuk {{runner}}…",
+                    "headingGeneric": "Mempersiapkan proses masuk…"
+                },
+                "retry": "Coba Lagi",
+                "timeout": {
+                    "body": "Jendela masuk membutuhkan waktu terlalu lama untuk selesai. Anda dapat mencoba lagi.",
+                    "heading": "Masuk ke {{runner}} melebihi batas waktu",
+                    "headingGeneric": "Masuk melebihi batas waktu"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Penjelajahan toko dan wiki dalam aplikasi tidak tersedia pada build ini"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Manajemen komponen Winetricks tidak tersedia pada build ini",
+        "unavailableDetail": "Dukungan Winetricks ditunda ke rilis mendatang (D-03, Fase 34.6) dan tidak dapat ditampilkan atau dipasang dari build ini."
+    }
+}

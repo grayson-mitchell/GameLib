@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Περί"
+    },
+    "app": {
+        "routeError": "Κάτι πήγε στραβά: {{detail}}"
+    },
+    "box": {
+        "cancel": "Ακύρωση",
+        "error": {
+            "install": {
+                "failed": "Η εγκατάσταση του {{title}} απέτυχε: {{error}}",
+                "signInToSteam": "Συνδεθείτε στο Steam",
+                "stalled": "Καμία πρόοδος λήψης για {{minutes}} λεπτά — η εγκατάσταση σταμάτησε"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "Το GameLib δεν μπόρεσε να ανοίξει τον επιλογέα αρχείων του συστήματος, οπότε δεν επιλέχθηκε τίποτα και δεν έγιναν αλλαγές. ({{error}})",
+                "title": "Δεν ήταν δυνατό το άνοιγμα του επιλογέα αρχείων"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Επανεγκατάσταση μέσω CrossOver",
+                "message": "Η έκδοση macOS αυτού του παιχνιδιού είναι μόνο 32-bit και δεν μπορεί να εκτελεστεί σε αυτήν την έκδοση του macOS. Το GameLib μπορεί αντ' αυτού να το επανεγκαταστήσει μέσω CrossOver, το οποίο θα κατεβάσει ξανά την έκδοση Windows.",
+                "title": "Εντοπίστηκε έκδοση macOS 32-bit"
+            }
+        }
+    },
+    "button": {
+        "close": "Kλείσιμο",
+        "paste": "Επικόλληση"
+    },
+    "consoleMode": {
+        "installNext": "Επόμενο",
+        "installPrevious": "Προηγούμενο",
+        "sortAscending": "A → Ω",
+        "sortDescending": "Ω → A",
+        "steamInstallBlockedTitle": "Δεν είναι δυνατή η έναρξη αυτής της εγκατάστασης",
+        "steamInstallLibraryFull": "Δεν υπάρχει αρκετός ελεύθερος χώρος στον φάκελο βιβλιοθήκης του Steam. Ελευθερώστε χώρο και δοκιμάστε ξανά.",
+        "steamInstallLibraryMissing": "Ο φάκελος βιβλιοθήκης του Steam δεν είναι διαθέσιμος αυτή τη στιγμή. Επανασυνδέστε τον δίσκο και δοκιμάστε ξανά."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Σε παύση"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Η αναζήτηση εικόνων SteamGridDB δεν είναι διαθέσιμη σε αυτήν την έκδοση."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Χωρίς αξιολόγηση",
+        "etaPrefix": "Εκτ. χρόνος: {{eta}}",
+        "extraInfoEmptyBody": "Τα Metacritic, OpenCritic και HowLongToBeat δεν είχαν τίποτα για αυτόν τον τίτλο.",
+        "extraInfoEmptyTitle": "Δεν βρέθηκαν επιπλέον πληροφορίες",
+        "extraInfoErrorBody": "Η αναζήτηση απέτυχε, κάτι που δεν σημαίνει ότι αυτό το παιχνίδι δεν έχει δεδομένα. Δοκιμάστε ξανά.",
+        "extraInfoErrorTitle": "Δεν ήταν δυνατή η φόρτωση επιπλέον πληροφοριών",
+        "extraInfoRetry": "Επανάληψη",
+        "extraInfoStaleBody": "Αυτό το αποτέλεσμα αποθηκεύτηκε προσωρινά πριν καταγραφούν τα αποτελέσματα φόρτωσης, οπότε ίσως είναι παρωχημένο. Ανανεώστε για να ελέγξετε.",
+        "tabsAriaLabel": "καρτέλες πληροφοριών παιχνιδιού",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "λιγότερο από ένα λεπτό"
+    },
+    "humbleKeys": {
+        "activate": "Ενεργοποίηση",
+        "activateConfirmBody": "Αυτό αποκαλύπτει το κλειδί — αφαιρώντας το οριστικά από τα διαθέσιμα για δώρο — και το εξαργυρώνει στον λογαριασμό σας Steam. Δεν υπάρχει αναίρεση.",
+        "activateConfirmBodyRevealed": "Αυτό εξαργυρώνει το ήδη αποκαλυμμένο κλειδί σας στον λογαριασμό σας Steam. Δεν υπάρχει αναίρεση.",
+        "activateConfirmTitle": "Ενεργοποίηση αυτού του κλειδιού στο Steam;",
+        "activatedDone": "Ολοκληρώθηκε",
+        "activateDismiss": "Ακύρωση",
+        "activatedTitle": "Ενεργοποιήθηκε",
+        "activateWizardTitle": "Ενεργοποίηση αυτού του κλειδιού",
+        "activatingBody": "Αποκάλυψη του κλειδιού σας και εξαργύρωσή του στο Steam — αυτό διαρκεί μόνο λίγο.",
+        "activatingTitle": "Ενεργοποίηση στο Steam…"
+    },
+    "info": {
+        "refresh-rating": "Ανανέωση βαθμολογίας"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "Το GameLib δεν μπόρεσε να εισάγει από αυτή την τοποθεσία. Η πηγή πρέπει να είναι μια πλήρης διαδρομή φακέλου χωρίς βήματα \"..\". Επιλέξτε ξανά τον φάκελο του παιχνιδιού.",
+        "pathRejectedBodyMove": "Το GameLib δεν μπόρεσε να μετακινήσει αυτό το παιχνίδι εκεί. Ο προορισμός πρέπει να είναι μια πλήρης διαδρομή φακέλου χωρίς βήματα \"..\". Επιλέξτε ξανά τον φάκελο προορισμού.",
+        "pathRejectedTitle": "Δεν είναι δυνατή η χρήση αυτής της τοποθεσίας"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Περιλαμβάνονται κρυφά",
+            "chipHiddenOnly": "Μόνο κρυφά",
+            "chipNonAvailableIncluded": "Περιλαμβάνονται μη διαθέσιμα",
+            "chipNonAvailableOnly": "Μόνο μη διαθέσιμα",
+            "chipNoStorePageHidden": "Απόκρυψη χωρίς σελίδα καταστήματος",
+            "chipNoStorePageOnly": "Μόνο χωρίς σελίδα καταστήματος",
+            "clearAll": "Εκκαθάριση όλων",
+            "collections": "Συλλογές",
+            "emptyAlphabetLetter": "Ξεκινούν με \"{{letter}}\"",
+            "emptyAlphabetNumber": "Ξεκινούν με αριθμό",
+            "emptyBody": "Κανένα παιχνίδι δεν ταιριάζει με {{filters}}.",
+            "emptyClearAll": "Εκκαθάριση όλων των φίλτρων",
+            "emptyHeading": "Κανένα παιχνίδι δεν ταιριάζει με τα φίλτρα σας",
+            "groupSelectedCount": "{{selected}} επιλεγμένα",
+            "manageCollections": "Διαχείριση συλλογών",
+            "moreFilters": "Περισσότερα φίλτρα",
+            "newCollection": "+ Νέα συλλογή",
+            "noStorePage": "Χωρίς σελίδα καταστήματος",
+            "notYetChecked": "Δεν έχει ελεγχθεί ακόμα",
+            "removeFilter": "Αφαίρεση φίλτρου {{filterLabel}}",
+            "runnabilityGroup": "Δυνατότητα εκτέλεσης",
+            "runsNatively": "Εκτελείται εγγενώς",
+            "runsViaBottle": "Εκτελείται μέσω bottle",
+            "storeGroup": "Κατάστημα",
+            "viewAll": "Όλα τα παιχνίδια",
+            "viewFavourites": "Αγαπημένα",
+            "viewInstalled": "Εγκατεστημένο",
+            "viewRecentlyPlayed": "Πρόσφατα παιγμένα",
+            "wontRun": "Δεν εκτελείται"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} από {{total}}"
+        },
+        "no_no_store_page_games": "Δεν υπάρχουν παιχνίδια χωρίς σελίδα καταστήματος στη βιβλιοθήκη σας",
+        "noStorePage": "Χωρίς σελίδα καταστήματος",
+        "steamSync": {
+            "failedBody": "Οι άλλες βιβλιοθήκες σας παραμένουν διαθέσιμες. Δοκιμάστε ξανά ή ελέγξτε ότι το Steam είναι προσβάσιμο.",
+            "failedTitle": "Δεν ήταν δυνατός ο συγχρονισμός της βιβλιοθήκης Steam",
+            "retry": "Επανάληψη συγχρονισμού Steam",
+            "signedOutAction": "Σύνδεση στο Steam",
+            "signedOutBody": "Συνδεθείτε ξανά για να συγχρονίσετε τη βιβλιοθήκη Steam. Οι άλλες βιβλιοθήκες σας παραμένουν διαθέσιμες.",
+            "signedOutTitle": "Η σύνδεση σας στο Steam έληξε",
+            "syncing": "Συγχρονισμός της βιβλιοθήκης Steam…"
+        },
+        "storeOther": "Άλλα"
+    },
+    "login": {
+        "connected": "Συνδεδεμένος",
+        "humble_dialog_title": "Σύνδεση στο Humble Bundle",
+        "logoutFailedTitle": "Η αποσύνδεση δεν ολοκληρώθηκε",
+        "steam_logout_failed_message": "Η αποσύνδεση από το Steam δεν ολοκληρώθηκε εγκαίρως. Δοκιμάστε ξανά.",
+        "steam_logout_failed_title": "Η αποσύνδεση απέτυχε",
+        "steamReconnect": "Η σύνδεση έληξε — Επανασύνδεση"
+    },
+    "pathSelectionBox": {
+        "saved": "Αποθηκεύτηκε",
+        "unsaved": "Δεν έχει αποθηκευτεί ακόμη — πατήστε Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Απέτυχε",
+            "retry": "Επανάληψη"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Εισαγάγετε το κλειδί Steam σας",
+        "redeem": "Εξαργύρωση",
+        "redeeming": "Εξαργύρωση...",
+        "title": "Εξαργύρωση κλειδιού Steam",
+        "viewInLibrary": "Προβολή στη βιβλιοθήκη"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "Το EOS Overlay δεν είναι διαθέσιμο σε αυτή την έκδοση",
+            "unavailableDetail": "Η υποστήριξη EOS Overlay έχει αναβληθεί για μελλοντική έκδοση (D-03, Phase 34.6) και δεν μπορεί να εγκατασταθεί, να ενημερωθεί ή να αφαιρεθεί από αυτή την έκδοση."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Εγκατάσταση του EOS Overlay τώρα;",
+        "eosOverlayInstallConfirmTitle": "Επιβεβαίωση εγκατάστασης overlay",
+        "eosOverlayUpdateConfirmBody": "Ενημέρωση του EOS Overlay στην τελευταία έκδοση;",
+        "eosOverlayUpdateConfirmTitle": "Επιβεβαίωση ενημέρωσης overlay",
+        "framelessWindowDescription": "Χρήση παραθύρου χωρίς πλαίσιο",
+        "gamepadInitialRepeatDelay": "Αρχική καθυστέρηση επανάληψης εισόδου χειριστηρίου",
+        "gamepadRepeatFrequency": "Συχνότητα επανάληψης εισόδου χειριστηρίου",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Μέθοδος αναβάθμισης ανάλυσης",
+        "gamescopeWindowType": "Τύπος παραθύρου",
+        "loginBackground": "Φόντο διαχείρισης λογαριασμών",
+        "loginBackgroundDialogTitle": "Επιλέξτε εικόνα φόντου",
+        "loginBackgroundFilterName": "Εικόνες",
+        "loginBackgroundHelp": "Εικόνα που εμφανίζεται πίσω από την οθόνη διαχείρισης λογαριασμών. Καθαρίστε το πεδίο για να επιστρέψετε στην προεπιλεγμένη εικόνα. Υποστηρίζονται PNG, JPEG, WebP, AVIF και GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Μη διαθέσιμο σε αυτή την έκδοση"
+            },
+            "help": {
+                "unavailableDetail": "Η υποστήριξη εικαστικού SteamGridDB έχει αναβληθεί για μελλοντική έκδοση (D-03, Φάση 34.6) και δεν μπορεί να ρυθμιστεί από αυτή την έκδοση."
+            }
+        },
+        "wineDefaultLabel": "Προεπιλογή Wine",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Εξαργύρωση κλειδιού Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Όλα",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Εφαρμογές",
+            "executables": "Εκτελέσιμα",
+            "images": "Εικόνες",
+            "otherBinaries": "Άλλα δυαδικά αρχεία",
+            "scripts": "Σενάρια"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Έλεγχος επιλογών εγκατάστασης…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "Το GameLib σταμάτησε να λαμβάνει απόκριση σχετικά με τη ρύθμιση του Steam bottle. Ίσως εξακολουθεί να εκτελείται — ελέγξτε για ένα παράθυρο εγκαταστάτη Steam και δοκιμάστε ξανά."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Οι διακομιστές του Steam διέκοψαν τη σύνδεση.",
+                "decodeFailed": "Τα δεδομένα του παιχνιδιού που λήφθηκαν δεν ήταν δυνατό να αποσυμπιεστούν. Δεν πρόκειται για πρόβλημα δικτύου.",
+                "genericV2": "Η λήψη από το Steam απέτυχε.",
+                "notSignedIn": "Δεν έχετε συνδεθεί στο Steam, επομένως αυτή η λήψη δεν ήταν δυνατό να ξεκινήσει."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "Το GameLib διαχειρίζεται ένα κοινόχρηστο CrossOver bottle για το Steam. Η ονομασία ξεχωριστού bottle ανά παιχνίδι δεν υποστηρίζεται ακόμη.",
+            "contentLightNotice": "Αυτό εγκαθίσταται μέσω του δικού του πελάτη Steam, οπότε δεν υπάρχει τίποτα να επιλέξετε εδώ. Ενεργοποιήστε τις εγγενείς εγκαταστάσεις Steam στις Ρυθμίσεις για να διαχειρίζεστε τη θέση εγκατάστασης και τη συμβατότητα με Windows από το GameLib.",
+            "contentLightSingleLibraryNotice": "Υπάρχει μόνο μία βιβλιοθήκη Steam σε αυτό το σύστημα, οπότε δεν υπάρχει τίποτα να επιλέξετε εδώ — το GameLib θα εγκαταστήσει το παιχνίδι σε αυτήν.",
+            "forceWindowsHelp": "Αυτό το παιχνίδι έχει εγγενή έκδοση για macOS, αλλά μπορείτε να εγκαταστήσετε την έκδοση Windows μέσω ενός Wine bottle — χρήσιμο αν η εγγενής έκδοση δεν διαθέτει λειτουργίες ή αποδίδει χειρότερα.",
+            "libraryFullNotice": "Δεν υπάρχει αρκετός χώρος στη βιβλιοθήκη Steam σας — επιλέξτε άλλη παρακάτω ή ελευθερώστε χώρο.",
+            "libraryFullOnlyNotice": "Δεν υπάρχει αρκετός χώρος στη βιβλιοθήκη Steam σας. Ελευθερώστε χώρο και δοκιμάστε ξανά.",
+            "libraryMissingNotice": "Δεν ήταν δυνατή η πρόσβαση στη βιβλιοθήκη Steam σας — επιλέξτε άλλη παρακάτω.",
+            "libraryMissingOnlyNotice": "Δεν ήταν δυνατή η πρόσβαση στη βιβλιοθήκη Steam σας. Επανασυνδέστε τον δίσκο και δοκιμάστε ξανά.",
+            "libraryPickerLabel": "Επιλογή βιβλιοθήκης Steam",
+            "libraryPrimarySuffix": "προεπιλογή",
+            "noCrossoverEngine": "Δεν βρέθηκε εγκατάσταση CrossOver. Το GameLib θα ρυθμίσει μία όταν ξεκινήσει η εγκατάσταση.",
+            "sharedBottleNotice": "Η έκδοση wine που επιλέγετε εδώ χρησιμοποιείται για κάθε παιχνίδι Steam που χρειάζεται bottle — όχι μόνο για αυτό. Αν την αλλάξετε αργότερα, θα αλλάξει και ο τρόπος εκτέλεσης αυτών των παιχνιδιών.",
+            "withOptionsLabel": "Εγκατάσταση με επιλογές…"
+        },
+        "resumeAvailable": {
+            "notify": "Μια διακοπείσα εγκατάσταση για {{game}} είναι έτοιμη να συνεχιστεί — κάντε κλικ στο Εγκατάσταση για να συνεχίσετε"
+        },
+        "status": {
+            "resumeInstall": "Συνέχιση εγκατάστασης",
+            "resumeInstallHint": "Ημιτελής εγκατάσταση — συνεχίστε τη λήψη στο GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Αυτό αφαιρεί κάθε εγκατεστημένο αντίγραφο αυτού του παιχνιδιού σε όλες τις θέσεις εγκατάστασης. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
+            "removeAllCopiesConfirmTitle": "Αφαίρεση όλων των αντιγράφων;",
+            "removeAllCopiesLabel": "Αφαίρεση όλων των αντιγράφων…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Το εικαστικό SteamGridDB δεν είναι διαθέσιμο σε αυτή την έκδοση"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Κυβερνο-Όαση",
+        "cyberSpaceOasisAlt": "Κυβερνο-Όαση Κλασική",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Υψηλή Αντίθεση",
+        "marine": "Marine",
+        "marineClassic": "Marine Κλασικό",
+        "midnightMirage": "Μεσονύχτιος Αντικατοπτρισμός",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Παλιάς Σχολής GameLib",
+        "sweet": "Γλυκό",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Κλασικό"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Η σύνδεσή σας δεν μπορεί να ολοκληρωθεί ακόμα: το {{channel}} δεν έχει μεταφερθεί σε αυτή την έκδοση. Αυτό θα προστεθεί στη Φάση 34.5.",
+                "heading": "Η σύνδεση στο {{runner}} δεν έχει συνδεθεί ακόμα",
+                "headingGeneric": "Η σύνδεση δεν έχει συνδεθεί ακόμα"
+            },
+            "humble": {
+                "body": "Άνοιξε ένα παράθυρο σύνδεσης. Ολοκληρώστε τη σύνδεση εκεί — αυτή η σελίδα ενημερώνεται αυτόματα μόλις επιτευχθεί.",
+                "error": {
+                    "window_unreachable": "το παράθυρο σύνδεσης του Humble Bundle έκλεισε ή δεν ήταν προσβάσιμο"
+                },
+                "heading": "Σύνδεση στο Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Άνοιξε ένα παράθυρο σύνδεσης. Ολοκληρώστε τη σύνδεση εκεί.",
+                    "heading": "Σύνδεση στο {{runner}}",
+                    "headingGeneric": "Σύνδεση σε εξέλιξη"
+                },
+                "blocked": {
+                    "body": "Η σύνδεσή σας καταγράφηκε με επιτυχία, αλλά το κανάλι backend {{channel}} δεν έχει μεταφερθεί ακόμα σε αυτή την έκδοση. Αυτό θα προστεθεί στη Φάση 34.5.",
+                    "heading": "Η σύνδεση στο {{runner}} καταγράφηκε, αλλά δεν μπορεί να ολοκληρωθεί ακόμα",
+                    "headingGeneric": "Η σύνδεση καταγράφηκε, αλλά δεν μπορεί να ολοκληρωθεί ακόμα"
+                },
+                "cancelled": {
+                    "body": "Το παράθυρο σύνδεσης έκλεισε πριν ολοκληρωθεί. Μπορείτε να δοκιμάσετε ξανά.",
+                    "heading": "Η σύνδεση στο {{runner}} ακυρώθηκε",
+                    "headingGeneric": "Η σύνδεση ακυρώθηκε"
+                },
+                "error": {
+                    "body": "Κάτι πήγε στραβά κατά τη σύνδεση: {{message}}",
+                    "heading": "Η σύνδεση στο {{runner}} απέτυχε",
+                    "headingGeneric": "Η σύνδεση απέτυχε"
+                },
+                "finalizing": {
+                    "body": "Η σύνδεση καταγράφηκε. Ολοκλήρωση της ανταλλαγής με το κατάστημα — αυτό μπορεί να διαρκέσει λίγα δευτερόλεπτα.",
+                    "heading": "Ολοκλήρωση σύνδεσης με το {{runner}}…",
+                    "headingGeneric": "Ολοκλήρωση σύνδεσης…"
+                },
+                "genericChannel": "το κανάλι σύνδεσης",
+                "preparing": {
+                    "body": "Το παράθυρο σύνδεσης του καταστήματος προετοιμάζεται και θα ανοίξει σύντομα.",
+                    "heading": "Προετοιμασία σύνδεσης {{runner}}…",
+                    "headingGeneric": "Προετοιμασία σύνδεσης…"
+                },
+                "retry": "Επανάληψη",
+                "timeout": {
+                    "body": "Το παράθυρο σύνδεσης χρειάστηκε πολύ χρόνο για να ολοκληρωθεί. Μπορείτε να δοκιμάσετε ξανά.",
+                    "heading": "Η σύνδεση στο {{runner}} έληξε λόγω χρονικού ορίου",
+                    "headingGeneric": "Η σύνδεση έληξε λόγω χρονικού ορίου"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Η περιήγηση σε κατάστημα και wiki εντός της εφαρμογής δεν είναι διαθέσιμη σε αυτή την έκδοση"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Η διαχείριση στοιχείων Winetricks δεν είναι διαθέσιμη σε αυτή την έκδοση",
+        "unavailableDetail": "Η υποστήριξη Winetricks έχει μετατεθεί σε μελλοντική έκδοση (D-03, Φάση 34.6) και δεν μπορεί να προβληθεί ή να εγκατασταθεί από αυτή την έκδοση."
+    }
+}

@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "정보"
+    },
+    "app": {
+        "routeError": "문제가 발생했습니다: {{detail}}"
+    },
+    "box": {
+        "cancel": "취소",
+        "error": {
+            "install": {
+                "failed": "{{title}} 설치에 실패했습니다: {{error}}",
+                "signInToSteam": "Steam에 로그인",
+                "stalled": "{{minutes}}분 동안 다운로드 진행이 없어 설치가 중단되었습니다"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib에서 시스템 파일 선택기를 열 수 없어 아무것도 선택되지 않았으며 변경 사항이 없습니다. ({{error}})",
+                "title": "파일 선택기를 열 수 없음"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "CrossOver로 다시 설치",
+                "message": "이 게임의 macOS 빌드는 32비트 전용이며 현재 버전의 macOS에서 실행할 수 없습니다. 대신 GameLib이 CrossOver를 통해 다시 설치할 수 있으며, 이 경우 Windows 버전을 다시 다운로드합니다.",
+                "title": "32비트 macOS 빌드 감지됨"
+            }
+        }
+    },
+    "button": {
+        "close": "닫기",
+        "paste": "붙여넣기"
+    },
+    "consoleMode": {
+        "installNext": "다음",
+        "installPrevious": "이전",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "이 설치를 시작할 수 없습니다",
+        "steamInstallLibraryFull": "Steam 라이브러리 폴더에 여유 공간이 부족합니다. 공간을 확보한 후 다시 시도하세요.",
+        "steamInstallLibraryMissing": "현재 Steam 라이브러리 폴더를 사용할 수 없습니다. 드라이브를 다시 연결한 후 다시 시도하세요."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "일시중지됨"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "이 빌드에서는 SteamGridDB 아트워크 검색을 사용할 수 없습니다."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "등급 없음",
+        "etaPrefix": "예상 완료: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic, HowLongToBeat에 이 타이틀에 대한 정보가 없습니다.",
+        "extraInfoEmptyTitle": "추가 정보를 찾을 수 없음",
+        "extraInfoErrorBody": "조회에 실패했습니다. 이는 이 게임에 데이터가 없는 것과는 다릅니다. 다시 시도해 보세요.",
+        "extraInfoErrorTitle": "추가 정보를 불러오지 못함",
+        "extraInfoRetry": "다시 시도",
+        "extraInfoStaleBody": "이 결과는 로드 결과가 기록되기 전에 캐시되어 오래되었을 수 있습니다. 새로고침하여 확인하세요.",
+        "tabsAriaLabel": "게임 정보 탭",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "1분 미만"
+    },
+    "humbleKeys": {
+        "activate": "활성화",
+        "activateConfirmBody": "이 작업은 키를 공개하여 Giftable spares에서 영구히 제거하고, Steam 계정에 등록합니다. 취소할 수 없습니다.",
+        "activateConfirmBodyRevealed": "이미 공개된 키를 Steam 계정에 등록합니다. 취소할 수 없습니다.",
+        "activateConfirmTitle": "이 키를 Steam에서 활성화하시겠습니까?",
+        "activatedDone": "완료",
+        "activateDismiss": "취소",
+        "activatedTitle": "활성화됨",
+        "activateWizardTitle": "이 키 활성화",
+        "activatingBody": "키를 공개하고 Steam에서 사용 등록하는 중입니다 — 잠시만 기다려 주세요.",
+        "activatingTitle": "Steam에서 활성화하는 중…"
+    },
+    "info": {
+        "refresh-rating": "평점 새로고침"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib가 해당 위치에서 가져올 수 없습니다. 원본 경로는 \"..\" 단계가 없는 전체 폴더 경로여야 합니다. 게임 폴더를 다시 선택하세요.",
+        "pathRejectedBodyMove": "GameLib가 이 게임을 그곳으로 이동할 수 없습니다. 대상 경로는 \"..\" 단계가 없는 전체 폴더 경로여야 합니다. 대상 폴더를 다시 선택하세요.",
+        "pathRejectedTitle": "해당 위치를 사용할 수 없습니다"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "숨김 포함",
+            "chipHiddenOnly": "숨김만",
+            "chipNonAvailableIncluded": "이용 불가 포함",
+            "chipNonAvailableOnly": "이용 불가만",
+            "chipNoStorePageHidden": "스토어 페이지 없음 숨김",
+            "chipNoStorePageOnly": "스토어 페이지 없음만",
+            "clearAll": "모두 지우기",
+            "collections": "컬렉션",
+            "emptyAlphabetLetter": "\"{{letter}}\"(으)로 시작",
+            "emptyAlphabetNumber": "숫자로 시작",
+            "emptyBody": "{{filters}}와(과) 일치하는 게임이 없습니다.",
+            "emptyClearAll": "모든 필터 지우기",
+            "emptyHeading": "필터와 일치하는 게임이 없습니다",
+            "groupSelectedCount": "{{selected}}개 선택됨",
+            "manageCollections": "컬렉션 관리",
+            "moreFilters": "추가 필터",
+            "newCollection": "+ 새 컬렉션",
+            "noStorePage": "스토어 페이지 없음",
+            "notYetChecked": "아직 확인되지 않음",
+            "removeFilter": "{{filterLabel}} 필터 제거",
+            "runnabilityGroup": "실행 가능 여부",
+            "runsNatively": "네이티브로 실행됨",
+            "runsViaBottle": "보틀을 통해 실행됨",
+            "storeGroup": "스토어",
+            "viewAll": "모든 게임",
+            "viewFavourites": "즐겨찾기",
+            "viewInstalled": "설치됨",
+            "viewRecentlyPlayed": "최근 플레이",
+            "wontRun": "실행되지 않음"
+        },
+        "header": {
+            "filteredOfTotal": "{{total}} 중 {{shown}}개"
+        },
+        "no_no_store_page_games": "라이브러리에 스토어 페이지가 없는 게임이 없습니다",
+        "noStorePage": "스토어 페이지 없음",
+        "steamSync": {
+            "failedBody": "다른 라이브러리는 계속 사용할 수 있습니다. 다시 시도하거나 Steam에 연결할 수 있는지 확인하세요.",
+            "failedTitle": "Steam 라이브러리를 동기화하지 못했습니다",
+            "retry": "Steam 동기화 다시 시도",
+            "signedOutAction": "Steam에 로그인",
+            "signedOutBody": "Steam 라이브러리를 동기화하려면 다시 로그인하세요. 다른 라이브러리는 계속 사용할 수 있습니다.",
+            "signedOutTitle": "Steam 로그인이 만료되었습니다",
+            "syncing": "Steam 라이브러리 동기화 중…"
+        },
+        "storeOther": "기타"
+    },
+    "login": {
+        "connected": "연결됨",
+        "humble_dialog_title": "Humble Bundle에 로그인",
+        "logoutFailedTitle": "로그아웃 미완료",
+        "steam_logout_failed_message": "Steam 로그아웃이 제시간에 완료되지 않았습니다. 다시 시도해 주세요.",
+        "steam_logout_failed_title": "로그아웃 실패",
+        "steamReconnect": "로그인 만료됨 — 다시 연결"
+    },
+    "pathSelectionBox": {
+        "saved": "저장됨",
+        "unsaved": "아직 저장되지 않음 — Enter를 누르세요"
+    },
+    "queue": {
+        "label": {
+            "failed": "실패",
+            "retry": "재시도"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Steam 키를 입력하세요",
+        "redeem": "등록",
+        "redeeming": "등록 중...",
+        "title": "Steam 키 등록",
+        "viewInLibrary": "라이브러리에서 보기"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "이 빌드에서는 EOS 오버레이를 사용할 수 없습니다",
+            "unavailableDetail": "EOS 오버레이 지원은 향후 릴리스(D-03, Phase 34.6)로 연기되었으며, 이 빌드에서는 설치, 업데이트 또는 제거할 수 없습니다."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "지금 EOS 오버레이를 설치하시겠습니까?",
+        "eosOverlayInstallConfirmTitle": "오버레이 설치 확인",
+        "eosOverlayUpdateConfirmBody": "EOS 오버레이를 최신 버전으로 업데이트하시겠습니까?",
+        "eosOverlayUpdateConfirmTitle": "오버레이 업데이트 확인",
+        "framelessWindowDescription": "프레임 없는 창 사용",
+        "gamepadInitialRepeatDelay": "게임패드 입력 초기 반복 지연",
+        "gamepadRepeatFrequency": "게임패드 입력 반복 빈도",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "업스케일 방법",
+        "gamescopeWindowType": "창 유형",
+        "loginBackground": "계정 관리 배경화면",
+        "loginBackgroundDialogTitle": "배경 이미지 선택",
+        "loginBackgroundFilterName": "이미지",
+        "loginBackgroundHelp": "계정 관리 화면 뒤에 표시되는 이미지입니다. 필드를 지우면 기본 제공 이미지로 돌아갑니다. PNG, JPEG, WebP, AVIF, GIF 형식을 지원합니다.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "이 빌드에서는 사용할 수 없음"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB 아트워크 지원은 이후 릴리스(D-03, Phase 34.6)로 연기되었으며 이 빌드에서는 구성할 수 없습니다."
+            }
+        },
+        "wineDefaultLabel": "Wine 기본값",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Steam 키 사용하기"
+    },
+    "sideload": {
+        "filter": {
+            "all": "모두",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "앱",
+            "executables": "실행 파일",
+            "images": "이미지",
+            "otherBinaries": "기타 바이너리",
+            "scripts": "스크립트"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "설치 옵션 확인 중…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib가 Steam 병(bottle) 설정에 대한 응답을 더 이상 받지 못했습니다. 여전히 실행 중일 수 있으니 Steam 설치 프로그램 창을 확인한 후 다시 시도해 보세요."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam 서버에서 연결이 끊어졌습니다.",
+                "decodeFailed": "다운로드한 게임 데이터의 압축을 풀 수 없습니다. 네트워크 문제가 아닙니다.",
+                "genericV2": "Steam 다운로드에 실패했습니다.",
+                "notSignedIn": "Steam에 로그인되어 있지 않아 이 다운로드를 시작할 수 없습니다."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib는 Steam용으로 공유 CrossOver 병(bottle) 하나를 관리합니다. 게임마다 별도의 병에 이름을 지정하는 기능은 아직 지원되지 않습니다.",
+            "contentLightNotice": "이 항목은 Steam 자체 클라이언트를 통해 설치되므로 여기서 선택할 항목이 없습니다. 설치 위치와 Windows 호환성을 GameLib에서 관리하려면 설정에서 네이티브 Steam 설치를 켜세요.",
+            "contentLightSingleLibraryNotice": "이 시스템에는 Steam 라이브러리가 하나뿐이므로 여기서 선택할 항목이 없습니다 — GameLib가 이 게임을 해당 라이브러리에 설치합니다.",
+            "forceWindowsHelp": "이 게임에는 네이티브 macOS 버전이 있지만, Wine 병(bottle)을 통해 Windows 버전을 대신 설치할 수도 있습니다 — 네이티브 빌드에 기능이 누락되었거나 성능이 더 낮은 경우 유용합니다.",
+            "libraryFullNotice": "Steam 라이브러리에 공간이 부족합니다 — 아래에서 다른 라이브러리를 선택하거나 공간을 확보하세요.",
+            "libraryFullOnlyNotice": "Steam 라이브러리에 공간이 부족합니다. 공간을 확보한 후 다시 시도하세요.",
+            "libraryMissingNotice": "Steam 라이브러리에 접근할 수 없습니다 — 아래에서 다른 라이브러리를 선택하세요.",
+            "libraryMissingOnlyNotice": "Steam 라이브러리에 접근할 수 없습니다. 드라이브를 다시 연결한 후 다시 시도하세요.",
+            "libraryPickerLabel": "Steam 라이브러리 선택",
+            "libraryPrimarySuffix": "기본값",
+            "noCrossoverEngine": "CrossOver 설치가 발견되지 않았습니다. 설치가 시작되면 GameLib가 자동으로 설정합니다.",
+            "sharedBottleNotice": "여기서 선택한 wine 버전은 병(bottle)이 필요한 모든 Steam 게임에 사용됩니다 — 이 게임뿐만이 아닙니다. 나중에 변경하면 해당 게임들의 실행 방식도 함께 바뀝니다.",
+            "withOptionsLabel": "옵션과 함께 설치…"
+        },
+        "resumeAvailable": {
+            "notify": "{{game}}의 중단된 설치를 재개할 수 있습니다 — 설치를 클릭하여 계속하세요"
+        },
+        "status": {
+            "resumeInstall": "설치 재개",
+            "resumeInstallHint": "설치 미완료 — GameLib에서 다운로드를 재개하세요"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "모든 설치 위치에서 이 게임의 설치된 모든 사본이 제거됩니다. 이 작업은 되돌릴 수 없습니다.",
+            "removeAllCopiesConfirmTitle": "모든 사본을 제거하시겠습니까?",
+            "removeAllCopiesLabel": "모든 사본 제거…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "이 빌드에서는 SteamGridDB 아트워크를 사용할 수 없습니다"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "사이버스페이스 오아시스",
+        "cyberSpaceOasisAlt": "사이버스페이스 오아시스 클래식",
+        "dracula": "드라큘라",
+        "gruvboxDark": "그루브박스 다크",
+        "highContrast": "고대비",
+        "marine": "마린",
+        "marineClassic": "마린 클래식",
+        "midnightMirage": "미드나이트 미라지",
+        "nordDark": "노르드 다크",
+        "nordLight": "노르드 라이트",
+        "oldSchool": "올드 스쿨 GameLib",
+        "sweet": "스위트",
+        "zombie": "좀비",
+        "zombieClassic": "좀비 클래식"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "아직 로그인을 완료할 수 없습니다: {{channel}}은(는) 이 빌드에 포팅되지 않았습니다. 이 기능은 Phase 34.5에서 제공될 예정입니다.",
+                "heading": "{{runner}} 로그인이 아직 연결되지 않았습니다",
+                "headingGeneric": "로그인이 아직 연결되지 않았습니다"
+            },
+            "humble": {
+                "body": "로그인 창이 열렸습니다. 해당 창에서 로그인을 완료하세요. 성공하면 이 페이지가 자동으로 업데이트됩니다.",
+                "error": {
+                    "window_unreachable": "Humble Bundle 로그인 창이 닫혔거나 접근할 수 없습니다"
+                },
+                "heading": "Humble Bundle 로그인 중"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "로그인 창이 열렸습니다. 해당 창에서 로그인을 완료하세요.",
+                    "heading": "{{runner}} 로그인 중",
+                    "headingGeneric": "로그인 중"
+                },
+                "blocked": {
+                    "body": "로그인 정보는 성공적으로 캡처되었지만, {{channel}} 백엔드 채널이 이 빌드에 아직 포팅되지 않았습니다. 이 기능은 Phase 34.5에서 제공될 예정입니다.",
+                    "heading": "{{runner}} 로그인 정보가 캡처되었지만 아직 완료할 수 없습니다",
+                    "headingGeneric": "로그인 정보가 캡처되었지만 아직 완료할 수 없습니다"
+                },
+                "cancelled": {
+                    "body": "로그인 창이 완료되기 전에 닫혔습니다. 다시 시도할 수 있습니다.",
+                    "heading": "{{runner}} 로그인이 취소되었습니다",
+                    "headingGeneric": "로그인이 취소되었습니다"
+                },
+                "error": {
+                    "body": "로그인 중 문제가 발생했습니다: {{message}}",
+                    "heading": "{{runner}} 로그인에 실패했습니다",
+                    "headingGeneric": "로그인에 실패했습니다"
+                },
+                "finalizing": {
+                    "body": "로그인 정보가 캡처되었습니다. 스토어와의 교환을 완료하는 중입니다. 몇 초 정도 걸릴 수 있습니다.",
+                    "heading": "{{runner}} 로그인 마무리 중…",
+                    "headingGeneric": "로그인 마무리 중…"
+                },
+                "genericChannel": "로그인 채널",
+                "preparing": {
+                    "body": "스토어의 로그인 창을 준비 중이며 곧 열립니다.",
+                    "heading": "{{runner}} 로그인 준비 중…",
+                    "headingGeneric": "로그인 준비 중…"
+                },
+                "retry": "재시도",
+                "timeout": {
+                    "body": "로그인 창이 완료되기까지 시간이 너무 오래 걸렸습니다. 다시 시도할 수 있습니다.",
+                    "heading": "{{runner}} 로그인 시간이 초과되었습니다",
+                    "headingGeneric": "로그인 시간이 초과되었습니다"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "이 빌드에서는 앱 내 스토어 및 위키 탐색을 사용할 수 없습니다"
+        }
+    },
+    "winetricks": {
+        "unavailable": "이 빌드에서는 Winetricks 구성 요소 관리를 사용할 수 없습니다",
+        "unavailableDetail": "Winetricks 지원은 향후 릴리스(D-03, 34.6단계)로 연기되었으며, 이 빌드에서는 나열하거나 설치할 수 없습니다."
+    }
+}

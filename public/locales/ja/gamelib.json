@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "GameLibについて"
+    },
+    "app": {
+        "routeError": "問題が発生しました: {{detail}}"
+    },
+    "box": {
+        "cancel": "キャンセル",
+        "error": {
+            "install": {
+                "failed": "{{title}} のインストールに失敗しました: {{error}}",
+                "signInToSteam": "Steam にサインイン",
+                "stalled": "{{minutes}} 分間ダウンロードの進行が確認できなかったため、インストールを停止しました"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib はシステムのファイル選択ダイアログを開けなかったため、何も選択されず、変更は行われませんでした。（{{error}}）",
+                "title": "ファイル選択ダイアログを開けませんでした"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "CrossOver 経由で再インストール",
+                "message": "このゲームの macOS 版は 32ビットのみで、この macOS のバージョンでは実行できません。GameLib は代わりに CrossOver 経由で再インストールし、Windows 版を再ダウンロードできます。",
+                "title": "32ビット macOS 版を検出しました"
+            }
+        }
+    },
+    "button": {
+        "close": "閉じる",
+        "paste": "貼り付け"
+    },
+    "consoleMode": {
+        "installNext": "進む",
+        "installPrevious": "前へ",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "このインストールを開始できません",
+        "steamInstallLibraryFull": "Steam ライブラリフォルダーに十分な空き容量がありません。空き容量を確保してから再度お試しください。",
+        "steamInstallLibraryMissing": "Steam ライブラリフォルダーが現在利用できません。ドライブを再接続してから再度お試しください。"
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "一時停止中"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "このビルドでは SteamGridDB のアートワーク検索は利用できません。"
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "未評価",
+        "etaPrefix": "残り時間: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic、OpenCritic、HowLongToBeat にこのタイトルの情報はありませんでした。",
+        "extraInfoEmptyTitle": "追加情報は見つかりませんでした",
+        "extraInfoErrorBody": "検索に失敗しました。これはこのゲームにデータがないことを意味するものではありません。再試行してください。",
+        "extraInfoErrorTitle": "追加情報を読み込めませんでした",
+        "extraInfoRetry": "再試行",
+        "extraInfoStaleBody": "この結果は読み込み結果が記録される前にキャッシュされたため、古い可能性があります。更新して確認してください。",
+        "tabsAriaLabel": "ゲーム情報タブ",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "1分未満"
+    },
+    "humbleKeys": {
+        "activate": "有効化",
+        "activateConfirmBody": "これによりキーが表示され、Giftable spares から完全に削除されたうえで、Steam アカウントで引き換えられます。元に戻すことはできません。",
+        "activateConfirmBodyRevealed": "すでに表示されているキーを Steam アカウントで引き換えます。元に戻すことはできません。",
+        "activateConfirmTitle": "このキーを Steam で有効化しますか？",
+        "activatedDone": "完了",
+        "activateDismiss": "キャンセル",
+        "activatedTitle": "有効化済み",
+        "activateWizardTitle": "このキーを有効化",
+        "activatingBody": "キーを表示し、Steamで引き換えています — 少々お待ちください。",
+        "activatingTitle": "Steamで有効化中…"
+    },
+    "info": {
+        "refresh-rating": "評価を更新"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLibはその場所からインポートできませんでした。ソースは「..」を含まない完全なフォルダパスである必要があります。ゲームのフォルダを再度選択してください。",
+        "pathRejectedBodyMove": "GameLibはこのゲームをそこに移動できませんでした。移動先は「..」を含まない完全なフォルダパスである必要があります。移動先フォルダを再度選択してください。",
+        "pathRejectedTitle": "その場所は使用できません"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "非表示を含む",
+            "chipHiddenOnly": "非表示のみ",
+            "chipNonAvailableIncluded": "利用不可を含む",
+            "chipNonAvailableOnly": "利用不可のみ",
+            "chipNoStorePageHidden": "ストアページなしを非表示",
+            "chipNoStorePageOnly": "ストアページなしのみ",
+            "clearAll": "すべてクリア",
+            "collections": "コレクション",
+            "emptyAlphabetLetter": "「{{letter}}」で始まる",
+            "emptyAlphabetNumber": "数字で始まる",
+            "emptyBody": "{{filters}}に一致するゲームがありません。",
+            "emptyClearAll": "すべてのフィルターをクリア",
+            "emptyHeading": "フィルターに一致するゲームがありません",
+            "groupSelectedCount": "{{selected}}件選択中",
+            "manageCollections": "コレクションを管理",
+            "moreFilters": "その他のフィルター",
+            "newCollection": "+ 新しいコレクション",
+            "noStorePage": "ストアページなし",
+            "notYetChecked": "未確認",
+            "removeFilter": "{{filterLabel}}フィルターを削除",
+            "runnabilityGroup": "実行可否",
+            "runsNatively": "ネイティブで実行",
+            "runsViaBottle": "ボトル経由で実行",
+            "storeGroup": "ストア",
+            "viewAll": "すべてのゲーム",
+            "viewFavourites": "お気に入り",
+            "viewInstalled": "インストール済み",
+            "viewRecentlyPlayed": "最近プレイした",
+            "wontRun": "実行不可"
+        },
+        "header": {
+            "filteredOfTotal": "{{total}}件中{{shown}}件"
+        },
+        "no_no_store_page_games": "ライブラリにストアページのないゲームはありません",
+        "noStorePage": "ストアページなし",
+        "steamSync": {
+            "failedBody": "他のライブラリは引き続き利用できます。もう一度試すか、Steamに接続できるか確認してください。",
+            "failedTitle": "Steamライブラリを同期できませんでした",
+            "retry": "Steam同期を再試行",
+            "signedOutAction": "Steamにサインイン",
+            "signedOutBody": "Steamライブラリを同期するには再度サインインしてください。他のライブラリは引き続き利用できます。",
+            "signedOutTitle": "Steamのサインインの有効期限が切れました",
+            "syncing": "Steamライブラリを同期中…"
+        },
+        "storeOther": "その他"
+    },
+    "login": {
+        "connected": "接続済み",
+        "humble_dialog_title": "Humble Bundleにサインイン",
+        "logoutFailedTitle": "サインアウトが完了していません",
+        "steam_logout_failed_message": "Steamのサインアウトが時間内に完了しませんでした。もう一度お試しください。",
+        "steam_logout_failed_title": "サインアウトに失敗しました",
+        "steamReconnect": "サインインの有効期限切れ — 再接続"
+    },
+    "pathSelectionBox": {
+        "saved": "保存済み",
+        "unsaved": "未保存 — Enterキーを押してください"
+    },
+    "queue": {
+        "label": {
+            "failed": "失敗",
+            "retry": "再試行"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Steamキーを入力してください",
+        "redeem": "引き換える",
+        "redeeming": "引き換え中...",
+        "title": "Steamキーを引き換える",
+        "viewInLibrary": "ライブラリで表示"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "このビルドではEOS Overlayは利用できません",
+            "unavailableDetail": "EOS Overlayのサポートは将来のリリース（D-03、フェーズ34.6）に延期されており、このビルドではインストール、更新、削除ができません。"
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "EOS Overlayを今すぐインストールしますか？",
+        "eosOverlayInstallConfirmTitle": "オーバーレイのインストールを確認",
+        "eosOverlayUpdateConfirmBody": "EOS Overlayを最新バージョンに更新しますか？",
+        "eosOverlayUpdateConfirmTitle": "オーバーレイの更新を確認",
+        "framelessWindowDescription": "フレームレスウィンドウを使用",
+        "gamepadInitialRepeatDelay": "ゲームパッド入力の初期リピート遅延",
+        "gamepadRepeatFrequency": "ゲームパッド入力のリピート頻度",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "アップスケール方式",
+        "gamescopeWindowType": "ウィンドウタイプ",
+        "loginBackground": "アカウント管理の背景",
+        "loginBackgroundDialogTitle": "背景画像を選択",
+        "loginBackgroundFilterName": "画像",
+        "loginBackgroundHelp": "アカウント管理画面の背後に表示される画像です。フィールドを空にすると同梱のアートワークに戻ります。PNG、JPEG、WebP、AVIF、GIFに対応しています。",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "このビルドでは利用できません"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDBのアートワーク対応は将来のリリース（D-03、フェーズ34.6）に見送られており、このビルドからは設定できません。"
+            }
+        },
+        "wineDefaultLabel": "Wine既定",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Steamキーを引き換える"
+    },
+    "sideload": {
+        "filter": {
+            "all": "すべて",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "アプリ",
+            "executables": "実行ファイル",
+            "images": "画像",
+            "otherBinaries": "その他のバイナリ",
+            "scripts": "スクリプト"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "インストールオプションを確認中…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLibはSteamボトルのセットアップに関する応答を受信できなくなりました。まだ処理が続いている可能性があります — Steamインストーラーのウィンドウを確認してから、もう一度お試しください。"
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steamサーバーとの接続が切断されました。",
+                "decodeFailed": "ダウンロードしたゲームデータを展開できませんでした。これはネットワークの問題ではありません。",
+                "genericV2": "Steamのダウンロードに失敗しました。",
+                "notSignedIn": "Steamにサインインしていないため、このダウンロードを開始できませんでした。"
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLibはSteam用に1つの共有CrossOverボトルを管理しています。ゲームごとに別々のボトルに名前を付けることはまだサポートされていません。",
+            "contentLightNotice": "これはSteam自身のクライアントを通じてインストールされるため、ここで選択する項目はありません。インストール先とWindows互換性をGameLibから管理するには、設定でネイティブSteamインストールをオンにしてください。",
+            "contentLightSingleLibraryNotice": "このシステムにはSteamライブラリが1つしかないため、ここで選択する項目はありません — GameLibはこのゲームをそこにインストールします。",
+            "forceWindowsHelp": "このゲームにはネイティブのmacOS版がありますが、代わりにWineボトルを通じてWindows版をインストールすることもできます — ネイティブ版に機能が欠けていたり、パフォーマンスが劣る場合に便利です。",
+            "libraryFullNotice": "Steamライブラリの空き容量が足りません — 以下から別のライブラリを選択するか、空き容量を確保してください。",
+            "libraryFullOnlyNotice": "Steamライブラリの空き容量が足りません。空き容量を確保してから、もう一度お試しください。",
+            "libraryMissingNotice": "Steamライブラリに接続できませんでした — 以下から別のライブラリを選択してください。",
+            "libraryMissingOnlyNotice": "Steamライブラリに接続できませんでした。ドライブを再接続してから、もう一度お試しください。",
+            "libraryPickerLabel": "Steamライブラリを選択",
+            "libraryPrimarySuffix": "既定",
+            "noCrossoverEngine": "CrossOverのインストールが見つかりませんでした。インストール開始時にGameLibがセットアップします。",
+            "sharedBottleNotice": "ここで選択したWineのバージョンは、このゲームだけでなく、ボトルを必要とするすべてのSteamゲームで使用されます。後で変更すると、それらのゲームの動作にも影響します。",
+            "withOptionsLabel": "オプション付きでインストール…"
+        },
+        "resumeAvailable": {
+            "notify": "{{game}}の中断されたインストールを再開できます — インストールをクリックして続行してください"
+        },
+        "status": {
+            "resumeInstall": "インストールを再開",
+            "resumeInstallHint": "インストールが未完了です — GameLibでダウンロードを再開してください"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "すべてのインストール先にあるこのゲームのインストール済みコピーがすべて削除されます。この操作は元に戻せません。",
+            "removeAllCopiesConfirmTitle": "すべてのコピーを削除しますか？",
+            "removeAllCopiesLabel": "すべてのコピーを削除…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDBのアートワークはこのビルドでは利用できません"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "サイバースペース・オアシス",
+        "cyberSpaceOasisAlt": "サイバースペース・オアシス クラシック",
+        "dracula": "ドラキュラ",
+        "gruvboxDark": "Gruvbox ダーク",
+        "highContrast": "ハイコントラスト",
+        "marine": "マリン",
+        "marineClassic": "マリン クラシック",
+        "midnightMirage": "ミッドナイト・ミラージュ",
+        "nordDark": "Nord ダーク",
+        "nordLight": "Nord ライト",
+        "oldSchool": "オールドスクール GameLib",
+        "sweet": "スウィート",
+        "zombie": "ゾンビ",
+        "zombieClassic": "ゾンビ クラシック"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "サインインはまだ完了できません: {{channel}} はこのビルドに移植されていません。これはPhase 34.5で対応予定です。",
+                "heading": "{{runner}} へのサインインはまだ実装されていません",
+                "headingGeneric": "サインインはまだ実装されていません"
+            },
+            "humble": {
+                "body": "サインインウィンドウが開きました。そちらでサインインを完了してください。成功すると、このページは自動的に更新されます。",
+                "error": {
+                    "window_unreachable": "Humble サインインウィンドウが閉じられたか、到達できませんでした"
+                },
+                "heading": "Humble Bundle にサインイン中"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "サインインウィンドウが開きました。そちらでサインインを完了してください。",
+                    "heading": "{{runner}} にサインイン中",
+                    "headingGeneric": "サインイン中"
+                },
+                "blocked": {
+                    "body": "サインインは正常にキャプチャされましたが、{{channel}} バックエンドチャンネルはこのビルドにまだ移植されていません。これはPhase 34.5で対応予定です。",
+                    "heading": "{{runner}} へのサインインはキャプチャされましたが、まだ完了できません",
+                    "headingGeneric": "サインインはキャプチャされましたが、まだ完了できません"
+                },
+                "cancelled": {
+                    "body": "サインインウィンドウが完了前に閉じられました。もう一度お試しください。",
+                    "heading": "{{runner}} へのサインインはキャンセルされました",
+                    "headingGeneric": "サインインはキャンセルされました"
+                },
+                "error": {
+                    "body": "サインイン中に問題が発生しました: {{message}}",
+                    "heading": "{{runner}} へのサインインに失敗しました",
+                    "headingGeneric": "サインインに失敗しました"
+                },
+                "finalizing": {
+                    "body": "サインインがキャプチャされました。ストアとの認証処理を完了しています — 数秒かかる場合があります。",
+                    "heading": "{{runner}} とのサインインを完了しています…",
+                    "headingGeneric": "サインインを完了しています…"
+                },
+                "genericChannel": "サインインチャンネル",
+                "preparing": {
+                    "body": "ストアのサインインウィンドウを準備しています。まもなく開きます。",
+                    "heading": "{{runner}} のサインインを準備しています…",
+                    "headingGeneric": "サインインを準備しています…"
+                },
+                "retry": "再試行",
+                "timeout": {
+                    "body": "サインインウィンドウの処理に時間がかかりすぎました。もう一度お試しください。",
+                    "heading": "{{runner}} へのサインインがタイムアウトしました",
+                    "headingGeneric": "サインインがタイムアウトしました"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "このビルドではアプリ内のストアおよびWiki閲覧は利用できません"
+        }
+    },
+    "winetricks": {
+        "unavailable": "このビルドではWinetricksコンポーネント管理は利用できません",
+        "unavailableDetail": "Winetricksのサポートは将来のリリース（D-03、フェーズ34.6）に延期されており、このビルドでは一覧表示やインストールができません。"
+    }
+}

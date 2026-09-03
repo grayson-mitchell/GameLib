@@ -1,0 +1,324 @@
+{
+    "about": {
+        "navLabel": "Tietoja"
+    },
+    "app": {
+        "routeError": "Jokin meni pieleen: {{detail}}"
+    },
+    "box": {
+        "cancel": "Peruuta",
+        "error": {
+            "install": {
+                "failed": "Pelin {{title}} asennus epäonnistui: {{error}}",
+                "stalled": "Ei latauksen etenemistä {{minutes}} minuuttiin — asennus pysäytettiin"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib ei voinut avata järjestelmän tiedostonvalitsinta, joten mitään ei valittu eikä muutoksia tehty. ({{error}})",
+                "title": "Tiedostonvalitsinta ei voitu avata"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "title": "32-bittinen macOS-versio havaittu"
+            }
+        }
+    },
+    "button": {
+        "close": "Sulje",
+        "paste": "Liitä"
+    },
+    "consoleMode": {
+        "installNext": "Seuraava",
+        "installPrevious": "Edellinen",
+        "sortAscending": "A → Ö",
+        "sortDescending": "Ö → A",
+        "steamInstallBlockedTitle": "Tätä asennusta ei voi aloittaa",
+        "steamInstallLibraryFull": "Steam-kirjastokansiossasi ei ole tarpeeksi vapaata tilaa. Vapauta tilaa ja yritä uudelleen.",
+        "steamInstallLibraryMissing": "Steam-kirjastokansiosi ei ole tällä hetkellä käytettävissä. Yhdistä asema uudelleen ja yritä uudelleen."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Keskeytetty"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "SteamGridDB-kuvahaku ei ole käytettävissä tässä versiossa."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Ei arvioitu",
+        "etaPrefix": "Arvioitu aika: {{eta}}",
+        "extraInfoEmptyBody": "Metacriticilla, OpenCriticilla ja HowLongToBeatilla ei ollut mitään tästä pelistä.",
+        "extraInfoEmptyTitle": "Lisätietoja ei löytynyt",
+        "extraInfoErrorBody": "Haku epäonnistui, mikä ei tarkoita, ettei pelistä olisi tietoja. Yritä uudelleen.",
+        "extraInfoErrorTitle": "Lisätietoja ei voitu ladata",
+        "extraInfoRetry": "Yritä uudelleen",
+        "extraInfoStaleBody": "Tämä tulos tallennettiin välimuistiin ennen kuin latauksen tuloksia alettiin tallentaa, joten se voi olla vanhentunut. Päivitä tarkistaaksesi.",
+        "tabsAriaLabel": "pelitietojen välilehdet",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "alle minuutti"
+    },
+    "humbleKeys": {
+        "activate": "Aktivoi",
+        "activateConfirmBody": "Tämä paljastaa avaimen — poistaen sen pysyvästi lahjoitettavista varakappaleista — ja lunastaa sen Steam-tilillesi. Toimintoa ei voi perua.",
+        "activateConfirmBodyRevealed": "Tämä lunastaa jo paljastetun avaimesi Steam-tilillesi. Toimintoa ei voi perua.",
+        "activatedDone": "Valmis",
+        "activateDismiss": "Peruuta",
+        "activatedTitle": "Aktivoitu",
+        "activateWizardTitle": "Aktivoi tämä avain"
+    },
+    "info": {
+        "refresh-rating": "Päivitä arvostelu"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib ei voinut tuoda kyseisestä sijainnista. Lähteen on oltava täydellinen kansiopolku ilman \"..\"-askeleita. Valitse pelin kansio uudelleen.",
+        "pathRejectedBodyMove": "GameLib ei voinut siirtää tätä peliä sinne. Kohteen on oltava täydellinen kansiopolku ilman \"..\"-askeleita. Valitse kohdekansio uudelleen.",
+        "pathRejectedTitle": "Tätä sijaintia ei voi käyttää"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Mukana piilotetut",
+            "chipHiddenOnly": "Vain piilotetut",
+            "chipNonAvailableIncluded": "Mukana ei-saatavilla olevat",
+            "chipNonAvailableOnly": "Vain ei-saatavilla olevat",
+            "chipNoStorePageHidden": "Piilotettu ilman kauppasivua",
+            "chipNoStorePageOnly": "Vain ilman kauppasivua",
+            "clearAll": "Tyhjennä kaikki",
+            "collections": "Kokoelmat",
+            "emptyAlphabetLetter": "Alkaa kirjaimella \"{{letter}}\"",
+            "emptyAlphabetNumber": "Alkaa numerolla",
+            "emptyBody": "Yksikään peli ei vastaa suodattimia {{filters}}.",
+            "emptyClearAll": "Tyhjennä kaikki suodattimet",
+            "emptyHeading": "Yksikään peli ei vastaa suodattimiasi",
+            "groupSelectedCount": "{{selected}} valittu",
+            "manageCollections": "Hallitse kokoelmia",
+            "moreFilters": "Enemmän suodattimia",
+            "newCollection": "+ Uusi kokoelma",
+            "noStorePage": "Ei kauppasivua",
+            "notYetChecked": "Ei vielä tarkistettu",
+            "removeFilter": "Poista suodatin {{filterLabel}}",
+            "runnabilityGroup": "Toimivuus",
+            "runsNatively": "Toimii natiivisti",
+            "runsViaBottle": "Toimii bottlen kautta",
+            "storeGroup": "Kauppa",
+            "viewAll": "Kaikki pelit",
+            "viewFavourites": "Suosikit",
+            "viewInstalled": "Asennettu",
+            "viewRecentlyPlayed": "Äskettäin pelattu",
+            "wontRun": "Ei toimi"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} / {{total}}"
+        },
+        "no_no_store_page_games": "Kirjastossasi ei ole pelejä ilman kauppasivua",
+        "noStorePage": "Ei kauppasivua",
+        "steamSync": {
+            "failedBody": "Muut kirjastosi ovat yhä käytettävissä. Yritä uudelleen tai tarkista, että Steam on tavoitettavissa.",
+            "failedTitle": "Steam-kirjastoa ei voitu synkronoida",
+            "retry": "Yritä Steam-synkronointia uudelleen",
+            "signedOutBody": "Kirjaudu uudelleen sisään synkronoidaksesi Steam-kirjastosi. Muut kirjastosi ovat yhä käytettävissä.",
+            "signedOutTitle": "Steam-kirjautumisesi on vanhentunut",
+            "syncing": "Synkronoidaan Steam-kirjastoasi…"
+        },
+        "storeOther": "Muu"
+    },
+    "login": {
+        "connected": "Yhdistetty",
+        "logoutFailedTitle": "Uloskirjautuminen jäi kesken",
+        "steam_logout_failed_message": "Steam-uloskirjautuminen ei valmistunut ajoissa. Yritä uudelleen.",
+        "steam_logout_failed_title": "Uloskirjautuminen epäonnistui",
+        "steamReconnect": "Kirjautuminen vanhentunut — Yhdistä uudelleen"
+    },
+    "pathSelectionBox": {
+        "saved": "Tallennettu",
+        "unsaved": "Ei vielä tallennettu — paina Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Epäonnistui",
+            "retry": "Yritä uudelleen"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Anna Steam-avaimesi",
+        "redeem": "Lunasta",
+        "redeeming": "Lunastetaan...",
+        "title": "Lunasta Steam-avain",
+        "viewInLibrary": "Näytä kirjastossa"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS-peittokuva ei ole käytettävissä tässä versiossa",
+            "unavailableDetail": "EOS-peittokuvan tuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi asentaa, päivittää tai poistaa tästä versiosta."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Asennetaanko EOS-peittokuva nyt?",
+        "eosOverlayInstallConfirmTitle": "Vahvista peittokuvan asennus",
+        "eosOverlayUpdateConfirmBody": "Päivitetäänkö EOS-peittokuva uusimpaan versioon?",
+        "eosOverlayUpdateConfirmTitle": "Vahvista peittokuvan päivitys",
+        "framelessWindowDescription": "Käytä kehyksetöntä ikkunaa",
+        "gamepadInitialRepeatDelay": "Peliohjaimen syötteen alkuviive toistolle",
+        "gamepadRepeatFrequency": "Peliohjaimen syötteen toistotaajuus",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Skaalausmenetelmä",
+        "gamescopeWindowType": "Ikkunatyyppi",
+        "loginBackground": "Tilien hallinnan tausta",
+        "loginBackgroundDialogTitle": "Valitse taustakuva",
+        "loginBackgroundFilterName": "Kuvat",
+        "loginBackgroundHelp": "Tilien hallinnan näytön takana näytettävä kuva. Tyhjennä kenttä palataksesi mukana tulevaan kuvitukseen. Tuetut muodot ovat PNG, JPEG, WebP, AVIF ja GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Ei käytettävissä tässä versiossa"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB-kuvatuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi määrittää tästä versiosta."
+            }
+        },
+        "wineDefaultLabel": "Wine-oletus",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Lunasta Steam-avain"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Kaikki",
+            "appExtension": "Sovellus",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImage-tiedostot",
+            "apps": "Sovellukset",
+            "executables": "Suoritettavat tiedostot",
+            "images": "Levykuvat",
+            "otherBinaries": "Muut binaaritiedostot",
+            "scripts": "Komentosarjat"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Tarkistetaan asennusvaihtoehtoja…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib lakkasi saamasta vastausta Steam-bottlen asetuksesta. Se voi olla edelleen käynnissä — tarkista, avautuiko Steam-asennusikkuna, ja yritä sitten uudelleen."
+        },
+        "download": {
+            "error": {
+                "decodeFailed": "Latattua pelidataa ei voitu purkaa. Kyse ei ole verkko-ongelmasta.",
+                "genericV2": "Steam-lataus epäonnistui."
+            }
+        },
+        "install": {
+            "contentLightSingleLibraryNotice": "Tässä järjestelmässä on vain yksi Steam-kirjasto, niin tässä ei ole mitään valittavaa — GameLib asentaa tämän pelin siihen.",
+            "forceWindowsHelp": "Tällä pelillä on natiivi macOS-versio, mutta voit asentaa sen sijaan Windows-version Wine-bottlen kautta — hyödyllistä, jos natiivista versiosta puuttuu ominaisuuksia tai se toimii heikommin.",
+            "libraryFullNotice": "Steam-kirjastossasi ei ole tarpeeksi tilaa — valitse toinen alta tai vapauta tilaa.",
+            "libraryFullOnlyNotice": "Steam-kirjastossasi ei ole tarpeeksi tilaa. Vapauta tilaa ja yritä sitten uudelleen.",
+            "libraryMissingNotice": "Steam-kirjastoosi ei saatu yhteyttä — valitse toinen alta.",
+            "libraryMissingOnlyNotice": "Steam-kirjastoosi ei saatu yhteyttä. Yhdistä asema uudelleen ja yritä sitten uudelleen.",
+            "libraryPickerLabel": "Valitse Steam-kirjasto",
+            "libraryPrimarySuffix": "oletus",
+            "noCrossoverEngine": "CrossOver-asennusta ei löytynyt. GameLib asentaa sen, kun asennus käynnistyy.",
+            "sharedBottleNotice": "Tässä valitsemaasi wine-versiota käytetään kaikissa Steam-peleissä, jotka tarvitsevat bottlen — ei vain tässä. Sen muuttaminen myöhemmin vaikuttaa myös niiden muiden pelien toimintaan.",
+            "withOptionsLabel": "Asenna asetuksin…"
+        },
+        "resumeAvailable": {
+            "notify": "Keskeytynyt asennus pelille {{game}} on valmis jatkettavaksi — jatka napsauttamalla Asenna"
+        },
+        "status": {
+            "resumeInstall": "Jatka asennusta"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Tämä poistaa kaikki tämän pelin asennetut kopiot kaikista asennussijainneista. Tätä ei voi kumota.",
+            "removeAllCopiesConfirmTitle": "Poistetaanko kaikki kopiot?",
+            "removeAllCopiesLabel": "Poista kaikki kopiot…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB-kuvat eivät ole käytettävissä tässä versiossa"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Korkea kontrasti",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Kirjautumistasi ei voida vielä viimeistellä: {{channel}} ei ole vielä siirretty tähän versioon. Tämä toteutuu vaiheessa 34.5.",
+                "heading": "Kirjautuminen palveluun {{runner}} ei ole vielä käytössä",
+                "headingGeneric": "Kirjautuminen ei ole vielä käytössä"
+            },
+            "humble": {
+                "body": "Kirjautumisikkuna on avautunut. Viimeistele kirjautuminen siellä — tämä sivu päivittyy automaattisesti onnistuneen kirjautumisen jälkeen.",
+                "error": {
+                    "window_unreachable": "Humble Bundlen kirjautumisikkuna sulkeutui tai siihen ei saatu yhteyttä"
+                },
+                "heading": "Kirjaudutaan palveluun Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Kirjautumisikkuna on avautunut. Viimeistele kirjautuminen siellä.",
+                    "heading": "Kirjaudutaan palveluun {{runner}}",
+                    "headingGeneric": "Kirjaudutaan"
+                },
+                "blocked": {
+                    "body": "Kirjautumisesi otettiin onnistuneesti talteen, mutta {{channel}}-taustakanavaa ei ole vielä siirretty tähän versioon. Tämä toteutuu vaiheessa 34.5.",
+                    "heading": "Kirjautuminen palveluun {{runner}} otettiin talteen, mutta sitä ei voida vielä viimeistellä",
+                    "headingGeneric": "Kirjautuminen otettiin talteen, mutta sitä ei voida vielä viimeistellä"
+                },
+                "cancelled": {
+                    "body": "Kirjautumisikkuna suljettiin ennen kuin kirjautuminen viimeisteltiin. Voit yrittää uudelleen.",
+                    "heading": "Kirjautuminen palveluun {{runner}} peruutettiin",
+                    "headingGeneric": "Kirjautuminen peruutettiin"
+                },
+                "error": {
+                    "body": "Kirjautumisessa tapahtui virhe: {{message}}",
+                    "heading": "Kirjautuminen palveluun {{runner}} epäonnistui",
+                    "headingGeneric": "Kirjautuminen epäonnistui"
+                },
+                "finalizing": {
+                    "body": "Kirjautuminen otettu talteen. Viimeistellään tiedonvaihtoa kaupan kanssa — tämä voi kestää muutaman sekunnin.",
+                    "heading": "Viimeistellään kirjautumista palveluun {{runner}}…",
+                    "headingGeneric": "Viimeistellään kirjautumista…"
+                },
+                "genericChannel": "kirjautumiskanava",
+                "preparing": {
+                    "body": "Kaupan kirjautumisikkunaa valmistellaan ja se avautuu pian.",
+                    "heading": "Valmistellaan kirjautumista palveluun {{runner}}…",
+                    "headingGeneric": "Valmistellaan kirjautumista…"
+                },
+                "retry": "Yritä uudelleen",
+                "timeout": {
+                    "body": "Kirjautumisikkunan täyttyminen kesti liian kauan. Voit yrittää uudelleen.",
+                    "heading": "Kirjautuminen palveluun {{runner}} aikakatkaistiin",
+                    "headingGeneric": "Kirjautuminen aikakatkaistiin"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Sovelluksen sisäinen kauppa- ja wiki-selailu ei ole käytettävissä tässä versiossa"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Winetricks-komponenttien hallinta ei ole käytettävissä tässä versiossa",
+        "unavailableDetail": "Winetricks-tuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi luetella tai asentaa tästä versiosta."
+    }
+}

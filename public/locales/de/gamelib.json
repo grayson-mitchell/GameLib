@@ -72,7 +72,9 @@
             "viewFavourites": "Favoriten",
             "viewInstalled": "Installiert",
             "viewRecentlyPlayed": "Kürzlich gespielt",
-            "wontRun": "Läuft nicht"
+            "wontRun": "Läuft nicht",
+            "emptyAlphabetLetter": "Beginnt mit \"{{letter}}\"",
+            "emptyAlphabetNumber": "Beginnt mit einer Zahl"
         },
         "header": {
             "filteredOfTotal": "{{shown}} von {{total}}"
@@ -92,7 +94,12 @@
     },
     "login": {
         "connected": "Verbunden",
-        "steamReconnect": "Anmeldung abgelaufen — Erneut verbinden"
+        "steamReconnect": "Anmeldung abgelaufen — Erneut verbinden",
+        "humble_dialog_title": "Bei Humble Bundle anmelden",
+        "logoutFailedMessage": "Ihr Konto wurde auf diesem Gerät abgemeldet, aber die Browser-Sitzung konnte nicht vollständig gelöscht werden. Melden Sie sich auf einem gemeinsam genutzten Computer erneut ab oder löschen Sie Ihre Browserdaten für diese Website, um sicherzustellen, dass Ihre Sitzung nicht zugänglich bleibt.",
+        "logoutFailedTitle": "Abmeldung unvollständig",
+        "steam_logout_failed_message": "Die Steam-Abmeldung wurde nicht rechtzeitig abgeschlossen. Bitte versuchen Sie es erneut.",
+        "steam_logout_failed_title": "Abmeldung fehlgeschlagen"
     },
     "pathSelectionBox": {
         "saved": "Gespeichert",
@@ -106,7 +113,23 @@
         "gamescopeUpscaleMethod": "Hochskalierungsmethode",
         "gamescopeWindowType": "Fenstertyp",
         "wineDefaultLabel": "Wine Standard",
-        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+        "eosOverlayInstallConfirmBody": "Das EOS-Overlay jetzt installieren?",
+        "eosOverlayInstallConfirmTitle": "Overlay-Installation bestätigen",
+        "eosOverlayUpdateConfirmBody": "Das EOS-Overlay auf die neueste Version aktualisieren?",
+        "eosOverlayUpdateConfirmTitle": "Overlay-Aktualisierung bestätigen",
+        "loginBackground": "Hintergrund für Konten verwalten",
+        "loginBackgroundDialogTitle": "Ein Hintergrundbild auswählen",
+        "loginBackgroundFilterName": "Bilder",
+        "loginBackgroundHelp": "Bild, das hinter dem Bildschirm „Konten verwalten“ angezeigt wird. Feld leeren, um zum mitgelieferten Artwork zurückzukehren. PNG, JPEG, WebP, AVIF und GIF werden unterstützt.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "In diesem Build nicht verfügbar"
+            },
+            "help": {
+                "unavailableDetail": "Die Unterstützung für SteamGridDB-Artwork ist auf eine zukünftige Version verschoben (D-03, Phase 34.6) und kann in diesem Build nicht konfiguriert werden."
+            }
+        }
     },
     "sideload": {
         "filter": {
@@ -151,6 +174,17 @@
             "removeAllCopiesConfirmMessage": "Dadurch werden alle installierten Kopien dieses Spiels an allen Installationsorten entfernt. Dies kann nicht rückgängig gemacht werden.",
             "removeAllCopiesConfirmTitle": "Alle Kopien entfernen?",
             "removeAllCopiesLabel": "Alle Kopien entfernen…"
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Die Steam-Server haben die Verbindung getrennt.",
+                "decodeFailed": "Die heruntergeladenen Spieldaten konnten nicht entpackt werden. Dies ist kein Netzwerkproblem.",
+                "genericV2": "Der Steam-Download ist fehlgeschlagen.",
+                "notSignedIn": "Du bist nicht bei Steam angemeldet, daher konnte dieser Download nicht gestartet werden."
+            }
+        },
+        "resumeAvailable": {
+            "notify": "Eine unterbrochene Installation für {{game}} kann fortgesetzt werden — klicke auf Installieren, um fortzufahren"
         }
     },
     "themeSelector": {
@@ -168,5 +202,140 @@
         "sweet": "Süß",
         "zombie": "Zombie",
         "zombieClassic": "Zombie Classic"
+    },
+    "about": {
+        "navLabel": "Über"
+    },
+    "box": {
+        "cancel": "Abbrechen",
+        "error": {
+            "install": {
+                "failed": "Die Installation von {{title}} ist fehlgeschlagen: {{error}}",
+                "signInToSteam": "Bei Steam anmelden",
+                "stalled": "Seit {{minutes}} Minuten kein Download-Fortschritt — die Installation wurde gestoppt"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib konnte die Dateiauswahl des Systems nicht öffnen, daher wurde nichts ausgewählt und keine Änderungen vorgenommen. ({{error}})",
+                "title": "Dateiauswahl konnte nicht geöffnet werden"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Über CrossOver neu installieren",
+                "message": "Die macOS-Version dieses Spiels ist nur 32-Bit und kann auf dieser macOS-Version nicht ausgeführt werden. GameLib kann es stattdessen über CrossOver neu installieren, wodurch die Windows-Version erneut heruntergeladen wird.",
+                "title": "32-Bit-macOS-Version erkannt"
+            }
+        }
+    },
+    "button": {
+        "close": "Schließen",
+        "paste": "Einfügen"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Die SteamGridDB-Grafiksuche ist in dieser Version nicht verfügbar."
+        }
+    },
+    "info": {
+        "refresh-rating": "Bewertung aktualisieren"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib konnte nicht von diesem Ort importieren. Die Quelle muss ein vollständiger Ordnerpfad ohne \"..\"-Schritte sein. Wählen Sie den Spielordner erneut aus.",
+        "pathRejectedBodyMove": "GameLib konnte dieses Spiel nicht dorthin verschieben. Das Ziel muss ein vollständiger Ordnerpfad ohne \"..\"-Schritte sein. Wählen Sie den Zielordner erneut aus.",
+        "pathRejectedTitle": "Dieser Ort kann nicht verwendet werden"
+    },
+    "queue": {
+        "label": {
+            "failed": "Fehlgeschlagen",
+            "retry": "Erneut versuchen"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Geben Sie Ihren Steam-Key ein",
+        "redeem": "Einlösen",
+        "redeeming": "Wird eingelöst...",
+        "title": "Einen Steam-Key einlösen",
+        "viewInLibrary": "In Bibliothek anzeigen"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "Das EOS-Overlay ist in dieser Version nicht verfügbar",
+            "unavailableDetail": "Die Unterstützung für das EOS-Overlay wurde auf ein zukünftiges Release verschoben (D-03, Phase 34.6) und kann in dieser Version nicht installiert, aktualisiert oder entfernt werden."
+        }
+    },
+    "sidebar": {
+        "redeemSteamKey": "Steam-Key einlösen"
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB-Artwork ist in diesem Build nicht verfügbar"
+        }
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Deine Anmeldung kann noch nicht abgeschlossen werden: {{channel}} ist noch nicht auf diesen Build portiert. Dies kommt in Phase 34.5.",
+                "heading": "Die Anmeldung bei {{runner}} ist noch nicht eingerichtet",
+                "headingGeneric": "Die Anmeldung ist noch nicht eingerichtet"
+            },
+            "humble": {
+                "body": "Ein Anmeldefenster wurde geöffnet. Schließe die Anmeldung dort ab — diese Seite aktualisiert sich automatisch, sobald sie erfolgreich war.",
+                "error": {
+                    "window_unreachable": "das Humble-Anmeldefenster wurde geschlossen oder war nicht erreichbar"
+                },
+                "heading": "Anmeldung bei Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Ein Anmeldefenster wurde geöffnet. Schließe die Anmeldung dort ab.",
+                    "heading": "Anmeldung bei {{runner}}",
+                    "headingGeneric": "Anmeldung läuft"
+                },
+                "blocked": {
+                    "body": "Deine Anmeldung wurde erfolgreich erfasst, aber der Backend-Kanal {{channel}} ist noch nicht auf diesen Build portiert. Dies kommt in Phase 34.5.",
+                    "heading": "Die Anmeldung bei {{runner}} wurde erfasst, kann aber noch nicht abgeschlossen werden",
+                    "headingGeneric": "Die Anmeldung wurde erfasst, kann aber noch nicht abgeschlossen werden"
+                },
+                "cancelled": {
+                    "body": "Das Anmeldefenster wurde geschlossen, bevor die Anmeldung abgeschlossen war. Du kannst es erneut versuchen.",
+                    "heading": "Die Anmeldung bei {{runner}} wurde abgebrochen",
+                    "headingGeneric": "Die Anmeldung wurde abgebrochen"
+                },
+                "error": {
+                    "body": "Bei der Anmeldung ist ein Fehler aufgetreten: {{message}}",
+                    "heading": "Anmeldung bei {{runner}} fehlgeschlagen",
+                    "headingGeneric": "Anmeldung fehlgeschlagen"
+                },
+                "finalizing": {
+                    "body": "Anmeldung erfasst. Der Austausch mit dem Store wird abgeschlossen — dies kann einige Sekunden dauern.",
+                    "heading": "Anmeldung bei {{runner}} wird abgeschlossen…",
+                    "headingGeneric": "Anmeldung wird abgeschlossen…"
+                },
+                "genericChannel": "der Anmeldekanal",
+                "preparing": {
+                    "body": "Das Anmeldefenster des Stores wird vorbereitet und öffnet sich in Kürze.",
+                    "heading": "{{runner}}-Anmeldung wird vorbereitet…",
+                    "headingGeneric": "Anmeldung wird vorbereitet…"
+                },
+                "retry": "Erneut versuchen",
+                "timeout": {
+                    "body": "Das Anmeldefenster hat zu lange zum Abschließen gebraucht. Du kannst es erneut versuchen.",
+                    "heading": "Die Anmeldung bei {{runner}} hat zu lange gedauert",
+                    "headingGeneric": "Die Anmeldung hat zu lange gedauert"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "In-App-Store- und Wiki-Browsing sind in diesem Build nicht verfügbar",
+            "open-in-browser": "Im Browser öffnen",
+            "next-step": "Dies ist als eigenes zukünftiges Vorhaben vorgesehen -- verwende bis dahin den Button unten, um die Seite im System-Browser zu öffnen.",
+            "body": "Der Tauri-Build von GameLib enthält noch keine eingebettete Browser-Ansicht für Store- und Wiki-Seiten."
+        }
+    },
+    "winetricks": {
+        "unavailable": "Die Verwaltung von Winetricks-Komponenten ist in diesem Build nicht verfügbar",
+        "unavailableDetail": "Die Unterstützung für Winetricks ist auf eine zukünftige Version verschoben (D-03, Phase 34.6) und kann in diesem Build nicht aufgelistet oder installiert werden."
     }
 }

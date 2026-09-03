@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "درباره"
+    },
+    "app": {
+        "routeError": "مشکلی پیش آمد: {{detail}}"
+    },
+    "box": {
+        "cancel": "لغو",
+        "error": {
+            "install": {
+                "failed": "نصب {{title}} ناموفق بود: {{error}}",
+                "signInToSteam": "ورود به Steam",
+                "stalled": "به مدت {{minutes}} دقیقه پیشرفتی در دانلود رخ نداد — نصب متوقف شد"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib نتوانست انتخاب‌گر فایل سیستم را باز کند، بنابراین چیزی انتخاب نشد و هیچ تغییری اعمال نگردید. ({{error}})",
+                "title": "انتخاب‌گر فایل باز نشد"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "نصب مجدد از طریق CrossOver",
+                "message": "نسخه macOS این بازی فقط ۳۲ بیتی است و روی این نسخه از macOS اجرا نمی‌شود. GameLib می‌تواند به‌جای آن، آن را از طریق CrossOver نصب مجدد کند که نسخه Windows را دوباره دانلود خواهد کرد.",
+                "title": "نسخه ۳۲ بیتی macOS شناسایی شد"
+            }
+        }
+    },
+    "button": {
+        "close": "بستن",
+        "paste": "جای‌گذاری"
+    },
+    "consoleMode": {
+        "installNext": "بعدی",
+        "installPrevious": "قبلی",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "شروع این نصب ممکن نیست",
+        "steamInstallLibraryFull": "فضای کافی در پوشه کتابخانه Steam شما وجود ندارد. فضا آزاد کنید و دوباره تلاش کنید.",
+        "steamInstallLibraryMissing": "پوشه کتابخانه Steam شما در حال حاضر در دسترس نیست. درایو را دوباره متصل کنید و دوباره تلاش کنید."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "متوقف‌شده"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "جستجوی تصاویر SteamGridDB در این نسخه در دسترس نیست."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "بدون رتبه‌بندی",
+        "etaPrefix": "زمان تقریبی: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic، OpenCritic و HowLongToBeat اطلاعاتی برای این عنوان نداشتند.",
+        "extraInfoEmptyTitle": "اطلاعات اضافی یافت نشد",
+        "extraInfoErrorBody": "جستجو ناموفق بود، که به معنای نبود داده برای این بازی نیست. دوباره تلاش کنید.",
+        "extraInfoErrorTitle": "بارگذاری اطلاعات اضافی ممکن نشد",
+        "extraInfoRetry": "تلاش دوباره",
+        "extraInfoStaleBody": "این نتیجه پیش از ثبت نتایج بارگذاری کش شده است، پس ممکن است قدیمی باشد. برای بررسی، تازه‌سازی کنید.",
+        "tabsAriaLabel": "برگه‌های اطلاعات بازی",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "کمتر از یک دقیقه"
+    },
+    "humbleKeys": {
+        "activate": "فعال‌سازی",
+        "activateConfirmBody": "این کار کلید را نمایش می‌دهد — و آن را برای همیشه از Giftable spares حذف می‌کند — و آن را در حساب Steam شما فعال می‌کند. این عمل قابل بازگشت نیست.",
+        "activateConfirmBodyRevealed": "این کار کلید از پیش نمایش‌داده‌شده شما را در حساب Steam شما فعال می‌کند. این عمل قابل بازگشت نیست.",
+        "activateConfirmTitle": "این کلید در Steam فعال شود؟",
+        "activatedDone": "انجام شد",
+        "activateDismiss": "لغو",
+        "activatedTitle": "فعال شد",
+        "activateWizardTitle": "فعال کردن این کلید",
+        "activatingBody": "کلید شما در حال آشکارسازی و بازخرید در Steam است — این فقط لحظه‌ای طول می‌کشد.",
+        "activatingTitle": "در حال فعال‌سازی روی Steam…"
+    },
+    "info": {
+        "refresh-rating": "تازه‌سازی امتیاز"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib نتوانست از آن مکان وارد کند. مبدأ باید یک مسیر پوشه کامل بدون مرحله \"..\" در آن باشد. پوشه بازی را دوباره انتخاب کنید.",
+        "pathRejectedBodyMove": "GameLib نتوانست این بازی را به آنجا منتقل کند. مقصد باید یک مسیر پوشه کامل بدون مرحله \"..\" در آن باشد. پوشه مقصد را دوباره انتخاب کنید.",
+        "pathRejectedTitle": "نمی‌توان از آن مکان استفاده کرد"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "شامل موارد پنهان",
+            "chipHiddenOnly": "فقط پنهان‌ها",
+            "chipNonAvailableIncluded": "شامل موارد غیرقابل‌دسترس",
+            "chipNonAvailableOnly": "فقط غیرقابل‌دسترس‌ها",
+            "chipNoStorePageHidden": "پنهان‌کردن موارد بدون صفحه فروشگاه",
+            "chipNoStorePageOnly": "فقط بدون صفحه فروشگاه",
+            "clearAll": "پاک کردن همه",
+            "collections": "مجموعه‌ها",
+            "emptyAlphabetLetter": "شروع شده با \"{{letter}}\"",
+            "emptyAlphabetNumber": "شروع شده با یک عدد",
+            "emptyBody": "هیچ بازی‌ای با {{filters}} مطابقت ندارد.",
+            "emptyClearAll": "پاک کردن همه فیلترها",
+            "emptyHeading": "هیچ بازی‌ای با فیلترهای شما مطابقت ندارد",
+            "groupSelectedCount": "{{selected}} انتخاب شده",
+            "manageCollections": "مدیریت مجموعه‌ها",
+            "moreFilters": "فیلترهای بیشتر",
+            "newCollection": "+ مجموعه جدید",
+            "noStorePage": "بدون صفحه فروشگاه",
+            "notYetChecked": "هنوز بررسی نشده",
+            "removeFilter": "حذف فیلتر {{filterLabel}}",
+            "runnabilityGroup": "قابلیت اجرا",
+            "runsNatively": "به‌صورت بومی اجرا می‌شود",
+            "runsViaBottle": "از طریق بطری اجرا می‌شود",
+            "storeGroup": "فروشگاه",
+            "viewAll": "همه بازی‌ها",
+            "viewFavourites": "علاقه مندی ها",
+            "viewInstalled": "نصب شده",
+            "viewRecentlyPlayed": "به‌تازگی بازی شده",
+            "wontRun": "اجرا نمی‌شود"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} از {{total}}"
+        },
+        "no_no_store_page_games": "هیچ بازی بدون صفحه فروشگاه در کتابخانه شما وجود ندارد",
+        "noStorePage": "بدون صفحه فروشگاه",
+        "steamSync": {
+            "failedBody": "کتابخانه‌های دیگر شما همچنان در دسترس هستند. دوباره امتحان کنید یا مطمئن شوید Steam در دسترس است.",
+            "failedTitle": "همگام‌سازی کتابخانه Steam شما ممکن نشد",
+            "retry": "تلاش مجدد برای همگام‌سازی Steam",
+            "signedOutAction": "ورود به Steam",
+            "signedOutBody": "برای همگام‌سازی کتابخانه Steam خود دوباره وارد شوید. کتابخانه‌های دیگر شما همچنان در دسترس هستند.",
+            "signedOutTitle": "ورود شما به Steam منقضی شده است",
+            "syncing": "در حال همگام‌سازی کتابخانه Steam شما…"
+        },
+        "storeOther": "بقیه"
+    },
+    "login": {
+        "connected": "متصل",
+        "humble_dialog_title": "ورود به Humble Bundle",
+        "logoutFailedTitle": "خروج ناقص",
+        "steam_logout_failed_message": "خروج از Steam به موقع انجام نشد. لطفاً دوباره امتحان کنید.",
+        "steam_logout_failed_title": "خروج ناموفق بود",
+        "steamReconnect": "ورود منقضی شده — اتصال مجدد"
+    },
+    "pathSelectionBox": {
+        "saved": "ذخیره شد",
+        "unsaved": "هنوز ذخیره نشده — Enter را فشار دهید"
+    },
+    "queue": {
+        "label": {
+            "failed": "ناموفق",
+            "retry": "تلاش مجدد"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "کلید Steam خود را وارد کنید",
+        "redeem": "فعال‌سازی",
+        "redeeming": "در حال فعال‌سازی...",
+        "title": "فعال‌سازی کلید Steam",
+        "viewInLibrary": "مشاهده در کتابخانه"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "روکش EOS در این نسخه در دسترس نیست",
+            "unavailableDetail": "پشتیبانی از روکش EOS به نسخه‌ای در آینده موکول شده است (D-03، فاز 34.6) و نمی‌توان آن را در این نسخه نصب، به‌روزرسانی یا حذف کرد."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "روکش EOS اکنون نصب شود؟",
+        "eosOverlayInstallConfirmTitle": "تأیید نصب روکش",
+        "eosOverlayUpdateConfirmBody": "روکش EOS به آخرین نسخه به‌روزرسانی شود؟",
+        "eosOverlayUpdateConfirmTitle": "تأیید به‌روزرسانی روکش",
+        "framelessWindowDescription": "استفاده از پنجره بدون قاب",
+        "gamepadInitialRepeatDelay": "تأخیر اولیه تکرار ورودی گیم‌پد",
+        "gamepadRepeatFrequency": "فرکانس تکرار ورودی گیم‌پد",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "روش آپ‌اسکیل",
+        "gamescopeWindowType": "نوع پنجره",
+        "loginBackground": "پس‌زمینه مدیریت حساب‌ها",
+        "loginBackgroundDialogTitle": "یک تصویر پس‌زمینه انتخاب کنید",
+        "loginBackgroundFilterName": "تصاویر",
+        "loginBackgroundHelp": "تصویری که پشت صفحه مدیریت حساب‌ها نمایش داده می‌شود. برای بازگشت به تصویر پیش‌فرض، فیلد را پاک کنید. فرمت‌های PNG، JPEG، WebP، AVIF و GIF پشتیبانی می‌شوند.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "در این نسخه در دسترس نیست"
+            },
+            "help": {
+                "unavailableDetail": "پشتیبانی از تصاویر هنری SteamGridDB به نسخه‌ای در آینده موکول شده (D-03, Phase 34.6) و از این نسخه قابل تنظیم نیست."
+            }
+        },
+        "wineDefaultLabel": "Wine پیش‌فرض",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "استفاده از کد Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "همه",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImageها",
+            "apps": "برنامه‌ها",
+            "executables": "فایل‌های اجرایی",
+            "images": "تصاویر",
+            "otherBinaries": "سایر فایل‌های باینری",
+            "scripts": "اسکریپت‌ها"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "در حال بررسی گزینه‌های نصب…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib دیگر پاسخی درباره راه‌اندازی bottle مربوط به Steam دریافت نکرد. ممکن است هنوز در حال اجرا باشد — پنجره نصب‌کننده Steam را بررسی کنید و دوباره امتحان کنید."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "سرورهای Steam اتصال را قطع کردند.",
+                "decodeFailed": "داده‌های بازی دانلودشده قابل باز کردن نبودند. این یک مشکل شبکه نیست.",
+                "genericV2": "دانلود Steam ناموفق بود.",
+                "notSignedIn": "شما وارد Steam نشده‌اید، بنابراین این دانلود شروع نشد."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib یک bottle مشترک CrossOver را برای Steam مدیریت می‌کند. نام‌گذاری bottle جداگانه برای هر بازی هنوز پشتیبانی نمی‌شود.",
+            "contentLightNotice": "این نصب از طریق کلاینت خود Steam انجام می‌شود، پس چیزی برای انتخاب اینجا وجود ندارد. برای مدیریت محل نصب و سازگاری با Windows از طریق GameLib، نصب‌های بومی Steam را در تنظیمات فعال کنید.",
+            "contentLightSingleLibraryNotice": "فقط یک کتابخانه Steam روی این سیستم وجود دارد، پس چیزی برای انتخاب اینجا نیست — GameLib این بازی را در همان نصب خواهد کرد.",
+            "forceWindowsHelp": "این بازی نسخه بومی macOS دارد، اما می‌توانید در عوض نسخه Windows را از طریق یک bottle Wine نصب کنید — این کار زمانی مفید است که نسخه بومی ویژگی‌هایی را کم داشته باشد یا عملکرد ضعیف‌تری داشته باشد.",
+            "libraryFullNotice": "فضای کافی در کتابخانه Steam شما وجود ندارد — یکی دیگر را در پایین انتخاب کنید یا فضا آزاد کنید.",
+            "libraryFullOnlyNotice": "فضای کافی در کتابخانه Steam شما وجود ندارد. فضا آزاد کنید و دوباره امتحان کنید.",
+            "libraryMissingNotice": "دسترسی به کتابخانه Steam شما ممکن نبود — یکی دیگر را در پایین انتخاب کنید.",
+            "libraryMissingOnlyNotice": "دسترسی به کتابخانه Steam شما ممکن نبود. درایو را دوباره متصل کنید و دوباره امتحان کنید.",
+            "libraryPickerLabel": "انتخاب کتابخانه Steam",
+            "libraryPrimarySuffix": "پیش‌فرض",
+            "noCrossoverEngine": "هیچ نصبی از CrossOver پیدا نشد. GameLib هنگام شروع نصب یکی راه‌اندازی خواهد کرد.",
+            "sharedBottleNotice": "نسخه Wine که اینجا انتخاب می‌کنید برای هر بازی Steam که به bottle نیاز دارد استفاده می‌شود — نه فقط این یکی. تغییر آن بعداً، نحوه اجرای آن بازی‌ها را نیز تغییر می‌دهد.",
+            "withOptionsLabel": "نصب با گزینه‌ها…"
+        },
+        "resumeAvailable": {
+            "notify": "نصب متوقف‌شده {{game}} آماده ادامه است — برای ادامه روی نصب کلیک کنید"
+        },
+        "status": {
+            "resumeInstall": "ادامه نصب",
+            "resumeInstallHint": "نصب ناتمام است — دانلود را در GameLib ادامه دهید"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "این کار هر نسخه نصب‌شده این بازی را در تمام محل‌های نصب حذف می‌کند. این عمل قابل بازگشت نیست.",
+            "removeAllCopiesConfirmTitle": "همه نسخه‌ها حذف شوند؟",
+            "removeAllCopiesLabel": "حذف همه نسخه‌ها…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "تصاویر هنری SteamGridDB در این نسخه در دسترس نیست"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "واحه سایبراسپیس",
+        "cyberSpaceOasisAlt": "واحه سایبراسپیس کلاسیک",
+        "dracula": "دراکولا",
+        "gruvboxDark": "گراوباکس تاریک",
+        "highContrast": "کنتراست بالا",
+        "marine": "مارین",
+        "marineClassic": "مارین کلاسیک",
+        "midnightMirage": "سراب نیمه‌شب",
+        "nordDark": "نورد تاریک",
+        "nordLight": "نورد روشن",
+        "oldSchool": "GameLib قدیمی",
+        "sweet": "شیرین",
+        "zombie": "زامبی",
+        "zombieClassic": "زامبی کلاسیک"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "ورود شما هنوز نمی‌تواند تکمیل شود: {{channel}} برای این نسخه پورت نشده است. این قابلیت در فاز 34.5 اضافه می‌شود.",
+                "heading": "ورود به {{runner}} هنوز راه‌اندازی نشده است",
+                "headingGeneric": "ورود هنوز راه‌اندازی نشده است"
+            },
+            "humble": {
+                "body": "یک پنجره ورود باز شده است. ورود خود را در آنجا تکمیل کنید — این صفحه پس از موفقیت به‌طور خودکار به‌روزرسانی می‌شود.",
+                "error": {
+                    "window_unreachable": "پنجره ورود Humble Bundle بسته شد یا در دسترس نبود"
+                },
+                "heading": "ورود به Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "یک پنجره ورود باز شده است. ورود خود را در آنجا تکمیل کنید.",
+                    "heading": "ورود به {{runner}}",
+                    "headingGeneric": "در حال ورود"
+                },
+                "blocked": {
+                    "body": "ورود شما با موفقیت ثبت شد، اما کانال پس‌زمینه {{channel}} هنوز برای این نسخه پورت نشده است. این قابلیت در فاز 34.5 اضافه می‌شود.",
+                    "heading": "ورود به {{runner}} ثبت شد، اما هنوز نمی‌تواند تکمیل شود",
+                    "headingGeneric": "ورود ثبت شد، اما هنوز نمی‌تواند تکمیل شود"
+                },
+                "cancelled": {
+                    "body": "پنجره ورود پیش از تکمیل بسته شد. می‌توانید دوباره تلاش کنید.",
+                    "heading": "ورود به {{runner}} لغو شد",
+                    "headingGeneric": "ورود لغو شد"
+                },
+                "error": {
+                    "body": "هنگام ورود مشکلی پیش آمد: {{message}}",
+                    "heading": "ورود به {{runner}} ناموفق بود",
+                    "headingGeneric": "ورود ناموفق بود"
+                },
+                "finalizing": {
+                    "body": "ورود ثبت شد. تکمیل تبادل با فروشگاه — این ممکن است چند ثانیه طول بکشد.",
+                    "heading": "در حال نهایی‌سازی ورود با {{runner}}…",
+                    "headingGeneric": "در حال نهایی‌سازی ورود…"
+                },
+                "genericChannel": "کانال ورود",
+                "preparing": {
+                    "body": "پنجره ورود فروشگاه در حال آماده‌سازی است و به‌زودی باز می‌شود.",
+                    "heading": "در حال آماده‌سازی ورود به {{runner}}…",
+                    "headingGeneric": "در حال آماده‌سازی ورود…"
+                },
+                "retry": "تلاش دوباره",
+                "timeout": {
+                    "body": "پنجره ورود بیش از حد طول کشید. می‌توانید دوباره تلاش کنید.",
+                    "heading": "ورود به {{runner}} با وقفه زمانی مواجه شد",
+                    "headingGeneric": "ورود با وقفه زمانی مواجه شد"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "مرور فروشگاه و ویکی درون‌برنامه‌ای در این نسخه در دسترس نیست"
+        }
+    },
+    "winetricks": {
+        "unavailable": "مدیریت اجزای Winetricks در این نسخه در دسترس نیست",
+        "unavailableDetail": "پشتیبانی از Winetricks به نسخه‌ای در آینده (D-03, Phase 34.6) موکول شده و از این نسخه قابل فهرست‌کردن یا نصب نیست."
+    }
+}

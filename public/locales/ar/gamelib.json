@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "عن"
+    },
+    "app": {
+        "routeError": "حدث خطأ ما: {{detail}}"
+    },
+    "box": {
+        "cancel": "ألغِ",
+        "error": {
+            "install": {
+                "failed": "فشل تثبيت {{title}}: {{error}}",
+                "signInToSteam": "سجّل الدخول إلى Steam",
+                "stalled": "لا تقدم في التنزيل منذ {{minutes}} دقيقة — تم إيقاف التثبيت"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "تعذّر على GameLib فتح منتقي الملفات في النظام، لذا لم يتم اختيار شيء ولم يطرأ أي تغيير. ({{error}})",
+                "title": "تعذّر فتح منتقي الملفات"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "أعد التثبيت عبر CrossOver",
+                "message": "نسخة macOS من هذه اللعبة 32-بت فقط ولا يمكنها العمل على هذا الإصدار من macOS. يمكن لـ GameLib إعادة تثبيتها عبر CrossOver بدلًا من ذلك، وهذا سيعيد تنزيل نسخة Windows.",
+                "title": "تم اكتشاف نسخة macOS بصيغة 32-بت"
+            }
+        }
+    },
+    "button": {
+        "close": "أغلق",
+        "paste": "الصق"
+    },
+    "consoleMode": {
+        "installNext": "التالي",
+        "installPrevious": "السابق",
+        "sortAscending": "أ ← ي",
+        "sortDescending": "ي ← أ",
+        "steamInstallBlockedTitle": "تعذّر بدء هذا التثبيت",
+        "steamInstallLibraryFull": "لا توجد مساحة كافية في مجلد مكتبة Steam. أخلِ مساحة وأعد المحاولة.",
+        "steamInstallLibraryMissing": "مجلد مكتبة Steam غير متاح حاليًا. أعد توصيل القرص وحاول مجددًا."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "متوقف مؤقتًا"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "البحث عن الصور الفنية عبر SteamGridDB غير متاح في هذا الإصدار."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "غير مُصنَّف",
+        "etaPrefix": "الوقت المتبقي: {{eta}}",
+        "extraInfoEmptyBody": "لم يعثر Metacritic ولا OpenCritic ولا HowLongToBeat على أي شيء لهذا العنوان.",
+        "extraInfoEmptyTitle": "لا توجد معلومات إضافية",
+        "extraInfoErrorBody": "فشل البحث، وهذا لا يعني بالضرورة عدم وجود بيانات لهذه اللعبة. حاول مجددًا.",
+        "extraInfoErrorTitle": "تعذّر تحميل المعلومات الإضافية",
+        "extraInfoRetry": "أعد المحاولة",
+        "extraInfoStaleBody": "تم تخزين هذه النتيجة مؤقتًا قبل تسجيل نتائج التحميل، لذا قد تكون قديمة. حدّثها للتحقق.",
+        "tabsAriaLabel": "علامات تبويب معلومات اللعبة",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "أقل من دقيقة"
+    },
+    "humbleKeys": {
+        "activate": "فعّل",
+        "activateConfirmBody": "سيؤدي هذا إلى كشف المفتاح — وإزالته نهائيًا من النسخ الاحتياطية القابلة للإهداء — وتفعيله على حساب Steam الخاص بك. لا يمكن التراجع عن هذا.",
+        "activateConfirmBodyRevealed": "سيؤدي هذا إلى تفعيل مفتاحك المكشوف مسبقًا على حساب Steam الخاص بك. لا يمكن التراجع عن هذا.",
+        "activateConfirmTitle": "هل تريد تفعيل هذا المفتاح على Steam؟",
+        "activatedDone": "تم",
+        "activateDismiss": "ألغِ",
+        "activatedTitle": "تم التفعيل",
+        "activateWizardTitle": "تفعيل هذا المفتاح",
+        "activatingBody": "يتم كشف مفتاحك واستبداله على Steam — لن يستغرق هذا سوى لحظة.",
+        "activatingTitle": "جارٍ التفعيل على Steam…"
+    },
+    "info": {
+        "refresh-rating": "تحديث التقييم"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "تعذر على GameLib الاستيراد من هذا الموقع. يجب أن يكون المصدر مسار مجلد كامل بدون أي خطوات \"..\" فيه. اختر مجلد اللعبة مرة أخرى.",
+        "pathRejectedBodyMove": "تعذر على GameLib نقل هذه اللعبة إلى هناك. يجب أن تكون الوجهة مسار مجلد كامل بدون أي خطوات \"..\" فيه. اختر مجلد الوجهة مرة أخرى.",
+        "pathRejectedTitle": "لا يمكن استخدام هذا الموقع"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "يشمل المخفية",
+            "chipHiddenOnly": "المخفية فقط",
+            "chipNonAvailableIncluded": "يشمل غير المتوفرة",
+            "chipNonAvailableOnly": "غير المتوفرة فقط",
+            "chipNoStorePageHidden": "إخفاء ما بلا صفحة متجر",
+            "chipNoStorePageOnly": "بلا صفحة متجر فقط",
+            "clearAll": "مسح الكل",
+            "collections": "المجموعات",
+            "emptyAlphabetLetter": "يبدأ بـ \"{{letter}}\"",
+            "emptyAlphabetNumber": "يبدأ برقم",
+            "emptyBody": "لا توجد ألعاب تطابق {{filters}}.",
+            "emptyClearAll": "مسح كل عوامل التصفية",
+            "emptyHeading": "لا توجد ألعاب تطابق عوامل التصفية",
+            "groupSelectedCount": "تم تحديد {{selected}}",
+            "manageCollections": "إدارة المجموعات",
+            "moreFilters": "المزيد من عوامل التصفية",
+            "newCollection": "+ مجموعة جديدة",
+            "noStorePage": "بلا صفحة متجر",
+            "notYetChecked": "لم يتم التحقق بعد",
+            "removeFilter": "إزالة عامل تصفية {{filterLabel}}",
+            "runnabilityGroup": "إمكانية التشغيل",
+            "runsNatively": "يعمل بشكل أصلي",
+            "runsViaBottle": "يعمل عبر bottle",
+            "storeGroup": "المتجر",
+            "viewAll": "جميع الألعاب",
+            "viewFavourites": "المفضلة",
+            "viewInstalled": "مثبت",
+            "viewRecentlyPlayed": "شُغِّلت مؤخرًا",
+            "wontRun": "لن يعمل"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} من {{total}}"
+        },
+        "no_no_store_page_games": "لا توجد ألعاب بلا صفحة متجر في مكتبتك",
+        "noStorePage": "بلا صفحة متجر",
+        "steamSync": {
+            "failedBody": "لا تزال مكتباتك الأخرى متاحة. حاول مرة أخرى، أو تحقق من إمكانية الوصول إلى Steam.",
+            "failedTitle": "تعذّرت مزامنة مكتبة Steam الخاصة بك",
+            "retry": "إعادة محاولة مزامنة Steam",
+            "signedOutAction": "تسجيل الدخول إلى Steam",
+            "signedOutBody": "سجّل الدخول مرة أخرى لمزامنة مكتبة Steam الخاصة بك. لا تزال مكتباتك الأخرى متاحة.",
+            "signedOutTitle": "انتهت صلاحية تسجيل دخولك إلى Steam",
+            "syncing": "جارٍ مزامنة مكتبة Steam الخاصة بك…"
+        },
+        "storeOther": "آخر"
+    },
+    "login": {
+        "connected": "متصل",
+        "humble_dialog_title": "تسجيل الدخول إلى Humble Bundle",
+        "logoutFailedTitle": "تسجيل الخروج غير مكتمل",
+        "steam_logout_failed_message": "لم يكتمل تسجيل الخروج من Steam في الوقت المحدد. يرجى المحاولة مرة أخرى.",
+        "steam_logout_failed_title": "فشل تسجيل الخروج",
+        "steamReconnect": "انتهت صلاحية تسجيل الدخول — إعادة الاتصال"
+    },
+    "pathSelectionBox": {
+        "saved": "تم الحفظ",
+        "unsaved": "لم يُحفظ بعد — اضغط Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "فشل",
+            "retry": "إعادة المحاولة"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "أدخل مفتاح Steam الخاص بك",
+        "redeem": "استبدال",
+        "redeeming": "جارٍ الاستبدال...",
+        "title": "استبدال مفتاح Steam",
+        "viewInLibrary": "عرض في المكتبة"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "طبقة EOS Overlay غير متاحة في هذا الإصدار",
+            "unavailableDetail": "تم تأجيل دعم EOS Overlay إلى إصدار مستقبلي (D-03, Phase 34.6) ولا يمكن تثبيته أو تحديثه أو إزالته من هذا الإصدار."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "هل تريد تثبيت EOS Overlay الآن؟",
+        "eosOverlayInstallConfirmTitle": "تأكيد تثبيت الطبقة",
+        "eosOverlayUpdateConfirmBody": "هل تريد تحديث EOS Overlay إلى أحدث إصدار؟",
+        "eosOverlayUpdateConfirmTitle": "تأكيد تحديث الطبقة",
+        "framelessWindowDescription": "استخدام نافذة بلا إطار",
+        "gamepadInitialRepeatDelay": "تأخير التكرار الأولي لإدخال وحدة التحكم",
+        "gamepadRepeatFrequency": "تردد تكرار إدخال وحدة التحكم",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "طريقة تكبير الدقة",
+        "gamescopeWindowType": "نوع النافذة",
+        "loginBackground": "خلفية إدارة الحسابات",
+        "loginBackgroundDialogTitle": "اختر صورة خلفية",
+        "loginBackgroundFilterName": "الصور",
+        "loginBackgroundHelp": "الصورة المعروضة خلف شاشة إدارة الحسابات. امسح الحقل للعودة إلى الصورة الافتراضية المرفقة. يدعم التنسيقات PNG وJPEG وWebP وAVIF وGIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "غير متاح في هذا الإصدار"
+            },
+            "help": {
+                "unavailableDetail": "تم تأجيل دعم صور SteamGridDB الفنية إلى إصدار مستقبلي (D-03، المرحلة 34.6) ولا يمكن إعداده من هذا الإصدار."
+            }
+        },
+        "wineDefaultLabel": "Wine الافتراضي",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "استبدال مفتاح Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "الكل",
+            "appExtension": "تطبيق",
+            "appImageExtension": "AppImage",
+            "appImages": "ملفات AppImage",
+            "apps": "التطبيقات",
+            "executables": "الملفات التنفيذية",
+            "images": "الصور",
+            "otherBinaries": "ملفات ثنائية أخرى",
+            "scripts": "البرامج النصية"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "جارٍ التحقق من خيارات التثبيت…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "توقف GameLib عن تلقي ردود بشأن إعداد بوتل Steam. قد يكون لا يزال قيد التشغيل — تحقق من وجود نافذة مثبت Steam، ثم أعد المحاولة."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "قطعت خوادم Steam الاتصال.",
+                "decodeFailed": "تعذر فك ضغط بيانات اللعبة التي تم تنزيلها. هذه ليست مشكلة شبكة.",
+                "genericV2": "فشل تنزيل Steam.",
+                "notSignedIn": "لم يتم تسجيل الدخول إلى Steam، لذا تعذر بدء هذا التنزيل."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "يدير GameLib بوتل CrossOver واحدًا مشتركًا لـ Steam. تسمية بوتل منفصل لكل لعبة غير مدعوم بعد.",
+            "contentLightNotice": "يتم التثبيت عبر عميل Steam الخاص به، لذا لا يوجد شيء لاختياره هنا. فعّل تثبيتات Steam الأصلية في الإعدادات لإدارة موقع التثبيت وتوافق Windows من GameLib.",
+            "contentLightSingleLibraryNotice": "توجد مكتبة Steam واحدة فقط على هذا النظام، لذا لا يوجد شيء لاختياره هنا — سيقوم GameLib بتثبيت هذه اللعبة فيها.",
+            "forceWindowsHelp": "تتوفر لهذه اللعبة نسخة أصلية لنظام macOS، لكن يمكنك بدلًا من ذلك تثبيت نسخة Windows عبر بوتل Wine — وهذا مفيد إذا كانت النسخة الأصلية تفتقد ميزات أو أداؤها أضعف.",
+            "libraryFullNotice": "لا توجد مساحة كافية في مكتبة Steam الخاصة بك — اختر مكتبة أخرى أدناه أو حرر مساحة.",
+            "libraryFullOnlyNotice": "لا توجد مساحة كافية في مكتبة Steam الخاصة بك. حرر مساحة، ثم أعد المحاولة.",
+            "libraryMissingNotice": "تعذر الوصول إلى مكتبة Steam الخاصة بك — اختر مكتبة أخرى أدناه.",
+            "libraryMissingOnlyNotice": "تعذر الوصول إلى مكتبة Steam الخاصة بك. أعد توصيل القرص، ثم أعد المحاولة.",
+            "libraryPickerLabel": "اختر مكتبة Steam",
+            "libraryPrimarySuffix": "افتراضي",
+            "noCrossoverEngine": "لم يتم العثور على أي تثبيت لـ CrossOver. سيقوم GameLib بإعداد واحد عند بدء التثبيت.",
+            "sharedBottleNotice": "يُستخدم إصدار Wine الذي تختاره هنا لكل لعبة Steam تحتاج إلى بوتل — وليس هذه اللعبة فقط. تغييره لاحقًا سيؤثر أيضًا على طريقة تشغيل تلك الألعاب.",
+            "withOptionsLabel": "التثبيت مع خيارات…"
+        },
+        "resumeAvailable": {
+            "notify": "يوجد تثبيت متوقف لـ {{game}} جاهز للاستئناف — انقر على تثبيت للمتابعة"
+        },
+        "status": {
+            "resumeInstall": "استئناف التثبيت",
+            "resumeInstallHint": "التثبيت غير مكتمل — استأنف التنزيل في GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "يؤدي هذا إلى إزالة كل نسخة مثبتة من هذه اللعبة في جميع مواقع التثبيت. لا يمكن التراجع عن هذا الإجراء.",
+            "removeAllCopiesConfirmTitle": "إزالة جميع النسخ؟",
+            "removeAllCopiesLabel": "إزالة جميع النسخ…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "صور SteamGridDB الفنية غير متاحة في هذا الإصدار"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "واحة الفضاء السيبراني",
+        "cyberSpaceOasisAlt": "واحة الفضاء السيبراني الكلاسيكية",
+        "dracula": "دراكولا",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "تباين عالٍ",
+        "marine": "بحري",
+        "marineClassic": "بحري كلاسيكي",
+        "midnightMirage": "سراب منتصف الليل",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "GameLib الكلاسيكي",
+        "sweet": "حلو",
+        "zombie": "زومبي",
+        "zombieClassic": "زومبي كلاسيكي"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "لا يمكن إتمام تسجيل الدخول الآن: {{channel}} لم يتم دعمه في هذا الإصدار بعد. سيتوفر هذا في المرحلة 34.5.",
+                "heading": "تسجيل الدخول إلى {{runner}} غير مفعّل بعد",
+                "headingGeneric": "تسجيل الدخول غير مفعّل بعد"
+            },
+            "humble": {
+                "body": "تم فتح نافذة تسجيل الدخول. أكمل تسجيل الدخول هناك — سيتم تحديث هذه الصفحة تلقائيًا عند النجاح.",
+                "error": {
+                    "window_unreachable": "تم إغلاق نافذة تسجيل الدخول إلى Humble Bundle أو تعذر الوصول إليها"
+                },
+                "heading": "تسجيل الدخول إلى Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "تم فتح نافذة تسجيل الدخول. أكمل تسجيل الدخول هناك.",
+                    "heading": "تسجيل الدخول إلى {{runner}}",
+                    "headingGeneric": "تسجيل الدخول"
+                },
+                "blocked": {
+                    "body": "تم تسجيل دخولك بنجاح، ولكن قناة {{channel}} الخلفية لم تُدعم في هذا الإصدار بعد. سيتوفر هذا في المرحلة 34.5.",
+                    "heading": "تم تسجيل دخولك إلى {{runner}}، ولكن لا يمكن إتمامه الآن",
+                    "headingGeneric": "تم تسجيل تسجيل الدخول، ولكن لا يمكن إتمامه الآن"
+                },
+                "cancelled": {
+                    "body": "تم إغلاق نافذة تسجيل الدخول قبل الاكتمال. يمكنك المحاولة مرة أخرى.",
+                    "heading": "تم إلغاء تسجيل الدخول إلى {{runner}}",
+                    "headingGeneric": "تم إلغاء تسجيل الدخول"
+                },
+                "error": {
+                    "body": "حدث خطأ أثناء تسجيل الدخول: {{message}}",
+                    "heading": "فشل تسجيل الدخول إلى {{runner}}",
+                    "headingGeneric": "فشل تسجيل الدخول"
+                },
+                "finalizing": {
+                    "body": "تم تسجيل الدخول. جارٍ إتمام التبادل مع المتجر — قد يستغرق هذا بضع ثوانٍ.",
+                    "heading": "إنهاء تسجيل الدخول مع {{runner}}…",
+                    "headingGeneric": "إنهاء تسجيل الدخول…"
+                },
+                "genericChannel": "قناة تسجيل الدخول",
+                "preparing": {
+                    "body": "يتم تحضير نافذة تسجيل الدخول للمتجر وستُفتح قريبًا.",
+                    "heading": "تحضير تسجيل الدخول إلى {{runner}}…",
+                    "headingGeneric": "تحضير تسجيل الدخول…"
+                },
+                "retry": "إعادة المحاولة",
+                "timeout": {
+                    "body": "استغرقت نافذة تسجيل الدخول وقتاً طويلاً جداً لإتمامها. يمكنك المحاولة مرة أخرى.",
+                    "heading": "انتهت مهلة تسجيل الدخول إلى {{runner}}",
+                    "headingGeneric": "انتهت مهلة تسجيل الدخول"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "تصفّح المتجر والويكي داخل التطبيق غير متاح في هذا الإصدار"
+        }
+    },
+    "winetricks": {
+        "unavailable": "إدارة مكوّنات Winetricks غير متاحة في هذا الإصدار",
+        "unavailableDetail": "تم تأجيل دعم Winetricks إلى إصدار مستقبلي (D-03، المرحلة 34.6) ولا يمكن إدراجه أو تثبيته من هذا الإصدار."
+    }
+}

@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Maidir"
+    },
+    "app": {
+        "routeError": "Tharla earráid: {{detail}}"
+    },
+    "box": {
+        "cancel": "Cealaigh",
+        "error": {
+            "install": {
+                "failed": "Theip ar shuiteáil {{title}}: {{error}}",
+                "signInToSteam": "Sínigh isteach i Steam",
+                "stalled": "Gan dul chun cinn íoslódála le {{minutes}} nóiméad — stopadh an tsuiteáil"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "Níorbh fhéidir le GameLib roghnóir comhad an chórais a oscailt, mar sin níor roghnaíodh aon rud agus níor rinneadh aon athrú. ({{error}})",
+                "title": "Níorbh fhéidir an roghnóir comhad a oscailt"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Athshuiteáil trí CrossOver",
+                "message": "Níl leagan macOS an chluiche seo ach 32-giotán agus ní féidir leis rith ar an leagan seo de macOS. Is féidir le GameLib é a athshuiteáil trí CrossOver ina áit, rud a íoslódálfaidh an leagan Windows arís.",
+                "title": "Braitheadh leagan macOS 32-giotán"
+            }
+        }
+    },
+    "button": {
+        "close": "Dún",
+        "paste": "Greamaigh"
+    },
+    "consoleMode": {
+        "installNext": "Ar Aghaidh",
+        "installPrevious": "Roimhe Seo",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Ní féidir an tsuiteáil seo a thosú",
+        "steamInstallLibraryFull": "Níl go leor spás saor i bhfillteán do leabharlainne Steam. Déan spás a shaoradh agus bain triail eile as.",
+        "steamInstallLibraryMissing": "Níl fillteán do leabharlainne Steam ar fáil faoi láthair. Athnasc an tiomántán agus bain triail eile as."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Ar Sos"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Níl cuardach ealaín SteamGridDB ar fáil ar an leagan seo."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Gan Rátáil",
+        "etaPrefix": "ETA: {{eta}}",
+        "extraInfoEmptyBody": "Ní raibh aon rud ag Metacritic, OpenCritic ná HowLongToBeat don teideal seo.",
+        "extraInfoEmptyTitle": "Níor aimsíodh aon eolas breise",
+        "extraInfoErrorBody": "Theip ar an gcuardach, rud nach ionann agus gan aon sonraí a bheith ag an gcluiche seo. Bain triail eile as.",
+        "extraInfoErrorTitle": "Níorbh fhéidir eolas breise a lódáil",
+        "extraInfoRetry": "Bain triail eile as",
+        "extraInfoStaleBody": "Cuireadh an toradh seo i dtaisce sula taifeadadh torthaí lódála, mar sin d'fhéadfadh sé a bheith as dáta. Athnuaigh chun a sheiceáil.",
+        "tabsAriaLabel": "cluaisíní gameinfo",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "níos lú ná nóiméad"
+    },
+    "humbleKeys": {
+        "activate": "Gníomhachtaigh",
+        "activateConfirmBody": "Nochtann sé seo an eochair — á baint go buan as spártha In-bhronnta — agus fuascailtear í ar do chuntas Steam. Níl aon chur ar ceal ann.",
+        "activateConfirmBodyRevealed": "Fuascailtear é seo d'eochair atá nochtaithe cheana féin ar do chuntas Steam. Níl aon chur ar ceal ann.",
+        "activateConfirmTitle": "An eochair seo a ghníomhachtú ar Steam?",
+        "activatedDone": "Déanta",
+        "activateDismiss": "Cealaigh",
+        "activatedTitle": "Gníomhachtaithe",
+        "activateWizardTitle": "Gníomhachtaigh an eochair seo",
+        "activatingBody": "Do chuid eochrach á nochtadh agus á fuascailt ar Steam — ní thógann sé ach nóiméad.",
+        "activatingTitle": "Á ghníomhachtú ar Steam…"
+    },
+    "info": {
+        "refresh-rating": "Athnuaigh an rátáil"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "Níorbh fhéidir le GameLib iompórtáil ón suíomh sin. Caithfidh an fhoinse a bheith ina cosán fillteáin iomlán gan aon chéimeanna \"..\" ann. Roghnaigh fillteán an chluiche arís.",
+        "pathRejectedBodyMove": "Níorbh fhéidir le GameLib an cluiche seo a bhogadh ansin. Caithfidh an ceann scríbe a bheith ina cosán fillteáin iomlán gan aon chéimeanna \"..\" ann. Roghnaigh an fillteán ceann scríbe arís.",
+        "pathRejectedTitle": "Ní féidir an suíomh sin a úsáid"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Ag áireamh na cinn fholaithe",
+            "chipHiddenOnly": "Cinn fholaithe amháin",
+            "chipNonAvailableIncluded": "Ag áireamh na gcinn nach bhfuil ar fáil",
+            "chipNonAvailableOnly": "Cinn nach bhfuil ar fáil amháin",
+            "chipNoStorePageHidden": "Gan leathanach siopa á fholú",
+            "chipNoStorePageOnly": "Gan leathanach siopa amháin",
+            "clearAll": "Glan gach rud",
+            "collections": "Bailiúcháin",
+            "emptyAlphabetLetter": "Ag tosú le \"{{letter}}\"",
+            "emptyAlphabetNumber": "Ag tosú le huimhir",
+            "emptyBody": "Níl aon chluiche ag teacht le {{filters}}.",
+            "emptyClearAll": "Glan gach scagaire",
+            "emptyHeading": "Níl aon chluiche ag teacht le do chuid scagairí",
+            "groupSelectedCount": "{{selected}} roghnaithe",
+            "manageCollections": "Bainistigh bailiúcháin",
+            "moreFilters": "Tuilleadh scagairí",
+            "newCollection": "+ Bailiúchán nua",
+            "noStorePage": "Gan leathanach siopa",
+            "notYetChecked": "Nár seiceáladh fós",
+            "removeFilter": "Bain scagaire {{filterLabel}}",
+            "runnabilityGroup": "Inrite",
+            "runsNatively": "Ritheann go dúchasach",
+            "runsViaBottle": "Ritheann trí bhuidéal",
+            "storeGroup": "Siopa",
+            "viewAll": "Gach Cluiche",
+            "viewFavourites": "Ceanáin",
+            "viewInstalled": "Suiteáilte",
+            "viewRecentlyPlayed": "Imeartha le déanaí",
+            "wontRun": "Ní ritheann"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} as {{total}}"
+        },
+        "no_no_store_page_games": "Níl aon chluiche gan leathanach siopa i do leabharlann",
+        "noStorePage": "Gan leathanach siopa",
+        "steamSync": {
+            "failedBody": "Tá do leabharlanna eile fós ar fáil. Bain triail eile as, nó cinntigh go bhfuil Steam inrochtana.",
+            "failedTitle": "Níorbh fhéidir do leabharlann Steam a shioncronú",
+            "retry": "Bain triail eile as sioncronú Steam",
+            "signedOutAction": "Sínigh isteach i Steam",
+            "signedOutBody": "Sínigh isteach arís chun do leabharlann Steam a shioncronú. Tá do leabharlanna eile fós ar fáil.",
+            "signedOutTitle": "Chuaigh do shíniú isteach Steam in éag",
+            "syncing": "Do leabharlann Steam á sioncronú…"
+        },
+        "storeOther": "Eile"
+    },
+    "login": {
+        "connected": "Ceangailte",
+        "humble_dialog_title": "Sínigh isteach i Humble Bundle",
+        "logoutFailedTitle": "Síniú amach neamhiomlán",
+        "steam_logout_failed_message": "Níor chríochnaigh síniú amach Steam in am. Bain triail eile as le do thoil.",
+        "steam_logout_failed_title": "Theip ar an síniú amach",
+        "steamReconnect": "Síniú isteach in éag — Ceangail arís"
+    },
+    "pathSelectionBox": {
+        "saved": "Sábháilte",
+        "unsaved": "Níor sábháladh fós — brúigh Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Teipthe",
+            "retry": "Bain triail eile as"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Cuir isteach d'eochair Steam",
+        "redeem": "Fuascail",
+        "redeeming": "Á fhuascailt...",
+        "title": "Fuascail eochair Steam",
+        "viewInLibrary": "Amharc sa leabharlann"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "Níl an EOS Overlay ar fáil sa leagan seo",
+            "unavailableDetail": "Cuireadh tacaíocht EOS Overlay siar go dtí eisiúint sa todhchaí (D-03, Céim 34.6) agus ní féidir í a shuiteáil, a nuashonrú ná a bhaint den leagan seo."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "An bhfuil fonn ort an EOS Overlay a shuiteáil anois?",
+        "eosOverlayInstallConfirmTitle": "Deimhnigh suiteáil an fhorleagain",
+        "eosOverlayUpdateConfirmBody": "An bhfuil fonn ort an EOS Overlay a nuashonrú go dtí an leagan is déanaí?",
+        "eosOverlayUpdateConfirmTitle": "Deimhnigh nuashonrú an fhorleagain",
+        "framelessWindowDescription": "Úsáid fuinneog gan fhráma",
+        "gamepadInitialRepeatDelay": "Moill athuair tosaigh ionchur an ghamepad",
+        "gamepadRepeatFrequency": "Minicíocht athuair ionchur an ghamepad",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Modh Uas-scálaithe",
+        "gamescopeWindowType": "Cineál Fuinneoige",
+        "loginBackground": "Cúlra Bainistigh Cuntais",
+        "loginBackgroundDialogTitle": "Roghnaigh íomhá chúlra",
+        "loginBackgroundFilterName": "Íomhánna",
+        "loginBackgroundHelp": "Íomhá a thaispeántar taobh thiar den scáileán Bainistigh Cuntais. Glan an réimse chun filleadh ar an ealaín intiompaithe. Tacaítear le PNG, JPEG, WebP, AVIF agus GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Níl ar fáil sa leagan seo"
+            },
+            "help": {
+                "unavailableDetail": "Tá tacaíocht ealaín SteamGridDB curtha ar athló go leagan amach anseo (D-03, Céim 34.6) agus ní féidir í a chumrú ón leagan seo."
+            }
+        },
+        "wineDefaultLabel": "Réamhshocrú Wine",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Fuascail eochair Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Gach",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Aipeanna",
+            "executables": "Inrite",
+            "images": "Íomhánna",
+            "otherBinaries": "Dénártha Eile",
+            "scripts": "Scripteanna"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Rogha suiteála á seiceáil…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "Stop GameLib ag cloisteáil scéala faoi shocrú an bhuidéil Steam. Seans go bhfuil sé ag rith fós — seiceáil an bhfuil fuinneog suiteálaí Steam ann, agus bain triail eile as."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Chaill freastalaithe Steam an nasc.",
+                "decodeFailed": "Níorbh fhéidir sonraí an chluiche a íoslódáladh a dhíphacáil. Ní fadhb líonra é seo.",
+                "genericV2": "Theip ar an íoslódáil Steam.",
+                "notSignedIn": "Níl tú sínithe isteach i Steam, mar sin níorbh fhéidir an íoslódáil seo a thosú."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "Bainistíonn GameLib buidéal CrossOver amháin a roinntear le haghaidh Steam. Ní thacaítear fós le buidéal ar leith in aghaidh an chluiche a ainmniú.",
+            "contentLightNotice": "Suiteáiltear é seo trí chliant Steam féin, mar sin níl aon rud le roghnú anseo. Cuir suiteálacha dúchasach Steam ar siúl sna Socruithe chun an suíomh suiteála agus comhoiriúnacht Windows a bhainistiú ó GameLib.",
+            "contentLightSingleLibraryNotice": "Níl ach leabharlann Steam amháin ar an chóras seo, mar sin níl aon rud le roghnú anseo — suiteálfaidh GameLib an cluiche seo isteach inti.",
+            "forceWindowsHelp": "Tá leagan dúchasach macOS den chluiche seo ann, ach is féidir leat an leagan Windows a shuiteáil ina áit trí bhuidéal Wine — úsáideach má tá gnéithe in easnamh sa leagan dúchasach nó má fheidhmíonn sé níos measa.",
+            "libraryFullNotice": "Níl dóthain spáis i do leabharlann Steam — roghnaigh ceann eile thíos nó saor spás.",
+            "libraryFullOnlyNotice": "Níl dóthain spáis i do leabharlann Steam. Saor spás, agus bain triail eile as.",
+            "libraryMissingNotice": "Níorbh fhéidir teacht ar do leabharlann Steam — roghnaigh ceann eile thíos.",
+            "libraryMissingOnlyNotice": "Níorbh fhéidir teacht ar do leabharlann Steam. Athcheangail an tiomántán, agus bain triail eile as.",
+            "libraryPickerLabel": "Roghnaigh leabharlann Steam",
+            "libraryPrimarySuffix": "réamhshocrú",
+            "noCrossoverEngine": "Níor aimsíodh aon suiteáil CrossOver. Cuirfidh GameLib ceann ar bun nuair a thosóidh an tsuiteáil.",
+            "sharedBottleNotice": "Úsáidtear an leagan wine a roghnaíonn tú anseo do gach cluiche Steam a bhfuil buidéal de dhíth air — ní hé an ceann seo amháin. Athróidh athrú air níos déanaí conas a fheidhmíonn na cluichí sin freisin.",
+            "withOptionsLabel": "Suiteáil le roghanna…"
+        },
+        "resumeAvailable": {
+            "notify": "Tá suiteáil idirbhriste do {{game}} réidh le atosú — cliceáil Suiteáil chun leanúint ar aghaidh"
+        },
+        "status": {
+            "resumeInstall": "Atosaigh Suiteáil",
+            "resumeInstallHint": "Suiteáil neamhiomlán — atosaigh an íoslódáil i GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Bainfidh sé seo gach cóip suiteáilte den chluiche seo ó gach suíomh suiteála. Ní féidir é seo a chur ar ceal.",
+            "removeAllCopiesConfirmTitle": "Bain gach cóip?",
+            "removeAllCopiesLabel": "Bain gach cóip…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Níl ealaín SteamGridDB ar fáil sa leagan seo"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Ósais Cibearspáis",
+        "cyberSpaceOasisAlt": "Ósais Cibearspáis Clasaiceach",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dorcha",
+        "highContrast": "Ard-Chodarsnacht",
+        "marine": "Muirí",
+        "marineClassic": "Muirí Clasaiceach",
+        "midnightMirage": "Meititreoir Meán Oíche",
+        "nordDark": "Nord Dorcha",
+        "nordLight": "Nord Éadrom",
+        "oldSchool": "Seanscoil GameLib",
+        "sweet": "Milis",
+        "zombie": "Zombaí",
+        "zombieClassic": "Zombaí Clasaiceach"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Ní féidir do shíniú isteach a chríochnú go fóill: níl {{channel}} curtha in oiriúint don leagan seo. Tiocfaidh sé seo i gCéim 34.5.",
+                "heading": "Níl an síniú isteach chuig {{runner}} sreangaithe fós",
+                "headingGeneric": "Níl an síniú isteach sreangaithe fós"
+            },
+            "humble": {
+                "body": "Osclaíodh fuinneog shíniú isteach. Críochnaigh an síniú isteach ansin — nuashonraítear an leathanach seo go huathoibríoch nuair a éiríonn leis.",
+                "error": {
+                    "window_unreachable": "dhún fuinneog shíniú isteach Humble nó ní raibh sé inrochtana"
+                },
+                "heading": "Ag síniú isteach chuig Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Osclaíodh fuinneog shíniú isteach. Críochnaigh an síniú isteach ansin.",
+                    "heading": "Ag síniú isteach chuig {{runner}}",
+                    "headingGeneric": "Ag síniú isteach"
+                },
+                "blocked": {
+                    "body": "Gabhadh do shíniú isteach go rathúil, ach níl an cainéal cúlchláir {{channel}} curtha in oiriúint don leagan seo fós. Tiocfaidh sé seo i gCéim 34.5.",
+                    "heading": "Gabhadh an síniú isteach chuig {{runner}}, ach ní féidir é a chríochnú go fóill",
+                    "headingGeneric": "Gabhadh an síniú isteach, ach ní féidir é a chríochnú go fóill"
+                },
+                "cancelled": {
+                    "body": "Dúnadh an fhuinneog shíniú isteach sula raibh sé críochnaithe. Is féidir leat triail eile a bhaint as.",
+                    "heading": "Cuireadh an síniú isteach chuig {{runner}} ar ceal",
+                    "headingGeneric": "Cuireadh an síniú isteach ar ceal"
+                },
+                "error": {
+                    "body": "Chuaigh rud éigin amú agus tú ag síniú isteach: {{message}}",
+                    "heading": "Theip ar an síniú isteach chuig {{runner}}",
+                    "headingGeneric": "Theip ar an síniú isteach"
+                },
+                "finalizing": {
+                    "body": "Gabhadh an síniú isteach. Ag críochnú an mhalartaithe leis an stór — d'fhéadfadh sé seo cúpla soicind a thógáil.",
+                    "heading": "Ag críochnú an tsínithe isteach le {{runner}}…",
+                    "headingGeneric": "Ag críochnú an tsínithe isteach…"
+                },
+                "genericChannel": "an cainéal sínithe isteach",
+                "preparing": {
+                    "body": "Tá fuinneog shíniú isteach an stóir á hullmhú agus osclóidh sí go luath.",
+                    "heading": "Ag ullmhú síniú isteach {{runner}}…",
+                    "headingGeneric": "Ag ullmhú síniú isteach…"
+                },
+                "retry": "Atriail",
+                "timeout": {
+                    "body": "Thóg an fhuinneog síniú isteach an iomarca ama. Is féidir leat triail eile a bhaint as.",
+                    "heading": "Chuaigh an t-am amú agus tú ag síniú isteach i {{runner}}",
+                    "headingGeneric": "Chuaigh an t-am amú don síniú isteach"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Níl brabhsáil an tsiopa agus an vicí laistigh den aip ar fáil sa tógáil seo"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Níl bainistíocht comhpháirteanna Winetricks ar fáil sa tógáil seo",
+        "unavailableDetail": "Cuirtear tacaíocht Winetricks siar go dtí eisiúint sa todhchaí (D-03, Céim 34.6) agus ní féidir í a liostú ná a shuiteáil ón tógáil seo."
+    }
+}

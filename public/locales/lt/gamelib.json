@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Apie"
+    },
+    "app": {
+        "routeError": "Kažkas nutiko ne taip: {{detail}}"
+    },
+    "box": {
+        "cancel": "Atšaukti",
+        "error": {
+            "install": {
+                "failed": "Nepavyko įdiegti {{title}}: {{error}}",
+                "signInToSteam": "Prisijunkite prie Steam",
+                "stalled": "Jokios atsisiuntimo pažangos {{minutes}} min. — diegimas buvo sustabdytas"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib nepavyko atverti sistemos failų parinkiklio, todėl niekas nebuvo pasirinkta ir jokie pakeitimai nebuvo atlikti. ({{error}})",
+                "title": "Nepavyko atverti failų parinkiklio"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Įdiegti iš naujo per CrossOver",
+                "message": "Šio žaidimo macOS versija yra tik 32 bitų ir negali veikti šioje macOS versijoje. GameLib gali ją įdiegti iš naujo per CrossOver, tokiu būdu iš naujo atsisiunčiant Windows versiją.",
+                "title": "Aptikta 32 bitų macOS versija"
+            }
+        }
+    },
+    "button": {
+        "close": "Uždaryti",
+        "paste": "Įklijuoti"
+    },
+    "consoleMode": {
+        "installNext": "Sekantis",
+        "installPrevious": "Praeita/-s",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Nepavyksta pradėti šio diegimo",
+        "steamInstallLibraryFull": "Jūsų Steam bibliotekos aplanke nepakanka laisvos vietos. Atlaisvinkite vietos ir bandykite dar kartą.",
+        "steamInstallLibraryMissing": "Jūsų Steam bibliotekos aplankas šiuo metu nepasiekiamas. Iš naujo prijunkite diską ir bandykite dar kartą."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Pristabdyta"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "SteamGridDB paveikslėlių paieška šioje versijoje nepasiekiama."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Neįvertinta",
+        "etaPrefix": "Liko: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic ir HowLongToBeat neturėjo jokios informacijos apie šį žaidimą.",
+        "extraInfoEmptyTitle": "Papildomos informacijos nerasta",
+        "extraInfoErrorBody": "Paieška nepavyko, o tai nereiškia, kad šis žaidimas neturi duomenų. Bandykite dar kartą.",
+        "extraInfoErrorTitle": "Nepavyko įkelti papildomos informacijos",
+        "extraInfoRetry": "Bandyti dar kartą",
+        "extraInfoStaleBody": "Šis rezultatas buvo talpinamas podėlyje prieš pradedant registruoti įkėlimo rezultatus, todėl jis gali būti pasenęs. Atnaujinkite, kad patikrintumėte.",
+        "tabsAriaLabel": "žaidimo informacijos skirtukai",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "mažiau nei minutė"
+    },
+    "humbleKeys": {
+        "activate": "Aktyvuoti",
+        "activateConfirmBody": "Tai atskleis raktą — visam laikui pašalinant jį iš dovanotinų atsarginių raktų — ir jį panaudos jūsų Steam paskyroje. Šio veiksmo anuliuoti negalima.",
+        "activateConfirmBodyRevealed": "Tai panaudos jau atskleistą raktą jūsų Steam paskyroje. Šio veiksmo anuliuoti negalima.",
+        "activateConfirmTitle": "Aktyvuoti šį raktą Steam platformoje?",
+        "activatedDone": "Atlikta",
+        "activateDismiss": "Atšaukti",
+        "activatedTitle": "Aktyvuota",
+        "activateWizardTitle": "Aktyvuoti šį raktą",
+        "activatingBody": "Atskleidžiamas jūsų raktas ir jis aktyvuojamas Steam — tai užtruks tik akimirką.",
+        "activatingTitle": "Aktyvuojama Steam…"
+    },
+    "info": {
+        "refresh-rating": "Atnaujinti įvertinimą"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib nepavyko importuoti iš tos vietos. Šaltinis turi būti pilnas aplanko kelias be „..“ žingsnių jame. Pasirinkite žaidimo aplanką dar kartą.",
+        "pathRejectedBodyMove": "GameLib nepavyko perkelti šio žaidimo ten. Paskirties vieta turi būti pilnas aplanko kelias be „..“ žingsnių jame. Pasirinkite paskirties aplanką dar kartą.",
+        "pathRejectedTitle": "Negalima naudoti tos vietos"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Įtraukiant paslėptus",
+            "chipHiddenOnly": "Tik paslėpti",
+            "chipNonAvailableIncluded": "Įtraukiant neprieinamus",
+            "chipNonAvailableOnly": "Tik neprieinami",
+            "chipNoStorePageHidden": "Slepiant be parduotuvės puslapio",
+            "chipNoStorePageOnly": "Tik be parduotuvės puslapio",
+            "clearAll": "Išvalyti viską",
+            "collections": "Kolekcijos",
+            "emptyAlphabetLetter": "Prasideda „{{letter}}“",
+            "emptyAlphabetNumber": "Prasideda skaičiumi",
+            "emptyBody": "Nėra žaidimų, atitinkančių {{filters}}.",
+            "emptyClearAll": "Išvalyti visus filtrus",
+            "emptyHeading": "Nėra žaidimų, atitinkančių jūsų filtrus",
+            "groupSelectedCount": "Pasirinkta: {{selected}}",
+            "manageCollections": "Tvarkyti kolekcijas",
+            "moreFilters": "Daugiau filtrų",
+            "newCollection": "+ Nauja kolekcija",
+            "noStorePage": "Be parduotuvės puslapio",
+            "notYetChecked": "Dar nepatikrinta",
+            "removeFilter": "Pašalinti filtrą „{{filterLabel}}“",
+            "runnabilityGroup": "Paleidžiamumas",
+            "runsNatively": "Veikia natūraliai",
+            "runsViaBottle": "Veikia per talpyklą",
+            "storeGroup": "Parduotuvė",
+            "viewAll": "Visi žaidimai",
+            "viewFavourites": "Mėgstamiausi",
+            "viewInstalled": "Įdiegta",
+            "viewRecentlyPlayed": "Neseniai žaista",
+            "wontRun": "Nepaleis"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} iš {{total}}"
+        },
+        "no_no_store_page_games": "Jūsų bibliotekoje nėra žaidimų be parduotuvės puslapio",
+        "noStorePage": "Be parduotuvės puslapio",
+        "steamSync": {
+            "failedBody": "Kitos jūsų bibliotekos vis dar pasiekiamos. Bandykite dar kartą arba patikrinkite, ar Steam pasiekiamas.",
+            "failedTitle": "Nepavyko sinchronizuoti jūsų Steam bibliotekos",
+            "retry": "Kartoti Steam sinchronizavimą",
+            "signedOutAction": "Prisijungti prie Steam",
+            "signedOutBody": "Prisijunkite iš naujo, kad sinchronizuotumėte savo Steam biblioteką. Kitos jūsų bibliotekos vis dar pasiekiamos.",
+            "signedOutTitle": "Jūsų Steam prisijungimo galiojimas baigėsi",
+            "syncing": "Sinchronizuojama jūsų Steam biblioteka…"
+        },
+        "storeOther": "Kita/-s/-i"
+    },
+    "login": {
+        "connected": "Prisijungta",
+        "humble_dialog_title": "Prisijunkite prie Humble Bundle",
+        "logoutFailedTitle": "Atsijungimas nebaigtas",
+        "steam_logout_failed_message": "Steam atsijungimas nebuvo baigtas laiku. Bandykite dar kartą.",
+        "steam_logout_failed_title": "Atsijungti nepavyko",
+        "steamReconnect": "Prisijungimo galiojimas baigėsi — prisijungti iš naujo"
+    },
+    "pathSelectionBox": {
+        "saved": "Išsaugota",
+        "unsaved": "Dar neišsaugota — paspauskite Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Nepavyko",
+            "retry": "Kartoti"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Įveskite savo Steam raktą",
+        "redeem": "Aktyvuoti",
+        "redeeming": "Aktyvuojama...",
+        "title": "Aktyvuoti Steam raktą",
+        "viewInLibrary": "Žiūrėti bibliotekoje"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay nepasiekiamas šioje versijoje",
+            "unavailableDetail": "EOS Overlay palaikymas atidėtas iki būsimos versijos (D-03, 34.6 etapas) ir šioje versijoje negali būti įdiegtas, atnaujintas ar pašalintas."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Įdiegti EOS Overlay dabar?",
+        "eosOverlayInstallConfirmTitle": "Patvirtinkite overlay diegimą",
+        "eosOverlayUpdateConfirmBody": "Atnaujinti EOS Overlay iki naujausios versijos?",
+        "eosOverlayUpdateConfirmTitle": "Patvirtinkite overlay atnaujinimą",
+        "framelessWindowDescription": "Naudoti langą be rėmelio",
+        "gamepadInitialRepeatDelay": "Žaidimų pulto įvesties pradinis kartojimo delsos laikas",
+        "gamepadRepeatFrequency": "Žaidimų pulto įvesties kartojimo dažnis",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Padidinimo metodas",
+        "gamescopeWindowType": "Lango tipas",
+        "loginBackground": "Paskyrų valdymo fonas",
+        "loginBackgroundDialogTitle": "Pasirinkite fono paveikslėlį",
+        "loginBackgroundFilterName": "Atvaizdai",
+        "loginBackgroundHelp": "Paveikslėlis, rodomas už paskyrų valdymo ekrano. Išvalykite lauką, kad grįžtumėte prie įtraukto vaizdo. Palaikomi PNG, JPEG, WebP, AVIF ir GIF formatai.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Neprieinama šioje versijoje"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB apipavidalinimo palaikymas atidėtas iki būsimos versijos (D-03, 34.6 etapas) ir negali būti konfigūruojamas šioje versijoje."
+            }
+        },
+        "wineDefaultLabel": "Numatytoji Wine versija",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Aktyvuoti Steam raktą"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Visi/-as/-os/-us",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImage failai",
+            "apps": "Programos",
+            "executables": "Vykdomieji failai",
+            "images": "Atvaizdai",
+            "otherBinaries": "Kiti dvejetainiai failai",
+            "scripts": "Scenarijai"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Tikrinamos diegimo parinktys…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib nebegauna atsako apie Steam talpyklos (bottle) nustatymą. Procesas gali dar vykti — patikrinkite, ar neatidarytas Steam diegimo programos langas, tada bandykite dar kartą."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam serveriai nutraukė ryšį.",
+                "decodeFailed": "Nepavyko išpakuoti atsisiųstų žaidimo duomenų. Tai nėra tinklo problema.",
+                "genericV2": "Nepavyko atsisiųsti iš Steam.",
+                "notSignedIn": "Nesate prisijungę prie Steam, todėl atsisiuntimas negalėjo prasidėti."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib valdo vieną bendrą CrossOver talpyklą (bottle) Steam žaidimams. Atskiros talpyklos kiekvienam žaidimui pavadinimas dar nepalaikomas.",
+            "contentLightNotice": "Diegiama per Steam klientą, todėl čia nėra ko rinktis. Įjunkite tikruosius Steam diegimus Nustatymuose, kad diegimo vietą ir Windows suderinamumą galėtumėte valdyti iš GameLib.",
+            "contentLightSingleLibraryNotice": "Šioje sistemoje yra tik viena Steam biblioteka, todėl čia nėra ko rinktis — GameLib įdiegs žaidimą į ją.",
+            "forceWindowsHelp": "Šis žaidimas turi tikrąją macOS versiją, tačiau vietoj jos galite įdiegti Windows versiją per Wine talpyklą (bottle) — tai naudinga, jei tikrajai versijai trūksta funkcijų arba ji veikia prasčiau.",
+            "libraryFullNotice": "Jūsų Steam bibliotekoje nepakanka vietos — pasirinkite kitą žemiau arba atlaisvinkite vietos.",
+            "libraryFullOnlyNotice": "Jūsų Steam bibliotekoje nepakanka vietos. Atlaisvinkite vietos ir bandykite dar kartą.",
+            "libraryMissingNotice": "Nepavyko pasiekti jūsų Steam bibliotekos — pasirinkite kitą žemiau.",
+            "libraryMissingOnlyNotice": "Nepavyko pasiekti jūsų Steam bibliotekos. Iš naujo prijunkite diską ir bandykite dar kartą.",
+            "libraryPickerLabel": "Pasirinkite Steam biblioteką",
+            "libraryPrimarySuffix": "~Numatytasis",
+            "noCrossoverEngine": "Nerasta CrossOver diegimo. GameLib ją nustatys, kai prasidės diegimas.",
+            "sharedBottleNotice": "Čia pasirinkta Wine versija bus naudojama visiems Steam žaidimams, kuriems reikia talpyklos (bottle), — ne tik šiam. Vėliau ją pakeitus, pasikeis ir tų žaidimų veikimas.",
+            "withOptionsLabel": "Diegti su parinktimis…"
+        },
+        "resumeAvailable": {
+            "notify": "Nutrauktą {{game}} diegimą galima tęsti — spustelėkite „Diegti“, kad tęstumėte"
+        },
+        "status": {
+            "resumeInstall": "Tęsti diegimą",
+            "resumeInstallHint": "Diegimas nebaigtas — tęskite atsisiuntimą GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Tai pašalins visas įdiegtas šio žaidimo kopijas iš visų diegimo vietų. Šio veiksmo anuliuoti negalima.",
+            "removeAllCopiesConfirmTitle": "Pašalinti visas kopijas?",
+            "removeAllCopiesLabel": "Pašalinti visas kopijas…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB apipavidalinimas neprieinamas šioje versijoje"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Didelis kontrastas",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Senoji mokykla GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Prisijungimo dar negalima užbaigti: {{channel}} nėra perkeltas į šią versiją. Tai bus pridėta 34.5 fazėje.",
+                "heading": "Prisijungimas prie {{runner}} dar neįdiegtas",
+                "headingGeneric": "Prisijungimas dar neįdiegtas"
+            },
+            "humble": {
+                "body": "Atsidarė prisijungimo langas. Užbaikite prisijungimą jame — šis puslapis atsinaujins automatiškai, kai pavyks.",
+                "error": {
+                    "window_unreachable": "Humble Bundle prisijungimo langas užsidarė arba jo nepavyko pasiekti"
+                },
+                "heading": "Jungiamasi prie Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Atsidarė prisijungimo langas. Užbaikite prisijungimą jame.",
+                    "heading": "Jungiamasi prie {{runner}}",
+                    "headingGeneric": "Jungiamasi"
+                },
+                "blocked": {
+                    "body": "Prisijungimas sėkmingai užfiksuotas, bet {{channel}} serverio kanalas dar nėra perkeltas į šią versiją. Tai bus pridėta 34.5 fazėje.",
+                    "heading": "Prisijungimas prie {{runner}} užfiksuotas, bet dar negali būti užbaigtas",
+                    "headingGeneric": "Prisijungimas užfiksuotas, bet dar negali būti užbaigtas"
+                },
+                "cancelled": {
+                    "body": "Prisijungimo langas buvo uždarytas prieš užbaigiant. Galite bandyti dar kartą.",
+                    "heading": "Prisijungimas prie {{runner}} atšauktas",
+                    "headingGeneric": "Prisijungimas atšauktas"
+                },
+                "error": {
+                    "body": "Prisijungiant įvyko klaida: {{message}}",
+                    "heading": "Nepavyko prisijungti prie {{runner}}",
+                    "headingGeneric": "Nepavyko prisijungti"
+                },
+                "finalizing": {
+                    "body": "Prisijungimas užfiksuotas. Baigiamas keitimasis duomenimis su parduotuve — tai gali užtrukti kelias sekundes.",
+                    "heading": "Baigiamas prisijungimas prie {{runner}}…",
+                    "headingGeneric": "Baigiamas prisijungimas…"
+                },
+                "genericChannel": "prisijungimo kanalas",
+                "preparing": {
+                    "body": "Ruošiamas parduotuvės prisijungimo langas, jis bus atidarytas netrukus.",
+                    "heading": "Ruošiamas {{runner}} prisijungimas…",
+                    "headingGeneric": "Ruošiamas prisijungimas…"
+                },
+                "retry": "Bandyti dar kartą",
+                "timeout": {
+                    "body": "Prisijungimo langas veikė per ilgai. Galite bandyti dar kartą.",
+                    "heading": "Baigėsi laikas prisijungiant prie {{runner}}",
+                    "headingGeneric": "Baigėsi prisijungimo laikas"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Šioje versijoje parduotuvės ir wiki naršymas programoje negalimas"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Winetricks komponentų valdymas šioje versijoje negalimas",
+        "unavailableDetail": "Winetricks palaikymas atidėtas iki būsimos versijos (D-03, 34.6 etapas) ir šioje versijoje negali būti rodomas ar diegiamas."
+    }
+}

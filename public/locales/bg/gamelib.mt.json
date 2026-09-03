@@ -1,7 +1,7 @@
 {
-  "locale": "de",
+  "locale": "bg",
   "model": "claude-sonnet-5",
-  "filledAt": "2026-09-02T22:05:32.802Z",
+  "filledAt": "2026-09-02T19:23:15.635Z",
   "keys": [
     "about.navLabel",
     "app.routeError",
@@ -93,7 +93,6 @@
     "library.storeOther",
     "login.connected",
     "login.humble_dialog_title",
-    "login.logoutFailedMessage",
     "login.logoutFailedTitle",
     "login.steamReconnect",
     "login.steam_logout_failed_message",
@@ -206,10 +205,7 @@
     "webview.login.oauth.timeout.body",
     "webview.login.oauth.timeout.heading",
     "webview.login.oauth.timeout.headingGeneric",
-    "webview.unavailable.body",
     "webview.unavailable.heading",
-    "webview.unavailable.next-step",
-    "webview.unavailable.open-in-browser",
     "winetricks.unavailable",
     "winetricks.unavailableDetail"
   ]

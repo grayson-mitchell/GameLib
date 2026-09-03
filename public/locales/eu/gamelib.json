@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Buruz"
+    },
+    "app": {
+        "routeError": "Zerbait gaizki joan da: {{detail}}"
+    },
+    "box": {
+        "cancel": "Ezeztatu",
+        "error": {
+            "install": {
+                "failed": "{{title}} instalatzeak huts egin du: {{error}}",
+                "signInToSteam": "Hasi saioa Steam-en",
+                "stalled": "{{minutes}} minutuz ez da deskarga aurrerapenik izan — instalazioa gelditu da"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib-ek ezin izan du sistemaren fitxategi hautatzailea ireki, beraz ez da ezer hautatu eta ez da aldaketarik egin. ({{error}})",
+                "title": "Ezin izan da fitxategi hautatzailea ireki"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Berrinstalatu CrossOver bidez",
+                "message": "Joko honen macOS bertsioa 32 bit-ekoa da soilik eta ezin da macOS bertsio honetan exekutatu. GameLib-ek CrossOver bidez berrinstala dezake horren ordez, Windows bertsioa berriro deskargatuz.",
+                "title": "32 bit-eko macOS bertsioa detektatu da"
+            }
+        }
+    },
+    "button": {
+        "close": "Itxi",
+        "paste": "Itsatsi"
+    },
+    "consoleMode": {
+        "installNext": "Hurrengoa",
+        "installPrevious": "Aurrekoa",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Ezin da instalazio hau hasi",
+        "steamInstallLibraryFull": "Ez dago nahikoa leku libre zure Steam liburutegiaren karpetan. Egin lekua eta saiatu berriro.",
+        "steamInstallLibraryMissing": "Zure Steam liburutegiaren karpeta ez dago erabilgarri une honetan. Berrkonektatu unitatea eta saiatu berriro."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Pausatuta"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "SteamGridDB artelan bilaketa ez dago erabilgarri eraikuntza honetan."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Balioztatu gabea",
+        "etaPrefix": "ETA: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic eta HowLongToBeat-ek ez zuten ezer izenburu honentzat.",
+        "extraInfoEmptyTitle": "Ez da informazio gehigarririk aurkitu",
+        "extraInfoErrorBody": "Bilaketak huts egin du, eta hori ez da gauza bera joko honek daturik ez izatea baino. Saiatu berriro.",
+        "extraInfoErrorTitle": "Ezin izan da informazio gehigarria kargatu",
+        "extraInfoRetry": "Saiatu berriro",
+        "extraInfoStaleBody": "Emaitza hau kargaren emaitzak erregistratu baino lehen katxeatu zen, beraz baliteke eguneratua ez egotea. Freskatu egiaztatzeko.",
+        "tabsAriaLabel": "joko informazioaren fitxak",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "minutu bat baino gutxiago"
+    },
+    "humbleKeys": {
+        "activate": "Aktibatu",
+        "activateConfirmBody": "Honek gakoa agerian jartzen du — betiko kenduz Giftable erreserbetatik — eta zure Steam kontuan kanjeatzen du. Ez dago atzera bueltarik.",
+        "activateConfirmBodyRevealed": "Honek zure jadanik agerian jarritako gakoa kanjeatzen du zure Steam kontuan. Ez dago atzera bueltarik.",
+        "activateConfirmTitle": "Gako hau Steam-en aktibatu?",
+        "activatedDone": "Eginda",
+        "activateDismiss": "Ezeztatu",
+        "activatedTitle": "Aktibatuta",
+        "activateWizardTitle": "Aktibatu gako hau",
+        "activatingBody": "Zure gakoa agerian jarri eta Steam-en berreskuratzen — une bat baino ez du behar.",
+        "activatingTitle": "Steam-en aktibatzen…"
+    },
+    "info": {
+        "refresh-rating": "Freskatu balorazioa"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib-ek ezin izan du kokapen horretatik inportatu. Iturburuak karpeta-bide osoa izan behar du, \"..\" pausorik gabe. Aukeratu berriro jokoaren karpeta.",
+        "pathRejectedBodyMove": "GameLib-ek ezin izan du joko hau hara eraman. Helmugak karpeta-bide osoa izan behar du, \"..\" pausorik gabe. Aukeratu berriro helmugako karpeta.",
+        "pathRejectedTitle": "Ezin da kokapen hori erabili"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Ezkutukoak barne",
+            "chipHiddenOnly": "Ezkutukoak soilik",
+            "chipNonAvailableIncluded": "Erabilgarri ez daudenak barne",
+            "chipNonAvailableOnly": "Erabilgarri ez daudenak soilik",
+            "chipNoStorePageHidden": "Denda-orririk gabekoak ezkutatzen",
+            "chipNoStorePageOnly": "Denda-orririk gabekoak soilik",
+            "clearAll": "Garbitu guztiak",
+            "collections": "Bildumak",
+            "emptyAlphabetLetter": "\"{{letter}}\" letraz hasten direnak",
+            "emptyAlphabetNumber": "Zenbaki batez hasten direnak",
+            "emptyBody": "Ez dago {{filters}} betetzen duen jokorik.",
+            "emptyClearAll": "Garbitu iragazki guztiak",
+            "emptyHeading": "Ez dago zure iragazkiak betetzen dituen jokorik",
+            "groupSelectedCount": "{{selected}} hautatuta",
+            "manageCollections": "Kudeatu bildumak",
+            "moreFilters": "Iragazki gehiago",
+            "newCollection": "+ Bilduma berria",
+            "noStorePage": "Denda-orririk ez",
+            "notYetChecked": "Oraindik egiaztatu gabe",
+            "removeFilter": "Kendu {{filterLabel}} iragazkia",
+            "runnabilityGroup": "Exekuzio-gaitasuna",
+            "runsNatively": "Modu nabatiboan exekutatzen da",
+            "runsViaBottle": "Bottle bidez exekutatzen da",
+            "storeGroup": "Denda",
+            "viewAll": "Joko guztiak",
+            "viewFavourites": "Gogokoenak",
+            "viewInstalled": "Instalatuta",
+            "viewRecentlyPlayed": "Duela gutxi jokatutakoak",
+            "wontRun": "Ez da exekutatuko"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}}/{{total}}"
+        },
+        "no_no_store_page_games": "Ez dago denda-orririk gabeko jokorik zure liburutegian",
+        "noStorePage": "Denda-orririk ez",
+        "steamSync": {
+            "failedBody": "Zure beste liburutegiak eskuragarri jarraitzen dute. Saiatu berriro, edo egiaztatu Steam eskuragarri dagoela.",
+            "failedTitle": "Ezin izan da zure Steam liburutegia sinkronizatu",
+            "retry": "Saiatu berriro Steam sinkronizazioa",
+            "signedOutAction": "Hasi saioa Steam-en",
+            "signedOutBody": "Hasi saioa berriro zure Steam liburutegia sinkronizatzeko. Zure beste liburutegiak eskuragarri jarraitzen dute.",
+            "signedOutTitle": "Zure Steam saioa iraungi da",
+            "syncing": "Zure Steam liburutegia sinkronizatzen…"
+        },
+        "storeOther": "Bestela"
+    },
+    "login": {
+        "connected": "Konektatuta",
+        "humble_dialog_title": "Hasi saioa Humble Bundle-n",
+        "logoutFailedTitle": "Saioa ez da erabat itxi",
+        "steam_logout_failed_message": "Steam-eko saioa itxiek ez du garaiz amaitu. Mesedez, saiatu berriro.",
+        "steam_logout_failed_title": "Saioa ixtea huts egin du",
+        "steamReconnect": "Saioa iraungi da — Berrkonektatu"
+    },
+    "pathSelectionBox": {
+        "saved": "Gordeta",
+        "unsaved": "Oraindik gorde gabe — sakatu Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Huts egin du",
+            "retry": "Saiatu berriro"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Sartu zure Steam gakoa",
+        "redeem": "Erreskatatu",
+        "redeeming": "Erreskatatzen...",
+        "title": "Erreskatatu Steam gako bat",
+        "viewInLibrary": "Ikusi liburutegian"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay ez dago eskuragarri bertsio honetan",
+            "unavailableDetail": "EOS Overlay onarpena etorkizuneko bertsio baterako atzeratu da (D-03, 34.6 fasea) eta ezin da instalatu, eguneratu edo kendu bertsio honetan."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Instalatu EOS Overlay orain?",
+        "eosOverlayInstallConfirmTitle": "Berretsi overlay instalazioa",
+        "eosOverlayUpdateConfirmBody": "Eguneratu EOS Overlay azken bertsiora?",
+        "eosOverlayUpdateConfirmTitle": "Berretsi overlay eguneratzea",
+        "framelessWindowDescription": "Erabili markorik gabeko leihoa",
+        "gamepadInitialRepeatDelay": "Gamepad sarreraren hasierako errepikapen-atzerapena",
+        "gamepadRepeatFrequency": "Gamepad sarreraren errepikapen-maiztasuna",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Eskalatze-metodoa",
+        "gamescopeWindowType": "Leiho-mota",
+        "loginBackground": "Kontuak kudeatzeko atzeko planoa",
+        "loginBackgroundDialogTitle": "Hautatu atzeko planoko irudi bat",
+        "loginBackgroundFilterName": "Irudiak",
+        "loginBackgroundHelp": "Kontuak kudeatzeko pantailaren atzean erakusten den irudia. Garbitu eremua barneratutako artelanera itzultzeko. PNG, JPEG, WebP, AVIF eta GIF onartzen dira.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Ez dago erabilgarri build honetan"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB-ren artelanen euskarria etorkizuneko bertsio baterako utzi da (D-03, 34.6 Fasea) eta ezin da konfiguratu build honetatik."
+            }
+        },
+        "wineDefaultLabel": "Wine Lehenetsia",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Kanjeatu Steam gako bat"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Dena",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImage-ak",
+            "apps": "Aplikazioak",
+            "executables": "Exekutagarriak",
+            "images": "Irudiak",
+            "otherBinaries": "Beste bitar batzuk",
+            "scripts": "Script-ak"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Instalazio-aukerak egiaztatzen…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib-ek Steam bottle-aren konfigurazioari buruzko erantzuna jasotzeari utzi dio. Oraindik exekutatzen ari daiteke — begiratu Steam instalatzailearen leiho bat dagoen, eta saiatu berriro."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam-en zerbitzariek konexioa moztu dute.",
+                "decodeFailed": "Deskargatutako jokoaren datuak ezin izan dira deskonprimitu. Hau ez da sareko arazo bat.",
+                "genericV2": "Steam deskarga huts egin du.",
+                "notSignedIn": "Ez zaude Steam-en saioa hasita, beraz deskarga hau ezin izan da hasi."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib-ek Steam-erako partekatutako CrossOver bottle bakarra kudeatzen du. Joko bakoitzeko bottle bereizi bati izena jartzea ez da oraindik onartzen.",
+            "contentLightNotice": "Hau Steam-en bezero propioaren bidez instalatzen da, beraz ez dago hemen ezer aukeratzeko. Aktibatu Steam instalazio natiboak Ezarpenetan instalazio-kokalekua eta Windows bateragarritasuna GameLib-etik kudeatzeko.",
+            "contentLightSingleLibraryNotice": "Sistema honetan Steam liburutegi bakarra dago, beraz ez dago hemen ezer aukeratzeko — GameLib-ek joko hau bertan instalatuko du.",
+            "forceWindowsHelp": "Joko honek macOS bertsio natibo bat du, baina Windows bertsioa instala dezakezu Wine bottle baten bidez — erabilgarria bertsio natiboak eginbideren bat falta badu edo errendimendu txarragoa badu.",
+            "libraryFullNotice": "Ez dago nahikoa lekurik zure Steam liburutegian — aukeratu beste bat behean edo egin lekua.",
+            "libraryFullOnlyNotice": "Ez dago nahikoa lekurik zure Steam liburutegian. Egin lekua eta saiatu berriro.",
+            "libraryMissingNotice": "Ezin izan da zure Steam liburutegira iritsi — aukeratu beste bat behean.",
+            "libraryMissingOnlyNotice": "Ezin izan da zure Steam liburutegira iritsi. Konektatu berriro unitatea eta saiatu berriro.",
+            "libraryPickerLabel": "Aukeratu Steam liburutegia",
+            "libraryPrimarySuffix": "lehenetsia",
+            "noCrossoverEngine": "Ez da CrossOver instalaziorik aurkitu. GameLib-ek bat konfiguratuko du instalazioa hasten denean.",
+            "sharedBottleNotice": "Hemen aukeratzen duzun wine bertsioa bottle bat behar duen Steam joko guztietan erabiltzen da — ez soilik honetan. Geroago aldatzeak joko horiek nola exekutatzen diren ere aldatuko du.",
+            "withOptionsLabel": "Instalatu aukerekin…"
+        },
+        "resumeAvailable": {
+            "notify": "{{game}} jokoaren eten den instalazioa berrekiteko prest dago — sakatu Instalatu jarraitzeko"
+        },
+        "status": {
+            "resumeInstall": "Berrekin instalazioa",
+            "resumeInstallHint": "Instalazioa osatu gabe — berrekin deskarga GameLib-en"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Honek joko honen instalatutako kopia guztiak kentzen ditu instalazio-kokaleku guztietan. Ezin da desegin.",
+            "removeAllCopiesConfirmTitle": "Kopia guztiak kendu?",
+            "removeAllCopiesLabel": "Kendu kopia guztiak…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB artelanak ez daude erabilgarri build honetan"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Kontraste Handia",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Zure saioa ezin da oraindik osatu: {{channel}} ez dago eraikuntza honetara migratuta. Hau 34.5 fasean iritsiko da.",
+                "heading": "{{runner}}(e)ra saioa hastea oraindik ez dago prest",
+                "headingGeneric": "Saioa hastea oraindik ez dago prest"
+            },
+            "humble": {
+                "body": "Saioa hasteko leihoa ireki da. Osatu saioa hasteko prozesua han — orrialde hau automatikoki eguneratuko da arrakastatsua denean.",
+                "error": {
+                    "window_unreachable": "Humble saio-hasierako leihoa itxi da edo ezin izan da atzitu"
+                },
+                "heading": "Humble Bundle-ra saioa hasten"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Saioa hasteko leihoa ireki da. Osatu saioa hasteko prozesua han.",
+                    "heading": "{{runner}}(e)ra saioa hasten",
+                    "headingGeneric": "Saioa hasten"
+                },
+                "blocked": {
+                    "body": "Zure saioa arrakastaz jaso da, baina {{channel}} atzeko kanala oraindik ez dago eraikuntza honetara migratuta. Hau 34.5 fasean iritsiko da.",
+                    "heading": "{{runner}}(e)ra saioa hastea jaso da, baina ezin da oraindik amaitu",
+                    "headingGeneric": "Saioa hastea jaso da, baina ezin da oraindik amaitu"
+                },
+                "cancelled": {
+                    "body": "Saioa hasteko leihoa itxi da amaitu baino lehen. Berriro saia zaitezke.",
+                    "heading": "{{runner}}(e)ra saioa hastea bertan behera utzi da",
+                    "headingGeneric": "Saioa hastea bertan behera utzi da"
+                },
+                "error": {
+                    "body": "Zerbait gaizki joan da saioa hastean: {{message}}",
+                    "heading": "{{runner}}(e)ra saioa hasteak huts egin du",
+                    "headingGeneric": "Saioa hasteak huts egin du"
+                },
+                "finalizing": {
+                    "body": "Saioa hastea jaso da. Dendarekin trukea osatzen — honek segundo batzuk behar ditzake.",
+                    "heading": "{{runner}}(r)ekin saioa hastea amaitzen…",
+                    "headingGeneric": "Saioa hastea amaitzen…"
+                },
+                "genericChannel": "saioa hasteko kanala",
+                "preparing": {
+                    "body": "Dendaren saioa hasteko leihoa prestatzen ari da eta laster irekiko da.",
+                    "heading": "{{runner}} saioa hasteko prestatzen…",
+                    "headingGeneric": "Saioa hasteko prestatzen…"
+                },
+                "retry": "Saiatu berriro",
+                "timeout": {
+                    "body": "Saioa hasteko leihoak denbora gehiegi behar izan du osatzeko. Berriro saiatu zaitezke.",
+                    "heading": "{{runner}}(e)n saioa hasteak denbora-muga gainditu du",
+                    "headingGeneric": "Saioa hasteak denbora-muga gainditu du"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Aplikazio barneko denda eta wiki arakatzea ez dago erabilgarri bertsio honetan"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Winetricks osagaien kudeaketa ez dago erabilgarri bertsio honetan",
+        "unavailableDetail": "Winetricks euskarria etorkizuneko bertsio baterako utzi da (D-03, 34.6 fasea) eta ezin da bertsio honetatik zerrendatu edo instalatu."
+    }
+}

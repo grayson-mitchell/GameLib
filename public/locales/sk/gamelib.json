@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "About"
+    },
+    "app": {
+        "routeError": "Niečo sa pokazilo: {{detail}}"
+    },
+    "box": {
+        "cancel": "Cancel",
+        "error": {
+            "install": {
+                "failed": "Inštalácia {{title}} zlyhala: {{error}}",
+                "signInToSteam": "Prihlásiť sa do Steam",
+                "stalled": "Žiadny postup sťahovania {{minutes}} minút — inštalácia bola zastavená"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib sa nepodarilo otvoriť systémový výber súborov, takže nič nebolo vybrané a neboli vykonané žiadne zmeny. ({{error}})",
+                "title": "Nepodarilo sa otvoriť výber súborov"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Preinštalovať cez CrossOver",
+                "message": "macOS verzia tejto hry je iba 32-bitová a nedá sa spustiť na tejto verzii macOS. GameLib ju môže namiesto toho preinštalovať cez CrossOver, čo znova stiahne Windows verziu.",
+                "title": "Zistená 32-bitová macOS verzia"
+            }
+        }
+    },
+    "button": {
+        "close": "Zatvoriť",
+        "paste": "Vložiť"
+    },
+    "consoleMode": {
+        "installNext": "Ďalej",
+        "installPrevious": "Predchádzajúce",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Túto inštaláciu nemožno spustiť",
+        "steamInstallLibraryFull": "V priečinku vašej Steam knižnice nie je dostatok voľného miesta. Uvoľnite miesto a skúste to znova.",
+        "steamInstallLibraryMissing": "Priečinok vašej Steam knižnice momentálne nie je k dispozícii. Znova pripojte disk a skúste to znova."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Pozastavené"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Vyhľadávanie grafiky SteamGridDB nie je v tejto verzii k dispozícii."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Bez hodnotenia",
+        "etaPrefix": "Zostávajúci čas: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic a HowLongToBeat pre tento titul nemali žiadne údaje.",
+        "extraInfoEmptyTitle": "Nenašli sa žiadne ďalšie informácie",
+        "extraInfoErrorBody": "Vyhľadávanie zlyhalo, čo neznamená, že táto hra nemá žiadne údaje. Skúste to znova.",
+        "extraInfoErrorTitle": "Nepodarilo sa načítať ďalšie informácie",
+        "extraInfoRetry": "Skúsiť znova",
+        "extraInfoStaleBody": "Tento výsledok bol uložený do vyrovnávacej pamäte pred zaznamenaním výsledkov načítania, takže môže byť neaktuálny. Obnovte a skontrolujte.",
+        "tabsAriaLabel": "karty s informáciami o hre",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "menej ako minúta"
+    },
+    "humbleKeys": {
+        "activate": "Aktivovať",
+        "activateConfirmBody": "Tým sa odhalí kľúč — natrvalo sa odstráni z Giftable spares — a uplatní sa na vašom Steam účte. Túto akciu nemožno vrátiť späť.",
+        "activateConfirmBodyRevealed": "Tým sa uplatní váš už odhalený kľúč na vašom Steam účte. Túto akciu nemožno vrátiť späť.",
+        "activateConfirmTitle": "Aktivovať tento kľúč na Steam?",
+        "activatedDone": "Hotovo",
+        "activateDismiss": "Cancel",
+        "activatedTitle": "Aktivované",
+        "activateWizardTitle": "Aktivovať tento kľúč",
+        "activatingBody": "Odhaľujeme váš kľúč a uplatňujeme ho na Steam — chvíľu to potrvá.",
+        "activatingTitle": "Aktivuje sa na Steam…"
+    },
+    "info": {
+        "refresh-rating": "Obnoviť hodnotenie"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib sa nepodarilo importovať z tohto umiestnenia. Zdroj musí byť úplná cesta k priečinku bez krokov „..“. Vyberte priečinok hry znova.",
+        "pathRejectedBodyMove": "GameLib nemohol túto hru tam presunúť. Cieľ musí byť úplná cesta k priečinku bez krokov „..“. Vyberte cieľový priečinok znova.",
+        "pathRejectedTitle": "Toto umiestnenie nie je možné použiť"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Vrátane skrytých",
+            "chipHiddenOnly": "Len skryté",
+            "chipNonAvailableIncluded": "Vrátane nedostupných",
+            "chipNonAvailableOnly": "Len nedostupné",
+            "chipNoStorePageHidden": "Skrývanie bez stránky obchodu",
+            "chipNoStorePageOnly": "Len bez stránky obchodu",
+            "clearAll": "Vymazať všetko",
+            "collections": "Zbierky",
+            "emptyAlphabetLetter": "Začínajúce na „{{letter}}“",
+            "emptyAlphabetNumber": "Začínajúce číslom",
+            "emptyBody": "Žiadne hry nezodpovedajú filtru {{filters}}.",
+            "emptyClearAll": "Vymazať všetky filtre",
+            "emptyHeading": "Žiadne hry nezodpovedajú vašim filtrom",
+            "groupSelectedCount": "{{selected}} vybraných",
+            "manageCollections": "Spravovať zbierky",
+            "moreFilters": "Ďalšie filtre",
+            "newCollection": "+ Nová zbierka",
+            "noStorePage": "Bez stránky obchodu",
+            "notYetChecked": "Zatiaľ neskontrolované",
+            "removeFilter": "Odstrániť filter {{filterLabel}}",
+            "runnabilityGroup": "Spustiteľnosť",
+            "runsNatively": "Beží natívne",
+            "runsViaBottle": "Beží cez bottle",
+            "storeGroup": "Store",
+            "viewAll": "Všetky hry",
+            "viewFavourites": "Favourites",
+            "viewInstalled": "Nainštalované",
+            "viewRecentlyPlayed": "Nedávno hrané",
+            "wontRun": "Nespustí sa"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} z {{total}}"
+        },
+        "no_no_store_page_games": "Vo vašej knižnici nie sú žiadne hry bez stránky obchodu",
+        "noStorePage": "Bez stránky obchodu",
+        "steamSync": {
+            "failedBody": "Vaše ostatné knižnice sú stále dostupné. Skúste to znova alebo skontrolujte, či je Steam dostupný.",
+            "failedTitle": "Nepodarilo sa synchronizovať vašu knižnicu Steam",
+            "retry": "Zopakovať synchronizáciu Steam",
+            "signedOutAction": "Prihlásiť sa do Steam",
+            "signedOutBody": "Prihláste sa znova, aby ste mohli synchronizovať svoju knižnicu Steam. Vaše ostatné knižnice sú stále dostupné.",
+            "signedOutTitle": "Platnosť vášho prihlásenia do Steam vypršala",
+            "syncing": "Synchronizuje sa vaša knižnica Steam…"
+        },
+        "storeOther": "Other"
+    },
+    "login": {
+        "connected": "Pripojené",
+        "humble_dialog_title": "Prihlásiť sa do Humble Bundle",
+        "logoutFailedTitle": "Odhlásenie nedokončené",
+        "steam_logout_failed_message": "Odhlásenie zo Steam sa nedokončilo včas. Skúste to prosím znova.",
+        "steam_logout_failed_title": "Odhlásenie zlyhalo",
+        "steamReconnect": "Platnosť prihlásenia vypršala — Znova pripojiť"
+    },
+    "pathSelectionBox": {
+        "saved": "Uložené",
+        "unsaved": "Zatiaľ neuložené — stlačte Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Zlyhalo",
+            "retry": "Skúsiť znova"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Zadajte svoj kľúč Steam",
+        "redeem": "Uplatniť",
+        "redeeming": "Uplatňuje sa...",
+        "title": "Uplatniť kľúč Steam",
+        "viewInLibrary": "Zobraziť v knižnici"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "Prekrytie EOS nie je v tejto verzii k dispozícii",
+            "unavailableDetail": "Podpora pre prekrytie EOS je odložená na budúce vydanie (D-03, fáza 34.6) a v tejto verzii ju nie je možné nainštalovať, aktualizovať ani odstrániť."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Nainštalovať prekrytie EOS teraz?",
+        "eosOverlayInstallConfirmTitle": "Potvrdiť inštaláciu prekrytia",
+        "eosOverlayUpdateConfirmBody": "Aktualizovať prekrytie EOS na najnovšiu verziu?",
+        "eosOverlayUpdateConfirmTitle": "Potvrdiť aktualizáciu prekrytia",
+        "framelessWindowDescription": "Použiť okno bez rámu",
+        "gamepadInitialRepeatDelay": "Počiatočné oneskorenie opakovania vstupu z gamepadu",
+        "gamepadRepeatFrequency": "Frekvencia opakovania vstupu z gamepadu",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Metóda zväčšenia",
+        "gamescopeWindowType": "Typ okna",
+        "loginBackground": "Pozadie obrazovky Správa účtov",
+        "loginBackgroundDialogTitle": "Vyberte obrázok na pozadie",
+        "loginBackgroundFilterName": "Obrázky",
+        "loginBackgroundHelp": "Obrázok zobrazený na pozadí obrazovky Správa účtov. Vymazaním poľa sa vrátite k predvolenej grafike. Podporované sú formáty PNG, JPEG, WebP, AVIF a GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Nedostupné v tejto verzii"
+            },
+            "help": {
+                "unavailableDetail": "Podpora pre grafiku zo SteamGridDB je odložená na budúce vydanie (D-03, fáza 34.6) a v tejto verzii ju nie je možné nastaviť."
+            }
+        },
+        "wineDefaultLabel": "Predvolené Wine",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Uplatniť kľúč Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Všetky",
+            "appExtension": "Aplikácia",
+            "appImageExtension": "AppImage",
+            "appImages": "Súbory AppImage",
+            "apps": "Aplikácie",
+            "executables": "Spustiteľné súbory",
+            "images": "Obrázky",
+            "otherBinaries": "Ostatné binárne súbory",
+            "scripts": "Skripty"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Kontrolujú sa možnosti inštalácie…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib prestal dostávať odpovede o nastavení Steam bottle. Proces možno stále beží — skontrolujte, či sa nezobrazilo okno inštalátora Steamu, a skúste to znova."
+        },
+        "download": {
+            "error": {
+                "decodeFailed": "Stiahnuté dáta hry sa nepodarilo rozbaliť. Nejde o problém so sieťou.",
+                "connectionDroppedV2": "Servery Steam prerušili spojenie.",
+                "genericV2": "Sťahovanie zo Steam zlyhalo.",
+                "notSignedIn": "Nie ste prihlásený do Steam, takže toto sťahovanie sa nemohlo spustiť."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib spravuje jeden zdieľaný bottle CrossOver pre Steam. Vytvorenie samostatného bottle pre každú hru zatiaľ nie je podporované.",
+            "contentLightNotice": "Toto sa inštaluje priamo cez klienta Steam, takže tu nie je čo vyberať. Zapnite natívne inštalácie Steamu v Nastaveniach, aby ste mohli spravovať umiestnenie inštalácie a kompatibilitu s Windows priamo z GameLib.",
+            "contentLightSingleLibraryNotice": "V tomto systéme je len jedna knižnica Steam, takže tu nie je čo vyberať — GameLib túto hru nainštaluje do nej.",
+            "forceWindowsHelp": "Táto hra má natívnu verziu pre macOS, no môžete namiesto nej nainštalovať verziu pre Windows cez bottle Wine — užitočné, ak natívnej verzii chýbajú funkcie alebo má horší výkon.",
+            "libraryFullNotice": "Vo vašej knižnici Steam nie je dostatok miesta — vyberte inú nižšie alebo uvoľnite miesto.",
+            "libraryFullOnlyNotice": "Vo vašej knižnici Steam nie je dostatok miesta. Uvoľnite miesto a skúste to znova.",
+            "libraryMissingNotice": "Vašu knižnicu Steam sa nepodarilo nájsť — vyberte inú nižšie.",
+            "libraryMissingOnlyNotice": "Vašu knižnicu Steam sa nepodarilo nájsť. Pripojte disk znova a skúste to znova.",
+            "libraryPickerLabel": "Vybrať knižnicu Steam",
+            "libraryPrimarySuffix": "predvolená",
+            "noCrossoverEngine": "Nebola nájdená žiadna inštalácia CrossOver. GameLib ju nastaví pri spustení inštalácie.",
+            "withOptionsLabel": "Inštalovať s možnosťami…",
+            "sharedBottleNotice": "Verzia wine, ktorú tu vyberiete, sa použije pre každú hru Steam vyžadujúcu bottle — nielen pre túto. Jej neskoršia zmena ovplyvní aj chod týchto hier."
+        },
+        "resumeAvailable": {
+            "notify": "Prerušená inštalácia hry {{game}} je pripravená na pokračovanie — kliknutím na Inštalovať budete pokračovať"
+        },
+        "status": {
+            "resumeInstall": "Pokračovať v inštalácii",
+            "resumeInstallHint": "Inštalácia nedokončená — pokračujte v sťahovaní v GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Toto odstráni každú nainštalovanú kópiu tejto hry vo všetkých umiestneniach inštalácie. Túto akciu nemožno vrátiť späť.",
+            "removeAllCopiesConfirmTitle": "Odstrániť všetky kópie?",
+            "removeAllCopiesLabel": "Odstrániť všetky kópie…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Grafika zo SteamGridDB je v tejto verzii nedostupná"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Vysoký kontrast",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Vaše prihlásenie zatiaľ nemožno dokončiť: {{channel}} nie je pre toto zostavenie portovaný. Táto funkcia príde vo Fáze 34.5.",
+                "heading": "Prihlásenie do {{runner}} zatiaľ nie je zapojené",
+                "headingGeneric": "Prihlásenie zatiaľ nie je zapojené"
+            },
+            "humble": {
+                "body": "Otvorilo sa prihlasovacie okno. Dokončite prihlásenie tam — táto stránka sa po úspešnom prihlásení automaticky aktualizuje.",
+                "error": {
+                    "window_unreachable": "prihlasovacie okno Humble Bundle sa zatvorilo alebo sa naň nepodarilo pripojiť"
+                },
+                "heading": "Prihlasovanie do Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Otvorilo sa prihlasovacie okno. Dokončite prihlásenie tam.",
+                    "heading": "Prihlasovanie do {{runner}}",
+                    "headingGeneric": "Prihlasovanie"
+                },
+                "blocked": {
+                    "body": "Vaše prihlásenie bolo úspešne zachytené, ale backendový kanál {{channel}} zatiaľ nie je pre toto zostavenie portovaný. Táto funkcia príde vo Fáze 34.5.",
+                    "heading": "Prihlásenie do {{runner}} bolo zachytené, ale zatiaľ ho nemožno dokončiť",
+                    "headingGeneric": "Prihlásenie bolo zachytené, ale zatiaľ ho nemožno dokončiť"
+                },
+                "cancelled": {
+                    "body": "Prihlasovacie okno sa zatvorilo pred dokončením. Môžete to skúsiť znova.",
+                    "heading": "Prihlásenie do {{runner}} bolo zrušené",
+                    "headingGeneric": "Prihlásenie bolo zrušené"
+                },
+                "error": {
+                    "body": "Pri prihlasovaní sa niečo pokazilo: {{message}}",
+                    "heading": "Prihlásenie do {{runner}} zlyhalo",
+                    "headingGeneric": "Prihlásenie zlyhalo"
+                },
+                "finalizing": {
+                    "body": "Prihlásenie zachytené. Dokončuje sa výmena s obchodom — môže to chvíľu trvať.",
+                    "heading": "Dokončuje sa prihlásenie do {{runner}}…",
+                    "headingGeneric": "Dokončuje sa prihlásenie…"
+                },
+                "genericChannel": "prihlasovací kanál",
+                "preparing": {
+                    "body": "Pripravuje sa prihlasovacie okno obchodu, čoskoro sa otvorí.",
+                    "heading": "Pripravuje sa prihlásenie do {{runner}}…",
+                    "headingGeneric": "Pripravuje sa prihlásenie…"
+                },
+                "retry": "Skúsiť znova",
+                "timeout": {
+                    "body": "Prihlasovaciemu oknu trvalo dokončenie príliš dlho. Môžete to skúsiť znova.",
+                    "heading": "Vypršal časový limit prihlásenia do {{runner}}",
+                    "headingGeneric": "Vypršal časový limit prihlásenia"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Prehliadanie obchodu a wiki v aplikácii nie je v tomto builde dostupné"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Správa komponentov Winetricks nie je v tomto builde dostupná",
+        "unavailableDetail": "Podpora pre Winetricks je odložená na budúce vydanie (D-03, fáza 34.6) a v tomto builde ju nie je možné zobraziť ani nainštalovať."
+    }
+}

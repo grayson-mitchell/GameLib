@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "אודות"
+    },
+    "app": {
+        "routeError": "משהו השתבש: {{detail}}"
+    },
+    "box": {
+        "cancel": "ביטול",
+        "error": {
+            "install": {
+                "failed": "ההתקנה של {{title}} נכשלה: {{error}}",
+                "signInToSteam": "היכנס ל-Steam",
+                "stalled": "אין התקדמות בהורדה כבר {{minutes}} דקות — ההתקנה נעצרה"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib לא הצליח לפתוח את בורר הקבצים של המערכת, כך שלא נבחר דבר ולא בוצעו שינויים. ({{error}})",
+                "title": "לא ניתן היה לפתוח את בורר הקבצים"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "התקן מחדש דרך CrossOver",
+                "message": "גרסת macOS של המשחק הזה היא 32-ביט בלבד ולא ניתן להריץ אותה בגרסת macOS זו. GameLib יכול להתקין אותה מחדש דרך CrossOver במקום זאת, מה שיוריד מחדש את גרסת Windows.",
+                "title": "זוהתה גרסת macOS בת 32-ביט"
+            }
+        }
+    },
+    "button": {
+        "close": "לסגור",
+        "paste": "הדבק"
+    },
+    "consoleMode": {
+        "installNext": "הבא",
+        "installPrevious": "הקודם",
+        "sortAscending": "א → ת",
+        "sortDescending": "ת → א",
+        "steamInstallBlockedTitle": "לא ניתן להתחיל התקנה זו",
+        "steamInstallLibraryFull": "אין מספיק מקום פנוי בתיקיית ספריית Steam שלך. פנה מקום ונסה שוב.",
+        "steamInstallLibraryMissing": "תיקיית ספריית Steam שלך אינה זמינה כרגע. חבר מחדש את הכונן ונסה שוב."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "מושהה"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "חיפוש אמנות SteamGridDB אינו זמין בגרסה זו."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "ללא דירוג",
+        "etaPrefix": "זמן משוער: {{eta}}",
+        "extraInfoEmptyBody": "ל-Metacritic, OpenCritic ו-HowLongToBeat לא היה מידע על הכותר הזה.",
+        "extraInfoEmptyTitle": "לא נמצא מידע נוסף",
+        "extraInfoErrorBody": "החיפוש נכשל, וזה לא אותו דבר כמו שלמשחק הזה אין נתונים. נסה שוב.",
+        "extraInfoErrorTitle": "לא ניתן היה לטעון מידע נוסף",
+        "extraInfoRetry": "נסה שוב",
+        "extraInfoStaleBody": "תוצאה זו נשמרה במטמון לפני שתוצאות הטעינה נרשמו, ולכן ייתכן שהיא אינה עדכנית. רענן כדי לבדוק.",
+        "tabsAriaLabel": "לשוניות מידע על המשחק",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "פחות מדקה"
+    },
+    "humbleKeys": {
+        "activate": "הפעל",
+        "activateConfirmBody": "פעולה זו חושפת את המפתח — ומסירה אותו לצמיתות מהמפתחות הניתנים למתנה — ומממשת אותו בחשבון Steam שלך. אין דרך לבטל זאת.",
+        "activateConfirmBodyRevealed": "פעולה זו מממשת את המפתח שכבר נחשף בחשבון Steam שלך. אין דרך לבטל זאת.",
+        "activateConfirmTitle": "להפעיל את המפתח הזה ב-Steam?",
+        "activatedDone": "בוצע",
+        "activateDismiss": "ביטול",
+        "activatedTitle": "הופעל",
+        "activateWizardTitle": "הפעלת המפתח הזה",
+        "activatingBody": "חושפים את המפתח שלך ומממשים אותו ב-Steam — זה ייקח רק רגע.",
+        "activatingTitle": "מפעילים ב-Steam…"
+    },
+    "info": {
+        "refresh-rating": "רענון דירוג"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib לא הצליחה לייבא מהמיקום הזה. המקור חייב להיות נתיב תיקייה מלא ללא צעדי \"..\" בתוכו. בחר שוב את תיקיית המשחק.",
+        "pathRejectedBodyMove": "GameLib לא הצליחה להעביר את המשחק לשם. היעד חייב להיות נתיב תיקייה מלא ללא צעדי \"..\" בתוכו. בחר שוב את תיקיית היעד.",
+        "pathRejectedTitle": "לא ניתן להשתמש במיקום הזה"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "כולל מוסתרים",
+            "chipHiddenOnly": "מוסתרים בלבד",
+            "chipNonAvailableIncluded": "כולל לא זמינים",
+            "chipNonAvailableOnly": "לא זמינים בלבד",
+            "chipNoStorePageHidden": "מסתיר ללא עמוד חנות",
+            "chipNoStorePageOnly": "ללא עמוד חנות בלבד",
+            "clearAll": "ניקוי הכול",
+            "collections": "אוספים",
+            "emptyAlphabetLetter": "מתחיל באות \"{{letter}}\"",
+            "emptyAlphabetNumber": "מתחיל במספר",
+            "emptyBody": "אין משחקים התואמים ל-{{filters}}.",
+            "emptyClearAll": "ניקוי כל הסינונים",
+            "emptyHeading": "אין משחקים התואמים לסינונים שלך",
+            "groupSelectedCount": "{{selected}} נבחרו",
+            "manageCollections": "ניהול אוספים",
+            "moreFilters": "סינונים נוספים",
+            "newCollection": "+ אוסף חדש",
+            "noStorePage": "ללא עמוד חנות",
+            "notYetChecked": "עדיין לא נבדק",
+            "removeFilter": "הסרת סינון {{filterLabel}}",
+            "runnabilityGroup": "יכולת הפעלה",
+            "runsNatively": "פועל באופן טבעי",
+            "runsViaBottle": "פועל דרך bottle",
+            "storeGroup": "חנות",
+            "viewAll": "כל המשחקים",
+            "viewFavourites": "מועדפים",
+            "viewInstalled": "מותקן",
+            "viewRecentlyPlayed": "נוגן לאחרונה",
+            "wontRun": "לא יפעל"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} מתוך {{total}}"
+        },
+        "no_no_store_page_games": "אין משחקים ללא עמוד חנות בספרייה שלך",
+        "noStorePage": "ללא עמוד חנות",
+        "steamSync": {
+            "failedBody": "שאר הספריות שלך עדיין זמינות. נסה שוב, או ודא ש-Steam נגיש.",
+            "failedTitle": "לא ניתן היה לסנכרן את ספריית Steam שלך",
+            "retry": "נסה שוב לסנכרן את Steam",
+            "signedOutAction": "התחבר ל-Steam",
+            "signedOutBody": "התחבר שוב כדי לסנכרן את ספריית Steam שלך. שאר הספריות שלך עדיין זמינות.",
+            "signedOutTitle": "תוקף ההתחברות שלך ל-Steam פג",
+            "syncing": "מסנכרן את ספריית Steam שלך…"
+        },
+        "storeOther": "אחר"
+    },
+    "login": {
+        "connected": "מחובר",
+        "humble_dialog_title": "התחבר ל-Humble Bundle",
+        "logoutFailedTitle": "ההתנתקות לא הושלמה",
+        "steam_logout_failed_message": "ההתנתקות מ-Steam לא הושלמה בזמן. נסה שוב.",
+        "steam_logout_failed_title": "ההתנתקות נכשלה",
+        "steamReconnect": "תוקף ההתחברות פג — התחבר מחדש"
+    },
+    "pathSelectionBox": {
+        "saved": "נשמר",
+        "unsaved": "עדיין לא נשמר — הקש Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "נכשל",
+            "retry": "נסה שוב"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "הזן את מפתח Steam שלך",
+        "redeem": "מימוש",
+        "redeeming": "ממומש...",
+        "title": "מימוש מפתח Steam",
+        "viewInLibrary": "הצג בספרייה"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "שכבת ה-EOS Overlay אינה זמינה בגרסה זו",
+            "unavailableDetail": "התמיכה ב-EOS Overlay נדחתה לגרסה עתידית (D-03, Phase 34.6) ולא ניתן להתקין, לעדכן או להסיר אותה מגרסה זו."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "להתקין את ה-EOS Overlay כעת?",
+        "eosOverlayInstallConfirmTitle": "אישור התקנת השכבה",
+        "eosOverlayUpdateConfirmBody": "לעדכן את ה-EOS Overlay לגרסה האחרונה?",
+        "eosOverlayUpdateConfirmTitle": "אישור עדכון השכבה",
+        "framelessWindowDescription": "השתמש בחלון ללא מסגרת",
+        "gamepadInitialRepeatDelay": "השהיית חזרה ראשונית של קלט בקר המשחק",
+        "gamepadRepeatFrequency": "תדירות חזרה של קלט בקר המשחק",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "שיטת שדרוג רזולוציה",
+        "gamescopeWindowType": "סוג חלון",
+        "loginBackground": "רקע מסך ניהול חשבונות",
+        "loginBackgroundDialogTitle": "בחר תמונת רקע",
+        "loginBackgroundFilterName": "תמונות",
+        "loginBackgroundHelp": "תמונה המוצגת מאחורי מסך ניהול חשבונות. נקה את השדה כדי לחזור לתמונה המקורית. נתמכים הפורמטים PNG,‏ JPEG,‏ WebP,‏ AVIF ו-GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "לא זמין בגרסה זו"
+            },
+            "help": {
+                "unavailableDetail": "התמיכה בגרפיקה מ-SteamGridDB נדחתה לגרסה עתידית (D-03, Phase 34.6) ואינה ניתנת להגדרה בגרסה זו."
+            }
+        },
+        "wineDefaultLabel": "ברירת המחדל של Wine",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "ממש מפתח Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "הכל",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "קובצי AppImage",
+            "apps": "אפליקציות",
+            "executables": "קבצי הפעלה",
+            "images": "תמונות",
+            "otherBinaries": "קבצי בינארי אחרים",
+            "scripts": "סקריפטים"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "בודק אפשרויות התקנה…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib הפסיק לקבל עדכונים לגבי הגדרת ה-bottle של Steam. ייתכן שהתהליך עדיין פועל — בדוק אם חלון התקנה של Steam פתוח, ואז נסה שוב."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "שרתי Steam ניתקו את החיבור.",
+                "decodeFailed": "לא ניתן היה לחלץ את נתוני המשחק שהורדו. זו אינה בעיית רשת.",
+                "genericV2": "ההורדה מ-Steam נכשלה.",
+                "notSignedIn": "אינך מחובר ל-Steam, ולכן לא ניתן היה להתחיל את ההורדה."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib מנהל bottle משותף אחד של CrossOver עבור Steam. מתן שם ל-bottle נפרד לכל משחק עדיין אינו נתמך.",
+            "contentLightNotice": "ההתקנה מתבצעת דרך הלקוח של Steam עצמו, כך שאין כאן מה לבחור. הפעל התקנות Steam מובנות בהגדרות כדי לנהל את מיקום ההתקנה ואת התאימות ל-Windows מתוך GameLib.",
+            "contentLightSingleLibraryNotice": "יש רק ספריית Steam אחת במערכת זו, כך שאין כאן מה לבחור — GameLib יתקין את המשחק אליה.",
+            "forceWindowsHelp": "למשחק זה יש גרסה מקורית ל-macOS, אך ניתן להתקין במקום זאת את גרסת Windows דרך bottle של Wine — שימושי אם בגרסה המקורית חסרות תכונות או שהביצועים בה גרועים יותר.",
+            "libraryFullNotice": "אין מספיק מקום בספריית ה-Steam שלך — בחר ספרייה אחרת למטה או פנה מקום.",
+            "libraryFullOnlyNotice": "אין מספיק מקום בספריית ה-Steam שלך. פנה מקום ונסה שוב.",
+            "libraryMissingNotice": "לא ניתן היה להגיע לספריית ה-Steam שלך — בחר ספרייה אחרת למטה.",
+            "libraryMissingOnlyNotice": "לא ניתן היה להגיע לספריית ה-Steam שלך. חבר מחדש את הכונן ונסה שוב.",
+            "libraryPickerLabel": "בחר ספריית Steam",
+            "libraryPrimarySuffix": "ברירת מחדל",
+            "noCrossoverEngine": "לא נמצאה התקנת CrossOver. GameLib יגדיר אחת כאשר ההתקנה תתחיל.",
+            "sharedBottleNotice": "גרסת ה-wine שתבחר כאן משמשת עבור כל משחק Steam שדורש bottle — לא רק עבור משחק זה. שינוי שלה בהמשך ישפיע גם על אופן הפעולה של אותם משחקים.",
+            "withOptionsLabel": "התקן עם אפשרויות…"
+        },
+        "resumeAvailable": {
+            "notify": "התקנה שהופסקה עבור {{game}} מוכנה להמשך — לחץ על התקן כדי להמשיך"
+        },
+        "status": {
+            "resumeInstall": "המשך התקנה",
+            "resumeInstallHint": "ההתקנה לא הושלמה — המשך את ההורדה ב-GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "פעולה זו תסיר את כל העותקים המותקנים של משחק זה מכל מיקומי ההתקנה. לא ניתן לבטל פעולה זו.",
+            "removeAllCopiesConfirmTitle": "להסיר את כל העותקים?",
+            "removeAllCopiesLabel": "הסר את כל העותקים…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "גרפיקת SteamGridDB אינה זמינה בגרסה זו"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "נווה מדבר קיברנטי",
+        "cyberSpaceOasisAlt": "נווה מדבר קיברנטי קלאסי",
+        "dracula": "דרקולה",
+        "gruvboxDark": "Gruvbox כהה",
+        "highContrast": "ניגודיות גבוהה",
+        "marine": "ימי",
+        "marineClassic": "ימי קלאסי",
+        "midnightMirage": "מיראז' חצות",
+        "nordDark": "נורדי כהה",
+        "nordLight": "נורדי בהיר",
+        "oldSchool": "GameLib קלאסי",
+        "sweet": "מתוק",
+        "zombie": "זומבי",
+        "zombieClassic": "זומבי קלאסי"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "לא ניתן להשלים את ההתחברות עדיין: {{channel}} לא הותאם לגרסה זו. תמיכה בכך תגיע בשלב 34.5.",
+                "heading": "ההתחברות אל {{runner}} עדיין לא מוכנה",
+                "headingGeneric": "ההתחברות עדיין לא מוכנה"
+            },
+            "humble": {
+                "body": "נפתח חלון התחברות. השלימו את ההתחברות שם — עמוד זה יתעדכן אוטומטית לאחר ההצלחה.",
+                "error": {
+                    "window_unreachable": "חלון ההתחברות של Humble Bundle נסגר או שלא ניתן היה להגיע אליו"
+                },
+                "heading": "מתחברים אל Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "נפתח חלון התחברות. השלימו את ההתחברות שם.",
+                    "heading": "מתחברים אל {{runner}}",
+                    "headingGeneric": "מתחברים"
+                },
+                "blocked": {
+                    "body": "ההתחברות שלכם נקלטה בהצלחה, אך ערוץ הקצה האחורי של {{channel}} עדיין לא הותאם לגרסה זו. תמיכה בכך תגיע בשלב 34.5.",
+                    "heading": "ההתחברות אל {{runner}} נקלטה, אך לא ניתן להשלים אותה עדיין",
+                    "headingGeneric": "ההתחברות נקלטה, אך לא ניתן להשלים אותה עדיין"
+                },
+                "cancelled": {
+                    "body": "חלון ההתחברות נסגר לפני שהושלם. ניתן לנסות שוב.",
+                    "heading": "ההתחברות אל {{runner}} בוטלה",
+                    "headingGeneric": "ההתחברות בוטלה"
+                },
+                "error": {
+                    "body": "משהו השתבש בעת ההתחברות: {{message}}",
+                    "heading": "ההתחברות אל {{runner}} נכשלה",
+                    "headingGeneric": "ההתחברות נכשלה"
+                },
+                "finalizing": {
+                    "body": "ההתחברות נקלטה. משלימים את החילופין עם החנות — זה עשוי לקחת כמה שניות.",
+                    "heading": "משלימים התחברות עם {{runner}}…",
+                    "headingGeneric": "משלימים התחברות…"
+                },
+                "genericChannel": "ערוץ ההתחברות",
+                "preparing": {
+                    "body": "חלון ההתחברות של החנות בהכנה וייפתח בקרוב.",
+                    "heading": "מכינים התחברות אל {{runner}}…",
+                    "headingGeneric": "מכינים התחברות…"
+                },
+                "retry": "נסה שוב",
+                "timeout": {
+                    "body": "חלון ההתחברות ארך זמן רב מדי. ניתן לנסות שוב.",
+                    "heading": "ההתחברות אל {{runner}} נתקעה עקב פסק זמן",
+                    "headingGeneric": "ההתחברות נתקעה עקב פסק זמן"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "עיון בחנות ובוויקי בתוך האפליקציה אינו זמין בגרסה זו"
+        }
+    },
+    "winetricks": {
+        "unavailable": "ניהול רכיבי Winetricks אינו זמין בגרסה זו",
+        "unavailableDetail": "תמיכה ב-Winetricks נדחתה לגרסה עתידית (D-03, Phase 34.6) ולא ניתן להציגה או להתקינה בגרסה זו."
+    }
+}

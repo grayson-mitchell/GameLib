@@ -1,0 +1,330 @@
+{
+    "about": {
+        "navLabel": "Névjegy"
+    },
+    "app": {
+        "routeError": "Hiba történt: {{detail}}"
+    },
+    "box": {
+        "cancel": "Mégse",
+        "error": {
+            "install": {
+                "failed": "A {{title}} telepítése sikertelen: {{error}}",
+                "stalled": "{{minutes}} perce nincs letöltési folyamat — a telepítés leállítva"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "A GameLib nem tudta megnyitni a rendszer fájlválasztóját, így semmi nem lett kiválasztva, és nem történt módosítás. ({{error}})",
+                "title": "Nem sikerült megnyitni a fájlválasztót"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Újratelepítés a CrossOver segítségével",
+                "message": "A játék macOS-verziója csak 32 bites, így nem futtatható ezen a macOS-verzión. A GameLib újratelepítheti a CrossOver segítségével, ami letölti a Windows-verziót.",
+                "title": "32 bites macOS-verzió észlelve"
+            }
+        }
+    },
+    "button": {
+        "close": "Bezárás",
+        "paste": "Beillesztés"
+    },
+    "consoleMode": {
+        "installNext": "Következő",
+        "installPrevious": "Előző",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Nem indítható el ez a telepítés",
+        "steamInstallLibraryFull": "Nincs elég szabad hely a Steam-könyvtár mappájában. Szabadíts fel helyet, és próbáld újra.",
+        "steamInstallLibraryMissing": "A Steam-könyvtár mappája jelenleg nem elérhető. Csatlakoztasd újra a meghajtót, és próbáld újra."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Szüneteltetve"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "A SteamGridDB grafikakeresés nem elérhető ebben a buildben."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Nincs értékelve",
+        "etaPrefix": "Becsült idő: {{eta}}",
+        "extraInfoEmptyBody": "A Metacritic, az OpenCritic és a HowLongToBeat nem talált semmit ehhez a címhez.",
+        "extraInfoEmptyTitle": "Nem található extra információ",
+        "extraInfoErrorBody": "A keresés sikertelen volt, ez nem jelenti azt, hogy a játékhoz nincs adat. Próbáld újra.",
+        "extraInfoErrorTitle": "Az extra információk betöltése sikertelen",
+        "extraInfoRetry": "Újra",
+        "extraInfoStaleBody": "Ez az eredmény a betöltési kimenetek rögzítése előtt lett gyorsítótárazva, így elavult lehet. Frissítsd az ellenőrzéshez.",
+        "tabsAriaLabel": "játékinfó fülek",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "kevesebb mint egy perc"
+    },
+    "humbleKeys": {
+        "activate": "Aktiválás",
+        "activateConfirmBody": "Ez felfedi a kulcsot — véglegesen eltávolítva az ajándékozható tartalékból —, és beváltja a Steam-fiókodon. Nincs visszavonás.",
+        "activateConfirmBodyRevealed": "Ez beváltja a már felfedett kulcsot a Steam-fiókodon. Nincs visszavonás.",
+        "activatedDone": "Kész",
+        "activateDismiss": "Mégse",
+        "activatedTitle": "Aktiválva",
+        "activateWizardTitle": "Kulcs aktiválása"
+    },
+    "info": {
+        "refresh-rating": "Értékelés frissítése"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "A GameLib nem tudott importálni arról a helyről. A forrásnak teljes mappaútvonalnak kell lennie, „..” lépések nélkül. Válaszd ki újra a játék mappáját.",
+        "pathRejectedBodyMove": "A GameLib nem tudta oda áthelyezni ezt a játékot. A célhelynek teljes mappaútvonalnak kell lennie, „..” lépések nélkül. Válaszd ki újra a célmappát.",
+        "pathRejectedTitle": "Ez a hely nem használható"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Rejtettekkel együtt",
+            "chipHiddenOnly": "Csak rejtett",
+            "chipNonAvailableIncluded": "Nem elérhetőkkel együtt",
+            "chipNonAvailableOnly": "Csak nem elérhető",
+            "chipNoStorePageHidden": "Áruházi oldal nélküliek elrejtve",
+            "chipNoStorePageOnly": "Csak áruházi oldal nélküli",
+            "clearAll": "Összes törlése",
+            "collections": "Gyűjtemények",
+            "emptyAlphabetLetter": "„{{letter}}” betűvel kezdődik",
+            "emptyAlphabetNumber": "Számmal kezdődik",
+            "emptyBody": "Nincs a szűrőknek megfelelő játék: {{filters}}.",
+            "emptyClearAll": "Összes szűrő törlése",
+            "emptyHeading": "Nincs a szűrőknek megfelelő játék",
+            "groupSelectedCount": "{{selected}} kiválasztva",
+            "manageCollections": "Gyűjtemények kezelése",
+            "moreFilters": "Több szűrő",
+            "newCollection": "+ Új gyűjtemény",
+            "noStorePage": "Nincs áruházi oldal",
+            "notYetChecked": "Még nincs ellenőrizve",
+            "removeFilter": "{{filterLabel}} szűrő eltávolítása",
+            "runnabilityGroup": "Futtathatóság",
+            "runsNatively": "Natívan fut",
+            "runsViaBottle": "Bottle-on keresztül fut",
+            "storeGroup": "Áruház",
+            "viewAll": "Összes játék",
+            "viewFavourites": "Kedvencek",
+            "viewInstalled": "Telepítve",
+            "viewRecentlyPlayed": "Nemrég játszott",
+            "wontRun": "Nem fut"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} / {{total}}"
+        },
+        "no_no_store_page_games": "Nincs áruházi oldal nélküli játék a könyvtáradban",
+        "noStorePage": "Nincs áruházi oldal",
+        "steamSync": {
+            "failedBody": "A többi könyvtárad továbbra is elérhető. Próbáld újra, vagy ellenőrizd, hogy a Steam elérhető-e.",
+            "failedTitle": "Nem sikerült szinkronizálni a Steam könyvtáradat",
+            "retry": "Steam szinkronizálás újra",
+            "signedOutBody": "Jelentkezz be újra a Steam könyvtárad szinkronizálásához. A többi könyvtárad továbbra is elérhető.",
+            "signedOutTitle": "A Steam bejelentkezésed lejárt",
+            "syncing": "Steam könyvtár szinkronizálása…"
+        },
+        "storeOther": "Egyéb"
+    },
+    "login": {
+        "connected": "Csatlakoztatva",
+        "humble_dialog_title": "Bejelentkezés a Humble Bundle-be",
+        "logoutFailedTitle": "A kijelentkezés nem fejeződött be",
+        "steam_logout_failed_title": "A kijelentkezés sikertelen",
+        "steamReconnect": "A bejelentkezés lejárt — Újracsatlakozás"
+    },
+    "pathSelectionBox": {
+        "saved": "Mentve",
+        "unsaved": "Még nincs mentve — nyomd meg az Entert"
+    },
+    "queue": {
+        "label": {
+            "failed": "Sikertelen",
+            "retry": "Újra"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Add meg a Steam kulcsodat",
+        "redeem": "Beváltás",
+        "redeeming": "Beváltás folyamatban...",
+        "title": "Steam kulcs beváltása",
+        "viewInLibrary": "Megtekintés a könyvtárban"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "Az EOS Overlay nem érhető el ebben a buildben",
+            "unavailableDetail": "Az EOS Overlay támogatása egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a buildben nem telepíthető, nem frissíthető és nem távolítható el."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Telepíted most az EOS Overlayt?",
+        "eosOverlayInstallConfirmTitle": "Overlay telepítésének megerősítése",
+        "eosOverlayUpdateConfirmBody": "Frissíted az EOS Overlayt a legújabb verzióra?",
+        "eosOverlayUpdateConfirmTitle": "Overlay frissítésének megerősítése",
+        "framelessWindowDescription": "Keret nélküli ablak használata",
+        "gamepadInitialRepeatDelay": "Gamepad bemenet kezdeti ismétlési késleltetése",
+        "gamepadRepeatFrequency": "Gamepad bemenet ismétlési gyakorisága",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Felskálázási módszer",
+        "gamescopeWindowType": "Ablaktípus",
+        "loginBackground": "Fiókkezelés háttérkép",
+        "loginBackgroundDialogTitle": "Válassz egy háttérképet",
+        "loginBackgroundFilterName": "Képek",
+        "loginBackgroundHelp": "A Fiókkezelés képernyő mögött megjelenő kép. A mező törlésével visszaállítható a beépített illusztráció. PNG, JPEG, WebP, AVIF és GIF formátumok támogatottak.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Nem elérhető ebben a verzióban"
+            },
+            "help": {
+                "unavailableDetail": "A SteamGridDB grafikatámogatás egy későbbi kiadásra halasztva (D-03, 34.6. fázis), és ebből a verzióból nem konfigurálható."
+            }
+        },
+        "wineDefaultLabel": "Wine alapértelmezett",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Steam kulcs beváltása"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Összes",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImage-ek",
+            "apps": "Alkalmazások",
+            "executables": "Futtatható fájlok",
+            "images": "Képek",
+            "otherBinaries": "Egyéb binárisok",
+            "scripts": "Szkriptek"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Telepítési lehetőségek ellenőrzése…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "A GameLib nem kapott több visszajelzést a Steam palack beállításáról. Lehet, hogy még fut — ellenőrizd, van-e Steam telepítő ablak, majd próbáld újra."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "A Steam szerverek megszakították a kapcsolatot.",
+                "decodeFailed": "A letöltött játékadatokat nem sikerült kicsomagolni. Ez nem hálózati probléma.",
+                "genericV2": "A Steam letöltés sikertelen volt."
+            }
+        },
+        "install": {
+            "contentLightSingleLibraryNotice": "Ezen a rendszeren csak egy Steam könyvtár van, így itt nincs mit választani — a GameLib ide fogja telepíteni a játékot.",
+            "forceWindowsHelp": "Ennek a játéknak van natív macOS verziója, de a Windows verziót is telepítheted egy Wine palackon keresztül — ez akkor hasznos, ha a natív verzióból hiányoznak funkciók, vagy gyengébben teljesít.",
+            "libraryFullNotice": "Nincs elég hely a Steam könyvtáradban — válassz másikat lent, vagy szabadíts fel helyet.",
+            "libraryFullOnlyNotice": "Nincs elég hely a Steam könyvtáradban. Szabadíts fel helyet, majd próbáld újra.",
+            "libraryMissingNotice": "A Steam könyvtárad nem érhető el — válassz másikat lent.",
+            "libraryMissingOnlyNotice": "A Steam könyvtárad nem érhető el. Csatlakoztasd újra a meghajtót, majd próbáld újra.",
+            "libraryPickerLabel": "Steam könyvtár kiválasztása",
+            "libraryPrimarySuffix": "alapértelmezett",
+            "noCrossoverEngine": "Nem található CrossOver telepítés. A GameLib telepít egyet, amikor a telepítés elindul.",
+            "sharedBottleNotice": "Az itt kiválasztott Wine verziót minden olyan Steam játék használja, amelynek palackra van szüksége — nem csak ez az egy. Ha később módosítod, az azokra a játékokra is hatással lesz.",
+            "withOptionsLabel": "Telepítés beállításokkal…",
+            "bottleNameReadonlyHelper": "A GameLib egyetlen közös CrossOver bottle-t kezel a Steam számára. Külön bottle elnevezése játékonként még nem támogatott.",
+            "contentLightNotice": "Ez a Steam saját kliensén keresztül települ, így itt nincs mit választani. Kapcsold be a natív Steam telepítéseket a Beállításokban, hogy a telepítési helyet és a Windows kompatibilitást a GameLib-ből kezelhesd."
+        },
+        "resumeAvailable": {
+            "notify": "A(z) {{game}} megszakított telepítése folytatásra kész — kattints a Telepítésre a folytatáshoz"
+        },
+        "status": {
+            "resumeInstall": "Telepítés folytatása",
+            "resumeInstallHint": "A telepítés nem fejeződött be — folytasd a letöltést a GameLib-ben"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Ez eltávolítja a játék minden telepített példányát az összes telepítési helyről. Ez nem vonható vissza.",
+            "removeAllCopiesConfirmTitle": "Eltávolítod az összes példányt?",
+            "removeAllCopiesLabel": "Összes példány eltávolítása…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "A SteamGridDB grafika nem érhető el ebben a verzióban"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oázis",
+        "cyberSpaceOasisAlt": "Cyberspace Oázis Klasszikus",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Sötét",
+        "highContrast": "Nagy Kontraszt",
+        "marine": "Tengerész",
+        "marineClassic": "Tengerész Klasszikus",
+        "midnightMirage": "Éjféli Délibáb",
+        "nordDark": "Nord Sötét",
+        "nordLight": "Nord Világos",
+        "oldSchool": "Régi Iskolás GameLib",
+        "sweet": "Édes",
+        "zombie": "Zombi",
+        "zombieClassic": "Zombi Klasszikus"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "A bejelentkezésed még nem fejezhető be: a(z) {{channel}} nincs átültetve erre a verzióra. Ez a 34.5-ös fázisban valósul meg.",
+                "heading": "A(z) {{runner}} bejelentkezés még nincs bekötve",
+                "headingGeneric": "A bejelentkezés még nincs bekötve"
+            },
+            "humble": {
+                "body": "Megnyílt egy bejelentkezési ablak. Fejezd be ott a bejelentkezést — ez az oldal automatikusan frissül, amint sikerül.",
+                "error": {
+                    "window_unreachable": "a Humble bejelentkezési ablak bezárult, vagy nem volt elérhető"
+                },
+                "heading": "Bejelentkezés a Humble Bundle-be"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Megnyílt egy bejelentkezési ablak. Fejezd be ott a bejelentkezést.",
+                    "heading": "Bejelentkezés ide: {{runner}}",
+                    "headingGeneric": "Bejelentkezés"
+                },
+                "blocked": {
+                    "body": "A bejelentkezésed sikeresen rögzítve lett, de a(z) {{channel}} háttércsatorna még nincs átültetve erre a verzióra. Ez a 34.5-ös fázisban valósul meg.",
+                    "heading": "A(z) {{runner}} bejelentkezés rögzítve, de még nem fejezhető be",
+                    "headingGeneric": "A bejelentkezés rögzítve, de még nem fejezhető be"
+                },
+                "cancelled": {
+                    "body": "A bejelentkezési ablak bezárult, mielőtt a folyamat befejeződött volna. Próbáld meg újra.",
+                    "heading": "A(z) {{runner}} bejelentkezés megszakadt",
+                    "headingGeneric": "A bejelentkezés megszakadt"
+                },
+                "error": {
+                    "body": "Hiba történt a bejelentkezés során: {{message}}",
+                    "heading": "A(z) {{runner}} bejelentkezés sikertelen",
+                    "headingGeneric": "A bejelentkezés sikertelen"
+                },
+                "finalizing": {
+                    "body": "A bejelentkezés rögzítve. Az áruházzal való egyeztetés folyamatban — ez néhány másodpercig tarthat.",
+                    "heading": "Bejelentkezés véglegesítése ezzel: {{runner}}…",
+                    "headingGeneric": "Bejelentkezés véglegesítése…"
+                },
+                "genericChannel": "a bejelentkezési csatorna",
+                "preparing": {
+                    "body": "Az áruház bejelentkezési ablaka előkészítés alatt áll, és hamarosan megnyílik.",
+                    "heading": "{{runner}} bejelentkezés előkészítése…",
+                    "headingGeneric": "Bejelentkezés előkészítése…"
+                },
+                "retry": "Újra",
+                "timeout": {
+                    "body": "A bejelentkezési ablak befejezése túl sokáig tartott. Próbáld újra.",
+                    "heading": "A bejelentkezés túllépte az időkorlátot ennél: {{runner}}",
+                    "headingGeneric": "A bejelentkezés túllépte az időkorlátot"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Az alkalmazáson belüli áruház- és wikibongészés nem érhető el ebben a build-ben"
+        }
+    },
+    "winetricks": {
+        "unavailable": "A Winetricks komponenskezelés nem érhető el ebben a build-ben",
+        "unavailableDetail": "A Winetricks támogatás egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a build-ben nem listázható és nem telepíthető."
+    }
+}

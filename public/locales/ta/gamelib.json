@@ -1,0 +1,340 @@
+{
+    "about": {
+        "navLabel": "இதனை பற்றி"
+    },
+    "app": {
+        "routeError": "ஏதோ தவறு நடந்தது: {{detail}}"
+    },
+    "box": {
+        "cancel": "ரத்து செய்",
+        "error": {
+            "install": {
+                "failed": "{{title}} நிறுவல் தோல்வியடைந்தது: {{error}}",
+                "signInToSteam": "Steam இல் உள்நுழையவும்",
+                "stalled": "{{minutes}} நிமிடங்களாக பதிவிறக்க முன்னேற்றம் இல்லை — நிறுவல் நிறுத்தப்பட்டது"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib கணினி கோப்பு தேர்வியைத் திறக்க முடியவில்லை, எனவே எதுவும் தேர்ந்தெடுக்கப்படவில்லை மற்றும் மாற்றங்கள் எதுவும் செய்யப்படவில்லை. ({{error}})",
+                "title": "கோப்பு தேர்வியைத் திறக்க முடியவில்லை"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "CrossOver மூலம் மீண்டும் நிறுவு",
+                "message": "இந்த ஆட்டத்தின் macOS பதிப்பு 32-பிட் மட்டுமே கொண்டது, இது இந்த macOS பதிப்பில் இயங்காது. GameLib அதற்கு பதிலாக CrossOver மூலம் இதை மீண்டும் நிறுவலாம், இது Windows பதிப்பை மீண்டும் பதிவிறக்கும்.",
+                "title": "32-பிட் macOS பதிப்பு கண்டறியப்பட்டது"
+            }
+        }
+    },
+    "button": {
+        "close": "மூடு",
+        "paste": "ஒட்டு"
+    },
+    "consoleMode": {
+        "installNext": "அடுத்தது",
+        "installPrevious": "முந்தையது",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "இந்த நிறுவலைத் தொடங்க முடியவில்லை",
+        "steamInstallLibraryFull": "உங்கள் Steam நூலக கோப்புறையில் போதுமான காலி இடம் இல்லை. இடத்தை காலி செய்து மீண்டும் முயற்சிக்கவும்.",
+        "steamInstallLibraryMissing": "உங்கள் Steam நூலக கோப்புறை தற்போது கிடைக்கவில்லை. இயக்ககத்தை மீண்டும் இணைத்து மீண்டும் முயற்சிக்கவும்."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "இடைநிறுத்தப்பட்டது"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "இந்த பதிப்பில் SteamGridDB கலைப்பட தேடல் கிடைக்கவில்லை."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "மதிப்பிடப்படாதது",
+        "etaPrefix": "ETA: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic மற்றும் HowLongToBeat இல் இந்த தலைப்புக்கு எதுவும் இல்லை.",
+        "extraInfoEmptyTitle": "கூடுதல் தகவல் எதுவும் கிடைக்கவில்லை",
+        "extraInfoErrorBody": "தேடல் தோல்வியடைந்தது, இது இந்த ஆட்டத்திற்கு தரவு இல்லை என்பதற்குச் சமமல்ல. மீண்டும் முயற்சிக்கவும்.",
+        "extraInfoErrorTitle": "கூடுதல் தகவலை ஏற்ற முடியவில்லை",
+        "extraInfoRetry": "மீண்டும் முயற்சி",
+        "extraInfoStaleBody": "ஏற்றல் முடிவுகள் பதிவு செய்யப்படுவதற்கு முன்பே இந்த முடிவு தற்காலிக சேமிப்பில் வைக்கப்பட்டது, எனவே இது காலாவதியானதாக இருக்கலாம். சரிபார்க்க புதுப்பிக்கவும்.",
+        "tabsAriaLabel": "ஆட்ட தகவல் தாவல்கள்",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "ஒரு நிமிடத்திற்கும் குறைவாக"
+    },
+    "humbleKeys": {
+        "activate": "செயல்படுத்து",
+        "activateConfirmBody": "இது விசையை வெளிப்படுத்துகிறது — அதை Giftable இருப்பிலிருந்து நிரந்தரமாக அகற்றுகிறது — மேலும் அதை உங்கள் Steam கணக்கில் மீட்டெடுக்கிறது. இதை மாற்ற முடியாது.",
+        "activateConfirmBodyRevealed": "இது ஏற்கனவே வெளிப்படுத்தப்பட்ட உங்கள் விசையை உங்கள் Steam கணக்கில் மீட்டெடுக்கிறது. இதை மாற்ற முடியாது.",
+        "activateConfirmTitle": "இந்த விசையை Steam இல் செயல்படுத்தவா?",
+        "activatedDone": "முடிந்தது",
+        "activateDismiss": "ரத்து செய்",
+        "activatedTitle": "செயல்படுத்தப்பட்டது",
+        "activateWizardTitle": "இந்த கீயை செயல்படுத்தவும்",
+        "activatingBody": "உங்கள் கீயை வெளிப்படுத்தி Steam-இல் மீட்டெடுக்கிறது — இதற்கு ஒரு நொடி மட்டுமே ஆகும்.",
+        "activatingTitle": "Steam-இல் செயல்படுத்துகிறது…"
+    },
+    "info": {
+        "refresh-rating": "மதிப்பீட்டை புதுப்பிக்கவும்"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib அந்த இடத்திலிருந்து இறக்குமதி செய்ய முடியவில்லை. மூலமானது \"..\" படிகள் இல்லாத முழு கோப்புறை பாதையாக இருக்க வேண்டும். விளையாட்டின் கோப்புறையை மீண்டும் தேர்ந்தெடுக்கவும்.",
+        "pathRejectedBodyMove": "GameLib இந்த விளையாட்டை அங்கு நகர்த்த முடியவில்லை. இலக்கானது \"..\" படிகள் இல்லாத முழு கோப்புறை பாதையாக இருக்க வேண்டும். இலக்கு கோப்புறையை மீண்டும் தேர்ந்தெடுக்கவும்.",
+        "pathRejectedTitle": "அந்த இடத்தைப் பயன்படுத்த முடியாது"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "மறைக்கப்பட்டவை உட்பட",
+            "chipHiddenOnly": "மறைக்கப்பட்டவை மட்டும்",
+            "chipNonAvailableIncluded": "கிடைக்காதவை உட்பட",
+            "chipNonAvailableOnly": "கிடைக்காதவை மட்டும்",
+            "chipNoStorePageHidden": "கடைப் பக்கம் இல்லாதவை மறைக்கப்பட்டுள்ளது",
+            "chipNoStorePageOnly": "கடைப் பக்கம் இல்லாதவை மட்டும்",
+            "clearAll": "அனைத்தையும் அழிக்கவும்",
+            "collections": "தொகுப்புகள்",
+            "emptyAlphabetLetter": "\"{{letter}}\" உடன் தொடங்குபவை",
+            "emptyAlphabetNumber": "எண்ணுடன் தொடங்குபவை",
+            "emptyBody": "{{filters}} உடன் பொருந்தும் விளையாட்டுகள் இல்லை.",
+            "emptyClearAll": "அனைத்து வடிகட்டிகளையும் அழிக்கவும்",
+            "emptyHeading": "உங்கள் வடிகட்டிகளுக்கு பொருந்தும் விளையாட்டுகள் இல்லை",
+            "groupSelectedCount": "{{selected}} தேர்ந்தெடுக்கப்பட்டது",
+            "manageCollections": "தொகுப்புகளை நிர்வகிக்கவும்",
+            "moreFilters": "மேலும் வடிகட்டிகள்",
+            "newCollection": "+ புதிய தொகுப்பு",
+            "noStorePage": "கடைப் பக்கம் இல்லை",
+            "notYetChecked": "இன்னும் சரிபார்க்கப்படவில்லை",
+            "removeFilter": "{{filterLabel}} வடிகட்டியை அகற்றவும்",
+            "runnabilityGroup": "இயக்கும் தன்மை",
+            "runsNatively": "இயல்பாகவே இயங்கும்",
+            "runsViaBottle": "பாட்டில் வழியாக இயங்கும்",
+            "storeGroup": "கடை",
+            "viewAll": "அனைத்து விளையாட்டுகள்",
+            "viewFavourites": "பிடித்தவை",
+            "viewInstalled": "நிறுவப்பட்டது",
+            "viewRecentlyPlayed": "சமீபத்தில் விளையாடியவை",
+            "wontRun": "இயங்காது"
+        },
+        "header": {
+            "filteredOfTotal": "{{total}} இல் {{shown}}"
+        },
+        "no_no_store_page_games": "உங்கள் நூலகத்தில் கடைப் பக்கம் இல்லாத விளையாட்டுகள் இல்லை",
+        "noStorePage": "கடைப் பக்கம் இல்லை",
+        "steamSync": {
+            "failedBody": "உங்கள் மற்ற நூலகங்கள் இன்னும் கிடைக்கின்றன. மீண்டும் முயற்சிக்கவும், அல்லது Steam ஐ அணுக முடிகிறதா எனச் சரிபார்க்கவும்.",
+            "failedTitle": "உங்கள் Steam நூலகத்தை ஒத்திசைக்க முடியவில்லை",
+            "retry": "Steam ஒத்திசைவை மீண்டும் முயற்சிக்கவும்",
+            "signedOutAction": "Steam இல் உள்நுழையவும்",
+            "signedOutBody": "உங்கள் Steam நூலகத்தை ஒத்திசைக்க மீண்டும் உள்நுழையவும். உங்கள் மற்ற நூலகங்கள் இன்னும் கிடைக்கின்றன.",
+            "signedOutTitle": "உங்கள் Steam உள்நுழைவு காலாவதியானது",
+            "syncing": "உங்கள் Steam நூலகத்தை ஒத்திசைக்கிறது…"
+        },
+        "storeOther": "மற்றவை"
+    },
+    "login": {
+        "connected": "இணைக்கப்பட்டது",
+        "humble_dialog_title": "Humble Bundle இல் உள்நுழையவும்",
+        "logoutFailedTitle": "வெளியேறுதல் முழுமையடையவில்லை",
+        "steam_logout_failed_message": "Steam வெளியேறுதல் காலவரையில் முடியவில்லை. மீண்டும் முயற்சிக்கவும்.",
+        "steam_logout_failed_title": "வெளியேறுதல் தோல்வியடைந்தது",
+        "steamReconnect": "உள்நுழைவு காலாவதியானது — மீண்டும் இணைக்கவும்"
+    },
+    "pathSelectionBox": {
+        "saved": "சேமிக்கப்பட்டது",
+        "unsaved": "இன்னும் சேமிக்கப்படவில்லை — Enter ஐ அழுத்தவும்"
+    },
+    "queue": {
+        "label": {
+            "failed": "தோல்வியடைந்தது",
+            "retry": "மீண்டும் முயற்சிக்கவும்"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "உங்கள் Steam விசையை உள்ளிடவும்",
+        "redeem": "பெறு",
+        "redeeming": "பெறப்படுகிறது...",
+        "title": "Steam விசையைப் பெறவும்",
+        "viewInLibrary": "நூலகத்தில் காண்க"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "இந்த பதிப்பில் EOS Overlay கிடைக்கவில்லை",
+            "unavailableDetail": "EOS Overlay ஆதரவு எதிர்கால வெளியீட்டிற்கு (D-03, Phase 34.6) ஒத்திவைக்கப்பட்டுள்ளது, மேலும் இந்த பதிப்பிலிருந்து நிறுவவோ, புதுப்பிக்கவோ, அகற்றவோ முடியாது."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "EOS Overlay ஐ இப்போது நிறுவவா?",
+        "eosOverlayInstallConfirmTitle": "ஓவர்லே நிறுவலை உறுதிப்படுத்தவும்",
+        "eosOverlayUpdateConfirmBody": "EOS Overlay ஐ சமீபத்திய பதிப்புக்கு புதுப்பிக்கவா?",
+        "eosOverlayUpdateConfirmTitle": "ஓவர்லே புதுப்பிப்பை உறுதிப்படுத்தவும்",
+        "framelessWindowDescription": "சட்டகமற்ற சாளரத்தைப் பயன்படுத்தவும்",
+        "gamepadInitialRepeatDelay": "கேம்பேட் உள்ளீட்டின் ஆரம்ப மறுநிகழ்வு தாமதம்",
+        "gamepadRepeatFrequency": "கேம்பேட் உள்ளீட்டின் மறுநிகழ்வு அதிர்வெண்",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "அப்ஸ்கேல் முறை",
+        "gamescopeWindowType": "சாளர வகை",
+        "loginBackground": "கணக்குகளை நிர்வகி பின்னணி",
+        "loginBackgroundDialogTitle": "ஒரு பின்னணி படத்தைத் தேர்ந்தெடுக்கவும்",
+        "loginBackgroundFilterName": "படங்கள்",
+        "loginBackgroundHelp": "கணக்குகளை நிர்வகி திரையின் பின்னணியில் காட்டப்படும் படம். இணைக்கப்பட்ட கலைப்படைப்புக்குத் திரும்பச் செல்ல புலத்தை அழிக்கவும். PNG, JPEG, WebP, AVIF மற்றும் GIF ஆதரிக்கப்படுகின்றன.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "இந்த பதிப்பில் கிடைக்கவில்லை"
+            },
+            "help": {
+                "unavailableDetail": "SteamGridDB ஓவியப் பணி எதிர்கால வெளியீட்டிற்கு (D-03, Phase 34.6) தள்ளிவைக்கப்பட்டுள்ளது, இதை இந்த பதிப்பில் இருந்து அமைக்க முடியாது."
+            }
+        },
+        "wineDefaultLabel": "Wine இயல்புநிலை",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Steam விசையை மீட்டுப் பெறு"
+    },
+    "sideload": {
+        "filter": {
+            "all": "அனைத்தும்",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "பயன்பாடுகள்",
+            "executables": "இயக்கக்கூடிய கோப்புகள்",
+            "images": "படங்கள்",
+            "otherBinaries": "பிற பைனரிகள்",
+            "scripts": "ஸ்கிரிப்ட்கள்"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "நிறுவல் விருப்பங்களை சரிபார்க்கிறது…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "Steam bottle அமைப்பு பற்றிய பதிலை GameLib பெறுவதை நிறுத்திவிட்டது. இது இன்னும் இயங்கிக்கொண்டிருக்கலாம் — Steam நிறுவி சாளரத்தை சரிபார்த்து, மீண்டும் முயற்சிக்கவும்."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Steam சேவையகங்கள் இணைப்பைத் துண்டித்தன.",
+                "decodeFailed": "பதிவிறக்கம் செய்யப்பட்ட விளையாட்டு தரவை அவிழ்க்க முடியவில்லை. இது ஒரு நெட்வொர்க் சிக்கல் அல்ல.",
+                "genericV2": "Steam பதிவிறக்கம் தோல்வியடைந்தது.",
+                "notSignedIn": "நீங்கள் Steam இல் உள்நுழையவில்லை, எனவே இந்த பதிவிறக்கத்தைத் தொடங்க முடியவில்லை."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib Steam-க்கு ஒரு பகிரப்பட்ட CrossOver bottle-ஐ நிர்வகிக்கிறது. ஒவ்வொரு விளையாட்டிற்கும் தனித்தனி bottle பெயரிடுவது இன்னும் ஆதரிக்கப்படவில்லை.",
+            "contentLightNotice": "இது Steam-இன் சொந்த கிளையண்ட் மூலம் நிறுவப்படுகிறது, எனவே இங்கே தேர்வு செய்ய எதுவும் இல்லை. GameLib இலிருந்து நிறுவல் இருப்பிடம் மற்றும் Windows இணக்கத்தன்மையை நிர்வகிக்க அமைப்புகளில் native Steam நிறுவல்களை இயக்கவும்.",
+            "contentLightSingleLibraryNotice": "இந்த கணினியில் ஒரே ஒரு Steam நூலகம் மட்டுமே உள்ளது, எனவே இங்கே தேர்வு செய்ய எதுவும் இல்லை — GameLib இந்த விளையாட்டை அதில் நிறுவும்.",
+            "forceWindowsHelp": "இந்த விளையாட்டிற்கு native macOS பதிப்பு உள்ளது, ஆனால் Wine bottle மூலம் Windows பதிப்பையும் நிறுவலாம் — native பதிப்பில் அம்சங்கள் இல்லாதபோது அல்லது செயல்திறன் குறைவாக இருக்கும்போது இது பயனுள்ளதாக இருக்கும்.",
+            "libraryFullNotice": "உங்கள் Steam நூலகத்தில் போதிய இடம் இல்லை — கீழே வேறு ஒன்றைத் தேர்வு செய்யவும் அல்லது இடத்தை காலி செய்யவும்.",
+            "libraryFullOnlyNotice": "உங்கள் Steam நூலகத்தில் போதிய இடம் இல்லை. இடத்தை காலி செய்து, மீண்டும் முயற்சிக்கவும்.",
+            "libraryMissingNotice": "உங்கள் Steam நூலகத்தை அணுக முடியவில்லை — கீழே வேறு ஒன்றைத் தேர்வு செய்யவும்.",
+            "libraryMissingOnlyNotice": "உங்கள் Steam நூலகத்தை அணுக முடியவில்லை. இயக்ககத்தை மீண்டும் இணைத்து, பின் முயற்சிக்கவும்.",
+            "libraryPickerLabel": "Steam நூலகத்தைத் தேர்வு செய்யவும்",
+            "libraryPrimarySuffix": "இயல்புநிலை",
+            "noCrossoverEngine": "எந்த CrossOver நிறுவலும் கிடைக்கவில்லை. நிறுவல் தொடங்கும்போது GameLib ஒன்றை அமைக்கும்.",
+            "sharedBottleNotice": "இங்கே நீங்கள் தேர்ந்தெடுக்கும் wine பதிப்பு, bottle தேவைப்படும் ஒவ்வொரு Steam விளையாட்டிற்கும் பயன்படுத்தப்படும் — இந்த ஒன்றுக்கு மட்டுமல்ல. இதை பின்னர் மாற்றினால் அந்த விளையாட்டுகள் இயங்கும் விதமும் மாறும்.",
+            "withOptionsLabel": "விருப்பங்களுடன் நிறுவு…"
+        },
+        "resumeAvailable": {
+            "notify": "{{game}}-க்கான தடைபட்ட நிறுவல் தொடர தயாராக உள்ளது — தொடர நிறுவு என்பதை கிளிக் செய்யவும்"
+        },
+        "status": {
+            "resumeInstall": "நிறுவலைத் தொடரவும்",
+            "resumeInstallHint": "நிறுவல் முழுமையடையவில்லை — GameLib இல் பதிவிறக்கத்தைத் தொடரவும்"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "இது அனைத்து நிறுவல் இருப்பிடங்களிலும் உள்ள இந்த விளையாட்டின் நிறுவப்பட்ட எல்லா நகல்களையும் நீக்கும். இதை மீட்டெடுக்க முடியாது.",
+            "removeAllCopiesConfirmTitle": "அனைத்து நகல்களையும் நீக்கவா?",
+            "removeAllCopiesLabel": "அனைத்து நகல்களையும் நீக்கு…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "SteamGridDB ஓவியப்பணி இந்த பதிப்பில் கிடைக்கவில்லை"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "சைபர்ஸ்பேஸ் ஓயசிஸ்",
+        "cyberSpaceOasisAlt": "சைபர்ஸ்பேஸ் ஓயசிஸ் கிளாசிக்",
+        "dracula": "டிராகுலா",
+        "gruvboxDark": "க்ரூவ்பாக்ஸ் டார்க்",
+        "highContrast": "அதிக மாறுபாடு",
+        "marine": "மரைன்",
+        "marineClassic": "மரைன் கிளாசிக்",
+        "midnightMirage": "மிட்நைட் மிராஜ்",
+        "nordDark": "நோர்டு டார்க்",
+        "nordLight": "நோர்டு லைட்",
+        "oldSchool": "ஓல்ட் ஸ்கூல் GameLib",
+        "sweet": "ஸ்வீட்",
+        "zombie": "சாம்பி",
+        "zombieClassic": "சாம்பி கிளாசிக்"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "உங்கள் உள்நுழைவை இன்னும் முடிக்க முடியவில்லை: {{channel}} இந்த பதிப்பிற்கு இன்னும் மாற்றப்படவில்லை. இது கட்டம் 34.5 இல் வழங்கப்படும்.",
+                "heading": "{{runner}} இல் உள்நுழைவது இன்னும் இணைக்கப்படவில்லை",
+                "headingGeneric": "உள்நுழைவது இன்னும் இணைக்கப்படவில்லை"
+            },
+            "humble": {
+                "body": "உள்நுழைவு சாளரம் திறக்கப்பட்டது. அங்கு உள்நுழைவை முடிக்கவும் — இது வெற்றியடைந்தவுடன் இந்தப் பக்கம் தானாகவே புதுப்பிக்கப்படும்.",
+                "error": {
+                    "window_unreachable": "Humble உள்நுழைவு சாளரம் மூடப்பட்டது அல்லது அணுக முடியவில்லை"
+                },
+                "heading": "Humble Bundle இல் உள்நுழைகிறது"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "உள்நுழைவு சாளரம் திறக்கப்பட்டது. அங்கு உள்நுழைவை முடிக்கவும்.",
+                    "heading": "{{runner}} இல் உள்நுழைகிறது",
+                    "headingGeneric": "உள்நுழைகிறது"
+                },
+                "blocked": {
+                    "body": "உங்கள் உள்நுழைவு வெற்றிகரமாகப் பதிவு செய்யப்பட்டது, ஆனால் {{channel}} பின்தள சேனல் இந்த பதிப்பிற்கு இன்னும் மாற்றப்படவில்லை. இது கட்டம் 34.5 இல் வழங்கப்படும்.",
+                    "heading": "{{runner}} உள்நுழைவு பதிவு செய்யப்பட்டது, ஆனால் இன்னும் முடிக்க முடியவில்லை",
+                    "headingGeneric": "உள்நுழைவு பதிவு செய்யப்பட்டது, ஆனால் இன்னும் முடிக்க முடியவில்லை"
+                },
+                "cancelled": {
+                    "body": "முடிவடைவதற்கு முன் உள்நுழைவு சாளரம் மூடப்பட்டது. மீண்டும் முயற்சிக்கலாம்.",
+                    "heading": "{{runner}} இல் உள்நுழைவு ரத்து செய்யப்பட்டது",
+                    "headingGeneric": "உள்நுழைவு ரத்து செய்யப்பட்டது"
+                },
+                "error": {
+                    "body": "உள்நுழையும் போது ஏதோ தவறு ஏற்பட்டது: {{message}}",
+                    "heading": "{{runner}} இல் உள்நுழைவு தோல்வியடைந்தது",
+                    "headingGeneric": "உள்நுழைவு தோல்வியடைந்தது"
+                },
+                "finalizing": {
+                    "body": "உள்நுழைவு பதிவு செய்யப்பட்டது. கடையுடன் பரிமாற்றத்தை முடிக்கிறது — இதற்கு சில வினாடிகள் ஆகலாம்.",
+                    "heading": "{{runner}} உடன் உள்நுழைவை முடிக்கிறது…",
+                    "headingGeneric": "உள்நுழைவை முடிக்கிறது…"
+                },
+                "genericChannel": "உள்நுழைவு சேனல்",
+                "preparing": {
+                    "body": "கடையின் உள்நுழைவு சாளரம் தயாராகி விரைவில் திறக்கப்படும்.",
+                    "heading": "{{runner}} உள்நுழைவைத் தயார் செய்கிறது…",
+                    "headingGeneric": "உள்நுழைவைத் தயார் செய்கிறது…"
+                },
+                "retry": "மீண்டும் முயற்சி",
+                "timeout": {
+                    "body": "உள்நுழைவு சாளகம் முடிவடைய அதிக நேரம் எடுத்தது. மீண்டும் முயற்சிக்கலாம்.",
+                    "heading": "{{runner}} இல் உள்நுழைவது நேரம் முடிந்தது",
+                    "headingGeneric": "உள்நுழைவு நேரம் முடிந்தது"
+                }
+            }
+        },
+        "unavailable": {
+            "body": "GameLib இன் Tauri பதிப்பில் ஸ்டோர் மற்றும் விக்கி பக்கங்களுக்கான Browser காட்சி இன்னும் இணைக்கப்படவில்லை.",
+            "heading": "இந்த பதிப்பில் ஆப்-க்குள் ஸ்டோர் மற்றும் விக்கி உலாவல் கிடைக்கவில்லை",
+            "next-step": "இது எதிர்கால வேலையாக தனியாக கண்காணிக்கப்படுகிறது -- தற்போதைக்கு, உங்கள் சிஸ்டம் Browser இல் திறக்க கீழே உள்ள பொத்தானைப் பயன்படுத்தவும்.",
+            "open-in-browser": "Browser இல் திற"
+        }
+    },
+    "winetricks": {
+        "unavailable": "இந்த பதிப்பில் Winetricks கூறு மேலாண்மை கிடைக்கவில்லை",
+        "unavailableDetail": "Winetricks ஆதரவு எதிர்கால வெளியீட்டிற்கு (D-03, Phase 34.6) ஒத்திவைக்கப்பட்டுள்ளது, இந்த பதிப்பிலிருந்து பட்டியலிடவோ நிறுவவோ முடியாது."
+    }
+}

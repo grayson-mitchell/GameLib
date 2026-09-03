@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Despre"
+    },
+    "app": {
+        "routeError": "Ceva nu a mers bine: {{detail}}"
+    },
+    "box": {
+        "cancel": "Anulare",
+        "error": {
+            "install": {
+                "failed": "Instalarea {{title}} a eșuat: {{error}}",
+                "signInToSteam": "Conectează-te la Steam",
+                "stalled": "Nicio evoluție a descărcării de {{minutes}} minute — instalarea a fost oprită"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib nu a putut deschide selectorul de fișiere al sistemului, așa că nu s-a selectat nimic și nu s-a făcut nicio modificare. ({{error}})",
+                "title": "Nu s-a putut deschide selectorul de fișiere"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Reinstalează prin CrossOver",
+                "message": "Versiunea macOS a acestui joc este doar pe 32 de biți și nu poate rula pe această versiune de macOS. GameLib o poate reinstala prin CrossOver, ceea ce va redescărca versiunea Windows.",
+                "title": "S-a detectat o versiune macOS pe 32 de biți"
+            }
+        }
+    },
+    "button": {
+        "close": "Închide",
+        "paste": "Lipește"
+    },
+    "consoleMode": {
+        "installNext": "Următorul",
+        "installPrevious": "Anteriorul",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Nu se poate porni această instalare",
+        "steamInstallLibraryFull": "Nu există suficient spațiu liber în folderul bibliotecii Steam. Eliberează spațiu și încearcă din nou.",
+        "steamInstallLibraryMissing": "Folderul bibliotecii Steam nu este disponibil momentan. Reconectează unitatea și încearcă din nou."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Pauzat"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Căutarea de imagini SteamGridDB nu este disponibilă în această versiune."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Neevaluat",
+        "etaPrefix": "ETA: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic și HowLongToBeat nu au nimic pentru acest titlu.",
+        "extraInfoEmptyTitle": "Nu s-au găsit informații suplimentare",
+        "extraInfoErrorBody": "Căutarea a eșuat, ceea ce nu înseamnă că acest joc nu are date. Încearcă din nou.",
+        "extraInfoErrorTitle": "Nu s-au putut încărca informațiile suplimentare",
+        "extraInfoRetry": "Reîncearcă",
+        "extraInfoStaleBody": "Acest rezultat a fost stocat în cache înainte de a se înregistra rezultatele încărcării, deci poate fi depășit. Reîmprospătează pentru a verifica.",
+        "tabsAriaLabel": "file gameinfo",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "mai puțin de un minut"
+    },
+    "humbleKeys": {
+        "activate": "Activează",
+        "activateConfirmBody": "Astfel se dezvăluie cheia — eliminând-o definitiv din rezervele Giftable — și se activează pe contul tău Steam. Nu există anulare.",
+        "activateConfirmBodyRevealed": "Aceasta activează cheia deja dezvăluită pe contul tău Steam. Nu există anulare.",
+        "activateConfirmTitle": "Activezi această cheie pe Steam?",
+        "activatedDone": "Gata",
+        "activateDismiss": "Anulare",
+        "activatedTitle": "Activat",
+        "activateWizardTitle": "Activează această cheie",
+        "activatingBody": "Se dezvăluie cheia și se activează pe Steam — durează doar o clipă.",
+        "activatingTitle": "Se activează pe Steam…"
+    },
+    "info": {
+        "refresh-rating": "Reîmprospătează evaluarea"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib nu a putut importa din acea locație. Sursa trebuie să fie o cale completă de folder, fără pași \"..\" în ea. Alege din nou folderul jocului.",
+        "pathRejectedBodyMove": "GameLib nu a putut muta acest joc acolo. Destinația trebuie să fie o cale completă de folder, fără pași \"..\" în ea. Alege din nou folderul de destinație.",
+        "pathRejectedTitle": "Locația nu poate fi folosită"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Inclusiv ascunse",
+            "chipHiddenOnly": "Doar ascunse",
+            "chipNonAvailableIncluded": "Inclusiv indisponibile",
+            "chipNonAvailableOnly": "Doar indisponibile",
+            "chipNoStorePageHidden": "Ascunde fără pagină de magazin",
+            "chipNoStorePageOnly": "Doar fără pagină de magazin",
+            "clearAll": "Șterge tot",
+            "collections": "Colecții",
+            "emptyAlphabetLetter": "Începe cu \"{{letter}}\"",
+            "emptyAlphabetNumber": "Începe cu o cifră",
+            "emptyBody": "Niciun joc nu corespunde {{filters}}.",
+            "emptyClearAll": "Șterge toate filtrele",
+            "emptyHeading": "Niciun joc nu corespunde filtrelor tale",
+            "groupSelectedCount": "{{selected}} selectate",
+            "manageCollections": "Gestionează colecțiile",
+            "moreFilters": "Mai multe filtre",
+            "newCollection": "+ Colecție nouă",
+            "noStorePage": "Fără pagină de magazin",
+            "notYetChecked": "Neverificat încă",
+            "removeFilter": "Elimină filtrul {{filterLabel}}",
+            "runnabilityGroup": "Rulabilitate",
+            "runsNatively": "Rulează nativ",
+            "runsViaBottle": "Rulează prin bottle",
+            "storeGroup": "Magazin",
+            "viewAll": "Toate jocurile",
+            "viewFavourites": "Favorite",
+            "viewInstalled": "Instalat",
+            "viewRecentlyPlayed": "Jucate recent",
+            "wontRun": "Nu va rula"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} din {{total}}"
+        },
+        "no_no_store_page_games": "Nu există jocuri fără pagină de magazin în biblioteca ta",
+        "noStorePage": "Fără pagină de magazin",
+        "steamSync": {
+            "failedBody": "Celelalte biblioteci ale tale sunt încă disponibile. Încearcă din nou sau verifică dacă Steam este accesibil.",
+            "failedTitle": "Nu am putut sincroniza biblioteca ta Steam",
+            "retry": "Reîncearcă sincronizarea Steam",
+            "signedOutAction": "Conectează-te la Steam",
+            "signedOutBody": "Conectează-te din nou pentru a-ți sincroniza biblioteca Steam. Celelalte biblioteci ale tale sunt încă disponibile.",
+            "signedOutTitle": "Sesiunea ta Steam a expirat",
+            "syncing": "Se sincronizează biblioteca ta Steam…"
+        },
+        "storeOther": "Altele"
+    },
+    "login": {
+        "connected": "Conectat",
+        "humble_dialog_title": "Conectează-te la Humble Bundle",
+        "logoutFailedTitle": "Deconectare incompletă",
+        "steam_logout_failed_message": "Deconectarea de la Steam nu s-a finalizat la timp. Te rugăm să încerci din nou.",
+        "steam_logout_failed_title": "Deconectare eșuată",
+        "steamReconnect": "Sesiune expirată — Reconectează-te"
+    },
+    "pathSelectionBox": {
+        "saved": "Salvat",
+        "unsaved": "Nesalvat încă — apasă Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Eșuat",
+            "retry": "Reîncearcă"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Introdu cheia ta Steam",
+        "redeem": "Revendică",
+        "redeeming": "Se revendică...",
+        "title": "Revendică o cheie Steam",
+        "viewInLibrary": "Vezi în bibliotecă"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay nu este disponibil în această versiune",
+            "unavailableDetail": "Suportul pentru EOS Overlay este amânat pentru o versiune viitoare (D-03, Faza 34.6) și nu poate fi instalat, actualizat sau eliminat din această versiune."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Instalezi EOS Overlay acum?",
+        "eosOverlayInstallConfirmTitle": "Confirmă instalarea overlay-ului",
+        "eosOverlayUpdateConfirmBody": "Actualizezi EOS Overlay la cea mai recentă versiune?",
+        "eosOverlayUpdateConfirmTitle": "Confirmă actualizarea overlay-ului",
+        "framelessWindowDescription": "Folosește fereastră fără cadru",
+        "gamepadInitialRepeatDelay": "Întârziere inițială de repetare pentru gamepad",
+        "gamepadRepeatFrequency": "Frecvență de repetare pentru gamepad",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Metodă de upscaling",
+        "gamescopeWindowType": "Tip de fereastră",
+        "loginBackground": "Fundal pentru Gestionare conturi",
+        "loginBackgroundDialogTitle": "Selectează o imagine de fundal",
+        "loginBackgroundFilterName": "Imagini",
+        "loginBackgroundHelp": "Imagine afișată în spatele ecranului Gestionare conturi. Golește câmpul pentru a reveni la imaginea inclusă implicit. Sunt acceptate formatele PNG, JPEG, WebP, AVIF și GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Indisponibil în această versiune"
+            },
+            "help": {
+                "unavailableDetail": "Suportul pentru ilustrațiile SteamGridDB este amânat pentru o versiune viitoare (D-03, Faza 34.6) și nu poate fi configurat din această versiune."
+            }
+        },
+        "wineDefaultLabel": "Wine implicit",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Revendică o cheie Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Toate",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Aplicații",
+            "executables": "Executabile",
+            "images": "Imagini",
+            "otherBinaries": "Alte binare",
+            "scripts": "Scripturi"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Se verifică opțiunile de instalare…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib nu a mai primit informații despre configurarea bottle-ului Steam. Este posibil să ruleze în continuare — verifică dacă există o fereastră de instalare Steam, apoi încearcă din nou."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Serverele Steam au întrerupt conexiunea.",
+                "decodeFailed": "Datele descărcate ale jocului nu au putut fi despachetate. Aceasta nu este o problemă de rețea.",
+                "genericV2": "Descărcarea Steam a eșuat.",
+                "notSignedIn": "Nu ești autentificat în Steam, așa că această descărcare nu a putut începe."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib gestionează un singur bottle CrossOver comun pentru Steam. Denumirea unui bottle separat pentru fiecare joc nu este încă acceptată.",
+            "contentLightNotice": "Aceasta se instalează prin propriul client Steam, deci nu ai nimic de ales aici. Activează instalările native Steam din Setări pentru a gestiona locația de instalare și compatibilitatea cu Windows din GameLib.",
+            "contentLightSingleLibraryNotice": "Există o singură bibliotecă Steam pe acest sistem, deci nu ai nimic de ales aici — GameLib va instala acest joc în ea.",
+            "forceWindowsHelp": "Acest joc are o versiune nativă pentru macOS, dar poți instala în schimb versiunea pentru Windows printr-un bottle Wine — util dacă versiunea nativă are funcții lipsă sau performanțe mai slabe.",
+            "libraryFullNotice": "Nu este suficient spațiu în biblioteca ta Steam — alege alta mai jos sau eliberează spațiu.",
+            "libraryFullOnlyNotice": "Nu este suficient spațiu în biblioteca ta Steam. Eliberează spațiu, apoi încearcă din nou.",
+            "libraryMissingNotice": "Biblioteca ta Steam nu a putut fi accesată — alege alta mai jos.",
+            "libraryMissingOnlyNotice": "Biblioteca ta Steam nu a putut fi accesată. Reconectează unitatea, apoi încearcă din nou.",
+            "libraryPickerLabel": "Alege biblioteca Steam",
+            "libraryPrimarySuffix": "implicită",
+            "noCrossoverEngine": "Nu a fost găsită nicio instalare CrossOver. GameLib va configura una la începerea instalării.",
+            "sharedBottleNotice": "Versiunea de wine aleasă aici este folosită pentru fiecare joc Steam care are nevoie de un bottle — nu doar pentru acesta. Schimbarea ei ulterioară va afecta și modul în care rulează acele jocuri.",
+            "withOptionsLabel": "Instalează cu opțiuni…"
+        },
+        "resumeAvailable": {
+            "notify": "O instalare întreruptă pentru {{game}} este gata de reluare — apasă Instalează pentru a continua"
+        },
+        "status": {
+            "resumeInstall": "Reia instalarea",
+            "resumeInstallHint": "Instalare incompletă — reia descărcarea în GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Aceasta elimină fiecare copie instalată a acestui joc din toate locațiile de instalare. Această acțiune nu poate fi anulată.",
+            "removeAllCopiesConfirmTitle": "Elimini toate copiile?",
+            "removeAllCopiesLabel": "Elimină toate copiile…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Ilustrațiile SteamGridDB nu sunt disponibile în această versiune"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Contrast Ridicat",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Autentificarea nu poate fi finalizată încă: {{channel}} nu este portat pe această versiune. Aceasta va fi disponibilă în Faza 34.5.",
+                "heading": "Autentificarea la {{runner}} nu este încă implementată",
+                "headingGeneric": "Autentificarea nu este încă implementată"
+            },
+            "humble": {
+                "body": "S-a deschis o fereastră de autentificare. Finalizează autentificarea acolo — această pagină se actualizează automat după ce reușește.",
+                "error": {
+                    "window_unreachable": "fereastra de autentificare Humble s-a închis sau nu a putut fi accesată"
+                },
+                "heading": "Autentificare la Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "S-a deschis o fereastră de autentificare. Finalizează autentificarea acolo.",
+                    "heading": "Autentificare la {{runner}}",
+                    "headingGeneric": "Se autentifică"
+                },
+                "blocked": {
+                    "body": "Autentificarea a fost capturată cu succes, dar canalul backend {{channel}} nu este încă portat pe această versiune. Aceasta va fi disponibilă în Faza 34.5.",
+                    "heading": "Autentificarea la {{runner}} a fost capturată, dar nu poate fi finalizată încă",
+                    "headingGeneric": "Autentificarea a fost capturată, dar nu poate fi finalizată încă"
+                },
+                "cancelled": {
+                    "body": "Fereastra de autentificare a fost închisă înainte de finalizare. Poți încerca din nou.",
+                    "heading": "Autentificarea la {{runner}} a fost anulată",
+                    "headingGeneric": "Autentificarea a fost anulată"
+                },
+                "error": {
+                    "body": "A apărut o problemă la autentificare: {{message}}",
+                    "heading": "Autentificarea la {{runner}} a eșuat",
+                    "headingGeneric": "Autentificarea a eșuat"
+                },
+                "finalizing": {
+                    "body": "Autentificare capturată. Se finalizează schimbul cu magazinul — acest lucru poate dura câteva secunde.",
+                    "heading": "Se finalizează autentificarea cu {{runner}}…",
+                    "headingGeneric": "Se finalizează autentificarea…"
+                },
+                "genericChannel": "canalul de autentificare",
+                "preparing": {
+                    "body": "Fereastra de autentificare a magazinului este în curs de pregătire și se va deschide în curând.",
+                    "heading": "Se pregătește autentificarea la {{runner}}…",
+                    "headingGeneric": "Se pregătește autentificarea…"
+                },
+                "retry": "Reîncearcă",
+                "timeout": {
+                    "body": "Fereastra de autentificare a durat prea mult pentru a se finaliza. Poți încerca din nou.",
+                    "heading": "Autentificarea la {{runner}} a expirat",
+                    "headingGeneric": "Autentificarea a expirat"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Navigarea în magazin și wiki din aplicație nu este disponibilă în această versiune"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Gestionarea componentelor Winetricks nu este disponibilă în această versiune",
+        "unavailableDetail": "Suportul pentru Winetricks este amânat pentru o versiune viitoare (D-03, Faza 34.6) și nu poate fi listat sau instalat din această versiune."
+    }
+}

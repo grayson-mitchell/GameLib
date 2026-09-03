@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Giới Thiệu"
+    },
+    "app": {
+        "routeError": "Đã xảy ra lỗi: {{detail}}"
+    },
+    "box": {
+        "cancel": "Hủy",
+        "error": {
+            "install": {
+                "failed": "Cài đặt {{title}} thất bại: {{error}}",
+                "signInToSteam": "Đăng nhập vào Steam",
+                "stalled": "Không có tiến trình tải xuống trong {{minutes}} phút — việc cài đặt đã bị dừng"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib không thể mở trình chọn tệp hệ thống, vì vậy không có gì được chọn và không có thay đổi nào được thực hiện. ({{error}})",
+                "title": "Không thể mở trình chọn tệp"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Cài đặt lại qua CrossOver",
+                "message": "Bản dựng macOS của trò chơi này chỉ là 32-bit và không thể chạy trên phiên bản macOS này. GameLib có thể cài đặt lại thông qua CrossOver, việc này sẽ tải lại phiên bản Windows.",
+                "title": "Đã phát hiện bản dựng macOS 32-bit"
+            }
+        }
+    },
+    "button": {
+        "close": "Đóng",
+        "paste": "Dán"
+    },
+    "consoleMode": {
+        "installNext": "Tiếp",
+        "installPrevious": "Trước",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Không thể bắt đầu cài đặt này",
+        "steamInstallLibraryFull": "Không đủ dung lượng trống trong thư mục thư viện Steam của bạn. Hãy giải phóng dung lượng và thử lại.",
+        "steamInstallLibraryMissing": "Thư mục thư viện Steam của bạn hiện không khả dụng. Hãy kết nối lại ổ đĩa và thử lại."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Đã tạm dừng"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Tìm kiếm hình ảnh SteamGridDB không khả dụng trên bản dựng này."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Chưa xếp hạng",
+        "etaPrefix": "Còn lại: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic và HowLongToBeat không có dữ liệu cho tựa game này.",
+        "extraInfoEmptyTitle": "Không tìm thấy thông tin bổ sung",
+        "extraInfoErrorBody": "Việc tra cứu thất bại, điều này không đồng nghĩa với việc trò chơi không có dữ liệu. Hãy thử lại.",
+        "extraInfoErrorTitle": "Không thể tải thông tin bổ sung",
+        "extraInfoRetry": "Thử lại",
+        "extraInfoStaleBody": "Kết quả này được lưu vào bộ nhớ đệm trước khi kết quả tải được ghi nhận, nên có thể đã lỗi thời. Làm mới để kiểm tra.",
+        "tabsAriaLabel": "tab thông tin game",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "chưa đầy một phút"
+    },
+    "humbleKeys": {
+        "activate": "Kích hoạt",
+        "activateConfirmBody": "Việc này sẽ hiển thị mã key — xóa vĩnh viễn khỏi kho tặng — và kích hoạt trên tài khoản Steam của bạn. Không thể hoàn tác.",
+        "activateConfirmBodyRevealed": "Việc này sẽ kích hoạt mã key đã hiển thị của bạn trên tài khoản Steam. Không thể hoàn tác.",
+        "activateConfirmTitle": "Kích hoạt mã key này trên Steam?",
+        "activatedDone": "Xong",
+        "activateDismiss": "Hủy",
+        "activatedTitle": "Đã kích hoạt",
+        "activateWizardTitle": "Kích hoạt key này",
+        "activatingBody": "Đang tiết lộ key của bạn và đổi trên Steam — chỉ mất một chút thời gian.",
+        "activatingTitle": "Đang kích hoạt trên Steam…"
+    },
+    "info": {
+        "refresh-rating": "Làm mới xếp hạng"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib không thể nhập từ vị trí đó. Nguồn phải là đường dẫn thư mục đầy đủ, không chứa bước \"..\". Hãy chọn lại thư mục của game.",
+        "pathRejectedBodyMove": "GameLib không thể di chuyển game này đến đó. Đích đến phải là đường dẫn thư mục đầy đủ, không chứa bước \"..\". Hãy chọn lại thư mục đích.",
+        "pathRejectedTitle": "Không thể dùng vị trí đó"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Bao gồm đã ẩn",
+            "chipHiddenOnly": "Chỉ đã ẩn",
+            "chipNonAvailableIncluded": "Bao gồm không khả dụng",
+            "chipNonAvailableOnly": "Chỉ không khả dụng",
+            "chipNoStorePageHidden": "Ẩn game không có trang cửa hàng",
+            "chipNoStorePageOnly": "Chỉ không có trang cửa hàng",
+            "clearAll": "Xóa tất cả",
+            "collections": "Bộ sưu tập",
+            "emptyAlphabetLetter": "Bắt đầu bằng \"{{letter}}\"",
+            "emptyAlphabetNumber": "Bắt đầu bằng số",
+            "emptyBody": "Không có game nào khớp với {{filters}}.",
+            "emptyClearAll": "Xóa tất cả bộ lọc",
+            "emptyHeading": "Không có game nào khớp với bộ lọc của bạn",
+            "groupSelectedCount": "Đã chọn {{selected}}",
+            "manageCollections": "Quản lý bộ sưu tập",
+            "moreFilters": "Thêm bộ lọc",
+            "newCollection": "+ Bộ sưu tập mới",
+            "noStorePage": "Không có trang cửa hàng",
+            "notYetChecked": "Chưa kiểm tra",
+            "removeFilter": "Xóa bộ lọc {{filterLabel}}",
+            "runnabilityGroup": "Khả năng chạy",
+            "runsNatively": "Chạy gốc",
+            "runsViaBottle": "Chạy qua bottle",
+            "storeGroup": "Cửa Hàng",
+            "viewAll": "Tất Cả game",
+            "viewFavourites": "Ưa Thích",
+            "viewInstalled": "Đã Cài Đặt",
+            "viewRecentlyPlayed": "Chơi gần đây",
+            "wontRun": "Không thể chạy"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} trên {{total}}"
+        },
+        "no_no_store_page_games": "Không có game nào thiếu trang cửa hàng trong thư viện của bạn",
+        "noStorePage": "Không có trang cửa hàng",
+        "steamSync": {
+            "failedBody": "Các thư viện khác của bạn vẫn khả dụng. Hãy thử lại, hoặc kiểm tra xem có thể kết nối tới Steam không.",
+            "failedTitle": "Không thể đồng bộ thư viện Steam của bạn",
+            "retry": "Thử đồng bộ Steam lại",
+            "signedOutAction": "Đăng nhập vào Steam",
+            "signedOutBody": "Đăng nhập lại để đồng bộ thư viện Steam của bạn. Các thư viện khác của bạn vẫn khả dụng.",
+            "signedOutTitle": "Phiên đăng nhập Steam của bạn đã hết hạn",
+            "syncing": "Đang đồng bộ thư viện Steam của bạn…"
+        },
+        "storeOther": "Khác"
+    },
+    "login": {
+        "connected": "Đã kết nối",
+        "humble_dialog_title": "Đăng nhập vào Humble Bundle",
+        "logoutFailedTitle": "Đăng xuất chưa hoàn tất",
+        "steam_logout_failed_message": "Đăng xuất Steam không hoàn tất kịp thời. Vui lòng thử lại.",
+        "steam_logout_failed_title": "Đăng xuất thất bại",
+        "steamReconnect": "Phiên đăng nhập đã hết hạn — Kết nối lại"
+    },
+    "pathSelectionBox": {
+        "saved": "Đã lưu",
+        "unsaved": "Chưa được lưu — nhấn Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Thất bại",
+            "retry": "Thử lại"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Nhập key Steam của bạn",
+        "redeem": "Kích hoạt",
+        "redeeming": "Đang kích hoạt...",
+        "title": "Kích hoạt key Steam",
+        "viewInLibrary": "Xem trong thư viện"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "EOS Overlay không khả dụng trong bản dựng này",
+            "unavailableDetail": "Hỗ trợ EOS Overlay được hoãn lại cho bản phát hành trong tương lai (D-03, Phase 34.6) và không thể được cài đặt, cập nhật hoặc gỡ bỏ trong bản dựng này."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Cài đặt EOS Overlay ngay bây giờ?",
+        "eosOverlayInstallConfirmTitle": "Xác nhận cài đặt overlay",
+        "eosOverlayUpdateConfirmBody": "Cập nhật EOS Overlay lên phiên bản mới nhất?",
+        "eosOverlayUpdateConfirmTitle": "Xác nhận cập nhật overlay",
+        "framelessWindowDescription": "Sử dụng cửa sổ không viền",
+        "gamepadInitialRepeatDelay": "Độ trễ lặp lại ban đầu của tay cầm",
+        "gamepadRepeatFrequency": "Tần suất lặp lại đầu vào của tay cầm",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Phương pháp nâng cấp độ phân giải",
+        "gamescopeWindowType": "Loại cửa sổ",
+        "loginBackground": "Hình nền màn hình Quản lý tài khoản",
+        "loginBackgroundDialogTitle": "Chọn hình nền",
+        "loginBackgroundFilterName": "Hình ảnh",
+        "loginBackgroundHelp": "Hình ảnh hiển thị phía sau màn hình Quản lý tài khoản. Xóa trống trường này để quay lại hình ảnh mặc định. Hỗ trợ PNG, JPEG, WebP, AVIF và GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Không khả dụng trên bản dựng này"
+            },
+            "help": {
+                "unavailableDetail": "Hỗ trợ hình ảnh SteamGridDB được hoãn sang bản phát hành tương lai (D-03, Giai đoạn 34.6) và không thể cấu hình từ bản dựng này."
+            }
+        },
+        "wineDefaultLabel": "Wine mặc định",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Kích hoạt mã Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Tất cả",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Ứng dụng",
+            "executables": "Tệp thực thi",
+            "images": "Hình ảnh",
+            "otherBinaries": "Tệp nhị phân khác",
+            "scripts": "Tập lệnh"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Đang kiểm tra tùy chọn cài đặt…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib không còn nhận được phản hồi về việc thiết lập bottle Steam. Quá trình này có thể vẫn đang chạy — hãy kiểm tra cửa sổ cài đặt Steam, sau đó thử lại."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Máy chủ Steam đã ngắt kết nối.",
+                "decodeFailed": "Không thể giải nén dữ liệu trò chơi đã tải xuống. Đây không phải là sự cố mạng.",
+                "genericV2": "Tải xuống Steam đã thất bại.",
+                "notSignedIn": "Bạn chưa đăng nhập vào Steam nên không thể bắt đầu tải xuống này."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib quản lý một bottle CrossOver dùng chung cho Steam. Chưa hỗ trợ đặt tên riêng cho từng trò chơi.",
+            "contentLightNotice": "Trò chơi này được cài đặt qua client riêng của Steam nên không có gì để chọn ở đây. Hãy bật cài đặt Steam gốc trong Cài đặt để quản lý vị trí cài đặt và khả năng tương thích Windows từ GameLib.",
+            "contentLightSingleLibraryNotice": "Hệ thống này chỉ có một thư viện Steam nên không có gì để chọn ở đây — GameLib sẽ cài đặt trò chơi này vào đó.",
+            "forceWindowsHelp": "Trò chơi này có phiên bản macOS gốc, nhưng bạn có thể cài đặt phiên bản Windows thay thế thông qua bottle Wine — hữu ích nếu bản gốc thiếu tính năng hoặc chạy kém hơn.",
+            "libraryFullNotice": "Không đủ dung lượng trong thư viện Steam của bạn — chọn thư viện khác bên dưới hoặc giải phóng dung lượng.",
+            "libraryFullOnlyNotice": "Không đủ dung lượng trong thư viện Steam của bạn. Hãy giải phóng dung lượng rồi thử lại.",
+            "libraryMissingNotice": "Không thể kết nối tới thư viện Steam của bạn — chọn thư viện khác bên dưới.",
+            "libraryMissingOnlyNotice": "Không thể kết nối tới thư viện Steam của bạn. Kết nối lại ổ đĩa rồi thử lại.",
+            "libraryPickerLabel": "Chọn thư viện Steam",
+            "libraryPrimarySuffix": "mặc định",
+            "noCrossoverEngine": "Không tìm thấy bản cài đặt CrossOver nào. GameLib sẽ thiết lập một bản khi bắt đầu cài đặt.",
+            "sharedBottleNotice": "Phiên bản wine bạn chọn ở đây được dùng cho mọi trò chơi Steam cần bottle — không chỉ trò chơi này. Thay đổi sau này cũng sẽ ảnh hưởng đến cách các trò chơi đó chạy.",
+            "withOptionsLabel": "Cài đặt với tùy chọn…"
+        },
+        "resumeAvailable": {
+            "notify": "Một bản cài đặt bị gián đoạn cho {{game}} đã sẵn sàng để tiếp tục — nhấp Cài đặt để tiếp tục"
+        },
+        "status": {
+            "resumeInstall": "Tiếp tục cài đặt",
+            "resumeInstallHint": "Cài đặt chưa hoàn tất — tiếp tục tải xuống trong GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Thao tác này sẽ xóa mọi bản sao đã cài đặt của trò chơi này tại tất cả vị trí cài đặt. Không thể hoàn tác.",
+            "removeAllCopiesConfirmTitle": "Xóa tất cả bản sao?",
+            "removeAllCopiesLabel": "Xóa tất cả bản sao…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Hình ảnh SteamGridDB không khả dụng trên bản dựng này"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Tương phản cao",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "GameLib Cổ điển",
+        "sweet": "Ngọt ngào",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Đăng nhập của bạn chưa thể hoàn tất: {{channel}} chưa được chuyển sang bản dựng này. Tính năng này sẽ có ở Phase 34.5.",
+                "heading": "Đăng nhập vào {{runner}} chưa được thiết lập",
+                "headingGeneric": "Đăng nhập chưa được thiết lập"
+            },
+            "humble": {
+                "body": "Một cửa sổ đăng nhập đã mở. Hãy hoàn tất đăng nhập ở đó — trang này sẽ tự động cập nhật khi thành công.",
+                "error": {
+                    "window_unreachable": "cửa sổ đăng nhập Humble Bundle đã đóng hoặc không thể truy cập"
+                },
+                "heading": "Đang đăng nhập vào Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Một cửa sổ đăng nhập đã mở. Hãy hoàn tất đăng nhập ở đó.",
+                    "heading": "Đang đăng nhập vào {{runner}}",
+                    "headingGeneric": "Đang đăng nhập"
+                },
+                "blocked": {
+                    "body": "Đăng nhập của bạn đã được ghi nhận thành công, nhưng kênh backend {{channel}} chưa được chuyển sang bản dựng này. Tính năng này sẽ có ở Phase 34.5.",
+                    "heading": "Đăng nhập vào {{runner}} đã được ghi nhận, nhưng chưa thể hoàn tất",
+                    "headingGeneric": "Đăng nhập đã được ghi nhận, nhưng chưa thể hoàn tất"
+                },
+                "cancelled": {
+                    "body": "Cửa sổ đăng nhập đã đóng trước khi hoàn tất. Bạn có thể thử lại.",
+                    "heading": "Đăng nhập vào {{runner}} đã bị hủy",
+                    "headingGeneric": "Đăng nhập đã bị hủy"
+                },
+                "error": {
+                    "body": "Đã xảy ra lỗi khi đăng nhập: {{message}}",
+                    "heading": "Đăng nhập vào {{runner}} không thành công",
+                    "headingGeneric": "Đăng nhập không thành công"
+                },
+                "finalizing": {
+                    "body": "Đã ghi nhận đăng nhập. Đang hoàn tất trao đổi với cửa hàng — quá trình này có thể mất vài giây.",
+                    "heading": "Đang hoàn tất đăng nhập với {{runner}}…",
+                    "headingGeneric": "Đang hoàn tất đăng nhập…"
+                },
+                "genericChannel": "kênh đăng nhập",
+                "preparing": {
+                    "body": "Cửa sổ đăng nhập của cửa hàng đang được chuẩn bị và sẽ mở ra trong giây lát.",
+                    "heading": "Đang chuẩn bị đăng nhập {{runner}}…",
+                    "headingGeneric": "Đang chuẩn bị đăng nhập…"
+                },
+                "retry": "Thử lại",
+                "timeout": {
+                    "body": "Cửa sổ đăng nhập mất quá nhiều thời gian để hoàn tất. Bạn có thể thử lại.",
+                    "heading": "Đăng nhập vào {{runner}} đã hết thời gian chờ",
+                    "headingGeneric": "Đăng nhập đã hết thời gian chờ"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Duyệt cửa hàng và wiki trong ứng dụng không khả dụng trên bản dựng này"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Quản lý thành phần Winetricks không khả dụng trên bản dựng này",
+        "unavailableDetail": "Hỗ trợ Winetricks được hoãn lại cho bản phát hành trong tương lai (D-03, Phase 34.6) và không thể liệt kê hoặc cài đặt từ bản dựng này."
+    }
+}

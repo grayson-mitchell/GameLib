@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "O aplikaci"
+    },
+    "app": {
+        "routeError": "Něco se pokazilo: {{detail}}"
+    },
+    "box": {
+        "cancel": "Zrušit",
+        "error": {
+            "install": {
+                "failed": "Instalace {{title}} se nezdařila: {{error}}",
+                "signInToSteam": "Přihlásit se ke Steam",
+                "stalled": "Žádný postup stahování po dobu {{minutes}} minut — instalace byla zastavena"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "GameLib nemohl otevřít systémový výběr souborů, takže nic nebylo vybráno a žádné změny nebyly provedeny. ({{error}})",
+                "title": "Nepodařilo se otevřít výběr souborů"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Přeinstalovat přes CrossOver",
+                "message": "Tato macOS verze hry je pouze 32bitová a nelze ji spustit na této verzi macOS. GameLib ji místo toho může přeinstalovat přes CrossOver, čímž se znovu stáhne verze pro Windows.",
+                "title": "Zjištěna 32bitová macOS verze"
+            }
+        }
+    },
+    "button": {
+        "close": "Zavřít",
+        "paste": "Vložit"
+    },
+    "consoleMode": {
+        "installNext": "Další",
+        "installPrevious": "Předcházející",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Tuto instalaci nelze spustit",
+        "steamInstallLibraryFull": "Ve složce vaší knihovny Steam není dostatek volného místa. Uvolněte místo a zkuste to znovu.",
+        "steamInstallLibraryMissing": "Složka vaší knihovny Steam není nyní dostupná. Znovu připojte disk a zkuste to znovu."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Pozastaveno"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "Vyhledávání grafiky přes SteamGridDB není v této verzi k dispozici."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Nehodnoceno",
+        "etaPrefix": "Zbývá: {{eta}}",
+        "extraInfoEmptyBody": "Metacritic, OpenCritic a HowLongToBeat k této hře nic neměli.",
+        "extraInfoEmptyTitle": "Nenalezeny žádné další informace",
+        "extraInfoErrorBody": "Vyhledávání selhalo, což neznamená, že tato hra nemá žádná data. Zkuste to znovu.",
+        "extraInfoErrorTitle": "Nepodařilo se načíst další informace",
+        "extraInfoRetry": "Zkusit znovu",
+        "extraInfoStaleBody": "Tento výsledek byl uložen do mezipaměti před zaznamenáním výsledků načtení, takže může být zastaralý. Obnovte pro kontrolu.",
+        "tabsAriaLabel": "karty s informacemi o hře",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "méně než minuta"
+    },
+    "humbleKeys": {
+        "activate": "Aktivovat",
+        "activateConfirmBody": "Tímto se klíč zobrazí — natrvalo se odstraní z Giftable rezerv — a uplatní se na vašem účtu Steam. Tuto akci nelze vrátit zpět.",
+        "activateConfirmBodyRevealed": "Tímto se uplatní váš již odhalený klíč na vašem účtu Steam. Tuto akci nelze vrátit zpět.",
+        "activateConfirmTitle": "Aktivovat tento klíč na Steam?",
+        "activatedDone": "Hotovo",
+        "activateDismiss": "Zrušit",
+        "activatedTitle": "Aktivováno",
+        "activateWizardTitle": "Aktivovat tento klíč",
+        "activatingBody": "Odhalujeme váš klíč a uplatňujeme ho na Steam — chvilku to potrvá.",
+        "activatingTitle": "Aktivace na Steam…"
+    },
+    "info": {
+        "refresh-rating": "Obnovit hodnocení"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "GameLib nemohl importovat z tohoto umístění. Zdroj musí být úplná cesta ke složce bez kroků \"..\" v ní. Vyberte složku hry znovu.",
+        "pathRejectedBodyMove": "GameLib nemohl tuto hru přesunout tam. Cíl musí být úplná cesta ke složce bez kroků \"..\" v ní. Vyberte cílovou složku znovu.",
+        "pathRejectedTitle": "Toto umístění nelze použít"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "Včetně skrytých",
+            "chipHiddenOnly": "Pouze skryté",
+            "chipNonAvailableIncluded": "Včetně nedostupných",
+            "chipNonAvailableOnly": "Pouze nedostupné",
+            "chipNoStorePageHidden": "Skrývání bez stránky v obchodě",
+            "chipNoStorePageOnly": "Pouze bez stránky v obchodě",
+            "clearAll": "Vymazat vše",
+            "collections": "Sbírky",
+            "emptyAlphabetLetter": "Začínající na \"{{letter}}\"",
+            "emptyAlphabetNumber": "Začínající číslem",
+            "emptyBody": "Žádné hry neodpovídají {{filters}}.",
+            "emptyClearAll": "Vymazat všechny filtry",
+            "emptyHeading": "Žádné hry neodpovídají vašim filtrům",
+            "groupSelectedCount": "{{selected}} vybráno",
+            "manageCollections": "Správa sbírek",
+            "moreFilters": "Více filtrů",
+            "newCollection": "+ Nová sbírka",
+            "noStorePage": "Bez stránky v obchodě",
+            "notYetChecked": "Ještě nezkontrolováno",
+            "removeFilter": "Odstranit filtr {{filterLabel}}",
+            "runnabilityGroup": "Spustitelnost",
+            "runsNatively": "Běží nativně",
+            "runsViaBottle": "Běží přes bottle",
+            "storeGroup": "Obchod",
+            "viewAll": "Všechny hry",
+            "viewFavourites": "Oblíbené",
+            "viewInstalled": "Nainstalováno",
+            "viewRecentlyPlayed": "Nedávno hrané",
+            "wontRun": "Nepoběží"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} z {{total}}"
+        },
+        "no_no_store_page_games": "Ve vaší knihovně nejsou žádné hry bez stránky v obchodě",
+        "noStorePage": "Bez stránky v obchodě",
+        "steamSync": {
+            "failedBody": "Vaše ostatní knihovny jsou stále dostupné. Zkuste to znovu, nebo ověřte, že je Steam dostupný.",
+            "failedTitle": "Nepodařilo se synchronizovat vaši knihovnu Steam",
+            "retry": "Zopakovat synchronizaci Steam",
+            "signedOutAction": "Přihlásit se ke Steam",
+            "signedOutBody": "Přihlaste se znovu pro synchronizaci vaší knihovny Steam. Vaše ostatní knihovny jsou stále dostupné.",
+            "signedOutTitle": "Platnost přihlášení ke Steam vypršela",
+            "syncing": "Synchronizuje se vaše knihovna Steam…"
+        },
+        "storeOther": "Ostatní"
+    },
+    "login": {
+        "connected": "Připojeno",
+        "humble_dialog_title": "Přihlásit se k Humble Bundle",
+        "logoutFailedTitle": "Odhlášení nedokončeno",
+        "steam_logout_failed_message": "Odhlášení ze Steam se včas nedokončilo. Zkuste to prosím znovu.",
+        "steam_logout_failed_title": "Odhlášení se nezdařilo",
+        "steamReconnect": "Platnost přihlášení vypršela — Připojit znovu"
+    },
+    "pathSelectionBox": {
+        "saved": "Uloženo",
+        "unsaved": "Zatím neuloženo — stiskněte Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "Selhalo",
+            "retry": "Zkusit znovu"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Zadejte svůj klíč Steam",
+        "redeem": "Uplatnit",
+        "redeeming": "Uplatňuje se...",
+        "title": "Uplatnit klíč Steam",
+        "viewInLibrary": "Zobrazit v knihovně"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "Překryvná vrstva EOS není v této verzi dostupná",
+            "unavailableDetail": "Podpora překryvné vrstvy EOS je odložena na budoucí vydání (D-03, fáze 34.6) a v této verzi ji nelze instalovat, aktualizovat ani odebrat."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Nainstalovat nyní překryvnou vrstvu EOS?",
+        "eosOverlayInstallConfirmTitle": "Potvrdit instalaci překryvné vrstvy",
+        "eosOverlayUpdateConfirmBody": "Aktualizovat překryvnou vrstvu EOS na nejnovější verzi?",
+        "eosOverlayUpdateConfirmTitle": "Potvrdit aktualizaci překryvné vrstvy",
+        "framelessWindowDescription": "Použít okno bez rámečku",
+        "gamepadInitialRepeatDelay": "Počáteční prodleva opakování vstupu gamepadu",
+        "gamepadRepeatFrequency": "Frekvence opakování vstupu gamepadu",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Metoda upscalování",
+        "gamescopeWindowType": "Typ okna",
+        "loginBackground": "Pozadí Správy účtů",
+        "loginBackgroundDialogTitle": "Vyberte obrázek pozadí",
+        "loginBackgroundFilterName": "Obrázky",
+        "loginBackgroundHelp": "Obrázek zobrazený za obrazovkou Správa účtů. Vymazáním pole se vrátíte k výchozí grafice. Podporovány jsou formáty PNG, JPEG, WebP, AVIF a GIF.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Nedostupné v této verzi"
+            },
+            "help": {
+                "unavailableDetail": "Podpora grafiky SteamGridDB je odložena na budoucí verzi (D-03, fáze 34.6) a v této verzi nelze nastavit."
+            }
+        },
+        "wineDefaultLabel": "Výchozí Wine",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Uplatnit klíč Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "Vše",
+            "appExtension": "App",
+            "appImageExtension": "AppImage",
+            "appImages": "Soubory AppImage",
+            "apps": "Aplikace",
+            "executables": "Spustitelné soubory",
+            "images": "Obrázky",
+            "otherBinaries": "Ostatní binární soubory",
+            "scripts": "Skripty"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Kontrola možností instalace…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib přestal dostávat odpovědi ohledně nastavení bottle pro Steam. Proces možná stále běží — zkontrolujte, zda se nezobrazilo okno instalátoru Steamu, a zkuste to znovu."
+        },
+        "download": {
+            "error": {
+                "decodeFailed": "Stažená data hry se nepodařilo rozbalit. Nejde o problém se sítí.",
+                "connectionDroppedV2": "Servery Steam přerušily spojení.",
+                "genericV2": "Stahování ze Steam se nezdařilo.",
+                "notSignedIn": "Nejste přihlášeni ke Steam, takže toto stahování nelze spustit."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib spravuje jeden sdílený bottle CrossOver pro Steam. Pojmenování samostatného bottle pro každou hru zatím není podporováno.",
+            "contentLightNotice": "Toto se instaluje přímo přes klienta Steam, takže tady není co vybírat. Zapněte nativní instalace Steamu v Nastavení, chcete-li spravovat umístění instalace a kompatibilitu s Windows z GameLib.",
+            "forceWindowsHelp": "Tato hra má nativní verzi pro macOS, ale místo ní můžete nainstalovat verzi pro Windows přes bottle Wine — užitečné, pokud nativní verzi chybí funkce nebo má horší výkon.",
+            "libraryPrimarySuffix": "výchozí",
+            "noCrossoverEngine": "Nebyla nalezena žádná instalace CrossOver. GameLib ji nastaví při spuštění instalace.",
+            "sharedBottleNotice": "Verze Wine, kterou zde vyberete, se používá pro každou hru Steam, která potřebuje bottle — nejen pro tuto. Její pozdější změna ovlivní i chod těchto her.",
+            "withOptionsLabel": "Instalovat s možnostmi…",
+            "contentLightSingleLibraryNotice": "V tomto systému je pouze jedna knihovna Steam, takže tu není z čeho vybírat — GameLib do ní tuto hru nainstaluje.",
+            "libraryFullNotice": "Ve vaší knihovně Steam není dostatek místa — vyberte jinou níže nebo uvolněte místo.",
+            "libraryFullOnlyNotice": "Ve vaší knihovně Steam není dostatek místa. Uvolněte místo a zkuste to znovu.",
+            "libraryMissingNotice": "Vaši knihovnu Steam se nepodařilo najít — vyberte jinou níže.",
+            "libraryMissingOnlyNotice": "Vaši knihovnu Steam se nepodařilo najít. Znovu připojte disk a zkuste to znovu.",
+            "libraryPickerLabel": "Vyberte knihovnu Steam"
+        },
+        "resumeAvailable": {
+            "notify": "Přerušená instalace hry {{game}} je připravena k pokračování — klikněte na Instalovat pro pokračování"
+        },
+        "status": {
+            "resumeInstall": "Pokračovat v instalaci",
+            "resumeInstallHint": "Instalace není dokončena — pokračujte ve stahování v GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Tímto se odstraní každá nainstalovaná kopie této hry ve všech umístěních instalace. Tuto akci nelze vrátit zpět.",
+            "removeAllCopiesConfirmTitle": "Odstranit všechny kopie?",
+            "removeAllCopiesLabel": "Odstranit všechny kopie…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Grafika SteamGridDB je v této verzi nedostupná"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Cyberspace Oasis",
+        "cyberSpaceOasisAlt": "Cyberspace Oasis Classic",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Dark",
+        "highContrast": "Vysoký kontrast",
+        "marine": "Marine",
+        "marineClassic": "Marine Classic",
+        "midnightMirage": "Midnight Mirage",
+        "nordDark": "Nord Dark",
+        "nordLight": "Nord Light",
+        "oldSchool": "Old School GameLib",
+        "sweet": "Sweet",
+        "zombie": "Zombie",
+        "zombieClassic": "Zombie Classic"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "Vaše přihlášení zatím nelze dokončit: {{channel}} není v této verzi implementován. Tato funkce přibude ve fázi 34.5.",
+                "heading": "Přihlášení k {{runner}} zatím není zapojeno",
+                "headingGeneric": "Přihlášení zatím není zapojeno"
+            },
+            "humble": {
+                "body": "Otevřelo se přihlašovací okno. Dokončete přihlášení v něm — tato stránka se automaticky aktualizuje po úspěšném přihlášení.",
+                "error": {
+                    "window_unreachable": "přihlašovací okno Humble Bundle se zavřelo nebo je nedostupné"
+                },
+                "heading": "Přihlašování k Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Otevřelo se přihlašovací okno. Dokončete přihlášení v něm.",
+                    "heading": "Přihlašování k {{runner}}",
+                    "headingGeneric": "Přihlašování"
+                },
+                "blocked": {
+                    "body": "Vaše přihlášení bylo úspěšně zachyceno, ale backendový kanál {{channel}} zatím není v této verzi implementován. Tato funkce přibude ve fázi 34.5.",
+                    "heading": "Přihlášení k {{runner}} bylo zachyceno, ale zatím ho nelze dokončit",
+                    "headingGeneric": "Přihlášení bylo zachyceno, ale zatím ho nelze dokončit"
+                },
+                "cancelled": {
+                    "body": "Přihlašovací okno bylo zavřeno před dokončením. Můžete to zkusit znovu.",
+                    "heading": "Přihlášení k {{runner}} bylo zrušeno",
+                    "headingGeneric": "Přihlášení bylo zrušeno"
+                },
+                "error": {
+                    "body": "Při přihlašování došlo k chybě: {{message}}",
+                    "heading": "Přihlášení k {{runner}} se nezdařilo",
+                    "headingGeneric": "Přihlášení se nezdařilo"
+                },
+                "finalizing": {
+                    "body": "Přihlášení zachyceno. Dokončuje se výměna dat s obchodem — může to chvíli trvat.",
+                    "heading": "Dokončuje se přihlášení k {{runner}}…",
+                    "headingGeneric": "Dokončuje se přihlášení…"
+                },
+                "genericChannel": "přihlašovací kanál",
+                "preparing": {
+                    "body": "Přihlašovací okno obchodu se připravuje a brzy se otevře.",
+                    "heading": "Připravuje se přihlášení k {{runner}}…",
+                    "headingGeneric": "Připravuje se přihlášení…"
+                },
+                "retry": "Zkusit znovu",
+                "timeout": {
+                    "body": "Přihlašovací okno trvalo příliš dlouho. Zkuste to prosím znovu.",
+                    "heading": "Vypršel časový limit přihlášení k {{runner}}",
+                    "headingGeneric": "Vypršel časový limit přihlášení"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "Procházení obchodu a wiki v aplikaci není v tomto sestavení k dispozici"
+        }
+    },
+    "winetricks": {
+        "unavailable": "Správa komponent Winetricks není v tomto sestavení k dispozici",
+        "unavailableDetail": "Podpora Winetricks je odložena na budoucí vydání (D-03, fáze 34.6) a v tomto sestavení ji nelze zobrazit ani nainstalovat."
+    }
+}

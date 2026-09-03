@@ -1,0 +1,337 @@
+{
+    "about": {
+        "navLabel": "Diwar-об"
+    },
+    "app": {
+        "routeError": "Bez a zo bet fazi: {{detail}}"
+    },
+    "box": {
+        "cancel": "Nullañ",
+        "error": {
+            "install": {
+                "failed": "C'hwitet ez eus staliadur {{title}}: {{error}}",
+                "signInToSteam": "Kevreañ ouzh Steam",
+                "stalled": "Kirri ebet e-pad {{minutes}} munutenn — paouezet eo bet ar staliañ"
+            }
+        },
+        "filePicker": {
+            "error": {
+                "message": "N'eo ket bet gouest GameLib da zigeriñ diuzer restroù ar reizhiad, neuze n'eus bet diuzet netra ha n'eus bet graet kemmadenn ebet. ({{error}})",
+                "title": "N'haller ket digeriñ an diuzer restroù"
+            }
+        },
+        "steam": {
+            "mac32Detected": {
+                "confirm": "Adstaliañ dre CrossOver",
+                "message": "Savenn macOS ar c'hoari-mañ a zo 32-bit hepken ha ne c'hell ket bezañ implijet war ar stumm-mañ eus macOS. GameLib a c'hell adstaliañ anezhañ dre CrossOver e lec'h se, hag a adpellgargo stumm Windows.",
+                "title": "Savenn macOS 32-bit dinoet"
+            }
+        }
+    },
+    "button": {
+        "close": "Serriñ",
+        "paste": "Pegañ"
+    },
+    "consoleMode": {
+        "installNext": "Da heul",
+        "installPrevious": "A-raok",
+        "sortAscending": "A → Z",
+        "sortDescending": "Z → A",
+        "steamInstallBlockedTitle": "Ne c'haller ket loc'hañ ar staliañ-mañ",
+        "steamInstallLibraryFull": "N'eus ket plas dieub a-walc'h e teuliad levraoueg Steam ganeoc'h. Dieubit plas hag adklaskit.",
+        "steamInstallLibraryMissing": "N'eo ket hegerz teuliad levraoueg Steam ganeoc'h bremañ. Adkevreit ar bladenn hag adklaskit."
+    },
+    "discounts": {
+        "pegiPrefix": "PEGI ≤ {{value}}"
+    },
+    "downloadManager": {
+        "progressPaused": "Ehanet"
+    },
+    "edit-game": {
+        "sgdb": {
+            "unavailable": "N'eo ket hegerz an enklask arzoù SteamGridDB war ar savadur-mañ."
+        }
+    },
+    "gamepage": {
+        "appleRatingUnrated": "Anjujet",
+        "etaPrefix": "Amzer c'hortoz: {{eta}}",
+        "extraInfoEmptyBody": "N'o doa Metacritic, OpenCritic ha HowLongToBeat netra evit an titl-mañ.",
+        "extraInfoEmptyTitle": "Titour ouzhpenn ebet kavet",
+        "extraInfoErrorBody": "C'hwitet eo bet an enklask, ha n'eo ket ar memes tra ha n'en deus ket ar c'hoari-mañ roadennoù. Adklaskit.",
+        "extraInfoErrorTitle": "N'eo ket bet gouest da gargañ an titour ouzhpenn",
+        "extraInfoRetry": "Adklask",
+        "extraInfoStaleBody": "Er c'hrubuilh eo bet ar disoc'h-mañ a-raok ma voe enrollet an disoc'hoù kargañ, dre-se marteze n'eo ket dedennus mui. Freskaat evit gwiriañ.",
+        "tabsAriaLabel": "ivinelloù titouroù ar c'hoari",
+        "wineLabel": "Wine:"
+    },
+    "humble": {
+        "lessThanAMinute": "nebeutoc'h eget ur vunutenn"
+    },
+    "humbleKeys": {
+        "activate": "Gweredekaat",
+        "activateConfirmBody": "Kement-mañ a ziskouez an alc'hwez — o lemel anezhañ diouzh ar re Giftable evit mat — hag e zaskor war ho kont Steam. N'eus tro-dre-ginañ ebet.",
+        "activateConfirmBodyRevealed": "Kement-mañ a zaskor ho alc'hwez diskouezet endeo war ho kont Steam. N'eus tro-dre-ginañ ebet.",
+        "activateConfirmTitle": "Gweredekaat an alc'hwez-mañ war Steam?",
+        "activatedDone": "Graet",
+        "activateDismiss": "Nullañ",
+        "activatedTitle": "Aktivet",
+        "activateWizardTitle": "Aktivañ an alc'hwez-mañ",
+        "activatingBody": "O tiskuliañ hoc'h alc'hwez hag oc'h adprenañ anezhañ war Steam — un tammig amzer nemetken a bad an dra-se.",
+        "activatingTitle": "Oc'h aktivañ war Steam…"
+    },
+    "info": {
+        "refresh-rating": "Freskaat ar priziadur"
+    },
+    "installFlows": {
+        "pathRejectedBodyImport": "N'eus ket gallet GameLib enporzhiañ eus al lec'h-se. Ret eo d'ar mammenn bezañ un treug renkell klok hep pazenn \"..\" ennañ. Dibabit adarre renkell ar c'hoari.",
+        "pathRejectedBodyMove": "N'eus ket gallet GameLib dilec'hiañ ar c'hoari-mañ eno. Ret eo d'ar bal bezañ un treug renkell klok hep pazenn \"..\" ennañ. Dibabit adarre ar renkell bal.",
+        "pathRejectedTitle": "N'haller ket implijout al lec'h-se"
+    },
+    "library": {
+        "filterPanel": {
+            "chipHiddenIncluded": "O kemer ar re guzh",
+            "chipHiddenOnly": "Ar re guzh hepken",
+            "chipNonAvailableIncluded": "O kemer ar re n'int ket hegerz",
+            "chipNonAvailableOnly": "Ar re n'int ket hegerz hepken",
+            "chipNoStorePageHidden": "O kuzhat ar re hep pajenn stal",
+            "chipNoStorePageOnly": "Ar re hep pajenn stal hepken",
+            "clearAll": "Skarzhañ pep tra",
+            "collections": "Dastumadoù",
+            "emptyAlphabetLetter": "O kregiñ gant \"{{letter}}\"",
+            "emptyAlphabetNumber": "O kregiñ gant un niver",
+            "emptyBody": "Ken ur c'hoari ne glot gant {{filters}}.",
+            "emptyClearAll": "Skarzhañ an holl siloù",
+            "emptyHeading": "Ken ur c'hoari ne glot gant ho siloù",
+            "groupSelectedCount": "{{selected}} dibabet",
+            "manageCollections": "Merañ an dastumadoù",
+            "moreFilters": "Muioc'h a siloù",
+            "newCollection": "+ Dastumad nevez",
+            "noStorePage": "Pajenn stal ebet",
+            "notYetChecked": "N'eo ket bet gwiriet c'hoazh",
+            "removeFilter": "Lemel ar sil {{filterLabel}}",
+            "runnabilityGroup": "Gallout lañsañ",
+            "runsNatively": "O redek ent naturel",
+            "runsViaBottle": "O redek dre boutailh",
+            "storeGroup": "Stal",
+            "viewAll": "An holl c'hoarioù",
+            "viewFavourites": "Muiañ-karet",
+            "viewInstalled": "Staliet",
+            "viewRecentlyPlayed": "C'hoariet nevez zo",
+            "wontRun": "Ne lañso ket"
+        },
+        "header": {
+            "filteredOfTotal": "{{shown}} eus {{total}}"
+        },
+        "no_no_store_page_games": "C'hoari ebet hep pajenn stal en ho levraoueg",
+        "noStorePage": "Pajenn stal ebet",
+        "steamSync": {
+            "failedBody": "Ho lyrjadoù all a chom da c'hout. Klaskit en-dro, pe gwiriit e c'haller tizhout Steam.",
+            "failedTitle": "N'haller ket goubredañ ho lyrjad Steam",
+            "retry": "Klask goubredañ Steam en-dro",
+            "signedOutAction": "Kevreañ da Steam",
+            "signedOutBody": "Kevreit en-dro evit goubredañ ho lyrjad Steam. Ho lyrjadoù all a chom da c'hout.",
+            "signedOutTitle": "Aet eo da get ho kevreadur Steam",
+            "syncing": "Goubredañ ho lyrjad Steam..."
+        },
+        "storeOther": "All"
+    },
+    "login": {
+        "connected": "Kevreet",
+        "humble_dialog_title": "Kevreañ da Humble Bundle",
+        "logoutFailedTitle": "Digevreañ diglok",
+        "steam_logout_failed_message": "N'eo ket echu bet digevreañ Steam a-walc'h buan. Klaskit en-dro mar plij.",
+        "steam_logout_failed_title": "C'hwitet ar digevreañ",
+        "steamReconnect": "Aet da get ar c'hevreañ — Adkevreañ"
+    },
+    "pathSelectionBox": {
+        "saved": "Enrollet",
+        "unsaved": "N'eo ket enrollet c'hoazh — pouezit war Enter"
+    },
+    "queue": {
+        "label": {
+            "failed": "C'hwitet",
+            "retry": "Klask en-dro"
+        }
+    },
+    "redeemSteamKey": {
+        "placeholder": "Skrivit hoc'h alc'hwez Steam",
+        "redeem": "Dispakañ",
+        "redeeming": "O tispakañ...",
+        "title": "Dispakañ un alc'hwez Steam",
+        "viewInLibrary": "Gwelet el lyrjad"
+    },
+    "setting": {
+        "eosOverlay": {
+            "unavailable": "N'eo ket hegerz an EOS Overlay er stumm-mañ",
+            "unavailableDetail": "Ezvezet eo bet skor an EOS Overlay betek ur stumm da zont (D-03, Phase 34.6) ha ne c'haller ket he staliañ, hizivaat pe zilemel eus ar stumm-mañ."
+        }
+    },
+    "settings": {
+        "eosOverlayInstallConfirmBody": "Staliañ an EOS Overlay bremañ?",
+        "eosOverlayInstallConfirmTitle": "Kadarnaat staliadur an overlay",
+        "eosOverlayUpdateConfirmBody": "Hizivaat an EOS Overlay d'ar stumm diwezhañ?",
+        "eosOverlayUpdateConfirmTitle": "Kadarnaat hizivadenn an overlay",
+        "framelessWindowDescription": "Implijout ur prenestr hep framm",
+        "gamepadInitialRepeatDelay": "Dale kentañ adkemer evit al lezenn dorn",
+        "gamepadRepeatFrequency": "Ampled adkemer evit al lezenn dorn",
+        "gamescopeFsr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+        "gamescopeUpscaleMethod": "Hentenn uc'hveviñ",
+        "gamescopeWindowType": "Rizh prenestr",
+        "loginBackground": "Drekleur Merañ ar Kontoù",
+        "loginBackgroundDialogTitle": "Dibabit ur skeudenn drekleur",
+        "loginBackgroundFilterName": "Skeudennoù",
+        "loginBackgroundHelp": "Skeudenn diskouezet a-dreñv skramm Merañ ar Kontoù. Goullonderit ar vaezienn evit distreiñ d'ar skeudennaj orin. PNG, JPEG, WebP, AVIF ha GIF a c'haller implijout.",
+        "steamgriddb": {
+            "apikey": {
+                "unavailable": "Dihegerus war ar sevel-mañ"
+            },
+            "help": {
+                "unavailableDetail": "Skor arz SteamGridDB a zo dilezet betek ur mouezhiadenn da zont (D-03, Fazenn 34.6) ha ne c'hell ket bezañ kefluniet diwar ar sevel-mañ."
+            }
+        },
+        "wineDefaultLabel": "Wine Dre Ziouer",
+        "wineFlatpakPath": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+    },
+    "sidebar": {
+        "redeemSteamKey": "Aotren ur alc'hwez Steam"
+    },
+    "sideload": {
+        "filter": {
+            "all": "An holl",
+            "appExtension": "Arload",
+            "appImageExtension": "AppImage",
+            "appImages": "AppImages",
+            "apps": "Arloadoù",
+            "executables": "Restroù erounit",
+            "images": "Skeudennoù",
+            "otherBinaries": "Restroù daouredel all",
+            "scripts": "Skriptoù"
+        }
+    },
+    "status": {
+        "checkingSteamInstallOptions": "Emañ ar gwiriañ dibarzhioù staliañ…"
+    },
+    "steam": {
+        "bottle": {
+            "statusPollTimeout": "GameLib a zo paouezet klask keleier diwar-benn kefluniañ ar voutailh Steam. Marteze emañ c'hoazh war vont — sellit hag-eñ ez eus ur prenestr staliañ Steam, ha klaskit adarre goude."
+        },
+        "download": {
+            "error": {
+                "connectionDroppedV2": "Servijerien Steam o deus torret ar gevreadur.",
+                "decodeFailed": "N'haller ket dibakañ roadennoù ar c'hoarigell pellgarget. N'eo ket ur gudenn rouedad.",
+                "genericV2": "C'hwitet eo pellgargañ Steam.",
+                "notSignedIn": "N'oc'h ket kevreet ouzh Steam, ne oa ket tro da loc'hañ ar pellgargañ-mañ."
+            }
+        },
+        "install": {
+            "bottleNameReadonlyHelper": "GameLib a ren ur voutailh CrossOver rannet evit Steam. N'eo ket skoret c'hoazh ober ur voutailh dishañvel evit pep c'hoarigell.",
+            "contentLightNotice": "Staliet e vez dre arval Steam e-unan, evel-se n'eus netra da zibab amañ. Enaouit staliadurioù Steam orin er Arventennoù evit ren lec'h ar staliañ hag heñvelder Windows diwar GameLib.",
+            "contentLightSingleLibraryNotice": "N'eus nemet ul levraoueg Steam war ar reizhiad-mañ, evel-se n'eus netra da zibab amañ — GameLib a staliañ ar c'hoarigell-mañ enni.",
+            "forceWindowsHelp": "Ur stumm macOS orin zo evit ar c'hoarigell-mañ, met gallout a rit staliañ ar stumm Windows kentoc'h dre ur voutailh Wine — talvoudus mard eo diweuz an arc'hweladurioù pe siwazh en emzalc'h er stumm orin.",
+            "libraryFullNotice": "N'eus ket a-walc'h a lec'h en ho levraoueg Steam — dibabit unan all a-is pe grouit lec'h.",
+            "libraryFullOnlyNotice": "N'eus ket a-walc'h a lec'h en ho levraoueg Steam. Grouit lec'h, ha klaskit adarre goude.",
+            "libraryMissingNotice": "N'haller ket tizhout ho levraoueg Steam — dibabit unan all a-is.",
+            "libraryMissingOnlyNotice": "N'haller ket tizhout ho levraoueg Steam. Adkevreit ar bladenn, ha klaskit adarre goude.",
+            "libraryPickerLabel": "Dibab levraoueg Steam",
+            "libraryPrimarySuffix": "dre ziouer",
+            "noCrossoverEngine": "Kavet ne oa staliadur CrossOver ebet. GameLib a sav unan pa loc'ho ar staliañ.",
+            "sharedBottleNotice": "Ar stumm wine dibabet amañ a vez implijet evit pep c'hoarigell Steam hag a c'houlenn ur voutailh — ket hepken evit hemañ. Cheñch anezhañ diwezhatoc'h a cheñcho ivez penaos e red ar c'hoarigelloù-se.",
+            "withOptionsLabel": "Staliañ gant dibarzhioù…"
+        },
+        "resumeAvailable": {
+            "notify": "Ur staliañ dispennet evit {{game}} a zo prest da vont en-dro — klikit war Staliañ evit kenderc'hel"
+        },
+        "status": {
+            "resumeInstall": "Kenderc'hel Staliañ",
+            "resumeInstallHint": "Staliadur diglok — kenderc'hel ar pellgargañ e GameLib"
+        },
+        "uninstall": {
+            "removeAllCopiesConfirmMessage": "Kement-mañ a zilamo pep eilskrid staliet eus ar c'hoarigell-mañ e pep lec'h staliañ. Ne c'hell ket bezañ dizoueret.",
+            "removeAllCopiesConfirmTitle": "Dilemel an holl eilskridoù?",
+            "removeAllCopiesLabel": "Dilemel an holl eilskridoù…"
+        }
+    },
+    "steamgriddb": {
+        "error": {
+            "unavailable": "Dihegerus eo arz SteamGridDB war ar sevel-mañ"
+        }
+    },
+    "themeSelector": {
+        "cyberSpaceOasis": "Oaz Sistr-Egor",
+        "cyberSpaceOasisAlt": "Oaz Sistr-Egor Klasel",
+        "dracula": "Dracula",
+        "gruvboxDark": "Gruvbox Teñval",
+        "highContrast": "Kehidad Uhel",
+        "marine": "Morel",
+        "marineClassic": "Morel Klasel",
+        "midnightMirage": "Skeud-arvor Hanternoz",
+        "nordDark": "Norzh Teñval",
+        "nordLight": "Norzh Sklaer",
+        "oldSchool": "GameLib Skol Gozh",
+        "sweet": "Dous",
+        "zombie": "Zombi",
+        "zombieClassic": "Zombi Klasel"
+    },
+    "webview": {
+        "login": {
+            "blocked": {
+                "body": "N'haller ket peurechuiñ ho kevreañ c'hoazh: n'eo ket {{channel}} treuzdouget d'ar sevenadur-mañ. Dont a raio gant Fazenn 34.5.",
+                "heading": "N'eo ket kevreet an dro d'en em lugañ ouzh {{runner}} c'hoazh",
+                "headingGeneric": "N'eo ket kevreet an dro d'en em lugañ c'hoazh"
+            },
+            "humble": {
+                "body": "Digoret eo bet ur prenestr kevreañ. Peurechuit ho kevreañ eno — hizivaet e vo ar bajenn-mañ ent emgefre pa vo aet en-dro.",
+                "error": {
+                    "window_unreachable": "serret eo bet prenestr kevreañ Humble pe n'haller ket tizhout anezhañ"
+                },
+                "heading": "O kevreañ ouzh Humble Bundle"
+            },
+            "oauth": {
+                "awaiting": {
+                    "body": "Digoret eo bet ur prenestr kevreañ. Peurechuit ho kevreañ eno.",
+                    "heading": "O kevreañ ouzh {{runner}}",
+                    "headingGeneric": "O kevreañ"
+                },
+                "blocked": {
+                    "body": "Kroget eo bet mat ho kevreañ, met n'eo ket treuzdouget c'hoazh kanol diadreñv {{channel}} d'ar sevenadur-mañ. Dont a raio gant Fazenn 34.5.",
+                    "heading": "Kroget eo bet ho kevreañ ouzh {{runner}}, met n'haller ket e beurechuiñ c'hoazh",
+                    "headingGeneric": "Kroget eo bet ar c'hevreañ, met n'haller ket e beurechuiñ c'hoazh"
+                },
+                "cancelled": {
+                    "body": "Serret eo bet ar prenestr kevreañ a-raok echuiñ. Gallout a rit klask en-dro.",
+                    "heading": "Nullet eo bet ar c'hevreañ ouzh {{runner}}",
+                    "headingGeneric": "Nullet eo bet ar c'hevreañ"
+                },
+                "error": {
+                    "body": "Bet ez eus bet ur gudenn en ur gevreañ: {{message}}",
+                    "heading": "C'hwitet eo ar c'hevreañ ouzh {{runner}}",
+                    "headingGeneric": "C'hwitet eo ar c'hevreañ"
+                },
+                "finalizing": {
+                    "body": "Kevreañ kroget. O peurechuiñ an eskemm gant ar stal — gallout a ra kemer un nebeud eilennadoù.",
+                    "heading": "O peurechuiñ ar c'hevreañ gant {{runner}}…",
+                    "headingGeneric": "O peurechuiñ ar c'hevreañ…"
+                },
+                "genericChannel": "kanol ar c'hevreañ",
+                "preparing": {
+                    "body": "O tont da vezañ prientet eo prenestr kevreañ ar stal ha digoret e vo a-benn nebeut.",
+                    "heading": "O prientiñ kevreañ {{runner}}…",
+                    "headingGeneric": "O prientiñ ar c'hevreañ…"
+                },
+                "retry": "Klask en-dro",
+                "timeout": {
+                    "body": "Prenestañ an ereañ en deus kemeret re a amzer. Gallout a rit klask en-dro.",
+                    "heading": "Amzer-hont evit ereañ ouzh {{runner}}",
+                    "headingGeneric": "Amzer-hont evit ereañ"
+                }
+            }
+        },
+        "unavailable": {
+            "heading": "N'eo ket hegerz merdeiñ er stal hag ar wiki diabarzh war ar savadur-mañ"
+        }
+    },
+    "winetricks": {
+        "unavailable": "N'eo ket hegerz merañ parzhioù Winetricks war ar savadur-mañ",
+        "unavailableDetail": "Dilezet eo skor Winetricks evit un embannadur da zont (D-03, Fazenn 34.6) ha ne c'hall ket bezañ rollet pe staliet diwar ar savadur-mañ."
+    }
+}
