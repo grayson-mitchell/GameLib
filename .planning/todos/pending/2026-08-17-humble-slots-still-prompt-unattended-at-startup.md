@@ -4,7 +4,7 @@ title: "Humble's two keyring slots still read unattended at bootstrap — 260817
 area: auth
 severity: minor
 needs: design-then-code-fix
-status: OPEN
+status: "PARKED 2026-09-04 — superseded by the cross-store signed-out/offline mode design (ROADMAP Phase 999.1), which needs boot-time auth state and therefore conflicts with deferring the read. The dev-mode prompt symptom that motivated this todo is addressed by GAMELIB_DEV_SECRET_VAULT=1; shipped-build prompt count is governed by Apple code signing, not read timing. See the PARKED section below for the unpark condition."
 found_by: "Quick task 260817-d61 live gate (measured on hardware, two independent launches)"
 source: ".planning/quick/260817-d61-defer-the-steam-keyring-read-from-startu/260817-d61-LIVE-GATE.md"
 files:
@@ -13,6 +13,38 @@ files:
   - src/backend/sidecar/humbleSecretStore.ts
   - src/backend/storeManagers/steam/authTrigger.ts
 ---
+
+## PARKED 2026-09-04 — superseded by a design decision
+
+Deferring the Humble keyring read **conflicts with** a planned cross-store signed-out/offline
+mode (ROADMAP Phase 999.1), which needs boot-time auth state in order to render its warning
+banner at all. You cannot both refuse to read the credential at boot and accurately tell the user
+at boot that their session has expired.
+
+Three findings, measured 2026-09-04:
+
+1. **The dev symptom this todo was filed against is not what it fixes.** The ~6 Keychain prompts
+   on a `tauri dev` rebuild are a prompt *quantity* problem; deferral changes prompt *timing*
+   only. `GAMELIB_DEV_SECRET_VAULT=1` (`src/backend/sidecar/devSecretVault.ts`, verified present
+   2026-09-04) skips all three slots in dev and removes them outright.
+2. **Shipped-build prompt count is governed by code signing, not read timing.**
+   `.github/workflows/release-tauri.yml` signs + notarizes only when `APPLE_CERTIFICATE`,
+   `APPLE_CERTIFICATE_PASSWORD` and `APPLE_SIGNING_IDENTITY` are all enrolled; otherwise it emits
+   `::warning::...shipping unsigned` and ships anyway. An unsigned build gets a fresh code
+   identity per release, so the Keychain ACL never matches and macOS re-prompts on every update.
+   **Open action, not yet done: confirm those secrets are enrolled.** That is the real lever on
+   prompt quantity for real users, and it is independent of everything else in this file.
+3. **The boot signal is already partly free.** `HumbleUser.isLoggedIn()` reads a plain
+   `configStore` flag with no keyring access, so "Humble is not connected" costs nothing at boot.
+   Only "session expired" needs `checkHealthAndFlagExpiry()` (`user.ts:757`), which is precisely
+   what reads both slots (`user.ts:757` → `humble-session`, `user.ts:803` → `humble-csrf`).
+
+**What remains true.** The measured evidence in this file is not withdrawn: two independent
+launches did record ~12.5 s of unattended Keychain prompt latency across the two Humble slots.
+Only the proposed *remedy* is parked, not the observation.
+
+**Unpark condition:** if Phase 999.1 is dropped, or lands in a shape that does not need boot-time
+auth state, this todo's original UX argument stands again unchanged.
 
 ## Problem
 

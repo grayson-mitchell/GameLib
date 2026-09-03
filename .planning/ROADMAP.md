@@ -4878,3 +4878,50 @@ Plans:
 - [ ] 22-08-PLAN.md — "Steam Families" Settings section: create/rename/set-wine/guarded delete
 
 **If ever unparked:** the parts of Phase 22 that could still have value are the ones *not* about bottle multiplicity — chiefly any per-game launch-configuration UI and the Steam game-families data model itself. Re-derive those against the bridge architecture rather than executing the plans as written. Bridge scope limits that might reopen adjacent work are tracked in Phase 24's own artifacts (`24-UAT.md`, `24-SECURITY.md`) and the `spike-findings-gamelib` skill — notably that the bridge currently proxies only ISteamUser + ISteamFriends, so games needing more interfaces (Utils/Apps/UserStats/RemoteStorage/Matchmaking/Networking) are out of scope until those proxies are built.
+
+## Backlog
+
+### Phase 999.1: Cross-store signed-out / offline mode (BACKLOG)
+
+**Goal:** [Captured for future planning]
+**Requirements:** TBD
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd:review-backlog when ready)
+
+**Captured:** 2026-09-04, from the reconsideration that parked
+`.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md` and
+`.planning/todos/pending/2026-08-17-keyring-available-is-a-silent-prompt-channel.md`.
+
+**Idea:** Warn the user which stores they are not signed in to (Epic, GOG, Amazon, Humble,
+Steam) while cached libraries still render and installed games remain launchable. The Steam
+client is the reference UX: it tells you plainly that you are offline, and then gets out of the
+way so you can still play what is already on disk. GameLib today has no equivalent — a signed-out
+or expired store is communicated per-store, if at all, and there is no single surface that answers
+"what can I actually do right now?".
+
+**Why this parks the two keyring todos.** Those todos proposed deferring credential reads off the
+bootstrap path so a macOS Keychain prompt would arrive attached to a deliberate user action. That
+is in direct tension with this phase: an accurate boot-time warning banner needs boot-time auth
+state. You cannot both refuse to read the credential at boot and truthfully tell the user at boot
+that their session has expired. If this phase is built, doing auth at bootstrap and surfacing one
+consolidated result is the coherent design.
+
+**One measured asymmetry worth carrying into planning.** Not all of the boot-time signal costs a
+keyring read. `HumbleUser.isLoggedIn()` (`src/backend/humble/user.ts`) reads a plain `configStore`
+flag with no keyring access, so "Humble is not connected" is free at boot. Only "session expired"
+needs `checkHealthAndFlagExpiry()` (`user.ts:757`), which is what reads `humble-session` and then
+`humble-csrf`. A two-tier banner — free "not connected" state at boot, credential-backed "expired"
+state on first use — may get most of the value at a fraction of the prompt cost. Worth measuring
+the equivalent split for Epic/GOG/Amazon/Steam before locking the design.
+
+**Scope signals:** cross-store (five runners), user-facing UI, and new strings requiring
+localisation across the repo's non-English locales. This is a phase, not a quick task.
+
+**Adjacent, deliberately NOT folded in:** confirming that `APPLE_CERTIFICATE`,
+`APPLE_CERTIFICATE_PASSWORD` and `APPLE_SIGNING_IDENTITY` are enrolled as repo secrets — without
+them `.github/workflows/release-tauri.yml` ships unsigned, giving each release a fresh code
+identity so the macOS Keychain ACL never matches and users get re-prompted on every update. That
+is the actual lever on prompt *quantity*, it is independent of this phase, and it should not wait
+on it.
