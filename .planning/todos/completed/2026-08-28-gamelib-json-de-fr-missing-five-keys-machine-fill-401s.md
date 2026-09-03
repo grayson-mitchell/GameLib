@@ -1,9 +1,11 @@
 ---
 created: 2026-08-28T00:10:00.000Z
-title: "de/fr gamelib.json are missing 80 translatable keys each, machine-fill 401s, and the lint gate is structurally blind to an absent key"
+title: "CLOSED 2026-09-03 -- de and fr are both at full fork-string coverage; the 401 was real, but two glossary-validator defects were the larger blocker"
+title_history: "de/fr gamelib.json are missing 80 translatable keys each, machine-fill 401s, and the lint gate is structurally blind to an absent key"
 area: i18n
 severity: low
-status: pending
+status: CLOSED
+closed: 2026-09-03
 resolves_phase: ""
 found_by: "Quick task 260827-vpl verification (gsd-verifier), while closing Phase 34.11's residual ledger"
 files:
@@ -110,3 +112,61 @@ filename.
 46 locales have no gamelib.json at all, machine-fill 401s, and the lint gate is structurally
 blind to all of it") is itself now superseded — see `## Split out 2026-09-02` above. This
 todo reverts to owning `de`/`fr` only; the 46-locale gap has its own record.
+
+## CLOSURE RECORD -- 2026-09-03
+
+**Measured at closure:** `public/locales/de/gamelib.json` and `public/locales/fr/gamelib.json`
+each hold **209 keys with 0 missing translatable keys**. The gap this todo recorded -- **80
+translatable keys absent from each** -- is fully closed. Counted by flattening both catalogs
+against `en/gamelib.json` key-by-key, not by reading an exit code.
+
+### The 401 was real, and it was not the whole story
+
+This todo named its only blocker as "a valid raw Anthropic API key -- an OPERATOR action, not
+an engineering one." The operator supplied a working key and ran the fill on 2026-09-03, and
+the 401 is resolved. **But the key alone would not have closed this gap.** Two defects in
+`meta/machineFillGamelib.ts`'s glossary validator silently rejected correct translations while
+the run exited 0:
+
+1. **Quick `260903-itr`** -- the source-side presence check was case-**IN**sensitive while the
+   survival check was case-**sensitive**, so an English source containing the ordinary word
+   "browser" demanded the literal `Browser` survive into the translation. Cost: 185 strings
+   across 46 languages.
+2. **Quick `260903-ly4`** -- the trailing `(?![A-Za-z0-9_])` lookahead on the target-side
+   matcher forbade a glossed brand from taking any suffix, which is invisible in English and
+   fatal in inflecting languages. Cost: the last 57 strings across 8 locales.
+
+Both are the same root shape: a validator encoding **English** morphology and applying it to
+languages that do not share it. Without both fixes the fill would have written little or
+nothing for most locales **and still exited 0** -- exactly the failure this todo warned about
+in its own "verify the fill actually happened -- count the keys, do not trust exit 0" note.
+That warning was correct and is the reason the closure above is stated in counted keys.
+
+`de` is a special case worth recording: it was the **only** locale to survive defect (1)
+intact, because "Browser" is also the capitalised German noun. A spot check against `de` alone
+would have cleared a 46-locale defect.
+
+**Wider outcome:** all 48 non-English locales now hold all 209 translatable keys -- 10032
+filled, 0 outstanding. The full arc, the per-locale evidence and the residues are recorded in
+`.planning/todos/completed/2026-09-02-46-locales-have-zero-gamelib-json-fork-string-coverage.md`,
+closed the same day.
+
+## What this closure does NOT cover
+
+**Six keys are still empty in ENGLISH.** `redeemKey.alreadyOwned`, `.error`, `.invalid`,
+`.rateLimited`, `.successNoPackage`, `.successWithPackage` are empty strings in
+`en/gamelib.json` itself -- a pre-existing **authoring** gap this todo already documented, not
+a translation gap, and correctly untouched by the machine-fill. `en` has 215 total keys and
+209 translatable. Both todos that documented this residue are closed as of 2026-09-03, so it
+now has **no owner**; that is recorded plainly rather than assumed away.
+
+**The lint-gate blindness this todo diagnosed is NOT fixed.** `meta/lintTranslations.ts` still
+checks a translated file's *own* keys against English, so a key **absent** from a translation
+remains structurally invisible and the gate still stays green at zero coverage. That diagnosis
+was this todo's most valuable content and it survives its closure intact -- the next fork
+string added will be just as invisible as the 80 were. It has no owning todo after this
+closure.
+
+**Every non-English value is unreviewed machine translation**, marked MT-origin in each
+locale's `gamelib.mt.json` sidecar. Weblate human review stays deferred per the 2026-08-06
+decision.

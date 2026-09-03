@@ -1,12 +1,15 @@
 ---
 created: 2026-09-02
-title: "242 of 10032 fork strings (48 locales x 209 translatable keys) remain outstanding after the 260903-itr machine-fill + glossary-matcher fix; 185 need only a re-run, 57 are undiagnosed"
+title: "CLOSED 2026-09-03 -- all 10032 fork strings filled across 48 of 48 locales; the blocker was never only the API key but two English-morphology defects in the glossary validator"
+title_history: "242 of 10032 fork strings (48 locales x 209 translatable keys) remain outstanding after the 260903-itr machine-fill + glossary-matcher fix; 185 need only a re-run, 57 are undiagnosed"
 area: i18n
-status: pending
+status: CLOSED
+closed: 2026-09-03
 severity: medium
 resolves_phase: ""
 found_by: "Quick task 260902-9wt (the 2026-08-06 Phase-34.8 i18n closure), split out into its own record by quick 260902-ad5 at the operator's request"
-blocked_by: "Nothing operator-side any more. The prior API-key blocker was resolved when quick 260903-itr ran the fill on 2026-09-03 (commit 3b3d813f2). The dominant remaining blocker was meta/machineFillGamelib.ts containsTermLoose/containsTermVerbatim case asymmetry, fixed by the same quick task (commit c198c1021) -- a pnpm machine-fill-gamelib re-run is now required to collect the 185 fills that fix unblocks. The other 57 outstanding fills are undiagnosed and need separate investigation."
+blocked_by: ""
+blocked_by_history: "Nothing operator-side any more. The prior API-key blocker was resolved when quick 260903-itr ran the fill on 2026-09-03 (commit 3b3d813f2). The dominant remaining blocker was meta/machineFillGamelib.ts containsTermLoose/containsTermVerbatim case asymmetry, fixed by the same quick task (commit c198c1021) -- a pnpm machine-fill-gamelib re-run is now required to collect the 185 fills that fix unblocks. The other 57 outstanding fills are undiagnosed and need separate investigation."
 files:
   - public/locales/
   - public/locales/en/gamelib.json
@@ -214,3 +217,109 @@ discipline" note above, this script has silently rejected translations and still
 exited 0 twice now.
 
 This todo **stays `status: pending`** -- the fix is proven but not yet run at scale.
+
+## CLOSURE RECORD -- 2026-09-03
+
+**Closed on measurement, not on a green tick.** Every non-English locale directory under
+`public/locales/` now carries a `gamelib.json`, and every translatable English key has a
+value in every one of them.
+
+| measure | when filed (2026-09-02) | at closure (2026-09-03) |
+|---|---|---|
+| locale dirs with a `gamelib.json` | 3 of 49 (`en`, `de`, `fr`) | **49 of 49** |
+| filled strings | 0 of 10032 | **10032** |
+| outstanding | 10032, then 242 | **0** |
+| locales at FULL coverage | 1 | **48 of 48** |
+| interpolation-placeholder mismatches | -- | **0** |
+
+Counted by flattening `en/gamelib.json` and every `<locale>/gamelib.json` and comparing
+key-by-key, because this script has twice reported success while writing nothing. Exit code
+was not accepted as evidence at any point.
+
+### The blocker was never only the API key
+
+The record as filed named a missing Anthropic API key as the operator-side blocker. That was
+true but incomplete. **Two defects in `meta/machineFillGamelib.ts`'s glossary validator
+silently rejected correct translations while the run exited 0.** Both are the same root
+shape: *a validator encoding ENGLISH morphology and applying it to languages that do not
+share it.*
+
+1. **Quick `260903-itr`** -- `containsTermSourcePresence` was case-**IN**sensitive while
+   `containsTermVerbatim` was case-**sensitive**. Any English source containing the ordinary
+   word "browser" therefore triggered the rule and then demanded the literal capitalised
+   `Browser` survive into the translation, which no genuine translation can do. **Cost: 185
+   strings across 46 languages.** German passed only because "Browser" is also the
+   capitalised German noun -- which is precisely why a single-locale spot check cleared a
+   46-locale defect.
+2. **Quick `260903-ly4`** -- the trailing `(?![A-Za-z0-9_])` lookahead on the **target-side**
+   matcher forbade a glossed brand from taking any suffix. Invisible in English, where brands
+   do not inflect; fatal in inflecting languages. **Cost: the last 57 strings across 8
+   locales.**
+
+### Three passes, each delta matching its prediction exactly
+
+| pass | filled | outstanding |
+|---|---|---|
+| after `260903-itr` fill | 9790 | 242 |
+| after the `Browser` fix | 9975 (**+185**) | 57 |
+| after the lookahead fix | 10032 (**+57**) | **0** |
+
+The final pass filled `et` 33, `fi` 14, `hu` 4, `hr` 2, `sl` 1, `da` 1, `nb_NO` 1, `sv` 1 --
+**0 skipped**.
+
+**The diagnosis is legible in the delivered translations.** Every form below would have been
+rejected by the old trailing boundary:
+
+```
+et            Steami  Steamis  Steamist         GameLib'i
+fi            Steamin Steamiin Steamille        GameLibin
+              Steamissa
+hu            Steamen
+da nb_NO sv                                     GameLibs
+```
+
+The three North Germanic locales independently produced the bare `-s` genitive on the one
+English source carrying "GameLib's" -- three unrelated languages converging on one string is
+what pointed at the lookahead before the fix was written, and the delivered text confirms it
+from the other direction.
+
+**Integrity across all three batches:** D-09 held throughout (0 non-empty values overwritten,
+0 emptied); 0 interpolation-placeholder mismatches across all 10032 filled strings; prettier
+clean; `lint-translations:gamelib` exit 0; 263 meta tests green.
+
+**Commits:** `5bc76a74c` (+185, 94 files) - `7be3bfaa9` / `787f8354d` / `00ecab7be` (the
+`260903-ly4` fix) - `5ecdf2768` (its records) - `f492b11c0` (+57, 16 files).
+
+## What this closure does NOT cover
+
+Three residues survive this todo. None is closed by it, and none should be read as closed
+because coverage is now complete.
+
+**(a) Six keys are empty in ENGLISH.** `public/locales/en/gamelib.json` has **215** total keys
+of which only **209 are translatable**; the other six -- `redeemKey.alreadyOwned`, `.error`,
+`.invalid`, `.rateLimited`, `.successNoPackage`, `.successWithPackage` -- are empty strings in
+the source language. This is a pre-existing English **authoring** gap, not a translation gap;
+the machine-fill correctly never touched them. Both this todo and the `2026-08-28` de/fr todo
+documented it, and **both are now closed, so as of 2026-09-03 this residue has NO owner.**
+That is stated rather than papered over: whoever next touches `redeemKey.*` should file it.
+
+**(b) Every non-English value is unreviewed machine translation.** Each is marked MT-origin in
+its locale's `gamelib.mt.json` sidecar. The Weblate human-review path was deliberately
+deferred by the 2026-08-06 decision todo and **remains deferred** -- full coverage is not the
+same as reviewed coverage.
+
+**(c) `meta/lintTranslations.ts` is still structurally blind to an ABSENT key.** It checks a
+translated file's *own* keys against English, so a key missing entirely from a translation is
+invisible and the gate stays green at zero coverage. That blindness is why this gap grew from
+5 keys to 80 unobserved. **Closing the coverage gap does not fix the gate** -- the next fork
+string added will be just as invisible. This diagnosis has no owning todo after this closure
+either.
+
+## One observation, not a fix
+
+`pnpm lint-translations:gamelib` prints ENOENT stack traces for
+`public/locales/sl/translation.json` and `public/locales/uz/login.json` and **still exits 0**.
+Both files are absent at `HEAD` as well, so this is pre-existing and unrelated to
+`gamelib.json` -- but a gate that dumps error objects and reports success is a fail-open
+shape worth a look on its own terms. Recorded here so the observation is not lost with this
+file.
