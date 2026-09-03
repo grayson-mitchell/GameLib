@@ -1,6 +1,6 @@
 ---
 created: 2026-09-03T00:00:00.000Z
-title: 'Nav tour renders stale "Heroic" branding in 28 locales — D-07 minted 3 new keys but 10 of 12 steps still read tour.sidebar.*'
+title: 'Stale "Heroic" branding in translated catalogs — nav tour steps in 28 locales, and the version label in 38'
 area: i18n
 severity: minor
 needs: code-fix
@@ -10,6 +10,7 @@ source: '.planning/phases/34.12-onboarding-tour-rework-re-anchor-the-disabled-si
 resolves_phase: ''
 files:
   - src/frontend/components/UI/NavShell/components/NavShellTour/index.tsx
+  - src/frontend/components/UI/NavShell/components/HeroicVersion/index.tsx
   - public/locales/en/translation.json
   - public/locales/*/translation.json
 ---
@@ -51,6 +52,23 @@ German specimens:
 The `community` string has a **second, independent defect**: it promises a Discord community,
 while the English source string is just "Support GameLib's development." That is content drift,
 not only branding — translated users are told about a channel the English copy never mentions.
+
+## Second surface, found the same way: the version LABEL itself
+
+`HeroicVersion/index.tsx:102` renders `t('info.heroic.version', 'GameLib Version')`. The English
+fallback is correct, but **38 locales** translate that key to a Heroic-branded string — German
+renders literally **"Heroic-Version: 0.7.0"** in the Settings panel.
+
+This is the element nav-tour step 12 anchors to, so in German the tour tooltip correctly reads
+"Check your current **GameLib** version..." while pointing at a label that says
+**"Heroic-Version"**. Both were on screen together during the 34.12-07 run.
+
+Affected (38): be, bg, bs, ca, cs, de, el, es, et, eu, fa, fi, fr, ga, gl, he, hr, hu, id, it,
+ja, ko, lt, ml, nb_NO, nl, pl, pt, pt_BR, ru, sk, sv, ta, tr, uk, vi, zh_Hans, zh_Hant.
+
+Same root shape as the tour strings — a valid key with a valid translation about the wrong
+product — but a different surface, and it is visible without ever opening the tour. Worth fixing
+in the same pass; it is a one-key change per locale.
 
 ## Why this was invisible until now
 
