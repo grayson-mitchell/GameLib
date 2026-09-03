@@ -2,6 +2,7 @@
 phase: quick-260903-ut6
 plan: 01
 status: complete
+live_verified: 2026-09-03
 date: 2026-09-03
 commits:
   - c55071298
@@ -80,10 +81,67 @@ tree (`git`-untouched, restored from a scratchpad copy) and confirming both new 
 
 ## Not done
 
-- **No live verification.** Proving the real gesture -- start a tour, `pkill` mid-tour, relaunch,
-  observe no tour -- needs a rebuild and an operator. The read boundary is an exported pure
-  function precisely because this jest project is `testEnvironment: 'node'` with no jsdom and
-  cannot mount `TourProvider` (see `src/frontend/jest.config.js`). Worth folding into the next
-  live session rather than rebuilding for it alone.
 - **`tourProgress` is still written and never read.** Dead but harmless; deliberately left alone
   rather than widening a targeted fix.
+- **Tested on the dev build (`pnpm tauri:dev`), not a packaged `--debug` bundle.** The change is
+  pure frontend TypeScript and the origin differs (`http://localhost:5173` vs `tauri://localhost`),
+  so the fix applies identically; but a packaged run was not performed.
+
+## Addendum 1 -- LIVE VERIFICATION (2026-09-03, same day)
+
+The "no live verification" caveat above is now retired. Verified on a live dev build with the
+operator, plus direct reads of WebKit's localStorage backing store.
+
+### The instrument
+
+WebKit persists localStorage to
+`~/Library/WebKit/gamelib-shell/WebsiteData/Default/<origin-hash>/.../LocalStorage/localstorage.sqlite3`,
+in an `ItemTable(key TEXT, value BLOB)` where values are **UTF-16LE** (so `cast(value as text)`
+truncates at the first NUL -- decode `hex(value)` instead). Reading that file directly is a far
+better instrument than the DevTools console, which is awkward to drive under Tauri. The dev origin
+is `5aTadv95...` (`http://localhost:5173`).
+
+Starting state, before anything: all five GameLib origins held
+`{"activeTour":null,"tourProgress":{},"completedTours":[]}` -- old-format blobs (the key is
+present) with a clean `null`, because the previous session was quit properly. **No live poison
+existed**, so the condition had to be created.
+
+### The control -- because the premise itself was unproven
+
+The resurrect had been asserted from code reading and from one contaminated 34.12-07 observation;
+nobody had watched it happen. Running only the fixed build would have been worthless: "no tour
+appears" is equally consistent with the fix working and with the premise having been wrong.
+
+| # | code | gesture | result |
+| --- | --- | --- | --- |
+| B1 | pre-fix | operator starts nav tour, `kill -9` mid-tour | db: `{"activeTour":"nav-tour",...}` -- **poison is real** |
+| B2 | pre-fix | relaunch on that poison | **tour appeared, unprompted** (operator-confirmed) |
+| B3 | pre-fix | relaunch on an injected copy of the same blob | **tour appeared** -- screenshot: "Nav Bar / Welcome to GameLib!", step 1 of 12 |
+
+B3 exists as a **false-pass guard**. Between B2 and C the poison had to be re-established by
+writing the blob back into sqlite; if WebKit had ignored that write, C's "no tour" would have
+measured a clean launch and proved nothing. B3 launching *pre-fix* code against the injected value
+and showing the tour proves WebKit reads it, which is what licenses C.
+
+### The fix
+
+| # | code | gesture | result |
+| --- | --- | --- | --- |
+| C1 | **fixed** | relaunch on the same poisoned db | **no tour** -- screenshot shows a clean library |
+| C2 | **fixed** | read db after that launch | `{"tourProgress":{},"completedTours":[]}` -- `activeTour` key **absent**, not `null` |
+| C3 | **fixed** | operator starts a tour; read db while it is on screen | tour opens normally; db still has **no `activeTour` key** |
+| C4 | **fixed** | `kill -9` mid-tour, then relaunch -- **no injection anywhere** | db has no `activeTour`; relaunch shows **no tour** |
+
+C1 proves the read side heals poison already on disk. C2/C3 prove the write side. C3 is also the
+regression check that starting a tour still works. C4 is the real user gesture end to end.
+
+### One anomaly, recorded not explained
+
+Between B2 and B3 the persisted value **self-cleared to `null` before the kill**: the resurrected
+tour ended on its own, or the operator's window interaction ended it. Cause not established. It
+does not affect the conclusion -- it means the pre-fix defect was *intermittent* rather than
+certain, and the fix removes the possibility outright. It is why B3 needed the re-injection at all.
+
+### Not covered
+
+Packaged-bundle run, and non-macOS platforms.
