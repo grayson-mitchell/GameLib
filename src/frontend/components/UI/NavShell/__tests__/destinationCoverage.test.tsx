@@ -281,7 +281,7 @@ describe('Destination coverage -- the settled tree', () => {
       'System Information',
       'Documentation',
       'About',
-      'Ko-fi',
+      'Donate',
       'App Tour'
     ])
   })
@@ -322,7 +322,7 @@ describe('Accounts entry point (re-homed from the deleted suite)', () => {
 })
 
 describe('Community links (re-homed from the deleted suite)', () => {
-  it('labels contain neither "Discord" nor "GitHub Sponsors", and do contain "Ko-fi"', () => {
+  it('labels contain neither "Discord" nor "GitHub Sponsors" nor a bare "Ko-fi", and do contain the donate row', () => {
     contextValue = permissiveContextValue()
     const settingsLabels = navItemLabels(
       SettingsPanel() as unknown as ReactElement
@@ -330,7 +330,12 @@ describe('Community links (re-homed from the deleted suite)', () => {
 
     expect(settingsLabels).not.toContain('Discord')
     expect(settingsLabels).not.toContain('GitHub Sponsors')
-    expect(settingsLabels).toContain('Ko-fi')
+    // Renamed from the bare literal "Ko-fi" to a translated label in quick
+    // `260903-vwi`. The row, its handler and its ko-fi.com destination are
+    // unchanged -- only the visible word. The brand name is asserted ABSENT
+    // too, so this keeps proving the label is not a bare proper noun.
+    expect(settingsLabels).toContain('Donate')
+    expect(settingsLabels).not.toContain('Ko-fi')
   })
 })
 

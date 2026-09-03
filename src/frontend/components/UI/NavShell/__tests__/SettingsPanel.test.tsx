@@ -191,7 +191,7 @@ describe('SettingsPanel', () => {
       'System Information',
       'Documentation',
       'About',
-      'Ko-fi',
+      'Donate',
       'App Tour'
     ])
 
@@ -236,13 +236,13 @@ describe('SettingsPanel', () => {
     expect(window.api.showAboutWindow).toHaveBeenCalled()
   })
 
-  it('Ko-fi is a button whose onClick calls handleExternalLinkDialog when the stored preference is absent', () => {
+  it('Donate is a button whose onClick calls handleExternalLinkDialog when the stored preference is absent', () => {
     storedPreference = null
     const handleExternalLinkDialog = jest.fn()
     contextValue = makeContextValue({ handleExternalLinkDialog })
 
     const tree = SettingsPanel() as unknown as ReactElement
-    const kofiItem = findNavItem(tree, 'Ko-fi')
+    const kofiItem = findNavItem(tree, 'Donate')
 
     expect(kofiItem?.props.elementType).toBe('button')
     ;(kofiItem?.props.onClick as () => void)()
@@ -253,13 +253,13 @@ describe('SettingsPanel', () => {
     expect(window.api.openKofiPage).not.toHaveBeenCalled()
   })
 
-  it('Ko-fi calls handleExternalLinkDialog when the stored preference is true', () => {
+  it('Donate calls handleExternalLinkDialog when the stored preference is true', () => {
     storedPreference = 'true'
     const handleExternalLinkDialog = jest.fn()
     contextValue = makeContextValue({ handleExternalLinkDialog })
 
     const tree = SettingsPanel() as unknown as ReactElement
-    const kofiItem = findNavItem(tree, 'Ko-fi')
+    const kofiItem = findNavItem(tree, 'Donate')
     ;(kofiItem?.props.onClick as () => void)()
 
     expect(handleExternalLinkDialog).toHaveBeenCalledWith(
@@ -268,13 +268,13 @@ describe('SettingsPanel', () => {
     expect(window.api.openKofiPage).not.toHaveBeenCalled()
   })
 
-  it('Ko-fi calls window.api.openKofiPage directly when the stored preference is false', () => {
+  it('Donate calls window.api.openKofiPage directly when the stored preference is false', () => {
     storedPreference = 'false'
     const handleExternalLinkDialog = jest.fn()
     contextValue = makeContextValue({ handleExternalLinkDialog })
 
     const tree = SettingsPanel() as unknown as ReactElement
-    const kofiItem = findNavItem(tree, 'Ko-fi')
+    const kofiItem = findNavItem(tree, 'Donate')
     ;(kofiItem?.props.onClick as () => void)()
 
     expect(handleExternalLinkDialog).not.toHaveBeenCalled()
@@ -318,11 +318,11 @@ describe('SettingsPanel', () => {
       expect(row?.props['data-tour']).toBe('nav-docs')
     })
 
-    it('the Ko-fi row carries data-tour="nav-community"', () => {
+    it('the Donate row carries data-tour="nav-community"', () => {
       contextValue = makeContextValue()
 
       const tree = SettingsPanel() as unknown as ReactElement
-      const row = findNavItem(tree, 'Ko-fi')
+      const row = findNavItem(tree, 'Donate')
 
       expect(row?.props['data-tour']).toBe('nav-community')
     })

@@ -51,9 +51,25 @@ import { NAV_TOUR_ID } from '../NavShellTour'
  * still carry the pre-fork brand name (de is "Uber Heroic"), which has no
  * business on a new surface.
  *
- * The bare "Ko-fi" label is an exact do-not-translate glossary term (a
- * brand name), so it is deliberately not passed through the translation
- * function -- doing so would mint a fake translation key for a proper noun.
+ * The donate row's label is a fork-owned `gamelib:` key. It rendered the
+ * bare literal "Ko-fi" until quick `260903-vwi`, on the stated grounds that
+ * the brand name was an exact do-not-translate glossary term -- a claim
+ * that was simply false (`meta/i18nGlossary.json` holds 28 terms and has
+ * never contained "Ko-fi"; the literal survived the gate for some other
+ * reason). "Donate" is an ordinary English verb either way, so it has no
+ * claim to an exemption and must be translated like any other prose.
+ *
+ * The key is NEW rather than a reused one on purpose. Nothing in this repo
+ * detects English-side drift: `gamelibCatalogParity` walks the TRANSLATED
+ * catalog and only asks whether each key exists in `en` and passes the
+ * placeholder/plural/glossary rules, and the `.mt.json` provenance sidecar
+ * records locale/model/filledAt plus key NAMES -- no source text, no hash,
+ * nothing to compare against. A fresh key is absent from all 48 locales,
+ * which the parity gate allows, so each falls back to the new English
+ * instead of a translation written for the old wording.
+ *
+ * Only the visible word changed: the handler, the `faCoffee` icon, the
+ * `nav-community` tour anchor and the ko-fi.com destination are untouched.
  * Its click handler ports the retired external-link confirmation gate
  * verbatim: read the stored dialog preference and either ask first or open
  * directly.
@@ -155,7 +171,7 @@ export default function SettingsPanel() {
         elementType="button"
         onClick={handleKofiClick}
         icon={faCoffee}
-        label="Ko-fi"
+        label={tGamelib('gamelib:donate.navLabel', 'Donate')}
         data-tour="nav-community"
       />
       <NavItem
