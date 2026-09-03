@@ -4244,7 +4244,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4)*
 
-- [ ] 34.12-07-PLAN.md — blocking manual verification: twelve individually-recorded step outcomes, the D-04 interaction lock, the no-auto-start guarantee, three-theme spacing, and the German stale-copy check *(not autonomous)*
+- [x] 34.12-07-PLAN.md — blocking manual verification: twelve individually-recorded step outcomes, the D-04 interaction lock, the no-auto-start guarantee, three-theme spacing, and the German stale-copy check *(not autonomous)* — **17 of 18 outcomes PASS; Task 3 step 6 (zero connected stores) NOT ATTEMPTED, recorded not omitted.** Found the tour tooltip had never rendered under Tauri at all (fixed `2cc58c186`; WebKit will not paint a `visibility:visible` child of a `visibility:hidden` composited ancestor). Settled RESEARCH.md claim A1 — MUI `Tab`/`Tabs` DOES forward `data-*` to the DOM — and confirmed D-04, D-07 and D-09 on live evidence. See `34.12-07-SUMMARY.md` Addendum 1.
 
 **Cross-cutting constraints** *(hold across plans — no single plan owns them)*
 
