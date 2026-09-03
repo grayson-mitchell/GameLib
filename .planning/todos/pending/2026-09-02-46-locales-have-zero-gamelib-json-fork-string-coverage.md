@@ -169,3 +169,48 @@ half).
 - `.planning/todos/pending/2026-08-28-gamelib-json-de-fr-missing-five-keys-machine-fill-401s.md`
   — the de/fr half this gap was split out of
 - `meta/machineFillGamelib.ts`, `meta/i18nGlossary.json`, `meta/lintTranslations.ts`
+
+## 2026-09-03 update (quick 260903-ly4) -- the 57 remaining fills diagnosed and unblocked, live re-run still owed
+
+Landed 2026-09-03: the `260903-itr` machine fill batch committed `5bc76a74c`
+(`i18n(locales): machine-fill 185 fork strings across 47 locales`), moving coverage
+from **9790/10032** to **9975/10032 filled, 242 -> 57 outstanding**, 40 of 48 locales
+now at full 209/209.
+
+The remaining **57** were diagnosed as the SAME root shape as the `Browser` defect
+`260903-itr` fixed, just on the target side instead of the source side:
+`containsTermVerbatim`'s trailing `(?![A-Za-z0-9_])` lookahead forbade a glossed term
+from taking ANY suffix. English brands do not inflect, so the defect was invisible in
+English. Every one of the 57 has an English source containing a glossary term --
+zero have a glossary-term-free source. Per-locale evidence: Estonian misses 31 of its
+33 Steam-bearing strings vs 2 of 176 others (94% vs 1%); Finnish 9 of 33 vs 5 of 176;
+Hungarian 4 of 33 vs 0; Croatian 2 vs 0; Slovenian 1 vs 0; and Danish, Norwegian-Bokmål
+and Swedish each miss the exact same single string, `webview.unavailable.body`, whose
+English source opens with the genitive `GameLib's` -- three independent North Germanic
+locales failing on one English possessive.
+
+`260903-ly4` fixed the root cause by relaxing `containsTermVerbatim` to keep only the
+leading `(?<![A-Za-z0-9_])` lookbehind, dropping the trailing lookahead --
+`containsTermSourcePresence` (the source-side check) is untouched and stays strict on
+both sides. The fix is hermetically proven: six new accept-case assertions (Estonian
+`Steami`/`Steamis`/`Steamiga`, Finnish `Steamin`, Hungarian `Steamet`, Scandinavian
+bare-s `GameLibs`) demonstrated RED against the unmodified validator, then GREEN after
+the fix; two regression pins (a genuine localisation of the term, and a mid-word match)
+stayed green throughout and the mid-word pin was mutation-proven capable of failing; a
+scratchpad sweep over all 9,975 filled pairs in the committed catalogs confirmed
+`patched <= baseline` with zero problem-free -> problem-bearing flips (both counts were
+0, expected: the catalogs were filled under the OLD strict validator, so nothing
+rejected by it was ever written to disk to appear in a sweep of committed content).
+
+**What is still owed:** a live `pnpm machine-fill-gamelib` re-run, scoped to the
+affected locales, to actually COLLECT the 57 fills the fix unblocks -- the fix only
+stops future rejections, it does not retroactively fill anything already on disk.
+This is an OPERATOR step: `260903-ly4` ran in an environment where
+`ANTHROPIC_API_KEY` is a truthy but non-functional placeholder, so the live fill could
+not be run or verified here. Whoever runs it should
+`GAMELIB_MT_LOCALES=et,fi,hu,hr,sl,da,nb_NO,sv pnpm machine-fill-gamelib`, then COUNT
+the outstanding keys afterwards rather than trusting exit 0 -- per the "Verification
+discipline" note above, this script has silently rejected translations and still
+exited 0 twice now.
+
+This todo **stays `status: pending`** -- the fix is proven but not yet run at scale.
