@@ -1,6 +1,6 @@
 ---
 slug: introjs-tooltip-not-rendering
-status: fix-applied-REFUTED-live
+status: resolved
 trigger: "intro.js tooltip renders nothing in both GameLib tours — no title, body, or Next/Back/Skip controls; dim overlay and highlight box do render. Intermittent and session-stateful across runs. Found during 34.12-07 live gate."
 created: 2026-09-03
 updated: 2026-09-03T08:06:14Z
@@ -648,3 +648,88 @@ This is the second time in this session that a confident source-derived mechanis
 The pattern to avoid: a chain that is verifiable in source (the guards ARE always-true, that
 part is fact) can still be the wrong explanation for the observed symptom, because being real
 is not the same as being operative. Measure the driver, do not infer it.
+
+
+## RESOLVED 2026-09-03 — WebKit will not paint a visible child of a hidden composited ancestor
+
+**Operator, verbatim: "omg it worked"**, then re-confirmed on a clean rebuild with ALL
+instrumentation removed: *"tooltip still works"*. Both tours, multiple steps.
+
+### Root cause (the real one)
+
+`introjs.css` ships:
+
+```css
+.introjs-tooltipReferenceLayer { position:absolute; visibility:hidden; z-index:100000000;
+                                 transition:all .3s ease-out }
+.introjs-tooltip              { position:absolute; visibility:visible; ... }
+```
+
+intro.js's entire show/hide design is that CSS override — the parent is hidden and the child
+un-hides itself. **Nothing in intro.js's JavaScript ever touches `visibility`** (grepped: zero
+matches for `visibility` in `node_modules/intro.js/intro.js`).
+
+Chromium honours it. **WebKit does not paint the `visibility:visible` descendant of a
+`visibility:hidden` composited ancestor — while still HIT-TESTING it.** That painting/hit-testing
+split is why every measurement said the element was fine:
+
+  - `rect={x:414,y:64,w:452,h:252}` — correctly sized and placed, inside the viewport
+  - `tooltipPaint={bg:rgb(22,28,30),color:rgb(255,255,255),border:1px solid rgb(29,232,245),
+     vis:visible,opacity:1,transform:none,clip:none,overflow:visible}`
+  - all five `elementFromPoint` probes returned the tooltip's OWN children —
+    `centre:introjs-tooltiptext | topLeft:introjs-tooltip-header | topRight:introjs-skipbutton |
+     bottomLeft:introjs-button introjs-prevbutton introjs-disabled |
+     bottomRight:introjs-button introjs-nextbutton`
+  - `counts={tooltip:1,helper:1,refLayer:1,overlay:1}` — nothing duplicated, nothing overlapping
+  - and a window capture of exactly those pixels showed **game cards, no tooltip**
+
+Hit-testing and painting disagreed. That disagreement WAS the diagnosis.
+
+### Fix
+
+Three lines in `src/frontend/components/Tour/Tour.scss`:
+
+```css
+.introjs-tooltipReferenceLayer { visibility: visible; }
+```
+
+Costs nothing visually — the reference layer is `background-color:transparent` and sized to the
+anchor; its children carry all the appearance.
+
+### Why no phase ever caught this
+
+It has been broken since the Electron→Tauri migration and was invisible the entire time. Upstream
+Heroic runs on Chromium, where the override works. 34.10 disabled the sidebar tour; 34.12 rebuilt
+it against a jest project that is `testEnvironment:'node'` with no jsdom and no browser runner.
+The full suite was green throughout. **This defect was unreachable by every automated check in
+the repo** — only 34.12-07's live gate could ever have found it.
+
+### RECORD CORRECTION — commit f8b432b7e was NOT the fix
+
+`f8b432b7e` ("stabilise options/steps identity so intro.js stops starving the tooltip") is
+**retained by operator decision as code hygiene, but its stated root cause is WRONG** and it did
+not fix this bug — it was refuted live in `65fb8dc61` before the real cause was found.
+
+What it says, and what is actually true:
+  - TRUE: `intro.js-react`'s `Steps.componentDidUpdate` compares `props.options`/`props.steps` by
+    reference, and both were fresh literals every render, so the guards were always-true and
+    `configureIntroJs()`→`setOptions()` re-ran on every render. That waste is real and the
+    memoization genuinely removes it.
+  - FALSE: that this caused the blank tooltip. It did not. The tooltip was never painted at all,
+    at any opacity, for a reason entirely unrelated to re-render cadence.
+  - The measured `opacity=0`/`+839ms`/`~260ms churn` observations were REAL but INCIDENTAL. They
+    described a re-render storm that was happening; they did not describe why nothing was drawn.
+    A run with `finalOpacity=1` and a visibly blank screen is what finally broke that framing.
+
+Anyone reading `f8b432b7e` in isolation will be misled. It is corrected here and in the commit
+that carries the real fix.
+
+### Process lesson
+
+Three successive explanations were derived from source, each internally sound, each refuted live.
+Every one of them was a mechanism that genuinely EXISTS in the code but was not OPERATIVE. The
+steps that actually advanced the investigation were all measurements, and the decisive one was
+the cheapest: sampling `elementFromPoint` at several points rather than one, after an earlier
+single-point sample produced a confounded result (the centre of a floating step is exactly where
+intro.js parks its zero-size floating element, so it hits the helper layer regardless).
+**Being real is not the same as being operative. Measure the driver; do not infer it.**

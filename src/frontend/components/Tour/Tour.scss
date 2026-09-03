@@ -1,3 +1,19 @@
+/* WKWebView compositing workaround (debug: introjs-tooltip-not-rendering).
+ * intro.js ships `.introjs-tooltipReferenceLayer{visibility:hidden}` and relies
+ * on `.introjs-tooltip{visibility:visible}` to un-hide the child. Nothing in
+ * intro.js's JS ever touches visibility -- it is purely this CSS override.
+ * Chromium honours it (upstream Heroic under Electron is fine); WebKit does not
+ * paint the visible descendant of a hidden composited ancestor, while still
+ * HIT-TESTING it -- measured live: every elementFromPoint probe inside the
+ * tooltip returned its own children (tooltiptext / header / skipbutton /
+ * prevbutton / nextbutton) with correct rect, colours, opacity:1 and nothing
+ * overlapping, yet a window capture showed nothing painted at those pixels.
+ * Making the reference layer itself visible costs nothing visually -- it is
+ * background-color:transparent and sized to the anchor. */
+.introjs-tooltipReferenceLayer {
+  visibility: visible;
+}
+
 /* Custom styling for intro.js elements */
 .introjs-tooltip {
   background: var(--neutral-02);
