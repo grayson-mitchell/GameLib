@@ -276,6 +276,11 @@ and the gap-log effect) is already covered by this plan's own `<threat_model>` (
 -06, T-40-09-SC) -- no new network endpoint, auth path, file access pattern, or schema change was
 introduced outside that register.
 
+## Self-Check: PASSED
+
+All created/modified files confirmed present on disk; all four commits (`2ede63d2d`, `b5d98d471`,
+`9e538c2ed`, `e98e830c2`) confirmed present in `git log --oneline --all`.
+
 ---
 *Phase: 40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we*
 *Completed: 2026-09-04*
