@@ -63,7 +63,6 @@ import {
   wineDownloaderInfoStore
 } from './wine/manager/utils'
 import { readdir, lstat } from 'fs/promises'
-import { getHeroicVersion } from './utils/systeminfo/heroicVersion'
 import { backendEvents } from './backend_events'
 import { wikiGameInfoStore } from './wiki_game_info/electronStore'
 import EasyDl from 'easydl'
