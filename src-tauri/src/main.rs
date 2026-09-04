@@ -3243,6 +3243,40 @@ fn epic_cookie_domain_matches(domain: &str) -> bool {
         .any(|epic| cookie_domain_matches(domain, Some(epic)))
 }
 
+/// GOG/Amazon cookie-domain allow-list for the D-15 fix (Phase 40 plan 04, T-40-04-07/-08).
+/// GOG and Amazon logout leave stale session cookies in the shared default cookie jar -- the
+/// embed this phase adds is what makes that leak user-visible for the first time, because it
+/// now carries a visible, navigable GOG/Amazon tab whose cookies never get cleared on sign-out.
+///
+/// Mirrors `EPIC_COOKIE_DOMAINS` exactly, including the SAME apex-domain reasoning:
+/// `cookie_domain_matches`'s suffix rule already covers every subdomain a session cookie may be
+/// scoped to (`login.gog.com`, `www.amazon.com`, etc. all match their bare apex), so listing the
+/// apex alone is sufficient -- no need to enumerate every observed subdomain by hand. Deliberately
+/// a SEPARATE list from `EPIC_COOKIE_DOMAINS` rather than a widening of it: Epic's list stays
+/// scoped to Epic-owned domains only, and this repository's convention (this const's own sibling
+/// above) is that widening a storefront-scoped allow-list to a different storefront is exactly
+/// the over-broad-clear shape REQ-34.4.1-06 forbids. Scoped to GOG and Amazon ONLY -- this list
+/// must never be widened to any other storefront (Humble already has its own always-a-window
+/// path and needs no fallback here; Steam has no browser-cookie session to clear at all).
+///
+/// PAIRED LIST -- keep this in lockstep with `GOG_COOKIE_HOSTS` (`gog/user.ts`) and
+/// `AMAZON_COOKIE_HOSTS` (`nile/user.ts`), which name this constant back. A domain added on one
+/// side and not the other is a silent half-fix, exactly the T-35-41 drift risk
+/// `EPIC_COOKIE_DOMAINS`'s own doc comment describes for Epic's list.
+#[cfg(target_os = "macos")]
+const STORE_LOGOUT_COOKIE_DOMAINS: &[&str] = &["gog.com", "amazon.com"];
+
+/// True when `domain` is (or is a subdomain of) ANY apex in `STORE_LOGOUT_COOKIE_DOMAINS`.
+/// Delegates to `cookie_domain_matches`, exactly like `epic_cookie_domain_matches` above --
+/// see that function's own doc comment for why a hand-rolled suffix test here would be a SECOND
+/// comparator (the mistake Plan 22's Defect A already made once).
+#[cfg(target_os = "macos")]
+fn store_logout_cookie_domain_matches(domain: &str) -> bool {
+    STORE_LOGOUT_COOKIE_DOMAINS
+        .iter()
+        .any(|store_domain| cookie_domain_matches(domain, Some(store_domain)))
+}
+
 /// Resolves the `NSWindow` handle for a Tauri-managed login window (Humble/GOG/Amazon --
 /// REQ-34.4.2-10's locked scope; see this file's module-level scope note on
 /// `open_pristine_epic_login_window`, above, for the full boundary). Returns the raw address as
@@ -6394,8 +6428,18 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // NARROW for every other storefront, and that property is asserted in both
             // directions by `epic_cookie_domain_matches_*` in this file's own `mod tests`
             // rather than merely claimed in this comment.
+            //
+            // Phase 40 plan 04 (D-15, T-40-04-07): OR'd with `store_logout_cookie_domain_matches`
+            // so GOG and Amazon reach the SAME no-window fallback via their own sentinel labels
+            // (`GOG_COOKIE_CLEAR_NO_WINDOW_LABEL`/`AMAZON_COOKIE_CLEAR_NO_WINDOW_LABEL`,
+            // `gog/user.ts`/`nile/user.ts`) -- neither store opens a Tauri-managed window at
+            // logout time, so `existing_window` is structurally `None` for them too, same as
+            // Epic's pristine window. `EPIC_COOKIE_DOMAINS` itself is left untouched.
             #[cfg(target_os = "macos")]
-            if existing_window.is_none() && epic_cookie_domain_matches(domain) {
+            if existing_window.is_none()
+                && (epic_cookie_domain_matches(domain)
+                    || store_logout_cookie_domain_matches(domain))
+            {
                 return clear_default_data_store_cookies_for_domain(app, domain);
             }
 
@@ -6891,8 +6935,17 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // caller (Humble/GOG/Amazon, all still routed through a live Tauri-managed window
             // here) fails the domain check and falls straight through to the unchanged
             // `no-window` error below.
+            //
+            // Phase 40 plan 04 (D-15, T-40-04-07/-08): OR'd with
+            // `store_logout_cookie_domain_matches`, mirroring the sibling widening in
+            // `humble_login_clear_cookies` above -- GOG/Amazon's before/after cookie census
+            // needs the SAME no-window path their clear already takes, or the census would
+            // always read `no-window:{label}` and never prove the clear did anything.
             #[cfg(target_os = "macos")]
-            if existing_window.is_none() && epic_cookie_domain_matches(domain) {
+            if existing_window.is_none()
+                && (epic_cookie_domain_matches(domain)
+                    || store_logout_cookie_domain_matches(domain))
+            {
                 return default_data_store_cookies_for_domain(app, domain, &names);
             }
 
@@ -9875,6 +9928,72 @@ mod tests {
             assert!(
                 !epic_cookie_domain_matches(domain),
                 "suffix lookalike `{domain}` must NOT reach Epic's clear path"
+            );
+        }
+    }
+
+    // ---- store_logout_cookie_domain_matches (Phase 40 plan 04, D-15, T-40-04-07/-08) ----
+    //
+    // Same both-directions discipline as the Epic group above: a positive-only test cannot
+    // detect an over-wide set, which is the exact REQ-34.4.1-06 harm this repo already paid for
+    // once.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_logout_cookie_domain_matches_accepts_gog_and_amazon_apexes() {
+        for domain in ["gog.com", "amazon.com"] {
+            assert!(
+                store_logout_cookie_domain_matches(domain),
+                "expected the store-logout apex `{domain}` to reach the macOS clear path"
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_logout_cookie_domain_matches_accepts_subdomains_of_each_apex() {
+        // The set is APEX domains and `cookie_domain_matches` does the suffix work -- GOG's own
+        // login flow runs on `login.gog.com`, and Amazon's on `www.amazon.com`, neither of
+        // which is the bare apex.
+        for domain in ["login.gog.com", "www.gog.com", "www.amazon.com"] {
+            assert!(
+                store_logout_cookie_domain_matches(domain),
+                "expected the store-logout subdomain `{domain}` to reach the macOS clear path"
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_logout_cookie_domain_matches_rejects_every_other_storefront() {
+        // The NEGATIVE direction. Epic and Humble must fall straight through to the arm's
+        // existing `no-window` error, unchanged by this widening -- an over-wide set here would
+        // let a GOG/Amazon logout clear a domain it was never asked to touch.
+        for domain in [
+            "epicgames.com",
+            "www.epicgames.com",
+            "fortnite.com",
+            "humblebundle.com",
+            "www.humblebundle.com",
+            "steampowered.com",
+        ] {
+            assert!(
+                !store_logout_cookie_domain_matches(domain),
+                "`{domain}` must NOT reach the store-logout clear path -- an over-wide guard is \
+                 the REQ-34.4.1-06 harm, not a convenience"
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_logout_cookie_domain_matches_rejects_suffix_lookalikes() {
+        // `notgog.com`/`notamazon.com` end with the apex as a raw substring but are DIFFERENT
+        // registrable domains -- `cookie_domain_matches`'s own discipline (`host == d` or `host`
+        // ending with `.{d}`), re-asserted through this wrapper.
+        for domain in ["notgog.com", "gog.com.evil.example", "notamazon.com"] {
+            assert!(
+                !store_logout_cookie_domain_matches(domain),
+                "suffix lookalike `{domain}` must NOT reach the store-logout clear path"
             );
         }
     }

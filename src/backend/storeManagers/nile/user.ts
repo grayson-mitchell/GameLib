@@ -1,4 +1,10 @@
-import { LogPrefix, logDebug, logError, logInfo } from 'backend/logger'
+import {
+  LogPrefix,
+  logDebug,
+  logError,
+  logInfo,
+  logWarning
+} from 'backend/logger'
 import {
   NileLoginData,
   NileRegisterData,
@@ -9,6 +15,77 @@ import { existsSync, readFileSync } from 'graceful-fs'
 import { configStore } from './electronStores'
 import { clearCache } from 'backend/utils'
 import { nileUserData } from './constants'
+import { isMac } from 'backend/constants/environment'
+import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
+
+// Amazon-owned APEX domain. Suffix-matching happens Rust-side in
+// `cookie_domain_matches`, so this single apex covers `www.amazon.com` (the
+// host Amazon's own login flow runs on) without listing it separately --
+// mirroring `legendary/user.ts`'s `EPIC_COOKIE_HOSTS` (apex-only).
+//
+// PAIRED LIST -- keep this in lockstep with `STORE_LOGOUT_COOKIE_DOMAINS` in
+// `src-tauri/src/main.rs` (see that constant's own doc comment, which names
+// this one back). A domain added on one side and not the other is a silent
+// half-fix (T-35-41's drift risk, applied here to D-15).
+const AMAZON_COOKIE_HOSTS = ['amazon.com'] as const
+
+// A label that can never name a real window -- mirrors
+// `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL` (`legendary/user.ts`) and
+// `GOG_COOKIE_CLEAR_NO_WINDOW_LABEL` (`gog/user.ts`) exactly: Amazon's login
+// window is already closed by the time `logout()` runs, so passing a label
+// GUARANTEED never to resolve routes `humble_login_clear_cookies`/
+// `humble_login_cookies_for_domain` (`src-tauri/src/main.rs`) straight to
+// their macOS default-data-store fallback, gated by
+// `store_logout_cookie_domain_matches`.
+const AMAZON_COOKIE_CLEAR_NO_WINDOW_LABEL = 'amazon-cookie-clear-no-window'
+
+// Phase 40 plan 04, D-15/T-40-04-07/-08: Amazon's logout leaves session
+// cookies behind in the shared default cookie jar. This SUPERSEDES the prior
+// accepted disposition recorded against this path (T-34.5-37, `accept`) --
+// see `runnerAuthFlowRegistration.ts`'s `logoutAmazon` handler comment, which
+// this plan updates in the same spirit as this function's own change.
+// macOS-only, and never fatal to `logout()` -- see the caller's own comment.
+async function clearAmazonCookiesForLogout(): Promise<void> {
+  if (!isMac) {
+    return
+  }
+  const seam = getLoginWindowSeamOrThrow()
+  for (const host of AMAZON_COOKIE_HOSTS) {
+    let beforeTotal: number | null = null
+    try {
+      const before = await seam.cookiesForDomain(
+        AMAZON_COOKIE_CLEAR_NO_WINDOW_LABEL,
+        host,
+        []
+      )
+      beforeTotal = before.total
+    } catch (error) {
+      logWarning(
+        `Amazon logout: cookie census failed for ${host}: ${error}`,
+        LogPrefix.Nile
+      )
+    }
+
+    const deleted = await seam.clearCookies(
+      AMAZON_COOKIE_CLEAR_NO_WINDOW_LABEL,
+      host
+    )
+    logInfo(
+      `Amazon logout: cleared ${deleted} cookie(s) for ${host}`,
+      LogPrefix.Nile
+    )
+
+    // wry's cookie-delete is known to lie about deletion (WebKit bug
+    // #184938) -- `deleted` is the Rust side's own independent before/after
+    // re-read (`verified_delete_count`), never the removal call's own signal.
+    if (deleted === 0 && beforeTotal !== null && beforeTotal > 0) {
+      logWarning(
+        `Amazon logout: removed 0 cookies for ${host} despite a non-empty before-census (${beforeTotal})`,
+        LogPrefix.Nile
+      )
+    }
+  }
+}
 
 function authLogSanitizer(line: string) {
   try {
@@ -180,8 +257,23 @@ export class NileUser {
       return
     }
 
+    // Credential-side cleanup runs FIRST and UNCONDITIONALLY relative to the
+    // cookie-side step below (D-15, Phase 40 plan 04) -- a sign-out that
+    // revoked the CLI session but left `userData` behind is worse than one
+    // that left a stray cookie behind. The cookie step is wrapped in its own
+    // try/catch below precisely so its failure can never retroactively skip
+    // this, and can never make `logout()` itself reject.
     configStore.delete('userData')
     clearCache('nile')
+
+    try {
+      await clearAmazonCookiesForLogout()
+    } catch (error) {
+      logWarning(
+        `Amazon logout: cookie clear failed: ${error}`,
+        LogPrefix.Nile
+      )
+    }
   }
 
   static async getUserData(): Promise<NileUserData | undefined> {

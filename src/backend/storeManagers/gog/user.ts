@@ -8,6 +8,80 @@ import { GOGCredentials, UserData } from 'common/types/gog'
 import { clearCache } from 'backend/utils'
 import { app } from 'backend/platform'
 import { gogdlAuthConfig } from './constants'
+import { isMac } from 'backend/constants/environment'
+import { getLoginWindowSeamOrThrow } from '../../humble/loginWindowSeam'
+
+// GOG-owned APEX domain(s). Suffix-matching happens Rust-side in
+// `cookie_domain_matches`, so this single apex covers every subdomain that may
+// have set a session cookie against it (`login.gog.com`, `www.gog.com`, ...) --
+// mirroring `legendary/user.ts`'s `EPIC_COOKIE_HOSTS` (apex-only, not every
+// observed subdomain by hand).
+//
+// PAIRED LIST -- keep this in lockstep with `STORE_LOGOUT_COOKIE_DOMAINS` in
+// `src-tauri/src/main.rs` (see that constant's own doc comment, which names
+// this one back). A domain added on one side and not the other is a silent
+// half-fix (T-35-41's drift risk, applied here to D-15).
+const GOG_COOKIE_HOSTS = ['gog.com'] as const
+
+// A label that can never name a real window -- mirrors
+// `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL` (`legendary/user.ts`) exactly, including
+// the reasoning: GOG's login window is already closed by the time `logout()`
+// runs, so `app.get_webview_window(label)` was always going to resolve `None`
+// for GOG's own label too. Passing a label that is GUARANTEED never to resolve
+// makes that `None` explicit rather than incidental, and routes
+// `humble_login_clear_cookies`/`humble_login_cookies_for_domain`
+// (`src-tauri/src/main.rs`) straight to their macOS default-data-store
+// fallback, gated by `store_logout_cookie_domain_matches`.
+const GOG_COOKIE_CLEAR_NO_WINDOW_LABEL = 'gog-cookie-clear-no-window'
+
+// Phase 40 plan 04, D-15/T-40-04-07/-08: GOG's logout leaves session cookies
+// behind in the shared default cookie jar -- the store/wiki embed is what
+// makes that leak user-visible for the first time (a navigable GOG tab whose
+// login silently outlives an explicit sign-out). macOS-only: the Rust-side
+// fallback this depends on is `#[cfg(target_os = "macos")]`, and no Tauri leg
+// ships on Windows/Linux yet (Phase 38) -- there is no live target to clear
+// cookies against off macOS today. Never fatal to `logout()` -- see the
+// caller's own comment for why credential-side cleanup must never be blocked
+// by this.
+async function clearGogCookiesForLogout(): Promise<void> {
+  if (!isMac) {
+    return
+  }
+  const seam = getLoginWindowSeamOrThrow()
+  for (const host of GOG_COOKIE_HOSTS) {
+    let beforeTotal: number | null = null
+    try {
+      const before = await seam.cookiesForDomain(
+        GOG_COOKIE_CLEAR_NO_WINDOW_LABEL,
+        host,
+        []
+      )
+      beforeTotal = before.total
+    } catch (error) {
+      // A failed BEFORE-census must never block the clear attempt below --
+      // it only disables the zero-against-non-empty warning for this host.
+      logWarning(
+        `GOG logout: cookie census failed for ${host}: ${error}`,
+        LogPrefix.Gog
+      )
+    }
+
+    const deleted = await seam.clearCookies(GOG_COOKIE_CLEAR_NO_WINDOW_LABEL, host)
+    logInfo(`GOG logout: cleared ${deleted} cookie(s) for ${host}`, LogPrefix.Gog)
+
+    // wry's cookie-delete is known to lie about deletion (WebKit bug #184938)
+    // -- `deleted` is the Rust side's own independent before/after re-read
+    // (`verified_delete_count`), not the removal call's own signal. A zero
+    // count against a non-empty before-census means the clear silently did
+    // nothing and must be surfaced, not silently accepted as success.
+    if (deleted === 0 && beforeTotal !== null && beforeTotal > 0) {
+      logWarning(
+        `GOG logout: removed 0 cookies for ${host} despite a non-empty before-census (${beforeTotal})`,
+        LogPrefix.Gog
+      )
+    }
+  }
+}
 
 function authLogSanitizer(line: string) {
   try {
@@ -260,7 +334,21 @@ export class GOGUser {
     }
   }
 
-  public static logout() {
+  // D-15 (Phase 40 plan 04): stayed a plain (non-async-looking-mandatory)
+  // function whose declared return is now a Promise, deliberately for
+  // backward compatibility with `runnerAuthFlowRegistration.ts`'s `logoutGOG`
+  // listener (`ipcMain.on`, never `ipcMain.handle`): every line above the
+  // first `await` still runs SYNCHRONOUSLY the instant `logout()` is called,
+  // exactly as it did before this method gained an `async` keyword -- credit
+  // JS's own run-to-first-await semantics, not a special case here. That is
+  // what lets the credential-side cleanup below run FIRST and run
+  // UNCONDITIONALLY, even for a caller that never awaits the returned
+  // promise. The cookie-side step is wrapped in its own try/catch so its
+  // failure can never become the reason credential cleanup was skipped --
+  // impossible by ORDER already, but the wrap also stops it becoming a
+  // rejected `logout()` promise (an unhandled rejection at the `ipcMain.on`
+  // call site, which cannot `.catch()` a fire-and-forget invocation).
+  public static async logout() {
     clearCache('gog')
     configStore.clear()
     if (existsSync(gogdlAuthConfig)) {
@@ -269,6 +357,15 @@ export class GOGUser {
     cachedCredentials = undefined
     cachedCredentialsFetchedAt = 0
     logInfo('Logging user out', LogPrefix.Gog)
+
+    try {
+      await clearGogCookiesForLogout()
+    } catch (error) {
+      logWarning(
+        `GOG logout: cookie clear failed: ${error}`,
+        LogPrefix.Gog
+      )
+    }
   }
 
   /**

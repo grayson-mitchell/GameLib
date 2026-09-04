@@ -24,14 +24,19 @@
  *   send (ipcMain.on, 1):
  *     - `logoutGOG` -> main.ts:880 SEND -> `GOGUser.logout()`. A `send` channel's rejection
  *       reaches NO caller (no reject, no timeout, no console line to the renderer) —
- *       `sidecar-send-channels-fail-silently` project memory. `GOGUser.logout()` is SYNCHRONOUS
- *       (`gog/user.ts:140`, no `async`), so the listener body below wraps it in a plain
- *       synchronous try/catch — NOT `.catch()`, which would itself throw a TypeError against a
- *       `void` return and make the failure invisible in exactly the way a send channel already
- *       is. This is the phase's only Repudiation surface (T-34.5-18); the asymmetry (Legendary
- *       and Amazon's sign-outs are handle-kind while GOG's is send-kind) is inherited Electron
- *       behaviour, deliberately preserved, and cross-checked in both directions by
- *       `__tests__/runnerAuthFlows.test.ts`.
+ *       `sidecar-send-channels-fail-silently` project memory. `GOGUser.logout()` gained a D-15
+ *       cookie-clear step (Phase 40 plan 04, T-40-04-07) and with it an `async` keyword, but
+ *       every line before its first `await` — all of the credential-side cleanup — still runs
+ *       SYNCHRONOUSLY the instant the function is called (JS's own run-to-first-await
+ *       semantics), so the listener body below keeps its synchronous try/catch AND additionally
+ *       chains `.catch()` onto the returned promise: the sync try/catch alone would miss a
+ *       genuine async rejection (which surfaces only via the promise, never as a thrown
+ *       exception at the call site), while `.catch()` alone would miss a synchronously-throwing
+ *       mock/implementation (the exact shape `__tests__/runnerAuthFlows.test.ts` T-34.5-18 pins).
+ *       Both defences are load-bearing; neither subsumes the other. This is the phase's only
+ *       Repudiation surface (T-34.5-18); the asymmetry (Legendary and Amazon's sign-outs are
+ *       handle-kind while GOG's is send-kind) is inherited Electron behaviour, deliberately
+ *       preserved, and cross-checked in both directions by `__tests__/runnerAuthFlows.test.ts`.
  *
  * Curated-import rule (inherited from every prior slice's D-08 -> D-09 -> D-04 -> D-14 -> D-02
  * lineage): the cluster plan that fills this module in imports the underlying logic modules
@@ -221,28 +226,41 @@ export function registerRunnerAuthFlows(): void {
   })
 
   // Source: main.ts:884 -> `NileUser.logout()`. Unchanged body — `NileUser.logout()`
-  // (`nile/user.ts:88-102`) has NO Electron `session` usage (verified: it runs the CLI `auth
-  // --logout`, then `configStore.delete('userData')` + `clearCache('nile')`), so unlike
-  // `LegendaryUser.logout()` it needs no ordering repair; the faithful port is this unmodified
-  // delegation. Amazon cookies landing in the app-wide jar is the INHERITED, already-accepted
-  // T-34.4.1-47 residual (T-34.5-37, `accept`) — Electron never cleared them either, so adding a
-  // cookie clear here would be a behaviour change, not a port. Do NOT add a cookie clear to this
-  // path.
+  // (`nile/user.ts`) is `ipcMain.handle`-kind, so unlike `logoutGOG` below its returned promise
+  // is already awaited/propagated by the handle mechanism itself; no extra `.catch()` wiring is
+  // needed here for a rejection to reach the caller. Amazon cookies landing in the app-wide jar
+  // was the INHERITED, previously-accepted T-34.4.1-47 residual (T-34.5-37, `accept`) — that
+  // acceptance is now SUPERSEDED by Phase 40 plan 04's D-15 fix (T-40-04-07, disposition
+  // `mitigate`): `NileUser.logout()` itself now clears GOG's Amazon-equivalent cookie domain
+  // (`AMAZON_COOKIE_HOSTS`, `nile/user.ts`) after its own credential-side cleanup, so the
+  // "do not add a cookie clear" instruction this comment used to carry no longer applies — the
+  // clear lives inside `NileUser.logout()`, not in this delegation.
   ipcMain.handle('logoutAmazon', () => {
     return NileUser.logout()
   })
 
   // Source: main.ts:880 -> `addListener('logoutGOG', () => GOGUser.logout())` — the phase's
-  // Repudiation surface (T-34.5-18). `ipcMain.on`, NEVER `ipcMain.handle`. `GOGUser.logout()` is
-  // SYNCHRONOUS (verified: `gog/user.ts:140`, no `async`), so this body wraps the call in a plain
-  // try/catch — attaching `.catch()` to a `void` return would itself throw a TypeError and make
-  // the failure invisible in exactly the way a send channel already is
-  // (`sidecar-send-channels-fail-silently`). Three sign-outs, three runners, and only this one is
-  // send-kind: inherited Electron behaviour, deliberately preserved — the registration-kind test
-  // is what keeps it honest.
+  // Repudiation surface (T-34.5-18). `ipcMain.on`, NEVER `ipcMain.handle`. `GOGUser.logout()`
+  // gained a D-15 cookie-clear step (Phase 40 plan 04, T-40-04-07) and now returns a promise, but
+  // every line before its first `await` (all of its credential-side cleanup) still runs
+  // synchronously the instant it is called — see the header docblock's `logoutGOG` entry for the
+  // full reasoning. This body therefore keeps its original synchronous try/catch (covers a
+  // synchronously-throwing implementation/mock — the exact shape
+  // `__tests__/runnerAuthFlows.test.ts` T-34.5-18 pins) AND additionally chains `.catch()` onto
+  // the call's return value when it looks like a promise (covers a genuine async rejection,
+  // which a synchronous try/catch cannot observe). Never awaited here — this stays a fire-and-
+  // forget `send` channel by design, exactly as before.
   ipcMain.on('logoutGOG', () => {
     try {
-      GOGUser.logout()
+      const result: unknown = GOGUser.logout()
+      if (
+        result &&
+        typeof (result as Promise<void>).catch === 'function'
+      ) {
+        ;(result as Promise<void>).catch((error) => {
+          logSendFailure('logoutGOG', error)
+        })
+      }
     } catch (error) {
       logSendFailure('logoutGOG', error)
     }
