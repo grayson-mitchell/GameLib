@@ -4834,8 +4834,20 @@ ACL access to `#[tauri::command]`s. `MANIFEST.md:340-343` says in terms: *"threa
 shipping a store browser."* This phase is the first time GameLib would point a webview at arbitrary
 third-party store pages by design, so that threat model is in scope here and nowhere else.
 
-**Requirements**: TBD — mint `REQ-40-*` at `/gsd-plan-phase 40` from `spikes/MANIFEST.md:345-378`
-(Idea C) plus REQ-34.4.1-07's deferral text. Do not re-derive them from the panel's copy.
+**Requirements**: **REQ-40-01 .. REQ-40-14** — minted 2026-09-04 at `/gsd-plan-phase 40` from
+`spikes/MANIFEST.md:345-378` (Idea C, spikes 016–018) plus REQ-34.4.1-07's deferral text, per this
+section's own instruction NOT to re-derive them from the panel's copy. See `REQUIREMENTS.md`
+§"Phase 40 Requirements". Three planning-time corrections are recorded in the requirement text
+rather than left in a plan: **D-26's capability control is a CONJUNCTION** (the embed *does* match
+`default.json` on the ACL's window leg — `tauri-utils-2.9.3/src/acl/capability.rs:150-163` and
+`tauri-2.11.5/src/ipc/authority.rs:459` — and the ORIGIN leg at `authority.rs:57-67` is what denies
+it); **D-32's "blocked subresource" caveat is inverted** (the retired detection was main-frame; the
+real obstacle is that wry 0.55.1's macOS backend implements **no navigation-failure callback at
+all**, so REQ-40-08 closes on evidence either way); and **two frontend gates are invalidated by the
+Model A retirement** and are dispositioned in-plan rather than discovered in CI
+(`WebviewUnavailablePanel.test.tsx`'s `hasTwoDistinctArms` extracts at the literal
+`if (!webviewPreloadPath)` string the retirement deletes, and `meta/i18nForkTouchedFiles.json:51,:203`
+pin two deleted files).
 
 **Depends on:** **Phase 35** (Electron cutover) — already complete; the `<webview>` unwind half is
 only meaningful once the Electron branch is genuinely dead, which it now is. **Independent of
@@ -4843,13 +4855,20 @@ Phases 38 and 39** despite following them in number: 38 is a hardware collection
 debt, and neither gates a line of this work. The Windows/Linux backend questions above may generate
 items *for* Phase 38's ledger — that is a downstream contribution, not a dependency.
 
-**Plans:** 0 plans
+**Plans:** 11 plans in 7 waves
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 40 to break down — read `spikes/MANIFEST.md:345-378` and the
-  `spike-findings-gamelib` skill BEFORE planning; the API questions this phase turns on were
-  already answered against vendored crate sources and live hardware, and re-deriving them from
-  docs will get different answers)
+- [ ] 40-01-PLAN.md — Model A frontend census by predicate, retirement, and disposition of the three invalidated test pins (wave 1)
+- [ ] 40-02-PLAN.md — Rust embed foundation: discharge D-25 against vendored source, target-gate `unstable` to macOS with the exclusion proven, add the `store_embed_*` lifecycle and bounds arms (wave 1)
+- [ ] 40-03-PLAN.md — `WebviewTag` shim retirement, four-surface channel re-census, and the mutation-proven Model A retirement gate (wave 3)
+- [ ] 40-04-PLAN.md — Store-browser threat model, the capability conjunction, navigation containment, and the verified GOG/Amazon logout jar clear (wave 2)
+- [ ] 40-05-PLAN.md — Store-embed seam, IPC registration, channel constants, preload bindings and the IPC inventory (wave 2)
+- [ ] 40-06-PLAN.md — Reference-counted overlay-suppression context, the placeholder, and four structural overlay wirings (wave 3)
+- [ ] 40-07-PLAN.md — Rust navigation arms with browser-correct cursor semantics, and the rebuilt props-driven chrome (wave 4)
+- [ ] 40-08-PLAN.md — The embed host: one geometry oracle, one bounds writer, route lifecycle, and the store/wiki render path (wave 5)
+- [ ] 40-09-PLAN.md — Origin table replacing the substring host check, re-derived restore, deep-link origin gate, adtraction derive-or-declare (wave 6)
+- [ ] 40-10-PLAN.md — Panel copy for two honest reasons, Phase 38 ledger items, the Epic spike filing, and the counted i18n census (wave 6)
+- [ ] 40-11-PLAN.md — Live gate on real hardware: the D-33 gesture pixel-measured, plus input feel and drag-resize latency (wave 7, **`autonomous: false`**)
 
 ---
 

@@ -1362,3 +1362,323 @@ blast-radius-unknowable repo-wide `--fix` for a requirement that never demanded 
 The `--max-warnings 4157` ratchet added to `package.json`'s `lint` script was mutation-proven in
 both directions on the live tree, not merely configured, closing the exact failure mode T-39-40
 named (a ratchet set above the true count is inert and indistinguishable from a working control).*
+
+## Phase 40 Requirements — In-app store and wiki browsing under Tauri (embedded child webview)
+
+Minted 2026-09-04 during `/gsd-plan-phase 40`, from `spikes/MANIFEST.md:345-378` (the "Requirements
+(Idea C — in-app store browser / embedded child webviews)" block, spikes 016–018) plus
+**REQ-34.4.1-07**'s deferral text, exactly as ROADMAP.md's Phase 40 section directed. They are
+deliberately NOT re-derived from `WebviewUnavailablePanel`'s user-facing copy. `40-CONTEXT.md`'s
+D-01..D-37 supply the shipping decisions; there is no `RESEARCH.md` or `VALIDATION.md` for this phase
+by design (`--skip-research`), because spikes 016/017/018 were run on 2026-07-31 against **vendored
+crate sources and live hardware** as the kill-shot for exactly these questions, and the ROADMAP warns
+that re-deriving them from documentation gets different answers.
+
+**Three planning-time corrections are recorded in requirement text rather than left in a plan,
+because each changes what a plan must assert:**
+
+1. **D-26's stated control is verifiable but is not the control that holds.** Measured against
+   `tauri-utils-2.9.3/src/acl/capability.rs:150-163` and `tauri-2.11.5/src/ipc/authority.rs:459`:
+   `resolve_access` ORs the window and webview legs, and the `windows` field's own doc comment states
+   that matching a window enables the capability on **all of that window's webviews, regardless of
+   the `webviews` value**. `capabilities/default.json` is scoped `"windows": ["main"]`, and the store
+   embed is a child webview OF `main` — so it **does** match on the window leg. What actually denies
+   it is the ORIGIN leg: `Origin::matches` (`authority.rs:57-67`) matches a Remote origin only against
+   a Remote execution context, and `default.json` declares no `remote` key. The assertion is therefore
+   a **conjunction** (REQ-40-11), not the single check D-26 names.
+2. **D-32's "blocked third-party subresource" caveat is inverted.** The retired detection fired on a
+   **main-frame** load failure whose failed URL was the tracker's, then read the redirect target out
+   of that URL's own query string. The difficulty is not frame scope — it is that **wry 0.55.1's
+   macOS backend implements no navigation-failure callback at all** (no
+   `didFailProvisionalNavigation`/`didFailNavigation` handling, no failure handler on the attributes
+   struct). REQ-40-08 is therefore a derive-or-declare obligation and closes on evidence either way.
+3. **Two frontend gates are invalidated by the Model A retirement and must be dispositioned, not
+   discovered in CI.** `WebviewUnavailablePanel.test.tsx`'s `hasTwoDistinctArms` extracts its block at
+   the literal string `if (!webviewPreloadPath)`, which REQ-40-10 deletes; and
+   `meta/i18nForkTouchedFiles.json` pins two files REQ-40-10 deletes (`:51`, `:203`), which is the
+   recorded "deleting a scoped source file breaks the blocking i18n gate" failure shape.
+   Also folded: **`humbleGetLoginUserAgent` joins D-11's re-census scope** — its only renderer consumer
+   was `HumbleLoginSurface`'s UA fetch, and REQ-34.4.1-04 already recorded that the channel travelled
+   to 34.4.1 solely because its consumer was the deferred `<webview>`'s `useragent` attribute.
+
+Scope fence: **macOS only** (D-01) and **`/store/epic` out** (D-05). Both are shipping decisions with
+user-visible surfaces (REQ-40-12), not silent omissions.
+
+- [ ] **REQ-40-01**: The store embed is created with `Window::add_child(WebviewBuilder, Position, Size)`
+  on the **existing config-created `main` window** — no window restructuring — and the `unstable` cargo
+  feature it is gated on (`tauri-2.11.5/src/window/mod.rs:1129`,
+  `#[cfg(any(test, all(desktop, feature = "unstable")))]`) is **target-gated to macOS**, with the
+  exclusion **PROVEN by measurement against a non-macOS target, not asserted from the declaration's
+  shape** — Cargo unifies features across duplicate declarations of the same crate, so
+  `40-PATTERNS.md`'s proposed two-declaration shape may unify `unstable` back in. `unstable` is
+  currently enabled **unconditionally** at `Cargo.toml:25` for the pristine-Epic-webview work, and that
+  line's existing rationale comment is amended, never replaced. Cost is compile-time only: `tauri` +
+  `tauri-runtime-wry` recompile, ~10.8 s warm, **no binary payload and no new dependency**. Plan `40-02`.
+  *(MANIFEST Idea C bullets 1-2; D-01, D-03)*
+
+- [ ] **REQ-40-02**: **The renderer is the ONLY owner of the embed's geometry.** The slot div's
+  `getBoundingClientRect()` is the single layout oracle; its logical-px rect is sent to Rust and applied
+  **verbatim** via `set_position`/`set_size`. The control is **structural, not a runtime check** —
+  spike 017 proved two writers silently last-write-wins with **no error**, so nothing could detect a
+  second writer at runtime. Concretely: exactly one `setBounds` call site in the entire renderer, fed
+  only by that slot's rect; exactly one bounds-writing site in the Rust tree; **no fallback rect of any
+  kind** (no window size, no CSS variable, no numeric coordinate literal) even when the ref is null; and
+  the TypeScript layer is a courier that throws on a missing or non-finite coordinate rather than
+  substituting one, because a substituted rect is a second writer in disguise. Fractional CSS px round
+  to the nearest whole logical px with no cumulative drift, and JS viewport coords map 1:1 with no
+  titlebar offset at `scale_factor` 1.0 (spike 017, macOS only). Plans `40-05`, `40-08`.
+  *(MANIFEST Idea C bullet 3; D-18)*
+
+- [ ] **REQ-40-03**: **Overlay UI never renders above the embed**, enforced by ONE reference-counted
+  suppression context every overlay routes through **by mounting**, not by an author remembering to
+  call `hide()`. Reference counting is required, not an optimisation: nested overlays and the
+  multi-step tour must compose, and releasing on the first unmount while a second overlay is open
+  would un-hide the embed underneath a live modal. A styled placeholder fills the slot while hidden so
+  it reads as the store dimming behind a modal rather than a rendering glitch, and the slot stays
+  mounted and measurable throughout so the bounds sync keeps working. Route lifecycle is `hide()` on
+  leave and `close()` **only** at app teardown, which is what makes returning instant with page state
+  and scroll intact. Consumers at ship time: the shared `Dialog` (covering both `LoginWarning` and the
+  adtraction warning in one wiring), NavShell's tier-2 portal dropdowns, the Humble expiry toast, and
+  the onboarding tour — the tour holding **one** acquisition across its whole multi-step lifecycle
+  rather than re-acquiring per step. The counter must survive React 18 strict-mode double-mounting,
+  clamp at zero, and make **both** misuse modes noisy (an underflow warns; a consumer rendered outside
+  the provider warns instead of silently no-opping). **`LoginWarning` stays driven by GameLib's own
+  per-runner auth state and must never start parsing third-party session cookies out of the shared jar**
+  — it answers "have you connected this store to GameLib", and a per-store cookie heuristic over a
+  process-wide jar would rot. This is not a z-index problem: the child is a native subview and DOM
+  stacking contexts do not extend to it. Plans `40-06`, `40-08`.
+  *(MANIFEST Idea C bullet 4; D-16, D-18, D-19, D-20, D-21, D-36)*
+
+- [ ] **REQ-40-04**: **One default cookie jar per process is retained DELIBERATELY** — no
+  `data_store_identifier` anywhere — because that shared jar is what makes the store tab carry the
+  user's real login, which is the single property that makes the tab worth having, and is why upstream
+  Heroic's "store page doesn't know you're signed in" defect is **structurally absent** here (confirmed
+  live by quick task `260902-8i2`). Its accepted cost — one jar holding every store's session, readable
+  from any webview handle — is recorded as an explicit `accept` in the threat model, not omitted because
+  it was decided. **The embed promotes the GOG/Amazon logout jar leak from latent to user-visible, and
+  this phase fixes it**: both logout paths clear at `WKWebsiteDataStore::defaultDataStore()` level
+  through the **existing** `clear_default_data_store_cookies_for_domain` (`main.rs:3775`), which is
+  label-independent and measures the delete with an **independent** `getAllCookies()` re-read before and
+  after — never trusting the removal call's own completion signal, because wry's cookie delete is known
+  to report success while deleting nothing. One host per invocation, mirroring `clearEpicCookies`; the
+  **credential-side cleanup runs first and runs even if every cookie-side step fails**; a verified count
+  of zero against a non-empty before-census warns rather than reading as success. No second domain
+  comparator (`cookie_domain_matches`, `main.rs:1823`, is deliberately the only one). **Zoom is
+  excluded** — its backend handlers were dropped permanently by Phase 34.5 D-02 and its logout is
+  unreachable under Tauri. Folds `2026-09-02-gog-and-amazon-logout-never-clear-the-shared-cookie-jar`
+  and `2026-09-02-d-35-19-15-sibling-apex-seeding` (the four Epic sibling apexes get evidence or a named
+  owner, not a third stay in zero queues). Plan `40-04`.
+  *(MANIFEST Idea C bullet 5; D-14, D-15, two folded todos)*
+
+- [ ] **REQ-40-05**: **All 013–015 rules carry over to the embed unchanged**: `cookies()` never
+  `cookies_for_url()` (wry compares domains with string `==` on macOS); `on_page_load` — never
+  `on_navigation` — for **deadline-armed relays**, because `on_navigation` fires for subframes and an ad
+  iframe could re-arm a deadline forever; per-child `.user_agent()` is **mandatory** and does reach the
+  network; and the handle dies with the webview, so any poller is anchored to a survivor and every read
+  tolerates an absent embed by returning a quiescent state rather than throwing into a render path.
+  **The embed's UA is a real, current Chrome string**, defined as a `const` whose comment marks the
+  version as a MAINTAINED value with a review date — **the synthetic
+  `Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0` must not be ported**, that version does not
+  exist and reads as synthetic to any anti-bot heuristic. This is a header string only: zero package
+  size impact, and the embed renders on the system WKWebView like the rest of the app. **One deliberate
+  refinement of the `on_page_load`-not-`on_navigation` rule is recorded**: it governs deadline-armed
+  relays, so a scheme BLOCKER correctly lives in `on_navigation`, where firing for subframes is a
+  feature rather than the hazard — see REQ-40-11. Plans `40-02`, `40-05`.
+  *(MANIFEST Idea C bullet 6; D-17)*
+
+- [ ] **REQ-40-06**: The browser chrome is **rebuilt, not ported**, because control inverts:
+  `webview.canGoBack()` has no equivalent, so back/forward availability becomes **state Rust pushes to
+  the renderer**, never something the renderer can synchronously ask a handle for. **D-25 is discharged
+  FIRST and in writing, against the VENDORED CRATE SOURCE** — 34.3 D-05's standing rule that no plan may
+  be written on an unverified API, and the ROADMAP's explicit warning about re-deriving from docs. The
+  plan-time scan found `tauri::webview::Webview` (2.11.5) exposes `url`, `navigate`, `reload`, `eval`,
+  `hide`, `show`, `close`, `set_position`, `set_size`, `position`, `size` and **no** `go_back`/
+  `go_forward`/`can_go_back`/`can_go_forward`, with wry 0.55.1's `WebView` the same — so **D-22 stands**
+  and back/forward is a Rust-side history stack recorded from `on_page_load` main-frame loads and driven
+  by `navigate()`. A native API, if the executor's re-verification finds one, beats it. The stack's
+  cursor must behave like a browser's: a history-driven navigation **moves** the cursor rather than
+  pushing, or every back press appends and the stack grows forever while never going back; a push from
+  mid-stack truncates the forward entries; a reload pushes nothing. **ZERO page-side JS injection** —
+  no `eval`, no `history.back()` in the page — because document-side injection is the confirmed Talon
+  fingerprint vector root-caused on 2026-08-03; this is a hard rule, not a preference. The chrome
+  component is presentational: it holds no handle and no subscription, so it cannot regress into
+  querying one. It displays the **HOST only** (D-23) — not the full URL with affiliate and session
+  parameters — keeps the insecure-scheme warning treatment, renders empty rather than throwing on an
+  unparseable URL, and **does not reproduce the retired bar's router-history fallback**, which conflated
+  two histories and would navigate the user out of the store screen. It sits structurally above the
+  embed slot so the slot's rect is measured below it and **NavShell needs no changes**. Accepted cost,
+  stated in code: in-page state and scroll are not restored the way true browser history would restore
+  them. Plans `40-02`, `40-07`.
+  *(REQ-34.4.1-07's `WebviewControls` chrome clause; D-22, D-23, D-24, D-25)*
+
+- [ ] **REQ-40-07**: The `sessionStorage` last-url restore and its `validStoredUrl` host check are
+  **RE-DERIVED for Model B, not ported verbatim** — the standing lesson is that verbatim ports ship
+  silent defects, and this code assumed a different lifecycle. Two substantive changes follow.
+  **(a)** `validStoredUrl`'s substring test is replaced with real origin parsing: hostname **exact-or-
+  dot-suffix** against an apex, plus an https requirement. `url.includes('gog.com')` matches
+  `evil-gog.com.attacker.net`, and a suffix test without the leading dot still matches `evilgog.com` —
+  this project already shipped one production defect (F-34.4.2-19) from omitting exactly that boundary.
+  The value is only narrowly attacker-influenceable but it feeds a native webview's **initial**
+  navigation at app start. **(b)** The storage choice is re-derived by measurement, not ported: REQ-40-03's
+  `hide()`-on-leave already preserves state **within** a session, so the restore now earns its keep
+  **only across app restarts** — and `sessionStorage` does not survive a process restart, so a restore
+  keyed to it cannot deliver the one property it now exists for. The restore validates on **read**, not
+  only on write, so a value stored under older origin rules cannot feed the first navigation after an
+  update. All five stores' origins live in **one table**, not five ad-hoc checks, and its test suite is
+  adversarial — a permissive matcher passes every happy-path test. Plan `40-09`.
+  *(REQ-34.4.1-07's restore + `validStoredUrl` clauses; D-30, D-31)*
+
+- [ ] **REQ-40-08**: The adtraction redirect workaround is **re-derived against a mechanism proven to
+  fire, or DECLARED A GAP in writing — never shipped as a detection that cannot fire.** This is a
+  derive-or-declare obligation and closes on evidence either way. Two planning-time findings shape it:
+  the retired detection was **main-frame**, not a subresource detector (it matched a load-failure event
+  whose failed URL was the tracker's, then read the redirect target from that URL's own query string and
+  stripped a port GOG began emitting that makes the target unreachable) — so D-32's stated caveat is
+  inverted; **but wry 0.55.1's macOS backend implements no navigation-failure callback at all**, so
+  there is no direct equivalent. If a derivation from the proven primitives is used, its arming must be
+  restricted to main-frame-shaped navigations and its **disarming must come from `on_page_load`**, or a
+  third-party ad frame can re-arm the deadline indefinitely — the exact defect the 013–015 rule exists
+  to prevent. If no derivation can be proven to fire, the warning `Dialog` is **REMOVED** rather than
+  left unreachable, the gap is logged at the point the detection would have run per this file's
+  "logged, never silent" discipline, and a todo is filed with the vendored-source citation. **A dead
+  modal reads as working code to every future reader and is worse than an absent one.** Plan `40-09`.
+  *(REQ-34.4.1-07's adtraction clause; D-32)*
+
+- [ ] **REQ-40-09**: `store-page?store-url=` deep links **embed only known, embeddable origins and hand
+  everything else to the system browser** with a visible escape hatch, never a blank screen. The URL
+  arrives from third-party deal data that returns storefronts beyond the five embedded ones (Fanatical,
+  GreenManGaming, Humble and others), so a non-match is the **normal** case, not an error case. The
+  Rust scheme policy (REQ-40-11) is a separate, independent control and does **not** make this
+  redundant — it is a scheme policy and would happily load an arbitrary https origin into a native
+  webview; a comment at the check says so, so a future reader does not delete it. A deep link that
+  resolves **is** that store's embed pointed at a different starting URL: same user agent, same restore
+  key, same history stack. **No sixth store identity is introduced** — D-35 falls out of the origin
+  check and adds no concept. Plan `40-09`.
+  *(REQ-34.4.1-07's `store-page` route family; D-34, D-35)*
+
+- [ ] **REQ-40-10**: **Model A is FULLY retired — the codebase leaves this phase with one webview model,
+  not two.** That is the deliverable, not a cleanup appended to one. The census is derived **by
+  predicate against the live tree**, because the 34.4.1 deferred list is partly stale: it names
+  `Sidebar/index.tsx:92,103`, a file Phase 34.10's NavShell deleted, and the zero result must be
+  recorded as an explicitly falsified claim rather than by omission. The census is larger than the
+  ROADMAP states, because `getWebviewPreloadPath` returns a declared-empty `''` **unconditionally**
+  under Tauri (`appShellFlowRegistration.ts:262-266`, 34.4.1 D-12) and Tauri has been the only shell
+  since Phase 35 — so `!webviewPreloadPath` is **always** true and everything behind it is dead:
+  `WebView/index.tsx`'s `<webview>` render and its two Model-A effects and the mouse back/forward
+  effect; the **entire** `WebviewControls` component (its only render site was inside that dead branch);
+  `HumbleLoginSurface`'s `<webview>` render and **both** of its `useLayoutEffect`s (the D-17 navigation
+  relay and the chrome-CSS attach), because `webviewRef.current` is never populated; the renderer-side
+  `humbleLoginChromeCss` helper; and the `WebviewTag`/`DidFailLoadEvent` shim
+  (`platform/types.ts:167`/`:125`), its barrel re-export (`platform/index.ts:1128`) and its
+  `types.usage.test.ts` pin — whose deletion set is **re-derived**, because D-12's five line numbers
+  omit the `DidFailLoadEvent` assertions. **`HumbleLoginSurface` is NOT a live consumer**: it is a
+  half-migrated file whose return path is already Model B while it still carries its entire Model-A
+  body. `getWebviewPreloadPath`'s declared-empty backend return **survives untouched** — it is a
+  declared-dead backend return, not Model A, and it is the fact that makes this census correct.
+  `humbleLoginNavigated` **and `humbleGetLoginUserAgent`** are removed **only** if a four-surface sweep
+  (TypeScript, Rust, behaviour-level callers of `notifyLoginNavigated`, and the two send-channel test
+  lists) proves zero live callers; a KEEP with a written reason is a valid outcome, because deleting a
+  channel the native path needs would break Humble cookie revalidation **silently**. Retirement is
+  guarded by a **mechanical predicate gate**, phase-directory-resident and runner-discovered, whose
+  **vocabulary is MEASURED against the real post-deletion tree before it is committed** (`WebviewBuilder`
+  in the new Rust code, the surviving `WebviewUnavailablePanel` identifier, and comment lines are all
+  known false-positive risks) and which is **mutation-proven in BOTH directions** — RED against a
+  reintroduced token with `git status` clean afterwards, GREEN against the real tree. The anti-vacuity
+  floor in `meta/runPlanningGates.py` is raised in the same commit, or the new gate can be deleted later
+  with every gate still green. **Two invalidated gates are dispositioned rather than discovered in CI**:
+  `WebviewUnavailablePanel.test.tsx`'s `hasTwoDistinctArms` is **INVERTED** (its purpose — the store/wiki
+  arm is never silently re-gated behind a predicate — survives the guard's deletion and gets sharper,
+  with a fifth self-test rejecting a guard re-added under any name), and the two
+  `meta/i18nForkTouchedFiles.json` entries naming deleted files are removed with both i18n scripts
+  measured before and after. Folds
+  `2026-09-01-webview-amazonlogindata-is-permanently-null` — removed as part of the retirement rather
+  than fixed in place. Plans `40-01`, `40-03`.
+  *(34.4.1 deferred list, `34.4.1-PORTED-CHANNELS.md:420`; D-09, D-09a, D-10, D-11, D-12, D-13, one folded todo)*
+
+- [ ] **REQ-40-11**: **The full store-browser surface is threat-modelled — a shipping precondition, not
+  a nice-to-have** (`MANIFEST.md:340-343`, spike 014b). This is the first time GameLib points a webview
+  at arbitrary third-party pages **by design**, so the model is in scope here and nowhere else. It
+  covers the injected Tauri global, remote-IPC eligibility, ACL window-leg inheritance, arbitrary-origin
+  navigation including redirect chains through payment providers and SSO, `window.open`, downloads,
+  external protocol handlers, and **the shared cookie jar the embed now sits inside, which holds every
+  store's session** (REQ-40-04's accepted cost, recorded as an explicit `accept`). Every row carries a
+  disposition and a `## Controls verified` section distinguishes what was **proven** from what was
+  asserted. **The capability assertion is a CONJUNCTION** (see planning-time correction 1 above):
+  **(i)** no capability file declares a `remote` key — the control that actually denies a remote origin
+  any match, cited to `authority.rs:57-67`; and **(ii)** a defence-in-depth attempt to scope
+  `default.json` by `webviews` rather than `windows`, per the crate's own recommendation for
+  multiwebview windows — **verified against every renderer window-chrome call or REVERTED with the
+  falsification recorded**, because a broken capability fails at runtime with an ACL rejection the
+  renderer swallows. Containment uses the three first-class builder hooks verified in vendored source:
+  `on_navigation` **blocks `gamelib://`** — the sharpest edge in the phase, since it would let a store
+  page drive the app — hands `steam://` to the OS through the app's **existing** external-open path,
+  allows `https`, and **default-denies unknown schemes**, implemented as a named unit-tested function
+  rather than an inline closure; `on_new_window` **denies** and routes to the system browser, where the
+  URL bar and the user's password manager both work; `on_download` **returns false** and routes
+  likewise, so a store page cannot write to disk through the app. **Navigation itself stays FREE — an
+  origin allowlist is forbidden**, because store checkout genuinely crosses origins and an allowlist
+  would break buying things, which is the point of a store tab. Plan `40-04`.
+  *(MANIFEST.md:340-343; D-26, D-27, D-28, D-29)*
+
+- [ ] **REQ-40-12**: **The macOS-only, Epic-excluded scope is honest to users AND to the ledger.** All
+  evidence behind this phase is macOS/tauri 2.11.5/wry 0.55.1 at `scale_factor` 1.0; Windows (WebView2)
+  and Linux (webkit2gtk) child-webview behaviour is entirely unverified, so the phase **ships where the
+  evidence is** rather than writing an untestable runtime fallback. Non-macOS keeps
+  `WebviewUnavailablePanel`, **reworded to name the platform reason** — not "not available on this
+  build", which would send a Windows user looking for a download that does not exist — preserving
+  34.4.1 D-06's principle that the gap stays visible to **users**, not only to the roadmap.
+  `/store/epic` is out of scope with **provisional, non-accusatory** copy: the confirmed 403 is on a
+  **login** endpoint and whether Talon guards store browsing the same way is **untested**, so the copy
+  must not assert that Epic blocks in-app browsing — that is a claim this project has not earned and
+  would have to retract. Both messages are **new keys**, never edited defaults on the existing key, and
+  both paths keep the open-in-browser escape hatch. **The Epic tile stays** in the stores panel: a tile
+  leading to a working escape hatch beats no tile. The Windows/Linux unknowns — whether `add_child`
+  works at all on either backend, retina at `scale_factor` 2.0, drag-resize latency, and input/scroll
+  feel — are filed as **Phase 38 ledger items** (not todos; Phase 38 is the deferred hardware/environment
+  collection), each stating that Phase 40's macOS evidence does not transfer and that plan `40-11`'s
+  macOS result **does not close it**, with the matching non-closure recorded on the gate's side too. The
+  Epic question is filed as a **spike that runs ALONGSIDE this phase and blocks nothing**, carrying its
+  mechanism note (a Tauri-**managed** child webview inherits the injected globals root-caused as the
+  fingerprint, so an embed is a predicted failure with a known mechanism, not an open question), D-07's
+  bounded live probe, and the existing harness path
+  `sources/016-embedded-child-webview-basic/app/`. **This phase exists because a deferral sat in three
+  prose locations and zero queues; it must not repeat that.** Plan `40-10`.
+  *(MANIFEST Idea C "all macOS-only evidence" + "Open before shipping"; D-01, D-02, D-04, D-05, D-06, D-07, D-08)*
+
+- [ ] **REQ-40-13**: **The two open questions no automated check can answer are settled by a human on
+  real hardware**, together with the one live gesture that proves the suppression machinery end to end.
+  D-33's gesture — open a store tab, trigger an overlay, confirm the embed hides and the placeholder
+  shows, dismiss, confirm it returns — covers the hook, the placeholder, `hide`/`show` and the geometry
+  sync **together**, because jest cannot see a native subview. Input/scroll feel and drag-resize latency
+  get the human's verbatim verdict; **no verbatim report containing a qualification may be recorded as
+  an unqualified PASS**, and the agent does not invent a numeric threshold it cannot measure. **Every
+  geometry claim is PIXEL-MEASURED against the slot's reported rect within a one-logical-pixel tolerance
+  justified from spike 017's measured rounding — never eyeballed from a screenshot, a method already
+  wrong twice on this project.** The run uses the **packaged** binary with every prior instance killed
+  and the kill confirmed (the dev command exits 0 without replacing a running instance), captures
+  **by window id** and never full-screen or to a dotfile (both produce a run with no evidence and no
+  error), reads renderer state from disk rather than driving a web inspector console that has been
+  observed wedged, and records the build command, binary timestamp, OS version and `scale_factor`.
+  The **contract is written and reviewed against the five live-gate defect classes BEFORE the run**,
+  including the requirement-PAIR analysis — hiding the embed **destroys** the geometry evidence the same
+  item's pass condition needs, so geometry is captured before the overlay opens and again after it
+  dismisses. The artifact names what the run does **not** establish, with a queue owner against each.
+  Plan `40-11` (`autonomous: false`; auto-advance must not answer its own checkpoint).
+  *(MANIFEST Idea C "Open before shipping"; D-33)*
+
+- [ ] **REQ-40-14**: **Every user-facing string this phase mints lands in `gamelib.json`, never
+  `translation.json`, and is COUNTED from the catalog diff rather than assumed.** This is discipline,
+  not enforcement: **no gate catches a violation** — the lint gate is blind to an absent key, so a
+  consumer referencing a missing key silently renders its default forever; nothing detects English-side
+  drift, so a changed English string under an existing key silently disagrees with every translated
+  locale; and renaming through the translation function's **default argument is a no-op** when the key
+  already exists. So: new keys are **minted**, never redefined in place; the changed-key count for the
+  shared catalog must be **zero**, and a non-zero count is a defect to fix rather than a number to
+  report; every added key's consumer link is **verified by grep**, not asserted; and the census names
+  the gaps the gates leave, so it is not read as more assurance than it is. Existing localised keys are
+  **reused** where they fit (the four `webview.controls.*` labels), because minting duplicates would
+  strand their translations. The newly minted keys get the project's standard localisation treatment
+  in-phase. Plan `40-10`.
+  *(D-37)*
+
+*Last updated: 2026-09-04 -- Phase 40 (REQ-40-01..14) minted during `/gsd-plan-phase 40` from `spikes/MANIFEST.md:345-378` (Idea C, spikes 016-018) plus REQ-34.4.1-07's deferral text, per ROADMAP.md's Phase 40 instruction NOT to re-derive them from the panel's copy; `40-CONTEXT.md` D-01..D-37 supply the shipping decisions. **No RESEARCH.md or VALIDATION.md exists for this phase by design** (`--skip-research`) -- spikes 016/017/018 were run against vendored crate sources and live hardware as the kill-shot for exactly these questions, and the ROADMAP warns that re-deriving them from docs gets different answers; validation criteria are therefore carried inside each plan's `<verification>` and `must_haves` rather than in a separate artifact. **Three planning-time corrections are recorded in requirement text rather than left in a plan**, each because it changes what a plan must assert: (1) D-26's stated capability control is verifiable but is not the control that holds -- the embed DOES match `default.json` on the ACL's window leg (`capability.rs:150-163` doc comment; `authority.rs:459` ORs the legs), and the ORIGIN leg is what denies it (`authority.rs:57-67`), making REQ-40-11 a conjunction; (2) D-32's "blocked subresource" caveat is inverted -- the retired detection was main-frame, and the real obstacle is that wry 0.55.1's macOS backend implements no navigation-failure callback at all, so REQ-40-08 is a derive-or-declare obligation; (3) two frontend gates are invalidated by the Model A retirement and are dispositioned in-plan rather than discovered in CI (`WebviewUnavailablePanel.test.tsx`'s `hasTwoDistinctArms` extracts at the literal `if (!webviewPreloadPath)` string REQ-40-10 deletes, and `meta/i18nForkTouchedFiles.json:51,:203` pin two deleted files). Also folded into REQ-40-10: `humbleGetLoginUserAgent` joins D-11's re-census scope, its only renderer consumer having been the deleted UA fetch. ROADMAP.md's Phase 40 `**Requirements**: TBD -- mint REQ-40-*` line is replaced by these IDs.*
