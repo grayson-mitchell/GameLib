@@ -445,9 +445,28 @@ export default function WebView() {
   // `navigator.platform` -- both are wrong here: `process` is Node/main-process-only, and
   // `navigator.platform` under WKWebView doesn't reflect the actual host OS this app runs on
   // (`tauri-chromium-only-web-apis` project gotcha). Every other platform falls through to the
-  // exact same `WebviewUnavailablePanel` plan 40-01 left in place; its copy is plan 40-10's job.
+  // `WebviewUnavailablePanel`, reworded by plan 40-10 (D-02) to name the platform reason.
   if (platform !== 'darwin') {
-    return <WebviewUnavailablePanel url={startUrl} />
+    window.api.logInfo(
+      `[WebView] platform=${platform}: in-app store/wiki browsing is macOS-only (D-02)`
+    )
+    return <WebviewUnavailablePanel url={startUrl} reason="platform" />
+  }
+
+  // Phase 40 Plan 10 (D-05/D-08, REQ-40-12) -- Rule 2 deviation: `/store/epic` is scoped OUT of
+  // the embed on EVERY platform, including macOS, even though nothing upstream of this point
+  // (`urls` map, `useStoreEmbedHost`, `storeEmbedOrigins.ts`'s `embeddable: false` flag -- that
+  // flag is consulted only by the deep-link/restore path above, never by this direct route) ever
+  // stopped `/store/epic` from reaching the live embed render below. A Tauri-managed child
+  // webview (`Window::add_child`) still inherits the injected globals that are the confirmed,
+  // root-caused Talon fingerprint (2026-08-03); embedding Epic here would reproduce the exact
+  // failure the pristine-WKWebView escape hatch exists to avoid. The Epic tile stays (D-08,
+  // `NavShell/components/StoresPanel/index.tsx`) -- it now lands on the panel instead.
+  if (store === 'epic') {
+    window.api.logInfo(
+      '[WebView] store=epic: /store/epic is scoped out of the embed on every platform (D-05)'
+    )
+    return <WebviewUnavailablePanel url={startUrl} reason="epic" />
   }
 
   // D-24: the chrome renders ABOVE the slot, so the slot's rect is measured below (and never

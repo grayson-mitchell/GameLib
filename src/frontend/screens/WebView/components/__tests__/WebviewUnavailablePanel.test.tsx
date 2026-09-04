@@ -109,15 +109,6 @@ describe('WebviewUnavailablePanel (D-06, store/wiki-only)', () => {
     expect(element.props.className).toBe('WebView__unavailablePanel')
   })
 
-  it('renders honest copy naming in-app store/wiki browsing as the gap, never a login gap', () => {
-    const element = WebviewUnavailablePanel({}) as AnyReactElement
-    const text = collectText(element)
-
-    expect(text).toContain('not available on this build')
-    expect(text.toLowerCase()).toContain('store and wiki')
-    expect(text.toLowerCase()).not.toMatch(/sign in|signing in|login/)
-  })
-
   it('renders no Open in browser button when url is absent', () => {
     const element = WebviewUnavailablePanel({}) as AnyReactElement
     const button = findByClassName(
@@ -140,6 +131,168 @@ describe('WebviewUnavailablePanel (D-06, store/wiki-only)', () => {
     button?.props.onClick?.()
     expect(mockApi.openExternalUrl).toHaveBeenCalledWith(url)
   })
+})
+
+describe('WebviewUnavailablePanel — reason="platform" (D-02, REQ-40-12)', () => {
+  it('defaults to the platform reason when no reason prop is passed (D-34 deep-link call site compatibility)', () => {
+    const element = WebviewUnavailablePanel({}) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).toContain(
+      "In-app store and wiki browsing isn't available on this platform yet"
+    )
+  })
+
+  it('renders honest copy naming the PLATFORM as the reason, never "this build"', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'platform'
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text.toLowerCase()).toContain('platform')
+    expect(text.toLowerCase()).not.toContain('not available on this build')
+    expect(text.toLowerCase()).toContain('store and wiki')
+    expect(text.toLowerCase()).not.toMatch(/sign in|signing in|login/)
+  })
+
+  it('renders ONLY the platform heading, never the epic heading', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'platform'
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).not.toContain('Epic Store browsing')
+  })
+
+  it('renders an Open in browser button for the platform reason', () => {
+    const url = 'https://store.steampowered.com/'
+    const element = WebviewUnavailablePanel({
+      url,
+      reason: 'platform'
+    }) as AnyReactElement
+    const button = findByClassName(
+      element,
+      'WebView__unavailablePanel-openInBrowser'
+    )
+
+    expect(button).not.toBeNull()
+    button?.props.onClick?.()
+    expect(mockApi.openExternalUrl).toHaveBeenCalledWith(url)
+  })
+})
+
+describe('WebviewUnavailablePanel — reason="epic" (D-05/D-08, REQ-40-12)', () => {
+  it('renders ONLY the epic heading, never the platform heading', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'epic'
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text).toContain("Epic Store browsing isn't available in-app yet")
+    expect(text).not.toContain('platform')
+  })
+
+  it('D-08: the epic copy asserts no blocking/accusatory claim about Epic', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'epic'
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    // The confirmed 403 is on a LOGIN endpoint only (D-07) -- whether Epic
+    // guards store pages the same way is unproven. The copy must describe
+    // GameLib's own gap ("doesn't yet embed"), never assert that Epic
+    // itself blocks, refuses, or prevents in-app browsing.
+    expect(text.toLowerCase()).not.toMatch(
+      /epic[^.]*\b(blocks?|refuses?|prevents?|disallows?|forbids?)\b/
+    )
+    expect(text.toLowerCase()).not.toMatch(/\b403\b/)
+  })
+
+  it('never mentions signing in or login for the epic reason', () => {
+    const element = WebviewUnavailablePanel({
+      reason: 'epic'
+    }) as AnyReactElement
+    const text = collectText(element)
+
+    expect(text.toLowerCase()).not.toMatch(/sign in|signing in|login/)
+  })
+
+  it('renders an Open in browser button for the epic reason (D-08 escape hatch)', () => {
+    const url = 'https://www.epicgames.com/store/en-US/'
+    const element = WebviewUnavailablePanel({
+      url,
+      reason: 'epic'
+    }) as AnyReactElement
+    const button = findByClassName(
+      element,
+      'WebView__unavailablePanel-openInBrowser'
+    )
+
+    expect(button).not.toBeNull()
+    button?.props.onClick?.()
+    expect(mockApi.openExternalUrl).toHaveBeenCalledWith(url)
+  })
+})
+
+describe('WebviewUnavailablePanel — minted i18n keys (Task 1, gamelib.json only)', () => {
+  const gamelibEnPath = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    'public',
+    'locales',
+    'en',
+    'gamelib.json'
+  )
+  const translationEnPath = join(
+    __dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    'public',
+    'locales',
+    'en',
+    'translation.json'
+  )
+
+  function getPath(obj: unknown, path: string[]): unknown {
+    return path.reduce<unknown>((acc, key) => {
+      if (acc !== null && typeof acc === 'object' && key in acc) {
+        return (acc as Record<string, unknown>)[key]
+      }
+      return undefined
+    }, obj)
+  }
+
+  const mintedKeyPaths = [
+    ['webview', 'unavailable', 'platform', 'heading'],
+    ['webview', 'unavailable', 'platform', 'body'],
+    ['webview', 'unavailable', 'epic', 'heading'],
+    ['webview', 'unavailable', 'epic', 'body']
+  ]
+
+  it.each(mintedKeyPaths)(
+    'gamelib.json has the minted key %s',
+    (...path) => {
+      const gamelib = JSON.parse(readFileSync(gamelibEnPath, 'utf-8'))
+      expect(typeof getPath(gamelib, path)).toBe('string')
+    }
+  )
+
+  it.each(mintedKeyPaths)(
+    'translation.json does NOT have the minted key %s (new strings never go there)',
+    (...path) => {
+      const translation = JSON.parse(readFileSync(translationEnPath, 'utf-8'))
+      expect(getPath(translation, path)).toBeUndefined()
+    }
+  )
 })
 
 describe('WebviewUnavailablePanel — no navigator.clipboard reference (Group 2)', () => {

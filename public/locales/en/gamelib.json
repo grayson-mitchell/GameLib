@@ -339,10 +339,16 @@
             }
         },
         "unavailable": {
-            "body": "GameLib's Tauri build does not yet embed a browser view for the store and wiki pages.",
-            "heading": "In-app store and wiki browsing is not available on this build",
+            "epic": {
+                "body": "GameLib doesn't yet embed Epic Store pages in-app.",
+                "heading": "Epic Store browsing isn't available in-app yet"
+            },
             "next-step": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
-            "open-in-browser": "Open in browser"
+            "open-in-browser": "Open in browser",
+            "platform": {
+                "body": "GameLib's in-app store and wiki browsing is available on macOS. It isn't available on this platform yet.",
+                "heading": "In-app store and wiki browsing isn't available on this platform yet"
+            }
         },
         "embedPlaceholder": {
             "message": "Paused while a window is open"
