@@ -2,10 +2,11 @@
   "baseCommit": "b5b5cad3fa2e822602d320b70788d87240fc056e",
   "baseVersion": "2.22.0",
   "generatedAt": "2026-08-15T00:00:00.000Z",
-  "generatedBy": "hand-edited (34.13 review CR-02(b), then A-02/A-03, then 34.12-04 Task 2 repointed the renamed onboarding-tour component's path) -- NOT a `pnpm gen-i18n-gate-scope` run; see meta/__tests__/genI18nGateScope.test.ts's staleness guard",
+  "generatedBy": "hand-edited (34.13 review CR-02(b), then A-02/A-03, then 34.12-04 Task 2 repointed the renamed onboarding-tour component's path) , then quick 260905-d33 added the new AboutDialog component -- NOT a `pnpm gen-i18n-gate-scope` run; see meta/__tests__/genI18nGateScope.test.ts's staleness guard",
   "files": [
     "src/frontend/App.tsx",
     "src/frontend/bootErrorSurface.ts",
+    "src/frontend/components/UI/AboutDialog/index.tsx",
     "src/frontend/components/UI/CachedImage/index.tsx",
     "src/frontend/components/UI/Dropdown/index.tsx",
     "src/frontend/components/UI/EditGameDialog/index.tsx",

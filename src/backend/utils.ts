@@ -244,17 +244,6 @@ async function isEpicServiceOffline(
   }
 }
 
-const showAboutWindow = () => {
-  app.setAboutPanelOptions({
-    applicationName: 'GameLib',
-    applicationVersion: getHeroicVersion(),
-    copyright: 'GPL V3',
-    iconPath: windowIcon,
-    website: 'https://github.com/grayson-mitchell/GameLib'
-  })
-  return app.showAboutPanel()
-}
-
 /**
  * CR-04 (Phase 34.1 code review): a translation lookup that survives an UNINITIALIZED
  * i18next instance.
@@ -1778,7 +1767,6 @@ export {
   handleExit,
   isEpicServiceOffline,
   openUrlOrFile,
-  showAboutWindow,
   showItemInFolder,
   removeSpecialcharacters,
   clearCache,

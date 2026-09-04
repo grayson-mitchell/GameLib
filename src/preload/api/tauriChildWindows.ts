@@ -1,19 +1,23 @@
 /**
  * Tauri renderer-side child windows (Phase 34.1 Plan 07, D-12).
  *
- * `createNewWindow` and `showAboutWindow` become genuine Tauri `WebviewWindow`s here.
- * This is RENDERER-SIDE by structural necessity, not preference: `WebviewWindow`'s
+ * `createNewWindow` becomes a genuine Tauri `WebviewWindow` here. This is
+ * RENDERER-SIDE by structural necessity, not preference: `WebviewWindow`'s
  * constructor is a webview-context-only JS API (`@tauri-apps/api/webviewWindow`) that
  * the headless Node sidecar cannot call at all -- there is no sidecar arm to route
- * through. D-03's enumerated sidecar-seam list does not name either channel, so this
+ * through. D-03's enumerated sidecar-seam list does not name the channel, so this
  * does not contradict it.
  *
+ * This module also carried `showAboutWindow` until quick `260905-d33`, which replaced
+ * that OS window with an in-app modal (`components/UI/AboutDialog`) and deleted the
+ * window, its static `public/about.html` page and this module's helper outright.
+ *
  * Fail-closed by design: `src-tauri/capabilities/default.json` scopes its grants to
- * `"windows": ["main"]`. Every window this module creates is labelled `about` or
- * `external-<n>` (NEVER `main`, NEVER derived from the caller-supplied URL), so those
- * windows match NO capability and receive ZERO Tauri command access -- load-bearing
- * because `createNewWindow` loads renderer-SUPPLIED REMOTE content and Tauri provides
- * no `<webview>` isolation boundary of its own.
+ * `"windows": ["main"]`. Every window this module creates is labelled `external-<n>`
+ * (NEVER `main`, NEVER derived from the caller-supplied URL), so those windows match
+ * NO capability and receive ZERO Tauri command access -- load-bearing because
+ * `createNewWindow` loads renderer-SUPPLIED REMOTE content and Tauri provides no
+ * `<webview>` isolation boundary of its own.
  *
  * Explicitly NOT implemented here: the `<webview>` login story (navigation
  * interception, OAuth redirect capture, session/cookie access for Epic/GOG/Amazon/
@@ -22,10 +26,9 @@
  * against no consumer, would build the wrong abstraction. Phase 33 D-09 already
  * recorded `session` as an accepted gap.
  *
- * Both exports are TOTAL -- wrapped in try/catch and console.warn on failure -- because
- * they are reached from `window.api` in response to a user click (a reference link, the
- * About menu item); a throw there is a user-visible failure for what should be a
- * harmless action.
+ * The export is TOTAL -- wrapped in try/catch and console.warn on failure -- because it
+ * is reached from `window.api` in response to a user click on a reference link; a throw
+ * there is a user-visible failure for what should be a harmless action.
  */
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow'
 
@@ -129,63 +132,4 @@ export const tauriCreateNewWindow = (url: string): void => {
   } catch (error) {
     warn('createNewWindow', error)
   }
-}
-
-/**
- * Opens (or refocuses) the single About window. Tauri has no native about panel
- * (unlike Electron's `app.showAboutPanel()`), which is exactly why this is a real
- * window backed by the static, capability-free `public/about.html`.
- */
-export const tauriShowAboutWindow = (): void => {
-  void showAboutWindowAsync().catch((error) => warn('showAboutWindow', error))
-}
-
-/**
- * WR-06 (Phase 34.1 code review): how long the About window may wait on the sidecar.
- *
- * `getHeroicVersion()` is a `sidecar_invoke` round-trip bounded by `INVOKE_TIMEOUT`
- * (60s, `src-tauri/src/main.rs`). Awaiting it UNBOUNDED before constructing the window
- * meant that with a slow or wedged sidecar the About menu item appeared to do nothing
- * for up to a minute and then opened. The version string is cosmetic; the window is
- * not. One second is far longer than a healthy round-trip and far shorter than a
- * user-visible hang.
- */
-const ABOUT_VERSION_TIMEOUT_MS = 1000
-
-async function resolveAboutVersion(): Promise<string> {
-  try {
-    return await Promise.race([
-      window.api.getHeroicVersion(),
-      new Promise<string>((resolve) => setTimeout(() => resolve('unknown'), ABOUT_VERSION_TIMEOUT_MS))
-    ])
-  } catch (error) {
-    warn('showAboutWindow:getHeroicVersion', error)
-    return 'unknown'
-  }
-}
-
-async function showAboutWindowAsync(): Promise<void> {
-  const existing = await WebviewWindow.getByLabel('about')
-  if (existing) {
-    await existing.setFocus()
-    return
-  }
-
-  const version = await resolveAboutVersion()
-
-  const win = new WebviewWindow('about', {
-    url: 'about.html?v=' + encodeURIComponent(version),
-    width: 420,
-    height: 380,
-    resizable: false,
-    center: true,
-    // Unlike `tauriCreateNewWindow` above, a hard-coded title is CORRECT here: this
-    // window loads the static, first-party, capability-free `public/about.html`, not
-    // renderer-supplied remote content, so WR-07's phishing concern does not apply.
-    title: 'About GameLib'
-  })
-  // WR-06: float the `once()` promise explicitly (see tauriCreateNewWindow).
-  void win
-    .once('tauri://error', (event) => warn('showAboutWindow', event))
-    .catch((error) => warn('showAboutWindow:once', error))
 }

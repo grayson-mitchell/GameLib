@@ -91,7 +91,6 @@ interface SyncIPCFunctions {
   openSupportPage: () => void
   openReleases: () => void
   openWeblate: () => void
-  showAboutWindow: () => void
   openLoginPage: () => void
   openDiscordLink: () => void
   openKofiPage: () => void
@@ -442,18 +441,22 @@ interface AsyncIPCFunctions {
   // failure (e.g. nothing to go back to) — never a silent default/plausible state
   // (`storeEmbedSeam.ts`'s `back()`/`forward()`/`reload()`/`navigate()` doc comments).
   storeEmbedBack: () => Promise<
-    { status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }
+    | { status: 'ok'; navState: StoreEmbedNavEvent }
+    | { status: 'error'; error: string }
   >
   storeEmbedForward: () => Promise<
-    { status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }
+    | { status: 'ok'; navState: StoreEmbedNavEvent }
+    | { status: 'error'; error: string }
   >
   storeEmbedReload: () => Promise<
-    { status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }
+    | { status: 'ok'; navState: StoreEmbedNavEvent }
+    | { status: 'error'; error: string }
   >
   storeEmbedNavigate: (
     url: string
   ) => Promise<
-    { status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }
+    | { status: 'ok'; navState: StoreEmbedNavEvent }
+    | { status: 'error'; error: string }
   >
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>

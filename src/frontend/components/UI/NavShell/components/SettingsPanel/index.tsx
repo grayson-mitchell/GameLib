@@ -1,4 +1,4 @@
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   faBookOpen,
@@ -11,6 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import ContextProvider from 'frontend/state/ContextProvider'
+import AboutDialog from 'frontend/components/UI/AboutDialog'
 import { SHOW_EXTERNAL_LINK_DIALOG_STORAGE_KEY } from 'frontend/components/UI/ExternalLinkDialog'
 import { useTour } from 'frontend/state/TourContext'
 import NavItem from '../NavItem'
@@ -27,24 +28,28 @@ import { NAV_TOUR_ID } from '../NavShellTour'
  * Settings item rather than members of its submenu -- each keeps the exact
  * guard (or lack of one) it carried at its old position.
  *
- * The About row is the About window's ONLY entry point under Tauri. The
- * window itself (`tauriShowAboutWindow`) has been fully implemented since
- * 34.1 and had no caller anywhere outside `tray_icon.ts`'s Electron tray
- * menu, which Tauri does not run -- Tauri's own tray is a deliberately
- * bounded Show/Quit menu. `window.api.showAboutWindow()` resolves directly to
- * `tauriShowAboutWindow()` (`preload/api/helpers.ts:14`), so this row opens the
- * real Tauri `WebviewWindow`.
+ * The About row is the About surface's ONLY entry point, and since quick
+ * `260905-d33` that surface is an in-app modal rather than an OS window. It
+ * previously called `window.api.showAboutWindow()`, which opened a 420x380
+ * capability-free Tauri `WebviewWindow` backed by a static `public/about.html`;
+ * that page hardcoded its own palette and could not be themed. The whole path
+ * -- page, preload helper, IPC channel type and the already-dead Electron
+ * `app.showAboutPanel()` body behind it -- was deleted in the same task rather
+ * than left orphaned, so no second entry point survives.
  *
- * The original 260822-tv4 comment described this as shell-agnostic by way of a
- * runtime shell-detection switch in `preload/api/helpers.ts`. That was true when
- * written on `main`; Phase 35 plan 17 has since collapsed the Electron-branch
- * fallback, the Tauri shell being the only shell, so no such switch remains.
- * Corrected when the commit was landed here (quick `260902-ucw`) rather than
- * ported verbatim -- and deliberately worded without naming the removed helper,
- * because the D-01/D-00b completeness gate in `meta/__tests__/` is a ZERO-MATCH
- * grep over all of `src/` that does not exempt comments, and matches on the bare
- * identifier (so even the gate file's own name cannot be cited here). It caught
- * the first two drafts of this very comment.
+ * This row therefore holds local dialog state instead of calling into preload.
+ * It does not use the heavier `ExternalLinkDialog` arrangement (GlobalState +
+ * ContextProvider, mounted in `App.tsx`): that exists because several surfaces
+ * raise that dialog, whereas About has exactly one trigger. The row is a plain
+ * `<button>` that does not navigate, so this panel stays mounted while the
+ * dialog is open -- switching tier-2 tabs unmounts both together, which is the
+ * wanted behaviour.
+ *
+ * A note kept from quick `260902-ucw`, because it still constrains edits here:
+ * the D-01/D-00b completeness gate in `meta/__tests__/` is a ZERO-MATCH grep
+ * over all of `src/` that does not exempt comments and matches on a bare
+ * identifier, so the retired shell-detection helper cannot be named in this
+ * file at all. It caught the first two drafts of that comment.
  *
  * Its label is a fork-owned `gamelib:` key rather than the already-
  * translated `tray.about`: several of that key's shipped translations
@@ -88,6 +93,7 @@ export default function SettingsPanel() {
   const { t: tGamelib } = useTranslation('gamelib')
   const { platform, handleExternalLinkDialog } = useContext(ContextProvider)
   const { startTour, resetTour, hasTourCompleted } = useTour()
+  const [showAboutDialog, setShowAboutDialog] = useState(false)
   const isWin = platform === 'win32'
 
   function handleStartTour() {
@@ -163,7 +169,7 @@ export default function SettingsPanel() {
       />
       <NavItem
         elementType="button"
-        onClick={() => window.api.showAboutWindow()}
+        onClick={() => setShowAboutDialog(true)}
         icon={faCircleInfo}
         label={tGamelib('gamelib:about.navLabel', 'About')}
       />
@@ -182,6 +188,9 @@ export default function SettingsPanel() {
         data-tour="nav-launcher"
       />
       <QuitButton />
+      {showAboutDialog && (
+        <AboutDialog onClose={() => setShowAboutDialog(false)} />
+      )}
     </div>
   )
 }

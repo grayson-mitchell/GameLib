@@ -3,11 +3,12 @@
   "baseVersion": "2.22.0",
   "generatedAt": "2026-08-30T19:44:57.524Z",
   "generatedBy": "pnpm gen-i18n-gate-scope",
-  "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet — every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
+  "purpose": "A-17: the CI-readable input to the i18n scope staleness ratchet \u2014 every fork-touched src/frontend source file eligible for the hardcoded-string gate (D-17 deferrals already removed, exactly the operand the ratchet compares against), INCLUDING those not yet listed in i18nGateScope.json. Regenerate with `pnpm gen-i18n-gate-scope`.",
   "files": [
     "src/frontend/App.tsx",
     "src/frontend/bootErrorSurface.ts",
     "src/frontend/components/Tour/Tour.tsx",
+    "src/frontend/components/UI/AboutDialog/index.tsx",
     "src/frontend/components/UI/ActionIcons/index.tsx",
     "src/frontend/components/UI/CachedImage/index.tsx",
     "src/frontend/components/UI/Dialog/components/Dialog.tsx",

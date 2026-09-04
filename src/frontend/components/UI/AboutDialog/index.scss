@@ -1,0 +1,31 @@
+// Every colour here is a theme token. The surface this replaces
+// (`public/about.html`) hardcoded `#1a1a1a` / `#e6e6e6` / `#b3b3b3` and so
+// rendered identically under every theme, including the light ones --
+// hardcoded colours are a repeatedly re-litigated defect in this repo.
+
+.AboutDialog__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 var(--space-md, 16px) var(--space-md, 16px);
+  color: var(--text-default);
+}
+
+.AboutDialog__icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 12px;
+}
+
+.AboutDialog__version {
+  margin: 2px 0;
+  font-size: var(--text-md);
+  color: var(--text-default);
+}
+
+.AboutDialog__meta {
+  margin: 2px 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}

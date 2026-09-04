@@ -1,15 +1,17 @@
 /**
  * Tauri child-window contract test (Phase 34.1 Plan 07, D-12, REQ-34.1-08).
  *
- * Covers `tauriChildWindows.ts`'s two exports directly (mocking
+ * Covers `tauriChildWindows.ts`'s export directly (mocking
  * `@tauri-apps/api/webviewWindow`'s `WebviewWindow` class). `helpers.ts`'s
- * `showAboutWindow`/`createNewWindow` used to route on a Tauri-context check; Phase 35
- * plan 17 collapsed that branch, deleting the Electron-branch fallback
- * (`makeListenerCaller('showAboutWindow')`/`makeListenerCaller('createNewWindow')`)
- * entirely -- there is no longer a runtime-detection decision to test, so the test that
- * exercised the deleted ELSE arm is gone with it (same treatment
- * `gamepadActionRouting.test.ts` and `steamInstallFormApi.test.ts` gave their own
- * now-unreachable branches).
+ * `createNewWindow` used to route on a Tauri-context check; Phase 35 plan 17 collapsed
+ * that branch, deleting the Electron-branch fallback entirely -- there is no longer a
+ * runtime-detection decision to test, so the test that exercised the deleted ELSE arm is
+ * gone with it (same treatment `gamepadActionRouting.test.ts` and
+ * `steamInstallFormApi.test.ts` gave their own now-unreachable branches).
+ *
+ * This suite also covered the About window until quick `260905-d33` replaced it with an
+ * in-app modal (`components/UI/AboutDialog`); those five cases were deleted with the
+ * code they exercised rather than left asserting a surface that no longer exists.
  *
  * jest.config sets `resetMocks: true` -- every mock's implementation/return value is
  * (re)established in `beforeEach`.
@@ -37,41 +39,20 @@ jest.mock('../tauriTransport', () => ({
 // for the project-wide mechanized version of this same guarantee.
 
 const onceMock = jest.fn().mockResolvedValue(undefined)
-const setFocusMock = jest.fn().mockResolvedValue(undefined)
-const getByLabelMock = jest.fn()
 const webviewWindowCtor = jest.fn()
 
 function MockWebviewWindow(label: string, options: unknown) {
   webviewWindowCtor(label, options)
-  return { label, options, once: onceMock, setFocus: setFocusMock }
+  return { label, options, once: onceMock }
 }
-MockWebviewWindow.getByLabel = (...args: unknown[]) => getByLabelMock(...args)
 
 jest.mock('@tauri-apps/api/webviewWindow', () => ({
   WebviewWindow: MockWebviewWindow
 }))
 
-import { tauriCreateNewWindow, tauriShowAboutWindow } from '../api/tauriChildWindows'
-
-const mockedGetHeroicVersion = jest.fn()
-
-// The preload jest project's testEnvironment is 'node' (see windowChrome.test.ts's own
-// documented constraint). tauriChildWindows.ts reads `window.api.getHeroicVersion` only
-// inside a function body (never at import time), so a minimal manual stub suffices.
-;(globalThis as unknown as { window: { api: { getHeroicVersion: () => Promise<string> } } }).window = {
-  api: { getHeroicVersion: () => mockedGetHeroicVersion() }
-}
-
-// Flush the microtask queue so tauriShowAboutWindow's floated internal promise settles
-// before assertions run (it is intentionally fire-and-forget from the caller's side).
-const flush = () => new Promise((resolve) => setImmediate(resolve))
+import { tauriCreateNewWindow } from '../api/tauriChildWindows'
 
 describe('tauriChildWindows (REQ-34.1-08)', () => {
-  beforeEach(() => {
-    getByLabelMock.mockResolvedValue(null)
-    mockedGetHeroicVersion.mockResolvedValue('1.2.3')
-  })
-
   it('REQ-34.1-08: tauriCreateNewWindow constructs a WebviewWindow with width 1200, height 700, and the passed url', () => {
     tauriCreateNewWindow('https://www.protondb.com/app/1')
 
@@ -104,38 +85,6 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     const [label1] = webviewWindowCtor.mock.calls[0]
     const [label2] = webviewWindowCtor.mock.calls[1]
     expect(label1).not.toBe(label2)
-  })
-
-  it('REQ-34.1-08: tauriShowAboutWindow with no existing about window constructs one labelled "about" whose url starts with "about.html?v="', async () => {
-    tauriShowAboutWindow()
-    await flush()
-
-    expect(getByLabelMock).toHaveBeenCalledWith('about')
-    expect(webviewWindowCtor).toHaveBeenCalledTimes(1)
-    const [label, options] = webviewWindowCtor.mock.calls[0]
-    expect(label).toBe('about')
-    expect((options as { url: string }).url).toMatch(/^about\.html\?v=/)
-  })
-
-  it('REQ-34.1-08: tauriShowAboutWindow when getByLabel("about") resolves an existing window calls setFocus() and does NOT construct a second window', async () => {
-    getByLabelMock.mockResolvedValue({ setFocus: setFocusMock })
-
-    tauriShowAboutWindow()
-    await flush()
-
-    expect(setFocusMock).toHaveBeenCalledTimes(1)
-    expect(webviewWindowCtor).not.toHaveBeenCalled()
-  })
-
-  it('REQ-34.1-08: a getHeroicVersion() rejection still results in a window being constructed, with v=unknown', async () => {
-    mockedGetHeroicVersion.mockRejectedValue(new Error('sidecar unreachable'))
-
-    tauriShowAboutWindow()
-    await flush()
-
-    expect(webviewWindowCtor).toHaveBeenCalledTimes(1)
-    const [, options] = webviewWindowCtor.mock.calls[0]
-    expect((options as { url: string }).url).toBe('about.html?v=unknown')
   })
 
   it('REQ-34.1-08: a constructor throw is caught and warned, and the function does not throw', () => {
@@ -252,34 +201,6 @@ describe('tauriChildWindows (REQ-34.1-08)', () => {
     expect(label).not.toContain('evil')
     expect(label).not.toBe('main')
     expect(label).not.toBe('about')
-  })
-
-  it('REQ-34.1-08/WR-07: the About window DOES keep its title -- it loads first-party static about.html, not remote content', async () => {
-    tauriShowAboutWindow()
-    await flush()
-
-    const [, options] = webviewWindowCtor.mock.calls[0] as [string, Record<string, unknown>]
-    expect(options.title).toBe('About GameLib')
-  })
-
-  // ── WR-06: the About window must not block on a wedged sidecar ──
-
-  it('REQ-34.1-08/WR-06: a getHeroicVersion() that never settles still opens the About window, with v=unknown', async () => {
-    // `advanceTimersByTimeAsync` (not the sync variant) is required: it yields to the
-    // microtask queue between timer runs, which is what lets the `getByLabel('about')`
-    // await and the `Promise.race` continuation settle inside the fake-timer clock.
-    jest.useFakeTimers()
-    // A wedged sidecar: the invoke hangs until the Rust shell's own 60s INVOKE_TIMEOUT.
-    mockedGetHeroicVersion.mockReturnValue(new Promise(() => {}))
-
-    tauriShowAboutWindow()
-    await jest.advanceTimersByTimeAsync(1000)
-
-    expect(webviewWindowCtor).toHaveBeenCalledTimes(1)
-    const [, options] = webviewWindowCtor.mock.calls[0] as [string, { url: string }]
-    expect(options.url).toBe('about.html?v=unknown')
-
-    jest.useRealTimers()
   })
 
   // ── Phase 34.4.1 Plan 06 (T-34.1-27): extended label-discipline coverage ──

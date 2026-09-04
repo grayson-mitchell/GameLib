@@ -36,9 +36,38 @@ const startTourMock = jest.fn()
 const resetTourMock = jest.fn()
 const hasTourCompletedMock = jest.fn()
 
+// `SettingsPanel` holds local `useState` for the About dialog (quick
+// `260905-d33`). Because this project calls the component as a plain function
+// rather than rendering it, real `useState` would hit a null dispatcher -- so
+// the slot harness below stands in for it, keyed by call order exactly as
+// React's own is. `resetHookState()` clears the slots between tests and
+// `renderPanel()` rewinds the cursor before each invocation, which is what
+// lets one test invoke the component twice and observe committed state.
+let stateSlots: unknown[] = []
+let stateCursor = 0
+
+function resetHookState(): void {
+  stateSlots = []
+  stateCursor = 0
+}
+
 jest.mock('react', () => ({
   ...jest.requireActual<typeof import('react')>('react'),
-  useContext: () => contextValue
+  useContext: () => contextValue,
+  useState: (initial: unknown) => {
+    const idx = stateCursor++
+    if (idx >= stateSlots.length) {
+      stateSlots[idx] =
+        typeof initial === 'function' ? (initial as () => unknown)() : initial
+    }
+    const setState = (updater: unknown) => {
+      stateSlots[idx] =
+        typeof updater === 'function'
+          ? (updater as (prev: unknown) => unknown)(stateSlots[idx])
+          : updater
+    }
+    return [stateSlots[idx], setState]
+  }
 }))
 
 jest.mock('react-i18next', () => ({
@@ -49,6 +78,13 @@ jest.mock('react-i18next', () => ({
 
 jest.mock('frontend/components/UI/ExternalLinkDialog', () => ({
   SHOW_EXTERNAL_LINK_DIALOG_STORAGE_KEY: 'show_external_link_dialog'
+}))
+
+// Mocked as a module (not just its assets): `AboutDialog` imports a .png and a
+// .scss, and this jest project declares no moduleNameMapper for either.
+jest.mock('frontend/components/UI/AboutDialog', () => ({
+  __esModule: true,
+  default: () => null
 }))
 
 // `useTour()` is mocked directly rather than relying on the `react` mock's
@@ -98,10 +134,10 @@ jest.mock('../components/QuitButton', () => ({
 }
 ;(
   globalThis as unknown as {
-    window: { api: { openKofiPage: jest.Mock; showAboutWindow: jest.Mock } }
+    window: { api: { openKofiPage: jest.Mock } }
   }
 ).window = {
-  api: { openKofiPage: jest.fn(), showAboutWindow: jest.fn() }
+  api: { openKofiPage: jest.fn() }
 }
 
 // Imported after the mocks above (textual order -- this project's ts-jest
@@ -113,6 +149,7 @@ jest.mock('../components/QuitButton', () => ({
 // 34.10-02 SUMMARY Deviation 1).
 import NavItem from '../components/NavItem'
 import QuitButton from '../components/QuitButton'
+import AboutDialog from 'frontend/components/UI/AboutDialog'
 import SettingsPanel from '../components/SettingsPanel'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
@@ -162,6 +199,17 @@ function findNavItem(tree: ReactNode, label: string): AnyElement | undefined {
   )
 }
 
+function findAboutDialog(tree: ReactNode): AnyElement | undefined {
+  return collectElements(tree).find((el) => el.type === AboutDialog)
+}
+
+// Rewinds the hook cursor before each invocation so committed state from a
+// previous call is read back rather than re-initialised.
+function renderPanel(): ReactElement {
+  stateCursor = 0
+  return SettingsPanel() as unknown as ReactElement
+}
+
 describe('SettingsPanel', () => {
   beforeEach(() => {
     // `resetMocks: true` (src/frontend/jest.config.js) clears every mock's
@@ -169,6 +217,7 @@ describe('SettingsPanel', () => {
     // `localStorage.getItem` factory below -- reassign it here so each
     // test's `storedPreference` value actually takes effect.
     storedPreference = null
+    resetHookState()
     ;(localStorage.getItem as jest.Mock).mockImplementation(
       () => storedPreference
     )
@@ -220,20 +269,33 @@ describe('SettingsPanel', () => {
     expect(labels.indexOf('System Information')).toBe(labels.indexOf('Log') + 1)
   })
 
-  it('About is a button whose onClick calls window.api.showAboutWindow', () => {
-    // The About row is the About window's ONLY entry point under Tauri
-    // (`tauriShowAboutWindow` had no caller outside the Electron tray menu).
-    // Asserting the handler REACHES `window.api.showAboutWindow` -- not merely
-    // that a row labelled "About" is rendered -- is the whole point: a row that
-    // renders and does nothing is exactly the state this test exists to prevent
-    // returning to.
-    const tree = SettingsPanel() as unknown as ReactElement
-    const aboutItem = findNavItem(tree, 'About')
+  it('About is a button that mounts the in-app AboutDialog, and does not before it is clicked', () => {
+    // The About row is the About surface's ONLY entry point, and since quick
+    // `260905-d33` that surface is an in-app modal rather than an OS window
+    // (`window.api.showAboutWindow` and the window behind it were deleted).
+    // Asserting the handler actually MOUNTS the dialog -- not merely that a row
+    // labelled "About" is rendered -- is the whole point: a row that renders
+    // and does nothing is exactly the state this test exists to prevent
+    // returning to. The negative half matters just as much, since a dialog that
+    // is always mounted would render over the app on every visit to Settings.
+    const aboutItem = findNavItem(renderPanel(), 'About')
 
     expect(aboutItem?.props.elementType).toBe('button')
+    expect(findAboutDialog(renderPanel())).toBeUndefined()
     ;(aboutItem?.props.onClick as () => void)()
 
-    expect(window.api.showAboutWindow).toHaveBeenCalled()
+    expect(findAboutDialog(renderPanel())).toBeDefined()
+  })
+
+  it('the AboutDialog onClose handler unmounts it again', () => {
+    const aboutItem = findNavItem(renderPanel(), 'About')
+    ;(aboutItem?.props.onClick as () => void)()
+
+    const dialog = findAboutDialog(renderPanel())
+    expect(dialog).toBeDefined()
+    ;(dialog?.props.onClose as () => void)()
+
+    expect(findAboutDialog(renderPanel())).toBeUndefined()
   })
 
   it('Donate is a button whose onClick calls handleExternalLinkDialog when the stored preference is absent', () => {

@@ -752,7 +752,7 @@ describe('--rewrite-scope guard', () => {
    * gap-closure follow-up: 205 -> 206, `Winetricks/WinetricksSearch/index.tsx`,
    * touched by 35-25's `366e719bb` after 35-24's re-baseline had already
    * landed). Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 169 -> 213 delta this task exists to
+   * so the specs below assert the REAL 170 -> 214 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -778,10 +778,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 169-file hand-curated snapshot and the fresh snapshot is the REAL 213', () => {
-    expect(scopeSnapshot.files.length).toBe(169)
-    expect(forkTouchedSnapshot.files.length).toBe(213)
-    expect(freshSnapshot().files.length).toBe(213)
+  it('A0 fixture sanity: the seeded scope is the REAL 170-file hand-curated snapshot and the fresh snapshot is the REAL 214', () => {
+    expect(scopeSnapshot.files.length).toBe(170)
+    expect(forkTouchedSnapshot.files.length).toBe(214)
+    expect(freshSnapshot().files.length).toBe(214)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -807,7 +807,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 169 -> 213 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 170 -> 214 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -843,12 +843,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(213)
+    expect(rewritten.files.length).toBe(214)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 213 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 214 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -861,7 +861,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(213)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(214)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

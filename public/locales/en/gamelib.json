@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "About"
+        "license": "License: GPL V3",
+        "navLabel": "About",
+        "title": "About GameLib",
+        "version": "Version: {{version}}",
+        "versionUnknown": "unknown"
     },
     "app": {
         "routeError": "Something went wrong: {{detail}}"
