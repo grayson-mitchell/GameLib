@@ -701,14 +701,16 @@ fn update_tray_recent_games(app: &AppHandle, games: Vec<TrayRecentGame>) {
     refresh_tray_menu(app);
 }
 
-/// Open the About window from the tray.
+/// Open the About dialog from the tray.
 ///
-/// Reaches `tauriShowAboutWindow` (`src/preload/api/tauriChildWindows.ts:139`) through the
-/// preload surface the renderer already exposes -- `window.api.showAboutWindow`
-/// (`src/preload/api/helpers.ts:17`, barrelled into `window.api` by
-/// `src/preload/api/index.ts`). Deliberately NOT re-implemented in Rust: the About window's
-/// version resolution, its single-window reuse, and its `about.html` load all live in that
-/// preload function, and a second implementation here would be a second thing to keep correct.
+/// Reaches `window.api.showAboutWindow` (`src/preload/api/helpers.ts`, barrelled into
+/// `window.api` by `src/preload/api/index.ts`). Since quick `260905-d33` that function no
+/// longer opens a `WebviewWindow`: About is an in-app modal, and the preload function raises
+/// the window event `AboutDialogHost` (`src/frontend/components/UI/AboutDialog/`) listens
+/// for. Nothing here had to change, which is the point of going through the preload name
+/// rather than reimplementing anything -- but note the CONSEQUENCE for whoever edits that
+/// name next: the eval below is optional-chained, so if `window.api.showAboutWindow` ever
+/// stops existing this menu item does nothing and reports nothing, on either side.
 ///
 /// Deliberately NOT routed as a new frontend-message channel either: nothing in the renderer
 /// listens for an inbound `showAboutWindow` push (it has only ever been an OUTBOUND call), so

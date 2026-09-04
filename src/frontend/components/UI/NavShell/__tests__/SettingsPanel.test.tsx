@@ -80,13 +80,6 @@ jest.mock('frontend/components/UI/ExternalLinkDialog', () => ({
   SHOW_EXTERNAL_LINK_DIALOG_STORAGE_KEY: 'show_external_link_dialog'
 }))
 
-// Mocked as a module (not just its assets): `AboutDialog` imports a .png and a
-// .scss, and this jest project declares no moduleNameMapper for either.
-jest.mock('frontend/components/UI/AboutDialog', () => ({
-  __esModule: true,
-  default: () => null
-}))
-
 // `useTour()` is mocked directly rather than relying on the `react` mock's
 // `useContext` override above -- that override answers every `useContext`
 // call with the Settings/ExternalLinkDialog-shaped `contextValue`
@@ -134,10 +127,10 @@ jest.mock('../components/QuitButton', () => ({
 }
 ;(
   globalThis as unknown as {
-    window: { api: { openKofiPage: jest.Mock } }
+    window: { api: { openKofiPage: jest.Mock; showAboutWindow: jest.Mock } }
   }
 ).window = {
-  api: { openKofiPage: jest.fn() }
+  api: { openKofiPage: jest.fn(), showAboutWindow: jest.fn() }
 }
 
 // Imported after the mocks above (textual order -- this project's ts-jest
@@ -149,7 +142,6 @@ jest.mock('../components/QuitButton', () => ({
 // 34.10-02 SUMMARY Deviation 1).
 import NavItem from '../components/NavItem'
 import QuitButton from '../components/QuitButton'
-import AboutDialog from 'frontend/components/UI/AboutDialog'
 import SettingsPanel from '../components/SettingsPanel'
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode }
@@ -197,10 +189,6 @@ function findNavItem(tree: ReactNode, label: string): AnyElement | undefined {
   return collectElements(tree).find(
     (el) => el.type === NavItem && el.props?.label === label
   )
-}
-
-function findAboutDialog(tree: ReactNode): AnyElement | undefined {
-  return collectElements(tree).find((el) => el.type === AboutDialog)
 }
 
 // Rewinds the hook cursor before each invocation so committed state from a
@@ -269,33 +257,25 @@ describe('SettingsPanel', () => {
     expect(labels.indexOf('System Information')).toBe(labels.indexOf('Log') + 1)
   })
 
-  it('About is a button that mounts the in-app AboutDialog, and does not before it is clicked', () => {
-    // The About row is the About surface's ONLY entry point, and since quick
-    // `260905-d33` that surface is an in-app modal rather than an OS window
-    // (`window.api.showAboutWindow` and the window behind it were deleted).
-    // Asserting the handler actually MOUNTS the dialog -- not merely that a row
-    // labelled "About" is rendered -- is the whole point: a row that renders
-    // and does nothing is exactly the state this test exists to prevent
-    // returning to. The negative half matters just as much, since a dialog that
-    // is always mounted would render over the app on every visit to Settings.
-    const aboutItem = findNavItem(renderPanel(), 'About')
+  it('About is a button whose onClick calls window.api.showAboutWindow', () => {
+    // `window.api.showAboutWindow` no longer opens an OS window -- since quick
+    // `260905-d33` it raises a window event that `AboutDialogHost` answers with
+    // an in-app modal. This row keeps calling it rather than opening the dialog
+    // directly, because the SAME name is what the macOS tray's "About GameLib"
+    // item reaches by `eval` from Rust, and that eval is optional-chained (so
+    // dropping the name would break the tray silently).
+    //
+    // Asserting the handler REACHES `window.api.showAboutWindow` -- not merely
+    // that a row labelled "About" is rendered -- is the whole point: a row that
+    // renders and does nothing is exactly the state this test exists to prevent
+    // returning to.
+    const tree = renderPanel()
+    const aboutItem = findNavItem(tree, 'About')
 
     expect(aboutItem?.props.elementType).toBe('button')
-    expect(findAboutDialog(renderPanel())).toBeUndefined()
     ;(aboutItem?.props.onClick as () => void)()
 
-    expect(findAboutDialog(renderPanel())).toBeDefined()
-  })
-
-  it('the AboutDialog onClose handler unmounts it again', () => {
-    const aboutItem = findNavItem(renderPanel(), 'About')
-    ;(aboutItem?.props.onClick as () => void)()
-
-    const dialog = findAboutDialog(renderPanel())
-    expect(dialog).toBeDefined()
-    ;(dialog?.props.onClose as () => void)()
-
-    expect(findAboutDialog(renderPanel())).toBeUndefined()
+    expect(window.api.showAboutWindow).toHaveBeenCalled()
   })
 
   it('Donate is a button whose onClick calls handleExternalLinkDialog when the stored preference is absent', () => {

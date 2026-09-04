@@ -37,8 +37,8 @@
  *
  * WHY `locales/` AND `icon.png` ARE STRUCTURALLY DUPLICATED BY DESIGN: the
  * renderer reads them over `tauri://` from `frontendDist`
- * (`src/frontend/index.tsx`'s i18next `loadPath`, `public/about.html`'s
- * `<img src="./icon.png">`), while the sidecar's i18next-fs-backend and
+ * (`src/frontend/index.tsx`'s i18next `loadPath`, `public/manifest.json`'s
+ * `icons[].src`), while the sidecar's i18next-fs-backend and
  * `paths.ts`'s `windowIcon` read the SAME two assets from
  * `Contents/Resources/build` via `bundle.resources` targets -- a completely
  * separate copy mechanism this task does not touch. Deduplicating either
@@ -59,7 +59,7 @@ import { dirname, join } from 'node:path'
 
 import type { Plugin } from 'vite'
 
-export const STATIC_RENDERER_FILES = ['about.html', 'icon.png']
+export const STATIC_RENDERER_FILES = ['icon.png']
 export const STATIC_RENDERER_DIRS = ['locales']
 
 function countFilesRecursive(dir: string): number {
@@ -100,7 +100,7 @@ function hasJsonFileRecursive(dir: string): boolean {
  * rollup reported for this build pass. `rm -rf`s `rendererDir` first (a
  * stale prior tree must not survive), copies every bundle key byte-for-byte,
  * then the static files/dirs this bundle-key-driven copy can never see
- * (`about.html`, `icon.png`, `locales/` appear in no bundle key -- they are
+ * (`icon.png` and `locales/` appear in no bundle key -- they are
  * `publicDir` passthrough, not rollup output), then runs every fail-loud
  * post-condition. Throws on the FIRST failure, naming the missing path --
  * this is what stands between a broken/partial assembly and a shipped white
@@ -116,7 +116,7 @@ export function assembleRendererDist(
       'assembleRendererDist: bundleKeys is empty -- generateBundle never ' +
         'fired (or fired with nothing captured). Refusing to assemble a ' +
         'renderer dir from the static set alone: an assembly that copied ' +
-        'only about.html/icon.png/locales could look plausible and still ' +
+        'only icon.png/locales could look plausible and still ' +
         'ship a white screen.'
     )
   }

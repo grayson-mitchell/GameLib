@@ -1,5 +1,6 @@
 import { frontendListenerSlot, makeHandlerInvoker, makeListenerCaller } from '../ipc'
 import { tauriCreateNewWindow } from './tauriChildWindows'
+import { SHOW_ABOUT_DIALOG_EVENT } from 'common/aboutDialogEvent'
 
 export const notify = makeListenerCaller('notify')
 export const openLoginPage = makeListenerCaller('openLoginPage')
@@ -12,9 +13,16 @@ export const openCustomThemesWiki = makeListenerCaller('openCustomThemesWiki')
 // D-12 (Phase 34.1 Plan 07): createNewWindow opens a genuine Tauri WebviewWindow --
 // renderer-side, per tauriChildWindows.ts's module comment. Phase 35 plan 17 collapsed
 // the Electron-branch fallback (`makeListenerCaller('createNewWindow')`), which is
-// unreachable now that the Tauri shell is the only shell. `showAboutWindow` sat beside
-// it until quick `260905-d33` made About an in-app modal and deleted the window.
+// unreachable now that the Tauri shell is the only shell.
 export const createNewWindow = (url: string) => tauriCreateNewWindow(url)
+
+// Quick `260905-d33`: About is an in-app modal now, so this no longer constructs a
+// WebviewWindow -- it raises the event `AboutDialogHost` listens for. The NAME is kept
+// deliberately: the macOS tray reaches About by evaluating
+// `window.api?.showAboutWindow?.()` from Rust (`open_about_window_from_tray`), and that
+// eval is optional-chained, so renaming or removing this would break the tray item
+// silently, with no error on either side.
+export const showAboutWindow = () => window.dispatchEvent(new CustomEvent(SHOW_ABOUT_DIALOG_EVENT))
 export const readConfig = makeHandlerInvoker('readConfig')
 export const isLoggedIn = makeHandlerInvoker('isLoggedIn')
 export const writeConfig = makeHandlerInvoker('writeConfig')

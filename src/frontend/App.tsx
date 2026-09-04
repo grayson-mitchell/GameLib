@@ -18,6 +18,7 @@ import ContextProvider from './state/ContextProvider'
 import { ControllerHints, Help, OfflineMessage } from './components/UI'
 import DialogHandler from './components/UI/DialogHandler'
 import ExternalLinkDialog from './components/UI/ExternalLinkDialog'
+import AboutDialogHost from './components/UI/AboutDialog/AboutDialogHost'
 import RedeemSteamKeyDialog from './components/UI/RedeemSteamKeyDialog'
 import WindowControls from './components/UI/WindowControls'
 import classNames from 'classnames'
@@ -153,6 +154,7 @@ function Root() {
                   <SteamBridgeSetup />
                   <SettingsModalWrapper />
                   <ExternalLinkDialog />
+                  <AboutDialogHost />
                   <RedeemSteamKeyDialog />
                   <LogFileUploadDialog />
                   <UploadedLogFilesList />
@@ -166,9 +168,7 @@ function Root() {
                   </dialog>
                 </div>
                 {showOverlayControls && <WindowControls />}
-                {experimentalFeatures.enableHelp && (
-                  <Help items={help.items} />
-                )}
+                {experimentalFeatures.enableHelp && <Help items={help.items} />}
               </Tier2PortalProvider>
             </TourProvider>
           )}

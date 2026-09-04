@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react'
+import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   faBookOpen,
@@ -11,7 +11,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import ContextProvider from 'frontend/state/ContextProvider'
-import AboutDialog from 'frontend/components/UI/AboutDialog'
 import { SHOW_EXTERNAL_LINK_DIALOG_STORAGE_KEY } from 'frontend/components/UI/ExternalLinkDialog'
 import { useTour } from 'frontend/state/TourContext'
 import NavItem from '../NavItem'
@@ -30,20 +29,22 @@ import { NAV_TOUR_ID } from '../NavShellTour'
  *
  * The About row is the About surface's ONLY entry point, and since quick
  * `260905-d33` that surface is an in-app modal rather than an OS window. It
- * previously called `window.api.showAboutWindow()`, which opened a 420x380
- * capability-free Tauri `WebviewWindow` backed by a static `public/about.html`;
- * that page hardcoded its own palette and could not be themed. The whole path
- * -- page, preload helper, IPC channel type and the already-dead Electron
- * `app.showAboutPanel()` body behind it -- was deleted in the same task rather
- * than left orphaned, so no second entry point survives.
+ * `window.api.showAboutWindow()` used to open a 420x380 capability-free Tauri
+ * `WebviewWindow` backed by a static `public/about.html`; that page hardcoded
+ * its own palette and could not be themed. The window, the page, the orphaned
+ * IPC channel type and the already-dead Electron `app.showAboutPanel()` body
+ * behind it were all deleted in the same task rather than left orphaned.
  *
- * This row therefore holds local dialog state instead of calling into preload.
- * It does not use the heavier `ExternalLinkDialog` arrangement (GlobalState +
- * ContextProvider, mounted in `App.tsx`): that exists because several surfaces
- * raise that dialog, whereas About has exactly one trigger. The row is a plain
- * `<button>` that does not navigate, so this panel stays mounted while the
- * dialog is open -- switching tier-2 tabs unmounts both together, which is the
- * wanted behaviour.
+ * The row still calls `window.api.showAboutWindow()`, deliberately: that name
+ * is ALSO reached by the macOS tray's "About GameLib" item, which cannot call
+ * into React at all -- it evaluates `window.api?.showAboutWindow?.()` in the
+ * main window from Rust (`open_about_window_from_tray`, src-tauri/src/main.rs).
+ * Because that eval is optional-chained it fails SILENTLY, so deleting the name
+ * would have left the tray item doing nothing with no error anywhere -- the
+ * exact "live silent no-op" shape that function's own comment warns about. The
+ * preload function now raises a window event instead of opening a window, and
+ * `AboutDialogHost` (mounted in App.tsx) answers it. Both entry points therefore
+ * reach ONE surface.
  *
  * A note kept from quick `260902-ucw`, because it still constrains edits here:
  * the D-01/D-00b completeness gate in `meta/__tests__/` is a ZERO-MATCH grep
@@ -93,7 +94,6 @@ export default function SettingsPanel() {
   const { t: tGamelib } = useTranslation('gamelib')
   const { platform, handleExternalLinkDialog } = useContext(ContextProvider)
   const { startTour, resetTour, hasTourCompleted } = useTour()
-  const [showAboutDialog, setShowAboutDialog] = useState(false)
   const isWin = platform === 'win32'
 
   function handleStartTour() {
@@ -169,7 +169,7 @@ export default function SettingsPanel() {
       />
       <NavItem
         elementType="button"
-        onClick={() => setShowAboutDialog(true)}
+        onClick={() => window.api.showAboutWindow()}
         icon={faCircleInfo}
         label={tGamelib('gamelib:about.navLabel', 'About')}
       />
@@ -188,9 +188,6 @@ export default function SettingsPanel() {
         data-tour="nav-launcher"
       />
       <QuitButton />
-      {showAboutDialog && (
-        <AboutDialog onClose={() => setShowAboutDialog(false)} />
-      )}
     </div>
   )
 }

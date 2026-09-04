@@ -151,7 +151,7 @@ export default defineConfig(({ mode }) => ({
     // Quick task 260901-b8z: assembles build/renderer -- the directory
     // tauri.conf.json's frontendDist now points at -- from rollup's own
     // emitted-file list plus the static publicDir passthrough
-    // (about.html/icon.png/locales/) that never appears in a bundle key.
+    // (icon.png/locales/) that never appears in a bundle key.
     // MUST stay LAST: it reads Object.keys(bundle) at generateBundle and
     // assembles at closeBundle, after every other plugin (in particular
     // preserveRunnerSymlinksPlugin, whose build/bin work this plugin never

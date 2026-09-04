@@ -61,7 +61,6 @@ function seedValidOutDir(
   writeFile(join(outDir, 'index.html'), '<!doctype html>')
   writeFile(join(outDir, 'assets', 'index-abc123.js'), 'console.log(1)')
   writeFile(join(outDir, 'assets', 'index-abc123.css'), 'body{}')
-  writeFile(join(outDir, 'about.html'), '<html>about</html>')
   writeFile(join(outDir, 'icon.png'), 'PNGDATA')
   if (includeLocalesJson) {
     writeFile(
@@ -113,19 +112,15 @@ describe('assembleRendererDist -- copy correctness (both directions)', () => {
     )
   })
 
-  test('Test 3: about.html, icon.png and locales/ are copied byte-for-byte though they appear in no bundle key', () => {
+  test('Test 3: icon.png and locales/ are copied byte-for-byte though they appear in no bundle key', () => {
     const outDir = outDirPath()
     const rendererDir = rendererDirPath()
     const bundleKeys = seedValidOutDir(outDir)
-    expect(bundleKeys).not.toContain('about.html')
     expect(bundleKeys).not.toContain('icon.png')
     expect(bundleKeys.some((k) => k.startsWith('locales/'))).toBe(false)
 
     assembleRendererDist(outDir, rendererDir, bundleKeys)
 
-    expect(readFileSync(join(rendererDir, 'about.html'), 'utf-8')).toBe(
-      readFileSync(join(outDir, 'about.html'), 'utf-8')
-    )
     expect(readFileSync(join(rendererDir, 'icon.png'), 'utf-8')).toBe(
       readFileSync(join(outDir, 'icon.png'), 'utf-8')
     )
@@ -200,24 +195,12 @@ describe('assembleRendererDist -- fail-loud post-conditions (each throws)', () =
     const rendererDir = rendererDirPath()
     // Seed only index.html + statics -- no assets/* bundle keys at all.
     writeFile(join(outDir, 'index.html'), '<!doctype html>')
-    writeFile(join(outDir, 'about.html'), '<html>about</html>')
     writeFile(join(outDir, 'icon.png'), 'PNGDATA')
     writeFile(join(outDir, 'locales', 'en', 'translation.json'), '{}')
 
     expect(() =>
       assembleRendererDist(outDir, rendererDir, ['index.html'])
     ).toThrow(/assets.*has zero files/)
-  })
-
-  test('Test 9: about.html missing from outDir throws', () => {
-    const outDir = outDirPath()
-    const rendererDir = rendererDirPath()
-    const bundleKeys = seedValidOutDir(outDir)
-    rmSync(join(outDir, 'about.html'))
-
-    expect(() => assembleRendererDist(outDir, rendererDir, bundleKeys)).toThrow(
-      /required static file 'about\.html' is missing/
-    )
   })
 
   test('Test 10: icon.png missing from outDir throws', () => {
@@ -262,7 +245,7 @@ describe('assembleRendererDist -- fail-loud post-conditions (each throws)', () =
 
 describe('assembleRendererDist -- exported constants', () => {
   test('STATIC_RENDERER_FILES and STATIC_RENDERER_DIRS match the design', () => {
-    expect(STATIC_RENDERER_FILES).toEqual(['about.html', 'icon.png'])
+    expect(STATIC_RENDERER_FILES).toEqual(['icon.png'])
     expect(STATIC_RENDERER_DIRS).toEqual(['locales'])
   })
 })
