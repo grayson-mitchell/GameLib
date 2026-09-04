@@ -92,8 +92,10 @@ ELECTRON_STUB_PATH = SRC_DIR / "backend" / "platform" / "index.ts"
 #
 # The gate is INVERTED, not RETIRED, because there is still something real and falsifiable left to
 # assert: exactly ONE `getLoginWindowSeam()` call site survives anywhere in `src/` --
-# `sidecar/humbleLoginFlowRegistration.ts`'s smoke-test guard (line 457; unchanged this cycle,
-# never drifted). It is a defensive `if (!seam)` check inside a
+# `sidecar/humbleLoginFlowRegistration.ts`'s smoke-test guard (line 447 as of Phase 40 plan 03's
+# D-11 channel re-census, which deleted two channel registrations above this site and shifted it
+# up by 10 lines from 457 -- see the `line_hint` refresh note below). It is a defensive `if (!seam)`
+# check inside a
 # `process.env.GAMELIB_LOGIN_SEAM_SMOKE === '1'`-gated diagnostic harness, not a dual-build
 # discriminator -- it was FOUND, CONSIDERED, and DELIBERATELY KEPT by this phase's collapse (see
 # 39-SEAM-DISPOSITIONS.md's "deliberate exclusion" section). Following the `artifactTargets.test.ts`
@@ -107,7 +109,7 @@ ELECTRON_STUB_PATH = SRC_DIR / "backend" / "platform" / "index.ts"
 # not merely "contains", because "contains" alone would silently tolerate any of the seven deleted
 # predicates regrowing elsewhere in `src/` without ever being noticed by this check.
 EXPECTED_AXIS_A_SURVIVOR_SET = {
-    "src/backend/sidecar/humbleLoginFlowRegistration.ts:457",  # the deliberately-kept smoke guard
+    "src/backend/sidecar/humbleLoginFlowRegistration.ts:447",  # the deliberately-kept smoke guard
 }
 # Updated Phase 34.4.1 Plan 18 (first regeneration since Plan 10): Plan 12 (already committed,
 # F-1/S-10 closure) moved the safeStorage import OUT of humble/user.ts entirely, into a new
@@ -604,7 +606,13 @@ SITE_PROFILES = {
         # costs one hint sweep per cycle that moved code.
         # Refreshed AGAIN 2026-08-23 (gap cycle 3, plan 31): 436 -> 457. Third and last of the
         # three profiles that drifted on `fbbfa852e style: apply prettier repo-wide`.
-        "line_hint": 457,
+        # Refreshed AGAIN 2026-09-04 (Phase 40 plan 03, D-11 channel re-census, Rule 1 fix): 457 ->
+        # 447. Plan 40-03's Task 1 removed `humbleGetLoginUserAgent` and `humbleLoginNavigated`'s
+        # registration blocks from this file (both dead after plan 40-01 retired their only
+        # renderer caller), shifting every line below them up by 10 -- including this smoke guard,
+        # a 10-line drift that exceeded the +/-5 window and correctly hard-stopped this gate rather
+        # than silently mismatching.
+        "line_hint": 447,
         "anchors": [
             "GAMELIB_LOGIN_SEAM_SMOKE",
             "this is a FAIL, not a skip",

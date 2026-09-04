@@ -24,8 +24,10 @@ stop. If a rider genuinely no longer needs tracking, remove its token from
 token list and the prose can never quietly drift apart.
 
 **This phase adds a second concern 34.3's gate did not have (REQ-34.4-16): verifying, not
-editing, `.planning/IPC-PORT-INVENTORY.md`'s 31/6/58 scope-surgery split.** Those assertions read
-the inventory directly and must FAIL if a future edit silently reverts the split back to 38/56 —
+editing, `.planning/IPC-PORT-INVENTORY.md`'s 31/6/58 scope-surgery split** (now 31/4/58 as of
+2026-09-04 -- Phase 40 plan 03's D-11 channel re-census legitimately retired 2 of the original 6
+Phase 34.4.1 channels outright; see `PHASE_34_4_1_CHANNELS`'s own comment below). Those assertions
+read the inventory directly and must FAIL if a future edit silently reverts the split back to 38/56 —
 that is the entire point of REQ-34.4-16 being a gate rather than an editing task. This script
 makes NO edit to `IPC-PORT-INVENTORY.md` or `ROADMAP.md`; it only reads them.
 
@@ -83,11 +85,19 @@ CHANNELS = [
 
 assert len(CHANNELS) == 31, f"CHANNELS constant has {len(CHANNELS)} entries, expected 31"
 
-# The 6 channels moved to the newly-inserted Phase 34.4.1 (D-01/D-02). They must NEVER appear as
+# The channels moved to the newly-inserted Phase 34.4.1 (D-01/D-02). They must NEVER appear as
 # a row-leading channel in 34.4-PORTED-CHANNELS.md — only in prose explaining the split.
+#
+# 2026-09-04 (Phase 40 plan 03, D-11 channel re-census, Rule 1 fix): originally 6 entries.
+# `humbleGetLoginUserAgent` and `humbleLoginNavigated` were retired outright -- a four-surface
+# sweep (`40-CHANNEL-RECENSUS.md`) found zero remaining callers of either channel (or, for
+# `humbleLoginNavigated`, of the method it invoked) after plan 40-01 deleted their only renderer
+# caller. This constant tracks the LIVE inventory (this gate's REQ-34.4-16 concern is verifying
+# the CURRENT split, not a frozen historical record — contrast with
+# `34.4.1-.../ported-channels-gate.py`'s `RETIRED_CHANNELS`, which preserves its own phase's frozen
+# `34.4.1-PORTED-CHANNELS.md` "what shipped" record unchanged and instead scopes an exclusion
+# around it).
 PHASE_34_4_1_CHANNELS = [
-    "humbleGetLoginUserAgent",
-    "humbleLoginNavigated",
     "humbleReconnect",
     "humbleRevealKey",
     "humbleStartLogin",
@@ -251,7 +261,7 @@ def check_proof_levels(text: str) -> None:
 INVENTORY_SLICE7_HEADING = re.compile(
     r"## Phase 34\.4 — Slice 7 — Steam completion and Humble \(31 channels\)"
 )
-INVENTORY_34_4_1_HEADING = re.compile(r"## Phase 34\.4\.1 — the embedded-browser login seam \(6 channels\)")
+INVENTORY_34_4_1_HEADING = re.compile(r"## Phase 34\.4\.1 — the embedded-browser login seam \(4 channels\)")
 INVENTORY_SLICE8_HEADING = re.compile(
     r"## Phase 34\.5 — Slice 8 — non-Steam runners, Wine and shortcuts \(58 channels\)"
 )
@@ -317,7 +327,8 @@ def check_inventory_34_4_1_intact(text: str) -> None:
     if not INVENTORY_34_4_1_HEADING.search(text):
         fail(
             "IPC-PORT-INVENTORY.md is missing the '## Phase 34.4.1 — the embedded-browser login "
-            "seam (6 channels)' heading — D-01's new phase insertion appears to have been reverted"
+            "seam (4 channels)' heading — D-01's new phase insertion appears to have been reverted "
+            "(or D-11's 2026-09-04 retirement of 2 of the original 6 channels was undone)"
         )
     section = _extract_section(text, INVENTORY_34_4_1_HEADING)
     names = _channel_names_in_backtick_list(section)
@@ -325,13 +336,13 @@ def check_inventory_34_4_1_intact(text: str) -> None:
     if missing:
         fail(
             "IPC-PORT-INVENTORY.md's Phase 34.4.1 section is missing channel(s): "
-            f"{', '.join(missing)} — the 6-channel browser-auth cluster appears incomplete"
+            f"{', '.join(missing)} — the 4-channel browser-auth cluster appears incomplete"
         )
     unexpected = [n for n in names if n not in PHASE_34_4_1_CHANNELS]
     if unexpected:
         fail(
             "IPC-PORT-INVENTORY.md's Phase 34.4.1 section contains unexpected channel(s): "
-            f"{', '.join(unexpected)} — expected exactly the 6 browser-auth channels"
+            f"{', '.join(unexpected)} — expected exactly the 4 browser-auth channels"
         )
 
 
@@ -366,7 +377,7 @@ ASSERTIONS = [
     ("every required rider token present (PORTED-CHANNELS)", check_rider_tokens),
     ("every row's proof level is a permitted value (PORTED-CHANNELS)", check_proof_levels),
     ("IPC-PORT-INVENTORY.md's slice-7 31-channel list is intact", check_inventory_slice7_intact),
-    ("IPC-PORT-INVENTORY.md's Phase 34.4.1 6-channel list is intact", check_inventory_34_4_1_intact),
+    ("IPC-PORT-INVENTORY.md's Phase 34.4.1 4-channel list is intact", check_inventory_34_4_1_intact),
     ("IPC-PORT-INVENTORY.md's slice-8 58-channel list still contains isLoggedIn", check_inventory_slice8_intact),
 ]
 
@@ -429,7 +440,7 @@ def _valid_synthetic_inventory_doc() -> str:
 
 {slice7_list}
 
-## Phase 34.4.1 — the embedded-browser login seam (6 channels)
+## Phase 34.4.1 — the embedded-browser login seam (4 channels)
 
 {p344_1_list}
 
@@ -631,7 +642,7 @@ def main() -> None:
     print(
         f"OK: all {len(CHANNELS)} channels declared exactly once with correct send/invoke kind, "
         f"{len(REQUIRED_RIDER_TOKENS)} rider token(s) present, every proof level permitted, and "
-        "IPC-PORT-INVENTORY.md's 31/6/58 scope-surgery split is intact (REQ-34.4-16, verified not "
+        "IPC-PORT-INVENTORY.md's 31/4/58 scope-surgery split is intact (REQ-34.4-16, verified not "
         "edited)."
     )
     sys.exit(0)

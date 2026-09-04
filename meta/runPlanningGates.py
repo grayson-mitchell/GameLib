@@ -40,7 +40,14 @@ GATE_SUFFIX = "-gate.py"
 # finds it. Raising the floor is the only edit that rename required -- and it
 # IS required, because a floor left at 6 would keep reporting green if the new
 # gate were later deleted or renamed back out of discovery.
-MINIMUM_EXPECTED_GATES = 7
+#
+# 7 -> 8 (Phase 40 plan 03, D-13/REQ-40-10): the eighth gate is
+# `model-a-retirement-gate.py`, sweeping `src/frontend/` for the three
+# reintroduced Model A tokens (`<webview>`, `WebviewTag`,
+# `webviewPreloadPath`). Leaving the floor at 7 would let this gate be
+# deleted later with every remaining gate still reporting green -- exactly
+# the property this constant exists to hold.
+MINIMUM_EXPECTED_GATES = 8
 
 
 def discover_gates():

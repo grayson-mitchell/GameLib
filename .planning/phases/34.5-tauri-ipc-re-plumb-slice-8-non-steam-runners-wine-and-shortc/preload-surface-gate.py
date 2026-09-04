@@ -103,19 +103,35 @@ def extract_from_tree(preload_root: Path):
 
 
 # ---------------------------------------------------------------------------
-# Bucket-line parsing — lines with >=5 backticked names only (see check 4's justification).
+# Bucket-line parsing — lines that are STRUCTURALLY a pure comma-separated list of
+# backtick-quoted names (nothing else on the line) only (see check 4's justification).
+#
+# 2026-09-04 (Phase 40 plan 03, Rule 1 fix): this used to be a `len(found) >= 5`
+# backtick-count-per-line heuristic. Plan 40-03's D-11 channel re-census correctly
+# shrank the Phase 34.4.1 bucket line from 6 names to 4 (`humbleReconnect`,
+# `humbleRevealKey`, `humbleStartLogin`, `humbleStopLogin`), which fell below the
+# count threshold and made those 4 real, still-live channels invisible to check_coverage
+# and check_totals_reconciliation alike -- a count-based proxy for "is this a real list
+# line" breaks the moment a legitimate list gets shorter than the arbitrary count. The
+# structural test below asks the actual question instead: is the ENTIRE line (once
+# stripped of leading/trailing whitespace and an optional trailing period) nothing but
+# backtick-quoted names joined by ", "? That is true for every bucket line regardless of
+# length, and false for every prose sentence that merely mentions a channel in passing
+# (the F-34.5-G6-10 warning paragraph among them) -- see check 4's live-document proof.
 # ---------------------------------------------------------------------------
 
 BACKTICK_NAME = re.compile(r"`([A-Za-z0-9_.-]+)`")
+CHANNEL_LIST_LINE_PATTERN = re.compile(
+    r"^`[A-Za-z0-9_.-]+`(?:,\s*`[A-Za-z0-9_.-]+`)*\.?$"
+)
 TOTALS_UNIQUE_PATTERN = re.compile(r"\|\s*Unique channels\s*\|\s*(\d+)\s*\|")
 
 
 def parse_bucket_names(inventory_text: str) -> set:
     names = set()
     for ln in inventory_text.splitlines():
-        found = BACKTICK_NAME.findall(ln)
-        if len(found) >= 5:
-            names |= set(found)
+        if CHANNEL_LIST_LINE_PATTERN.match(ln.strip()):
+            names |= set(BACKTICK_NAME.findall(ln))
     return names
 
 
@@ -192,11 +208,12 @@ def check_comment_blindness(raw_text: str, invoke: set, send: set) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Check 4 — Bucket-line scoping: membership is parsed from lines with >=5 backticked names only,
-# never from any backtick anywhere in the document. Real proof this matters on THIS document: the
-# >=5 rule (222) must find strictly fewer names than an any-backtick parse (277) -- if they were
-# ever equal, the scoping rule would be doing nothing, and the F-34.5-G6-10 warning paragraph's own
-# backticked channel mentions would silently count as "listed".
+# Check 4 — Bucket-line scoping: membership is parsed from lines that are structurally a pure
+# comma-separated backtick-name list, never from any backtick anywhere in the document. Real proof
+# this matters on THIS document: the structural rule (216) must find strictly fewer names than an
+# any-backtick parse (312) -- if they were ever equal, the scoping rule would be doing nothing, and
+# the F-34.5-G6-10 warning paragraph's own backticked channel mentions would silently count as
+# "listed".
 # ---------------------------------------------------------------------------
 
 
@@ -206,7 +223,7 @@ def check_bucket_line_scoping(inventory_text: str) -> None:
     if not (bucket_names < any_names):
         fail(
             f"bucket-line-scoped names ({len(bucket_names)}) are not a STRICT subset of "
-            f"any-backtick names ({len(any_names)}) — the >=5-backtick-line scoping rule is not "
+            f"any-backtick names ({len(any_names)}) — the pure-comma-list-line scoping rule is not "
             "discriminating on this document, which means a channel named only in prose (e.g. the "
             "F-34.5-G6-10 warning paragraph) could be silently counted as listed"
         )
@@ -378,10 +395,10 @@ def self_test() -> None:
         base_send,
     )
 
-    # Case 4 (check_bucket_line_scoping): a degenerate document where the >=5 rule makes NO
+    # Case 4 (check_bucket_line_scoping): a degenerate document where the structural rule makes NO
     # difference (bucket_names == any_backtick_names) -- proves the discriminating-scope
     # assertion itself can fail, not just pass by construction.
-    degenerate_doc = "`a`, `b`, `c`, `d`, `e`\n"  # exactly 5 names, nothing else in the doc
+    degenerate_doc = "`a`, `b`, `c`, `d`, `e`\n"  # a pure list line, nothing else in the doc
     case(
         "a document where bucket-line scoping makes no difference rejected by "
         "check_bucket_line_scoping",

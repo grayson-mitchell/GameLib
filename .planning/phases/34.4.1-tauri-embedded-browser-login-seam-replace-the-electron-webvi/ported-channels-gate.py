@@ -46,6 +46,25 @@ HUMBLE_CHANNELS = [
 
 assert len(HUMBLE_CHANNELS) == 6, f"HUMBLE_CHANNELS has {len(HUMBLE_CHANNELS)} entries, expected 6"
 
+# 2026-09-04 (Phase 40 plan 03, D-11 channel re-census, Rule 1 fix): `humbleGetLoginUserAgent` and
+# `humbleLoginNavigated` were retired outright -- a four-surface sweep (`40-CHANNEL-RECENSUS.md`)
+# found zero remaining callers of either channel (or, for `humbleLoginNavigated`, of the method it
+# invoked) after plan 40-01 deleted their only renderer caller (`HumbleLoginSurface.tsx`'s
+# `<webview>` wiring). `HUMBLE_CHANNELS` above and every PORTED-CHANNELS-side assertion in this
+# file (check_all_channels_present, check_exact_row_count, check_kind_correctness,
+# check_proof_levels) are DELIBERATELY UNCHANGED: they verify the historical, frozen
+# `34.4.1-PORTED-CHANNELS.md` record of what actually shipped and was proven in this phase, which
+# remains true regardless of later retirement -- that document is not rewritten to erase channels
+# that DID ship. RETIRED_CHANNELS exists only to scope the LIVE-inventory cross-check
+# (check_humble_channels_match_inventory) down to the channels still present in
+# IPC-PORT-INVENTORY.md today, mirroring OAUTH_CHANNEL's own precedent below for an explicit,
+# asserted exclusion rather than a silent filter.
+RETIRED_CHANNELS = {"humbleGetLoginUserAgent", "humbleLoginNavigated"}
+HUMBLE_CHANNELS_LIVE = [c for c in HUMBLE_CHANNELS if c not in RETIRED_CHANNELS]
+assert len(HUMBLE_CHANNELS_LIVE) == 4, (
+    f"HUMBLE_CHANNELS_LIVE has {len(HUMBLE_CHANNELS_LIVE)} entries, expected 4"
+)
+
 # The one new Tauri-only channel this phase adds (plan 34.4.1-09). Deliberately NOT in
 # HUMBLE_CHANNELS and NOT in the inventory — see check_oauth_excluded_from_inventory_crosscheck,
 # which asserts that exclusion explicitly rather than silently filtering it out.
@@ -193,11 +212,13 @@ def check_proof_levels(text: str) -> None:
 
 
 def check_humble_channels_match_inventory(ported_text: str, inventory_text: str) -> None:
-    """Check 2: the 6 humble* rows in 34.4.1-PORTED-CHANNELS.md match
+    """Check 2: the 4 LIVE humble* rows in 34.4.1-PORTED-CHANNELS.md (HUMBLE_CHANNELS_LIVE) match
     IPC-PORT-INVENTORY.md's Phase 34.4.1 section exactly, set-equality both directions.
-    oauthCaptureLogin is EXCLUDED from this comparison BY NAME, asserted explicitly here rather
-    than silently filtered — a genuinely-missing inventory row could otherwise hide behind an
-    unexamined exclusion."""
+    oauthCaptureLogin AND RETIRED_CHANNELS are EXCLUDED from this comparison BY NAME, asserted
+    explicitly here rather than silently filtered — a genuinely-missing inventory row could
+    otherwise hide behind an unexamined exclusion. RETIRED_CHANNELS' rows must still exist in
+    34.4.1-PORTED-CHANNELS.md (that document's historical record is unchanged) but must NOT be
+    expected in the inventory, which no longer lists them at all as of 2026-09-04."""
     rows = extract_rows(ported_text)
     ported_humble_names = {name for name, _ in rows if name in HUMBLE_CHANNELS or name == OAUTH_CHANNEL}
     # Explicit assertion that the exclusion is deliberate, not a silent filter bug: oauthCaptureLogin
@@ -211,11 +232,24 @@ def check_humble_channels_match_inventory(ported_text: str, inventory_text: str)
             "deliberate exclusion from the inventory cross-check"
         )
 
+    # Same explicit-exclusion discipline for RETIRED_CHANNELS: their rows must still exist in the
+    # frozen PORTED-CHANNELS.md record (this phase DID ship and prove them at the time), but they
+    # are deliberately excluded from the live-inventory comparison below, since the inventory no
+    # longer lists them after their 2026-09-04 retirement.
+    missing_retired_rows = RETIRED_CHANNELS - ported_humble_names
+    if missing_retired_rows:
+        fail(
+            f"retired channel(s) {', '.join(sorted(missing_retired_rows))} have no row in "
+            "34.4.1-PORTED-CHANNELS.md — cannot verify their deliberate exclusion from the live "
+            "inventory cross-check"
+        )
+    ported_humble_names = ported_humble_names - RETIRED_CHANNELS
+
     section = _extract_section(inventory_text, INVENTORY_34_4_1_HEADING)
     if not section:
         fail(
             "IPC-PORT-INVENTORY.md is missing the '## Phase 34.4.1 — the embedded-browser login "
-            "seam (6 channels)' heading — cannot cross-check the humble* channel set"
+            "seam (4 channels)' heading — cannot cross-check the humble* channel set"
         )
     inventory_names = _channel_names_in_backtick_list(section)
 
@@ -232,7 +266,7 @@ def check_humble_channels_match_inventory(ported_text: str, inventory_text: str)
                 f"in PORTED-CHANNELS but missing from the inventory: {', '.join(sorted(extra_in_ported))}"
             )
         fail(
-            "the 6 humble* channels in 34.4.1-PORTED-CHANNELS.md do not exactly match "
+            "the 4 live humble* channels in 34.4.1-PORTED-CHANNELS.md do not exactly match "
             f"IPC-PORT-INVENTORY.md's Phase 34.4.1 section — {'; '.join(details)}"
         )
 
@@ -270,7 +304,7 @@ def check_oauth_proof_level_never_live(text: str) -> None:
 # ---------------------------------------------------------------------------
 
 INVENTORY_34_4_1_HEADING = re.compile(
-    r"## Phase 34\.4\.1 — the embedded-browser login seam \(6 channels\)"
+    r"## Phase 34\.4\.1 — the embedded-browser login seam \(4 channels\)"
 )
 
 # Matches a WHOLE LINE that consists of nothing but a comma-separated list of backtick-quoted
@@ -424,11 +458,13 @@ def _valid_synthetic_ported_channels_doc() -> str:
 
 
 def _valid_synthetic_inventory_doc() -> str:
-    """A minimal synthetic IPC-PORT-INVENTORY.md satisfying check 2/5's inventory-side shape."""
-    humble_list = ", ".join(f"`{c}`" for c in HUMBLE_CHANNELS)
+    """A minimal synthetic IPC-PORT-INVENTORY.md satisfying check 2/5's inventory-side shape.
+    Lists HUMBLE_CHANNELS_LIVE (4), not HUMBLE_CHANNELS (6) -- RETIRED_CHANNELS no longer have an
+    inventory row at all, mirroring the live document's post-2026-09-04 shape."""
+    humble_list = ", ".join(f"`{c}`" for c in HUMBLE_CHANNELS_LIVE)
     return f"""# Synthetic inventory
 
-## Phase 34.4.1 — the embedded-browser login seam (6 channels)
+## Phase 34.4.1 — the embedded-browser login seam (4 channels)
 
 {humble_list}
 
