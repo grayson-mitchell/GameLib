@@ -17,10 +17,10 @@
  *     - `storeEmbedShow`           -> `createRustStoreEmbedSeam().show()`
  *     - `storeEmbedClose`          -> `createRustStoreEmbedSeam().close()`
  *     - `storeEmbedTakeNavEvents`  -> `createRustStoreEmbedSeam().takeNavEvents()` (unimplemented)
- *     - `storeEmbedBack`           -> `createRustStoreEmbedSeam().back()` (unimplemented, owner 40-07)
- *     - `storeEmbedForward`        -> `createRustStoreEmbedSeam().forward()` (unimplemented, owner 40-07)
- *     - `storeEmbedReload`         -> `createRustStoreEmbedSeam().reload()` (unimplemented, owner 40-07)
- *     - `storeEmbedNavigate`       -> `createRustStoreEmbedSeam().navigate()` (unimplemented, owner 40-07)
+ *     - `storeEmbedBack`           -> `createRustStoreEmbedSeam().back()` (Phase 40 Plan 07, D-22)
+ *     - `storeEmbedForward`        -> `createRustStoreEmbedSeam().forward()` (Phase 40 Plan 07, D-22)
+ *     - `storeEmbedReload`         -> `createRustStoreEmbedSeam().reload()` (Phase 40 Plan 07, D-22)
+ *     - `storeEmbedNavigate`       -> `createRustStoreEmbedSeam().navigate()` (Phase 40 Plan 07, D-22)
  *
  *   send (ipcMain.on, 1):
  *     - `storeEmbedSetBounds` -> `createRustStoreEmbedSeam().setBounds()`
@@ -29,18 +29,27 @@
  * safe `{ status: 'error', error }` default rather than rejecting
  * (`sidecar-dialog-reject-crashes`). The one `send`-kind body wraps its work in the same
  * `void (async () => {...})()` shape `humbleLoginFlowRegistration.ts` uses, so a listener
- * rejection can never become an unhandled rejection.
+ * rejection can never become an unhandled rejection. `back`/`forward`/`reload`/`navigate` carry
+ * their resolved navigation state alongside `status` (`{ status: 'ok', navState }`) rather than
+ * discarding it — the caller needs the pushed state, not just a success/failure signal.
  *
  * Response-coercion discipline (T-40-05-01): every seam method below reads its `requestRustInvoke`
  * result into a narrowly typed local and THROWS a descriptive Error naming the channel and
  * quoting the raw response on a malformed shape. A silently-coerced default would make a dead
  * Rust channel indistinguishable from a healthy empty one — the F-34.4.2-19 defect class this
- * file's `humbleLoginFlowRegistration.ts` analog exists to prevent one layer up.
+ * file's `humbleLoginFlowRegistration.ts` analog exists to prevent one layer up. For
+ * `back`/`forward`/`reload`/`navigate` this means a per-field check on the navigation-state
+ * shape (`url`/`host` strings, `canGoBack`/`canGoForward` booleans) — a navigation state that
+ * silently defaulted to "back unavailable" would make the chrome's back button dead with no
+ * signal, indistinguishable from a correctly disabled one.
  *
- * `back`/`forward`/`reload`/`navigate`/`takeNavEvents` throw a declared-unimplemented Error
- * naming plan `40-07` as owner — no Rust arm exists yet for any of the five (D-25: no native
- * back/forward/history API on `tauri::webview::Webview` or `wry::WebView`,
- * `40-EMBED-API-VERIFICATION.md` Q1/Q2). Never stubbed as no-ops, never a plausible default.
+ * `takeNavEvents` throws a declared-unimplemented Error (D-25: no native back/forward/history
+ * API on `tauri::webview::Webview` or `wry::WebView`, `40-EMBED-API-VERIFICATION.md` Q1/Q2) — no
+ * Rust arm drains queued nav events yet, and no future plan has been assigned to own it. It is
+ * deliberately NOT attributed to a specific plan number here: `back`/`forward`/`reload`/
+ * `navigate` were the same shape until Phase 40 Plan 07 (this plan) implemented them, and naming
+ * a plan that has already shipped without addressing a method would be a stale, false claim the
+ * moment this file lands — never stubbed as a no-op, never a plausible default.
  *
  * Geometry courier discipline (T-40-05-04, D-18/D-29): `setBounds()` validates every coordinate
  * is a finite number and THROWS rather than substituting one — a substituted rect is a second
@@ -61,17 +70,20 @@ import {
   RUST_STORE_EMBED_SET_BOUNDS,
   RUST_STORE_EMBED_HIDE,
   RUST_STORE_EMBED_SHOW,
-  RUST_STORE_EMBED_CLOSE
-  // RUST_STORE_EMBED_TAKE_NAV_EVENTS / _BACK / _FORWARD / _RELOAD / _NAVIGATE are declared in
-  // sidecarTransport.ts for plan `40-07` to import when it implements those arms -- this file's
-  // takeNavEvents()/back()/forward()/reload()/navigate() throw declared-unimplemented Errors
-  // WITHOUT calling requestRustInvoke, so importing those five constants here would be dead
-  // weight (and a `no-unused-vars` lint error). Deliberately not imported.
+  RUST_STORE_EMBED_CLOSE,
+  RUST_STORE_EMBED_BACK,
+  RUST_STORE_EMBED_FORWARD,
+  RUST_STORE_EMBED_RELOAD,
+  RUST_STORE_EMBED_NAVIGATE
+  // RUST_STORE_EMBED_TAKE_NAV_EVENTS is declared in sidecarTransport.ts but stays unimported here:
+  // takeNavEvents() throws a declared-unimplemented Error WITHOUT calling requestRustInvoke, so
+  // importing that constant would be dead weight (and a `no-unused-vars` lint error).
 } from '../../common/types/sidecarTransport'
 import {
   setStoreEmbedSeam,
   type StoreEmbedSeam,
-  type StoreEmbedBounds
+  type StoreEmbedBounds,
+  type StoreEmbedNavEvent
 } from '../store/storeEmbedSeam'
 import { logWarning, LogPrefix } from '../logger'
 
@@ -86,17 +98,57 @@ function logSendFailure(channel: string, error: unknown): void {
   )
 }
 
-/** A single method name this file names in every declared-unimplemented Error message. */
-const NAV_OWNER_PLAN = '40-07'
-
-/** Builds a declared-unimplemented Error naming `40-07` as owner (T-40-05-01/D-25). */
-function unimplementedError(method: string): Error {
+/**
+ * Builds the declared-unimplemented Error for `takeNavEvents()` (D-25) — no Rust arm drains
+ * queued nav events yet. Deliberately does NOT name a specific owning plan: `back`/`forward`/
+ * `reload`/`navigate` carried the same "owned by Phase 40 Plan 07" message until this very file
+ * (that plan) implemented them, and pinning a plan number here would go stale the instant that
+ * plan ships without addressing this method — the exact trap this rewrite fixes for the other
+ * four. This is a declared gap, not a bug — never stub this as a no-op or a plausible default.
+ */
+function takeNavEventsUnimplementedError(): Error {
   return new Error(
-    `StoreEmbedSeam.${method}(): not yet implemented -- no Rust arm exists (plan ${NAV_OWNER_PLAN} ` +
-      'owns it, D-25: no native back/forward/history API exists on tauri::webview::Webview or ' +
-      'wry::WebView). This is a declared gap, not a bug -- never stub this as a no-op or a ' +
-      'plausible default.'
+    'StoreEmbedSeam.takeNavEvents(): not yet implemented -- no Rust arm exists (D-25: no native ' +
+      'back/forward/history API exists on tauri::webview::Webview or wry::WebView). No future ' +
+      'plan has been assigned ownership yet. This is a declared gap, not a bug -- never stub ' +
+      'this as a no-op or a plausible default.'
   )
+}
+
+/**
+ * Coerces a `requestRustInvoke` result into `StoreEmbedNavEvent` with a per-field type check
+ * (T-40-05-01, extended for this plan's navigation arms). THROWS a descriptive Error naming the
+ * channel and quoting the raw response on any mismatch -- never coerces a default. A navigation
+ * state that silently defaulted to "back unavailable" would make the chrome's back button dead
+ * with no signal, indistinguishable from a correctly disabled one.
+ */
+function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
+  if (result === null || typeof result !== 'object') {
+    throw new Error(`${channel}: malformed response (expected an object): ${JSON.stringify(result)}`)
+  }
+  const candidate = result as Record<string, unknown>
+  if (typeof candidate.url !== 'string') {
+    throw new Error(`${channel}: malformed response (url must be a string): ${JSON.stringify(result)}`)
+  }
+  if (typeof candidate.host !== 'string') {
+    throw new Error(`${channel}: malformed response (host must be a string): ${JSON.stringify(result)}`)
+  }
+  if (typeof candidate.canGoBack !== 'boolean') {
+    throw new Error(
+      `${channel}: malformed response (canGoBack must be a boolean): ${JSON.stringify(result)}`
+    )
+  }
+  if (typeof candidate.canGoForward !== 'boolean') {
+    throw new Error(
+      `${channel}: malformed response (canGoForward must be a boolean): ${JSON.stringify(result)}`
+    )
+  }
+  return {
+    url: candidate.url,
+    host: candidate.host,
+    canGoBack: candidate.canGoBack,
+    canGoForward: candidate.canGoForward
+  }
 }
 
 /**
@@ -119,7 +171,7 @@ function assertFiniteBounds(bounds: StoreEmbedBounds): void {
  * Constructs the `rustInvoke`-backed `StoreEmbedSeam` implementation. Every method that calls
  * a live Rust arm coerces the response into the declared return type and THROWS a descriptive
  * Error on a malformed shape -- load-bearing, not defensive (see this file's own header comment).
- * The five methods with no backing Rust arm throw a declared-unimplemented Error naming `40-07`.
+ * `takeNavEvents` has no backing Rust arm yet and throws a declared-unimplemented Error.
  */
 export function createRustStoreEmbedSeam(): StoreEmbedSeam {
   return {
@@ -188,33 +240,42 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
       }
     },
 
-    // NOT YET IMPLEMENTED (plan 40-07, D-25/D-22) -- no Rust arm exists for
-    // RUST_STORE_EMBED_TAKE_NAV_EVENTS yet. Declared-unimplemented, matching the treatment of
-    // back/forward/reload/navigate below, rather than resolving a plausible-looking `[]`, which
-    // would be indistinguishable from "genuinely no queued events".
-    // eslint-disable-next-line @typescript-eslint/require-await -- interface requires Promise<T>; throws synchronously by design, matching back()/forward()/reload()/navigate() below
+    // NOT YET IMPLEMENTED (D-25/D-22) -- no Rust arm exists for RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    // yet, and no future plan has been assigned ownership. Declared-unimplemented rather than
+    // resolving a plausible-looking `[]`, which would be indistinguishable from "genuinely no
+    // queued events".
+    // eslint-disable-next-line @typescript-eslint/require-await -- interface requires Promise<T>; throws synchronously by design
     async takeNavEvents() {
-      throw unimplementedError('takeNavEvents')
+      throw takeNavEventsUnimplementedError()
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // Phase 40 Plan 07 (D-22): moves the Rust-side history cursor back one entry and returns the
+    // resulting navigation state -- there is no handle to separately query, so this return value
+    // IS the read (control inverts: Rust pushes, this seam relays, the renderer never polls).
     async back() {
-      throw unimplementedError('back')
+      const result = await requestRustInvoke(RUST_STORE_EMBED_BACK, [])
+      return coerceNavState('store_embed_back', result)
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // The mirror of `back()` -- see its doc comment.
     async forward() {
-      throw unimplementedError('forward')
+      const result = await requestRustInvoke(RUST_STORE_EMBED_FORWARD, [])
+      return coerceNavState('store_embed_forward', result)
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // Reloads the embed's current page. The returned navigation state's cursor is unchanged --
+    // a reload must not move it (the history-stack-DoS mitigation from this plan's threat model).
     async reload() {
-      throw unimplementedError('reload')
+      const result = await requestRustInvoke(RUST_STORE_EMBED_RELOAD, [])
+      return coerceNavState('store_embed_reload', result)
     },
 
-    // eslint-disable-next-line @typescript-eslint/require-await
-    async navigate(_url) {
-      throw unimplementedError('navigate')
+    // Navigates the embed to `url`, pushing it onto the history stack (truncating any forward
+    // entries past the cursor, exactly like a user-initiated navigation) and returning the
+    // resulting navigation state.
+    async navigate(url) {
+      const result = await requestRustInvoke(RUST_STORE_EMBED_NAVIGATE, [url])
+      return coerceNavState('store_embed_navigate', result)
     }
   }
 }
@@ -238,6 +299,26 @@ async function safeStatus(
   try {
     await action()
     return { status: 'ok' }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn(`[storeEmbedFlowRegistration] ${label} failed:`, message)
+    return { status: 'error', error: message }
+  }
+}
+
+/**
+ * The navigation-arm analog of `safeStatus()` (Phase 40 Plan 07): resolves
+ * `{ status: 'ok', navState }` on success rather than discarding the seam method's return value
+ * -- the caller (plan `40-08`'s host) needs the pushed navigation state, not just a
+ * success/failure signal. Never rejects, matching `safeStatus()`'s fail-safe discipline.
+ */
+async function safeNavState(
+  label: string,
+  action: () => Promise<StoreEmbedNavEvent>
+): Promise<{ status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }> {
+  try {
+    const navState = await action()
+    return { status: 'ok', navState }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.warn(`[storeEmbedFlowRegistration] ${label} failed:`, message)
@@ -287,18 +368,20 @@ export function registerStoreEmbedFlows(): void {
     }
   })
 
-  ipcMain.handle('storeEmbedBack', async () => safeStatus('storeEmbedBack', () => seam.back()))
+  ipcMain.handle('storeEmbedBack', async () =>
+    safeNavState('storeEmbedBack', () => seam.back())
+  )
   ipcMain.handle('storeEmbedForward', async () =>
-    safeStatus('storeEmbedForward', () => seam.forward())
+    safeNavState('storeEmbedForward', () => seam.forward())
   )
   ipcMain.handle('storeEmbedReload', async () =>
-    safeStatus('storeEmbedReload', () => seam.reload())
+    safeNavState('storeEmbedReload', () => seam.reload())
   )
   ipcMain.handle(
     'storeEmbedNavigate',
     async (_event: unknown, ...args: unknown[]) => {
       const [url] = args as [string]
-      return safeStatus('storeEmbedNavigate', () => seam.navigate(url))
+      return safeNavState('storeEmbedNavigate', () => seam.navigate(url))
     }
   )
 

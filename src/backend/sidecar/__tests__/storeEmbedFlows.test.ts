@@ -11,13 +11,18 @@
  *   1. kind correctness — the 9 invoke channels are `ipcMain.handle`-registered and NOT
  *      `ipcMain.on`-registered; the 1 send channel is the reverse (T-40-05-02).
  *   2. malformed-response-throws — each of the 5 live-Rust-arm methods (open/setBounds/hide/
- *      show/close) throws on 3 distinct malformed response shapes (T-40-05-01).
+ *      show/close) throws on 3 distinct malformed response shapes (T-40-05-01), plus (Phase 40
+ *      Plan 07) each of the 4 navigation methods (back/forward/reload/navigate) throws on ≥4
+ *      distinct malformed navigation-state shapes.
  *   3. no-handler-rejects — a rejecting `requestRustInvoke` result surfaces through the
  *      registered `ipcMain.handle` arm as a resolved `{ status: 'error' }`, never a rejection
  *      (T-40-05-03).
- *   4. unimplemented-navigation-throws-naming-40-07 — takeNavEvents/back/forward/reload/navigate
- *      each throw an Error naming `40-07` as owner, without emitting any rustInvoke frame
- *      (D-25).
+ *   4. unimplemented-navigation-throws-naming-40-07 (inverted by Phase 40 Plan 07, not deleted) —
+ *      `takeNavEvents` still throws a declared-unimplemented Error, without emitting any
+ *      rustInvoke frame (D-25). `back`/`forward`/`reload`/`navigate` are implemented as of this
+ *      plan and are now asserted to REACH their Rust channel with the expected arguments instead
+ *      (lineage: this describe block is the same one plan `40-05` wrote, migrated rather than
+ *      dropped).
  *   5. bounds-courier-passthrough-and-throw — `setBounds` passes x/y/w/h through unchanged, and
  *      throws (never substitutes) on a missing or non-finite coordinate (T-40-05-04/D-18/D-29).
  */
@@ -35,7 +40,11 @@ import {
   RUST_STORE_EMBED_SET_BOUNDS,
   RUST_STORE_EMBED_HIDE,
   RUST_STORE_EMBED_SHOW,
-  RUST_STORE_EMBED_CLOSE
+  RUST_STORE_EMBED_CLOSE,
+  RUST_STORE_EMBED_BACK,
+  RUST_STORE_EMBED_FORWARD,
+  RUST_STORE_EMBED_RELOAD,
+  RUST_STORE_EMBED_NAVIGATE
 } from 'common/types/sidecarTransport'
 
 type Frame = Record<string, unknown>
@@ -216,6 +225,80 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     await expect(promise).rejects.toThrow(/malformed response/)
   })
 
+  // ── Phase 40 Plan 07: navigation-state malformed-response coverage (≥4 bad shapes) ──────────
+  const BAD_NAV_SHAPES: { label: string; value: unknown }[] = [
+    { label: 'null instead of a navigation-state object', value: null },
+    {
+      label: 'an object missing the canGoBack field',
+      value: { url: 'https://example.com/', host: 'example.com', canGoForward: false }
+    },
+    {
+      label: 'a non-boolean canGoForward field',
+      value: {
+        url: 'https://example.com/',
+        host: 'example.com',
+        canGoBack: false,
+        canGoForward: 'no'
+      }
+    },
+    {
+      label: 'a non-string url field',
+      value: { url: 123, host: 'example.com', canGoBack: false, canGoForward: false }
+    }
+  ]
+
+  it.each(BAD_NAV_SHAPES)('store_embed_back: throws on $label', async ({ value }) => {
+    const { input, frames } = startTransport()
+    const seam = createRustStoreEmbedSeam()
+
+    const promise = seam.back()
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_BACK)
+    expect(frame).toBeDefined()
+
+    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
+    await expect(promise).rejects.toThrow(/malformed response/)
+  })
+
+  it.each(BAD_NAV_SHAPES)('store_embed_forward: throws on $label', async ({ value }) => {
+    const { input, frames } = startTransport()
+    const seam = createRustStoreEmbedSeam()
+
+    const promise = seam.forward()
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_FORWARD)
+    expect(frame).toBeDefined()
+
+    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
+    await expect(promise).rejects.toThrow(/malformed response/)
+  })
+
+  it.each(BAD_NAV_SHAPES)('store_embed_reload: throws on $label', async ({ value }) => {
+    const { input, frames } = startTransport()
+    const seam = createRustStoreEmbedSeam()
+
+    const promise = seam.reload()
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_RELOAD)
+    expect(frame).toBeDefined()
+
+    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
+    await expect(promise).rejects.toThrow(/malformed response/)
+  })
+
+  it.each(BAD_NAV_SHAPES)('store_embed_navigate: throws on $label', async ({ value }) => {
+    const { input, frames } = startTransport()
+    const seam = createRustStoreEmbedSeam()
+
+    const promise = seam.navigate('https://store.steampowered.com/app/440')
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_NAVIGATE)
+    expect(frame).toBeDefined()
+
+    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
+    await expect(promise).rejects.toThrow(/malformed response/)
+  })
+
   it('sanity: requestRustInvoke refuses a non-allowlisted channel without emitting a frame', async () => {
     const { frames } = startTransport()
     await expect(
@@ -262,26 +345,106 @@ describe('no-handler-rejects — a rejecting requestRustInvoke surfaces as a res
     expect(handler).toBeDefined()
     await expect(handler?.({})).resolves.toEqual([])
   })
+
+  it('storeEmbedBack: the registered ipcMain.handle arm resolves { status: "error" } rather than rejecting (Phase 40 Plan 07 safeNavState)', async () => {
+    const { input, frames } = startTransport()
+
+    const handler = handlerRegistry.get('storeEmbedBack')
+    expect(handler).toBeDefined()
+
+    const resultPromise = handler?.({}) as Promise<unknown>
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_BACK)
+    expect(frame).toBeDefined()
+
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: false,
+        error: 'store_embed_back:no-back-entry'
+      })}\n`
+    )
+
+    const result = (await resultPromise) as { status: string; error?: string }
+    expect(result.status).toBe('error')
+    expect(result.error).toMatch(/no-back-entry/)
+  })
 })
 
 // ── Test 4: unimplemented-navigation-throws-naming-40-07 ────────────────────────────────────────
-describe('unimplemented-navigation-throws-naming-40-07 — no Rust arm exists yet (D-25)', () => {
-  const UNIMPLEMENTED_METHODS: [string, () => Promise<unknown>][] = [
-    ['takeNavEvents', () => createRustStoreEmbedSeam().takeNavEvents()],
-    ['back', () => createRustStoreEmbedSeam().back()],
-    ['forward', () => createRustStoreEmbedSeam().forward()],
-    ['reload', () => createRustStoreEmbedSeam().reload()],
-    ['navigate', () => createRustStoreEmbedSeam().navigate('https://example.com')]
+//
+// Plan 40-05 wrote this describe block asserting all five methods (takeNavEvents/back/forward/
+// reload/navigate) threw a declared-unimplemented Error naming plan `40-07` as owner. Phase 40
+// Plan 07 (this plan) implemented four of the five, so this block is INVERTED for those four
+// rather than deleted (a deleted test is a lost property; an inverted one is a migrated one):
+// they now assert the method REACHES its Rust channel with the expected arguments. `takeNavEvents`
+// still has no Rust arm and keeps its original declared-unimplemented assertion, updated only to
+// stop asserting a `40-07` owner (D-25 — no future plan has been assigned ownership; see
+// `storeEmbedFlowRegistration.ts`'s `takeNavEventsUnimplementedError()` doc comment for why
+// naming a specific plan there would go stale).
+describe('unimplemented-navigation-throws-naming-40-07 — takeNavEvents has no Rust arm (D-25); back/forward/reload/navigate now reach their Rust channel (Phase 40 Plan 07)', () => {
+  it('takeNavEvents throws a declared-unimplemented Error, without emitting any rustInvoke frame', async () => {
+    const { frames } = startTransport()
+    await expect(createRustStoreEmbedSeam().takeNavEvents()).rejects.toThrow(
+      /not yet implemented/
+    )
+    expect(frames).toHaveLength(0)
+  })
+
+  const SAMPLE_NAV_STATE = {
+    url: 'https://store.steampowered.com/app/440',
+    host: 'store.steampowered.com',
+    canGoBack: true,
+    canGoForward: false
+  }
+
+  const NAV_REACHABILITY_CASES: [string, string, () => Promise<unknown>][] = [
+    ['back', RUST_STORE_EMBED_BACK, () => createRustStoreEmbedSeam().back()],
+    ['forward', RUST_STORE_EMBED_FORWARD, () => createRustStoreEmbedSeam().forward()],
+    ['reload', RUST_STORE_EMBED_RELOAD, () => createRustStoreEmbedSeam().reload()],
+    [
+      'navigate',
+      RUST_STORE_EMBED_NAVIGATE,
+      () => createRustStoreEmbedSeam().navigate(SAMPLE_NAV_STATE.url)
+    ]
   ]
 
-  it.each(UNIMPLEMENTED_METHODS)(
-    '%s throws an Error naming 40-07 as owner, without emitting any rustInvoke frame',
-    async (_name, invoke) => {
-      const { frames } = startTransport()
-      await expect(invoke()).rejects.toThrow(/40-07/)
-      expect(frames).toHaveLength(0)
+  it.each(NAV_REACHABILITY_CASES)(
+    '%s (migrated from plan 40-05\'s declared-unimplemented assertion) reaches its Rust channel %s and resolves the navigation state it returns',
+    async (_name, channel, invoke) => {
+      const { input, frames } = startTransport()
+      const promise = invoke()
+      await flush()
+      const frame = frames.find((f) => f.channel === channel)
+      expect(frame).toBeDefined()
+
+      input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: SAMPLE_NAV_STATE })}\n`)
+      await expect(promise).resolves.toEqual(SAMPLE_NAV_STATE)
     }
   )
+
+  it('store_embed_navigate: forwards the url argument on the wire, unchanged', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().navigate('https://example.com/next')
+    await flush()
+    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_NAVIGATE)
+    expect(frame).toBeDefined()
+    expect(frame?.args).toEqual(['https://example.com/next'])
+
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: {
+          url: 'https://example.com/next',
+          host: 'example.com',
+          canGoBack: true,
+          canGoForward: false
+        }
+      })}\n`
+    )
+    await promise
+  })
 })
 
 // ── Test 5: bounds-courier-passthrough-and-throw ─────────────────────────────────────────────────

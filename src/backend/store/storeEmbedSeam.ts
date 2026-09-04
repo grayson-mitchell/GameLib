@@ -84,17 +84,25 @@ export interface StoreEmbedSeam {
    */
   takeNavEvents(): Promise<StoreEmbedNavEvent[]>
   /**
-   * NOT YET IMPLEMENTED: plan `40-02` deliberately did not add this arm; plan `40-07` adds it
-   * against the D-25 verdict (no native back/forward API exists). Throws a
-   * declared-unimplemented Error until then — never a no-op, never a plausible default.
+   * Moves the Rust-side history cursor back one entry and navigates the embed there (`40-07`,
+   * D-22). Returns the resulting navigation state — there is no handle to separately query, so
+   * this return value IS the read. Rejects (never resolves with a defaulted/plausible state) if
+   * the underlying Rust arm errors, e.g. because there is nothing to go back to.
    */
-  back(): Promise<void>
-  /** NOT YET IMPLEMENTED — see `back()`'s doc comment. Throws a declared-unimplemented Error until `40-07` lands. */
-  forward(): Promise<void>
-  /** NOT YET IMPLEMENTED — see `back()`'s doc comment. Throws a declared-unimplemented Error until `40-07` lands. */
-  reload(): Promise<void>
-  /** NOT YET IMPLEMENTED — see `back()`'s doc comment. Throws a declared-unimplemented Error until `40-07` lands. */
-  navigate(url: string): Promise<void>
+  back(): Promise<StoreEmbedNavEvent>
+  /** The mirror of `back()` — see its doc comment. */
+  forward(): Promise<StoreEmbedNavEvent>
+  /**
+   * Reloads the embed's current page. Returns the (unchanged) navigation state — a reload must
+   * NOT move the history cursor.
+   */
+  reload(): Promise<StoreEmbedNavEvent>
+  /**
+   * Navigates the embed to `url`, pushing it onto the history stack and truncating any forward
+   * entries past the cursor, exactly like a user-initiated navigation. Returns the resulting
+   * navigation state.
+   */
+  navigate(url: string): Promise<StoreEmbedNavEvent>
 }
 
 // Module-scoped holder. `null` before registerStoreEmbedFlows() runs at sidecar startup, and
