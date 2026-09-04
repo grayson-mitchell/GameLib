@@ -482,16 +482,27 @@ register — this feature exists only under the Tauri sidecar architecture, exac
 `getLoginBackground` had none — so, per that same precedent, this bucket's own header count is
 "(10 channels)" and `Ported to sidecar` in `## Totals` below also rises by 10.
 
-Five of the ten (`storeEmbedOpen`/`storeEmbedSetBounds`/`storeEmbedHide`/`storeEmbedShow`/
-`storeEmbedClose`) have a live Rust arm behind `requestRustInvoke` (owned by an earlier Phase 40
-plan, not this one — this plan made zero Rust changes). The remaining five
-(`storeEmbedTakeNavEvents`/`storeEmbedBack`/`storeEmbedForward`/`storeEmbedReload`/
-`storeEmbedNavigate`) are a **declared-unimplemented** stub: each throws an `Error` naming plan
-`40-07` as the owner (D-25 — no native back/forward/history API exists on
-`tauri::webview::Webview` or `wry::WebView`), never a silent no-op or a plausible default. The
-`storeEmbedTakeNavEvents` invoke arm converts that declared throw into a safe `[]` default at the
-`ipcMain.handle` boundary (fail-safe discipline); the other four surface it as
-`{ status: 'error' }` via the same `safeStatus()` helper used by the five live-Rust-arm methods.
+**AS SHIPPED BY PLAN 40-05:** five of the ten (`storeEmbedOpen`/`storeEmbedSetBounds`/
+`storeEmbedHide`/`storeEmbedShow`/`storeEmbedClose`) had a live Rust arm behind
+`requestRustInvoke` (owned by an earlier Phase 40 plan, not that one — it made zero Rust
+changes). The other five (`storeEmbedTakeNavEvents`/`storeEmbedBack`/`storeEmbedForward`/
+`storeEmbedReload`/`storeEmbedNavigate`) were a **declared-unimplemented** stub: each threw an
+`Error` naming plan `40-07` as owner (D-25), never a silent no-op or a plausible default.
+
+**ALL TEN ARE NOW LIVE.** Plan `40-07` implemented `back`/`forward`/`reload`/`navigate`; quick
+task `260905-e61` (GAP-D, REQ-40-06) implemented `takeNavEvents`, which was the last one and the
+one that mattered most — while it threw, an in-embed link click moved Rust's history cursor and
+nothing carried that to the renderer, so Back stayed permanently greyed and the chrome's host
+label stayed frozen on the start URL's host (visible as `af.gog.com` never becoming `www.gog.com`
+on `/store/gog`). **Channel counts are unchanged by both** — all ten were already created and
+counted by plan 40-05; implementing an arm behind an existing channel is not a new channel.
+
+Fail-safe boundaries are unchanged: the `storeEmbedTakeNavEvents` invoke arm still converts a
+throw into a safe `[]` at the `ipcMain.handle` boundary (after logging), and the other four still
+surface one as `{ status: 'error' }`. The seam methods themselves still THROW on a malformed
+response rather than coercing a default — for `takeNavEvents` that check is per-ELEMENT, since an
+empty array is this channel's normal healthy answer and a coerced one would make a dead arm
+indistinguishable from an idle one.
 
 **Unique channels raised 208 → 218 (plan 40-05, 2026-09-04):** all 10 are newly created, so this
 is a straight raise, not a re-derive — matching the `getLoginBackground` note's own arithmetic

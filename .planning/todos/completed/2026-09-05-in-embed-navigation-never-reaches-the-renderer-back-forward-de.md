@@ -8,6 +8,9 @@ found_by: "Phase 40 verification (40-VERIFICATION.md, GAP-D)"
 found_in_commit: cabc2c7d1
 blocked_by: null
 resolves_phase: null
+resolved_by: 260905-e61
+resolved_date: 2026-09-05
+resolution: "Option 1 (Drain) implemented across all three layers. Automated DoD met; the live /store/gog confirmation remains OUTSTANDING."
 ---
 
 ## Symptom (user-visible)
@@ -77,3 +80,39 @@ the phase's founding defect inside the phase itself.
 - `40-VERIFICATION.md` GAP-D (the full measurement)
 - `40-LIVE-GATE.md` Item 2 — the gesture that touched this and was not scored for it
 - REQ-40-06
+
+
+---
+
+## RESOLUTION (quick task `260905-e61`, 2026-09-05)
+
+**Option 1 (Drain)** was implemented, in three commits matching the three inert layers:
+
+| Commit | Layer | Change |
+|---|---|---|
+| `b1fb9da27` | `src-tauri/src/main.rs` | `StoreEmbedState` gained a bounded `pending_nav_events` queue filled by `push()`; `store_embed_take_nav_events` dispatch arm added |
+| `1a98652ca` | seam + transport | `takeNavEvents()` reaches the arm and coerces PER ELEMENT; two defect-pinning tests inverted |
+| `b4de6820a` | `useStoreEmbedHost.ts` | 250 ms drain poll, anchored to a survivor, applies the last event |
+
+Option 2 (Push) was rejected: it needed a new event channel and a subscription
+shape with no sibling in this codebase, and would have left the already-shipped
+`takeNavEvents` rung of the seam dead permanently.
+
+### Definition of done
+
+- [x] **A test that fails today.** `useStoreEmbedHost.test.tsx` property 10 asserts
+  `canGoBack` and the host label follow a simulated in-embed page load, using the
+  todo's own `af.gog.com` → `www.gog.com` reproduction. Verified RED against the
+  pre-fix hook — **and properties 1–9 stayed GREEN under the same mutation**, which
+  is exactly the blindness this todo described. Rust side:
+  `store_embed_push_enqueues_a_nav_event_carrying_the_post_push_cursor_state`,
+  verified RED by neutering `push`'s enqueue call.
+- [ ] **Manual confirmation on `/store/gog`** that the host label moves from
+  `af.gog.com` to `www.gog.com` on landing. **NOT DONE** — this is a live gate on
+  real hardware and was not run. It is the one remaining unverified item.
+
+### Notes for the live run
+
+The 250 ms poll means the chrome updates up to a quarter-second after the page
+lands. That is the expected feel, not a defect; a Back button that enables
+instantly would mean the poll is running far hotter than intended.

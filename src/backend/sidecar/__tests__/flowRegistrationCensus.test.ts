@@ -89,9 +89,10 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'shortcutsFlowRegistration.ts': { invoke: 4, send: 3 },
   'steamAuthFlowRegistration.ts': { invoke: 18, send: 1 },
   'steamFlowRegistration.ts': { invoke: 2, send: 0 },
-  // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): new module — the 9 in-app store-embed channels
-  // (8 lifecycle/navigation invoke arms plus the unimplemented takeNavEvents invoke arm, D-25;
-  // 1 send arm for the fire-and-forget bounds courier, D-18/D-29).
+  // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): new module — the 10 in-app store-embed channels
+  // (9 lifecycle/navigation invoke arms, including the takeNavEvents drain implemented by quick
+  // task `260905-e61` for GAP-D; 1 send arm for the fire-and-forget bounds courier, D-18/D-29).
+  // Counts unchanged by that fix: implementing an arm behind an existing channel adds none.
   'storeEmbedFlowRegistration.ts': { invoke: 9, send: 1 },
   // Phase 34.6 Plan 07 (2026-08-24): invoke 9 -> 12, send 0 -> 1 -- winetricksAvailable/
   // winetricksInstalled/runWineCommandForGame (invoke) and winetricksInstall (send, D-11)
