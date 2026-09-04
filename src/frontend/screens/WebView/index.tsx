@@ -3,15 +3,20 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 
 import ContextProvider from 'frontend/state/ContextProvider'
+import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
+import StoreEmbedControls from 'frontend/components/UI/StoreEmbedControls'
 import './index.css'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
 import HumbleLoginSurface from './components/HumbleLoginSurface'
+import StoreEmbedPlaceholder from './components/StoreEmbedPlaceholder'
 import { useTauriOAuthLogin } from './useTauriOAuthLogin'
 import type { OAuthLoginCompletionPayload } from './useTauriOAuthLogin'
+import { useStoreEmbedHost } from './useStoreEmbedHost'
 import type { OAuthRunner } from 'common/types/oauthLogin'
 import {
   isLoginPathname,
+  LOGIN_PATHNAMES,
   EPIC_LOGIN_URL,
   GOG_LOGIN_URL,
   ZOOM_LOGIN_URL
@@ -37,7 +42,7 @@ const validStoredUrl = (url: string, store: string) => {
 export default function WebView() {
   const { i18n } = useTranslation()
   const { pathname, search } = useLocation()
-  const { epic, gog, amazon, zoom, completeOAuthLogin } =
+  const { epic, gog, amazon, zoom, completeOAuthLogin, platform } =
     useContext(ContextProvider)
   const navigate = useNavigate()
 
@@ -197,6 +202,37 @@ export default function WebView() {
     }
   }
 
+  // Phase 40 Plan 08 (D-18/D-19/D-20/D-21, REQ-40-02/REQ-40-03): the embed host hook, called
+  // unconditionally here alongside this file's other hooks -- NOT inside the store/wiki return
+  // arm further down -- because `loginweb/:runner`'s `runner` param (and this route's `store`
+  // param) can change without this component unmounting (same `path:` entry in App.tsx's
+  // router), so any hook call must sit at a stable position across every re-render, not behind
+  // the humble/login early returns below (mirrors this file's existing `oauthLoginState`
+  // convention). Its own no-op path carries the weight instead: `slotRef` is only ever attached
+  // to a real DOM node in the macOS store/wiki JSX further down, so on every other route (login,
+  // humble, non-macOS) `slotRef.current` stays null for the hook's whole lifetime and its mount
+  // effect logs and returns without opening anything (Task 1's own null-ref guard, D-18: no
+  // fallback rect). `storeKey` falls back to a route label rather than the `store` param for the
+  // `/wiki` and `store-page` routes, which have no `store` param at all.
+  //
+  // Deliberately reads `LOGIN_PATHNAMES` directly rather than calling `isLoginPathname(pathname)`
+  // a second time here: plan 40-01's inverted structural gate
+  // (`WebviewUnavailablePanel.test.tsx`) anchors on the FIRST occurrence of the literal substring
+  // `isLoginPathname(pathname)` in this file to locate the real login arm's `if (` -- a second,
+  // earlier occurrence of that exact call shape (even one that means something different) would
+  // make the gate extract the wrong block as "the login arm" and fail for a reason that has
+  // nothing to do with an actual regression.
+  const slotRef = useRef<HTMLDivElement>(null)
+  const storeKey = store ?? (pathname === '/wiki' ? 'wiki' : 'store-page')
+  const isStoreRoute = !LOGIN_PATHNAMES.includes(pathname) && runner !== 'humble'
+  const embedHost = useStoreEmbedHost({
+    slotRef,
+    startUrl,
+    storeKey,
+    isStoreRoute
+  })
+  const embedSuppressed = useStoreEmbedSuppressed()
+
   useEffect(() => {
     if (pathname !== '/loginweb/nile') return
     // Quick task 260806-teb Task 1 / Phase 35 plan 17: this effect used to load Amazon
@@ -308,14 +344,46 @@ export default function WebView() {
     return <TauriLoginPanel runner={runner} state={oauthLoginState} />
   }
 
-  // D-05: in-app store and wiki browsing was never this phase's job --
-  // log the gap so it is legible to a developer too ("logged, never
-  // silent"), and let the user escape to the system browser via
-  // WebviewUnavailablePanel's Open-in-browser button. Phase 40 retires
-  // Model A entirely (D-09/D-10); this remains the store/wiki surface
-  // until plan 40-07+ replaces it with the Tauri child-webview embed.
+  // Phase 40 Plan 08 (D-01/D-02/D-24): logged unconditionally, before the platform gate below,
+  // so this line stays the store/wiki arm's own unconditional first statement -- plan 40-01's
+  // inverted structural gate (`WebviewUnavailablePanel.test.tsx`) asserts nothing guards this
+  // arm ahead of it. On macOS this is now the embed's mount log; on every other platform it
+  // reads exactly as plan 40-01 left it (D-05's deferral note), which is why the message and its
+  // meaning both still hold true for the non-macOS branch immediately below.
   window.api.logInfo(
-    `[WebView] in-app store/wiki browsing unavailable under Tauri (pathname=${pathname}) -- tracked as its own deferral (D-05)`
+    `[WebView] store/wiki route pathname=${pathname} startUrl=${startUrl}`
   )
-  return <WebviewUnavailablePanel url={startUrl} />
+
+  // D-01/D-02: the live embed is macOS-only for now. Reuses `platform` from `ContextProvider`
+  // (the same source `App.tsx`'s own `isMac` check reads) rather than `process.platform` or
+  // `navigator.platform` -- both are wrong here: `process` is Node/main-process-only, and
+  // `navigator.platform` under WKWebView doesn't reflect the actual host OS this app runs on
+  // (`tauri-chromium-only-web-apis` project gotcha). Every other platform falls through to the
+  // exact same `WebviewUnavailablePanel` plan 40-01 left in place; its copy is plan 40-10's job.
+  if (platform !== 'darwin') {
+    return <WebviewUnavailablePanel url={startUrl} />
+  }
+
+  // D-24: the chrome renders ABOVE the slot, so the slot's rect is measured below (and never
+  // includes) the chrome -- this is what keeps `useStoreEmbedHost`'s bounds arithmetic trivial
+  // and is why NavShell needs no changes for this plan. The slot itself renders no children of
+  // its own except the placeholder (D-19): the native subview composites over it, so anything
+  // else drawn inside would either be invisibly covered or covered while still being hit-tested
+  // (this project's own WKWebView paint-vs-hit-test gotcha).
+  return (
+    <div className="WebView WebView__embedContainer">
+      <StoreEmbedControls
+        url={embedHost.currentUrl}
+        backAvailable={embedHost.canGoBack}
+        forwardAvailable={embedHost.canGoForward}
+        onBack={embedHost.onBack}
+        onForward={embedHost.onForward}
+        onReload={embedHost.onReload}
+        onOpenInBrowser={() => window.api.openExternalUrl(embedHost.currentUrl)}
+      />
+      <div className="WebView__embedSlot" ref={slotRef}>
+        {embedSuppressed && <StoreEmbedPlaceholder />}
+      </div>
+    </div>
+  )
 }

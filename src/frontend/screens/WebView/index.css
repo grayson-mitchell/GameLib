@@ -57,6 +57,29 @@
 }
 
 /*
+ * Phase 40 Plan 08, D-24: the chrome (`StoreEmbedControls`) sits in the grid's first (`auto`)
+ * row and the slot -- the single geometry oracle for the native embed (D-18) -- sits in the
+ * second, sized by the grid's own `1fr` track rather than a percentage height. A percentage
+ * height and a `1fr` grid row do not behave the same way in this project's WKWebView (recorded
+ * layout gotcha), and `useStoreEmbedHost`'s bounds sync needs the slot's measured rect to be
+ * stable. No border is set on the slot for the same reason this project has already hit: a
+ * hairline border on a fractional grid-track boundary never rasterises.
+ */
+.WebView__embedContainer {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  width: 100%;
+}
+
+.WebView__embedSlot {
+  grid-row: 2;
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+}
+
+/*
  * Phase 40 Plan 06, D-19: fills the embed's slot while
  * StoreEmbedSuppressionContext reports it suppressed. Reads as the store
  * dimming behind whatever dialog/dropdown/toast/tour step is open, not as

@@ -225,6 +225,14 @@ interface MountOptions {
 }
 
 function invoke(options: MountOptions): StoreEmbedHostState {
+  // `invoke` is a test-harness wrapper around the real hook (mirrors
+  // `useTauriOAuthLogin.test.tsx`'s `mount`/`rerender`, which the lint ratchet already tolerates
+  // unsuppressed for this exact reason) -- the mocked `react` module above turns this file into a
+  // hand-rolled render harness, not an actual component tree, so there is no real rules-of-hooks
+  // risk here despite the name not starting with `use`. Suppressed (unlike its sibling file) only
+  // because this repo's lint ratchet is pinned to an exact warning count and this project's own
+  // acceptance criteria for this plan requires `pnpm lint` to exit 0 without raising it.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   return useStoreEmbedHost({
     slotRef: options.slotRef,
     startUrl: options.startUrl ?? 'https://store.steampowered.com/',
