@@ -255,6 +255,30 @@ describe('REQ-34.1-07 macOS tray template wiring (gap G3 redirect, 34.1-13)', ()
   })
 })
 
+/**
+ * The arm-scraping regexes for the census gate below (quick task `260905-foh`).
+ *
+ * MODULE SCOPE ON PURPOSE, not inlined at the call site where they used to live. The
+ * self-test at the bottom of this file exercises THESE BINDINGS, so narrowing the character
+ * class here fails that test. An earlier draft of the self-test hardcoded its own copies of
+ * both the old and new patterns, which made it prove a fact about regexes in general and
+ * NOTHING about the gate -- it passed cleanly with the real gate reverted. That is the
+ * "gesture blind to its own defect" shape; sharing the binding is what closes it.
+ *
+ * `[a-z0-9_]+`, NOT `[a-z_]+` (widened by the same task). Under the original class an arm
+ * whose name contained a DIGIT -- `wake_lock_2`, `oauth2_begin` -- was invisible to the scrape
+ * and passed the gate BY NOT BEING SEEN: fail-open behaviour in a gate whose entire job is to
+ * catch the undeclared, and the one shape of miss it could never report. Measured before
+ * landing: on today's main.rs both classes scrape a byte-identical 36-name set, so this
+ * changes nothing that exists and can only ever catch more.
+ *
+ * Safe to share despite the `g` flag: every consumer uses `String.prototype.match`, which
+ * resets `lastIndex` before iterating. Do not switch a consumer to `.exec()` without making
+ * these factories instead.
+ */
+const DISPATCH_ARM_LINE_RE = /^ {8}"[a-z0-9_]+"\s*=>/gm
+const DISPATCH_ARM_NAME_RE = /"([a-z0-9_]+)"/
+
 describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-11)', () => {
   test('REQ-34.1-07 dispatch_rust_channel has exactly one "tray_set_icon" arm', () => {
     const code = loadMainRsCode()
@@ -278,8 +302,10 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
     // like dialog_message's `"error"`/`"warning"` MessageDialogKind arms, and NOT the
     // unrelated `"show"`/`"quit"` MenuId matches inside the tray's own on_menu_event
     // closure (a different match statement entirely, at a different indent depth).
-    const armMatches = code.match(/^ {8}"[a-z_]+"\s*=>/gm) ?? []
-    const armNames = armMatches.map((line) => line.match(/"([a-z_]+)"/)?.[1])
+    const armMatches = code.match(DISPATCH_ARM_LINE_RE) ?? []
+    const armNames = armMatches.map(
+      (line) => line.match(DISPATCH_ARM_NAME_RE)?.[1]
+    )
     const preExistingArms = [
       'keyring_get',
       'keyring_set',
@@ -352,7 +378,91 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // mock would assert only that the mock was called. macOS is verified live at this plan's
       // Task 3 against `pmset -g assertions`; Windows and Linux are recorded NOT ATTEMPTED.
       'wake_lock_start',
-      'wake_lock_stop'
+      'wake_lock_stop',
+      // ── Phase 40 + quick task 260905-e61: the ten in-app store-embed arms ───────────────
+      //
+      // WHY THIS BLOCK EXISTS AT ALL. This gate went RED at `4e269d321` (`feat(40-02)`,
+      // 2026-09-04) when five `store_embed_*` arms landed without being declared here, and
+      // stayed red through plan 40-07's four more and six further commits to main.rs. Nothing
+      // in Phase 40's planning record mentions this gate. So it did exactly what it was built
+      // to do -- refuse an undeclared capability -- and nobody acted on the refusal, which is
+      // the failure mode a known-red gate always decays into. Declared retroactively by quick
+      // task `260905-foh`.
+      //
+      // SCOPE OF EVERY PROOF BELOW: **CI runs no cargo step.** Re-derived at HEAD rather than
+      // inherited from the clipboard block's own claim below -- `grep -rn "cargo"
+      // .github/workflows/*.yml` returns zero hits across all 11 workflows. Every Rust unit
+      // test named below is therefore HAND-RUN and CI-invisible, and THIS jest gate is the only
+      // CI-visible proxy for these arms' existence. Read no green pipeline into any line here.
+      //
+      // ALSO COMMON TO ALL TEN: each arm's non-macOS branch returns `:unsupported-platform`
+      // rather than compiling away, so a missing arm stays distinguishable from a dead channel.
+      // D-03's macOS-only `unstable` feature gating is proven by a `cargo tree --target` DIFF
+      // and NOT by a cross-target `cargo check`: only `aarch64-apple-darwin` is installed, and
+      // the attempted `--target x86_64-pc-windows-msvc` run failed `E0463` in unrelated crates
+      // before reaching this code. `40-02-SUMMARY.md` records that as an environment limitation,
+      // explicitly NOT a passed proof. Do not upgrade it to one.
+
+      // Plan 40-02 (D-01/D-03/D-17/D-18/D-21, REQ-40-02). PROOF STATUS -- SPLIT.
+      // PROVEN (pure): `store_embed_open_args` and `store_embed_set_bounds_args` are covered by
+      // four wire-contract tests in main.rs's own `#[cfg(test)] mod`, double-end pinned against
+      // `meta/fixtures/store-embed-wire-args.json` -- the TS side asserts the seam EMITS those
+      // bytes (`storeEmbedWireContract.test.ts`), the Rust side asserts the parsers ACCEPT them.
+      // That fixture exists because the seam shipped POSITIONAL arrays against parsers reading a
+      // single OBJECT, and both store routes rendered blank; `store_embed_wire_contract_rejects_
+      // the_positional_shape_that_shipped` is the regression lock.
+      // NOT PROVABLE HERE (native): `window.add_child`, `set_position`/`set_size`, and
+      // `hide()`/`show()`/`close()` need a live `AppHandle` and a real webview, which this
+      // file's own `mod tests` cannot construct (see its comment near `mod tests`).
+      // LIVE-VERIFIED INSTEAD: `40-LIVE-GATE.md` Item 1 (D-33 suppression gesture, PASS, launch
+      // 3, commit `54ca5b400`) exercises open + hide + show + set_bounds with a 0 px slot-rect
+      // delta across captures A/B/C. Item 3 exercises `set_bounds` under sustained motion and
+      // FAILED on its first run, passing only on re-run after `b4517366e` -- so that arm carries
+      // an observed behavioural proof, not an assumed one.
+      // NOT ATTEMPTED: `store_embed_close`'s `webview.close()`. It fires only on `beforeunload`
+      // app teardown, which no live-gate item exercises.
+      'store_embed_open',
+      'store_embed_set_bounds',
+      'store_embed_hide',
+      'store_embed_show',
+      'store_embed_close',
+
+      // Plan 40-07 (D-22/D-25, REQ-40-06). PROOF STATUS -- SPLIT, and WEAKER than the group
+      // above. Say so plainly: these four are the least-verified arms in this list.
+      // PROVEN (pure): the Rust-side history cursor -- six `StoreEmbedState` tests plus two
+      // `store_embed_nav_state_json` tests. `40-VERIFICATION.md` REQ-40-06 names three by name,
+      // including `store_embed_state_back_moves_the_cursor_it_does_not_append_a_new_entry`,
+      // which was verified RED against an append-based `go_back`. `store_embed_navigate_args` is
+      // in the same wire-contract fixture as the group above. Zero page-side JS injection:
+      // `Webview::navigate(Url)` / `reload()`, never `eval` or `history.back()` (D-22 makes that
+      // a hard rule after the 2026-08-03 Talon root-cause named document-side injection as the
+      // confirmed fingerprint vector).
+      // NOT ATTEMPTED -- THE BUTTONS THEMSELVES. `40-VERIFICATION.md` Observable Truth 6,
+      // "Chrome back/forward reflect the live page", is recorded ✗ FAILED. Live-gate Item 2 did
+      // click an in-page link, but its pass condition is input FEEL, so nobody scored the Back
+      // button. A correct cursor and a working button are different claims and only the first
+      // is evidenced.
+      'store_embed_back',
+      'store_embed_forward',
+      'store_embed_reload',
+      'store_embed_navigate',
+
+      // Quick task `260905-e61` (GAP-D, D-22, REQ-40-06) -- the drain that closes plan 40-07's
+      // half-built inversion: `on_page_load` moved the cursor and emitted nothing, so an
+      // in-embed link click never reached the renderer.
+      // PROOF STATUS -- SPLIT.
+      // PROVEN (pure): five queue tests in main.rs's `#[cfg(test)] mod`. THREE of the five were
+      // verified RED by neutering `push`'s `enqueue_nav_event()` call; the other two
+      // (suppressed-push, clear) assert EMPTINESS and so stay vacuously green under that
+      // mutation -- they guard the no-duplicate and D-21-teardown properties instead. Recorded
+      // rather than counted as five reds. The renderer half is proven by
+      // `useStoreEmbedHost.test.tsx` property 10, also RED-proven -- and properties 1-9 stayed
+      // GREEN under the same mutation, which is what showed the old suite was structurally blind
+      // to a navigation the PAGE initiated rather than the chrome.
+      // NOT ATTEMPTED: the live confirmation on `/store/gog` that the host label moves from
+      // `af.gog.com` to `www.gog.com`. It needs real hardware and is recorded UNTICKED on the
+      // closed todo, not implied by the automated half passing.
+      'store_embed_take_nav_events'
     ]
     const newArms = armNames.filter(
       (name) => name && !preExistingArms.includes(name)
@@ -504,6 +614,35 @@ describe('loadMainRsCode comment-stripping self-test (REQ-34.1-07)', () => {
       .map((line) => line.replace(/\/\/.*$/, ''))
       .join('\n')
     expect(stripped).not.toContain('TrayIconBuilder')
+  })
+
+  // Quick task `260905-foh`. The sibling of the comment-stripping self-test above, and written
+  // for the same reason: it proves the HELPER -- here the arm-scraping regex -- not main.rs.
+  //
+  // It drives `DISPATCH_ARM_LINE_RE`/`DISPATCH_ARM_NAME_RE`, THE BINDINGS THE GATE ITSELF USES,
+  // never a local copy of the pattern. That distinction is the whole test: the first draft
+  // hardcoded its own `NARROW`/`WIDE` literals and was measured GREEN with the real gate
+  // reverted to the narrow class -- proving a fact about regexes and nothing about this file.
+  test('the arm scrape SEES a digit-bearing arm name -- the fail-open hole the widened character class closes', () => {
+    // Two synthetic arms at the same 8-space indent the real scrape targets. `plain_arm` is
+    // matched by either character class; `oauth2_begin` only by the widened one, so it is the
+    // discriminating case.
+    const synthetic = [
+      '        "plain_arm" => {',
+      '        "oauth2_begin" => {'
+    ].join('\n')
+
+    const scraped = (synthetic.match(DISPATCH_ARM_LINE_RE) ?? []).map(
+      (line) => line.match(DISPATCH_ARM_NAME_RE)?.[1]
+    )
+
+    // Narrowing the shared binding back to `[a-z_]+` drops the second entry and fails here.
+    expect(scraped).toEqual(['plain_arm', 'oauth2_begin'])
+
+    // Stated separately so the failure message names the PROPERTY, not just an array diff:
+    // an undeclared digit-bearing arm must never be absent from the set the gate subtracts
+    // the allowlist from, because absence there reads as "declared".
+    expect(scraped).toContain('oauth2_begin')
   })
 })
 
