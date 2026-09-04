@@ -22,7 +22,19 @@ tauri-build = { version = "2", features = [] }
 # Cost: purely additive per the project's own `unstable` multiwebview spike
 # (`tauri-embedded-store-browser.md`: "only tauri + tauri-runtime-wry recompile -- 10.8s with a
 # warm target dir. No config or capability changes to the existing app.").
-tauri = { version = "2", features = ["tray-icon", "image-png", "unstable"] }
+#
+# Phase 40 Plan 02 (D-03): the `unstable` feature itself moved OUT of this unconditional
+# `tauri = {...}` line and into the macOS-only `tauri = {...}` declaration in
+# `[target.'cfg(target_os = "macos")'.dependencies]` below. D-01 already scopes the whole
+# in-app store/wiki embed (`Window::add_child`, also `unstable`-gated -- see
+# `tauri-2.11.5/src/window/mod.rs:1127`, verified in
+# `40-EMBED-API-VERIFICATION.md`) to macOS only; target-gating the feature itself means a
+# future Tauri release that breaks `unstable`'s API can only break the macOS build leg, never
+# the Windows/Linux legs that compile against neither `add_child` nor
+# `open_pristine_epic_login_window`'s webview-less `WindowBuilder`. This is compile-time
+# only and adds no binary payload on any platform -- see Task 2's `cargo tree -e features`
+# proof in `40-02-SUMMARY.md` for both a macOS and a non-macOS target.
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
@@ -99,6 +111,20 @@ tauri-plugin-deep-link = "2"
 # `objc2-web-kit` feature list already includes it), same "declare what your own code directly
 # needs, even if already present" discipline as every feature above.
 [target.'cfg(target_os = "macos")'.dependencies]
+# Phase 40 Plan 02 (D-03): the `unstable` feature, moved here from the unconditional
+# `[dependencies]` `tauri = {...}` line above (see that line's own comment for the full
+# rationale history -- pristine-webview `WindowBuilder` access, now also the in-app store/wiki
+# embed's `Window::add_child`). Cargo unifies a dependency declared in both `[dependencies]`
+# and a `[target.'cfg(...)'.dependencies]` table for the same crate: the base `tauri` request
+# above always resolves, and this table's `features` list is UNIONED into that resolution
+# only when the active target matches `cfg(target_os = "macos")` -- so a non-macOS build
+# never sees `unstable` at all. Proven by measurement, not assumed: `cargo tree -e features`
+# run once with `--target x86_64-pc-windows-msvc` (no `unstable` on `tauri`) and once with no
+# `--target` on this macOS host (`unstable` present) -- both outputs are pasted verbatim into
+# `40-02-SUMMARY.md`. Declaring only `features`, with no `version`, would still union with the
+# same `tauri` dependency graph node; `version = "2"` is repeated here anyway so this table
+# reads standalone and matches every other entry's own explicit-`version` convention.
+tauri = { version = "2", features = ["unstable"] }
 block2 = "0.6.2"
 objc2 = "0.6.4"
 # `NSAlert`/`NSApplication`/`NSButton`/`NSControl`/`NSResponder`/`NSTextField` added for the
