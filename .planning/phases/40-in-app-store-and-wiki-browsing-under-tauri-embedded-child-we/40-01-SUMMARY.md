@@ -181,3 +181,14 @@ None - no external service configuration required.
 
 *Phase: 40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we*
 *Completed: 2026-09-04*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we/40-01-SUMMARY.md`
+- FOUND: `.planning/phases/40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we/40-MODEL-A-CENSUS.md`
+- CONFIRMED DELETED: `src/frontend/components/UI/WebviewControls/`
+- CONFIRMED DELETED: `src/frontend/screens/WebView/components/humbleLoginChromeCss.ts`
+- FOUND commit: `bf7731647` (Task 1)
+- FOUND commit: `157409206` (Task 2)
+- FOUND commit: `b7513ee48` (Task 3)
+- FOUND commit: `b36139233` (SUMMARY.md commit)
