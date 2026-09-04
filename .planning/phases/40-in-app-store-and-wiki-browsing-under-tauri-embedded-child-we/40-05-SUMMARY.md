@@ -201,3 +201,8 @@ None - no external service configuration required.
 ---
 *Phase: 40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we*
 *Completed: 2026-09-04*
+
+## Self-Check: PASSED
+
+All 5 created files confirmed present on disk; all 4 commits (`ed85a4885`, `9df239a38`,
+`6188f7e4f`, `1a4e72095`) confirmed present in `git log --oneline --all`.
