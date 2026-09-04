@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Prehliadanie obchodu a wiki v aplikácii nie je v tomto builde dostupné",
-            "body": "Tauri verzia GameLib zatiaľ neobsahuje vstavané zobrazenie prehliadača pre stránky obchodu a wiki.",
             "next-step": "Toto je sledované ako samostatná budúca úloha -- zatiaľ použite tlačidlo nižšie na otvorenie v systémovom prehliadači.",
             "open-in-browser": "Otvoriť v prehliadači"
         }

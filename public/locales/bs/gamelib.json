@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Pregled trgovine i wikija u aplikaciji nije dostupan u ovoj verziji",
-            "body": "Tauri verzija GameLib-a još uvijek ne sadrži ugrađeni prikaz pretraživača za stranice prodavnice i wiki-ja.",
             "next-step": "Ovo je zabilježeno kao poseban budući zadatak -- za sada koristite dugme ispod da to otvorite u sistemskom pretraživaču.",
             "open-in-browser": "Otvorite u pretraživaču"
         }

@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "La navigazione in-app di store e wiki non è disponibile in questa build",
-            "body": "La build Tauri di GameLib non integra ancora una vista browser per le pagine dello store e della wiki.",
             "next-step": "Questo è tracciato come attività futura a sé stante -- per ora, usa il pulsante qui sotto per aprirla nel browser di sistema.",
             "open-in-browser": "Apri nel browser"
         }

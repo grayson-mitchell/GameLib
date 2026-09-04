@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Aplikazio barneko denda eta wiki arakatzea ez dago erabilgarri bertsio honetan",
-            "body": "GameLib-en Tauri bertsioak oraindik ez du arakatzaile-ikuspegirik txertatzen dendarako eta wiki-orrialdeetarako.",
             "next-step": "Hau etorkizuneko lan gisa jasota dago -- oraingoz, erabili beheko botoia zure sistemako arakatzailean irekitzeko.",
             "open-in-browser": "Ireki arakatzailean"
         }

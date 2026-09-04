@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "此版本不支援應用程式內商店與 wiki 瀏覽",
-            "body": "GameLib 的 Tauri 版本尚未內建用於商店與 wiki 頁面的瀏覽器檢視。",
             "next-step": "這已列入未來的獨立開發項目 -- 目前請使用下方按鈕改在您系統的瀏覽器中開啟。",
             "open-in-browser": "在瀏覽器中開啟"
         }

@@ -325,8 +325,6 @@
             }
         },
         "unavailable": {
-            "heading": "Rakendusesisene poe ja wiki sirvimine pole selles versioonis saadaval",
-            "body": "GameLib'i Tauri versioon ei toeta veel sisseehitatud veebilehitsejat poe- ja wikilehtede jaoks.",
             "next-step": "See on eraldi tulevase töö nimekirjas — praegu kasuta allolevat nuppu, et avada see hoopis oma süsteemi veebilehitsejas.",
             "open-in-browser": "Ava veebilehitsejas"
         }

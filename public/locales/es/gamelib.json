@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "La navegación de tienda y wiki dentro de la app no está disponible en esta compilación",
-            "body": "La compilación de Tauri de GameLib aún no incluye una vista de navegador integrada para las páginas de la tienda y la wiki.",
             "next-step": "Esto se está gestionando como un trabajo futuro independiente; por ahora, usa el botón de abajo para abrirlo en tu navegador del sistema.",
             "open-in-browser": "Abrir en el navegador"
         }

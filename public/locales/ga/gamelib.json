@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Níl brabhsáil an tsiopa agus an vicí laistigh den aip ar fáil sa tógáil seo",
-            "body": "Ní chuimsíonn tógáil Tauri de GameLib radharc brabhsálaí do leathanaigh an stóir agus na vicí go fóill.",
             "next-step": "Táthar ag rianú seo mar obair ar leithligh amach anseo -- go dtí sin, úsáid an cnaipe thíos chun é a oscailt i mbrabhsálaí do chórais ina ionad.",
             "open-in-browser": "Oscail sa bhrabhsálaí"
         }

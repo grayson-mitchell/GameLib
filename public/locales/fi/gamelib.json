@@ -328,10 +328,8 @@
             }
         },
         "unavailable": {
-            "heading": "Sovelluksen sisäinen kauppa- ja wiki-selailu ei ole käytettävissä tässä versiossa",
             "next-step": "Tämä on kirjattu omaksi tulevaksi kehitystyöksi -- käytä toistaiseksi alla olevaa painiketta avataksesi sen järjestelmäsi selaimessa.",
-            "open-in-browser": "Avaa selaimessa",
-            "body": "GameLibin Tauri-versio ei vielä sisällä upotettua selainnäkymää kauppa- ja wiki-sivuille."
+            "open-in-browser": "Avaa selaimessa"
         }
     },
     "winetricks": {

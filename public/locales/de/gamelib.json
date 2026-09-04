@@ -328,10 +328,8 @@
             }
         },
         "unavailable": {
-            "heading": "In-App-Store- und Wiki-Browsing sind in diesem Build nicht verfügbar",
             "open-in-browser": "Im Browser öffnen",
-            "next-step": "Dies ist als eigenes zukünftiges Vorhaben vorgesehen -- verwende bis dahin den Button unten, um die Seite im System-Browser zu öffnen.",
-            "body": "Der Tauri-Build von GameLib enthält noch keine eingebettete Browser-Ansicht für Store- und Wiki-Seiten."
+            "next-step": "Dies ist als eigenes zukünftiges Vorhaben vorgesehen -- verwende bis dahin den Button unten, um die Seite im System-Browser zu öffnen."
         }
     },
     "winetricks": {

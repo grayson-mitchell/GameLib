@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Procházení obchodu a wiki v aplikaci není v tomto sestavení k dispozici",
-            "body": "Sestavení GameLib pro Tauri zatím neobsahuje vestavěné zobrazení prohlížeče pro stránky obchodu a wiki.",
             "next-step": "Toto je sledováno jako samostatný budoucí úkol -- prozatím použijte tlačítko níže a otevřete stránku v systémovém prohlížeči.",
             "open-in-browser": "Otevřít v prohlížeči"
         }

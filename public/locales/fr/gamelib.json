@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "La navigation dans la boutique intégrée et le wiki n'est pas disponible sur cette version",
-            "body": "La version Tauri de GameLib n'intègre pas encore de vue navigateur pour les pages de boutique et de wiki.",
             "next-step": "Ceci fait l'objet d'un travail futur distinct -- pour l'instant, utilisez le bouton ci-dessous pour l'ouvrir dans votre navigateur système.",
             "open-in-browser": "Ouvrir dans un navigateur"
         }

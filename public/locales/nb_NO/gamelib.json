@@ -328,10 +328,8 @@
             }
         },
         "unavailable": {
-            "heading": "Bla­dring i butikk og wiki i appen er ikke tilgjengelig i dette bygget",
             "next-step": "Dette er registrert som eget fremtidig arbeid -- inntil videre kan du bruke knappen under for å åpne det i systemets nettleser i stedet.",
-            "open-in-browser": "Åpne i nettleseren",
-            "body": "GameLibs Tauri-bygg har ennå ikke en innebygd nettleservisning for butikk- og wiki-sidene."
+            "open-in-browser": "Åpne i nettleseren"
         }
     },
     "winetricks": {

@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Uygulama içi mağaza ve wiki tarama bu sürümde kullanılamıyor",
-            "body": "GameLib'in Tauri sürümü, mağaza ve wiki sayfaları için henüz gömülü bir tarayıcı görünümü içermiyor.",
             "next-step": "Bu, ayrı bir gelecek çalışma olarak takip ediliyor -- şimdilik, bunun yerine sistem tarayıcınızda açmak için aşağıdaki düğmeyi kullanın.",
             "open-in-browser": "Tarayıcıda aç"
         }

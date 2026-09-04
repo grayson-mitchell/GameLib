@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Ushbu qurilmada dastur ichida do'kon va vikini ko'rish mavjud emas",
-            "body": "GameLib'ning Tauri versiyasi hali doʻkon va wiki sahifalari uchun brauzer view'ini oʻz ichiga olmaydi.",
             "next-step": "Bu alohida kelajakdagi ish sifatida rejalashtirilgan -- hozircha, uni tizim brauzeringizda ochish uchun quyidagi tugmadan foydalaning.",
             "open-in-browser": "Brauzerda oching"
         }

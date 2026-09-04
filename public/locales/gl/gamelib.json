@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "A navegación pola tenda e a wiki desde a app non está dispoñible nesta compilación",
-            "body": "A versión Tauri de GameLib aínda non integra unha vista de navegador para as páxinas da tenda e do wiki.",
             "next-step": "Isto está rexistrado como traballo futuro por separado -- por agora, usa o botón de abaixo para abrilo no teu navegador do sistema.",
             "open-in-browser": "Abrir no navegador"
         }

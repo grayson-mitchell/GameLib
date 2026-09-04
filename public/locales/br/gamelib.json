@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "N'eo ket hegerz merdeiñ er stal hag ar wiki diabarzh war ar savadur-mañ",
-            "body": "N'eo ket enframmet c'hoazh ur gwel merdeer evit pajennoù ar stal hag ar wiki e savadur Tauri GameLib.",
             "next-step": "Heuliet eo an dra-se evel ul labour dazont a-se -- evit ar mare, implijit an afell dindan evit e zigeriñ er merdeer reizhiad kentoc'h.",
             "open-in-browser": "Digeriñ er merdeer"
         }

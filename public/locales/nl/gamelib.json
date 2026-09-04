@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Winkel- en wikiweergave in de app is niet beschikbaar in deze build",
-            "body": "De Tauri-build van GameLib bevat nog geen ingebouwde browserweergave voor de store- en wikipagina's.",
             "next-step": "Dit wordt bijgehouden als apart toekomstig werk -- gebruik voorlopig de knop hieronder om het in je systeembrowser te openen.",
             "open-in-browser": "Openen in de browser"
         }

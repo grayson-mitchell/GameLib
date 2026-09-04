@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Przeglądanie sklepu i wiki w aplikacji jest niedostępne w tym buildzie",
-            "body": "Build GameLib dla Tauri nie ma jeszcze wbudowanego widoku przeglądarki dla stron sklepu i wiki.",
             "next-step": "Jest to śledzone jako osobne zadanie na przyszłość -- na razie użyj poniższego przycisku, aby otworzyć to w przeglądarce systemowej.",
             "open-in-browser": "Otwórz w przeglądarce"
         }

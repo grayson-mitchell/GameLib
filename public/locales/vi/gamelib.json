@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Duyệt cửa hàng và wiki trong ứng dụng không khả dụng trên bản dựng này",
-            "body": "Bản dựng Tauri của GameLib chưa tích hợp khung xem trình duyệt cho các trang cửa hàng và wiki.",
             "next-step": "Đây được ghi nhận là một hạng mục công việc riêng trong tương lai -- hiện tại, hãy dùng nút bên dưới để mở trong trình duyệt hệ thống thay thế.",
             "open-in-browser": "Mở trong trình duyệt"
         }

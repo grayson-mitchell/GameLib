@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Tətbiq daxilində mağaza və wiki brauzeri bu versiyada mövcud deyil",
-            "body": "GameLib-in Tauri quruluşu hələ mağaza və wiki səhifələri üçün brauzer görünüşünü daxil etmir.",
             "next-step": "Bu ayrıca gələcək iş kimi izlənilir -- hələlik onu sistem brauzerinizdə açmaq üçün aşağıdakı düymədən istifadə edin.",
             "open-in-browser": "Brauzerdə açın"
         }

@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Šioje versijoje parduotuvės ir wiki naršymas programoje negalimas",
-            "body": "„GameLib“ „Tauri“ versijoje dar nėra integruoto naršyklės lango parduotuvės ir wiki puslapiams.",
             "next-step": "Tai numatyta kaip atskiras būsimas darbas -- kol kas naudokite žemiau esantį mygtuką, kad atidarytumėte tai savo sistemos naršyklėje.",
             "open-in-browser": "Atidaryti naršyklėje"
         }

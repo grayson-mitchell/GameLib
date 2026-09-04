@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "La navegació per la botiga i el wiki dins de l'aplicació no està disponible en aquesta versió",
-            "body": "La compilació Tauri de GameLib encara no incorpora una vista de navegador per a les pàgines de la botiga i la wiki.",
             "next-step": "Això es fa un seguiment com a feina futura pròpia -- de moment, useu el botó de sota per obrir-ho al navegador del sistema.",
             "open-in-browser": "Obre al navegador"
         }

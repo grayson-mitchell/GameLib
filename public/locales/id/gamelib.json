@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Penjelajahan toko dan wiki dalam aplikasi tidak tersedia pada build ini",
-            "body": "Build Tauri GameLib belum menyematkan tampilan peramban untuk halaman toko dan wiki.",
             "next-step": "Ini dicatat sebagai pekerjaan mendatang tersendiri -- untuk saat ini, gunakan tombol di bawah untuk membukanya di peramban sistem Anda.",
             "open-in-browser": "Buka di peramban"
         }

@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Navigarea în magazin și wiki din aplicație nu este disponibilă în această versiune",
-            "body": "Build-ul Tauri al GameLib nu încorporează încă o vizualizare de browser pentru paginile magazinului și wiki.",
             "next-step": "Aceasta este urmărită ca o activitate viitoare separată -- deocamdată, folosește butonul de mai jos pentru a o deschide în browserul sistemului.",
             "open-in-browser": "Deschide în browser"
         }

@@ -328,8 +328,6 @@
             }
         },
         "unavailable": {
-            "heading": "Az alkalmazáson belüli áruház- és wikibongészés nem érhető el ebben a build-ben",
-            "body": "A GameLib Tauri build még nem tartalmaz beágyazott böngészőnézetet az áruház és a wiki oldalakhoz.",
             "next-step": "Ezt külön jövőbeli feladatként tartjuk nyilván -- addig is használd az alábbi gombot, hogy a rendszer böngésződben nyisd meg.",
             "open-in-browser": "Megnyitás böngészőben"
         }

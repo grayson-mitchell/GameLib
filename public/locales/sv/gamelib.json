@@ -328,10 +328,8 @@
             }
         },
         "unavailable": {
-            "heading": "Bläddring i butik och wiki i appen är inte tillgänglig i denna version",
             "next-step": "Detta spåras som ett separat framtida arbete -- använd knappen nedan för att öppna det i din systemwebbläsare istället.",
-            "open-in-browser": "Öppna i webbläsare",
-            "body": "GameLibs Tauri-version innehåller ännu ingen inbäddad webbläsarvy för butiks- och wikisidorna."
+            "open-in-browser": "Öppna i webbläsare"
         }
     },
     "winetricks": {
