@@ -4601,6 +4601,248 @@ fn wake_lock_release_all() {
     }
 }
 
+// ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03/D-17/D-18/D-21) ----
+//
+// A single child webview, created via the `unstable`-gated child-window constructor (see the
+// one call site inside `store_embed_open` below) on the existing config-created `main` window
+// (no window restructuring -- D-01). Every symbol below
+// is macOS-only per D-03's target-gated `unstable` feature (`src-tauri/Cargo.toml`); non-macOS
+// dispatch arms below return a legible error rather than compiling this section out silently
+// (a silently-absent arm is indistinguishable from a dead channel).
+//
+// The API surface this section is written against was verified from vendored crate source, not
+// documentation, in `40-EMBED-API-VERIFICATION.md` (D-25) -- most importantly: neither
+// `tauri::webview::Webview` nor wry's `WebView` expose any back/forward/history method, so the
+// `StoreEmbedState` history stack below (D-22) is the mechanism, not a fallback.
+
+/// Fixed, non-`main`, non-`about` label for the store/wiki embed child webview (T-40-02-02:
+/// never derived from a caller-supplied URL).
+#[cfg(target_os = "macos")]
+const STORE_EMBED_LABEL: &str = "store-embed";
+
+/// Chrome UA sent by the store/wiki embed's child webview (D-17). MAINTAINED VALUE: this must
+/// be a real, currently-shipping Chrome version, reviewed periodically -- NOT a synthetic
+/// placeholder like `Chrome/200.0`, which does not exist and reads as obviously fake to any
+/// store/wiki origin doing UA sniffing. Reviewed: 2026-09-04. Matches the `Chrome/142.0`
+/// convention already used by this file's own reveal/clear-storage test fixtures
+/// (`valid_reveal_args`/`valid_clear_storage_args`).
+#[cfg(target_os = "macos")]
+const STORE_EMBED_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
+     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
+
+/// Ordered main-frame URL history for the store/wiki embed (D-22). Neither
+/// `tauri::webview::Webview` nor wry's `WebView` expose a back/forward/history API
+/// (`40-EMBED-API-VERIFICATION.md` Q1/Q2), so this Rust-side stack is the mechanism. Pure
+/// bookkeeping behind one `Mutex`, same shape as `WakeLockRegistry` above: `on_page_load`
+/// (main-frame-only, verified Q4) pushes; `store_embed_close` clears.
+///
+/// Deliberately exposes no `back`/`forward`/`navigate` command in this plan -- plan `40-07`
+/// owns those and adds them against Task 1's verdict. Recording starts from the embed's first
+/// load rather than being retrofitted once those commands land.
+#[cfg(target_os = "macos")]
+#[derive(Default)]
+struct StoreEmbedState {
+    history: Vec<String>,
+    cursor: usize,
+}
+
+#[cfg(target_os = "macos")]
+impl StoreEmbedState {
+    /// PURE: record a main-frame URL. Performs no OS call.
+    fn push(&mut self, url: String) {
+        self.history.push(url);
+        self.cursor = self.history.len().saturating_sub(1);
+    }
+
+    /// PURE: drop all recorded history. Called on `store_embed_close` (D-21 teardown).
+    fn clear(&mut self) {
+        self.history.clear();
+        self.cursor = 0;
+    }
+}
+
+#[cfg(target_os = "macos")]
+static STORE_EMBED_STATE: OnceLock<Mutex<StoreEmbedState>> = OnceLock::new();
+
+#[cfg(target_os = "macos")]
+fn store_embed_state() -> &'static Mutex<StoreEmbedState> {
+    STORE_EMBED_STATE.get_or_init(|| Mutex::new(StoreEmbedState::default()))
+}
+
+/// Parse `store_embed_open`'s `{ url, x, y, w, h }` args. Extracted pure-parse, same discipline
+/// as `reveal_post_args`/`clear_storage_args` above: the decision is testable without a window.
+#[cfg(target_os = "macos")]
+fn store_embed_open_args(args: &[Value]) -> Result<(tauri::Url, f64, f64, f64, f64), String> {
+    let obj = args
+        .first()
+        .and_then(|v| v.as_object())
+        .ok_or_else(|| "store_embed_open:bad-args".to_string())?;
+    let url_str = obj
+        .get("url")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "store_embed_open:bad-args:url".to_string())?;
+    // Parsed with `tauri::Url`; a parse failure returns a prefixed `Err`, never a fallback URL
+    // (T-40-02-01).
+    let url = tauri::Url::parse(url_str).map_err(|e| format!("store_embed_open:bad-url:{e}"))?;
+    let x = obj
+        .get("x")
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| "store_embed_open:bad-args:x".to_string())?;
+    let y = obj
+        .get("y")
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| "store_embed_open:bad-args:y".to_string())?;
+    let w = obj
+        .get("w")
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| "store_embed_open:bad-args:w".to_string())?;
+    let h = obj
+        .get("h")
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| "store_embed_open:bad-args:h".to_string())?;
+    Ok((url, x, y, w, h))
+}
+
+/// Create (or, if already open, navigate) the store/wiki embed child webview on `main`
+/// (D-01/D-25). Idempotent: a second `store_embed_open` while one already exists under
+/// `STORE_EMBED_LABEL` navigates it rather than creating a second child under the same label.
+#[cfg(target_os = "macos")]
+fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
+    let (url, x, y, w, h) = store_embed_open_args(args)?;
+
+    if let Some(existing) = app.get_webview(STORE_EMBED_LABEL) {
+        existing
+            .navigate(url)
+            .map_err(|e| format!("store_embed_open:navigate-failed:{e}"))?;
+        return Ok(Value::Null);
+    }
+
+    let window = app.get_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
+        format!("store_embed_open:no-window:{MAIN_WINDOW_LABEL}")
+    })?;
+
+    let builder = tauri::WebviewBuilder::new(STORE_EMBED_LABEL, tauri::WebviewUrl::External(url))
+        .user_agent(STORE_EMBED_USER_AGENT)
+        // D-22: on_page_load, never on_navigation, per the 013-015 rule that carries over
+        // unchanged -- main-frame-only per `40-EMBED-API-VERIFICATION.md` Q4.
+        .on_page_load(|_webview, payload| {
+            if payload.event() == tauri::webview::PageLoadEvent::Finished {
+                if let Ok(mut state) = store_embed_state().lock() {
+                    state.push(payload.url().to_string());
+                } else {
+                    eprintln!("[shell] WARN: store_embed history registry poisoned -- continuing");
+                }
+            }
+        })
+        // Bare log-only placeholder reserved for plan `40-04`'s scheme policy (D-29,
+        // T-40-02-01). Returning `true` unconditionally allows every navigation for now; this
+        // is explicitly NOT a containment control and must not be read as one until `40-04`
+        // replaces this closure.
+        .on_navigation(|_url| true);
+
+    match window.add_child(
+        builder,
+        tauri::LogicalPosition::new(x, y),
+        tauri::LogicalSize::new(w, h),
+    ) {
+        Ok(_webview) => Ok(Value::Null),
+        Err(e) => {
+            eprintln!("[shell] store_embed_open: child webview construction failed: {e}");
+            Err(format!("store_embed_open:child-webview-failed:{e}"))
+        }
+    }
+}
+
+/// Parse `store_embed_set_bounds`'s `{ x, y, w, h }` args, all logical px.
+#[cfg(target_os = "macos")]
+fn store_embed_set_bounds_args(args: &[Value]) -> Result<(f64, f64, f64, f64), String> {
+    let obj = args
+        .first()
+        .and_then(|v| v.as_object())
+        .ok_or_else(|| "store_embed_set_bounds:bad-args".to_string())?;
+    let x = obj
+        .get("x")
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| "store_embed_set_bounds:bad-args:x".to_string())?;
+    let y = obj
+        .get("y")
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| "store_embed_set_bounds:bad-args:y".to_string())?;
+    let w = obj
+        .get("w")
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| "store_embed_set_bounds:bad-args:w".to_string())?;
+    let h = obj
+        .get("h")
+        .and_then(|v| v.as_f64())
+        .ok_or_else(|| "store_embed_set_bounds:bad-args:h".to_string())?;
+    Ok((x, y, w, h))
+}
+
+/// D-18: the renderer is the SOLE geometry writer; this arm applies whatever it sends VERBATIM
+/// via `set_position`/`set_size` -- no clamping, offsetting, rounding, or default-supplying.
+/// Spike 017 measured that two geometry writers silently last-write-wins with no error, so this
+/// function is the ONLY place in the Rust tree that may call `Webview::set_position` or
+/// `Webview::set_size` on the embed (T-40-02-03). Do not add a second call site, and do not add
+/// a "sensible default bounds" fallback here -- that is exactly the second writer D-18 forbids.
+#[cfg(target_os = "macos")]
+fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
+    let (x, y, w, h) = store_embed_set_bounds_args(args)?;
+    let webview = app
+        .get_webview(STORE_EMBED_LABEL)
+        .ok_or_else(|| format!("store_embed_set_bounds:no-webview:{STORE_EMBED_LABEL}"))?;
+    webview
+        .set_position(tauri::LogicalPosition::new(x, y))
+        .map_err(|e| format!("store_embed_set_bounds:set_position-failed:{e}"))?;
+    webview
+        .set_size(tauri::LogicalSize::new(w, h))
+        .map_err(|e| format!("store_embed_set_bounds:set_size-failed:{e}"))?;
+    Ok(Value::Null)
+}
+
+/// D-21: hide on route leave, never close -- the embed's state and history registry survive.
+/// Returns a distinguishable error when the label is absent, never a silent `Ok`.
+#[cfg(target_os = "macos")]
+fn store_embed_hide(app: &AppHandle) -> Result<Value, String> {
+    let webview = app
+        .get_webview(STORE_EMBED_LABEL)
+        .ok_or_else(|| format!("store_embed_hide:no-webview:{STORE_EMBED_LABEL}"))?;
+    webview
+        .hide()
+        .map_err(|e| format!("store_embed_hide:failed:{e}"))?;
+    Ok(Value::Null)
+}
+
+/// D-21: show after a prior hide. Returns a distinguishable error when the label is absent,
+/// never a silent `Ok`.
+#[cfg(target_os = "macos")]
+fn store_embed_show(app: &AppHandle) -> Result<Value, String> {
+    let webview = app
+        .get_webview(STORE_EMBED_LABEL)
+        .ok_or_else(|| format!("store_embed_show:no-webview:{STORE_EMBED_LABEL}"))?;
+    webview
+        .show()
+        .map_err(|e| format!("store_embed_show:failed:{e}"))?;
+    Ok(Value::Null)
+}
+
+/// D-21: close only at teardown -- unlike `store_embed_hide`, this also clears the history
+/// registry (D-22), since a closed embed's history is not meant to survive into the next open.
+/// Returns a distinguishable error when the label is absent, never a silent `Ok`.
+#[cfg(target_os = "macos")]
+fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
+    let webview = app
+        .get_webview(STORE_EMBED_LABEL)
+        .ok_or_else(|| format!("store_embed_close:no-webview:{STORE_EMBED_LABEL}"))?;
+    webview
+        .close()
+        .map_err(|e| format!("store_embed_close:failed:{e}"))?;
+    if let Ok(mut state) = store_embed_state().lock() {
+        state.clear();
+    }
+    Ok(Value::Null)
+}
+
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
 /// the folder picker is reached via the AppHandle, not via `args` — the picked path comes
 /// FROM the OS dialog, never INTO it from the renderer/sidecar (T-30-11/T-30-12).
@@ -6688,6 +6930,60 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 .ok_or_else(|| "wake_lock_stop:bad-args".to_string())?;
             wake_lock_stop(id as u32)?;
             Ok(Value::Null)
+        }
+        // ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03). Every arm is macOS-only
+        // per D-03's target-gated `unstable` feature; the non-macOS branch returns a legible
+        // error rather than silently compiling this section out (see the section doc comment
+        // above `STORE_EMBED_LABEL` for the full rationale). ----
+        "store_embed_open" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_open(app, args)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_open:unsupported-platform".to_string())
+            }
+        }
+        "store_embed_set_bounds" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_set_bounds(app, args)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_set_bounds:unsupported-platform".to_string())
+            }
+        }
+        "store_embed_hide" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_hide(app)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_hide:unsupported-platform".to_string())
+            }
+        }
+        "store_embed_show" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_show(app)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_show:unsupported-platform".to_string())
+            }
+        }
+        "store_embed_close" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_close(app)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_close:unsupported-platform".to_string())
+            }
         }
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
     }
