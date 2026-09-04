@@ -219,8 +219,20 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
   }
 }
 
-/** Shared handle-arm wrapper: resolves `{ status: 'ok' }` on success, `{ status: 'error', error }` on any throw -- never rejects (fail-safe discipline, T-40-05-03). */
+/**
+ * Shared handle-arm wrapper: resolves `{ status: 'ok' }` on success, `{ status: 'error', error }`
+ * on any throw -- never rejects (fail-safe discipline, T-40-05-03).
+ *
+ * Uses `console.warn`, NOT the file logger, mirroring `humbleLoginFlowRegistration.ts`'s own
+ * `ipcMain.handle` catch bodies (its `logSendFailure`/`logWarning` helper is reserved for
+ * `ipcMain.on` send arms only, which have no return-value channel to report a failure through).
+ * `logWarning` calls `heroicLogWriter.logWarning(...)`, and `heroicLogWriter` is not constructed
+ * until `bootstrap.ts`'s `initLogger()` runs -- calling it earlier (or in a Jest suite that never
+ * boots the sidecar) throws `TypeError: Cannot read properties of undefined`, which would turn a
+ * benign handle-arm failure into a SECOND, unrelated crash.
+ */
 async function safeStatus(
+  label: string,
   action: () => Promise<void>
 ): Promise<{ status: 'ok' | 'error'; error?: string }> {
   try {
@@ -228,10 +240,7 @@ async function safeStatus(
     return { status: 'ok' }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    logWarning(
-      [`[storeEmbedFlowRegistration] handler failed:`, message],
-      LogPrefix.Backend
-    )
+    console.warn(`[storeEmbedFlowRegistration] ${label} failed:`, message)
     return { status: 'error', error: message }
   }
 }
@@ -256,43 +265,40 @@ export function registerStoreEmbedFlows(): void {
         StoreEmbedBounds,
         string
       ]
-      return safeStatus(() => seam.open(url, bounds, storeKey))
+      return safeStatus('storeEmbedOpen', () => seam.open(url, bounds, storeKey))
     }
   )
 
-  ipcMain.handle('storeEmbedHide', async () => safeStatus(() => seam.hide()))
-  ipcMain.handle('storeEmbedShow', async () => safeStatus(() => seam.show()))
+  ipcMain.handle('storeEmbedHide', async () => safeStatus('storeEmbedHide', () => seam.hide()))
+  ipcMain.handle('storeEmbedShow', async () => safeStatus('storeEmbedShow', () => seam.show()))
   ipcMain.handle('storeEmbedClose', async () =>
-    safeStatus(() => seam.close())
+    safeStatus('storeEmbedClose', () => seam.close())
   )
 
   ipcMain.handle('storeEmbedTakeNavEvents', async () => {
     try {
       return await seam.takeNavEvents()
     } catch (error) {
-      logWarning(
-        [
-          '[storeEmbedFlowRegistration] storeEmbedTakeNavEvents failed:',
-          error instanceof Error ? error.message : String(error)
-        ],
-        LogPrefix.Backend
+      console.warn(
+        '[storeEmbedFlowRegistration] storeEmbedTakeNavEvents failed:',
+        error instanceof Error ? error.message : String(error)
       )
       return []
     }
   })
 
-  ipcMain.handle('storeEmbedBack', async () => safeStatus(() => seam.back()))
+  ipcMain.handle('storeEmbedBack', async () => safeStatus('storeEmbedBack', () => seam.back()))
   ipcMain.handle('storeEmbedForward', async () =>
-    safeStatus(() => seam.forward())
+    safeStatus('storeEmbedForward', () => seam.forward())
   )
   ipcMain.handle('storeEmbedReload', async () =>
-    safeStatus(() => seam.reload())
+    safeStatus('storeEmbedReload', () => seam.reload())
   )
   ipcMain.handle(
     'storeEmbedNavigate',
     async (_event: unknown, ...args: unknown[]) => {
       const [url] = args as [string]
-      return safeStatus(() => seam.navigate(url))
+      return safeStatus('storeEmbedNavigate', () => seam.navigate(url))
     }
   )
 

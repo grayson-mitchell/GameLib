@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 208 |
-| Ported to sidecar | 53 |
+| Unique channels | 218 |
+| Ported to sidecar | 63 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -451,6 +451,41 @@ call sites** — a full-source census measured 0 across `src/frontend/`. It ship
 gate at all, which the live gate records as UNREACHABLE-BY-CONSTRUCTION rather than as a pass.
 This section stays SEPARATE from the slice-9 section above so that section's historical
 "(16 channels)" heading count is not silently inflated.
+
+## Phase 40 — Plan 05 — in-app store-embed seam (10 channels) — **PORTED**
+
+`storeEmbedOpen`, `storeEmbedSetBounds`, `storeEmbedHide`, `storeEmbedShow`, `storeEmbedClose`, `storeEmbedTakeNavEvents`, `storeEmbedBack`, `storeEmbedForward`, `storeEmbedReload`, `storeEmbedNavigate`
+
+All 10 are BRAND NEW channels created by this plan (T-40-05, REQ-40-02/REQ-40-05), not
+late-discovered pre-existing ones — matching the `getLoginBackground` precedent above rather than
+any "unlisted-but-real" note. They back the Tauri child-webview store embed (D-01/D-17/D-18/D-21/
+D-22/D-25/D-29): 9 are invoke-kind (`makeHandlerInvoker`, `src/preload/api/storeEmbed.ts`) and 1
+(`storeEmbedSetBounds`) is send-kind (`makeListenerCaller`), registered in
+`storeEmbedFlowRegistration.ts` and installed into the sidecar bootstrap via
+`registerStoreEmbedFlows()` (`src/backend/sidecar/handlers.ts`). There is no Electron leg to
+register — this feature exists only under the Tauri sidecar architecture, exactly as
+`getLoginBackground` had none — so, per that same precedent, this bucket's own header count is
+"(10 channels)" and `Ported to sidecar` in `## Totals` below also rises by 10.
+
+Five of the ten (`storeEmbedOpen`/`storeEmbedSetBounds`/`storeEmbedHide`/`storeEmbedShow`/
+`storeEmbedClose`) have a live Rust arm behind `requestRustInvoke` (owned by an earlier Phase 40
+plan, not this one — this plan made zero Rust changes). The remaining five
+(`storeEmbedTakeNavEvents`/`storeEmbedBack`/`storeEmbedForward`/`storeEmbedReload`/
+`storeEmbedNavigate`) are a **declared-unimplemented** stub: each throws an `Error` naming plan
+`40-07` as the owner (D-25 — no native back/forward/history API exists on
+`tauri::webview::Webview` or `wry::WebView`), never a silent no-op or a plausible default. The
+`storeEmbedTakeNavEvents` invoke arm converts that declared throw into a safe `[]` default at the
+`ipcMain.handle` boundary (fail-safe discipline); the other four surface it as
+`{ status: 'error' }` via the same `safeStatus()` helper used by the five live-Rust-arm methods.
+
+**Unique channels raised 208 → 218 (plan 40-05, 2026-09-04):** all 10 are newly created, so this
+is a straight raise, not a re-derive — matching the `getLoginBackground` note's own arithmetic
+style. `Ported to sidecar` raised 53 → 63 for the same reason `getLoginBackground` raised it
+(no Electron leg, sidecar-only channel). `Unported` (159) is unchanged — nothing in this plan
+touched an existing unported bucket line. The pre-existing one-channel offset between
+`## Totals` → `Unique channels` and the live `preload-surface-gate.py` union (caused by
+`getEpicGamesStatus` being bucket-pinned with no preload exposure, noted above) is unchanged by
+this edit; both numbers moved together by the same +10.
 
 ## Not an IPC channel, but blocks Phase 35
 

@@ -505,6 +505,18 @@ const IN_SCOPE_SUITES = [
  * `startRpcServer()`, which shares the same underlying stream-binding
  * containment guarantees as `init()`. No new containment surface.
  *
+ * `storeEmbedFlows.test.ts` (Phase 40 Plan 05, REQ-40-02/REQ-40-05) is
+ * classified as structurally contained: unlike the humble analog above it
+ * does not mock `electron`/`electron-store` at all, because
+ * `storeEmbedFlowRegistration.ts`'s import graph (`../platform`,
+ * `./sidecarRpc`, `../../common/types/sidecarTransport`,
+ * `../store/storeEmbedSeam`, `../logger`) never touches
+ * `electron`/`electron-store`/`axios`/`backend/utils` the way
+ * `humble/user.ts`/`humble/library.ts` do -- it calls
+ * `registerStoreEmbedFlows()` directly and drives the real `sidecarRpc`
+ * transport via `startRpcServer()`, exactly as the humble test's
+ * frame-shape describe block does above. No new containment surface.
+ *
  * `oauthLoginCapture.test.ts` (Phase 34.4.1 Plan 09) is classified as
  * structurally contained: it factory-mocks only `backend/logger` (mirrors
  * `electronUntouched.test.ts`'s convention) -- it never touches `electron`,
@@ -846,6 +858,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'steamAuthFlows.test.ts',
   'steamFlows.test.ts',
   'steamgridSecretStore.test.ts',
+  'storeEmbedFlows.test.ts',
   'storeLayer.test.ts',
   'structuralContainment.test.ts',
   'testContainment.test.ts',
