@@ -346,6 +346,9 @@
         },
         "embedPlaceholder": {
             "message": "Paused while a window is open"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Currently viewing {{host}}"
         }
     },
     "winetricks": {
