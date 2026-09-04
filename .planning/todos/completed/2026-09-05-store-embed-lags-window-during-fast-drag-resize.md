@@ -53,3 +53,25 @@ follow is the option most at risk of violating this and needs the most care.
 
 `38-E04` covers drag-resize latency on hardware/backends OTHER than this macOS host, and does NOT
 close on this gate. This finding is the macOS-host answer; `38-E04` remains open for everything else.
+
+---
+
+## RESOLVED — 2026-09-05, commit `b4517366e`
+
+Fixed by replacing the trailing-edge debounce with a **leading-edge throttle + max-wait + trailing
+flush**, keeping spike 017's 40 ms interval and D-18's single-writer rule intact (`flush()` remains
+the only rect reader; no fallback rect anywhere, including the null-ref path).
+
+Verified on real macOS hardware, live gate launch 4. Operator's verbatim verdict:
+**"resize is smooth now, tracks like the browser."** The same browser A/B that detected the defect
+was used to confirm the fix, and the operator confirmed a MATCH rather than merely an improvement —
+so the 40 ms interval needs no retune.
+
+Regression coverage: `useStoreEmbedHost.test.tsx` Property `3b` models sustained motion (20 ticks,
+10 ms apart, never pausing) and asserts sends occur DURING the drag. Mutation-proven: restoring the
+debounce drives it to ZERO sends. Property 3 (the pre-existing coalescing test) still PASSES under
+that same mutation — which is exactly why the original suite was green over a visible defect, and
+the reason 3b had to be written rather than relying on the existing one.
+
+`38-E04` (drag-resize latency on hardware/backends other than this macOS host) remains OPEN and does
+NOT close on this fix.

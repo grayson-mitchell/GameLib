@@ -5,10 +5,10 @@ type: live-gate
 status: complete
 blocking: true
 created: 2026-09-04
-verdict: FAIL — 2 of 3 items pass; Item 3 (drag-resize latency) fails on a diagnosed 40 ms trailing-edge debounce
-run_date: 2026-09-05
+verdict: PASS — all 3 items pass. Item 3 passed only on RE-RUN after fix b4517366e; it FAILED on the first run (54ca5b400) and that failure is retained in full, being the substantive finding of this gate.
+run_date: 2026-09-05 (launches 3 and 4; blocked attempt on c78ff3d30 recorded separately)
 items_total: 3
-items_passed: 2
+items_passed: 3
 notes: |
   Authored by the plan-40-11 Task 1 executor, BEFORE any live run took place. Per this
   plan's `autonomous: false` and Task 2's `checkpoint:human-verify gate="blocking"`, the
@@ -636,8 +636,31 @@ embed slot's width, in both directions (wider then narrower), once slowly and on
 item defines no numeric threshold the agent cannot measure — the agent's job is to make the
 gesture unambiguous and capture what is capturable, not to invent a pass/fail number.
 
+**RESULT: PASS on re-run** (launch 4, commit `b4517366e`, after the fix).
+**Original result on launch 3 / commit `54ca5b400`: FAIL — retained below in full.**
+
+**Re-run operator verdict, verbatim:** "resize is smooth now, tracks like the browser."
+
+The re-run used the same instrument that produced the FAIL — an A/B against a browser on the same
+hardware — and answers the discriminating case directly: the embed now tracks DURING the drag rather
+than catching up when the pointer stops. The agent asked specifically whether it merely improved or
+actually matched the browser, because ~25 sends/sec sits below a 60 Hz refresh and residual stepping
+would have been possible by design; the operator reported a match, so no interval retune is needed.
+
+Fix: `b4517366e` — the trailing-edge debounce became a leading-edge throttle with a max-wait and a
+trailing flush, keeping spike 017's 40 ms interval and D-18's single-writer rule. Regression test
+`3b` in `useStoreEmbedHost.test.tsx` models sustained motion and is mutation-proven: restoring the
+debounce drives it to ZERO sends during the drag.
+
+**The original FAIL is retained rather than overwritten.** It is the substantive finding of this
+gate — a real defect that reached a packaged build past 8 planning gates and ~1,647 tests — and a
+re-run passing does not make it not have happened.
+
+---
+
+### Original result (launch 3, commit `54ca5b400`) — FAIL
+
 **RESULT: FAIL — the embed lags the window during a live drag-resize.**
-(operator verdict, launch 3, commit `54ca5b400`)
 
 **Operator's verbatim verdict:** "resize lags behind. tested with browser. the difference is that in
 browser is smooth on mouse move, whilst in gamelib is resized only on mouse stopping or maybe being
@@ -694,7 +717,7 @@ the operator's verbatim judgment, which is recorded in full above.
 |---|---|
 | 1 — D-33 suppression gesture | **PASS** — all four conditions; slot rect identical across A/B/C (0 px delta); hit-test verified separately from paint |
 | 2 — Input/scroll feel | **PASS** — operator verdict; all four sub-gestures exercised (scroll, click, typing, trackpad momentum) |
-| 3 — Drag-resize latency | **FAIL** — embed lags the window under a fast drag; cause diagnosed as a 40 ms trailing-edge debounce with no leading edge or max-wait |
+| 3 — Drag-resize latency | **PASS on re-run** (`b4517366e`) — "tracks like the browser". Originally **FAIL** on `54ca5b400`; the defect and its diagnosis are retained in the item. |
 
 ## Teardown record
 
@@ -724,6 +747,9 @@ the operator's verbatim judgment, which is recorded in full above.
   **No zero-length capture and no missing artifact** — the condition this step exists to surface
   during the run rather than after it. All three captures are non-zero and were measured.
   `gamelib.log` was archived per launch before the next launch's first write could rotate it.
+- Launch 4 (commit `b4517366e`, the resize fix) ran the Item 3 RE-RUN. Pre-launch assertion empty,
+  exactly 1 at window-appearance (PID 51026) and at teardown, 0 after `pkill` with no orphaned
+  sidecar. Launch 3's `gamelib.log` was archived before launch 4's first write could rotate it.
 - Not captured this session: screen recordings for Items 2 and 3. Recorded as an evidence gap in
   those items rather than silently omitted; neither item's PASS CONDITION depends on one.
 
