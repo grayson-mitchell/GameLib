@@ -261,3 +261,9 @@ None introduced by this plan.
 None — this plan removes surface (two IPC channels, one type shim) and adds a CI-only mechanical
 gate. No new network endpoints, auth paths, file access patterns, or schema changes at trust
 boundaries were introduced.
+
+## Self-Check: PASSED
+
+All claimed created files verified present on disk (`40-CHANNEL-RECENSUS.md`,
+`model-a-retirement-gate.py`, `40-03-SUMMARY.md`). All five commit hashes
+(`c152dd9ef`, `69fc68348`, `0c5cf18f1`, `41997d94a`, `f1c1fbcb5`) verified present in `git log`.
