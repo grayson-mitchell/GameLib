@@ -1,19 +1,14 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import ContextProvider from 'frontend/state/ContextProvider'
 import TauriLoginPanel from './TauriLoginPanel'
 import type { TauriOAuthLoginState } from '../useTauriOAuthLogin'
-import type { WebviewTag } from 'backend/platform'
-import { attachHumbleLoginChromeCss } from './humbleLoginChromeCss'
 
 interface Props {
   onDone: () => void
   onCancelled: () => void
 }
-
-const humbleLoginUrl = 'https://www.humblebundle.com/login'
-const trueAsStr = 'true' as unknown as boolean | undefined
 
 /**
  * Shell-agnostic Humble login surface. Extracted verbatim (quick task
@@ -23,39 +18,21 @@ const trueAsStr = 'true' as unknown as boolean | undefined
  * comment below carries D-05/D-06/D-16/D-17, F-34.4.2-19 and quick task
  * 260808-gl6 rationale forward unchanged from its pre-extraction home.
  *
- * Renders (in this exact, load-bearing order): the Tauri in-progress panel
- * when there is no webview preload path, then holds render until the
- * standard-Chrome UA has been fetched, then the embedded Electron
- * `<webview>` itself.
+ * Phase 40 Plan 01 (D-09/D-09a): this file used to be a half-migrated
+ * component -- its return path was already Model B (`TauriLoginPanel`), but
+ * it still carried an entire dead Model A body behind it (a
+ * `webviewPreloadPath` fetch that always resolved to a declared-empty
+ * string, a fetched standard-Chrome UA no live render ever consumed, a
+ * D-17 navigation relay, a login-chrome-CSS attach effect, and the
+ * `<webview>` render itself). All of that is now gone: this component
+ * renders `TauriLoginPanel` unconditionally. The `window.api.humbleGetLoginUserAgent`
+ * fetch and its state are deleted with it (REQ-34.4.1-04's channel is
+ * re-censused separately in plan 40-03 alongside D-11's
+ * `humbleLoginNavigated`, since a native login path may still need it).
  */
 export default function HumbleLoginSurface({ onDone, onCancelled }: Props) {
   const { t: tGamelib } = useTranslation('gamelib')
   const { humble } = useContext(ContextProvider)
-  const webviewRef = useRef<WebviewTag>(null)
-
-  const [webviewPreloadPath, setWebviewPreloadPath] = useState('')
-  useEffect(() => {
-    const fetchWebviewPreloadPath = async () => {
-      const path = await window.api.getWebviewPreloadPath()
-      setWebviewPreloadPath(path)
-    }
-
-    void fetchWebviewPreloadPath()
-  }, [])
-
-  // D-05/D-07/UA note: the /loginweb/humble webview needs a standard-Chrome
-  // user agent (not the fake 'Chrome/200.0' applied to other login runners
-  // in WebView/index.tsx) so Google SSO offers its normal password / "Try
-  // another way" flows. Fetched once per mount of this surface.
-  const [humbleLoginUserAgent, setHumbleLoginUserAgent] = useState('')
-  useEffect(() => {
-    const fetchHumbleLoginUserAgent = async () => {
-      const userAgent = await window.api.humbleGetLoginUserAgent()
-      setHumbleLoginUserAgent(userAgent)
-    }
-
-    void fetchHumbleLoginUserAgent()
-  }, [])
 
   // F-34.4.2-19 fix: `result.status === 'error'`/`'waiting'` used to be silently swallowed
   // here — the promise settled, but nothing told `TauriLoginPanel` (still statically rendering
@@ -134,63 +111,5 @@ export default function HumbleLoginSurface({ onDone, onCancelled }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // D-17: relays the webview's navigation events to the main-process
-  // login watch so a rejected candidate cookie is force-revalidated
-  // (bypassing the poll-path throttle) — e.g. the SSO redirect landing
-  // back on humblebundle.com.
-  useLayoutEffect(() => {
-    const webview = webviewRef.current
-    if (webview) {
-      const onHumbleLoginNavigate = () => {
-        window.api.humbleLoginNavigated()
-      }
-
-      webview.addEventListener('did-navigate', onHumbleLoginNavigate)
-      webview.addEventListener('did-navigate-in-page', onHumbleLoginNavigate)
-
-      return () => {
-        webview.removeEventListener('did-navigate', onHumbleLoginNavigate)
-        webview.removeEventListener(
-          'did-navigate-in-page',
-          onHumbleLoginNavigate
-        )
-      }
-    }
-    return
-  }, [webviewRef.current])
-
-  // Login-chrome CSS (quick task 260822-di1, D-1): hides Humble's marketing footer so the
-  // sign-in page reads as app UI. Delegates entirely to attachHumbleLoginChromeCss
-  // (WebView/components/humbleLoginChromeCss.ts), which wires dom-ready -> insertCSS and is
-  // re-applied on every navigation (Electron drops inserted CSS on navigation).
-  useLayoutEffect(() => {
-    const webview = webviewRef.current
-    if (webview) {
-      return attachHumbleLoginChromeCss(webview)
-    }
-    return
-  }, [webviewRef.current])
-
-  if (!webviewPreloadPath) {
-    return <TauriLoginPanel runner="humble" state={humbleLoginState} />
-  }
-
-  // The humble login surface must not render until its standard-Chrome UA
-  // has been fetched — applying it late (after the webview's first request)
-  // would defeat the SSO fix (UA note).
-  if (!humbleLoginUserAgent) {
-    return <></>
-  }
-
-  return (
-    <webview
-      ref={webviewRef}
-      className="HumbleLoginSurface__webview"
-      partition="persist:humble"
-      src={humbleLoginUrl}
-      preload={webviewPreloadPath}
-      useragent={humbleLoginUserAgent}
-      allowpopups={trueAsStr}
-    />
-  )
+  return <TauriLoginPanel runner="humble" state={humbleLoginState} />
 }

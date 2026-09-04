@@ -1,21 +1,9 @@
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState
-} from 'react'
+import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 
-import { ToggleSwitch, UpdateComponent } from 'frontend/components/UI'
-import WebviewControls from 'frontend/components/UI/WebviewControls'
 import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
-import LoginWarning from '../Login/components/LoginWarning'
-import { NileLoginData } from 'common/types/nile'
-import type { WebviewTag, DidFailLoadEvent } from 'backend/platform'
 import WebviewUnavailablePanel from './components/WebviewUnavailablePanel'
 import TauriLoginPanel from './components/TauriLoginPanel'
 import HumbleLoginSurface from './components/HumbleLoginSurface'
@@ -28,11 +16,6 @@ import {
   GOG_LOGIN_URL,
   ZOOM_LOGIN_URL
 } from './loginRoutes'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader
-} from 'frontend/components/UI/Dialog'
 
 const validStoredUrl = (url: string, store: string) => {
   switch (store) {
@@ -54,19 +37,9 @@ const validStoredUrl = (url: string, store: string) => {
 export default function WebView() {
   const { i18n } = useTranslation()
   const { pathname, search } = useLocation()
-  const { t } = useTranslation()
-  const { epic, gog, amazon, zoom, connectivity, completeOAuthLogin } =
+  const { epic, gog, amazon, zoom, completeOAuthLogin } =
     useContext(ContextProvider)
-  const [loading, setLoading] = useState<{
-    refresh: boolean
-    message: string
-  }>(() => ({
-    refresh: true,
-    message: t('loading.website', 'Loading Website')
-  }))
-  const [amazonLoginData] = useState<NileLoginData | null>(null)
   const navigate = useNavigate()
-  const webviewRef = useRef<WebviewTag>(null)
 
   // `store` is set to epic/gog/amazon depending on which storefront we're
   // supposed to show, `runner` is set to a runner if we're supposed to show its
@@ -78,7 +51,7 @@ export default function WebView() {
   // runners. Called unconditionally alongside this component's other hooks (React's
   // rules-of-hooks) -- the hook's OWN internal guard is what makes it a no-op for
   // `runner === 'humble'`/`undefined`/any non-OAuth value, not a conditional call here. Its
-  // result is only consumed by the `!webviewPreloadPath` branch below. `completeOAuthLogin` is
+  // result is only consumed by the login-pathname branch below.  `completeOAuthLogin` is
   // GlobalState.tsx's own post-login completion path (setState + handleSuccessfulLogin ->
   // refreshLibrary) -- passing it here is what makes a captured OAuth login actually refresh the
   // library instead of silently landing nowhere.
@@ -180,12 +153,9 @@ export default function WebView() {
   const steamStore = 'https://store.steampowered.com/'
   const wikiURL =
     'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki'
-  const gogEmbedRegExp = new RegExp('https://embed.gog.com/on_login_success?')
   const gogLoginUrl = GOG_LOGIN_URL
   const zoomLoginUrl = ZOOM_LOGIN_URL
   const humbleLoginUrl = 'https://www.humblebundle.com/login'
-
-  const trueAsStr = 'true' as unknown as boolean | undefined
 
   const urls: { [pathname: string]: string } = {
     '/store/epic': epicStore,
@@ -198,7 +168,14 @@ export default function WebView() {
     '/loginGOG': gogLoginUrl,
     '/loginweb/legendary': epicLoginUrl,
     '/loginweb/gog': gogLoginUrl,
-    '/loginweb/nile': amazonLoginData ? amazonLoginData.url : '',
+    // Phase 40 Plan 01 (D-09): the `amazonLoginData` state that used to populate this key fed
+    // only the deleted Electron `<webview>` amazon-login flow (`handleAmazonLogin`, removed by
+    // this plan). `useTauriOAuthLogin.ts`'s own `getAmazonLoginData()` call is the single
+    // remaining owner of that fetch -- see
+    // `.planning/todos/pending/2026-09-01-webview-amazonlogindata-is-permanently-null.md` for
+    // the folded todo this deletion resolves. Do NOT re-add a fetch here: the double-spawn cost
+    // is the measured ~12.8s-per-call regression named in the no-op effect below.
+    '/loginweb/nile': '',
     '/loginweb/zoom': zoomLoginUrl,
     '/loginweb/humble': humbleLoginUrl
   }
@@ -234,186 +211,16 @@ export default function WebView() {
     // task 260806-teb measured and fixed by preventing a SECOND, redundant spawn racing
     // `useTauriOAuthLogin.ts`'s own call (pyinstaller-onefile-spawn-tax). Re-adding a call
     // here -- guarded or not -- reintroduces that double-spawn.
+    //
+    // Phase 40 Plan 01 (D-09): the Model A `<webview>` this comment refers to is now fully
+    // deleted (not merely dead) -- `handleAmazonLogin`, `amazonLoginData`, and every webview
+    // event-listener effect are gone from this file. This effect itself stays as the
+    // historical record of why no fetch belongs here.
   }, [pathname])
-
-  const handleAmazonLogin = (code: string) => {
-    if (!amazonLoginData) {
-      console.error('Could not login to Amazon because login data is missing')
-      return
-    }
-
-    setLoading({
-      refresh: true,
-      message: t('status.logging', 'Logging In...')
-    })
-    amazon
-      .login({
-        client_id: amazonLoginData.client_id,
-        code: code,
-        code_verifier: amazonLoginData.code_verifier,
-        serial: amazonLoginData.serial
-      })
-      .then(() => {
-        handleSuccessfulLogin()
-      })
-  }
 
   const handleSuccessfulLogin = () => {
     navigate('/login')
   }
-
-  const [webviewPreloadPath, setWebviewPreloadPath] = useState('')
-  useEffect(() => {
-    const fetchWebviewPreloadPath = async () => {
-      const path = await window.api.getWebviewPreloadPath()
-      setWebviewPreloadPath(path)
-    }
-
-    void fetchWebviewPreloadPath()
-  }, [])
-
-  useLayoutEffect(() => {
-    const webview = webviewRef.current
-    if (webview) {
-      const loadstop = async () => {
-        setLoading({ ...loading, refresh: false })
-        // Humble's login surface (its own fetched standard-Chrome UA, applied
-        // via the webview's `useragent` attribute) now lives in
-        // HumbleLoginSurface.tsx — this component no longer renders a humble
-        // route at all, so the generic fake 'Chrome/200.0' UA below applies
-        // unconditionally to the runners that remain here.
-        const userAgent =
-          startUrl === epicLoginUrl
-            ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) EpicGamesLauncher'
-            : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/200.0'
-        if (webview.getUserAgent() != userAgent) {
-          webview.setUserAgent(userAgent)
-        }
-        // Ignore the login handling if not on login page
-        if (!runner) {
-          return
-        } else if (runner === 'gog') {
-          const pageUrl = webview.getURL()
-          if (pageUrl.match(gogEmbedRegExp)) {
-            const parsedURL = new URL(pageUrl)
-            const code = parsedURL.searchParams.get('code')
-            if (code) {
-              setLoading({
-                refresh: true,
-                message: t('status.logging', 'Logging In...')
-              })
-              gog.login(code).then(() => handleSuccessfulLogin())
-            }
-          }
-        } else if (runner === 'nile') {
-          const pageURL = webview.getURL()
-          const parsedURL = new URL(pageURL)
-          const code = parsedURL.searchParams.get(
-            'openid.oa2.authorization_code'
-          )
-          if (code) {
-            handleAmazonLogin(code)
-          }
-        } else if (runner == 'legendary') {
-          const pageUrl = webview.getURL()
-          const parsedUrl = new URL(pageUrl)
-          if (parsedUrl.hostname === 'localhost') {
-            const code = parsedUrl.searchParams.get('code')
-            if (code) {
-              setLoading({
-                refresh: true,
-                message: t('status.logging', 'Logging In...')
-              })
-              epic.login(code).then(() => handleSuccessfulLogin())
-            }
-          }
-        }
-      }
-
-      const onerror = ({ validatedURL }: DidFailLoadEvent) => {
-        if (validatedURL && validatedURL.match(/track\.adtraction\.com/)) {
-          const parsedUrl = new URL(validatedURL)
-          const redirectUrl = parsedUrl.searchParams.get('url')
-          const url = new URL(redirectUrl || 'https://gog.com')
-          // Remove any port definitions
-          // Recently GOG made a change where they started to provide a port
-          // in a URL that adtraction is supposed to redirect to.
-          // This leads to urls like https://gog.com:80
-          // That address is unreachable
-          //
-          // Add a entry below if you notice this line of code and cringe
-          // - username - DD/MM/YY
-          // - imLinguin - 01/07/24
-          url.port = ''
-          webview.loadURL(url.toString())
-          if (!localStorage.getItem('adtraction-warning')) {
-            setShowAdtractionWarning(true)
-          }
-        }
-      }
-
-      webview.addEventListener('dom-ready', loadstop)
-      webview.addEventListener('did-fail-load', onerror)
-      // if the page title changed it's because the store loaded so there's
-      // connectivity, we can update the status without waiting for the checks
-      const updateConnectivity = () => {
-        if (connectivity.status !== 'online') {
-          window.api.setConnectivityOnline()
-        }
-      }
-      webview.addEventListener('page-title-updated', updateConnectivity)
-
-      return () => {
-        webview.removeEventListener('dom-ready', loadstop)
-        webview.removeEventListener('did-fail-load', onerror)
-        webview.removeEventListener('page-title-updated', updateConnectivity)
-      }
-    }
-    return
-  }, [webviewRef.current, amazonLoginData, runner, webviewPreloadPath])
-
-  useEffect(() => {
-    const webview = webviewRef.current
-    if (webview) {
-      const onNavigate = () => {
-        if (store) {
-          const url = webview.getURL()
-          if (validStoredUrl(url, store)) {
-            sessionStorage.setItem(`last-url-${store}`, webview.getURL())
-          }
-        }
-      }
-
-      const onLoginNavigate = () => {
-        if (runner === 'zoom') {
-          const pageURL = webview.getURL()
-          const parsedURL = new URL(pageURL)
-          const token = parsedURL.searchParams.get('li_token')
-          if (token) {
-            setLoading({
-              refresh: true,
-              message: t('status.logging', 'Logging In...')
-            })
-            zoom.login(pageURL).then(() => handleSuccessfulLogin())
-          }
-        }
-      }
-
-      // this one is needed for gog/amazon
-      webview.addEventListener('did-navigate', onNavigate)
-      // this one is needed for epic
-      webview.addEventListener('did-navigate-in-page', onNavigate)
-      webview.addEventListener('did-navigate', onLoginNavigate)
-
-      return () => {
-        webview.removeEventListener('did-navigate', onNavigate)
-        webview.removeEventListener('did-navigate-in-page', onNavigate)
-        webview.removeEventListener('did-navigate', onLoginNavigate)
-      }
-    }
-
-    return
-  }, [webviewRef.current, store, runner])
 
   const [showLoginWarningFor, setShowLoginWarningFor] = useState<
     null | 'epic' | 'gog' | 'amazon' | 'zoom'
@@ -451,44 +258,29 @@ export default function WebView() {
     setShowLoginWarningFor(null)
   }
 
-  // Handle back/forward mouse buttons to navigate inside webview
-  useEffect(() => {
-    if (!webviewRef.current) return
-
-    const webview = webviewRef.current
-
-    const handleMouseBackForward = (ev: MouseEvent) => {
-      // 3 and 4 are the typical `button` value for mouse back/forward buttons on mouseup events
-      switch (ev.button) {
-        case 3:
-          if (webview.canGoBack()) {
-            ev.preventDefault()
-            webview.goBack()
-          }
-          break
-        case 4:
-          if (webview.canGoForward()) {
-            ev.preventDefault()
-            webview.goForward()
-          }
-          break
-      }
-    }
-
-    document.addEventListener('mouseup', handleMouseBackForward)
-
-    return () => {
-      document.removeEventListener('mouseup', handleMouseBackForward)
-    }
-  }, [webviewRef.current])
+  // Phase 40 Plan 01 (D-09/D-10): Task 2 deletes this file's entire Model A render --
+  // the `<webview>` element, `WebviewControls`, the `UpdateComponent` loading indicator,
+  // the `LoginWarning` render, and the adtraction `Dialog` -- but explicitly does NOT
+  // delete the state/effects/handlers above (`handleSuccessfulLogin`, `showLoginWarningFor`
+  // and its effect, `showAdtractionWarning`/`dontShowAdtractionWarning`,
+  // `onLoginWarningClosed`) per 40-01-PLAN.md's own "Do NOT delete" list: they are Model B
+  // / route logic re-consumed when plan 40-07 rebuilds this chrome around the new embed
+  // slot (D-24), not ported fresh. That leaves them with no reader in THIS plan's render --
+  // referenced here only to keep them alive for the linter during that interim window.
+  void handleSuccessfulLogin
+  void showLoginWarningFor
+  void onLoginWarningClosed
+  void showAdtractionWarning
+  void setShowAdtractionWarning
+  void dontShowAdtractionWarning
+  void setDontShowAdtractionWarning
 
   // Quick task 260821-iri: Humble's login surface (state, watch, webview,
   // navigation relay) now lives entirely in HumbleLoginSurface.tsx, hosted
   // by the Login screen's own co-mounted `HumbleLogin` overlay. This route
   // stays alive, unchanged in URL, for `HumbleExpiryToast` and
   // `Humble/Keys`, which still navigate here directly. Placed AFTER every
-  // hook above (rules of hooks) and BEFORE the `!webviewPreloadPath` branch
-  // below, whose own Tauri/humble special-casing this early return replaces.
+  // hook above (rules of hooks) and BEFORE the login-pathname branch below.
   if (runner === 'humble') {
     return (
       <HumbleLoginSurface
@@ -498,100 +290,32 @@ export default function WebView() {
     )
   }
 
-  if (!webviewPreloadPath) {
-    if (isLoginPathname(pathname)) {
-      // D-06 (REQ-34.4.1-07/-08): Phase 34.4.1 shipped a real Rust
-      // login-window seam, so the old blanket "not available on this
-      // build" message here would now be a lie for login routes. They
-      // drive TauriLoginPanel instead: Humble gets an honest in-progress
-      // surface, and the four OAuth runners get a declared-blocked one
-      // naming the exact backend channel and Phase 34.5.
-      //
-      // Phase 35 plan 17: this arm and the one below used to each be
-      // gated on a Tauri-context check as well as their own condition
-      // (`isLoginPathname`/nothing). Tauri is the only shell now, so that
-      // check always evaluated true; both are now unconditional past this
-      // `!webviewPreloadPath` guard. The Electron-only third arm this
-      // block used to fall through to (`return <></>`) is gone with it --
-      // `getWebviewPreloadPath` (`backend/sidecar/appShellFlowRegistration.ts`,
-      // D-12) is untouched by this plan and still returns a declared-empty
-      // string under Tauri, so this outer guard's own meaning is unchanged.
-      return <TauriLoginPanel runner={runner} state={oauthLoginState} />
-    }
-    // D-05: in-app store and wiki browsing was never this phase's job --
-    // log the gap so it is legible to a developer too ("logged, never
-    // silent"), and let the user escape to the system browser via
-    // WebviewUnavailablePanel's Open-in-browser button.
-    window.api.logInfo(
-      `[WebView] in-app store/wiki browsing unavailable under Tauri (pathname=${pathname}) -- tracked as its own deferral (D-05)`
-    )
-    return <WebviewUnavailablePanel url={startUrl} />
+  if (isLoginPathname(pathname)) {
+    // D-06 (REQ-34.4.1-07/-08): Phase 34.4.1 shipped a real Rust
+    // login-window seam, so the old blanket "not available on this
+    // build" message here would now be a lie for login routes. They
+    // drive TauriLoginPanel instead: Humble gets an honest in-progress
+    // surface, and the four OAuth runners get a declared-blocked one
+    // naming the exact backend channel and Phase 34.5.
+    //
+    // Phase 40 Plan 01 (D-09): this used to be one arm of a
+    // `!webviewPreloadPath` guard shared with the store/wiki arm below.
+    // That guard is now fully retired -- `getWebviewPreloadPath`
+    // (`backend/sidecar/appShellFlowRegistration.ts`, D-12) is untouched by
+    // this plan and still returns a declared-empty string under Tauri, but
+    // nothing in this file reads it any longer. Both arms are unconditional
+    // now, split solely on `isLoginPathname(pathname)`.
+    return <TauriLoginPanel runner={runner} state={oauthLoginState} />
   }
 
-  return (
-    <div className="WebView">
-      {webviewRef.current && (
-        <WebviewControls
-          webview={webviewRef.current}
-          initURL={startUrl}
-          openInBrowser={!startUrl.startsWith('login')}
-        />
-      )}
-      {loading.refresh && <UpdateComponent message={loading.message} />}
-      <webview
-        key={store}
-        ref={webviewRef}
-        className="WebView__webview"
-        partition={`persist:${startUrl === epicLoginUrl ? 'epicstore' : store}`}
-        src={startUrl}
-        allowpopups={trueAsStr}
-        preload={webviewPreloadPath}
-      />
-      {showLoginWarningFor && (
-        <LoginWarning
-          warnLoginForStore={showLoginWarningFor}
-          onClose={onLoginWarningClosed}
-        />
-      )}
-      {showAdtractionWarning && (
-        <Dialog
-          showCloseButton={true}
-          onClose={() => {
-            setShowAdtractionWarning(false)
-            if (dontShowAdtractionWarning)
-              localStorage.setItem('adtraction-warning', 'true')
-          }}
-        >
-          <DialogHeader
-            onClose={() => {
-              setShowAdtractionWarning(false)
-              if (dontShowAdtractionWarning)
-                localStorage.setItem('adtraction-warning', 'true')
-            }}
-          >
-            {t('adtraction-locked.title', 'Adtraction is blocked')}
-          </DialogHeader>
-          <DialogContent>
-            <p>
-              {t(
-                'adtraction-locked.description',
-                'It seems the track.adtraction.com domain was unable to load or is blocked. With adtraction, any purchase you make in the GOG store supports GameLib financially. Consider removing the block if you wish to contribute.'
-              )}
-            </p>
-            <ToggleSwitch
-              htmlId="dont-show-adtraction-warning-checkbox"
-              value={dontShowAdtractionWarning}
-              handleChange={(e) =>
-                setDontShowAdtractionWarning(e.target.checked)
-              }
-              title={t(
-                'adtraction-locked.dont-show-again',
-                "Don't show this warning again"
-              )}
-            />
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+  // D-05: in-app store and wiki browsing was never this phase's job --
+  // log the gap so it is legible to a developer too ("logged, never
+  // silent"), and let the user escape to the system browser via
+  // WebviewUnavailablePanel's Open-in-browser button. Phase 40 retires
+  // Model A entirely (D-09/D-10); this remains the store/wiki surface
+  // until plan 40-07+ replaces it with the Tauri child-webview embed.
+  window.api.logInfo(
+    `[WebView] in-app store/wiki browsing unavailable under Tauri (pathname=${pathname}) -- tracked as its own deferral (D-05)`
   )
+  return <WebviewUnavailablePanel url={startUrl} />
 }
