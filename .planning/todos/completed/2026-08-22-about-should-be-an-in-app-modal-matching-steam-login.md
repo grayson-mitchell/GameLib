@@ -3,6 +3,9 @@ created: 2026-08-22T22:15:00.000Z
 title: "About opens a bare OS window — should be an in-app animated modal matching the Steam login overlay"
 area: frontend
 severity: low
+status: RESOLVED
+resolved: 2026-09-05
+resolved_by: quick-260905-d33
 found_by: "Operator, during 34.1 UAT item 8b live run, 2026-08-22 (the run that PASSED the entry point)"
 source: ".planning/phases/34.1-tauri-ipc-re-plumb-slice-4-app-shell-and-window-chrome/34.1-HUMAN-UAT.md item 8b"
 files:
@@ -51,10 +54,10 @@ Humble got in quick task `260821-iri`:
    is the exact defect that produced the About entry point in the first place
    (`.planning/todos/completed/2026-08-22-about-window-is-unreachable-under-tauri.md`).
 
-2. **Electron diverges unless it is handled too.** `helpers.ts:17` routes `showAboutWindow()` to
+2. **Electron diverges unless it is handled too.** `helpers.ts:14` routes `showAboutWindow()` to
    `tauriShowAboutWindow()` under Tauri and to the IPC listener under Electron, which lands at
-   `utils.ts:243`. An in-app Dialog is shell-agnostic and would bypass BOTH — likely a
-   simplification (one surface, both shells), but it means `utils.ts:243`, the
+   `utils.ts:247`. An in-app Dialog is shell-agnostic and would bypass BOTH — likely a
+   simplification (one surface, both shells), but it means `utils.ts:247`, the
    `showAboutWindow` IPC channel, and `tray_icon.ts:124`'s tray item all need a disposition.
    Note the Electron tray item would then point at a window that no longer exists.
 
@@ -79,3 +82,59 @@ Humble got in quick task `260821-iri`:
 
 The current behaviour is correct and passing. This is a polish/consistency item, raised in the
 same breath as the pass. `severity: low`.
+
+---
+
+## Resolution (2026-09-05, quick task `260905-d33`)
+
+Shipped. Commits `bb560d51a`, `d92c888fb`, `f10f7bd6a`.
+
+About is now `src/frontend/components/UI/AboutDialog/`, an in-app MUI `Dialog` consuming the
+shared primitive, themed with `var(--*)` tokens, mounted app-level in `App.tsx` by
+`AboutDialogHost`. `public/about.html`, `tauriShowAboutWindow`, `showAboutWindowAsync`,
+`resolveAboutVersion`, `ABOUT_VERSION_TIMEOUT_MS`, the orphaned `ipc.ts` channel type and the
+already-dead Electron `app.showAboutPanel()` body are all deleted.
+
+### The five items, as resolved
+
+1. **Deleted, as asked.** Nothing orphaned.
+2. **The premise was STALE, and checking it was the most valuable part of this task.** There was
+   no Electron divergence left to handle: Phase 35 plan 17 had already collapsed the
+   Electron-branch fallback, `src/backend/tray_icon.ts` no longer exists, and `utils.ts:247` was
+   registered on no IPC channel at all. But the same check surfaced something this todo did not
+   know about and that a `src/`-only grep cannot see: **the macOS tray has a live "About GameLib"
+   item implemented in Rust** (`open_about_window_from_tray`, `src-tauri/src/main.rs`), which
+   reaches About by evaluating `window.api?.showAboutWindow?.()` in the main window. Deleting
+   that preload export — which item 1 appears to sanction — made the tray item a **live silent
+   no-op**, because the eval is optional-chained and throws nothing on either side. It was
+   deleted, shipped in `bb560d51a`, and caught only by a follow-up sweep. `showAboutWindow` is
+   therefore KEPT as a name and repointed at a window event; `d92c888fb` restored it.
+3. **Done.** UAT item 8b's (a)/(b) are annotated as having lost their subject, the pass is left
+   standing (it was correct when written), and a replacement re-run gesture is written in —
+   including one click on the tray item, for the reason in 2.
+4. **Confirmed and accepted.** The isolation boundary IS dropped: `about.html` was fail-closed by
+   window label (`capabilities/default.json` scopes `"windows": ["main"]`) and took its version
+   via `?v=` precisely because it had zero command access. In-app it inherits `main`'s
+   capabilities. Impact is nil — the surface renders a version string and static text, makes no
+   network call, and holds no secret — but it is a real reduction and is recorded, not skipped.
+5. **Deleted, confirmed first.** The 1s race guarded WINDOW CONSTRUCTION against a wedged
+   sidecar. A dialog is on screen immediately, so the version fills in asynchronously — the same
+   unbounded `getHeroicVersion()` call `HeroicVersion` and `ChangelogModal` already make.
+
+### One deviation from the ask
+
+The behind-content crossfade at `screens/Login/index.scss:51-57` was **not** ported. That rule
+slides the login page's own content away behind its overlay; About opens from a tier-2 nav panel
+with no equivalent behind-content, so there was nothing to crossfade and animating the app body
+on About-open would have been a new effect rather than a port. The 500ms Slide the todo actually
+wanted lives inside the shared `Dialog` primitive and is inherited for free.
+
+### Not anticipated by this todo
+
+- `meta/assembleRendererDist.ts` listed `about.html` in a fail-loud static-copy set, so deleting
+  the page would have thrown at BUILD time. Removed there too, with its test.
+- `src/backend/__tests__/aboutHtmlSource.test.ts` was a source gate over the deleted page; its
+  six cases errored on read. Deleted with the page.
+- Adding the new component to `meta/i18nGateScope.json` (and `i18nForkTouchedFiles.json`, which
+  it must stay a subset of) cascaded into four pinned counts in `genI18nGateScope.test.ts`.
+  Worth it: the blocking gate immediately caught a hardcoded `'GPL V3'` constant.
