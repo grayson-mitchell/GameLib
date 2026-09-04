@@ -70,7 +70,11 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'eosOverlayFlowRegistration.ts': { invoke: 8, send: 0 },
   'gameDetailsFlowRegistration.ts': { invoke: 16, send: 3 },
   'humbleFlowRegistration.ts': { invoke: 15, send: 1 },
-  'humbleLoginFlowRegistration.ts': { invoke: 4, send: 2 },
+  // Phase 40 Plan 03 (D-11): invoke 4 -> 3, send 2 -> 1 -- `humbleGetLoginUserAgent`
+  // (invoke-kind) and `humbleLoginNavigated` (send-kind) removed after a four-surface sweep
+  // found zero remaining callers (see 40-CHANNEL-RECENSUS.md); their only renderer caller was
+  // the deleted `<webview>`-era HumbleLoginSurface.
+  'humbleLoginFlowRegistration.ts': { invoke: 3, send: 1 },
   // Phase 34.6 Plan 06 (2026-08-24): invoke 5 -> 7 -- moveInstall/importGame
   // ported byte-equivalently from main.ts (D-02); send count unchanged.
   'installFlowRegistration.ts': { invoke: 7, send: 0 },

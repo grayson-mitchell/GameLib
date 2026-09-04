@@ -333,17 +333,22 @@ export function createRustLoginWindowSeam(): LoginWindowSeam {
 }
 
 /**
- * Registers this module's 6 browser-auth channels and installs the rustInvoke-backed login-window
+ * Registers this module's 4 browser-auth channels and installs the rustInvoke-backed login-window
  * seam. Called once from `handlers.ts` (module scope) -- this module owns no side effects at
  * import time beyond the imports above; the caller decides when registration happens.
+ *
+ * Phase 40 Plan 03 (D-11): was 6 channels (4 invoke + 2 send); `humbleGetLoginUserAgent` and
+ * `humbleLoginNavigated` (both send-kind) were removed after a four-surface sweep found zero
+ * remaining callers -- see this file's module docstring above and
+ * `.planning/phases/40-.../40-CHANNEL-RECENSUS.md`.
  */
 export function registerHumbleLoginFlows(): void {
-  // T-34.4.1-10: the ONE call site in the repo. Must run before any of the 6 handlers below could
-  // possibly be invoked (registration order, not request order, is what matters here -- all 6 are
+  // T-34.4.1-10: the ONE call site in the repo. Must run before any of the 4 handlers below could
+  // possibly be invoked (registration order, not request order, is what matters here -- all 4 are
   // registered synchronously in this same function before it returns).
   setLoginWindowSeam(createRustLoginWindowSeam())
 
-  // ── invoke (4) ──────────────────────────────────────────────────────────────────────────────
+  // ── invoke (3) ──────────────────────────────────────────────────────────────────────────────
 
   ipcMain.handle('humbleStartLogin', async () => {
     try {
@@ -388,7 +393,7 @@ export function registerHumbleLoginFlows(): void {
     }
   )
 
-  // ── send (2) ────────────────────────────────────────────────────────────────────────────────
+  // ── send (1) ────────────────────────────────────────────────────────────────────────────────
 
   ipcMain.on('humbleStopLogin', () => {
     void (async () => {
