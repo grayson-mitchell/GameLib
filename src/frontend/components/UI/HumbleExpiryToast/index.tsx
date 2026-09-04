@@ -9,6 +9,7 @@ import {
 
 import ContextProvider from 'frontend/state/ContextProvider'
 import { humbleLoginPath } from 'frontend/screens/Login'
+import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import './index.scss'
 
 // D-09: the ONLY correct surface for the reconnect prompt is a non-blocking,
@@ -31,6 +32,14 @@ export default function HumbleExpiryToast() {
   // (successful reconnect) and later flips true again.
   const shownForCurrentExpiry = useRef(false)
   const [visible, setVisible] = useState(false)
+
+  // Phase 40 Plan 06 (D-18/D-20): this component is permanently mounted
+  // (it's a sibling of the routed `<Outlet/>` in `App.tsx`'s `Root()`, not
+  // rendered/unmounted per appearance -- the `if (!visible) return null`
+  // below is a render-output early-out, not a mount/unmount), so suppression
+  // is acquired while `visible` is true rather than for the whole mounted
+  // lifetime, mirroring `Dropdown`'s `isExpanded` wiring.
+  useSuppressStoreEmbedWhile(visible)
 
   useEffect(() => {
     const isExpired = !!humble.expired

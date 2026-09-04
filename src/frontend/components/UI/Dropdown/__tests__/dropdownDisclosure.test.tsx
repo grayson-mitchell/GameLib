@@ -9,7 +9,14 @@
  * returned React-element object graph is inspected without a DOM. The
  * `tsconfig.json` `jsx: "react-jsx"` automatic runtime means JSX element
  * creation goes through `react/jsx-runtime`, not the mocked `react` module,
- * so only the hook (`useState`) needs mocking here.
+ * so only the hooks actually called in `Dropdown`'s body need mocking here.
+ *
+ * Phase 40 Plan 06 (D-18/D-20) added `useSuppressStoreEmbedWhile(isExpanded)`
+ * to this component, which itself calls `useContext`/`useEffect` -- both
+ * are now mocked below (the `useTauriOAuthLogin.test.tsx` slot/dep-array
+ * harness style) alongside the pre-existing `useState` mock, or every call
+ * to `Dropdown(...)` in this file would throw "Invalid hook call" (there is
+ * no active React dispatcher outside a real render).
  *
  * The second describe block is a SOURCE-TEXT gate on `Dropdown/index.scss`
  * and proves only that the popup-geometry declarations are gone from
@@ -32,6 +39,19 @@ jest.mock('react', () => {
   const actualReact = jest.requireActual<typeof import('react')>('react')
   let stateSlots: unknown[] = []
   let stateCursor = 0
+  let effectDeps: (unknown[] | undefined)[] = []
+  let effectCleanups: (void | (() => void))[] = []
+  let effectCursor = 0
+  let contextValue: unknown = { acquire: () => {}, release: () => {} }
+
+  const depsChanged = (
+    prev: unknown[] | undefined,
+    next: unknown[] | undefined
+  ): boolean => {
+    if (!prev || !next) return true
+    if (prev.length !== next.length) return true
+    return prev.some((d, i) => !Object.is(d, next[i]))
+  }
 
   return {
     ...actualReact,
@@ -49,12 +69,35 @@ jest.mock('react', () => {
       }
       return [stateSlots[idx], setState]
     },
+    useContext: () => contextValue,
+    useEffect: (effect: () => void | (() => void), deps?: unknown[]) => {
+      const idx = effectCursor++
+      if (depsChanged(effectDeps[idx], deps)) {
+        const priorCleanup = effectCleanups[idx]
+        if (typeof priorCleanup === 'function') priorCleanup()
+        effectDeps[idx] = deps
+        effectCleanups[idx] = effect()
+      }
+    },
+    __setContextValue: (value: unknown) => {
+      contextValue = value
+    },
     __beginRender: () => {
       stateCursor = 0
+      effectCursor = 0
     },
     __resetMount: () => {
       stateSlots = []
       stateCursor = 0
+      effectDeps = []
+      effectCleanups = []
+      effectCursor = 0
+    },
+    __unmount: () => {
+      for (const cleanup of effectCleanups) {
+        if (typeof cleanup === 'function') cleanup()
+      }
+      effectCleanups = []
     }
   }
 })
@@ -75,6 +118,8 @@ import Dropdown from '../index'
 type HookHarness = {
   __beginRender: () => void
   __resetMount: () => void
+  __setContextValue: (value: unknown) => void
+  __unmount: () => void
 }
 
 function harness(): HookHarness {
@@ -196,6 +241,61 @@ describe('Dropdown disclosure behaviour', () => {
     const tree = mount()
 
     expect(String(button(tree).props.className)).toContain('dropdownButton')
+  })
+})
+
+describe('Dropdown acquires store-embed suppression while expanded (Phase 40 Plan 06, D-18/D-20)', () => {
+  let acquire: jest.Mock
+  let release: jest.Mock
+
+  beforeEach(() => {
+    gamepadAction.mockReset()
+    acquire = jest.fn()
+    release = jest.fn()
+    harness().__setContextValue({ acquire, release })
+  })
+
+  it('does not acquire on first mount while collapsed', () => {
+    mount()
+
+    expect(acquire).not.toHaveBeenCalled()
+    expect(release).not.toHaveBeenCalled()
+  })
+
+  it('acquires exactly once when a click expands the panel', () => {
+    mount()
+    let tree = reinvoke()
+    ;(button(tree).props.onClick as () => void)()
+    tree = reinvoke()
+
+    expect(acquire).toHaveBeenCalledTimes(1)
+    expect(release).not.toHaveBeenCalled()
+  })
+
+  it('releases when a second click collapses the panel again', () => {
+    mount()
+    let tree = reinvoke()
+    ;(button(tree).props.onClick as () => void)()
+    tree = reinvoke()
+    ;(button(tree).props.onClick as () => void)()
+    tree = reinvoke()
+
+    expect(acquire).toHaveBeenCalledTimes(1)
+    expect(release).toHaveBeenCalledTimes(1)
+  })
+
+  it('releases on unmount while still expanded -- the navigate-away-while-open case', () => {
+    mount()
+    const tree = reinvoke()
+    ;(button(tree).props.onClick as () => void)()
+    reinvoke()
+
+    expect(acquire).toHaveBeenCalledTimes(1)
+    expect(release).not.toHaveBeenCalled()
+
+    harness().__unmount()
+
+    expect(release).toHaveBeenCalledTimes(1)
   })
 })
 

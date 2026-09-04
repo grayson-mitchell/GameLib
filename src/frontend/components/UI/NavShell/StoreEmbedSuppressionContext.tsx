@@ -194,3 +194,24 @@ export function useSuppressStoreEmbed(): void {
     return () => release()
   }, [acquire, release])
 }
+
+/**
+ * Acquires suppression for as long as `active` is true, releasing when it
+ * becomes false or the caller unmounts. `useSuppressStoreEmbed()` above
+ * assumes the calling component only EXISTS in the tree while open (true
+ * for `Dialog`, per T-40-06-01); this variant is for the opposite shape --
+ * a component that is permanently mounted and toggles a boolean it already
+ * tracks (the tier-2 portal dropdown's `isExpanded`, the Humble expiry
+ * toast's `visible`, the onboarding tour's `activeTour !== null`, per D-36).
+ * Same reference-counted context underneath, same symmetric acquire/release
+ * discipline -- only the trigger differs.
+ */
+export function useSuppressStoreEmbedWhile(active: boolean): void {
+  const { acquire, release } = useContext(StoreEmbedSuppressionContext)
+
+  useEffect(() => {
+    if (!active) return undefined
+    acquire()
+    return () => release()
+  }, [active, acquire, release])
+}

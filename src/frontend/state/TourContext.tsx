@@ -6,6 +6,7 @@ import React, {
   useMemo,
   ReactNode
 } from 'react'
+import { useSuppressStoreEmbedWhile } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 
 // Define the shape of our tour state
 type TourState = {
@@ -114,6 +115,15 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const [tourState, setTourState] = useState<TourState>(() =>
     readPersistedTourState(localStorage.getItem('heroic-tour-state'))
   )
+
+  // Phase 40 Plan 06 (D-18/D-20/D-36): keyed off `activeTour !== null` --
+  // the tour's ACTIVE state, not any individual step's element -- so one
+  // acquisition spans the whole multi-step lifecycle (`startTour()` through
+  // `endTour()`), rather than releasing and re-acquiring between steps as
+  // intro.js tears down and rebuilds its tooltip DOM per step. A per-step
+  // acquire/release would create a suppression gap between steps, during
+  // which the native embed would flash back on top for a frame.
+  useSuppressStoreEmbedWhile(tourState.activeTour !== null)
 
   // Save state to localStorage whenever it changes -- minus `activeTour`,
   // which is session-only (see `readPersistedTourState`). This is the half

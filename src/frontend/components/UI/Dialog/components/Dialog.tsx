@@ -17,6 +17,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close'
 
 import ContextProvider from 'frontend/state/ContextProvider'
+import { useSuppressStoreEmbed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 
 interface DialogProps {
   className?: string
@@ -66,6 +67,15 @@ export const Dialog: React.FC<DialogProps> = ({
 }) => {
   const [open, setOpen] = useState(true)
   const { disableDialogBackdropClose } = useContext(ContextProvider)
+
+  // Phase 40 Plan 06 (D-18/D-20/T-40-06-01): called unconditionally, not
+  // gated on `open` -- `Dialog` only exists in the tree while it is open
+  // (there is no closed-but-mounted state; `close()` calls the parent's
+  // `onClose`, which unmounts it), so mounting IS the acquisition. This one
+  // edit is what makes every one of this primitive's ~25 consumers --
+  // including `LoginWarning` and any future dialog -- suppress the store
+  // embed while open, with no per-call-site wiring required.
+  useSuppressStoreEmbed()
 
   useEffect(() => {
     // HACK: Focussing the dialog using JS does not seem to work
