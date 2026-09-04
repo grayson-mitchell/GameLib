@@ -40,6 +40,23 @@
  * `WebViewOAuthNavigation.test.ts` is the established precedent for gating this exact file via
  * its source text; this follows that structure, including its self-test-against-synthetic-
  * regressed-sources anti-vacuity requirement.
+ *
+ * Phase 40 Plan 01 (REQ-40-10). Verdict: RE-POINT, no functional change needed. This plan
+ * retired Model A wholesale from `WebView/index.tsx` (deleted the `<webview>` render, its
+ * `handleAmazonLogin`, and the surrounding conditional structure this effect's rationale
+ * references), which raised the question of whether this gate's markers still exist at the
+ * same relative position and its invariant still holds. Measured directly against the
+ * rewritten file rather than assumed: the `/loginweb/nile` effect (`extractNileEffectBody`'s
+ * `pathname !== '/loginweb/nile'` ... `}, [pathname])` markers) is untouched -- it was already
+ * a no-op effect body pre-dating this plan (Phase 35 plan 17's own zero-calls fix), and this
+ * plan's Model A deletions lived entirely in the JSX return path below it, not in this effect.
+ * `amazon.getLoginData()` still appears zero times in the file; `useTauriOAuthLogin.ts` (not
+ * touched by this plan) still owns exactly one `getAmazonLoginData()` call; the raw source
+ * still carries the spawn-tax rationale comment. All four assertions below continue to hold
+ * against the post-retirement source, unmodified. RE-POINT rather than RE-DERIVE because the
+ * property being measured (call count at this site) did not change in kind or strength --
+ * Model A's deletion removed dead consumers of `amazonLoginData`'s *result*
+ * (`handleAmazonLogin`, the `<webview src>`), not the fetch-suppression this gate defends.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'

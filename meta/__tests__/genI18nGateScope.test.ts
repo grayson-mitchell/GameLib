@@ -227,6 +227,21 @@ const FIXTURE_DIFF_LINES = [
  * unparseable by this jsdom-less jest config, so it is not scope-eligible at
  * all. Hand-edited surgically, NOT regenerated -- the regen is measured to take
  * this suite from 1 failure to 5, and it did not recur here (36/36 green).
+ *
+ * 2026-09-04 (Phase 40 Plan 01, REQ-40-10, RE-DERIVE): fork-touched 210 -> 208,
+ * unscanned UNCHANGED at 46 (both removed files were already scope-ineligible
+ * debt, never in the committed `i18nGateScope.json`, so `forkTouched - scope`
+ * loses exactly the same two entries it already counted). Two entries REMOVED
+ * because Task 2 of that plan DELETED both files outright as part of retiring
+ * Model A (the renderer-owned `<webview>`): `components/UI/WebviewControls/index.tsx`
+ * (the deleted store-chrome component) and
+ * `screens/WebView/components/humbleLoginChromeCss.ts` (the deleted renderer-side
+ * CSS-attach helper, whose only consumer was `HumbleLoginSurface.tsx`'s now-removed
+ * `useLayoutEffect`). Same precedent as `260901-w9e`: a deleted file leaves the
+ * artifact. Hand-edited surgically via `pnpm gen-i18n-gate-scope`'s own two-line
+ * diff, then reverted and re-applied by hand with `generatedAt` held constant --
+ * NOT regenerated in place -- per this file's own `260903-w73` note that a live
+ * regen here is measured to cascade beyond the intended edit.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/Tour/Tour.tsx',
@@ -239,7 +254,6 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/ProgressDialog/index.tsx',
   'src/frontend/components/UI/SliderField/index.tsx',
   'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
-  'src/frontend/components/UI/WebviewControls/index.tsx',
   'src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx',
   'src/frontend/components/UI/Winetricks/index.tsx',
   'src/frontend/helpers/declaredUnavailable.ts',
@@ -272,7 +286,6 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Settings/sections/SyncSaves/gog.tsx',
   'src/frontend/screens/Settings/sections/SyncSaves/legendary.tsx',
   'src/frontend/screens/WebView/components/HumbleLoginSurface.tsx',
-  'src/frontend/screens/WebView/components/humbleLoginChromeCss.ts',
   'src/frontend/state/InstallProgress.ts',
   'src/frontend/state/TourContext.tsx'
 ]
@@ -708,7 +721,7 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 210 files of
+   * The snapshot a real regeneration would produce TODAY: the 208 files of
    * the committed fork-touched artifact (35-24: 199 -> 205, six files that
    * phase touched -- `PathSelectionBox/index.tsx`, `WebviewControls/index.tsx`,
    * `DownloadManager/index.tsx`, `CategoriesManager/index.tsx`,
@@ -716,7 +729,7 @@ describe('--rewrite-scope guard', () => {
    * gap-closure follow-up: 205 -> 206, `Winetricks/WinetricksSearch/index.tsx`,
    * touched by 35-25's `366e719bb` after 35-24's re-baseline had already
    * landed). Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 164 -> 210 delta this task exists to
+   * so the specs below assert the REAL 164 -> 208 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -742,10 +755,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 164-file hand-curated snapshot and the fresh snapshot is the REAL 210', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 164-file hand-curated snapshot and the fresh snapshot is the REAL 208', () => {
     expect(scopeSnapshot.files.length).toBe(164)
-    expect(forkTouchedSnapshot.files.length).toBe(210)
-    expect(freshSnapshot().files.length).toBe(210)
+    expect(forkTouchedSnapshot.files.length).toBe(208)
+    expect(freshSnapshot().files.length).toBe(208)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -771,7 +784,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 164 -> 210 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 164 -> 208 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -794,7 +807,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 210', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 208', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -807,12 +820,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(210)
+    expect(rewritten.files.length).toBe(208)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 210 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 208 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -825,7 +838,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(210)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(208)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

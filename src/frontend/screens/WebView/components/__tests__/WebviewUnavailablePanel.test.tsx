@@ -177,61 +177,107 @@ describe('WebviewUnavailablePanel — no navigator.clipboard reference (Group 2)
   })
 })
 
-describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 rider, Group 3)', () => {
+describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 rider, Group 3, INVERT)', () => {
   const webViewIndexPath = join(__dirname, '..', '..', 'index.tsx')
 
-  /** Extracts the balanced-brace block body starting at the first `{` after `marker`. */
-  function extractBlock(source: string, marker: string): string {
+  /**
+   * Phase 40 Plan 01 (D-09/D-10, REQ-40-10). Verdict: INVERT.
+   *
+   * The guard string this gate used to anchor on, `if (!webviewPreloadPath)`, no longer exists
+   * -- Task 2 of that plan hoisted both of its arms to unconditional returns, because
+   * `getWebviewPreloadPath` (`appShellFlowRegistration.ts`, D-12) always returns a declared-empty
+   * string under Tauri and the guard was therefore always true. The gate's PURPOSE survives the
+   * guard's deletion and gets sharper: instead of extracting a named guard's block (which a
+   * regression could dodge by naming a NEW guard, or by nesting the two arms one level deeper
+   * without touching either arm's own content), this extracts the `WebView` component's whole
+   * function body and asserts the two-arm shape structurally, by position and brace depth, not by
+   * searching for any particular guard's name.
+   */
+  function extractFunctionBody(source: string, marker: string): string {
     const markerIdx = source.indexOf(marker)
     if (markerIdx === -1) {
       throw new Error(`marker not found: ${marker}`)
     }
-    const braceStart = source.indexOf('{', markerIdx)
-    let depth = 0
-    let i = braceStart
+    // Skip past the parameter list by paren-depth, not by the first `{` after the marker -- a
+    // destructured parameter (none here, but self-tests below use plain functions too) would
+    // otherwise make `indexOf('{', markerIdx)` land on the PARAMETER list's brace instead of the
+    // function body's own opening brace.
+    const parenStart = source.indexOf('(', markerIdx)
+    let parenDepth = 0
+    let i = parenStart
     for (; i < source.length; i++) {
-      if (source[i] === '{') depth++
-      else if (source[i] === '}') {
+      if (source[i] === '(') parenDepth++
+      else if (source[i] === ')') {
+        parenDepth--
+        if (parenDepth === 0) {
+          i++
+          break
+        }
+      }
+    }
+    const braceStart = source.indexOf('{', i)
+    let depth = 0
+    let j = braceStart
+    for (; j < source.length; j++) {
+      if (source[j] === '{') depth++
+      else if (source[j] === '}') {
         depth--
         if (depth === 0) break
       }
     }
-    return source.slice(braceStart, i + 1)
+    return source.slice(braceStart, j + 1)
+  }
+
+  /** Counts the net brace depth of `source` at the point just before `index`. */
+  function braceDepthBefore(source: string, index: number): number {
+    let depth = 0
+    for (let k = 0; k < index; k++) {
+      if (source[k] === '{') depth++
+      else if (source[k] === '}') depth--
+    }
+    return depth
   }
 
   /**
-   * The gate under test (D-06's rider, proven not asserted): the
-   * `!webviewPreloadPath` block must contain, IN ORDER: a login arm gated
-   * on `isLoginPathname(pathname)` rendering `TauriLoginPanel`, followed
-   * UNCONDITIONALLY (no guarding `if (` of any name/shape in front of it —
-   * this is what makes the check structural rather than name-specific) by
-   * a store/wiki arm rendering `WebviewUnavailablePanel` (and NOT
+   * The gate under test: the `WebView` function body must contain, IN ORDER: a login arm gated
+   * on `isLoginPathname(pathname)` rendering `TauriLoginPanel`, followed UNCONDITIONALLY (no
+   * guarding `if (` of any name/shape in front of it, AND not nested one level deeper inside a
+   * reintroduced wrapper of any name -- this is what makes the check structural rather than
+   * name-specific) by a store/wiki arm rendering `WebviewUnavailablePanel` (and NOT
    * `TauriLoginPanel`) that names the pathname via `window.api.logInfo`.
    */
   function hasTwoDistinctArms(strippedSource: string): boolean {
-    let outerBlock: string
+    let functionBody: string
     try {
-      outerBlock = extractBlock(strippedSource, 'if (!webviewPreloadPath)')
+      functionBody = extractFunctionBody(strippedSource, 'function WebView')
     } catch {
       return false
     }
 
-    const loginConditionIdx = outerBlock.indexOf('isLoginPathname(pathname)')
+    const loginConditionIdx = functionBody.indexOf('isLoginPathname(pathname)')
     if (loginConditionIdx === -1) return false
-    const loginArmStart = outerBlock.lastIndexOf('if (', loginConditionIdx)
+    const loginArmStart = functionBody.lastIndexOf('if (', loginConditionIdx)
     if (loginArmStart === -1) return false
+
+    // Structural, not name-specific: the login arm's own `if (` must sit directly inside the
+    // function body (brace depth 1, i.e. the function body's own opening brace and nothing
+    // else) -- not nested one level deeper inside a reintroduced wrapper guard of any name. A
+    // regression that re-wraps BOTH arms behind a fresh guard (mirroring the exact shape of the
+    // deleted `!webviewPreloadPath` guard, just renamed) must fail this check even though the
+    // login/store arms themselves are otherwise untouched.
+    if (braceDepthBefore(functionBody, loginArmStart) !== 1) return false
 
     let loginBlock: string
     try {
-      loginBlock = extractBlock(outerBlock.slice(loginArmStart), 'if (')
+      loginBlock = extractFunctionBody(functionBody.slice(loginArmStart), 'if (')
     } catch {
       return false
     }
     const loginArmRendersLoginPanel = loginBlock.includes('TauriLoginPanel')
 
-    const loginBlockEndInOuter =
-      outerBlock.indexOf(loginBlock, loginArmStart) + loginBlock.length
-    const afterLogin = outerBlock.slice(loginBlockEndInOuter)
+    const loginBlockEndInBody =
+      functionBody.indexOf(loginBlock, loginArmStart) + loginBlock.length
+    const afterLogin = functionBody.slice(loginBlockEndInBody)
 
     // Structural, not name-specific: the store/wiki arm must not be
     // guarded by ANY `if (` immediately following the login arm's close
@@ -263,9 +309,7 @@ describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 ride
   it('self-test: the gate REJECTS a synthetic source where both arms were merged into one unconditional return', () => {
     const merged = [
       'function WebView() {',
-      '  if (!webviewPreloadPath) {',
-      '    return <></>',
-      '  }',
+      '  return <></>',
       '}'
     ].join('\n')
 
@@ -275,14 +319,12 @@ describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 ride
   it('self-test: the gate REJECTS a synthetic source where the store/wiki arm was silently re-gated behind a guard (stale-guard regression)', () => {
     const reGated = [
       'function WebView() {',
-      '  if (!webviewPreloadPath) {',
-      '    if (isLoginPathname(pathname)) {',
-      '      return <TauriLoginPanel runner={runner} />',
-      '    }',
-      '    if (guardCheck()) {',
-      '      window.api.logInfo("gap")',
-      '      return <WebviewUnavailablePanel url={startUrl} />',
-      '    }',
+      '  if (isLoginPathname(pathname)) {',
+      '    return <TauriLoginPanel runner={runner} />',
+      '  }',
+      '  if (guardCheck()) {',
+      '    window.api.logInfo("gap")',
+      '    return <WebviewUnavailablePanel url={startUrl} />',
       '  }',
       '}'
     ].join('\n')
@@ -293,13 +335,11 @@ describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 ride
   it('self-test: the gate REJECTS a synthetic source where the store/wiki arm was silently changed to also render TauriLoginPanel (wrong-panel regression)', () => {
     const wrongPanel = [
       'function WebView() {',
-      '  if (!webviewPreloadPath) {',
-      '    if (isLoginPathname(pathname)) {',
-      '      return <TauriLoginPanel runner={runner} />',
-      '    }',
-      '    window.api.logInfo("gap")',
+      '  if (isLoginPathname(pathname)) {',
       '    return <TauriLoginPanel runner={runner} />',
       '  }',
+      '  window.api.logInfo("gap")',
+      '  return <TauriLoginPanel runner={runner} />',
       '}'
     ].join('\n')
 
@@ -309,7 +349,21 @@ describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 ride
   it('self-test: the gate ACCEPTS the exact shape the real source uses (positive control, proves the gate is not vacuously false either)', () => {
     const correctShape = [
       'function WebView() {',
-      '  if (!webviewPreloadPath) {',
+      '  if (isLoginPathname(pathname)) {',
+      '    return <TauriLoginPanel runner={runner} />',
+      '  }',
+      '  window.api.logInfo("gap, pathname=x")',
+      '  return <WebviewUnavailablePanel url={startUrl} />',
+      '}'
+    ].join('\n')
+
+    expect(hasTwoDistinctArms(correctShape)).toBe(true)
+  })
+
+  it('self-test (FIFTH, INVERT anti-regression): the gate REJECTS a synthetic source where the deleted guard was RE-ADDED under an entirely new name, wrapping BOTH arms exactly as `!webviewPreloadPath` used to', () => {
+    const reintroducedGuard = [
+      'function WebView() {',
+      '  if (someFreshlyNamedGuard()) {',
       '    if (isLoginPathname(pathname)) {',
       '      return <TauriLoginPanel runner={runner} />',
       '    }',
@@ -319,6 +373,6 @@ describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 ride
       '}'
     ].join('\n')
 
-    expect(hasTwoDistinctArms(correctShape)).toBe(true)
+    expect(hasTwoDistinctArms(reintroducedGuard)).toBe(false)
   })
 })

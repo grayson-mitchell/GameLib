@@ -1,180 +1,47 @@
 /**
- * Behavioural tests for `attachHumbleLoginChromeCss` (quick task 260822-di1, Task 3) against a
- * hand-rolled fake webview object -- no jsdom, no react. Plus a source-text structural gate on
- * `HumbleLoginSurface.tsx`'s wiring, mirroring `HumbleLoginWatchErrorHandling.test.ts`'s own
- * precedent (nothing in that file can be rendered without jsdom, which is not installed here).
+ * Phase 40 Plan 01 (D-09/D-10, REQ-40-10). Verdict: RETIRE.
+ *
+ * This file used to hold two things: (1) behavioural tests for the renderer-side
+ * `attachHumbleLoginChromeCss` helper (`../components/humbleLoginChromeCss.ts`), and (2) a
+ * source-text structural gate on `HumbleLoginSurface.tsx`'s Model A wiring -- the
+ * `useLayoutEffect` that called it, and the D-17 navigation relay `useLayoutEffect` that called
+ * `window.api.humbleLoginNavigated()` on every `did-navigate`/`did-navigate-in-page` event.
+ *
+ * Both are gone. `humbleLoginChromeCss.ts` was deleted outright in this plan's Task 2 (its only
+ * consumer was the deleted `<webview>` render); `HumbleLoginSurface.tsx` no longer has a
+ * `useLayoutEffect` calling it, nor a D-17 navigation relay. RETIRING (not weakening) every
+ * assertion below that referenced either: the `attachHumbleLoginChromeCss` behavioural suite in
+ * full (its subject no longer exists -- importing it would be a compile error, per the
+ * planning_findings note this plan measured), and the source-text gate's
+ * `attachHumbleLoginChromeCss` import check, `useLayoutEffect`/`[webviewRef.current]` dependency
+ * check, the "no bare insertCSS/dom-ready" checks (their whole premise was the now-deleted
+ * wiring), and the `window.api.humbleLoginNavigated()` toContain pin that plan-time measurement
+ * (`40-01-PLAN.md` planning_findings #3) named directly.
+ *
+ * `humbleLoginNavigated` the CHANNEL (its backend registration, not this renderer call site) is
+ * explicitly OUT OF SCOPE for this plan -- it is re-censused in plan `40-03` alongside D-11,
+ * since a native Humble login path may still need to drive the same cookie-revalidation
+ * behaviour from Rust. Nothing here asserts on the channel's backend registration; only the
+ * renderer-side call site (deleted along with the relay effect it lived in) is retired.
+ *
+ * `common/humble/loginChromeCss.ts` itself SURVIVES this plan untouched -- it has three other
+ * importers (`src/backend/humble/__tests__/loginChromeCss.test.ts`,
+ * `src/backend/__tests__/loginChromeCssInjection.test.ts`, and the backend CSS-injection path)
+ * and is exercised by ITS OWN test files, not this one. Nothing in this file touched it in
+ * isolation from the deleted renderer helper, so there is no assertion here that "only touches
+ * `common/humble/loginChromeCss`" to carry forward unedited.
+ *
+ * What replaces the retired suite: a structural regression gate proving the deletion holds --
+ * `HumbleLoginSurface.tsx` renders `TauriLoginPanel` unconditionally and imports neither
+ * `attachHumbleLoginChromeCss` nor `WebviewTag`, and no longer calls
+ * `window.api.humbleLoginNavigated()`. This is the same "prove a guard cannot quietly reappear"
+ * discipline the sibling `WebviewUnavailablePanel.test.tsx` INVERT applies to the store/wiki arm.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { stripSourceComments } from 'backend/testUtils/stripSourceComments'
-import {
-  attachHumbleLoginChromeCss,
-  HumbleLoginChromeCssWebview
-} from '../components/humbleLoginChromeCss'
-import { HUMBLE_LOGIN_CHROME_CSS } from 'common/humble/loginChromeCss'
 
-/** Records (type, listener) pairs so tests can fire an event by invoking the recorded listener directly. */
-function makeFakeWebview(overrides: {
-  getURL?: () => string
-  insertCSS?: (css: string) => Promise<string>
-}): {
-  webview: HumbleLoginChromeCssWebview
-  fire: (type: string) => void
-  listenerFor: (type: string) => (() => void) | undefined
-  insertCSSCalls: string[]
-} {
-  const listeners = new Map<string, () => void>()
-  const insertCSSCalls: string[] = []
-
-  const webview: HumbleLoginChromeCssWebview = {
-    getURL: overrides.getURL ?? (() => ''),
-    insertCSS: (css: string) => {
-      insertCSSCalls.push(css)
-      return overrides.insertCSS
-        ? overrides.insertCSS(css)
-        : Promise.resolve('')
-    },
-    addEventListener: (type, listener) => {
-      listeners.set(type, listener)
-    },
-    removeEventListener: (type, listener) => {
-      if (listeners.get(type) === listener) {
-        listeners.delete(type)
-      }
-    }
-  }
-
-  return {
-    webview,
-    fire: (type: string) => {
-      const listener = listeners.get(type)
-      listener?.()
-    },
-    listenerFor: (type: string) => listeners.get(type),
-    insertCSSCalls
-  }
-}
-
-describe('attachHumbleLoginChromeCss', () => {
-  test('registers exactly one listener, of type dom-ready', () => {
-    const registered: Array<{ type: string; listener: () => void }> = []
-    const webview: HumbleLoginChromeCssWebview = {
-      getURL: () => '',
-      insertCSS: () => Promise.resolve(''),
-      addEventListener: (type, listener) => {
-        registered.push({ type, listener })
-      },
-      removeEventListener: () => undefined
-    }
-    attachHumbleLoginChromeCss(webview)
-    expect(registered.length).toBe(1)
-    expect(registered[0].type).toBe('dom-ready')
-  })
-
-  test('firing dom-ready on a qualifying humblebundle.com URL calls insertCSS exactly once with HUMBLE_LOGIN_CHROME_CSS', () => {
-    const { webview, fire, insertCSSCalls } = makeFakeWebview({
-      getURL: () => 'https://www.humblebundle.com/login'
-    })
-    attachHumbleLoginChromeCss(webview)
-    fire('dom-ready')
-    expect(insertCSSCalls).toEqual([HUMBLE_LOGIN_CHROME_CSS])
-  })
-
-  test('firing dom-ready TWICE calls insertCSS twice (navigation-reapply case, idempotence would be a bug)', () => {
-    const { webview, fire, insertCSSCalls } = makeFakeWebview({
-      getURL: () => 'https://www.humblebundle.com/login'
-    })
-    attachHumbleLoginChromeCss(webview)
-    fire('dom-ready')
-    fire('dom-ready')
-    expect(insertCSSCalls.length).toBe(2)
-  })
-
-  test('firing dom-ready on accounts.google.com calls insertCSS zero times', () => {
-    const { webview, fire, insertCSSCalls } = makeFakeWebview({
-      getURL: () => 'https://accounts.google.com/signin'
-    })
-    attachHumbleLoginChromeCss(webview)
-    fire('dom-ready')
-    expect(insertCSSCalls.length).toBe(0)
-  })
-
-  test('firing dom-ready on the look-alike host humblebundle.com.evil.example calls insertCSS zero times', () => {
-    const { webview, fire, insertCSSCalls } = makeFakeWebview({
-      getURL: () => 'https://humblebundle.com.evil.example/login'
-    })
-    attachHumbleLoginChromeCss(webview)
-    fire('dom-ready')
-    expect(insertCSSCalls.length).toBe(0)
-  })
-
-  test('getURL() returning an empty string calls insertCSS zero times and does not throw', () => {
-    const { webview, fire, insertCSSCalls } = makeFakeWebview({
-      getURL: () => ''
-    })
-    attachHumbleLoginChromeCss(webview)
-    expect(() => fire('dom-ready')).not.toThrow()
-    expect(insertCSSCalls.length).toBe(0)
-  })
-
-  test('getURL() throwing does not propagate', () => {
-    const { webview, fire, insertCSSCalls } = makeFakeWebview({
-      getURL: () => {
-        throw new Error('getURL exploded')
-      }
-    })
-    attachHumbleLoginChromeCss(webview)
-    expect(() => fire('dom-ready')).not.toThrow()
-    expect(insertCSSCalls.length).toBe(0)
-  })
-
-  test('insertCSS returning a rejected promise does not produce an unhandled rejection and does not throw', async () => {
-    const { webview, fire } = makeFakeWebview({
-      getURL: () => 'https://www.humblebundle.com/login',
-      insertCSS: () => Promise.reject(new Error('insertCSS rejected'))
-    })
-    attachHumbleLoginChromeCss(webview)
-    expect(() => fire('dom-ready')).not.toThrow()
-    // Await a microtask tick so the rejection has a chance to surface as unhandled if the
-    // implementation did not `.catch()` it -- jest/Node would otherwise report it separately.
-    await Promise.resolve()
-    await Promise.resolve()
-  })
-
-  test('insertCSS throwing SYNCHRONOUSLY does not propagate', () => {
-    const { webview, fire } = makeFakeWebview({
-      getURL: () => 'https://www.humblebundle.com/login',
-      insertCSS: () => {
-        throw new Error('insertCSS threw synchronously')
-      }
-    })
-    attachHumbleLoginChromeCss(webview)
-    expect(() => fire('dom-ready')).not.toThrow()
-  })
-
-  test('the returned cleanup removes the same listener reference that was added', () => {
-    let addedListener: (() => void) | undefined
-    let removedType: string | undefined
-    let removedListener: (() => void) | undefined
-    const webview: HumbleLoginChromeCssWebview = {
-      getURL: () => '',
-      insertCSS: () => Promise.resolve(''),
-      addEventListener: (_type, listener) => {
-        addedListener = listener
-      },
-      removeEventListener: (type, listener) => {
-        removedType = type
-        removedListener = listener
-      }
-    }
-    const cleanup = attachHumbleLoginChromeCss(webview)
-    cleanup()
-    expect(removedType).toBe('dom-ready')
-    expect(removedListener).toBe(addedListener)
-  })
-})
-
-describe('HumbleLoginSurface.tsx source-text gate (no jsdom installed)', () => {
+describe('HumbleLoginSurface.tsx -- Model A wiring retired (RETIRE, REQ-40-10, plan 40-03 owns the channel-level re-census)', () => {
   const surfacePath = join(
     __dirname,
     '..',
@@ -183,41 +50,89 @@ describe('HumbleLoginSurface.tsx source-text gate (no jsdom installed)', () => {
   )
   const source = stripSourceComments(readFileSync(surfacePath, 'utf-8'))
 
-  test('imports and calls attachHumbleLoginChromeCss', () => {
-    expect(source).toContain(
-      "import { attachHumbleLoginChromeCss } from './humbleLoginChromeCss'"
+  test('no longer imports the deleted attachHumbleLoginChromeCss helper', () => {
+    expect(source).not.toContain('attachHumbleLoginChromeCss')
+  })
+
+  test('no longer imports WebviewTag', () => {
+    expect(source).not.toContain('WebviewTag')
+  })
+
+  test('no longer calls window.api.humbleLoginNavigated (D-17 relay retired with the <webview> it navigated)', () => {
+    expect(source).not.toContain('humbleLoginNavigated')
+  })
+
+  test('renders TauriLoginPanel unconditionally as its final statement', () => {
+    const returnIdx = source.lastIndexOf('return <TauriLoginPanel')
+    expect(returnIdx).toBeGreaterThan(-1)
+
+    const functionMarker = 'export default function HumbleLoginSurface'
+    const functionStart = source.indexOf(functionMarker)
+    expect(functionStart).toBeGreaterThan(-1)
+
+    // Skip past the parameter list by paren-depth (not the first `{` after the marker, which
+    // would land on the destructured `{ onDone, onCancelled }` parameter's own brace).
+    const parenStart = source.indexOf('(', functionStart)
+    let parenDepth = 0
+    let i = parenStart
+    for (; i < source.length; i++) {
+      if (source[i] === '(') parenDepth++
+      else if (source[i] === ')') {
+        parenDepth--
+        if (parenDepth === 0) {
+          i++
+          break
+        }
+      }
+    }
+    const bodyBraceStart = source.indexOf('{', i)
+
+    // Nothing between the function's own opening brace and the `TauriLoginPanel` return may
+    // leave a brace unclosed -- an `if (` reintroduced around the return would open a brace
+    // that is still unclosed at `returnIdx`, so the net depth across that span would exceed 1.
+    // Effects inside the body (the login watch's own internal `if (` branches) are fine: they
+    // close before the return, so they contribute net zero to this count.
+    let depth = 0
+    for (let k = bodyBraceStart; k < returnIdx; k++) {
+      if (source[k] === '{') depth++
+      else if (source[k] === '}') depth--
+    }
+    expect(depth).toBe(1)
+  })
+
+  test('self-test: the depth check REJECTS a synthetic source where the return was re-guarded', () => {
+    const guarded = [
+      'export default function HumbleLoginSurface({ onDone, onCancelled }) {',
+      '  if (someGuard()) {',
+      '    return <TauriLoginPanel runner="humble" state={humbleLoginState} />',
+      '  }',
+      '}'
+    ].join('\n')
+
+    const functionStart = guarded.indexOf(
+      'export default function HumbleLoginSurface'
     )
-    expect(source).toContain('attachHumbleLoginChromeCss(')
-  })
+    const parenStart = guarded.indexOf('(', functionStart)
+    let parenDepth = 0
+    let i = parenStart
+    for (; i < guarded.length; i++) {
+      if (guarded[i] === '(') parenDepth++
+      else if (guarded[i] === ')') {
+        parenDepth--
+        if (parenDepth === 0) {
+          i++
+          break
+        }
+      }
+    }
+    const bodyBraceStart = guarded.indexOf('{', i)
+    const returnIdx = guarded.lastIndexOf('return <TauriLoginPanel')
 
-  test('the call sits inside a useLayoutEffect whose dependency array is [webviewRef.current]', () => {
-    const callIdx = source.indexOf('attachHumbleLoginChromeCss(')
-    expect(callIdx).toBeGreaterThan(-1)
-    const before = source.slice(0, callIdx)
-    const lastEffectStart = before.lastIndexOf('useLayoutEffect(() => {')
-    expect(lastEffectStart).toBeGreaterThan(-1)
-    const effectEnd = source.indexOf(
-      '}, [webviewRef.current])',
-      lastEffectStart
-    )
-    expect(effectEnd).toBeGreaterThan(callIdx)
-  })
-
-  test('the file contains no literal insertCSS call of its own -- the wiring lives in the helper', () => {
-    expect(source).not.toContain('insertCSS(')
-  })
-
-  test("no bare 'dom-ready' string appears outside the helper import -- the effect delegates", () => {
-    const withoutImportLine = source
-      .split('\n')
-      .filter((line) => !line.includes('humbleLoginChromeCss'))
-      .join('\n')
-    expect(withoutImportLine).not.toContain("'dom-ready'")
-  })
-
-  test('the pre-existing D-17 did-navigate / did-navigate-in-page effect is unchanged', () => {
-    expect(source).toContain("'did-navigate'")
-    expect(source).toContain("'did-navigate-in-page'")
-    expect(source).toContain('window.api.humbleLoginNavigated()')
+    let depth = 0
+    for (let k = bodyBraceStart; k < returnIdx; k++) {
+      if (guarded[k] === '{') depth++
+      else if (guarded[k] === '}') depth--
+    }
+    expect(depth).not.toBe(1)
   })
 })
