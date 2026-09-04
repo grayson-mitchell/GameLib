@@ -1,7 +1,7 @@
 import { addHandler, addListener } from 'backend/ipc'
 import { logWarning, LogPrefix } from 'backend/logger'
 
-import { HumbleUser, standardBrowserUserAgent } from './user'
+import { HumbleUser } from './user'
 import { HumbleLibrary } from './library'
 
 /**
@@ -22,7 +22,6 @@ export function registerHumbleIpcHandlers(): void {
   addHandler('humbleGetUserInfo', () => HumbleUser.getUserDetails())
   addHandler('humbleReconnect', async () => HumbleUser.reconnect())
   addHandler('humbleCheckHealth', () => HumbleUser.checkHealthAndFlagExpiry())
-  addHandler('humbleGetLoginUserAgent', () => standardBrowserUserAgent())
   // Phase 11 (library.ts, Plan 02): sync IPC surface. These delegate to
   // HumbleLibrary and return ONLY the display-safe HumbleKey[]/HumbleSyncState
   // projections — never register humbleLibraryStore/humbleRevealedStore on
@@ -124,5 +123,4 @@ export function registerHumbleIpcHandlers(): void {
     )
   })
   addListener('humbleStopLogin', () => HumbleUser.stopLogin())
-  addListener('humbleLoginNavigated', () => HumbleUser.notifyLoginNavigated())
 }

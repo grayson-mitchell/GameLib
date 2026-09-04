@@ -18,9 +18,12 @@ import {
 } from './loginWindowSeam'
 import { getHumbleSecretStore, type HumbleSecretKey } from './secretStore'
 
-// Re-exported so existing callers (ipc_handler.ts's humbleGetLoginUserAgent
-// handler, user.test.ts) are unaffected by the round-6 move into its own
-// module (see userAgent.ts's doc comment for why the move was needed).
+// Re-exported so existing callers (user.test.ts, plus the D-08
+// GAMELIB_LOGIN_SEAM_SMOKE hook in humbleLoginFlowRegistration.ts) are
+// unaffected by the round-6 move into its own module (see userAgent.ts's doc
+// comment for why the move was needed). The `humbleGetLoginUserAgent` IPC
+// handler that used to call this via ipc_handler.ts was removed by Phase 40
+// Plan 03 (D-11) after a four-surface sweep found zero remaining callers.
 export { standardBrowserUserAgent }
 
 /**

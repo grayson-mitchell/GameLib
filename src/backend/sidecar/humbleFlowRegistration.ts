@@ -86,18 +86,20 @@
  * of disagreeing; this gate keeps calling it directly anyway, because the
  * dependency it wants is on the derivation, not on the Electron shim.
  *
- * Deliberately does NOT register the six channels Phase 34.4.1 owns
+ * Deliberately does NOT register the four channels Phase 34.4.1 owns
  * (`humbleStartLogin` `ipc_handler.ts:21`, `humbleReconnect` `:23`,
- * `humbleGetLoginUserAgent` `:25`, `humbleRevealKey` `:102`, `humbleStopLogin`
- * `:126`, `humbleLoginNavigated` `:127`) — the embedded-browser login seam
- * (Phase 34.4 D-01/D-02). Those channels stay unregistered on the sidecar and
- * keep rejecting non-fatally with `UNPORTED_CHANNEL_MARKER` per SEAM.md
- * Load-Bearing Invariant B.
+ * `humbleRevealKey` `:102`, `humbleStopLogin` `:126`) — the embedded-browser
+ * login seam (Phase 34.4 D-01/D-02). Those channels stay unregistered on the
+ * sidecar and keep rejecting non-fatally with `UNPORTED_CHANNEL_MARKER` per
+ * SEAM.md Load-Bearing Invariant B. (Phase 40 Plan 03 D-11 removed the two
+ * remaining names this comment used to list here, `humbleGetLoginUserAgent`
+ * and `humbleLoginNavigated` — a four-surface sweep found zero remaining
+ * callers of either.)
  *
  * Why this module curated-imports `humble/user.ts`, `humble/library.ts` and
  * `humble/validation.ts` directly and must NEVER side-effect-import
- * `humble/ipc_handler.ts`: that file registers all 21 Humble channels as an
- * import side effect, so importing it would prematurely claim the six
+ * `humble/ipc_handler.ts`: that file registers all 20 Humble channels as an
+ * import side effect, so importing it would prematurely claim the four
  * channels Phase 34.4.1 owns and drag `backend/ipc` into the sidecar's
  * module graph.
  */

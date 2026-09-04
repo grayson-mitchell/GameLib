@@ -1,7 +1,12 @@
 /**
- * Transport-shape + registration-kind proof for the sidecar's 6 curated browser-auth channels
+ * Transport-shape + registration-kind proof for the sidecar's 4 curated browser-auth channels
  * and their `rustInvoke`-backed login-window seam (Phase 34.4.1 Plan 02 — Task 3, Wave 0 gap 2,
  * REQ-34.4.1-02/-03/-04/-05/-13).
+ *
+ * Phase 40 Plan 03 (D-11) removed `humbleGetLoginUserAgent` and `humbleLoginNavigated` from this
+ * seam after a four-surface sweep found zero remaining callers of either channel or of
+ * `HumbleUser.notifyLoginNavigated()` directly (`.planning/phases/40-.../40-CHANNEL-RECENSUS.md`)
+ * — what was 6 channels is now 4.
  *
  * Four describe blocks:
  *   1. Registration kind — the file's reason to exist. A send-vs-handle mismatch fails 100%
@@ -13,7 +18,7 @@
  *      exists in Jest, every "Rust response" here is a synthetic line written directly into the
  *      input stream.
  *   3. Curated-import guard — `humbleLoginFlowRegistration.ts` must never import
- *      `humble/ipc_handler` (that file registers these same 6 channels a SECOND time onto
+ *      `humble/ipc_handler` (that file registers these same 4 channels a SECOND time onto
  *      Electron's real `ipcMain`, and would drag `backend/ipc` into the sidecar's curated import
  *      graph). Comment-stripped via the shared `stripSourceComments` util (quick task
  *      260726-q8f) so a docblock merely NAMING `ipc_handler.ts` cannot trip the gate.
@@ -153,14 +158,9 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
 // hazard).
 registerHumbleLoginFlows()
 
-describe('registration kind — the 6 channels are registered with the correct kind, both directions', () => {
-  const HANDLE_CHANNELS = [
-    'humbleStartLogin',
-    'humbleReconnect',
-    'humbleGetLoginUserAgent',
-    'humbleRevealKey'
-  ]
-  const SEND_CHANNELS = ['humbleStopLogin', 'humbleLoginNavigated']
+describe('registration kind — the 4 channels are registered with the correct kind, both directions', () => {
+  const HANDLE_CHANNELS = ['humbleStartLogin', 'humbleReconnect', 'humbleRevealKey']
+  const SEND_CHANNELS = ['humbleStopLogin']
 
   it.each(HANDLE_CHANNELS)(
     'REQ-34.4.1-02/-03/-04 %s is registered as ipcMain.handle, and NOT as ipcMain.on',
@@ -652,7 +652,7 @@ describe('curated-import guard — humbleLoginFlowRegistration.ts never imports 
     const synthetic = [
       '/**',
       ' * Never side-effect-import humble/ipc_handler.ts — it registers',
-      ' * these same 6 channels a second time.',
+      ' * these same 4 channels a second time.',
       ' */',
       'export function registerHumbleLoginFlows(): void {}'
     ].join('\n')

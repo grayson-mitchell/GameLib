@@ -3,26 +3,30 @@
  * D-01/D-02/D-04/D-07/D-08, REQ-34.4.1-02/REQ-34.4.1-03/REQ-34.4.1-04/REQ-34.4.1-05/
  * REQ-34.4.1-13).
  *
- * Registers the 6 browser-auth channels onto `electronStub`'s `ipcMain` recorder and installs a
+ * Registers the 4 browser-auth channels onto `electronStub`'s `ipcMain` recorder and installs a
  * `rustInvoke`-backed implementation of `LoginWindowSeam` (`backend/humble/loginWindowSeam.ts`) at
  * sidecar startup. This is the ONLY module that constructs that implementation and the ONLY call
  * site of `setLoginWindowSeam()` in the whole repo (T-34.4.1-10) -- kept in its own dedicated
  * module (rather than folded into `humbleFlowRegistration.ts`) specifically so the claim "this
- * phase adds one seam used by six channels" stays auditable from one file.
+ * phase adds one seam used by its channels" stays auditable from one file.
+ *
+ * **Phase 40 Plan 03 (D-11) removed `humbleGetLoginUserAgent` and `humbleLoginNavigated`** --
+ * both channels were dual-registered here and in `ipc_handler.ts`, but their only renderer
+ * caller (the deleted `<webview>`-era `HumbleLoginSurface`) died with Model A, and a four-surface
+ * sweep (`.planning/phases/40-.../40-CHANNEL-RECENSUS.md`) found zero remaining callers,
+ * including of `HumbleUser.notifyLoginNavigated()` directly. What was 6 channels is now 4.
  *
  * Registration-kind cross-check against `humble/ipc_handler.ts` (verified against source by
  * `34.4.1-RESEARCH.md`, zero divergence -- READ ONLY, never imported, see the curated-import
  * paragraph below):
  *
- *   invoke (ipcMain.handle, 4):
+ *   invoke (ipcMain.handle, 3):
  *     - `humbleStartLogin`         -> `ipc_handler.ts:21`  -> `HumbleUser.startLogin()`
  *     - `humbleReconnect`          -> `ipc_handler.ts:23`  -> `HumbleUser.reconnect()`
- *     - `humbleGetLoginUserAgent`  -> `ipc_handler.ts:25`  -> `standardBrowserUserAgent()`
  *     - `humbleRevealKey`          -> `ipc_handler.ts:102` -> `HumbleLibrary.revealKey(gamekey, machineName)`
  *
- *   send (ipcMain.on, 2):
+ *   send (ipcMain.on, 1):
  *     - `humbleStopLogin`      -> `ipc_handler.ts:126` -> `HumbleUser.stopLogin()`
- *     - `humbleLoginNavigated` -> `ipc_handler.ts:127` -> `HumbleUser.notifyLoginNavigated()`
  *
  * A `send` channel registered with `ipcMain.handle` (or the reverse) fails 100% SILENTLY at
  * runtime -- no reject, no timeout, no console line (`sidecar-send-channels-fail-silently` project
@@ -33,18 +37,18 @@
  * import `../humble/user`, `../humble/userAgent`, `../humble/library` and
  * `../humble/loginWindowSeam` directly (`standardBrowserUserAgent` comes straight from its own
  * `userAgent.ts` module, not through `user.ts`'s re-export, so this module's dependency on it is
- * explicit), and NEVER `../humble/ipc_handler`. That file ALSO
- * registers these same 6 channels (plus the 15 Phase 34.4 already ported) onto Electron's REAL
- * `ipcMain` at import time via `backend/ipc`'s `addHandler`/`addListener` -- a side-effect import
- * here would double-register all 21 channels this phase and Phase 34.4 own, and would drag
+ * explicit, and is still needed below by the Assumption A4 smoke hook even though the
+ * `humbleGetLoginUserAgent` channel itself is gone), and NEVER `../humble/ipc_handler`. That file
+ * ALSO registers these same 4 channels (plus the 15 Phase 34.4 already ported) onto Electron's
+ * REAL `ipcMain` at import time via `backend/ipc`'s `addHandler`/`addListener` -- a side-effect
+ * import here would double-register all 19 channels this phase and Phase 34.4 own, and would drag
  * `backend/ipc` (an Electron-only module) into the sidecar's curated import graph.
  *
  * D-07 (fail-safe, never reject): every `handle`-kind body catches and RESOLVES a safe default
  * rather than rejecting (`sidecar-dialog-reject-crashes`) -- `humbleStartLogin`/`humbleReconnect`
- * resolve `{ status: 'error' }`, `humbleGetLoginUserAgent` resolves the pure
- * `standardBrowserUserAgent()` value directly (it cannot fail), and `humbleRevealKey` resolves the
- * same typed failure outcome shape (`{ status: 'failed' }`) its own internal defensive default
- * already uses. Every `send`-kind body wraps its work in the `void (async () => {...})()` shape
+ * resolve `{ status: 'error' }`, and `humbleRevealKey` resolves the same typed failure outcome
+ * shape (`{ status: 'failed' }`) its own internal defensive default already uses. Every
+ * `send`-kind body wraps its work in the `void (async () => {...})()` shape
  * `copySystemInfoToClipboard` (`clipboardFlowRegistration.ts`) uses, so a listener rejection can
  * never become an unhandled rejection.
  *
@@ -365,10 +369,6 @@ export function registerHumbleLoginFlows(): void {
     }
   })
 
-  // Pure -- cannot fail (standardBrowserUserAgent() only string-manipulates
-  // app.userAgentFallback), so no try/catch is needed here.
-  ipcMain.handle('humbleGetLoginUserAgent', () => standardBrowserUserAgent())
-
   ipcMain.handle(
     'humbleRevealKey',
     async (_event: unknown, ...args: unknown[]) => {
@@ -396,16 +396,6 @@ export function registerHumbleLoginFlows(): void {
         HumbleUser.stopLogin()
       } catch (error) {
         logSendFailure('humbleStopLogin', error)
-      }
-    })()
-  })
-
-  ipcMain.on('humbleLoginNavigated', () => {
-    void (async () => {
-      try {
-        HumbleUser.notifyLoginNavigated()
-      } catch (error) {
-        logSendFailure('humbleLoginNavigated', error)
       }
     })()
   })

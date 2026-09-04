@@ -428,8 +428,8 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
   })
 
   // ── Negative-scope guard (requirement 4, the load-bearing one) ────────────
-  describe('negative-scope guard — the 6 channels Phase 34.4.1 owns are registered by a DIFFERENT module, never by registerHumbleFlows() itself', () => {
-    // UPDATED by Phase 34.4.1 Plan 02: these 6 channels are no longer deferred — they
+  describe('negative-scope guard — the 4 channels Phase 34.4.1 owns are registered by a DIFFERENT module, never by registerHumbleFlows() itself', () => {
+    // UPDATED by Phase 34.4.1 Plan 02: these channels are no longer deferred — they
     // are now registered by `registerHumbleLoginFlows()`
     // (`humbleLoginFlowRegistration.ts`), a module this file never imports or calls.
     // Prior to Plan 02 this block asserted these channels stayed globally UNREGISTERED,
@@ -437,22 +437,23 @@ describe('sidecar Humble library/sync + key-state flows (Phase 34.4 Plan 04, REQ
     // held while nothing else in the sidecar's module graph registered them either. Now
     // that `handlers.ts` also calls `registerHumbleLoginFlows()` at module scope (reached
     // transitively through this file's own `import { init } from '../bootstrap'`), the
-    // global registries legitimately contain all 6. The still-load-bearing claim this
-    // block exists to prove — registerHumbleFlows() itself never touches these 6 channel
+    // global registries legitimately contain all of them. The still-load-bearing claim this
+    // block exists to prove — registerHumbleFlows() itself never touches these channel
     // names — is unchanged and re-asserted below by kind, with both directions checked
     // per channel (a one-directional check cannot catch a send-vs-handle swap). Full
-    // frame-shape + rustInvoke-argument-order coverage for these 6 channels lives in
+    // frame-shape + rustInvoke-argument-order coverage for these channels lives in
     // `humbleLoginFlows.test.ts` (Plan 02 Task 3), which is this suite's positive
-    // counterpart.
+    // counterpart. Phase 40 Plan 03 (D-11) removed `humbleGetLoginUserAgent` and
+    // `humbleLoginNavigated` from this seam after a four-surface sweep found zero remaining
+    // callers of either — what was 6 channels here is now 4.
     const HANDLE_CHANNELS_34_4_1 = [
       'humbleStartLogin',
       'humbleReconnect',
-      'humbleGetLoginUserAgent',
       'humbleRevealKey'
     ]
-    const SEND_CHANNELS_34_4_1 = ['humbleStopLogin', 'humbleLoginNavigated']
+    const SEND_CHANNELS_34_4_1 = ['humbleStopLogin']
 
-    it('REQ-34.4.1-02/-03/-04/-05 registerHumbleLoginFlows() has registered all 6 channels it owns, with the correct kind, both directions', () => {
+    it('REQ-34.4.1-02/-03/-04/-05 registerHumbleLoginFlows() has registered all 4 channels it owns, with the correct kind, both directions', () => {
       for (const channel of HANDLE_CHANNELS_34_4_1) {
         expect(isolationHandlerRegistry.has(channel)).toBe(true)
         expect((isolationListenerRegistry.get(channel) ?? []).length).toBe(0)

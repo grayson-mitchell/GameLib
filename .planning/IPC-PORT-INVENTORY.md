@@ -53,8 +53,8 @@ now provably the real one, not merely the originally-transcribed one.
 
 | | Count |
 |---|---:|
-| Unique channels | 218 |
-| Ported to sidecar | 63 |
+| Unique channels | 216 |
+| Ported to sidecar | 61 |
 | **Unported** | **159** |
 
 Reconciles with SEAM.md line 366 ("~208 of the 220 total IPC endpoints ... remain") and its
@@ -265,16 +265,31 @@ reporting an **attempted** count for an operation WebKit never actually performe
 `REQ-34.4.1-GAP-05`'s rider in `.planning/REQUIREMENTS.md`. Whichever phase next holds a
 multi-origin jar owns re-running that check.
 
-## Phase 34.4.1 — the embedded-browser login seam (6 channels)
+## Phase 34.4.1 — the embedded-browser login seam (4 channels)
 
-`humbleGetLoginUserAgent`, `humbleLoginNavigated`, `humbleReconnect`, `humbleRevealKey`, `humbleStartLogin`, `humbleStopLogin`
+`humbleReconnect`, `humbleRevealKey`, `humbleStartLogin`, `humbleStopLogin`
 
-Carved out of slice 7 on 2026-07-27. Five of the six drive `HumbleUser.watchForLogin()`'s
-partition-cookie poll or the `<webview>`'s user-agent; `humbleRevealKey` is a *different*
+Carved out of slice 7 on 2026-07-27, originally 6 channels. Three of the four drive
+`HumbleUser.watchForLogin()`'s partition-cookie poll; `humbleRevealKey` is a *different*
 Chromium dependency — `humblePostRequest` (`humble/adapter.ts:264`) routes through Electron's
 `net.request` on the `persist:humble` partition specifically because Cloudflare Bot Management
 403s axios's TLS/HTTP fingerprint. **This phase runs BEFORE Phase 34.5**, whose Epic/GOG/Amazon
 logins depend on the same seam.
+
+**REMOVED 2026-09-04 (plan 40-03, D-11): `humbleGetLoginUserAgent` and `humbleLoginNavigated`.**
+Both channels' only renderer caller was `HumbleLoginSurface.tsx`, deleted by plan 40-01 when the
+`<webview>` it drove was retired. A four-surface sweep
+(`.planning/phases/40-.../40-CHANNEL-RECENSUS.md`) — TypeScript `src/` callers, `src-tauri/` Rust
+dispatch arms in every casing, direct callers of the underlying methods
+(`standardBrowserUserAgent()`/`HumbleUser.notifyLoginNavigated()`), and test-file channel-list
+pins — found zero remaining callers of either channel or, for `humbleLoginNavigated`, of the
+method it invoked. Both `VERDICT: REMOVE`. Removed from `src/preload/api/humble.ts`,
+`src/common/types/ipc.ts`, `src/backend/sidecar/humbleLoginFlowRegistration.ts`,
+`src/backend/humble/ipc_handler.ts`, and both send-channel test lists in
+`humbleLoginFlows.test.ts`/`humbleFlows.test.ts`. The underlying `standardBrowserUserAgent()` and
+`HumbleUser.notifyLoginNavigated()` functions themselves are UNCHANGED and still exist — only the
+IPC channel wiring around them was removed, per D-11's discipline that a channel can be dead while
+a native path might still need the behavior directly.
 
 ## Phase 34.5 — Slice 8 — non-Steam runners, Wine and shortcuts (58 channels)
 
@@ -486,6 +501,17 @@ touched an existing unported bucket line. The pre-existing one-channel offset be
 `## Totals` → `Unique channels` and the live `preload-surface-gate.py` union (caused by
 `getEpicGamesStatus` being bucket-pinned with no preload exposure, noted above) is unchanged by
 this edit; both numbers moved together by the same +10.
+
+**Unique channels lowered 218 → 216, Ported to sidecar lowered 63 → 61 (plan 40-03, D-11,
+2026-09-04, applied on top of 40-05's raise above):** `humbleGetLoginUserAgent` and
+`humbleLoginNavigated` were both dual-registered (Electron `ipc_handler.ts` AND the Tauri sidecar's
+`humbleLoginFlowRegistration.ts`) and both preload-exposed, so their removal decrements `Unique
+channels` and `Ported to sidecar` by 2 each, together — the same "both numbers move together"
+pattern the note directly above uses for a raise. `Unported` (159) is unchanged — neither channel
+was ever in an unported bucket line. Per CONTEXT.md's explicit instruction, the pre-existing
+one-channel `## Totals` → live-union offset (caused by `getEpicGamesStatus`) is preserved, not
+"fixed" — both removed channels were fully accounted for in the live union already, so the offset
+moves by the same −2 as the two totals it sits between and stays at exactly one channel.
 
 ## Not an IPC channel, but blocks Phase 35
 
