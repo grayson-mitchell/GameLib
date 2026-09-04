@@ -1,7 +1,7 @@
 ---
 phase: 40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we
 verified: 2026-09-05T10:40:00Z
-status: gaps_found
+status: gaps_closed_partially
 score: 11/14 requirements verified; 2 PARTIAL (REQ-40-06, REQ-40-14); 1 requirement's own gates left RED by the phase (REQ-40-10's i18n-scope pin)
 overrides_applied: 0
 verified_against_commit: cabc2c7d1
@@ -9,6 +9,65 @@ note_on_head: >
   HEAD moved to f200869e1 mid-verification (a concurrent orchestrator commit touching
   .planning/STATE.md only). `git diff --name-only cabc2c7d1..f200869e1` = one file,
   .planning/STATE.md. Zero source files differ, so every measurement below holds at HEAD.
+gap_closure:
+  closed_at: 2026-09-05
+  closed_in: [646969a63, fbf26afdf, 653e2fdd5, 63a8f7f83]
+  summary: >
+    GAP-A, GAP-B and GAP-C are FIXED and re-measured. GAP-D is FILED, not fixed,
+    by explicit operator decision. GAP-E remains OPEN and unqueued. One further
+    blocker this report MISSED was found and fixed. The original findings below
+    are retained verbatim; nothing in them has been softened or deleted.
+  gap_a: >
+    CLOSED. `pnpm lint` exits 0 at 4149 -- eight below the 4157 ratchet and four
+    below the 4153 pre-phase baseline, so the phase now returns lint debt rather
+    than adding it. Fixed at source (untyped jest mocks in the two logoutCookies
+    suites returning `any`), NOT by raising the ratchet, which would invert
+    REQ-39-01's monotonic-downward intent.
+  gap_b: >
+    CLOSED. hardcodedStringGate green. The gate already owned this decision --
+    it exempts getItem/setItem storage keys and its comment names `last-url-`
+    -- and plan 40-09 moved the literal out of that check's syntactic reach.
+    Restored via a name-gated builder-body exemption, with 4 narrowness tests.
+    The allowlist route was rejected: T-34.8-30 pins it at exactly two entries
+    and calls growing it "a decision, not a way to reach green".
+  gap_c: >
+    CLOSED, and the prescribed fix was INCOMPLETE. Following this report's
+    `missing` list verbatim (add 5 files to the fork pin, move 208 -> 213) would
+    have left A-03 red, because those five then land in the unscanned-debt set
+    unless they also enter i18nGateScope.json. Rather than declare five brand-new
+    files as permanently unscanned debt, all five were added to the SCANNED scope
+    (164 -> 169). Four are clean; the fifth needed a resolution-gated exemption
+    for its one-line window.api.logInfo wrapper (3 more narrowness tests).
+  gap_d: >
+    FILED, NOT FIXED, per operator decision. Now a real queue item at
+    .planning/todos/pending/2026-09-05-in-embed-navigation-never-reaches-the-renderer-back-forward-de.md
+    with both fix options and a definition of done requiring a test that fails
+    today. The phase therefore ships with this known functional gap, named here
+    rather than written up as a caveat on a pass.
+  gap_e: >
+    OPEN and still unqueued. The six minted keys remain English-only (de/fr 0/6);
+    a live ANTHROPIC_API_KEY is needed. The RETIRED half of it is fixed (below).
+  missed_by_this_report: >
+    gamelibCatalogParity was RED at HEAD across 48 locale tests and this report
+    does not list it. The orphaned keys were recorded as a FACT under GAP-E and
+    scored a WARNING, but the suite that turns that fact into a CI blocker was
+    never run -- `pnpm test:ci` has no project filter, so it was breaking
+    .github/workflows/test.yml exactly as GAP-B was. Fixed in fbf26afdf by
+    pruning the two retired keys from 48 catalogs and their 48 gamelib.mt.json
+    provenance sidecars. Recorded because a verification that misses a red suite
+    is a more useful finding than the red suite itself.
+  verified_after_closure:
+    - "pnpm lint -> exit 0, 4149 warnings"
+    - "pnpm codecheck (tsc --noEmit) -> exit 0"
+    - "jest --selectProjects Meta -> 36/36 suites, 974 passed, 1 skipped, exit 0"
+    - "jest logoutCookies -> 2 suites, 17/17"
+    - "prettier --check across every changed file -> clean (run as a dry-run FIRST; it flagged 3 files, and every gate above was re-run AFTER the reformat, not before)"
+  not_verified_after_closure: >
+    A full `pnpm test:ci` was NOT run. The suites this work could plausibly
+    disturb were run individually and are green, but the whole-suite run that CI
+    performs has not been reproduced locally, and this project has a recorded
+    case of a full run manufacturing a different failure set under load.
+
 gaps:
   - truth: "`pnpm lint` exits 0 — the Phase 39 ratchet holds"
     status: failed
