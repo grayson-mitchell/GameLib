@@ -2,13 +2,13 @@
 phase: 40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we
 plan: 11
 type: live-gate
-status: draft
+status: complete
 blocking: true
 created: 2026-09-04
-verdict: NOT YET RUN
-run_date: NOT YET RUN
+verdict: FAIL — 2 of 3 items pass; Item 3 (drag-resize latency) fails on a diagnosed 40 ms trailing-edge debounce
+run_date: 2026-09-05
 items_total: 3
-items_passed: NOT YET RUN
+items_passed: 2
 notes: |
   Authored by the plan-40-11 Task 1 executor, BEFORE any live run took place. Per this
   plan's `autonomous: false` and Task 2's `checkpoint:human-verify gate="blocking"`, the
@@ -17,6 +17,15 @@ notes: |
   percentage, or narrative outcome may be written into this file until that run actually
   happens. Every RESULT slot below reads "NOT YET RUN" until then. Author and runner are
   deliberately separated so this contract cannot grade its own homework.
+
+  RUN PROVENANCE (added at completion, 2026-09-05). The run was performed by the human
+  operator on real macOS hardware; the agent built, launched, asserted single-instance at
+  all three points, archived both sinks, and performed the pixel measurement for Item 1.
+  Items 2 and 3 are the operator's verbatim verdicts and were NOT scored by the agent —
+  Item 3's FAIL is the operator's own finding, reversing their own earlier "resize is
+  smooth" once the gesture was run in the shape the item specifies. The gate BLOCKED on its
+  first attempt at c78ff3d30 (no verdict recorded, embed never opened); evidence here is
+  taken against the fix commit 54ca5b400.
 ---
 
 # Phase 40 Plan 11 — Live Gate: Embedded Store Suppression, Feel, and Resize (macOS)
@@ -576,7 +585,34 @@ pass/fail by the agent. This item defines no numeric threshold — per the plan'
 instruction, no automated check and no screenshot can answer whether input and scroll feel
 correct; only a human on real hardware can.
 
-**RESULT: NOT YET RUN — human verdict not yet collected.**
+**RESULT: PASS** (operator verdict, launch 3, commit `54ca5b400`)
+
+**Operator's verbatim verdict:** "scroll and click feel fine", and on the follow-up covering the
+remaining input modes: "typing works, momentum fine".
+
+Sub-gestures exercised, per this item's gesture list:
+
+| Sub-gesture | Exercised | Operator's words |
+|---|---|---|
+| Scroll a real store page inside the embed | yes | "scroll ... feel fine" |
+| Click at least one in-page link | yes | "click feel fine" |
+| Type into the store's own search field | yes | "typing works" |
+| Trackpad two-finger scroll, momentum/inertia | yes | "momentum fine" |
+
+Trackpad availability (this item requires it be recorded rather than silently skipped): a trackpad
+WAS available and was used — the operator evaluated momentum directly rather than declaring it
+unevaluable.
+
+The first three sub-gestures were reported in two passes: scroll and click first, then typing and
+trackpad momentum after the agent flagged that they were named in the gesture list but not covered
+by the initial report. Recorded here because the initial report would otherwise have been rounded up
+into a full pass over two input modes nobody had exercised — and keyboard input in particular has no
+automated coverage anywhere, so "typing works" is the only evidence of it that exists.
+
+**Evidence gap, recorded not hidden:** no screen recording was captured for this item. This item's
+Evidence list asks for one; its PASS CONDITION is explicitly and solely "the human operator's
+judgment, recorded verbatim", which is satisfied above. The missing recording limits later
+re-examination of *how* it felt; it does not weaken the verdict, which was never a measurement.
 
 ### Item 3 — Drag-resize latency
 
@@ -600,20 +636,96 @@ embed slot's width, in both directions (wider then narrower), once slowly and on
 item defines no numeric threshold the agent cannot measure — the agent's job is to make the
 gesture unambiguous and capture what is capturable, not to invent a pass/fail number.
 
-**RESULT: NOT YET RUN — human verdict not yet collected.**
+**RESULT: FAIL — the embed lags the window during a live drag-resize.**
+(operator verdict, launch 3, commit `54ca5b400`)
+
+**Operator's verbatim verdict:** "resize lags behind. tested with browser. the difference is that in
+browser is smooth on mouse move, whilst in gamelib is resized only on mouse stopping or maybe being
+quite slow movement."
+
+Note the operator's FIRST report on this item was "resize is smooth". It became a fail only after
+the gesture was run in the shape this item actually specifies — wider then narrower, once slowly and
+once quickly. A slow drag passes; a fast one does not. **The slow/fast distinction in this item's
+gesture list is the entire reason the defect was seen at all**, and a less specific gesture would
+have recorded a false pass.
+
+The operator's browser A/B is the load-bearing part of the evidence: it establishes that the lag is
+not an inherent cost of resizing a native web surface on this hardware, because a browser on the
+same machine tracks the pointer smoothly.
+
+**Diagnosed cause — a pure trailing-edge debounce with no leading edge and no max-wait ceiling.**
+`useStoreEmbedHost.ts` drives the bounds sync as:
+
+    const scheduleFlush = () => {
+      if (debounceHandle !== null) clearTimeout(debounceHandle)   // every tick RESTARTS the timer
+      debounceHandle = setTimeout(flush, BOUNDS_SYNC_DEBOUNCE_MS) // 40 ms
+    }
+    const observer = new ResizeObserver(scheduleFlush)
+
+Every `ResizeObserver` tick cancels the pending flush and restarts the 40 ms timer, so during a
+continuous drag `flush()` never fires — the embed's bounds are only sent once the drag PAUSES for
+40 ms. That is exactly the observed behaviour: "resized only on mouse stopping or maybe being quite
+slow movement" (a slow drag leaves inter-tick gaps longer than 40 ms, so it flushes and looks
+smooth). Confirmed by inspection: there is no leading-edge call and no max-wait ceiling anywhere in
+the file.
+
+**This is a design limitation, not a coding error against the plan.** The 40 ms debounce is
+implemented exactly as specified, and its own comment cites spike 017's
+`tauri-embedded-store-browser.md` "Bounds sync" section: "ResizeObserver on the slot div, debounced
+~40 ms". The spike measured a bounds-sync INTERVAL; it never evaluated drag-resize latency — that
+was left open on purpose, as `MANIFEST.md`'s "Open before shipping" bullet and ledger item `38-E04`
+both record. **This run is the first time that open question has been answered on real hardware, and
+the answer is that the specified design produces visible lag under a fast drag.**
+
+A fix is not attempted here: this item's job is to report the operator's judgment, and choosing
+between a leading-edge + max-wait throttle, a rAF-driven sync, or a Rust-side follow is a design
+decision with its own trade-offs (each additional flush is an IPC round-trip renderer -> sidecar ->
+Rust, which is why the debounce exists). Filed rather than fixed mid-gate.
+
+**Evidence gaps, recorded not hidden:** no screen recording was captured, and no wall-clock duration
+was measured. Per this contract's own Test 3 finding, no log line is emitted for a successful
+bounds-sync call, so no timestamp bracket exists in either sink to derive a duration from — this
+item explicitly instructs not to block on finding one that may not be there. The PASS CONDITION is
+the operator's verbatim judgment, which is recorded in full above.
 
 ## ITEM VERDICT SUMMARY
 
 | Item | Result |
 |---|---|
-| 1 — D-33 suppression gesture | NOT YET RUN |
-| 2 — Input/scroll feel | NOT YET RUN |
-| 3 — Drag-resize latency | NOT YET RUN |
+| 1 — D-33 suppression gesture | **PASS** — all four conditions; slot rect identical across A/B/C (0 px delta); hit-test verified separately from paint |
+| 2 — Input/scroll feel | **PASS** — operator verdict; all four sub-gestures exercised (scroll, click, typing, trackpad momentum) |
+| 3 — Drag-resize latency | **FAIL** — embed lags the window under a fast drag; cause diagnosed as a 40 ms trailing-edge debounce with no leading edge or max-wait |
 
 ## Teardown record
 
-NOT YET RUN. To be filled in at run time: final `pgrep -f 'gamelib-shell'` result (must be
-0), closing inventory output (`ls -la`, `wc -l` over `$GATE_SESSION_DIR`).
+**RUN — 2026-09-05 07:41 local, launch 3.**
+
+- Single-instance assertion at teardown (third and final point): `pgrep -f 'gamelib-shell'` returned
+  exactly **1** (PID 46404) immediately before teardown, matching the pre-launch (empty) and
+  window-appearance (exactly 1) assertions. All three points satisfied for launch 3; no launch was
+  aborted, and nothing from the BLOCKED first run is cited as evidence for any item.
+- After `pkill`: `pgrep -fl 'gamelib-shell|gamelib-sidecar'` returned **0** — the shell and its SEA
+  sidecar both exited. Checked explicitly because an orphaned node sidecar surviving its shell is a
+  recorded pattern on this project.
+- Closing inventory (contract step 6), `$GATE_SESSION_DIR = /tmp/gamelib-gate-20260904T183948Z`:
+
+  | File | Size | Lines |
+  |---|---|---|
+  | `item1-capture-A.png` | 3,683,752 B | — |
+  | `item1-capture-B-overlay.png` | 622,923 B | — |
+  | `item1-capture-C.png` | 3,632,333 B | — |
+  | `terminal.log` | 21,314 B | 456 |
+  | `gamelib-launch-1.log` / `-1-final.log` | 9,261 B | 62 |
+  | `gamelib-launch-2.log` | 4,146 B | 31 |
+  | `gamelib-launch-3.log` | 7,724 B | 50 |
+  | `gamelib-pre-session.log` | 6,923 B | 73 |
+  | `ITEM1-BLOCKED-FINDING.md` | 2,525 B | 44 |
+
+  **No zero-length capture and no missing artifact** — the condition this step exists to surface
+  during the run rather than after it. All three captures are non-zero and were measured.
+  `gamelib.log` was archived per launch before the next launch's first write could rotate it.
+- Not captured this session: screen recordings for Items 2 and 3. Recorded as an evidence gap in
+  those items rather than silently omitted; neither item's PASS CONDITION depends on one.
 
 ## Non-closure statement (binding, mirrors ROADMAP.md's Phase 38 ledger from this side)
 
