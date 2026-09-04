@@ -284,6 +284,19 @@ describe('getWikiGameInfo — cached wiki miss self-heals (todo 2026-08-22, task
     expect(getInfoFromPCGamingWikiMock).toHaveBeenCalled()
   })
 
+  // Pins the `howlongtobeat === 'skipped'` clause on its own. The test above cannot: it
+  // seeds pcgamingwiki 'error' too, which re-fetches by itself, so deleting the 'skipped'
+  // clause leaves it green. The shape seeded here was unreachable under the old derivation
+  // ('skipped' was only assigned when pcgamingwiki errored), which is precisely why the
+  // clause needs its own test now that nothing assigns the value at all.
+  it("re-fetches a legacy 'skipped' HLTB entry even when pcgamingwiki succeeded", async () => {
+    seedCache({ pcgamingwiki: 'ok', howlongtobeat: 'skipped' })
+
+    await getWikiGameInfo(makeGame())
+
+    expect(getInfoFromPCGamingWikiMock).toHaveBeenCalled()
+  })
+
   it('re-fetches when the cached entry predates fetchStatus entirely (old-shape 403-era entry)', async () => {
     seedCache(undefined)
 

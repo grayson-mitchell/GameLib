@@ -72,10 +72,17 @@ export async function getWikiGameInfo(
     // details-page visit, forever -- exactly the traffic pattern PCGamingWiki's UA policy
     // exists to discourage. `notfound` is a real answer and stays cached.
     //
-    // `howlongtobeat === 'skipped'` is currently implied by `pcgamingwiki === 'error'`
-    // (see the outcome derivation below -- 'skipped' is only ever assigned when the
-    // pcgamingwiki outcome is 'error'), but is spelled out so a future change to that
-    // derivation cannot silently narrow this rule.
+    // `howlongtobeat === 'skipped'` is now a LEGACY-ONLY outcome: nothing assigns it any
+    // more (see the derivation below -- HLTB gained a title-search fallback, so it always
+    // issues a request).
+    //
+    // This clause is kept but is REDUNDANT for real cache entries, and the honest reason is
+    // narrower than "legacy entries need it to self-heal": the old derivation only ever
+    // assigned 'skipped' when pcgamingwiki was 'error', so the clause above already
+    // re-fetches every 'skipped' entry that can actually exist. Deleting this line passes
+    // the whole suite. It stays as a cheap guard for an entry whose two fields disagree --
+    // hand-edited, or written by some future derivation -- and the test pinning it seeds
+    // exactly that otherwise-unreachable shape.
     //
     // A cache entry with NO `fetchStatus` at all predates the field -- i.e. it is exactly
     // a 403-era entry. `WikiInfo.fetchStatus`'s own docstring requires this reading:
@@ -125,24 +132,30 @@ export async function getWikiGameInfo(
     const pcgamingwikiOutcome: WikiSourceOutcome =
       pcgamingwikiResult?.outcome ?? 'error'
 
-    // Get HowLongToBeat data, using gog.com site for GOG games, and HLTB ID from PCGamingWiki if available
+    // Get HowLongToBeat data: the gog.com site for GOG games, the HLTB ID from PCGamingWiki
+    // when there is one, and otherwise a title search inside getHowLongToBeat.
     const howlongtobeat = await getHowLongToBeat(
       game,
       pcgamingwiki?.howLongToBeatID
     )
 
-    // HLTB's outcome is DERIVED, not reported by its own fetcher, because its failure is
-    // usually not its own: it takes its ID from the PCGamingWiki result above, so when
-    // that errors HLTB never issues a request at all. Calling that `notfound` would
-    // blame HLTB for PCGamingWiki's failure and send a future reader to the wrong
-    // module. GOG games resolve HLTB by their own path and so are never `skipped`.
+    // HLTB's outcome is DERIVED, not reported by its own fetcher.
+    //
+    // `'skipped'` used to be assigned here and no longer is. It meant "HLTB never issued a
+    // request at all", which was true when the only non-GOG path needed an ID from
+    // PCGamingWiki: if that errored, there was nothing to fetch, and calling it `notfound`
+    // would have blamed HLTB for PCGamingWiki's failure. getHowLongToBeat now falls back to
+    // a title search, so every game reaches HLTB one way or another and the honest answers
+    // are just `'ok'` and `'notfound'`.
+    //
+    // `'skipped'` stays in HowLongToBeatOutcome, and the staleWikiFetch clause keyed on it
+    // above stays too -- deliberately. Caches written before this change still hold
+    // `'skipped'` entries, and that clause is exactly what makes them re-fetch through the
+    // new title path instead of sitting until their 30-day expiry. Removing it would strand
+    // every already-cached game on the old outcome.
     const howlongtobeatOutcome: HowLongToBeatOutcome = howlongtobeat
       ? 'ok'
-      : runner !== 'gog' &&
-          !pcgamingwiki?.howLongToBeatID &&
-          pcgamingwikiOutcome === 'error'
-        ? 'skipped'
-        : 'notfound'
+      : 'notfound'
 
     let steamInfo = null
     if (isLinux) {
