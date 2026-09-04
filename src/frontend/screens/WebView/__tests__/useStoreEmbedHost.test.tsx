@@ -154,6 +154,7 @@ const mockApi = {
   storeEmbedForward: jest.fn(),
   storeEmbedReload: jest.fn(),
   storeEmbedNavigate: jest.fn(),
+  storeEmbedTakeNavEvents: jest.fn(),
   logInfo: jest.fn()
 }
 
@@ -290,6 +291,9 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     mockApi.storeEmbedForward.mockResolvedValue(okStatus)
     mockApi.storeEmbedReload.mockResolvedValue(okStatus)
     mockApi.storeEmbedNavigate.mockResolvedValue(okStatus)
+    // The idle case: the drain effect polls on an interval, so EVERY test that advances timers
+    // reaches it. An empty queue is what a user who has not navigated inside the embed produces.
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -527,5 +531,111 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(fakeLocalStorage.get('last-url-steam')).toBe(
       'https://store.steampowered.com/app/2'
     )
+  })
+
+  // ── GAP-D (quick task `260905-e61`, REQ-40-06) ────────────────────────────────────────────
+  //
+  // Properties 1-9 above were ALL GREEN while GAP-D shipped, because every one of them drives a
+  // navigation through a call the test itself makes -- `state.onBack()`, `startUrl` changing --
+  // and reads the state that call returned. None of them could see the case the user actually
+  // hit: a link clicked INSIDE the embed, which no renderer call initiates and which therefore
+  // reached the renderer through nothing at all. That is the gap these three close.
+
+  // Property 10. THE GAP-D REGRESSION TEST, and the todo's stated definition of done. Verified
+  // RED against the pre-fix hook (which had no drain effect, so `canGoBack` stayed false and the
+  // host stayed `af.gog.com` forever). The URLs are the todo's own reproduction: `/store/gog`
+  // starts on the affiliate host and lands on `www.gog.com`, which is what made the frozen label
+  // obvious there rather than merely subtle.
+  it('10. an in-embed page load reaches the renderer — canGoBack and the host label both follow it', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://af.gog.com/',
+      storeKey: 'gog'
+    }
+
+    const initial = mount(options)
+    expect(initial.host).toBe('af.gog.com')
+    expect(initial.canGoBack).toBe(false)
+
+    // What Rust's `on_page_load` Finished handler queued when the user clicked a link.
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([
+      {
+        url: 'https://www.gog.com/game/foo',
+        host: 'www.gog.com',
+        canGoBack: true,
+        canGoForward: false
+      }
+    ])
+
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    const after = reinvoke(options)
+    expect(after.host).toBe('www.gog.com')
+    expect(after.canGoBack).toBe(true)
+    expect(after.currentUrl).toBe('https://www.gog.com/game/foo')
+  })
+
+  // Property 11. Observed-red mutation: applying `events[0]` instead of the last entry turns this
+  // red -- a drain that catches up on several queued navigations would render the OLDEST of them
+  // as the current page.
+  it('11. a drain carrying several queued navigations applies the LAST one', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://af.gog.com/',
+      storeKey: 'gog'
+    }
+
+    mount(options)
+
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([
+      {
+        url: 'https://www.gog.com/',
+        host: 'www.gog.com',
+        canGoBack: true,
+        canGoForward: false
+      },
+      {
+        url: 'https://www.gog.com/game/foo',
+        host: 'www.gog.com',
+        canGoBack: true,
+        canGoForward: false
+      },
+      {
+        url: 'https://www.gog.com/game/foo/reviews',
+        host: 'www.gog.com',
+        canGoBack: true,
+        canGoForward: false
+      }
+    ])
+
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(reinvoke(options).currentUrl).toBe(
+      'https://www.gog.com/game/foo/reviews'
+    )
+  })
+
+  // Property 12. Observed-red mutation: dropping `clearInterval` from the effect cleanup turns
+  // this red. A poll that outlived the route would keep draining Rust's queue on a screen with no
+  // embed on it, and — worse — would steal the events belonging to the NEXT visit, since the
+  // drain is destructive.
+  it('12. leaving the route stops the drain poll', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+
+    mount({ slotRef: ref, startUrl: 'https://af.gog.com/', storeKey: 'gog' })
+    jest.advanceTimersByTime(250)
+    const callsWhileMounted = mockApi.storeEmbedTakeNavEvents.mock.calls.length
+    expect(callsWhileMounted).toBeGreaterThan(0)
+
+    harness().__unmount()
+    jest.advanceTimersByTime(1000)
+
+    expect(mockApi.storeEmbedTakeNavEvents).toHaveBeenCalledTimes(callsWhileMounted)
   })
 })

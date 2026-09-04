@@ -31,6 +31,19 @@ import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEm
 // that visibly lags it (plan 40-11 live gate, Item 3, 2026-09-05).
 const BOUNDS_SYNC_INTERVAL_MS = 40
 
+// Drain cadence for Rust's in-embed navigation queue (GAP-D, D-22, REQ-40-06). This is the ONE
+// thing standing between an in-embed link click and the chrome: Rust's `on_page_load` queues a
+// navigation state and emits nothing, so if nobody drains, `canGoBack` stays false forever and
+// the host label stays frozen on the START URL's host.
+//
+// 250 ms, not the 40 ms above. The two intervals answer different questions. Bounds sync tracks
+// a CONTINUOUS gesture (a window drag) where a human eye reads any lag as jank, so it must be
+// near frame rate. This one waits on a page load -- already hundreds of milliseconds of network
+// -- and its output is a button's enabled state and a text label, neither of which a user can
+// perceive arriving a quarter-second late. Polling it at 40 ms would multiply the embed's IPC
+// round-trips for no perceivable gain.
+const NAV_POLL_INTERVAL_MS = 250
+
 // Derived from the real IPC return type rather than re-declared here, so this file cannot drift
 // from `common/types/ipc.ts` the way the four nav methods' types already had (Rule 1 fix, this
 // plan's SUMMARY) — if that type changes again, this one follows it instead of going stale next
@@ -111,17 +124,62 @@ export function useStoreEmbedHost({
     )
   }, [])
 
+  // ── IN-EMBED NAVIGATION DRAIN (GAP-D, D-22, REQ-40-06) ─────────────────────────────────────
+  //
+  // The four callbacks at the bottom of this file learn about navigations the CHROME initiated,
+  // from the return value of the call they themselves made. Nothing learns about the ones the
+  // PAGE initiated -- a link clicked inside the embed -- because there is no handle in the
+  // renderer to attach a `did-navigate` listener to, and (D-25, vendored-source-verified) no
+  // native history API on the Rust side either. Rust's `on_page_load` Finished handler queues
+  // the resulting state; this effect is the only thing that collects it.
+  //
+  // ANCHORED TO A SURVIVOR (the 013-015 rule). The interval belongs to THIS hook, which lives
+  // in the main webview and outlives the embed. It holds no embed handle -- `storeEmbedTakeNavEvents`
+  // reads a process-static queue in Rust, not the webview -- so a drain issued while the embed
+  // is hidden, closed, or was never opened resolves empty rather than erroring.
+  useEffect(() => {
+    let cancelled = false
+    let inFlight = false
+
+    const drain = () => {
+      // A slow round-trip must not stack a second drain behind the first: two in flight would
+      // race, and whichever resolved last would win with whichever half of the queue it got.
+      if (inFlight) return
+      inFlight = true
+      window.api
+        .storeEmbedTakeNavEvents()
+        .then((events) => {
+          if (cancelled) return
+          // Apply the LAST event only. The earlier ones are intermediate states this drain
+          // already superseded -- setting each in turn would render a burst of stale hosts.
+          const latest = events[events.length - 1]
+          if (latest) setNavState(latest)
+        })
+        .catch((error) => {
+          logNavCallFailure('storeEmbedTakeNavEvents', error)
+        })
+        .finally(() => {
+          inFlight = false
+        })
+    }
+
+    const handle = setInterval(drain, NAV_POLL_INTERVAL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(handle)
+    }
+  }, [])
+
   // ── D-30 RESTORE PERSISTENCE — write on navigation, not on route entry ─────────────────────
   // This hook's own `navState` initializer (above) is a DISPLAY-ONLY derivation of `startUrl`,
   // not a navigation -- persisting it here on mount would write the caller's own resolved start
   // URL straight back to storage on every route entry, defeating "write on navigation, not on
   // route entry" (D-30's own wording) before a single real navigation ever happened.
   // `hasNavigatedRef` skips exactly that first effect run; every run after it corresponds to a
-  // REAL change to `navState` -- the only navigations this hook currently learns about at all are
-  // the ones that resolve through `applyNavResult` above (back/forward/reload/navigate;
-  // `takeNavEvents`, for a same-page in-embed link click, is not yet implemented -- see its own
-  // seam doc comment -- so THIS hook cannot yet learn about those, and this effect persists only
-  // what it actually knows).
+  // REAL change to `navState`, from either of the two writers above: `applyNavResult`
+  // (back/forward/reload/navigate -- navigations the chrome initiated) or the drain effect
+  // (in-embed link clicks -- navigations the page initiated). Before GAP-D was fixed the second
+  // writer did not exist, so an in-embed click was never persisted; it is now.
   const hasNavigatedRef = useRef(false)
 
   useEffect(() => {
