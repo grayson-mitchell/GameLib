@@ -6,7 +6,8 @@
 // WHAT THIS FILE IS. Every type declared here replaces a name the tree currently
 // reads out of the `electron` package -- either through the AMBIENT namespace
 // that `node_modules/electron/electron.d.ts` installs globally (its own
-// `IpcRendererEvent`, `WebviewTag`, ... members, referenced with a dotted
+// `IpcRendererEvent`, the retired `<webview>`-element method-surface shim, ...
+// members, referenced with a dotted
 // namespace qualifier), or through an explicit `import type { X } from
 // 'electron'`. Neither shape survives the phase: plan 35-15 rewrites the
 // import sites to `backend/platform`, plan 35-16 rewrites the bare dotted
@@ -116,96 +117,16 @@ export interface IpcMainInvokeEvent {
   }
 }
 
-// Consumed by:
-//   src/frontend/screens/WebView/index.tsx:346 -- destructures `{ validatedURL }`
-//   and matches/parses it as a URL string.
-// All four fields are declared with electron's real types even though only
-// `validatedURL` is read today: they are cheap, correct, and a `did-fail-load`
-// listener that starts reading `errorCode` should not have to widen this file.
-export interface DidFailLoadEvent {
-  errorCode: number
-  errorDescription: string
-  validatedURL: string
-  isMainFrame: boolean
-}
-
-// ---------------------------------------------------------------------------
-// SECTION 3 -- THE <webview> ELEMENT
-// ---------------------------------------------------------------------------
-
-// Consumed by:
-//   src/frontend/screens/WebView/index.tsx:71                       (`useRef<WebviewTag>(null)`)
-//   src/frontend/screens/WebView/components/HumbleLoginSurface.tsx:33 (`useRef<WebviewTag>(null)`)
-//   src/frontend/components/UI/WebviewControls/index.tsx:14          (`webview: WebviewTag | null` prop)
-//
-// EXHAUSTIVE list of the surface those three sites actually touch:
-//   getURL()          WebviewControls:41; WebView:309, :322, :331, :393, :395, :402
-//   loadURL()         WebView:361
-//   getUserAgent()    WebView:302
-//   setUserAgent()    WebView:303
-//   canGoBack()       WebviewControls:44, :48; WebView:477
-//   canGoForward()    WebviewControls:45, :49; WebView:483
-//   goBack()          WebviewControls:70; WebView:479
-//   goForward()       WebviewControls:75; WebView:485
-//   reload()          WebviewControls:65
-//   insertCSS()       reached structurally via `HumbleLoginChromeCssWebview`
-//                     (src/frontend/screens/WebView/components/humbleLoginChromeCss.ts)
-//   addEventListener/removeEventListener for exactly these five events:
-//     'dom-ready'             WebView:368, :380
-//     'did-fail-load'         WebView:369, :381        -> DidFailLoadEvent
-//     'page-title-updated'    WebView:377, :382
-//     'did-navigate'          WebView:416, :419, :422, :424; WebviewControls:43, :47, :53
-//                             HumbleLoginSurface:147, :151
-//     'did-navigate-in-page'  WebView:418, :423; WebviewControls:42, :46, :52
-//                             HumbleLoginSurface:148, :152
-//
-// It extends `HTMLElement` because it is a real DOM element: it is the target of
-// a React `ref` on the `<webview>` intrinsic (declared by `@types/react`, NOT by
-// electron -- verified, so `<webview>` itself survives plan 35-18 untouched), and
-// `humbleLoginChromeCss.ts`'s structural stand-in relies on the inherited
-// `addEventListener(type: string, ...)` overload being present.
-export interface WebviewTag extends HTMLElement {
-  getURL(): string
-  loadURL(
-    url: string,
-    options?: { httpReferrer?: string; userAgent?: string }
-  ): Promise<void>
-  getUserAgent(): string
-  setUserAgent(userAgent: string): void
-  canGoBack(): boolean
-  canGoForward(): boolean
-  goBack(): void
-  goForward(): void
-  reload(): void
-  insertCSS(css: string): Promise<string>
-
-  addEventListener(
-    event: 'did-fail-load',
-    listener: (event: DidFailLoadEvent) => void,
-    useCapture?: boolean
-  ): this
-  removeEventListener(
-    event: 'did-fail-load',
-    listener: (event: DidFailLoadEvent) => void
-  ): this
-  addEventListener(
-    event:
-      | 'dom-ready'
-      | 'did-navigate'
-      | 'did-navigate-in-page'
-      | 'page-title-updated',
-    listener: (event: globalThis.Event) => void,
-    useCapture?: boolean
-  ): this
-  removeEventListener(
-    event:
-      | 'dom-ready'
-      | 'did-navigate'
-      | 'did-navigate-in-page'
-      | 'page-title-updated',
-    listener: (event: globalThis.Event) => void
-  ): this
-}
+// SECTION 3 (the `<webview>` element's method-surface type shim and its
+// navigation-failure event-payload type) was retired by Phase 40 Plan 03
+// (REQ-40-10). Tauri has no `<webview>` element: the embedded child surface
+// is a real OS-native window owned by Rust, not a renderer-side HTML custom
+// element with a JS method surface to type. That shim's last three
+// consumers (`WebView/index.tsx`, `HumbleLoginSurface.tsx`,
+// `WebviewControls/index.tsx`) were all deleted by plan 40-01 when the
+// `<webview>` render path itself was retired, orphaning its entire reason
+// to exist -- per this file's own "HOW TO READ IT" rule above: "If a site
+// disappears, the declaration can go with it."
 
 // ---------------------------------------------------------------------------
 // SECTION 4 -- DIALOG AND WINDOW OPTION BAGS

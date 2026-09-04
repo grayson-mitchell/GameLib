@@ -32,7 +32,8 @@
 // That is deliberate and load-bearing in both directions: `export` keeps eslint
 // from pruning them as unused, and never invoking them keeps them compile-only.
 // The first draft used bare block statements, which ts-jest happily EXECUTED --
-// `undefined as unknown as WebviewTag` then threw
+// `undefined as unknown as` (the now-retired `<webview>`-element method-surface
+// shim) then threw
 // `TypeError: Cannot read properties of undefined (reading 'addEventListener')`
 // at load. A type-usage assertion that has to be runtime-safe is a weaker
 // assertion, because it can only exercise values it can actually construct.
@@ -43,8 +44,6 @@ import type {
   IpcMainEvent,
   IpcMainInvokeEvent,
   Event as ElectronEvent,
-  DidFailLoadEvent,
-  WebviewTag,
   FileFilter,
   OpenDialogOptions,
   MessageBoxOptions,
@@ -181,103 +180,15 @@ export function assert_ipcMainInvokeEvent(): void {
 }
 
 // ---------------------------------------------------------------------------
-// DidFailLoadEvent -- FIELDS ARE READ
-// Reproduces: src/frontend/screens/WebView/index.tsx:346-:360 verbatim in shape.
+// The <webview>-element event-payload type and method-surface shim --
+// RETIRED (Phase 40 Plan 03, REQ-40-10).
+// Tauri has no `<webview>` element to type: the embedded child surface is a
+// real OS-native `WebviewWindow`/child window owned by Rust, not a
+// renderer-side HTML custom element with a did-fail-load event or a JS method
+// surface. Every consumer this section reproduced (WebView/index.tsx,
+// HumbleLoginSurface.tsx, WebviewControls/index.tsx,
+// humbleLoginChromeCss.ts's structural stand-in) was deleted by plan 40-01.
 // ---------------------------------------------------------------------------
-export function assert_didFailLoadEvent(): void {
-  const onerror = ({ validatedURL }: DidFailLoadEvent): string | null => {
-    if (validatedURL && validatedURL.match(/track\.adtraction\.com/)) {
-      const parsedUrl = new URL(validatedURL)
-      const redirectUrl = parsedUrl.searchParams.get('url')
-      const url = new URL(redirectUrl || 'https://gog.com')
-      url.port = ''
-      return url.toString()
-    }
-    return null
-  }
-  void onerror
-
-  // The other three fields must exist with electron's types.
-  const full: DidFailLoadEvent = {
-    errorCode: -6,
-    errorDescription: 'ERR_FILE_NOT_FOUND',
-    validatedURL: 'https://example.invalid',
-    isMainFrame: true
-  }
-  const code: number = full.errorCode
-  const desc: string = full.errorDescription
-  const main: boolean = full.isMainFrame
-  void code
-  void desc
-  void main
-}
-
-// ---------------------------------------------------------------------------
-// WebviewTag
-// Reproduces the FULL surface touched by
-//   src/frontend/screens/WebView/index.tsx,
-//   src/frontend/screens/WebView/components/HumbleLoginSurface.tsx,
-//   src/frontend/components/UI/WebviewControls/index.tsx.
-// ---------------------------------------------------------------------------
-export function assert_webviewTag(): void {
-  const webview = undefined as unknown as WebviewTag
-
-  // WebviewControls/index.tsx:41-:57 + WebView/index.tsx:302-:303, :361
-  const eventCallback = () => void webview.getURL()
-  webview.addEventListener('did-navigate-in-page', eventCallback)
-  webview.addEventListener('did-navigate', eventCallback)
-  webview.removeEventListener('did-navigate-in-page', eventCallback)
-  webview.removeEventListener('did-navigate', eventCallback)
-  const back: boolean = webview.canGoBack()
-  const fwd: boolean = webview.canGoForward()
-  webview.goBack()
-  webview.goForward()
-  webview.reload()
-  void back
-  void fwd
-
-  // WebView/index.tsx:302-:303
-  if (webview.getUserAgent() !== 'ua') {
-    webview.setUserAgent('ua')
-  }
-  // WebView/index.tsx:361
-  void webview.loadURL(new URL('https://gog.com').toString())
-
-  // WebView/index.tsx:368-:382 -- the 'did-fail-load' listener receives a
-  // DidFailLoadEvent, which is what makes the destructure at :346 legal.
-  const loadstop = () => undefined
-  const onFail = ({ validatedURL }: DidFailLoadEvent) => void validatedURL
-  const updateConnectivity = () => undefined
-  webview.addEventListener('dom-ready', loadstop)
-  webview.addEventListener('did-fail-load', onFail)
-  webview.addEventListener('page-title-updated', updateConnectivity)
-  webview.removeEventListener('dom-ready', loadstop)
-  webview.removeEventListener('did-fail-load', onFail)
-  webview.removeEventListener('page-title-updated', updateConnectivity)
-
-  // WebviewControls/index.tsx:14 -- the nullable prop shape.
-  const props: { webview: WebviewTag | null } = { webview: null }
-  void props.webview?.reload()
-
-  // HumbleLoginSurface.tsx:166-:169 -> humbleLoginChromeCss.ts's structural
-  // stand-in. A WebviewTag must remain assignable to it, which is what forces
-  // WebviewTag to keep `insertCSS` AND to inherit HTMLElement's generic
-  // `addEventListener(type: string, ...)` overload.
-  interface HumbleLoginChromeCssWebview {
-    getURL(): string
-    insertCSS(css: string): Promise<string>
-    addEventListener(type: string, listener: () => void): void
-    removeEventListener(type: string, listener: () => void): void
-  }
-  const structural: HumbleLoginChromeCssWebview = webview
-  void structural
-
-  // WebView/index.tsx:71 / HumbleLoginSurface.tsx:33 -- `useRef<WebviewTag>(null)`
-  // is `{ current: WebviewTag | null }`, and the element is a real DOM node.
-  const ref: { current: WebviewTag | null } = { current: null }
-  const asElement: HTMLElement | null = ref.current
-  void asElement
-}
 
 // ---------------------------------------------------------------------------
 // FileFilter + OpenDialogOptions
@@ -569,8 +480,9 @@ export function assert_crossProcessExportsTray(): void {
 // These exist because of a measured gap. The positive assertions above were
 // tested for non-vacuity by damaging `types.ts` and confirming this module goes
 // red. Two of three mutations were caught (dropping
-// `IpcMainInvokeEvent.sender.send` -> TS18046; dropping `WebviewTag.insertCSS`
-// -> TS2741). The THIRD -- widening `KeyboardInputEvent['type']` from its
+// `IpcMainInvokeEvent.sender.send` -> TS18046; dropping the retired
+// `<webview>`-element method-surface shim's `insertCSS` member -> TS2741).
+// The THIRD -- widening `KeyboardInputEvent['type']` from its
 // literal union to `string` -- was NOT caught, because the union at
 // `src/backend/main.ts:1303` still discriminates by EXCLUDING the two mouse
 // members, whose literals were left intact. A positive assertion can only ever
@@ -666,25 +578,10 @@ export function assert_opaqueHandlesStayOpaque(): void {
   void real.sender
 }
 
-export function assert_webviewTagIsNotAnEscapeHatch(): void {
-  const webview = undefined as unknown as WebviewTag
-  // @ts-expect-error 'did-frobnicate' is not one of the five declared events
-  webview.addEventListener('did-frobnicate', () => undefined)
-  // @ts-expect-error executeJavaScript is deliberately NOT declared -- no site
-  // uses it, and adding it should be a visible edit to types.ts
-  void webview.executeJavaScript('1')
-}
-
-export function assert_didFailLoadEventFieldsAreTyped(): void {
-  const bad: DidFailLoadEvent = {
-    errorCode: -6,
-    errorDescription: 'x',
-    // @ts-expect-error validatedURL is a string, not a URL
-    validatedURL: new URL('https://example.invalid'),
-    isMainFrame: true
-  }
-  void bad
-}
+// The negative assertions covering the <webview>-element method-surface shim
+// and its event-payload type retired alongside the positive assertion section
+// above (Phase 40 Plan 03, REQ-40-10) -- both existed only to prove the
+// deleted declarations were narrow, not vacuous.
 
 export function assert_displayAndCtorOptionsAreTyped(): void {
   // @ts-expect-error workAreaSize is a Size, not a number

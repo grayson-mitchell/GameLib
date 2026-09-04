@@ -1124,8 +1124,6 @@ export type {
   IpcMainEvent,
   IpcMainInvokeEvent,
   Event,
-  DidFailLoadEvent,
-  WebviewTag,
   FileFilter,
   OpenDialogOptions,
   MessageBoxOptions,

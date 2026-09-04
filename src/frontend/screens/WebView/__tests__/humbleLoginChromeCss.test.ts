@@ -33,9 +33,18 @@
  *
  * What replaces the retired suite: a structural regression gate proving the deletion holds --
  * `HumbleLoginSurface.tsx` renders `TauriLoginPanel` unconditionally and imports neither
- * `attachHumbleLoginChromeCss` nor `WebviewTag`, and no longer calls
- * `window.api.humbleLoginNavigated()`. This is the same "prove a guard cannot quietly reappear"
- * discipline the sibling `WebviewUnavailablePanel.test.tsx` INVERT applies to the store/wiki arm.
+ * `attachHumbleLoginChromeCss` nor the retired `<webview>`-element method-surface shim, and no
+ * longer calls `window.api.humbleLoginNavigated()`. This is the same "prove a guard cannot
+ * quietly reappear" discipline the sibling `WebviewUnavailablePanel.test.tsx` INVERT applies to
+ * the store/wiki arm.
+ *
+ * Phase 40 Plan 03 (D-12, REQ-40-10) deleted that shim's type declaration outright from
+ * `backend/platform/types.ts` -- there is no longer anywhere in the codebase it could be imported
+ * from, so re-importing it is now a compile error `pnpm codecheck` catches directly, and plan
+ * 40-03's own mechanical gate (D-13) sweeps `src/frontend/` for the same reintroduced token. The
+ * runtime string-matching test that used to guard this here is retired as redundant coverage of a
+ * regression two independent, stronger mechanisms already cover; keeping a test whose subject is
+ * categorically impossible to violate is dead weight, not a guard.
  */
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -52,10 +61,6 @@ describe('HumbleLoginSurface.tsx -- Model A wiring retired (RETIRE, REQ-40-10, p
 
   test('no longer imports the deleted attachHumbleLoginChromeCss helper', () => {
     expect(source).not.toContain('attachHumbleLoginChromeCss')
-  })
-
-  test('no longer imports WebviewTag', () => {
-    expect(source).not.toContain('WebviewTag')
   })
 
   test('no longer calls window.api.humbleLoginNavigated (D-17 relay retired with the <webview> it navigated)', () => {
