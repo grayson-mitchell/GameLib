@@ -289,6 +289,9 @@
         "zombieClassic": "Zombie Classic"
     },
     "webview": {
+        "embedPlaceholder": {
+            "message": "Paused while a window is open"
+        },
         "login": {
             "blocked": {
                 "body": "Your sign-in cannot be completed yet: {{channel}} is not ported to this build. This lands in Phase 34.5.",
@@ -342,6 +345,9 @@
                 }
             }
         },
+        "storeEmbedControls": {
+            "hostLabel": "Currently viewing {{host}}"
+        },
         "unavailable": {
             "epic": {
                 "body": "GameLib doesn't yet embed Epic Store pages in-app.",
@@ -353,12 +359,6 @@
                 "body": "GameLib's in-app store and wiki browsing is available on macOS. It isn't available on this platform yet.",
                 "heading": "In-app store and wiki browsing isn't available on this platform yet"
             }
-        },
-        "embedPlaceholder": {
-            "message": "Paused while a window is open"
-        },
-        "storeEmbedControls": {
-            "hostLabel": "Currently viewing {{host}}"
         }
     },
     "winetricks": {

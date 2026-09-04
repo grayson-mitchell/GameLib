@@ -111,7 +111,9 @@ export default function StoreEmbedControls({
             className={cx('StoreEmbedControls__hostText', {
               ['StoreEmbedControls__hostText--warning']: display?.isInsecure ?? false
             })}
-            aria-label={tGamelib('storeEmbedControls.hostLabel', { host })}
+            aria-label={tGamelib('webview.storeEmbedControls.hostLabel', {
+              host
+            })}
           >
             {host}
           </span>
