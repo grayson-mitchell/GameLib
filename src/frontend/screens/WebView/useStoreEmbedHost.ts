@@ -1,0 +1,284 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
+
+import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
+
+/**
+ * Store embed host hook (Phase 40 Plan 08, D-18/D-19/D-20/D-21, REQ-40-02/REQ-40-03).
+ *
+ * Under the retired Electron `<webview>` model the element was IN the document and CSS laid it
+ * out. Under `Window::add_child` (spike 016-018) the embed is a native subview the DOM cannot
+ * contain, only describe the position of. This hook is that description: it owns the ONE thing
+ * that makes the inversion work (bounds sync, T-40-08-03/T-40-08-01) plus the three things a
+ * long-lived native subview needs that a DOM element gets for free (open/re-point, a
+ * hide-not-close route lifecycle, and hiding under app-UI suppression).
+ *
+ * SINGLE GEOMETRY ORACLE (D-18, spike 017): the interactive spike panel's own `ResizeObserver`
+ * silently overrode a scripted run's bounds with zero error — a second writer always wins
+ * silently, so the only defence is structural, not a runtime check. This hook contains the ONE
+ * `storeEmbedSetBounds` call site in the entire renderer (T-40-08-03), fed by nothing but
+ * `slot.getBoundingClientRect()`. There is no fallback rect anywhere in this file: a missing slot
+ * ref sends nothing at all and only logs — computing a rect from `window.innerWidth/innerHeight`,
+ * a CSS custom property, or a parent element's box would be a second writer wearing a disguise.
+ */
+
+// Spike 017's measured bounds-sync interval (`tauri-embedded-store-browser.md`, "Bounds sync"
+// section: "ResizeObserver on the slot div, debounced ~40 ms"). Named so a future retune is a
+// one-line diff against a comment, not a search for a buried magic number.
+const BOUNDS_SYNC_DEBOUNCE_MS = 40
+
+// Derived from the real IPC return type rather than re-declared here, so this file cannot drift
+// from `common/types/ipc.ts` the way the four nav methods' types already had (Rule 1 fix, this
+// plan's SUMMARY) — if that type changes again, this one follows it instead of going stale next
+// to it.
+type StoreEmbedNavCallResult = Awaited<ReturnType<typeof window.api.storeEmbedBack>>
+type StoreEmbedNavState = Extract<StoreEmbedNavCallResult, { status: 'ok' }>['navState']
+
+/**
+ * Display-only host derivation for the hook's OWN initial state, before any real navigation
+ * event has arrived from the Rust history stack. Mirrors `StoreEmbedControls`'s own
+ * `parseDisplayUrl` fail-soft shape (empty string, never a thrown error) — duplicated rather than
+ * imported because that component's parser is private to its display concerns, not a shared
+ * utility, and this hook needs only the host, not the insecure-scheme flag.
+ */
+function deriveInitialHost(url: string): string {
+  try {
+    return new URL(url).host
+  } catch {
+    return ''
+  }
+}
+
+function logNavCallFailure(label: string, error: unknown): void {
+  window.api.logInfo(`[useStoreEmbedHost] ${label} threw: ${String(error)}`)
+}
+
+export interface UseStoreEmbedHostOptions {
+  /** The slot div's ref — the single geometry oracle. Read, never written, by this hook. */
+  slotRef: RefObject<HTMLDivElement>
+  /** The route's resolved start URL (from `WebView/index.tsx`'s existing `urls` map/session restore). */
+  startUrl: string
+  /** Which store the caller is opening (e.g. `'steam'`) — bookkeeping only, per `storeEmbedSeam.open`'s own doc comment. */
+  storeKey: string
+  /**
+   * True while the route currently rendering this hook is a store/wiki route. Guards the
+   * suppression-release transition (T-40-08-02): a suppression released after the user has
+   * already navigated away must not resurrect the embed on whatever screen they landed on next.
+   */
+  isStoreRoute: boolean
+}
+
+export interface StoreEmbedHostState {
+  currentUrl: string
+  host: string
+  canGoBack: boolean
+  canGoForward: boolean
+  onBack: () => void
+  onForward: () => void
+  onReload: () => void
+  onNavigate: (url: string) => void
+}
+
+export function useStoreEmbedHost({
+  slotRef,
+  startUrl,
+  storeKey,
+  isStoreRoute
+}: UseStoreEmbedHostOptions): StoreEmbedHostState {
+  const [navState, setNavState] = useState<StoreEmbedNavState>(() => ({
+    url: startUrl,
+    host: deriveInitialHost(startUrl),
+    canGoBack: false,
+    canGoForward: false
+  }))
+
+  // D-22: `canGoBack`/`canGoForward` are FIELDS pushed by the Rust history stack, never a
+  // synchronous query — this is the one place that state lands, from whichever call resolved it.
+  const applyNavResult = useCallback((result: StoreEmbedNavCallResult) => {
+    if (result.status === 'ok') {
+      setNavState(result.navState)
+      return
+    }
+    // T-40-08-05: tolerate an absent/erroring embed by leaving the last-known state in place
+    // rather than throwing into the render path — the handle dies with the webview (planning
+    // finding 5), so a failed nav call is a normal condition, not a bug to surface as a crash.
+    window.api.logInfo(
+      `[useStoreEmbedHost] navigation call resolved with status=error error=${result.error}`
+    )
+  }, [])
+
+  // ── BOUNDS SYNC + OPEN — the single geometry oracle (D-18, T-40-08-01/03) ──────────────────
+  const openedRef = useRef(false)
+
+  useEffect(() => {
+    const slot = slotRef.current
+    if (!slot) {
+      window.api.logInfo(
+        '[useStoreEmbedHost] slot ref is null on mount -- no ResizeObserver attached, no bounds sent (D-18: no fallback rect)'
+      )
+      return undefined
+    }
+
+    let debounceHandle: ReturnType<typeof setTimeout> | null = null
+
+    // The ONLY place in the renderer that reads a rect and sends bounds (grep-checked by this
+    // plan's own acceptance criteria). `slot.getBoundingClientRect()` is the sole input to both
+    // the initial `open()` and every later `setBounds()` — never `window.innerWidth/innerHeight`,
+    // a CSS custom property, or a parent element's box, not even as a fallback for a momentarily
+    // zero-sized slot.
+    const flush = () => {
+      const rect = slot.getBoundingClientRect()
+      const bounds = { x: rect.x, y: rect.y, w: rect.width, h: rect.height }
+      if (!openedRef.current) {
+        openedRef.current = true
+        window.api.storeEmbedOpen(startUrl, bounds, storeKey).catch((error) => {
+          logNavCallFailure('storeEmbedOpen', error)
+        })
+      } else {
+        window.api.storeEmbedSetBounds(bounds)
+      }
+    }
+
+    const scheduleFlush = () => {
+      if (debounceHandle !== null) clearTimeout(debounceHandle)
+      debounceHandle = setTimeout(flush, BOUNDS_SYNC_DEBOUNCE_MS)
+    }
+
+    const observer = new ResizeObserver(scheduleFlush)
+    observer.observe(slot)
+
+    // T-40-08-06: `getBoundingClientRect` is viewport-relative, so a scroll that moves the slot
+    // changes its rect WITHOUT changing its size — a resize-only observer would strand the
+    // embed. Determined (not assumed) for THIS layout: the slot renders inside `<Outlet/>`,
+    // which App.css places inside `.App .content` — and that element is `overflow-y: auto`
+    // (F-34.10-06), the app's real scroll container for every routed screen. So yes, the slot
+    // CAN move without resizing here. `scroll` does not bubble, but a capturing-phase listener
+    // on `window` still observes it on the way down to whichever element actually scrolled, so
+    // one listener here catches `.App .content` (or any other scrollable ancestor introduced
+    // later) without this hook needing to know which ancestor it is.
+    window.addEventListener('resize', scheduleFlush)
+    window.addEventListener('scroll', scheduleFlush, true)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', scheduleFlush)
+      window.removeEventListener('scroll', scheduleFlush, true)
+      if (debounceHandle !== null) clearTimeout(debounceHandle)
+    }
+    // Mount-once by design: this effect opens the embed exactly once (guarded by `openedRef`)
+    // and re-points it via `storeEmbedNavigate` on a `startUrl` change (the effect below), never
+    // by tearing down and re-attaching the observer — the observer's identity must outlive a
+    // same-store URL change or the debounce window above would be defeated on every navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── SAME-STORE NAVIGATION ON A START-URL CHANGE — navigate, never re-open ──────────────────
+  const previousUrlRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (previousUrlRef.current === null) {
+      previousUrlRef.current = startUrl
+      return
+    }
+    if (previousUrlRef.current === startUrl) return
+    previousUrlRef.current = startUrl
+    window.api
+      .storeEmbedNavigate(startUrl)
+      .then(applyNavResult)
+      .catch((error) => {
+        logNavCallFailure('storeEmbedNavigate (start-url change)', error)
+      })
+  }, [startUrl, applyNavResult])
+
+  // ── SUPPRESSION (D-19/D-20, T-40-08-02) ─────────────────────────────────────────────────────
+  const suppressed = useStoreEmbedSuppressed()
+  const wasSuppressedRef = useRef(false)
+
+  useEffect(() => {
+    if (suppressed) {
+      wasSuppressedRef.current = true
+      window.api.storeEmbedHide().catch((error) => {
+        logNavCallFailure('storeEmbedHide (suppression)', error)
+      })
+      return
+    }
+    if (wasSuppressedRef.current) {
+      wasSuppressedRef.current = false
+      if (isStoreRoute) {
+        window.api.storeEmbedShow().catch((error) => {
+          logNavCallFailure('storeEmbedShow (suppression)', error)
+        })
+      }
+    }
+  }, [suppressed, isStoreRoute])
+
+  // ── ROUTE LIFECYCLE — hide on leave, close only at app teardown (D-21) ─────────────────────
+  const tearingDownRef = useRef(false)
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      tearingDownRef.current = true
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      // This cleanup fires when the hook unmounts, i.e. when the user leaves the store/wiki
+      // route. `beforeunload` firing FIRST is the only signal that this unmount is instead part
+      // of the whole app tearing down — in that case, and ONLY that case, close() rather than
+      // hide(). Never close() on an ordinary route change: that would throw away the webview and
+      // its cookie jar, defeating the "instant, state-intact return" this hook exists to give.
+      if (tearingDownRef.current) {
+        window.api.storeEmbedClose().catch((error) => {
+          logNavCallFailure('storeEmbedClose (app teardown)', error)
+        })
+      } else {
+        window.api.storeEmbedHide().catch((error) => {
+          logNavCallFailure('storeEmbedHide (route leave)', error)
+        })
+      }
+    }
+  }, [])
+
+  const onBack = useCallback(() => {
+    window.api
+      .storeEmbedBack()
+      .then(applyNavResult)
+      .catch((error) => logNavCallFailure('storeEmbedBack', error))
+  }, [applyNavResult])
+
+  const onForward = useCallback(() => {
+    window.api
+      .storeEmbedForward()
+      .then(applyNavResult)
+      .catch((error) => logNavCallFailure('storeEmbedForward', error))
+  }, [applyNavResult])
+
+  const onReload = useCallback(() => {
+    window.api
+      .storeEmbedReload()
+      .then(applyNavResult)
+      .catch((error) => logNavCallFailure('storeEmbedReload', error))
+  }, [applyNavResult])
+
+  const onNavigate = useCallback(
+    (url: string) => {
+      window.api
+        .storeEmbedNavigate(url)
+        .then(applyNavResult)
+        .catch((error) => logNavCallFailure('storeEmbedNavigate', error))
+    },
+    [applyNavResult]
+  )
+
+  return {
+    currentUrl: navState.url,
+    host: navState.host,
+    canGoBack: navState.canGoBack,
+    canGoForward: navState.canGoForward,
+    onBack,
+    onForward,
+    onReload,
+    onNavigate
+  }
+}

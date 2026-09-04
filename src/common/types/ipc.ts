@@ -436,15 +436,25 @@ interface AsyncIPCFunctions {
   // canGoBack() query. NOT YET BACKED BY A RUST ARM (plan `40-07` owns it, D-25); resolves `[]`
   // on catch (fail-safe discipline) rather than rejecting.
   storeEmbedTakeNavEvents: () => Promise<StoreEmbedNavEvent[]>
-  // The four methods below have no Rust arm yet (plan `40-02` deliberately did not add one;
-  // plan `40-07` adds them against the D-25 verdict). Each resolves `{ status: 'error', error }`
-  // with `error` naming `40-07` as owner — declared-unimplemented, never a silent no-op.
-  storeEmbedBack: () => Promise<{ status: 'ok' | 'error'; error?: string }>
-  storeEmbedForward: () => Promise<{ status: 'ok' | 'error'; error?: string }>
-  storeEmbedReload: () => Promise<{ status: 'ok' | 'error'; error?: string }>
+  // Plan `40-07` backed these four with a real Rust history-stack arm (D-22/D-25): each
+  // resolves the resulting pushed navigation state on success (there is no handle to
+  // separately query — the return value IS the read), or `{ status: 'error', error }` on
+  // failure (e.g. nothing to go back to) — never a silent default/plausible state
+  // (`storeEmbedSeam.ts`'s `back()`/`forward()`/`reload()`/`navigate()` doc comments).
+  storeEmbedBack: () => Promise<
+    { status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }
+  >
+  storeEmbedForward: () => Promise<
+    { status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }
+  >
+  storeEmbedReload: () => Promise<
+    { status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }
+  >
   storeEmbedNavigate: (
     url: string
-  ) => Promise<{ status: 'ok' | 'error'; error?: string }>
+  ) => Promise<
+    { status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }
+  >
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>
