@@ -330,6 +330,63 @@ function isWindowApiLogArgument(node: Node): boolean {
   return Node.isIdentifier(root) && root.getText() === 'window'
 }
 
+/**
+ * Phase 40 (gap GAP-C): an argument to a LOCAL function whose entire body is a
+ * single `window.api.log*` / `console.*` call is a diagnostic log label, and is
+ * exempt for the same reason `isWindowApiLogArgument` above exempts the direct
+ * call — it is developer-facing, never rendered.
+ *
+ * RESOLUTION-BASED, NOT NAME-BASED, deliberately. The tempting version of this
+ * rule is "exempt any call to something named `log*`", which would let a
+ * function called `logIn` (a real login verb) launder rendered prose past the
+ * gate forever. Instead the callee identifier is RESOLVED to its declaration
+ * and that declaration's body is required to be a single expression statement
+ * that is itself already-exempt diagnostic output. A wrapper that renders,
+ * returns, or branches does not qualify.
+ *
+ * Concretely this covers `useStoreEmbedHost.ts`'s
+ * `logNavCallFailure(label, error)`, a one-line
+ * `window.api.logInfo(\`[useStoreEmbedHost] \${label} threw: ...\`)` wrapper
+ * that produced six false positives the moment plan 40-08's file entered the
+ * scanned scope. Without this the only alternatives were to leave that file
+ * permanently unscanned, or to reshape working product code to satisfy a gate.
+ */
+function isLocalDiagnosticWrapperArgument(node: Node): boolean {
+  const call = node.getFirstAncestor(Node.isCallExpression)
+  if (!call) return false
+  if (!call.getArguments().includes(node)) return false
+
+  const callee = call.getExpression()
+  if (!Node.isIdentifier(callee)) return false
+
+  for (const decl of callee.getDefinitionNodes()) {
+    const fn = Node.isFunctionDeclaration(decl)
+      ? decl
+      : Node.isVariableDeclaration(decl)
+        ? decl.getInitializer()
+        : undefined
+    if (!fn) continue
+    if (!Node.isFunctionDeclaration(fn) && !Node.isArrowFunction(fn)) continue
+
+    const body = fn.getBody()
+    if (!body || !Node.isBlock(body)) continue
+    const statements = body.getStatements()
+    if (statements.length !== 1) continue
+
+    const only = statements[0]
+    if (!Node.isExpressionStatement(only)) continue
+    const inner = only.getExpression()
+    if (!Node.isCallExpression(inner)) continue
+
+    // The wrapper's own call must be the diagnostic channel this gate already
+    // exempts — reuse those predicates rather than re-deriving them here.
+    const probe = inner.getArguments()[0]
+    if (!probe) continue
+    if (isConsoleArgument(probe) || isWindowApiLogArgument(probe)) return true
+  }
+  return false
+}
+
 function isNewErrorArgument(node: Node): boolean {
   const newExpr = node.getFirstAncestor(Node.isNewExpression)
   if (!newExpr) return false
@@ -695,6 +752,57 @@ const INTERNAL_STRING_COMPARISON_METHOD_NAMES = new Set([
   'replace'
 ])
 
+/**
+ * Phase 40 (gap GAP-B): a string/template literal that is the whole body of a
+ * builder function whose name ends in `StorageKey` is a Web Storage key
+ * prefix, not rendered prose.
+ *
+ * This RESTORES an exemption this gate already owns rather than widening it.
+ * `TECHNICAL_DOM_API_METHOD_NAMES` above exempts `getItem`/`setItem` key
+ * arguments, and its own comment names this very literal --
+ * `WebView/index.tsx`'s `setItem('last-url-${store}', ...)`. Plan 40-09 then
+ * lifted that key out of the call and into a named helper so the read side
+ * and the write side could not drift onto two different key shapes. The
+ * string did not change meaning; it simply moved out of the argument position
+ * the old check was gated on, and the gate went red on a decision it had
+ * already made.
+ *
+ * Deliberately narrow, mirroring `isConfigStoreKeyArgument`'s name-gating so
+ * it cannot exempt an unrelated literal:
+ *   - the enclosing function must be a variable-declared arrow/function whose
+ *     identifier ends in `StorageKey`, and
+ *   - the literal must be that function's ENTIRE body (or its sole `return`),
+ *     so a prose literal sitting elsewhere inside such a function is still
+ *     caught.
+ *
+ * Vocabulary measured before writing this, per the recorded
+ * `measure-a-gates-vocabulary-before-building-it` lesson: exactly two
+ * identifiers in `src/` end in `StorageKey` — `GamesSettings/index.tsx`'s
+ * `localStorageKey` (a ternary over two `getStartingTab` values, not a
+ * literal body, so unaffected) and `WebView/index.tsx`'s `lastUrlStorageKey`.
+ * This rule therefore exempts exactly one site today.
+ */
+function isStorageKeyBuilderBody(node: Node): boolean {
+  const fn = node.getFirstAncestor(
+    (a) => Node.isArrowFunction(a) || Node.isFunctionExpression(a)
+  )
+  if (!fn) return false
+
+  // The literal must BE the body, or the sole returned expression of it.
+  const body = (fn as unknown as { getBody: () => Node }).getBody()
+  const isBody =
+    body === node ||
+    (Node.isBlock(body) &&
+      body
+        .getStatements()
+        .some((s) => Node.isReturnStatement(s) && s.getExpression() === node))
+  if (!isBody) return false
+
+  const decl = fn.getFirstAncestor(Node.isVariableDeclaration)
+  if (!decl) return false
+  return /StorageKey$/.test(decl.getName())
+}
+
 function isInternalStringComparisonArgument(node: Node): boolean {
   const call = node.getFirstAncestor(Node.isCallExpression)
   if (!call) return false
@@ -819,6 +927,8 @@ function isStructuralNonCandidate(
   if (isDropdownButtonClassProp(node)) return true
   if (isConfigStoreKeyArgument(node)) return true
   if (isTechnicalDomApiArgument(node)) return true
+  if (isStorageKeyBuilderBody(node)) return true
+  if (isLocalDiagnosticWrapperArgument(node)) return true
   if (isInternalStringComparisonArgument(node)) return true
   if (isIncludesArrayLiteralElement(node)) return true
   return false

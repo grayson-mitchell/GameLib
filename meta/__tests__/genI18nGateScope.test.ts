@@ -242,6 +242,29 @@ const FIXTURE_DIFF_LINES = [
  * diff, then reverted and re-applied by hand with `generatedAt` held constant --
  * NOT regenerated in place -- per this file's own `260903-w73` note that a live
  * regen here is measured to cascade beyond the intended edit.
+ *
+ * 2026-09-05 (Phase 40 verification gap GAP-C, the ADD half): fork-touched
+ * 208 -> 213. Plan 01's re-derive above was correct AND INCOMPLETE AS A PHASE
+ * RECORD: it ran in wave 1 and moved the pin DOWN for two files it deleted,
+ * but waves 3-6 then CREATED five new string-carrying frontend files and
+ * nobody re-ran this gate, so the artifact rotted in the opposite direction
+ * and `A-17 ANTI-ROT` went red. The lesson is about ORDERING, not arithmetic:
+ * a scope pin re-derived before the phase stops creating files measures a
+ * world that no longer exists by the time the phase ends. Added:
+ * `components/UI/NavShell/StoreEmbedSuppressionContext.tsx` (40-06),
+ * `components/UI/StoreEmbedControls/index.tsx` (40-07),
+ * `screens/WebView/components/StoreEmbedPlaceholder.tsx` (40-06),
+ * `screens/WebView/storeEmbedOrigins.ts` (40-09) and
+ * `screens/WebView/useStoreEmbedHost.ts` (40-08).
+ *
+ * Derived, not assumed: `buildScopeSnapshot()` was called against the real
+ * merge-base diff and its output compared to the committed artifact, giving
+ * exactly these five additions and ZERO removals. That import was made with
+ * `JEST_WORKER_ID` set, because `genI18nGateScope.ts` runs `main()` at import
+ * time otherwise and would have REWRITTEN the very artifact being measured --
+ * the recorded `importing-a-meta-script-runs-its-main` hazard. The artifact's
+ * md5 was checked before and after the derivation to prove it had not moved.
+ * Applied by hand with `generatedAt` held constant, per the precedent above.
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/Tour/Tour.tsx',
@@ -721,7 +744,7 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 208 files of
+   * The snapshot a real regeneration would produce TODAY: the 213 files of
    * the committed fork-touched artifact (35-24: 199 -> 205, six files that
    * phase touched -- `PathSelectionBox/index.tsx`, `WebviewControls/index.tsx`,
    * `DownloadManager/index.tsx`, `CategoriesManager/index.tsx`,
@@ -729,7 +752,7 @@ describe('--rewrite-scope guard', () => {
    * gap-closure follow-up: 205 -> 206, `Winetricks/WinetricksSearch/index.tsx`,
    * touched by 35-25's `366e719bb` after 35-24's re-baseline had already
    * landed). Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 164 -> 208 delta this task exists to
+   * so the specs below assert the REAL 169 -> 213 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -755,10 +778,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 164-file hand-curated snapshot and the fresh snapshot is the REAL 208', () => {
-    expect(scopeSnapshot.files.length).toBe(164)
-    expect(forkTouchedSnapshot.files.length).toBe(208)
-    expect(freshSnapshot().files.length).toBe(208)
+  it('A0 fixture sanity: the seeded scope is the REAL 169-file hand-curated snapshot and the fresh snapshot is the REAL 213', () => {
+    expect(scopeSnapshot.files.length).toBe(169)
+    expect(forkTouchedSnapshot.files.length).toBe(213)
+    expect(freshSnapshot().files.length).toBe(213)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -784,7 +807,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 164 -> 208 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 169 -> 213 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -807,7 +830,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 208', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 213', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -820,12 +843,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(208)
+    expect(rewritten.files.length).toBe(213)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 208 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 213 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -838,7 +861,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(208)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(213)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

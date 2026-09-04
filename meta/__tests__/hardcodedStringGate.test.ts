@@ -235,6 +235,111 @@ describe('hardcodedStringGate', () => {
     })
   })
 
+  // Phase 40 GAP-B. `TECHNICAL_DOM_API_METHOD_NAMES` already exempts
+  // `getItem`/`setItem` key arguments and its comment names this very literal.
+  // Plan 40-09 lifted the key into a named builder so the read and write sides
+  // could not drift apart, which moved it out of the argument position that
+  // check is gated on — the gate went red on a decision it had already made.
+  // These four cases pin the restored exemption AND its narrowness; the last
+  // two are the ones that must stay RED, because an exemption that swallows
+  // prose is worse than the false positive it replaced.
+  describe('GAP-B: storage-key builder bodies (name-gated, Phase 40)', () => {
+    it('does not flag a template literal that is the whole body of a *StorageKey arrow', () => {
+      const source = `
+        const lastUrlStorageKey = (storeKey: string) => \`last-url-\${storeKey}\`
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('does not flag the sole returned literal of a *StorageKey block body', () => {
+      const source = `
+        const tabStorageKey = (id: string) => {
+          return \`selected-tab-\${id}\`
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('STILL flags a prose literal sitting elsewhere inside a *StorageKey builder', () => {
+      const source = `
+        const lastUrlStorageKey = (storeKey: string) => {
+          const label = 'Could not restore your last page'
+          void label
+          return \`last-url-\${storeKey}\`
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(1)
+      expect(result.violations[0].text).toBe('Could not restore your last page')
+    })
+
+    it('STILL flags the same literal shape when the builder is NOT named *StorageKey', () => {
+      const source = `
+        const buildLabel = (storeKey: string) => \`Last visited page for \${storeKey}\`
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(1)
+    })
+  })
+
+  // Phase 40 GAP-C. Bringing plan 40-08's `useStoreEmbedHost.ts` into the
+  // scanned scope surfaced six labels passed to a one-line
+  // `window.api.logInfo` wrapper. The rule resolves the callee to its
+  // declaration rather than matching its NAME, because a name rule would let
+  // anything called `log*` — `logIn`, say — launder rendered prose past the
+  // gate permanently. The last two cases are the ones that must stay RED.
+  describe('GAP-C: local diagnostic wrappers (resolution-gated, Phase 40)', () => {
+    it('does not flag a label passed to a one-line window.api.log* wrapper', () => {
+      const source = `
+        function logNavCallFailure(label: string, error: unknown): void {
+          window.api.logInfo(\`[host] \${label} threw: \${String(error)}\`)
+        }
+        function run() {
+          logNavCallFailure('storeEmbedHide (suppression)', new Error('x'))
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(0)
+    })
+
+    it('STILL flags a label passed to a same-named wrapper that RENDERS instead of logging', () => {
+      const source = `
+        function logNavCallFailure(label: string): string {
+          return label
+        }
+        function run() {
+          logNavCallFailure('Could not hide the store window')
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(1)
+      expect(result.violations[0].text).toBe('Could not hide the store window')
+    })
+
+    it('STILL flags a label passed to a MULTI-statement wrapper, even one that does log', () => {
+      const source = `
+        function logIn(label: string): void {
+          showToast(label)
+          window.api.logInfo(label)
+        }
+        function run() {
+          logIn('Signing you in to your account')
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+      expect(result.violations).toHaveLength(1)
+    })
+  })
+
   describe('plan 06 (34.8-06): whole-scope audit fixes', () => {
     describe('composed t()-call arguments', () => {
       it('never flags a ternary default-text argument — real TauriLoginPanel.tsx idiom', () => {
