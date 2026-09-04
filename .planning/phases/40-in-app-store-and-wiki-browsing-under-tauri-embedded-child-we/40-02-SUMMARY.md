@@ -32,7 +32,7 @@ decisions:
   - "D-03 proven by cargo tree diff, not asserted; cross-target cargo check could not run in this environment (no non-host rustup target installed) so it is NOT reported as a passed proof"
   - "D-17 UA: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36, reviewed 2026-09-04"
 metrics:
-  duration: "~35 min between Task 1 and Task 3 commits (a6bca3c84 17:04:32 -> 4e269d321 17:39:42 NZ local); one session interruption occurred mid-Task-2 verification"
+  duration: "~35 min between Task 1 and Task 3 commits (a6bca3c84 17:04:32 -> 4e269d321 17:39:42 NZ local); one session interruption (transient API 502) occurred mid-Task-3 verification, after Task 2 was already committed at 61e0593b8; resumed with no lost work"
   completed: 2026-09-04
 ---
 
