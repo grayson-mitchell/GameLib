@@ -34,7 +34,10 @@
  * `humbleFlowRegistration.ts` — Phase 34.4 Plans 04+05, REQ-34.4-07;
  * curated-imports `humble/user.ts`/`humble/library.ts` directly, never
  * `humble/ipc_handler.ts`, which also registers the channels Phase 34.4.1
- * owns), and the two store-layer read handlers (D-03): the eager
+ * owns), the curated in-app store-embed channels (`registerStoreEmbedFlows()`,
+ * `storeEmbedFlowRegistration.ts` -- Phase 40 Plan 05, REQ-40-02/REQ-40-05, which also installs
+ * the `rustInvoke`-backed `StoreEmbedSeam` implementation via `setStoreEmbedSeam()`), and the
+ * two store-layer read handlers (D-03): the eager
  * `sidecar:store-snapshot` (serves the declared `BOOT_SET_STORES`, filtered
  * through the single D-08 allow-list) and the lazy `sidecar:store-fetch`
  * (single-store on-demand hydrate for everything else in `STORE_UNIVERSE`,
@@ -93,6 +96,7 @@ import { registerWineToolsFlows } from './wineToolsFlowRegistration'
 import { registerShortcutsFlows } from './shortcutsFlowRegistration'
 import { registerRunnerMiscFlows } from './runnerMiscFlowRegistration'
 import { registerEosOverlayFlows } from './eosOverlayFlowRegistration'
+import { registerStoreEmbedFlows } from './storeEmbedFlowRegistration'
 import { ensureStoresRegistered } from './storeRegistration'
 import { registerStoreWriteHandlers } from './storeWriteHandlers'
 import { getRegisteredStore } from '../electron_store'
@@ -216,6 +220,11 @@ registerRunnerMiscFlows()
 // Phase 34.6 Plan 08 (REQ-34.6-01): the EOS overlay channel cluster — no ordering constraint
 // relative to the other calls above.
 registerEosOverlayFlows()
+// Phase 40 Plan 05 (REQ-40-02/REQ-40-05): the in-app store-embed channels, plus installing the
+// rustInvoke-backed store-embed seam (setStoreEmbedSeam) — no ordering constraint relative to
+// the other calls above (own channel names, no cross-module runtime dependency at registration
+// time), placed alongside them, before `ensureStoresRegistered()`.
+registerStoreEmbedFlows()
 ensureStoresRegistered()
 // D-05: the write handlers (storeSet/storeDelete/storeNew) must not be reachable before
 // every store instance exists, or a legitimate write would be rejected as an unknown

@@ -9,6 +9,7 @@ import * as Zoom from './zoom'
 import * as Steam from './steam'
 import * as Humble from './humble'
 import * as StoreSearch from './storeSearch'
+import * as StoreEmbed from './storeEmbed'
 
 export default {
   ...Misc,
@@ -21,5 +22,6 @@ export default {
   ...Zoom,
   ...Steam,
   ...Humble,
-  ...StoreSearch
+  ...StoreSearch,
+  ...StoreEmbed
 }
