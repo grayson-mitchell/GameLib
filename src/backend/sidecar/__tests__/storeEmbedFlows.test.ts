@@ -429,7 +429,7 @@ describe('unimplemented-navigation-throws-naming-40-07 — takeNavEvents has no 
     await flush()
     const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_NAVIGATE)
     expect(frame).toBeDefined()
-    expect(frame?.args).toEqual(['https://example.com/next'])
+    expect(frame?.args).toEqual([{ url: 'https://example.com/next' }])
 
     input.write(
       `${JSON.stringify({
@@ -449,7 +449,7 @@ describe('unimplemented-navigation-throws-naming-40-07 — takeNavEvents has no 
 
 // ── Test 5: bounds-courier-passthrough-and-throw ─────────────────────────────────────────────────
 describe('bounds-courier-passthrough-and-throw — setBounds is a pure courier (T-40-05-04/D-18/D-29)', () => {
-  it('store_embed_set_bounds: emits [x, y, w, h] field-for-field unchanged, no rounding/clamping/defaulting', async () => {
+  it('store_embed_set_bounds: emits { x, y, w, h } field-for-field unchanged, no rounding/clamping/defaulting', async () => {
     const { input, frames } = startTransport()
     const seam = createRustStoreEmbedSeam()
 
@@ -461,7 +461,7 @@ describe('bounds-courier-passthrough-and-throw — setBounds is a pure courier (
       (f) => f.channel === RUST_STORE_EMBED_SET_BOUNDS
     )
     expect(frame).toBeDefined()
-    expect(frame?.args).toEqual([10.5, -3, 799.999, 0])
+    expect(frame?.args).toEqual([{ x: 10.5, y: -3, w: 799.999, h: 0 }])
 
     input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: null })}\n`)
   })

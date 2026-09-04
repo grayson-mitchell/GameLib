@@ -9229,6 +9229,78 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    // ---- Phase 40 store-embed WIRE CONTRACT (added 2026-09-05 after a live-gate failure) ----
+    //
+    // These read `meta/fixtures/store-embed-wire-args.json` -- the SAME file the TS suite
+    // `storeEmbedWireContract.test.ts` asserts the sidecar actually emits. Neither side can
+    // change the wire shape without breaking the other.
+    //
+    // Why: on 2026-09-05 a live gate found `store_embed_open` rejecting every call with the bare
+    // `store_embed_open:bad-args`. The sidecar sent POSITIONAL arrays (`[url, x, y, w, h]`) while
+    // these parsers read a single OBJECT (`{url,x,y,w,h}`). Every gate was green -- the TS suite
+    // drove the real transport into a JS test handler, and these parsers had NO Rust tests at all.
+    // Both sides were tested; the contract between them was not.
+    const STORE_EMBED_WIRE_FIXTURE: &str =
+        include_str!("../../meta/fixtures/store-embed-wire-args.json");
+
+    fn wire_args(arm: &str) -> Vec<Value> {
+        let doc: Value = serde_json::from_str(STORE_EMBED_WIRE_FIXTURE)
+            .expect("store-embed wire fixture must be valid JSON");
+        doc.get(arm)
+            .and_then(|v| v.as_array())
+            .unwrap_or_else(|| panic!("wire fixture missing array for arm {arm}"))
+            .clone()
+    }
+
+    #[test]
+    fn store_embed_wire_contract_open_parses_the_shipped_payload() {
+        let (url, x, y, w, h) = store_embed_open_args(&wire_args("store_embed_open"))
+            .expect("the shipped open payload must parse");
+        assert_eq!(url.as_str(), "https://store.steampowered.com/");
+        assert_eq!((x, y, w, h), (12.5, 64.0, 1280.25, 800.0));
+    }
+
+    #[test]
+    fn store_embed_wire_contract_set_bounds_parses_the_shipped_payload() {
+        let (x, y, w, h) = store_embed_set_bounds_args(&wire_args("store_embed_set_bounds"))
+            .expect("the shipped set_bounds payload must parse");
+        assert_eq!((x, y, w, h), (10.5, -3.0, 799.999, 0.0));
+    }
+
+    #[test]
+    fn store_embed_wire_contract_navigate_parses_the_shipped_payload() {
+        let url = store_embed_navigate_args(&wire_args("store_embed_navigate"))
+            .expect("the shipped navigate payload must parse");
+        assert_eq!(url.as_str(), "https://example.com/next");
+    }
+
+    // The regression direction: the POSITIONAL shape that actually shipped must be REJECTED, so a
+    // revert to it cannot pass. A "does it parse" test alone would be blind to this.
+    #[test]
+    fn store_embed_wire_contract_rejects_the_positional_shape_that_shipped() {
+        let positional = vec![
+            Value::String("https://store.steampowered.com/".into()),
+            Value::from(12.5),
+            Value::from(64.0),
+            Value::from(1280.25),
+            Value::from(800.0),
+        ];
+        assert_eq!(
+            store_embed_open_args(&positional).unwrap_err(),
+            "store_embed_open:bad-args"
+        );
+        assert_eq!(
+            store_embed_navigate_args(&[Value::String("https://example.com/next".into())])
+                .unwrap_err(),
+            "store_embed_navigate:bad-args"
+        );
+        assert_eq!(
+            store_embed_set_bounds_args(&[Value::from(10.5), Value::from(-3.0)]).unwrap_err(),
+            "store_embed_set_bounds:bad-args"
+        );
+    }
+
+
     // ---- open_external scheme allow-list (35-21, CR-01) ----
     //
     // `open_external` itself needs a live `AppHandle` (`app.opener()`), so these tests drive

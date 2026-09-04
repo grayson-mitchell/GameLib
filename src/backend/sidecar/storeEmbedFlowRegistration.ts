@@ -180,11 +180,7 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
       // (`store_embed_open_args`, 40-02-SUMMARY.md) takes no such argument, so it never
       // crosses the wire.
       const result = await requestRustInvoke(RUST_STORE_EMBED_OPEN, [
-        url,
-        bounds.x,
-        bounds.y,
-        bounds.w,
-        bounds.h
+        { url, x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h }
       ])
       if (result !== null) {
         throw new Error(
@@ -200,10 +196,7 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
       // malformed response is still observable rather than silently swallowed.
       return (async () => {
         const result = await requestRustInvoke(RUST_STORE_EMBED_SET_BOUNDS, [
-          bounds.x,
-          bounds.y,
-          bounds.w,
-          bounds.h
+          { x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h }
         ])
         if (result !== null) {
           throw new Error(
@@ -274,7 +267,7 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
     // entries past the cursor, exactly like a user-initiated navigation) and returning the
     // resulting navigation state.
     async navigate(url) {
-      const result = await requestRustInvoke(RUST_STORE_EMBED_NAVIGATE, [url])
+      const result = await requestRustInvoke(RUST_STORE_EMBED_NAVIGATE, [{ url }])
       return coerceNavState('store_embed_navigate', result)
     }
   }
