@@ -55,3 +55,25 @@
     transform: rotate(360deg);
   }
 }
+
+/*
+ * Phase 40 Plan 06, D-19: fills the embed's slot while
+ * StoreEmbedSuppressionContext reports it suppressed. Reads as the store
+ * dimming behind whatever dialog/dropdown/toast/tour step is open, not as
+ * a rendering glitch -- theme variables only, never a literal colour, so
+ * it survives every theme this app ships (not just the default one).
+ */
+.WebView__embedPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background: var(--background-secondary);
+}
+
+.WebView__embedPlaceholder-message {
+  color: var(--text-secondary);
+  font-size: var(--text-md);
+  margin: 0;
+}

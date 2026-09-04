@@ -343,6 +343,9 @@
             "heading": "In-app store and wiki browsing is not available on this build",
             "next-step": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
             "open-in-browser": "Open in browser"
+        },
+        "embedPlaceholder": {
+            "message": "Paused while a window is open"
         }
     },
     "winetricks": {
