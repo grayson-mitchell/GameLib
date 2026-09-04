@@ -4597,6 +4597,32 @@ before it is a verification task. **`38-E03` and `38-E04` do NOT close on plan `
 `40-LIVE-GATE.md` artifact carries the matching statement from its own side (40-11-PLAN.md lines
 92-95), so the non-closure is recorded in both places. See `38-VERIFICATION.md` for full item text.
 
+⚠ **RETURN HALF OF THE `38-E03`/`38-E04` NON-CLOSURE, recorded 2026-09-05 after plan `40-11`'s live
+gate actually RAN.** The paragraph above was written by plan `40-10` *before* the gate ran, and said
+the two items would not close on it. The gate has now run and **passed 3/3** -- and the two items
+**remain OPEN**. This is the return half: the forward half predicted a non-closure, this half records
+that the predicted non-closure is what happened, so neither a reader of the ROADMAP nor a reader of
+the gate has to go find the other document to learn it.
+
+- **`38-E03` (retina/HiDPI at `scale_factor` 2.0) -- OPEN.** `40-11` Item 1 measured on ONE macOS host
+  at backing scale factor **2.0 exactly**, and got a **0 px delta** across the hide/show cycle. That
+  delta is why it does not close the item: a 0 px result on a *static* rect exercises no rounding
+  behaviour in either direction, and the one-logical-pixel tolerance it was checked against was itself
+  derived at scale factor **1.0**. The item stays open for any other host and any other scale factor.
+- **`38-E04` (embed drag-resize latency) -- OPEN.** `40-11` Item 3 **FAILED** on the first run, was
+  fixed in `b4517366e` (a renderer-side leading-edge throttle at a fixed 40 ms interval, replacing a
+  trailing-edge debounce that never flushed during continuous motion), and passed on re-run with the
+  operator's verdict "tracks like the browser". Whether a fixed 40 ms interval tracks the window on
+  *other* hardware or under *another* backend's resize cadence is exactly what this item still asks.
+  One host answering yes is not the answer for the set.
+
+The macOS answers are recorded at
+`.planning/phases/40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we/40-LIVE-GATE.md`
+(see its "What this run establishes, and what it does not" and "Non-closure statement" sections). That
+artifact carries the same statement from its own side. **A macOS PASS is not a close for either item.**
+`38-E01`/`38-E02` are untouched by the gate for a stronger reason still: no Windows or Linux code path
+exists for it to have exercised.
+
 **Items: 29 as of 2026-09-01** (historical, superseded by the 2026-09-04 count above), confirmed against `gsd-sdk query audit-uat` (`by_phase["38"] == 29`): 8 controller, 7 Windows, 5 Linux, 3 Windows-or-Linux, 2 both-machines, 2 Windows-with-two-Steam-libraries, 2 Linux-with-two-Steam-libraries. **The count below was stale at 8** — it was never updated as the S-series items arrived, and the correcting sweep found it sitting in the same paragraph as the false hardware premise. Historical record follows. Was 8 as of 2026-08-23. **38-W03** (Phase 34.4.1 `D-29-05` — the login window's provisional title) joined 2026-08-23 by operator decision, after live gate run 4 established it is UNSCOREABLE on macOS: the login window is presented as an AppKit **sheet**, and sheets **structurally render no title bar at all** (`main.rs:1551`, F-34.5-G6-16), so the origin-derived `.title()` added by plan 34.4.1-33 sets an NSWindow title this hardware never displays. The fix is correct and unobservable here — the same shape as 38-W02 arriving only once its blocker was genuinely hardware. Its `platform_gate` names the sheet presentation, not "needs Windows", and is falsifiable: if the login window ever stops being a sheet on macOS the item moves back. Was 7 as of 2026-08-22. Seeded with 6; 34.1's tray dark/light item (38-W02) joined once its ARTWORK blocker was fixed in code, which is the intended sequence — an item blocked on something other than hardware does not belong here, because parking it would disguise a real defect as a hardware excuse.
 
 **Why this phase exists.** Phase 34.9 routed 8 of 24 ledger items to "a follow-up phase" that was never in ROADMAP.md; six sat dangling 9-11 days while every gate read `24/24 mapped, unmapped 0`, because the sweep scored whether an item was *mapped to a row*, not whether the row's owner resolved to anything real. This phase exists **before** the items are moved into it, so that no relocation ever points at a phase that does not exist.

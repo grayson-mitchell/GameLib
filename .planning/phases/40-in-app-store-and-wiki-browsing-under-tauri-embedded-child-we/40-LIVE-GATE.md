@@ -753,6 +753,38 @@ the operator's verbatim judgment, which is recorded in full above.
 - Not captured this session: screen recordings for Items 2 and 3. Recorded as an evidence gap in
   those items rather than silently omitted; neither item's PASS CONDITION depends on one.
 
+## What this run establishes, and what it does not
+
+Written at Task 3, after all three items had a recorded RESULT. The purpose of this section is
+that a later reader who finds only this artifact cannot mistake its scope for a larger one.
+
+**Established.** The three items above, on ONE machine: macOS 26.5.2, backing scale factor
+**2.0 exactly** (2560x1600 physical capture of a 1280x800 logical window), built from commit
+`54ca5b400` for Items 1 and 2 and `b4517366e` for Item 3's re-run. Nothing here is established
+for a second host, a second scale factor, or a second platform, because none was run.
+
+**Did the phase ship with a known failure?** No. Item 3's FAIL was **fixed, not caveated** --
+todo `2026-09-05-store-embed-lags-window-during-fast-drag-resize` was filed against the failure,
+the defect was fixed in `b4517366e`, the item was re-run on real hardware and the operator's own
+verdict reversed to a PASS. The original FAIL and its diagnosis are retained above in full. No
+item of this gate is left in a failing state, and no failure has been recorded as a caveat on a
+pass. Had Item 3 stayed red, this line would read the other way and the phase would ship with it
+named here.
+
+**Not established, with the queue that owns each.**
+
+| # | Not established by this run | Why this run cannot answer it | Queue that owns it |
+|---|---|---|---|
+| 1 | Retina/HiDPI embed geometry at **any scale factor other than 2.0**, and at 2.0 on **any host other than this one** | This run measured at 2.0, but the observed delta was 0 px, so no rounding behaviour was exercised in either direction; and the spike tolerance it is checked against was measured at 1.0. One host is not a population. | Phase 38 ledger item **`38-E03`** |
+| 2 | Drag-resize latency on **any other hardware or backend** | The fix in `b4517366e` is a renderer-side leading-edge throttle at a fixed 40 ms interval. Whether 40 ms tracks the window depends on the host's frame budget and on the backend's own resize cadence, neither of which this machine samples for any other machine. | Phase 38 ledger item **`38-E04`** |
+| 3 | Whether `Window::add_child` works at all on the **Windows WebView2** backend | Not merely untested here: `src-tauri/Cargo.toml` target-gates the `unstable` feature to `cfg(target_os = "macos")`, so there is no Windows code path for any gate to exercise. This is an implementation task before it is a verification task (D-04). | Phase 38 ledger item **`38-E01`** |
+| 4 | The same question for the **Linux webkit2gtk** backend | As above -- no Linux code path exists yet. | Phase 38 ledger item **`38-E02`** |
+| 5 | **Epic's posture inside an embed** (its pre-auth 403, and whether an embedded child webview can reach the Epic store at all) | Plan `40-10` routes `/store/epic` away from the live embed on every platform per D-05/REQ-40-12, so this gate had no Epic embed to exercise. The question was filed as a probe, not run. | Spike **`024`** (`epic-store-in-embedded-child-webview`), status **PLANNED**, in `.planning/spikes/MANIFEST.md` |
+| 6 | Anything a **screen recording** of Items 2 or 3 would have shown | Not captured this session. Recorded as an evidence gap in those items rather than silently omitted; neither item's PASS CONDITION depends on one, and both rest on the operator's verbatim verdict instead. | This artifact's own Items 2 and 3 (already recorded there) |
+
+Rows 1 and 2 are the two overlaps with Phase 38. Their non-closure is stated immediately below
+and again in `.planning/ROADMAP.md`'s Phase 38 section, in both directions.
+
 ## Non-closure statement (binding, mirrors ROADMAP.md's Phase 38 ledger from this side)
 
 **A macOS PASS recorded in this gate does not close Phase 38's `38-E03` or `38-E04`.**
