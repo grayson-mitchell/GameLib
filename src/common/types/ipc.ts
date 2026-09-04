@@ -72,6 +72,10 @@ import type {
   RedeemOutcome,
   RevealOutcome
 } from './humble'
+import type {
+  StoreEmbedBounds,
+  StoreEmbedNavEvent
+} from 'backend/store/storeEmbedSeam'
 
 // ts-prune-ignore-next
 interface SyncIPCFunctions {
@@ -154,6 +158,11 @@ interface SyncIPCFunctions {
   // did-navigate-in-page events to force an immediate re-validation,
   // bypassing the poll-path throttle.
   humbleLoginNavigated: () => void
+  // Phase 40 Plan 05 (D-18/D-29): fire-and-forget re-bound, fires on every ResizeObserver
+  // tick. Send-kind is load-bearing here, not incidental — an invoke-kind channel would
+  // accumulate a pending promise per tick. Logical px, courier-only (see StoreEmbedBounds's
+  // own doc comment): no rounding, clamping, default or fallback anywhere downstream.
+  storeEmbedSetBounds: (bounds: StoreEmbedBounds) => void
   setGameMetadataOverride: (args: {
     appName: string
     title?: string
@@ -420,6 +429,31 @@ interface AsyncIPCFunctions {
   // Phase 14: per-key reveal/redeem annotations, keyed by the composite
   // `gamekey:machineName` string, for the claim-flow wizard/list UI.
   humbleGetClaimAnnotations: () => Promise<Record<string, ClaimAnnotation>>
+  // Phase 40 Plan 05 (D-01/REQ-40-02): opens or re-points the store embed. `storeKey`
+  // (e.g. 'steam') is the caller's own bookkeeping — the Rust arm this reaches takes no such
+  // argument (40-02-SUMMARY.md), so it never crosses the wire. Resolves `{ status: 'ok' |
+  // 'error', error?: string }` — never rejects (fail-safe discipline, T-40-05-03).
+  storeEmbedOpen: (
+    url: string,
+    bounds: StoreEmbedBounds,
+    storeKey: string
+  ) => Promise<{ status: 'ok' | 'error'; error?: string }>
+  storeEmbedHide: () => Promise<{ status: 'ok' | 'error'; error?: string }>
+  storeEmbedShow: () => Promise<{ status: 'ok' | 'error'; error?: string }>
+  storeEmbedClose: () => Promise<{ status: 'ok' | 'error'; error?: string }>
+  // D-22: pushed navigation state, drained by the chrome (`40-07`) — never a synchronous
+  // canGoBack() query. NOT YET BACKED BY A RUST ARM (plan `40-07` owns it, D-25); resolves `[]`
+  // on catch (fail-safe discipline) rather than rejecting.
+  storeEmbedTakeNavEvents: () => Promise<StoreEmbedNavEvent[]>
+  // The four methods below have no Rust arm yet (plan `40-02` deliberately did not add one;
+  // plan `40-07` adds them against the D-25 verdict). Each resolves `{ status: 'error', error }`
+  // with `error` naming `40-07` as owner — declared-unimplemented, never a silent no-op.
+  storeEmbedBack: () => Promise<{ status: 'ok' | 'error'; error?: string }>
+  storeEmbedForward: () => Promise<{ status: 'ok' | 'error'; error?: string }>
+  storeEmbedReload: () => Promise<{ status: 'ok' | 'error'; error?: string }>
+  storeEmbedNavigate: (
+    url: string
+  ) => Promise<{ status: 'ok' | 'error'; error?: string }>
   logoutLegendary: () => Promise<void>
   logoutAmazon: () => Promise<void>
   getAlternativeWine: () => Promise<WineInstallation[]>

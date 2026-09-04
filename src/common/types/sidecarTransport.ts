@@ -394,6 +394,73 @@ export const RUST_HUMBLE_LOGIN_CLEAR_STORAGE =
   'humble_login_clear_storage' as const
 
 /**
+ * Rust-side channel names for the in-app store embed (Phase 40 Plan 02 shipped the first five;
+ * Plan 05, D-01/D-03/D-17/D-18/D-21/D-22/D-25/D-29, defines the full set here — including the
+ * four navigation arms plan `40-07` implements — so that plan never has to edit this file and
+ * collide with a concurrent plan). All nine are gated to a single fixed-label webview
+ * (`STORE_EMBED_LABEL = "store-embed"`, `src-tauri/src/main.rs`); none take a label argument.
+ *
+ * The first five below are LIVE (`40-02-SUMMARY.md` records their shipped argument/return
+ * shapes). The last four have no Rust arm yet — `back`/`forward`/`reload`/`navigate` are
+ * declared here only so `storeEmbedFlowRegistration.ts`'s `StoreEmbedSeam` implementation can
+ * reference a stable channel name while its methods throw a declared-unimplemented Error naming
+ * `40-07` as owner (D-25: no native back/forward/history API exists on `tauri::webview::Webview`
+ * or `wry::WebView`, confirmed by `40-EMBED-API-VERIFICATION.md` Q1/Q2 — a Rust-side history
+ * stack fed by `on_page_load` is the only mechanism, and `40-07` is the plan that builds it).
+ */
+
+/**
+ * Opens (or, if already open, re-points — D-01 idempotency) the store embed. Args:
+ * `[url: string, x: number, y: number, w: number, h: number]` — bounds are LOGICAL px, courier
+ * discipline (D-18): no rounding, clamping, default or fallback anywhere in the TypeScript
+ * layer. Resolves `Value::Null` on success (40-02-SUMMARY.md) — NOT a window label, unlike
+ * `RUST_HUMBLE_LOGIN_OPEN`; the embed's label is the fixed `STORE_EMBED_LABEL` constant, known
+ * statically to both sides.
+ */
+export const RUST_STORE_EMBED_OPEN = 'store_embed_open' as const
+
+/**
+ * Re-bounds the store embed. Args: `[x: number, y: number, w: number, h: number]`, same
+ * courier discipline as `RUST_STORE_EMBED_OPEN` above (D-18) — spike 017 proved a second
+ * geometry writer (a substituted/defaulted rect) wins silently with no error, so a missing or
+ * non-finite coordinate must throw rather than be coerced. Resolves `Value::Null`. This is the
+ * one channel in this group that is SEND-kind end to end (renderer → preload → sidecar) — it
+ * fires on every `ResizeObserver` tick and must never accumulate promises (D-29).
+ */
+export const RUST_STORE_EMBED_SET_BOUNDS = 'store_embed_set_bounds' as const
+
+/** Hides the store embed without destroying it (D-21: history/state survive a hide). No args. Resolves `Value::Null`. */
+export const RUST_STORE_EMBED_HIDE = 'store_embed_hide' as const
+
+/** Re-shows a previously hidden store embed. No args. Resolves `Value::Null`. */
+export const RUST_STORE_EMBED_SHOW = 'store_embed_show' as const
+
+/** Closes the store embed and clears its Rust-side history (D-21: teardown only, never a route-leave hide). No args. Resolves `Value::Null`. */
+export const RUST_STORE_EMBED_CLOSE = 'store_embed_close' as const
+
+/**
+ * NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm). Drains queued navigation state —
+ * D-22's inversion: back/forward availability is PUSHED state the renderer receives, never a
+ * `canGoBack()` it can synchronously ask for. Declared here now so `storeEmbedSeam.ts`'s
+ * `takeNavEvents()` has a stable channel name to reference while its Task 2 implementation
+ * throws a declared-unimplemented Error.
+ */
+export const RUST_STORE_EMBED_TAKE_NAV_EVENTS =
+  'store_embed_take_nav_events' as const
+
+/** NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm, D-25). Navigates the embed backward one step. */
+export const RUST_STORE_EMBED_BACK = 'store_embed_back' as const
+
+/** NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm, D-25). Navigates the embed forward one step. */
+export const RUST_STORE_EMBED_FORWARD = 'store_embed_forward' as const
+
+/** NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm, D-25). Reloads the embed's current page. */
+export const RUST_STORE_EMBED_RELOAD = 'store_embed_reload' as const
+
+/** NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm, D-25). Args: `[url: string]`. Navigates the embed to a new URL within the existing webview. */
+export const RUST_STORE_EMBED_NAVIGATE = 'store_embed_navigate' as const
+
+/**
  * Single source of truth for the sidecar→Rust `rustInvoke` channel allowlist (T-28-03).
  * `requestRustInvoke()` in sidecarRpc.ts refuses to emit a frame for any channel not listed
  * here. Must be kept in sync with Rust's `dispatch_rust_channel` match arms (plan 28-02).
@@ -423,6 +490,16 @@ export const RUST_INVOKE_CHANNELS = [
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES,
   RUST_HUMBLE_REVEAL_POST,
   RUST_HUMBLE_LOGIN_CLEAR_STORAGE,
+  RUST_STORE_EMBED_OPEN,
+  RUST_STORE_EMBED_SET_BOUNDS,
+  RUST_STORE_EMBED_HIDE,
+  RUST_STORE_EMBED_SHOW,
+  RUST_STORE_EMBED_CLOSE,
+  RUST_STORE_EMBED_TAKE_NAV_EVENTS,
+  RUST_STORE_EMBED_BACK,
+  RUST_STORE_EMBED_FORWARD,
+  RUST_STORE_EMBED_RELOAD,
+  RUST_STORE_EMBED_NAVIGATE,
   RUST_WAKE_LOCK_START,
   RUST_WAKE_LOCK_STOP
 ] as const
