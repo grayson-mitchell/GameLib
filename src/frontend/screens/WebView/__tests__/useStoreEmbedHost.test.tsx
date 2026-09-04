@@ -180,6 +180,28 @@ function dispatchWindowEvent(type: string): void {
   windowListeners.get(type)?.forEach((cb) => cb())
 }
 
+// D-30 persistence tests (below) need a real read/write surface: `localStorage` does not exist
+// under this project's `testEnvironment: 'node'` jest config at all (confirmed empirically --
+// referencing the bare identifier throws `ReferenceError: localStorage is not defined`), which
+// is exactly why the hook's own persistence effect wraps its call in try/catch. A Map-backed
+// stand-in, stubbed at `globalThis` alongside `window`/`ResizeObserver` above, is what lets these
+// tests observe a real write instead of only a swallowed failure.
+const fakeLocalStorage = new Map<string, string>()
+;(
+  globalThis as unknown as { localStorage: Storage }
+).localStorage = {
+  getItem: (key: string) => (fakeLocalStorage.has(key) ? fakeLocalStorage.get(key)! : null),
+  setItem: (key: string, value: string) => {
+    fakeLocalStorage.set(key, value)
+  },
+  removeItem: (key: string) => {
+    fakeLocalStorage.delete(key)
+  },
+  clear: () => fakeLocalStorage.clear(),
+  key: () => null,
+  length: 0
+} as Storage
+
 // Imported after the mocks above (textual order -- this project's ts-jest setup does not hoist
 // jest.mock like babel-jest; see useDebouncedStoreSearch.test.ts / useTauriOAuthLogin.test.tsx).
 import { useStoreEmbedHost, type StoreEmbedHostState } from '../useStoreEmbedHost'
@@ -259,6 +281,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     suppressionContextValue = { suppressed: false, acquire: jest.fn(), release: jest.fn() }
     MockResizeObserver.instances = []
     windowListeners.clear()
+    fakeLocalStorage.clear()
     mockApi.storeEmbedOpen.mockResolvedValue(okStatus)
     mockApi.storeEmbedHide.mockResolvedValue(okStatus)
     mockApi.storeEmbedShow.mockResolvedValue(okStatus)
@@ -405,5 +428,58 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
 
     expect(mockApi.storeEmbedClose).toHaveBeenCalledTimes(1)
     expect(mockApi.storeEmbedHide).not.toHaveBeenCalled()
+  })
+
+  // Property 8 (D-30). Observed-red mutation: dropping the `hasNavigatedRef` guard (persisting
+  // on every effect run, including the first) turns this red -- mounting a route the user never
+  // navigated within would overwrite `last-url-steam` with the caller's own `startUrl` on every
+  // visit, which is exactly the "write on route entry" behaviour D-30 retires.
+  it('8. mounting alone does not persist a last-url value (write on navigation, not on route entry)', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+
+    mount({
+      slotRef: ref,
+      startUrl: 'https://store.steampowered.com/app/1',
+      storeKey: 'steam'
+    })
+    jest.advanceTimersByTime(40)
+
+    expect(fakeLocalStorage.has('last-url-steam')).toBe(false)
+  })
+
+  // Property 9 (D-30). Observed-red mutation: reading `startUrl` instead of the resolved
+  // `navState.url` inside the persistence effect turns this red -- the value written would stay
+  // frozen at the route's initial URL no matter how many real navigations followed.
+  it('9. a resolved navigation persists the NEW url under last-url-<storeKey>', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://store.steampowered.com/app/1',
+      storeKey: 'steam'
+    }
+
+    const state = mount(options)
+    jest.advanceTimersByTime(40)
+
+    mockApi.storeEmbedBack.mockResolvedValueOnce({
+      status: 'ok',
+      navState: {
+        url: 'https://store.steampowered.com/app/2',
+        host: 'store.steampowered.com',
+        canGoBack: true,
+        canGoForward: true
+      }
+    })
+
+    state.onBack()
+    // Flushes the `storeEmbedBack().then(applyNavResult)` microtask chain -- two ticks: one for
+    // the mocked promise's own resolution, one for the `.then()` callback queued after it.
+    await Promise.resolve()
+    await Promise.resolve()
+    reinvoke(options)
+
+    expect(fakeLocalStorage.get('last-url-steam')).toBe(
+      'https://store.steampowered.com/app/2'
+    )
   })
 })

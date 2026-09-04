@@ -107,6 +107,31 @@ export function useStoreEmbedHost({
     )
   }, [])
 
+  // ── D-30 RESTORE PERSISTENCE — write on navigation, not on route entry ─────────────────────
+  // This hook's own `navState` initializer (above) is a DISPLAY-ONLY derivation of `startUrl`,
+  // not a navigation -- persisting it here on mount would write the caller's own resolved start
+  // URL straight back to storage on every route entry, defeating "write on navigation, not on
+  // route entry" (D-30's own wording) before a single real navigation ever happened.
+  // `hasNavigatedRef` skips exactly that first effect run; every run after it corresponds to a
+  // REAL change to `navState` -- the only navigations this hook currently learns about at all are
+  // the ones that resolve through `applyNavResult` above (back/forward/reload/navigate;
+  // `takeNavEvents`, for a same-page in-embed link click, is not yet implemented -- see its own
+  // seam doc comment -- so THIS hook cannot yet learn about those, and this effect persists only
+  // what it actually knows).
+  const hasNavigatedRef = useRef(false)
+
+  useEffect(() => {
+    if (!hasNavigatedRef.current) {
+      hasNavigatedRef.current = true
+      return
+    }
+    try {
+      localStorage.setItem(`last-url-${storeKey}`, navState.url)
+    } catch (error) {
+      logNavCallFailure(`persisting last-url-${storeKey}`, error)
+    }
+  }, [navState.url, storeKey])
+
   // ── BOUNDS SYNC + OPEN — the single geometry oracle (D-18, T-40-08-01/03) ──────────────────
   const openedRef = useRef(false)
 

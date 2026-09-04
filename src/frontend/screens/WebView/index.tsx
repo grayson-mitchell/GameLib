@@ -21,23 +21,12 @@ import {
   GOG_LOGIN_URL,
   ZOOM_LOGIN_URL
 } from './loginRoutes'
+import { resolveStoreForUrl } from './storeEmbedOrigins'
 
-const validStoredUrl = (url: string, store: string) => {
-  switch (store) {
-    case 'epic':
-      return url.includes('epicgames.com')
-    case 'gog':
-      return url.includes('gog.com')
-    case 'amazon':
-      return url.includes('gaming.amazon.com')
-    case 'zoom':
-      return url.includes('zoom-platform.com')
-    case 'steam':
-      return url.includes('store.steampowered.com')
-    default:
-      return false
-  }
-}
+// D-30: the key the last-URL restore reads/writes under, per store. Kept as a named helper
+// (not inlined at each of the two call sites) so the read side (below) and the write side
+// (`useStoreEmbedHost.ts`) can never drift onto two different key shapes.
+const lastUrlStorageKey = (storeKey: string) => `last-url-${storeKey}`
 
 export default function WebView() {
   const { i18n } = useTranslation()
@@ -186,20 +175,60 @@ export default function WebView() {
   }
   let startUrl = urls[pathname]
 
+  // RESTORE (D-30, D-31, T-40-09-03). Re-derived, not ported: plan 40-08's `hide()`-on-leave
+  // already keeps the embed and its page state alive across route changes WITHIN a session, so
+  // this restore now earns its keep only across an app RESTART. That changes the storage choice
+  // -- measured at plan time by inspecting this shell's on-disk WebKit `WebsiteData` store
+  // (`~/Library/WebKit/{gamelib-shell,com.gamelib.shell}/WebsiteData/Default/*/LocalStorage/
+  // localstorage.sqlite3`, per this project's own storage-inspection technique): every origin
+  // has a `LocalStorage/localstorage.sqlite3` file, an on-disk store that survives a process
+  // restart, but NO equivalent SessionStorage-backed file exists anywhere in that tree --
+  // WebKit's sessionStorage is memory-only, scoped to the browsing context, and is discarded
+  // with it. The retired implementation stored the restore value in `sessionStorage`, which
+  // could never have delivered a cross-restart restore even before this plan -- moving to
+  // `localStorage` is the fix this measurement calls for, not a preference.
+  //
+  // Validated on READ, not only on write (T-40-09-03): a value stored under an old origin-table
+  // shape must not silently feed the embed's first navigation after the table changes. The read
+  // key requires the resolved store to match the ROUTE's own store, not merely "some known
+  // store" -- otherwise a value that drifted to a different store's origin would still pass.
   if (store) {
-    sessionStorage.setItem('last-store', store)
-    const lastUrl = sessionStorage.getItem(`last-url-${store}`)
-    if (lastUrl && validStoredUrl(lastUrl, store)) {
-      startUrl = lastUrl
+    const lastUrl = localStorage.getItem(lastUrlStorageKey(store))
+    if (lastUrl) {
+      const resolved = resolveStoreForUrl(lastUrl)
+      if (resolved && resolved.key === store) {
+        startUrl = lastUrl
+      } else {
+        localStorage.removeItem(lastUrlStorageKey(store))
+      }
     }
   }
 
-  if (pathname.match(/store-page/)) {
-    const searchParams = new URLSearchParams(search)
-    const queryParam = searchParams.get('store-url')
-    if (queryParam) {
-      startUrl = queryParam
-    }
+  // DEEP LINK (D-34, D-35, T-40-09-02). `store-page?store-url=` arrives from third-party deal
+  // data that returns storefronts beyond the five this app embeds, so a non-match here is the
+  // NORMAL case, not an error case. `resolveStoreForUrl` is the origin gate: an embeddable match
+  // reuses that store's OWN identity end to end (D-35 -- same key, same user agent, same restore
+  // key, same history stack; there is no sixth "deep link" identity). Anything else -- known but
+  // not embeddable (Epic, D-05), or not a configured store origin at all, or unparseable -- opens
+  // externally instead of loading unvetted third-party input into a native webview.
+  //
+  // NOTE ON THE RUST SCHEME POLICY (plan 40-04, `store_embed_navigation_policy`): that control is
+  // NOT a substitute for this one. It decides ALLOW/BLOCK/HANDOFF purely by URL SCHEME
+  // (gamelib/http/https/steam), so it would happily allow any https origin, including an
+  // arbitrary third-party one, straight into the embed. This origin check is what actually scopes
+  // "https" down to "one of our five configured stores" -- do not delete this gate as redundant
+  // with that one; they answer different questions.
+  const isStorePageDeepLink = pathname.match(/store-page/) !== null
+  const deepLinkUrl = isStorePageDeepLink
+    ? new URLSearchParams(search).get('store-url')
+    : null
+  const deepLinkConfig = deepLinkUrl ? resolveStoreForUrl(deepLinkUrl) : null
+  const deepLinkEmbeddable = deepLinkConfig !== null && deepLinkConfig.embeddable
+  const deepLinkShouldOpenExternally =
+    isStorePageDeepLink && deepLinkUrl !== null && !deepLinkEmbeddable
+
+  if (deepLinkEmbeddable && deepLinkUrl) {
+    startUrl = deepLinkUrl
   }
 
   // Phase 40 Plan 08 (D-18/D-19/D-20/D-21, REQ-40-02/REQ-40-03): the embed host hook, called
@@ -213,7 +242,10 @@ export default function WebView() {
   // humble, non-macOS) `slotRef.current` stays null for the hook's whole lifetime and its mount
   // effect logs and returns without opening anything (Task 1's own null-ref guard, D-18: no
   // fallback rect). `storeKey` falls back to a route label rather than the `store` param for the
-  // `/wiki` and `store-page` routes, which have no `store` param at all.
+  // `/wiki` route (no `store` param at all), and for `store-page` falls back FURTHER to the
+  // resolved deep-link store's own key when the deep link is embeddable (D-35: reusing that
+  // store's identity, not inventing a sixth one) -- only an unresolved/non-embeddable deep link
+  // (which never reaches the embed JSX below) keeps the literal `'store-page'` label.
   //
   // Deliberately reads `LOGIN_PATHNAMES` directly rather than calling `isLoginPathname(pathname)`
   // a second time here: plan 40-01's inverted structural gate
@@ -223,7 +255,8 @@ export default function WebView() {
   // make the gate extract the wrong block as "the login arm" and fail for a reason that has
   // nothing to do with an actual regression.
   const slotRef = useRef<HTMLDivElement>(null)
-  const storeKey = store ?? (pathname === '/wiki' ? 'wiki' : 'store-page')
+  const storeKey =
+    store ?? (pathname === '/wiki' ? 'wiki' : (deepLinkConfig?.key ?? 'store-page'))
   const isStoreRoute = !LOGIN_PATHNAMES.includes(pathname) && runner !== 'humble'
   const embedHost = useStoreEmbedHost({
     slotRef,
@@ -294,6 +327,18 @@ export default function WebView() {
     setShowLoginWarningFor(null)
   }
 
+  // DEEP LINK ESCAPE HATCH (D-34, T-40-09-02): fires the SAME external-open call
+  // `WebviewUnavailablePanel`'s own button uses, automatically, the moment a store-page deep
+  // link resolves to something this app does not embed -- the user should not have to notice a
+  // panel and click a button just to reach a store this app never intended to load into a native
+  // webview. The panel still renders below (render branch, near the platform gate) as the
+  // fallback in case the automatic open is blocked or the user wants to retry it. Called
+  // unconditionally (rules of hooks); the effect body itself is the guard.
+  useEffect(() => {
+    if (!deepLinkShouldOpenExternally || !deepLinkUrl) return
+    window.api.openExternalUrl(deepLinkUrl)
+  }, [deepLinkShouldOpenExternally, deepLinkUrl])
+
   // Phase 40 Plan 01 (D-09/D-10): Task 2 deletes this file's entire Model A render --
   // the `<webview>` element, `WebviewControls`, the `UpdateComponent` loading indicator,
   // the `LoginWarning` render, and the adtraction `Dialog` -- but explicitly does NOT
@@ -353,6 +398,17 @@ export default function WebView() {
   window.api.logInfo(
     `[WebView] store/wiki route pathname=${pathname} startUrl=${startUrl}`
   )
+
+  // DEEP LINK ESCAPE HATCH render (D-34, T-40-09-02): checked BEFORE the platform gate below
+  // because it applies on every platform, not only non-macOS -- a deep link to an unconfigured
+  // origin is never embedded regardless of what this shell can otherwise embed. Reuses
+  // `WebviewUnavailablePanel`'s existing external-open button/call shape rather than a new
+  // surface (its "Open in browser" button is the same `window.api.openExternalUrl` call the
+  // effect above already fired automatically) -- this keeps the user off a blank screen even if
+  // the automatic open above was blocked, without introducing a second escape-hatch component.
+  if (deepLinkShouldOpenExternally) {
+    return <WebviewUnavailablePanel url={deepLinkUrl ?? undefined} />
+  }
 
   // D-01/D-02: the live embed is macOS-only for now. Reuses `platform` from `ContextProvider`
   // (the same source `App.tsx`'s own `isMac` check reads) rather than `process.platform` or
