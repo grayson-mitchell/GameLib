@@ -111,6 +111,26 @@ export function diceSimilarity(a: string, b: string): number {
   return (2 * intersection) / (a.length - 1 + (b.length - 1))
 }
 
+/**
+ * Split a store title into the search terms HLTB's endpoint expects.
+ *
+ * Store metadata carries trademark glyphs that HLTB's index does not: searching the raw
+ * `Sekiro™: Shadows Die Twice` returns ZERO results, while `Sekiro Shadows Die Twice`
+ * returns the game. Verified live against the endpoint.
+ *
+ * Only trademark symbols and TRAILING punctuation are removed. Diacritics are left alone
+ * (`Pokémon Snap` and `Pokemon Snap` both work), and interior punctuation is preserved
+ * because `NieR:Automata` resolves as one term. This is about widening the search, never
+ * about deciding a match -- `pickBestMatch` still scores against the original title.
+ */
+export function toSearchTerms(title: string): string[] {
+  return title
+    .replace(/[™®©℠]/g, ' ')
+    .split(/\s+/)
+    .map((term) => term.replace(/[:,.;!?-]+$/, '').trim())
+    .filter(Boolean)
+}
+
 export interface TitleCandidate<T> {
   title: string
   value: T

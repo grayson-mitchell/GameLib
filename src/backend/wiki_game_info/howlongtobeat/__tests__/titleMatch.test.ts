@@ -3,7 +3,8 @@ import {
   diceSimilarity,
   normalizeTitle,
   pickBestMatch,
-  sequelToken
+  sequelToken,
+  toSearchTerms
 } from '../titleMatch'
 
 const candidates = (...titles: string[]) =>
@@ -53,6 +54,31 @@ describe('sequelToken', () => {
   it('is null when there is no trailing number', () => {
     expect(sequelToken(normalizeTitle('Portal'))).toBeNull()
     expect(sequelToken(normalizeTitle('Half-Life: Alyx'))).toBeNull()
+  })
+})
+
+describe('toSearchTerms', () => {
+  // Verified live: the raw title returns zero results from HLTB, the stripped one returns
+  // the game. This was the only miss in a 20-title live sample.
+  it('drops trademark glyphs that make HLTB return nothing', () => {
+    expect(toSearchTerms('Sekiro™: Shadows Die Twice')).toEqual([
+      'Sekiro',
+      'Shadows',
+      'Die',
+      'Twice'
+    ])
+  })
+
+  it('keeps diacritics, which HLTB handles fine', () => {
+    expect(toSearchTerms('Pokémon Snap')).toEqual(['Pokémon', 'Snap'])
+  })
+
+  it('keeps interior punctuation, which HLTB also handles', () => {
+    expect(toSearchTerms('NieR:Automata')).toEqual(['NieR:Automata'])
+  })
+
+  it('drops empty terms produced by stripping', () => {
+    expect(toSearchTerms('Hades  ®  ')).toEqual(['Hades'])
   })
 })
 
