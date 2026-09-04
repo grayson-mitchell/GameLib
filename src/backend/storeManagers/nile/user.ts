@@ -269,10 +269,7 @@ export class NileUser {
     try {
       await clearAmazonCookiesForLogout()
     } catch (error) {
-      logWarning(
-        `Amazon logout: cookie clear failed: ${error}`,
-        LogPrefix.Nile
-      )
+      logWarning(`Amazon logout: cookie clear failed: ${error}`, LogPrefix.Nile)
     }
   }
 

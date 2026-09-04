@@ -159,7 +159,11 @@ function startTransport(): { input: PassThrough; frames: Frame[] } {
 registerHumbleLoginFlows()
 
 describe('registration kind — the 4 channels are registered with the correct kind, both directions', () => {
-  const HANDLE_CHANNELS = ['humbleStartLogin', 'humbleReconnect', 'humbleRevealKey']
+  const HANDLE_CHANNELS = [
+    'humbleStartLogin',
+    'humbleReconnect',
+    'humbleRevealKey'
+  ]
   const SEND_CHANNELS = ['humbleStopLogin']
 
   it.each(HANDLE_CHANNELS)(

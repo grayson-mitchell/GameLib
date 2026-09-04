@@ -51,7 +51,11 @@ function extractRawBlock(source: string, marker: string): string {
 }
 
 /** Extracts raw source between two markers, exclusive of the end marker. */
-function extractRawBetween(source: string, startMarker: string, endMarker: string): string {
+function extractRawBetween(
+  source: string,
+  startMarker: string,
+  endMarker: string
+): string {
   const startIdx = source.indexOf(startMarker)
   if (startIdx === -1) throw new Error(`start marker not found: ${startMarker}`)
   const endIdx = source.indexOf(endMarker, startIdx)
@@ -97,7 +101,11 @@ interface DeepLinkResult {
   storeKey: string
 }
 
-function runDeepLink(pathname: string, search: string, storeParam: string | undefined): DeepLinkResult {
+function runDeepLink(
+  pathname: string,
+  search: string,
+  storeParam: string | undefined
+): DeepLinkResult {
   return computeDeepLink(
     pathname,
     search,
@@ -109,8 +117,11 @@ function runDeepLink(pathname: string, search: string, storeParam: string | unde
 }
 
 // ── RESTORE derivation (D-30) — stale-value drop on READ ─────────────────────────────────────
-const lastUrlStorageKeyLine = rawSource.match(/const lastUrlStorageKey = .+/)?.[0]
-if (!lastUrlStorageKeyLine) throw new Error('lastUrlStorageKey definition not found')
+const lastUrlStorageKeyLine = rawSource.match(
+  /const lastUrlStorageKey = .+/
+)?.[0]
+if (!lastUrlStorageKeyLine)
+  throw new Error('lastUrlStorageKey definition not found')
 const restoreBlock = extractRawBlock(rawSource, 'if (store) {')
 
 const computeRestore = compileToFunction(
@@ -131,13 +142,22 @@ function runRestore(
       removed = true
     }
   }
-  const startUrl = computeRestore(store, startUrlInitial, localStorageStub, resolveStoreForUrl) as string
+  const startUrl = computeRestore(
+    store,
+    startUrlInitial,
+    localStorageStub,
+    resolveStoreForUrl
+  ) as string
   return { startUrl, removed }
 }
 
 describe('WebView deep-link origin gating (D-34/D-35, T-40-09-02)', () => {
   it('outcome 1: a deep link to an EMBEDDABLE store opens the embed under that store’s OWN key (D-35 — no sixth identity)', () => {
-    const result = runDeepLink('/store-page', '?store-url=https%3A%2F%2Fstore.steampowered.com%2F', undefined)
+    const result = runDeepLink(
+      '/store-page',
+      '?store-url=https%3A%2F%2Fstore.steampowered.com%2F',
+      undefined
+    )
     expect(result.deepLinkConfig?.key).toBe('steam')
     expect(result.deepLinkEmbeddable).toBe(true)
     expect(result.deepLinkShouldOpenExternally).toBe(false)
@@ -159,7 +179,11 @@ describe('WebView deep-link origin gating (D-34/D-35, T-40-09-02)', () => {
   })
 
   it('outcome 3: a deep link to an UNKNOWN origin (not one of the five configured stores) opens externally', () => {
-    const result = runDeepLink('/store-page', '?store-url=https%3A%2F%2Fattacker.net%2F', undefined)
+    const result = runDeepLink(
+      '/store-page',
+      '?store-url=https%3A%2F%2Fattacker.net%2F',
+      undefined
+    )
     expect(result.deepLinkConfig).toBeNull()
     expect(result.deepLinkEmbeddable).toBe(false)
     expect(result.deepLinkShouldOpenExternally).toBe(true)
@@ -167,7 +191,9 @@ describe('WebView deep-link origin gating (D-34/D-35, T-40-09-02)', () => {
   })
 
   it('outcome 4: an UNPARSEABLE deep-link value opens externally without throwing', () => {
-    expect(() => runDeepLink('/store-page', '?store-url=not-a-url', undefined)).not.toThrow()
+    expect(() =>
+      runDeepLink('/store-page', '?store-url=not-a-url', undefined)
+    ).not.toThrow()
     const result = runDeepLink('/store-page', '?store-url=not-a-url', undefined)
     expect(result.deepLinkConfig).toBeNull()
     expect(result.deepLinkShouldOpenExternally).toBe(true)
@@ -201,7 +227,11 @@ describe('WebView restore stale-value drop on READ (D-30, T-40-09-03)', () => {
     // Stored under 'gog' but the value itself now resolves to a different store (or none) --
     // simulating an origin-table change or hand-edited storage -- must not silently feed the
     // embed's first navigation.
-    const { startUrl, removed } = runRestore('gog', 'https://af.gog.com?as=1838482841', 'https://attacker.net/')
+    const { startUrl, removed } = runRestore(
+      'gog',
+      'https://af.gog.com?as=1838482841',
+      'https://attacker.net/'
+    )
     expect(startUrl).toBe('https://af.gog.com?as=1838482841')
     expect(removed).toBe(true)
   })
@@ -228,14 +258,19 @@ describe('WebView restore stale-value drop on READ (D-30, T-40-09-03)', () => {
   })
 
   it('no stored value at all leaves the caller-provided start URL untouched and removes nothing', () => {
-    const { startUrl, removed } = runRestore('gog', 'https://af.gog.com?as=1838482841', null)
+    const { startUrl, removed } = runRestore(
+      'gog',
+      'https://af.gog.com?as=1838482841',
+      null
+    )
     expect(startUrl).toBe('https://af.gog.com?as=1838482841')
     expect(removed).toBe(false)
   })
 
   describe('self-test (anti-vacuity)', () => {
     it('detects a regression that accepts ANY known store rather than requiring a match to the route’s own', () => {
-      const regressedAccepts = (resolvedKey: string, _routeStore: string) => resolvedKey !== null
+      const regressedAccepts = (resolvedKey: string, _routeStore: string) =>
+        resolvedKey !== null
       expect(regressedAccepts('steam', 'gog')).toBe(true)
     })
   })

@@ -253,10 +253,7 @@ export function registerRunnerAuthFlows(): void {
   ipcMain.on('logoutGOG', () => {
     try {
       const result: unknown = GOGUser.logout()
-      if (
-        result &&
-        typeof (result as Promise<void>).catch === 'function'
-      ) {
+      if (result && typeof (result as Promise<void>).catch === 'function') {
         ;(result as Promise<void>).catch((error) => {
           logSendFailure('logoutGOG', error)
         })

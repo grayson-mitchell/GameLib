@@ -105,14 +105,20 @@ function logSendFailure(channel: string, error: unknown): void {
  */
 function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
   if (result === null || typeof result !== 'object') {
-    throw new Error(`${channel}: malformed response (expected an object): ${JSON.stringify(result)}`)
+    throw new Error(
+      `${channel}: malformed response (expected an object): ${JSON.stringify(result)}`
+    )
   }
   const candidate = result as Record<string, unknown>
   if (typeof candidate.url !== 'string') {
-    throw new Error(`${channel}: malformed response (url must be a string): ${JSON.stringify(result)}`)
+    throw new Error(
+      `${channel}: malformed response (url must be a string): ${JSON.stringify(result)}`
+    )
   }
   if (typeof candidate.host !== 'string') {
-    throw new Error(`${channel}: malformed response (host must be a string): ${JSON.stringify(result)}`)
+    throw new Error(
+      `${channel}: malformed response (host must be a string): ${JSON.stringify(result)}`
+    )
   }
   if (typeof candidate.canGoBack !== 'boolean') {
     throw new Error(
@@ -143,13 +149,18 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
  * from a working idle one, forever. The fail-safe boundary belongs at the `ipcMain.handle` arm
  * (which logs first), not here.
  */
-function coerceNavEvents(channel: string, result: unknown): StoreEmbedNavEvent[] {
+function coerceNavEvents(
+  channel: string,
+  result: unknown
+): StoreEmbedNavEvent[] {
   if (!Array.isArray(result)) {
     throw new Error(
       `${channel}: malformed response (expected an array): ${JSON.stringify(result)}`
     )
   }
-  return result.map((element, index) => coerceNavState(`${channel}[${index}]`, element))
+  return result.map((element, index) =>
+    coerceNavState(`${channel}[${index}]`, element)
+  )
 }
 
 /**
@@ -238,7 +249,10 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
     // click back to the renderer. Takes no arguments: the embed is a singleton under the fixed
     // `STORE_EMBED_LABEL`, so there is no label to pass (unlike `humble_login_take_events`).
     async takeNavEvents() {
-      const result = await requestRustInvoke(RUST_STORE_EMBED_TAKE_NAV_EVENTS, [])
+      const result = await requestRustInvoke(
+        RUST_STORE_EMBED_TAKE_NAV_EVENTS,
+        []
+      )
       return coerceNavEvents('store_embed_take_nav_events', result)
     },
 
@@ -267,7 +281,9 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
     // entries past the cursor, exactly like a user-initiated navigation) and returning the
     // resulting navigation state.
     async navigate(url) {
-      const result = await requestRustInvoke(RUST_STORE_EMBED_NAVIGATE, [{ url }])
+      const result = await requestRustInvoke(RUST_STORE_EMBED_NAVIGATE, [
+        { url }
+      ])
       return coerceNavState('store_embed_navigate', result)
     }
   }
@@ -308,7 +324,10 @@ async function safeStatus(
 async function safeNavState(
   label: string,
   action: () => Promise<StoreEmbedNavEvent>
-): Promise<{ status: 'ok'; navState: StoreEmbedNavEvent } | { status: 'error'; error: string }> {
+): Promise<
+  | { status: 'ok'; navState: StoreEmbedNavEvent }
+  | { status: 'error'; error: string }
+> {
   try {
     const navState = await action()
     return { status: 'ok', navState }
@@ -334,17 +353,19 @@ export function registerStoreEmbedFlows(): void {
   ipcMain.handle(
     'storeEmbedOpen',
     async (_event: unknown, ...args: unknown[]) => {
-      const [url, bounds, storeKey] = args as [
-        string,
-        StoreEmbedBounds,
-        string
-      ]
-      return safeStatus('storeEmbedOpen', () => seam.open(url, bounds, storeKey))
+      const [url, bounds, storeKey] = args as [string, StoreEmbedBounds, string]
+      return safeStatus('storeEmbedOpen', () =>
+        seam.open(url, bounds, storeKey)
+      )
     }
   )
 
-  ipcMain.handle('storeEmbedHide', async () => safeStatus('storeEmbedHide', () => seam.hide()))
-  ipcMain.handle('storeEmbedShow', async () => safeStatus('storeEmbedShow', () => seam.show()))
+  ipcMain.handle('storeEmbedHide', async () =>
+    safeStatus('storeEmbedHide', () => seam.hide())
+  )
+  ipcMain.handle('storeEmbedShow', async () =>
+    safeStatus('storeEmbedShow', () => seam.show())
+  )
   ipcMain.handle('storeEmbedClose', async () =>
     safeStatus('storeEmbedClose', () => seam.close())
   )

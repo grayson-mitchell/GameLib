@@ -224,9 +224,7 @@ describe('HumbleExpiryToast acquires store-embed suppression while visible (Phas
         return out
       }
       if (Array.isArray(node)) {
-        node.forEach((child: ReactNode) =>
-          collectByClassPart(child, part, out)
-        )
+        node.forEach((child: ReactNode) => collectByClassPart(child, part, out))
         return out
       }
       if (typeof node === 'object' && 'type' in node) {

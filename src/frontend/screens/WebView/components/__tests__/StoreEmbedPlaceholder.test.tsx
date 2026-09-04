@@ -86,9 +86,10 @@ describe('StoreEmbedPlaceholder (D-19)', () => {
       __dirname,
       '../../../../../../public/locales/en/gamelib.json'
     )
-    const gamelib = JSON.parse(
-      readFileSync(gamelibJsonPath, 'utf8')
-    ) as Record<string, unknown>
+    const gamelib = JSON.parse(readFileSync(gamelibJsonPath, 'utf8')) as Record<
+      string,
+      unknown
+    >
 
     const value = MINTED_KEY.split('.').reduce<unknown>((acc, segment) => {
       if (acc && typeof acc === 'object' && segment in acc) {

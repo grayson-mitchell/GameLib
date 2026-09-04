@@ -26,7 +26,12 @@
  * `forwardAvailable` props, never guessed locally.
  */
 
-import { ArrowBackOutlined, ArrowForwardRounded, OpenInBrowser, Replay } from '@mui/icons-material'
+import {
+  ArrowBackOutlined,
+  ArrowForwardRounded,
+  OpenInBrowser,
+  Replay
+} from '@mui/icons-material'
 import cx from 'classnames'
 import { useTranslation } from 'react-i18next'
 
@@ -51,7 +56,9 @@ export interface StoreEmbedControlsProps {
  * throwing when `url` cannot be parsed, so a malformed or empty URL renders an empty chrome
  * instead of crashing the store screen (T-40-07-06).
  */
-function parseDisplayUrl(url: string): { host: string; isInsecure: boolean } | null {
+function parseDisplayUrl(
+  url: string
+): { host: string; isInsecure: boolean } | null {
   if (!url) {
     return null
   }
@@ -109,7 +116,8 @@ export default function StoreEmbedControls({
         {host && (
           <span
             className={cx('StoreEmbedControls__hostText', {
-              ['StoreEmbedControls__hostText--warning']: display?.isInsecure ?? false
+              ['StoreEmbedControls__hostText--warning']:
+                display?.isInsecure ?? false
             })}
             aria-label={tGamelib('webview.storeEmbedControls.hostLabel', {
               host

@@ -48,8 +48,13 @@ const NAV_POLL_INTERVAL_MS = 250
 // from `common/types/ipc.ts` the way the four nav methods' types already had (Rule 1 fix, this
 // plan's SUMMARY) — if that type changes again, this one follows it instead of going stale next
 // to it.
-type StoreEmbedNavCallResult = Awaited<ReturnType<typeof window.api.storeEmbedBack>>
-type StoreEmbedNavState = Extract<StoreEmbedNavCallResult, { status: 'ok' }>['navState']
+type StoreEmbedNavCallResult = Awaited<
+  ReturnType<typeof window.api.storeEmbedBack>
+>
+type StoreEmbedNavState = Extract<
+  StoreEmbedNavCallResult,
+  { status: 'ok' }
+>['navState']
 
 /**
  * Display-only host derivation for the hook's OWN initial state, before any real navigation

@@ -12,7 +12,13 @@
     "must break a test -- that is the whole point of it."
   ],
   "store_embed_open": [
-    { "url": "https://store.steampowered.com/", "x": 12.5, "y": 64, "w": 1280.25, "h": 800 }
+    {
+      "url": "https://store.steampowered.com/",
+      "x": 12.5,
+      "y": 64,
+      "w": 1280.25,
+      "h": 800
+    }
   ],
   "store_embed_set_bounds": [{ "x": 10.5, "y": -3, "w": 799.999, "h": 0 }],
   "store_embed_navigate": [{ "url": "https://example.com/next" }]

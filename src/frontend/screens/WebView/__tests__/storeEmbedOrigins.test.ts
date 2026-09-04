@@ -25,7 +25,12 @@ interface StoreCase {
 // so this suite fails loudly if the source table's apex hosts ever drift, rather than silently
 // testing against whatever the source happens to say today.
 const STORE_CASES: readonly StoreCase[] = [
-  { key: 'epic', apex: 'epicgames.com', subdomain: 'www.epicgames.com', embeddable: false },
+  {
+    key: 'epic',
+    apex: 'epicgames.com',
+    subdomain: 'www.epicgames.com',
+    embeddable: false
+  },
   { key: 'gog', apex: 'gog.com', subdomain: 'af.gog.com', embeddable: true },
   {
     key: 'amazon',
@@ -94,20 +99,27 @@ describe('resolveStoreForUrl / isEmbeddableOrigin — per-store adversarial matr
   it.each(STORE_CASES)(
     '$key: the apex appearing only in a query string (https://attacker.net/?x=$apex) does NOT resolve to $key',
     ({ key, apex }) => {
-      expect(resolveStoreForUrl(`https://attacker.net/?x=${apex}`)?.key).not.toBe(key)
+      expect(
+        resolveStoreForUrl(`https://attacker.net/?x=${apex}`)?.key
+      ).not.toBe(key)
     }
   )
 
   it.each(STORE_CASES)(
     '$key: the apex appearing only in a path (https://attacker.net/$apex) does NOT resolve to $key',
     ({ key, apex }) => {
-      expect(resolveStoreForUrl(`https://attacker.net/${apex}`)?.key).not.toBe(key)
+      expect(resolveStoreForUrl(`https://attacker.net/${apex}`)?.key).not.toBe(
+        key
+      )
     }
   )
 
-  it.each(STORE_CASES)('$key: http (insecure scheme) does NOT resolve for $apex', ({ apex }) => {
-    expect(resolveStoreForUrl(`http://${apex}/`)).toBeNull()
-  })
+  it.each(STORE_CASES)(
+    '$key: http (insecure scheme) does NOT resolve for $apex',
+    ({ apex }) => {
+      expect(resolveStoreForUrl(`http://${apex}/`)).toBeNull()
+    }
+  )
 
   it.each(STORE_CASES)(
     '$key: isEmbeddableOrigin for the exact apex matches the table’s embeddable flag ($embeddable)',
@@ -119,7 +131,9 @@ describe('resolveStoreForUrl / isEmbeddableOrigin — per-store adversarial matr
 
 describe('resolveStoreForUrl — named boundary cases from the plan (D-31)', () => {
   it('rejects the prefix-label attack evil-gog.com.attacker.net for gog', () => {
-    expect(resolveStoreForUrl('https://evil-gog.com.attacker.net/')?.key).not.toBe('gog')
+    expect(
+      resolveStoreForUrl('https://evil-gog.com.attacker.net/')?.key
+    ).not.toBe('gog')
   })
 
   it('rejects the suffix-label attack evilgog.com for gog', () => {
@@ -127,7 +141,9 @@ describe('resolveStoreForUrl — named boundary cases from the plan (D-31)', () 
   })
 
   it('resolves GOG’s real affiliate start-URL host (af.gog.com) to the gog key', () => {
-    expect(resolveStoreForUrl('https://af.gog.com?as=1838482841')?.key).toBe('gog')
+    expect(resolveStoreForUrl('https://af.gog.com?as=1838482841')?.key).toBe(
+      'gog'
+    )
   })
 
   it('resolves an unparseable URL to null without throwing', () => {
@@ -144,7 +160,9 @@ describe('resolveStoreForUrl — named boundary cases from the plan (D-31)', () 
     const config = resolveStoreForUrl('https://www.epicgames.com/store/en-US/')
     expect(config?.key).toBe('epic')
     expect(config?.embeddable).toBe(false)
-    expect(isEmbeddableOrigin('https://www.epicgames.com/store/en-US/')).toBe(false)
+    expect(isEmbeddableOrigin('https://www.epicgames.com/store/en-US/')).toBe(
+      false
+    )
   })
 
   it('isEmbeddableOrigin is false for an unresolvable origin', () => {

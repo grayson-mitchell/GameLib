@@ -278,13 +278,10 @@ describe('WebviewUnavailablePanel — minted i18n keys (Task 1, gamelib.json onl
     ['webview', 'unavailable', 'epic', 'body']
   ]
 
-  it.each(mintedKeyPaths)(
-    'gamelib.json has the minted key %s',
-    (...path) => {
-      const gamelib = JSON.parse(readFileSync(gamelibEnPath, 'utf-8'))
-      expect(typeof getPath(gamelib, path)).toBe('string')
-    }
-  )
+  it.each(mintedKeyPaths)('gamelib.json has the minted key %s', (...path) => {
+    const gamelib = JSON.parse(readFileSync(gamelibEnPath, 'utf-8'))
+    expect(typeof getPath(gamelib, path)).toBe('string')
+  })
 
   it.each(mintedKeyPaths)(
     'translation.json does NOT have the minted key %s (new strings never go there)',
@@ -422,7 +419,10 @@ describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 ride
 
     let loginBlock: string
     try {
-      loginBlock = extractFunctionBody(functionBody.slice(loginArmStart), 'if (')
+      loginBlock = extractFunctionBody(
+        functionBody.slice(loginArmStart),
+        'if ('
+      )
     } catch {
       return false
     }
@@ -460,11 +460,7 @@ describe('WebView/index.tsx — two distinct arms: login / store-wiki (D-06 ride
   })
 
   it('self-test: the gate REJECTS a synthetic source where both arms were merged into one unconditional return', () => {
-    const merged = [
-      'function WebView() {',
-      '  return <></>',
-      '}'
-    ].join('\n')
+    const merged = ['function WebView() {', '  return <></>', '}'].join('\n')
 
     expect(hasTwoDistinctArms(merged)).toBe(false)
   })

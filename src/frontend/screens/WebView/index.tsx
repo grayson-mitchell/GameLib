@@ -223,7 +223,8 @@ export default function WebView() {
     ? new URLSearchParams(search).get('store-url')
     : null
   const deepLinkConfig = deepLinkUrl ? resolveStoreForUrl(deepLinkUrl) : null
-  const deepLinkEmbeddable = deepLinkConfig !== null && deepLinkConfig.embeddable
+  const deepLinkEmbeddable =
+    deepLinkConfig !== null && deepLinkConfig.embeddable
   const deepLinkShouldOpenExternally =
     isStorePageDeepLink && deepLinkUrl !== null && !deepLinkEmbeddable
 
@@ -256,8 +257,10 @@ export default function WebView() {
   // nothing to do with an actual regression.
   const slotRef = useRef<HTMLDivElement>(null)
   const storeKey =
-    store ?? (pathname === '/wiki' ? 'wiki' : (deepLinkConfig?.key ?? 'store-page'))
-  const isStoreRoute = !LOGIN_PATHNAMES.includes(pathname) && runner !== 'humble'
+    store ??
+    (pathname === '/wiki' ? 'wiki' : (deepLinkConfig?.key ?? 'store-page'))
+  const isStoreRoute =
+    !LOGIN_PATHNAMES.includes(pathname) && runner !== 'humble'
   const embedHost = useStoreEmbedHost({
     slotRef,
     startUrl,

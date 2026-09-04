@@ -66,8 +66,14 @@ async function clearGogCookiesForLogout(): Promise<void> {
       )
     }
 
-    const deleted = await seam.clearCookies(GOG_COOKIE_CLEAR_NO_WINDOW_LABEL, host)
-    logInfo(`GOG logout: cleared ${deleted} cookie(s) for ${host}`, LogPrefix.Gog)
+    const deleted = await seam.clearCookies(
+      GOG_COOKIE_CLEAR_NO_WINDOW_LABEL,
+      host
+    )
+    logInfo(
+      `GOG logout: cleared ${deleted} cookie(s) for ${host}`,
+      LogPrefix.Gog
+    )
 
     // wry's cookie-delete is known to lie about deletion (WebKit bug #184938)
     // -- `deleted` is the Rust side's own independent before/after re-read
@@ -361,10 +367,7 @@ export class GOGUser {
     try {
       await clearGogCookiesForLogout()
     } catch (error) {
-      logWarning(
-        `GOG logout: cookie clear failed: ${error}`,
-        LogPrefix.Gog
-      )
+      logWarning(`GOG logout: cookie clear failed: ${error}`, LogPrefix.Gog)
     }
   }
 

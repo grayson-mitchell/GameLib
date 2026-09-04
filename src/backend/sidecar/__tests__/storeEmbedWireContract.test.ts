@@ -130,7 +130,11 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
   it('the fixture is the shared artifact the Rust side reads — its arms must not drift', () => {
     // If an arm is renamed or dropped here, the Rust `wire_args(...)` lookup panics on the same
     // key. This test makes that coupling visible from the TS side rather than implicit.
-    expect(Object.keys(wireFixture).filter((k) => k !== '_comment').sort()).toEqual([
+    expect(
+      Object.keys(wireFixture)
+        .filter((k) => k !== '_comment')
+        .sort()
+    ).toEqual([
       'store_embed_navigate',
       'store_embed_open',
       'store_embed_set_bounds'

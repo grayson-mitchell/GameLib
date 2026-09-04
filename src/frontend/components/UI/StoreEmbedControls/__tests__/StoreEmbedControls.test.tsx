@@ -22,7 +22,12 @@ jest.mock('../../SvgButton/index.css', () => ({}))
 jest.mock('react-i18next', () => ({
   useTranslation: (ns?: string) => ({
     t: (key: string, opts?: Record<string, unknown>) => {
-      if (ns === 'gamelib' && opts && typeof opts === 'object' && 'host' in opts) {
+      if (
+        ns === 'gamelib' &&
+        opts &&
+        typeof opts === 'object' &&
+        'host' in opts
+      ) {
         return `Currently viewing ${String(opts.host)}`
       }
       return key
@@ -64,7 +69,10 @@ function collectText(node: unknown): string {
  * of its space-separated tokens -- `cx()` (used for the insecure-scheme modifier) joins multiple
  * classes into one string, so an exact-string match would miss a match with any sibling class.
  */
-function findAllByClassName(node: unknown, className: string): AnyReactElement[] {
+function findAllByClassName(
+  node: unknown,
+  className: string
+): AnyReactElement[] {
   if (node === null || node === undefined || typeof node !== 'object') {
     return []
   }
@@ -172,7 +180,10 @@ describe('StoreEmbedControls -- host-only display (D-23, T-40-07-01)', () => {
     const element = StoreEmbedControls(
       baseProps({ url: 'not a url at all' })
     ) as unknown as AnyReactElement
-    const hostNodes = findAllByClassName(element, 'StoreEmbedControls__hostText')
+    const hostNodes = findAllByClassName(
+      element,
+      'StoreEmbedControls__hostText'
+    )
 
     expect(hostNodes).toHaveLength(0)
   })
@@ -181,7 +192,10 @@ describe('StoreEmbedControls -- host-only display (D-23, T-40-07-01)', () => {
     const element = StoreEmbedControls(
       baseProps({ url: '' })
     ) as unknown as AnyReactElement
-    const openInBrowserButton = findByTitle(element, 'webview.controls.openInBrowser')
+    const openInBrowserButton = findByTitle(
+      element,
+      'webview.controls.openInBrowser'
+    )
 
     expect(openInBrowserButton?.props.disabled).toBe(true)
   })
@@ -190,7 +204,10 @@ describe('StoreEmbedControls -- host-only display (D-23, T-40-07-01)', () => {
     const element = StoreEmbedControls(
       baseProps({ url: 'http://store.steampowered.com/app/440' })
     ) as unknown as AnyReactElement
-    const warned = findAllByClassName(element, 'StoreEmbedControls__hostText--warning')
+    const warned = findAllByClassName(
+      element,
+      'StoreEmbedControls__hostText--warning'
+    )
 
     expect(warned).toHaveLength(1)
   })
@@ -199,7 +216,10 @@ describe('StoreEmbedControls -- host-only display (D-23, T-40-07-01)', () => {
     const element = StoreEmbedControls(
       baseProps({ url: 'https://store.steampowered.com/app/440' })
     ) as unknown as AnyReactElement
-    const warned = findAllByClassName(element, 'StoreEmbedControls__hostText--warning')
+    const warned = findAllByClassName(
+      element,
+      'StoreEmbedControls__hostText--warning'
+    )
 
     expect(warned).toHaveLength(0)
   })
@@ -208,7 +228,10 @@ describe('StoreEmbedControls -- host-only display (D-23, T-40-07-01)', () => {
     const element = StoreEmbedControls(
       baseProps({ url: 'https://store.steampowered.com/app/440' })
     ) as unknown as AnyReactElement
-    const hostNode = findAllByClassName(element, 'StoreEmbedControls__hostText')[0]
+    const hostNode = findAllByClassName(
+      element,
+      'StoreEmbedControls__hostText'
+    )[0]
 
     expect(hostNode?.props['aria-label']).toBe(
       'Currently viewing store.steampowered.com'

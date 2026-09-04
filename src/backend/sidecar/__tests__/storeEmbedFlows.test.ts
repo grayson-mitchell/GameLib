@@ -153,7 +153,9 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
       const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_OPEN)
       expect(frame).toBeDefined()
 
-      input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`
+      )
       await expect(promise).rejects.toThrow(/malformed response/)
     }
   )
@@ -178,7 +180,9 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
       )
       expect(frame).toBeDefined()
 
-      input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`
+      )
       const outcome = await settled
       expect(outcome.threw).toBe(true)
       expect((outcome as { error: Error }).error.message).toMatch(
@@ -187,51 +191,70 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     }
   )
 
-  it.each(BAD_SHAPES)('store_embed_hide: throws on $label', async ({ value }) => {
-    const { input, frames } = startTransport()
-    const seam = createRustStoreEmbedSeam()
+  it.each(BAD_SHAPES)(
+    'store_embed_hide: throws on $label',
+    async ({ value }) => {
+      const { input, frames } = startTransport()
+      const seam = createRustStoreEmbedSeam()
 
-    const promise = seam.hide()
-    await flush()
-    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_HIDE)
-    expect(frame).toBeDefined()
+      const promise = seam.hide()
+      await flush()
+      const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_HIDE)
+      expect(frame).toBeDefined()
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
-    await expect(promise).rejects.toThrow(/malformed response/)
-  })
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`
+      )
+      await expect(promise).rejects.toThrow(/malformed response/)
+    }
+  )
 
-  it.each(BAD_SHAPES)('store_embed_show: throws on $label', async ({ value }) => {
-    const { input, frames } = startTransport()
-    const seam = createRustStoreEmbedSeam()
+  it.each(BAD_SHAPES)(
+    'store_embed_show: throws on $label',
+    async ({ value }) => {
+      const { input, frames } = startTransport()
+      const seam = createRustStoreEmbedSeam()
 
-    const promise = seam.show()
-    await flush()
-    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_SHOW)
-    expect(frame).toBeDefined()
+      const promise = seam.show()
+      await flush()
+      const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_SHOW)
+      expect(frame).toBeDefined()
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
-    await expect(promise).rejects.toThrow(/malformed response/)
-  })
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`
+      )
+      await expect(promise).rejects.toThrow(/malformed response/)
+    }
+  )
 
-  it.each(BAD_SHAPES)('store_embed_close: throws on $label', async ({ value }) => {
-    const { input, frames } = startTransport()
-    const seam = createRustStoreEmbedSeam()
+  it.each(BAD_SHAPES)(
+    'store_embed_close: throws on $label',
+    async ({ value }) => {
+      const { input, frames } = startTransport()
+      const seam = createRustStoreEmbedSeam()
 
-    const promise = seam.close()
-    await flush()
-    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_CLOSE)
-    expect(frame).toBeDefined()
+      const promise = seam.close()
+      await flush()
+      const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_CLOSE)
+      expect(frame).toBeDefined()
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
-    await expect(promise).rejects.toThrow(/malformed response/)
-  })
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`
+      )
+      await expect(promise).rejects.toThrow(/malformed response/)
+    }
+  )
 
   // ── Phase 40 Plan 07: navigation-state malformed-response coverage (≥4 bad shapes) ──────────
   const BAD_NAV_SHAPES: { label: string; value: unknown }[] = [
     { label: 'null instead of a navigation-state object', value: null },
     {
       label: 'an object missing the canGoBack field',
-      value: { url: 'https://example.com/', host: 'example.com', canGoForward: false }
+      value: {
+        url: 'https://example.com/',
+        host: 'example.com',
+        canGoForward: false
+      }
     },
     {
       label: 'a non-boolean canGoForward field',
@@ -244,61 +267,86 @@ describe('malformed-response-throws — every live-Rust-arm method throws on a m
     },
     {
       label: 'a non-string url field',
-      value: { url: 123, host: 'example.com', canGoBack: false, canGoForward: false }
+      value: {
+        url: 123,
+        host: 'example.com',
+        canGoBack: false,
+        canGoForward: false
+      }
     }
   ]
 
-  it.each(BAD_NAV_SHAPES)('store_embed_back: throws on $label', async ({ value }) => {
-    const { input, frames } = startTransport()
-    const seam = createRustStoreEmbedSeam()
+  it.each(BAD_NAV_SHAPES)(
+    'store_embed_back: throws on $label',
+    async ({ value }) => {
+      const { input, frames } = startTransport()
+      const seam = createRustStoreEmbedSeam()
 
-    const promise = seam.back()
-    await flush()
-    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_BACK)
-    expect(frame).toBeDefined()
+      const promise = seam.back()
+      await flush()
+      const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_BACK)
+      expect(frame).toBeDefined()
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
-    await expect(promise).rejects.toThrow(/malformed response/)
-  })
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`
+      )
+      await expect(promise).rejects.toThrow(/malformed response/)
+    }
+  )
 
-  it.each(BAD_NAV_SHAPES)('store_embed_forward: throws on $label', async ({ value }) => {
-    const { input, frames } = startTransport()
-    const seam = createRustStoreEmbedSeam()
+  it.each(BAD_NAV_SHAPES)(
+    'store_embed_forward: throws on $label',
+    async ({ value }) => {
+      const { input, frames } = startTransport()
+      const seam = createRustStoreEmbedSeam()
 
-    const promise = seam.forward()
-    await flush()
-    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_FORWARD)
-    expect(frame).toBeDefined()
+      const promise = seam.forward()
+      await flush()
+      const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_FORWARD)
+      expect(frame).toBeDefined()
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
-    await expect(promise).rejects.toThrow(/malformed response/)
-  })
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`
+      )
+      await expect(promise).rejects.toThrow(/malformed response/)
+    }
+  )
 
-  it.each(BAD_NAV_SHAPES)('store_embed_reload: throws on $label', async ({ value }) => {
-    const { input, frames } = startTransport()
-    const seam = createRustStoreEmbedSeam()
+  it.each(BAD_NAV_SHAPES)(
+    'store_embed_reload: throws on $label',
+    async ({ value }) => {
+      const { input, frames } = startTransport()
+      const seam = createRustStoreEmbedSeam()
 
-    const promise = seam.reload()
-    await flush()
-    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_RELOAD)
-    expect(frame).toBeDefined()
+      const promise = seam.reload()
+      await flush()
+      const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_RELOAD)
+      expect(frame).toBeDefined()
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
-    await expect(promise).rejects.toThrow(/malformed response/)
-  })
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`
+      )
+      await expect(promise).rejects.toThrow(/malformed response/)
+    }
+  )
 
-  it.each(BAD_NAV_SHAPES)('store_embed_navigate: throws on $label', async ({ value }) => {
-    const { input, frames } = startTransport()
-    const seam = createRustStoreEmbedSeam()
+  it.each(BAD_NAV_SHAPES)(
+    'store_embed_navigate: throws on $label',
+    async ({ value }) => {
+      const { input, frames } = startTransport()
+      const seam = createRustStoreEmbedSeam()
 
-    const promise = seam.navigate('https://store.steampowered.com/app/440')
-    await flush()
-    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_NAVIGATE)
-    expect(frame).toBeDefined()
+      const promise = seam.navigate('https://store.steampowered.com/app/440')
+      await flush()
+      const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_NAVIGATE)
+      expect(frame).toBeDefined()
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`)
-    await expect(promise).rejects.toThrow(/malformed response/)
-  })
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: value })}\n`
+      )
+      await expect(promise).rejects.toThrow(/malformed response/)
+    }
+  )
 
   it('sanity: requestRustInvoke refuses a non-allowlisted channel without emitting a frame', async () => {
     const { frames } = startTransport()
@@ -430,7 +478,9 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
         canGoForward: false
       }
     ]
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: queued })}\n`)
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: queued })}\n`
+    )
     await expect(promise).resolves.toEqual(queued)
   })
 
@@ -452,7 +502,9 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
     const frame = frames.find(
       (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
     )
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: null })}\n`)
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: null })}\n`
+    )
     await expect(promise).rejects.toThrow(/expected an array/)
   })
 
@@ -474,7 +526,11 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
             canGoBack: true,
             canGoForward: false
           },
-          { url: 'https://www.gog.com/next', host: 'www.gog.com', canGoForward: false }
+          {
+            url: 'https://www.gog.com/next',
+            host: 'www.gog.com',
+            canGoForward: false
+          }
         ]
       })}\n`
     )
@@ -494,8 +550,16 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
 
   const NAV_REACHABILITY_CASES: [string, string, () => Promise<unknown>][] = [
     ['back', RUST_STORE_EMBED_BACK, () => createRustStoreEmbedSeam().back()],
-    ['forward', RUST_STORE_EMBED_FORWARD, () => createRustStoreEmbedSeam().forward()],
-    ['reload', RUST_STORE_EMBED_RELOAD, () => createRustStoreEmbedSeam().reload()],
+    [
+      'forward',
+      RUST_STORE_EMBED_FORWARD,
+      () => createRustStoreEmbedSeam().forward()
+    ],
+    [
+      'reload',
+      RUST_STORE_EMBED_RELOAD,
+      () => createRustStoreEmbedSeam().reload()
+    ],
     [
       'navigate',
       RUST_STORE_EMBED_NAVIGATE,
@@ -504,7 +568,7 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
   ]
 
   it.each(NAV_REACHABILITY_CASES)(
-    '%s (migrated from plan 40-05\'s declared-unimplemented assertion) reaches its Rust channel %s and resolves the navigation state it returns',
+    "%s (migrated from plan 40-05's declared-unimplemented assertion) reaches its Rust channel %s and resolves the navigation state it returns",
     async (_name, channel, invoke) => {
       const { input, frames } = startTransport()
       const promise = invoke()
@@ -512,14 +576,18 @@ describe('nav-methods-reach-their-rust-channel — all five navigation methods r
       const frame = frames.find((f) => f.channel === channel)
       expect(frame).toBeDefined()
 
-      input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: SAMPLE_NAV_STATE })}\n`)
+      input.write(
+        `${JSON.stringify({ id: frame?.id, ok: true, result: SAMPLE_NAV_STATE })}\n`
+      )
       await expect(promise).resolves.toEqual(SAMPLE_NAV_STATE)
     }
   )
 
   it('store_embed_navigate: forwards the url argument on the wire, unchanged', async () => {
     const { input, frames } = startTransport()
-    const promise = createRustStoreEmbedSeam().navigate('https://example.com/next')
+    const promise = createRustStoreEmbedSeam().navigate(
+      'https://example.com/next'
+    )
     await flush()
     const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_NAVIGATE)
     expect(frame).toBeDefined()
@@ -551,13 +619,13 @@ describe('bounds-courier-passthrough-and-throw — setBounds is a pure courier (
     void (seam.setBounds(oddBounds) as unknown as Promise<void>)
     await flush()
 
-    const frame = frames.find(
-      (f) => f.channel === RUST_STORE_EMBED_SET_BOUNDS
-    )
+    const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_SET_BOUNDS)
     expect(frame).toBeDefined()
     expect(frame?.args).toEqual([{ x: 10.5, y: -3, w: 799.999, h: 0 }])
 
-    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: null })}\n`)
+    input.write(
+      `${JSON.stringify({ id: frame?.id, ok: true, result: null })}\n`
+    )
   })
 
   const BAD_COORDINATES: { label: string; bounds: unknown }[] = [

@@ -27,7 +27,6 @@
  * in the mock below, unlike `humbleExpiryToastSuppression.test.tsx`.
  */
 import type { ReactElement, ReactNode } from 'react'
-
 ;(globalThis as unknown as { localStorage: Storage }).localStorage = {
   getItem: jest.fn(() => null),
   setItem: jest.fn(),
@@ -118,14 +117,18 @@ type TourValue = {
 function mount(): ReactElement<{ value: TourValue }> {
   harness().__resetMount()
   harness().__beginRender()
-  return TourProvider({ children: null as unknown as ReactNode }) as ReactElement<{
+  return TourProvider({
+    children: null as unknown as ReactNode
+  }) as ReactElement<{
     value: TourValue
   }>
 }
 
 function reinvoke(): ReactElement<{ value: TourValue }> {
   harness().__beginRender()
-  return TourProvider({ children: null as unknown as ReactNode }) as ReactElement<{
+  return TourProvider({
+    children: null as unknown as ReactNode
+  }) as ReactElement<{
     value: TourValue
   }>
 }

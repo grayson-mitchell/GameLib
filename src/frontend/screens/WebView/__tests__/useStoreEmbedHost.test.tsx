@@ -107,7 +107,11 @@ jest.mock('react', () => {
 // two transitions (test 5) -- there is only one context consumed anywhere in this hook
 // (`useStoreEmbedSuppressed`'s own `useContext` call), so no identity-based branching is needed
 // in the mock above, unlike `humbleExpiryToastSuppression.test.tsx`.
-let suppressionContextValue = { suppressed: false, acquire: jest.fn(), release: jest.fn() }
+let suppressionContextValue = {
+  suppressed: false,
+  acquire: jest.fn(),
+  release: jest.fn()
+}
 
 // Stand-in for the DOM's ResizeObserver, absent under this project's `testEnvironment: 'node'`
 // jest config. `observe()` auto-fires once, matching the real spec (an initial observation
@@ -188,10 +192,9 @@ function dispatchWindowEvent(type: string): void {
 // stand-in, stubbed at `globalThis` alongside `window`/`ResizeObserver` above, is what lets these
 // tests observe a real write instead of only a swallowed failure.
 const fakeLocalStorage = new Map<string, string>()
-;(
-  globalThis as unknown as { localStorage: Storage }
-).localStorage = {
-  getItem: (key: string) => (fakeLocalStorage.has(key) ? fakeLocalStorage.get(key)! : null),
+;(globalThis as unknown as { localStorage: Storage }).localStorage = {
+  getItem: (key: string) =>
+    fakeLocalStorage.has(key) ? fakeLocalStorage.get(key)! : null,
   setItem: (key: string, value: string) => {
     fakeLocalStorage.set(key, value)
   },
@@ -205,7 +208,10 @@ const fakeLocalStorage = new Map<string, string>()
 
 // Imported after the mocks above (textual order -- this project's ts-jest setup does not hoist
 // jest.mock like babel-jest; see useDebouncedStoreSearch.test.ts / useTauriOAuthLogin.test.tsx).
-import { useStoreEmbedHost, type StoreEmbedHostState } from '../useStoreEmbedHost'
+import {
+  useStoreEmbedHost,
+  type StoreEmbedHostState
+} from '../useStoreEmbedHost'
 
 type HookHarness = {
   __beginRender: () => void
@@ -279,7 +285,11 @@ const okStatus = { status: 'ok' as const }
 
 describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
   beforeEach(() => {
-    suppressionContextValue = { suppressed: false, acquire: jest.fn(), release: jest.fn() }
+    suppressionContextValue = {
+      suppressed: false,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
     MockResizeObserver.instances = []
     windowListeners.clear()
     fakeLocalStorage.clear()
@@ -306,7 +316,11 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
   it('1. mounting opens the embed with the start URL', () => {
     const { ref } = makeSlot({ x: 10, y: 20, width: 300, height: 400 })
 
-    mount({ slotRef: ref, startUrl: 'https://store.steampowered.com/', storeKey: 'steam' })
+    mount({
+      slotRef: ref,
+      startUrl: 'https://store.steampowered.com/',
+      storeKey: 'steam'
+    })
     jest.advanceTimersByTime(40)
 
     expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
@@ -363,7 +377,12 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     // Six ticks, at most two sends -- IPC stays bounded, which is why the interval exists.
     expect(mockApi.storeEmbedSetBounds.mock.calls.length).toBeLessThanOrEqual(2)
     // ...and the embed comes to rest on the FINAL rect, never an intermediate one.
-    expect(mockApi.storeEmbedSetBounds).toHaveBeenLastCalledWith({ x: 6, y: 6, w: 106, h: 106 })
+    expect(mockApi.storeEmbedSetBounds).toHaveBeenLastCalledWith({
+      x: 6,
+      y: 6,
+      w: 106,
+      h: 106
+    })
   })
 
   // Property 3b. THE REGRESSION FROM THE 40-11 LIVE GATE (2026-09-05, Item 3: FAIL).
@@ -439,12 +458,20 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedHide).not.toHaveBeenCalled()
     expect(mockApi.storeEmbedShow).not.toHaveBeenCalled()
 
-    suppressionContextValue = { suppressed: true, acquire: jest.fn(), release: jest.fn() }
+    suppressionContextValue = {
+      suppressed: true,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
     reinvoke(options)
     expect(mockApi.storeEmbedHide).toHaveBeenCalledTimes(1)
     expect(mockApi.storeEmbedShow).not.toHaveBeenCalled()
 
-    suppressionContextValue = { suppressed: false, acquire: jest.fn(), release: jest.fn() }
+    suppressionContextValue = {
+      suppressed: false,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
     reinvoke(options)
     expect(mockApi.storeEmbedShow).toHaveBeenCalledTimes(1)
     expect(mockApi.storeEmbedHide).toHaveBeenCalledTimes(1)
@@ -636,6 +663,8 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     harness().__unmount()
     jest.advanceTimersByTime(1000)
 
-    expect(mockApi.storeEmbedTakeNavEvents).toHaveBeenCalledTimes(callsWhileMounted)
+    expect(mockApi.storeEmbedTakeNavEvents).toHaveBeenCalledTimes(
+      callsWhileMounted
+    )
   })
 })

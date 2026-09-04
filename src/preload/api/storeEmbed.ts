@@ -21,16 +21,12 @@ const storeEmbedSetBoundsIpc = makeListenerCaller('storeEmbedSetBounds')
 // sidecar, where it would either be silently coerced (the very defect class this seam exists to
 // prevent) or produce a confusing error several layers removed from the actual caller. Mirrors
 // `settings.ts`'s `setSetting` wrapper pattern: a private raw sender plus a validating export.
-export const storeEmbedSetBounds = (
-  ...args: Parameters<typeof storeEmbedSetBoundsIpc>
-) => {
+export const storeEmbedSetBounds = (...args: Parameters<typeof storeEmbedSetBoundsIpc>) => {
   const [bounds] = args
   for (const key of ['x', 'y', 'w', 'h'] as const) {
     const value = bounds?.[key]
     if (typeof value !== 'number' || !Number.isFinite(value)) {
-      throw new Error(
-        `storeEmbedSetBounds: bounds.${key} must be a finite number, received ${JSON.stringify(value)}`
-      )
+      throw new Error(`storeEmbedSetBounds: bounds.${key} must be a finite number, received ${JSON.stringify(value)}`)
     }
   }
   storeEmbedSetBoundsIpc(...args)

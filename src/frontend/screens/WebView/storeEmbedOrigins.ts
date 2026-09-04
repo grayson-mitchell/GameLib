@@ -89,7 +89,9 @@ export function resolveStoreForUrl(url: string): StoreEmbedConfig | null {
     return null
   }
   for (const config of STORE_EMBED_ORIGINS) {
-    if (config.apexHosts.some((apex) => hostMatchesApex(parsed.hostname, apex))) {
+    if (
+      config.apexHosts.some((apex) => hostMatchesApex(parsed.hostname, apex))
+    ) {
       return config
     }
   }

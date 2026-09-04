@@ -62,12 +62,18 @@ function extractBlockFromBrace(source: string, braceStart: number): string {
  * than whichever brace happens to appear textually after it (which, for a one-line-guard effect
  * immediately followed by another `useEffect(`, is the NEXT effect's opening brace instead).
  */
-function extractEnclosingBlock(source: string, innerMarker: string, blockOpener: string): string {
+function extractEnclosingBlock(
+  source: string,
+  innerMarker: string,
+  blockOpener: string
+): string {
   const innerIdx = source.indexOf(innerMarker)
   if (innerIdx === -1) throw new Error(`inner marker not found: ${innerMarker}`)
   const openerIdx = source.lastIndexOf(blockOpener, innerIdx)
   if (openerIdx === -1) {
-    throw new Error(`enclosing opener "${blockOpener}" not found before: ${innerMarker}`)
+    throw new Error(
+      `enclosing opener "${blockOpener}" not found before: ${innerMarker}`
+    )
   }
   const braceStart = openerIdx + blockOpener.length - 1
   return extractBlockFromBrace(source, braceStart)
@@ -95,7 +101,12 @@ describe('WebView adtraction gap declaration (D-32, T-40-09-06)', () => {
     // the log call, which would satisfy a narrower "gated correctly" assertion while still being
     // silent -- the exact failure mode "logged, never silent" exists to prevent.
     const bodyAfterGuard = gapEffect.replace("if (store !== 'gog') return", '')
-    expect(bodyAfterGuard.trim().replace(/^\{|\}$/g, '').trim().length).toBeGreaterThan(0)
+    expect(
+      bodyAfterGuard
+        .trim()
+        .replace(/^\{|\}$/g, '')
+        .trim().length
+    ).toBeGreaterThan(0)
   })
 
   it('the gap effect depends on [store] so it re-evaluates if the route store changes', () => {
@@ -118,7 +129,9 @@ describe('WebView adtraction gap declaration (D-32, T-40-09-06)', () => {
     })
 
     it('no Dialog import/render exists in this file at all (the retired Dialog stays deleted)', () => {
-      expect(strippedSource).not.toMatch(/from ['"]frontend\/components\/UI\/Dialog['"]/)
+      expect(strippedSource).not.toMatch(
+        /from ['"]frontend\/components\/UI\/Dialog['"]/
+      )
       expect(strippedSource).not.toMatch(/<Dialog[\s>]/)
     })
   })
@@ -126,7 +139,7 @@ describe('WebView adtraction gap declaration (D-32, T-40-09-06)', () => {
   describe('self-test (anti-vacuity)', () => {
     it('detects a regression that reintroduces the removed state', () => {
       const regressed =
-        "const [showAdtractionWarning, setShowAdtractionWarning] = useState<boolean>(false)"
+        'const [showAdtractionWarning, setShowAdtractionWarning] = useState<boolean>(false)'
       expect(regressed).toContain('showAdtractionWarning')
     })
 
@@ -137,8 +150,16 @@ describe('WebView adtraction gap declaration (D-32, T-40-09-06)', () => {
 
     it('detects a regression that keeps the guard but drops the log call', () => {
       const regressedEmpty = "{ if (store !== 'gog') return }"
-      const bodyAfterGuard = regressedEmpty.replace("if (store !== 'gog') return", '')
-      expect(bodyAfterGuard.trim().replace(/^\{|\}$/g, '').trim().length).toBe(0)
+      const bodyAfterGuard = regressedEmpty.replace(
+        "if (store !== 'gog') return",
+        ''
+      )
+      expect(
+        bodyAfterGuard
+          .trim()
+          .replace(/^\{|\}$/g, '')
+          .trim().length
+      ).toBe(0)
     })
 
     it('detects a regression that silently reintroduces a Dialog render', () => {
