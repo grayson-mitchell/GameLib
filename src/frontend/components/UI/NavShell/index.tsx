@@ -22,6 +22,15 @@ import './index.scss'
  * `.NavShell__tier2` (plan 34.10-02) must both be direct grid items of
  * `.App` for their `grid-area` to resolve. A wrapper element here would
  * break grid placement.
+ *
+ * `StoreEmbedSuppressionProvider` (Phase 40 Plan 06, D-18/D-20) is NOT
+ * mounted here despite living in this directory
+ * (`./StoreEmbedSuppressionContext.tsx`) -- this component's fragment
+ * return doesn't enclose `<Outlet/>`, the app-level dialogs, or
+ * `HumbleExpiryToast`, all of which need to be inside the provider too. It
+ * is mounted in `App.tsx`'s `Root()` instead, wrapping this component as a
+ * sibling of those other consumers. See that file and
+ * `StoreEmbedSuppressionContext.tsx`'s doc comment.
  */
 export default function NavShell() {
   const location = useLocation() as { pathname: string }

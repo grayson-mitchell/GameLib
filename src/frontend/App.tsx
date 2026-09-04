@@ -13,6 +13,7 @@ import {
 import ErrorComponent from './components/UI/ErrorComponent'
 import NavShell from './components/UI/NavShell'
 import { Tier2PortalProvider } from './components/UI/NavShell/Tier2PortalContext'
+import { StoreEmbedSuppressionProvider } from './components/UI/NavShell/StoreEmbedSuppressionContext'
 import ContextProvider from './state/ContextProvider'
 import { ControllerHints, Help, OfflineMessage } from './components/UI'
 import DialogHandler from './components/UI/DialogHandler'
@@ -122,40 +123,56 @@ function Root() {
       onDragStart={(e) => e.preventDefault()}
     >
       <ThemeProvider theme={theme}>
-        {isConsoleMode ? (
-          <main className="content consoleContent">
-            <Outlet />
-          </main>
-        ) : (
-          <TourProvider>
-            <Tier2PortalProvider>
-              <OfflineMessage />
-              <NavShell />
-              <main className="content">
-                <DialogHandler />
-                <InstallGameWrapper />
-                <SteamBottleSetup />
-                <SteamClientSetup />
-                <SteamBridgeSetup />
-                <SettingsModalWrapper />
-                <ExternalLinkDialog />
-                <RedeemSteamKeyDialog />
-                <LogFileUploadDialog />
-                <UploadedLogFilesList />
-                <Outlet />
-                <HumbleExpiryToast />
-              </main>
-              <div className="controller">
-                <ControllerHints />
-                <dialog className="simple-keyboard-wrapper">
-                  <div className="simple-keyboard"></div>
-                </dialog>
-              </div>
-              {showOverlayControls && <WindowControls />}
-              {experimentalFeatures.enableHelp && <Help items={help.items} />}
-            </Tier2PortalProvider>
-          </TourProvider>
-        )}
+        {/*
+          Phase 40 Plan 06 (D-18/D-20). Mounted here, wrapping BOTH render
+          branches below, not inside `NavShell/index.tsx` -- `NavShell`
+          renders a fragment (`<header/><aside/><NavShellTour/>`) that does
+          not enclose `<Outlet/>`, the dialogs below, or
+          `<HumbleExpiryToast/>`, all of which are `Root()`'s own children,
+          siblings of `<NavShell/>`. Every overlay this plan wires
+          (`Dialog`, the tier-2 dropdown, the Humble toast, the tour) must
+          be a React descendant of this provider or it silently falls back
+          to the no-op-but-warning default value -- see
+          `StoreEmbedSuppressionContext.tsx`'s doc comment.
+        */}
+        <StoreEmbedSuppressionProvider>
+          {isConsoleMode ? (
+            <main className="content consoleContent">
+              <Outlet />
+            </main>
+          ) : (
+            <TourProvider>
+              <Tier2PortalProvider>
+                <OfflineMessage />
+                <NavShell />
+                <main className="content">
+                  <DialogHandler />
+                  <InstallGameWrapper />
+                  <SteamBottleSetup />
+                  <SteamClientSetup />
+                  <SteamBridgeSetup />
+                  <SettingsModalWrapper />
+                  <ExternalLinkDialog />
+                  <RedeemSteamKeyDialog />
+                  <LogFileUploadDialog />
+                  <UploadedLogFilesList />
+                  <Outlet />
+                  <HumbleExpiryToast />
+                </main>
+                <div className="controller">
+                  <ControllerHints />
+                  <dialog className="simple-keyboard-wrapper">
+                    <div className="simple-keyboard"></div>
+                  </dialog>
+                </div>
+                {showOverlayControls && <WindowControls />}
+                {experimentalFeatures.enableHelp && (
+                  <Help items={help.items} />
+                )}
+              </Tier2PortalProvider>
+            </TourProvider>
+          )}
+        </StoreEmbedSuppressionProvider>
       </ThemeProvider>
     </div>
   )
