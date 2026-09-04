@@ -4703,6 +4703,66 @@ fn store_embed_open_args(args: &[Value]) -> Result<(tauri::Url, f64, f64, f64, f
     Ok((url, x, y, w, h))
 }
 
+/// Disposition returned by `store_embed_navigation_policy` (D-29, T-40-04-02/03/09). Kept as an
+/// enum rather than a bare `bool` so the `Handoff` case (steam://) is impossible to confuse with
+/// plain `Allow` at the call site -- both return `false` to `on_navigation`'s underlying `bool`
+/// contract, but only `Handoff` carries the side effect of opening the URL externally.
+#[cfg(target_os = "macos")]
+#[derive(Debug, PartialEq, Eq)]
+enum StoreEmbedNavigationDecision {
+    /// Allow the navigation to proceed inside the embed. Ordinary `http`/`https` (D-28): no
+    /// origin allowlist, so store checkout keeps working end to end.
+    Allow,
+    /// Block the navigation inside the embed. No side effect beyond the log.
+    Block,
+    /// Block the navigation inside the embed AND hand `url` to the OS via the existing
+    /// `open_external` path (steam:// rungameid links reachable from a store page).
+    Handoff,
+}
+
+/// Named, unit-tested scheme policy for `store_embed_open`'s `on_navigation` hook (D-29,
+/// T-40-04-02/03/09), replacing the bare `|_url| true` placeholder plan `40-02` left in place.
+///
+/// `on_navigation` -- not `on_page_load` -- is the correct hook for this BLOCKER. `on_navigation`
+/// fires for every frame including subframes/iframes (`40-EMBED-API-VERIFICATION.md` Q4; spike
+/// 013 measured 5 of 8 `on_navigation` events firing for third-party iframes on this exact wry
+/// build), which is exactly the coverage a stateless blocker needs: a store page cannot smuggle a
+/// `gamelib://` navigation past this policy by hiding it in an iframe. `on_page_load` stays
+/// main-frame-only by construction (the WKNavigationDelegate contract) and is reserved for
+/// deadline-armed relays that must observe exactly one authoritative main-frame event (the
+/// `013-015` rule the login flows above follow) -- it is the wrong hook for a control with no
+/// deadline and no need to ignore subframes.
+///
+/// Pure and side-effect-free so it can be proven by `#[cfg(test)] mod tests` without constructing
+/// a `Webview`. The caller (the `on_navigation` closure in `store_embed_open` below) is
+/// responsible for the one side effect the `Handoff` variant implies -- calling the existing
+/// `open_external` command function directly, never a second, duplicated opener call.
+#[cfg(target_os = "macos")]
+fn store_embed_navigation_policy(url: &tauri::Url) -> StoreEmbedNavigationDecision {
+    let scheme = url.scheme();
+    if scheme == "gamelib" {
+        // The sharpest edge in the phase (T-40-04-02): a store page driving the app's own deep
+        // link would let it act with the app's own IPC surface. Scheme-only in the log --
+        // never the full URL -- matching `open_external_scheme_check`'s T-28-04 convention.
+        eprintln!(
+            "[shell] store_embed: blocked in-embed navigation to the app's own scheme \
+             ('gamelib') -- T-40-04-02"
+        );
+        return StoreEmbedNavigationDecision::Block;
+    }
+    if scheme == "http" || scheme == "https" {
+        return StoreEmbedNavigationDecision::Allow;
+    }
+    if scheme == "steam" {
+        return StoreEmbedNavigationDecision::Handoff;
+    }
+    // Default-deny (T-40-04-03): any scheme outside the enumerated set above, not an allowlist
+    // of known-bad schemes. A future store/wiki origin registering some other custom scheme
+    // falls here automatically rather than needing a new arm added reactively.
+    eprintln!("[shell] store_embed: blocked in-embed navigation to unrecognized scheme '{scheme}'");
+    StoreEmbedNavigationDecision::Block
+}
+
 /// Create (or, if already open, navigate) the store/wiki embed child webview on `main`
 /// (D-01/D-25). Idempotent: a second `store_embed_open` while one already exists under
 /// `STORE_EMBED_LABEL` navigates it rather than creating a second child under the same label.
@@ -4734,11 +4794,67 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
                 }
             }
         })
-        // Bare log-only placeholder reserved for plan `40-04`'s scheme policy (D-29,
-        // T-40-02-01). Returning `true` unconditionally allows every navigation for now; this
-        // is explicitly NOT a containment control and must not be read as one until `40-04`
-        // replaces this closure.
-        .on_navigation(|_url| true);
+        // D-29/T-40-04-02/03/09: named, unit-tested scheme policy (see
+        // `store_embed_navigation_policy` above) replaces plan `40-02`'s bare log-only
+        // placeholder. Fires for every frame including subframes, which is the coverage a
+        // stateless blocker needs -- see that function's own doc comment for why this hook,
+        // not `on_page_load`, is correct here.
+        .on_navigation({
+            let app_handle = app.clone();
+            move |url| match store_embed_navigation_policy(url) {
+                StoreEmbedNavigationDecision::Allow => true,
+                StoreEmbedNavigationDecision::Block => false,
+                StoreEmbedNavigationDecision::Handoff => {
+                    // Reuses the existing `open_external` command function directly -- never a
+                    // second, duplicated `app.opener()` call site (D-28).
+                    if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
+                        eprintln!(
+                            "[shell] store_embed: on_navigation handoff to open_external \
+                             failed: {e}"
+                        );
+                    }
+                    false
+                }
+            }
+        })
+        // D-28: a store page's `window.open()` popup is denied inside the embed's own frame
+        // and routed to the system browser instead, where the URL bar and the user's password
+        // manager both work -- neither exists inside an in-app child webview (T-40-04-05).
+        .on_new_window({
+            let app_handle = app.clone();
+            move |url, _features| {
+                eprintln!(
+                    "[shell] store_embed: denied window.open request, routing to system \
+                     browser (D-28)"
+                );
+                if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
+                    eprintln!(
+                        "[shell] store_embed: on_new_window handoff to open_external failed: {e}"
+                    );
+                }
+                tauri::webview::NewWindowResponse::Deny
+            }
+        })
+        // D-28: a store page cannot write to disk through the app. The download is refused
+        // inside the embed and its URL is routed to the system browser instead (T-40-04-04).
+        .on_download({
+            let app_handle = app.clone();
+            move |_webview, event| {
+                if let tauri::webview::DownloadEvent::Requested { url, .. } = &event {
+                    eprintln!(
+                        "[shell] store_embed: denied in-embed download, routing to system \
+                         browser (D-28)"
+                    );
+                    if let Err(e) = open_external(url.to_string(), app_handle.clone()) {
+                        eprintln!(
+                            "[shell] store_embed: on_download handoff to open_external \
+                             failed: {e}"
+                        );
+                    }
+                }
+                false
+            }
+        });
 
     match window.add_child(
         builder,
@@ -11789,5 +11905,86 @@ mod tests {
         // The shutdown hook runs on every exit, including exits where no game ever ran and the
         // `OnceLock` was never initialised. It must not panic there.
         wake_lock_release_all();
+    }
+
+    // ---- store_embed_navigation_policy (Phase 40 Plan 04, D-29, T-40-04-02/03/09) ----
+    //
+    // Covers block / allow / hand-off / default-deny per the plan's own verification list.
+    // `on_navigation`'s actual side effect (calling `open_external` on `Handoff`) lives in the
+    // closure inside `store_embed_open`, not here -- this function is pure by construction so
+    // it can be driven without a live `AppHandle`.
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_navigation_policy_blocks_the_apps_own_scheme() {
+        // T-40-04-02: the sharpest edge in the phase. A store page must never be able to drive
+        // the app's own deep link from inside the embed.
+        let url = tauri::Url::parse("gamelib://launch?appName=1207659037&runner=gog").unwrap();
+        assert_eq!(
+            store_embed_navigation_policy(&url),
+            StoreEmbedNavigationDecision::Block
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_navigation_policy_allows_https_freely() {
+        // D-28 forbids an origin allowlist -- ordinary https navigation (e.g. a GOG checkout
+        // redirect chain through several distinct hosts) must stay free.
+        for candidate in [
+            "https://store.gog.com/game/some_game",
+            "https://checkout.stripe.com/pay/cs_test_abc",
+            "https://www.amazon.com/gp/cart/view.html",
+        ] {
+            let url = tauri::Url::parse(candidate).unwrap();
+            assert_eq!(
+                store_embed_navigation_policy(&url),
+                StoreEmbedNavigationDecision::Allow,
+                "expected free https navigation to `{candidate}` under D-28"
+            );
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_navigation_policy_allows_http_freely() {
+        let url = tauri::Url::parse("http://example.com/").unwrap();
+        assert_eq!(
+            store_embed_navigation_policy(&url),
+            StoreEmbedNavigationDecision::Allow
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_navigation_policy_hands_off_steam_scheme() {
+        // A store page's own "launch"/"install" button can produce a steam:// URL. It must
+        // never load inside the embed -- it is handed to the OS via the existing
+        // `open_external` path instead (D-28/D-29).
+        let url = tauri::Url::parse("steam://rungameid/440").unwrap();
+        assert_eq!(
+            store_embed_navigation_policy(&url),
+            StoreEmbedNavigationDecision::Handoff
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_navigation_policy_default_denies_unknown_schemes() {
+        // T-40-04-03: default-deny on anything outside the enumerated set, not an allowlist of
+        // known-bad schemes.
+        for candidate in [
+            "ftp://example.com/",
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "itms-apps://apps.apple.com/app/id123",
+        ] {
+            let url = tauri::Url::parse(candidate).unwrap();
+            assert_eq!(
+                store_embed_navigation_policy(&url),
+                StoreEmbedNavigationDecision::Block,
+                "expected `{candidate}` to be default-denied"
+            );
+        }
     }
 }
