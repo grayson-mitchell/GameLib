@@ -52,7 +52,6 @@ describe('showAboutWindow (the tray + Settings seam)', () => {
   })
 
   it('constructs no WebviewWindow -- About stopped being an OS window', () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const childWindows = jest.requireMock<{
       tauriCreateNewWindow: jest.Mock
     }>('../api/tauriChildWindows')

@@ -6,7 +6,9 @@
  * is invoked directly and its effect is run by hand, following the slot-harness
  * pattern in `HeroicVersion.test.tsx`.
  */
-import type { ReactElement } from 'react'
+import type { ReactElement, ReactNode } from 'react'
+
+type AnyProps = Record<string, unknown> & { children?: ReactNode }
 
 let stateSlots: unknown[] = []
 let stateCursor = 0
@@ -54,9 +56,9 @@ function installWindow(): void {
   }
 }
 
-function render(): ReactElement | null {
+function render(): ReactElement<AnyProps> | null {
   stateCursor = 0
-  return AboutDialogHost() as unknown as ReactElement | null
+  return AboutDialogHost() as unknown as ReactElement<AnyProps> | null
 }
 
 /** Runs the effects the last render queued, returning their cleanups. */

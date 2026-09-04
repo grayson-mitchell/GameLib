@@ -10,7 +10,7 @@
  */
 import type { ReactElement, ReactNode } from 'react'
 
-const mockedGetHeroicVersion = jest.fn()
+const mockedGetHeroicVersion = jest.fn<Promise<string>, []>()
 
 let stateSlots: unknown[] = []
 let stateCursor = 0
@@ -128,9 +128,9 @@ function renderDialog(onClose = jest.fn()): AnyElement {
 
 function textOf(tree: ReactNode): string[] {
   return collectElements(tree)
-    .flatMap((el) => {
+    .flatMap((el): ReactNode[] => {
       const children = el.props?.children
-      return Array.isArray(children) ? children : [children]
+      return Array.isArray(children) ? (children as ReactNode[]) : [children]
     })
     .filter((c): c is string => typeof c === 'string')
 }
