@@ -4666,6 +4666,15 @@ const STORE_EMBED_LABEL: &str = "store-embed";
 const STORE_EMBED_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
      AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 
+/// Per-drain cap on `StoreEmbedState::pending_nav_events`, oldest-dropped past this bound.
+/// Mirrors `LOGIN_WINDOW_EVENTS_CAP` and its T-34.4.1-09 rationale exactly: a page that
+/// navigates in a loop must not grow the queue without bound between
+/// `store_embed_take_nav_events` drains. Oldest-dropped rather than newest-dropped because the
+/// renderer only ever applies the LAST event -- discarding the freshest state to preserve a
+/// stale one would defeat the drain entirely.
+#[cfg(target_os = "macos")]
+const STORE_EMBED_NAV_EVENTS_CAP: usize = 50;
+
 /// Ordered main-frame URL history for the store/wiki embed (D-22). Neither
 /// `tauri::webview::Webview` nor wry's `WebView` expose a back/forward/history API
 /// (`40-EMBED-API-VERIFICATION.md` Q1/Q2), so this Rust-side stack is the mechanism. Pure
@@ -4675,11 +4684,23 @@ const STORE_EMBED_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_
 /// Phase 40 Plan 07 (D-22, T-40-07-05) adds cursor semantics on top of Plan 02's shipped
 /// push/clear: `store_embed_back`/`forward`/`reload`/`navigate` below drive the cursor and this
 /// registry through the one-shot `suppress_next_push` flag documented on `push()`.
+///
+/// GAP-D (quick task `260905-e61`, REQ-40-06) adds `pending_nav_events`. Until it existed the
+/// inversion was HALF-BUILT: `on_page_load` mutated the cursor here and emitted nothing, so an
+/// in-embed link click moved Rust's `can_go_back()` to true while the renderer's stayed false
+/// forever -- Back greyed out, host label frozen at the START URL's host (most visible on
+/// `/store/gog`, which starts on `af.gog.com` and lands on `www.gog.com`). The queue lives
+/// INSIDE this struct, behind the same one `Mutex`, deliberately: an outboard queue would be a
+/// second source of truth for a cursor position this struct already owns.
 #[cfg(target_os = "macos")]
 #[derive(Default)]
 struct StoreEmbedState {
     history: Vec<String>,
     cursor: usize,
+    /// Navigation states awaiting a `store_embed_take_nav_events` drain, oldest first, capped
+    /// at `STORE_EMBED_NAV_EVENTS_CAP`. Filled ONLY by a real (non-suppressed) `push()` -- see
+    /// `enqueue_nav_event()` for why a suppressed push must enqueue nothing.
+    pending_nav_events: Vec<Value>,
     /// One-shot flag (T-40-07-05): armed immediately before a history-driven navigation
     /// (`store_embed_back`/`forward`/`reload`) issues its `navigate()`/`reload()` call, and
     /// consumed by the very next `push()` -- the `on_page_load` Finished event that navigation
@@ -4712,6 +4733,34 @@ impl StoreEmbedState {
         self.history.truncate(keep);
         self.history.push(url);
         self.cursor = self.history.len() - 1;
+        // GAP-D: enqueue AFTER the cursor has moved, never before -- the whole value of the
+        // event is that its `canGoBack`/`canGoForward` are the post-navigation cursor's, the
+        // same derivation every other arm reports.
+        self.enqueue_nav_event();
+    }
+
+    /// PURE: snapshots the current navigation state onto the drain queue (GAP-D, REQ-40-06),
+    /// capped at `STORE_EMBED_NAV_EVENTS_CAP` with oldest-dropped.
+    ///
+    /// Called from `push()`'s non-suppressed path ONLY. A SUPPRESSED push is the confirming
+    /// `on_page_load` Finished event of a back/forward/reload this process itself issued, and
+    /// that caller already received the identical state as its arm's return value -- queueing
+    /// it again would hand the renderer a second copy of state it has already applied. The
+    /// early `return` in `push()` above is what enforces that, so this method is never reached
+    /// on the suppressed path.
+    fn enqueue_nav_event(&mut self) {
+        let event = store_embed_nav_state_json(self);
+        self.pending_nav_events.push(event);
+        if self.pending_nav_events.len() > STORE_EMBED_NAV_EVENTS_CAP {
+            self.pending_nav_events.remove(0);
+        }
+    }
+
+    /// PURE: DRAINS (never merely reads) the queued navigation states -- the same
+    /// drain-not-peek contract `humble_login_take_events` promises the sidecar. A second call
+    /// with no navigation in between returns empty, which is a healthy idle state.
+    fn take_nav_events(&mut self) -> Vec<Value> {
+        std::mem::take(&mut self.pending_nav_events)
     }
 
     /// PURE: drop all recorded history. Called on `store_embed_close` (D-21 teardown).
@@ -4719,6 +4768,9 @@ impl StoreEmbedState {
         self.history.clear();
         self.cursor = 0;
         self.suppress_next_push = false;
+        // D-21: a teardown must not leave events describing a history that no longer exists --
+        // the next embed would drain them and render another session's host in its chrome.
+        self.pending_nav_events.clear();
     }
 
     /// PURE: derived from the cursor, never stored as an independent flag that could drift
@@ -5086,6 +5138,25 @@ fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
         state.clear();
     }
     Ok(Value::Null)
+}
+
+/// Drains the navigation states queued by `on_page_load`'s Finished handler (GAP-D, D-22,
+/// REQ-40-06). Takes no `AppHandle`: the queue lives in the process-static `STORE_EMBED_STATE`,
+/// NOT on the webview handle -- which is the point. The 013-015 rule is that a poller must be
+/// anchored to a SURVIVOR, and the embed's handle dies with the embed; this state does not, so
+/// a drain issued while the embed is closed resolves an empty array rather than erroring.
+///
+/// A poisoned lock IS surfaced as an error here, unlike the `on_page_load` push path (which
+/// logs and continues rather than panicking a webview navigation callback). The asymmetry is
+/// deliberate: a failed push loses one event, while a failed drain that resolved `[]` would be
+/// indistinguishable from a healthy idle channel -- exactly the F-34.4.2-19 defect class this
+/// seam's per-field coercion exists to prevent one layer up.
+#[cfg(target_os = "macos")]
+fn store_embed_take_nav_events() -> Result<Value, String> {
+    let mut state = store_embed_state()
+        .lock()
+        .map_err(|_| "store_embed_take_nav_events:history-registry-poisoned".to_string())?;
+    Ok(Value::Array(state.take_nav_events()))
 }
 
 /// Parse `store_embed_navigate`'s `{ url }` arg.
@@ -7369,6 +7440,21 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             #[cfg(not(target_os = "macos"))]
             {
                 Err("store_embed_close:unsupported-platform".to_string())
+            }
+        }
+        // GAP-D (quick task `260905-e61`, D-22, REQ-40-06): the arm that carries an IN-EMBED
+        // navigation back to the renderer. Without it the four arms below only ever reported
+        // state for navigations the USER's own chrome initiated, so clicking a link inside the
+        // embed moved this process's cursor while the renderer's `canGoBack` stayed false
+        // forever. Drains, never peeks -- same contract as `humble_login_take_events` above.
+        "store_embed_take_nav_events" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_take_nav_events()
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_take_nav_events:unsupported-platform".to_string())
             }
         }
         // Phase 40 Plan 07 (D-22/D-25): the four navigation arms. Each returns the navigation
@@ -12588,5 +12674,112 @@ mod tests {
         assert_eq!(json["host"], "");
         assert_eq!(json["canGoBack"], false);
         assert_eq!(json["canGoForward"], false);
+    }
+
+    // ---- GAP-D: the drain queue (quick task `260905-e61`, D-22, REQ-40-06) ----
+    //
+    // The seven tests above prove the cursor semantics and were all green while GAP-D shipped:
+    // they measure what `push` does to the HISTORY, and GAP-D was that `push` did nothing to
+    // carry that history anywhere. These five measure the missing half. Each was verified RED
+    // against the pre-fix code (no `pending_nav_events` field at all, so they did not compile
+    // -- the strongest possible red for an absent mechanism).
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_push_enqueues_a_nav_event_carrying_the_post_push_cursor_state() {
+        // THE GAP-D REGRESSION TEST. An in-embed link click reaches `push()` via
+        // `on_page_load`'s Finished handler and nothing else -- so if `push` queues nothing,
+        // the renderer can never learn that `canGoBack` became true.
+        let mut state = StoreEmbedState::default();
+        state.push("https://af.gog.com/".to_string());
+        state.push("https://www.gog.com/game/foo".to_string());
+
+        let events = state.take_nav_events();
+        assert_eq!(events.len(), 2, "one event per real navigation");
+
+        assert_eq!(events[0]["host"], "af.gog.com");
+        assert_eq!(
+            events[0]["canGoBack"], false,
+            "the first entry has nothing behind it"
+        );
+
+        assert_eq!(events[1]["url"], "https://www.gog.com/game/foo");
+        assert_eq!(
+            events[1]["host"], "www.gog.com",
+            "the host label must follow the landing page, not stay frozen on the start URL's \
+             host -- the exact user-visible symptom GAP-D reported on /store/gog"
+        );
+        assert_eq!(
+            events[1]["canGoBack"], true,
+            "Back must become available after an in-embed navigation"
+        );
+        assert_eq!(events[1]["canGoForward"], false);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_suppressed_push_enqueues_nothing() {
+        // The confirming Finished event of a back/forward/reload this process itself issued.
+        // Its caller already received the identical state as that arm's return value.
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.push("https://b.example/".to_string());
+        let _ = state.take_nav_events();
+
+        let back_target = state.go_back().unwrap();
+        state.push(back_target);
+
+        assert!(
+            state.take_nav_events().is_empty(),
+            "a suppressed push must not queue a duplicate of state the caller already has"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_take_nav_events_drains_rather_than_peeks() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+
+        assert_eq!(state.take_nav_events().len(), 1);
+        assert!(
+            state.take_nav_events().is_empty(),
+            "a second drain with no navigation in between is a healthy idle state, not a \
+             repeat of the first"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_nav_event_queue_is_capped_oldest_dropped() {
+        // T-34.4.1-09's shape, restated for this queue: a page navigating in a loop must not
+        // grow the queue without bound between drains.
+        let mut state = StoreEmbedState::default();
+        for i in 0..(STORE_EMBED_NAV_EVENTS_CAP + 10) {
+            state.push(format!("https://example.com/{i}"));
+        }
+
+        let events = state.take_nav_events();
+        assert_eq!(events.len(), STORE_EMBED_NAV_EVENTS_CAP);
+        assert_eq!(
+            events[0]["url"], "https://example.com/10",
+            "the OLDEST entries are the ones dropped -- the renderer applies the last event, \
+             so dropping the freshest would defeat the drain"
+        );
+        assert_eq!(
+            events[STORE_EMBED_NAV_EVENTS_CAP - 1]["url"],
+            format!("https://example.com/{}", STORE_EMBED_NAV_EVENTS_CAP + 9)
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_clear_empties_the_nav_event_queue() {
+        // D-21 teardown: leaving events behind would let the NEXT embed drain a previous
+        // session's host straight into its chrome.
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.clear();
+        assert!(state.take_nav_events().is_empty());
     }
 }
