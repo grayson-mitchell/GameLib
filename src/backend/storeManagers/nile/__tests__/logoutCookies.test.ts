@@ -20,7 +20,7 @@ jest.mock('backend/logger', () => ({
   LogPrefix: { Nile: 'Nile' }
 }))
 
-const mockConfigStoreDelete = jest.fn()
+const mockConfigStoreDelete = jest.fn<unknown, unknown[]>()
 jest.mock('backend/storeManagers/nile/electronStores', () => ({
   configStore: {
     set: jest.fn(),
@@ -29,7 +29,7 @@ jest.mock('backend/storeManagers/nile/electronStores', () => ({
   }
 }))
 
-const mockClearCache = jest.fn()
+const mockClearCache = jest.fn<unknown, unknown[]>()
 jest.mock('backend/utils', () => ({
   clearCache: (...args: unknown[]) => mockClearCache(...args)
 }))
@@ -38,10 +38,12 @@ jest.mock('backend/storeManagers/nile/constants', () => ({
   nileUserData: '/tmp/gamelib-nile-logout-cookies-test/does-not-exist.json'
 }))
 
-const mockRunRunnerCommand = jest.fn()
+const mockRunRunnerCommand = jest.fn<Promise<unknown>, unknown[]>()
 jest.mock('backend/storeManagers/index', () => ({
   libraryManagerMap: {
-    nile: { runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args) }
+    nile: {
+      runRunnerCommand: (...args: unknown[]) => mockRunRunnerCommand(...args)
+    }
   }
 }))
 
@@ -49,7 +51,9 @@ jest.mock('backend/storeManagers/index', () => ({
 // not an object-literal getter.
 let mockIsMac = true
 jest.mock('backend/constants/environment', () => {
-  const actual = jest.requireActual('backend/constants/environment')
+  const actual = jest.requireActual<Record<string, unknown>>(
+    'backend/constants/environment'
+  )
   return Object.defineProperty({ ...actual }, 'isMac', {
     get: () => mockIsMac
   })
@@ -82,7 +86,10 @@ function makeMockSeam(
 }
 
 function allLoggedText(): string {
-  const sinks = [logInfo, logWarning] as unknown as jest.Mock[]
+  const sinks = [logInfo, logWarning] as unknown as jest.Mock<
+    unknown,
+    unknown[]
+  >[]
   return sinks
     .flatMap((sink) => sink.mock.calls)
     .map((call) => JSON.stringify(call))
@@ -93,7 +100,11 @@ beforeEach(() => {
   jest.clearAllMocks()
   mockIsMac = true
   setLoginWindowSeam(null)
-  mockRunRunnerCommand.mockResolvedValue({ abort: false, stdout: '', stderr: '' })
+  mockRunRunnerCommand.mockResolvedValue({
+    abort: false,
+    stdout: '',
+    stderr: ''
+  })
 })
 
 afterEach(() => {
@@ -110,7 +121,9 @@ describe('NileUser.logout() credential cleanup runs first and unconditionally (D
 
   it('clears credentials even when the cookie seam clearCookies() rejects', async () => {
     const seam = makeMockSeam({
-      clearCookies: jest.fn().mockRejectedValue(new Error('rust-side clear failed'))
+      clearCookies: jest
+        .fn()
+        .mockRejectedValue(new Error('rust-side clear failed'))
     })
     setLoginWindowSeam(seam)
 
@@ -131,7 +144,11 @@ describe('NileUser.logout() credential cleanup runs first and unconditionally (D
   })
 
   it('does not attempt the cookie clear at all when runRunnerCommand reports an abort', async () => {
-    mockRunRunnerCommand.mockResolvedValue({ abort: true, stdout: '', stderr: '' })
+    mockRunRunnerCommand.mockResolvedValue({
+      abort: true,
+      stdout: '',
+      stderr: ''
+    })
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 

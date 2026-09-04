@@ -48,7 +48,7 @@ jest.mock('backend/storeManagers/index', () => ({
   }
 }))
 
-const mockConfigStoreClear = jest.fn()
+const mockConfigStoreClear = jest.fn<unknown, unknown[]>()
 jest.mock('backend/storeManagers/gog/electronStores', () => ({
   configStore: {
     set: jest.fn(),
@@ -71,7 +71,9 @@ jest.mock('backend/utils', () => ({
 // instead.
 let mockIsMac = true
 jest.mock('backend/constants/environment', () => {
-  const actual = jest.requireActual('backend/constants/environment')
+  const actual = jest.requireActual<Record<string, unknown>>(
+    'backend/constants/environment'
+  )
   return Object.defineProperty({ ...actual }, 'isMac', {
     get: () => mockIsMac
   })
@@ -105,7 +107,10 @@ function makeMockSeam(
 
 /** Every string that reached any of the two relevant log sinks, flattened. */
 function allLoggedText(): string {
-  const sinks = [logInfo, logWarning] as unknown as jest.Mock[]
+  const sinks = [logInfo, logWarning] as unknown as jest.Mock<
+    unknown,
+    unknown[]
+  >[]
   return sinks
     .flatMap((sink) => sink.mock.calls)
     .map((call) => JSON.stringify(call))
@@ -134,7 +139,9 @@ describe('GOGUser.logout() credential cleanup runs first and unconditionally (D-
 
   it('clears credentials even when the cookie seam clearCookies() rejects', async () => {
     const seam = makeMockSeam({
-      clearCookies: jest.fn().mockRejectedValue(new Error('rust-side clear failed'))
+      clearCookies: jest
+        .fn()
+        .mockRejectedValue(new Error('rust-side clear failed'))
     })
     setLoginWindowSeam(seam)
 
