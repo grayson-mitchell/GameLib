@@ -25,7 +25,11 @@ import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEm
 // Spike 017's measured bounds-sync interval (`tauri-embedded-store-browser.md`, "Bounds sync"
 // section: "ResizeObserver on the slot div, debounced ~40 ms"). Named so a future retune is a
 // one-line diff against a comment, not a search for a buried magic number.
-const BOUNDS_SYNC_DEBOUNCE_MS = 40
+//
+// This is a THROTTLE interval, not a debounce delay -- see `scheduleFlush` below. The distinction
+// is not cosmetic: it is the difference between an embed that tracks a live window drag and one
+// that visibly lags it (plan 40-11 live gate, Item 3, 2026-09-05).
+const BOUNDS_SYNC_INTERVAL_MS = 40
 
 // Derived from the real IPC return type rather than re-declared here, so this file cannot drift
 // from `common/types/ipc.ts` the way the four nav methods' types already had (Rule 1 fix, this
@@ -144,7 +148,8 @@ export function useStoreEmbedHost({
       return undefined
     }
 
-    let debounceHandle: ReturnType<typeof setTimeout> | null = null
+    let trailingHandle: ReturnType<typeof setTimeout> | null = null
+    let lastFlushAt = 0
 
     // The ONLY place in the renderer that reads a rect and sends bounds (grep-checked by this
     // plan's own acceptance criteria). `slot.getBoundingClientRect()` is the sole input to both
@@ -164,9 +169,49 @@ export function useStoreEmbedHost({
       }
     }
 
+    // LEADING-EDGE THROTTLE WITH A TRAILING FLUSH (D-18 unchanged: `flush` above is still the
+    // only call site that reads a rect and sends bounds).
+    //
+    // The retired implementation was a pure trailing-edge debounce -- every tick called
+    // `clearTimeout` and restarted the timer, so during a CONTINUOUS drag-resize the timer was
+    // perpetually reset and `flush()` never ran until the drag paused for a full interval. The
+    // plan 40-11 live gate caught this on real hardware: the embed updated "only on mouse
+    // stopping or maybe being quite slow movement", against a browser that tracked the pointer
+    // smoothly. A slow drag left inter-tick gaps longer than the interval and so looked fine,
+    // which is why it survived every automated test and a first eyeball pass.
+    //
+    // The throttle keeps the debounce's actual purpose -- bounding IPC round-trips, since every
+    // flush is renderer -> sidecar -> Rust -- while guaranteeing forward progress:
+    //   * leading edge: the first tick after an idle interval sends IMMEDIATELY, so motion is
+    //     visible from its first frame rather than after a delay;
+    //   * max-wait: during sustained motion a send lands at least once per interval, because the
+    //     pending trailing timer is NEVER cleared and restarted by a later tick (that restart was
+    //     precisely the defect);
+    //   * trailing edge: the final rect always lands, so the embed cannot come to rest misaligned.
     const scheduleFlush = () => {
-      if (debounceHandle !== null) clearTimeout(debounceHandle)
-      debounceHandle = setTimeout(flush, BOUNDS_SYNC_DEBOUNCE_MS)
+      const now = Date.now()
+      const sinceLastFlush = now - lastFlushAt
+
+      if (sinceLastFlush >= BOUNDS_SYNC_INTERVAL_MS) {
+        if (trailingHandle !== null) {
+          clearTimeout(trailingHandle)
+          trailingHandle = null
+        }
+        lastFlushAt = now
+        flush()
+        return
+      }
+
+      // Inside the interval: ensure exactly one trailing flush is pending. Deliberately NOT
+      // rescheduled on subsequent ticks -- an already-armed timer is left alone so it fires on
+      // schedule and motion keeps progressing.
+      if (trailingHandle === null) {
+        trailingHandle = setTimeout(() => {
+          trailingHandle = null
+          lastFlushAt = Date.now()
+          flush()
+        }, BOUNDS_SYNC_INTERVAL_MS - sinceLastFlush)
+      }
     }
 
     const observer = new ResizeObserver(scheduleFlush)
@@ -188,12 +233,12 @@ export function useStoreEmbedHost({
       observer.disconnect()
       window.removeEventListener('resize', scheduleFlush)
       window.removeEventListener('scroll', scheduleFlush, true)
-      if (debounceHandle !== null) clearTimeout(debounceHandle)
+      if (trailingHandle !== null) clearTimeout(trailingHandle)
     }
     // Mount-once by design: this effect opens the embed exactly once (guarded by `openedRef`)
     // and re-points it via `storeEmbedNavigate` on a `startUrl` change (the effect below), never
     // by tearing down and re-attaching the observer — the observer's identity must outlive a
-    // same-store URL change or the debounce window above would be defeated on every navigation.
+    // same-store URL change or the throttle window above would be defeated on every navigation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

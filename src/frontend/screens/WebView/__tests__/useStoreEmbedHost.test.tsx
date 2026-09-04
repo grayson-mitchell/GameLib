@@ -335,30 +335,76 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     })
   })
 
-  // Property 3. Observed-red mutation: removing the `clearTimeout(debounceHandle)` call inside
-  // `scheduleFlush` (sending on every observer tick instead of debouncing) turns this red --
-  // `storeEmbedSetBounds` would be called twice, once per tick, instead of once.
-  it('3. two rapid resizes inside the debounce window produce exactly one send', () => {
+  // Property 3. Coalescing under DENSE ticks. The bounds sync is a leading-edge throttle with a
+  // trailing flush (not a debounce), so a burst of ticks inside one interval collapses to at most
+  // two sends -- the leading one and the trailing one -- however many ticks occur, and the
+  // trailing send carries the LAST rect. Observed-red mutation: deleting the `trailingHandle ===
+  // null` guard in `scheduleFlush` (re-arming the timer on every tick) turns the final-rect
+  // assertion red by restoring the retired debounce.
+  it('3. a burst of ticks inside one interval coalesces to leading + trailing, last rect winning', () => {
     const { ref, setRect } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
 
     mount({ slotRef: ref })
     jest.advanceTimersByTime(40) // drains the initial open() call
+    mockApi.storeEmbedSetBounds.mockClear()
 
-    setRect({ x: 1, y: 1, width: 101, height: 101 })
-    MockResizeObserver.instances[0].trigger()
-    jest.advanceTimersByTime(10) // well inside the 40ms window
-
-    setRect({ x: 2, y: 2, width: 102, height: 102 })
-    MockResizeObserver.instances[0].trigger()
+    // Six ticks, 5ms apart -- all well inside one 40ms interval.
+    for (let i = 1; i <= 6; i++) {
+      setRect({ x: i, y: i, width: 100 + i, height: 100 + i })
+      MockResizeObserver.instances[0].trigger()
+      jest.advanceTimersByTime(5)
+    }
     jest.advanceTimersByTime(40)
 
-    expect(mockApi.storeEmbedSetBounds).toHaveBeenCalledTimes(1)
-    expect(mockApi.storeEmbedSetBounds).toHaveBeenCalledWith({
-      x: 2,
-      y: 2,
-      w: 102,
-      h: 102
-    })
+    // Six ticks, at most two sends -- IPC stays bounded, which is why the interval exists.
+    expect(mockApi.storeEmbedSetBounds.mock.calls.length).toBeLessThanOrEqual(2)
+    // ...and the embed comes to rest on the FINAL rect, never an intermediate one.
+    expect(mockApi.storeEmbedSetBounds).toHaveBeenLastCalledWith({ x: 6, y: 6, w: 106, h: 106 })
+  })
+
+  // Property 3b. THE REGRESSION FROM THE 40-11 LIVE GATE (2026-09-05, Item 3: FAIL).
+  //
+  // The retired implementation was a pure trailing-edge debounce: every tick called
+  // `clearTimeout` and re-armed the timer, so under SUSTAINED motion the timer was perpetually
+  // reset and `flush()` never ran until the drag stopped. On hardware the embed updated "only on
+  // mouse stopping or maybe being quite slow movement" while a browser tracked the pointer
+  // smoothly. Every unit test was green over it, because none of them modelled sustained motion
+  // -- they all advanced timers past the window and asserted the settled result.
+  //
+  // This test models the drag itself: continuous ticks with NO pause long enough to let a
+  // debounce fire. Observed-red mutation: restoring `scheduleFlush` to the debounce form
+  // (clearTimeout + re-arm on every tick) drives the send count to ZERO here.
+  it('3b. sustained motion keeps sending during the drag, never only after it stops', () => {
+    const { ref, setRect } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+
+    mount({ slotRef: ref })
+    jest.advanceTimersByTime(40) // drains the initial open() call
+    mockApi.storeEmbedSetBounds.mockClear()
+
+    // ~200ms of continuous drag: a tick every 10ms, never pausing for a full 40ms interval.
+    for (let i = 1; i <= 20; i++) {
+      setRect({ x: i, y: i, width: 100 + i, height: 100 + i })
+      MockResizeObserver.instances[0].trigger()
+      jest.advanceTimersByTime(10)
+    }
+
+    // WITHOUT advancing past the end of the drag: sends must already have happened. Over ~200ms
+    // at a 40ms interval, forward progress means several -- the exact count is a scheduling
+    // detail, but zero (the retired behaviour) and one are both failures.
+    const duringDrag = mockApi.storeEmbedSetBounds.mock.calls.length
+    expect(duringDrag).toBeGreaterThanOrEqual(3)
+
+    // Bounded, not per-tick: 20 ticks must not become 20 IPC round-trips.
+    expect(duringDrag).toBeLessThan(20)
+
+    // Every send carries a real observed rect -- never a fallback (D-18).
+    const sentBounds = mockApi.storeEmbedSetBounds.mock.calls as unknown as [
+      { x: number; y: number; w: number; h: number }
+    ][]
+    for (const [bounds] of sentBounds) {
+      expect(bounds.w).toBeGreaterThanOrEqual(101)
+      expect(bounds.w).toBeLessThanOrEqual(120)
+    }
   })
 
   // Property 4. Observed-red mutation: replacing the null-ref early return with a computed
