@@ -384,18 +384,66 @@ declared-dead instructions instead of quietly working around them.
 - [ ] No screen recording / capture tool is targeting a dotfile destination anywhere in this
       run (Evidence-Capture step 5).
 
+## CONTRACT CORRECTION 1 — the prescribed launch path does not exist
+
+The Evidence-Capture Instruction's step 3 says to build with `pnpm exec tauri build` and launch
+`src-tauri/target/release/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell`. **That binary does
+not exist after that command.** The default `tauri build` bundles the `.app`, then bundles the DMG,
+then logs `Cleaning .../bundle/macos/GameLib.app` and finishes with only
+`bundle/dmg/GameLib_0.7.0_aarch64.dmg`; `bundle/macos/` is left empty. Verified directly on
+2026-09-05.
+
+The working command is `pnpm exec tauri build --bundles app`, which produces the `.app` and skips
+the DMG step that consumes it. This run used that. The rest of step 3's reasoning is unaffected and
+still binding — the packaged SEA sidecar was confirmed shipped (`gamelib-sidecar`, 169,813,472
+bytes, not a node script), which is exactly what `tauri:dev`/`--debug` would have failed to give.
+
+`tauri build --bundles app` also ends with a non-fatal `TAURI_SIGNING_PRIVATE_KEY` error while
+producing the updater artifact. The `.app` is built and launchable regardless; macOS releases
+shipping unsigned is a separately filed known state.
+
+## BLOCKED RUN — first attempt at `c78ff3d30`, no verdict recorded
+
+The gate was first attempted on the commit at which plans 40-01..40-10 closed. **Every item was
+blocked and no verdict was recorded**, because the embed never opened:
+
+    [storeEmbedFlowRegistration] storeEmbedOpen failed: store_embed_open:bad-args
+    [storeEmbedFlowRegistration] storeEmbedNavigate failed: store_embed_navigate:bad-args  (x6)
+
+`/store/steam` and `/store/gog` both rendered blank, both showing `af.gog.com` in the chrome. The
+URL was a red herring: `af.gog.com` is GOG's configured affiliate `startUrl` in
+`storeEmbedOrigins.ts`, and it appeared on the Steam route only because no embed ever opened, so the
+chrome fell back to a stale value. One fault, not two.
+
+Root cause: a cross-plan args-shape mismatch. Plan `40-02` (Rust, wave 1) parses a single JSON
+object; plan `40-05` (TS, wave 2) sent positional arrays. Three arms affected — `open`,
+`set_bounds`, `navigate`. The error being the BARE `bad-args` rather than `:url`/`:x`/`:y` is what
+pinned it: the parse failed at `args.first().as_object()`, before any field was read.
+
+Fixed in `54ca5b400`, which this run's evidence is taken against. Full analysis, and why 8 planning
+gates plus ~1,400 tests were all green over it, is in that commit message and in
+`$GATE_SESSION_DIR/ITEM1-BLOCKED-FINDING.md`. The short version: `storeEmbedFlows.test.ts` drove the
+real transport into a JS test handler — real transport, fake counterparty — and two of its
+assertions had PINNED the positional shape, so the suite was green *because* it encoded the defect;
+the Rust arg parsers had no tests at all. Both ends were covered; the boundary between them was not.
+A shared fixture (`meta/fixtures/store-embed-wire-args.json`) now holds the canonical payloads and is
+asserted from both sides, with a regression test proving the positional shape is rejected.
+
+**This is the gate's own justification.** No unit test, no planning gate and no plan-checker pass
+caught this; one live launch did, in under a minute.
+
 ## Environment (fill in at run time — empty until the gate is run)
 
 | Field | Value |
 |---|---|
-| Build command used | NOT YET RUN |
-| Commit hash built from | NOT YET RUN |
-| Binary path | NOT YET RUN |
-| Binary/bundle timestamp | NOT YET RUN |
-| macOS version | NOT YET RUN |
-| Display scale factor | NOT YET RUN |
-| No-prior-instance confirmation | NOT YET RUN |
-| Session directory (`$GATE_SESSION_DIR`) | NOT YET RUN |
+| Build command used | `pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && pnpm exec tauri build --bundles app` (see CONTRACT CORRECTION 1) |
+| Commit hash built from | `54ca5b400` (fix commit; gate first attempted at `c78ff3d30` and BLOCKED — see BLOCKED RUN below) |
+| Binary path | `src-tauri/target/release/bundle/macos/GameLib.app/Contents/MacOS/gamelib-shell` |
+| Binary/bundle timestamp | Sep 5 07:02:00 2026 |
+| macOS version | 26.5.2 |
+| Display scale factor | **2.0 exactly** — 2560x1600 window capture of a 1280x800 logical window. NOT the 1.0 basis the spike tolerance rests on; see the recorded discrepancy under Item 1. |
+| No-prior-instance confirmation | `pgrep -f gamelib-shell` empty pre-launch; exactly 1 at window-appearance (PID 46404) and at teardown, all three points, launch 3 |
+| Session directory (`$GATE_SESSION_DIR`) | `/tmp/gamelib-gate-20260904T183948Z` |
 
 ## Launch plan
 
@@ -460,7 +508,52 @@ otherwise follow the plan's interfaces block exactly):
   silently applying the same tolerance).
 - No unexpected ERROR/WARN line appears in either archived sink for the covering launch.
 
-**RESULT: NOT YET RUN**
+**RESULT: PASS** (launch 3, commit `54ca5b400`, 2026-09-05 07:07–07:10 local)
+
+Captures: `item1-capture-A.png` 07:07:37, `item1-capture-B-overlay.png` 07:08:51,
+`item1-capture-C.png` 07:10:28 — all 2560x1600 physical, all non-zero.
+
+Measurement method (recorded per the evidence requirement): programmatic pixel measurement over
+the PNGs with Pillow 12.3.0 in an isolated venv — vertical/horizontal edge-energy profiles to
+locate the slot boundary, then a single-row/single-column argmax to resolve the edge to exactly
+1 physical px. Not a Preview ruler pass, and not eyeballed.
+
+**Measured embed slot rect: origin (204, 82) logical, 1076x718 logical**
+(physical origin (408, 164), the window being 1280x800 logical at backing scale 2.0).
+
+| Pass condition | Result | Evidence |
+|---|---|---|
+| A: embed fills the slot, no placeholder visible | PASS | 954 distinct colours over 1295 samples across the slot — real page content, not flat |
+| B: embed ABSENT from the slot rect | PASS | slot centre (18,18,23) vs A's (87,75,65) artwork; 0 non-flat samples outside the dialog |
+| B: placeholder content FILLS that same rect (second half, Test 4) | PASS | **1467/1467** sampled px outside the dialog are the flat placeholder colour (20,21,26)+/-6, and the placeholder's own string `webview.embedPlaceholder.message` ("Paused while window is open") is rendered and visible past the dialog's right edge (109 bright px in the text band) |
+| C: embed visible again, rect matches A within one logical px | PASS | slot TOP y=164 and LEFT x=408 physical in A, B **and** C — **0 px delta**, exact, so the tolerance was never actually exercised |
+| No unexpected ERROR/WARN in either sink | PASS | 0 `bad-args`, 0 uppercase ERROR/WARN in the transcript for launch 3; `gamelib.log` carries only two launch-time `[WARNING] ... not implemented on Sideload Library Manager` lines at 07:04, three minutes BEFORE the first capture and unrelated to the embed |
+
+**Hit-test verified separately from paint.** WKWebView will not paint a visible child of a hidden
+ancestor yet still hit-tests it, so "embed not visible" alone cannot distinguish a correctly hidden
+subview from an invisible one still swallowing input. The operator clicked inside the placeholder
+region while the dialog was open: the **dialog dismissed and the embed re-showed**. The click was
+therefore consumed by the dialog's scrim, not by the embed — had the hidden embed been hit-testing,
+the scrim would never have received it. This also exercised the suppression RELEASE path a second
+time by a different route (scrim click rather than the Close button). No errors resulted; instance
+count remained exactly 1.
+
+**Recorded discrepancy — scale factor (binding, per this item's own pass condition).** The
+one-logical-pixel tolerance is justified by `tauri-embedded-store-browser.md`'s round-tripping
+measurements taken at **scale factor 1.0**. This run measured at **2.0**. Per the pass condition's
+instruction, the discrepancy is recorded rather than the tolerance silently applied. It did not
+affect this result: the observed delta was 0 px, so no rounding behaviour was exercised in either
+direction. **This run therefore still does NOT close `38-E03`** (retina/HiDPI embed behaviour) — a
+0 px delta on a static rect is not evidence about rounding under fractional or changing geometry.
+
+**Incidental observation, cause unresolved, NOT folded into the verdict.** The top nav bar's text
+glyphs (ACCOUNTS / LIBRARY / STORES) render exactly 2 physical px (1 logical px) HIGHER in capture C
+than in capture A — identical x-spans and identical bright-pixel counts (3968 in both), i.e. a pure
+translation, not a re-render. It is not a layout shift and not in the embed: the nav bar's own
+container bottom edge measures y=122 in BOTH captures, and every embed slot edge is identical. Most
+likely a text-baseline/font-smoothing difference tied to window focus state between the two
+captures. Recorded because it is real and was invisible to the eye — it was found only by pixel
+measurement, which is precisely why this contract forbids eyeballing geometry.
 
 ### Item 2 — Input and scroll feel
 
