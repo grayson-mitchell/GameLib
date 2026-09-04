@@ -4670,29 +4670,122 @@ const STORE_EMBED_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_
 /// bookkeeping behind one `Mutex`, same shape as `WakeLockRegistry` above: `on_page_load`
 /// (main-frame-only, verified Q4) pushes; `store_embed_close` clears.
 ///
-/// Deliberately exposes no `back`/`forward`/`navigate` command in this plan -- plan `40-07`
-/// owns those and adds them against Task 1's verdict. Recording starts from the embed's first
-/// load rather than being retrofitted once those commands land.
+/// Phase 40 Plan 07 (D-22, T-40-07-05) adds cursor semantics on top of Plan 02's shipped
+/// push/clear: `store_embed_back`/`forward`/`reload`/`navigate` below drive the cursor and this
+/// registry through the one-shot `suppress_next_push` flag documented on `push()`.
 #[cfg(target_os = "macos")]
 #[derive(Default)]
 struct StoreEmbedState {
     history: Vec<String>,
     cursor: usize,
+    /// One-shot flag (T-40-07-05): armed immediately before a history-driven navigation
+    /// (`store_embed_back`/`forward`/`reload`) issues its `navigate()`/`reload()` call, and
+    /// consumed by the very next `push()` -- the `on_page_load` Finished event that navigation
+    /// itself produces. Without this, every back/forward/reload would re-push the URL it just
+    /// navigated to as a NEW entry, so the stack would grow unboundedly while never actually
+    /// moving backward -- exactly the append-instead-of-move defect this flag exists to
+    /// prevent (see the failing-before-the-flag test below). A user-initiated navigation (a
+    /// link clicked inside the embed, or `store_embed_navigate`) leaves this false, so it
+    /// pushes normally.
+    suppress_next_push: bool,
 }
 
 #[cfg(target_os = "macos")]
 impl StoreEmbedState {
-    /// PURE: record a main-frame URL. Performs no OS call.
+    /// PURE: record a main-frame URL from `on_page_load`, OR consume a one-shot suppression
+    /// armed by a history-driven navigation this code itself issued.
+    ///
+    /// If `suppress_next_push` is set, consumes it and returns without pushing -- the cursor
+    /// already reflects the correct position (`go_back`/`go_forward` moved it before
+    /// navigating; a reload leaves it untouched). Otherwise this is a genuinely new,
+    /// user-initiated navigation: truncate any forward entries beyond the cursor (exactly as a
+    /// browser does when you navigate away after going back), then push and move the cursor to
+    /// the new last entry.
     fn push(&mut self, url: String) {
+        if self.suppress_next_push {
+            self.suppress_next_push = false;
+            return;
+        }
+        let keep = self.cursor.saturating_add(1).min(self.history.len());
+        self.history.truncate(keep);
         self.history.push(url);
-        self.cursor = self.history.len().saturating_sub(1);
+        self.cursor = self.history.len() - 1;
     }
 
     /// PURE: drop all recorded history. Called on `store_embed_close` (D-21 teardown).
     fn clear(&mut self) {
         self.history.clear();
         self.cursor = 0;
+        self.suppress_next_push = false;
     }
+
+    /// PURE: derived from the cursor, never stored as an independent flag that could drift
+    /// (Task 1 acceptance criteria).
+    fn can_go_back(&self) -> bool {
+        self.cursor > 0
+    }
+
+    /// PURE: derived from the cursor, never stored as an independent flag that could drift.
+    fn can_go_forward(&self) -> bool {
+        !self.history.is_empty() && self.cursor + 1 < self.history.len()
+    }
+
+    /// PURE: moves the cursor back one entry and arms the one-shot suppression flag. Returns
+    /// the URL to navigate to, or `None` if already at the oldest entry (the caller must not
+    /// call `navigate()` in that case).
+    fn go_back(&mut self) -> Option<String> {
+        if !self.can_go_back() {
+            return None;
+        }
+        self.cursor -= 1;
+        self.suppress_next_push = true;
+        self.history.get(self.cursor).cloned()
+    }
+
+    /// PURE: the mirror of `go_back` -- moves the cursor forward one entry and arms the same
+    /// one-shot suppression flag.
+    fn go_forward(&mut self) -> Option<String> {
+        if !self.can_go_forward() {
+            return None;
+        }
+        self.cursor += 1;
+        self.suppress_next_push = true;
+        self.history.get(self.cursor).cloned()
+    }
+
+    /// PURE: arms the one-shot suppression flag without moving the cursor -- used by
+    /// `store_embed_reload`, which reloads the same URL and must not push a duplicate entry
+    /// for it.
+    fn arm_reload_suppression(&mut self) {
+        self.suppress_next_push = true;
+    }
+
+    /// PURE: the URL the cursor currently points at, if any.
+    fn current_url(&self) -> Option<String> {
+        self.history.get(self.cursor).cloned()
+    }
+}
+
+/// Builds the navigation state JSON every `store_embed_back`/`forward`/`reload`/`navigate` arm
+/// returns (D-22/D-23): the current URL, its host (D-23 -- host only, never the full URL with
+/// affiliate/session parameters, is the chrome's job to decide but the state must carry `host`
+/// for it to use), and back/forward availability DERIVED from the cursor -- there is no handle
+/// to synchronously ask, so this state IS the read. Field names match
+/// `StoreEmbedNavEvent` (`src/backend/store/storeEmbedSeam.ts`) exactly: `url`, `host`,
+/// `canGoBack`, `canGoForward`.
+#[cfg(target_os = "macos")]
+fn store_embed_nav_state_json(state: &StoreEmbedState) -> Value {
+    let url = state.current_url().unwrap_or_default();
+    let host = tauri::Url::parse(&url)
+        .ok()
+        .and_then(|parsed| parsed.host_str().map(str::to_string))
+        .unwrap_or_default();
+    serde_json::json!({
+        "url": url,
+        "host": host,
+        "canGoBack": state.can_go_back(),
+        "canGoForward": state.can_go_forward(),
+    })
 }
 
 #[cfg(target_os = "macos")]
@@ -4991,6 +5084,128 @@ fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
         state.clear();
     }
     Ok(Value::Null)
+}
+
+/// Parse `store_embed_navigate`'s `{ url }` arg.
+#[cfg(target_os = "macos")]
+fn store_embed_navigate_args(args: &[Value]) -> Result<tauri::Url, String> {
+    let obj = args
+        .first()
+        .and_then(|v| v.as_object())
+        .ok_or_else(|| "store_embed_navigate:bad-args".to_string())?;
+    let url_str = obj
+        .get("url")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "store_embed_navigate:bad-args:url".to_string())?;
+    // No fallback URL on a parse failure (same discipline as `store_embed_open_args`).
+    tauri::Url::parse(url_str).map_err(|e| format!("store_embed_navigate:bad-url:{e}"))
+}
+
+/// Phase 40 Plan 07 (D-22/D-25): moves the history cursor back one entry and navigates the
+/// embed there. Returns the navigation state (`store_embed_nav_state_json`) derived from the
+/// cursor's NEW position -- there is no handle to synchronously ask, so this state IS the read.
+///
+/// ZERO page-side JS injection: this calls `Webview::navigate(Url)`, the vendored-source-verified
+/// mechanism (`40-EMBED-API-VERIFICATION.md` Q1/Q2), never `eval()` or any evaluated history
+/// call in the page. The 2026-08-03 Talon root-cause identified document-side injection as the
+/// confirmed fingerprint vector -- D-22 makes avoiding it a hard rule for every arm in this
+/// section, not a preference, and this comment is the reason a future reader reaching for
+/// `eval` here should stop.
+#[cfg(target_os = "macos")]
+fn store_embed_back(app: &AppHandle) -> Result<Value, String> {
+    let webview = app
+        .get_webview(STORE_EMBED_LABEL)
+        .ok_or_else(|| format!("store_embed_back:no-webview:{STORE_EMBED_LABEL}"))?;
+    let (target_url, json) = {
+        let mut state = store_embed_state()
+            .lock()
+            .map_err(|_| "store_embed_back:history-registry-poisoned".to_string())?;
+        let Some(target_url) = state.go_back() else {
+            return Err("store_embed_back:no-back-entry".to_string());
+        };
+        (target_url, store_embed_nav_state_json(&state))
+    };
+    let parsed_url = tauri::Url::parse(&target_url)
+        .map_err(|e| format!("store_embed_back:bad-recorded-url:{e}"))?;
+    webview
+        .navigate(parsed_url)
+        .map_err(|e| format!("store_embed_back:navigate-failed:{e}"))?;
+    Ok(json)
+}
+
+/// The mirror of `store_embed_back` -- see its doc comment for the shared rationale (D-22/D-25,
+/// ZERO page-side JS injection via `Webview::navigate(Url)`, never `eval`).
+#[cfg(target_os = "macos")]
+fn store_embed_forward(app: &AppHandle) -> Result<Value, String> {
+    let webview = app
+        .get_webview(STORE_EMBED_LABEL)
+        .ok_or_else(|| format!("store_embed_forward:no-webview:{STORE_EMBED_LABEL}"))?;
+    let (target_url, json) = {
+        let mut state = store_embed_state()
+            .lock()
+            .map_err(|_| "store_embed_forward:history-registry-poisoned".to_string())?;
+        let Some(target_url) = state.go_forward() else {
+            return Err("store_embed_forward:no-forward-entry".to_string());
+        };
+        (target_url, store_embed_nav_state_json(&state))
+    };
+    let parsed_url = tauri::Url::parse(&target_url)
+        .map_err(|e| format!("store_embed_forward:bad-recorded-url:{e}"))?;
+    webview
+        .navigate(parsed_url)
+        .map_err(|e| format!("store_embed_forward:navigate-failed:{e}"))?;
+    Ok(json)
+}
+
+/// Reloads the embed's current page. Arms the one-shot suppression flag FIRST (T-40-07-05) so
+/// the `on_page_load` Finished event this reload produces does not push a duplicate history
+/// entry for the same URL -- reload must leave the stack unchanged. Calls `Webview::reload()`,
+/// never `eval('location.reload()')` (D-22's zero-page-side-JS-injection rule, see
+/// `store_embed_back`'s doc comment).
+#[cfg(target_os = "macos")]
+fn store_embed_reload(app: &AppHandle) -> Result<Value, String> {
+    let webview = app
+        .get_webview(STORE_EMBED_LABEL)
+        .ok_or_else(|| format!("store_embed_reload:no-webview:{STORE_EMBED_LABEL}"))?;
+    let json = {
+        let mut state = store_embed_state()
+            .lock()
+            .map_err(|_| "store_embed_reload:history-registry-poisoned".to_string())?;
+        state.arm_reload_suppression();
+        store_embed_nav_state_json(&state)
+    };
+    webview
+        .reload()
+        .map_err(|e| format!("store_embed_reload:failed:{e}"))?;
+    Ok(json)
+}
+
+/// The arm plan `40-09`'s deep-link and route-change paths use (T-40-07 interfaces contract).
+/// A `store_embed_navigate` call is ITSELF the user-initiated event, so it pushes the new URL
+/// immediately -- like a browser's `history.pushState` -- rather than waiting for
+/// `on_page_load`'s Finished event to land asynchronously after the network round trip;
+/// waiting would return a stale nav state to the caller. It then arms the one-shot suppression
+/// flag so that same Finished event (which WILL still fire for this navigation) does not
+/// double-push the URL this call already recorded. Pushing truncates any forward entries past
+/// the cursor, exactly like a user-initiated navigation (D-22).
+#[cfg(target_os = "macos")]
+fn store_embed_navigate(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
+    let url = store_embed_navigate_args(args)?;
+    let webview = app
+        .get_webview(STORE_EMBED_LABEL)
+        .ok_or_else(|| format!("store_embed_navigate:no-webview:{STORE_EMBED_LABEL}"))?;
+    let json = {
+        let mut state = store_embed_state()
+            .lock()
+            .map_err(|_| "store_embed_navigate:history-registry-poisoned".to_string())?;
+        state.push(url.to_string());
+        state.arm_reload_suppression();
+        store_embed_nav_state_json(&state)
+    };
+    webview
+        .navigate(url)
+        .map_err(|e| format!("store_embed_navigate:navigate-failed:{e}"))?;
+    Ok(json)
 }
 
 /// Also dispatches `dialog_open` (Phase 30 Plan 03). `app` is threaded through for that arm:
@@ -7152,6 +7367,50 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             #[cfg(not(target_os = "macos"))]
             {
                 Err("store_embed_close:unsupported-platform".to_string())
+            }
+        }
+        // Phase 40 Plan 07 (D-22/D-25): the four navigation arms. Each returns the navigation
+        // state (`store_embed_nav_state_json`) derived from the Rust-owned cursor -- there is
+        // no `canGoBack()`-style handle to query, so this pushed/returned state IS the read
+        // (control inverts: Rust pushes, the frontend never polls).
+        "store_embed_back" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_back(app)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_back:unsupported-platform".to_string())
+            }
+        }
+        "store_embed_forward" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_forward(app)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_forward:unsupported-platform".to_string())
+            }
+        }
+        "store_embed_reload" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_reload(app)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_reload:unsupported-platform".to_string())
+            }
+        }
+        "store_embed_navigate" => {
+            #[cfg(target_os = "macos")]
+            {
+                store_embed_navigate(app, args)
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                Err("store_embed_navigate:unsupported-platform".to_string())
             }
         }
         _ => Err(format!("rustInvoke:unknown-channel:{channel}")),
@@ -12105,5 +12364,155 @@ mod tests {
                 "expected `{candidate}` to be default-denied"
             );
         }
+    }
+
+    // ---- StoreEmbedState (Phase 40 Plan 07, D-22/D-25) ----
+    //
+    // Pure cursor-based history state machine, provable without a live `AppHandle` or webview
+    // (same "prove the pure branch in isolation" discipline as `store_embed_navigation_policy`
+    // above). D-25's verdict (`40-EMBED-API-VERIFICATION.md`) confirmed no native back/forward/
+    // history API exists on either `tauri::webview::Webview` or `wry::WebView` -- this stack IS
+    // the feature, not a convenience wrapper around one.
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_state_default_has_no_back_or_forward() {
+        let state = StoreEmbedState::default();
+        assert!(!state.can_go_back());
+        assert!(!state.can_go_forward());
+        assert_eq!(state.current_url(), None);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_state_push_three_then_back_twice_lands_on_first() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.push("https://b.example/".to_string());
+        state.push("https://c.example/".to_string());
+        assert_eq!(state.current_url().as_deref(), Some("https://c.example/"));
+
+        assert_eq!(state.go_back().as_deref(), Some("https://b.example/"));
+        assert_eq!(state.go_back().as_deref(), Some("https://a.example/"));
+        assert!(!state.can_go_back(), "no entry remains before the first push");
+        assert!(
+            state.suppress_next_push,
+            "go_back must arm the one-shot suppression flag for the confirming Finished event"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_state_forward_once_after_back_returns_to_the_skipped_entry() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.push("https://b.example/".to_string());
+        state.go_back();
+        assert!(state.can_go_forward());
+        assert_eq!(state.go_forward().as_deref(), Some("https://b.example/"));
+        assert!(!state.can_go_forward());
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_state_push_from_middle_truncates_forward_entries() {
+        // T-40-07-05: a fresh user-initiated push from a back-ed-up position (not a
+        // history-driven move) must discard the entries ahead of the cursor -- exactly like a
+        // browser tab: going back then clicking a new link erases the old "forward" branch.
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.push("https://b.example/".to_string());
+        state.push("https://c.example/".to_string());
+        let back_target = state.go_back().unwrap(); // cursor -> b, suppress_next_push armed
+
+        // Mirrors `on_page_load`'s Finished handler confirming the back-navigation landed --
+        // suppressed, so it must NOT push a duplicate "b" entry.
+        state.push(back_target);
+        assert_eq!(state.history.len(), 3, "the suppressed confirm-push must not grow history");
+
+        // The user's actual next navigation, made from the back-ed-up "b" position.
+        state.push("https://d.example/".to_string());
+        assert_eq!(state.current_url().as_deref(), Some("https://d.example/"));
+        assert!(!state.can_go_forward(), "c must be gone once d is pushed from the b position");
+        assert_eq!(
+            state.history,
+            vec![
+                "https://a.example/".to_string(),
+                "https://b.example/".to_string(),
+                "https://d.example/".to_string(),
+            ]
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_state_reload_does_not_push_a_duplicate_entry() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.arm_reload_suppression();
+        // Mirrors `on_page_load`'s Finished handler firing for the reload's own navigation.
+        state.push("https://a.example/".to_string());
+        assert_eq!(state.history.len(), 1, "reload must not grow the history stack");
+        assert_eq!(state.current_url().as_deref(), Some("https://a.example/"));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_state_back_moves_the_cursor_it_does_not_append_a_new_entry() {
+        // Regression test for a defect class encountered while implementing this: a `go_back`
+        // that appends the target URL to `history` (treating "go back" like "push") instead of
+        // decrementing `cursor` in place. That version still returns the right URL from a
+        // shallow "does the target URL come back out" check, but corrupts the stack --
+        // `history.len()` grows on every back/forward pair, and a subsequent `can_go_forward()`
+        // lies because the "forward" entry ends up BEHIND the cursor instead of ahead of it.
+        // This assertion was verified RED against an append-based `go_back` before the
+        // move-based fix below was applied -- see 40-07-SUMMARY.md for the observed failure.
+        let mut state = StoreEmbedState::default();
+        state.push("https://a.example/".to_string());
+        state.push("https://b.example/".to_string());
+        state.push("https://c.example/".to_string());
+        let history_len_before = state.history.len();
+
+        state.go_back();
+
+        assert_eq!(
+            state.history.len(),
+            history_len_before,
+            "go_back must move the cursor, not append a new history entry"
+        );
+        assert!(
+            state.can_go_forward(),
+            "after moving back, the entry ahead of the cursor must still be reachable forward"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_nav_state_json_reports_full_url_host_and_availability() {
+        let mut state = StoreEmbedState::default();
+        state.push("https://store.steampowered.com/app/440?utm_source=affiliate".to_string());
+        state.push("https://example.com/next".to_string());
+        state.go_back();
+
+        let json = store_embed_nav_state_json(&state);
+        assert_eq!(json["host"], "store.steampowered.com");
+        assert_eq!(
+            json["url"], "https://store.steampowered.com/app/440?utm_source=affiliate",
+            "the full url is still carried on the wire for the frontend's own host-only \
+             DISPLAY logic (D-23) -- this JSON is an internal payload, not what gets rendered"
+        );
+        assert_eq!(json["canGoBack"], false);
+        assert_eq!(json["canGoForward"], true);
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_nav_state_json_on_empty_state_is_all_empty_never_panics() {
+        let state = StoreEmbedState::default();
+        let json = store_embed_nav_state_json(&state);
+        assert_eq!(json["url"], "");
+        assert_eq!(json["host"], "");
+        assert_eq!(json["canGoBack"], false);
+        assert_eq!(json["canGoForward"], false);
     }
 }
