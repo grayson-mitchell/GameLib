@@ -439,25 +439,29 @@ export const RUST_STORE_EMBED_SHOW = 'store_embed_show' as const
 export const RUST_STORE_EMBED_CLOSE = 'store_embed_close' as const
 
 /**
- * NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm). Drains queued navigation state —
- * D-22's inversion: back/forward availability is PUSHED state the renderer receives, never a
- * `canGoBack()` it can synchronously ask for. Declared here now so `storeEmbedSeam.ts`'s
- * `takeNavEvents()` has a stable channel name to reference while its Task 2 implementation
- * throws a declared-unimplemented Error.
+ * DRAINS (never peeks) the navigation states queued by the embed's `on_page_load` Finished
+ * handler — D-22's inversion: back/forward availability is PUSHED state the renderer receives,
+ * never a `canGoBack()` it can synchronously ask for. Takes no args, returns an array of
+ * `StoreEmbedNavEvent`-shaped objects, oldest first.
+ *
+ * Live in Rust since quick task `260905-e61` (GAP-D, REQ-40-06). Until then this was the ONLY
+ * one of the five nav channels with no dispatch arm, which is precisely why an in-embed link
+ * click never reached the renderer: the four arms below report state for navigations the
+ * CHROME initiated, and nothing reported the ones the PAGE initiated.
  */
 export const RUST_STORE_EMBED_TAKE_NAV_EVENTS =
   'store_embed_take_nav_events' as const
 
-/** NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm, D-25). Navigates the embed backward one step. */
+/** Navigates the embed backward one step (live since plan `40-07`, D-22/D-25). */
 export const RUST_STORE_EMBED_BACK = 'store_embed_back' as const
 
-/** NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm, D-25). Navigates the embed forward one step. */
+/** Navigates the embed forward one step (live since plan `40-07`, D-22/D-25). */
 export const RUST_STORE_EMBED_FORWARD = 'store_embed_forward' as const
 
-/** NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm, D-25). Reloads the embed's current page. */
+/** Reloads the embed's current page (live since plan `40-07`, D-22/D-25). */
 export const RUST_STORE_EMBED_RELOAD = 'store_embed_reload' as const
 
-/** NOT YET IMPLEMENTED IN RUST (plan `40-07` owns this arm, D-25). Args: `[url: string]`. Navigates the embed to a new URL within the existing webview. */
+/** Args: `[{ url: string }]`. Navigates the embed to a new URL within the existing webview (live since plan `40-07`, D-22/D-25). */
 export const RUST_STORE_EMBED_NAVIGATE = 'store_embed_navigate' as const
 
 /**

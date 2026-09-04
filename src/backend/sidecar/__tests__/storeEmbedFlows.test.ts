@@ -17,12 +17,12 @@
  *   3. no-handler-rejects — a rejecting `requestRustInvoke` result surfaces through the
  *      registered `ipcMain.handle` arm as a resolved `{ status: 'error' }`, never a rejection
  *      (T-40-05-03).
- *   4. unimplemented-navigation-throws-naming-40-07 (inverted by Phase 40 Plan 07, not deleted) —
- *      `takeNavEvents` still throws a declared-unimplemented Error, without emitting any
- *      rustInvoke frame (D-25). `back`/`forward`/`reload`/`navigate` are implemented as of this
- *      plan and are now asserted to REACH their Rust channel with the expected arguments instead
- *      (lineage: this describe block is the same one plan `40-05` wrote, migrated rather than
- *      dropped).
+ *   4. nav-methods-reach-their-rust-channel (twice-inverted, never deleted) — plan `40-05`
+ *      wrote this block asserting all FIVE nav methods threw a declared-unimplemented Error;
+ *      plan `40-07` inverted four of them; quick task `260905-e61` (GAP-D, REQ-40-06) inverted
+ *      the fifth, `takeNavEvents`. All five now assert the method REACHES its Rust channel with
+ *      the expected arguments and coerces the response. `takeNavEvents` additionally asserts
+ *      per-ELEMENT coercion, since it returns an array.
  *   5. bounds-courier-passthrough-and-throw — `setBounds` passes x/y/w/h through unchanged, and
  *      throws (never substitutes) on a missing or non-finite coordinate (T-40-05-04/D-18/D-29).
  */
@@ -44,7 +44,8 @@ import {
   RUST_STORE_EMBED_BACK,
   RUST_STORE_EMBED_FORWARD,
   RUST_STORE_EMBED_RELOAD,
-  RUST_STORE_EMBED_NAVIGATE
+  RUST_STORE_EMBED_NAVIGATE,
+  RUST_STORE_EMBED_TAKE_NAV_EVENTS
 } from 'common/types/sidecarTransport'
 
 type Frame = Record<string, unknown>
@@ -339,11 +340,32 @@ describe('no-handler-rejects — a rejecting requestRustInvoke surfaces as a res
     expect(result.error).toMatch(/timeout/)
   })
 
-  it('storeEmbedTakeNavEvents: the registered ipcMain.handle arm resolves [] rather than rejecting, on the declared-unimplemented throw', async () => {
-    startTransport()
+  // GAP-D lineage: until quick task `260905-e61` this test read
+  // `resolves.toEqual([])` on the declared-unimplemented throw -- green, and green BECAUSE the
+  // defect was present. The PROPERTY it was protecting (the arm never rejects) is real and is
+  // kept; only its driver changes, from an unconditional throw to a rejecting transport.
+  it('storeEmbedTakeNavEvents: the registered ipcMain.handle arm resolves [] rather than rejecting, when the Rust arm errors', async () => {
+    const { input, frames } = startTransport()
+
     const handler = handlerRegistry.get('storeEmbedTakeNavEvents')
     expect(handler).toBeDefined()
-    await expect(handler?.({})).resolves.toEqual([])
+
+    const resultPromise = handler?.({}) as Promise<unknown>
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    expect(frame).toBeDefined()
+
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: false,
+        error: 'store_embed_take_nav_events:history-registry-poisoned'
+      })}\n`
+    )
+
+    await expect(resultPromise).resolves.toEqual([])
   })
 
   it('storeEmbedBack: the registered ipcMain.handle arm resolves { status: "error" } rather than rejecting (Phase 40 Plan 07 safeNavState)', async () => {
@@ -371,24 +393,96 @@ describe('no-handler-rejects — a rejecting requestRustInvoke surfaces as a res
   })
 })
 
-// ── Test 4: unimplemented-navigation-throws-naming-40-07 ────────────────────────────────────────
+// ── Test 4: nav-methods-reach-their-rust-channel ────────────────────────────────────────────────
 //
 // Plan 40-05 wrote this describe block asserting all five methods (takeNavEvents/back/forward/
-// reload/navigate) threw a declared-unimplemented Error naming plan `40-07` as owner. Phase 40
-// Plan 07 (this plan) implemented four of the five, so this block is INVERTED for those four
-// rather than deleted (a deleted test is a lost property; an inverted one is a migrated one):
-// they now assert the method REACHES its Rust channel with the expected arguments. `takeNavEvents`
-// still has no Rust arm and keeps its original declared-unimplemented assertion, updated only to
-// stop asserting a `40-07` owner (D-25 — no future plan has been assigned ownership; see
-// `storeEmbedFlowRegistration.ts`'s `takeNavEventsUnimplementedError()` doc comment for why
-// naming a specific plan there would go stale).
-describe('unimplemented-navigation-throws-naming-40-07 — takeNavEvents has no Rust arm (D-25); back/forward/reload/navigate now reach their Rust channel (Phase 40 Plan 07)', () => {
-  it('takeNavEvents throws a declared-unimplemented Error, without emitting any rustInvoke frame', async () => {
-    const { frames } = startTransport()
-    await expect(createRustStoreEmbedSeam().takeNavEvents()).rejects.toThrow(
-      /not yet implemented/
+// reload/navigate) threw a declared-unimplemented Error naming plan `40-07` as owner. Plan 40-07
+// inverted four of them; quick task `260905-e61` (GAP-D, REQ-40-06) inverts the fifth. Inverted
+// twice, deleted never -- a deleted test is a lost property; an inverted one is a migrated one.
+//
+// `takeNavEvents` is the one that mattered: while it threw, an in-embed link click moved Rust's
+// history cursor and NOTHING carried that to the renderer, so Back stayed greyed forever. Its
+// assertion below is the TS half of that fix; the Rust half is
+// `store_embed_push_enqueues_a_nav_event_carrying_the_post_push_cursor_state` in main.rs.
+describe('nav-methods-reach-their-rust-channel — all five navigation methods reach Rust and coerce the response (40-05 -> 40-07 -> GAP-D)', () => {
+  it('takeNavEvents reaches store_embed_take_nav_events with no arguments and resolves the coerced event array', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
     )
-    expect(frames).toHaveLength(0)
+    expect(frame).toBeDefined()
+    expect(frame?.args).toEqual([])
+
+    const queued = [
+      {
+        url: 'https://af.gog.com/',
+        host: 'af.gog.com',
+        canGoBack: false,
+        canGoForward: false
+      },
+      {
+        url: 'https://www.gog.com/game/foo',
+        host: 'www.gog.com',
+        canGoBack: true,
+        canGoForward: false
+      }
+    ]
+    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: queued })}\n`)
+    await expect(promise).resolves.toEqual(queued)
+  })
+
+  it('takeNavEvents resolves an empty array for an idle queue — the healthy, most frequent case', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: [] })}\n`)
+    await expect(promise).resolves.toEqual([])
+  })
+
+  it('takeNavEvents throws on a non-array response — a dead arm must not look like an idle one', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(`${JSON.stringify({ id: frame?.id, ok: true, result: null })}\n`)
+    await expect(promise).rejects.toThrow(/expected an array/)
+  })
+
+  it('takeNavEvents coerces PER ELEMENT — one malformed entry in an otherwise valid array throws', async () => {
+    const { input, frames } = startTransport()
+    const promise = createRustStoreEmbedSeam().takeNavEvents()
+    await flush()
+    const frame = frames.find(
+      (f) => f.channel === RUST_STORE_EMBED_TAKE_NAV_EVENTS
+    )
+    input.write(
+      `${JSON.stringify({
+        id: frame?.id,
+        ok: true,
+        result: [
+          {
+            url: 'https://www.gog.com/',
+            host: 'www.gog.com',
+            canGoBack: true,
+            canGoForward: false
+          },
+          { url: 'https://www.gog.com/next', host: 'www.gog.com', canGoForward: false }
+        ]
+      })}\n`
+    )
+    // The channel name in the message carries the failing INDEX, so a malformed element is
+    // locatable rather than merely reported.
+    await expect(promise).rejects.toThrow(
+      /store_embed_take_nav_events\[1\]: malformed response \(canGoBack must be a boolean\)/
+    )
   })
 
   const SAMPLE_NAV_STATE = {

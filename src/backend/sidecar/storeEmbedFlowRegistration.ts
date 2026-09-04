@@ -11,12 +11,12 @@
  * Channel kinds (cross-checked against `src/preload/api/storeEmbed.ts` — a send-versus-handle
  * mismatch fails 100% SILENTLY at runtime, no reject, no timeout, no console line):
  *
- *   invoke (ipcMain.handle, 8):
+ *   invoke (ipcMain.handle, 9):
  *     - `storeEmbedOpen`           -> `createRustStoreEmbedSeam().open()`
  *     - `storeEmbedHide`           -> `createRustStoreEmbedSeam().hide()`
  *     - `storeEmbedShow`           -> `createRustStoreEmbedSeam().show()`
  *     - `storeEmbedClose`          -> `createRustStoreEmbedSeam().close()`
- *     - `storeEmbedTakeNavEvents`  -> `createRustStoreEmbedSeam().takeNavEvents()` (unimplemented)
+ *     - `storeEmbedTakeNavEvents`  -> `createRustStoreEmbedSeam().takeNavEvents()` (GAP-D, REQ-40-06)
  *     - `storeEmbedBack`           -> `createRustStoreEmbedSeam().back()` (Phase 40 Plan 07, D-22)
  *     - `storeEmbedForward`        -> `createRustStoreEmbedSeam().forward()` (Phase 40 Plan 07, D-22)
  *     - `storeEmbedReload`         -> `createRustStoreEmbedSeam().reload()` (Phase 40 Plan 07, D-22)
@@ -43,13 +43,13 @@
  * silently defaulted to "back unavailable" would make the chrome's back button dead with no
  * signal, indistinguishable from a correctly disabled one.
  *
- * `takeNavEvents` throws a declared-unimplemented Error (D-25: no native back/forward/history
- * API on `tauri::webview::Webview` or `wry::WebView`, `40-EMBED-API-VERIFICATION.md` Q1/Q2) — no
- * Rust arm drains queued nav events yet, and no future plan has been assigned to own it. It is
- * deliberately NOT attributed to a specific plan number here: `back`/`forward`/`reload`/
- * `navigate` were the same shape until Phase 40 Plan 07 (this plan) implemented them, and naming
- * a plan that has already shipped without addressing a method would be a stale, false claim the
- * moment this file lands — never stubbed as a no-op, never a plausible default.
+ * `takeNavEvents` is the drain half of D-22's inversion, live in Rust since quick task
+ * `260905-e61` (GAP-D, REQ-40-06). It is the ONLY method here that reports a navigation the
+ * PAGE initiated — the four below each report the result of a call the CHROME made — so while
+ * it threw a declared-unimplemented Error, clicking a link inside the embed moved Rust's
+ * history cursor and the renderer never found out: Back stayed greyed and the host label stayed
+ * frozen on the start URL's host. Its response coercion is per-ELEMENT (see `coerceNavEvents`),
+ * for the same reason the four below coerce per-field.
  *
  * Geometry courier discipline (T-40-05-04, D-18/D-29): `setBounds()` validates every coordinate
  * is a finite number and THROWS rather than substituting one — a substituted rect is a second
@@ -74,10 +74,8 @@ import {
   RUST_STORE_EMBED_BACK,
   RUST_STORE_EMBED_FORWARD,
   RUST_STORE_EMBED_RELOAD,
-  RUST_STORE_EMBED_NAVIGATE
-  // RUST_STORE_EMBED_TAKE_NAV_EVENTS is declared in sidecarTransport.ts but stays unimported here:
-  // takeNavEvents() throws a declared-unimplemented Error WITHOUT calling requestRustInvoke, so
-  // importing that constant would be dead weight (and a `no-unused-vars` lint error).
+  RUST_STORE_EMBED_NAVIGATE,
+  RUST_STORE_EMBED_TAKE_NAV_EVENTS
 } from '../../common/types/sidecarTransport'
 import {
   setStoreEmbedSeam,
@@ -95,23 +93,6 @@ function logSendFailure(channel: string, error: unknown): void {
       error instanceof Error ? error.message : String(error)
     ],
     LogPrefix.Backend
-  )
-}
-
-/**
- * Builds the declared-unimplemented Error for `takeNavEvents()` (D-25) — no Rust arm drains
- * queued nav events yet. Deliberately does NOT name a specific owning plan: `back`/`forward`/
- * `reload`/`navigate` carried the same "owned by Phase 40 Plan 07" message until this very file
- * (that plan) implemented them, and pinning a plan number here would go stale the instant that
- * plan ships without addressing this method — the exact trap this rewrite fixes for the other
- * four. This is a declared gap, not a bug — never stub this as a no-op or a plausible default.
- */
-function takeNavEventsUnimplementedError(): Error {
-  return new Error(
-    'StoreEmbedSeam.takeNavEvents(): not yet implemented -- no Rust arm exists (D-25: no native ' +
-      'back/forward/history API exists on tauri::webview::Webview or wry::WebView). No future ' +
-      'plan has been assigned ownership yet. This is a declared gap, not a bug -- never stub ' +
-      'this as a no-op or a plausible default.'
   )
 }
 
@@ -152,6 +133,26 @@ function coerceNavState(channel: string, result: unknown): StoreEmbedNavEvent {
 }
 
 /**
+ * The array analog of `coerceNavState()` for `takeNavEvents()` (GAP-D, REQ-40-06). THROWS on a
+ * non-array response and delegates every element to the same per-field check.
+ *
+ * It would be easy to `?? []` a malformed response here and call it fail-safe. That is exactly
+ * the F-34.4.2-19 defect class this file's header names: an empty array is this channel's
+ * NORMAL, most frequent healthy answer -- the queue is empty whenever the user is not
+ * navigating -- so a coerced `[]` would make a dead or mis-shaped Rust arm indistinguishable
+ * from a working idle one, forever. The fail-safe boundary belongs at the `ipcMain.handle` arm
+ * (which logs first), not here.
+ */
+function coerceNavEvents(channel: string, result: unknown): StoreEmbedNavEvent[] {
+  if (!Array.isArray(result)) {
+    throw new Error(
+      `${channel}: malformed response (expected an array): ${JSON.stringify(result)}`
+    )
+  }
+  return result.map((element, index) => coerceNavState(`${channel}[${index}]`, element))
+}
+
+/**
  * Validates a bounds rect field-for-field is a finite number (D-18/D-29/T-40-05-04). Throws
  * rather than substituting a value -- a substituted rect is a second geometry writer in
  * disguise, and spike 017 proved a second writer wins silently with no error.
@@ -171,7 +172,6 @@ function assertFiniteBounds(bounds: StoreEmbedBounds): void {
  * Constructs the `rustInvoke`-backed `StoreEmbedSeam` implementation. Every method that calls
  * a live Rust arm coerces the response into the declared return type and THROWS a descriptive
  * Error on a malformed shape -- load-bearing, not defensive (see this file's own header comment).
- * `takeNavEvents` has no backing Rust arm yet and throws a declared-unimplemented Error.
  */
 export function createRustStoreEmbedSeam(): StoreEmbedSeam {
   return {
@@ -233,13 +233,13 @@ export function createRustStoreEmbedSeam(): StoreEmbedSeam {
       }
     },
 
-    // NOT YET IMPLEMENTED (D-25/D-22) -- no Rust arm exists for RUST_STORE_EMBED_TAKE_NAV_EVENTS
-    // yet, and no future plan has been assigned ownership. Declared-unimplemented rather than
-    // resolving a plausible-looking `[]`, which would be indistinguishable from "genuinely no
-    // queued events".
-    // eslint-disable-next-line @typescript-eslint/require-await -- interface requires Promise<T>; throws synchronously by design
+    // GAP-D (quick task `260905-e61`, D-22, REQ-40-06): drains the navigation states Rust's
+    // `on_page_load` Finished handler queued -- the only channel that carries an IN-EMBED link
+    // click back to the renderer. Takes no arguments: the embed is a singleton under the fixed
+    // `STORE_EMBED_LABEL`, so there is no label to pass (unlike `humble_login_take_events`).
     async takeNavEvents() {
-      throw takeNavEventsUnimplementedError()
+      const result = await requestRustInvoke(RUST_STORE_EMBED_TAKE_NAV_EVENTS, [])
+      return coerceNavEvents('store_embed_take_nav_events', result)
     },
 
     // Phase 40 Plan 07 (D-22): moves the Rust-side history cursor back one entry and returns the
@@ -329,7 +329,7 @@ export function registerStoreEmbedFlows(): void {
   const seam = createRustStoreEmbedSeam()
   setStoreEmbedSeam(seam)
 
-  // ── invoke (8) ──────────────────────────────────────────────────────────────────────────────
+  // ── invoke (9) ──────────────────────────────────────────────────────────────────────────────
 
   ipcMain.handle(
     'storeEmbedOpen',
@@ -349,6 +349,10 @@ export function registerStoreEmbedFlows(): void {
     safeStatus('storeEmbedClose', () => seam.close())
   )
 
+  // The fail-safe boundary for the drain (GAP-D): `[]` is resolved ONLY here, after the
+  // failure has been logged, and never inside `coerceNavEvents` -- see that function's own doc
+  // comment. The renderer's poller treats an empty drain as "nothing navigated", which is the
+  // correct reading of a logged failure too: leave the last-known chrome state alone.
   ipcMain.handle('storeEmbedTakeNavEvents', async () => {
     try {
       return await seam.takeNavEvents()

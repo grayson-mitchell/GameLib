@@ -75,12 +75,15 @@ export interface StoreEmbedSeam {
   /** Closes the embed and clears its Rust-side history (D-21: teardown only, never a route-leave hide). */
   close(): Promise<void>
   /**
-   * Drains queued navigation state (D-22). Poll-shaped, mirroring
+   * DRAINS (never peeks) queued navigation state (D-22). Poll-shaped, mirroring
    * `LoginWindowSeam.takeEvents()` — the renderer calls this to receive the current
-   * URL/host/back-forward-availability as pushed state, never as a synchronous query.
+   * URL/host/back-forward-availability as pushed state, never as a synchronous query. Events
+   * come oldest-first; a caller that only wants "where are we now" applies the LAST one.
    *
-   * NOT YET IMPLEMENTED: no Rust arm exists yet (plan `40-07` owns it, D-25). Throws a
-   * declared-unimplemented Error until then.
+   * This is the ONLY channel that reports a navigation the PAGE initiated. `back`/`forward`/
+   * `reload`/`navigate` below each return the state resulting from a call the CHROME made, so
+   * without this method an in-embed link click is invisible to the renderer — which is exactly
+   * what GAP-D measured before quick task `260905-e61` implemented the Rust arm (REQ-40-06).
    */
   takeNavEvents(): Promise<StoreEmbedNavEvent[]>
   /**
