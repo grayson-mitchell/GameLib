@@ -296,6 +296,11 @@ path's slot/chrome/placeholder composition) is already covered by this plan's ow
 `<threat_model>` (T-40-08-01 through -06, T-40-08-SC) -- no new network endpoint, auth path, file
 access pattern, or schema change was introduced outside that register.
 
+## Self-Check: PASSED
+
+All created/modified files confirmed present on disk; all three commits (`ec1506d5b`,
+`56fa28030`, `257c4a4ae`) confirmed present in `git log --oneline --all`.
+
 ---
 *Phase: 40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we*
 *Completed: 2026-09-04*
