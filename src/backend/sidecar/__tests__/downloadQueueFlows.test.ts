@@ -164,9 +164,16 @@ jest.mock('../../storeManagers/steam/games', () => ({
 // REAL bodies dispatch into a runner's real .install()/.update(); mirrors
 // downloadqueue.test.ts's own precedent boundary (this plan's read_first
 // companion suite) ───────────────────────────────────────────────────────────
+// 260905-luf: `resolveGameTitle` is real production logic
+// downloadqueue.ts's processNotification now calls unconditionally on every
+// status (including 'done'), which this suite's real addToQueue()->
+// initQueue() path reaches. No test in this file asserts on a resolved
+// title, so a bare (unimplemented) jest.fn() is sufficient here — it only
+// needs to not throw the way an entirely absent export does.
 jest.mock('../../downloadmanager/utils', () => ({
   installQueueElement: jest.fn(),
-  updateQueueElement: jest.fn()
+  updateQueueElement: jest.fn(),
+  resolveGameTitle: jest.fn()
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────

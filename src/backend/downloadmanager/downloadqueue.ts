@@ -1,7 +1,11 @@
 import { logError, logInfo, LogPrefix, logWarning } from 'backend/logger'
 import { getFileSize, removeFolder, sendGameStatusUpdate } from '../utils'
 import { DMQueueElement, DMStatus, DownloadManagerState } from 'common/types'
-import { installQueueElement, updateQueueElement } from './utils'
+import {
+  installQueueElement,
+  resolveGameTitle,
+  updateQueueElement
+} from './utils'
 import { sendFrontendMessage } from '../ipc'
 import { callAbortController } from 'backend/utils/aborthandler/aborthandler'
 import { notify } from '../dialog/dialog'
@@ -385,9 +389,20 @@ function processNotification(element: DMQueueElement, status: DMStatus) {
   ) {
     return
   }
-  const { title } = libraryManagerMap[element.params.runner]
-    .getGame(element.params.appName)
-    .getGameInfo()
+  // Quick task 260905-luf (D-01): the bare, unguarded destructure this used
+  // to be (`const { title } = libraryManagerMap[...].getGame(...).getGameInfo()`)
+  // notified with `title === undefined` whenever a Steam GameInfo double
+  // cache miss returned `{}` -- a nameless OS notification. `resolveGameTitle`
+  // falls back to `element.params.gameInfo?.title` (captured at enqueue
+  // time, unaffected by a later cache miss) before finally falling back to
+  // the raw appName. Covers every branch below (paused/canceled/failed/
+  // finished) at once.
+  const title = resolveGameTitle(
+    libraryManagerMap,
+    element.params.runner,
+    element.params.appName,
+    element.params.gameInfo
+  )
 
   if (status === 'abort') {
     if (isPaused()) {

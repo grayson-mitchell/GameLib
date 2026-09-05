@@ -136,6 +136,28 @@ const nativeInstallsInFlight = new Map<string, NativeInstallEntry>()
 const bridgeFailedThisSession = new Set<string>()
 
 /**
+ * Quick task 260905-luf (D-01): appIds for which `getGameInfo()`'s double
+ * cache miss (both the in-memory `library` Map AND the persisted
+ * `steamLibraryStore` missed) has already been logged THIS PROCESS.
+ * `getGameInfo()` runs on every library render, so an ungated warning would
+ * flood `gamelib.log` on a cold boot with a large, not-yet-hydrated
+ * library (T-luf-02). Session-scoped only, per appId — a later miss for a
+ * DIFFERENT appId still warns.
+ */
+const loggedEmptyGameInfoMisses = new Set<string>()
+
+/**
+ * Test-only reset for loggedEmptyGameInfoMisses — mirrors
+ * `__resetBridgeFailedSessionForTests()`'s convention above. Unit tests that
+ * deliberately drive the double-miss branch for a reused appId must call
+ * this (in a `beforeEach`) so one test's miss does not silence the warning
+ * for a later test asserting the same appId still warns.
+ */
+export function __resetLoggedEmptyGameInfoMissesForTests(): void {
+  loggedEmptyGameInfoMisses.clear()
+}
+
+/**
  * Marks appId as bridge-failed for the remainder of this GameLib process.
  * Called from every terminal bridge-failure branch in install()/launch()
  * (installBridgeGame below; launch()'s bridge branch, Task 3) — never
@@ -554,6 +576,20 @@ export default class SteamGame implements Game {
    * implements for the same reason. Self-heals the in-memory Map on hit so
    * subsequent calls (and the metadata self-heal below) don't repeat the
    * disk read.
+   *
+   * Quick task 260905-luf (D-01): when BOTH the in-memory Map and the
+   * persisted cache miss (below), this deliberately still returns the `{}`
+   * sentinel rather than a populated stub — that is a DECISION, not an
+   * oversight. `{}` is a cross-runner protocol shared by five store
+   * managers: `dispatch.ts:88` converts it to `null` for the frontend,
+   * `appShellFlowRegistration.ts:536`'s tray runner resolution relies on a
+   * falsy `app_name` to skip this runner, and `library.ts:1257`'s own
+   * persisted-cache fallback relies on the same falsy check. Populating a
+   * stub here would silently break all three. What WAS silent — the miss
+   * itself — is now logged once per appId (T-luf-01/T-luf-02) so it is at
+   * least observable; every DownloadManager title consumer is expected to
+   * fall back through `resolveGameTitle` (downloadmanager/utils.ts) rather
+   * than assume this method never returns an empty object.
    */
   getGameInfo(): GameInfo {
     let existing = library.get(this.appId)
@@ -566,7 +602,21 @@ export default class SteamGame implements Game {
         existing = cached
       }
     }
-    if (!existing) return {} as GameInfo
+    if (!existing) {
+      if (!loggedEmptyGameInfoMisses.has(this.appId)) {
+        loggedEmptyGameInfoMisses.add(this.appId)
+        logWarning(
+          [
+            `SteamGame.getGameInfo(): double cache miss for appId ${this.appId} —`,
+            'both the in-memory library Map and the persisted steamLibraryStore',
+            'missed. Returning the {} sentinel (logged once per appId; see',
+            '260905-luf).'
+          ],
+          LogPrefix.Steam
+        )
+      }
+      return {} as GameInfo
+    }
 
     // Trigger lazy metadata fetch as fire-and-forget side effect (D-04).
     // Also self-heal games cached before DETAIL-01 shipped: their art_cover is

@@ -56,6 +56,31 @@ const gameGetGameInfoMock = jest
   .fn()
   .mockReturnValue({ folder_name: undefined })
 
+// 260905-luf: behavior mirror of downloadmanager/utils.ts's real
+// resolveGameTitle (live.title || fallback?.title || appName) — see the
+// jest.mock('../utils', ...) factory below for why this is a mirror rather
+// than the real module. `resetMocks: true` wipes any implementation
+// attached at jest.fn() construction before EVERY test (same trap
+// documented on `mockT`/`gameGetGameInfoMock` elsewhere in this file), so
+// every describe block that reaches `processNotification` via a real
+// `initQueue()` call re-applies this implementation in its own `beforeEach`.
+const resolveGameTitleMock = jest.fn(
+  (
+    libraryManagerMap: Record<
+      string,
+      {
+        getGame: (appName: string) => { getGameInfo: () => { title?: string } }
+      }
+    >,
+    runner: string,
+    appName: string,
+    fallback?: { title?: string }
+  ): string => {
+    const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+    return title || fallback?.title || appName
+  }
+)
+
 jest.mock('backend/storeManagers', () => ({
   libraryManagerMap: {
     steam: {
@@ -83,9 +108,18 @@ jest.mock('../../utils', () => ({
 // updateQueueElement pull in backend/constants/paths -> tmp, which crashes
 // outside a real Electron app context. Never exercised by these tests
 // (initQueue() is deliberately never called — see file header).
+//
+// 260905-luf: `resolveGameTitle` is real production logic downloadqueue.ts's
+// processNotification now calls directly — mocked here with a behavior
+// mirror (not a bare jest.fn()) so the describe blocks that DO reach
+// processNotification via a real initQueue() call (Thread B, and the
+// 260905-luf suite below) exercise the same fallback chain the real
+// function implements, without pulling in downloadmanager/utils.ts's
+// Electron-only imports.
 jest.mock('../utils', () => ({
   installQueueElement: jest.fn(),
-  updateQueueElement: jest.fn()
+  updateQueueElement: jest.fn(),
+  resolveGameTitle: resolveGameTitleMock
 }))
 
 jest.mock('../../ipc', () => ({
@@ -255,6 +289,17 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
     // unlike the other describe blocks here) needs a defined getGameInfo()
     // result to destructure `title` from.
     gameGetGameInfoMock.mockReturnValue({ folder_name: undefined })
+    // 260905-luf: same resetMocks:true trap — resolveGameTitleMock's
+    // implementation (set at jest.fn() construction) is wiped before every
+    // test; processNotification calls it via the mocked '../utils' module.
+    resolveGameTitleMock.mockImplementation(
+      (libraryManagerMap, runner, appName, fallback) => {
+        const { title } = libraryManagerMap[runner]
+          .getGame(appName)
+          .getGameInfo()
+        return title || fallback?.title || appName
+      }
+    )
   })
 
   it('initQueue(true) (the app-startup call) does NOT call installQueueElement for a persisted Steam queue head', async () => {
@@ -387,6 +432,14 @@ describe('downloadqueue.ts — 260905-luf: processNotification title fallback on
     jest.clearAllMocks()
     for (const key of Object.keys(__store)) delete __store[key]
     gameGetGameInfoMock.mockReturnValue({ folder_name: undefined })
+    resolveGameTitleMock.mockImplementation(
+      (libraryManagerMap, runner, appName, fallback) => {
+        const { title } = libraryManagerMap[runner]
+          .getGame(appName)
+          .getGameInfo()
+        return title || fallback?.title || appName
+      }
+    )
   })
 
   it("SUSPECT (Test B): processNotification's error branch notifies with a non-empty title, falling back to the queue element's captured gameInfo.title, when getGameInfo() returns {} (double cache miss)", async () => {

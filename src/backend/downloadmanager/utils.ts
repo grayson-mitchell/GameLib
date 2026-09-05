@@ -8,7 +8,13 @@ import {
   callAbortController,
   hasAbortController
 } from 'backend/utils/aborthandler/aborthandler'
-import { ButtonOptions, DMStatus, InstallParams, Runner } from 'common/types'
+import {
+  ButtonOptions,
+  DMStatus,
+  GameInfo,
+  InstallParams,
+  Runner
+} from 'common/types'
 import { InstallResult, InstallErrorAction } from 'common/types/game_manager'
 import i18next from 'i18next'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
@@ -51,14 +57,40 @@ type LibraryManagerMap =
  * `installQueueElement` and `updateQueueElement` funnel through this one
  * resolver so it is impossible to fix the fallback on one queue element and
  * leave the other with the raw, unguarded destructure.
+ *
+ * Quick task 260905-luf: this is now a thin wrapper around the exported
+ * `resolveGameTitle` below, so there is exactly ONE fallback chain for
+ * every DownloadManager title consumer, not two independently-maintained
+ * ones. Behaviour here is byte-identical to before (no `fallback` argument
+ * is passed) -- the install-failure dialog this function feeds still
+ * resolves `live.title || appName`, nothing more.
  */
 function resolveQueueElementTitle(
   libraryManagerMap: LibraryManagerMap,
   runner: Runner,
   appName: string
 ): string {
+  return resolveGameTitle(libraryManagerMap, runner, appName)
+}
+
+/**
+ * Quick task 260905-luf (D-01): the single fallback chain for every
+ * DownloadManager title consumer that reads a possibly-`{}` Steam GameInfo.
+ * `live.title` wins when present; else `fallback?.title` (typically the
+ * queue element's `params.gameInfo`, captured at enqueue time and therefore
+ * unaffected by a later cache miss -- evidence item 9); else the raw
+ * `appName`. Never returns an empty string when `appName` is non-empty: an
+ * empty-string `live.title` (falsy) is treated as absent, same as
+ * `undefined`.
+ */
+export function resolveGameTitle(
+  libraryManagerMap: LibraryManagerMap,
+  runner: Runner,
+  appName: string,
+  fallback?: GameInfo
+): string {
   const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
-  return title || appName
+  return title || fallback?.title || appName
 }
 
 /**

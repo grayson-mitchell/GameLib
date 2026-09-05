@@ -126,6 +126,7 @@ import { checkGameUpdates } from '../utils/checkGameUpdates'
 import { listSteamLibraryTargets } from '../storeManagers/steam/installLocation'
 import { isSteamNativeInstallEnabled } from '../storeManagers/steam/nativeInstallSetting'
 import { addToQueue } from '../downloadmanager/downloadqueue'
+import { resolveGameTitle } from '../downloadmanager/utils'
 // Plan 34.6-06 (REQ-34.6-04): byte-equivalent port of moveInstall/importGame
 // (main.ts:1112-1245, D-02). getGame/isEpicServiceOffline/sendGameStatusUpdate/writeConfig are
 // the same `backend/utils.ts` exports main.ts itself imports for these two handlers.
@@ -339,7 +340,12 @@ export function registerInstallFlows(): void {
         status: 'moving'
       })
 
-      const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+      // Quick task 260905-luf: was a bare, unguarded destructure -- a Steam
+      // GameInfo double cache miss (games.ts's `{}` sentinel) made `title`
+      // `undefined` here, notifying with a nameless subject. No queue
+      // element is in scope at this call site (unlike downloadqueue.ts's
+      // processNotification), so the chain is `live.title || appName`.
+      const title = resolveGameTitle(libraryManagerMap, runner, appName)
       notify({ title, body: i18next.t('notify.moving', 'Moving Game') })
 
       const moveRes = await libraryManagerMap[runner]
@@ -472,7 +478,9 @@ export function registerInstallFlows(): void {
         }
       }
 
-      const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
+      // Quick task 260905-luf: same unguarded-destructure fix as moveInstall
+      // above -- see that call site's comment.
+      const title = resolveGameTitle(libraryManagerMap, runner, appName)
       sendGameStatusUpdate({
         appName,
         runner,
