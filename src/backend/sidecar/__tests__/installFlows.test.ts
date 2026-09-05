@@ -424,11 +424,13 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
   // No-regression (260905-mv5, site 2): the fallback must never shadow a
   // real, present title. `appName` ('999002') below is a value that would
   // never plausibly be mistaken for the live title, so this assertion is
-  // defeated by a PRECEDENCE-SWAP revert (`appName || live` instead of
-  // `live || fallback || appName` inside gameTitle.ts's pickTitle) --
-  // verified by hand in askForceUninstall.test.ts's sibling no-regression
-  // test against the same shared pickTitle helper; not re-verified a second
-  // time here since both sites delegate to the identical function.
+  // defeated by a PRECEDENCE-SWAP revert (`appName || live || fallback`
+  // instead of `live || fallback || appName` inside gameTitle.ts's
+  // pickTitle) -- re-verified by hand for this site specifically (not just
+  // by analogy to askForceUninstall.test.ts's sibling no-regression test):
+  // swapping pickTitle's operand order turns this test RED (received
+  // '999002', not 'Real Live Title'), confirming the assertion discriminates
+  // the axis under test.
   it('260905-mv5 (site 2, no regression): notifies with the LIVE title on an uninstall() rejection, never the raw appName', async () => {
     steamGameMocks.getGameInfo.mockReturnValue({ title: 'Real Live Title' })
     steamGameMocks.uninstall.mockRejectedValue(new Error('uninstall failed'))
