@@ -4977,6 +4977,66 @@ carries an explicit **return half** stating that 40-11's macOS PASS does **not**
 12 pre-existing `cargo clippy` errors in `main.rs` remain out of scope (`deferred-items.md`);
 `cargo clippy` is in no CI workflow.
 
+### Phase 41: i18n gate honesty - make the translation and hardcoded-string gates report what they cannot currently see
+
+**Goal:** Both i18n gates currently return green over things they cannot see. Make each one
+report the condition it was built to catch, and retire the false-positive debt that made the
+hardcoded-string gate's scope artifact untrustworthy. Scope is `meta/` plus
+`public/locales/en/gamelib.json` — **no runtime code path is touched.**
+
+**Requirements**:
+- REQ-41-01 — `lintTranslations.ts` must report a key present in `en` and absent from a scoped
+  locale catalog. Today `checkFileAgainstEnglish` (`meta/lintTranslations.ts:140`) enumerates the
+  TRANSLATION's own keys and looks English up by them, so an absent key is never visited and the
+  gate stays green at zero coverage for it. Invert the direction: enumerate `en`'s keys and assert
+  each exists and is non-empty in every scoped catalog.
+- REQ-41-02 — Close the two fail-open shapes at the same seam. `checkLanguage`'s
+  `if (!content) continue` (`:168`) skips an entirely-missing catalog in silence, so a whole absent
+  namespace is exactly as invisible as one absent key. Separately, `pnpm lint-translations:gamelib`
+  prints Node ENOENT stack traces for `public/locales/sl/translation.json` and
+  `public/locales/uz/login.json` and **still exits 0**. Settle whether that exit 0 is deliberate
+  before changing it — the todo flags it as an observation, not a diagnosed bug.
+- REQ-41-03 — Author the six `redeemKey.*` strings that are empty in **English**
+  (`alreadyOwned`, `error`, `invalid`, `rateLimited`, `successNoPackage`, `successWithPackage`).
+  Their source text already exists as the hardcoded defaults at
+  `RedeemSteamKeyDialog/copy.ts:43,54,64,74,83,94`. Doing this BEFORE REQ-41-01 is what removes the
+  need for a carve-out list in the new check — key the check off `en` being non-empty and no
+  exemption register is needed at all.
+- REQ-41-04 — Widen the **existing** D-14 tuple-table exemption in `meta/hardcodedStringGate.ts`
+  (`:952-956`, `:1180-1185` — it already covers `CrossoverBadge.tsx`'s `labelKeyByTier` and
+  `LibraryFilters`' `crossoverRatingLabels`) to reach `facetLabels.ts` and `chipLabels.ts`, and
+  handle `helpers/gamepad.ts`'s **bare** CSS class selectors (`.MuiPopover-root`,
+  `.MuiDialog-root`) — the gate's existing selector handling covers bracketed attribute selectors
+  (`:209`) and `querySelector` arguments (`:700`), neither of which matches these. Then fold all
+  three files out of `DECLARED_UNSCANNED_DEBT` and into `meta/i18nGateScope.json` at zero
+  violations.
+
+**Depends on:** Phase 40
+**Plans:** 0 plans
+
+**Closes three pending todos:**
+- `.planning/todos/pending/2026-09-03-lint-translations-is-structurally-blind-to-an-absent-key.md`
+- `.planning/todos/pending/2026-09-03-six-gamelib-keys-are-empty-in-english-so-never-localisable.md`
+- `.planning/todos/pending/2026-08-27-i18n-gate-flags-declaration-site-literals-as-violations.md`
+
+**Why these three together.** They interact at one seam. Fixing REQ-41-01 without REQ-41-03 forces
+a carve-out list for the six empty English keys that REQ-41-03 then deletes. And this project has
+already been bitten by *a conformance fix for gate A breaking gate B's exemption*, which is an
+argument for changing both gates under one set of eyes rather than in two passes.
+
+**Selected as an unattended run.** No app launch, no network, no operator gesture, no credentials —
+verified by `pnpm lint-translations:gamelib`, the hardcoded-string gate and jest. Two cautions for
+whoever plans it:
+- **Do not trust a gate's exit code as the result.** This project's i18n glossary validator encoded
+  English morphology twice across 242 strings and exited 0 both times. Count keys before and after
+  and put the numbers in the record.
+- **Propagating the six new strings to the other 48 locales needs `machine-fill`, which has 401'd
+  before.** That step is explicitly OUT of this phase's unattended scope — REQ-41-03 is the English
+  authoring only. Filling the locales is a follow-up needing a working key.
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 41 to break down)
+
 ---
 
 ## Parked / Superseded Phases
