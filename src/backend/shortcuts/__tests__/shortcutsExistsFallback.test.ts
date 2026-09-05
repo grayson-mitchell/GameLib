@@ -43,15 +43,29 @@ jest.mock('../nonesteamgame/nonesteamgame', () => ({
   isAddedToSteam: jest.fn(),
   removeNonSteamGame: jest.fn()
 }))
+jest.mock('backend/logger', () => ({
+  logInfo: jest.fn(),
+  logWarning: jest.fn(),
+  logError: jest.fn(),
+  LogPrefix: { Backend: 'Backend' }
+}))
+jest.mock('graceful-fs', () => ({
+  ...jest.requireActual('graceful-fs'),
+  existsSync: jest.fn()
+}))
 
+import { existsSync } from 'graceful-fs'
 import { getGame } from '../../utils'
 import { shortcutFiles } from '../shortcuts/shortcuts'
 import { addShortcuts } from '../shortcuts/shortcuts'
 import { handlerRegistry } from 'backend/platform'
+import { logWarning } from 'backend/logger'
 import type { GameInfo } from 'common/types'
 import type { Game } from 'common/types/game_manager'
 
 const mockedGetGame = getGame as jest.Mock
+const mockedLogWarning = logWarning as jest.Mock
+const mockedExistsSync = existsSync as jest.Mock
 
 // Import for side effect only: this is what actually calls addHandler(...)
 // / addListener(...) at module-load time, registering the real handlers
@@ -81,6 +95,7 @@ function makeStubGame(gameInfo: GameInfo): Game {
 describe('backend/shortcuts/ipc_handler.ts: shortcutsExists (260905-mv5, site 3)', () => {
   beforeEach(() => {
     mockedGetGame.mockReset()
+    mockedExistsSync.mockReset()
   })
 
   it('260905-mv5: resolves false instead of throwing when getGameInfo() returns {} (D-01 sentinel)', async () => {
@@ -93,6 +108,45 @@ describe('backend/shortcuts/ipc_handler.ts: shortcutsExists (260905-mv5, site 3)
     await expect(
       Promise.resolve().then(() => handler(undefined, 'AppName', 'legendary'))
     ).resolves.toBe(false)
+  })
+
+  // 260905-mv5 Task 3: the falsy-title branch must not fail SILENTLY -- a
+  // missing shortcut check is a behavior change from before this fix (it used
+  // to throw), so it must be observable in the logs exactly once.
+  it('260905-mv5: logs exactly one warning when getGameInfo() returns {} (D-01 sentinel)', async () => {
+    mockedGetGame.mockReturnValue(makeStubGame({} as GameInfo))
+    const handler = getRegisteredHandler('shortcutsExists')
+
+    await Promise.resolve().then(() =>
+      handler(undefined, 'AppName', 'legendary')
+    )
+
+    expect(mockedLogWarning).toHaveBeenCalledTimes(1)
+    expect(mockedLogWarning.mock.calls[0][0]).toContain('AppName')
+  })
+
+  // 260905-mv5 Task 3 (no regression): the D-03 early return must not swallow
+  // the normal path -- with a POPULATED title, the handler must still call
+  // the real `shortcutFiles` and return the real `existsSync` result, not an
+  // unconditional `false`. `shortcutFiles` is left real/unmocked (see file
+  // header), so `existsSync` is mocked here specifically so a `true` result
+  // is reachable -- on a clean test machine none of these paths exist for
+  // real, which would make this assertion pass just as well against an
+  // ALWAYS-false-returning guard (not discriminating). Mocking `existsSync`
+  // to return `true` for the exact path `shortcutFiles` computes is what
+  // makes a reverted, unconditional `return false` guard turn this test RED.
+  it('260905-mv5 (no regression): still calls shortcutFiles/existsSync and returns true when a real title is present', async () => {
+    mockedGetGame.mockReturnValue(
+      makeStubGame({ title: 'Real Game' } as GameInfo)
+    )
+    const [desktopFile] = shortcutFiles('Real Game')
+    mockedExistsSync.mockImplementation((path: string) => path === desktopFile)
+
+    const handler = getRegisteredHandler('shortcutsExists')
+    await expect(
+      Promise.resolve().then(() => handler(undefined, 'AppName', 'legendary'))
+    ).resolves.toBe(true)
+    expect(mockedLogWarning).not.toHaveBeenCalled()
   })
 })
 

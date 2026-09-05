@@ -305,9 +305,50 @@ describe("shortcutsExists' fallback on an empty getGameInfo() (260905-mv5, site 
     const handler = handlerRegistry.get('shortcutsExists')
     expect(handler).toBeDefined()
 
-    await expect(
-      handler?.(undefined, 'AppName', 'legendary')
-    ).resolves.toBe(false)
+    await expect(handler?.(undefined, 'AppName', 'legendary')).resolves.toBe(
+      false
+    )
+  })
+
+  // 260905-mv5 Task 3: the falsy-title branch must not fail SILENTLY -- a
+  // missing shortcut check is a behavior change from before this fix (it
+  // used to throw), so it must be observable in the logs exactly once.
+  it('260905-mv5: logs exactly one warning when getGameInfo() returns {} (D-01 sentinel)', async () => {
+    mockGetGame.mockReturnValue({ getGameInfo: () => ({}) })
+
+    const handler = handlerRegistry.get('shortcutsExists')
+    expect(handler).toBeDefined()
+
+    await handler?.(undefined, 'AppName', 'legendary')
+
+    expect(mockLogWarning).toHaveBeenCalledTimes(1)
+    expect(mockLogWarning.mock.calls[0][0]).toContain('AppName')
+  })
+
+  // 260905-mv5 Task 3 (no regression): the D-03 early return must not
+  // swallow the normal path -- with a POPULATED title, the handler must
+  // still call the real `shortcutFiles` and return the real `existsSync`
+  // result, not an unconditional `false`. This suite's `shortcutFiles` and
+  // `existsSync` are both real (see the file's own header on this), so a
+  // real `.app` bundle directory is created on disk (under the structurally
+  // redirected home from `jest.setupContainment`, per the containment rule
+  // this file already follows above) at the exact path `shortcutFiles`
+  // computes for the title used below -- only a reverted, unconditional
+  // `return false` guard would turn this RED, since existsSync would
+  // otherwise genuinely see the created path.
+  it('260905-mv5 (no regression): still calls shortcutFiles/existsSync and returns true when a real title is present', async () => {
+    const title = '260905-mv5 Site 4 No-Regression Game'
+    mockGetGame.mockReturnValue({ getGameInfo: () => ({ title }) })
+    const [desktopFile] = shortcutFiles(title)
+    mkdirSync(desktopFile, { recursive: true })
+
+    const handler = handlerRegistry.get('shortcutsExists')
+    expect(handler).toBeDefined()
+
+    await expect(handler?.(undefined, 'AppName', 'legendary')).resolves.toBe(
+      true
+    )
+    expect(mockLogWarning).not.toHaveBeenCalled()
   })
 })
 

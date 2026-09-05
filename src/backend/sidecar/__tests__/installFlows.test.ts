@@ -421,6 +421,34 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     expect(notifyArg.title).toBeTruthy()
   })
 
+  // No-regression (260905-mv5, site 2): the fallback must never shadow a
+  // real, present title. `appName` ('999002') below is a value that would
+  // never plausibly be mistaken for the live title, so this assertion is
+  // defeated by a PRECEDENCE-SWAP revert (`appName || live` instead of
+  // `live || fallback || appName` inside gameTitle.ts's pickTitle) --
+  // verified by hand in askForceUninstall.test.ts's sibling no-regression
+  // test against the same shared pickTitle helper; not re-verified a second
+  // time here since both sites delegate to the identical function.
+  it('260905-mv5 (site 2, no regression): notifies with the LIVE title on an uninstall() rejection, never the raw appName', async () => {
+    steamGameMocks.getGameInfo.mockReturnValue({ title: 'Real Live Title' })
+    steamGameMocks.uninstall.mockRejectedValue(new Error('uninstall failed'))
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'uninstall-mv5-2', 'uninstall', [
+      '999002',
+      'steam',
+      false,
+      false
+    ])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'uninstall-mv5-2')
+    expect(response).toMatchObject({ id: 'uninstall-mv5-2', ok: true })
+    expect(mockedNotify).toHaveBeenCalledTimes(1)
+    const notifyArg = mockedNotify.mock.calls[0][0] as { title?: string }
+    expect(notifyArg.title).toBe('Real Live Title')
+  })
+
   // Test 5: checkGameUpdates resolves a string[] across all runners (D-12,
   // all runners) — a happy-path wiring assertion only. The per-runner
   // isolation property this comment used to claim is proven by the WR-05

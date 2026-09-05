@@ -46,10 +46,34 @@ describe('backend/utils.ts: askForceUninstall (260905-mv5, site 1)', () => {
   it('260905-mv5: never shows a nameless force-uninstall confirmation dialog, even when getGameInfo() returns {} (D-01 sentinel)', async () => {
     const game = makeStubGame({} as GameInfo)
 
-    await askForceUninstall(game)
+    // 260905-mv5 (D-02/D-03, site 1): askForceUninstall was widened to take
+    // appName as a second parameter -- resolveTitleForGame needs it as the
+    // fallback when getGameInfo().title is absent.
+    await askForceUninstall(game, 'Some Game AppName')
 
     expect(mockedShowMessageBox).toHaveBeenCalledTimes(1)
     const dialogOptions = mockedShowMessageBox.mock.calls[0][0]
     expect(dialogOptions.title).toBeTruthy()
+  })
+
+  // No-regression: the fallback must never shadow a real, present title.
+  // `appName` below is deliberately a value that would never plausibly be
+  // mistaken for the live title, so this assertion is defeated by a
+  // PRECEDENCE-SWAP revert (`appName || live` instead of `live || appName`
+  // inside gameTitle.ts's pickTitle) -- verified by hand: swapping that one
+  // line's operand order turns this test RED (dialog title becomes
+  // 'fallback-appname-must-not-win', not 'Real Live Title'), confirming the
+  // assertion discriminates the axis under test rather than merely
+  // reflecting "some string was passed as the title" (a bare-destructure/
+  // removal revert would not distinguish the two, per 260905-luf's own
+  // RED-proof ledger entries #7/#11).
+  it('260905-mv5 (no regression): shows the LIVE title when getGameInfo() has one, never appName', async () => {
+    const game = makeStubGame({ title: 'Real Live Title' } as GameInfo)
+
+    await askForceUninstall(game, 'fallback-appname-must-not-win')
+
+    expect(mockedShowMessageBox).toHaveBeenCalledTimes(1)
+    const dialogOptions = mockedShowMessageBox.mock.calls[0][0]
+    expect(dialogOptions.title).toBe('Real Live Title')
   })
 })
