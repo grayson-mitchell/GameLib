@@ -346,7 +346,8 @@ import { stripSourceComments as stripComments } from 'backend/testUtils/stripSou
 import {
   startSidecar,
   writeInvoke,
-  findResponse
+  findResponse,
+  Frame
 } from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
 import { libraryManagerMap } from 'backend/storeManagers'
@@ -436,15 +437,37 @@ async function flush(): Promise<void> {
 }
 
 /**
- * `getAnticheatInfo`'s real `fs/promises` `readFile()` of an EXISTING file
- * goes through libuv's threadpool, which only resolves on a real event-loop
- * timer tick — `flush()`'s `setImmediate` chain alone is not sufficient
- * (empirically confirmed: the ENOENT-fast-path tests below pass on `flush()`
- * alone, but the file-present tests do not without this extra tick).
+ * Polls for a response frame instead of assuming any fixed delay was long
+ * enough. `getAnticheatInfo` is the only channel this file drives whose
+ * handler (`gameAnticheatInfo`, `anticheat/utils.ts`) awaits a real
+ * `fs/promises` `readFile()`: that resolves through libuv's threadpool, so
+ * its round-trip is bounded by OS thread scheduling, NOT by the JS event
+ * loop. `flush()`'s `setImmediate` chain therefore cannot bound it, and
+ * neither can a real timer of any fixed length — this file previously used a
+ * `flush()` + fixed 20ms `setTimeout` helper for exactly this reason, and
+ * under full-suite CPU contention that ALSO dropped a frame (1 failure in 12
+ * repeated `--selectProjects Backend` runs, on a test already using it).
+ * Both the ENOENT fast path and the file-present path go through the same
+ * threadpool round-trip. Polling every 10ms up to `timeoutMs` (default
+ * 3000ms, comfortably inside jest's default 5000ms per-test timeout) returns
+ * as soon as the frame actually arrives and bakes in no upper-bound
+ * assumption beyond the test's own timeout budget. Used only for
+ * `getAnticheatInfo`'s call sites -- the file's other `flush()` call sites
+ * drive channels that resolve via microtasks or synchronous fs calls and are
+ * not subject to this race. See debug session `anticheat-response-frame-drop`.
  */
-async function flushWithIo(): Promise<void> {
-  await flush()
-  await new Promise((resolve) => setTimeout(resolve, 20))
+async function waitForResponse(
+  frames: Frame[],
+  id: string,
+  timeoutMs = 3000
+): Promise<ReturnType<typeof findResponse>> {
+  const deadline = Date.now() + timeoutMs
+  let response = findResponse(frames, id)
+  while (!response && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    response = findResponse(frames, id)
+  }
+  return response
 }
 
 function makeGameInfo(overrides: Partial<GameInfo> = {}): GameInfo {
@@ -937,9 +960,13 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'gai-1', 'getAnticheatInfo', ['epicnamespace1'])
-      await flushWithIo()
 
-      const response = findResponse(frames, 'gai-1')
+      // waitForResponse(), not a fixed-delay flush: this test used to await
+      // a flush() + fixed 20ms timer, and that still intermittently dropped
+      // this frame under full-suite CPU contention (reproduced -- debug
+      // session anticheat-response-frame-drop). Polling removes the
+      // fixed-delay assumption entirely. See waitForResponse()'s docstring.
+      const response = await waitForResponse(frames, 'gai-1')
       expect(response?.ok).toBe(true)
       expect(response?.result).toMatchObject({ status: 'Working' })
     })
@@ -962,9 +989,9 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
 
       const { input, frames } = startSidecar()
       writeInvoke(input, 'gai-2', 'getAnticheatInfo', ['440'])
-      await flushWithIo()
 
-      const response = findResponse(frames, 'gai-2')
+      // waitForResponse(), not a fixed-delay flush -- see gai-1's comment above.
+      const response = await waitForResponse(frames, 'gai-2')
       expect(response?.ok).toBe(true)
       // gameAnticheatInfo resolves via Array.prototype.find, whose "no
       // match" value is `undefined` (not `null` despite the declared
@@ -1006,9 +1033,13 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
     it('REQ-34.2-07 with no data file at all, returns null rather than throwing', async () => {
       const { input, frames } = startSidecar()
       writeInvoke(input, 'gai-4', 'getAnticheatInfo', ['anything'])
-      await flush()
-
-      const response = findResponse(frames, 'gai-4')
+      // waitForResponse(), not flush(): the missing-file path still goes
+      // through `readFile()`'s libuv threadpool round-trip before rejecting
+      // with ENOENT (see waitForResponse()'s docstring above), and no fixed
+      // real-timer wait is a safe upper bound on that under full-suite CPU
+      // contention (reproduced -- debug session
+      // anticheat-response-frame-drop).
+      const response = await waitForResponse(frames, 'gai-4')
       expect(response?.ok).toBe(true)
       expect(response?.result).toBeNull()
     })
@@ -1258,9 +1289,20 @@ describe('sidecar enrichment flows (Phase 34.2 Plan 06)', () => {
 
         const { input, frames } = startSidecar()
         writeInvoke(input, `all8-${channel}`, channel, args)
-        await flush()
-
-        const response = findResponse(frames, `all8-${channel}`)
+        // waitForResponse(), not flush(): `getAnticheatInfo` (one of the 8
+        // channels this same block dispatches) awaits a real
+        // `fs/promises.readFile()` libuv threadpool round-trip even on its
+        // ENOENT fast path (see waitForResponse()'s docstring above), and no
+        // fixed real-timer wait is a safe upper bound on that under
+        // full-suite CPU contention -- the previously-used flush() + fixed
+        // 20ms timer intermittently dropped this frame too (debug session
+        // anticheat-response-frame-drop: reproduced RED with `flush()`
+        // before this change, and a SEPARATE reproduction showed the fixed
+        // 20ms helper still failing once in 12 full-suite runs on the
+        // pre-existing `gai-1` test). Polling removes the fixed-delay
+        // assumption entirely for all 8 channels; the other 7 resolve via
+        // microtasks/sync fs so they return on the first check.
+        const response = await waitForResponse(frames, `all8-${channel}`)
         expect(response).toBeDefined()
         expect(String(response?.error ?? '')).not.toContain(
           UNPORTED_CHANNEL_MARKER

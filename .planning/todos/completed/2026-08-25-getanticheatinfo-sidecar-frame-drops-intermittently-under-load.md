@@ -3,7 +3,7 @@ created: 2026-08-25
 title: "`getAnticheatInfo`'s sidecar response frame goes missing intermittently under full-project load"
 source: /gsd-execute-phase 34.6 regression gate (wave 8, after plan 34.6-14)
 severity: unknown
-status: pending
+status: "RESOLVED 2026-09-06 via debug session `anticheat-response-frame-drop`. MEASURED, not dismissed: reproduced RED twice under real full-suite load (the exact reported all8-getAnticheatInfo row at :1264, plus sibling gai-4 at :1012). Verdict: TEST-HARNESS RACE, not a product defect. gameAnticheatInfo is the only one of the 8 ALL_8_CHANNELS handlers awaiting a real fs/promises readFile(), which resolves via libuv threadpool -- bounded by OS thread scheduling, not the JS event loop -- so flush()'s setImmediate chain could not bound it. The bootstrap.ts Block A/Block B ordering hypothesis is RULED OUT: gameAnticheatInfo always resolves (try/catch -> null), so mis-ordering could change the VALUE but never make the frame ABSENT. Fixed by polling (waitForResponse) at all 4 getAnticheatInfo call sites; a longer fixed delay was tried first and MEASURED INSUFFICIENT. GREEN 16/16 full runs + mutation-proven load-bearing."
 ---
 
 # `getAnticheatInfo`'s sidecar response frame goes missing intermittently under full-project load
