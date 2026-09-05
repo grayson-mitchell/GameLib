@@ -366,6 +366,71 @@ describe('downloadqueue.ts — debug/steam-install-slow-start Thread B: no auto-
 })
 
 /**
+ * quick task 260905-luf (Task 1, Test B — the SUSPECT): `processNotification`
+ * (this file, error branch) destructures `const { title } =
+ * libraryManagerMap[...].getGame(...).getGameInfo()` with NO `|| appName`
+ * fallback (unlike downloadmanager/utils.ts's `resolveQueueElementTitle`,
+ * which already guards with `title || appName`). When SteamGame.getGameInfo()
+ * hits its double cache miss (games.ts ~L569, `return {} as GameInfo`), this
+ * destructure yields `title === undefined`, and `notify({ title, ... })` fires
+ * with an undefined subject — the OS notification, not the
+ * `showDialogBoxModalAuto` install-failure dialog (that dialog's title is
+ * already guarded — see utils.test.ts's control test in this same task).
+ *
+ * Driven through the real `initQueue()` path (not a direct unit call) per
+ * this file's own established convention (Thread B describe block above) —
+ * `processNotification` is only reachable this way in this suite.
+ */
+describe('downloadqueue.ts — 260905-luf: processNotification title fallback on a double getGameInfo() cache miss', () => {
+  beforeEach(() => {
+    jest.resetModules()
+    jest.clearAllMocks()
+    for (const key of Object.keys(__store)) delete __store[key]
+    gameGetGameInfoMock.mockReturnValue({ folder_name: undefined })
+  })
+
+  it("SUSPECT (Test B): processNotification's error branch notifies with a non-empty title, falling back to the queue element's captured gameInfo.title, when getGameInfo() returns {} (double cache miss)", async () => {
+    __store.queue = [
+      {
+        type: 'install',
+        params: {
+          appName: '1091500',
+          runner: 'steam',
+          path: '/mock/install/path',
+          platformToInstall: 'Windows',
+          gameInfo: {
+            app_name: '1091500',
+            runner: 'steam',
+            title: 'Cyberpunk 2077'
+          } as never
+        },
+        addToQueueTime: Date.now(),
+        startTime: 0,
+        endTime: 0
+      }
+    ]
+    __store.finished = []
+
+    // The double cache miss this quick task root-causes: BOTH the in-memory
+    // library Map and the persisted steamLibraryStore missed, so
+    // SteamGame.getGameInfo() returns the `{}` sentinel.
+    gameGetGameInfoMock.mockReturnValue({})
+
+    const { installQueueElement } = await import('../utils')
+    ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'error' })
+
+    const { initQueue } = await import('../downloadqueue')
+    const { notify } = await import('../../dialog/dialog')
+
+    await initQueue(false)
+
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Cyberpunk 2077' })
+    )
+  })
+})
+
+/**
  * debug/steam-cancel-abort-thread-a: regression coverage for the "cancels a
  * native Steam download... but the game stays showing 'downloading'" symptom.
  *

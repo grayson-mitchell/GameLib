@@ -645,6 +645,26 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
     )
     expect(showDialogBoxModalAuto).not.toHaveBeenCalled()
   })
+
+  // quick task 260905-luf (Task 1, Test A — the CONTROL): falsifies evidence
+  // item 6 (the plan's own claim that this dialog is ALREADY guarded).
+  // resolveQueueElementTitle (this module, ~L55-62) is `title || appName`, so
+  // even a `{} as GameInfo` double cache miss must still render the raw
+  // appName rather than an empty subject. EXPECTED: GREEN. If this comes
+  // back RED, evidence item 6 is wrong and that is the headline finding, not
+  // this test.
+  it('260905-luf Test A (CONTROL): a Steam install error dialog renders a NON-EMPTY subject even when getGameInfo() returns {} (double cache miss)', async () => {
+    getGameInfoMock.mockReturnValue({})
+    installMock.mockResolvedValue({ status: 'error' })
+
+    await installQueueElement(makeParams({ appName: '1091500' }))
+
+    expect(showDialogBoxModalAuto).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('1091500')
+      })
+    )
+  })
 })
 
 /**
