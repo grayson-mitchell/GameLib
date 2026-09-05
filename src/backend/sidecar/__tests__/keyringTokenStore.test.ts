@@ -1405,7 +1405,7 @@ describe('SidecarKeyringTokenStore', () => {
       expect(
         infoLines.some((l) =>
           l.includes(
-            'issuing keyring_available (may prompt) trigger=store-humble-secret'
+            'issuing keyring_available (non-prompting reachability probe) trigger=store-humble-secret'
           )
         )
       ).toBe(true)
@@ -1424,7 +1424,7 @@ describe('SidecarKeyringTokenStore', () => {
       expect(
         infoLinesDuring.some((l) =>
           l.includes(
-            'issuing keyring_available (may prompt) trigger=boot-probe'
+            'issuing keyring_available (non-prompting reachability probe) trigger=boot-probe'
           )
         )
       ).toBe(true)
@@ -1559,7 +1559,7 @@ describe('SidecarKeyringTokenStore', () => {
       expect(
         infoLines.some((l) =>
           l.includes(
-            'issuing keyring_available (may prompt) trigger=unspecified'
+            'issuing keyring_available (non-prompting reachability probe) trigger=unspecified'
           )
         )
       ).toBe(true)
@@ -1655,28 +1655,39 @@ describe('SidecarKeyringTokenStore', () => {
     type LedgerEntry = {
       /** Can this round trip raise a macOS Keychain authorization prompt? */
       canPrompt: boolean
-      /** Is an `issuing <channel> (may prompt)` line written BEFORE the invoke? */
-      announcesBeforeInvoke: boolean
+      /** The exact parenthetical in the `issuing <channel> <...>` line written BEFORE the
+       * invoke, or `null` when this channel writes no pre-invoke line at all. Held as the
+       * literal rather than a boolean (quick-260905-l8g) because the two announcing channels no
+       * longer say the same thing: one may prompt and one provably cannot, and a boolean would
+       * let those two facts drift apart silently. */
+      announcement: string | null
       note: string
     }
 
     const LEDGER: Record<string, LedgerEntry> = {
       RUST_KEYRING_GET: {
         canPrompt: true,
-        announcesBeforeInvoke: true,
+        announcement: '(may prompt)',
         note: 'The original prompting read. Announced since F-34.5-G6-26.'
       },
       RUST_KEYRING_AVAILABLE: {
-        canPrompt: true,
-        announcesBeforeInvoke: true,
+        canPrompt: false,
+        announcement: '(non-prompting reachability probe)',
         note:
-          'NOT a cheap capability probe -- the Rust handler calls entry.get_password(), so it ' +
-          'prompts exactly like keyring_get. Silent on success until quick-260905-jx3; that ' +
-          'silence is what made 260817-d61 Gate A blind to it.'
+          "Was the WORST of the four: a full secret read on the caller's real slot, prompting " +
+          'exactly like keyring_get, while documented as a cheap capability probe -- and silent ' +
+          'on success, which is what made 260817-d61 Gate A blind to it. Logging it ' +
+          '(quick-260905-jx3) and teaching the gate to see it (quick-260905-kd0) were ' +
+          'mitigations. quick-260905-l8g removed the channel: the Rust arm now probes a ' +
+          'deliberately-never-written account, which returns errSecItemNotFound with no item, no ' +
+          'ACL and no dialog. Measured on hardware 2026-09-05 at 16.28/15.12/16.75ms against ' +
+          '48.87s/291.08s for the old present-account read. Still counted by any startup-absence ' +
+          'gate even though it cannot prompt -- a round trip at boot is worth seeing, and the ' +
+          'gate is what would notice this regressing to the prompting path.'
       },
       RUST_KEYRING_SET: {
         canPrompt: true,
-        announcesBeforeInvoke: false,
+        announcement: null,
         note:
           'setToken()\'s own source comment: "a write is a real Keychain round trip and can ' +
           'prompt". It logs only AFTER the invoke (ok len= / failed). Sufficient for an ABSENCE ' +
@@ -1685,7 +1696,7 @@ describe('SidecarKeyringTokenStore', () => {
       },
       RUST_KEYRING_DELETE: {
         canPrompt: true,
-        announcesBeforeInvoke: false,
+        announcement: null,
         note:
           "clearToken()'s own source comment records a 2026-08-14 session observing TWO prompts " +
           'during a single Steam sign-out. Same post-invoke-only shape as RUST_KEYRING_SET.'
@@ -1736,12 +1747,13 @@ describe('SidecarKeyringTokenStore', () => {
       const stripped = stripSourceComments(readFileSync(SRC_PATH, 'utf-8'))
 
       for (const [channel, entry] of Object.entries(LEDGER)) {
-        const announces = stripped.includes(
-          `issuing \${${channel}} (may prompt)`
-        )
-        expect({ channel, announces }).toEqual({
+        const announcement =
+          ['(may prompt)', '(non-prompting reachability probe)'].find(
+            (suffix) => stripped.includes(`issuing \${${channel}} ${suffix}`)
+          ) ?? null
+        expect({ channel, announcement }).toEqual({
           channel,
-          announces: entry.announcesBeforeInvoke
+          announcement: entry.announcement
         })
       }
     })
@@ -1749,16 +1761,24 @@ describe('SidecarKeyringTokenStore', () => {
     // The whole reason this block exists. If a channel that can prompt is ever left out of a
     // startup-absence gate, that gate reports PASS while the user is clicking through a Keychain
     // dialog -- which is exactly what happened to `keyring_available` under 260817-d61 Gate A.
-    it('every channel that can prompt is accounted for, so no startup-absence gate can be narrower than the prompt surface', () => {
+    // A startup-absence gate must cover every channel that REACHES the Keychain, which is a
+    // superset of the ones that can prompt. `keyring_available` is the reason the distinction
+    // exists: since quick-260905-l8g it cannot raise a dialog, but it still makes a round trip at
+    // boot, and it is precisely the channel whose regression back to the prompting path a gate
+    // would need to catch. Dropping it from a gate on the grounds that "it does not prompt any
+    // more" would rebuild the blind spot 260817-d61 Gate A already had once.
+    it('the prompt surface is a SUBSET of the round-trip surface, and a gate must cover the larger one', () => {
+      const invoked = invokedChannels(readFileSync(SRC_PATH, 'utf-8'))
       const prompting = Object.entries(LEDGER)
         .filter(([, e]) => e.canPrompt)
         .map(([c]) => c)
         .sort()
 
-      expect(prompting).toEqual(
-        invokedChannels(readFileSync(SRC_PATH, 'utf-8'))
-      )
-      expect(prompting).toHaveLength(4)
+      // Non-vacuous on both sides.
+      expect(invoked).toHaveLength(4)
+      expect(prompting).toHaveLength(3)
+      expect(prompting).not.toContain('RUST_KEYRING_AVAILABLE')
+      for (const channel of prompting) expect(invoked).toContain(channel)
     })
   })
 })

@@ -198,13 +198,20 @@ export class SidecarKeyringSlotStore implements TokenStore {
   private cacheEpoch = 0
 
   /**
-   * `isAvailable()` is NOT a cheap capability probe: `keyring_available`'s Rust handler calls
-   * `entry.get_password()` (`src-tauri/src/main.rs`), so a fresh probe raises a real macOS
-   * Keychain approval prompt exactly as `keyring_get` does. Until quick-260905-jx3 that prompt
-   * was completely invisible -- `fetchAvailable()` logged only in its `catch`, so a SUCCESSFUL
-   * probe left no trace in `gamelib.log` at all and could not be attributed after the fact.
-   * Every path through this method now says which of the three things happened: a real round
-   * trip (INFO, below), a cache hit, or a join onto one already in flight (both DEBUG, here).
+   * `isAvailable()` no longer prompts (quick-260905-l8g). It used to: `keyring_available`'s Rust
+   * handler called `entry.get_password()` on the caller's REAL slot, a full secret read that
+   * raised a macOS Keychain approval dialog exactly as `keyring_get` does, while being documented
+   * as a cheap capability probe. It now probes a deliberately-never-written account, which returns
+   * `errSecItemNotFound` immediately -- no item, no ACL, no dialog. Measured on hardware
+   * 2026-09-05 at 16.28ms / 15.12ms / 16.75ms against 48.87s / 291.08s for the old present-account
+   * read (`KEYRING_REACHABILITY_PROBE_ACCOUNT`'s doc comment in `main.rs` carries the full
+   * evidence).
+   *
+   * The logging below is KEPT, and is not vestigial. It was added by quick-260905-jx3 when this
+   * channel did prompt, and it still earns its place: it is what makes a startup round trip
+   * visible at all, and it is what would show this channel regressing to the prompting path.
+   * Every path through this method says which of the three things happened: a real round trip
+   * (INFO, below), a cache hit, or a join onto one already in flight (both DEBUG, here).
    *
    * `context` is an OPTIONAL trigger label -- what deliberate action, if any, caused this probe.
    * Never a secret. Mirrors `readToken(context?)`'s parameter exactly; `undefined` logs as
@@ -244,12 +251,16 @@ export class SidecarKeyringSlotStore implements TokenStore {
     const label = context ?? 'unspecified'
     // Announced BEFORE the invoke, at INFO rather than DEBUG, for the same reason `fetchToken()`
     // announces its own (F-34.5-G6-26): DEBUG output is settings-dependent, and a line that may
-    // not be written is no better than no line. This and `fetchToken()`'s issue line are the ONLY
-    // two calls in this class that can raise a macOS approval prompt, so together they are the
-    // log-side count an operator's observed prompt count is checked against -- before this line
-    // existed, that cross-check was blind to every prompt raised through this method.
+    // not be written is no better than no line.
+    //
+    // The parenthetical says `non-prompting reachability probe`, NOT `(may prompt)` like
+    // `fetchToken()`'s. That difference is load-bearing and must not be "tidied" into matching its
+    // sibling: since quick-260905-l8g this channel cannot raise a dialog, and a log line claiming
+    // otherwise would send an operator hunting for a prompt this code cannot produce. If the Rust
+    // arm is ever reverted to reading a real slot, this string is one of the things that has to
+    // change back -- see the prompting-channel ledger in this module's test file.
     logInfo(
-      `SidecarKeyringSlotStore(${this.slot}).isAvailable(): issuing ${RUST_KEYRING_AVAILABLE} (may prompt) trigger=${label}`,
+      `SidecarKeyringSlotStore(${this.slot}).isAvailable(): issuing ${RUST_KEYRING_AVAILABLE} (non-prompting reachability probe) trigger=${label}`,
       LogPrefix.Steam
     )
     try {

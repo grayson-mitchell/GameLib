@@ -267,7 +267,7 @@ describe('SidecarHumbleSecretStore', () => {
     expect(
       infoLines.some((l) =>
         l.includes(
-          'issuing keyring_available (may prompt) trigger=humble-secret-store-availability'
+          'issuing keyring_available (non-prompting reachability probe) trigger=humble-secret-store-availability'
         )
       )
     ).toBe(true)
@@ -283,7 +283,7 @@ describe('SidecarHumbleSecretStore', () => {
     expect(
       infoLines.some((l) =>
         l.includes(
-          'issuing keyring_available (may prompt) trigger=store-humble-secret'
+          'issuing keyring_available (non-prompting reachability probe) trigger=store-humble-secret'
         )
       )
     ).toBe(true)

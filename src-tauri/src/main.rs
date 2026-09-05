@@ -915,6 +915,34 @@ fn timeout_for(channel: &str) -> Option<Duration> {
 const KEYRING_SERVICE: &str = "com.gamelib.launcher";
 const KEYRING_ACCOUNT: &str = "steam-refresh-token";
 
+/// The account `keyring_available` probes to ask "does the Keychain backend answer" WITHOUT
+/// raising an authorization dialog (quick-260905-l8g).
+///
+/// **Why an absent account is the whole mechanism.** A lookup for an item that does not exist
+/// returns `errSecItemNotFound` (-25300 -> `keyring::Error::NoEntry`) immediately: there is no
+/// item, therefore no ACL, therefore no authorization step and no prompt. A lookup for an item
+/// that DOES exist is what triggers the negotiation. This is measured, not inferred -- see
+/// `keyring_read_timing_hypothesis_absent_vs_present_entry` below, run twice on real hardware
+/// 2026-07-31: the absent-account read returned `NoEntry` in 40.04ms and 102.23ms, while the
+/// present-account read against the real `steam-refresh-token` entry took 48.87s and 291.08s and
+/// ended both times in a Keychain AUTHORIZATION error.
+///
+/// **Why not a metadata-only API.** keyring 3.6.3's `get_attributes()` has no macOS override;
+/// `credential.rs`'s default calls `get_secret()` "for effect" and so prompts identically, and
+/// `macos.rs` routes `get_password`/`get_secret`/`get_credential` all through
+/// `find_generic_password` (`SecKeychainFindGenericPassword`), which returns the secret data and
+/// therefore performs the ACL check. No non-prompting metadata call is reachable through this
+/// crate.
+///
+/// **This name MUST stay absent.** It is deliberately outside `keyring_account()`'s allowlist, so
+/// no sidecar frame can select it and no slot maps to it, and nothing in this file may ever pass
+/// it to `set_password`. Both properties are pinned by tests below -- if an item ever appears at
+/// this account the probe silently starts hitting the ACL path again, which is precisely the
+/// defect this constant exists to remove. Stable rather than randomly suffixed on purpose:
+/// deterministic behaviour and a reproducible live gate are worth more than per-call
+/// unguessability, and absence is guarded by those tests rather than by randomness.
+const KEYRING_REACHABILITY_PROBE_ACCOUNT: &str = "reachability-probe-never-written";
+
 /// Compile-time keyring slot allowlist (34.4.1 gap cycle, D-GAP-01 -- binding). A caller supplies
 /// a slot NAME; this function is the ONLY place a slot name is mapped to a real Keychain account
 /// string, and it is the ONLY thing standing between a sidecar frame and `Entry::new`. T-28-03
@@ -5366,12 +5394,42 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 }
             }
         }
+        // NON-PROMPTING since quick-260905-l8g. This arm used to call `entry.get_password()` on
+        // the caller's REAL slot, which is a full secret read: it raised a macOS authorization
+        // dialog exactly like `keyring_get`, while being documented as a cheap capability probe.
+        // Logging that prompt (quick-260905-jx3) and teaching the startup gate to see it
+        // (quick-260905-kd0) were mitigations; this removes the channel.
+        //
+        // The slot argument is still parsed and still validated, so `keyring:unknown-slot` remains
+        // the contract for an unrecognised slot -- but it deliberately no longer selects the item
+        // looked up. The question this arm answers is slot-INDEPENDENT, which is what its own
+        // documentation always claimed ("Backend works, whether or not a token is currently
+        // stored") and what `SidecarHumbleSecretStore.isAvailable()` already relies on ("a
+        // Keychain that is reachable for one slot is reachable for the other").
+        //
+        // Accepted semantic narrowing, stated rather than buried: a user who DENIES the dialog for
+        // a real item used to drive this to `false`. It now stays `true`, because denying access
+        // to one item does not make the backend unavailable. The one affected caller is
+        // `humble/user.ts`'s `encryptionDegraded` flag; a failed write is reported by
+        // `setSecret()`'s own error handling, not by this probe.
         "keyring_available" => {
-            let account = keyring_account(keyring_slot_arg(args, 0))?;
-            match Entry::new(KEYRING_SERVICE, account) {
+            // Validated for its rejection contract, intentionally unused for the lookup.
+            let _validated_slot = keyring_account(keyring_slot_arg(args, 0))?;
+            match Entry::new(KEYRING_SERVICE, KEYRING_REACHABILITY_PROBE_ACCOUNT) {
                 Ok(entry) => match entry.get_password() {
-                    // Backend works, whether or not a token is currently stored.
-                    Ok(_) | Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
+                    // THE expected healthy answer. The backend answered, and answered that this
+                    // deliberately-never-written account holds nothing -- which is exactly the
+                    // fast, ACL-free path this probe is built on.
+                    Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
+                    // Reachable, but something wrote to a reserved account. The backend is
+                    // demonstrably up so the honest answer is still `true`, but this must be loud:
+                    // an item here means the probe has re-acquired an ACL and may prompt again.
+                    Ok(_) => {
+                        eprintln!(
+                            "[shell] keyring {channel}: WARNING -- a value exists at the reserved probe account; the reachability probe may raise an authorization prompt again (see KEYRING_REACHABILITY_PROBE_ACCOUNT)"
+                        );
+                        Ok(Value::Bool(true))
+                    }
                     // A *successful* report of unavailability (D-06's honest-unavailable signal),
                     // not an error — the caller asked "is it available", and the honest answer
                     // here is "no".
@@ -11555,6 +11613,127 @@ mod tests {
             margin = ROUND_TRIP_MARGIN
         );
     }
+
+    // ---- keyring_available's non-prompting reachability probe (quick-260905-l8g) ----
+    //
+    // The arm used to call `entry.get_password()` on the CALLER'S REAL SLOT, which is a full
+    // secret read: it raised a macOS authorization dialog exactly like `keyring_get` while being
+    // documented as a cheap capability probe. It now probes a deliberately-never-written account
+    // instead, which returns `errSecItemNotFound` immediately -- no item, no ACL, no dialog.
+    //
+    // The entire mechanism depends on ONE property: that account must stay absent. If anything
+    // ever writes to it, the probe silently re-acquires an ACL and starts prompting again, and
+    // nothing else in the system would notice. These three tests are what hold that property.
+    //
+    // Every name here starts `keyring_` deliberately. This file is routinely exercised with
+    // `cargo test keyring`, which is a SUBSTRING FILTER: the first drafts of the two tests below
+    // were named `probe_account_...` and `no_allowlisted_slot_...` and were silently excluded by
+    // it -- they reported neither pass nor fail, and a mutation that should have turned them red
+    // was caught only by an unrelated pre-existing test. A guard that the project's habitual
+    // command cannot select is not a guard.
+
+    #[test]
+    fn keyring_probe_account_is_rejected_by_the_slot_allowlist_so_no_frame_can_select_it() {
+        assert!(keyring_account(KEYRING_REACHABILITY_PROBE_ACCOUNT).is_err());
+    }
+
+    #[test]
+    fn keyring_no_allowlisted_slot_resolves_to_the_probe_account() {
+        // Every slot the allowlist accepts, checked exhaustively rather than sampled -- a probe
+        // account that collided with a real slot would read a real secret and prompt.
+        for slot in [
+            "steam-refresh-token",
+            "humble-session",
+            "humble-csrf",
+            "steamgrid-api-key",
+        ] {
+            let account = keyring_account(slot).expect("allowlisted slot must resolve");
+            assert_ne!(
+                account, KEYRING_REACHABILITY_PROBE_ACCOUNT,
+                "slot {slot} resolves to the reachability probe account, which must stay absent"
+            );
+        }
+    }
+
+    #[test]
+    fn the_keyring_available_arm_only_ever_READS_the_probe_account() {
+        // Reads this file's own source, mirroring
+        // `open_external_command_body_calls_the_scheme_check_before_opening` above. Bounded to
+        // the arm's own body: without the bound, a match anywhere later in the file (including
+        // this very test) would produce a pass or a failure for the wrong reason.
+        let source = include_str!("main.rs");
+        let arm_start = source
+            .find("\"keyring_available\" => {")
+            .expect("keyring_available arm not found in main.rs");
+        let after = &source[arm_start..];
+        let arm_end = after
+            .find("// Native folder picker")
+            .expect("the marker that bounds the keyring_available arm has moved");
+        let arm = &after[..arm_end];
+
+        // It probes the reserved account, not the caller's slot.
+        assert!(
+            arm.contains("Entry::new(KEYRING_SERVICE, KEYRING_REACHABILITY_PROBE_ACCOUNT)"),
+            "keyring_available must probe the reserved account, never the caller's slot"
+        );
+        // And it only ever reads. A write or delete here would give the probe account an item and
+        // re-arm the ACL path this whole design exists to avoid.
+        for forbidden in ["set_password", "set_secret", "delete_credential"] {
+            assert!(
+                !arm.contains(forbidden),
+                "keyring_available must never call {forbidden} -- the probe account must stay absent"
+            );
+        }
+    }
+
+    // ---- LIVE gate: the probe does not prompt (quick-260905-l8g) ----
+    //
+    // A unit test cannot watch a screen, but it does not need to: **a Keychain authorization
+    // dialog BLOCKS until it is answered.** That is the entire reason `KEYRING_READ_TIMEOUT` is
+    // 45 seconds. So a probe that returns in milliseconds provably did not raise one, and the
+    // measurement below is a machine-checkable proxy for "no dialog appeared".
+    //
+    // The bound is deliberately generous relative to the expected figure. The prior harness
+    // (`keyring_read_timing_hypothesis_absent_vs_present_entry`, directly below) measured absent-
+    // account reads at 40.04ms and 102.23ms and present-account reads at 48.87s and 291.08s on
+    // this same machine -- three orders of magnitude apart. Anything inside this bound is
+    // unambiguously the ACL-free path.
+    //
+    // #[ignore]d for the same reason as the harness below: it needs a real Keychain and must never
+    // become a CI-time dependency. Note that CI runs NO cargo step at all, so this is hand-run
+    // only. Run with:
+    //   cd src-tauri && cargo test -- --ignored --nocapture keyring_reachability_probe
+    //
+    // Last recorded runs (2026-09-05, this machine, three separate invocations):
+    //   16.28ms / 15.12ms / 16.75ms, outcome=Err(NoEntry) every time.
+    // Against the same machine's present-account figures from the harness below (48.87s, 291.08s)
+    // that is three to four ORDERS OF MAGNITUDE, which is the gap between "returned from a cache
+    // lookup" and "negotiated an authorization the user had to answer".
+    #[test]
+    #[ignore]
+    fn keyring_reachability_probe_returns_without_raising_an_authorization_prompt() {
+        const NO_DIALOG_COULD_BE_THIS_FAST: Duration = Duration::from_secs(2);
+
+        let started = std::time::Instant::now();
+        let entry = Entry::new(KEYRING_SERVICE, KEYRING_REACHABILITY_PROBE_ACCOUNT)
+            .expect("Entry::new must not fail for a well-formed service/account pair");
+        let outcome = entry.get_password();
+        let elapsed = started.elapsed();
+
+        println!("[live] reachability probe elapsed={elapsed:?} outcome={outcome:?}");
+
+        // The healthy answer. `Ok(_)` here would mean something wrote to the reserved account,
+        // which is the one condition that silently re-arms the prompt.
+        assert!(
+            matches!(outcome, Err(keyring::Error::NoEntry)),
+            "the reachability probe account must be ABSENT -- got {outcome:?}"
+        );
+        assert!(
+            elapsed < NO_DIALOG_COULD_BE_THIS_FAST,
+            "probe took {elapsed:?}, which is long enough that an authorization dialog cannot be ruled out"
+        );
+    }
+
 
     // ---- F-9 root-cause timing harness (34.4.1 gap cycle 2 plan 26, Task 1) ----
     //
