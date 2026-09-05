@@ -4957,9 +4957,13 @@ the `is_none()` conjunction.
 - `/store/epic` is scoped out and Cloudflare-challenged in the embed (spike 024: PARTIAL, 2 of 3
   runs challenged — run 1 alone produced a VALIDATED verdict that runs 2–3 overturned).
   → `todos/pending/2026-09-05-store-epic-blocked-by-cloudflare-turnstile-in-the-embed.md`
-- The six minted `gamelib.json` keys are English-only; de/fr are 0/6 of 49 catalogs (machine-fill
-  401'd on a placeholder `ANTHROPIC_API_KEY`). English fallback works.
-  → `todos/pending/2026-09-05-phase-40s-six-minted-gamelib-keys-are-english-only-de-fr-0-of-6.md`
+- ~~The six minted `gamelib.json` keys are English-only.~~ **CLOSED 2026-09-05** by `260905-c40`:
+  de and fr are both 218 keys / 0 missing, 6/6 on the Phase 40 keys. The run filled **11** keys per
+  locale, not 6 — five older gaps (`about.*` ×4, `donate.navLabel`) had accumulated uncensused. One
+  string (`fr/webview.unavailable.epic.body`) was omitted by the model's batch and was hand-authored
+  rather than script-filled; the provenance caveat is recorded on the commit and the todo. The other
+  46 locales remain at 0/6 under their own standing todos.
+  → `todos/completed/2026-09-05-phase-40s-six-minted-gamelib-keys-are-english-only-de-fr-0-of-6.md`
 - GAP-D's fix shipped with automated coverage green but its live `/store/gog` confirmation unrun.
   → `todos/pending/2026-09-05-confirm-the-gap-d-nav-drain-on-store-gog-on-real-hardware.md`
 - D-32 adtraction ad-block detection has no derivable signal under Tauri (wry 0.55.1 implements no
