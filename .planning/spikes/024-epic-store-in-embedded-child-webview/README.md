@@ -2,99 +2,82 @@
 spike: 024
 name: epic-store-in-embedded-child-webview
 type: standard
-validates: "Given a Tauri-managed child webview (`Window::add_child`, spike 016's harness) pointed at Epic's storefront, when the page loads with the injected `window.isTauri`/`__TAURI__`/`__TAURI_INTERNALS__`/`window.ipc` globals PRESENT, then the store renders normally — Talon's block is LOGIN-scoped, not store-scoped"
-verdict: VALIDATED
+validates: "Given a Tauri-managed child webview (`Window::add_child`, spike 016's harness) pointed at Epic's storefront, when the page loads with the injected Tauri globals PRESENT, then observe whether Talon/Cloudflare blocks STORE browsing the way it blocks the LOGIN endpoint"
+verdict: PARTIAL — the store is NOT reliably browsable; it rendered on FIRST contact and was Cloudflare-challenged on both later runs, including from a fresh container
 run_date: 2026-09-05
+runs: 3
 related: [013, 016, 017, 018]
-tags: [tauri, webview, epic, talon, anti-bot, embed, store-browser, macos]
+tags: [tauri, webview, epic, talon, cloudflare, turnstile, anti-bot, embed, store-browser, macos]
 ---
 
 # Spike 024: Epic store in an embedded child webview
 
-## Verdict
+## Verdict — PARTIAL, and read the three runs before quoting this
 
-**VALIDATED — Epic's storefront browses fine inside a Tauri-managed child webview, with the full
-Tauri fingerprint present.** The confirmed 2026-08-03 Talon 403 is **login-endpoint-scoped**
-(`/id/api/email/exists`), not a blanket block on the domain.
+**Epic's store rendered fully on first contact and was blocked by a Cloudflare Turnstile challenge
+on both subsequent runs.** One run in three is not "browsable".
 
-This means `/store/epic` is a **small follow-up**, not a new phase. The feared fallback — a raw
-zero-injection `WKWebView` subview, with its four known plumbing gaps (no `WKUIDelegate`, dead
-Cmd+V, no inspector, every `get_webview_window` lookup broken) — is **not needed for store
-browsing**.
+| Run | Container | Cloudflare challenge navs | Epic result |
+|---|---|---|---|
+| **1** (12:51) | fresh (`spike024`) | **0** | **Store rendered.** Real title, `bodyLen=89181`, live sale copy, header painted |
+| **2** (13:06) | reused | **2** | `Just a moment...`, `bodyLen=18450`, **empty** text |
+| **3** (13:1x) | **fresh** (`spike024c`) | **2** | `Just a moment...`, `bodyLen=18450`, **empty** text |
 
-## The measurement
+The **Steam positive control rendered in all three runs** (`bodyLen` ~295 k, real text), so no run
+can be dismissed as a broken harness or a dead network.
 
-Two arms through the **same embed, same window, same session**, ~40 s apart.
+⚠️ **An earlier version of this file said VALIDATED on the strength of run 1 alone. That was
+wrong** — it generalised from a single sample of a service whose posture is known to vary. Runs 2
+and 3 were what caught it.
 
-| | `href` after settle | `document.title` | `bodyLen` | Injected globals present |
-|---|---|---|---|---|
-| **epic** (subject) | `https://store.epicgames.com/?lang=en-US` | `Epic Games Store \| Download & Play PC Games, Mods, DLC & More – Epic Games` | **89 181** | `isTauri`, `__TAURI__`, `__TAURI_INTERNALS__`, `ipc`, `__TAURI_IIFE__` |
-| **steam** (positive control) | `https://store.steampowered.com/app/440/Team_Fortress_2/` | `Team Fortress 2 on Steam` | 295 547 | identical set |
+## What IS established
 
-`textHead` for the Epic arm is live merchandising copy, not an error page:
+1. **The block is not the login fingerprint.** The injected globals — `isTauri`, `__TAURI__`,
+   `__TAURI_INTERNALS__`, `ipc`, `__TAURI_IIFE__` — were read **from inside the loaded Epic page**
+   and were present in **all three runs**, including the run that rendered fine. So the 2026-08-03
+   Talon 403 mechanism (see [[tauri-pristine-wkwebview-defeats-fingerprinting]]) does **not**
+   explain what happens on the store: the same fingerprint both passed and failed.
+2. **The store CAN render in a Tauri-managed child webview.** Run 1 is a real, screenshotted
+   render (`shot-epic-store.png`): Epic's header, nav, Sign in, Download, `Discover ⌄`. It is not
+   a capability question.
+3. **The gate is Cloudflare Turnstile**, not a bare 403. `shot-epic-CHALLENGED-run2.png` shows
+   *"Please complete a security check to continue"*, and the nav log records
+   `challenges.cloudflare.com/cdn-cgi/challenge-platform/…/turnstile/…`.
+4. **`www.epicgames.com/store/en-US/` and `store.epicgames.com` converge.** Epic 302s the
+   configured start URL onto the other host — observed in the nav sequence of every run. The
+   host distinction that prompted run 2 is therefore **not** a variable.
 
-> `Discover Discover End of Summer Sale Save up to 75% on your favorites during the End of Summer
-> Sale. Save Now Deals end September 17, 11am ET. New Featured Carousel Fortnite OG …`
+## What is NOT established
 
-Navigation sequence (from `run.log`): `navigate → on_page_load started → on_page_load finished
-url=https://store.epicgames.com/?lang=en-US`. **No redirect to a challenge page**, and the
-canonical anti-bot string `enable javascript and cookies to continue` appears nowhere.
+- **Whether a human can click through the challenge.** Turnstile in normal mode is often an
+  interactive checkbox. **These runs were fully automated and never clicked anything.** So
+  "challenged" here does **not** mean "a user cannot browse the Epic store in-app" — it means the
+  unattended probe never got past it. This is the single most important open question and it is
+  cheap to answer: launch the harness interactively and click the widget.
+- **Why run 1 passed.** Two candidates were considered; one is now dead:
+  - ~~Container/cookie state~~ — **falsified.** Run 3 used a brand-new container and was still
+    challenged.
+  - **IP/behaviour reputation accrued over the session** — surviving, untested. Run 1 was this
+    IP's first contact; by runs 2–3 it had a short history of visits that each loaded the store
+    and then abruptly navigated away to `localhost` (the probe's exfil).
+- Whether the challenge would have cleared given longer. Both challenged runs were still on the
+  interstitial ~21 s after navigate. Not forever, just longer than the probe waited.
+- Product pages, search, cart, and **anything behind sign-in** (still the known-blocked surface,
+  deliberately untouched per D-07).
+- Full-viewport layout: the embed had shrunk to ~`986×117` logical by capture time.
 
-`shot-epic-store.png` is the visual half: the real Epic Games Store header — logo, STORE /
-Support / Distribute nav, locale globe, **Sign in**, **Download**, `Discover ⌄` — composited inside
-the harness window. A populated DOM alone would not have proved it painted.
+## Method notes worth keeping
 
-## Why the premise had to be measured, not assumed
-
-The whole question presupposes the child webview *carries* the fingerprint. It does — the probe
-read the globals **from inside the loaded Epic page** and found all five. Had they been absent,
-this run would have proved nothing about Talon (it would only have shown that a clean webview
-passes, which spike 013's pristine `WKWebView` already established for login).
-
-So the two facts sit together and the conclusion follows:
-
-1. The fingerprint Talon 403s the **login** endpoint over is present in this webview.
-2. The **store** renders anyway.
-
-⇒ The block is scoped to the login endpoint.
-
-## Controls
-
-- **Positive control (Steam)** ran through the *same* embed minutes later and rendered — so a
-  passing Epic arm cannot be explained by a broken harness or a dead network.
-- **Fresh container.** The app was renamed (`com.gamelib.spike024`, `spike-024-epic-store-embed`)
-  so it got its own WKWebsiteDataStore. No Epic cookie or prior session was inherited; this is the
-  first-visit case.
-- **UA is representative, checked not assumed.** Harness sends
-  `…Chrome/131.0.0.0 Safari/537.36`; production's `STORE_EMBED_USER_AGENT`
-  (`src-tauri/src/main.rs:4666`) is the same macOS Chrome-token shape at `Chrome/142.0.0.0`. Same
-  shape, different version.
-
-## Method note — the exfil channel is a navigation, deliberately
-
-The probe reads page state and ships it by **top-level navigation** to the harness's existing
-`/report` endpoint, not `fetch`. An https store page cannot issue an `http://localhost` subresource
-request — WebKit blocks mixed content — and a silently blocked `fetch` would have looked exactly
-like a blocked page. Same navigation-exfil channel `report_response` already served for 016–018.
-
-The probe `eval`s **after** the page settles, so it cannot influence what Talon fingerprinted at
-load. It is measurement, not an `initialization_script` (the latter is the technique that *caused*
-the original 403 suspicion).
-
-## What this does NOT prove
-
-- **Store landing page only.** Product pages, search, cart, checkout and anything behind sign-in
-  are untested. Bounded probe scope per D-07 — this spike answers the store-page question and
-  nothing broader.
-- **Sign-in is still the known-blocked surface** and was deliberately not touched. Nothing here
-  reopens it; the pristine `WKWebView` remains the login answer.
-- **Not a full-size layout proof.** The harness's live bounds sync had shrunk the embed to
-  `986×117` logical by screenshot time (its log strip grew), against `760×560` requested. The page
-  loaded, executed and painted — but scroll feel, retina and drag-resize at a real viewport remain
-  what spike 016 already listed as unverified.
-- **n=1**, one machine, one IP, one account-less session, on 2026-09-05. Epic's posture is a
-  service-side variable that has changed before: it throttled this account on 2026-08-04 after
-  repeated logins, and that produced symptoms unrelated to any code change.
+- **The premise was measured, not assumed.** Reading the injected globals from inside the live page
+  is what makes run 1 interpretable at all — a pass with an *absent* fingerprint would have proved
+  nothing about Talon.
+- **Exfiltrate by top-level navigation, never `fetch`.** An https store page cannot issue an
+  `http://localhost` subresource request; WebKit blocks mixed content and a silently blocked
+  `fetch` looks exactly like a blocked page.
+- **`eval` after settle, never an `initialization_script`** — the latter is the technique that
+  caused the original 403 suspicion.
+- **A single run of a third-party anti-bot surface is not a result.** This spike's own history is
+  the argument: run 1 alone produced a confident, wrong verdict.
 
 ## How to reproduce
 
@@ -103,16 +86,15 @@ cd .planning/spikes/024-epic-store-in-embedded-child-webview/app
 SPIKE_AUTORUN=1 SPIKE_AUTORUN_EXIT=1 CARGO_TARGET_DIR=../../../../src-tauri/target cargo run
 ```
 
-Screenshots are window-targeted and taken externally: read `windowNumber` from `run.log`, then
+Drop `SPIKE_AUTORUN` for the interactive panel — that is the mode needed to answer the open
+question above, since it lets a human click the Turnstile widget.
+
+Screenshots are window-targeted: read `windowNumber` from the run log, then
 `screencapture -l<id> -x shot.png` during the 6 s `SCREENSHOT WINDOW NOW` pause each arm logs.
+Change `identifier` in `tauri.conf.json` to force a fresh WKWebsiteDataStore.
 
-Warm build after the harness copy: **4.3 s**.
+## Consequence for `/store/epic`
 
-## Follow-up this unblocks
-
-`/store/epic` is currently gated off on every platform (`storeEmbedOrigins.ts`'s
-`embeddable: false`, plus the `WebviewUnavailablePanel` `reason: 'epic'` arm added by plan 40-10).
-Flipping it is a small change — but it is **not** in Phase 40's scope by D-05/D-06, and this spike
-was explicitly filed as blocking nothing. It should be scheduled deliberately, with a live check
-that Epic's own `Sign in` button inside the embed degrades acceptably (it leads straight to the
-one surface known to be blocked).
+**Keep it scoped out for now.** D-05's decision stands, and this spike does not overturn it. The
+follow-up is no longer "flip `embeddable: false`" — it is "find out whether a user can clear the
+Turnstile challenge in-app, and decide what the embed shows when they cannot." Filed as a todo.

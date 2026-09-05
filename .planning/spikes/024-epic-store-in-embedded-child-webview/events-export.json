@@ -1,5 +1,5 @@
 {
-  "eventCount": 102,
+  "eventCount": 132,
   "events": [
     {
       "category": "control-server",
@@ -8,7 +8,7 @@
       },
       "message": "listening",
       "ms": 0,
-      "t": "2026-09-05T00:51:36.973Z"
+      "t": "2026-09-05T01:09:27.919Z"
     },
     {
       "category": "app",
@@ -18,8 +18,8 @@
         "unstableFeature": true
       },
       "message": "started",
-      "ms": 456,
-      "t": "2026-09-05T00:51:37.429Z"
+      "ms": 360,
+      "t": "2026-09-05T01:09:28.279Z"
     },
     {
       "category": "env",
@@ -31,15 +31,15 @@
         "wry": "0.55.1"
       },
       "message": "environment",
-      "ms": 998,
-      "t": "2026-09-05T00:51:37.970Z"
+      "ms": 608,
+      "t": "2026-09-05T01:09:28.527Z"
     },
     {
       "category": "autorun",
       "data": {},
       "message": "=== PHASE 0: baseline ===",
-      "ms": 1967,
-      "t": "2026-09-05T00:51:38.940Z"
+      "ms": 1865,
+      "t": "2026-09-05T01:09:29.784Z"
     },
     {
       "category": "embed",
@@ -55,8 +55,8 @@
         ]
       },
       "message": "list_webviews",
-      "ms": 1969,
-      "t": "2026-09-05T00:51:38.942Z"
+      "ms": 1866,
+      "t": "2026-09-05T01:09:29.785Z"
     },
     {
       "category": "autorun",
@@ -72,15 +72,15 @@
         ]
       },
       "message": "0a list_webviews before anything (expect exactly ['main'])",
-      "ms": 1969,
-      "t": "2026-09-05T00:51:38.942Z"
+      "ms": 1867,
+      "t": "2026-09-05T01:09:29.786Z"
     },
     {
       "category": "autorun",
       "data": {},
       "message": "=== PHASE 1 (016 KILL-SHOT): add_child on the config-created main window ===",
-      "ms": 1970,
-      "t": "2026-09-05T00:51:38.943Z"
+      "ms": 1867,
+      "t": "2026-09-05T01:09:29.786Z"
     },
     {
       "category": "embed",
@@ -97,40 +97,40 @@
         "url": "http://localhost:17913/set"
       },
       "message": "add_child",
-      "ms": 1970,
-      "t": "2026-09-05T00:51:38.943Z"
+      "ms": 1867,
+      "t": "2026-09-05T01:09:29.786Z"
     },
     {
       "category": "embed",
       "data": {
         "boundsReadback": "Rect { position: Logical(LogicalPosition { x: 290.0, y: 96.0 }), size: Logical(LogicalSize { width: 760.0, height: 560.0 }) }",
-        "elapsedMs": 37,
+        "elapsedMs": 33,
         "label": "store-embed",
-        "windowNumber": 40683,
+        "windowNumber": 40752,
         "windowWebviews": [
           "store-embed",
           "main"
         ]
       },
       "message": "add_child OK",
-      "ms": 2009,
-      "t": "2026-09-05T00:51:38.982Z"
+      "ms": 1901,
+      "t": "2026-09-05T01:09:29.820Z"
     },
     {
       "category": "autorun",
       "data": {
         "boundsReadback": "Rect { position: Logical(LogicalPosition { x: 290.0, y: 96.0 }), size: Logical(LogicalSize { width: 760.0, height: 560.0 }) }",
-        "elapsedMs": 37,
+        "elapsedMs": 33,
         "label": "store-embed",
-        "windowNumber": 40683,
+        "windowNumber": 40752,
         "windowWebviews": [
           "store-embed",
           "main"
         ]
       },
       "message": "1a create_embed → control origin /set (UA + cookie oracles server-side)",
-      "ms": 2009,
-      "t": "2026-09-05T00:51:38.982Z"
+      "ms": 1901,
+      "t": "2026-09-05T01:09:29.820Z"
     },
     {
       "category": "navigation",
@@ -138,8 +138,8 @@
         "url": "http://localhost:17913/set"
       },
       "message": "embed on_navigation",
-      "ms": 2036,
-      "t": "2026-09-05T00:51:39.008Z"
+      "ms": 1925,
+      "t": "2026-09-05T01:09:29.844Z"
     },
     {
       "category": "control-server",
@@ -150,8 +150,8 @@
         "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
       },
       "message": "request",
-      "ms": 2042,
-      "t": "2026-09-05T00:51:39.014Z"
+      "ms": 1928,
+      "t": "2026-09-05T01:09:29.847Z"
     },
     {
       "category": "navigation",
@@ -160,8 +160,8 @@
         "url": "http://localhost:17913/set"
       },
       "message": "embed on_page_load",
-      "ms": 2047,
-      "t": "2026-09-05T00:51:39.020Z"
+      "ms": 1934,
+      "t": "2026-09-05T01:09:29.853Z"
     },
     {
       "category": "navigation",
@@ -170,8 +170,8 @@
         "url": "http://localhost:17913/set"
       },
       "message": "embed on_page_load",
-      "ms": 2056,
-      "t": "2026-09-05T00:51:39.029Z"
+      "ms": 1939,
+      "t": "2026-09-05T01:09:29.858Z"
     },
     {
       "category": "embed",
@@ -193,8 +193,8 @@
         ]
       },
       "message": "list_webviews",
-      "ms": 4013,
-      "t": "2026-09-05T00:51:40.985Z"
+      "ms": 3907,
+      "t": "2026-09-05T01:09:31.826Z"
     },
     {
       "category": "autorun",
@@ -216,15 +216,15 @@
         ]
       },
       "message": "1b list_webviews (expect main + store-embed, same window)",
-      "ms": 4014,
-      "t": "2026-09-05T00:51:40.987Z"
+      "ms": 3909,
+      "t": "2026-09-05T01:09:31.828Z"
     },
     {
       "category": "autorun",
       "data": {},
       "message": "=== PHASE 2 (016): /probe — server echoes Cookie header + UA of the EMBED ===",
-      "ms": 4015,
-      "t": "2026-09-05T00:51:40.987Z"
+      "ms": 3909,
+      "t": "2026-09-05T01:09:31.828Z"
     },
     {
       "category": "embed",
@@ -233,8 +233,8 @@
         "url": "http://localhost:17913/probe"
       },
       "message": "navigate",
-      "ms": 4015,
-      "t": "2026-09-05T00:51:40.988Z"
+      "ms": 3910,
+      "t": "2026-09-05T01:09:31.829Z"
     },
     {
       "category": "autorun",
@@ -242,8 +242,8 @@
         "ok": true
       },
       "message": "2a navigate embed to /probe",
-      "ms": 4015,
-      "t": "2026-09-05T00:51:40.988Z"
+      "ms": 3910,
+      "t": "2026-09-05T01:09:31.829Z"
     },
     {
       "category": "navigation",
@@ -251,8 +251,8 @@
         "url": "http://localhost:17913/probe"
       },
       "message": "embed on_navigation",
-      "ms": 4017,
-      "t": "2026-09-05T00:51:40.989Z"
+      "ms": 3912,
+      "t": "2026-09-05T01:09:31.831Z"
     },
     {
       "category": "control-server",
@@ -267,8 +267,8 @@
         "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
       },
       "message": "request",
-      "ms": 4022,
-      "t": "2026-09-05T00:51:40.995Z"
+      "ms": 3917,
+      "t": "2026-09-05T01:09:31.836Z"
     },
     {
       "category": "navigation",
@@ -277,8 +277,8 @@
         "url": "http://localhost:17913/probe"
       },
       "message": "embed on_page_load",
-      "ms": 4025,
-      "t": "2026-09-05T00:51:40.998Z"
+      "ms": 3921,
+      "t": "2026-09-05T01:09:31.840Z"
     },
     {
       "category": "navigation",
@@ -287,38 +287,47 @@
         "url": "http://localhost:17913/probe"
       },
       "message": "embed on_page_load",
-      "ms": 4028,
-      "t": "2026-09-05T00:51:41.000Z"
+      "ms": 3923,
+      "t": "2026-09-05T01:09:31.842Z"
     },
     {
       "category": "autorun",
       "data": {
-        "arm": "epic",
-        "note": "SUBJECT: Epic store in a Tauri-managed child webview",
-        "url": "https://store.epicgames.com/en-US/"
+        "arm": "epic-configured",
+        "note": "SUBJECT (the URL that would actually ship, www.epicgames.com)",
+        "url": "https://www.epicgames.com/store/en-US/"
       },
       "message": "=== PHASE 3 (024): a REAL store page in the embed ===",
-      "ms": 5523,
-      "t": "2026-09-05T00:51:42.496Z"
+      "ms": 5416,
+      "t": "2026-09-05T01:09:33.335Z"
     },
     {
       "category": "embed",
       "data": {
         "label": "store-embed",
-        "url": "https://store.epicgames.com/en-US/"
+        "url": "https://www.epicgames.com/store/en-US/"
       },
       "message": "navigate",
-      "ms": 5523,
-      "t": "2026-09-05T00:51:42.496Z"
+      "ms": 5417,
+      "t": "2026-09-05T01:09:33.336Z"
     },
     {
       "category": "autorun",
       "data": {
         "ok": true
       },
-      "message": "3a[epic] navigate embed",
-      "ms": 5524,
-      "t": "2026-09-05T00:51:42.497Z"
+      "message": "3a[epic-configured] navigate embed",
+      "ms": 5418,
+      "t": "2026-09-05T01:09:33.337Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "https://www.epicgames.com/store/en-US/"
+      },
+      "message": "embed on_navigation",
+      "ms": 5419,
+      "t": "2026-09-05T01:09:33.338Z"
     },
     {
       "category": "navigation",
@@ -326,27 +335,18 @@
         "url": "https://store.epicgames.com/en-US/"
       },
       "message": "embed on_navigation",
-      "ms": 5525,
-      "t": "2026-09-05T00:51:42.498Z"
-    },
-    {
-      "category": "navigation",
-      "data": {
-        "url": "https://store.epicgames.com/?lang=en-US"
-      },
-      "message": "embed on_navigation",
-      "ms": 5917,
-      "t": "2026-09-05T00:51:42.890Z"
+      "ms": 5483,
+      "t": "2026-09-05T01:09:33.402Z"
     },
     {
       "category": "navigation",
       "data": {
         "event": "started",
-        "url": "https://store.epicgames.com/?lang=en-US"
+        "url": "https://store.epicgames.com/en-US/"
       },
       "message": "embed on_page_load",
-      "ms": 6563,
-      "t": "2026-09-05T00:51:43.536Z"
+      "ms": 5910,
+      "t": "2026-09-05T01:09:33.829Z"
     },
     {
       "category": "navigation",
@@ -354,64 +354,127 @@
         "url": "about:blank"
       },
       "message": "embed on_navigation",
-      "ms": 7286,
-      "t": "2026-09-05T00:51:44.259Z"
-    },
-    {
-      "category": "navigation",
-      "data": {
-        "url": "about:blank"
-      },
-      "message": "embed on_navigation",
-      "ms": 7696,
-      "t": "2026-09-05T00:51:44.669Z"
+      "ms": 5955,
+      "t": "2026-09-05T01:09:33.874Z"
     },
     {
       "category": "navigation",
       "data": {
         "event": "finished",
-        "url": "https://store.epicgames.com/?lang=en-US"
+        "url": "https://store.epicgames.com/en-US/"
       },
       "message": "embed on_page_load",
-      "ms": 8782,
-      "t": "2026-09-05T00:51:45.755Z"
+      "ms": 5962,
+      "t": "2026-09-05T01:09:33.881Z"
     },
     {
-      "category": "autorun",
+      "category": "navigation",
       "data": {
-        "url": "https://store.epicgames.com/?lang=en-US"
+        "url": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile/f/av0/rch/q7fe3/0x4AAAAAAADnPIDROrmt1Wwj/light/fbE/new/normal?lang=auto"
       },
-      "message": "3b[epic] embed url after settle",
-      "ms": 20535,
-      "t": "2026-09-05T00:51:57.507Z"
+      "message": "embed on_navigation",
+      "ms": 6101,
+      "t": "2026-09-05T01:09:34.020Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 6146,
+      "t": "2026-09-05T01:09:34.065Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 6516,
+      "t": "2026-09-05T01:09:34.435Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:srcdoc"
+      },
+      "message": "embed on_navigation",
+      "ms": 6612,
+      "t": "2026-09-05T01:09:34.531Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 6612,
+      "t": "2026-09-05T01:09:34.531Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 6633,
+      "t": "2026-09-05T01:09:34.552Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 6679,
+      "t": "2026-09-05T01:09:34.598Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 6702,
+      "t": "2026-09-05T01:09:34.621Z"
     },
     {
       "category": "autorun",
       "data": {
-        "arm": "epic",
+        "url": "https://store.epicgames.com/en-US/"
+      },
+      "message": "3b[epic-configured] embed url after settle",
+      "ms": 20422,
+      "t": "2026-09-05T01:09:48.341Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "arm": "epic-configured",
         "sleeping_secs": 6
       },
       "message": "SCREENSHOT WINDOW NOW (screencapture -l<windowNumber>)",
-      "ms": 20537,
-      "t": "2026-09-05T00:51:57.510Z"
+      "ms": 20426,
+      "t": "2026-09-05T01:09:48.345Z"
     },
     {
       "category": "autorun",
       "data": {
         "ok": true
       },
-      "message": "3c[epic] probe (eval + navigation exfil)",
-      "ms": 26539,
-      "t": "2026-09-05T00:52:03.512Z"
+      "message": "3c[epic-configured] probe (eval + navigation exfil)",
+      "ms": 26431,
+      "t": "2026-09-05T01:09:54.350Z"
     },
     {
       "category": "navigation",
       "data": {
-        "url": "http://localhost:17913/report?tag=epic&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2F%3Flang%3Den-US%22%2C%22title%22%3A%22Epic%20Games%20Store%20%7C%20Download%20%26%20Play%20PC%20Games%2C%20Mods%2C%20DLC%20%26%20More%20%E2%80%93%20Epic%20Games%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22Discover%20Discover%20End%20of%20Summer%20Sale%20Save%20up%20to%2075%25%20on%20your%20favorites%20during%20the%20End%20of%20Summer%20Sale.%20Save%20Now%20Deals%20end%20September%2017%2C%2011am%20ET.%20New%20Featured%20Carousel%20Fortnite%20OG%20OUT%20OF%20TIME%20AND%20INTO%20THE%20ACTION%20%E2%80%94%20OG%20SEASON%20X%20IS%20LIVE!%20Drop%20into%20OG%20Season%20X%20as%20a%20Reality%20Wave%20reshapes%20the%20Island%2C%20bringin%22%2C%22bodyLen%22%3A89181%7D"
+        "url": "http://localhost:17913/report?tag=epic-configured&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2Fen-US%2F%22%2C%22title%22%3A%22Just%20a%20moment...%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22%22%2C%22bodyLen%22%3A18450%7D"
       },
       "message": "embed on_navigation",
-      "ms": 26556,
-      "t": "2026-09-05T00:52:03.529Z"
+      "ms": 26435,
+      "t": "2026-09-05T01:09:54.354Z"
     },
     {
       "category": "control-server",
@@ -422,12 +485,12 @@
           "spike_httponly",
           "spike_plain"
         ],
-        "path": "/report?tag=epic&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2F%3Flang%3Den-US%22%2C%22title%22%3A%22Epic%20Games%20Store%20%7C%20Download%20%26%20Play%20PC%20Games%2C%20Mods%2C%20DLC%20%26%20More%20%E2%80%93%20Epic%20Games%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22Discover%20Discover%20End%20of%20Summer%20Sale%20Save%20up%20to%2075%25%20on%20your%20favorites%20during%20the%20End%20of%20Summer%20Sale.%20Save%20Now%20Deals%20end%20September%2017%2C%2011am%20ET.%20New%20Featured%20Carousel%20Fortnite%20OG%20OUT%20OF%20TIME%20AND%20INTO%20THE%20ACTION%20%E2%80%94%20OG%20SEASON%20X%20IS%20LIVE!%20Drop%20into%20OG%20Season%20X%20as%20a%20Reality%20Wave%20reshapes%20the%20Island%2C%20bringin%22%2C%22bodyLen%22%3A89181%7D",
+        "path": "/report?tag=epic-configured&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2Fen-US%2F%22%2C%22title%22%3A%22Just%20a%20moment...%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22%22%2C%22bodyLen%22%3A18450%7D",
         "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
       },
       "message": "request",
-      "ms": 26566,
-      "t": "2026-09-05T00:52:03.539Z"
+      "ms": 26450,
+      "t": "2026-09-05T01:09:54.369Z"
     },
     {
       "category": "js-channel",
@@ -437,48 +500,292 @@
         "navigatorUserAgent": "",
         "origin": "",
         "probe": {
-          "bodyLen": 89181,
+          "bodyLen": 18450,
           "globals": [
             "isTauri",
             "__TAURI__",
             "__TAURI_INTERNALS__",
             "ipc"
           ],
-          "href": "https://store.epicgames.com/?lang=en-US",
+          "href": "https://store.epicgames.com/en-US/",
           "plugins": [
             "__TAURI_IIFE__"
           ],
-          "textHead": "Discover Discover End of Summer Sale Save up to 75% on your favorites during the End of Summer Sale. Save Now Deals end September 17, 11am ET. New Featured Carousel Fortnite OG OUT OF TIME AND INTO THE ACTION — OG SEASON X IS LIVE! Drop into OG Season X as a Reality Wave reshapes the Island, bringin",
-          "title": "Epic Games Store | Download & Play PC Games, Mods, DLC & More – Epic Games"
+          "textHead": "",
+          "title": "Just a moment..."
         },
         "raw": "",
         "remoteIpcStatus": "unset",
-        "tag": "epic",
+        "tag": "epic-configured",
         "tauriGlobalPresent": "unset"
       },
       "message": "document.cookie exfiltrated via navigation",
-      "ms": 26567,
-      "t": "2026-09-05T00:52:03.540Z"
+      "ms": 26450,
+      "t": "2026-09-05T01:09:54.370Z"
     },
     {
       "category": "navigation",
       "data": {
         "event": "started",
-        "url": "http://localhost:17913/report?tag=epic&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2F%3Flang%3Den-US%22%2C%22title%22%3A%22Epic%20Games%20Store%20%7C%20Download%20%26%20Play%20PC%20Games%2C%20Mods%2C%20DLC%20%26%20More%20%E2%80%93%20Epic%20Games%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22Discover%20Discover%20End%20of%20Summer%20Sale%20Save%20up%20to%2075%25%20on%20your%20favorites%20during%20the%20End%20of%20Summer%20Sale.%20Save%20Now%20Deals%20end%20September%2017%2C%2011am%20ET.%20New%20Featured%20Carousel%20Fortnite%20OG%20OUT%20OF%20TIME%20AND%20INTO%20THE%20ACTION%20%E2%80%94%20OG%20SEASON%20X%20IS%20LIVE!%20Drop%20into%20OG%20Season%20X%20as%20a%20Reality%20Wave%20reshapes%20the%20Island%2C%20bringin%22%2C%22bodyLen%22%3A89181%7D"
+        "url": "http://localhost:17913/report?tag=epic-configured&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2Fen-US%2F%22%2C%22title%22%3A%22Just%20a%20moment...%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22%22%2C%22bodyLen%22%3A18450%7D"
       },
       "message": "embed on_page_load",
-      "ms": 26569,
-      "t": "2026-09-05T00:52:03.542Z"
+      "ms": 26453,
+      "t": "2026-09-05T01:09:54.372Z"
     },
     {
       "category": "navigation",
       "data": {
         "event": "finished",
-        "url": "http://localhost:17913/report?tag=epic&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2F%3Flang%3Den-US%22%2C%22title%22%3A%22Epic%20Games%20Store%20%7C%20Download%20%26%20Play%20PC%20Games%2C%20Mods%2C%20DLC%20%26%20More%20%E2%80%93%20Epic%20Games%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22Discover%20Discover%20End%20of%20Summer%20Sale%20Save%20up%20to%2075%25%20on%20your%20favorites%20during%20the%20End%20of%20Summer%20Sale.%20Save%20Now%20Deals%20end%20September%2017%2C%2011am%20ET.%20New%20Featured%20Carousel%20Fortnite%20OG%20OUT%20OF%20TIME%20AND%20INTO%20THE%20ACTION%20%E2%80%94%20OG%20SEASON%20X%20IS%20LIVE!%20Drop%20into%20OG%20Season%20X%20as%20a%20Reality%20Wave%20reshapes%20the%20Island%2C%20bringin%22%2C%22bodyLen%22%3A89181%7D"
+        "url": "http://localhost:17913/report?tag=epic-configured&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2Fen-US%2F%22%2C%22title%22%3A%22Just%20a%20moment...%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22%22%2C%22bodyLen%22%3A18450%7D"
       },
       "message": "embed on_page_load",
-      "ms": 26570,
-      "t": "2026-09-05T00:52:03.543Z"
+      "ms": 26455,
+      "t": "2026-09-05T01:09:54.374Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "arm": "epic-alt",
+        "note": "SUBJECT (store.epicgames.com -- the host run 1 measured)",
+        "url": "https://store.epicgames.com/en-US/"
+      },
+      "message": "=== PHASE 3 (024): a REAL store page in the embed ===",
+      "ms": 31437,
+      "t": "2026-09-05T01:09:59.356Z"
+    },
+    {
+      "category": "embed",
+      "data": {
+        "label": "store-embed",
+        "url": "https://store.epicgames.com/en-US/"
+      },
+      "message": "navigate",
+      "ms": 31438,
+      "t": "2026-09-05T01:09:59.357Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "ok": true
+      },
+      "message": "3a[epic-alt] navigate embed",
+      "ms": 31439,
+      "t": "2026-09-05T01:09:59.358Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "https://store.epicgames.com/en-US/"
+      },
+      "message": "embed on_navigation",
+      "ms": 31440,
+      "t": "2026-09-05T01:09:59.359Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "https://store.epicgames.com/en-US/"
+      },
+      "message": "embed on_page_load",
+      "ms": 31526,
+      "t": "2026-09-05T01:09:59.445Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 31567,
+      "t": "2026-09-05T01:09:59.486Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "https://store.epicgames.com/en-US/"
+      },
+      "message": "embed on_page_load",
+      "ms": 31576,
+      "t": "2026-09-05T01:09:59.495Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile/f/av0/rch/69yg8/0x4AAAAAAADnPIDROrmt1Wwj/light/fbE/new/normal?lang=auto"
+      },
+      "message": "embed on_navigation",
+      "ms": 31765,
+      "t": "2026-09-05T01:09:59.684Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 31807,
+      "t": "2026-09-05T01:09:59.726Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 32188,
+      "t": "2026-09-05T01:10:00.108Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 32225,
+      "t": "2026-09-05T01:10:00.144Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:srcdoc"
+      },
+      "message": "embed on_navigation",
+      "ms": 32260,
+      "t": "2026-09-05T01:10:00.179Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 32260,
+      "t": "2026-09-05T01:10:00.179Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 32268,
+      "t": "2026-09-05T01:10:00.187Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "about:blank"
+      },
+      "message": "embed on_navigation",
+      "ms": 32302,
+      "t": "2026-09-05T01:10:00.221Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "url": "https://store.epicgames.com/en-US/"
+      },
+      "message": "3b[epic-alt] embed url after settle",
+      "ms": 46445,
+      "t": "2026-09-05T01:10:14.364Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "arm": "epic-alt",
+        "sleeping_secs": 6
+      },
+      "message": "SCREENSHOT WINDOW NOW (screencapture -l<windowNumber>)",
+      "ms": 46445,
+      "t": "2026-09-05T01:10:14.364Z"
+    },
+    {
+      "category": "autorun",
+      "data": {
+        "ok": true
+      },
+      "message": "3c[epic-alt] probe (eval + navigation exfil)",
+      "ms": 52451,
+      "t": "2026-09-05T01:10:20.370Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "url": "http://localhost:17913/report?tag=epic-alt&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2Fen-US%2F%22%2C%22title%22%3A%22Just%20a%20moment...%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22%22%2C%22bodyLen%22%3A18472%7D"
+      },
+      "message": "embed on_navigation",
+      "ms": 52455,
+      "t": "2026-09-05T01:10:20.374Z"
+    },
+    {
+      "category": "control-server",
+      "data": {
+        "cookieHeader": "spike_domain=echo5; spike_httponly=bravo2; spike_plain=alpha1",
+        "cookieHeaderNames": [
+          "spike_domain",
+          "spike_httponly",
+          "spike_plain"
+        ],
+        "path": "/report?tag=epic-alt&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2Fen-US%2F%22%2C%22title%22%3A%22Just%20a%20moment...%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22%22%2C%22bodyLen%22%3A18472%7D",
+        "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+      },
+      "message": "request",
+      "ms": 52468,
+      "t": "2026-09-05T01:10:20.387Z"
+    },
+    {
+      "category": "js-channel",
+      "data": {
+        "documentCookieCount": 0,
+        "documentCookieNames": [],
+        "navigatorUserAgent": "",
+        "origin": "",
+        "probe": {
+          "bodyLen": 18472,
+          "globals": [
+            "isTauri",
+            "__TAURI__",
+            "__TAURI_INTERNALS__",
+            "ipc"
+          ],
+          "href": "https://store.epicgames.com/en-US/",
+          "plugins": [
+            "__TAURI_IIFE__"
+          ],
+          "textHead": "",
+          "title": "Just a moment..."
+        },
+        "raw": "",
+        "remoteIpcStatus": "unset",
+        "tag": "epic-alt",
+        "tauriGlobalPresent": "unset"
+      },
+      "message": "document.cookie exfiltrated via navigation",
+      "ms": 52469,
+      "t": "2026-09-05T01:10:20.388Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "started",
+        "url": "http://localhost:17913/report?tag=epic-alt&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2Fen-US%2F%22%2C%22title%22%3A%22Just%20a%20moment...%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22%22%2C%22bodyLen%22%3A18472%7D"
+      },
+      "message": "embed on_page_load",
+      "ms": 52472,
+      "t": "2026-09-05T01:10:20.391Z"
+    },
+    {
+      "category": "navigation",
+      "data": {
+        "event": "finished",
+        "url": "http://localhost:17913/report?tag=epic-alt&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.epicgames.com%2Fen-US%2F%22%2C%22title%22%3A%22Just%20a%20moment...%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22%22%2C%22bodyLen%22%3A18472%7D"
+      },
+      "message": "embed on_page_load",
+      "ms": 52473,
+      "t": "2026-09-05T01:10:20.392Z"
     },
     {
       "category": "autorun",
@@ -488,8 +795,8 @@
         "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
       },
       "message": "=== PHASE 3 (024): a REAL store page in the embed ===",
-      "ms": 31544,
-      "t": "2026-09-05T00:52:08.517Z"
+      "ms": 57459,
+      "t": "2026-09-05T01:10:25.378Z"
     },
     {
       "category": "embed",
@@ -498,8 +805,8 @@
         "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
       },
       "message": "navigate",
-      "ms": 31546,
-      "t": "2026-09-05T00:52:08.519Z"
+      "ms": 57460,
+      "t": "2026-09-05T01:10:25.379Z"
     },
     {
       "category": "autorun",
@@ -507,8 +814,8 @@
         "ok": true
       },
       "message": "3a[steam] navigate embed",
-      "ms": 31547,
-      "t": "2026-09-05T00:52:08.520Z"
+      "ms": 57461,
+      "t": "2026-09-05T01:10:25.380Z"
     },
     {
       "category": "navigation",
@@ -516,8 +823,8 @@
         "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
       },
       "message": "embed on_navigation",
-      "ms": 31549,
-      "t": "2026-09-05T00:52:08.522Z"
+      "ms": 57462,
+      "t": "2026-09-05T01:10:25.381Z"
     },
     {
       "category": "navigation",
@@ -526,8 +833,8 @@
         "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
       },
       "message": "embed on_page_load",
-      "ms": 32442,
-      "t": "2026-09-05T00:52:09.416Z"
+      "ms": 57933,
+      "t": "2026-09-05T01:10:25.853Z"
     },
     {
       "category": "navigation",
@@ -536,8 +843,8 @@
         "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
       },
       "message": "embed on_page_load",
-      "ms": 33362,
-      "t": "2026-09-05T00:52:10.335Z"
+      "ms": 58960,
+      "t": "2026-09-05T01:10:26.879Z"
     },
     {
       "category": "autorun",
@@ -545,8 +852,8 @@
         "url": "https://store.steampowered.com/app/440/Team_Fortress_2/"
       },
       "message": "3b[steam] embed url after settle",
-      "ms": 46551,
-      "t": "2026-09-05T00:52:23.524Z"
+      "ms": 72465,
+      "t": "2026-09-05T01:10:40.384Z"
     },
     {
       "category": "autorun",
@@ -555,8 +862,8 @@
         "sleeping_secs": 6
       },
       "message": "SCREENSHOT WINDOW NOW (screencapture -l<windowNumber>)",
-      "ms": 46554,
-      "t": "2026-09-05T00:52:23.527Z"
+      "ms": 72469,
+      "t": "2026-09-05T01:10:40.388Z"
     },
     {
       "category": "autorun",
@@ -564,17 +871,17 @@
         "ok": true
       },
       "message": "3c[steam] probe (eval + navigation exfil)",
-      "ms": 52560,
-      "t": "2026-09-05T00:52:29.533Z"
+      "ms": 78474,
+      "t": "2026-09-05T01:10:46.393Z"
     },
     {
       "category": "navigation",
       "data": {
-        "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295547%7D"
+        "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295583%7D"
       },
       "message": "embed on_navigation",
-      "ms": 52581,
-      "t": "2026-09-05T00:52:29.554Z"
+      "ms": 78484,
+      "t": "2026-09-05T01:10:46.403Z"
     },
     {
       "category": "control-server",
@@ -585,12 +892,12 @@
           "spike_httponly",
           "spike_plain"
         ],
-        "path": "/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295547%7D",
+        "path": "/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295583%7D",
         "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
       },
       "message": "request",
-      "ms": 52596,
-      "t": "2026-09-05T00:52:29.569Z"
+      "ms": 78528,
+      "t": "2026-09-05T01:10:46.448Z"
     },
     {
       "category": "js-channel",
@@ -600,7 +907,7 @@
         "navigatorUserAgent": "",
         "origin": "",
         "probe": {
-          "bodyLen": 295547,
+          "bodyLen": 295583,
           "globals": [
             "isTauri",
             "__TAURI__",
@@ -620,40 +927,40 @@
         "tauriGlobalPresent": "unset"
       },
       "message": "document.cookie exfiltrated via navigation",
-      "ms": 52597,
-      "t": "2026-09-05T00:52:29.570Z"
+      "ms": 78529,
+      "t": "2026-09-05T01:10:46.448Z"
     },
     {
       "category": "navigation",
       "data": {
         "event": "started",
-        "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295547%7D"
+        "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295583%7D"
       },
       "message": "embed on_page_load",
-      "ms": 52604,
-      "t": "2026-09-05T00:52:29.578Z"
+      "ms": 78531,
+      "t": "2026-09-05T01:10:46.451Z"
     },
     {
       "category": "navigation",
       "data": {
         "event": "finished",
-        "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295547%7D"
+        "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295583%7D"
       },
       "message": "embed on_page_load",
-      "ms": 52609,
-      "t": "2026-09-05T00:52:29.582Z"
+      "ms": 78540,
+      "t": "2026-09-05T01:10:46.459Z"
     },
     {
       "category": "autorun",
       "data": {},
       "message": "=== PHASE 4 (017): bounds round-trips, hide/show ===",
-      "ms": 57567,
-      "t": "2026-09-05T00:52:34.540Z"
+      "ms": 83485,
+      "t": "2026-09-05T01:10:51.404Z"
     },
     {
       "category": "bounds",
       "data": {
-        "elapsedMs": 0,
+        "elapsedMs": 1,
         "readbackLogical": {
           "h": 700.0,
           "w": 900.0,
@@ -675,13 +982,13 @@
         "scaleFactor": 2.0
       },
       "message": "set_bounds round-trip",
-      "ms": 57568,
-      "t": "2026-09-05T00:52:34.541Z"
+      "ms": 83487,
+      "t": "2026-09-05T01:10:51.406Z"
     },
     {
       "category": "autorun",
       "data": {
-        "elapsedMs": 0,
+        "elapsedMs": 1,
         "readbackLogical": {
           "h": 700.0,
           "w": 900.0,
@@ -703,8 +1010,8 @@
         "scaleFactor": 2.0
       },
       "message": "4a set_bounds(290,96,900,700) round-trip",
-      "ms": 57569,
-      "t": "2026-09-05T00:52:34.542Z"
+      "ms": 83488,
+      "t": "2026-09-05T01:10:51.407Z"
     },
     {
       "category": "bounds",
@@ -731,8 +1038,8 @@
         "scaleFactor": 2.0
       },
       "message": "set_bounds round-trip",
-      "ms": 57975,
-      "t": "2026-09-05T00:52:34.948Z"
+      "ms": 83896,
+      "t": "2026-09-05T01:10:51.815Z"
     },
     {
       "category": "autorun",
@@ -759,8 +1066,8 @@
         "scaleFactor": 2.0
       },
       "message": "4b set_bounds(10,400,400,300) round-trip",
-      "ms": 57976,
-      "t": "2026-09-05T00:52:34.949Z"
+      "ms": 83897,
+      "t": "2026-09-05T01:10:51.816Z"
     },
     {
       "category": "bounds",
@@ -787,8 +1094,8 @@
         "scaleFactor": 2.0
       },
       "message": "set_bounds round-trip",
-      "ms": 58379,
-      "t": "2026-09-05T00:52:35.353Z"
+      "ms": 84304,
+      "t": "2026-09-05T01:10:52.223Z"
     },
     {
       "category": "autorun",
@@ -815,8 +1122,8 @@
         "scaleFactor": 2.0
       },
       "message": "4c set_bounds(290.5,96.5,760.25,560.75) round-trip",
-      "ms": 58381,
-      "t": "2026-09-05T00:52:35.354Z"
+      "ms": 84305,
+      "t": "2026-09-05T01:10:52.224Z"
     },
     {
       "category": "embed",
@@ -826,8 +1133,8 @@
         "ok": true
       },
       "message": "hide",
-      "ms": 58784,
-      "t": "2026-09-05T00:52:35.758Z"
+      "ms": 84716,
+      "t": "2026-09-05T01:10:52.635Z"
     },
     {
       "category": "autorun",
@@ -835,8 +1142,8 @@
         "ok": true
       },
       "message": "4d hide()",
-      "ms": 58785,
-      "t": "2026-09-05T00:52:35.758Z"
+      "ms": 84717,
+      "t": "2026-09-05T01:10:52.636Z"
     },
     {
       "category": "embed",
@@ -846,8 +1153,8 @@
         "ok": true
       },
       "message": "show",
-      "ms": 59391,
-      "t": "2026-09-05T00:52:36.364Z"
+      "ms": 85325,
+      "t": "2026-09-05T01:10:53.244Z"
     },
     {
       "category": "autorun",
@@ -855,15 +1162,15 @@
         "ok": true
       },
       "message": "4e show()",
-      "ms": 59391,
-      "t": "2026-09-05T00:52:36.364Z"
+      "ms": 85325,
+      "t": "2026-09-05T01:10:53.244Z"
     },
     {
       "category": "autorun",
       "data": {},
       "message": "=== PHASE 5 (018): cookies on child vs main handle ===",
-      "ms": 59391,
-      "t": "2026-09-05T00:52:36.365Z"
+      "ms": 85325,
+      "t": "2026-09-05T01:10:53.245Z"
     },
     {
       "category": "cookie-read",
@@ -876,20 +1183,12 @@
         ],
         "cookies": [
           {
-            "domain": "static-assets-prod.epicgames.com",
+            "domain": "www.epicgames.com",
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "3s9…<redacted 199 chars>",
-            "value_len": 199
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": true,
-            "name": "steamCountry",
-            "secure": true,
-            "value": "NZ%…<redacted 37 chars>",
-            "value_len": 37
+            "value": "f5l…<redacted 198 chars>",
+            "value_len": 198
           },
           {
             "domain": "store.steampowered.com",
@@ -910,14 +1209,6 @@
           {
             "domain": "store.steampowered.com",
             "http_only": false,
-            "name": "sessionid",
-            "secure": true,
-            "value": "d63…<redacted 24 chars>",
-            "value_len": 24
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": false,
             "name": "timezoneOffset",
             "secure": false,
             "value": "432…<redacted 7 chars>",
@@ -930,6 +1221,62 @@
             "secure": true,
             "value": "Pac…<redacted 16 chars>",
             "value_len": 16
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "e63…<redacted 24 chars>",
+            "value_len": 24
+          },
+          {
+            "domain": "static-assets-prod.epicgames.com",
+            "http_only": true,
+            "name": "__cf_bm",
+            "secure": true,
+            "value": "3s9…<redacted 199 chars>",
+            "value_len": 199
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "epicgames.com",
+            "http_only": false,
+            "name": "_epicSID",
+            "secure": true,
+            "value": "0ac…<redacted 32 chars>",
+            "value_len": 32
           },
           {
             "domain": "localhost",
@@ -948,14 +1295,6 @@
             "value_len": 6
           },
           {
-            "domain": "epicgames.com",
-            "http_only": false,
-            "name": "_epicSID",
-            "secure": true,
-            "value": "0ac…<redacted 32 chars>",
-            "value_len": 32
-          },
-          {
             "domain": "store.epicgames.com",
             "http_only": true,
             "name": "cf_clearance",
@@ -968,7 +1307,7 @@
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "r_w…<redacted 199 chars>",
+            "value": ".vW…<redacted 199 chars>",
             "value_len": 199
           },
           {
@@ -980,16 +1319,16 @@
             "value_len": 5
           }
         ],
-        "count": 13,
-        "elapsedMs": 4,
+        "count": 17,
+        "elapsedMs": 3,
         "error": null,
         "ok": true,
         "thread": "main",
         "webview": "store-embed"
       },
       "message": "cookies()",
-      "ms": 59396,
-      "t": "2026-09-05T00:52:36.369Z"
+      "ms": 85329,
+      "t": "2026-09-05T01:10:53.248Z"
     },
     {
       "category": "autorun",
@@ -1002,20 +1341,12 @@
         ],
         "cookies": [
           {
-            "domain": "static-assets-prod.epicgames.com",
+            "domain": "www.epicgames.com",
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "3s9…<redacted 199 chars>",
-            "value_len": 199
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": true,
-            "name": "steamCountry",
-            "secure": true,
-            "value": "NZ%…<redacted 37 chars>",
-            "value_len": 37
+            "value": "f5l…<redacted 198 chars>",
+            "value_len": 198
           },
           {
             "domain": "store.steampowered.com",
@@ -1036,14 +1367,6 @@
           {
             "domain": "store.steampowered.com",
             "http_only": false,
-            "name": "sessionid",
-            "secure": true,
-            "value": "d63…<redacted 24 chars>",
-            "value_len": 24
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": false,
             "name": "timezoneOffset",
             "secure": false,
             "value": "432…<redacted 7 chars>",
@@ -1056,6 +1379,62 @@
             "secure": true,
             "value": "Pac…<redacted 16 chars>",
             "value_len": 16
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "e63…<redacted 24 chars>",
+            "value_len": 24
+          },
+          {
+            "domain": "static-assets-prod.epicgames.com",
+            "http_only": true,
+            "name": "__cf_bm",
+            "secure": true,
+            "value": "3s9…<redacted 199 chars>",
+            "value_len": 199
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "epicgames.com",
+            "http_only": false,
+            "name": "_epicSID",
+            "secure": true,
+            "value": "0ac…<redacted 32 chars>",
+            "value_len": 32
           },
           {
             "domain": "localhost",
@@ -1074,14 +1453,6 @@
             "value_len": 6
           },
           {
-            "domain": "epicgames.com",
-            "http_only": false,
-            "name": "_epicSID",
-            "secure": true,
-            "value": "0ac…<redacted 32 chars>",
-            "value_len": 32
-          },
-          {
             "domain": "store.epicgames.com",
             "http_only": true,
             "name": "cf_clearance",
@@ -1094,7 +1465,7 @@
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "r_w…<redacted 199 chars>",
+            "value": ".vW…<redacted 199 chars>",
             "value_len": 199
           },
           {
@@ -1106,16 +1477,16 @@
             "value_len": 5
           }
         ],
-        "count": 13,
-        "elapsedMs": 4,
+        "count": 17,
+        "elapsedMs": 3,
         "error": null,
         "ok": true,
         "thread": "main",
         "webview": "store-embed"
       },
       "message": "5a cookies() on the CHILD handle (expect control + steam cookies)",
-      "ms": 59399,
-      "t": "2026-09-05T00:52:36.372Z"
+      "ms": 85332,
+      "t": "2026-09-05T01:10:53.251Z"
     },
     {
       "category": "cookie-read",
@@ -1128,20 +1499,12 @@
         ],
         "cookies": [
           {
-            "domain": "static-assets-prod.epicgames.com",
+            "domain": "www.epicgames.com",
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "3s9…<redacted 199 chars>",
-            "value_len": 199
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": true,
-            "name": "steamCountry",
-            "secure": true,
-            "value": "NZ%…<redacted 37 chars>",
-            "value_len": 37
+            "value": "f5l…<redacted 198 chars>",
+            "value_len": 198
           },
           {
             "domain": "store.steampowered.com",
@@ -1162,14 +1525,6 @@
           {
             "domain": "store.steampowered.com",
             "http_only": false,
-            "name": "sessionid",
-            "secure": true,
-            "value": "d63…<redacted 24 chars>",
-            "value_len": 24
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": false,
             "name": "timezoneOffset",
             "secure": false,
             "value": "432…<redacted 7 chars>",
@@ -1182,6 +1537,62 @@
             "secure": true,
             "value": "Pac…<redacted 16 chars>",
             "value_len": 16
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "e63…<redacted 24 chars>",
+            "value_len": 24
+          },
+          {
+            "domain": "static-assets-prod.epicgames.com",
+            "http_only": true,
+            "name": "__cf_bm",
+            "secure": true,
+            "value": "3s9…<redacted 199 chars>",
+            "value_len": 199
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "epicgames.com",
+            "http_only": false,
+            "name": "_epicSID",
+            "secure": true,
+            "value": "0ac…<redacted 32 chars>",
+            "value_len": 32
           },
           {
             "domain": "localhost",
@@ -1200,14 +1611,6 @@
             "value_len": 6
           },
           {
-            "domain": "epicgames.com",
-            "http_only": false,
-            "name": "_epicSID",
-            "secure": true,
-            "value": "0ac…<redacted 32 chars>",
-            "value_len": 32
-          },
-          {
             "domain": "store.epicgames.com",
             "http_only": true,
             "name": "cf_clearance",
@@ -1220,7 +1623,7 @@
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "r_w…<redacted 199 chars>",
+            "value": ".vW…<redacted 199 chars>",
             "value_len": 199
           },
           {
@@ -1232,7 +1635,7 @@
             "value_len": 5
           }
         ],
-        "count": 13,
+        "count": 17,
         "elapsedMs": 2,
         "error": null,
         "ok": true,
@@ -1240,8 +1643,8 @@
         "webview": "main"
       },
       "message": "cookies()",
-      "ms": 59405,
-      "t": "2026-09-05T00:52:36.378Z"
+      "ms": 85337,
+      "t": "2026-09-05T01:10:53.256Z"
     },
     {
       "category": "autorun",
@@ -1254,20 +1657,12 @@
         ],
         "cookies": [
           {
-            "domain": "static-assets-prod.epicgames.com",
+            "domain": "www.epicgames.com",
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "3s9…<redacted 199 chars>",
-            "value_len": 199
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": true,
-            "name": "steamCountry",
-            "secure": true,
-            "value": "NZ%…<redacted 37 chars>",
-            "value_len": 37
+            "value": "f5l…<redacted 198 chars>",
+            "value_len": 198
           },
           {
             "domain": "store.steampowered.com",
@@ -1288,14 +1683,6 @@
           {
             "domain": "store.steampowered.com",
             "http_only": false,
-            "name": "sessionid",
-            "secure": true,
-            "value": "d63…<redacted 24 chars>",
-            "value_len": 24
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": false,
             "name": "timezoneOffset",
             "secure": false,
             "value": "432…<redacted 7 chars>",
@@ -1308,6 +1695,62 @@
             "secure": true,
             "value": "Pac…<redacted 16 chars>",
             "value_len": 16
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
+          },
+          {
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "e63…<redacted 24 chars>",
+            "value_len": 24
+          },
+          {
+            "domain": "static-assets-prod.epicgames.com",
+            "http_only": true,
+            "name": "__cf_bm",
+            "secure": true,
+            "value": "3s9…<redacted 199 chars>",
+            "value_len": 199
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "csrf",
+            "secure": true,
+            "value": "tru…<redacted 4 chars>",
+            "value_len": 4
+          },
+          {
+            "domain": "gog.com",
+            "http_only": true,
+            "name": "gog_lc",
+            "secure": false,
+            "value": "NZ_…<redacted 12 chars>",
+            "value_len": 12
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
+          },
+          {
+            "domain": "epicgames.com",
+            "http_only": false,
+            "name": "_epicSID",
+            "secure": true,
+            "value": "0ac…<redacted 32 chars>",
+            "value_len": 32
           },
           {
             "domain": "localhost",
@@ -1326,14 +1769,6 @@
             "value_len": 6
           },
           {
-            "domain": "epicgames.com",
-            "http_only": false,
-            "name": "_epicSID",
-            "secure": true,
-            "value": "0ac…<redacted 32 chars>",
-            "value_len": 32
-          },
-          {
             "domain": "store.epicgames.com",
             "http_only": true,
             "name": "cf_clearance",
@@ -1346,7 +1781,7 @@
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "r_w…<redacted 199 chars>",
+            "value": ".vW…<redacted 199 chars>",
             "value_len": 199
           },
           {
@@ -1358,7 +1793,7 @@
             "value_len": 5
           }
         ],
-        "count": 13,
+        "count": 17,
         "elapsedMs": 2,
         "error": null,
         "ok": true,
@@ -1366,15 +1801,15 @@
         "webview": "main"
       },
       "message": "5b cookies() on the MAIN handle (default shared jar? — 015 said yes for windows)",
-      "ms": 59407,
-      "t": "2026-09-05T00:52:36.380Z"
+      "ms": 85340,
+      "t": "2026-09-05T01:10:53.259Z"
     },
     {
       "category": "autorun",
       "data": {},
       "message": "=== PHASE 6 (016 probe B): bare Window + two children ===",
-      "ms": 59409,
-      "t": "2026-09-05T00:52:36.382Z"
+      "ms": 85342,
+      "t": "2026-09-05T01:10:53.261Z"
     },
     {
       "category": "embed",
@@ -1384,11 +1819,11 @@
           "multi-store"
         ],
         "window": "multi",
-        "windowNumber": 40708
+        "windowNumber": 40760
       },
       "message": "probe B window built",
-      "ms": 59495,
-      "t": "2026-09-05T00:52:36.468Z"
+      "ms": 85409,
+      "t": "2026-09-05T01:10:53.328Z"
     },
     {
       "category": "autorun",
@@ -1398,11 +1833,11 @@
           "multi-store"
         ],
         "window": "multi",
-        "windowNumber": 40708
+        "windowNumber": 40760
       },
       "message": "6a create_multi_window",
-      "ms": 59495,
-      "t": "2026-09-05T00:52:36.469Z"
+      "ms": 85409,
+      "t": "2026-09-05T01:10:53.328Z"
     },
     {
       "category": "env",
@@ -1414,8 +1849,8 @@
         "wry": "0.55.1"
       },
       "message": "environment",
-      "ms": 59555,
-      "t": "2026-09-05T00:52:36.528Z"
+      "ms": 85463,
+      "t": "2026-09-05T01:10:53.382Z"
     },
     {
       "category": "navigation",
@@ -1424,8 +1859,8 @@
         "url": "https://www.gog.com/en/games"
       },
       "message": "multi-store on_page_load",
-      "ms": 60798,
-      "t": "2026-09-05T00:52:37.771Z"
+      "ms": 86450,
+      "t": "2026-09-05T01:10:54.369Z"
     },
     {
       "category": "navigation",
@@ -1434,8 +1869,8 @@
         "url": "https://www.gog.com/en/games"
       },
       "message": "multi-store on_page_load",
-      "ms": 63458,
-      "t": "2026-09-05T00:52:40.431Z"
+      "ms": 87336,
+      "t": "2026-09-05T01:10:55.256Z"
     },
     {
       "category": "embed",
@@ -1443,9 +1878,9 @@
         "count": 4,
         "webviews": [
           {
-            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 282.0, y: 125.0 }), size: Logical(LogicalSize { width: 9.0, height: 301.0 }) }",
-            "label": "store-embed",
-            "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295547%7D",
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
             "window": "main"
           },
           {
@@ -1455,9 +1890,9 @@
             "window": "multi"
           },
           {
-            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
-            "label": "main",
-            "url": "tauri://localhost",
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 282.0, y: 125.0 }), size: Logical(LogicalSize { width: 9.0, height: 301.0 }) }",
+            "label": "store-embed",
+            "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295583%7D",
             "window": "main"
           },
           {
@@ -1469,8 +1904,8 @@
         ]
       },
       "message": "list_webviews",
-      "ms": 65501,
-      "t": "2026-09-05T00:52:42.475Z"
+      "ms": 91420,
+      "t": "2026-09-05T01:10:59.339Z"
     },
     {
       "category": "autorun",
@@ -1478,9 +1913,9 @@
         "count": 4,
         "webviews": [
           {
-            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 282.0, y: 125.0 }), size: Logical(LogicalSize { width: 9.0, height: 301.0 }) }",
-            "label": "store-embed",
-            "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295547%7D",
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
+            "label": "main",
+            "url": "tauri://localhost",
             "window": "main"
           },
           {
@@ -1490,9 +1925,9 @@
             "window": "multi"
           },
           {
-            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 0.0, y: 0.0 }), size: Logical(LogicalSize { width: 1280.0, height: 900.0 }) }",
-            "label": "main",
-            "url": "tauri://localhost",
+            "boundsPhysical": "Rect { position: Logical(LogicalPosition { x: 282.0, y: 125.0 }), size: Logical(LogicalSize { width: 9.0, height: 301.0 }) }",
+            "label": "store-embed",
+            "url": "http://localhost:17913/report?tag=steam&probe=%7B%22href%22%3A%22https%3A%2F%2Fstore.steampowered.com%2Fapp%2F440%2FTeam_Fortress_2%2F%22%2C%22title%22%3A%22Team%20Fortress%202%20on%20Steam%22%2C%22globals%22%3A%5B%22isTauri%22%2C%22__TAURI__%22%2C%22__TAURI_INTERNALS__%22%2C%22ipc%22%5D%2C%22plugins%22%3A%5B%22__TAURI_IIFE__%22%5D%2C%22textHead%22%3A%22STORE%20COMMUNITY%20ABOUT%20SUPPORT%20Install%20Steam%20sign%20in%20%7C%20language%20Browse%20Recommendations%20Categories%20Ways%20to%20Play%20More%20Open%20in%20Desktop%20App%20You%27re%20not%20signed%20in!%20Open%20this%20page%20in%20the%20Steam%20App%20to%20wishlist%2C%20follow%2C%20purchase%20and%20see%20recommendations%20All%20Games%20%3E%20Free%20To%20Play%20Games%20%3E%20Team%20Fortress%202%20Communit%22%2C%22bodyLen%22%3A295583%7D",
             "window": "main"
           },
           {
@@ -1504,15 +1939,15 @@
         ]
       },
       "message": "6b list_webviews with probe B alive",
-      "ms": 65504,
-      "t": "2026-09-05T00:52:42.478Z"
+      "ms": 91421,
+      "t": "2026-09-05T01:10:59.340Z"
     },
     {
       "category": "embed",
       "data": {},
       "message": "probe B window closed",
-      "ms": 65506,
-      "t": "2026-09-05T00:52:42.479Z"
+      "ms": 91422,
+      "t": "2026-09-05T01:10:59.341Z"
     },
     {
       "category": "autorun",
@@ -1520,15 +1955,15 @@
         "ok": true
       },
       "message": "6c close probe B window",
-      "ms": 65506,
-      "t": "2026-09-05T00:52:42.480Z"
+      "ms": 91422,
+      "t": "2026-09-05T01:10:59.341Z"
     },
     {
       "category": "autorun",
       "data": {},
       "message": "=== PHASE 7: destroy the embed; handle lifetime after close ===",
-      "ms": 66310,
-      "t": "2026-09-05T00:52:43.284Z"
+      "ms": 92226,
+      "t": "2026-09-05T01:11:00.145Z"
     },
     {
       "category": "embed",
@@ -1536,8 +1971,8 @@
         "label": "store-embed"
       },
       "message": "destroyed",
-      "ms": 66312,
-      "t": "2026-09-05T00:52:43.285Z"
+      "ms": 92227,
+      "t": "2026-09-05T01:11:00.146Z"
     },
     {
       "category": "autorun",
@@ -1545,8 +1980,8 @@
         "ok": true
       },
       "message": "7a destroy_embed",
-      "ms": 66312,
-      "t": "2026-09-05T00:52:43.286Z"
+      "ms": 92228,
+      "t": "2026-09-05T01:11:00.147Z"
     },
     {
       "category": "embed",
@@ -1562,8 +1997,8 @@
         ]
       },
       "message": "list_webviews",
-      "ms": 67116,
-      "t": "2026-09-05T00:52:44.090Z"
+      "ms": 93036,
+      "t": "2026-09-05T01:11:00.955Z"
     },
     {
       "category": "autorun",
@@ -1579,8 +2014,8 @@
         ]
       },
       "message": "7b list_webviews after destroy (expect ['main'] again)",
-      "ms": 67117,
-      "t": "2026-09-05T00:52:44.090Z"
+      "ms": 93037,
+      "t": "2026-09-05T01:11:00.956Z"
     },
     {
       "category": "cookie-read",
@@ -1596,8 +2031,8 @@
         "webview": "store-embed"
       },
       "message": "cookies()",
-      "ms": 67117,
-      "t": "2026-09-05T00:52:44.091Z"
+      "ms": 93038,
+      "t": "2026-09-05T01:11:00.957Z"
     },
     {
       "category": "autorun",
@@ -1613,15 +2048,15 @@
         "webview": "store-embed"
       },
       "message": "7c cookies() on the DESTROYED child (expect loud error — 015's handle-lifetime rule)",
-      "ms": 67118,
-      "t": "2026-09-05T00:52:44.091Z"
+      "ms": 93038,
+      "t": "2026-09-05T01:11:00.957Z"
     },
     {
       "category": "autorun",
       "data": {},
       "message": "=== PHASE 8 (018): data_store_identifier isolation on a CHILD webview ===",
-      "ms": 67118,
-      "t": "2026-09-05T00:52:44.091Z"
+      "ms": 93039,
+      "t": "2026-09-05T01:11:00.958Z"
     },
     {
       "category": "embed",
@@ -1638,40 +2073,40 @@
         "url": "http://localhost:17913/set"
       },
       "message": "add_child",
-      "ms": 67118,
-      "t": "2026-09-05T00:52:44.091Z"
+      "ms": 93039,
+      "t": "2026-09-05T01:11:00.958Z"
     },
     {
       "category": "embed",
       "data": {
         "boundsReadback": "Rect { position: Logical(LogicalPosition { x: 290.0, y: 96.0 }), size: Logical(LogicalSize { width: 760.0, height: 560.0 }) }",
-        "elapsedMs": 42,
+        "elapsedMs": 48,
         "label": "store-embed",
-        "windowNumber": 40683,
+        "windowNumber": 40752,
         "windowWebviews": [
-          "store-embed",
-          "main"
+          "main",
+          "store-embed"
         ]
       },
       "message": "add_child OK",
-      "ms": 67161,
-      "t": "2026-09-05T00:52:44.134Z"
+      "ms": 93088,
+      "t": "2026-09-05T01:11:01.007Z"
     },
     {
       "category": "autorun",
       "data": {
         "boundsReadback": "Rect { position: Logical(LogicalPosition { x: 290.0, y: 96.0 }), size: Logical(LogicalSize { width: 760.0, height: 560.0 }) }",
-        "elapsedMs": 42,
+        "elapsedMs": 48,
         "label": "store-embed",
-        "windowNumber": 40683,
+        "windowNumber": 40752,
         "windowWebviews": [
-          "store-embed",
-          "main"
+          "main",
+          "store-embed"
         ]
       },
       "message": "8a create_embed ISOLATED → control /set",
-      "ms": 67161,
-      "t": "2026-09-05T00:52:44.134Z"
+      "ms": 93088,
+      "t": "2026-09-05T01:11:01.008Z"
     },
     {
       "category": "navigation",
@@ -1679,8 +2114,8 @@
         "url": "http://localhost:17913/set"
       },
       "message": "embed on_navigation",
-      "ms": 67184,
-      "t": "2026-09-05T00:52:44.157Z"
+      "ms": 93114,
+      "t": "2026-09-05T01:11:01.033Z"
     },
     {
       "category": "control-server",
@@ -1691,8 +2126,8 @@
         "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
       },
       "message": "request",
-      "ms": 67187,
-      "t": "2026-09-05T00:52:44.160Z"
+      "ms": 93117,
+      "t": "2026-09-05T01:11:01.036Z"
     },
     {
       "category": "navigation",
@@ -1701,8 +2136,8 @@
         "url": "http://localhost:17913/set"
       },
       "message": "embed on_page_load",
-      "ms": 67188,
-      "t": "2026-09-05T00:52:44.161Z"
+      "ms": 93118,
+      "t": "2026-09-05T01:11:01.037Z"
     },
     {
       "category": "navigation",
@@ -1711,8 +2146,8 @@
         "url": "http://localhost:17913/set"
       },
       "message": "embed on_page_load",
-      "ms": 67192,
-      "t": "2026-09-05T00:52:44.166Z"
+      "ms": 93123,
+      "t": "2026-09-05T01:11:01.042Z"
     },
     {
       "category": "cookie-read",
@@ -1750,15 +2185,15 @@
           }
         ],
         "count": 3,
-        "elapsedMs": 2,
+        "elapsedMs": 3,
         "error": null,
         "ok": true,
         "thread": "main",
         "webview": "store-embed"
       },
       "message": "cookies()",
-      "ms": 69169,
-      "t": "2026-09-05T00:52:46.143Z"
+      "ms": 95102,
+      "t": "2026-09-05T01:11:03.021Z"
     },
     {
       "category": "autorun",
@@ -1796,15 +2231,15 @@
           }
         ],
         "count": 3,
-        "elapsedMs": 2,
+        "elapsedMs": 3,
         "error": null,
         "ok": true,
         "thread": "main",
         "webview": "store-embed"
       },
       "message": "8b cookies() on the ISOLATED child (expect spike_* present, Steam cookies ABSENT)",
-      "ms": 69172,
-      "t": "2026-09-05T00:52:46.146Z"
+      "ms": 95105,
+      "t": "2026-09-05T01:11:03.024Z"
     },
     {
       "category": "cookie-read",
@@ -1817,20 +2252,12 @@
         ],
         "cookies": [
           {
-            "domain": "static-assets-prod.epicgames.com",
+            "domain": "www.epicgames.com",
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "3s9…<redacted 199 chars>",
-            "value_len": 199
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": true,
-            "name": "steamCountry",
-            "secure": true,
-            "value": "NZ%…<redacted 37 chars>",
-            "value_len": 37
+            "value": "f5l…<redacted 198 chars>",
+            "value_len": 198
           },
           {
             "domain": "store.steampowered.com",
@@ -1851,14 +2278,6 @@
           {
             "domain": "store.steampowered.com",
             "http_only": false,
-            "name": "sessionid",
-            "secure": true,
-            "value": "d63…<redacted 24 chars>",
-            "value_len": 24
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": false,
             "name": "timezoneOffset",
             "secure": false,
             "value": "432…<redacted 7 chars>",
@@ -1873,20 +2292,28 @@
             "value_len": 16
           },
           {
-            "domain": "localhost",
-            "http_only": false,
-            "name": "spike_plain",
-            "secure": false,
-            "value": "alpha1",
-            "value_len": 6
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
           },
           {
-            "domain": "localhost",
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "e63…<redacted 24 chars>",
+            "value_len": 24
+          },
+          {
+            "domain": "static-assets-prod.epicgames.com",
             "http_only": true,
-            "name": "spike_httponly",
-            "secure": false,
-            "value": "bravo2",
-            "value_len": 6
+            "name": "__cf_bm",
+            "secure": true,
+            "value": "3s9…<redacted 199 chars>",
+            "value_len": 199
           },
           {
             "domain": "gog.com",
@@ -1909,8 +2336,16 @@
             "http_only": true,
             "name": "cart_token",
             "secure": false,
-            "value": "0f5…<redacted 16 chars>",
+            "value": "4ec…<redacted 16 chars>",
             "value_len": 16
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
           },
           {
             "domain": "epicgames.com",
@@ -1921,12 +2356,20 @@
             "value_len": 32
           },
           {
-            "domain": "www.gog.com",
+            "domain": "localhost",
             "http_only": false,
-            "name": "g_state",
+            "name": "spike_plain",
             "secure": false,
-            "value": "{\"i…<redacted 140 chars>",
-            "value_len": 140
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
           },
           {
             "domain": "store.epicgames.com",
@@ -1941,7 +2384,7 @@
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "r_w…<redacted 199 chars>",
+            "value": ".vW…<redacted 199 chars>",
             "value_len": 199
           },
           {
@@ -1953,16 +2396,16 @@
             "value_len": 5
           }
         ],
-        "count": 17,
-        "elapsedMs": 2,
+        "count": 18,
+        "elapsedMs": 3,
         "error": null,
         "ok": true,
         "thread": "main",
         "webview": "main"
       },
       "message": "cookies()",
-      "ms": 69177,
-      "t": "2026-09-05T00:52:46.151Z"
+      "ms": 95109,
+      "t": "2026-09-05T01:11:03.029Z"
     },
     {
       "category": "autorun",
@@ -1975,20 +2418,12 @@
         ],
         "cookies": [
           {
-            "domain": "static-assets-prod.epicgames.com",
+            "domain": "www.epicgames.com",
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "3s9…<redacted 199 chars>",
-            "value_len": 199
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": true,
-            "name": "steamCountry",
-            "secure": true,
-            "value": "NZ%…<redacted 37 chars>",
-            "value_len": 37
+            "value": "f5l…<redacted 198 chars>",
+            "value_len": 198
           },
           {
             "domain": "store.steampowered.com",
@@ -2009,14 +2444,6 @@
           {
             "domain": "store.steampowered.com",
             "http_only": false,
-            "name": "sessionid",
-            "secure": true,
-            "value": "d63…<redacted 24 chars>",
-            "value_len": 24
-          },
-          {
-            "domain": "store.steampowered.com",
-            "http_only": false,
             "name": "timezoneOffset",
             "secure": false,
             "value": "432…<redacted 7 chars>",
@@ -2031,20 +2458,28 @@
             "value_len": 16
           },
           {
-            "domain": "localhost",
-            "http_only": false,
-            "name": "spike_plain",
-            "secure": false,
-            "value": "alpha1",
-            "value_len": 6
+            "domain": "store.steampowered.com",
+            "http_only": true,
+            "name": "steamCountry",
+            "secure": true,
+            "value": "NZ%…<redacted 37 chars>",
+            "value_len": 37
           },
           {
-            "domain": "localhost",
+            "domain": "store.steampowered.com",
+            "http_only": false,
+            "name": "sessionid",
+            "secure": true,
+            "value": "e63…<redacted 24 chars>",
+            "value_len": 24
+          },
+          {
+            "domain": "static-assets-prod.epicgames.com",
             "http_only": true,
-            "name": "spike_httponly",
-            "secure": false,
-            "value": "bravo2",
-            "value_len": 6
+            "name": "__cf_bm",
+            "secure": true,
+            "value": "3s9…<redacted 199 chars>",
+            "value_len": 199
           },
           {
             "domain": "gog.com",
@@ -2067,8 +2502,16 @@
             "http_only": true,
             "name": "cart_token",
             "secure": false,
-            "value": "0f5…<redacted 16 chars>",
+            "value": "4ec…<redacted 16 chars>",
             "value_len": 16
+          },
+          {
+            "domain": "www.gog.com",
+            "http_only": false,
+            "name": "g_state",
+            "secure": false,
+            "value": "{\"i…<redacted 140 chars>",
+            "value_len": 140
           },
           {
             "domain": "epicgames.com",
@@ -2079,12 +2522,20 @@
             "value_len": 32
           },
           {
-            "domain": "www.gog.com",
+            "domain": "localhost",
             "http_only": false,
-            "name": "g_state",
+            "name": "spike_plain",
             "secure": false,
-            "value": "{\"i…<redacted 140 chars>",
-            "value_len": 140
+            "value": "alpha1",
+            "value_len": 6
+          },
+          {
+            "domain": "localhost",
+            "http_only": true,
+            "name": "spike_httponly",
+            "secure": false,
+            "value": "bravo2",
+            "value_len": 6
           },
           {
             "domain": "store.epicgames.com",
@@ -2099,7 +2550,7 @@
             "http_only": true,
             "name": "__cf_bm",
             "secure": true,
-            "value": "r_w…<redacted 199 chars>",
+            "value": ".vW…<redacted 199 chars>",
             "value_len": 199
           },
           {
@@ -2111,16 +2562,16 @@
             "value_len": 5
           }
         ],
-        "count": 17,
-        "elapsedMs": 2,
+        "count": 18,
+        "elapsedMs": 3,
         "error": null,
         "ok": true,
         "thread": "main",
         "webview": "main"
       },
       "message": "8c cookies() on MAIN (expect Steam cookies still present — shared jar untouched)",
-      "ms": 69181,
-      "t": "2026-09-05T00:52:46.154Z"
+      "ms": 95113,
+      "t": "2026-09-05T01:11:03.032Z"
     },
     {
       "category": "embed",
@@ -2128,8 +2579,8 @@
         "label": "store-embed"
       },
       "message": "destroyed",
-      "ms": 69185,
-      "t": "2026-09-05T00:52:46.158Z"
+      "ms": 95117,
+      "t": "2026-09-05T01:11:03.036Z"
     },
     {
       "category": "autorun",
@@ -2137,16 +2588,16 @@
         "ok": true
       },
       "message": "8d destroy isolated embed",
-      "ms": 69185,
-      "t": "2026-09-05T00:52:46.159Z"
+      "ms": 95117,
+      "t": "2026-09-05T01:11:03.036Z"
     },
     {
       "category": "autorun",
       "data": {},
       "message": "=== COMPLETE ===",
-      "ms": 69185,
-      "t": "2026-09-05T00:52:46.159Z"
+      "ms": 95117,
+      "t": "2026-09-05T01:11:03.036Z"
     }
   ],
-  "exportedAt": "2026-09-05T00:52:46.159Z"
+  "exportedAt": "2026-09-05T01:11:03.037Z"
 }

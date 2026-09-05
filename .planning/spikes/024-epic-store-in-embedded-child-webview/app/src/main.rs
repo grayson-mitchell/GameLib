@@ -35,6 +35,13 @@ const STEAM_STORE_URL: &str = "https://store.steampowered.com/app/440/Team_Fortr
 /// inside a Tauri-managed child webview (which does carry the injected globals) has never
 /// been observed. That is the whole question here.
 const EPIC_STORE_URL: &str = "https://store.epicgames.com/en-US/";
+/// RUN 2 (2026-09-05): the URL GameLib would ACTUALLY ship. `WebView/index.tsx:143` builds
+/// `https://www.epicgames.com/store/{lang}/` and `storeEmbedOrigins.ts:44` records the same.
+/// That is a DIFFERENT HOST from `store.epicgames.com` above -- same `epicgames.com` apex, so
+/// the origin table covers both, but `www.epicgames.com` is the host that serves the login
+/// flow whose `/id/api/email/exists` returned the confirmed 403. Run 1 proved the host that is
+/// NOT configured; this arm closes that gap rather than inferring across it.
+const EPIC_STORE_CONFIGURED_URL: &str = "https://www.epicgames.com/store/en-US/";
 const GOG_STORE_URL: &str = "https://www.gog.com/en/games";
 
 const EMBED_LABEL: &str = "store-embed";
@@ -625,7 +632,16 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
         // Steam is the POSITIVE CONTROL: spike 016 proved it renders here, so if Steam also
         // fails this run the harness is broken and the Epic result means nothing.
         for (tag, url, note) in [
-            ("epic", EPIC_STORE_URL, "SUBJECT: Epic store in a Tauri-managed child webview"),
+            (
+                "epic-configured",
+                EPIC_STORE_CONFIGURED_URL,
+                "SUBJECT (the URL that would actually ship, www.epicgames.com)",
+            ),
+            (
+                "epic-alt",
+                EPIC_STORE_URL,
+                "SUBJECT (store.epicgames.com -- the host run 1 measured)",
+            ),
             ("steam", STEAM_STORE_URL, "POSITIVE CONTROL: known-good from spike 016"),
         ] {
             log.log(
