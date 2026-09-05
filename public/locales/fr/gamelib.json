@@ -204,7 +204,11 @@
         "zombieClassic": "Zombie Classique"
     },
     "about": {
-        "navLabel": "À propos"
+        "navLabel": "À propos",
+        "license": "Licence : GPL V3",
+        "title": "À propos de GameLib",
+        "version": "Version : {{version}}",
+        "versionUnknown": "inconnue"
     },
     "box": {
         "cancel": "Annuler",
@@ -329,11 +333,28 @@
         },
         "unavailable": {
             "next-step": "Ceci fait l'objet d'un travail futur distinct -- pour l'instant, utilisez le bouton ci-dessous pour l'ouvrir dans votre navigateur système.",
-            "open-in-browser": "Ouvrir dans un navigateur"
+            "open-in-browser": "Ouvrir dans un navigateur",
+            "epic": {
+                "body": "GameLib n'intègre pas encore les pages de l'Epic Store dans l'application.",
+                "heading": "La navigation sur l'Epic Store n'est pas encore disponible dans l'application"
+            },
+            "platform": {
+                "body": "La navigation intégrée dans le magasin et le wiki de GameLib est disponible sur macOS. Elle n'est pas encore disponible sur cette plateforme.",
+                "heading": "La navigation intégrée dans le magasin et le wiki n'est pas encore disponible sur cette plateforme"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "En pause pendant qu'une fenêtre est ouverte"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Affichage actuel de {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "La gestion des composants Winetricks n'est pas disponible sur cette version",
         "unavailableDetail": "La prise en charge de Winetricks est reportée à une version future (D-03, Phase 34.6) et ne peut pas être listée ou installée depuis cette version."
+    },
+    "donate": {
+        "navLabel": "Faire un don"
     }
 }

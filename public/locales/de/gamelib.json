@@ -204,7 +204,11 @@
         "zombieClassic": "Zombie Classic"
     },
     "about": {
-        "navLabel": "Über"
+        "navLabel": "Über",
+        "license": "Lizenz: GPL V3",
+        "title": "Über GameLib",
+        "version": "Version: {{version}}",
+        "versionUnknown": "unbekannt"
     },
     "box": {
         "cancel": "Abbrechen",
@@ -329,11 +333,28 @@
         },
         "unavailable": {
             "open-in-browser": "Im Browser öffnen",
-            "next-step": "Dies ist als eigenes zukünftiges Vorhaben vorgesehen -- verwende bis dahin den Button unten, um die Seite im System-Browser zu öffnen."
+            "next-step": "Dies ist als eigenes zukünftiges Vorhaben vorgesehen -- verwende bis dahin den Button unten, um die Seite im System-Browser zu öffnen.",
+            "epic": {
+                "body": "GameLib bettet Epic Store-Seiten noch nicht in der App ein.",
+                "heading": "Epic Store-Browsing ist in der App noch nicht verfügbar"
+            },
+            "platform": {
+                "body": "Das In-App-Browsen von Store und Wiki von GameLib ist unter macOS verfügbar. Auf dieser Plattform ist es noch nicht verfügbar.",
+                "heading": "In-App-Browsen von Store und Wiki ist auf dieser Plattform noch nicht verfügbar"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Pausiert, während ein Fenster geöffnet ist"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Momentan angezeigt: {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Die Verwaltung von Winetricks-Komponenten ist in diesem Build nicht verfügbar",
         "unavailableDetail": "Die Unterstützung für Winetricks ist auf eine zukünftige Version verschoben (D-03, Phase 34.6) und kann in diesem Build nicht aufgelistet oder installiert werden."
+    },
+    "donate": {
+        "navLabel": "Spenden"
     }
 }
