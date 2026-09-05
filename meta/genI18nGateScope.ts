@@ -39,11 +39,16 @@
  * `upstream.baseCommit`), but `actions/checkout@v6` gives a shallow,
  * single-remote clone with no Heroic remote and no merge-base commit in its
  * history — the `git diff` below would fail there with
- * "fatal: invalid object name". So this script is run locally (where
- * `origin` already points at Heroic and the merge-base has been fetched)
- * and its output is committed. The gate itself only ever reads the
- * committed JSON artifact this script writes — zero network dependency,
- * zero CI-environment risk (see RESEARCH.md Pitfall 1).
+ * "fatal: invalid object name". So this script is run locally, where the
+ * merge-base commit is present in the object store, and its output is
+ * committed. What matters is that the OBJECT is reachable, not which remote
+ * is named what: as of 2026-09-05 the remotes are `origin` = the GameLib fork
+ * and `upstream` = Heroic (they were the other way round until quick
+ * 260905-h3w), and `b5b5cad3f` is reachable from `origin/main` as well, so
+ * this diff survives even if the Heroic remote is removed entirely. The gate
+ * itself only ever reads the committed JSON artifact this script writes —
+ * zero network dependency, zero CI-environment risk (see RESEARCH.md
+ * Pitfall 1).
  */
 
 import { execFileSync } from 'node:child_process'
