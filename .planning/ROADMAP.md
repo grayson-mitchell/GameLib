@@ -4795,7 +4795,7 @@ one-to-one onto the phase's own `deferred-items.md`, and **Phase 39 touched ZERO
 `src/frontend/**` files** — the scope fence held. The `prettier --check` gate remains red and
 remains explicitly OUT of scope; that is correct behaviour, not a gap.
 
-### Phase 40: In-app store and wiki browsing under Tauri — embedded child webview (D-05 / REQ-34.4.1-07)
+### Phase 40: In-app store and wiki browsing under Tauri — embedded child webview (D-05 / REQ-34.4.1-07) — ✅ COMPLETE 2026-09-05
 
 **Goal:** Restore the store and wiki browsing surface that the Tauri rearchitecture left showing an
 honest apology panel. Today `/store/epic|gog|amazon|zoom|steam`, `/wiki` and
@@ -4898,17 +4898,80 @@ items *for* Phase 38's ledger — that is a downstream contribution, not a depen
 **Plans:** 11 plans in 7 waves
 
 Plans:
-- [ ] 40-01-PLAN.md — Model A frontend census by predicate, retirement, and disposition of the three invalidated test pins (wave 1)
-- [ ] 40-02-PLAN.md — Rust embed foundation: discharge D-25 against vendored source, target-gate `unstable` to macOS with the exclusion proven, add the `store_embed_*` lifecycle and bounds arms (wave 1)
-- [ ] 40-03-PLAN.md — `WebviewTag` shim retirement, four-surface channel re-census, and the mutation-proven Model A retirement gate (wave 3)
-- [ ] 40-04-PLAN.md — Store-browser threat model, the capability conjunction, navigation containment, and the verified GOG/Amazon logout jar clear (wave 2)
-- [ ] 40-05-PLAN.md — Store-embed seam, IPC registration, channel constants, preload bindings and the IPC inventory (wave 2)
-- [ ] 40-06-PLAN.md — Reference-counted overlay-suppression context, the placeholder, and four structural overlay wirings (wave 3)
-- [ ] 40-07-PLAN.md — Rust navigation arms with browser-correct cursor semantics, and the rebuilt props-driven chrome (wave 4)
-- [ ] 40-08-PLAN.md — The embed host: one geometry oracle, one bounds writer, route lifecycle, and the store/wiki render path (wave 5)
-- [ ] 40-09-PLAN.md — Origin table replacing the substring host check, re-derived restore, deep-link origin gate, adtraction derive-or-declare (wave 6)
-- [ ] 40-10-PLAN.md — Panel copy for two honest reasons, Phase 38 ledger items, the Epic spike filing, and the counted i18n census (wave 6)
-- [ ] 40-11-PLAN.md — Live gate on real hardware: the D-33 gesture pixel-measured, plus input feel and drag-resize latency (wave 7, **`autonomous: false`**)
+- [x] 40-01-PLAN.md — Model A frontend census by predicate, retirement, and disposition of the three invalidated test pins (wave 1)
+- [x] 40-02-PLAN.md — Rust embed foundation: discharge D-25 against vendored source, target-gate `unstable` to macOS with the exclusion proven, add the `store_embed_*` lifecycle and bounds arms (wave 1)
+- [x] 40-03-PLAN.md — `WebviewTag` shim retirement, four-surface channel re-census, and the mutation-proven Model A retirement gate (wave 3)
+- [x] 40-04-PLAN.md — Store-browser threat model, the capability conjunction, navigation containment, and the verified GOG/Amazon logout jar clear (wave 2)
+- [x] 40-05-PLAN.md — Store-embed seam, IPC registration, channel constants, preload bindings and the IPC inventory (wave 2)
+- [x] 40-06-PLAN.md — Reference-counted overlay-suppression context, the placeholder, and four structural overlay wirings (wave 3)
+- [x] 40-07-PLAN.md — Rust navigation arms with browser-correct cursor semantics, and the rebuilt props-driven chrome (wave 4)
+- [x] 40-08-PLAN.md — The embed host: one geometry oracle, one bounds writer, route lifecycle, and the store/wiki render path (wave 5)
+- [x] 40-09-PLAN.md — Origin table replacing the substring host check, re-derived restore, deep-link origin gate, adtraction derive-or-declare (wave 6)
+- [x] 40-10-PLAN.md — Panel copy for two honest reasons, Phase 38 ledger items, the Epic spike filing, and the counted i18n census (wave 6)
+- [x] 40-11-PLAN.md — Live gate on real hardware: the D-33 gesture pixel-measured, plus input feel and drag-resize latency (wave 7, **`autonomous: false`**)
+
+**Closed 2026-09-05** by quick `260905-c40`. **11/11 plans executed.** The user-facing goal is
+delivered: `/store/{gog,amazon,zoom,steam}`, `/wiki` and embeddable `store-page?store-url=` deep
+links render a real `Window::add_child` webview on macOS instead of the apology panel, and the
+Electron `<webview>` model behind it is gone — retirement enforced by a mutation-proven gate
+(`model-a-retirement-gate.py`, now the 8th planning gate).
+
+**Live gate: PASS 3/3** (`40-LIVE-GATE.md`, real macOS hardware, human operator). Item 1 (D-33
+suppression gesture) was pixel-measured — 0 px slot-rect delta before/during/after — because
+`store_embed_hide/show/set_bounds` emit no success-path log line in either sink, so no log
+assertion could have proven it. **Item 3 FAILED on its first run** and passed only on re-run after
+fix `b4517366e`; the failure is retained in full and was the operator's own finding, reversing
+their earlier "resize is smooth" once the gesture was run in the shape the item specifies. The
+gate also BLOCKED entirely on an earlier attempt (`c78ff3d30`, embed never opened).
+
+**Verification: `40-VERIFICATION.md`, status `gaps_closed_partially`** — 11/14 requirements
+verified, 2 PARTIAL, 5/8 observable truths at first pass. GAP-A/B/C (lint ratchet,
+`hardcodedStringGate`, the A-17 fork-scope pin) were closed and re-measured; the report also
+recorded a red suite **it had itself missed** (`gamelibCatalogParity` across 48 locales). GAP-D
+was fixed by quick `260905-e61`. Note the status string means Phase 40 is **invisible to
+`audit-uat`**, which parses only `human_needed`/`gaps_found` — every open item below therefore
+lives in `.planning/todos/pending/`, not in the verification alone.
+
+**Gates re-measured at close** (not read from a SUMMARY): `pnpm lint` exit 0 at **4145** warnings
+— under the 4157 ratchet and under the 4153 pre-phase baseline, so the phase returns lint debt
+rather than adding it; `pnpm codecheck` exit 0; `jest --selectProjects Meta` 36/36 suites,
+973 passed / 1 skipped; 8/8 planning gates.
+
+⚠ **`pnpm test:ci` was RED at close and is the reason this closeout is not a formality.** The
+verification explicitly recorded that the full suite — the one CI runs — had never been
+reproduced locally. Running it found `tauriShellSource.test.ts` failing: plan 40-04 deliberately
+widened the `humble_login_cookies_for_domain` fallback guard (D-15 / T-40-04-07/-08) to OR in
+`store_logout_cookie_domain_matches`, but Phase 35's D-35-29-01 pin asserted a bare substring on
+the un-parenthesised two-term shape, so **a gate was convicting correct code** and
+`.github/workflows/test.yml` was red. **Proven a Phase 40 regression, not inherited debt:** a
+hookless worktree at `8ac3a8c12` (the last commit before Phase 40's first) runs the same suite
+**GREEN, 138/138**, and the guard there is verbatim the un-parenthesised shape the pin required.
+Three earlier quick tasks (`260905-fast`, `260905-ew2`, `260905-glr`) each observed this failure
+and recorded it as **"pre-existing"** — it was already red at their HEADs, so each was locally
+right, but none traced it to 40-04 and so it stayed unowned while CI stayed red. Fixed in
+`260905-c40` by matching the guard *expression* rather than one spelling of it, with two
+narrowness tests proving the relaxed pin still rejects both dropping the Epic term and severing
+the `is_none()` conjunction.
+
+**Open items, all queued — none left in prose only:**
+- `/store/epic` is scoped out and Cloudflare-challenged in the embed (spike 024: PARTIAL, 2 of 3
+  runs challenged — run 1 alone produced a VALIDATED verdict that runs 2–3 overturned).
+  → `todos/pending/2026-09-05-store-epic-blocked-by-cloudflare-turnstile-in-the-embed.md`
+- The six minted `gamelib.json` keys are English-only; de/fr are 0/6 of 49 catalogs (machine-fill
+  401'd on a placeholder `ANTHROPIC_API_KEY`). English fallback works.
+  → `todos/pending/2026-09-05-phase-40s-six-minted-gamelib-keys-are-english-only-de-fr-0-of-6.md`
+- GAP-D's fix shipped with automated coverage green but its live `/store/gog` confirmation unrun.
+  → `todos/pending/2026-09-05-confirm-the-gap-d-nav-drain-on-store-gog-on-real-hardware.md`
+- D-32 adtraction ad-block detection has no derivable signal under Tauri (wry 0.55.1 implements no
+  navigation-failure callback at all — the retired detection's premise was inverted).
+  → `todos/pending/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`
+
+**Deferred out, not closed:** `38-E01`/`38-E02` (Windows WebView2 and Linux webkit2gtk `add_child`
+— no code path exists to test; `unstable` is target-gated to macOS), and `38-E03`/`38-E04`
+(retina/HiDPI at other scale factors, drag-resize latency on other hardware) — the Phase 38 ledger
+carries an explicit **return half** stating that 40-11's macOS PASS does **not** close them.
+12 pre-existing `cargo clippy` errors in `main.rs` remain out of scope (`deferred-items.md`);
+`cargo clippy` is in no CI workflow.
 
 ---
 
