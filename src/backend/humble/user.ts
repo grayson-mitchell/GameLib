@@ -7,7 +7,7 @@ import {
   humbleSyncStore
 } from './electronStores'
 import { HUMBLE_BASE_URL, HUMBLE_LOGIN_URL } from './constants'
-import { getAccountIdentity, getGamekeys } from './adapter'
+import { getGamekeys } from './adapter'
 import { invalidateSyncGeneration } from './syncFence'
 import { HumbleUserData } from 'common/types/humble'
 import { standardBrowserUserAgent } from './userAgent'
@@ -640,7 +640,7 @@ export class HumbleUser {
   ): Promise<'done' | 'rejected' | 'transient'> {
     // NEVER pass cookieValue to a logger, or store it under any key other
     // than the encrypted+prefixed sessionCookie value (Pitfall 4 / T-10-05).
-    // Passing the raw value to getGamekeys/getAccountIdentity is fine — the
+    // Passing the raw value to getGamekeys is fine — the
     // adapter already receives it on every call and never logs it.
 
     // Validate BEFORE storing anything: Humble hands `_simpleauth_sess` to
@@ -714,34 +714,18 @@ export class HumbleUser {
       )
     }
 
-    // D-02: identity is fetched BEST-EFFORT after acceptance. A failed
-    // identity fetch (or a thrown error) must NEVER block login completion —
-    // the tile falls back to a generic "Connected" label (username
-    // undefined) and no userData is written.
-    let username: string | undefined
-    try {
-      const identity = await getAccountIdentity(cookieValue)
-      if (identity.status === 'ok') {
-        configStore.set('userData', identity.data)
-        username = identity.data.username
-      } else {
-        logWarning(
-          [
-            'Humble post-login identity fetch failed (best-effort, login already accepted):',
-            identity.status
-          ],
-          LogPrefix.Backend
-        )
-      }
-    } catch (err) {
-      logWarning(
-        [
-          'Humble post-login identity fetch threw (best-effort, login already accepted):',
-          err
-        ],
-        LogPrefix.Backend
-      )
-    }
+    // D-02: the tile shows a generic "Connected" label, never a username.
+    // A best-effort post-login account-identity fetch used to run here and set
+    // `username`. Removed by quick-260905-qjf: `/api/v1/user/info` is not a
+    // route on Humble's API and never has been — 404 (hard failure, every
+    // attempt) at Phase 10, re-confirmed live on 2026-09-05 against a session
+    // proven live by a 200 on the sibling `/api/v1/user/order`. It never once
+    // resolved `ok`, so `username` was ALWAYS undefined and `userData` was
+    // never written; the removal is behaviour-preserving. The field is kept
+    // explicit rather than dropped from the payloads below so a reader learns
+    // WHY it is never populated. GlobalState converges on `isLoggedIn`, not
+    // `username` (10-VALIDATION.md Fix 2).
+    const username: string | undefined = undefined
 
     // WR-06: push the authoritative state so the renderer converges even if
     // the /loginweb/humble route unmounted before the login promise's

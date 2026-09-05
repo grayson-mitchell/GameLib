@@ -45,12 +45,6 @@ export interface HumbleValidationEndpointResult {
     | 'schema_error'
     | 'not_attempted'
   schemaValid: boolean
-  /**
-   * D-13 revised: true for the account-identifier endpoint only. Advisory
-   * results are recorded in the report but can NEVER affect the overall
-   * pass/fail verdict (D-02 generic-"Connected" fallback).
-   */
-  advisory?: boolean
 }
 
 /**

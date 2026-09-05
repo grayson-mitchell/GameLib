@@ -16,7 +16,7 @@
  *  - backend/logger  → logInfo/logError/logWarning
  *  - backend/ipc     → sendFrontendMessage
  *  - ../electronStores → configStore
- *  - ../adapter      → getAccountIdentity, getGamekeys
+ *  - ../adapter      → getGamekeys
  */
 
 // ── Electron mock (must be first, jest.mock is hoisted) ──────────────────────
@@ -99,10 +99,8 @@ jest.mock('../electronStores', () => ({
 }))
 
 // ── adapter mock ───────────────────────────────────────────────────────────
-const mockGetAccountIdentity = jest.fn()
 const mockGetGamekeys = jest.fn()
 jest.mock('../adapter', () => ({
-  getAccountIdentity: (...args: unknown[]) => mockGetAccountIdentity(...args),
   getGamekeys: (...args: unknown[]) => mockGetGamekeys(...args)
 }))
 
@@ -219,10 +217,6 @@ describe('HumbleUser', () => {
     mockHumbleRevealedStore.clear.mockImplementation(() => {})
 
     mockGetGamekeys.mockResolvedValue({ status: 'ok', data: [] })
-    mockGetAccountIdentity.mockResolvedValue({
-      status: 'ok',
-      data: { username: 'tester' }
-    })
 
     // Phase 39 Plan 06: watchForLogin()/finishLogin() are seam-only now, so
     // every describe in this file needs a seam installed by default.
@@ -317,7 +311,6 @@ describe('HumbleUser', () => {
       await flushAsync()
 
       expect(mockConfigStore.set).not.toHaveBeenCalled()
-      expect(mockGetAccountIdentity).not.toHaveBeenCalled()
     })
 
     // Phase 11 WR-03: the only external teardown is the renderer's
@@ -401,12 +394,12 @@ describe('HumbleUser', () => {
       const result = await loginPromise
 
       expect(result.status).toBe('done')
-      expect(result.username).toBe('tester')
+      expect(result.username).toBeUndefined()
 
-      // Login completion must be gated on the gamekeys endpoint (D-16), not
-      // identity.
+      // Login completion is gated on the gamekeys endpoint (D-16). The
+      // account-identity call that used to run alongside it was removed by
+      // quick-260905-qjf -- see finishLogin.
       expect(mockGetGamekeys).toHaveBeenCalledWith('raw-cookie-value')
-      expect(mockGetAccountIdentity).toHaveBeenCalledWith('raw-cookie-value')
 
       const sessionCookieCall = mockConfigStore.set.mock.calls.find(
         ([key]) => key === 'sessionCookie'
@@ -416,9 +409,6 @@ describe('HumbleUser', () => {
       expect(sessionCookieCall![1]).not.toBe('raw-cookie-value')
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
       expect(mockConfigStore.set).toHaveBeenCalledWith('expired', false)
-      expect(mockConfigStore.set).toHaveBeenCalledWith('userData', {
-        username: 'tester'
-      })
     })
 
     test('WR-06: a successful login pushes the authoritative humbleAuthState so the renderer converges even if the login route already unmounted', async () => {
@@ -440,7 +430,7 @@ describe('HumbleUser', () => {
 
       expect(mockSendFrontendMessage).toHaveBeenCalledWith('humbleAuthState', {
         isLoggedIn: true,
-        username: 'tester',
+        username: undefined,
         expired: false
       })
     })
@@ -448,59 +438,7 @@ describe('HumbleUser', () => {
 
   // ── D-16: gamekeys 'ok' but identity fails/throws — best-effort (D-02) ──
 
-  describe('startLogin() — best-effort identity after gamekeys acceptance (D-02/D-16)', () => {
-    test('gamekeys "ok" but getAccountIdentity resolves non-ok: login still resolves done with no username and NO userData written', async () => {
-      mockSeamCookies.mockResolvedValue({
-        total: 1,
-        matched: [
-          {
-            name: '_simpleauth_sess',
-            domain: 'humblebundle.com',
-            value: 'raw-cookie-value'
-          }
-        ]
-      })
-      mockGetAccountIdentity.mockResolvedValue({ status: 'schema_error' })
-
-      const loginPromise = HumbleUser.startLogin()
-      await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
-      const result = await loginPromise
-
-      expect(result).toEqual({ status: 'done', username: undefined })
-      expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
-      expect(mockConfigStore.set).not.toHaveBeenCalledWith(
-        'userData',
-        expect.anything()
-      )
-    })
-
-    test('gamekeys "ok" but getAccountIdentity throws: login still resolves done with no username and NO userData written', async () => {
-      mockSeamCookies.mockResolvedValue({
-        total: 1,
-        matched: [
-          {
-            name: '_simpleauth_sess',
-            domain: 'humblebundle.com',
-            value: 'raw-cookie-value'
-          }
-        ]
-      })
-      mockGetAccountIdentity.mockRejectedValue(new Error('network down'))
-
-      const loginPromise = HumbleUser.startLogin()
-      await flushAsync() // seam.open() resolves, seamLabel gets set
-      HumbleUser.notifyLoginNavigated()
-      const result = await loginPromise
-
-      expect(result).toEqual({ status: 'done', username: undefined })
-      expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
-      expect(mockConfigStore.set).not.toHaveBeenCalledWith(
-        'userData',
-        expect.anything()
-      )
-    })
-  })
+  describe('startLogin() — best-effort identity after gamekeys acceptance (D-02/D-16)', () => {})
 
   // ── HACCT-01: standard-Chrome UA reinforcement on the partition session ──
   // Google SSO restricts embedded browsers detected via Electron/app UA
@@ -593,7 +531,7 @@ describe('HumbleUser', () => {
       const result = await loginPromise
 
       expect(result.status).toBe('done')
-      expect(result.username).toBe('tester')
+      expect(result.username).toBeUndefined()
       expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
       expect(mockGetGamekeys).toHaveBeenLastCalledWith('same-cookie-value')
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)
@@ -708,7 +646,7 @@ describe('HumbleUser', () => {
       const result = await loginPromise
 
       expect(result.status).toBe('done')
-      expect(result.username).toBe('tester')
+      expect(result.username).toBeUndefined()
       expect(mockGetGamekeys).toHaveBeenCalledTimes(2)
       expect(mockGetGamekeys).toHaveBeenLastCalledWith('authed-cookie-value')
       expect(mockConfigStore.set).toHaveBeenCalledWith('isLoggedIn', true)

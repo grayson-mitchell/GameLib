@@ -5,12 +5,12 @@ import {
 } from 'common/types/humble'
 
 import { HumbleUser } from './user'
-import { getAccountIdentity, getGamekeys, getOrderDetail } from './adapter'
+import { getGamekeys, getOrderDetail } from './adapter'
 
 /**
  * D-12 dev-only in-app debug trigger. Exercises the REAL adapter
- * (getAccountIdentity/getGamekeys/getOrderDetail) with the REAL stored
- * encrypted cookie, decrypted via HumbleUser.getCredentials() — never a
+ * (getGamekeys/getOrderDetail) with the REAL stored encrypted cookie,
+ * decrypted via HumbleUser.getCredentials() — never a
  * standalone Node script (D-12: Node CLI is not Electron main).
  *
  * Returns a redacted HumbleValidationReport (D-15): endpoint paths, result
@@ -30,12 +30,6 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
       overall: 'fail',
       endpoints: [
         {
-          path: '/api/v1/user/info',
-          status: 'not_attempted',
-          schemaValid: false,
-          advisory: true
-        },
-        {
           path: '/api/v1/user/order',
           status: 'not_attempted',
           schemaValid: false
@@ -52,13 +46,6 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
   }
 
   const endpoints: HumbleValidationEndpointResult[] = []
-
-  // D-13 revised: the account-identifier endpoint is ADVISORY ONLY (D-02).
-  // It is still called and recorded, but can never fail the overall verdict.
-  const identity = await getAccountIdentity(cookie)
-  endpoints.push(
-    toEndpointResult('/api/v1/user/info', identity, { advisory: true })
-  )
 
   // D-13 point 1: gamekeys list
   const gamekeys = await getGamekeys(cookie)
@@ -104,8 +91,10 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
   }
 
   // D-13 revised: overall depends ONLY on gamekeys + order-detail +
-  // steamAppIdPresent. The advisory identity result above can never flip
-  // this verdict (D-02).
+  // steamAppIdPresent. The account-identifier endpoint recorded here as an
+  // advisory-only result was removed by quick-260905-qjf: `/api/v1/user/info`
+  // is not a route on Humble's API and never was, so there is nothing left to
+  // record and nothing that could have flipped this verdict anyway (D-02).
   const overall: 'pass' | 'fail' =
     gamekeys.status === 'ok' && orderDetailOk && steamAppIdPresent
       ? 'pass'
@@ -123,13 +112,11 @@ export async function runHumbleValidation(): Promise<HumbleValidationReport> {
 
 function toEndpointResult(
   path: string,
-  result: AdapterResult<unknown>,
-  opts?: { advisory?: boolean }
+  result: AdapterResult<unknown>
 ): HumbleValidationEndpointResult {
   return {
     path,
     status: result.status,
-    schemaValid: result.status === 'ok',
-    ...(opts?.advisory ? { advisory: true } : {})
+    schemaValid: result.status === 'ok'
   }
 }

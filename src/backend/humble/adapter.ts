@@ -2,7 +2,7 @@ import axios from 'axios'
 import { z } from 'zod'
 
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
-import { AdapterResult, HumbleUserData } from 'common/types/humble'
+import { AdapterResult } from 'common/types/humble'
 import {
   HUMBLE_BASE_URL,
   HUMBLE_REDEEM_PATH,
@@ -114,18 +114,6 @@ const OrderDetailSchema = z
   })
   .passthrough()
 
-// The shape below comes from D-02/D-13 point 4, NOT from an observed body.
-// `/api/v1/user/info` has never answered on this auth flow: 10-VALIDATION.md:106
-// records it as "404 (hard failure, every attempt)" at Phase 10, the first time it
-// was ever exercised, and a control-verified live probe on 2026-09-05
-// (quick-260905-q4j) got the same bare 232-byte framework 404. This schema is
-// therefore unexercised against a real payload -- treat it as unverified.
-const AccountIdentitySchema = z
-  .object({
-    username: z.string()
-  })
-  .passthrough()
-
 export type OrderDetail = z.infer<typeof OrderDetailSchema>
 export type OrderDetailTpk = z.infer<typeof OrderDetailTpkSchema>
 
@@ -156,7 +144,7 @@ interface HumbleRawResponse {
  * bare-axios transport is blocked by Humble, this is the ONLY function that
  * needs to be swapped for a `session.fromPartition('persist:humble').fetch()`
  * implementation behind the same signature — call sites in
- * getGamekeys/getOrderDetail/getAccountIdentity never change.
+ * getGamekeys/getOrderDetail never change.
  */
 // WR-04: axios's default timeout is 0 (unlimited). A hung transport (stalled
 // TCP, captive portal, Humble blackholing the request) would otherwise pin
@@ -397,7 +385,7 @@ function extractHttpErrorResponse(err: unknown):
  * `context`, when provided, additionally logs a redacted HTTP-failure
  * diagnostic (status/content-type/body-shape, never body content) for any
  * caught HTTP error response — opt-in per call site so the existing silent
- * behavior of getGamekeys/getOrderDetail/getAccountIdentity is unchanged.
+ * behavior of getGamekeys/getOrderDetail is unchanged.
  */
 function mapAxiosError<T>(err: unknown, context?: string): AdapterResult<T> {
   const httpResponse = extractHttpErrorResponse(err)
@@ -564,50 +552,6 @@ export async function getOrderDetail(
     return { status: 'ok', data: parsed.data }
   } catch (err) {
     return mapAxiosError<OrderDetail>(err)
-  }
-}
-
-export async function getAccountIdentity(
-  cookie: string
-): Promise<AdapterResult<HumbleUserData>> {
-  try {
-    // This path 404s, always, and always has -- it is not a route on Humble's API
-    // for this auth flow. 10-VALIDATION.md:106 recorded "404 (hard failure, every
-    // attempt)" at Phase 10, and quick-260905-q4j discriminated the two standing
-    // candidates (moved endpoint vs. an interstitial answering in its place) with a
-    // control-verified live probe: an AUTHENTICATED /api/v1/user/order returned 200
-    // with 32 orders while, seconds later on the same session, /api/v1/user/info
-    // returned the bare 232-byte framework 404 -- byte-identical unauthenticated and
-    // under a browser UA, with no redirect and no cf-mitigated header. The
-    // interstitial candidate is RULED OUT: it would have caught the sibling path,
-    // and Humble answers 401-with-branded-page when a route exists but the caller is
-    // not authorized. Where identity data actually lives is still UNKNOWN -- six
-    // guessed paths all bare-404'd, which proves nothing. Kept deliberately: this
-    // call is advisory-only and inert, since finishLogin gates on getGamekeys and
-    // never on getAccountIdentity.
-    const response = await humbleRequest('/api/v1/user/info', cookie)
-    const parsed = AccountIdentitySchema.safeParse(response.data)
-    if (!parsed.success) {
-      describeSchemaFailure('/api/v1/user/info', response, parsed.error)
-      return { status: 'schema_error', raw: response.data }
-    }
-    return { status: 'ok', data: parsed.data }
-  } catch (err) {
-    // F-3 fix (Phase 34.4.1 Plan 18): the live gate recorded an identity 404
-    // as "unexplained" -- diagnosable only from a stack trace into a bundled
-    // sidecar.js offset. Opting into mapAxiosError's existing diagnostic
-    // context (already used by revealKey, round 5) names the request PATH
-    // and HTTP status for EVERY caught failure shape here, not just the
-    // mapped 401/403/429 ones -- a genuinely unexpected status (like the
-    // gate's 404) now logs 'Humble adapter: /api/v1/user/info HTTP failure
-    // diagnostic status=404 ...' before falling through to the existing
-    // generic 'unexpected request failure' line and rethrowing. Same
-    // structural-only redaction as describeSchemaFailure/revealKey's own
-    // diagnostic: status/content-type/body-shape/length, NEVER the response
-    // body, cookies, or headers. Does not change the return/throw shape at
-    // all -- login stays best-effort accepted regardless (unchanged in
-    // user.ts's finishLogin caller).
-    return mapAxiosError<HumbleUserData>(err, '/api/v1/user/info')
   }
 }
 

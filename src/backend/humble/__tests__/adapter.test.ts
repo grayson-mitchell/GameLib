@@ -3,8 +3,7 @@
  * Covers HACCT-01 (identity fetch), HACCT-02 (401/403 split), T-10-01/02/03.
  *
  * Mock boundaries:
- *  - axios       → get, isAxiosError (GET paths: getGamekeys/getOrderDetail/
- *                  getAccountIdentity)
+ *  - axios       → get, isAxiosError (GET paths: getGamekeys/getOrderDetail)
  *  - login-window seam → revealPost (Phase 39 Plan 03: the reveal POST's
  *                  sole transport since humblePostRequest's electron-net
  *                  alternate was collapsed — see the `fakeSeam` helper below)
@@ -94,12 +93,7 @@ jest.mock('backend/logger', () => ({
   }
 }))
 
-import {
-  getGamekeys,
-  getOrderDetail,
-  getAccountIdentity,
-  revealKey
-} from '../adapter'
+import { getGamekeys, getOrderDetail, revealKey } from '../adapter'
 import { setLoginWindowSeam, type LoginWindowSeam } from '../loginWindowSeam'
 
 const COOKIE = 'super-secret-cookie-value'
@@ -440,95 +434,6 @@ describe('getOrderDetail', () => {
     for (const logged of allLoggedStrings()) {
       expect(logged).not.toContain(COOKIE)
     }
-  })
-})
-
-describe('getAccountIdentity', () => {
-  test('valid identity body -> ok AdapterResult<HumbleUserData>', async () => {
-    mockGet.mockResolvedValue({ data: { username: 'testuser' } })
-    const result = await getAccountIdentity(COOKIE)
-    expect(result).toEqual({ status: 'ok', data: { username: 'testuser' } })
-  })
-
-  test('malformed body -> schema_error', async () => {
-    mockGet.mockResolvedValue({ data: { no_username_field: true } })
-    const result = await getAccountIdentity(COOKIE)
-    expect(result.status).toBe('schema_error')
-  })
-
-  test('axios 401 -> session_expired', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(401))
-    const result = await getAccountIdentity(COOKIE)
-    expect(result).toEqual({ status: 'session_expired' })
-  })
-
-  test('axios 403 -> access_denied', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(403))
-    const result = await getAccountIdentity(COOKIE)
-    expect(result).toEqual({ status: 'access_denied' })
-  })
-
-  test('sends X-Requested-By and Cookie headers', async () => {
-    mockGet.mockResolvedValue({ data: { username: 'testuser' } })
-    await getAccountIdentity(COOKIE)
-    const [, config] = mockGet.mock.calls[0]
-    expect(config.headers['X-Requested-By']).toBe('hb_android_app')
-    expect(config.headers.Cookie).toBe(`_simpleauth_sess=${COOKIE}`)
-  })
-
-  test('never logs the raw cookie value', async () => {
-    mockGet.mockResolvedValue({ data: { username: 'testuser' } })
-    await getAccountIdentity(COOKIE)
-    for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain(COOKIE)
-    }
-  })
-
-  // F-3 fix (Phase 34.4.1 Plan 18): the live gate recorded an identity 404 as
-  // "unexplained" -- diagnosable only from a stack trace into a bundled
-  // sidecar.js offset. getAccountIdentity now opts into mapAxiosError's
-  // existing diagnostic context (same mechanism revealKey already uses,
-  // round 5), so an otherwise-unmapped status (like the gate's 404) logs the
-  // request PATH and HTTP status before falling through to the existing
-  // generic rethrow.
-  test('F-3: a 404 (unmapped status) logs the request path and HTTP status, then still rethrows', async () => {
-    mockGet.mockRejectedValue(
-      makeAxiosError(404, { data: { error: 'not found' } })
-    )
-    await expect(getAccountIdentity(COOKIE)).rejects.toThrow()
-    const call = mockLogWarning.mock.calls.find((c) =>
-      JSON.stringify(c).includes('HTTP failure diagnostic')
-    )
-    expect(call).toBeDefined()
-    const logged = JSON.stringify(call)
-    expect(logged).toContain('/api/v1/user/info')
-    expect(logged).toContain('status=404')
-  })
-
-  test('F-3: the identity-failure diagnostic never logs the response body — only status/contentType/shape', async () => {
-    mockGet.mockRejectedValue(
-      makeAxiosError(404, {
-        data: { error: 'not found', secret_should_not_leak: 'nope' },
-        headers: { 'content-type': 'application/json' }
-      })
-    )
-    await expect(getAccountIdentity(COOKIE)).rejects.toThrow()
-    for (const logged of allLoggedStrings()) {
-      expect(logged).not.toContain('secret_should_not_leak')
-      expect(logged).not.toContain('not found')
-    }
-  })
-
-  test('F-3: a mapped 401 ALSO now logs the request path alongside the existing session_expired mapping', async () => {
-    mockGet.mockRejectedValue(makeAxiosError(401))
-    const result = await getAccountIdentity(COOKIE)
-    expect(result).toEqual({ status: 'session_expired' })
-    const call = mockLogWarning.mock.calls.find((c) =>
-      JSON.stringify(c).includes('HTTP failure diagnostic')
-    )
-    expect(call).toBeDefined()
-    expect(JSON.stringify(call)).toContain('/api/v1/user/info')
-    expect(JSON.stringify(call)).toContain('status=401')
   })
 })
 
