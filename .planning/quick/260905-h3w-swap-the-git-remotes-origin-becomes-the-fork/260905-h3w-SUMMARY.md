@@ -94,11 +94,28 @@ afterwards would have been worthless.
 ## Not done
 
 - **Heroic not removed.** Still needed for locale refreshes and port review.
-- **`upstream`'s push URL not disabled.** `git remote set-url --push upstream DISABLED` would make
-  read-only explicit rather than relying on GitHub's 403. Offered, not done — beyond what was
-  asked, and trivially added later.
+- ~~**`upstream`'s push URL not disabled.**~~ **DONE same day, on request** — see the closure note
+  below.
 - **`.github/workflows/create-pr-from-stable.yml` and `update-bug-template-on-release.yml` not
   touched.** Both use `origin`, but in Actions `origin` is whatever `actions/checkout` cloned, so
   local naming cannot affect them. Both look like inherited Heroic release plumbing —
   `create-pr-from-stable.yml` syncs a `stable` branch this fork does not appear to use. Flagged as
   a separate question, not resolved here.
+
+## Closure note — `upstream` push disabled (2026-09-05, same day)
+
+`git remote set-url --push upstream DISABLED`. Read-only is now enforced **locally** rather than
+by hoping GitHub returns 403.
+
+Verified all three paths, by exit code rather than by inspection:
+
+| Path | Result |
+|---|---|
+| `git push upstream …` | **exit 128, refused in ~14ms** — never reaches the network |
+| `git fetch upstream` | **exit 0** — the diff baseline and locale-refresh source are untouched |
+| `git push` (origin) | **exit 0** — unaffected |
+
+The timing is the informative part: a 14ms failure proves the refusal is local and independent of
+credentials or network state, which a 403 from GitHub never was. `remote.upstream.url` still holds
+the real Heroic URL; only `pushurl` is the literal `DISABLED`. Undo with
+`git remote set-url --delete --push upstream DISABLED`.
