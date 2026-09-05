@@ -24,7 +24,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::hash::{BuildHasher, Hash, Hasher};
@@ -898,6 +898,56 @@ const LONG_RUNNING_CHANNELS: &[&str] = &[
     "openDialog",
 ];
 
+/// Cap on `SidecarState::abandoned`, oldest-dropped past this bound.
+///
+/// Mirrors `STORE_EMBED_NAV_EVENTS_CAP`'s rationale: a pathological run that times out
+/// repeatedly must not grow this table without bound for the life of the process. 64 is chosen
+/// over that queue's 50 only because nothing DRAINS this one — it is read opportunistically by
+/// the reader thread and never emptied — so it wants a little more headroom for the case the
+/// diagnostic exists to serve: several invokes abandoned in the same window, whose late
+/// responses then arrive interleaved and must each still find their channel.
+const ABANDONED_IDS_CAP: usize = 64;
+
+/// Rendered in place of a channel name when a late response's id is NOT in the abandoned ring
+/// (evicted past `ABANDONED_IDS_CAP`, or a frame the shell never sent).
+///
+/// A distinct literal rather than an empty string or a plausible-looking guess: the failure this
+/// whole path exists to prevent is an unknown being read as an answer. "unrecorded" cannot be
+/// mistaken for a channel name, so a reader correlating a scrollback is told plainly that the
+/// attribution is missing rather than being handed something to over-trust.
+const ABANDONED_CHANNEL_UNRECORDED: &str = "<unrecorded>";
+
+/// Push `id -> channel` onto the abandoned ring, evicting oldest-first past `ABANDONED_IDS_CAP`.
+fn push_abandoned(ring: &mut VecDeque<(String, String)>, id: &str, channel: &str) {
+    ring.push_back((id.to_string(), channel.to_string()));
+    while ring.len() > ABANDONED_IDS_CAP {
+        ring.pop_front();
+    }
+}
+
+/// The channel `id` was awaiting when it was abandoned, or `ABANDONED_CHANNEL_UNRECORDED`.
+///
+/// Searches newest-first: ids come from a monotonic counter and so do not repeat within a run,
+/// but scanning from the back means the common case (a response arriving shortly after its own
+/// timeout) hits immediately instead of walking the whole ring.
+fn abandoned_channel_for(ring: &VecDeque<(String, String)>, id: &str) -> String {
+    ring.iter()
+        .rev()
+        .find(|(recorded, _)| recorded == id)
+        .map(|(_, channel)| channel.clone())
+        .unwrap_or_else(|| ABANDONED_CHANNEL_UNRECORDED.to_string())
+}
+
+/// The `Err` a bounded invoke rejects with when its channel does not answer in time.
+///
+/// Names the channel, mirroring the format the OPPOSITE leg of this transport already uses
+/// (`rustInvoke timed out after 60000ms: keyring_get`, `sidecarRpc.ts:385`, documented as that
+/// direction's diagnostic contract in `sidecarTransport.ts`). The `sidecar invoke timed out`
+/// prefix is preserved verbatim so any consumer matching on it by prefix/substring still does.
+fn invoke_timeout_message(channel: &str) -> String {
+    format!("sidecar invoke timed out: {channel}")
+}
+
 /// `None` means "wait indefinitely" (see `LONG_RUNNING_CHANNELS`).
 fn timeout_for(channel: &str) -> Option<Duration> {
     if LONG_RUNNING_CHANNELS.contains(&channel) {
@@ -1012,8 +1062,25 @@ struct FrontendMessagePayload {
 /// id counter. Wrapped in an Arc and `manage`d so the four commands can reach it.
 struct SidecarState {
     stdin: Mutex<ChildStdin>,
-    /// id -> one-shot sender the reader thread fulfils when the matching response arrives.
-    pending: Mutex<HashMap<String, Sender<Result<Value, String>>>>,
+    /// id -> (channel, one-shot sender the reader thread fulfils when the matching response
+    /// arrives). The channel name is retained alongside the sender so an abandoned id can still
+    /// be ATTRIBUTED after the fact — see `abandoned` below and F-9 (quick task `260905-omc`).
+    pending: Mutex<HashMap<String, (String, Sender<Result<Value, String>>)>>,
+    /// Recently abandoned invokes: `id -> channel`, for ids whose pending entry was removed by a
+    /// timeout or a sidecar disconnect. Bounded at `ABANDONED_IDS_CAP`, oldest-dropped.
+    ///
+    /// Exists so the reader thread's late-response diagnostic can NAME the channel. Without it,
+    /// `pending.remove(&id)` at the timeout branch destroys the only record of which channel
+    /// opened that id, and the resulting `[shell] response for unknown/timed-out id=N (dropped)`
+    /// is unattributable — permanently, not just inconveniently. That is precisely what stranded
+    /// F-9 (`.planning/todos/pending/2026-08-23-f9-...`): `id=1575` fired live, and because the
+    /// diagnostic named no channel, whether it co-occurred with a cookie operation could not be
+    /// settled afterwards and is recorded as UNDETERMINED to this day. This field does not answer
+    /// that question — nothing can, the scrollback is gone — it makes the NEXT one answerable.
+    ///
+    /// A `VecDeque` of pairs rather than a map: the cap is small, lookups happen only on the rare
+    /// late-response path, and insertion order is what makes oldest-dropped eviction trivial.
+    abandoned: Mutex<VecDeque<(String, String)>>,
     counter: AtomicU64,
     /// The shell owns the sidecar's lifetime: held alive so it is not reaped early, and
     /// explicitly killed by `shutdown_child()` on app exit (WR-03).
@@ -1078,16 +1145,20 @@ impl SidecarState {
         let (tx, rx) = mpsc_channel::<Result<Value, String>>();
         {
             let mut pending = self.pending.lock().map_err(|e| e.to_string())?;
-            pending.insert(id.clone(), tx);
+            pending.insert(id.clone(), (channel.clone(), tx));
         }
         let req = SidecarRpcRequest {
             id: id.clone(),
             kind: "invoke",
-            channel,
+            channel: channel.clone(),
             args,
         };
         if let Err(e) = self.write_frame(&req) {
             self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+            // Deliberately NOT recorded as abandoned: the frame never reached the pipe, so the
+            // sidecar cannot answer it late. Only ids that were actually SENT can produce the
+            // unknown-id response this ring exists to attribute; recording unsent ids would
+            // dilute a bounded table with entries that can never be looked up.
             return Err(e);
         }
         match timeout {
@@ -1095,7 +1166,8 @@ impl SidecarState {
                 Ok(result) => result,
                 Err(_) => {
                     self.pending.lock().ok().and_then(|mut p| p.remove(&id));
-                    Err("sidecar invoke timed out".into())
+                    self.record_abandoned(&id, &channel);
+                    Err(invoke_timeout_message(&channel))
                 }
             },
             // Long-running channel: block until the sidecar answers. `recv()` still returns
@@ -1105,9 +1177,19 @@ impl SidecarState {
                 Ok(result) => result,
                 Err(_) => {
                     self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+                    self.record_abandoned(&id, &channel);
                     Err("sidecar closed before responding".into())
                 }
             },
+        }
+    }
+
+    /// Note that `id` was abandoned while awaiting `channel`, so a late response can still be
+    /// attributed. Lock poisoning is swallowed: this is a diagnostic aid on an already-failing
+    /// path, and it must never convert a timeout into a panic.
+    fn record_abandoned(&self, id: &str, channel: &str) {
+        if let Ok(mut ring) = self.abandoned.lock() {
+            push_abandoned(&mut ring, id, channel);
         }
     }
 }
@@ -8176,7 +8258,7 @@ fn start_reader(
                             .ok()
                             .and_then(|mut p| p.remove(id));
                         match sender {
-                            Some(tx) => {
+                            Some((_channel, tx)) => {
                                 let ok =
                                     value.get("ok").and_then(|v| v.as_bool()).unwrap_or(false);
                                 let outcome = if ok {
@@ -8190,9 +8272,25 @@ fn start_reader(
                                 };
                                 let _ = tx.send(outcome);
                             }
-                            None => eprintln!(
-                                "[shell] response for unknown/timed-out id={id} (dropped)"
-                            ),
+                            // F-9 (quick task `260905-omc`): name the CHANNEL, not just the id.
+                            // This line used to print the bare id, which made the question
+                            // "what was this invoke?" answerable only by correlating the id
+                            // against the originating request in the same live scrollback, at
+                            // the time — and therefore unanswerable afterwards. That is exactly
+                            // how F-9's `id=1575` became permanently UNDETERMINED.
+                            //
+                            // T-28-04 holds: a channel name is a fixed identifier from a known
+                            // set, not a `result`/`error` body. No payload is logged here.
+                            None => {
+                                let channel = state
+                                    .abandoned
+                                    .lock()
+                                    .map(|ring| abandoned_channel_for(&ring, id))
+                                    .unwrap_or_else(|_| ABANDONED_CHANNEL_UNRECORDED.to_string());
+                                eprintln!(
+                                    "[shell] response for unknown/timed-out id={id} channel={channel} (dropped)"
+                                );
+                            }
                         }
                     }
                     None => eprintln!(
@@ -8638,6 +8736,7 @@ fn main() {
             let state = Arc::new(SidecarState {
                 stdin: Mutex::new(stdin),
                 pending: Mutex::new(HashMap::new()),
+                abandoned: Mutex::new(VecDeque::new()),
                 counter: AtomicU64::new(1),
                 child: Mutex::new(child),
             });
@@ -9945,6 +10044,95 @@ mod tests {
         // instead of exempting a specific channel (mirrors the JS gate's own reasoning,
         // asserted here behaviorally).
         assert_eq!(INVOKE_TIMEOUT, Duration::from_secs(60));
+    }
+
+    // ---- Abandoned-invoke attribution (F-9, quick task `260905-omc`) ----
+    //
+    // These cover the mechanism that makes an abandoned id ATTRIBUTABLE. They do NOT settle
+    // F-9's own question (did `id=1575` co-occur with a cookie operation?) — that stays
+    // UNDETERMINED and is unsettleable, because the scrollback for its window was never
+    // captured. What they pin is that the NEXT such event names its channel rather than
+    // repeating id=1575's dead end.
+
+    #[test]
+    fn an_abandoned_id_is_attributed_to_the_channel_it_was_awaiting() {
+        let mut ring = VecDeque::new();
+        push_abandoned(&mut ring, "1575", "getCookies");
+
+        assert_eq!(abandoned_channel_for(&ring, "1575"), "getCookies");
+    }
+
+    #[test]
+    fn an_unrecorded_id_renders_as_unrecorded_rather_than_guessing() {
+        // The whole point of the ring is to stop an unknown being read as an answer. An id the
+        // shell has no record of must say so, not borrow the nearest channel name -- rounding an
+        // unknown to a convenient answer is the F-10 correlation-as-cause mistake, and F-9's own
+        // todo exists because that mistake was already paid for once.
+        let mut ring = VecDeque::new();
+        push_abandoned(&mut ring, "1575", "getCookies");
+
+        assert_eq!(abandoned_channel_for(&ring, "9999"), "<unrecorded>");
+        // Non-vacuous: an implementation that returned the constant unconditionally would pass
+        // the line above and fail this one.
+        assert_eq!(abandoned_channel_for(&ring, "1575"), "getCookies");
+    }
+
+    #[test]
+    fn an_empty_ring_attributes_nothing() {
+        let ring = VecDeque::new();
+        assert_eq!(abandoned_channel_for(&ring, "1575"), "<unrecorded>");
+    }
+
+    #[test]
+    fn the_abandoned_ring_is_bounded_oldest_dropped() {
+        let mut ring = VecDeque::new();
+        // One past the cap, so exactly the oldest entry must have been evicted.
+        for n in 0..=ABANDONED_IDS_CAP {
+            push_abandoned(&mut ring, &n.to_string(), "someChannel");
+        }
+
+        assert_eq!(ring.len(), ABANDONED_IDS_CAP);
+        // id "0" was the oldest and is gone; the newest and the second-oldest both survive.
+        assert_eq!(abandoned_channel_for(&ring, "0"), "<unrecorded>");
+        assert_eq!(abandoned_channel_for(&ring, "1"), "someChannel");
+        assert_eq!(
+            abandoned_channel_for(&ring, &ABANDONED_IDS_CAP.to_string()),
+            "someChannel"
+        );
+    }
+
+    #[test]
+    fn distinct_ids_keep_their_own_distinct_channels() {
+        // Guards the case the diagnostic actually exists to serve: several invokes abandoned in
+        // the same window, whose late responses then arrive interleaved. A ring that collapsed
+        // to "last channel wins" would pass every single-entry test above.
+        let mut ring = VecDeque::new();
+        push_abandoned(&mut ring, "1575", "getCookies");
+        push_abandoned(&mut ring, "1576", "openDialog");
+        push_abandoned(&mut ring, "1577", "keyring_get");
+
+        assert_eq!(abandoned_channel_for(&ring, "1575"), "getCookies");
+        assert_eq!(abandoned_channel_for(&ring, "1576"), "openDialog");
+        assert_eq!(abandoned_channel_for(&ring, "1577"), "keyring_get");
+    }
+
+    #[test]
+    fn the_invoke_timeout_error_names_the_channel() {
+        // The asymmetry F-9 exposed: the sidecar->Rust leg of this same transport already names
+        // its channel (`rustInvoke timed out after 60000ms: keyring_get`, sidecarRpc.ts:385),
+        // while the Rust->sidecar leg rejected with a bare, unattributable string.
+        assert_eq!(
+            invoke_timeout_message("getCookies"),
+            "sidecar invoke timed out: getCookies"
+        );
+    }
+
+    #[test]
+    fn the_invoke_timeout_error_keeps_its_original_prefix() {
+        // The message was `sidecar invoke timed out` verbatim before this task. Preserving it as
+        // a prefix keeps any substring/startsWith consumer working; a rewrite that dropped it
+        // would be a silent contract break for anything matching the old text.
+        assert!(invoke_timeout_message("getCookies").starts_with("sidecar invoke timed out"));
     }
 
     // ---- clipboard_text_arg (Phase 34.3 Plan 03, REQ-34.3-08) ----
