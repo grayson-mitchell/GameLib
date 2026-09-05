@@ -205,6 +205,47 @@
  *    is FIRST-PARTY code that reads `XDG_DATA_HOME` for `flatpakHome`, not
  *    merely "a transitively-imported library" as the prior wording
  *    claimed.
+ *
+ * ── SHADOWING: THIS MODULE'S `os` MOCK BEATS EVERY PER-SUITE ONE ───────────
+ *
+ * THE RULE (measured 2026-08-23 closing gap cycle 4 WR-02, re-verified at
+ * HEAD 2026-09-05, quick task 260905-jg4): a backend test file that declares
+ * its own `jest.mock('os', factory)` DOES NOT GET THAT FACTORY. This module's
+ * registration wins, for the suite's top-level import AND for a test-body
+ * `require`, on BOTH the `'os'` and `'node:os'` specifiers. Probed with a
+ * scratch suite whose factory returned a distinct `mkdtemp` root: that root
+ * appeared nowhere, and every read resolved to the containment root below.
+ *
+ * MECHANISM (the measurement is the fact; this is the best explanation).
+ * `setupFiles` entries run before the test framework and before the test
+ * file's own imports, and this module `require`s `'os'` in its precondition
+ * block at the foot of the file. The mocked module is therefore already
+ * INSTANTIATED in Jest's registry by the time the test file's hoisted
+ * `jest.mock` registers a competing factory, and `require('os')` returns the
+ * cached instance. This is the same ordering property point 4 above relies
+ * on deliberately -- here it just also has the side effect of shadowing.
+ *
+ * CONTAINMENT IS NOT WEAKENED. `homedir()` still resolves inside a
+ * disposable tmp root -- this module's, rather than the suite's own. Nothing
+ * reaches the developer's real home. What was false was documentation:
+ * several suites described their own `os` mock as the element that redirects
+ * `homedir()`. It never was; this module is.
+ *
+ * THE SHADOWED MOCKS ARE RETAINED, NOT DELETED, and are defence in depth: if
+ * the `setupFiles` entry in `jest.config.js` were ever removed, they become
+ * effective again. That is not hypothetical -- a hand-maintained per-suite
+ * containment list in this repo already rotted once (see the docstring's
+ * opening paragraphs), which is precisely why this module exists. Census by
+ * COMMENT-STRIPPED source on 2026-09-05: 24 suite-level declarations under
+ * `src/backend`, plus 9 files that name one only in prose. A raw `grep` gives
+ * a higher, wrong number -- most of the difference is prose.
+ *
+ * WHAT THIS MEANS WHEN YOU WRITE A SUITE. Do not add a `jest.mock('os', ...)`
+ * expecting it to take effect, and do not describe an existing one as
+ * load-bearing -- assert the value instead. The behavioural pin lives in
+ * `loggerFlows.test.ts` ("this file's own jest.mock('os') is INERT"); the
+ * census and this note are gated by `structuralContainment.test.ts`'s
+ * "shadowing" describe block.
  */
 
 import { chmodSync, lstatSync, mkdtempSync } from 'fs'

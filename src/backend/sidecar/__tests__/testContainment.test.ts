@@ -24,6 +24,19 @@
  * `os.tmpdir()`, because those mocks ignore `platform` and `env` entirely --
  * a property a bare `os.homedir()` mock does NOT have.
  *
+ * BLOCK A DOES NOT DEPEND ON THIS FILE'S OWN `os` MOCK, and never did
+ * (audited by quick task 260905-jg4, 2026-09-05, when the shadowing rule in
+ * `jest.setupContainment.ts` raised the question of whether Block A was
+ * exercising a factory that is never installed). Both of Block A's assertions
+ * are RED-PROOFed against the `../pathShim` and `backend/logger/paths` mocks
+ * only -- see the two RED-PROOF notes at the foot of Block A, which record
+ * commenting out each of THOSE two blocks and observing the corresponding
+ * test go red. The sentence above is the same finding stated from the other
+ * side: what Block A proves is precisely the property the `os` mock lacks, so
+ * no re-pointing of Block A's assertions was required. What WAS wrong is the
+ * comment above this file's own `jest.mock('os', ...)` below, which described
+ * it as redirecting `homedir()`; it is corrected in place.
+ *
  * **Block B** is a declared-list (not derived) source gate over the four
  * in-scope suites' own text, proving each still carries all four elements
  * of the containment kit, matched against COMMENT-STRIPPED source (mirrors
@@ -106,8 +119,15 @@ const mockTmpRoot = jest
       )
   )
 
-// ── os — redirect homedir() to the disposable tmp root above
-// (mirrors the four in-scope suites' own kit) ───────────────────────────────
+// ── os — INERT, and retained deliberately (mirrors the four in-scope suites'
+// own kit, which is equally inert). This factory is SHADOWED by
+// `src/backend/jest.setupContainment.ts`, which registers from the backend
+// project's `setupFiles` and therefore wins on both the `'os'` and `'node:os'`
+// specifiers -- see that module's SHADOWING section. `homedir()` IS redirected
+// under test, just to setupContainment's root rather than `mockTmpRoot`. The
+// declaration stays as defence in depth: it becomes effective again if the
+// `setupFiles` entry is ever removed. Block A does not rely on it either way
+// (see the module docstring), and Block B does not gate on it. ─────────────
 jest.mock('os', () => {
   const actual = jest.requireActual('os')
   return {

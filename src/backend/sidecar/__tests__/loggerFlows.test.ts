@@ -31,13 +31,23 @@
  * Containment kit (all four elements, per this suite's own acceptance
  * criteria — shipped from day one, not retrofitted in a later gap cycle):
  *
- *   1. `jest.mock('os', ...)` redirects `homedir()` to the tmp root.
+ *   1. `jest.mock('os', ...)` — INERT, and retained deliberately. This
+ *      element is carried by `src/backend/jest.setupContainment.ts`, which
+ *      registers from the backend project's `setupFiles` and therefore beats
+ *      this file's hoisted factory on both the `'os'` and `'node:os'`
+ *      specifiers (see that module's SHADOWING section for the mechanism, and
+ *      the "this file's own jest.mock('os') is INERT" test below for the
+ *      measurement). `homedir()` IS redirected — just to setupContainment's
+ *      root, not the `mockTmpRoot` this file declares. The declaration stays
+ *      as defence in depth: it becomes effective again if the `setupFiles`
+ *      entry is ever removed. Do NOT cite it as this suite's live mechanism.
  *   2. `jest.mock('../pathShim', ...)` — the REAL choke point:
  *      `constants/paths.ts`'s module-scope `app.getPath('appData'|'userData')`
  *      calls resolve through `electronStub.ts` -> `pathShim.getPath()`, whose
  *      real `resolveAppDataDir()` prefers `env.APPDATA` (win32) /
- *      `env.XDG_CONFIG_HOME` (default/Linux) over `homedir()` — bypassing
- *      element 1 above on those platforms. Copied verbatim from
+ *      `env.XDG_CONFIG_HOME` (default/Linux) over `homedir()` — bypassing any
+ *      `homedir()` redirection on those platforms, element 1's or
+ *      setupContainment's alike. Copied verbatim from
  *      `gameDetailsFlows.test.ts:136-161` except for the tmp-root name, with
  *      no platform branch and no env-var reference.
  *   3. `jest.mock('backend/logger/paths', ...)` — `getLogFilePath`'s real
@@ -375,14 +385,20 @@ describe('WR-02: the containment root is minted, not derived from a predictable 
     //
     // Containment is NOT weakened by this: homedir() still resolves inside a
     // disposable tmp root, just setupContainment's rather than this file's, so
-    // nothing reaches the developer's real home. What IS false is this file's
-    // docstring calling its `os` mock "containment kit element 1" -- that
-    // element is carried by `setupFiles`, and the same is true of ~30 other
-    // backend suites that declare their own. Filed as a todo rather than
-    // chased here; WR-02 is about predictable paths, and the two mocks that DO
-    // take effect (pathShim, backend/logger/paths) are the ones that placed
-    // the real gamelib.log, which is the write the old predictable root
-    // exposed.
+    // nothing reaches the developer's real home. What WAS false was this
+    // file's docstring, which called its `os` mock "containment kit element
+    // 1" -- that element is carried by `setupFiles`. WR-02 filed a todo rather
+    // than chasing it, because WR-02 is about predictable paths, and the two
+    // mocks that DO take effect (pathShim, backend/logger/paths) are the ones
+    // that placed the real gamelib.log, which is the write the old predictable
+    // root exposed.
+    //
+    // CLOSED by quick task 260905-jg4 (2026-09-05). The rule now lives in
+    // `jest.setupContainment.ts`'s SHADOWING section: suite-level `os` mocks
+    // are inert-but-retained defence in depth, and no suite may describe its
+    // own as load-bearing. The docstring above is corrected; the census is 24
+    // shadowed declarations by comment-stripped source, not the ~30 a raw grep
+    // suggested. This test remains the behavioural pin for the rule.
     /* eslint-disable @typescript-eslint/no-require-imports */
     const { homedir } = require('os') as typeof import('os')
     /* eslint-enable @typescript-eslint/no-require-imports */

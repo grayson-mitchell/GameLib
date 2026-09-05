@@ -853,3 +853,150 @@ describe('WR-05: this file registers no mocks, transitively', () => {
     ).toThrow(/cannot resolve import/)
   })
 })
+
+// ── SHADOWING gate (quick task 260905-jg4, 2026-09-05) ──────────────────────
+
+/**
+ * The rule this gate holds: `src/backend/jest.setupContainment.ts` SHADOWS
+ * every per-suite `jest.mock('os', ...)` in the Backend project. Suite-level
+ * `os` mocks are inert-but-retained defence in depth, and no suite may
+ * describe its own as the thing that redirects `homedir()`.
+ *
+ * Why the rule needs a gate rather than only a docstring. The shadowing was
+ * measured on 2026-08-23 and the finding sat in a todo for a fortnight while
+ * two suites went on claiming, in prose, that their own `os` mock was
+ * "containment kit element 1". Prose that nothing executes is exactly how this
+ * repo's containment documentation rotted the first time (the hand-maintained
+ * per-suite list this whole module replaced). So the three legs of the rule
+ * are asserted here instead: the shadowed population is real and large, the
+ * canonical statement of the rule still exists where readers land, and the
+ * BEHAVIOURAL pin that measures inertness still exists in the one place it can
+ * live -- a suite that actually declares an `os` mock, which by construction
+ * this file never will.
+ *
+ * This block deliberately adds NO `jest.mock` and NO top-level import: the
+ * WR-05 gate above walks this file's static import graph and fails if any of
+ * it registers a mock, and that property is this whole file's evidentiary
+ * value.
+ */
+// The title below says "os mock" rather than spelling the call out, and that
+// is load-bearing, not stylistic: a describe title IS code, so it survives
+// comment-stripping, and the literal form of the call is this gate's own
+// census needle. Spelling it here made this file match its own census and
+// simultaneously tripped the WR-05 import-graph gate above. Self-test C is
+// what caught it -- twice, since the first fix missed this second occurrence.
+// Do not "improve" this title by writing the call out.
+describe('shadowing: a per-suite os mock is INERT (quick task 260905-jg4)', () => {
+  // Needles assembled at runtime, for the same reason WR-05's MOCK_CALL_NEEDLE
+  // is: a literal would make this file match its own census, which would both
+  // inflate the count and imply this file registers a mock when it does not.
+  const OS_SPECIFIERS = ['os', 'node:os']
+  const OS_MOCK_NEEDLES = OS_SPECIFIERS.flatMap((specifier) => [
+    `jest` + `.mock('${specifier}'`,
+    `jest` + `.mock("${specifier}"`
+  ])
+
+  const backendRoot = resolve(__dirname, '..', '..')
+  const setupContainmentPath = join(backendRoot, 'jest.setupContainment.ts')
+  const loggerFlowsPath = join(__dirname, 'loggerFlows.test.ts')
+
+  /** True when `source` declares an `os` mock in CODE, not merely in prose.
+   * Comment-stripped for the same reason `testContainment.test.ts`'s Block B
+   * is: every file in this population necessarily names the pattern in its own
+   * explanatory prose, so a raw match counts documentation as code. That is
+   * precisely the error the todo behind this gate recorded -- a raw `grep`
+   * reported ~31 files where the real figure was 24. */
+  function declaresOsMockInCode(source: string): boolean {
+    const stripped = stripSourceComments(source)
+    return OS_MOCK_NEEDLES.some((needle) => stripped.includes(needle))
+  }
+
+  function shadowedDeclarers(): string[] {
+    return collectBackendTsFiles(backendRoot)
+      .filter((filePath) => filePath.endsWith('.test.ts'))
+      .filter((filePath) =>
+        declaresOsMockInCode(readFileSync(filePath, 'utf8'))
+      )
+      .map(backendRelative)
+  }
+
+  it('leg 1: the shadowed population is real and large — at least 20 backend suites declare an os mock in code', () => {
+    // A FLOOR, not an exact pin. An exact count would go red every time a
+    // suite is added or removed, which is how a pin gets "fixed" by being
+    // loosened rather than read (this repo has that lesson recorded twice).
+    // The floor is what the claim actually needs: that this is a population,
+    // not a one-off, so deleting the rule's documentation would mislead many
+    // readers rather than one.
+    const declarers = shadowedDeclarers()
+    expect(declarers.length).toBeGreaterThanOrEqual(20)
+
+    // ...and every one of them is genuinely shadowed, because none of them IS
+    // the effective registration. The effective one is not a `*.test.ts` file
+    // at all, so it cannot appear in this list -- asserted rather than assumed.
+    expect(declarers).not.toContain('jest.setupContainment.ts')
+  })
+
+  it('leg 2: the canonical statement of the rule still exists in jest.setupContainment.ts', () => {
+    // Matched on RAW source: the rule lives in a docblock, which
+    // stripSourceComments would remove entirely. (Same reasoning as Block B's
+    // WR-01 anti-claim gate in testContainment.test.ts -- do not "restore
+    // consistency" by moving this onto stripped source, which would make it
+    // permanently vacuous.)
+    const raw = readFileSync(setupContainmentPath, 'utf8')
+    expect(raw).toContain('SHADOWING')
+    expect(raw).toContain('DOES NOT GET THAT FACTORY')
+    expect(raw).toContain('CONTAINMENT IS NOT WEAKENED')
+  })
+
+  it('leg 3: the behavioural pin that MEASURES inertness still exists, in a suite that actually declares an os mock', () => {
+    // This file cannot host that measurement: proving a per-suite factory is
+    // ignored requires declaring one, and this file's mock-free import graph
+    // is load-bearing for the WR-05 gate above. The pin therefore lives in
+    // loggerFlows.test.ts and this leg holds it in place.
+    //
+    // The pin's title is assembled at runtime rather than written as a
+    // literal, for a reason this gate's own self-test C caught on its first
+    // run: the title CONTAINS the census needle, so spelling it out here made
+    // this file match its own census AND tripped the WR-05 import-graph gate
+    // above, which greps for the same `jest` + `.mock(` fragment. Two red
+    // tests, one cause. Left as a runtime concatenation deliberately.
+    const pinTitle = `jest` + `.mock('os') is INERT`
+    const raw = readFileSync(loggerFlowsPath, 'utf8')
+
+    // Matched on COMMENT-STRIPPED source, and this is the whole point of the
+    // leg. The first version matched RAW source and its RED-PROOF stayed
+    // GREEN: renaming the actual `it(...)` did not fail the gate, because
+    // loggerFlows.test.ts ALSO names the pin in its docstring, and prose was
+    // enough to satisfy a raw match. That is this repo's recorded "a gate a
+    // comment can satisfy" failure -- the gate would have gone on passing
+    // after the test it exists to hold in place had been deleted. A test
+    // title is code and survives stripping; the docstring mention does not.
+    const stripped = stripSourceComments(raw)
+    expect(stripped).toContain(pinTitle)
+    expect(declaresOsMockInCode(raw)).toBe(true)
+  })
+
+  it('self-test A: prose alone does NOT count — the census matches code, not documentation', () => {
+    const proseOnly = [
+      '/**',
+      ` * This suite used to declare its own ${OS_MOCK_NEEDLES[0]} ...) block.`,
+      ' */',
+      'export const x = 1'
+    ].join('\n')
+    expect(proseOnly).toContain(OS_MOCK_NEEDLES[0])
+    expect(declaresOsMockInCode(proseOnly)).toBe(false)
+  })
+
+  it('self-test B: a real declaration DOES count, on both the os and node:os specifiers', () => {
+    for (const needle of OS_MOCK_NEEDLES) {
+      const synthetic = `${needle} () => ({}))\nexport const x = 1`
+      expect(declaresOsMockInCode(synthetic)).toBe(true)
+    }
+  })
+
+  it('self-test C: this file is NOT in the census, so the gate never counts itself', () => {
+    expect(shadowedDeclarers()).not.toContain(
+      'sidecar/__tests__/structuralContainment.test.ts'
+    )
+  })
+})
