@@ -216,8 +216,11 @@ describe('SidecarKeyringTokenStore', () => {
   })
 
   // Behavior 6b: isAvailable() resolves false on keyring_available -> false (a SUCCESSFUL
-  // report of unavailability, not an error -- must not be logged as a warning).
-  it('isAvailable() resolves false when keyring_available reports false, without logging', async () => {
+  // report of unavailability, not an error -- must not be logged as a WARNING. It IS logged, at
+  // INFO, since quick-260905-jx3: a successful `false` is a completed probe that already
+  // prompted. This test's name said "without logging" and asserted only the absence of a
+  // warning; the name is now precise about which sink it means.)
+  it('isAvailable() resolves false when keyring_available reports false, without logging a warning', async () => {
     programChannel('keyring_available', { type: 'resolve', value: false })
     const store = new SidecarKeyringTokenStore()
 
@@ -1375,6 +1378,194 @@ describe('SidecarKeyringTokenStore', () => {
         ...mockLogWarning.mock.calls
       ].map((c) => String(c[0]))
       expect(allLines.some((l) => l.includes(DISTINCTIVE_TOKEN))).toBe(false)
+    })
+  })
+
+  /**
+   * `keyring_available` is a PROMPTING channel too (quick-260905-jx3, closing Direction item 1 of
+   * `2026-08-17-keyring-available-is-a-silent-prompt-channel.md`). Its Rust handler calls
+   * `entry.get_password()` (`src-tauri/src/main.rs`), so a fresh probe raises a real macOS Keychain
+   * approval prompt exactly as `keyring_get` does -- yet until this task `fetchAvailable()` logged
+   * ONLY in its `catch`. A successful probe prompted the user and left no trace whatsoever in
+   * `gamelib.log`, which made a real prompt unattributable after the fact and made every
+   * absence-grep over `issuing keyring_get` structurally blind to it.
+   *
+   * These tests are the counterpart of the `keyring_get` block directly above, assertion for
+   * assertion, so the two prompting channels cannot drift apart in what they record.
+   */
+  describe('keyring_available trigger= / elapsed= annotation (quick-260905-jx3)', () => {
+    it('a fresh isAvailable("store-humble-secret") logs the issue line with trigger=store-humble-secret', async () => {
+      programChannel('keyring_available', { type: 'resolve', value: true })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await expect(store.isAvailable('store-humble-secret')).resolves.toBe(true)
+      expect(callLog).toHaveLength(1)
+
+      const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+      expect(
+        infoLines.some((l) =>
+          l.includes(
+            'issuing keyring_available (may prompt) trigger=store-humble-secret'
+          )
+        )
+      ).toBe(true)
+    })
+
+    // The whole point of announcing at INFO is that the line exists BEFORE the prompt can appear
+    // -- a line written only after the round trip settles is useless for attributing a prompt the
+    // user is staring at right now, and is never written at all if the process is killed at the
+    // dialog. Proven by holding the invoke open and asserting the line is already present.
+    it('the issue line is written BEFORE the invoke settles, not after', async () => {
+      const deferred = deferFirstCall('keyring_available')
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      const inFlight = store.isAvailable('boot-probe')
+      const infoLinesDuring = mockLogInfo.mock.calls.map((c) => String(c[0]))
+      expect(
+        infoLinesDuring.some((l) =>
+          l.includes(
+            'issuing keyring_available (may prompt) trigger=boot-probe'
+          )
+        )
+      ).toBe(true)
+      // Non-vacuous: the round trip really is still open at this point, so the assertion above
+      // could not have been satisfied by an outcome line written after it resolved.
+      expect(
+        infoLinesDuring.some((l) => l.includes('keyring_available ok'))
+      ).toBe(false)
+
+      deferred.resolve(true)
+      await expect(inFlight).resolves.toBe(true)
+    })
+
+    it('the ok line carries available=true with trigger= and elapsed= appended AFTER it, never reordered', async () => {
+      programChannel('keyring_available', { type: 'resolve', value: true })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await store.isAvailable('store-humble-secret')
+
+      const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+      const okLine = infoLines.find((l) => l.includes('keyring_available ok'))
+      expect(okLine).toBeDefined()
+      expect(okLine).toContain('keyring_available ok available=true')
+      // Order-sensitive, mirroring the keyring_get ordering test above: available= must appear
+      // BEFORE trigger=/elapsed=, so a future edit cannot quietly rewrite the line's shape.
+      const availableIdx = okLine!.indexOf('available=')
+      const triggerIdx = okLine!.indexOf('trigger=')
+      const elapsedIdx = okLine!.indexOf('elapsed=')
+      expect(availableIdx).toBeGreaterThanOrEqual(0)
+      expect(triggerIdx).toBeGreaterThan(availableIdx)
+      expect(elapsedIdx).toBeGreaterThan(triggerIdx)
+      expect(okLine).toContain('trigger=store-humble-secret')
+      expect(okLine).toMatch(/elapsed=\d+ms/)
+    })
+
+    // A successful `false` is D-06's honest-unavailable: a COMPLETED probe that already raised
+    // whatever prompt it was going to raise. It is not an error, and staying silent about it
+    // would reproduce exactly half of the defect this task closes.
+    it('a successful FALSE probe also logs an ok line (available=false) and still logs no warning', async () => {
+      programChannel('keyring_available', { type: 'resolve', value: false })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await expect(store.isAvailable('store-humble-secret')).resolves.toBe(
+        false
+      )
+
+      const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+      expect(
+        infoLines.some((l) =>
+          l.includes('keyring_available ok available=false')
+        )
+      ).toBe(true)
+      expect(mockLogWarning).not.toHaveBeenCalled()
+    })
+
+    it('a rejected probe keeps the exact pre-existing warning substrings, with trigger= and elapsed= appended after them', async () => {
+      programChannel('keyring_available', {
+        type: 'reject',
+        error: new Error('keyring:unavailable:PlatformFailure')
+      })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await expect(store.isAvailable('store-humble-secret')).resolves.toBe(
+        false
+      )
+
+      const warnLine = String(mockLogWarning.mock.calls[0][0])
+      expect(warnLine).toContain('.isAvailable(): keyring_available failed:')
+      expect(warnLine).toContain('keyring:unavailable:PlatformFailure')
+      const failedIdx = warnLine.indexOf('failed:')
+      expect(warnLine.indexOf('trigger=')).toBeGreaterThan(failedIdx)
+      expect(warnLine).toContain('trigger=store-humble-secret')
+      expect(warnLine).toMatch(/elapsed=\d+ms/)
+    })
+
+    // Distinguishes "zero prompts because nothing asked" from "zero prompts because the answer was
+    // already in memory". Without this line the ABSENCE of an issue line proves neither.
+    it('a cache-hit second call logs a DEBUG line saying no keyring_available was issued, and issues none', async () => {
+      programChannel('keyring_available', { type: 'resolve', value: true })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await store.isAvailable('first')
+      expect(callLog).toHaveLength(1)
+      mockLogDebug.mockClear()
+
+      await expect(store.isAvailable('second')).resolves.toBe(true)
+      expect(callLog).toHaveLength(1)
+
+      const debugLines = mockLogDebug.mock.calls.map((c) => String(c[0]))
+      expect(
+        debugLines.some(
+          (l) =>
+            l.includes('served from cache, no keyring_available issued') &&
+            l.includes('trigger=second')
+        )
+      ).toBe(true)
+    })
+
+    it('a call that joins an in-flight probe logs its own DEBUG line and issues no additional keyring_available', async () => {
+      const deferred = deferFirstCall('keyring_available')
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      const first = store.isAvailable('first')
+      const second = store.isAvailable('joiner')
+      expect(callLog).toHaveLength(1)
+
+      const debugLines = mockLogDebug.mock.calls.map((c) => String(c[0]))
+      expect(
+        debugLines.some(
+          (l) =>
+            l.includes(
+              'joined in-flight probe, no additional keyring_available issued'
+            ) && l.includes('trigger=joiner')
+        )
+      ).toBe(true)
+
+      deferred.resolve(true)
+      await expect(first).resolves.toBe(true)
+      await expect(second).resolves.toBe(true)
+      expect(callLog).toHaveLength(1)
+    })
+
+    // The label is optional by contract; a caller that passes nothing must still produce an
+    // attributable line rather than no line at all.
+    it('an unlabelled isAvailable() still logs both lines, as trigger=unspecified', async () => {
+      programChannel('keyring_available', { type: 'resolve', value: true })
+      const store = new SidecarKeyringSlotStore(KEYRING_SLOT_HUMBLE_SESSION)
+
+      await store.isAvailable()
+
+      const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+      expect(
+        infoLines.some((l) =>
+          l.includes(
+            'issuing keyring_available (may prompt) trigger=unspecified'
+          )
+        )
+      ).toBe(true)
+      expect(
+        infoLines.some((l) => l.includes('keyring_available ok available=true'))
+      ).toBe(true)
     })
   })
 

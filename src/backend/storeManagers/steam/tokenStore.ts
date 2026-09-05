@@ -58,8 +58,17 @@ export type TokenReadOutcome =
 
 export interface TokenStore {
   /** Whether this store's underlying encryption/secure-storage mechanism is
-   * currently usable. Does NOT indicate whether a token is present. */
-  isAvailable(): Promise<boolean>
+   * currently usable. Does NOT indicate whether a token is present.
+   *
+   * `context` (quick-260905-jx3) is an OPTIONAL trigger label naming what
+   * deliberate action caused this probe -- never a secret. It exists because on
+   * the sidecar's keyring-backed store this call is NOT free: it reaches
+   * `entry.get_password()` and can raise a real Keychain prompt, so the prompt
+   * needs to be attributable in the log the same way `readToken()`'s is. An
+   * implementer that cannot prompt (`ElectronTokenStore`, `DevVaultTokenStore`)
+   * ignores it and keeps its zero-arg body -- an optional parameter widens the
+   * signature without changing any implementer's arity. */
+  isAvailable(context?: string): Promise<boolean>
   /** Returns the stored refresh token, or `''` when none is stored OR the
    * store is unavailable (D-06 semantics — callers treat both the same).
    * KEPT verbatim for backward compatibility with `humbleSecretStore.ts`'s

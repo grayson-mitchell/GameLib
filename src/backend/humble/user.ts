@@ -113,7 +113,10 @@ async function storeHumbleSecret(
 ): Promise<void> {
   const store = getHumbleSecretStore()
   await store.setSecret(key, value)
-  configStore.set('encryptionDegraded', !(await store.isAvailable()))
+  configStore.set(
+    'encryptionDegraded',
+    !(await store.isAvailable('store-humble-secret'))
+  )
 }
 
 // Handle to the currently-running login watch (if any), so stopLogin() /

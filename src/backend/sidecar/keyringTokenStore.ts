@@ -197,10 +197,40 @@ export class SidecarKeyringSlotStore implements TokenStore {
    * never a secret. */
   private cacheEpoch = 0
 
-  async isAvailable(): Promise<boolean> {
-    if (this.cachedAvailable) return this.cachedAvailable.value
-    if (this.pendingAvailable) return this.pendingAvailable
-    this.pendingAvailable = this.fetchAvailable()
+  /**
+   * `isAvailable()` is NOT a cheap capability probe: `keyring_available`'s Rust handler calls
+   * `entry.get_password()` (`src-tauri/src/main.rs`), so a fresh probe raises a real macOS
+   * Keychain approval prompt exactly as `keyring_get` does. Until quick-260905-jx3 that prompt
+   * was completely invisible -- `fetchAvailable()` logged only in its `catch`, so a SUCCESSFUL
+   * probe left no trace in `gamelib.log` at all and could not be attributed after the fact.
+   * Every path through this method now says which of the three things happened: a real round
+   * trip (INFO, below), a cache hit, or a join onto one already in flight (both DEBUG, here).
+   *
+   * `context` is an OPTIONAL trigger label -- what deliberate action, if any, caused this probe.
+   * Never a secret. Mirrors `readToken(context?)`'s parameter exactly; `undefined` logs as
+   * `trigger=unspecified`.
+   */
+  async isAvailable(context?: string): Promise<boolean> {
+    const label = context ?? 'unspecified'
+    // Cache-hit and in-flight-join lines mirror `readToken()`'s, for the same reason: a run that
+    // raises ZERO Keychain prompts is otherwise ambiguous between "no probe was issued" and "a
+    // probe was issued earlier and this call was served from memory". Without these two lines the
+    // absence of an `issuing keyring_available` line proves nothing about which one happened.
+    if (this.cachedAvailable) {
+      logDebug(
+        `SidecarKeyringSlotStore(${this.slot}).isAvailable(): served from cache, no ${RUST_KEYRING_AVAILABLE} issued trigger=${label}`,
+        LogPrefix.Steam
+      )
+      return this.cachedAvailable.value
+    }
+    if (this.pendingAvailable) {
+      logDebug(
+        `SidecarKeyringSlotStore(${this.slot}).isAvailable(): joined in-flight probe, no additional ${RUST_KEYRING_AVAILABLE} issued trigger=${label}`,
+        LogPrefix.Steam
+      )
+      return this.pendingAvailable
+    }
+    this.pendingAvailable = this.fetchAvailable(context)
     try {
       return await this.pendingAvailable
     } finally {
@@ -208,8 +238,20 @@ export class SidecarKeyringSlotStore implements TokenStore {
     }
   }
 
-  private async fetchAvailable(): Promise<boolean> {
+  private async fetchAvailable(context?: string): Promise<boolean> {
+    const started = Date.now()
     const epoch = this.cacheEpoch
+    const label = context ?? 'unspecified'
+    // Announced BEFORE the invoke, at INFO rather than DEBUG, for the same reason `fetchToken()`
+    // announces its own (F-34.5-G6-26): DEBUG output is settings-dependent, and a line that may
+    // not be written is no better than no line. This and `fetchToken()`'s issue line are the ONLY
+    // two calls in this class that can raise a macOS approval prompt, so together they are the
+    // log-side count an operator's observed prompt count is checked against -- before this line
+    // existed, that cross-check was blind to every prompt raised through this method.
+    logInfo(
+      `SidecarKeyringSlotStore(${this.slot}).isAvailable(): issuing ${RUST_KEYRING_AVAILABLE} (may prompt) trigger=${label}`,
+      LogPrefix.Steam
+    )
     try {
       const result = await requestRustInvoke(RUST_KEYRING_AVAILABLE, [
         this.slot
@@ -222,10 +264,24 @@ export class SidecarKeyringSlotStore implements TokenStore {
       if (epoch === this.cacheEpoch) {
         this.cachedAvailable = { value }
       }
+      // Logged on BOTH outcomes, `true` and `false` alike. A successful `false` is D-06's honest
+      // unavailable -- a completed probe that already prompted -- not an error, and not a reason
+      // to stay silent. Carries no secret: slot name, boolean and timing only.
+      logInfo(
+        `SidecarKeyringSlotStore(${this.slot}).isAvailable(): ${RUST_KEYRING_AVAILABLE} ok available=${value} trigger=${label} elapsed=${
+          Date.now() - started
+        }ms`,
+        LogPrefix.Steam
+      )
       return value
     } catch (error) {
+      // `trigger=`/`elapsed=` are APPENDED after the pre-existing `failed: <message>` text --
+      // never reordered, never renamed -- so every grep substring that already targeted this
+      // line stays load-bearing verbatim.
       logWarning(
-        `SidecarKeyringSlotStore(${this.slot}).isAvailable(): ${RUST_KEYRING_AVAILABLE} failed: ${errorMessage(error)}`,
+        `SidecarKeyringSlotStore(${this.slot}).isAvailable(): ${RUST_KEYRING_AVAILABLE} failed: ${errorMessage(error)} trigger=${label} elapsed=${
+          Date.now() - started
+        }ms`,
         LogPrefix.Steam
       )
       return false

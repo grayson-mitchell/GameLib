@@ -72,8 +72,14 @@ const STORE_KEYS: Record<HumbleSecretKey, 'sessionCookie' | 'csrfToken'> = {
 
 export interface HumbleSecretStore {
   /** Whether this store's underlying encryption/secure-storage mechanism is
-   * currently usable. Does NOT indicate whether a secret is present. */
-  isAvailable(): Promise<boolean>
+   * currently usable. Does NOT indicate whether a secret is present.
+   *
+   * `context` (quick-260905-jx3) is an OPTIONAL, never-secret trigger label,
+   * forwarded to `SidecarKeyringSlotStore.isAvailable()` by the sidecar
+   * implementation because that call can raise a real Keychain prompt and the
+   * prompt must be attributable afterwards. `ElectronHumbleSecretStore` cannot
+   * prompt and ignores it. */
+  isAvailable(context?: string): Promise<boolean>
   /** Returns the stored secret, or `''` when none is stored, the store is
    * unavailable, or decryption failed. */
   getSecret(key: HumbleSecretKey): Promise<string>

@@ -67,13 +67,18 @@ const SLOT_STORES: Record<HumbleSecretKey, SidecarKeyringSlotStore> = {
 }
 
 export class SidecarHumbleSecretStore implements HumbleSecretStore {
-  async isAvailable(): Promise<boolean> {
+  async isAvailable(context?: string): Promise<boolean> {
     // Both slots live in the SAME OS Keychain, addressed under the SAME
     // application/service identity (only the account name differs — see
     // `keyring_account()` in `src-tauri/src/main.rs`): a Keychain that is reachable for one
     // slot is reachable for the other. The session slot's own totalized `isAvailable()` stands
     // in for the whole store rather than probing both slots for one boolean.
-    return SLOT_STORES.sessionCookie.isAvailable()
+    // Forwarded so the Keychain prompt this can raise is attributable to a caller rather than
+    // logged as `trigger=unspecified` (quick-260905-jx3). The default names THIS seam, not the
+    // slot, so a log line still says something useful when a caller passes nothing.
+    return SLOT_STORES.sessionCookie.isAvailable(
+      context ?? 'humble-secret-store-availability'
+    )
   }
 
   async getSecret(key: HumbleSecretKey): Promise<string> {

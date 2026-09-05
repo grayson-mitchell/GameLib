@@ -253,6 +253,48 @@ describe('SidecarHumbleSecretStore', () => {
     await expect(store.isAvailable()).resolves.toBe(true)
   })
 
+  // quick-260905-jx3: `keyring_available` reaches `entry.get_password()` in Rust and can raise a
+  // real Keychain prompt, so the probe must be attributable in `gamelib.log`. This store is one of
+  // only two prompting `isAvailable()` callers in the codebase; if it stops forwarding a label,
+  // every prompt it causes is logged as `trigger=unspecified` and cannot be traced back here.
+  it('forwards a default trigger label to the slot store, so its Keychain prompt is attributable', async () => {
+    programChannel('keyring_available', { type: 'resolve', value: true })
+    const store = new SidecarHumbleSecretStore()
+
+    await expect(store.isAvailable()).resolves.toBe(true)
+
+    const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+    expect(
+      infoLines.some((l) =>
+        l.includes(
+          'issuing keyring_available (may prompt) trigger=humble-secret-store-availability'
+        )
+      )
+    ).toBe(true)
+  })
+
+  it("forwards a CALLER's trigger label verbatim in preference to its own default", async () => {
+    programChannel('keyring_available', { type: 'resolve', value: true })
+    const store = new SidecarHumbleSecretStore()
+
+    await expect(store.isAvailable('store-humble-secret')).resolves.toBe(true)
+
+    const infoLines = mockLogInfo.mock.calls.map((c) => String(c[0]))
+    expect(
+      infoLines.some((l) =>
+        l.includes(
+          'issuing keyring_available (may prompt) trigger=store-humble-secret'
+        )
+      )
+    ).toBe(true)
+    // Non-vacuous: the caller's label really did displace the default, rather than both appearing.
+    expect(
+      infoLines.some((l) =>
+        l.includes('trigger=humble-secret-store-availability')
+      )
+    ).toBe(false)
+  })
+
   // Behavior: no method ever logs the secret value, on any path.
   it('never logs the secret value on any path (setSecret failure, getSecret failure)', async () => {
     const SECRET = 'super-secret-cookie-value-xyz'
