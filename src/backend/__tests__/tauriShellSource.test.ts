@@ -858,11 +858,20 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
         'the arm does not bind `existing_window` from app.get_webview_window(label)'
       )
     }
-    if (
-      !noWs.includes(
-        'existing_window.is_none()&&epic_cookie_domain_matches(domain)'
-      )
-    ) {
+    // Phase 40 plan 04 (D-15, T-40-04-07/-08) OR'd `store_logout_cookie_domain_matches`
+    // into this guard so GOG/Amazon reach the same no-window census path. That is a
+    // deliberate WIDENING, but the original pin was a bare substring on the
+    // un-parenthesised two-term shape, so the extension broke it and left `test:ci` red
+    // while the arm was more correct than before — a gate convicting correct code.
+    //
+    // Match the guard EXPRESSION instead of one literal spelling of it: require the
+    // `existing_window.is_none() &&` conjunction, then require the Epic check somewhere
+    // inside the conjoined condition. This still fails if the conjunction is dropped, if
+    // the Epic check is deleted, or if the guard is replaced wholesale (all three proved
+    // by the negative self-tests below), while tolerating further OR'd terms and the
+    // operand order rustfmt or a later widening might choose.
+    const guardCondition = noWs.match(/existing_window\.is_none\(\)&&([^{]*)\{/)
+    if (!guardCondition?.[1].includes('epic_cookie_domain_matches(domain)')) {
       violations.push(
         'the Epic fallback guard (existing_window.is_none() && epic_cookie_domain_matches(domain)) is missing'
       )
@@ -939,6 +948,56 @@ describe('D-35-29-01 (quick q93) the census arm falls back to the label-independ
         ),
         expect.stringContaining('unconditional no-window ok_or_else')
       ])
+    )
+  })
+
+  /**
+   * NARROWNESS for the Phase 40 widening above. Relaxing the guard pin from a bare
+   * substring to an expression match is only safe if it still convicts the removal it
+   * exists to prevent — so drive it over arms that keep the Phase 40 shape but delete the
+   * Epic term, and over one that severs the `existing_window.is_none()` conjunction.
+   * Neither is caught by any other check in the list (both still bind `existing_window`
+   * and still reach `default_data_store_cookies_for_domain`), so a false PASS here would
+   * be invisible everywhere else in this suite.
+   */
+  // The clear arm carries a byte-identical guard, so every mutation below is anchored on
+  // the census arm's OWN return statement. Without that anchor a plain `.replace()` would
+  // edit the first (clear-arm) occurrence, leave the census arm untouched, and the
+  // assertion would fail for a reason unrelated to what it is testing.
+  const CENSUS_GUARD = [
+    '                && (epic_cookie_domain_matches(domain)',
+    '                    || store_logout_cookie_domain_matches(domain))',
+    '            {',
+    '                return default_data_store_cookies_for_domain(app, domain, &names);'
+  ].join('\n')
+
+  test('NARROWNESS: the widened guard pin still REJECTS an arm that keeps the disjunction but drops the Epic term', () => {
+    const code = loadMainRsCode()
+    const epicTermDeleted = code.replace(
+      CENSUS_GUARD,
+      [
+        '                && (store_logout_cookie_domain_matches(domain))',
+        '            {',
+        '                return default_data_store_cookies_for_domain(app, domain, &names);'
+      ].join('\n')
+    )
+    // Guard against the edit silently no-opping — a narrowness test that mutated nothing
+    // would pass for the wrong reason (this repo has recorded exactly that failure).
+    expect(epicTermDeleted).not.toEqual(code)
+    expect(censusFallbackViolations(epicTermDeleted)).toEqual(
+      expect.arrayContaining([expect.stringContaining('fallback guard')])
+    )
+  })
+
+  test('NARROWNESS: the widened guard pin still REJECTS an arm whose Epic check is no longer conjoined with is_none()', () => {
+    const code = loadMainRsCode()
+    const conjunctionSevered = code.replace(
+      `            if existing_window.is_none()\n${CENSUS_GUARD}`,
+      `            if true\n${CENSUS_GUARD}`
+    )
+    expect(conjunctionSevered).not.toEqual(code)
+    expect(censusFallbackViolations(conjunctionSevered)).toEqual(
+      expect.arrayContaining([expect.stringContaining('fallback guard')])
     )
   })
 
