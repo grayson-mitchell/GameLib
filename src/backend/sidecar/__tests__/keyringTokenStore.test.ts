@@ -1630,6 +1630,137 @@ describe('SidecarKeyringTokenStore', () => {
       expect(specimen).toMatch(/process\.env/)
     })
   })
+
+  /**
+   * The prompting-channel LEDGER (quick-260905-kd0, closing Direction item 2 of
+   * `2026-08-17-keyring-available-is-a-silent-prompt-channel.md`).
+   *
+   * `260817-d61`'s Gate A asserts "startup issues NO Steam keyring read" by grepping the log for
+   * an absence. That gate was BLIND to `keyring_available` for as long as it existed: the channel
+   * prompts (its Rust handler calls `entry.get_password()`) but logged nothing on success, so the
+   * grep had nothing to match and the gate measured a property strictly narrower than the one it
+   * appeared to guard. Widening the grep fixed that instance. This block is what stops the NEXT
+   * instance, because a pattern written into a quick-task markdown file from August cannot notice
+   * a fifth channel being added to this module in a year's time.
+   *
+   * Deliberately a LEDGER, not a name list -- the same shape this repo already requires of
+   * `dispatch_rust_channel`'s allowlist. A bare set of four strings could be turned green by
+   * appending a fifth, which would throw the property away. Each entry has to state whether the
+   * channel can prompt and whether it announces itself BEFORE the invoke, because those two facts
+   * are what any startup-absence gate has to be built from.
+   */
+  describe('prompting-channel ledger (quick-260905-kd0)', () => {
+    const SRC_PATH = join(__dirname, '..', 'keyringTokenStore.ts')
+
+    type LedgerEntry = {
+      /** Can this round trip raise a macOS Keychain authorization prompt? */
+      canPrompt: boolean
+      /** Is an `issuing <channel> (may prompt)` line written BEFORE the invoke? */
+      announcesBeforeInvoke: boolean
+      note: string
+    }
+
+    const LEDGER: Record<string, LedgerEntry> = {
+      RUST_KEYRING_GET: {
+        canPrompt: true,
+        announcesBeforeInvoke: true,
+        note: 'The original prompting read. Announced since F-34.5-G6-26.'
+      },
+      RUST_KEYRING_AVAILABLE: {
+        canPrompt: true,
+        announcesBeforeInvoke: true,
+        note:
+          'NOT a cheap capability probe -- the Rust handler calls entry.get_password(), so it ' +
+          'prompts exactly like keyring_get. Silent on success until quick-260905-jx3; that ' +
+          'silence is what made 260817-d61 Gate A blind to it.'
+      },
+      RUST_KEYRING_SET: {
+        canPrompt: true,
+        announcesBeforeInvoke: false,
+        note:
+          'setToken()\'s own source comment: "a write is a real Keychain round trip and can ' +
+          'prompt". It logs only AFTER the invoke (ok len= / failed). Sufficient for an ABSENCE ' +
+          'gate -- a completed round trip always leaves a line -- but it cannot attribute a ' +
+          'prompt the user is looking at right now. Adding the announcement is a real, open gap.'
+      },
+      RUST_KEYRING_DELETE: {
+        canPrompt: true,
+        announcesBeforeInvoke: false,
+        note:
+          "clearToken()'s own source comment records a 2026-08-14 session observing TWO prompts " +
+          'during a single Steam sign-out. Same post-invoke-only shape as RUST_KEYRING_SET.'
+      }
+    }
+
+    /** Every channel constant this module actually hands to `requestRustInvoke`, read from
+     * comment-stripped source. Comment-stripped and not raw: this file's own prose names all four
+     * constants, and so does the module's, so a raw match would be satisfied by documentation
+     * rather than by a call site. */
+    function invokedChannels(source: string): string[] {
+      const stripped = stripSourceComments(source)
+      const found = new Set<string>()
+      const re = /requestRustInvoke\(\s*(RUST_KEYRING_[A-Z_]+)/g
+      let m: RegExpExecArray | null
+      while ((m = re.exec(stripped)) !== null) found.add(m[1])
+      return [...found].sort()
+    }
+
+    it('every channel invoked by this module is declared in the ledger, and every ledger entry is really invoked', () => {
+      const invoked = invokedChannels(readFileSync(SRC_PATH, 'utf-8'))
+
+      // Non-vacuous: the census really did find call sites, so an equality below cannot pass
+      // merely because both sides were empty.
+      expect(invoked.length).toBeGreaterThan(0)
+      expect(invoked).toEqual(Object.keys(LEDGER).sort())
+    })
+
+    it('RED-proof: a fifth channel added to the source trips the census, so it cannot be introduced silently', () => {
+      // Specimen DERIVED from the real source by insertion, never hand-authored -- the same
+      // discipline the grep-gate hygiene block above uses.
+      const real = readFileSync(SRC_PATH, 'utf-8')
+      const specimen = `${real}\nasync function smuggled() {\n  await requestRustInvoke(RUST_KEYRING_SMUGGLED, [])\n}\n`
+
+      const invoked = invokedChannels(specimen)
+      expect(invoked).toContain('RUST_KEYRING_SMUGGLED')
+      expect(invoked).not.toEqual(Object.keys(LEDGER).sort())
+    })
+
+    it('RED-proof: the census reads CALL SITES, not prose -- a constant named only in a comment does not count', () => {
+      const real = readFileSync(SRC_PATH, 'utf-8')
+      const specimen = `${real}\n// a comment mentioning requestRustInvoke(RUST_KEYRING_SMUGGLED, []) and nothing more\n`
+
+      expect(invokedChannels(specimen)).toEqual(Object.keys(LEDGER).sort())
+    })
+
+    it('every channel the ledger marks as announcing really does emit an "issuing ... (may prompt)" line, and the ones it does not are honestly recorded', () => {
+      const stripped = stripSourceComments(readFileSync(SRC_PATH, 'utf-8'))
+
+      for (const [channel, entry] of Object.entries(LEDGER)) {
+        const announces = stripped.includes(
+          `issuing \${${channel}} (may prompt)`
+        )
+        expect({ channel, announces }).toEqual({
+          channel,
+          announces: entry.announcesBeforeInvoke
+        })
+      }
+    })
+
+    // The whole reason this block exists. If a channel that can prompt is ever left out of a
+    // startup-absence gate, that gate reports PASS while the user is clicking through a Keychain
+    // dialog -- which is exactly what happened to `keyring_available` under 260817-d61 Gate A.
+    it('every channel that can prompt is accounted for, so no startup-absence gate can be narrower than the prompt surface', () => {
+      const prompting = Object.entries(LEDGER)
+        .filter(([, e]) => e.canPrompt)
+        .map(([c]) => c)
+        .sort()
+
+      expect(prompting).toEqual(
+        invokedChannels(readFileSync(SRC_PATH, 'utf-8'))
+      )
+      expect(prompting).toHaveLength(4)
+    })
+  })
 })
 
 /**
