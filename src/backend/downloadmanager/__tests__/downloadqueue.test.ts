@@ -481,6 +481,46 @@ describe('downloadqueue.ts — 260905-luf: processNotification title fallback on
       expect.objectContaining({ title: 'Cyberpunk 2077' })
     )
   })
+
+  it('260905-luf (Task 3, no-regression): still notifies with the LIVE getGameInfo() title when hydrated — the fallback chain never overrides a real title', async () => {
+    __store.queue = [
+      {
+        type: 'install',
+        params: {
+          appName: '1091500',
+          runner: 'steam',
+          path: '/mock/install/path',
+          platformToInstall: 'Windows',
+          gameInfo: {
+            app_name: '1091500',
+            runner: 'steam',
+            title: 'Stale Enqueue-Time Title'
+          } as never
+        },
+        addToQueueTime: Date.now(),
+        startTime: 0,
+        endTime: 0
+      }
+    ]
+    __store.finished = []
+
+    // Library IS hydrated this time — getGameInfo() returns a live title that
+    // differs from the queue element's captured (stale) gameInfo.title, so a
+    // pass here can only mean the live title actually won.
+    gameGetGameInfoMock.mockReturnValue({ title: 'Cyberpunk 2077' })
+
+    const { installQueueElement } = await import('../utils')
+    ;(installQueueElement as jest.Mock).mockResolvedValue({ status: 'error' })
+
+    const { initQueue } = await import('../downloadqueue')
+    const { notify } = await import('../../dialog/dialog')
+
+    await initQueue(false)
+
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Cyberpunk 2077' })
+    )
+  })
 })
 
 /**

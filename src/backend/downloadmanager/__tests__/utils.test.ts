@@ -109,7 +109,7 @@ jest.mock('backend/constants/paths', () => ({
   fixesPath: '/mock/fixes'
 }))
 
-import { installQueueElement } from '../utils'
+import { installQueueElement, resolveGameTitle } from '../utils'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { isOnline } from '../../online_monitor'
 import { existsSync } from 'graceful-fs'
@@ -120,7 +120,7 @@ import {
   hasAbortController
 } from 'backend/utils/aborthandler/aborthandler'
 import { backendEvents } from 'backend/backend_events'
-import type { InstallParams, GameStatus } from 'common/types'
+import type { InstallParams, GameStatus, GameInfo } from 'common/types'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
@@ -664,6 +664,60 @@ describe('installQueueElement — WR-03/D-12: error-path regression coverage', (
         message: expect.stringContaining('1091500')
       })
     )
+  })
+})
+
+// quick task 260905-luf (Task 3, D-01): resolveGameTitle is the single
+// shared fallback chain every DownloadManager title consumer now delegates
+// to (resolveQueueElementTitle above, downloadqueue.ts's processNotification,
+// installFlowRegistration.ts's moveInstall/importGame). Locking its four
+// behavior cases directly guards the contract independent of any one caller.
+describe('resolveGameTitle — 260905-luf (D-01): the shared title fallback chain', () => {
+  beforeEach(() => {
+    getGameInfoMock.mockReturnValue({ title: 'Test Game' })
+    ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+      install: installMock,
+      getGameInfo: getGameInfoMock,
+      stop: stopMock
+    })
+  })
+
+  it('a live (non-empty) title from getGameInfo() wins over both the fallback and the raw appName', () => {
+    getGameInfoMock.mockReturnValue({ title: 'Live Title' })
+
+    const result = resolveGameTitle(libraryManagerMap, 'steam', '1091500', {
+      title: 'Fallback Title'
+    } as GameInfo)
+
+    expect(result).toBe('Live Title')
+  })
+
+  it('a double cache miss ({} from getGameInfo()) falls back to fallback.title when provided', () => {
+    getGameInfoMock.mockReturnValue({})
+
+    const result = resolveGameTitle(libraryManagerMap, 'steam', '1091500', {
+      title: 'Cyberpunk 2077'
+    } as GameInfo)
+
+    expect(result).toBe('Cyberpunk 2077')
+  })
+
+  it('a double cache miss with NO fallback provided falls back to the raw appName — never an empty subject', () => {
+    getGameInfoMock.mockReturnValue({})
+
+    const result = resolveGameTitle(libraryManagerMap, 'steam', '1091500')
+
+    expect(result).toBe('1091500')
+  })
+
+  it('an empty-string live title is treated as absent (falsy), same as undefined — falls through to fallback.title', () => {
+    getGameInfoMock.mockReturnValue({ title: '' })
+
+    const result = resolveGameTitle(libraryManagerMap, 'steam', '1091500', {
+      title: 'Cyberpunk 2077'
+    } as GameInfo)
+
+    expect(result).toBe('Cyberpunk 2077')
   })
 })
 

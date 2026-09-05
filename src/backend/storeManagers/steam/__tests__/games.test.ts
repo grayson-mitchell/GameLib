@@ -24,7 +24,8 @@ import SteamGame, {
   clearBridgeFailedThisSession,
   __resetBridgeFailedSessionForTests,
   markForcedWindowsViaBottle,
-  clearForcedWindowsViaBottle
+  clearForcedWindowsViaBottle,
+  __resetLoggedEmptyGameInfoMissesForTests
 } from '../games'
 import SteamLibraryManager from '../library'
 import * as libraryModule from '../library'
@@ -6478,6 +6479,72 @@ describe('SteamGame supporting read methods — GAME-01 unblock', () => {
     const result = new SteamGame(APP_ID).getGameInfo()
 
     expect(result).toEqual({})
+  })
+
+  // ── quick task 260905-luf (D-01): the double cache miss is now logged once
+  // per appId, not silent ────────────────────────────────────────────────
+  describe('260905-luf: getGameInfo() double cache miss logging (log-once per appId)', () => {
+    beforeEach(() => {
+      __resetLoggedEmptyGameInfoMissesForTests()
+    })
+
+    it('still returns the {} sentinel unchanged — the logging addition is not a behavior change to the cross-runner contract', () => {
+      library.delete(APP_ID)
+      ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
+
+      const result = new SteamGame(APP_ID).getGameInfo()
+
+      expect(result).toEqual({})
+    })
+
+    it('logs a warning via backend/logger on a double cache miss for a given appId', () => {
+      library.delete(APP_ID)
+      ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
+      const { logWarning } = jest.requireMock('backend/logger')
+
+      new SteamGame(APP_ID).getGameInfo()
+
+      expect(logWarning).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.stringContaining(APP_ID)]),
+        expect.anything()
+      )
+    })
+
+    it('does NOT log again for the SAME appId on a second double cache miss within the same process (log-once, T-luf-02 flood guard)', () => {
+      library.delete(APP_ID)
+      ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
+      const { logWarning } = jest.requireMock('backend/logger')
+
+      new SteamGame(APP_ID).getGameInfo()
+      expect(logWarning).toHaveBeenCalledTimes(1)
+
+      // Second double-miss lookup for the same appId, same process.
+      library.delete(APP_ID)
+      new SteamGame(APP_ID).getGameInfo()
+
+      expect(logWarning).toHaveBeenCalledTimes(1)
+    })
+
+    it('DOES log again for a DIFFERENT appId — the guard is scoped per appId, not a single global latch', () => {
+      const OTHER_LUF_APP_ID = '271590'
+      library.delete(APP_ID)
+      library.delete(OTHER_LUF_APP_ID)
+      ;(steamLibraryStore.get as jest.Mock).mockReturnValue([])
+      const { logWarning } = jest.requireMock('backend/logger')
+
+      new SteamGame(APP_ID).getGameInfo()
+      new SteamGame(OTHER_LUF_APP_ID).getGameInfo()
+
+      expect(logWarning).toHaveBeenCalledTimes(2)
+      expect(logWarning).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.stringContaining(APP_ID)]),
+        expect.anything()
+      )
+      expect(logWarning).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.stringContaining(OTHER_LUF_APP_ID)]),
+        expect.anything()
+      )
+    })
   })
 
   it('isGameAvailable() resolves true via the persisted-cache fallback when the in-memory library Map has not been hydrated yet (the exact hydration-race false negative this session diagnosed)', async () => {
