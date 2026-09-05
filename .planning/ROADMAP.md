@@ -5012,7 +5012,7 @@ hardcoded-string gate's scope artifact untrustworthy. Scope is `meta/` plus
   violations.
 
 **Depends on:** Phase 40
-**Plans:** 0 plans
+**Plans:** 5 plans in 2 waves
 
 **Closes three pending todos:**
 - `.planning/todos/pending/2026-09-03-lint-translations-is-structurally-blind-to-an-absent-key.md`
@@ -5035,7 +5035,11 @@ whoever plans it:
   authoring only. Filling the locales is a follow-up needing a working key.
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 41 to break down)
+- [ ] 41-01-PLAN.md — Author the six empty-in-English redeemKey.* strings and gate against a seventh (wave 1, REQ-41-03)
+- [ ] 41-02-PLAN.md — Widen the D-14 gate exemptions so the 46 declaration-site false positives go to zero (wave 1, REQ-41-04)
+- [ ] 41-03-PLAN.md — Make lintTranslations importable and close both fail-open shapes at the catalog-read seam (wave 1, REQ-41-02)
+- [ ] 41-04-PLAN.md — Promote the three files into the blocking gate scope at zero violations (wave 2, REQ-41-04)
+- [ ] 41-05-PLAN.md — Invert the presence check and pin the 794 known-missing pairs as a set (wave 2, REQ-41-01)
 
 ---
 
