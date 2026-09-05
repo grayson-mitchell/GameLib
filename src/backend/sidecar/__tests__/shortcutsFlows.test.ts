@@ -286,6 +286,31 @@ describe('registration kind — the 7 channels are registered with the correct k
   )
 })
 
+// ── Describe 1b: shortcutsExists fallback (260905-mv5, site 4) ─────────────────────────────────
+//
+// `shortcutsExists` (`shortcutsFlowRegistration.ts`) re-reads `game.getGameInfo()` itself, exactly
+// like the install-failure surfaces 260905-luf already fixed, and exactly like site 3's Electron
+// counterpart (`backend/shortcuts/ipc_handler.ts`, same channel name, same shape) just above it in
+// the census. Steam's `getGameInfo()` can return `{} as GameInfo` on a double cache miss (D-01,
+// kept as the cross-runner sentinel, not relitigated here) -- this pins that the sidecar's
+// `shortcutsExists` handler resolves `false` instead of throwing in that case, per D-03 (a title
+// feeding a filesystem path component must never fabricate a path from a synthesized fallback).
+//
+// Drives the REAL registered handler via `handlerRegistry` (the same registry Describe 6's
+// `addToSteam` tests already use), reusing this file's own `mockGetGame`/`makeGameInfo` fixtures.
+describe("shortcutsExists' fallback on an empty getGameInfo() (260905-mv5, site 4)", () => {
+  it('260905-mv5: resolves false instead of throwing when getGameInfo() returns {} (D-01 sentinel)', async () => {
+    mockGetGame.mockReturnValue({ getGameInfo: () => ({}) })
+
+    const handler = handlerRegistry.get('shortcutsExists')
+    expect(handler).toBeDefined()
+
+    await expect(
+      handler?.(undefined, 'AppName', 'legendary')
+    ).resolves.toBe(false)
+  })
+})
+
 // ── Describe 2: Containment ─────────────────────────────────────────────────────────────────────
 describe('containment — getPath(desktop) never resolves under the developer real home (tests-clobbering-real-steam-store rule, applied to a cluster that writes outside the app-support dir by design)', () => {
   it('resolves under the structurally redirected home, and differs from the pre-redirect real home', () => {

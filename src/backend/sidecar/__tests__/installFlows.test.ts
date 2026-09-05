@@ -174,11 +174,19 @@ jest.mock('../../storeManagers/steam/games', () => {
 // bare `jest.fn()` here (Plan 34.6-06's error-branch/D-15-adjacent assertion
 // needs to observe the call, not exercise the real sendFrontendMessage/
 // electronStub fallback chain, which shellFilesFlows.test.ts/wineToolsFlows
-// .test.ts already cover). `notify` stays real via the requireActual spread —
-// unchanged from every other test in this file. ─────────────────────────────
+// .test.ts already cover).
+//
+// 260905-mv5 (site 2): `notify` is ALSO now a bare `jest.fn()`, not real via
+// requireActual — this suite's Test 4 lineage needs to observe the `title`
+// argument `uninstallGameCallback`'s catch branch (`backend/utils/
+// uninstaller.ts`) passes to it under a `{}` GameInfo, and nothing else in
+// this file asserted on `notify`'s real Notification/rustInvoke side effect
+// before this change (verified by grep — zero prior references), so no
+// existing assertion is weakened by making it observable. ──────────────────
 jest.mock('../../dialog/dialog', () => ({
   ...jest.requireActual('../../dialog/dialog'),
-  showDialogBoxModalAuto: jest.fn()
+  showDialogBoxModalAuto: jest.fn(),
+  notify: jest.fn()
 }))
 
 // ── Imports (after mocks) ────────────────────────────────────────────────────
@@ -191,7 +199,7 @@ import { GlobalConfig } from 'backend/config'
 import { libraryManagerMap } from 'backend/storeManagers'
 import SteamGame from '../../storeManagers/steam/games'
 import { handlerRegistry, listenerRegistry } from '../../platform'
-import { showDialogBoxModalAuto } from '../../dialog/dialog'
+import { showDialogBoxModalAuto, notify } from '../../dialog/dialog'
 import { UNPORTED_CHANNEL_MARKER } from 'common/types/sidecarTransport'
 import type { AppSettings } from 'common/types'
 import * as loggerModule from '../../logger'
@@ -212,6 +220,7 @@ const GAMELIB_CATALOG = JSON.parse(
 const mockedGlobalConfigGet = GlobalConfig.get as jest.Mock
 const mockedWriteConfig = writeConfig as jest.Mock
 const mockedShowDialogBoxModalAuto = showDialogBoxModalAuto as jest.Mock
+const mockedNotify = notify as jest.Mock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object (mirrors
  *  nativeInstallSetting.test.ts's own helper). */
@@ -266,6 +275,7 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
     steamGameMocks.getSettings.mockReset().mockResolvedValue({})
     mockedWriteConfig.mockReset()
     mockedShowDialogBoxModalAuto.mockReset()
+    mockedNotify.mockReset()
     // resetMocks:true wipes the mocked constructor's own mockImplementation
     // too (not just steamGameMocks.*'s), so it must be re-established here —
     // otherwise `new SteamGame(appName)` returns a bare `{}` with none of the
@@ -382,6 +392,33 @@ describe('sidecar install-slice flows (Phase 30 Plan 02)', () => {
           'uninstalling'
     )
     expect(uninstallingFrame).toBeDefined()
+  })
+
+  // Test 4b (260905-mv5, site 2): uninstallGameCallback's catch branch
+  // (`backend/utils/uninstaller.ts`) re-reads `game.getGameInfo()` itself,
+  // exactly like the install-failure surfaces 260905-luf already fixed.
+  // Steam's `getGameInfo()` can return `{} as GameInfo` on a double cache
+  // miss (D-01, kept as the sentinel — not relitigated here); this pins
+  // that the uninstall-error OS notification never renders a nameless
+  // subject in that case.
+  it('260905-mv5 (site 2): notifies with a non-empty title on an uninstall() rejection, even when getGameInfo() returns {}', async () => {
+    steamGameMocks.getGameInfo.mockReturnValue({})
+    steamGameMocks.uninstall.mockRejectedValue(new Error('uninstall failed'))
+
+    const { input, frames } = startSidecar()
+    writeInvoke(input, 'uninstall-mv5-1', 'uninstall', [
+      '999002',
+      'steam',
+      false,
+      false
+    ])
+    await flush()
+
+    const response = frames.find((frame) => frame.id === 'uninstall-mv5-1')
+    expect(response).toMatchObject({ id: 'uninstall-mv5-1', ok: true })
+    expect(mockedNotify).toHaveBeenCalledTimes(1)
+    const notifyArg = mockedNotify.mock.calls[0][0] as { title?: string }
+    expect(notifyArg.title).toBeTruthy()
   })
 
   // Test 5: checkGameUpdates resolves a string[] across all runners (D-12,
