@@ -52,13 +52,54 @@ Consequences for this gate:
 
 ## Grep calibration (already performed — do not skip on a re-run)
 
-The absence-grep is proven capable of a hit against a real pre-fix log, so a later zero is
-meaningful rather than a broken pattern:
+**WIDENED 2026-09-05 by quick-260905-kd0.** The original pattern below matched `keyring_get` on the
+`getToken()` path only. That is NARROWER than the property this gate claims to hold, which is "no
+Steam Keychain prompt at startup". `SidecarKeyringSlotStore` reaches the Keychain through **four**
+channels, and all four can prompt — `setToken()`'s and `clearToken()`'s own source comments say so:
+*"a write is a real Keychain round trip and can prompt"*, and *"a delete is a real Keychain round
+trip that can prompt. A 2026-08-14 session observed TWO prompts during a single Steam sign-out."*
+
+| Channel | Can prompt | Announces `(may prompt)` before the invoke | Post-invoke line |
+|---|---|---|---|
+| `keyring_get` | yes | yes | `ok` / `failed` |
+| `keyring_available` | yes | yes, since `0fdbdac36` | `ok` / `failed` |
+| `keyring_set` | yes | **no** | `ok len=` / `failed` |
+| `keyring_delete` | yes | **no** | `ok` / `failed` |
+
+For an ABSENCE gate the post-invoke line suffices — a completed round trip always leaves one — so
+the pattern keys on the announcement *and* the outcome line, covering all four.
+
+**This widening is only non-vacuous because of `0fdbdac36`.** Before it, a successful
+`keyring_available` emitted no line whatsoever, so an absence-assertion over it would have been
+vacuously true by construction: a false green. Do not port this pattern to a build that predates
+that commit.
+
+**The widened pattern (use this one):**
 
 ```bash
-grep -c "SidecarKeyringSlotStore(steam-refresh-token).getToken(): issuing keyring_get" \
-  ~/Library/Logs/GameLib/gamelib.run3.log
-# => 1   (known-bad specimen, pre-fix startup)
+GATE_A_PATTERN='SidecarKeyringSlotStore\(steam-refresh-token\)\.[a-zA-Z]+\(\): (issuing )?keyring_(get|available|set|delete)\b'
+```
+
+**Calibration, measured 2026-09-05 — not asserted.** Two specimens. The known-bad one is the real
+2026-08-17 pre-fix log, still present on the operator machine. The second was generated FROM THE
+CODE (a throwaway jest run capturing real logger output, then deleted) rather than retyped from a
+display copy, and is preserved at
+`.planning/quick/260905-kd0-widen-the-260817-d61-absence-grep-to-cou/260905-kd0-specimen-startup-probe.log`.
+
+| Pattern | code-generated specimen | real pre-fix log | humble-slot false hits |
+|---|---|---|---|
+| OLD `getToken(): issuing keyring_get` | **1** — misses the `keyring_available` line entirely | 1 | 0 |
+| WIDENED (above) | **4** | **2** | **0** |
+
+The OLD pattern scoring 1 where the WIDENED scores 4 on the same file **demonstrates the hole
+rather than arguing it**. The WIDENED pattern still hitting the real pre-fix log preserves the
+calibration property — a later zero is meaningful, not a broken pattern. Zero humble-slot hits
+confirms it stays slot-scoped, which Gate A's third PASS bullet requires.
+
+```bash
+# reproduce both columns
+grep -cE "$GATE_A_PATTERN" ~/Library/Logs/GameLib/gamelib.run3.log   # => 2  (known-bad specimen)
+grep -cE "$GATE_A_PATTERN" .../260905-kd0-specimen-startup-probe.log # => 4  (all four line shapes)
 ```
 
 ---
@@ -74,15 +115,19 @@ grep -c "SidecarKeyringSlotStore(steam-refresh-token).getToken(): issuing keyrin
 3. `pnpm tauri:dev`. Wait for the library grid to render.
 4. **Do not touch anything Steam.** Do not open the Games tab, a game page, Install, Play, or
    Refresh. Sit on a non-Steam surface. Wait ~60s.
-5. Collect:
+5. Collect (widened 2026-09-05 — see Grep calibration above for why the narrow
+   `issuing keyring_get` form was insufficient):
    ```bash
-   grep -n "issuing keyring_get" ~/Library/Logs/GameLib/gamelib.log
+   GATE_A_PATTERN='SidecarKeyringSlotStore\(steam-refresh-token\)\.[a-zA-Z]+\(\): (issuing )?keyring_(get|available|set|delete)\b'
+   grep -nE "$GATE_A_PATTERN" ~/Library/Logs/GameLib/gamelib.log
    grep -n "library refresh deferred" ~/Library/Logs/GameLib/gamelib.log
    ```
 
 **PASS requires all three:**
 
-- [ ] Zero `steam-refresh-token ... issuing keyring_get` lines.
+- [ ] Zero matches for `$GATE_A_PATTERN` — i.e. zero Steam-slot Keychain round trips of ANY of the
+      four channels, not merely zero `keyring_get` reads. A pass recorded with the pre-2026-09-05
+      narrow pattern does not discharge this bullet and must be re-run.
 - [ ] At least one `Steam: library refresh deferred until a deliberate Steam action — no
       keyring_get issued (trigger=startup)` line. *(Absence of both this AND the read would mean
       the Steam path never ran at all — a vacuous pass, not a real one.)*
@@ -191,26 +236,53 @@ retiring Gate C below. On a stable-identity production build this is one dialog,
 
 ---
 
-## FINDING 1 — `keyring_available` is a second, SILENT prompt channel
+## FINDING 1 — `keyring_available` is a second, SILENT prompt channel — **CLOSED 2026-09-05**
 
-`src-tauri/src/main.rs:3131` (`keyring_available`) calls `entry.get_password()` — a **full secret
-read**. It prompts exactly like `keyring_get`. But `fetchAvailable()`
-(`keyringTokenStore.ts:203-221`) logs **only on failure**: a *successful* probe is completely silent.
+> **Status: CLOSED.** Both halves fixed — the silence by quick-260905-jx3 (`0fdbdac36`), the grep
+> hole by quick-260905-kd0. Line references below are refreshed to HEAD; the originals
+> (`main.rs:3131`, `keyringTokenStore.ts:203-221`, `user.ts:115`, `humbleSecretStore.ts:73`) had
+> gone stale by 2 000+ lines while the defect itself was completely unchanged.
 
-**Gate A's grep cannot see an `isAvailable()`-driven prompt.** That is a genuine hole in the gate's
-coverage, not a hypothetical.
+`src-tauri/src/main.rs:5369-5386` (`keyring_available`) calls `entry.get_password()` at `:5372` — a
+**full secret read**. It prompts exactly like `keyring_get`. But `fetchAvailable()`
+(then `keyringTokenStore.ts:203-221`) logged **only on failure**: a *successful* probe was
+completely silent.
 
-**Gate A survives it.** Audited every non-test `.isAvailable()` call site:
+**Gate A's grep could not see an `isAvailable()`-driven prompt.** That was a genuine hole in the
+gate's coverage, not a hypothetical.
 
-| Call site | Slot |
-|---|---|
-| `humble/user.ts:115` (inside `storeHumbleSecret`, write-path only) | Humble |
-| `humbleSecretStore.ts:73` (`SLOT_STORES.sessionCookie`) | Humble |
+**Gate A survived it by luck rather than design.** Non-test `.isAvailable()` call sites, census
+re-run 2026-09-05 (one new since the original audit):
 
-There is **no Steam-slot `isAvailable()` caller at all**, so the Steam slot genuinely does not touch
-the Keychain at startup. But any future Steam-side `isAvailable()` call would prompt at startup and
-be invisible to both the log and this gate. Worth closing pre-emptively: either log the successful
-probe, or route `keyring_available` through the same trigger annotation.
+| Call site | Slot | Prompts? |
+|---|---|---|
+| `humble/user.ts:116` (inside `storeHumbleSecret`, write-path only) | Humble | yes |
+| `humbleSecretStore.ts:76` (`SLOT_STORES.sessionCookie`) | Humble | yes |
+| `steamgridSecretStore.ts:71` (`SidecarSteamGridDbSecretStore.isAvailable()`) | steamgrid-api-key | **no** — the seam declares this member synchronous, so it returns `true` optimistically and never reaches `SidecarKeyringSlotStore.isAvailable()` |
+
+There is still **no prompting Steam-slot `isAvailable()` caller**, so the Steam slot genuinely did
+not touch the Keychain at startup. The steamgrid store is the near miss the original finding
+predicted: it addresses a non-Humble slot and is named as if it probes, and only its synchronous
+interface stops it.
+
+**How it was closed, in the order it had to happen:**
+
+1. `0fdbdac36` (quick-260905-jx3) made the successful probe visible — an INFO
+   `issuing keyring_available (may prompt) trigger=<label>` line before the invoke and an
+   `available=<bool> trigger= elapsed=` line after it, mirroring `fetchToken()`.
+2. quick-260905-kd0 widened this gate's pattern to match it — **and could not have done so first.**
+   Before step 1 there was no line to grep for, so an absence-assertion over `keyring_available`
+   would have been vacuously true: a false green by construction.
+
+The widening also found the original remedy too narrow: the prompt surface is **four** channels,
+not two. See Grep calibration above. A CI-visible ledger test in
+`src/backend/sidecar/__tests__/keyringTokenStore.test.ts` now fails if a fifth is added, so this
+rule no longer depends on someone re-reading this file.
+
+**Still not attempted, and still strictly better:** `keyring_available` maps both `Ok(_)` and
+`Err(NoEntry)` to `true` — it is really asking "is the Keychain backend reachable", which may be
+answerable without decrypting an item. A non-prompting probe removes the channel entirely rather
+than logging it.
 
 ## FINDING 2 — Gate C is ILL-POSED and is hereby RETIRED, not deferred
 

@@ -1,0 +1,4 @@
+(09-05 02:40:00) [Steam]:     SidecarKeyringSlotStore(steam-refresh-token).isAvailable(): issuing keyring_available (may prompt) trigger=startup
+(09-05 02:40:00) [Steam]:     SidecarKeyringSlotStore(steam-refresh-token).isAvailable(): keyring_available ok available=true trigger=startup elapsed=0ms
+(09-05 02:40:00) [Steam]:     SidecarKeyringSlotStore(steam-refresh-token).getToken(): issuing keyring_get (may prompt) trigger=startup
+(09-05 02:40:00) [Steam]:     SidecarKeyringSlotStore(steam-refresh-token).getToken(): keyring_get ok present=true len=14 trigger=startup elapsed=0ms

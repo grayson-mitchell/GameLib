@@ -4,7 +4,7 @@ title: "`keyring_available` reads the secret and PROMPTS, but logs only on failu
 area: auth
 severity: low
 needs: code-fix
-status: "OPEN, item 1 DONE — Direction item 1 (log the keyring_available success path) was FIXED 2026-09-05 by quick-260905-jx3 (0fdbdac36). Direction item 2 (widen the absence-grep) remains DEFERRED behind the Phase 999.1 offline-mode decision and is the only thing left in this file. Do NOT close the file on item 1's fix."
+status: "CLOSED 2026-09-05 — both Direction items done. Item 1 (log the success path) by quick-260905-jx3 (0fdbdac36); item 2 (widen the absence-grep) by quick-260905-kd0. Item 2 was PARKED 2026-09-04 behind Phase 999.1 and that deferral was deliberately OVERRIDDEN: 999.1 is a BACKLOG phase (ROADMAP.md:5010), unscheduled and unplanned. NOT closed by this: the non-prompting reachability probe, still the strictly better fix, and the missing pre-invoke announcements on keyring_set/keyring_delete — both recorded in the ledger and in kd0's SUMMARY."
 found_by: "Quick task 260817-d61 live gate (Gate A coverage audit)"
 source: ".planning/quick/260817-d61-defer-the-steam-keyring-read-from-startu/260817-d61-LIVE-GATE.md"
 files:
@@ -12,7 +12,7 @@ files:
   - src/backend/sidecar/keyringTokenStore.ts
 ---
 
-## ITEM 1 FIXED 2026-09-05 (quick-260905-jx3, 0fdbdac36) — item 2 is all that remains
+## CLOSED 2026-09-05 — item 1 by quick-260905-jx3 (0fdbdac36), item 2 by quick-260905-kd0
 
 Re-raised 2026-09-05, re-verified live, then fixed. History in one place:
 
@@ -113,7 +113,21 @@ Two independent fixes.
 1. ~~**Log the success path.** Mirror `fetchToken()`'s shape — announce `issuing keyring_available
    (may prompt) trigger=<label>` before the invoke and log the outcome with `elapsed=`.~~
    **DONE 2026-09-05, quick-260905-jx3 (`0fdbdac36`).** See the section at the top of this file.
-2. **Widen the absence-grep.** STILL OPEN, deferred behind the Phase 999.1 offline-mode decision. Any gate asserting "no keyring prompt at startup" must count
+2. ~~**Widen the absence-grep.**~~ **DONE 2026-09-05, quick-260905-kd0.** The 2026-09-04 deferral
+   behind Phase 999.1 was overridden: 999.1 is a BACKLOG phase (`ROADMAP.md:5010`), unscheduled and
+   unplanned, and a deferral resting on an item that may never land is not a reason to leave a
+   known-blind gate blind. **Item 1 was a hard prerequisite, not merely a predecessor** — before
+   `0fdbdac36` a successful `keyring_available` emitted nothing, so an absence-assertion over it
+   would have been vacuously true by construction: a false green.
+
+   The widening found this very remedy **too narrow**. The prompt surface is **four** channels, not
+   two: `setToken()`'s and `clearToken()`'s own source comments state that a write and a delete are
+   each "a real Keychain round trip" that "can prompt", and `clearToken()`'s records a 2026-08-14
+   session observing two prompts during a single Steam sign-out. Gate A's pattern now covers all
+   four, calibrated against two specimens (the real 2026-08-17 pre-fix log, and one generated from
+   the code rather than retyped). A CI-visible ledger test in
+   `src/backend/sidecar/__tests__/keyringTokenStore.test.ts` fails if a fifth is ever added, so the
+   rule no longer depends on anyone re-reading a quick-task markdown file from August. Any gate asserting "no keyring prompt at startup" must count
    `keyring_available` as well as `keyring_get`. Update `260817-d61-LIVE-GATE.md`'s Gate A grep
    accordingly, and RED-prove the widened pattern against a specimen containing an
    `isAvailable()` line.
@@ -130,3 +144,17 @@ the `keyring` crate, that is the better fix and removes the channel entirely.
 - Memory `keyring-timeout-races-keychain-approval` — read this BEFORE investigating any Keychain
   prompt in this project; the dev-ACL cause is already diagnosed there.
 - Sibling todo: `2026-08-17-humble-slots-still-prompt-unattended-at-startup.md`
+
+## Still open elsewhere — deliberately NOT absorbed into this todo's closure
+
+1. **A non-prompting reachability probe.** This file's own closing suggestion, still untried and
+   still strictly better than logging the channel: `keyring_available` maps both `Ok(_)` and
+   `Err(NoEntry)` to `true`, so it is really asking "is the Keychain backend reachable" — a
+   question that may be answerable without decrypting an item, and therefore without a prompt.
+2. **`keyring_set` / `keyring_delete` have no pre-invoke `(may prompt)` announcement.** Both can
+   prompt and both log only after the round trip. That is sufficient for an ABSENCE gate — a
+   completed round trip always leaves a line — but it cannot attribute a prompt the user is
+   looking at right now, which was the whole argument for item 1. Recorded in the ledger.
+3. **Gate A has not been re-run live** against the widened pattern. It is an operator procedure
+   needing a real Keychain and a logged-in Steam account. This work makes the gate correct; it
+   does not claim to have re-executed it.
