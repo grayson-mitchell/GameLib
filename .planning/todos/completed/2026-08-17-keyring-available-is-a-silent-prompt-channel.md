@@ -147,10 +147,16 @@ the `keyring` crate, that is the better fix and removes the channel entirely.
 
 ## Still open elsewhere — deliberately NOT absorbed into this todo's closure
 
-1. **A non-prompting reachability probe.** This file's own closing suggestion, still untried and
-   still strictly better than logging the channel: `keyring_available` maps both `Ok(_)` and
-   `Err(NoEntry)` to `true`, so it is really asking "is the Keychain backend reachable" — a
-   question that may be answerable without decrypting an item, and therefore without a prompt.
+1. ~~**A non-prompting reachability probe.**~~ **DONE 2026-09-05, quick-260905-l8g (`8eba75f9c`).**
+   The channel no longer prompts at all. `keyring_available` now probes a
+   deliberately-never-written account — no item, therefore no ACL, therefore no dialog — measured
+   live at 16.28 / 15.12 / 16.75 / 18.08 ms with `Err(NoEntry)` every time, against 48.87 s /
+   291.08 s for the old present-account read. Since a Keychain dialog blocks until it is answered,
+   a probe returning in milliseconds provably did not raise one. Three guards keep the probe
+   account absent; two of them were silently excluded by `cargo test keyring`'s substring filter
+   until renamed. This makes items 1 and 2 above mitigations of a defect that no longer exists —
+   they are kept because they still make a boot-time round trip visible, and because they are what
+   would show this channel regressing to the prompting path.
 2. **`keyring_set` / `keyring_delete` have no pre-invoke `(may prompt)` announcement.** Both can
    prompt and both log only after the round trip. That is sufficient for an ABSENCE gate — a
    completed round trip always leaves a line — but it cannot attribute a prompt the user is

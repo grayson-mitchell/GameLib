@@ -59,15 +59,30 @@ channels, and all four can prompt — `setToken()`'s and `clearToken()`'s own so
 *"a write is a real Keychain round trip and can prompt"*, and *"a delete is a real Keychain round
 trip that can prompt. A 2026-08-14 session observed TWO prompts during a single Steam sign-out."*
 
-| Channel | Can prompt | Announces `(may prompt)` before the invoke | Post-invoke line |
+| Channel | Can prompt | Pre-invoke announcement | Post-invoke line |
 |---|---|---|---|
-| `keyring_get` | yes | yes | `ok` / `failed` |
-| `keyring_available` | yes | yes, since `0fdbdac36` | `ok` / `failed` |
-| `keyring_set` | yes | **no** | `ok len=` / `failed` |
-| `keyring_delete` | yes | **no** | `ok` / `failed` |
+| `keyring_get` | yes | `(may prompt)` | `ok` / `failed` |
+| `keyring_available` | **no, since quick-260905-l8g** | `(non-prompting reachability probe)` | `ok` / `failed` |
+| `keyring_set` | yes | **none** | `ok len=` / `failed` |
+| `keyring_delete` | yes | **none** | `ok` / `failed` |
 
 For an ABSENCE gate the post-invoke line suffices — a completed round trip always leaves one — so
 the pattern keys on the announcement *and* the outcome line, covering all four.
+
+**`keyring_available` stays in the pattern even though it can no longer prompt.** It still makes a
+round trip at boot, which is worth seeing on its own; and it is precisely the channel whose
+regression back to the prompting path this gate would need to catch. Dropping it on the grounds
+that "it does not prompt any more" would rebuild the blind spot this gate already had once. The
+same rule is pinned in code by the prompting-channel ledger in
+`src/backend/sidecar/__tests__/keyringTokenStore.test.ts`.
+
+**What quick-260905-l8g changed.** The arm used to call `entry.get_password()` on the caller's real
+slot — a full secret read that raised an authorization dialog. It now probes a
+deliberately-never-written account, which returns `errSecItemNotFound` immediately: no item, no
+ACL, no dialog. Measured on this hardware 2026-09-05 at **16.28 ms / 15.12 ms / 16.75 ms**
+(`Err(NoEntry)` every time) against **48.87 s / 291.08 s** for the old present-account read. A
+Keychain dialog blocks until answered, so a probe returning in milliseconds provably did not raise
+one.
 
 **This widening is only non-vacuous because of `0fdbdac36`.** Before it, a successful
 `keyring_available` emitted no line whatsoever, so an absence-assertion over it would have been
