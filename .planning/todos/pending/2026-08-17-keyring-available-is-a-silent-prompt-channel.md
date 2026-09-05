@@ -4,7 +4,7 @@ title: "`keyring_available` reads the secret and PROMPTS, but logs only on failu
 area: auth
 severity: low
 needs: code-fix
-status: "PARKED 2026-09-04 — Direction item 2 (widen the absence-grep) parks with its sibling todo, because the startup-prompt gate it would widen has had its premise withdrawn by the Phase 999.1 offline-mode design. Direction item 1 (log the keyring_available success path) is NOT parked — it is a standalone observability defect that survives every outcome of that decision. See the PARKED section below."
+status: "ACTIVE (unparked 2026-09-05) — Direction item 1 (log the keyring_available success path) is OPEN and re-verified live at 2026-09-05; it is a standalone observability defect that survives every outcome of the Phase 999.1 offline-mode decision. Direction item 2 (widen the absence-grep) remains DEFERRED behind that decision, as recorded below — the file as a whole is no longer parked."
 found_by: "Quick task 260817-d61 live gate (Gate A coverage audit)"
 source: ".planning/quick/260817-d61-defer-the-steam-keyring-read-from-startu/260817-d61-LIVE-GATE.md"
 files:
@@ -12,36 +12,39 @@ files:
   - src/backend/sidecar/keyringTokenStore.ts
 ---
 
-## PARKED 2026-09-04 — with one item explicitly NOT parked
+## UNPARKED 2026-09-05 — re-raised, re-verified live, item 1 is open
 
-Parked alongside its sibling (`2026-08-17-humble-slots-still-prompt-unattended-at-startup.md`)
-because **Direction item 2** — widening `260817-d61`'s absence-grep to count `keyring_available`
-— only has meaning while a "no keyring prompt at startup" gate exists to widen. Under the
-Phase 999.1 offline-mode design that gate's premise is withdrawn (see the sibling's park note),
-so item 2 has nothing left to measure.
+Re-raised 2026-09-05 and re-checked against the tree. **The defect is unchanged and live.**
 
-**Direction item 1 is NOT parked, and must not be buried by this file's status.**
-`keyring_available` calls `entry.get_password()` (`src-tauri/src/main.rs`), so it prompts exactly
-like `keyring_get` — but `fetchAvailable()` (`keyringTokenStore.ts`) logs only in its `catch`, so
-a successful probe leaves no trace in `gamelib.log` at all. That is an observability defect on its
-own terms: it makes a real, user-visible Keychain prompt unattributable after the fact, whether or
-not any deferral gate exists anywhere in the codebase. It survives every outcome of the
-offline-mode decision — and under Phase 999.1, where auth deliberately happens at boot, being able
-to attribute each prompt matters MORE, not less.
+- `keyring_available` still calls `entry.get_password()` — `src-tauri/src/main.rs:5369-5386`
+  (the handler moved from 3131; the read is at `:5372`).
+- `fetchAvailable()` still logs **only** in its `catch` — `src/backend/sidecar/keyringTokenStore.ts:211-233`
+  (moved from 203-221). The success path writes `this.cachedAvailable` and returns, with no log
+  line of any kind.
+
+**Direction item 1 is OPEN and is why this file is no longer parked.** It is an observability
+defect on its own terms: it makes a real, user-visible Keychain prompt unattributable after the
+fact, whether or not any deferral gate exists anywhere in the codebase. It survives every outcome
+of the offline-mode decision — and under Phase 999.1, where auth deliberately happens at boot,
+being able to attribute each prompt matters MORE, not less.
+
+**Direction item 2 stays DEFERRED, and that is the only thing the 2026-09-04 park still governs.**
+Widening `260817-d61`'s absence-grep to count `keyring_available` only has meaning while a "no
+keyring prompt at startup" gate exists to widen. Under the Phase 999.1 offline-mode design that
+gate's premise is withdrawn (see the sibling todo's park note), so item 2 has nothing left to
+measure. It un-defers with the sibling, `2026-08-17-humble-slots-still-prompt-unattended-at-startup.md`.
 
 The same holds for this file's closing suggestion: `keyring_available` maps both `Ok(_)` and
 `Err(NoEntry)` to `true`, i.e. it is really asking "is the Keychain backend reachable" — a
 question that may be answerable without decrypting an item. A non-prompting probe would remove
 the channel entirely and is strictly better than logging it.
 
-**Unpark condition:** item 2 unparks with the sibling. Item 1 was never parked.
-
 ## Problem
 
 `keyring_available` is not a cheap capability probe. It is a **full secret read**:
 
 ```rust
-// src-tauri/src/main.rs:3131
+// src-tauri/src/main.rs:5369  (re-verified 2026-09-05)
 "keyring_available" => {
     let account = keyring_account(keyring_slot_arg(args, 0))?;
     match Entry::new(KEYRING_SERVICE, account) {
@@ -49,7 +52,7 @@ the channel entirely and is strictly better than logging it.
 ```
 
 It calls `entry.get_password()`, so on macOS it triggers a Keychain authorization prompt exactly
-like `keyring_get` does. But `fetchAvailable()` (`keyringTokenStore.ts:203-221`) logs **only in its
+like `keyring_get` does. But `fetchAvailable()` (`keyringTokenStore.ts:211-233`) logs **only in its
 `catch`**:
 
 ```ts
@@ -71,16 +74,20 @@ all.** It is a correctly-computed, RED-proven, non-vacuous gate that measures a 
 than the one it appears to guard — the same failure shape already recorded in
 `gate-can-be-nonvacuous-and-measure-wrong-property`.
 
-Steam is unaffected **today, by luck rather than design**. Audited every non-test `.isAvailable()`
-call site at the time of filing:
+Steam is unaffected **today, by luck rather than design**. Census of every non-test
+`.isAvailable()` call site, **re-run 2026-09-05** (line numbers refreshed; one new site since
+filing):
 
-| Call site | Slot |
-|---|---|
-| `src/backend/humble/user.ts:115` (inside `storeHumbleSecret`, write-path only) | Humble |
-| `src/backend/sidecar/humbleSecretStore.ts:73` (`SLOT_STORES.sessionCookie`) | Humble |
+| Call site | Slot | Prompts? |
+|---|---|---|
+| `src/backend/humble/user.ts:116` (inside `storeHumbleSecret`, write-path only) | Humble | yes |
+| `src/backend/sidecar/humbleSecretStore.ts:76` (`SLOT_STORES.sessionCookie`) | Humble | yes |
+| `src/backend/sidecar/steamgridSecretStore.ts:71` (`SidecarSteamGridDbSecretStore.isAvailable()`) | steamgrid-api-key | **no** — the seam declares this member synchronous, so it returns `true` optimistically and never reaches `SidecarKeyringSlotStore.isAvailable()` |
 
-There is no Steam-slot caller. But nothing prevents one being added, and if one is, it will prompt
-at bootstrap, silently, and `260817-d61`'s gate will keep reporting PASS.
+There is still no prompting Steam-slot caller. The steamgrid store is the near miss: it addresses
+a non-Humble slot and is named as if it probes, but its synchronous interface is the only reason
+it does not. If that member is ever made async and wired to the real probe, it will prompt at
+bootstrap, silently, and `260817-d61`'s gate will keep reporting PASS.
 
 ## Direction
 
