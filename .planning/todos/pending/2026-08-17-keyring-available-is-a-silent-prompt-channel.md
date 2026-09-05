@@ -4,7 +4,7 @@ title: "`keyring_available` reads the secret and PROMPTS, but logs only on failu
 area: auth
 severity: low
 needs: code-fix
-status: "ACTIVE (unparked 2026-09-05) — Direction item 1 (log the keyring_available success path) is OPEN and re-verified live at 2026-09-05; it is a standalone observability defect that survives every outcome of the Phase 999.1 offline-mode decision. Direction item 2 (widen the absence-grep) remains DEFERRED behind that decision, as recorded below — the file as a whole is no longer parked."
+status: "OPEN, item 1 DONE — Direction item 1 (log the keyring_available success path) was FIXED 2026-09-05 by quick-260905-jx3 (0fdbdac36). Direction item 2 (widen the absence-grep) remains DEFERRED behind the Phase 999.1 offline-mode decision and is the only thing left in this file. Do NOT close the file on item 1's fix."
 found_by: "Quick task 260817-d61 live gate (Gate A coverage audit)"
 source: ".planning/quick/260817-d61-defer-the-steam-keyring-read-from-startu/260817-d61-LIVE-GATE.md"
 files:
@@ -12,21 +12,38 @@ files:
   - src/backend/sidecar/keyringTokenStore.ts
 ---
 
-## UNPARKED 2026-09-05 — re-raised, re-verified live, item 1 is open
+## ITEM 1 FIXED 2026-09-05 (quick-260905-jx3, 0fdbdac36) — item 2 is all that remains
 
-Re-raised 2026-09-05 and re-checked against the tree. **The defect is unchanged and live.**
+Re-raised 2026-09-05, re-verified live, then fixed. History in one place:
 
-- `keyring_available` still calls `entry.get_password()` — `src-tauri/src/main.rs:5369-5386`
-  (the handler moved from 3131; the read is at `:5372`).
-- `fetchAvailable()` still logs **only** in its `catch` — `src/backend/sidecar/keyringTokenStore.ts:211-233`
-  (moved from 203-221). The success path writes `this.cachedAvailable` and returns, with no log
-  line of any kind.
+- **2026-08-17** filed. **2026-09-04** parked — but with item 1 explicitly carved out as not
+  parked. The carve-out was invisible to every reader that takes the leading token of `status:`
+  as the file's whole state, and the item was re-captured verbatim on **2026-09-05** by someone
+  who did not know this file existed.
+- **2026-09-05, re-verification.** Defect unchanged and live. `keyring_available` still reached
+  `entry.get_password()` at `src-tauri/src/main.rs:5372`; `fetchAvailable()` still logged only in
+  its `catch` at `src/backend/sidecar/keyringTokenStore.ts:211-233`. All line refs in this file
+  were stale by 2 000+ lines; refreshed in `eb1a9dfd3`.
+- **2026-09-05, item 1 FIXED** by quick-260905-jx3 (`0fdbdac36`).
 
-**Direction item 1 is OPEN and is why this file is no longer parked.** It is an observability
-defect on its own terms: it makes a real, user-visible Keychain prompt unattributable after the
-fact, whether or not any deferral gate exists anywhere in the codebase. It survives every outcome
-of the offline-mode decision — and under Phase 999.1, where auth deliberately happens at boot,
-being able to attribute each prompt matters MORE, not less.
+**What item 1's fix actually shipped.** `fetchAvailable()` now mirrors `fetchToken()`'s shape:
+an INFO `issuing keyring_available (may prompt) trigger=<label>` line **before** the invoke, and
+an INFO `keyring_available ok available=<bool> trigger= elapsed=<n>ms` line on success — on both
+outcomes, because a successful `false` is D-06's honest unavailable, a completed probe that
+already prompted. `trigger=`/`elapsed=` were appended to the existing catch warning after its
+pre-existing text, so every grep substring that already targeted that line stays load-bearing
+verbatim. `isAvailable()` additionally logs its cache-hit and joined-in-flight early returns at
+DEBUG, so a zero-prompt run is attributable to a warm cache rather than ambiguous with "no probe
+was issued". An optional `context?: string` trigger label is threaded through both
+`TokenStore.isAvailable()` and `HumbleSecretStore.isAvailable()`; no implementer changed arity.
+10 tests added, each RED-proven by reverting the exact line it covers (5 mutations).
+
+**The better fix was NOT attempted and is still available.** This file's own closing suggestion —
+replace `entry.get_password()` with a non-prompting reachability probe — removes the prompt
+channel rather than logging it, and remains strictly superior. It is a Rust behaviour change
+needing its own live verification, so it was deliberately left out of a logging task. If someone
+takes it up, item 1's logging stays useful (it attributes whatever prompts remain) but its
+urgency drops to zero.
 
 **Direction item 2 stays DEFERRED, and that is the only thing the 2026-09-04 park still governs.**
 Widening `260817-d61`'s absence-grep to count `keyring_available` only has meaning while a "no
@@ -91,13 +108,12 @@ bootstrap, silently, and `260817-d61`'s gate will keep reporting PASS.
 
 ## Direction
 
-Two independent fixes; do both:
+Two independent fixes.
 
-1. **Log the success path.** Mirror `fetchToken()`'s shape — announce `issuing keyring_available
-   (may prompt) trigger=<label>` before the invoke and log the outcome with `elapsed=`. This makes
-   every prompt in the process attributable, which is the whole point of `260817-d61`'s
-   instrumentation.
-2. **Widen the absence-grep.** Any gate asserting "no keyring prompt at startup" must count
+1. ~~**Log the success path.** Mirror `fetchToken()`'s shape — announce `issuing keyring_available
+   (may prompt) trigger=<label>` before the invoke and log the outcome with `elapsed=`.~~
+   **DONE 2026-09-05, quick-260905-jx3 (`0fdbdac36`).** See the section at the top of this file.
+2. **Widen the absence-grep.** STILL OPEN, deferred behind the Phase 999.1 offline-mode decision. Any gate asserting "no keyring prompt at startup" must count
    `keyring_available` as well as `keyring_get`. Update `260817-d61-LIVE-GATE.md`'s Gate A grep
    accordingly, and RED-prove the widened pattern against a specimen containing an
    `isAvailable()` line.
