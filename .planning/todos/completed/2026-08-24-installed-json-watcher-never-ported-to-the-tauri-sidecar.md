@@ -2,7 +2,12 @@
 created: 2026-08-24T00:00:00.000Z
 title: "The `installed.json` watcher that refreshes legendary's in-memory install map lives in `main.ts` and was NEVER ported to the sidecar — so any field legendary writes itself is permanently invisible under Tauri"
 area: tauri-sidecar
-status: OPEN
+status: "RESOLVED 2026-09-05 by quick-260905-upz. The watcher is now ported into the sidecar's own
+  bootstrap (import + call site in bootstrap.ts, and the bundle carries the discharge log string);
+  the todo's third clause -- sweeping main.ts for other unported non-handler side effects -- was
+  NOT performed because main.ts no longer exists, and is re-filed as its own todo."
+discharged: 2026-09-05
+discharged_by: quick-260905-upz
 severity: major
 files:
   - src/backend/main.ts
@@ -99,3 +104,50 @@ manually; `getDefaultSavePath` itself is recorded as a working channel with this
 
 Related: [[initstoremanagers-dead-under-tauri]] · [[migrations-never-run-in-tauri-sidecar]] ·
 [[sidecar-guard-first-import-breaks-electron-hook]] · [[census-by-wrong-namespace-misses-call-sites]]
+
+---
+
+## Disposition (2026-09-05, quick-260905-upz) — PARTIAL, closes on the mechanism only
+
+### The observation
+
+```
+$ grep -vE '^\s*(//|\*|/\*)' src/backend/sidecar/bootstrap.ts | grep -n 'startInstalledJsonWatcher'
+10:import { startInstalledJsonWatcher } from './installedJsonWatcher'
+307:      startInstalledJsonWatcher()
+310:        `[bootstrap] startInstalledJsonWatcher() failed: ${error}`,
+
+$ grep -c "installed.json updated, refreshing library" build/main/sidecar.js
+1
+
+$ ls -la build/main/sidecar.js src/backend/sidecar/installedJsonWatcher.ts
+-rw-r--r--@ 1 graysonmitchell  staff  1351269 Sep  5 20:45 build/main/sidecar.js
+-rw-r--r--@ 1 graysonmitchell  staff     9185 Sep  1 22:00 src/backend/sidecar/installedJsonWatcher.ts
+
+$ ls src/backend/main.ts
+ls: src/backend/main.ts: No such file or directory
+```
+
+### The claim that MAY now be made
+
+The `installed.json` watcher is ported into the sidecar's own bootstrap: a real (comment-stripped)
+import and call site exist in `bootstrap.ts`, and the exact discharge log string this todo named
+now appears once in the built bundle (previously `0`). The headline symptom — legendary's own
+writes to `installed.json` being invisible under Tauri because nothing calls `refreshInstalled()`
+— is fixed by this mechanism.
+
+### The claim that still may NOT be made
+
+That the sidecar's bootstrap has been swept for **other** unported non-handler side effects. This
+todo's third clause asked for exactly that sweep against `main.ts`, but `main.ts` no longer exists
+in this codebase — the file the clause targets is gone, not merely unchecked. The question behind
+the clause (does the sidecar's own bootstrap carry every non-handler side effect the old Electron
+main once had — other `watch(`, `setInterval`, `.on(` subscriptions) is still open and was not
+answered here.
+
+### Residue and its owner
+
+Re-filed as `.planning/todos/pending/2026-09-05-sidecar-bootstrap-never-swept-for-unported-non-handler-side-effects.md`,
+targeting `src/backend/sidecar/bootstrap.ts` and the sidecar import graph directly (since `main.ts`
+is gone, there is no longer a source to diff against — the sweep must instead inventory bootstrap's
+own side effects and cross-check history/git-log for what the old `main.ts` used to register).

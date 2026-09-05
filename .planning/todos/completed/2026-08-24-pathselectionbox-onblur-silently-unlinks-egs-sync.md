@@ -2,7 +2,12 @@
 created: 2026-08-24T00:00:00.000Z
 title: "Focus leaving an EMPTY `PathSelectionBox` sends `''` to its `onPathChange`, and `EgsSettings` maps that to `'unlink'` — so opening the picker to ENABLE EGS sync silently DISABLES it first"
 area: ui-settings
-status: OPEN
+status: "RESOLVED 2026-09-05 by quick-260905-upz. Suggested fixes #1/#2 (do not treat an empty
+  field as unlink; guard the blur route like the picker route) are satisfied by Guard G1 in
+  commitPath. Suggested fix #3 (make the sync/unsync dialogs distinguishable) is NOT satisfied and
+  is re-filed as its own todo."
+discharged: 2026-09-05
+discharged_by: quick-260905-upz
 severity: minor
 files:
   - src/frontend/components/UI/PathSelectionBox/index.tsx
@@ -74,3 +79,66 @@ completed the pick within the 60s window described in
 [[2026-08-24-opendialog-is-missing-from-long-running-channels-so-every-file-picker-flow-dies-silently]].
 
 Related: [[t-default-arg-is-inert-when-key-exists]]
+
+---
+
+## Disposition (2026-09-05, quick-260905-upz) — PARTIAL, closes on items 1/2 only
+
+### The observation
+
+```
+$ grep -vE '^\s*(//|\*|/\*)' src/frontend/components/UI/PathSelectionBox/index.tsx | grep -n "commitFromBlur\|commitPath"
+60:  function commitPath(next: string) {
+70:    commitPath(next)
+74:  function commitFromBlur(next: string) {
+79:    commitPath(next)
+84:      commitPath('')
+97:        commitPath(selectedPath)
+121:      onBlur={(e) => commitFromBlur(e.target.value)}
+
+$ sed -n '100,120p' src/frontend/components/UI/PathSelectionBox/index.tsx
+  function commitPath(next: string) {
+    enterCommittedRef.current = null
+    if (next === path) {
+      // Guard G1
+      return
+    }
+    onPathChange(next)
+    setJustSaved(true)
+  }
+
+  function commitFromEnter(next: string) {
+    commitPath(next)
+    enterCommittedRef.current = next
+  }
+
+$ grep -n "message.unsync\|message.sync\|title:" src/frontend/screens/Settings/components/EgsSettings.tsx
+36:          title: t('box.error.title', 'Error')
+43:            newPath === 'unlink' ? t('message.unsync') : t('message.sync'),
+44:          title: 'EGS Sync'
+```
+
+### The claim that MAY now be made
+
+The blur route (`onBlur` -> `commitFromBlur` -> `commitPath`) now shares the same funnel and the
+same Guard G1 (`if (next === path) return`) as the picker route, rather than calling
+`onPathChange(e.target.value)` directly and unguarded. For the exact reported scenario — focus
+leaving an already-empty field — `next === '' === path`, so G1 suppresses the call before
+`onPathChange` (and therefore `EgsSettings`'s `'unlink'` mapping) ever fires. Suggested fixes #1
+("don't treat an empty field as unlink") and #2 ("guard the blur route like the picker route") are
+both satisfied by this single guard.
+
+### The claim that still may NOT be made
+
+That the two outcome dialogs are now distinguishable. Suggested fix #3 is untouched: both the sync
+and unsync success dialogs still render under the identical literal title `'EGS Sync'`
+(`EgsSettings.tsx:44`), differing only in the one-word body (`message.sync` vs `message.unsync`).
+The parent todo's own argument for why this matters — a one-word body difference under a shared
+title was misread once already by the operator — still holds for every other path that reaches
+this dialog.
+
+### Residue and its owner
+
+Re-filed as
+`.planning/todos/pending/2026-09-05-egs-sync-and-unsync-dialogs-are-indistinguishable-at-a-glance.md`,
+carrying suggested fix #3 as its sole scope.

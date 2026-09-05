@@ -2,7 +2,14 @@
 created: 2026-08-24T00:00:00.000Z
 title: "Move Game is BROKEN on every modern macOS — `moveOnUnix` passes two rsync flags Apple's `openrsync` rejects, and the capability probe only checks that a binary EXISTS"
 area: backend-utils
-status: OPEN
+status: "RESOLVED 2026-09-05 by quick-260905-upz. moveOnUnix now probes rsync's capability
+  (flavour), branches its flag list on openrsync vs GNU, and the mv-fallback/rsync success tests
+  were both corrected to code === 0; a unit test pins the argv per flavour. Not claimed: the
+  openrsync branch has not been exercised live on macOS in this session, so this closes on code,
+  not on an observed move. Same root cause and fix as
+  2026-08-28-moveinstall-fails-rsync-unrecognized-option-no-human-readable.md."
+discharged: 2026-09-05
+discharged_by: quick-260905-upz
 severity: major
 files:
   - src/backend/utils.ts
@@ -135,3 +142,92 @@ which independently confirms that diagnosis: the identical gesture completed und
 failed above it.
 
 Related: [[upstream-port-verbatim-ships-silent-defects]] · [[live-gate-beats-green-suite-three-times]]
+
+---
+
+## Disposition (2026-09-05, quick-260905-upz) — DISCHARGED
+
+### The observation
+
+```
+$ sed -n '1200,1245p' src/backend/utils.ts
+  let rsyncFlavour: 'gnu' | 'openrsync' | null = null
+  try {
+    const { stdout } = await execAsync('rsync --version')
+    rsyncFlavour = /openrsync/i.test(stdout) ? 'openrsync' : 'gnu'
+  } catch (error) {
+    logError(error, LogPrefix.Gog)
+  }
+  if (rsyncFlavour) {
+    const origin = install_path + '/'
+    const rsyncArgs =
+      rsyncFlavour === 'openrsync'
+        ? ['--archive', '--compress', '--remove-source-files', '--progress']
+        : [
+            '--archive',
+            '--compress',
+            '--no-human-readable',
+            '--remove-source-files',
+            '--info=name,progress'
+          ]
+    ...
+
+$ grep -vE '^\s*(//|\*|/\*)' src/backend/utils.ts | grep -n "rsyncFlavour\|no-human-readable"
+1057:  let rsyncFlavour: 'gnu' | 'openrsync' | null = null
+1060:    rsyncFlavour = /openrsync/i.test(stdout) ? 'openrsync' : 'gnu'
+1064:  if (rsyncFlavour) {
+1067:      rsyncFlavour === 'openrsync'
+1072:            '--no-human-readable',
+1077:      `moving command (${rsyncFlavour}): rsync ${rsyncArgs.join(
+
+$ grep -rn "moveOnUnix\|moveInstall" src/backend/storeManagers/legendary/games.ts src/backend/storeManagers/gog/games.ts
+src/backend/storeManagers/legendary/games.ts:19:  moveOnUnix,
+src/backend/storeManagers/legendary/games.ts:359:    const moveImpl = isWindows ? moveOnWindows : moveOnUnix
+src/backend/storeManagers/gog/games.ts:9:  moveOnUnix,
+src/backend/storeManagers/gog/games.ts:782:    const moveImpl = isWindows ? moveOnWindows : moveOnUnix
+
+$ sed -n '1246,1266p' src/backend/utils.ts
+    if (code === 0) {
+      logInfo(`Finished Moving ${title}`, LogPrefix.Backend)
+      await spawnAsync('rm', ['-rf', install_path])
+    } else {
+      logError(`Error: ${stderr}`, LogPrefix.Backend)
+      return { status: 'error', error: stderr }
+    }
+  } else {
+    const { code, stderr } = await spawnAsync('mv', ['-f', install_path, destination])
+    if (code === 0) {
+      return { status: 'done', installPath: destination }
+    } else {
+      logError(`Error: ${stderr}`, LogPrefix.Backend)
+      return { status: 'error', error: stderr }
+    }
+  }
+
+$ grep -n "openrsync\|no-human-readable\|toHaveBeenCalledWith" src/backend/__tests__/moveOnUnix.test.ts
+124:    test('openrsync is never passed the two flags it rejects', async () => {
+131:      expect(args).not.toContain('--no-human-readable')
+155:    test('openrsync still takes the rsync path — it does NOT fall through to mv', async () => {
+```
+
+### The claim that MAY now be made
+
+All four suggested fixes in this todo are answered by code that survives comment-stripping: (1)
+`moveOnUnix` probes rsync's actual implementation via `rsync --version` rather than trusting `which
+rsync`'s existence check; (2) the openrsync branch only uses flags openrsync accepts, dropping both
+`--no-human-readable` and `--info=name,progress` in favour of `--progress`; (3) the `code !== 1`
+inverted success test named in this todo (attributed to `D-35-19-08`) is gone from both the rsync
+arm and the `mv` fallback arm, both now testing `code === 0`; (4) `moveOnUnix.test.ts` pins the
+per-flavour argv, including asserting the rejected flags are absent on openrsync. Both `legendary`
+and `gog` `moveInstall` route through this same shared `moveOnUnix`.
+
+### The claim that still may NOT be made
+
+That the openrsync branch has been exercised against a real openrsync binary and a real move, live,
+in this session. This closes on the code being correct and unit-tested, not on an observed move.
+
+### Residue and its owner
+
+None. Same root cause and fix as
+`.planning/todos/completed/2026-08-28-moveinstall-fails-rsync-unrecognized-option-no-human-readable.md`
+— see that record for the cross-reference.

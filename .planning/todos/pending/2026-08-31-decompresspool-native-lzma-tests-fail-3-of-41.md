@@ -65,3 +65,60 @@ so, these three tests would have been deleted or skipped, not left asserting `"n
 
 Unowned. **No `resolves_phase:` set deliberately** — this is Phase 23.1 territory surfaced by
 Phase 35's regression gate, and must not auto-close when Phase 35 completes.
+
+## 2026-09-05 (quick-260905-upz staleness audit) — DOES NOT CURRENTLY REPRODUCE, and that is the finding
+
+Re-run during the pending-queue staleness audit. **The todo stays OPEN.** It was screened as a
+discharge candidate and deliberately rejected as one.
+
+```
+$ npx jest --config src/backend/jest.config.js \
+    --runTestsByPath src/backend/storeManagers/steam/__tests__/decompressPool.test.ts
+Tests:       41 passed, 41 total
+Test Suites: 1 passed, 1 total
+```
+
+All three tests named above now pass, including the two that assert `lzmaDecoderKind() === "native"`.
+
+**Nothing that could explain the flip has changed:**
+
+```
+$ git log --oneline --since=2026-08-30 -- src/backend/storeManagers/steam/lzmaLoader.ts
+(no output)
+$ git log --oneline --since=2026-08-30 -- .../__tests__/decompressPool.test.ts
+(no output)
+$ node -v
+v26.2.0                       # the same version this todo recorded on 2026-08-31
+$ stat -f "%Sm" node_modules/lzma-native
+Aug 23 20:47:49 2026          # predates this todo
+$ git diff --quiet HEAD -- .../decompressPool.test.ts && echo CLEAN
+CLEAN
+```
+
+Same loader, same test file, same Node, same native module — and a failure this todo explicitly
+established as **deterministic** ("the isolated single-suite run reproduces all three identically.
+It is real.") is now green.
+
+### Why this does not close the todo
+
+The central question is unchanged and unanswered: *why does `lzma-native` load fine outside jest
+and resolve to `pure-js` inside it?* Nobody answered it; the symptom simply stopped presenting.
+A green suite is not an answer, and with no code delta there is no mechanism to point at.
+
+This todo's own instruction anticipated the trap — *"Do not assume the kill switch is simply
+'working as intended' — if that were so, these three tests would have been deleted or skipped, not
+left asserting `native`."* They still assert `native`. They now pass. With no code change, that
+makes the **passing** result the one that needs explaining.
+
+### What changed about this todo
+
+Its subject. It was "3 tests fail"; it is now "this suite's native-path result is
+environment-dependent and nobody knows on what." The second is the more serious defect, because it
+means neither a red nor a green run of this suite currently carries information.
+
+### For whoever picks it up
+
+Establish what the result actually depends on before touching the loader. The two commits that
+touched jest/package config in the window (`e98174032`, `90bb5a08d`) are unexamined and are the
+only observed candidates, but neither was probed here and neither is implicated by evidence — they
+are a starting point, not a hypothesis. Related: `flake-baselines-can-be-undiagnosed-bugs`.
