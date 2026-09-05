@@ -250,9 +250,18 @@ reasoning_checkpoint:
     `lzmaNativeSeaRealBuild.test.ts` — all unrelated). Run 8 PASS. **0 of 8 runs touched
     `enrichmentFlows.test.ts` at all.** System load average climbed to 18-26 (on a 10-core
     machine) during this measurement window — well beyond the original bug's load
-    conditions, evidently from an unrelated concurrent process on the machine — making this
-    an even more adversarial test of the fix than the original full-suite-only scenario, and
-    the target mechanism still did not reproduce once.
+    conditions — making this an even more adversarial test of the fix than the original
+    full-suite-only scenario, and the target mechanism still did not reproduce once.
+    [CORRECTED 2026-09-06: this entry originally attributed that load to "an unrelated
+    concurrent process on the machine". That was WRONG. The load was THIS SESSION'S OWN
+    leaked sidecars — five orphaned `gamelib-sidecar` processes, each pinned at ~100% CPU,
+    whose start times (19:48, 20:08, 20:11, 20:21, 20:42) fall inside this agent's own
+    measurement window and nowhere else. Found still running 14h later and killed
+    2026-09-06 10:35; `sample(1)` output captured first, and all five showed a BYTE-IDENTICAL
+    main-thread spin (100% of samples, 2450/2450, all 11 other threads parked) at the same
+    stripped-SEA offsets — a deterministic loop, not drift. Filed as its own todo. The GREEN
+    conclusion is UNAFFECTED and if anything strengthened: the 8 runs passed on a machine
+    with five cores saturated. Only the cause of the load was misattributed.]
   implication: GREEN confirmed by the same mechanism that originally caught the RED failure
     (a real `npx jest --selectProjects Backend` run). Stopped the loop at 8 runs (rather than
     the full 12) once it was clear the unrelated environmental failures were consuming
