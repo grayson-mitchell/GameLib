@@ -8,13 +8,7 @@ import {
   callAbortController,
   hasAbortController
 } from 'backend/utils/aborthandler/aborthandler'
-import {
-  ButtonOptions,
-  DMStatus,
-  GameInfo,
-  InstallParams,
-  Runner
-} from 'common/types'
+import { ButtonOptions, DMStatus, InstallParams, Runner } from 'common/types'
 import { InstallResult, InstallErrorAction } from 'common/types/game_manager'
 import i18next from 'i18next'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
@@ -30,6 +24,18 @@ import {
   isStallError,
   INSTALL_NO_PROGRESS_TIMEOUT_MS
 } from 'backend/downloadmanager/installStallWatchdog'
+import { resolveGameTitle } from 'backend/utils/gameTitle'
+
+// Quick task 260905-mv5 (D-02): re-exported, unchanged name and signature,
+// so this module's 3 existing jest.mock() callers (downloadqueue.test.ts,
+// downloadQueueFlows.test.ts, utils.test.ts) keep working without
+// modification. The implementation itself now lives in
+// backend/utils/gameTitle.ts (a zero-runtime-import module) alongside its
+// new Game-instance counterpart, resolveTitleForGame -- see that file's
+// docstring for why the relocation was necessary (HAZARD B: this module
+// imports FROM backend/utils.ts, so backend/utils.ts could not import
+// resolveGameTitle back from here without closing a cycle).
+export { resolveGameTitle }
 
 // Type-only reference to the lazily-imported module below -- erased at
 // compile time, so it does NOT reintroduce the downloadmanager/utils.ts <->
@@ -58,12 +64,13 @@ type LibraryManagerMap =
  * resolver so it is impossible to fix the fallback on one queue element and
  * leave the other with the raw, unguarded destructure.
  *
- * Quick task 260905-luf: this is now a thin wrapper around the exported
- * `resolveGameTitle` below, so there is exactly ONE fallback chain for
- * every DownloadManager title consumer, not two independently-maintained
- * ones. Behaviour here is byte-identical to before (no `fallback` argument
- * is passed) -- the install-failure dialog this function feeds still
- * resolves `live.title || appName`, nothing more.
+ * Quick task 260905-luf: this is now a thin wrapper around `resolveGameTitle`
+ * (260905-mv5: re-exported above from `backend/utils/gameTitle.ts`, its new
+ * home), so there is exactly ONE fallback chain for every DownloadManager
+ * title consumer, not two independently-maintained ones. Behaviour here is
+ * byte-identical to before (no `fallback` argument is passed) -- the
+ * install-failure dialog this function feeds still resolves
+ * `live.title || appName`, nothing more.
  */
 function resolveQueueElementTitle(
   libraryManagerMap: LibraryManagerMap,
@@ -71,26 +78,6 @@ function resolveQueueElementTitle(
   appName: string
 ): string {
   return resolveGameTitle(libraryManagerMap, runner, appName)
-}
-
-/**
- * Quick task 260905-luf (D-01): the single fallback chain for every
- * DownloadManager title consumer that reads a possibly-`{}` Steam GameInfo.
- * `live.title` wins when present; else `fallback?.title` (typically the
- * queue element's `params.gameInfo`, captured at enqueue time and therefore
- * unaffected by a later cache miss -- evidence item 9); else the raw
- * `appName`. Never returns an empty string when `appName` is non-empty: an
- * empty-string `live.title` (falsy) is treated as absent, same as
- * `undefined`.
- */
-export function resolveGameTitle(
-  libraryManagerMap: LibraryManagerMap,
-  runner: Runner,
-  appName: string,
-  fallback?: GameInfo
-): string {
-  const { title } = libraryManagerMap[runner].getGame(appName).getGameInfo()
-  return title || fallback?.title || appName
 }
 
 /**

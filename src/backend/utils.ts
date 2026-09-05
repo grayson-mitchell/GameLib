@@ -41,6 +41,7 @@ import {
 } from './storeManagers/gog/electronStores'
 import gogPresence from './storeManagers/gog/presence'
 import { libraryManagerMap } from './storeManagers'
+import { resolveTitleForGame } from './utils/gameTitle'
 import {
   installStore as nileInstallStore,
   libraryStore as nileLibraryStore
@@ -326,8 +327,12 @@ async function handleExit() {
   app.exit()
 }
 
-export async function askForceUninstall(game: Game) {
-  const { title } = game.getGameInfo()
+export async function askForceUninstall(game: Game, appName: string) {
+  // Quick task 260905-mv5 (site 1, D-03): getGameInfo() can return
+  // `{} as GameInfo` on a double cache miss (D-01) -- resolveTitleForGame
+  // falls back to appName so this destructive-confirmation dialog is never
+  // nameless.
+  const title = resolveTitleForGame(game, appName)
   const { response } = await dialog.showMessageBox({
     type: 'question',
     title,
@@ -370,7 +375,7 @@ async function errorHandler(
   if (ignoreMessages.some((msg) => error.includes(msg))) return
 
   if (error.includes(deletedFolderMsg) && appName) {
-    await askForceUninstall(getGame(appName, runner))
+    await askForceUninstall(getGame(appName, runner), appName)
     return
   }
 

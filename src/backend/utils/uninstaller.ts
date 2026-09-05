@@ -8,6 +8,7 @@ import { notify } from 'backend/dialog/dialog'
 import { logError, logInfo, LogPrefix } from 'backend/logger'
 import { libraryManagerMap } from 'backend/storeManagers'
 import { sendGameStatusUpdate } from 'backend/utils'
+import { resolveGameTitle } from 'backend/utils/gameTitle'
 import { Runner } from 'common/types'
 import { storeMap } from 'common/utils'
 import { Event } from 'backend/platform'
@@ -105,7 +106,11 @@ export const uninstallGameCallback = async (
   })
 
   const game = libraryManagerMap[runner].getGame(appName)
-  const { title } = game.getGameInfo()
+  // Quick task 260905-mv5 (site 2, D-03): getGameInfo() can return
+  // `{} as GameInfo` on a double cache miss (D-01) -- resolveGameTitle
+  // falls back to appName so neither the uninstall-error nor the
+  // uninstall-success notification below is ever nameless.
+  const title = resolveGameTitle(libraryManagerMap, runner, appName)
 
   let uninstalled = false
 
