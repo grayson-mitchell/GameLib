@@ -114,7 +114,12 @@ const OrderDetailSchema = z
   })
   .passthrough()
 
-// D-02/D-13 point 4: endpoint confirmed empirically in Plan 05 (10-VALIDATION.md)
+// The shape below comes from D-02/D-13 point 4, NOT from an observed body.
+// `/api/v1/user/info` has never answered on this auth flow: 10-VALIDATION.md:106
+// records it as "404 (hard failure, every attempt)" at Phase 10, the first time it
+// was ever exercised, and a control-verified live probe on 2026-09-05
+// (quick-260905-q4j) got the same bare 232-byte framework 404. This schema is
+// therefore unexercised against a real payload -- treat it as unverified.
 const AccountIdentitySchema = z
   .object({
     username: z.string()
@@ -566,7 +571,20 @@ export async function getAccountIdentity(
   cookie: string
 ): Promise<AdapterResult<HumbleUserData>> {
   try {
-    // D-02/D-13 point 4: endpoint confirmed empirically in Plan 05 (10-VALIDATION.md)
+    // This path 404s, always, and always has -- it is not a route on Humble's API
+    // for this auth flow. 10-VALIDATION.md:106 recorded "404 (hard failure, every
+    // attempt)" at Phase 10, and quick-260905-q4j discriminated the two standing
+    // candidates (moved endpoint vs. an interstitial answering in its place) with a
+    // control-verified live probe: an AUTHENTICATED /api/v1/user/order returned 200
+    // with 32 orders while, seconds later on the same session, /api/v1/user/info
+    // returned the bare 232-byte framework 404 -- byte-identical unauthenticated and
+    // under a browser UA, with no redirect and no cf-mitigated header. The
+    // interstitial candidate is RULED OUT: it would have caught the sibling path,
+    // and Humble answers 401-with-branded-page when a route exists but the caller is
+    // not authorized. Where identity data actually lives is still UNKNOWN -- six
+    // guessed paths all bare-404'd, which proves nothing. Kept deliberately: this
+    // call is advisory-only and inert, since finishLogin gates on getGamekeys and
+    // never on getAccountIdentity.
     const response = await humbleRequest('/api/v1/user/info', cookie)
     const parsed = AccountIdentitySchema.safeParse(response.data)
     if (!parsed.success) {
