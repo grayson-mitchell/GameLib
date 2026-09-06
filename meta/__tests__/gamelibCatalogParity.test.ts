@@ -109,6 +109,52 @@ describe('gamelib catalog parity', () => {
   )
 })
 
+// Shared by both assertions below so the live check and its non-vacuity
+// proof can never drift apart -- two separately-written predicates would
+// let the live check rot while the sabotage check stayed green.
+function findEmptyEnglishKeys(catalog: Record<string, string>): string[] {
+  return Object.entries(catalog)
+    .filter(([, value]) => value === '')
+    .map(([key]) => key)
+}
+
+// English source completeness (REQ-41-03)
+//
+// An empty English value is precisely what makes a key un-fillable --
+// machine-fill skips any key whose English source is empty, so it renders
+// English in every locale and can never be translated. This is an
+// AUTHORING gap in `en`, not a translation gap, and REQ-41-01's inverted
+// presence check (plan 41-05) is only allowed to key off `en` being
+// non-empty because this block keeps that true.
+//
+// Accepted trade-off: `pnpm i18n` writes `defaultValue: ''`
+// (i18next-parser.config.js:22) for any key whose `t()` default is a
+// VARIABLE rather than a string literal, so this assertion WILL go red the
+// next time such a key is minted. That is a TRUE POSITIVE by REQ-41-03's
+// own definition -- an empty English value is un-localisable -- and the
+// remedy is to author the string, exactly as plan 41-01 did for the six
+// `redeemKey.*` keys this block was added alongside.
+//
+// Deliberately no exemption list: the comment at meta/lintTranslations.ts
+// (around checkLanguage()) claims 48 "legitimately empty" keys exist by
+// design; only 6 existed when this block was written (2026-09-06) and
+// plan 41-01 authored all six. Plan 41-03 corrects that stale comment.
+describe('English source completeness (REQ-41-03)', () => {
+  it('has zero empty-string values in the committed English catalog', () => {
+    const emptyKeys = findEmptyEnglishKeys(english)
+    expect(emptyKeys).toEqual([])
+  })
+
+  it('is non-vacuous -- the shared predicate catches a sabotaged empty value', () => {
+    const sabotaged = { ...english, 'redeemKey.error': '' }
+    expect(findEmptyEnglishKeys(sabotaged)).toEqual(['redeemKey.error'])
+  })
+
+  it('actually read the catalog -- guards against a truncated/empty file making the first assertion vacuously true', () => {
+    expect(Object.keys(english).length).toBeGreaterThan(200)
+  })
+})
+
 describe('machine-translation provenance', () => {
   it('never ships a provenance sidecar without its catalog', () => {
     const orphaned = manifestPaths.filter(
