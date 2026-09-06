@@ -465,7 +465,7 @@ the verdict:
 | 20 | `2026-09-01-non-english-catalogs-are-unrebranded-2117-heroic-strings` | `grep -rho "Heroic" public/locales/*/translation.json \| wc -l` | `1969` | **LIVE — headline count is stale.** The todo says 2117; HEAD is 1969. The defect is live but its magnitude has drifted, so the number must not be quoted from the title. |
 | 21 | `2026-09-01-webview-amazonlogindata-is-permanently-null` | `grep -rn "amazonLoginData" src \| wc -l` | `4` | **LIVE** — anchor still present |
 | 25 | `2026-09-03-nav-tour-shows-stale-heroic-branding-in-28-locales` | `grep -rl "Heroic" public/locales/*/tour.json` | no `tour.json` exists; the tour strings are in `translation.json`, inside todo 20's 1969 | **LIVE — overlaps todo 20.** These two are not independent; fixing 20 wholesale would absorb 25. Whoever takes either should take both. |
-| 18 | `2026-08-31-decompresspool-native-lzma-tests-fail-3-of-41` | `npx jest --runTestsByPath .../decompressPool.test.ts` | `Tests: 41 passed, 41 total` | **LIVE — see below. NOT discharged.** |
+| 18 | `2026-08-31-decompresspool-native-lzma-tests-fail-3-of-41` | `npx jest --runTestsByPath .../decompressPool.test.ts` | `Tests: 41 passed, 41 total` | **LIVE — see below. NOT discharged.** **[CORRECTED 2026-09-07 — see the correction note below this section: this verdict rested on a pathspec that does not exist.]** |
 
 #### Row 18 is the sweep's one real finding, and it is the opposite of a discharge
 
@@ -500,6 +500,41 @@ left asserting `native`."* They still assert `native`, and they now pass, with n
 **Verdict: LIVE, and upgraded in interest.** Closing this on a green suite would have been the
 `flake-baselines-can-be-undiagnosed-bugs` failure mode, with the flake on the passing side. The
 non-reproduction is recorded on the todo itself; the todo stays in `pending/`.
+
+> **CORRECTION, 2026-09-07 (quick `260907-brc`). Row 18's "nothing changed" finding is wrong.**
+>
+> This section concluded that no code delta could explain the flip to green, on the strength of:
+>
+> ```
+> $ git log --oneline --since=2026-08-30 -- src/backend/storeManagers/steam/lzmaLoader.ts
+> (no output)
+> ```
+>
+> **That path does not exist.** The file is `src/backend/storeManagers/steam/depot/lzmaLoader.ts`
+> (note `depot/`). `git log` against a pathspec matching nothing prints nothing and **exits 0** —
+> "no commits touched this file" and "this file is not where you think it is" produce identical
+> output. The wrong path was copied in good faith from the todo's own `files:` frontmatter, which
+> had carried it since 2026-08-31.
+>
+> Against the real path there is exactly one commit in the window, and it is the answer:
+>
+> ```
+> $ git log --oneline --since=2026-08-30 -- src/backend/storeManagers/steam/depot/lzmaLoader.ts
+> b79765af2 fix(steam): decode known-size lzma_alone streams on liblzma 5.2.3
+> ```
+>
+> `b79765af2` (quick `260902-pwy`, 2026-09-02) landed three days BEFORE this audit ran. The
+> smoke test in `resolveLzmaModule()` — not the import — was what failed, because liblzma 5.2.3
+> rejects the known-size + EOS stream shape of `SMOKE_TEST_COMPRESSED`; the loader collapses both
+> failures into one `catch` that sets `'pure-js'`. The todo is now CLOSED with the full mechanism
+> at `.planning/todos/completed/2026-08-31-decompresspool-native-lzma-tests-fail-3-of-41.md`.
+>
+> **The audit's judgement was sound and its evidence was not.** Refusing to discharge row 18 on a
+> green suite was the right call — `flake-baselines-can-be-undiagnosed-bugs` applied, and there
+> genuinely was an undiagnosed bug. Only the "no code delta" premise was false, and it was false
+> in a way that exits 0. **A `git log -- <path>` printing nothing is evidence only once the path
+> is known to exist.**
+
 
 ### BY CONSTRUCTION — 14 rows, no code probe run
 
