@@ -4979,6 +4979,8 @@ carries an explicit **return half** stating that 40-11's macOS PASS does **not**
 
 ### Phase 41: i18n gate honesty - make the translation and hardcoded-string gates report what they cannot currently see
 
+✅ **COMPLETE 2026-09-06** — 7/7 plans. `41-VERIFICATION.md` `status: passed`, 10/10 must-haves, 0 gaps (first pass was `gaps_found` 8/10 with 2 blockers; both closed by 41-06/41-07 and independently re-reproduced as fixed).
+
 **Goal:** Both i18n gates currently return green over things they cannot see. Make each one
 report the condition it was built to catch, and retire the false-positive debt that made the
 hardcoded-string gate's scope artifact untrustworthy. Scope is `meta/` plus
@@ -5043,11 +5045,13 @@ whoever plans it:
   authoring only. Filling the locales is a follow-up needing a working key.
 
 Plans:
-- [ ] 41-01-PLAN.md — Author the six empty-in-English redeemKey.* strings and gate against a seventh (wave 1, REQ-41-03)
-- [ ] 41-02-PLAN.md — Widen the D-14 gate exemptions so the 46 declaration-site false positives go to zero (wave 1, REQ-41-04)
-- [ ] 41-03-PLAN.md — Make lintTranslations importable and close both fail-open shapes at the catalog-read seam (wave 1, REQ-41-02)
-- [ ] 41-04-PLAN.md — Promote the three files into the blocking gate scope at zero violations (wave 2, REQ-41-04)
-- [ ] 41-05-PLAN.md — Invert the presence check and pin the 794 known-missing pairs as a set (wave 2, REQ-41-01)
+- [x] 41-01-PLAN.md — Author the six empty-in-English redeemKey.* strings and gate against a seventh (wave 1, REQ-41-03)
+- [x] 41-02-PLAN.md — Widen the D-14 gate exemptions so the 46 declaration-site false positives go to zero (wave 1, REQ-41-04)
+- [x] 41-03-PLAN.md — Make lintTranslations importable and close both fail-open shapes at the catalog-read seam (wave 2, REQ-41-02)
+- [x] 41-04-PLAN.md — Promote the three files into the blocking gate scope at zero violations (wave 2, REQ-41-04)
+- [x] 41-05-PLAN.md — Invert the presence check and pin the 794 known-missing pairs as a set (wave 3, REQ-41-01)
+- [x] 41-06-PLAN.md — GAP CLOSURE: guard BOTH English catalog reads, and make every drift-check skip emit a named finding (gap wave 1, REQ-41-01/REQ-41-02)
+- [x] 41-07-PLAN.md — GAP CLOSURE: correct the entry-point guard's false comment and give R5 the ability to fail (gap wave 2, review-derived)
 
 ---
 
