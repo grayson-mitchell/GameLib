@@ -1586,109 +1586,107 @@ describe('hardcodedStringGate', () => {
       })
     })
 
-    // WR-18 (quick 260827-vpl, DECISION 3): facetLabels.ts and chipLabels.ts
-    // are both listed in genI18nGateScope.test.ts's DECLARED_UNSCANNED_DEBT
-    // (a documented, comment-only exclusion from meta/i18nGateScope.json —
-    // NOT the D-18 allowlist, which stays pinned at exactly 2 entries per
-    // T-34.8-30 above). That leaves them with zero automated coverage: no
-    // ratchet caught a regression, and nothing proved the 43 violations
-    // measured here were ever triaged. This block is that missing coverage.
-    // It runs the real gate over the two files in audit mode (`extraFiles`,
-    // scanned but not folded into the blocking `report.violations` above) so
+    // WR-18 (quick 260827-vpl, DECISION 3) → widened by REQ-41-04 (41-02):
+    // facetLabels.ts, chipLabels.ts, and helpers/gamepad.ts are all listed
+    // in genI18nGateScope.test.ts's DECLARED_UNSCANNED_DEBT (a documented,
+    // comment-only exclusion from meta/i18nGateScope.json — NOT the D-18
+    // allowlist, which stays pinned at exactly 2 entries per T-34.8-30
+    // above). That leaves them with zero automated coverage beyond this
+    // block: no ratchet caught a regression, and nothing proved the 45
+    // violations (8 facetLabels.ts + 34 chipLabels.ts + 3 gamepad.ts)
+    // measured before 41-02's two feat commits (d399475bf, e0ff72ee4) were
+    // legitimate D-14/technical-token exemptions rather than an
+    // under-scanned gate. This block is that missing coverage. It runs the
+    // real gate over the three files in audit mode (`extraFiles`, scanned
+    // but not folded into the blocking `report.violations` above) so
     // neither pinned config file (`meta/i18nGateScope.json`,
     // `meta/i18nGateAllowlist.json`) needs to change size or content.
-    describe('measured ratchet over facetLabels.ts / chipLabels.ts (WR-18, DECISION 3, quick 260827-vpl)', () => {
+    //
+    // Since 41-02: all three files measure zero violations. facetLabels.ts
+    // and chipLabels.ts got there via the widened D-14 chain
+    // (`isKeyDefaultObjectProperty`, the ns-prefixed `DOTTED_KEY_RE`, and
+    // the local `TFunc` alias spelling); gamepad.ts got there via
+    // `TECHNICAL_DOM_API_METHOD_NAMES` recognising `closest()` — a
+    // *structural* non-candidate check (`isStructuralNonCandidate` →
+    // `isTechnicalDomApiArgument`), same category as the two pre-existing
+    // `querySelector()` calls already in that file. That check discards
+    // before `record()`'s `exempted` counter ever increments (the same
+    // discard-without-counting behaviour as the pre-existing
+    // `isTechnicalToken()` content-shape checks) — so unlike facetLabels.ts
+    // and chipLabels.ts, gamepad.ts legitimately measures `exempted: 0`
+    // even though its three `.closest(...)` call arguments are correctly
+    // exempt. W3 pins that zero rather than asserting a nonzero `exempted`
+    // count uniformly, so a future reader does not "fix" it back to a
+    // nonzero pin and reintroduce a false expectation.
+    describe('measured ratchet over facetLabels.ts / chipLabels.ts / helpers/gamepad.ts (WR-18, DECISION 3, quick 260827-vpl; widened by REQ-41-04)', () => {
       const FACET_FILE = 'src/frontend/screens/Library/facetLabels.ts'
       const CHIP_FILE =
         'src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts'
+      const GAMEPAD_FILE = 'src/frontend/helpers/gamepad.ts'
+      const ALL_FILES = [FACET_FILE, CHIP_FILE, GAMEPAD_FILE]
 
       function auditReport() {
-        return scanScope({ extraFiles: [FACET_FILE, CHIP_FILE] })
+        return scanScope({ extraFiles: ALL_FILES })
       }
 
-      it('W1: neither file has been quietly folded into the committed scope or the D-18 allowlist — this ratchet is their only coverage', () => {
+      it('W1: none of the three files has been quietly folded into the committed scope or the D-18 allowlist — this ratchet is their only coverage', () => {
         const realScope = JSON.parse(
           readFileSync('meta/i18nGateScope.json', 'utf-8')
         ) as { files: string[] }
         const realAllowlist = JSON.parse(
           readFileSync('meta/i18nGateAllowlist.json', 'utf-8')
         ) as Array<{ file: string }>
+        const allowlistFiles = realAllowlist.map((entry) => entry.file)
 
-        expect(realScope.files).not.toContain(FACET_FILE)
-        expect(realScope.files).not.toContain(CHIP_FILE)
-        expect(realAllowlist.map((entry) => entry.file)).not.toContain(
-          FACET_FILE
-        )
-        expect(realAllowlist.map((entry) => entry.file)).not.toContain(
-          CHIP_FILE
-        )
+        for (const file of ALL_FILES) {
+          expect(realScope.files).not.toContain(file)
+          expect(allowlistFiles).not.toContain(file)
+        }
       })
 
-      it('W2: measured violation counts, pinned per file — a regression here means someone added (or removed) a hardcoded literal without re-measuring', () => {
+      it('W2: measured violation counts are all zero, post-41-02 — before 41-02 these were 8 (facetLabels.ts), 34 (chipLabels.ts), and 3 (gamepad.ts), 45 total, removed by d399475bf and e0ff72ee4; a regression here means someone added a hardcoded literal (or narrowed an exemption) without re-measuring', () => {
         const report = auditReport()
 
-        const facet = report.violations.filter((v) => v.file === FACET_FILE)
-        const chip = report.violations.filter((v) => v.file === CHIP_FILE)
-
-        expect(facet).toHaveLength(8)
-        expect(chip).toHaveLength(35)
+        for (const file of ALL_FILES) {
+          const violations = report.violations.filter((v) => v.file === file)
+          expect(violations).toHaveLength(0)
+        }
       })
 
-      it('W3: the sorted unique set of violation texts is pinned — a silent swap (same count, different literal) still fails here', () => {
-        const report = auditReport()
+      it("W3: every candidate in all three files is either absent or provably exempted, never silently un-scanned — facetLabels.ts and chipLabels.ts pin a nonzero `exempted` count (proof the D-14 chain actually ran), gamepad.ts legitimately pins zero (its closest() arguments are discarded by the structural DOM-API check before the `exempted` counter increments, same as this file's pre-existing querySelector() calls)", () => {
+        const glossary = { glossary: loadGlossary() }
 
-        const facet = report.violations.filter((v) => v.file === FACET_FILE)
-        const chip = report.violations.filter((v) => v.file === CHIP_FILE)
-        const combinedTexts = [
-          ...new Set([...facet, ...chip].map((v) => v.text))
-        ].sort()
-
-        expect(combinedTexts).toEqual(
-          [
-            'Favourites',
-            'Hidden only',
-            'Hiding no store page',
-            'Including hidden',
-            'Including non-available',
-            'Installed',
-            'No store page only',
-            'Non-available only',
-            'Not yet checked',
-            'Other',
-            'Recently played',
-            'Runs natively',
-            'Runs via bottle',
-            'Show games with updates only',
-            'Show offline-supported only',
-            'Show third-party managed only',
-            'Uncategorized',
-            "Won't run",
-            'gamelib:library.filterPanel.chipHiddenIncluded',
-            'gamelib:library.filterPanel.chipHiddenOnly',
-            'gamelib:library.filterPanel.chipNoStorePageHidden',
-            'gamelib:library.filterPanel.chipNoStorePageOnly',
-            'gamelib:library.filterPanel.chipNonAvailableIncluded',
-            'gamelib:library.filterPanel.chipNonAvailableOnly',
-            'gamelib:library.filterPanel.notYetChecked',
-            'gamelib:library.filterPanel.runsNatively',
-            'gamelib:library.filterPanel.runsViaBottle',
-            'gamelib:library.filterPanel.viewFavourites',
-            'gamelib:library.filterPanel.viewInstalled',
-            'gamelib:library.filterPanel.viewRecentlyPlayed',
-            'gamelib:library.filterPanel.wontRun',
-            'gamelib:library.storeOther',
-            'header.show_support_offline_only',
-            'header.show_third_party_managed_only',
-            'header.show_updates_only'
-          ].sort()
+        const facetResult = scanSource(
+          FACET_FILE,
+          readFileSync(FACET_FILE, 'utf-8'),
+          glossary
         )
+        const chipResult = scanSource(
+          CHIP_FILE,
+          readFileSync(CHIP_FILE, 'utf-8'),
+          glossary
+        )
+        const gamepadResult = scanSource(
+          GAMEPAD_FILE,
+          readFileSync(GAMEPAD_FILE, 'utf-8'),
+          glossary
+        )
+
+        expect(facetResult.violations).toHaveLength(0)
+        expect(facetResult.exempted).toBe(13)
+
+        expect(chipResult.violations).toHaveLength(0)
+        expect(chipResult.exempted).toBe(36)
+
+        expect(gamepadResult.violations).toHaveLength(0)
+        expect(gamepadResult.exempted).toBe(0)
       })
 
-      it('W4: no collateral — every violation the audit scan finds for these two extraFiles is attributed to one of them, never a third file', () => {
+      it('W4: no collateral — every violation the audit scan finds for these three extraFiles is attributed to one of them, never a fourth file', () => {
         const report = auditReport()
 
         const outside = report.violations.filter(
-          (v) => v.file !== FACET_FILE && v.file !== CHIP_FILE
+          (v) => !ALL_FILES.includes(v.file)
         )
 
         expect(outside).toHaveLength(0)
@@ -1696,44 +1694,50 @@ describe('hardcodedStringGate', () => {
 
       // Non-vacuity: prove this ratchet can actually fail. Uses the same
       // mkdtempSync/writeScope idiom as the 'stale exemption' block above,
-      // scanning a scratch copy of chipLabels.ts with one bare English
+      // scanning a scratch copy of each real file with one bare English
       // literal appended via extraFiles — never the real file, never
       // committed. If W2/W3 could not distinguish this from the real
       // committed file, they would be measuring nothing.
-      it('non-vacuity: a synthetic copy of chipLabels.ts with one added bare literal is caught by the same measurement this ratchet relies on', () => {
-        const dir = mkdtempSync(
-          join(tmpdir(), 'hardcoded-string-gate-wr18-sabotage-')
-        )
-        try {
-          const realChipSource = readFileSync(CHIP_FILE, 'utf-8')
-          const sabotagedChipSource =
-            realChipSource +
-            "\nexport const SABOTAGE_LITERAL = 'This literal was never translated'\n"
-          const sabotagedFile = join(dir, 'chipLabels.sabotaged.ts')
-          writeFileSync(sabotagedFile, sabotagedChipSource)
+      it.each([
+        ['chipLabels.ts', CHIP_FILE, 'chipLabels.sabotaged.ts'],
+        ['gamepad.ts', GAMEPAD_FILE, 'gamepad.sabotaged.ts']
+      ])(
+        'non-vacuity: a synthetic copy of %s with one added bare literal is caught by the same measurement this ratchet relies on',
+        (_label, realFile, scratchName) => {
+          const dir = mkdtempSync(
+            join(tmpdir(), 'hardcoded-string-gate-wr18-sabotage-')
+          )
+          try {
+            const realSource = readFileSync(realFile, 'utf-8')
+            const sabotagedSource =
+              realSource +
+              "\nexport const SABOTAGE_LITERAL = 'This literal was never translated'\n"
+            const sabotagedFile = join(dir, scratchName)
+            writeFileSync(sabotagedFile, sabotagedSource)
 
-          const before = scanScope({ extraFiles: [CHIP_FILE] })
-          const beforeCount = before.violations.filter(
-            (v) => v.file === CHIP_FILE
-          ).length
+            const before = scanScope({ extraFiles: [realFile] })
+            const beforeCount = before.violations.filter(
+              (v) => v.file === realFile
+            ).length
 
-          const after = scanScope({ extraFiles: [sabotagedFile] })
-          const afterCount = after.violations.filter(
-            (v) => v.file === sabotagedFile
-          ).length
+            const after = scanScope({ extraFiles: [sabotagedFile] })
+            const afterCount = after.violations.filter(
+              (v) => v.file === sabotagedFile
+            ).length
 
-          expect(afterCount).toBe(beforeCount + 1)
-          expect(
-            after.violations.some(
-              (v) =>
-                v.file === sabotagedFile &&
-                v.text === 'This literal was never translated'
-            )
-          ).toBe(true)
-        } finally {
-          rmSync(dir, { recursive: true, force: true })
+            expect(afterCount).toBe(beforeCount + 1)
+            expect(
+              after.violations.some(
+                (v) =>
+                  v.file === sabotagedFile &&
+                  v.text === 'This literal was never translated'
+              )
+            ).toBe(true)
+          } finally {
+            rmSync(dir, { recursive: true, force: true })
+          }
         }
-      })
+      )
     })
   })
 })
