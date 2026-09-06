@@ -38,27 +38,33 @@ import { join } from 'path'
 const ALL_NAMESPACES = ['gamelib', 'gamepage', 'login', 'translation'] as const
 type Namespace = (typeof ALL_NAMESPACES)[number]
 
-const namespaceScope: Namespace[] = process.env.LINT_TRANSLATIONS_NAMESPACES
-  ? process.env.LINT_TRANSLATIONS_NAMESPACES.split(',')
-      .map((ns) => ns.trim())
-      .filter((ns): ns is Namespace =>
-        (ALL_NAMESPACES as readonly string[]).includes(ns)
-      )
-  : [...ALL_NAMESPACES]
-
 // there are many extra keys in translation files without a matching
 // key in the english file
 //
 // this is not really a problem so these messages are ignored by default
 const printExtraTransations = false
 
-const localesPath = './public/locales'
+type CatalogRecord = Record<string, unknown>
+
+export interface LintOptions {
+  localesPath: string
+  namespaces: Namespace[]
+}
+
+export interface LintResult {
+  findings: string[]
+  hardFailures: string[]
+}
 
 // Read a file as JSON
-function readFile(fileName: string, language: string) {
+export function readCatalog(
+  localesPath: string,
+  language: string,
+  namespace: Namespace
+): CatalogRecord | null {
   try {
     return JSON.parse(
-      readFileSync(join(localesPath, language, fileName + '.json')).toString()
+      readFileSync(join(localesPath, language, namespace + '.json')).toString()
     )
   } catch (error) {
     console.log(error)
@@ -66,29 +72,31 @@ function readFile(fileName: string, language: string) {
   }
 }
 
-// Read the 4 files for a given language
-function readFiles(language: string) {
-  return {
-    gamelib: readFile('gamelib', language),
-    gamepage: readFile('gamepage', language),
-    login: readFile('login', language),
-    translation: readFile('translation', language)
+// Read the given namespaces for a language
+export function readCatalogs(
+  localesPath: string,
+  language: string,
+  namespaces: readonly Namespace[]
+): Partial<Record<Namespace, CatalogRecord | null>> {
+  const result: Partial<Record<Namespace, CatalogRecord | null>> = {}
+  for (const namespace of namespaces) {
+    result[namespace] = readCatalog(localesPath, language, namespace)
   }
+  return result
 }
-
-const enFiles = readFiles('en')
-let processingLanguage = ''
-let processingFile = ''
 
 // Run checks in string from translation against original in english file
 function checkStringValueAgainstEnglish(
   trValue: string,
   enValue: string,
-  parent?: string
-) {
+  language: string,
+  namespace: string,
+  parent: string | undefined,
+  result: LintResult
+): void {
   if (trValue === '') {
-    console.log(
-      `Empty translation for ${processingLanguage}.${processingFile}.${parent}`
+    result.findings.push(
+      `Empty translation for ${language}.${namespace}.${parent}`
     )
     return
   }
@@ -106,8 +114,8 @@ function checkStringValueAgainstEnglish(
     })
 
     if (invalidTags.length) {
-      console.log(
-        `Missing content in translation, <X></X> tags not matching original for ${processingLanguage}.${processingFile}.${parent}.\nExpected ${enValue}\nGot: ${trValue}\n\n`
+      result.findings.push(
+        `Missing content in translation, <X></X> tags not matching original for ${language}.${namespace}.${parent}.\nExpected ${enValue}\nGot: ${trValue}\n\n`
       )
     }
   }
@@ -115,67 +123,147 @@ function checkStringValueAgainstEnglish(
 
 // Recursive function traversing objects
 function checkValueAgainstEnglish(
-  trValue: string | object,
-  enValue: string | object,
-  parent?: string
-) {
+  trValue: unknown,
+  enValue: unknown,
+  language: string,
+  namespace: string,
+  parent: string | undefined,
+  result: LintResult
+): void {
   if (typeof enValue === 'undefined') {
     if (printExtraTransations) {
-      console.log(
-        `Extra translation not present in english for ${processingLanguage}.${processingFile}.${parent}`
+      result.findings.push(
+        `Extra translation not present in english for ${language}.${namespace}.${parent}`
       )
     }
   } else {
     if (typeof trValue === 'string') {
-      checkStringValueAgainstEnglish(trValue, enValue as string, parent)
+      checkStringValueAgainstEnglish(
+        trValue,
+        enValue as string,
+        language,
+        namespace,
+        parent,
+        result
+      )
     } else {
-      for (const key in trValue) {
-        checkValueAgainstEnglish(trValue[key], enValue[key], `${parent}.${key}`)
+      const trObj = trValue as Record<string, unknown>
+      const enObj = enValue as Record<string, unknown>
+      for (const key in trObj) {
+        checkValueAgainstEnglish(
+          trObj[key],
+          enObj[key],
+          language,
+          namespace,
+          `${parent}.${key}`,
+          result
+        )
       }
     }
   }
 }
 
 // entry point to check a single translation file
-function checkFileAgainstEnglish(translations: object) {
+function checkFileAgainstEnglish(
+  translations: CatalogRecord,
+  enCatalog: CatalogRecord,
+  language: string,
+  namespace: string,
+  result: LintResult
+): void {
   for (const key in translations) {
     checkValueAgainstEnglish(
       translations[key],
-      enFiles[processingFile][key],
-      key
+      enCatalog[key],
+      language,
+      namespace,
+      key,
+      result
     )
   }
 }
 
 // entry point to check a single language
-function checkLanguage(language: string) {
-  const langFiles = readFiles(language)
+export function checkLanguage(
+  language: string,
+  enCatalogs: Partial<Record<Namespace, CatalogRecord | null>>,
+  opts: LintOptions
+): LintResult {
+  const result: LintResult = { findings: [], hardFailures: [] }
+  const langCatalogs = readCatalogs(opts.localesPath, language, ALL_NAMESPACES)
 
-  for (const file in langFiles) {
+  for (const namespace of ALL_NAMESPACES) {
     // D-15 scope selector -- see the header docstring. Filtering here (not
-    // in readFiles()) keeps readFiles() a plain "read everything" helper;
-    // this is the one seam that decides what actually gets checked.
-    if (!namespaceScope.includes(file as Namespace)) continue
+    // in readCatalogs()) keeps readCatalogs() a plain "read everything"
+    // helper; this is the one seam that decides what actually gets checked.
+    if (!opts.namespaces.includes(namespace)) continue
 
-    const content = langFiles[file]
-    // The 48 keys catalogue 34.8-07/08a/08b/08c introduced into
-    // en/gamelib.json are legitimately empty (defaultValue: '' plus
-    // returnEmptyString: false plus the inline t(key, 'Default') fallback --
-    // see i18next-parser.config.js and 34.8-09-PLAN.md's own <interfaces>
-    // note). The existing `if (dir === 'en') return` in the readdirSync
-    // loop below already excludes `en` from ever reaching this function, so
-    // no separate empty-string carve-out is needed here.
+    const content = langCatalogs[namespace]
+    // Measured at HEAD (2026-09-06): 6 of the 48 keys catalogued by
+    // 34.8-07/08a/08b/08c in en/gamelib.json were empty. Plan 41-01
+    // (REQ-41-03) authored all six, taking en/gamelib.json to 0 empty
+    // values -- there is deliberately no "legitimately empty" exemption
+    // register any more. The `if (dir === 'en') return` in
+    // lintTranslations() below already excludes `en` from ever reaching
+    // this function.
     if (!content) continue
 
-    processingFile = file
-    checkFileAgainstEnglish(content)
+    const enCatalog = enCatalogs[namespace]
+    checkFileAgainstEnglish(
+      content,
+      enCatalog as CatalogRecord,
+      language,
+      namespace,
+      result
+    )
+  }
+
+  return result
+}
+
+// the whole run: walks every locale directory (except `en`) and checks it
+// against the English source
+export function lintTranslations(opts: LintOptions): LintResult {
+  const enCatalogs = readCatalogs(opts.localesPath, 'en', ALL_NAMESPACES)
+  const result: LintResult = { findings: [], hardFailures: [] }
+
+  readdirSync(opts.localesPath).forEach((dir) => {
+    if (dir === 'en') return
+
+    const langResult = checkLanguage(dir, enCatalogs, opts)
+    result.findings.push(...langResult.findings)
+    result.hardFailures.push(...langResult.hardFailures)
+  })
+
+  return result
+}
+
+function main(): void {
+  const localesPath = './public/locales'
+  const namespaces: Namespace[] = process.env.LINT_TRANSLATIONS_NAMESPACES
+    ? process.env.LINT_TRANSLATIONS_NAMESPACES.split(',')
+        .map((ns) => ns.trim())
+        .filter((ns): ns is Namespace =>
+          (ALL_NAMESPACES as readonly string[]).includes(ns)
+        )
+    : [...ALL_NAMESPACES]
+
+  const result = lintTranslations({ localesPath, namespaces })
+
+  result.findings.forEach((finding) => console.log(finding))
+  result.hardFailures.forEach((failure) => console.log(failure))
+
+  if (result.hardFailures.length > 0) {
+    process.exit(1)
   }
 }
 
-// loop through all translations and compare to english
-readdirSync(localesPath).forEach((dir) => {
-  if (dir === 'en') return
-
-  processingLanguage = dir
-  checkLanguage(dir)
-})
+// This script is run via `node meta/runTs.cjs` (package.json
+// `lint-translations`), which DOES set `require.main` -- but this module is
+// also imported directly by its jest suite, so the usual
+// `require.main === module` idiom would run this at import time under test
+// too. JEST_WORKER_ID is set by Jest for every worker (including
+// --runInBand).
+if (!process.env.JEST_WORKER_ID) {
+  main()
+}
