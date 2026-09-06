@@ -2,9 +2,9 @@
 created: 2026-09-03
 title: "Six `redeemKey.*` strings are empty in ENGLISH, so they render English in all 48 locales and can never be translated"
 area: i18n
-status: pending
+status: completed
 severity: low
-resolves_phase: ""
+resolves_phase: "41-01, 41-05"
 found_by: "Closing the two i18n fork-string coverage todos on 2026-09-03 (commit ef7d7b8e6) — both closure records name this residue as surviving unowned"
 files:
   - public/locales/en/gamelib.json
@@ -79,3 +79,29 @@ and
 `.planning/todos/completed/2026-09-02-46-locales-have-zero-gamelib-json-fork-string-coverage.md`,
 both closed 2026-09-03. Both state in writing that this residue survives their closure with **no
 owner**, which is why it is being filed rather than left in a closed record.
+
+## RESOLVED 2026-09-06 (phase 41-01 authored the strings; phase 41-05 settled the policy question)
+
+Plan 41-01 authored all six `redeemKey.*` strings into `public/locales/en/gamelib.json` from
+`copy.ts`'s existing hardcoded English defaults (the "obvious source text" this record already
+pointed at). Measured directly: `en/gamelib.json` now has **224 keys, 0 empty values** (was 215
+keys / 6 empty). The "AUTHORING gap in `en`" this record diagnosed is closed.
+
+**The open question this record raised — bug or deliberate trade-off — is settled: it was stale
+prose, not a deliberate policy.** The `meta/lintTranslations.ts:161-167` comment claiming "48
+legitimately empty keys by design" has been replaced (plan 41-03) with a measured statement, and
+this record's own "one discrepancy worth a look" (48 claimed vs. 6 actually empty) is the reason
+why: the comment was inherited prose that never got re-verified against the catalog as strings
+were added and translated over time. There is no design that intends any `gamelib` key to stay
+empty in English — the six that reached that state did so by omission when `copy.ts`'s call sites
+were written, not by a documented policy. Plan 41-05 made the presence check key off `en` being
+non-empty rather than exempting these six by name, so this class of gap degrades correctly (gets
+reported) instead of needing a name-by-name carve-out register if it recurs.
+
+**What remains open, and is now impossible to lose track of:** propagating the six strings to the
+other 48 locales still needs a live `pnpm machine-fill-gamelib` run (an API key, previously
+401'd) — out of phase 41's unattended scope. It is no longer an unowned diagnosis: the 288
+`redeemKey.*` pairs (6 keys × 48 locales) are recorded by name inside
+`meta/i18nCatalogPresenceBaseline.json`, phase 41-05's committed baseline, and reported by
+`pnpm lint-translations:gamelib` on every run until they are filled. Tracked as a fresh pending
+todo, `.planning/todos/pending/2026-09-06-fill-the-794-missing-gamelib-locale-pairs-via-machine-fill.md`.

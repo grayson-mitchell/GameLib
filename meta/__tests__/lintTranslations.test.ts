@@ -4,7 +4,9 @@ import {
   rmSync,
   writeFileSync,
   cpSync,
-  unlinkSync
+  unlinkSync,
+  readFileSync,
+  statSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -13,6 +15,9 @@ import {
   lintTranslations,
   readCatalog,
   checkLanguage,
+  checkEnglishKeysPresent,
+  comparePresenceBaseline,
+  PRESENCE_BASELINE_PATH,
   CorruptCatalogError
 } from '../lintTranslations'
 
@@ -250,5 +255,212 @@ describe('checkLanguage (REQ-41-02)', () => {
       expect(result.hardFailures).toHaveLength(0)
       expect(result.findings).toHaveLength(0)
     })
+  })
+})
+
+describe('checkEnglishKeysPresent (REQ-41-01)', () => {
+  // R8 -- THE RED PROOF. Same fixture, two directions: the new inverted
+  // check reports the missing key by name; the OLD forward direction
+  // (checkFileAgainstEnglish, exercised here via an upstream namespace so
+  // the inverted check -- gated to FORK_OWNED_NAMESPACES -- never fires and
+  // cannot mask the comparison) sees nothing at all, because it enumerates
+  // the TRANSLATION's own keys and a wholly-absent key is never visited. A
+  // check that has never been observed catching its condition is not known
+  // to work -- this is that observation, made explicit in one test.
+  it('REQ-41-01 R8: a key wholly absent from a locale is invisible to the forward direction, reported by the inverted one', () => {
+    withFixtureLocales((localesPath) => {
+      // New direction: gamelib is fork-owned, so checkEnglishKeysPresent
+      // runs as part of lintTranslations().
+      writeCatalog(localesPath, 'en', 'gamelib', { a: { b: 'Text' } })
+      writeCatalog(localesPath, 'xx', 'gamelib', {})
+
+      const newResult = lintTranslations({ localesPath, namespaces: ['gamelib'] })
+      const presenceFindings = newResult.findings.filter((f) => f.includes('a.b'))
+      expect(presenceFindings).toHaveLength(1)
+      expect(presenceFindings[0]).toEqual(expect.stringContaining('xx'))
+      expect(presenceFindings[0]).toEqual(expect.stringContaining('a.b'))
+      expect(newResult.hardFailures).toHaveLength(0)
+
+      // Old direction: an upstream namespace never triggers
+      // checkEnglishKeysPresent (it is gated to FORK_OWNED_NAMESPACES), so
+      // this run exercises ONLY checkFileAgainstEnglish -- the same
+      // function, same identically-shaped fixture, same missing key.
+      writeCatalog(localesPath, 'en', 'translation', { a: { b: 'Text' } })
+      writeCatalog(localesPath, 'xx', 'translation', {})
+
+      const oldResult = lintTranslations({ localesPath, namespaces: ['translation'] })
+      expect(oldResult.findings).toHaveLength(0)
+      expect(oldResult.hardFailures).toHaveLength(0)
+    })
+  })
+
+  // R9 -- present but empty is the same defect as absent.
+  it('REQ-41-01 R9: a key present but empty in the locale is reported', () => {
+    const findings = checkEnglishKeysPresent(
+      'xx',
+      'gamelib',
+      { a: { b: 'Text' } },
+      { a: { b: '' } }
+    )
+    expect(findings).toHaveLength(1)
+    expect(findings[0]).toEqual(expect.stringContaining('xx'))
+    expect(findings[0]).toEqual(expect.stringContaining('a.b'))
+  })
+
+  // R10 -- keyed off `en` being non-empty: an empty-in-English key is
+  // silently excluded, no exemption register needed.
+  it('REQ-41-01 R10: a key empty in English is NOT reported even when absent from the locale', () => {
+    const findings = checkEnglishKeysPresent('xx', 'gamelib', { a: { b: '' } }, {})
+    expect(findings).toHaveLength(0)
+  })
+
+  // R11 -- an extra key in the locale, absent from en, is not this check's
+  // concern (unchanged printExtraTransations = false behaviour).
+  it('REQ-41-01 R11: an extra key in the locale not present in English is not reported', () => {
+    const findings = checkEnglishKeysPresent(
+      'xx',
+      'gamelib',
+      { a: { b: 'Text' } },
+      { a: { b: 'Text' }, z: { z: 'Extra' } }
+    )
+    expect(findings).toHaveLength(0)
+  })
+
+  // R12 -- nested objects are compared leaf-by-leaf, not object-by-object.
+  // Reordering a nested object's own keys changes nothing structurally
+  // relevant to a leaf-by-leaf walk -- if this check instead compared
+  // objects wholesale it would risk false signals on key order, which
+  // flattening avoids entirely.
+  it('REQ-41-01 R12: nested objects are compared leaf-by-leaf, independent of key order', () => {
+    const findings = checkEnglishKeysPresent(
+      'xx',
+      'gamelib',
+      { a: { b: 'Text', c: 'Other' } },
+      { a: { c: 'Other', b: 'Text' } }
+    )
+    expect(findings).toHaveLength(0)
+  })
+
+  // The check runs for gamelib only -- an upstream namespace in scope
+  // produces no presence findings, even when a key is genuinely missing.
+  // (Structural coverage: this is what R8's "old direction" half already
+  // demonstrates end-to-end via lintTranslations(); this is the direct
+  // unit-level statement of the same gate.)
+  it('REQ-41-01: checkEnglishKeysPresent is never invoked for an upstream namespace via lintTranslations()', () => {
+    withFixtureLocales((localesPath) => {
+      writeCatalog(localesPath, 'en', 'translation', { redeemKey: { error: 'Oops' } })
+      writeCatalog(localesPath, 'xx', 'translation', {})
+
+      const result = lintTranslations({ localesPath, namespaces: ['translation'] })
+      expect(result.findings).toHaveLength(0)
+      expect(result.hardFailures).toHaveLength(0)
+    })
+  })
+})
+
+describe('comparePresenceBaseline (REQ-41-01)', () => {
+  // R13 -- the CI-facing live gate: the committed baseline agrees exactly
+  // with a fresh derivation over the real, committed public/locales/ tree.
+  it('REQ-41-01 R13: zero drift between the live tree and the committed baseline', () => {
+    const diff = comparePresenceBaseline('public/locales', PRESENCE_BASELINE_PATH)
+    expect(diff.added).toHaveLength(0)
+    expect(diff.removed).toHaveLength(0)
+  })
+
+  // R14 -- non-vacuity of R13, in BOTH directions. Never mutates the
+  // committed baseline -- every mutation happens on a JSON-cloned COPY
+  // written to an mkdtempSync scratch file. This project has a recorded
+  // lesson that a one-directional residual check misses half the defect
+  // class ("a `toContain` pin catches DELETION but not EXTENSION") -- both
+  // directions are proven here, independently, with their own assertion.
+  it('REQ-41-01 R14: comparePresenceBaseline detects drift in BOTH directions against copied baselines', () => {
+    type BaselineShape = {
+      namespace: string
+      totalPairs: number
+      missing: Record<string, string[]>
+    }
+    const parsedCommitted: unknown = JSON.parse(
+      readFileSync(PRESENCE_BASELINE_PATH, 'utf8')
+    )
+    const committed = parsedCommitted as BaselineShape
+
+    const scratchDir = mkdtempSync(join(tmpdir(), 'presence-baseline-'))
+    try {
+      // (a) Shrink a COPY: delete one real, genuinely-still-missing pair
+      // from the baseline. Live still has it missing, the copy no longer
+      // records it -- the comparison must report it as `added` (a new
+      // blind spot relative to that copy).
+      const shrunk = JSON.parse(JSON.stringify(committed)) as typeof committed
+      const firstKey = Object.keys(shrunk.missing).sort()[0]
+      const removedLocale = [...shrunk.missing[firstKey]].sort()[0]
+      shrunk.missing[firstKey] = shrunk.missing[firstKey].filter(
+        (locale) => locale !== removedLocale
+      )
+      if (shrunk.missing[firstKey].length === 0) delete shrunk.missing[firstKey]
+      shrunk.totalPairs -= 1
+      const shrunkPath = join(scratchDir, 'shrunk.json')
+      writeFileSync(shrunkPath, JSON.stringify(shrunk))
+
+      const diffShrunk = comparePresenceBaseline('public/locales', shrunkPath)
+      expect(diffShrunk.added.length).toBeGreaterThan(0)
+      expect(diffShrunk.added).toEqual(
+        expect.arrayContaining([{ locale: removedLocale, key: firstKey }])
+      )
+
+      // (b) Grow a COPY: add a fabricated pair that is NOT actually
+      // missing live (a locale/key pair that does not exist at all). The
+      // comparison must report it as `removed` (the copy overstating
+      // reality).
+      const grown = JSON.parse(JSON.stringify(committed)) as typeof committed
+      grown.missing['__fabricated_key_for_r14__'] = ['__fabricated_locale_for_r14__']
+      grown.totalPairs += 1
+      const grownPath = join(scratchDir, 'grown.json')
+      writeFileSync(grownPath, JSON.stringify(grown))
+
+      const diffGrown = comparePresenceBaseline('public/locales', grownPath)
+      expect(diffGrown.removed.length).toBeGreaterThan(0)
+      expect(diffGrown.removed).toEqual(
+        expect.arrayContaining([
+          { locale: '__fabricated_locale_for_r14__', key: '__fabricated_key_for_r14__' }
+        ])
+      )
+    } finally {
+      rmSync(scratchDir, { recursive: true, force: true })
+    }
+
+    // Never touched the committed baseline itself.
+    const stillCommitted = readFileSync(PRESENCE_BASELINE_PATH, 'utf8')
+    expect(JSON.parse(stillCommitted)).toEqual(committed)
+  })
+})
+
+describe('baseline write-guard (REQ-41-01, T-41-05-01)', () => {
+  // R15 -- the write path is unreachable under jest even when explicitly
+  // requested: setting LINT_TRANSLATIONS_WRITE_BASELINE=1 and re-importing
+  // the module (jest.resetModules()) still cannot write, because main()
+  // itself is gated behind `!process.env.JEST_WORKER_ID`, which this
+  // process always has set. This is a genuine attempt-and-fail proof, not
+  // an assumption: the trigger env var IS set when the import happens.
+  it('REQ-41-01 R15: LINT_TRANSLATIONS_WRITE_BASELINE=1 during a jest run cannot write the baseline', async () => {
+    const beforeBytes = readFileSync(PRESENCE_BASELINE_PATH)
+    const beforeMtime = statSync(PRESENCE_BASELINE_PATH).mtimeMs
+
+    const originalEnv = process.env.LINT_TRANSLATIONS_WRITE_BASELINE
+    process.env.LINT_TRANSLATIONS_WRITE_BASELINE = '1'
+    try {
+      jest.resetModules()
+      await import('../lintTranslations')
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env.LINT_TRANSLATIONS_WRITE_BASELINE
+      } else {
+        process.env.LINT_TRANSLATIONS_WRITE_BASELINE = originalEnv
+      }
+    }
+
+    const afterBytes = readFileSync(PRESENCE_BASELINE_PATH)
+    const afterMtime = statSync(PRESENCE_BASELINE_PATH).mtimeMs
+    expect(afterBytes.equals(beforeBytes)).toBe(true)
+    expect(afterMtime).toBe(beforeMtime)
   })
 })
