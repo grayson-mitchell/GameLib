@@ -313,3 +313,137 @@ do not exist.
 > `uninstallBottleGameDirectly()`'s bypass read `2578 → 2610`; the method's own definition
 > `2552 → 2574`; its `NUMERIC_APP_ID` guard `2566 → 2588`; its call site `2363 → 2385`. Nothing
 > else in `games.ts` moved by more than these two comment insertions (+22 and +14 lines).
+
+---
+
+## Task 3 — The todo is closed
+
+`git mv`'d from `.planning/todos/pending/` to `.planning/todos/completed/` and edited in place.
+Convention checked against two neighbouring completed todos before writing
+(`keyring-read-lazy-at-point-of-use.md` — the E-7 reference — and
+`2026-08-16-aborted-depot-residue-has-no-acf.md`, which also carries a trailing `## Closed (date)`
+section; both patterns are followed).
+
+**Frontmatter:** every original field kept; `status: OPEN` → `status: RESOLVED` (replaced, not
+duplicated), plus `resolved: 2026-09-07` and `resolved_by: quick-260907-e7a`.
+
+**Body:** a `## Resolution (2026-09-07, quick task `260907-e7a`)` section carrying all four required
+elements, then a `## Closed (2026-09-07)` marker.
+
+| Element | What it records |
+|---|---|
+| (a) | D-01 as a deliberate cross-runner sentinel, with the three named consumers (`gamedetails/dispatch.ts:82`, `sidecar/appShellFlowRegistration.ts:536`, `storeManagers/steam/library.ts:1257`) **plus the fourth this census found** (`protocol.ts:221`). Cites `260905-luf`. Records that populating a stub is permanently rejected, not deferred. |
+| (b) | **Both** corrections the plan required, carried rather than dropped: (1) the todo's **title is factually wrong** — luf disproved it; the nameless surface was `downloadqueue.ts`'s `processNotification` OS notification, not the install-failure dialog, and `resolveQueueElementTitle` already had `title \|\| appName` with a control test GREEN on first run; (2) the todo's **body names `SteamGame.stop()` in error** — re-verified at `games.ts:2803`, it reads `nativeInstallsInFlight`, never `getGameInfo()`. |
+| (c) | The **full verdict table inline** — census command, total 101, bucket arithmetic, the seven class counts and their sum, and every row of classes 3a/3b/4/5/6 with `file:line`. Not a link: the closed ledger entry is self-contained. Includes the four hand-named sites answered on the todo's own terms and the `steamhelper.ts` grep-evading read. |
+| (d) | Task 2's decision verbatim in substance: **NOT REACHABLE**, the (a)-(d) window table with its deciding `file:line` evidence, why (d) is load-bearing and timing-independent, the one shape not fully killed, and that the outcome was a **documented non-gap, not a RED-proven fix**. |
+
+**Nothing silently dropped.** A closing "What remains explicitly NOT done, and why" section names all
+four: async `getGameInfo()` stays scoped out (and the census confirms nothing needs it); the stub
+stays rejected by D-01; the six class-3b rows are documented but unactioned (each UI-gated,
+`try`-caught, or self-correcting — none a crash or data-loss path); and the **two class-6 rows are
+filed as a follow-up todo rather than buried**:
+
+`.planning/todos/pending/2026-09-07-two-unguarded-getgameinfo-derefs-protocol-findgame-and-runwinecommandongame.md`
+
+### Task 3 verification
+
+The plan's automated gate passed in full: file present under `completed/`, absent from `pending/`,
+`^status: RESOLVED` present, `^resolved_by: quick-260907-e7a` present, **no residual `^status: OPEN`**,
+and `260905-luf` / `processNotification` / `dispatch.ts:82` all present. → **PASS**
+
+---
+
+## Deviations from Plan
+
+### Auto-fixed / plan corrections
+
+**1. [Rule 2 — census completeness] Class 3 had to be split into 3a and 3b**
+- **Found during:** Task 1, Step 2
+- **Issue:** The plan defined class 3 as "title-axis, *already dispositioned*" and required each row
+  to cite the luf/mv5 summary that closed it. Six Steam-reachable title-axis hits have **no such
+  citation** — mv5 closed exactly four sites. Filing them under class 3 would have implied a
+  disposition that does not exist.
+- **Fix:** Split into **3a** (dispositioned, cited) and **3b** (newly surfaced, listed row-by-row
+  with consequences). The class counts still sum to 101.
+- **Files modified:** none (SUMMARY + todo content only)
+
+**2. [Rule 2 — census completeness] Class 2's definition had to be widened, and every non-obvious
+member individually evidenced**
+- **Found during:** Task 1, Step 2
+- **Issue:** The plan scoped class 2 to "`this.getGameInfo()` inside a NON-Steam store manager". 12
+  of the 51 members are not that shape — 5 are pinned to a non-Steam runner *string literal* outside
+  any store manager, and 7 are cross-runner in signature but have every caller short-circuit
+  `'steam'` first. The plan's own instruction ("no per-row listing needed") would have let those 12
+  through on assertion.
+- **Fix:** Widened to "the receiver provably cannot be a `SteamGame`", split into 2a/2b/2c, and gave
+  **each of the 12 non-obvious members its own killing `file:line`** rather than a shared claim. Two
+  are non-trivial and would have been wrong if assumed: `storeManagers/index.ts:49` is unreachable
+  only because `steam/library.ts:1294-1296` returns `[]`; `shortcuts/shortcuts.ts:34`/`:124` only
+  because `SteamGame` overrides both methods at `games.ts:2057`/`2064`.
+- **Files modified:** none
+
+**3. [Rule 1 — measurement] E-4b's recorded measurement was too narrow to support its conclusion**
+- **Found during:** Task 2, Step 1
+- **Issue:** `grep -c "await "` detects one suspension shape. A `.then()`, a nested `async` callback,
+  a `for await`, or an early `return`/`throw` would each break the "atomic with respect to the event
+  loop" conclusion while leaving that count at 0.
+- **Fix:** Re-scanned the window for all of them (one match, a false positive: the substring "yields"
+  in a comment at `library.ts:1180`) and confirmed the loop opener at `L1091` is a plain `for…of`.
+  The conclusion survives on the wider measurement.
+- **Files modified:** none
+
+**4. [Rule 2 — nothing silently dropped] Follow-up todo filed for the two class-6 rows**
+- **Found during:** Task 3
+- **Issue:** The plan's Task 3 requires that a non-empty class 6 whose rows were not fixed here must
+  be named **and filed**, not buried in the closure. Class 6 has 2 rows.
+- **Fix:** Filed `.planning/todos/pending/2026-09-07-two-unguarded-getgameinfo-derefs-protocol-findgame-and-runwinecommandongame.md`
+  with both sites, their reachability, their concrete consequence, and a proposed fix each.
+- **Files created:** that todo
+
+### Plan facts that did not survive contact with the source
+
+- **The plan's `<behavior>` block predicted the (b) window would be the killing evidence.** It is
+  *corroborating*, not load-bearing. `refresh()` being atomic says nothing about window (a) — which
+  this task found **OPEN** (`GameSubMenu/index.tsx:445` gates uninstall on `is.playing` alone). The
+  actual kill is (d): the sole caller already self-heals. Reported as measured rather than adopting
+  the plan's expected reasoning.
+- **`games.ts:2079`'s JSDoc contradicts the current dispatch.** It states that for a bottle-eligible
+  confirmed-not-native macOS game, "launcher.ts's `launchEventCallback` runs `checkWineBeforeLaunch`
+  BEFORE calling this method". Both callers now short-circuit `runner === 'steam'` before
+  `launchEventCallback` (`sidecar/steamFlowRegistration.ts:357`, `protocol.ts:159`), so no Steam
+  launch reaches it. Out of scope for this task and **not** edited — recorded here so it is not
+  mistaken for current truth.
+- **E-1's "of which exactly 5 match `this.getGameInfo()`" is accurate but easy to misread** — 2 of
+  those 5 (L2350, L2575) are comments, so `steam/games.ts` holds **3** real calls, not 5. The plan
+  labels them correctly; noted because the census's class-1 count of 12 for bucket C depends on it.
+
+### Authentication gates
+
+None.
+
+### Deferred issues
+
+None. Every class-6 and class-3b row is either dispositioned as harmless with its evidence, or filed
+as the follow-up todo above.
+
+---
+
+## Threat model outcome
+
+| Threat ID | Disposition | Outcome |
+|---|---|---|
+| T-e7a-01 | mitigate | **Vacuously satisfied — branch 3b, so no read helper exists.** Verified by diff anyway: `git diff --numstat` on `steam/games.ts` is **32 additions, 0 deletions**, and every added line matches `^\+[[:space:]]*//`. `NUMERIC_APP_ID.test(this.appId)` and the `resolveInstallRoot` containment check are provably untouched. |
+| T-e7a-02 | mitigate | **N/A** — no data source was widened; both bypass sites still read the Map alone. |
+| T-e7a-03 | mitigate | **Satisfied** — branch 3b adds **no log line at all**, only comments. No `install_path` is emitted anywhere new. |
+| T-e7a-04 | mitigate | **Satisfied** — element (d) of the closure carries the `file:line` evidence inline in the ledger entry, and Task 2 Step 1 re-measured all four plan-time snapshots before relying on any of them. |
+| T-e7a-SC | N/A | No packages installed. No `## Package Legitimacy Audit` required. |
+
+## Threat Flags
+
+None. This task added zero executable lines — no endpoint, auth path, file access pattern or schema
+change at any trust boundary.
+
+## Known Stubs
+
+None introduced. (`SteamGame.addShortcuts`/`removeShortcuts`/`repair` are **pre-existing** Phase-2
+stubs, surfaced by the census as evidence for class-2c/3b dispositions, not created here.)
