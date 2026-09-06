@@ -206,3 +206,110 @@ and `:1146` read `cachedMeta?.` with optional chaining and never touch `getGameI
 
 **Class 6 is non-empty (2 rows).** Both are recorded above with a proposed fix and neither is written
 here, per the task's own instruction.
+
+---
+
+## Task 2 — The raw-Map bypass: **documented non-gap, not a fix**
+
+### Step 1: re-measurement of every plan-time snapshot
+
+Every recorded value was re-measured before being relied on. **All four matched; none disagreed.**
+
+| Anchor | Recorded (plan time, HEAD `4c0a7f58d`) | Observed now | Verdict |
+|---|---|---|---|
+| **E-4a** `init()` hydrates the Map synchronously from `steamLibraryStore` | `library.ts:711` `init()`; read at L717; `library.clear()` → `library.set(g.app_name, g)` at L717-722; no intervening `await` | `init()` at **L711**; `const cached = steamLibraryStore.get('games', [])` at **L717**; `if (cached.length)` L718; `library.clear()` at **L719**; `library.set(g.app_name, g)` at **L721** inside a plain `forEach`. **No `await` between the read and the sets.** | ✅ match |
+| **E-4b** zero `await`s in the `refresh()` clear→rebuild window | L1090 `library.clear()`, L1215 `library.set(appIdStr, gameInfo)`; `awk 'NR>=1090 && NR<=1220' … \| grep -c "await "` → **0** | Boundaries unchanged: `grep -n "library.clear()\|library.set(appIdStr"` → clear at **1090**, set at **1215**. Same awk → **0**. No line-number drift, no window widening needed. | ✅ match |
+| **E-5** the two bypass reads + the `root === null` refusal | `games.ts:2354` and `games.ts:2578`; refusal at `~2386` returning a non-empty `stderr` | `games.ts:2354` `const installPath = library.get(this.appId)?.install?.install_path`; `games.ts:2578` `const entryInstallPath = library.get(this.appId)?.install?.install_path`. Refusal branch at **L2391-2398**: `logWarning(…)` then `return { stdout: '', stderr: 'Refused to uninstall: install_path does not resolve inside any known root for appId …' }` — a **logged refusal with a non-empty `stderr`**, exactly as E-5 corrected the task framing. `uninstallBottleGameDirectly`'s sibling refusal is at L2580-2589. | ✅ match |
+| **E-6** `getGameInfo()` self-heals the Map on a store hit | `games.ts:595-610` | `games.ts:594` `getGameInfo(): GameInfo {`; Map read L595; `steamLibraryStore.get('games', []).find(…)` L597-599; **`library.set(this.appId, cached)` at L601**; `{} as GameInfo` sentinel at L618. | ✅ match |
+
+**E-4b was strengthened beyond the recorded measurement.** `grep -c "await "` counts only one shape,
+so the window was re-scanned for every other suspension point and early exit:
+
+```
+awk 'NR>=1090 && NR<=1215 && (/await|\.then\(|yield|async |return |throw |Promise\./)' \
+  src/backend/storeManagers/steam/library.ts
+```
+
+→ **one match, and it is a false positive**: `L1180`, the substring "yields" inside a prose comment.
+The loop opener at `L1091` is `for (const app of ownedApps) {` — a plain `for…of`, **not** `for await`
+— and it closes at `L1217`. So there is no `await`, no `.then()`, no `yield`, no nested `async`
+callback, no `return` and no `throw` anywhere between the clear and the last set.
+
+### Step 2: the reachability verdict
+
+> **Question:** can a user reach `uninstall()` (or `uninstallBottleGameDirectly()`) for an owned,
+> installed Steam game while the in-memory `library` Map has no entry for that appId, but
+> `steamLibraryStore` does?
+>
+> **VERDICT: NO — NOT REACHABLE. Branch 3b (documented non-gap).**
+
+Each candidate window, killed or confirmed on its own evidence:
+
+| Window | Verdict | Deciding evidence (file:line) |
+|---|---|---|
+| **(a) Before `init()` runs** | **OPEN at the UI layer — not killed.** Reported honestly rather than assumed away. | The uninstall control at `frontend/screens/Game/GameSubMenu/index.tsx:435-449` is gated on **`disabled={is.playing}` only** (L445). Nothing gates it on library-hydration state, and for a Steam game L437-439 fires `window.api.uninstall(appName, runner, false, false)` immediately with no confirm modal (D-05). So the renderer *can* present an enabled, actionable uninstall control from its own state before the backend's `init()` hydration lands. This window survives — which is precisely why (d), not (a), is the load-bearing kill. |
+| **(b) The `refresh()` clear→rebuild window** | **KILLED.** | `library.ts:1090` `library.clear()` → `L1091` `for (const app of ownedApps) {` (plain `for…of`) → `L1215` `library.set(appIdStr, gameInfo)` → loop closes `L1217` → `L1220` `steamLibraryStore.set('games', Array.from(library.values()))`. Re-measured: **zero** `await`/`.then(`/`yield`/`async `/`return `/`throw ` in `NR 1090..1215`. The clear→rebuild→persist span is one uninterrupted synchronous block; the event loop never yields inside it, so **no IPC handler can observe a cleared Map.** |
+| **(c) A game in the store but dropped from the Map by a *completed* `refresh()`** | **KILLED.** | `library.ts:1220` writes the store **from** the rebuilt Map: `steamLibraryStore.set('games', Array.from(library.values()))`, wholesale, in the same synchronous block as the rebuild. The Map is the *source* of the store, so after a completed `refresh()` the two are identical by construction and the store cannot hold an entry the Map lacks. |
+| **(d) Ordering — is there a path to `uninstall()` that has provably NOT called `getGameInfo()` for that appId first?** | **KILLED — and this is the load-bearing kill.** | **No such path exists.** `uninstaller.ts:118` `await game.uninstall({ shouldRemovePrefix })` is the **sole** caller of `.uninstall(` anywhere in `src/backend` (the only other grep hit is a prose comment at `steam/bottle.ts:1042`). Its sole IPC registration is `sidecar/installFlowRegistration.ts:216` → `uninstallGameCallback` at L218. And **five lines earlier**, `uninstaller.ts:113` runs `const title = resolveGameTitle(libraryManagerMap, runner, appName)` → `utils/gameTitle.ts:58` `libraryManagerMap[runner].getGame(appName).getGameInfo()` — same appId, same runner. Per E-6 that call already consulted `steamLibraryStore` and already wrote the entry back into the Map at `games.ts:601`. Between L113 and L118 there is **no `await`** (L115 `let uninstalled = false`, L117 `try {`), so nothing can interleave and undo the self-heal. |
+
+**Why (d) makes the verdict timing-independent.** (b) and (c) are arguments about *when* the Map can
+diverge from the store. (d) is an argument about *ordering on the only path that matters*: whatever
+state the Map is in — even the fully-cleared state window (a) leaves open — the caller's own
+`getGameInfo()` at `uninstaller.ts:113` repairs it before `games.ts:2354` reads it. **The bypass's
+forfeited store fallback is redundant, because its sole caller already performed that fallback.**
+
+`uninstallBottleGameDirectly()` inherits this for free and is strictly safer: it is `private`
+(`games.ts:2552`) and its only call site is `uninstall()` itself at `games.ts:2363`
+(`return this.uninstallBottleGameDirectly()`), i.e. inside the same synchronous continuation after
+the same self-heal.
+
+**The one shape that is not fully killed, recorded rather than buried.** If a *synchronous* exception
+is thrown inside the rebuild loop (`library.ts:1091-1217`), the `catch` at `L1222` re-throws at
+`L1236` and `refresh()` rejects with the Map left cleared while the store still holds the previous
+list — the Map-miss/store-hit divergence, genuinely. But (i) it requires an unrelated latent defect
+(the window contains no `throw` of its own), and (ii) even then (d) still holds: the uninstall path
+self-heals from that same surviving store entry before the bypass reads. This is noted so the next
+reader does not mistake its absence for an oversight.
+
+### Step 3b: the deliverable — source comments only
+
+**Documented non-gap, not a fix. No production behaviour changed; no test was written** (per the
+`<behavior>` block: "If the verdict is NOT REACHABLE, NO test is written and NO production behaviour
+changes"). A fix was not manufactured to make the task feel substantial.
+
+Both bypass sites now carry a `260907-e7a`-tagged comment recording the three required facts:
+
+| Site | What the comment adds |
+|---|---|
+| `games.ts:2349-2375` (marker at L2355; the read moved to L2376) | That the bypass forfeits **the `steamLibraryStore` fallback AND the Map self-heal** (`games.ts:596-604`, `library.set` at L601), not merely the metadata fetch the pre-existing comment named; the full (d) evidence chain (`uninstaller.ts:118` sole caller, `installFlowRegistration.ts:216` sole registration, `uninstaller.ts:113` → `gameTitle.ts:58`, no `await` between); and (b)/(c) as corroboration with their line numbers. |
+| `games.ts:2596-2609` (marker at L2601; the read moved to L2610) | The same forfeit note, plus why this site is strictly safer (`private` at L2574, sole call site `games.ts:2385`), cross-referencing `uninstall()`'s comment rather than restating the chain. |
+
+Both end with "do not re-open this without new evidence" so the next reader does not re-derive the
+question — the stated purpose of branch 3b.
+
+### RED-proof ledger
+
+**Not applicable — no test was written, because no production behaviour changed.** Branch 3a's
+R1-R4 were never entered. Recording this explicitly rather than leaving the section absent: an
+unproven test claimed as proven would be worse than no test, and so would a ledger for tests that
+do not exist.
+
+### Task 2 verification results
+
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | **exit 0**, clean |
+| exactly one `getGameInfo(): GameInfo` definition survives the comment-strip | **PASS** (guards against the new prose being counted as a second definition) |
+| `grep -c "260907-e7a" src/backend/storeManagers/steam/games.ts` | **2** — one marker at each bypass site |
+| `npx jest src/backend/storeManagers/steam/__tests__/games.test.ts` (own command, per `jest-in-the-same-command-as-a-write-reads-stale`) | **269 passed, 269 total**, 1 suite |
+| `git diff --stat public/locales/` | **empty** — no new user-facing strings, as expected |
+| `npx prettier --check src/backend/storeManagers/steam/games.ts` | **All matched files use Prettier code style!** |
+
+> **Line-number convention.** Every `file:line` outside the Step 3b table is **as measured at HEAD
+> `4c0a7f58d`**, before this task inserted its comments — that is the state the census and the
+> reachability argument were derived against, and it is what a reader comparing to the plan's
+> evidence block will expect. Only the Step 3b table describes the post-edit tree. For the two
+> sites this task touched, the post-edit deltas are: `uninstall()`'s bypass read `2354 → 2376`;
+> `uninstallBottleGameDirectly()`'s bypass read `2578 → 2610`; the method's own definition
+> `2552 → 2574`; its `NUMERIC_APP_ID` guard `2566 → 2588`; its call site `2363 → 2385`. Nothing
+> else in `games.ts` moved by more than these two comment insertions (+22 and +14 lines).

@@ -2351,6 +2351,28 @@ export default class SteamGame implements Game {
     // metadata-fetch side effect (art_cover/platform capture) that an
     // internal routing read must never trigger (D-01/D-02: uninstall() must
     // not have side effects beyond the uninstall itself).
+    //
+    // 260907-e7a: this bypass forfeits MORE than the metadata fetch — it also
+    // forfeits getGameInfo()'s `steamLibraryStore` fallback AND its Map
+    // self-heal (games.ts:596-604; `library.set(this.appId, cached)` at L601).
+    // So a bare Map read here would see nothing in the one state getGameInfo()
+    // recovers from: Map miss + store hit. Audited and found UNREACHABLE — do
+    // not re-open this without new evidence. The killing fact is ordering, not
+    // timing: `uninstaller.ts:118` is the SOLE caller of `game.uninstall(...)`
+    // in the backend (sole IPC registration: installFlowRegistration.ts:216),
+    // and five lines earlier `uninstaller.ts:113` calls
+    // `resolveGameTitle(libraryManagerMap, runner, appName)` ->
+    // `utils/gameTitle.ts:58`'s `getGameInfo()` for THIS SAME appId. That call
+    // already performed the store fallback and already wrote the entry back
+    // into the Map. There is no `await` between L113 and L118, so nothing can
+    // interleave and undo it. Corroborating (not load-bearing): SteamLibrary
+    // `refresh()`'s clear->rebuild->persist span is one uninterrupted
+    // synchronous block — `library.clear()` at library.ts:1090, the plain
+    // (non-`for await`) rebuild loop at L1091-1217, and
+    // `steamLibraryStore.set('games', Array.from(library.values()))` at L1220,
+    // with ZERO await/.then/yield/return/throw in between — so no IPC handler
+    // can observe a cleared Map, and the store is written FROM the Map and can
+    // never hold an entry a completed refresh dropped.
     const installPath = library.get(this.appId)?.install?.install_path
     const root = await resolveInstallRoot(installPath)
 
@@ -2575,6 +2597,16 @@ export default class SteamGame implements Game {
     // this.getGameInfo() — see uninstall()'s own comment on the same
     // pattern (avoids getGameInfo()'s fire-and-forget metadata-fetch side
     // effect on what must be a side-effect-free routing/guard read).
+    //
+    // 260907-e7a: like uninstall()'s read, this forfeits getGameInfo()'s
+    // `steamLibraryStore` fallback and Map self-heal (games.ts:596-604), not
+    // just the metadata fetch. Audited and found UNREACHABLE for the same
+    // reason, and this site is strictly safer than uninstall()'s: the method
+    // is `private` and its ONLY call site is `uninstall()` at games.ts:2363,
+    // so it inherits uninstall()'s guarantee that `uninstaller.ts:113`'s
+    // `resolveGameTitle` -> `getGameInfo()` already self-healed the Map for
+    // this appId before control ever reached here. See uninstall()'s comment
+    // above for the full evidence chain; do not re-open without new evidence.
     const entryInstallPath = library.get(this.appId)?.install?.install_path
     const entryRoot = await resolveInstallRoot(entryInstallPath)
     if (entryRoot !== 'bottle') {
