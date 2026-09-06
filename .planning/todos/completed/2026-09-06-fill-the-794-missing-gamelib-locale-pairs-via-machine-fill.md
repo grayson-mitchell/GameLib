@@ -2,7 +2,7 @@
 created: 2026-09-06
 title: "Fill the 794 missing gamelib locale pairs recorded in the presence baseline via machine-fill"
 area: i18n
-status: pending
+status: resolved
 severity: low
 resolves_phase: ""
 found_by: "Filed while closing phase 41-05, which committed the presence baseline that names this exact gap"
@@ -66,3 +66,36 @@ this todo exists to eventually empty out. Earlier ancestors of the same gap:
 `.planning/todos/completed/2026-08-28-gamelib-json-de-fr-missing-five-keys-machine-fill-401s.md`
 (the original 401) and
 `.planning/todos/completed/2026-09-02-46-locales-have-zero-gamelib-json-fork-string-coverage.md`.
+
+## RESOLVED 2026-09-06 (quick task 260906-u8i)
+
+A working `ANTHROPIC_API_KEY` was available this session (the earlier 401 was a stale-shell-env
+issue, not a revoked key). Ran `pnpm machine-fill-gamelib` in two stages per the plan's D-08
+proof-before-bulk discipline:
+
+1. **Proof run**, `GAMELIB_MT_LOCALES=de,fr`: filled the 6 `redeemKey.*` keys for both locales.
+   Measured: `pnpm lint-translations:gamelib` findings dropped 794 -> 782 (12 pairs), exactly
+   the expected 6 keys x 2 locales.
+2. **Bulk run**, `GAMELIB_MT_LOCALES=all GAMELIB_MT_CONFIRM_BULK=1`: filled the remaining 46
+   locales (92 files: `gamelib.json` + `gamelib.mt.json` each). 3 locales (`hr`, `ro`, `sr`)
+   initially skipped `webview.unavailable.platform.body` on the glossary-term check ("GameLib"
+   term integrity); an unplanned second invocation of the same command re-attempted only the
+   still-missing keys (per the script's no-overwrite contract) and all 3 passed on retry, so
+   **zero pairs remain unfilled**. Measured: `pnpm lint-translations:gamelib` reported
+   **0 findings** after the bulk run (before the baseline was re-recorded, so it reported 794
+   baseline-drift hard failures — expected, resolved by regeneration).
+
+**Baseline re-recorded**: `LINT_TRANSLATIONS_WRITE_BASELINE=1 pnpm lint-translations:gamelib`
+regenerated `meta/i18nCatalogPresenceBaseline.json` to `totalPairs: 0, missing: {}`. Verified
+`pnpm lint-translations:gamelib` now reports `0 findings, 0 hard failures`.
+
+**One regression surfaced and fixed in-scope**: `meta/__tests__/lintTranslations.test.ts`'s R14
+"comparePresenceBaseline detects drift in BOTH directions" test read the real committed
+baseline's `missing` map for its "shrink" scenario and assumed at least one entry would always
+exist — an assumption this exact fill invalidates. Rebuilt that half of the test on an isolated
+fixture locales tree, decoupled from the real tree's current fill state. Confirmed via the full
+Meta suite: 37/37 suites, 1018 passed / 1 skipped / 1019 total — identical to the pre-fill
+baseline count, no new failures. `pnpm codecheck` exit 0 throughout.
+
+**All 794 pairs recorded by this todo are filled. No residual.** All measurements taken in
+isolated tool calls, never chained after a write.
