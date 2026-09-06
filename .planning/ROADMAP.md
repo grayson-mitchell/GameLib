@@ -71,6 +71,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 33: Tauri lifecycle cluster** - Real behavior for the 44-file `app`/`dialog`/window/`Notification`/tray/protocol/updater cluster; scope the `session`/`powerSaveBlocker` parity gaps explicitly (completed 2026-07-23)
 - [x] **Phase 34: Tauri packaging (Windows/Linux)** — COMPLETE 2026-07-25. Cross-platform builds, signing, notarization, and an auto-update feed pointed at the GameLib fork — 17/17 plans executed (gap cycle 3 all closed: 34-16 closed GAP-A, the macOS codesign-on-empty-secret blocker from live run 30084918812; 34-17 closed GAP-B's code half, pnpm verify:updater-key; 34-18 closed GAP-B's human half via Branch B — regenerated + re-enrolled matched updater keypair, new key id 9A02F7E0C9FC04C7). **Live tag-push gate PASSED (REQ-34-09): run [30123449346](https://github.com/grayson-mitchell/GameLib/actions/runs/30123449346) on commit 006a900a — all 4 legs green, draft+prerelease release with all artifacts + latest.json, macOS+Windows signing gracefully skipped, arm64 SEA sidecar ran Node-free.** Secure-phase DONE (34-SECURITY.md, 42/42 threats closed, threats_open: 0). One build-blocking merge slip fixed en route (paths.ts missing `resolve` import, commit 006a900a).
 - [x] **Phase 35: Electron cutover** - Remove the Electron build; the one phase that intentionally breaks the additive/reversible invariant, so it runs last — **✅ GOAL ACHIEVED, 17/17 (2026-09-01).** 29 plans executed incl. gap-closure cycle 1 (35-20..35-29, all 10 complete). Six adjudication passes: 11/17 → 16/17 → 17/17 **rejected** → 16/17 → 16/17 → **17/17**, the sixth being the first verified against a **GENUINE RELEASE ARTIFACT** rather than a debug-packaged one (`F-5-01`: `tauri build --debug` structurally never executes the SEA sidecar, so the earlier identity check had verified an inert artifact; the chain was closed at the RUNNING PROCESS instead — PID 9781 `gamelib-shell` → PID 9787 **bundled** `gamelib-sidecar`, both sha256-identical to that build's outputs). Blocking live gate 21/21 PASS. **`35-VERIFICATION.md` stays `status: human_needed` BY DESIGN, not as a default** — 7 human items remain, and `gaps_found` would make the phase vanish from `audit-uat` entirely, taking criterion 14's genuinely-open UI-repaint item with it. **Three records blockers CLOSED 2026-09-01 by quick `260901-vuy`** (no code, no gesture): the `35-LIVE-GATE.md` writeback, the Phase 38 inheritance now ledgered as `38-W06`, and REQ-35-07 deconditioned from `D-35-19-15`. **STILL OPEN, do NOT read as closed:** `D-35-19-15` (unreproducible by construction — `b5b3464bd` removed the window that seeded the sibling apexes; the domain-*suffix* half IS exercised, the four sibling apexes are not), criterion 14's unobserved repaint, criterion 10's AppleEvent path. **Routed out:** `pnpm lint` → Phase 39; Windows/Linux and off-macOS Epic logout → Phase 38.
+- [ ] **Phase 42: Deferred Linux-host UAT gates** - Collection phase for the 5 UAT items that can only be observed on a Linux host, split out of Phase 38 on 2026-09-06 (plan 38-01) so Phase 38 could narrow to Windows-plus-controller items
+- [ ] **Phase 43: Off-macOS embed backend - Windows WebView2 and Linux webkit2gtk** - Widens the in-app store/wiki embed's macOS-only Cargo target gate to Windows and Linux, then answers the 4 embed-backend UAT items split out of Phase 38 on 2026-09-06 (plan 38-01)
 
 ## Phase Details
 
@@ -5157,6 +5159,69 @@ Plans:
 - [ ] 41-03-PLAN.md — Make lintTranslations importable and close both fail-open shapes at the catalog-read seam (wave 1, REQ-41-02)
 - [ ] 41-04-PLAN.md — Promote the three files into the blocking gate scope at zero violations (wave 2, REQ-41-04)
 - [ ] 41-05-PLAN.md — Invert the presence check and pin the 794 known-missing pairs as a set (wave 2, REQ-41-01)
+
+---
+
+### Phase 42: Deferred Linux-host UAT gates
+
+**Goal:** Hold the UAT items that can only be observed on a Linux host, so Phase 38 could narrow
+to Windows-plus-controller items only instead of staying open across three hosts. Ships no code.
+
+**Created 2026-09-06 by plan `38-01`, BEFORE anything was relocated into it** — per relocation
+rule (1), first written by `38-VERIFICATION.md` after Phase 34.9 routed 8 items to a phase that
+was never in ROADMAP.md and six of them dangled 9-11 days while every gate read `unmapped 0`. A
+relocation must never point at a phase that does not exist; this section and `42-VERIFICATION.md`
+exist before Task 2 of plan `38-01` moves a single item here.
+
+**Requirements**: NONE, and none will be minted. This is a **collection phase, not an
+implementation phase** — it ships no code, the same construction Phase 38 uses for its own
+Requirements line.
+
+**Depends on:** Phase 38 (the items originate there) and, transitively, Phase 34 for the
+Windows/Linux builds those items observe.
+
+**Items:** 5 as of 2026-09-06 — `38-W05` (AppImage smoke-launch), `38-S04`, `38-S10`, `38-S12`
+(section-gating matrix rows 7/8 on Linux, Tauri runtime), and newly-minted `38-S17` (the Linux
+row-7 half of `38-S16`'s content-light-notice-copy item, split out per relocation rule (4) — a
+compound item resolves to a single pass/fail and the un-run half disappears). All five keep their
+`38-` id prefix; relocation changes the owning file, not the id, because `34.13-UAT.md`,
+`35-LIVE-GATE.md` and Phase 40's artifacts all name these ids in their own receipts.
+
+**Plans:** No plan files. A human observation is not something an executor can "do"; this ledger
+is discharged by a live sitting on a Linux host, the same shape Phase 38 used before its own
+`38-01` ledger-repair exception.
+
+---
+
+### Phase 43: Off-macOS embed backend - Windows WebView2 and Linux webkit2gtk
+
+**Goal:** Widen `src-tauri/Cargo.toml`'s `[target.'cfg(target_os = "macos")'.dependencies]` table
+(the table carrying the `unstable` feature that enables `Window::add_child`) so the in-app
+store/wiki embed's code path exists on Windows (WebView2/wry) and Linux (webkit2gtk/wry), then
+answer the four embed-backend questions Phase 40 named but could not resolve on macOS-only
+hardware.
+
+**Created 2026-09-06 by plan `38-01`, BEFORE anything was relocated into it** — same relocation
+rule (1) as Phase 42, above.
+
+**Requirements**: TBD, to be minted when this phase is planned. Unlike Phase 42, this is an
+**implementation phase**: `38-E01`/`38-E02` (does `add_child` work at all on the Windows/Linux wry
+backends) are implementation tasks before they are verification tasks, per Phase 38's D-38-09 —
+planning this phase converts them into requirements, while `38-E03`/`38-E04` remain
+human-verification items behind them.
+
+**Depends on:** Phase 40 (origin of all four items) and Phase 38 (the phase they were relocated
+out of on 2026-09-06).
+
+**Items:** 4 as of 2026-09-06 — `38-E01` (Windows backend feasibility), `38-E02` (Linux backend
+feasibility), `38-E03` (retina/HiDPI at scale_factor 2.0 on hardware/backends other than the one
+macOS host Phase 40's plan `40-11` verified), `38-E04` (drag-resize latency on hardware/backends
+other than that same macOS host). `38-E03`/`38-E04` carry an ANTI-CONFLATION NOTE inherited
+verbatim from `38-VERIFICATION.md`: plan `40-11`'s macOS PASS does NOT close either item, and
+`40-LIVE-GATE.md`'s "Non-closure statement" section carries the matching statement from its own
+side — the non-closure is recorded on both sides so neither reader has to go find the other.
+
+**Plans:** Unplanned. Needs `/gsd-plan-phase 43`.
 
 ---
 
