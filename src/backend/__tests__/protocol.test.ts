@@ -35,7 +35,7 @@ import { app, dialog } from 'backend/platform'
 import { libraryManagerMap } from '../storeManagers'
 import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
-import { logInfo } from '../logger'
+import { logInfo, logError } from '../logger'
 import { launchEventCallback } from '../launcher'
 import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
 
@@ -565,6 +565,55 @@ describe('protocol.ts --no-gui behavior', () => {
 
       expect(launchEventCallback).toHaveBeenCalled()
       expect(dispatchSteamLaunch).not.toHaveBeenCalled()
+    })
+  })
+  // Quick task 260907-f2g (class 6 of 260907-e7a's census). `findGame()`'s explicit-runner
+  // branch returned `getGameInfo()` unguarded, so the `{}` cross-runner sentinel (D-01) came
+  // back TRUTHY and defeated `handleLaunch`'s own `if (!gameInfo)` guard at protocol.ts:116.
+  // The launch then rejected at protocol.ts:124 with
+  // `TypeError: Cannot read properties of undefined (reading 'getGame')`, because
+  // `gameInfo.runner` on a `{}` is undefined -- a silent no-op deep link, no dialog, no error.
+  describe('findGame explicit-runner branch guards the {} sentinel (260907-f2g)', () => {
+    // RED-proven: hand-editing protocol.ts back to the single-line
+    // `if (runner) return libraryManagerMap[runner].getGame(appName).getGameInfo()`
+    // fails this by name with:
+    //   Received promise rejected instead of resolved
+    //   Rejected to value: [TypeError: Cannot read properties of undefined (reading 'getGame')]
+    test('an explicit-runner link whose manager returns the {} sentinel resolves and logs', async () => {
+      // `libraryManagerMap.steam.getGame` returns `emptyGameInfoMock` from the outer beforeEach.
+      await expect(
+        handleProtocol(['gamelib://launch?appName=steam-1&runner=steam'])
+      ).resolves.toBeUndefined()
+
+      expect(logError).toHaveBeenCalledWith(
+        'Could not receive game data for steam-1!',
+        'ProtocolHandler'
+      )
+      expect(dispatchSteamLaunch).not.toHaveBeenCalled()
+      expect(launchEventCallback).not.toHaveBeenCalled()
+      expect(dialog.showMessageBox).not.toHaveBeenCalled()
+    })
+
+    // Inverse case -- the guard only ever narrows. A populated GameInfo on the same
+    // explicit-runner path must still reach its launch dispatch.
+    test('an explicit-runner link with a populated GameInfo still dispatches', async () => {
+      ;(libraryManagerMap.steam.getGame as jest.Mock).mockReturnValue({
+        getGameInfo: () => ({
+          app_name: 'steam-2',
+          title: 'Populated Steam Game',
+          runner: 'steam' as const,
+          is_installed: true
+        }),
+        getSettings: () => mockGameSettings
+      })
+
+      await handleProtocol(['gamelib://launch?appName=steam-2&runner=steam'])
+
+      expect(dispatchSteamLaunch).toHaveBeenCalledWith('steam-2')
+      expect(logError).not.toHaveBeenCalledWith(
+        'Could not receive game data for steam-2!',
+        'ProtocolHandler'
+      )
     })
   })
 })

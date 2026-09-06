@@ -212,7 +212,16 @@ function findGame(
   if (!appName) return
 
   // If a runner is specified, search for the game in that runner and return it (if found)
-  if (runner) return libraryManagerMap[runner].getGame(appName).getGameInfo()
+  // 260907-f2g: guard the D-01 sentinel. `SteamGame.getGameInfo()` deliberately returns
+  // `{} as GameInfo` on a double cache miss, and `{}` is TRUTHY -- returning it here defeats
+  // the caller's own `if (!gameInfo)` guard at L116, so the deep link silently does nothing
+  // and then throws at `libraryManagerMap[gameInfo.runner]` where `runner` is undefined.
+  // The `app_name` check makes this branch AGREE with the loop branch below, whose identical
+  // check is one of D-01's four legitimate sentinel consumers and must not be altered.
+  if (runner) {
+    const gameInfo = libraryManagerMap[runner].getGame(appName).getGameInfo()
+    return gameInfo.app_name ? gameInfo : undefined
+  }
 
   // If no runner is specified, search for the game in all runners and return the first one found
   for (const runner of RUNNERS.options) {
