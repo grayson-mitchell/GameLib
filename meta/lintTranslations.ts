@@ -30,6 +30,19 @@
  * (Correction, C3-02: an earlier version of this comment claimed argv was
  * mechanically unreachable because of the script's invocation mechanism --
  * that claim was false and has been removed.)
+ *
+ * REQ-41-02: an out-of-scope namespace is never read at all -- reads are
+ * scoped by `opts.namespaces`, the same set `namespaceScope` filtered on
+ * before. An absent IN-scope catalog is then classified by ownership,
+ * reusing the D-05/D-06 split `meta/i18nCatalogChurnGuard.ts` already
+ * establishes for `public/locales/`: `gamelib` is fork-owned (this fork
+ * authors it, so an absent one is a real defect -- a hard, counted, named
+ * failure with a non-zero exit code); `gamepage`/`login`/`translation` are
+ * upstream Weblate-sourced data this fork neither owns nor can fix (an
+ * absent one is simply not yet translated for that locale -- reported on
+ * one clean line, no stack trace, no exit-code contribution). This is what
+ * keeps D-15's own rationale intact -- "a gate with unactionable noise
+ * stops being read" -- while making the fork-owned half honest.
  */
 
 import { readdirSync, readFileSync } from 'graceful-fs'
@@ -44,6 +57,18 @@ type Namespace = (typeof ALL_NAMESPACES)[number]
 // this is not really a problem so these messages are ignored by default
 const printExtraTransations = false
 
+// D-05/D-06 split-brain (see meta/i18nCatalogChurnGuard.ts's own header):
+// `gamelib` is the only fork-owned namespace under public/locales/ --
+// `gamepage`/`login`/`translation` are upstream Weblate-sourced data this
+// fork neither owns nor can fix. This is a REUSED decision, not a new one:
+// it is what lets an absent fork-owned catalog fail the gate while an
+// absent upstream catalog stays a report.
+const FORK_OWNED_NAMESPACES: readonly Namespace[] = ['gamelib']
+
+function isForkOwned(namespace: Namespace): boolean {
+  return (FORK_OWNED_NAMESPACES as readonly string[]).includes(namespace)
+}
+
 type CatalogRecord = Record<string, unknown>
 
 export interface LintOptions {
@@ -56,19 +81,46 @@ export interface LintResult {
   hardFailures: string[]
 }
 
-// Read a file as JSON
+// Thrown by readCatalog() when a catalog file exists but is not valid JSON.
+// A corrupt catalog is a real defect in a file that exists, unlike an
+// upstream file that was simply never shipped -- it is a hard failure
+// regardless of namespace ownership. Carries the parse-failure MESSAGE
+// TEXT, never the raw Error object (T-41-03-04: no stack trace in gate
+// output).
+export class CorruptCatalogError extends Error {
+  constructor(
+    public readonly language: string,
+    public readonly namespace: Namespace,
+    parseMessage: string
+  ) {
+    super(`${language}/${namespace}.json is not valid JSON: ${parseMessage}`)
+    this.name = 'CorruptCatalogError'
+  }
+}
+
+// Read a file as JSON. Returns `null` if the file is absent (ENOENT or any
+// other read failure) -- absence is classified by the caller (fork-owned vs
+// upstream-owned), not here, and nothing is printed for it (no
+// `console.log(error)`: that was the source of the ENOENT stack traces
+// REQ-41-02 closes). Throws `CorruptCatalogError` if the file exists but
+// fails to parse as JSON.
 export function readCatalog(
   localesPath: string,
   language: string,
   namespace: Namespace
 ): CatalogRecord | null {
+  let raw: string
   try {
-    return JSON.parse(
-      readFileSync(join(localesPath, language, namespace + '.json')).toString()
-    )
-  } catch (error) {
-    console.log(error)
+    raw = readFileSync(join(localesPath, language, namespace + '.json')).toString()
+  } catch {
     return null
+  }
+
+  try {
+    return JSON.parse(raw)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    throw new CorruptCatalogError(language, namespace, message)
   }
 }
 
@@ -190,32 +242,49 @@ export function checkLanguage(
   opts: LintOptions
 ): LintResult {
   const result: LintResult = { findings: [], hardFailures: [] }
-  const langCatalogs = readCatalogs(opts.localesPath, language, ALL_NAMESPACES)
 
-  for (const namespace of ALL_NAMESPACES) {
-    // D-15 scope selector -- see the header docstring. Filtering here (not
-    // in readCatalogs()) keeps readCatalogs() a plain "read everything"
-    // helper; this is the one seam that decides what actually gets checked.
-    if (!opts.namespaces.includes(namespace)) continue
+  for (const namespace of opts.namespaces) {
+    // REQ-41-02 (a): scope-aware reads. `opts.namespaces` is read here, one
+    // namespace at a time, rather than pre-reading ALL_NAMESPACES and
+    // filtering afterwards (the old D-15 shape) -- an out-of-scope
+    // namespace file is therefore never opened, so it cannot raise an
+    // ENOENT trace.
+    let content: CatalogRecord | null
+    try {
+      content = readCatalog(opts.localesPath, language, namespace)
+    } catch (error) {
+      if (error instanceof CorruptCatalogError) {
+        // REQ-41-02: a catalog that exists but fails to parse is a hard
+        // failure regardless of ownership -- a corrupt file that exists is
+        // a real defect, unlike an upstream file that was never shipped.
+        result.hardFailures.push(error.message)
+        continue
+      }
+      throw error
+    }
 
-    const content = langCatalogs[namespace]
-    // Measured at HEAD (2026-09-06): 6 of the 48 keys catalogued by
-    // 34.8-07/08a/08b/08c in en/gamelib.json were empty. Plan 41-01
-    // (REQ-41-03) authored all six, taking en/gamelib.json to 0 empty
-    // values -- there is deliberately no "legitimately empty" exemption
-    // register any more. The `if (dir === 'en') return` in
-    // lintTranslations() below already excludes `en` from ever reaching
-    // this function.
-    if (!content) continue
+    if (!content) {
+      // REQ-41-02 (b): ownership classification replaces the old silent
+      // `if (!content) continue`. Measured at HEAD (2026-09-06): all 49
+      // locales have gamelib.json; the 5 absent catalogs are all
+      // upstream-owned, so this cannot turn the gamelib-scoped gate red.
+      const path = `${language}/${namespace}.json`
+      if (isForkOwned(namespace)) {
+        result.hardFailures.push(
+          `${path} is absent -- this is a fork-owned catalog (D-06) and must exist`
+        )
+      } else {
+        result.findings.push(
+          `${path} is absent -- upstream (Weblate) catalog not yet translated for this locale`
+        )
+      }
+      continue
+    }
 
     const enCatalog = enCatalogs[namespace]
-    checkFileAgainstEnglish(
-      content,
-      enCatalog as CatalogRecord,
-      language,
-      namespace,
-      result
-    )
+    if (!enCatalog) continue // english source itself absent for this namespace -- nothing to check against
+
+    checkFileAgainstEnglish(content, enCatalog, language, namespace, result)
   }
 
   return result
@@ -224,7 +293,9 @@ export function checkLanguage(
 // the whole run: walks every locale directory (except `en`) and checks it
 // against the English source
 export function lintTranslations(opts: LintOptions): LintResult {
-  const enCatalogs = readCatalogs(opts.localesPath, 'en', ALL_NAMESPACES)
+  // Scope-aware read for the English source too (REQ-41-02 (a)) -- an
+  // out-of-scope namespace's English catalog is never opened either.
+  const enCatalogs = readCatalogs(opts.localesPath, 'en', opts.namespaces)
   const result: LintResult = { findings: [], hardFailures: [] }
 
   readdirSync(opts.localesPath).forEach((dir) => {
@@ -252,6 +323,13 @@ function main(): void {
 
   result.findings.forEach((finding) => console.log(finding))
   result.hardFailures.forEach((failure) => console.log(failure))
+
+  // REQ-41-02 (c): the exit code is derived from a counted failure set,
+  // never from "did anything throw" -- and this summary line is what makes
+  // the run's result readable without parsing the body above.
+  console.log(
+    `lint-translations[${namespaces.join(',')}]: ${result.findings.length} findings, ${result.hardFailures.length} hard failures`
+  )
 
   if (result.hardFailures.length > 0) {
     process.exit(1)
