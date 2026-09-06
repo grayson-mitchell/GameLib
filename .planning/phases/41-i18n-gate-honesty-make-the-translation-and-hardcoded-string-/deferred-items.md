@@ -18,3 +18,19 @@ rule rather than fixed inline.
 - **Disposition:** out of scope for 41-01 per the executor's scope-boundary rule (only auto-fix
   issues directly caused by the current task's changes). Not fixed. Recorded here so a future
   phase (or the operator) can decide whether to raise the ceiling or burn down the warning count.
+
+## 41-07: pre-existing eslint warning at `meta/lintTranslations.ts:155`
+
+- **Found during:** 41-07 overall verification (step 5: `npx eslint meta/lintTranslations.ts
+  meta/__tests__/lintTranslations.test.ts`)
+- **Observed:** `155:5  warning  Unsafe return of a value of type `any`
+  @typescript-eslint/no-unsafe-return` — 0 errors, 1 warning, exit 0
+- **Scope check:** 41-07's diff (`git diff --stat HEAD`) spans only `meta/lintTranslations.ts`
+  lines 732-769 (the CLI entry-point guard and its comment) and
+  `meta/__tests__/lintTranslations.test.ts`'s R5 block. Line 155 sits inside `readCatalog()`'s
+  `JSON.parse(raw)` return, in a function this plan's `<files>` declares in scope but whose body
+  this plan did not touch or need to touch.
+- **Disposition:** out of scope for 41-07 per the executor's scope-boundary rule (only auto-fix
+  issues directly caused by the current task's changes). Not fixed. Recorded here so a future
+  phase (or the operator) can decide whether to add a type guard or narrow `JSON.parse`'s return
+  type at that call site.
