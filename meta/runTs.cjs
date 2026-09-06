@@ -91,6 +91,27 @@ function parseArgv(argv) {
   return { esbuildFlags, entry, forwardedArgs }
 }
 
+// Quick task 260906-hq8: decides HOW the resolved esbuild CLI is spawned.
+// Mirrors buildEsbuildArgv() in meta/buildSidecarSea.ts, including the
+// injectable `platform` default parameter -- that injection is not a
+// convenience, it is what lets both branches be asserted from a single
+// macOS/Linux test run instead of only the host's own platform (see
+// meta/__tests__/runTs.test.ts and buildSidecarSea's own WR-06 note). Unlike
+// buildEsbuildArgv(), the flags here come from argv rather than a fixed
+// seaEsbuildFlags() call, so they are a parameter, not computed internally.
+// Pure: no I/O, no closed-over mutable state, safe to require() and call
+// from a test without touching the filesystem.
+function buildEsbuildSpawnArgv(
+  esbuildCli,
+  esbuildArgs,
+  platform = process.platform
+) {
+  if (platform === 'win32') {
+    return { command: process.execPath, args: [esbuildCli, ...esbuildArgs] }
+  }
+  return { command: esbuildCli, args: esbuildArgs }
+}
+
 // Signals forwarded to the running child (C4-01). SIGTERM/SIGINT are the two
 // the reviewer measured directly; SIGHUP is the terminal-closed case that
 // produces the exact same orphan+leak shape. Nothing else is forwarded.
@@ -311,18 +332,32 @@ async function main() {
 
     // esbuild's own `install.js` postinstall step overwrites `bin/esbuild`
     // with the native platform binary (Mach-O/ELF/PE) for the current
-    // machine -- it is NEVER a JS file to hand to `process.execPath`, on any
-    // platform, once install has run. Spawn it directly; on POSIX this also
-    // transparently handles the (no longer normal, but not impossible) case
-    // where it is still a `#!/usr/bin/env node` shim, since execve resolves
-    // the shebang itself.
+    // machine -- EXCEPT on win32, where `maybeOptimizePackage()` in that
+    // installer explicitly skips the hardlink swap (measured directly
+    // against esbuild 0.25.12's own `install.js`, quick task 260906-hq8:
+    // this is the sixth such discovered-by-execution note in this file).
+    // The *published* `esbuild` tarball ships `bin/esbuild` as a
+    // 9351-byte `#!/usr/bin/env node` JS shim; on win32 that shim survives
+    // untouched, and `CreateProcess` cannot execute a shebang script --
+    // spawning it as the direct command there surfaces as libuv errno
+    // -4058 (ENOENT). On this project's macOS/Linux hosts the installed
+    // copy IS the native binary (confirmed here by its Mach-O header), so
+    // it must be spawned directly, never routed through `process.execPath`
+    // (a native binary is not parseable JS). `buildEsbuildSpawnArgv()`
+    // above picks the right shape for the given platform.
+    //
+    // Honesty note: the Windows failure that motivated this branch was
+    // REPORTED, not reproduced by the author of this fix -- there was no
+    // Windows machine to confirm on. The mechanism above is confirmed from
+    // esbuild's own tarball and installer source, on macOS, today; whether
+    // it is what the reporting machine actually hit is not confirmed. See
+    // this quick task's plan `<diagnosis_status>` falsifiers and the
+    // pending todo filed alongside this change.
     const esbuildBin = require.resolve('esbuild/bin/esbuild')
+    const esbuildArgs = [...esbuildFlags, '--outfile=' + outfile, entry]
+    const esbuildArgv = buildEsbuildSpawnArgv(esbuildBin, esbuildArgs)
 
-    const compile = await runChild(esbuildBin, [
-      ...esbuildFlags,
-      '--outfile=' + outfile,
-      entry
-    ])
+    const compile = await runChild(esbuildArgv.command, esbuildArgv.args)
     if (compile.error) {
       console.error('meta/runTs.cjs: failed to launch esbuild:', compile.error)
     }
@@ -354,7 +389,19 @@ async function main() {
 // become an unhandled rejection rather than the process exiting non-zero.
 // main()'s own catch already ran cleanup() before re-throwing here, and the
 // 'exit' hook registered above is the idempotent second guarantee.
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+//
+// Quick task 260906-hq8: guarded behind require.main === module so this file
+// can be require()d (by meta/__tests__/runTs.test.ts, to assert both
+// buildEsbuildSpawnArgv() platform branches from a macOS host) without
+// kicking off a real compile-and-run. Every package.json script invokes this
+// file as `node meta/runTs.cjs ...`, where require.main === module holds, as
+// do the generated probe copies meta/__tests__/runTsSignals.test.ts spawns --
+// this guard changes nothing for either of those callers.
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+}
+
+module.exports = { buildEsbuildSpawnArgv }
