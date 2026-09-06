@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Quant a"
+        "navLabel": "Quant a",
+        "license": "Llicència: GPL V3",
+        "title": "Quant a GameLib",
+        "version": "Versió: {{version}}",
+        "versionUnknown": "desconeguda"
     },
     "app": {
         "routeError": "S'ha produït un error: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Això es fa un seguiment com a feina futura pròpia -- de moment, useu el botó de sota per obrir-ho al navegador del sistema.",
-            "open-in-browser": "Obre al navegador"
+            "open-in-browser": "Obre al navegador",
+            "epic": {
+                "body": "GameLib encara no incrusta pàgines d'Epic Store dins l'aplicació.",
+                "heading": "La navegació per Epic Store encara no està disponible dins l'aplicació"
+            },
+            "platform": {
+                "body": "La navegació per la botiga i el wiki dins l'aplicació de GameLib està disponible a macOS. Encara no està disponible en aquesta plataforma.",
+                "heading": "La navegació per la botiga i el wiki dins l'aplicació encara no està disponible en aquesta plataforma"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "En pausa mentre hi ha una finestra oberta"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Visualitzant actualment {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "La gestió de components de Winetricks no està disponible en aquesta versió",
         "unavailableDetail": "El suport de Winetricks s'ha ajornat a una versió futura (D-03, Fase 34.6) i no es pot llistar ni instal·lar des d'aquesta versió."
+    },
+    "donate": {
+        "navLabel": "Fes una donació"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Aquesta clau ja s'ha bescanviat — ja tens això a Steam.",
+        "error": "No s'ha pogut contactar amb Steam per bescanviar aquesta clau. Comprova la connexió i torna-ho a provar.",
+        "invalid": "Aquesta clau no sembla correcta. Comprova-la i torna-ho a provar.",
+        "rateLimited": "Massa intents — espera una mica abans de tornar-ho a provar.",
+        "successNoPackage": "Clau bescanviada! S'ha actualitzat la teva biblioteca de Steam.",
+        "successWithPackage": "Clau bescanviada! S'ha afegit {{packageName}} a la teva biblioteca de Steam."
     }
 }

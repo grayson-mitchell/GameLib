@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Giới Thiệu"
+        "navLabel": "Giới Thiệu",
+        "license": "Giấy phép: GPL V3",
+        "title": "Giới thiệu về GameLib",
+        "version": "Phiên bản: {{version}}",
+        "versionUnknown": "không xác định"
     },
     "app": {
         "routeError": "Đã xảy ra lỗi: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Đây được ghi nhận là một hạng mục công việc riêng trong tương lai -- hiện tại, hãy dùng nút bên dưới để mở trong trình duyệt hệ thống thay thế.",
-            "open-in-browser": "Mở trong trình duyệt"
+            "open-in-browser": "Mở trong trình duyệt",
+            "epic": {
+                "body": "GameLib chưa hỗ trợ nhúng trang Epic Store trong ứng dụng.",
+                "heading": "Duyệt Epic Store trong ứng dụng chưa khả dụng"
+            },
+            "platform": {
+                "body": "Tính năng duyệt cửa hàng và wiki trong ứng dụng của GameLib hiện khả dụng trên macOS. Tính năng này chưa khả dụng trên nền tảng này.",
+                "heading": "Duyệt cửa hàng và wiki trong ứng dụng chưa khả dụng trên nền tảng này"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Đã tạm dừng khi có cửa sổ đang mở"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Đang xem {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Quản lý thành phần Winetricks không khả dụng trên bản dựng này",
         "unavailableDetail": "Hỗ trợ Winetricks được hoãn lại cho bản phát hành trong tương lai (D-03, Phase 34.6) và không thể liệt kê hoặc cài đặt từ bản dựng này."
+    },
+    "donate": {
+        "navLabel": "Quyên góp"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Mã này đã được kích hoạt — bạn đã sở hữu trò chơi này trên Steam.",
+        "error": "Không thể kết nối đến Steam để kích hoạt mã này. Kiểm tra kết nối của bạn và thử lại.",
+        "invalid": "Mã này có vẻ không đúng. Kiểm tra lại và thử lại.",
+        "rateLimited": "Quá nhiều lần thử — vui lòng đợi một chút trước khi thử lại.",
+        "successNoPackage": "Đã kích hoạt mã! Thư viện Steam của bạn đã được cập nhật.",
+        "successWithPackage": "Đã kích hoạt mã! {{packageName}} đã được thêm vào thư viện Steam của bạn."
     }
 }

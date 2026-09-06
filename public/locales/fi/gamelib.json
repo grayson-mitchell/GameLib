@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Tietoja"
+        "navLabel": "Tietoja",
+        "license": "Lisenssi: GPL V3",
+        "title": "Tietoja GameLibistä",
+        "version": "Versio: {{version}}",
+        "versionUnknown": "tuntematon"
     },
     "app": {
         "routeError": "Jokin meni pieleen: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Tämä on kirjattu omaksi tulevaksi kehitystyöksi -- käytä toistaiseksi alla olevaa painiketta avataksesi sen järjestelmäsi selaimessa.",
-            "open-in-browser": "Avaa selaimessa"
+            "open-in-browser": "Avaa selaimessa",
+            "epic": {
+                "body": "GameLib ei vielä upota Epic Storen sivuja sovellukseen.",
+                "heading": "Epic Storen selaus ei ole vielä käytettävissä sovelluksessa"
+            },
+            "platform": {
+                "body": "GameLibin sovelluksen sisäinen kaupan ja wikin selaus on käytettävissä macOS-käyttöjärjestelmässä. Se ei ole vielä käytettävissä tällä alustalla.",
+                "heading": "Sovelluksen sisäinen kaupan ja wikin selaus ei ole vielä käytettävissä tällä alustalla"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Keskeytetty, kun ikkuna on auki"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Katselet nyt kohdetta {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Winetricks-komponenttien hallinta ei ole käytettävissä tässä versiossa",
         "unavailableDetail": "Winetricks-tuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi luetella tai asentaa tästä versiosta."
+    },
+    "donate": {
+        "navLabel": "Lahjoita"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Tämä avain on jo lunastettu — omistat tämän jo Steamissa.",
+        "error": "Steamiin ei saatu yhteyttä avaimen lunastamiseksi. Tarkista yhteytesi ja yritä uudelleen.",
+        "invalid": "Tämä avain ei näytä oikealta. Tarkista se ja yritä uudelleen.",
+        "rateLimited": "Liian monta yritystä — odota hetki ennen kuin yrität uudelleen.",
+        "successNoPackage": "Avain lunastettu! Steam-kirjastosi on päivitetty.",
+        "successWithPackage": "Avain lunastettu! {{packageName}} on lisätty Steam-kirjastoosi."
     }
 }

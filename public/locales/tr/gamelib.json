@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Hakkında"
+        "navLabel": "Hakkında",
+        "license": "Lisans: GPL V3",
+        "title": "GameLib Hakkında",
+        "version": "Sürüm: {{version}}",
+        "versionUnknown": "bilinmiyor"
     },
     "app": {
         "routeError": "Bir şeyler ters gitti: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Bu, ayrı bir gelecek çalışma olarak takip ediliyor -- şimdilik, bunun yerine sistem tarayıcınızda açmak için aşağıdaki düğmeyi kullanın.",
-            "open-in-browser": "Tarayıcıda aç"
+            "open-in-browser": "Tarayıcıda aç",
+            "epic": {
+                "body": "GameLib henüz Epic Store sayfalarını uygulama içinde göstermiyor.",
+                "heading": "Epic Store gezinme uygulama içinde henüz kullanılamıyor"
+            },
+            "platform": {
+                "body": "GameLib'in uygulama içi mağaza ve wiki gezinme özelliği macOS'ta kullanılabilir. Bu platformda henüz kullanılamıyor.",
+                "heading": "Uygulama içi mağaza ve wiki gezinme bu platformda henüz kullanılamıyor"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Bir pencere açıkken duraklatıldı"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Şu anda görüntülenen: {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Winetricks bileşen yönetimi bu sürümde kullanılamıyor",
         "unavailableDetail": "Winetricks desteği ileriki bir sürüme ertelenmiştir (D-03, Aşama 34.6) ve bu sürümden listelenip yüklenemez."
+    },
+    "donate": {
+        "navLabel": "Bağış Yap"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Bu anahtar zaten kullanılmış — bu ürün zaten Steam hesabınızda mevcut.",
+        "error": "Bu anahtarı kullanmak için Steam'e ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+        "invalid": "Bu anahtar doğru görünmüyor. Tekrar kontrol edip yeniden deneyin.",
+        "rateLimited": "Çok fazla deneme yapıldı — tekrar denemeden önce lütfen biraz bekleyin.",
+        "successNoPackage": "Anahtar kullanıldı! Steam kitaplığınız güncellendi.",
+        "successWithPackage": "Anahtar kullanıldı! {{packageName}} Steam kitaplığınıza eklendi."
     }
 }

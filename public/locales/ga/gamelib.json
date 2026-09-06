@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Maidir"
+        "navLabel": "Maidir",
+        "license": "Ceadúnas: GPL V3",
+        "title": "Maidir le GameLib",
+        "version": "Leagan: {{version}}",
+        "versionUnknown": "anaithnid"
     },
     "app": {
         "routeError": "Tharla earráid: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Táthar ag rianú seo mar obair ar leithligh amach anseo -- go dtí sin, úsáid an cnaipe thíos chun é a oscailt i mbrabhsálaí do chórais ina ionad.",
-            "open-in-browser": "Oscail sa bhrabhsálaí"
+            "open-in-browser": "Oscail sa bhrabhsálaí",
+            "epic": {
+                "body": "Níl leabaithe ag GameLib fós leathanaigh Epic Store san aip.",
+                "heading": "Níl brabhsáil Epic Store ar fáil san aip fós"
+            },
+            "platform": {
+                "body": "Tá brabhsáil siopa agus vicí GameLib san aip ar fáil ar macOS. Níl sé ar fáil ar an ardán seo fós.",
+                "heading": "Níl brabhsáil siopa agus vicí san aip ar fáil ar an ardán seo fós"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Ar sos fad is atá fuinneog oscailte"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Ag féachaint ar {{host}} faoi láthair"
         }
     },
     "winetricks": {
         "unavailable": "Níl bainistíocht comhpháirteanna Winetricks ar fáil sa tógáil seo",
         "unavailableDetail": "Cuirtear tacaíocht Winetricks siar go dtí eisiúint sa todhchaí (D-03, Céim 34.6) agus ní féidir í a liostú ná a shuiteáil ón tógáil seo."
+    },
+    "donate": {
+        "navLabel": "Deonaigh"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Baineadh úsáid as an eochair seo cheana — tá seo agat ar Steam cheana féin.",
+        "error": "Níorbh fhéidir teacht ar Steam chun an eochair seo a fhuascailt. Seiceáil do cheangal agus bain triail eile as.",
+        "invalid": "Ní fhéachann an eochair seo i gceart. Seiceáil arís í agus bain triail eile as.",
+        "rateLimited": "An iomarca iarrachtaí — fan tamall sula ndéanann tú iarracht eile.",
+        "successNoPackage": "Fuasclaíodh an eochair! Nuashonraíodh do leabharlann Steam.",
+        "successWithPackage": "Fuasclaíodh an eochair! Cuireadh {{packageName}} le do leabharlann Steam."
     }
 }

@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Buruz"
+        "navLabel": "Buruz",
+        "license": "Lizentzia: GPL V3",
+        "title": "GameLib-i buruz",
+        "version": "Bertsioa: {{version}}",
+        "versionUnknown": "ezezaguna"
     },
     "app": {
         "routeError": "Zerbait gaizki joan da: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Hau etorkizuneko lan gisa jasota dago -- oraingoz, erabili beheko botoia zure sistemako arakatzailean irekitzeko.",
-            "open-in-browser": "Ireki arakatzailean"
+            "open-in-browser": "Ireki arakatzailean",
+            "epic": {
+                "body": "GameLib-ek oraindik ez ditu Epic Store-ren orriak app barruan txertatzen.",
+                "heading": "Epic Store nabigatzea ez dago erabilgarri app barruan oraindik"
+            },
+            "platform": {
+                "body": "GameLib-en app barruko denda eta wiki nabigazioa macOS-en dago erabilgarri. Oraindik ez dago erabilgarri plataforma honetan.",
+                "heading": "App barruko denda eta wiki nabigazioa ez dago erabilgarri plataforma honetan oraindik"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Pausatuta leiho bat irekita dagoen bitartean"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Une honetan ikusten: {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Winetricks osagaien kudeaketa ez dago erabilgarri bertsio honetan",
         "unavailableDetail": "Winetricks euskarria etorkizuneko bertsio baterako utzi da (D-03, 34.6 fasea) eta ezin da bertsio honetatik zerrendatu edo instalatu."
+    },
+    "donate": {
+        "navLabel": "Dohaintza eman"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Kode hau dagoeneko erabili da — jada zure jabetzakoa da Steam-en.",
+        "error": "Ezin izan da Steam-ekin konektatu kode hau erreskatatzeko. Egiaztatu zure konexioa eta saiatu berriro.",
+        "invalid": "Kode hau ez dirudi zuzena. Egiaztatu berriro eta saiatu berriro.",
+        "rateLimited": "Saiakera gehiegi — itxaron pixka bat berriro saiatu aurretik.",
+        "successNoPackage": "Kodea erabili da! Zure Steam liburutegia eguneratu da.",
+        "successWithPackage": "Kodea erabili da! {{packageName}} zure Steam liburutegira gehitu da."
     }
 }

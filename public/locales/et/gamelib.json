@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Info"
+        "navLabel": "Info",
+        "license": "Litsents: GPL V3",
+        "title": "GameLib teave",
+        "version": "Versioon: {{version}}",
+        "versionUnknown": "teadmata"
     },
     "app": {
         "routeError": "Midagi läks valesti: {{detail}}"
@@ -326,7 +330,21 @@
         },
         "unavailable": {
             "next-step": "See on eraldi tulevase töö nimekirjas — praegu kasuta allolevat nuppu, et avada see hoopis oma süsteemi veebilehitsejas.",
-            "open-in-browser": "Ava veebilehitsejas"
+            "open-in-browser": "Ava veebilehitsejas",
+            "epic": {
+                "body": "GameLib ei kuva veel Epic Store lehti rakenduse sees.",
+                "heading": "Epic Store sirvimine pole rakenduses veel saadaval"
+            },
+            "platform": {
+                "body": "GameLibi rakendusesisene poe ja wiki sirvimine on saadaval macOS-il. Sellel platvormil pole see veel saadaval.",
+                "heading": "Rakendusesisene poe ja wiki sirvimine pole sellel platvormil veel saadaval"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Peatatud, kuni aken on avatud"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Praegu vaatad {{host}}"
         }
     },
     "winetricks": {
@@ -335,5 +353,16 @@
     },
     "sidebar": {
         "redeemSteamKey": "Lunasta Steami võti"
+    },
+    "donate": {
+        "navLabel": "Anneta"
+    },
+    "redeemKey": {
+        "alreadyOwned": "See võti on juba kasutatud — see mäng on juba sinu Steami kontol olemas.",
+        "error": "Steamiga ei õnnestunud võtme aktiveerimiseks ühendust saada. Kontrolli internetiühendust ja proovi uuesti.",
+        "invalid": "See võti ei tundu õige olevat. Kontrolli see üle ja proovi uuesti.",
+        "rateLimited": "Liiga palju katseid — palun oota veidi ja proovi uuesti.",
+        "successNoPackage": "Võti aktiveeritud! Sinu Steami teek on uuendatud.",
+        "successWithPackage": "Võti aktiveeritud! {{packageName}} on lisatud sinu Steami teeki."
     }
 }

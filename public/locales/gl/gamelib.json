@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Sobre"
+        "navLabel": "Sobre",
+        "license": "Licenza: GPL V3",
+        "title": "Sobre GameLib",
+        "version": "Versión: {{version}}",
+        "versionUnknown": "descoñecida"
     },
     "app": {
         "routeError": "Algo saíu mal: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Isto está rexistrado como traballo futuro por separado -- por agora, usa o botón de abaixo para abrilo no teu navegador do sistema.",
-            "open-in-browser": "Abrir no navegador"
+            "open-in-browser": "Abrir no navegador",
+            "epic": {
+                "body": "GameLib aínda non integra as páxinas de Epic Store na aplicación.",
+                "heading": "A navegación de Epic Store aínda non está dispoñible na aplicación"
+            },
+            "platform": {
+                "body": "A navegación pola tenda e a wiki dentro da aplicación de GameLib está dispoñible en macOS. Aínda non está dispoñible nesta plataforma.",
+                "heading": "A navegación pola tenda e a wiki dentro da aplicación aínda non está dispoñible nesta plataforma"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "En pausa mentres unha xanela está aberta"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Vendo actualmente {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "A xestión de compoñentes de Winetricks non está dispoñible nesta compilación",
         "unavailableDetail": "O soporte de Winetricks quédase para unha versión futura (D-03, Fase 34.6) e non se pode listar nin instalar desde esta compilación."
+    },
+    "donate": {
+        "navLabel": "Doar"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Esta clave xa foi canxeada — xa posúes isto en Steam.",
+        "error": "Non se puido conectar con Steam para canxear esta clave. Comproba a túa conexión e téntao de novo.",
+        "invalid": "Esta clave non parece correcta. Compróbaa e téntao de novo.",
+        "rateLimited": "Demasiados intentos — agarda un momento antes de tentalo de novo.",
+        "successNoPackage": "Clave canxeada! A túa biblioteca de Steam foi actualizada.",
+        "successWithPackage": "Clave canxeada! Engadiuse {{packageName}} á túa biblioteca de Steam."
     }
 }

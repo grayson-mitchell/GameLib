@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "關於"
+        "navLabel": "關於",
+        "license": "授權條款：GPL V3",
+        "title": "關於 GameLib",
+        "version": "版本：{{version}}",
+        "versionUnknown": "未知"
     },
     "app": {
         "routeError": "發生錯誤：{{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "這已列入未來的獨立開發項目 -- 目前請使用下方按鈕改在您系統的瀏覽器中開啟。",
-            "open-in-browser": "在瀏覽器中開啟"
+            "open-in-browser": "在瀏覽器中開啟",
+            "epic": {
+                "body": "GameLib 目前尚未支援在應用程式內嵌入 Epic Store 頁面。",
+                "heading": "Epic Store 瀏覽功能尚未在應用程式內提供"
+            },
+            "platform": {
+                "body": "GameLib 的應用程式內商店與 wiki 瀏覽功能目前僅支援 macOS。此平台尚未提供此功能。",
+                "heading": "此平台尚未提供應用程式內商店與 wiki 瀏覽功能"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "視窗開啟期間已暫停"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "目前正在檢視 {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "此版本不支援 Winetricks 元件管理",
         "unavailableDetail": "Winetricks 支援已延後至未來版本推出（D-03，第 34.6 階段），此版本無法列出或安裝相關元件。"
+    },
+    "donate": {
+        "navLabel": "捐款"
+    },
+    "redeemKey": {
+        "alreadyOwned": "此金鑰已經兌換過了 — 您在 Steam 上已擁有此遊戲。",
+        "error": "無法連上 Steam 以兌換此金鑰。請檢查您的連線後再試一次。",
+        "invalid": "此金鑰似乎不正確。請仔細檢查後再試一次。",
+        "rateLimited": "嘗試次數過多 — 請稍候片刻再試一次。",
+        "successNoPackage": "金鑰兌換成功！您的 Steam 庫已更新。",
+        "successWithPackage": "金鑰兌換成功！{{packageName}} 已加入您的 Steam 庫。"
     }
 }

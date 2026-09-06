@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Névjegy"
+        "navLabel": "Névjegy",
+        "license": "Licenc: GPL V3",
+        "title": "A GameLib névjegye",
+        "version": "Verzió: {{version}}",
+        "versionUnknown": "ismeretlen"
     },
     "app": {
         "routeError": "Hiba történt: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Ezt külön jövőbeli feladatként tartjuk nyilván -- addig is használd az alábbi gombot, hogy a rendszer böngésződben nyisd meg.",
-            "open-in-browser": "Megnyitás böngészőben"
+            "open-in-browser": "Megnyitás böngészőben",
+            "epic": {
+                "body": "A GameLib még nem ágyazza be az Epic Store oldalait az alkalmazáson belül.",
+                "heading": "Az Epic Store böngészése még nem érhető el az alkalmazáson belül"
+            },
+            "platform": {
+                "body": "A GameLib alkalmazáson belüli áruház- és wikiböngészése macOS rendszeren érhető el. Ezen a platformon még nem érhető el.",
+                "heading": "Az alkalmazáson belüli áruház- és wikiböngészés még nem érhető el ezen a platformon"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Szüneteltetve, amíg egy ablak nyitva van"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Jelenleg megtekintve: {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "A Winetricks komponenskezelés nem érhető el ebben a build-ben",
         "unavailableDetail": "A Winetricks támogatás egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a build-ben nem listázható és nem telepíthető."
+    },
+    "donate": {
+        "navLabel": "Adományozás"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Ezt a kulcsot már beváltották — ez a tartalom már a tiéd a Steamen.",
+        "error": "Nem sikerült elérni a Steamet a kulcs beváltásához. Ellenőrizd a kapcsolatot, és próbáld újra.",
+        "invalid": "Ez a kulcs nem tűnik helyesnek. Ellenőrizd, és próbáld újra.",
+        "rateLimited": "Túl sok próbálkozás — kérjük, várj egy kicsit, mielőtt újra megpróbálod.",
+        "successNoPackage": "A kulcsot beváltottad! A Steam könyvtárad frissült.",
+        "successWithPackage": "A kulcsot beváltottad! A(z) {{packageName}} bekerült a Steam könyvtáradba."
     }
 }

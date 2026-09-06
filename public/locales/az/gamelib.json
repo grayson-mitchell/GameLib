@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Haqqında"
+        "navLabel": "Haqqında",
+        "license": "Lisenziya: GPL V3",
+        "title": "GameLib haqqında",
+        "version": "Versiya: {{version}}",
+        "versionUnknown": "naməlum"
     },
     "app": {
         "routeError": "Nəsə səhv getdi: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Bu ayrıca gələcək iş kimi izlənilir -- hələlik onu sistem brauzerinizdə açmaq üçün aşağıdakı düymədən istifadə edin.",
-            "open-in-browser": "Brauzerdə açın"
+            "open-in-browser": "Brauzerdə açın",
+            "epic": {
+                "body": "GameLib hələ Epic Store səhifələrini tətbiq daxilində göstərmir.",
+                "heading": "Epic Store-a tətbiq daxilində baxış hələ mövcud deyil"
+            },
+            "platform": {
+                "body": "GameLib-in tətbiq daxilində mağaza və wiki baxışı macOS-da mövcuddur. Bu platformada hələ mövcud deyil.",
+                "heading": "Tətbiq daxilində mağaza və wiki baxışı bu platformada hələ mövcud deyil"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Pəncərə açıq olduğu üçün dayandırılıb"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Hazırda {{host}} baxılır"
         }
     },
     "winetricks": {
         "unavailable": "Winetricks komponent idarəetməsi bu versiyada mövcud deyil",
         "unavailableDetail": "Winetricks dəstəyi gələcək buraxılış üçün təxirə salınıb (D-03, Faza 34.6) və bu versiyadan siyahıya alına və ya quraşdırıla bilməz."
+    },
+    "donate": {
+        "navLabel": "İanə et"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Bu açar artıq istifadə olunub — bu, artıq Steam-də sizindir.",
+        "error": "Bu açarı aktivləşdirmək üçün Steam-ə qoşulmaq mümkün olmadı. Bağlantınızı yoxlayıb yenidən cəhd edin.",
+        "invalid": "Bu açar düzgün görünmür. Onu yenidən yoxlayıb cəhd edin.",
+        "rateLimited": "Çox sayda cəhd edildi — yenidən cəhd etmədən əvvəl bir az gözləyin.",
+        "successNoPackage": "Açar aktivləşdirildi! Steam kitabxananız yeniləndi.",
+        "successWithPackage": "Açar aktivləşdirildi! {{packageName}} Steam kitabxananıza əlavə edildi."
     }
 }

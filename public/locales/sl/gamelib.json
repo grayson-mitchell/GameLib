@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "O aplikaciji"
+        "navLabel": "O aplikaciji",
+        "license": "Licenca: GPL V3",
+        "title": "O aplikaciji GameLib",
+        "version": "Različica: {{version}}",
+        "versionUnknown": "neznano"
     },
     "app": {
         "routeError": "Prišlo je do napake: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "To je zabeleženo kot ločeno prihodnje delo -- za zdaj uporabite spodnji gumb, da to odprete v sistemskem brskalniku.",
-            "open-in-browser": "Odpri v brskalniku"
+            "open-in-browser": "Odpri v brskalniku",
+            "epic": {
+                "body": "GameLib še ne vgrajuje strani Epic Store v aplikacijo.",
+                "heading": "Brskanje po Epic Store še ni na voljo v aplikaciji"
+            },
+            "platform": {
+                "body": "Brskanje po trgovini in wikiju znotraj aplikacije GameLib je na voljo na macOS. Na tej platformi še ni na voljo.",
+                "heading": "Brskanje po trgovini in wikiju znotraj aplikacije na tej platformi še ni na voljo"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Začasno ustavljeno, dokler je okno odprto"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Trenutno si ogledujete {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Upravljanje komponent Winetricks v tej različici ni na voljo",
         "unavailableDetail": "Podpora za Winetricks je odložena na prihodnjo izdajo (D-03, faza 34.6) in je v tej različici ni mogoče prikazati na seznamu ali namestiti."
+    },
+    "donate": {
+        "navLabel": "Doniraj"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Ta ključ je bil že unovčen — to igro že imate v lasti na Steam.",
+        "error": "Ni bilo mogoče vzpostaviti povezave s Steam za unovčitev tega ključa. Preverite povezavo in poskusite znova.",
+        "invalid": "Ta ključ ni videti pravilen. Preverite ga in poskusite znova.",
+        "rateLimited": "Preveč poskusov — počakajte trenutek, preden poskusite znova.",
+        "successNoPackage": "Ključ unovčen! Vaša knjižnica Steam je bila posodobljena.",
+        "successWithPackage": "Ključ unovčen! {{packageName}} je bil dodan v vašo knjižnico Steam."
     }
 }

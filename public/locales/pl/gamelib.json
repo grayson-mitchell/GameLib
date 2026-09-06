@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "O programie"
+        "navLabel": "O programie",
+        "license": "Licencja: GPL V3",
+        "title": "O programie GameLib",
+        "version": "Wersja: {{version}}",
+        "versionUnknown": "nieznana"
     },
     "app": {
         "routeError": "Coś poszło nie tak: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Jest to śledzone jako osobne zadanie na przyszłość -- na razie użyj poniższego przycisku, aby otworzyć to w przeglądarce systemowej.",
-            "open-in-browser": "Otwórz w przeglądarce"
+            "open-in-browser": "Otwórz w przeglądarce",
+            "epic": {
+                "body": "GameLib nie obsługuje jeszcze wyświetlania stron Epic Store w aplikacji.",
+                "heading": "Przeglądanie Epic Store w aplikacji nie jest jeszcze dostępne"
+            },
+            "platform": {
+                "body": "Przeglądanie sklepu i wiki w aplikacji GameLib jest dostępne na macOS. Na tej platformie nie jest jeszcze dostępne.",
+                "heading": "Przeglądanie sklepu i wiki w aplikacji nie jest jeszcze dostępne na tej platformie"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Wstrzymano, dopóki okno jest otwarte"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Obecnie przeglądasz {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Zarządzanie komponentami Winetricks jest niedostępne w tym buildzie",
         "unavailableDetail": "Obsługa Winetricks została odłożona do przyszłej wersji (D-03, Faza 34.6) i nie może być wyświetlana ani instalowana w tym buildzie."
+    },
+    "donate": {
+        "navLabel": "Wesprzyj"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Ten klucz został już wykorzystany — ta gra jest już na Twoim koncie Steam.",
+        "error": "Nie udało się połączyć ze Steam, aby zrealizować ten klucz. Sprawdź połączenie i spróbuj ponownie.",
+        "invalid": "Ten klucz wygląda na nieprawidłowy. Sprawdź go i spróbuj ponownie.",
+        "rateLimited": "Zbyt wiele prób — poczekaj chwilę przed kolejną próbą.",
+        "successNoPackage": "Klucz zrealizowany! Twoja biblioteka Steam została zaktualizowana.",
+        "successWithPackage": "Klucz zrealizowany! {{packageName}} została dodana do Twojej biblioteki Steam."
     }
 }

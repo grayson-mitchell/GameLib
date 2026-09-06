@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Sobre"
+        "navLabel": "Sobre",
+        "license": "Licença: GPL V3",
+        "title": "Sobre o GameLib",
+        "version": "Versão: {{version}}",
+        "versionUnknown": "desconhecida"
     },
     "app": {
         "routeError": "Algo deu errado: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Isso está sendo acompanhado como um trabalho futuro à parte -- por enquanto, use o botão abaixo para abri-la no navegador do sistema.",
-            "open-in-browser": "Abrir no navegador"
+            "open-in-browser": "Abrir no navegador",
+            "epic": {
+                "body": "O GameLib ainda não incorpora páginas da Epic Store no aplicativo.",
+                "heading": "A navegação na Epic Store ainda não está disponível no aplicativo"
+            },
+            "platform": {
+                "body": "A navegação na loja e na wiki dentro do aplicativo do GameLib está disponível no macOS. Ainda não está disponível nesta plataforma.",
+                "heading": "A navegação na loja e na wiki dentro do aplicativo ainda não está disponível nesta plataforma"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Pausado enquanto uma janela está aberta"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Visualizando atualmente {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "O gerenciamento de componentes do Winetricks não está disponível nesta build",
         "unavailableDetail": "O suporte ao Winetricks foi adiado para uma versão futura (D-03, Fase 34.6) e não pode ser listado ou instalado nesta build."
+    },
+    "donate": {
+        "navLabel": "Doar"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Esta chave já foi resgatada — você já possui isto na Steam.",
+        "error": "Não foi possível conectar à Steam para resgatar esta chave. Verifique sua conexão e tente novamente.",
+        "invalid": "Esta chave não parece estar correta. Verifique-a e tente novamente.",
+        "rateLimited": "Muitas tentativas — aguarde um pouco antes de tentar novamente.",
+        "successNoPackage": "Chave resgatada! Sua biblioteca da Steam foi atualizada.",
+        "successWithPackage": "Chave resgatada! {{packageName}} foi adicionado à sua biblioteca da Steam."
     }
 }

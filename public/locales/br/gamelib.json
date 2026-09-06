@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Diwar-об"
+        "navLabel": "Diwar-об",
+        "license": "Lañvaz: GPL V3",
+        "title": "Diwar-benn GameLib",
+        "version": "Handelv: {{version}}",
+        "versionUnknown": "dianav"
     },
     "app": {
         "routeError": "Bez a zo bet fazi: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Heuliet eo an dra-se evel ul labour dazont a-se -- evit ar mare, implijit an afell dindan evit e zigeriñ er merdeer reizhiad kentoc'h.",
-            "open-in-browser": "Digeriñ er merdeer"
+            "open-in-browser": "Digeriñ er merdeer",
+            "epic": {
+                "body": "N'emberc'h ket c'hoazh GameLib pajennoù Epic Store en-diabarzh.",
+                "heading": "N'eo ket hegerz c'hoazh furchal Epic Store en-diabarzh"
+            },
+            "platform": {
+                "body": "Hegerz eo furchal ar stal hag ar wiki en-diabarzh eus GameLib war macOS. N'eo ket hegerz c'hoazh war ar rummstal-mañ.",
+                "heading": "N'eo ket hegerz c'hoazh furchal ar stal hag ar wiki en-diabarzh war ar rummstal-mañ"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Ehanet e-pad ma'z eo digor ur prenestr"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "O sellet ouzh {{host}} evit ar mare"
         }
     },
     "winetricks": {
         "unavailable": "N'eo ket hegerz merañ parzhioù Winetricks war ar savadur-mañ",
         "unavailableDetail": "Dilezet eo skor Winetricks evit un embannadur da zont (D-03, Fazenn 34.6) ha ne c'hall ket bezañ rollet pe staliet diwar ar savadur-mañ."
+    },
+    "donate": {
+        "navLabel": "Reiñ arc'hant"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Adkemeret eo bet an alc'hwez-mañ dija — ho eus anezhañ dija war Steam.",
+        "error": "N'haller ket tizhout Steam evit adkemer an alc'hwez-mañ. Gwiriit ho kevreadur ha klaskit en-dro.",
+        "invalid": "N'eo ket mat an alc'hwez-mañ, war a seblant. Gwiriit anezhañ ha klaskit en-dro.",
+        "rateLimited": "Re a glaskoù — gortozit un tammig kent klask en-dro.",
+        "successNoPackage": "Adkemeret eo bet an alc'hwez! Hizivaet eo bet ho levraoueg Steam.",
+        "successWithPackage": "Adkemeret eo bet an alc'hwez! Ouzhpennet eo bet {{packageName}} d'ho levraoueg Steam."
     }
 }

@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "O aplikaci"
+        "navLabel": "O aplikaci",
+        "license": "Licence: GPL V3",
+        "title": "O aplikaci GameLib",
+        "version": "Verze: {{version}}",
+        "versionUnknown": "neznámá"
     },
     "app": {
         "routeError": "Něco se pokazilo: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Toto je sledováno jako samostatný budoucí úkol -- prozatím použijte tlačítko níže a otevřete stránku v systémovém prohlížeči.",
-            "open-in-browser": "Otevřít v prohlížeči"
+            "open-in-browser": "Otevřít v prohlížeči",
+            "epic": {
+                "body": "GameLib zatím nezobrazuje stránky Epic Store přímo v aplikaci.",
+                "heading": "Procházení Epic Store v aplikaci zatím není dostupné"
+            },
+            "platform": {
+                "body": "Procházení obchodu a wiki přímo v aplikaci GameLib je dostupné na macOS. Na této platformě zatím není k dispozici.",
+                "heading": "Procházení obchodu a wiki v aplikaci na této platformě zatím není dostupné"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Pozastaveno, dokud je okno otevřené"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Aktuálně zobrazujete {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Správa komponent Winetricks není v tomto sestavení k dispozici",
         "unavailableDetail": "Podpora Winetricks je odložena na budoucí vydání (D-03, fáze 34.6) a v tomto sestavení ji nelze zobrazit ani nainstalovat."
+    },
+    "donate": {
+        "navLabel": "Přispět"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Tento klíč již byl uplatněn — tuto hru na Steamu už vlastníte.",
+        "error": "Nepodařilo se spojit se Steamem kvůli uplatnění klíče. Zkontrolujte připojení a zkuste to znovu.",
+        "invalid": "Tento klíč nevypadá správně. Zkontrolujte ho a zkuste to znovu.",
+        "rateLimited": "Příliš mnoho pokusů — počkejte prosím chvíli, než to zkusíte znovu.",
+        "successNoPackage": "Klíč uplatněn! Vaše knihovna Steam byla aktualizována.",
+        "successWithPackage": "Klíč uplatněn! {{packageName}} byl přidán do vaší knihovny Steam."
     }
 }

@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Apie"
+        "navLabel": "Apie",
+        "license": "Licencija: GPL V3",
+        "title": "Apie GameLib",
+        "version": "Versija: {{version}}",
+        "versionUnknown": "nežinoma"
     },
     "app": {
         "routeError": "Kažkas nutiko ne taip: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Tai numatyta kaip atskiras būsimas darbas -- kol kas naudokite žemiau esantį mygtuką, kad atidarytumėte tai savo sistemos naršyklėje.",
-            "open-in-browser": "Atidaryti naršyklėje"
+            "open-in-browser": "Atidaryti naršyklėje",
+            "epic": {
+                "body": "GameLib dar neįterpia „Epic Store“ puslapių programoje.",
+                "heading": "„Epic Store“ naršymas programoje dar nepasiekiamas"
+            },
+            "platform": {
+                "body": "GameLib parduotuvės ir wiki naršymas programoje pasiekiamas macOS sistemoje. Šioje platformoje jis dar nepasiekiamas.",
+                "heading": "Parduotuvės ir wiki naršymas programoje šioje platformoje dar nepasiekiamas"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Pristabdyta, kol atidarytas langas"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Šiuo metu peržiūrima {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Winetricks komponentų valdymas šioje versijoje negalimas",
         "unavailableDetail": "Winetricks palaikymas atidėtas iki būsimos versijos (D-03, 34.6 etapas) ir šioje versijoje negali būti rodomas ar diegiamas."
+    },
+    "donate": {
+        "navLabel": "Aukoti"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Šis raktas jau buvo panaudotas — jūs jau turite šį žaidimą „Steam“.",
+        "error": "Nepavyko prisijungti prie „Steam“, kad būtų aktyvuotas šis raktas. Patikrinkite ryšį ir bandykite dar kartą.",
+        "invalid": "Šis raktas atrodo neteisingas. Patikrinkite jį dar kartą ir bandykite iš naujo.",
+        "rateLimited": "Per daug bandymų — prašome palaukti prieš bandant vėl.",
+        "successNoPackage": "Raktas aktyvuotas! Jūsų „Steam“ biblioteka atnaujinta.",
+        "successWithPackage": "Raktas aktyvuotas! „{{packageName}}“ pridėtas prie jūsų „Steam“ bibliotekos."
     }
 }

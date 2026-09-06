@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Om"
+        "navLabel": "Om",
+        "license": "Licens: GPL V3",
+        "title": "Om GameLib",
+        "version": "Version: {{version}}",
+        "versionUnknown": "ukendt"
     },
     "app": {
         "routeError": "Noget gik galt: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Dette er registreret som fremtidigt arbejde -- brug for nu knappen nedenfor til at åbne det i din systembrowser i stedet.",
-            "open-in-browser": "Åbn i browser"
+            "open-in-browser": "Åbn i browser",
+            "epic": {
+                "body": "GameLib indlejrer endnu ikke Epic Store-sider i appen.",
+                "heading": "Gennemsyn af Epic Store er endnu ikke tilgængeligt i appen"
+            },
+            "platform": {
+                "body": "GameLibs indbyggede butik- og wiki-gennemsyn er tilgængeligt på macOS. Det er endnu ikke tilgængeligt på denne platform.",
+                "heading": "Indbygget butik- og wiki-gennemsyn er endnu ikke tilgængeligt på denne platform"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Sat på pause, mens et vindue er åbent"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Viser i øjeblikket {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Håndtering af Winetricks-komponenter er ikke tilgængelig i denne build",
         "unavailableDetail": "Understøttelse af Winetricks er udskudt til en fremtidig udgivelse (D-03, fase 34.6) og kan ikke listes eller installeres fra denne build."
+    },
+    "donate": {
+        "navLabel": "Donér"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Denne nøgle er allerede indløst — du ejer allerede dette på Steam.",
+        "error": "Kunne ikke oprette forbindelse til Steam for at indløse denne nøgle. Tjek din forbindelse, og prøv igen.",
+        "invalid": "Denne nøgle ser ikke korrekt ud. Tjek den igen, og prøv igen.",
+        "rateLimited": "For mange forsøg — vent lidt, før du prøver igen.",
+        "successNoPackage": "Nøgle indløst! Dit Steam-bibliotek er blevet opdateret.",
+        "successWithPackage": "Nøgle indløst! {{packageName}} er blevet tilføjet til dit Steam-bibliotek."
     }
 }

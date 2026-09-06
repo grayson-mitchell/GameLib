@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Over"
+        "navLabel": "Over",
+        "license": "Licentie: GPL V3",
+        "title": "Over GameLib",
+        "version": "Versie: {{version}}",
+        "versionUnknown": "onbekend"
     },
     "app": {
         "routeError": "Er is iets misgegaan: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Dit wordt bijgehouden als apart toekomstig werk -- gebruik voorlopig de knop hieronder om het in je systeembrowser te openen.",
-            "open-in-browser": "Openen in de browser"
+            "open-in-browser": "Openen in de browser",
+            "epic": {
+                "body": "GameLib bevat nog geen ingesloten Epic Store-pagina's in de app.",
+                "heading": "Bladeren door Epic Store is nog niet beschikbaar in de app"
+            },
+            "platform": {
+                "body": "Bladeren door de in-app store en wiki van GameLib is beschikbaar op macOS. Dit is nog niet beschikbaar op dit platform.",
+                "heading": "In-app store en wiki bladeren is nog niet beschikbaar op dit platform"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Gepauzeerd terwijl er een venster open is"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Je bekijkt momenteel {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Winetricks-componentbeheer is niet beschikbaar in deze build",
         "unavailableDetail": "Ondersteuning voor Winetricks is uitgesteld naar een toekomstige release (D-03, fase 34.6) en kan in deze build niet worden weergegeven of geïnstalleerd."
+    },
+    "donate": {
+        "navLabel": "Doneren"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Deze key is al ingewisseld — je hebt dit al in bezit op Steam.",
+        "error": "Kon Steam niet bereiken om deze key in te wisselen. Controleer je verbinding en probeer het opnieuw.",
+        "invalid": "Deze key lijkt niet correct. Controleer hem nogmaals en probeer het opnieuw.",
+        "rateLimited": "Te veel pogingen — wacht even voordat je het opnieuw probeert.",
+        "successNoPackage": "Key ingewisseld! Je Steam-bibliotheek is bijgewerkt.",
+        "successWithPackage": "Key ingewisseld! {{packageName}} is toegevoegd aan je Steam-bibliotheek."
     }
 }

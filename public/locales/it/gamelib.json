@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Informazioni su"
+        "navLabel": "Informazioni su",
+        "license": "Licenza: GPL V3",
+        "title": "Informazioni su GameLib",
+        "version": "Versione: {{version}}",
+        "versionUnknown": "sconosciuta"
     },
     "app": {
         "routeError": "Qualcosa è andato storto: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Questo è tracciato come attività futura a sé stante -- per ora, usa il pulsante qui sotto per aprirla nel browser di sistema.",
-            "open-in-browser": "Apri nel browser"
+            "open-in-browser": "Apri nel browser",
+            "epic": {
+                "body": "GameLib non integra ancora le pagine dell'Epic Store nell'app.",
+                "heading": "La navigazione dell'Epic Store non è ancora disponibile nell'app"
+            },
+            "platform": {
+                "body": "La navigazione dello store e del wiki integrata nell'app di GameLib è disponibile su macOS. Non è ancora disponibile su questa piattaforma.",
+                "heading": "La navigazione dello store e del wiki integrata non è ancora disponibile su questa piattaforma"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "In pausa mentre una finestra è aperta"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Visualizzazione attuale: {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "La gestione dei componenti Winetricks non è disponibile in questa build",
         "unavailableDetail": "Il supporto di Winetricks è rimandato a una versione futura (D-03, Fase 34.6) e non può essere elencato o installato da questa build."
+    },
+    "donate": {
+        "navLabel": "Dona"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Questo codice è già stato riscattato — possiedi già questo gioco su Steam.",
+        "error": "Impossibile contattare Steam per riscattare questo codice. Controlla la connessione e riprova.",
+        "invalid": "Questo codice non sembra corretto. Verificalo e riprova.",
+        "rateLimited": "Troppi tentativi — attendi un momento prima di riprovare.",
+        "successNoPackage": "Codice riscattato! La tua libreria Steam è stata aggiornata.",
+        "successWithPackage": "Codice riscattato! {{packageName}} è stato aggiunto alla tua libreria Steam."
     }
 }

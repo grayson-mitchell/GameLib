@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Tentang"
+        "navLabel": "Tentang",
+        "license": "Lisensi: GPL V3",
+        "title": "Tentang GameLib",
+        "version": "Versi: {{version}}",
+        "versionUnknown": "tidak diketahui"
     },
     "app": {
         "routeError": "Terjadi kesalahan: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Ini dicatat sebagai pekerjaan mendatang tersendiri -- untuk saat ini, gunakan tombol di bawah untuk membukanya di peramban sistem Anda.",
-            "open-in-browser": "Buka di peramban"
+            "open-in-browser": "Buka di peramban",
+            "epic": {
+                "body": "GameLib belum menyematkan halaman Epic Store di dalam aplikasi.",
+                "heading": "Penjelajahan Epic Store belum tersedia di dalam aplikasi"
+            },
+            "platform": {
+                "body": "Penjelajahan toko dan wiki dalam aplikasi GameLib tersedia di macOS. Fitur ini belum tersedia di platform ini.",
+                "heading": "Penjelajahan toko dan wiki dalam aplikasi belum tersedia di platform ini"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Dijeda selagi sebuah jendela terbuka"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Sedang melihat {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Manajemen komponen Winetricks tidak tersedia pada build ini",
         "unavailableDetail": "Dukungan Winetricks ditunda ke rilis mendatang (D-03, Fase 34.6) dan tidak dapat ditampilkan atau dipasang dari build ini."
+    },
+    "donate": {
+        "navLabel": "Donasi"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Kunci ini sudah pernah ditukarkan — Anda sudah memiliki game ini di Steam.",
+        "error": "Tidak dapat terhubung ke Steam untuk menukarkan kunci ini. Periksa koneksi Anda dan coba lagi.",
+        "invalid": "Kunci ini tampaknya tidak benar. Periksa kembali dan coba lagi.",
+        "rateLimited": "Terlalu banyak percobaan — mohon tunggu sebentar sebelum mencoba lagi.",
+        "successNoPackage": "Kunci berhasil ditukarkan! Perpustakaan Steam Anda telah diperbarui.",
+        "successWithPackage": "Kunci berhasil ditukarkan! {{packageName}} telah ditambahkan ke perpustakaan Steam Anda."
     }
 }

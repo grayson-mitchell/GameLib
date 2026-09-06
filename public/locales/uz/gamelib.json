@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Haqida"
+        "navLabel": "Haqida",
+        "license": "Litsenziya: GPL V3",
+        "title": "GameLib haqida",
+        "version": "Versiya: {{version}}",
+        "versionUnknown": "noma'lum"
     },
     "app": {
         "routeError": "Nimadir xato ketdi: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Bu alohida kelajakdagi ish sifatida rejalashtirilgan -- hozircha, uni tizim brauzeringizda ochish uchun quyidagi tugmadan foydalaning.",
-            "open-in-browser": "Brauzerda oching"
+            "open-in-browser": "Brauzerda oching",
+            "epic": {
+                "body": "GameLib hali Epic Store sahifalarini ilova ichida ko'rsatmaydi.",
+                "heading": "Epic Store'ni ilova ichida ko'rish hali mavjud emas"
+            },
+            "platform": {
+                "body": "GameLib'ning ilova ichidagi do'kon va vikini ko'rish imkoniyati macOS'da mavjud. Bu platformada hali mavjud emas.",
+                "heading": "Ilova ichida do'kon va vikini ko'rish bu platformada hali mavjud emas"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Oyna ochiq bo'lganda to'xtatilgan"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Hozir {{host}} ko'rilmoqda"
         }
     },
     "winetricks": {
         "unavailable": "Winetricks komponentlarini boshqarish ushbu qurilmada mavjud emas",
         "unavailableDetail": "Winetricks qo'llab-quvvatlashi keyingi versiyaga qoldirilgan (D-03, 34.6-bosqich) va ushbu qurilmadan ro'yxatga olinishi yoki o'rnatilishi mumkin emas."
+    },
+    "donate": {
+        "navLabel": "Xayriya qilish"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Bu kalit allaqachon faollashtirilgan — siz bunga Steam'da allaqachon egasiz.",
+        "error": "Kalitni faollashtirish uchun Steam'ga ulanib bo'lmadi. Ulanishingizni tekshirib, qayta urinib ko'ring.",
+        "invalid": "Bu kalit noto'g'ridek ko'rinadi. Uni qayta tekshirib, qayta urinib ko'ring.",
+        "rateLimited": "Juda ko'p urinish bo'ldi — qayta urinishdan oldin biroz kuting.",
+        "successNoPackage": "Kalit faollashtirildi! Steam kutubxonangiz yangilandi.",
+        "successWithPackage": "Kalit faollashtirildi! {{packageName}} Steam kutubxonangizga qo'shildi."
     }
 }

@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "GameLibについて"
+        "navLabel": "GameLibについて",
+        "license": "ライセンス: GPL V3",
+        "title": "GameLib について",
+        "version": "バージョン: {{version}}",
+        "versionUnknown": "不明"
     },
     "app": {
         "routeError": "問題が発生しました: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "これは今後の対応課題として別途管理されています。現時点では、下のボタンからシステムのブラウザで開いてください。",
-            "open-in-browser": "ブラウザで開く"
+            "open-in-browser": "ブラウザで開く",
+            "epic": {
+                "body": "GameLib はまだ Epic Store のページをアプリ内に埋め込んでいません。",
+                "heading": "Epic Store の閲覧はまだアプリ内で利用できません"
+            },
+            "platform": {
+                "body": "GameLib のアプリ内ストア・Wiki 閲覧機能は macOS で利用できます。このプラットフォームではまだ利用できません。",
+                "heading": "アプリ内ストア・Wiki 閲覧はこのプラットフォームではまだ利用できません"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "ウィンドウが開いている間は一時停止しています"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "現在 {{host}} を表示中"
         }
     },
     "winetricks": {
         "unavailable": "このビルドではWinetricksコンポーネント管理は利用できません",
         "unavailableDetail": "Winetricksのサポートは将来のリリース（D-03、フェーズ34.6）に延期されており、このビルドでは一覧表示やインストールができません。"
+    },
+    "donate": {
+        "navLabel": "寄付"
+    },
+    "redeemKey": {
+        "alreadyOwned": "このキーはすでに使用済みです — Steam でこのゲームをすでに所有しています。",
+        "error": "Steam に接続してキーを利用登録できませんでした。接続を確認してもう一度お試しください。",
+        "invalid": "このキーは正しくないようです。内容を確認してもう一度お試しください。",
+        "rateLimited": "試行回数が多すぎます — しばらく待ってからもう一度お試しください。",
+        "successNoPackage": "キーが利用登録されました！Steam ライブラリが更新されました。",
+        "successWithPackage": "キーが利用登録されました！{{packageName}} が Steam ライブラリに追加されました。"
     }
 }

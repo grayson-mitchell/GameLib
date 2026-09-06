@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Despre"
+        "navLabel": "Despre",
+        "license": "Licență: GPL V3",
+        "title": "Despre GameLib",
+        "version": "Versiune: {{version}}",
+        "versionUnknown": "necunoscută"
     },
     "app": {
         "routeError": "Ceva nu a mers bine: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Aceasta este urmărită ca o activitate viitoare separată -- deocamdată, folosește butonul de mai jos pentru a o deschide în browserul sistemului.",
-            "open-in-browser": "Deschide în browser"
+            "open-in-browser": "Deschide în browser",
+            "epic": {
+                "body": "GameLib nu încorporează încă paginile Epic Store în aplicație.",
+                "heading": "Navigarea Epic Store nu este încă disponibilă în aplicație"
+            },
+            "platform": {
+                "heading": "Navigarea magazinului și a wiki-ului în aplicație nu este încă disponibilă pe această platformă",
+                "body": "Magazinul din aplicație și navigarea wiki din GameLib sunt disponibile pe macOS. Nu sunt încă disponibile pe această platformă."
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Suspendat cât timp o fereastră este deschisă"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Vizualizezi în prezent {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Gestionarea componentelor Winetricks nu este disponibilă în această versiune",
         "unavailableDetail": "Suportul pentru Winetricks este amânat pentru o versiune viitoare (D-03, Faza 34.6) și nu poate fi listat sau instalat din această versiune."
+    },
+    "donate": {
+        "navLabel": "Donează"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Această cheie a fost deja revendicată — deții deja acest joc pe Steam.",
+        "error": "Nu s-a putut contacta Steam pentru a revendica această cheie. Verifică-ți conexiunea și încearcă din nou.",
+        "invalid": "Această cheie nu pare corectă. Verific-o din nou și încearcă din nou.",
+        "rateLimited": "Prea multe încercări — te rugăm să aștepți puțin înainte de a încerca din nou.",
+        "successNoPackage": "Cheie revendicată! Biblioteca ta de Steam a fost actualizată.",
+        "successWithPackage": "Cheie revendicată! {{packageName}} a fost adăugat în biblioteca ta de Steam."
     }
 }

@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Om"
+        "navLabel": "Om",
+        "license": "Licens: GPL V3",
+        "title": "Om GameLib",
+        "version": "Version: {{version}}",
+        "versionUnknown": "okänd"
     },
     "app": {
         "routeError": "Något gick fel: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Detta spåras som ett separat framtida arbete -- använd knappen nedan för att öppna det i din systemwebbläsare istället.",
-            "open-in-browser": "Öppna i webbläsare"
+            "open-in-browser": "Öppna i webbläsare",
+            "epic": {
+                "body": "GameLib bäddar ännu inte in Epic Store-sidor i appen.",
+                "heading": "Bläddring i Epic Store är inte tillgängligt i appen ännu"
+            },
+            "platform": {
+                "body": "GameLibs bläddring i butik och wiki i appen är tillgänglig på macOS. Den är inte tillgänglig på den här plattformen ännu.",
+                "heading": "Bläddring i butik och wiki i appen är inte tillgänglig på den här plattformen ännu"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Pausad medan ett fönster är öppet"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Visar för närvarande {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Hantering av Winetricks-komponenter är inte tillgänglig i denna version",
         "unavailableDetail": "Stöd för Winetricks skjuts upp till en framtida version (D-03, fas 34.6) och kan inte listas eller installeras från denna version."
+    },
+    "donate": {
+        "navLabel": "Donera"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Den här nyckeln har redan lösts in — du äger redan detta på Steam.",
+        "error": "Kunde inte nå Steam för att lösa in nyckeln. Kontrollera din anslutning och försök igen.",
+        "invalid": "Den här nyckeln ser inte rätt ut. Kontrollera den och försök igen.",
+        "rateLimited": "För många försök — vänta en stund innan du försöker igen.",
+        "successNoPackage": "Nyckeln har lösts in! Ditt Steam-bibliotek har uppdaterats.",
+        "successWithPackage": "Nyckeln har lösts in! {{packageName}} har lagts till i ditt Steam-bibliotek."
     }
 }

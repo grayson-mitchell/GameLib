@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "U vezi sa"
+        "navLabel": "U vezi sa",
+        "license": "Licenca: GPL V3",
+        "title": "O aplikaciji GameLib",
+        "version": "Verzija: {{version}}",
+        "versionUnknown": "nepoznato"
     },
     "app": {
         "routeError": "Nešto je pošlo po zlu: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Ovo je zabilježeno kao poseban budući zadatak -- za sada koristite dugme ispod da to otvorite u sistemskom pretraživaču.",
-            "open-in-browser": "Otvorite u pretraživaču"
+            "open-in-browser": "Otvorite u pretraživaču",
+            "epic": {
+                "body": "GameLib još uvijek ne prikazuje Epic Store stranice unutar aplikacije.",
+                "heading": "Pregledavanje Epic Store-a još nije dostupno unutar aplikacije"
+            },
+            "platform": {
+                "body": "Pregledavanje trgovine i wikija unutar aplikacije GameLib dostupno je na macOS-u. Na ovoj platformi to još nije dostupno.",
+                "heading": "Pregledavanje trgovine i wikija unutar aplikacije još nije dostupno na ovoj platformi"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "Pauzirano dok je prozor otvoren"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Trenutno pregledate {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "Upravljanje komponentama Winetricks nije dostupno u ovoj verziji",
         "unavailableDetail": "Podrška za Winetricks je odgođena za buduće izdanje (D-03, Faza 34.6) i ne može se prikazati niti instalirati iz ove verzije."
+    },
+    "donate": {
+        "navLabel": "Doniraj"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Ovaj ključ je već iskorišten — ovu igru već posjedujete na Steamu.",
+        "error": "Nije moguće povezati se sa Steamom radi iskorištavanja ovog ključa. Provjerite vezu i pokušajte ponovo.",
+        "invalid": "Ovaj ključ ne izgleda ispravno. Provjerite ga ponovo i pokušajte opet.",
+        "rateLimited": "Previše pokušaja — sačekajte malo prije nego pokušate ponovo.",
+        "successNoPackage": "Ključ iskorišten! Vaša Steam biblioteka je ažurirana.",
+        "successWithPackage": "Ključ iskorišten! {{packageName}} je dodan u vašu Steam biblioteku."
     }
 }

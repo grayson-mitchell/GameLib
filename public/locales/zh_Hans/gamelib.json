@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "关于"
+        "navLabel": "关于",
+        "license": "许可证：GPL V3",
+        "title": "关于 GameLib",
+        "version": "版本：{{version}}",
+        "versionUnknown": "未知"
     },
     "app": {
         "routeError": "出现错误：{{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "这已被列为未来的独立工作项——目前请使用下方按钮在系统浏览器中打开。",
-            "open-in-browser": "在浏览器中打开"
+            "open-in-browser": "在浏览器中打开",
+            "epic": {
+                "body": "GameLib 目前尚未在应用内嵌入 Epic Store 页面。",
+                "heading": "Epic Store 浏览功能尚不支持应用内使用"
+            },
+            "platform": {
+                "body": "GameLib 的应用内商店和 wiki 浏览功能目前仅支持 macOS。此平台尚不支持该功能。",
+                "heading": "此平台尚不支持应用内商店和 wiki 浏览功能"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "窗口打开时已暂停"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "当前正在查看 {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "此版本不支持 Winetricks 组件管理",
         "unavailableDetail": "Winetricks 支持已推迟至未来版本（D-03，第 34.6 阶段），此版本无法列出或安装。"
+    },
+    "donate": {
+        "navLabel": "捐赠"
+    },
+    "redeemKey": {
+        "alreadyOwned": "此密钥已被兑换——你已在 Steam 上拥有该游戏。",
+        "error": "无法连接到 Steam 以兑换此密钥。请检查你的网络连接后重试。",
+        "invalid": "此密钥似乎不正确。请仔细检查后重试。",
+        "rateLimited": "尝试次数过多——请稍等片刻后再试。",
+        "successNoPackage": "密钥兑换成功！你的 Steam 库已更新。",
+        "successWithPackage": "密钥兑换成功！{{packageName}} 已添加到你的 Steam 库。"
     }
 }

@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "Acerca"
+        "navLabel": "Acerca",
+        "license": "Licencia: GPL V3",
+        "title": "Acerca de GameLib",
+        "version": "Versión: {{version}}",
+        "versionUnknown": "desconocida"
     },
     "app": {
         "routeError": "Algo salió mal: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "Esto se está gestionando como un trabajo futuro independiente; por ahora, usa el botón de abajo para abrirlo en tu navegador del sistema.",
-            "open-in-browser": "Abrir en el navegador"
+            "open-in-browser": "Abrir en el navegador",
+            "epic": {
+                "body": "GameLib todavía no integra las páginas de Epic Store en la aplicación.",
+                "heading": "La navegación por Epic Store aún no está disponible en la aplicación"
+            },
+            "platform": {
+                "body": "La navegación por tienda y wiki dentro de la aplicación de GameLib está disponible en macOS. Todavía no está disponible en esta plataforma.",
+                "heading": "La navegación por tienda y wiki dentro de la aplicación aún no está disponible en esta plataforma"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "En pausa mientras hay una ventana abierta"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "Viendo actualmente {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "La gestión de componentes de Winetricks no está disponible en esta compilación",
         "unavailableDetail": "El soporte de Winetricks se ha diferido a una versión futura (D-03, Fase 34.6) y no se puede listar ni instalar desde esta compilación."
+    },
+    "donate": {
+        "navLabel": "Donar"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Esta clave ya ha sido canjeada; ya tienes esto en Steam.",
+        "error": "No se pudo conectar con Steam para canjear esta clave. Comprueba tu conexión e inténtalo de nuevo.",
+        "invalid": "Esta clave no parece correcta. Revísala e inténtalo de nuevo.",
+        "rateLimited": "Demasiados intentos. Espera un poco antes de volver a intentarlo.",
+        "successNoPackage": "¡Clave canjeada! Se ha actualizado tu biblioteca de Steam.",
+        "successWithPackage": "¡Clave canjeada! {{packageName}} se ha añadido a tu biblioteca de Steam."
     }
 }

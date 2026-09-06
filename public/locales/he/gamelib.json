@@ -1,6 +1,10 @@
 {
     "about": {
-        "navLabel": "אודות"
+        "navLabel": "אודות",
+        "license": "רישיון: GPL V3",
+        "title": "אודות GameLib",
+        "version": "גרסה: {{version}}",
+        "versionUnknown": "לא ידוע"
     },
     "app": {
         "routeError": "משהו השתבש: {{detail}}"
@@ -329,11 +333,36 @@
         },
         "unavailable": {
             "next-step": "זהו פריט עבודה עתידי נפרד -- לעת עתה, השתמש בכפתור שלמטה כדי לפתוח אותו בדפדפן המערכת שלך במקום זאת.",
-            "open-in-browser": "פתח בדפדפן"
+            "open-in-browser": "פתח בדפדפן",
+            "epic": {
+                "body": "GameLib עדיין לא מטמיע עמודי Epic Store בתוך האפליקציה.",
+                "heading": "גלישה ב-Epic Store עדיין לא זמינה בתוך האפליקציה"
+            },
+            "platform": {
+                "body": "גלישה בחנות ובוויקי בתוך האפליקציה של GameLib זמינה ב-macOS. היא עדיין לא זמינה בפלטפורמה הזו.",
+                "heading": "גלישה בחנות ובוויקי בתוך האפליקציה עדיין לא זמינה בפלטפורמה הזו"
+            }
+        },
+        "embedPlaceholder": {
+            "message": "מושהה בזמן שחלון פתוח"
+        },
+        "storeEmbedControls": {
+            "hostLabel": "מציג כרגע את {{host}}"
         }
     },
     "winetricks": {
         "unavailable": "ניהול רכיבי Winetricks אינו זמין בגרסה זו",
         "unavailableDetail": "תמיכה ב-Winetricks נדחתה לגרסה עתידית (D-03, Phase 34.6) ולא ניתן להציגה או להתקינה בגרסה זו."
+    },
+    "donate": {
+        "navLabel": "תרומה"
+    },
+    "redeemKey": {
+        "alreadyOwned": "המפתח הזה כבר מומש — הכותר הזה כבר ברשותך ב-Steam.",
+        "error": "לא ניתן היה להתחבר ל-Steam כדי לממש את המפתח. בדוק את החיבור שלך ונסה שוב.",
+        "invalid": "המפתח הזה לא נראה תקין. בדוק אותו שוב ונסה מחדש.",
+        "rateLimited": "יותר מדי ניסיונות — אנא המתן מעט לפני שתנסה שוב.",
+        "successNoPackage": "המפתח מומש! ספריית ה-Steam שלך עודכנה.",
+        "successWithPackage": "המפתח מומש! {{packageName}} נוסף לספריית ה-Steam שלך."
     }
 }
