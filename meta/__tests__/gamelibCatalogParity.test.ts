@@ -139,6 +139,14 @@ function findEmptyEnglishKeys(catalog: Record<string, string>): string[] {
 // (around checkLanguage()) claims 48 "legitimately empty" keys exist by
 // design; only 6 existed when this block was written (2026-09-06) and
 // plan 41-01 authored all six. Plan 41-03 corrects that stale comment.
+//
+// `pnpm i18n` idempotence, measured 2026-09-06 (plan 41-01, Task 3): run
+// against a tarred snapshot of public/locales, `pnpm i18n` left
+// en/gamelib.json BYTE-IDENTICAL to the committed authored file -- git
+// reported zero changed paths under public/locales/, and the six
+// redeemKey.* values (and all 224 keys / 0 empty values) were unchanged.
+// `pnpm i18n` is value-preserving for pre-authored keys; this assertion is
+// what would catch a future reversion, not a parser-config change.
 describe('English source completeness (REQ-41-03)', () => {
   it('has zero empty-string values in the committed English catalog', () => {
     const emptyKeys = findEmptyEnglishKeys(english)
