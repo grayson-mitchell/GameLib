@@ -43,6 +43,27 @@
  * one clean line, no stack trace, no exit-code contribution). This is what
  * keeps D-15's own rationale intact -- "a gate with unactionable noise
  * stops being read" -- while making the fork-owned half honest.
+ *
+ * REQ-41-01: `checkFileAgainstEnglish` (above `checkValueAgainstEnglish`)
+ * enumerates the TRANSLATION's own keys and looks English up BY them -- a
+ * key present and non-empty in `en` but entirely ABSENT from a locale
+ * catalog is therefore never visited by that loop, and can never be
+ * reported. The gate stayed green at zero coverage for that key: measured
+ * at HEAD (2026-09-06) this was hiding 794 missing (locale, key) pairs
+ * across 17 keys, invisible to `pnpm lint-translations:gamelib` the whole
+ * time. `checkEnglishKeysPresent` below is the INVERTED direction that
+ * closes this: it enumerates `en`'s own flattened keys and asserts each is
+ * present and non-empty in the locale catalog, reporting every miss by
+ * name. It is keyed off `en` being non-empty rather than an exemption
+ * list -- a key that is itself empty in `en` (there were 6 before phase
+ * 41-01 authored them; there are 0 now) is silently excluded from this
+ * check rather than needing to be named in a carve-out register, and the
+ * check degrades correctly if a new empty-in-English key ever appears. Like
+ * the ownership split above, this inverted check runs ONLY over
+ * `FORK_OWNED_NAMESPACES` -- running it across the three upstream
+ * namespaces would surface a wall of unactionable Weblate-sourced gaps this
+ * fork neither owns nor can fix, which is precisely the noise D-15 exists
+ * to keep out of a gate that must stay read.
  */
 
 import { readdirSync, readFileSync } from 'graceful-fs'
@@ -235,6 +256,104 @@ function checkFileAgainstEnglish(
   }
 }
 
+// Flattens a nested catalog object into `.`-joined leaf keys, matching the
+// flatten() helper meta/__tests__/gamelibCatalogParity.test.ts already uses
+// as this repo's reference key-flattening implementation. Non-string leaves
+// (there are none in practice for gamelib.json, but the type is
+// `unknown`-safe) are stringified defensively rather than silently dropped.
+function flattenCatalog(
+  catalog: CatalogRecord,
+  prefix = ''
+): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [key, value] of Object.entries(catalog)) {
+    const keyPath = prefix ? `${prefix}.${key}` : key
+    if (typeof value === 'string') {
+      out[keyPath] = value
+    } else if (value && typeof value === 'object') {
+      Object.assign(out, flattenCatalog(value as CatalogRecord, keyPath))
+    } else {
+      out[keyPath] = String(value)
+    }
+  }
+  return out
+}
+
+// REQ-41-01: the INVERTED presence check. Enumerates `en`'s own flattened
+// keys (not the locale's) and asserts each is present AND non-empty in the
+// locale catalog. This is what `checkFileAgainstEnglish` above structurally
+// cannot do -- that loop enumerates the TRANSLATION's keys, so a key wholly
+// absent from the translation is never visited. Keyed off `en` being
+// non-empty: a key that is itself empty in `en` is silently skipped, no
+// exemption register needed (see the header docstring).
+export function checkEnglishKeysPresent(
+  language: string,
+  namespace: string,
+  enCatalog: CatalogRecord,
+  localeCatalog: CatalogRecord
+): string[] {
+  const findings: string[] = []
+  const enFlat = flattenCatalog(enCatalog)
+  const localeFlat = flattenCatalog(localeCatalog)
+
+  for (const [key, enValue] of Object.entries(enFlat)) {
+    if (enValue === '') continue // en itself has no translatable content here
+
+    const localeValue = localeFlat[key]
+    if (localeValue === undefined || localeValue === '') {
+      findings.push(
+        `Missing translation for ${language}.${namespace}.${key} (en is non-empty)`
+      )
+    }
+  }
+
+  return findings
+}
+
+// REQ-41-01: one derivation of the missing (locale, key) SET, consumed by
+// both the committed baseline (meta/i18nCatalogPresenceBaseline.json) and
+// the live gate that compares against it (comparePresenceBaseline below).
+// A second, independently-written derivation would let the gate agree with
+// a wrong baseline -- there must be exactly one source of truth for what
+// "missing" means.
+export function missingPairs(
+  localesPath: string,
+  namespace: Namespace
+): Array<{ locale: string; key: string }> {
+  const enCatalog = readCatalog(localesPath, 'en', namespace)
+  if (!enCatalog) return []
+
+  const enFlat = flattenCatalog(enCatalog)
+  const nonEmptyEnKeys = Object.entries(enFlat)
+    .filter(([, value]) => value !== '')
+    .map(([key]) => key)
+
+  const pairs: Array<{ locale: string; key: string }> = []
+  const locales = readdirSync(localesPath).filter((dir) => dir !== 'en')
+
+  for (const locale of locales) {
+    let localeCatalog: CatalogRecord | null
+    try {
+      localeCatalog = readCatalog(localesPath, locale, namespace)
+    } catch {
+      // A corrupt catalog is reported elsewhere (checkLanguage's
+      // hardFailures) -- missingPairs() only derives the presence set, and
+      // treats a corrupt/absent catalog identically: everything is missing.
+      localeCatalog = null
+    }
+    const localeFlat = localeCatalog ? flattenCatalog(localeCatalog) : {}
+
+    for (const key of nonEmptyEnKeys) {
+      const value = localeFlat[key]
+      if (value === undefined || value === '') {
+        pairs.push({ locale, key })
+      }
+    }
+  }
+
+  return pairs
+}
+
 // entry point to check a single language
 export function checkLanguage(
   language: string,
@@ -285,6 +404,18 @@ export function checkLanguage(
     if (!enCatalog) continue // english source itself absent for this namespace -- nothing to check against
 
     checkFileAgainstEnglish(content, enCatalog, language, namespace, result)
+
+    // REQ-41-01: the inverted direction, gated to fork-owned namespaces
+    // only (D-15 unactionable-noise rationale -- see header docstring). The
+    // forward-direction call above is left unchanged and still runs: the
+    // two directions catch different things (the forward loop still catches
+    // <X></X> tag mismatches and empty translations for keys that DO
+    // exist in the locale catalog).
+    if (isForkOwned(namespace)) {
+      result.findings.push(
+        ...checkEnglishKeysPresent(language, namespace, enCatalog, content)
+      )
+    }
   }
 
   return result
