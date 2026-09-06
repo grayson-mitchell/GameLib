@@ -356,5 +356,13 @@
     },
     "donate": {
         "navLabel": "Faire un don"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Cette clé a déjà été utilisée — vous possédez déjà ce jeu sur Steam.",
+        "error": "Impossible de contacter Steam pour utiliser cette clé. Vérifiez votre connexion et réessayez.",
+        "invalid": "Cette clé ne semble pas valide. Vérifiez-la et réessayez.",
+        "rateLimited": "Trop de tentatives — veuillez patienter un peu avant de réessayer.",
+        "successNoPackage": "Clé utilisée avec succès ! Votre bibliothèque Steam a été mise à jour.",
+        "successWithPackage": "Clé utilisée avec succès ! {{packageName}} a été ajouté à votre bibliothèque Steam."
     }
 }

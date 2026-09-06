@@ -1,7 +1,7 @@
 {
   "locale": "fr",
   "model": "claude-sonnet-5",
-  "filledAt": "2026-09-05T01:45:03.379Z",
+  "filledAt": "2026-09-06T09:48:32.058Z",
   "keys": [
     "about.license",
     "about.navLabel",
@@ -107,6 +107,12 @@
     "pathSelectionBox.unsaved",
     "queue.label.failed",
     "queue.label.retry",
+    "redeemKey.alreadyOwned",
+    "redeemKey.error",
+    "redeemKey.invalid",
+    "redeemKey.rateLimited",
+    "redeemKey.successNoPackage",
+    "redeemKey.successWithPackage",
     "redeemSteamKey.placeholder",
     "redeemSteamKey.redeem",
     "redeemSteamKey.redeeming",

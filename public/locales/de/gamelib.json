@@ -356,5 +356,13 @@
     },
     "donate": {
         "navLabel": "Spenden"
+    },
+    "redeemKey": {
+        "alreadyOwned": "Dieser Key wurde bereits eingelöst — du besitzt dies bereits auf Steam.",
+        "error": "Steam konnte nicht erreicht werden, um diesen Key einzulösen. Überprüfe deine Verbindung und versuche es erneut.",
+        "invalid": "Dieser Key sieht nicht korrekt aus. Überprüfe ihn und versuche es erneut.",
+        "rateLimited": "Zu viele Versuche — bitte warte kurz, bevor du es erneut versuchst.",
+        "successNoPackage": "Key eingelöst! Deine Steam-Bibliothek wurde aktualisiert.",
+        "successWithPackage": "Key eingelöst! {{packageName}} wurde zu deiner Steam-Bibliothek hinzugefügt."
     }
 }
