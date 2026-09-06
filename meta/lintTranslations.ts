@@ -131,12 +131,36 @@ export class CorruptCatalogError extends Error {
   }
 }
 
-// Read a file as JSON. Returns `null` if the file is absent (ENOENT or any
-// other read failure) -- absence is classified by the caller (fork-owned vs
+// Thrown by readCatalog() when a catalog file cannot be READ for a reason
+// OTHER than ENOENT (EACCES, EISDIR, transient I/O, ...). WR-03: this is a
+// real filesystem fault on a path that exists (or that the OS otherwise
+// could not resolve as an absent-and-nothing-else path), and is a distinct
+// failure mode from a genuinely absent file -- folding it into the `null`
+// case let a mis-mounted volume or a permission fault read as ordinary
+// Weblate incompleteness. Carries the errno CODE, never the raw Error
+// object (T-41-03-04: no stack trace in gate output), matching
+// CorruptCatalogError's own discipline.
+export class CatalogReadError extends Error {
+  constructor(
+    public readonly language: string,
+    public readonly namespace: Namespace,
+    public readonly code: string
+  ) {
+    super(`${language}/${namespace}.json could not be read (${code})`)
+    this.name = 'CatalogReadError'
+  }
+}
+
+// Read a file as JSON. Returns `null` ONLY for a genuinely absent file
+// (ENOENT) -- absence is classified by the caller (fork-owned vs
 // upstream-owned), not here, and nothing is printed for it (no
 // `console.log(error)`: that was the source of the ENOENT stack traces
-// REQ-41-02 closes). Throws `CorruptCatalogError` if the file exists but
-// fails to parse as JSON.
+// REQ-41-02 closes). WR-03: any OTHER read failure (EACCES, EISDIR,
+// transient I/O, ...) is a real filesystem fault, not an absence -- it is
+// re-thrown as `CatalogReadError` rather than folded into the `null` case,
+// because the two are not the same defect and must not read as one to a
+// caller. Throws `CorruptCatalogError` if the file exists but fails to
+// parse as JSON.
 export function readCatalog(
   localesPath: string,
   language: string,
@@ -147,8 +171,10 @@ export function readCatalog(
     raw = readFileSync(
       join(localesPath, language, namespace + '.json')
     ).toString()
-  } catch {
-    return null
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException)?.code
+    if (code === 'ENOENT') return null
+    throw new CatalogReadError(language, namespace, code ?? 'UNKNOWN')
   }
 
   try {
@@ -321,16 +347,25 @@ export function missingPairs(
   localesPath: string,
   namespace: Namespace
 ): Array<{ locale: string; key: string }> {
-  // REQ-41-02, gap-closure plan 41-06 (GAP-1, second site): a corrupt
-  // English catalog is reported elsewhere (lintTranslations()'s
-  // hardFailures) -- this derivation only computes the missing-pair SET, and
-  // treats a corrupt/absent English catalog identically: nothing can be
-  // derived, so there is nothing missing to report from here. Mirrors the
-  // locale-catalog catch immediately below.
+  // REQ-41-02, gap-closure plan 41-06 (GAP-1, second site) -- rewritten by
+  // WR-03. An absent or CORRUPT English catalog is still swallowed to
+  // `null` here, unchanged: it IS reported elsewhere (lintTranslations()'s
+  // hardFailures, via the try/catch around this module's OWN readCatalog()
+  // call site). But that "reported elsewhere" premise is true ONLY on the
+  // lint path. Under `LINT_TRANSLATIONS_WRITE_BASELINE=1`, main() calls
+  // writePresenceBaseline() -> missingPairs() DIRECTLY -- lintTranslations()
+  // is never called, so there is no hardFailures list for anything to land
+  // in. Swallowing a CatalogReadError there would silently write a WRONG
+  // committed baseline (an unreadable `en` catalog -> `return []` below ->
+  // baseline says "no gap at all"). CatalogReadError is therefore let
+  // PROPAGATE instead of being swallowed -- it is the mechanism by which
+  // the writer refuses to write something wrong. Mirrors the locale-catalog
+  // catch immediately below; see its comment for the same asymmetry.
   let enCatalog: CatalogRecord | null
   try {
     enCatalog = readCatalog(localesPath, 'en', namespace)
-  } catch {
+  } catch (error) {
+    if (error instanceof CatalogReadError) throw error
     enCatalog = null
   }
   if (!enCatalog) return []
@@ -347,10 +382,16 @@ export function missingPairs(
     let localeCatalog: CatalogRecord | null
     try {
       localeCatalog = readCatalog(localesPath, locale, namespace)
-    } catch {
-      // A corrupt catalog is reported elsewhere (checkLanguage's
-      // hardFailures) -- missingPairs() only derives the presence set, and
-      // treats a corrupt/absent catalog identically: everything is missing.
+    } catch (error) {
+      // WR-03: unlike a corrupt/absent locale catalog (still swallowed --
+      // reported elsewhere via checkLanguage()'s hardFailures on the lint
+      // path), an unreadable one must PROPAGATE. The asymmetry is the same
+      // one documented above the English read: under
+      // `LINT_TRANSLATIONS_WRITE_BASELINE=1` there is no hardFailures list
+      // for anything to land in, and swallowing here would record every
+      // English key as "missing" for a locale that merely could not be
+      // read, writing that wrong claim into the committed baseline.
+      if (error instanceof CatalogReadError) throw error
       localeCatalog = null
     }
     const localeFlat = localeCatalog ? flattenCatalog(localeCatalog) : {}
@@ -540,6 +581,18 @@ export function checkLanguage(
         result.hardFailures.push(error.message)
         continue
       }
+      if (error instanceof CatalogReadError) {
+        // WR-03: a catalog that could not be READ (EACCES, EISDIR,
+        // transient I/O, ...) is a real filesystem fault regardless of
+        // namespace ownership -- it must not be classified as "absent"
+        // (which, for an upstream namespace, is merely a report -- see the
+        // `!content` branch below) or crash uncaught (the CR-01 defect
+        // class, re-created at a new errno). error.message already names
+        // the errno code, distinguishing it from both "absent" and
+        // "corrupt" in gate output.
+        result.hardFailures.push(error.message)
+        continue
+      }
       throw error
     }
 
@@ -596,6 +649,12 @@ export function lintTranslations(opts: LintOptions): LintResult {
   // catch below has somewhere to push.
   const enCatalogs: Partial<Record<Namespace, CatalogRecord | null>> = {}
   const corruptEnglishNamespaces = new Set<Namespace>()
+  // WR-03: a sibling to corruptEnglishNamespaces, not a reuse of it -- the
+  // drift-check skip message below needs to say "could not be read" for
+  // this set and "could not be parsed" for the corrupt one, so the two
+  // failure modes stay distinguishable in gate output the same way their
+  // hardFailures entries already are.
+  const unreadableEnglishNamespaces = new Set<Namespace>()
   for (const namespace of opts.namespaces) {
     try {
       enCatalogs[namespace] = readCatalog(opts.localesPath, 'en', namespace)
@@ -604,6 +663,17 @@ export function lintTranslations(opts: LintOptions): LintResult {
         result.hardFailures.push(error.message)
         enCatalogs[namespace] = null
         corruptEnglishNamespaces.add(namespace)
+        continue
+      }
+      if (error instanceof CatalogReadError) {
+        // WR-03: mirrors the CorruptCatalogError branch immediately above
+        // -- the drift check (comparePresenceBaseline(), below) cannot run
+        // without a readable English catalog either, so this namespace must
+        // be excluded from it the same way, or comparePresenceBaseline()
+        // runs against a catalog that was never read.
+        result.hardFailures.push(error.message)
+        enCatalogs[namespace] = null
+        unreadableEnglishNamespaces.add(namespace)
         continue
       }
       throw error
@@ -661,6 +731,18 @@ export function lintTranslations(opts: LintOptions): LintResult {
       continue
     }
 
+    // WR-03: mirrors the corrupt-English guard immediately above, for the
+    // sibling failure mode -- an English catalog that could not be READ
+    // (rather than failing to parse) leaves missingPairs() with nothing to
+    // derive from either.
+    if (unreadableEnglishNamespaces.has(namespace)) {
+      result.findings.push(
+        `presence baseline drift check skipped for ${namespace}: ` +
+          `its English catalog could not be read (see the hard failure above)`
+      )
+      continue
+    }
+
     if (!isCanonicalLocalesPath) {
       result.findings.push(
         `presence baseline drift check skipped for ${namespace}: localesPath ` +
@@ -676,7 +758,22 @@ export function lintTranslations(opts: LintOptions): LintResult {
       continue
     }
 
-    const diff = comparePresenceBaseline(opts.localesPath, baselinePath)
+    // WR-03: missingPairs() (called by comparePresenceBaseline() below) can
+    // now throw CatalogReadError for an unreadable LOCALE catalog -- the
+    // English-side guards above only cover an unreadable/corrupt `en`
+    // catalog, not a locale one. Without this catch, lintTranslations()
+    // would crash uncaught here: precisely the CR-01 defect class,
+    // re-created at this call site.
+    let diff: ReturnType<typeof comparePresenceBaseline>
+    try {
+      diff = comparePresenceBaseline(opts.localesPath, baselinePath)
+    } catch (error) {
+      if (error instanceof CatalogReadError) {
+        result.hardFailures.push(error.message)
+        continue
+      }
+      throw error
+    }
     for (const pair of diff.added) {
       result.hardFailures.push(
         `${pair.locale}.${namespace}.${pair.key}: a new key is not localised and was not ` +
