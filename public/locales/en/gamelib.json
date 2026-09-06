@@ -162,12 +162,12 @@
         }
     },
     "redeemKey": {
-        "alreadyOwned": "",
-        "error": "",
-        "invalid": "",
-        "rateLimited": "",
-        "successNoPackage": "",
-        "successWithPackage": ""
+        "alreadyOwned": "This key has already been redeemed — you already own this on Steam.",
+        "error": "Couldn't reach Steam to redeem this key. Check your connection and try again.",
+        "invalid": "This key doesn't look right. Double-check it and try again.",
+        "rateLimited": "Too many attempts — please wait a bit before trying again.",
+        "successNoPackage": "Key redeemed! Your Steam library has been updated.",
+        "successWithPackage": "Key redeemed! {{packageName}} has been added to your Steam library."
     },
     "redeemSteamKey": {
         "placeholder": "Enter your Steam key",
