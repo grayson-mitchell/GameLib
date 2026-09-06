@@ -4581,7 +4581,7 @@ same run. Note that 37-03 explains **9** of those 22 games and closing it will N
 
 **Depends on:** **Phase 34** for the Windows/Linux items — the W/L builds must exist before anything can be observed on them. The controller items have **no phase dependency** and cost only a controller pairing, so they can be discharged independently and earlier — **on the macOS machine, without leaving the desk.** That makes the 8 controller items the cheapest leg by a wide margin and the sensible first sitting.
 
-**Plans:** 0 — see the item ledger in `38-VERIFICATION.md`, which is the phase's source of truth and the array `gsd-sdk query audit-uat` reads.
+**Plans:** 7 plans in 6 waves (planned 2026-09-06). ⚠ **THIS IS AN AMENDMENT TO THIS PHASE'S OWN `No plan files` RULE, recorded here so neither document silently contradicts the other (D-38-04).** The rule was right about the SITTING: a human observation is not something an executor can "do", so plans `38-04` through `38-07` are gate steps with instrumentation, evidence capture and a recording protocol — not implementation tasks — and all four are `autonomous: false`. The rule was wrong about the LEDGER. Nine of the 34 items described the Electron runtime that Phase 35 deleted, so they could not be run as written, and every gate over them passed because each item's `platform_gate` was individually correct: well-formed items pointing at nothing. Repairing that is a docs edit against a YAML array whose two failure modes are both SILENT, which needs a plan, an atomic commit, a SUMMARY and a measured before/after `audit-uat` gate — exactly what a bare "run the sweep directly" instruction does not provide. Hence `38-01`. `38-VERIFICATION.md` remains the phase's source of truth and the array `gsd-sdk query audit-uat` reads; the plans do not replace it, they edit it under a gate.
 
 **Items: 34 as of 2026-09-04.** 4 new items (`38-E01`..`38-E04`) joined from Phase 40 Plan 10 (D-04):
 whether Tauri's `Window::add_child` embed mechanism works at all on the Windows WebView2 backend
@@ -4633,7 +4633,13 @@ exists for it to have exercised.
 2. **Every item carries a source-level gate, not a prose blocker.** `blocked_by: "a Windows or Linux machine"` is unfalsifiable and rots without anyone noticing; `platform_gate: src/frontend/App.tsx:79` can be grepped and disproven. ⚠ **This rule was VIOLATED by this phase's own ledger, 29 times out of 29, and the violation stood from 2026-08-22 to 2026-09-01** — every `blocked_by` value was exactly the unfalsifiable shape this rule quotes as the bad example, and it rotted precisely as predicted: it encoded hardware the operator *already owned*, and nobody noticed for ten days because an unfalsifiable blocker gives no one anything to check. The values now name the deferral COST instead (see `38-VERIFICATION.md`'s `deferral_note`). **A rule is not self-enforcing — when writing this file, grep your own `blocked_by` values against it.** Phase 34.1's item 5b sat blocked for four sessions on a prose blocker that misdescribed its own predicate — it needed `window.screen.availWidth < 1200`, not the hardware the note named, and passed on the first attempt once someone read the code. **Before relocating anything here, read the predicate that supposedly blocks it.**
 
 Plans:
-- [ ] No plan files. Run the sweep directly from `38-VERIFICATION.md` when the hardware is available; record results there and in `38-HUMAN-UAT.md`.
+- [ ] 38-01-PLAN.md — Ledger repair and phase split: retire the 9 Electron items as unscoreable, create Phases 42 and 43, relocate 9 items, split 38-S16, repair 38-HUMAN-UAT.md (wave 1, docs-only, autonomous)
+- [ ] 38-02-PLAN.md — Two-way relocation receipts and retirement outcomes at the origin phases 34.13, 35 and 40 (wave 2, docs-only, autonomous)
+- [ ] 38-03-PLAN.md — Windows sitting preflight: toolchain, branch tip, proven log path, heartbeat-verified instrument, and the D-38-15 DevTools re-test (wave 2, `autonomous: false`)
+- [ ] 38-04-PLAN.md — 38-W04: local NSIS smoke build, then score on the CI artifact from a `workflow_dispatch` run — no `v*` tag (wave 3, `autonomous: false`)
+- [ ] 38-05-PLAN.md — Controller sitting: 38-C01–38-C06 and 38-C08, seven items in one sitting (wave 4, `autonomous: false`)
+- [ ] 38-06-PLAN.md — Windows Steam install-modal sitting: 38-S02, 38-S06, 38-S08, 38-S14, 38-S16 (wave 5, `autonomous: false`)
+- [ ] 38-07-PLAN.md — Window-chrome and Epic-logout sitting: 38-W01, 38-W02, 38-W03, 38-W06 — the phase's last four items (wave 6, `autonomous: false`)
 
 ---
 
