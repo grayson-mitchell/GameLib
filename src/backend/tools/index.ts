@@ -894,6 +894,19 @@ export async function runWineCommandOnGame(
     return { stdout: '', stderr: '' }
   }
   const { folder_name, install } = game.getGameInfo()
+  // 260907-f2g: a `{}` can arrive here. `SteamGame.getGameInfo()` returns `{} as GameInfo` on a
+  // double cache miss (D-01, a deliberate cross-runner sentinel), so `install` may be undefined
+  // and `install.install_path` below would throw an unhandled TypeError. Optional-chaining alone
+  // would NOT be enough: `WineCommandArgs.gameInstallPath` is optional, so the undefined would
+  // type-check and reach Wine as a silently-wrong argument. Take the same handled no-op shape as
+  // the two guards above instead. Log runner + appName only -- never the path.
+  if (!install?.install_path) {
+    logError(
+      `runWineCommand called on ${runner} game ${appName} whose GameInfo carries no resolved install path`,
+      LogPrefix.Gog
+    )
+    return { stdout: '', stderr: '' }
+  }
   const gameSettings = await game.getSettings()
 
   return runWineCommand({
