@@ -1,0 +1,421 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "GameLib \u2014 Process & Transport Topology",
+    "output": "gamelib-topology.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/grayson-mitchell/GameLib",
+      "revision": "36832a3df02bfdbd329c1aa856219c5a52676df5"
+    },
+    "views": [
+      {
+        "id": "request-path",
+        "label": "Renderer to sidecar",
+        "focus": [
+          "renderer",
+          "preload",
+          "shell",
+          "sidecar"
+        ],
+        "note": "The only path business logic travels: four Tauri commands, then a stdio JSON-RPC pipe."
+      },
+      {
+        "id": "rust-invoke",
+        "label": "Sidecar reaching back to Rust",
+        "focus": [
+          "sidecar",
+          "shell",
+          "keyring",
+          "childviews"
+        ],
+        "note": "rustInvoke frames travel sidecar to shell only; OS surfaces are never touched from Node."
+      },
+      {
+        "id": "install-path",
+        "label": "Install and launch",
+        "focus": [
+          "sidecar",
+          "managers",
+          "dlqueue",
+          "depot",
+          "runners"
+        ],
+        "note": "Store managers own install and launch; runner binaries are separate child processes."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "renderer",
+      "type": "frontend",
+      "label": "React Renderer",
+      "sublabel": "WKWebView, window `main`",
+      "tag": "50,490 LOC",
+      "pos": [
+        40,
+        130
+      ],
+      "size": [
+        195,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/frontend/index.tsx",
+          "label": "renderer entry"
+        }
+      ]
+    },
+    {
+      "id": "preload",
+      "type": "frontend",
+      "label": "Preload `window.api`",
+      "sublabel": "3 channel factories",
+      "tag": "253 channels",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        195,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/preload/ipc.ts",
+          "label": "invoker factories"
+        }
+      ]
+    },
+    {
+      "id": "shell",
+      "type": "backend",
+      "label": "Rust Tauri Shell",
+      "sublabel": "single-file main.rs",
+      "tag": "13,152 LOC",
+      "pos": [
+        380,
+        290
+      ],
+      "size": [
+        215,
+        96
+      ],
+      "sources": [
+        {
+          "path": "src-tauri/src/main.rs",
+          "line": 9394,
+          "label": "invoke_handler"
+        }
+      ]
+    },
+    {
+      "id": "sidecar",
+      "type": "backend",
+      "label": "Node Sidecar",
+      "sublabel": "JSON-RPC over stdio",
+      "tag": "all business logic",
+      "pos": [
+        740,
+        290
+      ],
+      "size": [
+        215,
+        96
+      ],
+      "sources": [
+        {
+          "path": "src/backend/sidecar/sidecarRpc.ts",
+          "label": "RPC loop"
+        }
+      ]
+    },
+    {
+      "id": "managers",
+      "type": "backend",
+      "label": "Store Managers",
+      "sublabel": "6 runner implementations",
+      "pos": [
+        1090,
+        290
+      ],
+      "size": [
+        180,
+        96
+      ],
+      "sources": [
+        {
+          "path": "src/backend/storeManagers/index.ts",
+          "line": 14,
+          "label": "libraryManagerMap"
+        }
+      ]
+    },
+    {
+      "id": "keyring",
+      "type": "security",
+      "label": "OS Keychain",
+      "sublabel": "refresh + session tokens",
+      "pos": [
+        390,
+        80
+      ],
+      "size": [
+        195,
+        76
+      ]
+    },
+    {
+      "id": "childviews",
+      "type": "external",
+      "label": "Child Webviews",
+      "sublabel": "login / store-embed",
+      "tag": "zero capability",
+      "pos": [
+        390,
+        500
+      ],
+      "size": [
+        195,
+        76
+      ]
+    },
+    {
+      "id": "stores",
+      "type": "database",
+      "label": "Config & Cache Stores",
+      "sublabel": "`conf` JSON on disk",
+      "pos": [
+        750,
+        80
+      ],
+      "size": [
+        195,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/backend/store_backend.ts",
+          "label": "electron-store shim"
+        }
+      ]
+    },
+    {
+      "id": "dlqueue",
+      "type": "messagebus",
+      "label": "Download Queue",
+      "sublabel": "runner-agnostic",
+      "pos": [
+        750,
+        500
+      ],
+      "size": [
+        195,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/backend/downloadmanager/downloadqueue.ts",
+          "label": "install queue"
+        }
+      ]
+    },
+    {
+      "id": "runners",
+      "type": "external",
+      "label": "Runner Binaries",
+      "sublabel": "legendary / gogdl / nile",
+      "pos": [
+        1090,
+        80
+      ],
+      "size": [
+        180,
+        76
+      ]
+    },
+    {
+      "id": "depot",
+      "type": "backend",
+      "label": "Steam Depot Engine",
+      "sublabel": "native install + LZMA pool",
+      "pos": [
+        1090,
+        500
+      ],
+      "size": [
+        180,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/backend/storeManagers/steam/depot/manifest.ts",
+          "label": "depot manifest"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Renderer process (untrusted content)",
+      "wraps": [
+        "renderer",
+        "preload"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Rust shell \u2014 sole owner of every OS surface",
+      "wraps": [
+        "shell",
+        "keyring",
+        "childviews"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Node sidecar \u2014 business logic, state and subprocesses",
+      "wraps": [
+        "sidecar",
+        "stores",
+        "dlqueue",
+        "managers",
+        "runners",
+        "depot"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "api-calls",
+      "from": "renderer",
+      "to": "preload",
+      "label": "window.api.*",
+      "labelDy": 50
+    },
+    {
+      "id": "tauri-ipc",
+      "from": "preload",
+      "to": "shell",
+      "label": "4 Tauri commands",
+      "variant": "emphasis",
+      "labelDy": -30
+    },
+    {
+      "id": "push",
+      "from": "shell",
+      "to": "preload",
+      "label": "FRONTEND_MESSAGE_EVENT",
+      "variant": "dashed",
+      "labelDy": 52
+    },
+    {
+      "id": "rpc-down",
+      "from": "shell",
+      "to": "sidecar",
+      "label": "SidecarRpcRequest",
+      "variant": "emphasis",
+      "labelDy": -30
+    },
+    {
+      "id": "rust-invoke",
+      "from": "sidecar",
+      "to": "shell",
+      "label": "rustInvoke \u00d736",
+      "variant": "dashed",
+      "labelDy": 30
+    },
+    {
+      "id": "keyring-access",
+      "from": "shell",
+      "to": "keyring",
+      "label": "keyring_get / set",
+      "variant": "security",
+      "labelDy": -50,
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "child-create",
+      "from": "shell",
+      "to": "childviews",
+      "label": "add_child",
+      "labelDy": 50,
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "manager-dispatch",
+      "from": "sidecar",
+      "to": "managers",
+      "label": "LibraryManager"
+    },
+    {
+      "id": "persist",
+      "from": "sidecar",
+      "to": "stores",
+      "label": "read / write",
+      "labelDy": -50,
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "enqueue",
+      "from": "sidecar",
+      "to": "dlqueue",
+      "label": "addToQueue",
+      "labelDy": 50,
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "runner-spawn",
+      "from": "managers",
+      "to": "runners",
+      "label": "spawn",
+      "labelDy": -50,
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "steam-install",
+      "from": "managers",
+      "to": "depot",
+      "label": "install()",
+      "labelDy": 50,
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Transport",
+      "items": [
+        "Renderer reaches Rust through exactly 4 registered commands",
+        "Shell to sidecar is a private stdio pipe, not loopback TCP",
+        "RPC ids are strings \u2014 Steam uses 64-bit values"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Ownership",
+      "items": [
+        "Shell holds every OS surface: keychain, dialogs, tray, cookies",
+        "Sidecar holds every business decision and all persistence",
+        "Renderer holds only window chrome and the 4 relay commands"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Asymmetry",
+      "items": [
+        "rustInvoke travels sidecar to shell only",
+        "isValidRequest() rejects it inbound (T-28-03b)"
+      ]
+    }
+  ]
+}

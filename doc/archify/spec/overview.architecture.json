@@ -1,0 +1,342 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "GameLib \u2014 Architecture Overview",
+    "output": "gamelib-overview.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/grayson-mitchell/GameLib",
+      "revision": "36832a3df02bfdbd329c1aa856219c5a52676df5"
+    },
+    "views": [
+      {
+        "id": "layers",
+        "label": "The four code layers",
+        "focus": [
+          "frontend",
+          "preload",
+          "rust",
+          "backend"
+        ],
+        "note": "143,471 lines across four layers, three languages and three runtime processes."
+      },
+      {
+        "id": "contracts",
+        "label": "What everything points at",
+        "focus": [
+          "common",
+          "ipccontract",
+          "gamecontract"
+        ],
+        "note": "src/common imports nothing and is imported by everyone \u2014 the one-way rule that keeps the layers separable."
+      },
+      {
+        "id": "steam",
+        "label": "The differentiator",
+        "focus": [
+          "gamecontract",
+          "managers",
+          "steam"
+        ],
+        "note": "Steam is a runner like any other at the contract, and four times the size of any other behind it."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "Frontend",
+      "sublabel": "365 files \u00b7 50,490 LOC",
+      "tag": "13 screens",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        205,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/frontend/index.tsx",
+          "label": "renderer entry"
+        }
+      ]
+    },
+    {
+      "id": "preload",
+      "type": "frontend",
+      "label": "Preload",
+      "sublabel": "20 files \u00b7 2,084 LOC",
+      "tag": "window.api",
+      "pos": [
+        320,
+        40
+      ],
+      "size": [
+        205,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/preload/ipc.ts",
+          "label": "3 factories"
+        }
+      ]
+    },
+    {
+      "id": "rust",
+      "type": "backend",
+      "label": "Rust Shell",
+      "sublabel": "1 file \u00b7 13,152 LOC",
+      "tag": "no module split",
+      "pos": [
+        600,
+        40
+      ],
+      "size": [
+        205,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src-tauri/src/main.rs",
+          "label": "shell monolith"
+        }
+      ]
+    },
+    {
+      "id": "backend",
+      "type": "backend",
+      "label": "Backend",
+      "sublabel": "295 files \u00b7 71,846 LOC",
+      "tag": "21 flow modules",
+      "pos": [
+        880,
+        40
+      ],
+      "size": [
+        205,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/backend/sidecar/handlers.ts",
+          "label": "flow registration"
+        }
+      ]
+    },
+    {
+      "id": "common",
+      "type": "database",
+      "label": "Domain Types",
+      "sublabel": "GameInfo, Runner, AppSettings",
+      "pos": [
+        180,
+        220
+      ],
+      "size": [
+        205,
+        90
+      ],
+      "sources": [
+        {
+          "path": "src/common/types.ts",
+          "line": 23,
+          "label": "Runner union"
+        }
+      ]
+    },
+    {
+      "id": "ipccontract",
+      "type": "database",
+      "label": "IPC Contract",
+      "sublabel": "60 sync \u00b7 163 async \u00b7 30 push",
+      "tag": "253 channels",
+      "pos": [
+        460,
+        220
+      ],
+      "size": [
+        205,
+        90
+      ],
+      "sources": [
+        {
+          "path": "src/common/types/ipc.ts",
+          "line": 185,
+          "label": "AsyncIPCFunctions"
+        }
+      ]
+    },
+    {
+      "id": "gamecontract",
+      "type": "database",
+      "label": "Game / LibraryManager",
+      "sublabel": "15 methods per runner",
+      "pos": [
+        740,
+        220
+      ],
+      "size": [
+        205,
+        90
+      ],
+      "sources": [
+        {
+          "path": "src/common/types/game_manager.ts",
+          "line": 48,
+          "label": "Game interface"
+        }
+      ]
+    },
+    {
+      "id": "managers",
+      "type": "backend",
+      "label": "Store Managers",
+      "sublabel": "6 runners, 1 dropped",
+      "pos": [
+        740,
+        400
+      ],
+      "size": [
+        205,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/backend/storeManagers/index.ts",
+          "line": 14,
+          "label": "libraryManagerMap"
+        }
+      ]
+    },
+    {
+      "id": "steam",
+      "type": "backend",
+      "label": "Steam Subsystem",
+      "sublabel": "24 modules \u2014 depot, bridge, auth",
+      "tag": "the differentiator",
+      "pos": [
+        1020,
+        400
+      ],
+      "size": [
+        205,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/backend/storeManagers/steam/library.ts",
+          "label": "Steam library"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "src/common \u2014 38 files \u00b7 5,778 LOC \u00b7 imports nothing",
+      "wraps": [
+        "common",
+        "ipccontract",
+        "gamecontract"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "src/backend/storeManagers",
+      "wraps": [
+        "managers",
+        "steam"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "fe-preload",
+      "from": "frontend",
+      "to": "preload",
+      "label": "window.api.*"
+    },
+    {
+      "id": "fe-types",
+      "from": "frontend",
+      "to": "common",
+      "label": "domain types",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "preload-ipc",
+      "from": "preload",
+      "to": "ipccontract",
+      "label": "channel names",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "rust-mirror",
+      "from": "rust",
+      "to": "ipccontract",
+      "label": "mirrors, never imports",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "be-game",
+      "from": "backend",
+      "to": "gamecontract",
+      "label": "implements",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "mgr-game",
+      "from": "managers",
+      "to": "gamecontract",
+      "label": "satisfies Record<Runner, \u2026>",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelDy": -46
+    },
+    {
+      "id": "steam-mgr",
+      "from": "steam",
+      "to": "managers"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One-way dependency rule",
+      "items": [
+        "src/common imports neither backend nor frontend, and is imported by both",
+        "InstallErrorAction lives in common purely to honour that rule",
+        "The Rust shell mirrors the Runner union by hand \u2014 no shared codegen"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Where the weight sits",
+      "items": [
+        "143,471 lines total; backend is half of it",
+        "372 test files, 206 of them against the backend",
+        "45 meta/ scripts run i18n, gate and binary-download tooling"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Structural risk",
+      "items": [
+        "main.rs is 13,152 lines in one file with no mod decomposition",
+        "Frontend state is mid-migration: Context and zustand both live",
+        "The Runner mirror in Rust has no machine check"
+      ]
+    }
+  ]
+}
