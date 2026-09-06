@@ -4643,11 +4643,21 @@ same run. Note that 37-03 explains **9** of those 22 games and closing it will N
 
 **Requirements**: NONE, and none will be minted. This is a **collection phase, not an implementation phase** — it ships no code. Its deliverable is a set of live observations against existing behaviour. A planner running `/gsd-plan-phase 38` should produce gate steps, not tasks.
 
-**Depends on:** **Phase 34** for the Windows/Linux items — the W/L builds must exist before anything can be observed on them. The controller items have **no phase dependency** and cost only a controller pairing, so they can be discharged independently and earlier — **on the macOS machine, without leaving the desk.** That makes the 8 controller items the cheapest leg by a wide margin and the sensible first sitting.
+**Depends on:** **Phase 34** for the Windows/Linux items — the W/L builds must exist before anything can be observed on them. ⚠ **CORRECTED 2026-09-06 (plan `38-01`) — the controller items are NOT discharged on the macOS machine.** This line previously said the controller items had no phase dependency and could be discharged "on the macOS machine, without leaving the desk." That is disproved: GameLib runs in WKWebView on macOS and WebView2 (Chromium) on Windows, and the two engines disagree about which gamepads exist — the PowerA Advantage Wired for Nintendo Switch 2 (`0x20D6`/`0xA720`) is read by Chromium and returns 0 slots in WebKit, confirmed by a complete Steam-running/Steam-quit 2x2 that also ruled out Steam Input exclusivity as the cause. The seven controller items now in scope (`38-C01`–`38-C06`, `38-C08`) run in the **same Windows sitting** as the W and S items, not separately and not on macOS. See `38-HUMAN-UAT.md` for the full finding.
 
 **Plans:** 7 plans in 6 waves (planned 2026-09-06). ⚠ **THIS IS AN AMENDMENT TO THIS PHASE'S OWN `No plan files` RULE, recorded here so neither document silently contradicts the other (D-38-04).** The rule was right about the SITTING: a human observation is not something an executor can "do", so plans `38-04` through `38-07` are gate steps with instrumentation, evidence capture and a recording protocol — not implementation tasks — and all four are `autonomous: false`. The rule was wrong about the LEDGER. Nine of the 34 items described the Electron runtime that Phase 35 deleted, so they could not be run as written, and every gate over them passed because each item's `platform_gate` was individually correct: well-formed items pointing at nothing. Repairing that is a docs edit against a YAML array whose two failure modes are both SILENT, which needs a plan, an atomic commit, a SUMMARY and a measured before/after `audit-uat` gate — exactly what a bare "run the sweep directly" instruction does not provide. Hence `38-01`. `38-VERIFICATION.md` remains the phase's source of truth and the array `gsd-sdk query audit-uat` reads; the plans do not replace it, they edit it under a gate.
 
-**Items: 34 as of 2026-09-04.** 4 new items (`38-E01`..`38-E04`) joined from Phase 40 Plan 10 (D-04):
+**Items: 17 as of 2026-09-06** (plan `38-01`, superseding the 34-item count below). The ledger
+repair retired 9 Electron-runtime items as unscoreable (Phase 35 deleted that build; each carries
+a `result: unscoreable` and names its surviving Tauri twin, never recorded as a pass), relocated
+4 Linux-host items plus all 4 embed-backend items out to the newly-created Phase 42 and Phase 43
+respectively, and split `38-S16` into its Windows half (stays here) and a newly-minted Linux half
+(`38-S17`, Phase 42). Confirmed at the tool, not merely asserted: `gsd-sdk query audit-uat` moved
+`by_phase["38"]` 34 → 17, `by_phase["42"]` → 5, `by_phase["43"]` → 4, and the all-phase
+`total_items` 59 → 51 (9 retired leave the open set, 1 minted enters it: net −8). Full disposition
+table and both destination ledgers: `38-CONTEXT.md` and `38-01-SUMMARY.md`.
+
+**Items: 34 as of 2026-09-04** (historical, superseded by the 2026-09-06 count above). 4 new items (`38-E01`..`38-E04`) joined from Phase 40 Plan 10 (D-04):
 whether Tauri's `Window::add_child` embed mechanism works at all on the Windows WebView2 backend
 (`38-E01`); the same question for the Linux webkit2gtk backend (`38-E02`); retina/HiDPI embed
 behaviour at `scale_factor` 2.0 on hardware other than the one macOS host Phase 40's own live gate
