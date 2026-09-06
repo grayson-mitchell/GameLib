@@ -66,8 +66,8 @@
  * to keep out of a gate that must stay read.
  */
 
-import { readdirSync, readFileSync } from 'graceful-fs'
-import { join } from 'path'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'graceful-fs'
+import { join, resolve } from 'path'
 
 const ALL_NAMESPACES = ['gamelib', 'gamepage', 'login', 'translation'] as const
 type Namespace = (typeof ALL_NAMESPACES)[number]
@@ -354,6 +354,146 @@ export function missingPairs(
   return pairs
 }
 
+// REQ-41-01: the committed baseline SET is what makes drift in EITHER
+// direction (a new blind spot, or a fill nobody re-recorded) a hard
+// failure. Only `gamelib` has a baseline today -- FORK_OWNED_NAMESPACES has
+// exactly one entry, and this is that entry's known-missing register.
+export const PRESENCE_BASELINE_PATH = 'meta/i18nCatalogPresenceBaseline.json'
+
+// The baseline drift check below is a statement about the REAL committed
+// tree matching the REAL committed baseline -- it is meaningless for any of
+// the mkdtempSync fixture trees the R1-R7 tests (plan 41-03) and R8-R12
+// tests (this plan) build, which intentionally contain only a handful of
+// keys and would "drift" from the 794-pair baseline on every single run.
+// Gating on an exact resolved-path match to this constant is what lets
+// `lintTranslations()` stay usable against an arbitrary fixture path (as
+// every existing test already relies on) while still gating the real CLI
+// invocation (`main()`'s `./public/locales`, which resolves identically).
+const CANONICAL_LOCALES_PATH = 'public/locales'
+
+interface PresenceBaselineFile {
+  namespace: Namespace
+  generatedAt: string
+  generatedBy: string
+  reason: string
+  totalPairs: number
+  missing: Record<string, string[]>
+}
+
+function pairId(locale: string, key: string): string {
+  return `${locale} ${key}`
+}
+
+function readPresenceBaseline(baselinePath: string): PresenceBaselineFile {
+  const parsed: unknown = JSON.parse(readFileSync(baselinePath).toString())
+  return parsed as PresenceBaselineFile
+}
+
+// REQ-41-01: symmetric-difference comparison between the live derivation
+// (missingPairs, above -- the single source of truth) and the committed
+// baseline SET. `added` = a pair that is missing live but NOT recorded in
+// the baseline (a new blind spot: exactly the failure this check exists to
+// prevent). `removed` = a pair recorded in the baseline that is no longer
+// missing live (the baseline overstates reality -- someone filled a locale
+// without regenerating it). Both directions must be checked: a baseline
+// that only ever shrinks silently rots the moment reality improves out from
+// under it.
+export function comparePresenceBaseline(
+  localesPath: string,
+  baselinePath: string
+): {
+  added: Array<{ locale: string; key: string }>
+  removed: Array<{ locale: string; key: string }>
+} {
+  const baseline = readPresenceBaseline(baselinePath)
+
+  const baselineSet = new Set<string>()
+  for (const [key, locales] of Object.entries(baseline.missing)) {
+    for (const locale of locales) baselineSet.add(pairId(locale, key))
+  }
+
+  const live = missingPairs(localesPath, baseline.namespace)
+  const liveSet = new Set<string>()
+  for (const pair of live) liveSet.add(pairId(pair.locale, pair.key))
+
+  const added = live.filter((pair) => !baselineSet.has(pairId(pair.locale, pair.key)))
+
+  const removed: Array<{ locale: string; key: string }> = []
+  for (const [key, locales] of Object.entries(baseline.missing)) {
+    for (const locale of locales) {
+      if (!liveSet.has(pairId(locale, key))) removed.push({ locale, key })
+    }
+  }
+
+  return { added, removed }
+}
+
+// REQ-41-01: regeneration is a deliberate, explicitly-opted-into act, never
+// an import-time or test-time side effect. Guarded twice over: the caller
+// (main(), below) only reaches this behind
+// `LINT_TRANSLATIONS_WRITE_BASELINE === '1'`, and main() itself only runs
+// behind the pre-existing `!process.env.JEST_WORKER_ID` guard (T-41-05-01 --
+// this project has a recorded failure where importing a meta script ran its
+// main and rewrote a committed artifact).
+function writePresenceBaseline(localesPath: string): void {
+  const namespace: Namespace = 'gamelib'
+  const pairs = missingPairs(localesPath, namespace)
+
+  let previousSet = new Set<string>()
+  if (existsSync(PRESENCE_BASELINE_PATH)) {
+    try {
+      const previous = readPresenceBaseline(PRESENCE_BASELINE_PATH)
+      previousSet = new Set(
+        Object.entries(previous.missing).flatMap(([key, locales]) =>
+          locales.map((locale) => pairId(locale, key))
+        )
+      )
+    } catch {
+      previousSet = new Set()
+    }
+  }
+
+  const missing: Record<string, string[]> = {}
+  for (const pair of pairs) {
+    ;(missing[pair.key] ??= []).push(pair.locale)
+  }
+  const sortedMissing: Record<string, string[]> = {}
+  for (const key of Object.keys(missing).sort()) {
+    sortedMissing[key] = [...missing[key]].sort()
+  }
+
+  const currentSet = new Set(pairs.map((pair) => pairId(pair.locale, pair.key)))
+  const added = pairs.filter((pair) => !previousSet.has(pairId(pair.locale, pair.key)))
+  const removedIds = [...previousSet].filter((id) => !currentSet.has(id))
+
+  const baseline: PresenceBaselineFile = {
+    namespace,
+    generatedAt: new Date().toISOString(),
+    generatedBy: 'Phase 41 REQ-41-01',
+    reason:
+      'Known-missing (locale, key) pairs at the time the inverted presence check landed. ' +
+      'Filling these requires `pnpm machine-fill-gamelib`, which needs an API key and is out ' +
+      "of Phase 41's unattended scope. This file is a RECORD of a known gap, not a permission " +
+      'to grow it. The assertion is over `missing`, never over `totalPairs` -- do not "fix" ' +
+      'the gate by comparing counts.',
+    totalPairs: pairs.length,
+    missing: sortedMissing
+  }
+
+  writeFileSync(PRESENCE_BASELINE_PATH, JSON.stringify(baseline, null, 2) + '\n')
+
+  console.log(
+    `Wrote ${PRESENCE_BASELINE_PATH}: ${pairs.length} pairs across ${Object.keys(sortedMissing).length} keys`
+  )
+  console.log(`Added (new blind spot recorded): ${added.length}`)
+  added.forEach((pair) => console.log(`  + ${pair.locale}.${namespace}.${pair.key}`))
+  console.log(`Removed (no longer missing): ${removedIds.length}`)
+  removedIds.forEach((id) => {
+    const [locale, key] = id.split(' ')
+    console.log(`  - ${locale}.${namespace}.${key}`)
+  })
+}
+
 // entry point to check a single language
 export function checkLanguage(
   language: string,
@@ -437,11 +577,56 @@ export function lintTranslations(opts: LintOptions): LintResult {
     result.hardFailures.push(...langResult.hardFailures)
   })
 
+  // REQ-41-01: the live-tree gate. Compares the missingPairs() derivation
+  // against the committed baseline SET for every fork-owned namespace in
+  // scope that has one, and fails in BOTH directions -- naming every pair.
+  // `added` (a new blind spot) and `removed` (the baseline overstating
+  // reality) are both hardFailures: a baseline can drift silently in either
+  // direction, and this project has a recorded lesson that a one-directional
+  // check misses half the defect class.
+  const isCanonicalLocalesPath =
+    resolve(opts.localesPath) === resolve(CANONICAL_LOCALES_PATH)
+
+  for (const namespace of opts.namespaces) {
+    if (
+      !isForkOwned(namespace) ||
+      !isCanonicalLocalesPath ||
+      !existsSync(PRESENCE_BASELINE_PATH)
+    ) {
+      continue
+    }
+
+    const diff = comparePresenceBaseline(opts.localesPath, PRESENCE_BASELINE_PATH)
+    for (const pair of diff.added) {
+      result.hardFailures.push(
+        `${pair.locale}.${namespace}.${pair.key}: a new key is not localised and was not ` +
+          'recorded — fill it or regenerate the baseline'
+      )
+    }
+    for (const pair of diff.removed) {
+      result.hardFailures.push(
+        `${pair.locale}.${namespace}.${pair.key}: the baseline overstates reality; ` +
+          'regenerate it with LINT_TRANSLATIONS_WRITE_BASELINE=1 pnpm lint-translations:gamelib'
+      )
+    }
+  }
+
   return result
 }
 
 function main(): void {
   const localesPath = './public/locales'
+
+  // REQ-41-01: regeneration is opt-in and separate from the normal gate
+  // path -- it writes the one filesystem artifact this module has ever
+  // written, and exits 0 unconditionally (it is not itself a pass/fail
+  // check; re-running the normal path afterwards is what proves the
+  // regeneration was applied correctly).
+  if (process.env.LINT_TRANSLATIONS_WRITE_BASELINE === '1') {
+    writePresenceBaseline(localesPath)
+    return
+  }
+
   const namespaces: Namespace[] = process.env.LINT_TRANSLATIONS_NAMESPACES
     ? process.env.LINT_TRANSLATIONS_NAMESPACES.split(',')
         .map((ns) => ns.trim())
