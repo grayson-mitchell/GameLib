@@ -4645,7 +4645,7 @@ same run. Note that 37-03 explains **9** of those 22 games and closing it will N
 
 **Depends on:** **Phase 34** for the Windows/Linux items — the W/L builds must exist before anything can be observed on them. ⚠ **CORRECTED 2026-09-06 (plan `38-01`) — the controller items are NOT discharged on the macOS machine.** This line previously said the controller items had no phase dependency and could be discharged "on the macOS machine, without leaving the desk." That is disproved: GameLib runs in WKWebView on macOS and WebView2 (Chromium) on Windows, and the two engines disagree about which gamepads exist — the PowerA Advantage Wired for Nintendo Switch 2 (`0x20D6`/`0xA720`) is read by Chromium and returns 0 slots in WebKit, confirmed by a complete Steam-running/Steam-quit 2x2 that also ruled out Steam Input exclusivity as the cause. The seven controller items now in scope (`38-C01`–`38-C06`, `38-C08`) run in the **same Windows sitting** as the W and S items, not separately and not on macOS. See `38-HUMAN-UAT.md` for the full finding.
 
-**Plans:** 7 plans in 6 waves (planned 2026-09-06). ⚠ **THIS IS AN AMENDMENT TO THIS PHASE'S OWN `No plan files` RULE, recorded here so neither document silently contradicts the other (D-38-04).** The rule was right about the SITTING: a human observation is not something an executor can "do", so plans `38-04` through `38-07` are gate steps with instrumentation, evidence capture and a recording protocol — not implementation tasks — and all four are `autonomous: false`. The rule was wrong about the LEDGER. Nine of the 34 items described the Electron runtime that Phase 35 deleted, so they could not be run as written, and every gate over them passed because each item's `platform_gate` was individually correct: well-formed items pointing at nothing. Repairing that is a docs edit against a YAML array whose two failure modes are both SILENT, which needs a plan, an atomic commit, a SUMMARY and a measured before/after `audit-uat` gate — exactly what a bare "run the sweep directly" instruction does not provide. Hence `38-01`. `38-VERIFICATION.md` remains the phase's source of truth and the array `gsd-sdk query audit-uat` reads; the plans do not replace it, they edit it under a gate.
+**Plans:** 1/7 plans executed
 
 **Items: 17 as of 2026-09-06** (plan `38-01`, superseding the 34-item count below). The ledger
 repair retired 9 Electron-runtime items as unscoreable (Phase 35 deleted that build; each carries
@@ -4710,7 +4710,7 @@ exists for it to have exercised.
 Plans:
 **Wave 1**
 
-- [ ] 38-01-PLAN.md — Ledger repair and phase split: retire the 9 Electron items as unscoreable, create Phases 42 and 43, relocate 9 items, split 38-S16, repair 38-HUMAN-UAT.md (wave 1, docs-only, autonomous)
+- [x] 38-01-PLAN.md — Ledger repair and phase split: retire the 9 Electron items as unscoreable, create Phases 42 and 43, relocate 9 items, split 38-S16, repair 38-HUMAN-UAT.md (wave 1, docs-only, autonomous)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
