@@ -1083,6 +1083,85 @@ describe('hardcodedStringGate', () => {
       const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
       expect(result.violations).toHaveLength(2)
     })
+
+    it('REQ-41-04: a namespace prefix alone (no dot) still does not buy the tuple exemption — the dotted tail stays mandatory', () => {
+      const source = `
+        const labels = {
+          bad: ['gamelib:Windows only', 'Not available on macOS']
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(2)
+    })
+
+    it("REQ-41-04: never flags an ns-prefixed [key, defaultText] tuple — real Library/facetLabels.ts's RUNNABILITY_LABELS", () => {
+      const source = `
+        export const RUNNABILITY_LABELS = {
+          native: ['gamelib:library.filterPanel.runsNatively', 'Runs natively'],
+          bottle: ['gamelib:library.filterPanel.runsViaBottle', 'Runs via bottle'],
+          wontRun: ['gamelib:library.filterPanel.wontRun', "Won't run"],
+          notChecked: ['gamelib:library.filterPanel.notYetChecked', 'Not yet checked']
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+      // Proves the widened tuple check actually ran (T-34.8-07): a
+      // zero-violation file must be distinguishable from an unscanned one.
+      expect(result.exempted).toBeGreaterThan(0)
+    })
+
+    it("REQ-41-04: never flags a { key, defaultText } object-literal pairing — real FilterChipRow/chipLabels.ts's chipLabelSpec shape", () => {
+      const source = `
+        function chipLabelSpec() {
+          return {
+            ns: 'default',
+            key: 'header.uncategorized',
+            defaultText: 'Uncategorized'
+          }
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+      expect(result.exempted).toBeGreaterThan(0)
+    })
+
+    it('REQ-41-04: flags a { key, defaultText } object pairing whose key is NOT key-shaped — the object exemption is narrow too', () => {
+      const source = `
+        function chipLabelSpec() {
+          return {
+            ns: 'gamelib',
+            key: 'Windows only',
+            defaultText: 'Not available on macOS'
+          }
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(2)
+    })
+
+    it('REQ-41-04: flags a key-shaped `key` property with no `defaultText` sibling — the pairing must be complete to exempt', () => {
+      // Deliberately mixed-case dotted key (not `header.uncategorized`,
+      // which is an all-lowercase two-segment string that the pre-existing
+      // `DOMAIN_RE` technical-token heuristic already discards regardless of
+      // this exemption — that would prove nothing about pairing
+      // completeness). `library.filterPanel.chipHiddenOnly` mirrors the real
+      // camelCase-segmented keys chipLabels.ts uses, which DOMAIN_RE cannot
+      // match.
+      const source = `
+        function chipLabelSpec() {
+          return {
+            ns: 'gamelib',
+            key: 'library.filterPanel.chipHiddenOnly',
+            label: 'Hidden only'
+          }
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      const texts = result.violations.map((v) => v.text)
+      // The dangling `key` literal is flagged because no `defaultText`
+      // sibling exists to pair it with.
+      expect(texts).toContain('library.filterPanel.chipHiddenOnly')
+    })
   })
 
   describe('D-14: repairFailure English fallbacks', () => {

@@ -1167,23 +1167,31 @@ function isTCallDefaultValueProperty(
   return call.getArguments().includes(objectLiteral)
 }
 
-// Requires at least one literal `.`, matching this repo's `keySeparator: '.'`
-// i18next config — RESEARCH.md Pattern 2, Assumption A1. Deliberately
-// narrow: a developer wrapping two unrelated strings in a fake key-shaped
-// tuple to dodge the gate is visible in review, and the paired negative
-// fixture (`['Windows only', 'Not available on macOS']`) proves the shape
-// alone is not enough to exempt.
-const DOTTED_KEY_RE = /^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/
+// Requires at least one literal `.` after an optional `ns:` prefix, matching
+// this repo's i18next config — the bare `keySeparator: '.'` form
+// (RESEARCH.md Pattern 2, Assumption A1) AND the `namespaceSeparator: ':'`
+// form actually used by `RUNNABILITY_LABELS` in
+// `src/frontend/screens/Library/facetLabels.ts`
+// (`gamelib:library.filterPanel.runsNatively`) — plan 41-02 widened this
+// from the bare form only, which rejected every one of that table's four
+// tuples. Deliberately narrow: a developer wrapping two unrelated strings in
+// a fake key-shaped tuple to dodge the gate is visible in review, and the
+// paired negative fixture (`['Windows only', 'Not available on macOS']`)
+// proves the shape alone is not enough to exempt — the dotted tail stays
+// MANDATORY, so a namespace prefix alone (no dot) still cannot pass.
+const DOTTED_KEY_RE =
+  /^([a-zA-Z][a-zA-Z0-9]*:)?[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/
 
 /**
  * Pattern 2: exempts both string elements of a `[i18nKeyString,
  * englishDefaultString]` tuple — `CrossoverBadge.tsx`'s
- * `labelKeyByTier`, `LibraryFilters`' `crossoverRatingLabels`, and
- * `stateLabels.ts`'s `STATE_LABEL_KEYS` all build this table shape, then
- * destructure and call `t(key, defaultText)` at a DIFFERENT source
- * location than the literal itself — a pure per-call-site check cannot see
- * this link, so this exemption is structural (the tuple shape itself), not
- * dataflow-traced.
+ * `labelKeyByTier`, `LibraryFilters`' `crossoverRatingLabels`,
+ * `stateLabels.ts`'s `STATE_LABEL_KEYS`, and `facetLabels.ts`'s
+ * `RUNNABILITY_LABELS` all build this table shape, then destructure and
+ * call `t(key, defaultText)`/`tGamelib(key, defaultText)` at a DIFFERENT
+ * source location than the literal itself — a pure per-call-site check
+ * cannot see this link, so this exemption is structural (the tuple shape
+ * itself), not dataflow-traced.
  */
 function isKeyDefaultTupleElement(node: Node): boolean {
   const parent = node.getParent()
@@ -1195,6 +1203,61 @@ function isKeyDefaultTupleElement(node: Node): boolean {
     return false
   }
   return DOTTED_KEY_RE.test(first.getLiteralText())
+}
+
+/**
+ * Pattern 2b: exempts both string properties of a `{ key, defaultText }`
+ * object-literal pairing — `chipLabels.ts`'s `chipLabelSpec` returns
+ * `{ ns, key, defaultText }` (or `{ literal }`) rather than a 2-tuple, but
+ * implements the exact same "key elsewhere, defaultText elsewhere, `t()`/
+ * `tGamelib()` called at a THIRD location" idiom `isKeyDefaultTupleElement`
+ * above already exempts for the array-literal container — `resolveLabel()`
+ * destructures the spec and calls `t(spec.key, spec.defaultText)` (or
+ * `tGamelib(...)`) at a different source location than either literal, so
+ * this is structural, not dataflow-traced, for the same reason as the tuple
+ * check. Requires BOTH properties present with string-literal initializers,
+ * and the `key` initializer dotted-key-shaped (`DOTTED_KEY_RE`) — an object
+ * with only one of the pair is not this idiom (a `defaultText`-less object
+ * stays flagged), and a non-key-shaped `key` value does not buy the
+ * exemption either (paired negative fixtures for both prove this). The `ns`
+ * property (`'gamelib'`/`'default'`) is not checked here — it is already a
+ * lowercase, whitespace-free technical token that `isTechnicalToken`
+ * exempts independently.
+ */
+function isKeyDefaultObjectProperty(node: Node): boolean {
+  const propertyAssignment = node.getParent()
+  if (!propertyAssignment || !Node.isPropertyAssignment(propertyAssignment)) {
+    return false
+  }
+  if (propertyAssignment.getInitializer() !== node) return false
+
+  const nameNode = propertyAssignment.getNameNode()
+  const propName = Node.isIdentifier(nameNode) ? nameNode.getText() : undefined
+  if (propName !== 'key' && propName !== 'defaultText') return false
+
+  const objectLiteral = propertyAssignment.getFirstAncestor(
+    Node.isObjectLiteralExpression
+  )
+  if (!objectLiteral) return false
+
+  let keyText: string | undefined
+  let hasStringDefaultText = false
+  for (const prop of objectLiteral.getProperties()) {
+    if (!Node.isPropertyAssignment(prop)) continue
+    const propNameNode = prop.getNameNode()
+    if (!Node.isIdentifier(propNameNode)) continue
+    const initializer = prop.getInitializer()
+    if (!initializer || !Node.isStringLiteral(initializer)) continue
+
+    if (propNameNode.getText() === 'key') {
+      keyText = initializer.getLiteralText()
+    } else if (propNameNode.getText() === 'defaultText') {
+      hasStringDefaultText = true
+    }
+  }
+
+  if (keyText === undefined || !hasStringDefaultText) return false
+  return DOTTED_KEY_RE.test(keyText)
 }
 
 /**
@@ -1516,7 +1579,7 @@ export function scanSource(
     // Cheapest-first per RESEARCH.md Pattern 1-3: tuple (structural) before
     // direct t-call-argument (one parent hop) before dataflow
     // (`findReferencesAsNodes()`, the only one that walks the whole file).
-    if (isKeyDefaultTupleElement(node)) {
+    if (isKeyDefaultTupleElement(node) || isKeyDefaultObjectProperty(node)) {
       exempted += 1
       return
     }
