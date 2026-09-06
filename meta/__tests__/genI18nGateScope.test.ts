@@ -63,29 +63,34 @@ const FIXTURE_DIFF_LINES = [
  *   hand-curated and widening it is a deliberate act (see the clobber-guard
  *   comment below for what accidental widening has already cost twice).
  *
- *   helpers/gamepad.ts -- 3 violations, ALL of them CSS selector string
- *   literals ('.MuiPopover-root' at :323, '.MuiDialog-root' at :370 and :377).
- *   These are gate false positives, not untranslated UI text, so they must NOT
- *   be parked in meta/i18nGateAllowlist.json -- that file is a DEFERRAL
- *   register (`expectedCount` + a blocking reason), and a false positive
- *   recorded there would read as real deferred debt forever. The right fix is
- *   in the gate: stop flagging CSS-selector-shaped literals.
+ *   helpers/gamepad.ts, Library/components/FilterChipRow/chipLabels.ts and
+ *   Library/facetLabels.ts -- PROMOTED into meta/i18nGateScope.json by Phase
+ *   41 Plan 04 (REQ-41-04), removed from this array 2026-09-06. History,
+ *   corrected:
  *
- *   Library/components/FilterChipRow/chipLabels.ts and Library/facetLabels.ts
- *   -- unlike every entry above, these two are no longer UNMEASURED debt as
- *   of quick task 260827-vpl (WR-18, DECISION 3): 35 and 8 violations
- *   respectively (43 total, all i18n key literals or paired English
- *   defaultText -- no genuine untranslated string among them), pinned by a
- *   dedicated ratchet at
- *   meta/__tests__/hardcodedStringGate.test.ts's "measured ratchet over
- *   facetLabels.ts / chipLabels.ts" describe block (`scanScope({
- *   extraFiles })`, audit mode, committed scope and allowlist both
- *   untouched -- same idiom as the three ConsoleMode/HumbleLogin files
- *   above). They stay in this array rather than moving into
- *   meta/i18nGateScope.json because folding them in would still be the
- *   deliberate, hand-curated widening this comment warns against elsewhere;
- *   the ratchet exists so that widening decision can be made later without
- *   losing count/regression coverage in the meantime.
+ *   Measured before the fix (quick task 260827-vpl, WR-18, DECISION 3):
+ *   gamepad.ts 3 violations, chipLabels.ts 35, facetLabels.ts 8 -- 46 total,
+ *   all i18n key literals, paired English defaultText, or (for gamepad.ts)
+ *   closest() selector arguments, no genuine untranslated string among them.
+ *   This header previously said gamepad.ts's three hits were bare
+ *   CSS-selector-shaped string literals at :323/:370/:377 and that "the right
+ *   fix is in the gate: stop flagging CSS-selector-shaped literals" -- both
+ *   wrong. Re-measured: the three literals are at :405/:452/:459, and each is
+ *   an ARGUMENT to `.closest(...)`, not a bare selector. Plan 41-02 fixed it
+ *   with a method-name gate (`'closest'` added to
+ *   `TECHNICAL_DOM_API_METHOD_NAMES` in meta/hardcodedStringGate.ts), not a
+ *   content-shape regex -- a narrower, more targeted fix than this header
+ *   originally prescribed. The chipLabels.ts/facetLabels.ts 43 were already
+ *   covered by a dedicated ratchet at
+ *   meta/__tests__/hardcodedStringGate.test.ts (`scanScope({ extraFiles })`,
+ *   audit mode); Plan 41-02 widened the D-14 declaration-site exemption so
+ *   all 46 read 0 under the same idiom, still in audit mode, committed scope
+ *   untouched. Plan 41-04 then promoted all three into the BLOCKING scope
+ *   (171 -> 174 files) and inverted that ratchet to assert coverage FROM the
+ *   blocking report instead of an audit-mode widening -- see the "REQ-41-04:
+ *   facetLabels.ts, chipLabels.ts, helpers/gamepad.ts in blocking scope"
+ *   describe block in hardcodedStringGate.test.ts. Hand-edited surgically,
+ *   NOT regenerated, per this file's own precedent.
  *
  * 2026-08-30 (35-24, gap-closure of 35-VERIFICATION.md gap 4): six entries
  * added when `pnpm gen-i18n-gate-scope` was re-run against current HEAD,
@@ -280,7 +285,6 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx',
   'src/frontend/components/UI/Winetricks/index.tsx',
   'src/frontend/helpers/declaredUnavailable.ts',
-  'src/frontend/helpers/gamepad.ts',
   'src/frontend/helpers/gamepad_layouts/nintendo.ts',
   'src/frontend/screens/ConsoleMode/components/ConfirmDialog/index.tsx',
   'src/frontend/screens/ConsoleMode/controller.ts',
@@ -288,12 +292,10 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/DownloadManager/index.tsx',
   'src/frontend/screens/Game/GamePage/components/WikiInfoEmptyState.tsx',
   'src/frontend/screens/Library/components/CategoriesManager/index.tsx',
-  'src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts',
   'src/frontend/screens/Library/components/GamesList/index.tsx',
   'src/frontend/screens/Library/components/InstallModal/defaultPlatform.ts',
   'src/frontend/screens/Library/components/LibraryHeader/gameCount.ts',
   'src/frontend/screens/Library/engineWiring.ts',
-  'src/frontend/screens/Library/facetLabels.ts',
   'src/frontend/screens/Library/filterEngine.ts',
   'src/frontend/screens/Login/components/HumbleLogin/index.tsx',
   'src/frontend/screens/Login/steamTileState.ts',
@@ -790,7 +792,7 @@ describe('--rewrite-scope guard', () => {
   })
 
   it('A0 fixture sanity: the seeded scope is the REAL 171-file hand-curated snapshot and the fresh snapshot is the REAL 215', () => {
-    expect(scopeSnapshot.files.length).toBe(171)
+    expect(scopeSnapshot.files.length).toBe(174)
     expect(forkTouchedSnapshot.files.length).toBe(215)
     expect(freshSnapshot().files.length).toBe(215)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
