@@ -19,7 +19,8 @@ import {
   comparePresenceBaseline,
   missingPairs,
   PRESENCE_BASELINE_PATH,
-  CorruptCatalogError
+  CorruptCatalogError,
+  type LintResult
 } from '../lintTranslations'
 
 /**
@@ -671,6 +672,72 @@ describe('presence baseline drift skip diagnostics (REQ-41-01, gap-closure 41-06
         f.includes('presence baseline drift check skipped')
       )
       expect(skips).toHaveLength(0)
+    })
+  })
+})
+
+describe('WR-03: an unreadable catalog is distinguished from an absent one', () => {
+  // RED-1 -- readCatalog() itself. `mkdir <fixture>/xx/gamelib.json` makes the
+  // catalog PATH a directory, so readFileSync fails with EISDIR (no chmod
+  // games -- a no-op for root, and fails open in some CI images). At HEAD,
+  // readCatalog()'s bare `catch { return null }` (:146-152) reports this
+  // identically to a genuinely absent file. It must instead throw a
+  // read-failure error naming the errno code.
+  it('WR-03 RED-1: readCatalog() throws for an unreadable (EISDIR) catalog instead of returning null', () => {
+    withFixtureLocales((localesPath) => {
+      mkdirSync(join(localesPath, 'xx', 'gamelib.json'), { recursive: true })
+
+      expect(() => readCatalog(localesPath, 'xx', 'gamelib')).toThrow(
+        /EISDIR/
+      )
+    })
+  })
+
+  // RED-2 -- lintTranslations() end to end, over an UPSTREAM namespace
+  // (translation), which is the dangerous half of WR-03: an absent upstream
+  // catalog is normally a one-line "not yet translated" finding, not a hard
+  // failure (R2 above). At HEAD, readCatalog() swallows the EISDIR the same
+  // way, so this identical fixture is silently downgraded to that same
+  // "not yet translated" finding -- a real filesystem fault reads as
+  // ordinary Weblate incompleteness. It must instead be a NAMED hard
+  // failure, and lintTranslations() must still return normally (not throw)
+  // -- CR-01's defect class must not be re-created at this new errno.
+  it('WR-03 RED-2: lintTranslations() reports an unreadable upstream catalog as a named hard failure, not a "not yet translated" downgrade', () => {
+    withFixtureLocales((localesPath) => {
+      writeCatalog(localesPath, 'en', 'translation', { hello: 'hi' })
+      mkdirSync(join(localesPath, 'xx', 'translation.json'), {
+        recursive: true
+      })
+
+      let result: LintResult | undefined
+      expect(() => {
+        result = lintTranslations({ localesPath, namespaces: ['translation'] })
+      }).not.toThrow()
+
+      expect(result!.hardFailures).toHaveLength(1)
+      expect(result!.hardFailures[0]).toEqual(expect.stringContaining('xx'))
+      expect(result!.hardFailures[0]).not.toEqual(
+        expect.stringContaining('not yet translated')
+      )
+    })
+  })
+
+  // RED-3 -- missingPairs()'s own bare catches at :332/:349 swallow a
+  // read-failure identically to genuine absence, which is worse than R2's
+  // downgrade: it flows into `writePresenceBaseline()` (never through
+  // `lintTranslations()`'s hardFailures at all) and would record every
+  // English key as missing for a locale that merely could not be READ. Built
+  // so the difference is unambiguous: an `en` catalog with one known key,
+  // and one locale whose catalog PATH is a directory. At HEAD this returns a
+  // fully-populated missing set (every en key recorded against `xx`); it
+  // must instead propagate the read-failure so the caller can distinguish
+  // "unreadable" from "confirmed missing".
+  it('WR-03 RED-3: missingPairs() propagates an unreadable locale catalog instead of recording every key as missing', () => {
+    withFixtureLocales((localesPath) => {
+      writeCatalog(localesPath, 'en', 'gamelib', { greeting: 'hi' })
+      mkdirSync(join(localesPath, 'xx', 'gamelib.json'), { recursive: true })
+
+      expect(() => missingPairs(localesPath, 'gamelib')).toThrow(/EISDIR/)
     })
   })
 })
