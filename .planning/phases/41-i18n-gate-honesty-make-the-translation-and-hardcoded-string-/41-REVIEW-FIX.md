@@ -50,14 +50,18 @@ own stated risk has since been observed to occur.
 
 ## Outstanding
 
-- **WR-02** — `meta/hardcodedStringGate.ts:1219-1284`. No owner assigned. Reconsider only if the
+- **WR-02** — `meta/hardcodedStringGate.ts:1219-1284`. Filed 2026-09-07 as
+  `.planning/todos/pending/2026-09-07-t-exemption-fires-on-shape-alone-never-a-real-call-site.md`. Reconsider only if the
   object-pair/tuple exemption's real-world footprint grows beyond today's single legitimate user
   (`chipLabels.ts`).
-- **WR-03** — `meta/lintTranslations.ts:140-152`. No owner assigned. The review's suggested fix
+- **WR-03** — `meta/lintTranslations.ts:140-152`. Filed 2026-09-07 as
+  `.planning/todos/pending/2026-09-07-readcatalog-swallows-every-read-failure-as-absent.md`. The review's suggested fix
   (narrow the catch to `ENOENT`, re-throw other errors) has not been applied.
-- **IN-01** — `meta/lintTranslations.ts:493`. No owner assigned; the review scored this as
+- **IN-01** — `meta/lintTranslations.ts:493`. Filed 2026-09-07 as
+  `.planning/todos/pending/2026-09-07-presence-baseline-totalpairs-is-unenforced-prose.md`; the review scored this as
   intentional design, not a defect.
-- **IN-02** — `meta/lintTranslations.ts:52-53`. No owner assigned. The header comment's "794"
+- **IN-02** — `meta/lintTranslations.ts:52-53`. Filed 2026-09-07 as
+  `.planning/todos/pending/2026-09-07-linttranslations-header-comment-cites-794-pairs-now-zero.md`. The header comment's "794"
   figure is stale as of commit `68348932e` and should be updated or reworded to state it is a
   historical measurement the next time this file is touched.
 
