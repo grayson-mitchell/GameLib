@@ -3,8 +3,8 @@ phase: 41-i18n-gate-honesty-make-the-translation-and-hardcoded-string-
 review: 41-REVIEW.md
 status: partial
 findings_total: 8
-findings_fixed: 4
-outstanding: [WR-02, WR-03, IN-01, IN-02]
+findings_fixed: 5
+outstanding: [WR-02, IN-01, IN-02]
 ---
 
 # Fix pass for 41-REVIEW.md — phase 41-i18n-gate-honesty-make-the-translation-and-hardcoded-string-
@@ -36,16 +36,15 @@ eight findings currently stands.
 | CR-03 | Critical | FIXED | `meta/lintTranslations.ts:768` — the guard is now `if (require.main === module && !process.env.JEST_WORKER_ID)`, replacing the `JEST_WORKER_ID`-only check. The preceding comment (`:736-767`) states only measured claims: that `require.main === module` is `false` under ts-jest (resolves to the test file, not this module) and that `runTs.cjs`'s esbuild `--bundle` collapses `require.main === module` to always-true inside the bundle, so `JEST_WORKER_ID` is still needed and neither condition is redundant. Commit `2ac88fcf6`. |
 | WR-01 | Warning | FIXED | `meta/__tests__/lintTranslations.test.ts:287-312` — R5 ("importing the module performs no side effects (no main() run on import)") now installs a `console.log` spy and asserts zero calls whose first argument contains `'lint-translations['` (`:308-312`), rather than only asserting `process.exit` was never called. `41-07-SUMMARY.md` records this rewritten assertion measured genuinely RED under the exact sabotage (`main()` called unconditionally) the old, `process.exit`-only R5 could not detect. Commit `2ac88fcf6`. |
 | WR-02 | Warning | **OPEN** | `meta/hardcodedStringGate.ts:1219-1284` — `isKeyDefaultTupleElement` and `isKeyDefaultObjectProperty` are unchanged: both still exempt purely on property/element shape (a dotted `key` string plus a sibling `defaultText`/second-tuple-element string), with no check that the pair ever actually reaches a `t()`/`tGamelib()` call. No dataflow-tracing logic exists anywhere in the file. The review itself scored this as "no change required to ship this phase" (a documented, accepted trade-off, not a blocker) — no fix was made, and none was owed by the review's own disposition. |
-| WR-03 | Warning | **OPEN** | `meta/lintTranslations.ts:140-152` — `readCatalog()`'s file read is still a bare `try { ... } catch { return null }` (`:146-152`), classifying ENOENT identically to EACCES, EISDIR, or any other `readFileSync` failure. The doc comment above it (`:134-139`) still explicitly documents this as deliberate ("Returns `null` if the file is absent (ENOENT or any other read failure)"). The review's own suggested fix (narrow the catch to `ENOENT` and re-throw anything else) was not applied. This finding is entangled with CR-01's fix only in that CR-01 now *catches* `CorruptCatalogError` at the call sites — it does not touch `readCatalog()`'s separate, broader read-failure catch, which remains exactly as the review found it. |
+| WR-03 | Warning | FIXED | `meta/lintTranslations.ts` — `readCatalog()`'s catch is now narrowed to `ENOENT`; any other read failure (EACCES, EISDIR, transient I/O) re-throws a new `CatalogReadError` carrying the errno code, and the doc comment above it no longer documents the broad catch as deliberate. Narrowing alone was traced as insufficient at two of the four call sites (would crash uncaught) and a no-op at the other two (would swallow unchanged), so the fix also: classifies `CatalogReadError` into a named `hardFailures` entry at `checkLanguage()`'s locale read and `lintTranslations()`'s English pre-read (instead of letting it propagate uncaught, the CR-01 defect class at a new errno); lets it PROPAGATE from `missingPairs()`'s two catches instead of swallowing it (the "reported elsewhere" justification for swallowing is true on the lint path but false under `LINT_TRANSLATIONS_WRITE_BASELINE=1`, which calls `missingPairs()` directly and would otherwise write a wrong committed baseline — a defect not in the original review's scope); and catches the now-possible `CatalogReadError` at the `comparePresenceBaseline()` call site inside the drift loop. RED-proven in `meta/__tests__/lintTranslations.test.ts` ("WR-03: an unreadable catalog is distinguished from an absent one", RED-1/RED-2/RED-3) via an EISDIR fixture, all three measured RED against unmodified source before the fix landed. Quick task `260907-8yz`. Closed as `.planning/todos/completed/2026-09-07-readcatalog-swallows-every-read-failure-as-absent.md`. |
 | IN-01 | Info | **OPEN** (unenforced, by design) | `meta/lintTranslations.ts:493` — the comment "assertion over `missing`, never over `totalPairs` -- do not 'fix' [it]" and `meta/i18nCatalogPresenceBaseline.json`'s live `totalPairs` field (currently `0`) confirm `comparePresenceBaseline()` still never reads `totalPairs`. The review explicitly said no fix was required here ("good practice", not a defect) — nothing changed, and nothing was owed to change. |
 | IN-02 | Info | **OPEN, and its risk has since materialized** | `meta/lintTranslations.ts:52-53` — the header comment still reads "measured at HEAD (2026-09-06) this was hiding 794 missing (locale, key) pairs across 17 keys" verbatim, unedited since the review. Separately, commit `68348932e` ("re-record the presence baseline after the fill"), also dated 2026-09-06, regenerated `meta/i18nCatalogPresenceBaseline.json` to `totalPairs: 0, missing: {}` — every one of the 794 pairs is now present. The header comment's number is therefore now stale *on the very day it was written*, exactly the risk the review flagged ("as the baseline evolves ... this specific number will read as stale"). The review scored this INFO/no-action-needed because the comment carries a date; that date alone did not prevent the number going stale same-day. No fix was made. |
 
 ## Tally
 
-**4 of 8 fixed** (CR-01, CR-02, CR-03, WR-01). **4 open** (WR-02, WR-03, IN-01, IN-02) — all four
-are non-critical (2 warning, 2 info), all three that carry a review-authored fix recommendation
-(WR-02, WR-03) or an enforcement question (IN-01) were explicitly scored by the review as
-non-blocking to ship, and none was owed a code change. IN-02 is the one item where the review's
+**5 of 8 fixed** (CR-01, CR-02, CR-03, WR-01, WR-03). **3 open** (WR-02, IN-01, IN-02) — all three
+are non-critical (1 warning, 2 info); WR-02 and IN-01 were explicitly scored by the review as
+non-blocking to ship, and neither was owed a code change. IN-02 is the one item where the review's
 own stated risk has since been observed to occur.
 
 ## Outstanding
@@ -54,9 +53,6 @@ own stated risk has since been observed to occur.
   `.planning/todos/pending/2026-09-07-t-exemption-fires-on-shape-alone-never-a-real-call-site.md`. Reconsider only if the
   object-pair/tuple exemption's real-world footprint grows beyond today's single legitimate user
   (`chipLabels.ts`).
-- **WR-03** — `meta/lintTranslations.ts:140-152`. Filed 2026-09-07 as
-  `.planning/todos/pending/2026-09-07-readcatalog-swallows-every-read-failure-as-absent.md`. The review's suggested fix
-  (narrow the catch to `ENOENT`, re-throw other errors) has not been applied.
 - **IN-01** — `meta/lintTranslations.ts:493`. Filed 2026-09-07 as
   `.planning/todos/pending/2026-09-07-presence-baseline-totalpairs-is-unenforced-prose.md`; the review scored this as
   intentional design, not a defect.
