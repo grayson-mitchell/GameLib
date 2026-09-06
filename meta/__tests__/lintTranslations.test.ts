@@ -17,6 +17,7 @@ import {
   checkLanguage,
   checkEnglishKeysPresent,
   comparePresenceBaseline,
+  missingPairs,
   PRESENCE_BASELINE_PATH,
   CorruptCatalogError
 } from '../lintTranslations'
@@ -67,12 +68,8 @@ describe('lintTranslations (REQ-41-02)', () => {
       const result = lintTranslations({ localesPath, namespaces: ['gamelib'] })
 
       expect(result.hardFailures).toHaveLength(1)
-      expect(result.hardFailures[0]).toEqual(
-        expect.stringContaining('xx')
-      )
-      expect(result.hardFailures[0]).toEqual(
-        expect.stringContaining('gamelib')
-      )
+      expect(result.hardFailures[0]).toEqual(expect.stringContaining('xx'))
+      expect(result.hardFailures[0]).toEqual(expect.stringContaining('gamelib'))
       expect(result.findings).toHaveLength(0)
 
       // Evidence this is a genuine RED proof, not an assumption: Task 1
@@ -153,6 +150,70 @@ describe('lintTranslations (REQ-41-02)', () => {
     })
   })
 
+  // R16 -- gap-closure plan 41-06, GAP-1: a corrupt ENGLISH catalog must be
+  // just as much a named hard failure as a corrupt locale catalog (R4 above)
+  // -- lintTranslations() must return normally, never let CorruptCatalogError
+  // escape uncaught.
+  it('REQ-41-02 R16: a corrupt English catalog is a named hard failure, not a crash', () => {
+    withFixtureLocales((localesPath) => {
+      writeCatalog(localesPath, 'xx', 'gamelib', { greeting: 'hi' })
+      mkdirSync(join(localesPath, 'en'), { recursive: true })
+      writeFileSync(join(localesPath, 'en', 'gamelib.json'), '{')
+
+      const result = lintTranslations({ localesPath, namespaces: ['gamelib'] })
+
+      expect(result.hardFailures).toHaveLength(1)
+      expect(result.hardFailures[0]).toEqual(expect.stringContaining('en'))
+      expect(result.hardFailures[0]).toEqual(expect.stringContaining('gamelib'))
+      expect(result.hardFailures[0]).toEqual(
+        expect.stringContaining('is not valid JSON')
+      )
+      expect(result.hardFailures[0]).not.toEqual(
+        expect.stringContaining('Error:')
+      )
+      expect(result.hardFailures[0]).not.toEqual(
+        expect.stringContaining('    at ')
+      )
+    })
+  })
+
+  // R17 -- the second, verification-missed crash site: missingPairs() reads
+  // `en` unguarded at its own call site (comparePresenceBaseline's drift
+  // path). Same fixture as R16, called directly.
+  it('REQ-41-02 R17: missingPairs() returns [] instead of throwing when the English catalog is corrupt', () => {
+    withFixtureLocales((localesPath) => {
+      writeCatalog(localesPath, 'xx', 'gamelib', { greeting: 'hi' })
+      mkdirSync(join(localesPath, 'en'), { recursive: true })
+      writeFileSync(join(localesPath, 'en', 'gamelib.json'), '{')
+
+      expect(missingPairs(localesPath, 'gamelib')).toEqual([])
+    })
+  })
+
+  // R18 -- the corrupt-en fixture, run through lintTranslations() end to
+  // end, must skip the drift check FOR THAT REASON (not silently, and not by
+  // falling through to comparePresenceBaseline() which would throw via
+  // missingPairs()). Exactly one findings entry, naming the namespace and
+  // the English-catalog reason.
+  it('REQ-41-02 R18: a corrupt English catalog produces a named drift-skip finding, not silence', () => {
+    withFixtureLocales((localesPath) => {
+      writeCatalog(localesPath, 'xx', 'gamelib', { greeting: 'hi' })
+      mkdirSync(join(localesPath, 'en'), { recursive: true })
+      writeFileSync(join(localesPath, 'en', 'gamelib.json'), '{')
+
+      const result = lintTranslations({ localesPath, namespaces: ['gamelib'] })
+
+      expect(result.findings).toHaveLength(1)
+      expect(result.findings[0]).toEqual(
+        expect.stringContaining('presence baseline drift check skipped')
+      )
+      expect(result.findings[0]).toEqual(expect.stringContaining('gamelib'))
+      expect(result.findings[0]).toEqual(
+        expect.stringContaining('English catalog')
+      )
+    })
+  })
+
   // Direct unit coverage of readCatalog()'s two distinct failure shapes,
   // underneath the lintTranslations()-level assertions above.
   it('REQ-41-02: readCatalog() returns null for an absent file and throws CorruptCatalogError for invalid JSON', () => {
@@ -178,11 +239,11 @@ describe('lintTranslations (REQ-41-02)', () => {
   // Task 1 introduced, so proving process.exit was never called is proof
   // that main() -- and therefore the walk it triggers -- never ran either.
   it('REQ-41-02: importing the module performs no side effects (no process.exit on import)', async () => {
-    const exitSpy = jest
-      .spyOn(process, 'exit')
-      .mockImplementation(((code?: number) => {
-        throw new Error(`process.exit(${String(code)}) called during import`)
-      }) as unknown as (code?: number) => never)
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((
+      code?: number
+    ) => {
+      throw new Error(`process.exit(${String(code)}) called during import`)
+    }) as unknown as (code?: number) => never)
 
     jest.resetModules()
     await expect(import('../lintTranslations')).resolves.toBeDefined()
@@ -274,8 +335,13 @@ describe('checkEnglishKeysPresent (REQ-41-01)', () => {
       writeCatalog(localesPath, 'en', 'gamelib', { a: { b: 'Text' } })
       writeCatalog(localesPath, 'xx', 'gamelib', {})
 
-      const newResult = lintTranslations({ localesPath, namespaces: ['gamelib'] })
-      const presenceFindings = newResult.findings.filter((f) => f.includes('a.b'))
+      const newResult = lintTranslations({
+        localesPath,
+        namespaces: ['gamelib']
+      })
+      const presenceFindings = newResult.findings.filter((f) =>
+        f.includes('a.b')
+      )
       expect(presenceFindings).toHaveLength(1)
       expect(presenceFindings[0]).toEqual(expect.stringContaining('xx'))
       expect(presenceFindings[0]).toEqual(expect.stringContaining('a.b'))
@@ -288,7 +354,10 @@ describe('checkEnglishKeysPresent (REQ-41-01)', () => {
       writeCatalog(localesPath, 'en', 'translation', { a: { b: 'Text' } })
       writeCatalog(localesPath, 'xx', 'translation', {})
 
-      const oldResult = lintTranslations({ localesPath, namespaces: ['translation'] })
+      const oldResult = lintTranslations({
+        localesPath,
+        namespaces: ['translation']
+      })
       expect(oldResult.findings).toHaveLength(0)
       expect(oldResult.hardFailures).toHaveLength(0)
     })
@@ -310,7 +379,12 @@ describe('checkEnglishKeysPresent (REQ-41-01)', () => {
   // R10 -- keyed off `en` being non-empty: an empty-in-English key is
   // silently excluded, no exemption register needed.
   it('REQ-41-01 R10: a key empty in English is NOT reported even when absent from the locale', () => {
-    const findings = checkEnglishKeysPresent('xx', 'gamelib', { a: { b: '' } }, {})
+    const findings = checkEnglishKeysPresent(
+      'xx',
+      'gamelib',
+      { a: { b: '' } },
+      {}
+    )
     expect(findings).toHaveLength(0)
   })
 
@@ -348,10 +422,15 @@ describe('checkEnglishKeysPresent (REQ-41-01)', () => {
   // unit-level statement of the same gate.)
   it('REQ-41-01: checkEnglishKeysPresent is never invoked for an upstream namespace via lintTranslations()', () => {
     withFixtureLocales((localesPath) => {
-      writeCatalog(localesPath, 'en', 'translation', { redeemKey: { error: 'Oops' } })
+      writeCatalog(localesPath, 'en', 'translation', {
+        redeemKey: { error: 'Oops' }
+      })
       writeCatalog(localesPath, 'xx', 'translation', {})
 
-      const result = lintTranslations({ localesPath, namespaces: ['translation'] })
+      const result = lintTranslations({
+        localesPath,
+        namespaces: ['translation']
+      })
       expect(result.findings).toHaveLength(0)
       expect(result.hardFailures).toHaveLength(0)
     })
@@ -362,7 +441,10 @@ describe('comparePresenceBaseline (REQ-41-01)', () => {
   // R13 -- the CI-facing live gate: the committed baseline agrees exactly
   // with a fresh derivation over the real, committed public/locales/ tree.
   it('REQ-41-01 R13: zero drift between the live tree and the committed baseline', () => {
-    const diff = comparePresenceBaseline('public/locales', PRESENCE_BASELINE_PATH)
+    const diff = comparePresenceBaseline(
+      'public/locales',
+      PRESENCE_BASELINE_PATH
+    )
     expect(diff.added).toHaveLength(0)
     expect(diff.removed).toHaveLength(0)
   })
@@ -412,7 +494,9 @@ describe('comparePresenceBaseline (REQ-41-01)', () => {
       // comparison must report it as `removed` (the copy overstating
       // reality).
       const grown = JSON.parse(JSON.stringify(committed)) as typeof committed
-      grown.missing['__fabricated_key_for_r14__'] = ['__fabricated_locale_for_r14__']
+      grown.missing['__fabricated_key_for_r14__'] = [
+        '__fabricated_locale_for_r14__'
+      ]
       grown.totalPairs += 1
       const grownPath = join(scratchDir, 'grown.json')
       writeFileSync(grownPath, JSON.stringify(grown))
@@ -421,7 +505,10 @@ describe('comparePresenceBaseline (REQ-41-01)', () => {
       expect(diffGrown.removed.length).toBeGreaterThan(0)
       expect(diffGrown.removed).toEqual(
         expect.arrayContaining([
-          { locale: '__fabricated_locale_for_r14__', key: '__fabricated_key_for_r14__' }
+          {
+            locale: '__fabricated_locale_for_r14__',
+            key: '__fabricated_key_for_r14__'
+          }
         ])
       )
     } finally {

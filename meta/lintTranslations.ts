@@ -66,7 +66,12 @@
  * to keep out of a gate that must stay read.
  */
 
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'graceful-fs'
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync
+} from 'graceful-fs'
 import { join, resolve } from 'path'
 
 const ALL_NAMESPACES = ['gamelib', 'gamepage', 'login', 'translation'] as const
@@ -132,7 +137,9 @@ export function readCatalog(
 ): CatalogRecord | null {
   let raw: string
   try {
-    raw = readFileSync(join(localesPath, language, namespace + '.json')).toString()
+    raw = readFileSync(
+      join(localesPath, language, namespace + '.json')
+    ).toString()
   } catch {
     return null
   }
@@ -143,19 +150,6 @@ export function readCatalog(
     const message = error instanceof Error ? error.message : String(error)
     throw new CorruptCatalogError(language, namespace, message)
   }
-}
-
-// Read the given namespaces for a language
-export function readCatalogs(
-  localesPath: string,
-  language: string,
-  namespaces: readonly Namespace[]
-): Partial<Record<Namespace, CatalogRecord | null>> {
-  const result: Partial<Record<Namespace, CatalogRecord | null>> = {}
-  for (const namespace of namespaces) {
-    result[namespace] = readCatalog(localesPath, language, namespace)
-  }
-  return result
 }
 
 // Run checks in string from translation against original in english file
@@ -320,7 +314,18 @@ export function missingPairs(
   localesPath: string,
   namespace: Namespace
 ): Array<{ locale: string; key: string }> {
-  const enCatalog = readCatalog(localesPath, 'en', namespace)
+  // REQ-41-02, gap-closure plan 41-06 (GAP-1, second site): a corrupt
+  // English catalog is reported elsewhere (lintTranslations()'s
+  // hardFailures) -- this derivation only computes the missing-pair SET, and
+  // treats a corrupt/absent English catalog identically: nothing can be
+  // derived, so there is nothing missing to report from here. Mirrors the
+  // locale-catalog catch immediately below.
+  let enCatalog: CatalogRecord | null
+  try {
+    enCatalog = readCatalog(localesPath, 'en', namespace)
+  } catch {
+    enCatalog = null
+  }
   if (!enCatalog) return []
 
   const enFlat = flattenCatalog(enCatalog)
@@ -416,7 +421,9 @@ export function comparePresenceBaseline(
   const liveSet = new Set<string>()
   for (const pair of live) liveSet.add(pairId(pair.locale, pair.key))
 
-  const added = live.filter((pair) => !baselineSet.has(pairId(pair.locale, pair.key)))
+  const added = live.filter(
+    (pair) => !baselineSet.has(pairId(pair.locale, pair.key))
+  )
 
   const removed: Array<{ locale: string; key: string }> = []
   for (const [key, locales] of Object.entries(baseline.missing)) {
@@ -463,7 +470,9 @@ function writePresenceBaseline(localesPath: string): void {
   }
 
   const currentSet = new Set(pairs.map((pair) => pairId(pair.locale, pair.key)))
-  const added = pairs.filter((pair) => !previousSet.has(pairId(pair.locale, pair.key)))
+  const added = pairs.filter(
+    (pair) => !previousSet.has(pairId(pair.locale, pair.key))
+  )
   const removedIds = [...previousSet].filter((id) => !currentSet.has(id))
 
   const baseline: PresenceBaselineFile = {
@@ -480,13 +489,18 @@ function writePresenceBaseline(localesPath: string): void {
     missing: sortedMissing
   }
 
-  writeFileSync(PRESENCE_BASELINE_PATH, JSON.stringify(baseline, null, 2) + '\n')
+  writeFileSync(
+    PRESENCE_BASELINE_PATH,
+    JSON.stringify(baseline, null, 2) + '\n'
+  )
 
   console.log(
     `Wrote ${PRESENCE_BASELINE_PATH}: ${pairs.length} pairs across ${Object.keys(sortedMissing).length} keys`
   )
   console.log(`Added (new blind spot recorded): ${added.length}`)
-  added.forEach((pair) => console.log(`  + ${pair.locale}.${namespace}.${pair.key}`))
+  added.forEach((pair) =>
+    console.log(`  + ${pair.locale}.${namespace}.${pair.key}`)
+  )
   console.log(`Removed (no longer missing): ${removedIds.length}`)
   removedIds.forEach((id) => {
     const [locale, key] = id.split(' ')
@@ -564,10 +578,30 @@ export function checkLanguage(
 // the whole run: walks every locale directory (except `en`) and checks it
 // against the English source
 export function lintTranslations(opts: LintOptions): LintResult {
+  const result: LintResult = { findings: [], hardFailures: [] }
+
   // Scope-aware read for the English source too (REQ-41-02 (a)) -- an
   // out-of-scope namespace's English catalog is never opened either.
-  const enCatalogs = readCatalogs(opts.localesPath, 'en', opts.namespaces)
-  const result: LintResult = { findings: [], hardFailures: [] }
+  // Gap-closure plan 41-06 (GAP-1): a corrupt en/<namespace>.json is a named
+  // hard failure, not an uncaught CorruptCatalogError -- mirrors
+  // checkLanguage()'s existing handling of a corrupt LOCALE catalog above.
+  // `result` is declared before this loop (moved up from after it) so the
+  // catch below has somewhere to push.
+  const enCatalogs: Partial<Record<Namespace, CatalogRecord | null>> = {}
+  const corruptEnglishNamespaces = new Set<Namespace>()
+  for (const namespace of opts.namespaces) {
+    try {
+      enCatalogs[namespace] = readCatalog(opts.localesPath, 'en', namespace)
+    } catch (error) {
+      if (error instanceof CorruptCatalogError) {
+        result.hardFailures.push(error.message)
+        enCatalogs[namespace] = null
+        corruptEnglishNamespaces.add(namespace)
+        continue
+      }
+      throw error
+    }
+  }
 
   readdirSync(opts.localesPath).forEach((dir) => {
     if (dir === 'en') return
@@ -588,15 +622,37 @@ export function lintTranslations(opts: LintOptions): LintResult {
     resolve(opts.localesPath) === resolve(CANONICAL_LOCALES_PATH)
 
   for (const namespace of opts.namespaces) {
-    if (
-      !isForkOwned(namespace) ||
-      !isCanonicalLocalesPath ||
-      !existsSync(PRESENCE_BASELINE_PATH)
-    ) {
+    // D-15 scope decision, the ONE deliberate silent branch: the three
+    // upstream Weblate namespaces have no baseline and never will. This is
+    // not a statement about whether a check was available (unlike the
+    // guards below) -- emitting for it would add noise to every
+    // full-namespace run. See <design_notes> in 41-06-PLAN.md.
+    if (!isForkOwned(namespace)) {
       continue
     }
 
-    const diff = comparePresenceBaseline(opts.localesPath, PRESENCE_BASELINE_PATH)
+    // Gap-closure plan 41-06 (GAP-1): a corrupt English catalog for this
+    // namespace already produced a named hardFailure above -- the drift
+    // check cannot run without it (missingPairs() would have nothing to
+    // derive from), so this is checked FIRST, ahead of the canonical-path
+    // and baseline-existence guards below, so a corrupt-en fixture reports
+    // this reason rather than an incidental one.
+    if (corruptEnglishNamespaces.has(namespace)) {
+      result.findings.push(
+        `presence baseline drift check skipped for ${namespace}: ` +
+          `its English catalog could not be parsed (see the hard failure above)`
+      )
+      continue
+    }
+
+    if (!isCanonicalLocalesPath || !existsSync(PRESENCE_BASELINE_PATH)) {
+      continue
+    }
+
+    const diff = comparePresenceBaseline(
+      opts.localesPath,
+      PRESENCE_BASELINE_PATH
+    )
     for (const pair of diff.added) {
       result.hardFailures.push(
         `${pair.locale}.${namespace}.${pair.key}: a new key is not localised and was not ` +
