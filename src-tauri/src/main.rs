@@ -705,12 +705,46 @@ fn update_tray_recent_games(app: &AppHandle, games: Vec<TrayRecentGame>) {
 ///
 /// Reaches `window.api.showAboutWindow` (`src/preload/api/helpers.ts`, barrelled into
 /// `window.api` by `src/preload/api/index.ts`). Since quick `260905-d33` that function no
-/// longer opens a `WebviewWindow`: About is an in-app modal, and the preload function raises
-/// the window event `AboutDialogHost` (`src/frontend/components/UI/AboutDialog/`) listens
-/// for. Nothing here had to change, which is the point of going through the preload name
-/// rather than reimplementing anything -- but note the CONSEQUENCE for whoever edits that
-/// name next: the eval below is optional-chained, so if `window.api.showAboutWindow` ever
-/// stops existing this menu item does nothing and reports nothing, on either side.
+/// longer opens a `WebviewWindow`: About is an in-app modal (`AboutDialogHost`,
+/// `src/frontend/components/UI/AboutDialog/`), mounted app-level from `App.tsx` inside `main`
+/// itself. That migration is exactly what made raising the window here mandatory (fixed by
+/// quick `260907-9co`): a free-standing `WebviewWindow` used to come up on its own regardless
+/// of `main`'s state; a modal mounted inside `main` cannot. A hidden (`startInTray`), minimized,
+/// or backgrounded `main` used to swallow the whole interaction -- the eval ran and the modal
+/// mounted, but nothing was ever visible.
+///
+/// Three calls raise the window before the eval, in this ORDER, which is load-bearing --
+/// measured against the vendored runtime, not assumed (`tao-0.35.3`,
+/// `src/platform_impl/macos/window.rs`):
+///   1. `unminimize()` FIRST -- `set_focus()` (`:677-685`) is a hard no-op while
+///      `isMiniaturized()` is true, so a minimized `main` would otherwise never focus at all.
+///      Calling `unminimize()` unconditionally is free on every non-minimized path: internally
+///      it is `set_minimized(false)` (`:1035-1050`), which early-returns when the window is
+///      already not miniaturized.
+///   2. `show()` BEFORE `set_focus()` -- `set_focus()` (`:677-685`) also requires
+///      `isVisible()` to be true, and `set_visible(true)` (`:668-673`) is
+///      `make_key_and_order_front_sync`, i.e. synchronous. `show()` running first is what makes
+///      `isVisible()` true by the time `set_focus()` tests it a line later.
+///   3. `set_focus()`, then the eval LAST -- so the window is already up when the About modal
+///      mounts inside it, rather than mounting into a window still coming into view.
+///
+/// Measured caveat, not smoothed over: AppKit's `deminiaturize:` animates, so `isMiniaturized()`
+/// may still read true when `set_focus()` runs one line later, and focus may not land in every
+/// minimized case even with this fix. `deminiaturize:` orders the window front itself, so the
+/// visible symptom should still be gone -- but "should" is why the minimized state is scored as
+/// a live operator check in quick `260907-9co` rather than assumed passing from this diff alone.
+///
+/// Deliberate deviation, noted so the asymmetry does not read as an oversight to the next
+/// editor: four sibling call sites elsewhere in this file (`build_tray_menu`'s child-window
+/// attachment fallback, the `__GAMELIB_FOCUS__` single-instance socket handler, the tray menu
+/// `"show"` arm, and the tray icon left-click handler) raise `main` with only `show()` +
+/// `set_focus()`, no `unminimize()`. They carry the same latent minimized-window gap this
+/// function used to have. That gap is OBSERVED, not fixed, at those four sites -- out of scope
+/// for quick `260907-9co`, which touches only the tray About path.
+///
+/// Note the CONSEQUENCE for whoever edits the preload name next: the eval below is
+/// optional-chained, so if `window.api.showAboutWindow` ever stops existing this menu item does
+/// nothing and reports nothing, on either side.
 ///
 /// Deliberately NOT routed as a new frontend-message channel either: nothing in the renderer
 /// listens for an inbound `showAboutWindow` push (it has only ever been an OUTBOUND call), so
@@ -720,7 +754,8 @@ fn update_tray_recent_games(app: &AppHandle, games: Vec<TrayRecentGame>) {
 /// The evaluated script is a FIXED literal with no interpolation -- there is no caller-supplied
 /// value anywhere in it, so it carries no injection surface -- and it is fully optional-chained
 /// so a webview that has not finished attaching `window.api` yet does nothing instead of
-/// throwing into the renderer's console.
+/// throwing into the renderer's console. The three raise calls above take no arguments at all,
+/// so they add no injection surface either.
 fn open_about_window_from_tray(app: &AppHandle) {
     let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
         eprintln!(
@@ -728,6 +763,9 @@ fn open_about_window_from_tray(app: &AppHandle) {
         );
         return;
     };
+    let _ = window.unminimize();
+    let _ = window.show();
+    let _ = window.set_focus();
     if let Err(e) = window.eval("window.api?.showAboutWindow?.()") {
         eprintln!("[shell] WARN: tray About: eval failed ({e}) -- About window not opened");
     }
