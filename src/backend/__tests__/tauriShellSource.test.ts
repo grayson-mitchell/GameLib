@@ -2529,3 +2529,130 @@ describe('REQ-34.3-11 item 2 (debug session finder-reveal-no-selection) macOS Fi
     ).toBe(false)
   })
 })
+
+// Quick 260907-9co -- tray About must RAISE the main window before mounting the modal. The
+// tray's "About GameLib" item was found to mount the About modal inside a `main` window it never
+// raised: a hidden (`startInTray`), minimized, or backgrounded `main` swallowed the whole
+// interaction. Since quick `260905-d33` there is no separate About `WebviewWindow` -- the modal
+// mounts app-level inside `main` (`AboutDialogHost`), so a `main` that is not up and frontmost
+// shows the user nothing at all.
+//
+// CI runs no cargo step, and `open_about_window_from_tray` takes `&AppHandle`, so it is not
+// unit-testable without a running Tauri app anyway. This gate mirrors the
+// `macos_finder_reselect_workaround` block above: a body slicer, a properties predicate returned
+// (not asserted inline) so RED self-tests can drive it with synthetic source, and a prose-only
+// self-test proving the comment-stripping is load-bearing (the corrected doc comment names
+// `set_focus`, `show` and `unminimize`, so an unstripped gate could pass on prose alone).
+describe('quick 260907-9co -- tray About must RAISE the main window before mounting the modal', () => {
+  /**
+   * Slices `open_about_window_from_tray`'s own body out of `code`. Takes the source as an
+   * argument (not reading main.rs directly) so the RED self-tests below drive this SAME
+   * extraction path with synthetic input, per this file's `loadMainRsCode(source?)` convention.
+   * The function's only column-0 `}` is its terminator, so `indexOf('\n}', start)` is safe here.
+   */
+  function extractAboutTrayBody(code: string): string {
+    const start = code.indexOf('fn open_about_window_from_tray(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('\n}', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  /**
+   * The four call-site indices whose relative order determines whether the window is fully
+   * raised before the modal-mounting eval runs. Returned as a plain object (not asserted
+   * inline) so the self-tests can drive the identical predicate against synthetic regressed
+   * source and prove this gate goes RED, rather than merely asserting today's source is green.
+   */
+  function aboutTrayRaiseProperties(code: string): {
+    unminimizeIdx: number
+    showIdx: number
+    focusIdx: number
+    evalIdx: number
+  } {
+    const body = extractAboutTrayBody(code)
+    return {
+      unminimizeIdx: body.indexOf('.unminimize()'),
+      showIdx: body.indexOf('.show()'),
+      focusIdx: body.indexOf('.set_focus()'),
+      evalIdx: body.indexOf('.eval(')
+    }
+  }
+
+  test('all four raise/eval calls exist in the real (comment-stripped) source', () => {
+    const props = aboutTrayRaiseProperties(loadMainRsCode())
+    expect(props.unminimizeIdx).toBeGreaterThan(-1)
+    expect(props.showIdx).toBeGreaterThan(-1)
+    expect(props.focusIdx).toBeGreaterThan(-1)
+    expect(props.evalIdx).toBeGreaterThan(-1)
+  })
+
+  test('LOAD-BEARING ORDERING: unminimize, then show, then set_focus, then the eval LAST -- the window must already be up when the modal mounts', () => {
+    const props = aboutTrayRaiseProperties(loadMainRsCode())
+    expect(props.unminimizeIdx).toBeLessThan(props.showIdx)
+    expect(props.showIdx).toBeLessThan(props.focusIdx)
+    expect(props.focusIdx).toBeLessThan(props.evalIdx)
+  })
+
+  test('SELF-TEST (RED direction): the exact HEAD form (get_webview_window + eval only) has no raise calls at all', () => {
+    const headForm = [
+      'fn open_about_window_from_tray(app: &AppHandle) {',
+      '    let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {',
+      '        eprintln!("[shell] WARN: tray About: no window -- skipping");',
+      '        return;',
+      '    };',
+      '    if let Err(e) = window.eval("window.api?.showAboutWindow?.()") {',
+      '        eprintln!("[shell] WARN: tray About: eval failed ({e})");',
+      '    }',
+      '}'
+    ].join('\n')
+    const props = aboutTrayRaiseProperties(headForm)
+    expect(props.unminimizeIdx).toBe(-1)
+    expect(props.showIdx).toBe(-1)
+    expect(props.focusIdx).toBe(-1)
+    // The eval itself is unchanged by this fix and must still be found.
+    expect(props.evalIdx).toBeGreaterThan(-1)
+  })
+
+  test('SELF-TEST (RED direction): raise calls placed AFTER the eval fail the ordering chain', () => {
+    const regressedOrder = [
+      'fn open_about_window_from_tray(app: &AppHandle) {',
+      '    let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else { return; };',
+      '    if let Err(e) = window.eval("window.api?.showAboutWindow?.()") {',
+      '        eprintln!("[shell] WARN: tray About: eval failed ({e})");',
+      '    }',
+      '    let _ = window.unminimize();',
+      '    let _ = window.show();',
+      '    let _ = window.set_focus();',
+      '}'
+    ].join('\n')
+    const props = aboutTrayRaiseProperties(regressedOrder)
+    // All four calls exist, but the eval is FIRST -- the ordering chain must not hold.
+    expect(props.evalIdx).toBeGreaterThan(-1)
+    expect(
+      props.unminimizeIdx < props.showIdx &&
+        props.showIdx < props.focusIdx &&
+        props.focusIdx < props.evalIdx
+    ).toBe(false)
+  })
+
+  test('SELF-TEST (RED direction, comment-stripping is load-bearing): a doc comment merely NAMING unminimize/show/set_focus does not satisfy the gate', () => {
+    // The corrected doc comment (Task 2) will name all three calls in prose above the fn. This
+    // proves the stripping does work, rather than the gate passing on the comment the next task
+    // is about to write.
+    const proseOnly = [
+      '/// This raises the window by calling unminimize(), then show(), then set_focus(),',
+      '/// before the eval below runs, per fix 260907-9co.',
+      'fn open_about_window_from_tray(app: &AppHandle) {',
+      '    let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else { return; };',
+      '    if let Err(e) = window.eval("window.api?.showAboutWindow?.()") {',
+      '        eprintln!("[shell] WARN: tray About: eval failed ({e})");',
+      '    }',
+      '}'
+    ].join('\n')
+    const props = aboutTrayRaiseProperties(loadMainRsCode(proseOnly))
+    expect(props.unminimizeIdx).toBe(-1)
+    expect(props.showIdx).toBe(-1)
+    expect(props.focusIdx).toBe(-1)
+  })
+})
