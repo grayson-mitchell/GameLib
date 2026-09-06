@@ -5012,7 +5012,15 @@ hardcoded-string gate's scope artifact untrustworthy. Scope is `meta/` plus
   violations.
 
 **Depends on:** Phase 40
-**Plans:** 5 plans in 2 waves
+**Plans:** 7 plans — 41-01..41-05 executed in 3 waves (planned as 2; 41-03 was resequenced behind
+41-01 by `36832a3df` to close a shared-tree race), plus gap-closure plans 41-06 and 41-07 added
+2026-09-06 after verification returned `gaps_found` at 8/10 must-haves with 2 blockers, both in
+`meta/lintTranslations.ts`. 41-06 (wave 1) closes GAP-1 (a corrupt English catalog crashes the run
+uncaught, at two call sites — `:569` and `missingPairs()` at `:323`, the second found during
+gap planning and not named by the verification) and GAP-2 (the baseline-drift check `continue`s
+silently, a fail-open newly introduced by 41-05 inside the module REQ-41-02 rewrote to eliminate
+fail-opens). 41-07 (wave 2, depends on 41-06) is review-derived and optional: it hardens the CLI
+guard and rewrites R5, a delivered test that cannot fail.
 
 **Closes three pending todos:**
 - `.planning/todos/pending/2026-09-03-lint-translations-is-structurally-blind-to-an-absent-key.md`
