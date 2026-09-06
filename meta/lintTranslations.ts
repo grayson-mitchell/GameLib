@@ -732,12 +732,39 @@ function main(): void {
   }
 }
 
-// This script is run via `node meta/runTs.cjs` (package.json
-// `lint-translations`), which DOES set `require.main` -- but this module is
-// also imported directly by its jest suite, so the usual
-// `require.main === module` idiom would run this at import time under test
-// too. JEST_WORKER_ID is set by Jest for every worker (including
-// --runInBand).
-if (!process.env.JEST_WORKER_ID) {
+// Gap-closure plan 41-07 (CR-03): this comment previously claimed that the
+// standard `require.main === module` idiom "would run this at import time
+// under test too," and used that claim to justify relying on
+// JEST_WORKER_ID alone. That claim was measured false, independently, by
+// both this phase's code reviewer and its verifier: under this repo's
+// ts-jest transform, a module required from inside a test file sees
+// `require.main` resolve to the TEST FILE's own module, not to this
+// module -- so `require.main === module` is `false` here under jest, and
+// the idiom was safe all along (see 41-REVIEW.md CR-03, 41-VERIFICATION.md
+// WR-01, and this plan's own re-measurement in 41-07-SUMMARY.md).
+//
+// `require.main === module` is ADDED, not substituted for JEST_WORKER_ID,
+// because of a second, separate fact: this script is invoked as
+// `node meta/runTs.cjs ... meta/lintTranslations.ts` (package.json
+// `lint-translations`), and runTs.cjs compiles the entry with esbuild
+// `--bundle` before spawning `node <outfile>`. Bundling collapses every
+// source module into the OUTFILE's single module scope, so inside that
+// bundle `require.main === module` is `true` regardless of which source
+// file this top-level code originally lived in -- `require.main ===
+// module` alone cannot refuse a bundled import of this module by some
+// other entry point. JEST_WORKER_ID covers that hole; `require.main ===
+// module` in turn covers a hole JEST_WORKER_ID never did: a non-bundled,
+// non-jest import (a direct require() of a transpiled copy, an ad-hoc
+// script) that reaches this file outside both the CLI bundle and jest.
+// Neither condition is redundant with the other.
+//
+// Both conditions gate the ONLY filesystem-writing branch in this module:
+// main()'s LINT_TRANSLATIONS_WRITE_BASELINE=1 path overwrites the committed
+// meta/i18nCatalogPresenceBaseline.json. This project has a recorded
+// incident where importing a different meta script (genI18nGateScope.ts,
+// which has no entry-point guard) ran its main and overwrote the artifact
+// it was supposed to be measuring -- this guard exists to keep this module
+// out of that same bug class.
+if (require.main === module && !process.env.JEST_WORKER_ID) {
   main()
 }

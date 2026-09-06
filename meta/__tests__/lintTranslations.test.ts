@@ -259,25 +259,60 @@ describe('lintTranslations (REQ-41-02)', () => {
   })
 
   // R5 -- import purity: the module must be safe to import under jest.
-  // Re-require it fresh (jest.resetModules) with a process.exit spy already
-  // installed BEFORE the require call, so the spy genuinely observes the
-  // import event itself rather than a stale one from file-load time. The
-  // "no filesystem walk of public/locales" half of this behaviour is
-  // structural, not separately spied: the top-level readdirSync() walk and
-  // main() both live behind the same `!process.env.JEST_WORKER_ID` guard
-  // Task 1 introduced, so proving process.exit was never called is proof
-  // that main() -- and therefore the walk it triggers -- never ran either.
-  it('REQ-41-02: importing the module performs no side effects (no process.exit on import)', async () => {
+  // Re-require it fresh (jest.resetModules) with a console.log spy already
+  // installed BEFORE the import call, so the spy genuinely observes the
+  // import event itself rather than a stale one from file-load time.
+  //
+  // Gap-closure plan 41-07 (WR-01): this test previously spied only on
+  // process.exit, and reasoned that "process.exit was not called" proves
+  // main() never ran. That inference is false: main() calls process.exit(1)
+  // only when hardFailures.length > 0, and hard failures are zero against
+  // the committed tree -- so main() running to completion and main() never
+  // running are BOTH observationally silent to a process.exit spy. That
+  // made the old assertion incapable of failing; it was measured passing
+  // even when the entry-point guard was replaced with a bare, unconditional
+  // `main()` call (see 41-07-SUMMARY.md for the verbatim measurement).
+  //
+  // The rewritten assertion instead observes a side effect main() ALWAYS
+  // produces on its normal (non-write-baseline) path: an unconditional
+  // `console.log('lint-translations[...]: N findings, M hard failures')`
+  // summary line, printed regardless of whether hardFailures is zero. The
+  // absence of any console.log call containing 'lint-translations[' is
+  // therefore direct evidence main() did not run at import time --
+  // LINT_TRANSLATIONS_WRITE_BASELINE is explicitly unset for the duration
+  // (saved/restored in a finally, matching R15's pattern) so the import
+  // cannot land on main()'s other, summary-line-free exit path and produce
+  // a false pass. The process.exit spy is kept as a second, narrower
+  // assertion, not as the proof.
+  it('REQ-41-02: importing the module performs no side effects (no main() run on import)', async () => {
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((
       code?: number
     ) => {
       throw new Error(`process.exit(${String(code)}) called during import`)
     }) as unknown as (code?: number) => never)
 
-    jest.resetModules()
-    await expect(import('../lintTranslations')).resolves.toBeDefined()
+    const originalEnv = process.env.LINT_TRANSLATIONS_WRITE_BASELINE
+    delete process.env.LINT_TRANSLATIONS_WRITE_BASELINE
+    try {
+      jest.resetModules()
+      await expect(import('../lintTranslations')).resolves.toBeDefined()
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env.LINT_TRANSLATIONS_WRITE_BASELINE
+      } else {
+        process.env.LINT_TRANSLATIONS_WRITE_BASELINE = originalEnv
+      }
+    }
+
+    const summaryLineCalls = logSpy.mock.calls.filter(
+      (call) =>
+        typeof call[0] === 'string' && call[0].includes('lint-translations[')
+    )
+    expect(summaryLineCalls).toHaveLength(0)
     expect(exitSpy).not.toHaveBeenCalled()
 
+    logSpy.mockRestore()
     exitSpy.mockRestore()
   })
 
