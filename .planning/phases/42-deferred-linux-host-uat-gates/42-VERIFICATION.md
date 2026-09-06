@@ -2,7 +2,7 @@
 phase: 42-deferred-linux-host-uat-gates
 verified: null
 status: human_needed
-score: N/A — collection phase, no must-haves. 0 items as of 2026-09-06 (file just created by plan 38-01, Task 1; items land in Task 2 of the same plan).
+score: N/A — collection phase, no must-haves. 5 items as of 2026-09-06 (plan 38-01, Task 2): 38-W05, 38-S04, 38-S10, 38-S12 relocated from Phase 38, plus 38-S17 minted from the 38-S16 split. Confirmed at the tool: `audit-uat` reports by_phase["42"] == 5.
 audit_tool_note: >
   `status` MUST stay `human_needed`. `gsd-sdk query audit-uat` admits a VERIFICATION.md when
   status is `human_needed` OR `gaps_found`, but `parseVerificationItems` only emits items when
@@ -53,7 +53,89 @@ relocation_rules: >
   (4) Items are split at their branch boundary, never compounded. A compound item resolves to a
   single pass/fail and the un-run half disappears.
 
-human_verification: []
+human_verification:
+  - id: "38-W05"
+    test: "Smoke-launch the CI-produced LINUX installer artifact. Download the AppImage from the `release-tauri.yml` workflow run for the commit under gate, mark it executable, and launch it."
+    expected: "The AppImage launches directly (no separate install step, per D-11/D-12's AppImage-only decision). A window appears, and the process survives at least 10 seconds without crashing — the same bar `35-LIVE-GATE.md` criterion 1 applies to the macOS artifact."
+    why_human: "Requires a Linux host. Same gap as 38-W04: `release-tauri.yml` builds and uploads the AppImage but never executes it."
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
+    platform_gate: "src-tauri/tauri.conf.json `bundle.targets` includes `appimage` — an AppImage binary cannot execute on macOS at all; this is a binary-format boundary, not an unreached code branch."
+    origin_phase: "35"
+    origin_item: "35-19 Task 2, option-c"
+    reduction_note: >
+      THIS ITEM IS A RECORDED SCOPE REDUCTION AGAINST D-16, NOT A ROUTINE DEFERRAL. Same reduction
+      as 38-W04, for the Linux leg specifically — D-16 said "artifacts plus a smoke launch"; Phase
+      35 closed on artifact production alone for this leg. See `35-LIVE-GATE.md`'s Windows/Linux
+      disposition section and `REQUIREMENTS.md` REQ-35-20.
+    prior_state: >
+      Never attempted. Same `35-PREFLIGHT.md` OQ-4 / D-00c basis as 38-W04.
+    relocation_history: >
+      Filed in Phase 38 on its original date (see origin_phase/origin_item above);
+      relocated to Phase 42 on 2026-09-06 by plan 38-01 under D-38-08, reason "one host
+      per item; Phase 38 retains Windows plus controller only".
+  - id: "38-S04"
+    test: "Steam quick install on a LINUX host, tauri runtime — native installs OFF, or ON with <=1 library. Click the PRIMARY half of Install."
+    expected: "NOTHING opens — no dialog, modal, overlay or picker, no flash-and-close."
+    why_human: "Requires a Linux host. On Linux the platform row does not render at all (D-18), a branch unreachable on macOS."
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-QUICK-LINUX / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+    relocation_history: >
+      Filed in Phase 38 on its original date (see origin_phase/origin_item above);
+      relocated to Phase 42 on 2026-09-06 by plan 38-01 under D-38-08, reason "one host
+      per item; Phase 38 retains Windows plus controller only".
+  - id: "38-S10"
+    test: "Section-gating matrix row 7 on a LINUX host, tauri runtime — native installs OFF, or ON with <=1 library."
+    expected: "The platform row does NOT render at all (D-18); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). All four checked independently."
+    why_human: "Requires a Linux host. 'Platform row absent' is a distinct state from 'platform row present but read-only' and cannot be produced on macOS or Windows."
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-7 / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+    relocation_history: >
+      Filed in Phase 38 on its original date (see origin_phase/origin_item above);
+      relocated to Phase 42 on 2026-09-06 by plan 38-01 under D-38-08, reason "one host
+      per item; Phase 38 retains Windows plus controller only".
+  - id: "38-S12"
+    test: "Section-gating matrix row 8 on a LINUX host, tauri runtime — hasChoice (native installs ON and >1 library)."
+    expected: "The platform row does NOT render (D-18); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
+    why_human: "Requires a Linux host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
+    blocked_by: "machine switch + setup -- boot the Linux machine (OWNED and available), then register a SECOND Steam library on it"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-8 / tauri (34.13-UAT.md)"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's only
+      host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once
+      every macOS-runnable row was resolved (44 PASS / 0 FAIL).
+    relocation_history: >
+      Filed in Phase 38 on its original date (see origin_phase/origin_item above);
+      relocated to Phase 42 on 2026-09-06 by plan 38-01 under D-38-08, reason "one host
+      per item; Phase 38 retains Windows plus controller only".
+  - id: "38-S17"
+    test: "Content-light notice COPY and container, tauri runtime — scored on matrix row 7 (Linux) only."
+    expected: "The notice renders in an `.infoBox`, NOT in ThirdPartyDialog's `.noticeIcon`/`.noticeInfo`. Copy must match the catalogue EXACTLY, per branch: native installs OFF -> gamelib:steam.install.contentLightNotice; native installs ON with <=1 library -> gamelib:steam.install.contentLightSingleLibraryNotice. Verify against public/locales/en/gamelib.json, never by eye."
+    why_human: "Requires a Linux host, since the row is scored on matrix row 7."
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow`'s `'absent'` branch requires `input.hostPlatform` to be NEITHER `'darwin'` NOR `'win32'` (i.e. Linux, or any unrecognised host); on macOS or Windows this branch is unreachable by construction."
+    origin_phase: "34.13"
+    origin_item: "G-D20-Q6-COPY / tauri (34.13-UAT.md) - Linux row-7 half"
+    split_from: "38-S16"
+    prior_state: >
+      Pending in 34.13's ledger from 2026-08-15 to 2026-08-28. Never attempted: this project's
+      only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate
+      close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL). Minted
+      2026-09-06 by plan 38-01 (D-38-11) as the Linux row-7 half of 38-S16, which stays in
+      Phase 38 narrowed to the Windows row-5 half only.
 
 human_verification_discharged: []
 ---
