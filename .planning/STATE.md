@@ -4,12 +4,12 @@ milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
 stopped_at: Phase 38 context gathered
-last_updated: "2026-09-06T01:49:46.523Z"
-last_activity: "2026-08-25 -- Phase 34.16 LIVE GATE SCORED: **VERDICT FAIL**, 1 passed / 1 failed / 4 not attempted. RUN ATTEMPT 2 = run 32817077782, after the developer pushed the 249-commit feature branch and re-pushed the workflow blob. Attempt 1s three findings ALL CLEARED (A resolved, B fixed by fa231e3dc, C resolved) -- the ref guard ran and PASSED, printing its confirmation naming the ref. Item 1 PASS with 3 recorded deviations. Item 2 FAIL at §8 criterion 3: the arm64 leg concluded failure at "Build the three onedir runners"; x64 never dequeued. Items 3-6 NOT ATTEMPTED (§13 ordering). BLOCKER **F-34.16-D**: legendary 0.21.0 migrated its build to `uv run --module PyInstaller`, but `extractUpstreamPyinstallerCommand` (meta/buildRunnersOnedir.ts, written 2026-08-07) requires the first token to be literally `pyinstaller`. The 2026-08-22 runner bump 0034ad265 invalidated the extraction contract with NO tripwire, and this build path had never run in CI so nothing caught it. legendary ONLY -- gogdl v1.3.0 and nile v1.2.0 still use bare `run: pyinstaller`. Open sub-question: the replaced pin 0.20.43 resolves to NO TAG upstream today. Also F-34.16-E (gate §7 criterion 4 hardcodes `A`, aborts on the CORRECT `M` for a mandated re-push) and F-34.16-F (attempt 2 skipped the §6 re-capture; Preconditions record a superseded sha). NEXT: /gsd-plan-phase 34.16 --gaps -- widen the extractor + add a version-drift tripwire. That is Phase 34.9 code, NOT plan 34.16-06s to author."
+last_updated: "2026-09-06T02:30:00.946Z"
+last_activity: 2026-09-06 -- Phase 38 planning complete
 progress:
   total_phases: 37
   completed_phases: 32
-  total_plans: 472
+  total_plans: 479
   completed_plans: 460
   percent: 86
 ---
@@ -189,7 +189,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > start and `.old` is overwritten by the next. Both legs are now preserved as
 > `~/Library/Logs/GameLib/gamelib.log.35-02-ab-{electron,tauri-part1}`. **Copy the log at the end of
 > each leg of any future A/B or gate run.**
-> **Status:** Executing Phase 35
+> **Status:** Ready to execute
 >
 > Worktree isolation is DISABLED project-wide (`workflow.use_worktrees=false`), so all 19 plans
 > execute SEQUENTIALLY on the main working tree regardless of `parallelization: true`. There are
@@ -1116,7 +1116,7 @@ set-difference (CR-01, WR-01, WR-02, IN-01, IN-02 landed via 34.9-18..21; IN-03 
 UNPROVEN), corrected the overclaiming "automated tripwire ... cannot go silent again" prose in
 `34.9-LIVE-GATE-RERUN.md`, ROADMAP.md and REQUIREMENTS.md to carry that same scope in every passage,
 and reconciled ROADMAP.md's duplicate `34.9-17` row. See `34.9-22-SUMMARY.md`.
-Status: Executing Phase 34.16
+Status: Ready to execute
 the ledger this plan's own truth-8 gap named as missing, but this plan does not itself re-score that
 verification report. **Next step: `/gsd-verify-work 34.9`**, to re-score truth 8 against this
 landed evidence. The phase does not close until that re-verification runs.
@@ -3941,7 +3941,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-08-25 -- Phase 34.16 LIVE GATE SCORED: **VERDICT FAIL**, 1 passed / 1 failed / 4 not attempted. RUN ATTEMPT 2 = run 32817077782, after the developer pushed the 249-commit feature branch and re-pushed the workflow blob. Attempt 1s three findings ALL CLEARED (A resolved, B fixed by fa231e3dc, C resolved) -- the ref guard ran and PASSED, printing its confirmation naming the ref. Item 1 PASS with 3 recorded deviations. Item 2 FAIL at §8 criterion 3: the arm64 leg concluded failure at "Build the three onedir runners"; x64 never dequeued. Items 3-6 NOT ATTEMPTED (§13 ordering). BLOCKER **F-34.16-D**: legendary 0.21.0 migrated its build to `uv run --module PyInstaller`, but `extractUpstreamPyinstallerCommand` (meta/buildRunnersOnedir.ts, written 2026-08-07) requires the first token to be literally `pyinstaller`. The 2026-08-22 runner bump 0034ad265 invalidated the extraction contract with NO tripwire, and this build path had never run in CI so nothing caught it. legendary ONLY -- gogdl v1.3.0 and nile v1.2.0 still use bare `run: pyinstaller`. Open sub-question: the replaced pin 0.20.43 resolves to NO TAG upstream today. Also F-34.16-E (gate §7 criterion 4 hardcodes `A`, aborts on the CORRECT `M` for a mandated re-push) and F-34.16-F (attempt 2 skipped the §6 re-capture; Preconditions record a superseded sha). NEXT: /gsd-plan-phase 34.16 --gaps -- widen the extractor + add a version-drift tripwire. That is Phase 34.9 code, NOT plan 34.16-06s to author.
+Last activity: 2026-09-06 -- Phase 38 planning complete
 defects**. (1) Console Mode's `getActionButtonLabel`/`getBackButtonLabel`
 (`ConsoleMode/controller.ts`) branched only on `layout.startsWith('ps')`, so the `'nintendo'` layout
 that `detectControllerLayout()` already returns fell through to the Xbox default. Chromium's standard
