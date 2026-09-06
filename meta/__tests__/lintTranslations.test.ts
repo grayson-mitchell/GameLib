@@ -532,26 +532,32 @@ describe('comparePresenceBaseline (REQ-41-01)', () => {
 
     const scratchDir = mkdtempSync(join(tmpdir(), 'presence-baseline-'))
     try {
-      // (a) Shrink a COPY: delete one real, genuinely-still-missing pair
-      // from the baseline. Live still has it missing, the copy no longer
-      // records it -- the comparison must report it as `added` (a new
-      // blind spot relative to that copy).
-      const shrunk = JSON.parse(JSON.stringify(committed)) as typeof committed
-      const firstKey = Object.keys(shrunk.missing).sort()[0]
-      const removedLocale = [...shrunk.missing[firstKey]].sort()[0]
-      shrunk.missing[firstKey] = shrunk.missing[firstKey].filter(
-        (locale) => locale !== removedLocale
-      )
-      if (shrunk.missing[firstKey].length === 0) delete shrunk.missing[firstKey]
-      shrunk.totalPairs -= 1
-      const shrunkPath = join(scratchDir, 'shrunk.json')
-      writeFileSync(shrunkPath, JSON.stringify(shrunk))
+      // (a) Shrink direction: a baseline that does NOT record a pair that
+      // is genuinely still missing live must be reported as `added` (a new
+      // blind spot). Built on an isolated fixture locales tree (never
+      // `public/locales`) rather than deleting an entry from the real
+      // committed baseline's `missing` map -- REQ-41-01's intended end
+      // state is that map going to `{}` once every real gap is filled
+      // (see quick task 260906-u8i), and this direction of R14 must stay
+      // testable regardless of whether the real tree currently has ANY
+      // gaps of its own.
+      withFixtureLocales((fixtureLocalesPath) => {
+        writeCatalog(fixtureLocalesPath, 'en', 'gamelib', { greeting: 'hi' })
+        writeCatalog(fixtureLocalesPath, 'xx', 'gamelib', {})
 
-      const diffShrunk = comparePresenceBaseline('public/locales', shrunkPath)
-      expect(diffShrunk.added.length).toBeGreaterThan(0)
-      expect(diffShrunk.added).toEqual(
-        expect.arrayContaining([{ locale: removedLocale, key: firstKey }])
-      )
+        const shrunkBaseline = { namespace: 'gamelib', missing: {} }
+        const shrunkPath = join(scratchDir, 'shrunk.json')
+        writeFileSync(shrunkPath, JSON.stringify(shrunkBaseline))
+
+        const diffShrunk = comparePresenceBaseline(
+          fixtureLocalesPath,
+          shrunkPath
+        )
+        expect(diffShrunk.added.length).toBeGreaterThan(0)
+        expect(diffShrunk.added).toEqual(
+          expect.arrayContaining([{ locale: 'xx', key: 'greeting' }])
+        )
+      })
 
       // (b) Grow a COPY: add a fabricated pair that is NOT actually
       // missing live (a locale/key pair that does not exist at all). The
