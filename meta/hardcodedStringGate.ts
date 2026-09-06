@@ -719,7 +719,19 @@ const TECHNICAL_DOM_API_METHOD_NAMES = new Set([
   // methods (`get`/`set`/`storeGet`/...), not the browser's native Web
   // Storage API.
   'getItem',
-  'setItem'
+  'setItem',
+  // Plan 41-02: `Element.closest()`'s argument is BY DEFINITION a CSS
+  // selector, never prose — `src/frontend/helpers/gamepad.ts`'s
+  // `el.closest('.MuiPopover-root')` (:405), `el.closest('.MuiDialog-root')`
+  // (:452), and `dialog...closest('.MuiDialog-root')` (:459), the only three
+  // real call sites this exempts. Deliberately the SAME method-name gate
+  // this set's existing `querySelector` entry uses, not a `.kebab-class`
+  // content-shape regex: a content-shape check would exempt that literal
+  // shape ANYWHERE in the 171-file blocking scope, whereas this entry
+  // cannot reach outside a `.closest(...)` call — the same file's
+  // `parent.querySelector<HTMLButtonElement>('.playIcon')` calls are
+  // already exempt through the same set, confirming the precedent.
+  'closest'
 ])
 
 function isTechnicalDomApiArgument(node: Node): boolean {
@@ -980,12 +992,23 @@ function templateExpressionLiteralText(node: Node): string {
  *     parameter such as `{ t }: ReportRepairFailureOptions` — because both
  *     shapes are `ObjectBindingPattern` nodes in the AST regardless of
  *     whether their parent is a `VariableDeclaration` or a `Parameter`.
- *   - Any (non-destructured) parameter whose declared type text contains
- *     `TFunction` adds its own name — this is what makes an aliased,
- *     directly-typed `TFunction` parameter (plan 07's retrofit of
- *     `copy.ts` to this shape) recognisable even when it is never seeded
- *     as the bare name `t`.
+ *   - Any (non-destructured) parameter whose declared type text matches
+ *     `T_FUNC_TYPE_RE` (`TFunction`, or the local `TFunc` alias) adds its
+ *     own name — this is what makes an aliased, directly-typed `TFunction`
+ *     parameter (plan 07's retrofit of `copy.ts` to this shape)
+ *     recognisable even when it is never seeded as the bare name `t`.
+ *     `chipLabels.ts` declares its own local
+ *     `export type TFunc = (key: string, defaultValue: string, options?) =>
+ *     string` and threads it through `resolveLabel(spec, t: TFunc, tGamelib:
+ *     TFunc)` — the parameter literally named `t` is already covered by the
+ *     bare-name seed above; only the aliased `tGamelib` needed this pass
+ *     widened from a bare `TFunction` substring test to also recognise
+ *     `TFunc`. Anchored with word boundaries (`/\bTFunc(tion)?\b/`), not a
+ *     substring test, so a lookalike type name (`TFuncKeyPrefix`, `NotTFunc`)
+ *     cannot slip through.
  */
+const T_FUNC_TYPE_RE = /\bTFunc(tion)?\b/
+
 export function collectTAliases(sourceFile: SourceFile): Set<string> {
   const aliases = new Set<string>(['t'])
 
@@ -1003,7 +1026,7 @@ export function collectTAliases(sourceFile: SourceFile): Set<string> {
 
     if (Node.isParameterDeclaration(node)) {
       const typeText = node.getTypeNode()?.getText() ?? ''
-      if (typeText.includes('TFunction')) {
+      if (T_FUNC_TYPE_RE.test(typeText)) {
         const paramNameNode = node.getNameNode()
         if (Node.isIdentifier(paramNameNode)) {
           aliases.add(paramNameNode.getText())

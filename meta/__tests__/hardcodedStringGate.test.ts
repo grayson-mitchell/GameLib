@@ -753,6 +753,37 @@ describe('hardcodedStringGate', () => {
         expect(result.violations).toHaveLength(1)
       })
     })
+
+    describe('technical DOM API arguments — Element.closest() (REQ-41-04, real helpers/gamepad.ts:405,452,459)', () => {
+      it('REQ-41-04: never flags a CSS selector argument to el.closest(...)', () => {
+        const source = `
+          function run(el: HTMLElement) {
+            return !!el.closest('.MuiDialog-root')
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('REQ-41-04: also exempts closest() on a non-DOM object sharing the method name — the accepted cost of a method-name gate, same as the pre-existing querySelector entry', () => {
+        const source = `
+          function run(someObject: { closest: (s: string) => unknown }) {
+            return someObject.closest('Please try again')
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('REQ-41-04: still flags the same CSS-selector-shaped literal OUTSIDE any call — the exemption is call-gated, not content-shaped', () => {
+        const source = "const x = '.MuiDialog-root'"
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+      })
+    })
   })
 
   describe('glossary exemption', () => {
@@ -940,6 +971,34 @@ describe('hardcodedStringGate', () => {
       `
       const result = scanSource('fixture.tsx', source, EMPTY_GLOSSARY)
       expect(result.violations.length).toBeGreaterThan(0)
+    })
+
+    it("REQ-41-04: recognises a parameter typed with the local `TFunc` alias — real FilterChipRow/chipLabels.ts's resolveLabel(spec, t: TFunc, tGamelib: TFunc)", () => {
+      const source = `
+        type TFunc = (key: string, defaultValue: string, options?: Record<string, unknown>) => string
+
+        function resolveLabel(spec: unknown, t: TFunc, tGamelib: TFunc) {
+          return tGamelib('gamelib:a.b', 'Hidden only')
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(0)
+
+      expect(collectTAliases(makeSourceFile(source))).toEqual(
+        new Set(['t', 'tGamelib'])
+      )
+    })
+
+    it('REQ-41-04: still flags calls through a parameter typed with an unrelated type name — the TFunc match is anchored, not a substring test', () => {
+      const source = `
+        type Other = (key: string, defaultValue: string) => string
+
+        function resolveLabel(spec: unknown, g: Other) {
+          return g('gamelib:a.b', 'Hidden only')
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      expect(result.violations).toHaveLength(2)
     })
   })
 
