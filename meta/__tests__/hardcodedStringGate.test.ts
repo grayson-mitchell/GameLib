@@ -1586,26 +1586,31 @@ describe('hardcodedStringGate', () => {
       })
     })
 
-    // WR-18 (quick 260827-vpl, DECISION 3) → widened by REQ-41-04 (41-02):
-    // facetLabels.ts, chipLabels.ts, and helpers/gamepad.ts are all listed
-    // in genI18nGateScope.test.ts's DECLARED_UNSCANNED_DEBT (a documented,
-    // comment-only exclusion from meta/i18nGateScope.json — NOT the D-18
-    // allowlist, which stays pinned at exactly 2 entries per T-34.8-30
-    // above). That leaves them with zero automated coverage beyond this
-    // block: no ratchet caught a regression, and nothing proved the 45
-    // violations (8 facetLabels.ts + 34 chipLabels.ts + 3 gamepad.ts)
-    // measured before 41-02's two feat commits (d399475bf, e0ff72ee4) were
-    // legitimate D-14/technical-token exemptions rather than an
-    // under-scanned gate. This block is that missing coverage. It runs the
-    // real gate over the three files in audit mode (`extraFiles`, scanned
-    // but not folded into the blocking `report.violations` above) so
-    // neither pinned config file (`meta/i18nGateScope.json`,
-    // `meta/i18nGateAllowlist.json`) needs to change size or content.
+    // REQ-41-04 (Plan 41-04), closing WR-18 (quick 260827-vpl, DECISION 3).
+    // facetLabels.ts, chipLabels.ts, and helpers/gamepad.ts are now IN
+    // meta/i18nGateScope.json (171 -> 174 files) and OUT of
+    // genI18nGateScope.test.ts's DECLARED_UNSCANNED_DEBT (44 -> 41). The
+    // arc: 46 violations measured before any fix (8 facetLabels.ts, 35
+    // chipLabels.ts, 3 gamepad.ts) -> Plan 41-02 widened the gate itself
+    // (the D-14 declaration-site exemption chain plus a `closest()`
+    // method-name check) so all three read 0, still in audit mode with the
+    // committed scope untouched (feat commits d399475bf, e0ff72ee4) -> this
+    // plan promotes all three into the BLOCKING scope, so a hardcoded
+    // literal added to any of them now fails CI by name instead of sitting
+    // behind an audit-mode `extraFiles` widening that nothing runs by
+    // default.
     //
-    // Since 41-02: all three files measure zero violations. facetLabels.ts
-    // and chipLabels.ts got there via the widened D-14 chain
-    // (`isKeyDefaultObjectProperty`, the ns-prefixed `DOTTED_KEY_RE`, and
-    // the local `TFunc` alias spelling); gamepad.ts got there via
+    // This block is no longer a ratchet over UNSCANNED debt — the top-level
+    // "scans the whole committed scope" test above already covers these
+    // three files as part of the 174. It stays as dedicated, per-file
+    // coverage so a regression names the exact file instead of vanishing
+    // into a whole-scope count, and so the structural-discard difference
+    // between gamepad.ts (`exempted: 0`, correctly) and the other two
+    // (`exempted > 0`) has a permanent, explained home.
+    //
+    // facetLabels.ts and chipLabels.ts got to zero via the widened D-14
+    // chain (`isKeyDefaultObjectProperty`, the ns-prefixed `DOTTED_KEY_RE`,
+    // and the local `TFunc` alias spelling); gamepad.ts via
     // `TECHNICAL_DOM_API_METHOD_NAMES` recognising `closest()` — a
     // *structural* non-candidate check (`isStructuralNonCandidate` →
     // `isTechnicalDomApiArgument`), same category as the two pre-existing
@@ -1618,18 +1623,22 @@ describe('hardcodedStringGate', () => {
     // exempt. W3 pins that zero rather than asserting a nonzero `exempted`
     // count uniformly, so a future reader does not "fix" it back to a
     // nonzero pin and reintroduce a false expectation.
-    describe('measured ratchet over facetLabels.ts / chipLabels.ts / helpers/gamepad.ts (WR-18, DECISION 3, quick 260827-vpl; widened by REQ-41-04)', () => {
+    //
+    // W4 ("no collateral outside the extraFiles") is retired: it was a
+    // property of audit mode, where a widened `extraFiles` set could in
+    // principle leak violations onto files never asked for. Now that all
+    // three are permanent members of the blocking scope, the suite's
+    // existing `expect(report.violations).toHaveLength(0)` over the WHOLE
+    // scope already subsumes it — a passing whole-scope assertion with zero
+    // violations anywhere already proves no collateral exists.
+    describe('REQ-41-04: facetLabels.ts, chipLabels.ts, helpers/gamepad.ts in blocking scope (WR-18 origin, quick 260827-vpl; widened by 41-02; promoted by 41-04)', () => {
       const FACET_FILE = 'src/frontend/screens/Library/facetLabels.ts'
       const CHIP_FILE =
         'src/frontend/screens/Library/components/FilterChipRow/chipLabels.ts'
       const GAMEPAD_FILE = 'src/frontend/helpers/gamepad.ts'
       const ALL_FILES = [FACET_FILE, CHIP_FILE, GAMEPAD_FILE]
 
-      function auditReport() {
-        return scanScope({ extraFiles: ALL_FILES })
-      }
-
-      it('W1: none of the three files has been quietly folded into the committed scope or the D-18 allowlist — this ratchet is their only coverage', () => {
+      it('W1: all three files are now in the committed blocking scope and remain OUT of the D-18 allowlist — a false positive belongs in neither the debt register nor the allowlist', () => {
         const realScope = JSON.parse(
           readFileSync('meta/i18nGateScope.json', 'utf-8')
         ) as { files: string[] }
@@ -1639,13 +1648,13 @@ describe('hardcodedStringGate', () => {
         const allowlistFiles = realAllowlist.map((entry) => entry.file)
 
         for (const file of ALL_FILES) {
-          expect(realScope.files).not.toContain(file)
+          expect(realScope.files).toContain(file)
           expect(allowlistFiles).not.toContain(file)
         }
       })
 
-      it('W2: measured violation counts are all zero, post-41-02 — before 41-02 these were 8 (facetLabels.ts), 34 (chipLabels.ts), and 3 (gamepad.ts), 45 total, removed by d399475bf and e0ff72ee4; a regression here means someone added a hardcoded literal (or narrowed an exemption) without re-measuring', () => {
-        const report = auditReport()
+      it('W2: the BLOCKING report attributes zero violations to any of the three, post-41-02/41-04 — before 41-02 these were 8 (facetLabels.ts), 35 (chipLabels.ts), and 3 (gamepad.ts), 46 total, removed by d399475bf and e0ff72ee4, then promoted from audit mode into this same blocking report by 41-04; a regression here means someone added a hardcoded literal (or narrowed an exemption) without re-measuring', () => {
+        const report = scanScope()
 
         for (const file of ALL_FILES) {
           const violations = report.violations.filter((v) => v.file === file)
@@ -1680,16 +1689,6 @@ describe('hardcodedStringGate', () => {
 
         expect(gamepadResult.violations).toHaveLength(0)
         expect(gamepadResult.exempted).toBe(0)
-      })
-
-      it('W4: no collateral — every violation the audit scan finds for these three extraFiles is attributed to one of them, never a fourth file', () => {
-        const report = auditReport()
-
-        const outside = report.violations.filter(
-          (v) => !ALL_FILES.includes(v.file)
-        )
-
-        expect(outside).toHaveLength(0)
       })
 
       // Non-vacuity: prove this ratchet can actually fail. Uses the same
