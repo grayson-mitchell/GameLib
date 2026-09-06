@@ -70,7 +70,20 @@ describe('lintTranslations (REQ-41-02)', () => {
       expect(result.hardFailures).toHaveLength(1)
       expect(result.hardFailures[0]).toEqual(expect.stringContaining('xx'))
       expect(result.hardFailures[0]).toEqual(expect.stringContaining('gamelib'))
-      expect(result.findings).toHaveLength(0)
+
+      // Gap-closure plan 41-06 (GAP-2, REQ-41-01): this fixture's localesPath
+      // is a non-canonical mkdtempSync tree, so it now ALSO receives one
+      // presence-baseline-drift-skip finding (R20a proves this diagnostic
+      // directly). That is a strengthening, not a regression: partition the
+      // findings and assert the skip diagnostic is present, then assert R1's
+      // original claim -- zero findings OTHER than the skip diagnostic --
+      // over the remainder. Suppressing the diagnostic to keep this test
+      // quiet would recreate the exact fail-open this plan closes.
+      const skips = result.findings.filter((f) =>
+        f.includes('presence baseline drift check skipped')
+      )
+      expect(skips).toHaveLength(1)
+      expect(result.findings.filter((f) => !skips.includes(f))).toHaveLength(0)
 
       // Evidence this is a genuine RED proof, not an assumption: Task 1
       // (this same plan) already replaced the pre-refactor
@@ -119,11 +132,27 @@ describe('lintTranslations (REQ-41-02)', () => {
 
       const result = lintTranslations({ localesPath, namespaces: ['gamelib'] })
 
-      expect(result.findings).toHaveLength(0)
+      // Gap-closure plan 41-06 (GAP-2, REQ-41-01): this fixture's localesPath
+      // is a non-canonical mkdtempSync tree, so it now ALSO receives one
+      // presence-baseline-drift-skip finding (R20a proves this diagnostic
+      // directly). Strengthened, not weakened: partition the findings,
+      // assert the skip diagnostic is present, and keep the ORIGINAL
+      // out-of-scope-namespace claim ("login" never appears anywhere)
+      // applied to the non-skip findings, so it stays a statement about
+      // catalog reads rather than being satisfied by the skip message's own
+      // vocabulary.
+      const skips = result.findings.filter((f) =>
+        f.includes('presence baseline drift check skipped')
+      )
+      expect(skips).toHaveLength(1)
+      expect(result.findings.filter((f) => !skips.includes(f))).toHaveLength(0)
       expect(result.hardFailures).toHaveLength(0)
 
-      const text = [...result.findings, ...result.hardFailures].join('\n')
-      expect(text).not.toEqual(expect.stringContaining('login'))
+      const nonSkipText = [
+        ...result.findings.filter((f) => !skips.includes(f)),
+        ...result.hardFailures
+      ].join('\n')
+      expect(nonSkipText).not.toEqual(expect.stringContaining('login'))
     })
   })
 
@@ -518,6 +547,90 @@ describe('comparePresenceBaseline (REQ-41-01)', () => {
     // Never touched the committed baseline itself.
     const stillCommitted = readFileSync(PRESENCE_BASELINE_PATH, 'utf8')
     expect(JSON.parse(stillCommitted)).toEqual(committed)
+  })
+})
+
+describe('presence baseline drift skip diagnostics (REQ-41-01, gap-closure 41-06)', () => {
+  // R19a -- an absent baseline (injected via opts.baselinePath, NEVER the
+  // committed artifact) makes the gate say so, rather than disabling drift
+  // detection in silence.
+  it('R19a: an absent (injected) baseline path emits exactly one named skip finding', () => {
+    const scratchDir = mkdtempSync(join(tmpdir(), 'presence-baseline-absent-'))
+    try {
+      const nonexistentBaselinePath = join(scratchDir, 'no-such-baseline.json')
+
+      const result = lintTranslations({
+        localesPath: 'public/locales',
+        namespaces: ['gamelib'],
+        baselinePath: nonexistentBaselinePath
+      })
+
+      const skips = result.findings.filter((f) =>
+        f.includes('presence baseline drift check skipped')
+      )
+      expect(skips).toHaveLength(1)
+      expect(skips[0]).toEqual(expect.stringContaining('gamelib'))
+      expect(skips[0]).toEqual(expect.stringContaining(nonexistentBaselinePath))
+      expect(result.hardFailures).toHaveLength(0)
+    } finally {
+      rmSync(scratchDir, { recursive: true, force: true })
+    }
+  })
+
+  // R19b -- non-vacuity of R19a: the negative half of the pair. Omitting
+  // baselinePath entirely resolves to the real committed PRESENCE_BASELINE_PATH
+  // and drift detection actually runs -- no skip finding.
+  it('R19b: omitting baselinePath resolves to the committed baseline and emits no skip finding', () => {
+    const result = lintTranslations({
+      localesPath: 'public/locales',
+      namespaces: ['gamelib']
+    })
+
+    const skips = result.findings.filter((f) =>
+      f.includes('presence baseline drift check skipped')
+    )
+    expect(skips).toHaveLength(0)
+  })
+
+  // R20a -- a non-canonical localesPath (a fixture tree, as every other test
+  // in this file uses) makes the gate say so, rather than disabling drift
+  // detection in silence.
+  it('R20a: a non-canonical localesPath emits exactly one named skip finding for the fork-owned namespace', () => {
+    withFixtureLocales((localesPath) => {
+      writeCatalog(localesPath, 'en', 'gamelib', { greeting: 'hi' })
+      writeCatalog(localesPath, 'xx', 'gamelib', { greeting: 'hi' })
+
+      const result = lintTranslations({ localesPath, namespaces: ['gamelib'] })
+
+      const skips = result.findings.filter((f) =>
+        f.includes('presence baseline drift check skipped')
+      )
+      expect(skips).toHaveLength(1)
+      expect(skips[0]).toEqual(expect.stringContaining('gamelib'))
+      expect(skips[0]).toEqual(expect.stringContaining(localesPath))
+      expect(skips[0]).toEqual(expect.stringContaining('public/locales'))
+    })
+  })
+
+  // R20b -- non-vacuity of R20a: the same non-canonical fixture path with an
+  // UPSTREAM namespace in scope emits no skip finding, proving the emission
+  // is gated to fork-owned namespaces and adds no noise to a full-namespace
+  // run (the D-15 silent branch).
+  it('R20b: the same non-canonical fixture with an upstream namespace emits no skip finding', () => {
+    withFixtureLocales((localesPath) => {
+      writeCatalog(localesPath, 'en', 'translation', { hello: 'hi' })
+      writeCatalog(localesPath, 'xx', 'translation', { hello: 'salut' })
+
+      const result = lintTranslations({
+        localesPath,
+        namespaces: ['translation']
+      })
+
+      const skips = result.findings.filter((f) =>
+        f.includes('presence baseline drift check skipped')
+      )
+      expect(skips).toHaveLength(0)
+    })
   })
 })
 

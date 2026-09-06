@@ -100,6 +100,13 @@ type CatalogRecord = Record<string, unknown>
 export interface LintOptions {
   localesPath: string
   namespaces: Namespace[]
+  // REQ-41-01, gap-closure plan 41-06: the presence baseline this run
+  // compares against. Defaults to the committed PRESENCE_BASELINE_PATH.
+  // Injectable so the "baseline is absent" boundary is testable without
+  // moving, renaming or deleting the committed artifact -- this project has
+  // a recorded incident of a test clobbering a real artifact, and R13/R14/
+  // R15 all read this file's real bytes.
+  baselinePath?: string
 }
 
 export interface LintResult {
@@ -618,8 +625,17 @@ export function lintTranslations(opts: LintOptions): LintResult {
   // reality) are both hardFailures: a baseline can drift silently in either
   // direction, and this project has a recorded lesson that a one-directional
   // check misses half the defect class.
+  //
+  // Gap-closure plan 41-06 (GAP-2, REQ-41-01): every skip of this check
+  // below emits a named `findings` entry identifying the namespace and the
+  // reason -- a `continue` with no finding, no hard failure and no log line
+  // is indistinguishable from a pass, which is the defect class this phase
+  // exists to eliminate. The ONLY silent branch is `!isForkOwned(namespace)`,
+  // a D-15 scope decision (see its own comment below), not a statement about
+  // whether a check was available.
   const isCanonicalLocalesPath =
     resolve(opts.localesPath) === resolve(CANONICAL_LOCALES_PATH)
+  const baselinePath = opts.baselinePath ?? PRESENCE_BASELINE_PATH
 
   for (const namespace of opts.namespaces) {
     // D-15 scope decision, the ONE deliberate silent branch: the three
@@ -645,14 +661,22 @@ export function lintTranslations(opts: LintOptions): LintResult {
       continue
     }
 
-    if (!isCanonicalLocalesPath || !existsSync(PRESENCE_BASELINE_PATH)) {
+    if (!isCanonicalLocalesPath) {
+      result.findings.push(
+        `presence baseline drift check skipped for ${namespace}: localesPath ` +
+          `"${opts.localesPath}" does not resolve to the canonical "${CANONICAL_LOCALES_PATH}"`
+      )
+      continue
+    }
+    if (!existsSync(baselinePath)) {
+      result.findings.push(
+        `presence baseline drift check skipped for ${namespace}: ` +
+          `${baselinePath} does not exist`
+      )
       continue
     }
 
-    const diff = comparePresenceBaseline(
-      opts.localesPath,
-      PRESENCE_BASELINE_PATH
-    )
+    const diff = comparePresenceBaseline(opts.localesPath, baselinePath)
     for (const pair of diff.added) {
       result.hardFailures.push(
         `${pair.locale}.${namespace}.${pair.key}: a new key is not localised and was not ` +
