@@ -302,7 +302,21 @@ const MainButton = ({ gameInfo, handlePlay, handleInstall }: Props) => {
         <span className="installButtons">
           <button
             onClick={async () => {
-              if (!is_installed && !is.queued && gameInfo.runner !== 'steam') {
+              // quick 260907-dbh: the label branch at :222 reads
+              // `is.installing` and renders Pause/cancel, but this guard did
+              // not — so a mid-download click on a non-steam game reopened
+              // the install modal instead of falling through to
+              // `handleInstall`, which routes to `install({ isInstalling:
+              // true })` -> `handleStopInstallation`. Steam is unaffected:
+              // it is already excluded by `runner !== 'steam'` and its
+              // install button is separately disabled while installing
+              // (`disabledInstallButtons`, D-07).
+              if (
+                !is_installed &&
+                !is.queued &&
+                !is.installing &&
+                gameInfo.runner !== 'steam'
+              ) {
                 openInstallGameModal({
                   appName: gameInfo.app_name,
                   runner: gameInfo.runner,
