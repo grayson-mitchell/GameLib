@@ -88,27 +88,28 @@ let _ = window.show();
 let _ = window.set_focus();
 ```
 
-**Three calls, not the two the file's four sibling raise sites use — and the third is MEASURED,
-not stylistic.** The obvious fix was to copy the established
-`let _ = window.show(); let _ = window.set_focus();` idiom. That would have left the
-minimized-to-Dock case broken. From the vendored runtime
-(`tao-0.35.3/src/platform_impl/macos/window.rs`, read directly, not assumed):
+**Three calls, where the file's four sibling raise sites use two.** ~~The third is MEASURED, not
+stylistic — copying the established `let _ = window.show(); let _ = window.set_focus();` idiom
+would have left the minimized-to-Dock case broken.~~ **That claim was wrong and is retracted in
+section 4: `show()` alone is sufficient, and the two-call idiom would have worked.** The runtime
+facts below are accurate as stated; the inference drawn from the first one was not
+(`tao-0.35.3/src/platform_impl/macos/window.rs`):
 
 - `:677-685` — `set_focus()` bodies out to `if !is_minimized && is_visible { util::set_focus(..) }`.
-  It is a **hard no-op while miniaturized**, so `unminimize()` must come first.
+  It is a **hard no-op while miniaturized**. ~~so `unminimize()` must come first~~ — see the
+  CORRECTION in section 4: that inference was wrong.
 - `:668-673` — `set_visible(true)` is `make_key_and_order_front_sync`, i.e. synchronous. That is
   what makes `show()`-before-`set_focus()` load-bearing: it is why `isVisible()` is already true
   when `set_focus()` tests it a line later.
 - `:1035-1050` — `set_minimized(false)` early-returns when `isMiniaturized()` is already false, so
   the unconditional `unminimize()` is free on every non-minimized path.
 
-**The four sibling raise sites carry the same latent gap and were deliberately NOT fixed:** the
-child-window attachment fallback (`~6477`), the `__GAMELIB_FOCUS__` single-instance socket handler
-(`~8783`), the tray menu `"show"` arm (`~9126`), and the tray icon left-click handler (`~9164`).
-All four are `show()` + `set_focus()` with no `unminimize()`, so all four should fail to restore a
-Dock-minimized `main` — including the tray's own **"Show GameLib"** item. Out of scope for this
-quick task, observed and recorded rather than silently widened. **This is an open defect with no
-todo of its own yet.**
+**The four sibling raise sites were not touched:** the child-window attachment fallback (`~6477`),
+the `__GAMELIB_FOCUS__` single-instance socket handler (`~8783`), the tray menu `"show"` arm
+(`~9126`), and the tray icon left-click handler (`~9164`). All four are `show()` + `set_focus()`
+with no `unminimize()`. This section originally predicted all four would therefore fail to restore
+a Dock-minimized `main`. **That prediction was disproved — see section 4. There is no defect at
+those sites and nothing to file.**
 
 **The doc comment's false claim is gone.** It read "Nothing here had to change, which is the point
 of going through the preload name rather than reimplementing anything" — written during
@@ -156,3 +157,37 @@ operator rather than inferred from a green suite.
 **Not run, deliberately:** `pnpm test:ci` (RED at HEAD from a leaked 60s timer, zero failing tests)
 and `pnpm lint` (RED at HEAD, warning ratchet breached — Phase 39 debt). Neither is this task's.
 Nothing was pushed.
+
+### 4. CORRECTION (same day, after the live gate) — `unminimize()` was never required
+
+The operator was asked to spot-check the predicted sibling defect and reported: **tray "Show
+GameLib" restores a Dock-minimized `main` correctly, and works from another display.** That arm is
+`show()` + `set_focus()` with no `unminimize()`, so the prediction in sections 2 and 3 is false.
+
+**Why the code-read was wrong.** The reasoning traced `set_focus()`'s `!is_minimized` guard
+(`:677-685`) and stopped there, concluding a minimized `main` "would otherwise never focus at all".
+It never traced what `show()` itself does to a miniaturized window. It does everything:
+`set_visible(true)` (`:668-673`) is `util::make_key_and_order_front_sync` ->
+`ns_window.makeKeyAndOrderFront(None)` (`tao-0.35.3/src/platform_impl/macos/util/async.rs:212-217`),
+and AppKit's `makeKeyAndOrderFront:` deminiaturizes a miniaturized window and makes it key. So
+`show()` alone un-minimizes, raises, and focuses. `set_focus()` no-opping in that case is
+irrelevant.
+
+**What this changes:**
+
+- The **defect and its fix are unaffected.** `open_about_window_from_tray` raised nothing at all;
+  it now raises. All three live states still PASS. The two-call sibling idiom would have been
+  sufficient, so the briefed fix was fine and the "briefed fix was wrong" framing in the SUMMARY
+  and STATE.md row is itself the thing that was wrong.
+- `unminimize()` is **kept** — free (`set_minimized(false)` early-returns) and an explicit
+  statement of intent — but demoted from "load-bearing" to defence in depth. The doc comment on
+  `open_about_window_from_tray` now says so, and warns against citing this site as precedent for
+  `unminimize()` being required.
+- **Nothing to file.** The four sibling raise sites are correct as they stand.
+
+**The process lesson,** which is the durable part: a code-read prediction about a native-runtime
+behaviour was carried into four records (source comment, this todo, the SUMMARY, the STATE.md row)
+as though measured, on the strength of one true premise plus an untraced inference. One 10-second
+operator gesture on an ALREADY-WORKING sibling disproved it. The tell was available in advance —
+the prediction claimed a user-visible defect in the tray's most-used item, which would not have
+gone unreported.

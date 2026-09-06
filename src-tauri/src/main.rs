@@ -713,34 +713,37 @@ fn update_tray_recent_games(app: &AppHandle, games: Vec<TrayRecentGame>) {
 /// or backgrounded `main` used to swallow the whole interaction -- the eval ran and the modal
 /// mounted, but nothing was ever visible.
 ///
-/// Three calls raise the window before the eval, in this ORDER, which is load-bearing --
-/// measured against the vendored runtime, not assumed (`tao-0.35.3`,
-/// `src/platform_impl/macos/window.rs`):
-///   1. `unminimize()` FIRST -- `set_focus()` (`:677-685`) is a hard no-op while
-///      `isMiniaturized()` is true, so a minimized `main` would otherwise never focus at all.
-///      Calling `unminimize()` unconditionally is free on every non-minimized path: internally
-///      it is `set_minimized(false)` (`:1035-1050`), which early-returns when the window is
-///      already not miniaturized.
-///   2. `show()` BEFORE `set_focus()` -- `set_focus()` (`:677-685`) also requires
-///      `isVisible()` to be true, and `set_visible(true)` (`:668-673`) is
-///      `make_key_and_order_front_sync`, i.e. synchronous. `show()` running first is what makes
-///      `isVisible()` true by the time `set_focus()` tests it a line later.
-///   3. `set_focus()`, then the eval LAST -- so the window is already up when the About modal
-///      mounts inside it, rather than mounting into a window still coming into view.
+/// Three calls raise the window before the eval. Referenced against the vendored runtime
+/// (`tao-0.35.3`, `src/platform_impl/macos/window.rs`) -- but read the LOAD-BEARING line
+/// carefully, because only one of the three actually carries the fix:
+///   1. `show()` is THE call that fixes this. `set_visible(true)` (`:668-673`) is
+///      `util::make_key_and_order_front_sync` -> `makeKeyAndOrderFront:`
+///      (`util/async.rs:212-217`), which AppKit defines as deminiaturizing a miniaturized
+///      window AND making it key. So `show()` alone un-minimizes, raises and focuses.
+///   2. `unminimize()` is DEFENCE IN DEPTH, not a requirement. See the correction note below.
+///      It is free on every non-minimized path: internally `set_minimized(false)`
+///      (`:1035-1050`) early-returns when the window is already not miniaturized.
+///   3. `set_focus()` is a no-op in the minimized case by design -- it gates on
+///      `!is_minimized && is_visible` (`:677-685`) -- and does the real work only for a
+///      window that is already visible but backgrounded. The eval comes LAST so the window is
+///      already up when the About modal mounts inside it.
 ///
-/// Measured caveat, not smoothed over: AppKit's `deminiaturize:` animates, so `isMiniaturized()`
-/// may still read true when `set_focus()` runs one line later, and focus may not land in every
-/// minimized case even with this fix. `deminiaturize:` orders the window front itself, so the
-/// visible symptom should still be gone -- but "should" is why the minimized state is scored as
-/// a live operator check in quick `260907-9co` rather than assumed passing from this diff alone.
+/// CORRECTION (quick `260907-9co`, after the live gate). This comment previously claimed
+/// `unminimize()` was mandatory -- that "a minimized `main` would otherwise never focus at
+/// all" -- reasoning from `set_focus()`'s `!is_minimized` guard alone. That premise is true and
+/// the conclusion was FALSE: it never traced what `show()` does to a miniaturized window.
+/// DISPROVED BY MEASUREMENT, not by re-reading: the tray's own "Show GameLib" arm is
+/// `show()` + `set_focus()` with no `unminimize()`, and it restores a Dock-minimized `main`
+/// correctly. `unminimize()` is kept here as an explicit, free statement of intent, but it is
+/// not what makes the minimized case work. Do not cite this site as precedent for it being
+/// required.
 ///
-/// Deliberate deviation, noted so the asymmetry does not read as an oversight to the next
-/// editor: four sibling call sites elsewhere in this file (`build_tray_menu`'s child-window
-/// attachment fallback, the `__GAMELIB_FOCUS__` single-instance socket handler, the tray menu
-/// `"show"` arm, and the tray icon left-click handler) raise `main` with only `show()` +
-/// `set_focus()`, no `unminimize()`. They carry the same latent minimized-window gap this
-/// function used to have. That gap is OBSERVED, not fixed, at those four sites -- out of scope
-/// for quick `260907-9co`, which touches only the tray About path.
+/// Consequently there is NO latent minimized-window gap at the four sibling raise sites
+/// (`build_tray_menu`'s child-window attachment fallback, the `__GAMELIB_FOCUS__`
+/// single-instance socket handler, the tray menu `"show"` arm, and the tray icon left-click
+/// handler). Their `show()` + `set_focus()` pair is sufficient. An earlier revision of this
+/// comment asserted the opposite; it was wrong, and the three-vs-two asymmetry here is a
+/// stylistic surplus rather than a fix those sites still need.
 ///
 /// Note the CONSEQUENCE for whoever edits the preload name next: the eval below is
 /// optional-chained, so if `window.api.showAboutWindow` ever stops existing this menu item does

@@ -21,18 +21,27 @@ The tray's **About GameLib** item mounted the About modal inside a `main` window
 function's false doc comment is corrected. All three live window states scored **PASS** by the
 operator.
 
-## The brief was wrong about the fix, and the measurement is why
+## RETRACTED: "the brief was wrong about the fix"
+
+**This section originally claimed the briefed two-call fix would have left minimized-to-Dock broken.
+That claim is false. See "Correction" at the end of this file.** The two-call sibling idiom would
+have worked; `unminimize()` is defence in depth, not a requirement. The retracted reasoning, kept
+because the failure mode is the point:
 
 The task was dispatched with a two-call fix: copy the file's four sibling raise sites, which all use
-`let _ = window.show(); let _ = window.set_focus();`. **That would have left the minimized-to-Dock
-case broken.** Read from the vendored runtime (`tao-0.35.3/src/platform_impl/macos/window.rs`),
-confirmed independently by the orchestrator before execution:
+`let _ = window.show(); let _ = window.set_focus();`. Read from the vendored runtime
+(`tao-0.35.3/src/platform_impl/macos/window.rs`):
 
-| Line | Fact | Consequence |
+| Line | Fact (accurate) | Inference drawn |
 |---|---|---|
-| `:677-685` | `set_focus()` is `if !is_minimized && is_visible { util::set_focus(..) }` | A hard no-op while miniaturized — `unminimize()` must come FIRST |
-| `:668-673` | `set_visible(true)` is `make_key_and_order_front_sync` (synchronous) | `show()` before `set_focus()` is load-bearing, not cosmetic |
-| `:1035-1050` | `set_minimized(false)` early-returns when not miniaturized | The unconditional `unminimize()` is free on every other path |
+| `:677-685` | `set_focus()` is `if !is_minimized && is_visible { util::set_focus(..) }` | ~~A hard no-op while miniaturized — `unminimize()` must come FIRST~~ **FALSE — `show()` already handles it** |
+| `:668-673` | `set_visible(true)` is `make_key_and_order_front_sync` (synchronous) | `show()` before `set_focus()` — correct, but this is also what makes `unminimize()` redundant |
+| `:1035-1050` | `set_minimized(false)` early-returns when not miniaturized | The unconditional `unminimize()` is free — still true |
+
+Every FACT column entry was verified against the vendored source by two parties. The error is
+entirely in the inference column, and no amount of re-reading `window.rs` would have caught it —
+the missing step was tracing `make_key_and_order_front_sync` one hop further into
+`util/async.rs:212-217`.
 
 ## The todo's premise was stale
 
@@ -136,19 +145,48 @@ why this was scored by the operator and not inferred from a green suite. The clo
 this repo (`reveal-in-finder-does-not-select-when-tauri-window-frontmost`) was exactly that: an
 action that succeeded while its visible half silently did not.
 
-## Carried forward — an open defect with no todo yet
+## Correction (same day, after the live gate) — nothing is carried forward
 
-**The four sibling raise sites carry the same latent minimized-window gap and were deliberately NOT
-fixed here:**
+This SUMMARY originally ended with a "Carried forward — an open defect with no todo yet" section
+predicting that the four sibling raise sites (`~6477` child-window attachment fallback, `~8783`
+`__GAMELIB_FOCUS__` socket handler, `~9126` tray `"show"` arm, `~9164` tray icon left-click) would
+all fail to restore a Dock-minimized `main`, because all four are `show()` + `set_focus()` with no
+`unminimize()`.
 
-| Site | Location |
+**Disproved by one operator gesture.** Asked to spot-check it, the operator reported that tray
+**"Show GameLib" restores a Dock-minimized `main` correctly, and works from another display.**
+
+**Mechanism.** `show()` -> `set_visible(true)` (`window.rs:668-673`) ->
+`util::make_key_and_order_front_sync` -> `ns_window.makeKeyAndOrderFront(None)`
+(`tao-0.35.3/src/platform_impl/macos/util/async.rs:212-217`). AppKit's `makeKeyAndOrderFront:`
+deminiaturizes a miniaturized window and makes it key. `show()` alone un-minimizes, raises and
+focuses; `set_focus()` no-opping in that case is irrelevant, and `unminimize()` is redundant.
+
+**What stands and what does not:**
+
+| Claim | Status |
 |---|---|
-| child-window attachment fallback | `src-tauri/src/main.rs:~6477` |
-| `__GAMELIB_FOCUS__` single-instance socket handler | `~8783` |
-| tray menu `"show"` arm | `~9126` |
-| tray icon left-click handler | `~9164` |
+| The defect was real and is fixed; `open_about_window_from_tray` raised nothing at all | **Stands** — all 3 live states PASS |
+| The doc comment's "Nothing here had to change" was a false claim worth deleting | **Stands** |
+| The jest guard, its double RED proof, and the prose-only self-test | **Stands** — unaffected |
+| "The briefed two-call fix would have left minimized broken" | **RETRACTED** — it would have worked |
+| "`unminimize()` is load-bearing" | **RETRACTED** — defence in depth; kept, but demoted in the doc comment |
+| "The four sibling sites carry a latent gap" | **RETRACTED** — they are correct; nothing to file |
 
-All four are `show()` + `set_focus()` with no `unminimize()`. Per the tao measurement above, all four
-should fail to restore a **Dock-minimized** `main` — including the tray's own **"Show GameLib"**
-item and the second-instance focus path. Scope was held to the tray About path; this is observed and
-recorded rather than silently widened, and it has no todo of its own yet.
+`unminimize()` was kept in the shipped code (free — `set_minimized(false)` early-returns — and an
+explicit statement of intent), and the doc comment now warns the next editor not to cite this site
+as precedent for it being required.
+
+## Process lesson
+
+A code-read prediction about native-runtime behaviour was carried into **four** records — the source
+doc comment, the closed todo, this SUMMARY, and the STATE.md row — phrased as "measured", on the
+strength of one true premise (`set_focus()` really does gate on `!is_minimized`) plus one untraced
+inference (what `show()` does to a miniaturized window). Two parties verified the premise
+independently and neither traced the inference, because both were reading the same file;
+the disproof lived one hop away in `util/async.rs`.
+
+The tell was available before any measurement: the prediction implied a user-visible defect in the
+tray's most-used item, **"Show GameLib"**, which would not have gone unreported. A prediction that
+implies a loud, long-standing bug nobody has hit should be checked before it is written down, not
+after. Cost of checking: one operator gesture, ten seconds.
