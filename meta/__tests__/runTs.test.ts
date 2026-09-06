@@ -11,7 +11,7 @@
  * -- a test that reconstructs the call site is a replica and drifts
  * silently from what actually ships (the standing project rule).
  */
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const PACKAGE_JSON_PATH = join(__dirname, '..', '..', 'package.json')
@@ -246,5 +246,106 @@ describe('meta/*.ts doc-comment execution-path accuracy pin (E-02)', () => {
 // \`node node_modules/.cache/example.cjs\` (the meta/ convention).
 `
     expect(sourceMentionsSharedCachePath(syntheticBadSource)).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Quick task 260906-hq8: first platform coverage this file has ever had.
+// Before today, nothing in this suite exercised the esbuild spawn's argv at
+// all, which is exactly how the win32 branch went missing for as long as it
+// did. `buildEsbuildSpawnArgv()` takes `platform` as an injected parameter
+// (not `process.platform` read internally) SPECIFICALLY so the win32 branch
+// is assertable without an `if (process.platform === 'win32')` guard around
+// the argv assertions -- that shape is what WR-06 rejected for the identical
+// helper in meta/buildSidecarSea.ts, because it made the win32 branch
+// unreachable on macOS/Linux dev machines and on three of the four CI legs.
+// Every test below runs unconditionally on every host except test 6, which is
+// a deliberate, commented exception (see its own note).
+//
+// `require('../runTs.cjs')` below is only safe because runTs.cjs wraps its
+// own `main()` call in `if (require.main === module)`; if that guard is ever
+// removed, this require() starts a real compile-and-run inside jest and this
+// whole suite fails loudly (not silently) -- which is the point.
+// ---------------------------------------------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const runTs = require('../runTs.cjs')
+
+describe('meta/runTs.cjs esbuild spawn argv (quick task 260906-hq8)', () => {
+  const CLI = '/fake/project/node_modules/esbuild/bin/esbuild'
+  const FLAGS = ['--bundle', '--outfile=/tmp/out.cjs', '/tmp/entry.ts']
+
+  test('win32 branch runs the CLI through process.execPath', () => {
+    const argv = runTs.buildEsbuildSpawnArgv(CLI, FLAGS, 'win32')
+    expect(argv.command).toBe(process.execPath)
+    expect(argv.args[0]).toBe(CLI)
+    expect(argv.args.slice(1)).toEqual(FLAGS)
+  })
+
+  test('non-win32 branches spawn the CLI directly', () => {
+    for (const platform of ['darwin', 'linux'] as const) {
+      const argv = runTs.buildEsbuildSpawnArgv(CLI, FLAGS, platform)
+      expect(argv.command).toBe(CLI)
+      expect(argv.command).not.toBe(process.execPath)
+      expect(argv.args[0]).toBe(FLAGS[0])
+    }
+  })
+
+  test('the two branches differ only in who is spawned, never in the flags', () => {
+    const win = runTs.buildEsbuildSpawnArgv(CLI, FLAGS, 'win32')
+    const linux = runTs.buildEsbuildSpawnArgv(CLI, FLAGS, 'linux')
+    expect(win.args.slice(1)).toEqual(linux.args)
+  })
+
+  test('the default parameter follows the host platform', () => {
+    expect(runTs.buildEsbuildSpawnArgv(CLI, FLAGS)).toEqual(
+      runTs.buildEsbuildSpawnArgv(CLI, FLAGS, process.platform)
+    )
+  })
+
+  // Non-vacuity control: proves the helper actually branches on `platform`
+  // rather than ignoring the argument -- which is exactly the pre-fix
+  // behaviour, hard-coded to the non-win32 (direct-spawn) shape. A helper
+  // that ignored `platform` would pass tests 1-4 trivially on a non-win32
+  // host (they'd never observe the win32 shape diverging from anything) but
+  // fails HERE because the two calls would be deep-equal.
+  test('non-vacuity control: the helper actually branches on platform', () => {
+    const win = runTs.buildEsbuildSpawnArgv(CLI, FLAGS, 'win32')
+    const darwin = runTs.buildEsbuildSpawnArgv(CLI, FLAGS, 'darwin')
+    expect(win).not.toEqual(darwin)
+  })
+
+  // Host-fact pin, deliberately host-conditional -- unlike tests 1-5 above,
+  // this one asserts a fact about THIS DISK's installed esbuild copy, not
+  // about a code branch, so a host conditional is correct here and would be
+  // wrong there. On a non-win32 host, esbuild's installer has already
+  // hardlink-swapped bin/esbuild for the native binary, so its first two
+  // bytes must NOT be a `#!` shebang -- confirming the direct-spawn branch is
+  // the right choice on this machine. On win32 the installer skips that
+  // swap, so the shebang survives and process.execPath is required instead.
+  test('host-fact pin: the installed esbuild/bin/esbuild matches this host branch', () => {
+    const esbuildBin = require.resolve('esbuild/bin/esbuild')
+    expect(existsSync(esbuildBin)).toBe(true)
+    const firstBytes = readFileSync(esbuildBin).subarray(0, 2).toString('utf8')
+    if (process.platform === 'win32') {
+      expect(firstBytes).toBe('#!')
+    } else {
+      expect(firstBytes).not.toBe('#!')
+    }
+  })
+
+  // Installer tripwire: a stale-assumption pin, not a correctness assertion
+  // about our own code. It reads esbuild's OWN bundled, minified installer
+  // output -- a third-party file we do not control -- so an esbuild upgrade
+  // that changes maybeOptimizePackage()'s shape can turn this red without any
+  // of our code being wrong. That is intended: RED here means esbuild changed
+  // its installer, so the win32 branch's justification needs re-verification
+  // against the new version, NOT that the branch itself should be deleted.
+  // If the file cannot be read or the function is missing, this fails loudly
+  // (never skips) -- "what happens when the check fails to load" must be RED.
+  test('installer tripwire: esbuild install.js still skips the hardlink swap on win32', () => {
+    const installJsPath = require.resolve('esbuild/install.js')
+    const source = readFileSync(installJsPath, 'utf8')
+    expect(source).toContain('maybeOptimizePackage')
+    expect(source).toMatch(/platform\(\)\s*!==\s*["']win32["']/)
   })
 })
