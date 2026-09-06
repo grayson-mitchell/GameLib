@@ -1,61 +1,106 @@
 {
   "version": "1.0",
-  "timestamp": "2026-08-17T02:03:44.027Z",
-  "phase": "23",
-  "phase_name": "steam-full-ownership-install-stateflags-4",
-  "phase_dir": ".planning/phases/23-steam-full-ownership-install-stateflags-4",
-  "plan": 10,
-  "task": 1,
-  "total_tasks": 3,
+  "timestamp": "2026-09-06T00:31:23.645Z",
+  "phase": "38",
+  "phase_name": "deferred-hardware-and-environment-uat-gates-windows-linux-machine-and-game-controller",
+  "phase_dir": ".planning/phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma",
+  "plan": null,
+  "task": null,
+  "total_tasks": 34,
   "status": "paused",
-  "completed_tasks": [],
+  "context_kind": "machine-migration (cross-phase, not phase-41 work despite 41 having the newest PLAN.md mtime)",
+  "completed_tasks": [
+    {
+      "id": "260906-h2k",
+      "name": "graphify PreToolUse hooks now PATH-resolved (works on Windows)",
+      "status": "done",
+      "commit": "0e086176a"
+    }
+  ],
   "remaining_tasks": [
     {
-      "id": 1,
-      "name": "Gate 2 CLEAN re-run — HUMANKIND installs and launches with NO manual chmod",
-      "status": "in_progress",
-      "progress": "Two full HUMANKIND install attempts this session, both aborted before completion. Attempt A stalled completely at 29% for 13min (watchdog correctly aborted, StateFlags fell back to 1026) -- root-caused to two real defects in the depot downloader, NOT the StateFlags/chmod logic under test. Attempt B (after the fix landed) ran cleanly with zero failures but throughput still plateaued well below Steam's own client, so it was cancelled mid-download to investigate further rather than let it run to completion. Gate 2's actual census/log/launch steps have not been run against a completed install yet."
+      "id": "win-setup",
+      "name": "Stand up the Windows dev environment (prereqs, clone, pnpm install, tauri:dev)",
+      "status": "not_started"
     },
-    { "id": 2, "name": "Gate 3 (INTERRUPT-RESUME) — first execution", "status": "not_started" },
-    { "id": 3, "name": "Gate 1 launch re-confirmation + G-23-01 official-Steam-client diagnostic", "status": "not_started" }
+    {
+      "id": "38-ledger",
+      "name": "Retire or rewrite the dead 'electron runtime' Phase 38 items before the sitting",
+      "status": "not_started"
+    },
+    {
+      "id": "38-windows",
+      "name": "Run the Windows-observable 38-W/38-S items",
+      "status": "not_started"
+    },
+    {
+      "id": "38-controller",
+      "name": "Controller sitting (7 runnable items; needs an Xbox pad or a GENUINE Switch Pro on macOS)",
+      "status": "not_started"
+    },
+    {
+      "id": "41",
+      "name": "Phase 41 i18n gate honesty \u2014 5 plans, 2 waves, PLANNED but NOT EXECUTED",
+      "status": "not_started"
+    }
   ],
   "blockers": [
     {
-      "description": "HUMANKIND native install throughput is well below the official Steam client's (spot-checked: 489 Mbps / ~5min under real Steam vs ~4-12 MiB/s / rising latency under GameLib, even after the concurrency fix landed). Root cause NOT yet found. Ruled out: undici's default per-origin connection pool is unbounded (verified by reading node_modules/undici/lib/dispatcher/pool.js directly), so this is not an HTTP connection-reuse cap. Two live hypotheses, neither confirmed: (a) InflightLimiter only wraps the network fetch phase, so workers mid-decode/mid-disk-write don't count toward the 32 budget, naturally under-utilizing it; (b) genuine capacity/congestion on the 3 regional SteamCache nodes that won host selection fairly (lowest weightedload) over the generic CDN edges.",
+      "description": "17 unpushed commits on fix/steam-native-install-stability. `.husky/pre-push` refuses every push: `pnpm lint` = 4166 warnings vs a `--max-warnings 4157` ratchet.",
       "type": "technical",
-      "workaround": "None applied. Options for the resuming session: (1) accept current throughput as sufficient since it does NOT stall/fail, and let a full HUMANKIND install run to completion to get Gate 2's actual data, or (2) open a proper debug session (packet capture / compare request pattern against the official client) to chase the remaining throughput gap before re-attempting Gate 2."
+      "workaround": "PRE-EXISTING, not caused by the held work \u2014 the 13 commits measured before the quick task REDUCED warnings by 21 (190->169 across touched files), putting origin's own tip near 4187. Push with --no-verify (CI lint.yml still sees it) or reset the ratchet. Phase 39 owns the debt."
+    },
+    {
+      "description": "38-E01/38-E02 (Window::add_child on WebView2 / webkit2gtk) are implementation tasks before they are verification tasks \u2014 src-tauri/Cargo.toml target-gates the `unstable` feature to cfg(target_os=\"macos\").",
+      "type": "technical",
+      "workaround": null
+    },
+    {
+      "description": "38-W04 asks for a CI-produced NSIS artifact from release-tauri.yml, which has never completed a real tag-push run.",
+      "type": "external",
+      "workaround": "workflow_dispatch it before the sitting, or accept a local `tauri build` which does not match the item text."
     }
   ],
   "human_actions_pending": [
     {
-      "action": "Decide whether to (a) just let a full HUMANKIND install run to completion on the current code and gather Gate 2's data despite the slower-than-Steam throughput, or (b) open a debug session to chase the throughput gap first.",
-      "context": "23-10 Task 1 cannot be marked done without a completed, workaround-free HUMANKIND install and its census/log/.acf/launch evidence recorded in 23-UAT.md.",
+      "action": "Decide how to push: `git push --no-verify` (recommended) vs resetting the --max-warnings ratchet.",
+      "context": "17 commits are stranded; the gate is rejecting work that improves the metric it measures.",
       "blocking": true
     },
     {
-      "action": "Full uninstall before any retry: remove ~/Library/Application Support/Steam/steamapps/common/Humankind AND appmanifest_1124300.acf, quit Steam.",
-      "context": "Current on-disk state from the cancelled attempt is 2,674 files with a stale appmanifest_1124300.acf present -- reusing it would produce a false PASS or a confusing partial-state census.",
-      "blocking": true
+      "action": "On Windows: ensure a `python3` alias exists.",
+      "context": "`pnpm planning-gates` calls `python3 meta/runPlanningGates.py` literally; the python.org installer ships only python.exe + the py launcher. Microsoft Store Python creates python3.exe.",
+      "blocking": false
     },
     {
-      "action": "Test only via `pnpm tauri:dev` (never bare `tauri dev`, which serves a stale static bundle).",
-      "context": "Confirmed convention from quick task 260817-dib's own LIVE-GATE.md; this session's fix (quick task 260817-ihr, commits f77de7c57/a0e2f07f4/d89059e06) is already in the build/main/sidecar.js bundle as of this session.",
+      "action": "On Windows: `npm i -g gsd-pi && gsd-pi`, and `pipx install graphifyy`.",
+      "context": "GSD skills live in ~/.claude/skills, not the repo. graphify is now invoked bare from PATH (quick 260906-h2k), so it must be installed or every Bash/Read/Glob hook reports exit 127 (non-blocking, but noisy).",
+      "blocking": false
+    },
+    {
+      "action": "Register a SECOND Steam library folder on Windows.",
+      "context": "38-S07/38-S08 require >1 library or they are unscoreable.",
       "blocking": false
     }
   ],
   "decisions": [
     {
-      "decision": "Fixed the real depot throughput bugs (host-demotion one-way-door + accidental 8-request concurrency ceiling) via quick task 260817-ihr rather than re-implementing the fan-out fix the task was originally filed against.",
-      "rationale": "The filed premise ('pickHost sends every attempt-0 to one host') was disproven by the stalled run's own chunk-stream-stats log -- that fix already shipped as Phase 25 (commit 9923545e3). Re-planning found two different, evidenced defects instead.",
-      "phase": "23"
+      "decision": "graphify hooks use a bare PATH-resolved command, with NO `command -v` guard.",
+      "rationale": "PreToolUse only blocks on exit 2, so a missing binary (127) is non-blocking and surfaces a visible prompt. A guard would exit 0 and silently disable a workflow CLAUDE.md calls mandatory.",
+      "phase": "quick-260906-h2k"
     },
     {
-      "decision": "Corrected the stale steam-install-slow-start-outcome memory and filed a new memory (steam-depot-throughput-real-bottlenecks) documenting both the disproven premise and the two real defects.",
-      "rationale": "The stale 'never implemented' memory is what caused this session to initially mis-diagnose the live stall; leaving it uncorrected would mislead a future session the same way.",
-      "phase": "23"
+      "decision": "The PowerA pad is a WINDOWS asset, not a macOS one.",
+      "rationale": "WKWebView exposes only GameController-framework pads; Chromium (=WebView2 on Windows) reads it fine. nintendo.ts:69's widened third-party predicate is only exercisable off macOS.",
+      "phase": "38"
+    },
+    {
+      "decision": "Steam Input exclusivity RULED OUT as a cause of gamepad invisibility.",
+      "rationale": "Complete 2x2: Brave works with Steam running AND quit; Safari dead in both.",
+      "phase": "38"
     }
   ],
   "uncommitted_files": [],
-  "next_action": "Ask the user (or decide, if given autonomy) whether to just let a full HUMANKIND install run to completion now that the concurrency fix has landed and is stall-free, or to open a debug session first to chase the remaining throughput gap vs the official Steam client. Either way, start with a full uninstall of HUMANKIND (install dir + appmanifest_1124300.acf) before the next install attempt.",
-  "context_notes": "This session's actual scope creep: started as phase 23 plan 23-10 Task 1 (a pure hardware-verification checkpoint, no code changes expected), but Task 1's own install kept failing/stalling on infrastructure rather than the StateFlags=4/chmod logic the gate is meant to test -- so real code fixes (quick task 260817-ihr) were required first via /gsd-quick, which IS the correct routing per this project's GSD workflow enforcement. The StateFlags=4/execute-bit/chmod logic itself (23-08's fix) has NOT been contradicted by anything found this session -- all evidence points to it being correct; the blocker is purely about getting a download to actually finish without the no-progress watchdog (working as designed) killing it first."
+  "next_action": "Answer the push question (--no-verify vs ratchet reset), push, then run Step 1 of the Windows setup (winget prereqs + rustup default stable-msvc + corepack enable).",
+  "context_notes": "Pausing macOS dev to move to the Windows box for Phase 38's Windows UAT items. Phase 38 is a COLLECTION phase - it ships no code and has 0 plans; 38-VERIFICATION.md is its source of truth. Before the sitting, fix the ledger: 38-C07, 38-S01, 38-S05, 38-S07, 38-S13 and half of 38-S15 all say 'electron runtime', and Phase 35 deleted the Electron build - they cannot be run as written (Linux twins 38-S03/S09/S11 + half of S16 likewise). The 8 controller items are macOS-runnable in principle but only 7 are live (38-C07 is one of the dead electron ones), and they need an Xbox pad or a genuine Switch Pro - the PowerA Advantage Wired for Switch 2 is invisible to WKWebView."
 }
