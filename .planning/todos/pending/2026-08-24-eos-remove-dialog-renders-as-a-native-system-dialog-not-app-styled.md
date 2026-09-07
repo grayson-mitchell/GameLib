@@ -1,95 +1,199 @@
 ---
 created: 2026-08-24T00:00:00.000Z
-title: "The EOS overlay remove confirmation renders as a NATIVE system dialog, not an app-styled one — and it is one of ~14 such sites, whose obvious fix is booby-trapped"
+title: "Three dialog-shim collapse defects (VCRuntime 'don't show again', Snap checkbox, sideloaded-game unsaved-progress fail-open) across 10 native showMessageBox sites — plus the still-unresolved native-vs-in-app policy question"
 area: ui-dialogs
 status: OPEN
-severity: minor
+severity: major
 files:
-  - src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts
-  - src/backend/dialog/dialog.ts
-  - src/frontend/components/UI/Dialog/index.css
+  - src/backend/platform/index.ts
+  - src/backend/utils.ts
+  - src/backend/sidecar/appShellFlowRegistration.ts
+  - src/backend/storeManagers/storeManagerCommon/games.ts
 ---
 
-## Context
+## Rewrite notice (2026-09-07)
 
-Observed live by the operator on 2026-08-24 while driving **step 2 of `34.6-LIVE-GATE.md`**
-(the EOS overlay round-trip). The "Confirm overlay removal" dialog appeared and functioned
-correctly — that observation is what confirmed amendment **A-02**'s corrected premise, that the
-dialog belongs to `remove()`'s unconditional call and not to `enable()`'s gated one. But it
-renders as an **OS-native dialog**, visually unlike the rest of the app.
+This is a **verified rewrite against HEAD**, not the original 2026-08-24 analysis. The original
+is wrong on its headline claim and on parts of its census; both were independently re-confirmed
+by the orchestrator and the planner on 2026-09-07 against every anchor cited below. Why it was
+wrong:
 
-Operator's words: *"the dialog to remove looks like a system dialog (not conforming to app
-styling)."*
+- Its headline item — the EOS overlay remove confirmation rendering as a native dialog — was
+  **fixed** by Phase 35 plan 26 (REQ-35-17, closes D-35-11-01). See "What has already closed"
+  below.
+- Its Trap 1 (the in-app `Dialog` primitive isn't really styled) was **fixed** by quick task
+  `260820-kq0` round 3.
+- Its Trap 2 (a rejecting dialog crashes the sidecar) was **mitigated** by a never-reject
+  contract that now ships in `platform/index.ts`.
+- Its census counted sites (`main.ts:585`, `updater.ts:35`, `updater.ts:59`) that no longer exist
+  at HEAD, and every one of its surviving line numbers had drifted.
 
-## Root cause
+Meanwhile, three genuinely live defects — introduced after the original was written, by the Rust
+dialog shim's narrower contract — were recorded nowhere. They are this rewrite's headline.
 
-`eos_overlay.ts:162`'s `remove()` calls Electron's **native** `dialog.showMessageBox(...)`.
-The app also has an **in-app styled** path — `showDialogBoxModalAuto()`
-(`src/backend/dialog/dialog.ts:8`), which forwards to the renderer via
-`sendFrontendMessage('showDialog', ...)` and is drawn by the React `Dialog` primitive. The EOS
-overlay code uses the former.
+## The three live defects
 
-## This is systemic, not one site
+### 1. VCRuntime "Don't show again" is unreachable (Windows-only)
 
-A census of `src/backend` (excluding tests, `electronStub`, `dialogStub`) finds roughly **14**
-native `showMessageBox` / `showMessageBoxSync` call sites:
+`src/backend/utils.ts:843` raises a 3-button dialog (`Download now` / `Ok` / `Don't show again`)
+and branches on `response === 2` (`utils.ts:856`) to persist `configStore.set('skipVcRuntime',
+true)`.
 
-- `main.ts:585`
-- `protocol.ts:153`
-- `utils.ts:287`, `:339`, `:838`, `:858`, `:973`, `:1387`
-- `updater.ts:35`, `:59`
-- `dialog/dialog.ts:45` (the native fallback arm — legitimate)
-- `sidecar/appShellFlowRegistration.ts:343`
-- `storeManagers/steam/library.ts:1772`
-- `storeManagers/storeManagerCommon/games.ts:89` (`showMessageBoxSync`)
+The shim it calls through, `src/backend/platform/index.ts`'s `showMessageBox`, maps the Rust
+dialog's boolean result `true → response 0`, `false → response 1`
+(`return { response: result === false ? 1 : 0, checkboxChecked: false }`). There is no path that
+ever yields `2`. Under the Tauri sidecar, the third button is unreachable — clicking it can only
+ever resolve to `0` or `1` — so `response === 2` can never fire and the "Don't show again"
+preference can never be set. The warning will recur on every VCRuntime check, forever, with no
+way to permanently dismiss it. **Windows-only** (the VCRuntime check only runs on Windows).
 
-So "make the EOS dialog match the app" is really "decide which dialogs are native and which are
-in-app, and apply that consistently." Fixing only the EOS one narrows the inconsistency without
-resolving it.
+### 2. Snap warning "do not show again" checkbox can never be checked (Linux/Snap-only)
 
-## Three traps — do NOT do the obvious migration blind
+`src/backend/sidecar/appShellFlowRegistration.ts:389` raises the Snap-limitations warning with a
+`checkboxLabel` ("Do not show this message again"); the caller's `.then((result) => { if
+(result.checkboxChecked) { ... } })` (around `:402`–`:405`) is what persists the
+`showSnapWarning: false` preference.
 
-**1. The in-app `Dialog` primitive is NOT actually styled the way its CSS implies.**
-A class census (2026-08-20, quick task `260820-kq0`) found `Dialog/index.css`'s
-`.Dialog__element`, `.Dialog__header`, `.Dialog__content` and `.Dialog__Close*` rules **entirely
-dead** — the only live rule is `.Dialog__footer`. The primitive was reimplemented on MUI, so the
-caller's `className` lands on `PaperProps` and the Paper never carries `.Dialog__element`. All
-**25** existing dialog consumers silently fall back to MUI defaults.
-**The trap:** the dead rule bases `opacity: 0; transform: translateY(50px)` and restores them only
-under `:popover-open` / `[open]` — native `<dialog>`/popover states that can never match MUI's
-Paper `<div>`. So the obvious fix (apply `.Dialog__element` to the Paper) would render **every
-dialog in the app permanently invisible**. Migrating EOS onto the in-app dialog for "consistent
-styling" therefore inherits an unstyled target, and any attempt to style that target first must
-not reason forward from the stylesheet — it does not describe the running app.
+The shim hard-codes `checkboxChecked: false` on every return path — both the success arm
+(`platform/index.ts`) and the catch/fail-safe arm. There is no code path in the shim that can
+ever set it `true`. Under the Tauri sidecar the checkbox visually exists but its state is never
+read back, so `result.checkboxChecked` is always `false` and the preference is never persisted.
+The Snap warning recurs on every `frontendReady`, regardless of what the user checks.
+**Linux/Snap-only** (`isSnap` gate).
 
-**2. Under the Tauri sidecar, a dialog that REJECTS crashes the app.**
-`dialog.showMessageBox` today never throws — it resolves a safe value, and unguarded
-fire-and-forget callers depend on that (`promptI386Recovery` at `steam/library.ts`, invoked as
-`void promptI386Recovery(appId)`; `askForceUninstall` at `utils.ts:~292`, reached fire-and-forget
-from `launcher.ts`). There is no `process.on('unhandledRejection')` guard and the sidecar runs as
-plain `node`, so a rejecting dialog path is a process crash. Any rework must **resolve a
-safe-decline sentinel, never reject**.
+### 3. Sideloaded-game unsaved-progress guard is fail-open (reachable on macOS)
 
-**3. `utils.ts:287` has INVERTED response semantics** relative to every other `showMessageBox`
-caller in the codebase — the file says so in a comment at `:290`. A blanket mechanical migration
-would flip a destructive branch's sense.
+`src/backend/storeManagers/storeManagerCommon/games.ts:121` computes `choice` from
+`dialog.showMessageBoxSync(browserGame, { buttons: ['Yes', 'No'], ... })` on the browser window's
+`will-prevent-unload` event, then (per the surrounding logic) treats `choice === 0` ("Yes, quit")
+as leave-confirmed and calls `event.preventDefault()` to allow the unload — i.e. this is the
+"Any unsaved progress might be lost" confirmation for sideloaded browser games.
+
+`showMessageBoxSync` in the shim is a logged no-op: `src/backend/platform/index.ts`'s
+`showMessageBoxSync` implementation only does `console.warn(...)` and unconditionally `return 0`
+— synchronous dialogs cannot cross the async `rustInvoke` transport (D-03), so it never shows
+anything and never asks the user. Because `0` is exactly the "Yes, quit" response, the guard is
+**fail-open**: it always silently answers "yes, discard my progress" without ever asking. This is
+a data-loss guard that no longer guards. **Reachable on macOS** (and any platform) via sideloaded
+browser games — this is not behind a platform gate the way defects 1 and 2 are.
+
+**Severity note:** defects 1 and 2, taken alone, would each be minor — they are platform-gated
+inconveniences (a nag that won't go away). Defect 3 is what raises this todo's severity to
+`major`: it is a fail-open data-loss guard reachable on the operator's own platform, not merely a
+persistent-annoyance bug.
+
+## Common cause
+
+All three defects trace to one thing: `src/backend/platform/index.ts`'s `showMessageBox` /
+`showMessageBoxSync` shim has a contract **narrower than Electron's** along three independent
+axes:
+
+1. **At most two buttons.** The boolean-result mapping (`true`/`false` → `0`/`1`) cannot express
+   a third button's response index. → Defect 1.
+2. **No checkbox readback.** `checkboxChecked` is always hard-coded `false` on every return path.
+   → Defect 2.
+3. **No synchronous form.** `showMessageBoxSync` cannot cross the async `rustInvoke` transport, so
+   it is a logged no-op that always returns `0`. → Defect 3.
+
+Any caller relying on a third button, a checkbox result, or a real synchronous prompt will
+silently degrade under the sidecar rather than error — because each shim method still returns
+successfully with a plausible-looking value.
+
+## The census (10 live sites)
+
+Excludes tests, `__mocks__`, `electronStub`, comment-only mentions, and the legitimate native
+fallback arm at `src/backend/dialog/dialog.ts:45` (the `catch` arm of `showDialogBoxModalAuto`,
+which intentionally falls back to a native dialog when the renderer IPC send fails). This
+replaces the original's "~14" — that count included sites (`main.ts:585`, `updater.ts:35`,
+`updater.ts:59`) that no longer exist at HEAD.
+
+| Site | Role | Note |
+|------|------|------|
+| `src/backend/utils.ts:281` | `handleExit` / quit confirmation | INVERTED polarity, explicit `cancelId: 0` |
+| `src/backend/utils.ts:343` | folder-not-found → force-uninstall | cancelId declared |
+| `src/backend/utils.ts:843` | VCRuntime not installed | THREE buttons — **DEFECT 1** |
+| `src/backend/utils.ts:863` | VCRuntime download-links info box | |
+| `src/backend/utils.ts:978` | `ContinueWithFoundWine` | |
+| `src/backend/utils.ts:1417` | Rosetta not found | OK-only |
+| `src/backend/protocol.ts:180` | protocol-handler "not installed, install it?" | `cancelId: 1` |
+| `src/backend/sidecar/appShellFlowRegistration.ts:389` | Snap warning | uses `checkboxLabel`/`checkboxChecked` — **DEFECT 2** |
+| `src/backend/storeManagers/steam/library.ts:1772` | `promptI386Recovery` | fire-and-forget `void` |
+| `src/backend/storeManagers/storeManagerCommon/games.ts:121` | sideloaded browser game `will-prevent-unload` | `showMessageBoxSync` — **DEFECT 3** |
+
+## What has already closed
+
+**A — the EOS headline item is FIXED (CLOSED).** Phase 35 plan 26 (REQ-35-17, closes
+D-35-11-01): `src/backend/storeManagers/legendary/eos_overlay/eos_overlay.ts:173`'s
+`remove(confirmed)` no longer calls `dialog.showMessageBox` at all — it only enforces a
+fail-closed `confirmed !== true` gate at `:174`. The confirmation now happens app-styled in the
+renderer, at `src/frontend/screens/Settings/sections/AdvancedSettings/index.tsx:250`
+(`confirmRemoveEosOverlay`, via `showDialogModal`); only the affirmative button's `onClick` calls
+`removeEosOverlay()`, passing the literal `true`. Regression test:
+`src/frontend/screens/Settings/sections/AdvancedSettings/__tests__/removeEosOverlayConfirmation.test.tsx`.
+
+The structural insight this leaves behind, carried forward as a constraint on any future
+migration: an **ASKING** dialog can never be moved to the renderer through the one-way
+`showDialogBoxModalAuto` backend-dialog path (`src/backend/dialog/dialog.ts`) — that path only
+sends a message outward, it has no way to carry an answer back. The answer has to be gathered
+renderer-side and passed back in as an argument, the way `eos_overlay.ts`'s `remove(confirmed)`
+now does.
+
+**B — Trap 1 (the in-app `Dialog` primitive is not really styled) is FIXED.** Quick task
+`260820-kq0` round 3 reimplemented the styling inside the primitive itself:
+`src/frontend/components/UI/Dialog/components/Dialog.tsx:50` is a `styled(Paper)` override
+(`backgroundColor: 'var(--modal-background)'`, `borderRadius: '10px'`), and `:128` sets MUI's own
+`TransitionComponent={SlideUpTransition}` with `transitionDuration={500}`, replacing the dead
+CSS rule's never-firing opacity/translateY entrance with MUI's supported mechanism. Nothing was
+ever applied to the Paper via the dead CSS class, so no dialog was ever at risk of the
+"permanently invisible" trap the original todo warned about.
+
+**Residue only, COSMETIC, not blocking:** `src/frontend/components/UI/Dialog/index.css` still
+carries dead `.Dialog__element` (`:10`, `:39`, `:43`), `.Dialog__header` (`:50`) and
+`.Dialog__Close*` (`:64`, `:76`, `:103`) blocks as unused cruft. The one live rule is
+`.Dialog__footer` (`:115`).
+
+**C — Trap 2 (a rejecting dialog crashes the sidecar) is MITIGATED.**
+`src/backend/platform/index.ts:459`'s `showMessageBox` forwards to the Rust transport and, on any
+transport error or timeout, resolves `{ response: safeIndex, checkboxChecked: false }` rather
+than rejecting — `safeIndex` is `options?.cancelId ?? (options?.buttons?.length ?? 1) - 1`
+(`:486`), i.e. always the CALLER's own declared `cancelId`, never a positional heuristic.
+`src/backend/sidecar/processGuards.ts` additionally installs a process-level
+`unhandledRejection` guard as defence in depth. The never-reject contract the original todo asked
+for already exists and is documented in place.
+
+## What is still live from the original
+
+**D — Trap 3 (inverted response semantics) is STILL LIVE.** `src/backend/utils.ts:281`
+(`handleExit`): index 0 is the SAFE "No", index 1 is the DESTRUCTIVE "Yes" (killing an in-flight
+install/download and exiting). It now carries an explicit `cancelId: 0` (CR-04), added precisely
+because the shim's positional cancelId fallback would otherwise resolve to the destructive branch
+on any transport error. This stands as a live constraint on any future migration of this site:
+preserve its response polarity exactly.
 
 ## Suggested shape
 
-1. Decide the policy first: which confirmations are legitimately OS-native (quit, updater,
-   pre-window-ready) versus in-app (anything reached from a settings surface). Record the rule.
-2. Independently, fix the `Dialog` primitive so the in-app path is genuinely styled — knowing the
-   base-state trap above — otherwise migrating callers onto it changes nothing visible.
-3. Only then migrate the settings-surface confirmations, EOS removal included, preserving each
-   caller's response polarity and the never-reject contract.
-
-Steps 1 and 2 are independently valuable and can land separately.
+1. **Fix the three shim-collapse defects.** They are independent of the policy question below
+   and can land first: extend the shim's 3-button mapping (or route the VCRuntime dialog through
+   a 2-button + separate persisted-preference shape) for defect 1; wire a real checkbox-state
+   round trip (or drop the checkbox and use a separate "don't ask again" mechanism) for defect 2;
+   and replace the `showMessageBoxSync` fail-open no-op at the sideloaded-game unload guard with
+   an async confirmation for defect 3, since that one is a live data-loss risk.
+2. **Decide the native-vs-in-app policy.** Which confirmations are legitimately OS-native (quit,
+   updater, pre-window-ready, Rosetta) versus in-app (anything reached from a settings surface),
+   and record the rule. This question from the original todo is still open and still applies to
+   the surviving census sites.
 
 ## Notes
 
-Not resolved by Phase 34.6 — deliberately no `resolves_phase:` field, so this is not auto-closed
-by that phase's completion. The 34.6 live gate only *observed* the dialog; A-02's assertion is
-about **where** the dialog occurs, not how it is styled, so step 2's disposition is unaffected.
+Deliberately no `resolves_phase:` field, carried over unchanged from the original — this todo is
+not scoped to a single phase's completion and should not be auto-closed by one.
 
-Related: [[stylesheet-can-be-wholly-dead-against-its-component]] ·
-[[sidecar-dialog-reject-crashes]]
+The filename still encodes the original's false "renders as a native system dialog" headline.
+The path is kept stable deliberately (todos are referenced by path elsewhere); the frontmatter
+`title` above is what's current.
+
+Related, both **HISTORICAL** — retained as provenance for the two now-closed traps, not as
+active hazards: [[stylesheet-can-be-wholly-dead-against-its-component]] (HISTORICAL: the
+primitive is now genuinely styled at `Dialog.tsx:50`, per "What has already closed" B above) ·
+[[sidecar-dialog-reject-crashes]] (HISTORICAL: `platform/index.ts:459` now provably never
+rejects, per "What has already closed" C above).
