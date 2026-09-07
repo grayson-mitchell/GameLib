@@ -1158,6 +1158,22 @@ impl SidecarState {
     /// open network sockets, and file handles. This runs on the exit path, so a poisoned
     /// mutex, an already-exited process, or a kill error must all be logged and swallowed
     /// rather than panicking -- an unwind here is worse than a leak.
+    ///
+    /// UPDATED (quick task 260907-juv, Layer B): killing/waiting on the sidecar alone left
+    /// its own long-lived children (GOG's `comet`, the Steam bridge helper) reparented and
+    /// orphaned on exactly this path -- `Child::kill()` is SIGKILL on unix, which the
+    /// sidecar's own Node process can never catch to run its own JS-side teardown
+    /// (`backend/longLivedChildren.ts`'s `shutdownLongLivedChildren()` is unreachable here
+    /// by construction; that registry only ever runs from the in-app `handleExit()` quit
+    /// path, `backend/utils.ts`). On unix, `configure_sidecar_process_group` (called at both
+    /// spawn sites, `spawn_sidecar_dev`/`spawn_sidecar_packaged`) puts the sidecar in its OWN
+    /// process group, so this now signals that WHOLE group -- SIGTERM first (catchable,
+    /// giving comet/the bridge helper a chance at their own graceful exit; the todo's own
+    /// evidence measured comet exiting ~1s after a plain SIGTERM), a bounded grace period
+    /// polled via `try_wait()`, then SIGKILL if still alive after the grace window. Windows
+    /// has no process-group-signal equivalent reachable from this crate, so it keeps the
+    /// pre-existing sidecar-only `child.kill()` (`#[cfg(not(unix))]` below) -- a narrower
+    /// fix than unix's group reap, not a regression of what existed before this quick task.
     fn shutdown_child(&self) {
         let mut child = match self.child.lock() {
             Ok(guard) => guard,
@@ -1166,9 +1182,52 @@ impl SidecarState {
                 poisoned.into_inner()
             }
         };
-        if let Err(e) = child.kill() {
-            eprintln!("[shell] sidecar kill() failed during exit shutdown (may have already exited): {e}");
+
+        #[cfg(unix)]
+        {
+            // `configure_sidecar_process_group` put the sidecar in its own process group at
+            // spawn time (`process_group(0)`), making its pgid equal to its own pid -- so
+            // this pid IS the group id to signal.
+            let pgid = child.id() as i32;
+            // SAFETY: `libc::kill` with a negative first argument signals every process in
+            // the group `-pgid`, never a single arbitrary pid this code does not own -- the
+            // sidecar created that group itself at spawn time. No pointers are dereferenced;
+            // the call can only fail (ESRCH/EPERM), never crash.
+            unsafe {
+                libc::kill(-pgid, libc::SIGTERM);
+            }
+            let grace_deadline = std::time::Instant::now() + Duration::from_millis(2000);
+            let mut exited = false;
+            while std::time::Instant::now() < grace_deadline {
+                match child.try_wait() {
+                    Ok(Some(_)) => {
+                        exited = true;
+                        break;
+                    }
+                    Ok(None) => thread::sleep(Duration::from_millis(50)),
+                    Err(e) => {
+                        eprintln!(
+                            "[shell] sidecar try_wait() failed during exit shutdown grace period: {e}"
+                        );
+                        break;
+                    }
+                }
+            }
+            if !exited {
+                // SAFETY: same group-only guarantee as the SIGTERM call above.
+                unsafe {
+                    libc::kill(-pgid, libc::SIGKILL);
+                }
+            }
         }
+
+        #[cfg(not(unix))]
+        {
+            if let Err(e) = child.kill() {
+                eprintln!("[shell] sidecar kill() failed during exit shutdown (may have already exited): {e}");
+            }
+        }
+
         if let Err(e) = child.wait() {
             eprintln!("[shell] sidecar wait() failed during exit shutdown: {e}");
         } else {
@@ -8159,6 +8218,27 @@ fn acquire_single_instance(socket_path: &std::path::Path) -> SingleInstanceRole 
 /// argv AFTER the entry path -- the sidecar's `process.argv` becomes
 /// `[node, <entry>, ...forward_args]`, matching `environment.ts`'s `process.argv.includes(...)`
 /// checks.
+/// Quick task 260907-juv (Layer B): puts the sidecar in its OWN process group (pgid == its
+/// own pid, `process_group(0)`) so `shutdown_child()` can signal the WHOLE group -- the
+/// sidecar plus every descendant it spawns (GOG's `comet`, the Steam bridge helper) -- with a
+/// single `libc::kill(-pgid, sig)`, instead of only the sidecar's own pid. Without this, the
+/// sidecar inherits the Tauri shell's own process group, so a group-wide signal would also
+/// target the shell process itself; called from BOTH spawn sites (`spawn_sidecar_dev`,
+/// `spawn_sidecar_packaged`) so neither path can silently regress the other's protection.
+///
+/// unix-only: `std::os::unix::process::CommandExt::process_group` has no Windows equivalent
+/// and is stable since Rust 1.64 (this crate's `rust-version` is 1.77.2). The `#[cfg(not(unix))]`
+/// arm is a deliberate no-op, not a stub awaiting an implementation -- `shutdown_child()`'s own
+/// `#[cfg(not(unix))]` arm keeps calling `child.kill()` on the sidecar alone on that platform.
+#[cfg(unix)]
+fn configure_sidecar_process_group(cmd: &mut Command) {
+    use std::os::unix::process::CommandExt;
+    cmd.process_group(0);
+}
+
+#[cfg(not(unix))]
+fn configure_sidecar_process_group(_cmd: &mut Command) {}
+
 fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Result<Child> {
     let entry = resolve_sidecar_entry();
     let app_root = resolve_dev_app_root();
@@ -8177,15 +8257,16 @@ fn spawn_sidecar_dev(shell_exe: &str, forward_args: &[String]) -> std::io::Resul
     shell_diag(&format!("  GAMELIB_SHELL_EXE={shell_exe}"));
     shell_diag(&format!("  GAMELIB_APP_ROOT={app_root}"));
     shell_diag(&format!("  forward_args={forward_args:?}"));
-    let child = Command::new(&node)
-        .arg(&entry)
+    let mut cmd = Command::new(&node);
+    cmd.arg(&entry)
         .args(forward_args)
         .env("GAMELIB_SHELL_EXE", shell_exe)
         .env("GAMELIB_APP_ROOT", &app_root)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+        .stderr(Stdio::piped());
+    configure_sidecar_process_group(&mut cmd);
+    let child = cmd.spawn();
     match &child {
         Ok(_) => shell_diag("sidecar process spawned OK"),
         Err(e) => shell_diag(&format!(
@@ -8224,14 +8305,15 @@ fn spawn_sidecar_packaged(
     eprintln!("[shell]   entry_exists={exists}");
     eprintln!("[shell]   GAMELIB_APP_ROOT={app_root}");
     eprintln!("[shell]   forward_args={forward_args:?}");
-    let child = std_command
+    std_command
         .args(forward_args)
         .env("GAMELIB_SHELL_EXE", shell_exe)
         .env("GAMELIB_APP_ROOT", &app_root)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
+        .stderr(Stdio::piped());
+    configure_sidecar_process_group(&mut std_command);
+    let child = std_command.spawn();
     match &child {
         Ok(_) => eprintln!("[shell] sidecar process spawned OK"),
         Err(e) => eprintln!(

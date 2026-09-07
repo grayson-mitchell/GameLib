@@ -218,6 +218,21 @@ objc2-web-kit = { version = "0.3.2", default-features = false, features = [
     "objc2-app-kit",
 ] }
 
+# Quick task 260907-juv (Layer B): the sidecar's process-group reap on quit
+# (`SidecarState::shutdown_child()` in `src/main.rs`) needs `libc::kill(-pgid, sig)` to signal
+# the sidecar's whole process group rather than the lone sidecar pid -- `std::process::Child`
+# exposes no group-signal API of its own. ALREADY resolved in this workspace's tree at this
+# exact version (a transitive dependency of `dispatch2`'s own default features, see that
+# crate's comment above, and of several other dependencies) -- this line only declares what
+# `src/main.rs` directly calls, same "declare what your own code directly needs, even if
+# already present" discipline the `dispatch2`/`objc2-core-foundation` comments above
+# established. `git diff --exit-code Cargo.lock` stays 0: no new crate enters the tree.
+# `target.'cfg(unix)'` (not macOS-only): the process-group reap applies to every unix target
+# this shell builds for (macOS AND Linux) -- only Windows gets the `#[cfg(not(unix))]`
+# degraded arm in `shutdown_child()` that keeps the pre-existing `child.kill()`.
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.186"
+
 [profile.release]
 opt-level = "s"
 lto = true
