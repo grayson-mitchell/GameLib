@@ -412,3 +412,19 @@ was an available alternative; there is no delete equivalent. Needs one operator 
 
 **Backups** (session scratchpad, not the repo):
 `…/scratchpad/repair-backup/installed.json.before` and `…/repair-backup/1769415595.json.orphan`.
+
+### Both cleanup items now discharged — todo CLOSED
+
+The orphan `GamesConfig/1769415595.json` was deleted by the operator in a terminal on 2026-09-07,
+after the classifier block above. **Deliberately not substituted:** overwriting it with `{}` (the
+shape of every other non-installed game's config in that directory) would have achieved a similar
+end state, but it is a different act from the delete that was authorised, so it was surfaced as a
+choice rather than performed.
+
+Verified after the fact: the file is absent; `1769415595` is still absent from `installed.json`;
+Endless Sky's `versionEtag` reads `'"688661e1d54090f16fd8742109bc6759"'` and `pinnedVersion` is
+`false`.
+
+Source todo moved to `.planning/todos/completed/` with `status: RESOLVED`, `resolved: 2026-09-07`,
+`resolved_by: quick 260907-ppy`. The split-out
+`2026-09-07-macos-shortcut-icon-generation-fails-on-correct-installs.md` stays OPEN.
