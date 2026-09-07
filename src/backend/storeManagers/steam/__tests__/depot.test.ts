@@ -30,6 +30,7 @@ import {
   readFileSync,
   readlinkSync,
   rmSync,
+  statSync,
   writeFileSync
 } from 'node:fs'
 import { open, stat } from 'node:fs/promises'
@@ -3569,16 +3570,20 @@ describe('downloadDepotFiles', () => {
       expect(logged[0]).toContain('777')
     })
 
-    it('T-D2: carries `code` — the real EISDIR shape that reached the generic bucket unrecorded', async () => {
-      // Faithful reproduction of the 2026-08-27 Fallout 2 state: `master.dat`
-      // is a 333MB FILE in the manifest but exists on disk as a DIRECTORY, so
-      // the real open() fails EISDIR — a code matching no signature in
-      // classifyDepotError's alternation, which is exactly why it fell
-      // through to genericV2 with nothing logged. Not a synthesised error
-      // object: the fs produces it.
-      mkdirSync(join(dir, 'common', 'SomeGame', 'master.dat'), {
-        recursive: true
-      })
+    // T-D2 SUPERSEDED. Its original body created an EMPTY directory at
+    // `master.dat` and asserted the write failed with `code=EISDIR`. That
+    // premise is now obsolete BY DESIGN: clearStaleDirectoryAtFilePath removes
+    // an empty stale directory so the retry succeeds, which is the whole point
+    // of the repair half of the fix. The `code=` plumbing it was really
+    // testing is covered directly and more precisely by describeDepotFailure's
+    // own unit tests. What remains worth pinning here is the case the fix
+    // deliberately REFUSES to handle.
+    it('T-D2: a NON-EMPTY directory at a file path is recorded and named — never silently deleted', async () => {
+      const stale = join(dir, 'common', 'SomeGame', 'master.dat')
+      mkdirSync(stale, { recursive: true })
+      // Real user content. Deleting this to make an install succeed would be
+      // far worse than failing, so the fix must refuse and say so.
+      writeFileSync(join(stale, 'precious.txt'), 'do not delete me')
 
       const file: DepotPlanFile = {
         filename: 'master.dat',
@@ -3599,12 +3604,83 @@ describe('downloadDepotFiles', () => {
       })
 
       expect(result.failures).toHaveLength(1)
+      expect(result.failures[0].error).toMatch(/NON-EMPTY directory/i)
+      // The user's file is untouched.
+      expect(readFileSync(join(stale, 'precious.txt'), 'utf8')).toBe(
+        'do not delete me'
+      )
+
       const logged = jest
         .mocked(logWarning)
         .mock.calls.map((c) => String(c[0]))
         .find((m) => m.includes('downloadDepotFiles:'))
       expect(logged).toContain('master.dat')
-      expect(logged).toContain('code=EISDIR')
+    })
+
+    it('T-D5: an EMPTY stale directory is removed and the file is written — the repair half', async () => {
+      // The state the 2026-08-27 Fallout 2 install is in RIGHT NOW. Before
+      // this fix the reconciler re-queued the file, open() failed EISDIR, and
+      // it failed forever — prevention alone could never repair it.
+      const stale = join(dir, 'common', 'SomeGame', 'master.dat')
+      mkdirSync(stale, { recursive: true })
+
+      const file: DepotPlanFile = {
+        filename: 'master.dat',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 'sha-m', cb_original: content.length, offset: 0 }]
+      }
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+      const plan = makePlan(
+        [{ depotId: '777', gid: 'g7', key: Buffer.from('key'), files: [file] }],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      expect(result.outcome).toBe('completed')
+      // It is now a FILE with the manifest's bytes, not a directory.
+      expect(statSync(stale).isFile()).toBe(true)
+      expect(readFileSync(stale).equals(content)).toBe(true)
+    })
+
+    it('T-D6: a stale FILE is simply overwritten — the cleanup never fires for it', async () => {
+      const dest = join(dir, 'common', 'SomeGame', 'master.dat')
+      mkdirSync(join(dir, 'common', 'SomeGame'), { recursive: true })
+      writeFileSync(dest, 'stale bytes from an older build')
+
+      const file: DepotPlanFile = {
+        filename: 'master.dat',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 'sha-m', cb_original: content.length, offset: 0 }]
+      }
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+      const plan = makePlan(
+        [{ depotId: '777', gid: 'g7', key: Buffer.from('key'), files: [file] }],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toEqual([])
+      expect(readFileSync(dest).equals(content)).toBe(true)
+      // No "removed a stale empty directory" line — the path was never a dir.
+      expect(
+        jest
+          .mocked(logWarning)
+          .mock.calls.map((c) => String(c[0]))
+          .filter((m) => m.includes('stale empty directory'))
+      ).toEqual([])
     })
 
     it('T-D3: caps per-file lines but never hides the true failure COUNT', async () => {

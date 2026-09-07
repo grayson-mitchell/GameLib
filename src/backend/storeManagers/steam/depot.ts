@@ -18,8 +18,10 @@ import {
   mkdir,
   readdir,
   stat,
+  lstat,
   symlink,
   rm,
+  rmdir,
   chmod,
   type FileHandle
 } from 'node:fs/promises'
@@ -1045,6 +1047,59 @@ export class PathTraversalError extends Error {}
  * BEFORE any fs call — path.join alone is not containment (Phase 18 lesson,
  * per user memory). A "../"-escaping filename never reaches open()/mkdir().
  */
+/**
+ * Remove a stale DIRECTORY sitting where a manifest FILE entry belongs, so a
+ * retry can actually write it (debug/steam-depot-unclassified-generic-error).
+ *
+ * Uses `rmdir`, NOT `rm`, and that choice is load-bearing in both directions:
+ *  - `rm(dest, { force: true })` throws `ERR_FS_EISDIR` against a directory
+ *    even when it is EMPTY (measured, not assumed), so it cannot do this job;
+ *  - `rm(dest, { recursive: true })` would delete a directory full of real
+ *    files. A manifest path colliding with a populated directory is an
+ *    ambiguous state that must SURFACE, never be silently erased.
+ *
+ * `rmdir` removes an empty directory and refuses a populated one with
+ * ENOTEMPTY — exactly the wanted semantics. The refusal is rethrown with a
+ * message naming the file, so it lands in downloadDepotFiles' failure list and
+ * the operator is told what to do, instead of a bare fs error.
+ *
+ * Scope limit, deliberate: only a REAL directory is handled (`lstat`, so a
+ * symlink is never followed). A symlink pointing AT a directory would still
+ * fail EISDIR — not the observed defect, and clearing it silently would be a
+ * bigger behaviour change than this fix is entitled to make.
+ */
+async function clearStaleDirectoryAtFilePath(
+  dest: string,
+  filename: string
+): Promise<void> {
+  let st
+  try {
+    st = await lstat(dest)
+  } catch {
+    // Nothing at that path — the overwhelmingly common case (fresh install).
+    return
+  }
+  // A stale FILE needs no special handling: open(dest, 'w') truncates it.
+  if (!st.isDirectory()) return
+
+  try {
+    await rmdir(dest)
+  } catch (err) {
+    throw new Error(
+      `downloadDepotFiles: "${filename}" is a file in the depot manifest, but a ` +
+        `NON-EMPTY directory exists at that path. Refusing to delete it ` +
+        `(${(err as Error).message}) — remove it by hand and retry the install.`
+    )
+  }
+
+  logWarning(
+    `downloadDepotFiles: removed a stale empty directory at "${filename}" so the ` +
+      `manifest's file could be written — without this the write fails EISDIR on ` +
+      `every retry (see depot/pathCollisions.ts for how one gets created)`,
+    LogPrefix.Steam
+  )
+}
+
 export function resolveContainedPath(root: string, filename: string): string {
   const dest = resolve(root, filename.replace(/\\/g, '/'))
   const rel = relative(root, dest)
@@ -1496,6 +1551,20 @@ async function downloadSingleFile(
     await symlink(file.linktarget, dest)
     return
   }
+
+  // debug/steam-depot-unclassified-generic-error: everything below writes via
+  // `open(dest, 'w')`, which throws EISDIR against a directory. The symlink
+  // branch above already clears a stale entry for exactly this reason ("a
+  // retry of a partially-succeeded install would fail that file forever") —
+  // that argument applies verbatim here and was never applied.
+  //
+  // It is not hypothetical: the 2026-08-27 Fallout 2 install left a directory
+  // at `master.dat` (a cross-depot collision, now prevented at plan build by
+  // depot/pathCollisions.ts). Prevention alone does not repair the installs
+  // already damaged — the reconciler correctly re-queues the file, the write
+  // hits EISDIR, and it fails FOREVER. This is what makes the fix repair
+  // rather than merely prevent.
+  await clearStaleDirectoryAtFilePath(dest, file.filename)
 
   if (!file.chunks.length || Number(file.size) === 0) {
     if (Number(file.size) !== 0) {
