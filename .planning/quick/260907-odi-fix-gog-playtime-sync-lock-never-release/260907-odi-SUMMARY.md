@@ -273,4 +273,6 @@ FOUND: src/backend/sidecar/__tests__/testContainment.test.ts
 FOUND: .planning/todos/completed/2026-09-06-gog-playtime-sync-lock-never-cleared-at-boot.md
 ```
 
-(Commit sha check appended after commit, below.)
+Commit `3eba3cff6` verified present via `git log --oneline --all | grep 3eba3cff6`.
+
+## Self-Check: PASSED
