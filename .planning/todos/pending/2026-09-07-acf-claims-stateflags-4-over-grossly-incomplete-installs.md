@@ -4,7 +4,7 @@ title: "Two GameLib-written ACFs claim StateFlags=4 (complete) over grossly inco
 area: steam-depot
 status: OPEN
 severity: critical
-split_from: .planning/todos/pending/2026-08-27-steam-depot-install-fails-with-unclassified-generic-error.md
+split_from: .planning/todos/completed/steam-depot-install-fails-with-unclassified-generic-error.md (RESOLVED 2026-09-08; this defect was NOT closed with it)
 debug_session: .planning/debug/steam-depot-unclassified-generic-error.md
 files:
   - src/backend/storeManagers/steam/depot.ts
@@ -80,3 +80,47 @@ gate is an accessory rather than the cause.
 Both ACFs are still on disk claiming completeness. Repair is a user decision (Steam
 "Verify integrity of game files", or reinstall) — **not** something to do silently
 while investigating, and deliberately not done here.
+
+
+---
+
+# 2026-09-08 — the parent todo closed; this one is UNTOUCHED and now has NO cover story
+
+The cross-depot collision that produced 38410's damaged install is fixed and
+live-verified (`0a6e5e91b` + `037f0e4d3`, parent todo now in `completed/`). **That
+tells us nothing about this defect**, and the parent's closure must not be read as
+progress here.
+
+## What the 2026-09-08 live re-drive did and did not show
+
+A real Fallout 2 install ran to completion against live Steam. The ACF it wrote
+carries `StateFlags=4` over an install whose measured bytes (591,399,306) match the
+manifest sum byte-exactly — the gate behaving **correctly**. A correct pass over a
+complete install is not evidence about the incorrect pass over an incomplete one.
+
+**It also went to the CrossOver bottle, not the native Steam tree** (38410 is a
+Windows title). Both damaged installs — 38410 (−56.3%) and 718850 (−79.2%) — are on
+the **native** path. Whatever chose native in August chooses bottle now. That
+divergence is itself unexplained and may mean this defect is native-path-specific;
+establish which root a run targets before treating its ACF as a data point.
+
+## The discriminating run, still NOT taken
+
+Plant a **non-empty** directory at `master.dat` in the target install root, install,
+and observe three things:
+
+1. `clearStaleDirectoryAtFilePath` must refuse it with `ENOTEMPTY` (this also gives
+   the parent's repair half its only live coverage — the re-drive's fresh target
+   meant it logged nothing);
+2. the install must FAIL;
+3. the ACF must read **`1026`**, the verify handoff.
+
+If it writes `4` over that failure, this defect is caught live and in the act. Drive
+it against the **native** path if possible, since that is where both observed
+failures occurred.
+
+## Cleanup still owed
+
+The damaged installs are untouched by any code fix and still need Steam's "verify
+integrity": native 38410 (`master.dat` is still an empty directory,
+258,221,501 B under a `StateFlags=4` manifest) and native 718850.

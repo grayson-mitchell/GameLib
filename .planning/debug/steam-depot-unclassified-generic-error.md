@@ -1,9 +1,9 @@
 ---
 slug: steam-depot-unclassified-generic-error
-status: resolved-pending-verify
+status: resolved
 created: 2026-09-07
-updated: 2026-09-07
-source_todo: .planning/todos/pending/2026-08-27-steam-depot-install-fails-with-unclassified-generic-error.md
+updated: 2026-09-08
+source_todo: .planning/todos/completed/steam-depot-install-fails-with-unclassified-generic-error.md
 area: steam-depot
 severity: major
 trigger: "Steam depot install of Fallout 2 (38410) fails ~5s after click with the UNCLASSIFIED generic fallback 'The Steam download failed.' (depotErrors.ts genericV2) and no chunk-level diagnostic anywhere in the log."
@@ -319,3 +319,82 @@ repo-wide — zero warnings added.
   changes at once and is the best chance to catch the StateFlags=4 defect in the act.
 - The two damaged installs still need repair (this fix lets a retry heal 38410's
   `master.dat`; it does not address 718850's missing-files shape).
+
+
+---
+
+# LIVE RE-DRIVE 2026-09-08 — the collision fix is PROVEN on real hardware
+
+A real Fallout 2 (38410) install was driven through the running app against live
+Steam. It went to the **CrossOver bottle**, not the native Steam tree — 38410 is a
+Windows title (`os=windows arch=64` in the plan log), so `GameLibSteam` is the
+correct target. The Aug 27 failure was on the **native** path; that difference
+matters and is carried forward below.
+
+## The collision log fired verbatim in production
+
+```
+buildDepotPlan: appId=38410 cross-depot path collision on "master.dat" — depot(s) 38414
+declare it a Directory while depot 38415 declares a file of 333177805 bytes (318 chunks).
+Keeping the FILE and dropping the directory marker(s)
+resolved 1 cross-depot path collision(s), dropped 1 directory marker(s)
+```
+
+`steam-flags-census` then read `totalFiles=64`, not 65 — the dropped marker,
+matching the Aug 27 disk forensics (64 entries present against a 65-entry plan)
+exactly.
+
+## Result, measured on disk
+
+| | Aug 27 (broken, native) | 2026-09-08 (fixed, bottle) |
+| --- | --- | --- |
+| `master.dat` | empty **directory** | **regular file, 333,177,805 B** |
+| entries | 49 files + 15 subdirs = 64 of 65 | **50 files + 14 subdirs = 64 of 64** |
+| real bytes on disk | 258,221,501 | **591,399,306** |
+| ACF `SizeOnDisk` | 591,399,306 (**−56.3%**) | 591,399,306 (**byte-exact**) |
+| outcome | UNCLASSIFIED `genericV2` | `status=done` |
+
+`BytesDownloaded == BytesToDownload == SizeOnDisk == 591399306`, and `StateFlags=4`
+is **legitimately** earned here: measured bytes match the manifest sum exactly.
+
+## Two things this run did NOT establish
+
+**1. The repair half was never exercised.** `clearStaleDirectoryAtFilePath` logged
+**zero** occurrences of `removed a stale empty directory` — correctly, because the
+bottle target was fresh and no stale directory existed. That half of `037f0e4d3`
+still has only unit + sabotage coverage, **no live evidence**. It is not counted as
+live-validated.
+
+**2. Nothing was learned about the false `StateFlags=4`.** The gate wrote `4` over a
+genuinely complete install, which is the gate behaving correctly. The CRITICAL
+defect needs its own discriminating run (plant a NON-EMPTY directory at
+`master.dat`, install, and check the write refuses `ENOTEMPTY`, the install fails,
+and the ACF reads `1026` not `4`) — tracked in
+`2026-09-07-acf-claims-stateflags-4-over-grossly-incomplete-installs.md`, which
+would exercise (1) as a side effect.
+
+## A prediction error worth recording
+
+Before the run I predicted "~333 MB, not 591 MB" downloaded, reasoning that the
+existing 258 MB would be reconciled and skipped. That was wrong: I read past
+`os=windows` in the plan log and assumed the native path. The bottle target was
+empty, so `reconciledSkipped=0` and a full 591 MB transfer was CORRECT. The
+prediction nearly caused a good run to be aborted as anomalous. **Confirm which
+install ROOT a title targets before predicting resume behaviour** — the same title
+has two, and they hold independent state.
+
+## Closing this todo
+
+The reported symptom is resolved and live-verified end to end:
+- the UNCLASSIFIED generic bucket now carries `code`/`eresult`, the filename, the
+  failure count and the classification key (`669eefd17`/`2ea598d24`);
+- the root cause — a cross-depot path collision in Valve's own data — cannot recur
+  (`0a6e5e91b`, live-proven above);
+- an already-damaged install can now self-heal (`037f0e4d3`, unit-proven only).
+
+**Deliberately NOT closed by this todo**, each carried elsewhere:
+- false `StateFlags=4` — CRITICAL, own todo, no innocent explanation left;
+- the damaged **native** 38410 install (`master.dat` still an empty directory,
+  258,221,501 B under a `StateFlags=4` manifest) and 718850 (−79.2%) still need
+  Steam's "verify integrity" — a code fix stops recurrence, it does not repair
+  existing damage.
