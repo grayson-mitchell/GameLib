@@ -5053,6 +5053,31 @@ Plans:
 - [x] 41-06-PLAN.md — GAP CLOSURE: guard BOTH English catalog reads, and make every drift-check skip emit a named finding (gap wave 1, REQ-41-01/REQ-41-02)
 - [x] 41-07-PLAN.md — GAP CLOSURE: correct the entry-point guard's false comment and give R5 the ability to fail (gap wave 2, review-derived)
 
+### Phase 42: Humble key platform identity — evidenced key_type table driving store indicator, per-platform redeem deep links, and a home for owned+revealed keys
+
+**Goal:** Humble's raw `key_type` string is interpreted ad hoc at three call sites that spell it
+differently, so the store a key belongs to is never presented as such and only Steam gets a real
+redeem path. Replace that with ONE evidenced `key_type` table — display name, logo-or-neutral,
+redeem-URL-or-help-fallback — and drive the row's store indicator and the per-platform deep links
+from it. Also give owned+revealed keys somewhere to live: today they are correctly excluded from
+Keys-waiting and Giftable Spares alike, so they sit under All-keys' `Revealed` heading forever
+with no way to settle them.
+
+**Requirements**: TBD (run /gsd-plan-phase 42)
+
+**Depends on:** Phase 12 (`ownedElsewhere`/`matchConfidence` overlay + the D-42 fuzzy override this
+must not auto-settle around), Phase 13 (`selectKeysWaiting`/`selectGiftableSpares`, the two tabs the
+third state falls between), Phase 14 (`HumbleClaimWizard`'s Steam-vs-help URL fork, which the table
+subsumes). **NOT** Phase 41 — `phase.add` fills `Depends on` with the preceding phase number as a
+positional guess; 41 is `meta/`-only and touches no runtime path. Phase 41's i18n gates do
+constrain this phase's new strings (`gamelib.json`, never `translation.json`) but that is a
+standing repo constraint, not a dependency.
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 42 to break down)
+
 ---
 
 ## Parked / Superseded Phases
