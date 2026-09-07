@@ -1,0 +1,297 @@
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Users/graysonmitchell/Projects/GameLib source=GAMELIB_APP_ROOT
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Users/graysonmitchell/Projects/GameLib/public exists=true
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary exists=true
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl exists=true
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile exists=true
+(18:32:18) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/comet exists=true
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(18:32:18) [INFO]:    [Backend]:         [bootstrap] steamgrid secret store: keyring
+(18:32:18) [INFO]:    [Connection]:      Connectivity: check-online
+(18:32:18) [INFO]:    [Connection]:      Pinging external endpoints
+(18:32:18) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (main.ts:579-only, startup-flagged initQueue call) is deliberately disabled (D-05) — a persisted queue head stays resumable via the Resume button, never auto-started on sidecar boot
+(18:32:18) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(18:32:18) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=mount
+(18:32:18) [INFO]:    [Backend]:         [GAMELIB_SIDECAR_SEND_HANDLER] frontendReady
+(18:32:18) [INFO]:    [Backend]:         Frontend Ready
+(18:32:18) [WARNING]: refresh not implemented on Sideload Library Manager
+(18:32:18) [INFO]:    [Steam]:           Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(18:32:18) [INFO]:    [Legendary]:       Refreshing library...
+(18:32:18) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(18:32:18) [INFO]:    [Connection]:      Connectivity: online
+(18:32:18) [WARNING]: listUpdateableGames not implemented on Sideload Library Manager
+(18:32:18) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(18:32:18) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(18:32:18) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(18:32:18) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(18:32:18) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(18:32:20) [INFO]:    [Gog]:             Found 1 game(s) to update
+(18:33:03) [WARNING]: [Steam]:           keyring failure memoized slot=humble-session class=timeout ms=120000 trigger=unspecified
+(18:33:03) [WARNING]: [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): keyring_get failed: keyring:timeout trigger=unspecified elapsed=45006ms
+(18:33:03) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): memo hit, answering unreadable/timeout without a second keyring_get trigger=unspecified
+(18:34:18) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Ale  Tale Tavern
+(18:34:18) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Ale  Tale Tavern
+(18:34:18) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Ale  Tale Tavern
+(18:34:18) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Ale  Tale Tavern
+(18:34:18) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Ale  Tale Tavern
+(18:34:18) [INFO]:    [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): issuing keyring_get (may prompt) trigger=game-page
+(18:34:19) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Ale & Tale Tavern (ID: 156757) - steam
+(18:34:25) [INFO]:    [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): keyring_get ok present=true len=494 trigger=game-page elapsed=6226ms
+(18:34:26) [INFO]:    [Steam]:           [Timing] SteamUser.loggedOn: cellID=22 publicIP=114.23.167.2
+(18:34:26) [INFO]:    [Steam]:           [Timing] SteamUser.ensureConnected: cold-connect path took 1359ms
+(18:34:53) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for The Binding of Isaac
+(18:34:53) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for The Binding of Isaac
+(18:34:53) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for The Binding of Isaac
+(18:34:53) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for The Binding of Isaac
+(18:34:53) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for The Binding of Isaac
+(18:34:54) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for The Binding of Isaac (ID: 9781) - steam
+(18:35:06) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Citizen Sleeper
+(18:35:06) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Citizen Sleeper
+(18:35:06) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Citizen Sleeper
+(18:35:06) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Citizen Sleeper
+(18:35:07) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Citizen Sleeper (ID: 130017) - steam
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Balrum
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Balrum
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Balrum
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Balrum
+(18:37:05) [INFO]:    [Gog]:             Getting game metadata: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" info 1769415595 --os osx
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Balrum
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Balrum
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Balrum
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Balrum
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Balrum
+(18:37:05) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Balrum
+(18:37:05) [INFO]:    [Gog]:             Getting game metadata: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" info 1769415595 --os osx
+(18:37:06) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Balrum TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:37:06) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Balrum TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:37:06) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Balrum 1769415595 - gog
+(18:37:06) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Balrum 1769415595 - gog
+(18:37:08) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Balrum
+(18:37:08) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Balrum, cannot fetch data
+(18:37:08) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1769415595: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:37:08) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1769415595: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:37:08) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Balrum, cannot fetch data
+(18:37:08) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Balrum
+(18:37:41) [ERROR]:   [Backend]:         importGame: rejected a renderer-supplied path that is not a plausible absolute filesystem path
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Endless Sky
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Endless Sky
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Endless Sky
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Endless Sky
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Endless Sky
+(18:40:51) [INFO]:    [Gog]:             Getting game metadata: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" info 1829678475 --os osx
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Endless Sky
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Endless Sky
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Endless Sky
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Endless Sky
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Endless Sky
+(18:40:51) [INFO]:    [Gog]:             Getting game metadata: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" info 1829678475 --os osx
+(18:40:51) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Endless Sky TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:40:51) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Endless Sky TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Endless Sky 1829678475 - gog
+(18:40:51) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Endless Sky 1829678475 - gog
+(18:40:53) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1829678475: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:40:53) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Endless Sky
+(18:40:53) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Endless Sky, cannot fetch data
+(18:40:54) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1829678475: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:40:54) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Endless Sky, cannot fetch data
+(18:40:54) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Endless Sky
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Balrum
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Balrum
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Balrum
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Balrum
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Balrum
+(18:54:44) [INFO]:    [Gog]:             Got install info from cache for 1769415595 on osx platform
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Balrum
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Balrum
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Balrum
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Balrum
+(18:54:44) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Balrum
+(18:54:44) [INFO]:    [Gog]:             Got install info from cache for 1769415595 on osx platform
+(18:54:44) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Balrum TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:54:44) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Balrum TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:54:45) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Balrum 1769415595 - gog
+(18:54:45) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Balrum 1769415595 - gog
+(18:54:47) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1769415595: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:54:47) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Balrum, cannot fetch data
+(18:54:47) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Balrum
+(18:54:47) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1769415595: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:54:47) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Balrum
+(18:54:47) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Balrum, cannot fetch data
+(18:55:04) [INFO]:    [GlobalConfig]:    Searching for Gaming Porting Toolkit Wine
+(18:55:04) [INFO]:    [GlobalConfig]:    Found Game Porting Toolkit Wine at /Users/graysonmitchell/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Endless Sky
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Endless Sky
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Endless Sky
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Endless Sky
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Endless Sky
+(18:58:12) [INFO]:    [Gog]:             Got install info from cache for 1829678475 on osx platform
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Endless Sky
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Endless Sky
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Endless Sky
+(18:58:12) [INFO]:    [Gog]:             Got install info from cache for 1829678475 on osx platform
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Endless Sky
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Endless Sky
+(18:58:12) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Endless Sky TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:58:12) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Endless Sky TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Endless Sky 1829678475 - gog
+(18:58:12) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Endless Sky 1829678475 - gog
+(18:58:14) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1829678475: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:58:14) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Endless Sky
+(18:58:14) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Endless Sky, cannot fetch data
+(18:58:14) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1829678475: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:58:14) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Endless Sky
+(18:58:14) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Endless Sky, cannot fetch data
+(18:59:04) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Balrum
+(18:59:04) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Balrum
+(18:59:04) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Balrum
+(18:59:04) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Balrum
+(18:59:04) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Balrum
+(18:59:05) [INFO]:    [Gog]:             Got install info from cache for 1769415595 on osx platform
+(18:59:05) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Balrum
+(18:59:05) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Balrum
+(18:59:05) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Balrum
+(18:59:05) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Balrum
+(18:59:05) [INFO]:    [ExtraGameInfo]:   Getting CodeWeavers CrossOver rating for Balrum
+(18:59:05) [INFO]:    [Gog]:             Got install info from cache for 1769415595 on osx platform
+(18:59:05) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Balrum TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:59:05) [ERROR]:   [ExtraGameInfo]:   Was not able to get PCGamingWiki data for Balrum TypeError: Cannot read properties of undefined (reading '0')
+    at getPageID2 (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19490:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getInfoFromPCGamingWiki (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19440:16)
+    at async Promise.all (index 0)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19873:80)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:59:05) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Balrum 1769415595 - gog
+(18:59:05) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Balrum 1769415595 - gog
+(18:59:07) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1769415595: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:59:07) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Balrum
+(18:59:07) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Balrum, cannot fetch data
+(18:59:07) [ERROR]:   [ExtraGameInfo]:   Error fetching HLTB game data for ID 1769415595: TypeError: Cannot read properties of null (reading '1')
+    at getGogHLTBGameData (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19336:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async getHowLongToBeat (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19381:22)
+    at async getWikiGameInfo (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:19882:27)
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:59:07) [INFO]:    [ExtraGameInfo]:   No HLTB ID available for Balrum, cannot fetch data
+(18:59:07) [INFO]:    [ExtraGameInfo]:   HLTB ID undefined not found for Balrum
+(18:59:41) [INFO]:    [Gog]:             Importing 1769415595: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" import "/Volumes/GLFIXTURE/import-src/Endless Sky.app"
+(18:59:42) [INFO]:    [Gog]:             Getting game metadata: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" info 1829678475 --os windows
+(18:59:45) [INFO]:    [Backend]:         Adding shortcuts for Balrum
+(18:59:45) [ERROR]:   [Backend]:         Error converting icon to icns: TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string. Received undefined
+    at join (node:path:1339:7)
+    at getIcon (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:18729:44)
+    at convertPngToICNS (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:20475:28)
+    at generateMacOsApp (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:20428:28)
+    at addShortcuts (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:20360:15)
+    at GOGGame.addShortcuts (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:21526:16)
+    at GOGGame.importGame (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:21322:16)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async /Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:32389:34
+    at async dispatchInvoke (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:28142:20)
+(18:59:45) [INFO]:    [Backend]:         Generating macOS shortcut
+(18:59:45) [INFO]:    [Backend]:         imported Balrum
+(18:59:45) [ERROR]:   [Backend]:         Error generating MacOS App
+(18:59:45) [INFO]:    [Backend]:         Temporary MacOS App removed
+(18:59:45) [INFO]:    [Gog]:             Got install info from cache for 1769415595 on osx platform
+(18:59:45) [INFO]:    [Gog]:             Got install info from cache for 1769415595 on osx platform

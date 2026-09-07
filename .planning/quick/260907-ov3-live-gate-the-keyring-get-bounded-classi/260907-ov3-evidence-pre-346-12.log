@@ -1,0 +1,35 @@
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Users/graysonmitchell/Projects/GameLib source=GAMELIB_APP_ROOT
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Users/graysonmitchell/Projects/GameLib/public exists=true
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary exists=true
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl exists=true
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile exists=true
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/comet exists=true
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] steamgrid secret store: keyring
+(11:38:34) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(11:38:34) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(11:38:34) [INFO]:    [Connection]:      Connectivity: check-online
+(11:38:34) [INFO]:    [Connection]:      Pinging external endpoints
+(11:38:34) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (main.ts:579-only, startup-flagged initQueue call) is deliberately disabled (D-05) — a persisted queue head stays resumable via the Resume button, never auto-started on sidecar boot
+(11:38:34) [INFO]:    [Connection]:      Connectivity: online
+(11:38:34) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(11:38:34) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=mount
+(11:38:34) [INFO]:    [Steam]:           Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(11:38:34) [INFO]:    [Backend]:         Frontend Ready
+(11:38:34) [INFO]:    [Backend]:         [GAMELIB_SIDECAR_SEND_HANDLER] frontendReady
+(11:38:34) [INFO]:    [Legendary]:       Refreshing library...
+(11:38:34) [WARNING]: refresh not implemented on Sideload Library Manager
+(11:38:34) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(11:38:34) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(11:38:34) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(11:38:34) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(11:38:34) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(11:38:34) [INFO]:    [Gog]:             Getting GOG library
+(11:38:35) [INFO]:    [Gog]:             Saved games data
+(11:38:35) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(11:38:35) [WARNING]: listUpdateableGames not implemented on Sideload Library Manager
+(11:38:35) [INFO]:    [Gog]:             Found 0 game(s) to update
+(11:39:19) [WARNING]: [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): keyring_get failed: keyring:timeout trigger=unspecified elapsed=45006ms
+(11:39:19) [WARNING]: [Steam]:           keyring failure memoized slot=humble-session class=timeout ms=120000 trigger=unspecified
+(11:39:19) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): memo hit, answering unreadable/timeout without a second keyring_get trigger=unspecified

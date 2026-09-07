@@ -1,0 +1,216 @@
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Users/graysonmitchell/Projects/GameLib source=GAMELIB_APP_ROOT
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Users/graysonmitchell/Projects/GameLib/public exists=true
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary exists=true
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile exists=true
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl exists=true
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/comet exists=true
+(15:48:56) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] steamgrid secret store: keyring
+(15:48:56) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(15:48:56) [INFO]:    [Connection]:      Connectivity: check-online
+(15:48:56) [INFO]:    [Connection]:      Pinging external endpoints
+(15:48:56) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (main.ts:579-only, startup-flagged initQueue call) is deliberately disabled (D-05) — a persisted queue head stays resumable via the Resume button, never auto-started on sidecar boot
+(15:48:56) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=mount
+(15:48:56) [INFO]:    [Backend]:         [GAMELIB_SIDECAR_SEND_HANDLER] frontendReady
+(15:48:56) [INFO]:    [Backend]:         Frontend Ready
+(15:48:56) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(15:48:56) [INFO]:    [Steam]:           Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(15:48:56) [WARNING]: refresh not implemented on Sideload Library Manager
+(15:48:56) [INFO]:    [Legendary]:       Refreshing library...
+(15:48:56) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(15:48:57) [WARNING]: listUpdateableGames not implemented on Sideload Library Manager
+(15:48:57) [INFO]:    [Connection]:      Connectivity: online
+(15:48:57) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(15:48:57) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(15:48:57) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(15:49:04) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Age of Wonders III
+(15:49:04) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Age of Wonders III
+(15:49:04) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Age of Wonders III
+(15:49:04) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Age of Wonders III
+(15:49:04) [INFO]:    [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): issuing keyring_get (may prompt) trigger=game-page
+(15:49:06) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Age of Wonders III (ID: 17567) - steam
+(15:49:34) [INFO]:    [Steam]:           SteamGame: removed bottle install for appId 226840 at "/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteam/drive_c/Program Files (x86)/Steam/steamapps/common/AoW3"
+(15:49:34) [INFO]:    [Steam]:           Steam: uninstall polling complete for appId 226840 — badge flipped to not-installed
+(15:49:34) [INFO]:    [Backend]:         Finished uninstalling
+(15:49:34) [INFO]:    [Frontend]:        [refreshLibrary] runner=steam origin=game-status
+(15:49:34) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): joined in-flight read, no additional keyring_get issued trigger=user-refresh
+(15:49:39) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 226840
+(15:49:41) [WARNING]: [Steam]:           keyring failure memoized slot=humble-session class=timeout ms=120000 trigger=unspecified
+(15:49:41) [WARNING]: [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): keyring_get failed: keyring:timeout trigger=unspecified elapsed=45006ms
+(15:49:41) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): memo hit, answering unreadable/timeout without a second keyring_get trigger=unspecified
+(15:49:49) [WARNING]: [Steam]:           keyring failure memoized slot=steam-refresh-token class=timeout ms=120000 trigger=game-page
+(15:49:49) [WARNING]: [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): keyring_get failed: keyring:timeout trigger=game-page elapsed=45004ms
+(15:49:49) [WARNING]: [Steam]:           Steam: refresh token read failed (timeout) — this is retryable, keeping the signed-in session and NOT clearing any credentials
+(15:49:49) [WARNING]: [Steam]:           Steam client not ready, skipping library refresh
+(15:49:49) [INFO]:    [Steam]:           refreshLibrary complete runner=steam managers=1
+(15:49:49) [WARNING]: [Steam]:           Steam: refresh token read failed (timeout) — this is retryable, keeping the signed-in session and NOT clearing any credentials
+(15:50:23) [INFO]:    [ExtraGameInfo]:   Getting GamesDB data for Machinarium
+(15:50:23) [INFO]:    [ExtraGameInfo]:   Getting ExtraGameInfo data for Machinarium
+(15:50:23) [INFO]:    [ExtraGameInfo]:   Getting AppleGamingWiki data for Machinarium
+(15:50:23) [INFO]:    [ExtraGameInfo]:   Getting PCGamingWiki data for Machinarium
+(15:50:23) [INFO]:    [ExtraGameInfo]:   Getting HowLongToBeat data for Machinarium (ID: 5478) - steam
+(15:50:29) [INFO]:    [GlobalConfig]:    Searching for Gaming Porting Toolkit Wine
+(15:50:29) [INFO]:    [GlobalConfig]:    Found Game Porting Toolkit Wine at /Users/graysonmitchell/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin
+(15:50:31) [INFO]:    [GlobalConfig]:    Searching for Gaming Porting Toolkit Wine
+(15:50:31) [INFO]:    [GlobalConfig]:    Found Game Porting Toolkit Wine at /Users/graysonmitchell/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin
+(15:50:31) [INFO]:    [DownloadManager]: Machinarium  was added to the download queue.
+(15:50:31) [INFO]:    [Steam]:           [Timing] runNativeDepotDownload: ensureSteamClientReady took 0ms for appId 40700
+(15:50:31) [WARNING]: [Steam]:           SteamGame: PICS returned no usable installdir for appId 40700 (absent or blank), using fallback "app_40700"
+(15:50:31) [INFO]:    [Steam]:           [Timing] runNativeDepotDownload: resolveSteamInstallTarget took 1ms for appId 40700
+(15:50:31) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): memo hit, answering unreadable/timeout without a second keyring_get trigger=user-install
+(15:50:31) [WARNING]: [Steam]:           Steam: refresh token read failed (timeout) — this is retryable, keeping the signed-in session and NOT clearing any credentials
+(15:50:31) [INFO]:    [Steam]:           [Timing] resolveSteamInstallTarget: total 0ms for appId 40700
+(15:50:31) [WARNING]: [Steam]:           downloadSteamDepots: no authenticated Steam CM connection for appId 40700
+(15:50:31) [WARNING]: [Steam]:           downloadSteamDepots: plan-build failed for appId 40700 before any depot was attempted — manifest deliberately left untouched (D-08)
+(15:50:31) [WARNING]: [Steam]:           SteamGame: appId 40700 installed to fallback directory "app_40700" (PICS installdir was absent/unresolved)
+(15:50:31) [INFO]:    [Steam]:           [Timing] runNativeDepotDownload: downloadSteamDepots (buildDepotPlan + stream) took 1ms so far for appId 40700 (status=error); total since click 8ms
+(15:50:31) [WARNING]: [Steam]:           SteamGame: depot install failed for appId 40700: You are not signed in to Steam, so this download could not start.
+(15:50:31) [ERROR]:   [DownloadManager]: Installation of 40700 failed with: You are not signed in to Steam, so this download could not start.
+(15:50:31) [WARNING]: [Steam]:           SteamGame.stop: Steam owns process lifecycle for appId 40700; no-op
+(15:50:31) [WARNING]: [DownloadManager]: No in-flight download to abort for 40700 — the install failed outside its abort controller's lifetime
+(15:50:31) [INFO]:    [DownloadManager]: 40700 added to download manager finished.
+(15:50:31) [INFO]:    [DownloadManager]: 40700 removed from download manager.
+(15:50:31) [WARNING]: [DownloadManager]: Installation of 40700 failed!
+(15:50:31) [INFO]:    [Frontend]:        [refreshLibrary] runner=steam origin=game-status
+(15:50:31) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).getToken(): memo hit, answering unreadable/timeout without a second keyring_get trigger=user-refresh
+(15:50:31) [WARNING]: [Steam]:           Steam client not ready, skipping library refresh
+(15:50:31) [INFO]:    [Steam]:           refreshLibrary complete runner=steam managers=1
+(15:50:31) [WARNING]: [Steam]:           Steam: refresh token read failed (timeout) — this is retryable, keeping the signed-in session and NOT clearing any credentials
+(15:50:36) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/legendary.log
+(15:50:36) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(15:50:36) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" --version
+(15:50:36) [INFO]:    [Nile]:            Running command: NILE_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/nile_config" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile/nile --version
+(15:50:36) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/nile.log
+(15:50:36) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/legendaryConfig/legendary" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary/legendary --version
+(15:51:41) [INFO]:    [Steam]:           Logging user out from Steam
+(15:51:41) [WARNING]: [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).clearToken(): keyring_delete failed: rustInvoke timed out after 60000ms: keyring_delete
+(15:51:48) [WARNING]: [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).clearToken(): keyring_delete failed: rustInvoke timed out after 60000ms: keyring_delete
+(15:51:48) [INFO]:    [Steam]:           Logging user out from Steam
+(15:52:54) [INFO]:    [ExtraGameInfo]:   Using cached ExtraGameInfo data for Machinarium
+(15:53:00) [INFO]:    [GlobalConfig]:    Searching for Gaming Porting Toolkit Wine
+(15:53:00) [INFO]:    [GlobalConfig]:    Found Game Porting Toolkit Wine at /Users/graysonmitchell/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin
+(15:53:02) [INFO]:    [GlobalConfig]:    Searching for Gaming Porting Toolkit Wine
+(15:53:02) [INFO]:    [GlobalConfig]:    Found Game Porting Toolkit Wine at /Users/graysonmitchell/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin
+(15:53:02) [INFO]:    [DownloadManager]: Machinarium  was added to the download queue.
+(15:53:03) [INFO]:    [Steam]:           Steam: starting install polling for appId 40700 (interval 3000ms, source native, isNativeHandoff false, skippedDepots 0)
+(15:53:03) [INFO]:    [Steam]:           [Timing] runNativeDepotDownload: ensureSteamClientReady took 0ms for appId 40700
+(15:53:03) [INFO]:    [Steam]:           [Timing] resolveSteamInstallTarget: total 0ms for appId 40700
+(15:53:03) [WARNING]: [Steam]:           SteamGame: PICS returned no usable installdir for appId 40700 (absent or blank), using fallback "app_40700"
+(15:53:03) [WARNING]: [Steam]:           SteamGame: appId 40700 installed to fallback directory "app_40700" (PICS installdir was absent/unresolved)
+(15:53:03) [WARNING]: [Steam]:           downloadSteamDepots: no authenticated Steam CM connection for appId 40700
+(15:53:03) [WARNING]: [Steam]:           downloadSteamDepots: plan-build failed for appId 40700 before any depot was attempted — manifest deliberately left untouched (D-08)
+(15:53:03) [INFO]:    [Steam]:           [Timing] runNativeDepotDownload: resolveSteamInstallTarget took 0ms for appId 40700
+(15:53:03) [WARNING]: [Steam]:           SteamGame: depot install failed for appId 40700: You are not signed in to Steam, so this download could not start.
+(15:53:03) [INFO]:    [Steam]:           [Timing] runNativeDepotDownload: downloadSteamDepots (buildDepotPlan + stream) took 0ms so far for appId 40700 (status=error); total since click 4ms
+(15:53:03) [ERROR]:   [DownloadManager]: Installation of 40700 failed with: You are not signed in to Steam, so this download could not start.
+(15:53:03) [WARNING]: [DownloadManager]: No in-flight download to abort for 40700 — the install failed outside its abort controller's lifetime
+(15:53:03) [WARNING]: [DownloadManager]: Installation of 40700 failed!
+(15:53:03) [INFO]:    [DownloadManager]: 40700 added to download manager finished.
+(15:53:03) [WARNING]: [Steam]:           SteamGame.stop: Steam owns process lifecycle for appId 40700; no-op
+(15:53:03) [INFO]:    [DownloadManager]: 40700 removed from download manager.
+(15:53:03) [INFO]:    [Frontend]:        [refreshLibrary] runner=steam origin=game-status
+(15:53:03) [INFO]:    [Steam]:           refreshLibrary complete runner=steam managers=1
+(15:53:03) [WARNING]: [Steam]:           Steam client not ready, skipping library refresh
+(15:53:15) [INFO]:    [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).clearToken(): keyring_delete ok
+(15:53:15) [INFO]:    [Steam]:           Logging user out from Steam
+(15:53:57) [INFO]:    [Steam]:           SidecarKeyringSlotStore(steam-refresh-token).setToken(): keyring_set ok len=494
+(15:53:58) [INFO]:    [Steam]:           [Timing] SteamUser.loggedOn: cellID=22 publicIP=114.23.167.2
+(15:54:01) [INFO]:    [Frontend]:        [refreshLibrary] runner=steam origin=steam-login
+(15:54:01) [INFO]:    [Steam]:           [Timing] SteamUser.ensureConnected: already connected (fast path, canary OK)
+(15:54:01) [INFO]:    [Steam]:           Steam: fetched 381 owned games
+(15:54:02) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1
+(15:54:02) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1 failed=false
+(15:54:02) [INFO]:    [Steam]:           Steam library sync complete: 381 games
+(15:54:02) [INFO]:    [Steam]:           refreshLibrary complete runner=steam managers=1
+(15:54:03) [WARNING]: [Steam]:           Steam: install polling for appId 40700 stopped after grace window (20 ticks) — no manifest detected; user may have cancelled
+(15:54:03) [INFO]:    [Steam]:           Steam: stopped install polling for appId 40700
+(15:54:13) [INFO]:    [ExtraGameInfo]:   Using cached ExtraGameInfo data for Machinarium
+(15:54:24) [INFO]:    [GlobalConfig]:    Searching for Gaming Porting Toolkit Wine
+(15:54:24) [INFO]:    [GlobalConfig]:    Found Game Porting Toolkit Wine at /Users/graysonmitchell/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin
+(15:54:32) [INFO]:    [GlobalConfig]:    Searching for Gaming Porting Toolkit Wine
+(15:54:32) [INFO]:    [GlobalConfig]:    Found Game Porting Toolkit Wine at /Users/graysonmitchell/Library/Application Support/gamelib/tools/game-porting-toolkit/Game-Porting-Toolkit-latest/Contents/Resources/wine/bin
+(15:54:33) [INFO]:    [DownloadManager]: Machinarium  was added to the download queue.
+(15:54:33) [INFO]:    [Steam]:           Steam: starting install polling for appId 40700 (interval 3000ms, source native, isNativeHandoff false, skippedDepots 0)
+(15:54:33) [INFO]:    [Steam]:           [Timing] runNativeDepotDownload: ensureSteamClientReady took 0ms for appId 40700
+(15:54:33) [INFO]:    [Steam]:           [Timing] fetchInstalldir: getProductInfo for appId 40700 took 216ms
+(15:54:33) [INFO]:    [Steam]:           [Timing] resolveSteamInstallTarget: total 218ms for appId 40700
+(15:54:33) [INFO]:    [Steam]:           [Timing] runNativeDepotDownload: resolveSteamInstallTarget took 218ms for appId 40700
+(15:54:33) [INFO]:    [Steam]:           [Timing] SteamUser.ensureConnected: already connected (fast path, canary OK)
+(15:54:33) [INFO]:    [Steam]:           [Timing] buildDepotPlan/fetchAppInfo: attempt 1 succeeded in 213ms (total 213ms)
+(15:54:34) [INFO]:    [Steam]:           [Timing] buildDepotPlan/getOwnedSets: attempt 1 succeeded in 301ms (total 301ms)
+(15:54:34) [INFO]:    [Steam]:           Steam depot selection: selectAllDepots union across base + DLC apps -> 1 depot(s)
+(15:54:34) [INFO]:    [Steam]:           Steam depot selection: skipped depot 40702 (oslist=macos != windows)
+(15:54:34) [INFO]:    [Steam]:           Steam depot selection: os=windows arch=64 language=english branch=public -> depots [40701(gid=2396199780517335850,size=310605728)]
+(15:54:34) [INFO]:    [Steam]:           [Timing] buildDepotPlan/fetchDlcInfos: attempt 1 succeeded in 1ms (total 1ms)
+(15:54:36) [INFO]:    [Steam]:           [Timing] buildDepotPlan/fetchDepotPlanEntry:40701: attempt 1 succeeded in 2079ms (total 2079ms)
+(15:54:36) [INFO]:    [Steam]:           [Timing] buildDepotPlan: total 2880ms for appId 40700 (1 depot(s))
+(15:54:36) [INFO]:    [Steam]:           steam-flags-census stage=plan-build appId=40700 depots=1 totalFiles=37 flagBearing=1 executableFlagged=0 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=1 symlinkEntries=0 zeroSizeEntries=1 distinctFlagValues=[64] skipped=
+(15:54:36) [INFO]:    [Steam]:           [Timing] getContentServerHosts RAW for appId 40700: [{"type":"SteamCache","sourceid":"498","cell":"22","load":"13","weightedload":"22","NumEntriesInClientList":"1","Host":"cache1-akl-edgx.steamcontent.com","vhost":"cache1-akl-edgx.steamcontent.com","https_support":"mandatory"},{"type":"SteamCache","sourceid":"349","cell":"22","load":"33","weightedload":"41","NumEntriesInClientList":"1","Host":"cache1-akl-tpwr.steamcontent.com","vhost":"cache1-akl-tpwr.steamcontent.com","https_support":"mandatory"},{"type":"SteamCache","sourceid":"350","cell":"22","load":"43","weightedload":"51","NumEntriesInClientList":"1","Host":"cache2-akl-tpwr.steamcontent.com","vhost":"cache2-akl-tpwr.steamcontent.com","https_support":"mandatory"},{"type":"CDN","sourceid":"31","load":"0","weightedload":"130","NumEntriesInClientList":"1","Host":"fastly.cdn.steampipe.steamcontent.com","vhost":"fastly.cdn.steampipe.steamcontent.com","https_support":"mandatory"},{"type":"CDN","sourceid":"11","load":"0","weightedload":"130","NumEntriesInClientList":"1","Host":"steampipe.akamaized.net","vhost":"steampipe.akamaized.net","https_support":"mandatory"},{"type":"CDN","sourceid":"33","load":"0","weightedload":"130","NumEntriesInClientList":"1","Host":"alibaba.cdn.steampipe.steamcontent.com","vhost":"alibaba.cdn.steampipe.steamcontent.com","https_support":"unavailable"}]
+(15:54:36) [INFO]:    [Steam]:           [Timing] getContentServerHosts: getContentServers for appId 40700 took 0ms, hosts=6, weightedLoads=6
+(15:54:36) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:36) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:37) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:37) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:37) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:38) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:38) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:38) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:39) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:39) [WARNING]: [Steam]:           lzmaLoader: native lzma-native decode is explicitly DISABLED by this build (NATIVE_LZMA_DECODE_ENABLED=false, lzmaLoader.ts) -- running the pure-JS lzma package for THE REST OF THIS PROCESS. This is a deliberate, temporary kill switch, not an import/ smoke-test failure: a real cold-built packaged SEA binary showed native resolution AND its own small smoke-test decode genuinely succeeding, but decoding a real-sized chunk through that same binding then hangs until DecompressPool's own task timeout fires -- a failure class the smoke test below is proven unable to catch, so this switch does not rely on it. See .planning/debug/sea-native-lzma-real-chunk-decode-hang.md for the full investigation and the criteria for safely re-enabling this.
+(15:54:39) [INFO]:    [Steam]:           steam-flags-census stage=download-entry appId=40700 totalFiles=37 flagBearing=1 executableFlagged=0 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=1 symlinkEntries=0 zeroSizeEntries=1 distinctFlagValues=[64]
+(15:54:39) [INFO]:    [Steam]:           [Timing] downloadDepotFiles: first bytes written after 212ms
+(15:54:39) [WARNING]: [Steam]:           CdnAuthTokenCache: empty token field in decoded GetCDNAuthToken response for depot=40701 host=fastly.cdn.steampipe.steamcontent.com eresult=1 rawBodyShape=ByteBuffer rawBodyBytes=8 decodedExpirationTime=1787900079
+(15:54:39) [WARNING]: [Steam]:           CdnAuthTokenCache: empty token field in decoded GetCDNAuthToken response for depot=40701 host=alibaba.cdn.steampipe.steamcontent.com eresult=1 rawBodyShape=ByteBuffer rawBodyBytes=8 decodedExpirationTime=1787900079
+(15:54:39) [WARNING]: [Steam]:           CdnAuthTokenCache: empty token field in decoded GetCDNAuthToken response for depot=40701 host=steampipe.akamaized.net eresult=1 rawBodyShape=ByteBuffer rawBodyBytes=8 decodedExpirationTime=1787900079
+(15:54:39) [WARNING]: [Steam]:           CdnAuthTokenCache: GetCDNAuthToken failed for depot=40701 host=alibaba.cdn.steampipe.steamcontent.com: Error: ContentServerDirectory.GetCDNAuthToken: empty response
+    at SteamUser.<anonymous> (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:9409:19)
+    at SteamUser._handleMessage (/Users/graysonmitchell/Projects/GameLib/node_modules/steam-user/components/03-messages.js:643:16)
+    at SteamUser._handleNetMessage (/Users/graysonmitchell/Projects/GameLib/node_modules/steam-user/components/03-messages.js:565:8)
+    at SteamUser._processMulti (/Users/graysonmitchell/Projects/GameLib/node_modules/steam-user/components/03-messages.js:697:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+(15:54:39) [WARNING]: [Steam]:           CdnAuthTokenCache: GetCDNAuthToken failed for depot=40701 host=fastly.cdn.steampipe.steamcontent.com: Error: ContentServerDirectory.GetCDNAuthToken: empty response
+    at SteamUser.<anonymous> (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:9409:19)
+    at SteamUser._handleMessage (/Users/graysonmitchell/Projects/GameLib/node_modules/steam-user/components/03-messages.js:643:16)
+    at SteamUser._handleNetMessage (/Users/graysonmitchell/Projects/GameLib/node_modules/steam-user/components/03-messages.js:565:8)
+    at SteamUser._processMulti (/Users/graysonmitchell/Projects/GameLib/node_modules/steam-user/components/03-messages.js:697:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+(15:54:39) [WARNING]: [Steam]:           CdnAuthTokenCache: GetCDNAuthToken failed for depot=40701 host=steampipe.akamaized.net: Error: ContentServerDirectory.GetCDNAuthToken: empty response
+    at SteamUser.<anonymous> (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:9409:19)
+    at SteamUser._handleMessage (/Users/graysonmitchell/Projects/GameLib/node_modules/steam-user/components/03-messages.js:643:16)
+    at SteamUser._handleNetMessage (/Users/graysonmitchell/Projects/GameLib/node_modules/steam-user/components/03-messages.js:565:8)
+    at SteamUser._processMulti (/Users/graysonmitchell/Projects/GameLib/node_modules/steam-user/components/03-messages.js:697:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+(15:54:54) [INFO]:    [Steam]:           [Timing] chunk-stream stats @15s: percent=74% downSpeedMiBs=3.19 diskSpeedMiBs=3.18 totalAttempts=233 rotations=0 timeouts=0 avgMs=2971 avgNetMs=2799 avgDecodeMs=172 pool[size=10 busy=4 idle=6 queued=0 inline=false] hosts=6 worstHosts=[cache1-akl-edgx.steamcontent.com[a=38 ok=38 to=0 err=0 avgMs=2708 wl=22 scheme=https type=SteamCache] cache1-akl-tpwr.steamcontent.com[a=39 ok=39 to=0 err=0 avgMs=2902 wl=41 scheme=https type=SteamCache] cache2-akl-tpwr.steamcontent.com[a=44 ok=44 to=0 err=0 avgMs=2766 wl=51 scheme=https type=SteamCache] fastly.cdn.steampipe.steamcontent.com[a=41 ok=41 to=0 err=0 avgMs=3150 wl=130 scheme=https type=CDN] alibaba.cdn.steampipe.steamcontent.com[a=38 ok=38 to=0 err=0 avgMs=2984 wl=130 scheme=http type=CDN] steampipe.akamaized.net[a=33 ok=33 to=0 err=0 avgMs=3394 wl=130 scheme=https type=CDN]]
+(15:55:08) [INFO]:    [Steam]:           [Timing] chunk-stream stats @29s: percent=100% downSpeedMiBs=3.95 diskSpeedMiBs=3.94 totalAttempts=312 rotations=0 timeouts=0 avgMs=2394 avgNetMs=2151 avgDecodeMs=243 pool[size=10 busy=0 idle=10 queued=0 inline=false] hosts=6 worstHosts=[cache1-akl-edgx.steamcontent.com[a=38 ok=38 to=0 err=0 avgMs=2708 wl=22 scheme=https type=SteamCache] cache1-akl-tpwr.steamcontent.com[a=49 ok=49 to=0 err=0 avgMs=2451 wl=41 scheme=https type=SteamCache] cache2-akl-tpwr.steamcontent.com[a=54 ok=54 to=0 err=0 avgMs=2382 wl=51 scheme=https type=SteamCache] fastly.cdn.steampipe.steamcontent.com[a=63 ok=63 to=0 err=0 avgMs=2291 wl=130 scheme=https type=CDN] alibaba.cdn.steampipe.steamcontent.com[a=58 ok=58 to=0 err=0 avgMs=2148 wl=130 scheme=http type=CDN] steampipe.akamaized.net[a=50 ok=50 to=0 err=0 avgMs=2530 wl=130 scheme=https type=CDN]]
+(15:55:08) [INFO]:    [Steam]:           steam-flags-census stage=download-complete appId=40700 totalFiles=37 flagBearing=1 executableFlagged=0 readonlyFlagged=0 hiddenFlagged=0 directoryEntries=1 symlinkEntries=0 zeroSizeEntries=1 chmodAttempts=0 modeCallsites=0 jobCount=37 reconciledSkipped=0 distinctFlagValues=[64]
+(15:55:08) [INFO]:    [Steam]:           Writing StateFlags=4 full-ownership manifest for appId 40700 (sizeOnDisk=310605728, buildid=24417709)
+(15:55:08) [INFO]:    [Steam]:           [Timing] runNativeDepotDownload: downloadSteamDepots (buildDepotPlan + stream) took 35346ms so far for appId 40700 (status=done); total since click 35571ms
+(15:55:08) [INFO]:    [Steam]:           Steam: upgrading in-flight install poll for appId 40700 to isNativeHandoff (260822-dkf D-02)
+(15:55:08) [INFO]:    [Steam]:           SteamGame: appId 40700 — persisted forced Windows-via-bottle verdict after a committed install
+(15:55:08) [INFO]:    [DownloadManager]: Finished Installation of 40700
+(15:55:08) [INFO]:    [DownloadManager]: 40700 added to download manager finished.
+(15:55:08) [INFO]:    [DownloadManager]: 40700 removed from download manager.
+(15:55:33) [WARNING]: [Steam]:           Steam: install polling for appId 40700 stopped after grace window (20 ticks) — no manifest detected; user may have cancelled
+(15:55:33) [INFO]:    [Steam]:           Steam: stopped install polling for appId 40700
+(15:55:33) [INFO]:    [Frontend]:        [refreshLibrary] runner=steam origin=game-status
+(15:55:33) [INFO]:    [Steam]:           [Timing] SteamUser.ensureConnected: already connected (fast path, canary OK)
+(15:55:33) [INFO]:    [Steam]:           Steam: fetched 381 owned games
+(15:55:33) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1
+(15:55:33) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1 failed=false
+(15:55:33) [INFO]:    [Steam]:           Steam library sync complete: 381 games
+(15:55:33) [INFO]:    [Steam]:           refreshLibrary complete runner=steam managers=1
+(15:57:00) [INFO]:    [ExtraGameInfo]:   Using cached ExtraGameInfo data for Machinarium
+(15:57:04) [INFO]:    [Steam]:           SteamGame: removed bottle install for appId 40700 at "/Users/graysonmitchell/Library/Application Support/CrossOver/Bottles/GameLibSteam/drive_c/Program Files (x86)/Steam/steamapps/common/Machinarium"
+(15:57:04) [INFO]:    [Steam]:           SteamGame: appId 40700 — cleared forced Windows-via-bottle verdict (bottle ACF confirmed absent)
+(15:57:04) [INFO]:    [Steam]:           Steam: uninstall polling complete for appId 40700 — badge flipped to not-installed
+(15:57:04) [INFO]:    [Backend]:         Finished uninstalling
+(15:57:04) [INFO]:    [Frontend]:        [refreshLibrary] runner=steam origin=game-status
+(15:57:04) [INFO]:    [Steam]:           [Timing] SteamUser.ensureConnected: already connected (fast path, canary OK)
+(15:57:05) [INFO]:    [Steam]:           Steam: fetched 381 owned games
+(15:57:05) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1
+(15:57:05) [INFO]:    [Steam]:           Steam bulk platform capture: scoped=1 captured=0 skipped=1 failed=false
+(15:57:05) [INFO]:    [Steam]:           Steam library sync complete: 381 games
+(15:57:05) [INFO]:    [Steam]:           refreshLibrary complete runner=steam managers=1
+(15:57:08) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 40700
