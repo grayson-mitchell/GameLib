@@ -1638,18 +1638,19 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
 
   test("Test 8 (NEGATIVE, narrowed 2026-09-08 by quick-260908-ci2): no window-focus-gained re-raise of the LOGIN window exists -- a focus-driven re-raise would steal key focus back to the login window every time the user clicks the main window. Narrowed to exclude quick-260908-ci2's own, unrelated WindowEvent::Focused(true) match in `.setup()`: that block reacts to the MAIN window regaining focus by writing a sidecar refresh frame for install-badge reconciliation (SHELL_WINDOW_FOCUSED) and never touches the login window -- the two mechanisms share only the enum variant name. A blanket file-wide ban became a false positive the moment that unrelated, legitimate feature landed; everywhere ELSE in the file, WindowEvent::Focused must still never appear.", () => {
     const code = loadMainRsCode()
-    const ownBlockStart = code.indexOf(
-      'focus_window.on_window_event(move |event| {'
-    )
-    expect(ownBlockStart).toBeGreaterThan(-1)
-    const ownBlockEnd = code.indexOf(
-      'load_recent_games_from_disk(',
-      ownBlockStart
-    )
-    expect(ownBlockEnd).toBeGreaterThan(ownBlockStart)
-    const codeWithoutOwnBlock =
-      code.slice(0, ownBlockStart) + code.slice(ownBlockEnd)
-    expect(codeWithoutOwnBlock).not.toContain('WindowEvent::Focused')
+    // Pinned by COUNT, not by excluding a region. The first form of this narrowing sliced out
+    // everything between quick-260908-ci2's own block and an unrelated
+    // `load_recent_games_from_disk(` call: correct on the day it was written, but the end
+    // anchor belongs to a different feature, so any code later inserted into that gap would
+    // silently widen the exclusion and a genuine login-window focus-steal re-raise landing
+    // there would pass unseen. Counting is anchor-free -- ANY second occurrence anywhere in
+    // the file reds and forces a conscious decision, which is what a negative gate is for.
+    const focusedOccurrences = code.match(/WindowEvent::Focused/g) ?? []
+    expect(focusedOccurrences).toHaveLength(1)
+    // ...and the one permitted occurrence is quick-260908-ci2's MAIN-window badge-refresh
+    // handler, which reacts to focus GAINED and never touches the login window.
+    expect(code).toContain('tauri::WindowEvent::Focused(true) = event')
+    expect(code).not.toContain('WindowEvent::Focused(false)')
   })
 
   test("Test 9 (SCOPE GUARD, REQ-34.4.2-10, updated 2026-08-04 for Plan 07's renamed symbols): the PHASE_34_4_2_NEW_SYMBOLS-driven guard still passes with this plan's three current symbols appended -- none of them is referenced from open_pristine_epic_login_window's sliced body", () => {
