@@ -64,7 +64,10 @@ import { configStore } from '../../constants/key_value_stores'
 import { runOnceWhenOnline as mockedRunOnceWhenOnline } from '../../online_monitor'
 
 const EXPECTED_LOG_MESSAGE = 'User Not Found, removing it from Store'
-const EXPECTED_LOG_OPTIONS = { prefix: loggerModule.LogPrefix.Backend, forceLog: true }
+const EXPECTED_LOG_OPTIONS = {
+  prefix: loggerModule.LogPrefix.Backend,
+  forceLog: true
+}
 
 // `src/backend/jest.config.js` sets `resetMocks: true`, which strips the implementation off
 // EVERY `jest.fn(...)`-created mock -- including the one supplied at module-factory creation
@@ -122,10 +125,10 @@ describe('todo 2026-09-06 -- sidecar boot restores Epic/GOG user reconciliation'
         .spyOn(GOGUser, 'isLoggedIn')
         .mockReturnValue(false)
       configStore.set('userInfo', {
-      account_id: 'stale',
-      displayName: 'Stale',
-      user: 'stale-user'
-    })
+        account_id: 'stale',
+        displayName: 'Stale',
+        user: 'stale-user'
+      })
       const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
 
       reconcileStoreUsersWhenOnline()
