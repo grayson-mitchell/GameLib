@@ -272,10 +272,23 @@ optional. Step 1's label guard exists so a mis-targeted delete is caught before 
 | R5 | `grep -c 'rustInvoke timed out after 60000ms' repro-gamelib.log repro-shell.log` | `0` | (not run) |
 | R6 | post-teardown four-slot census | matches F2: PRESENT / absent / absent / absent | (not run) |
 
-**Task 3 status: awaiting an operator.** This section was not run during this execution — the
-executor does not have a channel to the operator and cannot answer this gate on their behalf. Every
-bar above stays `(not run)` unless the operator later pastes raw Steps 0–6 output. If the operator
-declines, the correct annotation is `not run, declined — the close does not depend on it`.
+**Task 3 status: `not run, declined — the close does not depend on it`.** Put to the operator
+2026-09-07 by the orchestrator, with the recommendation to skip; the operator replied "skip the
+forced run". Every R1–R6 bar above stays `(not run)` and none was filled by inference. This is a
+complete and correct outcome, not a deficiency: the discharge rests entirely on the archived
+evidence scored above, and Task 3 gated nothing.
+
+**What declining costs, stated so a later reader does not have to re-derive it:** the one thing this
+reproduction would have added is the Rust-side `[shell] keyring keyring_get timed out after 45s
+(worker thread abandoned, not cancelled ...)` line (F5). It is a bare `eprintln!` to stderr, so it is
+absent from every log file by construction and therefore from the archive. **The discharge condition
+never asked for it** — it asks for a classified error with elapsed measured, which the sidecar-side
+line supplies. The other candidate value, "reproduces on today's binary", is pre-paid by the D1–D5
+byte-identical region proof against baseline `d629d9f30`.
+
+If a future session wants that Rust-side line anyway, the full plant/procedure/teardown recipe above
+is unchanged and still runnable. A contradictory result would be a NEW finding warranting a new
+todo — it could not retroactively un-close this one.
 
 ---
 
