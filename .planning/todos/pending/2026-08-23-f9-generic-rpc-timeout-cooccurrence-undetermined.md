@@ -134,3 +134,95 @@ the log file. A clean grep of the wrong source is not evidence of absence.
 Gates: `src/backend/__tests__/abandonedInvokeAttribution.test.ts` (9 tests, runs in CI) pins the
 wiring; `src-tauri/src/main.rs`'s cargo module covers the helpers (251 passed, manual — CI runs no
 cargo step).
+
+## Disposition (2026-09-07, quick task `260907-fni`) — does NOT close
+
+A live cookie-gesture run was captured and analyzed by the apparatus this task built
+(`pnpm capture:shell-scrollback` + `meta/captureShellScrollback.ts`'s `analyzeCapture()`). Verdict:
+**`CLEAN_ASSERTED`** — the target diagnostic did not fire during a demonstrably-live window.
+
+**This is an asserted null finding, not an assumed one.** The capture's proof-of-source anchors
+were present and checked before anything else was evaluated:
+
+- Boot: `[shell] sidecar process spawned OK`, `[shell] sidecar signalled READY (...)`
+- Gesture: `[shell] humble_login_open: login chrome CSS injected for '...'`,
+  `[shell] login-window sheet: present_login_window_as_sheet entered for '...'`
+- Teardown: `[shell] sidecar terminated on exit`
+
+Window: `windowStartedAt` 2026-09-07T00:28:10.772Z → `gestureAt` 2026-09-07T00:29:38.309Z →
+`windowEndedAt` 2026-09-07T00:33:39.980Z. `durationMs` 329208 (~5.5 min total, ~4.6 min from gesture
+to teardown). `derivedPollCount` 161, via the recipe the analyzer prints verbatim:
+`floor((windowEndedAt − gestureAt) / COOKIE_POLL_INTERVAL_MS[1500]) = 161` — a **derived upper
+bound** over ticks not short-circuited by `settled || validationInFlight`, never an observed count.
+
+**Observed corroboration**, independently read from the same run's `gamelib.log` snapshot: the F-2
+collapsed status line shows **1 + 7×7 = 50 observed validations** over ~222s of the window
+(~4.4s apart) — `(12:29:40) Humble login validation rejected candidate session: session_expired`,
+then seven repeats of `Humble login still waiting (status unchanged; 6 rejection(s) suppressed
+since the last line): session_expired`. The derived 161 and the observed 50 do not conflict: they
+measure different things (every 1500ms tick vs. `checkCookie`'s throttled validation), and 161 is
+consistent with an upper bound over the same interval. State both, keep the distinction — one is
+derived, one is observed.
+
+The gesture exercised **all three** cookie channels, not only the poll:
+`humble_login_clear_cookies` (a real Humble disconnect fired 3s before the window opened, clearing
+21 `humblebundle.com` cookies), `humble_login_cookies_for_domain` (the same event's before/after
+cookie census), and `humble_login_cookies` (`watchForLogin()`'s poll, running the whole window,
+rejecting on `session_expired`). No credentials were entered — the session was already expired, so
+this was a clean exercise of the cookie machinery with nothing to type, exactly as planned.
+
+`nesting` is `null` in the result — **because there was no co-occurrence to evaluate, not because
+an adjacency was checked and cleared.** `cookieLegMatches` (the sidecar→Rust leg's own
+`rustInvoke timed out after …ms: humble_login_cookies*` timeout diagnostic) was empty: none of the
+three cookie channels actually timed out this run, they completed normally (rejected, but
+answered). `nesting` is only ever computed when a `RECURRENCE` and a cookie-leg timeout coincide;
+neither condition held, so there was nothing for the field to assert.
+
+Independent verification directly against the capture files (not just the analyzer's own verdict):
+`response for unknown/timed-out` in raw stderr — **0**. `rustInvoke timed out` in the `gamelib.log`
+snapshot — **0**. `sidecar invoke timed out` in raw stderr — **0**. `keyring:timeout` in either —
+**0**. `^\[shell\]` lines in raw stderr — **31**, proof the sink was live and would have caught the
+target line had it fired. Raw/timestamped line parity: **51 / 51**.
+
+Capture files: `scratchpad/260907-fni-2026-09-07T00-28-01-703Z.{stderr.raw,stderr.ts,gamelib,meta,stdout}.log`
+(gitignored — never committed). Orphan report: none found. Run metadata: `headSha bef1fa4ca`.
+
+**One harness defect surfaced and was fixed before this run could produce a result.** The tool's
+own first invocation crashed before the app ever launched: `meta/runTs.cjs` bundles the script into
+a `mkdtempSync(os.tmpdir(), 'gamelib-runts-')` temp directory and runs it from there, so
+`REPO_ROOT = join(__dirname, '..')` resolved to the temp dir, not the repo, and
+`readLongRunningChannels()` threw `ENOENT` reading `src-tauri/src/main.rs` before `pnpm tauri:dev`
+was ever spawned. **Task 1's own nine tests could not see this**, because all nine drive
+`analyzeCapture()` over inline string fixtures and never exercise the CLI half's path resolution at
+all — the test gate was fully green while the tool could not run. Fixed in `bef1fa4ca` by resolving
+`REPO_ROOT` from `process.cwd()` (this repo's established convention for scripts run this way, per
+`meta/checkBuildBinMirror.ts:197` and `meta/genI18nGateScope.ts:459`) and adding `assertRepoRoot()`,
+run before either module-scope source read, whose message states plainly that nothing was captured
+and nothing was measured — so a no-capture exit cannot be misread as a clean watch. A new T10 (4
+tests) pins the guard's contract and was itself RED-proved by disabling it.
+
+**In both branches this task's plan requires stating explicitly, restated here:**
+
+- **`id=1575` remains UNDETERMINED and is NOT rounded to "no".** That id's own scrollback was never
+  captured at the time it fired, and no later run — however clean — can reconstruct a diagnostic
+  that was never emitted. A clean watch of a *different* window answers nothing about it, exactly
+  as the 2026-08-25 (id=10023) and 2026-09-05 (attribution fix) dispositions above already
+  established for their own, different findings.
+- **This run is not a discharge of this todo.** `status: pending` is unchanged, byte-identical
+  outside this appended section. No box is checked. `closes_todo: false`.
+- **The transferable correction, extended by this task:** `gamelib.log` cannot see shell
+  `eprintln!` output (already established). **Neither can `gamelib-shell.log`** — `shell_diag()`
+  (`main.rs:8521`) writes to both stderr and that file, but the target diagnostic at `main.rs:8332`
+  is a plain `eprintln!` that never routes through `shell_diag()`. A dev-time grep of
+  `gamelib-shell.log` would be a *second* wrong source, not a fallback for the first. Only the
+  shell process's own stderr, captured whole, is a valid source for this diagnostic.
+- **What a future reader may now rely on:** the next recurrence is capturable by one command,
+  `pnpm capture:shell-scrollback` (repo root, quits/refuses if a dev instance is already running).
+  Its analyzer is fail-closed by construction — it refuses to certify a capture whose boot/gesture/
+  teardown `[shell]` anchors are not all present, so the "clean grep of the wrong source" failure
+  that produced this todo's original, worthless first record cannot be repeated through this path.
+  Exit 0 with `verdict: RECURRENCE` or `CLEAN_ASSERTED` is a usable result; exit 2
+  (`INVALID_ANCHORS`) or exit 3 (a pre-existing instance already running) means the run measured
+  nothing and must be re-run, not written up.
+
+**Stays `pending`, UNDETERMINED for id=1575, exactly as before.**
