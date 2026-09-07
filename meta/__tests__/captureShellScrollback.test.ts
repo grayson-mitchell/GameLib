@@ -7,6 +7,7 @@
  */
 import {
   analyzeCapture,
+  assertRepoRoot,
   CAPTURE_ANCHORS,
   TARGET_DROP_RE,
   COOKIE_LEG_RE,
@@ -210,5 +211,51 @@ describe('captureShellScrollback / analyzeCapture', () => {
       expect(result.verdict).toBe('RECURRENCE')
       expect(result.nesting).toBeNull()
     })
+  })
+})
+
+/**
+ * T10. The nine tests above all drive `analyzeCapture()` over inline fixtures, so NONE of them
+ * could observe how the CLI resolves its repo-relative paths -- and the harness's first live run
+ * crashed on exactly that, before the app was ever launched:
+ *
+ *   Error: ENOENT: no such file or directory,
+ *     open '/private/var/folders/.../T/src-tauri/src/main.rs'
+ *
+ * `meta/runTs.cjs` bundles this script into `mkdtempSync(os.tmpdir(), 'gamelib-runts-')` and runs
+ * it from there, so the original `join(__dirname, '..')` resolved REPO_ROOT to the temp directory.
+ * `process.cwd()` is the repo's established convention for scripts run this way
+ * (`meta/checkBuildBinMirror.ts:197`, `meta/genI18nGateScope.ts:459` both carry the same comment).
+ *
+ * These tests pin `assertRepoRoot`'s CONTRACT rather than the crash's spelling: a root missing
+ * either required file must throw, and the message must name the run as having measured nothing
+ * -- an exit that produced no capture must not read as a clean watch.
+ */
+describe('T10: assertRepoRoot rejects a non-repo cwd', () => {
+  it('throws naming the missing paths when cwd is a temp dir', () => {
+    expect(() =>
+      assertRepoRoot('/tmp/gamelib-runts-XXXX', () => false)
+    ).toThrow(/cwd is not the GameLib repo root/)
+  })
+
+  it('states that nothing was captured, so the failure cannot read as a clean watch', () => {
+    expect(() =>
+      assertRepoRoot('/tmp/gamelib-runts-XXXX', () => false)
+    ).toThrow(/NOTHING was captured and NOTHING was measured/)
+  })
+
+  it('names each missing file individually', () => {
+    // Only main.rs present -- user.ts missing must still be fatal, and must be the path named.
+    const exists = (p: string) => p.endsWith('main.rs')
+    expect(() => assertRepoRoot('/not/a/repo', exists)).toThrow(
+      /src\/backend\/humble\/user\.ts/
+    )
+    expect(() => assertRepoRoot('/not/a/repo', exists)).not.toThrow(
+      /Missing: .*main\.rs/
+    )
+  })
+
+  it('accepts the real repo root, so the guard cannot false-fire on a correct run', () => {
+    expect(() => assertRepoRoot(process.cwd())).not.toThrow()
   })
 })

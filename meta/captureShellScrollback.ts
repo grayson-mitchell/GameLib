@@ -58,6 +58,7 @@ import {
   appendFileSync,
   copyFileSync,
   createWriteStream,
+  existsSync,
   mkdirSync,
   readFileSync,
   writeFileSync
@@ -73,9 +74,47 @@ import {
   RUST_HUMBLE_LOGIN_CLEAR_COOKIES
 } from '../src/common/types/sidecarTransport'
 
-const REPO_ROOT = join(__dirname, '..')
+// process.cwd(), NOT __dirname -- this script is bundled by esbuild to a private
+// tmpdir and run from there (`meta/runTs.cjs` creates its own
+// `mkdtempSync(os.tmpdir(), 'gamelib-runts-')` bundle target), so __dirname
+// resolves inside that temp directory and every repo-relative path below lands
+// outside the repo. The first run of this harness crashed on exactly that:
+// `ENOENT ... open '/private/var/folders/.../T/src-tauri/src/main.rs'`, before
+// the app was ever launched. Same convention and same reason as
+// `meta/checkBuildBinMirror.ts` and `meta/genI18nGateScope.ts`. `pnpm` runs
+// package scripts with the repo root as cwd, so this is the repo root.
+//
+// This is load-bearing for more than the two reads below: REPO_ROOT is also the
+// `cwd` this harness spawns `pnpm tauri:dev` in, so the __dirname form would
+// have launched the app from a temp directory.
+const REPO_ROOT = process.cwd()
 const MAIN_RS_PATH = join(REPO_ROOT, 'src-tauri', 'src', 'main.rs')
 const USER_TS_PATH = join(REPO_ROOT, 'src', 'backend', 'humble', 'user.ts')
+
+/**
+ * Fail LOUDLY and early if `REPO_ROOT` is not the repo, instead of letting the
+ * first `readFileSync` below surface a raw `ENOENT` stack trace naming a temp
+ * path -- the shape the first run of this harness actually produced. A capture
+ * run that dies here has measured nothing, and must say so in those terms
+ * rather than in filesystem terms.
+ */
+export function assertRepoRoot(
+  root: string,
+  exists: (p: string) => boolean = existsSync
+): void {
+  const missing = [
+    join(root, 'src-tauri', 'src', 'main.rs'),
+    join(root, 'src', 'backend', 'humble', 'user.ts')
+  ].filter((p) => !exists(p))
+  if (missing.length > 0) {
+    throw new Error(
+      `captureShellScrollback: cwd is not the GameLib repo root (${root}). ` +
+        `Missing: ${missing.join(', ')}. ` +
+        `Run this via \`pnpm capture:shell-scrollback\` from the repo root -- ` +
+        `NOTHING was captured and NOTHING was measured by this run.`
+    )
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Source-text-derived constants (never hard-coded, so a rename/rework upstream
@@ -106,6 +145,10 @@ function readLongRunningChannels(): string[] {
   }
   return Array.from(match[1].matchAll(/"([^"]+)"/g)).map((m) => m[1])
 }
+
+// Runs BEFORE the two module-scope source reads below, so a wrong cwd is named
+// as such rather than surfacing as an ENOENT on a temp path.
+assertRepoRoot(REPO_ROOT)
 
 /** Exempt from the shell's 60s `INVOKE_TIMEOUT` bound (main.rs:845/994) -- see module docblock. */
 export const LONG_RUNNING_CHANNELS: readonly string[] =
