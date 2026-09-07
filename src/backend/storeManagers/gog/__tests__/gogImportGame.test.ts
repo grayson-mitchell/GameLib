@@ -235,10 +235,7 @@ describe('GOGGame.importGame -- identity guard (260907-ppy)', () => {
     const result = await game.importGame(FOLDER_PATH)
 
     expect(mockLibraryManagerImportGame).toHaveBeenCalledTimes(1)
-    expect(mockLibraryManagerImportGame).toHaveBeenCalledWith(
-      data,
-      FOLDER_PATH
-    )
+    expect(mockLibraryManagerImportGame).toHaveBeenCalledWith(data, FOLDER_PATH)
     expect(mockAddShortcutsUtil).toHaveBeenCalledTimes(1)
     expect(result.error).toBeUndefined()
     expect(result.abort).toBeFalsy()
