@@ -310,3 +310,47 @@ eslint 4205 repo-wide — byte-identical to the pre-change baseline, zero warnin
   is no longer an innocent explanation for it.
 - The two damaged installs on disk (38410, 718850) still need Steam's "verify integrity".
 - No live re-drive has been taken against the fix.
+
+
+---
+
+# REPAIR HALF LANDED 2026-09-08 (commit `037f0e4d3`)
+
+`clearStaleDirectoryAtFilePath()` in `depot.ts`, called before both
+`open(dest, 'w')` write sites in `downloadSingleFile`.
+
+**Why it was needed even after the plan-build fix.** `0a6e5e91b` prevents the bad
+directory from being CREATED; it does nothing about one already on disk. The two
+damaged installs could not self-heal: the reconciler correctly re-queues
+`master.dat` (not a file -> not verified), the write hits `EISDIR`, and it fails on
+every retry FOREVER. The symlink branch had already solved this exact problem for
+itself — "a retry of a partially-succeeded install would fail that file forever" —
+and the file branch never got the same treatment.
+
+**`rmdir`, not `rm`, in both directions:**
+- `rm(dest, { force: true })` throws `ERR_FS_EISDIR` against a directory even when
+  EMPTY (measured, not assumed) — it cannot do this job;
+- `rm(dest, { recursive: true })` would delete a directory of real user files. A
+  manifest path colliding with a populated directory must SURFACE, never be erased.
+
+`rmdir` removes an empty directory and refuses a populated one with `ENOTEMPTY`,
+rethrown naming the file so the operator gets an actionable failure.
+
+**T-D2 was SUPERSEDED, not repaired** — its premise (empty directory -> EISDIR) is
+made obsolete BY DESIGN, so it now pins the case the fix deliberately refuses
+(non-empty directory, user file provably untouched).
+
+**Both sabotages caught:** removing the call site reds T-D2/T-D5 while T-D6 (stale
+FILE, the negative control) stays green; swapping `rmdir` for `rm(recursive:true)`
+reds T-D2 because the planted user file is gone.
+
+Gates: tsc 0, prettier clean, Backend 204 suites / 4633 passed, eslint 4205
+repo-wide — zero warnings added.
+
+## Still open after this
+
+- **False `StateFlags=4`** — CRITICAL, untouched, no innocent explanation left.
+- **No live re-drive taken.** A Fallout 2 install would now exercise all three
+  changes at once and is the best chance to catch the StateFlags=4 defect in the act.
+- The two damaged installs still need repair (this fix lets a retry heal 38410's
+  `master.dat`; it does not address 718850's missing-files shape).
