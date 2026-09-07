@@ -1,6 +1,7 @@
 ---
 created: 2026-08-27
 title: "Steam depot install fails at the download stage with the UNCLASSIFIED generic error and no diagnostic detail"
+root_cause: "cross-depot path collision: master.dat is a Directory entry in depot 38414 and a 333MB file in depot 38415"
 area: steam-depot
 status: OPEN
 debug_session: .planning/debug/steam-depot-unclassified-generic-error.md
@@ -193,3 +194,38 @@ deliberately not taken without authorisation. The alternative mechanism
 excluded.
 
 A re-drive now has the instrumentation it lacked on Aug 27.
+
+
+---
+
+# ROOT CAUSE CONFIRMED 2026-09-07 (live manifest probe) — supersedes the hypothesis above
+
+The "STILL OPEN" section above is now ANSWERED, and **both** of its hypotheses were
+wrong. An authenticated read-only Steam CM probe fetched both depot manifests:
+
+| depot | entry | size | chunks | flags |
+| --- | --- | --- | --- | --- |
+| 38414 | `master.dat` | 0 | 0 | **64 (DIRECTORY)** |
+| 38415 | `master.dat` | 333,177,805 | 318 | 0 (regular file) |
+
+**Two depots in the same plan declare one path with incompatible types.**
+`selectAllDepots` unions them and both write into the same `installRoot`. The
+directory entry won the race, `mkdir`'d `master.dat`, and the 333 MB file write
+then failed `EISDIR` — matching no classifier signature, hence `genericV2`.
+
+- flag-64-on-the-file hypothesis: **REFUTED** (`flags=0`, 318 chunks).
+- `mkdir(dirname(dest))` hypothesis: **REFUTED** (zero entries have `master.dat`
+  as a path prefix in either depot).
+
+Depot 38415's other three entries (`fallout2.cfg`, `patch000.dat`, `critter.dat`)
+are on disk at byte-exact sizes — only the colliding entry failed.
+
+Note the benign near-miss: 38414 has a DIRECTORY `data\critter.dat` while 38415 has
+a FILE `critter.dat`. Different paths, no collision. Only `master.dat` collides.
+
+## Status
+
+The **diagnostic half is fixed and committed** (per the update above). The
+**collision itself is NOT fixed** — the remedy is a policy decision (does the
+chunked file entry simply win, or is `selectAllDepots` selecting a depot real Steam
+would not install?), recorded in the debug session. This todo stays OPEN for that.

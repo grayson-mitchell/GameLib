@@ -1,6 +1,6 @@
 ---
 slug: steam-depot-unclassified-generic-error
-status: diagnosed
+status: root-caused-no-fix-applied
 created: 2026-09-07
 updated: 2026-09-07
 source_todo: .planning/todos/pending/2026-08-27-steam-depot-install-fails-with-unclassified-generic-error.md
@@ -130,3 +130,67 @@ finding", it is bounded, and it is what makes F3 answerable on the next occurren
 F1/E1-E4 are recorded. The false-`StateFlags=4` defect (E3/E4) is SPLIT OUT as its own
 todo: it is a distinct, more severe defect affecting live user data and is not what
 this todo asked about.
+
+
+---
+
+# ROOT CAUSE CONFIRMED 2026-09-07 — cross-depot path collision
+
+Live manifest probe against Steam CM (authenticated, 469 licenses, read-only).
+**Both prior hypotheses are REFUTED and the real cause is established.**
+
+## The evidence
+
+The SAME path `master.dat` is declared by BOTH depots in the plan, with
+**incompatible types**:
+
+| depot | entry | size | chunks | flags |
+| --- | --- | --- | --- | --- |
+| 38414 | `master.dat` | 0 | 0 | **64 (DIRECTORY)** |
+| 38415 | `master.dat` | 333,177,805 | 318 | 0 (regular file) |
+
+Depot 38415 in full (4 entries): `fallout2.cfg` 962, `master.dat` 333,177,805,
+`patch000.dat` 2,355,526, `critter.dat` 166,951,131 — all flags=0. The other
+three are on disk at byte-exact sizes. Only the colliding entry broke.
+
+`selectAllDepots` unions base+DLC depots into ONE plan, and `downloadDepotFiles`
+writes every depot's entries into the SAME `installRoot`. Nothing at plan-build
+or write time detects that two depots claim one path with different types. The
+directory entry won the race, `mkdir`'d `master.dat`, and depot 38415's file
+write then failed `EISDIR` — unclassified, hence `genericV2`.
+
+## What this REFUTES (both recorded hypotheses were wrong)
+
+- **F3 / flag-64 on the file:** REFUTED. 38415's `master.dat` is `flags=0` with
+  318 chunks. Valve's data is correct.
+- **`mkdir(dirname(dest))` at `:1389`:** REFUTED. Zero entries in either depot
+  have `master.dat` as a path prefix.
+
+The F3 inference ("StateFlags=4 implies the retry recorded no failure, which
+implies flag 64") was **sound reasoning from a false premise**. With `flags=0`
+proven, its conclusion collapses — and the false `StateFlags=4` therefore has NO
+innocent explanation. That strengthens the split-out todo: the completeness gate
+is genuinely unsound, not merely an accessory to a flag bug.
+
+## Benign near-miss, do not confuse the two
+
+Depot 38414 also has a DIRECTORY entry `data\critter.dat` while 38415 has a FILE
+`critter.dat`. Those are DIFFERENT paths (`data/critter.dat` vs `critter.dat`) and
+do NOT collide. Only `master.dat` collides.
+
+## NOT fixed here — the remedy is a policy decision
+
+A file entry with 318 chunks must beat a size-0/chunks-0 Directory entry on the
+same path; that much is clear. What is NOT established is whether the collision is
+the real defect or a SYMPTOM of `selectAllDepots` selecting a depot the real Steam
+client would not install for this platform. Choosing a resolution policy before
+answering that risks fixing the measurement rather than the defect.
+
+Options to weigh:
+1. Detect same-path/different-type collisions at plan build; let the chunked file
+   entry win; log the collision loudly. Contained, but treats the union as correct.
+2. Re-examine `selectAllDepots` — establish which depots real Steam installs for
+   this title/platform. Larger, and answers whether the union itself is wrong.
+
+Either way a collision must never again surface as "The Steam download failed."
+with nothing in the log; that half is fixed and committed.
