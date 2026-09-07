@@ -940,7 +940,18 @@ export default class GOGLibraryManager implements LibraryManager {
       return
     }
 
+    // 260907-ppy: re-importing an already-installed game used to overwrite its
+    // record wholesale, silently dropping fields this function does not own --
+    // live evidence: a re-import dropped a previous record's `versionEtag` and
+    // `pinnedVersion`, degrading update detection for a game the user never
+    // touched. Spread the previous record first so fields this function doesn't
+    // set (manifest, isDosbox, dosboxConf, versionEtag, branch, pinnedVersion,
+    // cyberpunk, ...) survive, then layer the import-owned fields on top so they
+    // still always win. `installedGames.get()` is undefined on a fresh import,
+    // and spreading `undefined` is legal -- no branch needed for that case.
+    const previous = installedGames.get(data.appName)
     const installInfo: InstalledInfo = {
+      ...previous,
       appName: data.appName,
       install_path: executablePath,
       executable: executablePath,

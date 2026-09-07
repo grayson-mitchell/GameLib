@@ -75,7 +75,9 @@ jest.mock('../../../utils', () => ({
 // variadic signature that `(...a) => mockX(...a)` can spread into below.
 const mockLibraryStoreGet = jest.fn()
 const mockInstalledGamesStoreGet = jest.fn()
+const mockInstalledGamesStoreSet = jest.fn()
 const mockInstallInfoStoreHas = jest.fn()
+const mockInstallInfoStoreGet = jest.fn()
 const mockPrivateBranchesStoreGet = jest.fn()
 // finding A1 LEG 1 (quick-260907-odi): promoted `configStore`/`playtimeSyncQueue` from bare
 // jest.fn()s at the factory to the same delegating-arrow convention as the mocks above, so
@@ -94,11 +96,11 @@ jest.mock('../electronStores', () => ({
   },
   installedGamesStore: {
     get: (...a: unknown[]) => mockInstalledGamesStoreGet(...a),
-    set: jest.fn()
+    set: (...a: unknown[]) => mockInstalledGamesStoreSet(...a)
   },
   installInfoStore: {
     has: (...a: unknown[]) => mockInstallInfoStoreHas(...a),
-    get: jest.fn(),
+    get: (...a: unknown[]) => mockInstallInfoStoreGet(...a),
     set: jest.fn()
   },
   apiInfoCache: {
@@ -143,6 +145,7 @@ jest.mock('axios', () => ({
 import GOGLibraryManager from '../library'
 import { GOGUser } from '../user'
 import type { GOGCredentials, Library } from 'common/types/gog'
+import type { GOGImportData, InstalledInfo } from 'common/types'
 
 const fakeCredentials: GOGCredentials = {
   access_token: 'test-access-token',
@@ -412,6 +415,163 @@ describe('D-35-19-16 -- changeGameInstallPath does not double the macOS bundle n
       await manager.changeGameInstallPath(APP_NAME, candidate)
       expect(recordedPath()).not.toContain(`${FOLDER_NAME}/${FOLDER_NAME}`)
     }
+  })
+})
+
+/**
+ * 260907-ppy: `GOGLibraryManager.importGame` used to overwrite an already-installed
+ * game's record wholesale, silently dropping fields it does not own. Live evidence:
+ * a re-import dropped a previous record's `versionEtag` and `pinnedVersion`,
+ * degrading update detection for a game the user never touched.
+ *
+ * Seeds both `installedGames` (via `refreshInstalled()`) and the private `library`
+ * map (via the cast-to-call-private-method pattern already used by the D-35-19-16
+ * describe block above) so `importGame`'s `library.get(data.appName)!` has an entry
+ * to mutate. Forces `isOnline()` false during seeding so `loadLocalLibrary()` skips
+ * `checkForOfflineInstallerChanges` -- unrelated to this behaviour.
+ *
+ * `getInstallInfo()` is driven through its cache-hit branch (`installInfoStore.has`
+ * true) so the test never reaches the login gate or any subprocess call.
+ * `createMissingGogdlManifest()` (called unconditionally at the end of `importGame`)
+ * is reached, since the real (unmocked) `graceful-fs` `existsSync` legitimately
+ * returns `false` for a manifest path that does not exist on this machine -- no
+ * spy needed. It then calls `this.runRunnerCommand()`, which is driven through the
+ * already-mocked `getGOGdlBin`/`callRunner` (`mockGetGOGdlBin`/`mockCallRunner`,
+ * shared with the fix4 describe block above) to return unparseable stdout, which
+ * `createMissingGogdlManifest`'s OWN internal try/catch swallows via a mocked
+ * `logError` and an early return -- never reaching `getBuilds`/axios.
+ */
+describe('importGame preserves un-owned InstalledInfo fields on re-import (260907-ppy)', () => {
+  const APP_NAME = '1829678475' // Endless Sky
+  const FRESH_APP_NAME = '1769415595' // Balrum -- never installed before
+
+  const PREVIOUS_VERSION_ETAG = '688661e1d54090f16fd8742109bc6759'
+
+  let manager: GOGLibraryManager
+
+  const previousRecord: InstalledInfo = {
+    appName: APP_NAME,
+    install_path: '/Users/u/GameLib/Endless Sky.app',
+    executable: '/Users/u/GameLib/Endless Sky.app',
+    install_size: '100',
+    is_dlc: false,
+    version: '1.0.0',
+    platform: 'osx',
+    buildId: 'old-build',
+    language: 'en-US',
+    installedDLCs: [],
+    installedWithDLCs: false,
+    versionEtag: PREVIOUS_VERSION_ETAG,
+    pinnedVersion: false
+  }
+
+  function newImportData(appName: string): GOGImportData {
+    return {
+      appName,
+      buildId: 'new-build',
+      title: 'Endless Sky',
+      tasks: [],
+      installedLanguage: 'fr-FR',
+      platform: 'windows',
+      versionName: '2.0.0',
+      dlcs: ['dlc-1']
+    }
+  }
+
+  beforeEach(async () => {
+    manager = new GOGLibraryManager()
+
+    mockInstallInfoStoreHas.mockReturnValue(true)
+    mockInstallInfoStoreGet.mockReturnValue({ manifest: { disk_size: 100 } })
+    mockPrivateBranchesStoreGet.mockReturnValue('')
+    // Backs createMissingGogdlManifest's runRunnerCommand call, reached because the
+    // real graceful-fs existsSync(manifestPath) legitimately returns false here.
+    // Unparseable stdout makes createMissingGogdlManifest's OWN try/catch swallow
+    // it harmlessly -- see the file-level comment above this describe block.
+    mockGetGOGdlBin.mockReturnValue({ dir: '/fake', bin: 'gogdl' })
+    mockCallRunner.mockResolvedValue({
+      stdout: 'not json',
+      stderr: '',
+      abort: false
+    })
+
+    // Offline so loadLocalLibrary skips checkForOfflineInstallerChanges -- same
+    // trick as the D-35-19-16 describe block above.
+    mockIsOnline.mockReturnValue(false)
+    // `importGame` calls `installedGamesStore.set(...)` then immediately calls
+    // `this.refreshInstalled()`, which rebuilds the module-private `installedGames`
+    // map from `installedGamesStore.get(...)`. A static mockReturnValue here would
+    // make refreshInstalled() wipe out the record importGame just wrote (stale
+    // read), which crashes `createMissingGogdlManifest` for a fresh appName (no
+    // record at all post-wipe). Back both with a shared in-memory array instead so
+    // get() reflects the most recent set().
+    let installedStoreBacking: InstalledInfo[] = [previousRecord]
+    mockInstalledGamesStoreGet.mockImplementation(() => installedStoreBacking)
+    mockInstalledGamesStoreSet.mockImplementation(
+      (_key: string, value: InstalledInfo[]) => {
+        installedStoreBacking = value
+      }
+    )
+    mockLibraryStoreGet.mockReturnValue([
+      {
+        app_name: APP_NAME,
+        title: 'Endless Sky',
+        runner: 'gog',
+        is_installed: false,
+        install: {}
+      },
+      {
+        app_name: FRESH_APP_NAME,
+        title: 'Balrum',
+        runner: 'gog',
+        is_installed: false,
+        install: {}
+      }
+    ])
+
+    manager.refreshInstalled()
+    await (
+      manager as unknown as { loadLocalLibrary: () => Promise<void> }
+    ).loadLocalLibrary()
+  })
+
+  const installOf = (appName: string) =>
+    manager.getGameInfo(appName)?.install as InstalledInfo | undefined
+
+  it('re-importing an already-installed game preserves versionEtag and pinnedVersion from the previous record', async () => {
+    await manager.importGame(
+      newImportData(APP_NAME),
+      '/Users/u/Dest/Endless Sky.app'
+    )
+
+    expect(installOf(APP_NAME)?.versionEtag).toBe(PREVIOUS_VERSION_ETAG)
+    expect(installOf(APP_NAME)?.pinnedVersion).toBe(false)
+  })
+
+  it('re-importing still overwrites every import-owned field with the NEW data -- preservation must not become staleness', async () => {
+    const newPath = '/Users/u/Dest/Endless Sky.app'
+    await manager.importGame(newImportData(APP_NAME), newPath)
+
+    const written = installOf(APP_NAME)
+    expect(written?.version).toBe('2.0.0')
+    expect(written?.buildId).toBe('new-build')
+    expect(written?.platform).toBe('windows')
+    expect(written?.install_path).toBe(newPath)
+    expect(written?.executable).toBe(newPath)
+    expect(written?.installedDLCs).toEqual(['dlc-1'])
+  })
+
+  it('a fresh import with no previous record produces a complete InstalledInfo and does not throw', async () => {
+    const freshPath = '/Users/u/GameLib/Balrum.app'
+
+    await expect(
+      manager.importGame(newImportData(FRESH_APP_NAME), freshPath)
+    ).resolves.toBeUndefined()
+
+    const written = installOf(FRESH_APP_NAME)
+    expect(written?.appName).toBe(FRESH_APP_NAME)
+    expect(written?.install_path).toBe(freshPath)
+    expect(written?.versionEtag).toBeUndefined()
   })
 })
 
