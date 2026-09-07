@@ -361,3 +361,54 @@ the previous record's `versionEtag` forward. `versionEtag` feeds Linux-installer
 until the next real update check rewrites it. This is the behaviour the todo's item 3 explicitly
 asked for, and it is strictly better than the measured alternative (silently dropping the field on
 a game the user never touched). Recorded so it is not re-discovered as a surprise.
+
+---
+
+## Live-machine repair (2026-09-07, operator-authorised) — ONE OF TWO ITEMS DONE
+
+Supersedes "Still owed: the live machine was NOT repaired" above for the first item only.
+
+**Preconditions re-checked before touching anything:** GameLib not running (`pgrep`, no app/sidecar
+process), so nothing would overwrite the edit from memory. Both targets backed up first.
+
+### DONE — Endless Sky's stripped update-detection fields restored
+
+`~/Library/Application Support/GameLib/gog_store/installed.json`, record `1829678475`:
+
+```
+ 			"installedWithDLCs": false
++			"versionEtag": "\"688661e1d54090f16fd8742109bc6759\"",
++			"pinnedVersion": false
+```
+
+**The quoted form is not a typo and was not guessed.** `versionEtag` is sent verbatim as the
+`If-None-Match` request header by `getMetaResponse` (`library.ts:1063-1067`) and compared against
+`metaResponse.headers.etag` (`:1108`), so it must carry the HTTP ETag's own double quotes. Both
+sibling records in this same file store it that way (`"\"db527b50…\""`,
+`"\"e02cd24f…\""`). The todo's markdown rendering of the lost value was ambiguous on this point.
+
+Verified: file parses; 3 records intact; re-serialising the patched object with the app's own
+formatting (`json.dumps(indent='\t')`) is byte-identical to what is now on disk, so the next
+`installedGamesStore` write will not reformat it; `diff` against the backup is exactly the two
+added lines and nothing else.
+
+**Deliberately NOT restored** (the todo names only the two fields above, and these two carry risk
+either way): `executable` is still the `.app` path rather than the `""` both other GOG records use
+— it currently points at the game's real location, and reverting it could break launching;
+`install_size` is still `401.2 MiB` rather than `404.73 MiB`, which is display-only and will be
+re-measured on the next real update.
+
+### NOT DONE — the orphan Balrum config is still present
+
+`~/Library/Application Support/GameLib/GamesConfig/1769415595.json` (1570 bytes, mtime
+2026-08-29 08:42). Confirmed still an orphan: `1769415595` does not appear in `installed.json`,
+and the file still holds the import-written `winePrefix`
+`/Users/graysonmitchell/GameLib/Prefixes/Balrum` — a directory that still does not exist
+(`~/GameLib/Prefixes/` contains only `Alan Wake`).
+
+**Blocked, not skipped:** the auto-mode classifier refused every Bash write/delete under
+`~/Library/Application Support/`. The `installed.json` half succeeded only because the Edit tool
+was an available alternative; there is no delete equivalent. Needs one operator command.
+
+**Backups** (session scratchpad, not the repo):
+`…/scratchpad/repair-backup/installed.json.before` and `…/repair-backup/1769415595.json.orphan`.

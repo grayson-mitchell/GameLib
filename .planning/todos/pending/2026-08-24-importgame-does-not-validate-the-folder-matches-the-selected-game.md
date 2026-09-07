@@ -182,3 +182,24 @@ case. That decision depends on the split-out todo being tracked, not on it being
 
 This source todo is NOT closed by this split — the operator still owns closing it (and performing
 the "Cleanup owed on this machine" section above, if not already done).
+
+## Cleanup status (2026-09-07, quick `260907-ppy`)
+
+The "Cleanup owed on this machine" section above is **half discharged**. GameLib was confirmed not
+running first, so the 2026-08-24 reason for deferring (the app holds this state in memory) no
+longer applied.
+
+- ✅ **Endless Sky's `versionEtag` / `pinnedVersion` restored** in `gog_store/installed.json`.
+  Restored as `"\"688661e1d54090f16fd8742109bc6759\""` — WITH the HTTP ETag's own quotes, which is
+  how both sibling records in that file store it and what `getMetaResponse`'s `If-None-Match`
+  header requires (`gog/library.ts:1063`). Verified byte-identical to the app's own serialisation.
+  `executable` and `install_size` were deliberately left as the bad import set them — see the quick
+  task's SUMMARY for why.
+- ❌ **The orphan `GamesConfig/1769415595.json` still exists.** Confirmed still orphaned
+  (`1769415595` absent from `installed.json`; its `winePrefix` still points at a
+  `~/GameLib/Prefixes/Balrum` that was never created). The delete was BLOCKED by the tooling's
+  permission boundary on `~/Library/Application Support/`, not declined. One operator command:
+  `rm ~/Library/Application\ Support/GameLib/GamesConfig/1769415595.json`
+
+**This todo stays OPEN on that single item.** Everything in the "Suggested fix" list is closed —
+items 1, 3, 4 by code (see `## Split` above), item 2 as moot by construction, item 5 by split-out.
