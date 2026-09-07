@@ -279,7 +279,7 @@ describe('withStallTimeout', () => {
   // wrapped install's own abort registry, not merely the rejection — see
   // .planning/todos/pending/2026-08-27-stall-watchdog-leaves-the-download-running.md.
 
-  it('T-A: a trip aborts the appName\'s registered controller, not just the race', async () => {
+  it("T-A: a trip aborts the appName's registered controller, not just the race", async () => {
     jest.useFakeTimers()
     const appName = 'trip-signals-abort'
     const stallMs = 5000
