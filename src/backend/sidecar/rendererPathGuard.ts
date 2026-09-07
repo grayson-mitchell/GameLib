@@ -32,11 +32,14 @@
  * correctly rejected by `relative()` diverging at the first path segment).
  * It now has ZERO production call sites (`runWineCommandForGame` uses
  * `assertCommandParts`, not this primitive) — retained deliberately as the
- * shared containment primitive, not left behind by omission. Its named
- * future consumer is the open todo
- * `.planning/todos/pending/2026-08-24-importgame-wineprefix-wineversion-not-contained-by-34-6-11.md`,
- * whose design question is exactly "what containment root is correct for a
- * Wine prefix."
+ * shared containment primitive, not left behind by omission. It has no
+ * named future consumer: the design question that once named it as a
+ * future consumer ("what containment root is correct for a Wine prefix")
+ * has been closed and answered NO-GATE-HERE — the identical setting is
+ * reachable unchecked via the typed `setSetting`/`writeConfig` route, so
+ * containment at this boundary would close nothing. See the closed
+ * re-disposition record in the completed todos directory for the full
+ * rationale.
  *
  * Deliberately NOT a positive safe-character check on the input string
  * (REQ-37-06's documented anti-pattern): a character check would reject

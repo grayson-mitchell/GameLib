@@ -73,7 +73,9 @@
  *     containment REMOVED by gap plan 34.6-18, replaced by
  *     `rendererPathGuard.assertPlausibleAbsolutePath`.
  *     `winePrefix`/`wineVersion` are NOT contained by this plan — see
- *     34.6-11-SUMMARY.md's residuals.
+ *     34.6-11-SUMMARY.md's residuals. That open question is now
+ *     re-dispositioned as a deliberate, accepted residual — see
+ *     `.planning/todos/completed/2026-08-24-importgame-wineprefix-wineversion-not-contained-by-34-6-11.md`.
  *
  * `uninstallGameCallback`/`checkGameUpdates`/`addToQueue` all "genuinely span
  * multiple store managers" (checklist step 2's own curated-import carve-out)
@@ -416,10 +418,24 @@ export function registerInstallFlows(): void {
   // absolute, non-traversing path, bypassing the picker entirely -- the same
   // exposure every other filesystem-touching sidecar channel carries.
   // Accepted at ASVS L1 for a local desktop launcher. Note:
-  // `winePrefix`/`wineVersion`/`wineCrossoverBottle` (below, used only for a
-  // config write, never a filesystem path) are NOT validated by this plan --
-  // declared residual, see
-  // `.planning/todos/pending/2026-08-24-importgame-wineprefix-wineversion-not-contained-by-34-6-11.md`.
+  // `winePrefix` and `wineVersion.bin`/`.wineserver` (below) ARE
+  // renderer-supplied filesystem paths, consumed at launch:
+  // `launcher.ts:1115`/`:1134`/`:1142` (`WINEPREFIX`), `launcher.ts:1136`
+  // (`PROTONPATH` via `dirname(wineVersion.bin)`), `launcher.ts:1510`
+  // (`wineBin`, spawned), `launcher.ts:1576`
+  // (`spawn(wineVersion.wineserver!)`), and `utils.ts:919` (`WINEPREFIX`
+  // env). `wineCrossoverBottle` is different -- it is a CrossOver bottle
+  // NAME, not a path (`launcher.ts:820`, `{ bottle_name: ... }`); an
+  // absolute-path shape check would have broken it. All three are STILL NOT
+  // validated by this handler, and that is now a DELIBERATE,
+  // re-dispositioned ACCEPTED RESIDUAL, not an open question:
+  // `settingsFlowRegistration.ts:160` (`setSetting`) and `:195`
+  // (`writeConfig`) gate only `appName` via `isContainedGameConfig` and
+  // never inspect the value, so the identical persisted setting is
+  // reachable unchecked by a wider route that is open by design. A gate
+  // here would close nothing while risking rejection of legitimate
+  // configurations (a shared system Wine, a prefix under `~/.wine`). See
+  // `.planning/todos/completed/2026-08-24-importgame-wineprefix-wineversion-not-contained-by-34-6-11.md`.
   ipcMain.handle(
     'importGame',
     async (_event: unknown, ...args: unknown[]): StatusPromise => {
