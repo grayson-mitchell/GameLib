@@ -2,9 +2,10 @@
 created: 2026-09-07T00:00:00.000Z
 title: "macOS shortcut/icon generation fails on BOTH a mismatched import and a correct install — two different proximate causes on the same call path"
 area: shortcuts
-status: OPEN
+status: RESOLVED
 severity: major
 files:
+  - src/backend/shortcuts/utils.ts
   - src/backend/shortcuts/shortcuts/shortcuts.ts
 ---
 
@@ -85,6 +86,33 @@ Either way, a thrown icon/shortcut failure should be visibly logged (not silentl
 after this is fixed, since a residual environment-specific failure (permissions, disk full, etc.)
 is always possible and users importing/installing macOS games should not need to check logs to
 know their shortcut has no icon.
+
+## Resolved by
+
+Quick task `260908-e64` fixed both proximate causes in `src/backend/shortcuts/utils.ts`'s `getIcon`
+and `downloadImage`:
+
+1. `ERR_INVALID_ARG_TYPE` case: `getIcon`'s gog branch dereferenced
+   `gameInfo.install.install_path!` via a false non-null assertion. Fixed by guarding on
+   `const installPath = gameInfo.install.install_path; if (installPath) { ... }` before joining any
+   path off of it — an absent `install_path` now falls through to the `getProductApi` lookup
+   instead of throwing.
+2. `ENOENT` case: `downloadImage` was declared non-`async` and called `downloadFile` without
+   `await`, making the download fire-and-forget; `getIcon` returned the destination path before the
+   file landed on disk. Fixed by making `downloadImage` `async` and awaiting `downloadFile`, and by
+   making `getIcon` itself `async` and awaiting `downloadImage`, re-checking `existsSync(icon)`
+   afterward before returning a path.
+3. Per this todo's "Suggested fix" closing note (silent-swallow must not persist), `getIcon` now
+   returns `Promise<string | undefined>` — `undefined` on any icon-unavailable path (no URL, failed
+   download, or missing file post-download), each case logged via `logWarning` rather than thrown or
+   silently swallowed. This propagates through all 4 real call sites (linux `.desktop` generation,
+   `convertPngToICNS`, `generateMacOsApp`, `addNonSteamGame`'s `newEntry.icon` assignment), and
+   `generateMacOsApp` was restructured (D-04) so the `.app`/`Info.plist`/`run.sh` are written
+   unconditionally — an unobtainable icon degrades to an iconless shortcut, never a deleted `.app`.
+
+Unit tests added at `src/backend/shortcuts/__tests__/getIcon.test.ts` cover the `install_path`
+guard, the awaited-download-exists invariant, and the undefined-on-failure contract, each proven RED
+against the pre-fix source at base commit `eedf46e64` before being proven GREEN against the fix.
 
 ## Notes
 
