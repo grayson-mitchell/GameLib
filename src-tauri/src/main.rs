@@ -989,6 +989,23 @@ fn invoke_timeout_message(channel: &str) -> String {
     format!("sidecar invoke timed out: {channel}")
 }
 
+/// One shell diagnostic line for an invoke abandoned before the sidecar ever answered.
+///
+/// Split out as a pure function for the same reason `invoke_timeout_message` above is: the two
+/// call sites that use it live inside `SidecarState::invoke`, which needs a real `Child`/
+/// `ChildStdin` to construct and is therefore unreachable from `#[cfg(test)] mod tests`. The
+/// FORMAT can still be pinned; the call sites are pinned by
+/// `src/backend/__tests__/shellDiagPersistence.test.ts` instead.
+///
+/// Carries NO `[shell] ` prefix: `shell_diag` prepends one, and a literal here would emit
+/// `[shell] [shell] ...`.
+///
+/// T-28-04 holds unchanged: `id` is a monotonic counter and `channel` is a fixed identifier from
+/// the registered set. No `result`, `error` or argument body is logged.
+fn invoke_abandoned_message(reason: &str, id: &str, channel: &str) -> String {
+    format!("invoke abandoned ({reason}): id={id} channel={channel}")
+}
+
 /// `None` means "wait indefinitely" (see `LONG_RUNNING_CHANNELS`).
 fn timeout_for(channel: &str) -> Option<Duration> {
     if LONG_RUNNING_CHANNELS.contains(&channel) {
@@ -1202,11 +1219,20 @@ impl SidecarState {
             // dilute a bounded table with entries that can never be looked up.
             return Err(e);
         }
+        // Until this task, both `Err(_)` arms below were silent: they removed the pending entry,
+        // recorded the abandonment into the ring, and returned an `Err` — printing nothing. The
+        // `response for unknown/timed-out` diagnostic (reader thread, below) only ever fires if a
+        // LATE response eventually arrives; if the sidecar simply never answers, nothing else
+        // observes that at all. The rule this task acts on: a transport failure that leaves no trace is indistinguishable from no failure.
+        // So each arm now emits one `shell_diag` line naming both id and channel BEFORE
+        // `record_abandoned` — a placement `abandonedInvokeAttribution.test.ts`'s ordering pin
+        // requires, not an arbitrary choice.
         match timeout {
             Some(bound) => match rx.recv_timeout(bound) {
                 Ok(result) => result,
                 Err(_) => {
                     self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+                    shell_diag(&invoke_abandoned_message("timeout", &id, &channel));
                     self.record_abandoned(&id, &channel);
                     Err(invoke_timeout_message(&channel))
                 }
@@ -1218,6 +1244,7 @@ impl SidecarState {
                 Ok(result) => result,
                 Err(_) => {
                     self.pending.lock().ok().and_then(|mut p| p.remove(&id));
+                    shell_diag(&invoke_abandoned_message("sidecar closed", &id, &channel));
                     self.record_abandoned(&id, &channel);
                     Err("sidecar closed before responding".into())
                 }
@@ -8328,14 +8355,14 @@ fn start_reader(
                                     .lock()
                                     .map(|ring| abandoned_channel_for(&ring, id))
                                     .unwrap_or_else(|_| ABANDONED_CHANNEL_UNRECORDED.to_string());
-                                eprintln!(
-                                    "[shell] response for unknown/timed-out id={id} channel={channel} (dropped)"
-                                );
+                                shell_diag(&format!(
+                                    "response for unknown/timed-out id={id} channel={channel} (dropped)"
+                                ));
                             }
                         }
                     }
-                    None => eprintln!(
-                        "[shell] response frame with a missing or non-string id (dropped)"
+                    None => shell_diag(
+                        "response frame with a missing or non-string id (dropped)"
                     ),
                 }
                 continue;
@@ -10174,6 +10201,45 @@ mod tests {
         // a prefix keeps any substring/startsWith consumer working; a rewrite that dropped it
         // would be a silent contract break for anything matching the old text.
         assert!(invoke_timeout_message("getCookies").starts_with("sidecar invoke timed out"));
+    }
+
+    // ---- invoke_abandoned_message (quick task `260907-j8n`) ----
+    //
+    // MANUAL gate: this project's CI runs no cargo step at all (`.github/workflows/*.yml`
+    // contains neither `cargo test` nor `cargo check`). The mechanical gate that actually runs on
+    // every push is `src/backend/__tests__/shellDiagPersistence.test.ts`; this module exists for
+    // local/manual verification of the pure helper only. It cannot reach the two `invoke()` call
+    // sites that consume the helper (both need a live `Child`/`ChildStdin`), which is exactly why
+    // the JS gate pins those call sites instead.
+
+    #[test]
+    fn invoke_abandoned_message_renders_both_reasons() {
+        assert_eq!(
+            invoke_abandoned_message("timeout", "1575", "getCookies"),
+            "invoke abandoned (timeout): id=1575 channel=getCookies"
+        );
+        assert_eq!(
+            invoke_abandoned_message("sidecar closed", "1575", "getCookies"),
+            "invoke abandoned (sidecar closed): id=1575 channel=getCookies"
+        );
+    }
+
+    #[test]
+    fn invoke_abandoned_message_carries_no_shell_prefix() {
+        // Double-prefix guard: `shell_diag` prepends `[shell] ` itself. A literal here that
+        // already carried the prefix would emit `[shell] [shell] ...` at both call sites.
+        assert!(!invoke_abandoned_message("timeout", "1575", "getCookies").starts_with("[shell] "));
+    }
+
+    #[test]
+    fn invoke_abandoned_message_does_not_collide_with_the_capture_harness() {
+        // Non-collision guard: `meta/captureShellScrollback.ts`'s `LEGACY_TARGET_DROP_RE` exists
+        // to DETECT a stale shell binary by matching the pre-`260905-omc` bare-id form of the
+        // unrelated `response for unknown/timed-out` diagnostic. If this helper's rendered text
+        // ever contained that phrase, a new abandonment line could be misread as evidence of a
+        // stale binary rather than what it actually is.
+        assert!(!invoke_abandoned_message("timeout", "1575", "getCookies")
+            .contains("response for unknown/timed-out"));
     }
 
     // ---- clipboard_text_arg (Phase 34.3 Plan 03, REQ-34.3-08) ----
