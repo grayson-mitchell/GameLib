@@ -270,7 +270,16 @@ async function addNonSteamGame(game: Game): Promise<boolean> {
     newEntry.appid = generateShortcutId(newEntry.Exe, newEntry.AppName)
 
     await getIcon(gameInfo.app_name, gameInfo)
-      .then((path) => (newEntry.icon = path))
+      .then((path) => {
+        if (path) {
+          newEntry.icon = path
+        } else {
+          logWarning(
+            `Couldn't find an icon for ${gameInfo.title}`,
+            LogPrefix.Shortcuts
+          )
+        }
+      })
       .catch((error) =>
         logWarning(
           [`Couldn't find a icon for ${gameInfo.title} with:`, error],
