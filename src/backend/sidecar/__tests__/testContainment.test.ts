@@ -839,18 +839,35 @@ const IN_SCOPE_SUITES = [
  *
  * It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
  * `backend/logger/paths` mock kit Block B gates on. Recount, run rather than carried forward:
- * 59 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 55 below (quick-260908-ci2 added
+ * 61 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 57 below (correcting the stale "59 / 55" figure
+ * that had drifted two additions behind reality -- quick-260908-ci2 added
  * `steamFocusRefreshWire.test.ts` -- same reasoning as `steamFlows.test.ts`, its immediate
  * list neighbour: its own `jest.mock('os', ...)` plus the identical `backend/store_backend`/
  * `axios`/`backend/utils`/`backend/constants/environment`/`../../storeManagers/steam/user`/
  * `../../launcher` mock set makes its import graph contained without opting into the
  * four-element `IN_SCOPE_SUITE` kit).
+ *
+ * `bootstrapUserReconcile.test.ts` (todo 2026-09-06, quick-260908-fre) is classified as
+ * structurally contained: it follows `playtimeLockBootClear.test.ts`'s own already-approved
+ * preamble exactly -- `backend/store_backend` routed at the real sidecar `fileStore` shim,
+ * `axios` mocked so `initOnlineMonitor()`'s `pingSites()` (invoked by Block B's
+ * `fetchLastestReleases()` inside `init()`) cannot make a live network call, and an additional
+ * partial mock of `../../online_monitor` (spreading `jest.requireActual`, overriding only
+ * `initOnlineMonitor`/`isOnline`/`runOnceWhenOnline` so the reconciliation callback under test
+ * runs inline instead of parking on the real connectivity emitter). It declares NO
+ * `jest.mock('os', ...)` of its own, deliberately -- containment is structural
+ * (`jest.setupContainment.ts`'s project-wide `setupFiles` registration), the same floor
+ * `playtimeLockBootClear.test.ts` relies on. It cannot be an `IN_SCOPE_SUITE`: it declares none
+ * of the four-element `pathShim`/`backend/logger/paths` mock kit Block B gates on. A
+ * `readdirSync` recount at this task's execution time puts the directory at 62 `*.test.ts`
+ * files: 4 `IN_SCOPE_SUITES` + 58 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
   'appShellFlows.test.ts',
   'appShellImportGate.test.ts',
   'bootstrap.test.ts',
+  'bootstrapUserReconcile.test.ts',
   'bootstrapWirings.test.ts',
   'clipboardFlows.test.ts',
   'devSecretVault.test.ts',
