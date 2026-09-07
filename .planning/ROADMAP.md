@@ -4645,7 +4645,7 @@ same run. Note that 37-03 explains **9** of those 22 games and closing it will N
 
 **Depends on:** **Phase 34** for the Windows/Linux items — the W/L builds must exist before anything can be observed on them. ⚠ **CORRECTED 2026-09-06 (plan `38-01`) — the controller items are NOT discharged on the macOS machine.** This line previously said the controller items had no phase dependency and could be discharged "on the macOS machine, without leaving the desk." That is disproved: GameLib runs in WKWebView on macOS and WebView2 (Chromium) on Windows, and the two engines disagree about which gamepads exist — the PowerA Advantage Wired for Nintendo Switch 2 (`0x20D6`/`0xA720`) is read by Chromium and returns 0 slots in WebKit, confirmed by a complete Steam-running/Steam-quit 2x2 that also ruled out Steam Input exclusivity as the cause. The seven controller items now in scope (`38-C01`–`38-C06`, `38-C08`) run in the **same Windows sitting** as the W and S items, not separately and not on macOS. See `38-HUMAN-UAT.md` for the full finding.
 
-**Plans:** 1/7 plans executed
+**Plans:** 2/7 plans executed
 
 **Items: 17 as of 2026-09-06** (plan `38-01`, superseding the 34-item count below). The ledger
 repair retired 9 Electron-runtime items as unscoreable (Phase 35 deleted that build; each carries
@@ -4714,7 +4714,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 38-02-PLAN.md — Two-way relocation receipts and retirement outcomes at the origin phases 34.13, 35 and 40 (wave 2, docs-only, autonomous)
+- [x] 38-02-PLAN.md — Two-way relocation receipts and retirement outcomes at the origin phases 34.13, 35 and 40 (wave 2, docs-only, autonomous)
 - [ ] 38-03-PLAN.md — Windows sitting preflight: toolchain, branch tip, proven log path, heartbeat-verified instrument, and the D-38-15 DevTools re-test (wave 2, `autonomous: false`)
 
 **Wave 3** *(blocked on Wave 2 completion)*

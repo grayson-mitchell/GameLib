@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 38-01-PLAN.md
-last_updated: "2026-09-06T02:58:45.337Z"
-last_activity: 2026-09-06
+stopped_at: Completed 38-02-PLAN.md
+last_updated: "2026-09-07T05:56:58.397Z"
+last_activity: 2026-09-07
 progress:
   total_phases: 39
   completed_phases: 32
   total_plans: 479
-  completed_plans: 461
+  completed_plans: 462
   percent: 82
 ---
 
@@ -124,7 +124,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > # ◆ PHASE 35 EXECUTING — started 2026-08-28. `/gsd-execute-phase 35`, no `--wave` filter.
 >
 > **Phase:** 35 (electron-cutover-remove-the-electron-build) — EXECUTING
-> **Plan:** 13 of 19 (`35-10` PARTIAL) · **Wave:** 6 DONE (re-planned), wave 7 part-run. `35-13` UNBLOCKED — 35-09 code-complete. **FOUR human gates queued:** 35-07 packaged deep-link, 35-08 live wake-lock, **35-09 the 34.6 Step 8 re-run (BOTH clauses — do NOT accept (a) alone)**, 34.6 Step 4 winetricks. **`D-35-10-01` DEADLINE WAVE 8.** **NOTE (2026-08-30): this "12 of 19" line is STALE and predates waves 7-13 — see ROADMAP.md's phase-35 row for the current wave-plan count (18/19, only `35-19` remains) and the gap-closure bullet immediately below for the newer 10-plan cycle; left uncorrected here per SCOPE BOUNDARY, fixing it is unrelated to the plan that added this note.**
+> **Plan:** 14 of 19 (`35-10` PARTIAL) · **Wave:** 6 DONE (re-planned), wave 7 part-run. `35-13` UNBLOCKED — 35-09 code-complete. **FOUR human gates queued:** 35-07 packaged deep-link, 35-08 live wake-lock, **35-09 the 34.6 Step 8 re-run (BOTH clauses — do NOT accept (a) alone)**, 34.6 Step 4 winetricks. **`D-35-10-01` DEADLINE WAVE 8.** **NOTE (2026-08-30): this "12 of 19" line is STALE and predates waves 7-13 — see ROADMAP.md's phase-35 row for the current wave-plan count (18/19, only `35-19` remains) and the gap-closure bullet immediately below for the newer 10-plan cycle; left uncorrected here per SCOPE BOUNDARY, fixing it is unrelated to the plan that added this note.**
 > **Gap-closure cycle 1, wave 1 (2026-08-30).** `35-26` **COMPLETE** (7/10 gap-closure plans). Closed
 > `REQ-35-17`'s EOS half and resolved `D-35-11-01`. Task 1 (`81794b7bd`) moved `remove()`/`enable()`'s
 > native `dialog.showMessageBox` confirmations to an explicit backend `confirmed: boolean` param
@@ -973,7 +973,7 @@ gap-cycle-3 state follows.
 
 Phase: 34.9 — **gap cycle 3
 COMPLETE, phase remained OPEN pending re-verification** (superseded 2026-08-15 by the block above)
-Plan: 13 of 19 (`35-10` PARTIAL) · **Wave:** 6 DONE (re-planned), wave 7 part-run. `35-13` UNBLOCKED — 35-09 code-complete. **FOUR human gates queued:** 35-07 packaged deep-link, 35-08 live wake-lock, **35-09 the 34.6 Step 8 re-run (BOTH clauses — do NOT accept (a) alone)**, 34.6 Step 4 winetricks. **`D-35-10-01` DEADLINE WAVE 8.** **NOTE (2026-08-30): this "12 of 19" line is STALE and predates waves 7-13 — see ROADMAP.md's phase-35 row for the current wave-plan count (18/19, only `35-19` remains) and the gap-closure bullet immediately below for the newer 10-plan cycle; left uncorrected here per SCOPE BOUNDARY, fixing it is unrelated to the plan that added this note.**
+Plan: 14 of 19 (`35-10` PARTIAL) · **Wave:** 6 DONE (re-planned), wave 7 part-run. `35-13` UNBLOCKED — 35-09 code-complete. **FOUR human gates queued:** 35-07 packaged deep-link, 35-08 live wake-lock, **35-09 the 34.6 Step 8 re-run (BOTH clauses — do NOT accept (a) alone)**, 34.6 Step 4 winetricks. **`D-35-10-01` DEADLINE WAVE 8.** **NOTE (2026-08-30): this "12 of 19" line is STALE and predates waves 7-13 — see ROADMAP.md's phase-35 row for the current wave-plan count (18/19, only `35-19` remains) and the gap-closure bullet immediately below for the newer 10-plan cycle; left uncorrected here per SCOPE BOUNDARY, fixing it is unrelated to the plan that added this note.**
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
 compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
@@ -3941,7 +3941,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-09-06
+Last activity: 2026-09-07
 defects**. (1) Console Mode's `getActionButtonLabel`/`getBackButtonLabel`
 (`ConsoleMode/controller.ts`) branched only on `layout.startsWith('ps')`, so the `'nintendo'` layout
 that `detectControllerLayout()` already returns fell through to the Xbox default. Chromium's standard
@@ -4906,6 +4906,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P26 | 75min | 3 tasks | 2 files |
 | Phase 34.9 P27 | 20min | 3 tasks | 2 files |
 | Phase 38 P01 | 25min | 3 tasks | 5 files |
+| Phase 38 P02 | 25min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -5507,6 +5508,8 @@ Recent decisions affecting current work:
 - [Phase quick-260816-qcn]: Freshest-write-wins precedence (D-A) for the two Steam platform-signal writers (appdetails, PICS oslist), timestamp-based, symmetric, neither source authoritative -- closes WR-02's root mechanism (Phase 34.15 CR-01). Legacy entries with no platformsCapturedAt handled at the read boundary, no Migration added (D-D). `gsd-sdk query state.add-decision` was invoked once for this entry and reproduced the standing whole-file corruption defect (reverted status/stopped_at/last_activity/last_updated to a stale Phase 34.5 banner, deleted the ~350-line counter-convention comment block, wiped total_phases/completed_phases/total_plans/completed_plans/percent to 27/19/353/340/70 vs the correct 26/20/344/339/98) -- reverted byte-for-byte from a pre-call `cp` snapshot and this single decision line hand-applied instead. No further gsd-sdk state.*/roadmap.* verb was invoked this session.
 - [Phase 34.6-01]: `steamgrid/secretStore.ts`'s `isAvailable()` probes `secureKey.ts`'s crypto primitives indirectly (`isEncryptedValue(encryptApiKey('probe'))`) rather than exporting a new `encryptionAvailable()` from `secureKey.ts` -- keeps that module's three-export surface unchanged (plan's explicit instruction) while still satisfying the acceptance criterion that `secretStore.ts` never imports `electron` directly. No gsd-sdk state.*/roadmap.* verb was invoked for this plan's STATE.md/ROADMAP.md updates (known corruption defect); both hand-applied instead, per the standing protocol documented throughout this section.
 - [Phase 38]: 38-01: human_verification_relocated entry count resolved at 9 (8 relocated + 1 minted), not the plan's inconsistent nine/tenth (10) phrasing -- matches the actual item disposition table — Plan's own action text and acceptance criteria disagree with each other on the count; 9 is the only figure that reconciles against 4+4+1 relocated/minted items, and neither of Task 2's automated verify scripts checks this count
+- [Phase 38]: Preserved the watchdog-killed agent's Phase 35 receipt edits verbatim after independent verification against 38-02-PLAN.md's spec — The edits matched the plan's required receipt shape exactly (38-W04/38-W05 entries, REQ-35-20 note, dated second-hop paragraph); rewriting would have added no value and risked introducing drift.
+- [Phase 38]: Appended the Phase 40 ROADMAP cross-note to the 'Deferred out, not closed' paragraph rather than the 'RETURN HALF' block the plan text named — 'RETURN HALF OF THE 38-E03/38-E04 NON-CLOSURE' lives in Phase 38's own ROADMAP section, not Phase 40's; Phase 40's actual closing paragraph naming 38-E01..38-E04 as deferred to Phase 38 is 'Deferred out, not closed', matching the plan's read_first description and satisfying its acceptance criteria.
 
 ### Pending Todos
 
@@ -5945,8 +5948,8 @@ Recent decisions affecting current work:
 > disagreement between readers, not newly introduced here. Demoted into its own "prior
 > session (37-discuss), preserved as history" block, unchanged in content.
 
-Last session: 2026-09-06T02:58:45.301Z
-Stopped at: Completed 38-01-PLAN.md
+Last session: 2026-09-07T05:56:58.347Z
+Stopped at: Completed 38-02-PLAN.md
 remaining code gap. `legendary/user.ts`'s `clearEpicCookies` gained a per-host before/after
 cookie census (ported from `humble/user.ts`'s disconnect() pattern) and a three-case
 jar-liveness fatality rule replacing the bare `total === 0` check -- a host proven
