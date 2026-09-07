@@ -54,6 +54,7 @@ import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
 import { applyDepotFileFlags } from './depot/fileAttributes'
 import { reconcilePartialState } from './depot/reconcile'
+import { resolveDepotPathCollisions } from './depot/pathCollisions'
 import {
   classifyDepotError,
   isNonRetryableDepotError,
@@ -881,6 +882,14 @@ export async function buildDepotPlan(
     allSkippedErr.eresult = 40
     throw allSkippedErr
   }
+
+  // debug/steam-depot-unclassified-generic-error: two selected depots can
+  // claim the SAME path with incompatible types (Fallout 2 ships `master.dat`
+  // as a Directory marker in depot 38414 and as a 333MB file in 38415). Both
+  // depots are correctly selected, so this must be resolved on the plan before
+  // the write loop can race on it. Every dropped entry is size 0, so
+  // `totalBytes` — already summed above — needs no compensating arithmetic.
+  resolveDepotPathCollisions({ appId, depots })
 
   logInfo(
     `[Timing] buildDepotPlan: total ${Date.now() - planStart}ms for appId ${appId} (${depots.length} depot(s))`,

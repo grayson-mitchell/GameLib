@@ -395,6 +395,120 @@ describe('buildDepotPlan', () => {
       expect(plan.totalBytes).toBe(350)
     })
 
+    // debug/steam-depot-unclassified-generic-error — WIRING pin.
+    //
+    // pathCollisions.test.ts exercises resolveDepotPathCollisions directly, and
+    // a direct-call test is exactly how shutdownBridgeHelper() stayed green in
+    // this repo with ZERO production callers for a whole milestone. This test
+    // exists to prove buildDepotPlan actually CALLS it: it asserts on the plan
+    // buildDepotPlan RETURNS, so deleting the call site reds it.
+    //
+    // Fixture is the real Fallout 2 shape measured from live Steam 2026-09-07:
+    // depot 38414 ships `master.dat` as a size-0/chunks-0 Directory marker,
+    // depot 38415 ships it as a 333,177,805-byte / 318-chunk file.
+    it('resolves the Fallout 2 cross-depot master.dat collision in the RETURNED plan (wiring)', async () => {
+      // Plumbing supplied as makeFakeClient OVERRIDES rather than via
+      // jest.mocked(fakeClient.method) — referencing those methods unbound
+      // trips @typescript-eslint/unbound-method, and this repo enforces a
+      // --max-warnings ceiling, so a new test must not add to it.
+      const fakeClient = makeFakeClient({
+        getDepotDecryptionKey: jest
+          .fn()
+          .mockImplementation(
+            (
+              _appId: number,
+              depotId: number,
+              cb: (err: Error | null, key: Buffer) => void
+            ) => cb(null, Buffer.from(`key-${depotId}`))
+          ),
+        getRawManifest: jest
+          .fn()
+          .mockImplementation(
+            (
+              _appId: number,
+              depotId: number,
+              _gid: string,
+              _branch: string,
+              cb: (err: Error | null, raw: Buffer) => void
+            ) => cb(null, Buffer.from(`raw-${depotId}`))
+          )
+      })
+      // `jest.mocked(SteamUser).method` rather than
+      // `jest.mocked(SteamUser.method)`: the latter references the static
+      // unbound and trips @typescript-eslint/unbound-method against the
+      // repo's --max-warnings ceiling.
+      jest.mocked(SteamUser).ensureConnected.mockResolvedValue(true)
+      jest.mocked(SteamUser).getClient.mockReturnValue(fakeClient as never)
+      jest.mocked(selectAllDepots).mockReturnValue([
+        {
+          id: '38414',
+          manifest: '784733385950245239',
+          size: 0,
+          ownerAppId: APP_ID
+        },
+        {
+          id: '38415',
+          manifest: '6840570039060968053',
+          size: 0,
+          ownerAppId: APP_ID
+        }
+      ])
+
+      const contentManifest = jest.requireMock<{ parse: jest.Mock }>(
+        'steam-user/components/content_manifest.js'
+      )
+      contentManifest.parse.mockImplementation((raw: Buffer) =>
+        raw.toString() === 'raw-38414'
+          ? {
+              files: [
+                // the bare Directory marker that won the race on 2026-08-27
+                {
+                  filename: 'master.dat',
+                  size: '0',
+                  sha_content: '',
+                  chunks: [],
+                  flags: 64
+                },
+                {
+                  filename: 'sound',
+                  size: '0',
+                  sha_content: '',
+                  chunks: [],
+                  flags: 64
+                }
+              ]
+            }
+          : {
+              files: [
+                {
+                  filename: 'master.dat',
+                  size: '333177805',
+                  sha_content: 'sha-master',
+                  chunks: [{ sha: 'c0', cb_original: 1, offset: 0 }],
+                  flags: 0
+                }
+              ]
+            }
+      )
+      jest.mocked(decryptFilename).mockImplementation((b64: string) => b64)
+
+      const plan = await buildDepotPlan(APP_ID, BASE_OPTS)
+
+      // The directory marker is gone from depot 38414 …
+      expect(plan.depots[0].files.map((f) => f.filename)).toEqual(['sound'])
+      // … the real 333MB file survives in 38415 …
+      expect(plan.depots[1].files.map((f) => f.filename)).toEqual([
+        'master.dat'
+      ])
+      expect(plan.depots[1].files[0].size).toBe(333177805)
+      // … and `sound`, a legitimate non-colliding directory entry, is untouched.
+      expect(plan.depots[0].files[0].flags).toBe(64)
+
+      // totalBytes needs no compensating arithmetic: every dropped entry is
+      // size 0, so the sum taken before resolution is still correct.
+      expect(plan.totalBytes).toBe(333177805)
+    })
+
     it('produces the same shape for a single-depot app (N=1 case)', async () => {
       const fakeClient = makeFakeClient()
       jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
