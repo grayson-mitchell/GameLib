@@ -11,7 +11,7 @@
 // chunk is fetched. The streaming download loop is Plan 05; recovery/finalize
 // (writeAppManifest) is Plan 06 — this module only builds the plan.
 
-import { logInfo, logWarning, LogPrefix } from 'backend/logger'
+import { logInfo, logWarning, logError, LogPrefix } from 'backend/logger'
 import type SteamUserLib from 'steam-user'
 import {
   open,
@@ -81,6 +81,55 @@ const NUMERIC_ID = /^\d+$/
  *  these rather than re-literalling the numeric bit values. */
 export const DIRECTORY_FLAG = 64
 export const SYMLINK_FLAG = 512
+
+/** debug/steam-depot-unclassified-generic-error (F2): how many individual
+ *  per-file download failures downloadDepotFiles logs in full before
+ *  suppressing the rest. A stalled 19k-file title can fail thousands of
+ *  files; the aggregate logged at the throw site always reports the true
+ *  total, so the cap costs no information about SCALE, only about which
+ *  specific files beyond the first N. */
+export const FAILURE_LOG_CAP = 10
+
+/**
+ * Render a thrown depot failure for the log with the fields that actually
+ * discriminate causes — `code` (fs/HTTP errors: EISDIR, ENOSPC, ECONNRESET)
+ * and `eresult` (Steam CM errors) — which `(err as Error).message` alone
+ * drops. These are the exact two properties classifyDepotError reads
+ * (37-02 D-08), so a failure that reaches the UNCLASSIFIED generic bucket
+ * now leaves behind the same evidence the classifier saw and rejected.
+ *
+ * Exported for depot.test.ts. Never throws: a non-Error thrown value
+ * (string, undefined, a rejected non-Error) must still produce a log line
+ * rather than replacing a download failure with a TypeError.
+ */
+export function describeDepotFailure(err: unknown): string {
+  // Only string/number are rendered for code/eresult: an object-valued
+  // property would stringify to a useless "[object Object]" and is better
+  // omitted than logged as noise (also what keeps this no-base-to-string
+  // clean rather than suppressed).
+  const scalar = (v: unknown): string | undefined =>
+    typeof v === 'string' || typeof v === 'number' ? String(v) : undefined
+
+  if (typeof err !== 'object' || err === null) {
+    return typeof err === 'string' ? err : String(err)
+  }
+
+  const e = err as { message?: unknown; code?: unknown; eresult?: unknown }
+  const parts: string[] = []
+  if (typeof e.message === 'string' && e.message) {
+    parts.push(e.message)
+  } else if (err instanceof Error) {
+    // `new Error('')` — no message, but the name still identifies the class.
+    parts.push(err.name)
+  }
+
+  const code = scalar(e.code)
+  if (code !== undefined) parts.push(`code=${code}`)
+  const eresult = scalar(e.eresult)
+  if (eresult !== undefined) parts.push(`eresult=${eresult}`)
+
+  return parts.length ? parts.join(' ') : '[non-Error value thrown]'
+}
 // SPIKE 003 finding: EDepotFileFlag.Executable (32) / CustomExecutable (128).
 // Steam's 1026 verify pass sets the +x bit from these flags; the StateFlags=4
 // full-ownership path skips verify, so GameLib must apply them itself or the
@@ -2443,6 +2492,30 @@ export async function downloadDepotFiles(
                 // classifyDepotError can read `.code`/`.eresult` off it.
                 cause: err
               })
+              // debug/steam-depot-unclassified-generic-error (F2): this catch
+              // used to record the failure and log NOTHING, so an install
+              // could fail N files and leave the operator with one generic
+              // sentence ("The Steam download failed.") and no record of what
+              // failed. That is why the 2026-08-27 Fallout 2 report has no
+              // `reason=` line anywhere: a decode-stage failure rethrows and
+              // is logged upstream, but an fs/HTTP error at open/write time
+              // was swallowed HERE. Capped so a 19k-file title cannot flood
+              // the log — the aggregate at the throw site always reports the
+              // true total.
+              if (failures.length <= FAILURE_LOG_CAP) {
+                logWarning(
+                  `downloadDepotFiles: appId=${plan.appId} depot=${job.depotId} ` +
+                    `file="${job.file.filename}" failed: ${describeDepotFailure(err)}`,
+                  LogPrefix.Steam
+                )
+              } else if (failures.length === FAILURE_LOG_CAP + 1) {
+                logWarning(
+                  `downloadDepotFiles: appId=${plan.appId} further per-file ` +
+                    `failures suppressed after ${FAILURE_LOG_CAP} — see the ` +
+                    `aggregate on the download-failed line below`,
+                  LogPrefix.Steam
+                )
+              }
             }
           }
         })
@@ -3015,6 +3088,24 @@ export async function downloadSteamDepots(
       // classifyDepotError can read `.code`/`.eresult` off it directly.
       const classified = classifyDepotError(
         result.failures[0].cause ?? result.failures[0].error
+      )
+      // debug/steam-depot-unclassified-generic-error (F2): the classified
+      // message is all the UI ever shows, and for the generic bucket that is
+      // "The Steam download failed." — a sentence with no cause in it. Record
+      // the aggregate the classifier was fed so the log can answer "how many
+      // files, which ones, and what did the UNCLASSIFIED text actually say".
+      // `classified.key` is logged too: it is the ONLY way to tell from a log
+      // whether the generic fallback was reached (nothing matched) or a real
+      // signature matched — the user-facing string cannot distinguish a
+      // classified failure from an unclassified one.
+      logError(
+        `downloadSteamDepots: appId=${appId} download failed — ` +
+          `${result.failures.length} file failure(s), classified as ` +
+          `${classified.key}; first: file="${result.failures[0].file}" ` +
+          `${describeDepotFailure(
+            result.failures[0].cause ?? result.failures[0].error
+          )}`,
+        LogPrefix.Steam
       )
       return {
         status: 'error',

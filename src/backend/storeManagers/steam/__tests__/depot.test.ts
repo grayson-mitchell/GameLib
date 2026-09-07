@@ -35,7 +35,7 @@ import {
 import { open, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { logWarning, logInfo } from 'backend/logger'
+import { logWarning, logInfo, logError } from 'backend/logger'
 import {
   buildDepotPlan,
   downloadSteamDepots,
@@ -53,6 +53,8 @@ import {
   DIRECTORY_FLAG,
   SYMLINK_FLAG,
   EXECUTABLE_FLAG,
+  FAILURE_LOG_CAP,
+  describeDepotFailure,
   type DepotPlan,
   type DepotPlanFile,
   type DepotDownloadFailure,
@@ -2172,6 +2174,64 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     expect(acfText).toMatch(/"111"\s*\{\s*"manifest"\s+"11111111111111111"/)
   })
 
+  // debug/steam-depot-unclassified-generic-error (F2): the UI only ever sees
+  // classifyDepotError's plain-language string, and for the generic bucket
+  // that is "The Steam download failed." — a sentence with no cause in it and
+  // no way to tell an UNCLASSIFIED failure from a classified one. The
+  // 2026-08-27 Fallout 2 report is exactly that: a generic message with
+  // nothing in the log behind it.
+  it('T-D4: logs the failure COUNT, the classification KEY and the first raw failure when the download errors', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-game',
+          size: '5',
+          sha_content: 'sha-that-will-never-match',
+          chunks: [{ sha: 'chunk-sha', cb_original: 5, offset: 0 }]
+        }
+      ]
+    })
+    // Resolves rather than rejects — see the sibling test above for why a
+    // rejecting fetchChunk mock OOMs this path.
+    jest.mocked(fetchChunk).mockResolvedValue(Buffer.from('wrong'))
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('error')
+
+    const aggregate = jest
+      .mocked(logError)
+      .mock.calls.map((c) => String(c[0]))
+      .find((m) => m.includes('downloadSteamDepots:'))
+
+    expect(aggregate).toBeDefined()
+    expect(aggregate).toContain('12345')
+    expect(aggregate).toContain('1 file failure(s)')
+    // The classification key is the ONLY log-visible signal distinguishing
+    // "nothing matched, we fell through to the generic bucket" from "a real
+    // signature matched" — the user-facing string cannot express that. This
+    // input IS classified (sha1 mismatch -> verifyFailed), and the line says
+    // so; the 2026-08-27 Fallout 2 failure would instead read
+    // `classified as steam.download.error.generic`, which is precisely the
+    // distinction that was unavailable to the operator at the time.
+    expect(aggregate).toContain(
+      'classified as steam.download.error.verifyFailed'
+    )
+    expect(aggregate).not.toContain('steam.download.error.generic')
+    // …and the raw text the classifier was fed, which the UI discards.
+    expect(aggregate).toMatch(/sha1 mismatch/i)
+  })
+
   it('D-UAT-05: a cancel issued WHILE the plan is still being built (e.g. during the CM connect wait) resolves with status cancelled — never error — and never reaches downloadDepotFiles/fetchChunk', async () => {
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
@@ -3076,6 +3136,50 @@ describe('classifyDepotError', () => {
   })
 })
 
+// debug/steam-depot-unclassified-generic-error (F2): `code`/`eresult` are the
+// exact two properties classifyDepotError reads, and `(err as Error).message`
+// alone drops both — so a failure that reaches the UNCLASSIFIED generic bucket
+// left behind LESS evidence than the classifier itself saw.
+describe('describeDepotFailure', () => {
+  it('carries `code` alongside the message (the EISDIR/ENOSPC fs shapes)', () => {
+    const out = describeDepotFailure(
+      Object.assign(new Error('EISDIR: illegal operation on a directory'), {
+        code: 'EISDIR'
+      })
+    )
+    expect(out).toContain('EISDIR: illegal operation on a directory')
+    expect(out).toContain('code=EISDIR')
+  })
+
+  it('carries `eresult` (the Steam CM shape)', () => {
+    expect(
+      describeDepotFailure(Object.assign(new Error('blocked'), { eresult: 40 }))
+    ).toContain('eresult=40')
+  })
+
+  it('omits absent fields rather than printing undefined', () => {
+    const out = describeDepotFailure(new Error('plain'))
+    expect(out).toBe('plain')
+    expect(out).not.toContain('undefined')
+  })
+
+  // A diagnostic helper that throws would REPLACE a download failure with a
+  // TypeError at the exact moment the log is the only evidence there is.
+  it.each([
+    ['a string', 'just a string'],
+    ['undefined', undefined],
+    ['null', null],
+    ['a number', 42]
+  ])('never throws on %s thrown as a non-Error', (_label, thrown) => {
+    expect(() => describeDepotFailure(thrown)).not.toThrow()
+    expect(typeof describeDepotFailure(thrown)).toBe('string')
+  })
+
+  it('falls back to String(err) when message is present but empty', () => {
+    expect(describeDepotFailure(new Error(''))).toBe('Error')
+  })
+})
+
 describe('isNonRetryableDepotError', () => {
   it('returns true for each terminal EResult (FileNotFound=9, AccessDenied=15, and peers)', () => {
     for (const eresult of [8, 9, 15, 17, 40, 42, 43]) {
@@ -3292,6 +3396,121 @@ describe('downloadDepotFiles', () => {
     expect(result.failures).toHaveLength(1)
     expect(result.failures[0].file).toBe('bad-hash.bin')
     expect(result.failures[0].error).toMatch(/sha1 mismatch/i)
+  })
+
+  // debug/steam-depot-unclassified-generic-error (F2). The 2026-08-27
+  // Fallout 2 report reached the UNCLASSIFIED generic bucket ("The Steam
+  // download failed.") with NOTHING in the log to classify it by: this
+  // per-file catch recorded the failure into `failures` and logged nothing
+  // at all. These tests pin that a recorded failure is also an OBSERVABLE
+  // one.
+  describe('per-file failure diagnostics', () => {
+    // NOTE: the failure is driven at FILE level (whole-file sha1 mismatch),
+    // never by rejecting fetchChunk. downloadDepotFiles passes a stallTracker
+    // into downloadFileChunks, whose catch RE-QUEUES a failed chunk until the
+    // whole-run stall timeout elapses — so a rejecting fetchChunk spins for
+    // STALL_TIMEOUT_MS and OOMs the worker rather than producing one failure.
+    const content = Buffer.from('DATA')
+
+    function mismatchedPlan(filenames: string[]): DepotPlan {
+      const files: DepotPlanFile[] = filenames.map((filename) => ({
+        filename,
+        size: content.length,
+        // deliberately wrong — chunks download fine, the whole-file sha1
+        // check then rejects, which is the job-level catch under test
+        sha_content: sha1Hex(Buffer.from('DIFFERENT CONTENT')),
+        chunks: [
+          { sha: `sha-${filename}`, cb_original: content.length, offset: 0 }
+        ]
+      }))
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+      return makePlan(
+        [{ depotId: '777', gid: 'g7', key: Buffer.from('key'), files }],
+        content.length * files.length
+      )
+    }
+
+    it('T-D1: logs the failing FILENAME and the error text — a recorded failure is never a silent one', async () => {
+      const result = await downloadDepotFiles(mismatchedPlan(['master.dat']), {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toHaveLength(1)
+
+      const logged = jest
+        .mocked(logWarning)
+        .mock.calls.map((c) => String(c[0]))
+        .filter((m) => m.includes('downloadDepotFiles:'))
+      expect(logged).toHaveLength(1)
+      expect(logged[0]).toContain('master.dat')
+      expect(logged[0]).toMatch(/sha1 mismatch/i)
+      // appId + depotId are what let an operator tie the line to the install
+      // when two appIds download concurrently (23-05 supports this).
+      expect(logged[0]).toContain('12345')
+      expect(logged[0]).toContain('777')
+    })
+
+    it('T-D2: carries `code` — the real EISDIR shape that reached the generic bucket unrecorded', async () => {
+      // Faithful reproduction of the 2026-08-27 Fallout 2 state: `master.dat`
+      // is a 333MB FILE in the manifest but exists on disk as a DIRECTORY, so
+      // the real open() fails EISDIR — a code matching no signature in
+      // classifyDepotError's alternation, which is exactly why it fell
+      // through to genericV2 with nothing logged. Not a synthesised error
+      // object: the fs produces it.
+      mkdirSync(join(dir, 'common', 'SomeGame', 'master.dat'), {
+        recursive: true
+      })
+
+      const file: DepotPlanFile = {
+        filename: 'master.dat',
+        size: content.length,
+        sha_content: sha1Hex(content),
+        chunks: [{ sha: 'sha-m', cb_original: content.length, offset: 0 }]
+      }
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+      const plan = makePlan(
+        [{ depotId: '777', gid: 'g7', key: Buffer.from('key'), files: [file] }],
+        content.length
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      expect(result.failures).toHaveLength(1)
+      const logged = jest
+        .mocked(logWarning)
+        .mock.calls.map((c) => String(c[0]))
+        .find((m) => m.includes('downloadDepotFiles:'))
+      expect(logged).toContain('master.dat')
+      expect(logged).toContain('code=EISDIR')
+    })
+
+    it('T-D3: caps per-file lines but never hides the true failure COUNT', async () => {
+      const names = Array.from(
+        { length: FAILURE_LOG_CAP + 5 },
+        (_, i) => `f${i}.bin`
+      )
+      const result = await downloadDepotFiles(mismatchedPlan(names), {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS
+      })
+
+      // Every failure is still RECORDED — the cap is a logging bound only,
+      // never a truncation of the failure list the completeness gate reads.
+      expect(result.failures).toHaveLength(FAILURE_LOG_CAP + 5)
+
+      const msgs = jest.mocked(logWarning).mock.calls.map((c) => String(c[0]))
+      const perFile = msgs.filter((m) => m.includes(' failed: '))
+      const suppression = msgs.filter((m) => m.includes('suppressed after'))
+      expect(perFile).toHaveLength(FAILURE_LOG_CAP)
+      expect(suppression).toHaveLength(1)
+    })
   })
 
   it('never RAM-buffers a whole file (no Buffer.alloc(Number(file.size)) grep gate)', () => {
