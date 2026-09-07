@@ -428,6 +428,15 @@ export const app = {
 // the last index must likewise declare `cancelId` -- the positional fallback cannot infer it.
 // Real multi-button `showMessageBox` behavior is deferred to Phase 33 (lifecycle/dialog cluster).
 //
+// UPDATED (2026-09-07, quick task 260907-juv). A second staleness beyond the CR-04
+// correction above: `handleExit()` (`backend/utils.ts`) now ALSO calls
+// `shutdownLongLivedChildren()` (`backend/longLivedChildren.ts`) immediately before
+// `app.exit()`, unconditionally -- not gated behind this dialog's destructive branch. This
+// tears down GOG's `comet` and the Steam bridge helper gracefully on THIS quit path only;
+// the red-X/Cmd+Q/`osascript` quit path bypasses `handleExit()` entirely and is covered
+// separately by a Rust-side process-group reap in `src-tauri/src/main.rs`. See
+// `.planning/quick/260907-juv-fix-helper-process-orphan-on-app-quit-wi/260907-juv-CONTEXT.md`.
+//
 // The two Sync members (showMessageBoxSync/showOpenDialogSync) stay logged no-ops (D-03) --
 // synchronous dialogs cannot be forwarded across the async rustInvoke transport, so they log a
 // console.warn and return a safe default rather than silently doing nothing.

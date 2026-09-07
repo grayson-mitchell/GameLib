@@ -85,6 +85,7 @@ import { spawn } from 'child_process'
 import { getUmuId } from 'backend/wiki_game_info/umu/utils'
 import { gogdlConfigPath, gogSupportPath } from './constants'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
+import { registerLongLivedChild } from 'backend/longLivedChildren'
 
 import type LogWriter from 'backend/logger/log_writer'
 
@@ -744,6 +745,16 @@ export default class GOGGame implements Game {
       logInfo(`Launching Comet!`, LogPrefix.Gog)
     }
 
+    // Quick task 260907-juv (Layer A): register comet on the shared long-lived-child
+    // registry so `handleExit()` can gracefully terminate it on in-app quit even while
+    // this game's `runRunnerCommand()` call below is still in flight -- previously comet
+    // was ONLY killed after that call resolved (game-exit-scoped, never quit-scoped), so
+    // quitting mid-session left comet running as an orphan (see the CONTEXT.md findings
+    // for this quick task).
+    const unregisterComet = child
+      ? registerLongLivedChild('gog-comet', () => child?.kill())
+      : null
+
     const { error, abort } = await libraryManagerMap['gog'].runRunnerCommand(
       commandParts,
       {
@@ -757,6 +768,7 @@ export default class GOGGame implements Game {
 
     if (child) {
       logInfo(`Killing Comet!`, LogPrefix.Gog)
+      unregisterComet?.()
       child.kill()
     }
     launchCleanup(rpcClient)

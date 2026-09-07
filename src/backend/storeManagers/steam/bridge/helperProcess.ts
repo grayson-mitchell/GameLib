@@ -39,6 +39,7 @@ import { dirname } from 'node:path'
 import { logError, logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { steamBridgeHelperPath } from 'backend/constants/paths'
 import { sendFrontendMessage } from 'backend/ipc'
+import { registerLongLivedChild } from 'backend/longLivedChildren'
 import {
   encodeControl,
   decodeResponse,
@@ -76,6 +77,9 @@ export interface EnsureBridgeHelperReadyResult {
 // D-03: the ONE shared, long-lived helper handle. null when no helper has
 // been spawned yet (or the previous one exited/errored and was cleared).
 let helperProcess: ChildProcess | null = null
+// Quick task 260907-juv (Layer A): the unregister handle for this helper's entry on the
+// shared long-lived-child registry -- see `backend/longLivedChildren`'s module docblock.
+let unregisterLongLivedChild: (() => void) | null = null
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -136,6 +140,14 @@ function spawnHelperIfNeeded(): void {
   })
 
   helperProcess = child
+  // Quick task 260907-juv (Layer A): register so `handleExit()` (via
+  // `shutdownLongLivedChildren()`) can reach this helper gracefully on in-app quit. This
+  // is the ONLY production registration of `shutdownBridgeHelper` -- see that function's
+  // doc comment for why it must never be called directly from a quit path.
+  unregisterLongLivedChild = registerLongLivedChild(
+    'steam-bridge-helper',
+    shutdownBridgeHelper
+  )
 }
 
 interface ProbeResult {
@@ -297,13 +309,28 @@ export async function ensureBridgeHelperReady(
 }
 
 /**
- * Finding #8: torn down from the main-process app-quit lifecycle (Task 3,
- * `main.ts` before-quit) so the long-lived shared helper never orphans on
- * quit. A no-op when no helper was ever spawned -- safe to call
- * unconditionally on every quit, including quits where no bridge game was
- * ever launched this session.
+ * Finding #8: torn down via `backend/longLivedChildren`'s registry, which
+ * `handleExit()` (`backend/utils.ts`) fans out to immediately before `app.exit()` on
+ * in-app quit (quick task 260907-juv, Layer A -- as of 2026-09-07; the `main.ts`
+ * before-quit hook this comment used to name was deleted in the Phase 35 Tauri
+ * cutover and never replaced until now). `spawnHelperIfNeeded()` registers this
+ * function on that registry the moment the shared helper is first spawned, so this is
+ * NOT called directly from any quit path -- only via the registry, and only from tests
+ * that exercise this module's own behaviour directly. A no-op when no helper was ever
+ * spawned -- safe to call unconditionally on every quit, including quits where no
+ * bridge game was ever launched this session.
+ *
+ * Note (Layer A alone does not cover every quit path): the red-X/Cmd+Q/`osascript`
+ * quit path never reaches this function at all -- the sidecar is SIGKILLed by the Rust
+ * shell before any JavaScript here could run. That path is covered separately by
+ * Layer B (`src-tauri/src/main.rs`'s process-group reap of the sidecar's descendants).
  */
 export function shutdownBridgeHelper(): void {
+  if (unregisterLongLivedChild) {
+    unregisterLongLivedChild()
+    unregisterLongLivedChild = null
+  }
+
   if (!helperProcess) {
     return
   }
@@ -324,4 +351,5 @@ export function shutdownBridgeHelper(): void {
  */
 export function __resetBridgeHelperStateForTests(): void {
   helperProcess = null
+  unregisterLongLivedChild = null
 }

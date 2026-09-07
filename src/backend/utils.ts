@@ -1,4 +1,5 @@
 import { callAllAbortControllers } from './utils/aborthandler/aborthandler'
+import { shutdownLongLivedChildren } from './longLivedChildren'
 import {
   Runner,
   WineInstallation,
@@ -323,6 +324,12 @@ async function handleExit() {
 
   mainWindow?.hide()
   await gogPresence.deletePresence()
+
+  // Quick task 260907-juv, Layer A: tear down every registered long-lived child
+  // (comet, the Steam bridge helper) gracefully before exiting. This is the ONLY quit
+  // path this call can reach -- see `longLivedChildren.ts`'s module docblock for why a
+  // second, unconditional layer in the Rust shell is also required.
+  shutdownLongLivedChildren()
 
   app.exit()
 }
