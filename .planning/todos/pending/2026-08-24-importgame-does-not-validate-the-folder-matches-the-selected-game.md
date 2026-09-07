@@ -146,3 +146,39 @@ No `resolves_phase:` — not resolved by Phase 34.6 and must not be auto-closed 
 
 Related: [[upstream-port-verbatim-ships-silent-defects]] ·
 [[uat-run-can-disqualify-its-own-fixture]] · [[live-gate-beats-green-suite-three-times]]
+
+## Split
+
+Quick task `260907-ppy` (2026-09-07) closed items 1, 3 and 4 of the "Suggested fix" list above:
+
+- **Item 1** (reject a folder whose product id does not match the selected game): fixed in
+  `GOGGame.importGame` (`src/backend/storeManagers/gog/games.ts`) — parses `gogdl import`'s stdout,
+  compares `data.appName` against `this.id` as strings, and rejects with a message naming both ids
+  when they differ, writing no install record, no config, and no shortcuts.
+- **Item 3** (never drop fields the previous record had): fixed in `GOGLibraryManager.importGame`
+  (`src/backend/storeManagers/gog/library.ts`) — the new `InstalledInfo` is now built as a
+  previous-record-first spread with only the import-owned fields layered on top, so `versionEtag`,
+  `pinnedVersion`, and any other un-owned field survive a re-import.
+- **Item 4** (do not report success when the write threw): fixed in the same `GOGGame.importGame`
+  rewrite — a thrown install-record write now returns an `ExecResult` with `error` set instead of
+  being logged and reported as success. A thrown `addShortcuts()` after a SUCCESSFUL record write
+  is a deliberate exception to this — see below.
+- **Item 2** ("derive from ONE resolved identity") is satisfied in effect by item 1's guard: once a
+  mismatched folder is rejected before either the install-record write or the config/shortcuts/
+  notification path runs, `data.appName` and `this.id` are provably equal for every import that
+  proceeds — there is no longer a way for the two identities to diverge, even though the code still
+  technically reads `this.id` in one place and `data.appName` in another.
+
+**Item 5 (macOS shortcut/icon generation failures) moved to its own todo**, because the todo's own
+evidence proves it independent of the identity mismatch (the same failure pair fires on a clean,
+correct Phoenix Point install) and the two observed runs have different proximate causes
+(`ERR_INVALID_ARG_TYPE` on an undefined path vs `ENOENT` on `icons/Iris.jpg`) — a fix targeting one
+will not close the other. See
+`.planning/todos/pending/2026-09-07-macos-shortcut-icon-generation-fails-on-correct-installs.md`.
+Quick task `260907-ppy`'s item-4 fix deliberately logs (rather than fails the import on) a thrown
+`addShortcuts()` after a successful record write, precisely because shortcut/icon generation is
+broken for every correct macOS install too — failing the import on it would break the primary use
+case. That decision depends on the split-out todo being tracked, not on it being fixed here.
+
+This source todo is NOT closed by this split — the operator still owns closing it (and performing
+the "Cleanup owed on this machine" section above, if not already done).
