@@ -1,6 +1,6 @@
 ---
 slug: steam-depot-unclassified-generic-error
-status: root-caused-no-fix-applied
+status: resolved-pending-verify
 created: 2026-09-07
 updated: 2026-09-07
 source_todo: .planning/todos/pending/2026-08-27-steam-depot-install-fails-with-unclassified-generic-error.md
@@ -238,3 +238,40 @@ Steam resolves the clash in favour of the file. GameLib must do the same.
 depots claim the same path, an entry WITH chunks beats a size-0/chunks-0 Directory
 entry, and the collision is logged. A legitimate directory entry never collides with a
 real file, so nothing else is affected.
+
+
+---
+
+# FIX LANDED 2026-09-07 (commit `0a6e5e91b`)
+
+`src/backend/storeManagers/steam/depot/pathCollisions.ts` —
+`resolveDepotPathCollisions()`, called from `buildDepotPlan` before the plan is
+returned. A size-0/chunks-0 Directory marker colliding with exactly ONE real file
+loses; the file is kept. Anything else (two chunked files, symlink-vs-file, a
+Directory-flagged entry carrying real bytes) is reported as `unresolved` and left
+untouched. Every collision is logged.
+
+**The vacuity that nearly shipped.** The first version of the bare-marker guard test
+passed even with the size/chunks conditions DELETED — the odd entry counts as content
+too, so `content.length === 2` sent it to `unresolved` regardless of the guard. It was
+green for the wrong reason, and only a deliberate sabotage run exposed it. Re-shaped to
+pair the odd entry against a bare marker, so `content.length === 1` and the marker check
+alone decides the outcome; it now reds under that sabotage. Same shape as
+`a-pass-can-cover-an-unreachable-surface`.
+
+**Wiring pinned separately**, because a direct-call test is exactly how
+`shutdownBridgeHelper()` stayed green in this repo with ZERO production callers for a
+milestone: `depot.test.ts` asserts on the plan `buildDepotPlan` RETURNS, and deleting
+the call site reds it (verified).
+
+Gates: tsc 0, prettier clean, Backend 204 suites / 4631 passed (from 203/4617),
+eslint 4205 repo-wide — byte-identical to the pre-change baseline, zero warnings added.
+
+## What remains open
+
+- The **false `StateFlags=4`** defect is NOT addressed by this and stays CRITICAL in its
+  own todo. This fix stops the collision from recurring; it does not explain how a
+  56%-complete install earned a full-ownership manifest, and with `flags=0` proven there
+  is no longer an innocent explanation for it.
+- The two damaged installs on disk (38410, 718850) still need Steam's "verify integrity".
+- No live re-drive has been taken against the fix.
