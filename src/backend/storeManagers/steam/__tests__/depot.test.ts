@@ -2184,10 +2184,13 @@ describe('downloadSteamDepots (full orchestration + recovery convergence)', () =
     const fakeClient = makeFakeClient()
     setupPlanPlumbing(fakeClient)
 
-    const contentManifest = jest.requireMock(
+    // Typed requireMock rather than the sibling test's untyped one: the
+    // untyped form yields `any` and costs four no-unsafe-* warnings against
+    // the repo's --max-warnings ceiling.
+    const contentManifest = jest.requireMock<{ parse: jest.Mock }>(
       'steam-user/components/content_manifest.js'
     )
-    jest.mocked(contentManifest.parse).mockReturnValue({
+    contentManifest.parse.mockReturnValue({
       files: [
         {
           filename: 'enc-game',
