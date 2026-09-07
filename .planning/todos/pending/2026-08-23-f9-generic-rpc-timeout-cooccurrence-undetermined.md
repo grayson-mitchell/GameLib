@@ -226,3 +226,69 @@ tests) pins the guard's contract and was itself RED-proved by disabling it.
   nothing and must be re-run, not written up.
 
 **Stays `pending`, UNDETERMINED for id=1575, exactly as before.**
+
+## Disposition (2026-09-07, quick task `260907-j8n`) — does NOT close
+
+**What changed.** The shell's four RPC transport-failure diagnostics now route through
+`shell_diag()` instead of a bare `eprintln!`, so they persist to `gamelib-shell.log` in addition
+to stderr (`main.rs`, commit `6fb96c76a`). Two of the four — `SidecarState::invoke`'s timeout arm
+and its disconnect arm — **emitted nothing at all before this task.** A 60s abandonment with no
+late response left no shell-side trace whatsoever; it was visible only as a rejected promise in
+the renderer. Both arms now emit one line naming both `id` and `channel`
+(`invoke abandoned (timeout): id=… channel=…` / `invoke abandoned (sidecar closed): id=… channel=…`),
+placed before `self.record_abandoned(…)` because `abandonedInvokeAttribution.test.ts`'s ordering
+pin (`record_abandoned(&id, &channel);\s*Err(…)`, only whitespace between) forces that placement —
+proven by mutation, see the SUMMARY's RED-proof (d). The other two sites (the reader thread's
+`response for unknown/timed-out` and `response frame with a missing or non-string id` lines) were
+converted from `eprintln!` to `shell_diag` with no change to their rendered stderr text.
+
+**What a future reader may now rely on: a recurrence is PASSIVELY recorded.** No scheduled capture
+session, no `pnpm capture:shell-scrollback` run, no operator present at the keyboard. It survives
+in a **packaged build**, where LaunchServices discards stderr and every previous observation route
+was blind. This is a strictly weaker but strictly always-on complement to `260907-fni`'s active
+capture harness, which requires a deliberate live run.
+
+**Correcting `260907-fni`'s extension to the transferable correction, above.** That disposition
+stated:
+
+> Neither can `gamelib-shell.log` — `shell_diag()` (`main.rs:8521`) writes to both stderr and that
+> file, but the target diagnostic at `main.rs:8332` is a plain `eprintln!` that never routes
+> through `shell_diag()`. A dev-time grep of `gamelib-shell.log` would be a *second* wrong source,
+> not a fallback for the first.
+
+**That was true when written and remains true for every occurrence of these four diagnostics
+BEFORE commit `6fb96c76a`.** It becomes **false for these four diagnostics specifically**, for
+every occurrence **from `6fb96c76a` onward**: `gamelib-shell.log` is now a valid source for them.
+Do **not** generalise this correction — the other ~164 bare `eprintln!` sites in `main.rs` remain
+invisible to `gamelib-shell.log`, and `260907-fni`'s original correction stands unchanged for every
+one of them. A grep of `gamelib-shell.log` for *any other* shell diagnostic is still a clean grep
+of the wrong source. A reader comparing the two dispositions should read `260907-fni`'s claim as
+scoped to captures taken before `6fb96c76a`, and this one as scoped to captures taken at or after
+it — they do not contradict each other; they describe two different points in time for the same
+four lines.
+
+**What this does NOT do, stated plainly:**
+
+- It does not establish F-9's cause. It is observability. This todo's own cross-link rule — the
+  one that keeps `REQ-34.4.1-GAP-11` from closing it — applies to this task unchanged.
+- It cannot retroactively answer `id=1575`. That id's scrollback was never captured, and no code
+  written afterwards can reconstruct a diagnostic that was never emitted.
+- **`id=1575` remains UNDETERMINED and is NOT rounded to "no."**
+- It does not make the analyzer smarter: see the residual below.
+
+**The named residual.** After this change, an invoke abandoned with **no late response** emits
+`[shell] invoke abandoned (timeout): id=… channel=…` (or the `sidecar closed` counterpart) — a line
+`meta/captureShellScrollback.ts`'s `analyzeCapture()` does **not** recognise, so it will not raise
+a `RECURRENCE` verdict on it. The analyzer's verdict remains keyed exclusively on `TARGET_DROP_RE`
+(the late-response line). This is a deliberate consequence of the "do not edit the harness"
+constraint, not an oversight: the new lines are additional evidence present in the raw capture,
+which is what a human reads. Widening the analyzer is a legitimate follow-on, out of scope here,
+and is **not** filed as a todo by this task.
+
+**Gates.** `src/backend/__tests__/shellDiagPersistence.test.ts` (15 tests, runs in CI) pins all
+four call sites, counted per-branch, RED-proved by mutating the implementation. The cargo module
+added beside it (`main.rs`, `invoke_abandoned_message` tests) is a **manual** gate — this project's
+CI runs no cargo step. `abandonedInvokeAttribution.test.ts` (9/9) and
+`captureShellScrollback.test.ts` (15/15) both pass **unedited**.
+
+**Stays `pending`. Status unchanged. No box checked. `closes_todo: false`.**
