@@ -94,3 +94,103 @@ graceful quit -> gamelib-shell + gamelib-sidecar gone in 2s; comet 58242 still a
 SIGTERM       -> comet exited in 1s
 lsof +D /Applications/GameLib.app after kill -> empty (it was the only holder)
 ```
+
+## Disposition 2026-09-07 (quick task 260907-juv) — DOES NOT CLOSE
+
+Implemented the two-layer fix this todo's "Fix sketch" called for. Full detail, verbatim
+RED/GREEN proof output, and deviations in
+`.planning/quick/260907-juv-fix-helper-process-orphan-on-app-quit-wi/260907-juv-SUMMARY.md`.
+Commits: `edb4db4e9` (Layer A), `60ec8cb89` (Layer B), `e12545484` (gates).
+
+- **Layer A (graceful, in-app quit only):** new `src/backend/longLivedChildren.ts` registry.
+  `handleExit()` (`backend/utils.ts`, the `ipcMain.on('quit', ...)`/Ctrl+Q path) calls
+  `shutdownLongLivedChildren()` immediately before `app.exit()`. Both comet (`gog/games.ts`)
+  and the Steam bridge helper (`helperProcess.ts`) register with it at spawn time.
+- **Layer B (unconditional, every quit path):** `SidecarState::shutdown_child()`
+  (`src-tauri/src/main.rs`) now signals the sidecar's whole unix process group
+  (`libc::kill(-pgid, SIGTERM)` -> bounded grace via `try_wait()` -> `SIGKILL` -> `wait()`)
+  instead of just the sidecar pid, so comet/the bridge helper are reaped even on red-X/Cmd+Q/
+  `osascript` quit, which never reaches `handleExit()`. Windows keeps the pre-existing
+  `child.kill()` (no process-group-signal equivalent available).
+- **Wiring gate, not just a behavior gate** (this todo's verification requirement #2): a new
+  `src/backend/__tests__/quitTeardownWiring.test.ts` pins the Rust call sites and structure
+  directly (source-text assertions, comment-stripped), plus two new tests each in
+  `appShellFlows.test.ts` and `helperProcess.test.ts` proving the registry is reachable from
+  the sidecar's quit handler and from the bridge helper — not just callable in isolation.
+- **Verification requirement #1 (live gate) is UNRUN.** Per this quick task's plan, the live
+  gate was explicitly out of scope for the executor to perform:
+  1. Launch a GOG game so comet spawns.
+  2. Quit the app via the window's red-X close button (not Ctrl+Q — that exercises
+     `handleExit()`/Layer A; red-X exercises the `RunEvent::Exit` path/Layer B, which is the
+     path this todo's original evidence was captured against).
+  3. `pgrep -f comet` should return no result.
+  4. Repeat for the Steam bridge helper (start a Steam game session, quit via red-X, confirm
+     the bridge helper process is gone).
+
+  **This todo does not close until that live gate is run and passes.**
+- **Separately, and explicitly out of scope for this fix:** `pnpm tauri:dev`'s own Ctrl-C
+  dev-teardown still orphans the sidecar by a different mechanism (a PATH-based process sweep
+  that the dev harness performs, not the packaged app's quit path) — see
+  `tauri-dev-shell-does-not-reap-its-node-sidecar.md`. Layer B's process-group reap lives in
+  `shutdown_child()`, which the dev harness's Ctrl-C teardown does not invoke. Not addressed
+  by this fix; tracked as a pre-existing, distinct limitation.
+
+## Live-gate attempt 2026-09-07 (orchestrator) — BLOCKED, NOT RUN, NOT FAILED
+
+Attempted the Verification Requirement #1 live gate against a real `pnpm tauri:dev` build carrying
+both layers. **The quit gesture could not be delivered: the machine's screen was LOCKED**, so the
+app had no GUI session (`count of windows` = 0 via System Events, `frontmost` could not be set).
+Two `osascript ... to quit` attempts changed nothing — shell, sidecar, comet, gogdl and the game
+were all still running 16s later.
+
+**This is BLOCKED, not a FAIL.** A SIGTERM to `gamelib-shell` was deliberately NOT used as a
+substitute gesture: a bare signal terminates the process without running `RunEvent::Exit`, so it
+cannot exercise `shutdown_child()` at all and would have manufactured a false FAIL.
+
+### What WAS observed, and it is real evidence for Layer B's spawn half
+
+The deep link was delivered to the running dev instance by writing to the single-instance socket
+(`~/Library/Application Support/gamelib/gamelib-single-instance.sock`), bypassing LaunchServices —
+necessary because `/Applications/GameLib.app` (v0.7, `com.gamelib.shell`) still claims the
+`gamelib:` scheme and `open gamelib://...` would have launched the STALE PACKAGED app instead of
+the dev build under test. Verbatim, with the game running:
+
+```
+  PID  PPID  PGID  COMMAND
+25817 25676 25607  target/debug/gamelib-shell
+25887 25817 25887  node .../build/main/sidecar.js
+26083 25887 25887  .../bin/arm64/darwin/comet --from-heroic --username soreluel --quit
+26084 25887 25887  ./gogdl ... launch .../Endless Sky.app 1829678475 --platform osx
+26085 26084 25887  .../Endless Sky.app/Contents/MacOS/Endless Sky
+```
+
+The sidecar's PGID **equals its own PID (25887)** rather than inheriting the shell's group (25607),
+and comet, gogdl and the game itself all sit in that same group 25887. That is
+`configure_sidecar_process_group()` / `process_group(0)` working on a live build, and it is the
+precondition Layer B's `libc::kill(-pgid, ...)` reap depends on. **It does not prove the reap
+itself fires** — only `RunEvent::Exit` running `shutdown_child()` can, and that is what remains
+unrun.
+
+### Two findings that change how the gate must be run
+
+1. **`exitToTray: true` (the current on-disk setting) intercepts the quit.** The close handler
+   hides to tray instead of exiting, so `RunEvent::Exit` never fires. Whoever runs this gate must
+   either use the **tray icon's Quit item** (`main.rs:643` menu id `quit` -> `app_handle.exit(0)`
+   at `:9281`) or temporarily set `exitToTray: false`. The todo's original 2026-09-01 evidence was
+   captured against a packaged build where the `osascript` quit did exit in 2s — do not assume the
+   same gesture works under the current settings.
+2. **`~/Library/Application Support/GameLib` and `.../gamelib` are the SAME DIRECTORY** — one
+   inode (`16777231:47832404`), two case-variant paths on case-insensitive APFS. Anything that
+   treats them as two stores is reading and writing one file twice.
+
+### Remaining gesture (~2 minutes, needs an unlocked screen)
+
+1. `pnpm tauri:dev`, wait for `sidecar signalled READY`.
+2. `echo "gamelib://launch/gog/1829678475" | nc -U "$HOME/Library/Application Support/gamelib/gamelib-single-instance.sock"`
+3. Confirm `pgrep -f comet` is non-empty and `ps -o pgid= -p $(pgrep -f comet)` matches the sidecar's PGID.
+4. Quit via the **tray icon's Quit item** (or red-X with `exitToTray:false`).
+5. Assert `pgrep -f comet` and `pgrep -f 'build/main/sidecar.js'` are both empty.
+6. Repeat for the Steam bridge helper: launch a Steam game (Steam client must be running — it was,
+   `steam_osx` pid 17365), confirm `pgrep -f steam-bridge-helper` non-empty, quit, assert empty.
+
+**This todo still does not close.**
