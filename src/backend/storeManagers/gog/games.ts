@@ -20,6 +20,7 @@ import {
   GameInfo,
   GameSettings,
   ExecResult,
+  GOGImportData,
   InstallArgs,
   InstalledInfo,
   InstallProgress,
@@ -219,14 +220,46 @@ export default class GOGGame implements Game {
       return res
     }
 
+    // 260907-ppy: `gogdl import <folderPath>` takes no app-id argument, so this
+    // parse + identity check is the only place a mismatched folder can be caught.
+    // Without it, the install record gets written for the FOLDER's product id
+    // while the config/shortcuts/notification/log line all use `this.id`.
+    let data: GOGImportData
     try {
-      await libraryManagerMap['gog'].importGame(
-        JSON.parse(res.stdout),
-        folderPath
-      )
-      this.addShortcuts()
+      data = JSON.parse(res.stdout) as GOGImportData
     } catch (error) {
-      logError([`Failed to import ${this.id}:`, error], LogPrefix.Gog)
+      const reason = error instanceof Error ? error.message : String(error)
+      const message = `Failed to import ${this.id}: could not parse gogdl import output: ${reason}`
+      logError([message], LogPrefix.Gog)
+      return { ...res, error: message }
+    }
+
+    if (String(data.appName) !== String(this.id)) {
+      const message = `Refusing to import: the chosen folder contains GOG product ${data.appName}, but the selected game is ${this.id}`
+      logError([message], LogPrefix.Gog)
+      return { ...res, error: message }
+    }
+
+    try {
+      await libraryManagerMap['gog'].importGame(data, folderPath)
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      const message = `Failed to import ${this.id}: ${reason}`
+      logError([message], LogPrefix.Gog)
+      return { ...res, error: message }
+    }
+
+    try {
+      await this.addShortcuts()
+    } catch (error) {
+      // The game imported correctly -- a shortcut failure after that must not be
+      // reported as a failed import. macOS shortcut/icon generation is broken for
+      // every correct install too (see the split-out todo this quick task files
+      // for item 5), so failing the import here would break the primary use case.
+      logError(
+        [`Imported ${this.id} but failed to add shortcuts:`, error],
+        LogPrefix.Gog
+      )
     }
 
     return res
