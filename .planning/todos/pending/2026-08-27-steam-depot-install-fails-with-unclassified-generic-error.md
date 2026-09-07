@@ -3,6 +3,8 @@ created: 2026-08-27
 title: "Steam depot install fails at the download stage with the UNCLASSIFIED generic error and no diagnostic detail"
 area: steam-depot
 status: OPEN
+debug_session: .planning/debug/steam-depot-unclassified-generic-error.md
+last_actioned: 2026-09-07
 severity: major
 files:
   - src/backend/storeManagers/steam/depotErrors.ts
@@ -102,3 +104,92 @@ worth testing:
 failure reached the generic bucket with NO `fetchChunk`/`reason=` line logged, and
 `steam-flags-census stage=download-complete` fired on all 65 files immediately before the error.
 Whatever the root cause, an operator gets "The Steam download failed." and nothing to work from.
+
+
+---
+
+# UPDATE 2026-09-07 (debug session `steam-depot-unclassified-generic-error`)
+
+## ROOT CAUSE IDENTIFIED — `master.dat` is a DIRECTORY on disk
+
+The Aug 27 log did not survive, but the install did. On disk right now:
+
+```
+drwxr-xr-x@ 2 graysonmitchell staff 64 Aug 27 18:09 master.dat
+```
+
+Fallout 2's `master.dat` is a ~333 MB game archive. It exists as an **empty
+directory**. Its absence is byte-exactly the shortfall:
+
+| quantity | bytes |
+| --- | --- |
+| ACF `SizeOnDisk` | 591,399,306 |
+| real bytes on disk (49 files) | 258,221,501 |
+| **shortfall** | **333,177,805** |
+
+Entry counts corroborate: 49 files + 15 subdirs = 64 present against the plan's
+65. The single missing entry is `master.dat`-as-a-file.
+
+Writing a file over a directory fails `EISDIR`, which matches **no signature** in
+`depotErrors.ts`'s alternation — so it fell through to `genericV2`
+("The Steam download failed."). That is the whole reported symptom.
+
+## THE TODO'S THREE RANKED CANDIDATES ARE ALL WRONG
+
+1. **degraded fixture** — restored now (`steamPlatformsCaptured: true`, metadata
+   present) and could never explain a directory on disk.
+2. **title-specific depot content / pure-JS lzma** — a decode failure rethrows via
+   `isDecodeStageError` and IS logged; no decode line was ever emitted, because
+   this was never a decode failure.
+3. **Steam 403 rate limiting** — would have matched a network signature, not the
+   generic bucket.
+
+## THE TODO'S CENTRAL PREMISE WAS FALSE
+
+> "`stage=download-complete` fires on all 65 files, and THEN the install errors."
+
+Both census lines are computed from the **plan**, not from download results
+(`summarizeDepotFlags(plan)` at `depot.ts:1999` and `:2475`; the doc comment says
+emitting the identical census at both points "is the point"). `totalFiles=65` is
+identical at both ends **by construction**, and the line is emitted regardless of
+`failures.length`. It never evidenced that 65 files downloaded — so the reasoning
+that the failure must be downstream of the download walk does not hold.
+
+## FIXED IN THIS PASS — the diagnostic gap (the todo's own "more valuable finding")
+
+`depot.ts:2438`'s per-file catch recorded failures into `failures` and **logged
+nothing**; the throw site classified only `failures[0]` and logged neither the raw
+text, the filename, nor the count. Now:
+
+- every per-file failure logs `appId`, `depotId`, filename and
+  `describeDepotFailure(err)` — which carries `code` (EISDIR/ENOSPC/ECONNRESET)
+  and `eresult`, the exact two fields `classifyDepotError` reads and
+  `(err as Error).message` drops — capped at `FAILURE_LOG_CAP = 10` with an
+  explicit suppression line;
+- the throw site logs the **failure count**, the **classification key** (the only
+  log-visible way to tell the UNCLASSIFIED generic bucket from a real signature
+  match) and the first raw failure.
+
+Tests T-D1..T-D4 + 8 `describeDepotFailure` cases, all RED-proved at HEAD
+(T-D1/T-D2/T-D4 with genuine assertion failures; T-D3 reds on the missing export
+only — import-shape, recorded as the weaker proof it is). T-D2 reproduces the real
+defect: it `mkdir`s `master.dat` and lets the real fs raise EISDIR.
+
+## STILL OPEN — why is `master.dat` a directory?
+
+`downloadSingleFile` (`depot.ts:1394`) mkdirs when `file.flags & DIRECTORY_FLAG (64)`.
+
+**Inference supporting flag-64 (not proof):** `reconcile.ts`'s `regularFileVerified`
+is fail-closed (`if (!st.isFile()) return false`), so had `master.dat` been a
+regular-file entry, the 19:03 retry would have re-queued it, hit EISDIR, recorded a
+failure and written `StateFlags=1026`. The ACF says `4`. That is consistent with
+flag 64 being set: mkdir "succeeds", `directoryVerified` passes on retry, no failure
+is recorded, and the gate legitimately writes 4 over a game missing its largest file.
+
+**Decisive test, NOT run:** fetch depot 38415's manifest and read `master.dat`'s
+`flags`. Needs a live authenticated Steam CM connection on the user's real account —
+deliberately not taken without authorisation. The alternative mechanism
+(`mkdir(dirname(dest))` at `:1389` creating `master.dat` for a child entry) is not
+excluded.
+
+A re-drive now has the instrumentation it lacked on Aug 27.
