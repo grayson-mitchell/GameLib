@@ -2,7 +2,7 @@
 quick_id: 260906-mdc
 slug: move-archify-diagrams-to-doc-archify
 date: 2026-09-06
-status: complete
+status: rolled-back
 ---
 
 # Summary
@@ -50,3 +50,33 @@ delta. If repo weight becomes a concern, the alternative is to commit
 ## Not done
 
 No source changes, no CI wiring, no regeneration-on-commit hook.
+
+
+---
+
+## ROLLED BACK — 2026-09-07
+
+The user reviewed the published diagrams and decided they should not be
+versioned. `doc/archify/` was removed in full, along with the `.prettierignore`
+entry that existed only to protect it.
+
+Reverted forward, not rewritten: by the time the decision was made this commit
+sat roughly 75 commits deep under concurrent work on the same branch, so a
+`reset`/`rebase` would have destroyed another session's history. The removal is
+an ordinary deletion commit.
+
+`.planning/STATE.md` was dirty with a concurrent session's uncommitted line when
+the removal landed. Only this task's own table row was staged — built by
+applying the edit to the `HEAD` blob, staging that, then restoring the working
+tree to the other session's version with the same edit re-applied. Their line
+was never staged.
+
+The "known trade-off" recorded above is the reason for the rollback: ~2.9 MB of
+near-duplicate generated HTML in git history, growing by ~720 KB per
+re-delivery. That was flagged before the original commit and accepted at the
+time; on review it was not worth the repo weight.
+
+The artifacts and their pinned specs were verified byte-identical outside the
+repo before deletion, so nothing was lost. They are regenerable from the specs
+at any time via `archify deliver` — see the removed `doc/archify/README.md`,
+preserved in this commit's parent (`git show 1c1454e66:doc/archify/README.md`).

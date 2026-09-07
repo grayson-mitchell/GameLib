@@ -34,9 +34,3 @@ graphify-out
 # would be reintroduced on every re-download since the download is tag-idempotent, not
 # presence-idempotent -- see [[download-helper-binaries-is-tag-idempotent-not-presence-idempotent]].
 public/bin
-
-# Generated archify diagram artifacts and their pinned specs. The HTML inlines
-# the whole viewer runtime and is delivered with a SHA-256 receipt; reformatting
-# it would invalidate that receipt and is never a hand-edit anyone should make.
-# Regenerate via `archify deliver` from doc/archify/spec/ instead.
-doc/archify
