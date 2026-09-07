@@ -2,10 +2,10 @@
 created: 2026-08-23
 title: "F-9 — a generic RPC timeout fired live; co-occurrence with a cookie op is UNDETERMINED"
 source: 34.4.1 gap cycle 3, plan 34 (from D-29-06 / F-9, open since gate run 2)
-status: pending
+status: "PARKED 2026-09-07 — SPLIT INTO TWO QUESTIONS. Question 1 (did id=1575 co-occur with a cookie operation?) is CLOSED AS PERMANENTLY UNANSWERABLE and its answer is recorded as UNDETERMINED, FOREVER — closed is NOT answered, and it is NOT rounded to no. Question 2 (does this timeout shape co-occur with a cookie operation as a class?) stays OPEN and is PARKED. See the two dated sections below; the PARKED one carries a runnable unpark condition."
 severity: low
 resolves_phase: null
-blocked_by: "nothing external — it needs a RECURRENCE, which cannot be scheduled. Not blocked, UNSCHEDULED. Note id=1575 carries no channel name, so the originating request must be located in the same scrollback AT THE TIME; co-occurrence cannot be settled after the fact."
+blocked_by: "nothing external. Q1 (id=1575) is not blocked, it is UNANSWERABLE — that id carries no channel name in the diagnostic as it was emitted, its scrollback was never captured, and no later code can reconstruct a line that was never written; see the CLOSED section below. Q2 (the class question) is not blocked either, it is UNSCHEDULED — it needs a RECURRENCE, which cannot be scheduled. The old 'co-occurrence cannot be settled after the fact' clause was retired for FUTURE occurrences by 260905-omc (the diagnostic now names its channel) and 260907-j8n (it now persists to gamelib-shell.log); it remains exactly true for id=1575 itself."
 parked: 2026-08-23
 parked_by: operator
 revisit_trigger: "the timeout recurs with a cookie operation in the same window"
@@ -292,3 +292,110 @@ CI runs no cargo step. `abandonedInvokeAttribution.test.ts` (9/9) and
 `captureShellScrollback.test.ts` (15/15) both pass **unedited**.
 
 **Stays `pending`. Status unchanged. No box checked. `closes_todo: false`.**
+
+## CLOSED AS UNANSWERABLE 2026-09-07 (quick task 260907-o1b) — question 1: the answer is UNDETERMINED, FOREVER
+
+This file has always asked **two** questions, and they want **opposite** dispositions. Naming them
+plainly: **Q1** — did `id=1575` specifically co-occur with a cookie operation? **Q2** — does this
+timeout shape co-occur with a cookie operation as a **class**? This section closes Q1 only, and its
+recorded answer is UNDETERMINED. Q2 is addressed in the PARKED section below and stays open.
+
+Q1 is closed, UNDETERMINED, because it is **permanently unanswerable**: `id=1575`'s scrollback was
+never captured at the time it fired, and no code written afterwards can reconstruct a diagnostic
+that was never emitted.
+
+**Closing is not rounding to "no."** The recorded answer is UNDETERMINED, and it stays UNDETERMINED
+forever. Every one of the five dispositions above already refused to round this to "no" — the
+2026-08-25 disposition called it a recurrence of the pattern, not a discharge; the 2026-09-05
+disposition made the *next* occurrence answerable while stating id=1575 itself remains UNDETERMINED;
+the 2026-09-07 `260907-fni` disposition asserted a clean watch of a *different* window that answers
+nothing about id=1575, UNDETERMINED; and the 2026-09-07 `260907-j8n` disposition made recurrence
+passively recorded going forward while restating id=1575 remains UNDETERMINED and is not rounded to
+"no." This closure does not achieve by accident of bookkeeping what none of those five attempted:
+"closed" here means *the question was retired for lack of any possible evidence*, not *the question
+was resolved*. UNDETERMINED is the permanent, final answer to Q1, and it is closed as UNDETERMINED,
+never as "no."
+
+Closing beats parking for this half: parking implies "later," and for `id=1575` there is no later —
+the evidence window is gone and cannot be reopened. A park with no possible trigger is
+indistinguishable from a forgotten item, which is worse than an honest, permanent UNDETERMINED
+closure.
+
+This task also reconciled a **pre-existing** frontmatter inconsistency (present since August, not
+introduced here): `parked: 2026-08-23` / `parked_by: operator` have coexisted with `status: pending`
+and a `## Park` section since the file was first parked. Those August `parked:` / `parked_by:`
+values are left untouched at their original date — this task did not invent the park, it reconciled
+the status line to match what the body already said.
+
+The file deliberately **stays in `.planning/todos/pending/`**, because Q2 is still open. Only one of
+the two questions closed here, and it closed to UNDETERMINED, not to an answer; a move to
+`.planning/todos/completed/` would misrepresent that the file's business is finished. It is not — Q2
+is now PARKED, below, with a runnable unpark condition.
+
+## PARKED 2026-09-07 — question 2: does this timeout shape co-occur with a cookie operation (the class question)?
+
+This half can park now when it could not before: `260905-omc` made the diagnostic name its channel,
+and `260907-j8n` made it persist to a file — so a recurrence of this timeout shape is now **passively
+recorded**, with no operator at the keyboard and no scheduled capture session required, and it
+survives a packaged build, where LaunchServices discards stderr and every prior observation route
+was blind.
+
+**Unpark condition:** run the grep below against `gamelib-shell.log`. A non-zero count means the
+timeout shape recurred since persistence began (`6fb96c76a`) and names its channel — see below for
+exactly what that does and does not establish.
+
+```
+# macOS
+grep -c 'invoke abandoned\|unknown/timed-out' ~/Library/Logs/GameLib/gamelib-shell.log
+# Linux (and any non-macOS build that sets HOME)
+grep -c 'invoke abandoned\|unknown/timed-out' ~/.config/gamelib/gamelib-shell.log
+```
+
+- **`grep -c` exits 1 on a zero count.** It prints `0` and returns exit code `1` when there are no
+  matches — that is not an error, and a reader running this in a `set -e` shell should not mistake
+  the non-zero exit for a failure.
+- **The file's lines are not `[shell] `-prefixed.** `shell_diag` writes `"[shell] {message}"` to
+  stderr but `"{epoch_secs} pid={pid} {message}\n"` to the file. Do not add `[shell]` to the grep
+  pattern above; it will match nothing against this file. Real sample, verified live:
+  `1788755786 pid=30321 sidecar process spawned OK`.
+- **On Windows this file very likely does not exist at all.** `shell_diag` (`main.rs`) resolves its
+  directory from `std::env::var("HOME")` only, and Windows sets `USERPROFILE`, not `HOME` — the sole
+  `USERPROFILE` reference in `main.rs` belongs to a different function. On a normal Windows shell the
+  path resolution returns nothing and the file write is a silent no-op; stderr still gets the line,
+  the file does not. This unpark condition is macOS/Linux only and does not claim Windows coverage.
+- **Persistence began at commit `6fb96c76a`.** A zero count over lines that predate that commit
+  establishes nothing — they were never written to this file in the first place.
+- **Baseline observed at execution time (2026-09-07):** `~/Library/Logs/GameLib/gamelib-shell.log`
+  had **537** lines and the grep above returned a count of **0** (exit 1), matching the same probe
+  taken at planning time. A future reader can diff their own count against this baseline to tell
+  growth from a cold start.
+
+**What a non-zero count DOES and does NOT establish.** It **does** establish that the timeout
+recurred, and that the line names its `channel` — precisely what `id=1575` lacked. It does **not**,
+by itself, establish co-occurrence with a cookie operation. That requires correlating the *other*
+leg: the sidecar→Rust side's own timeout diagnostic, ``rustInvoke timed out after …ms:
+humble_login_cookies*`` (`sidecarRpc.ts:385`), which goes to **`gamelib.log`** — a different file
+from `gamelib-shell.log`. Two legs, two files; a trigger that names only one leg is misleading.
+
+**The `260907-j8n` residual, restated for a reader who runs this grep.** `analyzeCapture()`
+(`meta/captureShellScrollback.ts`) does not recognise the two new `invoke abandoned` lines — its
+`RECURRENCE` verdict is keyed exclusively on `TARGET_DROP_RE` — so the active capture harness would
+not have raised `RECURRENCE` on an event this passive grep finds. And `TARGET_DROP_RE` is anchored
+`^\[shell\] `, so by the file-vs-stderr prefix difference above it could never match a
+`gamelib-shell.log` line even for the one shape it does recognise. The harness and the log observe
+**different event populations**, in two independent ways. `pnpm capture:shell-scrollback`
+(`260907-fni`) remains the stronger, deliberate route for a live gesture; this grep is the weaker,
+always-on complement.
+
+**Nothing automated reads this file.** Nothing currently reads `gamelib-shell.log`, and `audit-uat`
+cannot see this todo at all. This parked item is only meaningfully different from a forgotten one if
+a human actually runs the grep above — this project has a recorded failure exactly here (*a parked
+status buries the item it exempts*). Wiring this grep into an automated audit was **deliberately
+deferred** by the operator as a broader change, and is therefore **not** filed as a todo by this
+task.
+
+**No IPC change.** This task changes no channel, no command signature, and no frame shape —
+`.planning/IPC-PORT-INVENTORY.md` discipline is not engaged.
+
+Q1's answer is, and remains, UNDETERMINED and is not rounded to "no." This task closes no box,
+checks nothing, and is `closes_todo: false`.
