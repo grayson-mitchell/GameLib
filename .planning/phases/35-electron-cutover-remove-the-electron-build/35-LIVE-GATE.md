@@ -74,6 +74,13 @@ Both items name this plan (`35-19 Task 2, option-c`) as their origin, per the bi
 cross-reference Phase 38's relocation rules require. See `REQUIREMENTS.md` REQ-35-20 for the
 matching acknowledgment on the requirement-text side.
 
+**UPDATE 2026-09-06 (plan 38-02), second hop.** Phase 38 itself split. `38-W04` (Windows NSIS
+smoke launch) remains in Phase 38, unmoved. `38-W05` (Linux AppImage smoke launch) moved on to
+the newly-created Phase 42 (Deferred Linux-host UAT gates) by plan 38-01 under D-38-08, because
+Phase 38 narrowed to Windows plus controller items only. The structured receipt for both hops now
+lives in `35-VERIFICATION.md`'s `human_verification_relocated` frontmatter block — this paragraph
+predicted where the deferral went, and that block is where it landed.
+
 ## Three log sinks — read before scoring any log-based criterion
 
 This project has three, not two, log destinations, and conflating them is the exact shape of

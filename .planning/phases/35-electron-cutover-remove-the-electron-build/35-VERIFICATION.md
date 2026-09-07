@@ -324,6 +324,30 @@ human_verification:
   - test: "PARTIALLY RESOLVED — Review criticals CR-01..CR-04 from 35-REVIEW.md"
     expected: "A decision per item: fix, or accept with a recorded reason"
     why_human: "All four fixes have LANDED in code and the verifier confirmed each: CR-01 `OPEN_EXTERNAL_ALLOWED_SCHEMES` at main.rs:1207 enforced at :1220; CR-02 `frontendReadyBootWorkDone` one-shot guard at appShellFlowRegistration.ts:202; CR-03 `window.platform` win32 arm at tauriAttach.ts:77; CR-04 renderer surfacing plus the backend jar-liveness classification. WHAT REMAINS IS A RECORDS PASS, NOT A DECISION: 35-REVIEW.md is still `status: issues_found` and none of the four CR sections carries a resolution annotation."
+human_verification_relocated:
+  - origin_item: "35-19 Task 2, option-c - Windows NSIS smoke launch"
+    to_phase: "38"
+    to_item: "38-W04"
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
+    relocated: 2026-08-30
+    decided_by: "35-19 Task 2 option-c; second hop per 38-CONTEXT.md D-38-08, plan 38-01"
+    outcome: "open - remains in Phase 38 after the 2026-09-06 split; Phase 38 retained the Windows items"
+  - origin_item: "35-19 Task 2, option-c - Linux AppImage smoke launch"
+    to_phase: "42"
+    to_item: "38-W05"
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
+    relocated: 2026-08-30
+    decided_by: "35-19 Task 2 option-c; second hop per 38-CONTEXT.md D-38-08, plan 38-01"
+    outcome: >
+      Filed in Phase 38 on 2026-08-30, moved on to Phase 42 on 2026-09-06 by plan
+      38-01 under D-38-08 because Phase 38 narrowed to Windows plus controller only.
+      Still open, not yet run.
+    note: >
+      Both 38-W04 and 38-W05 are the SMOKE-LAUNCH half of D-16's "artifacts plus a
+      smoke launch" bar, acknowledged as a scope reduction in REQUIREMENTS.md
+      REQ-35-20 when this gate closed on artifact production alone. That reduction is
+      not compounded by this second-hop relocation -- the item is still owed, only by
+      a different phase now (Phase 42 for the Linux half).
 ---
 
 # Phase 35: Electron cutover — remove the Electron build — Verification Report

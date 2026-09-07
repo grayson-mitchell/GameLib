@@ -212,6 +212,61 @@ deferred:
   - truth: "12 pre-existing clippy errors in src-tauri/src/main.rs"
     addressed_in: "Not this phase"
     evidence: "phase deferred-items.md — confirmed pre-existing via `git diff --stat -- src-tauri/src/main.rs` showing zero changes at the time of the clippy run; `cargo clippy` is not in any CI workflow"
+human_verification_relocated:
+  - origin_item: "40-10 Task 2 (D-04)"
+    to_phase: "43"
+    to_item: "38-E01"
+    blocked_by: "no Windows code path exists yet -- src-tauri/Cargo.toml target-gates the unstable add_child feature to cfg(target_os = \"macos\"); Phase 43 exists to widen that gate before this can even run"
+    relocated: 2026-09-06
+    decided_by: "38-CONTEXT.md D-38-09, plan 38-01"
+    outcome: >
+      Filed in Phase 38 on 2026-09-01 by plan 40-10 under D-04, moved on to the
+      newly-created Phase 43 on 2026-09-06 by plan 38-01 under D-38-09. Still open,
+      not yet run. 38-E01 is an IMPLEMENTATION task before it is a verification task
+      -- does Window::add_child work at all on the Windows WebView2 backend -- so
+      keeping it in Phase 38 would hold that phase open no matter which host ran.
+      Phase 43 exists specifically to widen the
+      `[target.'cfg(target_os = "macos")'.dependencies]` gate first.
+  - origin_item: "40-10 Task 2 (D-04)"
+    to_phase: "43"
+    to_item: "38-E02"
+    blocked_by: "no Linux code path exists yet -- same target-gate as 38-E01; Phase 43 exists to widen it before this can even run"
+    relocated: 2026-09-06
+    decided_by: "38-CONTEXT.md D-38-09, plan 38-01"
+    outcome: >
+      Filed in Phase 38 on 2026-09-01 by plan 40-10 under D-04, moved on to Phase 43
+      on 2026-09-06 by plan 38-01 under D-38-09. Still open, not yet run. 38-E02 is an
+      IMPLEMENTATION task before it is a verification task -- does Window::add_child
+      work at all on the Linux webkit2gtk backend -- so keeping it in Phase 38 would
+      hold that phase open no matter which host ran. Phase 43 exists specifically to
+      widen the `[target.'cfg(target_os = "macos")'.dependencies]` gate first.
+  - origin_item: "40-10 Task 2 (D-04), coordinates with plan 40-11's live gate Item 1"
+    to_phase: "43"
+    to_item: "38-E03"
+    blocked_by: "any non-macOS host, or any macOS host at a scale factor other than 2.0 -- 40-11 Item 1 measured ONE macOS host at exactly 2.0 and got a 0 px delta, which exercises no rounding behavior in either direction"
+    relocated: 2026-09-06
+    decided_by: "38-CONTEXT.md D-38-09, plan 38-01"
+    outcome: >
+      Filed in Phase 38 on 2026-09-01 by plan 40-10 under D-04. 40-11's live gate ran
+      2026-09-05 and PASSED 3/3 on the one macOS host it covers -- that PASS did NOT
+      close this item, per the non-closure statement recorded in both
+      40-LIVE-GATE.md and ROADMAP.md's Phase 38 ledger. Moved on to Phase 43 on
+      2026-09-06 by plan 38-01 under D-38-09, still open for any other host or scale
+      factor. The non-closure substance is unchanged by this relocation -- only the
+      owning phase moved.
+  - origin_item: "40-10 Task 2 (D-04), coordinates with plan 40-11's live gate Item 3"
+    to_phase: "43"
+    to_item: "38-E04"
+    blocked_by: "any hardware/backend other than the one macOS host 40-11 Item 3 measured -- a fixed 40 ms leading-edge throttle tracking one host's resize cadence is not the answer for the set"
+    relocated: 2026-09-06
+    decided_by: "38-CONTEXT.md D-38-09, plan 38-01"
+    outcome: >
+      Filed in Phase 38 on 2026-09-01 by plan 40-10 under D-04. 40-11's live gate ran
+      2026-09-05; Item 3 FAILED on first run, was fixed in b4517366e, and PASSED on
+      re-run -- that PASS did NOT close this item, per the same non-closure statement.
+      Moved on to Phase 43 on 2026-09-06 by plan 38-01 under D-38-09, still open for
+      any other hardware/backend. The non-closure substance is unchanged by this
+      relocation -- only the owning phase moved.
 ---
 
 # Phase 40: In-app store and wiki browsing under Tauri — embedded child webview — Verification Report

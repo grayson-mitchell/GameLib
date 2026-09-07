@@ -799,6 +799,15 @@ places rather than depending on a reader finding only one of them. `38-E01` and 
 (Windows/Linux `add_child` feasibility) are unaffected by this gate entirely — no code path
 exists for this gate to exercise on those platforms regardless of outcome here.
 
+**UPDATE 2026-09-06 (plan 38-02), second hop.** The statement above is UNCHANGED in substance
+— a macOS PASS still does not close `38-E03` or `38-E04` — but their owning phase is no longer
+Phase 38. Plan `38-01` relocated all four E items (`38-E01`, `38-E02`, `38-E03`, `38-E04`) to the
+newly-created Phase 43 (Off-macOS embed backend — Windows WebView2 and Linux webkit2gtk) under
+D-38-09, because `38-E01`/`38-E02` are implementation tasks before they are verification tasks
+and Phase 43 exists to widen the `[target.'cfg(target_os = "macos")'.dependencies]` gate first.
+The structured receipt for this hop lives in `40-VERIFICATION.md`'s `human_verification_relocated`
+frontmatter block.
+
 ## PASS bar for the contract as a whole
 
 All three items must record a RESULT (a measured PASS/FAIL for Item 1, a verbatim human
