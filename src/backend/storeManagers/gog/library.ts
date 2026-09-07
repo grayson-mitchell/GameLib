@@ -167,6 +167,16 @@ export default class GOGLibraryManager implements LibraryManager {
   }
 
   async syncQueuedPlaytime() {
+    // finding A1 (quick-260907-odi): `playtimeSyncQueue` is a file-backed `CacheStore`
+    // (`gog/electronStores.ts:42`) that survives process restarts. `CacheStore` evaluates its
+    // lifespan/expiry only inside `get()` (`cache.ts:64-88`, which deletes the stale key and
+    // returns the fallback) -- the guard below uses `has()` (`cache.ts:142`), a raw
+    // `current_store.has(key)` passthrough with NO expiry check at all. Nothing ever calls
+    // `get('lock')`, so the expiring path is unreachable for this key: a stranded `lock` never
+    // ages out on its own. This is LEG 1 of a two-leg fix -- see the `finally` below for an
+    // in-process throw, and `bootstrap.ts`'s `clearStrandedPlaytimeSyncLock` (Block D) for the
+    // companion leg that clears a lock left behind by process death, which `finally` cannot
+    // observe.
     if (playtimeSyncQueue.has('lock')) {
       return
     }
@@ -184,19 +194,28 @@ export default class GOGLibraryManager implements LibraryManager {
     playtimeSyncQueue.set('lock', [])
     const failed = []
 
-    for (const session of queue) {
-      if (!isOnline()) {
-        failed.push(session)
-      }
-      const response = await this.postPlaytimeSession(session)
+    try {
+      for (const session of queue) {
+        if (!isOnline()) {
+          failed.push(session)
+        }
+        const response = await this.postPlaytimeSession(session)
 
-      if (!response || response.status !== 201) {
-        logError('Failed to post session', { prefix: LogPrefix.Gog })
-        failed.push(session)
+        if (!response || response.status !== 201) {
+          logError('Failed to post session', { prefix: LogPrefix.Gog })
+          failed.push(session)
+        }
       }
+      playtimeSyncQueue.set(userData.galaxyUserId, failed)
+    } finally {
+      // LOAD-BEARING: `set(userData.galaxyUserId, failed)` stays inside the `try`, as its last
+      // statement, deliberately -- NOT here. If the loop throws, that line never runs, so the
+      // queue keeps its original, un-overwritten contents and no session is lost; only the lock
+      // is released. Moving the `set` into this `finally` would overwrite the full queue with a
+      // partial `failed` array on every throw, silently discarding whichever sessions the loop
+      // had not yet reached. Do not "improve" this.
+      playtimeSyncQueue.delete('lock')
     }
-    playtimeSyncQueue.set(userData.galaxyUserId, failed)
-    playtimeSyncQueue.delete('lock')
     logInfo(
       [
         'Finished posting sessions to gameplay.gog.com',

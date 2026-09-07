@@ -77,6 +77,16 @@ const mockLibraryStoreGet = jest.fn()
 const mockInstalledGamesStoreGet = jest.fn()
 const mockInstallInfoStoreHas = jest.fn()
 const mockPrivateBranchesStoreGet = jest.fn()
+// finding A1 LEG 1 (quick-260907-odi): promoted `configStore`/`playtimeSyncQueue` from bare
+// jest.fn()s at the factory to the same delegating-arrow convention as the mocks above, so
+// `beforeEach` can back them with real behaviour. Verified at planning time: no existing test in
+// this file references either export before this change, so this promotion cannot disturb the
+// three pre-existing describe blocks.
+const mockPlaytimeHas = jest.fn()
+const mockPlaytimeGet = jest.fn()
+const mockPlaytimeSet = jest.fn()
+const mockPlaytimeDelete = jest.fn()
+const mockConfigStoreGetNodefault = jest.fn()
 jest.mock('../electronStores', () => ({
   libraryStore: {
     get: (...a: unknown[]) => mockLibraryStoreGet(...a),
@@ -100,12 +110,16 @@ jest.mock('../electronStores', () => ({
   privateBranchesStore: {
     get: (...a: unknown[]) => mockPrivateBranchesStoreGet(...a)
   },
-  configStore: { get_nodefault: jest.fn(), set: jest.fn(), clear: jest.fn() },
-  playtimeSyncQueue: {
-    has: jest.fn(),
-    get: jest.fn(),
+  configStore: {
+    get_nodefault: (...a: unknown[]) => mockConfigStoreGetNodefault(...a),
     set: jest.fn(),
-    delete: jest.fn()
+    clear: jest.fn()
+  },
+  playtimeSyncQueue: {
+    has: (...a: unknown[]) => mockPlaytimeHas(...a),
+    get: (...a: unknown[]) => mockPlaytimeGet(...a),
+    set: (...a: unknown[]) => mockPlaytimeSet(...a),
+    delete: (...a: unknown[]) => mockPlaytimeDelete(...a)
   }
 }))
 
@@ -398,5 +412,76 @@ describe('D-35-19-16 -- changeGameInstallPath does not double the macOS bundle n
       await manager.changeGameInstallPath(APP_NAME, candidate)
       expect(recordedPath()).not.toContain(`${FOLDER_NAME}/${FOLDER_NAME}`)
     }
+  })
+})
+
+describe('finding A1 LEG 1 -- syncQueuedPlaytime releases the lock when postPlaytimeSession throws', () => {
+  let manager: GOGLibraryManager
+  let store: Map<string, unknown>
+  const galaxyUserId = 'gid-1'
+
+  beforeEach(() => {
+    manager = new GOGLibraryManager()
+    // Back the four playtime mocks with a real Map so `has()` reflects true state instead of
+    // a canned boolean -- `syncQueuedPlaytime()`'s own `has('lock')` guard and its `set('lock',
+    // ...)`/`delete('lock')` calls must all observe the same underlying state for these tests to
+    // mean anything.
+    store = new Map<string, unknown>()
+    mockPlaytimeHas.mockImplementation((key: string) => store.has(key))
+    mockPlaytimeGet.mockImplementation((key: string, fallback?: unknown) =>
+      store.has(key) ? store.get(key) : fallback
+    )
+    mockPlaytimeSet.mockImplementation((key: string, value: unknown) => {
+      store.set(key, value)
+    })
+    mockPlaytimeDelete.mockImplementation((key: string) => {
+      store.delete(key)
+    })
+    mockConfigStoreGetNodefault.mockReturnValue({ galaxyUserId })
+    // Scope fence 1 (quick-260907-odi): the offline branch at library.ts:188-196 has a separate,
+    // out-of-scope double-push defect (missing `continue`). Forcing online here keeps that
+    // branch unreached so this suite cannot accidentally depend on its buggy shape.
+    mockIsOnline.mockReturnValue(true)
+  })
+
+  const sessionA = { appName: 'app-a', session_date: 1, time: 10 }
+  const sessionB = { appName: 'app-b', session_date: 2, time: 20 }
+
+  it('releases the lock after postPlaytimeSession rejects -- RED today: the rejection propagates with the lock still set', async () => {
+    store.set(galaxyUserId, [sessionA, sessionB])
+    jest
+      .spyOn(manager, 'postPlaytimeSession')
+      .mockRejectedValue(new Error('network error'))
+
+    // The fix wraps the loop in try/finally, not try/catch -- syncQueuedPlaytime() still
+    // SETTLES by rejecting (the throw propagates through the `finally`). What must change is
+    // that the lock is released before that rejection is observed here, not that the promise
+    // stops rejecting.
+    await expect(manager.syncQueuedPlaytime()).rejects.toThrow('network error')
+
+    expect(mockPlaytimeHas('lock')).toBe(false)
+  })
+
+  it('does not lose queued sessions when postPlaytimeSession rejects -- the queue keeps both original sessions', async () => {
+    store.set(galaxyUserId, [sessionA, sessionB])
+    jest
+      .spyOn(manager, 'postPlaytimeSession')
+      .mockRejectedValue(new Error('network error'))
+
+    await expect(manager.syncQueuedPlaytime()).rejects.toThrow('network error')
+
+    expect(mockPlaytimeGet(galaxyUserId, [])).toEqual([sessionA, sessionB])
+  })
+
+  it('happy path is unchanged: lock released AND queue overwritten with the (empty) failed array on success', async () => {
+    store.set(galaxyUserId, [sessionA, sessionB])
+    jest
+      .spyOn(manager, 'postPlaytimeSession')
+      .mockResolvedValue({ status: 201 } as never)
+
+    await manager.syncQueuedPlaytime()
+
+    expect(mockPlaytimeHas('lock')).toBe(false)
+    expect(mockPlaytimeGet(galaxyUserId, [])).toEqual([])
   })
 })

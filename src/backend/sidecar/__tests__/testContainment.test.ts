@@ -839,7 +839,8 @@ const IN_SCOPE_SUITES = [
  *
  * It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
  * `backend/logger/paths` mock kit Block B gates on. Recount, run rather than carried forward:
- * 57 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 53 below.
+ * 58 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 54 below (quick-260907-odi added
+ * `playtimeLockBootClear.test.ts`).
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -876,6 +877,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'onlineMonitorWiring.test.ts',
   'outputStreamBinding.test.ts',
   'pathShim.test.ts',
+  'playtimeLockBootClear.test.ts',
   'rendererPathGuard.test.ts',
   'runnerAuthFlows.test.ts',
   'runnerMiscFlows.test.ts',

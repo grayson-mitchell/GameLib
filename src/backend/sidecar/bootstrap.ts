@@ -43,6 +43,10 @@ import { supportedLanguages } from 'common/languages'
 // ---- Step 2: import the backend registration path — AFTER the hook -------
 
 import './handlers'
+// Block D (finding A1, quick-260907-odi). Adds NO new module to the sidecar bundle:
+// `sidecar/storeRegistration.ts:61` already imports `playtimeSyncQueue` from this exact
+// module, so this is a second binding onto an already-resident singleton, not a new edge.
+import { playtimeSyncQueue } from '../storeManagers/gog/electronStores'
 // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09, REQ-34.5-01/05/12): `protocol.ts` imports
 // `dialog`/`app` from `electron`, so this import is safe ONLY because `./installElectronHook`
 // (Step 1, above) has already installed the `Module._load` redirect by the time this
@@ -172,6 +176,10 @@ let migrationsInitialized = false
 // overwrite the first, which is harmless today but is exactly the kind of "works by accident"
 // idempotency this file's other five guards exist to make explicit instead.
 let protocolUrlHandlerRegistered = false
+// Guards clearStrandedPlaytimeSyncLock() below (Block D, finding A1, quick-260907-odi). Same
+// reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times per
+// file, production calls it once.
+let playtimeLockClearInitialized = false
 
 /**
  * Delivers a startup (cold-start) `gamelib://` deep link to `handleProtocol`, if `argv`
@@ -260,6 +268,48 @@ export function registerProtocolUrlHandler(): void {
       return true
     }
   )
+}
+
+/**
+ * Clears a stranded GOG playtime-sync `lock` sentinel at sidecar boot (finding A1 LEG 2,
+ * quick-260907-odi).
+ *
+ * `syncQueuedPlaytime()` (`gog/library.ts:169`) guards its critical section with
+ * `playtimeSyncQueue.has('lock')`. The deleted Electron `main.ts:469` cleared this key at every
+ * boot (`playtimeSyncQueue.delete('lock')`); that line has no successor in the Tauri sidecar.
+ * This is the process-death half of a two-leg fix: its companion is the `try/finally` added to
+ * `syncQueuedPlaytime()` itself, which releases the lock on an in-process throw but cannot
+ * survive SIGKILL, a crash, or a power loss -- `finally` never runs if the process dies mid-sync.
+ * This function is the only thing that can recover from THAT case, and it only runs at boot.
+ *
+ * The lock never ages out on its own: `playtimeSyncQueue` is a file-backed `CacheStore`
+ * (`gog/electronStores.ts:42`) that survives restarts, and `CacheStore` evaluates its
+ * lifespan/expiry only inside `get()` (`cache.ts:64-88`) -- `has()` (`cache.ts:142`) is a raw
+ * `current_store.has(key)` passthrough with no expiry check, and nothing else ever calls
+ * `get('lock')` for this key.
+ *
+ * Checks `has('lock')` first and returns silently if absent -- a normal boot must log nothing
+ * here. Only the clearing path logs, at `logWarning` (not `logInfo`): a stranded lock means a
+ * previous sync died mid-flight, which is an anomaly worth surfacing, matching this file's
+ * existing reservation of `logWarning` for its other abnormal boot paths. Wrapped in try/catch
+ * per this file's standing rule that a boot-time block must never fail boot.
+ */
+export function clearStrandedPlaytimeSyncLock(): void {
+  try {
+    if (!playtimeSyncQueue.has('lock')) {
+      return
+    }
+    playtimeSyncQueue.delete('lock')
+    logWarning(
+      '[bootstrap] Cleared a stranded GOG playtime sync lock left by an interrupted sync',
+      LogPrefix.Backend
+    )
+  } catch (error) {
+    logWarning(
+      `[bootstrap] clearStrandedPlaytimeSyncLock() failed: ${String(error)}`,
+      LogPrefix.Backend
+    )
+  }
 }
 
 export function init(
@@ -684,6 +734,18 @@ export function init(
         LogPrefix.Backend
       )
     }
+  }
+  // Block D — boot-time stranded GOG playtime-sync lock clear (finding A1 LEG 2,
+  // quick-260907-odi). Placed after `initLogger()` (the helper logs, and `heroicLogWriter` is
+  // unset before that — see the standing `sidecar-console-and-logger-are-invisible` finding)
+  // and before READY so the lock is already clear by the time any RPC-driven playtime sync can
+  // arrive. Mirrors `main.ts`'s ordering intent, where the clear ran during app startup rather
+  // than lazily. `clearStrandedPlaytimeSyncLock()` itself never fails boot (see its own header),
+  // so no additional try/catch is needed at this call site — matches Blocks A/B's shape, which
+  // wrap their own bodies rather than duplicating that at the call site too.
+  if (!playtimeLockClearInitialized) {
+    playtimeLockClearInitialized = true
+    clearStrandedPlaytimeSyncLock()
   }
   output.write(`${READY_SENTINEL}\n`)
   // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately

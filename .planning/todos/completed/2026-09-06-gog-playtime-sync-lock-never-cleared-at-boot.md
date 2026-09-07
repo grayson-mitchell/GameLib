@@ -2,7 +2,7 @@
 created: 2026-09-06
 title: "GOG playtime sync lock is never cleared at boot, so one interrupted sync wedges playtime sync forever"
 area: tauri-sidecar
-status: OPEN
+status: "RESOLVED 2026-09-07 by quick-260907-odi -- two-leg fix. LEG 1: syncQueuedPlaytime() (gog/library.ts) now wraps its critical section in try/finally, releasing the `lock` sentinel on an in-process throw/rejection without losing queued sessions. LEG 2: bootstrap.ts's init() now calls a new clearStrandedPlaytimeSyncLock(), mirroring the deleted main.ts:469 behavior, to clear a lock stranded by process death (SIGKILL/crash/power loss), which `finally` cannot observe. This todo's own Fix sketch only prescribed the boot-clear leg (LEG 2) -- that reasoning is now superseded, since a boot-clear alone would not release the lock for the remainder of a still-running process after an in-process throw. FINDING A2 (the boot-time queue DRAIN, `runOnceWhenOnline(() => syncQueuedPlaytime())`, never restored) is explicitly OUT OF SCOPE for this fix and REMAINS OPEN, filed separately."
 severity: major
 source: "quick-260906-gej, sweep FINDINGS.md section A row A1"
 files:
