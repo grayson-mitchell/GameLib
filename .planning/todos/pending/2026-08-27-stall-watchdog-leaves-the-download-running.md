@@ -158,7 +158,118 @@ strength and no stronger: `cdnAuth.ts` itself never consults an abort signal; wh
 per-chunk/per-attempt checkpoints in `depot.ts` nonetheless bound the rotation loop despite that is
 NOT established here, and establishing it was not part of this task.
 
-## Residual
+
+## LIVE GATE — 2026-09-08, quick 260908-asd: PASSED, and it settles the discriminator above
+
+**A stall WAS manufactured on demand, contradicting this file's own Residual claim that it could
+not be.** Run on the **Tauri** shell (satisfying the shell requirement below), sidecar carrying
+`e08997f35`, against **BATTLETECH `637090`**, a mac-native native-depot install.
+
+**Forcing method (third attempt; the first two measured nothing — see "Forcing methods that
+failed" below).** `pf` packet-drop on the ten CDN IPs, loaded with `block drop out quick` plus
+`pfctl -k` to kill existing states. Verified BEFORE blocking by listing the sidecar's own
+`ESTABLISHED` sockets (`lsof -nP -p <sidecar> -i TCP`) and confirming every peer IP the download
+was actually using was in the block set — 22 sockets to `23.52.70.65`, plus `203.26.79.2`,
+`101.53.220.134/135`, `65.8.136.33`, `199.232.211.82`, `199.232.215.82`.
+
+**Measured timeline.**
+
+| Time | Observation |
+|---|---|
+| 07:33:31 | `chunk-stream stats @135s: percent=8% downSpeedMiBs=4.73 ... timeouts=38` |
+| 07:33:46 | `@150s: percent=9% downSpeedMiBs=0.00 diskSpeedMiBs=0.00 ... timeouts=41` — last advance |
+| 07:34:01 | `@165s: percent=9%` — flat, stall established |
+| **07:41:41** | **watchdog trips at 480s**, and BOTH abort paths take their **INFO** branch |
+| 07:41:41 | `@625s: percent=9% ... rotations=1375` — **one final line, same second** |
+| 07:41:41+ | zero further stats lines; all CDN sockets torn down |
+| 07:44:xx | pf restored, network reachable again — **no revival** |
+| 07:45:18 | `SILENT for 180s — depot loop is genuinely dead` |
+
+The two abort lines, verbatim:
+
+```
+(07:41:41) [INFO]: [DownloadManager]: Stall watchdog aborting in-flight download for 637090 after a trip (no progress for 480s)
+(07:41:41) [INFO]: [DownloadManager]: Aborting in-flight download for 637090 after terminal install failure
+```
+
+**THIS ANSWERS THE DISCRIMINATOR QUESTION POSED ABOVE.** On the STALL path
+`hasAbortController(appName)` is **TRUE** — the INFO branch fired, not the WARNING. That is
+mechanically necessary and now confirmed: a stall means `install()` never settled, so
+`runNativeDepotDownload`'s own `finally` (which does `deleteAbortController`) has not run, and the
+controller is still registered. Both the watchdog's own new abort AND `installQueueElement`'s
+pre-existing `finally` abort found and used the live controller.
+
+**The 180s silence spans the pf restore, which is the load-bearing control.** Had the loop merely
+been wedged on dropped packets rather than genuinely cancelled, restoring the network would have
+revived 22 hung fetches and resumed logging. Nothing resumed. Contrast 2026-08-27: 5081 rotations
+and 51 minutes of continued streaming AFTER the terminal line.
+
+### Hypothesis A is REFUTED for the stall path
+
+The registry-clobber theory predicted the abort would be delivered to a stranded controller while
+the live run kept running. Measured: the controller was live, the abort was delivered, the loop
+died in the same second. **Separately, the `No in-flight download to abort` WARNING was reproduced
+twice** (2026-09-07, appId 402060, at 21:34:50 and 21:40:20) — but ONLY on **resolved-error**
+paths, where `runNativeDepotDownload`'s `finally` has already deleted the controller before the
+result reaches `installQueueElement`. That is by design and is exactly what `utils.ts`'s 37-05
+comment predicts. It is NOT evidence of a clobber, and the original todo's citation of that warning
+for 228280 should not be read as one.
+
+### Hypothesis B is NARROWED, not settled
+
+`cdnAuth.ts` is still abort-blind by construction. But this gate shows the enclosing `depot.ts`
+checkpoints DO bound the loop for a packet-drop wedge. Whether they also bound a wedge sitting
+inside the auth-token path specifically remains untested.
+
+### The empty-auth-token condition is REPRODUCIBLE — and is NOT sufficient to stall
+
+Californium `402060`, 2026-09-07 21:32-21:34, unprompted and with no network manipulation:
+
+```
+CdnAuthTokenCache: empty token field in decoded GetCDNAuthToken response
+  for depot=402062 host=alibaba.cdn.steampipe.steamcontent.com eresult=1
+```
+
+Same game, same error, same `eresult=1` as the 2026-08-27 capture, across every host
+(`alibaba.cdn`, `fastly.cdn`, `steampipe.akamaized.net`) and both depots (402062, 402064).
+**The download ran straight through it at 7-9 MiB/s and reached 100% in 105 seconds** — it falls
+back to hosts that do not require token auth. So this condition is a CONSTANT for this title, not
+the one-off outage this file implies, and **it cannot by itself be the cause of the 2026-08-27
+wedge.** Whatever turned it into a stall that night is still unidentified.
+
+### Forcing methods that failed, recorded so they are not retried
+
+- **`/etc/hosts` blackhole CANNOT stall an in-flight depot download.** It only affects NEW DNS
+  lookups; the download had already resolved its hosts and holds keep-alive connections, so it
+  never re-resolves. Measured: all six hosts returned `curl` **exit 28 (timed out)** while Disco
+  Elysium `632470` downloaded 9.7 GB to completion at full speed with the block active for 18
+  minutes. A forcing method that verifies clean and changes nothing about the thing under test —
+  the [[a-pass-can-cover-an-unreachable-surface]] shape.
+- **Blocking BEFORE the install starts produces a terminal error, not a stall.** Plan build fetches
+  manifests over the CDN: `fetchDepotPlanEntry: couldn't get manifest for depot 402062 ...
+  attempt 1/3`, then `Installation of 402060 failed with: The Steam download failed.` The block
+  must land AFTER plan build and DURING chunk streaming.
+- **Blocking mid-download on a small title just corrupts it.** Californium is 105s end-to-end; the
+  block landed at ~100% and produced `A downloaded file failed verification`. Use a title large
+  enough to give a wide window — BATTLETECH is 45,679 files.
+- **`SIGSTOP` on the decompress workers is not available.** `decompressPool.ts` uses
+  `node:worker_threads`, so they are in-process; stopping them would freeze the watchdog timer too.
+
+## Residual (rewritten 2026-09-08 — supersedes the section below)
+
+**What the gate proves:** at HEAD, on the Tauri shell, a stalled native depot install IS aborted by
+the watchdog and the depot loop DOES stop promptly, with the abort delivered to a live controller.
+The redundancy shipped by 260907-sxp is real and both paths fire.
+
+**What remains unproven, and why this todo stays OPEN:** whether the 2026-08-27 run had a THIRD
+cause not reachable by a packet-drop wedge. This gate reproduced *a* stall, not *the* stall. The
+discharge condition is now narrower and better specified than "genuine CDN-stall conditions": a
+re-drive in which the wedge sits inside the **empty-auth-token rotation loop** specifically — the
+one code path measured here to be abort-blind (`cdnAuth.ts`, zero `AbortSignal` occurrences) and
+not exercised by dropping packets at the socket layer. Since the empty-token condition is now known
+to be reproducible on demand for Californium, the missing ingredient is whatever additionally
+prevented fallback to the non-token hosts that night.
+## Residual (SUPERSEDED 2026-09-08 by the gate section above — left for the record)
 
 Closing this todo needs a live re-drive under genuine CDN-stall conditions, which cannot be
 manufactured on demand and is out of scope for a quick task. The original observation was on the
