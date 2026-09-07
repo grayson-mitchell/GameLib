@@ -205,6 +205,19 @@ jest.mock('../../utils/aborthandler/aborthandler', () => ({
   callAllAbortControllers: jest.fn()
 }))
 
+// ── longLivedChildren mock — quick task 260907-juv (Gate A). A narrow jest.fn()
+// boundary so `handleExit()`'s reachability into the Layer A registry can be asserted
+// directly, mirroring this file's own aborthandler mock above. Deliberately NOT
+// `{ virtual: true }`: at HEAD the module does not exist yet, and the honest RED here is
+// a module-resolution failure -- a virtual mock would let this suite survive a world in
+// which the registry was never created, which is exactly the failure mode (a call site
+// silently losing its target) this gate exists to catch.
+jest.mock('../../longLivedChildren', () => ({
+  registerLongLivedChild: jest.fn(() => jest.fn()),
+  shutdownLongLivedChildren: jest.fn(),
+  __resetLongLivedChildrenForTests: jest.fn()
+}))
+
 // ── downloadmanager/downloadqueue mock — Plan 05 (REQ-34.6-04/07/13): spreads the REAL
 // module (already transitively loaded today via `utils.ts`'s own `import { isRunning } from
 // './downloadmanager/downloadqueue'`, exercised by the CR-04 quit tests above — this mock
@@ -242,6 +255,7 @@ import {
   callAllAbortControllers
 } from '../../utils/aborthandler/aborthandler'
 import { requestRustInvoke } from '../sidecarRpc'
+import { shutdownLongLivedChildren } from '../../longLivedChildren'
 import { listenerRegistry, handlerRegistry } from '../../platform'
 import * as loggerModule from '../../logger'
 import { handleProtocol } from '../../protocol'
@@ -263,6 +277,7 @@ const mockedGameInfoStoreClear = gameInfoStore.clear as jest.Mock
 const mockedCallAbortController = callAbortController as jest.Mock
 const mockedCallAllAbortControllers = callAllAbortControllers as jest.Mock
 const mockRequestRustInvoke = requestRustInvoke as jest.Mock
+const mockedShutdownLongLivedChildren = shutdownLongLivedChildren as jest.Mock
 const mockedHandleProtocol = handleProtocol as jest.Mock
 
 /** Points the mocked GlobalConfig.get() at a fresh settings object. */
@@ -298,6 +313,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     mockedGameInfoStoreClear.mockClear()
     mockedCallAbortController.mockClear()
     mockedCallAllAbortControllers.mockClear()
+    mockedShutdownLongLivedChildren.mockClear()
     mockRequestRustInvoke.mockReset().mockResolvedValue(undefined)
     warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
   })
@@ -445,6 +461,34 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_APP_EXIT, [])
   })
 
+  // ── Quick task 260907-juv (Gate A): handleExit() -> shutdownLongLivedChildren() ──
+  //
+  // Layer A of the two-layer helper-process-orphan fix. `longLivedChildren` is mocked
+  // as a narrow jest.fn() boundary (see the module mock above) so these assertions fail
+  // on CALL-SITE DELETION -- if `handleExit()` stops calling `shutdownLongLivedChildren()`,
+  // these tests go RED with `Number of calls: 0`, not merely on misbehaviour.
+  it('REQ-260907-juv A1: quit (send) calls shutdownLongLivedChildren exactly once', async () => {
+    const { input } = startSidecar()
+    writeSend(input, 'quit-1', 'quit', [])
+    await flush()
+
+    expect(mockedShutdownLongLivedChildren).toHaveBeenCalledTimes(1)
+  })
+
+  it('REQ-260907-juv A2: shutdownLongLivedChildren runs BEFORE the RUST_APP_EXIT rustInvoke (ordering)', async () => {
+    const { input } = startSidecar()
+    writeSend(input, 'quit-2', 'quit', [])
+    await flush()
+
+    const registryOrder = mockedShutdownLongLivedChildren.mock.invocationCallOrder[0]
+    const exitCallIndex = mockRequestRustInvoke.mock.calls.findIndex(
+      ([channel]) => channel === RUST_APP_EXIT
+    )
+    expect(exitCallIndex).toBeGreaterThanOrEqual(0)
+    const exitOrder = mockRequestRustInvoke.mock.invocationCallOrder[exitCallIndex]
+    expect(registryOrder).toBeLessThan(exitOrder)
+  })
+
   // ── CR-04 (Phase 34.1 code review): the pending-operations quit confirm ───
   //
   // Registering `quit` made `handleExit()` sidecar-reachable for the first time, which
@@ -520,6 +564,26 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       // fan-out NOR app_exit may be reached.
       expect(mockedCallAllAbortControllers).not.toHaveBeenCalled()
       expect(mockRequestRustInvoke).not.toHaveBeenCalledWith(RUST_APP_EXIT, [])
+    })
+
+    // Quick task 260907-juv (Gate A3): a cancelled quit must not tear down long-lived
+    // children. Reuses this describe block's lockFile fixture with the SUITE'S DEFAULT
+    // mock (mockRequestRustInvoke resolving `undefined` for every channel, un-overridden)
+    // -- per `electronStub.showMessageBox`'s own logic, `result === false` is false for an
+    // `undefined` resolution, so the safe/"No"/cancelled `response: 0` path is taken and
+    // `handleExit()` returns before reaching either the abort fan-out or the registry.
+    it('REQ-260907-juv A3: a cancelled quit (response === 0) does NOT tear down long-lived children', async () => {
+      const { input } = startSidecar()
+      writeSend(input, 'quit-pending-3', 'quit', [])
+      await flush()
+
+      // Proves the dialog branch was actually taken (pending operations present).
+      expect(
+        mockRequestRustInvoke.mock.calls.some(
+          ([channel]) => channel === RUST_DIALOG_MESSAGE
+        )
+      ).toBe(true)
+      expect(mockedShutdownLongLivedChildren).not.toHaveBeenCalled()
     })
   })
 

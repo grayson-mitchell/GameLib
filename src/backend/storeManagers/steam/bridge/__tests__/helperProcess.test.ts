@@ -30,6 +30,10 @@ import {
   shutdownBridgeHelper,
   __resetBridgeHelperStateForTests
 } from '../helperProcess'
+import {
+  shutdownLongLivedChildren,
+  __resetLongLivedChildrenForTests
+} from 'backend/longLivedChildren'
 
 jest.mock('backend/logger', () => ({
   logError: jest.fn(),
@@ -117,6 +121,7 @@ const whoamiErrFrame = encodeResponse(PROBE_REQUEST_ID, STATUS_ERR)
 describe('helperProcess.ts', () => {
   beforeEach(() => {
     __resetBridgeHelperStateForTests()
+    __resetLongLivedChildrenForTests()
     mockedSpawn.mockReturnValue(new FakeChildProcess())
   })
 
@@ -229,6 +234,40 @@ describe('helperProcess.ts', () => {
 
     // A second call is a no-op -- the handle was cleared by the first call.
     shutdownBridgeHelper()
+    expect(child.kill).toHaveBeenCalledTimes(1)
+  })
+
+  // ── Quick task 260907-juv (Gate B): the registry, not the direct export, is the
+  // production teardown path. `shutdownBridgeHelper()` above is exercised directly for
+  // its own unit behaviour; these two prove the REGISTRATION wiring -- that calling the
+  // shared `shutdownLongLivedChildren()` registry (the only thing `handleExit()` calls,
+  // per Gate A) actually reaches this module's helper, and does so exactly once even
+  // across repeated registry-wide teardown calls.
+  test('REQ-260907-juv B1: shutdownLongLivedChildren() reaches the bridge helper via the registry (never shutdownBridgeHelper() directly)', async () => {
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+
+    await ensureBridgeHelperReady('1234')
+    shutdownLongLivedChildren()
+
+    expect(child.kill).toHaveBeenCalledTimes(1)
+  })
+
+  test('REQ-260907-juv B2: a second shutdownLongLivedChildren() call does not re-kill (idempotent unregistration)', async () => {
+    MockedSocket.mockImplementation(
+      () => new FakeSocket(healthOkFrame, whoamiOkFrame)
+    )
+    const child = new FakeChildProcess()
+    mockedSpawn.mockReturnValue(child)
+
+    await ensureBridgeHelperReady('1234')
+    shutdownLongLivedChildren()
+    expect(child.kill).toHaveBeenCalledTimes(1)
+
+    shutdownLongLivedChildren()
     expect(child.kill).toHaveBeenCalledTimes(1)
   })
 })
