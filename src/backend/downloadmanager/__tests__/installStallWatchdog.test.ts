@@ -15,6 +15,26 @@ import {
   withStallTimeout,
   type StallError
 } from '../installStallWatchdog'
+import {
+  createAbortController,
+  deleteAbortController
+} from 'backend/utils/aborthandler/aborthandler'
+import { logError } from 'backend/logger'
+
+// 260907-sxp T-C: bare jest.fn()s with no implementation, per this project's
+// jest.config.js `resetMocks: true` trap (see installStallWatchdog.test.ts's
+// own describe block below) — a factory that spreads `jest.requireActual`
+// and wraps a real implementation loses that implementation between tests
+// under `resetMocks: true`. `aborthandler.ts` imports `logError` from this
+// same `backend/logger` specifier, so this mock also covers the registry's
+// own "Could not find a matching abort controller" ERROR log — the log T-C
+// asserts the absence of.
+jest.mock('backend/logger', () => ({
+  LogPrefix: { Backend: 'Backend', DownloadManager: 'DownloadManager' },
+  logError: jest.fn(),
+  logInfo: jest.fn(),
+  logWarning: jest.fn()
+}))
 
 function emitProgress(
   appName: string,
@@ -253,5 +273,127 @@ describe('withStallTimeout', () => {
 
     const err = await rejection
     expect(isStallError(err)).toBe(true)
+  })
+
+  // 260907-sxp: T-A through T-D assert the SIGNAL a trip sends to the
+  // wrapped install's own abort registry, not merely the rejection — see
+  // .planning/todos/pending/2026-08-27-stall-watchdog-leaves-the-download-running.md.
+
+  it('T-A: a trip aborts the appName\'s registered controller, not just the race', async () => {
+    jest.useFakeTimers()
+    const appName = 'trip-signals-abort'
+    const stallMs = 5000
+    const controller = createAbortController(appName)
+    try {
+      const guarded = withStallTimeout(
+        new Promise(() => {}),
+        appName,
+        stallMs,
+        'test'
+      )
+      const rejection = guarded.catch((err: unknown) => err)
+
+      await jest.advanceTimersByTimeAsync(stallMs)
+      const err = await rejection
+
+      expect(controller.signal.aborted).toBe(true)
+      expect(isStallError(err)).toBe(true)
+    } finally {
+      deleteAbortController(appName)
+    }
+  })
+
+  it('T-B: the abort fires strictly before the rejection is observed by the caller', async () => {
+    jest.useFakeTimers()
+    const appName = 'trip-abort-before-reject'
+    const stallMs = 5000
+    const controller = createAbortController(appName)
+    try {
+      let tick = 0
+      let abortTick: number | undefined
+      let rejectTick: number | undefined
+      controller.signal.addEventListener('abort', () => {
+        abortTick = ++tick
+      })
+
+      const guarded = withStallTimeout(
+        new Promise(() => {}),
+        appName,
+        stallMs,
+        'test'
+      )
+      const rejection = guarded.catch(() => {
+        rejectTick = ++tick
+      })
+
+      await jest.advanceTimersByTimeAsync(stallMs)
+      await rejection
+
+      expect(abortTick).toBeDefined()
+      expect(rejectTick).toBeDefined()
+      expect(abortTick as number).toBeLessThan(rejectTick as number)
+    } finally {
+      deleteAbortController(appName)
+    }
+  })
+
+  it('T-C: no controller registered signals nothing, logs no ERROR, and still rejects with a StallError', async () => {
+    jest.useFakeTimers()
+    const appName = 'trip-no-controller-no-error'
+    const stallMs = 5000
+
+    const guarded = withStallTimeout(
+      new Promise(() => {}),
+      appName,
+      stallMs,
+      'test'
+    )
+    const rejection = guarded.catch((err: unknown) => err)
+
+    await jest.advanceTimersByTimeAsync(stallMs)
+    const err = await rejection
+
+    expect(isStallError(err)).toBe(true)
+    expect(logError).not.toHaveBeenCalled()
+  })
+
+  it('T-D: a late inner rejection after the trip does not surface as an unhandledRejection (F6 pin)', async () => {
+    jest.useFakeTimers()
+    const appName = 'trip-late-rejection-absorbed'
+    const stallMs = 5000
+    let rejectInner: (err: Error) => void = () => {}
+    const inner = new Promise((_resolve, reject) => {
+      rejectInner = reject
+    })
+
+    const unhandled: unknown[] = []
+    const onUnhandledRejection = (reason: unknown) => unhandled.push(reason)
+    process.prependListener('unhandledRejection', onUnhandledRejection)
+
+    try {
+      const guarded = withStallTimeout(inner, appName, stallMs, 'test')
+      const rejection = guarded.catch((err: unknown) => err)
+
+      await jest.advanceTimersByTimeAsync(stallMs)
+      await rejection
+
+      // Promise.race already holds a handler on `inner` (F6) — a real clock
+      // is required here because jest's fake timers do not reliably surface
+      // Node's `unhandledRejection` event, which fires on a later real turn
+      // of the event loop once a rejected promise remains unhandled at the
+      // end of a microtask checkpoint.
+      jest.useRealTimers()
+      await new Promise<void>((resolve) => {
+        setTimeout(() => {
+          rejectInner(new Error('late inner failure'))
+          resolve()
+        }, 1000)
+      })
+      await new Promise<void>((resolve) => setImmediate(resolve))
+
+      expect(unhandled).toHaveLength(0)
+    } finally {
+      process.removeListener('unhandledRejection', onUnhandledRejection)
+    }
   })
 })
