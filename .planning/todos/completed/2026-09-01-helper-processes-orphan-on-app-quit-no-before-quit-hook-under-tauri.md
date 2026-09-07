@@ -2,7 +2,7 @@
 created: 2026-09-01T04:55:00.000Z
 title: "Helper processes orphan on app quit — comet survived 22h across two teardowns, and `shutdownBridgeHelper()` has no production call site under Tauri"
 area: tauri-shell
-status: OPEN
+status: RESOLVED
 severity: major
 files:
   - src/backend/storeManagers/gog/games.ts:728-731 (getCometBin + comet spawn)
@@ -194,3 +194,82 @@ unrun.
    `steam_osx` pid 17365), confirm `pgrep -f steam-bridge-helper` non-empty, quit, assert empty.
 
 **This todo still does not close.**
+
+## LIVE GATE RUN 2026-09-07 — BOTH HALVES PASS, NON-VACUITY PROVEN. THIS TODO CLOSES.
+
+Supersedes the "BLOCKED" record above: the screen was unlocked and the gate was run end to end
+against a `pnpm tauri:dev` build carrying both layers. Quit gesture was the **tray icon's Quit
+item** (`main.rs:643` -> `app_handle.exit(0)` at `:9281`), chosen because `exitToTray: true`
+remained on disk and intercepts a window-close quit. No settings were modified.
+
+### Half 1 — GOG / comet: PASS
+
+Launched via the single-instance socket (NOT `open gamelib://`, which would have gated the stale
+`/Applications/GameLib.app` v0.7). Pre-quit, everything in the sidecar's OWN group 28778:
+
+```
+28728 28583 28532  target/debug/gamelib-shell
+28778 28728 28778  node .../build/main/sidecar.js
+28850 28778 28778  comet --from-heroic --username soreluel --quit
+28851 28778 28778  ./gogdl ... launch .../Endless Sky.app 1829678475 --platform osx
+28852 28851 28778  .../Endless Sky.app/Contents/MacOS/Endless Sky
+```
+
+Quit clicked 16:30:53. At t+1s: **all gone.** `pgrep -f comet`, `pgrep -f build/main/sidecar.js`,
+`pgrep -f gamelib-shell`, `pgrep -f "Endless Sky"` — all empty. Shell logged
+`[shell] sidecar terminated on exit`.
+
+### Half 2 — Steam bridge helper: PASS
+
+The helper does NOT spawn for an ordinary macOS-native Steam title: Bastion (107100) correctly took
+`shell.openExternal('steam://rungameid/...')` and never touched the bridge. The helper is reached
+ONLY from `launchBridgeGame()` (`steam/games.ts:2163`), the allowlisted Windows-title path. The
+allowlist (`bridge/bridge-allowlist.json`) holds exactly two entries — Avernum 5 (206040) and
+Avernum 6 (206060) — and neither has an ACF under Steam's default `steamapps`. They ARE installed,
+in the dedicated CrossOver bottle:
+`~/Library/Application Support/CrossOver/Bottles/GameLibSteamBridge/drive_c/Program Files (x86)/Steam/steamapps/`.
+
+Launching 206040 spawned the helper into the sidecar's group:
+
+```
+29539 29396 29344  target/debug/gamelib-shell
+29571 29539 29571  node .../build/main/sidecar.js
+29986 29571 29571  .../bin/arm64/darwin/steam-bridge-helper
+```
+
+Quit clicked 16:35:20. At t+1s: **all gone.** `pgrep -f steam-bridge-helper` empty.
+
+### Negative control — the gate CAN fail, and it reproduces the original defect
+
+A passing gate proves nothing unless it could have failed, so `main.rs` was reverted to
+`32324f6ec` (`git show 32324f6ec:src-tauri/src/main.rs > src-tauri/src/main.rs`, never
+`git checkout --`), rebuilt, and the IDENTICAL gesture re-run with the same game.
+
+First, the spawn-side difference is visible before any quit — pre-fix the sidecar INHERITS the
+shell's group (`30413` has pgid `30131`), where the fixed build gives it its own (`28778`/`28778`).
+
+Then, after the same tray-Quit click, shell and sidecar died but:
+
+```
+30474     1 30131  comet --from-heroic --username soreluel --quit
+30475     1 30131  ./gogdl ... launch .../Endless Sky.app 1829678475 --platform osx
+30476 30475 30131  .../Endless Sky.app/Contents/MacOS/Endless Sky
+```
+
+**PPID 1 — reparented to launchd, still alive at t+6s.** That is this todo's original orphan,
+reproduced on demand. `main.rs` was then restored from `HEAD` and verified byte-identical
+(`git diff` empty). Control orphans were reaped.
+
+### Verification requirements — final status
+
+1. **Live gate — RUN AND PASSED**, both halves, with a negative control proving non-vacuity.
+2. **Wiring assertion — DONE.** Gates A/B/C; call-site deletion reds with `Received number of
+   calls: 0`, not a module-resolution error.
+3. **Both directions — DONE.** Automated: RED at `32324f6ec`, GREEN at HEAD. Live: orphans at
+   `32324f6ec`, clean at HEAD, same gesture.
+
+**CLOSED.** Machine swept clean; `exitToTray`/`startInTray` unchanged (`true`/`true`).
+
+Out of scope and still open, unchanged by this todo: `pnpm tauri:dev`'s own Ctrl-C dev-teardown
+orphan (`tauri-dev-shell-does-not-reap-its-node-sidecar`) — a different mechanism, since killing
+the dev shell never runs `RunEvent::Exit` at all.
