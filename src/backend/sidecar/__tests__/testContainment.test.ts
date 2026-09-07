@@ -839,8 +839,12 @@ const IN_SCOPE_SUITES = [
  *
  * It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
  * `backend/logger/paths` mock kit Block B gates on. Recount, run rather than carried forward:
- * 58 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 54 below (quick-260907-odi added
- * `playtimeLockBootClear.test.ts`).
+ * 59 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 55 below (quick-260908-ci2 added
+ * `steamFocusRefreshWire.test.ts` -- same reasoning as `steamFlows.test.ts`, its immediate
+ * list neighbour: its own `jest.mock('os', ...)` plus the identical `backend/store_backend`/
+ * `axios`/`backend/utils`/`backend/constants/environment`/`../../storeManagers/steam/user`/
+ * `../../launcher` mock set makes its import graph contained without opting into the
+ * four-element `IN_SCOPE_SUITE` kit).
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -891,6 +895,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'skeletonFlows.test.ts',
   'steamAuthFlows.test.ts',
   'steamFlows.test.ts',
+  'steamFocusRefreshWire.test.ts',
   'steamgridSecretStore.test.ts',
   'storeEmbedFlows.test.ts',
   'storeEmbedWireContract.test.ts',

@@ -1636,9 +1636,20 @@ describe('Phase 34.4.2 Plan 02 — AppKit sheet presentation (superseded from ch
     expect(code).not.toMatch(/\.parent\([^)]/)
   })
 
-  test('Test 8 (NEGATIVE): no window-focus-gained re-raise exists -- a focus-driven re-raise would steal key focus back to the login window every time the user clicks the main window', () => {
+  test("Test 8 (NEGATIVE, narrowed 2026-09-08 by quick-260908-ci2): no window-focus-gained re-raise of the LOGIN window exists -- a focus-driven re-raise would steal key focus back to the login window every time the user clicks the main window. Narrowed to exclude quick-260908-ci2's own, unrelated WindowEvent::Focused(true) match in `.setup()`: that block reacts to the MAIN window regaining focus by writing a sidecar refresh frame for install-badge reconciliation (SHELL_WINDOW_FOCUSED) and never touches the login window -- the two mechanisms share only the enum variant name. A blanket file-wide ban became a false positive the moment that unrelated, legitimate feature landed; everywhere ELSE in the file, WindowEvent::Focused must still never appear.", () => {
     const code = loadMainRsCode()
-    expect(code).not.toContain('WindowEvent::Focused')
+    const ownBlockStart = code.indexOf(
+      'focus_window.on_window_event(move |event| {'
+    )
+    expect(ownBlockStart).toBeGreaterThan(-1)
+    const ownBlockEnd = code.indexOf(
+      'load_recent_games_from_disk(',
+      ownBlockStart
+    )
+    expect(ownBlockEnd).toBeGreaterThan(ownBlockStart)
+    const codeWithoutOwnBlock =
+      code.slice(0, ownBlockStart) + code.slice(ownBlockEnd)
+    expect(codeWithoutOwnBlock).not.toContain('WindowEvent::Focused')
   })
 
   test("Test 9 (SCOPE GUARD, REQ-34.4.2-10, updated 2026-08-04 for Plan 07's renamed symbols): the PHASE_34_4_2_NEW_SYMBOLS-driven guard still passes with this plan's three current symbols appended -- none of them is referenced from open_pristine_epic_login_window's sliced body", () => {
