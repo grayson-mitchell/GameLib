@@ -194,3 +194,47 @@ Options to weigh:
 
 Either way a collision must never again surface as "The Steam download failed."
 with nothing in the log; that half is fixed and committed.
+
+
+---
+
+# DEPOT SELECTION VERIFIED 2026-09-07 — `selectAllDepots` is CORRECT, the union is not the bug
+
+Live PICS probe (`getProductInfo`) for app 38410 plus package `depotids` ownership:
+
+| depot | config | owned | size | role |
+| --- | --- | --- | --- | --- |
+| 38411 | `{}` | NO | 589,006,710 | retired full build |
+| 38412 | language=french | NO | 501,981,790 | |
+| 38413 | language=german | NO | 470,736,391 | |
+| **38414** | `{}` (no language, no oslist) | **yes** | 88,913,882 | **common content** |
+| **38415** | language=**english** | **yes** | 502,485,424 | **English data** |
+| 38416 | language=french | yes | 505,188,503 | |
+| 38417 | language=german | yes | 472,048,862 | |
+| 228990 | oslist=windows, sharedinstall=1, depotfromapp=228980 | yes | — | Steamworks redist |
+| 229002 | oslist=windows, sharedinstall=1, depotfromapp=228980 | yes | — | Steamworks redist |
+
+App-level: type=game, no app `oslist`, no `listofdlc`.
+
+**Real Steam installs exactly 38414 + 38415 for an English install, which is exactly
+what GameLib selected** ("-> 2 depot(s)" in the original log). Every exclusion is
+correct: 38411-38413 fail the ownership channel, 38416/38417 fail the language filter,
+and both `sharedinstall` redistributables are correctly skipped.
+
+38415/38416/38417 are LANGUAGE VARIANTS of the same content — each ships its own
+`master.dat`/`critter.dat`/`patch000.dat`.
+
+## This CLOSES the policy question
+
+- **Option 2 (`selectAllDepots` selects a depot Steam would not install): REFUTED.**
+- **Option 1 (resolve the collision): the remedy**, now evidence-backed.
+
+The collision is genuine in VALVE'S OWN DATA: common depot 38414 ships `master.dat` as
+a size-0/chunks-0 Directory entry while English depot 38415 ships it as the real
+333,177,805-byte file. Real Steam installs both and produces `master.dat` as a FILE, so
+Steam resolves the clash in favour of the file. GameLib must do the same.
+
+**Proposed rule (narrow, cannot regress the normal case):** at plan build, when two
+depots claim the same path, an entry WITH chunks beats a size-0/chunks-0 Directory
+entry, and the collision is logged. A legitimate directory entry never collides with a
+real file, so nothing else is affected.
