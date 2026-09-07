@@ -624,3 +624,25 @@ export interface StoreChangedPayload {
   deleted?: boolean
   invalidated?: boolean
 }
+
+/**
+ * `send`-kind channel fired by the Rust shell itself (`src-tauri/src/main.rs`'s `.setup()`,
+ * `WindowEvent::Focused(true)`) rather than by the renderer through the `sidecar_send`
+ * command — the FIRST channel on this transport with that origin. Every other `send`-kind
+ * constant in this file carries the `ipcRenderer.send` parity comment above (`makeListenerCaller`
+ * fired from `src/preload/ipc.ts`); this one has no preload call site and no renderer-side
+ * caller at all, so it does not appear in `RUST_INVOKE_CHANNELS` or any preload factory list.
+ *
+ * This does NOT contradict `SidecarRpcKind`'s direction-asymmetry note above — that note is
+ * scoped to `rustInvoke` frames only (sidecar→Rust, never the reverse). `send`-kind frames
+ * have always travelled shell→sidecar on the wire (`sidecar_send` writes them from Rust); what
+ * changes here is only WHO on the Rust side decides to write one — a `.setup()` window-event
+ * callback instead of a renderer-driven `ipcRenderer.send` call relayed through the command.
+ *
+ * Restores the Electron→Tauri cutover's dropped `mainWindow.on('focus', ...)` handler
+ * (`src/backend/main.ts:272-274`, deleted in `5643c7583`), which drove
+ * `SteamLibraryManager.refreshInstallState()` (D-01/D-02) so install/uninstall badges
+ * reconcile when the user refocuses the window after using the native Steam client. Carries
+ * no args — the sidecar-side listener re-derives everything it needs from its own state.
+ */
+export const SHELL_WINDOW_FOCUSED = 'shellWindowFocused' as const

@@ -58,6 +58,11 @@ const READY_SENTINEL: &str = "__GAMELIB_SIDECAR_READY__";
 /// Mirrors FRONTEND_MESSAGE_EVENT.
 const FRONTEND_MESSAGE_EVENT: &str = "frontend_message";
 
+/// `send`-kind channel this shell writes to the sidecar's stdin from `.setup()`'s
+/// `WindowEvent::Focused(true)` handler, restoring the install-badge reconciliation trigger
+/// dropped in the Electron to Tauri cutover. Mirrors SHELL_WINDOW_FOCUSED.
+const SHELL_WINDOW_FOCUSED: &str = "shellWindowFocused";
+
 /// Reserved channel the store-snapshot command invokes on.
 const STORE_SNAPSHOT_CHANNEL: &str = "sidecar:store-snapshot";
 
@@ -9235,6 +9240,71 @@ fn main() {
                         "[shell] WARN: exitToTray: no '{MAIN_WINDOW_LABEL}' window to attach a close handler to"
                     ),
                 }
+            }
+
+            // Restores the install-badge reconciliation trigger dropped in the Electron to
+            // Tauri cutover (D-01/D-02): Electron's `mainWindow.on('focus', ...)`
+            // (`src/backend/main.ts:272-274`, deleted in `5643c7583`) drove a store manager's
+            // install-state refresh so badges reconcile after the window regains focus following
+            // an install/uninstall performed outside this app.
+            //
+            // Attached as a SECOND `on_window_event` listener on the SAME window as the
+            // `exitToTray` handler above. That is safe because the runtime dispatcher's
+            // `on_window_event` is additive -- it dispatches an `AddEventListener` message and
+            // returns a fresh listener id per call, not a single-slot setter -- so this
+            // registration cannot silently replace or disturb the close handler.
+            //
+            // `Focused(true)` ONLY, never `Focused(false)`: `WindowEvent::Focused(bool)` fires
+            // on both the gain and the loss of focus, and matching only the `true` arm keeps
+            // this a read-triggering signal on refocus, never on blur (T-03-03: no action is
+            // taken from data the window itself does not control -- a blur carries nothing worth
+            // reacting to here).
+            //
+            // Fires unconditionally, with no `!tray_settings.no_tray_icon` gate unlike
+            // `exitToTray` above: refocusing the window is a normal interaction whether or not a
+            // tray exists, and gating this on tray presence would silently stop badge
+            // reconciliation for every user who has disabled the tray icon.
+            match app.get_webview_window(MAIN_WINDOW_LABEL) {
+                Some(focus_window) => {
+                    let focus_app_handle = app.handle().clone();
+                    focus_window.on_window_event(move |event| {
+                        if let tauri::WindowEvent::Focused(true) = event {
+                            let Some(state) = focus_app_handle.try_state::<Arc<SidecarState>>()
+                            else {
+                                eprintln!(
+                                    "[shell] WARN: window focus refresh: no sidecar state -- skipping"
+                                );
+                                return;
+                            };
+                            let state = state.inner().clone();
+                            thread::spawn(move || {
+                                let req = SidecarRpcRequest {
+                                    id: state.next_id(),
+                                    kind: "send",
+                                    channel: SHELL_WINDOW_FOCUSED.to_string(),
+                                    args: Vec::new(),
+                                };
+                                if send_trace_enabled() {
+                                    eprintln!(
+                                        "[shell] send-trace: window focus refresh entered for '{}'",
+                                        req.channel
+                                    );
+                                }
+                                if let Err(e) = state.write_frame(&req) {
+                                    eprintln!(
+                                        "[shell] WARN: window focus refresh: write_frame failed: {e}"
+                                    );
+                                }
+                            });
+                        }
+                    });
+                    eprintln!(
+                        "[shell] window focus refresh: listener attached to '{MAIN_WINDOW_LABEL}'"
+                    );
+                }
+                None => eprintln!(
+                    "[shell] WARN: window focus refresh: no '{MAIN_WINDOW_LABEL}' window to attach a focus listener to"
+                ),
             }
 
             // Seed the recent-games cache before the menu is built, so the section is
