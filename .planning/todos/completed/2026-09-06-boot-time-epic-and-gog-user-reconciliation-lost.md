@@ -2,7 +2,22 @@
 created: 2026-09-06
 title: "Boot-time Epic/GOG user reconciliation is lost — stale Epic userInfo and stale GOG user details both survive indefinitely"
 area: tauri-sidecar
-status: OPEN
+status: "RESOLVED 2026-09-08 by quick-260908-fre. Ported the deleted main.ts:442-457 side
+  effect into the Tauri sidecar as reconcileStoreUsersWhenOnline() (Block E in
+  src/backend/sidecar/bootstrap.ts), called once from init() behind a module-scope guard
+  (storeUserReconcileInitialized). Bundle-level receipt: the log string
+  'User Not Found, removing it from Store' now appears 1 time in build/main/sidecar.js
+  (1363535 bytes, 2026-09-08 11:43), versus 0 occurrences in the original
+  1351269-byte/2026-09-06 10:27 bundle this todo's evidence was taken against. Honesty
+  note (established fact 4 of the executing plan): the Epic leg was already PARTIALLY
+  mitigated before this fix -- LegendaryUser.getUserInfo() already calls
+  configStore.delete('userInfo') lazily on its own read path -- so this todo's Epic
+  finding was about the boot-time proactive reconciliation specifically being absent,
+  not about the key never being cleared under any circumstance. This fix does not touch
+  storeManagers/legendary/user.ts or storeManagers/gog/user.ts themselves (the files:
+  list above); it adds the boot-time caller that was missing. Dedicated test suite:
+  src/backend/sidecar/__tests__/bootstrapUserReconcile.test.ts (7 cases, 3 mandated
+  mutation proofs executed RED then restored)."
 severity: medium
 source: "quick-260906-gej, sweep FINDINGS.md section A row A4"
 files:
