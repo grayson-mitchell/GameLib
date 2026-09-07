@@ -88,7 +88,11 @@ const EXPECTED: Record<string, { invoke: number; send: number }> = {
   'shellFilesFlowRegistration.ts': { invoke: 3, send: 17 },
   'shortcutsFlowRegistration.ts': { invoke: 4, send: 3 },
   'steamAuthFlowRegistration.ts': { invoke: 18, send: 1 },
-  'steamFlowRegistration.ts': { invoke: 2, send: 0 },
+  // Quick 260908-ci2 (2026-09-08): send 0 -> 1 -- `shellWindowFocused`, restoring the
+  // install-badge reconciliation trigger dropped in the Electron to Tauri cutover
+  // (`mainWindow.on('focus', ...)`, `main.ts:272-274`, deleted in `5643c7583`). Shell-originated
+  // (the Rust `.setup()` window-focus handler), not renderer-originated. Invoke count unchanged.
+  'steamFlowRegistration.ts': { invoke: 2, send: 1 },
   // Phase 40 Plan 05 (REQ-40-02/REQ-40-05): new module — the 10 in-app store-embed channels
   // (9 lifecycle/navigation invoke arms, including the takeNavEvents drain implemented by quick
   // task `260905-e61` for GAP-D; 1 send arm for the fire-and-forget bounds courier, D-18/D-29).
@@ -155,10 +159,26 @@ function read(file: string): string {
   return readFileSync(join(SIDECAR_DIR, file), 'utf-8')
 }
 
+// A channel-name argument is either a string literal (`'channel'`) or -- broadened for
+// quick-260908-ci2's `ipcMain.on(SHELL_WINDOW_FOCUSED, ...)`, the first identifier-based
+// registration on any file this census tracks -- an imported SHARED-CONSTANT identifier
+// followed by a comma. The trailing comma is required so a bare function reference passed
+// as the listener argument itself (never valid in the channel-name position, but not a
+// pattern this regex should reason about either way) cannot be miscounted.
+const CHANNEL_ARG_SOURCE = "'|[A-Z][A-Z0-9_]*\\s*,"
+
 function countRegistrations(source: string): { invoke: number; send: number } {
   return {
-    invoke: (source.match(/ipcMain\.handle\(\s*'/g) ?? []).length,
-    send: (source.match(/ipcMain\.on\(\s*'/g) ?? []).length
+    invoke: (
+      source.match(
+        new RegExp(`ipcMain\\.handle\\(\\s*(?:${CHANNEL_ARG_SOURCE})`, 'g')
+      ) ?? []
+    ).length,
+    send: (
+      source.match(
+        new RegExp(`ipcMain\\.on\\(\\s*(?:${CHANNEL_ARG_SOURCE})`, 'g')
+      ) ?? []
+    ).length
   }
 }
 

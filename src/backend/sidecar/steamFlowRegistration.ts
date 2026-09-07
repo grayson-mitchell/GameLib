@@ -116,6 +116,10 @@ import { dispatchSteamLaunch } from '../storeManagers/steam/launchDispatch'
 import { HumbleLibrary } from '../humble/library'
 import { logInfo, logWarning, LogPrefix, RunnerToLogPrefixMap } from '../logger'
 import type { LaunchParams, Runner, StatusPromise } from 'common/types'
+// SHELL_WINDOW_FOCUSED: the third channel registerSteamFlows() below owns (quick-260908-ci2).
+// Adds zero new files to this module's curated import graph -- `libraryManagerMap` (the
+// consumer below dispatches through it) is already this file's load-bearing FIRST import.
+import { SHELL_WINDOW_FOCUSED } from 'common/types/sidecarTransport'
 
 /**
  * The `refreshLibrary` handler body, extracted to a named function (rather
@@ -383,12 +387,57 @@ async function handleLaunch(
 }
 
 /**
- * Registers the read-flow (`refreshLibrary`) and action-flow (`launch`)
- * invoke handlers. Called once from `handlers.ts` — this module owns no
- * side effects at import time beyond registration; the caller decides when
+ * Registers `refreshLibrary` (read-flow), `launch` (action-flow), and
+ * `shellWindowFocused` (install-state refresh trigger) — the first two as
+ * `ipcMain.handle` invoke handlers, the last as an `ipcMain.on` send
+ * listener. Called once from `handlers.ts` — this module owns no side
+ * effects at import time beyond registration; the caller decides when
  * registration onto the handler registry happens.
  */
 export function registerSteamFlows(): void {
   ipcMain.handle('refreshLibrary', handleRefreshLibrary)
   ipcMain.handle('launch', handleLaunch)
+
+  // Restores the install-badge reconciliation trigger dropped in the
+  // Electron to Tauri cutover (D-01/D-02): Electron's
+  // `mainWindow.on('focus', ...)` (`src/backend/main.ts:272-274`, deleted
+  // in `5643c7583`) called `libraryManagerMap['steam']?.refreshInstallState
+  // ?.()` directly from the focus listener. Under the sidecar transport
+  // that listener lives in the Rust shell instead (`.setup()`'s
+  // `WindowEvent::Focused(true)` handler, `src-tauri/src/main.rs`), which
+  // writes a `send`-kind `SHELL_WINDOW_FOCUSED` frame; this is that frame's
+  // consumer.
+  //
+  // `ipcMain.on`, NEVER `ipcMain.handle` — this is fire-and-forget, no
+  // response frame is written back, mirroring the `logoutSteam` guard shape
+  // at `steamAuthFlowRegistration.ts:197`.
+  //
+  // The PRODUCER is the Rust shell, not the renderer: there is no preload
+  // export for this channel and no `IPC-PORT-INVENTORY.md` line — the
+  // `trayResolveRunner` precedent (a channel with no renderer call site),
+  // but `send`-kind rather than `rustInvoke`-kind, and the first channel on
+  // this transport to originate from the shell in that direction.
+  //
+  // Both optional chains are preserved from the Electron original:
+  // `refreshInstallState` is declared optional on the shared
+  // `LibraryManager` interface (`src/common/types/game_manager.ts:125`) —
+  // only Steam implements it. `.catch()` guards the returned promise
+  // (mirroring `logoutSteam`'s guard, not decorative): `refreshInstallState`
+  // does real ACF disk I/O and can reject on a bad library root, and an
+  // unguarded fire-and-forget rejection can crash the sidecar.
+  //
+  // SILENT-FAILURE HAZARD: an unregistered or misnamed `send` channel
+  // produces nothing at all — no error, no timeout, no log line — which is
+  // why `steamFocusRefreshWire.test.ts` pins this listener's channel name
+  // to the exact string literal the Rust producer writes.
+  ipcMain.on(SHELL_WINDOW_FOCUSED, () => {
+    libraryManagerMap['steam']
+      ?.refreshInstallState?.()
+      .catch((error) =>
+        logWarning(
+          ['shellWindowFocused: refreshInstallState failed:', error],
+          LogPrefix.Backend
+        )
+      )
+  })
 }
