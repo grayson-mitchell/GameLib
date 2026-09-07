@@ -1,9 +1,9 @@
 ---
 created: 2026-08-24T00:00:00.000Z
-title: "Three dialog-shim collapse defects (VCRuntime 'don't show again', Snap checkbox, sideloaded-game unsaved-progress fail-open) across 10 native showMessageBox sites — plus the still-unresolved native-vs-in-app policy question"
+title: "Two live dialog-shim collapse defects (VCRuntime 'don't show again', Snap checkbox) plus one dead-code site, across 10 native showMessageBox sites — and the still-unresolved native-vs-in-app policy question"
 area: ui-dialogs
 status: OPEN
-severity: major
+severity: minor
 files:
   - src/backend/platform/index.ts
   - src/backend/utils.ts
@@ -28,10 +28,12 @@ wrong:
 - Its census counted sites (`main.ts:585`, `updater.ts:35`, `updater.ts:59`) that no longer exist
   at HEAD, and every one of its surviving line numbers had drifted.
 
-Meanwhile, three genuinely live defects — introduced after the original was written, by the Rust
-dialog shim's narrower contract — were recorded nowhere. They are this rewrite's headline.
+Meanwhile, defects introduced after the original was written — by the Rust dialog shim's narrower
+contract — were recorded nowhere. They are this rewrite's headline. **Two are live** (both
+platform-gated away from macOS); a third, first recorded here as live, was withdrawn the same day
+as dead code — see section 3.
 
-## The three live defects
+## The dialog-shim collapse defects (2 live, 1 withdrawn)
 
 ### 1. VCRuntime "Don't show again" is unreachable (Windows-only)
 
@@ -61,26 +63,49 @@ read back, so `result.checkboxChecked` is always `false` and the preference is n
 The Snap warning recurs on every `frontendReady`, regardless of what the user checks.
 **Linux/Snap-only** (`isSnap` gate).
 
-### 3. Sideloaded-game unsaved-progress guard is fail-open (reachable on macOS)
+### 3. Sideloaded-game unsaved-progress guard — DEAD CODE, not a live defect
+
+> **CORRECTED 2026-09-07** — see the correction note at the end of this section. The first
+> version of this rewrite called this a live, macOS-reachable, fail-open data-loss guard. That
+> was wrong.
 
 `src/backend/storeManagers/storeManagerCommon/games.ts:121` computes `choice` from
 `dialog.showMessageBoxSync(browserGame, { buttons: ['Yes', 'No'], ... })` on the browser window's
-`will-prevent-unload` event, then (per the surrounding logic) treats `choice === 0` ("Yes, quit")
-as leave-confirmed and calls `event.preventDefault()` to allow the unload — i.e. this is the
-"Any unsaved progress might be lost" confirmation for sideloaded browser games.
+`will-prevent-unload` event, then treats `choice === 0` ("Yes, quit") as leave-confirmed and calls
+`event.preventDefault()` to allow the unload — the "Any unsaved progress might be lost"
+confirmation for sideloaded browser games. `showMessageBoxSync` in the shim
+(`src/backend/platform/index.ts:506`) is a logged no-op that only does `console.warn(...)` and
+unconditionally `return 0` — and `0` is exactly the "Yes, quit" response.
 
-`showMessageBoxSync` in the shim is a logged no-op: `src/backend/platform/index.ts`'s
-`showMessageBoxSync` implementation only does `console.warn(...)` and unconditionally `return 0`
-— synchronous dialogs cannot cross the async `rustInvoke` transport (D-03), so it never shows
-anything and never asks the user. Because `0` is exactly the "Yes, quit" response, the guard is
-**fail-open**: it always silently answers "yes, discard my progress" without ever asking. This is
-a data-loss guard that no longer guards. **Reachable on macOS** (and any platform) via sideloaded
-browser games — this is not behind a platform gate the way defects 1 and 2 are.
+**But that handler is never registered, so the no-op is never reached.** Four statements earlier,
+`openNewBrowserGameWindow` (`games.ts:47`) calls `new BrowserWindow({...})` at `games.ts:87`.
+`backend/platform`'s `BrowserWindow` is an object literal carrying only `getAllWindows`
+(`platform/index.ts:753`) — `new` on it throws `TypeError` unconditionally. Construction throws,
+the function never reaches `webContents.on('will-prevent-unload', ...)` at `:120`, and
+`showMessageBoxSync` is never called.
 
-**Severity note:** defects 1 and 2, taken alone, would each be minor — they are platform-gated
-inconveniences (a nag that won't go away). Defect 3 is what raises this todo's severity to
-`major`: it is a fail-open data-loss guard reachable on the operator's own platform, not merely a
-persistent-annoyance bug.
+There is no second shell where this path works. `package.json` contains zero `electron`
+references, `node_modules/electron` does not exist, and `backend/platform` has no delegation
+switch — it is the sole implementation on every platform. So this is not platform-gated like
+defects 1 and 2; it is unreachable everywhere.
+
+**A fix at `games.ts:121` alone would change no observable behaviour.** The owner of this surface
+is **D-35-15-01** — "browser games broken under Tauri, been since sidecar existed... Status: open,
+unowned. Pre-existing runtime break, NOT a regression"
+(`.planning/phases/35-electron-cutover-remove-the-electron-build/deferred-items.md:1216`), whose
+recorded real fix is a Tauri child window, "the same shape as the embedded store browser (spikes
+016–018)". `games.ts:30` carries the same note inline. That is phase-sized work and out of this
+todo's scope; the confirmation dialog should be reconsidered as part of it, not before it.
+
+**Correction note (2026-09-07):** the original defect-3 claim in this rewrite was written from
+the call site outward without a reachability check on its enclosing function — the same class of
+error this file's own "Rewrite notice" was created to correct. Recorded rather than silently
+edited so the next reader can see the mistake and its cause. The two remaining defects were
+re-checked at the same time and both stand.
+
+**Severity note:** defects 1 and 2 are each platform-gated inconveniences — a nag that will not go
+away, on Windows and on Linux/Snap respectively. Neither is reachable on macOS. With defect 3
+withdrawn, nothing here justifies `major`, so severity is `minor`.
 
 ## Common cause
 
@@ -93,11 +118,14 @@ axes:
 2. **No checkbox readback.** `checkboxChecked` is always hard-coded `false` on every return path.
    → Defect 2.
 3. **No synchronous form.** `showMessageBoxSync` cannot cross the async `rustInvoke` transport, so
-   it is a logged no-op that always returns `0`. → Defect 3.
+   it is a logged no-op that always returns `0`. Still a true property of the shim, but it
+   currently has **zero live consumers** — its only call site (`games.ts:121`) is unreachable, per
+   section 3. Axis 3 is therefore a latent trap for the next caller, not a present defect.
 
 Any caller relying on a third button, a checkbox result, or a real synchronous prompt will
 silently degrade under the sidecar rather than error — because each shim method still returns
-successfully with a plausible-looking value.
+successfully with a plausible-looking value. That is what makes axis 3 worth keeping on record
+even with no consumer today.
 
 ## The census (10 live sites)
 
@@ -118,7 +146,7 @@ replaces the original's "~14" — that count included sites (`main.ts:585`, `upd
 | `src/backend/protocol.ts:180` | protocol-handler "not installed, install it?" | `cancelId: 1` |
 | `src/backend/sidecar/appShellFlowRegistration.ts:389` | Snap warning | uses `checkboxLabel`/`checkboxChecked` — **DEFECT 2** |
 | `src/backend/storeManagers/steam/library.ts:1772` | `promptI386Recovery` | fire-and-forget `void` |
-| `src/backend/storeManagers/storeManagerCommon/games.ts:121` | sideloaded browser game `will-prevent-unload` | `showMessageBoxSync` — **DEFECT 3** |
+| `src/backend/storeManagers/storeManagerCommon/games.ts:121` | sideloaded browser game `will-prevent-unload` | `showMessageBoxSync` — **DEAD CODE**, unreachable behind the `new BrowserWindow` throw at `:87` (D-35-15-01) |
 
 ## What has already closed
 
@@ -172,12 +200,16 @@ preserve its response polarity exactly.
 
 ## Suggested shape
 
-1. **Fix the three shim-collapse defects.** They are independent of the policy question below
+1. **Fix the two live shim-collapse defects.** They are independent of the policy question below
    and can land first: extend the shim's 3-button mapping (or route the VCRuntime dialog through
    a 2-button + separate persisted-preference shape) for defect 1; wire a real checkbox-state
-   round trip (or drop the checkbox and use a separate "don't ask again" mechanism) for defect 2;
-   and replace the `showMessageBoxSync` fail-open no-op at the sideloaded-game unload guard with
-   an async confirmation for defect 3, since that one is a live data-loss risk.
+   round trip (or drop the checkbox and use a separate "don't ask again" mechanism) for defect 2.
+   Both are platform-gated off macOS, so neither can be verified on the operator's own machine —
+   scope accordingly.
+
+   **Not in scope:** the sideloaded-game unload confirmation (section 3). It is dead code behind
+   D-35-15-01's `new BrowserWindow` throw, and its real owner is that item's Tauri-child-window
+   fix, which is phase-sized. Fixing the dialog call alone would change nothing observable.
 2. **Decide the native-vs-in-app policy.** Which confirmations are legitimately OS-native (quit,
    updater, pre-window-ready, Rosetta) versus in-app (anything reached from a settings surface),
    and record the rule. This question from the original todo is still open and still applies to
