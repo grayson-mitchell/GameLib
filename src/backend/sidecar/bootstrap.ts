@@ -78,7 +78,17 @@ import { installDevSecretVault } from './devSecretVault'
 // "App offline, skipping install" even when fully online. Paired with the sidecar
 // `net.isOnline()` stub (electronStub.ts) so the very first status check falls through to the
 // real `pingSites()` ping instead of pinning `'offline'` permanently.
-import { initOnlineMonitor } from '../online_monitor'
+import { initOnlineMonitor, runOnceWhenOnline } from '../online_monitor'
+// Block E (todo 2026-09-06, quick-260908-fre). `grep -rn
+// "storeManagers/legendary/user\|storeManagers/gog/user" src/backend/sidecar/` confirms
+// `./handlers` (Step 2, above) already pulls both classes in transitively:
+// `handlers.ts` imports `registerRunnerAuthFlows` from `./runnerAuthFlowRegistration`, which
+// itself imports `LegendaryUser` from `../storeManagers/legendary/user` and `GOGUser` from
+// `../storeManagers/gog/user`. So these three imports add NO new module to the sidecar
+// bundle — each is a second binding onto an already-resident module, not a new edge.
+import { LegendaryUser } from '../storeManagers/legendary/user'
+import { GOGUser } from '../storeManagers/gog/user'
+import { configStore } from '../constants/key_value_stores'
 // Deviation (Rule 3 — blocking, Phase 27 Plan 04): `backend/logger`'s
 // `logInfo`/`logWarning`/`logError` (called throughout the REAL Steam
 // read/action flow code Plan 04 wires up — e.g. library.ts's refresh()
@@ -180,6 +190,13 @@ let protocolUrlHandlerRegistered = false
 // reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times per
 // file, production calls it once.
 let playtimeLockClearInitialized = false
+// Guards reconcileStoreUsersWhenOnline() below (Block E, todo 2026-09-06, quick-260908-fre).
+// Same reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times
+// per file, and without this guard each call would register another
+// runOnceWhenOnline(...) — either invoking the reconciliation body again immediately (if
+// already online) or stacking another 'online' listener on connectivityEmitter (if not).
+// Production calls init() once.
+let storeUserReconcileInitialized = false
 
 /**
  * Delivers a startup (cold-start) `gamelib://` deep link to `handleProtocol`, if `argv`
@@ -307,6 +324,89 @@ export function clearStrandedPlaytimeSyncLock(): void {
   } catch (error) {
     logWarning(
       `[bootstrap] clearStrandedPlaytimeSyncLock() failed: ${String(error)}`,
+      LogPrefix.Backend
+    )
+  }
+}
+
+/**
+ * Restores the boot-time Epic/GOG user reconciliation deleted with `src/backend/main.ts` in
+ * commit `5643c7583` ("feat(35-14)!: delete the Electron entry points") (todo 2026-09-06,
+ * quick-260908-fre). The deleted source, `main.ts:442-457`, ran inside `app.whenReady()`:
+ *
+ *     runOnceWhenOnline(async () => {
+ *       if (!LegendaryUser.isLoggedIn()) {
+ *         logInfo('User Not Found, removing it from Store', { prefix: ..., forceLog: true })
+ *         configStore.delete('userInfo')
+ *       }
+ *       if (GOGUser.isLoggedIn()) GOGUser.getUserDetails()
+ *     })
+ *
+ * Honesty note (established fact 4): `LegendaryUser.getUserInfo()` (`legendary/user.ts:679-681`)
+ * already does `configStore.delete('userInfo')` lazily, whenever something calls it while
+ * logged out. This function restores the EAGER boot-time leg only — it is a second, earlier
+ * trigger for the same delete, not the sole reconciliation mechanism.
+ *
+ * The callback passed to `runOnceWhenOnline` is deliberately SYNCHRONOUS (`() => {...}`), unlike
+ * the deleted `main.ts` version's `async` callback, which was never `await`ed for anything and
+ * gained nothing from being `async`. A sync callback makes the floated `getUserDetails()`
+ * promise and its `.catch` below syntactically obvious, instead of hiding a floated call behind
+ * an unawaited `async` function body.
+ *
+ * TWO try/catch layers, not one — this is the subtle part. `runOnceWhenOnline` either invokes
+ * the callback immediately (if already online) or defers it to
+ * `connectivityEmitter.once('online', ...)` (if offline), so when offline the callback body runs
+ * on a LATER turn, outside the stack frame of any `try` wrapping the `runOnceWhenOnline(...)`
+ * call itself. An outer `try { runOnceWhenOnline(cb) } catch {}` therefore protects only the
+ * registration, never the deferred work. Both `LegendaryUser.isLoggedIn()` (an `existsSync`) and
+ * `configStore.delete()` can throw, so the callback body gets its OWN inner try/catch too. This
+ * repo's standing rule is that a boot-time block must never fail boot — here that costs two
+ * guards, not one. Do not "simplify" this back down to one.
+ *
+ * `GOGUser.getUserDetails()`'s promise gets an explicit `.catch`: `runOnceWhenOnline`'s callback
+ * return value is discarded, so an unhandled rejection would otherwise surface only via
+ * `processGuards`' process-wide net. Relying on that net for a known-floatable promise is exactly
+ * what `deliverStartupProtocolUrl` and the migrations block above already refuse to do in this
+ * file. `getUserDetails()` does `await axios.get(...).catch(...)` internally but can still reject
+ * earlier — `getCredentials()` (`gog/user.ts:303`) spawns a `gogdl auth` subprocess.
+ *
+ * The ported `logInfo` line is deliberately VERBATIM, including `forceLog: true`, and does NOT
+ * carry this file's local `[bootstrap] ` message-prefix convention: the literal
+ * `'User Not Found, removing it from Store'` is the exact string the todo's bundle-level evidence
+ * greps for, and it is the receipt that proves this port shipped. Prefixing it would silently
+ * invalidate that evidence. The two catch-arm diagnostics below are new lines, so they DO follow
+ * the local `[bootstrap] ` convention.
+ */
+export function reconcileStoreUsersWhenOnline(): void {
+  try {
+    runOnceWhenOnline(() => {
+      try {
+        if (!LegendaryUser.isLoggedIn()) {
+          // Verbatim, unprefixed — see the doc comment above (D5).
+          logInfo('User Not Found, removing it from Store', {
+            prefix: LogPrefix.Backend,
+            forceLog: true
+          })
+          configStore.delete('userInfo')
+        }
+        if (GOGUser.isLoggedIn()) {
+          GOGUser.getUserDetails().catch((error: unknown) => {
+            logWarning(
+              `[bootstrap] reconcileStoreUsersWhenOnline: GOGUser.getUserDetails() failed: ${String(error)}`,
+              LogPrefix.Backend
+            )
+          })
+        }
+      } catch (error) {
+        logWarning(
+          `[bootstrap] reconcileStoreUsersWhenOnline: callback failed: ${String(error)}`,
+          LogPrefix.Backend
+        )
+      }
+    })
+  } catch (error) {
+    logWarning(
+      `[bootstrap] reconcileStoreUsersWhenOnline: could not be started: ${String(error)}`,
       LogPrefix.Backend
     )
   }
@@ -746,6 +846,21 @@ export function init(
   if (!playtimeLockClearInitialized) {
     playtimeLockClearInitialized = true
     clearStrandedPlaytimeSyncLock()
+  }
+  // Block E — boot-time Epic/GOG user reconciliation (todo 2026-09-06, quick-260908-fre).
+  // Placement (D2): must be after `initLogger()` above (the helper logs, and `heroicLogWriter`
+  // is unset before that — the standing `sidecar-console-and-logger-are-invisible` finding);
+  // must be after `initOnlineMonitor()` above (it calls `runOnceWhenOnline`, the same
+  // requirement Block B's `fetchLastestReleases()` comment already records); and runs before
+  // READY so the reconciliation is at least queued before the frontend can issue its first
+  // `getUserInfo`-shaped RPC. Appending after Block D satisfies all three while leaving the
+  // existing A→B→C→D sequence byte-identical. `reconcileStoreUsersWhenOnline()` itself never
+  // fails boot (see its own header), so no additional try/catch is needed at this call site —
+  // matches Block D's call site shape, which wraps its own body rather than duplicating that
+  // here too.
+  if (!storeUserReconcileInitialized) {
+    storeUserReconcileInitialized = true
+    reconcileStoreUsersWhenOnline()
   }
   output.write(`${READY_SENTINEL}\n`)
   // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
