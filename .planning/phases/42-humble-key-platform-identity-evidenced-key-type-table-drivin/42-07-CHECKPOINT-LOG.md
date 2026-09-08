@@ -1,4 +1,4 @@
-# 42-07 Task 2 — operator checkpoint log (IN PROGRESS)
+# 42-07 Task 2 — operator checkpoint log (COMPLETE)
 
 Running record of the `checkpoint:human-verify` gate. **This is deliberately NOT
 `42-07-SUMMARY.md`** — creating that file early would set `has_summary: true` and make the
@@ -8,14 +8,17 @@ line below for the live count — do not trust a number hard-coded in this parag
 Operator answers are transcribed as given. Nothing in this file was inferred, auto-approved,
 or generated on the operator's behalf.
 
-Status: **4 of 6 answered** (1, 2, 3, 5). Items 4 and 6 outstanding.
+Status: **COMPLETE — all 6 items resolved.** See the summary table near the end.
 
 > **CAVEAT — item 3's PASS is against the PRE-REDESIGN row.** The operator subsequently
 > directed a row redesign (quick task `260908-*`, "drop origin, title line height"): the store
 > icon moves to the left, grows to the title line-box, the store-name text and the
 > `· {{origin}}` segment are removed. That changes the exact rendering item 3 verified.
-> **Item 3 must be re-run after the redesign lands.** Item 4 is SUPERSEDED — it measured the
-> reserved-glyph-box geometry inside `.humbleKeyRowCaption`, which the redesign replaces.
+> **Item 3 was deliberately NOT re-run** — superseded again by the operator's subsequent
+> Humble Keys screen redesign (2026-09-09), which restructures the row a third time. Verifying
+> the `vo4` treatment would have been throwaway work. The unverified surface is carried by two
+> open `ready: live-gate` todos instead; see "Residue" at the end. Item 4 is SUPERSEDED — it
+> measured reserved-glyph-box geometry inside `.humbleKeyRowCaption`, which `vo4` replaced.
 
 ---
 
@@ -122,9 +125,65 @@ Two constraints carried into the follow-up task:
   Once that text is gone the rationale inverts and screen-reader users lose the store
   entirely.
 
+## 6. Auto-settle and its Undo — **PASS**
+
+Operator, 2026-09-09, verbatim: *"3, confirmed moved successfully"* / *"4. refreshed and stayed"*.
+
+Operator-observed: Undo moved the row from `Redeemed` back to `Revealed`, and after a
+further sync it **stayed** in `Revealed`.
+
+Orchestrator-verified from disk, before and after (the visual "stayed put" is also what a UI
+that simply never re-ran the settle would look like, so the decline record is the load-bearing
+evidence, not the row position):
+
+| check | before | after |
+|---|---|---|
+| `humble_settle_declined.json` | did not exist | **exists, 1 record, field `declinedAt`** |
+| local-redeemed overlay entries | 14 | **13** |
+| entries with `source: 'ownership-exact'` | 12 | **11** |
+| entries with absent `source` (legacy) | 2 | 2 — untouched |
+| undone composite still in local-redeemed | — | **False** |
+
+**The decisive observation:** the undone key remains `state: REVEALED`,
+`ownedElsewhere: true`, `matchConfidence: exact` — it still satisfies EVERY precondition for
+the 42-03 auto-settle. It did not re-settle across a subsequent sync. The only thing
+suppressing it is the decline record, so this is a genuine falsification test of the
+durability guard rather than an absence-of-evidence pass.
+
+**The fuzzy-match half was verified by measurement, not by eye.** All 12 auto-settled
+entries joined back to library rows with `matchConfidence: exact`; **zero** of the operator's
+8 fuzzy-matched keys were settled. D-42's "Not the same game" boundary held.
+
+Also confirms 42-02's legacy path against real data: the 2 overlay entries with no `source`
+field were left untouched by the undo and continue to default to `'user'`.
+
 ---
 
-## Still outstanding — operator input required
+## Gate complete — all six items resolved
+
+| # | Item | Outcome |
+|---|---|---|
+| 1 | A1 `key_type` | **CORRECTED** → `gog_keyless`; fixed and live-confirmed (QT `260908-uic`) |
+| 2 | Four display names | **APPROVED AS SHIPPED** (naming judgement, not observed) |
+| 3 | Both themes | **PASS**, against the pre-`vo4` rendering — see residue below |
+| 4 | No layout shift | **SUPERSEDED** by the `vo4` redesign |
+| 5 | GOG deep link | **NOT APPLICABLE** — keyless entitlement carries no code |
+| 6 | Auto-settle + Undo | **PASS**, operator-observed and disk-verified |
+
+### Residue carried out of this gate (named, not hidden)
+
+- **Item 3's PASS is against a superseded rendering.** Quick task `260908-vo4` subsequently
+  moved the icon, resized it from the title line box, and changed how it gets its colour
+  (explicit `color: var(--text-secondary)` instead of inheriting through
+  `.humbleKeyRowCaption`). The current build's theme behaviour is therefore UNVERIFIED. It was
+  deliberately not re-run: the operator has since specified a full Humble Keys screen
+  redesign (search/sort/filter chrome, column headers, a restructured three-column row), so
+  re-verifying the `vo4` treatment would be throwaway work. Covered by the two open
+  `ready: live-gate` todos:
+  `2026-09-08-humble-key-row-store-logo-fill-currentcolor-unverified-live.md` and
+  `2026-09-08-humble-key-row-store-icon-geometry-unverified-live.md`.
+- **Phase 42's GOG deep link (42-05) has no reachable user**, now for an evidenced reason.
+- **Item 4 has no successor check yet** — re-scope it against the redesigned row.
 
 - **4. No layout shift.** SUPERSEDED by the redesign — it measured `.humbleKeyRowCaption`'s
   reserved-glyph-box geometry, which the redesign replaces. Do not collect numbers for a
