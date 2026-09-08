@@ -33,6 +33,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  truncateSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -45,6 +46,7 @@ import { fetchChunk } from '../depot/decompress'
 import { getBottleDir, getBottleSteamappsDir } from '../bottle'
 import { DEFAULT_STEAM_BOTTLE_NAME } from '../constants'
 import { buildAppManifestText } from '../depot/manifest'
+import { logWarning } from 'backend/logger'
 
 // ── Logger mock (factory form — prevents transitive fs-extra native crash) ───
 jest.mock('backend/logger', () => ({
@@ -365,6 +367,262 @@ describe('D-UAT-09 (21-17): abort-aware finalize — cancel can never write Stat
     const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
     expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
     expect(acfText).not.toMatch(/"StateFlags"\s+"4"/)
+  })
+})
+
+/**
+ * Quick 260908-nbd: end-to-end proof that verifyStructuralIntegrity (added
+ * to depot/reconcile.ts, wired into downloadDepotFiles) closes the
+ * structural half of the completeness gate — a post-write-damaged tree can
+ * no longer earn StateFlags=4, while a genuinely complete run still does.
+ *
+ * Modelled on Test D (line 301 above), which stays green and unmodified as
+ * the single-file version of the "no regression" guard (test 3 below is its
+ * two-file sibling).
+ *
+ * The damage in tests 1/2 must land AFTER file A's own write is complete on
+ * disk — otherwise the run would fail for a different, unrelated reason
+ * (downloadSingleFile's own per-file whole-file sha1 check, or a raw ENOENT/
+ * EISDIR write error) and measure nothing about the NEW post-download check.
+ * `waitForFileWritten` polls for file A's correct on-disk content (the
+ * earliest point at which downloadSingleFile could plausibly have finished
+ * verifying it) before an additional fixed settle margin lets its own
+ * fd.close()+sha1File readback actually complete — both are sub-millisecond
+ * operations on a few bytes of local tmpfs, so the margin is generous, not
+ * load-bearing precision.
+ */
+describe('quick 260908-nbd: post-download structural re-verification', () => {
+  let dir: string
+  const contentA = Buffer.from('file-a-original-content-untouched')
+  const contentB = Buffer.from('file-b-content-different-length-entirely')
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gamelib-260908-nbd-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  // downloadDepotFiles resolves every plan file's destination under
+  // installRoot = resolve(targetSteamappsDir, 'common', installdir)
+  // (depot.ts:2117-2121) — NOT directly under targetSteamappsDir itself
+  // (that's reserved for appmanifest_*.acf, per Steam's own layout). Every
+  // test below must reach into the game's actual install directory, never
+  // `dir` directly, or these paths silently never exist.
+  function gameFile(name: string): string {
+    return join(dir, 'common', 'SomeGame', name)
+  }
+
+  function waitForFileWritten(
+    path: string,
+    expected: Buffer,
+    timeoutMs = 3000
+  ): Promise<void> {
+    const deadline = Date.now() + timeoutMs
+    return new Promise((resolveWait, rejectWait) => {
+      const check = () => {
+        try {
+          if (readFileSync(path).equals(expected)) {
+            resolveWait()
+            return
+          }
+        } catch {
+          // not yet created / still being written — keep polling
+        }
+        if (Date.now() > deadline) {
+          rejectWait(
+            new Error(
+              `waitForFileWritten: ${path} never matched expected content within ${timeoutMs}ms`
+            )
+          )
+          return
+        }
+        setTimeout(check, 5)
+      }
+      check()
+    })
+  }
+
+  /** Two-file plan shared by tests 1-3 (must be the IDENTICAL plan shape so
+   *  the "no regression" guard in test 3 cannot silently diverge from the
+   *  damage tests). File A is the one damaged; file B is the vehicle whose
+   *  chunk-fetch mock performs the damage — this is the real cross-depot-
+   *  clobber mechanism (a later job's write clobbering an earlier file's
+   *  already-written destination), and it leaves zero failures recorded and
+   *  every job attempted — exactly the state that used to earn a 4. */
+  function setupTwoFilePlan(fakeClient: ReturnType<typeof makeFakeClient>) {
+    setupPlanPlumbing(fakeClient)
+    jest
+      .mocked(decryptFilename)
+      .mockImplementation((raw: string) =>
+        raw === 'enc-a' ? 'a.bin' : 'b.bin'
+      )
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'enc-a',
+          size: String(contentA.length),
+          sha_content: sha1Hex(contentA),
+          chunks: [
+            { sha: 'chunk-sha-a', cb_original: contentA.length, offset: 0 }
+          ]
+        },
+        {
+          filename: 'enc-b',
+          size: String(contentB.length),
+          sha_content: sha1Hex(contentB),
+          chunks: [
+            { sha: 'chunk-sha-b', cb_original: contentB.length, offset: 0 }
+          ]
+        }
+      ]
+    })
+  }
+
+  it('test 1 (the observed 38410 master.dat shape): file A is replaced with an empty directory while file B downloads — zero failures recorded, finalizes 1026 never 4, and logWarning names the damaged file', async () => {
+    const fakeClient = makeFakeClient()
+    setupTwoFilePlan(fakeClient)
+
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, depotChunk) => {
+        if ((depotChunk as { sha: string }).sha === 'chunk-sha-b') {
+          await waitForFileWritten(gameFile('a.bin'), contentA)
+          // Settle margin — see describe-block doc comment above.
+          await new Promise((r) => setTimeout(r, 50))
+          rmSync(gameFile('a.bin'), { force: true, recursive: true })
+          mkdirSync(gameFile('a.bin'))
+          return contentB
+        }
+        return contentA
+      })
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('done')
+    const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
+    expect(acfText).not.toMatch(/"StateFlags"\s+"4"/)
+
+    expect(jest.mocked(logWarning)).toHaveBeenCalledWith(
+      expect.stringContaining('a.bin'),
+      expect.anything()
+    )
+  })
+
+  it('test 2 (truncation): file A is truncated to a shorter length while file B downloads — zero failures recorded, finalizes 1026 never 4', async () => {
+    const fakeClient = makeFakeClient()
+    setupTwoFilePlan(fakeClient)
+
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, depotChunk) => {
+        if ((depotChunk as { sha: string }).sha === 'chunk-sha-b') {
+          await waitForFileWritten(gameFile('a.bin'), contentA)
+          await new Promise((r) => setTimeout(r, 50))
+          truncateSync(gameFile('a.bin'), 3)
+          return contentB
+        }
+        return contentA
+      })
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('done')
+    const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"1026"/)
+    expect(acfText).not.toMatch(/"StateFlags"\s+"4"/)
+  })
+
+  it('test 3 (no regression — the guard this plan most risks breaking): the IDENTICAL two-file plan with a benign fetchChunk, no damage at all, still finalizes StateFlags=4', async () => {
+    const fakeClient = makeFakeClient()
+    setupTwoFilePlan(fakeClient)
+
+    jest
+      .mocked(fetchChunk)
+      .mockImplementation(async (_hosts, _depotId, depotChunk) => {
+        return (depotChunk as { sha: string }).sha === 'chunk-sha-a'
+          ? contentA
+          : contentB
+      })
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('done')
+    const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"4"/)
+  })
+
+  it('test 4 (non-regular entries in a complete plan): a Directory(64) entry and a zero-size entry alongside a real file, downloaded cleanly, still finalizes StateFlags=4', async () => {
+    const fakeClient = makeFakeClient()
+    setupPlanPlumbing(fakeClient)
+    jest.mocked(decryptFilename).mockReturnValue('real-file.bin')
+    const realContent = Buffer.from('a real regular file')
+
+    const contentManifest = jest.requireMock(
+      'steam-user/components/content_manifest.js'
+    )
+    jest.mocked(contentManifest.parse).mockReturnValue({
+      files: [
+        {
+          filename: 'a-directory',
+          size: '0',
+          sha_content: '',
+          chunks: [],
+          flags: DIRECTORY_FLAG
+        },
+        {
+          filename: 'empty-file',
+          size: '0',
+          sha_content: '',
+          chunks: []
+        },
+        {
+          filename: 'real-file',
+          size: String(realContent.length),
+          sha_content: sha1Hex(realContent),
+          chunks: [
+            {
+              sha: 'chunk-sha-real',
+              cb_original: realContent.length,
+              offset: 0
+            }
+          ]
+        }
+      ]
+    })
+    jest.mocked(decryptFilename).mockImplementation((raw: string) => {
+      if (raw === 'a-directory') return 'a-directory'
+      if (raw === 'empty-file') return 'empty-file'
+      return 'real-file.bin'
+    })
+    jest.mocked(fetchChunk).mockResolvedValue(realContent)
+
+    const result = await downloadSteamDepots('12345', {
+      targetSteamappsDir: dir,
+      installdir: 'SomeGame',
+      os: 'windows'
+    })
+
+    expect(result.status).toBe('done')
+    const acfText = readFileSync(join(dir, 'appmanifest_12345.acf'), 'utf8')
+    expect(acfText).toMatch(/"StateFlags"\s+"4"/)
   })
 })
 

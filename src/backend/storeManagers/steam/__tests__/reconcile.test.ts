@@ -23,7 +23,10 @@ import {
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { reconcilePartialState } from '../depot/reconcile'
+import {
+  reconcilePartialState,
+  verifyStructuralIntegrity
+} from '../depot/reconcile'
 import {
   PathTraversalError,
   type DepotPlan,
@@ -357,5 +360,223 @@ describe('reconcilePartialState', () => {
 
     expect(result.jobs).toEqual([])
     expect(result.allFilesVerified).toBe(true)
+  })
+})
+
+describe('verifyStructuralIntegrity (quick 260908-nbd)', () => {
+  let dir: string
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'gamelib-structural-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('a complete tree — every planned regular file present with the right size — is ok with zero mismatches', async () => {
+    const a = Buffer.from('file-a-content')
+    const b = Buffer.from('file-b-content-longer')
+    writeFileSync(join(dir, 'a.bin'), a)
+    writeFileSync(join(dir, 'b.bin'), b)
+
+    const fileA: DepotPlanFile = {
+      filename: 'a.bin',
+      size: a.length,
+      sha_content: sha1Hex(a),
+      chunks: [{ sha: 's1', cb_original: a.length, offset: 0 }]
+    }
+    const fileB: DepotPlanFile = {
+      filename: 'b.bin',
+      size: b.length,
+      sha_content: sha1Hex(b),
+      chunks: [{ sha: 's2', cb_original: b.length, offset: 0 }]
+    }
+    const plan = makePlan([
+      {
+        depotId: '1',
+        gid: 'g1',
+        key: Buffer.from('key'),
+        files: [fileA, fileB]
+      }
+    ])
+
+    const result = await verifyStructuralIntegrity(plan, dir)
+
+    expect(result.ok).toBe(true)
+    expect(result.mismatchCount).toBe(0)
+    expect(result.checked).toBe(2)
+  })
+
+  it('the observed 38410 master.dat shape — a planned regular file present as an EMPTY DIRECTORY — mismatches as not-a-file', async () => {
+    mkdirSync(join(dir, 'master.dat'))
+    const file: DepotPlanFile = {
+      filename: 'master.dat',
+      size: 100,
+      sha_content: 'irrelevant',
+      chunks: [{ sha: 's', cb_original: 100, offset: 0 }]
+    }
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
+
+    const result = await verifyStructuralIntegrity(plan, dir)
+
+    expect(result.ok).toBe(false)
+    expect(result.mismatches).toEqual([
+      expect.objectContaining({ filename: 'master.dat', reason: 'not-a-file' })
+    ])
+  })
+
+  it('a planned regular file present but SHORT mismatches as wrong-size, reporting the found size', async () => {
+    writeFileSync(join(dir, 'short.bin'), Buffer.alloc(5))
+    const file: DepotPlanFile = {
+      filename: 'short.bin',
+      size: 999,
+      sha_content: 'irrelevant',
+      chunks: [{ sha: 's', cb_original: 999, offset: 0 }]
+    }
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
+
+    const result = await verifyStructuralIntegrity(plan, dir)
+
+    expect(result.ok).toBe(false)
+    expect(result.mismatches).toEqual([
+      expect.objectContaining({
+        filename: 'short.bin',
+        reason: 'wrong-size',
+        foundSize: 5
+      })
+    ])
+  })
+
+  it('a planned regular file ABSENT from disk mismatches as missing', async () => {
+    const file: DepotPlanFile = {
+      filename: 'gone.bin',
+      size: 10,
+      sha_content: 'irrelevant',
+      chunks: [{ sha: 's', cb_original: 10, offset: 0 }]
+    }
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
+
+    const result = await verifyStructuralIntegrity(plan, dir)
+
+    expect(result.ok).toBe(false)
+    expect(result.mismatches).toEqual([
+      expect.objectContaining({ filename: 'gone.bin', reason: 'missing' })
+    ])
+  })
+
+  it('Directory(64), Symlink(512) and zero-size entries all satisfied correctly are ok — guards against false-failing the non-regular entry kinds', async () => {
+    mkdirSync(join(dir, 'a-dir'))
+    symlinkSync('target.exe', join(dir, 'a-link'))
+    writeFileSync(join(dir, 'empty.dat'), Buffer.alloc(0))
+
+    const dirFile: DepotPlanFile = {
+      filename: 'a-dir',
+      size: 0,
+      sha_content: '',
+      chunks: [],
+      flags: 64
+    }
+    const linkFile: DepotPlanFile = {
+      filename: 'a-link',
+      size: 0,
+      sha_content: '',
+      chunks: [],
+      flags: 512,
+      linktarget: 'target.exe'
+    }
+    const zeroFile: DepotPlanFile = {
+      filename: 'empty.dat',
+      size: 0,
+      sha_content: '',
+      chunks: []
+    }
+    const plan = makePlan([
+      {
+        depotId: '1',
+        gid: 'g1',
+        key: Buffer.from('key'),
+        files: [dirFile, linkFile, zeroFile]
+      }
+    ])
+
+    const result = await verifyStructuralIntegrity(plan, dir)
+
+    expect(result.ok).toBe(true)
+    expect(result.mismatchCount).toBe(0)
+    expect(result.checked).toBe(3)
+  })
+
+  it('more than 10 mismatches caps the reported list at 10 but keeps the true mismatchCount uncapped', async () => {
+    const files: DepotPlanFile[] = []
+    for (let i = 0; i < 15; i++) {
+      files.push({
+        filename: `missing-${i}.bin`,
+        size: 10,
+        sha_content: 'irrelevant',
+        chunks: [{ sha: 's', cb_original: 10, offset: 0 }]
+      })
+    }
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files }
+    ])
+
+    const result = await verifyStructuralIntegrity(plan, dir)
+
+    expect(result.ok).toBe(false)
+    expect(result.mismatches).toHaveLength(10)
+    expect(result.mismatchCount).toBe(15)
+  })
+
+  it('NO SHA1 — a file with correct size but WRONG CONTENT is ok (documented boundary, not a loophole)', async () => {
+    const declared = Buffer.from('AAAA')
+    const actual = Buffer.from('ZZZZ') // same length, different content
+    writeFileSync(join(dir, 'wrong-content.bin'), actual)
+
+    const file: DepotPlanFile = {
+      filename: 'wrong-content.bin',
+      size: declared.length,
+      sha_content: sha1Hex(declared),
+      chunks: [{ sha: 's', cb_original: declared.length, offset: 0 }]
+    }
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
+
+    const result = await verifyStructuralIntegrity(plan, dir)
+
+    // verifyStructuralIntegrity is a POST-download damage detector, not a
+    // content check (see its doc comment) — this is the documented boundary.
+    expect(result.ok).toBe(true)
+    expect(result.mismatchCount).toBe(0)
+  })
+
+  it("CONTRAST: reconcilePartialState's sha1 invariant survives the regularFileShape extraction — the identical wrong-content/right-size file still fails its sha1 gate and is pushed as a job", async () => {
+    const declared = Buffer.from('AAAA')
+    const actual = Buffer.from('ZZZZ')
+    writeFileSync(join(dir, 'wrong-content.bin'), actual)
+
+    const file: DepotPlanFile = {
+      filename: 'wrong-content.bin',
+      size: declared.length,
+      sha_content: sha1Hex(declared),
+      chunks: [{ sha: 's', cb_original: declared.length, offset: 0 }]
+    }
+    const plan = makePlan([
+      { depotId: '1', gid: 'g1', key: Buffer.from('key'), files: [file] }
+    ])
+
+    const result = await reconcilePartialState(plan, dir)
+
+    expect(result.allFilesVerified).toBe(false)
+    expect(result.jobs.map((j) => j.file.filename)).toEqual([
+      'wrong-content.bin'
+    ])
   })
 })
