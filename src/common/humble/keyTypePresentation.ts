@@ -15,7 +15,8 @@ import { GENERIC_KEY_PLATFORM } from './groupKeys'
 // D-42-03: the true fallback for every platform with no evidenced deep
 // link. NO per-key value is ever interpolated into this string — this is
 // the D-68/T-14-09 constraint, preserved.
-export const HUMBLE_REDEEM_HELP_URL = 'https://support.humblebundle.com/hc/en-us'
+export const HUMBLE_REDEEM_HELP_URL =
+  'https://support.humblebundle.com/hc/en-us'
 
 /**
  * The store logos that actually EXIST in `src/frontend/assets/`

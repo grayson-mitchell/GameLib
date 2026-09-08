@@ -179,7 +179,7 @@ describe('getRedeemTarget', () => {
     'wibble',
     ''
   ])(
-    "every other key_type %j -> help fallback, never a fabricated deep link",
+    'every other key_type %j -> help fallback, never a fabricated deep link',
     (keyType) => {
       expect(getRedeemTarget(keyType, 'ANY-CODE')).toEqual({
         kind: 'help',
