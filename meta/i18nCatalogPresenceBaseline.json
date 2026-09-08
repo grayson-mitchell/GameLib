@@ -1,8 +1,8 @@
 {
   "namespace": "gamelib",
-  "generatedAt": "2026-09-06T09:58:24.777Z",
+  "generatedAt": "2026-09-08T00:16:32.135Z",
   "generatedBy": "Phase 41 REQ-41-01",
-  "reason": "Known-missing (locale, key) pairs at the time the inverted presence check landed. Filling these requires `pnpm machine-fill-gamelib`, which needs an API key and is out of Phase 41's unattended scope. This file is a RECORD of a known gap, not a permission to grow it. The assertion is over `missing`, never over `totalPairs` -- do not \"fix\" the gate by comparing counts.",
+  "reason": "Known-missing (locale, key) pairs for this namespace, as of generatedAt. This file is a RECORD of a known gap, not a permission to grow it: the drift check reports a pair that is missing live but unrecorded here, AND a pair recorded here that is no longer missing live. That assertion is over `missing` and only `missing` -- do not \"fix\" the gate by comparing counts against the catalogs. `totalPairs` is DERIVED from `missing` by the writer and is checked solely for agreement with it, so a hand-edit that desyncs the two halves of this file is a hard failure; it is never itself compared against anything live. Regenerate with LINT_TRANSLATIONS_WRITE_BASELINE=1 pnpm lint-translations:gamelib rather than editing this file by hand.",
   "totalPairs": 0,
   "missing": {}
 }

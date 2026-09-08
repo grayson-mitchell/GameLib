@@ -48,10 +48,13 @@
  * enumerates the TRANSLATION's own keys and looks English up BY them -- a
  * key present and non-empty in `en` but entirely ABSENT from a locale
  * catalog is therefore never visited by that loop, and can never be
- * reported. The gate stayed green at zero coverage for that key: measured
- * at HEAD (2026-09-06) this was hiding 794 missing (locale, key) pairs
- * across 17 keys, invisible to `pnpm lint-translations:gamelib` the whole
- * time. `checkEnglishKeysPresent` below is the INVERTED direction that
+ * reported. The gate stayed green at zero coverage for that key, for as
+ * long as the key was missing everywhere. (Historical, NOT a live count:
+ * when this inverted check first landed it surfaced a backlog of 794 such
+ * pairs across 17 keys; quick task `260906-u8i` filled all of them the same
+ * day. The mechanism above is the durable claim -- the number is not, and
+ * the committed baseline, never a comment, is where the current figure
+ * lives.) `checkEnglishKeysPresent` below is the INVERTED direction that
  * closes this: it enumerates `en`'s own flattened keys and asserts each is
  * present and non-empty in the locale catalog, reporting every miss by
  * name. It is keyed off `en` being non-empty rather than an exemption
@@ -417,7 +420,8 @@ export const PRESENCE_BASELINE_PATH = 'meta/i18nCatalogPresenceBaseline.json'
 // tree matching the REAL committed baseline -- it is meaningless for any of
 // the mkdtempSync fixture trees the R1-R7 tests (plan 41-03) and R8-R12
 // tests (this plan) build, which intentionally contain only a handful of
-// keys and would "drift" from the 794-pair baseline on every single run.
+// keys and would "drift" from the committed baseline on every single run
+// whatever that baseline currently records.
 // Gating on an exact resolved-path match to this constant is what lets
 // `lintTranslations()` stay usable against an arbitrary fixture path (as
 // every existing test already relies on) while still gating the real CLI
@@ -574,11 +578,15 @@ function writePresenceBaseline(localesPath: string): void {
     generatedAt: new Date().toISOString(),
     generatedBy: 'Phase 41 REQ-41-01',
     reason:
-      'Known-missing (locale, key) pairs at the time the inverted presence check landed. ' +
-      'Filling these requires `pnpm machine-fill-gamelib`, which needs an API key and is out ' +
-      "of Phase 41's unattended scope. This file is a RECORD of a known gap, not a permission " +
-      'to grow it. The assertion is over `missing`, never over `totalPairs` -- do not "fix" ' +
-      'the gate by comparing counts.',
+      'Known-missing (locale, key) pairs for this namespace, as of generatedAt. This file is a ' +
+      'RECORD of a known gap, not a permission to grow it: the drift check reports a pair that ' +
+      'is missing live but unrecorded here, AND a pair recorded here that is no longer missing ' +
+      'live. That assertion is over `missing` and only `missing` -- do not "fix" the gate by ' +
+      'comparing counts against the catalogs. `totalPairs` is DERIVED from `missing` by the ' +
+      'writer and is checked solely for agreement with it, so a hand-edit that desyncs the two ' +
+      'halves of this file is a hard failure; it is never itself compared against anything ' +
+      'live. Regenerate with LINT_TRANSLATIONS_WRITE_BASELINE=1 pnpm lint-translations:gamelib ' +
+      'rather than editing this file by hand.',
     totalPairs: pairs.length,
     missing: sortedMissing
   }
