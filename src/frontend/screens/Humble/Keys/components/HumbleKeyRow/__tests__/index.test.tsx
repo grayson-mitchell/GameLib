@@ -252,3 +252,84 @@ describe('HumbleKeyRow store indicator (D-42-03)', () => {
     expect(buttons).toHaveLength(0)
   })
 })
+
+// D-42-01 Exception 4 (Phase 42 plan 06): the reversal affordance for a key
+// settled from an exact-match Steam ownership signal. An `ownedElsewhere`
+// key never reaches Keys-waiting (viewFilters.ts:62), so `claimAction` is
+// never supplied for it — `settleAction` is the ONLY way this row can ever
+// render an Undo for such a key.
+describe('HumbleKeyRow settleAction (D-42-01 Exception 4, Phase 42 plan 06)', () => {
+  function findUndoButtons(
+    tree: ReactElement
+  ): ReactElement<PropsWithChildren & { onClick?: () => void }>[] {
+    return collectElements(tree).filter(
+      (el) =>
+        el.type === 'button' &&
+        typeof el.props?.className === 'string' &&
+        el.props.className.split(' ').includes('humbleKeyUndoButton')
+    ) as ReactElement<PropsWithChildren & { onClick?: () => void }>[]
+  }
+
+  it('renders a humbleKeyUndoButton and calls onUndoSettle exactly once when clicked', () => {
+    const onUndoSettle = jest.fn()
+    const key = makeHumbleKey({ platform: 'steam' })
+    const tree = HumbleKeyRow({
+      humbleKey: key,
+      settleAction: { settledAt: 1700000000000, onUndoSettle }
+    }) as ReactElement
+
+    const undoButtons = findUndoButtons(tree)
+    expect(undoButtons).toHaveLength(1)
+    undoButtons[0].props.onClick?.()
+    expect(onUndoSettle).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders the "Already in your Steam library" caption', () => {
+    const key = makeHumbleKey({ platform: 'steam' })
+    const tree = HumbleKeyRow({
+      humbleKey: key,
+      settleAction: { settledAt: 1700000000000, onUndoSettle: jest.fn() }
+    }) as ReactElement
+
+    expect(textContent(tree)).toContain('Already in your Steam library')
+  })
+
+  // D-22 structural pin, re-stated for Exception 4 specifically: adding
+  // settleAction to the contract block must not widen the read-only
+  // default when the prop is simply absent.
+  it('renders zero button elements without settleAction (and without claimAction/giftAction/undoOverride)', () => {
+    const key = makeHumbleKey({ platform: 'steam' })
+    const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+
+    const buttons = collectElements(tree).filter((el) => el.type === 'button')
+    expect(buttons).toHaveLength(0)
+  })
+
+  // Defensive mutual-exclusion rule (index.tsx's `!claimAction` guard): no
+  // real caller supplies both props, but if one somehow did, claimAction's
+  // richer Keys-waiting affordance must win and settleAction's Undo must
+  // not also render — never two Undo controls on one row.
+  it('renders exactly one Undo control when BOTH claimAction and settleAction are supplied — claimAction wins', () => {
+    const onUndoRedeem = jest.fn()
+    const onUndoSettle = jest.fn()
+    const key = makeHumbleKey({ platform: 'steam' })
+    const tree = HumbleKeyRow({
+      humbleKey: key,
+      claimAction: {
+        revealedAt: null,
+        redeemedAt: 1600000000000,
+        keyindexResolved: true,
+        onClaim: jest.fn(),
+        onFinish: jest.fn(),
+        onUndoRedeem
+      },
+      settleAction: { settledAt: 1700000000000, onUndoSettle }
+    }) as ReactElement
+
+    const undoButtons = findUndoButtons(tree)
+    expect(undoButtons).toHaveLength(1)
+    undoButtons[0].props.onClick?.()
+    expect(onUndoRedeem).toHaveBeenCalledTimes(1)
+    expect(onUndoSettle).not.toHaveBeenCalled()
+  })
+})
