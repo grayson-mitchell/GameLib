@@ -2967,10 +2967,9 @@ describe('HumbleLibrary', () => {
       const outcome = await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
 
       expect(outcome).toEqual({ status: 'ok' })
-      expect(localRedeemedData.get('gk1:gk1_key')).toEqual({
-        redeemedAt: expect.any(Number),
-        source: 'user'
-      })
+      const record = localRedeemedData.get('gk1:gk1_key')
+      expect(record?.redeemedAt).toEqual(expect.any(Number))
+      expect(record?.source).toBe('user')
     })
 
     // D-42-01: a record written before Phase 42 has no `source` key at all.
@@ -3016,6 +3015,109 @@ describe('HumbleLibrary', () => {
       expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
       const audit = auditData.get('gk1:gk1_key')
       expect(audit?.map((a) => a.event)).toEqual(['undo_redeemed'])
+    })
+  })
+
+  // D-42-01: getClaimAnnotations must expose WHY a key is REDEEMED so the
+  // renderer can distinguish an explicit user mark from an inferred
+  // ownership-exact settle, without ever suppressing the D-77 Undo gate
+  // (redeemedAt !== null) for either provenance.
+  describe('HumbleLibrary.getClaimAnnotations() — D-42-01 provenance', () => {
+    test("emits redeemedSource: 'user' for a record written by markRedeemed", async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REVEALED', keyindex: 'idx-1' })
+      )
+      await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].redeemedSource).toBe('user')
+      expect(annotations['gk1:gk1_key'].redeemedAt).toEqual(expect.any(Number))
+    })
+
+    test("emits redeemedSource: 'user' for a legacy record with no source field (missing-field default)", () => {
+      localRedeemedData.set('gk1:gk1_key', { redeemedAt: 123 })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REDEEMED', keyindex: 'idx-1' })
+      )
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].redeemedSource).toBe('user')
+      expect(annotations['gk1:gk1_key'].redeemedAt).toBe(123)
+    })
+
+    test("emits redeemedSource: 'ownership-exact' for a record seeded with that source", () => {
+      localRedeemedData.set('gk1:gk1_key', {
+        redeemedAt: 456,
+        source: 'ownership-exact'
+      })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REDEEMED', keyindex: 'idx-1' })
+      )
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].redeemedSource).toBe('ownership-exact')
+      expect(annotations['gk1:gk1_key'].redeemedAt).toBe(456)
+    })
+
+    test('emits redeemedSource: undefined and redeemedAt: undefined when there is no local-redeemed record', () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REVEALED', keyindex: 'idx-1' })
+      )
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].redeemedSource).toBeUndefined()
+      expect(annotations['gk1:gk1_key'].redeemedAt).toBeUndefined()
+    })
+
+    // REGRESSION PIN: redeemedAt must be identical regardless of provenance,
+    // so the existing HumbleKeyRow:116 Undo gate (redeemedAt !== null) keeps
+    // firing for both — checked directly against HumbleKeyRow/index.tsx:116.
+    test('redeemedAt is emitted with the same value regardless of source (D-77 Undo gate re-check)', () => {
+      localRedeemedData.set('gk1:gk1_key', { redeemedAt: 789, source: 'user' })
+      localRedeemedData.set('gk2:gk2_key', {
+        redeemedAt: 789,
+        source: 'ownership-exact'
+      })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REDEEMED', keyindex: 'idx-1' })
+      )
+      libraryData.set(
+        'gk2',
+        makeRevealableEntry('gk2', { state: 'REDEEMED', keyindex: 'idx-2' })
+      )
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].redeemedAt).toBe(789)
+      expect(annotations['gk2:gk2_key'].redeemedAt).toBe(789)
+      expect(annotations['gk1:gk1_key'].redeemedAt).toBe(
+        annotations['gk2:gk2_key'].redeemedAt
+      )
+    })
+
+    // SECURITY PIN (T-42-05): the widening must not smuggle a key value or
+    // any other field into the IPC-broadcast-adjacent annotation object.
+    test('every emitted annotation carries exactly revealedAt/redeemedAt/keyindexResolved/redeemedSource', () => {
+      localRedeemedData.set('gk1:gk1_key', { redeemedAt: 1, source: 'user' })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REDEEMED', keyindex: 'idx-1' })
+      )
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(Object.keys(annotations['gk1:gk1_key']).sort()).toEqual(
+        ['keyindexResolved', 'redeemedAt', 'redeemedSource', 'revealedAt'].sort()
+      )
     })
   })
 
