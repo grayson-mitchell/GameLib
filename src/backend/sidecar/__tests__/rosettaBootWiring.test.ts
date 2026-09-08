@@ -62,7 +62,9 @@ jest.mock('axios', () => {
         return Promise.resolve({ data: '[]' })
       }
       return Promise.reject(
-        new Error(`rosettaBootWiring.test.ts: unexpected axios.get URL "${url}"`)
+        new Error(
+          `rosettaBootWiring.test.ts: unexpected axios.get URL "${url}"`
+        )
       )
     }),
     head: jest.fn(() => Promise.resolve({ status: 200 }))
@@ -226,7 +228,8 @@ describe('sidecar bootstrap runs the Rosetta probe (todo 2026-09-06, quick-26090
 
     const callsBeforeReinit = mockedExec.mock.calls.filter(
       (call) =>
-        typeof call[0] === 'string' && call[0].includes('sysctl.proc_translated')
+        typeof call[0] === 'string' &&
+        call[0].includes('sysctl.proc_translated')
     ).length
 
     init(new PassThrough(), new PassThrough())
@@ -235,7 +238,8 @@ describe('sidecar bootstrap runs the Rosetta probe (todo 2026-09-06, quick-26090
 
     const callsAfterReinit = mockedExec.mock.calls.filter(
       (call) =>
-        typeof call[0] === 'string' && call[0].includes('sysctl.proc_translated')
+        typeof call[0] === 'string' &&
+        call[0].includes('sysctl.proc_translated')
     ).length
 
     expect(callsAfterReinit).toBe(callsBeforeReinit)
