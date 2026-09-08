@@ -30,10 +30,33 @@ export default class LogWriter {
   readonly #isGeneralLog: boolean
 
   /**
-   * Whether the log file was already written to by this writer. Used to rotate
-   * log files
+   * Whether this writer has already passed its one-time rotate gate. Used to
+   * rotate log files.
+   *
+   * Set when the first {@link writeString} ENTERS the gate, not when its write
+   * completes -- the gate is about "has this writer already claimed the
+   * rotation", and claiming it after an `await` leaves it open to every
+   * overlapping caller (debug session `bootstrapwirings-log-drop`). A write
+   * that subsequently fails deliberately does NOT reopen it: re-rotating on the
+   * next call would archive away whatever did land, which is the bug, not the
+   * recovery.
    */
   #wasWrittenTo: boolean
+  /**
+   * Memoized `mkdir -p` of {@link logFilePath}'s parent, shared by every
+   * concurrent {@link writeString}.
+   *
+   * Kept SEPARATE from {@link #wasWrittenTo} deliberately. The two used to be
+   * the same gate, which meant "has this writer rotated yet" and "does the
+   * directory exist yet" were answered by one flag -- so closing the rotation
+   * race by claiming that flag early also stopped every subsequent write from
+   * awaiting the directory, and appends began racing ahead of the `mkdir` with
+   * ENOENT. Rotation must happen exactly once; the directory must be awaited by
+   * ALL of them. Reset to `undefined` on failure so a later write can retry --
+   * a failed `mkdir` must not be remembered as success, but it must also never
+   * reopen the rotate gate.
+   */
+  #logDirectoryReady: Promise<void> | undefined
   /** Whether the log file was closed by calling {@link close} */
   #isClosed: boolean
   /**
@@ -77,8 +100,29 @@ export default class LogWriter {
     this.#logsDisabled = logsDisabled
     this.#isGeneralLog = logFilePath === getLogFilePath({})
     this.#wasWrittenTo = skipInitialArchive
+    this.#logDirectoryReady = undefined
     this.#isClosed = false
     this.#messageWaitPromise = Promise.resolve()
+  }
+
+  /**
+   * Ensures {@link logFilePath}'s parent directory exists, once per writer.
+   * Every {@link writeString} awaits this -- including `skipInitialArchive`
+   * writers, which previously skipped it along with the rotate block and simply
+   * relied on some other writer having made the directory first.
+   */
+  async #ensureLogDirectory(): Promise<void> {
+    if (!this.#logDirectoryReady) {
+      this.#logDirectoryReady = fsPromises
+        .mkdir(path.dirname(this.logFilePath), { recursive: true })
+        .then(() => undefined)
+        .catch((error) => {
+          // Let a later write try again rather than caching the failure.
+          this.#logDirectoryReady = undefined
+          throw error
+        })
+    }
+    return this.#logDirectoryReady
   }
 
   public get oldLogFilePath(): string {
@@ -117,14 +161,32 @@ export default class LogWriter {
     }
 
     if (!this.#wasWrittenTo) {
+      // Claim the rotation SYNCHRONOUSLY, before this function's first `await`.
+      // Debug session `bootstrapwirings-log-drop`: this flag used to be set only
+      // after the `appendFile` below RESOLVED, which left the gate open across
+      // the whole first write. The append's bytes reach the file when the call
+      // is dispatched to libuv's threadpool, but the continuation that flipped
+      // the flag only ran once the event loop picked the completion up -- so any
+      // other `writeString` entering in between saw `#wasWrittenTo === false`
+      // AND an existing file, and renamed the live log, and everything already
+      // written into it, to `.old`. No production caller awaits a `logXXX()`
+      // (they are all fire-and-forget), so overlapping entry is the normal case
+      // at boot; under load the window widened far enough to silently drop
+      // freshly-logged lines out of `gamelib.log`. Claiming it here makes the
+      // rotate exactly-once per writer, which is what the constructor docstring
+      // already describes as the intended behaviour, and completes the intent of
+      // `#archiveOldLogFile`'s own "needs to be synchronous" note.
+      this.#wasWrittenTo = true
+
       this.#archiveOldLogFile()
 
       // print this message only once when a new log file is created and it's not the general log
       if (!this.#isGeneralLog)
         logDebug(`Logging to file(s) ${this.logFilePath}`, LogPrefix.Backend)
-      const dirname = path.dirname(this.logFilePath)
-      await fsPromises.mkdir(dirname, { recursive: true })
     }
+
+    // Outside the gate above ON PURPOSE -- see #logDirectoryReady's docstring.
+    await this.#ensureLogDirectory()
 
     // Wait for any previously-submitted Promise<string>s to be written first
     await this.#messageWaitPromise
@@ -146,7 +208,6 @@ export default class LogWriter {
     if (appendNewline) message += '\n'
 
     await fsPromises.appendFile(this.logFilePath, message, 'utf-8')
-    this.#wasWrittenTo = true
   }
 
   /**
