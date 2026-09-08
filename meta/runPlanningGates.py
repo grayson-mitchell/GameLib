@@ -47,7 +47,17 @@ GATE_SUFFIX = "-gate.py"
 # `webviewPreloadPath`). Leaving the floor at 7 would let this gate be
 # deleted later with every remaining gate still reporting green -- exactly
 # the property this constant exists to hold.
-MINIMUM_EXPECTED_GATES = 8
+#
+# 8 -> 9 (quick task 260908-gye): the ninth gate is
+# `.planning/todos/todo-frontmatter-gate.py`, holding the closed triage
+# vocabulary (`severity`/`platform`/`ready`) that every file in
+# `.planning/todos/pending/` must carry. Leaving the floor at 8 would let this
+# gate be deleted later with every remaining gate still reporting green --
+# exactly the property this constant exists to hold. It matters more than usual
+# here: the todo corpus is edited by nearly every session, so this gate is a
+# more attractive thing to delete than most, and `severity:` was free text for
+# months precisely because nothing enforced it.
+MINIMUM_EXPECTED_GATES = 9
 
 
 def discover_gates():

@@ -104,7 +104,46 @@ GameLib is a public fork of Heroic Games Launcher that adds Steam as a first-cla
 
 ## Conventions
 
-Conventions not yet established. Will populate as patterns emerge during development.
+### Todo triage frontmatter (enforced by CI)
+
+**Every file you create in `.planning/todos/pending/` must carry all three of these keys.** The
+`/gsd-add-todo` workflow's frontmatter template does **not** emit them — it stops at
+`created`/`title`/`area`/`files` — so you have to add them by hand. Omitting them turns CI red.
+
+```yaml
+severity: medium # critical | major | medium | minor
+platform: any # macos | windows | linux | any    (default: any)
+ready: code # code | live-gate | human | blocked
+```
+
+Place `platform:` immediately after `severity:`, and `ready:` immediately after `platform:`.
+
+Values are matched **bare, lowercase and exact**: `severity: minor`, never `severity: "minor"`,
+never `severity: Minor`, never `severity: low`.
+
+| key        | value       | means                                                              |
+| ---------- | ----------- | ------------------------------------------------------------------ |
+| `severity` | `critical`  | data loss, corruption, or a shipped claim that is false            |
+|            | `major`     | a feature is broken or a measurement is silently contaminated      |
+|            | `medium`    | real defect, bounded blast radius, workaround exists               |
+|            | `minor`     | polish, rough edge, or a latent trap with no live consequence      |
+| `platform` | `any`       | reproducible and fixable on any machine (**the default** — use it) |
+|            | `macos`     | needs the operator's Mac specifically                              |
+|            | `windows`   | needs the operator's Windows machine (not their primary OS)        |
+|            | `linux`     | needs a Linux machine                                              |
+| `ready`    | `code`      | desk-ready: edit and typecheck, no live gate and no other OS       |
+|            | `live-gate` | needs a live app run on this Mac to verify                         |
+|            | `human`     | needs a decision, credentials or a person — not code               |
+|            | `blocked`   | parked, externally blocked, or gated on hardware not to hand       |
+
+`ready:` is the one that earns its keep: `grep -l 'ready: code' .planning/todos/pending/*.md`
+answers "what can I actually pick up right now?" without opening a single file.
+
+`pnpm planning-gates` enforces this in CI via `.planning/todos/todo-frontmatter-gate.py`. When it
+fails, **fix the todo's frontmatter** — add the missing key, or pick the vocabulary value that
+fits. Never widen the vocabulary in the gate to admit the value that failed; a vocabulary that
+grows to fit whatever was typed is free text with extra steps, which is the exact condition the
+gate exists to end. Scope is `pending/` only — `completed/` is deliberately exempt.
 
 <!-- GSD:conventions-end -->
 
