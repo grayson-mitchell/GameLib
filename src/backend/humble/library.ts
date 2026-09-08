@@ -496,18 +496,116 @@ function recomputeOwnership(): void {
   }
 
   for (const [gamekey, entry] of humbleLibraryStore.entries()) {
+    // Cast: dedup.ts's return type is the display-safe HumbleKey[] (it's
+    // shared with the pure/unit-tested contract), but at runtime every
+    // element is spread from an entry.keys HumbleKeyInternal, so the
+    // internal-only fields (revealedKeyValue) survive the round-trip
+    // unchanged — same trust patchCachedState places in entry.keys below.
     const mutatedKeys = dedupRecomputeOwnership(
       entry.keys,
       steamGames,
       (machineName) => humbleOwnershipOverrideStore.has(machineName)
-    )
-    humbleLibraryStore.set(gamekey, { ...entry, keys: mutatedKeys })
+    ) as HumbleKeyInternal[]
+
+    // Plan 42-03 (D-42-01/D-42-02): auto-settle exact-match owned+REVEALED
+    // keys to REDEEMED, driven off `mutatedKeys` — the SAME reconciled
+    // overlay the C2 guard reads (dedupRecomputeOwnership's output, computed
+    // above from the current Steam snapshot). This is the ONLY correct
+    // settle site: this function reads getSteamGate() and returns early
+    // above when the gate is closed (so a Steam hiccup can never fire a
+    // settle), and it runs once per recompute over the reconciled overlay —
+    // never a mid-sync intermediate. The per-order commit block
+    // (fetchAndCommitOrder, above) is explicitly NOT a settle site: its
+    // Branch B carries a PRIOR `ownedElsewhere` forward when the gate fails
+    // mid-sync (D-48 keep-last-known), and its Branch A runs per order,
+    // mid-sync — settling there would fire on a carried-forward or
+    // transiently-computed value instead of the final reconciled state.
+    let settledAny = false
+    const settledKeys = mutatedKeys.map((key) => {
+      // Guard 1 — must actually be owned. Paired with guard 2 below (never
+      // standalone): dedup.ts only ever sets ownedElsewhere/matchConfidence
+      // together, but the pairing is asserted explicitly here so the two
+      // guards read as independent correctness requirements, not one fact.
+      if (!key.ownedElsewhere) {
+        return key
+      }
+      // Guard 2 — D-42-02: fuzzy (and 'none') NEVER auto-settle, only a
+      // ground-truth exact AppID match does. 5 of the operator's 18 owned
+      // keys were fuzzy, and D-42's "Not the same game" override exists
+      // precisely because fuzzy matches are sometimes wrong. An overridden
+      // key is already excluded by guards 1+2 with no extra lookup here:
+      // setOwnershipOverride clears ownedElsewhere/matchConfidence back to
+      // false/'none' inside dedupRecomputeOwnership itself — do not add a
+      // redundant humbleOwnershipOverrideStore check below.
+      if (key.matchConfidence !== 'exact') {
+        return key
+      }
+      // Guard 3 — only a REVEALED key has "nowhere to go" (D-42-01). A
+      // REDEEMED/UNREDEEMABLE/UNPICKED/UNREVEALED key is untouched.
+      if (key.state !== 'REVEALED') {
+        return key
+      }
+      const composite = compositeKey(gamekey, key.machineName)
+      // Guard 4 — never overwrite or re-stamp an existing local-redeemed
+      // record, including a pre-existing `source: 'user'` mark (D-42-01).
+      if (humbleLocalRedeemedStore.has(composite)) {
+        return key
+      }
+
+      humbleLocalRedeemedStore.set(composite, {
+        redeemedAt: Date.now(),
+        source: 'ownership-exact'
+      })
+      // D-76: never carries the key value — only title/platform/timestamp.
+      appendAudit(gamekey, key.machineName, 'ownership_settled', {
+        title: key.title,
+        platform: key.platform
+      })
+      settledAny = true
+      return { ...key, state: 'REDEEMED' as HumbleKeyState }
+    })
+
+    if (!settledAny) {
+      // No settle fired for this order — keep today's behaviour byte-for-
+      // byte, including the entry's existing allTerminal/freezeEligible.
+      humbleLibraryStore.set(gamekey, { ...entry, keys: mutatedKeys })
+      continue
+    }
+
+    // WR-01: allTerminal/freezeEligible are RECOMPUTED from the settled key
+    // set, never spread forward — the same single-sourced helpers
+    // patchCachedState uses (isTerminal/isFreezeEligible from ./classify).
+    // An order that freezes under D-24 is skipped by every later sync; an
+    // Undo that flips the settled key back to REVEALED must unfreeze it or
+    // the order (and HSYNC-03's retroactive-expiry recompute) can never be
+    // reached again.
+    const allTerminal =
+      settledKeys.length > 0 &&
+      settledKeys.every((key) => isTerminal(key.state))
+    const freezeEligible =
+      settledKeys.length > 0 &&
+      settledKeys.every((key) =>
+        isFreezeEligible({
+          state: key.state,
+          expiration: key.expiration,
+          revealedKeyValuePresent: key.revealedKeyValue !== undefined
+        })
+      )
+    humbleLibraryStore.set(gamekey, {
+      ...entry,
+      keys: settledKeys,
+      allTerminal,
+      freezeEligible
+    })
   }
 
   // Pitfall 5: this is a DISTINCT final push, not covered by the per-order
   // progressive push inside runSync's fetch loop (that loop only runs
   // during a Humble sync; this function is also called standalone from the
-  // Steam-refresh entrypoint with no Humble fetch loop at all).
+  // Steam-refresh entrypoint with no Humble fetch loop at all). Also covers
+  // any settle performed just above — NOT one push per settled key
+  // (patchCachedState's own push is deliberately NOT used per-key here; see
+  // the settle loop above).
   sendFrontendMessage('humbleKeysUpdated', getKeys())
 }
 
