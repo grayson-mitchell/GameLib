@@ -81,7 +81,8 @@
         "activatedTitle": "Ενεργοποιήθηκε",
         "activateWizardTitle": "Ενεργοποίηση αυτού του κλειδιού",
         "activatingBody": "Αποκάλυψη του κλειδιού σας και εξαργύρωσή του στο Steam — αυτό διαρκεί μόνο λίγο.",
-        "activatingTitle": "Ενεργοποίηση στο Steam…"
+        "activatingTitle": "Ενεργοποίηση στο Steam…",
+        "platformOther": "Άλλα"
     },
     "info": {
         "refresh-rating": "Ανανέωση βαθμολογίας"

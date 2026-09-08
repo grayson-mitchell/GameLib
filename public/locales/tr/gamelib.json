@@ -81,7 +81,8 @@
         "activatedTitle": "Etkinleştirildi",
         "activateWizardTitle": "Bu anahtarı etkinleştir",
         "activatingBody": "Anahtarınız ortaya çıkarılıyor ve Steam'de kullanılıyor — bu sadece bir an sürer.",
-        "activatingTitle": "Steam'de etkinleştiriliyor…"
+        "activatingTitle": "Steam'de etkinleştiriliyor…",
+        "platformOther": "Diğer"
     },
     "info": {
         "refresh-rating": "Puanı yenile"

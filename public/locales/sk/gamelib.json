@@ -81,7 +81,8 @@
         "activatedTitle": "Aktivované",
         "activateWizardTitle": "Aktivovať tento kľúč",
         "activatingBody": "Odhaľujeme váš kľúč a uplatňujeme ho na Steam — chvíľu to potrvá.",
-        "activatingTitle": "Aktivuje sa na Steam…"
+        "activatingTitle": "Aktivuje sa na Steam…",
+        "platformOther": "Other"
     },
     "info": {
         "refresh-rating": "Obnoviť hodnotenie"

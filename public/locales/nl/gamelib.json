@@ -81,7 +81,8 @@
         "activatedTitle": "Geactiveerd",
         "activateWizardTitle": "Activeer deze key",
         "activatingBody": "Je key wordt onthuld en verzilverd op Steam — dit duurt maar even.",
-        "activatingTitle": "Activeren op Steam…"
+        "activatingTitle": "Activeren op Steam…",
+        "platformOther": "Overig"
     },
     "info": {
         "refresh-rating": "Beoordeling vernieuwen"

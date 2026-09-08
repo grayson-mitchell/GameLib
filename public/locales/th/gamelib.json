@@ -81,7 +81,8 @@
         "activatedTitle": "เปิดใช้งานแล้ว",
         "activateWizardTitle": "เปิดใช้งานคีย์นี้",
         "activatingBody": "กำลังเปิดเผยคีย์ของคุณและแลกใช้บน Steam — ใช้เวลาสักครู่เท่านั้น",
-        "activatingTitle": "กำลังเปิดใช้งานบน Steam…"
+        "activatingTitle": "กำลังเปิดใช้งานบน Steam…",
+        "platformOther": "อื่นๆ"
     },
     "info": {
         "refresh-rating": "รีเฟรชคะแนน"

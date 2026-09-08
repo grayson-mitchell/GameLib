@@ -81,7 +81,8 @@
         "activatedTitle": "Diaktifkan",
         "activateWizardTitle": "Aktifkan kunci ini",
         "activatingBody": "Mengungkap kunci Anda dan menukarkannya di Steam — ini hanya butuh waktu sebentar.",
-        "activatingTitle": "Mengaktifkan di Steam…"
+        "activatingTitle": "Mengaktifkan di Steam…",
+        "platformOther": "Lainnya"
     },
     "info": {
         "refresh-rating": "Segarkan rating"

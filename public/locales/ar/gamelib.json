@@ -81,7 +81,8 @@
         "activatedTitle": "تم التفعيل",
         "activateWizardTitle": "تفعيل هذا المفتاح",
         "activatingBody": "يتم كشف مفتاحك واستبداله على Steam — لن يستغرق هذا سوى لحظة.",
-        "activatingTitle": "جارٍ التفعيل على Steam…"
+        "activatingTitle": "جارٍ التفعيل على Steam…",
+        "platformOther": "آخر"
     },
     "info": {
         "refresh-rating": "تحديث التقييم"

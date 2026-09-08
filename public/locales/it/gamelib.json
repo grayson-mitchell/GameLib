@@ -81,7 +81,8 @@
         "activatedTitle": "Attivato",
         "activateWizardTitle": "Attiva questo codice",
         "activatingBody": "Rivelazione del codice e riscatto su Steam in corso — richiede solo un momento.",
-        "activatingTitle": "Attivazione su Steam…"
+        "activatingTitle": "Attivazione su Steam…",
+        "platformOther": "Altro"
     },
     "info": {
         "refresh-rating": "Aggiorna valutazione"

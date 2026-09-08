@@ -81,7 +81,8 @@
         "activatedTitle": "有効化済み",
         "activateWizardTitle": "このキーを有効化",
         "activatingBody": "キーを表示し、Steamで引き換えています — 少々お待ちください。",
-        "activatingTitle": "Steamで有効化中…"
+        "activatingTitle": "Steamで有効化中…",
+        "platformOther": "その他"
     },
     "info": {
         "refresh-rating": "評価を更新"

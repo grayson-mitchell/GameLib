@@ -81,7 +81,8 @@
         "activatedTitle": "활성화됨",
         "activateWizardTitle": "이 키 활성화",
         "activatingBody": "키를 공개하고 Steam에서 사용 등록하는 중입니다 — 잠시만 기다려 주세요.",
-        "activatingTitle": "Steam에서 활성화하는 중…"
+        "activatingTitle": "Steam에서 활성화하는 중…",
+        "platformOther": "기타"
     },
     "info": {
         "refresh-rating": "평점 새로고침"

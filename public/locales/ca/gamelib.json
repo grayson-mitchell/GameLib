@@ -81,7 +81,8 @@
         "activatedTitle": "Activada",
         "activateWizardTitle": "Activa aquesta clau",
         "activatingBody": "Revelant la teva clau i bescanviant-la a Steam — només trigarà un moment.",
-        "activatingTitle": "Activant a Steam…"
+        "activatingTitle": "Activant a Steam…",
+        "platformOther": "Altres"
     },
     "info": {
         "refresh-rating": "Actualitza la valoració"

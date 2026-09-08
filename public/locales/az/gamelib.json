@@ -81,7 +81,8 @@
         "activatedTitle": "Aktivləşdirildi",
         "activateWizardTitle": "Bu açarı aktivləşdir",
         "activatingBody": "Açarınız üzə çıxarılır və Steam-də aktivləşdirilir — bu bir anlıq çəkir.",
-        "activatingTitle": "Steam-də aktivləşdirilir…"
+        "activatingTitle": "Steam-də aktivləşdirilir…",
+        "platformOther": "Digər"
     },
     "info": {
         "refresh-rating": "Reytinqi yenilə"

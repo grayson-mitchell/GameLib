@@ -42,7 +42,8 @@
         "activatedDone": "Compris",
         "activatedTitle": "Activée",
         "activatingBody": "Révélation de votre clé et activation sur Steam — cela ne prend qu'un instant.",
-        "activatingTitle": "Activation sur Steam…"
+        "activatingTitle": "Activation sur Steam…",
+        "platformOther": "Autre"
     },
     "library": {
         "filterPanel": {

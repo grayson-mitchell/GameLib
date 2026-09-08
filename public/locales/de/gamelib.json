@@ -42,7 +42,8 @@
         "activatedDone": "Fertig",
         "activatedTitle": "Aktiviert",
         "activatingBody": "Ihr Key wird aufgedeckt und auf Steam eingelöst — das dauert nur einen Moment.",
-        "activatingTitle": "Wird auf Steam aktiviert…"
+        "activatingTitle": "Wird auf Steam aktiviert…",
+        "platformOther": "Andere"
     },
     "library": {
         "filterPanel": {

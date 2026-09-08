@@ -81,7 +81,8 @@
         "activatedTitle": "Ativado",
         "activateWizardTitle": "Ativar esta chave",
         "activatingBody": "Revelando sua chave e resgatando-a na Steam — isso leva só um instante.",
-        "activatingTitle": "Ativando na Steam…"
+        "activatingTitle": "Ativando na Steam…",
+        "platformOther": "Outros"
     },
     "info": {
         "refresh-rating": "Atualizar avaliação"

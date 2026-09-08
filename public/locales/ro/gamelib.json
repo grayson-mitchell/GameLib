@@ -81,7 +81,8 @@
         "activatedTitle": "Activat",
         "activateWizardTitle": "Activează această cheie",
         "activatingBody": "Se dezvăluie cheia și se activează pe Steam — durează doar o clipă.",
-        "activatingTitle": "Se activează pe Steam…"
+        "activatingTitle": "Se activează pe Steam…",
+        "platformOther": "Altele"
     },
     "info": {
         "refresh-rating": "Reîmprospătează evaluarea"

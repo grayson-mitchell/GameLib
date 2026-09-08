@@ -81,7 +81,8 @@
         "activatedTitle": "Gníomhachtaithe",
         "activateWizardTitle": "Gníomhachtaigh an eochair seo",
         "activatingBody": "Do chuid eochrach á nochtadh agus á fuascailt ar Steam — ní thógann sé ach nóiméad.",
-        "activatingTitle": "Á ghníomhachtú ar Steam…"
+        "activatingTitle": "Á ghníomhachtú ar Steam…",
+        "platformOther": "Eile"
     },
     "info": {
         "refresh-rating": "Athnuaigh an rátáil"

@@ -81,7 +81,8 @@
         "activatedTitle": "Faollashtirildi",
         "activateWizardTitle": "Ushbu kalitni faollashtirish",
         "activatingBody": "Kalitingiz ochilmoqda va Steam'da faollashtirilmoqda — bu bir zum vaqt oladi.",
-        "activatingTitle": "Steam'da faollashtirilmoqda…"
+        "activatingTitle": "Steam'da faollashtirilmoqda…",
+        "platformOther": "Boshqa"
     },
     "info": {
         "refresh-rating": "Reytingni yangilash"

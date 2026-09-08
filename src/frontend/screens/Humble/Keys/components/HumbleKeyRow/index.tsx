@@ -2,11 +2,76 @@ import { useTranslation } from 'react-i18next'
 import { faExternalLinkAlt } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
+import SteamLogo from 'frontend/assets/steam-logo.svg?react'
+import GOGLogo from 'frontend/assets/gog-logo.svg?react'
+import EpicLogo from 'frontend/assets/epic-logo.svg?react'
+
 import { HumbleKey } from 'common/types/humble'
 import { getExpirationDisplay } from 'common/humble/expirationDisplay'
 import { UrgencyTier } from 'common/humble/urgencyBadge'
+import {
+  getKeyTypePresentation,
+  HumbleKeyTypePresentation,
+  HumbleStoreLogoId
+} from 'common/humble/keyTypePresentation'
 import { STATE_LABEL_KEYS } from '../../stateLabels'
 import UrgencyBadge from '../UrgencyBadge'
+
+/**
+ * D-42-03: resolves a presentation from `keyTypePresentation.ts` to the
+ * caption's display name + optional logo id. Exhaustive over
+ * `HumbleKeyTypePresentation['kind']` — mirrors DialogHandler/index.tsx's
+ * `resolveButtonAction` exhaustiveness pattern (`const _exhaustive: never`)
+ * so a fourth presentation kind added later fails `pnpm codecheck` instead
+ * of silently rendering no name. `otherLabel` is passed in (rather than
+ * calling `tGamelib` here) because this module has no i18n — the neutral
+ * "Other" string for the 'unknown' case is resolved at the call site.
+ */
+function resolvePlatformDisplay(
+  presentation: HumbleKeyTypePresentation,
+  otherLabel: string
+): { name: string; logo: HumbleStoreLogoId | null } {
+  switch (presentation.kind) {
+    case 'branded':
+      return { name: presentation.name, logo: presentation.logo }
+    case 'named':
+      return { name: presentation.name, logo: null }
+    case 'unknown':
+      return { name: otherLabel, logo: null }
+    default: {
+      const _exhaustive: never = presentation
+      return _exhaustive
+    }
+  }
+}
+
+/**
+ * D-42-03: maps a `HumbleStoreLogoId` to the matching imported SVG
+ * component. Explicit three-case lookup, never a default/fallback — never
+ * routes through `StoreLogos` and never falls back to the GameLib icon
+ * (that `default` branch is exactly the trap D-42-03 names). `null` means
+ * "no logo asset exists for this platform" (origin/uplay/battlenet/
+ * nintendo_direct) and renders nothing, never a substitute icon.
+ */
+function resolveStoreLogo(
+  logoId: HumbleStoreLogoId | null
+): typeof SteamLogo | null {
+  if (logoId === null) {
+    return null
+  }
+  switch (logoId) {
+    case 'steam':
+      return SteamLogo
+    case 'gog':
+      return GOGLogo
+    case 'epic':
+      return EpicLogo
+    default: {
+      const _exhaustive: never = logoId
+      return _exhaustive
+    }
+  }
+}
 
 type ClaimAction = {
   revealedAt: number | null
@@ -98,6 +163,17 @@ export default function HumbleKeyRow({
           : null // 'blank' — render nothing, not placeholder text
 
   const isSteam = humbleKey.platform === 'steam'
+
+  // D-42-03: table-driven store indicator, replacing the raw lowercase
+  // key_type token ("steam · Humble RPG Bundle") with a proper display name
+  // plus logo (when one exists). Resolved once here, near the other derived
+  // locals, and consumed by the caption below.
+  const platformPresentation = getKeyTypePresentation(humbleKey.platform)
+  const platformDisplay = resolvePlatformDisplay(
+    platformPresentation,
+    tGamelib('gamelib:humbleKeys.platformOther', 'Other')
+  )
+  const PlatformLogo = resolveStoreLogo(platformDisplay.logo)
 
   return (
     <li className="humbleKeyRow">
@@ -226,9 +302,21 @@ export default function HumbleKeyRow({
       <div className="humbleKeyRowInfo">
         <span className="humbleKeyRowTitle">{displayTitle}</span>
         {!isUnpicked && (
+          // D-42-03: the store indicator is PRESENTATIONAL ONLY and does
+          // NOT need a fourth D-22 sanctioned exception (the :43-56 contract
+          // block above is unchanged) — it adds no click handler, no
+          // button/link element, no cursor:pointer, and no callback-bearing
+          // prop. The logo is decorative next to the adjacent display name
+          // (aria-hidden), so a screen reader isn't made to read the store
+          // name twice via a redundant alt/title.
           <span className="humbleKeyRowCaption">
+            {PlatformLogo && (
+              <span className="humbleKeyRowStoreLogo" aria-hidden="true">
+                <PlatformLogo />
+              </span>
+            )}
             {t('humbleKeys.rowCaption', '{{platform}} · {{origin}}', {
-              platform: humbleKey.platform,
+              platform: platformDisplay.name,
               origin: humbleKey.origin
             })}
           </span>

@@ -81,7 +81,8 @@
         "activatedTitle": "Aktyvuota",
         "activateWizardTitle": "Aktyvuoti šį raktą",
         "activatingBody": "Atskleidžiamas jūsų raktas ir jis aktyvuojamas Steam — tai užtruks tik akimirką.",
-        "activatingTitle": "Aktyvuojama Steam…"
+        "activatingTitle": "Aktyvuojama Steam…",
+        "platformOther": "Kita/-s/-i"
     },
     "info": {
         "refresh-rating": "Atnaujinti įvertinimą"

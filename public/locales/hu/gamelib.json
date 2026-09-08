@@ -81,7 +81,8 @@
         "activateWizardTitle": "Kulcs aktiválása",
         "activateConfirmTitle": "Aktiválod ezt a kulcsot a Steamen?",
         "activatingBody": "Kulcsod felfedése és beváltása a Steamen — ez csak egy pillanatot vesz igénybe.",
-        "activatingTitle": "Aktiválás a Steamen…"
+        "activatingTitle": "Aktiválás a Steamen…",
+        "platformOther": "Egyéb"
     },
     "info": {
         "refresh-rating": "Értékelés frissítése"

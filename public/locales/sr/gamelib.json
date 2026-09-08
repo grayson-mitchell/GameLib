@@ -81,7 +81,8 @@
         "activatedTitle": "Активирано",
         "activateWizardTitle": "Активирај овај кључ",
         "activatingBody": "Откривамо ваш кључ и активирамо га на Steam-у — ово траје само тренутак.",
-        "activatingTitle": "Активирање на Steam-у…"
+        "activatingTitle": "Активирање на Steam-у…",
+        "platformOther": "Остало"
     },
     "info": {
         "refresh-rating": "Освежи оцену"

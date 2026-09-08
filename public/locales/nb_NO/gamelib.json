@@ -81,7 +81,8 @@
         "activatedTitle": "Aktivert",
         "activateWizardTitle": "Aktiver denne nøkkelen",
         "activatingBody": "Avslører nøkkelen din og løser den inn på Steam — dette tar bare et øyeblikk.",
-        "activatingTitle": "Aktiverer på Steam …"
+        "activatingTitle": "Aktiverer på Steam …",
+        "platformOther": "Annen"
     },
     "info": {
         "refresh-rating": "Oppdater vurdering"

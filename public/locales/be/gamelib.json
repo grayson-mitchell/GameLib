@@ -81,7 +81,8 @@
         "activatedTitle": "Актывавана",
         "activateWizardTitle": "Актываваць гэты ключ",
         "activatingBody": "Раскрыццё вашага ключа і яго актывацыя ў Steam — гэта зойме толькі момант.",
-        "activatingTitle": "Актывацыя ў Steam…"
+        "activatingTitle": "Актывацыя ў Steam…",
+        "platformOther": "Іншае"
     },
     "info": {
         "refresh-rating": "Абнавіць рэйтынг"

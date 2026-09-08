@@ -81,7 +81,8 @@
         "activateConfirmBodyRevealed": "See lunastab sinu juba paljastatud võtme sinu Steami kontol. Seda ei saa tagasi võtta.",
         "activateConfirmTitle": "Aktiveerida see võti Steamis?",
         "activatingBody": "Sinu võtme paljastamine ja lunastamine Steamis — see võtab vaid hetke.",
-        "activatingTitle": "Aktiveerimine Steamis…"
+        "activatingTitle": "Aktiveerimine Steamis…",
+        "platformOther": "Muu"
     },
     "info": {
         "refresh-rating": "Värskenda hinnangut"

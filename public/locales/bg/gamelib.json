@@ -81,7 +81,8 @@
         "activatedTitle": "Активиран",
         "activateWizardTitle": "Активиране на този ключ",
         "activatingBody": "Разкриваме ключа ви и го активираме в Steam — това отнема само momент.",
-        "activatingTitle": "Активиране в Steam…"
+        "activatingTitle": "Активиране в Steam…",
+        "platformOther": "Други"
     },
     "info": {
         "refresh-rating": "Опресняване на рейтинга"

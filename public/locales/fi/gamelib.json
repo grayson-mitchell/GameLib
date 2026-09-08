@@ -81,7 +81,8 @@
         "activateWizardTitle": "Aktivoi tämä avain",
         "activateConfirmTitle": "Aktivoidaanko tämä avain Steamissa?",
         "activatingBody": "Avaimesi paljastetaan ja lunastetaan Steamissa — tämä kestää vain hetken.",
-        "activatingTitle": "Aktivoidaan Steamissa…"
+        "activatingTitle": "Aktivoidaan Steamissa…",
+        "platformOther": "Muu"
     },
     "info": {
         "refresh-rating": "Päivitä arvostelu"

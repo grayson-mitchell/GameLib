@@ -81,7 +81,8 @@
         "activatedTitle": "הופעל",
         "activateWizardTitle": "הפעלת המפתח הזה",
         "activatingBody": "חושפים את המפתח שלך ומממשים אותו ב-Steam — זה ייקח רק רגע.",
-        "activatingTitle": "מפעילים ב-Steam…"
+        "activatingTitle": "מפעילים ב-Steam…",
+        "platformOther": "אחר"
     },
     "info": {
         "refresh-rating": "רענון דירוג"
