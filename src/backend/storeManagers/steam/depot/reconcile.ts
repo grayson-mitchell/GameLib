@@ -97,19 +97,41 @@ async function zeroSizeVerified(dest: string): Promise<boolean> {
   }
 }
 
-async function regularFileVerified(
+export type ShapeFailure = 'missing' | 'not-a-file' | 'wrong-size'
+
+export type ShapeResult =
+  | { ok: true; size: number }
+  | { ok: false; reason: ShapeFailure; foundSize?: number }
+
+/** Non-content half of "is this a correct regular file on disk": present,
+ *  a regular file (not a directory/symlink/etc.), and the exact expected
+ *  size. Shared by `regularFileVerified` (sha1-gated, decides what may be
+ *  SKIPPED from the download job list) and `verifyStructuralIntegrity`
+ *  (POST-download, no-sha1) so "what a correct regular file looks like on
+ *  disk" lives in exactly one place. */
+async function regularFileShape(
   dest: string,
   file: DepotPlanFile
-): Promise<boolean> {
+): Promise<ShapeResult> {
   let st
   try {
     st = await stat(dest)
   } catch {
-    return false
+    return { ok: false, reason: 'missing' }
   }
-  if (!st.isFile()) return false
-  // Wrong size is decisive on its own — no sha1 needed to reject it.
-  if (st.size !== Number(file.size)) return false
+  if (!st.isFile()) return { ok: false, reason: 'not-a-file' }
+  if (st.size !== Number(file.size)) {
+    return { ok: false, reason: 'wrong-size', foundSize: st.size }
+  }
+  return { ok: true, size: st.size }
+}
+
+async function regularFileVerified(
+  dest: string,
+  file: DepotPlanFile
+): Promise<boolean> {
+  const shape = await regularFileShape(dest, file)
+  if (!shape.ok) return false
 
   // Pitfall 1 / T-23-07: size-match alone is NEVER sufficient. Every
   // present-and-size-correct file MUST pass a real content sha1 before being
@@ -171,4 +193,126 @@ export async function reconcilePartialState(
   }
 
   return { jobs, allFilesVerified, skippedBytes }
+}
+
+// Matches depot.ts's FAILURE_LOG_CAP (= 10) precedent for bounding a
+// per-run log payload while still counting the true total separately.
+const MISMATCH_REPORT_CAP = 10
+
+export type StructuralFailureReason =
+  | 'missing'
+  | 'not-a-file'
+  | 'wrong-size'
+  | 'not-a-directory'
+  | 'bad-symlink'
+  | 'error'
+
+export interface StructuralMismatch {
+  filename: string
+  reason: StructuralFailureReason
+  expectedSize?: number
+  foundSize?: number
+}
+
+export interface StructuralVerifyResult {
+  ok: boolean
+  checked: number
+  /** TOTAL mismatch count — never truncated, even though `mismatches` is
+   *  capped for logging. A caller must never infer the true damage extent
+   *  from `mismatches.length`. */
+  mismatchCount: number
+  /** Bounded to MISMATCH_REPORT_CAP entries. */
+  mismatches: StructuralMismatch[]
+}
+
+/**
+ * POST-download damage detector — NOT a content check, and NEVER a
+ * substitute for `reconcilePartialState`'s sha1 gate above. That function
+ * decides what may be SKIPPED from the download job list, a decision that
+ * requires sha1 per this file's header invariant. This function runs AFTER
+ * every planned file has already been written and whole-file-sha1-verified
+ * by `downloadSingleFile` (depot.ts:1629-1637), and asks a different
+ * question: is what we wrote still there, and still the right shape?
+ *
+ * Why no sha1: content was already proven correct at write time; the
+ * residual risk this function exists to catch is POST-write damage — a
+ * later job in the same run clobbering an earlier file's destination, a
+ * truncation, a regular file replaced by a directory. Type+size catches all
+ * of those at ~1 stat() per planned entry. Re-hashing a multi-GB install
+ * end-to-end on every single completion is not affordable.
+ *
+ * What it therefore CANNOT catch: content silently corrupted in place, at
+ * the identical size, by something outside this process. Documented here so
+ * nobody mistakes this for a full verify.
+ *
+ * An `unresolved` path collision (two chunked entries claiming one
+ * destination path — see depot/pathCollisions.ts) means at least one of
+ * those entries structurally cannot be satisfied on disk simultaneously, so
+ * it will legitimately mismatch here and force the safe 1026 fallback. That
+ * is the correct, honest answer for a plan `pathCollisions.ts` deliberately
+ * declined to resolve, but it IS a behaviour change from before this
+ * function existed: such a title could previously still earn a 4.
+ *
+ * Fails CLOSED like every other function in this file: a thrown
+ * PathTraversalError from resolveContainedPath is NOT caught here — it
+ * propagates so the caller (depot.ts) can fail the whole check closed,
+ * exactly as an unmatched shape does. There is no branch here that resolves
+ * to a pass on incomplete information.
+ */
+export async function verifyStructuralIntegrity(
+  plan: DepotPlan,
+  installRoot: string
+): Promise<StructuralVerifyResult> {
+  const mismatches: StructuralMismatch[] = []
+  let checked = 0
+  let mismatchCount = 0
+
+  const record = (
+    filename: string,
+    m: Omit<StructuralMismatch, 'filename'>
+  ) => {
+    mismatchCount++
+    if (mismatches.length < MISMATCH_REPORT_CAP) {
+      mismatches.push({ filename, ...m })
+    }
+  }
+
+  for (const depot of plan.depots) {
+    for (const file of depot.files) {
+      checked++
+      const dest = resolveContainedPath(installRoot, file.filename)
+
+      if (file.flags && file.flags & DIRECTORY_FLAG) {
+        if (!(await directoryVerified(dest))) {
+          record(file.filename, { reason: 'not-a-directory' })
+        }
+        continue
+      }
+
+      if (file.flags && file.flags & SYMLINK_FLAG) {
+        if (!(await symlinkVerified(dest, file.linktarget))) {
+          record(file.filename, { reason: 'bad-symlink' })
+        }
+        continue
+      }
+
+      if (!file.chunks.length || Number(file.size) === 0) {
+        if (!(await zeroSizeVerified(dest))) {
+          record(file.filename, { reason: 'wrong-size', expectedSize: 0 })
+        }
+        continue
+      }
+
+      const shape = await regularFileShape(dest, file)
+      if (!shape.ok) {
+        record(file.filename, {
+          reason: shape.reason,
+          expectedSize: Number(file.size),
+          foundSize: shape.foundSize
+        })
+      }
+    }
+  }
+
+  return { ok: mismatchCount === 0, checked, mismatchCount, mismatches }
 }

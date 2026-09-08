@@ -55,7 +55,10 @@ import { InflightLimiter } from './depot/inflightLimiter'
 import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
 import { applyDepotFileFlags } from './depot/fileAttributes'
-import { reconcilePartialState } from './depot/reconcile'
+import {
+  reconcilePartialState,
+  verifyStructuralIntegrity
+} from './depot/reconcile'
 import { resolveDepotPathCollisions } from './depot/pathCollisions'
 import {
   classifyDepotError,
@@ -2670,10 +2673,67 @@ export async function downloadDepotFiles(
       )
     }
 
+    // Phase 23 (NBD-01/02/03): reconcilePartialState (above, ~line 2160) runs
+    // ONCE at the START of downloadDepotFiles as the job-list builder. This
+    // is the only point at which the tree is in its FINAL state for this run
+    // — after the job loop, after healReconciledFileModes, after every
+    // per-file mode application — so it is the only place a post-write
+    // clobber (a later job overwriting an earlier file's destination, a
+    // truncation, a regular file replaced by a directory) can be caught
+    // before the completeness gate grants StateFlags=4.
+    //
+    // Guarded by runLooksComplete (the cancelled/failed-run decision): a
+    // cancelled or already-failed run already fails allFilesVerifiedThisRun
+    // via allJobsAttempted/failures below, so its value cannot change the
+    // ACF written for that run — running ~1 stat() per planned file there
+    // would be pure waste, and its per-file failures are already logged
+    // individually at the loop's own catch site. The check therefore runs
+    // ONLY on the runs that would otherwise be granted a 4 — exactly the
+    // population it exists to police. This is a strict tightening: no run
+    // that previously resolved to 1026 can now resolve to 4.
+    //
+    // Fail-closed contract: a structural mismatch resolves to false, a throw
+    // (including PathTraversalError) resolves to false, and an unguarded
+    // (incomplete/cancelled) run keeps the pre-existing false from
+    // allJobsAttempted/failures. No branch here resolves to true on
+    // incomplete information (gotcha 6 / fail-open-recreation precedent).
+    const runLooksComplete =
+      allJobsAttempted && failures.length === 0 && !opts.signal?.aborted
+    let structurallyVerified = true
+    if (runLooksComplete) {
+      try {
+        const structural = await verifyStructuralIntegrity(plan, installRoot)
+        structurallyVerified = structural.ok
+        if (!structural.ok) {
+          logWarning(
+            `downloadDepotFiles: appId=${plan.appId} post-download structural ` +
+              `re-verification found ${structural.mismatchCount} of ` +
+              `${structural.checked} planned entries damaged or missing — failing ` +
+              `closed to StateFlags=1026 instead of an unproven StateFlags=4: ` +
+              structural.mismatches
+                .map(
+                  (m) =>
+                    `"${m.filename}" ${m.reason} (expected=${m.expectedSize} found=${m.foundSize})`
+                )
+                .join('; '),
+            LogPrefix.Steam
+          )
+        }
+      } catch (err) {
+        structurallyVerified = false
+        logWarning(
+          `downloadDepotFiles: appId=${plan.appId} post-download structural ` +
+            `re-verification threw — failing closed to StateFlags=1026: ${String(err)}`,
+          LogPrefix.Steam
+        )
+      }
+    }
+
     return {
       outcome: opts.signal?.aborted ? 'cancelled' : 'completed',
       failures,
-      allFilesVerifiedThisRun: allJobsAttempted && failures.length === 0,
+      allFilesVerifiedThisRun:
+        allJobsAttempted && failures.length === 0 && structurallyVerified,
       allModesApplied
     }
   } finally {
