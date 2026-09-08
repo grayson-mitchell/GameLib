@@ -123,6 +123,11 @@ import { backendEvents } from '../backend_events'
 import { fetchLastestReleases } from '../utils/releases'
 import { downloadAntiCheatData } from '../anticheat/utils'
 import { isMac } from '../constants/environment'
+// Block F (todo 2026-09-06, quick-260908-k3x). `checkRosettaInstall()` has no static import
+// edge back into `sidecar/` (`grep -n "from './sidecar\|from '\.\./sidecar" src/backend/
+// utils.ts` returns nothing), so this import introduces no cycle. `isMac` above is already
+// imported for other blocks -- not duplicated here.
+import { checkRosettaInstall } from '../utils'
 // Todo 2026-08-16 (quick task 260822-s8y): `applyMigrations()` had exactly ONE call site in
 // the whole repo -- `main.ts:412`, inside Electron's `app.whenReady()` -- so under Tauri the
 // entire migration system was dead code that PRESENTED as live (`storeRegistration.ts`
@@ -197,6 +202,24 @@ let playtimeLockClearInitialized = false
 // already online) or stacking another 'online' listener on connectivityEmitter (if not).
 // Production calls init() once.
 let storeUserReconcileInitialized = false
+// Guards checkRosettaWhenMac()'s call site below (Block F, todo 2026-09-06, quick-260908-k3x).
+// Same reason as the other guards: bootstrap.test.ts / *Flows.test.ts call init() many times
+// per file, and without this guard each call would re-chain another `.then()` off `i18nReady`
+// and could paint a second Rosetta-warning dialog. Lives at the CALL SITE, not inside
+// `checkRosettaWhenMac()` itself, so `rosettaPlatformGate.test.ts` can call the function
+// directly without needing to reset a guard it doesn't own -- re-running the read-only probe
+// is harmless; the guard exists only to prevent a duplicate dialog.
+let rosettaCheckInitialized = false
+// Holds the i18next init promise, chained so a caller can await CATALOG READINESS rather than
+// mere init()-was-called (D-02 area, Block F). Assigned the CAUGHT promise -- not the raw
+// `i18next.use(Backend).init(...)` one -- because a failed i18n init must still let the
+// Rosetta check run (falling back to i18next's own inline defaults), and must never leave a
+// second unhandled rejection sitting alongside the existing `.catch()` below. If the i18next
+// block's own outer `try` (around `GlobalConfig.get().getSettings()`) throws before ever
+// reaching `i18next.use(Backend).init(...)`, this stays at its initial `Promise.resolve()`
+// value, which is the correct degrade: the Rosetta check still runs, just without having
+// waited on anything.
+let i18nReady: Promise<void> = Promise.resolve()
 
 /**
  * Delivers a startup (cold-start) `gamelib://` deep link to `handleProtocol`, if `argv`
@@ -407,6 +430,56 @@ export function reconcileStoreUsersWhenOnline(): void {
   } catch (error) {
     logWarning(
       `[bootstrap] reconcileStoreUsersWhenOnline: could not be started: ${String(error)}`,
+      LogPrefix.Backend
+    )
+  }
+}
+
+/**
+ * Restores the boot-time Rosetta-availability probe deleted with `src/backend/main.ts` in
+ * commit `5643c7583` ("feat(35-14)!: delete the Electron entry points") (todo 2026-09-06,
+ * quick-260908-k3x). The old caller was `main.ts:241` -- that file no longer exists, so this
+ * is a port into the sidecar's own boot path, not a re-wire of an existing call site.
+ * `checkRosettaInstall()` itself (`utils.ts:1402`) is untouched: it has no platform guard of
+ * its own, so the caller must gate it, which is this function's whole job.
+ *
+ * FIVE decisions this function's shape encodes:
+ *
+ * 1. **Why the mac gate lives HERE and not in `checkRosettaInstall()`**: the probe shells
+ *    `arch -x86_64 /usr/sbin/sysctl`, which is meaningless off macOS. Gating the caller
+ *    instead of the callee leaves `checkRosettaInstall()`'s own test suite
+ *    (`checkRosettaInstall.test.ts`) valid and unmodified.
+ * 2. **Why floated, not awaited**: `init()` is synchronous by contract -- `src/sidecar/
+ *    index.ts` and ~10 test suites call it as such. Same constraint the `applyMigrations()`
+ *    comment above records.
+ * 3. **Why chained off `i18nReady` rather than relying on statement order**: the dialog's
+ *    title/message come from `i18next.t()`, and `i18next.use(Backend).init()` is
+ *    asynchronous (installed i18next is 22.5.1; `i18next-fs-backend` reads catalogs off
+ *    disk). Statement order alone would only guarantee `i18next.init()` had been *called*,
+ *    not that the catalog had *loaded* -- so a non-English user would get the inline English
+ *    defaults baked into `checkRosettaInstall()`'s `t()` calls. Chaining makes the ordering
+ *    exact rather than probable.
+ * 4. **Why it cannot fail boot**: `dialog.showMessageBox` is a total method under the sidecar
+ *    (never rejects -- `platform/index.ts`), the chained promise is `.catch()`-guarded, and
+ *    the whole synchronous body is wrapped in try/catch too.
+ * 5. **`icon: windowIcon`** (inside `checkRosettaInstall()`) is inert under the Rust dialog
+ *    forward, which passes only `message`/`title`/`kind`/`buttons` -- named here so a reader
+ *    does not go looking for a missing icon.
+ */
+export function checkRosettaWhenMac(): void {
+  if (!isMac) return
+  try {
+    i18nReady
+      .then(() => checkRosettaInstall())
+      .catch((error: unknown) => {
+        logWarning(
+          `[bootstrap] checkRosettaInstall() failed: ${String(error)}`,
+          LogPrefix.Backend
+        )
+      })
+  } catch (error) {
+    logWarning(
+      `[bootstrap] checkRosettaWhenMac() could not be started: ${String(error)}`,
       LogPrefix.Backend
     )
   }
@@ -643,7 +716,9 @@ export function init(
           LogPrefix.Backend
         )
       }
-      i18next
+      // Assigned to `i18nReady` (Block F, quick-260908-k3x) -- see that variable's own
+      // declaration comment for why the CAUGHT promise, not the raw one, is what's held.
+      i18nReady = i18next
         .use(Backend)
         .init({
           backend: {
@@ -665,6 +740,7 @@ export function init(
           ns: ['translation', 'gamelib'],
           defaultNS: 'translation'
         })
+        .then(() => undefined)
         .catch((error) => {
           logWarning(
             `[bootstrap] i18next initialization failed: ${error}`,
@@ -861,6 +937,22 @@ export function init(
   if (!storeUserReconcileInitialized) {
     storeUserReconcileInitialized = true
     reconcileStoreUsersWhenOnline()
+  }
+  // Block F — boot-time Rosetta-availability probe (todo 2026-09-06, quick-260908-k3x).
+  // Placement is constrained from both sides:
+  //   - Must be AFTER the i18next block above so `i18nReady` holds the real init promise
+  //     rather than the `Promise.resolve()` initial value.
+  //   - Must be AFTER `startRpcServer(input, output)` and `electronStub.bindTransport(...)`
+  //     above, because the dialog reaches the shell via `requestRustInvoke`, which needs a
+  //     live write stream -- do not rely on the `i18nReady` await pushing this into a later
+  //     macrotask; the placement itself must carry it.
+  // Runs before READY_SENTINEL below, but deliberately does NOT delay it: boot is not
+  // blocked on a warning dialog (see `checkRosettaWhenMac()`'s own header for why it can
+  // never fail boot). The guard flag lives at this call site, matching Blocks A/B/E, not
+  // inside `checkRosettaWhenMac()` -- see `rosettaCheckInitialized`'s declaration comment.
+  if (!rosettaCheckInitialized) {
+    rosettaCheckInitialized = true
+    checkRosettaWhenMac()
   }
   output.write(`${READY_SENTINEL}\n`)
   // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
