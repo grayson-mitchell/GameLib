@@ -36,6 +36,20 @@ import { tmpdir } from 'os'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
+// DIAGNOSIS QUALITY ONLY -- this buys no correctness and is not what fixed the drop this
+// suite was reported for (that was `LogWriter`'s rotate gate; see
+// `.planning/debug/bootstrapwirings-log-drop.md`). `waitFor` below defaults to a 5000ms
+// deadline and the backend jest project sets no `testTimeout`, so jest's own per-test
+// default is 5000ms TOO -- and this file's tests each burn ~200ms in
+// `setupIsolatedBootstrap()` before any poll starts, so jest's deadline always expired
+// first. That made `waitFor`'s "condition not met" message unreachable dead code and every
+// failure here surface as a bare "Exceeded timeout of 5000 ms" naming nothing. Raising the
+// per-test ceiling (rather than lowering `waitFor`'s deadline, which would tighten the
+// i18next poll at line ~321 that legitimately takes ~800ms cold and ~2.4s under full-suite
+// load) lets the poll lose the race on its own terms and say which predicate never came
+// true. Tests still fail at 5s; they just explain themselves.
+jest.setTimeout(20000)
+
 // ── i18next — DEFEAT Jest's project-wide automatic manual mock. This is the load-bearing
 // line of this whole suite: `src/backend/__mocks__/i18next.ts` sits adjacent to this jest
 // project's `roots` (`src/backend`), so Jest substitutes it for the REAL npm `i18next`
