@@ -2,12 +2,20 @@
 
 Running record of the `checkpoint:human-verify` gate. **This is deliberately NOT
 `42-07-SUMMARY.md`** — creating that file early would set `has_summary: true` and make the
-plan-index treat plan 42-07 as complete while three gate items are still unanswered.
+plan-index treat plan 42-07 as complete while gate items remain unanswered. See the Status
+line below for the live count — do not trust a number hard-coded in this paragraph.
 
 Operator answers are transcribed as given. Nothing in this file was inferred, auto-approved,
 or generated on the operator's behalf.
 
-Status: **3 of 6 answered.**
+Status: **4 of 6 answered** (1, 2, 3, 5). Items 4 and 6 outstanding.
+
+> **CAVEAT — item 3's PASS is against the PRE-REDESIGN row.** The operator subsequently
+> directed a row redesign (quick task `260908-*`, "drop origin, title line height"): the store
+> icon moves to the left, grows to the title line-box, the store-name text and the
+> `· {{origin}}` segment are removed. That changes the exact rendering item 3 verified.
+> **Item 3 must be re-run after the redesign lands.** Item 4 is SUPERSEDED — it measured the
+> reserved-glyph-box geometry inside `.humbleKeyRowCaption`, which the redesign replaces.
 
 ---
 
@@ -71,13 +79,55 @@ deep link (42-05) still has no reachable user.** The todo said building it would
 "untestable code with no user"; that remains true, now for an evidenced reason rather than
 an assumed one.
 
+## 3. Both themes — **PASS** (against the pre-redesign row; see caveat above)
+
+Operator, 2026-09-08, verbatim: *"both themes look fine"*.
+
+Store logo visible and correctly coloured in both a light and a dark GameLib theme. The
+`fill: currentColor` inheritance concern (todo
+`2026-09-08-humble-key-row-store-logo-fill-currentcolor-unverified-live`) did not
+materialise — the logo did not vanish or invert on either theme. This was verified against a
+real **GOG** row (the newly-classified `gog_keyless` entitlement) as well as Steam rows, so
+two distinct logo assets were exercised, not one.
+
+**Same reply carried a design rejection**, recorded here because it is operator input, not a
+defect report: *"logo's are very small. should be size of row … should be icon only and put
+at begining of row"*. Resolved after review into the redesign directive below.
+
+## Redesign directive (operator, 2026-09-08) — follow-up work, not a phase-42 gate item
+
+Verbatim: *"drop origin, title line height"*.
+
+Agreed scope: store icon moves to the LEFT of the row and grows to the title line-box;
+the caption drops BOTH the store-name text and the `· {{origin}}` segment; the game title
+becomes the row's single label.
+
+**The field removed is `origin`, NOT the title.** The operator's first instruction was to
+remove "the now superfluous game title that is column 4". Measured against their live cache,
+that would have been destructive: `origin` is the bundle/order label (`humble.ts:104`), and
+on **20 of 33 keys** it is the gift string `"A very special gift just for you"`, which names
+no game at all. Dropping the title would have rendered those twenty rows unidentifiable
+(Crusader Kings III and Citizen Sleeper both reduce to "Steam · A very special gift just for
+you"). The duplication the operator saw is real but only on SINGLE-GAME orders, where
+`origin` ≈ `title` — e.g. `Dex` / `Dex: Enhanced Version`, `Racine` / `Racine`,
+`Valiant: Resurrection` / `Valiant: Resurrection (Steam)`. Corrected before any code changed.
+
+Two constraints carried into the follow-up task:
+- **No-logo stores keep their text label** (`uplay`, `battlenet`, `origin`, `origin_keyless`,
+  `nintendo_direct`, and the `generic`/unknown row the operator actually holds). Only
+  `steam`, `gog`, `epic` have art. Icon-only would blank those rows and make item 2's
+  approved names unreachable.
+- **The icon must gain an accessible name.** It is currently `aria-hidden="true"`
+  (`HumbleKeyRow/index.tsx:359-361`) precisely BECAUSE the adjacent text names the store.
+  Once that text is gone the rationale inverts and screen-reader users lose the store
+  entirely.
+
 ---
 
 ## Still outstanding — operator input required
 
-- **3. Both themes.** Per-theme verdict on store-logo visibility/colour in the row caption.
-  Now testable against a real GOG row for the first time.
-- **4. No layout shift.** Four measured numbers: `getComputedStyle(row).height` and
-  `.humbleKeyRowCaption` `getBoundingClientRect().left`, for a logo row vs a no-logo row.
+- **4. No layout shift.** SUPERSEDED by the redesign — it measured `.humbleKeyRowCaption`'s
+  reserved-glyph-box geometry, which the redesign replaces. Do not collect numbers for a
+  layout about to be deleted; re-scope the check after the redesign lands.
 - **6. Auto-settle and its Undo.** Settled count, Undo returns row to `Revealed`, re-sync
   durability (must NOT re-settle), and confirmation that no fuzzy-matched key settled.
