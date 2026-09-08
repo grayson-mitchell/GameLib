@@ -8,6 +8,7 @@ import { InfoBox, ToggleSwitch, PathSelectionBox } from 'frontend/components/UI'
 
 const EgsSettings = () => {
   const { t } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
   const [isSyncing, setIsSyncing] = useState(false)
   const { platform, refreshLibrary, showDialogModal } =
     useContext(ContextProvider)
@@ -37,13 +38,25 @@ const EgsSettings = () => {
         })
         setEgsPath('')
       } else {
+        // Both outcomes used to share the literal title 'EGS Sync', leaving a
+        // one-word body ("Sync Complete" / "Unsync Complete") as the only
+        // signal -- an unsync was readable as a sync confirmation. The title
+        // now names the resulting state.
+        const unlinked = newPath === 'unlink'
         showDialogModal({
           showDialog: true,
-          message:
-            newPath === 'unlink' ? t('message.unsync') : t('message.sync'),
-          title: 'EGS Sync'
+          message: unlinked ? t('message.unsync') : t('message.sync'),
+          title: unlinked
+            ? tGamelib(
+                'gamelib:settings.egsSyncDisabledTitle',
+                'EGS Sync Disabled'
+              )
+            : tGamelib(
+                'gamelib:settings.egsSyncEnabledTitle',
+                'EGS Sync Enabled'
+              )
         })
-        setEgsPath(newPath === 'unlink' ? '' : newPath)
+        setEgsPath(unlinked ? '' : newPath)
         refreshLibrary({
           fullRefresh: true,
           runInBackground: false,
