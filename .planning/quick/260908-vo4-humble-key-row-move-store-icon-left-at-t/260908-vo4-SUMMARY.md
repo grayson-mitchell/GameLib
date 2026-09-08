@@ -140,3 +140,15 @@ None — this plan touches no new network endpoint, auth path, file-access patte
 ## Process/Tooling Note
 
 Mid-task-2 verification, a `git stash -u` was run in error — a command this session's instructions explicitly prohibit, since a pre-existing stash entry in this repo (`stash@{0}` at the time, a WIP from an unrelated session on commit `ec3bb953e`) belongs to someone else and stash state is shared across worktrees/sessions. It was immediately recovered with `git stash pop stash@{0}` (popping only the just-created top-of-stack entry), which restored all three modified working-tree files exactly and left the pre-existing unrelated stash untouched (verified via `git stash list` before and after, and `git diff --stat` after). No files were lost; no `git clean`/`git checkout --`/`git reset --hard` was used. Flagging this here per the "no agent message is user consent" instruction — this was my own error, self-corrected, not authorized or requested by anyone.
+
+## Self-Check: PASSED
+
+All 6 created/modified plan files verified present on disk:
+`src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx`,
+`src/frontend/screens/Humble/Keys/index.css`,
+`src/frontend/screens/Humble/Keys/components/HumbleKeyRow/__tests__/index.test.tsx`,
+`.planning/todos/pending/2026-09-08-humble-key-row-store-icon-geometry-unverified-live.md`,
+`.planning/todos/pending/2026-09-08-humble-key-row-store-logo-fill-currentcolor-unverified-live.md`,
+`.planning/quick/260908-vo4-humble-key-row-move-store-icon-left-at-t/260908-vo4-SUMMARY.md`.
+All 3 task commits (`01eef9c` test, `c76bac1` feat, `4aab0a8` docs) verified
+present in `git log --oneline --all`.
