@@ -18,6 +18,13 @@ type Props = {
   /** One of the 5 states (D-30) or the round-7 'other' display bucket. */
   group: HumbleKeyGroupId
   keys: HumbleKey[]
+  /** D-42-01 (Phase 42): supplied by the All tab only. Returns the
+   * settle-undo affordance for a key, or undefined when the key was not
+   * settled from ownership. Every other caller omits it and the group
+   * renders exactly as before. */
+  settleActionFor?: (
+    key: HumbleKey
+  ) => { settledAt: number; onUndoSettle: () => void } | undefined
 }
 
 // Group headings: the 5 state groups reuse the badge labels (stateLabels.ts); the
@@ -36,7 +43,11 @@ function defaultExpanded(group: HumbleKeyGroupId): boolean {
   return group !== 'UNREDEEMABLE' && group !== 'other'
 }
 
-export default function HumbleKeyGroup({ group, keys }: Props) {
+export default function HumbleKeyGroup({
+  group,
+  keys,
+  settleActionFor
+}: Props) {
   const { t } = useTranslation()
   const listId = useId()
   const [expanded, setExpanded] = useState(() => defaultExpanded(group))
@@ -82,6 +93,7 @@ export default function HumbleKeyGroup({ group, keys }: Props) {
               key={`${key.gamekey}:${key.machineName}`}
               humbleKey={key}
               urgencyTier={getUrgencyTier(key.state, key.expiration)}
+              settleAction={settleActionFor?.(key)}
             />
           ))}
         </ul>
