@@ -47,6 +47,15 @@ import './handlers'
 // `sidecar/storeRegistration.ts:61` already imports `playtimeSyncQueue` from this exact
 // module, so this is a second binding onto an already-resident singleton, not a new edge.
 import { playtimeSyncQueue } from '../storeManagers/gog/electronStores'
+// Block G (todo 2026-09-06, quick-260908-wk0). Adds NO new module to the sidecar bundle:
+// `grep -rn "libraryManagerMap" src/backend/sidecar/*.ts` (re-run at execution time) confirms
+// `bootstrap.ts` already imports `./installedJsonWatcher` at its own line 39, and
+// `installedJsonWatcher.ts:41` already imports `libraryManagerMap` from `'../storeManagers'` --
+// so this is a second binding onto an already-resident singleton, strictly stronger than the
+// `./handlers`-transitive route (`runnerMiscFlowRegistration.ts:92`,
+// `installFlowRegistration.ts:125`, `appShellFlowRegistration.ts:164` all also import it), not a
+// new edge.
+import { libraryManagerMap } from '../storeManagers'
 // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09, REQ-34.5-01/05/12): `protocol.ts` imports
 // `dialog`/`app` from `electron`, so this import is safe ONLY because `./installElectronHook`
 // (Step 1, above) has already installed the `Module._load` redirect by the time this
@@ -210,6 +219,15 @@ let storeUserReconcileInitialized = false
 // directly without needing to reset a guard it doesn't own -- re-running the read-only probe
 // is harmless; the guard exists only to prevent a duplicate dialog.
 let rosettaCheckInitialized = false
+// Guards syncQueuedPlaytimeWhenOnline()'s call site below (Block G, todo 2026-09-06,
+// quick-260908-wk0). Same reason as storeUserReconcileInitialized above: bootstrap.test.ts /
+// *Flows.test.ts call init() many times per file, and without this guard each call would
+// register another runOnceWhenOnline(...) -- either invoking the drain body again immediately
+// (if already online) or stacking another 'online' listener on connectivityEmitter (if not).
+// Production calls init() once. Lives at the CALL SITE, not inside
+// syncQueuedPlaytimeWhenOnline() itself, matching Blocks A/B/E/F, so the new suite can call the
+// helper directly without owning a guard it cannot reset.
+let playtimeQueueDrainInitialized = false
 // Holds the i18next init promise, chained so a caller can await CATALOG READINESS rather than
 // mere init()-was-called (D-02 area, Block F). Assigned the CAUGHT promise -- not the raw
 // `i18next.use(Backend).init(...)` one -- because a failed i18n init must still let the
@@ -430,6 +448,104 @@ export function reconcileStoreUsersWhenOnline(): void {
   } catch (error) {
     logWarning(
       `[bootstrap] reconcileStoreUsersWhenOnline: could not be started: ${String(error)}`,
+      LogPrefix.Backend
+    )
+  }
+}
+
+/**
+ * Restores the boot-time GOG queued-playtime drain deleted with `src/backend/main.ts` in commit
+ * `5643c7583` ("feat(35-14)!: delete the Electron entry points") (todo 2026-09-06,
+ * quick-260908-wk0). The deleted source, `main.ts:470-476`, ran inside `app.whenReady()`,
+ * immediately after the `playtimeSyncQueue.delete('lock')` line Block D above already ported:
+ *
+ *     // Make sure lock is not present when starting up
+ *     playtimeSyncQueue.delete('lock')
+ *     if (!settings.disablePlaytimeSync) {
+ *       runOnceWhenOnline(() => libraryManagerMap['gog'].syncQueuedPlaytime())
+ *     } else {
+ *       logDebug('Skipping playtime sync queue upload - playtime sync disabled', {
+ *         prefix: LogPrefix.Backend
+ *       })
+ *     }
+ *
+ * LOAD-BEARING ORDERING (D2): Block D already cleared a lock stranded by process death.
+ * `syncQueuedPlaytime()`'s FIRST statement is `if (playtimeSyncQueue.has('lock')) return`
+ * (`gog/library.ts`). Calling this helper before Block D's clear has run would let a stale lock
+ * silently no-op the very drain this block adds -- restoring the call site while leaving the bug
+ * unfixed for exactly the users whose previous sync died mid-flight, i.e. the ones with a
+ * non-empty queue. THIS IS THE SINGLE MOST IMPORTANT SENTENCE IN THIS FILE'S BLOCK G. The call
+ * site below is therefore placed after Block D (and Block E, appended as Block G), never before.
+ *
+ * THREE GUARDS, not one (D4). `runOnceWhenOnline` either invokes its callback immediately (if
+ * already online) or defers it to `connectivityEmitter.once('online', ...)` (if offline) --
+ * `online_monitor.ts:136-142`. In the deferred case the callback body runs on a LATER turn,
+ * outside the stack frame of any `try` wrapping the `runOnceWhenOnline(...)` call itself, so an
+ * outer `try { runOnceWhenOnline(cb) } catch {}` covers only the REGISTRATION, never the deferred
+ * body -- hence the inner `try/catch` around the callback. And `syncQueuedPlaytime()` CAN reject:
+ * its `try/finally` (finding A1 LEG 1, `gog/library.ts`) deliberately re-throws rather than
+ * swallowing -- the `finally` only releases the lock -- and `postPlaytimeSession` does network
+ * I/O. `runOnceWhenOnline`'s callback return value is discarded, so a floated
+ * `syncQueuedPlaytime()` promise needs its OWN explicit `.catch`, or the rejection would surface
+ * only via `processGuards`' process-wide net -- exactly what `deliverStartupProtocolUrl` and the
+ * migrations block above already refuse to rely on. Do not "simplify" this back down to fewer
+ * guards.
+ *
+ * SETTINGS READ OUTSIDE THE CALLBACK (D5): `GlobalConfig.get().getSettings()` runs synchronously
+ * at helper-entry time, before `runOnceWhenOnline` is even called, and the `disablePlaytimeSync`
+ * branch returns early. Two reasons: fidelity (the deleted `main.ts` read `settings` at
+ * `whenReady()` time, not at online time), and determinism (a user toggling the setting between
+ * boot and coming online should not change what a boot-time decision already made). The whole
+ * synchronous body sits inside the outer try, so a throwing `getSettings()` cannot fail boot.
+ *
+ * THE `logDebug` LINE IS VERBATIM AND UNPREFIXED (D6), including its
+ * `{ prefix: LogPrefix.Backend }` options-object form. Two reasons, and an honest limit:
+ *   1. Block E established the house rule at this exact site: a PORTED log literal keeps its
+ *      original form; NEW diagnostic lines added by the port take the local `[bootstrap] `
+ *      prefix. This is the second application of that rule.
+ *   2. Honesty about what it is NOT: unlike Block E's `'User Not Found, removing it from Store'`,
+ *      this string is NOT the todo's own bundle-level evidence -- this todo's evidence is the
+ *      *count of `syncQueuedPlaytime()` call sites in `build/main/sidecar.js`* (recorded exactly
+ *      one, at `sidecar.js:23753`). So the verbatim decision here rests on the house rule and on
+ *      port fidelity, not on protecting a named grep. It is nonetheless a clean, independent
+ *      receipt for the DISABLED arm specifically -- that string appears zero times in `src/`
+ *      today.
+ * The two NEW catch-arm diagnostics below DO take the `[bootstrap] ` prefix and name this
+ * function, in the shape of `reconcileStoreUsersWhenOnline`'s catch arms.
+ *
+ * OUT OF SCOPE, explicitly (D13): `runOnceWhenOnline(gogPresence.setPresence)` sat on the very
+ * next line of the deleted source (`main.ts:477`) and is a SEPARATE, still-open todo
+ * (`2026-09-06-gog-presence-never-set-at-startup-and-its-keepalive-never-arms.md`). Not ported
+ * here, not touched here -- do not import `gogPresence` from this function.
+ */
+export function syncQueuedPlaytimeWhenOnline(): void {
+  try {
+    const settings = GlobalConfig.get().getSettings()
+    if (settings.disablePlaytimeSync) {
+      // Verbatim, unprefixed -- see the doc comment above (D6).
+      logDebug('Skipping playtime sync queue upload - playtime sync disabled', {
+        prefix: LogPrefix.Backend
+      })
+      return
+    }
+    runOnceWhenOnline(() => {
+      try {
+        libraryManagerMap['gog'].syncQueuedPlaytime().catch((error: unknown) => {
+          logWarning(
+            `[bootstrap] syncQueuedPlaytimeWhenOnline: syncQueuedPlaytime() failed: ${String(error)}`,
+            LogPrefix.Backend
+          )
+        })
+      } catch (error) {
+        logWarning(
+          `[bootstrap] syncQueuedPlaytimeWhenOnline: callback failed: ${String(error)}`,
+          LogPrefix.Backend
+        )
+      }
+    })
+  } catch (error) {
+    logWarning(
+      `[bootstrap] syncQueuedPlaytimeWhenOnline: could not be started: ${String(error)}`,
       LogPrefix.Backend
     )
   }
@@ -953,6 +1069,23 @@ export function init(
   if (!rosettaCheckInitialized) {
     rosettaCheckInitialized = true
     checkRosettaWhenMac()
+  }
+  // Block G — boot-time GOG queued-playtime drain (todo 2026-09-06, quick-260908-wk0).
+  // LOAD-BEARING PLACEMENT, stated first and in full: syncQueuedPlaytime()'s first statement is
+  // `if (playtimeSyncQueue.has('lock')) return`, so running this before Block D would let a lock
+  // stranded by process death silently no-op the very drain this block adds -- restoring the
+  // call site while leaving the bug unfixed for exactly the users whose previous sync died
+  // mid-flight. Appending here, after Block F, keeps this AFTER Block D's clear (the load-bearing
+  // constraint), AFTER `initLogger()` (the helper logs, and `heroicLogWriter` is unset before
+  // that -- the standing `sidecar-console-and-logger-are-invisible` finding), AFTER
+  // `initOnlineMonitor()` (it calls `runOnceWhenOnline`, the same requirement Blocks B/E already
+  // record), and BEFORE READY_SENTINEL below -- so the drain is at least queued before the
+  // frontend can drive any RPC, without delaying READY itself. `syncQueuedPlaytimeWhenOnline()`
+  // itself never fails boot (see its own header), so no additional try/catch is needed at this
+  // call site -- matches Blocks D/E/F's call site shape.
+  if (!playtimeQueueDrainInitialized) {
+    playtimeQueueDrainInitialized = true
+    syncQueuedPlaytimeWhenOnline()
   }
   output.write(`${READY_SENTINEL}\n`)
   // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
