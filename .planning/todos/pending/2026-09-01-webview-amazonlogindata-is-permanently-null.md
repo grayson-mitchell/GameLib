@@ -3,6 +3,8 @@ created: 2026-09-01T00:00:00.000Z
 title: "WebView/index.tsx's `amazonLoginData` state is permanently `null` — 6 read sites never see a value"
 area: login
 severity: medium
+platform: any
+ready: live-gate
 status: pending
 resolves_phase: ""
 found_by: "Quick task 260901-ud5 (clearing the pre-push eslint gate)"

@@ -4,6 +4,8 @@ title: "hardcodedStringGate's key/defaultText exemption fires on object shape al
 area: meta-i18n-gates
 status: OPEN
 severity: minor
+platform: any
+ready: code
 source: "41-REVIEW.md WR-02, carried forward by 41-REVIEW-FIX.md (outstanding)"
 files:
   - meta/hardcodedStringGate.ts (isKeyDefaultTupleElement / isKeyDefaultObjectProperty, ~:1219-1284)

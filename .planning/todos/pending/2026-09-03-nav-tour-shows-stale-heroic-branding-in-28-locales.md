@@ -3,6 +3,8 @@ created: 2026-09-03T00:00:00.000Z
 title: 'Stale "Heroic" branding in translated catalogs — nav tour steps in 28 locales, and the version label in 38'
 area: i18n
 severity: minor
+platform: any
+ready: live-gate
 needs: code-fix
 status: OPEN
 found_by: 'Phase 34.12-07 live UAT (measured across all 47 locale catalogs after the tooltip fix made tour text readable for the first time under Tauri)'

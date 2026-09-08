@@ -4,6 +4,8 @@ title: "Two live dialog-shim collapse defects (VCRuntime 'don't show again', Sna
 area: ui-dialogs
 status: OPEN
 severity: minor
+platform: any
+ready: human
 files:
   - src/backend/platform/index.ts
   - src/backend/utils.ts

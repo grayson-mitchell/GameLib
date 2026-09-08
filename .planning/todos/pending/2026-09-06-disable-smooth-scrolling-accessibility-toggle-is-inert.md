@@ -4,6 +4,8 @@ title: "The 'disable smooth scrolling' Accessibility toggle is inert — its onl
 area: frontend
 status: OPEN
 severity: minor
+platform: any
+ready: code
 source: "quick-260906-gej, sweep FINDINGS.md section D residue"
 files:
   - src/frontend/screens/Accessibility/index.tsx:51,232 (the still-rendered toggle)

@@ -3,7 +3,9 @@ created: 2026-09-03
 title: "All 10032 non-English fork strings are unreviewed machine translation — full coverage is not reviewed coverage"
 area: i18n
 status: pending
-severity: low
+severity: minor
+platform: any
+ready: human
 resolves_phase: ""
 found_by: "Closing the two i18n fork-string coverage todos on 2026-09-03 (commit ef7d7b8e6) — both closure records name this residue as surviving unowned"
 files:

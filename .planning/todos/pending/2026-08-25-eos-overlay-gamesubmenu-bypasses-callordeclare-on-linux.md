@@ -4,6 +4,8 @@ title: "`GameSubMenu`'s three EOS overlay call sites bypass `callOrDeclare` enti
 source: 34.6-LIVE-GATE.md Step 2, FINDING 2 (plan 34.6-12, 2026-08-24) -- disposition explicitly assigned to plan 34.6-14
 status: pending
 severity: medium
+platform: any
+ready: code
 resolves_phase: "unassigned"
 blocked_by: "nothing external -- fixable in-place once a plan's scope permits a source-file change to GameSubMenu/index.tsx"
 ---

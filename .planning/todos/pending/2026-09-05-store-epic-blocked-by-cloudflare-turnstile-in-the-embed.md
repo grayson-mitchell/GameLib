@@ -5,6 +5,8 @@ area: webview/store-embed
 needs: spike-then-decision-then-code
 status: OPEN
 severity: minor
+platform: any
+ready: human
 blocks: nothing
 origin: spike 024 (3 runs, 2026-09-05)
 files:

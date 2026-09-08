@@ -3,6 +3,8 @@ created: 2026-08-17T00:00:00.000Z
 title: "Humble's two keyring slots still read unattended at bootstrap — 260817-d61 deferred one slot of three, so the boot-prompt symptom is only partly fixed"
 area: auth
 severity: minor
+platform: any
+ready: blocked
 needs: design-then-code-fix
 status: "PARKED 2026-09-04 — superseded by the cross-store signed-out/offline mode design (ROADMAP Phase 999.1), which needs boot-time auth state and therefore conflicts with deferring the read. The dev-mode prompt symptom that motivated this todo is addressed by GAMELIB_DEV_SECRET_VAULT=1; shipped-build prompt count is governed by Apple code signing, not read timing. See the PARKED section below for the unpark condition."
 found_by: "Quick task 260817-d61 live gate (measured on hardware, two independent launches)"

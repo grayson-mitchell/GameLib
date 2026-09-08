@@ -2,7 +2,9 @@
 created: 2026-09-06
 title: "An interrupted jest run orphans a `gamelib-sidecar` that then spins at 100% CPU forever"
 source: /gsd-debug anticheat-response-frame-drop — five orphans found and killed during that session's cleanup
-severity: unknown
+severity: major
+platform: any
+ready: live-gate
 status: pending
 ---
 

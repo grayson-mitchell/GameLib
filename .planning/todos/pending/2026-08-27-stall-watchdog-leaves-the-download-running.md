@@ -4,6 +4,8 @@ title: "The install stall watchdog reports failure but never cancels the downloa
 area: steam-depot
 status: OPEN
 severity: major
+platform: any
+ready: live-gate
 files:
   - src/backend/downloadmanager/installStallWatchdog.ts
   - src/backend/storeManagers/steam/depot.ts

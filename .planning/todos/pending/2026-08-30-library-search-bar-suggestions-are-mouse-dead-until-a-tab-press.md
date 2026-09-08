@@ -4,6 +4,8 @@ title: "Library SearchBar suggestions are MOUSE-DEAD until a Tab press — rows 
 area: ui-search
 status: OPEN
 severity: major
+platform: any
+ready: live-gate
 files:
   - src/frontend/components/UI/SearchBar/index.tsx
   - src/frontend/components/UI/SearchBar/index.scss

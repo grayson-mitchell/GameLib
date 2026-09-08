@@ -2,7 +2,9 @@
 created: 2026-09-06
 title: "`bootstrapWirings` protocol-url log assertion fails ~1 in 8 full-suite runs"
 source: /gsd-debug anticheat-response-frame-drop — observed during that session's post-fix measurement loops
-severity: unknown
+severity: medium
+platform: any
+ready: code
 status: pending
 ---
 

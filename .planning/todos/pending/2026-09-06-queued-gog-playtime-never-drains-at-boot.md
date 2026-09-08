@@ -4,6 +4,8 @@ title: "Queued GOG playtime never drains at boot — only drains after the next 
 area: tauri-sidecar
 status: OPEN
 severity: medium
+platform: any
+ready: code
 source: "quick-260906-gej, sweep FINDINGS.md section A row A2"
 files:
   - src/backend/storeManagers/gog/games.ts:1346 (post-game-session syncQueuedPlaytime call site)

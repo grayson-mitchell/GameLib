@@ -5,6 +5,8 @@ area: frontend/store-embed
 needs: one-manual-gesture-on-macos
 status: OPEN
 severity: minor
+platform: macos
+ready: live-gate
 blocks: nothing
 origin: quick 260905-e61 (GAP-D fix) — its own second DoD line, left unrun; queued by 260905-c40
 files:

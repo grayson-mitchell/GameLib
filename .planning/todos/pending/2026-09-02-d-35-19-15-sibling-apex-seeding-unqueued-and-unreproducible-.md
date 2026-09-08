@@ -4,6 +4,8 @@ title: "D-35-19-15's four Epic sibling apexes were never proven cleared — the 
 area: auth/webview
 status: pending
 severity: medium
+platform: any
+ready: blocked
 blocked_by: "REAL and EXTERNAL — no seeding vehicle exists on this build. The Tauri build embeds no browser view, so no user action can create a non-primary Epic cookie in GameLib's own jar. Phase 40 is the trigger that unblocks it. This is NOT the self-describing-blocker shape corrected on the 2026-08-23 todo; nobody can go obtain the precondition today."
 trigger_phase: "40"
 owner: "NONE — D-35-19-15 has no owning phase. Phase 40 is named as the TRIGGER, not the owner."

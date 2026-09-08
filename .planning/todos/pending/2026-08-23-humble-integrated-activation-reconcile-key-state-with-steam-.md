@@ -4,6 +4,8 @@ title: "Humble integrated activation — reconcile key state with Steam ownershi
 area: humble
 status: OPEN
 severity: minor
+platform: any
+ready: code
 files:
   - src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx
   - src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.tsx

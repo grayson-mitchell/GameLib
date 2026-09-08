@@ -5,6 +5,7 @@ found_during: phase 35 plan 07 decision gate (deep-link registration)
 severity: medium
 area: src-tauri/shell
 platform: windows
+ready: blocked
 blocks: "gamelib:// deep links on Windows"
 verifiable_on: "operator has a Windows machine (not primary OS)"
 ---

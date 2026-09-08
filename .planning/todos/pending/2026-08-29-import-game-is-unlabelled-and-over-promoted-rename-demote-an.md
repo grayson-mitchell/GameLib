@@ -4,6 +4,8 @@ title: "\"Import Game\" does not say what it does and sits in the primary instal
 area: ui
 status: OPEN
 severity: minor
+platform: any
+ready: human
 files:
   - src/frontend/screens/Game/GamePage/components/MainButton.tsx:301
   - src/frontend/screens/Game/GamePage/components/MainButton.tsx:399

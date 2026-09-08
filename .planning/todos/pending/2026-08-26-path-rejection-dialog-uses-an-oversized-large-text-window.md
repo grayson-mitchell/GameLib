@@ -4,6 +4,8 @@ title: "The path-rejection dialog (\"Can't use that location\") renders in the o
 area: ui
 status: OPEN
 severity: minor
+platform: any
+ready: code
 files:
   - src/backend/sidecar/installFlowRegistration.ts:317
   - src/backend/sidecar/installFlowRegistration.ts:444

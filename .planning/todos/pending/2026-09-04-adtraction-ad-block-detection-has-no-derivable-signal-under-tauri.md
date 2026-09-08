@@ -2,7 +2,9 @@
 created: 2026-09-04T00:00:00.000Z
 title: "Adtraction/ad-block detection (D-32) has no derivable signal under wry/tauri — declared gap, not shipped"
 area: store-embed
-severity: low
+severity: minor
+platform: any
+ready: human
 status: pending
 resolves_phase: ""
 found_by: "Phase 40 Plan 09, Task 3 (D-32 re-derivation)"

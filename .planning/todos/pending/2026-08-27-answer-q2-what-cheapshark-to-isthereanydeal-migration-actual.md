@@ -4,6 +4,8 @@ title: "Answer Q2 — what a CheapShark → IsThereAnyDeal migration actually co
 area: store-search
 status: OPEN
 severity: minor
+platform: any
+ready: human
 files:
   - .planning/research/questions.md:59
   - .planning/notes/aggregated-store-search-foundations.md

@@ -4,7 +4,9 @@ title: "GOG and Amazon (nile) logout never clear the shared cookie jar their log
 area: auth/webview
 needs: test-then-fix
 status: OPEN
-severity: unknown-pending-one-gesture (upper bound: silent re-auth after logout; lower bound: stale cookies with no auth value)
+severity: medium
+platform: any
+ready: live-gate
 found_by: quick task 260902-8i2 (audit-login-webview-store-browser-data-store-sharing)
 upstream:
   - 68eb1adde (Heroic v2.22.1, #5752) — defect #2 of that commit ("logout did not clear the store's session"), CONCEPT ONLY
@@ -60,6 +62,23 @@ invisible to every prior investigation because all of them — `D-35-29-01`, `D-
 `35-AB-RETEST`, the `epic-cookie-clear-read-divergence` debug session — scoped to Epic.
 
 ## The one gesture that sets severity — run this BEFORE writing any fix
+
+**Severity rationale (recorded 2026-09-08, quick `260908-gye`).** The frontmatter `severity:` was
+free text until the todo triage vocabulary landed, and it carried the bound rather than a value:
+*upper bound* silent re-auth after logout, *lower bound* stale cookies with no auth value. The
+frontmatter now reads `medium`, and this paragraph — not the frontmatter — is where that judgement
+lives, so collapsing the key did not delete it.
+
+`medium` is the highest value the evidence supports **today**. The lower bound is already
+confirmed real: the 2026-09-02 index-walking census of `gamelib-shell.binarycookies` found 14 live
+GOG/Amazon records surviving an explicit logout, so this is at minimum a measured privacy defect
+and cannot be `minor`. The upper bound is a hypothesis nobody has run, so promoting to `major` on
+it would be scoring a defect by its worst imaginable reading rather than its measured one.
+
+**The bound is still live and still decides the value.** Run the gesture below. Silent completion
+⇒ raise this to `major` in the same edit that records the outcome. Credentials required ⇒ it stays
+`medium` (or drops to `minor` if the residue is judged to carry no privacy value either), and the
+fix is right but not urgent.
 
 **Nobody has observed the consequence.** The finding above is that nothing clears these cookies;
 whether that *matters* is untested. Do not write it up either way until this is run:

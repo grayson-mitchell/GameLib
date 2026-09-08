@@ -4,6 +4,8 @@ title: "checkRosettaInstall never runs under Tauri — Apple Silicon Macs withou
 area: tauri-sidecar
 status: OPEN
 severity: medium
+platform: macos
+ready: code
 source: "quick-260906-gej, sweep FINDINGS.md section A row A6"
 files:
   - src/backend/utils.ts:1395 (checkRosettaInstall definition, referenced only by its own test file)

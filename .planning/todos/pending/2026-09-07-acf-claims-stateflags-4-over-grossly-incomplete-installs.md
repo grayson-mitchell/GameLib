@@ -4,6 +4,8 @@ title: "Two GameLib-written ACFs claim StateFlags=4 (complete) over grossly inco
 area: steam-depot
 status: OPEN
 severity: critical
+platform: any
+ready: live-gate
 split_from: .planning/todos/completed/steam-depot-install-fails-with-unclassified-generic-error.md (RESOLVED 2026-09-08; this defect was NOT closed with it)
 debug_session: .planning/debug/steam-depot-unclassified-generic-error.md
 files:

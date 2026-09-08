@@ -3,6 +3,8 @@ created: 2026-09-04T00:00:00.000Z
 title: 'macOS releases ship UNSIGNED and un-notarized — no Apple signing secret is enrolled, so Gatekeeper quarantines every download and the Keychain ACL breaks on every update'
 area: build
 severity: major
+platform: macos
+ready: human
 needs: credentials-then-verify
 status: OPEN
 found_by: 'Reconsideration of the two keyring-deferral todos, 2026-09-04 — asked "what actually governs Keychain prompt COUNT?" rather than "how do I implement this todo?"'

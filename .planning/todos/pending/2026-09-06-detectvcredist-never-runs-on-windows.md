@@ -5,6 +5,7 @@ area: tauri-sidecar
 status: OPEN
 severity: medium
 platform: windows
+ready: blocked
 verifiable_on: "operator has a Windows machine (not primary OS)"
 source: "quick-260906-gej, sweep FINDINGS.md section A row A7"
 files:

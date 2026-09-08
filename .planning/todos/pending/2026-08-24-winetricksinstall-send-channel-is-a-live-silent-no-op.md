@@ -4,6 +4,8 @@ title: "`winetricksInstall` is a LIVE SILENT NO-OP under Tauri — the send chan
 area: sidecar-ipc
 status: OPEN
 severity: major
+platform: any
+ready: live-gate
 files:
   - src/frontend/components/UI/SearchBar/index.tsx
   - src/backend/sidecar/wineToolsFlowRegistration.ts

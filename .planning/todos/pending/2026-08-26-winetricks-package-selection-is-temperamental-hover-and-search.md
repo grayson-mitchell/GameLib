@@ -4,6 +4,8 @@ title: "UX FIX: the Winetricks search + package-selection interaction is tempera
 area: ui
 status: OPEN
 severity: major
+platform: any
+ready: code
 files:
   - src/frontend/components/UI/Winetricks/index.tsx
   - src/frontend/components/UI/Winetricks/WinetricksSearch.tsx

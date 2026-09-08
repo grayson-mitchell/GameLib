@@ -4,6 +4,8 @@ title: "Every non-English catalog is unrebranded — 2274 \"Heroic\" strings acr
 area: i18n
 status: pending
 severity: medium
+platform: any
+ready: human
 resolves_phase: ""
 found_by: "Quick task 260901-ncb (the upstream i18n catalog pull)"
 files:

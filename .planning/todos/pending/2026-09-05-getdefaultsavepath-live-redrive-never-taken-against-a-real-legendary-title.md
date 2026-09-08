@@ -4,6 +4,8 @@ title: "getDefaultSavePath live re-drive against a real legendary title -- never
 area: tauri-sidecar
 status: OPEN
 severity: medium
+platform: any
+ready: live-gate
 source: quick-260905-upz, residue of 2026-08-25-installed-json-watcher-not-ported-to-tauri.md (second, unsatisfied discharge conjunct)
 blocked_by: "nothing external -- needs a live app session with an installed legendary title; unscheduled, not blocked"
 files:

@@ -4,6 +4,8 @@ title: "GOG presence is never set at startup, and its 5-minute keep-alive never 
 area: tauri-sidecar
 status: OPEN
 severity: medium
+platform: any
+ready: code
 source: "quick-260906-gej, sweep FINDINGS.md section A row A3"
 files:
   - src/backend/storeManagers/gog/presence.ts (setPresence, its internal setInterval)

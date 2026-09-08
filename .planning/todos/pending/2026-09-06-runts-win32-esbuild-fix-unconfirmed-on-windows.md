@@ -3,6 +3,8 @@ created: 2026-09-06T00:00:00.000Z
 title: "runTs.cjs win32 esbuild spawn fix (260906-hq8) is shipped but unverified on Windows"
 area: build
 severity: major
+platform: windows
+ready: blocked
 needs: human-verification-on-windows
 status: pending
 found_by: "Quick task 260906-hq8"

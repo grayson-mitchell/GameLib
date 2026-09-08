@@ -4,6 +4,8 @@ title: "EGS Sync / Unsync success dialogs render under an identical title -- a o
 area: ui-settings
 status: OPEN
 severity: minor
+platform: any
+ready: code
 source: quick-260905-upz, residue of 2026-08-24-pathselectionbox-onblur-silently-unlinks-egs-sync.md (suggested fix #3, unaddressed by that closure)
 files:
   - src/frontend/screens/Settings/components/EgsSettings.tsx

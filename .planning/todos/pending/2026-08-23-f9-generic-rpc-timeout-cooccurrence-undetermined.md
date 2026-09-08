@@ -3,7 +3,9 @@ created: 2026-08-23
 title: "F-9 — a generic RPC timeout fired live; co-occurrence with a cookie op is UNDETERMINED"
 source: 34.4.1 gap cycle 3, plan 34 (from D-29-06 / F-9, open since gate run 2)
 status: "PARKED 2026-09-07 — SPLIT INTO TWO QUESTIONS. Question 1 (did id=1575 co-occur with a cookie operation?) is CLOSED AS PERMANENTLY UNANSWERABLE and its answer is recorded as UNDETERMINED, FOREVER — closed is NOT answered, and it is NOT rounded to no. Question 2 (does this timeout shape co-occur with a cookie operation as a class?) stays OPEN and is PARKED. See the two dated sections below; the PARKED one carries a runnable unpark condition."
-severity: low
+severity: minor
+platform: any
+ready: blocked
 resolves_phase: null
 blocked_by: "nothing external. Q1 (id=1575) is not blocked, it is UNANSWERABLE — that id carries no channel name in the diagnostic as it was emitted, its scrollback was never captured, and no later code can reconstruct a line that was never written; see the CLOSED section below. Q2 (the class question) is not blocked either, it is UNSCHEDULED — it needs a RECURRENCE, which cannot be scheduled. The old 'co-occurrence cannot be settled after the fact' clause was retired for FUTURE occurrences by 260905-omc (the diagnostic now names its channel) and 260907-j8n (it now persists to gamelib-shell.log); it remains exactly true for id=1575 itself."
 parked: 2026-08-23
