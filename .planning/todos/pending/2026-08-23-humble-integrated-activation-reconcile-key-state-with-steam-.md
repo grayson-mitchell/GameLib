@@ -2,7 +2,7 @@
 created: 2026-08-23T07:00:48.128Z
 title: "Humble integrated activation — reconcile key state with Steam ownership"
 area: humble
-status: OPEN
+status: completed
 severity: minor
 platform: any
 ready: code
@@ -149,11 +149,23 @@ prefills the code, verified by the operator 2026-08-23. That is the direct
 analogue of the Steam `store.steampowered.com/account/registerkey?key=` link
 the fallback already uses.
 
-**Deliberately NOT built yet** — the operator has **zero** GOG keys (table
-above), and that is conclusive rather than a stale cache: redeemed keys do
-persist in this data (two Steam keys are `REDEEMED`). Building it now would
-mean untestable code with no user. Operator: *"another day (after i buy some
-gog games)."* Revisit when a GOG key appears in a sync.
+~~**Deliberately NOT built yet** — the operator has **zero** GOG keys (table
+above)… Revisit when a GOG key appears in a sync.~~
+
+**SUPERSEDED 2026-09-09 — built by 42-05, and the prediction came true anyway.**
+The deep link shipped in plan 42-05 (`getRedeemTarget`, replacing the static
+`NON_STEAM_REDEEM_HELP_URL` fork). A GOG entitlement then DID appear in a sync —
+but it arrives as **`key_type: gog_keyless`**, a direct-redeem entitlement that
+carries **no key code**, so `gog.com/redeem/<code>` cannot be built for it.
+`gog_keyless` is therefore deliberately absent from `REDEEM_URL_BUILDERS`
+(T-UIC-01) and falls through to the help URL, exactly as `epic_keyless` does.
+
+**So this section's original warning still holds, for a now-evidenced reason:
+the GOG deep link has no reachable user.** It would take a genuinely *keyed*
+GOG key to exercise it, and this account has none. See `42-07-SUMMARY.md`
+"Residue". Separately, `gog_keyless` was being dropped by the classifier
+entirely until quick task `260908-uic` added it to `KNOWN_GAME_KEY_TYPES` —
+before that fix the game did not appear in GameLib at all.
 
 Note there is no GOG redemption API to automate against, only the web form —
 no official API exists, the Galaxy OAuth token GameLib holds is scoped to
