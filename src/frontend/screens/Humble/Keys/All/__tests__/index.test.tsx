@@ -390,30 +390,34 @@ describe('HumbleKeysAll settle-undo reachability (D-42-01 Exception 4, Phase 42 
       },
       {
         name: 'redeemedSource is "ownership-exact" but redeemedAt is absent',
-        annotation: { redeemedSource: 'ownership-exact', keyindexResolved: true }
+        annotation: {
+          redeemedSource: 'ownership-exact',
+          keyindexResolved: true
+        }
       }
     ]
 
-    it.each(SCOPE_CASES)('$name -> settleAction is undefined', async ({
-      annotation
-    }) => {
-      const key = makeHumbleKey({
-        state: 'REDEEMED',
-        ownedElsewhere: true,
-        matchConfidence: 'exact'
-      })
-      contextValue = { humble: { keys: [key] } }
-      mockApi.humbleGetClaimAnnotations.mockResolvedValue(
-        annotation ? annotationsFor(key, annotation) : {}
-      )
+    it.each(SCOPE_CASES)(
+      '$name -> settleAction is undefined',
+      async ({ annotation }) => {
+        const key = makeHumbleKey({
+          state: 'REDEEMED',
+          ownedElsewhere: true,
+          matchConfidence: 'exact'
+        })
+        contextValue = { humble: { keys: [key] } }
+        mockApi.humbleGetClaimAnnotations.mockResolvedValue(
+          annotation ? annotationsFor(key, annotation) : {}
+        )
 
-      mount()
-      await flushPromises()
+        mount()
+        await flushPromises()
 
-      const props = findHumbleKeyRowProps(rerender(), 'gk-1', 'mn-1')
-      expect(props).toBeDefined()
-      expect(props?.settleAction).toBeUndefined()
-    })
+        const props = findHumbleKeyRowProps(rerender(), 'gk-1', 'mn-1')
+        expect(props).toBeDefined()
+        expect(props?.settleAction).toBeUndefined()
+      }
+    )
   })
 
   describe('GROUP SCOPING — the gate is on the annotation, never on the group heading', () => {
