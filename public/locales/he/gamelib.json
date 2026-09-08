@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "סנכרון EGS הושבת",
+        "egsSyncEnabledTitle": "סנכרון EGS הופעל",
         "eosOverlayInstallConfirmBody": "להתקין את ה-EOS Overlay כעת?",
         "eosOverlayInstallConfirmTitle": "אישור התקנת השכבה",
         "eosOverlayUpdateConfirmBody": "לעדכן את ה-EOS Overlay לגרסה האחרונה?",

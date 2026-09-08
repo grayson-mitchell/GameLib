@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS 同期を無効にしました",
+        "egsSyncEnabledTitle": "EGS 同期を有効にしました",
         "eosOverlayInstallConfirmBody": "EOS Overlayを今すぐインストールしますか？",
         "eosOverlayInstallConfirmTitle": "オーバーレイのインストールを確認",
         "eosOverlayUpdateConfirmBody": "EOS Overlayを最新バージョンに更新しますか？",

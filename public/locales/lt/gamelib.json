@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS sinchronizavimas išjungtas",
+        "egsSyncEnabledTitle": "EGS sinchronizavimas įjungtas",
         "eosOverlayInstallConfirmBody": "Įdiegti EOS Overlay dabar?",
         "eosOverlayInstallConfirmTitle": "Patvirtinkite overlay diegimą",
         "eosOverlayUpdateConfirmBody": "Atnaujinti EOS Overlay iki naujausios versijos?",

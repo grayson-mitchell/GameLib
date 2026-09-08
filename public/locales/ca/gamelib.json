@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Sincronització amb EGS desactivada",
+        "egsSyncEnabledTitle": "Sincronització amb EGS activada",
         "eosOverlayInstallConfirmBody": "Vols instal·lar l'overlay d'EOS ara?",
         "eosOverlayInstallConfirmTitle": "Confirma la instal·lació de l'overlay",
         "eosOverlayUpdateConfirmBody": "Vols actualitzar l'overlay d'EOS a l'última versió?",

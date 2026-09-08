@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Ο συγχρονισμός EGS απενεργοποιήθηκε",
+        "egsSyncEnabledTitle": "Ο συγχρονισμός EGS ενεργοποιήθηκε",
         "eosOverlayInstallConfirmBody": "Εγκατάσταση του EOS Overlay τώρα;",
         "eosOverlayInstallConfirmTitle": "Επιβεβαίωση εγκατάστασης overlay",
         "eosOverlayUpdateConfirmBody": "Ενημέρωση του EOS Overlay στην τελευταία έκδοση;",

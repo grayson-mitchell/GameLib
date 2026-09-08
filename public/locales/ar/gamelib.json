@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "مزامنة EGS معطّلة",
+        "egsSyncEnabledTitle": "مزامنة EGS مفعّلة",
         "eosOverlayInstallConfirmBody": "هل تريد تثبيت EOS Overlay الآن؟",
         "eosOverlayInstallConfirmTitle": "تأكيد تثبيت الطبقة",
         "eosOverlayUpdateConfirmBody": "هل تريد تحديث EOS Overlay إلى أحدث إصدار؟",

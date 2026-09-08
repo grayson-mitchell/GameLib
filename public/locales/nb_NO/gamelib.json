@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS-synkronisering deaktivert",
+        "egsSyncEnabledTitle": "EGS-synkronisering aktivert",
         "eosOverlayInstallConfirmBody": "Installere EOS-overlegget nå?",
         "eosOverlayInstallConfirmTitle": "Bekreft installasjon av overlegg",
         "eosOverlayUpdateConfirmBody": "Oppdatere EOS-overlegget til nyeste versjon?",

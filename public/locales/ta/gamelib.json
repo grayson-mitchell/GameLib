@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS ஒத்திசைவு முடக்கப்பட்டது",
+        "egsSyncEnabledTitle": "EGS ஒத்திசைவு இயக்கப்பட்டது",
         "eosOverlayInstallConfirmBody": "EOS Overlay ஐ இப்போது நிறுவவா?",
         "eosOverlayInstallConfirmTitle": "ஓவர்லே நிறுவலை உறுதிப்படுத்தவும்",
         "eosOverlayUpdateConfirmBody": "EOS Overlay ஐ சமீபத்திய பதிப்புக்கு புதுப்பிக்கவா?",

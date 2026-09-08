@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS 동기화 비활성화됨",
+        "egsSyncEnabledTitle": "EGS 동기화 활성화됨",
         "eosOverlayInstallConfirmBody": "지금 EOS 오버레이를 설치하시겠습니까?",
         "eosOverlayInstallConfirmTitle": "오버레이 설치 확인",
         "eosOverlayUpdateConfirmBody": "EOS 오버레이를 최신 버전으로 업데이트하시겠습니까?",

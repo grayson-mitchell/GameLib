@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "ปิดใช้งานการซิงค์ EGS แล้ว",
+        "egsSyncEnabledTitle": "เปิดใช้งานการซิงค์ EGS แล้ว",
         "eosOverlayInstallConfirmBody": "ติดตั้ง EOS Overlay ตอนนี้เลยหรือไม่?",
         "eosOverlayInstallConfirmTitle": "ยืนยันการติดตั้ง overlay",
         "eosOverlayUpdateConfirmBody": "อัปเดต EOS Overlay เป็นเวอร์ชันล่าสุดหรือไม่?",

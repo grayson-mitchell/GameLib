@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS სინქრონიზაცია გამორთულია",
+        "egsSyncEnabledTitle": "EGS სინქრონიზაცია ჩართულია",
         "eosOverlayInstallConfirmBody": "დავაყენოთ EOS Overlay ახლა?",
         "eosOverlayInstallConfirmTitle": "დაადასტურეთ overlay-ის დაყენება",
         "eosOverlayUpdateConfirmBody": "განვაახლოთ EOS Overlay უახლეს ვერსიამდე?",

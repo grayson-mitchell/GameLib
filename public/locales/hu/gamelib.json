@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS-szinkronizálás kikapcsolva",
+        "egsSyncEnabledTitle": "EGS-szinkronizálás bekapcsolva",
         "eosOverlayInstallConfirmBody": "Telepíted most az EOS Overlayt?",
         "eosOverlayInstallConfirmTitle": "Overlay telepítésének megerősítése",
         "eosOverlayUpdateConfirmBody": "Frissíted az EOS Overlayt a legújabb verzióra?",

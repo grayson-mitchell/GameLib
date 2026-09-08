@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS синхронизација је онемогућена",
+        "egsSyncEnabledTitle": "EGS синхронизација је омогућена",
         "eosOverlayInstallConfirmBody": "Инсталирати EOS Overlay сада?",
         "eosOverlayInstallConfirmTitle": "Потврди инсталацију overlay-а",
         "eosOverlayUpdateConfirmBody": "Ажурирати EOS Overlay на најновију верзију?",

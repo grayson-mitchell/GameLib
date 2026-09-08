@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Synchronizace s EGS vypnuta",
+        "egsSyncEnabledTitle": "Synchronizace s EGS zapnuta",
         "eosOverlayInstallConfirmBody": "Nainstalovat nyní překryvnou vrstvu EOS?",
         "eosOverlayInstallConfirmTitle": "Potvrdit instalaci překryvné vrstvy",
         "eosOverlayUpdateConfirmBody": "Aktualizovat překryvnou vrstvu EOS na nejnovější verzi?",

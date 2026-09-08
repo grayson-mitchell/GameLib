@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS-synkronointi pois käytöstä",
+        "egsSyncEnabledTitle": "EGS-synkronointi käytössä",
         "eosOverlayInstallConfirmBody": "Asennetaanko EOS-peittokuva nyt?",
         "eosOverlayInstallConfirmTitle": "Vahvista peittokuvan asennus",
         "eosOverlayUpdateConfirmBody": "Päivitetäänkö EOS-peittokuva uusimpaan versioon?",

@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Synchronizacja z EGS wyłączona",
+        "egsSyncEnabledTitle": "Synchronizacja z EGS włączona",
         "eosOverlayInstallConfirmBody": "Zainstalować nakładkę EOS teraz?",
         "eosOverlayInstallConfirmTitle": "Potwierdź instalację nakładki",
         "eosOverlayUpdateConfirmBody": "Zaktualizować nakładkę EOS do najnowszej wersji?",

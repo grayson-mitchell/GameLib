@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Синхронізацію з EGS вимкнено",
+        "egsSyncEnabledTitle": "Синхронізацію з EGS увімкнено",
         "eosOverlayInstallConfirmBody": "Встановити накладення EOS зараз?",
         "eosOverlayInstallConfirmTitle": "Підтвердьте встановлення накладення",
         "eosOverlayUpdateConfirmBody": "Оновити накладення EOS до останньої версії?",

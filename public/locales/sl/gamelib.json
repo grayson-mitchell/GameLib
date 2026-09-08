@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Sinhronizacija z EGS onemogočena",
+        "egsSyncEnabledTitle": "Sinhronizacija z EGS omogočena",
         "eosOverlayInstallConfirmBody": "Ali želite zdaj namestiti prekritje EOS?",
         "eosOverlayInstallConfirmTitle": "Potrdite namestitev prekritja",
         "eosOverlayUpdateConfirmBody": "Ali želite posodobiti prekritje EOS na najnovejšo različico?",

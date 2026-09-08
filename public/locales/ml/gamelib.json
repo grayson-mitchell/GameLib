@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS സമന്വയം പ്രവർത്തനരഹിതമാക്കി",
+        "egsSyncEnabledTitle": "EGS സമന്വയം പ്രവർത്തനക്ഷമമാക്കി",
         "eosOverlayInstallConfirmBody": "ഇപ്പോൾ EOS ഓവർലേ ഇൻസ്റ്റാൾ ചെയ്യണോ?",
         "eosOverlayInstallConfirmTitle": "ഓവർലേ ഇൻസ്റ്റാൾ സ്ഥിരീകരിക്കുക",
         "eosOverlayUpdateConfirmBody": "EOS ഓവർലേ ഏറ്റവും പുതിയ പതിപ്പിലേക്ക് അപ്ഡേറ്റ് ചെയ്യണോ?",

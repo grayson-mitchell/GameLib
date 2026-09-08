@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Сінхранізацыя EGS выключана",
+        "egsSyncEnabledTitle": "Сінхранізацыя EGS уключана",
         "eosOverlayInstallConfirmBody": "Усталяваць EOS Overlay зараз?",
         "eosOverlayInstallConfirmTitle": "Пацвердзіце ўсталяванне накладкі",
         "eosOverlayUpdateConfirmBody": "Абнавіць EOS Overlay да найноўшай версіі?",

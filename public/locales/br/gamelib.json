@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Goubredañ EGS diweredekaet",
+        "egsSyncEnabledTitle": "Goubredañ EGS gweredekaet",
         "eosOverlayInstallConfirmBody": "Staliañ an EOS Overlay bremañ?",
         "eosOverlayInstallConfirmTitle": "Kadarnaat staliadur an overlay",
         "eosOverlayUpdateConfirmBody": "Hizivaat an EOS Overlay d'ar stumm diwezhañ?",

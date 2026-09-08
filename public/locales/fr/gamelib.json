@@ -106,6 +106,8 @@
         "unsaved": "Pas encore enregistré — appuyez sur Entrée"
     },
     "settings": {
+        "egsSyncDisabledTitle": "Synchronisation EGS désactivée",
+        "egsSyncEnabledTitle": "Synchronisation EGS activée",
         "framelessWindowDescription": "Utiliser une fenêtre sans bordure",
         "gamepadInitialRepeatDelay": "Délai initial de répétition de la manette",
         "gamepadRepeatFrequency": "Fréquence de répétition de la manette",

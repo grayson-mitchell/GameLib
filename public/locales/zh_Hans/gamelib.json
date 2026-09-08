@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "已禁用 EGS 同步",
+        "egsSyncEnabledTitle": "已启用 EGS 同步",
         "eosOverlayInstallConfirmBody": "现在安装 EOS 悬浮层吗？",
         "eosOverlayInstallConfirmTitle": "确认安装悬浮层",
         "eosOverlayUpdateConfirmBody": "将 EOS 悬浮层更新到最新版本吗？",

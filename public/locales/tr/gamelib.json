@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS eşitlemesi devre dışı bırakıldı",
+        "egsSyncEnabledTitle": "EGS eşitlemesi etkinleştirildi",
         "eosOverlayInstallConfirmBody": "EOS Overlay şimdi yüklensin mi?",
         "eosOverlayInstallConfirmTitle": "Overlay yüklemesini onayla",
         "eosOverlayUpdateConfirmBody": "EOS Overlay en son sürüme güncellensin mi?",

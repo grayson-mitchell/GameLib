@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Sinkronisasi EGS Dinonaktifkan",
+        "egsSyncEnabledTitle": "Sinkronisasi EGS Diaktifkan",
         "eosOverlayInstallConfirmBody": "Pasang EOS Overlay sekarang?",
         "eosOverlayInstallConfirmTitle": "Konfirmasi pemasangan overlay",
         "eosOverlayUpdateConfirmBody": "Perbarui EOS Overlay ke versi terbaru?",

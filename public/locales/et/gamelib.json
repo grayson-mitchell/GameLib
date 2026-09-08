@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS-i sünkroonimine on välja lülitatud",
+        "egsSyncEnabledTitle": "EGS-i sünkroonimine on sisse lülitatud",
         "eosOverlayInstallConfirmBody": "Paigaldada EOS Overlay kohe?",
         "eosOverlayInstallConfirmTitle": "Kinnita overlay paigaldamine",
         "eosOverlayUpdateConfirmBody": "Uuendada EOS Overlay uusimale versioonile?",

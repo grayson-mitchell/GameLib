@@ -106,6 +106,8 @@
         "unsaved": "Noch nicht gespeichert — Enter drücken"
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS-Synchronisierung deaktiviert",
+        "egsSyncEnabledTitle": "EGS-Synchronisierung aktiviert",
         "framelessWindowDescription": "Rahmenloses Fenster verwenden",
         "gamepadInitialRepeatDelay": "Anfängliche Wiederholverzögerung der Gamepad-Eingabe",
         "gamepadRepeatFrequency": "Wiederholfrequenz der Gamepad-Eingabe",

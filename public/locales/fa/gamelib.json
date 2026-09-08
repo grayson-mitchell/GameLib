@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "همگام‌سازی EGS غیرفعال شد",
+        "egsSyncEnabledTitle": "همگام‌سازی EGS فعال شد",
         "eosOverlayInstallConfirmBody": "روکش EOS اکنون نصب شود؟",
         "eosOverlayInstallConfirmTitle": "تأیید نصب روکش",
         "eosOverlayUpdateConfirmBody": "روکش EOS به آخرین نسخه به‌روزرسانی شود؟",

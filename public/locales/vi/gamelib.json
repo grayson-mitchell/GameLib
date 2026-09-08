@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Đã tắt đồng bộ hóa EGS",
+        "egsSyncEnabledTitle": "Đã bật đồng bộ hóa EGS",
         "eosOverlayInstallConfirmBody": "Cài đặt EOS Overlay ngay bây giờ?",
         "eosOverlayInstallConfirmTitle": "Xác nhận cài đặt overlay",
         "eosOverlayUpdateConfirmBody": "Cập nhật EOS Overlay lên phiên bản mới nhất?",

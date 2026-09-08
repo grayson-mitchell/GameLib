@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "Sioncrónú EGS díchumasaithe",
+        "egsSyncEnabledTitle": "Sioncrónú EGS cumasaithe",
         "eosOverlayInstallConfirmBody": "An bhfuil fonn ort an EOS Overlay a shuiteáil anois?",
         "eosOverlayInstallConfirmTitle": "Deimhnigh suiteáil an fhorleagain",
         "eosOverlayUpdateConfirmBody": "An bhfuil fonn ort an EOS Overlay a nuashonrú go dtí an leagan is déanaí?",

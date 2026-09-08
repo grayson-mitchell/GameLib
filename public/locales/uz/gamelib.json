@@ -172,6 +172,8 @@
         }
     },
     "settings": {
+        "egsSyncDisabledTitle": "EGS sinxronizatsiyasi o'chirildi",
+        "egsSyncEnabledTitle": "EGS sinxronizatsiyasi yoqildi",
         "eosOverlayInstallConfirmBody": "EOS Overlay hozir o'rnatilsinmi?",
         "eosOverlayInstallConfirmTitle": "Overlay o'rnatishni tasdiqlang",
         "eosOverlayUpdateConfirmBody": "EOS Overlay eng so'nggi versiyaga yangilansinmi?",
