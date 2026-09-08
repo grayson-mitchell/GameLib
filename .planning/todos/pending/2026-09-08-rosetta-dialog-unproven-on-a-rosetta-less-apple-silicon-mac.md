@@ -9,7 +9,7 @@ ready: live-gate
 source: "quick-260908-k3x, Task 3 residue -- the one hop that could not be proven on the machine that did the work"
 files:
   - src/backend/sidecar/bootstrap.ts (checkRosettaWhenMac, Block F call site)
-  - src/backend/utils.ts:1395 (checkRosettaInstall)
+  - src/backend/utils.ts:1402 (checkRosettaInstall)
   - src/backend/platform/index.ts (dialog.showMessageBox -> RUST_DIALOG_MESSAGE forward)
 resolves_phase: null
 ---
