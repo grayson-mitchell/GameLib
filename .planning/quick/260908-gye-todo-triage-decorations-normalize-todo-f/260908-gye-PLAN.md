@@ -9,6 +9,7 @@ files_modified:
   - .planning/todos/pending/*.md
   - .planning/todos/todo-frontmatter-gate.py
   - meta/runPlanningGates.py
+  - CLAUDE.md
   # Task 3 only — OUTSIDE this repo, captured by no GameLib commit:
   - ~/.vscode/extensions/gsd-phase-status/parse.js
   - ~/.vscode/extensions/gsd-phase-status/extension.js
@@ -21,6 +22,7 @@ must_haves:
     - "Every file in .planning/todos/pending/ carries severity/platform/ready from a controlled vocabulary"
     - "A bad or missing triage key fails `pnpm planning-gates` in CI"
     - "The gate cannot be deleted later without the runner's anti-vacuity floor noticing"
+    - "CLAUDE.md tells every future session the three keys the gate requires, so filing a todo does not redden CI"
     - "Each pending todo in the VS Code Explorer shows a 2-char severity+readiness badge, not a uniform grey circle"
     - "Readiness is legible by colour as well as badge, and neither channel alone is load-bearing"
     - "`node test-parse.js` stays green and pins the badge/colour mapping including the 2-char cap"
@@ -31,6 +33,9 @@ must_haves:
     - path: "meta/runPlanningGates.py"
       provides: "MINIMUM_EXPECTED_GATES raised 8 -> 9 with a house-style rationale comment"
       contains: "MINIMUM_EXPECTED_GATES = 9"
+    - path: "CLAUDE.md"
+      provides: "Conventions entry naming the three required todo triage keys and their vocabularies"
+      contains: "ready:"
   key_links:
     - from: "meta/runPlanningGates.py"
       to: ".planning/todos/todo-frontmatter-gate.py"
@@ -292,7 +297,7 @@ the SUMMARY, and the free-text file's nuance is present in its body.
 
 <task type="auto">
   <name>Task 2: Add the vocabulary gate and raise the anti-vacuity floor 8 -> 9</name>
-  <files>.planning/todos/todo-frontmatter-gate.py, meta/runPlanningGates.py</files>
+  <files>.planning/todos/todo-frontmatter-gate.py, meta/runPlanningGates.py, CLAUDE.md</files>
   <action>
 Create `.planning/todos/todo-frontmatter-gate.py`. The `-gate.py` suffix is what
 `meta/runPlanningGates.py` discovers by (`rglob('*-gate.py')` under `.planning/`), so no
@@ -322,6 +327,25 @@ Requirements:
 - Fail with a message that tells the maintainer the correct action is to fix the todo's
   frontmatter, never to widen the vocabulary to make the gate pass.
 
+**Also required — otherwise this gate is a foot-gun (orchestrator addition, measured 2026-09-08).**
+The workflow that files todos, `~/.claude/get-shit-done/workflows/add-todo.md:95-101`, emits a
+frontmatter template of exactly `created` / `title` / `area` / `files`. It does **not** emit
+`severity:` at all, never mind `platform:` or `ready:` — every `severity:` in the corpus was added
+by hand. So the moment this gate lands, the next todo any session files turns CI red through no
+fault of its own. A concurrent session (`260908-gx3`) was filing and closing todos in this repo
+during planning, so this is live, not hypothetical.
+
+That template lives outside this repo and is shared by every GSD project, so do NOT edit it —
+a GameLib-specific vocabulary must not be forced on unrelated projects. Instead close the loop
+through the in-repo channel every session already reads: **add a `## Conventions` entry to
+`./CLAUDE.md`** (the section currently reads "Conventions not yet established. Will populate as
+patterns emerge during development." — replace that placeholder line, keep the heading). It must
+state the three required keys, their exact vocabularies, that they are required on every file in
+`.planning/todos/pending/`, that `pnpm planning-gates` enforces them, and that the correct
+response to a red gate is to fix the todo rather than widen the vocabulary. Commit it with the
+gate, in the same commit — the gate and the instruction that makes it satisfiable must not be
+separable.
+
 Then edit `meta/runPlanningGates.py`: raise `MINIMUM_EXPECTED_GATES` from `8` to `9`, adding an
 `8 -> 9` comment in the established house style directly below the existing `6 -> 7` and `7 -> 8`
 comments. Say what the ninth gate is and why the floor must move: leaving it at 8 would let this
@@ -336,7 +360,7 @@ copy the gate beside them, and observe it RED with a finding for every un-backfi
 hook fires on the latter. Record the observed RED count in the SUMMARY.
 
 Commit with explicit paths only, after reading `git diff --cached --name-only`:
-`git add .planning/todos/todo-frontmatter-gate.py meta/runPlanningGates.py && git commit -m "feat(260908-gye): gate pending todo triage vocabulary, floor 8 -> 9"`
+`git add .planning/todos/todo-frontmatter-gate.py meta/runPlanningGates.py CLAUDE.md && git commit -m "feat(260908-gye): gate pending todo triage vocabulary, floor 8 -> 9"`
   </action>
   <verify>
     <automated>python3 .planning/todos/todo-frontmatter-gate.py --self-test &amp;&amp; python3 meta/runPlanningGates.py 2>&amp;1 | tee /dev/stderr | grep -q '^9/9 planning gates passed\.$' &amp;&amp; echo "RUNNER OK 9/9"</automated>
