@@ -717,15 +717,28 @@ function appendAudit(
  * `revealedAt` is machineName-keyed (humbleRevealedStore) — an accepted
  * pre-existing limitation (Open Q4); `redeemedAt` is the WR-01-safe
  * composite-keyed local-redeemed timestamp. Never includes a key value.
+ *
+ * D-42-01 re-check: `redeemedAt` is emitted identically regardless of
+ * `redeemedSource` — the D-77 Undo affordance
+ * (`HumbleKeyRow/index.tsx:116`, gated on `redeemedAt !== null`) therefore
+ * fires the same way for a user-marked and an ownership-inferred REDEEMED
+ * key. Provenance is informational only, never gating.
  */
 function getClaimAnnotations(): Record<string, ClaimAnnotation> {
   const result: Record<string, ClaimAnnotation> = {}
   for (const [gamekey, entry] of humbleLibraryStore.entries()) {
     for (const key of entry.keys) {
       const composite = compositeKey(gamekey, key.machineName)
+      const localRedeemed = humbleLocalRedeemedStore.get(composite)
       result[composite] = {
         revealedAt: humbleRevealedStore.get(key.machineName)?.revealedAt,
-        redeemedAt: humbleLocalRedeemedStore.get(composite)?.redeemedAt,
+        redeemedAt: localRedeemed?.redeemedAt,
+        // D-42-01: missing `source` on an existing record reads as 'user'
+        // (every pre-Phase-42 entry was written by the explicit action) —
+        // never default to 'ownership-exact'. No record at all -> undefined.
+        redeemedSource: localRedeemed
+          ? (localRedeemed.source ?? 'user')
+          : undefined,
         keyindexResolved: lookupKeyindex(gamekey, key.machineName) !== undefined
       }
     }

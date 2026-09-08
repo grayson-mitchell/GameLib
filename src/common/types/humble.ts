@@ -230,5 +230,13 @@ export type RedeemOutcome = { status: 'ok' } | { status: 'ineligible' }
 export interface ClaimAnnotation {
   revealedAt?: number
   redeemedAt?: number
+  /**
+   * D-42-01: WHY this key is REDEEMED — 'user' for the explicit
+   * "Mark as redeemed" action, 'ownership-exact' for an inferred settle
+   * driven by an exact-match Steam ownership signal. `undefined` when the
+   * key has no local-redeemed record at all. A record persisted before
+   * Phase 42 has no stored source and is reported as 'user'.
+   */
+  redeemedSource?: 'user' | 'ownership-exact'
   keyindexResolved: boolean
 }
