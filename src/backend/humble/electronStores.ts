@@ -171,6 +171,28 @@ const humbleNotifiedExpirationStore = new CacheStore<
   string
 >('humble_notified_expiration', null)
 
+// Plan 42-03 (D-42-01 durability): records that the user explicitly Undid an
+// auto-settle (a local-redeemed record with source: 'ownership-exact'),
+// keyed by the same composite `gamekey:machineName` string as
+// humbleLocalRedeemedStore/humbleAuditStore above. Read by
+// recomputeOwnership's settle guard so a declined key can never re-settle on
+// a later recompute against the SAME exact-ownership inputs — without this
+// store, undoRedeemed's delete of the local-redeemed record would be
+// silently reverted by the very next recomputeOwnership call, since the
+// ownership match itself hasn't changed. Clearing a decline (e.g. if the
+// user changes their mind again) is intentionally out of scope for this
+// plan — no code path ever deletes from this store. Like the other
+// disconnect-exempt stores above, this store is NEVER cleared by
+// HumbleUser.disconnect() (D-04 exemption) — a decline must survive a
+// disconnect/reconnect cycle for the same non-regression reason as the
+// stores above. Kept as its own electron-store file on disk for the same
+// isolation reason as the stores above — do not merge this into
+// humbleLibraryStore.
+const humbleSettleDeclinedStore = new CacheStore<
+  { declinedAt: number },
+  string
+>('humble_settle_declined', null)
+
 export {
   configStore,
   humbleLibraryStore,
@@ -180,5 +202,6 @@ export {
   humbleGiftedAtStore,
   humbleAuditStore,
   humbleLocalRedeemedStore,
-  humbleNotifiedExpirationStore
+  humbleNotifiedExpirationStore,
+  humbleSettleDeclinedStore
 }

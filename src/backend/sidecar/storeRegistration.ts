@@ -93,7 +93,8 @@ import {
   humbleGiftedAtStore as _humbleGiftedAtStore,
   humbleAuditStore as _humbleAuditStore,
   humbleLocalRedeemedStore as _humbleLocalRedeemedStore,
-  humbleNotifiedExpirationStore as _humbleNotifiedExpirationStore
+  humbleNotifiedExpirationStore as _humbleNotifiedExpirationStore,
+  humbleSettleDeclinedStore as _humbleSettleDeclinedStore
 } from '../humble/electronStores'
 
 import { gameOverridesStore as _gameOverridesStore } from '../game_overrides/electronStores'
@@ -183,6 +184,7 @@ export function ensureStoresRegistered(): void {
     _humbleAuditStore,
     _humbleLocalRedeemedStore,
     _humbleNotifiedExpirationStore,
+    _humbleSettleDeclinedStore,
     _gameOverridesStore,
     _wikiGameInfoStore,
     _umuStore,

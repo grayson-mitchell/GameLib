@@ -33,6 +33,7 @@ import {
   humbleLocalRedeemedStore,
   humbleOwnershipOverrideStore,
   humbleRevealedStore,
+  humbleSettleDeclinedStore,
   humbleSyncStore
 } from './electronStores'
 import {
@@ -549,6 +550,18 @@ function recomputeOwnership(): void {
       // Guard 4 — never overwrite or re-stamp an existing local-redeemed
       // record, including a pre-existing `source: 'user'` mark (D-42-01).
       if (humbleLocalRedeemedStore.has(composite)) {
+        return key
+      }
+      // Guard 5 (Task 3, D-42-01 durability): a key the user already
+      // reversed via Undo (undoRedeemed writes a decline record here when
+      // the reversed record's source was 'ownership-exact') must NEVER
+      // re-settle on a later recompute against the SAME exact-ownership
+      // inputs — without this guard, Undo would be immediately reverted by
+      // the very next recomputeOwnership call, since the underlying Steam
+      // ownership match itself hasn't changed. Undoing a source: 'user'
+      // mark does NOT write a decline record (there was never an
+      // auto-settle to decline), so it never trips this guard.
+      if (humbleSettleDeclinedStore.has(composite)) {
         return key
       }
 
@@ -1466,6 +1479,18 @@ async function markRedeemed(
  * key is local-only (there is no server-confirmed tier to protect), so this
  * is a no-op only when there is nothing to undo (key missing or not
  * currently REDEEMED).
+ *
+ * Plan 42-03 (D-42-01 durability, Task 3): when the record being reversed
+ * has `source: 'ownership-exact'`, this Undo ALSO writes a decline record to
+ * humbleSettleDeclinedStore, read by recomputeOwnership's guard 5 — without
+ * it, the very next ownership recompute would immediately re-settle the key
+ * right back to REDEEMED, since the underlying exact Steam-ownership match
+ * hasn't changed. Undoing a `source: 'user'` mark (or a legacy record with
+ * no stored `source`, which reads as 'user' — the safest-default rule) does
+ * NOT write a decline record: there was never an auto-settle to decline, and
+ * such a key was never eligible to re-settle in the first place. Clearing an
+ * existing decline record is intentionally out of scope for this plan — no
+ * code path ever deletes from humbleSettleDeclinedStore.
  */
 async function undoRedeemed(
   gamekey: string,
@@ -1478,7 +1503,12 @@ async function undoRedeemed(
     return
   }
 
-  humbleLocalRedeemedStore.delete(compositeKey(gamekey, machineName))
+  const composite = compositeKey(gamekey, machineName)
+  const priorRecord = humbleLocalRedeemedStore.get(composite)
+  humbleLocalRedeemedStore.delete(composite)
+  if (priorRecord?.source === 'ownership-exact') {
+    humbleSettleDeclinedStore.set(composite, { declinedAt: Date.now() })
+  }
   appendAudit(gamekey, machineName, 'undo_redeemed', {
     title: target.title,
     platform: target.platform
