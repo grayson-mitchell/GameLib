@@ -170,10 +170,20 @@ function hasKeyEvidence(tpk: Record<string, unknown>): boolean {
  * attests a known store. Galaxy's REAL capture (tests/data/orders_keys.json)
  * proves the need: Rayman Legends is a real uplay key carrying
  * `direct_redeem: true` WITH a redeemed key value.
+ *
+ * (QT-260908-UIC-01, 2026-09-08): `gog_keyless` is NOT from either
+ * third-party source above — it corrects phase-42 assumption A1, which
+ * assumed Humble sends `gog` for every GOG entitlement. A live GameLib sync
+ * observation showed Humble sends `gog_keyless` for a GOG entitlement
+ * delivered as direct-redeem (no key code; Humble redeems straight to the
+ * linked GOG account). `gog` is RETAINED as the evidenced value for a real
+ * keyed GOG key; `gog_keyless` is a second, separately-evidenced value with
+ * a different provenance.
  */
 const KNOWN_GAME_KEY_TYPES = new Set([
   'steam',
   'gog',
+  'gog_keyless',
   'origin',
   'origin_keyless',
   'uplay',

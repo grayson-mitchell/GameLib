@@ -80,6 +80,12 @@ export type HumbleRedeemTarget =
 const KEY_TYPE_PRESENTATIONS: Record<string, HumbleKeyTypePresentation> = {
   steam: { kind: 'branded', name: 'Steam', logo: 'steam' },
   gog: { kind: 'branded', name: 'GOG', logo: 'gog' },
+  // QT-260908-UIC-01 (2026-09-08): GOG's direct-redeem entitlement shape —
+  // no key code exists, Humble redeems straight to the linked GOG account.
+  // Branded/logo like keyed `gog`, but deliberately absent from
+  // REDEEM_URL_BUILDERS below (see the T-UIC-01 note there). Precedent:
+  // `epic_keyless` follows the identical branded-but-no-deep-link shape.
+  gog_keyless: { kind: 'branded', name: 'GOG', logo: 'gog' },
   epic: { kind: 'branded', name: 'Epic Games', logo: 'epic' },
   epic_keyless: { kind: 'branded', name: 'Epic Games', logo: 'epic' },
   origin: { kind: 'named', name: 'Origin' },
@@ -110,6 +116,12 @@ export function getKeyTypePresentation(
 // hard-coded templates keyed on the literals below — a hostile key_type
 // (including a full URL string) can never reach a fabricated URL because it
 // can only ever match one of these two exact keys or fall through to help.
+//
+// T-UIC-01: `gog_keyless` is DELIBERATELY ABSENT here even though it is
+// branded above — a keyless entitlement has no key code, so any URL built
+// for it would be broken or would carry a secret it should not. It falls
+// through to the help URL via the same closed-set miss as every other
+// unlisted key_type.
 const REDEEM_URL_BUILDERS: Record<string, (code: string) => string> = {
   steam: (code) =>
     `https://store.steampowered.com/account/registerkey?key=${encodeURIComponent(
