@@ -1190,6 +1190,39 @@ function isTCallDefaultValueProperty(
   return call.getArguments().includes(objectLiteral)
 }
 
+// ---------------------------------------------------------------------------
+// KEY_DEFAULT_SHAPE_ONLY — read this before touching either exemption below.
+//
+// `isKeyDefaultTupleElement` and `isKeyDefaultObjectProperty` are SHAPE
+// matches over an UNENFORCED invariant. Both fire on structure alone — a
+// dotted-or-`ns:`-prefixed key string beside a sibling default string — and
+// NOTHING here, or anywhere else in this gate, verifies that the pair ever
+// reaches a `t()`/`tGamelib()` call. Any object or 2-tuple in the blocking
+// scope that happens to wear this shape is exempted even if its strings are
+// rendered raw and never translated. That hole is deliberate and measured,
+// not an oversight (41-REVIEW.md WR-02, closed by quick 260909-du2).
+//
+// Why it is not closed with a file-local dataflow check ("does the key reach
+// a t-alias in the same file?"), the cheap fix the review proposed: a
+// ts-morph census replaying both predicates over all 174 scope files on
+// 2026-09-09 found six users of the shape, and THREE of them have no t-alias
+// call anywhere in the file, because they are cross-module label tables whose
+// consumer does the calling:
+//
+//   consoleSteamTarget.ts   4 tuples,  no local t()  <- would be convicted
+//   stateLabels.ts         10 tuples,  no local t()  <- would be convicted
+//   facetLabels.ts          8 tuples,  no local t()  <- would be convicted
+//   HumbleKeyGroup/index.tsx 2 tuples, local t()
+//   CrossoverBadge.tsx     10 tuples,  local t()
+//   chipLabels.ts          28 objects, local t()
+//
+// A file-local check therefore convicts 22 literals across three genuinely
+// compliant files — worse than the hole it closes. Cross-module tracing is
+// out of proportion to a hole with zero live instances. If you reopen this,
+// re-run the census FIRST: the footprint grew 4 -> 6 files between the review
+// and its closure, so the numbers above are a snapshot, not a constant.
+// ---------------------------------------------------------------------------
+
 // Requires at least one literal `.` after an optional `ns:` prefix, matching
 // this repo's i18next config — the bare `keySeparator: '.'` form
 // (RESEARCH.md Pattern 2, Assumption A1) AND the `namespaceSeparator: ':'`
@@ -1225,6 +1258,8 @@ function isKeyDefaultTupleElement(node: Node): boolean {
   if (!Node.isStringLiteral(first) || !Node.isStringLiteral(second)) {
     return false
   }
+  // SHAPE ONLY: the tuple is never traced to a t() call — see
+  // KEY_DEFAULT_SHAPE_ONLY above for the measured reason it stays that way.
   return DOTTED_KEY_RE.test(first.getLiteralText())
 }
 
@@ -1280,6 +1315,8 @@ function isKeyDefaultObjectProperty(node: Node): boolean {
   }
 
   if (keyText === undefined || !hasStringDefaultText) return false
+  // SHAPE ONLY: the pair is never traced to a t() call — see
+  // KEY_DEFAULT_SHAPE_ONLY above for the measured reason it stays that way.
   return DOTTED_KEY_RE.test(keyText)
 }
 

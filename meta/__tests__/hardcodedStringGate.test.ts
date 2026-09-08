@@ -1221,6 +1221,40 @@ describe('hardcodedStringGate', () => {
       // sibling exists to pair it with.
       expect(texts).toContain('library.filterPanel.chipHiddenOnly')
     })
+
+    // 41-REVIEW.md WR-02, closed by quick 260909-du2. This test asserts a
+    // HOLE, not a guarantee: the exemption is a shape match over an
+    // unenforced invariant (see `KEY_DEFAULT_SHAPE_ONLY` in
+    // hardcodedStringGate.ts), so a `{ key, defaultText }` object whose
+    // strings are rendered raw and never translated is exempted too. It is
+    // pinned so the trade-off is a recorded decision a reader can find,
+    // rather than an unstated assumption sitting under a scope that grew
+    // 171 -> 174 files during phase 41 alone.
+    //
+    // If you are here to CLOSE the hole: the obvious cheap fix — require the
+    // key to reach a t-alias in the same file — is refuted by measurement.
+    // Three of the six real users of this shape (consoleSteamTarget.ts,
+    // stateLabels.ts, facetLabels.ts) are cross-module label tables with no
+    // t() call anywhere in the file; a file-local check convicts 22 correct
+    // literals and reddens the whole-scope W2 assertion below. Re-run the
+    // census before believing any replacement.
+    it('REQ-41-04 / WR-02: the { key, defaultText } exemption is shape-only — an object never wired to t() is exempted too, a measured and deliberate hole', () => {
+      const source = `
+        function renderBanner() {
+          const spec = {
+            ns: 'gamelib',
+            key: 'library.filterPanel.chipHiddenOnly',
+            defaultText: 'Hidden only'
+          }
+          return spec.defaultText
+        }
+      `
+      const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+      // Not a claim that this SHOULD be exempt — a claim that it IS, and
+      // that closing it is a decision with a measured cost, not a tidy-up.
+      expect(result.violations).toHaveLength(0)
+      expect(result.exempted).toBeGreaterThan(0)
+    })
   })
 
   describe('D-14: repairFailure English fallbacks', () => {
