@@ -40,6 +40,7 @@ import {
   mixedKeyAndEntitlementOrder,
   directRedeemEntitlementOrder,
   realWorldDirectRedeemUplayKeyOrder,
+  gogKeylessDirectRedeemOrder,
   unknownPlatformKeyOrder,
   mixedKeyAndDirectRedeemEntitlementOrder,
   steamKeyWithNumericAppIdOrder,
@@ -422,6 +423,12 @@ describe('classifyOrder — direct-redeem entitlements (D-29 v2, round 6)', () =
     expect(entry.keys[0].state).toBe('REVEALED')
   })
 
+  test('QT-260908-UIC-01: a gog_keyless direct-redeem entitlement (live-observed 2026-09-08) yields exactly ONE key, not zero', () => {
+    const entry = classifyOrder(gogKeylessDirectRedeemOrder, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].platform).toBe('gog_keyless')
+  })
+
   test('D-28: an unknown-platform key WITHOUT direct_redeem is retained (no positive entitlement evidence)', () => {
     const entry = classifyOrder(unknownPlatformKeyOrder, NEVER_REVEALED)
     expect(entry.keys).toHaveLength(1)
@@ -433,6 +440,7 @@ describe('classifyOrder — direct-redeem entitlements (D-29 v2, round 6)', () =
     const platforms = [
       'steam',
       'gog',
+      'gog_keyless',
       'origin',
       'origin_keyless',
       'uplay',

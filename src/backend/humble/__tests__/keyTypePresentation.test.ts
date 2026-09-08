@@ -47,6 +47,14 @@ describe('getKeyTypePresentation', () => {
     })
   })
 
+  test("'gog_keyless' -> branded GOG (QT-260908-UIC-01, live-observed 2026-09-08)", () => {
+    expect(getKeyTypePresentation('gog_keyless')).toEqual({
+      kind: 'branded',
+      name: 'GOG',
+      logo: 'gog'
+    })
+  })
+
   test("'origin' -> named Origin, no logo", () => {
     expect(getKeyTypePresentation('origin')).toEqual({
       kind: 'named',
@@ -103,6 +111,7 @@ describe('getKeyTypePresentation', () => {
     const allKeyTypes = [
       'steam',
       'gog',
+      'gog_keyless',
       'epic',
       'epic_keyless',
       'origin',
@@ -158,6 +167,7 @@ describe('getRedeemTarget', () => {
   })
 
   test.each([
+    'gog_keyless',
     'epic',
     'epic_keyless',
     'origin',
@@ -180,6 +190,7 @@ describe('getRedeemTarget', () => {
 
   describe('SECURITY PIN (T-42-01): the help branch never carries the code', () => {
     test.each([
+      'gog_keyless',
       'epic',
       'epic_keyless',
       'origin',

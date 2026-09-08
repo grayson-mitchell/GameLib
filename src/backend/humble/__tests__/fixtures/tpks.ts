@@ -458,6 +458,11 @@ export const mixedKeyAndEntitlementOrder = {
 //  - Playnite HumbleKeysLibrary keyTypeWhitelist + Galaxy KEY_TYPE enum give
 //    the evidenced game-store key_type set (union): steam, gog, origin,
 //    origin_keyless, uplay, epic, epic_keyless, battlenet, nintendo_direct.
+//    (QT-260908-UIC-01, 2026-09-08): this union is no longer the FULL
+//    evidenced set — `gog_keyless` was added from a live GameLib sync
+//    observation, not from either third-party source. `gog` is RETAINED as
+//    the evidenced keyed value; `gog_keyless` is a second, separately-
+//    evidenced value for GOG's direct-redeem entitlement shape.
 // Therefore: exclude ONLY `direct_redeem === true` entries whose key_type is
 // NOT an evidenced game-store platform. Any-platform keys without
 // direct_redeem always survive (D-28 intact).
@@ -523,6 +528,39 @@ export const realWorldDirectRedeemUplayKeyOrder = {
         disallowed_countries: [],
         show_custom_instructions_in_user_libraries: false,
         redeemed_key_val: 'uplay-key-value-string'
+      }
+    ]
+  }
+}
+
+// gog_keyless direct-redeem entitlement (QT-260908-UIC-01). Live-observed on
+// the operator's Humble sync, 2026-09-08: a GOG entitlement delivered as
+// direct-redeem was classifying to zero keys because `gog_keyless` was
+// absent from KNOWN_GAME_KEY_TYPES. This is a DIFFERENT provenance from the
+// Playnite/Galaxy union cited above — a live GameLib sync observation, not a
+// third-party integration source. gamekey and human_name below are
+// SYNTHETIC (this repo is public; the real order identifier and purchased
+// game title are the operator's personal purchase data and are never
+// committed).
+export const gogKeylessDirectRedeemOrder = {
+  gamekey: 'order-gog-keyless-direct',
+  product: { category: 'bundle', human_name: 'Synthetic GOG Bundle' },
+  tpkd_dict: {
+    all_tpks: [
+      {
+        machine_name: 'synthetic_gog_keyless_game',
+        gamekey: 'order-gog-keyless-direct',
+        key_type: 'gog_keyless',
+        key_type_human_name: 'GOG Keyless',
+        human_name: 'Synthetic GOG Keyless Game',
+        is_expired: false,
+        direct_redeem: true,
+        visible: true,
+        sold_out: false,
+        display_separately: false,
+        exclusive_countries: [],
+        disallowed_countries: [],
+        keyindex: 0
       }
     ]
   }
