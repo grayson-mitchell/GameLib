@@ -144,9 +144,7 @@ describe('todo 2026-09-06 -- sidecar boot drains queued GOG playtime once online
 
       expect(syncQueuedPlaytimeSpy).toHaveBeenCalledTimes(1)
       expect(
-        logDebugSpy.mock.calls.some(
-          ([message]) => message === SKIP_LOG_MESSAGE
-        )
+        logDebugSpy.mock.calls.some(([message]) => message === SKIP_LOG_MESSAGE)
       ).toBe(false)
 
       logDebugSpy.mockRestore()

@@ -530,12 +530,14 @@ export function syncQueuedPlaytimeWhenOnline(): void {
     }
     runOnceWhenOnline(() => {
       try {
-        libraryManagerMap['gog'].syncQueuedPlaytime().catch((error: unknown) => {
-          logWarning(
-            `[bootstrap] syncQueuedPlaytimeWhenOnline: syncQueuedPlaytime() failed: ${String(error)}`,
-            LogPrefix.Backend
-          )
-        })
+        libraryManagerMap['gog']
+          .syncQueuedPlaytime()
+          .catch((error: unknown) => {
+            logWarning(
+              `[bootstrap] syncQueuedPlaytimeWhenOnline: syncQueuedPlaytime() failed: ${String(error)}`,
+              LogPrefix.Backend
+            )
+          })
       } catch (error) {
         logWarning(
           `[bootstrap] syncQueuedPlaytimeWhenOnline: callback failed: ${String(error)}`,
