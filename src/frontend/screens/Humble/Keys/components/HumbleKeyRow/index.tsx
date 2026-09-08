@@ -193,6 +193,37 @@ export default function HumbleKeyRow({
 
   return (
     <li className="humbleKeyRow">
+      {/* 260908-vo4 column 0 — D-42-03 store indicator, hoisted to the
+          row's FIRST slot per the operator's 2026-09-08 live direction (it
+          previously lived nested inside .humbleKeyRowCaption, below the
+          title — see index.css's .humbleKeyRowStoreLogo comment for why
+          `order:` cannot express this move). Gated on
+          `!isUnpicked && PlatformLogo`: the `!isUnpicked` half is
+          load-bearing and must not be lost — a Choice-month pseudo-entry
+          has no store key and must show no store glyph (pinned by the
+          UNPICKED test in __tests__/index.test.tsx). PRESENTATIONAL ONLY
+          and does NOT need a fifth D-22 sanctioned exception (the
+          :119-136 contract block above is unchanged) — it adds no click
+          handler, no button/link element, no cursor:pointer, and no
+          callback-bearing prop. It is now the ONLY store signal on a
+          branded row (the text label below renders only on the no-logo
+          branch), so it carries its own accessible name — `role="img"` +
+          `aria-label={platformDisplay.name}` — rather than being hidden
+          from assistive tech behind an adjacent caption. `role` is a
+          literal (safe: `meta/hardcodedStringGate.ts`'s
+          EXCLUDED_ATTRIBUTES); `aria-label` MUST stay an expression, never
+          a literal (USER_FACING_ATTRIBUTES) — it resolves to one of the
+          untranslated proper nouns in `keyTypePresentation.ts`, which are
+          marked do-not-translate in `meta/i18nGlossary.json`. */}
+      {!isUnpicked && PlatformLogo && (
+        <span
+          className="humbleKeyRowStoreLogo"
+          role="img"
+          aria-label={platformDisplay.name}
+        >
+          <PlatformLogo />
+        </span>
+      )}
       {/* 260823-op3 column 1 — D-67 sanctioned exception: rendered ONLY when
           the caller supplies a `claimAction` prop — the Keys-waiting tab is
           the sole caller that does (C2 guard is the authoritative backstop;
@@ -351,25 +382,25 @@ export default function HumbleKeyRow({
           pushes expiration to the right edge. */}
       <div className="humbleKeyRowInfo">
         <span className="humbleKeyRowTitle">{displayTitle}</span>
-        {!isUnpicked && (
-          // D-42-03: the store indicator is PRESENTATIONAL ONLY and does
-          // NOT need a fourth D-22 sanctioned exception (the :43-56 contract
-          // block above is unchanged) — it adds no click handler, no
-          // button/link element, no cursor:pointer, and no callback-bearing
-          // prop. The logo is decorative next to the adjacent display name
-          // (aria-hidden), so a screen reader isn't made to read the store
-          // name twice via a redundant alt/title.
-          <span className="humbleKeyRowCaption">
-            {PlatformLogo && (
-              <span className="humbleKeyRowStoreLogo" aria-hidden="true">
-                <PlatformLogo />
-              </span>
-            )}
-            {t('humbleKeys.rowCaption', '{{platform}} · {{origin}}', {
-              platform: platformDisplay.name,
-              origin: humbleKey.origin
-            })}
-          </span>
+        {!isUnpicked && PlatformLogo === null && (
+          // 260908-vo4: the caption now renders ONLY for platforms with no
+          // logo asset (`kind: 'named'` or `'unknown'`) — a branded row
+          // emits no caption element at all, the hoisted icon above (D-42-03
+          // column 0) is its sole store signal. Content is the bare display
+          // name only: the `· {{origin}}` bundle-label segment is dropped
+          // per the operator's directive (20 of 33 live keys carry the
+          // gift string "A very special gift just for you", which names no
+          // game and must not survive as row text — the game title in
+          // .humbleKeyRowTitle above remains the row's single label).
+          //
+          // `humbleKeys.rowCaption` (public/locales/en/translation.json —
+          // upstream-owned) is now UNUSED but deliberately left in place,
+          // not deleted: `meta/i18nCatalogChurnGuard.ts` throws
+          // `UpstreamChurnError` on any changed path under `public/locales/`
+          // that is not a gamelib.json/gamelib.mt.json leaf, so removing
+          // this key from 49 locale files would redden CI for no behaviour
+          // change. Do not "tidy" it away.
+          <span className="humbleKeyRowCaption">{platformDisplay.name}</span>
         )}
         {humbleKey.ownedElsewhere && (
           <span className="humbleKeyOwnedBadge">

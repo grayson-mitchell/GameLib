@@ -76,7 +76,17 @@ function makeHumbleKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
 // Waiting/__tests__/index.test.tsx, which both define an identical helper
 // set inline — there is no shared test-utils module in this project to
 // import them from.
-type PropsWithChildren = { children?: ReactNode; className?: string }
+// 260908-vo4: `role`/`aria-label`/`aria-hidden` added as optional fields
+// (rather than a separate narrower type) so the same shared helpers
+// (collectElements/findByClassNamePart/firstRowChild) can inspect the
+// store logo's accessible-name props without a second element-graph type.
+type PropsWithChildren = {
+  children?: ReactNode
+  className?: string
+  role?: string
+  'aria-label'?: string
+  'aria-hidden'?: boolean
+}
 
 function collectElements(
   node: ReactNode,
@@ -138,9 +148,9 @@ function captionText(tree: ReactElement): string | undefined {
 // first in DOM order, not just the first JSX expression slot (several
 // sibling slots are conditionally `false` and contribute nothing).
 function firstRowChild(
-  tree: ReactElement<PropsWithChildren>
+  tree: ReactElement
 ): ReactElement<PropsWithChildren> | undefined {
-  const children = tree.props?.children
+  const children = (tree.props as PropsWithChildren)?.children
   const flat = (Array.isArray(children) ? children : [children]).filter(
     (child) => child !== null && child !== undefined && child !== false
   )

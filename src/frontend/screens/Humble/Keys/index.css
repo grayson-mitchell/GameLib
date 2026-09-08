@@ -169,7 +169,23 @@
   flex-direction: column;
 }
 
+/* 260908-vo4: single declared source for the title's line-box height, used
+   below by both .humbleKeyRowTitle (directly) and .humbleKeyRowStoreLogo
+   (to size the icon against the title's box, not the caption's — the icon
+   is no longer a caption descendant). Must be a declared ratio, not `1lh`:
+   the app sets no body line-height (src/frontend/index.scss's `body` rule
+   declares none; the only `--line-height` token is button-scoped,
+   _buttons.scss:13), so today the title's line box is the font's UA
+   `normal` and is not expressible in CSS at all without this. `1lh` would
+   also be wrong even if declared: WebKitGTK (Linux) support for the `lh`
+   unit is version-risky, and `1lh` on the LOGO element resolves against
+   the logo's own line-height, not the title's — the font-size would have
+   to be copied onto it anyway, so `lh` buys nothing here. 1.2 is chosen to
+   sit as close to the font's UA `normal` as a declared number can, so the
+   title's own rendering does not visibly shift while its box becomes
+   expressible. */
 .humbleKeyRow {
+  --humble-key-row-title-line-height: 1.2;
   display: flex;
   align-items: center;
   gap: var(--space-md);
@@ -218,6 +234,7 @@
   font-size: var(--text-md);
   font-weight: var(--regular);
   color: var(--text-default);
+  line-height: var(--humble-key-row-title-line-height);
 }
 
 .humbleKeyRowCaption {
@@ -229,35 +246,55 @@
   color: var(--text-secondary);
 }
 
-/* D-42-03: the store logo, when the platform has one. Sized in `em` units
-   derived from .humbleKeyRowCaption's own font-size (var(--text-xs)) rather
-   than an invented pixel value, so it never grows past the caption line's
-   own text metrics and never reflows the row (urgency badge / expiration
-   columns stay put). Rows without a logo (origin/uplay/battlenet/
-   nintendo_direct/generic) simply omit this element — the caption text
-   starts at the same left edge either way, so there's no ragged column to
-   align.
+/* 260908-vo4: the store logo, hoisted to be the row's first flex child
+   (D-42-03 column 0, index.tsx), when the platform has one. Rows without a
+   logo (origin/uplay/battlenet/nintendo_direct/generic) simply omit this
+   element and keep their text label in .humbleKeyRowCaption instead — that
+   label stays BELOW the title, not moved to this slot, so a no-logo row's
+   left column stays content-sized instead of staggering every row (see
+   the .humbleKeyRowAction comment above for the identical fixed-basis
+   argument).
 
-   `fill: currentColor` (not just `color`) is required here: none of the
-   three logo SVGs (steam-logo.svg, gog-logo.svg, epic-logo.svg) declare
-   `fill="currentColor"` themselves — their <path> elements carry no `fill`
-   attribute at all, so without this override they paint the SVG UA default
-   of solid black regardless of theme. `fill` is an inherited SVG property,
-   so setting it here cascades down into the unmounted path (and, for GOG's
-   <use>/<symbol> indirection, into the referenced shadow content) and picks
-   up `.humbleKeyRowCaption`'s `--text-secondary` colour token, so the icon
-   reads correctly against both a light and a dark theme's row background
-   rather than only one. NOT verified against a live render in this repo —
-   the Frontend jest project has no jsdom/browser automation (see
-   jest.config.js's docstring) so this is a code-level guarantee, not a
-   pixel measurement; see the phase 42 SUMMARY for the follow-up todo. */
+   Sized from the TITLE's line box, not the caption's: this element is no
+   longer a .humbleKeyRowCaption descendant (that derivation, which used
+   `1em` against the caption's var(--text-xs), is now wrong on both counts
+   — `em` would resolve against .humbleKeyRow's own font-size, and the
+   target is the title's box). `--humble-key-row-title-line-height` is
+   declared once on .humbleKeyRow, above.
+
+   `color: var(--text-secondary)` is REQUIRED and easy to miss: `fill:
+   currentColor` (kept below — none of the three source SVGs declare their
+   own `fill`, so without it they'd paint the SVG UA default of solid
+   black) previously resolved through .humbleKeyRowCaption's inherited
+   `--text-secondary`. As a direct child of .humbleKeyRow it would
+   otherwise inherit the row's default text colour instead, silently
+   changing the icon's colour — so it is set explicitly here rather than
+   relied on to inherit.
+
+   `align-self: flex-start`: .humbleKeyRow is `align-items: center`, which
+   on a two-line row (e.g. an `ownedElsewhere` badge under the title) would
+   float the icon between the two lines. `flex-start` anchors it to the
+   row's content-box top, aligning with .humbleKeyRowInfo's first line box
+   — title-line-box height was chosen over full-row height specifically so
+   a two-line row does not dwarf the icon, and this is the alignment that
+   honours that choice.
+
+   NOT verified against a live render in this repo — the Frontend jest
+   project has no jsdom/browser automation (see jest.config.js's
+   docstring), so icon size, position, alignment and resolved colour are
+   code-level guarantees only, not pixel measurements. See the two
+   `ready: live-gate` todos this plan files/amends
+   (2026-09-08-humble-key-row-store-icon-geometry-unverified-live.md and
+   2026-09-08-humble-key-row-store-logo-fill-currentcolor-unverified-live.md). */
 .humbleKeyRowStoreLogo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1em;
-  height: 1em;
+  width: calc(var(--text-md) * var(--humble-key-row-title-line-height));
+  height: calc(var(--text-md) * var(--humble-key-row-title-line-height));
   flex-shrink: 0;
+  align-self: flex-start;
+  color: var(--text-secondary);
   fill: currentColor;
 }
 
