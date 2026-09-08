@@ -6,6 +6,7 @@ status: OPEN
 severity: minor
 platform: any
 ready: code
+resolves_phase: "42"
 files:
   - src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx
   - src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/index.tsx
@@ -18,9 +19,28 @@ files:
 
 **Humble key state never reconciles with Steam.** A key the user already
 activated on Steam stays `REVEALED` in Humble's data forever — Humble has no
-idea it was redeemed — so GameLib keeps presenting it in Keys-waiting with an
-actionable **Activate** button. Operator, 2026-08-23: *"humble list does not
+idea it was redeemed. Operator, 2026-08-23: *"humble list does not
 sync with steam, most of those have been activated!"*
+
+### CORRECTION 2026-09-07: the original Activate-button premise was FALSE
+
+The original wording of this section claimed GameLib "keeps presenting it in
+Keys-waiting with an actionable **Activate** button", and derived a
+batch-activation / rate-limit hazard from that. All four claims were measured
+and disproved on 2026-09-07 against `fix/steam-native-install-stability`
+@ `7bf39e3b5`:
+
+| Todo claim | Verdict | Evidence |
+|---|---|---|
+| Owned keys appear in Keys-waiting | FALSE | `selectKeysWaiting` returns `false` for any `k.ownedElsewhere` — `src/common/humble/viewFilters.ts:62`, landed `5bfc2cb3d` on 2026-07-08, six weeks BEFORE the todo was written |
+| Owned keys offer an Activate button | FALSE | The button rides entirely on the optional `claimAction` prop (`HumbleKeyRow/index.tsx:29`, rendered at `:114`). Exactly one caller supplies it: `Keys/Waiting/index.tsx:222`. `Spares/index.tsx:79` passes `giftAction` only; `HumbleKeyGroup/index.tsx:81` (the All tab) passes `urgencyTier` only |
+| Reconciling spends a Steam activation attempt | UNREACHABLE for owned keys | No Activate button ⇒ no attempt |
+| Rate-limit hazard across 18 keys | NO PATH TO OCCUR | Same as above |
+
+The claim was **already false on the day this todo was written** — `5bfc2cb3d`
+predates it by six weeks. No batch-activation, "activate all", or
+rate-limit-serialization requirement follows from this todo; a future reader
+should not re-derive one.
 
 ### Measured on the operator's live library (2026-08-23)
 
@@ -42,6 +62,13 @@ marked redeemed in GameLib). Their ownership flags:
 | true | fuzzy | 5 |
 | false | none | 2 |
 
+**This census is the ONLY measurement that exists, and it cannot be re-taken.**
+The live cache at
+`~/Library/Application Support/gamelib/store_cache/humble_library.json` was
+clobbered to `{}` on 2026-09-07 12:29 by the known tests-clobber-real-stores
+defect. Treat the numbers above as a historical record, not as something a
+later reader can reproduce on demand.
+
 **So the signal already exists.** Phase 12's ownership matching (D-38/D-41)
 has already resolved 18 of the 20 as owned on Steam. Nothing consumes that to
 settle the key's state — the row offers Activate regardless, and only the
@@ -53,16 +80,18 @@ fail there") *after* the user has already committed to the flow.
 Since quick task `260823-op3`, clicking Activate on an already-redeemed key
 returns `EPurchaseResult.AlreadyOwned` → the `'already-owned'` bucket, which
 `runActivate` treats as a success and marks the Humble row redeemed. So the
-list self-heals one key at a time, correctly. Two costs:
+list self-heals one key at a time, correctly.
 
-1. Every reconciliation spends a **real Steam activation attempt**. Steam
-   rate-limits these (roughly 10 failures/hour, ~50/day, and sustained abuse
-   can restrict the account from activating at all) — `EPurchaseResult.OnCooldown`
-   → the `'rate-limited'` bucket. Working through 18 keys in one sitting is a
-   plausible way to trip that. Any batch/"activate all" affordance MUST
-   serialize and stop on the first `rate-limited`.
-2. The user is asked to confirm an irreversible-sounding action for a key
-   where nothing will actually happen.
+The original cost (1) recorded here — that reconciling spends real Steam
+activation attempts and could trip Steam's rate limit across 18 keys — has
+been **removed as false**; see the CORRECTION above. Owned keys are excluded
+from Keys-waiting and are never given an Activate button, so there is no path
+by which that cost can be incurred.
+
+The one real cost that remains, and only for keys that genuinely ARE in
+Keys-waiting (the 2 `ownedElsewhere: false` keys in the census above, not the
+18 owned ones): the user is asked to confirm an irreversible-sounding action
+for a key where nothing will actually happen.
 
 ## Solution
 
@@ -80,6 +109,33 @@ TBD — but the shape is "use the ownership signal we already have":
   override exists precisely because fuzzy matches are wrong sometimes.
 - Whatever settles the row should be undoable, like D-77's local-redeemed
   Undo — a wrong auto-settle must not strand a genuinely unredeemed key.
+
+### The real defect, and what Phase 42 shipped
+
+Stripped of the false Activate-button premise, the defect this todo was
+circling is: **owned + REVEALED keys had no tab at all.**
+`src/common/humble/viewFilters.ts:62` excludes `ownedElsewhere` keys from
+Keys-waiting, and `:76` takes `state === 'UNREVEALED'` only for Giftable
+Spares. So a key that was both owned and revealed appeared ONLY under the All
+tab's `Revealed` heading, permanently, with no way to settle it.
+
+Phase 42 closed that:
+
+- **42-01** — the pure `key_type` → presentation table (display name, logo,
+  redeem-URL-or-help-fallback) in `src/common/humble/keyTypePresentation.ts`.
+- **42-02** — the provenance schema: `HumbleLocalRedeemedRecord.source`
+  (`'user' | 'ownership-exact'`), surfaced as `ClaimAnnotation.redeemedSource`.
+- **42-03** — exact-match ownership auto-settle with a durable undo
+  (`humbleSettleDeclinedStore`), so an undone settle does not re-fire on the
+  next sync. Fuzzy matches are deliberately NOT auto-settled.
+- **42-04** — the store indicator on the key row, driven by the 42-01 table.
+- **42-05** — the GOG redeem deep link, replacing the static help-URL fork.
+- **42-06** — the reachable Undo in the All tab.
+
+**The Undo affordance did NOT already render in the All tab.** That was found
+during Phase 42 planning, not assumed, and closed by 42-06 — without it,
+42-03's auto-settle would have been a one-way door. A future reader should not
+assume D-42-01 shipped for free.
 
 ### Also in scope: per-platform redeem deep links
 
