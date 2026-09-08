@@ -5,7 +5,7 @@ source: /gsd-debug anticheat-response-frame-drop — observed during that sessio
 severity: medium
 platform: any
 ready: code
-status: pending
+status: "RESOLVED 2026-09-08 by debug session `bootstrapwirings-log-drop`. Root cause was NOT this todo's hypothesis. The poll it prescribes was already shipped; the defect was in production code, not the test: LogWriter.writeString left its one-time rotate gate open across the whole first write (#wasWrittenTo was set only after appendFile RESOLVED), so any overlapping fire-and-forget log call saw the file exist with the gate still open and renameSync-ed the live log, and everything already in it, to .old. protocol.ts:117 ('Could not receive game data') fires immediately after protocol.ts:61 ('Received <url>'), so it could carry the asserted line into the .old sibling where the poll can never see it. Fixed by claiming the rotation synchronously and splitting the shared mkdir into its own memoized gate. CAVEAT: the 1-in-8 flake did not reproduce (0/8 full Backend runs before any change), so the mechanism is proven real and sufficient but was never observed causing these two specific sightings. If it recurs, assert on ${logFilePath}.old — that is the decisive check."
 ---
 
 # `bootstrapWirings` protocol-url log assertion fails ~1 in 8 full-suite runs
