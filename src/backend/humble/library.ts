@@ -1335,8 +1335,11 @@ async function markRedeemed(
     return { status: 'ineligible' }
   }
 
+  // D-42-01: the explicit-action writer stamps source: 'user', distinguishing
+  // this from plan 42-03's inferred 'ownership-exact' settle.
   humbleLocalRedeemedStore.set(compositeKey(gamekey, machineName), {
-    redeemedAt: Date.now()
+    redeemedAt: Date.now(),
+    source: 'user'
   })
   appendAudit(gamekey, machineName, 'mark_redeemed', {
     title: target.title,

@@ -121,6 +121,18 @@ const humbleAuditStore = new CacheStore<AuditRecord[], string>(
   null
 )
 
+// D-42-01: provenance for a local-redeemed record. `source` distinguishes
+// the user's explicit "Mark as redeemed" action ('user') from an inferred
+// settle driven by exact-match Steam ownership ('ownership-exact', written
+// by recomputeOwnership from Phase 42 plan 03). ADDITIVE and OPTIONAL: every
+// pre-Phase-42 record on disk was written by the explicit action, so a
+// MISSING `source` reads as 'user' — never migrate the file, never default
+// to 'ownership-exact'. NEVER carries the raw key value (C4/D-76).
+export interface HumbleLocalRedeemedRecord {
+  redeemedAt: number
+  source?: 'user' | 'ownership-exact'
+}
+
 // Phase 14 guided claim flow (HCLAIM-04, D-77): marks a key as locally
 // redeemed (the user confirmed "Mark as redeemed" in the wizard, ahead of any
 // server confirmation). Keyed by a composite `gamekey:machineName` string
@@ -132,10 +144,10 @@ const humbleAuditStore = new CacheStore<AuditRecord[], string>(
 // re-offer a key the user already redeemed. Kept as its own electron-store
 // file on disk for the same isolation reason as the stores above — do not
 // merge this into humbleLibraryStore.
-const humbleLocalRedeemedStore = new CacheStore<{ redeemedAt: number }, string>(
-  'humble_local_redeemed',
-  null
-)
+const humbleLocalRedeemedStore = new CacheStore<
+  HumbleLocalRedeemedRecord,
+  string
+>('humble_local_redeemed', null)
 
 // Phase 15 (HSTORE-03, D-92): records the last-notified expiration date per
 // key, keyed by a composite `gamekey:machineName` string (matching
