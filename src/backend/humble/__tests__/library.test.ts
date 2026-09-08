@@ -98,6 +98,19 @@ const mockAuditStore = {
   clear: jest.fn()
 }
 
+// Plan 42-03 (D-42-01 durability): settle-declined store, composite-keyed
+// `gamekey:machineName` (same WR-01 discipline as humbleLocalRedeemedStore).
+// Written only when undoRedeemed reverses a 'ownership-exact' settle, read by
+// recomputeOwnership's settle guard so a declined key can never re-settle.
+const settleDeclinedData = new Map<string, { declinedAt: number }>()
+const mockSettleDeclinedStore = {
+  has: jest.fn(),
+  get: jest.fn(),
+  set: jest.fn(),
+  delete: jest.fn(),
+  clear: jest.fn()
+}
+
 function resetStoreMocks() {
   mockLibraryStore.has.mockImplementation((k: string) => libraryData.has(k))
   mockLibraryStore.get.mockImplementation((k: string) => libraryData.get(k))
@@ -175,6 +188,24 @@ function resetStoreMocks() {
     }
   )
   mockAuditStore.clear.mockImplementation(() => auditData.clear())
+
+  mockSettleDeclinedStore.has.mockImplementation((k: string) =>
+    settleDeclinedData.has(k)
+  )
+  mockSettleDeclinedStore.get.mockImplementation((k: string) =>
+    settleDeclinedData.get(k)
+  )
+  mockSettleDeclinedStore.set.mockImplementation(
+    (k: string, v: { declinedAt: number }) => {
+      settleDeclinedData.set(k, v)
+    }
+  )
+  mockSettleDeclinedStore.delete.mockImplementation((k: string) => {
+    settleDeclinedData.delete(k)
+  })
+  mockSettleDeclinedStore.clear.mockImplementation(() =>
+    settleDeclinedData.clear()
+  )
 }
 
 jest.mock('../electronStores', () => ({
@@ -183,7 +214,8 @@ jest.mock('../electronStores', () => ({
   humbleRevealedStore: mockRevealedStore,
   humbleOwnershipOverrideStore: mockOverrideStore,
   humbleLocalRedeemedStore: mockLocalRedeemedStore,
-  humbleAuditStore: mockAuditStore
+  humbleAuditStore: mockAuditStore,
+  humbleSettleDeclinedStore: mockSettleDeclinedStore
 }))
 
 // ── Steam store manager mocks (D-48 connectivity double-gate) ──────────────
@@ -371,6 +403,7 @@ describe('HumbleLibrary', () => {
     overrideData.clear()
     localRedeemedData.clear()
     auditData.clear()
+    settleDeclinedData.clear()
     resetStoreMocks()
     mockGetCredentials.mockReturnValue('cookie-value')
     mockGetCsrfToken.mockReturnValue('csrf-token-value')
@@ -2324,6 +2357,316 @@ describe('HumbleLibrary', () => {
 
       HumbleLibrary.clearOwnershipOverride(entry.keys[0].machineName)
       expect(HumbleLibrary.getAllOwnershipOverrides()).toEqual({})
+    })
+  })
+
+  // ── Plan 42-03 (D-42-01/D-42-02): ownership auto-settle ────────────────────
+  // An exact-match owned+REVEALED key auto-settles to REDEEMED, carrying
+  // provenance `source: 'ownership-exact'`, inside recomputeOwnership's
+  // existing dedup pass. Fuzzy matches never settle (REQ-42-05). Reuses this
+  // suite's Steam-gate mocks (mockSteamIsLoggedIn/mockSteamLibraryStoreGet)
+  // and humbleLibraryStore seeding — no second harness.
+
+  // Single steam game fixture reused by every case below: appId '440',
+  // title 'Team Fortress 2' — matches makeSteamGame/makeOwnedEntry's existing
+  // convention elsewhere in this file.
+  const SETTLE_STEAM_APP_ID = '440'
+  const SETTLE_STEAM_TITLE = 'Team Fortress 2'
+
+  function makeSettleCandidateKey(opts: {
+    gamekey: string
+    state: HumbleKeyState
+    machineName?: string
+    title?: string
+    steamAppId?: string
+    // Only meaningful when state is 'UNPICKED' — dedup.ts's recomputeOwnership
+    // returns an UNPICKED key UNCHANGED (D-27), so it never recomputes these
+    // from steamAppId/title. Every other state gets these recomputed fresh by
+    // the real (unmocked) dedup.ts matcher.
+    ownedElsewhere?: boolean
+    matchConfidence?: 'exact' | 'fuzzy' | 'none'
+  }): HumbleOrderCacheEntry {
+    const machineName = opts.machineName ?? `${opts.gamekey}_key`
+    const key: HumbleKey = {
+      gamekey: opts.gamekey,
+      machineName,
+      state: opts.state,
+      title: opts.title ?? `Key for ${opts.gamekey}`,
+      platform: 'steam',
+      expiration: null,
+      origin: `Order ${opts.gamekey}`,
+      ownedElsewhere: opts.ownedElsewhere ?? false,
+      matchConfidence: opts.matchConfidence ?? 'none',
+      ...(opts.steamAppId !== undefined ? { steamAppId: opts.steamAppId } : {})
+    }
+    return { gamekey: opts.gamekey, keys: [key], allTerminal: false }
+  }
+
+  function seedSteamOwning440(): void {
+    mockSteamIsLoggedIn.mockReturnValue(true)
+    mockSteamLibraryStoreGet.mockReturnValue([
+      makeSteamGame(SETTLE_STEAM_APP_ID, SETTLE_STEAM_TITLE)
+    ])
+  }
+
+  describe('D-42-01/D-42-02 ownership auto-settle', () => {
+    test('exact-match owned+REVEALED key settles to REDEEMED with source: ownership-exact, audits ownership_settled (no key value), and getClaimAnnotations reports it', () => {
+      libraryData.set(
+        'gk-settle',
+        makeSettleCandidateKey({
+          gamekey: 'gk-settle',
+          state: 'REVEALED',
+          steamAppId: SETTLE_STEAM_APP_ID
+        })
+      )
+      seedSteamOwning440()
+
+      HumbleLibrary.recomputeOwnership()
+
+      const key = libraryData.get('gk-settle')?.keys[0]
+      expect(key?.state).toBe('REDEEMED')
+
+      const record = localRedeemedData.get('gk-settle:gk-settle_key')
+      expect(record?.redeemedAt).toEqual(expect.any(Number))
+      expect(record?.source).toBe('ownership-exact')
+
+      const audit = auditData.get('gk-settle:gk-settle_key')
+      expect(audit?.map((a) => a.event)).toEqual(['ownership_settled'])
+      expect(audit?.[0].title).toBeDefined()
+      expect(audit?.[0].platform).toBe('steam')
+      expect(audit?.[0]).not.toHaveProperty('keyValue')
+      expect(audit?.[0]).not.toHaveProperty('key')
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+      expect(annotations['gk-settle:gk-settle_key'].redeemedSource).toBe(
+        'ownership-exact'
+      )
+      expect(annotations['gk-settle:gk-settle_key'].redeemedAt).toEqual(
+        expect.any(Number)
+      )
+    })
+
+    // Table-driven so a future relaxation of any single guard cannot pass by
+    // omission — every row must leave the key untouched and write nothing.
+    const NON_SETTLING_CASES: Array<{
+      name: string
+      makeEntry: () => HumbleOrderCacheEntry
+    }> = [
+      {
+        // REQ-42-05 — the load-bearing negative: a genuine fuzzy match (no
+        // steamAppId, title matches a Steam-owned title) must NEVER settle.
+        name: "matchConfidence: 'fuzzy' + owned + REVEALED (REQ-42-05)",
+        makeEntry: () =>
+          makeSettleCandidateKey({
+            gamekey: 'gk-fuzzy',
+            state: 'REVEALED',
+            title: SETTLE_STEAM_TITLE
+          })
+      },
+      {
+        name: "matchConfidence: 'none' (no steamAppId, non-matching title) + REVEALED",
+        makeEntry: () =>
+          makeSettleCandidateKey({
+            gamekey: 'gk-none',
+            state: 'REVEALED',
+            title: 'Zzyzx Totally Unrelated Game Nobody Owns'
+          })
+      },
+      {
+        // steamAppId present (exact tier attempted) but does not match any
+        // owned game — dedup verdict is final (D-44, no fuzzy fallback), so
+        // this ends unowned/'none' exactly like the row above, from a
+        // structurally different input shape.
+        name: 'ownedElsewhere: false — steamAppId present but unmatched + REVEALED',
+        makeEntry: () =>
+          makeSettleCandidateKey({
+            gamekey: 'gk-unmatched-exact',
+            state: 'REVEALED',
+            steamAppId: '999999'
+          })
+      },
+      {
+        name: "owned + exact but state: 'UNREVEALED'",
+        makeEntry: () =>
+          makeSettleCandidateKey({
+            gamekey: 'gk-unrevealed',
+            state: 'UNREVEALED',
+            steamAppId: SETTLE_STEAM_APP_ID
+          })
+      },
+      {
+        // dedup.ts returns UNPICKED keys unchanged (D-27) — seed the flags
+        // directly since the real matcher will never touch them.
+        name: "owned + exact but state: 'UNPICKED'",
+        makeEntry: () =>
+          makeSettleCandidateKey({
+            gamekey: 'gk-unpicked',
+            state: 'UNPICKED',
+            ownedElsewhere: true,
+            matchConfidence: 'exact'
+          })
+      },
+      {
+        name: "owned + exact but state: 'UNREDEEMABLE'",
+        makeEntry: () =>
+          makeSettleCandidateKey({
+            gamekey: 'gk-unredeemable',
+            state: 'UNREDEEMABLE',
+            steamAppId: SETTLE_STEAM_APP_ID
+          })
+      }
+    ]
+
+    it.each(NON_SETTLING_CASES)(
+      '$name: recomputeOwnership leaves the key untouched, writes no record',
+      ({ makeEntry }) => {
+        const seeded = makeEntry()
+        libraryData.set(seeded.gamekey, seeded)
+        seedSteamOwning440()
+
+        HumbleLibrary.recomputeOwnership()
+
+        const key = libraryData.get(seeded.gamekey)?.keys[0]
+        expect(key?.state).toBe(seeded.keys[0].state)
+        expect(localRedeemedData.size).toBe(0)
+      }
+    )
+
+    test('Steam gate CLOSED: recomputeOwnership is a TOTAL no-op even with a settle-eligible key present — no store write, no push', () => {
+      libraryData.set(
+        'gk-closed',
+        makeSettleCandidateKey({
+          gamekey: 'gk-closed',
+          state: 'REVEALED',
+          ownedElsewhere: true,
+          matchConfidence: 'exact',
+          steamAppId: SETTLE_STEAM_APP_ID
+        })
+      )
+      mockSteamIsLoggedIn.mockReturnValue(false)
+      mockLibraryStore.set.mockClear()
+      mockSendFrontendMessage.mockClear()
+
+      HumbleLibrary.recomputeOwnership()
+
+      expect(mockLibraryStore.set).not.toHaveBeenCalled()
+      expect(mockSendFrontendMessage).not.toHaveBeenCalled()
+      expect(libraryData.get('gk-closed')?.keys[0].state).toBe('REVEALED')
+      expect(localRedeemedData.size).toBe(0)
+    })
+
+    test("an existing source: 'user' REDEEMED record is never overwritten or re-stamped by a recompute", () => {
+      localRedeemedData.set('gk-user:gk-user_key', {
+        redeemedAt: 111,
+        source: 'user'
+      })
+      libraryData.set(
+        'gk-user',
+        makeSettleCandidateKey({
+          gamekey: 'gk-user',
+          state: 'REDEEMED',
+          steamAppId: SETTLE_STEAM_APP_ID
+        })
+      )
+      seedSteamOwning440()
+
+      HumbleLibrary.recomputeOwnership()
+
+      expect(localRedeemedData.get('gk-user:gk-user_key')).toEqual({
+        redeemedAt: 111,
+        source: 'user'
+      })
+    })
+
+    test('undo of an auto-settled key is durable: a subsequent recompute with the SAME exact-ownership inputs leaves the key REVEALED and writes no new record', async () => {
+      libraryData.set(
+        'gk-undo',
+        makeSettleCandidateKey({
+          gamekey: 'gk-undo',
+          state: 'REVEALED',
+          steamAppId: SETTLE_STEAM_APP_ID
+        })
+      )
+      seedSteamOwning440()
+
+      HumbleLibrary.recomputeOwnership()
+      expect(libraryData.get('gk-undo')?.keys[0].state).toBe('REDEEMED')
+
+      await HumbleLibrary.undoRedeemed('gk-undo', 'gk-undo_key')
+      expect(libraryData.get('gk-undo')?.keys[0].state).toBe('REVEALED')
+      expect(localRedeemedData.has('gk-undo:gk-undo_key')).toBe(false)
+
+      HumbleLibrary.recomputeOwnership()
+
+      expect(libraryData.get('gk-undo')?.keys[0].state).toBe('REVEALED')
+      expect(localRedeemedData.has('gk-undo:gk-undo_key')).toBe(false)
+    })
+
+    test("undoing a source: 'user' record does NOT create a settle-decline record", async () => {
+      libraryData.set(
+        'gk-user-undo',
+        makeSettleCandidateKey({
+          gamekey: 'gk-user-undo',
+          state: 'REDEEMED',
+          steamAppId: SETTLE_STEAM_APP_ID
+        })
+      )
+      localRedeemedData.set('gk-user-undo:gk-user-undo_key', {
+        redeemedAt: Date.now(),
+        source: 'user'
+      })
+
+      await HumbleLibrary.undoRedeemed('gk-user-undo', 'gk-user-undo_key')
+
+      expect(settleDeclinedData.has('gk-user-undo:gk-user-undo_key')).toBe(
+        false
+      )
+    })
+
+    test('flag recompute (WR-01 trap): an order whose only non-terminal key is an exact-match owned REVEALED key gets allTerminal:true after settle, and allTerminal:false again after undo', async () => {
+      libraryData.set(
+        'gk-flag',
+        makeSettleCandidateKey({
+          gamekey: 'gk-flag',
+          state: 'REVEALED',
+          steamAppId: SETTLE_STEAM_APP_ID
+        })
+      )
+      seedSteamOwning440()
+
+      HumbleLibrary.recomputeOwnership()
+      expect(libraryData.get('gk-flag')?.allTerminal).toBe(true)
+
+      await HumbleLibrary.undoRedeemed('gk-flag', 'gk-flag_key')
+      expect(libraryData.get('gk-flag')?.allTerminal).toBe(false)
+    })
+
+    test('churn: two consecutive recomputeOwnership() calls settle exactly once — unchanged redeemedAt, exactly one ownership_settled audit record', () => {
+      libraryData.set(
+        'gk-churn',
+        makeSettleCandidateKey({
+          gamekey: 'gk-churn',
+          state: 'REVEALED',
+          steamAppId: SETTLE_STEAM_APP_ID
+        })
+      )
+      seedSteamOwning440()
+
+      HumbleLibrary.recomputeOwnership()
+      const firstRedeemedAt = localRedeemedData.get(
+        'gk-churn:gk-churn_key'
+      )?.redeemedAt
+
+      HumbleLibrary.recomputeOwnership()
+      const secondRedeemedAt = localRedeemedData.get(
+        'gk-churn:gk-churn_key'
+      )?.redeemedAt
+
+      expect(secondRedeemedAt).toBe(firstRedeemedAt)
+      const audit = auditData.get('gk-churn:gk-churn_key')
+      expect(
+        audit?.filter((a) => a.event === 'ownership_settled').length
+      ).toBe(1)
     })
   })
 
