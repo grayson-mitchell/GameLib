@@ -859,8 +859,9 @@ const IN_SCOPE_SUITES = [
  * (`jest.setupContainment.ts`'s project-wide `setupFiles` registration), the same floor
  * `playtimeLockBootClear.test.ts` relies on. It cannot be an `IN_SCOPE_SUITE`: it declares none
  * of the four-element `pathShim`/`backend/logger/paths` mock kit Block B gates on. A
- * `readdirSync` recount at this task's execution time puts the directory at 62 `*.test.ts`
- * files: 4 `IN_SCOPE_SUITES` + 58 below.
+ * `readdirSync` recount at this task's execution time puts the directory at 64 `*.test.ts`
+ * files: 4 `IN_SCOPE_SUITES` + 60 below (quick-260908-k3x added `rosettaBootWiring.test.ts`
+ * and `rosettaPlatformGate.test.ts`, neither of which declares the `IN_SCOPE_SUITES` kit).
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -900,6 +901,8 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'pathShim.test.ts',
   'playtimeLockBootClear.test.ts',
   'rendererPathGuard.test.ts',
+  'rosettaBootWiring.test.ts',
+  'rosettaPlatformGate.test.ts',
   'runnerAuthFlows.test.ts',
   'runnerMiscFlows.test.ts',
   'runnerSliceRegistration.test.ts',
