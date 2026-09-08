@@ -133,7 +133,28 @@ function captionText(tree: ReactElement): string | undefined {
   return caption ? textContent(caption) : undefined
 }
 
-describe('HumbleKeyRow store indicator (D-42-03)', () => {
+// 260908-vo4: the root element's FIRST non-falsy child, after flattening
+// arrays and dropping null/undefined/false — i.e. what actually renders
+// first in DOM order, not just the first JSX expression slot (several
+// sibling slots are conditionally `false` and contribute nothing).
+function firstRowChild(
+  tree: ReactElement<PropsWithChildren>
+): ReactElement<PropsWithChildren> | undefined {
+  const children = tree.props?.children
+  const flat = (Array.isArray(children) ? children : [children]).filter(
+    (child) => child !== null && child !== undefined && child !== false
+  )
+  return flat[0] as ReactElement<PropsWithChildren> | undefined
+}
+
+// 260908-vo4: NONE of the assertions in this file measure icon pixel size,
+// its position relative to the row's left edge, its vertical alignment on
+// a two-line row, or its resolved colour. The Frontend jest project has no
+// jsdom and no browser automation (see jest.config.js's docstring) — it
+// invokes the component as a plain function and inspects the returned
+// React-element graph, which cannot compute CSS. Those claims are carried
+// instead by the `ready: live-gate` todos this plan files/amends.
+describe('HumbleKeyRow store indicator (D-42-03, redesigned 260908-vo4)', () => {
   type PlatformCase = {
     platform: string
     expectedName: string
@@ -155,34 +176,122 @@ describe('HumbleKeyRow store indicator (D-42-03)', () => {
     { platform: 'wibble', expectedName: 'Other', hasLogo: false }
   ]
 
+  // GENUINE RED (before Task 2): a branded platform's caption used to be
+  // `"${name} · ${origin}"` WITH the logo nested inside it. Post-redesign,
+  // branded platforms render NO caption at all (the logo alone is the
+  // signal, named via aria-label) and no-logo platforms render a caption
+  // containing EXACTLY the display name — no ` · `, no origin. `toBe`, not
+  // `toContain`: `toContain` would still pass if ` · ` and the origin
+  // survived (this repo's recorded toContain blind spot).
   it.each(PLATFORM_CASES)(
     '$platform -> "$expectedName" (logo present: $hasLogo)',
     ({ platform, expectedName, hasLogo }) => {
       const key = makeHumbleKey({ platform })
       const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
 
-      const caption = captionText(tree)
-      expect(caption).toContain(`${expectedName} · Humble RPG Bundle`)
-
       const logo = findByClassNamePart(tree, 'humbleKeyRowStoreLogo')
       if (hasLogo) {
         expect(logo).toBeDefined()
+        expect(logo?.props['aria-label']).toBe(expectedName)
+        expect(captionText(tree)).toBeUndefined()
       } else {
         expect(logo).toBeUndefined()
+        expect(captionText(tree)).toBe(expectedName)
       }
+    }
+  )
+
+  // GENUINE RED: today the first non-falsy child of the row is the state
+  // badge column (or an action column, when a claim/gift/settle prop is
+  // supplied) — the logo lives two levels deep inside
+  // .humbleKeyRowInfo > .humbleKeyRowCaption. `order:` cannot fix this (it
+  // only permutes siblings within one flex container); only a DOM move can.
+  it('the store logo is the FIRST non-falsy child of the row for a branded platform', () => {
+    const key = makeHumbleKey({ platform: 'steam' })
+    const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+
+    const first = firstRowChild(tree)
+    expect(first?.props?.className).toContain('humbleKeyRowStoreLogo')
+  })
+
+  // GENUINE RED: general structural invariant — wherever a caption renders
+  // (the no-logo branch only, post-redesign), the store logo must never be
+  // nested inside it. Today it is, for every branded platform.
+  it.each(PLATFORM_CASES)(
+    '$platform: the store logo, if the caption exists at all, is never a descendant of it',
+    ({ platform }) => {
+      const key = makeHumbleKey({ platform })
+      const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+      const caption = findByClassNamePart(tree, 'humbleKeyRowCaption')
+      if (caption === undefined) {
+        return
+      }
+      const logoInsideCaption = collectElements(caption.props?.children).find(
+        (el) =>
+          typeof el.props?.className === 'string' &&
+          el.props.className.split(' ').includes('humbleKeyRowStoreLogo')
+      )
+      expect(logoInsideCaption).toBeUndefined()
+    }
+  )
+
+  // GENUINE RED: the logo carries no accessible name today (aria-hidden
+  // instead). The SVG stub collapses all three logo modules to one
+  // identity in this harness, so aria-label is the only way this suite can
+  // tell the brands apart — it replaces the caption text that used to
+  // serve that purpose.
+  it.each([
+    { platform: 'steam', expectedName: 'Steam' },
+    { platform: 'gog', expectedName: 'GOG' },
+    { platform: 'epic', expectedName: 'Epic Games' }
+  ])(
+    'the $platform logo carries role="img" + aria-label="$expectedName" and no aria-hidden',
+    ({ platform, expectedName }) => {
+      const key = makeHumbleKey({ platform })
+      const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+      const logo = findByClassNamePart(tree, 'humbleKeyRowStoreLogo')
+
+      expect(logo).toBeDefined()
+      expect(logo?.props.role).toBe('img')
+      expect(logo?.props['aria-label']).toBe(expectedName)
+      expect(logo?.props['aria-hidden']).toBeUndefined()
+    }
+  )
+
+  // GENUINE RED: origin erasure. HumbleKey.origin must appear NOWHERE in
+  // the rendered row, for both a branded and a no-logo platform — 20 of
+  // the operator's 33 live keys carry the gift string
+  // "A very special gift just for you", which names no game and must not
+  // survive as row text.
+  it.each([
+    { platform: 'steam', label: 'branded' },
+    { platform: 'uplay', label: 'no-logo' }
+  ])(
+    'the gift-string origin never appears anywhere in the row ($label platform)',
+    ({ platform }) => {
+      const key = makeHumbleKey({
+        platform,
+        origin: 'A very special gift just for you'
+      })
+      const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+
+      expect(textContent(tree)).not.toContain(
+        'A very special gift just for you'
+      )
     }
   )
 
   // The field-name collision trap: 'origin' is simultaneously a key_type
   // VALUE (Origin, the EA store) and the unrelated HumbleKey.origin FIELD
-  // (the bundle name, e.g. "Humble RPG Bundle"). Pin that the bundle-name
-  // half is untouched and was not silently overwritten by the platform's
-  // own resolved display name.
-  it("pins the 'origin' key_type against overwriting the unrelated origin (bundle-name) field", () => {
+  // (the bundle name, e.g. "Humble Choice"). 260908-vo4: the bundle name is
+  // now deliberately UNRENDERED — dropping `origin` from the row is the
+  // point of this change, not merely "not overwritten by the platform's
+  // own resolved name". The caption renders ONLY the display name.
+  it("pins the 'origin' key_type against the unrelated origin (bundle-name) field ever leaking into the caption", () => {
     const key = makeHumbleKey({ platform: 'origin', origin: 'Humble Choice' })
     const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
 
-    expect(captionText(tree)).toBe('Origin · Humble Choice')
+    expect(captionText(tree)).toBe('Origin')
   })
 
   it.each(PLATFORM_CASES)(
@@ -203,41 +312,59 @@ describe('HumbleKeyRow store indicator (D-42-03)', () => {
     }
   )
 
-  it('does not leak the raw lowercase "steam" token into the caption (the actual defect)', () => {
+  // GENUINE RED: previously pinned against the caption text; the caption
+  // no longer exists for a branded platform, so the check moves to the
+  // whole row's text content plus the logo's accessible name.
+  it('does not leak the raw lowercase "steam" token anywhere in the row (the original defect)', () => {
     const key = makeHumbleKey({ platform: 'steam' })
     const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
-    const caption = captionText(tree)
 
-    expect(caption).toBeDefined()
-    expect(caption).not.toContain('steam ·')
-    expect(caption).toContain('Steam ·')
+    expect(textContent(tree)).not.toContain('steam')
+    const logo = findByClassNamePart(tree, 'humbleKeyRowStoreLogo')
+    expect(logo?.props['aria-label']).toBe('Steam')
   })
 
+  // GENUINE RED: retargeted to the reduced caption — exactly 'Other', no
+  // longer `"Other · <origin>"`.
   it('the unknown branch fabricates no proper noun for the explicit "generic" sentinel', () => {
     const key = makeHumbleKey({ platform: 'generic' })
     const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
-    const caption = captionText(tree)
 
-    expect(caption).toBeDefined()
-    expect(caption).not.toContain('Generic')
-    expect(caption).not.toContain('generic')
+    expect(captionText(tree)).toBe('Other')
   })
 
   it('the unknown branch fabricates no proper noun for an unrecognised token', () => {
     const key = makeHumbleKey({ platform: 'wibble' })
     const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
-    const caption = captionText(tree)
 
-    expect(caption).toBeDefined()
-    expect(caption).not.toContain('Wibble')
-    expect(caption).not.toContain('wibble')
+    expect(captionText(tree)).toBe('Other')
   })
 
-  it('renders no caption at all for an UNPICKED pseudo-entry', () => {
+  // GENUINE RED risk: hoisting the logo out of the `{!isUnpicked && ...}`
+  // block is exactly how a Steam glyph would leak onto a Choice-month
+  // pseudo-entry — extended from the pre-existing caption-only pin.
+  it('renders no caption and no store logo at all for an UNPICKED pseudo-entry', () => {
     const key = makeHumbleKey({ state: 'UNPICKED', platform: 'steam' })
     const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
 
     expect(findByClassNamePart(tree, 'humbleKeyRowCaption')).toBeUndefined()
+    expect(findByClassNamePart(tree, 'humbleKeyRowStoreLogo')).toBeUndefined()
+  })
+
+  // REGRESSION PIN, not a RED — passes today AND after Task 2. Encodes the
+  // corrected directive: `origin` is dropped, the TITLE is not. Against the
+  // 20-of-33 gift-string rows that would otherwise become unidentifiable if
+  // this had gone the other way.
+  it('the game title still renders even when origin is the gift-string bundle label (REGRESSION PIN)', () => {
+    const key = makeHumbleKey({
+      title: 'Crusader Kings III',
+      origin: 'A very special gift just for you'
+    })
+    const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+
+    const title = findByClassNamePart(tree, 'humbleKeyRowTitle')
+    expect(title).toBeDefined()
+    expect(textContent(title)).toBe('Crusader Kings III')
   })
 
   // D-22 structural pin: with no claimAction/giftAction/undoOverride prop
