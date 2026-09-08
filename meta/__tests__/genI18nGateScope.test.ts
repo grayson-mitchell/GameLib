@@ -776,7 +776,7 @@ describe('--rewrite-scope guard', () => {
    * hand-curated blocking gate as a side effect of an unrelated fix.
    *
    * Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 171 -> 216 delta this task exists to
+   * so the specs below assert the REAL 174 -> 216 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -802,7 +802,7 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 171-file hand-curated snapshot and the fresh snapshot is the REAL 216', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 174-file hand-curated snapshot and the fresh snapshot is the REAL 216', () => {
     expect(scopeSnapshot.files.length).toBe(174)
     expect(forkTouchedSnapshot.files.length).toBe(216)
     expect(freshSnapshot().files.length).toBe(216)
@@ -831,7 +831,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 171 -> 216 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 174 -> 216 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
