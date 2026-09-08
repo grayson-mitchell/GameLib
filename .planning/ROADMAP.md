@@ -5078,6 +5078,53 @@ standing repo constraint, not a dependency.
 Plans:
 - [ ] TBD (run /gsd-plan-phase 42 to break down)
 
+### Phase 43: Humble Keys screen: unified list replacing the three tabs, with search, sort and hide-redeemed filters, a column-header row, and a three-column row whose KEY column is action-scenario driven
+
+**Goal:** Bring the Humble Keys screen closer to Humble's own site. Today it is three tabs
+(`Keys waiting` / `Giftable spares` / `All keys`) whose membership is computed by
+`selectKeysWaiting` / `selectGiftableSpares`, so a key's actionable state is expressed by
+WHICH LIST it sits in. Replace that with ONE unified list: a title row carrying a search box,
+a controls row with a sort picker (`Most recent` / `Alphabetical`) and a `Hide redeemed keys`
+checkbox, a column-header row (`TYPE` / `GAME` / `KEY`), and a three-column row. The tab
+predicates stop being list filters and become PER-ROW state, driving a KEY column with four
+scenarios: (1) not logged into the store — full-width `Log into [store] and claim`;
+(2) waiting — `Claim on [store]` and `Gift a friend` side by side; (3) giftable spare —
+`Gift a friend`; (4) already claimed — NO button on a confident match, else `Not the same
+game` plus bold `Likely owned on Steam ([game])`. Other descriptive text moves into the KEY
+column. Named `KEY` rather than Humble's "Keys and entitlements" because GameLib does not
+cover their non-computer-game catalogue.
+
+**Requirements**: TBD (run /gsd-ui-phase 43, then /gsd-plan-phase 43)
+
+**Depends on:** Phase 42 — VERIFIED, not the `phase.add` positional default. Scenario 4 renders
+Phase 42's own output: `ownedElsewhere` + `matchConfidence` (exact vs fuzzy), D-42's "Not the
+same game" override, and 42-03's exact-match auto-settle (which produces the no-button case)
+with 42-06's Undo. The `TYPE` column is 42-01's `key_type` presentation table and 42-04's
+store indicator. Also depends on quick tasks `260908-uic` (`gog_keyless` classification) and
+`260908-vo4` (icon hoisted to column 0 at title line-box height), which this phase's row
+restructure supersedes.
+
+**Open questions — resolve in /gsd-ui-phase before planning:**
+1. **`Most recent` may have nothing to sort by.** `HumbleKey` carries no purchase/order date
+   (`gamekey machineName state title platform expiration origin steamAppId ownedElsewhere
+   matchConfidence`). `revealedAt`/`redeemedAt` live on `ClaimAnnotation` and exist only for
+   keys already acted on. `HUMBLE-SPEC-SOURCE.md` documents NO order-level date;
+   `adapter.test.ts:520`'s `created` field is NOT supported by the Appendix A provenance its
+   comment claims. Every adapter schema is `.passthrough()`, so a date WOULD survive if sent.
+   **De-risk first:** `classify.ts:582` already has `fieldNames(rawOrder)`, logged as
+   `order_fields=` — but only on the `tpkd_dict` absent/non-object branch, which has never
+   fired live. A one-off diagnostic on a populated order settles it in a single sync. Do that
+   before specifying the sort; if absent, capture requires a backend change plus a
+   `HUMBLE_CLASSIFIER_VERSION` bump.
+2. **Per-store login state** must be reachable from this screen for scenario 1. Unverified.
+3. **Tab deletion is confirmed** by the operator (2026-09-09) — the three tabs are replaced by
+   the unified list, not kept alongside it.
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-ui-phase 43, then /gsd-plan-phase 43 to break down)
+
 ---
 
 ## Parked / Superseded Phases
