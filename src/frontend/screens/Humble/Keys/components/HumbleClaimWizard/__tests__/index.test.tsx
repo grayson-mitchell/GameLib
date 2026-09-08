@@ -403,7 +403,11 @@ describe('HumbleClaimWizard', () => {
     expect(content).not.toContain("couldn't confirm")
   })
 
-  it('shows "Redeem on {{platform}}" and no "Open Steam" control for a non-Steam key (HCLAIM-05)', async () => {
+  // 42-05 (D-42-03): gog now has an evidenced deep link (operator-verified
+  // 2026-08-23), so it no longer exercises the generic-help branch this
+  // suite used a gog fixture to cover — 'uplay' and an unrecognised
+  // platform value take over that role below (HCLAIM-05 preserved on both).
+  it('opens the GOG deep link with the revealed code and no "Open Steam" control for a GOG key (HCLAIM-05, D-42-03)', async () => {
     const onDone = jest.fn()
     const humbleKey = makeHumbleKey({ platform: 'gog' })
     mockApi.humbleRevealKey.mockResolvedValue({
@@ -412,17 +416,112 @@ describe('HumbleClaimWizard', () => {
     } satisfies RevealOutcome)
 
     const initial = mount({ humbleKey, entryMode: 'claim', onDone })
-    const revealButton = findByClassNamePart(
+    findByClassNamePart(
       initial,
       'humbleClaimWizardRevealButton'
-    )!
-    revealButton.props.onClick?.()
+    )!.props.onClick?.()
     await flushPromises()
 
     const revealed = rerender({ humbleKey, entryMode: 'claim', onDone })
-    const content = textContent(revealed)
-    expect(content).not.toContain('Open Steam')
-    expect(content).toContain('Redeem on gog')
+    expect(textContent(revealed)).not.toContain('Open Steam')
+
+    const activationLink = findByClassNamePart(
+      revealed,
+      'humbleClaimWizardActivationLink'
+    )!
+    expect(textContent(activationLink)).toContain('Open GOG')
+    activationLink.props.onClick?.()
+    expect(mockApi.openExternalUrl).toHaveBeenCalledWith(
+      'https://www.gog.com/redeem/GOG-KEY-1'
+    )
+  })
+
+  it('urlencodes the revealed code in the GOG deep link (D-42-03)', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey({ platform: 'gog' })
+    mockApi.humbleRevealKey.mockResolvedValue({
+      status: 'revealed',
+      key: 'GOG KEY/1'
+    } satisfies RevealOutcome)
+
+    const initial = mount({ humbleKey, entryMode: 'claim', onDone })
+    findByClassNamePart(
+      initial,
+      'humbleClaimWizardRevealButton'
+    )!.props.onClick?.()
+    await flushPromises()
+
+    const revealed = rerender({ humbleKey, entryMode: 'claim', onDone })
+    findByClassNamePart(
+      revealed,
+      'humbleClaimWizardActivationLink'
+    )!.props.onClick?.()
+    expect(mockApi.openExternalUrl).toHaveBeenCalledWith(
+      'https://www.gog.com/redeem/GOG%20KEY%2F1'
+    )
+  })
+
+  it('shows "Redeem on Ubisoft Connect" and routes to the static help URL for an uplay key, never leaking the code (HCLAIM-05, D-42-03)', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey({ platform: 'uplay' })
+    mockApi.humbleRevealKey.mockResolvedValue({
+      status: 'revealed',
+      key: 'UPLAY-SECRET'
+    } satisfies RevealOutcome)
+
+    const initial = mount({ humbleKey, entryMode: 'claim', onDone })
+    findByClassNamePart(
+      initial,
+      'humbleClaimWizardRevealButton'
+    )!.props.onClick?.()
+    await flushPromises()
+
+    const revealed = rerender({ humbleKey, entryMode: 'claim', onDone })
+    expect(textContent(revealed)).not.toContain('Open Steam')
+
+    const activationLink = findByClassNamePart(
+      revealed,
+      'humbleClaimWizardActivationLink'
+    )!
+    expect(textContent(activationLink)).toContain('Redeem on Ubisoft Connect')
+    activationLink.props.onClick?.()
+
+    // T-42-01: pinned directly on the recorded call argument, not on
+    // rendered text — the secret must never reach the fallback URL.
+    const calledWith = mockApi.openExternalUrl.mock.calls[0][0]
+    expect(calledWith).toBe('https://support.humblebundle.com/hc/en-us')
+    expect(calledWith).not.toContain('UPLAY-SECRET')
+  })
+
+  it('shows "Redeem on Other" for an unrecognised platform and never fabricates a name or URL (HCLAIM-05, D-42-03)', async () => {
+    const onDone = jest.fn()
+    const humbleKey = makeHumbleKey({ platform: 'wibble' })
+    mockApi.humbleRevealKey.mockResolvedValue({
+      status: 'revealed',
+      key: 'X-SECRET'
+    } satisfies RevealOutcome)
+
+    const initial = mount({ humbleKey, entryMode: 'claim', onDone })
+    findByClassNamePart(
+      initial,
+      'humbleClaimWizardRevealButton'
+    )!.props.onClick?.()
+    await flushPromises()
+
+    const revealed = rerender({ humbleKey, entryMode: 'claim', onDone })
+    const activationLink = findByClassNamePart(
+      revealed,
+      'humbleClaimWizardActivationLink'
+    )!
+    expect(textContent(activationLink)).toContain('Redeem on Other')
+    activationLink.props.onClick?.()
+
+    // D-42-03: never a fabricated URL, never a fabricated name — the raw
+    // unrecognised token must not leak into the resolved URL either.
+    const calledWith = mockApi.openExternalUrl.mock.calls[0][0]
+    expect(calledWith).toBe('https://support.humblebundle.com/hc/en-us')
+    expect(calledWith).not.toContain('X-SECRET')
+    expect(calledWith).not.toContain('wibble')
   })
 
   // 260823-op3: the C2 hard-block survives the one-click redesign unchanged —
