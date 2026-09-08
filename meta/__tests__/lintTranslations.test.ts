@@ -17,6 +17,7 @@ import {
   checkLanguage,
   checkEnglishKeysPresent,
   comparePresenceBaseline,
+  checkPresenceBaselineSelfConsistency,
   missingPairs,
   PRESENCE_BASELINE_PATH,
   CorruptCatalogError,
@@ -592,6 +593,146 @@ describe('comparePresenceBaseline (REQ-41-01)', () => {
   })
 })
 
+describe('checkPresenceBaselineSelfConsistency (TODO-2026-09-07)', () => {
+  type BaselineShape = {
+    namespace: string
+    totalPairs?: unknown
+    missing: Record<string, string[]>
+  }
+
+  const readCommitted = (): BaselineShape => {
+    const parsed: unknown = JSON.parse(
+      readFileSync(PRESENCE_BASELINE_PATH, 'utf8')
+    )
+    return JSON.parse(JSON.stringify(parsed)) as BaselineShape
+  }
+
+  // Writes a mutated COPY of the committed baseline to scratch and hands back
+  // its path. The committed artifact is never opened for writing anywhere in
+  // this describe -- R21d re-reads it at the end to prove that.
+  const withMutatedCopy = (
+    mutate: (copy: BaselineShape) => void,
+    inspect: (path: string) => void
+  ): void => {
+    const scratchDir = mkdtempSync(join(tmpdir(), 'presence-selfcheck-'))
+    try {
+      const copy = readCommitted()
+      mutate(copy)
+      const copyPath = join(scratchDir, 'mutated.json')
+      writeFileSync(copyPath, JSON.stringify(copy, null, 2))
+      inspect(copyPath)
+    } finally {
+      rmSync(scratchDir, { recursive: true, force: true })
+    }
+  }
+
+  const derivedCount = (baseline: BaselineShape): number =>
+    Object.values(baseline.missing).reduce(
+      (sum, locales) => sum + locales.length,
+      0
+    )
+
+  // R21a -- the arm the todo demands. `totalPairs` and `missing` disagreeing
+  // is what a hand-edit looks like, and it must be caught. Both halves are
+  // moved off zero so the fixture cannot pass by accident on an empty map.
+  // Neither expected number is hard-coded: they are derived from whatever the
+  // committed baseline holds at the time, so regenerating that artifact can
+  // never break this pin (this repo has a recorded lesson where it did).
+  it('R21a: a hand-edited baseline whose totalPairs disagrees with `missing` is reported', () => {
+    let expectedDerived = -1
+    let expectedRecorded = -1
+
+    withMutatedCopy(
+      (copy) => {
+        copy.missing['__r15_key__'] = ['__r15_locale_a__', '__r15_locale_b__']
+        expectedDerived = derivedCount(copy)
+        expectedRecorded = expectedDerived + 5 // the lie a hand-edit leaves
+        copy.totalPairs = expectedRecorded
+      },
+      (path) => {
+        const failures = checkPresenceBaselineSelfConsistency(path)
+        expect(failures).toHaveLength(1)
+        expect(failures[0]).toEqual(expect.stringContaining(path))
+        expect(failures[0]).toEqual(
+          expect.stringContaining(`totalPairs says ${expectedRecorded}`)
+        )
+        expect(failures[0]).toEqual(
+          expect.stringContaining(`holds ${expectedDerived} pairs`)
+        )
+      }
+    )
+  })
+
+  // R21b -- the sibling shape: the field absent entirely. An inert field that
+  // is also missing gives a reader nothing to check against, so it is caught
+  // by the same gate rather than silently coerced to 0.
+  it('R21b: a baseline with no totalPairs at all is reported', () => {
+    withMutatedCopy(
+      (copy) => {
+        delete copy.totalPairs
+      },
+      (path) => {
+        const failures = checkPresenceBaselineSelfConsistency(path)
+        expect(failures).toHaveLength(1)
+        expect(failures[0]).toEqual(expect.stringContaining('not a number'))
+      }
+    )
+  })
+
+  // R21c -- the green half. This is what makes the check safe to leave on the
+  // hard-failure path: the real committed artifact agrees with itself today,
+  // and the writer derives `totalPairs` from `missing`, so it always will
+  // unless someone edits the file by hand.
+  it('R21c: the committed baseline agrees with itself', () => {
+    expect(
+      checkPresenceBaselineSelfConsistency(PRESENCE_BASELINE_PATH)
+    ).toEqual([])
+  })
+
+  // R21d -- non-vacuity of R21a/R21b: without this arm the three above would
+  // pass identically against a helper that nothing calls. Drives the REAL
+  // entry point (canonical localesPath, so the canonical-path guard is
+  // satisfied) with baselinePath aimed at the desynced copy, and asserts the
+  // message lands in `hardFailures` -- the channel that reaches the exit code
+  // -- rather than in `findings`, which does not.
+  it('R21d: the desync reaches hardFailures through lintTranslations()', () => {
+    let expectedRecorded = -1
+
+    withMutatedCopy(
+      (copy) => {
+        // `missing` is left exactly as committed, so the drift comparison
+        // that runs immediately after this check stays clean -- the ONLY
+        // thing this arm perturbs is the file's agreement with itself.
+        expectedRecorded = derivedCount(copy) + 999
+        copy.totalPairs = expectedRecorded
+      },
+      (path) => {
+        const result = lintTranslations({
+          localesPath: 'public/locales',
+          namespaces: ['gamelib'],
+          baselinePath: path
+        })
+
+        const desync = result.hardFailures.filter((f) =>
+          f.includes('the file disagrees with itself')
+        )
+        expect(desync).toHaveLength(1)
+        expect(desync[0]).toEqual(
+          expect.stringContaining(`totalPairs says ${expectedRecorded}`)
+        )
+        expect(
+          result.findings.filter((f) => f.includes('disagrees with itself'))
+        ).toHaveLength(0)
+      }
+    )
+
+    // The committed artifact was never written to by any arm above.
+    expect(
+      checkPresenceBaselineSelfConsistency(PRESENCE_BASELINE_PATH)
+    ).toEqual([])
+  })
+})
+
 describe('presence baseline drift skip diagnostics (REQ-41-01, gap-closure 41-06)', () => {
   // R19a -- an absent baseline (injected via opts.baselinePath, NEVER the
   // committed artifact) makes the gate say so, rather than disabling drift
@@ -687,9 +828,7 @@ describe('WR-03: an unreadable catalog is distinguished from an absent one', () 
     withFixtureLocales((localesPath) => {
       mkdirSync(join(localesPath, 'xx', 'gamelib.json'), { recursive: true })
 
-      expect(() => readCatalog(localesPath, 'xx', 'gamelib')).toThrow(
-        /EISDIR/
-      )
+      expect(() => readCatalog(localesPath, 'xx', 'gamelib')).toThrow(/EISDIR/)
     })
   })
 

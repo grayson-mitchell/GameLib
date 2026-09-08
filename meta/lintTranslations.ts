@@ -442,6 +442,52 @@ function readPresenceBaseline(baselinePath: string): PresenceBaselineFile {
   return parsed as PresenceBaselineFile
 }
 
+// TODO-2026-09-07: `totalPairs` is derived from `missing` by the writer and
+// is read by NOTHING in the drift comparison below -- deliberately so, and
+// that must not change (making a redundant count load-bearing against the
+// live catalogs is the drift-prone coupling this repo has already paid for
+// once). But an inert field whose name reads like an invariant is its own
+// hazard: someone sees `totalPairs: 0`, concludes the gate asserts zero
+// missing pairs, and builds on it. This closes exactly that gap and nothing
+// wider -- it is a statement about the FILE's internal agreement, never
+// about the catalogs. It reads no locale, derives nothing live, and cannot
+// be tripped by translation state; the only way to make it fire is to
+// hand-edit the artifact so its two halves disagree. Reported as a hard
+// failure rather than a finding on purpose: `findings` do not reach the
+// exit code, and a check that cannot fail the run is a gesture.
+export function checkPresenceBaselineSelfConsistency(
+  baselinePath: string
+): string[] {
+  const baseline = readPresenceBaseline(baselinePath)
+  const failures: string[] = []
+
+  const recorded: unknown = baseline.totalPairs
+  const derived = Object.values(baseline.missing ?? {}).reduce(
+    (sum, locales) => sum + locales.length,
+    0
+  )
+
+  if (typeof recorded !== 'number' || !Number.isFinite(recorded)) {
+    failures.push(
+      `${baselinePath}: totalPairs is ${JSON.stringify(recorded)}, not a number — it must be ` +
+        `the derived count of the pairs in \`missing\` (${derived}); regenerate with ` +
+        'LINT_TRANSLATIONS_WRITE_BASELINE=1 pnpm lint-translations:gamelib'
+    )
+    return failures
+  }
+
+  if (recorded !== derived) {
+    failures.push(
+      `${baselinePath}: totalPairs says ${recorded} but \`missing\` holds ${derived} pairs — ` +
+        'the file disagrees with itself, so one of the two was hand-edited. `missing` is the ' +
+        'half the drift check asserts over; regenerate with ' +
+        'LINT_TRANSLATIONS_WRITE_BASELINE=1 pnpm lint-translations:gamelib'
+    )
+  }
+
+  return failures
+}
+
 // REQ-41-01: symmetric-difference comparison between the live derivation
 // (missingPairs, above -- the single source of truth) and the committed
 // baseline SET. `added` = a pair that is missing live but NOT recorded in
@@ -757,6 +803,14 @@ export function lintTranslations(opts: LintOptions): LintResult {
       )
       continue
     }
+
+    // TODO-2026-09-07: checked BEFORE the drift comparison and reported even
+    // when that comparison is clean -- a baseline whose two halves disagree
+    // is a fact about the artifact, not a consequence of the catalogs, so it
+    // must not be able to hide behind a green drift check.
+    result.hardFailures.push(
+      ...checkPresenceBaselineSelfConsistency(baselinePath)
+    )
 
     // WR-03: missingPairs() (called by comparePresenceBaseline() below) can
     // now throw CatalogReadError for an unreadable LOCALE catalog -- the
