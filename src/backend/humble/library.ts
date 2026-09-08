@@ -1481,16 +1481,17 @@ async function markRedeemed(
  * currently REDEEMED).
  *
  * Plan 42-03 (D-42-01 durability, Task 3): when the record being reversed
- * has `source: 'ownership-exact'`, this Undo ALSO writes a decline record to
- * humbleSettleDeclinedStore, read by recomputeOwnership's guard 5 — without
- * it, the very next ownership recompute would immediately re-settle the key
- * right back to REDEEMED, since the underlying exact Steam-ownership match
- * hasn't changed. Undoing a `source: 'user'` mark (or a legacy record with
- * no stored `source`, which reads as 'user' — the safest-default rule) does
- * NOT write a decline record: there was never an auto-settle to decline, and
- * such a key was never eligible to re-settle in the first place. Clearing an
- * existing decline record is intentionally out of scope for this plan — no
- * code path ever deletes from humbleSettleDeclinedStore.
+ * has its `source` field set to the ownership-exact-settle sentinel (see
+ * recomputeOwnership's write above), this Undo ALSO writes a decline record
+ * to humbleSettleDeclinedStore, read by recomputeOwnership's guard 5 —
+ * without it, the very next ownership recompute would immediately re-settle
+ * the key right back to REDEEMED, since the underlying exact Steam-ownership
+ * match hasn't changed. Undoing a user-marked record (or a legacy record
+ * with no stored `source`, which reads as user-marked — the safest-default
+ * rule) does NOT write a decline record: there was never an auto-settle to
+ * decline, and such a key was never eligible to re-settle in the first
+ * place. Clearing an existing decline record is intentionally out of scope
+ * for this plan — no code path ever deletes from humbleSettleDeclinedStore.
  */
 async function undoRedeemed(
   gamekey: string,
