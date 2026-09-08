@@ -20,9 +20,9 @@ describe('*.svg?react module resolution (Frontend jest project)', () => {
   })
 
   it('renders as <SteamLogo className="x" /> into an element carrying that className', () => {
-    const element = (
-      <SteamLogo className="x" />
-    ) as ReactElement<{ className?: string }>
+    const element = (<SteamLogo className="x" />) as ReactElement<{
+      className?: string
+    }>
     expect(element.props.className).toBe('x')
   })
 })
