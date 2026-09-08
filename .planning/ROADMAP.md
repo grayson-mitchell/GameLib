@@ -5055,6 +5055,8 @@ Plans:
 
 ### Phase 42: Humble key platform identity — evidenced key_type table driving store indicator, per-platform redeem deep links, and a home for owned+revealed keys
 
+✅ **COMPLETE 2026-09-09** — 7/7 plans. `42-VERIFICATION.md` `status: passed`, 14/14 must-haves, 0 gaps. The `autonomous: false` human gate (42-07) was run INLINE with the operator, not dispatched — all six items answered, transcribed verbatim in `42-07-CHECKPOINT-LOG.md`. Live-verified on the operator's real library: 12 exact-match keys auto-settled, **zero** of 8 fuzzy keys settled (D-42 held), and Undo proved durable by falsification — the undone key still satisfies every auto-settle precondition and did not re-settle across a subsequent sync. Assumption A1 was **disproved live**: Humble sends `gog_keyless`, not `gog`, and the entitlement was being dropped by the classifier entirely (fixed by quick task `260908-uic`, which also had to bump `HUMBLE_CLASSIFIER_VERSION` 6 → 7 or the fix would never reach server-terminal orders). Residue, named not hidden: the GOG deep link (42-05) has **no reachable user** — a keyless entitlement carries no code — and the row's current theme/geometry is unverified after quick task `260908-vo4`, deliberately not re-checked because Phase 43 redesigns the same row; carried by two open `ready: live-gate` todos.
+
 **Goal:** Humble's raw `key_type` string is interpreted ad hoc at three call sites that spell it
 differently, so the store a key belongs to is never presented as such and only Steam gets a real
 redeem path. Replace that with ONE evidenced `key_type` table — display name, logo-or-neutral,
@@ -5063,7 +5065,7 @@ from it. Also give owned+revealed keys somewhere to live: today they are correct
 Keys-waiting and Giftable Spares alike, so they sit under All-keys' `Revealed` heading forever
 with no way to settle them.
 
-**Requirements**: TBD (run /gsd-plan-phase 42)
+**Requirements**: REQ-42-01 … REQ-42-08 (see `42-VERIFICATION.md` for the traceability table)
 
 **Depends on:** Phase 12 (`ownedElsewhere`/`matchConfidence` overlay + the D-42 fuzzy override this
 must not auto-settle around), Phase 13 (`selectKeysWaiting`/`selectGiftableSpares`, the two tabs the
@@ -5073,10 +5075,16 @@ positional guess; 41 is `meta/`-only and touches no runtime path. Phase 41's i18
 constrain this phase's new strings (`gamelib.json`, never `translation.json`) but that is a
 standing repo constraint, not a dependency.
 
-**Plans:** 0 plans
+**Plans:** 7 plans, all complete
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 42 to break down)
+- [x] 42-01 — the pure `key_type` -> presentation table (`src/common/humble/keyTypePresentation.ts`) (wave 1)
+- [x] 42-02 — additive `source` provenance on the persisted local-redeemed record (wave 1)
+- [x] 42-03 — exact-match ownership auto-settle with a durable decline store (wave 2)
+- [x] 42-04 — table-driven store indicator in `HumbleKeyRow` + jest `?react` SVG plumbing (wave 2)
+- [x] 42-05 — `HumbleClaimWizard` redeem resolved through `getRedeemTarget` (wave 3)
+- [x] 42-06 — the Undo made REACHABLE in the All tab via a threaded `settleAction` (wave 4)
+- [x] 42-07 — strike the owning todo's false premise; operator human-verify gate (wave 5)
 
 ### Phase 43: Humble Keys screen: unified list replacing the three tabs, with search, sort and hide-redeemed filters, a column-header row, and a three-column row whose KEY column is action-scenario driven
 
