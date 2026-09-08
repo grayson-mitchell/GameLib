@@ -862,6 +862,16 @@ const IN_SCOPE_SUITES = [
  * `readdirSync` recount at this task's execution time puts the directory at 64 `*.test.ts`
  * files: 4 `IN_SCOPE_SUITES` + 60 below (quick-260908-k3x added `rosettaBootWiring.test.ts`
  * and `rosettaPlatformGate.test.ts`, neither of which declares the `IN_SCOPE_SUITES` kit).
+ *
+ * `playtimeQueueBootDrain.test.ts` (todo 2026-09-06, quick-260908-wk0) is classified as
+ * structurally contained: it copies `playtimeLockBootClear.test.ts`'s already-approved
+ * `backend/store_backend`/`axios` preamble plus `bootstrapUserReconcile.test.ts`'s
+ * `../../online_monitor` partial mock (`initOnlineMonitor`/`isOnline`/`runOnceWhenOnline`
+ * overridden, everything else `jest.requireActual`). It declares NO `jest.mock('os', ...)` of
+ * its own, deliberately -- containment is structural, the same floor both model files rely on.
+ * It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
+ * `backend/logger/paths` mock kit Block B gates on. A `ls | wc -l` recount at this task's
+ * execution time puts the directory at 65 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 61 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -900,6 +910,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'outputStreamBinding.test.ts',
   'pathShim.test.ts',
   'playtimeLockBootClear.test.ts',
+  'playtimeQueueBootDrain.test.ts',
   'rendererPathGuard.test.ts',
   'rosettaBootWiring.test.ts',
   'rosettaPlatformGate.test.ts',
