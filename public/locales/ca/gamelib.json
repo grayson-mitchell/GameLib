@@ -82,6 +82,7 @@
         "activateWizardTitle": "Activa aquesta clau",
         "activatingBody": "Revelant la teva clau i bescanviant-la a Steam — només trigarà un moment.",
         "activatingTitle": "Activant a Steam…",
+        "openStore": "Obre {{store}}",
         "platformOther": "Altres"
     },
     "info": {

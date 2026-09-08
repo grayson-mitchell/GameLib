@@ -82,6 +82,7 @@
         "activateConfirmTitle": "Aktiválod ezt a kulcsot a Steamen?",
         "activatingBody": "Kulcsod felfedése és beváltása a Steamen — ez csak egy pillanatot vesz igénybe.",
         "activatingTitle": "Aktiválás a Steamen…",
+        "openStore": "{{store}} megnyitása",
         "platformOther": "Egyéb"
     },
     "info": {

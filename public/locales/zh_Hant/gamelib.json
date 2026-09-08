@@ -82,6 +82,7 @@
         "activateWizardTitle": "啟用此金鑰",
         "activatingBody": "正在顯示您的金鑰並在 Steam 上兌換 — 只需片刻。",
         "activatingTitle": "正在於 Steam 上啟用…",
+        "openStore": "開啟 {{store}}",
         "platformOther": "其它"
     },
     "info": {

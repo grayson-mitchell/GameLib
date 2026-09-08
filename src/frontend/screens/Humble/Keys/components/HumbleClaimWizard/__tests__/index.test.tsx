@@ -109,7 +109,10 @@ const mockApi = {
   humbleGetRevealedKeyValue: jest.fn(),
   humbleSync: jest.fn(),
   clipboardWriteText: jest.fn(),
-  openExternalUrl: jest.fn(),
+  // Typed (not the bare jest.fn() this object otherwise uses) so the two
+  // T-42-01/D-42-03 security pins below can read `.mock.calls[0][0]`
+  // without an unsafe-any lint warning.
+  openExternalUrl: jest.fn<void, [string]>(),
   // 260823-op3: the Steam one-click path.
   redeemSteamKey: jest.fn()
 }

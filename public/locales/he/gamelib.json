@@ -82,6 +82,7 @@
         "activateWizardTitle": "הפעלת המפתח הזה",
         "activatingBody": "חושפים את המפתח שלך ומממשים אותו ב-Steam — זה ייקח רק רגע.",
         "activatingTitle": "מפעילים ב-Steam…",
+        "openStore": "פתח את {{store}}",
         "platformOther": "אחר"
     },
     "info": {

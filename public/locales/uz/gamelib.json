@@ -82,6 +82,7 @@
         "activateWizardTitle": "Ushbu kalitni faollashtirish",
         "activatingBody": "Kalitingiz ochilmoqda va Steam'da faollashtirilmoqda — bu bir zum vaqt oladi.",
         "activatingTitle": "Steam'da faollashtirilmoqda…",
+        "openStore": "{{store}} ochish",
         "platformOther": "Boshqa"
     },
     "info": {

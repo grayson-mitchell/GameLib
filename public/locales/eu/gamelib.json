@@ -82,6 +82,7 @@
         "activateWizardTitle": "Aktibatu gako hau",
         "activatingBody": "Zure gakoa agerian jarri eta Steam-en berreskuratzen — une bat baino ez du behar.",
         "activatingTitle": "Steam-en aktibatzen…",
+        "openStore": "Ireki {{store}}",
         "platformOther": "Bestela"
     },
     "info": {

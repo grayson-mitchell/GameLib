@@ -82,6 +82,7 @@
         "activateWizardTitle": "Ενεργοποίηση αυτού του κλειδιού",
         "activatingBody": "Αποκάλυψη του κλειδιού σας και εξαργύρωσή του στο Steam — αυτό διαρκεί μόνο λίγο.",
         "activatingTitle": "Ενεργοποίηση στο Steam…",
+        "openStore": "Άνοιγμα {{store}}",
         "platformOther": "Άλλα"
     },
     "info": {

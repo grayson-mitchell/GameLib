@@ -82,6 +82,7 @@
         "activateWizardTitle": "Aktywuj ten klucz",
         "activatingBody": "Odsłanianie klucza i aktywowanie go na Steam — to potrwa tylko chwilę.",
         "activatingTitle": "Aktywowanie na Steam…",
+        "openStore": "Otwórz {{store}}",
         "platformOther": "Inne"
     },
     "info": {

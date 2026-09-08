@@ -82,6 +82,7 @@
         "activateConfirmTitle": "Aktiveerida see võti Steamis?",
         "activatingBody": "Sinu võtme paljastamine ja lunastamine Steamis — see võtab vaid hetke.",
         "activatingTitle": "Aktiveerimine Steamis…",
+        "openStore": "Ava {{store}}",
         "platformOther": "Muu"
     },
     "info": {

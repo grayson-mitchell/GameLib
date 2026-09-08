@@ -82,6 +82,7 @@
         "activateWizardTitle": "Aktivirajte ovaj ključ",
         "activatingBody": "Otkrivamo vaš ključ i unosimo ga na Steam — ovo traje samo trenutak.",
         "activatingTitle": "Aktiviranje na Steam-u…",
+        "openStore": "Otvori {{store}}",
         "platformOther": "Drugi"
     },
     "info": {

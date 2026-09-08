@@ -82,6 +82,7 @@
         "activateWizardTitle": "Aktivañ an alc'hwez-mañ",
         "activatingBody": "O tiskuliañ hoc'h alc'hwez hag oc'h adprenañ anezhañ war Steam — un tammig amzer nemetken a bad an dra-se.",
         "activatingTitle": "Oc'h aktivañ war Steam…",
+        "openStore": "Digeriñ {{store}}",
         "platformOther": "All"
     },
     "info": {

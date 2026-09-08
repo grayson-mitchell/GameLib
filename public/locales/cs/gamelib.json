@@ -82,6 +82,7 @@
         "activateWizardTitle": "Aktivovat tento klíč",
         "activatingBody": "Odhalujeme váš klíč a uplatňujeme ho na Steam — chvilku to potrvá.",
         "activatingTitle": "Aktivace na Steam…",
+        "openStore": "Otevřít {{store}}",
         "platformOther": "Ostatní"
     },
     "info": {

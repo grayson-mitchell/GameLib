@@ -82,6 +82,7 @@
         "activateWizardTitle": "இந்த கீயை செயல்படுத்தவும்",
         "activatingBody": "உங்கள் கீயை வெளிப்படுத்தி Steam-இல் மீட்டெடுக்கிறது — இதற்கு ஒரு நொடி மட்டுமே ஆகும்.",
         "activatingTitle": "Steam-இல் செயல்படுத்துகிறது…",
+        "openStore": "{{store}} திற",
         "platformOther": "மற்றவை"
     },
     "info": {

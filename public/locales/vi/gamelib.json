@@ -82,6 +82,7 @@
         "activateWizardTitle": "Kích hoạt key này",
         "activatingBody": "Đang tiết lộ key của bạn và đổi trên Steam — chỉ mất một chút thời gian.",
         "activatingTitle": "Đang kích hoạt trên Steam…",
+        "openStore": "Mở {{store}}",
         "platformOther": "Khác"
     },
     "info": {

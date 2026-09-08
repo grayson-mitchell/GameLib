@@ -82,6 +82,7 @@
         "activateWizardTitle": "Attiva questo codice",
         "activatingBody": "Rivelazione del codice e riscatto su Steam in corso — richiede solo un momento.",
         "activatingTitle": "Attivazione su Steam…",
+        "openStore": "Apri {{store}}",
         "platformOther": "Altro"
     },
     "info": {

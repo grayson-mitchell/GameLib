@@ -82,6 +82,7 @@
         "activateWizardTitle": "فعال کردن این کلید",
         "activatingBody": "کلید شما در حال آشکارسازی و بازخرید در Steam است — این فقط لحظه‌ای طول می‌کشد.",
         "activatingTitle": "در حال فعال‌سازی روی Steam…",
+        "openStore": "باز کردن {{store}}",
         "platformOther": "بقیه"
     },
     "info": {

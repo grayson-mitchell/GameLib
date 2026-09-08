@@ -82,6 +82,7 @@
         "activateWizardTitle": "激活此密钥",
         "activatingBody": "正在显示您的密钥并在 Steam 上兑换 — 这只需片刻。",
         "activatingTitle": "正在 Steam 上激活…",
+        "openStore": "打开 {{store}}",
         "platformOther": "其他"
     },
     "info": {

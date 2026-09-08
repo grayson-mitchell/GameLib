@@ -82,6 +82,7 @@
         "activateWizardTitle": "Aktivera denna nyckel",
         "activatingBody": "Visar din nyckel och löser in den på Steam — detta tar bara ett ögonblick.",
         "activatingTitle": "Aktiverar på Steam…",
+        "openStore": "Öppna {{store}}",
         "platformOther": "Övrigt"
     },
     "info": {

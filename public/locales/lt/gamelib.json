@@ -82,6 +82,7 @@
         "activateWizardTitle": "Aktyvuoti šį raktą",
         "activatingBody": "Atskleidžiamas jūsų raktas ir jis aktyvuojamas Steam — tai užtruks tik akimirką.",
         "activatingTitle": "Aktyvuojama Steam…",
+        "openStore": "Atverti {{store}}",
         "platformOther": "Kita/-s/-i"
     },
     "info": {

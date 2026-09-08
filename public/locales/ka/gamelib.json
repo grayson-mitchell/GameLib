@@ -82,6 +82,7 @@
         "activateWizardTitle": "ამ გასაღების გააქტიურება",
         "activatingBody": "თქვენი გასაღების გამოვლენა და Steam-ზე გამოსყიდვა — ეს მხოლოდ ერთ წამს წაიღებს.",
         "activatingTitle": "Steam-ზე გააქტიურება…",
+        "openStore": "გახსენით {{store}}",
         "platformOther": "სხვა"
     },
     "info": {

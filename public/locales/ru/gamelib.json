@@ -82,6 +82,7 @@
         "activateWizardTitle": "Активировать этот ключ",
         "activatingBody": "Раскрываем ваш ключ и активируем его в Steam — это займёт всего мгновение.",
         "activatingTitle": "Активация в Steam…",
+        "openStore": "Открыть {{store}}",
         "platformOther": "Другое"
     },
     "info": {

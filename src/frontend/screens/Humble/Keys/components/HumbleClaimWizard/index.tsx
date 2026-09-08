@@ -7,15 +7,26 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import { HumbleKey, RevealOutcome } from 'common/types/humble'
 import { RedeemKeyOutcome } from 'common/types/steam'
+import {
+  getKeyTypePresentation,
+  getRedeemTarget
+} from 'common/humble/keyTypePresentation'
 import { redeemOutcomeCopy } from 'frontend/components/UI/RedeemSteamKeyDialog/copy'
 import ContextProvider from 'frontend/state/ContextProvider'
 
-// D-68/T-14-09: a single, static, generic redemption-help destination for
-// EVERY non-Steam platform. No authoritative Humble key_type -> URL table
-// exists (RESEARCH Open Q3) — fabricating a per-platform deep-link risks
-// sending the user's real secret to a wrong/broken page. Never interpolate
-// any per-key value into this string.
-const NON_STEAM_REDEEM_HELP_URL = 'https://support.humblebundle.com/hc/en-us'
+// D-68/T-14-09, revised by D-42-03 (Phase 42): the static, generic
+// redemption-help destination for every platform with NO evidenced
+// deep-link URL — origin/origin_keyless/uplay/battlenet/nintendo_direct/
+// epic/epic_keyless/generic and anything unrecognised. Steam and GOG are
+// the only two evidenced deep links and they are resolved by
+// common/humble/keyTypePresentation's getRedeemTarget, which also
+// guarantees the key value is DROPPED on this branch. Fabricating a
+// per-platform deep-link would risk sending the user's real secret to a
+// wrong/broken page — never interpolate any per-key value into this URL.
+// This file no longer defines (or needs to import) the fallback URL
+// itself — `getRedeemTarget` returns it as `redeemTarget.url` on its
+// 'help' branch, so `HUMBLE_REDEEM_HELP_URL` has exactly one definition
+// in the repo, inside the table.
 
 type Step =
   // 260823-op3: non-Steam claim entry ONLY. Steam keys skip straight to
@@ -639,35 +650,68 @@ export default function HumbleClaimWizard({
             </button>
           </div>
           <div className="humbleClaimWizardActions">
-            {isSteam ? (
-              <button
-                type="button"
-                className="humbleClaimWizardActivationLink"
-                onClick={() =>
-                  window.api.openExternalUrl(
-                    `https://store.steampowered.com/account/registerkey?key=${encodeURIComponent(
-                      revealedKey
-                    )}`
-                  )
-                }
-              >
-                {t('humbleKeys.openSteam', 'Open Steam')}
-                <FontAwesomeIcon icon={faExternalLinkAlt} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="humbleClaimWizardActivationLink"
-                onClick={() =>
-                  window.api.openExternalUrl(NON_STEAM_REDEEM_HELP_URL)
-                }
-              >
-                {t('humbleKeys.redeemOnPlatform', 'Redeem on {{platform}}', {
-                  platform: humbleKey.platform
-                })}
-                <FontAwesomeIcon icon={faExternalLinkAlt} />
-              </button>
-            )}
+            {(() => {
+              // D-42-03: resolve the redeem action through the table —
+              // getRedeemTarget is the single URL resolver (it drops the
+              // code entirely on the help branch, T-42-01) and
+              // getKeyTypePresentation supplies the display name. `kind`
+              // below is a THREE-way partition (Steam is kept as its own
+              // branch so its label/URL stay byte-identical to today,
+              // preserving the pre-existing pin) with a `never`
+              // exhaustiveness guard and no `default:` clause — a fourth
+              // kind added later fails typecheck instead of silently
+              // falling through.
+              const redeemTarget = getRedeemTarget(
+                humbleKey.platform,
+                revealedKey
+              )
+              const presentation = getKeyTypePresentation(humbleKey.platform)
+              const displayName =
+                presentation.kind === 'unknown'
+                  ? tGamelib('gamelib:humbleKeys.platformOther', 'Other')
+                  : presentation.name
+
+              type ActivationKind = 'steam' | 'deep-link' | 'help'
+              const activationKind: ActivationKind = isSteam
+                ? 'steam'
+                : redeemTarget.kind
+
+              let label: string
+              if (activationKind === 'steam') {
+                label = t('humbleKeys.openSteam', 'Open Steam')
+              } else if (activationKind === 'deep-link') {
+                label = tGamelib(
+                  'gamelib:humbleKeys.openStore',
+                  'Open {{store}}',
+                  { store: displayName }
+                )
+              } else if (activationKind === 'help') {
+                label = t(
+                  'humbleKeys.redeemOnPlatform',
+                  'Redeem on {{platform}}',
+                  { platform: displayName }
+                )
+              } else {
+                // Reached only if `ActivationKind` grows a case this
+                // if/else chain does not handle — TS narrows
+                // `activationKind` to `never` here once all three literal
+                // values above are ruled out, so a fourth kind fails
+                // typecheck instead of silently rendering no label.
+                const _exhaustive: never = activationKind
+                label = _exhaustive
+              }
+
+              return (
+                <button
+                  type="button"
+                  className="humbleClaimWizardActivationLink"
+                  onClick={() => window.api.openExternalUrl(redeemTarget.url)}
+                >
+                  {label}
+                  <FontAwesomeIcon icon={faExternalLinkAlt} />
+                </button>
+              )
+            })()}
             <button
               type="button"
               className="button is-secondary outline humbleClaimWizardMarkRedeemedButton"

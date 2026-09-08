@@ -82,6 +82,7 @@
         "activatingBody": "Razkrivamo vaš ključ in ga unovčujemo na Steam — to traja le trenutek.",
         "activatingTitle": "Aktiviranje na Steam …",
         "activateConfirmTitle": "Aktiviraj ta ključ na Steam?",
+        "openStore": "Odpri {{store}}",
         "platformOther": "Drugo"
     },
     "info": {

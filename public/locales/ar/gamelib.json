@@ -82,6 +82,7 @@
         "activateWizardTitle": "تفعيل هذا المفتاح",
         "activatingBody": "يتم كشف مفتاحك واستبداله على Steam — لن يستغرق هذا سوى لحظة.",
         "activatingTitle": "جارٍ التفعيل على Steam…",
+        "openStore": "افتح {{store}}",
         "platformOther": "آخر"
     },
     "info": {

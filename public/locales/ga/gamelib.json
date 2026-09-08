@@ -82,6 +82,7 @@
         "activateWizardTitle": "Gníomhachtaigh an eochair seo",
         "activatingBody": "Do chuid eochrach á nochtadh agus á fuascailt ar Steam — ní thógann sé ach nóiméad.",
         "activatingTitle": "Á ghníomhachtú ar Steam…",
+        "openStore": "Oscail {{store}}",
         "platformOther": "Eile"
     },
     "info": {

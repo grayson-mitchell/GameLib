@@ -82,6 +82,7 @@
         "activateWizardTitle": "Bu anahtarı etkinleştir",
         "activatingBody": "Anahtarınız ortaya çıkarılıyor ve Steam'de kullanılıyor — bu sadece bir an sürer.",
         "activatingTitle": "Steam'de etkinleştiriliyor…",
+        "openStore": "{{store}} Aç",
         "platformOther": "Diğer"
     },
     "info": {

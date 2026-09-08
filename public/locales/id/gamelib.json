@@ -82,6 +82,7 @@
         "activateWizardTitle": "Aktifkan kunci ini",
         "activatingBody": "Mengungkap kunci Anda dan menukarkannya di Steam — ini hanya butuh waktu sebentar.",
         "activatingTitle": "Mengaktifkan di Steam…",
+        "openStore": "Buka {{store}}",
         "platformOther": "Lainnya"
     },
     "info": {
