@@ -74,7 +74,13 @@ const mockOverrideStore = {
 }
 
 // Phase 14 (D-77): local-redeemed store, composite-keyed `gamekey:machineName`.
-const localRedeemedData = new Map<string, { redeemedAt: number }>()
+// D-42-01 widens the record with an additive, optional provenance `source`
+// field — the test-double type mirrors that widening so seeded fixtures can
+// include it.
+const localRedeemedData = new Map<
+  string,
+  { redeemedAt: number; source?: 'user' | 'ownership-exact' }
+>()
 const mockLocalRedeemedStore = {
   has: jest.fn(),
   get: jest.fn(),
@@ -148,7 +154,7 @@ function resetStoreMocks() {
     localRedeemedData.get(k)
   )
   mockLocalRedeemedStore.set.mockImplementation(
-    (k: string, v: { redeemedAt: number }) => {
+    (k: string, v: { redeemedAt: number; source?: 'user' | 'ownership-exact' }) => {
       localRedeemedData.set(k, v)
     }
   )
@@ -2947,6 +2953,69 @@ describe('HumbleLibrary', () => {
 
       expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
       expect(auditData.get('gk1:gk1_key')).toBeUndefined()
+    })
+
+    // D-42-01: the persisted local-redeemed record is widened with an
+    // additive, optional `source` provenance field. markRedeemed is the
+    // explicit-action writer and must stamp source: 'user'.
+    test("D-42-01: markRedeemed stamps source: 'user' on the persisted record", async () => {
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REVEALED', keyindex: 'idx-1' })
+      )
+
+      const outcome = await HumbleLibrary.markRedeemed('gk1', 'gk1_key')
+
+      expect(outcome).toEqual({ status: 'ok' })
+      expect(localRedeemedData.get('gk1:gk1_key')).toEqual({
+        redeemedAt: expect.any(Number),
+        source: 'user'
+      })
+    })
+
+    // D-42-01: a record written before Phase 42 has no `source` key at all.
+    // It must still read back and behave correctly — no throw, no coercion,
+    // the field is simply absent (additive widening, not a migration).
+    test('D-42-01: a legacy record with no source field reads back cleanly and undoes normally', async () => {
+      localRedeemedData.set('gk1:gk1_key', { redeemedAt: 111 })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          state: 'REDEEMED',
+          keyindex: 'idx-1'
+        })
+      )
+
+      await expect(
+        HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
+      ).resolves.not.toThrow()
+
+      expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+    })
+
+    // D-42-01: undoRedeemed must delete a source: 'user' record and revert
+    // to REVEALED identically to how it handles a legacy (source-less) one —
+    // provenance never gates the Undo affordance.
+    test("D-42-01: undoRedeemed deletes a source: 'user' record and reverts to REVEALED", async () => {
+      localRedeemedData.set('gk1:gk1_key', {
+        redeemedAt: Date.now(),
+        source: 'user'
+      })
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', {
+          state: 'REDEEMED',
+          keyindex: 'idx-1'
+        })
+      )
+
+      await HumbleLibrary.undoRedeemed('gk1', 'gk1_key')
+
+      expect(localRedeemedData.has('gk1:gk1_key')).toBe(false)
+      expect(libraryData.get('gk1')?.keys[0].state).toBe('REVEALED')
+      const audit = auditData.get('gk1:gk1_key')
+      expect(audit?.map((a) => a.event)).toEqual(['undo_redeemed'])
     })
   })
 
