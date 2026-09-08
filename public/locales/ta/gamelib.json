@@ -83,7 +83,8 @@
         "activatingBody": "உங்கள் கீயை வெளிப்படுத்தி Steam-இல் மீட்டெடுக்கிறது — இதற்கு ஒரு நொடி மட்டுமே ஆகும்.",
         "activatingTitle": "Steam-இல் செயல்படுத்துகிறது…",
         "openStore": "{{store}} திற",
-        "platformOther": "மற்றவை"
+        "platformOther": "மற்றவை",
+        "settledFromOwnership": "ஏற்கனவே உங்கள் Steam நூலகத்தில்"
     },
     "info": {
         "refresh-rating": "மதிப்பீட்டை புதுப்பிக்கவும்"

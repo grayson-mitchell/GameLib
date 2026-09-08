@@ -83,7 +83,8 @@
         "activatingBody": "Αποκάλυψη του κλειδιού σας και εξαργύρωσή του στο Steam — αυτό διαρκεί μόνο λίγο.",
         "activatingTitle": "Ενεργοποίηση στο Steam…",
         "openStore": "Άνοιγμα {{store}}",
-        "platformOther": "Άλλα"
+        "platformOther": "Άλλα",
+        "settledFromOwnership": "Ήδη στη βιβλιοθήκη σας στο Steam"
     },
     "info": {
         "refresh-rating": "Ανανέωση βαθμολογίας"

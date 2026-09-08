@@ -83,7 +83,8 @@
         "activatingTitle": "Aktiviranje na Steam…",
         "activateConfirmTitle": "Aktivirati ovaj ključ na Steamu?",
         "openStore": "Otvori {{store}}",
-        "platformOther": "Ostalo"
+        "platformOther": "Ostalo",
+        "settledFromOwnership": "Već u vašoj Steam knjižnici"
     },
     "info": {
         "refresh-rating": "Osvježi ocjenu"

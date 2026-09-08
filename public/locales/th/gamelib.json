@@ -83,7 +83,8 @@
         "activatingBody": "กำลังเปิดเผยคีย์ของคุณและแลกใช้บน Steam — ใช้เวลาสักครู่เท่านั้น",
         "activatingTitle": "กำลังเปิดใช้งานบน Steam…",
         "openStore": "เปิด {{store}}",
-        "platformOther": "อื่นๆ"
+        "platformOther": "อื่นๆ",
+        "settledFromOwnership": "มีอยู่ในคลังเกม Steam ของคุณแล้ว"
     },
     "info": {
         "refresh-rating": "รีเฟรชคะแนน"

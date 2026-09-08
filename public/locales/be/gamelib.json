@@ -83,7 +83,8 @@
         "activatingBody": "Раскрыццё вашага ключа і яго актывацыя ў Steam — гэта зойме толькі момант.",
         "activatingTitle": "Актывацыя ў Steam…",
         "openStore": "Адкрыць {{store}}",
-        "platformOther": "Іншае"
+        "platformOther": "Іншае",
+        "settledFromOwnership": "Ужо ў вашай бібліятэцы Steam"
     },
     "info": {
         "refresh-rating": "Абнавіць рэйтынг"

@@ -83,7 +83,8 @@
         "activatingBody": "Afslører din nøgle og indløser den på Steam — dette tager kun et øjeblik.",
         "activatingTitle": "Aktiverer på Steam…",
         "openStore": "Åbn {{store}}",
-        "platformOther": "Andet"
+        "platformOther": "Andet",
+        "settledFromOwnership": "Allerede i dit Steam-bibliotek"
     },
     "info": {
         "refresh-rating": "Opdater vurdering"

@@ -83,7 +83,8 @@
         "activatingBody": "Rivelazione del codice e riscatto su Steam in corso — richiede solo un momento.",
         "activatingTitle": "Attivazione su Steam…",
         "openStore": "Apri {{store}}",
-        "platformOther": "Altro"
+        "platformOther": "Altro",
+        "settledFromOwnership": "Già nella tua libreria Steam"
     },
     "info": {
         "refresh-rating": "Aggiorna valutazione"

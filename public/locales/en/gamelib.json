@@ -86,7 +86,8 @@
         "activatingBody": "Revealing your key and redeeming it on Steam — this only takes a moment.",
         "activatingTitle": "Activating on Steam…",
         "openStore": "Open {{store}}",
-        "platformOther": "Other"
+        "platformOther": "Other",
+        "settledFromOwnership": "Already in your Steam library"
     },
     "info": {
         "refresh-rating": "Refresh rating"

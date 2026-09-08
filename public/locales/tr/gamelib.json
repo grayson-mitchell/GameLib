@@ -83,7 +83,8 @@
         "activatingBody": "Anahtarınız ortaya çıkarılıyor ve Steam'de kullanılıyor — bu sadece bir an sürer.",
         "activatingTitle": "Steam'de etkinleştiriliyor…",
         "openStore": "{{store}} Aç",
-        "platformOther": "Diğer"
+        "platformOther": "Diğer",
+        "settledFromOwnership": "Zaten Steam kitaplığınızda"
     },
     "info": {
         "refresh-rating": "Puanı yenile"

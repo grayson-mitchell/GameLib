@@ -103,9 +103,20 @@ type Props = {
    * override button's own direct-call pattern) rather than taking a
    * caller-supplied callback. */
   undoOverride?: boolean
+  /** D-42-01 (Phase 42): All-keys' Redeemed group ONLY — omitted
+   * (undefined) everywhere else. Renders the reversal affordance for a key
+   * the app settled from an exact-match Steam ownership signal
+   * (`ClaimAnnotation.redeemedSource === 'ownership-exact'`). Scoped
+   * deliberately: a key REDEEMED by the user's own "Mark as redeemed"
+   * action already carries D-77's Undo in Keys-waiting via `claimAction`,
+   * and such a key is never `ownedElsewhere`, so it always has a
+   * Keys-waiting home (`viewFilters.ts:62`). This prop exists only because
+   * an auto-settled key is `ownedElsewhere` and therefore CANNOT reach
+   * Keys-waiting — it would otherwise have no Undo anywhere. */
+  settleAction?: { settledAt: number; onUndoSettle: () => void }
 }
 
-// D-22: strictly read-only, with THREE sanctioned exceptions. No click
+// D-22: strictly read-only, with FOUR sanctioned exceptions. No click
 // handler, no button/link element, no cursor:pointer, no reveal/copy/expand
 // affordance beyond these — Phase 14 owns the claim UX via the wizard it
 // mounts elsewhere, not general interactivity added here. Exception 1: the
@@ -116,7 +127,11 @@ type Props = {
 // optional `giftAction` prop (Giftable Spares tab only, Phase 13).
 // Exception 3: the optional `claimAction` prop (Keys-waiting tab only,
 // D-67, Phase 14) — opens the claim wizard via the caller-supplied
-// onClaim/onFinish/onUndoRedeem handlers. Every other interaction remains
+// onClaim/onFinish/onUndoRedeem handlers. Exception 4: the optional
+// `settleAction` prop (All-keys' Redeemed group only, D-42-01, Phase 42) —
+// the reversal affordance for an ownership-inferred settle, which cannot
+// use Exception 3 because an `ownedElsewhere` key never reaches
+// Keys-waiting (viewFilters.ts:62). Every other interaction remains
 // forbidden. Do not "improve" this row further into a generally-interactive
 // element.
 export default function HumbleKeyRow({
@@ -124,7 +139,8 @@ export default function HumbleKeyRow({
   urgencyTier,
   giftAction,
   claimAction,
-  undoOverride
+  undoOverride,
+  settleAction
 }: Props) {
   const { t } = useTranslation()
   // 260823-op3: fork-added strings live in the fork-owned `gamelib`
@@ -255,6 +271,40 @@ export default function HumbleKeyRow({
               {t('humbleKeys.syncToEnableClaiming', 'Sync to enable claiming')}
             </span>
           )}
+        </span>
+      )}
+      {/* Exception 4 (D-42-01, Phase 42): rendered ONLY when the caller
+          supplies a `settleAction` prop — the All tab's Redeemed group is
+          the sole caller that does, for a key settled from an
+          ownership-inferred REDEEM (never a user-marked one). Defensive
+          `!claimAction` guard: settleAction and claimAction are mutually
+          exclusive in practice (no caller supplies both — an
+          `ownedElsewhere` key never carries a `claimAction` prop, see
+          Keys-waiting's `selectKeysWaiting`), but if both were ever
+          present, claimAction's richer Keys-waiting affordance wins and
+          this column renders nothing rather than a duplicate Undo. */}
+      {!claimAction && settleAction && (
+        <span className="humbleKeyRowAction">
+          <span className="humbleKeyClaimGroup">
+            <span className="humbleKeyClaimAnnotation">
+              {t('humbleKeys.redeemedAnnotation', 'Redeemed {{date}}', {
+                date: new Date(settleAction.settledAt).toLocaleDateString()
+              })}
+            </span>
+            <span className="humbleKeyClaimAnnotation">
+              {tGamelib(
+                'gamelib:humbleKeys.settledFromOwnership',
+                'Already in your Steam library'
+              )}
+            </span>
+            <button
+              type="button"
+              className="humbleKeyUndoButton"
+              onClick={settleAction.onUndoSettle}
+            >
+              {t('humbleKeys.undo', 'Undo')}
+            </button>
+          </span>
         </span>
       )}
       {/* 260823-op3 column 2 — D-60 sanctioned exception: rendered ONLY when

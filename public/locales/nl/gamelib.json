@@ -83,7 +83,8 @@
         "activatingBody": "Je key wordt onthuld en verzilverd op Steam — dit duurt maar even.",
         "activatingTitle": "Activeren op Steam…",
         "openStore": "{{store}} openen",
-        "platformOther": "Overig"
+        "platformOther": "Overig",
+        "settledFromOwnership": "Al in je Steam-bibliotheek"
     },
     "info": {
         "refresh-rating": "Beoordeling vernieuwen"

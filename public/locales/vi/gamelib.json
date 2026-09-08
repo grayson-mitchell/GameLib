@@ -83,7 +83,8 @@
         "activatingBody": "Đang tiết lộ key của bạn và đổi trên Steam — chỉ mất một chút thời gian.",
         "activatingTitle": "Đang kích hoạt trên Steam…",
         "openStore": "Mở {{store}}",
-        "platformOther": "Khác"
+        "platformOther": "Khác",
+        "settledFromOwnership": "Đã có trong thư viện Steam của bạn"
     },
     "info": {
         "refresh-rating": "Làm mới xếp hạng"

@@ -83,7 +83,8 @@
         "activatingBody": "Avaimesi paljastetaan ja lunastetaan Steamissa — tämä kestää vain hetken.",
         "activatingTitle": "Aktivoidaan Steamissa…",
         "openStore": "Avaa {{store}}",
-        "platformOther": "Muu"
+        "platformOther": "Muu",
+        "settledFromOwnership": "Jo Steam-kirjastossasi"
     },
     "info": {
         "refresh-rating": "Päivitä arvostelu"

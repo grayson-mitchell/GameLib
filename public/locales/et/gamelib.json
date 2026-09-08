@@ -83,7 +83,8 @@
         "activatingBody": "Sinu võtme paljastamine ja lunastamine Steamis — see võtab vaid hetke.",
         "activatingTitle": "Aktiveerimine Steamis…",
         "openStore": "Ava {{store}}",
-        "platformOther": "Muu"
+        "platformOther": "Muu",
+        "settledFromOwnership": "Juba teie Steami raamatukogus"
     },
     "info": {
         "refresh-rating": "Värskenda hinnangut"

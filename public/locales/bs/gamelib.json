@@ -83,7 +83,8 @@
         "activatingBody": "Otkrivamo vaš ključ i unosimo ga na Steam — ovo traje samo trenutak.",
         "activatingTitle": "Aktiviranje na Steam-u…",
         "openStore": "Otvori {{store}}",
-        "platformOther": "Drugi"
+        "platformOther": "Drugi",
+        "settledFromOwnership": "Već je u vašoj Steam biblioteci"
     },
     "info": {
         "refresh-rating": "Osvježi ocjenu"

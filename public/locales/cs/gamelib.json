@@ -83,7 +83,8 @@
         "activatingBody": "Odhalujeme váš klíč a uplatňujeme ho na Steam — chvilku to potrvá.",
         "activatingTitle": "Aktivace na Steam…",
         "openStore": "Otevřít {{store}}",
-        "platformOther": "Ostatní"
+        "platformOther": "Ostatní",
+        "settledFromOwnership": "Již ve vaší knihovně Steam"
     },
     "info": {
         "refresh-rating": "Obnovit hodnocení"

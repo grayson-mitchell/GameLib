@@ -83,7 +83,8 @@
         "activatingBody": "Avslører nøkkelen din og løser den inn på Steam — dette tar bare et øyeblikk.",
         "activatingTitle": "Aktiverer på Steam …",
         "openStore": "Åpne {{store}}",
-        "platformOther": "Annen"
+        "platformOther": "Annen",
+        "settledFromOwnership": "Allerede i Steam-biblioteket ditt"
     },
     "info": {
         "refresh-rating": "Oppdater vurdering"

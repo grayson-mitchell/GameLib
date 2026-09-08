@@ -83,7 +83,8 @@
         "activatingBody": "Atskleidžiamas jūsų raktas ir jis aktyvuojamas Steam — tai užtruks tik akimirką.",
         "activatingTitle": "Aktyvuojama Steam…",
         "openStore": "Atverti {{store}}",
-        "platformOther": "Kita/-s/-i"
+        "platformOther": "Kita/-s/-i",
+        "settledFromOwnership": "Jau jūsų Steam bibliotekoje"
     },
     "info": {
         "refresh-rating": "Atnaujinti įvertinimą"

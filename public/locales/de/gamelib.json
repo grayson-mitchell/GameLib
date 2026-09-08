@@ -44,7 +44,8 @@
         "activatingBody": "Ihr Key wird aufgedeckt und auf Steam eingelöst — das dauert nur einen Moment.",
         "activatingTitle": "Wird auf Steam aktiviert…",
         "openStore": "{{store}} öffnen",
-        "platformOther": "Andere"
+        "platformOther": "Andere",
+        "settledFromOwnership": "Bereits in Ihrer Steam-Bibliothek"
     },
     "library": {
         "filterPanel": {

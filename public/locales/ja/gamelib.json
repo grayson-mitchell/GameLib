@@ -83,7 +83,8 @@
         "activatingBody": "キーを表示し、Steamで引き換えています — 少々お待ちください。",
         "activatingTitle": "Steamで有効化中…",
         "openStore": "{{store}}を開く",
-        "platformOther": "その他"
+        "platformOther": "その他",
+        "settledFromOwnership": "すでにあなたのSteamライブラリにあります"
     },
     "info": {
         "refresh-rating": "評価を更新"

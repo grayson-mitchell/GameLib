@@ -83,7 +83,8 @@
         "activatingBody": "Mengungkap kunci Anda dan menukarkannya di Steam — ini hanya butuh waktu sebentar.",
         "activatingTitle": "Mengaktifkan di Steam…",
         "openStore": "Buka {{store}}",
-        "platformOther": "Lainnya"
+        "platformOther": "Lainnya",
+        "settledFromOwnership": "Sudah ada di perpustakaan Steam Anda"
     },
     "info": {
         "refresh-rating": "Segarkan rating"

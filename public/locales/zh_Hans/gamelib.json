@@ -83,7 +83,8 @@
         "activatingBody": "正在显示您的密钥并在 Steam 上兑换 — 这只需片刻。",
         "activatingTitle": "正在 Steam 上激活…",
         "openStore": "打开 {{store}}",
-        "platformOther": "其他"
+        "platformOther": "其他",
+        "settledFromOwnership": "已在你的 Steam 库中"
     },
     "info": {
         "refresh-rating": "刷新评分"

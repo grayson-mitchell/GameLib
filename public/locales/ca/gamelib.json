@@ -83,7 +83,8 @@
         "activatingBody": "Revelant la teva clau i bescanviant-la a Steam — només trigarà un moment.",
         "activatingTitle": "Activant a Steam…",
         "openStore": "Obre {{store}}",
-        "platformOther": "Altres"
+        "platformOther": "Altres",
+        "settledFromOwnership": "Ja a la vostra biblioteca de Steam"
     },
     "info": {
         "refresh-rating": "Actualitza la valoració"

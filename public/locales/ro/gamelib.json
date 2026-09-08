@@ -83,7 +83,8 @@
         "activatingBody": "Se dezvăluie cheia și se activează pe Steam — durează doar o clipă.",
         "activatingTitle": "Se activează pe Steam…",
         "openStore": "Deschide {{store}}",
-        "platformOther": "Altele"
+        "platformOther": "Altele",
+        "settledFromOwnership": "Deja în biblioteca ta Steam"
     },
     "info": {
         "refresh-rating": "Reîmprospătează evaluarea"

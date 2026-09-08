@@ -83,7 +83,8 @@
         "activatingBody": "Revelando sua chave e resgatando-a na Steam — isso leva apenas um instante.",
         "activatingTitle": "Ativando na Steam…",
         "openStore": "Abrir {{store}}",
-        "platformOther": "Outro"
+        "platformOther": "Outro",
+        "settledFromOwnership": "Já está na tua biblioteca Steam"
     },
     "info": {
         "refresh-rating": "Atualizar avaliação"

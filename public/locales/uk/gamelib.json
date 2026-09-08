@@ -83,7 +83,8 @@
         "activatingBody": "Розкриваємо ваш ключ і активуємо його в Steam — це триває лише мить.",
         "activatingTitle": "Активація в Steam…",
         "openStore": "Відкрити {{store}}",
-        "platformOther": "Інше"
+        "platformOther": "Інше",
+        "settledFromOwnership": "Вже у вашій бібліотеці Steam"
     },
     "info": {
         "refresh-rating": "Оновити рейтинг"

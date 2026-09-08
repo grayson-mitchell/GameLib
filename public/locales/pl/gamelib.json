@@ -83,7 +83,8 @@
         "activatingBody": "Odsłanianie klucza i aktywowanie go na Steam — to potrwa tylko chwilę.",
         "activatingTitle": "Aktywowanie na Steam…",
         "openStore": "Otwórz {{store}}",
-        "platformOther": "Inne"
+        "platformOther": "Inne",
+        "settledFromOwnership": "Już w Twojej bibliotece Steam"
     },
     "info": {
         "refresh-rating": "Odśwież ocenę"

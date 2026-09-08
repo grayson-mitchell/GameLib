@@ -83,7 +83,8 @@
         "activatingBody": "Kalitingiz ochilmoqda va Steam'da faollashtirilmoqda — bu bir zum vaqt oladi.",
         "activatingTitle": "Steam'da faollashtirilmoqda…",
         "openStore": "{{store}} ochish",
-        "platformOther": "Boshqa"
+        "platformOther": "Boshqa",
+        "settledFromOwnership": "Allaqachon Steam kutubxonangizda"
     },
     "info": {
         "refresh-rating": "Reytingni yangilash"

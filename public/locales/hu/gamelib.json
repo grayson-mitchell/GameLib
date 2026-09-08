@@ -83,7 +83,8 @@
         "activatingBody": "Kulcsod felfedése és beváltása a Steamen — ez csak egy pillanatot vesz igénybe.",
         "activatingTitle": "Aktiválás a Steamen…",
         "openStore": "{{store}} megnyitása",
-        "platformOther": "Egyéb"
+        "platformOther": "Egyéb",
+        "settledFromOwnership": "Már a Steam könyvtáradban van"
     },
     "info": {
         "refresh-rating": "Értékelés frissítése"

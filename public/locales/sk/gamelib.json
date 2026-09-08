@@ -83,7 +83,8 @@
         "activatingBody": "Odhaľujeme váš kľúč a uplatňujeme ho na Steam — chvíľu to potrvá.",
         "activatingTitle": "Aktivuje sa na Steam…",
         "openStore": "Otvoriť {{store}}",
-        "platformOther": "Other"
+        "platformOther": "Other",
+        "settledFromOwnership": "Už vo vašej Steam knižnici"
     },
     "info": {
         "refresh-rating": "Obnoviť hodnotenie"
