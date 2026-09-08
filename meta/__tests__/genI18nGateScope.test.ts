@@ -272,6 +272,7 @@ const FIXTURE_DIFF_LINES = [
  * Applied by hand with `generatedAt` held constant, per the precedent above.
  */
 const DECLARED_UNSCANNED_DEBT = [
+  'src/frontend/__mocks__/svgReactStub.tsx',
   'src/frontend/components/Tour/Tour.tsx',
   'src/frontend/components/UI/ActionIcons/index.tsx',
   'src/frontend/components/UI/Dialog/components/Dialog.tsx',
@@ -746,7 +747,7 @@ describe('--rewrite-scope guard', () => {
   }
 
   /**
-   * The snapshot a real regeneration would produce TODAY: the 215 files of
+   * The snapshot a real regeneration would produce TODAY: the 216 files of
    * the committed fork-touched artifact (35-24: 199 -> 205, six files that
    * phase touched -- `PathSelectionBox/index.tsx`, `WebviewControls/index.tsx`,
    * `DownloadManager/index.tsx`, `CategoriesManager/index.tsx`,
@@ -764,8 +765,18 @@ describe('--rewrite-scope guard', () => {
    * was not bookkeeping: the blocking gate immediately caught a hardcoded
    * 'GPL V3' constant in it.
    *
+   * 2026-09-08 (Phase 42, plan 42-04): scope UNCHANGED at 174, fork-touched
+   * 215 -> 216, unscanned debt 41 -> 42. One new file:
+   * `__mocks__/svgReactStub.tsx`, the jest stand-in for vite's `?react`
+   * SVG-as-component imports, added so `HumbleKeyRow` could render a store
+   * logo. Hand-edited surgically, NOT regenerated, per the 260901-w9e /
+   * 260902-qs4 / 260905-d33 precedent above. Put in DEBT rather than SCOPE
+   * deliberately: it is a test double whose only literal is the `data-testid`
+   * "svg-stub", not a translatable surface, so promoting it would widen a
+   * hand-curated blocking gate as a side effect of an unrelated fix.
+   *
    * Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 171 -> 215 delta this task exists to
+   * so the specs below assert the REAL 171 -> 216 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -791,10 +802,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 171-file hand-curated snapshot and the fresh snapshot is the REAL 215', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 171-file hand-curated snapshot and the fresh snapshot is the REAL 216', () => {
     expect(scopeSnapshot.files.length).toBe(174)
-    expect(forkTouchedSnapshot.files.length).toBe(215)
-    expect(freshSnapshot().files.length).toBe(215)
+    expect(forkTouchedSnapshot.files.length).toBe(216)
+    expect(freshSnapshot().files.length).toBe(216)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -820,7 +831,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 171 -> 215 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 171 -> 216 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -856,7 +867,7 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(215)
+    expect(rewritten.files.length).toBe(216)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
@@ -874,7 +885,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(215)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(216)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
