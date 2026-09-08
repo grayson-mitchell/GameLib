@@ -49,7 +49,12 @@ export const HUMBLE_COOLDOWN_MS = 15 * 60 * 1000
 //       which also freezes the currently-thrashing REVEALED(null-exp)
 //       orders (restores the D-24 freeze benefit, cuts Cloudflare/WAF
 //       exposure from the standing 19-orders-per-sync re-fetch).
-export const HUMBLE_CLASSIFIER_VERSION = 6
+//   7 = QT-260908-UIC: `gog_keyless` added to KNOWN_GAME_KEY_TYPES, so a GOG
+//       direct-redeem entitlement is no longer discarded by the v2 exclusion
+//       above. Behaviour of classifyOrder changed, so every cached order must
+//       be re-classified once — without this bump, `frozen`/server-terminal
+//       orders keep the old zero-key result and the fix never reaches them.
+export const HUMBLE_CLASSIFIER_VERSION = 7
 
 // HDEDUP-01 success criterion 3 (Phase 12 dedup fuzzy-name fallback):
 // locked at 85%+, NOT the community-norm 70% — DLC titles false-positive
