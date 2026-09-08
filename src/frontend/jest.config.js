@@ -29,5 +29,17 @@ module.exports = {
     '^.+\\.tsx?$': 'ts-jest'
   },
 
+  // Phase 42 (D-42-03): HumbleKeyRow's store indicator imports vite's
+  // `?react` SVG-as-component suffix (see StoreLogos/index.tsx for the
+  // existing convention). Jest has no `vite-plugin-svgr` equivalent, and
+  // this project deliberately installs no jsdom/SVG transformer, so the
+  // specifier is routed to a plain stub component instead — see
+  // src/frontend/__mocks__/svgReactStub.tsx for why. `<rootDir>` here is the
+  // REPO root (`rootDir: '../..'` below), so the target path must be
+  // `<rootDir>/src/frontend/__mocks__/...`, not `<rootDir>/__mocks__/...`.
+  moduleNameMapper: {
+    '\\.svg\\?react$': '<rootDir>/src/frontend/__mocks__/svgReactStub.tsx'
+  },
+
   modulePaths: [compilerOptions.baseUrl]
 }
