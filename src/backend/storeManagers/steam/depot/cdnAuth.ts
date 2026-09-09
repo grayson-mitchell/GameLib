@@ -140,6 +140,29 @@
 // host 403 and deprioritizes it) decide the outcome. A hanging/failing token
 // fetch must NEVER block, serialize, or stall the chunk-download pipeline.
 //
+// QUICK 260909-q2o UPDATE: `getToken` now accepts an optional third
+// `signal?: AbortSignal` — the SAME signal `fetchChunk` already holds (see
+// depot/decompress.ts:1055-1057), threaded no differently than `cdnAuth`
+// itself was (D7). This discharges the CODE half of pending todo
+// `.planning/todos/pending/2026-08-27-stall-watchdog-leaves-the-download-running.md`
+// (its "Hypothesis B"). The contract above is UNCHANGED and strengthened:
+// an abort is a THIRD reason (alongside cooldown and fetch failure) to
+// degrade to `''` — never a new throw site (D1). An already-aborted signal
+// short-circuits before any cache/pending/negativeCache read or write, with
+// no network attempt and no listener registered (D2/D6). A signal that
+// fires while `getToken` is awaiting an in-flight fetch (its own, or one
+// shared via `pending` with a concurrent caller) resolves `''` promptly
+// without paying the bounded timeout — but the shared fetch itself is NEVER
+// cancelled, only stopped being waited on (D3): it runs to settlement,
+// still populates `cache`/`negativeCache` for the next caller, and remains
+// the single in-flight round-trip for that key. Because an aborting caller
+// can now return before that settlement, `pending`'s deletion is tied to
+// the fetch's OWN `finally`, not the awaiting caller's (D4) — see
+// `getToken`'s implementation comment. An abort NEVER writes a
+// `CDN_AUTH_TOKEN_FAILURE_COOLDOWN_MS` entry (D2) — a cancel is not evidence
+// the token endpoint failed. `callGetCDNAuthToken` itself is deliberately
+// left un-threaded (D5, see its own doc comment).
+//
 // SECURITY: the token is a short-lived credential. NEVER log its value —
 // every log line below reports only host/depot/length/expiry, never the
 // token string itself. Never persisted to disk; lives only in this in-memory,
@@ -398,9 +421,29 @@ export class CdnAuthTokenCache {
   /** Returns the token string to append VERBATIM to a chunk/manifest URL
    *  (already including its own leading `?` per steam-user's own usage
    *  convention — see module doc comment), or `''` when no token could be
-   *  obtained (including a currently-in-cooldown key, PART 3). Never throws,
-   *  never blocks past `CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS`. */
-  async getToken(depotId: string, host: string): Promise<string> {
+   *  obtained (including a currently-in-cooldown key, PART 3, or an
+   *  ABORTED `signal`, quick 260909-q2o). Never throws, never blocks past
+   *  `CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS`.
+   *
+   *  `signal` (quick 260909-q2o, discharges the CODE half of
+   *  `.planning/todos/pending/2026-08-27-stall-watchdog-leaves-the-download-running.md`)
+   *  is the SAME `AbortSignal` `fetchChunk` already carries — optional and
+   *  additive (D7): every existing two-argument caller is unaffected. An
+   *  already-aborted signal short-circuits to `''` before any cache/pending/
+   *  negativeCache read or write (D1/D2/D6 — no network attempt, no map
+   *  mutation, no listener registered). A signal that fires while this call
+   *  is waiting on an in-flight (own or shared) fetch resolves `''` promptly
+   *  via `awaitOrAbort` WITHOUT cancelling that shared fetch (D3) — see its
+   *  own doc comment. */
+  async getToken(
+    depotId: string,
+    host: string,
+    signal?: AbortSignal
+  ): Promise<string> {
+    // Fast path (D1/D2/D6): checked BEFORE any other lookup — an
+    // already-aborted signal degrades to '' having touched nothing at all.
+    if (signal?.aborted) return ''
+
     const key = CdnAuthTokenCache.key(depotId, host)
 
     // PART 3 (regression guard): a depot+host still in its failure cooldown
@@ -421,15 +464,57 @@ export class CdnAuthTokenCache {
 
     const existingFetch = this.pending.get(key)
     if (existingFetch) {
-      return existingFetch
+      // quick 260909-q2o: a follower carrying an aborting signal is bounded
+      // exactly like the creating caller — see awaitOrAbort's doc comment.
+      return this.awaitOrAbort(existingFetch, signal)
     }
 
     const fetchPromise = this.fetch(depotId, host, key)
     this.pending.set(key, fetchPromise)
+    // quick 260909-q2o (D4): the `pending` entry's lifetime now tracks the
+    // FETCH's own settlement, not the awaiting caller's. Under D3 the
+    // creating caller may return early on an abort while this fetch keeps
+    // running — deleting `pending` in the caller's own `finally` (the old
+    // shape) would then strand the key mid-flight, letting the NEXT
+    // non-aborted caller for it start a second, redundant CM round-trip and
+    // silently regress the single-flight guarantee this cache exists to
+    // provide. Safe: `fetch()` never rejects (see its own try/catch), so
+    // this derived promise can never produce an unhandled rejection.
+    void fetchPromise.finally(() => this.pending.delete(key))
+    return this.awaitOrAbort(fetchPromise, signal)
+  }
+
+  /** quick 260909-q2o: races an in-flight (own or shared) token fetch
+   *  against `signal` firing, WITHOUT ever aborting, rejecting, or
+   *  otherwise disturbing `fetchPromise` itself (D3) — a concurrent caller
+   *  with a different signal or none must still receive the shared fetch's
+   *  real result. With no `signal`, this is a no-op passthrough (D7): zero
+   *  behavioural delta for every pre-260909-q2o caller/test. With a
+   *  `signal`: an already-aborted one (the mid-flight-hit branch can reach
+   *  this with one, since the fast path above only guards the TOP of
+   *  `getToken`) resolves `''` with no listener registered; otherwise a
+   *  `{ once: true }`-registered listener resolves `''` on abort, and is
+   *  ALWAYS removed in the `finally` (D6) — leaving one abort listener
+   *  registered per settled call would accumulate a
+   *  `MaxListenersExceededWarning` and a retained-closure leak on the
+   *  long-lived, once-per-chunk-attempt download signal. */
+  private async awaitOrAbort(
+    fetchPromise: Promise<string>,
+    signal?: AbortSignal
+  ): Promise<string> {
+    if (!signal) return fetchPromise
+    if (signal.aborted) return ''
+
+    let onAbort: (() => void) | undefined
+    const abortPromise = new Promise<string>((resolvePromise) => {
+      onAbort = () => resolvePromise('')
+      signal.addEventListener('abort', onAbort, { once: true })
+    })
+
     try {
-      return await fetchPromise
+      return await Promise.race([fetchPromise, abortPromise])
     } finally {
-      this.pending.delete(key)
+      if (onAbort) signal.removeEventListener('abort', onAbort)
     }
   }
 
@@ -473,7 +558,19 @@ export class CdnAuthTokenCache {
 
   /** PART 1 (cycle 11: manual `_send` bypass) + PART 3 (bounded timeout) —
    *  see the module doc comment's CYCLE 11 UPDATE and REGRESSION GUARD
-   *  sections for the full evidence trail. Encodes the request manually via
+   *  sections for the full evidence trail.
+   *
+   *  DELIBERATELY NOT abort-aware (D5, quick 260909-q2o): this method's own
+   *  round-trip is already hard-bounded at `CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS`
+   *  by its local `setTimeout`, and rejecting it early on an external abort
+   *  would route into `fetch()`'s catch — which starts a
+   *  `CDN_AUTH_TOKEN_FAILURE_COOLDOWN_MS` cooldown, wrongly recording a
+   *  cancel as a token-endpoint failure (a D2 violation). All abort
+   *  awareness lives one level up, at `getToken`/`awaitOrAbort` — the only
+   *  surface a caller ever actually blocks on. Do not "complete" the
+   *  threading by adding a signal parameter here.
+   *
+   *  Encodes the request manually via
    *  the compiled protobuf classes (steam-user's own `_sendUnified` would
    *  throw here — its encode map is missing this specific RPC), sends it via
    *  the exact same lower-level transport `_sendUnified` itself delegates to
