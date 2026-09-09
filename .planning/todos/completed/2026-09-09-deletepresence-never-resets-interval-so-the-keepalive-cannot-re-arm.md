@@ -2,6 +2,18 @@
 created: 2026-09-09
 title: "deletePresence() clears the keep-alive interval but never resets `interval`, so setPresence()'s `if (!interval)` guard stays falsy-blocked and the 5-minute keep-alive can never re-arm in the same process"
 area: gog-presence
+status: "RESOLVED 2026-09-10 by quick-260910-drs -- deletePresence() now assigns `interval =
+  undefined` immediately after `clearInterval(interval)`, and the module-scope declaration is
+  widened from `let interval: NodeJS.Timeout` to `let interval: NodeJS.Timeout | undefined` to
+  make that assignment legal, restoring setPresence()'s `if (!interval)` re-arm guard for the
+  rest of the process. This ALSO closes the todo's second, previously-unaudited half: D-DRS-01
+  (recorded as a comment on deletePresence() in presence.ts) chose Option A -- the teardown
+  (clearInterval plus the interval reset) is hoisted above every one of deletePresence()'s five
+  early-return guards, so the local timer is torn down unconditionally on every call while the
+  five guards continue to gate only the network `axiosClient.delete` call, because no reachable
+  call site (utils.ts's quit-path await, or the settingChanged listener's force=true call) ever
+  wants the keep-alive to outlive a deletePresence() call. Regression suite:
+  src/backend/storeManagers/gog/__tests__/gogPresenceKeepAlive.test.ts."
 severity: medium
 platform: any
 ready: code
@@ -63,3 +75,15 @@ At process start, `interval` is genuinely `undefined` (its declaration has no in
 Block H's boot-time `setPresence()` call DOES correctly arm the keep-alive the first time. This
 defect only bites after a *subsequent* `deletePresence()` call re-disarms it without resetting the
 guard.
+
+## Resolution
+
+Closed by quick-260910-drs across three commits: `fcd50ae83` (D-DRS-01 audit recorded as a
+comment on `deletePresence()`, no behavior change), `e7f23224a` (RED-proving regression suite,
+`gogPresenceKeepAlive.test.ts`, genuinely failing on Case 1 and Case 3 against the pre-fix code),
+and `817cdceb0` (the one-line fix -- widen the declaration, assign `interval = undefined` right
+after `clearInterval(interval)`, hoisted per D-DRS-01 Option A). Mutation proof: reverting only
+the `interval = undefined` line while leaving `clearInterval(interval)` in place made Case 1 fail
+again with the exact same assertion (`expected 3, received 2` presence POSTs), and restoring the
+line returned the full suite to green, showing that line -- not the surrounding `clearInterval`
+call -- is what carries the fix.
