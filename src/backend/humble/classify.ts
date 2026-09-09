@@ -589,21 +589,6 @@ function fieldNames(value: object): string {
   return `[${shown}${suffix}]`
 }
 
-// TEMPORARY PROBE (D-43-05) — REVERT IN TASK 3
-/**
- * D-43-05 diagnostic: complete, UNCAPPED, sorted top-level field-name list
- * for a populated order. Deliberately does not call `fieldNames` and is not
- * subject to `MAX_DIAGNOSED_FIELDS` — a truncated list would read a real
- * date field's absence-from-the-shown-slice as absence-from-the-order,
- * producing a false NEGATIVE verdict. Names only, sorted for readability,
- * never a value (module discipline, C5/T-11-04) — same guarantee as
- * `fieldNames`/`describeZeroKeyOrder`, just without the cap.
- */
-export function probeOrderFieldNamesD4305(value: object): string {
-  const names = Object.keys(value).sort()
-  return `[${names.join(',')}]`
-}
-
 /**
  * Pure, fully-redacted structural diagnosis for an order that classified to
  * ZERO HumbleKeys (live-UAT round 3, debug session
