@@ -384,7 +384,7 @@
             "click-to-see-changelog": "Click to see changelog",
             "newReleases": "Update Available!",
             "stable": "Stable",
-            "version": "Heroic Version"
+            "version": "GameLib Version"
         },
         "save-sync": {
             "searching": "Trying to detect the correct save folder (click to cancel)"
@@ -1083,13 +1083,13 @@
         "sidebar": {
             "accessibility": "Benader toegankelijkheidsfuncties om je ervaring te personaliseren.",
             "accounts": "Beheer je verbonden winkel accounts (Epic, GOG, Amazon), log bij ze in of uit.",
-            "community": "Neem deel aan onze gemeenschap op Discord en steun Heroic's ontwikkeling.",
-            "docs": "Lees de documentatie voor hulp bij het gebruik van Heroic.",
+            "community": "Steun GameLib's ontwikkeling.",
+            "docs": "Lees de documentatie voor hulp bij het gebruik van GameLib.",
             "downloads": "Monitor en beheer jouw spel-downloads en -installaties.",
             "library": "Benader jouw spelletjesbibliotheek van verschillende winkels op één plek.",
             "login": "Log in bij jouw spelletjeswinkel accounts om je bibliotheek te benaderen.",
             "quit": "Sluit de applicatie veilig.",
-            "settings": "Configureer Heroic's instellingen, spelstandaarden, bekijk logboeken en meer.",
+            "settings": "Configureer GameLib's instellingen, spelstandaarden, bekijk logboeken en meer.",
             "stores": "Zoek en winkel spelletjes in verschillende winkels waaronder Epic, GOG, en Amazon.",
             "version": "Bekijk hier je huidige Heroic versie, klik erop om de laatste changelog te zien en benader deze tour vanuit het hulp-icoontje.",
             "welcome": {

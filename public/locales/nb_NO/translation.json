@@ -394,7 +394,7 @@
             "click-to-see-changelog": "Klikk for å se endringsloggen",
             "newReleases": "Oppdatering tilgjengelig!",
             "stable": "Stabil",
-            "version": "Heroic-versjon"
+            "version": "GameLib-versjon"
         },
         "save-sync": {
             "searching": "Prøver å finne riktig savemappe (klikk for å avbryte)"
@@ -1105,13 +1105,13 @@
         "sidebar": {
             "accessibility": "Få tilgang til tilgjengelighetsfunksjoner for å tilpasse opplevelsen din.",
             "accounts": "Administrer de tilkoblede butikk-kontoene dine (Epic, GOG, Amazon), logg ut eller logg på dem.",
-            "community": "Bli med i fellesskapet vårt på Discord og støtt Heroic sin utvikling.",
+            "community": "Støtt GameLib sin utvikling.",
             "library": "Få tilgang til spillbiblioteket ditt fra ulike butikker på ett sted.",
-            "docs": "Les dokumentasjonen for å få hjelp til å bruke Heroic.",
+            "docs": "Les dokumentasjonen for å få hjelp til å bruke GameLib.",
             "downloads": "Spor og administrer spillnedlastinger og installasjoner.",
             "login": "Logg på spillbutikk-kontoene dine for å få tilgang til biblioteket ditt.",
             "quit": "Avslutt applikasjonen trygt.",
-            "settings": "Konfigurer Heroics innstillinger, spillstandarder, sjekk logger og mer.",
+            "settings": "Konfigurer GameLibs innstillinger, spillstandarder, sjekk logger og mer.",
             "stores": "Bla gjennom og kjøp spill i flere butikker, inkludert Epic, GOG og Amazon.",
             "version": "Sjekk din nåværende Heroic-versjon, klikk på den for å se siste endringslogg, og få tilgang til denne omvisningen fra hjelpeikonet.",
             "welcome": {

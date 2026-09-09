@@ -400,7 +400,7 @@
             "click-to-see-changelog": "Kliknutím zobrazíte seznam změn",
             "newReleases": "K dispozici je nová aktualizace!",
             "stable": "Stabilní",
-            "version": "Verze Heroic"
+            "version": "Verze GameLib"
         },
         "save-sync": {
             "searching": "Pokus o zjištění správné složky uložení (klikněte pro zrušení)"
@@ -1130,10 +1130,10 @@
                 "intro": "Vítejte v aplikaci Heroic! Tato postranní lišta obsahuje všechny navigační možnosti pro procházení aplikace."
             },
             "wine": "Spravujte nebo stáhněte novou verzi Wine/Proton/GPTK pro spuštění Windows her na Linuxu nebo macOS.",
-            "settings": "Nastavte si nastavení aplikace Heroic, výchozí hodnoty her, zkontrolujte protokoly a další.",
+            "settings": "Nastavte si nastavení aplikace GameLib, výchozí hodnoty her, zkontrolujte protokoly a další.",
             "accessibility": "Prozkoumejte nastavení přístupnosti pro přizpůsobení pro vaše potřeby.",
             "accounts": "Spravujte své připojené účty obchodů (Epic, GOG, Amazon), odhlaste se nebo se do nich přihlaste.",
-            "community": "Připojte se k naší komunitě na Discordu a podpořte vývoj aplikace Heroic."
+            "community": "Podpořte vývoj aplikace GameLib."
         },
         "skip": "Přeskočit",
         "startTour": "Spustit prohlídku",

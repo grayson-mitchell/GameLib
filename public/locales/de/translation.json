@@ -394,7 +394,7 @@
             "click-to-see-changelog": "Klicken, um das Änderungsprotokoll anzusehen",
             "newReleases": "Aktualisierung verfügbar!",
             "stable": "Stabil",
-            "version": "Heroic-Version"
+            "version": "GameLib-Version"
         },
         "save-sync": {
             "searching": "Ordner für Spielstände wird ermittelt … (zum Abbrechen klicken)"
@@ -1113,13 +1113,13 @@
                 "title": "Seitenleiste",
                 "intro": "Willkommen in Heroic! Diese Seitenleiste beinhaltet alle wichtigen Navigationspunkte, um die App zu erkunden."
             },
-            "docs": "Lese die Dokumentation für Hilfe, bei der Verwendung von Heroic.",
+            "docs": "Lese die Dokumentation für Hilfe, bei der Verwendung von GameLib.",
             "quit": "Verlasse die Applikation sicher.",
             "accounts": "Verwalte deine verbundenen Konten (Epic, GOG, Amazon), melde dich bei ihnen an oder ab.",
-            "community": "Betrete unserer Community auf Discord und unterstütze Heroics Weiterentwicklung.",
+            "community": "Unterstütze GameLibs Weiterentwicklung.",
             "stores": "Durchsuche und kaufe unterschiedliche Spiele in unterschiedlichen Shops unter anderem Epic,GOG und Amazon.",
             "login": "Log dich in deine Spielevertriebsplattformkonten ein um Zugriff auf deine Bibliothek zu bekommen.",
-            "settings": "Konfiguriere die Einstellungen von Heroic, setze Standardeinstellungen für Spiele, prüfe Logdaten und mehr."
+            "settings": "Konfiguriere die Einstellungen von GameLib, setze Standardeinstellungen für Spiele, prüfe Logdaten und mehr."
         },
         "next": "Weiter",
         "startTour": "Tour starten",

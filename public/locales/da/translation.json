@@ -1141,13 +1141,13 @@
         "sidebar": {
             "accessibility": "Gå til tilgængelighedsfunktioner for at tilpasse din oplevelse.",
             "accounts": "Administrér dine tilknyttede butikskonti (Epic, GOG, Amazon), log ud eller log ind på dem.",
-            "community": "Bliv en del af vores fællesskab på Discord og støt udviklingen af Heroic.",
-            "docs": "Læs dokumentationen for at få hjælp til at bruge Heroic.",
+            "community": "Støt udviklingen af GameLib.",
+            "docs": "Læs dokumentationen for at få hjælp til at bruge GameLib.",
             "downloads": "Spor og administrér dine spil-downloads og installationer.",
             "library": "Få adgang til dit spilbibliotek fra forskellige butikker på ét sted.",
             "login": "Log ind på dine spilbutikskonti for at få adgang til dit bibliotek.",
             "quit": "Forlad applikationen sikkert.",
-            "settings": "Konfigurér Heroics indstillinger, standardindstillinger for spil, tjek logfiler med mere.",
+            "settings": "Konfigurér GameLibs indstillinger, standardindstillinger for spil, tjek logfiler med mere.",
             "stores": "Gennemse og køb spil i forskellige butikker, herunder Epic, GOG og Amazon.",
             "version": "Tjek din nuværende Heroic-version, klik på den for at se den seneste changelog, og få adgang til denne rundvisning fra hjælp-ikonet.",
             "welcome": {

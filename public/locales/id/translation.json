@@ -387,7 +387,7 @@
             "click-to-see-changelog": "Klik untuk melihat catatan perubahan",
             "newReleases": "Pembaruan Tersedia!",
             "stable": "Stabil",
-            "version": "Versi Heroic"
+            "version": "Versi GameLib"
         },
         "save-sync": {
             "searching": "Mencoba untuk melacak folder penyimpanan yang sesuai (klik untuk membatalkan)"
@@ -1081,13 +1081,13 @@
         "sidebar": {
             "accessibility": "Akses fitur aksesibilitas untuk menyesuaikan pengalaman Anda.",
             "accounts": "Kelola akun toko Anda yang terhubung (Epic, GOG, Amazon), keluar atau masuk ke akun tersebut.",
-            "community": "Bergabunglah dengan komunitas kami di Discord dan dukung pengembangan Heroic.",
-            "docs": "Baca dokumentasi untuk mendapatkan bantuan dalam menggunakan Heroic.",
+            "community": "Dukung pengembangan GameLib.",
+            "docs": "Baca dokumentasi untuk mendapatkan bantuan dalam menggunakan GameLib.",
             "downloads": "Lacak dan kelola unduhan serta instalasi game Anda.",
             "library": "Akses pustaka game Anda dari berbagai toko di satu tempat.",
             "login": "Masuk ke akun toko game Anda untuk mengakses pustaka Anda.",
             "quit": "Keluar dari aplikasi dengan aman.",
-            "settings": "Konfigurasikan pengaturan Heroic, pengaturan default game, periksa log, dan lainnya.",
+            "settings": "Konfigurasikan pengaturan GameLib, pengaturan default game, periksa log, dan lainnya.",
             "stores": "Jelajahi dan beli game di berbagai toko termasuk Epic, GOG, dan Amazon.",
             "version": "Periksa versi Heroic Anda saat ini, klik untuk melihat catatan perubahan terbaru, dan akses tur ini dari ikon bantuan.",
             "welcome": {

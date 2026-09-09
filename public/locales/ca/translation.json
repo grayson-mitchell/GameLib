@@ -395,7 +395,7 @@
             "click-to-see-changelog": "Fes-hi clic per a veure el registre de canvis",
             "newReleases": "Hi ha una actualització disponible!",
             "stable": "Estable",
-            "version": "Versió de l'Heroic"
+            "version": "Versió del GameLib"
         },
         "save-sync": {
             "searching": "S'està provant de detectar la carpeta correcta de partides desades (fes clic per a cancel·lar)"
@@ -1108,13 +1108,13 @@
         "sidebar": {
             "accessibility": "Accediu a funcions d'accessibilitat per a personalitzar l'experiència.",
             "accounts": "Gestiona els diversos comptes de botigues (Epic, GOG, Amazon) i inicia o tanca'n la sessió.",
-            "community": "Uneix-te a la nostra comunitat de Discord i ajuda amb el desenvolupament de l'Heroic.",
+            "community": "Ajuda amb el desenvolupament del GameLib.",
             "library": "Accediu a la vostra biblioteca de jocs de botigues diferents des d'un sol lloc.",
             "login": "Inicia la sessió als comptes de les teves botigues de jocs per a accedir a la biblioteca de jocs.",
-            "docs": "Llegiu la documentació d'ajuda de l'ús de l'Heroic.",
+            "docs": "Llegiu la documentació d'ajuda de l'ús del GameLib.",
             "downloads": "Gestiona i comprova les baixades i instal·lacions de jocs.",
             "quit": "Sortiu de l'aplicació de manera segura.",
-            "settings": "Configura les opcions de l'Heroic, les preferències dels jocs i comprova els registres, entre d'altres.",
+            "settings": "Configura les opcions del GameLib, les preferències dels jocs i comprova els registres, entre d'altres.",
             "version": "Comprova la versió actual de l'Heroic, fes-hi clic per a veure'n el registre de canvis i accedeix a aquesta visita des del botó d'ajuda.",
             "welcome": {
                 "title": "Barra lateral de navegació",

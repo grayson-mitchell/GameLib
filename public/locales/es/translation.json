@@ -395,7 +395,7 @@
             "click-to-see-changelog": "Haz clic para ver el registro de cambios",
             "newReleases": "¡Actualización disponible!",
             "stable": "Estable",
-            "version": "Versión de Heroic"
+            "version": "Versión de GameLib"
         },
         "save-sync": {
             "searching": "Intentando detectar la carpeta de guardado correcta (haga clic para cancelar)"
@@ -1116,13 +1116,13 @@
         "sidebar": {
             "accessibility": "Accede a funciones de accesibilidad para customizar tu experiencia.",
             "accounts": "Maneja tu cuenta de tiendas digitales (Epic, GOG, Amazon), termina tu sesion o inicia sesion con ellas.",
-            "community": "Unete a nuestra comunidad en Discord y ayuda el desarrollo de Heroic.",
-            "docs": "Lee la documentación para ayuda usando Heroic.",
+            "community": "Ayuda al desarrollo de GameLib.",
+            "docs": "Lee la documentación para ayuda usando GameLib.",
             "downloads": "Sigue y maneja tus descargas de juegos e instalaciones.",
             "library": "Accede tu librería de juegos de diferentes tiendas en un solo lugar.",
             "login": "Inicia sesión a tus cuentas de tienda de juego para acceder a tu librería.",
             "quit": "Sal de la aplicación seguramente.",
-            "settings": "Configura los ajustes de Heroic, juegos predeterminados, comprobar registros y mas.",
+            "settings": "Configura los ajustes de GameLib, juegos predeterminados, comprobar registros y mas.",
             "stores": "Navega y compra juegos en diferentes tiendas incluyendo Epic, GOG y Amazon.",
             "version": "Revisa tu versión de Heroic, haz clic para ver su registro de cambios y accede este tour desde el botón de ayuda.",
             "welcome": {

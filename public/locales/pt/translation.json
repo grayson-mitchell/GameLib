@@ -394,7 +394,7 @@
             "click-to-see-changelog": "Clique para ver o registo de alterações",
             "newReleases": "Atualizações Disponíveis!",
             "stable": "Estável",
-            "version": "Versão do Heroic"
+            "version": "Versão do GameLib"
         },
         "save-sync": {
             "searching": "A tentar detetar a pasta de jogos guardados (saves) correta (clique para cancelar)"
@@ -1110,12 +1110,12 @@
             "login": "Inicie a sessão das suas contas nas lojas de jogos para aceder à sua biblioteca.",
             "version": "Verifique a sua versão atual do Heroic, clique para ver os últimos registos de alterações e aceda à visita guiada a partir do ícone de ajuda.",
             "wine": "Faça a gestão ou transferências de novas versões do Wine/Proton/GPTK para executar jogos do Windows no Linux ou macOS.",
-            "community": "Junte-se à nossa comunidade no Discord e suporte o desenvolvimento do Heroic.",
-            "docs": "Consulte a documentação para obter ajuda em como usar o Heroic.",
+            "community": "Apoie o desenvolvimento do GameLib.",
+            "docs": "Consulte a documentação para obter ajuda em como usar o GameLib.",
             "downloads": "Acompanhe e faça a gestão das transferências e instalações dos seus jogos.",
             "library": "Aceda à sua biblioteca de jogos num único local, a partir de lojas diferentes.",
             "quit": "Sair da aplicação em segurança.",
-            "settings": "Configure as definições do Heroic, predefinições de jogos, consulte os registos de eventos e muito mais.",
+            "settings": "Configure as definições do GameLib, predefinições de jogos, consulte os registos de eventos e muito mais.",
             "stores": "Pesquise e compre jogos em lojas diferentes, incluindo Epic, GOG e Amazon.",
             "welcome": {
                 "intro": "Bem-vindo ao Heroic! Esta barra lateral contém todas as opções de navegação para explorar a aplicação.",

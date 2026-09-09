@@ -393,7 +393,7 @@
             "click-to-see-changelog": "Cliquer ici pour consulter les changements",
             "newReleases": "Une mise à jour est disponible !",
             "stable": "Stable",
-            "version": "Version d'Heroic"
+            "version": "Version de GameLib"
         },
         "save-sync": {
             "searching": "Tentative de détection du répertoire de sauvegarde adéquat (cliquer ici pour annuler)"
@@ -1115,11 +1115,11 @@
         "sidebar": {
             "accessibility": "Accédez aux fonctions d'accessibilité pour personnaliser votre expérience.",
             "accounts": "Supervisez vos comptes connectés (GOG, Epic, Amazon), déconnectez-vous ou connectez-vous y.",
-            "community": "Rejoignez notre communauté sur Discord et soutenez le développement d'Heroic.",
+            "community": "Soutenez le développement de GameLib.",
             "downloads": "Suivez et gérez le téléchargement et l'installation de vos jeux.",
             "library": "Accédez à votre ludothèque éparse depuis un seul endroit.",
             "login": "Connectez-vous au compte de votre boutique pour accéder à votre ludothèque.",
-            "settings": "Configurez Heroic, modifiez les paramètres par défaut des jeux, consultez les rapports d'événements et plus.",
+            "settings": "Configurez GameLib, modifiez les paramètres par défaut des jeux, consultez les rapports d'événements et plus.",
             "welcome": {
                 "intro": "Bienvenue dans Heroic ! Cette barre latérale contient toutes les options de navigation permettant d'explorer l'application.",
                 "title": "Navigation dans la barre latérale"
@@ -1128,7 +1128,7 @@
             "version": "Vérifiez la version actuelle d'Heroic, cliquez dessus pour consulter les dernier changements et accédez à cette visite guidée depuis le bouton d'aide.",
             "wine": "Supervisez ou téléchargez de nouvelles versions de Wine/Proton/GPTK pour exécuter des jeux Windows sur Linux ou macOS.",
             "quit": "Quittez l'application de manière sûre.",
-            "docs": "Lisez la documentation pour en apprendre plus sur l'utilisation d'Heroic."
+            "docs": "Lisez la documentation pour en apprendre plus sur l'utilisation de GameLib."
         },
         "skip": "Passer",
         "startTour": "Débuter la visite guidée"

@@ -394,7 +394,7 @@
             "click-to-see-changelog": "Fai clic para ver o rexistro de cambios",
             "newReleases": "Actualización dispoñible!",
             "stable": "Estable",
-            "version": "Versión de Heroic"
+            "version": "Versión de GameLib"
         },
         "save-sync": {
             "searching": "Intentando detectar o cartafol de gardado correcto (fai clic para cancelar)"
@@ -1073,13 +1073,13 @@
         "sidebar": {
             "accessibility": "Accede a funcións de accesibilidade para personalizar a túa experiencia.",
             "accounts": "Manexa as túas contas conectadas das tendas (Epic, GOG, Amazon), sae da sesión ou inicia sesión en elas.",
-            "community": "Únete á nosa comunidade en Discord e axuda ao desenvolvemento de Heroic.",
-            "docs": "Lee a documentación para axuda usando Heroic.",
+            "community": "Axuda ao desenvolvemento de GameLib.",
+            "docs": "Lee a documentación para axuda usando GameLib.",
             "downloads": "Segue e manexa as descargas e instalacións dos teus xogos.",
             "library": "Accede á túa biblioteca de xogos de diferentes tendas nun mesmo lugar.",
             "login": "Inicia sesión nas túas contas das tendas para acceder á túa biblioteca.",
             "quit": "Pecha a aplicación de forma segura.",
-            "settings": "Configura os axustes de Heroic, os axustes predeterminados dos xogos, comproba rexistros, e máis.",
+            "settings": "Configura os axustes de GameLib, os axustes predeterminados dos xogos, comproba rexistros, e máis.",
             "stores": "Navega e compra xogos en diferentes tendas incluíndo Epic, GOG e Amazon.",
             "version": "Comproba a túa versión actual de Heroic, fai clic para ver o último rexistro de cambios, e accede a este tour desde o botón de axuda.",
             "welcome": {

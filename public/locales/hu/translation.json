@@ -394,7 +394,7 @@
             "click-to-see-changelog": "Kattints a változásnapló megnyitásához",
             "newReleases": "Frissítés érhető el.",
             "stable": "Stabil",
-            "version": "Heroic verziója"
+            "version": "GameLib verziója"
         },
         "save-sync": {
             "searching": "Megfelelő mentési mappa keresése (kattints a megszakításhoz)"
@@ -1112,11 +1112,11 @@
         "sidebar": {
             "accessibility": "Érd el az akadálymentességi funkciókat az élményed testreszabásához.",
             "accounts": "Kezeld az összekapcsolt áruházi fiókokat (Epic, GOG, Amazon), jelentkezz be vagy ki belőlük.",
-            "community": "Csatlakozz a közösségünkhöz Discordon és támogasd a Heroic fejlesztését.",
-            "docs": "Olvasd el a dokumentációt, hogy segítséget kapj a Heroic használatához.",
+            "community": "Támogasd a GameLib fejlesztését.",
+            "docs": "Olvasd el a dokumentációt, hogy segítséget kapj a GameLib használatához.",
             "login": "Jelentkezz be a játékáruház-fiókodba, hogy hozzáférj a könyvtáradhoz.",
             "quit": "Biztonságos kilépés az alkalmazásból.",
-            "settings": "Állítsd be a Heroic beállításait, a játékok alapértelmezéseit, tekintsd meg a naplókat, stb.",
+            "settings": "Állítsd be a GameLib beállításait, a játékok alapértelmezéseit, tekintsd meg a naplókat, stb.",
             "welcome": {
                 "title": "Oldalsáv-navigáció",
                 "intro": "Üdvözöl a Heroic! Az oldalsáv tartalmazza az összes navigációs lehetőséget a Heroic felfedezéséhez."

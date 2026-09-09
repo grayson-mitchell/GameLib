@@ -383,7 +383,7 @@
             "click-to-see-changelog": "點擊查看更新日誌",
             "newReleases": "Update Available!",
             "stable": "Stable",
-            "version": "Heroic 版本"
+            "version": "GameLib 版本"
         },
         "save-sync": {
             "searching": "Trying to detect the correct save folder (click to cancel)"

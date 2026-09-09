@@ -394,7 +394,7 @@
             "click-to-see-changelog": "Kliknij aby zobaczyć listę zmian",
             "newReleases": "Dostępna aktualizacja!",
             "stable": "Stabilna",
-            "version": "Wersja Heroic"
+            "version": "Wersja GameLib"
         },
         "save-sync": {
             "searching": "Próba wykrycia właściwego folderu z zapisami (kliknij by anulować)"
@@ -1109,15 +1109,15 @@
         },
         "sidebar": {
             "stores": "Przeglądaj i kupuj gry w różnych sklepach, m.in. Epic, GOG i Amazon.",
-            "community": "Dołącz do naszej społeczności na Discordzie i wesprzyj rozwój Heroica.",
+            "community": "Wesprzyj rozwój GameLiba.",
             "accessibility": "Skorzystaj z ułatwień dostępu, aby dostosować swoje ustawienia.",
             "accounts": "Zarządzaj swoimi połączonymi kontami sklepowymi (Epic, GOG, Amazon), zaloguj się do nich bądź wyloguj.",
-            "docs": "Przeczytaj dokumentację, by uzyskać pomoc w używaniu Heroica.",
+            "docs": "Przeczytaj dokumentację, by uzyskać pomoc w używaniu GameLiba.",
             "downloads": "Śledź i zarządzaj swoimi pobraniami i instalacjami gier.",
             "library": "Uzyskaj dostęp do swojej biblioteki gier z różnych sklepów w jednym miejscu.",
             "login": "Zaloguj się do swoich kont do sklepów z grami, aby uzyskać dostęp do swojej biblioteki.",
             "quit": "Wyjdź z aplikacji w bezpieczny sposób.",
-            "settings": "Dostosuj ustawienia Heroica, domyślne dla gier, sprawdź logi i inne.",
+            "settings": "Dostosuj ustawienia GameLiba, domyślne dla gier, sprawdź logi i inne.",
             "version": "Sprawdź aktualną wersję Heroic, kliknij na nią, by zobaczyć listę zmian, oraz uzyskaj dostęp do tego przewodnika poprzez ikonę pomocy.",
             "welcome": {
                 "intro": "Witamy w Heroic! Ten pasek boczny zawiera wszystkie opcje nawigacji do odkrywania aplikacji.",

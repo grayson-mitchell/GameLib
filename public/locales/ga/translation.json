@@ -646,7 +646,7 @@
             "click-to-see-changelog": "Cliceáil chun loga athruithe a fheiceáil",
             "newReleases": "Nuashonrú ar Fáil!",
             "stable": "Cobhsaí",
-            "version": "Leagan Heroic"
+            "version": "Leagan GameLib"
         },
         "save-sync": {
             "searching": "Ag iarraidh an fillteán sábhála ceart a bhrath (cliceáil chun cealú)"
@@ -998,13 +998,13 @@
         "sidebar": {
             "accessibility": "Rochtain a fháil ar ghnéithe inrochtaineachta chun do thaithí a shaincheapadh.",
             "accounts": "Bainistigh do chuntais siopa nasctha (Epic, GOG, Amazon), logáil amach nó logáil isteach iontu.",
-            "community": "Bí linn inár bpobal ar Discord agus tabhair tacaíocht do fhorbairt Heroic.",
-            "docs": "Léigh an doiciméadú le haghaidh cabhrach maidir le Heroic a úsáid.",
+            "community": "Tabhair tacaíocht do fhorbairt GameLib.",
+            "docs": "Léigh an doiciméadú le haghaidh cabhrach maidir le GameLib a úsáid.",
             "downloads": "Rianaigh agus bainistigh d’íoslódálacha agus do shuiteálacha cluichí.",
             "library": "Rochtain a fháil ar do leabharlann cluichí ó shiopaí éagsúla in aon áit amháin.",
             "login": "Logáil isteach i do chuntais siopa cluichí chun rochtain a fháil ar do leabharlann.",
             "quit": "Scoir an feidhmchlár go sábháilte.",
-            "settings": "Cumraigh socruithe Heroic, réamhshocruithe cluiche, seiceáil logaí agus tuilleadh.",
+            "settings": "Cumraigh socruithe GameLib, réamhshocruithe cluiche, seiceáil logaí agus tuilleadh.",
             "stores": "Brabhsáil agus siopaigh cluichí i siopaí éagsúla lena n-áirítear Epic, GOG, agus Amazon.",
             "version": "Seiceáil do leagan reatha de Heroic, cliceáil air chun an loga athruithe is déanaí a fheiceáil, agus rochtain a fháil ar an turas seo ón deilbhín cabhrach.",
             "welcome": {

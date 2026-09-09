@@ -395,7 +395,7 @@
             "click-to-see-changelog": "Clique para ver a lista de mudanças",
             "newReleases": "Atualização disponível!",
             "stable": "Estável",
-            "version": "Versão do Heroic"
+            "version": "Versão do GameLib"
         },
         "save-sync": {
             "searching": "Tentando detectar a pasta de saves correta (Clique para cancelar)"
@@ -1113,15 +1113,15 @@
         },
         "sidebar": {
             "stores": "Navegue e faça a compra de jogos em diferentes lojas incluindo Epic, GOG, e Amazon.",
-            "docs": "Leia a documentação para obter ajuda sobre como usar o Heroic.",
+            "docs": "Leia a documentação para obter ajuda sobre como usar o GameLib.",
             "quit": "Sair do aplicativo de maneira segura.",
             "accessibility": "Acesse os recursos de acessibilidade para customizar a sua experiência.",
             "downloads": "Rastreie e gerencie os downloads e as instalações de seus jogos.",
             "accounts": "Gerencie as suas contas conectadas de lojas (Epic, GOG, Amazon), fazer o login ou sair de uma das contas.",
-            "community": "Junte-se à nossa comunidade no Discord e apoie o desenvolvimento do Heroic.",
+            "community": "Apoie o desenvolvimento do GameLib.",
             "library": "Acesse a sua biblioteca de jogos de diferentes lojas em um único lugar.",
             "login": "Faça o login em suas contas de lojas de jogos para acessar a sua biblioteca.",
-            "settings": "Ajuste as configurações do Heroic, padrões dos jogos, verifique logs e mais.",
+            "settings": "Ajuste as configurações do GameLib, padrões dos jogos, verifique logs e mais.",
             "version": "Verifique a sua versão atual do Heroic, clique nela para ver o último registro de alterações, e acesse este tour através do ícone de ajuda.",
             "welcome": {
                 "intro": "Bem-vindo ao Heroic! Esta barra lateral contém todas as opções de navegação para explorar o aplicativo.",

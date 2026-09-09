@@ -394,7 +394,7 @@
             "click-to-see-changelog": "Clicca per vedere i cambiamenti (changelog)",
             "newReleases": "Aggiornamento disponibile!",
             "stable": "Stabile",
-            "version": "Versione Heroic"
+            "version": "Versione GameLib"
         },
         "save-sync": {
             "searching": "Sto cercando di determinare la cartella di salvataggi corretta (clicca qui per annullare)"
@@ -1111,7 +1111,7 @@
             "downloads": "Monitora e gestisci i download e le installazioni dei tuoi giochi.",
             "library": "Accedi alle librerie dei tuoi giochi da diversi negozi in un solo posto.",
             "accessibility": "Modifica le impostazioni di accessibilità per personalizzare la tua esperienza.",
-            "settings": "Configura le impostazioni di Heroic, le impostazioni predefinite dei giochi, vedi i log e molto altro.",
+            "settings": "Configura le impostazioni di GameLib, le impostazioni predefinite dei giochi, vedi i log e molto altro.",
             "version": "Verifica la versione corrente di Heroic, clicca qui per vedere le ultime note di rilascio e accedi a questa guida dall'icona di aiuto.",
             "welcome": {
                 "title": "Navigazione della barra laterale",
@@ -1119,8 +1119,8 @@
             },
             "quit": "Esci dall'applicazione in modo sicuro.",
             "stores": "Sfoglia e acquista i giochi da negozi differenti, inclusi Epic, GOG e Amazon.",
-            "community": "Entra nel nostro server Discord e supporta lo sviluppo di Heroic.",
-            "docs": "Leggi la documentazione per imparare ad usare Heroic.",
+            "community": "Supporta lo sviluppo di GameLib.",
+            "docs": "Leggi la documentazione per imparare ad usare GameLib.",
             "login": "Accedi al tuo account del negozio per accedere alla tua libreria.",
             "wine": "Gestisci o scarica nuove versioni di Wine/Proton/GPTK per eseguire i giochi di Windows su Linux e macOS.",
             "accounts": "Gestisci gli account dei negozi connessi (Epic, GOG, Amazon), effettua l'accesso o esci."

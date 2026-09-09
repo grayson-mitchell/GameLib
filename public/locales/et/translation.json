@@ -393,7 +393,7 @@
             "click-to-see-changelog": "Klikkige, et näha muutuste nimekirja",
             "newReleases": "Uuendus saadaval!",
             "stable": "Stabiilne",
-            "version": "Heroicu versioon"
+            "version": "GameLibi versioon"
         },
         "save-sync": {
             "searching": "Üritan leida õiget salvestuste kausta (kliki, et tühistada)"
@@ -1109,7 +1109,7 @@
         },
         "next": "Järgmine",
         "sidebar": {
-            "community": "Liituge meie Discordi kogukonnaga ja toetage Heroicu arendamist.",
+            "community": "Toetage GameLibi arendamist.",
             "accessibility": "Vaadake ligipääsetavuse seadeid, et oma kogemust kohendada.",
             "version": "Kontrollige oma praegust Heroicu versiooni. Klikkige siia, et näha uusimaid muudatusi ja külastage seda tuuri läbi abiikooni.",
             "stores": "Sirvige ja ostelge mängusid erinevates poodides, sealhulgas Epicus, GOG-is ja Amazonis.",
@@ -1117,12 +1117,12 @@
             "login": "Logige sisse oma mängupoodide kontodele, et oma varamule ligi pääseda.",
             "library": "Pääsege oma eri poodides olevatele mängude varamutele ligi ühest kohast.",
             "downloads": "Jälgige ja hallake oma mängude allalaadimisi ja paigaldamisi.",
-            "docs": "Lugege dokumentatsiooni, et leida abi Heroicu kasutamisel.",
+            "docs": "Lugege dokumentatsiooni, et leida abi GameLibi kasutamisel.",
             "welcome": {
                 "title": "Küljeribal navigeerimine",
                 "intro": "Tere tulemast Heroicusse! Sellelt küljeribalt leiate kõik valikud, et rakenduses ringi liikuda."
             },
-            "settings": "Vaadake üle Heroicu ja mängude vaikimisi seaded, kontrollige logisid ja muud.",
+            "settings": "Vaadake üle GameLibi ja mängude vaikimisi seaded, kontrollige logisid ja muud.",
             "wine": "Hallake või laadige alla uus Wine/Proton/GPTK versioon, et käivitada Windowsi mänge Linuxil või macOS-il.",
             "accounts": "Hallake oma ühendatud poekontosid (Epic, GOG, Amazon), logige nendega välja või sisse."
         },

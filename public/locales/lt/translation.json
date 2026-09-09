@@ -374,7 +374,7 @@
         "version": "„Wine“ versija",
         "heroic": {
             "stable": "Stabilus",
-            "version": "„Heroic“ versija",
+            "version": "„GameLib“ versija",
             "beta": "„Beta“",
             "newReleases": "Pasiekiamas atnaujinimas!",
             "click-to-see-changelog": "Spauskite, norint peržiūrėti keitinių žurnalą"
@@ -1039,13 +1039,13 @@
                 "intro": "Sveiki į – „Heroic“! Ši šoninė juosta sudaro visas naršymo parinktis, siekiant naršyti programą."
             },
             "quit": "Išeikite iš programos saugiai.",
-            "docs": "Persiskaitykite dokumentaciją dėl „Heroic“ naudojimo.",
+            "docs": "Persiskaitykite dokumentaciją dėl „GameLib“ naudojimo.",
             "library": "Pasiekite savo žaidimų biblioteką iš skirtingų parduotuvių vienoje vietoje.",
-            "community": "Prisijunkite prie mūsų bendruomenės „Discord“ ir palaikykite „Heroic“ kūrimą.",
+            "community": "Palaikykite „GameLib“ kūrimą.",
             "accessibility": "Pasiekite pasiekiamumo funkcijas, siekiant tinkinti savo patirtį.",
             "wine": "",
             "login": "Prisijunkite prie savo žaidimų parduotuvės/-ių paskyros/-ų, kad pasiektumėte savo biblioteką.",
-            "settings": "Sukonfigūruokite „Heroic“ nustatymus, žaidimo numatytuosius parametrus, tikrinkite žurnalus ir t.t.",
+            "settings": "Sukonfigūruokite „GameLib“ nustatymus, žaidimo numatytuosius parametrus, tikrinkite žurnalus ir t.t.",
             "downloads": "Sekite ir valdykite savo žaidimų atnaujinimus ir įdiegimus.",
             "accounts": "Valdykite savo sujungtų parduotuvių paskyras („Epic“, „GOG“, „Amazon“); jų atsijungimą ir prisijungimą.",
             "stores": "Naršykite ir pirkite žaidimus skirtinguose parduotuvėse, įskaitant – „Epic“, „GOG“ ir „Amazon“.",

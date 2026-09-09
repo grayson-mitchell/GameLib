@@ -384,7 +384,7 @@
             "click-to-see-changelog": "Bấm vào để xem nhật ký thay đổi",
             "newReleases": "Cập Nhật Có Sẵn!",
             "stable": "Ổn Định",
-            "version": "Phiên Bản Heroic"
+            "version": "Phiên Bản GameLib"
         },
         "save-sync": {
             "searching": "Đang cố gắng phát hiện đúng thư mục lưu (bấm để hủy)"
@@ -1057,13 +1057,13 @@
         "sidebar": {
             "accessibility": "Truy cập các tính năng trợ năng để tùy chỉnh trải nghiệm của bạn.",
             "accounts": "Quản lý các tài khoản cửa hàng được kết nối của bạn (Epic, GOG, Amazon), đăng xuất hoặc đăng nhập vào chúng.",
-            "community": "Tham gia cộng đồng của chúng tôi trên Discord và hỗ trợ phát triển của Heroic.",
-            "docs": "Đọc tài liệu để được trợ giúp sử dụng Heroic.",
+            "community": "Hỗ trợ phát triển GameLib.",
+            "docs": "Đọc tài liệu để được trợ giúp sử dụng GameLib.",
             "downloads": "Theo dõi và quản lý việc tải xuống và cài đặt trò chơi của bạn.",
             "library": "Truy cập thư viện trò chơi của bạn từ các cửa hàng khác nhau ở cùng một nơi.",
             "login": "Đăng nhập vào tài khoản cửa hàng trò chơi của bạn để truy cập thư viện của bạn.",
             "quit": "Thoát khỏi ứng dụng một cách an toàn.",
-            "settings": "Định cấu hình cài đặt của Heroic, mặc định của trò chơi, nhật ký kiểm tra và hơn thế nữa.",
+            "settings": "Định cấu hình cài đặt của GameLib, mặc định của trò chơi, nhật ký kiểm tra và hơn thế nữa.",
             "stores": "Duyệt và mua trò chơi trong các cửa hàng khác nhau bao gồm Epic, GOG và Amazon.",
             "version": "Kiểm tra phiên bản Heroic hiện tại của bạn, nhấp vào phiên bản đó để xem nhật ký thay đổi mới nhất và truy cập chuyến tham quan này từ biểu tượng trợ giúp.",
             "welcome": {

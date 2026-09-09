@@ -394,7 +394,7 @@
             "click-to-see-changelog": "单击查看变更日志",
             "newReleases": "更新可用！",
             "stable": "稳定版",
-            "version": "Heroic 版本"
+            "version": "GameLib 版本"
         },
         "save-sync": {
             "searching": "尝试检测正确的保存文件夹（单击取消）"
@@ -1110,13 +1110,13 @@
             "steamInstall": "使用此按钮安装 Windows 版 Steam，并通过 Crossover、Wine 或 GPTK 玩你的 Windows 游戏。"
         },
         "sidebar": {
-            "community": "加入我们的 Discord 社区并支持 Heroic 的开发。",
-            "docs": "阅读文档获得使用 Heroic 的帮助。",
+            "community": "支持 GameLib 的开发。",
+            "docs": "阅读文档获得使用 GameLib 的帮助。",
             "downloads": "追踪并管理你的游戏下载和安装。",
             "library": "在一个地方访问不同商店中你的游戏库。",
             "login": "登录游戏商店账号来访问游戏库。",
             "quit": "安全退出程序。",
-            "settings": "配置 Heroic 的设置、游戏默认、检查日志和更多。",
+            "settings": "配置 GameLib 的设置、游戏默认、检查日志和更多。",
             "stores": "浏览并购买 Epic、GOG 和 Amazon 等不同商店中的游戏。",
             "version": "检查当前 Heroic 版本，单击它查看最新更新记录，并从帮助图标访问此入门指南。",
             "welcome": {
