@@ -1,0 +1,94 @@
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/Users/graysonmitchell/Projects/GameLib source=GAMELIB_APP_ROOT
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/Users/graysonmitchell/Projects/GameLib/src-tauri/target/debug/gamelib-shell
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/Users/graysonmitchell/Projects/GameLib/public exists=true
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/legendary exists=true
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl exists=true
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/nile exists=true
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/comet exists=true
+(14:57:07) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] steamgrid secret store: keyring
+(14:57:07) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(14:57:07) [INFO]:    [Connection]:      Pinging external endpoints
+(14:57:07) [INFO]:    [Connection]:      Connectivity: check-online
+(14:57:07) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not from this module — a persisted Steam queue head is still never auto-started, since the startup flag is itself the Steam suppression (downloadqueue.ts initQueue doc comment)
+(14:57:07) [INFO]:    [Connection]:      Connectivity: online
+(14:57:07) [INFO]:    [Backend]:         User Not Found, removing it from Store
+(14:57:07) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(14:57:07) [INFO]:    [Gog]:             Checking if login is valid
+(14:57:07) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(14:57:07) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(14:57:07) [INFO]:    [Backend]:         [GAMELIB_SIDECAR_SEND_HANDLER] frontendReady
+(14:57:07) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=mount
+(14:57:07) [INFO]:    [Backend]:         Frontend Ready
+(14:57:07) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(14:57:07) [WARNING]: refresh not implemented on Sideload Library Manager
+(14:57:07) [INFO]:    [Legendary]:       Refreshing library...
+(14:57:07) [INFO]:    [Steam]:           Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(14:57:07) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(14:57:08) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(14:57:08) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(14:57:08) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(14:57:08) [INFO]:    [Gog]:             Getting GOG library
+(14:57:09) [INFO]:    [Backend]:         Rosetta is available on this system.
+(14:57:09) [ERROR]:   [Gog]:             Error getting login information AxiosError: Request failed with status code 404
+    at settle (/Users/graysonmitchell/Projects/GameLib/node_modules/axios/dist/node/axios.cjs:2151:12)
+    at BrotliDecompress.handleStreamEnd (/Users/graysonmitchell/Projects/GameLib/node_modules/axios/dist/node/axios.cjs:3545:11)
+    at BrotliDecompress.emit (node:events:509:20)
+    at endReadableNT (node:internal/streams/readable:1744:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+    at Axios.request (/Users/graysonmitchell/Projects/GameLib/node_modules/axios/dist/node/axios.cjs:4796:41)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async GOGUser.getUserDetails (/Users/graysonmitchell/Projects/GameLib/build/main/sidecar.js:2336:26)
+(14:57:10) [INFO]:    [Gog]:             GOG presence set
+(14:57:11) [INFO]:    [Gog]:             Saved games data
+(14:57:11) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(14:57:11) [WARNING]: listUpdateableGames not implemented on Sideload Library Manager
+(14:57:12) [INFO]:    [Backend]:         Starting the Download Queue
+(14:57:13) [INFO]:    [Gog]:             Found 0 game(s) to update
+(14:57:52) [WARNING]: [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): keyring_get failed: keyring:timeout trigger=unspecified elapsed=45011ms
+(14:57:52) [WARNING]: [Steam]:           keyring failure memoized slot=humble-session class=timeout ms=120000 trigger=unspecified
+(14:57:52) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): memo hit, answering unreadable/timeout without a second keyring_get trigger=unspecified
+(15:02:08) [INFO]:    [Gog]:             GOG presence set
+(15:07:08) [INFO]:    [Gog]:             GOG presence set
+(15:12:08) [INFO]:    [Gog]:             GOG presence set
+(15:17:08) [INFO]:    [Gog]:             GOG presence set
+(15:22:08) [INFO]:    [Gog]:             GOG presence set
+(15:27:08) [INFO]:    [Gog]:             GOG presence set
+(15:32:08) [INFO]:    [Gog]:             GOG presence set
+(15:37:08) [INFO]:    [Gog]:             GOG presence set
+(15:42:08) [INFO]:    [Gog]:             GOG presence set
+(15:47:08) [INFO]:    [Gog]:             GOG presence set
+(15:52:08) [INFO]:    [Gog]:             GOG presence set
+(16:01:38) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(16:01:40) [INFO]:    [Gog]:             GOG presence set
+(16:06:39) [INFO]:    [Gog]:             GOG presence set
+(16:11:39) [INFO]:    [Gog]:             GOG presence set
+(16:16:39) [INFO]:    [Gog]:             GOG presence set
+(16:21:39) [INFO]:    [Gog]:             GOG presence set
+(16:26:39) [INFO]:    [Gog]:             GOG presence set
+(16:32:43) [INFO]:    [Gog]:             GOG presence set
+(16:33:58) [INFO]:    [Connection]:      Connectivity: offline
+(16:41:49) [INFO]:    [Connection]:      Pinging external endpoints
+(16:41:49) [INFO]:    [Connection]:      Connectivity: check-online
+(16:41:49) [INFO]:    [Connection]:      Connectivity: offline
+(16:41:49) [INFO]:    [Connection]:      AggregateError: All promises were rejected
+(16:41:49) [INFO]:    [Connection]:      All ping requests failed:
+(16:41:49) [INFO]:    [Connection]:      Connectivity: check-online
+(16:41:49) [INFO]:    [Connection]:      Pinging external endpoints
+(16:41:49) [INFO]:    [Connection]:      Connectivity: offline
+(16:41:49) [INFO]:    [Connection]:      Pinging external endpoints
+(16:41:49) [INFO]:    [Connection]:      All ping requests failed:
+(16:41:49) [INFO]:    [Connection]:      AggregateError: All promises were rejected
+(16:41:49) [INFO]:    [Connection]:      Connectivity: check-online
+(16:41:49) [INFO]:    [Connection]:      Connectivity: online
+(16:44:29) [INFO]:    [Gog]:             GOG presence set
+(16:49:29) [INFO]:    [Gog]:             GOG presence set
+(16:59:06) [INFO]:    [Gog]:             GOG presence set
+(17:04:06) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /Users/graysonmitchell/Projects/GameLib/public/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(17:04:07) [INFO]:    [Gog]:             GOG presence set
+(17:10:29) [INFO]:    [Gog]:             GOG presence set
+(17:15:29) [INFO]:    [Gog]:             GOG presence set
+(17:20:29) [INFO]:    [Gog]:             GOG presence set
+(17:25:42) [INFO]:    [Gog]:             GOG presence set
+(17:30:42) [INFO]:    [Gog]:             GOG presence set

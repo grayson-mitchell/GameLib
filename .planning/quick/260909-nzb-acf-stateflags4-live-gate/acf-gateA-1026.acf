@@ -1,0 +1,29 @@
+"AppState"
+{
+	"appid"		"112100"
+	"Universe"		"1"
+	"StateFlags"		"1026"
+	"installdir"		"Avadon The Black Fortress"
+	"name"		"Avadon: The Black Fortress"
+	"LastUpdated"		"1788933023"
+	"SizeOnDisk"		"115827304"
+	"buildid"		"0"
+	"LastOwner"		"76561197995867096"
+	"BytesToDownload"		"0"
+	"BytesDownloaded"		"0"
+	"AutoUpdateBehavior"		"0"
+	"InstalledDepots"
+	{
+		"112102"
+		{
+			"manifest"		"5064231271319177420"
+			"size"		"121853904"
+		}
+	}
+	"UserConfig"
+	{
+	}
+	"MountedDepots"
+	{
+	}
+}

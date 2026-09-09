@@ -3,7 +3,7 @@
 **Subject:** prove that GameLib's StateFlags=4 completeness gate fails CLOSED to
 `1026` on a damaged native install — both halves of it, separately.
 
-**Status:** SPECIFIED, NOT DRIVEN. §8's verdict table is empty by design.
+**Status:** DRIVEN 2026-09-09. All three gates PASS. See §8.
 
 **Why two gates and not one.** `clearStaleDirectoryAtFilePath` (`depot.ts:1074`)
 rethrows its ENOTEMPTY refusal into `failures[]`. `runLooksComplete`
@@ -254,9 +254,50 @@ Filled by the orchestrator from OBSERVED output only. Empty until driven.
 
 | Gate | Expected | Observed | Verdict | Evidence |
 | --- | --- | --- | --- | --- |
-| Gate A (ENOTEMPTY) | refusal naming `AvScenData.dat`; install fails; ACF `1026`; NO `post-download structural` line | _(not driven)_ | _(pending)_ | _(pending)_ |
-| Gate B (structural) | `post-download structural` naming `Contents/MacOS/Avadon`, `expected=4273440 found=0`; ACF `1026` | _(not driven)_ | _(pending)_ | _(pending)_ |
-| Negative control | ACF `StateFlags=4` | _(not driven)_ | _(pending)_ | _(pending)_ |
+| **Gate A** (ENOTEMPTY) | refusal naming `AvScenData.dat`; install fails; ACF `1026`; NO `post-download structural` | refusal fired naming `Avadon.app\Contents\Resources\AvScenData.dat` with `ENOTEMPTY: directory not empty`; `downloadSteamDepots ... download failed — 1 file failure(s)`; ACF `StateFlags "1026"` (od-verified); `post-download structural` **absent (0 hits)**; `removed a stale empty directory` absent (0) | **PASS** | `gamelib-gateA.log`, `acf-gateA-1026.acf` |
+| **Gate B** (structural) | `post-download structural` naming `Contents/MacOS/Avadon`, `expected=4273440 found=0`; ACF `1026` | `post-download structural re-verification found 1 of 1215 planned entries damaged or missing — failing closed to StateFlags=1026 instead of an unproven StateFlags=4: "Avadon.app\Contents\MacOS\Avadon" wrong-size (expected=4273440 found=0)`; ACF `StateFlags "1026"` (od-verified); `jobCount=1 reconciledSkipped=1214` so `failures.length===0` and `runLooksComplete` stayed true | **PASS** | `gamelib-gateB.log`, `acf-gateB-1026.acf`, watcher `FIRED 17:53:12 ... 4273440 -> 0` |
+| **Negative control** | ACF `StateFlags=4` | Ran **twice**, both `StateFlags=4`: (1) fresh install `jobCount=1215 reconciledSkipped=0` -> `Writing StateFlags=4 full-ownership manifest`; (2) resume `jobCount=0 reconciledSkipped=1215` -> `StateFlags=4` | **PASS** | `gamelib-control.log` |
+
+### Corroborating arithmetic (independent of the log)
+
+Each 1026 ACF's `SizeOnDisk` equals the pristine total minus exactly the damaged file, which
+independently confirms `measureInstalledBytes` is a real on-disk walk:
+
+- Gate A: 121,853,904 - 6,026,632 (`AvScenData.dat`) = **115,827,304** = observed.
+- Gate B: 121,853,904 - 4,273,440 (`Contents/MacOS/Avadon`) = **117,580,464** = observed.
+
+Both 1026 manifests also carry `buildid "0"` and `BytesDownloaded "0"` - the honest handoff shape,
+never a partial-looking 4.
+
+### Deviations from this contract, recorded
+
+1. **The negative control ran FIRST, not last (§6 ordering).** The first install attempt resolved
+   `installdir` to the fallback `app_112100` (see §11) and became a clean fresh-install control. A
+   second control then ran as a resume. Both passed, so Gates A and B are arbitrable; the ordering
+   change cost nothing, and running it twice is stronger than the single run §6 asked for.
+2. **Gate A's first arming targeted the wrong root** (`common/app_112100`) and measured nothing;
+   re-armed against `common/Avadon The Black Fortress` once the warm path was confirmed. The
+   wrong-root run is not counted as a gate result.
+3. **One BLOCKED attempt preceded all of this** - Keychain approval timed out
+   (`refresh token read failed (timeout)`), zero bytes transferred. Recorded as BLOCKED, not FAIL.
+
+## §11 UNPLANNED FINDING - `installdir` falls back to `app_<appid>` on a cold client
+
+Measured across the four runs. On the **first** install of a session the log shows:
+
+    SteamGame: PICS returned no usable installdir for appId 112100 (absent or blank), using fallback "app_112100"
+    SteamGame: appId 112100 installed to fallback directory "app_112100" (PICS installdir was absent/unresolved)
+
+`resolveSteamInstallTarget` completes in **1ms**, before `SteamUser.ensureConnected` has run its
+`cold-connect path took 1629ms`. So on a cold session there is no PICS appinfo to read an
+`installdir` from, and the install lands in a **duplicate directory** rather than the real one.
+Once the client is warm, the same title resolves correctly to `Avadon The Black Fortress` - proven
+by runs 3 and 4 in this very session.
+
+Consequence observed live: a 119 MB duplicate of Avadon now sits at
+`steamapps/common/app_112100`, orphaned, while the ACF points at `Avadon The Black Fortress`.
+This very likely also explains the pre-existing `app_257350`, `app_25900` and `app_402060`
+directories in that same folder. Filed as its own todo.
 
 ---
 

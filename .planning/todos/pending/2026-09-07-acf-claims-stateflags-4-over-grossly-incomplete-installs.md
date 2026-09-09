@@ -5,7 +5,7 @@ area: steam-depot
 status: OPEN
 severity: major
 platform: any
-ready: live-gate
+ready: human
 split_from: .planning/todos/completed/steam-depot-install-fails-with-unclassified-generic-error.md (RESOLVED 2026-09-08; this defect was NOT closed with it)
 debug_session: .planning/debug/steam-depot-unclassified-generic-error.md
 files:
@@ -346,3 +346,61 @@ Full contract, including the backup/restore ledger and the trap checklist:
 `.planning/quick/260909-nzb-acf-stateflags4-live-gate/260909-nzb-LIVE-GATE.md`
 
 **Not yet driven.** `ready:` stays `live-gate`.
+
+
+---
+
+# 2026-09-09 — LIVE GATE RESULT: all three gates PASS. The structural gate is now proven live.
+
+Driven on this Mac against live Steam, native path, appId **112100** (Avadon: The
+Black Fortress, depot 112102). Contract and full evidence:
+`.planning/quick/260909-nzb-acf-stateflags4-live-gate/260909-nzb-LIVE-GATE.md` §8.
+
+| Gate | Verdict | Observed |
+| --- | --- | --- |
+| **Gate A** — ENOTEMPTY / repair half | **PASS** | refusal fired naming `AvScenData.dat` with `ENOTEMPTY: directory not empty`; install FAILED (1 file failure); ACF `StateFlags "1026"`; `post-download structural` **absent** |
+| **Gate B** — structural half | **PASS** | `post-download structural re-verification found 1 of 1215 planned entries damaged or missing — failing closed to StateFlags=1026 instead of an unproven StateFlags=4: "Avadon.app\Contents\MacOS\Avadon" wrong-size (expected=4273440 found=0)`; ACF `StateFlags "1026"` |
+| **Negative control** | **PASS** (ran twice) | fresh install `jobCount=1215 reconciledSkipped=0` → `StateFlags=4`; resume `jobCount=0 reconciledSkipped=1215` → `StateFlags=4` |
+
+## What this discharges
+
+- **`verifyStructuralIntegrity` is no longer "unproven live".** Gate B forced it, live,
+  through the real orchestrator against real Steam: post-write damage to a
+  reconcile-SKIPPED file produced the structural warning and a `1026`, not an
+  unearned `4`. The title's claim on the structural half is **discharged**.
+- **Finding 3's mutual exclusion is confirmed live, not just by reading.** On Gate A
+  the `post-download structural` line did **not** appear, exactly as predicted:
+  `failures.length > 0` ⇒ `runLooksComplete === false` ⇒ the structural check is
+  skipped. One run genuinely cannot prove both halves.
+- **The 1026 fallback is honest.** Both damaged runs wrote `buildid "0"` and
+  `BytesDownloaded "0"`, never a partial-looking `4`.
+- **`measureInstalledBytes` re-confirmed as a real on-disk walk, arithmetically.**
+  Gate A's `SizeOnDisk` 115,827,304 = 121,853,904 − 6,026,632 and Gate B's
+  117,580,464 = 121,853,904 − 4,273,440 — each exactly the pristine total minus the
+  one file damaged in that run.
+- **The negative control matters:** the same title earned `StateFlags=4` twice in the
+  same session, so neither `1026` is a pre-existing condition and the gates are
+  **arbitrable**.
+
+## What this does NOT discharge
+
+Nothing here repairs or explains the two damaged installs. `StateFlags=4` over
+native **38410** and native **718850** was written by the **Steam client**
+(2026-09-08 correction), and this gate exercised **GameLib's** writer. A proven
+fail-closed GameLib gate says nothing about manifests GameLib did not author.
+
+## Unplanned finding, filed separately
+
+The first install of a session resolves `installdir` to a fallback `app_<appid>`
+because `resolveSteamInstallTarget` (1ms) runs before `SteamUser.ensureConnected`
+(1629ms cold-connect), so PICS has no appinfo yet. It created a 119 MB duplicate at
+`steamapps/common/app_112100`. Filed as
+`.planning/todos/pending/2026-09-09-cold-session-installdir-falls-back-to-app-appid.md`.
+
+## Frontmatter
+
+`ready:` moves `live-gate` → **`human`** (not `code`): every gate now has a
+non-BLOCKED verdict, so no live run remains, and no code work remains either — the
+only outstanding item is the **user's repair decision** on the two damaged installs,
+which is precisely what `human` denotes. `status: OPEN` and `severity: major` stay:
+both installs are still damaged and unrepaired.
