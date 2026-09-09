@@ -24,7 +24,16 @@ export const WAITING_STATES: Set<HumbleKeyState> = new Set([
 // an undated one; undated keys tiebreak alphabetically by title. Single flat
 // list — no groups (unlike groupKeys.ts's byExpiringSoonest, which sorts
 // within already-partitioned state groups).
-function compareWaiting(a: HumbleKey, b: HumbleKey): number {
+//
+// D-43-06: this is now also the unified Humble Keys list's default
+// "Expiring soonest" comparator. `groupKeys.ts`'s `byExpiringSoonest` is
+// DELETED in plan 43-08 rather than kept as a second implementation — the
+// two differ ONLY in the two-undated case (this function tiebreaks
+// alphabetically by title; `byExpiringSoonest` returns 0, leaving whatever
+// order the input happened to arrive in). That tiebreak is therefore
+// load-bearing, not incidental: it is the one behaviour a caller of the
+// deleted comparator would silently lose.
+export function compareWaiting(a: HumbleKey, b: HumbleKey): number {
   if (a.expiration !== null && b.expiration !== null) {
     return new Date(a.expiration).getTime() - new Date(b.expiration).getTime()
   }
@@ -74,6 +83,34 @@ export function selectKeysWaiting(keys: HumbleKey[]): HumbleKey[] {
  */
 export function selectGiftableSpares(keys: HumbleKey[]): HumbleKey[] {
   return keys.filter((k) => k.ownedElsewhere && k.state === 'UNREVEALED')
+}
+
+/**
+ * D-43-10: case-insensitive substring match against `key.title` ONLY — no
+ * other field is searched. An empty or whitespace-only query matches every
+ * key. `origin` is deliberately excluded: 20 of 33 live Humble keys carry
+ * the junk gift string "A very special gift just for you" in that field,
+ * which names no game, so matching it would surface hits a user could not
+ * explain. Compares copies rather than mutating `key.title`.
+ */
+export function matchesKeySearch(key: HumbleKey, query: string): boolean {
+  const trimmedQuery = query.trim()
+  if (trimmedQuery === '') {
+    return true
+  }
+  return key.title.toLowerCase().includes(trimmedQuery.toLowerCase())
+}
+
+/**
+ * D-54/D-55, per-row form: true for a key already owned elsewhere AND still
+ * UNREVEALED — the trigger for scenario 3's "you already own this, want to
+ * gift the spare?" affordance. Owned + REVEALED keys are deliberately
+ * excluded — reveal forfeits the gift link (spec §2.1). Supersedes the
+ * array-returning `selectGiftableSpares` above, which plan 43-08 deletes
+ * once its last caller is gone.
+ */
+export function isGiftableSpare(key: HumbleKey): boolean {
+  return key.ownedElsewhere && key.state === 'UNREVEALED'
 }
 
 /**
