@@ -140,6 +140,8 @@ that must match `en/`. **Zero user-visible stale product references remain in an
 The prune list is explicit and suite-pinned rather than derived, because the general
 "absent from en/" rule matches 171 keys and would have deleted 159 unrelated ones.
 
-**Caveat on the prune:** it is not gated and cannot be, since these keys still exist upstream.
-A wholesale catalog refresh will reintroduce them — re-run `pnpm rebrand-catalogs --prune-dead`
-afterwards. The rebrand itself is gated; only the deletion is manual.
+**Caveat on the prune, corrected:** all 214 (locale, key) pairs exist in `upstream/main`, and
+the refresh copies non-English catalogs verbatim, so a wholesale refresh restores every one.
+This IS gated, contrary to an earlier note here — the suite's `is gone from every translated
+catalog` assertion goes red after a refresh, telling you to re-run
+`pnpm rebrand-catalogs --prune-dead`.

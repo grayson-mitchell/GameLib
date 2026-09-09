@@ -95,9 +95,19 @@ stale product references remain in any language.**
 - **214 > the 202 pairs containing "Heroic"** because these keys also exist in a few locales
   whose translation never named the product. Dead by the same test, so they went too.
 
-**This prune is NOT gated, and cannot be.** The keys still exist upstream, so a wholesale
-catalog refresh reintroduces them. Re-run `pnpm rebrand-catalogs --prune-dead` after the next
-refresh. The rebrand itself IS gated; only the deletion is manual.
+**CORRECTION (2026-09-09, after the commit).** An earlier version of this summary and of
+commit `a9436fa9d`'s message said the prune "is NOT gated, and cannot be". **Both halves are
+wrong.** The suite's `is gone from every translated catalog` assertion already gates it, and
+there was never a reason it couldn't be.
+
+What IS true, and now measured rather than asserted: **all 214 (locale, key) pairs exist in
+`upstream/main`** (checked per key against the exact locales that carried it — 42/46/21/21/21/
+21/17/12/4/4/4/1). The refresh copies non-English catalogs verbatim, so a wholesale refresh
+restores **every one**. The difference is that this is now a red test telling you to re-run
+`pnpm rebrand-catalogs --prune-dead`, not a silent regression.
+
+Worth noting these keys are stale **upstream too**: upstream's own `en/` lacks 8 of the 12, so
+they are Weblate translations for English keys upstream itself has removed.
 
 ## Not done
 

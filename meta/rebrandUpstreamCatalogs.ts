@@ -256,8 +256,11 @@ export function applyRebrand(localesDir: string): number {
  * Delete every key in `DEAD_HEROIC_KEYS` from the non-English catalogs, pruning
  * any parent object left empty. Returns the number of keys removed.
  *
- * NOTE: this is not gated, and it cannot be. These keys still exist upstream, so
- * a future wholesale catalog refresh will reintroduce them; re-run this then.
+ * These keys all still exist in `upstream/main`, and the catalog refresh copies
+ * non-English files verbatim (`git show <upstream>:<path> > <path>`), so a
+ * wholesale refresh restores all 214 (locale, key) pairs. That reappearance IS
+ * caught: the suite's "is gone from every translated catalog" assertion goes red
+ * after a refresh. Re-run this command to clear it.
  */
 export function pruneDeadKeys(localesDir: string): number {
   let removed = 0
