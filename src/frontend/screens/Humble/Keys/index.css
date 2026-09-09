@@ -12,11 +12,17 @@
   margin-bottom: var(--space-md);
 }
 
+/* 43-UI-SPEC "Screen Layout Contract" item 1: the search box plan 43-07
+   inserts between the title and the refresh button needs a --space-sm
+   (12px) gap to the refresh button specifically. Rather than a
+   sibling-scoped override that only half the pairs would honour, the
+   whole row's gap is set to that value -- nothing in the spec pins the
+   title-to-search-box gap to a different number. */
 .humbleKeysHeaderTop {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 .humbleKeysTitle {
@@ -184,12 +190,37 @@
    sit as close to the font's UA `normal` as a declared number can, so the
    title's own rendering does not visibly shift while its box becomes
    expressible. */
+
+/* 43-UI-SPEC "Column Geometry Contract": ONE combined selector governs
+   both the column-header row (`.humbleKeysColumnHeader`, rendered by plan
+   43-07) and every data row (`.humbleKeyRow`), so the header's column
+   boundaries and the rows' column boundaries are the same numbers by
+   construction, never two independently eyeballed declarations that can
+   drift apart. There must be exactly one column-template declaration
+   in this file for that reason -- a future edit that splits
+   this back into two selectors (one per row type) is the exact regression
+   this combined form exists to prevent. */
+.humbleKeysColumnHeader,
+.humbleKeyRow {
+  grid-template-columns: 6.5rem minmax(0, 1fr) 20rem;
+  display: grid;
+  column-gap: var(--space-md);
+  align-items: start;
+}
+
 .humbleKeyRow {
   --humble-key-row-title-line-height: 1.2;
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
   padding: var(--space-md) 0;
+  /* Known GameLib trap: a 1px border painted on a fractional (`1fr`) grid
+     TRACK vanishes in WKWebView. This border stays on the row CONTAINER
+     (the grid itself), never on one of its three grid-item children --
+     the container spans the full row width regardless of how the three
+     tracks divide it, so it never touches the vanishing condition. Do
+     not move this onto .humbleKeyGameCell specifically (43-UI-SPEC "The
+     row-separator landmine"). Re-verify live per D-43-21: this phase
+     changes the layout mechanism (flex -> grid) around this exact
+     declaration, so the prior "it renders as a hairline" assumption does
+     not automatically carry over. */
   border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
 }
 
@@ -197,37 +228,84 @@
   border-bottom: none;
 }
 
-/* 260823-op3: the row's two leading action columns (Activate, then Gift on
-   Humble). A FIXED basis, not `auto` — each <li> is its own flex container,
-   so content-sized action cells would leave every row a slightly different
-   width and the "columns" would visibly stagger down the list. Within a tab
-   the action props are uniform, so one fixed basis aligns them all. Sized to
-   hold the widest content the cell carries: "Opened Humble gift page
-   8/23/2026" wraps to two caption lines rather than widening the column. */
-.humbleKeyRowAction {
-  flex: 0 0 9.5rem;
+/* Column 1 (TYPE), 43-UI-SPEC Column Geometry Contract: fixed 6.5rem
+   track. Holds the store-logo box or a text-only label for no-logo
+   platforms, left-aligned, wrapping onto up to two lines rather than
+   widening the column. Renders empty (no logo, no text) for UNPICKED
+   rows (D-43-02's `!isUnpicked` gate, unchanged) but the cell itself is
+   always present, so the GAME column's left edge never shifts row to
+   row. */
+.humbleKeyTypeCell {
   display: flex;
-  align-items: center;
-  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-/* Buttons stretch to the cell so the two columns read as aligned edges
-   rather than ragged content. */
-.humbleKeyRowAction > .humbleKeyGiftButton,
-.humbleKeyRowAction > .humbleKeyClaimGroup {
-  width: 100%;
-}
-
-.humbleKeyRowAction .humbleKeyGiftButton {
-  justify-content: center;
-}
-
-.humbleKeyRowInfo {
+/* Column 2 (GAME), 43-UI-SPEC Column Geometry Contract: the row's primary
+   visual anchor -- the only element on the row a scanning eye should
+   land on first. `min-width: 0` is required on this flexible
+   (`minmax(0, 1fr)`) track: a flexible grid child without it can
+   overflow its column instead of wrapping, the same trap the
+   library-filtering sketch's `min-width: 0` note names for its grid
+   container. */
+.humbleKeyGameCell {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  flex-grow: 1;
   min-width: 0;
+}
+
+/* Column 3 (KEY), 43-UI-SPEC "KEY column internal layout": fixed 20rem
+   track. Renders a full-width single button, a side-by-side button pair
+   (`.humbleKeyActionRow`), or bare multi-line text, without the column
+   box itself ever resizing to fit content. */
+.humbleKeyColumnCell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2xs);
+  width: 100%;
+}
+
+/* D-43-15: the state badge and (when present) the expiration caption
+   render together as the FIRST line of `.humbleKeyColumnCell`, above
+   whichever action content follows -- this rhythm (status line, then
+   action) stays uniform across all five KEY-column scenarios; only the
+   second line's content varies. */
+.humbleKeyStatusLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+}
+
+/* 43-UI-SPEC "KEY column internal layout": the side-by-side button pair
+   shape. A pair wraps to two lines inside the SAME 20rem column width,
+   never widens it. */
+.humbleKeyColumnCell .humbleKeyActionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs);
+  width: 100%;
+}
+
+.humbleKeyColumnCell .humbleKeyActionRow > button {
+  flex: 1 1 8.5rem;
+  min-width: 0;
+}
+
+/* Rescoped from the deleted `.humbleKeyRowAction` fixed-basis cell (see
+   the 260823-op3 comment this replaces, in history): a full-width single
+   button or claim group fills the whole KEY column instead of a
+   dedicated fixed-basis flex child, since the grid template now fixes
+   the column's width for every row uniformly. */
+.humbleKeyColumnCell .humbleKeyActionRow > .humbleKeyGiftButton,
+.humbleKeyColumnCell .humbleKeyActionRow > .humbleKeyClaimGroup {
+  width: 100%;
+}
+
+.humbleKeyColumnCell .humbleKeyActionRow .humbleKeyGiftButton {
+  justify-content: center;
 }
 
 .humbleKeyRowTitle {
@@ -246,38 +324,38 @@
   color: var(--text-secondary);
 }
 
-/* 260908-vo4: the store logo, hoisted to be the row's first flex child
-   (D-42-03 column 0, index.tsx), when the platform has one. Rows without a
-   logo (origin/uplay/battlenet/nintendo_direct/generic) simply omit this
-   element and keep their text label in .humbleKeyRowCaption instead — that
-   label stays BELOW the title, not moved to this slot, so a no-logo row's
-   left column stays content-sized instead of staggering every row (see
-   the .humbleKeyRowAction comment above for the identical fixed-basis
-   argument).
+/* 260908-vo4, updated 43-05: the store logo, first child of
+   `.humbleKeyTypeCell` (D-42-03 column 0, index.tsx), when the platform
+   has one. Rows without a logo (origin/uplay/battlenet/nintendo_direct/
+   generic) simply omit this element and keep their text label in
+   .humbleKeyRowCaption instead, in the same TYPE cell -- a no-logo row's
+   TYPE column stays the same fixed 6.5rem width regardless (43-UI-SPEC
+   Column Geometry Contract), so nothing staggers row to row.
 
    Sized from the TITLE's line box, not the caption's: this element is no
    longer a .humbleKeyRowCaption descendant (that derivation, which used
    `1em` against the caption's var(--text-xs), is now wrong on both counts
-   — `em` would resolve against .humbleKeyRow's own font-size, and the
-   target is the title's box). `--humble-key-row-title-line-height` is
-   declared once on .humbleKeyRow, above.
+   — `em` would resolve against .humbleKeyTypeCell's own font-size, and the
+   target is the title's box, in the sibling GAME cell).
+   `--humble-key-row-title-line-height` is declared once on .humbleKeyRow,
+   above.
 
    `color: var(--text-secondary)` is REQUIRED and easy to miss: `fill:
    currentColor` (kept below — none of the three source SVGs declare their
    own `fill`, so without it they'd paint the SVG UA default of solid
    black) previously resolved through .humbleKeyRowCaption's inherited
-   `--text-secondary`. As a direct child of .humbleKeyRow it would
-   otherwise inherit the row's default text colour instead, silently
-   changing the icon's colour — so it is set explicitly here rather than
-   relied on to inherit.
+   `--text-secondary`. As a child of .humbleKeyTypeCell it would otherwise
+   inherit the row's default text colour instead, silently changing the
+   icon's colour — so it is set explicitly here rather than relied on to
+   inherit.
 
-   `align-self: flex-start`: .humbleKeyRow is `align-items: center`, which
-   on a two-line row (e.g. an `ownedElsewhere` badge under the title) would
-   float the icon between the two lines. `flex-start` anchors it to the
-   row's content-box top, aligning with .humbleKeyRowInfo's first line box
-   — title-line-box height was chosen over full-row height specifically so
-   a two-line row does not dwarf the icon, and this is the alignment that
-   honours that choice.
+   `align-self: flex-start`: 43-05 converted `.humbleKeyRow` from
+   `align-items: center` to CSS Grid's `align-items: start`, so this
+   declaration is no longer load-bearing against the row itself, but it
+   remains correct and is kept: `.humbleKeyTypeCell` is itself
+   `flex-direction: column`, and `flex-start` anchors the icon to that
+   column's own top rather than letting it center against a taller
+   no-logo sibling in a future layout.
 
    NOT verified against a live render in this repo — the Frontend jest
    project has no jsdom/browser automation (see jest.config.js's
@@ -456,9 +534,10 @@
   font-size: var(--text-xs);
   font-weight: var(--regular);
   color: var(--text-secondary);
-  /* 260823-op3: wraps rather than nowrap — inside the fixed-width
-     .humbleKeyRowAction column, "Opened Humble gift page 8/23/2026" on one
-     line would overflow the cell it is meant to fit. */
+  /* 260823-op3, updated 43-05: wraps rather than nowrap — inside the
+     fixed-width (20rem) .humbleKeyColumnCell/.humbleKeyActionRow column,
+     "Opened Humble gift page 8/23/2026" on one line would overflow the
+     cell it is meant to fit. */
   white-space: normal;
 }
 
@@ -466,10 +545,10 @@
    rendered on Keys-waiting rows via the `claimAction` prop. Groups the
    caption with its adjoining Finish-activation/Undo button.
 
-   260823-op3: stacks vertically now that it lives inside the fixed-width
-   .humbleKeyRowAction column — side-by-side, "Redeemed 8/23/2026" plus its
-   Undo link cannot fit the column and would blow the alignment it exists to
-   provide. */
+   260823-op3, updated 43-05: stacks vertically now that it lives inside
+   the fixed-width (20rem) .humbleKeyColumnCell/.humbleKeyActionRow column
+   — side-by-side, "Redeemed 8/23/2026" plus its Undo link cannot fit the
+   column and would blow the alignment it exists to provide. */
 .humbleKeyClaimGroup {
   display: flex;
   flex-direction: column;
@@ -515,4 +594,87 @@
   color: var(--text-secondary);
   font-style: italic;
   white-space: nowrap;
+}
+
+/* 43-UI-SPEC "Screen Layout Contract" item 3: the column-header row,
+   rendered by plan 43-07. Its column boundaries come from the combined
+   `.humbleKeysColumnHeader, .humbleKeyRow` grid declaration above — this
+   block adds only its own typography, not layout. */
+.humbleKeysColumnHeader {
+  padding-bottom: var(--space-xs);
+  font-size: var(--text-xs);
+  font-weight: var(--semibold);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
+}
+
+/* 43-UI-SPEC "Screen Layout Contract" item 2: sort picker + redeemable-only
+   checkbox, left-aligned, sitting below the title row at --space-lg (24px)
+   vertical gap. No result count anywhere in this row (D-43-04). */
+.humbleKeysControlsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+/* 43-UI-SPEC "Sort Picker Contract": GameLib's MUI theme is light and
+   carries no `palette`, so MUI's `Select` renders wrong (dark-on-dark or
+   invisible outline) against the app's dark themes unless explicitly
+   overridden. `SelectField` (components/UI/SelectField/index.tsx) accepts
+   no `sx` prop -- its `sx` block is hard-coded internally -- so the
+   override the UI-SPEC calls for is shipped here instead, scoped by the
+   `extraClass="humbleKeysSortPicker"` `SelectField` call site passes. */
+.humbleKeysSortPicker .MuiSelect-select,
+.humbleKeysSortPicker .MuiInputBase-input {
+  color: var(--text-default);
+}
+
+.humbleKeysSortPicker .MuiOutlinedInput-notchedOutline {
+  border-color: var(--divider, rgba(255, 255, 255, 0.08));
+}
+
+/* 43-UI-SPEC "Empty States": filtered-to-zero state (search text and/or
+   the redeemable-only checkbox match nothing, while `humble.keys` itself
+   is non-empty). Reuses .humbleKeysEmptyState's own heading/body scale --
+   no new empty-state visual language -- plus room for one inline recovery
+   button (D-43-09's checked-by-default checkbox means this state is
+   reachable on a user's very first visit, so it needs its own escape
+   hatch rather than relying on the always-visible refresh button). */
+.humbleKeysFilteredEmptyState {
+  padding: var(--space-xl) 0;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.humbleKeysFilteredEmptyState h5 {
+  font-size: var(--text-lg);
+  font-weight: var(--semibold);
+  margin: 0 0 var(--space-xs);
+}
+
+.humbleKeysFilteredEmptyState p {
+  font-size: var(--text-sm);
+  font-weight: var(--regular);
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-sm);
+}
+
+.humbleKeysFilteredEmptyState button {
+  background: transparent;
+  border: 1px solid var(--text-secondary);
+  border-radius: var(--space-3xs);
+  padding: var(--space-3xs) var(--space-sm);
+  font-size: var(--text-sm);
+  font-weight: var(--regular);
+  color: var(--text-default);
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+}
+
+.humbleKeysFilteredEmptyState button:hover {
+  color: var(--accent);
+  border-color: var(--accent);
 }
