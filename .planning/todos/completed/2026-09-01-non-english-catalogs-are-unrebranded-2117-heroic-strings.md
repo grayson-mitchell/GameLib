@@ -2,7 +2,7 @@
 created: 2026-09-01T00:00:00.000Z
 title: "Every non-English catalog is unrebranded — 2274 \"Heroic\" strings across 89 files, zero \"GameLib\""
 area: i18n
-status: pending
+status: "RESOLVED 2026-09-09 by quick 260909-rvx. 1677 strings / 1817 occurrences rebranded across 87 catalog files, plus a re-runnable meta/ script and a mutation-proven CI gate so the next upstream refresh cannot silently undo it."
 severity: medium
 platform: any
 ready: human
@@ -89,3 +89,50 @@ record it, because the next refresh will then need a real merge instead of a cop
 - [[2026-09-02-46-locales-have-zero-gamelib-json-fork-string-coverage]] — a different
   defect: FORK strings absent entirely from `gamelib.json`, not upstream strings carrying
   the wrong product name.
+
+## RESOLVED 2026-09-09 (quick `260909-rvx`)
+
+**1677 strings / 1817 occurrences across 87 catalog files**, 46 non-English locales, all three
+upstream namespaces. Shipped with the two things this todo asked for beyond the edit itself:
+`meta/rebrandUpstreamCatalogs.ts` (`pnpm rebrand-catalogs [--apply]`) and a live-tree gate in
+`meta/__tests__/rebrandUpstreamCatalogs.test.ts`.
+
+### Two of this todo's own premises were wrong — corrected here
+
+1. **"A plain sweep is wrong because some occurrences genuinely refer to upstream Heroic."**
+   Measured at HEAD: **zero** keys have an English value containing "Heroic". The two hits in
+   `en/translation.json` this todo flagged are **KEY NAMES** (`resetHeroic`) whose value
+   already reads "Reset GameLib". The feared class of false claims does not exist.
+2. **The proposed rule ("a key that reads GameLib in English is a self-reference") has a
+   blind spot** — 17 keys where English names no product at all but translators injected
+   one. `tray.about` is "About" in English and "Über Heroic" in German. The rule shipped is
+   strictly wider and simpler: **renameable iff the key exists in `en/` and its English value
+   contains no "Heroic"**.
+
+Headline counts here (2117 / 2274) were already stale; do not quote them.
+
+### Every remaining occurrence is reconciled
+
+Non-English "Heroic": **2061 -> 336**, all accounted for:
+- **244** — values of 12 keys absent from `en/` with no `src` reference; they never render.
+- **92** — KEY NAMES that must match `en/` or the key contract with source breaks.
+
+### The grammatical caveat this todo raised, answered
+
+Five locales needed inflection overrides (`ca`/`fr` article elision, `et` oblique stem,
+`hu` vowel harmony, `sv` compounds). Six that look risky (`fi`, `cs`, `hr`, `bs`, `da`,
+`nb_NO`) are correct under a plain swap; the suite pins their *absence* of a rule.
+
+**Unverified by a native speaker:** the Hungarian back->front harmony flip (15 occurrences)
+rests on linguistic reasoning, not a speaker's judgement. Recorded in the task SUMMARY as the
+weakest link. No live locale read was done for this batch.
+
+### The namespace-split cost, decided
+
+Accepted deliberately: these upstream-owned catalogs are no longer byte-identical to
+upstream, so the next refresh needs a real merge rather than a wholesale copy. The gate makes
+that survivable — it fails loudly if a refresh reintroduces upstream branding, which is
+exactly the reappearance this todo predicted.
+
+**Residual (optional):** the 12 dead keys are still present. Deleting them is inert cleanup,
+deliberately left rather than widening scope.
