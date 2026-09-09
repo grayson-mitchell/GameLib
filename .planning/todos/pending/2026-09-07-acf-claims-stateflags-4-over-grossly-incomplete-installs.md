@@ -133,6 +133,11 @@ themselves are not disputed; only their attributed authorship is.
   entering the `selectAllDepots` base+DLC union, which would make its `SizeOnDisk`
   overstatement a plan-accounting bug rather than a download failure.
 
+  **Corrected 2026-09-09: the "Not established" clause above is now settled, and
+  it is FALSE.** The DLC-union explanation is refuted by arithmetic — see item 3
+  of "What to do" below. DLC depots total 561,517,956 B against a 13.59 GB
+  shortfall; the base depots alone overshoot what is on disk by 13.03 GB.
+
 ## Suspected mechanism (NOT established)
 
 `SizeOnDisk` for 38410 is byte-exactly `InstalledDepots` 38414 (88,913,882) +
@@ -158,6 +163,25 @@ gate is an accessory rather than the cause.
 `InstalledDepots`/byte-exactness observation, which is still true, but is no
 longer evidence about GameLib's `canWriteFullOwnership` path.
 
+**RETIRED 2026-09-09: the byte-exactness observation carries NO SIGNAL, so this
+section's central inference is dead.** Swept all 23 manifests in
+`~/Library/Application Support/Steam/steamapps` and compared `SizeOnDisk` against
+`sum(InstalledDepots[].size)`: they are byte-exactly equal in **18 of 23** —
+spanning healthy AND damaged installs, Steam-written AND GameLib-written ones
+alike. Byte-exactness is the **ordinary case**, not a symptom, so "`SizeOnDisk`
+is byte-exactly the `InstalledDepots` sum" discriminates nothing and was never
+evidence of a manifest-derived sum. The 5 that differ are 291650, 57300 (+1657),
+8930 (−1396), 91310, and 402060 (which carries no `InstalledDepots` block at
+all).
+
+That the differing rows include **GameLib-written** manifests with small non-zero
+deltas independently corroborates the 2026-09-08 correction above: a real
+recursive `measureInstalledBytes` walk is exactly what produces a total that
+lands *near but not on* the manifest sum. A manifest-derived sum could not.
+
+This section is retained as a historical record of a hypothesis that was tested
+and did not survive. Do not cite it as evidence.
+
 ## What to do
 
 1. ~~Determine whether `SizeOnDisk` is written from a real on-disk measurement or a
@@ -168,8 +192,24 @@ longer evidence about GameLib's `canWriteFullOwnership` path.
    bytes against the manifest total before granting StateFlags=4~~ ANSWERED,
    REJECTED AS SPECIFIED 2026-09-08: the 236 MB figure is a multi-depot summation
    artifact, not a per-entry threshold — see correction section above.
-3. Establish 718850's shape before assuming it shares 38410's cause. **Still
-   open.**
+3. ~~Establish 718850's shape before assuming it shares 38410's cause.~~
+   **ANSWERED 2026-09-09 — the DLC-union hypothesis is REFUTED by arithmetic.**
+   `appmanifest_718850.acf`'s `InstalledDepots` holds **9 depots totalling
+   17,151,298,416 B**. The depots carrying a `dlcappid` sub-key total only
+   **561,517,956 B**. The base depots alone — 718851 (16,328,140,703) + 718853
+   (261,639,757) = **16,589,780,460 B** — already exceed the **3,560,381,799 B**
+   actually on disk. So excluding **every** DLC depot still leaves a **13.03 GB**
+   shortfall, against a total shortfall of **13.59 GB**: DLC can account for at
+   most **4.1%** of it. The `selectAllDepots` base+DLC union is therefore NOT the
+   explanation. This is a broad genuine content shortfall in **base depot
+   718851**, not a plan-accounting artifact.
+
+   On-disk shape, measured the same day: 1315 files, 305 directories of which 24
+   are empty, the empties spread across `Content/DLC00`–`DLC05` pack/library dirs
+   and `Language/*/Text`; largest file actually present is 654 MB
+   (`Content/Title/Libraries/PFX/Particles.clb`). The spread — content present
+   throughout the tree with much absent alongside it — is the shape of an
+   incomplete transfer, not of a wholly-omitted depot.
 
 ## Live damage, not yet repaired
 
@@ -202,6 +242,12 @@ establish which root a run targets before treating its ACF as a data point.
 
 ## The discriminating run, still NOT taken
 
+> **Superseded in DESIGN 2026-09-09** — not in motivation. The run below is still
+> owed, but as specified it proves only the ENOTEMPTY *repair* half; it cannot
+> reach `verifyStructuralIntegrity` at all. See the 2026-09-09 section at the end
+> of this file for why, and for the corrected two-run design.
+
+
 Plant a **non-empty** directory at `master.dat` in the target install root, install,
 and observe three things:
 
@@ -226,3 +272,77 @@ still the only way to confirm that live, and has still not been taken.
 The damaged installs are untouched by any code fix and still need Steam's "verify
 integrity": native 38410 (`master.dat` is still an empty directory,
 258,221,501 B under a `StateFlags=4` manifest) and native 718850.
+
+
+---
+
+# 2026-09-09 — the prescribed discriminating run CANNOT prove the structural gate
+
+The "discriminating run, still NOT taken" section above prescribes **one** run and
+claims it catches this defect "live and in the act". It cannot. The run it
+describes proves the **repair** half only, and is structurally incapable of
+reaching the structural half — the very thing this todo's title calls "unproven
+live".
+
+## The mechanism, at file:line
+
+- `clearStaleDirectoryAtFilePath` (`src/backend/storeManagers/steam/depot.ts:1074`)
+  does not swallow the refusal — it **rethrows** it, wrapped, so it lands in
+  `downloadDepotFiles`' `failures[]`.
+- `runLooksComplete` (`depot.ts:2700`) is
+  `allJobsAttempted && failures.length === 0 && !opts.signal?.aborted`.
+- `verifyStructuralIntegrity` is called **only** inside `if (runLooksComplete)`
+  (`depot.ts:2703`).
+
+So an ENOTEMPTY run has `failures.length > 0` ⇒ `runLooksComplete === false` ⇒
+**the structural check is skipped entirely.** The two halves are mutually
+exclusive by construction. They need **TWO different runs**.
+
+## Why post-write damage is the ONLY shape that reaches the structural gate
+
+`verifyStructuralIntegrity` (`depot/reconcile.ts:262`) and the reconciler's
+`regularFileVerified` both call the **same** `regularFileShape` predicate
+(`reconcile.ts:112`) — present, regular file, exact expected size. The structural
+check is that predicate **without** the sha1; the reconciler is that predicate
+**plus** a sha1.
+
+The structural check is therefore strictly **weaker** than the reconciler. Any
+damage present *before* reconciliation is caught by the reconciler, scheduled as a
+download job, and repaired — so it never reaches the structural check. The two
+differ only in **when** they run. That leaves exactly one window in which the
+structural gate is the sole catcher: damage applied **after** its file was
+reconciled or written, and **before** the post-download check. Gate B below has to
+be driven by mid-run fault injection; there is no way to arrange it by planting
+damage up front.
+
+## The corrected design: two runs plus a control
+
+- **Gate A — ENOTEMPTY / repair half.** Plant a NON-EMPTY directory at a planned
+  file path. Expect the refusal naming the file, the install to FAIL, and the ACF
+  to read `1026`. The `post-download structural` line must be **ABSENT** — its
+  absence is a PASS condition here, and is itself the direct live confirmation of
+  the mutual exclusion above.
+- **Gate B — structural half.** A run that otherwise looks complete
+  (`failures.length === 0`) while carrying post-write damage, so `runLooksComplete`
+  stays true and the structural check is actually reached. Expect the
+  `post-download structural` warning and `1026`. If the injection window is missed
+  the run is **BLOCKED — window missed**: retryable, and neither a pass nor a fail.
+- **MANDATORY negative control.** An undamaged run of the same title must still
+  earn `StateFlags=4`. Without it a `1026` proves nothing — the live null
+  hypothesis is that the chosen title never earns a `4` at all, in which case both
+  gates merely measured a pre-existing condition and are **UNARBITRABLE**.
+
+## Target correction: NOT 38410
+
+38410 is a **Windows** title, and `routeThroughBottle = forceWindowsViaBottle ||
+this.isBottleEligible()` (`games.ts:1077`) now routes it to `installBottleNative`.
+That — not chance — is why the 2026-09-08 re-drive landed in the CrossOver bottle
+instead of the native tree, and why it learned nothing about this defect. The gate
+uses a small **mac-native** title already fully on disk (appId **112100**, Avadon:
+The Black Fortress, depot 112102, 121,853,904 B), so it runs as a cheap
+resume-over-existing-content pass rather than a real download.
+
+Full contract, including the backup/restore ledger and the trap checklist:
+`.planning/quick/260909-nzb-acf-stateflags4-live-gate/260909-nzb-LIVE-GATE.md`
+
+**Not yet driven.** `ready:` stays `live-gate`.
