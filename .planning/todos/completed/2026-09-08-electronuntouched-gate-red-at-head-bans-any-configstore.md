@@ -8,7 +8,9 @@ ready: code
 files:
   - src/backend/sidecar/__tests__/electronUntouched.test.ts (the gate, ~:298-307)
   - src/backend/sidecar/bootstrap.ts (:91 the import, :390 the only use)
-status: pending
+status: "RESOLVED 2026-09-09 by quick-260909-iz2. Reading 1 taken (the gate is over-broad); reading 2 refuted -- both gated files already legitimately import from the Steam token surface (keyringTokenStore.ts:6 binds the TokenStore type, bootstrap.ts:73 binds setTokenStore, D-04's own seam), so a specifier-level ban would have been red on arrival. Shipped: the bare `configStore` substring ban became a binding-level check (`findSteamTokenSurfaceViolations`, matched on the imported name so aliasing cannot evade); `TOKEN_STORE_KEY`/`TOKEN_PREFIX` stayed bare-banned anywhere in source. Guard tests (`steam token surface binding gate helper`) pin that a real Steam-surface `configStore` import -- direct, aliased, via require(), via dynamic import() -- still trips, and that bootstrap.ts's real Epic/GOG import, the real D-04 seam import, a real type-only import, a real GOG electronStores import and a trailing-comment-only mention do not. Measured Backend result: before 1 failed / 4744 passed / 2 skipped / 211 suites (the single failure was this gate); after 0 failed / 4755 passed / 2 skipped / 211 suites."
+resolved_by: quick-260909-iz2
+resolves_phase: null
 ---
 
 # The Backend suite is red at HEAD on a gate that outlaws more than its decision
