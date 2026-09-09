@@ -19,7 +19,12 @@ import type { InstallArgs } from 'common/types'
 import { getSteamLibraries } from 'backend/utils'
 import { logInfo, logWarning, LogPrefix } from 'backend/logger'
 import { SteamUser } from './user'
-import { withTimeout, STEAM_PICS_TIMEOUT_MS } from './withTimeout'
+import {
+  withTimeout,
+  STEAM_PICS_TIMEOUT_MS,
+  STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS
+} from './withTimeout'
+import { readAcfInstalldir } from './acfInstalldir'
 
 /** Numeric-only guard for appId before any PICS lookup (T-21-05 — reused from
  *  games.ts's buildSteamProtocolUrl / bottle.ts's dispatchToBottledSteam). */
@@ -227,17 +232,43 @@ async function fetchInstalldir(appId: string): Promise<string | undefined> {
     return undefined
   }
 
-  const client = SteamUser.getClient()
+  let client = SteamUser.getClient()
   if (!client) {
-    // [Timing] debug/steam-install-slow-start: no client yet — this call is a
-    // no-op (0ms), so on a cold session this PICS round-trip is NOT paid here.
-    return undefined
+    // quick-260909-pym (root cause confirmed): a null client here used to
+    // return undefined immediately, moving the installdir decision to
+    // BEFORE the data needed to name it existed — buildDepotPlan.fetchAppInfo
+    // pays this exact PICS round-trip 232ms later regardless, and
+    // ensureConnected pays its own cold-connect cost regardless, so the old
+    // early-return saved nothing while guaranteeing the app_<appid> fallback
+    // on every session's first install. Await the SAME connection
+    // buildDepotPlan would pay anyway, bounded well under the outer WR-01
+    // deadline (see STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS's docstring), then
+    // retry getClient(). A connect failure, rejection, or timeout all fall
+    // through to the existing `return undefined` below (hard constraint 2 —
+    // never hard-fail the install over a cosmetic directory name).
+    try {
+      await withTimeout(
+        SteamUser.ensureConnected(),
+        STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS,
+        'fetchInstalldir ensureConnected'
+      )
+    } catch (err) {
+      logWarning(
+        `SteamGame: ensureConnected timed out/failed while resolving installdir for appId ${appId}: ${String(err)}`,
+        LogPrefix.Steam
+      )
+    }
+    client = SteamUser.getClient()
+    if (!client) {
+      return undefined
+    }
   }
 
   // [Timing] debug/steam-install-slow-start: this getProductInfo call is a
   // network round-trip for the SAME appId buildDepotPlan.fetchAppInfo fetches
-  // again moments later — candidate redundant PICS call. Temporary
-  // instrumentation, remove once root cause is confirmed.
+  // again moments later — a redundant-but-necessary PICS call: this is what
+  // lets a cold session's FIRST install resolve the real installdir instead
+  // of the app_<appid> fallback (quick-260909-pym).
   const start = Date.now()
   try {
     const numericAppId = Number(appId)
@@ -322,24 +353,45 @@ export async function resolveSteamInstallTarget(
   }
 
   const target = resolveOverride(args?.path, libraries)
-  const picsInstalldir = await fetchInstalldir(appId)
+
+  // quick-260909-pym: prefer an existing on-disk ACF over PICS. The ACF is
+  // the on-disk TRUTH for where this app already lives — app_257350,
+  // app_25900 and app_402060 are live installs whose OWN ACFs name those
+  // directories with StateFlags=4. PICS-first would name a reinstall of one
+  // of them by its Steam store title and create a SECOND directory beside
+  // the live one, reproducing this very defect from the other direction and
+  // defeating reconciliation (reconciledSkipped=0). ACF-first makes those
+  // reinstalls land back in the directory that already holds the bytes, and
+  // is what keeps hard constraint 4 satisfiable without any migration code.
+  // When an ACF is found, the PICS/connect round-trip is skipped entirely
+  // (RED-3) — a reinstall pays no cold connect at all.
+  const acfInstalldir = readAcfInstalldir(target.steamappsDir, appId)
+  const usingAcf = Boolean(acfInstalldir && acfInstalldir.trim())
+  const candidate = usingAcf ? acfInstalldir : await fetchInstalldir(appId)
+  logInfo(
+    `SteamGame: resolving installdir for appId ${appId} from ${usingAcf ? 'acf' : 'pics'}`,
+    LogPrefix.Steam
+  )
   // D-04 (second half): branch 1 of sanitizeInstalldir (absent/blank
   // candidate) is the ONLY fallback trigger left — everything else either
   // passes through unchanged or throws. Determined here, independently of
   // sanitizeInstalldir's own return value, so its string-returning contract
   // stays unchanged for its OTHER caller (library.ts's
-  // buildResumeFinalizeOpts, which has no use for this flag).
-  const installdirFallbackUsed = !picsInstalldir || !picsInstalldir.trim()
+  // buildResumeFinalizeOpts, which has no use for this flag). Recomputed
+  // from the FINALLY-CHOSEN candidate (ACF or PICS), not just the PICS one —
+  // keying this to picsInstalldir alone would report `true` on every
+  // ACF-sourced resolve and lie to games.ts's "installed to fallback
+  // directory" warning.
+  const installdirFallbackUsed = !candidate || !candidate.trim()
   // D-04: sanitizeInstalldir may THROW UnsafeInstalldirError on a
-  // containment/denylist violation — deliberately NOT caught here. The
-  // caller (games.ts's runNativeDepotDownload) is the one place that must
-  // turn this into an honest security-abort {status:'error'} rather than a
-  // silent fallback write.
-  const installdir = sanitizeInstalldir(
-    picsInstalldir,
-    appId,
-    target.steamappsDir
-  )
+  // containment/denylist violation — deliberately NOT caught here, for
+  // EITHER source. The caller (games.ts's runNativeDepotDownload) is the
+  // one place that must turn this into an honest security-abort
+  // {status:'error'} rather than a silent fallback write. An ACF is
+  // attacker-writable by anyone who can already write into steamapps/
+  // (T-pym-01), which is exactly why this is the one shared sanitizer both
+  // the ACF and PICS candidate must funnel through — no ACF-only bypass.
+  const installdir = sanitizeInstalldir(candidate, appId, target.steamappsDir)
 
   logInfo(
     `[Timing] resolveSteamInstallTarget: total ${Date.now() - start}ms for appId ${appId}`,

@@ -46,6 +46,40 @@ export const STEAM_PICS_TIMEOUT_MS = 25000
  */
 export const STEAM_PICS_BULK_TIMEOUT_MS = 90000
 
+/**
+ * 20s — quick-260909-pym: bounds the `SteamUser.ensureConnected()` await
+ * `installLocation.ts`'s `fetchInstalldir` now performs on a cold session
+ * (`SteamUser.getClient()` null) before it can read PICS `config.installdir`.
+ *
+ * `ensureConnected()` is NOT self-bounded to anything below the outer
+ * deadline: its cold-connect path is `user.ts:386`'s own 15 000 ms logOn
+ * timeout followed by a further 20 000 ms late-connect grace window, so an
+ * UNBOUNDED await there could park this decision for up to 35 000 ms before
+ * `fetchInstalldir` even reaches `getProductInfo`.
+ *
+ * WR-01 arithmetic (games.ts:1698-1702 wraps resolveSteamInstallTarget in
+ * `withTimeout(..., STEAM_PICS_TIMEOUT_MS * 2)` = 50 000 ms outer bound,
+ * which must stay STRICTLY LARGER than any inner bound or the outer timer
+ * pre-empts fetchInstalldir's graceful fallback):
+ *
+ *   STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS (this constant)   20 000 ms
+ * + STEAM_PICS_TIMEOUT_MS (getProductInfo)              + 25 000 ms
+ * ------------------------------------------------------------------
+ *   inner worst case                                     45 000 ms  <  50 000 ms outer
+ *
+ * 45 000 < 50 000 — strictly smaller, 5 000 ms of headroom preserved.
+ *
+ * Why 20 000 specifically: a cold connect that is going to succeed settles
+ * inside `connectSteamUserClient`'s own 15 000 ms logOn timeout (measured
+ * live: 1 629 ms). 20 000 covers that path in full plus 5 000 ms of the
+ * late-grace edge case, while still leaving 5 000 ms under the outer bound.
+ * Abandoning the remaining late-grace window on a timeout here is not fatal
+ * (hard constraint 2): it degrades to the ACF / `app_<id>` fallback name,
+ * and `buildDepotPlan`'s own `ensureConnected` moments later still gets the
+ * connection for the actual download.
+ */
+export const STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS = 20000
+
 /** Marker property stamped on the Error `withTimeout` rejects with. The
  *  plan-build retry layer (withPlanBuildRetry, depot.ts) checks this to fail
  *  FAST on a timeout: a hung CM call re-hangs identically every attempt
