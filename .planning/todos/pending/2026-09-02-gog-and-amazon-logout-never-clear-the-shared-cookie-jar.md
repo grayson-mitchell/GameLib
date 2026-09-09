@@ -2,7 +2,7 @@
 created: 2026-09-02T18:20:00.000Z
 title: "GOG and Amazon (nile) logout never clear the shared cookie jar their login webviews write to"
 area: auth/webview
-needs: test-then-fix
+needs: live-verification-of-a-shipped-fix
 status: OPEN
 severity: medium
 platform: any
@@ -13,8 +13,71 @@ upstream:
 files:
   - src/backend/storeManagers/gog/user.ts
   - src/backend/storeManagers/nile/user.ts
-  - src/backend/sidecar/oauthLoginCapture.ts
+  - src-tauri/src/main.rs
 ---
+
+## STATUS 2026-09-09 — THE FIX SHIPPED; ONE LIVE GATE REMAINS
+
+**Do not implement this todo.** Its prescribed fix landed on 2026-09-04 in `84fc0ea90`
+(Phase 40 plan 04, Task 3, D-15) — five days after this file was written, and this file was never
+updated to say so. Everything below this block is the original filing. Its evidence and its four
+constraints are still the right ones and are kept verbatim; its two *instruction-bearing* sections
+are superseded and are marked as such where they appear.
+
+What shipped:
+
+| site | what |
+|---|---|
+| `src/backend/storeManagers/gog/user.ts:24` | `GOG_COOKIE_HOSTS = ['gog.com']`, `GOG_COOKIE_CLEAR_NO_WINDOW_LABEL`, `clearGogCookiesForLogout()`; `logout()` became async |
+| `src/backend/storeManagers/nile/user.ts` | `AMAZON_COOKIE_HOSTS`, `AMAZON_COOKIE_CLEAR_NO_WINDOW_LABEL`, `clearAmazonCookiesForLogout()` |
+| `src-tauri/src/main.rs:3511` | `STORE_LOGOUT_COOKIE_DOMAINS: &[&str] = &["gog.com", "amazon.com"]` + `store_logout_cookie_domain_matches()` |
+| `src-tauri/src/main.rs:7001`, `:7507` | that matcher OR'd into both no-window dispatch gates, so GOG and Amazon reach the same macOS default-data-store fallback Epic already used, without widening Epic's own list |
+| `gog/__tests__/logoutCookies.test.ts`, `nile/__tests__/logoutCookies.test.ts` | 17 tests, both suites green when re-run 2026-09-09 |
+
+All four of the constraints in "Constraints any fix MUST honour" below are met by the shipped
+code — verified by reading the code, not by trusting the plan that wrote it: the sentinel
+no-window label is there (1); there is no `clearStorage` step at all, so the ordering trap in (2)
+cannot arise; `verified_delete_count` is what the TypeScript consumes, never the removal call's
+own signal, and a zero against a non-empty before-census raises a `logWarning` (3); and each
+storefront got its own list rather than widening `EPIC_COOKIE_DOMAINS` (4).
+
+**One deliberate divergence, recorded so it does not read as an oversight.** Constraint 4 below
+says to expect the Amazon host list to be *narrower* than the registrable domain. The shipped code
+uses the `amazon.com` apex, suffix-matched. That was a decision, not a miss — D-15 in
+`40-04-SUMMARY.md` records it ("Single apex domain per storefront ... is sufficient"). The jar
+being cleared is GameLib's own process-wide jar, not the system browser's, so the user's real
+Safari shopping session was never what was at stake; the in-app Amazon browsing session is, and
+signing that out alongside an explicit Amazon logout is defensible.
+
+**What is left is exactly one live gate**, and `40-04-SUMMARY.md` flagged it against itself:
+
+> "Live per-domain cookie census before/after logout was NOT performed in this execution ... this
+> coverage claim is a structural argument from the comparator's own logic, not a live-measured
+> count, and should be flagged as an assumption pending a live UAT pass."
+
+The gate as it now stands is in the superseded severity section below. It is destructive — both
+storefronts are currently logged in (`gog_store/auth.json` holds an account id,
+`nile_config/nile/user.json` is present), so running it costs two webview re-logins.
+
+### Census 2026-09-09 — the residue is still there, and it grew
+
+Index-walked `~/Library/HTTPStorages/gamelib-shell.binarycookies` (never `strings`, per this
+file's own caveat; timestamps converted out of UTC before reading). 71 live records total,
+**23 GOG/Amazon against 14 at filing**:
+
+| host | now | at filing | delta |
+|---|---|---|---|
+| `.gog.com` | 9 | 2 | `checkout_ab` `csrf` `gog_us` `patron_visibility` `utm_campaign` `utm_medium` `utm_source` added, created 09-07/09-08 |
+| `login.gog.com` | 3 | 3 | unchanged, created 08-19 |
+| `www.gog.com` | 1 | 0 | `CookieConsent`, created 09-07 |
+| `.amazon.com` | 8 | 8 | unchanged, created 08-19 |
+| `www.amazon.com` | 1 | 1 | unchanged, created 08-19 |
+
+**The growth is not a regression.** The shipped fix is forward-acting only: it runs inside
+`logout()`, and no GOG or Amazon logout has been performed since it shipped on 09-04. Every one of
+the 23 records is suffix-covered by the shipped `gog.com` / `amazon.com` apexes, so a single
+logout of each storefront should clear all 23 — which is precisely what the outstanding gate
+measures. A code fix stopped the recurrence; it did not clear the damage already in the jar.
 
 ## Problem
 
@@ -47,6 +110,12 @@ The other three logouts touch only local credential state:
 | GOG | `gog/user.ts:263` | `clearCache('gog')`, `configStore.clear()`, unlinks `gogdlAuthConfig`, resets the credentials cache | **untouched** |
 | Amazon | `nile/user.ts:171` | `nile auth --logout`, `configStore.delete('userData')`, `clearCache('nile')` | **untouched** |
 
+> **This table is the 2026-09-02 state and is no longer true — see STATUS at the top.** Both
+> logouts now clear their cookies, both line numbers have moved (`GOGUser.logout()` is at
+> `gog/user.ts:357`, `NileUser.logout()` at `nile/user.ts:248`), and the "exactly six call sites"
+> count above is stale too: `clearGogCookiesForLogout()` and `clearAmazonCookiesForLogout()` are
+> the seventh and eighth. Kept unedited because it is the evidence the fix was built from.
+
 Live corroboration — index-walking parse of `~/Library/HTTPStorages/gamelib-shell.binarycookies`,
 2026-09-02, 51 live records:
 
@@ -61,7 +130,13 @@ This is defect #2 of upstream `68eb1adde`, the exact class the audit was filed t
 invisible to every prior investigation because all of them — `D-35-29-01`, `D-35-29-02`,
 `35-AB-RETEST`, the `epic-cookie-clear-read-divergence` debug session — scoped to Epic.
 
-## The one gesture that sets severity — run this BEFORE writing any fix
+## SUPERSEDED 2026-09-09: the severity gesture — the fix it gated is already written
+
+> **This section is kept for its reasoning, not its instruction.** Its three-step gesture existed
+> to decide whether the fix was worth building. That question closed on 2026-09-04 when the fix
+> shipped (see STATUS above). The rationale below is still the record of *why* `severity: medium`,
+> so it stays; the gesture itself is replaced at the end of this section by the gate that is
+> actually outstanding.
 
 **Severity rationale (recorded 2026-09-08, quick `260908-gye`).** The frontmatter `severity:` was
 free text until the todo triage vocabulary landed, and it carried the bound rather than a value:
@@ -81,18 +156,34 @@ it would be scoring a defect by its worst imaginable reading rather than its mea
 fix is right but not urgent.
 
 **Nobody has observed the consequence.** The finding above is that nothing clears these cookies;
-whether that *matters* is untested. Do not write it up either way until this is run:
+whether that *matters* is untested.
 
-1. Log in to GOG. Log out. Do **not** restart the app.
-2. Click Log in again.
-3. **Does the GOG page ask for credentials, or does it complete silently?**
+### THE OUTSTANDING GATE (replaces the three-step gesture above)
 
-- Silent completion ⇒ logout does not log you out; severity is major and the fix is required.
-- Credentials required ⇒ the residue carries no auth value; severity drops to hygiene/privacy
-  (stale third-party session cookies surviving an explicit logout), and the fix is still probably
-  right but is no longer urgent.
+The question is no longer "is the fix worth writing" but **"does the shipped fix actually work
+live"** — the one thing `40-04-SUMMARY.md` could not measure. `wry`'s cookie-delete is known to
+lie about deletion, which is exactly why the code consumes `verified_delete_count`; but that
+verification has itself never been observed against a real jar.
 
-Repeat for Amazon. **Do not spend time on Zoom** — see the non-finding below.
+1. Census the jar (index-walk, never `strings`). Expect 23 GOG/Amazon records or thereabouts.
+2. In the running app, log out of GOG. Do **not** restart the app.
+3. Re-census. `.gog.com`, `login.gog.com` and `www.gog.com` should all be at **0**.
+4. Repeat 2-3 for Amazon; `.amazon.com` and `www.amazon.com` should go to **0**.
+5. Read the log for `GOG logout: cleared N cookie(s)` / `Amazon logout: cleared N cookie(s)`, and
+   for the `removed 0 cookies ... despite a non-empty before-census` warning. **The final census
+   after the last mutation decides the outcome, never the log line** — constraint 3 below.
+
+- Both go to 0 ⇒ the fix is verified live. Close this todo.
+- Anything survives ⇒ the fix is a silent no-op on this platform and this becomes `major`; that
+  is the `D-35-29-02` failure recurring on a new storefront, and the log's `cleared N` line will
+  have said otherwise.
+
+While logged out and before logging back in, the **original** bound is also cheap to settle as a
+by-product: click Log in again, and record whether GOG asks for credentials or completes
+silently. That answer no longer decides whether to write the fix, but it does decide whether the
+23 records were carrying live auth value — which is what this file has always been unable to say.
+
+**Do not spend time on Zoom** — see the non-finding below.
 
 Verify by re-reading the jar with an index-walking binarycookies parse, **never `strings`**
 (a byte match over a binary format can surface unreferenced remnants as if they were live records
@@ -147,8 +238,18 @@ the `Runner` union at `common/types.ts:28`, with a login tile gated on
 **This becomes a real defect the moment those three channels are ported.** Whoever restores Zoom
 login inherits this todo's fix as a precondition, not as follow-up work.
 
-## Deliberately out of scope
+## CORRECTED 2026-09-09: the embedded store browser (was "deliberately out of scope")
 
-The embedded store browser. It does not exist (`WebView/index.tsx:528` returns
-`WebviewUnavailablePanel`, D-05). When it returns it will share this same jar by default, which
-makes this todo's fix *more* load-bearing, not less — but it changes nothing about the work here.
+**The premise of this section expired.** It said the embed "does not exist". It does — Phase 40
+shipped it. `store_embed_open` is live in `src-tauri/src/main.rs` behind a full scheme policy, and
+`storeEmbedOpen` is registered in `src/backend/sidecar/storeEmbedFlowRegistration.ts`.
+`WebView/index.tsx` does still return `WebviewUnavailablePanel`, but as a per-reason fallback —
+deep-link escape hatch, `reason="platform"` off macOS, `reason="epic"` for `/store/epic` (D-05) —
+not as the unconditional stub this section described. On macOS, every non-Epic store route reaches
+the live embed.
+
+Its prediction was right, and the census above measures it coming true: seven of the nine
+`.gog.com` records and the `www.gog.com` `CookieConsent` record were created on 09-07/09-08 by
+in-app store browsing, not by a login. So the embed does share this jar, which makes the shipped
+fix *more* load-bearing, not less. It still changes nothing about the work outstanding here, which
+is the live gate and nothing else.
