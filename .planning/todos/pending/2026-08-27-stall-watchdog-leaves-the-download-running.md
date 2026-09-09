@@ -5,10 +5,12 @@ area: steam-depot
 status: OPEN
 severity: major
 platform: any
-ready: live-gate
+ready: human
 files:
   - src/backend/downloadmanager/installStallWatchdog.ts
   - src/backend/storeManagers/steam/depot.ts
+  - src/backend/storeManagers/steam/depot/cdnAuth.ts
+  - src/backend/storeManagers/steam/depot/decompress.ts
 ---
 
 ## Symptom
@@ -223,6 +225,11 @@ for 228280 should not be read as one.
 checkpoints DO bound the loop for a packet-drop wedge. Whether they also bound a wedge sitting
 inside the auth-token path specifically remains untested.
 
+> **Annotated 2026-09-09 (quick 260909-q2o).** The code-side gap named in this paragraph is
+> closed — see `## Code-side abort-blindness CLOSED — 2026-09-09, quick 260909-q2o` below. This
+> paragraph is left as-is because it correctly describes the state as of 2026-09-08; the closure
+> neutralises the hypothesis rather than settling whether it was ever the 2026-08-27 cause.
+
 ### The empty-auth-token condition is REPRODUCIBLE — and is NOT sufficient to stall
 
 Californium `402060`, 2026-09-07 21:32-21:34, unprompted and with no network manipulation:
@@ -257,7 +264,58 @@ wedge.** Whatever turned it into a stall that night is still unidentified.
 - **`SIGSTOP` on the decompress workers is not available.** `decompressPool.ts` uses
   `node:worker_threads`, so they are in-process; stopping them would freeze the watchdog timer too.
 
-## Residual (rewritten 2026-09-08 — supersedes the section below)
+## Code-side abort-blindness CLOSED — 2026-09-09, quick 260909-q2o
+
+`CdnAuthTokenCache.getToken` now takes an optional third `AbortSignal`, and `fetchChunk`
+(`decompress.ts`) forwards the signal it already held — the SAME signal that traces back to
+`createAbortController(this.appId)` (`games.ts:1651`). No second cancellation mechanism was
+introduced.
+
+Six design decisions, one line each:
+- Abort degrades `getToken` to `''` — it never throws.
+- An abort never writes a `CDN_AUTH_TOKEN_FAILURE_COOLDOWN_MS` entry into `negativeCache`.
+- The shared in-flight `_send` fetch is never cancelled on an aborting caller's behalf — only
+  stopped being awaited by that caller.
+- The `pending` single-flight entry's lifetime now tracks the fetch's own settlement, not the
+  awaiting caller's, so an aborting caller can no longer strand the key for a concurrent one.
+- `callGetCDNAuthToken` (the manual `_send` bypass) is deliberately left un-threaded — it is
+  Steam-CM protocol plumbing, not the cancellation surface.
+- The `abort` listener registered in the mid-flight path is always removed in a `finally`,
+  whether the race is won by the fetch or by the abort.
+
+**The honest size of the win.** `getToken` was already hard-bounded at
+`CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS` (3000ms) per attempt. This closed a bounded latency window, one
+unobserved `await` inside an otherwise abort-aware `fetchChunk` — NOT an unbounded loop. What it
+actually buys is that Hypothesis B can no longer produce an orphaned loop even if it was true —
+the hypothesis is **neutralised**, not tested. No live reproduction of the 2026-08-27 wedge was
+attempted or achieved by this task.
+
+**What verified it:** unit tests in `cdnAuth.test.ts` (28 tests, up from 20 at the prior commit)
+and wiring tests in `depotPrimitives.test.ts` (73 tests, up from 70) — all green, plus a clean
+`npx tsc --noEmit` and a green run of the wider Steam backend suite. **No live gate was run for
+this change, and none is claimed.**
+
+**Gate-hygiene note:** the original evidence cited above (`grep -c AbortSignal cdnAuth.ts` == 0)
+is now a dead measurement — the file legitimately contains the string `AbortSignal` in prose
+(parameter names, doc comments) regardless of whether the call site is wired. Anyone re-checking
+this should grep the `decompress.ts` call-site expression instead:
+`grep -q 'cdnAuth\.getToken(depotId, host, signal)' src/backend/storeManagers/steam/depot/decompress.ts`.
+
+## Residual (rewritten 2026-09-09 — supersedes the 2026-09-08 section below)
+
+- **Hypothesis A (registry clobber) — REFUTED** for the stall path, 2026-09-08 live gate.
+- **Hypothesis B (abort-blind CDN auth path) — NEUTRALISED in code, 2026-09-09.** It was never
+  directly observed as the 2026-08-27 cause, and this task made no attempt to observe it live. It
+  can no longer produce the symptom regardless.
+- **What is genuinely left:** the 2026-08-27 wedge's cause is STILL unidentified. Both named
+  hypotheses are now off the table (one refuted, one neutralised), and no one has specified a
+  runnable gate for what remains. There is an open question with no proposed experiment — which
+  is precisely why the decision to close or keep this todo is the operator's, not a code task.
+- The abort machinery itself is proven on two paths by the 2026-09-08 live gate (watchdog-trip
+  abort and `installQueueElement`'s pre-existing finally-abort, both hitting a live controller),
+  and nothing further about cancellation delivery is known to be missing.
+
+## Residual (rewritten 2026-09-08 — SUPERSEDED 2026-09-09 by the section above — left for the record)
 
 **What the gate proves:** at HEAD, on the Tauri shell, a stalled native depot install IS aborted by
 the watchdog and the depot loop DOES stop promptly, with the abort delivered to a live controller.
@@ -271,6 +329,9 @@ one code path measured here to be abort-blind (`cdnAuth.ts`, zero `AbortSignal` 
 not exercised by dropping packets at the socket layer. Since the empty-token condition is now known
 to be reproducible on demand for Californium, the missing ingredient is whatever additionally
 prevented fallback to the non-token hosts that night.
+
+**Annotated 2026-09-09 (quick 260909-q2o):** the "one code path measured here to be abort-blind"
+clause above is now stale — that path is no longer abort-blind, see the 2026-09-09 Residual above.
 ## Residual (SUPERSEDED 2026-09-08 by the gate section above — left for the record)
 
 Closing this todo needs a live re-drive under genuine CDN-stall conditions, which cannot be
