@@ -1,4 +1,4 @@
-import { GENERIC_KEY_PLATFORM } from './groupKeys'
+import { GENERIC_KEY_PLATFORM } from './genericKeyPlatform'
 
 /**
  * Pure `key_type` -> (how it renders, where it redeems) table (D-42-03).
@@ -67,7 +67,7 @@ export type HumbleRedeemTarget =
 // D-42-03 tier 2: named — proper name, no logo asset exists for this
 // platform; text only, never a substitute icon.
 // D-42-03 tier 3: explicitly unknown — the literal GENERIC_KEY_PLATFORM
-// value from ./groupKeys is an EXPLICIT entry here, not left to fall
+// value from ./genericKeyPlatform is an EXPLICIT entry here, not left to fall
 // through by absence.
 //
 // Display names are the ONLY strings in this module and are untranslated

@@ -1,5 +1,5 @@
 import { HumbleKey, HumbleKeyState } from '../types/humble'
-import { GENERIC_KEY_PLATFORM } from './groupKeys'
+import { GENERIC_KEY_PLATFORM } from './genericKeyPlatform'
 import { getUrgencyTier } from './urgencyBadge'
 
 /**
