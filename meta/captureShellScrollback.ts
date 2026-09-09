@@ -674,6 +674,15 @@ function runCapture(): void {
   console.log(`  run metadata:       ${metaPath}`)
   console.log('Launching `pnpm tauri:dev` -- waiting for the app window...\n')
 
+  // 260910-et3: `tauri:dev` now defaults to the dev-vault secret-store arm
+  // (cross-env GAMELIB_DEV_SECRET_VAULT=1). Kept on `tauri:dev` rather than
+  // repointing to `tauri:dev:keyring`, for three reasons:
+  // 1. Nothing this harness measures (CAPTURE_ANCHORS, TARGET_DROP_RE,
+  //    COOKIE_CHANNELS) touches the secret-store arm.
+  // 2. The gamelib.log snapshot copied below already carries the
+  //    `[bootstrap] secret stores:` receipt, which is the only real proof
+  //    of which arm ran -- this harness does not need its own claim.
+  // 3. `command: 'pnpm tauri:dev'` in meta.json stays literal and true.
   const child = spawn('pnpm', ['tauri:dev'], {
     cwd: REPO_ROOT,
     stdio: ['inherit', 'pipe', 'pipe']
