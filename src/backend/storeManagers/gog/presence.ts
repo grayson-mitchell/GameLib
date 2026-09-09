@@ -15,7 +15,7 @@ interface PresencePayload {
 }
 
 let CURRENT_GAME = ''
-let interval: NodeJS.Timeout
+let interval: NodeJS.Timeout | undefined
 
 function setCurrentGame(game: string) {
   CURRENT_GAME = game
@@ -113,6 +113,10 @@ async function setPresence() {
  * arm re-creates the timer on its next call, exactly as it does after a fresh process start.
  */
 async function deletePresence(force = false) {
+  // D-DRS-01 Option A: local timer teardown is unconditional, ahead of every guard below --
+  // see this function's own docblock for the full audit and rationale.
+  clearInterval(interval)
+  interval = undefined
   try {
     const { disablePlaytimeSync, disableGOGPresence } =
       GlobalConfig.get().getSettings()
@@ -127,7 +131,6 @@ async function deletePresence(force = false) {
     if (!credentials) {
       return
     }
-    clearInterval(interval)
     const response = await axiosClient.delete(
       `https://presence.gog.com/users/${credentials.user_id}/status`,
       { headers: { Authorization: `Bearer ${credentials.access_token}` } }

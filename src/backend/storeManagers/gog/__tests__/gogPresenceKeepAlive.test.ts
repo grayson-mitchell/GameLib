@@ -94,6 +94,18 @@ const mockGetCredentials = jest.mocked(GOGUser).getCredentials
 
 const FIVE_MINUTES_MS = 5 * 60 * 1000
 
+// Fabricated credentials -- no real token, no real GOG account (T-DRS-05).
+const FAKE_CREDENTIALS = {
+  access_token: 't1',
+  expires_in: 3600,
+  token_type: 'bearer',
+  scope: '',
+  session_id: 's1',
+  refresh_token: 'r1',
+  user_id: 'u1',
+  loginType: 1
+}
+
 function installDefaultMocks(): void {
   ;(GlobalConfig.get as jest.Mock).mockReturnValue({
     getSettings: () => ({
@@ -102,7 +114,7 @@ function installDefaultMocks(): void {
     })
   })
   mockIsLoggedIn.mockReturnValue(true)
-  mockGetCredentials.mockResolvedValue({ user_id: 'u1', access_token: 't1' })
+  mockGetCredentials.mockResolvedValue(FAKE_CREDENTIALS)
   mockAxiosClient.post.mockResolvedValue({ status: 204 })
   mockAxiosClient.delete.mockResolvedValue({ status: 204 })
 }
@@ -150,10 +162,7 @@ function loadIsolatedPresence(): IsolatedPresenceHarness {
     })
   })
   harness.isLoggedIn.mockReturnValue(true)
-  harness.getCredentials.mockResolvedValue({
-    user_id: 'u1',
-    access_token: 't1'
-  })
+  harness.getCredentials.mockResolvedValue(FAKE_CREDENTIALS)
   harness.axiosClient.post.mockResolvedValue({ status: 204 })
   harness.axiosClient.delete.mockResolvedValue({ status: 204 })
 
@@ -202,7 +211,8 @@ describe('todo 2026-09-09 -- GOG presence keep-alive re-arm after deletePresence
   // Uses its own isolated module copy so its baseline is not contaminated by whatever Case 1
   // left `interval` holding.
   it('case 2 -- two consecutive setPresence() calls while a keep-alive is already live arm exactly ONE timer', async () => {
-    const { presence, axiosClient: isolatedAxiosClient } = loadIsolatedPresence()
+    const { presence, axiosClient: isolatedAxiosClient } =
+      loadIsolatedPresence()
 
     await presence.setPresence()
     await presence.setPresence()
