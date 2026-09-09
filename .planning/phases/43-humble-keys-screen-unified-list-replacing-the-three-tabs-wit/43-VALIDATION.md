@@ -2,7 +2,7 @@
 phase: 43
 slug: humble-keys-screen-unified-list-replacing-the-three-tabs-wit
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-09-09
 ---
@@ -21,7 +21,7 @@ created: 2026-09-09
 |----------|-------|
 | **Framework** | Jest 29 + ts-jest |
 | **Config file** | `src/backend/jest.config.js`, `src/frontend/jest.config.js` (both `rootDir: '../..'`, invoked via the root `jest.config.js`'s `projects` array) |
-| **Quick run command** | `npx jest --selectProjects Backend --passWithNoTests -t "<pattern>"` |
+| **Quick run command** | `npx jest --selectProjects Backend --passWithNoTests <path/to/file.test.ts>` (positional test-path form — see "Two jest gotchas" below for why `-t` is banned in this phase's commands) |
 | **Full suite command** | `npx jest --selectProjects Backend Frontend Common` |
 | **Estimated runtime** | Not measured this phase — measure once during Wave 0 and record here rather than guessing |
 
@@ -51,7 +51,7 @@ nothing — the exact failure class this document exists to prevent.
 
 ## Sampling Rate
 
-- **After task commit:** `npx jest --selectProjects Backend --passWithNoTests -t "<pattern scoped to the module touched>"`
+- **After task commit:** `npx jest --selectProjects Backend --passWithNoTests <path to the test file scoped to the module touched>`
 - **After plan wave:** `npx jest --selectProjects Backend Frontend Common`
 - **Before `/gsd-verify-work`:** full suite green **AND** `pnpm codecheck`/`tsc` green **AND**
   `meta/i18nGateScope.json` reflects the four deletions **AND** the REQ-43-19 live gate run and
@@ -79,17 +79,47 @@ Task IDs are assigned by the planner. This table is seeded from the research's r
 map and **must be completed with real task IDs during planning** — an unpopulated row is a
 Dimension 8 hole, not a formality.
 
+**Three commands the seeded table got wrong are corrected here, per Task 3's mandate:** the
+seeded table's `-t`-filtered greps for the literal patterns `compareWaiting`, `Redeemable` and
+`search` (against the `Backend` project) each match ZERO tests today and exit 0 (measured this
+session: `Tests: 4786 skipped, 4786 total`, exit 0 for all three). Every row below uses the
+positional test-path form plus an asserted test
+count instead. Measured pre-phase baselines used as the reference point: `viewFilters.test.ts`
+35 passed, `groupKeys.test.ts` 12 passed, `HumbleKeyRow/__tests__/index.test.tsx` 47 passed,
+`All/__tests__/index.test.tsx` 9 passed, `Waiting/__tests__/index.test.tsx` 13 passed,
+`HumbleClaimWizard/__tests__` 17 passed, `meta/__tests__/genI18nGateScope.test.ts` 26 passed /
+1 skipped, `meta/__tests__/hardcodedStringGate.test.ts` 151 passed (73s). The i18n gate's exact
+command name (previously flagged as unverified) is resolved: the gate is the `Meta` jest
+project's `meta/__tests__/hardcodedStringGate.test.ts` (reading `meta/i18nGateScope.json` via
+`meta/hardcodedStringGate.ts:1815`), and the scope-artifact ratchet is
+`meta/__tests__/genI18nGateScope.test.ts` — there is no separate CI script name.
+
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | TBD | REQ-43-05 | — | N/A | unit | `npx jest --selectProjects Backend -t "compareWaiting"` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-43-07 | — | N/A | unit | `npx jest --selectProjects Backend -t "Redeemable"` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-43-09 | — | N/A | unit | `npx jest --selectProjects Backend -t "search"` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-43-02, 03, 11, 12, 13, 14 | — | N/A | component (function-call) | `npx jest --selectProjects Frontend -t "HumbleKeyRow"` | Exists — needs substantial rewrite | ⬜ pending |
-| TBD | TBD | TBD | REQ-43-16 | — | N/A | component | `npx jest --selectProjects Frontend -t "redirect"` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | REQ-43-17, 18 | — | N/A | source census | `grep -rn "partitionWaitingByUrgency\|HumbleKeyGroup\|groupAndSortKeys" src/ --include="*.ts" --include="*.tsx"` — expect 0 hits | N/A (shell) | ⬜ pending |
-| TBD | TBD | TBD | REQ-43-19 | — | N/A | **live gate only** | N/A — packaged Tauri build, screenshot/AX measurement | N/A by design | ⬜ pending |
-| TBD | TBD | TBD | REQ-43-22 | — | N/A | CI gate | `meta/i18nGateScope.json`-driven check — **confirm the exact gate command before writing it into a plan; the name was not verified** | Exists | ⬜ pending |
-| TBD | TBD | TBD | REQ-43-23 | T-43-01 (secret in log) | `aria-label` stays an expression, never a literal | CI gate | `meta/hardcodedStringGate.ts` | Exists | ⬜ pending |
+| 43-06 T2 | 43-06 | 2 | REQ-43-01 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-06 T3 | 43-06 | 2 | REQ-43-02 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-06 T3 | 43-06 | 2 | REQ-43-03 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-07 T1 | 43-07 | 3 | REQ-43-04 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-04 T3 | 43-04 | 1 | REQ-43-05 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/viewFilters.test.ts` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
+| 43-07 T1 | 43-07 | 3 | REQ-43-06 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-04 T3 | 43-04 | 1 | REQ-43-07 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/viewFilters.test.ts` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
+| 43-07 T1 | 43-07 | 3 | REQ-43-08 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-04 T2 | 43-04 | 1 | REQ-43-09 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/viewFilters.test.ts` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
+| 43-06 T1 | 43-06 | 2 | REQ-43-10 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/keyTypePresentation.test.ts` — expect `Tests: N passed, N total`, N >= 60 (baseline 47) | Exists | ⬜ pending |
+| 43-06 T2 | 43-06 | 2 | REQ-43-11 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-06 T3 | 43-06 | 2 | REQ-43-12 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-05 T3 | 43-05 | 1 | REQ-43-13 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 52 (baseline 47) | Exists | ⬜ pending |
+| 43-05 T3 | 43-05 | 1 | REQ-43-14 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 52 (baseline 47) | Exists | ⬜ pending |
+| 43-05 T3 | 43-05 | 1 | REQ-43-15 | — | N/A | component (structural: walk element tree for onClick/href) | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 52 (baseline 47) | Exists | ⬜ pending |
+| 43-07 T2 | 43-07 | 3 | REQ-43-16 | — | N/A | component/router | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-08 T2 | 43-08 | 4 | REQ-43-17 | — | N/A | source census | `grep -rn "partitionWaitingByUrgency\|HumbleKeyGroup\|groupAndSortKeys" src/ --include="*.ts" --include="*.tsx"` — expect 0 hits | N/A (shell) | ⬜ pending |
+| 43-08 T2 | 43-08 | 4 | REQ-43-18 | — | N/A | build/typecheck + source census | `npx tsc --noEmit && test ! -f src/common/humble/groupKeys.ts` — expect exit 0 and file absent (note: `selectKeysWaiting` is explicitly OUT of this requirement's scope, see REQUIREMENTS.md correction 1) | N/A (shell) | ⬜ pending |
+| 43-10 T2 | 43-10 | 5 | REQ-43-19 | — | N/A | **live gate only** | N/A — packaged Tauri build, pixel-measured column geometry + row-separator hairline, per the Structural Reachability Review contract | N/A by design | ⬜ pending |
+| 43-07 T1 | 43-07 | 3 | REQ-43-20 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-04 T2 | 43-04 | 1 | REQ-43-21 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/viewFilters.test.ts` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
+| 43-08 T1 | 43-08 | 4 | REQ-43-22 | — | N/A | CI gate | `npx tsc --noEmit && npx jest --selectProjects Meta meta/__tests__/genI18nGateScope.test.ts` — expect `Tests: 26 passed, 1 skipped, 27 total` and zero failures (measured pre-phase shape; the four deleted files must no longer appear in either `meta/i18nGateScope.json` or `meta/i18nForkTouchedFiles.json`) | Exists | ⬜ pending |
+| 43-06 T2 | 43-06 | 2 | REQ-43-23 | T-43-01 (secret in log) | `aria-label` stays an expression, never a literal | CI gate | `npx jest --selectProjects Meta meta/__tests__/hardcodedStringGate.test.ts` — expect `Tests: 151 passed` (baseline; ~73s runtime, a timeout is not a pass) | Exists | ⬜ pending |
+| 43-09 T1 | 43-09 | 4 | REQ-43-24 (CONDITIONAL) | — | N/A | conditional — candidate-dependent | Candidate A only: `npx jest --selectProjects Backend src/backend/humble/__tests__/adapter.test.ts` — expect `Tests: N passed, N total` with zero failures. **Blocked until D-43-11's probe (plan 43-03) selects a candidate**; if candidate B or the external-browser fallback is selected instead, this row's command does not apply and the Manual-Only Verifications table's REQ-43-24 row governs. | Exists | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -137,18 +167,31 @@ also be the one who runs it.** Whoever writes the REQ-43-19 contract must not sc
 
 Stated plainly rather than left for the plan-checker to find:
 
-1. **Full-suite runtime is unmeasured.** Recorded as TBD above rather than guessed.
-2. **The i18n gate's exact command name is unverified.** The research flagged it; confirm by
-   inspecting `meta/` before any plan hard-codes a command.
-3. **REQ-43-24 has no validation at all** and cannot until D-43-11's spike closes. It is listed
-   so its absence is visible, not to imply coverage.
-4. **`pnpm test` was not confirmed to exist.** The full-suite command above uses the explicit
-   `npx jest --selectProjects` form for that reason.
+1. **Full-suite runtime is unmeasured.** Recorded as unmeasured above rather than guessed.
+2. ~~The i18n gate's exact command name is unverified.~~ **RESOLVED** — the gate is the `Meta`
+   jest project's `meta/__tests__/hardcodedStringGate.test.ts`, and the scope-artifact ratchet is
+   `meta/__tests__/genI18nGateScope.test.ts`; there is no separate CI script name (see the
+   Per-Task Verification Map's preamble).
+3. **REQ-43-24 has no unconditional validation** and cannot until D-43-11's spike closes. It is
+   listed so its absence is visible, not to imply coverage.
+4. ~~`pnpm test` was not confirmed to exist.~~ **RESOLVED** — `package.json:42` defines
+   `"test": "jest"`, so `pnpm test` does exist. The full-suite command above still uses the
+   explicit `npx jest --selectProjects` form for precision (it names which projects run), not
+   because `pnpm test` is missing.
 5. **This repo's backend suite and lint are red at HEAD** against a known allowlist ledger. Any
    "the suite is green" claim in this phase must be scoped to the tests this phase touches, with
    the pre-existing baseline named — a bare "green" claim would be false.
+6. **`pnpm lint`'s two ceilings carry ZERO padding.** `meta/lintScoped.cjs:49-50` sets
+   `SRC_CEILING = 1123` and `TESTS_CEILING = 638`. This phase's new code (and the four-file
+   deletion in plan 43-08) must not add net warnings beyond whatever the deletions free — a
+   ceiling bump is not an option available to this phase's plans.
 
 ---
 
-**Nyquist compliance:** `false` until the Per-Task Verification Map carries real task IDs.
-**Wave 0 complete:** `false`.
+**Nyquist compliance:** `true` — the Per-Task Verification Map now carries a real task ID, plan,
+wave and non-`-t`-filtered command for all 24 requirements (REQ-43-01..24), filled during plan
+`43-01`.
+**Wave 0 complete:** `false` — the Wave 0 Requirements checklist above (new unit cases, the
+relocated `GENERIC_KEY_PLATFORM` module, the `HumbleKeyRow` rewrite, the unified-list test file,
+and the REQ-43-19 live-gate contract) has not been executed yet; that work belongs to plans
+`43-04` through `43-10`, not to this requirements-minting plan.
