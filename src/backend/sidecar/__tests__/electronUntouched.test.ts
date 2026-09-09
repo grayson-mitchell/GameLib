@@ -37,7 +37,10 @@
 
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
+import {
+  stripSourceComments as stripComments,
+  stripTrailingLineCommentTs
+} from 'backend/testUtils/stripSourceComments'
 
 // ── electron / electron-store — route Jest's own module resolution at the REAL
 // sidecar shims (mirrors skeletonFlows.test.ts): without this, Jest's automatic
@@ -172,6 +175,211 @@ beforeEach(() => {
         : Promise.reject(outcome.error)
     }
   )
+})
+
+// ── D-04 binding-level gate helper (quick-260909-iz2) ───────────────────────
+// D-04's actual wording is narrower than a bare `configStore` substring ban:
+// "the sidecar must never write TOKEN_STORE_KEY into the shared configStore"
+// — the STEAM store from `storeManagers/steam/electronStores`. A bare-substring
+// ban also convicts `bootstrap.ts`'s unrelated Epic/GOG
+// `import { configStore } from '../constants/key_value_stores'` (used only for
+// `configStore.delete('userInfo')`, an Epic user record, not a token), which is
+// why that ban held the whole Backend suite red. This helper instead bans
+// BINDING one of these four names from a Steam-token-surface module specifier.
+const BANNED_STEAM_TOKEN_BINDINGS = [
+  // The Steam electronStores singleton itself -- the shared store D-04 forbids
+  // the sidecar from writing into.
+  'configStore',
+  // Unique to the Steam token surface (src/backend/storeManagers/steam/constants.ts:15-16) --
+  // a bare-anywhere ban on these two is exact, no binding-level reasoning needed.
+  'TOKEN_STORE_KEY',
+  'TOKEN_PREFIX',
+  // `ElectronTokenStore` is the ACTUAL WRITER of TOKEN_STORE_KEY --
+  // `storeManagers/steam/tokenStore.ts:188` does
+  // `configStore.set(TOKEN_STORE_KEY, this.encryptToken(token))` inside its
+  // `setToken()`. Installing this class inside the sidecar would violate D-04
+  // directly, so binding it from the Steam token surface is banned too.
+  'ElectronTokenStore'
+]
+
+// Steam token surface specifiers, and ONLY these -- everything else (in
+// particular `../constants/key_value_stores` and any `storeManagers/<other-runner>/...`
+// path such as GOG's `electronStores`) is deliberately out of scope.
+const STEAM_TOKEN_SURFACE_SPECIFIER =
+  /(?:^|\/)storeManagers\/steam\/(?:electronStores|tokenStore|constants)(?:\.(?:ts|js|mts|cts))?$|^\.\/(?:electronStores|tokenStore|constants)(?:\.(?:ts|js|mts|cts))?$/
+
+// Matches: `import [type] <clause> from '<spec>'`, allowing the clause to span
+// multiple lines (bootstrap.ts has multi-line brace imports).
+const STATIC_IMPORT_RE =
+  /import\s+(?:type\s+)?([\s\S]*?)\s+from\s+['"]([^'"]+)['"]/g
+// Matches: `<decl> <lhs> = require('<spec>')`.
+const REQUIRE_RE =
+  /(?:const|let|var)\s+([\s\S]*?)\s*=\s*require\(\s*['"]([^'"]+)['"]\s*\)/g
+// Matches: `<decl> <lhs> = [await] import('<spec>')`.
+const DYNAMIC_IMPORT_RE =
+  /(?:const|let|var)\s+([\s\S]*?)\s*=\s*(?:await\s+)?import\(\s*['"]([^'"]+)['"]\s*\)/g
+
+/**
+ * Extracts the bindings a single import/require/dynamic-import clause
+ * introduces. Matches on the imported name -- the identifier LEFT of `as` in
+ * an import clause, and LEFT of `:` in a require/dynamic-import destructuring
+ * -- so aliasing cannot evade the gate. A whole-module binding (`* as X`,
+ * `import X from ...`, `const X = require(...)` with no destructuring) binds
+ * every export, including the banned four, and is flagged as such.
+ */
+function extractBindings(clause: string): {
+  wholeModule: boolean
+  names: string[]
+} {
+  const trimmed = clause.trim()
+  if (trimmed.startsWith('*')) {
+    return { wholeModule: true, names: [] }
+  }
+  const braceMatch = trimmed.match(/\{([\s\S]*)\}/)
+  if (!braceMatch) {
+    // No destructuring at all -- a bare identifier binds the whole module.
+    return { wholeModule: true, names: [] }
+  }
+  const names: string[] = []
+  for (const rawSegment of braceMatch[1].split(',')) {
+    const segment = rawSegment
+      .trim()
+      .replace(/^type\s+/, '')
+      .trim()
+    if (!segment) continue
+    const asMatch = segment.match(/^(\S+)\s+as\s+\S+$/)
+    const colonMatch = segment.match(/^(\S+)\s*:\s*\S+$/)
+    if (asMatch) {
+      names.push(asMatch[1])
+    } else if (colonMatch) {
+      names.push(colonMatch[1])
+    } else {
+      names.push(segment)
+    }
+  }
+  // Anything before the opening brace (e.g. `Def, { a, b }`) is a default
+  // import alongside the named ones -- that default binding is whole-module.
+  const beforeBrace = trimmed
+    .slice(0, trimmed.indexOf('{'))
+    .replace(/,\s*$/, '')
+    .trim()
+  return { wholeModule: beforeBrace.length > 0, names }
+}
+
+/**
+ * D-04's binding-level source gate (quick-260909-iz2). Takes source TEXT (not
+ * a path) so guard tests can drive it against synthetic sources. Returns a
+ * list of human-readable violation strings; an empty array means clean.
+ *
+ * Rule A -- bare identifier ban: after comment stripping, `TOKEN_STORE_KEY` or
+ * `TOKEN_PREFIX` anywhere in the source is a violation. Both names are unique
+ * to the Steam token surface, so a bare-anywhere ban is exact for them.
+ * `configStore` is deliberately NOT part of this rule -- that is the whole
+ * narrowing this gate exists to make.
+ *
+ * Rule B -- binding-level ban: no import / `require(...)` / dynamic
+ * `import(...)` whose SPECIFIER names the Steam token surface may bind
+ * `configStore`, `TOKEN_STORE_KEY`, `TOKEN_PREFIX` or `ElectronTokenStore`
+ * (directly, aliased, or via a whole-module binding).
+ */
+function findSteamTokenSurfaceViolations(
+  source: string,
+  label: string
+): string[] {
+  const normalized = stripComments(source)
+    .split('\n')
+    .map((line) => stripTrailingLineCommentTs(line))
+    .join('\n')
+
+  const violations: string[] = []
+
+  // Rule A.
+  if (/\bTOKEN_STORE_KEY\b/.test(normalized)) {
+    violations.push(
+      `${label}: bare identifier TOKEN_STORE_KEY appears in source`
+    )
+  }
+  if (/\bTOKEN_PREFIX\b/.test(normalized)) {
+    violations.push(`${label}: bare identifier TOKEN_PREFIX appears in source`)
+  }
+
+  // Rule B.
+  for (const re of [STATIC_IMPORT_RE, REQUIRE_RE, DYNAMIC_IMPORT_RE]) {
+    re.lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = re.exec(normalized)) !== null) {
+      const [, clause, specifier] = match
+      if (!STEAM_TOKEN_SURFACE_SPECIFIER.test(specifier)) continue
+      const { wholeModule, names } = extractBindings(clause)
+      if (wholeModule) {
+        violations.push(
+          `${label}: whole-module binding of Steam token surface '${specifier}' (binds every export, including ${BANNED_STEAM_TOKEN_BINDINGS.join(', ')})`
+        )
+        continue
+      }
+      for (const name of names) {
+        if (BANNED_STEAM_TOKEN_BINDINGS.includes(name)) {
+          violations.push(
+            `${label}: binds banned '${name}' from Steam token surface '${specifier}'`
+          )
+        }
+      }
+    }
+  }
+
+  return violations
+}
+
+describe('steam token surface binding gate helper', () => {
+  it('trips on a real Steam electronStores configStore import (a)', () => {
+    const src = `import { configStore } from '../storeManagers/steam/electronStores'\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
+  })
+
+  it('trips on an ALIASED configStore import (aliasing does not evade) (b)', () => {
+    const src = `import { configStore as steamStore } from './electronStores'\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
+  })
+
+  it('trips on a synthetic configStore.set(TOKEN_STORE_KEY, x) body (c)', () => {
+    const src = `configStore.set(TOKEN_STORE_KEY, x)\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
+  })
+
+  it('does NOT trip on the real Epic/GOG constants/key_value_stores import (d)', () => {
+    const src = `import { configStore } from '../constants/key_value_stores'\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).toEqual([])
+  })
+
+  it('trips on a require() destructure of configStore from the Steam surface (e)', () => {
+    const src = `const { configStore } = require('../storeManagers/steam/electronStores')\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
+  })
+
+  it('trips on a dynamic import() destructure of configStore from the Steam surface (f)', () => {
+    const src = `const { configStore } = await import('./electronStores')\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).not.toEqual([])
+  })
+
+  it('does NOT trip on the real D-04 seam import of setTokenStore (g)', () => {
+    const src = `import { setTokenStore as installTokenStore } from '../storeManagers/steam/tokenStore'\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).toEqual([])
+  })
+
+  it('does NOT trip on a real type-only TokenStore import (h)', () => {
+    const src = `import type { TokenStore } from 'backend/storeManagers/steam/tokenStore'\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).toEqual([])
+  })
+
+  it('does NOT trip on a real GOG electronStores import (i)', () => {
+    const src = `import { playtimeSyncQueue } from '../storeManagers/gog/electronStores'\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).toEqual([])
+  })
+
+  it('does NOT trip on a trailing-comment-only mention (proves the trailing-comment strip is wired) (j)', () => {
+    const src = `const foo = 1 // import { configStore } from './electronStores'\n`
+    expect(findSteamTokenSurfaceViolations(src, 'synthetic')).toEqual([])
+  })
 })
 
 describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)', () => {
