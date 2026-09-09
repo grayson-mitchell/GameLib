@@ -5,8 +5,8 @@ area: i18n
 severity: minor
 platform: any
 ready: live-gate
-needs: live-verification
-status: OPEN
+needs: none
+status: "RESOLVED 2026-09-09 by quick 260909-r4h. Both surfaces rebranded in place across 39 catalogs (121 strings); live gate driven on this Mac -- German PASSES 4/4 and Korean falls back to English as the unaffected control."
 found_by: 'Phase 34.12-07 live UAT (measured across all 47 locale catalogs after the tooltip fix made tour text readable for the first time under Tauri)'
 source: '.planning/phases/34.12-onboarding-tour-rework-re-anchor-the-disabled-sidebartour-ag/34.12-07-SUMMARY.md'
 resolves_phase: ''
@@ -158,3 +158,56 @@ Verification section requires switching the app language and reading the tour on
 That gate has NOT been run. Nothing in the suite can discharge it -- the tour suites mock
 `t()` to echo defaults, so they are green either way. Close this only after a live read of
 steps 4, 9 and 10 in one affected locale plus one unaffected locale.
+
+## LIVE GATE DRIVEN 2026-09-09 -- German PASSES 4/4
+
+Operator ran the app (`pnpm tauri:dev`, pid 64221) with language set to **Deutsch** and
+read all four surfaces this todo names:
+
+| surface | read | verdict |
+| --- | --- | --- |
+| Settings version label (`info.heroic.version`) | "GameLib-Version" | PASS |
+| tour step 4 (`tour.sidebar.settings`) | GameLib-branded | PASS |
+| tour step 9 (`tour.sidebar.docs`) | GameLib-branded | PASS |
+| tour step 10 (`tour.sidebar.community`) | GameLib-branded, no Discord | PASS |
+
+Step 10 is the load-bearing one: it is the only string rewritten as a sentence rather than
+word-swapped, because it carried three overlapping defects (Heroic branding, a Discord
+promise the English source never made, and the Ko-fi -> Donate row rename underneath it).
+It reads correctly.
+
+This also retires the todo's own worry that the tooltip might not paint under Tauri --
+three tour tooltips were read on screen.
+
+**Scope of what this gate proves: German only.** The other 27 locales were changed by the
+same mechanism and are evidenced by measurement, not by eye. The hand-corrected grammar
+cases (`ca` "del GameLib" with the article elision undone, `pl` "GameLiba" genitive, `et`
+"GameLibi", `fr` "de GameLib", `sv` "GameLib-version") are UNREAD on screen -- those are
+the ones where a naive token swap would have been wrong, so they are the highest-value
+spot-check if anyone wants one later.
+
+## CONTROL LOCALE PASSES -- gate fully discharged, todo CLOSED 2026-09-09
+
+Operator switched to **Korean** on the same live run: tour steps 4/9/10 render **English**,
+not German and not "Heroic". Korean's `tour.sidebar.*` values are empty strings, so this is
+the `returnEmptyString: false` fallback behaving correctly, and it rules out
+cross-contamination between catalogs -- the failure mode a purely structural check could
+not have excluded.
+
+Both halves of this todo's stated verification are now satisfied: one affected locale
+(German, 4/4) plus one unaffected locale (Korean, fallback intact). **Closing.**
+
+**Honest scope of the evidence:** German and Korean were read on screen. The other 26
+changed locales rest on measurement (1967 -> 1846 "Heroic", exactly -121; zero stale live
+keys; zero Discord promises; `en/` untouched; all 47 catalogs parse). The five
+hand-corrected grammar cases -- `ca` "del GameLib", `pl` "GameLiba", `et` "GameLibi",
+`fr` "de GameLib", `sv` "GameLib-version" -- remain UNREAD on screen. They are correct by
+construction and by review, not by observation. If any of them is ever reported wrong,
+that is a copy bug in this commit, not a regression.
+
+**What this todo does NOT close:** todo
+`2026-09-01-non-english-catalogs-are-unrebranded-2117-heroic-strings` remains open with
+**1846** occurrences (its own title's 2117/2274 figures are stale -- re-measure, do not
+quote them). Critically, without the re-runnable `meta/` script that todo calls for, the
+next upstream catalog refresh re-imports upstream branding and silently undoes this fix.
+The 2026-09-05 staleness audit already flagged that these two overlap.

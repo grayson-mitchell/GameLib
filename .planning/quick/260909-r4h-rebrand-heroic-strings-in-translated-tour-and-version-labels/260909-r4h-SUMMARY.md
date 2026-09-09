@@ -59,11 +59,23 @@ area: i18n
 are green either way — which is how 28 locales went stale under four green gates in the first
 place. The evidence is the structural before/after measurement.
 
-## Not done
+## Live gate: DRIVEN and PASSED 2026-09-09
 
-- **The live gate.** The todo requires switching app language and reading tour steps 4, 9 and
-  10 in an affected locale plus an unaffected one. Not run. The todo therefore stays in
-  `pending/`, narrowed to that gate.
+Run on this Mac (`pnpm tauri:dev`, pid 64221), both halves of the todo's stated verification:
+
+- **German (affected)** -- 4/4: version label reads "GameLib-Version"; tour steps 4, 9 and 10
+  all GameLib-branded, and step 10 carries no Discord mention. Step 10 was the load-bearing
+  one, being the only string rewritten as a sentence rather than word-swapped.
+- **Korean (unaffected control)** -- tour steps fall back to **English**, not German and not
+  "Heroic", confirming `returnEmptyString: false` fallback and ruling out cross-contamination.
+
+Todo moved to `completed/`.
+
+**Evidence boundary:** German and Korean were read on screen; the other 26 changed locales
+rest on measurement. The five hand-corrected grammar cases (`ca`, `pl`, `et`, `fr`, `sv`) are
+correct by construction and review, **not** by observation.
+
+## Not done
 - **Todo 20** (`2026-09-01-non-english-catalogs-are-unrebranded`) remains open: 1846 "Heroic"
   occurrences across the catalogs. The 2026-09-05 staleness audit found these two todos
   overlap and said whoever takes either should take both. This task deliberately took only
