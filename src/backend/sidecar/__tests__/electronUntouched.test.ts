@@ -29,10 +29,26 @@
  * restores it. Safety is proven by comparing the file's raw bytes (`fs.readFileSync`) before and
  * after driving the sidecar; reading is inherently safe, so there is nothing to restore.
  *
- * The final two tests are a by-construction source gate (T-28-01/T-28-09): they read the
- * sidecar's own source files with comments stripped and assert the forbidden identifiers/lie
- * never reappear, so a regression fails this automated suite rather than relying on code
- * review.
+ * The last two `it`s in the main describe below are a by-construction source gate
+ * (T-28-01/T-28-09): they read the sidecar's own source files with comments stripped and
+ * assert the forbidden identifiers/lie never reappear, so a regression fails this automated
+ * suite rather than relying on code review.
+ *
+ * The Steam-token-surface gate (quick-260909-iz2) encodes D-04's BINDING-level constraint:
+ * `keyringTokenStore.ts` and `bootstrap.ts` may not bind `configStore`, `TOKEN_STORE_KEY`,
+ * `TOKEN_PREFIX` or `ElectronTokenStore` from the Steam token surface
+ * (`storeManagers/steam/{electronStores,tokenStore,constants}`, and its sibling `./` form), and
+ * may not name `TOKEN_STORE_KEY`/`TOKEN_PREFIX` at all, anywhere. It used to be a bare
+ * `configStore` substring ban across the whole file, which was wrong: `bootstrap.ts:100`'s
+ * unrelated Epic/GOG `import { configStore } from '../constants/key_value_stores'` -- used only
+ * for `configStore.delete('userInfo')` at `:431`, an Epic user record and not a token --
+ * convicted correct code and held the whole Backend suite red (landed by `204025b39`). The
+ * narrowing is proven, not merely asserted: the separate `steam token surface binding gate
+ * helper` describe below drives the same `findSteamTokenSurfaceViolations` helper against
+ * synthetic sources and pins that a real Steam-surface `configStore` import -- direct, aliased,
+ * via `require()`, or via dynamic `import()` -- still trips. Anyone narrowing this gate again
+ * must extend that guard block, not just this one; a negative gate narrowed by region without a
+ * proof leaves a widening blind spot.
  */
 
 import { existsSync, readFileSync } from 'fs'
@@ -504,14 +520,15 @@ describe('Electron-untouched byte-comparison proof (D-04, REQ-28-02/REQ-28-04)',
     }
   })
 
-  it('by-construction gate: keyringTokenStore.ts and bootstrap.ts never reference configStore/TOKEN_STORE_KEY/TOKEN_PREFIX (comments stripped)', () => {
+  it('by-construction gate: keyringTokenStore.ts and bootstrap.ts never bind the Steam token surface -- D-04, comments stripped', () => {
     const files = [
       join(__dirname, '../keyringTokenStore.ts'),
       join(__dirname, '../bootstrap.ts')
     ]
     for (const file of files) {
-      const stripped = stripComments(readFileSync(file, 'utf-8'))
-      expect(stripped).not.toMatch(/TOKEN_STORE_KEY|TOKEN_PREFIX|configStore/)
+      const source = readFileSync(file, 'utf-8')
+      const violations = findSteamTokenSurfaceViolations(source, file)
+      expect(violations).toEqual([])
     }
   })
 

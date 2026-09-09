@@ -290,8 +290,24 @@ describe('gameDetailsImportGate (Phase 34.2 Plan 04 — REQ-34.2-01/REQ-34.2-03/
   // insertions, 1 deletion, and a byte-for-byte review of the diff (whitespace/line-break
   // only). Prior digest:
   // 39e68ed1845d05a1cbc74739b0e86b5289531914c384fbad6638efefb060ce91
+  //
+  // Re-pinned 2026-09-09 by quick task 260909-iz2, per this gate's own documented procedure.
+  // Narrowed the by-construction gate (T-28-01) from a bare `configStore` substring ban to a
+  // binding-level check (D-04): added `findSteamTokenSurfaceViolations` plus its
+  // `steam token surface binding gate helper` guard describe (proving the narrowing still
+  // trips on real Steam-token-surface violations, including aliased ones, and no longer
+  // convicts bootstrap.ts's unrelated Epic/GOG `constants/key_value_stores` import), rewired
+  // the by-construction `it` onto that helper, and updated the module docstring's closing
+  // paragraph to describe the new binding-level contract. No assertion was weakened: the
+  // `safeStorage.isEncryptionAvailable` "always true" regression detector and the configStore
+  // byte-identity comparisons in the rest of the file are untouched, and the by-construction
+  // gate still asserts (against a check that is narrower in NAME-BAN but not narrower in what
+  // it can catch -- the specifier scope is exhaustively enumerated). Verified by
+  // `git diff --stat -- src/backend/sidecar/__tests__/electronUntouched.test.ts` across both
+  // task commits. Prior digest:
+  // 5e8bbe4f27c24d29910a1aa63ecb99e577451da900a65515f5fbd52722d4871b
   const ELECTRON_UNTOUCHED_SHA256 =
-    '5e8bbe4f27c24d29910a1aa63ecb99e577451da900a65515f5fbd52722d4871b'
+    '466327c30fca5097b24ec36fafadfe6b7d620175869c7e2e8bad5fa4ce7e874e'
 
   it('REQ-34.2-14 Gate 8: electronUntouched.test.ts matches its committed sha256 digest', () => {
     const filePath = join(__dirname, 'electronUntouched.test.ts')
