@@ -46,7 +46,7 @@ cold connect), so the first install of a session has no PICS appinfo and falls b
 a duplicate `app_<appid>` directory. Filed as
 `.planning/todos/pending/2026-09-09-cold-session-installdir-falls-back-to-app-appid.md`.
 
-## What remains OPEN
+## What remained OPEN at the time of writing (SUPERSEDED — see the note at the end)
 
 **Both damaged installs are still damaged and still unrepaired, deliberately.** Native
 **38410** (`master.dat` still an empty directory, 258,221,501 B under a `StateFlags=4`
@@ -84,3 +84,16 @@ Every mutated path was restored and hash-verified against its pre-run value: the
 ACF, `AvScenData.dat`, `Contents/MacOS/Avadon`, and `libraryfolders.vdf`. The Avadon
 tree is back to 1209 files / 121,853,904 B. No file under
 `src/backend/storeManagers/steam/` was modified — the gate measured shipped code.
+
+
+---
+
+## SUPERSEDED 2026-09-09 (later the same day) — both games uninstalled
+
+The "What remained OPEN" section above says native 38410 and 718850 are still damaged
+and unrepaired by user decision. **The operator reversed that decision shortly after and
+asked for both to be removed from disk.** Both were uninstalled through Steam's own
+`steam://uninstall/<appid>` (Steam was running by then, so hand-deleting underneath it
+was rejected as unsafe); ~2.7 GB reclaimed, manifest count 23 → 21, nothing else
+affected. Both damaged ACFs were preserved first under `damaged-acf-evidence/` with
+hashes matching the pre-gate controls. Corrected in place on the closed todo too.

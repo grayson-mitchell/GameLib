@@ -1,0 +1,89 @@
+"AppState"
+{
+	"appid"		"718850"
+	"Universe"		"1"
+	"name"		"Age of Wonders: Planetfall"
+	"StateFlags"		"4"
+	"installdir"		"Age of Wonders Planetfall"
+	"lastupdated"		"1787022447"
+	"LastPlayed"		"0"
+	"SizeOnDisk"		"17151298416"
+	"StagingSize"		"0"
+	"buildid"		"6792988"
+	"LastOwner"		"76561197995867096"
+	"DownloadType"		"1"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"0"
+	"BytesDownloaded"		"0"
+	"BytesToStage"		"0"
+	"BytesStaged"		"0"
+	"TargetBuildID"		"6792988"
+	"AutoUpdateBehavior"		"0"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"0"
+	"InstalledDepots"
+	{
+		"718851"
+		{
+			"manifest"		"3561846060667316042"
+			"size"		"16328140703"
+		}
+		"1078851"
+		{
+			"manifest"		"1877362118950640460"
+			"size"		"356999117"
+			"dlcappid"		"1078851"
+		}
+		"1078850"
+		{
+			"manifest"		"670349158200634662"
+			"size"		"31605187"
+			"dlcappid"		"1078850"
+		}
+		"1078852"
+		{
+			"manifest"		"3470553170978482425"
+			"size"		"171850877"
+			"dlcappid"		"1078852"
+		}
+		"1078840"
+		{
+			"manifest"		"5116800992846048191"
+			"size"		"229508"
+			"dlcappid"		"1078840"
+		}
+		"1137800"
+		{
+			"manifest"		"6385174098949226545"
+			"size"		"313593"
+			"dlcappid"		"1137800"
+		}
+		"1137801"
+		{
+			"manifest"		"8463722878323817861"
+			"size"		"203180"
+			"dlcappid"		"1137801"
+		}
+		"718853"
+		{
+			"manifest"		"892696496382364558"
+			"size"		"261639757"
+		}
+		"1137802"
+		{
+			"manifest"		"6297970458108346859"
+			"size"		"316494"
+			"dlcappid"		"1137802"
+		}
+	}
+	"InstallScripts"
+	{
+		"718851"		"Planetfall_InstallScript.vdf"
+	}
+	"UserConfig"
+	{
+	}
+	"MountedConfig"
+	{
+	}
+}

@@ -449,3 +449,51 @@ before opening anything new about 38410 or 718850.
 lands in a duplicate `app_<appid>` directory. Found by this task's gate. It is almost
 certainly what produced the pre-existing `app_257350`, `app_25900` and `app_402060`
 directories, which were left untouched as user data.
+
+
+---
+
+# 2026-09-09 (later the same day) — DISPOSITION CHANGED: both games UNINSTALLED
+
+**The `status:` frontmatter above, and the "# 2026-09-09 — CLOSED" section, both say the
+two installs "remain DAMAGED ON DISK BY DECISION". That is now STALE.** The operator
+reversed the decision shortly after this todo was closed and asked for both games to be
+cleaned off disk. Corrected here in place rather than by rewriting the closing record,
+which was accurate when written.
+
+## What was removed
+
+Uninstalled through **Steam's own uninstall** (`steam://uninstall/<appid>`), not by hand
+— Steam had started at 18:03 and was a live writer to `steamapps`, so deleting
+underneath it would have risked an inconsistent Steam-side state. Both apps were
+confirmed present in `libraryfolders.vdf`'s apps map first, because the verb is a silent
+no-op against an unadopted app.
+
+| appId | title | ACF | install dir |
+| --- | --- | --- | --- |
+| 38410 | Fallout 2 | removed | `common/Fallout 2` removed (246 MB) |
+| 718850 | Age of Wonders: Planetfall | removed | `common/Age of Wonders Planetfall` removed (2.4 GB) |
+
+~2.7 GB reclaimed. Manifest count 23 → 21. Verified that nothing else was affected: the
+remaining `common/` listing is the prior one minus exactly these two plus the
+`app_112100` orphan this task created. Both games **remain owned and reinstallable** —
+only local content was removed.
+
+## Evidence preserved before deletion
+
+Both damaged ACFs were copied to
+`.planning/quick/260909-nzb-acf-stateflags4-live-gate/damaged-acf-evidence/` with their
+sha256 values, which match the pre-gate control hashes
+(`8a48ad5a…` / `add630ea…`). The forensic record of this todo therefore survives the
+deletion of its subject.
+
+## One last live confirmation, captured on the way out
+
+Steam restarted at **18:03** and ran a full startup scan over both damaged manifests.
+It left them **byte-identical** — no verify, no repair, no downgrade to `1026`. That is
+this todo's central claim demonstrated directly rather than argued: `StateFlags=4` means
+**Steam runs no verify pass**, so an install damaged under that flag is never detected
+and never self-repaired. It is the reason the defect mattered, observed one last time
+immediately before the evidence was destroyed.
+
+**The todo stays closed.** This changes the disposition of the damage, not the finding.
