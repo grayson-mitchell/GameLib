@@ -477,6 +477,30 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-34.11-15 | Phase 34.11 | Complete |
 | REQ-34.11-16 | Phase 34.11 | Complete |
 | REQ-34.11-17 | Phase 34.11 | Complete |
+| REQ-43-01 | Phase 43 | Pending |
+| REQ-43-02 | Phase 43 | Pending |
+| REQ-43-03 | Phase 43 | Pending |
+| REQ-43-04 | Phase 43 | Pending |
+| REQ-43-05 | Phase 43 | Pending |
+| REQ-43-06 | Phase 43 | Pending |
+| REQ-43-07 | Phase 43 | Pending |
+| REQ-43-08 | Phase 43 | Pending |
+| REQ-43-09 | Phase 43 | Pending |
+| REQ-43-10 | Phase 43 | Pending |
+| REQ-43-11 | Phase 43 | Pending |
+| REQ-43-12 | Phase 43 | Pending |
+| REQ-43-13 | Phase 43 | Pending |
+| REQ-43-14 | Phase 43 | Pending |
+| REQ-43-15 | Phase 43 | Pending |
+| REQ-43-16 | Phase 43 | Pending |
+| REQ-43-17 | Phase 43 | Pending |
+| REQ-43-18 | Phase 43 | Pending |
+| REQ-43-19 | Phase 43 | Pending |
+| REQ-43-20 | Phase 43 | Pending |
+| REQ-43-21 | Phase 43 | Pending |
+| REQ-43-22 | Phase 43 | Pending |
+| REQ-43-23 | Phase 43 | Pending |
+| REQ-43-24 | Phase 43 | Pending (CONDITIONAL — blocked on D-43-11 spike) |
 
 **Coverage:**
 - v0.2 requirements: 15 total
@@ -1682,3 +1706,153 @@ user-visible surfaces (REQ-40-12), not silent omissions.
   *(D-37)*
 
 *Last updated: 2026-09-04 -- Phase 40 (REQ-40-01..14) minted during `/gsd-plan-phase 40` from `spikes/MANIFEST.md:345-378` (Idea C, spikes 016-018) plus REQ-34.4.1-07's deferral text, per ROADMAP.md's Phase 40 instruction NOT to re-derive them from the panel's copy; `40-CONTEXT.md` D-01..D-37 supply the shipping decisions. **No RESEARCH.md or VALIDATION.md exists for this phase by design** (`--skip-research`) -- spikes 016/017/018 were run against vendored crate sources and live hardware as the kill-shot for exactly these questions, and the ROADMAP warns that re-deriving them from docs gets different answers; validation criteria are therefore carried inside each plan's `<verification>` and `must_haves` rather than in a separate artifact. **Three planning-time corrections are recorded in requirement text rather than left in a plan**, each because it changes what a plan must assert: (1) D-26's stated capability control is verifiable but is not the control that holds -- the embed DOES match `default.json` on the ACL's window leg (`capability.rs:150-163` doc comment; `authority.rs:459` ORs the legs), and the ORIGIN leg is what denies it (`authority.rs:57-67`), making REQ-40-11 a conjunction; (2) D-32's "blocked subresource" caveat is inverted -- the retired detection was main-frame, and the real obstacle is that wry 0.55.1's macOS backend implements no navigation-failure callback at all, so REQ-40-08 is a derive-or-declare obligation; (3) two frontend gates are invalidated by the Model A retirement and are dispositioned in-plan rather than discovered in CI (`WebviewUnavailablePanel.test.tsx`'s `hasTwoDistinctArms` extracts at the literal `if (!webviewPreloadPath)` string REQ-40-10 deletes, and `meta/i18nForkTouchedFiles.json:51,:203` pin two deleted files). Also folded into REQ-40-10: `humbleGetLoginUserAgent` joins D-11's re-census scope, its only renderer consumer having been the deleted UA fetch. ROADMAP.md's Phase 40 `**Requirements**: TBD -- mint REQ-40-*` line is replaced by these IDs.*
+
+## Phase 43 Requirements — Humble Keys screen: unified list replacing the three tabs
+
+Minted 2026-09-09 during `/gsd-plan-phase 43`, adopted verbatim from `43-RESEARCH.md`'s
+`## Requirements (Proposed)` table (the closest live convention — Phase 37/40/23's
+`- [ ] **REQ-<phase>-<NN>** (D-XX): <PASS/FAIL-scoreable text>` shape). `43-CONTEXT.md`'s
+D-43-01..D-43-21 supply the shipping decisions behind each requirement, and `43-UI-SPEC.md`
+(approved 6/6 dimensions) is the binding design contract for REQ-43-19, REQ-43-20, REQ-43-21 and
+REQ-43-23 — the requirement text below does not re-derive layout, empty-state, or filter-contract
+detail the UI-SPEC already settles.
+
+**Four planning-time corrections are recorded in requirement text rather than left in a plan,
+because each changes what a plan must assert:**
+
+1. **`selectKeysWaiting` has THREE surviving production consumers outside the Humble Keys
+   screen** (`src/frontend/screens/StoreSearch/index.tsx:8,39`,
+   `src/frontend/screens/Discounts/index.tsx:16,84`, plus
+   `src/backend/humble/__tests__/library.test.ts:2147` and
+   `src/backend/discounts/__tests__/badges.test.ts`). `43-RESEARCH.md`'s Execution Sequencing
+   Risk point 5 and `43-PATTERNS.md`'s viewFilters assignment both state its only call sites are
+   the deleted tab files — that is FALSE. REQ-43-18's "no longer exists in the tree" scope covers
+   `HumbleKeyGroup`/`groupAndSortKeys`/`GROUP_ORDER`/`byExpiringSoonest`/
+   `partitionWaitingByUrgency` only; `selectKeysWaiting` survives untouched.
+2. **`compareWaiting` is module-private** (`src/common/humble/viewFilters.ts:27`, declared
+   `function compareWaiting`, no `export`). REQ-43-05's "the survivor" must therefore be
+   **exported** before the unified list can sort with it.
+3. **`meta/i18nForkTouchedFiles.json` ALSO enrols the four deleted files** (lines 115, 116, 117,
+   119). `43-RESEARCH.md`'s assumption A3 ("no other gate config also enrols these four paths")
+   is FALSE. `meta/__tests__/genI18nGateScope.test.ts:338-389`'s `A-03 RATCHET` compares
+   `forkTouched \ scope` against `DECLARED_UNSCANNED_DEBT`, and `:613`'s `A-17 ANTI-ROT` asserts
+   the committed artifact equals the live git derivation — so REQ-43-22's scope is **both** json
+   artifacts, not one.
+4. **Neither `Waiting/__tests__/index.test.tsx` nor `All/__tests__/index.test.tsx` asserts the
+   pinned "Expiring soon" section, `GROUP_ORDER`, or `defaultExpanded`/collapse behaviour**
+   (measured: `grep -n "expiringSoon\|Expiring soon\|humbleKeysPinnedSection\|pinned"` returns
+   zero hits in the Waiting test; the All test's only `collapse` hits are in its own header
+   prose). `43-RESEARCH.md`'s Deleted-Tab Salvage section predicts both tests cover this
+   behaviour — both predictions are FALSE. Those 22 assertions pin lifecycle behaviour that MUST
+   survive, so REQ-43-12/-17's triage is "port forward", not "delete".
+
+- [ ] **REQ-43-01**: A `platform === 'generic'` key renders as an ordinary row (no partition),
+  `TYPE` shows the neutral "Other" text at the same column width as a logo row. Source decision:
+  D-43-01. Verified by: unit (common) + component.
+
+- [ ] **REQ-43-02**: `state === 'UNPICKED'` renders the full-width "Pick on Humble" button; the
+  `!isUnpicked` gate still suppresses the store logo/text for UNPICKED rows. Source decision:
+  D-43-02. Verified by: component (extends existing UNPICKED pin).
+
+- [ ] **REQ-43-03**: `state === 'UNREDEEMABLE'` renders no button, state text only, the same bare-
+  text shape as scenario 4's no-button case. Source decision: D-43-03. Verified by: component.
+
+- [ ] **REQ-43-04**: No row count renders anywhere in the title row or controls row. Source
+  decision: D-43-04. Verified by: component (assert absence).
+
+- [ ] **REQ-43-05**: Default sort is `Expiring soonest`; exactly one of
+  `compareWaiting`/`byExpiringSoonest` survives in the codebase (the other is deleted with
+  `groupKeys.ts`); the survivor's undated-key tiebreak is alphabetical. Source decisions: D-43-06,
+  D-43-20. Verified by: unit (differentiating case) + source census (grep for the deleted name
+  returns 0 hits outside git history).
+
+- [ ] **REQ-43-06**: Search text, sort choice, and checkbox all reset to their defaults on every
+  fresh render/mount — nothing reads `localStorage` or route state. Source decision: D-43-07.
+  Verified by: component.
+
+- [ ] **REQ-43-07**: The checkbox predicate is exactly `WAITING_STATES.has(key.state)` — toggling
+  `ownedElsewhere`, `platform`, or `matchConfidence` alone never changes inclusion. Source
+  decision: D-43-08. Verified by: unit (field-independence parametrized test).
+
+- [ ] **REQ-43-08**: The checkbox's initial rendered value is checked (`true`). Source decision:
+  D-43-09. Verified by: component.
+
+- [ ] **REQ-43-09**: A query string matching only `origin` (not `title`) produces zero matches; a
+  query matching `title` matches regardless of `origin` content. Source decision: D-43-10.
+  Verified by: unit (common, new predicate).
+
+- [ ] **REQ-43-10**: Scenario 1 triggers only when the platform has a GameLib login concept AND
+  that store's `ContextProvider` username field is falsy. Source decision: D-43-12. Verified by:
+  unit/component (toggle username truthy/falsy).
+
+- [ ] **REQ-43-11**: For platforms in `{uplay, battlenet, origin, origin_keyless,
+  nintendo_direct, generic, unrecognised}`, `KEY` never renders scenario 1, always renders the
+  no-precondition "Claim on [store]" routed to `HUMBLE_REDEEM_HELP_URL`. Source decision: D-43-13.
+  Verified by: component.
+
+- [ ] **REQ-43-12**: On the same row, "Not the same game" and "Undo — I do own this game" are
+  mutually exclusive, keyed strictly on override-record presence, never on cleared fuzzy/owned
+  flags. Source decision: D-43-14. Verified by: component (adapts existing WR-04 pattern).
+
+- [ ] **REQ-43-13**: State badge and expiration/annotation text render inside the `KEY` cell,
+  never in `GAME`. Source decision: D-43-15. Verified by: component.
+
+- [ ] **REQ-43-14**: `UrgencyBadge` renders adjacent to the title inside `GAME`, never inside
+  `KEY`. Source decision: D-43-16. Verified by: component.
+
+- [ ] **REQ-43-15**: `TYPE` and `GAME` contain zero click handlers, zero `<button>`/`<a>`
+  elements, and no `cursor: pointer` rule targets them. Source decision: D-43-17. Verified by:
+  component (structural: walk returned element tree for onClick/href props) + CSS census.
+
+- [ ] **REQ-43-16**: `/humble-keys/waiting`, `/spares`, `/all` each redirect to `/humble-keys`;
+  `/humble-keys` itself renders the unified list, not a 404. Source decision: D-43-18. Verified
+  by: component/router test.
+
+- [ ] **REQ-43-17**: No pinned "Expiring soon" section renders anywhere on the unified screen;
+  `partitionWaitingByUrgency` has zero remaining call sites. Source decision: D-43-19. Verified
+  by: component + source census (grep).
+
+- [ ] **REQ-43-18**: `HumbleKeyGroup` and `groupAndSortKeys` no longer exist in the tree;
+  `GENERIC_KEY_PLATFORM` and `STATE_LABEL_KEYS` still resolve from their (possibly new) module
+  paths; `pnpm codecheck` passes. Source decision: D-43-20. Verified by: build/typecheck + source
+  census. **`selectKeysWaiting` is explicitly OUT of this requirement's scope** — see planning-
+  time correction 1 above.
+
+- [ ] **REQ-43-19**: The `TYPE` and `KEY` column widths are visually identical across the header
+  row and every KEY-scenario row shape (full-width button / pair / bare text), and the row
+  separator renders as a hairline in the packaged Tauri build. Source decision: D-43-21. Verified
+  by: **live gate only** — no unit/component substitute exists (frontend jest has no jsdom).
+
+- [ ] **REQ-43-20**: A genuinely-empty library shows the non-recovery empty state; a non-empty
+  library filtered to zero rows shows the distinct filtered-empty state with a working "Clear
+  search and filters" action that resets checkbox to `false` (not its `true` default). Source:
+  `43-UI-SPEC.md` "Empty States". Verified by: component.
+
+- [ ] **REQ-43-21**: Search and the checkbox combine with AND (a row must satisfy both to show).
+  Source: `43-UI-SPEC.md` "Search & Filter Contract". Verified by: unit/component.
+
+- [ ] **REQ-43-22**: `meta/i18nGateScope.json` **and** `meta/i18nForkTouchedFiles.json` no longer
+  list any of the four deleted files. Source: Landmine 1 (`43-CONTEXT.md`); scope widened by
+  planning-time correction 3 above. Verified by: source census (the CI gates themselves).
+
+- [ ] **REQ-43-23**: Every `aria-label` this phase adds/keeps is an expression, never a string
+  literal. Source: `43-UI-SPEC.md` "aria-label note". Verified by: `meta/hardcodedStringGate.ts`
+  (existing CI gate).
+
+- [ ] **REQ-43-24 (CONDITIONAL)**: **Not shippable until the D-43-11 spike closes.** `gog_keyless`
+  renders scenario 2/3 with the label+destination the spike's outcome selects (candidate A, B, or
+  external-browser fallback). Source decision: D-43-11. Verified by: blocked — see
+  `43-VALIDATION.md`'s Manual-Only Verifications table.
+
+*Last updated: 2026-09-09 -- Phase 43 (REQ-43-01..24) minted during `/gsd-plan-phase 43` from
+`43-RESEARCH.md`'s `## Requirements (Proposed)` table; `43-CONTEXT.md` D-43-01..D-43-21 supply the
+shipping decisions, `43-UI-SPEC.md` (approved 6/6) is the binding design contract for REQ-43-19/
+-20/-21/-23. **Four planning-time corrections are recorded in requirement text rather than left in
+a plan**, each because it changes what a plan must assert: (1) `selectKeysWaiting` survives with
+three production consumers outside the Humble Keys screen (`StoreSearch`, `Discounts`, plus two
+test files) — REQ-43-18's deletion scope excludes it; (2) `compareWaiting` is module-private and
+REQ-43-05's survivor must be exported before use; (3) `meta/i18nForkTouchedFiles.json` also enrols
+the four deleted files, so REQ-43-22's scope is both json artifacts; (4) the two deleted tabs'
+existing test suites do not cover the pinned "Expiring soon"/`GROUP_ORDER`/collapse behaviour the
+research predicted, so REQ-43-12/-17 require porting those 22 assertions forward rather than
+deleting them. ROADMAP.md's Phase 43 `**Requirements**: TBD` line is replaced by these IDs.*
