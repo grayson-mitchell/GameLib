@@ -116,24 +116,31 @@ type Props = {
   settleAction?: { settledAt: number; onUndoSettle: () => void }
 }
 
-// D-22: strictly read-only, with FOUR sanctioned exceptions. No click
-// handler, no button/link element, no cursor:pointer, no reveal/copy/expand
-// affordance beyond these — Phase 14 owns the claim UX via the wizard it
-// mounts elsewhere, not general interactivity added here. Exception 1: the
-// D-42 "Not the same game" override (fuzzy-matched rows only), paired with
-// its WR-04 (D-71, 14-REVIEW) undo-override counterpart (`undoOverride`
-// prop — rendered wherever the OVERRIDDEN key now appears, i.e.
-// Keys-waiting, keyed off the override record existing). Exception 2: the
-// optional `giftAction` prop (Giftable Spares tab only, Phase 13).
-// Exception 3: the optional `claimAction` prop (Keys-waiting tab only,
-// D-67, Phase 14) — opens the claim wizard via the caller-supplied
-// onClaim/onFinish/onUndoRedeem handlers. Exception 4: the optional
-// `settleAction` prop (All-keys' Redeemed group only, D-42-01, Phase 42) —
-// the reversal affordance for an ownership-inferred settle, which cannot
-// use Exception 3 because an `ownedElsewhere` key never reaches
-// Keys-waiting (viewFilters.ts:62). Every other interaction remains
-// forbidden. Do not "improve" this row further into a generally-interactive
-// element.
+// D-43-17 (Phase 43 plan 05): the row's interactivity contract, rewritten
+// as a KEY-column contract rather than retired or extended. The old D-22
+// premise — that the row was read-only apart from a small, fixed count of
+// sanctioned exceptions — is retired — by the time this plan ran that
+// count had grown and the premise described nothing real about the row.
+// The invariant worth keeping is
+// "interactivity lives in ONE place and nowhere else" — aimed at where the
+// risk now actually is, since `KEY` (`.humbleKeyColumnCell`) is interactive
+// in four of the UI-SPEC's five KEY-Column Scenario Matrix scenarios.
+//
+// New contract: `TYPE` (`.humbleKeyTypeCell`) and `GAME`
+// (`.humbleKeyGameCell`) are strictly presentational — no click handler, no
+// button/link element, no cursor:pointer, no reveal/copy/expand affordance.
+// Every action lives in `KEY` and is one of: the D-42 "Not the same game"
+// override (fuzzy-matched rows only) paired with its WR-04 (D-71,
+// 14-REVIEW) undo-override counterpart (`undoOverride` prop, keyed off the
+// override record existing); the optional `giftAction` prop (D-60,
+// Giftable Spares scenario); the optional `claimAction` prop (D-67,
+// Keys-waiting scenario) opening the claim wizard via the caller-supplied
+// onClaim/onFinish/onUndoRedeem handlers; and the optional `settleAction`
+// prop (D-42-01, an ownership-inferred settle) which cannot reuse
+// `claimAction` because an `ownedElsewhere` key never reaches Keys-waiting
+// (viewFilters.ts:62). Do not add an affordance outside `KEY` to satisfy
+// some future request — move the KEY cell's contents instead, or extend
+// the KEY-Column Scenario Matrix.
 export default function HumbleKeyRow({
   humbleKey,
   urgencyTier,
@@ -183,7 +190,7 @@ export default function HumbleKeyRow({
   // D-42-03: table-driven store indicator, replacing the raw lowercase
   // key_type token ("steam · Humble RPG Bundle") with a proper display name
   // plus logo (when one exists). Resolved once here, near the other derived
-  // locals, and consumed by the caption below.
+  // locals, and consumed by the TYPE cell below.
   const platformPresentation = getKeyTypePresentation(humbleKey.platform)
   const platformDisplay = resolvePlatformDisplay(
     platformPresentation,
@@ -193,207 +200,49 @@ export default function HumbleKeyRow({
 
   return (
     <li className="humbleKeyRow">
-      {/* 260908-vo4 column 0 — D-42-03 store indicator, hoisted to the
-          row's FIRST slot per the operator's 2026-09-08 live direction (it
-          previously lived nested inside .humbleKeyRowCaption, below the
-          title — see index.css's .humbleKeyRowStoreLogo comment for why
-          `order:` cannot express this move). Gated on
-          `!isUnpicked && PlatformLogo`: the `!isUnpicked` half is
-          load-bearing and must not be lost — a Choice-month pseudo-entry
-          has no store key and must show no store glyph (pinned by the
-          UNPICKED test in __tests__/index.test.tsx). PRESENTATIONAL ONLY
-          and does NOT need a fifth D-22 sanctioned exception (the
-          :119-136 contract block above is unchanged) — it adds no click
-          handler, no button/link element, no cursor:pointer, and no
-          callback-bearing prop. It is now the ONLY store signal on a
-          branded row (the text label below renders only on the no-logo
-          branch), so it carries its own accessible name — `role="img"` +
-          `aria-label={platformDisplay.name}` — rather than being hidden
-          from assistive tech behind an adjacent caption. `role` is a
-          literal (safe: `meta/hardcodedStringGate.ts`'s
-          EXCLUDED_ATTRIBUTES); `aria-label` MUST stay an expression, never
-          a literal (USER_FACING_ATTRIBUTES) — it resolves to one of the
+      {/* Column 1 -- TYPE (43-UI-SPEC Column Geometry Contract, D-43-15).
+          Always renders, including for UNPICKED rows, so the fixed 6.5rem
+          TYPE track never changes width row to row and the GAME column's
+          left edge never shifts. Holds either the branded-platform logo or
+          (no-logo branch) the .humbleKeyRowCaption text label -- never
+          both, and never for UNPICKED (D-43-02's `!isUnpicked` gate,
+          unchanged, pinned by the UNPICKED test in
+          __tests__/index.test.tsx). STRICTLY PRESENTATIONAL per the
+          D-43-17 contract above: no click handler, no button/link
+          element, no cursor:pointer, no callback-bearing prop. The logo
+          is the row's only store signal on a branded row (the caption
+          renders only on the no-logo branch), so it carries its own
+          accessible name -- `role="img"` + `aria-label={platformDisplay
+          .name}` -- rather than being hidden from assistive tech behind
+          an adjacent caption. `role` is a literal (safe:
+          `meta/hardcodedStringGate.ts`'s EXCLUDED_ATTRIBUTES);
+          `aria-label` MUST stay an expression, never a literal
+          (USER_FACING_ATTRIBUTES) -- it resolves to one of the
           untranslated proper nouns in `keyTypePresentation.ts`, which are
           marked do-not-translate in `meta/i18nGlossary.json`. */}
-      {!isUnpicked && PlatformLogo && (
-        <span
-          className="humbleKeyRowStoreLogo"
-          role="img"
-          aria-label={platformDisplay.name}
-        >
-          <PlatformLogo />
-        </span>
-      )}
-      {/* 260823-op3 column 1 — D-67 sanctioned exception: rendered ONLY when
-          the caller supplies a `claimAction` prop — the Keys-waiting tab is
-          the sole caller that does (C2 guard is the authoritative backstop;
-          this is first-line UI restriction only, T-14-03). D-77 Undo
-          affordance appears only while redeemedAt reflects a local-only mark
-          (the caller's annotations source already guarantees this — see
-          HumbleLibrary.getClaimAnnotations). Pitfall C: an UNREVEALED key
-          whose keyindex has not been resolved by a sync renders a
-          non-interactive "Sync to enable claiming" caption instead of a
-          button, so no wizard ever opens against a key it cannot reveal. */}
-      {claimAction && (
-        <span className="humbleKeyRowAction">
-          {claimAction.redeemedAt !== null ? (
-            <span className="humbleKeyClaimGroup">
-              <span className="humbleKeyClaimAnnotation">
-                {t('humbleKeys.redeemedAnnotation', 'Redeemed {{date}}', {
-                  date: new Date(claimAction.redeemedAt).toLocaleDateString()
-                })}
-              </span>
-              <button
-                type="button"
-                className="humbleKeyUndoButton"
-                onClick={claimAction.onUndoRedeem}
-              >
-                {t('humbleKeys.undo', 'Undo')}
-              </button>
-            </span>
-          ) : claimAction.revealedAt !== null ||
-            humbleKey.state === 'REVEALED' ? (
-            // CR-01 (14-REVIEW re-review): the Finish/Claim decision is gated
-            // on server truth (`state === 'REVEALED'`), not solely on the
-            // local reveal annotation — a key revealed on Humble's WEBSITE
-            // carries redeemed_key_val (classifies REVEALED) but has no
-            // humbleRevealedStore record, so `revealedAt` is null. Rendering
-            // "Claim" for it is a dead end: the backend refuses to reveal any
-            // non-UNREVEALED key (D-66 never-re-reveal). The "Revealed {date}"
-            // annotation still renders only when the local timestamp exists.
-            <span className="humbleKeyClaimGroup">
-              {claimAction.revealedAt !== null && (
-                <span className="humbleKeyClaimAnnotation">
-                  {t('humbleKeys.revealedAnnotation', 'Revealed {{date}}', {
-                    date: new Date(claimAction.revealedAt).toLocaleDateString()
-                  })}
-                </span>
-              )}
-              <button
-                type="button"
-                className="humbleKeyGiftButton"
-                onClick={claimAction.onFinish}
-              >
-                {/* 260823-op3: a REVEALED Steam key still activates in one
-                    click (the wizard reads the stored value instead of
-                    re-revealing), so it gets the same verb as a fresh one. */}
-                {isSteam
-                  ? tGamelib('gamelib:humbleKeys.activate', 'Activate')
-                  : t('humbleKeys.finishActivation', 'Finish activation')}
-              </button>
-            </span>
-          ) : claimAction.keyindexResolved ? (
-            <button
-              type="button"
-              className="humbleKeyGiftButton"
-              onClick={claimAction.onClaim}
-            >
-              {/* 260823-op3: "Claim" described a multi-step hand-off that no
-                  longer exists for Steam — one click reveals, redeems and
-                  marks the row. NEW key, not a changed default: `humbleKeys
-                  .claim` already resolves to "Claim" in en, so relabelling
-                  through the default argument would be a silent no-op. */}
-              {isSteam
-                ? tGamelib('gamelib:humbleKeys.activate', 'Activate')
-                : t('humbleKeys.claim', 'Claim')}
-            </button>
-          ) : (
-            <span className="humbleKeyClaimDisabledCaption">
-              {t('humbleKeys.syncToEnableClaiming', 'Sync to enable claiming')}
-            </span>
-          )}
-        </span>
-      )}
-      {/* Exception 4 (D-42-01, Phase 42): rendered ONLY when the caller
-          supplies a `settleAction` prop — the All tab's Redeemed group is
-          the sole caller that does, for a key settled from an
-          ownership-inferred REDEEM (never a user-marked one). Defensive
-          `!claimAction` guard: settleAction and claimAction are mutually
-          exclusive in practice (no caller supplies both — an
-          `ownedElsewhere` key never carries a `claimAction` prop, see
-          Keys-waiting's `selectKeysWaiting`), but if both were ever
-          present, claimAction's richer Keys-waiting affordance wins and
-          this column renders nothing rather than a duplicate Undo. */}
-      {!claimAction && settleAction && (
-        <span className="humbleKeyRowAction">
-          <span className="humbleKeyClaimGroup">
-            <span className="humbleKeyClaimAnnotation">
-              {t('humbleKeys.redeemedAnnotation', 'Redeemed {{date}}', {
-                date: new Date(settleAction.settledAt).toLocaleDateString()
-              })}
-            </span>
-            <span className="humbleKeyClaimAnnotation">
-              {tGamelib(
-                'gamelib:humbleKeys.settledFromOwnership',
-                'Already in your Steam library'
-              )}
-            </span>
-            <button
-              type="button"
-              className="humbleKeyUndoButton"
-              onClick={settleAction.onUndoSettle}
-            >
-              {t('humbleKeys.undo', 'Undo')}
-            </button>
+      <span className="humbleKeyTypeCell">
+        {!isUnpicked && PlatformLogo && (
+          <span
+            className="humbleKeyRowStoreLogo"
+            role="img"
+            aria-label={platformDisplay.name}
+          >
+            <PlatformLogo />
           </span>
-        </span>
-      )}
-      {/* 260823-op3 column 2 — D-60 sanctioned exception: rendered ONLY when
-          the caller supplies a `giftAction` prop — the Giftable Spares tab is
-          the sole caller that does. D-59 double-gift guard: once a gift has
-          been confirmed for this key, show the annotation instead of
-          re-rendering the button. */}
-      {giftAction && (
-        <span className="humbleKeyRowAction">
-          {giftAction.giftedAt !== null ? (
-            <span className="humbleKeyGiftedAnnotation">
-              {t(
-                'humbleKeys.giftedAnnotation',
-                'Opened Humble gift page {{date}}',
-                {
-                  date: new Date(giftAction.giftedAt).toLocaleDateString()
-                }
-              )}
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="humbleKeyGiftButton"
-              onClick={giftAction.onGift}
-            >
-              {t('humbleKeys.giftOnHumble', 'Gift on Humble')}
-              <FontAwesomeIcon icon={faExternalLinkAlt} />
-            </button>
-          )}
-        </span>
-      )}
-      {/* 260823-op3 column 3 — status, with the urgency badge kept adjacent
-          to it: the two read as one state pair, not as separate columns. */}
-      <span
-        className={`humbleKeyStateBadge humbleKeyStateBadge--${humbleKey.state}`}
-      >
-        {t(labelKey, labelDefault)}
-      </span>
-      <UrgencyBadge
-        tier={urgencyTier ?? null}
-        expiration={humbleKey.expiration}
-      />
-      {/* 260823-op3 column 4 — title + captions, the flex-grow cell that
-          pushes expiration to the right edge. */}
-      <div className="humbleKeyRowInfo">
-        <span className="humbleKeyRowTitle">{displayTitle}</span>
+        )}
         {!isUnpicked && PlatformLogo === null && (
-          // 260908-vo4: the caption now renders ONLY for platforms with no
-          // logo asset (`kind: 'named'` or `'unknown'`) — a branded row
-          // emits no caption element at all, the hoisted icon above (D-42-03
-          // column 0) is its sole store signal. Content is the bare display
-          // name only: the `· {{origin}}` bundle-label segment is dropped
-          // per the operator's directive (20 of 33 live keys carry the
-          // gift string "A very special gift just for you", which names no
-          // game and must not survive as row text — the game title in
-          // .humbleKeyRowTitle above remains the row's single label).
+          // 260908-vo4: the caption renders ONLY for platforms with no logo
+          // asset (`kind: 'named'` or `'unknown'`) -- a branded row emits no
+          // caption element at all, the logo above is its sole store
+          // signal. Content is the bare display name only: the
+          // `· {{origin}}` bundle-label segment is dropped per the
+          // operator's directive (20 of 33 live keys carry the gift string
+          // "A very special gift just for you", which names no game and
+          // must not survive as row text -- the game title in
+          // .humbleKeyRowTitle (GAME cell) remains the row's single
+          // label).
           //
-          // `humbleKeys.rowCaption` (public/locales/en/translation.json —
+          // `humbleKeys.rowCaption` (public/locales/en/translation.json --
           // upstream-owned) is now UNUSED but deliberately left in place,
           // not deleted: `meta/i18nCatalogChurnGuard.ts` throws
           // `UpstreamChurnError` on any changed path under `public/locales/`
@@ -402,14 +251,43 @@ export default function HumbleKeyRow({
           // change. Do not "tidy" it away.
           <span className="humbleKeyRowCaption">{platformDisplay.name}</span>
         )}
+      </span>
+      {/* Column 2 -- GAME (D-43-15/D-43-16, 43-UI-SPEC Column Geometry
+          Contract). The row's primary visual anchor: title plus
+          UrgencyBadge, nothing else. The ownership badge and both override
+          buttons now live in KEY (below), not here -- D-43-17 forbids any
+          button/link in this cell. */}
+      <div className="humbleKeyGameCell">
+        <span className="humbleKeyRowTitle">{displayTitle}</span>
+        <UrgencyBadge
+          tier={urgencyTier ?? null}
+          expiration={humbleKey.expiration}
+        />
+      </div>
+      {/* Column 3 -- KEY (D-43-15/D-43-17, 43-UI-SPEC "KEY column internal
+          layout"). Every interactive affordance on the row lives here. The
+          status line (state badge + expiration) renders first, above
+          whichever action content follows, uniformly across all five
+          KEY-Column Scenario Matrix scenarios (D-43-15). */}
+      <div className="humbleKeyColumnCell">
+        <span className="humbleKeyStatusLine">
+          <span
+            className={`humbleKeyStateBadge humbleKeyStateBadge--${humbleKey.state}`}
+          >
+            {t(labelKey, labelDefault)}
+          </span>
+          {expirationLabel !== null && (
+            <span className="humbleKeyRowExpiration">{expirationLabel}</span>
+          )}
+        </span>
         {humbleKey.ownedElsewhere && (
           <span className="humbleKeyOwnedBadge">
             {humbleKey.matchConfidence === 'exact'
               ? t('humbleKeys.ownedOnSteam', 'Owned on Steam')
               : t('humbleKeys.likelyOwnedOnSteam', 'Likely owned on Steam')}
-            {/* D-42 sanctioned exception: the ONLY interactive affordance on
-                this otherwise read-only row (D-22), and only for fuzzy
-                matches — exact AppID matches are trusted, no override. */}
+            {/* D-42 KEY-column affordance: the "Not the same game"
+                override, rendered only for fuzzy matches -- exact AppID
+                matches are trusted, no override needed. */}
             {humbleKey.matchConfidence === 'fuzzy' && (
               <button
                 type="button"
@@ -423,13 +301,15 @@ export default function HumbleKeyRow({
             )}
           </span>
         )}
-        {/* WR-04 (D-71, 14-REVIEW) sanctioned exception: reversal
+        {/* WR-04 (D-71, 14-REVIEW) KEY-column affordance: reversal
             counterpart of the "Not the same game" override above. Rendered
-            when the caller says an override RECORD exists — never gated on
-            ownedElsewhere/fuzzy, which the override itself cleared (the
-            overridden key now reads unowned/none and lives in Keys-waiting).
-            A mistaken override must stay reversible from wherever the key
-            actually appears. */}
+            when the caller says an override RECORD exists -- never gated
+            on ownedElsewhere/fuzzy, which the override itself cleared (the
+            overridden key now reads unowned/none). Under the unified list
+            nothing moves between views anymore (D-43-14), which is what
+            makes this pair simpler than it used to be, not harder: a
+            mistaken override stays reversible on the same row it was made
+            on, rather than needing to be chased into a different tab. */}
         {undoOverride && (
           <span className="humbleKeyOwnedBadge">
             <button
@@ -446,11 +326,148 @@ export default function HumbleKeyRow({
             </button>
           </span>
         )}
+        {/* D-67 KEY-column affordance: rendered ONLY when the caller
+            supplies a `claimAction` prop (C2 guard is the authoritative
+            backstop; this is first-line UI restriction only, T-14-03).
+            D-77 Undo affordance appears only while redeemedAt reflects a
+            local-only mark (the caller's annotations source already
+            guarantees this -- see HumbleLibrary.getClaimAnnotations).
+            Pitfall C: an UNREVEALED key whose keyindex has not been
+            resolved by a sync renders a non-interactive "Sync to enable
+            claiming" caption instead of a button, so no wizard ever opens
+            against a key it cannot reveal. */}
+        {claimAction && (
+          <span className="humbleKeyActionRow">
+            {claimAction.redeemedAt !== null ? (
+              <span className="humbleKeyClaimGroup">
+                <span className="humbleKeyClaimAnnotation">
+                  {t('humbleKeys.redeemedAnnotation', 'Redeemed {{date}}', {
+                    date: new Date(claimAction.redeemedAt).toLocaleDateString()
+                  })}
+                </span>
+                <button
+                  type="button"
+                  className="humbleKeyUndoButton"
+                  onClick={claimAction.onUndoRedeem}
+                >
+                  {t('humbleKeys.undo', 'Undo')}
+                </button>
+              </span>
+            ) : claimAction.revealedAt !== null ||
+              humbleKey.state === 'REVEALED' ? (
+              // CR-01 (14-REVIEW re-review): the Finish/Claim decision is gated
+              // on server truth (`state === 'REVEALED'`), not solely on the
+              // local reveal annotation — a key revealed on Humble's WEBSITE
+              // carries redeemed_key_val (classifies REVEALED) but has no
+              // humbleRevealedStore record, so `revealedAt` is null. Rendering
+              // "Claim" for it is a dead end: the backend refuses to reveal any
+              // non-UNREVEALED key (D-66 never-re-reveal). The "Revealed {date}"
+              // annotation still renders only when the local timestamp exists.
+              <span className="humbleKeyClaimGroup">
+                {claimAction.revealedAt !== null && (
+                  <span className="humbleKeyClaimAnnotation">
+                    {t('humbleKeys.revealedAnnotation', 'Revealed {{date}}', {
+                      date: new Date(claimAction.revealedAt).toLocaleDateString()
+                    })}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  className="humbleKeyGiftButton"
+                  onClick={claimAction.onFinish}
+                >
+                  {/* 260823-op3: a REVEALED Steam key still activates in one
+                      click (the wizard reads the stored value instead of
+                      re-revealing), so it gets the same verb as a fresh one. */}
+                  {isSteam
+                    ? tGamelib('gamelib:humbleKeys.activate', 'Activate')
+                    : t('humbleKeys.finishActivation', 'Finish activation')}
+                </button>
+              </span>
+            ) : claimAction.keyindexResolved ? (
+              <button
+                type="button"
+                className="humbleKeyGiftButton"
+                onClick={claimAction.onClaim}
+              >
+                {/* 260823-op3: "Claim" described a multi-step hand-off that no
+                    longer exists for Steam — one click reveals, redeems and
+                    marks the row. NEW key, not a changed default: `humbleKeys
+                    .claim` already resolves to "Claim" in en, so relabelling
+                    through the default argument would be a silent no-op. */}
+                {isSteam
+                  ? tGamelib('gamelib:humbleKeys.activate', 'Activate')
+                  : t('humbleKeys.claim', 'Claim')}
+              </button>
+            ) : (
+              <span className="humbleKeyClaimDisabledCaption">
+                {t('humbleKeys.syncToEnableClaiming', 'Sync to enable claiming')}
+              </span>
+            )}
+          </span>
+        )}
+        {/* D-42-01 KEY-column affordance: rendered ONLY when the caller
+            supplies a `settleAction` prop, for a key settled from an
+            ownership-inferred REDEEM (never a user-marked one). Defensive
+            `!claimAction` guard: settleAction and claimAction are mutually
+            exclusive in practice (no caller supplies both -- an
+            `ownedElsewhere` key never carries a `claimAction` prop, see
+            Keys-waiting's `selectKeysWaiting`), but if both were ever
+            present, claimAction's richer Keys-waiting affordance wins and
+            this cell renders nothing rather than a duplicate Undo. */}
+        {!claimAction && settleAction && (
+          <span className="humbleKeyActionRow">
+            <span className="humbleKeyClaimGroup">
+              <span className="humbleKeyClaimAnnotation">
+                {t('humbleKeys.redeemedAnnotation', 'Redeemed {{date}}', {
+                  date: new Date(settleAction.settledAt).toLocaleDateString()
+                })}
+              </span>
+              <span className="humbleKeyClaimAnnotation">
+                {tGamelib(
+                  'gamelib:humbleKeys.settledFromOwnership',
+                  'Already in your Steam library'
+                )}
+              </span>
+              <button
+                type="button"
+                className="humbleKeyUndoButton"
+                onClick={settleAction.onUndoSettle}
+              >
+                {t('humbleKeys.undo', 'Undo')}
+              </button>
+            </span>
+          </span>
+        )}
+        {/* D-60 KEY-column affordance: rendered ONLY when the caller
+            supplies a `giftAction` prop. D-59 double-gift guard: once a
+            gift has been confirmed for this key, show the annotation
+            instead of re-rendering the button. */}
+        {giftAction && (
+          <span className="humbleKeyActionRow">
+            {giftAction.giftedAt !== null ? (
+              <span className="humbleKeyGiftedAnnotation">
+                {t(
+                  'humbleKeys.giftedAnnotation',
+                  'Opened Humble gift page {{date}}',
+                  {
+                    date: new Date(giftAction.giftedAt).toLocaleDateString()
+                  }
+                )}
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="humbleKeyGiftButton"
+                onClick={giftAction.onGift}
+              >
+                {t('humbleKeys.giftOnHumble', 'Gift on Humble')}
+                <FontAwesomeIcon icon={faExternalLinkAlt} />
+              </button>
+            )}
+          </span>
+        )}
       </div>
-      {/* 260823-op3 column 5 — expiration, last. */}
-      {expirationLabel !== null && (
-        <span className="humbleKeyRowExpiration">{expirationLabel}</span>
-      )}
     </li>
   )
 }
