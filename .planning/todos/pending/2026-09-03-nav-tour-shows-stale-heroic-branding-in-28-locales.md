@@ -5,7 +5,7 @@ area: i18n
 severity: minor
 platform: any
 ready: live-gate
-needs: code-fix
+needs: live-verification
 status: OPEN
 found_by: 'Phase 34.12-07 live UAT (measured across all 47 locale catalogs after the tooltip fix made tour text readable for the first time under Tauri)'
 source: '.planning/phases/34.12-onboarding-tour-rework-re-anchor-the-disabled-sidebartour-ag/34.12-07-SUMMARY.md'
@@ -118,3 +118,43 @@ instead of a subset. Then:
 Cannot be proven by the suite. Requires switching the app language and reading the tour, which is
 only possible at all since `2cc58c186`. Check steps 4, 9 and 10 in at least one affected locale
 plus one unaffected locale.
+
+## RESOLVED IN CODE 2026-09-09 (quick `260909-r4h`) -- live gate still outstanding
+
+Both surfaces this todo reports are repaired. **121 strings across 39 catalogs**, measured
+before and after:
+
+- `tour.sidebar.settings` (28), `tour.sidebar.docs` (27), `tour.sidebar.community` (28)
+- `info.heroic.version` (38)
+- Non-English "Heroic" in `translation.json`: **1967 -> 1846**, exactly -121.
+- Discord promises in `tour.sidebar.community`: **28 -> 0**.
+
+**The prescribed fix was NOT the one applied.** Minting `tour.nav.*` for all twelve steps
+into `gamelib.json` is blocked at HEAD: `meta/i18nCatalogPresenceBaseline.json` sits at
+`totalPairs: 0`, so twelve new keys x 48 locales = 576 unrecorded pairs would turn R13 red,
+and `pnpm machine-fill-gamelib` still 401s. Minting would also have downgraded 48 locales
+from translated-but-stale to English-only. Instead the keys were rebranded **in place**
+using todo 20's own partition rule (English value says "GameLib" => product self-reference).
+
+**Superseded fix-direction items:**
+- Item 3 (decide the `community` copy) is DECIDED: translations realigned to the English
+  source, dropping the Discord clause, since the anchored row is now "Donate" -> Ko-fi.
+  Each language's own existing verb phrase was reused; only the false clause was removed.
+- Item 4: `tour.sidebar.version` is confirmed **dead** (no `src/` reference) and was
+  deliberately left stale -- editing it is churn on an upstream-owned file with no
+  user-visible effect. The other three `tour.sidebar.*` keys are live and were fixed.
+
+**Cost accepted (D-2):** these upstream-owned catalogs are no longer byte-identical to
+upstream, so the next catalog refresh needs a merge rather than a wholesale copy. This is
+the cost todo 20 already anticipated.
+
+**Measured, and worth knowing:** the D-05 churn guard's `live tree` test runs
+`git diff --name-only -- public/locales`, which is **unstaged-only**. The edit was RED
+unstaged and GREEN once staged -- both runs recorded. The test's own comment claims it bites
+"staged or unstaged", which inverts what its command does.
+
+**Why this stays in `pending/`:** the repair is structural and measured, but this todo's own
+Verification section requires switching the app language and reading the tour on a live run.
+That gate has NOT been run. Nothing in the suite can discharge it -- the tour suites mock
+`t()` to echo defaults, so they are green either way. Close this only after a live read of
+steps 4, 9 and 10 in one affected locale plus one unaffected locale.
