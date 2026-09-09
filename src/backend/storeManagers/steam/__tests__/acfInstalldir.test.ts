@@ -96,7 +96,7 @@ describe('readAcfInstalldir', () => {
     expect(readAcfInstalldir(STEAMAPPS_DIR, APP_ID)).toBeUndefined()
   })
 
-  it('D-03: returns the LITERAL on-disk value without sanitizing — a traversal-shaped candidate comes back verbatim, proving the sanitizer is the caller\'s job', () => {
+  it("D-03: returns the LITERAL on-disk value without sanitizing — a traversal-shaped candidate comes back verbatim, proving the sanitizer is the caller's job", () => {
     ;(existsSync as jest.Mock).mockReturnValue(true)
     ;(readFileSync as jest.Mock).mockReturnValue('content')
     ;(vdf.parse as jest.Mock).mockReturnValue({

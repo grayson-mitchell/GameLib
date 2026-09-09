@@ -2,7 +2,7 @@
 created: 2026-09-09
 title: "First install of a session lands in a duplicate `app_<appid>` directory — `resolveSteamInstallTarget` runs before the Steam client connects, so PICS has no installdir to give it"
 area: steam-depot
-status: OPEN
+status: RESOLVED
 severity: major
 platform: any
 ready: code
@@ -72,3 +72,48 @@ chosen.
 
 The pre-existing `app_*` directories are the user's data; removing them is the
 user's decision, not a code fix.
+
+## Resolution (quick-260909-pym, 2026-09-09)
+
+Fixed by two changes to `installLocation.ts`, plus a shared-read extraction
+(`acfInstalldir.ts`) reused by `library.ts`:
+
+1. **`fetchInstalldir`'s cold path now awaits `SteamUser.ensureConnected()`**
+   before deciding, instead of returning `undefined` in ~1ms while the
+   connection buildDepotPlan pays anyway 232ms later hadn't started yet.
+   Bounded by a new `STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS = 20000` so the inner
+   worst case (20000 + `STEAM_PICS_TIMEOUT_MS` 25000 = 45000ms) stays strictly
+   under `games.ts`'s 50000ms outer WR-01 bound. A connect failure, rejection,
+   or timeout still degrades to the existing safe `app_<id>` fallback — no new
+   hard-fail path.
+2. **`resolveSteamInstallTarget` now prefers an existing on-disk ACF over
+   PICS** (item 1's "resolve from data that already exists" option), reading
+   it via the new shared `readAcfInstalldir()` (`acfInstalldir.ts`) before
+   ever calling `fetchInstalldir`. When found, the connect/PICS round-trip is
+   skipped entirely. Both the ACF and PICS candidate funnel through the same
+   `sanitizeInstalldir` call — an ACF is attacker-writable, so this is not a
+   bypass of that check.
+
+Item 2 from "What to do" above (keep the `app_<appid>` fallback for the
+genuinely-absent case) was already true and remains true — it fires only when
+neither an ACF nor a usable PICS `config.installdir` exists.
+
+**RED evidence** (from `installLocation.test.ts` against the unmodified
+`installLocation.ts`, `quick-260909-pym-SUMMARY.md` has the full verbatim
+block):
+
+```
+● resolveSteamInstallTarget › RED-1 (cold session): a cold-session resolve awaits ensureConnected and reads the real PICS installdir, instead of returning app_<appid> in 1ms
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Avadon The Black Fortress"
+    Received: "app_12345"
+```
+
+**Item 3 — reclaiming the existing `app_257350` / `app_25900` / `app_402060`
+directories — is explicitly NOT done here** and remains the operator's call,
+per this todo's own "Not in scope here" section and this plan's hard
+constraint 4. The ACF-precedence fix in change 2 above is what makes a
+*future* reinstall of one of those three land back in its existing directory
+rather than beside it; it does not touch the directories themselves.

@@ -59,6 +59,7 @@ import {
   fallbackInstalldirFor,
   UnsafeInstalldirError
 } from './installLocation'
+import { readAcfInstalldir } from './acfInstalldir'
 import { bridgeAllowlist } from './bridge/allowlist'
 import { depotSignalCaptured } from './metadataCapture'
 import {
@@ -288,22 +289,19 @@ async function locateDownloadingTarget(appId: string): Promise<{
 
   for (const libPath of libraryPaths) {
     const steamappsDir = join(libPath, 'steamapps')
-    const manifestFile = join(steamappsDir, `appmanifest_${appId}.acf`)
-    if (!existsSync(manifestFile)) continue
+    // quick-260909-pym: the ACF read itself now lives in acfInstalldir.ts,
+    // shared with installLocation.ts's resolveSteamInstallTarget (D-03 —
+    // the two callers must never drift on how an ACF installdir is read,
+    // the same reason they share one sanitizeInstalldir). Only the read
+    // moved; the per-library loop, the continue-on-falsy-installdir
+    // behaviour, and the name lookup below are unchanged.
+    const installdir = readAcfInstalldir(steamappsDir, appId)
+    if (!installdir) continue
 
-    try {
-      const content = readFileSync(manifestFile, 'utf-8')
-      const parsed = parse(content)
-      const installdir = parsed?.AppState?.installdir
-      if (!installdir) continue
-
-      return {
-        targetSteamappsDir: steamappsDir,
-        installdir,
-        name: library.get(appId)?.title ?? installdir
-      }
-    } catch {
-      continue // skip corrupt ACF — same discipline as readAcfState (T-2-01)
+    return {
+      targetSteamappsDir: steamappsDir,
+      installdir,
+      name: library.get(appId)?.title ?? installdir
     }
   }
 
