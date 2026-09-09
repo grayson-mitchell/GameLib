@@ -86,6 +86,17 @@ export default tseslint.config(
     files: ['**/__tests__/**/*.ts', '**/__mocks__/**/*.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      // This block already sanctions `any` in tests above. The five
+      // `no-unsafe-*` rules fire precisely on dereferencing/assigning/
+      // returning/passing an `any` — so once `any` itself is permitted here,
+      // those rules are unactionable warnings against a construct this same
+      // policy allows. They remain `warn` in production, where the debt is
+      // real.
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/unbound-method': 'warn'
     }
   },
