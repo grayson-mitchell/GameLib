@@ -463,7 +463,7 @@ the verdict:
 | 13 | `2026-08-27-i18n-gate-flags-declaration-site-literals` | `sed -n '269,330p' meta/__tests__/genI18nGateScope.test.ts` | `facetLabels.ts`, `chipLabels.ts`, `helpers/gamepad.ts` all still present in `DECLARED_UNSCANNED_DEBT` | **LIVE** |
 | 17 | `2026-08-30-library-search-bar-suggestions-are-mouse-dead` | executor's last probe before the stall | the misleading comment is present verbatim ("is UNCHANGED and still correct... LibrarySearchBar's shared consumption"); the record correction has not been made | **LIVE** |
 | 20 | `2026-09-01-non-english-catalogs-are-unrebranded-2117-heroic-strings` | `grep -rho "Heroic" public/locales/*/translation.json \| wc -l` | `1969` | **LIVE — headline count is stale.** The todo says 2117; HEAD is 1969. The defect is live but its magnitude has drifted, so the number must not be quoted from the title. |
-| 21 | `2026-09-01-webview-amazonlogindata-is-permanently-null` | `grep -rn "amazonLoginData" src \| wc -l` | `4` | **LIVE** — anchor still present |
+| 21 | `2026-09-01-webview-amazonlogindata-is-permanently-null` | `grep -rn "amazonLoginData" src \| wc -l` | `4` | **LIVE** — anchor still present **[CORRECTED 2026-09-09 — see the correction note below this section: all 4 hits were COMMENTS; the todo was already dead.]** |
 | 25 | `2026-09-03-nav-tour-shows-stale-heroic-branding-in-28-locales` | `grep -rl "Heroic" public/locales/*/tour.json` | no `tour.json` exists; the tour strings are in `translation.json`, inside todo 20's 1969 | **LIVE — overlaps todo 20.** These two are not independent; fixing 20 wholesale would absorb 25. Whoever takes either should take both. |
 | 18 | `2026-08-31-decompresspool-native-lzma-tests-fail-3-of-41` | `npx jest --runTestsByPath .../decompressPool.test.ts` | `Tests: 41 passed, 41 total` | **LIVE — see below. NOT discharged.** **[CORRECTED 2026-09-07 — see the correction note below this section: this verdict rested on a pathspec that does not exist.]** |
 
@@ -534,6 +534,47 @@ non-reproduction is recorded on the todo itself; the todo stays in `pending/`.
 > genuinely was an undiagnosed bug. Only the "no code delta" premise was false, and it was false
 > in a way that exits 0. **A `git log -- <path>` printing nothing is evidence only once the path
 > is known to exist.**
+
+
+> **CORRECTION, 2026-09-09 (quick `260909-n9s`). Row 21's LIVE verdict is wrong. The todo was
+> already dead when this audit scored it.**
+>
+> The probe was `grep -rn "amazonLoginData" src | wc -l` → `4` → "anchor still present".
+> **All four hits were comments**, three of them comments *describing the deletion*. Phase 40
+> Plan 01 (`157409206`, 2026-09-02 — three days BEFORE this audit) deleted the `amazonLoginData`
+> state and all six read sites from `WebView/index.tsx`. One of those surviving comments even
+> cites the todo file by path as "the folded todo this deletion resolves".
+>
+> **A bare identifier grep cannot distinguish a live read site from prose about its removal —
+> and a thorough deletion tends to RAISE the comment count.** The signal points the wrong way
+> exactly when the todo is most dead. This is the mirror image of row 18: there a `git log`
+> against a non-existent pathspec produced a false *nothing*; here an un-stripped grep produced
+> a false *something*. Both exit 0 and both read as evidence.
+>
+> Two greps would have caught it, in this order:
+>
+> ```
+> $ grep -rn "2026-09-01-webview-amazonlogindata-is-permanently-null" src/
+> src/frontend/screens/WebView/index.tsx:169:  // `.planning/todos/.../...null.md` for
+> ```
+>
+> — the resolver's own receipt, written into the source by the commit that closed it. Only then
+> the identifier grep, comment-stripped (the technique this audit already used correctly in
+> Section 1 for `bootstrap.ts`, and did not carry into Section 5).
+>
+> The todo is now CLOSED at
+> `.planning/todos/completed/2026-09-01-webview-amazonlogindata-is-permanently-null.md`, with the
+> distinction that matters recorded on it: the todo's prescribed remedy ("read Amazon data from
+> `oauthLoginState` instead") was **superseded, not already-shipped** — `index.tsx` needs Amazon
+> login data on no path at all.
+>
+> **Re-check of the other five PROBED rows (2026-09-09): all five hold.** Row 13 was correct at
+> this audit's own sha `840196e9c` (all three files WERE in `DECLARED_UNSCANNED_DEBT` then);
+> `8c236df00` promoted them into blocking scope afterwards and that todo is already closed.
+> Row 17's only `SearchBar/index.tsx` commit in the window is `366e719bb`, which the todo itself
+> names as comment-only. Row 20 still counts `1969`. Row 25's `tour.json` still does not exist,
+> and the one `NavShellTour` commit since is intro.js tooltip work, not branding. Row 18 was
+> already corrected above. **Row 21 was the only false verdict in the group.**
 
 
 ### BY CONSTRUCTION — 14 rows, no code probe run
