@@ -21,7 +21,7 @@ created: 2026-09-09
 |----------|-------|
 | **Framework** | Jest 29 + ts-jest |
 | **Config file** | `src/backend/jest.config.js`, `src/frontend/jest.config.js` (both `rootDir: '../..'`, invoked via the root `jest.config.js`'s `projects` array) |
-| **Quick run command** | `npx jest --selectProjects Backend --passWithNoTests <path/to/file.test.ts>` (positional test-path form — see "Two jest gotchas" below for why `-t` is banned in this phase's commands) |
+| **Quick run command** | `npx jest <path/to/file.test.ts> --selectProjects Backend --passWithNoTests` (positional test-path form — see "Two jest gotchas" below for why `-t` is banned in this phase's commands) |
 | **Full suite command** | `npx jest --selectProjects Backend Frontend Common` |
 | **Estimated runtime** | Not measured this phase — measure once during Wave 0 and record here rather than guessing |
 
@@ -51,7 +51,7 @@ nothing — the exact failure class this document exists to prevent.
 
 ## Sampling Rate
 
-- **After task commit:** `npx jest --selectProjects Backend --passWithNoTests <path to the test file scoped to the module touched>`
+- **After task commit:** `npx jest <path to the test file scoped to the module touched> --selectProjects Backend --passWithNoTests`
 - **After plan wave:** `npx jest --selectProjects Backend Frontend Common`
 - **Before `/gsd-verify-work`:** full suite green **AND** `pnpm codecheck`/`tsc` green **AND**
   `meta/i18nGateScope.json` reflects the four deletions **AND** the REQ-43-19 live gate run and
@@ -70,6 +70,24 @@ Both are documented in this repo's own institutional memory and both apply direc
 A task whose acceptance criterion is "the command exits 0" is satisfied by both failure modes.
 Acceptance criteria in this phase must assert a **test count or a named test passing**, not an
 exit code.
+
+
+### Argument order is load-bearing: path BEFORE `--selectProjects`
+
+Measured live during 43-04, then re-confirmed with `--listTests`:
+
+    npx jest --selectProjects Backend src/backend/humble/__tests__/viewFilters.test.ts  -> 213 test files
+    npx jest src/backend/humble/__tests__/viewFilters.test.ts --selectProjects Backend  ->   1 test file
+
+`--selectProjects` takes a variadic list, so it greedily swallows the following positional path as
+another project name and the path never filters anything. The command still exits 0 and still
+prints a large green total, so it reads as a pass while measuring the whole project rather than
+the file under test. This is a third member of the same family as the two gotchas above, and it
+is why an earlier verification run of `hardcodedStringGate.test.ts` took 32 minutes and returned a
+39-suite aggregate instead of one file's count.
+
+**Every command in this document puts the path first.** Any command copied out of here must keep
+that order.
 
 ---
 
@@ -96,30 +114,30 @@ project's `meta/__tests__/hardcodedStringGate.test.ts` (reading `meta/i18nGateSc
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 43-06 T2 | 43-06 | 2 | REQ-43-01 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
-| 43-06 T3 | 43-06 | 2 | REQ-43-02 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
-| 43-06 T3 | 43-06 | 2 | REQ-43-03 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
-| 43-07 T1 | 43-07 | 3 | REQ-43-04 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
-| 43-04 T3 | 43-04 | 1 | REQ-43-05 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/viewFilters.test.ts` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
-| 43-07 T1 | 43-07 | 3 | REQ-43-06 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
-| 43-04 T3 | 43-04 | 1 | REQ-43-07 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/viewFilters.test.ts` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
-| 43-07 T1 | 43-07 | 3 | REQ-43-08 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
-| 43-04 T2 | 43-04 | 1 | REQ-43-09 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/viewFilters.test.ts` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
-| 43-06 T1 | 43-06 | 2 | REQ-43-10 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/keyTypePresentation.test.ts` — expect `Tests: N passed, N total`, N >= 60 (baseline 47) | Exists | ⬜ pending |
-| 43-06 T2 | 43-06 | 2 | REQ-43-11 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
-| 43-06 T3 | 43-06 | 2 | REQ-43-12 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
-| 43-05 T3 | 43-05 | 1 | REQ-43-13 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 52 (baseline 47) | Exists | ⬜ pending |
-| 43-05 T3 | 43-05 | 1 | REQ-43-14 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 52 (baseline 47) | Exists | ⬜ pending |
-| 43-05 T3 | 43-05 | 1 | REQ-43-15 | — | N/A | component (structural: walk element tree for onClick/href) | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/components/HumbleKeyRow` — expect `Tests: N passed, N total`, N >= 52 (baseline 47) | Exists | ⬜ pending |
-| 43-07 T2 | 43-07 | 3 | REQ-43-16 | — | N/A | component/router | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-06 T2 | 43-06 | 2 | REQ-43-01 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/components/HumbleKeyRow --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-06 T3 | 43-06 | 2 | REQ-43-02 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/components/HumbleKeyRow --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-06 T3 | 43-06 | 2 | REQ-43-03 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/components/HumbleKeyRow --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-07 T1 | 43-07 | 3 | REQ-43-04 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/__tests__/index.test.tsx --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-04 T3 | 43-04 | 1 | REQ-43-05 | — | N/A | unit | `npx jest src/backend/humble/__tests__/viewFilters.test.ts --selectProjects Backend` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
+| 43-07 T1 | 43-07 | 3 | REQ-43-06 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/__tests__/index.test.tsx --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-04 T3 | 43-04 | 1 | REQ-43-07 | — | N/A | unit | `npx jest src/backend/humble/__tests__/viewFilters.test.ts --selectProjects Backend` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
+| 43-07 T1 | 43-07 | 3 | REQ-43-08 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/__tests__/index.test.tsx --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-04 T2 | 43-04 | 1 | REQ-43-09 | — | N/A | unit | `npx jest src/backend/humble/__tests__/viewFilters.test.ts --selectProjects Backend` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
+| 43-06 T1 | 43-06 | 2 | REQ-43-10 | — | N/A | unit | `npx jest src/backend/humble/__tests__/keyTypePresentation.test.ts --selectProjects Backend` — expect `Tests: N passed, N total`, N >= 60 (baseline 47) | Exists | ⬜ pending |
+| 43-06 T2 | 43-06 | 2 | REQ-43-11 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/components/HumbleKeyRow --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-06 T3 | 43-06 | 2 | REQ-43-12 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/components/HumbleKeyRow --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 70 | Exists | ⬜ pending |
+| 43-05 T3 | 43-05 | 1 | REQ-43-13 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/components/HumbleKeyRow --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 52 (baseline 47) | Exists | ⬜ pending |
+| 43-05 T3 | 43-05 | 1 | REQ-43-14 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/components/HumbleKeyRow --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 52 (baseline 47) | Exists | ⬜ pending |
+| 43-05 T3 | 43-05 | 1 | REQ-43-15 | — | N/A | component (structural: walk element tree for onClick/href) | `npx jest src/frontend/screens/Humble/Keys/components/HumbleKeyRow --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 52 (baseline 47) | Exists | ⬜ pending |
+| 43-07 T2 | 43-07 | 3 | REQ-43-16 | — | N/A | component/router | `npx jest src/frontend/screens/Humble/Keys/__tests__/index.test.tsx --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
 | 43-08 T2 | 43-08 | 4 | REQ-43-17 | — | N/A | source census | `grep -rn "partitionWaitingByUrgency\|HumbleKeyGroup\|groupAndSortKeys" src/ --include="*.ts" --include="*.tsx"` — expect 0 hits | N/A (shell) | ⬜ pending |
 | 43-08 T2 | 43-08 | 4 | REQ-43-18 | — | N/A | build/typecheck + source census | `npx tsc --noEmit && test ! -f src/common/humble/groupKeys.ts` — expect exit 0 and file absent (note: `selectKeysWaiting` is explicitly OUT of this requirement's scope, see REQUIREMENTS.md correction 1) | N/A (shell) | ⬜ pending |
 | 43-10 T2 | 43-10 | 5 | REQ-43-19 | — | N/A | **live gate only** | N/A — packaged Tauri build, pixel-measured column geometry + row-separator hairline, per the Structural Reachability Review contract | N/A by design | ⬜ pending |
-| 43-07 T1 | 43-07 | 3 | REQ-43-20 | — | N/A | component | `npx jest --selectProjects Frontend src/frontend/screens/Humble/Keys/__tests__/index.test.tsx` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
-| 43-04 T2 | 43-04 | 1 | REQ-43-21 | — | N/A | unit | `npx jest --selectProjects Backend src/backend/humble/__tests__/viewFilters.test.ts` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
-| 43-08 T1 | 43-08 | 4 | REQ-43-22 | — | N/A | CI gate | `npx tsc --noEmit && npx jest --selectProjects Meta meta/__tests__/genI18nGateScope.test.ts` — expect `Tests: 26 passed, 1 skipped, 27 total` and zero failures (measured pre-phase shape; the four deleted files must no longer appear in either `meta/i18nGateScope.json` or `meta/i18nForkTouchedFiles.json`) | Exists | ⬜ pending |
-| 43-06 T2 | 43-06 | 2 | REQ-43-23 | T-43-01 (secret in log) | `aria-label` stays an expression, never a literal | CI gate | `npx jest --selectProjects Meta meta/__tests__/hardcodedStringGate.test.ts` — expect `Tests: 151 passed` (baseline; ~73s runtime, a timeout is not a pass) | Exists | ⬜ pending |
-| 43-09 T1 | 43-09 | 4 | REQ-43-24 (CONDITIONAL) | — | N/A | conditional — candidate-dependent | Candidate A only: `npx jest --selectProjects Backend src/backend/humble/__tests__/adapter.test.ts` — expect `Tests: N passed, N total` with zero failures. **Blocked until D-43-11's probe (plan 43-03) selects a candidate**; if candidate B or the external-browser fallback is selected instead, this row's command does not apply and the Manual-Only Verifications table's REQ-43-24 row governs. | Exists | ⬜ pending |
+| 43-07 T1 | 43-07 | 3 | REQ-43-20 | — | N/A | component | `npx jest src/frontend/screens/Humble/Keys/__tests__/index.test.tsx --selectProjects Frontend` — expect `Tests: N passed, N total`, N >= 33 | Exists | ⬜ pending |
+| 43-04 T2 | 43-04 | 1 | REQ-43-21 | — | N/A | unit | `npx jest src/backend/humble/__tests__/viewFilters.test.ts --selectProjects Backend` — expect `Tests: N passed, N total`, N > 35 (baseline 35) | Exists | ⬜ pending |
+| 43-08 T1 | 43-08 | 4 | REQ-43-22 | — | N/A | CI gate | `npx tsc --noEmit && npx jest meta/__tests__/genI18nGateScope.test.ts --selectProjects Meta` — expect `Tests: 26 passed, 1 skipped, 27 total` and zero failures (measured pre-phase shape; the four deleted files must no longer appear in either `meta/i18nGateScope.json` or `meta/i18nForkTouchedFiles.json`) | Exists | ⬜ pending |
+| 43-06 T2 | 43-06 | 2 | REQ-43-23 | T-43-01 (secret in log) | `aria-label` stays an expression, never a literal | CI gate | `npx jest meta/__tests__/hardcodedStringGate.test.ts --selectProjects Meta` — expect `Tests: 151 passed` (baseline; ~73s runtime, a timeout is not a pass) | Exists | ⬜ pending |
+| 43-09 T1 | 43-09 | 4 | REQ-43-24 (CONDITIONAL) | — | N/A | conditional — candidate-dependent | Candidate A only: `npx jest src/backend/humble/__tests__/adapter.test.ts --selectProjects Backend` — expect `Tests: N passed, N total` with zero failures. **Blocked until D-43-11's probe (plan 43-03) selects a candidate**; if candidate B or the external-browser fallback is selected instead, this row's command does not apply and the Manual-Only Verifications table's REQ-43-24 row governs. | Exists | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
