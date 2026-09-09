@@ -872,6 +872,16 @@ const IN_SCOPE_SUITES = [
  * It cannot be an `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/
  * `backend/logger/paths` mock kit Block B gates on. A `ls | wc -l` recount at this task's
  * execution time puts the directory at 65 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 61 below.
+ *
+ * `gogPresenceBootWire.test.ts` (todo 2026-09-06, quick-260909-k5x) is classified as
+ * structurally contained: it copies `playtimeQueueBootDrain.test.ts`'s already-approved
+ * `backend/store_backend`/`axios` preamble plus the same `../../online_monitor` partial mock
+ * (`initOnlineMonitor`/`isOnline`/`runOnceWhenOnline` overridden, everything else
+ * `jest.requireActual`). It declares NO `jest.mock('os', ...)` of its own, deliberately --
+ * containment is structural, the same floor both model files rely on. It cannot be an
+ * `IN_SCOPE_SUITE`: it declares none of the four-element `pathShim`/`backend/logger/paths` mock
+ * kit Block B gates on. A `readdirSync` recount at this task's execution time puts the directory
+ * at 66 `*.test.ts` files: 4 `IN_SCOPE_SUITES` + 62 below.
  */
 const STRUCTURALLY_CONTAINED_SUITES = [
   'appRootResolution.test.ts',
@@ -892,6 +902,7 @@ const STRUCTURALLY_CONTAINED_SUITES = [
   'flowRegistrationCensus.test.ts',
   'gameDetailsImportGate.test.ts',
   'gamelibNamespaceLoad.test.ts',
+  'gogPresenceBootWire.test.ts',
   'humbleFlows.test.ts',
   'humbleLoginFlows.test.ts',
   'humbleSecretStore.test.ts',
