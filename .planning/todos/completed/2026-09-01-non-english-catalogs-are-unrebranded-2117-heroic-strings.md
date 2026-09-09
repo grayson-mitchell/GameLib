@@ -134,5 +134,12 @@ upstream, so the next refresh needs a real merge rather than a wholesale copy. T
 that survivable — it fails loudly if a refresh reintroduces upstream branding, which is
 exactly the reappearance this todo predicted.
 
-**Residual (optional):** the 12 dead keys are still present. Deleting them is inert cleanup,
-deliberately left rather than widening scope.
+**The 12 dead keys were also pruned** (operator request, same task): 214 (locale, key)
+entries removed, taking non-English "Heroic" from 336 to **92** — all of which are KEY NAMES
+that must match `en/`. **Zero user-visible stale product references remain in any language.**
+The prune list is explicit and suite-pinned rather than derived, because the general
+"absent from en/" rule matches 171 keys and would have deleted 159 unrelated ones.
+
+**Caveat on the prune:** it is not gated and cannot be, since these keys still exist upstream.
+A wholesale catalog refresh will reintroduce them — re-run `pnpm rebrand-catalogs --prune-dead`
+afterwards. The rebrand itself is gated; only the deletion is manual.

@@ -76,7 +76,30 @@ Hungarian user. Estonian and Catalan are lower risk but the same class. If a spe
 of the five override languages is ever available, those ~65 strings are the ones to show
 them.
 
+## Follow-up in the same task: the 12 dead keys were pruned
+
+Operator asked for the deletion, so it shipped as a third commit. **214 (locale, key) entries
+removed**, taking non-English "Heroic" from **336 → 92** — and all 92 survivors are KEY NAMES
+(`settings.advanced.resetHeroic`), identifiers that must match `en/`. **Zero user-visible
+stale product references remain in any language.**
+
+- **The list is explicit, not derived.** The general rule "present in a translation but absent
+  from `en/`" matches **171** keys; only 12 also carry the old name. Deriving it would have
+  deleted 159 unrelated keys. The suite pins the list and re-verifies each entry is genuinely
+  absent from English, so it cannot silently grow.
+- **Liveness established three ways** before deleting: absent from `en/`, no literal `src`
+  reference, and unreachable by any template-literal `t()` call. Only four dynamic key
+  constructions exist in the codebase (`notify.${type}.paused|canceled|failed|finished`,
+  `platforms.*`, `setting.experimental_features.*`) and none can build these. The 50 `src`
+  hits for "zstd" are the decompression library, not the i18n key.
+- **214 > the 202 pairs containing "Heroic"** because these keys also exist in a few locales
+  whose translation never named the product. Dead by the same test, so they went too.
+
+**This prune is NOT gated, and cannot be.** The keys still exist upstream, so a wholesale
+catalog refresh reintroduces them. Re-run `pnpm rebrand-catalogs --prune-dead` after the next
+refresh. The rebrand itself IS gated; only the deletion is manual.
+
 ## Not done
 
-- The 12 dead keys (244 occurrences) are still in the catalogs. Deleting them is a separate,
-  optional cleanup — they are inert, so this was left as debt rather than widening scope.
+- No live locale read for this batch, and the Hungarian harmony flip remains unverified by a
+  native speaker (see the evidence boundary above).
