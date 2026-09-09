@@ -212,12 +212,12 @@
         "default": ""
     },
     "not_logged_in": {
-        "epic": "Je bent niet ingelogd met een Epic account in Heroic. Gebruik de winkel pagina NIET om in te loggen,  Klik in plaats op de volgende knop:",
-        "gog": "Je bent niet ingelogd met een GOG account in Heroic. Gebruik de winkel pagina NIET om in te loggen,  Klik in plaats op de volgende knop:",
+        "epic": "Je bent niet ingelogd met een Epic account in GameLib. Gebruik de winkel pagina NIET om in te loggen,  Klik in plaats op de volgende knop:",
+        "gog": "Je bent niet ingelogd met een GOG account in GameLib. Gebruik de winkel pagina NIET om in te loggen,  Klik in plaats op de volgende knop:",
         "login": "Log in",
         "title": "Je bent NIET ingelogd",
-        "amazon": "You are not logged in with an Epic account in Heroic. Don't use the store page to login, click the following button instead:",
-        "zoom": "You are not logged in with a GOG account in Heroic. Don't use the store page to login, click the following button instead:"
+        "amazon": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
+        "zoom": "You are not logged in with a GOG account in GameLib. Don't use the store page to login, click the following button instead:"
     },
     "report_problem": "Rapporteer een probleem met deze game",
     "sdl": {
@@ -324,7 +324,7 @@
     "third-party-managed": {
         "header": "Dit spel wordt beheerd door een third-party applicatie",
         "notice1": "Het volgende spel wordt beheerd door een third-party applicatie: \"{{application_name}}\"",
-        "notice2": "Nadat je op installeren hebt geklikt zal Heroic de applicatie starten om het installatieproces te voltooien"
+        "notice2": "Nadat je op installeren hebt geklikt zal GameLib de applicatie starten om het installatieproces te voltooien"
     },
     "Open": "Open de",
     "queue": {

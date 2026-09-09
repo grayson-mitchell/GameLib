@@ -176,7 +176,7 @@
         "anticheat-warning": {
             "ok": "Ok",
             "cancel": "Nu",
-            "disabled_installation": "Acest joc folosește software anticheat care nu este compatibil cu sistemul tău de operare sau suportul nu a fost activat de dezvoltatorii jocului. Asta înseamnă că funcțiile multiplayer nu vor funcționa, iar tu (sau echipa Heroic) nu puteți face nimic în privința asta. <br /><br /> Pentru a instala acest joc și a-l încerca oricum, mergi la Setări, Avansat și bifează opțiunea de a permite instalarea jocurilor cu anticheat defect sau refuzat. <br /><br />Reține că nu există nicio soluție pentru asta și vei risca să fii restricționat (Ban Permanent) în joc.",
+            "disabled_installation": "Acest joc folosește software anticheat care nu este compatibil cu sistemul tău de operare sau suportul nu a fost activat de dezvoltatorii jocului. Asta înseamnă că funcțiile multiplayer nu vor funcționa, iar tu (sau echipa GameLib) nu puteți face nimic în privința asta. <br /><br /> Pentru a instala acest joc și a-l încerca oricum, mergi la Setări, Avansat și bifează opțiunea de a permite instalarea jocurilor cu anticheat defect sau refuzat. <br /><br />Reține că nu există nicio soluție pentru asta și vei risca să fii restricționat (Ban Permanent) în joc.",
             "install_anyway": "Da (Ințeleg că funcțiile multiplayer nu vor funcționa)",
             "multiplayer_message": "Suportul pentru anti-cheat este defect sau refuzat. Jocul se poate deschide, dar funcțiile multiplayer nu vor funcționa. Doriți să îl instalați oricum?",
             "title": "Anti-cheat defect/refuzat"
@@ -211,12 +211,12 @@
         "default": ""
     },
     "not_logged_in": {
-        "epic": "You are not logged in with an Epic account in Heroic. Don't use the store page to login, click the following button instead:",
-        "gog": "You are not logged in with a GOG account in Heroic. Don't use the store page to login, click the following button instead:",
+        "epic": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
+        "gog": "You are not logged in with a GOG account in GameLib. Don't use the store page to login, click the following button instead:",
         "login": "Log in",
         "title": "You are NOT logged in",
-        "amazon": "You are not logged in with an Epic account in Heroic. Don't use the store page to login, click the following button instead:",
-        "zoom": "You are not logged in with a GOG account in Heroic. Don't use the store page to login, click the following button instead:"
+        "amazon": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
+        "zoom": "You are not logged in with a GOG account in GameLib. Don't use the store page to login, click the following button instead:"
     },
     "report_problem": "Raportați o problemă la rularea acestui joc",
     "sdl": {

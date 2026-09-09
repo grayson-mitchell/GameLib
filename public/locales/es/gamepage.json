@@ -180,7 +180,7 @@
             "title": "Anticheat Roto/Denegado",
             "ok": "Ok",
             "install_anyway": "Sí (Entiendo que las características multijugador no funcionarán)",
-            "disabled_installation": "Este juego utiliza un software antitrampas que no es compatible con tu sistema operativo o cuyos desarrolladores no lo habilitaron. Esto significa que las funciones multijugador no funcionarán y no hay nada que tú (ni el equipo de Heroic) puedan hacer al respecto.<br /><br />Para instalar este juego y probarlo de todos modos, ve a Configuración, Avanzado y marca la opción para permitir la instalación de juegos con antitrampas defectuosos o denegados.<br /><br />Ten en cuenta que no hay solución para esto y corres el riesgo de ser baneado del juego.",
+            "disabled_installation": "Este juego utiliza un software antitrampas que no es compatible con tu sistema operativo o cuyos desarrolladores no lo habilitaron. Esto significa que las funciones multijugador no funcionarán y no hay nada que tú (ni el equipo de GameLib) puedan hacer al respecto.<br /><br />Para instalar este juego y probarlo de todos modos, ve a Configuración, Avanzado y marca la opción para permitir la instalación de juegos con antitrampas defectuosos o denegados.<br /><br />Ten en cuenta que no hay solución para esto y corres el riesgo de ser baneado del juego.",
             "multiplayer_message": "El soporte antitrampas está roto o ha sido denegado. El juego podría ejecutarse, pero las características multijugador no funcionarán. ¿Deseas instalarlo de todos modos?"
         },
         "flatpak-path-not-writtable": "Error: No se ha concedido acceso al Sandbox a esta ruta, se perderán los datos."
@@ -235,12 +235,12 @@
         "default": "Por defecto"
     },
     "not_logged_in": {
-        "epic": "No has iniciado sesión con una cuenta de Epic en Heroic. No uses la página de la tienda, mejor haz clic en el siguiente botón:",
-        "gog": "No has iniciado sesión con una cuenta de GOG en Heroic. No uses la página de la tienda, haz clic en el siguiente botón:",
+        "epic": "No has iniciado sesión con una cuenta de Epic en GameLib. No uses la página de la tienda, mejor haz clic en el siguiente botón:",
+        "gog": "No has iniciado sesión con una cuenta de GOG en GameLib. No uses la página de la tienda, haz clic en el siguiente botón:",
         "login": "Iniciar sesión",
         "title": "No has iniciado sesión",
-        "amazon": "No has iniciado sesión con una cuenta de Amazon en Heroic. No uses la página de la tienda, haz clic en el siguiente botón:",
-        "zoom": "No se ha conectado con una cuenta de Zoom en Heroic. No utilice la página de la tienda para iniciar sesión, en su lugar haga clic en el botón siguiente:"
+        "amazon": "No has iniciado sesión con una cuenta de Amazon en GameLib. No uses la página de la tienda, haz clic en el siguiente botón:",
+        "zoom": "No se ha conectado con una cuenta de Zoom en GameLib. No utilice la página de la tienda para iniciar sesión, en su lugar haga clic en el botón siguiente:"
     },
     "report_problem": "Reportar un problema al ejecutar este juego",
     "sdl": {
@@ -349,7 +349,7 @@
         "dlcsCollapsible": "DLC"
     },
     "third-party-managed": {
-        "notice2": "Después de hacer clic en Instalar, Heroic ejecutará la aplicación para poder completar el proceso de instalación",
+        "notice2": "Después de hacer clic en Instalar, GameLib ejecutará la aplicación para poder completar el proceso de instalación",
         "notice1": "Este juego es administrado por una aplicación de terceros: \"{{application_name}}\"",
         "header": "Este juego es administrado por una aplicación de terceros"
     },

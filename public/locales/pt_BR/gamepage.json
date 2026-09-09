@@ -181,7 +181,7 @@
             "ok": "Ok",
             "install_anyway": "Sim (Entendo que a função multijogador não funcionará)",
             "multiplayer_message": "Suporte ao sistema anti trapaça foi negado ou comprometido. Talvez o jogo funcione, mas a função multijogador não funcionará. Instalar mesmo assim?",
-            "disabled_installation": "Este jogo utiliza sistema anti-trapaça que não é compatível com seu sistema operacional ou o suporte não esta disponível pelos desenvolvedores. Isto significa que recursos multijogador não funcionarão e não há nada que você (ou o Time Heroic) possa fazer sobre isso. <br /><br /> Para instalar este jogo ou tentar de alguma forma, vá para Configurações, Avançado e marque a opção para permitir a instalação de jogos com anti-trapaça quebrado ou negado.<br /><br /> Note que não há solução para isso e você terá risco de ser banido do jogo."
+            "disabled_installation": "Este jogo utiliza sistema anti-trapaça que não é compatível com seu sistema operacional ou o suporte não esta disponível pelos desenvolvedores. Isto significa que recursos multijogador não funcionarão e não há nada que você (ou o Time GameLib) possa fazer sobre isso. <br /><br /> Para instalar este jogo ou tentar de alguma forma, vá para Configurações, Avançado e marque a opção para permitir a instalação de jogos com anti-trapaça quebrado ou negado.<br /><br /> Note que não há solução para isso e você terá risco de ser banido do jogo."
         },
         "flatpak-path-not-writtable": "Erro: Acesso ao sandbox não concedido a este caminho, ocorrerá perda de dados."
     },
@@ -235,12 +235,12 @@
         "default": "Padrão"
     },
     "not_logged_in": {
-        "epic": "Você não está logado em uma conta Epic no Heroic. Não use a página da loja para fazer login, clique no seguinte botão:",
-        "gog": "Você não está logado em uma conta GOG no Heroic. Não use a página da loja para fazer login, clique no seguinte botão:",
+        "epic": "Você não está logado em uma conta Epic no GameLib. Não use a página da loja para fazer login, clique no seguinte botão:",
+        "gog": "Você não está logado em uma conta GOG no GameLib. Não use a página da loja para fazer login, clique no seguinte botão:",
         "login": "Entrar",
         "title": "Você NÃO está logado",
-        "amazon": "Você não está logado em uma conta Amazon no Heroic. Não use a página da loja para fazer login, clique no seguinte botão:",
-        "zoom": "Você não está conectado com uma conta Zoom no Heroic. Não use a página da loja para fazer login, clique no botão a seguir:"
+        "amazon": "Você não está logado em uma conta Amazon no GameLib. Não use a página da loja para fazer login, clique no seguinte botão:",
+        "zoom": "Você não está conectado com uma conta Zoom no GameLib. Não use a página da loja para fazer login, clique no botão a seguir:"
     },
     "report_problem": "Relatar um problema na execução deste jogo",
     "sdl": {
@@ -352,7 +352,7 @@
     },
     "third-party-managed": {
         "header": "Este jogo é gerenciado por um aplicativo de terceiros",
-        "notice2": "Ao clicar em instalar, o Heroic irá executar o aplicativo para terminar o processo de instalação",
+        "notice2": "Ao clicar em instalar, o GameLib irá executar o aplicativo para terminar o processo de instalação",
         "notice1": "Este jogo é gerenciado por um aplicativo de terceiros: \"{{application_name}}\""
     },
     "queue": {

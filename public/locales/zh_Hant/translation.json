@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Heroic 快取已清理。",
+            "message": "GameLib 快取已清理。",
             "title": "清理快取"
         },
         "choose": "請選擇",
@@ -105,8 +105,8 @@
                 "changelog": "開啟更新日誌",
                 "detail": "您想在背景下載更新嗎？",
                 "message": "目前有新版本可用！",
-                "message-finished": "您想立即重啟 Heroic 嗎？",
-                "title": "Heroic Games Launcher",
+                "message-finished": "您想立即重啟 GameLib 嗎？",
+                "title": "GameLib Games Launcher",
                 "title-finished": "更新完成",
                 "detailNoAutoupdate": ""
             }
@@ -124,8 +124,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Are you sure you want to reset Heroic? This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of heroic needs to be restarted manually afterwards.",
-                "title": "重置 Heroic"
+                "message": "Are you sure you want to reset GameLib? This will remove all Settings and Caching but won't remove your Installed games or your Epic credentials. Portable versions (AppImage, WinPortable, ...) of heroic needs to be restarted manually afterwards.",
+                "title": "重置 GameLib"
             }
         },
         "runexe": {
@@ -298,7 +298,7 @@
         "esync": "Esync 的目標是在 CPU 消耗很大的遊戲中減少 wineserver 的開銷。啟用可能會提高效能。",
         "fsync": "Fsync 的目標是在 CPU 消耗很大的遊戲中減少 wineserver 的開銷。啟用可能會提高受支援的 Linux 內核的效能。",
         "game_language": {
-            "fallback": "留空使用 Heroic 的語言。",
+            "fallback": "留空使用 GameLib 的語言。",
             "in_game_config": "不是所有遊戲都支援此設定，一些遊戲內有語言設定。",
             "valid_codes": "有效語言代碼取決於遊戲。"
         },
@@ -314,18 +314,18 @@
         "preferSystemLibs": "自訂 Wine 版本(Wine- ge、Wine- lutris)隨它們的庫依賴項一起發布。啟用此選項，這些附帶的庫將被忽略，Wine 將載入系統庫。警告！如果不滿足依賴關系，可能會出現問題。",
         "primerun": "Use dedicated graphics card to render game on multi-GPU systems. Only needed on gaming laptops or desktops that use a headless GPU for rendering (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "This path lets Heroic determine what version of Proton Steam uses, for adding non-Steam games to Steam."
+            "info": "This path lets GameLib determine what version of Proton Steam uses, for adding non-Steam games to Steam."
         },
         "steamruntime": "Steam 提供的用於幫助執行 Linux 和 Windows（Proton）遊戲的自訂庫。啟用可能會提高相容性。",
         "sync": {
-            "part1": "大多數情況下，Heroic 啟動器會正確猜測存檔的位置。但如果位置是錯誤的，請使用覆蓋框更改。",
-            "part2": "如果您改變了 Wine 或 Proton 的資料夾，將需要再次檢查路徑，因為 Proton 使用不同的前綴（/pfx）和使用者名稱（steamuser）。很簡單，您可以直接刪除目前的路徑，離開同步設定頁面再回來，Heroic 會去重新猜測正確 Prefix 的資料夾。",
+            "part1": "大多數情況下，GameLib 啟動器會正確猜測存檔的位置。但如果位置是錯誤的，請使用覆蓋框更改。",
+            "part2": "如果您改變了 Wine 或 Proton 的資料夾，將需要再次檢查路徑，因為 Proton 使用不同的前綴（/pfx）和使用者名稱（steamuser）。很簡單，您可以直接刪除目前的路徑，離開同步設定頁面再回來，GameLib 會去重新猜測正確 Prefix 的資料夾。",
             "part3": "手動同步：選擇下載以下載儲存在雲端的存檔。選擇上傳將會把本地存檔上傳到雲端。強制下載將會忽略本地版本，強制上傳將會忽略雲端版本。",
             "part4": "自動同步將在您每次開始遊戲時和結束遊戲後同步存檔。"
         },
         "vkd3d": "VKD3D 是一個基於 Vulkan 的轉換層，用於 DirectX 12 遊戲。啟用可能會顯著提高相容性。對老舊的 DirectX 遊戲沒有效果。",
         "wine": {
-            "part1": "Heroic 啟動器會在以下資料夾中搜尋現有的 Wine/Proton/CrossOver：",
+            "part1": "GameLib 啟動器會在以下資料夾中搜尋現有的 Wine/Proton/CrossOver：",
             "part2": "如果在其它位置，請使用軟鏈接連接到這些中的一個資料夾"
         },
         "disable_logs": "將此核取方塊切換為“開啟”可停用對日誌檔案的大部分寫入（始終記錄關鍵訊息）。請確保在報告任何問題之前關閉此設定。",
@@ -552,7 +552,7 @@
     "other": {
         "gogdl-version": "GOGDL 版本: ",
         "legendary-version": "Legendary 版本: ",
-        "weblate": "請協助翻譯 Heroic。",
+        "weblate": "請協助翻譯 GameLib。",
         "nile-version": "Nile 版本： "
     },
     "Other": "其它",
@@ -598,7 +598,7 @@
         "autosync": "自動同步存檔",
         "autovkd3d": "自動在 Prefix 中安裝/更新 VKD3D",
         "change-target-exe": "選擇要執行的替代 EXE",
-        "checkForUpdatesOnStartup": "啟動時檢查 Heroic 更新",
+        "checkForUpdatesOnStartup": "啟動時檢查 GameLib 更新",
         "crossover-version": "Crossover/Wine 版本",
         "custom_themes_path": "自訂主題路徑",
         "customWineProton": "自訂 Wine/Proton 路徑",
@@ -606,7 +606,7 @@
         "default-install-path": "預設安裝路徑",
         "default-steam-path": "預設 Steam 路徑",
         "defaultWinePrefix": "為新的 Wine Prefix 設定資料夾",
-        "disable_controller": "停用控制器操作 Heroic",
+        "disable_controller": "停用控制器操作 GameLib",
         "discordRPC": "啟用 Discord 的 Rich Presence（活動狀態）",
         "download-no-https": "不使用 HTTPS 下載遊戲 （對 LanCache 等 CDN 有用）",
         "dxvkfpslimit": "Limit FPS (DX9, 10 and 11)",
@@ -638,7 +638,7 @@
         "fsync": "啟用 Fsync",
         "gamemode": "使用 GameMode（需要已安裝 Feral Game Mode）",
         "hideChangelogsOnStartup": "啟動時不顯示更新日誌",
-        "language": "選擇 Heroic 語言",
+        "language": "選擇 GameLib 語言",
         "library_top_option": {
             "disabled": "已關閉",
             "favourites": "我的最愛",
@@ -706,7 +706,7 @@
         },
         "maxRecentGames": "要顯示最近遊玩的遊戲",
         "maxworkers": "下載時的最大 Worker 數量",
-        "minimize-on-launch": "遊戲啟動後最小化 Heroic",
+        "minimize-on-launch": "遊戲啟動後最小化 GameLib",
         "offlinemode": "離線執行遊戲",
         "prefered_language": "偏好語言（語言代碼）",
         "preferSystemLibs": "偏好系統庫",
@@ -801,7 +801,7 @@
             "installing": "安裝 BattlEye Runtime 中...",
             "name": "BattlEye AntiCheat Runtime"
         },
-        "clear-cache": "清理 Heroic 快取",
+        "clear-cache": "清理 GameLib 快取",
         "copiedToClipboard": "已複製到剪貼簿！",
         "copyToClipboard": "複製所有設定至剪貼簿",
         "default_hint": "Changes in this section only apply as default values when installing games. If you want to change the settings of an already installed game, use the Settings button in the game page.",
@@ -835,7 +835,7 @@
             "legacy": ""
         },
         "open-config-file": "開啟配置檔案",
-        "reset-heroic": "重置 Heroic",
+        "reset-heroic": "重置 GameLib",
         "saves": {
             "label": "Save Location:",
             "warning": "雲端存檔功能處於測試階段，請在同步前備份您的存檔（以防出現問題）",
@@ -857,7 +857,7 @@
             },
             "details": "內容",
             "title": {
-                "resetHeroic": "重置 Heroic",
+                "resetHeroic": "重置 GameLib",
                 "clearCache": "清理快取"
             },
             "resetHeroic": {

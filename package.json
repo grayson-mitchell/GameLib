@@ -55,6 +55,7 @@
     "lint-translations": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/lintTranslations.ts",
     "lint-translations:gamelib": "export LINT_TRANSLATIONS_NAMESPACES=gamelib && node meta/runTs.cjs --bundle --platform=node --target=node21 meta/lintTranslations.ts",
     "i18n-churn-guard": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/i18nCatalogChurnGuard.ts",
+    "rebrand-catalogs": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/rebrandUpstreamCatalogs.ts",
     "machine-fill-gamelib": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/machineFillGamelib.ts",
     "build-crossover-index": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/buildCrossoverIndex.ts",
     "gen-i18n-gate-scope": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/genI18nGateScope.ts",

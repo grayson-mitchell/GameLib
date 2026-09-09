@@ -179,7 +179,7 @@
             "cancel": "Nein",
             "install": "Ja (Ich verstehe, dass es nicht funktionieren wird)",
             "ok": "Ok",
-            "disabled_installation": "Dieses Spiel verwendet eine Anticheat-Software, die mit deinem Betriebssystem nicht kompatibel ist oder deren Unterstützung von den Spieleentwicklern nicht aktiviert wurde. Das bedeutet, dass die Multiplayer-Funktionen nicht funktionieren und weder du noch das Heroic-Team etwas dagegen unternehmen können. <br /><br />Um dieses Spiel dennoch zu installieren und auszuprobieren, gehe zu „Einstellungen“, „Erweitert“ und aktiviere die Option, welche die Installation von Spielen mit defekter oder abgelehnter Anticheat-Software zulässt. <br /><br />Beachte, dass es hierfür keine Lösung gibt und du riskierst, für das Spiel gesperrt zu werden.",
+            "disabled_installation": "Dieses Spiel verwendet eine Anticheat-Software, die mit deinem Betriebssystem nicht kompatibel ist oder deren Unterstützung von den Spieleentwicklern nicht aktiviert wurde. Das bedeutet, dass die Multiplayer-Funktionen nicht funktionieren und weder du noch das GameLib-Team etwas dagegen unternehmen können. <br /><br />Um dieses Spiel dennoch zu installieren und auszuprobieren, gehe zu „Einstellungen“, „Erweitert“ und aktiviere die Option, welche die Installation von Spielen mit defekter oder abgelehnter Anticheat-Software zulässt. <br /><br />Beachte, dass es hierfür keine Lösung gibt und du riskierst, für das Spiel gesperrt zu werden.",
             "install_anyway": "Ja (ich verstehe, dass die Multiplayer-Funktionen nicht funktionieren werden)",
             "multiplayer_message": "Die Anticheat-Unterstützung ist defekt oder wird abgelehnt. Das Spiel lässt sich möglicherweise öffnen, aber die Multiplayer-Funktionen funktionieren nicht. Möchtest du es trotzdem installieren?"
         },
@@ -235,12 +235,12 @@
         "default": "Standard"
     },
     "not_logged_in": {
-        "epic": "Du bist mit keinem Epic-Konto in Heroic angemeldet. Verwende zum Anmelden nicht die Store-Seite, sondern klicke stattdessen auf die folgende Schaltfläche:",
-        "gog": "Du bist mit keinem GOG-Konto in Heroic angemeldet. Verwende zum Anmelden nicht die Store-Seite, sondern klicke stattdessen auf die folgende Schaltfläche:",
+        "epic": "Du bist mit keinem Epic-Konto in GameLib angemeldet. Verwende zum Anmelden nicht die Store-Seite, sondern klicke stattdessen auf die folgende Schaltfläche:",
+        "gog": "Du bist mit keinem GOG-Konto in GameLib angemeldet. Verwende zum Anmelden nicht die Store-Seite, sondern klicke stattdessen auf die folgende Schaltfläche:",
         "login": "Anmelden",
         "title": "Du bist NICHT angemeldet",
-        "amazon": "Du bist nicht mit einem Amazon-Konto in Heroic angemeldet. Verwende zum Anmelden nicht die Store-Seite, sondern klicke stattdessen auf die folgende Schaltfläche:",
-        "zoom": "Du bist nicht mit einem Zoom Konto in Heroic angemeldet. Benutze nicht die Store Seite, benutze stattessen den folgenden Knopf:"
+        "amazon": "Du bist nicht mit einem Amazon-Konto in GameLib angemeldet. Verwende zum Anmelden nicht die Store-Seite, sondern klicke stattdessen auf die folgende Schaltfläche:",
+        "zoom": "Du bist nicht mit einem Zoom Konto in GameLib angemeldet. Benutze nicht die Store Seite, benutze stattessen den folgenden Knopf:"
     },
     "report_problem": "Ein Problem bei der Ausführung dieses Spiels melden",
     "sdl": {
@@ -353,7 +353,7 @@
     "third-party-managed": {
         "header": "Dieses Spiel wird von einer Drittanbieteranwendung verwaltet",
         "notice1": "Dieses Spiel wird von einer Drittanbieteranwendung verwaltet: „{{application_name}}“",
-        "notice2": "Nach dem Klicken auf Installieren führt Heroic die Anwendung aus, um den Installationsvorgang abzuschließen"
+        "notice2": "Nach dem Klicken auf Installieren führt GameLib die Anwendung aus, um den Installationsvorgang abzuschließen"
     },
     "Open": "Öffnen",
     "queue": {

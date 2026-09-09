@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Heroic gyorsítótár törölve.",
+            "message": "GameLib gyorsítótár törölve.",
             "title": "Gyorsítótár törölve"
         },
         "choose": "Kiválasztás",
@@ -99,7 +99,7 @@
                 "error": "A Steam indítófájlja nem található. Lehet, hogy egy felhasználó megszakította a telepítést, vagy hiba történt a Steam oldalán."
             },
             "executableNotFound": "Az indítófájl nem található",
-            "executableNotFoundMessage": "A Heroic nem találta a játék indítófájlát. Állítsd be kézileg a játék beállításaiban.",
+            "executableNotFoundMessage": "A GameLib nem találta a játék indítófájlát. Állítsd be kézileg a játék beállításaiban.",
             "dxmt": {
                 "message": "Hiba a DXMT letöltésekor. Ellenőrizd az internetkapcsolatot!",
                 "title": "DXMT letöltési hiba"
@@ -110,8 +110,8 @@
                 "changelog": "Changelog megnyitása",
                 "detail": "A háttérben töltöd le a frissítést?",
                 "message": "Új verzió érhető el.",
-                "message-finished": "Újraindítod most a Heroicot?",
-                "title": "Heroic Games Launcher",
+                "message-finished": "Újraindítod most a GameLibet?",
+                "title": "GameLib Games Launcher",
                 "title-finished": "Frissítés befejezve",
                 "detailNoAutoupdate": "Az automatikus frissítések nem támogatottak a csomag formátumához. Használd a csomagkezelőt a frissítéshez."
             }
@@ -129,8 +129,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Biztos, hogy visszaállítod a Heroicot? Ez törölni fogja a gyorsítótárat és az összes beállítást, de a telepített játékokat vagy az Epic-fiókodat nem. A Heroic hordozható verzióit (AppImage, WinPortable, …) ezután kézileg újra kell indítani.",
-                "title": "Heroic visszaállítása"
+                "message": "Biztos, hogy visszaállítod a GameLibet? Ez törölni fogja a gyorsítótárat és az összes beállítást, de a telepített játékokat vagy az Epic-fiókodat nem. A GameLib hordozható verzióit (AppImage, WinPortable, …) ezután kézileg újra kell indítani.",
+                "title": "GameLib visszaállítása"
             }
         },
         "runexe": {
@@ -181,12 +181,12 @@
             },
             "snap": {
                 "checkbox": "Ne mutassa újra ezt az üzenetet",
-                "title": "A Heroic Snapként fut",
-                "message": "Néhány funkció egyelőre nem érhető el az alkalmazás Snap verziójában, dolgozunk a megoldáson. {{newLine}}Jelenlegi korlátozások: {{newLine}}A Heroic nem találja meg a Protont a Steamből vagy a Wine-t a Lutrisból.{{newLine}}{{newLine}}A Gamescope, a GameMode és a MangoHud szintén nem működik, mivel a Heroicnak nincs jogosultsága az elérésükhöz.{{newLine}}{{newLine}}Hogy hozzáférésed legyen ehhez a funkcióhoz, telepítsd a Heroicot flatpakként, DEB vagy AppImage-csomagként."
+                "title": "A GameLib Snapként fut",
+                "message": "Néhány funkció egyelőre nem érhető el az alkalmazás Snap verziójában, dolgozunk a megoldáson. {{newLine}}Jelenlegi korlátozások: {{newLine}}A GameLib nem találja meg a Protont a Steamből vagy a Wine-t a Lutrisból.{{newLine}}{{newLine}}A Gamescope, a GameMode és a MangoHud szintén nem működik, mivel a GameLibnek nincs jogosultsága az elérésükhöz.{{newLine}}{{newLine}}Hogy hozzáférésed legyen ehhez a funkcióhoz, telepítsd a GameLibet flatpakként, DEB vagy AppImage-csomagként."
             },
             "rosetta": {
                 "title": "A Rosetta nem található",
-                "message": "A Heroichoz jelenleg a Rosetta szükséges macOS-en az Apple Silicon chipek esetén. Telepítsd a macOS terminálból a következő parancs használatával: „softwareupdate --install-rosetta”, majd indítsd újra a Heroicot. "
+                "message": "A GameLibhez jelenleg a Rosetta szükséges macOS-en az Apple Silicon chipek esetén. Telepítsd a macOS terminálból a következő parancs használatával: „softwareupdate --install-rosetta”, majd indítsd újra a GameLibet. "
             }
         },
         "wineprefix": "Wine-környezetmappa kiválasztása",
@@ -307,7 +307,7 @@
         "esync": "Az Esync célja, hogy csökkentse a wineserver többletterhelését a CPU-intenzív játékoknál. Engedélyezése növelheti a teljesítményt.",
         "fsync": "Az Fsync segít csökkenteni a wineserver többletterhelését a CPU-intenzív játékoknál. Engedélyezése javíthatja a teljesítményt a támogatott Linux kernelek esetén.",
         "game_language": {
-            "fallback": "Hagyd üresen a Heroic nyelvének használatához",
+            "fallback": "Hagyd üresen a GameLib nyelvének használatához",
             "in_game_config": "Nem minden játék támogatja ezt a konfigurációt, néhánynak játékbeli nyelvi beállításai vannak.",
             "valid_codes": "A működő nyelvkódok a játékokon múlnak."
         },
@@ -323,18 +323,18 @@
         "preferSystemLibs": "Az egyéni Wine verziók (Wine-GE, Wine-Lutris) saját programkönyvtár-függőségekkel vannak szállítva. Ezen beállítás engedélyezésével figyelmen kívül hagyod ezeket a szállított programkönyvtárakat és a Wine a rendszer programkönyvtárait fogja használni. Figyelem! Hibák merülhetnek fel, ha a függőségek nem teljesülnek.",
         "primerun": "Dedikált grafikus kártya használata a játék megjelenítéséhez a több GPU-s rendszereken. Csak olyan játékra szánt laptopokon és asztali számítógépeken van rá szükség, amelyek kimenet nélküli GPU-t használnak a megjelenítéshez (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "Ez az elérési út teszi lehetővé, hogy a Heroic eldöntse, melyik verziójú Protont használja a Steam, a nem steames játékok Steamhez adásához."
+            "info": "Ez az elérési út teszi lehetővé, hogy a GameLib eldöntse, melyik verziójú Protont használja a Steam, a nem steames játékok Steamhez adásához."
         },
         "steamruntime": "Steam által biztosított egyéni programkönyvtárak, melyek segítenek a Linuxos és Windowsos (Proton) játékok futtatásában. Engedélyezése javíthatja a kompatibilitást.",
         "sync": {
-            "part1": "A Heroic megpróbálja megtalálni a megfelelő mentési mappát, és ez az esetek többségében működik. Ha a mappa helytelen, akkor használd a felülbíráló mezőt a módosításához.",
-            "part2": "Abban az esetben, ha megváltoztatod a Wine- vagy a Proton-környezetmappát, ismét ellenőrizni kell az elérési utat, mivel a Proton más környezetet (/pfx) és felhasználónevet (steamuser) használ. Tehát egyszerűen törölheted az elérési utat, hogy kijuss a szinkronizálási beállítások oldalról és visszalépj a Heroichoz, hogy még egyszer megpróbáld megtalálni a megfelelő környezettel rendelkező mappát.",
+            "part1": "A GameLib megpróbálja megtalálni a megfelelő mentési mappát, és ez az esetek többségében működik. Ha a mappa helytelen, akkor használd a felülbíráló mezőt a módosításához.",
+            "part2": "Abban az esetben, ha megváltoztatod a Wine- vagy a Proton-környezetmappát, ismét ellenőrizni kell az elérési utat, mivel a Proton más környezetet (/pfx) és felhasználónevet (steamuser) használ. Tehát egyszerűen törölheted az elérési utat, hogy kijuss a szinkronizálási beállítások oldalról és visszalépj a GameLibhez, hogy még egyszer megpróbáld megtalálni a megfelelő környezettel rendelkező mappát.",
             "part3": "Kézi szinkronizálás: válaszd a letöltést, hogy letöltsd a felhőben tárolt játékmentéseket. Válaszd a feltöltést, hogy feltöltsd a helyieket a felhőbe. A kényszerített letöltés és kényszerített feltöltés figyelmen kívül hagyja a helyi vagy a felhőben lévő fájlverziókat.",
             "part4": "A mentések automatikus szinkronizálása minden egyes alkalommal szinkronizálja a mentéseket, amikor elindítja és miután befejezed a játékot."
         },
         "vkd3d": "A VKD3D egy Vulkan-alapú fordítóréteg DirectX 12-es játékokhoz. Engedélyezése jelentősen javíthatja a kompatibilitást. Nincs hatása régebbi DirectX-es játékokra, használatához DXVK szükséges.",
         "wine": {
-            "part1": "A Heroic a Wine, Proton és CrossOver verzióit a következő mappákban keresi:",
+            "part1": "A GameLib a Wine, Proton és CrossOver verzióit a következő mappákban keresi:",
             "part2": "Más hely esetén használj egy szimbolikus linket az egyik mappához"
         },
         "disable_logs": "Jelöld be ezt a négyzetet, hogy letiltsd a legtöbb írást a naplófájlokba (a kritikus információk mindig naplózásra kerülnek). Mielőtt bármilyen problémát jelentenél, feltétlenül kapcsold KI ezt a beállítást.",
@@ -365,7 +365,7 @@
         },
         "content": {
             "defaultInstallPath": "A játékok telepítésénél előre kiválasztott, alapértelmezett elérési út.",
-            "settingsDefault": "Megjeleníti a Heroic összes beállítását és a játékok alapértelmezéseit.",
+            "settingsDefault": "Megjeleníti a GameLib összes beállítását és a játékok alapértelmezéseit.",
             "settingsGame": "A játék összes beállításának megjelenítése.",
             "wineManager": "A Wine, Proton, Crossover stb. különböző verzióinak telepítése",
             "accessibility": "Megjeleníti az akadálymentességi beállításokat.",
@@ -377,16 +377,16 @@
         "msync": "Az Msync célja, hogy csökkentse a wineserver többletterhelését a CPU-igényes játékokban. Engedélyezése javíthatja a teljesítményt a támogatott Linux kerneleken.",
         "dxfpslimit": "Képkockaszámkorlátot állít be a DXVK-s játékokhoz",
         "advertiseAvxForRosetta": "Engedélyezi az AVX utasításkészlet támogatását, ha Windowsos játékokat futtat a Rosettával az Apple Silicon Maceken. Ez az olyan játékok esetén lehet szükséges, mint a Death Stranding, amelyhez AVX támogatás szükséges.",
-        "download_proton_steam": "Ha engedélyezve van, a GE-Proton közvetlenül a Steam kompatibilitási eszközök könyvtárába lesz letöltve, és nem a Heroic alapértelmezett elérési útjára. A fenti „Alapértelmezett Steam útvonal” beállításban megadott Steam elérési utat fogja használni.",
+        "download_proton_steam": "Ha engedélyezve van, a GE-Proton közvetlenül a Steam kompatibilitási eszközök könyvtárába lesz letöltve, és nem a GameLib alapértelmezett elérési útjára. A fenti „Alapértelmezett Steam útvonal” beállításban megadott Steam elérési utat fogja használni.",
         "wine-hdr": "A HDR javítja a színeket azáltal, hogy világosabb fényeket és mélyebb kontrasztokat biztosít. A HDR működéséhez mind a kijelzőnek, mind a játéknak támogatnia kell azt.",
         "wine-wayland": "A kísérleti Wine-Wayland illesztőprogram lehetővé teszi a játékok natív futtatását a Wayland megjelenítési protokoll alatt. Engedélyezése néhány játéknál problémákat okozhat.",
-        "analytics": "Lehetővé teszi a Heroic számára, hogy 100%-ban anonim használati adatokat gyűjtsön az alkalmazás fejlesztésének érdekében. Újraindítás után lép életbe.",
+        "analytics": "Lehetővé teszi a GameLib számára, hogy 100%-ban anonim használati adatokat gyűjtsön az alkalmazás fejlesztésének érdekében. Újraindítás után lép életbe.",
         "WoW64": "A Wine WoW64 mód lehetővé teszi a 32 bites Windows játékok futtatását 64 bites Wine-on. Engedélyezése javíthatja a teljesítményt, de problémákat okozhat régebbi 32 bites játékoknál.",
         "nvidiaprime": {
             "details": "Dedikált grafikus kártya használata a játék megjelenítéséhez a több GPU-s rendszereken. Csak olyan játékra szánt laptopokon és asztali számítógépeken van rá szükség, amelyek kimenet nélküli GPU-t használnak a megjelenítéshez (NVIDIA Optimus, AMD CrossFire)",
             "link": "További részletekért nézd meg a wikinket"
         },
-        "hide-window-on-protocol-launch": "Rejtve tartja a Heroic ablakát, ha a játékot külső parancsikonról indítod, például a „Hozzáadás a Steamhez” funkció használatával."
+        "hide-window-on-protocol-launch": "Rejtve tartja a GameLib ablakát, ha a játékot külső parancsikonról indítod, például a „Hozzáadás a Steamhez” funkció használatával."
     },
     "info": {
         "heroic": {
@@ -563,7 +563,7 @@
     "other": {
         "gogdl-version": "GOGDL verzió: ",
         "legendary-version": "Legendary verzió: ",
-        "weblate": "Segíts a Heroic fordításában.",
+        "weblate": "Segíts a GameLib fordításában.",
         "nile-version": "Nile verzió: "
     },
     "Other": "Egyéb",
@@ -609,7 +609,7 @@
         "autosync": "Mentések automatikus szinkronizálása",
         "autovkd3d": "A VKD3D automatikus telepítése/frissítése a környezeten",
         "change-target-exe": "Alternatív EXE-fájl választása a futtatáshoz",
-        "checkForUpdatesOnStartup": "A Heroic frissítéseinek keresése indításkor",
+        "checkForUpdatesOnStartup": "A GameLib frissítéseinek keresése indításkor",
         "crossover-version": "Crossover/Wine verzió",
         "custom_themes_path": "Egyéni témaútvonalak",
         "customWineProton": "Egyéni Wine/Proton elérési utak",
@@ -617,7 +617,7 @@
         "default-install-path": "Alapértelmezett telepítési útvonal",
         "default-steam-path": "A Steam alapértelmezett elérési útja",
         "defaultWinePrefix": "Mappa beállítása az új Wine-környezeteknek",
-        "disable_controller": "Játékvezérlős navigáció letiltása a Heroicban",
+        "disable_controller": "Játékvezérlős navigáció letiltása a GameLibben",
         "discordRPC": "Discord Rich Presence engedélyezése",
         "download-no-https": "Játékok letöltése HTTPS nélkül (CDN-ek esetén hasznos, például LanCache esetén)",
         "dxvkfpslimit": "FPS korlátozása (DX9, 10 and 11)",
@@ -686,7 +686,7 @@
                 },
                 "button": "Naplófájl feltöltése",
                 "error": {
-                    "content": "A naplófájl feltöltése sikertelen. Ellenőrizd a Heroic általános naplóit a részletekért.",
+                    "content": "A naplófájl feltöltése sikertelen. Ellenőrizd a GameLib általános naplóit a részletekért.",
                     "title": "A feltöltés sikertelen",
                     "manual_upload": "Kattints a „NAPLÓFÁJL MEGJELENÍTÉSE MAPPÁBAN” gombra, majd töltsd fel a „launch.log” fájlt Discordra vagy bármely online fájlmegosztó szolgáltatásba."
                 },
@@ -699,7 +699,7 @@
                 "legendary": "Epic Games / Legendary napló",
                 "game-log": "A(z) {{gameTitle}} játéknaplója",
                 "gog": "GOG napló",
-                "heroic": "Általános Heroic napló",
+                "heroic": "Általános GameLib napló",
                 "nile": "Amazon / Nile napló",
                 "zoom": "Zoom napló"
             },
@@ -717,7 +717,7 @@
         },
         "maxRecentGames": "Nemrég játszottak megjelenítése",
         "maxworkers": "Feldolgozók legnagyobb száma letöltéskor",
-        "minimize-on-launch": "A Heroic minimalizálása játékindítás után",
+        "minimize-on-launch": "A GameLib minimalizálása játékindítás után",
         "offlinemode": "Játék futtatása offline",
         "prefered_language": "Előnyben részesített nyelv (nyelvkód)",
         "preferSystemLibs": "Rendszer programkönyvtárainak előnyben részesítése",
@@ -757,7 +757,7 @@
             "enableLimiter": "FPS korlátozó engedélyezése",
             "enableForceGrabCursor": "Kurzor erőltetett megragadásának engedélyezése",
             "missingMsgFlatpak": "Nem található a Gamescope kompatibilis verziója. Telepítse a Gamescope flatpak csomagját a 25.08-as futtatókörnyezettel, és indítsa újra a Heroicot.",
-            "warningFlatpak": "Nem található a Gamescope kompatibilis verziója. Telepítsd a Gamescope flatpak csomagját a 25.08-as futtatókörnyezettel és indítsd újra a Heroicot."
+            "warningFlatpak": "Nem található a Gamescope kompatibilis verziója. Telepítsd a Gamescope flatpak csomagját a 25.08-as futtatókörnyezettel és indítsd újra a GameLibet."
         },
         "disablePlaytimeSync": "Játék közbeni szinkronizáció letiltása",
         "experimental_features": {
@@ -784,7 +784,7 @@
             "description": "Bőbeszédű naplók engedélyezése"
         },
         "custom_css": {
-            "warning": "Figyelmeztetés: ez az egész felhasználói felületre érvényes. Ez azt jelenti, hogy a hibás stílus használhatatlanná teheti a Heroicot. Ha szükséges, a beállítás kézileg megváltoztatható a `~/.config/heroic/config.json` fájlban. NE másolj stílusokat olyan forrásokból, melyekben nem bízol."
+            "warning": "Figyelmeztetés: ez az egész felhasználói felületre érvényes. Ez azt jelenti, hogy a hibás stílus használhatatlanná teheti a GameLibet. Ha szükséges, a beállítás kézileg megváltoztatható a `~/.config/heroic/config.json` fájlban. NE másolj stílusokat olyan forrásokból, melyekben nem bízol."
         },
         "advertiseAvxForRosetta": "AVX hirdetése a Rosetta esetén",
         "dxfpslimit": "A DirectX-es játékok FPS-ének korlátozása",
@@ -802,14 +802,14 @@
             "label": "Nem GE-Proton verziók engedélyezése játékok futtatásához",
             "wine_selector_warning": "A nem GE-Proton verziók alapértelmezetten figyelmen kívül vannak hagyva, engedélyezd őket a Globális speciális beállításokban"
         },
-        "analyticsOptIn": "Anonim adatok küldése a Heroic fejlesztésének támogatására",
+        "analyticsOptIn": "Anonim adatok küldése a GameLib fejlesztésének támogatására",
         "no-tray-icon": "Rendszertálcaikon elrejtése (újraindítás szükséges)",
         "show_valve_proton": {
             "confirmation": {
                 "dont_show": "Ne jelenjenek meg",
                 "show": "Értem, jelenjenek meg",
                 "title": "Biztos vagy benne?",
-                "message": "A Heroic használatához a Proton egyedi ágait (GE-Proton, Proton-CachyOS, stb.) ajánljuk, mivel a Valve Proton-verziói nem tartalmazzák a winetricks és protonfixes funkciókat. Ha szeretnéd, továbbra is használhatod őket."
+                "message": "A GameLib használatához a Proton egyedi ágait (GE-Proton, Proton-CachyOS, stb.) ajánljuk, mivel a Valve Proton-verziói nem tartalmazzák a winetricks és protonfixes funkciókat. Ha szeretnéd, továbbra is használhatod őket."
             },
             "label": "Nem GE-Proton verziók engedélyezése játékok futtatásához",
             "wine_selector_warning": "A nem GE-Proton verziók alapértelmezetten figyelmen kívül vannak hagyva, engedélyezd őket a Globális speciális beállításokban",
@@ -823,14 +823,14 @@
         "nvidiaprime": {
             "description": "NVIDIA Optimus vagy AMD Dynamic Switchable Graphics dedikált GPU kényszerített használata. CSAK OpenGL- és Vulkan-játékokhoz használd."
         },
-        "hide-window-on-protocol-launch": "Heroic ablak elrejtése a játékok heroic:// hivatkozással történő indításakor"
+        "hide-window-on-protocol-launch": "GameLib ablak elrejtése a játékok heroic:// hivatkozással történő indításakor"
     },
     "settings": {
         "battlEyeRuntime": {
             "installing": "BattlEye futtatókörnyezet telepítése…",
             "name": "BattlEye csalás elleni futtatókörnyezet"
         },
-        "clear-cache": "Heroic gyorsítótár törlése",
+        "clear-cache": "GameLib gyorsítótár törlése",
         "copiedToClipboard": "Vágólapra másolva.",
         "copyToClipboard": "Összes beállítás másolása a vágólapra",
         "default_hint": "A szakasz változtatásai csak alapértelmezett értékként lesznek használva a játékok telepítésekor. Ha egy már telepített játék beállításait módosítanád, akkor használd a játéklap Beállítások gombját.",
@@ -864,7 +864,7 @@
             "legacy": "Örökölt"
         },
         "open-config-file": "Beállítófájl megnyitása",
-        "reset-heroic": "A Heroic visszaállítása",
+        "reset-heroic": "A GameLib visszaállítása",
         "saves": {
             "label": "Save Location:",
             "warning": "A felhőmentés funkciója béta állapotú, szinkronizálás előtt készíts biztonsági mentést a mentéseidről (ha esetleg valami rosszul sikerülne)",
@@ -888,7 +888,7 @@
             "showDetailed": "Részletes rendszerleírás megjelenítése",
             "memory": "Memória:",
             "copyToClipboard": "Vágólapra másolás",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "gogdlVersion": "Gogdl: {{gogdlVersion}}",
             "nileVersion": "Nile: {{nileVersion}}",
             "legendaryVersion": "Legendary: {{legendaryVersion}}",
@@ -904,7 +904,7 @@
             "clearCache": {
                 "help8": "Telepített játékok",
                 "help1": "Ez a művelet törli ezeket a gyorsítótárakat:",
-                "help10": "A Heroic beállításai",
+                "help10": "A GameLib beállításai",
                 "help4": "GOG könyvtárinformációk (játéklista, telepítési párbeszédablak információi, API-információk, tehát előfeltételek)",
                 "help5": "Amazan könyvtárinformációk (játéklista, telepítési párbeszédablak információi)",
                 "help6": "Ez NEM törli ezeket:",
@@ -914,12 +914,12 @@
                 "help2": "Harmadik féltől származó játékinformációk (pontok, steam kompatibilitás, howlongtobeat, pcgamingwiki, applegamingwiki)"
             },
             "title": {
-                "resetHeroic": "A Heroic visszaállítása",
+                "resetHeroic": "A GameLib visszaállítása",
                 "clearCache": "Gyorsítótár törlése"
             },
             "details": "Részletek",
             "resetHeroic": {
-                "help": "Ez eltávolítja az összes beállítást és gyorsítótárazást, de nem távolítja el a telepített játékokat vagy az Epichez használt hitelesítési adatokat. A Heroic hordozható verzióit (AppImage, WinPortable, …) kézileg kell újraindítani."
+                "help": "Ez eltávolítja az összes beállítást és gyorsítótárazást, de nem távolítja el a telepített játékokat vagy az Epichez használt hitelesítési adatokat. A GameLib hordozható verzióit (AppImage, WinPortable, …) kézileg kell újraindítani."
             }
         },
         "offline": {
@@ -1071,7 +1071,7 @@
     "adtraction-locked": {
         "dont-show-again": "Ne jelenjen meg újra ez a figyelmeztetés",
         "title": "A reklámkövetés le van tiltva",
-        "description": "Úgy néz ki, hogy a track.adtraction.com domaint nem lehetett betölteni, vagy le van tiltva. A reklámkövetéssel az összes, a GOG áruházban történő vásárlás pénzügyileg támogatja a Heroicot. Fontold meg a tiltás eltávolítását, ha szeretnél támogatni."
+        "description": "Úgy néz ki, hogy a track.adtraction.com domaint nem lehetett betölteni, vagy le van tiltva. A reklámkövetéssel az összes, a GOG áruházban történő vásárlás pénzügyileg támogatja a GameLibet. Fontold meg a tiltás eltávolítását, ha szeretnél támogatni."
     },
     "categories-manager": {
         "add-placeholder": "Új kategória hozzáadása",
@@ -1091,9 +1091,9 @@
             "filters": "Szűrd a játékokat áruház, platform, kedvencek és továbbiak szerint, az alábbi lehetőségek használatával.",
             "gameCard": "Kattints bal egérgombbal a játékkártyára, hogy a játék oldalára navigálj, lásd a részleteit és módosítsd annak beállításait, vagy kattints jobb egérgombbal a helyi menü megnyitásához.",
             "welcome": {
-                "intro": "Üdvözöl a Heroic könyvtára! Itt láthatod a különböző áruházakból származó összes játékodat.",
+                "intro": "Üdvözöl a GameLib könyvtára! Itt láthatod a különböző áruházakból származó összes játékodat.",
                 "intro2": "Ha a könyvtár üres, akkor győződj meg arról, hogy bejelentkeztél-e a fiókjaidba a Fiókok kezelése oldalsáv-menüpont használatával, vagy add hozzá kézileg a saját játékait a fenti Játék hozzáadása gombbal.",
-                "title": "Üdvözöl a Heroic!",
+                "title": "Üdvözöl a GameLib!",
                 "title2": "A könyvtár kezelése!"
             },
             "categories": "Szervezd kategóriákba a játékokat, hogy rendezett legyen.",
@@ -1119,13 +1119,13 @@
             "settings": "Állítsd be a GameLib beállításait, a játékok alapértelmezéseit, tekintsd meg a naplókat, stb.",
             "welcome": {
                 "title": "Oldalsáv-navigáció",
-                "intro": "Üdvözöl a Heroic! Az oldalsáv tartalmazza az összes navigációs lehetőséget a Heroic felfedezéséhez."
+                "intro": "Üdvözöl a GameLib! Az oldalsáv tartalmazza az összes navigációs lehetőséget a GameLib felfedezéséhez."
             },
             "wine": "Kezeld vagy töltsd le a Wine/Proton/GPTK új verzióját a Windowsos játékok Linuxon vagy macOS-en való futtatásához.",
             "downloads": "Kövesd és kezeld a játékletöltéseket és -telepítéseket.",
             "library": "Érd el egy helyen a különböző áruházakból származó játékkönyvtárát.",
             "stores": "Böngéssz és vásárolj játékokat különböző áruházakban, köztük az Epicen, GOG-on vagy Amazonon.",
-            "version": "Nézd meg a Heroic jelenlegi verzióját, kattints rá a legutóbbi változásnapló megtekintéséhez és érd el ezt az útmutatót a súgó ikonra kattintva."
+            "version": "Nézd meg a GameLib jelenlegi verzióját, kattints rá a legutóbbi változásnapló megtekintéséhez és érd el ezt az útmutatót a súgó ikonra kattintva."
         },
         "skip": "Kihagyás",
         "startTour": "Bemutató indítása",
@@ -1142,12 +1142,12 @@
         "disable": "Letiltás",
         "enable": "Engedélyezés",
         "info": {
-            "pt1": "A Heroic az alkalmazás fejlesztése érdekében 100%-ban anonim adatokat gyűjt.",
-            "pt2": "A Heroic a nyílt forráskódú Plausible Analytics platformot használja alapvető adatok gyűjtésére: alkalmazásverzió, operációs rendszer, csatlakoztatott áruházak és ország.",
+            "pt1": "A GameLib az alkalmazás fejlesztése érdekében 100%-ban anonim adatokat gyűjt.",
+            "pt2": "A GameLib a nyílt forráskódú Plausible Analytics platformot használja alapvető adatok gyűjtésére: alkalmazásverzió, operációs rendszer, csatlakoztatott áruházak és ország.",
             "pt3": "Soha nem gyűjt semmilyen személyes adatot, beleértve a felhasználónevet, IP-címet vagy e-mail-címet.",
             "pt4": "Ezeket az adatokat arra használjuk, hogy betekintést nyerjünk, mire érdemes fókuszálnunk a korlátozott erőforrásaink és a felhasználói visszajelzések alapján.",
             "pt5": "A Plausible Analytics teljes mértékben megfelel a GDPR, CCPA és PECR előírásainak.",
-            "pt6": "Átláthatóság céljából megtekintheted az általunk gyűjtött adatokat a Heroic naplóiban.",
+            "pt6": "Átláthatóság céljából megtekintheted az általunk gyűjtött adatokat a GameLib naplóiban.",
             "pt7": "Ezt a beállítást bármikor módosíthatod az Alkalmazásbeállításokban."
         },
         "title": "Anonim analitika küldése"

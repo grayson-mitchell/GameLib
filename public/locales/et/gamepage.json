@@ -181,7 +181,7 @@
             "ok": "Ok",
             "multiplayer_message": "Sohivastased meetmed on katkised või keelatud. Mäng võib käivituda, aga mitmikmängu funktsioonid ei toimi. Kas soovite seda siiski paigaldada?",
             "install_anyway": "Jah (ma saan aru, et mitmikmängu funktsioonid ei toimi)",
-            "disabled_installation": "See mäng kasutab sohivastast tarkvara, mis ei ühildu teie operatsioonisüsteemiga, või mängu loojad ei ole selle tuge lubanud. See tähendab, et mitmikmängu funktsioonid ei toimi ning selle vastu pole teil (ega Heroicu tiimil) võimalik midagi teha.<br /><br />Et seda mängu siiski paigaldada ja käivitada, minge Seaded, Täpsem, ja pange linnuke sättele, mis lubab katkiste või keelatud sohivastaste meetmetega mängude paigaldamist.<br /><br />Pange tähele, et selle vastu ei ole lahendust ning mäng võib teie konto blokeerida."
+            "disabled_installation": "See mäng kasutab sohivastast tarkvara, mis ei ühildu teie operatsioonisüsteemiga, või mängu loojad ei ole selle tuge lubanud. See tähendab, et mitmikmängu funktsioonid ei toimi ning selle vastu pole teil (ega GameLibi tiimil) võimalik midagi teha.<br /><br />Et seda mängu siiski paigaldada ja käivitada, minge Seaded, Täpsem, ja pange linnuke sättele, mis lubab katkiste või keelatud sohivastaste meetmetega mängude paigaldamist.<br /><br />Pange tähele, et selle vastu ei ole lahendust ning mäng võib teie konto blokeerida."
         },
         "flatpak-path-not-writtable": "Viga: Liivakasti ligipääsu ei ole antud sellele asukohale, jätkates esineb andmete kadumine."
     },
@@ -234,12 +234,12 @@
         "default": "Vaikimisi"
     },
     "not_logged_in": {
-        "epic": "Te pole Epic kontoga Heroicusse sisse logitud. Ärge kasutage sisse logimiseks poelehte, vaid klikkige sellele nupule:",
-        "gog": "Te pole GOG kontoga Heroicusse sisse logitud. Ärge kasutage sisse logimiseks poelehte, vaid klikkige sellele nupule:",
+        "epic": "Te pole Epic kontoga GameLibisse sisse logitud. Ärge kasutage sisse logimiseks poelehte, vaid klikkige sellele nupule:",
+        "gog": "Te pole GOG kontoga GameLibisse sisse logitud. Ärge kasutage sisse logimiseks poelehte, vaid klikkige sellele nupule:",
         "login": "Log in",
         "title": "Te EI OLE sisse logitud",
-        "amazon": "Te ei ole Heroicus Amazoni kontoga sisse logitud. Ärge kasutage sisselogimiseks poelehekülge. Klikkige selle asemel seda nuppu:",
-        "zoom": "Te ei ole Heroicus Zoomi kontoga sisse logitud. Ärge kasutage sisselogimiseks poelehekülge. Klikkige selle asemel seda nuppu:"
+        "amazon": "Te ei ole GameLibis Amazoni kontoga sisse logitud. Ärge kasutage sisselogimiseks poelehekülge. Klikkige selle asemel seda nuppu:",
+        "zoom": "Te ei ole GameLibis Zoomi kontoga sisse logitud. Ärge kasutage sisselogimiseks poelehekülge. Klikkige selle asemel seda nuppu:"
     },
     "report_problem": "Teatage selle mängu käivitamise probleemist",
     "sdl": {
@@ -344,7 +344,7 @@
         "versionCollapsable": "Mängu versioon"
     },
     "third-party-managed": {
-        "notice2": "Pärast paigaldamise alustamist käivitab Heroic selle rakenduse, et paigaldus lõpuni viia",
+        "notice2": "Pärast paigaldamise alustamist käivitab GameLib selle rakenduse, et paigaldus lõpuni viia",
         "header": "Seda mängu haldab kolmanda osapoole rakendus",
         "notice1": "Seda mängu haldab kolmanda osapoole rakendus: \"{{application_name}}\""
     },

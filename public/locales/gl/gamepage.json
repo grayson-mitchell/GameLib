@@ -176,7 +176,7 @@
         "anticheat-warning": {
             "ok": "De acordo",
             "cancel": "Non",
-            "disabled_installation": "Este xogo utiliza software antitrampas que non é compatible co teu sistema operativo ou o soporte non foi habilitado polos desenvolvedores do xogo. Isto significa que as funcións de multixogador non van funcionar, e que non hai nada que ti (ou o equipo de Heroic) poida facer ao respecto.<br /><br />Para instalar este xogo e probalo de todos os modos, vai a Preferencias, Avanzado, e selecciona a opción para permitir a instalación de xogos con antitrampas rexeitado ou roto.<br /><br />Ten en conta que non hai ningunha solución para isto e no caso de continuar, córrese un risco de ser baneado do xogo.",
+            "disabled_installation": "Este xogo utiliza software antitrampas que non é compatible co teu sistema operativo ou o soporte non foi habilitado polos desenvolvedores do xogo. Isto significa que as funcións de multixogador non van funcionar, e que non hai nada que ti (ou o equipo de GameLib) poida facer ao respecto.<br /><br />Para instalar este xogo e probalo de todos os modos, vai a Preferencias, Avanzado, e selecciona a opción para permitir a instalación de xogos con antitrampas rexeitado ou roto.<br /><br />Ten en conta que non hai ningunha solución para isto e no caso de continuar, córrese un risco de ser baneado do xogo.",
             "install_anyway": "Si (Entendo que as características multixogador non funcionarán)",
             "multiplayer_message": "O soporte de antitrampas está roto ou foi rexeitado. O xogo podería executarse, pero as funcións de multixogador non van funcionar. Queres instalalo de todos os modos?",
             "title": "Antitrampas Roto/Rexeitado"
@@ -232,12 +232,12 @@
         "default": "Por defecto"
     },
     "not_logged_in": {
-        "epic": "Non se iniciou sesión cunha conta de Epic en Heroic. Non uses a páxina da tenda para iniciar sesión, mellor fai clic no seguinte botón:",
-        "gog": "Non se iniciou sesión cunha conta de GOG en Heroic. Non uses a páxina da tenda para iniciar sesión, mellor fai clic no seguinte botón:",
+        "epic": "Non se iniciou sesión cunha conta de Epic en GameLib. Non uses a páxina da tenda para iniciar sesión, mellor fai clic no seguinte botón:",
+        "gog": "Non se iniciou sesión cunha conta de GOG en GameLib. Non uses a páxina da tenda para iniciar sesión, mellor fai clic no seguinte botón:",
         "login": "Log in",
         "title": "NON se iniciou sesión",
-        "amazon": "Non se iniciou sesión cunha conta de Amazon en Heroic. Non uses a páxina da tenda para iniciar sesión, mellor fai clic no seguinte botón:",
-        "zoom": "Non se iniciou sesión cunha conta de GOG en Heroic. Non uses a páxina da tenda para iniciar sesión, mellor fai clic no seguinte botón:"
+        "amazon": "Non se iniciou sesión cunha conta de Amazon en GameLib. Non uses a páxina da tenda para iniciar sesión, mellor fai clic no seguinte botón:",
+        "zoom": "Non se iniciou sesión cunha conta de GOG en GameLib. Non uses a páxina da tenda para iniciar sesión, mellor fai clic no seguinte botón:"
     },
     "report_problem": "Avisar dun problema executando este xogo",
     "sdl": {
@@ -356,7 +356,7 @@
     "third-party-managed": {
         "header": "Este xogo está administrado por unha aplicación de terceiros",
         "notice1": "Este xogo está administrado por unha aplicación de terceiros: \"{{application_name}}\"",
-        "notice2": "Ao facer clic en Instalar, Heroic executará a aplicación para poder rematar o proceso de instalación"
+        "notice2": "Ao facer clic en Instalar, GameLib executará a aplicación para poder rematar o proceso de instalación"
     },
     "wikiLink": "Información importante sobre este xogo, lee esto: &nbsp;<1>Abrir páxina</1>",
     "open-saves-folder": "",

@@ -70,8 +70,8 @@
         },
         "yes": "כן",
         "cache-cleared": {
-            "message": "המטמון של Heroic נמחק.",
-            "title": "המטמון של Heroic נמחק"
+            "message": "המטמון של GameLib נמחק.",
+            "title": "המטמון של GameLib נמחק"
         },
         "warning": {
             "epic": {
@@ -121,8 +121,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "האם אתה בטוח שברצונך לאפס את Heroic? פעולה זו תסיר את כל ההגדרות והמטמון, אך לא תסיר את המשחקים המותקנים שלך או את האישורים של Epic. גרסאות ניידות (AppImage, WinPortable,...) של Heroic צריכות להיות מופעלות מחדש באופן ידני לאחר מכן.",
-                "title": "איפוס Heroic"
+                "message": "האם אתה בטוח שברצונך לאפס את GameLib? פעולה זו תסיר את כל ההגדרות והמטמון, אך לא תסיר את המשחקים המותקנים שלך או את האישורים של Epic. גרסאות ניידות (AppImage, WinPortable,...) של GameLib צריכות להיות מופעלות מחדש באופן ידני לאחר מכן.",
+                "title": "איפוס GameLib"
             }
         },
         "protocol": {
@@ -137,7 +137,7 @@
                 "message": "יש גרסה חדשה זמינה!",
                 "changelog": "פתח רשימת שינויים",
                 "detail": "אתם רוצים להוריד את האפדייט ברקע?",
-                "message-finished": "רוצים לפתוח מחדש את Heroic עכשיו?",
+                "message-finished": "רוצים לפתוח מחדש את GameLib עכשיו?",
                 "detailNoAutoupdate": ""
             }
         },
@@ -366,7 +366,7 @@
         "customWineProton": "מיקומי Wine/Proton מותאמים אישית",
         "darktray": "השתמש בtray icon כהה",
         "defaultWinePrefix": "הגדירו תיקיה עבור prefixים של Wine חדשים",
-        "disable_controller": "בטל ניווט של Heroic באמצעות קונטרולר",
+        "disable_controller": "בטל ניווט של GameLib באמצעות קונטרולר",
         "discordRPC": "הפעל Discord Rich Presence",
         "download-no-https": "הורד משחקים ללא HTTPS (שימושי עבור CDNים למשל LanCache)",
         "dxvkfpslimit": "הגבל קצב פריימים (FPS) (DX9, 10, ו-11)",
@@ -463,13 +463,13 @@
         "autodxvknvapi": "התקן או עדכן DXVK-NVAPI בprefix אוטומטית",
         "change-target-exe": "בחרו EXE חלופי להרצה",
         "autoUpdateGames": "עדכן משחקים אוטומטית",
-        "checkForUpdatesOnStartup": "בדוק לעדכונים לHeroic בעת פתיחת התוכנה",
+        "checkForUpdatesOnStartup": "בדוק לעדכונים לGameLib בעת פתיחת התוכנה",
         "crossover-version": "גרסת Crossover/Wine",
         "default-install-path": "נתיב התקנה ברירת מחדל",
         "default-steam-path": "נתיב Steam ברירת מחדל",
         "disable_logs": "בטל לוגים",
         "gamemode": "להשתמש בGameMode (צריכה להיות התקנה של Feral Game Mode)",
-        "minimize-on-launch": "צמצם את Heroic לאחר הפעלת המשחק",
+        "minimize-on-launch": "צמצם את GameLib לאחר הפעלת המשחק",
         "showfps": "הצג FPS (קצב פריימים) (DX9, 10, ו-11)",
         "start-in-tray": "התחל מצומצם",
         "steamruntime": "השתמש בSteam Runtime",
@@ -623,11 +623,11 @@
         "sync": {
             "part3": "סנכרון ידני: בחרו \"הורד\" כדי להוריד את השמירות של המשחקים שנשמרים בענן. בחרו \"העלה\" על מנת להעלות את האלה הלוקאליים לענן. \"אלץ הורדה\" ו\"אלץ העלאה\" יתעלמו מהגרסה הלוקאלית או זאת שבענן בהתאמה.",
             "part4": "\"סנכרן שמירות\" אוטומטית יסנכרן את השמירות כל פעם שתתחילו ותסגרו משחק.",
-            "part1": "Heroic מנסה לנחש את תיקיית השמירה הנכונה, זה יעבוד ברוב המקרים. במקרים שבהם התיקייה שגויה, השתמשו בתיבת הoverride כדי לשנות אותה.",
-            "part2": "במקרה שתשנו את תיקיית הprefix עבור Wine או Proton, תצטרכו לבדוק שוב את הנתיב מכיוון ש-Proton משתמש בprefix שונה (/pfx) ובשם משתמש (steamuser) שונה. אז אתם יכולים פשוט למחוק את הנתיב הנוכחי לצאת מדף הגדרות הסנכרון ולחזור שוב כדי ש-Heroic ינחש את התיקייה פעם נוספת עם הprefix הנכונה."
+            "part1": "GameLib מנסה לנחש את תיקיית השמירה הנכונה, זה יעבוד ברוב המקרים. במקרים שבהם התיקייה שגויה, השתמשו בתיבת הoverride כדי לשנות אותה.",
+            "part2": "במקרה שתשנו את תיקיית הprefix עבור Wine או Proton, תצטרכו לבדוק שוב את הנתיב מכיוון ש-Proton משתמש בprefix שונה (/pfx) ובשם משתמש (steamuser) שונה. אז אתם יכולים פשוט למחוק את הנתיב הנוכחי לצאת מדף הגדרות הסנכרון ולחזור שוב כדי ש-GameLib ינחש את התיקייה פעם נוספת עם הprefix הנכונה."
         },
         "wine": {
-            "part1": "Heroic מחפש גרסאות של Wine, Proton, ו-CrossOver בתיקיות הבאות:",
+            "part1": "GameLib מחפש גרסאות של Wine, Proton, ו-CrossOver בתיקיות הבאות:",
             "part2": "בשביל מקומות אחרים, השתמשו בsymbolic link לאחד מהתיקיות האלה"
         },
         "custom_themes_wiki": "בדקו את הויקי לפרטים נוספים על הוספת ערכות נושא מותאמים אישית. לחצו כאן.",
@@ -636,7 +636,7 @@
         "esync": "מטרת Esync היא להפחית את השימוש במעבד של winesever במשחקים הקשים על המעבד. הדלקה יכולה לשפר את הביצועים.",
         "fsync": "מטרת Fsync היא להפחית את השימוש במעבד של winesever במשחקים הקשים על המעבד. הדלקה יכולה לשפר את הביצועים על הקרנלים של לינוקס הנתמכים.",
         "game_language": {
-            "fallback": "השאירו ריק להשתמש בשפה של Heroic.",
+            "fallback": "השאירו ריק להשתמש בשפה של GameLib.",
             "in_game_config": "לא כל המשחקים תומכים בתצורה זו, לחלקם יש הגדרת שפה בתוך המשחק.",
             "valid_codes": "קודי שפה חוקיים תלויים במשחק."
         },
@@ -646,7 +646,7 @@
         "preferSystemLibs": "גרסאות Wine מותאמות אישית (Wine-GE, Wine-Lutris) באות עם הספריות שלהן. על ידי הפעלת אפשרות זו, wine יתעלם מהספריות הנשלחות הללו, ויטען ספריות מערכת במקום זאת. אזהרה! בעיות עלולות להתרחש אם הספריות שיש בהן תלות לא קיימות.",
         "primerun": "השתמשו בכרטיס גרפי (מאיץ גרפי) ייעודי כדי לרנדר את המשחק במערכות עם כמה כרטיסים גרפיים. נחוץ רק במחשבים ניידים למשחקים או במחשבים שולחניים המשתמשים ב-GPU ללא ראש לעיבוד (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "המיקום הזה נותן לHeroic לקבוע באיזה גרסת Proton משתמשת Steam, על מנת להוסיף משחקים שאינם מSteam לSteam."
+            "info": "המיקום הזה נותן לGameLib לקבוע באיזה גרסת Proton משתמשת Steam, על מנת להוסיף משחקים שאינם מSteam לSteam."
         },
         "steamruntime": "ספריות מותאמות אישית המסופקות על ידי Steam כדי לסייע בהפעלת משחקי Linux ו-Windows (Proton). הפעלה עשויה לשפר את התאימות.",
         "vkd3d": "VKD3D הוא שכבת תרגום מבוססת Vulkan עבור משחקי DirectX 12. הפעלה יכולה לשפר תאימות באופן משמעותי. אין השפעה על משחקי DirectX ישנים יותר.",
@@ -757,7 +757,7 @@
         "gogdl-version": "גרסת GOGDL: ",
         "legendary-version": "גרסת Legendary: ",
         "nile-version": "גרסת Nile: ",
-        "weblate": "עזרו לתרגם את Heroic."
+        "weblate": "עזרו לתרגם את GameLib."
     },
     "placeholder": {
         "alt-gogdl-bin": "משתמש בגרסה המובנה של GOGDL...",
@@ -771,7 +771,7 @@
     "progress": "התקדמות",
     "search": "חיפוש משחקים",
     "settings": {
-        "clear-cache": "מחק מטמון של Heroic",
+        "clear-cache": "מחק מטמון של GameLib",
         "copyToClipboard": "העתק את כל ההגדרות",
         "default_hint": "שינויים בסעיף זה חלים רק כערכי ברירת מחדל בעת התקנת משחקים. אם אתם רוצים לשנות את ההגדרות של משחק שכבר מותקן, השתמשו בלחצן ההגדרות בדף המשחק.",
         "eacRuntime": {
@@ -803,7 +803,7 @@
             "legacy": ""
         },
         "open-config-file": "פתח את קובץ התצורה",
-        "reset-heroic": "אפס את Heroic",
+        "reset-heroic": "אפס את GameLib",
         "battlEyeRuntime": {
             "installing": "מתקין BattlEye Runtime...",
             "name": "BattlEye AntiCheat Runtime"
@@ -833,7 +833,7 @@
             "showDetailed": "הראה מפרט מערכת מפורט",
             "memory": "זיכרון:",
             "copyToClipboard": "העתק ללוח הגזירים",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "nileVersion": "Nile: {{nileVersion}}",
             "cometVersion": ""
         },
@@ -842,7 +842,7 @@
         },
         "advanced": {
             "title": {
-                "resetHeroic": "אפס את Heroic",
+                "resetHeroic": "אפס את GameLib",
                 "clearCache": ""
             },
             "details": "פרטים",
@@ -859,7 +859,7 @@
                 "help4": ""
             },
             "resetHeroic": {
-                "help": "האם אתה בטוח שברצונך לאפס את Heroic? פעולה זו תסיר את כל ההגדרות והמטמון, אך לא תסיר את המשחקים המותקנים שלך או את האישורים של Epic. גרסאות ניידות (AppImage, WinPortable,...) של Heroic צריכות להיות מופעלות מחדש באופן ידני לאחר מכן."
+                "help": "האם אתה בטוח שברצונך לאפס את GameLib? פעולה זו תסיר את כל ההגדרות והמטמון, אך לא תסיר את המשחקים המותקנים שלך או את האישורים של Epic. גרסאות ניידות (AppImage, WinPortable,...) של GameLib צריכות להיות מופעלות מחדש באופן ידני לאחר מכן."
             }
         },
         "launchOptions": "פותח הגדרות...",

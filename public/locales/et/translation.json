@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Heroicu vahemälu puhastati.",
+            "message": "GameLibi vahemälu puhastati.",
             "title": "Vahemälu puhastati"
         },
         "choose": "Valige",
@@ -99,7 +99,7 @@
                 "title": "Steami viga"
             },
             "executableNotFound": "Käivitatavat programmi ei leitud",
-            "executableNotFoundMessage": "Heroic ei leidnud selle mängu jaoks käivitatavat programmi. Palun määrake see käsitsi mängu seadetes.",
+            "executableNotFoundMessage": "GameLib ei leidnud selle mängu jaoks käivitatavat programmi. Palun määrake see käsitsi mängu seadetes.",
             "dxmt": {
                 "message": "Viga DXMT allalaadimisel! Kontrollige oma ühendust!",
                 "title": "Viga DXMT allalaadimisel"
@@ -110,8 +110,8 @@
                 "changelog": "Ava muudatuste logi",
                 "detail": "Kas soovite uuenduse taustal alla laadida?",
                 "message": "Saadaval on uus versioon!",
-                "message-finished": "Kas soovite Heroicu nüüd taaskäivitada?",
-                "title": "Heroic Games Launcher",
+                "message-finished": "Kas soovite GameLibi nüüd taaskäivitada?",
+                "title": "GameLib Games Launcher",
                 "title-finished": "Uuendus lõpetatud",
                 "detailNoAutoupdate": "Teie pakiformaat ei toeta automaatseid uuendusi. Palun kasutage uuendamiseks oma pakihaldurit."
             }
@@ -129,8 +129,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Kas olete kindel, et soovite Heroicu lähtestada? See eemaldab kõik seaded ja vahemällu salvestamise, kuid ei eemalda teie paigaldatud mänge ega Epicu sisselogimise seisundit. Heroicu kompaktsed versioonid (AppImage, WinPortable jne.) peab pärast käsitsi taaskäivitama.",
-                "title": "Lähtesta Heroic"
+                "message": "Kas olete kindel, et soovite GameLibi lähtestada? See eemaldab kõik seaded ja vahemällu salvestamise, kuid ei eemalda teie paigaldatud mänge ega Epicu sisselogimise seisundit. GameLibi kompaktsed versioonid (AppImage, WinPortable jne.) peab pärast käsitsi taaskäivitama.",
+                "title": "Lähtesta GameLib"
             }
         },
         "runexe": {
@@ -181,12 +181,12 @@
             },
             "snap": {
                 "checkbox": "Ära enam seda teavitust näita",
-                "title": "Heroic töötab kui Snap",
-                "message": "Mõningaid võimalusi ei ole äpi Snap versioonis saadaval ning me üritame seda parandada.{{newLine}}Praeguste piirangute hulgas on: {{newLine}}Heroic ei leia Protonit üles Steamist või Lutrisest.{{newLine}}{{newLine}}Gamescope, GameMode ja MangoHud ei toimi, sest Heroicul ei ole neile ligipääsu.{{newLine}}{{newLine}}Et sellest mööda pääseda, installeerige Heroic kasutades Flatpaki, DEB-i või AppImage'it."
+                "title": "GameLib töötab kui Snap",
+                "message": "Mõningaid võimalusi ei ole äpi Snap versioonis saadaval ning me üritame seda parandada.{{newLine}}Praeguste piirangute hulgas on: {{newLine}}GameLib ei leia Protonit üles Steamist või Lutrisest.{{newLine}}{{newLine}}Gamescope, GameMode ja MangoHud ei toimi, sest GameLibil ei ole neile ligipääsu.{{newLine}}{{newLine}}Et sellest mööda pääseda, installeerige GameLib kasutades Flatpaki, DEB-i või AppImage'it."
             },
             "rosetta": {
                 "title": "Rosettat ei leitud",
-                "message": "Heroic nõuab Rosettat, et Apple Siliconi kiipidega macOS süsteemidel korralikult toimida. Palun paigaldage see macOS-i terminalist kasutades järgmist käsku: \"softwareupdate --install-rosetta\" ja taaskäivitage Heroic. "
+                "message": "GameLib nõuab Rosettat, et Apple Siliconi kiipidega macOS süsteemidel korralikult toimida. Palun paigaldage see macOS-i terminalist kasutades järgmist käsku: \"softwareupdate --install-rosetta\" ja taaskäivitage GameLib. "
             }
         },
         "wineprefix": "Valige WinePrefiksi kaust",
@@ -307,7 +307,7 @@
         "esync": "Esynci eesmärk on vähendada wineserveri koormust CPU-mahukates mängudes. Lubamine võib parandada jõudlust.",
         "fsync": "Fsynci eesmärk on vähendada wineserveri koormust CPU-mahukates mängudes. Lubamine võib parandada jõudlust toetatud Linuxi kernelitel.",
         "game_language": {
-            "fallback": "Heroicu keele kasutamiseks jätke väli tühjaks.",
+            "fallback": "GameLibi keele kasutamiseks jätke väli tühjaks.",
             "in_game_config": "Kõik mängud ei toeta seda seadistust, mõnel on mängusisene keeleseadistus.",
             "valid_codes": "Kehtivad keelekoodid sõltuvad mängust."
         },
@@ -323,18 +323,18 @@
         "preferSystemLibs": "Kohandatud Wine versioonid (Wine-GE, Wine-Lutris) tarnitakse koos nende teegi sõltuvustega. Selle valiku lubamisel ignoreeritakse neid tarnitud teeke ja Wine laadib selle asemel süsteemiteeke. Hoiatus! Kui sõltuvusi ei täideta, võib tekkida probleeme.",
         "primerun": "Mitme GPU-süsteemides mängu renderdamiseks kasutage spetsiaalset graafikakaarti. Vajalik ainult mängusülearvutites või lauaarvutites, mis kasutavad renderdamiseks peata GPU-d (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "See asukoht lubab Heroicul määrata, millist Protoni versiooni Steam kasutab, et lisada Steamiväliseid mänge Steami."
+            "info": "See asukoht lubab GameLibil määrata, millist Protoni versiooni Steam kasutab, et lisada Steamiväliseid mänge Steami."
         },
         "steamruntime": "Steami pakutavad kohandatud teegid, mis aitavad käivitada Linuxi ja Windowsi (Protoni) mänge. Lubamine võib parandada ühilduvust.",
         "sync": {
-            "part1": "Heroic üritab ära arvata õige salvestuskausta ja see toimib enamikul juhtudel. Juhul kui kaust on vale, kasutage selle muutmiseks override-kasti.",
-            "part2": "Kui te muudate Wine'i või Proton'i prefiksi kausta, peate te tee uuesti kontrollima, kuna Proton kasutab teistsugust prefiksit (/pfx) ja kasutajanime (steamuser). Nii et võite lihtsalt kustutada praeguse faili koha, lahkuda sünkroonimise seadete lehelt ja minna uuesti tagasi, et Heroic saaks arvata veelkord kausta õige eesliitega.",
+            "part1": "GameLib üritab ära arvata õige salvestuskausta ja see toimib enamikul juhtudel. Juhul kui kaust on vale, kasutage selle muutmiseks override-kasti.",
+            "part2": "Kui te muudate Wine'i või Proton'i prefiksi kausta, peate te tee uuesti kontrollima, kuna Proton kasutab teistsugust prefiksit (/pfx) ja kasutajanime (steamuser). Nii et võite lihtsalt kustutada praeguse faili koha, lahkuda sünkroonimise seadete lehelt ja minna uuesti tagasi, et GameLib saaks arvata veelkord kausta õige eesliitega.",
             "part3": "Manuaalne sünkroonimine: Valige Download, et laadida alla pilve salvestatud mängude salvestused. Upload, et laadida kohalikud pilve üles. Force Download ja Force Upload ignoreerivad lokaalselt või pilves olevat versiooni.",
             "part4": "Automaatne salvestuste sünkroonimine sünkroonib salvestused iga kord, kui alustate mängu ja pärast mängimise lõpetamist."
         },
         "vkd3d": "VKD3D on Vulkanil põhinev tõlkekiht DirectX 12 mängude jaoks. Selle lubamine võib ühilduvust oluliselt parandada. Ei mõjuta vanemaid DirectX mänge, nõuab DXVK-d.",
         "wine": {
-            "part1": "Heroic otsib Wine'i, Proton'i ja CrossOveri versioone järgmistes kaustades:",
+            "part1": "GameLib otsib Wine'i, Proton'i ja CrossOveri versioone järgmistes kaustades:",
             "part2": "Muude kohtade puhul kasutage sümboolset linki ühele neist kaustadest"
         },
         "disable_logs": "Lülitage see märkeruut sisse, et keelata suurem osa logifailidesse kirjutamisest (oluline teave logitakse alati sisse). Enne probleemist teatamist lülitage see seade kindlasti VÄLJA.",
@@ -367,7 +367,7 @@
             "accessibility": "Näita ligipääsetavuse seadeid.",
             "downloadManager": "Näitab praeguseid ja eelnevaid allalaadimisi.",
             "login": "Logi sisse erinevatesse poodidesse.",
-            "settingsDefault": "Näitab kõiki Heroicu seadeid ja mängude vaikimisi sätteid."
+            "settingsDefault": "Näitab kõiki GameLibi seadeid ja mängude vaikimisi sätteid."
         },
         "disablePlaytimeSync": "Keelab mänguajalist sünkroniseerimist antud poe serveritega (hetkel toetab ainult GOG poodi)",
         "msync": "Msync üritab vähendada wineserveri töökulu CPU-nõudlikes mängudes. Selle lubamine võib parandada jõudlust toetatud Linuxi kernelite puhul.",
@@ -376,11 +376,11 @@
             "open": "Ava abi"
         },
         "dxfpslimit": "Kehtestab kaadrisageduse piirangu DXVK mängude jaoks",
-        "download_proton_steam": "Kui lubatud, laetakse GE-Proton alla otse Steami ühilduvustööriistade kausta, mitte Heroicu vaikimisi teele. See kasutab Steami vaiketeed, mis on määratud üleval 'Steami vaiketee' valikus.",
+        "download_proton_steam": "Kui lubatud, laetakse GE-Proton alla otse Steami ühilduvustööriistade kausta, mitte GameLibi vaikimisi teele. See kasutab Steami vaiketeed, mis on määratud üleval 'Steami vaiketee' valikus.",
         "advertiseAvxForRosetta": "Lubab toe AVX käsustiku jaoks, kui mängite Windowsi mänge Apple Siliconi Mac-idel läbi Rosetta. See võib olla vajalik teatud mängude jaoks, mis vajavad AVX-i tuge, näiteks \"Death Stranding\".",
         "wine-hdr": "HDR täiustab värve võimendades eredaid kohti ja pakkudes sügavamat kontrasti. HDR-i toimimiseks peavad nii ekraan kui ka mäng seda toetama.",
         "wine-wayland": "Wine-Waylandi eksperimentaalne draiver lubab mängudel otse käivituda läbi Waylandi kuvaprotokolli. Selle lubamine võib mõned mängud katki teha.",
-        "analytics": "Lubab Heroicul koguda 100% anonüümseid kasutusandmeid, et rakendust paremaks teha. Nõuab restarti.",
+        "analytics": "Lubab GameLibil koguda 100% anonüümseid kasutusandmeid, et rakendust paremaks teha. Nõuab restarti.",
         "WoW64": "Wine'i WoW64 režiim lubab 32-bitistel Windowsi mängudel toimida 64-bitisel Wine'il. Selle lubamine võib muuta kogemuse sujuvamaks, aga võib ka vanemaid 32-bitiseid mänge katki teha.",
         "nvidiaprime": {
             "details": "Mitme GPU-süsteemides mängu renderdamiseks kasutage spetsiaalset graafikakaarti. Vajalik ainult mängusülearvutites või lauaarvutites, mis kasutavad renderdamiseks peata GPU-d (NVIDIA Optimus, AMD CrossFire)",
@@ -562,7 +562,7 @@
     "other": {
         "gogdl-version": "GOGDL versioon: ",
         "legendary-version": "Legendary versioon: ",
-        "weblate": "Aidake tõlkida Heroicut.",
+        "weblate": "Aidake tõlkida GameLibit.",
         "nile-version": "Nile Version: "
     },
     "Other": "Muu",
@@ -608,7 +608,7 @@
         "autosync": "Automaatne salvestiste sünkroonimine",
         "autovkd3d": "VKD3D automaatne paigaldamine/uuendamine prefiksile",
         "change-target-exe": "Vali alternatiivne EXE käivitamiseks",
-        "checkForUpdatesOnStartup": "Kontrolli Heroicu uuendusi käivitamisel",
+        "checkForUpdatesOnStartup": "Kontrolli GameLibi uuendusi käivitamisel",
         "crossover-version": "Crossoveri/Wine'i versioon",
         "custom_themes_path": "Kohandatud teemade asukoht",
         "customWineProton": "Kohandatud Wine/Proton teed",
@@ -616,7 +616,7 @@
         "default-install-path": "Vaikimisi paigaldustee",
         "default-steam-path": "Steami vaiketee",
         "defaultWinePrefix": "Määrake uute Wine'i prefikside jaoks kaust",
-        "disable_controller": "Keela Heroicu mängupuldiga navigeerimine",
+        "disable_controller": "Keela GameLibi mängupuldiga navigeerimine",
         "discordRPC": "Luba Discord Rich Presence",
         "download-no-https": "Mängude allalaadimine ilma HTTPS-ita (kasulik CDNide jaoks, nt LanCache)",
         "dxvkfpslimit": "Piira kaadrisagedust (DX9, 10 ja 11)",
@@ -678,7 +678,7 @@
                     "title": "Lae logifail üles?"
                 },
                 "error": {
-                    "content": "Ei suutnud logifaili üles laadida. Üksikasjade jaoks kontrollige Heroicu üldist logi",
+                    "content": "Ei suutnud logifaili üles laadida. Üksikasjade jaoks kontrollige GameLibi üldist logi",
                     "title": "Üleslaadimine ebaõnnestus",
                     "manual_upload": "Kliki \"Kuva logifail kaustas\" nuppu ja lae \"launch.log\" fail käsitsi Discordi või mis tahes failijagamise teenusesse."
                 },
@@ -695,7 +695,7 @@
                 }
             },
             "descriptiveNames": {
-                "heroic": "Üldine Heroicu logi",
+                "heroic": "Üldine GameLibi logi",
                 "legendary": "Epic Games / Legendary logi",
                 "game-log": "{{gameTitle}} mängu logi",
                 "gog": "GOG logi",
@@ -716,7 +716,7 @@
         },
         "maxRecentGames": "Hiljuti mängitud mängu, mida näidata",
         "maxworkers": "Töötajate maksimaalne arv allalaadimisel",
-        "minimize-on-launch": "Minimeeri Heroic pärast mängu käivitamist",
+        "minimize-on-launch": "Minimeeri GameLib pärast mängu käivitamist",
         "offlinemode": "Käivita mäng võrguühenduseta",
         "prefered_language": "Eelistatud keel (keelekood)",
         "preferSystemLibs": "Eelista süsteemiteeke",
@@ -749,7 +749,7 @@
             "enableLimiter": "Luba FPS limiit",
             "enableForceGrabCursor": "Luba sunnitud kursori haaramine",
             "missingMsgFlatpak": "Me ei suutnud leida ühilduvat Gamescope'i versiooni. Paigaldage Gamescope'i flatpak käitusaja versiooniga 25.08 ja taaskäivitage Heroic.",
-            "warningFlatpak": "Me ei suutnud leida ühilduvat Gamescope'i versiooni. Paigaldage Gamescope'i flatpak käitusaja versiooniga {{runtimeVersion}} ja taaskäivitage Heroic."
+            "warningFlatpak": "Me ei suutnud leida ühilduvat Gamescope'i versiooni. Paigaldage Gamescope'i flatpak käitusaja versiooniga {{runtimeVersion}} ja taaskäivitage GameLib."
         },
         "after-launch-script-path": "Vali skript, mida käitada pärast mängu sulgemist",
         "msync": "Luba Msync",
@@ -783,7 +783,7 @@
             "description": "Luba üksikasjalised logid"
         },
         "custom_css": {
-            "warning": "Hoiatus: see rakendub tervele eesliidesele. See tähendab, et vale stiil võib teha Heroicu kasutuskõlbmatuks. Kui vaja, võib seda sätet käsitsi muuta failis `~/.config/heroic/config.json`. ÄRGE KOPEERIGE stiile allikatest, mida te ei usalda."
+            "warning": "Hoiatus: see rakendub tervele eesliidesele. See tähendab, et vale stiil võib teha GameLibi kasutuskõlbmatuks. Kui vaja, võib seda sätet käsitsi muuta failis `~/.config/heroic/config.json`. ÄRGE KOPEERIGE stiile allikatest, mida te ei usalda."
         },
         "advertiseAvxForRosetta": "Kuuluta Rosettale AVX-tuge",
         "download-proton-steam": "Lae alla GE-Proton Steami kausta",
@@ -801,14 +801,14 @@
             "label": "Luba mitte-GE Protoni versioone mängude mängimiseks",
             "wine_selector_warning": "Mitte-GE Protoni versioone vaikimisi ignoreeritakse, luba need täpsemates globaalsetes seadetes"
         },
-        "analyticsOptIn": "Saada anonüümseid andmeid, et aidata Heroicu arendamist",
+        "analyticsOptIn": "Saada anonüümseid andmeid, et aidata GameLibi arendamist",
         "no-tray-icon": "Peida süsteemisalve ikoon (nõuab restarti)",
         "show_valve_proton": {
             "confirmation": {
                 "dont_show": "Ära näita neid",
                 "show": "Ma saan aru, näita neid",
                 "title": "Kas olete kindel?",
-                "message": "Soovitame Heroicuga kasutada kohandatud Protoni variante (GE-Proton, Proton-CachyOS jms.), kuna Valve'i Protoni versioonidel puuduvad winetricks ja protofixes. Kui soovite, võite neid siiski kasutada."
+                "message": "Soovitame GameLibiga kasutada kohandatud Protoni variante (GE-Proton, Proton-CachyOS jms.), kuna Valve'i Protoni versioonidel puuduvad winetricks ja protofixes. Kui soovite, võite neid siiski kasutada."
             },
             "label": "Luba mitte-GE Protoni versioone mängude mängimiseks",
             "wine_selector_warning": "Mitte-GE Protoni versioone vaikimisi ignoreeritakse, luba need täpsemates globaalsetes seadetes",
@@ -828,7 +828,7 @@
             "installing": "BattlEye Runtime paigaldamine...",
             "name": "BattlEye AntiCheat Runtime"
         },
-        "clear-cache": "Tühjenda Heroicu vahemälu",
+        "clear-cache": "Tühjenda GameLibi vahemälu",
         "copiedToClipboard": "Kopeeritud lõikelauale!",
         "copyToClipboard": "Kopeeri kõik seaded lõikelauale",
         "default_hint": "Muutused selles sektsioonis rakenduvad vaikimisi ainult mängude paigaldamisel. Kui soovite muuta juba paigaldatud mängu seadeid, kasutage Seadete nuppu mängu leheküljel.",
@@ -862,7 +862,7 @@
             "legacy": "Igand"
         },
         "open-config-file": "Ava konfiguratsioonifail",
-        "reset-heroic": "Lähtesta Heroic",
+        "reset-heroic": "Lähtesta GameLib",
         "saves": {
             "label": "Salvestuste asukoht:",
             "warning": "Pilvesalvestuse funktsioon on beetaversioonis, enne sünkroonimist varundage oma salvestused (juhuks, kui midagi läheb valesti)",
@@ -878,16 +878,16 @@
                 "help7": "Sisselogimine poodi",
                 "help6": "See EI kustuta:",
                 "help1": "See toiming lähtestab järgmised vahemälud:",
-                "help10": "Heroicu konfiguratsioon",
+                "help10": "GameLibi konfiguratsioon",
                 "help2": "Kolmanda osapoole mängude teave (skoorid, steam compatibility, howlongtobeat, pcgamingwiki, applegamingwiki)",
                 "help5": "Amazon varamu teave (mängude loend, installeerimisdialoogi teave)"
             },
             "title": {
-                "resetHeroic": "Lähtesta Heroic",
+                "resetHeroic": "Lähtesta GameLib",
                 "clearCache": "Tühjenda vahemälu"
             },
             "resetHeroic": {
-                "help": "See eemaldab kõik seaded ja vahemälud, aga ei eemalda teie installeeritud mänge ega Epicu sisselogimise seisundit. Heroicu kompaktseid versioone (AppImage, WinPortable jne.) peab pärast käsitsi taaskäivitama."
+                "help": "See eemaldab kõik seaded ja vahemälud, aga ei eemalda teie installeeritud mänge ega Epicu sisselogimise seisundit. GameLibi kompaktseid versioone (AppImage, WinPortable jne.) peab pärast käsitsi taaskäivitama."
             },
             "details": "Üksikasjad"
         },
@@ -905,7 +905,7 @@
             "cpu": "Protsessor:",
             "cpuDescription": "{{numOfCores}}x {{modelName}}",
             "gpu": "Graafikaprotsessor:",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "memory": "Mälu:",
             "nileVersion": "Nile: {{nileVersion}}",
             "osNameFlatpak": "{{osName}} (Flatpakis)",
@@ -1068,7 +1068,7 @@
         "wine-staging-macos": "Wine-Staging-macOS põhineb peavoolu Wine'i projektil ja on soovitatav Inteli Macidele ja DX11 või vanemate mängude puhul, eriti koos DXMT tööriistaga."
     },
     "adtraction-locked": {
-        "description": "Näib, et track.adtraction.com domeeni ei olnud võimalik laadida või on keelatud. Tänu adtractionile, iga ost, mida GOG poes teete, toetab rahaliselt Heroicut. Kui soovite aidata, palun eemaldage keeld.",
+        "description": "Näib, et track.adtraction.com domeeni ei olnud võimalik laadida või on keelatud. Tänu adtractionile, iga ost, mida GOG poes teete, toetab rahaliselt GameLibit. Kui soovite aidata, palun eemaldage keeld.",
         "dont-show-again": "Ära enam näita seda hoiatust",
         "title": "Adtraction on keelatud"
     },
@@ -1098,9 +1098,9 @@
             "sortOptions": "Klikkige siia, et sorteerida mänge tähestikulises järjekorras.",
             "viewToggle": "Vali mängude jaoks ruudustiku või nimekirja vaade.",
             "welcome": {
-                "intro": "Tere tulemast Heroicu varamusse! Siin võite näha kõiki oma mänge üle mitme erineva poe.",
+                "intro": "Tere tulemast GameLibi varamusse! Siin võite näha kõiki oma mänge üle mitme erineva poe.",
                 "intro2": "Kui varamu on tühi, siis logige kindlasti oma kontodesse sisse vajutades \"kontode haldamise\" valikut küljeribal või lisage omaenda mänge vajutades \"lisa mäng\" nuppu üleval.",
-                "title": "Tere tulemast Heroicusse!",
+                "title": "Tere tulemast GameLibisse!",
                 "title2": "Varamu haldamine!"
             },
             "gameCard": "Tehke vasakklõps mängu kaardil, et minna mängu lehele, näha üksikasju ja muuta seadeid, või paremklõps, et avada menüü.",
@@ -1111,7 +1111,7 @@
         "sidebar": {
             "community": "Toetage GameLibi arendamist.",
             "accessibility": "Vaadake ligipääsetavuse seadeid, et oma kogemust kohendada.",
-            "version": "Kontrollige oma praegust Heroicu versiooni. Klikkige siia, et näha uusimaid muudatusi ja külastage seda tuuri läbi abiikooni.",
+            "version": "Kontrollige oma praegust GameLibi versiooni. Klikkige siia, et näha uusimaid muudatusi ja külastage seda tuuri läbi abiikooni.",
             "stores": "Sirvige ja ostelge mängusid erinevates poodides, sealhulgas Epicus, GOG-is ja Amazonis.",
             "quit": "Väljuge ohutult rakendusest.",
             "login": "Logige sisse oma mängupoodide kontodele, et oma varamule ligi pääseda.",
@@ -1120,7 +1120,7 @@
             "docs": "Lugege dokumentatsiooni, et leida abi GameLibi kasutamisel.",
             "welcome": {
                 "title": "Küljeribal navigeerimine",
-                "intro": "Tere tulemast Heroicusse! Sellelt küljeribalt leiate kõik valikud, et rakenduses ringi liikuda."
+                "intro": "Tere tulemast GameLibisse! Sellelt küljeribalt leiate kõik valikud, et rakenduses ringi liikuda."
             },
             "settings": "Vaadake üle GameLibi ja mängude vaikimisi seaded, kontrollige logisid ja muud.",
             "wine": "Hallake või laadige alla uus Wine/Proton/GPTK versioon, et käivitada Windowsi mänge Linuxil või macOS-il.",
@@ -1139,12 +1139,12 @@
         "disable": "Lülita välja",
         "enable": "Luba",
         "info": {
-            "pt1": "Et äppi paremaks teha, kogub Heroic 100% anonüümseid andmeid.",
-            "pt2": "Heroic kasutab avatud allikaga Plausible Analyticsi platvormi, et koguda kõige põhilisemaid andmeid: äpi versioon, OS, ühendatud poed ja riik.",
+            "pt1": "Et äppi paremaks teha, kogub GameLib 100% anonüümseid andmeid.",
+            "pt2": "GameLib kasutab avatud allikaga Plausible Analyticsi platvormi, et koguda kõige põhilisemaid andmeid: äpi versioon, OS, ühendatud poed ja riik.",
             "pt3": "See ei kogu kunagi isiklikku teavet, näiteks kasutajanime, IP-aadressi või e-maili.",
             "pt4": "Need andmed annavad meile teavet sellest, millele järgmisena keskenduda, kuna meie ressursid ja kasutaja tagasiside on piiratud.",
             "pt5": "Plausible Analytics on täielikult vastavuses GDPR-i, CCPA ja PECR-iga.",
-            "pt6": "Läbipaistvuse nimel võite meie poolt kogutud andmeid vaadata Heroicu logifailides.",
+            "pt6": "Läbipaistvuse nimel võite meie poolt kogutud andmeid vaadata GameLibi logifailides.",
             "pt7": "Võite seda sätet muuta iga kell äpi seadetes."
         },
         "title": "Saada anonüümset analüütikat"

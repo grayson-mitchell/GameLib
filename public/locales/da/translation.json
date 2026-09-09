@@ -5,7 +5,7 @@
         "wineprefix": "Vælg WinePræfiks-mappe",
         "no": "NEJ",
         "cache-cleared": {
-            "message": "Heroic mellemlager ryddet.",
+            "message": "GameLib mellemlager ryddet.",
             "title": "Mellemlager ryddet"
         },
         "choose-egs-prefix": "Vælg Præfiks hvor EGS er installeret",
@@ -82,7 +82,7 @@
             "legendary": {
                 "generic": "Der skete en fejl! Prøv at logge ud og logge på din Epic-konto. {{newline}}  {{error}}"
             },
-            "executableNotFoundMessage": "Heroic kunne ikke finde den eksekverbare til dette spil. Indstil den venligst manuelt i spilindstillingerne.",
+            "executableNotFoundMessage": "GameLib kunne ikke finde den eksekverbare til dette spil. Indstil den venligst manuelt i spilindstillingerne.",
             "executableNotFound": "Eksekverbar ikke fundet",
             "dxmt": {
                 "message": "Fejl ved hentning af DXMT! Kontrollér din forbindelse!",
@@ -94,8 +94,8 @@
                 "changelog": "Åben changelog",
                 "detail": "Vil du hente opdateringen i baggrunden?",
                 "message": "Der er en ny Version tilgængelig!",
-                "message-finished": "Vil du genstarte Heroic nu?",
-                "title": "Heroic Games Launcher",
+                "message-finished": "Vil du genstarte GameLib nu?",
+                "title": "GameLib Games Launcher",
                 "title-finished": "Opdatering Fuldført",
                 "detailNoAutoupdate": "Automatiske opdateringer understøttes ikke for dit pakkeformat. Brug din pakkehåndtering til at opdatere."
             }
@@ -112,8 +112,8 @@
         },
         "reset-heroic": {
             "question": {
-                "title": "Nulstil Heroic",
-                "message": "Er du sikker på, at du vil nulstille Heroic? Dette fjerner alle Indstillinger og Mellemlager, men vil ikke fjerne dine installerede spil eller din Epic-legitimation. Flytbare versioner (AppImage, WinPortable, ...) af Heroic skal genstartes manuelt efterfølgende."
+                "title": "Nulstil GameLib",
+                "message": "Er du sikker på, at du vil nulstille GameLib? Dette fjerner alle Indstillinger og Mellemlager, men vil ikke fjerne dine installerede spil eller din Epic-legitimation. Flytbare versioner (AppImage, WinPortable, ...) af GameLib skal genstartes manuelt efterfølgende."
             }
         },
         "runexe": {
@@ -158,9 +158,9 @@
                 "title": "Wine ikke fundet!"
             },
             "snap": {
-                "title": "Heroic kører som Snap",
+                "title": "GameLib kører som Snap",
                 "checkbox": "Vis ikke denne meddelelse igen",
-                "message": "Nogle funktioner er ikke til tilgængelige i Snap-versionen af appen lige nu, og vi prøver at ordne det.{{newLine}}Nuværende begrænsninger er: {{newLine}}Heroic vil ikke være i stand til, at finde Proton fra Steam eller Wine fra Lutris.{{newLine}}{{newLine}}Gamescope, GameMode og MangoHud vil heller ikke virke, da Heroic ikke har adgang til dem.{{newLine}}{{newLine}}For at få adgang til denne funktion installér venligst Heroic som Flatpak, DEB eller fra et AppImage."
+                "message": "Nogle funktioner er ikke til tilgængelige i Snap-versionen af appen lige nu, og vi prøver at ordne det.{{newLine}}Nuværende begrænsninger er: {{newLine}}GameLib vil ikke være i stand til, at finde Proton fra Steam eller Wine fra Lutris.{{newLine}}{{newLine}}Gamescope, GameMode og MangoHud vil heller ikke virke, da GameLib ikke har adgang til dem.{{newLine}}{{newLine}}For at få adgang til denne funktion installér venligst GameLib som Flatpak, DEB eller fra et AppImage."
             },
             "sideload": {
                 "confirmExit": {
@@ -169,7 +169,7 @@
                 }
             },
             "rosetta": {
-                "message": "Heroic kræver Rosetta for, at køre korrekt på macOS med Apple Silicon-chip. Installér det venligst fra macOS-terminalen, ved hjælp af følgende kommando: \"softwareupdate --install-rosetta\" og genstart Heroic. ",
+                "message": "GameLib kræver Rosetta for, at køre korrekt på macOS med Apple Silicon-chip. Installér det venligst fra macOS-terminalen, ved hjælp af følgende kommando: \"softwareupdate --install-rosetta\" og genstart GameLib. ",
                 "title": "Rosetta ikke fundet"
             }
         },
@@ -258,8 +258,8 @@
             "part6": " skal kaldes efter startkommandoen, for eksempel: "
         },
         "sync": {
-            "part2": "I tilfælde af, at du ændrer præfiksmappen for Wine eller Proton, vil du være nødt til, at kontrollere stien igen, da Proton bruger et andet præfiks (/pfx) og brugernavn (steamuser). Så du kan blot slette den nuværende sti for, at komme ud af siden synkroniseringsindstillinger, og komme tilbage igen, for at Heroic gætter mappen en gang til med det rette præfiks.",
-            "part1": "Heroic forsøger at gætte den rigtige gemmemappe, og dette vil fungere i de fleste tilfælde. Hvis mappen er forkert, skal du bruge tilsidesættelsesboksen til at ændre den.",
+            "part2": "I tilfælde af, at du ændrer præfiksmappen for Wine eller Proton, vil du være nødt til, at kontrollere stien igen, da Proton bruger et andet præfiks (/pfx) og brugernavn (steamuser). Så du kan blot slette den nuværende sti for, at komme ud af siden synkroniseringsindstillinger, og komme tilbage igen, for at GameLib gætter mappen en gang til med det rette præfiks.",
+            "part1": "GameLib forsøger at gætte den rigtige gemmemappe, og dette vil fungere i de fleste tilfælde. Hvis mappen er forkert, skal du bruge tilsidesættelsesboksen til at ændre den.",
             "part3": "Manuel synkronisering: Vælg Download for at downloade spil, der er gemt i skyen. Upload for at uploade de lokale til skyen. Force Download og Force Upload ignorerer den version, der er lokalt eller i skyen.",
             "part4": "Synkronisering gemmer Automatisk vil synkronisere gemmerne hver gang du starter et spil og efter at have spillet færdig."
         },
@@ -273,7 +273,7 @@
         "resizablebar": "NVIDIAs Resizable Bar hjælper med at booste framerate ved at få CPU'en til at få adgang til hele grafikbufferen. Aktivering kan forbedre ydeevnen for Vulkan-baserede spil.",
         "vkd3d": "VKD3D er et Vulkan-baseret [MANGLER] til DirectX 12-spil. Aktivering kan forbedre kompatibiliteten betydeligt. Har ingen effekt på ældre DirectX-spil, det kræver DXVK.",
         "game_language": {
-            "fallback": "Lad stå tomt for at bruge Heroics sprog.",
+            "fallback": "Lad stå tomt for at bruge GameLibs sprog.",
             "in_game_config": "Ikke alle spil understøtter denne konfiguration, nogle har sprogindstilling i spillet.",
             "valid_codes": "Gyldige sprogkoder er spilafhængige."
         },
@@ -282,7 +282,7 @@
         "custom_themes_path": "Brug ikke CSS-filer fra upålidelige kilder. Når du er i tvivl, så bed om en anmeldelse i vores Discord-kanal.",
         "custom_themes_wiki": "Tjek Wiki for flere detaljer om tilføjelse af brugerdefinerede temaer. Klik her.",
         "steam_path": {
-            "info": "Denne sti lader Heroic bestemme, hvilken version af Proton Steam bruger, til at tilføje ikke-Steam-spil til Steam."
+            "info": "Denne sti lader GameLib bestemme, hvilken version af Proton Steam bruger, til at tilføje ikke-Steam-spil til Steam."
         },
         "dxvkfpslimit": "Indstiller et billedhastighedsloft for DXVK-spil",
         "disable_logs": "Slå dette afkrydsningsfelt TIL for at deaktivere de fleste skrivninger til logfiler (kritisk information logges altid). Sørg for at slå denne indstilling FRA, før du rapporterer et problem.",
@@ -301,7 +301,7 @@
             "defaultInstallPath": "Dette er den standardsti, der er forudvalgt ved installation af spil.",
             "library": "Viser alle ejede spil.",
             "login": "Log in på de forskellige butikker.",
-            "settingsDefault": "Viser alle indstillinger for Heroic og standardindstillinger for spil.",
+            "settingsDefault": "Viser alle indstillinger for GameLib og standardindstillinger for spil.",
             "settingsGame": "Viser alle indstillinger for et spil.",
             "wineManager": "Installer forskellige versioner af Wine, Proton, Crossover og så videre."
         },
@@ -310,9 +310,9 @@
             "close": "Luk Hjælp"
         },
         "advertiseAvxForRosetta": "Aktiverer understøttelse af AVX-instruktionssæt, når Windows-spil køres via Rosetta på Apple Silicon Mac-computere. Dette kan være nødvendigt for nogle spil såsom Death Stranding, der kræver AVX-understøttelse.",
-        "analytics": "Gør det muligt for Heroic at indsamle 100% anonyme brugerdata for at forbedre applikationen. Kræver genstart, før det træder i kraft.",
+        "analytics": "Gør det muligt for GameLib at indsamle 100% anonyme brugerdata for at forbedre applikationen. Kræver genstart, før det træder i kraft.",
         "disablePlaytimeSync": "Deaktiverer synkronisering af spilletid med den pågældende butiks servere (i øjeblikket understøttes kun GOG)",
-        "download_proton_steam": "Når denne funktion er aktiveret, downloades GE-Proton direkte til Steam-kompatibilitetsværktøjernes mappe i stedet for den standard Heroic-sti. Den bruger den Steam-sti, der er angivet i indstillingen 'Standard Steam-sti' ovenfor.",
+        "download_proton_steam": "Når denne funktion er aktiveret, downloades GE-Proton direkte til Steam-kompatibilitetsværktøjernes mappe i stedet for den standard GameLib-sti. Den bruger den Steam-sti, der er angivet i indstillingen 'Standard Steam-sti' ovenfor.",
         "dxfpslimit": "Indstiller en begrænsning for billedfrekvensen for DirectX-spil (9-12)",
         "dxvknvapi": "DXVK-NVAPI er en implementering af NVAPI, der er bygget oven på DXVK og Linux' lokale NVAPI, og som gør det muligt at bruge DLSS på Nvidia-GPU'er.",
         "gamescope": {
@@ -407,7 +407,7 @@
             "descriptiveNames": {
                 "game-log": "Spillog for {{gameTitle}}",
                 "gog": "GOG-log",
-                "heroic": "General Heroic log",
+                "heroic": "General GameLib log",
                 "legendary": "Epic Games / Legendary log",
                 "nile": "Amazon / Nile log",
                 "zoom": "Zoom log"
@@ -427,7 +427,7 @@
                     "title": "Upload gennemført"
                 },
                 "error": {
-                    "content": "Det lykkedes ikke at uploade logfilen. Tjek Heroics generelle log for detaljer",
+                    "content": "Det lykkedes ikke at uploade logfilen. Tjek GameLibs generelle log for detaljer",
                     "title": "Upload fejlede",
                     "manual_upload": ""
                 },
@@ -543,11 +543,11 @@
             },
             "label": "Tillad installation af spil med ikke-fungerende anticheat"
         },
-        "analyticsOptIn": "Send anonyme data for at hjælpe Heroic med udvikling",
+        "analyticsOptIn": "Send anonyme data for at hjælpe GameLib med udvikling",
         "autodxvknvapi": "Autoinstallér/Opdatér DXVK-NVAPI på Præfiks",
         "before-launch-script-path": "Vælg et script, der skal køres, før spillet startes",
         "custom_css": {
-            "warning": "Advarsel: Dette gælder for hele frontend. Det betyder, at den forkerte stil kan gøre Heroic ubrugelig. Hvis det er nødvendigt, kan indstillingen ændres manuelt i `~/.config/heroic/config.json`. Kopier IKKE stilarter fra kilder, du ikke stoler på."
+            "warning": "Advarsel: Dette gælder for hele frontend. Det betyder, at den forkerte stil kan gøre GameLib ubrugelig. Hvis det er nødvendigt, kan indstillingen ændres manuelt i `~/.config/heroic/config.json`. Kopier IKKE stilarter fra kilder, du ikke stoler på."
         },
         "disablePlaytimeSync": "Deaktiver synkronisering af spilletid",
         "disableUMU": "Deaktiver umu",
@@ -571,7 +571,7 @@
             "enableLimiter": "Aktiver FPS-begrænser",
             "enableUpscaling": "Aktiverer opskalering",
             "missingMsg": "Vi kunne ikke finde Gamescope på STIEN. Installer det eller tilføj det til STIEN.",
-            "warningFlatpak": "Vi kunne ikke finde en kompatibel version af Gamescope. Installer Gamescopes flatpak-pakke med runtime {{runtimeVersion}} og genstart Heroic."
+            "warningFlatpak": "Vi kunne ikke finde en kompatibel version af Gamescope. Installer Gamescopes flatpak-pakke med runtime {{runtimeVersion}} og genstart GameLib."
         },
         "hdr": "Aktiver HDR",
         "msync": "Aktiver Msync",
@@ -579,7 +579,7 @@
         "show_valve_proton": {
             "confirmation": {
                 "dont_show": "Vis dem ikke",
-                "message": "Vi anbefaler, at du bruger tilpassede Proton-forks (GE-Proton, Proton-CachyOS og så videre) sammen med Heroic, da Valves Proton-versioner mangler winetricks og protofixes. Du kan dog stadig bruge dem, hvis du ønsker det.",
+                "message": "Vi anbefaler, at du bruger tilpassede Proton-forks (GE-Proton, Proton-CachyOS og så videre) sammen med GameLib, da Valves Proton-versioner mangler winetricks og protofixes. Du kan dog stadig bruge dem, hvis du ønsker det.",
                 "show": "Jeg forstår, vis dem",
                 "title": "Er du sikker?"
             },
@@ -629,7 +629,7 @@
         "showAlphabetFilter": "Vis alfabetfilter"
     },
     "settings": {
-        "clear-cache": "Ryd Heroic-mellemlager",
+        "clear-cache": "Ryd GameLib-mellemlager",
         "copiedToClipboard": "Kopieret til udklipsholder!",
         "copyToClipboard": "Kopier alle indstillinger til udklipsholder",
         "eacRuntime": {
@@ -647,7 +647,7 @@
             }
         },
         "open-config-file": "Åbn Config File",
-        "reset-heroic": "Nulstil Heroic",
+        "reset-heroic": "Nulstil GameLib",
         "saves": {
             "warning": "Cloud Saves-funktionen er i beta, vær venlig at sikkerhedskopiere dine gemmer før synkronisering (i tilfælde af at noget går galt)",
             "label": "Gem placering:",
@@ -678,12 +678,12 @@
         "advanced": {
             "details": "detaljer",
             "title": {
-                "resetHeroic": "Nulstil Heroic",
+                "resetHeroic": "Nulstil GameLib",
                 "clearCache": "Ryd mellemlager"
             },
             "clearCache": {
                 "help1": "Denne handling vil rydde følgende mellemlagre:",
-                "help10": "Heroic konfiguration",
+                "help10": "GameLib konfiguration",
                 "help2": "Tredjepartsspil-info (scorer, Steam-kompatibilitet, howlongtobeat, pcgamingwiki, applegamingwiki)",
                 "help4": "GOG-biblioteksoplysninger (liste over spil, installationsdialog-info, API-info – dvs. krav)",
                 "help3": "Legendary biblioteksoplysninger (liste over spil, installationsdialog-info, spil-info)",
@@ -694,7 +694,7 @@
                 "help9": "Spilindstilinger"
             },
             "resetHeroic": {
-                "help": "Dette vil fjerne alle indstillinger og caching, men vil ikke fjerne dine installerede spil eller dine Epic-loginoplysninger. Bærbare versioner (AppImage, WinPortable, ...) af Heroic skal genstartes manuelt bagefter."
+                "help": "Dette vil fjerne alle indstillinger og caching, men vil ikke fjerne dine installerede spil eller dine Epic-loginoplysninger. Bærbare versioner (AppImage, WinPortable, ...) af GameLib skal genstartes manuelt bagefter."
             }
         },
         "custom_css": {
@@ -718,7 +718,7 @@
             "gpu": "GPU:",
             "gpuDriver": "Driver: {{driverVersion}}",
             "gpuWithNumber": "GPU {{number}}:",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "legendaryVersion": "Legendary: {{legendaryVersion}}",
             "memory": "Hukommelse:",
             "memoryStats": "{{percentUsed}}% brugt ({{usedGib}} / {{totalGib}}",
@@ -851,7 +851,7 @@
     "other": {
         "gogdl-version": "GOGDL-version: ",
         "legendary-version": "Legendarisk version: ",
-        "weblate": "Hjælp med at oversætte Heroic.",
+        "weblate": "Hjælp med at oversætte GameLib.",
         "nile-version": "Nile version: "
     },
     "platforms": {
@@ -1064,7 +1064,7 @@
         "search": "Søg efter skrifttyper eller komponenter"
     },
     "adtraction-locked": {
-        "description": "Domænet track.adtraction.com syntes at være ulæseligt eller blokeret. Med adtraction støtter ethvert køb, du foretager i GOG-butikken, Heroic økonomisk. Overvej at fjerne blokeringen, hvis du ønsker at bidrage.",
+        "description": "Domænet track.adtraction.com syntes at være ulæseligt eller blokeret. Med adtraction støtter ethvert køb, du foretager i GOG-butikken, GameLib økonomisk. Overvej at fjerne blokeringen, hvis du ønsker at bidrage.",
         "dont-show-again": "Vis ikke denne advarsel igen",
         "title": "Adtraction er blokeret"
     },
@@ -1102,11 +1102,11 @@
         "disable": "Deaktivér",
         "enable": "Aktivér",
         "info": {
-            "pt1": "For at forbedre appen indsamler Heroic 100% anonyme data.",
-            "pt2": "Heroic bruger den åbne platform Plausible Analytics til, at indsamle grundlæggende data: Appversion, operativsystem, tilknyttede butikker og land.",
+            "pt1": "For at forbedre appen indsamler GameLib 100% anonyme data.",
+            "pt2": "GameLib bruger den åbne platform Plausible Analytics til, at indsamle grundlæggende data: Appversion, operativsystem, tilknyttede butikker og land.",
             "pt3": "Det vil aldrig indsamle nogen personlige oplysninger, inklusive dit brugernavn, IP-adresse eller e-mail.",
             "pt4": "Disse data bruges til at give os indsigt i, hvor fokus skal være næste gang, pga. vores begrænsede ressourcer og tilbagemeldinger.",
-            "pt6": "For gennemsigtighed, kan du få vist de data, vi indsamler i Heroic-logfilerne.",
+            "pt6": "For gennemsigtighed, kan du få vist de data, vi indsamler i GameLib-logfilerne.",
             "pt7": "Du kan ændre denne indstilling når som helst, i App-Indstillinger.",
             "pt5": "Plausible Analytics overholder fuldt ud GDPR, CCPA og PECR."
         },
@@ -1131,9 +1131,9 @@
             "sortOptions": "Klik her for at sortere spil alfabetisk.",
             "viewToggle": "Skift mellem gitter- og listevisning for dine spil.",
             "welcome": {
-                "intro": "Velkommen til Heroic-biblioteket! Her kan du se alle dine spil fra de forskellige butikker.",
+                "intro": "Velkommen til GameLib-biblioteket! Her kan du se alle dine spil fra de forskellige butikker.",
                 "intro2": "Hvis biblioteket er tomt, skal du sørge for at logge ind med dine konti ved hjælp af \"Administrér konti\" i sidepanelet eller tilføje dine egne spil ved hjælp af knappen \"Tilføj spil\" ovenfor.",
-                "title": "Velkommen til Heroic!",
+                "title": "Velkommen til GameLib!",
                 "title2": "Administration af biblioteket!"
             }
         },
@@ -1149,9 +1149,9 @@
             "quit": "Forlad applikationen sikkert.",
             "settings": "Konfigurér GameLibs indstillinger, standardindstillinger for spil, tjek logfiler med mere.",
             "stores": "Gennemse og køb spil i forskellige butikker, herunder Epic, GOG og Amazon.",
-            "version": "Tjek din nuværende Heroic-version, klik på den for at se den seneste changelog, og få adgang til denne rundvisning fra hjælp-ikonet.",
+            "version": "Tjek din nuværende GameLib-version, klik på den for at se den seneste changelog, og få adgang til denne rundvisning fra hjælp-ikonet.",
             "welcome": {
-                "intro": "Velkommen til Heroic! Dette sidepanel indeholder alle navigationsmulighederne til at udforske appen.",
+                "intro": "Velkommen til GameLib! Dette sidepanel indeholder alle navigationsmulighederne til at udforske appen.",
                 "title": "Navigationssidepanel"
             },
             "wine": "Administrér eller download en ny version af Wine/Proton/GPTK for at køre Windows-spil på Linux eller macOS."
@@ -1160,7 +1160,7 @@
         "startTour": "Start rundvisning"
     },
     "wineExplanation": {
-        "proton-ge": "GE-Proton er en Proton-variant skabt af Glorious Eggroll. Den er ment til brug sammen med umu-launcheren (standard i Heroic).",
+        "proton-ge": "GE-Proton er en Proton-variant skabt af Glorious Eggroll. Den er ment til brug sammen med umu-launcheren (standard i GameLib).",
         "gpt": "",
         "wine-crossover": "",
         "wine-staging-macos": ""

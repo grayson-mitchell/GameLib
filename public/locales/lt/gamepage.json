@@ -144,7 +144,7 @@
             "cancel": "Ne",
             "install_anyway": "Taip (Aš suvokiu, kad daugiažaidėjė̄škumo funkcijos neveiks)",
             "title": "Anti-sukčiavimas sugedęs/neleistas",
-            "disabled_installation": "Šis žaidimas naudoja anti-sukčiavimo taikomąją programą, kuri nėra palaikoma su Jūsų operacine sistema. Tai reiškia, kad daugiažaidėjė̄škumo funkcijos neveiks. Šio negali sutaisyti, nei Jūs, nei „Heroic“ komanda, o žaidimo kūrėja/-s.<br /><br />Žaidimas negali būti įdiegtas. Norint įdiegti šį žaidimą, išjunkite šią patikrą pažangiose nustatymuose.<br /><br />Svarbu: Galimai gali nukentėti Jūsų žaidimo paskyros būsena (būtų uždrausta) dėl sukčiavimo ar pan. priežasčių.",
+            "disabled_installation": "Šis žaidimas naudoja anti-sukčiavimo taikomąją programą, kuri nėra palaikoma su Jūsų operacine sistema. Tai reiškia, kad daugiažaidėjė̄škumo funkcijos neveiks. Šio negali sutaisyti, nei Jūs, nei „GameLib“ komanda, o žaidimo kūrėja/-s.<br /><br />Žaidimas negali būti įdiegtas. Norint įdiegti šį žaidimą, išjunkite šią patikrą pažangiose nustatymuose.<br /><br />Svarbu: Galimai gali nukentėti Jūsų žaidimo paskyros būsena (būtų uždrausta) dėl sukčiavimo ar pan. priežasčių.",
             "multiplayer_message": "Anti-sukčiavimo palaikymas yra sugedęs arba neleidžiamas. Žaidimas galimai pasileis, bet daugiažaidėjė̄škumo funkcijos neveiks.. Ar Jūs vis tiek norite įdiegti šį žaidimą?"
         },
         "wineversion": "„Wine“ versija",
@@ -281,10 +281,10 @@
     "not_logged_in": {
         "login": "Prisijungti",
         "title": "Jūs nesate prisijungę",
-        "amazon": "Jūs nesate prisijungę su „Amazon“ paskyrą prie „Heroic“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:",
-        "epic": "Jūs nesate prisijungę su „Epic“ paskyrą prie „Heroic“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:",
-        "gog": "Jūs nesate prisijungę su „GOG“ paskyrą prie „Heroic“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:",
-        "zoom": "Jūs nesate prisijungę su „Zoom“ paskyrą prie „Heroic“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:"
+        "amazon": "Jūs nesate prisijungę su „Amazon“ paskyrą prie „GameLib“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:",
+        "epic": "Jūs nesate prisijungę su „Epic“ paskyrą prie „GameLib“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:",
+        "gog": "Jūs nesate prisijungę su „GOG“ paskyrą prie „GameLib“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:",
+        "zoom": "Jūs nesate prisijungę su „Zoom“ paskyrą prie „GameLib“. Nenaudokite parduotuvės puslapio, kad prisijungtumėte, vietoj to, paspauskite šį mygtuką:"
     },
     "setting": {
         "show-wine-settings": "Rodyti „Wine“ nustatymus",
@@ -319,7 +319,7 @@
     "enabled": "Įjungta/Įgalinta (-as/-i)",
     "report_problem": "Praneškite apie problemą, paleidžiant ir žaidžiant šį žaidimą",
     "third-party-managed": {
-        "notice2": "Paspaudus – „Įdiegti“, „Heroic“ vykdys nurodytą aplikaciją, kad užbaigtų įdiegimo procesą",
+        "notice2": "Paspaudus – „Įdiegti“, „GameLib“ vykdys nurodytą aplikaciją, kad užbaigtų įdiegimo procesą",
         "header": "Šis žaidimas tvarkomas trečios šalies aplikacijos",
         "notice1": "Šis žaidimas tvarkomas trečios šalies aplikacijos: „{{application_name}}“"
     },

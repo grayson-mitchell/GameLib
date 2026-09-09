@@ -180,7 +180,7 @@
             "ok": "Ok",
             "install_anyway": "Kyllä (ymmärrän että moninpeliominaisuudet eivät tule toimimaan)",
             "multiplayer_message": "Huijaukseneston tuki on rikki tai evätty. Peli voi käynnistyä mutta moninpeliominaisuudet eivät tule toimimaan. Haluatko asentaa pelin tästä huolimatta?",
-            "disabled_installation": "Tämä peli käyttää huijauksenestojärjestelmää joka ei ole yhteensopiva käyttöjärjestelmäsi kanssa, tai pelinkehittäjät eivät ole aktivoineet sitä. Tämä tarkoittaa, että moninpeliominaisuudet eivät toimi, etkä sinä (tai Heroic-tiimi) voi asialle mitään.<br /><br />Asentaaksesi tämän pelin jokatapauksessa, mene asetuksiin, sieltä lisäasetuksiin ja salli niiden pelien asennus joissa huijauksenesto on rikki tai muutoin estetty.<br /><br />Huomaa, että tähän ei ole ratkaisua ja saatat saada peliin pelikiellon."
+            "disabled_installation": "Tämä peli käyttää huijauksenestojärjestelmää joka ei ole yhteensopiva käyttöjärjestelmäsi kanssa, tai pelinkehittäjät eivät ole aktivoineet sitä. Tämä tarkoittaa, että moninpeliominaisuudet eivät toimi, etkä sinä (tai GameLib-tiimi) voi asialle mitään.<br /><br />Asentaaksesi tämän pelin jokatapauksessa, mene asetuksiin, sieltä lisäasetuksiin ja salli niiden pelien asennus joissa huijauksenesto on rikki tai muutoin estetty.<br /><br />Huomaa, että tähän ei ole ratkaisua ja saatat saada peliin pelikiellon."
         },
         "flatpak-path-not-writtable": "Virhe: pääsy tähän polkuun on hiekkalaatikoinnin ulkopuolella ja evätty, tiedonmenetystä tulee tapahtumaan."
     },
@@ -216,8 +216,8 @@
         "gog": "Et ole kirjautunut sisään GOG-käyttäjällä. Älä käytä kauppaa sisäänkirjautumiseen, vaan paina seuraavaa nappia:",
         "login": "Log in",
         "title": "ET ole kirjautunut sisään",
-        "amazon": "You are not logged in with an Epic account in Heroic. Don't use the store page to login, click the following button instead:",
-        "zoom": "You are not logged in with a GOG account in Heroic. Don't use the store page to login, click the following button instead:"
+        "amazon": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
+        "zoom": "You are not logged in with a GOG account in GameLib. Don't use the store page to login, click the following button instead:"
     },
     "report_problem": "Ilmoita ongelmasta tässä pelissä",
     "sdl": {
@@ -324,7 +324,7 @@
     "third-party-managed": {
         "header": "Tätä peliä hallinnoi kolmannen osapuolen sovellus",
         "notice1": "Tätä peliä hallinnoi kolmannen osapuolen sovellus: \"{{application_name}}\"",
-        "notice2": "Napsauttaessasi Asenna, Heroic ajaa sovelluksen jotta sen asennus voidaan saattaa päätökseen"
+        "notice2": "Napsauttaessasi Asenna, GameLib ajaa sovelluksen jotta sen asennus voidaan saattaa päätökseen"
     },
     "Open": "Avaa",
     "queue": {

@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Cache Heroic golit.",
+            "message": "Cache GameLib golit.",
             "title": "Cache golit"
         },
         "choose": "Alege",
@@ -94,7 +94,7 @@
                 "generic": "A avut loc o eroare! Încercați să vă deconectați și să vă autentificați pe contul dvs. Epic. {{newline}} {{error}}"
             },
             "executableNotFound": "Executabilul nu a fost găsit",
-            "executableNotFoundMessage": "Heroic nu a putut găsi un executabil pentru acest joc. Te rugăm să îl setezi manual în setările jocului.",
+            "executableNotFoundMessage": "GameLib nu a putut găsi un executabil pentru acest joc. Te rugăm să îl setezi manual în setările jocului.",
             "dxmt": {
                 "message": "Eroare la descărcarea DXMT! Verificați conexiunea!",
                 "title": "Eroare de descărcare DXMT"
@@ -105,7 +105,7 @@
                 "changelog": "Deschideți jurnalul de modificări",
                 "detail": "Doriți să descărcați actualizarea în fundal?",
                 "message": "Există o nouă versiune disponibilă!",
-                "message-finished": "Doriți să reporniți Heroic acum?",
+                "message-finished": "Doriți să reporniți GameLib acum?",
                 "title": "Lansatorul de jocuri eroice",
                 "title-finished": "Actualizare Finalizată",
                 "detailNoAutoupdate": "Update-urile automate nu sunt suportate pentru acest format de pachet. Te rugăm să folosesti managerul tău de pachete pentru acest update."
@@ -124,7 +124,7 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Sigur doriți să resetați Heroic? Acest lucru va elimina toate setările și stocarea în cache, dar nu va elimina jocurile dvs. instalate sau acreditările Epic. Versiunile portabile (AppImage, WinPortable, ...) ale Heroic trebuiesc restartate manual după aceea.",
+                "message": "Sigur doriți să resetați GameLib? Acest lucru va elimina toate setările și stocarea în cache, dar nu va elimina jocurile dvs. instalate sau acreditările Epic. Versiunile portabile (AppImage, WinPortable, ...) ale GameLib trebuiesc restartate manual după aceea.",
                 "title": "Resetează eroic"
             }
         },
@@ -175,13 +175,13 @@
                 }
             },
             "rosetta": {
-                "message": "Heroic are nevoie de Rosetta pentru a rula corect pe macOS cu chip-urile Apple Silicon. Te rugăm să-l reinstalezi din terminalul macOS folosing următoarea comandă : \"softwareupdate --install-rosetta\"  și repornește Heroic. ",
+                "message": "GameLib are nevoie de Rosetta pentru a rula corect pe macOS cu chip-urile Apple Silicon. Te rugăm să-l reinstalezi din terminalul macOS folosing următoarea comandă : \"softwareupdate --install-rosetta\"  și repornește GameLib. ",
                 "title": "Rosetta nu a fost găsit"
             },
             "snap": {
                 "checkbox": "Nu mai arăta acest mesaj",
-                "message": "Unele funcții nu sunt disponibile deocamdată în versiunea Snap a aplicației și încercăm sa o remediem.{{newLine}}Limitările curente sunt:{{newLine}}Heroic nu va putea localiza Proton de la Steam sau Wine de la Lutris.{{newLine}}{{newLine}}Gamescope, Gamemode și MangoHud, de asemenea, nu vor funcționa din moment ce Heroic nu are acces la acestea.{{newLine}}{{newLine}}Pentru a obține acces la această funcție vă rugăm instalați Heroic sub forma Flatpak, DEB sau din AppImage.",
-                "title": "Heroic rulează ca și Snap"
+                "message": "Unele funcții nu sunt disponibile deocamdată în versiunea Snap a aplicației și încercăm sa o remediem.{{newLine}}Limitările curente sunt:{{newLine}}GameLib nu va putea localiza Proton de la Steam sau Wine de la Lutris.{{newLine}}{{newLine}}Gamescope, Gamemode și MangoHud, de asemenea, nu vor funcționa din moment ce GameLib nu are acces la acestea.{{newLine}}{{newLine}}Pentru a obține acces la această funcție vă rugăm instalați GameLib sub forma Flatpak, DEB sau din AppImage.",
+                "title": "GameLib rulează ca și Snap"
             }
         },
         "wineprefix": "Selectați folderul WinePrefix",
@@ -299,7 +299,7 @@
         "esync": "Esync își propune să reducă supraîncărcarea serverului de vin în jocurile care necesită un proces intensiv. Activarea poate îmbunătăți performanța.",
         "fsync": "Fsync își propune să reducă supraîncărcarea serverului de vin în jocurile care necesită un proces intensiv. Activarea poate îmbunătăți performanța pe nucleele Linux acceptate.",
         "game_language": {
-            "fallback": "Lăsați necompletat pentru a folosi limbajul lui Heroic.",
+            "fallback": "Lăsați necompletat pentru a folosi limbajul lui GameLib.",
             "in_game_config": "Nu toate jocurile acceptă această configurație, unele au setări de limbă în joc.",
             "valid_codes": "Codurile de limbă valide depind de joc."
         },
@@ -315,18 +315,18 @@
         "preferSystemLibs": "Versiunile personalizate de vin (Wine-GE, Wine-Lutris) sunt livrate cu dependențele lor de bibliotecă. Prin activarea acestei opțiuni, aceste biblioteci livrate vor fi ignorate și Wine va încărca biblioteci de sistem. Avertizare! Pot apărea probleme dacă dependențele nu sunt îndeplinite.",
         "primerun": "Utilizați placa grafică dedicată pentru a reda jocul pe sisteme multi-GPU. Este necesar doar pe laptop-uri sau desktop-uri de jocuri care utilizează un GPU fără cap pentru randare (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "This path lets Heroic determine what version of Proton Steam uses, for adding non-Steam games to Steam."
+            "info": "This path lets GameLib determine what version of Proton Steam uses, for adding non-Steam games to Steam."
         },
         "steamruntime": "Biblioteci personalizate furnizate de Steam pentru a ajuta la rularea jocurilor Linux și Windows (Proton). Activarea ar putea îmbunătăți compatibilitatea.",
         "sync": {
-            "part1": "Heroic încearcă să ghicească folderul de salvare corect și acest lucru va funcționa în majoritatea cazurilor. În cazul în care folderul este greșit, utilizați caseta de înlocuire pentru a-l schimba.",
-            "part2": "In case you change the prefix folder for Wine or Proton, you will need to check the path again since Proton uses a different prefix (/pfx) and username (steamuser). Deci, puteți șterge simplu calea curentă, ieșiți din pagina de setări de sincronizare și reveniți din nou pentru ca Heroic să ghicească folderul încă o dată cu prefixul corect.",
+            "part1": "GameLib încearcă să ghicească folderul de salvare corect și acest lucru va funcționa în majoritatea cazurilor. În cazul în care folderul este greșit, utilizați caseta de înlocuire pentru a-l schimba.",
+            "part2": "In case you change the prefix folder for Wine or Proton, you will need to check the path again since Proton uses a different prefix (/pfx) and username (steamuser). Deci, puteți șterge simplu calea curentă, ieșiți din pagina de setări de sincronizare și reveniți din nou pentru ca GameLib să ghicească folderul încă o dată cu prefixul corect.",
             "part3": "Sincronizare manuală: alegeți Descărcare pentru a descărca salvările de jocuri stocate pe Cloud. Încărcați pentru a încărca cele locale în cloud. Descărcarea forțată și încărcarea forțată vor ignora versiunea locală sau în cloud.",
             "part4": "Sincronizarea salvărilor automat va sincroniza salvările de fiecare dată când începeți un joc și după ce terminați jocul."
         },
         "vkd3d": "VKD3D este un strat translațional bazat pe Vulkan pentru jocurile DirectX 12. Activarea poate îmbunătăți semnificativ compatibilitatea. Nu are niciun efect asupra jocurilor DirectX mai vechi.",
         "wine": {
-            "part1": "Heroic caută pentru versiuni de Wine, Proton și CrossOver în următoarele foldere:",
+            "part1": "GameLib caută pentru versiuni de Wine, Proton și CrossOver în următoarele foldere:",
             "part2": "Pentru alte locuri, utilizați un link simbolic către unul dintre aceste dosare"
         },
         "disable_logs": "Activați această casetă de selectare pentru a dezactiva majoritatea scrierilor în fișierele jurnal (informațiile critice sunt întotdeauna înregistrate). Asigurați-vă că dezactivați această setare înainte de a raporta orice problemă.",
@@ -340,7 +340,7 @@
         },
         "dxfpslimit": "Sets a frame rate cap for DXVK games",
         "advertiseAvxForRosetta": "Activează suportul de instrucțiuni AVX când rulezi jocuri Windows prin Rosetta pe chip-uri Apple Silicon. Acestea ar putea fi necesare pentru unele jocuri precum Death Stranding care necesită suport AVX.",
-        "analytics": "Acceptă ca Heroic sa colecteze date 100% anonime pentru a putea îmbunătăți calitatea aplicației. Este nevoie de o repornire pentru a intra în efect.",
+        "analytics": "Acceptă ca GameLib sa colecteze date 100% anonime pentru a putea îmbunătăți calitatea aplicației. Este nevoie de o repornire pentru a intra în efect.",
         "button": {
             "close": "Închide Help",
             "open": "Deschide Help"
@@ -352,12 +352,12 @@
             "downloadManager": "Arată descărcările actuale și din trecut",
             "library": "Arată toate jocurile deținute.",
             "login": "Conectați-vă la diferitele magazine.",
-            "settingsDefault": "Arată toate setările Heroic și cele implicite pentru jocuri.",
+            "settingsDefault": "Arată toate setările GameLib și cele implicite pentru jocuri.",
             "settingsGame": "Arată toate setările pentru un joc.",
             "wineManager": "Instalează diferite versiuni pentru Wine, Proton, Crossover, etc."
         },
         "disablePlaytimeSync": "Dezactivează sincronizarea timpului de joc cu serverele magazinului implicit (deocamdată doar GOG este suportat)",
-        "download_proton_steam": "Atunci când este activat, GE-Proton va fi descărcat direct in directorul uneltelor de compatibilitate Steam in locul căii implicite a Heroic. Va utiliza calea Steam setată în 'Cale Steam implicită' mai sus.",
+        "download_proton_steam": "Atunci când este activat, GE-Proton va fi descărcat direct in directorul uneltelor de compatibilitate Steam in locul căii implicite a GameLib. Va utiliza calea Steam setată în 'Cale Steam implicită' mai sus.",
         "dxvknvapi": "DXVK-NVAPI este o implementare a NVAPI construită peste DXVK și nativul linux NVAPI, el permite utilizarea DLSS pe plăcile video Nvidia.",
         "gamescope": {
             "additionalOptions": "Flag-uri din linia de comandă adiționale de pasat în gamescope.",
@@ -553,7 +553,7 @@
     "other": {
         "gogdl-version": "Versiunea GOGDL: ",
         "legendary-version": "Versiune Legendary: ",
-        "weblate": "Ajută la traducerea Heroic.",
+        "weblate": "Ajută la traducerea GameLib.",
         "nile-version": "Versiunea Nile: "
     },
     "Other": "Other",
@@ -858,7 +858,7 @@
             },
             "details": "Detalii",
             "resetHeroic": {
-                "help": "Sigur doriți să resetați Heroic? Acest lucru va elimina toate setările și stocarea în cache, dar nu va elimina jocurile dvs. instalate sau acreditările Epic. Versiunile portabile (AppImage, WinPortable, ...) ale Heroic trebuiesc restartate manual după aceea."
+                "help": "Sigur doriți să resetați GameLib? Acest lucru va elimina toate setările și stocarea în cache, dar nu va elimina jocurile dvs. instalate sau acreditările Epic. Versiunile portabile (AppImage, WinPortable, ...) ale GameLib trebuiesc restartate manual după aceea."
             },
             "title": {
                 "resetHeroic": "",
@@ -1079,18 +1079,18 @@
         "disable": "Dezactivare",
         "enable": "Activare",
         "info": {
-            "pt1": "Pentru a îmbunătăți aplicația, Heroic colectează date 100% anonime.",
-            "pt2": "Heroic folosește platforma open-source Plausible Analytics pentru a colecta date de bază: Versiunea aplicației, sistemul de operare, Magazinele conectate și Țara.",
+            "pt1": "Pentru a îmbunătăți aplicația, GameLib colectează date 100% anonime.",
+            "pt2": "GameLib folosește platforma open-source Plausible Analytics pentru a colecta date de bază: Versiunea aplicației, sistemul de operare, Magazinele conectate și Țara.",
             "pt3": "Nu va colecta niciodată informații personale, inclusiv numele tău de utilizator, adresa IP sau emailul.",
             "pt4": "Aceste date sunt folosite pentru a ne oferi perspective despre ce să ne concentrăm în continuare, datorită resurselor noastre limitate și feedback-ului utilizatorilor.",
             "pt5": "Plausible Analytics este complet conform cu GDPR, CCPA și PECR.",
-            "pt6": "Pentru transparență, puteți vizualiza datele pe care le colectăm în jurnalele Heroic.",
+            "pt6": "Pentru transparență, puteți vizualiza datele pe care le colectăm în jurnalele GameLib.",
             "pt7": "Poți schimba această setare oricând în Setările aplicației."
         },
         "title": "Trimite analize anonime"
     },
     "adtraction-locked": {
-        "description": "Se pare că domeniul track.adtraction.com nu a putut încărca sau este blocat. În plus, orice achiziție faci în magazinul GOG susține financiar Heroic. Ia în considerare eliminarea blocajului dacă dorești să contribui.",
+        "description": "Se pare că domeniul track.adtraction.com nu a putut încărca sau este blocat. În plus, orice achiziție faci în magazinul GOG susține financiar GameLib. Ia în considerare eliminarea blocajului dacă dorești să contribui.",
         "dont-show-again": "Nu mai afișa acest avertisment",
         "title": "Adtraction e blocat"
     },

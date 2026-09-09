@@ -103,7 +103,7 @@
                 "changelog": "O'zgarishlar jurnalini oching",
                 "detail": "Yangilanishni fonda yuklab olishni xohlaysizmi?",
                 "message": "Yangi versiya mavjud!",
-                "message-finished": "Endi Heroic-ni qayta ishga tushirmoqchimisiz?",
+                "message-finished": "Endi GameLib-ni qayta ishga tushirmoqchimisiz?",
                 "title": "Qahramonlik o'yinlari ishga tushirgich",
                 "title-finished": "Yangilash tugallandi",
                 "detailNoAutoupdate": ""
@@ -122,7 +122,7 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Haqiqatan ham Heroic sozlamalarini asliga qaytarmoqchimisiz? Bu barcha Sozlamalar va keshlashni olib tashlaydi, lekin oʻrnatilgan oʻyinlaringizni yoki Epic hisob maʼlumotlarini olib tashlamaydi. Heroic-ning portativ versiyalari (AppImage, WinPortable, ...) keyin qo'lda qayta ishga tushirilishi kerak.",
+                "message": "Haqiqatan ham GameLib sozlamalarini asliga qaytarmoqchimisiz? Bu barcha Sozlamalar va keshlashni olib tashlaydi, lekin oʻrnatilgan oʻyinlaringizni yoki Epic hisob maʼlumotlarini olib tashlamaydi. GameLib-ning portativ versiyalari (AppImage, WinPortable, ...) keyin qo'lda qayta ishga tushirilishi kerak.",
                 "title": "Qahramonlikni tiklash"
             }
         },
@@ -351,7 +351,7 @@
         "esync": "Esync protsessor talab qiladigan o'yinlarda vinoserver yukini kamaytirishga qaratilgan. Yoqish unumdorlikni oshirishi mumkin.",
         "fsync": "Fsync protsessor talab qiladigan o'yinlarda vinoserver yukini kamaytirishga qaratilgan. Yoqish qoʻllab-quvvatlanadigan Linux yadrolarida ish faoliyatini yaxshilashi mumkin.",
         "game_language": {
-            "fallback": "Heroic tilidan foydalanish uchun bo'sh qoldiring.",
+            "fallback": "GameLib tilidan foydalanish uchun bo'sh qoldiring.",
             "in_game_config": "Barcha o'yinlar bu konfiguratsiyani qo'llab-quvvatlamaydi, ba'zilarida o'yin ichidagi til sozlamalari mavjud.",
             "valid_codes": "Yaroqli til kodlari o'yinga bog'liq."
         },
@@ -367,12 +367,12 @@
         "preferSystemLibs": "Maxsus Wine versiyalari (Wine-GE, Wine-Lutris) kutubxonaga bog'liqliklari bilan birga yuboriladi. Ushbu parametr yoqilsa, ushbu yuborilgan kutubxonalar e'tiborga olinmaydi va Wine o'rniga tizim kutubxonalarini yuklaydi. Ogohlantirish! Agar bog'liqliklar bajarilmasa, muammolar paydo bo'lishi mumkin.",
         "primerun": "Ko'p GPU tizimlarida o'yinni ko'rsatish uchun maxsus grafik kartadan foydalaning. Faqat renderlash uchun boshsiz GPU ishlatadigan o'yin noutbuklari yoki ish stollarida kerak (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "Bu yo'l Heroic-ga Steam-ga Steam bo'lmagan o'yinlarni qo'shish uchun Proton Steam-ning qaysi versiyasidan foydalanishini aniqlash imkonini beradi."
+            "info": "Bu yo'l GameLib-ga Steam-ga Steam bo'lmagan o'yinlarni qo'shish uchun Proton Steam-ning qaysi versiyasidan foydalanishini aniqlash imkonini beradi."
         },
         "steamruntime": "Linux va Windows (Proton) o'yinlarini boshqarishga yordam berish uchun Steam tomonidan taqdim etilgan maxsus kutubxonalar. Yoqish moslikni yaxshilashi mumkin.",
         "sync": {
-            "part1": "Heroic to'g'ri saqlash papkasini topishga harakat qiladi va bu ko'pchilik hollarda ishlaydi. Jild noto'g'ri bo'lsa, uni o'zgartirish uchun bekor qilish qutisidan foydalaning.",
-            "part2": "Agar siz Wine yoki Proton uchun prefiks jildini o'zgartirsangiz, yo'lni qayta tekshirishingiz kerak bo'ladi, chunki Proton boshqa prefiks (/pfx) va foydalanuvchi nomidan (steamuzer) foydalanadi. Shunday qilib, joriy yo'lni oddiygina o'chirib tashlashingiz va sinxronlash sozlamalari sahifasidan chiqishingiz va Heroic uchun to'g'ri prefiks bilan papkani yana bir bor taxmin qilish uchun yana qaytib kelishingiz mumkin.",
+            "part1": "GameLib to'g'ri saqlash papkasini topishga harakat qiladi va bu ko'pchilik hollarda ishlaydi. Jild noto'g'ri bo'lsa, uni o'zgartirish uchun bekor qilish qutisidan foydalaning.",
+            "part2": "Agar siz Wine yoki Proton uchun prefiks jildini o'zgartirsangiz, yo'lni qayta tekshirishingiz kerak bo'ladi, chunki Proton boshqa prefiks (/pfx) va foydalanuvchi nomidan (steamuzer) foydalanadi. Shunday qilib, joriy yo'lni oddiygina o'chirib tashlashingiz va sinxronlash sozlamalari sahifasidan chiqishingiz va GameLib uchun to'g'ri prefiks bilan papkani yana bir bor taxmin qilish uchun yana qaytib kelishingiz mumkin.",
             "part3": "Qo'lda sinxronlash: Bulutda saqlangan o'yinlarni yuklab olish uchun Yuklab olish-ni tanlang. Mahalliylarni bulutga yuklash uchun yuklang. Majburiy yuklab olish va Majburiy yuklash mahalliy yoki bulutdagi versiyani e'tiborsiz qoldiradi.",
             "part4": "Saqlashlarni sinxronlash Avtomatik ravishda har safar oʻyinni boshlaganingizda va oʻyinni tugatganingizdan soʻng saqlaydi."
         },
@@ -601,7 +601,7 @@
     "other": {
         "gogdl-version": "GOGDL versiyasi: ",
         "legendary-version": "Afsonaviy versiya: ",
-        "weblate": "Heroic tarjimasiga yordam bering.",
+        "weblate": "GameLib tarjimasiga yordam bering.",
         "nile-version": "Nil versiyasi: "
     },
     "Other": "Boshqa",

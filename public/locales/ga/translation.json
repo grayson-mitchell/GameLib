@@ -13,7 +13,7 @@
     },
     "add_game": "Cuir Cluiche Leis",
     "adtraction-locked": {
-        "description": "Is cosúil nárbh fhéidir an fearann track.adtraction.com a luchtú nó go bhfuil sé blocáilte. Le adtraction, tacaíonn aon cheannachán a dhéanann tú i siopa GOG le Heroic ó thaobh airgeadais de. Smaoinigh ar an mbac a bhaint más mian leat ranníocaíocht a dhéanamh.",
+        "description": "Is cosúil nárbh fhéidir an fearann track.adtraction.com a luchtú nó go bhfuil sé blocáilte. Le adtraction, tacaíonn aon cheannachán a dhéanann tú i siopa GOG le GameLib ó thaobh airgeadais de. Smaoinigh ar an mbac a bhaint más mian leat ranníocaíocht a dhéanamh.",
         "dont-show-again": "Ná taispeáin an rabhadh seo arís",
         "title": "Tá bac ar Attraction"
     },
@@ -22,12 +22,12 @@
         "disable": "Díchumasaigh",
         "enable": "Cumasaigh",
         "info": {
-            "pt1": "Chun an aip a fheabhsú, bailíonn Heroic sonraí 100% gan ainm.",
-            "pt2": "Úsáideann Heroic an t-ardán foinse oscailte Plausible Analytics, atá á óstáil ag foireann Heroic féin, chun sonraí bunúsacha a bhailiú: Leagan an Aipe, Córas Oibriúcháin, Ailtireacht an Chórais, Dáileadh Linux, Siopaí Ceangailte agus Tír.",
+            "pt1": "Chun an aip a fheabhsú, bailíonn GameLib sonraí 100% gan ainm.",
+            "pt2": "Úsáideann GameLib an t-ardán foinse oscailte Plausible Analytics, atá á óstáil ag foireann GameLib féin, chun sonraí bunúsacha a bhailiú: Leagan an Aipe, Córas Oibriúcháin, Ailtireacht an Chórais, Dáileadh Linux, Siopaí Ceangailte agus Tír.",
             "pt3": "Ní bhaileoidh sé aon fhaisnéis phearsanta choíche, lena n-áirítear d’ainm úsáideora, do sheoladh IP ná do r-phost.",
             "pt4": "Úsáidtear an fhaisnéis seo chun léargas a thabhairt dúinn ar a bhfuil le díriú air ina dhiaidh seo mar gheall ar ár n-acmhainní teoranta agus aiseolas ó úsáideoirí.",
             "pt5": "Tá Plausible Analytics go hiomlán i gcomhréir le GDPR, CCPA agus PECR.",
-            "pt6": "Ar mhaithe le trédhearcacht, is féidir leat na sonraí a bhailímid a fheiceáil ar logaí Heroic.",
+            "pt6": "Ar mhaithe le trédhearcacht, is féidir leat na sonraí a bhailímid a fheiceáil ar logaí GameLib.",
             "pt7": "Is féidir leat an socrú seo a athrú am ar bith i Socruithe an Aipe."
         },
         "title": "Seol Anailísíocht Gan Ainm"
@@ -42,7 +42,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Glanadh an taisce Heroic.",
+            "message": "Glanadh an taisce GameLib.",
             "title": "Glanadh an taisce"
         },
         "changelog": "Log Athruithe",
@@ -105,7 +105,7 @@
                 "title": "Earráid Winetricks"
             },
             "executableNotFound": "Níor aimsíodh an comhad inrite",
-            "executableNotFoundMessage": "Níorbh fhéidir le Heroic an comhad inrite don chluiche seo a aimsiú. Socraigh de láimh é i socruithe an chluiche le do thoil.",
+            "executableNotFoundMessage": "Níorbh fhéidir le GameLib an comhad inrite don chluiche seo a aimsiú. Socraigh de láimh é i socruithe an chluiche le do thoil.",
             "dxmt": {
                 "message": "Earráid ag íoslódáil DXMT! Seiceáil do nasc!",
                 "title": "Earráid Íoslódála DXMT"
@@ -115,8 +115,8 @@
             "update": {
                 "detail": "Ar mhaith leat an nuashonrú a íoslódáil sa chúlra?",
                 "message": "Tá Leagan nua ar fáil!",
-                "message-finished": "Ar mhaith leat Heroic a atosú anois?",
-                "title": "Tosaitheoir Cluichí Heroic",
+                "message-finished": "Ar mhaith leat GameLib a atosú anois?",
+                "title": "Tosaitheoir Cluichí GameLib",
                 "title-finished": "Nuashonrú Críochnaithe",
                 "detailNoAutoupdate": "Ní thacaítear le nuashonruithe uathoibríocha le haghaidh formáid do phacáistíochta. Bain úsáid as do bhainisteoir pacáiste le nuashonrú a dhéanamh."
             }
@@ -135,8 +135,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "An bhfuil tú cinnte gur mian leat Heroic a athshocrú? Bainfidh sé seo na Socruithe agus an Taisceadh go léir ach ní bhainfidh sé do chluichí Suiteáilte ná do dhintiúir Epic. Ní mór leaganacha iniompartha (AppImage, WinPortable, ...) de Heroic a atosú de láimh ina dhiaidh sin.",
-                "title": "Athshocraigh Heroic"
+                "message": "An bhfuil tú cinnte gur mian leat GameLib a athshocrú? Bainfidh sé seo na Socruithe agus an Taisceadh go léir ach ní bhainfidh sé do chluichí Suiteáilte ná do dhintiúir Epic. Ní mór leaganacha iniompartha (AppImage, WinPortable, ...) de GameLib a atosú de láimh ina dhiaidh sin.",
+                "title": "Athshocraigh GameLib"
             }
         },
         "runexe": {
@@ -175,7 +175,7 @@
                 "update": "Tá briseadh mór ar fhreastalaithe Epic faoi láthair, ní féidir an cluiche a nuashonrú!"
             },
             "rosetta": {
-                "message": "Éilíonn Heroic Rosetta le go n-oibreoidh sé i gceart ar macOS le sceallóga Apple Silicon. Suiteáil é ón teirminéal macOS ag baint úsáide as an ordú seo a leanas: \"softwareupdate --install-rosetta\" agus atosú Heroic. ",
+                "message": "Éilíonn GameLib Rosetta le go n-oibreoidh sé i gceart ar macOS le sceallóga Apple Silicon. Suiteáil é ón teirminéal macOS ag baint úsáide as an ordú seo a leanas: \"softwareupdate --install-rosetta\" agus atosú GameLib. ",
                 "title": "Níor aimsíodh Rosetta"
             },
             "sideload": {
@@ -186,8 +186,8 @@
             },
             "snap": {
                 "checkbox": "Ná taispeáin an teachtaireacht seo arís",
-                "message": "Níl roinnt gnéithe ar fáil i leagan Snap den aip faoi láthair agus táimid ag iarraidh iad a shocrú.{{newLine}}Seo a leanas na teorainneacha reatha: {{newLine}}Ní bheidh Heroic in ann Proton a aimsiú ó Steam ná Wine ó Lutris.{{newLine}}{{newLine}}Ní oibreoidh Gamescope, GameMode ná MangoHud ach an oiread ós rud é nach féidir le Heroic rochtain a fháil orthu.{{newLine}}{{newLine}}Chun rochtain a fháil ar an ngné seo, suiteáil Heroic mar Flatpak, DEB nó ón AppImage.",
-                "title": "Tá Heroic ag rith mar Snap"
+                "message": "Níl roinnt gnéithe ar fáil i leagan Snap den aip faoi láthair agus táimid ag iarraidh iad a shocrú.{{newLine}}Seo a leanas na teorainneacha reatha: {{newLine}}Ní bheidh GameLib in ann Proton a aimsiú ó Steam ná Wine ó Lutris.{{newLine}}{{newLine}}Ní oibreoidh Gamescope, GameMode ná MangoHud ach an oiread ós rud é nach féidir le GameLib rochtain a fháil orthu.{{newLine}}{{newLine}}Chun rochtain a fháil ar an ngné seo, suiteáil GameLib mar Flatpak, DEB nó ón AppImage.",
+                "title": "Tá GameLib ag rith mar Snap"
             },
             "title": "Rabhadh",
             "wine-change": {
@@ -209,7 +209,7 @@
         },
         "advertiseAvxForRosetta": "Cumasaíonn sé seo tacaíocht do shraith treoracha AVX agus cluichí Windows á reáchtáil trí Rosetta ar ríomhairí Mac Apple Silicon. D’fhéadfadh sé seo a bheith riachtanach do roinnt cluichí cosúil le Death Stranding a bhfuil tacaíocht AVX ag teastáil uathu.",
         "amdfsr": "Cuidíonn FSR AMD le ráta fráma a threisiú trí réiteach níos ísle a uasghrádú i Mód Lánscáileáin. Méadaíonn cáilíocht íomhá ó 5 go 1 ar chostas beagán feidhmíochta. D’fhéadfadh feabhas a chur ar fheidhmíocht trí chumasú.",
-        "analytics": "Cumasaíonn sé Heroic chun sonraí úsáide 100% gan ainm a bhailiú chun cabhrú leis an bhfeidhmchlár a fheabhsú. Ní mór atosú a dhéanamh chun go dtiocfaidh sé i bhfeidhm.",
+        "analytics": "Cumasaíonn sé GameLib chun sonraí úsáide 100% gan ainm a bhailiú chun cabhrú leis an bhfeidhmchlár a fheabhsú. Ní mór atosú a dhéanamh chun go dtiocfaidh sé i bhfeidhm.",
         "button": {
             "close": "Dún Cabhair",
             "open": "Oscail Cabhair"
@@ -221,7 +221,7 @@
             "downloadManager": "Taispeánann sé íoslódálacha reatha agus san am atá thart.",
             "library": "Taispeánann sé na cluichí go léir atá faoi úinéireacht.",
             "login": "Logáil isteach sna siopaí éagsúla.",
-            "settingsDefault": "Taispeánann sé gach socrú de Heroic agus réamhshocruithe do chluichí.",
+            "settingsDefault": "Taispeánann sé gach socrú de GameLib agus réamhshocruithe do chluichí.",
             "settingsGame": "Taispeáin gach socrú le haghaidh cluiche.",
             "wineManager": "Suiteáil leaganacha éagsúla de Wine, Proton, Crossover, etc."
         },
@@ -229,14 +229,14 @@
         "custom_themes_wiki": "Seiceáil an Vicí le haghaidh tuilleadh sonraí maidir le téamaí saincheaptha a chur leis. Cliceáil anseo.",
         "disable_logs": "Cuir an bosca seiceála seo AR SIÚL chun an chuid is mó de na scríobh chuig comhaid loga a dhíchumasú (logáiltear faisnéis ríthábhachtach i gcónaí). Déan cinnte an socrú seo a mhúchadh sula dtuairiscíonn tú aon fhadhb.",
         "disablePlaytimeSync": "Díchumasaíonn sé sioncrónú ama súgartha le freastalaithe an tsiopa áirithe (ní thacaítear ach le GOG faoi láthair)",
-        "download_proton_steam": "Nuair a bheidh sé cumasaithe, déanfar GE-Proton a íoslódáil go díreach chuig eolaire uirlisí comhoiriúnachta Steam in ionad an chosáin réamhshocraithe Heroic. Úsáidfidh sé an cosán Steam atá socraithe sa socrú 'Cosán réamhshocraithe Steam' thuas.",
+        "download_proton_steam": "Nuair a bheidh sé cumasaithe, déanfar GE-Proton a íoslódáil go díreach chuig eolaire uirlisí comhoiriúnachta Steam in ionad an chosáin réamhshocraithe GameLib. Úsáidfidh sé an cosán Steam atá socraithe sa socrú 'Cosán réamhshocraithe Steam' thuas.",
         "dxfpslimit": "Socraíonn sé uasteorainn ráta fráma do Chluichí DirectX (9-12)",
         "dxvk": "Is ciseal aistriúcháin bunaithe ar Vulkan é DXVK do chluichí DirectX 9, 10 agus 11. D’fhéadfadh sé go mbeadh feabhas ar chomhoiriúnacht má chuirtear ar chumas é. D’fhéadfadh fadhbanna a bheith mar thoradh air sin go háirithe i gcás cluichí DirectX níos sine.",
         "dxvknvapi": "Is cur i bhfeidhm de NVAPI é DXVK-NVAPI atá tógtha ar bharr DXVK agus an NVAPI dúchasach Linux, agus ceadaíonn sé úsáid DLSS ar GPUanna Nvidia.",
         "esync": "Tá sé mar aidhm ag Esync forchostais fíona a laghdú i gcluichí a bhfuil go leor LAP iontu. D’fhéadfadh feabhas a chur ar fheidhmíocht trí chumasú.",
         "fsync": "Tá sé mar aidhm ag Fsync forchostais fíona a laghdú i gcluichí a bhfuil go leor LAP iontu. D’fhéadfadh feabhas a chur ar fheidhmíocht ar chroíthe Linux a dtacaítear leo má chuirtear ar chumas é.",
         "game_language": {
-            "fallback": "Fág bán chun teanga Heroic a úsáid.",
+            "fallback": "Fág bán chun teanga GameLib a úsáid.",
             "in_game_config": "Ní thacaíonn gach cluiche leis an gcumraíocht seo, tá socruithe teanga sa chluiche ag cuid acu.",
             "valid_codes": "Braitheann cóid theanga bailí ar an gcluiche."
         },
@@ -264,18 +264,18 @@
         "preferSystemLibs": "Seoltar leaganacha saincheaptha Wine (Wine-GE, Wine-Lutris) leis na spleáchais leabharlainne atá acu. Trí an rogha seo a chumasú, déanfar neamhaird de na leabharlanna seo a sheoltar agus luchtóidh Wine leabharlanna córais ina n-ionad. Rabhadh! D’fhéadfadh fadhbanna tarlú mura gcomhlíontar na spleáchais.",
         "primerun": "Bain úsáid as cárta grafaicí tiomnaithe chun cluiche a rindreáil ar chórais il-GPU. Ní gá ach ar ríomhairí glúine nó deisce cearrbhachais a úsáideann GPU gan cheann le haghaidh rindreála (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "Ligeann an cosán seo do Heroic a chinneadh cén leagan de Proton a úsáideann Steam, chun cluichí neamh-Steam a chur le Steam."
+            "info": "Ligeann an cosán seo do GameLib a chinneadh cén leagan de Proton a úsáideann Steam, chun cluichí neamh-Steam a chur le Steam."
         },
         "steamruntime": "Leabharlanna saincheaptha arna soláthar ag Steam chun cabhrú le cluichí Linux agus Windows (Proton) a rith. D’fhéadfadh feabhas a chur ar chomhoiriúnacht dá gcuirfí ar chumas iad.",
         "sync": {
-            "part1": "Déanann Heroic iarracht buille faoi thuairim a thabhairt faoin bhfillteán sábhála ceart agus oibreoidh sé seo i bhformhór na gcásanna. Sa chás go bhfuil an fillteán mícheart, bain úsáid as an mbosca sáraithe chun é a athrú.",
-            "part2": "Sa chás go n-athraíonn tú an fillteán réimír do Wine nó Proton, beidh ort an cosán a sheiceáil arís ós rud é go n-úsáideann Proton réimír (/pfx) agus ainm úsáideora (steamuser) difriúil. Mar sin, is féidir leat an cosán reatha a scriosadh go simplí, dul amach as an leathanach socruithe sioncrónaithe agus filleadh ar ais arís le go mbeidh Heroic in ann buille faoi thuairim a thabhairt faoin bhfillteán arís leis an réimír ceart.",
+            "part1": "Déanann GameLib iarracht buille faoi thuairim a thabhairt faoin bhfillteán sábhála ceart agus oibreoidh sé seo i bhformhór na gcásanna. Sa chás go bhfuil an fillteán mícheart, bain úsáid as an mbosca sáraithe chun é a athrú.",
+            "part2": "Sa chás go n-athraíonn tú an fillteán réimír do Wine nó Proton, beidh ort an cosán a sheiceáil arís ós rud é go n-úsáideann Proton réimír (/pfx) agus ainm úsáideora (steamuser) difriúil. Mar sin, is féidir leat an cosán reatha a scriosadh go simplí, dul amach as an leathanach socruithe sioncrónaithe agus filleadh ar ais arís le go mbeidh GameLib in ann buille faoi thuairim a thabhairt faoin bhfillteán arís leis an réimír ceart.",
             "part3": "Sioncrónú Láimhe: Roghnaigh Íoslódáil chun na cluichí atá stóráilte ar an Néal a íoslódáil. Uaslódáil chun na cinn áitiúla a uaslódáil chuig an néal. Déanfaidh Íoslódáil Fórsach agus Uaslódáil Fórsach neamhaird den leagan atá go háitiúil nó ar an néal.",
             "part4": "Déanfaidh Sioncrónú Sábhálacha go huathoibríoch na sábhálacha a sioncrónú gach uair a thosaíonn tú Cluiche agus tar éis duit críochnú ag imirt."
         },
         "vkd3d": "Is ciseal aistriúcháin bunaithe ar Vulkan é VKD3D do chluichí DirectX 12. D’fhéadfadh feabhas suntasach a bheith ar chomhoiriúnacht má chuirtear ar chumas é. Níl aon éifeacht aige ar chluichí DirectX níos sine, teastaíonn DXVK uaidh.",
         "wine": {
-            "part1": "Déanann Heroic cuardach ar leaganacha de Wine, Proton, agus CrossOver sna fillteáin seo a leanas:",
+            "part1": "Déanann GameLib cuardach ar leaganacha de Wine, Proton, agus CrossOver sna fillteáin seo a leanas:",
             "part2": "I gcás áiteanna eile, bain úsáid as nasc siombalach chuig ceann de na fillteáin seo"
         },
         "wine-hdr": "Feabhsaíonn HDR dathanna trí bhuaicphointí níos gile agus codarsnachtaí níos doimhne a sholáthar. Chun go n-oibreoidh HDR, ní mór don taispeáint agus don chluiche tacú leis.",
@@ -285,7 +285,7 @@
             "details": "Bain úsáid as cárta grafaicí tiomnaithe chun cluiche a rindreáil ar chórais il-GPU. Ní gá ach ar ríomhairí glúine nó deisce cearrbhachais a úsáideann GPU gan cheann le haghaidh rindreála (NVIDIA Optimus, AMD CrossFire)",
             "link": "Seiceáil tuilleadh sonraí inár vicí"
         },
-        "hide-window-on-protocol-launch": "Coinníonn sé an fhuinneog Heroic i bhfolach nuair a sheoltar cluiche ó aicearra seachtrach, cosúil leis an ngné 'Cuir le Steam'."
+        "hide-window-on-protocol-launch": "Coinníonn sé an fhuinneog GameLib i bhfolach nuair a sheoltar cluiche ó aicearra seachtrach, cosúil leis an ngné 'Cuir le Steam'."
     },
     "placeholder": {
         "egs-prefix": "Roghnaigh Réimír ina bhfuil EGS suiteáilte",
@@ -341,7 +341,7 @@
         "alt-gogdl-bin": "Roghnaigh GOGDL Dénártha Malartach le húsáid",
         "alt-legendary-bin": "Roghnaigh Dénártha Finscéalach Malartach",
         "alt-nile-bin": "Roghnaigh Binary Malartach Níle",
-        "analyticsOptIn": "Seol sonraí gan ainm chun cabhrú le forbairt Heroic",
+        "analyticsOptIn": "Seol sonraí gan ainm chun cabhrú le forbairt GameLib",
         "autodxvk": "Suiteáil/Nuashonraigh DXVK go huathoibríoch ar réimír",
         "autodxvknvapi": "Suiteáil/Nuashonrú Uathoibríoch DXVK-NVAPI ar Réimír",
         "autosync": "Sábhálacha Uath-Shioncrónaithe",
@@ -349,10 +349,10 @@
         "autovkd3d": "Suiteáil/Nuashonrú Uathoibríoch VKD3D ar Réimír",
         "before-launch-script-path": "Roghnaigh script le rith sula seoltar an cluiche",
         "change-target-exe": "Roghnaigh EXE malartach le rith",
-        "checkForUpdatesOnStartup": "Seiceáil le haghaidh Nuashonruithe Heroic ar an Startup",
+        "checkForUpdatesOnStartup": "Seiceáil le haghaidh Nuashonruithe GameLib ar an Startup",
         "crossover-version": "Leagan Trasnaithe/Wine",
         "custom_css": {
-            "warning": "Rabhadh: baineann sé seo leis an taobh tosaigh ar fad. Ciallaíonn sé sin gur féidir le stíl mhícheart Heroic a dhéanamh neamh-inúsáidte. Más gá, is féidir an socrú a athrú de láimh i `~/.config/heroic/config.json`. NÁ cóipeáil stíleanna ó fhoinsí nach bhfuil muinín agat astu."
+            "warning": "Rabhadh: baineann sé seo leis an taobh tosaigh ar fad. Ciallaíonn sé sin gur féidir le stíl mhícheart GameLib a dhéanamh neamh-inúsáidte. Más gá, is féidir an socrú a athrú de láimh i `~/.config/heroic/config.json`. NÁ cóipeáil stíleanna ó fhoinsí nach bhfuil muinín agat astu."
         },
         "custom_themes_path": "Cosán Téamaí Saincheaptha",
         "customWineProton": "Cosáin Saincheaptha Wine/Proton",
@@ -360,7 +360,7 @@
         "default-install-path": "Cosán Suiteála Réamhshocraithe",
         "default-steam-path": "Cosán réamhshocraithe Steam",
         "defaultWinePrefix": "Socraigh Fillteán le haghaidh Réimíreanna Wine nua",
-        "disable_controller": "Díchumasaigh nascleanúint Heroic ag baint úsáide as an rialtán",
+        "disable_controller": "Díchumasaigh nascleanúint GameLib ag baint úsáide as an rialtán",
         "disable_logs": "Díchumasaigh Logaí",
         "disablePlaytimeSync": "Díchumasaigh sioncrónú ama súgartha",
         "disableUMU": "Díchumasaigh umu",
@@ -393,7 +393,7 @@
             "enableLimiter": "Cumasaigh Teorannóir FPS",
             "enableUpscaling": "Cumasaíonn sé Uasghrádú",
             "missingMsg": "Ní raibh muid in ann Gamescope a aimsiú ar an PATH. Suiteáil é nó cuir leis an PATH é.",
-            "warningFlatpak": "Ní bhfuaireamar leagan comhoiriúnach de Gamescope. Suiteáil pacáiste flatpak Gamescope le ham-rith {{runtimeVersion}} agus atosú Heroic."
+            "warningFlatpak": "Ní bhfuaireamar leagan comhoiriúnach de Gamescope. Suiteáil pacáiste flatpak Gamescope le ham-rith {{runtimeVersion}} agus atosú GameLib."
         },
         "hdr": "Cumasaigh HDR",
         "hideChangelogsOnStartup": "Ná taispeáin logaí athraithe ar an Tosaithe",
@@ -404,7 +404,7 @@
             "descriptiveNames": {
                 "game-log": "Log cluiche {{gameTitle}}",
                 "gog": "Log GOG",
-                "heroic": "Log Heroic Ginearálta",
+                "heroic": "Log GameLib Ginearálta",
                 "legendary": "Cluichí Epic / Logáil Finscéalta",
                 "nile": "Log Amazon / Níle",
                 "zoom": "Log súmáil"
@@ -428,7 +428,7 @@
                     "title": "Uaslódáil críochnaithe"
                 },
                 "error": {
-                    "content": "Theip ar an gcomhad loga a uaslódáil. Seiceáil log ginearálta Heroic le haghaidh sonraí",
+                    "content": "Theip ar an gcomhad loga a uaslódáil. Seiceáil log ginearálta GameLib le haghaidh sonraí",
                     "title": "Theip ar an uaslódáil",
                     "manual_upload": "Cliceáil an cnaipe \"TAISPEÁIN AN COMHAD LOGÁLA SA FHILLTEÁN\" agus uaslódáil an comhad \"launch.log\" de láimh chuig Discord nó aon sheirbhís comhroinnte comhad ar líne."
                 },
@@ -475,7 +475,7 @@
         "show_valve_proton": {
             "confirmation": {
                 "dont_show": "Ná taispeáin iad",
-                "message": "Molaimid forcanna saincheaptha Proton (GE-Proton, Proton-CachyOS, srl.) a úsáid le Heroic mar níl winetricks ná protofixes i leaganacha Proton Valve. Is féidir leat iad a úsáid fós más mian leat.",
+                "message": "Molaimid forcanna saincheaptha Proton (GE-Proton, Proton-CachyOS, srl.) a úsáid le GameLib mar níl winetricks ná protofixes i leaganacha Proton Valve. Is féidir leat iad a úsáid fós más mian leat.",
                 "show": "Tuigim, taispeáin dóibh",
                 "title": "An bhfuil tú cinnte?"
             },
@@ -498,7 +498,7 @@
         "enable-quick-sync-menu": "Cumasaigh an Roghchlár Sábháil-Sioncrónaithe Tapa ar leathanach an chluiche",
         "disable_gog_presence": "Díchumasaigh nuashonruithe GOG Presence",
         "start-in-console-mode": "Tosaigh i Mód Consóil",
-        "hide-window-on-protocol-launch": "Folaigh fuinneog Heroic agus cluichí á seoladh ó naisc heroic://",
+        "hide-window-on-protocol-launch": "Folaigh fuinneog GameLib agus cluichí á seoladh ó naisc heroic://",
         "nvidiaprime": {
             "description": "Éirigh úsáid NVIDIA Optimus nó AMD Dynamic Switchable Graphics dGPU. Ná húsáid é seo ach amháin le haghaidh cluichí OpenGL agus Vulkan."
         }
@@ -817,7 +817,7 @@
         "gogdl-version": "Leagan GOGDL: ",
         "legendary-version": "Leagan Finscéalach: ",
         "nile-version": "Leagan na Níle: ",
-        "weblate": "Cabhraigh le Heroic a aistriú."
+        "weblate": "Cabhraigh le GameLib a aistriú."
     },
     "Other": "Eile",
     "platforms": {
@@ -856,11 +856,11 @@
             },
             "details": "Sonraí",
             "resetHeroic": {
-                "help": "Bainfidh sé seo na Socruithe agus an Taisceadh go léir ach ní bhainfidh sé do chluichí Suiteáilte ná do dhintiúir Epic. Ní mór leaganacha iniompartha (AppImage, WinPortable, ...) de Heroic a atosú de láimh ina dhiaidh sin."
+                "help": "Bainfidh sé seo na Socruithe agus an Taisceadh go léir ach ní bhainfidh sé do chluichí Suiteáilte ná do dhintiúir Epic. Ní mór leaganacha iniompartha (AppImage, WinPortable, ...) de GameLib a atosú de láimh ina dhiaidh sin."
             },
             "title": {
                 "clearCache": "Glan an Taisce",
-                "resetHeroic": "Athshocraigh Heroic"
+                "resetHeroic": "Athshocraigh GameLib"
             }
         },
         "battlEyeRuntime": {
@@ -912,7 +912,7 @@
             "warning": "Ní cheadaíonn an cluiche seo mód as líne go sainráite, mar sin is ar do phriacal féin atá sé seo a chur air. Seans nach n-oibreoidh an cluiche."
         },
         "open-config-file": "Oscail Comhad Cumraíochta",
-        "reset-heroic": "Athshocraigh Heroic",
+        "reset-heroic": "Athshocraigh GameLib",
         "saves": {
             "gog_linux_native_warning": "Ní thacaíonn cluichí dúchasacha Linux le gné Cloud Saves GOG. Bain úsáid as an leagan Windows ina ionad.",
             "not_supported": "Ní thacaíonn an cluiche seo le Sábhálacha Néal.",
@@ -927,7 +927,7 @@
             "gpu": "GPU:",
             "gpuDriver": "Tiománaí: {{driverVersion}}",
             "gpuWithNumber": "GPU {{number}}:",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "legendaryVersion": "Finscéalach: {{legendaryVersion}}",
             "memory": "Cuimhne:",
             "memoryStats": "{{percentUsed}}% úsáidte ({{usedGib}} / {{totalGib}}",
@@ -990,7 +990,7 @@
             "welcome": {
                 "intro": "Fáilte go dtí Leabharlann Laochra! Seo an áit ar féidir leat do chluichí go léir a fheiceáil i siopaí éagsúla.",
                 "intro2": "Mura bhfuil an leabharlann folamh, déan cinnte logáil isteach le do chuntais ag baint úsáide as Bainistigh cuntais ar an mbarra taoibh nó cuir do chluichí féin leis ag baint úsáide as an gcnaipe Cuir Cluiche Leis thuas.",
-                "title": "Fáilte go dtí Heroic!",
+                "title": "Fáilte go dtí GameLib!",
                 "title2": "Ag bainistiú na leabharlainne!"
             }
         },
@@ -1006,9 +1006,9 @@
             "quit": "Scoir an feidhmchlár go sábháilte.",
             "settings": "Cumraigh socruithe GameLib, réamhshocruithe cluiche, seiceáil logaí agus tuilleadh.",
             "stores": "Brabhsáil agus siopaigh cluichí i siopaí éagsúla lena n-áirítear Epic, GOG, agus Amazon.",
-            "version": "Seiceáil do leagan reatha de Heroic, cliceáil air chun an loga athruithe is déanaí a fheiceáil, agus rochtain a fháil ar an turas seo ón deilbhín cabhrach.",
+            "version": "Seiceáil do leagan reatha de GameLib, cliceáil air chun an loga athruithe is déanaí a fheiceáil, agus rochtain a fháil ar an turas seo ón deilbhín cabhrach.",
             "welcome": {
-                "intro": "Fáilte go Heroic! Tá na roghanna nascleanúna go léir chun an aip a iniúchadh sa bharra taoibh seo.",
+                "intro": "Fáilte go GameLib! Tá na roghanna nascleanúna go léir chun an aip a iniúchadh sa bharra taoibh seo.",
                 "title": "Nascleanúint Barra Taobh"
             },
             "wine": "Bainistigh nó íoslódáil leagan nua de Wine/Proton/GPTK le haghaidh cluichí Windows a rith ar Linux nó macOS."
@@ -1070,7 +1070,7 @@
         "notes": "Nótaí"
     },
     "wineExplanation": {
-        "proton-ge": "Is leagan Proton é GE-Proton a chruthaigh Glorious Eggroll. Tá sé ceaptha le húsáid in éineacht leis an lainseálaí umu (réamhshocraithe i Heroic).",
+        "proton-ge": "Is leagan Proton é GE-Proton a chruthaigh Glorious Eggroll. Tá sé ceaptha le húsáid in éineacht leis an lainseálaí umu (réamhshocraithe i GameLib).",
         "gpt": "D'fhorbair Apple an Game Porting Toolkit agus moltar é do ríomhairí Mac Apple Silicon leis na sceallóga M1+ agus oibríonn sé is fearr do chluichí níos nuaí a úsáideann DX12.",
         "wine-crossover": "Tá Wine-Crossover bunaithe ar thionscadal Crossover OpenSource Wine agus moltar é do ríomhairí Mac Intel agus do chluichí DX11 nó níos sine.",
         "wine-staging-macos": "Tá Wine-Staging-macOS bunaithe ar an tionscadal príomhlíne Wine agus moltar é do ríomhairí Mac Intel agus do chluichí DX11 nó níos sine, go háirithe nuair a bhíonn sé péireáilte leis an uirlis DXMT.",

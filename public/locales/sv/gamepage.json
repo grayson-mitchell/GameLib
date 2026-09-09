@@ -180,7 +180,7 @@
             "install_anyway": "Ja (Jag förstår att flerspelarfunktioner inte kommer att fungera)",
             "multiplayer_message": "Antifuskstödet är trasigt eller nekat. Spelet kan öppnas men flerspelarfunktionerna kommer inte att fungera. Vill du installera det ändå?",
             "ok": "Ok",
-            "disabled_installation": "Det här spelet använder antifusk-programvara som inte är kompatibelt med ditt operativsystem, eller så har stödet inte aktiverats av spelutvecklarna. Det betyder att flerspelarfunktionerna inte kommer att fungera, och det finns inget du (eller Heroic-teamet) kan göra åt det.<br /><br />För att installera det här spelet och prova det ändå, gå till Inställningar, Avancerat och markera alternativet för att tillåta installation av spel med trasiga eller nekade antifusk-funktioner.<br /><br />Observera att det inte finns någon lösning för detta och du riskerar att bli avstängd i spelet."
+            "disabled_installation": "Det här spelet använder antifusk-programvara som inte är kompatibelt med ditt operativsystem, eller så har stödet inte aktiverats av spelutvecklarna. Det betyder att flerspelarfunktionerna inte kommer att fungera, och det finns inget du (eller GameLib-teamet) kan göra åt det.<br /><br />För att installera det här spelet och prova det ändå, gå till Inställningar, Avancerat och markera alternativet för att tillåta installation av spel med trasiga eller nekade antifusk-funktioner.<br /><br />Observera att det inte finns någon lösning för detta och du riskerar att bli avstängd i spelet."
         },
         "flatpak-path-not-writtable": "Fel: Sandlådeåtkomst har inte beviljats till den här sökvägen, dataförlust kommer att inträffa."
     },
@@ -215,12 +215,12 @@
         "default": "Standard"
     },
     "not_logged_in": {
-        "epic": "Du är ej inloggad med Epic-konto i Heroic. Använd inte Butiksidan för att logga in, klicka denna knapp istället:",
-        "gog": "Du är ej inloggad med GOG-konto i Heroic. Använd inte Butiksidan för att logga in, klicka denna knapp istället:",
+        "epic": "Du är ej inloggad med Epic-konto i GameLib. Använd inte Butiksidan för att logga in, klicka denna knapp istället:",
+        "gog": "Du är ej inloggad med GOG-konto i GameLib. Använd inte Butiksidan för att logga in, klicka denna knapp istället:",
         "login": "Logga in",
         "title": "Du är ej inloggad!",
-        "amazon": "Du är ej inloggad med Epic-konto i Heroic. Använd inte Butiksidan för att logga in, klicka denna knapp istället:",
-        "zoom": "Du är inte inloggad med ett Zoom-konto i Heroic. Använd inte butiksidan för att logga in, klicka istället på följande knapp:"
+        "amazon": "Du är ej inloggad med Epic-konto i GameLib. Använd inte Butiksidan för att logga in, klicka denna knapp istället:",
+        "zoom": "Du är inte inloggad med ett Zoom-konto i GameLib. Använd inte butiksidan för att logga in, klicka istället på följande knapp:"
     },
     "report_problem": "Rapportera problem med spelet",
     "sdl": {
@@ -328,7 +328,7 @@
     "third-party-managed": {
         "header": "Detta spel hanteras av ett tredjeparts program",
         "notice1": "Detta spel hanteras av tredjeparts programmet: \"{{application_name}}\"",
-        "notice2": "Efter att ha klickat på Installera kommer Heroic att köra programmet för att slutföra installationsprocessen"
+        "notice2": "Efter att ha klickat på Installera kommer GameLib att köra programmet för att slutföra installationsprocessen"
     },
     "Open": "Öppna",
     "queue": {

@@ -54,7 +54,7 @@
                 "message": "Klaida atsisiunčiant „DXMT“! Patikrinkite savo ryšį!",
                 "title": "„DXMT“ atsisiuntimo klaida"
             },
-            "executableNotFoundMessage": "„Heroic“ nepavyko rasti šio žaidimo vykdomąjį. Prašome jį nustatyti rankiniu būdu žaidimo nustatymuose."
+            "executableNotFoundMessage": "„GameLib“ nepavyko rasti šio žaidimo vykdomąjį. Prašome jį nustatyti rankiniu būdu žaidimo nustatymuose."
         },
         "no": "NE",
         "runexe": {
@@ -89,8 +89,8 @@
             "title": "Įspėjimas",
             "snap": {
                 "checkbox": "Daugiau neberodyti šios žinutes",
-                "title": "„Heroic“ veikia kaip – „Snap“",
-                "message": "Kai kurios funkcijos nėra pasiekiamos „Snap“ versijoje (kol kas) ir stengiamės ta sutvarkyti.{{newLine}}Dabartiniai ribojimai yra:{{newLine}}„Heroic“ negalės surasti „Proton“ iš „Steam“ ar „Wine“ iš „Lutris“.{{newLine}}{{newLine}}„Gamescope“, žaidimų veiksena ir „MangoHud“ tai pat neveiks, nes „Heroic“ neturi prieigos prie jų.{{newLine}}{{newLine}}Norint gauti prieigą prie šių funkcijų, prašome įdiegti „Heroic“ kaip „Flatpack“, „DEB“ ar „AppImage“."
+                "title": "„GameLib“ veikia kaip – „Snap“",
+                "message": "Kai kurios funkcijos nėra pasiekiamos „Snap“ versijoje (kol kas) ir stengiamės ta sutvarkyti.{{newLine}}Dabartiniai ribojimai yra:{{newLine}}„GameLib“ negalės surasti „Proton“ iš „Steam“ ar „Wine“ iš „Lutris“.{{newLine}}{{newLine}}„Gamescope“, žaidimų veiksena ir „MangoHud“ tai pat neveiks, nes „GameLib“ neturi prieigos prie jų.{{newLine}}{{newLine}}Norint gauti prieigą prie šių funkcijų, prašome įdiegti „GameLib“ kaip „Flatpack“, „DEB“ ar „AppImage“."
             },
             "wine-change": {
                 "title": "„Wine“ nebuvo rastas!",
@@ -109,7 +109,7 @@
             },
             "rosetta": {
                 "title": "„Rotsetta“ nerasta",
-                "message": "„Heroic“ reikalauja „Rosetta“, kad veiktų teisingai ant „macOS“ su „Apple Silicon“ lustais. Prašome jį įdiegti iš „macOS“ terminalo su šia komanda: „softwareupdate --install-rosetta“ ir paleiskite iš naujo „Heroic“. "
+                "message": "„GameLib“ reikalauja „Rosetta“, kad veiktų teisingai ant „macOS“ su „Apple Silicon“ lustais. Prašome jį įdiegti iš „macOS“ terminalo su šia komanda: „softwareupdate --install-rosetta“ ir paleiskite iš naujo „GameLib“. "
             }
         },
         "downloadNow": "Atsisiųsti dabar",
@@ -118,8 +118,8 @@
                 "title-finished": "Atnaujinimas baigtas",
                 "detail": "Ar Jūs norite atsisiųsti atnaujinimą fone?",
                 "message": "Yra nauja pasiekiama versija!",
-                "message-finished": "Ar norite perleisti „Heroic“ dabar?",
-                "title": "„Heroic“ žaidimų paleidiklis/-ė",
+                "message-finished": "Ar norite perleisti „GameLib“ dabar?",
+                "title": "„GameLib“ žaidimų paleidiklis/-ė",
                 "detailNoAutoupdate": "Automatiniai atnaujinimai nėra palaikomi Jūsų pakavimo formatui. Prašome naudoti paketų tvarkytuvą, kad atnaujintumėte."
             }
         },
@@ -140,7 +140,7 @@
             }
         },
         "cache-cleared": {
-            "message": "„Heroic“ talpykla/podėlis išvalyta/-s.",
+            "message": "„GameLib“ talpykla/podėlis išvalyta/-s.",
             "title": "Talpykla/Podėlis išvalyta/-s"
         },
         "changelog": "Keitinių žurnãlas",
@@ -151,8 +151,8 @@
         "customWine": "Pasirinkti „Wine“ ar „Proton“ dvejetainę",
         "reset-heroic": {
             "question": {
-                "title": "Atstatyti „Heroic“",
-                "message": "Ar Jūs tikrai norite atstatyti „Heroic“? Šis pašalins visus/-as nustatymus ir talpyklas/podėlius, bet nepašalins Jūsų įdiegtų žaidimų ar Jūsų „Epic“ kredencialų. Perkeliamos „Heroic“ versijos („AppImage“, „WinPortable“ ir t.t.) turi būti paleidžiamos iš naujo rankiniu būdu po vėliau."
+                "title": "Atstatyti „GameLib“",
+                "message": "Ar Jūs tikrai norite atstatyti „GameLib“? Šis pašalins visus/-as nustatymus ir talpyklas/podėlius, bet nepašalins Jūsų įdiegtų žaidimų ar Jūsų „Epic“ kredencialų. Perkeliamos „GameLib“ versijos („AppImage“, „WinPortable“ ir t.t.) turi būti paleidžiamos iš naujo rankiniu būdu po vėliau."
             }
         }
     },
@@ -303,7 +303,7 @@
             "accessibility": "Rodo prieinamumo nustatymus.",
             "downloadManager": "Rodo dabartinius ir buvusius atsisiuntimus.",
             "login": "Prisijungti prie kitų parduotuvių.",
-            "settingsDefault": "Rodo visus „Heroic“ nustatymus ir numatytąsias parinktis žaidimams.",
+            "settingsDefault": "Rodo visus „GameLib“ nustatymus ir numatytąsias parinktis žaidimams.",
             "wineManager": "Įdiegia skirtingas „Wine“, „Proton“, „Crossover“ ir pan. versijas.",
             "customThemesPath": "Peržiūrėkite mūsų žinių aiškinamąjį puslapį.",
             "defaultInstallPath": "Šis yra numatytasis kelias, jau parinktas, kai įdiegiami žaidimai.",
@@ -315,16 +315,16 @@
         "game_language": {
             "in_game_config": "Nevisi žaidimai palaiko šią konfigūraciją, kai kurie žaidimai turi nuosava kalbos nustatymą.",
             "valid_codes": "Tinkami kalbos kodai yra priklausomi nuo žaidimo.",
-            "fallback": "Palikti tuščią, norint naudoti „Heroic“ kalbą."
+            "fallback": "Palikti tuščią, norint naudoti „GameLib“ kalbą."
         },
         "wine": {
-            "part1": "„Heroic“ ieško „Wine“, „Proton“ ir „CrossOver“ versijų, šiuose aplankuose:",
+            "part1": "„GameLib“ ieško „Wine“, „Proton“ ir „CrossOver“ versijų, šiuose aplankuose:",
             "part2": "Kitoks vietoms, naudokite virtualųjį katalogą į vieną iš šių aplankų/-alų"
         },
         "custom_themes_path": "Nenaudoti „CSS“ failų iš nepatikimų šaltinių. Kai esate abejonėje, klauskite apžiūros mūsų „Discord“ kanale.",
         "mangohud": "„MangoHUD“ yra perdanga, kuri rodo ir stebi kdr./sek., temperatūrą, „CPU“/„GPU“ apkrovą ir kitus sisteminius išteklius.",
         "steam_path": {
-            "info": "Šis kelias leidžia „Heroic“ numatyti kokią „Proton“ versiją „Steam“ naudos, skirta pridedant ne „Steam“ žaidimus į „Steam“."
+            "info": "Šis kelias leidžia „GameLib“ numatyti kokią „Proton“ versiją „Steam“ naudos, skirta pridedant ne „Steam“ žaidimus į „Steam“."
         },
         "gamescope": {
             "fpsLimiter": "Kiekis kadrų, kurias „gamescope“ ribos. Pvz.: 60",
@@ -339,8 +339,8 @@
         },
         "dxvk": "„DXVK“ yra „Vulkan“ pagrindo vertimo sluoksnis „DirectX 9/10/11“ žaidimams. Įjungus/Įgalinant gali pagerinti palaikomumą. Gali sukelti problemų, ypatingai senesniems „DirectX“ žaidimams.",
         "sync": {
-            "part1": "„Heroic“ bandys atspėti teisinga išsaugojimų aplanką/-alą ir jis dažniausiai atspėja. Atvejais kai jis yra neteisingas, naudokite perkeičiamąjį parinkimą, norint pakeisti jį.",
-            "part2": "Tuo atveju, kai Jūs pakeičiate prielinksnio/priešdėlio aplanką/-alą, skirtus „Wine“ ar „Proton“, reikės dar kart patikrinti šį kelią, kadangi „Proton“ naudoja kitokį prielinksnį/priešdėlį („/pfx“) or vartotojo/naudotojo vardą („steamuser“). Taigi, Jūs galite paprastai pašalinti dabartinį kelią ir išeiti iš sinchronizavimų nustatymo puslapio ir vėl sugrįžti, norint, kad „Heroic“ dar kartą atspėtų teisingąjį prielinksnį/priešdėlį.",
+            "part1": "„GameLib“ bandys atspėti teisinga išsaugojimų aplanką/-alą ir jis dažniausiai atspėja. Atvejais kai jis yra neteisingas, naudokite perkeičiamąjį parinkimą, norint pakeisti jį.",
+            "part2": "Tuo atveju, kai Jūs pakeičiate prielinksnio/priešdėlio aplanką/-alą, skirtus „Wine“ ar „Proton“, reikės dar kart patikrinti šį kelią, kadangi „Proton“ naudoja kitokį prielinksnį/priešdėlį („/pfx“) or vartotojo/naudotojo vardą („steamuser“). Taigi, Jūs galite paprastai pašalinti dabartinį kelią ir išeiti iš sinchronizavimų nustatymo puslapio ir vėl sugrįžti, norint, kad „GameLib“ dar kartą atspėtų teisingąjį prielinksnį/priešdėlį.",
             "part3": "Rankinis sinchronizavimas: Pasirinkite atsisiuntimą, norint atsisiųsti žaidimo išsaugojimus, kurie laikomi debesijoje. Pasirinkite įkėlimą, norint įkelti vietinius išsaugojimus į debesiją. Priverstinai atsisiųsti ir įkelti nepaisys jos parinkties versiją.",
             "part4": "Automatinis išsaugojimų sinchronizavimas, sinchronizuos išsaugojimus kiekvieną kartą, kada Jūs pradėsite žaidimą ir kai jį baigsite žaisti."
         },
@@ -358,17 +358,17 @@
         "primerun": "Naudoti paskirtąją vaizdo plokštę, kad apdorotų žaidimus daugia-„GPU“ sistemose. Reikalinga žaidimų nešiojamiesiems kompiuteriams arba stacionariems, kurie naudoja be išvestinį „GPU“, skirtus apdorojimui („NVIDIA Optimus“, „AMD CrossFire“)",
         "amdfsr": "„AMD FSR“ padeda pagerinti kadrų dažnį išplečiant mažesnes skiriamąsias gebas, pilno ekrano veiksenoje. Vaizdo kokybė pasitobulina nuo 5-ių iki 1-erių, tačiau našumas sumažėja. Įjungiant/Įgalinant gali pagerinti našumą.",
         "dxfpslimit": "Nustato kadrų dažnio ribą „DirectX“ (9-12) žaidimams",
-        "download_proton_steam": "Kai įjungta/įgalinta (-as/-i), „GE-Proton“ bus atsisiųstas tiesiai į „Steam“ palaikymo įrankių katalogą, vietoj numatytojo „Heroic“ kelio. Jis naudos „Steam“ nustatytą kelią – „numatytame „Steam“ kelyje“ nustatyme, randančio viršuje.",
+        "download_proton_steam": "Kai įjungta/įgalinta (-as/-i), „GE-Proton“ bus atsisiųstas tiesiai į „Steam“ palaikymo įrankių katalogą, vietoj numatytojo „GameLib“ kelio. Jis naudos „Steam“ nustatytą kelią – „numatytame „Steam“ kelyje“ nustatyme, randančio viršuje.",
         "wine-hdr": "„HDR“ išryškina spalvas, pateikiant skaistesnį išryškimą ir gilesnį kontrastą. Kad „HDR“ veiktų, ir ekranas, ir žaidimas, turi jį palaikyti.",
         "WoW64": "„Wine WoW64“ veiksena leidžia 32-bitų „Windows“ žaidimams veikti 64-bitų „Wine“. Įjungiant šią veikseną, gali padėti patobulinti našumą, tačiau gali veikti nesandariai su senesniais 32-bitų žaidimais.",
         "wine-wayland": "„Wine-Wayland“ eksperimentinė tvarkyklė leidžia žaidimams veikti sustatytai po „Wayland“ rodymo protokolo. Įgalinant jį, gali sukelti tam tikrų problemų kai kuriuose žaidimuose.",
         "advertiseAvxForRosetta": "Įgalina „AVX“ instrukcijų palaikymą, kai paleidžiami „Windows“ žaidimas per „Rosetta“ „Apple Silicon Mac (dgs.) kompiuteriuose“. Šis gali būti reikalingas kai kuriems žaidimams kaip – „Death Stranding“, kurie reikalauja „AVX“ palaikymo.",
-        "analytics": "Įgalina „Heroic“, kad rinktų 100% proc. ananomiška naudojimo duomenis, siekiant patobulinti programą. Reikalauja paleidimo iš naujo, kad įsigalintų.",
+        "analytics": "Įgalina „GameLib“, kad rinktų 100% proc. ananomiška naudojimo duomenis, siekiant patobulinti programą. Reikalauja paleidimo iš naujo, kad įsigalintų.",
         "nvidiaprime": {
             "details": "Naudoti paskirtąją vaizdo plokštę, kad apdorotų žaidimus daugia-„GPU“ sistemose. Reikalinga žaidimų nešiojamiesiems kompiuteriams arba stacionariems, kurie naudoja be išvestinį „GPU“, skirtus apdorojimui („NVIDIA Optimus“, „AMD CrossFire“)",
             "link": "Peržiūrėkite daugiau išsamumo mūsų aiškinamajame puslapyje"
         },
-        "hide-window-on-protocol-launch": "Laiko „Heroic“ langą paslėpta, kai žaidimas yra paleistas iš kitos išorinės nuorodos, tokios kaip – „pridėti prie „Steam““ funkcijos."
+        "hide-window-on-protocol-launch": "Laiko „GameLib“ langą paslėpta, kai žaidimas yra paleistas iš kitos išorinės nuorodos, tokios kaip – „pridėti prie „Steam““ funkcijos."
     },
     "info": {
         "version": "„Wine“ versija",
@@ -498,7 +498,7 @@
                     "title": "Įkėlimas baigtas"
                 },
                 "error": {
-                    "content": "Nepavyko įkelti žurnalo failo. Patikrinkite bendrąjį „Heroic“ žurnalą dėl išsamumo",
+                    "content": "Nepavyko įkelti žurnalo failo. Patikrinkite bendrąjį „GameLib“ žurnalą dėl išsamumo",
                     "title": "Įkėlimas nepavyko",
                     "manual_upload": "Spustelėkite ant – „RODYTI ŽURNALO FAILĄ APLANKALE“ mygtuko ir įkelkite – „launch.log“ failą rankiniu būdu į „Discord“ ar į bet kokį failų bendrinimo puslapį."
                 },
@@ -518,7 +518,7 @@
             "descriptiveNames": {
                 "game-log": "„{{gameTitle}}“ žaidimo žurnalas",
                 "gog": "„GOG“ žurnalas",
-                "heroic": "Bendras „Heroic“ žurnalas",
+                "heroic": "Bendras „GameLib“ žurnalas",
                 "legendary": "„Epic Games“ / „Legendary“ žurnalas",
                 "nile": "„Amazon“ / „Nile“ žurnalas",
                 "zoom": "„Zoom“ žurnalas"
@@ -532,7 +532,7 @@
         },
         "after-launch-script-path": "Pasirinkti skriptą, kurį vykdyti po žaidimo išjungimo",
         "before-launch-script-path": "Pasirinkti skriptą, kurį vykdyti prieš paleidžiant žaidimą",
-        "checkForUpdatesOnStartup": "Tikrinti ar yra „Heroic“ atnaujinimų, paleidimo metu",
+        "checkForUpdatesOnStartup": "Tikrinti ar yra „GameLib“ atnaujinimų, paleidimo metu",
         "customWineProton": "Pasirinktiniai „Wine“/„Proton“ keliai",
         "offlinemode": "Paleisti žaidimą kaip neprisijungus",
         "prefered_language": "Pageidaujama kalba (kalbos kodas)",
@@ -552,13 +552,13 @@
         "addgamestostartmenu": "Automatiškai pridėti žaidimus prie pradžios meniu",
         "darktray": "Naudoti tamsią juostos piktogramą",
         "dxvkfpslimit": "Riboti kadrus per sekundę („DX9/10/11“)",
-        "minimize-on-launch": "Nuleisti „Heroic“ po žaidimo paleidimo",
+        "minimize-on-launch": "Nuleisti „GameLib“ po žaidimo paleidimo",
         "gamescope": {
             "missingMsg": "Mes negalėjome surasti „Gamescope“ kelio vietoje. Įdiekite jį arba pridėkite prie kelio.",
             "enableLimiter": "Įjungti/Įgalinti kadrų per sekundę ribotuvą/-ę",
             "enableUpscaling": "Įjungia/Įgalina išplečiama gebą",
             "enableForceGrabCursor": "Įjungti/Įgalinti priverstinį griebimo žymeklį",
-            "warningFlatpak": "Negalėjome rasti palaikomos „Gamescope“ versijos. Įdiekite „Gamescope“ „flatpak“ paketą su vykdomuoju – {{runtimeVersion}} ir perleiskite „Heroic“."
+            "warningFlatpak": "Negalėjome rasti palaikomos „Gamescope“ versijos. Įdiekite „Gamescope“ „flatpak“ paketą su vykdomuoju – {{runtimeVersion}} ir perleiskite „GameLib“."
         },
         "hideChangelogsOnStartup": "Nerodyti keitinių žurnalo paleidime",
         "maxRecentGames": "Rodyti neseniai žaistus",
@@ -586,7 +586,7 @@
         "wineprefix": "„Wine“ prielinksnio/priešdėlio aplankas/-las",
         "fsync": "Įjungti „Fsync“",
         "msync": "Įjungti „Msync“",
-        "disable_controller": "Išjungti/Išgalinti „Heroic“ valdymą naudojant pultelį/valdiklį",
+        "disable_controller": "Išjungti/Išgalinti „GameLib“ valdymą naudojant pultelį/valdiklį",
         "enableFSRHack": "Įjungti/Įgalinti „FSR“ nulaužimą („Wine“ versija turi jį palaikyti)",
         "exit-to-tray": "Išeiti į sistemos užduočių juostą",
         "discordRPC": "Įjungti/Įgalinti išplėstinį „Discord“ veikimo palaikymą",
@@ -606,7 +606,7 @@
                 "title": "Ar Jūs esate tikra/-s?",
                 "show": "Aš suprantu, rodyti juos",
                 "dont_show": "Nerodyti jiems",
-                "message": "Mes rekomenduojame naudoti bendruomenės „Proton“ atšakas (tokias kaip: „GE-Proton“, „Proton-CachyOS“ ir t.t.) su „Heroic“, nes „Valve Proton“ neturi „winetricks“ ar „protofixes“ paketų. Jūs galite juos naudoti, jeigu norite."
+                "message": "Mes rekomenduojame naudoti bendruomenės „Proton“ atšakas (tokias kaip: „GE-Proton“, „Proton-CachyOS“ ir t.t.) su „GameLib“, nes „Valve Proton“ neturi „winetricks“ ar „protofixes“ paketų. Jūs galite juos naudoti, jeigu norite."
             },
             "wine_selector_warning": "Numatytai, „Valve Proton“ versijos yra nepaisomos ir ignoruojamos. Jas galite įgalinti pažangiuose visuotiniuose nustatymuose",
             "label": "Leisti naudoti „Valve Proton“ leidinius, kad paleistumėte žaidimus",
@@ -620,17 +620,17 @@
         "dxfpslimit": "Riboti „DirectX“ žaidimų kadr./sek.",
         "enable-quick-sync-menu": "Įjungti/Įgalinti greitąjį sinchronizuojantį išsaugojimą, jo meniu žaidimo puslapyje",
         "no-tray-icon": "Slėpti sistemos juostelėje randančią piktogramą (reikalauja paleidimo iš naujo)",
-        "analyticsOptIn": "Siųsti ananomiškus duomenis, siekiant padėti „Heroic“ kūrimą",
+        "analyticsOptIn": "Siųsti ananomiškus duomenis, siekiant padėti „GameLib“ kūrimą",
         "verboseLogs": {
             "description": "Įjungti derinimo veikseną"
         },
         "advertiseAvxForRosetta": "Pranešti „AVX“ „Rosetta“ palaikymui",
         "custom_css": {
-            "warning": "Įspėjimas: šis pritaikomas su visa vidine atvirąją sąsają. Tai reiškia, kad netinkamas stilius gali padaryti „Heroic“ neveiksnų. Jeigu reikia, šis nustatymas gali būti pakeistas rankiniu būdu – „`~/.config/heroic/config.json`“. Nekopijuokite stilių iš šaltinių, kurių nepasitikite."
+            "warning": "Įspėjimas: šis pritaikomas su visa vidine atvirąją sąsają. Tai reiškia, kad netinkamas stilius gali padaryti „GameLib“ neveiksnų. Jeigu reikia, šis nustatymas gali būti pakeistas rankiniu būdu – „`~/.config/heroic/config.json`“. Nekopijuokite stilių iš šaltinių, kurių nepasitikite."
         },
         "start-in-console-mode": "Paleisti konsolės veiksenoje",
         "disable_gog_presence": "Išjungti/Išgalinti „GOG“ matomumo (būsenos) atnaujinimus",
-        "hide-window-on-protocol-launch": "Slėpti „Heroic“ langą, kai paleidžiami žaidimai iš – „heroic://“ nuorodų",
+        "hide-window-on-protocol-launch": "Slėpti „GameLib“ langą, kai paleidžiami žaidimai iš – „heroic://“ nuorodų",
         "nvidiaprime": {
             "description": "Priverstinai naudoti „NVIDIA Optimus“ ar „AMD DSG dGPU“. Naudoti šį tik „OpenGL“ ir „Vulkan“ žaidimuose."
         }
@@ -639,7 +639,7 @@
         "advanced": {
             "details": "Išsamumas",
             "clearCache": {
-                "help10": "„Heroic“ konfigūracija",
+                "help10": "„GameLib“ konfigūracija",
                 "help7": "Parduotuvės prisijungimas",
                 "help8": "Įdiegti žaidimai",
                 "help9": "Žaidimų nustatymai",
@@ -652,10 +652,10 @@
             },
             "title": {
                 "clearCache": "Išvalyti talpyklą/podėlį",
-                "resetHeroic": "Atstatyti „Heroic“"
+                "resetHeroic": "Atstatyti „GameLib“"
             },
             "resetHeroic": {
-                "help": "Šis pašalins visus nustatymus ir talpyklas/podėlius, bet nepašalins Jūsų įdiegtų žaidimų ar „Epic“ kredencialų. Perkeliamos „Heroic“ versijos („AppImage“, „WinPortable“ ir t.t.) reikalauja, kad būtų perleisto rankiniu būdo po šio."
+                "help": "Šis pašalins visus nustatymus ir talpyklas/podėlius, bet nepašalins Jūsų įdiegtų žaidimų ar „Epic“ kredencialų. Perkeliamos „GameLib“ versijos („AppImage“, „WinPortable“ ir t.t.) reikalauja, kad būtų perleisto rankiniu būdo po šio."
             }
         },
         "navbar": {
@@ -683,7 +683,7 @@
             "cpu": "„CPU“:",
             "memory": "Atmintis:",
             "software": "Taikomoji programa:",
-            "heroicVersion": "„Heroic“: {{heroicVersion}}",
+            "heroicVersion": "„GameLib“: {{heroicVersion}}",
             "systemSpecifications": "Sistemos specifikacijos:",
             "cometVersion": "„Comet“: {{cometVersion}}",
             "copyToClipboard": "Kopijuoti į iškarpinę/mainų sritį",
@@ -707,7 +707,7 @@
             }
         },
         "open-config-file": "Atidaryti konfigūracijos failą",
-        "clear-cache": "Išvalyti „Heroic“ talpyklą/podėlį",
+        "clear-cache": "Išvalyti „GameLib“ talpyklą/podėlį",
         "gamescope": {
             "searchMsg": "Ieškoma „gamescope“ vykdomojo."
         },
@@ -721,7 +721,7 @@
         "offline": {
             "warning": "Šis žaidimas nurodomai nepalaiko neprisijungusią veikseną, įjunkite šį savo nuožiūrą. Žaidimas gali neveikti."
         },
-        "reset-heroic": "Atstatyti „Heroic“",
+        "reset-heroic": "Atstatyti „GameLib“",
         "saves": {
             "warning": "Debesijos išsaugojimo funkcija yra „Beta“ stadijoje, prašome atlikti atsargines kopijas savo išsaugojimų prieš sinchronizuojant (tuo atveju, jeigu įvyktu kažkas blogai)",
             "not_supported": "Šis žaidimas nepalaiko debesijos išsaugojimų.",
@@ -914,7 +914,7 @@
         "gogdl-version": "„GOGDL“ versija: ",
         "nile-version": "„Nile“ versija: ",
         "legendary-version": "„Legendary“ versija: ",
-        "weblate": "Padėkite išversti „Heroic“."
+        "weblate": "Padėkite išversti „GameLib“."
     },
     "platforms": {
         "browser": "Naršyklė",
@@ -953,7 +953,7 @@
     "adtraction-locked": {
         "dont-show-again": "Neberodinėti šio įspėjimo",
         "title": "„Adtraction“ yra užblokuotas",
-        "description": "Atrodo, kad „track.adtraction.com“ domenas-sritis negalėjo būti pakrautas arba buvo/yra užblokuotas. Su „adtraction“, bet kokie pirkimai „GOG“ parduotuvėje padeda „Heroic“ finansiškai. Apmąstykite pašalinti šį blokavimą, jeigu norite mums padėti."
+        "description": "Atrodo, kad „track.adtraction.com“ domenas-sritis negalėjo būti pakrautas arba buvo/yra užblokuotas. Su „adtraction“, bet kokie pirkimai „GOG“ parduotuvėje padeda „GameLib“ finansiškai. Apmąstykite pašalinti šį blokavimą, jeigu norite mums padėti."
     },
     "externalLink": {
         "dontAskAgain": "Daugiau nebeklausti",
@@ -1036,7 +1036,7 @@
         "sidebar": {
             "welcome": {
                 "title": "",
-                "intro": "Sveiki į – „Heroic“! Ši šoninė juosta sudaro visas naršymo parinktis, siekiant naršyti programą."
+                "intro": "Sveiki į – „GameLib“! Ši šoninė juosta sudaro visas naršymo parinktis, siekiant naršyti programą."
             },
             "quit": "Išeikite iš programos saugiai.",
             "docs": "Persiskaitykite dokumentaciją dėl „GameLib“ naudojimo.",
@@ -1049,14 +1049,14 @@
             "downloads": "Sekite ir valdykite savo žaidimų atnaujinimus ir įdiegimus.",
             "accounts": "Valdykite savo sujungtų parduotuvių paskyras („Epic“, „GOG“, „Amazon“); jų atsijungimą ir prisijungimą.",
             "stores": "Naršykite ir pirkite žaidimus skirtinguose parduotuvėse, įskaitant – „Epic“, „GOG“ ir „Amazon“.",
-            "version": "Patikrinkite savo dabartinę „Heroic“ versiją, spustelėkite čia, norint peržiūrėti naujausią keitinių žurnalą ir pasiekite šį gidą iš pagalbos piktogramos."
+            "version": "Patikrinkite savo dabartinę „GameLib“ versiją, spustelėkite čia, norint peržiūrėti naujausią keitinių žurnalą ir pasiekite šį gidą iš pagalbos piktogramos."
         },
         "library": {
             "gameCard": "Spustelėkite kairiuoju pelės mygtuku ant žaidimo kortelės, kad pereitumėte į žaidimo puslapį ir pamatytumėte jo išsamumą bei pakeistumėte nustatymus. Tai pat, galite spustelėti dešiniuoju pelės mygtuku, norint atidaryti parankinį meniu.",
             "welcome": {
-                "title": "Sveiki atvykę į „Heroic“!",
+                "title": "Sveiki atvykę į „GameLib“!",
                 "intro2": "Jei biblioteka yra tuščia, įsitikinkite, kad esate prisijungę su paskyromis, kuriose turite žaidimus. Šoninėje juostoje rasite šią parinktį. Tai pat, galite pridėti savo žaidimus spustelėjus – „Pridėti žaidimą“ mygtuką viršuje.",
-                "intro": "Sveiki atvykę į „Heroic“ biblioteką! Štai čia galite matyti visus savo žaidimus iš įvairių parduotuvių.",
+                "intro": "Sveiki atvykę į „GameLib“ biblioteką! Štai čia galite matyti visus savo žaidimus iš įvairių parduotuvių.",
                 "title2": "Bibliotekos tvarkymas!"
             },
             "filters": "Filtruoti žaidimus pagal parduotuvę, platformą, mėgstamumą ir daugiau, naudojant šias parinktis.",
@@ -1080,13 +1080,13 @@
         "disable": "Išjungta/Neįgalinta (-as/-i)",
         "enable": "Įjungta/Įgalinta (-as/-i)",
         "info": {
-            "pt1": "Siekiant patobulinti šią programą, „Heroic“ renką 100% proc. anonimiškus duomenis.",
-            "pt2": "„Heroic“ naudoja atviro kodo „Plausible Analytics“ platformą, kad surinktų šiuos duomenis: programos versiją, operacinę sistemą, prijungtas parduotuves/platformas ir šalį.",
+            "pt1": "Siekiant patobulinti šią programą, „GameLib“ renką 100% proc. anonimiškus duomenis.",
+            "pt2": "„GameLib“ naudoja atviro kodo „Plausible Analytics“ platformą, kad surinktų šiuos duomenis: programos versiją, operacinę sistemą, prijungtas parduotuves/platformas ir šalį.",
             "pt3": "Jis niekada nerinks jokių asmeninių duomenų, įskaitant Jūsų naudotojo/vartotojo vardą (t.y. slapyvardį), IP adresą ar el. paštą.",
             "pt5": "„Plausible Analytics“ yra pilnai paklusnus su BDAR, „CCPA“ ir PERR.",
             "pt4": "Šie duomenys yra naudojami suteiktiant įžvalgas į tolimesnius dėmesio sutelkimus dėl mūsų ribotų resursų ir vartotojų atsiliepimų.",
             "pt7": "Šį nustatymą galite pakeisti bet kada Programos Nustatymuose.",
-            "pt6": "Skaidrumo sumetimais, Jūs galite peržvelgti visus duomenis kuriuos renkame „Heroic“ programos žurnale."
+            "pt6": "Skaidrumo sumetimais, Jūs galite peržvelgti visus duomenis kuriuos renkame „GameLib“ programos žurnale."
         },
         "title": "Siūsti Anoniminę Analitiką"
     },

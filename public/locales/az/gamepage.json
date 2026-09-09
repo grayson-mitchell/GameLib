@@ -209,12 +209,12 @@
         "default": ""
     },
     "not_logged_in": {
-        "epic": "You are not logged in with an Epic account in Heroic. Don't use the store page to login, click the following button instead:",
-        "gog": "You are not logged in with a GOG account in Heroic. Don't use the store page to login, click the following button instead:",
+        "epic": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
+        "gog": "You are not logged in with a GOG account in GameLib. Don't use the store page to login, click the following button instead:",
         "login": "Log in",
         "title": "You are NOT logged in",
-        "amazon": "You are not logged in with an Epic account in Heroic. Don't use the store page to login, click the following button instead:",
-        "zoom": "You are not logged in with a GOG account in Heroic. Don't use the store page to login, click the following button instead:"
+        "amazon": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
+        "zoom": "You are not logged in with a GOG account in GameLib. Don't use the store page to login, click the following button instead:"
     },
     "report_problem": "Bu oyunu idarə edən problemi bildirin",
     "sdl": {
@@ -312,7 +312,7 @@
     "third-party-managed": {
         "notice1": "Bu oyun üçüncü tərəf proqram tərəfindən idarə olunur: {{application_name}}",
         "header": "Bu oyun üçüncü tərəf proqram tərəfindən idarə olunur",
-        "notice2": "Quraşdıra basdıqdan sonra, Heroic quraşdırma prosessini tamamlamaq üçün proqram çalışdıracaq"
+        "notice2": "Quraşdıra basdıqdan sonra, GameLib quraşdırma prosessini tamamlamaq üçün proqram çalışdıracaq"
     },
     "modifyInstall": {
         "redMod": {

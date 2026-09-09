@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Đã xoá bộ nhớ đệm của Heroic.",
+            "message": "Đã xoá bộ nhớ đệm của GameLib.",
             "title": "Đã xoá bộ nhớ đệm"
         },
         "choose": "Chọn",
@@ -94,7 +94,7 @@
                 "generic": "Một lỗi đã xảy ra! Hãy thử Đăng Xuất và Đăng Nhập vào tài khoản Epic của bạn. {{newline}}   {{error}}"
             },
             "executableNotFound": "Tệp thực thi không được tìm thấy",
-            "executableNotFoundMessage": "Heroic không thể tìm thấy tệp thực thi cho trò chơi này. Vui lòng thiết đặt nó một cách thủ công trong cài đặt của trò chơi.",
+            "executableNotFoundMessage": "GameLib không thể tìm thấy tệp thực thi cho trò chơi này. Vui lòng thiết đặt nó một cách thủ công trong cài đặt của trò chơi.",
             "dxmt": {
                 "message": "Lỗi tải DXMT! Kiểm tra kết nối của bạn!",
                 "title": "Lỗi tải xuống DXMT"
@@ -105,8 +105,8 @@
                 "changelog": "Mở changelog",
                 "detail": "Bạn có muốn tải xuống bản cập nhật ở chế độ nền không?",
                 "message": "Đã có Phiên Bản mới!",
-                "message-finished": "Bạn có muốn khởi động lại Heroic ngay bây giờ không?",
-                "title": "Heroic Games Launcher",
+                "message-finished": "Bạn có muốn khởi động lại GameLib ngay bây giờ không?",
+                "title": "GameLib Games Launcher",
                 "title-finished": "Cập nhật đã hoàn tất",
                 "detailNoAutoupdate": "Cập nhật tự động không được hỗ trợ cho định dạng đóng gói của bạn. Vui lòng sử dụng trình quản lý gói của bạn để cập nhật."
             }
@@ -124,8 +124,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Bạn có chắc chắn muốn thiết lập lại Heroic không? Thao tác này sẽ xóa tất cả Cài Đặt và Bộ Nhớ Đệm nhưng sẽ không xóa Trò chơi đã cài đặt hoặc thông tin xác thực Epic của bạn. Các phiên bản di động (AppImage, WinPortable, ...) của Heroic cần được khởi động lại theo cách thủ công sau đó.",
-                "title": "Đặt Lại Heroic"
+                "message": "Bạn có chắc chắn muốn thiết lập lại GameLib không? Thao tác này sẽ xóa tất cả Cài Đặt và Bộ Nhớ Đệm nhưng sẽ không xóa Trò chơi đã cài đặt hoặc thông tin xác thực Epic của bạn. Các phiên bản di động (AppImage, WinPortable, ...) của GameLib cần được khởi động lại theo cách thủ công sau đó.",
+                "title": "Đặt Lại GameLib"
             }
         },
         "runexe": {
@@ -175,13 +175,13 @@
                 }
             },
             "rosetta": {
-                "message": "Heroic yêu cầu Rosetta chạy chính xác trên macOS với chip Apple Silicon. Vui lòng cài đặt nó từ thiết bị đầu cuối macOS bằng lệnh sau: \"softwareupdate --install-rosetta\" và khởi động lại Heroic. ",
+                "message": "GameLib yêu cầu Rosetta chạy chính xác trên macOS với chip Apple Silicon. Vui lòng cài đặt nó từ thiết bị đầu cuối macOS bằng lệnh sau: \"softwareupdate --install-rosetta\" và khởi động lại GameLib. ",
                 "title": "Không tìm thấy Rosetta"
             },
             "snap": {
                 "checkbox": "Không hiển thị lại thông báo này",
-                "message": "Một số tính năng hiện không có trong phiên bản Snap của ứng dụng và chúng tôi đang cố gắng khắc phục.{{newLine}}Hạn chế hiện tại là: {{newLine}}Heroic sẽ không thể tìm thấy Proton từ Steam hoặc Wine từ Lutris.{{newLine}}{{newLine}}Gamescope, GameMode và MangoHud cũng sẽ không hoạt động vì Heroic không thể truy cập vào chúng.{{newLine}}{{newLine}}Để có quyền truy cập vào tính năng này, vui lòng cài đặt Heroic dưới dạng Heroic Flatpak, DEB hoặc từ AppImage.",
-                "title": "Heroic đang chạy như Snap"
+                "message": "Một số tính năng hiện không có trong phiên bản Snap của ứng dụng và chúng tôi đang cố gắng khắc phục.{{newLine}}Hạn chế hiện tại là: {{newLine}}GameLib sẽ không thể tìm thấy Proton từ Steam hoặc Wine từ Lutris.{{newLine}}{{newLine}}Gamescope, GameMode và MangoHud cũng sẽ không hoạt động vì GameLib không thể truy cập vào chúng.{{newLine}}{{newLine}}Để có quyền truy cập vào tính năng này, vui lòng cài đặt GameLib dưới dạng GameLib Flatpak, DEB hoặc từ AppImage.",
+                "title": "GameLib đang chạy như Snap"
             }
         },
         "wineprefix": "Chọn thư mục WinePrefix",
@@ -299,7 +299,7 @@
         "esync": "Esync nhằm mục đích giảm chi phí sử dụng wineserver trong các trò chơi sử dụng nhiều CPU. Việc kích hoạt có thể cải thiện hiệu suất.",
         "fsync": "Fsync nhằm mục đích giảm chi phí sử dụng máy chủ rượu trong các trò chơi sử dụng nhiều CPU. Việc kích hoạt có thể cải thiện hiệu suất trên các nhân Linux được hỗ trợ.",
         "game_language": {
-            "fallback": "Để trống để sử dụng ngôn ngữ của Heroic.",
+            "fallback": "Để trống để sử dụng ngôn ngữ của GameLib.",
             "in_game_config": "Không phải trò chơi nào cũng hỗ trợ cấu hình này, một số có cài đặt ngôn ngữ trong trò chơi.",
             "valid_codes": "Mã ngôn ngữ hợp lệ phụ thuộc vào trò chơi."
         },
@@ -315,18 +315,18 @@
         "preferSystemLibs": "Các phiên bản Wine tùy chỉnh (Wine-GE, Wine-Lutris) được cung cấp cùng với các phần phụ thuộc vào thư viện của chúng. Bằng cách bật tùy chọn này, các thư viện đã vận chuyển này sẽ bị bỏ qua và thay vào đó Wine sẽ tải các thư viện hệ thống. Cảnh báo! Các vấn đề có thể xảy ra nếu sự phụ thuộc không được đáp ứng.",
         "primerun": "Sử dụng card đồ họa chuyên dụng để render game trên hệ thống nhiều GPU. Chỉ cần trên máy tính xách tay chơi game hoặc máy tính để bàn sử dụng GPU không đầu để kết xuất (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "Đường dẫn này cho phép Heroic xác định phiên bản Proton Steam sử dụng để thêm các trò chơi không phải Steam vào Steam."
+            "info": "Đường dẫn này cho phép GameLib xác định phiên bản Proton Steam sử dụng để thêm các trò chơi không phải Steam vào Steam."
         },
         "steamruntime": "Thư viện tùy chỉnh do Steam cung cấp để giúp chạy các trò chơi Linux và Windows (Proton). Việc kích hoạt có thể cải thiện khả năng tương thích.",
         "sync": {
-            "part1": "Heroic cố gắng đoán đúng thư mục lưu và điều này sẽ có tác dụng trong phần lớn các trường hợp. Trong trường hợp thư mục sai, hãy sử dụng hộp ghi đè để thay đổi.",
-            "part2": "Trong trường hợp bạn thay đổi thư mục tiền tố cho Wine hoặc Proton, bạn sẽ cần kiểm tra lại đường dẫn vì Proton sử dụng tiền tố (/pfx) và tên người dùng (steamuser) khác. Vì vậy, bạn có thể đơn giản xóa đường dẫn hiện tại ra khỏi trang cài đặt đồng bộ hóa và quay lại để Heroic đoán thư mục một lần nữa với tiền tố phù hợp.",
+            "part1": "GameLib cố gắng đoán đúng thư mục lưu và điều này sẽ có tác dụng trong phần lớn các trường hợp. Trong trường hợp thư mục sai, hãy sử dụng hộp ghi đè để thay đổi.",
+            "part2": "Trong trường hợp bạn thay đổi thư mục tiền tố cho Wine hoặc Proton, bạn sẽ cần kiểm tra lại đường dẫn vì Proton sử dụng tiền tố (/pfx) và tên người dùng (steamuser) khác. Vì vậy, bạn có thể đơn giản xóa đường dẫn hiện tại ra khỏi trang cài đặt đồng bộ hóa và quay lại để GameLib đoán thư mục một lần nữa với tiền tố phù hợp.",
             "part3": "Đồng Bộ Hóa Thủ Công: Chọn Tải Xuống để tải xuống các trò chơi đã lưu được lưu trữ trên Đám Mây. Tải lên để tải những cái cục bộ lên đám mây. Buộc Tải Xuống và Buộc Tải Lên sẽ bỏ qua phiên bản cục bộ hoặc trên đám mây.",
             "part4": "Đồng Bộ Hóa Tự Động Lưu sẽ đồng bộ các bản sao lưu mỗi lần bạn bắt đầu và kết thúc chơi game."
         },
         "vkd3d": "VKD3D là lớp dịch dựa trên Vulkan dành cho trò chơi DirectX 12. Việc kích hoạt có thể cải thiện đáng kể khả năng tương thích. Không có tác dụng với các game DirectX cũ hơn, nó yêu cầu DXVK.",
         "wine": {
-            "part1": "Heroic tìm kiếm các phiên bản Wine, Proton và CrossOver trong các thư mục sau:",
+            "part1": "GameLib tìm kiếm các phiên bản Wine, Proton và CrossOver trong các thư mục sau:",
             "part2": "Đối với những nơi khác, hãy sử dụng liên kết tượng trưng đến một trong các thư mục này"
         },
         "disable_logs": "BẬT hộp kiểm này để vô hiệu hóa hầu hết việc ghi vào tệp nhật ký (thông tin quan trọng luôn được ghi lại). Đảm bảo TẮT cài đặt này trước khi báo cáo bất kỳ sự cố nào.",
@@ -341,7 +341,7 @@
         "msync": "Msync nhằm mục đích giảm chi phí sử dụng wineserver trong các trò chơi sử dụng nhiều CPU. Việc kích hoạt có thể cải thiện hiệu suất trên các nhân Linux được hỗ trợ.",
         "dxfpslimit": "Đặt giới hạn tốc độ khung hình cho Trò chơi DirectX (12-9)",
         "advertiseAvxForRosetta": "Bật hỗ trợ tập lệnh AVX khi chạy trò chơi Windows thông qua Rosetta trên máy Mac Apple Silicon. Điều này có thể được yêu cầu đối với một số trò chơi như Death Stranding cần hỗ trợ AVX.",
-        "analytics": "Cho phép Heroic thu thập dữ liệu sử dụng ẩn danh 100% để giúp cải thiện ứng dụng. Cần khởi động lại để có hiệu lực.",
+        "analytics": "Cho phép GameLib thu thập dữ liệu sử dụng ẩn danh 100% để giúp cải thiện ứng dụng. Cần khởi động lại để có hiệu lực.",
         "button": {
             "close": "Đóng Trợ Giúp",
             "open": "Mở Trợ Giúp"
@@ -353,12 +353,12 @@
             "downloadManager": "Hiển thị các lượt tải xuống hiện tại và trước đây.",
             "library": "Hiển thị tất cả các trò chơi thuộc sở hữu.",
             "login": "Đăng nhập vào các cửa hàng khác nhau.",
-            "settingsDefault": "Hiển thị tất cả các cài đặt của Heroic và mặc định cho trò chơi.",
+            "settingsDefault": "Hiển thị tất cả các cài đặt của GameLib và mặc định cho trò chơi.",
             "settingsGame": "Hiển thị tất cả các cài đặt cho một trò chơi.",
             "wineManager": "Cài đặt các phiên bản khác nhau của Wine, Proton, Crossover, v.v."
         },
         "disablePlaytimeSync": "Tắt đồng bộ hóa thời gian chơi với máy chủ của cửa hàng nhất định (hiện chỉ hỗ trợ GOG)",
-        "download_proton_steam": "Khi được bật, GE-Proton sẽ được tải trực tiếp vào thư mục công cụ tương thích Steam thay vì đường dẫn Heroic mặc định. Nó sẽ sử dụng đường dẫn Steam được đặt trong cài đặt 'Đường dẫn Steam mặc định' ở trên.",
+        "download_proton_steam": "Khi được bật, GE-Proton sẽ được tải trực tiếp vào thư mục công cụ tương thích Steam thay vì đường dẫn GameLib mặc định. Nó sẽ sử dụng đường dẫn Steam được đặt trong cài đặt 'Đường dẫn Steam mặc định' ở trên.",
         "dxvknvapi": "DXVK-NVAPI là một triển khai NVAPI được xây dựng dựa trên DXVK và NVAPI gốc linux, nó cho phép sử dụng DLSS trên GPU Nvidia.",
         "gamescope": {
             "additionalOptions": "Cờ dòng lệnh bổ sung để chuyển vào gamescope.",
@@ -553,7 +553,7 @@
     "other": {
         "gogdl-version": "Phiên Bản GOGDL: ",
         "legendary-version": "Phiên Bản Legendary ",
-        "weblate": "Giúp dịch Heroic.",
+        "weblate": "Giúp dịch GameLib.",
         "nile-version": "Phiên bản Nile: "
     },
     "Other": "Khác",
@@ -599,7 +599,7 @@
         "autosync": "Tự Động Lưu",
         "autovkd3d": "Tự Động Cài Đặt/Cập Nhật VKD3D trên Tiền Tố",
         "change-target-exe": "Chọn một EXE thay thế để chạy",
-        "checkForUpdatesOnStartup": "Kiểm tra Heroic Updates khi Khởi Động",
+        "checkForUpdatesOnStartup": "Kiểm tra GameLib Updates khi Khởi Động",
         "crossover-version": "Phiên Bản Crossover/Wine",
         "custom_themes_path": "Đường Dẫn Chủ Đề Tùy Chỉnh",
         "customWineProton": "Đường Dẫn Wine/Proton Tùy Chọn",
@@ -607,7 +607,7 @@
         "default-install-path": "Đường Dẫn Cài Đặt Mặc Định",
         "default-steam-path": "Đường dẫn Steam mặc định",
         "defaultWinePrefix": "Đặt Thư Mục cho Tiền Tố Wine mới",
-        "disable_controller": "Tắt điều hướng Heroic bằng bộ điều khiển",
+        "disable_controller": "Tắt điều hướng GameLib bằng bộ điều khiển",
         "discordRPC": "Bật Discord Rich Presence",
         "download-no-https": "Tải xuống trò chơi không có HTTPS (hữu ích cho CDN, ví dụ: LanCache)",
         "dxvkfpslimit": "Limit FPS (DX9, 10 and 11)",
@@ -668,7 +668,7 @@
                     "title": "Tải lên hoàn tất"
                 },
                 "error": {
-                    "content": "Không thể tải lên tệp nhật ký. Kiểm tra nhật ký tổng quan của Heroic để biết chi tiết",
+                    "content": "Không thể tải lên tệp nhật ký. Kiểm tra nhật ký tổng quan của GameLib để biết chi tiết",
                     "title": "Tải lên không thành công",
                     "manual_upload": ""
                 },
@@ -687,7 +687,7 @@
             "descriptiveNames": {
                 "game-log": "Nhật ký trò chơi của {{gameTitle}}",
                 "gog": "Nhật ký GOG",
-                "heroic": "Tổng Quan Nhật Ký Heroic",
+                "heroic": "Tổng Quan Nhật Ký GameLib",
                 "legendary": "Nhật ký",
                 "nile": "Nhật ký",
                 "zoom": "Nhật ký Zoom"
@@ -707,7 +707,7 @@
         },
         "maxRecentGames": "Đã Chơi Gần Đây để Hiển Thị",
         "maxworkers": "Số Lượng Công Nhân Tối Đa khi tải xuống",
-        "minimize-on-launch": "Thu Nhỏ Heroic Sau Khi Khởi Chạy Trò Chơi",
+        "minimize-on-launch": "Thu Nhỏ GameLib Sau Khi Khởi Chạy Trò Chơi",
         "offlinemode": "Chạy Trò Chơi Ngoại Tuyến",
         "prefered_language": "Ngôn Ngữ Ưa Thích (Mã Ngôn Ngữ)",
         "preferSystemLibs": "Ưu tiên thư viện hệ thống",
@@ -745,10 +745,10 @@
             },
             "label": "Cho phép cài đặt các trò chơi có chống gian lận bị hỏng hoặc bị từ chối"
         },
-        "analyticsOptIn": "Gửi dữ liệu ẩn danh để giúp phát triển Heroic",
+        "analyticsOptIn": "Gửi dữ liệu ẩn danh để giúp phát triển GameLib",
         "before-launch-script-path": "Chọn tập lệnh để chạy trước khi trò chơi được khởi chạy",
         "custom_css": {
-            "warning": "Cảnh báo: điều này áp dụng cho toàn bộ giao diện người dùng. Điều đó có nghĩa là kiểu dáng sai có thể khiến Heroic không thể sử dụng được. Nếu cần, bạn có thể thay đổi cài đặt theo cách thủ công trong `~/.config/heroic/config.json`. KHÔNG sao chép kiểu từ các nguồn mà bạn không tin tưởng."
+            "warning": "Cảnh báo: điều này áp dụng cho toàn bộ giao diện người dùng. Điều đó có nghĩa là kiểu dáng sai có thể khiến GameLib không thể sử dụng được. Nếu cần, bạn có thể thay đổi cài đặt theo cách thủ công trong `~/.config/heroic/config.json`. KHÔNG sao chép kiểu từ các nguồn mà bạn không tin tưởng."
         },
         "disablePlaytimeSync": "Vô hiệu hóa đồng bộ hóa thời gian chơi",
         "disableUMU": "Tắt umu",
@@ -772,14 +772,14 @@
             "enableLimiter": "Bật Giới Hạn FPS",
             "enableUpscaling": "Cho Phép Nâng Cấp Hình Ảnh",
             "missingMsg": "Chúng tôi không thể tìm thấy gamescope trên PATH. Cài đặt nó hoặc thêm nó vào PATH.",
-            "warningFlatpak": "Chúng tôi không thể tìm thấy phiên bản tương thích của Gamescope. Cài đặt gói Flatpak của Gamescope với thời gian chạy {{runtimeVersion}} và khởi động lại Heroic."
+            "warningFlatpak": "Chúng tôi không thể tìm thấy phiên bản tương thích của Gamescope. Cài đặt gói Flatpak của Gamescope với thời gian chạy {{runtimeVersion}} và khởi động lại GameLib."
         },
         "hdr": "Bật HDR",
         "no-tray-icon": "Ẩn Biểu Tượng Khay Hệ Thống (yêu cầu khởi động lại)",
         "show_valve_proton": {
             "confirmation": {
                 "dont_show": "Đừng hiện chúng",
-                "message": "Chúng tôi khuyên bạn nên sử dụng các nhánh Proton tùy chỉnh (GE-Proton, Proton-CachyOS, v.v.) với Heroic vì các bản dựng Proton của Valve thiếu winetricks và protofix. Bạn vẫn có thể sử dụng sau đó nếu muốn.",
+                "message": "Chúng tôi khuyên bạn nên sử dụng các nhánh Proton tùy chỉnh (GE-Proton, Proton-CachyOS, v.v.) với GameLib vì các bản dựng Proton của Valve thiếu winetricks và protofix. Bạn vẫn có thể sử dụng sau đó nếu muốn.",
                 "show": "Tôi hiểu, hãy hiện chúng",
                 "title": "Bạn có chắc không?"
             },
@@ -802,7 +802,7 @@
             "installing": "Đang cài đặt BattlEye Runtime...",
             "name": "BattlEye AntiCheat Runtime"
         },
-        "clear-cache": "Xóa Bộ Nhớ Đệm Của Heroic",
+        "clear-cache": "Xóa Bộ Nhớ Đệm Của GameLib",
         "copiedToClipboard": "Đã sao chép vào Bộ Nhớ Tạm!",
         "copyToClipboard": "Sao Chép Toàn Bộ Cài Đặt vào Bộ Nhớ Tạm",
         "default_hint": "Những thay đổi trong phần này chỉ áp dụng làm giá trị mặc định khi cài đặt trò chơi. Nếu bạn muốn thay đổi cài đặt của trò chơi đã cài đặt, hãy sử dụng nút Cài đặt trong trang trò chơi.",
@@ -836,7 +836,7 @@
             "legacy": ""
         },
         "open-config-file": "Mở Tệp Cấu Hình",
-        "reset-heroic": "Đặt Lại Heroic",
+        "reset-heroic": "Đặt Lại GameLib",
         "saves": {
             "label": "Save Location:",
             "warning": "Tính năng Cloud Saves đang ở giai đoạn Beta, vui lòng sao lưu các bản lưu của bạn trước khi đồng bộ hóa (phòng trường hợp có sự cố)",
@@ -848,7 +848,7 @@
                 "help8": "Trò chơi đã cài",
                 "help9": "Cài đặt trò chơi",
                 "help1": "Hành động này sẽ xóa các bộ đệm sau:",
-                "help10": "Cấu hình Heroic",
+                "help10": "Cấu hình GameLib",
                 "help2": "Thông tin trò chơi của bên thứ ba (điểm số, khả năng tương thích Steam, howlongtobeat, pcgamingwiki, applegamingwiki)",
                 "help3": "Thông tin thư viện Legendary (danh sách trò chơi, thông tin hộp thoại cài đặt, thông tin trò chơi)",
                 "help4": "Thông tin thư viện GOG (danh sách trò chơi, thông tin hộp thoại cài đặt, thông tin api -v.d: yêu cầu-)",
@@ -858,11 +858,11 @@
             },
             "details": "Chi Tiết",
             "title": {
-                "resetHeroic": "Đặt Lại Heroic",
+                "resetHeroic": "Đặt Lại GameLib",
                 "clearCache": "Xóa Bộ Nhớ Đệm"
             },
             "resetHeroic": {
-                "help": "Thao tác này sẽ xóa tất cả Cài Đặt và Bộ Nhớ Đệm nhưng sẽ không xóa Trò chơi đã cài đặt hoặc thông tin xác thực Epic của bạn. Các phiên bản di động (AppImage, WinPortable, ...) của Heroic cần được khởi động lại theo cách thủ công sau đó."
+                "help": "Thao tác này sẽ xóa tất cả Cài Đặt và Bộ Nhớ Đệm nhưng sẽ không xóa Trò chơi đã cài đặt hoặc thông tin xác thực Epic của bạn. Các phiên bản di động (AppImage, WinPortable, ...) của GameLib cần được khởi động lại theo cách thủ công sau đó."
             }
         },
         "systemInformation": {
@@ -874,7 +874,7 @@
             "gpu": "GPU:",
             "gpuDriver": "Driver: {{driverVersion}}",
             "gpuWithNumber": "GPU {{number}}:",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "legendaryVersion": "Legendary: {{legendaryVersion}}",
             "memory": "Bộ Nhớ:",
             "memoryStats": "Đã sử dụng {{percentUsed}}% ({{usedGib}} / {{totalGib}}",
@@ -1049,7 +1049,7 @@
             "welcome": {
                 "intro": "Chào mừng đến với Thư viện anh hùng! Đây là nơi bạn có thể xem tất cả các trò chơi của mình trên các cửa hàng khác nhau.",
                 "intro2": "Nếu thư viện trống, hãy đảm bảo đăng nhập bằng tài khoản của bạn bằng cách sử dụng Quản lý tài khoản trên thanh bên hoặc thêm trò chơi của riêng bạn bằng nút Thêm Trò Chơi ở trên.",
-                "title": "Chào mừng đến Heroic!",
+                "title": "Chào mừng đến GameLib!",
                 "title2": "Quản lý thư viện!"
             }
         },
@@ -1065,9 +1065,9 @@
             "quit": "Thoát khỏi ứng dụng một cách an toàn.",
             "settings": "Định cấu hình cài đặt của GameLib, mặc định của trò chơi, nhật ký kiểm tra và hơn thế nữa.",
             "stores": "Duyệt và mua trò chơi trong các cửa hàng khác nhau bao gồm Epic, GOG và Amazon.",
-            "version": "Kiểm tra phiên bản Heroic hiện tại của bạn, nhấp vào phiên bản đó để xem nhật ký thay đổi mới nhất và truy cập chuyến tham quan này từ biểu tượng trợ giúp.",
+            "version": "Kiểm tra phiên bản GameLib hiện tại của bạn, nhấp vào phiên bản đó để xem nhật ký thay đổi mới nhất và truy cập chuyến tham quan này từ biểu tượng trợ giúp.",
             "welcome": {
-                "intro": "Chào mừng đến với Heroic! Thanh bên này chứa tất cả các tùy chọn điều hướng để khám phá ứng dụng.",
+                "intro": "Chào mừng đến với GameLib! Thanh bên này chứa tất cả các tùy chọn điều hướng để khám phá ứng dụng.",
                 "title": "Điều Hướng Thanh Bên"
             },
             "wine": "Quản lý hoặc tải xuống phiên bản Wine/Proton/GPTK mới để chạy trò chơi Windows trên Linux hoặc macOS."
@@ -1079,18 +1079,18 @@
         "disable": "Tắt",
         "enable": "Bật",
         "info": {
-            "pt1": "Để cải thiện ứng dụng, Heroic thu thập 100% dữ liệu ẩn danh.",
-            "pt2": "Heroic sử dụng nền tảng Plausible Analytics mã nguồn mở để thu thập dữ liệu cơ bản: Phiên Bản Ứng Dụng, Hệ Điều Hành, Cửa Hàng Được Kết Nối và Quốc Gia.",
+            "pt1": "Để cải thiện ứng dụng, GameLib thu thập 100% dữ liệu ẩn danh.",
+            "pt2": "GameLib sử dụng nền tảng Plausible Analytics mã nguồn mở để thu thập dữ liệu cơ bản: Phiên Bản Ứng Dụng, Hệ Điều Hành, Cửa Hàng Được Kết Nối và Quốc Gia.",
             "pt3": "Nó sẽ không bao giờ thu thập bất kỳ thông tin cá nhân nào, bao gồm tên người dùng, địa chỉ IP hoặc email của bạn.",
             "pt4": "Dữ liệu này được sử dụng để cung cấp cho chúng tôi thông tin chi tiết về những gì cần tập trung vào tiếp theo do nguồn lực và phản hồi của người dùng có hạn.",
             "pt5": "Plausible Analytics hoàn toàn tuân thủ GDPR, CCPA và PECR.",
-            "pt6": "Để minh bạch, bạn có thể xem dữ liệu chúng tôi thu thập trên nhật ký Heroic.",
+            "pt6": "Để minh bạch, bạn có thể xem dữ liệu chúng tôi thu thập trên nhật ký GameLib.",
             "pt7": "Bạn có thể thay đổi cài đặt này bất kỳ lúc nào trong Cài Đặt Ứng Dụng."
         },
         "title": "Gửi Phân Tích Ẩn Danh"
     },
     "adtraction-locked": {
-        "description": "Có vẻ như miền track.adtraction.com không tải được hoặc đang bị chặn. Với Adtraction, mọi giao dịch mua hàng bạn thực hiện trên cửa hàng GOG sẽ hỗ trợ tài chính cho Heroic. Hãy cân nhắc gỡ chặn nếu bạn muốn đóng góp.",
+        "description": "Có vẻ như miền track.adtraction.com không tải được hoặc đang bị chặn. Với Adtraction, mọi giao dịch mua hàng bạn thực hiện trên cửa hàng GOG sẽ hỗ trợ tài chính cho GameLib. Hãy cân nhắc gỡ chặn nếu bạn muốn đóng góp.",
         "dont-show-again": "Đừng hiển thị cảnh báo này nữa",
         "title": "Adtraction bị chặn"
     },
@@ -1112,7 +1112,7 @@
         "noResults": "Các bộ lọc hiện tại không cho ra kết quả nào."
     },
     "wineExplanation": {
-        "proton-ge": "GE-Proton là một biến thể Proton được tạo ra bởi Glorious Eggroll. Nó được sử dụng cùng với trình khởi chạy umu (mặc định trong Heroic).",
+        "proton-ge": "GE-Proton là một biến thể Proton được tạo ra bởi Glorious Eggroll. Nó được sử dụng cùng với trình khởi chạy umu (mặc định trong GameLib).",
         "gpt": "",
         "wine-crossover": "",
         "wine-staging-macos": ""

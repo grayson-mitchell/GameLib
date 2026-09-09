@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Mezipaměť Heroic vymazána.",
+            "message": "Mezipaměť GameLib vymazána.",
             "title": "Mezipaměť vymazána"
         },
         "choose": "Vybrat",
@@ -99,7 +99,7 @@
                 "title": "Chyba Steamu"
             },
             "executableNotFound": "Spustitelný soubor nebyl nalezen",
-            "executableNotFoundMessage": "Heroic nemohl najít spustitelný soubor pro tuto hru. Nastavte jej prosím ručně v nastavení hry.",
+            "executableNotFoundMessage": "GameLib nemohl najít spustitelný soubor pro tuto hru. Nastavte jej prosím ručně v nastavení hry.",
             "dxmt": {
                 "message": "Chyba při stahování DXMT! Zkontrolujte připojení!",
                 "title": "Chyba při stahování DXMT"
@@ -110,8 +110,8 @@
                 "changelog": "Otevřít seznam změn",
                 "detail": "Chcete stáhnout aktualizaci na pozadí?",
                 "message": "K dispozici je nová verze!",
-                "message-finished": "Chcete restartovat Heroic nyní?",
-                "title": "Heroic Games Launcher",
+                "message-finished": "Chcete restartovat GameLib nyní?",
+                "title": "GameLib Games Launcher",
                 "title-finished": "Aktualizace dokončena",
                 "detailNoAutoupdate": "Automatické aktualizace nejsou pro váš formát balíčku podporovány. K aktualizaci použijte správce balíčků."
             }
@@ -129,8 +129,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Jste si jistí, že chcete resetovat Heroic? Tím se odstraní všechna nastavení a mezipaměť, ale neodstraní se nainstalované hry ani přihlašovací údaje Epic. Přenosné verze (AppImage, WinPortable, ...) je poté nutné restartovat ručně.",
-                "title": "Resetovat Heroic"
+                "message": "Jste si jistí, že chcete resetovat GameLib? Tím se odstraní všechna nastavení a mezipaměť, ale neodstraní se nainstalované hry ani přihlašovací údaje Epic. Přenosné verze (AppImage, WinPortable, ...) je poté nutné restartovat ručně.",
+                "title": "Resetovat GameLib"
             }
         },
         "runexe": {
@@ -181,12 +181,12 @@
             },
             "snap": {
                 "checkbox": "Tuto zprávu již nezobrazovat",
-                "title": "Heroic spuštěn jako Snap",
-                "message": "Některé funkce nejsou ve Snap verzi aplikace prozatím dostupné a snažíme se je opravit.{{newLine}}Aktuální omezení jsou: {{newLine}}Heroic nebude schopen najít Proton ze služby Steam nebo Wine z Lutrisu.{{newLine}}{{newLine}}Gamescope, GameMode a MangoHud také nebudou fungovat, protože k nim Heroic nemá přístup.{{newLine}}{{newLine}}Chcete-li mít přístup k těmto funkcím, nainstalujte si Heroic jako Flatpak, DEB nebo AppImage."
+                "title": "GameLib spuštěn jako Snap",
+                "message": "Některé funkce nejsou ve Snap verzi aplikace prozatím dostupné a snažíme se je opravit.{{newLine}}Aktuální omezení jsou: {{newLine}}GameLib nebude schopen najít Proton ze služby Steam nebo Wine z Lutrisu.{{newLine}}{{newLine}}Gamescope, GameMode a MangoHud také nebudou fungovat, protože k nim GameLib nemá přístup.{{newLine}}{{newLine}}Chcete-li mít přístup k těmto funkcím, nainstalujte si GameLib jako Flatpak, DEB nebo AppImage."
             },
             "rosetta": {
                 "title": "Rosetta nebyla nalezena",
-                "message": "Heroic vyžaduje Rosettu, aby správně fungoval na macOS s čipy Apple Silicon. Prosím, nainstalujte ji z terminálu macOS pomocí následujícího příkazu: \"softwareupdate --install-rosetta\" a restartujte Heroic. "
+                "message": "GameLib vyžaduje Rosettu, aby správně fungoval na macOS s čipy Apple Silicon. Prosím, nainstalujte ji z terminálu macOS pomocí následujícího příkazu: \"softwareupdate --install-rosetta\" a restartujte GameLib. "
             }
         },
         "wineprefix": "Vyberte složku WinePrefix",
@@ -313,7 +313,7 @@
         "esync": "Cílem Esync je snížit režii wineserveru ve hrách náročných na výkon procesoru. Povolení může zlepšit výkon.",
         "fsync": "Cílem Fsync je snížit režii wineserveru ve hrách náročných na výkon procesoru. Povolení může zlepšit výkon na podporovaných jádrech Linuxu.",
         "game_language": {
-            "fallback": "Ponechte prázdné pro použití jazyk Heroic.",
+            "fallback": "Ponechte prázdné pro použití jazyk GameLib.",
             "in_game_config": "Ne všechny hry tuto konfiguraci podporují, některé mají nastavení jazyka ve hře.",
             "valid_codes": "Platné kódy jazyků jsou závislé na hře."
         },
@@ -329,18 +329,18 @@
         "preferSystemLibs": "Vlastní verze Wine (Wine-GE, Wine-Lutris) jsou dodávány se závislostmi knihovnami. Povolením této možnosti budou tyto dodávané knihovny ignorovány a Wine místo nich načte systémové knihovny. Pozor! Při nedodržení závislostí může dojít k problémům.",
         "primerun": "K vykreslování hry na systémech s více grafickými procesory používejte dedikovanou grafickou kartu. Potřebné pouze u herních notebooků nebo stolních počítačů, které pro vykreslování používají headless GPU (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "Tato cesta umožní Heroic určit, jakou verzi Protonu používá služba Steam pro přidání her, které nejsou součástí služby Steam."
+            "info": "Tato cesta umožní GameLib určit, jakou verzi Protonu používá služba Steam pro přidání her, které nejsou součástí služby Steam."
         },
         "steamruntime": "Vlastní knihovny poskytované službou Steam, které pomáhají spouštět hry pro Linux a Windows (Proton). Jejich povolení může zlepšit kompatibilitu.",
         "sync": {
-            "part1": "Heroic se pokusí uhodnout správnou složku pro ukládání, což bude ve většině případů fungovat. V případě, že je složka špatně, změňte ji pomocí pole přepsání.",
-            "part2": "V případě, že změníte složku prefixu pro Wine nebo Proton, budete muset cestu znovu zkontrolovat, protože Proton používá jiný prefix (/pfx) a uživatelské jméno (steamuser). Můžete tedy jednoduše vymazat aktuální cestu, dostat se ze stránky nastavení synchronizace a vrátit se zpět, aby Heroic mohl uhodnout složku se správným prefixem.",
+            "part1": "GameLib se pokusí uhodnout správnou složku pro ukládání, což bude ve většině případů fungovat. V případě, že je složka špatně, změňte ji pomocí pole přepsání.",
+            "part2": "V případě, že změníte složku prefixu pro Wine nebo Proton, budete muset cestu znovu zkontrolovat, protože Proton používá jiný prefix (/pfx) a uživatelské jméno (steamuser). Můžete tedy jednoduše vymazat aktuální cestu, dostat se ze stránky nastavení synchronizace a vrátit se zpět, aby GameLib mohl uhodnout složku se správným prefixem.",
             "part3": "Ruční synchronizace: Vyberte Stáhnout pro stažení uložených souborů hry z cloudu. Nahrát pro nahrání místních souborů do cloudu. Vynutit stahování a Vynutit nahrávání bude ignorovat verzi, která je místní nebo v cloudu.",
             "part4": "Automatická synchronizace uložených souborů synchronizuje uložené soubory při každém spuštění hry a po dokončení hraní."
         },
         "vkd3d": "VKD3D je překladová vrstva založená na Vulkanu pro hry DirectX 12. Povolení může výrazně zlepšit kompatibilitu. Nemá žádný vliv na starší DirectX hry, vyžaduje DXVK.",
         "wine": {
-            "part1": "Heroic hledá verze Wine, Proton a CrossOver v následujících složkách:",
+            "part1": "GameLib hledá verze Wine, Proton a CrossOver v následujících složkách:",
             "part2": "Pro jiná místa použijte symbolický odkaz na jednu z těchto složek"
         },
         "disable_logs": "Zapnutím tohoto políčka zakážete většinu zápisů do souborů protokolu (kritické informace jsou vždy protokolovány). Před nahlášením jakéhokoli problému nezapomeňte toto nastavení vypnout.",
@@ -367,7 +367,7 @@
         },
         "content": {
             "defaultInstallPath": "Toto je výchozí cesta předem zvolená při instalaci her.",
-            "settingsDefault": "Zobrazí všechna nastavení Heroicu a výchozí nastavení pro hry.",
+            "settingsDefault": "Zobrazí všechna nastavení GameLibu a výchozí nastavení pro hry.",
             "settingsGame": "Zobrazit všechna nastavení hry.",
             "downloadManager": "Zobrazí aktuální a dokončená stahování.",
             "wineManager": "Instalace různých verzí služeb Wine, Proton, Crossover atd.",
@@ -381,18 +381,18 @@
             "close": "Zavřít nápovědu"
         },
         "msync": "Msync má za cíl snížit režii wineserveru ve hrách náročných na výkon procesoru. Povolení může na podporovaných jádrech Linuxu zlepšit výkon.",
-        "download_proton_steam": "Pokud je tato funkce povolena, bude GE-Proton stažen přímo do adresáře nástrojů kompatibility služby Steam namísto výchozí cesty k Heroic. Použije cestu ke službě Steam nastavenou ve výše uvedeném nastavení „Výchozí cesta ke službě Steam“.",
+        "download_proton_steam": "Pokud je tato funkce povolena, bude GE-Proton stažen přímo do adresáře nástrojů kompatibility služby Steam namísto výchozí cesty k GameLib. Použije cestu ke službě Steam nastavenou ve výše uvedeném nastavení „Výchozí cesta ke službě Steam“.",
         "dxfpslimit": "Nastaví omezení snímkové frekvence pro hry DirectX (9–12)",
         "advertiseAvxForRosetta": "Povoluje podporu instrukční sady AVX při spouštění her pro Windows prostřednictvím Rosetty na počítačích Apple Silicon Mac. To může být nutné u některých her, jako je Death Stranding, které podporu AVX vyžadují.",
         "wine-hdr": "HDR vylepšuje barvy tím, že poskytuje jasnější světla a hlubší kontrasty. Aby HDR fungovalo, musí jej podporovat jak displej, tak hra.",
         "wine-wayland": "Experimentální ovladač Wine-Wayland umožňuje spouštět hry nativně pod zobrazovacím protokolem Wayland. Jeho zapnutí může způsobit nefunkčnost některých her.",
-        "analytics": "Umožňuje Heroic shromažďovat 100% anonymní údaje o používání, které poskytují pomoc při vylepšování aplikace. Aby se změna projevila, je nutné restartovat zařízení.",
+        "analytics": "Umožňuje GameLib shromažďovat 100% anonymní údaje o používání, které poskytují pomoc při vylepšování aplikace. Aby se změna projevila, je nutné restartovat zařízení.",
         "WoW64": "Režim Wine WoW64 umožňuje spouštět 32bitové hry pro Windows na 64bitovém Wine. Jeho zapnutí může zlepšit výkon, ale také může způsobit nefunkčnost starších 32bitových her.",
         "nvidiaprime": {
             "details": "K vykreslování hry na systémech s více grafickými procesory používejte dedikovanou grafickou kartu. Potřebné pouze u herních notebooků nebo stolních počítačů, které pro vykreslování používají headless GPU (NVIDIA Optimus, AMD CrossFire)",
             "link": "Další podrobnosti najdete na naší wiki"
         },
-        "hide-window-on-protocol-launch": "Ponechává okno Heroicu schované když je hra spuštěna z externí zkratky, jako třeba přes \"Přidat na Steam\"."
+        "hide-window-on-protocol-launch": "Ponechává okno GameLibu schované když je hra spuštěna z externí zkratky, jako třeba přes \"Přidat na Steam\"."
     },
     "info": {
         "heroic": {
@@ -569,7 +569,7 @@
     "other": {
         "gogdl-version": "Verze GOGDL: ",
         "legendary-version": "Verze Legenary: ",
-        "weblate": "Pomozte s překladem Heroic.",
+        "weblate": "Pomozte s překladem GameLib.",
         "nile-version": "Verze Nile: "
     },
     "Other": "Other",
@@ -615,7 +615,7 @@
         "autosync": "Automaticky synchronizovat uložené soubory",
         "autovkd3d": "Automaticky Installovat/aktualizovat VKD3D na Prefixu",
         "change-target-exe": "Vyberte alternativní EXE ke spuštění",
-        "checkForUpdatesOnStartup": "Kontrolovat aktualizace Heroic při spuštění",
+        "checkForUpdatesOnStartup": "Kontrolovat aktualizace GameLib při spuštění",
         "crossover-version": "Verze Crossover/Wine",
         "custom_themes_path": "Vlastní cesta k motivům",
         "customWineProton": "Vlastní cesty pro Wine/Proton",
@@ -623,7 +623,7 @@
         "default-install-path": "Výchozí cesta pro instalaci",
         "default-steam-path": "Výchozí cesta služby Steam",
         "defaultWinePrefix": "Nastavit složku pro nové Prefixy Wine",
-        "disable_controller": "Zakázat navigaci v Heroic pomocí ovladače",
+        "disable_controller": "Zakázat navigaci v GameLib pomocí ovladače",
         "discordRPC": "Povolit Discord Rich Presence",
         "download-no-https": "Stahovat hry bez HTTPS (užitečné pro CDN, např. LanCache)",
         "dxvkfpslimit": "Omezit FPS (DX9, 10 a 11)",
@@ -681,7 +681,7 @@
                 "delete": "Požádat o smazání souboru protokolu",
                 "error": {
                     "title": "Nahrání selhalo",
-                    "content": "Nepodařilo se nahrát soubor protokolu. Více podrobností viz obecný protokol Heroic",
+                    "content": "Nepodařilo se nahrát soubor protokolu. Více podrobností viz obecný protokol GameLib",
                     "manual_upload": "Klikněte na tlačítko „ZOBRAZIT SOUBOR PROTOKOLU VE SLOŽCE“ a ručně nahrajte soubor „launch.log“ na Discord nebo jakoukoli online službu pro sdílení souborů."
                 },
                 "header": "Nahrány soubory protokolů",
@@ -703,7 +703,7 @@
             },
             "descriptiveNames": {
                 "gog": "Protokol GOG",
-                "heroic": "Obecný protokol Heroic",
+                "heroic": "Obecný protokol GameLib",
                 "game-log": "Protokol hry {{gameTitle}}",
                 "legendary": "Protokol Epic Games / Legendary",
                 "nile": "Protokol Amazon / Nile",
@@ -723,7 +723,7 @@
         },
         "maxRecentGames": "Max. nedávno hraných her k zobrazení",
         "maxworkers": "Maximální počet vláken při stahování",
-        "minimize-on-launch": "Minimalizovat Heroic po spuštění hry",
+        "minimize-on-launch": "Minimalizovat GameLib po spuštění hry",
         "offlinemode": "Spustit hru offline",
         "prefered_language": "Preferovaný jazyk (kód jazyka)",
         "preferSystemLibs": "Preferovat systémové knihovny",
@@ -766,7 +766,7 @@
             "missingMsg": "Na PATHu jsme gamescope nenašli. Nainstalujte jej nebo jej přidejte do PATH.",
             "enableForceGrabCursor": "Povolit vynucení uchopení kurzoru",
             "missingMsgFlatpak": "Nenašli jsme kompatibilní verzi Gamescope. Nainstalujte balíček flatpak Gamescope s runtime 25.08 a restartujte Heroic.",
-            "warningFlatpak": "Nenašli jsme kompatibilní verzi Gamescope. Nainstalujte balíček flatpak Gamescope s runtime {{runtimeVersion}} a restartujte Heroic."
+            "warningFlatpak": "Nenašli jsme kompatibilní verzi Gamescope. Nainstalujte balíček flatpak Gamescope s runtime {{runtimeVersion}} a restartujte GameLib."
         },
         "frameless-window": {
             "confirmation": {
@@ -788,7 +788,7 @@
         },
         "disableUMU": "Zakázat umu",
         "custom_css": {
-            "warning": "Upozornění: toto se vztahuje na celý frontend. To znamená, že nesprávný styl může způsobit, že Heroic nebude použitelný. V případě potřeby lze nastavení změnit ručně v souboru `~/.config/heroic/config.json`. NEKOPÍRUJTE styly ze zdrojů, kterým nedůvěřujete."
+            "warning": "Upozornění: toto se vztahuje na celý frontend. To znamená, že nesprávný styl může způsobit, že GameLib nebude použitelný. V případě potřeby lze nastavení změnit ručně v souboru `~/.config/heroic/config.json`. NEKOPÍRUJTE styly ze zdrojů, kterým nedůvěřujete."
         },
         "verboseLogs": {
             "description": "Povolit zobrazení protokolů"
@@ -815,13 +815,13 @@
                 "dont_show": "Neukazovat",
                 "show": "Rozumím, ukázat",
                 "title": "Opravdu?",
-                "message": "Doporučujeme používat vlastní verze Proton (GE-Proton, Proton-CachyOS atd.) s Heroic, protože verze Proton od Valve neobsahují winetricks a protofixes. Pokud chcete, můžete je i tak použít."
+                "message": "Doporučujeme používat vlastní verze Proton (GE-Proton, Proton-CachyOS atd.) s GameLib, protože verze Proton od Valve neobsahují winetricks a protofixes. Pokud chcete, můžete je i tak použít."
             },
             "label": "Povolit spouštění her pomocí buildů Valve Proton",
             "wine_selector_warning": "Verze Protonu od Valve jsou ve výchozím nastavení ignorovány, povolte je v pokročilých globálních nastaveních",
             "info_label": "Verze Valve Proton ignorovány"
         },
-        "analyticsOptIn": "Odesílejte anonymní data k pomoci vývoji Heroic",
+        "analyticsOptIn": "Odesílejte anonymní data k pomoci vývoji GameLib",
         "WoW64": "Povolit WoW64 (experimentální)",
         "scripts": "Skripty:",
         "enable-quick-sync-menu": "Povolit nabídku Rychlé uložení a synchronizace na stránce hry",
@@ -830,14 +830,14 @@
         "nvidiaprime": {
             "description": "Vynutit použití diskrétní grafické karty s technologií NVIDIA Optimus nebo AMD Dynamic Switchable Graphics. Tuto možnost používejte POUZE pro hry využívající OpenGL a Vulkan."
         },
-        "hide-window-on-protocol-launch": "Schovat Heroic okno při spuštění hry z heroic:// odkaz"
+        "hide-window-on-protocol-launch": "Schovat GameLib okno při spuštění hry z heroic:// odkaz"
     },
     "settings": {
         "battlEyeRuntime": {
             "installing": "Instaluji BattleEye Runtime...",
             "name": "BattlEye AntiCheat Runtime"
         },
-        "clear-cache": "Vymazat mezipaměť Heroic",
+        "clear-cache": "Vymazat mezipaměť GameLib",
         "copiedToClipboard": "Zkopírováno do schránky!",
         "copyToClipboard": "Kopírovat všechna nastavení do schránky",
         "default_hint": "Změny v této části platí pouze jako výchozí hodnoty při instalaci her. Pokud chcete změnit nastavení již nainstalované hry, použijte tlačítko Nastavení na stránce hry.",
@@ -871,7 +871,7 @@
             "legacy": "Zastaralé"
         },
         "open-config-file": "Otevřít soubor konfigurace",
-        "reset-heroic": "Resetovat Heroic",
+        "reset-heroic": "Resetovat GameLib",
         "saves": {
             "label": "Umístění pro ukládání:",
             "warning": "Funkce Cloud Saves je v Beta verzi, před synchronizací si prosím uložená data zálohujte (pro případ, že by se něco pokazilo)",
@@ -900,7 +900,7 @@
             "showDetailed": "Zobrazit podrobné informace o systému",
             "memory": "Paměť:",
             "copyToClipboard": "Zkopírovat do schránky",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "nileVersion": "Nile: {{nileVersion}}",
             "cometVersion": "Comet: {{cometVersion}}"
         },
@@ -913,7 +913,7 @@
         "advanced": {
             "details": "Podrobnosti",
             "title": {
-                "resetHeroic": "Resetovat Heroic",
+                "resetHeroic": "Resetovat GameLib",
                 "clearCache": "Vymazat mezipaměť"
             },
             "clearCache": {
@@ -923,7 +923,7 @@
                 "help4": "Informace o knihovně GOG (seznam her, informace v instalačním dialogu, informace o api -např.: požadavky-)",
                 "help5": "Informace o knihovně Amazon (seznam her, informace v instalačním dialogu)",
                 "help9": "Nastavení her",
-                "help10": "Nastavení programu Heroic",
+                "help10": "Nastavení programu GameLib",
                 "help3": "Informace o knihovně Legendary (seznam her, informace v instalačním dialogu, informace o hrách)",
                 "help6": "Tato akce NEodstraní:",
                 "help7": "Přihlášení do obchodu"
@@ -1078,7 +1078,7 @@
     },
     "adtraction-locked": {
         "title": "Služba adtraction je blokována",
-        "description": "Vypadá to, že doména track.adtraction.com je blokovaná. Se službou adtraction finančně podpoříte Heroic každým nákupem provedeným v obchodě GOG. Zvažte prosím odstranění blokování, pokud si přejete přispět projektu.",
+        "description": "Vypadá to, že doména track.adtraction.com je blokovaná. Se službou adtraction finančně podpoříte GameLib každým nákupem provedeným v obchodě GOG. Zvažte prosím odstranění blokování, pokud si přejete přispět projektu.",
         "dont-show-again": "Toto varování již nezobrazovat"
     },
     "categories-manager": {
@@ -1104,9 +1104,9 @@
             "sortInstalled": "Seřaďte hry podle stavu instalace.",
             "viewToggle": "Přepněte mezi zobrazením vašich her v mřížce a v seznamu.",
             "welcome": {
-                "title": "Vítejte v aplikaci Heroic!",
+                "title": "Vítejte v aplikaci GameLib!",
                 "title2": "Správa knihovny!",
-                "intro": "Vítejte v knihovně Heroic! Zde najdete všechny své hry napříč různými obchody.",
+                "intro": "Vítejte v knihovně GameLib! Zde najdete všechny své hry napříč různými obchody.",
                 "intro2": "Pokud je knihovna prázdná, nezapomeňte se přihlásit pomocí svých účtů v okně Správa účtů na bočním panelu nebo přidejte vlastní hry pomocí tlačítka Přidat hru výše."
             },
             "categories": "Organizujte své hry do kategorií a udržte tak svou knihovnu přehlednou.",
@@ -1124,10 +1124,10 @@
             "login": "Přihlaste se do svých účtů v herních obchodech a procházejte svou knihovnu.",
             "quit": "Bezpečně opusťte aplikaci.",
             "stores": "Procházejte a nakupujte hry v různých obchodech, včetně obchodů Epic, GOG a Amazon.",
-            "version": "Zkontrolujte svou aktuální verzi aplikace Heroic, klikněte pro zobrazení seznamu změn a znovu spusťte tuto prohlídku pomocí ikony nápovědy.",
+            "version": "Zkontrolujte svou aktuální verzi aplikace GameLib, klikněte pro zobrazení seznamu změn a znovu spusťte tuto prohlídku pomocí ikony nápovědy.",
             "welcome": {
                 "title": "Postranní navigace",
-                "intro": "Vítejte v aplikaci Heroic! Tato postranní lišta obsahuje všechny navigační možnosti pro procházení aplikace."
+                "intro": "Vítejte v aplikaci GameLib! Tato postranní lišta obsahuje všechny navigační možnosti pro procházení aplikace."
             },
             "wine": "Spravujte nebo stáhněte novou verzi Wine/Proton/GPTK pro spuštění Windows her na Linuxu nebo macOS.",
             "settings": "Nastavte si nastavení aplikace GameLib, výchozí hodnoty her, zkontrolujte protokoly a další.",
@@ -1150,12 +1150,12 @@
         "disable": "Zakázat",
         "enable": "Povolit",
         "info": {
-            "pt1": "Za účelem vylepšení aplikace Heroic shromažďuje 100% anonymní data.",
-            "pt2": "Heroic využívá open-source platformu Plausible Analytics, kterou si tým Heroic sám hostuje, k shromažďování základních údajů: verze aplikace, operační systém, architektura systému, distribuce Linuxu, připojené obchody a země.",
+            "pt1": "Za účelem vylepšení aplikace GameLib shromažďuje 100% anonymní data.",
+            "pt2": "GameLib využívá open-source platformu Plausible Analytics, kterou si tým GameLib sám hostuje, k shromažďování základních údajů: verze aplikace, operační systém, architektura systému, distribuce Linuxu, připojené obchody a země.",
             "pt3": "Nikdy nebude shromažďovat žádné osobní údaje, včetně vašeho uživatelského jména, IP adresy nebo e-mailu.",
             "pt4": "Tyto údaje nám pomáhají určit, na co se máme vzhledem k omezeným zdrojům a zpětné vazbě od uživatelů dále zaměřit.",
             "pt5": "Plausible Analytics je plně v souladu s GDPR, CCPA a PECR.",
-            "pt6": "Z důvodu transparentnosti si můžete prohlédnout data, která shromažďujeme, v protokolech Heroic.",
+            "pt6": "Z důvodu transparentnosti si můžete prohlédnout data, která shromažďujeme, v protokolech GameLib.",
             "pt7": "Toto nastavení můžete kdykoli změnit v nastavení aplikace."
         },
         "title": "Odeslat anonymní statistiky"

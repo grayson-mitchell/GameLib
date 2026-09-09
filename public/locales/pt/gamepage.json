@@ -181,7 +181,7 @@
             "install_anyway": "Sim (eu entendo que as funcionalidades de multi-jogador não vão funcionar)",
             "multiplayer_message": "O suporte anti-batota está danificado ou recusado. O jogo poderá abrir mas as funcionalidades de multi-jogador não vão funcionar. Pretende fazer a instalação à mesma?",
             "ok": "Ok",
-            "disabled_installation": "Este jogo usa um sistema de anti-batota que não é compatível com o seu sistema operativo ou não está ativado para o suportar, pelos criadores do jogo. Isso significa que as funcionalidades de multi-jogador não vão funcionar e não há nada que você (ou a equipa do Heroic) possa fazer em relação a isto. <br /><br />Mesmo assim, se quiser instalar o jogo e verificar se funciona, vá a 'Definições', depois 'Avançado' e selecione a opção para permitir a instalação de jogos com anti-batota danificada ou recusada. <br /><br />Lembre-se que não existe solução para isto, pode correr o risco de ser banido no jogo."
+            "disabled_installation": "Este jogo usa um sistema de anti-batota que não é compatível com o seu sistema operativo ou não está ativado para o suportar, pelos criadores do jogo. Isso significa que as funcionalidades de multi-jogador não vão funcionar e não há nada que você (ou a equipa do GameLib) possa fazer em relação a isto. <br /><br />Mesmo assim, se quiser instalar o jogo e verificar se funciona, vá a 'Definições', depois 'Avançado' e selecione a opção para permitir a instalação de jogos com anti-batota danificada ou recusada. <br /><br />Lembre-se que não existe solução para isto, pode correr o risco de ser banido no jogo."
         },
         "flatpak-path-not-writtable": "Erro: O acesso ao contentor não foi fornecido a este caminho, irá ocorrer a perda de dados."
     },
@@ -234,12 +234,12 @@
         "default": "Padrão"
     },
     "not_logged_in": {
-        "epic": "Não tem a sessão iniciada com uma conta da Epic no Heroic. Não use a página da loja para iniciar a sessão, em vez disso clique no botão seguinte:",
-        "gog": "Não tem a sessão iniciada com uma conta da GOG no Heroic. Não use a página da loja para iniciar a sessão, em vez disso clique no botão seguinte:",
+        "epic": "Não tem a sessão iniciada com uma conta da Epic no GameLib. Não use a página da loja para iniciar a sessão, em vez disso clique no botão seguinte:",
+        "gog": "Não tem a sessão iniciada com uma conta da GOG no GameLib. Não use a página da loja para iniciar a sessão, em vez disso clique no botão seguinte:",
         "login": "Iniciar sessão",
         "title": "NÃO tem a sessão iniciada",
-        "amazon": "Não tem a sessão iniciada com uma conta da Amazon no Heroic. Não use a página da loja para iniciar a sessão, em vez disso clique no botão seguinte:",
-        "zoom": "Não tem a sessão iniciada numa conta Zoom no Heroic. Não utilize a página da loja para iniciar a sessão, em vez disso clique no botão seguinte:"
+        "amazon": "Não tem a sessão iniciada com uma conta da Amazon no GameLib. Não use a página da loja para iniciar a sessão, em vez disso clique no botão seguinte:",
+        "zoom": "Não tem a sessão iniciada numa conta Zoom no GameLib. Não utilize a página da loja para iniciar a sessão, em vez disso clique no botão seguinte:"
     },
     "report_problem": "Reportar algum problema que ocorra ao executar este jogo",
     "sdl": {
@@ -350,7 +350,7 @@
     },
     "third-party-managed": {
         "header": "Este jogo é gerido por uma aplicação de terceiros",
-        "notice2": "Após clicar em Instalar, o Heroic executará a aplicação para concluir o processo de instalação",
+        "notice2": "Após clicar em Instalar, o GameLib executará a aplicação para concluir o processo de instalação",
         "notice1": "Este jogo é gerido por uma aplicação de terceiros: \"{{application_name}}\""
     },
     "Open": "Abrir",

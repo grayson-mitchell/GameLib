@@ -175,7 +175,7 @@
         "wineversion": "Phiên bản Wine",
         "anticheat-warning": {
             "cancel": "Không",
-            "disabled_installation": "Trò chơi này sử dụng chống gian lận không tương thích với hệ điều hành của bạn hoặc nhà phát triển trò chơi không kích hoạt hỗ trợ. Điều này có nghĩa là các tính năng nhiều người chơi sẽ không hoạt động và bạn (hoặc nhóm Heroic) không thể làm gì với điều đó.<br /><br />Để cài đặt trò chơi này và dùng thử, hãy đi tới Cài đặt, Nâng cao và chọn tùy chọn cho phép cài đặt các trò chơi có tính năng chống gian lận bị hỏng hoặc bị từ chối.<br /><br />Lưu ý rằng không có giải pháp nào cho vấn đề này và bạn sẽ có nguy cơ bị cấm trong trò chơi.",
+            "disabled_installation": "Trò chơi này sử dụng chống gian lận không tương thích với hệ điều hành của bạn hoặc nhà phát triển trò chơi không kích hoạt hỗ trợ. Điều này có nghĩa là các tính năng nhiều người chơi sẽ không hoạt động và bạn (hoặc nhóm GameLib) không thể làm gì với điều đó.<br /><br />Để cài đặt trò chơi này và dùng thử, hãy đi tới Cài đặt, Nâng cao và chọn tùy chọn cho phép cài đặt các trò chơi có tính năng chống gian lận bị hỏng hoặc bị từ chối.<br /><br />Lưu ý rằng không có giải pháp nào cho vấn đề này và bạn sẽ có nguy cơ bị cấm trong trò chơi.",
             "install_anyway": "Có (Tôi hiểu rằng tính năng nhiều người chơi sẽ không hoạt động)",
             "multiplayer_message": "Hỗ trợ chống gian lận bị hỏng hoặc bị từ chối. Trò chơi có thể mở nhưng tính năng nhiều người chơi sẽ không hoạt động. Bạn có muốn cài đặt nó không?",
             "ok": "Ok",
@@ -212,12 +212,12 @@
         "default": "Mặc định"
     },
     "not_logged_in": {
-        "epic": "Bạn chưa đăng nhập bằng tài khoản Epic trong Heroic. Không sử dụng trang cửa hàng để đăng nhập, thay vào đó hãy nhấp vào nút sau:",
-        "gog": "Bạn chưa đăng nhập bằng tài khoản GOG trong Heroic. Không sử dụng trang cửa hàng để đăng nhập, thay vào đó hãy nhấp vào nút sau:",
+        "epic": "Bạn chưa đăng nhập bằng tài khoản Epic trong GameLib. Không sử dụng trang cửa hàng để đăng nhập, thay vào đó hãy nhấp vào nút sau:",
+        "gog": "Bạn chưa đăng nhập bằng tài khoản GOG trong GameLib. Không sử dụng trang cửa hàng để đăng nhập, thay vào đó hãy nhấp vào nút sau:",
         "login": "Log in",
         "title": "Bạn CHƯA đăng nhập",
-        "amazon": "You are not logged in with an Epic account in Heroic. Don't use the store page to login, click the following button instead:",
-        "zoom": "Bạn chưa đăng nhập bằng tài khoản Zoom trong Heroic. Không sử dụng trang cửa hàng để đăng nhập, thay vào đó hãy nhấp vào nút sau:"
+        "amazon": "You are not logged in with an Epic account in GameLib. Don't use the store page to login, click the following button instead:",
+        "zoom": "Bạn chưa đăng nhập bằng tài khoản Zoom trong GameLib. Không sử dụng trang cửa hàng để đăng nhập, thay vào đó hãy nhấp vào nút sau:"
     },
     "report_problem": "Báo cáo sự cố khi chạy game này",
     "sdl": {
@@ -333,7 +333,7 @@
     "third-party-managed": {
         "header": "Trò chơi này được quản lý bởi ứng dụng của bên thứ ba",
         "notice1": "Trò chơi này được quản lý bởi ứng dụng của bên thứ ba: \"{{application_name}}\"",
-        "notice2": "Sau khi nhấn Cài Đặt, Heroic sẽ chạy ứng dụng để hoàn tất quá trình cài đặt"
+        "notice2": "Sau khi nhấn Cài Đặt, GameLib sẽ chạy ứng dụng để hoàn tất quá trình cài đặt"
     },
     "wikiLink": "Thông tin quan trọng về trò chơi này, hãy đọc phần này: <1>Mở trang</1>",
     "open-saves-folder": "Mở thư mục lưu",

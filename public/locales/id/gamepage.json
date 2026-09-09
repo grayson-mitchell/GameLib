@@ -179,7 +179,7 @@
             "title": "Anticheat Rusak/Ditolak",
             "ok": "Ok",
             "install_anyway": "Ya (Saya mengerti bahwa fitur multipemain tidak akan bekerja)",
-            "disabled_installation": "Game ini menggunakan perangkat lunak anticheat yang tidak kompatibel dengan sistem operasi Anda atau dukungan untuk perangkat lunak tersebut tidak diaktifkan oleh pengembang game. Hal ini berarti fitur multiplayer tidak akan berfungsi, dan tidak ada yang dapat Anda (atau tim Heroic) lakukan untuk mengatasinya. <br /><br />Untuk menginstal game ini dan mencobanya meskipun demikian, pergi ke Pengaturan, Lanjutan, dan centang opsi untuk mengizinkan instalasi game dengan anticheat yang rusak atau ditolak.<br /><br />Perlu diingat bahwa tidak ada solusi untuk ini dan Anda berisiko diblokir dalam game.",
+            "disabled_installation": "Game ini menggunakan perangkat lunak anticheat yang tidak kompatibel dengan sistem operasi Anda atau dukungan untuk perangkat lunak tersebut tidak diaktifkan oleh pengembang game. Hal ini berarti fitur multiplayer tidak akan berfungsi, dan tidak ada yang dapat Anda (atau tim GameLib) lakukan untuk mengatasinya. <br /><br />Untuk menginstal game ini dan mencobanya meskipun demikian, pergi ke Pengaturan, Lanjutan, dan centang opsi untuk mengizinkan instalasi game dengan anticheat yang rusak atau ditolak.<br /><br />Perlu diingat bahwa tidak ada solusi untuk ini dan Anda berisiko diblokir dalam game.",
             "multiplayer_message": "Dukungan anticheat rusak atau ditolak. Gim mungkin bisa dibuka namun fitur multipemain tidak akan bekerja. Apakah Anda ingin menginstalnya?"
         },
         "flatpak-path-not-writtable": "Kesalahan: Akses sandbox tidak diberikan ke lokasi ini, kehilangan data mungkin bisa terjadi."
@@ -212,12 +212,12 @@
         "default": "Bawaan"
     },
     "not_logged_in": {
-        "epic": "Anda tidak masuk dengan akun Epic di Heroic. Jangan gunakan halaman toko untuk masuk, klik tombol berikut sebagai gantinya:",
-        "gog": "Anda tidak masuk dengan akun GOG di Heroic. Jangan gunakan halaman toko untuk masuk, klik tombol berikut sebagai gantinya:",
+        "epic": "Anda tidak masuk dengan akun Epic di GameLib. Jangan gunakan halaman toko untuk masuk, klik tombol berikut sebagai gantinya:",
+        "gog": "Anda tidak masuk dengan akun GOG di GameLib. Jangan gunakan halaman toko untuk masuk, klik tombol berikut sebagai gantinya:",
         "login": "Masuk",
         "title": "Anda TIDAK masuk",
-        "amazon": "Anda tidak masuk dengan akun Epic di Heroic. Jangan gunakan halaman toko untuk masuk, klik tombol berikut sebagai gantinya:",
-        "zoom": "Anda tidak masuk dengan akun GOG di Heroic. Jangan gunakan halaman toko untuk masuk, klik tombol berikut sebagai gantinya:"
+        "amazon": "Anda tidak masuk dengan akun Epic di GameLib. Jangan gunakan halaman toko untuk masuk, klik tombol berikut sebagai gantinya:",
+        "zoom": "Anda tidak masuk dengan akun GOG di GameLib. Jangan gunakan halaman toko untuk masuk, klik tombol berikut sebagai gantinya:"
     },
     "report_problem": "Laporkan masalah yang terjadi saat memainkan gim ini",
     "sdl": {
@@ -274,7 +274,7 @@
         "processing": "Memproses berkas, harap tunggu",
         "queued": "Dalam Antrian",
         "reparing": "Memperbaiki Gim, harap tunggu",
-        "this-game-uses-third-party": "Gim ini menggunakan peluncur pihak ketiga dan belum didukung oleh Heroic",
+        "this-game-uses-third-party": "Gim ini menggunakan peluncur pihak ketiga dan belum didukung oleh GameLib",
         "totalDownloaded": "Jumlah yang Diunduh",
         "uninstalling": "Mencopot",
         "updating": "Memperbarui Gim",
@@ -329,7 +329,7 @@
     "third-party-managed": {
         "notice1": "Gim ini dikelola oleh aplikasi pihak ketiga: \"{{application_name}}\"",
         "header": "Gim ini dikelola oleh aplikasi pihak ketiga",
-        "notice2": "Setelah mengklik Pasang, Heroic akan menjalankan aplikasi untuk menyelesaikan proses pemasangan"
+        "notice2": "Setelah mengklik Pasang, GameLib akan menjalankan aplikasi untuk menyelesaikan proses pemasangan"
     },
     "Open": "Buka",
     "queue": {

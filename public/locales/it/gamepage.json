@@ -180,7 +180,7 @@
             "title": "Anticheat Rotto/Negato",
             "ok": "Ok",
             "install_anyway": "Sì (comprendo che le funzionalità multiplayer non funzioneranno)",
-            "disabled_installation": "Questo gioco utilizza un anticheat che non è compatibile con il tuo sistema operativo o il supporto non è stato abilitato dagli sviluppatori. Questo significa che le funzionalità multigiocatore non saranno disponibili e non c'è nulla che tu (o il team di Heroic) possa fare.<br /><br />Per installare questo gioco e provarlo comunque, vai nelle Impostazioni, Avanzate, e abilita l'opzione per consentire l'installazione di giochi con anticheat non funzionanti o rifiutati.<br /><br />Considera che non c'è alcuna soluzione e che rischi di essere bannato in gioco.",
+            "disabled_installation": "Questo gioco utilizza un anticheat che non è compatibile con il tuo sistema operativo o il supporto non è stato abilitato dagli sviluppatori. Questo significa che le funzionalità multigiocatore non saranno disponibili e non c'è nulla che tu (o il team di GameLib) possa fare.<br /><br />Per installare questo gioco e provarlo comunque, vai nelle Impostazioni, Avanzate, e abilita l'opzione per consentire l'installazione di giochi con anticheat non funzionanti o rifiutati.<br /><br />Considera che non c'è alcuna soluzione e che rischi di essere bannato in gioco.",
             "multiplayer_message": "Il supporto dell'anticheat è bloccato o non funzionante. Il gioco potrebbe aprirsi ma le funzionalità multiplayer non funzioneranno. Vuoi installarlo comunque?"
         },
         "flatpak-path-not-writtable": "Errore: accesso a Sandbox non garantito su questa posizione, i dati andranno persi."
@@ -234,12 +234,12 @@
         "default": "Predefinito"
     },
     "not_logged_in": {
-        "epic": "Non hai effettuato l'accesso con nessun account Epic in Heroic. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:",
-        "gog": "Non hai effettuato l'accesso con nessun account GOG in Heroic. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:",
+        "epic": "Non hai effettuato l'accesso con nessun account Epic in GameLib. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:",
+        "gog": "Non hai effettuato l'accesso con nessun account GOG in GameLib. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:",
         "login": "Accedi",
         "title": "NON hai effettuato l'accesso",
-        "amazon": "Non hai effettuato l'accesso con un account Amazon in Heroic. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:",
-        "zoom": "Non hai effettuato l'accesso con nessun account Zoom in Heroic. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:"
+        "amazon": "Non hai effettuato l'accesso con un account Amazon in GameLib. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:",
+        "zoom": "Non hai effettuato l'accesso con nessun account Zoom in GameLib. Non usare la pagina dello store per accede ma clicca sul seguente pulsante:"
     },
     "report_problem": "Segnala un problema nell'esecuzione di questo gioco",
     "sdl": {
@@ -351,7 +351,7 @@
     "third-party-managed": {
         "header": "Questo gioco è gestito da un'applicazione di terze parti",
         "notice1": "Questo gioco è gestito da un'applicazione di terze parti: \"{{application_name}}\"",
-        "notice2": "Dopo aver cliccato Installa, Heroic eseguirà l'applicazione al fine di completare il processo d'installazione"
+        "notice2": "Dopo aver cliccato Installa, GameLib eseguirà l'applicazione al fine di completare il processo d'installazione"
     },
     "Open": "Apri",
     "queue": {

@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Heroic:in välimuisti tyhjennettiin.",
+            "message": "GameLib:in välimuisti tyhjennettiin.",
             "title": "Välimuisti tyhjennetty"
         },
         "choose": "Valitse",
@@ -98,15 +98,15 @@
                 "title": "DXMT:n latausvirhe"
             },
             "executableNotFound": "Sovellusta ei löytynyt",
-            "executableNotFoundMessage": "Heroic ei löytänyt tämän pelin sovellusta. Ole hyvä ja aseta se manuaalisesti peliasetuksissa."
+            "executableNotFoundMessage": "GameLib ei löytänyt tämän pelin sovellusta. Ole hyvä ja aseta se manuaalisesti peliasetuksissa."
         },
         "info": {
             "update": {
                 "changelog": "Avaa muutosloki",
                 "detail": "Haluatko ladata päivityksen taustalla?",
                 "message": "Uusi versio on tarjolla!",
-                "message-finished": "Haluatko uudelleenkäynnistää Heroic:in nyt?",
-                "title": "Heroic Games Launcher",
+                "message-finished": "Haluatko uudelleenkäynnistää GameLib:in nyt?",
+                "title": "GameLib Games Launcher",
                 "title-finished": "Päivitys valmis",
                 "detailNoAutoupdate": "Automaattiset päivitykset eivät ole tuettuja tässä pakettimuodossa. Ole hyvä ja käytä paketinhallintaa päivittääksesi ohjelman."
             }
@@ -124,8 +124,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Oletko varma Heroic:in asetusten nollaamisesta? Tämä poistaa kaikki asetukset sekä välimuistin, mutta ei kuitenkaan asentamiasi pelejä eikä Epic -kirjautumisiasi. Portattavat julkaisut (AppImage, WinPortable, ...) Heroic:ista vaativat manuaalisen uudelleenkäynnistyksen jälkeenpäin.",
-                "title": "Nollaa Heroic"
+                "message": "Oletko varma GameLib:in asetusten nollaamisesta? Tämä poistaa kaikki asetukset sekä välimuistin, mutta ei kuitenkaan asentamiasi pelejä eikä Epic -kirjautumisiasi. Portattavat julkaisut (AppImage, WinPortable, ...) GameLib:ista vaativat manuaalisen uudelleenkäynnistyksen jälkeenpäin.",
+                "title": "Nollaa GameLib"
             }
         },
         "runexe": {
@@ -175,13 +175,13 @@
                 }
             },
             "snap": {
-                "message": "Aivan kaikki ominaisuudet eivät vielä ole saavutettavissa sovelluksen Snap-julkaisussa ja työstämme korjauksia.{{newLine}}Rajoituksia joita tällä hetkellä on havaittu: {{newLine}}Heroic ei löydä Protonia Steam:istä tai Wine:stä Lutris-käynnistimen kautta.{{newLine}}{{newLine}}Peliavustajat kuten Gamescope, GameMode ja MangoHud eivät myöskään toimi, koska Heroic:illa ei ole niihin pääsyä.{{newLine}}{{newLine}}Hyödyntääksesi näitä ominaisuuksia, asenna Heroic Games Launcher Flatpak, DEB tai AppImage -paketointien kautta.",
-                "title": "Ajossa on Heroic:in Snap-paketointi",
+                "message": "Aivan kaikki ominaisuudet eivät vielä ole saavutettavissa sovelluksen Snap-julkaisussa ja työstämme korjauksia.{{newLine}}Rajoituksia joita tällä hetkellä on havaittu: {{newLine}}GameLib ei löydä Protonia Steam:istä tai Wine:stä Lutris-käynnistimen kautta.{{newLine}}{{newLine}}Peliavustajat kuten Gamescope, GameMode ja MangoHud eivät myöskään toimi, koska GameLib:illa ei ole niihin pääsyä.{{newLine}}{{newLine}}Hyödyntääksesi näitä ominaisuuksia, asenna GameLib Games Launcher Flatpak, DEB tai AppImage -paketointien kautta.",
+                "title": "Ajossa on GameLib:in Snap-paketointi",
                 "checkbox": "Älä näytä tätä viestiä enää"
             },
             "rosetta": {
                 "title": "Rosettaa ei löytynyt",
-                "message": "Heroic vaatii Rosetta:n jotta sitä voidaan ajaa asianmukaisesti macOS:llä Apple Silicon -piireillä. Asenna se macOS:n päätteestä seuraavalla käskyllä: \"softwareupdate --install-rosetta\" ja uudelleenkäynnistä Heroic. "
+                "message": "GameLib vaatii Rosetta:n jotta sitä voidaan ajaa asianmukaisesti macOS:llä Apple Silicon -piireillä. Asenna se macOS:n päätteestä seuraavalla käskyllä: \"softwareupdate --install-rosetta\" ja uudelleenkäynnistä GameLib. "
             }
         },
         "wineprefix": "Valitse WinePrefix-kansio",
@@ -299,7 +299,7 @@
         "esync": "Esync pyrkii vähentämään Wine-palvelimen taakkaa suoritinta kuormittavissa peleissä. Päällekytkentä voi parantaa suorituskykyä.",
         "fsync": "Fsync pyrkii vähentämään Wine-palvelimen taakkaa suoritinta kuormittavissa peleissä. Päällekytkentä voi parantaa suorituskykyä tuettujen Linux-ydinten kohdalla.",
         "game_language": {
-            "fallback": "Jätä tyhjäksi käyttääksesi Heroic:in kieltä.",
+            "fallback": "Jätä tyhjäksi käyttääksesi GameLib:in kieltä.",
             "in_game_config": "Kaikki pelit eivät tue tätä asetusta, joissakin peleissä on sisäiset kieliasetusmahdollisuudet.",
             "valid_codes": "Kelvolliset kielikoodit riippuvat aina pelistä."
         },
@@ -315,18 +315,18 @@
         "preferSystemLibs": "Räätälöidyt Wine-versiot (Wine-GE, Wine-Lutris) toimitetaan niiden kirjastoriippuvaisuuksien kera. Kun kytketä tämän toiminnon päälle, nämä toimitetut kirjastot ohitetaan ja Wine lataa niiden sijasta järjestelmäkirjastot. Varoitus! Ilmenee ongelmia mikäli riippuvaisuudet eivät täyty.",
         "primerun": "Käytä omistautunutta tehokkaampaa grafiikkakorttia pelin hahmontamiseen moninäytönohjaimisissa järjestelmissä. Tarvitaan vain kannettavissa tietokoneissa tai työpöytäkonessa, jotka käyttävät vaihtelevaa näytönohjainmallia (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "Tämä polku määrittää Heroic:ille mitä Proton-versiota Steam käyttää, muiden kuin Steam-pelien lisäämiseksi."
+            "info": "Tämä polku määrittää GameLib:ille mitä Proton-versiota Steam käyttää, muiden kuin Steam-pelien lisäämiseksi."
         },
         "steamruntime": "Steam:in toimittamat erilliskirjastot jotka auttavat Linux- ja Windows -pelien ajamisessa. Päällekytkeminen saattaa parantaa yhteensopivuutta.",
         "sync": {
-            "part1": "Heroic yrittää arvata oikean kansion tallenteita varten. Tämä toimii useimmissa tapauksissa. Jos kansio on väärä, vaihda se ohitusruudun avulla.",
-            "part2": "Jos aiot vaihtaa Winen tai Protonin prefix-kansiota, polku tulee tarkistaa uudelleen, koska Proton käyttää toista prefixiä (/pfx) ja käyttäjänimeä (steamuser). Voit poistaa nykyisen polun synkronointiasetuksista ja antaa Heroicin arvata kansio vielä kerran oikealla prefixillä.",
+            "part1": "GameLib yrittää arvata oikean kansion tallenteita varten. Tämä toimii useimmissa tapauksissa. Jos kansio on väärä, vaihda se ohitusruudun avulla.",
+            "part2": "Jos aiot vaihtaa Winen tai Protonin prefix-kansiota, polku tulee tarkistaa uudelleen, koska Proton käyttää toista prefixiä (/pfx) ja käyttäjänimeä (steamuser). Voit poistaa nykyisen polun synkronointiasetuksista ja antaa GameLibin arvata kansio vielä kerran oikealla prefixillä.",
             "part3": "Manuaalinen synkronointi: valitse \"Lataa\" ladataksesi pelien tallennukset pilvipalvelusta. Valitse \"Lähetä\" lähettääksesi paikalliset tallennukset pilvipalveluun. \"Pakota Lataus\" ja \"Pakota Lähetys\" jättävät huomiotta version, jota säilytetään joko paikallisesti tai pilvipalvelussa.",
             "part4": "\"Synkronoi tallennukset automaattisesti\" synkronoi tallennukset joka kerta kun käynnistät pelin ja suljet sen."
         },
         "vkd3d": "VKD3D on Vulkan-pohjainen tulkki DirectX 12 -peleille. Päällekytkeminen saattaa parantaa merkittävästi yhteensopivuutta. Vaikutusta ei tule olemaan vanhempien DirectX-pelien kohdalla; se vaatii DXKV:n.",
         "wine": {
-            "part1": "Heroic etsii Wine, Proton- ja CrossOver -versioita seuraavista kansioista:",
+            "part1": "GameLib etsii Wine, Proton- ja CrossOver -versioita seuraavista kansioista:",
             "part2": "Muille sijainneille käytä symbolista linkkiä johonkin näistä kansioista"
         },
         "disable_logs": "Ota tämä valintaruutu PÄÄLLE, jos haluat poistaa suurimman osan kirjoituksista lokitiedostoihin (kriittiset tiedot kirjataan aina). Muista poistaa tämä asetus käytöstä ennen kuin ilmoitat ongelmasta.",
@@ -349,7 +349,7 @@
             "login": "Sisäänkirjaudu eri kauppoihin.",
             "defaultInstallPath": "Tämä on ennalta valittu vakiopolku pelejä asennettaessa.",
             "settingsGame": "Näytä pelille kaikki asetukset.",
-            "settingsDefault": "Näyttää kaikki Heroic:in asetukset sekä pelien vakiot niille.",
+            "settingsDefault": "Näyttää kaikki GameLib:in asetukset sekä pelien vakiot niille.",
             "wineManager": "Asenna eri versioita; Wine, Proton, Crossover, jne."
         },
         "button": {
@@ -369,8 +369,8 @@
         },
         "dxfpslimit": "Asettaa ruudunpäivitykselle katon DXVK-peleissä",
         "advertiseAvxForRosetta": "Ottaa käyttöön AVX-käskykannan tuen ajettaessa Windows-pelejä Rosettan kautta Apple Silicon -Maceilla. Tämä saattaa olla välttämätöntä peleissä, kuten Death Stranding, jotka vaativat AVX-tukea.",
-        "analytics": "Sallii Heroicin kerätä 100% anonyymejä käyttötietoja sovelluksen parantamiseksi. Muutos vaatii ohjelman uudelleenkäynnistämisen.",
-        "download_proton_steam": "Kun asetus on käytössä, GE-Proton ladataan suoraan Steamin yhteensopivuustyökalujen hakemistoon Heroicin oletussijainnin sijasta. Latauksessa käytetään ylempänä kohdassa ”Steamin oletuspolku” määritettyä polkua.",
+        "analytics": "Sallii GameLibin kerätä 100% anonyymejä käyttötietoja sovelluksen parantamiseksi. Muutos vaatii ohjelman uudelleenkäynnistämisen.",
+        "download_proton_steam": "Kun asetus on käytössä, GE-Proton ladataan suoraan Steamin yhteensopivuustyökalujen hakemistoon GameLibin oletussijainnin sijasta. Latauksessa käytetään ylempänä kohdassa ”Steamin oletuspolku” määritettyä polkua.",
         "wine-hdr": "HDR parantaa värejä tarjoamalla kirkkaampia kohokohtia ja syvempiä kontrasteja. Jotta HDR toimisi, sekä näytön että pelin on tuettava sitä.",
         "WoW64": "Wine WoW64 -tila mahdollistaa 32-bittisten Windows-pelien käytön 64-bittisessä Winessä. Tämä voi parantaa suorituskykyä, mutta voi myös rikkoa 32-bittisiä pelejä.",
         "wine-wayland": "Wine-Wayland-kokeellinen ajuri sallii pelien toimia natiivisti Wayland-näyttöprotokollan alla. Tämä ajuri saattaa rikkoa joitakin pelejä.",
@@ -554,7 +554,7 @@
     "other": {
         "gogdl-version": "GOGDL-versio: ",
         "legendary-version": "Legendary:n julkaisu: ",
-        "weblate": "Auta kääntämään Heroic:ia kielellesi.",
+        "weblate": "Auta kääntämään GameLib:ia kielellesi.",
         "nile-version": "Nile-julkaisu: "
     },
     "Other": "Muu",
@@ -600,7 +600,7 @@
         "autosync": "Synkronoi tallennukset automaattisesti",
         "autovkd3d": "VKD3D:n automaattinen asennus/päivitys etuasteeseen",
         "change-target-exe": "Valitse vaihtoehtoinen EXE-tiedosto joka ajetaan",
-        "checkForUpdatesOnStartup": "Tarkista Heroic:in päivitykset käynnistyksen yhteydessä",
+        "checkForUpdatesOnStartup": "Tarkista GameLib:in päivitykset käynnistyksen yhteydessä",
         "crossover-version": "Crossover/Wine-versio",
         "custom_themes_path": "Omien teemojen polku",
         "customWineProton": "Mukautetut Wine/Proton sijainnit",
@@ -608,7 +608,7 @@
         "default-install-path": "Oletus asennussijainti",
         "default-steam-path": "Vakio Steam-polku",
         "defaultWinePrefix": "Aseta kansio uusille Wine-etuasteille",
-        "disable_controller": "Poiskytke Heroic-navigaatio käyttäen peliohjainta",
+        "disable_controller": "Poiskytke GameLib-navigaatio käyttäen peliohjainta",
         "discordRPC": "Ota käyttöön Discord Rich Presence",
         "download-no-https": "Lataa pelit ilman HTTPS:ää (hyödyllinen CDN:ille kuten LanCache)",
         "dxvkfpslimit": "Aseta ruudunpäivityskatto (DX9, 10 ja 11)",
@@ -665,7 +665,7 @@
                 "error": {
                     "title": "Lähetys epäonnistui",
                     "manual_upload": "Klikkaa \"SHOW LOG FILE IN FOLDER\" -painiketta ja lähetä \"launch.log\" -tiedosto manuaalisesti Discordiin tai mihin tahansa tiedostojen jakamispalveluun.",
-                    "content": "Lokitiedon lähettäminen epäonnistui. Tarkista Heroicin yleislokitiedot tarkempaa kuvausta varten"
+                    "content": "Lokitiedon lähettäminen epäonnistui. Tarkista GameLibin yleislokitiedot tarkempaa kuvausta varten"
                 },
                 "uploading": {
                     "title": "Lähetetään",
@@ -692,7 +692,7 @@
                 "gog": "GOG lokitiedot",
                 "zoom": "Zoom lokitiedot",
                 "game-log": "Pelin {{gameTitle}} lokitiedot",
-                "heroic": "Yleiset Heroic lokitiedot"
+                "heroic": "Yleiset GameLib lokitiedot"
             },
             "show-uploads": "Näytä lähetetyt lokitiedot"
         },
@@ -708,7 +708,7 @@
         },
         "maxRecentGames": "Viimeksi pelatut näkyvillä",
         "maxworkers": "Työstäjien enimmäismäärä ladattaessa",
-        "minimize-on-launch": "Pienennä Heroic palkkiin pelin käynnistämisen jälkeen",
+        "minimize-on-launch": "Pienennä GameLib palkkiin pelin käynnistämisen jälkeen",
         "offlinemode": "Käynnistä peli offline-tilassa",
         "prefered_language": "Mitä kieltä suositaan (kielikoodi)",
         "preferSystemLibs": "Suosi järjestelmäkirjastoja",
@@ -767,7 +767,7 @@
         "show_valve_proton": {
             "confirmation": {
                 "title": "Oletko varma?",
-                "message": "Suosittelemme Heroicin kanssa muunneltujen Proton-haarojen (GE-Proton, Proton-CachyOS, jne.) käyttöä, sillä valven Proton ei sisällä winetricks ja protofixes -korjauksia. Voit silti kuitenkin käyttää niitä jos haluat.",
+                "message": "Suosittelemme GameLibin kanssa muunneltujen Proton-haarojen (GE-Proton, Proton-CachyOS, jne.) käyttöä, sillä valven Proton ei sisällä winetricks ja protofixes -korjauksia. Voit silti kuitenkin käyttää niitä jos haluat.",
                 "show": "Ymmärrän, näytä ne",
                 "dont_show": "Älä näytä"
             },
@@ -791,15 +791,15 @@
             "enableUpscaling": "Ota käyttöön ylösskaalaus",
             "missingMsg": "Emme löytäneet Gamescopea PATH-ympäristömuuttujassa. Asenna Gamescope, tai lisää se PATH-ympäristömuuttujaan.",
             "enableForceGrabCursor": "Ota käyttöön kursorin pakotettu kaappaus",
-            "warningFlatpak": "Emme löytäneet yhteensopivaa versiota Gamescopesta. Asenna Gamescopen flatpak-paketti ajoympäristöllä {{runtimeVersion}} ja uudelleenkäynnistä Heroic."
+            "warningFlatpak": "Emme löytäneet yhteensopivaa versiota Gamescopesta. Asenna Gamescopen flatpak-paketti ajoympäristöllä {{runtimeVersion}} ja uudelleenkäynnistä GameLib."
         },
         "enable-quick-sync-menu": "Ota käyttöön pikatallennuksen synkronointivalikko pelisivulla",
         "no-tray-icon": "Piiloita ilmoitusalueen kuvake (vaatii uudelleenkäynnistyksen)",
-        "analyticsOptIn": "Lähetä anonyymiä tietoa auttaaksesi Heroicin kehittämisessä",
+        "analyticsOptIn": "Lähetä anonyymiä tietoa auttaaksesi GameLibin kehittämisessä",
         "before-launch-script-path": "Valitse skripti, joka ajetaan ennen kuin peli käynnistyy",
         "disableUMU": "Poista umu käytöstä",
         "custom_css": {
-            "warning": "Varoitus: tämä pätee koko käyttöliittymään. Tämä tarkoittaa, että väärä tyyli voi tehdä Heroicista käyttökelvottoman. Asetusta voi tarvittaessa muuttaa `~/.config/heroic/config.json` tiedostossa. Älä kopioi tyylejä lähteistä joihin et luota."
+            "warning": "Varoitus: tämä pätee koko käyttöliittymään. Tämä tarkoittaa, että väärä tyyli voi tehdä GameLibista käyttökelvottoman. Asetusta voi tarvittaessa muuttaa `~/.config/heroic/config.json` tiedostossa. Älä kopioi tyylejä lähteistä joihin et luota."
         },
         "start-in-console-mode": "Käynnistä konsolitilassa",
         "disable_gog_presence": "Poista GOG:n läsnäolopäivitykset käytöstä",
@@ -812,7 +812,7 @@
             "installing": "Asennetaan BattlEye-ajoympäristö...",
             "name": "BattlEye AntiCheat (huijauksenesto) ajoympäristö"
         },
-        "clear-cache": "Tyhjennä Heroicin välimuisti",
+        "clear-cache": "Tyhjennä GameLibin välimuisti",
         "copiedToClipboard": "Kopioitu leikepöydälle!",
         "copyToClipboard": "Kopioi kaikki asetukset leikepöydälle",
         "default_hint": "Tämän osaston muutokset tulevat voimaan vakioarvoissa kun pelejä asennetaan. Mikäli haluat muuttaa jo valmiiksi asennetun pelin asetuksia, käytä Asetukset -painiketta pelisivulla.",
@@ -846,7 +846,7 @@
             "legacy": "Vanhentuneet"
         },
         "open-config-file": "Avaa asetustiedosto",
-        "reset-heroic": "Nollaa Heroic",
+        "reset-heroic": "Nollaa GameLib",
         "saves": {
             "label": "Save Location:",
             "warning": "Pilvitallennus on vielä keskeneräisessä beta-vaiheessa, varmuuskopioithan tallennuksesi ennen yhdentämistä (mikäli jokin menee vikaan)",
@@ -872,7 +872,7 @@
             "showDetailed": "Näytä yksityiskohtaiset järjestelmätiedot",
             "memory": "Muistia:",
             "copyToClipboard": "Kopioi leikepöydälle",
-            "heroicVersion": "Heroic-julkaisu: {{heroicVersion}}",
+            "heroicVersion": "GameLib-julkaisu: {{heroicVersion}}",
             "nileVersion": "Nile-julkaisu: {{nileVersion}}",
             "cometVersion": ""
         },
@@ -886,18 +886,18 @@
                 "help2": "Kolmannen osapuolen pelitiedot (pisteet, Steam-yhteensopivuus, läpipeluuaika, PcGamingWiki, AppleGamingWiki)",
                 "help1": "Tämä toiminto tyhjentää seuraavat välimuistit:",
                 "help3": "Legendaryn kirjastotiedot (pelilista, asennuskehotteen tiedot, pelin tiedot)",
-                "help10": "Heroic asetukset",
+                "help10": "GameLib asetukset",
                 "help7": "Kaupan kirjautuminen",
                 "help5": "Amazon kirjastotiedot (pelilista, asennuskehotteen tiedot)",
                 "help6": "Tämä EI poista:",
                 "help4": "GOG:n kirjastotiedot (pelilista, asennuskehotteen tiedot, rajapintatiedot, eli: vaatimukset)"
             },
             "title": {
-                "resetHeroic": "Nollaa Heroic",
+                "resetHeroic": "Nollaa GameLib",
                 "clearCache": "Tyhjennä välimuisti"
             },
             "resetHeroic": {
-                "help": "Haluatko varmasti nollata Heroic:in? Tämä poistaa kaikki asetukset sekä välimuistin, mutta ei asentamiasi pelejä eikä Epic-tietojasi. Portattavat julkaisut (AppImage, WinPortable, ...) Heroic:istä pitää uudelleenkäynnistää manuaalisesti jälkeenpäin."
+                "help": "Haluatko varmasti nollata GameLib:in? Tämä poistaa kaikki asetukset sekä välimuistin, mutta ei asentamiasi pelejä eikä Epic-tietojasi. Portattavat julkaisut (AppImage, WinPortable, ...) GameLib:istä pitää uudelleenkäynnistää manuaalisesti jälkeenpäin."
             },
             "details": "Yksityiskohdat"
         },
@@ -1040,7 +1040,7 @@
         "remove-category": "Poista luokka"
     },
     "adtraction-locked": {
-        "description": "Osoite track.adtraction.com ei ladannut tai se on estetty. Ostaessasi adtraction kautta, jokainen tekemäsi ostos GOG-kaupasta tukee Heroic:ia taloudellisesti. Harkitse eston poistamista mikäli haluat antaa tukesi.",
+        "description": "Osoite track.adtraction.com ei ladannut tai se on estetty. Ostaessasi adtraction kautta, jokainen tekemäsi ostos GOG-kaupasta tukee GameLib:ia taloudellisesti. Harkitse eston poistamista mikäli haluat antaa tukesi.",
         "dont-show-again": "Älä näytä tätä varoitusta enää",
         "title": "Adtraction on estetty"
     },
@@ -1069,8 +1069,8 @@
                 "intro": ""
             },
             "welcome": {
-                "intro": "Tervetuloa Heroic-kirjastoon! Täältä näet kaikki pelisi riippumatta mistä kaupasta ne ovat peräisin.",
-                "title": "Tervetuloa Heroiciin!",
+                "intro": "Tervetuloa GameLib-kirjastoon! Täältä näet kaikki pelisi riippumatta mistä kaupasta ne ovat peräisin.",
+                "title": "Tervetuloa GameLibiin!",
                 "title2": "Kirjaston hallinta!",
                 "intro2": ""
             },
@@ -1110,12 +1110,12 @@
         "disable": "Pois päältä",
         "enable": "Päällä",
         "info": {
-            "pt1": "Sovelluksen parantamiseksi Heroic kerää 100% anonyymejä tietoja.",
-            "pt2": "Heroic käyttää avoimen lähdekoodin Plausible Analytics -alustaa kerätäkseen perustietoja: Ohjelman versio, käyttöjärjestelmä, yhdistetyt kaupat, sekä maa.",
+            "pt1": "Sovelluksen parantamiseksi GameLib kerää 100% anonyymejä tietoja.",
+            "pt2": "GameLib käyttää avoimen lähdekoodin Plausible Analytics -alustaa kerätäkseen perustietoja: Ohjelman versio, käyttöjärjestelmä, yhdistetyt kaupat, sekä maa.",
             "pt3": "Se ei koskaan kerää mitään henkilökohtaisia tietoja, mukaan lukien käyttäjänimesi, IP-osoitteesi tai sähköpostisi.",
             "pt4": "Näitä tietoja käytetään antamaan meille oivalluksia siitä, mihin keskittyä seuraavaksi rajallisten resurssiemme ja käyttäjäpalautteen vuoksi.",
             "pt5": "Plausible Analytics on täysin GDPR:n, CCPA:n ja PECR:n mukainen.",
-            "pt6": "Läpinäkyvyyden vuoksi voit tarkastella Heroic-lokeissa keräämiämme tietoja.",
+            "pt6": "Läpinäkyvyyden vuoksi voit tarkastella GameLib-lokeissa keräämiämme tietoja.",
             "pt7": "Voit muuttaa tätä asetusta milloin tahansa ohjelman asetuksista."
         },
         "title": "Lähetä anonyymia analytiikkaa"

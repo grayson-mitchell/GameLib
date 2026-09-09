@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Tembolok Heroic telah dibersihkan.",
+            "message": "Tembolok GameLib telah dibersihkan.",
             "title": "Tembolok telah dibersihkan"
         },
         "choose": "Pilih",
@@ -94,7 +94,7 @@
                 "generic": "Sebuah kesalahan telah terjadi! Cobalah Keluar dan Masuk kembali di akun Epic Anda. {{newline}} {{error}}"
             },
             "executableNotFound": "File eksekusi tidak ditemukan",
-            "executableNotFoundMessage": "Heroic tidak bisa menemukan file eksekusi untuk permainan ini. Tolong ubah secara manual pada pengaturan permainan.",
+            "executableNotFoundMessage": "GameLib tidak bisa menemukan file eksekusi untuk permainan ini. Tolong ubah secara manual pada pengaturan permainan.",
             "dxmt": {
                 "message": "Kesalahan saat mengunduh DXMT! Periksa koneksi Anda!",
                 "title": "Kesalahan Unduhan DXMT"
@@ -105,8 +105,8 @@
                 "changelog": "Buka log perubahan",
                 "detail": "Apakah Anda ingin mengunduh pembaruan di latar belakang?",
                 "message": "Ada Versi baru yang tersedia!",
-                "message-finished": "Apakah Anda ingin memulai ulang Heroic sekarang?",
-                "title": "Heroic Games Launcher",
+                "message-finished": "Apakah Anda ingin memulai ulang GameLib sekarang?",
+                "title": "GameLib Games Launcher",
                 "title-finished": "Pembaruan Selesai",
                 "detailNoAutoupdate": "Pembaruan otomatis tidak didukung untuk format paket Anda. Silakan gunakan pengelola paket Anda untuk memperbarui."
             }
@@ -124,8 +124,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Anda yakin ingin menyetel ulang Heroic? Ini akan menghapus semua Pengaturan dan Tembolok tetapi tidak akan menghapus permainan yang Terpasang atau kredensial Epic Anda. Versi portable (AppImage, WinPortable, ...) dari Heroic perlu dijalankan ulang secara manual setelah melakukan proses ini.",
-                "title": "Reset Heroic"
+                "message": "Anda yakin ingin menyetel ulang GameLib? Ini akan menghapus semua Pengaturan dan Tembolok tetapi tidak akan menghapus permainan yang Terpasang atau kredensial Epic Anda. Versi portable (AppImage, WinPortable, ...) dari GameLib perlu dijalankan ulang secara manual setelah melakukan proses ini.",
+                "title": "Reset GameLib"
             }
         },
         "runexe": {
@@ -176,11 +176,11 @@
             },
             "snap": {
                 "checkbox": "Jangan munculkan pesan ini lagi",
-                "message": "Beberapa fitur tidak tersedia di versi Snap aplikasi untuk saat ini dan kami sedang berusaha untuk memperbaikinya.{{newLine}}Keterbatasan saat ini adalah: {{newLine}}Heroic tidak akan dapat menemukan Proton dari Steam atau Wine dari Lutris.{{newLine}}{{newLine}}Gamescope, GameMode, dan MangoHud juga tidak akan berfungsi karena Heroic tidak dapat mengaksesnya.{{newLine}}{{newLine}}Untuk mendapatkan akses ke fitur ini, silakan instal Heroic sebagai Flatpak, DEB, atau dari AppImage.",
-                "title": "Heroic berjalan sebagai Snap"
+                "message": "Beberapa fitur tidak tersedia di versi Snap aplikasi untuk saat ini dan kami sedang berusaha untuk memperbaikinya.{{newLine}}Keterbatasan saat ini adalah: {{newLine}}GameLib tidak akan dapat menemukan Proton dari Steam atau Wine dari Lutris.{{newLine}}{{newLine}}Gamescope, GameMode, dan MangoHud juga tidak akan berfungsi karena GameLib tidak dapat mengaksesnya.{{newLine}}{{newLine}}Untuk mendapatkan akses ke fitur ini, silakan instal GameLib sebagai Flatpak, DEB, atau dari AppImage.",
+                "title": "GameLib berjalan sebagai Snap"
             },
             "rosetta": {
-                "message": "Heroic memerlukan Rosetta agar dapat berjalan dengan benar di macOS dengan chip Apple Silicon. Harap instal melalui terminal macOS dengan perintah berikut: \"softwareupdate --install-rosetta\" dan mulai ulang Heroic. ",
+                "message": "GameLib memerlukan Rosetta agar dapat berjalan dengan benar di macOS dengan chip Apple Silicon. Harap instal melalui terminal macOS dengan perintah berikut: \"softwareupdate --install-rosetta\" dan mulai ulang GameLib. ",
                 "title": "Rosetta tidak ditemukan"
             }
         },
@@ -300,7 +300,7 @@
         "esync": "Esync bertujuan untuk mengurangi overhead server Wine di gim dengan CPU yang intensif. Mengaktifkannya dapat meningkatkan kinerja.",
         "fsync": "Fsync bertujuan untuk mengurangi overhead server Wine di gim dengan CPU intensif. Mengaktifkannya dapat meningkatkan kinerja pada kernel Linux yang didukung.",
         "game_language": {
-            "fallback": "Biarkan kosong untuk menggunakan bahasa Heroic.",
+            "fallback": "Biarkan kosong untuk menggunakan bahasa GameLib.",
             "in_game_config": "Tidak semua gim mendukung konfigurasi ini, sebagian memiliki pengaturan bahasa dalam gim.",
             "valid_codes": "Kode bahasa yang valid bergantung pada gim."
         },
@@ -316,18 +316,18 @@
         "preferSystemLibs": "Versi Wine khusus (Wine-GE, Wine-Lutris) dikirimkan dengan dependensi pustakanya. Dengan mengaktifkan opsi ini, pustaka yang dikirimkan tersebut akan diabaikan dan Wine akan memuat pustaka sistem sebagai gantinya. Peringatan! Masalah dapat terjadi jika dependensi tidak terpenuhi.",
         "primerun": "Gunakan kartu grafis khusus untuk merender game pada sistem multi-GPU. Hanya diperlukan pada laptop gaming atau desktop yang menggunakan GPU terpisah untuk rendering (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "Jalur ini memungkinkan Heroic menentukan versi apa yang digunakan oleh Proton Steam, untuk menambahkan game non-Steam ke Steam."
+            "info": "Jalur ini memungkinkan GameLib menentukan versi apa yang digunakan oleh Proton Steam, untuk menambahkan game non-Steam ke Steam."
         },
         "steamruntime": "Pustaka khusus disediakan oleh Steam untuk membantu menjalankan gim Linux dan Windows (Proton). Mengaktifkannya dapat meningkatkan kompatibilitas.",
         "sync": {
-            "part1": "Heroic mencoba untuk menebak folder penyimpanan yang tepat dan ini biasanya akan berhasil. Jika folder salah, gunakan kotak penimpaan untuk mengubahnya.",
-            "part2": "Jika Anda mengubah prefiks folder untuk Wine atau Proton, Anda perlu memeriksa lokasinya lagi karena Proton menggunakan prefiks (/pfx) dan nama pengguna (steamuser) yang berbeda. Jadi Anda dapat dengan mudah menghapus lokasi saat ini, keluar dari halaman pengaturan sinkronisasi, lalu kembali lagi dan biarkan Heroic menebak folder dengan prefiks yang tepat sekali lagi.",
+            "part1": "GameLib mencoba untuk menebak folder penyimpanan yang tepat dan ini biasanya akan berhasil. Jika folder salah, gunakan kotak penimpaan untuk mengubahnya.",
+            "part2": "Jika Anda mengubah prefiks folder untuk Wine atau Proton, Anda perlu memeriksa lokasinya lagi karena Proton menggunakan prefiks (/pfx) dan nama pengguna (steamuser) yang berbeda. Jadi Anda dapat dengan mudah menghapus lokasi saat ini, keluar dari halaman pengaturan sinkronisasi, lalu kembali lagi dan biarkan GameLib menebak folder dengan prefiks yang tepat sekali lagi.",
             "part3": "Sinkronisasi Manual: Pilih Unduh untuk mengunduh gim yang tersimpan di Awan. Unggah untuk mengunggah berkas lokal ke Awan. Unduh Paksa dan Unggah Paksa akan mengabaikan versi yang ada di penyimpanan lokal atau awan.",
             "part4": "Sinkroninasi Penyimpanan Secara Otomatis akan menyinkronkan penyimpanan setiap kali Anda Memulai Gim dan setelah Anda selesai bermain."
         },
         "vkd3d": "VKD3D adalah lapisan translasi berbasis Vulkan untuk game DirectX 12. Mengaktifkannya dapat meningkatkan kompatibilitas secara signifikan. Tidak berpengaruh pada game DirectX yang lebih lama, dan memerlukan DXVK.",
         "wine": {
-            "part1": "Heroic mencari versi Wine, Proton, dan CrossOver di folder berikut ini:",
+            "part1": "GameLib mencari versi Wine, Proton, dan CrossOver di folder berikut ini:",
             "part2": "Untuk tempat lain, gunakan tautan simbolis ke salah satu folder ini"
         },
         "disable_logs": "Aktifkan kotak centang ini untuk menonaktifkan sebagian besar penulisan ke berkas log (informasi penting selalu dicatat). Pastikan untuk MENONAKTIFKAN setelan ini sebelum melaporkan masalah apa pun.",
@@ -342,7 +342,7 @@
         "msync": "Fsync bertujuan untuk mengurangi overhead server Wine di gim dengan CPU intensif. Mengaktifkannya dapat meningkatkan kinerja pada kernel Linux yang didukung.",
         "dxfpslimit": "Atur batas maksimal frame untuk gim DXVK",
         "advertiseAvxForRosetta": "Mengaktifkan dukungan set instruksi AVX saat menjalankan game Windows melalui Rosetta di Mac dengan Apple Silicon. Ini mungkin diperlukan untuk beberapa game seperti Death Stranding yang membutuhkan dukungan AVX.",
-        "analytics": "Mengizinkan Heroic mengumpulkan data penggunaan anonim 100% untuk membantu meningkatkan aplikasi. Perlu dimulai ulang agar berpengaruh.",
+        "analytics": "Mengizinkan GameLib mengumpulkan data penggunaan anonim 100% untuk membantu meningkatkan aplikasi. Perlu dimulai ulang agar berpengaruh.",
         "button": {
             "close": "Tutup Bantuan",
             "open": "Buka Bantuan"
@@ -354,12 +354,12 @@
             "downloadManager": "Menampilkan unduhan saat ini dan sebelumnya.",
             "library": "Menampilkan semua game yang dimiliki.",
             "login": "Masuk ke berbagai toko.",
-            "settingsDefault": "Menampilkan semua pengaturan Heroic dan pengaturan default untuk game.",
+            "settingsDefault": "Menampilkan semua pengaturan GameLib dan pengaturan default untuk game.",
             "settingsGame": "Tampilkan semua pengaturan untuk sebuah game.",
             "wineManager": "Instal berbagai versi Wine, Proton, Crossover, dan lainnya."
         },
         "disablePlaytimeSync": "Menonaktifkan sinkronisasi waktu bermain dengan server toko yang bersangkutan (saat ini hanya GOG yang didukung).",
-        "download_proton_steam": "Jika diaktifkan, GE-Proton akan diunduh langsung ke direktori alat kompatibilitas Steam, bukan ke jalur default Heroic. Akan menggunakan jalur Steam yang diatur dalam pengaturan 'Jalur Steam Default' di atas.",
+        "download_proton_steam": "Jika diaktifkan, GE-Proton akan diunduh langsung ke direktori alat kompatibilitas Steam, bukan ke jalur default GameLib. Akan menggunakan jalur Steam yang diatur dalam pengaturan 'Jalur Steam Default' di atas.",
         "dxvknvapi": "DXVK-NVAPI adalah implementasi NVAPI yang dibangun di atas DXVK dan NVAPI native Linux, yang memungkinkan penggunaan DLSS pada GPU Nvidia.",
         "gamescope": {
             "additionalOptions": "Tambahan flag baris perintah untuk diteruskan ke gamescope.",
@@ -379,7 +379,7 @@
             "details": "Gunakan kartu grafis khusus untuk merender game pada sistem multi-GPU. Hanya diperlukan pada laptop gaming atau desktop yang menggunakan GPU terpisah untuk rendering (NVIDIA Optimus, AMD CrossFire)",
             "link": "Periksa detail lebih lanjut di wiki kami"
         },
-        "hide-window-on-protocol-launch": "Menjaga jendela Heroic tetap tersembunyi saat game diluncurkan dari pintasan eksternal, seperti fitur 'Tambahkan ke Steam'."
+        "hide-window-on-protocol-launch": "Menjaga jendela GameLib tetap tersembunyi saat game diluncurkan dari pintasan eksternal, seperti fitur 'Tambahkan ke Steam'."
     },
     "info": {
         "heroic": {
@@ -556,7 +556,7 @@
     "other": {
         "gogdl-version": "Versi GOGDL: ",
         "legendary-version": "Versi Legendary: ",
-        "weblate": "Bantu kami untuk menerjemahkan Heroic.",
+        "weblate": "Bantu kami untuk menerjemahkan GameLib.",
         "nile-version": "Versi Nile: "
     },
     "Other": "Lainnya",
@@ -610,7 +610,7 @@
         "default-install-path": "Lokasi Pemasangan Bawaan",
         "default-steam-path": "Lokasi Steam bawaan",
         "defaultWinePrefix": "Atur Folder untuk Prefiks Wine baru",
-        "disable_controller": "Nonaktifkan navigasi Heroic menggunakan pengontrol",
+        "disable_controller": "Nonaktifkan navigasi GameLib menggunakan pengontrol",
         "discordRPC": "Aktifkan Discord Rich Presence",
         "download-no-https": "Unduh gim tanpa HTTPS (berguna untuk CDN misalnya LanCache)",
         "dxvkfpslimit": "Batasi FPS (DX9, 10 dan 11)",
@@ -671,7 +671,7 @@
                     "title": "Unggahan selesai"
                 },
                 "error": {
-                    "content": "Gagal mengunggah file log. Periksa log umum Heroic untuk detailnya.",
+                    "content": "Gagal mengunggah file log. Periksa log umum GameLib untuk detailnya.",
                     "title": "Unggahan gagal",
                     "manual_upload": "Klik tombol \"TAMPILKAN FILE LOG DI FOLDER\" dan unggah file \"launch.log\" secara manual ke Discord atau layanan berbagi file online mana pun."
                 },
@@ -690,7 +690,7 @@
             "descriptiveNames": {
                 "game-log": "Log game dari {{gameTitle}}",
                 "gog": "Log GOG",
-                "heroic": "Log umum Heroic",
+                "heroic": "Log umum GameLib",
                 "legendary": "Log Epic Games / Legendary",
                 "nile": "Log Amazon / Nile",
                 "zoom": "Log Zoom"
@@ -710,7 +710,7 @@
         },
         "maxRecentGames": "Gim yang Dimainkan Baru-Baru Ini",
         "maxworkers": "Jumlah Maksimum Worker saat mengunduh",
-        "minimize-on-launch": "Minimalkan Jendela Heroic Setelah Gim Diluncurkan",
+        "minimize-on-launch": "Minimalkan Jendela GameLib Setelah Gim Diluncurkan",
         "offlinemode": "Jalankan Game Secara Luring",
         "prefered_language": "Bahasa Pilihan (Kode Bahasa)",
         "preferSystemLibs": "Lebih memilih pustaka sistem",
@@ -742,7 +742,7 @@
             "enableForceGrabCursor": "Aktifkan Paksa Pengambilan Kursor",
             "enableUpscaling": "Mengaktifkan Peningkatan Skala",
             "missingMsg": "Kami tidak dapat menemukan gamescope di PATH. Instal atau tambahkan ke PATH.",
-            "warningFlatpak": "Kami tidak dapat menemukan versi Gamescope yang kompatibel. Instal paket flatpak Gamescope dengan runtime {{runtimeVersion}} dan mulai ulang Heroic."
+            "warningFlatpak": "Kami tidak dapat menemukan versi Gamescope yang kompatibel. Instal paket flatpak Gamescope dengan runtime {{runtimeVersion}} dan mulai ulang GameLib."
         },
         "experimental_features": {
             "enableNewDesign": "Desain baru",
@@ -768,10 +768,10 @@
             },
             "label": "Izinkan pemasangan game dengan anticheat rusak atau ditolak"
         },
-        "analyticsOptIn": "Kirim data anonim untuk membantu pengembangan Heroic",
+        "analyticsOptIn": "Kirim data anonim untuk membantu pengembangan GameLib",
         "before-launch-script-path": "Pilih skrip untuk dijalankan sebelum game diluncurkan",
         "custom_css": {
-            "warning": "Peringatan: ini berlaku untuk seluruh antarmuka. Artinya, gaya yang salah dapat membuat Heroic tidak dapat digunakan. Jika diperlukan, pengaturan dapat diubah secara manual di `~/.config/heroic/config.json`. Jangan menyalin gaya dari sumber yang tidak tepercaya."
+            "warning": "Peringatan: ini berlaku untuk seluruh antarmuka. Artinya, gaya yang salah dapat membuat GameLib tidak dapat digunakan. Jika diperlukan, pengaturan dapat diubah secara manual di `~/.config/heroic/config.json`. Jangan menyalin gaya dari sumber yang tidak tepercaya."
         },
         "disablePlaytimeSync": "Nonaktifkan sinkronisasi waktu bermain",
         "disableUMU": "Nonaktifkan umu",
@@ -782,7 +782,7 @@
         "show_valve_proton": {
             "confirmation": {
                 "dont_show": "Jangan tampilkan mereka",
-                "message": "Kami merekomendasikan penggunaan Proton fork kustom (GE-Proton, Proton-CachyOS, dll.) bersama Heroic karena build Proton dari Valve tidak memiliki winetricks dan protofixes. Namun, Anda tetap bisa menggunakannya jika diinginkan.",
+                "message": "Kami merekomendasikan penggunaan Proton fork kustom (GE-Proton, Proton-CachyOS, dll.) bersama GameLib karena build Proton dari Valve tidak memiliki winetricks dan protofixes. Namun, Anda tetap bisa menggunakannya jika diinginkan.",
                 "show": "Saya mengerti, tampilkan mereka",
                 "title": "Apakah Anda yakin?"
             },
@@ -799,7 +799,7 @@
         "enable-quick-sync-menu": "Aktifkan Menu Quick Save-Sync di halaman game",
         "start-in-console-mode": "Mulai dalam Mode Konsol",
         "disable_gog_presence": "Nonaktifkan pembaruan GOG Presence",
-        "hide-window-on-protocol-launch": "Sembunyikan jendela Heroic saat meluncurkan game dari tautan heroic://",
+        "hide-window-on-protocol-launch": "Sembunyikan jendela GameLib saat meluncurkan game dari tautan heroic://",
         "nvidiaprime": {
             "description": "Paksa penggunaan NVIDIA Optimus atau AMD Dynamic Switchable Graphics dGPU. HANYA gunakan ini untuk game OpenGL dan Vulkan."
         }
@@ -809,7 +809,7 @@
             "installing": "Menginstal BattlEye Runtime...",
             "name": "BattlEye AntiCheat Runtime"
         },
-        "clear-cache": "Hapus Tembolok Heroic",
+        "clear-cache": "Hapus Tembolok GameLib",
         "copiedToClipboard": "Disalin ke Papan Klip!",
         "copyToClipboard": "Salin Semua Pengaturan ke Papan Klip",
         "default_hint": "Perubahan di bagian ini hanya berlaku sebagai nilai bawaan saat menginstal gim. Jika Anda ingin mengubah pengaturan gim yang sudah terinstal, gunakan tombol Pengaturan di halaman gim.",
@@ -843,7 +843,7 @@
             "legacy": "Warisan"
         },
         "open-config-file": "Buka Berkas Pengaturan",
-        "reset-heroic": "Reset Heroic",
+        "reset-heroic": "Reset GameLib",
         "saves": {
             "label": "Lokasi Penyimpanan:",
             "warning": "Fitur Cloud Saves masih dalam versi Beta, harap buat rekam cadang penyimpanan Anda sebelum menyinkronkan (jaga-jaga bila terjadi kesalahan)",
@@ -858,7 +858,7 @@
                 "help8": "Gim Terinstal",
                 "help9": "Pengaturan gim",
                 "help1": "Tindakan ini akan menghapus cache berikut:",
-                "help10": "Konfigurasi Heroic",
+                "help10": "Konfigurasi GameLib",
                 "help2": "Info game pihak ketiga (skor, kompatibilitas Steam, howlongtobeat, pcgamingwiki, applegamingwiki)",
                 "help3": "Info pustaka Legendary (daftar game, info dialog instalasi, info game)",
                 "help4": "Info pustaka GOG (daftar game, info dialog instalasi, info API — misalnya: persyaratan)",
@@ -867,11 +867,11 @@
                 "help7": "Login toko"
             },
             "title": {
-                "resetHeroic": "Reset Heroic",
+                "resetHeroic": "Reset GameLib",
                 "clearCache": "Hapus Cache"
             },
             "resetHeroic": {
-                "help": "Ini akan menghapus semua Pengaturan dan Cache, tetapi tidak akan menghapus game yang terinstal atau kredensial Epic Anda. Versi portabel (AppImage, WinPortable, ...) dari Heroic perlu dimulai ulang secara manual setelahnya."
+                "help": "Ini akan menghapus semua Pengaturan dan Cache, tetapi tidak akan menghapus game yang terinstal atau kredensial Epic Anda. Versi portabel (AppImage, WinPortable, ...) dari GameLib perlu dimulai ulang secara manual setelahnya."
             },
             "details": "Detail"
         },
@@ -884,7 +884,7 @@
             "gpu": "GPU:",
             "gpuDriver": "Driver: {{driverVersion}}",
             "gpuWithNumber": "GPU {{number}}:",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "legendaryVersion": "Legendary: {{legendaryVersion}}",
             "memory": "Memori:",
             "memoryStats": "{{percentUsed}}% digunakan ({{usedGib}} / {{totalGib}})",
@@ -1051,7 +1051,7 @@
     "adtraction-locked": {
         "dont-show-again": "Jangan tampilkan peringatan ini lagi",
         "title": "Adtraction diblokir",
-        "description": "Sepertinya domain track.adtraction.com gagal dimuat atau diblokir. Dengan adtraction, pembelian apa pun yang Anda lakukan di toko GOG akan mendukung Heroic secara finansial. Pertimbangkanlah untuk menghapus blokiran jika Anda ingin berkontribusi."
+        "description": "Sepertinya domain track.adtraction.com gagal dimuat atau diblokir. Dengan adtraction, pembelian apa pun yang Anda lakukan di toko GOG akan mendukung GameLib secara finansial. Pertimbangkanlah untuk menghapus blokiran jika Anda ingin berkontribusi."
     },
     "tour": {
         "back": "Kembali",
@@ -1071,9 +1071,9 @@
             "sortOptions": "Klik di sini untuk mengurutkan game secara alfabetis.",
             "viewToggle": "Beralih antara tampilan grid dan daftar untuk game Anda.",
             "welcome": {
-                "intro": "Selamat datang di Pustaka Heroic! Di sinilah Anda dapat melihat semua game Anda dari berbagai toko.",
+                "intro": "Selamat datang di Pustaka GameLib! Di sinilah Anda dapat melihat semua game Anda dari berbagai toko.",
                 "intro2": "Jika pustaka kosong, pastikan Anda masuk dengan akun Anda menggunakan Kelola akun di bilah sisi atau tambahkan game Anda sendiri menggunakan tombol Tambah Game di atas.",
-                "title": "Selamat datang di Heroic!",
+                "title": "Selamat datang di GameLib!",
                 "title2": "Mengelola pustaka!"
             }
         },
@@ -1089,9 +1089,9 @@
             "quit": "Keluar dari aplikasi dengan aman.",
             "settings": "Konfigurasikan pengaturan GameLib, pengaturan default game, periksa log, dan lainnya.",
             "stores": "Jelajahi dan beli game di berbagai toko termasuk Epic, GOG, dan Amazon.",
-            "version": "Periksa versi Heroic Anda saat ini, klik untuk melihat catatan perubahan terbaru, dan akses tur ini dari ikon bantuan.",
+            "version": "Periksa versi GameLib Anda saat ini, klik untuk melihat catatan perubahan terbaru, dan akses tur ini dari ikon bantuan.",
             "welcome": {
-                "intro": "Selamat datang di Heroic! Bilah sisi ini berisi semua opsi navigasi untuk menjelajahi aplikasi.",
+                "intro": "Selamat datang di GameLib! Bilah sisi ini berisi semua opsi navigasi untuk menjelajahi aplikasi.",
                 "title": "Navigasi Bilah Sisi"
             },
             "wine": "Kelola atau unduh versi baru Wine/Proton/GPTK untuk menjalankan game Windows di Linux atau macOS."
@@ -1103,12 +1103,12 @@
         "disable": "Nonaktif",
         "enable": "Aktif",
         "info": {
-            "pt1": "Untuk meningkatkan aplikasi, Heroic mengumpulkan data anonim 100%.",
-            "pt2": "Heroic menggunakan platform sumber terbuka Plausible Analytics untuk mengumpulkan data dasar: Versi Aplikasi, Sistem Operasi, Toko yang Terhubung, dan Negara.",
+            "pt1": "Untuk meningkatkan aplikasi, GameLib mengumpulkan data anonim 100%.",
+            "pt2": "GameLib menggunakan platform sumber terbuka Plausible Analytics untuk mengumpulkan data dasar: Versi Aplikasi, Sistem Operasi, Toko yang Terhubung, dan Negara.",
             "pt3": "Data pribadi apa pun tidak akan pernah dikumpulkan, termasuk nama pengguna, alamat IP, atau email Anda.",
             "pt4": "Data ini digunakan untuk memberi kami wawasan tentang hal-hal yang perlu difokuskan selanjutnya, karena sumber daya kami terbatas dan berdasarkan masukan pengguna.",
             "pt5": "Plausible Analytics sepenuhnya mematuhi GDPR, CCPA, dan PECR.",
-            "pt6": "Untuk transparansi, Anda dapat melihat data yang kami kumpulkan di log Heroic.",
+            "pt6": "Untuk transparansi, Anda dapat melihat data yang kami kumpulkan di log GameLib.",
             "pt7": "Anda dapat mengubah pengaturan ini kapan saja di Pengaturan Aplikasi."
         },
         "title": "Kirim Analitik Anonim"
@@ -1119,7 +1119,7 @@
         "noResults": "Filter saat ini tidak menghasilkan hasil apa pun."
     },
     "wineExplanation": {
-        "proton-ge": "GE-Proton adalah varian Proton yang dibuat oleh Glorious Eggroll. Versi ini dirancang untuk digunakan bersama peluncur umu (default di Heroic).",
+        "proton-ge": "GE-Proton adalah varian Proton yang dibuat oleh Glorious Eggroll. Versi ini dirancang untuk digunakan bersama peluncur umu (default di GameLib).",
         "gpt": "Game Porting Toolkit dikembangkan oleh Apple dan direkomendasikan untuk Mac Apple Silicon dengan chip M1 ke atas serta paling baik digunakan untuk game terbaru yang menggunakan DX12.",
         "wine-crossover": "Wine-Crossover didasarkan pada proyek Wine OpenSource Crossover dan direkomendasikan untuk Mac Intel serta untuk game DX11 atau yang lebih lama.",
         "wine-staging-macos": "Wine-Staging-macOS didasarkan pada proyek Wine utama dan direkomendasikan untuk Mac Intel serta untuk game DX11 atau yang lebih lama, terutama bila dipasangkan dengan alat DXMT."

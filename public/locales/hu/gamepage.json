@@ -181,7 +181,7 @@
             "ok": "Ok",
             "install_anyway": "Igen (Megértettem, hogy a többjátékos funkciók nem fognak működni)",
             "multiplayer_message": "A csalás elleni szoftver támogatása hibás vagy tiltásra került. A játékot lehet, hogy meg lehet nyitni, de a többjátékos funkciók nem fognak működni. Mindenképp telepíted?",
-            "disabled_installation": "A játék olyan csalás elleni szoftvert használ, amely nem kompatibilis az operációs rendszereddel, vagy a támogatást a játék fejlesztői nem engedélyezték. Ez azt jelenti, hogy a többjátékos funkciók nem fognak működni, és ez ellen semmit sem tehetsz (ahogy a Heroic csapata sem).<br /><br />A játék telepítéséhez, és hogy mégis megpróbáld, kattints a Beállítások, Speciális menüpontra, és kapcsold be a hibás vagy letiltott csalás elleni szoftverrel rendelkező játékok telepítésének engedélyezését.<br /><br />Vedd figyelembe, hogy erre nincs megoldás, és azt kockáztatod, hogy kitiltsanak a játékból."
+            "disabled_installation": "A játék olyan csalás elleni szoftvert használ, amely nem kompatibilis az operációs rendszereddel, vagy a támogatást a játék fejlesztői nem engedélyezték. Ez azt jelenti, hogy a többjátékos funkciók nem fognak működni, és ez ellen semmit sem tehetsz (ahogy a GameLib csapata sem).<br /><br />A játék telepítéséhez, és hogy mégis megpróbáld, kattints a Beállítások, Speciális menüpontra, és kapcsold be a hibás vagy letiltott csalás elleni szoftverrel rendelkező játékok telepítésének engedélyezését.<br /><br />Vedd figyelembe, hogy erre nincs megoldás, és azt kockáztatod, hogy kitiltsanak a játékból."
         },
         "flatpak-path-not-writtable": "Hiba: nem lett hozzáférés adva a homokozóhoz ennél az elérési útnál, adatvesztés fog történni."
     },
@@ -234,12 +234,12 @@
         "default": "Alapértelmezett"
     },
     "not_logged_in": {
-        "epic": "Nem vagy Epic-fiókkal bejelentkezve a Heroicba. Ne az áruházi oldalon jelentkezz be, kattints helyette erre a gombra:",
-        "gog": "Nem vagy GOG-fiókkal bejelentkezve a Heroicba. Ne az áruházi oldalon jelentkezz be, kattints helyette erre a gombra:",
+        "epic": "Nem vagy Epic-fiókkal bejelentkezve a GameLibbe. Ne az áruházi oldalon jelentkezz be, kattints helyette erre a gombra:",
+        "gog": "Nem vagy GOG-fiókkal bejelentkezve a GameLibbe. Ne az áruházi oldalon jelentkezz be, kattints helyette erre a gombra:",
         "login": "Bejelentkezés",
         "title": "Nem vagy bejelentkezve",
-        "amazon": "Nem vagy Amazon-fiókkal bejelentkezve a Heroicban. Ne az áruházi oldalon jelentkezz be, kattints helyette erre a gombra:",
-        "zoom": "Nem vagy Zoom-fiókkal bejelentkezve a Heroicban. Ne az áruházi oldalon jelentkezz be, kattints helyette erre a gombra:"
+        "amazon": "Nem vagy Amazon-fiókkal bejelentkezve a GameLibben. Ne az áruházi oldalon jelentkezz be, kattints helyette erre a gombra:",
+        "zoom": "Nem vagy Zoom-fiókkal bejelentkezve a GameLibben. Ne az áruházi oldalon jelentkezz be, kattints helyette erre a gombra:"
     },
     "report_problem": "Játék futtatásával kapcsolatos hiba jelentése",
     "sdl": {
@@ -351,7 +351,7 @@
     "third-party-managed": {
         "header": "Ezt a játékot egy külső alkalmazás kezeli",
         "notice1": "Ezt a játékot egy külső alkalmazás kezeli: „{{application_name}}”",
-        "notice2": "A Telepítés gombra való kattintás után a Heroic futtatni fogja az alkalmazást, hogy befejezze a telepítési folyamatot"
+        "notice2": "A Telepítés gombra való kattintás után a GameLib futtatni fogja az alkalmazást, hogy befejezze a telepítési folyamatot"
     },
     "Open": "Megnyitás",
     "queue": {

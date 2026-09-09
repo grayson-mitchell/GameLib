@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Heroic 캐시가 지워졌습니다.",
+            "message": "GameLib 캐시가 지워졌습니다.",
             "title": "캐시 지워짐"
         },
         "choose": "선택",
@@ -105,8 +105,8 @@
                 "changelog": "변경 로그 열기",
                 "detail": "백그라운드에서 업데이트를 다운로드하겠습니까?",
                 "message": "사용 가능한 새 버전이 있습니다!",
-                "message-finished": "지금 Heroic을 다시 시작하겠습니까?",
-                "title": "Heroic 게임 실행기",
+                "message-finished": "지금 GameLib을 다시 시작하겠습니까?",
+                "title": "GameLib 게임 실행기",
                 "title-finished": "업데이트 완료",
                 "detailNoAutoupdate": ""
             }
@@ -124,8 +124,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "Heroic을 재설정하겠습니까? 이렇게 하면 모든 설정과 캐시가 제거되지만 설치된 게임이나 에픽 자격 인증은 제거되지 않습니다. Heroic의 휴대용 버전(AppImage, WinPortable, ...)은 그 후 수동으로 다시 시작해야 합니다.",
-                "title": "Heroic 재설정"
+                "message": "GameLib을 재설정하겠습니까? 이렇게 하면 모든 설정과 캐시가 제거되지만 설치된 게임이나 에픽 자격 인증은 제거되지 않습니다. GameLib의 휴대용 버전(AppImage, WinPortable, ...)은 그 후 수동으로 다시 시작해야 합니다.",
+                "title": "GameLib 재설정"
             }
         },
         "runexe": {
@@ -176,8 +176,8 @@
             },
             "snap": {
                 "checkbox": "이 메세지를 다시 표시 안 함",
-                "message": "일부 기능은 현재 앱의 스냅 버전에서 사용할 수 없고 이를 수정하려고 노력하고 있습니다.{{newLine}}현재 제한 사항은 다음과 같습니다:{{newLine}}Heroic은 스팀의 프로톤이나 루트리스의 와인을 찾을 수 없습니다.{{newLine}}{{newLine}}Gamescope, GameMode, MangoHud도 Heroic이 접속할 수 없으므로 작동하지 않습니다.{{newLine}}{{newLine}}이 기능에 접속하려면 Heroic을 Flatpak, DEB 또는 AppImage에서 설치하세요.",
-                "title": "Heroic은 스냅으로 실행됨"
+                "message": "일부 기능은 현재 앱의 스냅 버전에서 사용할 수 없고 이를 수정하려고 노력하고 있습니다.{{newLine}}현재 제한 사항은 다음과 같습니다:{{newLine}}GameLib은 스팀의 프로톤이나 루트리스의 와인을 찾을 수 없습니다.{{newLine}}{{newLine}}Gamescope, GameMode, MangoHud도 GameLib이 접속할 수 없으므로 작동하지 않습니다.{{newLine}}{{newLine}}이 기능에 접속하려면 GameLib을 Flatpak, DEB 또는 AppImage에서 설치하세요.",
+                "title": "GameLib은 스냅으로 실행됨"
             },
             "rosetta": {
                 "title": "",
@@ -299,7 +299,7 @@
         "esync": "Esync는 CPU 집약적 게임에서 와인서버 오버헤드를 줄이는 것을 목표로 합니다. 활성화하면 성능이 향상될 수 있습니다.",
         "fsync": "Fsync는 CPU 집약적 게임에서 와인서버 오버헤드를 줄이는 것을 목표로 합니다. 활성화하면 지원되는 리눅스 커널에서 성능이 향상될 수 있습니다.",
         "game_language": {
-            "fallback": "Heroic의 언어를 사용하려면 비워두세요.",
+            "fallback": "GameLib의 언어를 사용하려면 비워두세요.",
             "in_game_config": "모든 게임이 이 구성을 지원하는 것은 아니며, 일부 게임에는 게임 내 언어 설정이 있습니다.",
             "valid_codes": "유효한 언어 코드는 게임에 따라 다릅니다."
         },
@@ -315,12 +315,12 @@
         "preferSystemLibs": "커스텀 와인 버전(와인-GE, 와인-루트리스)은 라이브러리 종속성과 함께 제공됩니다. 이 옵션을 활성화하면 이러한 제공된 라이브러리는 무시되고 와인은 대신 시스템 라이브러리를 로드합니다. 경고합니다! 종속성이 충족되지 않으면 문제가 발생할 수 있습니다.",
         "primerun": "전용 그래픽 카드를 사용하여 다중 GPU 시스템에서 게임을 렌더링합니다. 렌더링에 헤드리스 GPU를 사용하는 게임용 노트북이나 데스크탑에서만 필요(엔비디아 옵티머스, AMD 크로스파이어)",
         "steam_path": {
-            "info": "이 경로를 통해 Heroic은 스팀에 스팀이 아닌 게임을 추가할 때 어떤 버전의 프로톤을 사용하는지 확인할 수 있습니다."
+            "info": "이 경로를 통해 GameLib은 스팀에 스팀이 아닌 게임을 추가할 때 어떤 버전의 프로톤을 사용하는지 확인할 수 있습니다."
         },
         "steamruntime": "리눅스 및 윈도우즈 (프로톤) 게임을 실행하는 데 도움이 되는 스팀에서 제공하는 사용자 지정 라이브러리입니다. 활성화하면 호환성이 향상될 수 있습니다.",
         "sync": {
-            "part1": "Heroic은 올바른 저장 폴더를 찾으려고 시도하며 대부분의 경우에 작동합니다. 폴더가 잘못된 경우 재정의 상자를 사용하여 변경하세요.",
-            "part2": "와인 또는 프로톤의 설치 경로를 변경하면 프로톤은 다른 설치 경로(/pfx)와 사용자 이름(스팀사용자)을 사용하므로 경로를 다시 확인해야 합니다. 따라서 현재 경로를 지우고 동기화 설정 페이지에서 나가서 Heroic이 올바른 설치 경로로 폴더를 한 번 더 추측할 수 있도록 다시 돌아갈 수 있습니다.",
+            "part1": "GameLib은 올바른 저장 폴더를 찾으려고 시도하며 대부분의 경우에 작동합니다. 폴더가 잘못된 경우 재정의 상자를 사용하여 변경하세요.",
+            "part2": "와인 또는 프로톤의 설치 경로를 변경하면 프로톤은 다른 설치 경로(/pfx)와 사용자 이름(스팀사용자)을 사용하므로 경로를 다시 확인해야 합니다. 따라서 현재 경로를 지우고 동기화 설정 페이지에서 나가서 GameLib이 올바른 설치 경로로 폴더를 한 번 더 추측할 수 있도록 다시 돌아갈 수 있습니다.",
             "part3": "수동 동기화: 다운로드를 선택하여 클라우드에 저장된 게임 저장 파일을 다운로드합니다. 로컬 항목을 클라우드에 업로드하려면 업로드를 선택합니다. 강제 다운로드 및 강제 업로드는 로컬 또는 클라우드에 있는 버전을 무시합니다.",
             "part4": "자동으로 저장 동기화를 선택하면 게임을 시작할 시 또는 플레이를 끝낼 때마다 저장 데이터가 동기화됩니다."
         },
@@ -356,7 +356,7 @@
             "downloadManager": "현재 및 과거 다운로드를 보여줍니다.",
             "library": "보유한 모든 게임을 표시합니다.",
             "login": "다양한 스토어에 로그인하세요.",
-            "settingsDefault": "게임의 Heroic 설정과 기본 설정을 모두 표시합니다.",
+            "settingsDefault": "게임의 GameLib 설정과 기본 설정을 모두 표시합니다.",
             "settingsGame": "게임의 모든 설정을 표시합니다.",
             "wineManager": "와인, 프로톤, 크로스오버 등의 다양한 버전을 설치",
             "defaultInstallPath": "이는 게임을 설치할 때 기본적으로 선택된 경로입니다."
@@ -599,7 +599,7 @@
         "autosync": "저장 자동 동기화",
         "autovkd3d": "설치 경로에서 VKD3D 자동 설치/업데이트",
         "change-target-exe": "실행할 다른 EXE 선택",
-        "checkForUpdatesOnStartup": "시작 시 Heroic 업데이트 확인",
+        "checkForUpdatesOnStartup": "시작 시 GameLib 업데이트 확인",
         "crossover-version": "크로스오버/와인 버전",
         "custom_themes_path": "커스텀 테마 경로",
         "customWineProton": "커스텀 와인/프로톤 경로",
@@ -607,7 +607,7 @@
         "default-install-path": "기본 설치 경로",
         "default-steam-path": "기본 스팀 경로",
         "defaultWinePrefix": "새 와인 설치 경로 폴더 설정",
-        "disable_controller": "컨트롤러를 이용한 Heroic 탐색 비활성화",
+        "disable_controller": "컨트롤러를 이용한 GameLib 탐색 비활성화",
         "discordRPC": "디스코드 Rich Presence 활성화",
         "download-no-https": "HTTPS를 사용하지 않고 게임 다운로드 (예를 들어 LanCache와 같은 CDN에 유용)",
         "dxvkfpslimit": "FPS 제한 (DX9, 10, 11)",
@@ -668,7 +668,7 @@
                     "title": "업로드 완료"
                 },
                 "error": {
-                    "content": "로그 파일을 업로드 실패하였습니다. 자세한 내용은 Heroic의 일반 로그를 확인",
+                    "content": "로그 파일을 업로드 실패하였습니다. 자세한 내용은 GameLib의 일반 로그를 확인",
                     "title": "업로드 실패함",
                     "manual_upload": ""
                 },
@@ -687,7 +687,7 @@
             "descriptiveNames": {
                 "game-log": "{{gameTitle}}의 게임 로그",
                 "gog": "GOG 로그",
-                "heroic": "일반 Heroic 기록",
+                "heroic": "일반 GameLib 기록",
                 "legendary": "에픽 게임즈 / 레전더리 로그",
                 "nile": "아마존 / 나일 로그",
                 "zoom": ""
@@ -707,7 +707,7 @@
         },
         "maxRecentGames": "표시할 최근 플레이한 게임",
         "maxworkers": "다운로드할 때 최대 워커 수",
-        "minimize-on-launch": "게임 실행 후 Heroic 최소화",
+        "minimize-on-launch": "게임 실행 후 GameLib 최소화",
         "offlinemode": "게임 오프라인으로 실행",
         "prefered_language": "선호 언어 (언어 코드)",
         "preferSystemLibs": "시스템 라이브러리를 선호",
@@ -809,7 +809,7 @@
             "installing": "BattlEye 런타임 설치 중...",
             "name": "BattlEye 안티치트 런타임"
         },
-        "clear-cache": "Heroic 캐시 지우기",
+        "clear-cache": "GameLib 캐시 지우기",
         "copiedToClipboard": "클립보드에 복사되었습니다!",
         "copyToClipboard": "모든 설정을 클립보드에 복사",
         "default_hint": "이 섹션의 변경 사항은 게임을 설치할 때 기본값으로만 적용됩니다. 이미 설치된 게임의 설정을 변경하려면 게임 페이지에서 설정 버튼을 사용하세요.",
@@ -843,7 +843,7 @@
             "legacy": ""
         },
         "open-config-file": "구성 파일 열기",
-        "reset-heroic": "Heroic 재설정",
+        "reset-heroic": "GameLib 재설정",
         "saves": {
             "label": "Save Location:",
             "warning": "클라우드 저장 기능은 베타 상태이므로, (문제가 발생할 경우를 대비해서) 동기화하기 전에 저장 데이터를 백업",
@@ -857,7 +857,7 @@
                 "help2": "타사 게임 정보 (점수, 스팀 호환성, howlongtobeat, pcgamingwiki, applegamingwiki)",
                 "help4": "GOG 라이브러리 정보 (게임 목록, 설치 대화 상자 정보, API 정보 -예: 요구 사항-)",
                 "help1": "이 작업을 수행하면 다음 캐시가 지워집니다:",
-                "help10": "Heroic 구성",
+                "help10": "GameLib 구성",
                 "help5": "아마존 라이브러리 정보 (게임 목록, 설치 대화 정보)",
                 "help6": "삭제되지 않음:",
                 "help3": "레전더리 라이브러리 정보 (게임 목록, 설치 대화 정보, 게임 정보)",
@@ -865,11 +865,11 @@
             },
             "details": "세부 사항",
             "title": {
-                "resetHeroic": "Heroic 재설정",
+                "resetHeroic": "GameLib 재설정",
                 "clearCache": "캐시 지우기"
             },
             "resetHeroic": {
-                "help": "이렇게 하면 모든 설정과 캐시가 제거되지만 설치된 게임이나 에픽 자격 인증은 제거되지 않습니다. Heroic의 휴대용 버전 (AppImage, WinPortable, ...)은 그 후 수동으로 다시 시작해야 합니다."
+                "help": "이렇게 하면 모든 설정과 캐시가 제거되지만 설치된 게임이나 에픽 자격 인증은 제거되지 않습니다. GameLib의 휴대용 버전 (AppImage, WinPortable, ...)은 그 후 수동으로 다시 시작해야 합니다."
             }
         },
         "systemInformation": {
@@ -883,7 +883,7 @@
             "steamDeck": "스팀 덱 {{model}}",
             "cometVersion": "코멧: {{cometVersion}}",
             "gpuDriver": "드라이버: {{driverVersion}}",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "legendaryVersion": "레전더리: {{legendaryVersion}}",
             "systemSpecifications": "시스템 사양:",
             "osNameFlatpak": "{{osName}} (Flatpak 내부)",
@@ -1051,7 +1051,7 @@
     "adtraction-locked": {
         "dont-show-again": "이 경고 다시 표시 안 함",
         "title": "Adtraction 차단됨",
-        "description": "track.adtraction.com 도메인이 로드되지 않았거나 차단된 것 같습니다. Adtraction을 사용하면 GOG 스토어에서 구매하는 모든 상품이 Heroic을 재정적으로 지원합니다. 기여하고 싶다면 차단을 해제하는 것을 고려하세요."
+        "description": "track.adtraction.com 도메인이 로드되지 않았거나 차단된 것 같습니다. Adtraction을 사용하면 GOG 스토어에서 구매하는 모든 상품이 GameLib을 재정적으로 지원합니다. 기여하고 싶다면 차단을 해제하는 것을 고려하세요."
     },
     "wineExplanation": {
         "proton-ge": "GE-Proton은 Glorious Eggroll이 만든 프로톤 변형입니다. 스팀에서 사용하도록 만들어졌지만 스팀 외부의 일부 게임은 이 변형에서 더 잘 작동할 수 있습니다. 문제 해결을 위해 대부분 쓸모없는 로그를 제공합니다.",

@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Heroic 缓存已清理。",
+            "message": "GameLib 缓存已清理。",
             "title": "缓存已清理"
         },
         "choose": "选择",
@@ -99,7 +99,7 @@
                 "title": "Steam 错误"
             },
             "executableNotFound": "未找到可执行文件",
-            "executableNotFoundMessage": "Heroic 找不到这个游戏的可执行文件。请在游戏设置中手动指定。",
+            "executableNotFoundMessage": "GameLib 找不到这个游戏的可执行文件。请在游戏设置中手动指定。",
             "dxmt": {
                 "message": "下载 DXMT 出错！检查你的连接！",
                 "title": "DXMT 下载错误"
@@ -110,8 +110,8 @@
                 "changelog": "打开更新日志",
                 "detail": "你想在后台下载更新吗？",
                 "message": "有新版本可用！",
-                "message-finished": "你想立即重启 Heroic 吗？",
-                "title": "Heroic 游戏启动器",
+                "message-finished": "你想立即重启 GameLib 吗？",
+                "title": "GameLib 游戏启动器",
                 "title-finished": "更新已完成",
                 "detailNoAutoupdate": "您的打包格式不支持自动更新。请使用您的包管理器进行更新。"
             }
@@ -129,8 +129,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "你确定要重置 Heroic 吗？这会删除所有设置和缓存但不会删除你已安装的游戏或你的 Epic 凭据。便携版本 (AppImage, WinPortable, ...) 的 Heroic 需要稍后手动重启。",
-                "title": "重置 Heroic"
+                "message": "你确定要重置 GameLib 吗？这会删除所有设置和缓存但不会删除你已安装的游戏或你的 Epic 凭据。便携版本 (AppImage, WinPortable, ...) 的 GameLib 需要稍后手动重启。",
+                "title": "重置 GameLib"
             }
         },
         "runexe": {
@@ -181,12 +181,12 @@
             },
             "snap": {
                 "checkbox": "不再显示本消息",
-                "title": "Heroic 正以 Snap 运行",
-                "message": "某些功能眼下在本应用的 Snap 版本中不可用，我们正尝试修复它。{{newLine}}当前限制为：{{newLine}}Heroic 无法从 Steam 找到 Proton 或从 Lutris 找到 Wine。{{newLine}}{{newLine}}Gamescope、GameMode 和 MangoHud 也无法正常工作，因为 Heroci 无法有权限访问它们。{{newLine}}{{newLine}}要访问此功能，请以 Flakpak、DEB 格式包安装 Heroic 或从 AppImage 安装。"
+                "title": "GameLib 正以 Snap 运行",
+                "message": "某些功能眼下在本应用的 Snap 版本中不可用，我们正尝试修复它。{{newLine}}当前限制为：{{newLine}}GameLib 无法从 Steam 找到 Proton 或从 Lutris 找到 Wine。{{newLine}}{{newLine}}Gamescope、GameMode 和 MangoHud 也无法正常工作，因为 Heroci 无法有权限访问它们。{{newLine}}{{newLine}}要访问此功能，请以 Flakpak、DEB 格式包安装 GameLib 或从 AppImage 安装。"
             },
             "rosetta": {
                 "title": "未找到 Rosetta",
-                "message": "Heroic 需要 Rosetta 在配备 Apple Silicon 芯片的 macOS 上正确运行。请用以下命令从 macOS 终端安装它：\"softwareupdate --install-rosetta\"，并重启 Heroic。 "
+                "message": "GameLib 需要 Rosetta 在配备 Apple Silicon 芯片的 macOS 上正确运行。请用以下命令从 macOS 终端安装它：\"softwareupdate --install-rosetta\"，并重启 GameLib。 "
             }
         },
         "wineprefix": "选择 Wine 前缀文件夹",
@@ -308,7 +308,7 @@
         "esync": "Esync 的目标是在 CPU 消耗很大的游戏中减少 wineserver 的开销。启用可能会提高性能。",
         "fsync": "Fsync 的目标是在 CPU 开销很大的游戏中减少 wineserver 的开销。启用可能会提高受支持的 Linux 内核的性能。",
         "game_language": {
-            "fallback": "留空使用 Heroic 的语言。",
+            "fallback": "留空使用 GameLib 的语言。",
             "in_game_config": "不是所有游戏都支持此配置，一些有游戏内语言设置。",
             "valid_codes": "有效语言代码取决于游戏。"
         },
@@ -324,18 +324,18 @@
         "preferSystemLibs": "自定义 Wine 版本(Wine- ge、Wine- lutris)随它们的库依赖项一起发布。启用此选项，这些附带的库将被忽略，Wine 将加载系统库。警告！如果不满足依赖关系，可能会出现问题。",
         "primerun": "在多 GPU 系统上使用独立显卡渲染游戏。仅适用于使用无头 GPU 进行渲染的游戏笔记本或台式机 (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "此路径让 Heroic 确定 Steam 所用的 Proton 版本，用于添加非 Steam 游戏到 Steam。"
+            "info": "此路径让 GameLib 确定 Steam 所用的 Proton 版本，用于添加非 Steam 游戏到 Steam。"
         },
         "steamruntime": "Steam 提供的用于帮助运行 Linux 和 Windows（Proton）游戏的自定义库。启用可能会提高兼容性。",
         "sync": {
-            "part1": "大多数情况下，Heroic 启动器会正确猜测的存档的位置。但如果位置是错误的，请使用覆盖框更改。",
-            "part2": "如果你更改了 Wine 或 Proton 的前缀文件夹，则需要再次检查路径，因为 Proton 使用不同的前缀（/pfx）和用户名（steamuser）。你可以直接删除当前路径，退出同步设置页面再重新进入，Heroic 会使用正确的前缀重新检测文件夹。",
+            "part1": "大多数情况下，GameLib 启动器会正确猜测的存档的位置。但如果位置是错误的，请使用覆盖框更改。",
+            "part2": "如果你更改了 Wine 或 Proton 的前缀文件夹，则需要再次检查路径，因为 Proton 使用不同的前缀（/pfx）和用户名（steamuser）。你可以直接删除当前路径，退出同步设置页面再重新进入，GameLib 会使用正确的前缀重新检测文件夹。",
             "part3": "手动同步：选择下载以下载存储在云端的存档。选择上传将会把本地存档上传到云端。强制下载将会忽略本地版本，强制上传将会忽略云端版本。",
             "part4": "自动同步将在你每次开始游戏时和结束游戏后同步存档。"
         },
         "vkd3d": "VKD3D 是一个基于 Vulkan 的转换层，用于 DirectX 12 游戏。启用可能会显著提高兼容性。对老的 DirectX 游戏没有效果。它需要 DXVK。",
         "wine": {
-            "part1": "Heroic 启动器会在以下文件夹中查找现有的 Wine/Proton/CrossOver：",
+            "part1": "GameLib 启动器会在以下文件夹中查找现有的 Wine/Proton/CrossOver：",
             "part2": "如果在其它位置，请使用软链接连接到这些中的一个文件夹"
         },
         "disable_logs": "将此复选框切换为“开”可禁用对日志文件的大部分写入（始终记录关键信息）。请确保在报告任何问题之前关闭此设置。",
@@ -354,7 +354,7 @@
         },
         "content": {
             "defaultInstallPath": "这是安装游戏时预先选择的默认路径。",
-            "settingsDefault": "显示 Heroic 的所有设置及游戏的默认值。",
+            "settingsDefault": "显示 GameLib 的所有设置及游戏的默认值。",
             "settingsGame": "显示游戏的全部设置。",
             "downloadManager": "显示当前和过往下载。",
             "wineManager": "安装不同版本的 Wine、Proton、Crossover 等。",
@@ -376,17 +376,17 @@
             "close": "关闭帮助"
         },
         "msync": "Msync 旨在减少 wineserver 在 CPU 消耗巨大的游戏中的开销。开启它可能会改善受支持的 Linux 内核上的性能。",
-        "download_proton_steam": "启用后，GE-Proton 将被直接下载到 Steam 兼容性工具目录而非默认的 Heroic 路径。它会使用上方 “默认 Steam 路径”设置中设定的 Steam 路径。",
+        "download_proton_steam": "启用后，GE-Proton 将被直接下载到 Steam 兼容性工具目录而非默认的 GameLib 路径。它会使用上方 “默认 Steam 路径”设置中设定的 Steam 路径。",
         "dxfpslimit": "设置 DirectX 游戏（9-12）的帧率上限",
         "advertiseAvxForRosetta": "在 Apple Silicon Mac 机器上通过 Rosetta 运行 Windows 游戏时启用 AVX 指令集支持。这对于一些需要 AVX 支持的游戏如《死亡搁浅》等来说可能是必需的。",
         "wine-hdr": "HDR 提供更明亮的高潮和更深的对比增强色彩。要让 HDR 工作，显示器和游戏都必须支持 HDR。",
         "wine-wayland": "Wine-Wayland 实验性驱动允许游戏在 Wayland 显示协议下原生运行。启用可能破坏一些游戏。",
-        "analytics": "允许 Heroic 收集 100% 匿名的使用数据帮助改进应用。需要重启才能生效。",
+        "analytics": "允许 GameLib 收集 100% 匿名的使用数据帮助改进应用。需要重启才能生效。",
         "WoW64": "Wine WoW64 模式允许在 64 位 Wine 上运行 32 位 Windows 游戏。启用该选项可能会提高性能，但也可能会无法运行较早的 32 位游戏。",
         "nvidiaprime": {
             "details": "在多 GPU 系统上使用独立显卡渲染游戏。仅适用于使用无头 GPU 进行渲染的游戏笔记本或台式机 (NVIDIA Optimus, AMD CrossFire)"
         },
-        "hide-window-on-protocol-launch": "从外部快捷方式（如“添加到 Steam”）启动游戏时，保持 Heroic 窗口隐藏。"
+        "hide-window-on-protocol-launch": "从外部快捷方式（如“添加到 Steam”）启动游戏时，保持 GameLib 窗口隐藏。"
     },
     "info": {
         "heroic": {
@@ -563,7 +563,7 @@
     "other": {
         "gogdl-version": "GOGDL 版本： ",
         "legendary-version": "Legendary 版本： ",
-        "weblate": "帮助翻译 Heroic。",
+        "weblate": "帮助翻译 GameLib。",
         "nile-version": "Nile 版本： "
     },
     "Other": "其他",
@@ -609,7 +609,7 @@
         "autosync": "自动同步存档",
         "autovkd3d": "自动在前缀上安装并更新 VKD3D",
         "change-target-exe": "选择要运行的替代 EXE",
-        "checkForUpdatesOnStartup": "启动时检查 Heroic 更新",
+        "checkForUpdatesOnStartup": "启动时检查 GameLib 更新",
         "crossover-version": "Crossover/Wine 版本",
         "custom_themes_path": "自定义主题路径",
         "customWineProton": "自定义 Wine/Proton 路径",
@@ -617,7 +617,7 @@
         "default-install-path": "默认安装路径",
         "default-steam-path": "默认 Steam 路径",
         "defaultWinePrefix": "为新的 WinePrefix设置文件夹",
-        "disable_controller": "使用控制器禁止 Heroic 导航",
+        "disable_controller": "使用控制器禁止 GameLib 导航",
         "discordRPC": "启用 Discord 的 Rich Presence（活动状态）",
         "download-no-https": "不使用 HTTPS 下载游戏 (对 LanCache 等 CDN 有用)",
         "dxvkfpslimit": "限制 FPS (DX9、10 和 11)",
@@ -685,7 +685,7 @@
                     "title": "上传日志文件？"
                 },
                 "error": {
-                    "content": "上传日志文件失败。详情请查看 Heroic 的常规日志",
+                    "content": "上传日志文件失败。详情请查看 GameLib 的常规日志",
                     "title": "上传失败了",
                     "manual_upload": "单击 “在文件夹中显示日志文件”按钮并手动上传“launch.log”文件到 Discord 或任何在线文件分享服务。"
                 },
@@ -698,7 +698,7 @@
             "descriptiveNames": {
                 "game-log": "{{gameTitle}}的游戏日志",
                 "gog": "GOG 日志",
-                "heroic": "常规 Heroic 日志",
+                "heroic": "常规 GameLib 日志",
                 "legendary": "Epic Games / Legendary 日志",
                 "nile": "Amazon / Nile 日志",
                 "zoom": "Zoom 日志"
@@ -717,7 +717,7 @@
         },
         "maxRecentGames": "要显示的最近玩过的游戏",
         "maxworkers": "下载时的最大线程数量",
-        "minimize-on-launch": "游戏启动后最小化 Heroic",
+        "minimize-on-launch": "游戏启动后最小化 GameLib",
         "offlinemode": "离线运行游戏",
         "prefered_language": "首选语言 (语言代码)",
         "preferSystemLibs": "首选系统库",
@@ -760,7 +760,7 @@
             "missingMsg": "我们在 PATH 上找不到 Gamescope。请先安装它或将其添加到 PATH。",
             "enableForceGrabCursor": "启用强制抓取指针",
             "missingMsgFlatpak": "我们找不到兼容的 Gamescope 版本。安装带 25.08 版 runtime 的 Gamescope flatpak 包 ，然后重启 Heroic.",
-            "warningFlatpak": "我们找不到兼容的 Gamescope 版本。安装带 {{runtimeVersion}} 版 runtime 的 Gamescope flatpak 包 ，然后重启 Heroic。"
+            "warningFlatpak": "我们找不到兼容的 Gamescope 版本。安装带 {{runtimeVersion}} 版 runtime 的 Gamescope flatpak 包 ，然后重启 GameLib。"
         },
         "frameless-window": {
             "confirmation": {
@@ -782,7 +782,7 @@
         },
         "disableUMU": "禁用 umu",
         "custom_css": {
-            "warning": "警告：这应用到整个前端，意味着错误样式可以造成 Heroic 不稳定。如果有需要，可以手动在 `~/.config/heroic/config.json`文件中更改设置。不要从你不信任的来源复制样式。"
+            "warning": "警告：这应用到整个前端，意味着错误样式可以造成 GameLib 不稳定。如果有需要，可以手动在 `~/.config/heroic/config.json`文件中更改设置。不要从你不信任的来源复制样式。"
         },
         "verboseLogs": {
             "description": "启用详细记录"
@@ -804,11 +804,11 @@
             "info_label": "忽略了非 GE Proton 版本"
         },
         "no-tray-icon": "隐藏系统托盘图标（需要重启）",
-        "analyticsOptIn": "发送匿名数据帮助 Heroic 开发",
+        "analyticsOptIn": "发送匿名数据帮助 GameLib 开发",
         "show_valve_proton": {
             "confirmation": {
                 "dont_show": "不要显示它们",
-                "message": "我们推荐在 Heroic 中使用自定义 Proton 分叉（GE-Proton、Proton-CachyOS 等），因为 Valve 的 Proton 构建缺少 winetricks 和 protofixes。但如果需要您仍可使用它。",
+                "message": "我们推荐在 GameLib 中使用自定义 Proton 分叉（GE-Proton、Proton-CachyOS 等），因为 Valve 的 Proton 构建缺少 winetricks 和 protofixes。但如果需要您仍可使用它。",
                 "show": "我明白，显示它们",
                 "title": "您确定吗？"
             },
@@ -824,14 +824,14 @@
         "nvidiaprime": {
             "description": "强制使用独立显卡（适用于 NVIDIA Optimus 或 AMD 双显卡切换），此选项仅对 OpenGL 和 Vulkan 游戏有效。"
         },
-        "hide-window-on-protocol-launch": "通过 heroic:// 链接启动游戏时隐藏 Heroic 窗口"
+        "hide-window-on-protocol-launch": "通过 heroic:// 链接启动游戏时隐藏 GameLib 窗口"
     },
     "settings": {
         "battlEyeRuntime": {
             "installing": "安装 BattlEye 运行时中...",
             "name": "BattlEye 反作弊运行时"
         },
-        "clear-cache": "清理 Heroic 缓存",
+        "clear-cache": "清理 GameLib 缓存",
         "copiedToClipboard": "已复制到剪贴板！",
         "copyToClipboard": "复制所有设置到剪贴板",
         "default_hint": "此部分的更改仅在安装游戏时作为默认值应用。如果你想改变一个已经安装的游戏的设置，使用游戏页面的设置按钮。",
@@ -865,7 +865,7 @@
             "legacy": "老古董"
         },
         "open-config-file": "打开配置文件",
-        "reset-heroic": "重置 Heroic",
+        "reset-heroic": "重置 GameLib",
         "saves": {
             "label": "存档位置：",
             "warning": "云存档功能处于测试期，请在同步前备份你的存档（以防出现问题）",
@@ -894,7 +894,7 @@
             "showDetailed": "显示详细的系统规格",
             "memory": "内存：",
             "copyToClipboard": "复制到剪贴板",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "nileVersion": "Nile: {{nileVersion}}",
             "cometVersion": "Comet：{{cometVersion}}"
         },
@@ -906,7 +906,7 @@
         },
         "advanced": {
             "clearCache": {
-                "help10": "Heroic 配置",
+                "help10": "GameLib 配置",
                 "help3": "Legendary 库信息（游戏列表、安装对话框信息、游戏信息）",
                 "help4": "GOG 库信息（游戏列表、安装对话框信息、api 信息，-i.e: requirements-）",
                 "help1": "此操作将清除下列缓存：",
@@ -918,11 +918,11 @@
                 "help8": "已安装游戏"
             },
             "resetHeroic": {
-                "help": "这会删除所有设置和环迅但不会删除你已安装的游戏或 Epic 凭据。在此之后，需要手动重启 Heroic 便携版本（AppImage、WinPortable, ...）。"
+                "help": "这会删除所有设置和环迅但不会删除你已安装的游戏或 Epic 凭据。在此之后，需要手动重启 GameLib 便携版本（AppImage、WinPortable, ...）。"
             },
             "title": {
                 "clearCache": "清除缓存",
-                "resetHeroic": "重置 Heroic"
+                "resetHeroic": "重置 GameLib"
             },
             "details": "详情"
         },
@@ -1071,7 +1071,7 @@
     "adtraction-locked": {
         "dont-show-again": "不再显示此警告",
         "title": "Adtraction 被封禁",
-        "description": "track.adtraction.com 域名似乎无法加载或者被封禁。通过 adtraction，你在 GOG 商店的任意购买都会在经济上支持 Heroic。如果希望作贡献，请考虑解除对此站点的封禁。"
+        "description": "track.adtraction.com 域名似乎无法加载或者被封禁。通过 adtraction，你在 GOG 商店的任意购买都会在经济上支持 GameLib。如果希望作贡献，请考虑解除对此站点的封禁。"
     },
     "categories-manager": {
         "confirm-rename": "确认将“{{oldName}}“重命名为“{{newName}}”",
@@ -1098,9 +1098,9 @@
             "sortOptions": "单击此处按字母分类游戏。",
             "welcome": {
                 "intro2": "如果游戏库为空，请用侧边栏的“管理账号”登录你的账号或用上方的“添加游戏”按钮添加自己的游戏。",
-                "title": "欢迎来到 Heroic！",
+                "title": "欢迎来到 GameLib！",
                 "title2": "管理游戏库！",
-                "intro": "欢迎来到 Heroic 游戏库！在这里你可以看到不同商店中你所有的游戏。"
+                "intro": "欢迎来到 GameLib 游戏库！在这里你可以看到不同商店中你所有的游戏。"
             },
             "viewToggle": "选择游戏视图样式是网格还是列表。",
             "categories": "将游戏分入不同类别保持整洁。",
@@ -1118,9 +1118,9 @@
             "quit": "安全退出程序。",
             "settings": "配置 GameLib 的设置、游戏默认、检查日志和更多。",
             "stores": "浏览并购买 Epic、GOG 和 Amazon 等不同商店中的游戏。",
-            "version": "检查当前 Heroic 版本，单击它查看最新更新记录，并从帮助图标访问此入门指南。",
+            "version": "检查当前 GameLib 版本，单击它查看最新更新记录，并从帮助图标访问此入门指南。",
             "welcome": {
-                "intro": "欢迎来到 Heroic！此侧边栏包括了所有探索本程序的导航选项。",
+                "intro": "欢迎来到 GameLib！此侧边栏包括了所有探索本程序的导航选项。",
                 "title": "侧边栏导航"
             },
             "accessibility": "访问无障碍功能定制体验。",
@@ -1142,12 +1142,12 @@
         "disable": "禁用",
         "enable": "启用",
         "info": {
-            "pt1": "Heroic 收集 100% 匿名的数据来改进应用。",
-            "pt2": "Heroic 使用开源的 Plausible Analytics 平台收集基本数据：应用版本、操作系统、连接的商店和国家/地区。",
-            "pt3": "Heroic 从不收集任何个人信息，包括用户名、IP 地址或电子邮箱。",
+            "pt1": "GameLib 收集 100% 匿名的数据来改进应用。",
+            "pt2": "GameLib 使用开源的 Plausible Analytics 平台收集基本数据：应用版本、操作系统、连接的商店和国家/地区。",
+            "pt3": "GameLib 从不收集任何个人信息，包括用户名、IP 地址或电子邮箱。",
             "pt4": "由于资源和用户反馈有限，此数据用于洞悉接下来要把主要精力放在哪里。",
             "pt5": "Plausible Analytics 完全遵守 GDPR、CCPA 和 PECR.",
-            "pt6": "为透明起见，你可以在 Heroic 日志中查看我们收集的数据。",
+            "pt6": "为透明起见，你可以在 GameLib 日志中查看我们收集的数据。",
             "pt7": "你可以随时在应用设置中更改这一设置。"
         },
         "title": "发送匿名分析信息"

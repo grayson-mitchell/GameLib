@@ -270,11 +270,11 @@
         "default": ""
     },
     "not_logged_in": {
-        "epic": "Siz Heroic-da Epic hisob qaydnomasi bilan tizimga kirmagansiz. Kirish uchun doʻkon sahifasidan foydalanmang, uning oʻrniga quyidagi tugmani bosing:",
-        "gog": "Siz Heroic-da GOG hisobi bilan tizimga kirmagansiz. Kirish uchun doʻkon sahifasidan foydalanmang, uning oʻrniga quyidagi tugmani bosing:",
+        "epic": "Siz GameLib-da Epic hisob qaydnomasi bilan tizimga kirmagansiz. Kirish uchun doʻkon sahifasidan foydalanmang, uning oʻrniga quyidagi tugmani bosing:",
+        "gog": "Siz GameLib-da GOG hisobi bilan tizimga kirmagansiz. Kirish uchun doʻkon sahifasidan foydalanmang, uning oʻrniga quyidagi tugmani bosing:",
         "login": "Tizimga kirish",
         "title": "Siz tizimga kirmadingiz",
-        "amazon": "Siz Heroic-da Amazon hisob qaydnomasi bilan tizimga kirmagansiz. Kirish uchun doʻkon sahifasidan foydalanmang, uning oʻrniga quyidagi tugmani bosing:",
+        "amazon": "Siz GameLib-da Amazon hisob qaydnomasi bilan tizimga kirmagansiz. Kirish uchun doʻkon sahifasidan foydalanmang, uning oʻrniga quyidagi tugmani bosing:",
         "zoom": ""
     },
     "report_problem": "Ushbu o'yinni ishga tushirishda muammo haqida xabar bering",

@@ -26,7 +26,7 @@
     },
     "box": {
         "cache-cleared": {
-            "message": "Se limpió la caché de Heroic.",
+            "message": "Se limpió la caché de GameLib.",
             "title": "Caché borrado"
         },
         "choose": "Selecciona",
@@ -99,7 +99,7 @@
                 "title": "Error de Steam"
             },
             "executableNotFound": "No se ha encontrado el ejecutable",
-            "executableNotFoundMessage": "Heroic no pudo encontrar el ejecutable para este juego. Por favor, configura la ruta manualmente en la configuración del juego.",
+            "executableNotFoundMessage": "GameLib no pudo encontrar el ejecutable para este juego. Por favor, configura la ruta manualmente en la configuración del juego.",
             "dxmt": {
                 "title": "Error al descargar DXMT",
                 "message": "Error al descargar DXMT! Compruebe su conexión!"
@@ -110,8 +110,8 @@
                 "changelog": "Abrir registro de cambios",
                 "detail": "¿Quiere descargar la actualización en segundo plano?",
                 "message": "¡Hay una nueva versión disponible!",
-                "message-finished": "¿Quiere reiniciar Heroic ahora?",
-                "title": "Heroic Games Launcher",
+                "message-finished": "¿Quiere reiniciar GameLib ahora?",
+                "title": "GameLib Games Launcher",
                 "title-finished": "Actualización finalizada",
                 "detailNoAutoupdate": "Las actualizaciones automáticas no son soportadas para su formato de paquete. Por favor, utilice su gestor de paquetes para actualizar."
             }
@@ -129,8 +129,8 @@
         },
         "reset-heroic": {
             "question": {
-                "message": "¿Estás seguro de que quieres restablecer Heroic? Esto eliminará todas las configuraciones y caché, pero no eliminará tus juegos instalados ni las credenciales de Epic. Las versiones portables (AppImage, WinPortable, ...) de Heroic tienen que ser reiniciadas manualmente luego de ejecutar esta acción.",
-                "title": "Restablecer Heroic"
+                "message": "¿Estás seguro de que quieres restablecer GameLib? Esto eliminará todas las configuraciones y caché, pero no eliminará tus juegos instalados ni las credenciales de Epic. Las versiones portables (AppImage, WinPortable, ...) de GameLib tienen que ser reiniciadas manualmente luego de ejecutar esta acción.",
+                "title": "Restablecer GameLib"
             }
         },
         "runexe": {
@@ -181,11 +181,11 @@
             },
             "snap": {
                 "checkbox": "No mostrar este mensaje de nuevo",
-                "title": "Heroic se ejecuta como un Snap",
-                "message": "Algunas características no están disponibles en la versión Snap de la aplicación por ahora y estamos tratando de arreglarlo.{{newLine}}Las limitaciones actuales son: {{newLine}}Heroic no podrá encontrar Proton desde Steam o Wine desde Lutris.{{newLine}}{{newLine}}Gamescope, GameMode y MangoHud tampoco funcionarán ya que Heroic no puede tener acceso a ellos.{{newLine}}{{newLine}}Para tener acceso a esta característica por favor instala Heroic como Flatpak, DEB o desde la AppImage."
+                "title": "GameLib se ejecuta como un Snap",
+                "message": "Algunas características no están disponibles en la versión Snap de la aplicación por ahora y estamos tratando de arreglarlo.{{newLine}}Las limitaciones actuales son: {{newLine}}GameLib no podrá encontrar Proton desde Steam o Wine desde Lutris.{{newLine}}{{newLine}}Gamescope, GameMode y MangoHud tampoco funcionarán ya que GameLib no puede tener acceso a ellos.{{newLine}}{{newLine}}Para tener acceso a esta característica por favor instala GameLib como Flatpak, DEB o desde la AppImage."
             },
             "rosetta": {
-                "message": "Heroic require Rosetta para funcionar correctamente en macOS con chips Apple Silicon. Por favor, instalar desde una terminal de macOS usando el siguiente comando: \"softwareupdate --install-rosetta\" y reiniciar Heroic. ",
+                "message": "GameLib require Rosetta para funcionar correctamente en macOS con chips Apple Silicon. Por favor, instalar desde una terminal de macOS usando el siguiente comando: \"softwareupdate --install-rosetta\" y reiniciar GameLib. ",
                 "title": "Rosetta no encontrado"
             }
         },
@@ -308,7 +308,7 @@
         "esync": "Esync intenta reducir la sobrecarga de wineserver en juegos con intenso uso de CPU. Activarlo puede mejorar el rendimiento.",
         "fsync": "Fsync intenta reducir la sobrecarga de wineserver en juegos con uso intensivo de CPU. Activarlo puede mejorar el rendimiento en kernels de Linux que lo soporten.",
         "game_language": {
-            "fallback": "Dejar en blanco para usar el lenguaje de Heroic.",
+            "fallback": "Dejar en blanco para usar el lenguaje de GameLib.",
             "in_game_config": "No todos los juegos soportan esta configuración, algunos tienen configuración del lenguaje dentro del juego.",
             "valid_codes": "Códigos de lenguaje válidos varian dependiendo del juego."
         },
@@ -324,12 +324,12 @@
         "preferSystemLibs": "Versiones custom de Wine (Wine-GE, Wine-Lutris) incluyen sus propias librerías para sus dependencias. Al activar esta opción, esa librarías son ignoradas y Wine cargará las librarías del sistema en su lugar. Advertencia! Pueden ocurrir errores si las dependencias no se cumplen.",
         "primerun": "Utiliza una tarjeta gráfica dedicada para renderizar el juego en sistemas multi-GPU. Sólo es necesario en los portátiles para juegos o en los ordenadores de sobremesa que utilizan una GPU sin cabeza para el renderizado (NVIDIA Optimus, AMD CrossFire)",
         "steam_path": {
-            "info": "Esto ayuda a Heroic a encontrar versiones de Proton instaladas en Steam y a identificar a los usuarios para agregar juegos a Steam."
+            "info": "Esto ayuda a GameLib a encontrar versiones de Proton instaladas en Steam y a identificar a los usuarios para agregar juegos a Steam."
         },
         "steamruntime": "Librerías provistas por Steam para ayudar a ejecutar juegos de Linux y Windows (Proton). Activarlas puede mejorar la compatibilidad.",
         "sync": {
-            "part1": "Heroic intenta adivinar la carpeta de guardado correcta y esto funcionará en la mayoría de los casos. En caso de que la carpeta sea incorrecta, use el cuadro de sobreescritura para cambiarla.",
-            "part2": "En caso de que cambies la carpeta del prefijo de Wine o Proton, deberás verificar la ruta nuevamente, ya que Proton usa un prefijo (/pfx) y un nombre de usuario (steamuser) diferentes. Por lo tanto, puedes borrar la ruta actual, salir de la página de configuración de sincronización y volver para que Heroic adivine la carpeta una vez más con el prefijo correcto.",
+            "part1": "GameLib intenta adivinar la carpeta de guardado correcta y esto funcionará en la mayoría de los casos. En caso de que la carpeta sea incorrecta, use el cuadro de sobreescritura para cambiarla.",
+            "part2": "En caso de que cambies la carpeta del prefijo de Wine o Proton, deberás verificar la ruta nuevamente, ya que Proton usa un prefijo (/pfx) y un nombre de usuario (steamuser) diferentes. Por lo tanto, puedes borrar la ruta actual, salir de la página de configuración de sincronización y volver para que GameLib adivine la carpeta una vez más con el prefijo correcto.",
             "part3": "Sincronización manual: elija Descargar para descargar los juegos guardados en la nube. Subir para subir los locales a la nube. Forzar descarga y Carga forzada ignorarán la versión local o en la nube.",
             "part4": "Sincronizar guardados automáticamente sincronizará los guardados cada vez que inicie un juego y después de terminar de jugar."
         },
@@ -362,7 +362,7 @@
         },
         "content": {
             "defaultInstallPath": "Esta es la ruta preseleccionada por defecto al instalar juegos.",
-            "settingsDefault": "Muestra todos los ajustes de Heroic y los predeterminados para los juegos.",
+            "settingsDefault": "Muestra todos los ajustes de GameLib y los predeterminados para los juegos.",
             "settingsGame": "Mostrar todos los ajustes de un juego.",
             "downloadManager": "Muestra las descargas actuales y pasadas.",
             "wineManager": "Instala diferentes versiones de Wine, Proton, Crossover, etc.",
@@ -378,16 +378,16 @@
         "msync": "Fsync intenta reducir la sobrecarga de wineserver en juegos con uso intensivo de CPU. Activarlo puede mejorar el rendimiento en kernels de Linux que lo soporten.",
         "dxfpslimit": "Establece un límite de velocidad de fotogramas para los juegos DirectX (9-12).",
         "advertiseAvxForRosetta": "Activa el set de soporte de instrucciones AVX cuando se ejecutan juegos de Windows a través de Rosetta en computadoras Apple Sillicon. Esto podría ser requerido por algunos juegos como Death Stranding que necesita soporte AVX.",
-        "download_proton_steam": "Si se activa, GE-Proton se descargará directamente en el directorio de herramientas de compatibilidad de Steam en lugar de la ruta por defecto de Heroic. Se usará la ruta de Steam de la configuración 'Ruta por defecto de Steam' más arriba.",
+        "download_proton_steam": "Si se activa, GE-Proton se descargará directamente en el directorio de herramientas de compatibilidad de Steam en lugar de la ruta por defecto de GameLib. Se usará la ruta de Steam de la configuración 'Ruta por defecto de Steam' más arriba.",
         "wine-hdr": "El HDR mejora los colores proporcionando resaltes más brillantes y contrastes más profundos. Para que el HDR funcione, tanto la pantalla como el juego deben ser compatibles.",
         "wine-wayland": "El driver experimental Wine-Wayland permite a los juegos ejecutarse nativamente usando el protocolo de Wayland. Activarlo puede causar problemas en algunos juegos.",
-        "analytics": "Permite que Heroic recopile datos de uso 100 % anónimos para mejorar la aplicación. Es necesario reiniciar para que surta efecto.",
+        "analytics": "Permite que GameLib recopile datos de uso 100 % anónimos para mejorar la aplicación. Es necesario reiniciar para que surta efecto.",
         "WoW64": "El modo de Wine WoW64 permite que juegos 32-bits de Windows corran en el Wine de 64-bits. Activándolo puede mejorar el rendimiento, pero puede romper juegos 32-bits antiguos.",
         "nvidiaprime": {
             "details": "Utiliza una tarjeta gráfica dedicada para renderizar el juego en sistemas multi-GPU. Sólo es necesario en los portátiles para juegos o en los ordenadores de sobremesa que utilizan una GPU sin cabeza para el renderizado (NVIDIA Optimus, AMD CrossFire)",
             "link": "Comprueba más detalles en nuestra wiki"
         },
-        "hide-window-on-protocol-launch": "Mantener la ventana de Heroic oculta cuando un juego es lanzado desde un acceso directo externo, como la función \"Agregar a Steam\"."
+        "hide-window-on-protocol-launch": "Mantener la ventana de GameLib oculta cuando un juego es lanzado desde un acceso directo externo, como la función \"Agregar a Steam\"."
     },
     "info": {
         "heroic": {
@@ -564,7 +564,7 @@
     "other": {
         "gogdl-version": "Versión de GOGDL: ",
         "legendary-version": "Versión de Legendary: ",
-        "weblate": "Ayuda a traducir Heroic.",
+        "weblate": "Ayuda a traducir GameLib.",
         "nile-version": "Versión del Nile: "
     },
     "Other": "Otros",
@@ -610,7 +610,7 @@
         "autosync": "Autosincronizar guardados",
         "autovkd3d": "Instalar/Actualizar automáticamente VKD3D en el Prefijo",
         "change-target-exe": "Seleccione un EXE alternativo para ejecutar",
-        "checkForUpdatesOnStartup": "Comprobar actualizaciones de Heroic al iniciar",
+        "checkForUpdatesOnStartup": "Comprobar actualizaciones de GameLib al iniciar",
         "crossover-version": "Versión crossover/vino",
         "custom_themes_path": "Ubicación de temas personalizados",
         "customWineProton": "Rutas personalizadas de Wine o Proton",
@@ -618,7 +618,7 @@
         "default-install-path": "Ruta de instalación predeterminada",
         "default-steam-path": "Ruta de Steam por defecto",
         "defaultWinePrefix": "Establecer carpeta para nuevos prefijos de Wine",
-        "disable_controller": "Desactivar la navegación de Heroic mediante un gamepad",
+        "disable_controller": "Desactivar la navegación de GameLib mediante un gamepad",
         "discordRPC": "Activar Discord Rich Presence",
         "download-no-https": "Descargar juegos sin HTTPS (útil para CDNs, ej: LanCache)",
         "dxvkfpslimit": "Límite de CPS/FPS (DX9, 10 y 11)",
@@ -680,7 +680,7 @@
                     "title": "Subida completada"
                 },
                 "error": {
-                    "content": "Falló la subida del registro. Ver el registro general de Heroic para detalles",
+                    "content": "Falló la subida del registro. Ver el registro general de GameLib para detalles",
                     "title": "Error al subir",
                     "manual_upload": "Clicar en el botón «MOSTRAR ARCHIVO DE REGISTROS EN LA CARPETA» y subir manualmente el archivo «launch.log» en Discord o en otro servicio online para compartir archivos."
                 },
@@ -700,7 +700,7 @@
                 "nile": "Registro de Amazon / Nile",
                 "game-log": "Registro de juego de {{gameTitle}}",
                 "gog": "Registro de GOG",
-                "heroic": "Registro general de Heroic",
+                "heroic": "Registro general de GameLib",
                 "legendary": "Registro de Epic Games / Legendary",
                 "zoom": "Registro de Zoom"
             },
@@ -718,7 +718,7 @@
         },
         "maxRecentGames": "Cantidad de jugados recientemente a mostrar",
         "maxworkers": "Número máximo de procesos al descargar",
-        "minimize-on-launch": "Minimizar Heroic al ejecutar un juego",
+        "minimize-on-launch": "Minimizar GameLib al ejecutar un juego",
         "offlinemode": "Ejecutar juego sin conexión",
         "prefered_language": "Lenguaje preferido (Código de Lenguaje)",
         "preferSystemLibs": "Preferir librerías del sistema",
@@ -768,7 +768,7 @@
             "missingMsg": "No podemos encontrar Gamescope en PATH. Instálelo primero o agréguelo a PATH.",
             "missingMsgFlatpak": "No se encontró una versión compatible de Gamescope. Instalar el paquete de Flatpak de Gamescope con runtime 25.08 y reiniciar Heroic.",
             "enableForceGrabCursor": "Activar Forzar Agarrar Cursor",
-            "warningFlatpak": "No se encontró una versión compatible de Gamescope. Instale el paquete de Flatpak de Gamescope con runtime {{runtimeVersion}} y reinicie Heroic."
+            "warningFlatpak": "No se encontró una versión compatible de Gamescope. Instale el paquete de Flatpak de Gamescope con runtime {{runtimeVersion}} y reinicie GameLib."
         },
         "msync": "Habilitar Esync",
         "allow_installation_broken_anticheat": {
@@ -787,7 +787,7 @@
             "description": "Activar registrados detallados"
         },
         "custom_css": {
-            "warning": "Advertencia: esto se aplica a todo el frontend. Eso significa que el estilo incorrecto podría provocar que Heroic no se pueda usar. De ser necesario, la configuración se puede cambiar manualmente en `~/.config/heroic/config.json`. NO COPIAR estilos de fuentes no confiables."
+            "warning": "Advertencia: esto se aplica a todo el frontend. Eso significa que el estilo incorrecto podría provocar que GameLib no se pueda usar. De ser necesario, la configuración se puede cambiar manualmente en `~/.config/heroic/config.json`. NO COPIAR estilos de fuentes no confiables."
         },
         "disableUMU": "Desactivar umu",
         "advertiseAvxForRosetta": "Promociona AVX para Rosetta",
@@ -805,12 +805,12 @@
             "wine_selector_warning": "Las versiones de Proton que no sean GE son ignoradas por defecto, puedes activarlas en la Configuracion Avanzada Global"
         },
         "no-tray-icon": "Ocultar el icono de la bandeja del sistema (requiere reiniciar)",
-        "analyticsOptIn": "Enviar datos anónimos para ayudar al desarrollo de Heroic",
+        "analyticsOptIn": "Enviar datos anónimos para ayudar al desarrollo de GameLib",
         "WoW64": "Activar WoW64 (Experimental)",
         "show_valve_proton": {
             "confirmation": {
                 "dont_show": "No les enseñes",
-                "message": "Te recomendamos lineas customizadas de Proton (GE-Proton, Proton-CachyOS, etc.) para usar Heroic ya que las lineas de Proton hechas por Proton carece de winetricks y protofixes. Sin embargo, tu puedes usarlos si quieres.",
+                "message": "Te recomendamos lineas customizadas de Proton (GE-Proton, Proton-CachyOS, etc.) para usar GameLib ya que las lineas de Proton hechas por Proton carece de winetricks y protofixes. Sin embargo, tu puedes usarlos si quieres.",
                 "show": "Comprendo, muestralos",
                 "title": "Seguro?"
             },
@@ -822,7 +822,7 @@
         "scripts": "Secuencias de comandos:",
         "disable_gog_presence": "Desactivar actualizaciones de GOG Presence",
         "start-in-console-mode": "Iniciar en modo consola",
-        "hide-window-on-protocol-launch": "Ocultar ventana de Heroic cuando un juego es ejecutado desde enlaces heroic://",
+        "hide-window-on-protocol-launch": "Ocultar ventana de GameLib cuando un juego es ejecutado desde enlaces heroic://",
         "nvidiaprime": {
             "description": "Forzar el uso de NVIDIA Optimus o AMD Dynamic Switchable Graphics dGPU . Úsalo ÚNICAMENTE para juegos OpenGL y Vulkan."
         }
@@ -832,7 +832,7 @@
             "installing": "Instalando runtime de BattlEye...",
             "name": "Tiempo de ejecución del sistema antitrampas de BattlEye"
         },
-        "clear-cache": "Borrar la caché de Heroic",
+        "clear-cache": "Borrar la caché de GameLib",
         "copiedToClipboard": "¡Copiado en el portapapeles!",
         "copyToClipboard": "Copiar todas las configuraciones al portapapeles",
         "default_hint": "Los cambios en esta sección sólo se aplican como valores por defecto al instalar los juegos. Si quieres cambiar la configuración de un juego ya instalado, utiliza el botón de Configuración en la página del juego.",
@@ -866,7 +866,7 @@
             "legacy": "Obsoleto"
         },
         "open-config-file": "Abrir archivo de configuración",
-        "reset-heroic": "Restablecer Heroic",
+        "reset-heroic": "Restablecer GameLib",
         "saves": {
             "label": "Ubicación de guardados:",
             "warning": "La funcionalidad Cloud Saves es Beta, por favor, respalda tus guardados antes de sincronizar (en caso de que algo salga mal)",
@@ -895,7 +895,7 @@
             "showDetailed": "Mostrar las especificaciones detalladas del sistema",
             "memory": "Memoria:",
             "copyToClipboard": "Copiar al portapapeles",
-            "heroicVersion": "Heroic: {{heroicVersion}}",
+            "heroicVersion": "GameLib: {{heroicVersion}}",
             "nileVersion": "Nile: {{nileVersion}}",
             "cometVersion": "Comet: {{cometVersion}}"
         },
@@ -911,7 +911,7 @@
                 "help9": "Configuración del juego",
                 "help1": "Esta acción borrará los siguientes cachés:",
                 "help2": "Información sobre juegos informada por terceros (puntuaciones, compatibilidad con steam, howlongtobeat, pcgamingwiki, applegamingwiki)",
-                "help10": "Configuración de Heroic",
+                "help10": "Configuración de GameLib",
                 "help7": "Sesión iniciada en la tienda",
                 "help3": "Información de la biblioteca de Legendary (lista de juegos, información de diálogo de instalación, información del juego)",
                 "help5": "Información de la biblioteca de Amazon (lista de juegos, información de diálogo de instalación)",
@@ -919,11 +919,11 @@
                 "help6": "Esto NO borrará:"
             },
             "title": {
-                "resetHeroic": "Restablecer Heroic",
+                "resetHeroic": "Restablecer GameLib",
                 "clearCache": "Borrar caché"
             },
             "resetHeroic": {
-                "help": "Esto eliminará todas las configuraciones y caché, pero no eliminará los juegos instalados ni tus credenciales de Epic. Versiones portables (AppImage, WinPortable, ...) de Heroic tienen que ser reiniciadas manualmente luego de ejecutar esta acción."
+                "help": "Esto eliminará todas las configuraciones y caché, pero no eliminará los juegos instalados ni tus credenciales de Epic. Versiones portables (AppImage, WinPortable, ...) de GameLib tienen que ser reiniciadas manualmente luego de ejecutar esta acción."
             },
             "details": "Detalles"
         },
@@ -1062,7 +1062,7 @@
     "adtraction-locked": {
         "dont-show-again": "No volver a mostrar este aviso",
         "title": "Adtraction está bloqueado",
-        "description": "Parece que el dominio track.adtraction.com no pudo cargar o está bloqueado. Con adtraction, cualquier compra que haga en la tienda GOG apoya Heroic financieramente. Considere eliminar el bloqueo si desea contribuir."
+        "description": "Parece que el dominio track.adtraction.com no pudo cargar o está bloqueado. Con adtraction, cualquier compra que haga en la tienda GOG apoya GameLib financieramente. Considere eliminar el bloqueo si desea contribuir."
     },
     "emptyLibrary": {
         "noResults": "Los filtros actuales no produjeron resultados.",
@@ -1105,9 +1105,9 @@
             "sortOptions": "Haz clic aquí para ordenar los juegos alfabéticamente.",
             "steamInstall": "Usa este botón para instalar la versión de Windows de Steam y poder jugar tus juegos de windows usando Crossover, Wine o GPTK.",
             "welcome": {
-                "intro": "¡Bienvenido a la Biblioteca de Heroic! Aquí es donde puedes ver todos tus juegos de las diferentes tiendas.",
+                "intro": "¡Bienvenido a la Biblioteca de GameLib! Aquí es donde puedes ver todos tus juegos de las diferentes tiendas.",
                 "intro2": "Si la biblioteca está vacía, asegúrate de iniciar sesión con tus cuentas mediante la opción Gestionar cuentas de la barra lateral, o de añadir tus propios juegos con el botón Añadir juego de arriba.",
-                "title": "Bienvenido a Heroic!",
+                "title": "Bienvenido a GameLib!",
                 "title2": "Gestionando la biblioteca!"
             },
             "viewToggle": "Cambia entre vista de cuadrícula y vista de lista para tus juegos."
@@ -1124,9 +1124,9 @@
             "quit": "Sal de la aplicación seguramente.",
             "settings": "Configura los ajustes de GameLib, juegos predeterminados, comprobar registros y mas.",
             "stores": "Navega y compra juegos en diferentes tiendas incluyendo Epic, GOG y Amazon.",
-            "version": "Revisa tu versión de Heroic, haz clic para ver su registro de cambios y accede este tour desde el botón de ayuda.",
+            "version": "Revisa tu versión de GameLib, haz clic para ver su registro de cambios y accede este tour desde el botón de ayuda.",
             "welcome": {
-                "intro": "Bienvenido a Heroic! Esta barra lateral controla toda las opciones de navegación para explorar la app.",
+                "intro": "Bienvenido a GameLib! Esta barra lateral controla toda las opciones de navegación para explorar la app.",
                 "title": "Navegacion de la barra lateral"
             },
             "wine": "Maneja o descarga nuevas versiones de Wine/Proton/GPTK para correr juegos de Widows en Linux o en macOS."
@@ -1144,12 +1144,12 @@
         "disable": "Desactivar",
         "enable": "Activar",
         "info": {
-            "pt1": "Para mejorar la aplicación, Heroic recopila datos 100% anónimos.",
-            "pt2": "Heroic utiliza la plataforma de código abierto Plausible Analytics para recopilar datos básicos: versión de la aplicación, sistema operativo, tiendas conectadas y país.",
+            "pt1": "Para mejorar la aplicación, GameLib recopila datos 100% anónimos.",
+            "pt2": "GameLib utiliza la plataforma de código abierto Plausible Analytics para recopilar datos básicos: versión de la aplicación, sistema operativo, tiendas conectadas y país.",
             "pt3": "Nunca recopilará ninguna información personal, incluido su nombre de usuario, dirección IP o correo electrónico.",
             "pt4": "Estos datos se utilizan para brindarnos información sobre qué debemos abordar a continuación debido a nuestros recursos limitados y los comentarios de los usuarios.",
             "pt5": "Plausible Analytics cumple totalmente con GDPR, CCPA y PECR.",
-            "pt6": "Para mayor transparencia, puede ver los datos que recopilamos en los registros de Heroic.",
+            "pt6": "Para mayor transparencia, puede ver los datos que recopilamos en los registros de GameLib.",
             "pt7": "Puede cambiar esta configuración en cualquier momento en la Configuración de la aplicación."
         },
         "title": "Enviar analíticas anónimas"
