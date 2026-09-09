@@ -3,7 +3,10 @@ created: 2026-09-05T13:45:00.000Z
 title: 'Confirm the GAP-D nav drain live on `/store/gog` — Back enables and the host label follows'
 area: frontend/store-embed
 needs: one-manual-gesture-on-macos
-status: OPEN
+status: RESOLVED
+resolved_by: 260909-tgx
+resolved_date: 2026-09-09
+resolution: "VERDICT PASS. Gesture run on a release bundle proven fresh by sha256 (f480c240…d99c, built 2026-09-09T21:13). On /store/gog an in-page link click moved the host label af.gog.com → www.gog.com; Back's false → true transition was isolated on a freshly restarted app, because reaching /store/gog requires a store switch that already pushes history. Full record, including that confound and the agent-driven provenance of the observations: .planning/quick/260909-tgx-run-the-gap-d-nav-drain-live-gate-on-sto/260909-tgx-LIVE-GATE.md"
 severity: minor
 platform: macos
 ready: live-gate

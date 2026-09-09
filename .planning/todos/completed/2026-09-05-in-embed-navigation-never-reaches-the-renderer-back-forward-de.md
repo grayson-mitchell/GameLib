@@ -10,7 +10,7 @@ blocked_by: null
 resolves_phase: null
 resolved_by: 260905-e61
 resolved_date: 2026-09-05
-resolution: "Option 1 (Drain) implemented across all three layers. Automated DoD met; the live /store/gog confirmation remains OUTSTANDING."
+resolution: "Option 1 (Drain) implemented across all three layers. Automated DoD met 2026-09-05. Live /store/gog confirmation RUN AND PASSED 2026-09-09 by quick 260909-tgx — host label moved af.gog.com → www.gog.com on an in-page link click, and Back's false → true transition was isolated on a fresh app start. Record: .planning/quick/260909-tgx-run-the-gap-d-nav-drain-live-gate-on-sto/260909-tgx-LIVE-GATE.md"
 ---
 
 ## Symptom (user-visible)
@@ -107,9 +107,14 @@ shape with no sibling in this codebase, and would have left the already-shipped
   is exactly the blindness this todo described. Rust side:
   `store_embed_push_enqueues_a_nav_event_carrying_the_post_push_cursor_state`,
   verified RED by neutering `push`'s enqueue call.
-- [ ] **Manual confirmation on `/store/gog`** that the host label moves from
-  `af.gog.com` to `www.gog.com` on landing. **NOT DONE** — this is a live gate on
-  real hardware and was not run. It is the one remaining unverified item.
+- [x] **Manual confirmation on `/store/gog`** that the host label moves from
+  `af.gog.com` to `www.gog.com` on landing. **DONE 2026-09-09** (quick `260909-tgx`, VERDICT
+  PASS). On `/store/gog` the label read exactly `af.gog.com` before the click and exactly
+  `www.gog.com` after clicking an in-page link; Reload was never pressed. Back's `false → true`
+  transition was isolated in a second run on a freshly restarted app, because reaching
+  `/store/gog` requires a store switch that itself pushes onto the same history stack — so on
+  that route Back is already enabled before any in-page click. Record:
+  `.planning/quick/260909-tgx-run-the-gap-d-nav-drain-live-gate-on-sto/260909-tgx-LIVE-GATE.md`
 
 ### Notes for the live run
 
