@@ -1052,9 +1052,25 @@ export async function fetchChunk(
       // attempt proceeds token-less, exactly like every other host. Runs
       // BEFORE acquiring `limiter`'s slot -- it has its own bounded timeout
       // and was never part of the network budget this limiter tracks.
+      //
+      // QUICK 260909-q2o: this `await` used to be the ONE point in a chunk
+      // attempt where a delivered external cancel went unobserved — bounded
+      // at CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS (3000ms) per attempt, a latency
+      // gap rather than an unbounded one, but a gap all the same (see the
+      // now-narrowed "Hypothesis B" in
+      // .planning/todos/pending/2026-08-27-stall-watchdog-leaves-the-download-running.md).
+      // Forwarding this function's own `signal` (already reached here,
+      // already checked at the top of every attempt and re-checked in the
+      // catch below) into `getToken` makes the token await itself
+      // abort-interruptible too: an abort still degrades to `''` HERE
+      // (cdnAuth.ts never throws — see its own doc comment), and the actual
+      // stop is still delivered by THIS function's own existing checkpoints
+      // — the top-of-attempt `if (signal?.aborted) throw
+      // ChunkFetchAbortedError()` and the catch's re-check — not by
+      // `getToken` throwing.
       const token =
         wantsCdnAuthToken(meta) && cdnAuth
-          ? await cdnAuth.getToken(depotId, host)
+          ? await cdnAuth.getToken(depotId, host, signal)
           : ''
       // Debug/humankind-depot-full-stall (2026-08-17): acquire the network
       // slot immediately before the actual depot chunk fetch -- see this
