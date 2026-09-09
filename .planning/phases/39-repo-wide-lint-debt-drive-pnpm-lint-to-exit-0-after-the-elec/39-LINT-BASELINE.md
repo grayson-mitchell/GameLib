@@ -182,6 +182,15 @@ and the ratchet commit except this document's own edits.
 
 ## Task 3: the `--max-warnings` ratchet
 
+> **SUPERSEDED 2026-09-09.** This single `--max-warnings 4157` ceiling was replaced by TWO
+> independent ceilings — a production ceiling and a test ceiling, enforced by
+> `meta/lintScoped.cjs` via the `lint`, `lint:src` and `lint:tests` scripts — in quick task
+> `260909-s8x`. **`4157` must not be cited as a live number anywhere.** See
+> `.planning/quick/260909-s8x-split-the-lint-ratchet-into-separate-pro/260909-s8x-LINT-BASELINE.md`
+> for the current ceilings, their measurements, and the mutation proofs. The record below is left
+> in place, unmodified, per this document's own convention of marking superseded numbers in place
+> rather than rewriting history.
+
 Re-measured one final time, on the exact tree this commit sits on (only this document's own two
 prior edits — the baseline census and the Task 2 skip decision — landed since the 4157 figure was
 first measured; no code changed):
