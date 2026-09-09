@@ -2,7 +2,8 @@
 created: 2026-09-07
 title: "Two Steam-written ACFs (38410, 718850) claim StateFlags=4 over grossly incomplete native installs — GameLib's new structural gate is unproven live and both installs are still unrepaired"
 area: steam-depot
-status: OPEN
+status: "RESOLVED 2026-09-09 by quick-260909-nzb -- both subjects in the title are discharged, on different grounds. (1) THE STRUCTURAL GATE IS NO LONGER UNPROVEN LIVE: Gate A (ENOTEMPTY refusal + failed install + StateFlags=1026, with the post-download structural line ABSENT), Gate B (mid-run truncation of a reconcile-SKIPPED file -> 'post-download structural re-verification found 1 of 1215 planned entries damaged or missing ... expected=4273440 found=0' + StateFlags=1026, with jobCount=1 reconciledSkipped=1214 proving failures.length===0 so the check was genuinely reached), and a negative control that PASSED TWICE (fresh install and resume both earned StateFlags=4, so neither 1026 is a pre-existing condition and the gates are arbitrable). Evidence committed under .planning/quick/260909-nzb-acf-stateflags4-live-gate/. (2) THE TWO DAMAGED INSTALLS ARE NOT A GAMELIB DEFECT AND THE USER HAS DECIDED TO LEAVE THEM: the 2026-09-08 correction established by FIELD SET that Steam, not GameLib, wrote both StateFlags=4 manifests, so a proven fail-closed GameLib writer does not explain them and no code change here can repair them; repair was always the user's call and on 2026-09-09 the user explicitly chose to leave both alone. Native 38410 (master.dat still an empty directory, 258,221,501 B under a StateFlags=4 manifest) and native 718850 (13.59 GB short) therefore remain DAMAGED ON DISK BY DECISION, not by oversight -- their ACF sha256 values were recorded before the gate and re-verified unchanged after it. Also closed at the desk: item 3 ANSWERED (718850's shortfall is real content missing from base depot 718851, NOT the selectAllDepots DLC union -- DLC-tagged depots are 561,517,956 B against a 13.59 GB shortfall and the base depots alone overshoot disk by 13.03 GB), and the 'Suspected mechanism' section RETIRED (SizeOnDisk == sum(InstalledDepots.size) byte-exactly in 18 of 23 manifests, so byte-exactness is the ordinary case and carries no signal). The todo's own prescribed single discriminating run was CORRECTED before being driven: an ENOTEMPTY refusal populates failures[], making runLooksComplete false and skipping verifyStructuralIntegrity entirely, so it would have proven the repair half while leaving the structural half -- the thing the title called unproven -- still unproven. RESIDUE FILED, NOT BURIED: 2026-09-09-cold-session-installdir-falls-back-to-app-appid.md (major, ready: code)."
+resolved_by: quick-260909-nzb
 severity: major
 platform: any
 ready: human
@@ -404,3 +405,47 @@ non-BLOCKED verdict, so no live run remains, and no code work remains either —
 only outstanding item is the **user's repair decision** on the two damaged installs,
 which is precisely what `human` denotes. `status: OPEN` and `severity: major` stay:
 both installs are still damaged and unrepaired.
+
+
+---
+
+# 2026-09-09 — CLOSED
+
+Closed by quick task `260909-nzb`. Both subjects in the title are discharged, on
+different grounds — see the `status:` frontmatter for the full record.
+
+## Why this closes even though two installs are still broken on disk
+
+Because the damage is **not GameLib's, and not unowned**:
+
+- The 2026-09-08 correction proved by **field set** that the Steam client wrote both
+  `StateFlags=4` manifests. GameLib's writer emits a fixed 15-key set; both of these
+  carry `MountedConfig`, `StagingSize`, `LastPlayed`, `dlcappid` sub-keys and (on
+  718850) `InstallScripts`. So no GameLib code change repairs them, and the
+  now-proven fail-closed gate does not explain them.
+- Repair was always the user's decision. **On 2026-09-09 the user made it: leave both
+  alone.** That is the `ready: human` item resolved — with a decision, which is what
+  `human` means. It is not an item left dangling.
+
+**Both installs remain damaged on disk, deliberately.** Native **38410**
+(`master.dat` is still an empty directory; 258,221,501 B present under a
+`StateFlags=4` manifest) and native **718850** (13.59 GB short). If either game
+misbehaves, the fix is Steam → *Verify integrity of game files*; nothing in GameLib
+will detect them, because `StateFlags=4` means Steam runs no verify pass.
+
+## Do NOT re-open this on rediscovering the damage
+
+A future sweep of `steamapps` will find both of these again. They are **known,
+investigated, and deliberately left** — not a new finding. Re-deriving them costs the
+multi-session investigation recorded in this file and in
+`.planning/debug/steam-depot-unclassified-generic-error.md`. Read the `status:` field
+before opening anything new about 38410 or 718850.
+
+## What genuinely remains open, elsewhere
+
+`.planning/todos/pending/2026-09-09-cold-session-installdir-falls-back-to-app-appid.md`
+— `resolveSteamInstallTarget` (1 ms) runs before `SteamUser.ensureConnected`
+(1629 ms cold connect), so the first install of a session has no PICS appinfo and
+lands in a duplicate `app_<appid>` directory. Found by this task's gate. It is almost
+certainly what produced the pre-existing `app_257350`, `app_25900` and `app_402060`
+directories, which were left untouched as user data.
