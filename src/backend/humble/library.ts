@@ -20,7 +20,8 @@ import {
   describeMissingExpirationTpks,
   describeSkippedEntitlements,
   isTerminal,
-  isFreezeEligible
+  isFreezeEligible,
+  probeOrderFieldNamesD4305
 } from './classify'
 import { recomputeOwnership as dedupRecomputeOwnership } from './dedup'
 import { detectAndNotifyExpirationTransitions } from './expirationAlerts'
@@ -320,6 +321,17 @@ async function fetchAndCommitOrder(
     }
     // Committed immediately per resolve, never batched (D-34).
     humbleLibraryStore.set(gamekey, entry)
+
+    // TEMPORARY PROBE (D-43-05) — REVERT IN TASK 3
+    logInfo(
+      [
+        'D-43-05 probe: order_top_level_fields',
+        gamekey,
+        String(entry.keys.length),
+        probeOrderFieldNamesD4305(result.data)
+      ],
+      LogPrefix.Backend
+    )
 
     if (entry.keys.length === 0) {
       // Live-UAT round 3 diagnosability (debug session:
