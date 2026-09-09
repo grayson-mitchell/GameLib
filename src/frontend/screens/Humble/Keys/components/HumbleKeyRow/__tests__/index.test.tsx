@@ -38,10 +38,14 @@
  * around the logo (present iff a logo exists for that platform); which
  * brand renders is already pinned by the caption's display NAME text.
  */
+import { readFileSync } from 'fs'
+import { join } from 'path'
+
 import type { ReactElement, ReactNode } from 'react'
 
 import { HumbleKey } from 'common/types/humble'
 import HumbleKeyRow from '../index'
+import UrgencyBadge from '../../UrgencyBadge'
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -211,17 +215,24 @@ describe('HumbleKeyRow store indicator (D-42-03, redesigned 260908-vo4)', () => 
     }
   )
 
-  // GENUINE RED: today the first non-falsy child of the row is the state
-  // badge column (or an action column, when a claim/gift/settle prop is
-  // supplied) — the logo lives two levels deep inside
-  // .humbleKeyRowInfo > .humbleKeyRowCaption. `order:` cannot fix this (it
-  // only permutes siblings within one flex container); only a DOM move can.
-  it('the store logo is the FIRST non-falsy child of the row for a branded platform', () => {
+  // Re-pinned for the three-column grid (43-05 Task 2, superseding the old
+  // "logo is the row's first DOM child" claim from 260908-vo4): the row's
+  // first child is now always the `humbleKeyTypeCell` — the TYPE column
+  // renders on every row, branded or not (see the UNPICKED pin below) — and
+  // the store logo lives inside it for a branded platform. The store
+  // signal still leads the row; only what wraps it changed.
+  it('the FIRST child of the row is humbleKeyTypeCell, and the store logo is inside it for a branded platform', () => {
     const key = makeHumbleKey({ platform: 'steam' })
     const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
 
     const first = firstRowChild(tree)
-    expect(first?.props?.className).toContain('humbleKeyRowStoreLogo')
+    expect(first?.props?.className).toBe('humbleKeyTypeCell')
+    const logo = collectElements(first?.props?.children).find(
+      (el) =>
+        typeof el.props?.className === 'string' &&
+        el.props.className.split(' ').includes('humbleKeyRowStoreLogo')
+    )
+    expect(logo).toBeDefined()
   })
 
   // GENUINE RED: general structural invariant — wherever a caption renders
@@ -352,13 +363,17 @@ describe('HumbleKeyRow store indicator (D-42-03, redesigned 260908-vo4)', () => 
 
   // GENUINE RED risk: hoisting the logo out of the `{!isUnpicked && ...}`
   // block is exactly how a Steam glyph would leak onto a Choice-month
-  // pseudo-entry — extended from the pre-existing caption-only pin.
-  it('renders no caption and no store logo at all for an UNPICKED pseudo-entry', () => {
+  // pseudo-entry — extended from the pre-existing caption-only pin. 43-05
+  // Task 2 adds one more assertion: the `humbleKeyTypeCell` element itself
+  // still renders (empty) for UNPICKED, so the fixed TYPE track never
+  // changes width and the GAME column's left edge never shifts row to row.
+  it('renders no caption and no store logo at all for an UNPICKED pseudo-entry, but the TYPE cell still renders', () => {
     const key = makeHumbleKey({ state: 'UNPICKED', platform: 'steam' })
     const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
 
     expect(findByClassNamePart(tree, 'humbleKeyRowCaption')).toBeUndefined()
     expect(findByClassNamePart(tree, 'humbleKeyRowStoreLogo')).toBeUndefined()
+    expect(findByClassNamePart(tree, 'humbleKeyTypeCell')).toBeDefined()
   })
 
   // REGRESSION PIN, not a RED — passes today AND after Task 2. Encodes the
@@ -387,6 +402,234 @@ describe('HumbleKeyRow store indicator (D-42-03, redesigned 260908-vo4)', () => 
 
     const buttons = collectElements(tree).filter((el) => el.type === 'button')
     expect(buttons).toHaveLength(0)
+  })
+})
+
+// 43-05 Task 2/3: the three-column grid structure and the D-43-17
+// "interactivity lives in KEY only" contract. These gates did not exist
+// before this plan — the row was a flat six-child flex strip with no single
+// place interactivity was required to live.
+describe('HumbleKeyRow three-column structure (43-05, D-43-13/14/15/17)', () => {
+  // A key configured to render every KEY-cell affordance at once: the
+  // fuzzy-match ownership override (and, via `undoOverride`, its reversal
+  // counterpart), plus `claimAction` and `giftAction`. Used by the
+  // REQ-43-15 zero-interactivity gate below so that a pass is NOT vacuous —
+  // a row with no affordances configured would trivially have zero buttons
+  // anywhere, proving nothing about where they are forbidden from
+  // appearing. `claimAction`'s `redeemedAt: null` / `revealedAt: null` /
+  // `keyindexResolved: true` combination selects its "Claim"/"Activate"
+  // button branch (rather than the Undo or Finish-activation branches),
+  // which is the one live `<button>` claimAction can render alongside a
+  // gift button on the same row.
+  function makeFullyAffordancedRow(): ReactElement {
+    return HumbleKeyRow({
+      humbleKey: makeHumbleKey({
+        platform: 'steam',
+        state: 'UNREVEALED',
+        expiration: '2999-01-01T00:00:00.000Z',
+        ownedElsewhere: true,
+        matchConfidence: 'fuzzy'
+      }),
+      urgencyTier: 'warning',
+      undoOverride: true,
+      claimAction: {
+        revealedAt: null,
+        redeemedAt: null,
+        keyindexResolved: true,
+        onClaim: jest.fn(),
+        onFinish: jest.fn(),
+        onUndoRedeem: jest.fn()
+      },
+      giftAction: { giftedAt: null, onGift: jest.fn() }
+    }) as ReactElement
+  }
+
+  // Elements carrying interactivity, per the D-43-17 contract: a
+  // `<button>`, an `<a>`, or any element with a truthy `onClick` prop
+  // (defensive — this codebase currently expresses every affordance as a
+  // `<button>`, but the gate should not go blind if that ever changes).
+  function collectInteractive(
+    node: ReactNode
+  ): ReactElement<PropsWithChildren & { onClick?: unknown }>[] {
+    return collectElements(node).filter(
+      (el) =>
+        el.type === 'button' ||
+        el.type === 'a' ||
+        Boolean((el.props as { onClick?: unknown })?.onClick)
+    ) as ReactElement<PropsWithChildren & { onClick?: unknown }>[]
+  }
+
+  it('renders exactly three direct children — humbleKeyTypeCell, humbleKeyGameCell, humbleKeyColumnCell — in that order', () => {
+    const key = makeHumbleKey({ platform: 'steam' })
+    const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+
+    const children = (tree.props as PropsWithChildren)?.children
+    const flat = (Array.isArray(children) ? children : [children]).filter(
+      (child) => child !== null && child !== undefined && child !== false
+    ) as ReactElement<PropsWithChildren>[]
+
+    expect(flat).toHaveLength(3)
+    expect(flat.map((el) => el.props?.className)).toEqual([
+      'humbleKeyTypeCell',
+      'humbleKeyGameCell',
+      'humbleKeyColumnCell'
+    ])
+  })
+
+  // REQ-43-15: TYPE and GAME are strictly presentational. Checked against
+  // `makeFullyAffordancedRow()` so the zero result is proof, not vacuity —
+  // every affordance this component can render is present on this key, and
+  // none of them leaked into TYPE or GAME.
+  it('renders zero interactive elements (button/a/onClick) inside humbleKeyTypeCell, for a fully-affordanced row (REQ-43-15)', () => {
+    const tree = makeFullyAffordancedRow()
+    const typeCell = findByClassNamePart(tree, 'humbleKeyTypeCell')
+
+    expect(typeCell).toBeDefined()
+    expect(collectInteractive(typeCell?.props?.children)).toHaveLength(0)
+  })
+
+  it('renders zero interactive elements (button/a/onClick) inside humbleKeyGameCell, for a fully-affordanced row (REQ-43-15)', () => {
+    const tree = makeFullyAffordancedRow()
+    const gameCell = findByClassNamePart(tree, 'humbleKeyGameCell')
+
+    expect(gameCell).toBeDefined()
+    expect(collectInteractive(gameCell?.props?.children)).toHaveLength(0)
+  })
+
+  // The other half of the non-vacuity proof: the SAME fully-affordanced row
+  // DOES render interactive elements, and they are all inside KEY. Without
+  // this, the two tests above could pass because `makeFullyAffordancedRow`
+  // renders no buttons anywhere.
+  it('renders every configured affordance as an interactive element inside humbleKeyColumnCell, for a fully-affordanced row (REQ-43-15)', () => {
+    const tree = makeFullyAffordancedRow()
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+
+    expect(keyCell).toBeDefined()
+    const interactive = collectInteractive(keyCell?.props?.children)
+    // The override button, its undo-override counterpart, the claim
+    // button, and the gift button — four distinct affordances on this one
+    // configuration.
+    expect(interactive.length).toBeGreaterThanOrEqual(4)
+  })
+
+  // REQ-43-13: the status line (state badge + expiration) lives in KEY, not
+  // GAME.
+  it('renders the state badge and expiration inside humbleKeyColumnCell, not humbleKeyGameCell (REQ-43-13)', () => {
+    const key = makeHumbleKey({
+      platform: 'steam',
+      state: 'UNREVEALED',
+      expiration: '2999-01-01T00:00:00.000Z'
+    })
+    const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+    const gameCell = findByClassNamePart(tree, 'humbleKeyGameCell')
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+
+    expect(
+      findByClassNamePart(keyCell?.props?.children, 'humbleKeyStateBadge')
+    ).toBeDefined()
+    expect(
+      findByClassNamePart(keyCell?.props?.children, 'humbleKeyRowExpiration')
+    ).toBeDefined()
+    expect(
+      findByClassNamePart(gameCell?.props?.children, 'humbleKeyStateBadge')
+    ).toBeUndefined()
+    expect(
+      findByClassNamePart(gameCell?.props?.children, 'humbleKeyRowExpiration')
+    ).toBeUndefined()
+  })
+
+  // REQ-43-14: the UrgencyBadge lives in GAME, not KEY. Identified by
+  // element-type identity (`el.type === UrgencyBadge`) rather than
+  // className, because `HumbleKeyRow({...})` returns an unrendered element
+  // graph — `<UrgencyBadge .../>` appears as an element whose `type` is the
+  // imported component function itself, not its expanded output.
+  it('renders UrgencyBadge inside humbleKeyGameCell, not humbleKeyColumnCell (REQ-43-14)', () => {
+    const key = makeHumbleKey({
+      platform: 'steam',
+      state: 'UNREVEALED',
+      expiration: '2999-01-01T00:00:00.000Z'
+    })
+    const tree = HumbleKeyRow({
+      humbleKey: key,
+      urgencyTier: 'warning'
+    }) as ReactElement
+    const gameCell = findByClassNamePart(tree, 'humbleKeyGameCell')
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+
+    const inGame = collectElements(gameCell?.props?.children).find(
+      (el) => el.type === UrgencyBadge
+    )
+    const inKey = collectElements(keyCell?.props?.children).find(
+      (el) => el.type === UrgencyBadge
+    )
+    expect(inGame).toBeDefined()
+    expect(inKey).toBeUndefined()
+  })
+
+  // D-42's ownership badge and its fuzzy-only "Not the same game" override,
+  // plus the WR-04 undo-override counterpart, all moved from the old
+  // .humbleKeyRowInfo (GAME today) into KEY — this is the specific thing
+  // this plan's move changes about D-42's affordance placement.
+  it('renders the ownership badge and both override buttons inside humbleKeyColumnCell, not humbleKeyGameCell', () => {
+    const key = makeHumbleKey({
+      platform: 'steam',
+      ownedElsewhere: true,
+      matchConfidence: 'fuzzy'
+    })
+    const tree = HumbleKeyRow({
+      humbleKey: key,
+      undoOverride: true
+    }) as ReactElement
+    const gameCell = findByClassNamePart(tree, 'humbleKeyGameCell')
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+
+    const ownedBadgesInKey = collectElements(keyCell?.props?.children).filter(
+      (el) =>
+        typeof el.props?.className === 'string' &&
+        el.props.className.split(' ').includes('humbleKeyOwnedBadge')
+    )
+    const ownedBadgesInGame = collectElements(
+      gameCell?.props?.children
+    ).filter(
+      (el) =>
+        typeof el.props?.className === 'string' &&
+        el.props.className.split(' ').includes('humbleKeyOwnedBadge')
+    )
+    // One badge for the fuzzy-match override, one for the undoOverride
+    // counterpart — both in KEY.
+    expect(ownedBadgesInKey).toHaveLength(2)
+    expect(ownedBadgesInGame).toHaveLength(0)
+  })
+})
+
+// 43-05 Task 3: this proves the CSS source declares one shared grid
+// template for the header row and every data row — it proves the STRING
+// was written, and proves NOTHING about the rendered column geometry.
+// This project has no jsdom and no browser automation (jest.config.js's
+// docstring), so no test here (or anywhere in this suite) can measure a
+// computed width. REQ-43-19's actual verification is plan 43-09's live
+// gate.
+describe('Humble Keys index.css column geometry (source census only, REQ-43-19 verified live in 43-09)', () => {
+  it('declares exactly one grid-template-columns rule, on the combined .humbleKeysColumnHeader, .humbleKeyRow selector', () => {
+    const css = readFileSync(
+      join(__dirname, '../../../index.css'),
+      'utf-8'
+    )
+
+    const matches = css.match(/grid-template-columns/g) ?? []
+    expect(matches).toHaveLength(1)
+
+    const declarationIndex = css.indexOf('grid-template-columns')
+    const precedingCss = css.slice(0, declarationIndex)
+    const selectorBlockStart = precedingCss.lastIndexOf('.humbleKeysColumnHeader')
+    // The selector list must appear immediately before the declaration
+    // (i.e. no closing brace of an unrelated rule in between).
+    const closingBraceBetween = precedingCss
+      .slice(selectorBlockStart)
+      .indexOf('}')
+    expect(selectorBlockStart).toBeGreaterThan(-1)
+    expect(closingBraceBetween).toBe(-1)
+    expect(precedingCss.slice(selectorBlockStart)).toContain('.humbleKeyRow')
   })
 })
 
