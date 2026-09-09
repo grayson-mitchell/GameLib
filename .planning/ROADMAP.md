@@ -5102,7 +5102,17 @@ game` plus bold `Likely owned on Steam ([game])`. Other descriptive text moves i
 column. Named `KEY` rather than Humble's "Keys and entitlements" because GameLib does not
 cover their non-computer-game catalogue.
 
-**Requirements**: TBD (run /gsd-ui-phase 43, then /gsd-plan-phase 43)
+**Requirements**: REQ-43-01 … REQ-43-24 (see .planning/REQUIREMENTS.md § "Phase 43
+Requirements")
+
+**Deliberate deviations from this section's own goal text:** the goal prose above (unedited,
+kept as the record of what was proposed at UI-spec time) names a `Most recent`/`Alphabetical`
+sort picker and a `Hide redeemed keys` checkbox. D-43-06 and D-43-08 (`43-CONTEXT.md`) supersede
+both: the shipped default sort is `Expiring soonest` (D-43-06), not `Most recent` — the open
+question above about `HumbleKey` carrying no purchase date was never resolved in GameLib's favor
+— and the shipped checkbox is `Redeemable keys only` with inverted polarity (D-43-08), not `Hide
+redeemed keys`. This is recorded as a superseding note rather than a silent rewrite of the goal
+text.
 
 **Depends on:** Phase 42 — VERIFIED, not the `phase.add` positional default. Scenario 4 renders
 Phase 42's own output: `ownedElsewhere` + `matchConfidence` (exact vs fuzzy), D-42's "Not the
@@ -5128,10 +5138,29 @@ restructure supersedes.
 3. **Tab deletion is confirmed** by the operator (2026-09-09) — the three tabs are replaced by
    the unified list, not kept alongside it.
 
-**Plans:** 0 plans
+**Plans:** 10 plans
 
 Plans:
-- [ ] TBD (run /gsd-ui-phase 43, then /gsd-plan-phase 43 to break down)
+- [ ] 43-01 — mint REQ-43-01..24 into REQUIREMENTS.md and ROADMAP.md, fill 43-VALIDATION.md's
+  Per-Task Verification Map (wave 1)
+- [ ] 43-02 — settle D-43-05 by measurement: does a populated Humble order carry a purchase/order
+  date field a `Most recent` sort could use (wave 1)
+- [ ] 43-03 — settle D-43-11 by measurement: does the redeem endpoint accept a keyless
+  `gog_keyless` entitlement (wave 1)
+- [ ] 43-04 — land the pure-module changes (export `compareWaiting`, add `matchesKeySearch`/
+  `isGiftableSpare`, relocate `GENERIC_KEY_PLATFORM`) the unified list needs (wave 1)
+- [ ] 43-05 — convert `HumbleKeyRow` from a six-cell flex strip into the three-column CSS Grid
+  the UI-SPEC specifies (wave 1)
+- [ ] 43-06 — turn the KEY cell into the enumerated scenario set the phase is named for, and mint
+  the strings those scenarios need (wave 2)
+- [ ] 43-07 — replace the three-tab route shell with the unified list: search, controls, column
+  header, and scenario-driven rows (wave 3)
+- [ ] 43-08 — delete the four gate-scoped tab files and their dead code atomically with the gate
+  configuration that enrols them (wave 4)
+- [ ] 43-09 — ship the `gog_keyless` claim path plan 43-03's probe selects, closing REQ-43-24
+  (wave 4)
+- [ ] 43-10 — author and run the packaged-Tauri-build live gate for REQ-43-19's column geometry
+  and row separator (wave 5)
 
 ---
 
