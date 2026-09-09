@@ -2248,6 +2248,211 @@ describe('decompress', () => {
         expect(out.equals(data)).toBe(true)
       })
     })
+
+    // quick 260909-q2o: closes the last abort-blind window in the chunk
+    // attempt loop -- `cdnAuth.getToken` now takes the SAME `signal`
+    // fetchChunk already carries (see decompress.ts:1055-1057). These tests
+    // gate the WIRING, not just the capability: a `cdnAuth`-only test (see
+    // cdnAuth.test.ts) proves the third parameter exists but never proves
+    // production actually reaches it through fetchChunk.
+    describe('cdnAuth.getToken abort-signal wiring (quick 260909-q2o)', () => {
+      it('fetchChunk forwards its OWN signal into cdnAuth.getToken by reference -- the capability is reached in production, not merely present', async () => {
+        const data = Buffer.from('signal wiring proof', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const client: CDNAuthTokenClient = {
+          _send: jest.fn((_header, _body, callback) => {
+            callback(
+              encodeCdnAuthTokenResponse({
+                token: '?wiring-proof-token',
+                expiration_time: Math.floor(Date.now() / 1000) + 3600
+              }),
+              { proto: { eresult: 1 } }
+            )
+          })
+        }
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+        const getTokenSpy = jest.spyOn(cdnAuth, 'getToken')
+        const hostMeta = new Map([
+          [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+        ])
+        const controller = new AbortController()
+
+        global.fetch = jest.fn(() =>
+          Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        ) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        const out = await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta,
+          controller.signal
+        )
+
+        expect(out.equals(data)).toBe(true)
+        expect(getTokenSpy).toHaveBeenCalledWith(
+          depotId,
+          hosts[0],
+          controller.signal
+        )
+      })
+
+      it('a cancel that fires during the token await is not gated behind CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS -- only ONE attempt is made, never rotated to another host', async () => {
+        jest.useFakeTimers()
+        try {
+          const neverRespondingClient: CDNAuthTokenClient = {
+            _send: jest.fn(() => {
+              // Deliberately never calls back -- simulates a hanging CDN
+              // auth-token CM round-trip while the chunk attempt loop waits
+              // on `cdnAuth.getToken`.
+            })
+          }
+          const cdnAuth = new CdnAuthTokenCache(neverRespondingClient, 1091500)
+          const hostMeta = new Map([
+            [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+          ])
+          const controller = new AbortController()
+
+          // Mirrors the existing external-cancel mock shape (~L2107) but also
+          // honours an ALREADY-aborted signal at call time -- real fetch()
+          // rejects synchronously in that case; a listener registered after
+          // the abort event already fired would never invoke, hanging the
+          // mock forever, which is exactly the interleaving this test hits
+          // (the external signal aborts WHILE still inside the token await,
+          // before fetchChunk ever reaches its own fetch() call).
+          global.fetch = jest.fn((_url: unknown, opts?: { signal?: AbortSignal }) =>
+            new Promise((_resolve, reject) => {
+              const rejectAborted = () => {
+                const err = new Error('This operation was aborted')
+                err.name = 'AbortError'
+                reject(err)
+              }
+              if (opts?.signal?.aborted) {
+                rejectAborted()
+                return
+              }
+              opts?.signal?.addEventListener('abort', rejectAborted, {
+                once: true
+              })
+            })
+          ) as unknown as typeof fetch
+
+          const chunk = {
+            sha: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+            cb_original: 1,
+            attemptSeed: 0
+          }
+
+          const pending = fetchChunk(
+            hosts,
+            depotId,
+            chunk,
+            key,
+            lzma,
+            4,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            cdnAuth,
+            hostMeta,
+            controller.signal
+          )
+          pending.catch(() => {})
+
+          await jest.advanceTimersByTimeAsync(0)
+          controller.abort()
+          await jest.advanceTimersByTimeAsync(0)
+
+          await expect(pending).rejects.toMatchObject({
+            name: 'ChunkFetchAbortedError',
+            code: 'aborted'
+          })
+          // The fake clock never crossed CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS
+          // (3000ms) -- if it had, `jest.advanceTimersByTimeAsync(0)` alone
+          // could never have unblocked the token await.
+          expect(global.fetch).toHaveBeenCalledTimes(1)
+        } finally {
+          jest.useRealTimers()
+        }
+      })
+
+      it('regression: omitting `signal` but supplying cdnAuth + token-requiring hostMeta still appends the token to the URL exactly as the existing cycle-7 tests assert', async () => {
+        const data = Buffer.from('no signal, cdnAuth still works', 'utf8')
+        const encrypted = await buildEncryptedChunkResponse(data)
+        const expectedSha = sha1(data)
+        const client: CDNAuthTokenClient = {
+          _send: jest.fn((_header, _body, callback) => {
+            callback(
+              encodeCdnAuthTokenResponse({
+                token: '?no-signal-token',
+                expiration_time: Math.floor(Date.now() / 1000) + 3600
+              }),
+              { proto: { eresult: 1 } }
+            )
+          })
+        }
+        const cdnAuth = new CdnAuthTokenCache(client, 1091500)
+        const hostMeta = new Map([
+          [hosts[0], { httpsSupport: 'mandatory', usetokenauth: true }]
+        ])
+
+        let requestedUrl = ''
+        global.fetch = jest.fn((url: unknown) => {
+          requestedUrl = String(url)
+          return Promise.resolve({
+            ok: true,
+            arrayBuffer: () =>
+              Promise.resolve(
+                encrypted.buffer.slice(
+                  encrypted.byteOffset,
+                  encrypted.byteOffset + encrypted.byteLength
+                )
+              )
+          } as Response)
+        }) as unknown as typeof fetch
+
+        const chunk = { sha: expectedSha, cb_original: data.length }
+        const out = await fetchChunk(
+          hosts,
+          depotId,
+          chunk,
+          key,
+          lzma,
+          4,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          cdnAuth,
+          hostMeta
+        )
+
+        expect(out.equals(data)).toBe(true)
+        expect(requestedUrl).toBe(
+          `https://${hosts[0]}/depot/${depotId}/chunk/${expectedSha}?no-signal-token`
+        )
+      })
+    })
   })
 })
 
