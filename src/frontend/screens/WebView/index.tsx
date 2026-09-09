@@ -166,7 +166,7 @@ export default function WebView() {
     // only the deleted Electron `<webview>` amazon-login flow (`handleAmazonLogin`, removed by
     // this plan). `useTauriOAuthLogin.ts`'s own `getAmazonLoginData()` call is the single
     // remaining owner of that fetch -- see
-    // `.planning/todos/pending/2026-09-01-webview-amazonlogindata-is-permanently-null.md` for
+    // `.planning/todos/completed/2026-09-01-webview-amazonlogindata-is-permanently-null.md` for
     // the folded todo this deletion resolves. Do NOT re-add a fetch here: the double-spawn cost
     // is the measured ~12.8s-per-call regression named in the no-op effect below.
     '/loginweb/nile': '',

@@ -7,7 +7,8 @@ type: docs-only
 
 # Summary — 260909-n9s
 
-**Outcome:** Todo closed with **no code change**. Its premise was refuted, not just its remedy.
+**Outcome:** Todo closed with **no behavioural code change**. Its premise was refuted, not just
+its remedy. One non-behavioural source edit was required — see *Pointer repair* below.
 
 ## What was asked
 
@@ -44,6 +45,22 @@ login window — it never returns the payload to the component. There is nothing
 The single-call-site gate (`WebViewAmazonLoginDataSpawn.test.ts`) carries its own negative
 control: it asserts failure against a synthetic source with a duplicated `getAmazonLoginData()`
 call, so its green is not a green-check-proving-nothing.
+
+## Pointer repair (not in the original plan)
+
+`index.tsx:169` cited this todo at its `.planning/todos/pending/...` path — a breadcrumb left by
+the very commit that resolved it. Moving the file to `completed/` made that reference dangle, so
+the path was corrected in place. Comment-only: no behaviour, no API, no control flow touched.
+Re-verified after the edit — all 10 `WebView/__tests__` suites pass (213 tests), `planning-gates`
+9/9, prettier clean.
+
+## Noted, not actioned
+
+`.planning/quick/260905-upz-.../260905-upz-AUDIT.md:466` scored this todo **LIVE — anchor still
+present** on 2026-09-05 using `grep -rn "amazonLoginData" src | wc -l` => `4`. All four hits were
+already **comments**, not code; the todo had been dead since `157409206`. A bare identifier grep
+cannot distinguish a live read site from a comment describing its deletion. Recorded here rather
+than corrected — that audit is a historical artefact.
 
 ## Follow-ups
 
