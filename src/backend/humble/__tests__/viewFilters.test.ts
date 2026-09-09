@@ -9,8 +9,13 @@ import { HumbleKey, HumbleKeyState } from 'common/types/humble'
 import {
   selectKeysWaiting,
   selectGiftableSpares,
-  partitionWaitingByUrgency
+  partitionWaitingByUrgency,
+  compareWaiting,
+  matchesKeySearch,
+  isGiftableSpare,
+  WAITING_STATES
 } from 'common/humble/viewFilters'
+import { GENERIC_KEY_PLATFORM } from 'common/humble/genericKeyPlatform'
 
 function makeKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
   return {
@@ -289,5 +294,143 @@ describe('selectGiftableSpares', () => {
       matchConfidence: 'fuzzy'
     })
     expect(selectGiftableSpares([key])).toEqual([key])
+  })
+})
+
+describe('compareWaiting — the surviving comparator (REQ-43-05)', () => {
+  // This is the ONE case that distinguishes compareWaiting from the deleted
+  // groupKeys.ts byExpiringSoonest, which returns 0 for two undated keys and
+  // would leave Humble's insertion order — a silent, cosmetic regression
+  // nobody would catch in review. See the mutation proof recorded in
+  // 43-04-SUMMARY.md.
+  test('two undated keys supplied out of alphabetical order sort alphabetically by title', () => {
+    const zebra = makeKey({ title: 'Zebra Quest', expiration: null })
+    const alpha = makeKey({ title: 'Alpha Quest', expiration: null })
+    const middle = makeKey({ title: 'Middle Quest', expiration: null })
+    const result = [zebra, middle, alpha].sort(compareWaiting)
+    expect(result).toEqual([alpha, middle, zebra])
+  })
+
+  test('a dated key always precedes an undated key', () => {
+    const dated = makeKey({
+      title: 'Z Game',
+      expiration: '2026-08-01T00:00:00.000Z'
+    })
+    const undated = makeKey({ title: 'A Game', expiration: null })
+    expect([undated, dated].sort(compareWaiting)).toEqual([dated, undated])
+  })
+
+  test('two dated keys order soonest-expiring first', () => {
+    const soon = makeKey({
+      title: 'Soon Game',
+      expiration: '2026-07-10T00:00:00.000Z'
+    })
+    const later = makeKey({
+      title: 'Later Game',
+      expiration: '2026-09-01T00:00:00.000Z'
+    })
+    expect([later, soon].sort(compareWaiting)).toEqual([soon, later])
+  })
+})
+
+describe('WAITING_STATES as the Redeemable-keys-only predicate (REQ-43-07)', () => {
+  test.each<HumbleKeyState>([
+    'UNPICKED',
+    'UNREVEALED',
+    'REVEALED',
+    'REDEEMED',
+    'UNREDEEMABLE'
+  ])(
+    'membership for state %s is identical regardless of ownership/platform/matchConfidence',
+    (state) => {
+      const unowned = makeKey({
+        state,
+        ownedElsewhere: false,
+        platform: 'steam',
+        matchConfidence: 'none'
+      })
+      const ownedGeneric = makeKey({
+        state,
+        ownedElsewhere: true,
+        platform: GENERIC_KEY_PLATFORM,
+        matchConfidence: 'fuzzy'
+      })
+      expect(WAITING_STATES.has(unowned.state)).toBe(
+        WAITING_STATES.has(ownedGeneric.state)
+      )
+    }
+  )
+
+  test('D-43-08: UNPICKED is IN the set', () => {
+    expect(WAITING_STATES.has('UNPICKED')).toBe(true)
+  })
+
+  test('D-43-08: REDEEMED is OUT of the set', () => {
+    expect(WAITING_STATES.has('REDEEMED')).toBe(false)
+  })
+
+  test('D-43-08: UNREDEEMABLE is OUT of the set', () => {
+    expect(WAITING_STATES.has('UNREDEEMABLE')).toBe(false)
+  })
+})
+
+describe('matchesKeySearch — title only (REQ-43-09, REQ-43-21)', () => {
+  const key = makeKey({
+    title: 'Some Game',
+    origin: 'A very special gift just for you'
+  })
+
+  test('a query matching only origin returns no match', () => {
+    expect(matchesKeySearch(key, 'special gift')).toBe(false)
+  })
+
+  test('a lowercase substring of the title matches', () => {
+    expect(matchesKeySearch(key, 'some ga')).toBe(true)
+  })
+
+  test('an uppercase query matches case-insensitively', () => {
+    expect(matchesKeySearch(key, 'SOME GAME')).toBe(true)
+  })
+
+  test('an empty query matches everything', () => {
+    expect(matchesKeySearch(key, '')).toBe(true)
+  })
+
+  test('a whitespace-only query matches everything', () => {
+    expect(matchesKeySearch(key, '   ')).toBe(true)
+  })
+
+  test('REQ-43-21: a title match AND WAITING_STATES membership compose as the screen will use them', () => {
+    const redeemedMatch = makeKey({
+      title: 'Some Game',
+      state: 'REDEEMED',
+      ownedElsewhere: false
+    })
+    const composed =
+      matchesKeySearch(redeemedMatch, 'some game') &&
+      WAITING_STATES.has(redeemedMatch.state)
+    expect(composed).toBe(false)
+  })
+})
+
+describe('isGiftableSpare (scenario 3)', () => {
+  test('true for ownedElsewhere + UNREVEALED', () => {
+    const key = makeKey({ ownedElsewhere: true, state: 'UNREVEALED' })
+    expect(isGiftableSpare(key)).toBe(true)
+  })
+
+  test('D-55: false for ownedElsewhere + REVEALED', () => {
+    const key = makeKey({ ownedElsewhere: true, state: 'REVEALED' })
+    expect(isGiftableSpare(key)).toBe(false)
+  })
+
+  test('false for unowned + UNREVEALED', () => {
+    const key = makeKey({ ownedElsewhere: false, state: 'UNREVEALED' })
+    expect(isGiftableSpare(key)).toBe(false)
+  })
+
+  test('false for owned + REDEEMED', () => {
+    const key = makeKey({ ownedElsewhere: true, state: 'REDEEMED' })
+    expect(isGiftableSpare(key)).toBe(false)
   })
 })
