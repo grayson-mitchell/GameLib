@@ -62,11 +62,21 @@ fail-closed GameLib gate does not explain them. The todo stays `status: OPEN`,
 `severity: major`, `ready: human` — the only outstanding item is the user's repair
 decision.
 
-## Cleanup owed
+## Cleanup — DONE 2026-09-09
 
-A 119 MB orphan created by this session's first (cold) install sits at
-`steamapps/common/app_112100`. Awaiting the user's go-ahead to remove; not deleted
-unilaterally.
+The 119 MB orphan created by this session's first (cold) install at
+`steamapps/common/app_112100` was **removed on the user's explicit instruction**.
+Before deleting, it was confirmed unreferenced: no `appmanifest_*.acf` named
+`app_112100`, the 112100 ACF pointed at `Avadon The Black Fortress`, and `lsof`
+showed no open handles. After deleting, the surviving install was re-verified at
+1209 files / 121,853,904 B with `AvScenData.dat` and the `Avadon` binary hashing to
+their pre-run values.
+
+**The three PRE-EXISTING `app_*` directories were left alone** — `app_257350`,
+`app_25900`, `app_402060`. They predate this session, they are the user's data, and
+removing them is the user's decision, not cleanup owed by this task. They are almost
+certainly earlier instances of the same cold-session fallback defect (see the todo
+filed above).
 
 ## Restoration
 
