@@ -24,6 +24,7 @@ import {
 import { STEAM_PICS_TIMEOUT_MS } from '../withTimeout'
 import { SteamUser } from '../user'
 import { classifyDepotError } from '../depotErrors'
+import { readAcfInstalldir } from '../acfInstalldir'
 
 jest.mock('backend/logger', () => ({
   logInfo: jest.fn(),
@@ -49,6 +50,12 @@ jest.mock('i18next', () => ({
     t: (_key: string, fallback = '') => fallback
   }
 }))
+
+// ── quick-260909-pym: acfInstalldir mock — automocked default return is
+//    `undefined`, so every EXISTING test in this file below keeps its
+//    current PICS-only behaviour with no edit (asserted by the fact the
+//    whole file, not just the new tests, is run in Task 1's verify step). ──
+jest.mock('../acfInstalldir')
 
 function makeFakeClient(overrides: Record<string, unknown> = {}) {
   return {
@@ -349,6 +356,91 @@ describe('resolveSteamInstallTarget', () => {
         platformToInstall: 'Windows'
       })
     ).rejects.toBeInstanceOf(UnsafeInstalldirError)
+  })
+
+  // ── quick-260909-pym RED tests (Task 1) — all three EXPECTED TO FAIL
+  //    against current HEAD; Task 2 makes them pass. ─────────────────────
+
+  it('RED-1 (cold session): a cold-session resolve awaits ensureConnected and reads the real PICS installdir, instead of returning app_<appid> in 1ms', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    const client = makeFakeClient({
+      getProductInfo: mockProductInfo(12345, 'Avadon The Black Fortress')
+    })
+    jest
+      .mocked(SteamUser.getClient)
+      .mockReturnValueOnce(null as never)
+      .mockReturnValue(client as never)
+    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+
+    const result = await resolveSteamInstallTarget(APP_ID, {
+      path: '',
+      platformToInstall: 'Windows'
+    })
+
+    // At HEAD this fails with Received: "app_12345" and zero
+    // ensureConnected calls — the getClient() null-guard returns
+    // `undefined` from fetchInstalldir before ever awaiting a connection.
+    expect(result.installdir).toBe('Avadon The Black Fortress')
+    expect(result.installdirFallbackUsed).toBeUndefined()
+    expect(jest.mocked(SteamUser.ensureConnected)).toHaveBeenCalled()
+  })
+
+  it('RED-2 (ACF precedence): an existing on-disk ACF wins over PICS, so a reinstall/resume never creates a second directory beside a live install', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    jest.mocked(SteamUser.getClient).mockReturnValue(
+      makeFakeClient({
+        getProductInfo: mockProductInfo(
+          12345,
+          'Baldurs Gate II Enhanced Edition'
+        )
+      }) as never
+    )
+    jest.mocked(readAcfInstalldir).mockReturnValue('app_257350')
+
+    const result = await resolveSteamInstallTarget(APP_ID, {
+      path: '',
+      platformToInstall: 'Windows'
+    })
+
+    // At HEAD this fails: it returns the PICS name, which is exactly the
+    // second-directory-beside-a-live-install harm this plan fixes.
+    expect(result.installdir).toBe('app_257350')
+  })
+
+  it('RED-3 (ACF short-circuits the connect): a reinstall over an existing ACF pays no cold connect and no PICS round-trip at all', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    const client = makeFakeClient({
+      getProductInfo: mockProductInfo(12345, 'Baldurs Gate II Enhanced Edition')
+    })
+    jest.mocked(SteamUser.getClient).mockReturnValue(null as never)
+    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(true)
+    jest.mocked(readAcfInstalldir).mockReturnValue('app_257350')
+
+    const result = await resolveSteamInstallTarget(APP_ID, {
+      path: '',
+      platformToInstall: 'Windows'
+    })
+
+    // At HEAD this "passes" only vacuously (getClient() is null so
+    // getProductInfo was never reachable anyway) — assert the installdir
+    // too so it is non-vacuous once Task 2 wires the ACF-first branch.
+    expect(result.installdir).toBe('app_257350')
+    expect(jest.mocked(SteamUser.ensureConnected)).not.toHaveBeenCalled()
+    expect(client.getProductInfo).not.toHaveBeenCalled()
+  })
+
+  it('negative control: getClient() null AND ensureConnected resolves false still resolves (never rejects) with the safe app_<id> fallback — keeps RED-1 honest, passes at HEAD and after Task 2', async () => {
+    jest.mocked(getSteamLibraries).mockResolvedValue(['/lib/only'])
+    jest.mocked(SteamUser.getClient).mockReturnValue(null as never)
+    jest.mocked(SteamUser.ensureConnected).mockResolvedValue(false)
+
+    const result = await resolveSteamInstallTarget(APP_ID, {
+      path: '',
+      platformToInstall: 'Windows'
+    })
+
+    expect(result.installdir).toBe(`app_${APP_ID}`)
+    expect(result.installdirFallbackUsed).toBe(true)
   })
 
   it('throws when no Steam libraries are registered at all', async () => {
