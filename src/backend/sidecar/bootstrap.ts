@@ -98,6 +98,21 @@ import { initOnlineMonitor, runOnceWhenOnline } from '../online_monitor'
 import { LegendaryUser } from '../storeManagers/legendary/user'
 import { GOGUser } from '../storeManagers/gog/user'
 import { configStore } from '../constants/key_value_stores'
+// Block H (todo 2026-09-06, quick-260909-k5x). `grep -rn "gog/presence" src/backend
+// --include='*.ts'` (re-run at execution time) confirms `presence.ts` is ALREADY resident in
+// the sidecar bundle: `utils.ts:43` does `import gogPresence from './storeManagers/gog/
+// presence'`, and `bootstrap.ts` already imports `checkRosettaInstall` from `'../utils'` for
+// Block F above -- pulling `utils.ts`'s module graph in, which already contains this import.
+// `launcher.ts:77` is a second, independent route. So this is a second binding onto an
+// already-resident singleton, NOT a new module edge. Corollary: because ES modules are
+// singletons, this import does NOT cause a second registration of `presence.ts`'s module-scope
+// `backendEvents.on('settingChanged', ...)` listener -- that listener is installed exactly
+// once, the first time ANY route requires the module.
+//
+// Sanity note, not an action: this import is unaffected by `electronUntouched.test.ts`'s
+// by-construction gate, which bans only the Steam token surface bindings (`configStore`,
+// `TOKEN_STORE_KEY`, `TOKEN_PREFIX`) in this file.
+import gogPresence from '../storeManagers/gog/presence'
 // Deviation (Rule 3 — blocking, Phase 27 Plan 04): `backend/logger`'s
 // `logInfo`/`logWarning`/`logError` (called throughout the REAL Steam
 // read/action flow code Plan 04 wires up — e.g. library.ts's refresh()
@@ -228,6 +243,15 @@ let rosettaCheckInitialized = false
 // syncQueuedPlaytimeWhenOnline() itself, matching Blocks A/B/E/F, so the new suite can call the
 // helper directly without owning a guard it cannot reset.
 let playtimeQueueDrainInitialized = false
+// Guards setGogPresenceWhenOnline()'s call site below (Block H, todo 2026-09-06,
+// quick-260909-k5x). Same reason as storeUserReconcileInitialized/playtimeQueueDrainInitialized
+// above: bootstrap.test.ts / *Flows.test.ts call init() many times per file, and without this
+// guard each call would register another runOnceWhenOnline(...) -- either invoking the presence
+// body again immediately (if already online) or stacking another 'online' listener on
+// connectivityEmitter (if not). Production calls init() once. Lives at the CALL SITE, not
+// inside setGogPresenceWhenOnline() itself, matching Blocks E/F/G, so the new suite can call the
+// helper directly without owning a guard it cannot reset.
+let gogPresenceInitialized = false
 // Holds the i18next init promise, chained so a caller can await CATALOG READINESS rather than
 // mere init()-was-called (D-02 area, Block F). Assigned the CAUGHT promise -- not the raw
 // `i18next.use(Backend).init(...)` one -- because a failed i18n init must still let the
@@ -513,10 +537,19 @@ export function reconcileStoreUsersWhenOnline(): void {
  * The two NEW catch-arm diagnostics below DO take the `[bootstrap] ` prefix and name this
  * function, in the shape of `reconcileStoreUsersWhenOnline`'s catch arms.
  *
- * OUT OF SCOPE, explicitly (D13): `runOnceWhenOnline(gogPresence.setPresence)` sat on the very
- * next line of the deleted source (`main.ts:477`) and is a SEPARATE, still-open todo
- * (`2026-09-06-gog-presence-never-set-at-startup-and-its-keepalive-never-arms.md`). Not ported
- * here, not touched here -- do not import `gogPresence` from this function.
+ * OUT OF SCOPE AT THE TIME THIS WAS WRITTEN, explicitly (D13): `runOnceWhenOnline(gogPresence.
+ * setPresence)` sat on the very next line of the deleted source (`main.ts:477`) and was, at the
+ * time this function was ported, a SEPARATE todo that was not yet resolved
+ * (`2026-09-06-gog-presence-never-set-at-startup-and-its-keepalive-never-arms.md`). That todo was
+ * subsequently CLOSED by quick-260909-k5x and ported as **Block H**
+ * (`setGogPresenceWhenOnline()`, below `checkRosettaWhenMac()`), with its own independent call
+ * site in `init()`. The prohibition this note used to carry -- "do not import `gogPresence` from
+ * this function" -- is now stale in its absolute form: the MODULE (this file) imports
+ * `gogPresence` at file scope for Block H's use. The surviving, narrower statement is:
+ * `syncQueuedPlaytimeWhenOnline()` itself still does not use `gogPresence` and is still not
+ * Block H's caller -- the two blocks are independent boot-time side effects with independent
+ * call sites in `init()`, and neither reads or writes state the other depends on. Leaving the old
+ * absolute wording here would make this comment invert its own file.
  */
 export function syncQueuedPlaytimeWhenOnline(): void {
   try {
@@ -598,6 +631,126 @@ export function checkRosettaWhenMac(): void {
   } catch (error) {
     logWarning(
       `[bootstrap] checkRosettaWhenMac() could not be started: ${String(error)}`,
+      LogPrefix.Backend
+    )
+  }
+}
+
+/**
+ * Restores the boot-time GOG presence call deleted with `src/backend/main.ts` in commit
+ * `5643c7583` ("feat(35-14)!: delete the Electron entry points") (todo
+ * 2026-09-06-gog-presence-never-set-at-startup-and-its-keepalive-never-arms.md, quick-260909-k5x).
+ * The deleted source, `main.ts:477`, was the line immediately after Block G's ported call
+ * (`main.ts:470-476`) and read, in full:
+ *
+ *     runOnceWhenOnline(gogPresence.setPresence)
+ *
+ * KEEP-ALIVE NOTE: `presence.ts`'s module-scope `interval` is `undefined` at process start, and
+ * `setPresence()` arms its own 5-minute `setInterval` the first time it runs past its early
+ * return (`if (!interval) { interval = setInterval(setPresence, 5 * 60 * 1000) }`). So this one
+ * boot-time call is what arms the keep-alive too -- Block H closes BOTH halves of the todo's
+ * title, not just "presence is set at boot".
+ *
+ * D-K5X-01 -- PLACEMENT/ORDERING: Block H has NO ordering constraint of its own beyond the
+ * generic three every boot-time block in this file already satisfies:
+ *   1. after `initLogger()` -- the helper logs, and `heroicLogWriter` is unset before that
+ *      (standing `sidecar-console-and-logger-are-invisible` finding);
+ *   2. after `initOnlineMonitor()` -- it calls `runOnceWhenOnline`, the same requirement
+ *      Blocks B/E/G already record;
+ *   3. before the `READY_SENTINEL` write -- so presence is at least queued before the frontend
+ *      can drive any RPC, without delaying READY itself.
+ * Each candidate load-bearing dependency was checked and REFUTED, individually:
+ *   - *Not* dependent on Block D (`playtimeSyncQueue.delete('lock')`). `setPresence` never reads
+ *     `playtimeSyncQueue`. Block G's load-bearing constraint is specific to
+ *     `syncQueuedPlaytime()`'s `if (playtimeSyncQueue.has('lock')) return` first statement;
+ *     Block H has no analogue.
+ *   - *Not* dependent on Block E (`reconcileStoreUsersWhenOnline`). Block E's
+ *     `configStore.delete('userInfo')` arm is Epic-scoped and gated on
+ *     `!LegendaryUser.isLoggedIn()`; its GOG arm only calls `GOGUser.getUserDetails()` when
+ *     ALREADY logged in, which cannot change what `GOGUser.isLoggedIn()` returns. `setPresence`
+ *     calls `GOGUser.getCredentials()` itself and refreshes on its own.
+ *   - *Not* dependent on Block F (`i18nReady`). Block H paints no dialog and reads no catalog.
+ *   - *Not* dependent on Block G. Both blocks read `disablePlaytimeSync`, but neither writes it
+ *     and neither shares state with the other.
+ * So: the only constraints are the generic three. Appending after Block G satisfies all three
+ * and leaves the existing A->B->C->D->E->F->G sequence byte-identical.
+ *
+ * One HONEST, non-load-bearing note: when the process boots offline, Blocks E, G and H each
+ * register a `connectivityEmitter.once('online', ...)` listener, so their callbacks fire in
+ * registration order (E, then G, then H). That ordering is deterministic and observable, but
+ * nothing depends on it -- it is not dressed up as a constraint here.
+ *
+ * D-K5X-02 -- NO SETTINGS HOIST, deliberately DIFFERENT from Block G's D5. Block G hoisted
+ * `GlobalConfig.get().getSettings()` to helper entry because the deleted source ITSELF read
+ * `settings` at `whenReady()` time (`main.ts:470-476`'s `if (!settings.disablePlaytimeSync)`
+ * wrapper). Block H's deleted source had NO such wrapper -- `main.ts:477` was a bare
+ * `runOnceWhenOnline(gogPresence.setPresence)` with zero settings access at the call site.
+ * Reproducing that exactly means the gate stays exactly where the deleted source left it: inside
+ * `setPresence`, evaluated at ONLINE time, not at helper-entry time. Two consequences, neither an
+ * "improvement" to make:
+ *   - There is NO skip-log arm here. Block G's verbatim `logDebug` receipt has no counterpart in
+ *     the deleted presence source; inventing one would be a new log line masquerading as a port.
+ *   - A user who toggles `disableGOGPresence` between boot and coming online SHOULD see the new
+ *     value honoured. That is not a determinism regression relative to Block G -- it is the
+ *     deleted source's own behaviour, and `presence.ts`'s module-scope `settingChanged` listener
+ *     already makes live toggling the documented model for this specific flag.
+ *
+ * THREE GUARD LAYERS, same shape as Blocks E/G, and an honest limit on what they guard against:
+ * `setPresence()` today wraps its ENTIRE body in its own `try/catch` and logs+swallows
+ * (`presence.ts`), so it CANNOT reject as currently written -- the inner guards below are
+ * UNREACHABLE against the current implementation. They are defence-in-depth for the call site,
+ * the same shape Blocks E and G established, and insurance against a future `presence.ts`
+ * refactor that lets a rejection out. Do NOT claim `setPresence` can reject today -- that would
+ * be a false rationale, worse than a missing one. What IS structurally necessary regardless of
+ * `setPresence`'s current implementation is the standing `runOnceWhenOnline` argument Block G's
+ * header already records: when offline, the callback body runs on a LATER turn, outside the
+ * stack frame of any `try` wrapping the `runOnceWhenOnline(...)` call, so the outer
+ * `try { runOnceWhenOnline(cb) } catch {}` covers only REGISTRATION, never the deferred body --
+ * hence the inner `try/catch` around the callback.
+ *
+ * There is no ported log literal in this block (unlike Block E/G's D6-shaped verbatim strings),
+ * so the verbatim-log house rule does not apply here -- do not go looking for a verbatim string
+ * that was never in the deleted source. The two new catch-arm diagnostics below take this file's
+ * local `[bootstrap] ` prefix and name `setGogPresenceWhenOnline`, in the shape of
+ * `reconcileStoreUsersWhenOnline`'s and `syncQueuedPlaytimeWhenOnline`'s own catch arms.
+ *
+ * LOAD-BEARING CALL SHAPE: `gogPresence.setPresence()` is called as a property access on the
+ * default-export object, resolved at CALL time -- not destructured
+ * (`const { setPresence } = gogPresence`), and not passed as the bare reference
+ * `runOnceWhenOnline(gogPresence.setPresence)` the deleted source used. Two reasons: (i) the
+ * arrow-function wrapper is what makes the inner try/catch and the explicit `.catch` possible at
+ * all -- Block E made the same sync-arrow deviation from its deleted `async` callback for the
+ * same reason; (ii) a `jest.spyOn(gogPresence, 'setPresence')` can only intercept a call-time
+ * property access, so a destructured binding would make the wiring proof (this suite:
+ * `gogPresenceBootWire.test.ts`) silently measure nothing.
+ *
+ * OUT OF SCOPE, filed separately: `deletePresence()` calls `clearInterval(interval)` but never
+ * resets `interval` to `undefined`, so after any `deletePresence()` the `if (!interval)` guard in
+ * `setPresence()` stays falsy-blocked and the keep-alive cannot re-arm within the same process.
+ * That is a REAL, SEPARATE defect, filed as
+ * `2026-09-09-deletepresence-never-resets-interval-so-the-keepalive-cannot-re-arm.md` and
+ * deliberately NOT fixed here to keep this task atomic. `presence.ts` is untouched by Block H.
+ */
+export function setGogPresenceWhenOnline(): void {
+  try {
+    runOnceWhenOnline(() => {
+      try {
+        gogPresence.setPresence().catch((error: unknown) => {
+          logWarning(
+            `[bootstrap] setGogPresenceWhenOnline: gogPresence.setPresence() failed: ${String(error)}`,
+            LogPrefix.Backend
+          )
+        })
+      } catch (error) {
+        logWarning(
+          `[bootstrap] setGogPresenceWhenOnline: callback failed: ${String(error)}`,
+          LogPrefix.Backend
+        )
+      }
+    })
+  } catch (error) {
+    logWarning(
+      `[bootstrap] setGogPresenceWhenOnline: could not be started: ${String(error)}`,
       LogPrefix.Backend
     )
   }
@@ -1088,6 +1241,17 @@ export function init(
   if (!playtimeQueueDrainInitialized) {
     playtimeQueueDrainInitialized = true
     syncQueuedPlaytimeWhenOnline()
+  }
+  // Block H — boot-time GOG presence call (todo 2026-09-06, quick-260909-k5x). Unlike Block G,
+  // this block has NO load-bearing ordering constraint of its own -- do not go hunting for one.
+  // Only the generic three apply (see `setGogPresenceWhenOnline()`'s own header for the full
+  // refutation of Blocks D/E/F/G as candidates): after `initLogger()`, after
+  // `initOnlineMonitor()`, and before READY_SENTINEL below. Appending here, after Block G,
+  // satisfies all three. `setGogPresenceWhenOnline()` itself never fails boot per its own
+  // header, so no additional try/catch is needed at this call site, matching Blocks D/E/F/G.
+  if (!gogPresenceInitialized) {
+    gogPresenceInitialized = true
+    setGogPresenceWhenOnline()
   }
   output.write(`${READY_SENTINEL}\n`)
   // Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09): the LAST statement of init(), deliberately
