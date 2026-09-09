@@ -30,6 +30,7 @@
   "packageManager": "pnpm@10.28.0",
   "scripts": {
     "tauri:dev": "pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri dev",
+    "tauri:dev:vault": "cross-env GAMELIB_DEV_SECRET_VAULT=1 pnpm tauri:dev",
     "tauri:dev:packaged": "pnpm exec vite build && pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri build --debug",
     "build:sidecar": "esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --outfile=build/main/sidecar.js src/sidecar/index.ts",
     "build:decompress-worker-dev": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDecompressWorkerDev.ts",
