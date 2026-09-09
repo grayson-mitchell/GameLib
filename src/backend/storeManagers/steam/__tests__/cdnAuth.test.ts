@@ -422,6 +422,188 @@ describe('CdnAuthTokenCache', () => {
     })
   })
 
+  describe('abort awareness (quick 260909-q2o): an external cancel bounds the token path', () => {
+    it('an already-aborted signal resolves to "" immediately, with NO network attempt', async () => {
+      const { client } = makeFakeClient()
+      const cache = new CdnAuthTokenCache(client, 1091500)
+      const controller = new AbortController()
+      controller.abort()
+
+      const token = await cache.getToken('12345', 'host-a', controller.signal)
+
+      expect(token).toBe('')
+      expect(client._send).not.toHaveBeenCalled()
+    })
+
+    it('an already-aborted call leaves every cache untouched — a later call with no signal performs a real fetch (D2/D4)', async () => {
+      const { client, calls } = makeFakeClient()
+      const cache = new CdnAuthTokenCache(client, 1091500)
+      const controller = new AbortController()
+      controller.abort()
+
+      const aborted = await cache.getToken('12345', 'host-a', controller.signal)
+      expect(aborted).toBe('')
+
+      const real = await cache.getToken('12345', 'host-a')
+      expect(real).toBe('?default-token')
+      expect(calls).toHaveLength(1)
+    })
+
+    it('a mid-flight abort resolves promptly, without paying the CDN_AUTH_TOKEN_FETCH_TIMEOUT_MS bound', async () => {
+      jest.useFakeTimers()
+      try {
+        const { client } = makeFakeClient(() => ({ neverResolves: true }))
+        const cache = new CdnAuthTokenCache(client, 1091500)
+        const controller = new AbortController()
+
+        const pending = cache.getToken('12345', 'host-a', controller.signal)
+        let settled = false
+        void pending.then(() => {
+          settled = true
+        })
+
+        await jest.advanceTimersByTimeAsync(0)
+        expect(settled).toBe(false)
+
+        controller.abort()
+        await jest.advanceTimersByTimeAsync(0)
+
+        expect(settled).toBe(true)
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    it('a mid-flight abort never throws — the promise resolves to "" rather than rejecting', async () => {
+      jest.useFakeTimers()
+      try {
+        const { client } = makeFakeClient(() => ({ neverResolves: true }))
+        const cache = new CdnAuthTokenCache(client, 1091500)
+        const controller = new AbortController()
+
+        const pending = cache.getToken('12345', 'host-a', controller.signal)
+        controller.abort()
+        await jest.advanceTimersByTimeAsync(0)
+
+        await expect(pending).resolves.toBe('')
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    it('a mid-flight abort by one caller never corrupts the single-flight pending cache for a concurrent caller that passed no signal (D3) — that caller still gets the real token from exactly one _send', async () => {
+      let resolveFetch: (v: {
+        token: string
+        expiration_time: number
+      }) => void = () => {}
+      const client: CDNAuthTokenClient = {
+        _send: jest.fn((_header, _body, callback) => {
+          resolveFetch = (v) =>
+            callback(encodeResponse(v), { proto: { eresult: 1 } })
+        })
+      }
+      const cache = new CdnAuthTokenCache(client, 1091500)
+      const controllerA = new AbortController()
+
+      const pA = cache.getToken('12345', 'host-a', controllerA.signal)
+      const pB = cache.getToken('12345', 'host-a')
+
+      expect(client._send).toHaveBeenCalledTimes(1)
+
+      controllerA.abort()
+      await expect(pA).resolves.toBe('')
+
+      resolveFetch({
+        token: '?shared-token',
+        expiration_time: Math.floor(Date.now() / 1000) + 3600
+      })
+
+      await expect(pB).resolves.toBe('?shared-token')
+      expect(client._send).toHaveBeenCalledTimes(1)
+    })
+
+    it("the pending entry's lifetime tracks the fetch, not the aborting caller (D4) — a THIRD call after the fetch settles serves the CACHED token with no additional _send", async () => {
+      let resolveFetch: (v: {
+        token: string
+        expiration_time: number
+      }) => void = () => {}
+      const client: CDNAuthTokenClient = {
+        _send: jest.fn((_header, _body, callback) => {
+          resolveFetch = (v) =>
+            callback(encodeResponse(v), { proto: { eresult: 1 } })
+        })
+      }
+      const cache = new CdnAuthTokenCache(client, 1091500)
+      const controllerA = new AbortController()
+
+      const pA = cache.getToken('12345', 'host-a', controllerA.signal)
+      const pB = cache.getToken('12345', 'host-a')
+      controllerA.abort()
+      await expect(pA).resolves.toBe('')
+
+      resolveFetch({
+        token: '?shared-token',
+        expiration_time: Math.floor(Date.now() / 1000) + 3600
+      })
+      await expect(pB).resolves.toBe('?shared-token')
+
+      const third = await cache.getToken('12345', 'host-a')
+      expect(third).toBe('?shared-token')
+      expect(client._send).toHaveBeenCalledTimes(1)
+    })
+
+    it('an abort never writes a CDN_AUTH_TOKEN_FAILURE_COOLDOWN_MS entry into negativeCache (D2) — a subsequent no-signal call returns the real token immediately rather than the "" a live cooldown would produce', async () => {
+      let resolveFetch: (v: {
+        token: string
+        expiration_time: number
+      }) => void = () => {}
+      const client: CDNAuthTokenClient = {
+        _send: jest.fn((_header, _body, callback) => {
+          resolveFetch = (v) =>
+            callback(encodeResponse(v), { proto: { eresult: 1 } })
+        })
+      }
+      const cache = new CdnAuthTokenCache(client, 1091500)
+      const controllerA = new AbortController()
+
+      const pA = cache.getToken('12345', 'host-a', controllerA.signal)
+      controllerA.abort()
+      await expect(pA).resolves.toBe('')
+
+      resolveFetch({
+        token: '?recovered-after-abort',
+        expiration_time: Math.floor(Date.now() / 1000) + 3600
+      })
+
+      const afterAbort = await cache.getToken('12345', 'host-a')
+      expect(afterAbort).toBe('?recovered-after-abort')
+    })
+
+    it('the abort listener registered for a mid-flight wait is ALWAYS removed once the fetch settles normally (D6) — no accumulated abort listeners across successive calls on one signal', async () => {
+      const { client } = makeFakeClient()
+      const cache = new CdnAuthTokenCache(client, 1091500)
+      const controller = new AbortController()
+      const addSpy = jest.spyOn(controller.signal, 'addEventListener')
+      const removeSpy = jest.spyOn(controller.signal, 'removeEventListener')
+
+      await cache.getToken('12345', 'host-a', controller.signal)
+      await cache.getToken('67890', 'host-b', controller.signal)
+
+      expect(addSpy).toHaveBeenCalledTimes(2)
+      expect(removeSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('regression: a plain getToken(depot, host) with no third argument still fetches, caches, and returns the token — unaffected by the new optional signal parameter (D7)', async () => {
+      const { client, calls } = makeFakeClient()
+      const cache = new CdnAuthTokenCache(client, 1091500)
+
+      const token = await cache.getToken('12345', 'host-a')
+
+      expect(token).toBe('?default-token')
+      expect(calls).toHaveLength(1)
+    })
+  })
+
   it('SECURITY: the token value is NEVER present in any logInfo/logWarning call — only length/expiry/host are logged', async () => {
     const secretToken = '?SUPER_SECRET_SESSION_TOKEN_DO_NOT_LEAK_abc123'
     const { client } = makeFakeClient(() => ({
