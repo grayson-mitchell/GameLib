@@ -1,0 +1,3 @@
+(18:18:56) [INFO]:    [Gog]:             GOG logout: cleared 13 cookie(s) for gog.com
+(18:23:06) [INFO]:    [Frontend]:        GATE_PROBE_A1
+(18:26:13) [INFO]:    [Nile]:            Amazon logout: cleared 9 cookie(s) for amazon.com

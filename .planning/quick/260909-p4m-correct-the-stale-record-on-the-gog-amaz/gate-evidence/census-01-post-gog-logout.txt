@@ -1,0 +1,26 @@
+TOTAL LIVE RECORDS (index-walked): 58
+.amazon.com                    8  i18n-prefs lc-main session-id session-id-time session-token sp-cdn sst-main ubid-main
+.applegamingwiki.com           4  _ga _ga_10XTTXMB7R at_gd cf_clearance
+.humblebundle.com             25  IR_PI OPTY$$oeu1787456158192r0.43296436807365735$$5860319721947136$$VMAP OPTY$$oeu1787456158192r0.43296436807365735$$5860319721947136$$VPROF OPTY$$oeu1788740976727r0.6083139410003637$$5860319721947136$$VMAP OPTY$$oeu1788740976727r0.6083139410003637$$5860319721947136$$VPROF OTGPPConsent OptanonConsent _clck _clsk _fbp _ga _ga_521T2JFWQS _gcl_au _rdt_em _rdt_uuid _simpleauth_sess _uetsid _uetvid csrf_cookie optimizelyEndUserId optimizelySession usi_found_user usi_id usi_visitor v2_humblebundlelive
+.metacritic.com                3  cf_clearance exp_bucket exp_bucket_2
+.rtb.mx                        2  amdt_t_p amuid2_p
+.track.adtraction.com          1  at_gd
+.www.codeweavers.com           1  cw
+.www.humblebundle.com          1  __lt__cid
+.youtube.com                   4  VISITOR_INFO1_LIVE VISITOR_PRIVACY_METADATA __Secure-ROLLOUT_TOKEN __Secure-YNID
+api.hcaptcha.com               1  hmt_id
+store.steampowered.com         5  browserid lastagecheckage recentapps timezoneName timezoneOffset
+www.amazon.com                 1  csm-hit
+www.applegamingwiki.com        1  _pk_id.53.96c6
+www.humblebundle.com           1  fu
+
+--- GOG / AMAZON records in detail (UTC) ---
+  .amazon.com            session-id           created=2026-08-19 10:17:33Z expires=2027-08-19 10:17:33Z
+  .amazon.com            session-id-time      created=2026-08-19 10:17:33Z expires=2027-08-19 10:17:33Z
+  .amazon.com            sst-main             created=2026-08-19 10:17:33Z expires=2027-08-19 10:17:33Z
+  .amazon.com            ubid-main            created=2026-08-19 10:17:33Z expires=2027-08-19 10:17:33Z
+  .amazon.com            session-token        created=2026-08-19 10:17:33Z expires=2027-08-19 10:17:33Z
+  .amazon.com            i18n-prefs           created=2026-08-19 10:17:33Z expires=2027-08-19 10:17:33Z
+  .amazon.com            lc-main              created=2026-08-19 10:17:33Z expires=2027-08-19 10:17:33Z
+  .amazon.com            sp-cdn               created=2026-07-31 23:10:09Z expires=2027-07-31 23:10:09Z
+  www.amazon.com         csm-hit              created=2026-08-19 10:17:33Z expires=2027-08-04 10:17:33Z

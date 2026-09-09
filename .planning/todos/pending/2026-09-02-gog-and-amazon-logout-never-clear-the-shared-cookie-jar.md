@@ -3,7 +3,7 @@ created: 2026-09-02T18:20:00.000Z
 title: "GOG and Amazon (nile) logout never clear the shared cookie jar their login webviews write to"
 area: auth/webview
 needs: live-verification-of-a-shipped-fix
-status: OPEN
+status: "RESOLVED 2026-09-09 by quick-260909-p4m. Two-part close. PART 1 (desk): the prescribed fix had ALREADY SHIPPED on 2026-09-04 in 84fc0ea90 (Phase 40 plan 04 Task 3, D-15), five days after this todo was filed, and this file was never updated -- so the record was corrected rather than the fix re-implemented. PART 2 (live): the one gate 40-04-SUMMARY.md flagged against itself (\"Live per-domain cookie census before/after logout was NOT performed in this execution\") was DRIVEN on 2026-09-09 and PASSED on both storefronts, in both directions. GOG via the real ACCOUNTS -> LOG OUT gesture: `GOG logout: cleared 13 cookie(s) for gog.com`, jar 71 -> 58. Amazon via window.api.logoutAmazon() after a logInfo control proved the console executes (no UI logout button exists -- Amazon was NOT logged in, nile_store/config.json is empty, so this cost nothing): `Amazon logout: cleared 9 cookie(s) for amazon.com`, jar 58 -> 49. Both counts matched the pre-gate per-host census EXACTLY (13 = 9 .gog.com + 3 login.gog.com + 1 www.gog.com; 9 = 8 .amazon.com + 1 www.amazon.com). Final index-walked census after the LAST mutation: all 5 GOG/Amazon host groups at ZERO, and all 12 non-target hosts at byte-identical counts -- including api.hcaptcha.com (the case this todo named as correctly out of scope), store.steampowered.com and .humblebundle.com. Zero `removed 0 cookies` / `cookie clear failed` / `cookie census failed` warnings across the whole run. The ORIGINAL severity bound (does a post-logout re-login complete silently?) is now permanently UNANSWERABLE by construction -- the fix removes the residue the question was about. It is recorded as moot, not as answered."
 severity: medium
 platform: any
 ready: live-gate
@@ -16,7 +16,7 @@ files:
   - src-tauri/src/main.rs
 ---
 
-## STATUS 2026-09-09 — THE FIX SHIPPED; ONE LIVE GATE REMAINS
+## RESOLVED 2026-09-09 — FIX SHIPPED 09-04; LIVE GATE DRIVEN AND PASSED 09-09
 
 **Do not implement this todo.** Its prescribed fix landed on 2026-09-04 in `84fc0ea90`
 (Phase 40 plan 04, Task 3, D-15) — five days after this file was written, and this file was never
@@ -49,17 +49,82 @@ being cleared is GameLib's own process-wide jar, not the system browser's, so th
 Safari shopping session was never what was at stake; the in-app Amazon browsing session is, and
 signing that out alongside an explicit Amazon logout is defensible.
 
-**What is left is exactly one live gate**, and `40-04-SUMMARY.md` flagged it against itself:
+**The one live gate `40-04-SUMMARY.md` flagged against itself is now DRIVEN and PASSED.** It had
+said: *"Live per-domain cookie census before/after logout was NOT performed in this execution ...
+this coverage claim is a structural argument from the comparator's own logic, not a live-measured
+count, and should be flagged as an assumption pending a live UAT pass."* It is no longer an
+assumption.
 
-> "Live per-domain cookie census before/after logout was NOT performed in this execution ... this
-> coverage claim is a structural argument from the comparator's own logic, not a live-measured
-> count, and should be flagged as an assumption pending a live UAT pass."
+### GATE RUN 2026-09-09, 18:18–18:26 (UTC+12)
 
-The gate as it now stands is in the superseded severity section below. It is destructive — both
-storefronts are currently logged in (`gog_store/auth.json` holds an account id,
-`nile_config/nile/user.json` is present), so running it costs two webview re-logins.
+Driven against the live `tauri dev` session. **Both build artifacts were verified to contain the
+fix before anything was measured** — scoring a FAIL against a stale dev build is the trap here:
+the Rust binary (mtime 14:57) carries the `store_logout_cookie_domain_matches` symbol and the
+packed `gog.comamazon.com` rodata of `STORE_LOGOUT_COOKIE_DOMAINS`, and `build/main/sidecar.js`
+(14:56) carries both sentinel labels.
 
-### Census 2026-09-09 — the residue is still there, and it grew
+| step | driver | log line | jar |
+|---|---|---|---|
+| GOG | the real gesture — ACCOUNTS → **LOG OUT** on the GOG tile | `GOG logout: cleared 13 cookie(s) for gog.com` @18:18:56 | 71 → **58** |
+| Amazon | `window.api.logoutAmazon()` in the console | `Amazon logout: cleared 9 cookie(s) for amazon.com` @18:26:13 | 58 → **49** |
+
+Both counts match the pre-gate per-host census **exactly**: 13 = 9 (`.gog.com`) + 3
+(`login.gog.com`) + 1 (`www.gog.com`); 9 = 8 (`.amazon.com`) + 1 (`www.amazon.com`).
+
+**Why Amazon was driven through the console rather than the UI:** there was no logout button to
+click. Amazon was **not logged in** — `nile_store/config.json` is empty, and `NileUser.isLoggedIn()`
+reads `userData` from exactly that store, so the tile renders "AMAZON LOGIN". The 9 stale
+`.amazon.com` records were residue from an 2026-08-19 session, which is precisely the defect.
+`NileUser.logout()` reaches `clearAmazonCookiesForLogout()` unconditionally (only a user-abort of
+`nile auth --logout` returns early), so the cookie-clear path is identical either way — and driving
+it cost nothing, because there was no session to lose. A `window.api.logInfo('GATE_PROBE_A1')`
+control was run first and reached the backend log, proving the console executes rather than merely
+echoes (a wedged Web Inspector accepts input and runs nothing).
+
+### Final census after the LAST mutation — 49 records, and the negative half
+
+Constraint 3 satisfied: this is an independent index-walk of the jar taken after the last mutation,
+not any mutating call's own report.
+
+| host | before | after | |
+|---|---|---|---|
+| `.gog.com` | 9 | **0** | cleared |
+| `login.gog.com` | 3 | **0** | cleared |
+| `www.gog.com` | 1 | **0** | cleared |
+| `.amazon.com` | 8 | **0** | cleared |
+| `www.amazon.com` | 1 | **0** | cleared |
+| `api.hcaptcha.com` | 1 | 1 | **intact** — the case this file named as correctly out of scope |
+| `store.steampowered.com` | 5 | 5 | intact |
+| `.humblebundle.com` | 25 | 25 | intact |
+| `.youtube.com` | 4 | 4 | intact |
+| `.applegamingwiki.com` | 4 | 4 | intact |
+| `.metacritic.com` | 3 | 3 | intact |
+| `.rtb.mx` | 2 | 2 | intact |
+| `.track.adtraction.com` | 1 | 1 | intact |
+| `.www.codeweavers.com` | 1 | 1 | intact |
+| `www.applegamingwiki.com` | 1 | 1 | intact |
+| `www.humblebundle.com` | 1 | 1 | intact |
+| `.www.humblebundle.com` | 1 | 1 | intact |
+
+**All 12 non-target hosts unchanged.** Constraint 4 (do not over-clear) holds live, not just by
+unit test. Zero `removed 0 cookies …` / `cookie clear failed` / `cookie census failed` warnings.
+
+### A trap that nearly produced a false FAIL, recorded for the next jar gate
+
+Before the run the jar's mtime was **14:03:15** while the app had been running since **14:57** —
+over four hours with no flush. WebKit had buffered everything, so a naive post-logout file census
+could have read a stale jar and scored a working fix as a no-op. It turned out that the
+**deletion itself forces a flush**: the file was rewritten at 18:18:58 and 18:26:15, two to three
+seconds after each clear. So the file census is trustworthy immediately after a clear — but only
+for that reason, and the pre-run staleness looks identical to a fix that did nothing.
+
+### The original severity bound is now moot, not answered
+
+This file's three-step gesture asked whether a post-logout re-login completes silently. That
+question is now **unanswerable by construction**: the fix removes the residue it was about. It is
+recorded as moot. `severity: medium` stands as the last value the evidence supported.
+
+### Census 2026-09-09 (PRE-GATE BASELINE) — the residue was still there, and it had grown
 
 Index-walked `~/Library/HTTPStorages/gamelib-shell.binarycookies` (never `strings`, per this
 file's own caveat; timestamps converted out of UTC before reading). 71 live records total,
@@ -158,7 +223,11 @@ fix is right but not urgent.
 **Nobody has observed the consequence.** The finding above is that nothing clears these cookies;
 whether that *matters* is untested.
 
-### THE OUTSTANDING GATE (replaces the three-step gesture above)
+### THE GATE THAT REPLACED THE THREE-STEP GESTURE — DRIVEN 2026-09-09, **PASSED**
+
+> Results are in the RESOLVED block at the top of this file. Steps 1-5 below are kept as the
+> written protocol the run actually followed. Step 6's by-product (the original bound) turned
+> out to be unanswerable by construction — see the top.
 
 The question is no longer "is the fix worth writing" but **"does the shipped fix actually work
 live"** — the one thing `40-04-SUMMARY.md` could not measure. `wry`'s cookie-delete is known to

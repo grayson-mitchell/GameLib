@@ -76,13 +76,64 @@ Single file: the todo itself.
 
 Zoom non-finding left alone — re-verified as still accurate.
 
-## What remains — not done here
+## PART 2 — the live gate, DRIVEN on operator go-ahead: **PASSED**
 
-One destructive live gate, the one `40-04-SUMMARY.md` flagged against itself: a before/after
-per-domain census across a real GOG and Amazon logout. Both storefronts are currently logged in
-(`gog_store/auth.json` holds an account id, `nile_config/nile/user.json` present), so running it
-costs two webview re-logins. Left for the operator's go-ahead; the todo stays `OPEN` /
-`ready: live-gate` and now carries the gate's exact steps and pass/fail conditions.
+Driven 18:18-18:26 against the live `tauri dev` session. Todo now RESOLVED and moved to
+`completed/`.
+
+**Artifact freshness verified before measuring anything** — scoring a FAIL against a stale dev
+build is the trap. Rust binary (mtime 14:57) carries the `store_logout_cookie_domain_matches`
+symbol and the packed `gog.comamazon.com` rodata; `build/main/sidecar.js` (14:56) carries both
+sentinel labels. (My first freshness grep returned 0 and looked damning — it was my own anchor
+error: I searched the Rust binary for the *TypeScript* sentinel labels, and used `^…$` anchors
+against packed Rust `&str` literals that carry no separators.)
+
+| step | driver | log line | jar |
+|---|---|---|---|
+| GOG | real gesture: ACCOUNTS -> LOG OUT | `GOG logout: cleared 13 cookie(s) for gog.com` @18:18:56 | 71 -> 58 |
+| Amazon | `window.api.logoutAmazon()` in console | `Amazon logout: cleared 9 cookie(s) for amazon.com` @18:26:13 | 58 -> 49 |
+
+Both counts match the pre-gate per-host census exactly (13 = 9+3+1 GOG hosts; 9 = 8+1 Amazon).
+Final census after the last mutation: **all 5 GOG/Amazon host groups at 0, all 12 non-target hosts
+byte-identical** — including `api.hcaptcha.com`, the case the todo named as correctly out of
+scope, plus `store.steampowered.com` and `.humblebundle.com`. Zero `removed 0 cookies` /
+`cookie clear failed` / `cookie census failed` warnings. Constraints 3 (independent final census)
+and 4 (no over-clear) both hold live, not merely by unit test.
+
+### A claim in PART 1 that was WRONG, corrected
+
+PART 1's SUMMARY and STATE row said "both storefronts are currently logged in ... costs two webview
+re-logins". **Amazon was not logged in.** I inferred it from `nile_config/nile/user.json` (nile's
+own CLI config) when `NileUser.isLoggedIn()` reads `userData` from `nile_store/config.json`, which
+is empty `{}`. The ACCOUNTS screen said "AMAZON LOGIN" and was right. Real cost of the gate was one
+re-login (GOG), not two. The 9 stale `.amazon.com` records were residue from an 2026-08-19 session
+— which is exactly the defect, surviving a credential-side teardown.
+
+Consequence for method: Amazon had no logout button to click, so it was driven through
+`window.api.logoutAmazon()`. `NileUser.logout()` reaches `clearAmazonCookiesForLogout()`
+unconditionally (only a user-abort of `nile auth --logout` returns early), so the cookie path is
+identical to the UI's, and it cost nothing because there was no session to lose. A
+`window.api.logInfo('GATE_PROBE_A1')` control ran first and reached the backend log, proving the
+console executes rather than merely echoes.
+
+### The flush trap that nearly manufactured a false FAIL
+
+Pre-run the jar's mtime was 14:03:15 while the app had run since 14:57 — 4h15m with no flush.
+WebKit buffers; a naive post-logout census could have read a stale jar and scored a working fix as
+a no-op. The deletion itself forces a flush (file rewritten 18:18:58 and 18:26:15, 2-3s after each
+clear), so the census is trustworthy immediately after a clear — but only for that reason.
+
+### The original severity bound: moot, not answered
+
+The todo's three-step gesture asked whether a post-logout re-login completes silently. Now
+**unanswerable by construction** — the fix removes the residue the question was about. Recorded as
+moot. `severity: medium` stands as the last value the evidence supported.
+
+## Operator-visible state change
+
+You are now **logged out of GOG** in GameLib and will need to log back in. Amazon needed no
+re-login (it was already logged out). The Web Inspector was closed and reopened during the run and
+is left open, as found.
 
 ## Gates
 
