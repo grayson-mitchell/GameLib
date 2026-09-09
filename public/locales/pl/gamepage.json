@@ -210,7 +210,6 @@
             "abort": "Przerwij instalację",
             "recommended": "Zalecane specyfikacje dla lepszego komfortu",
             "compatibility": "Instalacja Steam nie powiodła się! Przeczytaj dokładnie instrukcje i spróbuj ponownie.",
-            "install-tooltip": "To zainstaluje windowsową wersję programu Steam i będzie ona działać przy użyciu warstwy kompatybilności programu Heroic. \n\n    Niektóre gry, zwłaszcza starsze tytuły, nowsze gry 3D lub te z oprogramowaniem antycziterskim, mogą nie działać poprawnie. \n\n    ",
             "specificVersion-pt1": "Spowoduje to pobranie określonej wersji Steam z",
             "launching": "Uruchamianie Steam...",
             "macOS": "macOS 14.0 lub nowszy",
@@ -221,13 +220,10 @@
             "install": "Zainstaluj Steam",
             "install-path": "Ścieżka instalacji Steam",
             "installation": "Instalacja Steam",
-            "launch": "Uruchom Steam, używając warstwy zgodności programu Heroic",
-            "notification": "Heroic powiadomi cię, gdy instalacja zostanie zakończona.",
             "patience": "Jeśli chcesz kontynuować, prosimy o cierpliwość, ponieważ może to potrwać kilka minut, w zależności od połączenia internetowego i konfiguracji systemu.",
             "ram": "8 GB pamięci RAM",
             "select-path": "Wybierz katalog instalacji dla Steam",
-            "specificVersion-pt2": "archive.org",
-            "specificVersion-pt3": "zoptymalizowanej do działania poprzez program Heroic, ponieważ nowe wersje Steam nie będą działać na macOS."
+            "specificVersion-pt2": "archive.org"
         }
     },
     "launch": {

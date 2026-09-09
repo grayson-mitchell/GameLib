@@ -215,19 +215,15 @@
             "install": "Instal·la Steam",
             "hardware": "Apple Silicon M1+ (per als Intel Mac, Steam funcionarà amb el Crossover)",
             "install-path": "Ruta d'instal·lació del Steam",
-            "install-tooltip": "Això instal·larà la versió de Windows del Steam i l'executarà utilitzant la capa de compatibilitat de l'Heroic. \n\n    Alguns jocs, especialment els antics, els nous en 3D o els que tinguin programes antitrampes, podrien no funcionar correctament. \n\n    ",
             "installation": "Instal·lació del Steam",
-            "launch": "Inicia el Steam utilitzant la capa de compatibilitat de l'Heroic",
             "launching": "S'està iniciant el Steam...",
             "macOS": "macOS 14.0 o superior",
-            "notification": "L'Heroic et notificarà quan finalitzi la instal·lació.",
             "patience": "Si vols continuar, tingues paciència, ja que podria trigar uns pocs minuts a finalitzar, depenent de la teva connexió a internet i la configuració del sistema.",
             "ram": "8 GB de RAM",
             "recommended": "Especificacions recomanades per a una millor experiència",
             "select-path": "Selecciona la carpeta d'instal·lació del Steam",
             "specificVersion-pt1": "Això baixarà una versió específica del Steam des de",
-            "specificVersion-pt2": "archive.org",
-            "specificVersion-pt3": "feta perquè funcioni amb l'Heroic, ja que les versions noves del Steam no funcionen en macOS."
+            "specificVersion-pt2": "archive.org"
         }
     },
     "launch": {

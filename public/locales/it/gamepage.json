@@ -214,19 +214,15 @@
             "crossover": "Se hai installato Crossover, non ne avrai bisogno poiché funzionerà correttamente con Steam.",
             "install": "Installa Steam",
             "install-path": "Percorso di installazione Steam",
-            "install-tooltip": "Verrà installata la versione Windows di Steam, che verrà eseguita utilizzando un Heroic Compatibility Layer. \n\n    Alcuni giochi, in particolare i titoli più vecchi, i giochi 3D più recenti o quelli con software anti-cheat potrebbero non funzionare correttamente. \n\n    ",
             "installation": "Installazione Steam",
-            "launch": "Avvia Steam utilizzando il Layer di compatibilità Heroic",
             "launching": "Avvio di Steam...",
             "macOS": "macOS 14.0 o versioni successive",
-            "notification": "Heroic ti avviserà una volta completata l'installazione.",
             "patience": "Se desideri continuare, ti preghiamo di pazientare poiché il completamento potrebbe richiedere alcuni minuti, a seconda della tua connessione Internet e della configurazione del sistema.",
             "ram": "8GB di RAM",
             "recommended": "Specifiche consigliate per un'esperienza migliore",
             "select-path": "Seleziona la cartella di installazione per Steam",
             "specificVersion-pt1": "Questo scaricherà una versione specifica di Steam da",
-            "specificVersion-pt2": "archive.org",
-            "specificVersion-pt3": "è stato reso compatibile con Heroic poiché le nuove versioni di Steam non funzionano su macOS."
+            "specificVersion-pt2": "archive.org"
         }
     },
     "launch": {

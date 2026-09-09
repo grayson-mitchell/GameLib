@@ -87,7 +87,6 @@
             },
             "moving": "Erro ao mover o xogo {{error}}",
             "ubisoft-connect": {
-                "message": "Produciuse un erro na instalación de Ubisoft Connect no prefixo do xogo. Consulte a nosa páxina wiki en https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac para instalalo manualmente.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -486,7 +485,6 @@
         },
         "moved": "Movemento rematado",
         "moving": "Movendo xogo",
-        "new-heroic-version": "Hai unha nova versión de Heroic!",
         "refresh": {
             "error": "Non se puido conseguir o listado de versións, pode ser polas restricións da API de GitHub! Inténtao de novo máis tarde."
         },
@@ -758,7 +756,6 @@
         "allow_non_ge_proton": {
             "confirmation": {
                 "dont_show": "Non amosalos",
-                "message": "Recomendamos usar GE-Proton con Heroic porque as outras versións carecen de wiretricks e protonfixes. Aínda así, podes usalas se queres.",
                 "show": "Entendo, ensínaos",
                 "title": "Estás seguro/a?"
             },

@@ -743,7 +743,6 @@
         },
         "moved": "Críochnaithe ag Bogadh",
         "moving": "Cluiche Bogtha",
-        "new-heroic-version": "Scaoileadh leagan nua de Heroic!",
         "refresh": {
             "error": "Níorbh fhéidir eisiúintí a fháil ón sruth suas, b'fhéidir mar gheall ar shrianta API Github! Déan iarracht arís ar ball."
         },
@@ -1182,11 +1181,6 @@
         "titleMulti": "Margaí",
         "currency": {
             "label": "Airgeadra"
-        },
-        "storeBadge": {
-            "gmgDrmHint": "Cearrbhachas Fear Glas — eochair {{drm}}, fuascailte lasmuigh de Heroic",
-            "gmgHint": "Green Man Gaming — eochair do shiopa seachtrach, ní féidir é a shuiteáil trí Heroic",
-            "humbleHint": "Bundle Uasal — eochair do stór seachtrach, ní féidir a shuiteáil trí Heroic"
         },
         "view": {
             "grid": "Eangach",

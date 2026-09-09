@@ -217,17 +217,13 @@
             "install": "Steam'i Yükle",
             "install-path": "Steam Kurulum Yolu",
             "installation": "Steam Kurulumu",
-            "launch": "Steam’i Heroic Uyumluluk Katmanını kullanarak başlat",
             "launching": "Steam Başlatılıyor...",
             "macOS": "macOS 14.0 ve sonrası",
-            "notification": "Kurulum tamamlandığında Heroic sizi bilgilendirecek.",
             "patience": "Devam etmek istiyorsanız lütfen sabırlı olun, çünkü işlem internet bağlantınıza ve sistem yapılandırmanıza bağlı olarak birkaç dakika sürebilir.",
             "ram": "8 GB RAM",
             "recommended": "Daha iyi bir deneyim için önerilen sistem gereksinimleri",
             "select-path": "Steam için kurulum klasörünü seçin",
-            "install-tooltip": "Bu işlem, Steam'in Windows sürümünü yükleyecek ve uygulama, bir Heroic Uyumluluk Katmanı kullanılarak çalıştırılacaktır. \n\n    Bazı oyunlar, özellikle de eski oyunlar, yeni 3D oyunlar veya hile koruma yazılımına sahip olanlar düzgün çalışmayabilir. \n\n    ",
-            "specificVersion-pt2": "archive.org",
-            "specificVersion-pt3": "Steam'in yeni sürümleri macOS'ta çalışmadığı için, Heroic üzerinden çalışır hale getirdik."
+            "specificVersion-pt2": "archive.org"
         }
     },
     "launch": {

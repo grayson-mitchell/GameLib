@@ -87,8 +87,7 @@
             },
             "moving": "게임 이동 중 오류 {{error}}",
             "ubisoft-connect": {
-                "title": "유비소프트 커넥트",
-                "message": "게임 환경에 Ubisoft Connect를 설치하지 못했습니다. 수동으로 설치하려면 https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac의 위키 페이지를 확인하세요."
+                "title": "유비소프트 커넥트"
             },
             "legendary": {
                 "generic": "오류가 발생했습니다! 에픽 계정에서 로그아웃하고 로그인해 보세요. {{newline}}  {{error}}"
@@ -476,7 +475,6 @@
         },
         "moved": "이동 완료됨",
         "moving": "게임 이동 중",
-        "new-heroic-version": "새 Heroic 버전이 출시되었습니다!",
         "refresh": {
             "error": "업스트림에서 릴리스를 가져올 수 없습니다. 아마도 깃허브 API 제한 때문일 수 있습니다! 나중에 다시 시도하세요."
         },

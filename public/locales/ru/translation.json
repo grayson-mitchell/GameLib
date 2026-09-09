@@ -87,8 +87,7 @@
             },
             "moving": "Ошибка при перемещении игры {{error}}",
             "ubisoft-connect": {
-                "title": "Ubisoft Connect",
-                "message": "Не удалось установить Ubisoft Connect в игровой префикс. Посетите нашу wiki-страницу по адресу https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac и установите его вручную."
+                "title": "Ubisoft Connect"
             },
             "legendary": {
                 "generic": "Произошла ошибка! Попробуйте выйти и войти в свою учётную запись Epic. {{newline}}\n{{error}}"
@@ -489,7 +488,6 @@
         },
         "moved": "Перемещение завершено",
         "moving": "Перемещение игры",
-        "new-heroic-version": "Вышла новая версия Heroic!",
         "refresh": {
             "error": "Не удалось получить выпуски из основной ветки разработки, возможно, из-за ограничений Github API! Попробуйте позже."
         },
@@ -1243,11 +1241,6 @@
         "titleMulti": "Подробности",
         "currency": {
             "label": "Валюта"
-        },
-        "storeBadge": {
-            "gmgDrmHint": "Green Man Gaming — {{drm}} ключ, активированный вне Heroic",
-            "gmgHint": "Green Man Gaming — ключ для стороннего магазина, не устанавливается через Heroic",
-            "humbleHint": "Humble Bundle — ключ для стороннего магазина, не устанавливается через Heroic"
         },
         "view": {
             "grid": "Сетка",

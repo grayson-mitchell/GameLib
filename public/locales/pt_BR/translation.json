@@ -87,8 +87,7 @@
             },
             "moving": "Erro ao mover o jogo {{error}}",
             "ubisoft-connect": {
-                "title": "Ubisoft Connect",
-                "message": "A instalação do Ubisoft Connect no prefixo do jogo falhou. Verifique nossa página wiki em https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac para instalá-lo manualmente."
+                "title": "Ubisoft Connect"
             },
             "legendary": {
                 "generic": "Um erro ocorreu! Tente deslogar e efetuar o login novamente em sua conta Epic. {{newline}}{{error}}"
@@ -487,7 +486,6 @@
         },
         "moved": "Movido com sucesso",
         "moving": "Movendo jogo",
-        "new-heroic-version": "Uma nova versão do Heroic foi lançada!",
         "refresh": {
             "error": "Não foi possível buscar lançamentos do upstream, talvez devido às restrições da API do Github! Tente mais tarde."
         },
@@ -767,7 +765,6 @@
             "enableUpscaling": "Permite aprimoramento de escala (Upscaling)",
             "missingMsg": "Não foi possível encontrar o gamescope no PATH. Instale-o ou adicione-o no PATH.",
             "enableForceGrabCursor": "Habilitar a captura forçada do cursor",
-            "missingMsgFlatpak": "Não conseguimos encontrar uma versão compatível do Gamescope. Instale o Gamescope pelo Flatpak com o runtime 25.08 e reinicie o Heroic.",
             "warningFlatpak": "Não conseguimos encontrar uma versão compatível do Gamescope. Instale o Gamescope pelo Flatpak com o runtime {{runtimeVersion}} e reinicie o GameLib."
         },
         "msync": "Habilitar Msync",
@@ -797,7 +794,6 @@
             "confirmation": {
                 "title": "Tem certeza?",
                 "dont_show": "Não os exibir",
-                "message": "Recomendamos o uso do GE-Proton no Heroic, pois a versão GE inclui o Winetricks e Protonfixes. Ainda pode usar se quiser.",
                 "show": "Eu entendo, os exiba"
             },
             "label": "Permitir que versões não GE do Proton executem jogos",

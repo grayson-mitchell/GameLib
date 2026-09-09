@@ -87,7 +87,6 @@
             },
             "moving": "Terjadi Kesalahan saat Memindahkan Game {{error}}",
             "ubisoft-connect": {
-                "message": "Pemasangan Ubisoft Connect di prefiks gim telah gagal. Periksa halaman wiki kami di https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac untuk memasangnya secara maunal.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -479,7 +478,6 @@
         },
         "moved": "Selesai Memindahkan",
         "moving": "Memindahkan Gim",
-        "new-heroic-version": "Versi Heroic yang baru telah dirilis!",
         "refresh": {
             "error": "Tidak dapat mengambil rilis dari sumber, ini mungkin karena pembatasan API Github! Coba lagi nanti."
         },

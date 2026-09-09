@@ -46,9 +46,6 @@
                 "title": "Wine Ikke Fundet",
                 "invalid": "Den valgte vinversion blev ikke fundet. Installer det eller vælg en anden version i spillets indstillinger{{newline}}Version: {{version}}{{newline}}Sti: {{path}}"
             },
-            "zstd": {
-                "message": "ZSTD ikke fundet, venligst installer det og genstart Heroic"
-            },
             "add": {
                 "steam": {
                     "body": "Tilføjelse af {{game}} til Steam fejlede med:{{newLine}} {{error}}",
@@ -76,7 +73,6 @@
             },
             "moving": "Fejl ved Flytning af Spil {{error}}",
             "ubisoft-connect": {
-                "message": "Installation af Ubisoft Connect i spillets præfiks mislykkedes. Tjek vores wiki-side på https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac for at installere det manuelt.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -378,7 +374,6 @@
             "failed": "Opdatering fejlede",
             "paused": "Opdatering sat på pause"
         },
-        "new-heroic-version": "En ny Heroic-version blev frigivet!",
         "import": {
             "failed": "Import fejlede"
         }

@@ -87,7 +87,6 @@
             },
             "moving": "Lỗi Di Chuyển Trò Chơi {{error}}",
             "ubisoft-connect": {
-                "message": "Cài đặt Ubisoft Connect trong tiền tố trò chơi không thành công. Kiểm tra trang wiki của chúng tôi tại https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac để cài đặt nó một cách nhanh chóng.",
                 "title": "Kết nối Ubisoft"
             },
             "legendary": {
@@ -476,7 +475,6 @@
         },
         "moved": "Đã Di Chuyển Xong",
         "moving": "Đang Di Chuyển Trò Chơi",
-        "new-heroic-version": "Một phiên bản Heroic mới đã được phát hành!",
         "refresh": {
             "error": "Không thể tìm nạp các bản phát hành từ thượng nguồn, có thể do các hạn chế của API Github! Hãy thử lại sau."
         },

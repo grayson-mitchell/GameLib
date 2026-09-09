@@ -214,19 +214,15 @@
             "hardware": "Apple Silicon M1+ (Intel Mac-ide puhul toimib Steam Crossoveriga)",
             "install": "Paigalda Steam",
             "install-path": "Steami paigaldamise asukoht",
-            "install-tooltip": "See paigaldab Steami Windowsi versiooni ning see töötab Heroicu ühilduvuskihiga. \n\n\tMõned mängud, eriti vanemad mängud, uuemad 3D-mängud või mängud sohivastase tarkvaraga ei pruugi korralikult toimida. \n\n    ",
             "installation": "Steami paigaldamine",
-            "launch": "Käivita Steam Heroicu ühilduvuskihiga",
             "launching": "Steami käivitamine...",
             "macOS": "macOS 14.0 või uuem",
-            "notification": "Heroic teavitab teid, kui paigaldamine valmis saab.",
             "patience": "Kui soovite jätkata, palun olge kannatlik, kuna lõpuni viimine võib võtta mitu minutit olenevalt teie internetiühendusest ja süsteemi seadistusest.",
             "ram": "8GB RAM-i",
             "recommended": "Soovitatav riistvara parema kogemuse jaoks",
             "select-path": "Vali Steami jaoks paigalduskaust",
             "specificVersion-pt1": "See laeb alla konkreetse Steami versiooni asukohast",
-            "specificVersion-pt2": "archive.org",
-            "specificVersion-pt3": "mis toimib läbi Heroicu, sest uued Steami versioonid ei tööta macOS-il."
+            "specificVersion-pt2": "archive.org"
         }
     },
     "launch": {

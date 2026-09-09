@@ -8,14 +8,17 @@
  * rebrand rots. The `live tree` block below is the part that makes CI notice.
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   deriveRenameSet,
   rebrandValue,
   scanResidue,
   flatten,
-  INFLECTION_RULES
+  listLocales,
+  INFLECTION_RULES,
+  DEAD_HEROIC_KEYS,
+  UPSTREAM_NAMESPACES
 } from '../rebrandUpstreamCatalogs'
 
 const LOCALES_DIR = join(process.cwd(), 'public', 'locales')
@@ -138,6 +141,61 @@ describe('deriveRenameSet -- the partition', () => {
   })
 })
 
+describe('DEAD_HEROIC_KEYS -- the prune list is narrow on purpose', () => {
+  it('is pinned exactly, so it cannot silently grow', () => {
+    expect([...DEAD_HEROIC_KEYS]).toEqual([
+      'translation:box.error.ubisoft-connect.message',
+      'translation:notify.new-heroic-version',
+      'gamepage:label.steam.install-tooltip',
+      'gamepage:label.steam.launch',
+      'gamepage:label.steam.notification',
+      'gamepage:label.steam.specificVersion-pt3',
+      'translation:setting.gamescope.missingMsgFlatpak',
+      'translation:setting.allow_non_ge_proton.confirmation.message',
+      'translation:discounts.storeBadge.gmgDrmHint',
+      'translation:discounts.storeBadge.gmgHint',
+      'translation:discounts.storeBadge.humbleHint',
+      'translation:box.error.zstd.message'
+    ])
+  })
+
+  it('every pinned key really is absent from English', () => {
+    // The justification for deleting them. If one ever appears in en/ it is no
+    // longer orphaned and must come off this list.
+    for (const entry of DEAD_HEROIC_KEYS) {
+      const idx = entry.indexOf(':')
+      const ns = entry.slice(0, idx)
+      const key = entry.slice(idx + 1)
+      const enKeys = new Set(
+        flatten(
+          JSON.parse(
+            readFileSync(join(LOCALES_DIR, 'en', `${ns}.json`), 'utf-8')
+          )
+        ).map((e) => e.key)
+      )
+      expect(enKeys.has(key)).toBe(false)
+    }
+  })
+
+  it('is gone from every translated catalog', () => {
+    const pinned = new Set<string>(DEAD_HEROIC_KEYS)
+    const survivors: string[] = []
+    for (const locale of listLocales(LOCALES_DIR)) {
+      for (const ns of UPSTREAM_NAMESPACES) {
+        const path = join(LOCALES_DIR, locale, `${ns}.json`)
+        if (!existsSync(path)) continue
+        for (const { key } of flatten(
+          JSON.parse(readFileSync(path, 'utf-8'))
+        )) {
+          if (pinned.has(`${ns}:${key}`))
+            survivors.push(`${locale} ${ns}:${key}`)
+        }
+      }
+    }
+    expect(survivors).toEqual([])
+  })
+})
+
 describe('live tree', () => {
   // The anti-rot assertion. It passes trivially today and bites the moment an
   // upstream catalog refresh re-imports Heroic branding into a key whose
@@ -147,5 +205,25 @@ describe('live tree', () => {
     expect(residue.map((r) => `${r.locale} ${r.namespace}:${r.key}`)).toEqual(
       []
     )
+  })
+
+  it('no translated VALUE names the old product at all -- only key names remain', () => {
+    // Stronger than the residue check above: after the prune, every surviving
+    // "Heroic" in a non-English catalog is a KEY NAME (settings.advanced.
+    // resetHeroic), which is an identifier that must match en/ or the key
+    // contract with src breaks. Zero user-visible strings remain.
+    const offenders: string[] = []
+    for (const locale of listLocales(LOCALES_DIR)) {
+      for (const ns of UPSTREAM_NAMESPACES) {
+        const path = join(LOCALES_DIR, locale, `${ns}.json`)
+        if (!existsSync(path)) continue
+        for (const { key, value } of flatten(
+          JSON.parse(readFileSync(path, 'utf-8'))
+        )) {
+          if (value.includes('Heroic')) offenders.push(`${locale} ${ns}:${key}`)
+        }
+      }
+    }
+    expect(offenders).toEqual([])
   })
 })

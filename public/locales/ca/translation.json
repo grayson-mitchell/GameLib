@@ -87,7 +87,6 @@
             },
             "moving": "Error en moure el joc {{error}}",
             "ubisoft-connect": {
-                "message": "La instal·lació d'Ubisoft Connect al prefix del joc ha fallat. Consulteu la pàgina wiki https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac per a instal·lar-lo manualment.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -487,7 +486,6 @@
         },
         "moved": "Ha finalitzat el desplaçament",
         "moving": "S'està movent el joc...",
-        "new-heroic-version": "Hi ha una nova versió de l'Heroic!",
         "refresh": {
             "error": "No s'ha pogut aconseguir el llistat de versions, potser per les restriccions de l'API del GitHub. Prova-ho més tard."
         },
@@ -766,7 +764,6 @@
             "enableUpscaling": "Activa l'escalatge",
             "missingMsg": "No s'ha trobat el gamescope a PATH. Instal·la'l o afegeix-lo a PATH.",
             "enableForceGrabCursor": "Activa la captura forçada de cursor",
-            "missingMsgFlatpak": "No hem pogut trobar una versió compatible del Gamescope. Instal·la el paquet flatpak del Gamescope amb Runtime 25.08 i reinicia l'Heroic.",
             "warningFlatpak": "No hem pogut trobar una versió compatible del Gamescope. Instal·la el paquet flatpak del Gamescope amb l'entorn d'execució {{runtimeVersion}} i reinicia el GameLib."
         },
         "after-launch-script-path": "Selecciona un script que s'executarà després de sortir del joc",

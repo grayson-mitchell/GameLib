@@ -87,7 +87,6 @@
             },
             "moving": "خطا در انتقال بازی {{error}}",
             "ubisoft-connect": {
-                "message": "نصب Ubisoft Connect در مسیر بازی انجام نشد. صفحه ویکی ما را در https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac را برای نصب کردن دستی برسی کنید.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -476,7 +475,6 @@
         },
         "moved": "انتقال کامل شد",
         "moving": "در حال انتقال بازی",
-        "new-heroic-version": "نسخه جدید Heroic منتشر شد!",
         "refresh": {
             "error": "امکان دریافت نسخه از آپ استریم گیت هاب نیست! بعدا تلاش کنید."
         },

@@ -87,7 +87,6 @@
             },
             "moving": "Viga mängu teisaldamisel {{error}}",
             "ubisoft-connect": {
-                "message": "Ubisoft Connecti installimine mängu eesliitesse ebaõnnestus. Selle käsitsi installimiseks vaadake meie wiki lehte aadressil https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -485,7 +484,6 @@
         },
         "moved": "Teisaldamine on lõpule viidud",
         "moving": "Mängu liigutamine",
-        "new-heroic-version": "Ilmus uus Heroicu versioon!",
         "refresh": {
             "error": "Ei saanud hankida väljalaskeid upstream'ist, võib-olla Githubi API piirangute tõttu! Proovige hiljem uuesti."
         },
@@ -748,7 +746,6 @@
             "enableUpscaling": "Lubab ülesskaleerimist",
             "enableLimiter": "Luba FPS limiit",
             "enableForceGrabCursor": "Luba sunnitud kursori haaramine",
-            "missingMsgFlatpak": "Me ei suutnud leida ühilduvat Gamescope'i versiooni. Paigaldage Gamescope'i flatpak käitusaja versiooniga 25.08 ja taaskäivitage Heroic.",
             "warningFlatpak": "Me ei suutnud leida ühilduvat Gamescope'i versiooni. Paigaldage Gamescope'i flatpak käitusaja versiooniga {{runtimeVersion}} ja taaskäivitage GameLib."
         },
         "after-launch-script-path": "Vali skript, mida käitada pärast mängu sulgemist",
@@ -794,7 +791,6 @@
             "confirmation": {
                 "title": "Kas olete kindel?",
                 "dont_show": "Ära näita neid",
-                "message": "Soovitame Heroicuga kasutamiseks GE-Protonit, sest Protoni versioonidel, mis ei ole GE, puuduvad winetricks ja protonfixes. Võite neid see-eest siiski kasutada.",
                 "show": "Ma saan aru, näita neid"
             },
             "info_label": "Mitte-GE Protoni versioonid ignoreeritud",

@@ -212,13 +212,10 @@
             "hardware": "Apple Silicon M1+ (do ríomhairí Mac Intel oibreoidh Steam le Crossover)",
             "install": "Suiteáil Steam",
             "install-path": "Cosán Suiteála Gaile",
-            "install-tooltip": "Suiteálfaidh sé seo leagan Windows de Steam agus rithfidh sé ag baint úsáide as Sraith Chomhoiriúnachta Heroic.\n\nB’fhéidir nach n-oibreoidh roinnt cluichí i gceart, go háirithe teidil níos sine, cluichí 3D níos nuaí, nó iad siúd a bhfuil bogearraí frith-cheat orthu. \n\n    ",
             "installation": "Suiteáil Steam",
             "installing": "Ag suiteáil",
-            "launch": "Seoladh Gaile ag baint úsáide as an gCiseal Comhoiriúnachta Heroic",
             "launching": "Ag lainseáil Steam...",
             "macOS": "macOS 14.0 nó níos airde",
-            "notification": "Cuirfidh Heroic in iúl duit nuair a bheidh an suiteáil déanta.",
             "patience": "Más mian leat leanúint ar aghaidh, bí foighneach le do thoil mar d’fhéadfadh sé cúpla nóiméad a thógáil le críochnú ag brath ar do nasc idirlín agus ar chumraíocht an chórais.",
             "pleaseWait": "Fan le do thoil",
             "ram": "8GB RAM",
@@ -226,7 +223,6 @@
             "select-path": "Roghnaigh fillteán suiteála do Steam",
             "specificVersion-pt1": "Íoslódálfaidh sé seo leagan sonrach de Steam ó",
             "specificVersion-pt2": "archive.org",
-            "specificVersion-pt3": "déanta chun oibriú trí Heroic ós rud é nach n-oibreoidh leaganacha nua de Steam ar macOS.",
             "compatibility-layer-not-available": "Níl an ciseal comhoiriúnachta ar fáil. Suiteáil ceann ó \"Socruithe > Bainisteoir Fíona\" ar dtús."
         },
         "winetricks": "Ag Suiteáil Pacáistí Winetricks"

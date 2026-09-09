@@ -39,7 +39,6 @@
                 "generic": "שגיאה ארעה! נסו לצאת ולהכנס שוב לחשבון הEpic שלכם. {{newline}}  {{error}}"
             },
             "ubisoft-connect": {
-                "message": "התקנת Ubisoft Connect בתוך הprefix של המשחק הזה נכשלה. בדקו את עמוד הוויקי שלנו בhttps://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac על מנת להתקין את זה ידנית.",
                 "title": "Ubisoft Connect"
             },
             "title": "שגיאה",
@@ -309,7 +308,6 @@
         },
         "moved": "המעבר הסתיים",
         "moving": "מזיז את המשחק",
-        "new-heroic-version": "גרסה חדשה של Heroic הושקה!",
         "refresh": {
             "error": "לא ניתן היה למצוא את רשימת הגרסאות ממעלה הזרם, אולי בגלל הגבלות של ה- Github API! נסו שוב מאוחר יותר."
         },

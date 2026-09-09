@@ -104,6 +104,32 @@ export const INFLECTION_RULES: Record<string, [RegExp, string][]> = {
   ]
 }
 
+/**
+ * Orphaned upstream keys that still name the old product: absent from `en/`,
+ * unreferenced anywhere in `src/` (literally or via a template-literal `t()`
+ * call), and therefore never rendered in any language.
+ *
+ * This list is EXPLICIT rather than derived, deliberately. The general rule
+ * "present in a translation but absent from en/" matches **171** keys; only
+ * these 12 also carry the old product name. Deriving the prune set would delete
+ * 159 unrelated keys, so the narrow list is the whole point -- the suite pins it
+ * and re-verifies each entry is genuinely orphaned, so it cannot silently grow.
+ */
+export const DEAD_HEROIC_KEYS = [
+  'translation:box.error.ubisoft-connect.message',
+  'translation:notify.new-heroic-version',
+  'gamepage:label.steam.install-tooltip',
+  'gamepage:label.steam.launch',
+  'gamepage:label.steam.notification',
+  'gamepage:label.steam.specificVersion-pt3',
+  'translation:setting.gamescope.missingMsgFlatpak',
+  'translation:setting.allow_non_ge_proton.confirmation.message',
+  'translation:discounts.storeBadge.gmgDrmHint',
+  'translation:discounts.storeBadge.gmgHint',
+  'translation:discounts.storeBadge.humbleHint',
+  'translation:box.error.zstd.message'
+] as const
+
 export interface FlatEntry {
   key: string
   value: string
@@ -226,9 +252,67 @@ export function applyRebrand(localesDir: string): number {
   return changed
 }
 
+/**
+ * Delete every key in `DEAD_HEROIC_KEYS` from the non-English catalogs, pruning
+ * any parent object left empty. Returns the number of keys removed.
+ *
+ * NOTE: this is not gated, and it cannot be. These keys still exist upstream, so
+ * a future wholesale catalog refresh will reintroduce them; re-run this then.
+ */
+export function pruneDeadKeys(localesDir: string): number {
+  let removed = 0
+  for (const locale of listLocales(localesDir)) {
+    for (const ns of UPSTREAM_NAMESPACES) {
+      const path = join(localesDir, locale, `${ns}.json`)
+      if (!existsSync(path)) continue
+      const original = readFileSync(path, 'utf-8')
+      const data = JSON.parse(original) as Record<string, unknown>
+
+      for (const entry of DEAD_HEROIC_KEYS) {
+        const [entryNs, dotted] = entry.split(/:(.*)/s)
+        if (entryNs !== ns) continue
+
+        const segments = dotted.split('.')
+        const leaf = segments.pop() as string
+        // Walk to the leaf's parent, remembering the chain so we can prune
+        // objects that become empty.
+        const chain: Record<string, unknown>[] = [data]
+        let node: Record<string, unknown> | undefined = data
+        for (const seg of segments) {
+          const next = node?.[seg]
+          if (!next || typeof next !== 'object' || Array.isArray(next)) {
+            node = undefined
+            break
+          }
+          node = next as Record<string, unknown>
+          chain.push(node)
+        }
+        if (!node || !(leaf in node)) continue
+
+        delete node[leaf]
+        removed += 1
+        for (let i = chain.length - 1; i > 0; i -= 1) {
+          if (Object.keys(chain[i]).length > 0) break
+          delete chain[i - 1][segments[i - 1]]
+        }
+      }
+
+      const updated = `${JSON.stringify(data, null, 4)}\n`
+      if (updated !== original) writeFileSync(path, updated, 'utf-8')
+    }
+  }
+  return removed
+}
+
 function runCli(): void {
   const localesDir = join(process.cwd(), 'public', 'locales')
   const apply = process.argv.includes('--apply')
+
+  if (process.argv.includes('--prune-dead')) {
+    const removed = pruneDeadKeys(localesDir)
+    console.log(`rebrand-catalogs: pruned ${removed} dead key(s).`)
+    return
+  }
 
   if (apply) {
     const changed = applyRebrand(localesDir)

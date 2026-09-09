@@ -87,7 +87,6 @@
             },
             "moving": "ゲームの移動中にエラーが発生しました: {{error}}",
             "ubisoft-connect": {
-                "message": "ゲーム環境へのUbisoft Connectのインストールに失敗しました。Wikiページ（ https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac ）を確認して、手動でインストールしてください。",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -480,7 +479,6 @@
         },
         "moved": "移動が完了しました",
         "moving": "ゲームを移動中",
-        "new-heroic-version": "新しいHeroicバージョンがリリースされました!",
         "refresh": {
             "error": "おそらくGitHub APIの制限のため、アップストリームからリリースを取得できませんでした! しばらく待ってからもう一度お試しください。"
         },
@@ -750,7 +748,6 @@
             "enableUpscaling": "アップスケーリングを有効",
             "missingMsg": "PATHにGamescopeが見つかりません。インストールするか、PATHに追加してください。",
             "enableForceGrabCursor": "強制的にグラブカーソルを有効にする",
-            "missingMsgFlatpak": "互換性のあるバージョンのGamescopeが見つかりませんでした。Gamescopeのflatpakパッケージとランタイム25.08をインストールし、Heroicを再起動してください。",
             "warningFlatpak": "互換性のあるバージョンのGamescopeが見つかりませんでした。Gamescopeのflatpakパッケージとランタイム25.08をインストールし、GameLibを再起動してください。"
         },
         "disablePlaytimeSync": "プレイ時間の同期を無効",

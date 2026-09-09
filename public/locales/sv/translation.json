@@ -87,7 +87,6 @@
             },
             "moving": "Fel när spelet flyttades {{error}}",
             "ubisoft-connect": {
-                "message": "Installationen av Ubisoft Connect i spelprefixet misslyckades. Kolla vår wikisida på https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac för att installera det manuellt.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -477,7 +476,6 @@
         },
         "moved": "Spelflytt slutförd",
         "moving": "Flyttar spel",
-        "new-heroic-version": "En ny version av Heroic är tillgänglig!",
         "refresh": {
             "error": "Det gick inte att ladda ner en ny version, kanske beror det på begränsningar i Github API, Försök igen senare."
         },

@@ -87,8 +87,7 @@
             },
             "moving": "Error al mover el juego {{error}}",
             "ubisoft-connect": {
-                "title": "Ubisoft Connect",
-                "message": "La instalación de Ubisoft Connect en el prefijo del juego ha fallado. Consulta nuestra página wiki en https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac para instalarlo manualmente."
+                "title": "Ubisoft Connect"
             },
             "legendary": {
                 "generic": "¡Se ha producido un error! Intente cerrar sesión e iniciar sesión nuevamente en su cuenta de Epic. {{newline}} {{error}}"
@@ -487,7 +486,6 @@
         },
         "moved": "Movimiento terminado",
         "moving": "Moviendo juego",
-        "new-heroic-version": "¡Una nueva versión de Heroic fue publicada!",
         "refresh": {
             "error": "No se pudieron descargar las versiones, puede deberse a una limitación en la API de Github! Intente más tarde nuevamente."
         },
@@ -766,7 +764,6 @@
             "enableLimiter": "Activar el limitador de FPS",
             "enableUpscaling": "Permite la ampliación",
             "missingMsg": "No podemos encontrar Gamescope en PATH. Instálelo primero o agréguelo a PATH.",
-            "missingMsgFlatpak": "No se encontró una versión compatible de Gamescope. Instalar el paquete de Flatpak de Gamescope con runtime 25.08 y reiniciar Heroic.",
             "enableForceGrabCursor": "Activar Forzar Agarrar Cursor",
             "warningFlatpak": "No se encontró una versión compatible de Gamescope. Instale el paquete de Flatpak de Gamescope con runtime {{runtimeVersion}} y reinicie GameLib."
         },
@@ -797,7 +794,6 @@
             "confirmation": {
                 "title": "¿Estas seguro/a?",
                 "dont_show": "No los enseñes",
-                "message": "Recomendamos usar Protón GE con Heroic, ya que las versiones de Proton que no sean GE carecen de winetricks y protonfixes. Puedes usarlos si quieres.",
                 "show": "Lo entiendo, enseñalos"
             },
             "info_label": "Se ignoran versiones de Proton que no sean GE",

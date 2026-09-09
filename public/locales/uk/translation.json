@@ -87,8 +87,7 @@
             },
             "moving": "Помилка при переміщенні гри {{error}}",
             "ubisoft-connect": {
-                "title": "Ubisoft Connect",
-                "message": "Не вдалося встановити Ubisoft Connect в ігровий префікс. Відвідайте нашу wiki-сторінку за адресою https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac та встановіть його вручну."
+                "title": "Ubisoft Connect"
             },
             "legendary": {
                 "generic": "Сталася помилка! Спробуйте вийти та увійти у свій обліковий запис Epic. {{newline}} {{error}}"
@@ -492,7 +491,6 @@
         },
         "moved": "Переміщення завершене",
         "moving": "Переміщення гри",
-        "new-heroic-version": "Вийшла нова версія Heroic!",
         "refresh": {
             "error": "Не вдалося отримати версію з джерела, можливо, через обмеження API Github! Спробуйте пізніше."
         },
@@ -772,7 +770,6 @@
             "enableUpscaling": "Увімкнути масштабування",
             "missingMsg": "Ми не змогли знайти gamescope у PATH. Встановіть його або додайте до PATH.",
             "enableForceGrabCursor": "Увімкнути курсор примусового захоплення",
-            "missingMsgFlatpak": "Не вдалося знайти сумісну версію Gamescope. Встановіть Flatpak-пакет Gamescope з середовищем виконання 25.08 і перезапустіть Heroic.",
             "warningFlatpak": "Не вдалося знайти сумісну версію Gamescope. Встановіть Flatpak-пакет Gamescope з середовищем виконання {{runtimeVersion}} і перезапустіть GameLib."
         },
         "msync": "Ввімкнути Msync",
@@ -800,7 +797,6 @@
             "confirmation": {
                 "title": "Ви впевнені?",
                 "dont_show": "Не показувати їх",
-                "message": "Ми рекомендуємо використовувати GE-Proton разом із Heroic, оскільки версії Proton, що не належать до GE, не мають winetricks та protonfixes. Ви все одно можете використовувати їх, якщо хочете.",
                 "show": "Я розумію, показати їх"
             },
             "label": "Дозволити використовувати не GE-Proton збірки для запуску ігор",
@@ -1255,11 +1251,6 @@
         "titleMulti": "Пропозиції",
         "currency": {
             "label": "Валюта"
-        },
-        "storeBadge": {
-            "gmgDrmHint": "Green Man Gaming — ключ {{drm}}, активований поза межами Heroic",
-            "gmgHint": "Green Man Gaming — ключ для зовнішньої крамниці, неможливо встановити через Heroic",
-            "humbleHint": "Humble Bundle — ключ для зовнішньої крамниці, неможливо встановити через Heroic"
         },
         "view": {
             "grid": "Сітка",

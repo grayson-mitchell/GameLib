@@ -211,18 +211,14 @@
             "hardware": "Apple Silicon M1+ (para Macs con chip Intel, Steam funciona usando Crossover)",
             "install": "Instalar Steam",
             "install-path": "Localización da Instalación de Steam",
-            "install-tooltip": "Isto vai instalar a versión de Windows de Steam, que se executará usando unha capa de compatibilidade de Heroic.\n\n    Algúns xogos, especialmente títulos antigos, xogos novos en 3D, ou xogos con software antitrampas poden non funcionar correctamente. \n\n    ",
-            "launch": "Executar Steam usando a capa de compatibilidade de Heroic",
             "launching": "Executando Steam...",
             "macOS": "macOS 14.0 ou máis novo",
-            "notification": "Heroic notificará cando remate a instalación.",
             "patience": "Se desexa continuar, por favor sexa paciente xa que pode levar uns minutos para rematar dependendo da súa conexión a internet e configuración do sistema.",
             "ram": "8GB de RAM",
             "recommended": "Características recomendadas para unha mellor experiencia",
             "select-path": "Selecionar localización da instación de Steam",
             "specificVersion-pt1": "Isto descargará unha versión específica de Steam desde",
-            "specificVersion-pt2": "archive.org",
-            "specificVersion-pt3": "feita para que funcione a través de Heroic, xa que as novas versións de Steam non funcionan en macOS."
+            "specificVersion-pt2": "archive.org"
         },
         "redist": "Instalando redistribuíbles",
         "winetricks": "Instalando paquetes de Winetricks"

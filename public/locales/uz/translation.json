@@ -44,7 +44,6 @@
             "launchAborted": "Ishga tushirish bekor qilindi",
             "moving": "O‘yinni ko‘chirishda xatolik {{error}}",
             "ubisoft-connect": {
-                "message": "O'yin prefiksida Ubisoft Connect-ni o'rnatib bo'lmadi. Uni qo'lda o'rnatish uchun https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac manzilidagi wiki sahifamizni tekshiring.",
                 "title": "Ubisoft Connect"
             },
             "uncaught-exception": {
@@ -525,7 +524,6 @@
         },
         "moved": "Ko‘chirish tugallandi",
         "moving": "Harakatlanuvchi o'yin",
-        "new-heroic-version": "Yangi Heroic versiyasi chiqdi!",
         "refresh": {
             "error": "Relizlarni yuqori oqimdan olib bo'lmadi, ehtimol Github API cheklovlari tufayli! Keyinroq qayta urinib ko‘ring."
         },

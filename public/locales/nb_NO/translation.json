@@ -87,8 +87,7 @@
             },
             "moving": "Feil ved flytting av spill {{error}}",
             "ubisoft-connect": {
-                "title": "Ubisoft Connect",
-                "message": "Installasjon av Ubisoft Connect i spillprefikset mislyktes. Sjekk wikisiden vår på https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac for å installere den manuelt."
+                "title": "Ubisoft Connect"
             },
             "legendary": {
                 "generic": "Det har oppstått en feil! Prøv å logge ut og logge på Epic-kontoen din. {{newline}} {{error}}"
@@ -486,7 +485,6 @@
         },
         "moved": "Flytting fullført",
         "moving": "Flytter spill",
-        "new-heroic-version": "En ny Heroic-versjon ble utgitt!",
         "refresh": {
             "error": "Kunne ikke hente utgivelser fra oppstrøms, kanskje på grunn av Github API-begrensninger! Prøv igjen senere."
         },
@@ -750,7 +748,6 @@
             "missingMsg": "Vi kunne ikke finne gamescope på STIEN. Installer den eller legg den til STIEN.",
             "enableUpscaling": "Skru på oppskalering",
             "enableForceGrabCursor": "Aktiver Tvungen Griping Av Musepeker",
-            "missingMsgFlatpak": "Vi kunne ikke finne en kompatibel versjon av Gamescope. Installer Gamescopes flatpak-pakke med runtime 25.08 og start Heroic på nytt.",
             "warningFlatpak": "Vi kunne ikke finne en kompatibel versjon av Gamescope. Installer Gamescopes flatpak-pakke med runtime {{runtimeVersion}} og start GameLib på nytt."
         },
         "msync": "Skru på Msync",

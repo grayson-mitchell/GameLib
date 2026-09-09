@@ -87,7 +87,6 @@
             },
             "moving": "Oyunu Taşıma Hatası {{error}}",
             "ubisoft-connect": {
-                "message": "Ubisoft Connect'in oyun önekine yüklenmesi başarısız oldu. Manuel olarak kurmak için https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac adresindeki wiki sayfamızı kontrol edin.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -484,7 +483,6 @@
         },
         "moved": "Taşıma Tamamlandı",
         "moving": "Oyun Taşınıyor",
-        "new-heroic-version": "Yeni bir Heroic sürümü yayınlandı!",
         "refresh": {
             "error": "Belki de Github API kısıtlamaları nedeniyle yukarı akıştan sürümler getirilemedi! Daha sonra tekrar deneyin."
         },
@@ -790,7 +788,6 @@
             "confirmation": {
                 "title": "Emin misiniz?",
                 "dont_show": "Bunları Gösterme",
-                "message": "GE olmayan Proton sürümleri, winedevices ve protonfixes gibi önemli araçları içermediğinden, Heroic ile GE-Proton kullanmanızı öneriyoruz. Elbette, yine de istediğiniz diğer Proton sürümlerini kullanmakta serbestsiniz.",
                 "show": "Yine de Göster"
             },
             "info_label": "GE olmayan Proton sürümleri yoksayıldı",

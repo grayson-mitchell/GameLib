@@ -87,7 +87,6 @@
             },
             "moving": "Памылка пры перамяшчэнні гульні {{error}}",
             "ubisoft-connect": {
-                "message": "Збой усталявання Ubisoft Connect у прэфікс гульні. Праверце нашу вікі-старонку па адрасе https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac, каб усталяваць яго ўручную.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -485,7 +484,6 @@
         },
         "moved": "Перамяшчэнне завершана",
         "moving": "Перамяшчэнне гульні",
-        "new-heroic-version": "Выйшла новая версія Heroic!",
         "refresh": {
             "error": "Немагчыма атрымаць выпускі з апстрыму, магчыма, з-за абмежаванняў Github API! Паўтарыце спробу пазней."
         },
@@ -765,7 +763,6 @@
             "enableUpscaling": "Уключыць маштабаванне",
             "missingMsg": "Нам не ўдалося знайсці gamescope у PATH. Усталюйце яго ці дадайце ў PATH.",
             "enableForceGrabCursor": "Уключыць прымусовае захопліванне курсора",
-            "missingMsgFlatpak": "Нам не ўдалося знайсці сумяшчальную версію Gamescope. Усталюйце flatpak-пакет Gamescope з асяроддзем выканання версіі 25.08 і перазапусціце Heroic.",
             "warningFlatpak": "Нам не ўдалося знайсці сумяшчальную версію Gamescope. Усталюйце flatpak-пакет Gamescope з асяроддзем выканання версіі 25.08 і перазапусціце GameLib."
         },
         "msync": "Уключыць Msync",

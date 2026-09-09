@@ -87,7 +87,6 @@
             },
             "moving": "Greška pri premještanju igre {{error}}",
             "ubisoft-connect": {
-                "message": "Instalacija Ubisoft Connecta u prefiksu igre nije uspjela. Provjerite našu wiki stranicu na https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac da je instalirate ručno.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -476,7 +475,6 @@
         },
         "moved": "Premještanje završeno",
         "moving": "Igra se premješta",
-        "new-heroic-version": "Objavljena je nova Heroic verzija!",
         "refresh": {
             "error": "Nije moguće dohvatiti izdanja iz uzvodnog izvora, možda zbog ograničenja Github API-ja! Pokušajte ponovo kasnije."
         },

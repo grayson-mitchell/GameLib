@@ -87,8 +87,7 @@
             },
             "moving": "Fehler beim Verschieben des Spiels {{error}}",
             "ubisoft-connect": {
-                "title": "Ubisoft Connect",
-                "message": "Die Installation von Ubisoft Connect im Spielpräfix ist fehlgeschlagen. Besuch unsere Wiki-Seite unter https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac, um es manuell zu installieren."
+                "title": "Ubisoft Connect"
             },
             "legendary": {
                 "generic": "Ein Fehler ist aufgetreten! Versuche, dich bei deinem Epic-Konto ab- und anzumelden. {{newline}}  {{error}}"
@@ -486,7 +485,6 @@
         },
         "moved": "Verschieben abgeschlossen",
         "moving": "Spiel wird verschoben",
-        "new-heroic-version": "Eine neue Heroic-Version wurde veröffentlicht!",
         "refresh": {
             "error": "Es konnten keine Veröffentlichungen von der Quelle abgerufen werden – möglicherweise aufgrund von Github-API-Einschränkungen! Versuche es später noch einmal."
         },
@@ -765,7 +763,6 @@
             "enableUpscaling": "Ermöglicht Hochskalierung",
             "missingMsg": "Gamescope wurde nicht in der PATH-Variable gefunden. Installiere es oder füge es der PATH-Variable hinzu.",
             "enableForceGrabCursor": "Aktiviere \"Erzwinge Ergreifen des Cursor\"",
-            "missingMsgFlatpak": "Wir konnten keine kompatible Version von Gamescope finden. Bitte Installiere das Gamescope Paket via Flatpak mit der Runtimeversion 25.08 und starte Heroic neu.",
             "warningFlatpak": "Es konnte keine kompatible Version von Gamescope gefunden werden. Installiere das Flatpak-Paket von Gamescope mit der Runtime {{runtimeVersion}} und starte GameLib neu."
         },
         "after-launch-script-path": "Wähle ein Skript aus, das nach dem Beenden des Spiels ausgeführt werden soll",

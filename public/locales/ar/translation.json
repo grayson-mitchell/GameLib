@@ -87,8 +87,7 @@
             },
             "moving": "خطأ في نقل اللعبة {{error}}",
             "ubisoft-connect": {
-                "title": "يوبيسوفت كنكت",
-                "message": "فشل تثبيت يوبيسوفت كنكت في سابقة اللعبة. طالع صفحة الوِيكي https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac لتثبِّته يدويًّا."
+                "title": "يوبيسوفت كنكت"
             },
             "legendary": {
                 "generic": "حدث خطأ! حاول تسجيل الخروج وتسجيل الدخول في حسابك لدى أبِك. {{newline}}  {{error}}"
@@ -481,7 +480,6 @@
         },
         "moved": "اُنتهي من النقل",
         "moving": "قيد تحريك اللعبة",
-        "new-heroic-version": "أُصدرت نسخة جديدة من هِرُوِك!",
         "refresh": {
             "error": "تعذر جلب الإصدارات من المصدر، ربما بسبب قيود واجهة برمجة التطبيقات لجت.هب! ترجى المحاولة لاحقًا."
         },

@@ -197,7 +197,6 @@
             "move": "Klaida perkeliant žaidimą",
             "reparing": "Klaida taisant"
         },
-        "new-heroic-version": "Nauja „Heroic“ versija buvo išleista!",
         "refresh": {
             "error": "Nepavyko gauti leidinių iš išsiunčiamo srauto, galbūt dėl „Github API“ ribojimų! Pabandykite dar kartą vėlesniu laiku."
         },

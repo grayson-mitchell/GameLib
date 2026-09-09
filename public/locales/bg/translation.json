@@ -87,7 +87,6 @@
             },
             "moving": "Грешка при преместването на играта {{error}}",
             "ubisoft-connect": {
-                "message": "Неуспешно инсталиране на Ubisoft Connect в префикса на играта. Проверете страницата в уикито на https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac, за да го инсталирате ръчно.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -486,7 +485,6 @@
         },
         "moved": "Преместването е завършено",
         "moving": "Преместване на играта…",
-        "new-heroic-version": "Излезе нова версия на Heroic!",
         "refresh": {
             "error": "Не могат да бъдат получени изданията от отдалеченото хранилище, може би поради ограничения на ППИ на Github! Опитайте отново по-късно."
         },
@@ -766,7 +764,6 @@
             "enableUpscaling": "Включва скалирането",
             "missingMsg": "Не успяхме да намерим изпълнимия файл на gamescope в PATH. Инсталирайте го или добавете пътя до него в PATH.",
             "enableForceGrabCursor": "Включване на принудителното прихващане на курсора",
-            "missingMsgFlatpak": "Не успяхме да намерим съвместима версия на Gamescope. Инсталирайте Gamescope от пакет flatpak със среда за изпълнение версия 25.08 и рестартирайте Heroic.",
             "warningFlatpak": "Не успяхме да намерим съвместима версия на Gamescope. Инсталирайте Gamescope от пакет flatpak със среда за изпълнение версия {{runtimeVersion}} и рестартирайте GameLib."
         },
         "msync": "Включване на Msync",
@@ -794,7 +791,6 @@
             "confirmation": {
                 "title": "Наистина ли искате това?",
                 "dont_show": "Да не се показват",
-                "message": "Препоръчително е да използвате GE-Proton с Heroic, тъй като при версиите на Proton, които не идват от GE, липсват winetricks и protonfixes. Въпреки това, може да ползвате такива версии, ако искате.",
                 "show": "Разбирам, нека се показват"
             },
             "label": "Разрешаване на ползването на версии на Proton, които не идват от GE, за пускане на игри",

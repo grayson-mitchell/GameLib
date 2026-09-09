@@ -87,8 +87,7 @@
             },
             "moving": "Errorea jokoa mugitzean {{error}}",
             "ubisoft-connect": {
-                "title": "Ubisoft Connect",
-                "message": "Ezin izan da instalatu Ubisoft Connect jokoaren aurrizkian. Begiratu gure wiki orria https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac helbidean modu egokian instalatzeko."
+                "title": "Ubisoft Connect"
             },
             "legendary": {
                 "generic": "Akats bat gertatu da! Saiatu saioa amaitzen eta saioa hasten zure Epic kontuan. {{newline}} {{error}}"
@@ -476,7 +475,6 @@
         },
         "moved": "Mugitzen amaitu",
         "moving": "Mugimendu Jokoa",
-        "new-heroic-version": "Bertsio heroiko berri bat kaleratu zen!",
         "refresh": {
             "error": "Ezin izan dira igoko bertsioak eskuratu, agian Github APIaren murrizketak direla eta! Saiatu berriro geroago."
         },

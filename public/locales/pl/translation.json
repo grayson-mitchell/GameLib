@@ -87,7 +87,6 @@
             },
             "moving": "Błąd przenoszenia gry {{error}}",
             "ubisoft-connect": {
-                "message": "Instalacja Ubisoft Connect w prefiksie gry nie powiodła się. Sprawdź naszą stronę wiki pod adresem https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac, aby zainstalować ją ręcznie.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -486,7 +485,6 @@
         },
         "moved": "Przenoszenie zakończone",
         "moving": "Przenoszenie gry",
-        "new-heroic-version": "Pojawiła się nowa wersja Heroic!",
         "refresh": {
             "error": "Nie udało się pobrać nowej wersji, prawdopodobnie z powodu limitacji API Githuba! Spróbuj ponownie później."
         },
@@ -765,7 +763,6 @@
             "enableUpscaling": "Włącz skalowanie",
             "missingMsg": "Nie mogliśmy znaleźć gamescope w ścieżce PATH. Zainstaluj go lub dodaj do ścieżki PATH.",
             "enableForceGrabCursor": "Włącz wymuszanie łapania kursora",
-            "missingMsgFlatpak": "Nie mogliśmy znaleźć zgodnej wersji Gamescope. Zainstaluj pakiet flatpak Gamescope ze środowiskiem wykonawczym 25.08 i uruchom ponownie program Heroic.",
             "warningFlatpak": "Nie mogliśmy znaleźć kompatybilnej wersji Gamescope. Zainstaluj pakiet flatpak Gamescope ze środowiskiem wykonawczym {{runtimeVersion}} i uruchom ponownie program GameLib."
         },
         "after-launch-script-path": "Wybierz skrypt do uruchomienia po zakończeniu gry",
@@ -793,7 +790,6 @@
             "confirmation": {
                 "title": "Czy na pewno?",
                 "dont_show": "Nie pokazuj ich",
-                "message": "Zalecamy używanie GE-Proton z Heroic, ponieważ wersje bez GE-Proton nie posiadają winetricków i protofixów. Jeśli chcesz, nadal możesz z nich korzystać.",
                 "show": "Zrozumiałem, pokaż im"
             },
             "info_label": "Wersje nie-GE Proton są ignorowane",

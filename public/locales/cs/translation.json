@@ -87,7 +87,6 @@
             },
             "moving": "Chyba při přesunu hry {{error}}",
             "ubisoft-connect": {
-                "message": "Instalace Ubisoft Connect do předpony hry se nezdařila. Podívejte se na naši wiki stránku na https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac a nainstalujte ji ručně.",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -492,7 +491,6 @@
         },
         "moved": "Přesun dokončen",
         "moving": "Přesouvám hru",
-        "new-heroic-version": "Byla vydána nová verze Heroic!",
         "refresh": {
             "error": "Nepodařilo se načíst vydání z upstreamu, možná kvůli omezením Github API! Zkuste to později."
         },
@@ -765,7 +763,6 @@
             "enableUpscaling": "Povolí upscaling",
             "missingMsg": "Na PATHu jsme gamescope nenašli. Nainstalujte jej nebo jej přidejte do PATH.",
             "enableForceGrabCursor": "Povolit vynucení uchopení kurzoru",
-            "missingMsgFlatpak": "Nenašli jsme kompatibilní verzi Gamescope. Nainstalujte balíček flatpak Gamescope s runtime 25.08 a restartujte Heroic.",
             "warningFlatpak": "Nenašli jsme kompatibilní verzi Gamescope. Nainstalujte balíček flatpak Gamescope s runtime {{runtimeVersion}} a restartujte GameLib."
         },
         "frameless-window": {
@@ -802,7 +799,6 @@
             "confirmation": {
                 "title": "Opravdu?",
                 "dont_show": "Neukazovat",
-                "message": "Doporučujeme používat GE-Proton společně s Heroic, protože verze bez GE Proton neobsahují winetricks a protofixes. Pokud chcete, můžete je i tak použít.",
                 "show": "Rozumím, ukázat"
             },
             "label": "Povolit používání ne-GE Proton buildů pro spouštění her",
@@ -1255,11 +1251,6 @@
         "titleMulti": "Nabídky",
         "currency": {
             "label": "Měna"
-        },
-        "storeBadge": {
-            "gmgDrmHint": "Green Man Gaming — klíč {{drm}}, uplatněný mimo Heroic",
-            "gmgHint": "Green Man Gaming — klíč pro externí obchod, nelze nainstalovat prostřednictvím Heroic",
-            "humbleHint": "Humble Bundle — klíč pro externí obchod, nelze nainstalovat prostřednictvím Heroic"
         },
         "view": {
             "grid": "Mřížka",

@@ -206,9 +206,7 @@
             "installing": "A instalar",
             "pleaseWait": "Por favor aguarde",
             "patience": "Se deseja prosseguir, por favor tenha paciência pois poderá demorar alguns minutos a concluir dependendo da conexão com a internet e configurações de sistema.",
-            "notification": "O Heroic irá notificá-lo aquando da conclusão da instalação.",
             "select-path": "Seleciona a pasta de instalação da Steam",
-            "specificVersion-pt3": "feito para funcionar através do Heroic visto que novas versões da Steam não funcionam no macOS.",
             "abort": "Abortar Instalação",
             "compatibility": "Esteja consciente de que nem todos os jogos irão funcionar e, mesmo que funcionem, podem não funcionar corretamente.",
             "cancel": "Cancelar Instalação",
@@ -223,8 +221,6 @@
             "compatibility-layer-not-available": "Compatibilidade não disponível. Por favor instala a partir de \"Definições>Wine Manager\"",
             "crossover": "Caso você tiver o Crossover instalado, você não vai precisar dele, pois ele pode rodar o Steam normalmente.",
             "hardware": "Apple Silicon M1+ (para Macs com Intel, o Steam rodará com Crossover)",
-            "install-tooltip": "Isso vai instalar a versão do Steam de Windows e isso vai rodar usando uma Camada de Compatibilidade do Heroic.\n\nAlguns jogos, especialmente jogos mais antigos, jogos 3D novos, ou que usam software anti-cheat, podem não funcionar corretamente. \n\n    ",
-            "launch": "Iniciar o Steam usando Camada de Compatibilidade do Heroic",
             "specificVersion-pt1": "Isso vai fazer o download de uma versão especifica do Steam",
             "specificVersion-pt2": "archive.org"
         }

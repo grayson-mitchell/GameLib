@@ -87,7 +87,6 @@
             },
             "moving": "移动游戏出错 {{error}}",
             "ubisoft-connect": {
-                "message": "在游戏前缀中安装 Ubisoft Connect 失败。查看我们的 wiki 页面 https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki/How-to-install-Ubisoft-Connect-on-Linux-and-Mac 来手动安装它。",
                 "title": "Ubisoft Connect"
             },
             "legendary": {
@@ -486,7 +485,6 @@
         },
         "moved": "移动完成",
         "moving": "移动游戏中",
-        "new-heroic-version": "新的 Heroic 版本发布了！",
         "refresh": {
             "error": "不能从上游获取发布，可能是因为 Github API 的限制！请稍后再试。"
         },
@@ -759,7 +757,6 @@
             "enableUpscaling": "启用分辨率提升",
             "missingMsg": "我们在 PATH 上找不到 Gamescope。请先安装它或将其添加到 PATH。",
             "enableForceGrabCursor": "启用强制抓取指针",
-            "missingMsgFlatpak": "我们找不到兼容的 Gamescope 版本。安装带 25.08 版 runtime 的 Gamescope flatpak 包 ，然后重启 Heroic.",
             "warningFlatpak": "我们找不到兼容的 Gamescope 版本。安装带 {{runtimeVersion}} 版 runtime 的 Gamescope flatpak 包 ，然后重启 GameLib。"
         },
         "frameless-window": {
@@ -796,7 +793,6 @@
             "confirmation": {
                 "title": "你确定吗？",
                 "dont_show": "不显示它们",
-                "message": "我们推荐 GE-Proton 和 Heroic 启动器一起使用，因为非 GE-Proton 构建缺少 winetricks 和 proton 修复。如果你愿意还是可以使用它们。",
                 "show": "了解，显示它们"
             },
             "label": "允许使用非 GE-Proton 构建运行游戏",

@@ -215,19 +215,15 @@
             "hardware": "Apple Silicon M1+ (pro počítače Intel Mac Steam bude fungovat s Crossoverem)",
             "install": "Nainstalovat Steam",
             "install-path": "Cesta k instalaci Steamu",
-            "install-tooltip": "Nainstaluje se verze Steam pro systém Windows a spustí se pomocí vrstvy kompatibility Heroic. \n\n    Některé hry, zejména starší tituly, novější 3D hry nebo hry se softwarem proti podvodům, nemusí fungovat správně. \n\n    ",
             "installation": "Instalace Steamu",
-            "launch": "Spustit Steam pomocí vrstvy kompatibility Heroic",
             "launching": "Spouštění Steamu...",
             "macOS": "macOS 14.0 nebo novější",
-            "notification": "Po dokončení instalace vás Heroic upozorní.",
             "patience": "Pokud chcete pokračovat, buďte trpěliví, protože dokončení může trvat několik minut v závislosti na vašem internetovém připojení a konfiguraci systému.",
             "ram": "8 GB RAM",
             "recommended": "Doporučené specifikace pro lepší zážitek",
             "select-path": "Vybrat instalační složku pro Steam",
             "specificVersion-pt1": "Tím se stáhne určitá verze služby Steam z",
-            "specificVersion-pt2": "archive.org",
-            "specificVersion-pt3": "zprovozněna přes Heroic, protože nové verze Steamu v systému MacOS nefungují."
+            "specificVersion-pt2": "archive.org"
         }
     },
     "launch": {
