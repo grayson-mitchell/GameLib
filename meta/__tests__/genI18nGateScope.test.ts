@@ -775,8 +775,17 @@ describe('--rewrite-scope guard', () => {
    * "svg-stub", not a translatable surface, so promoting it would widen a
    * hand-curated blocking gate as a side effect of an unrelated fix.
    *
+   * 2026-09-10 (Phase 43, plan 43-08): scope 174 -> 170, fork-touched
+   * 216 -> 212, unscanned debt UNCHANGED at 42. Four files removed from BOTH
+   * artifacts (which is why the debt does not move): the unified Humble Keys
+   * list retired its three tab containers (`Keys/All/index.tsx`,
+   * `Keys/Spares/index.tsx`, `Keys/Waiting/index.tsx`) and their shared
+   * group-heading component (`components/HumbleKeyGroup/index.tsx`). Hand-
+   * edited surgically, NOT regenerated, per the 260901-w9e / 260902-qs4 /
+   * 260905-d33 precedent above.
+   *
    * Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 174 -> 216 delta this task exists to
+   * so the specs below assert the REAL 170 -> 212 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -802,10 +811,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 174-file hand-curated snapshot and the fresh snapshot is the REAL 216', () => {
-    expect(scopeSnapshot.files.length).toBe(174)
-    expect(forkTouchedSnapshot.files.length).toBe(216)
-    expect(freshSnapshot().files.length).toBe(216)
+  it('A0 fixture sanity: the seeded scope is the REAL 170-file hand-curated snapshot and the fresh snapshot is the REAL 212', () => {
+    expect(scopeSnapshot.files.length).toBe(170)
+    expect(forkTouchedSnapshot.files.length).toBe(212)
+    expect(freshSnapshot().files.length).toBe(212)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -831,7 +840,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 174 -> 216 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 170 -> 212 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -867,7 +876,7 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(216)
+    expect(rewritten.files.length).toBe(212)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
@@ -885,7 +894,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(216)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(212)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
