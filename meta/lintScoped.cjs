@@ -46,7 +46,16 @@ const { ESLint } = require('eslint')
 //
 // Neither ceiling carries padding: each sits at its exact measured warning
 // count for its scope. N-1 must be RED and N must be GREEN.
-const SRC_CEILING = 1123
+//
+// SRC_CEILING bumped 1123 -> 1124 by Phase 43 Plan 07 (unified Humble Keys
+// screen): the new src/frontend/screens/Humble/Keys/index.tsx merges in
+// Waiting/index.tsx's mountedRef lifecycle-cleanup effect verbatim
+// (component-lifetime flag, deliberately empty deps -- see that effect's own
+// "Lifecycle ONLY" comment), which carries the exact same pre-existing,
+// accepted `react-hooks/exhaustive-deps` warning as its Waiting-tab source.
+// Verified: 1123 is RED against this plan's tree, 1124 is GREEN, and no
+// other file's warning count changed.
+const SRC_CEILING = 1124
 const TESTS_CEILING = 638
 
 // Each floor is 50% of the same commit's measured linted-file count for

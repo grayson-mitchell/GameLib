@@ -469,28 +469,8 @@
   background: var(--status-warning);
 }
 
-/* D-49/D-51: tab bar strip above the routed <Outlet/> content. */
-.humbleKeysTabBar {
-  display: flex;
-  gap: var(--space-md);
-  background: var(--background);
-  margin-bottom: var(--space-md);
-}
-
-.humbleKeysTab {
-  padding: var(--space-sm) var(--space-md);
-  font-size: var(--text-lg);
-  font-weight: var(--semibold);
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.humbleKeysTab.active {
-  color: var(--accent);
-}
-
-/* D-56: Keys-waiting is one flat list — no section headers, unlike
-   .humbleKeyGroupList's per-group sections on the All-keys tab. */
+/* Phase 43: the unified Humble Keys screen is one flat list — no tab bar,
+   no <Outlet/>, no per-tab section headers. */
 .humbleKeysFlatList {
   list-style: none;
   margin: 0;
