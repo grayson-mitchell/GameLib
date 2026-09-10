@@ -76,3 +76,79 @@ claimable.
   — full evidence, both attempts, and the residual unknowns.
 - Phase 43's `43-09` ships candidate B (embedded store browser) as the `gog_keyless` destination,
   which sidesteps this path but does not fix it for other stores.
+
+## Resolution (2026-09-11, quick 260911-ftc)
+
+**Rollback (DD-1).** `library.ts`'s `rejected_by_server` branch now calls
+`humbleRevealedStore.delete(machineName)`, mirroring the existing
+definitive-failure rollback. WR-06's inference that a server denial means
+"already redeemed upstream" is REFUTED by measurement, not by argument: Phase
+43 probe D-43-11 drove one real `gog_keyless` reveal through the server,
+Humble declined it, and the operator confirmed directly on gog.com that the
+game was never granted. "Humble said no" and "Humble already gave it to you"
+are different facts, and the old code could not tell them apart. Rolling back
+surrenders nothing WR-06 was protecting: if the key genuinely IS consumed
+server-side, the very next sync reports that itself — `classify.ts:409` sets
+`redeemedKeyValuePresent` from a truthy `redeemed_key_val`, and `classifyTpk`
+(`classify.ts:56-60`) returns `REVEALED` on that server truth alone, with no
+local flag involved. Regression: `library.test.ts` — describe
+`HumbleLibrary.revealKey()`, tests `'DD-1 rejected_by_server: ROLLS BACK the
+write-ahead REVEALED flag...'` and `'DD-1 claim path reachable: a second
+revealKey after a rejected_by_server reaches the adapter'`.
+
+**"A state that means attempted, refused, cause unknown" (DD-2).** Answered
+explicitly as NO sixth `HumbleKeyState`. `HumbleKeyState` classifies the KEY
+(revealed / redeemed / expired / etc.); a refused attempt changes nothing
+about the key itself — after the DD-1 rollback it is UNREVEALED again, still
+owned, still claimable. The requested fact lives instead on
+`ClaimAnnotation.revealRefusedAt` as attempt metadata: a value that DECAYS
+(a later reveal outcome supersedes it), which does not belong inside a union
+`classifyOrder` recomputes fresh from the server payload every sync. A 6th
+`HumbleKeyState` member would also have cascaded through `stateLabels.ts`,
+`viewFilters.ts`, `urgencyBadge.ts`, `expirationDisplay.ts`, `HumbleKeyRow`,
+`ipc_handler.ts` and ~13 test files, and minted a new user-visible state
+label — see DD-4 below for why that is expensive right now. The todo's
+operative requirement — "the claim path must stay reachable from that
+state" — is satisfied by the DD-1 rollback returning the key to
+`UNREVEALED`, independent of whether the refusal fact is surfaced at all.
+
+**Derivation, not storage (DD-3).** `revealRefusedAt` is computed by
+`deriveRevealRefusedAt()` from the EXISTING append-only, disconnect-exempt
+`humbleAuditStore` trail — no new `CacheStore`. It walks the trail backwards
+to the first record whose event is in the module-level
+`REVEAL_OUTCOME_EVENTS` set (`reveal_success | reveal_rejected |
+reveal_failed | reveal_ambiguous` — `reveal_attempt`, the write-ahead marker,
+is deliberately excluded so it can never mask the real outcome) and emits
+that record's `at` only when the event is `reveal_rejected`. This buys
+supersession for free: a later success/failure/ambiguous outcome wins
+automatically with no second writer to keep in sync, and a key revealed on
+Humble's website (D-66, no audit records at all) can never carry a refusal.
+Regression: `library.test.ts` — describe `HumbleLibrary.getClaimAnnotations()
+— DD-3 revealRefusedAt derivation`, six tests covering the base case, both
+supersession paths (success, and failed/ambiguous), the attempt-only trail,
+the no-audit-trail (D-66) case, and a non-reveal record (`mark_redeemed`)
+appended after the refusal NOT clearing it.
+
+**Zero new user-visible strings (DD-4).** The wizard's `warning` step (the
+one surface every claim passes through) now renders the notice conditionally
+on `priorRefusalAt != null`, on both the Steam and non-Steam branch, reusing
+the ALREADY-SHIPPED `humbleKeys.revealRejectedBody` key/default verbatim (the
+same copy already used on the terminal `rejected` step). No new key was
+added: the `gamelib` i18n presence baseline was measured at `totalPairs: 0`
+against a live gap of 816 pairs (17 keys × 48 locales, R13 in
+`meta/__tests__/lintTranslations.test.ts`, already red at HEAD independent of
+this fix), and one new key would have deepened that gap by 48 more pairs.
+`git diff public/locales meta/i18nCatalogPresenceBaseline.json` is empty.
+Regression: `HumbleClaimWizard/__tests__/index.test.tsx` — describe
+`prior-refusal warning on the confirm step (DD-1/DD-4, quick 260911-ftc)`,
+four tests (non-Steam notice + confirm still offered, null/omitted-prop
+absence, Steam-branch notice, and a pin on the exact existing key/default).
+
+**Out of scope, left untouched (DD-5/DD-6).** The `ambiguous` (adapter
+threw) branch at `library.ts` was NOT touched — it is a genuinely different
+fact (we do not know whether Humble processed the reveal at all), and the
+existing `D-78 ambiguous` test still asserts the write-ahead flag is KEPT,
+proving the two branches were not collapsed. The C5 redaction was NOT
+widened to read Humble's actual refusal reason; the recorded fact remains
+deliberately "refused, cause unknown." `classify.ts`, `ipc_handler.ts`, and
+`HumbleKeyRow/index.tsx` were not modified.
