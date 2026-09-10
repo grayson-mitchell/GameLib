@@ -301,17 +301,33 @@ live_verification: |
   All three items of the todo's and this session's verification standard are now met by a live
   run, not inference alone.
 known_non_blockers: |
-  At BOOT (10:44:35) the log still emits `Unable to syncQueued playtime, userData not present`
-  in the same second as, but BEFORE, `Saved username to config file` -- an ordering artifact
-  where `syncQueuedPlaytime()` runs ahead of `getUserDetails()` resolving. It did NOT recur
-  after the fresh in-app login (10:45:01-03 shows no such line). It may self-resolve on the
-  next boot now that `userData` is persisted from this session onward, but that is a
-  PREDICTION, not a verified claim -- not asserted fixed, recorded here only as a known,
-  non-blocking residual to watch for.
+  RESOLVED -- prediction below was tested and held. Original observation: at BOOT (10:44:35)
+  the log emitted `Unable to syncQueued playtime, userData not present` in the same second as,
+  but BEFORE, `Saved username to config file` -- an ordering artifact where
+  `syncQueuedPlaytime()` (library.ts:183, reading `configStore.get_nodefault('userData')`) ran
+  ahead of `getUserDetails()` resolving. It did NOT recur after the fresh in-app login
+  (10:45:01-03). It was recorded as a PREDICTION that it would self-resolve on the next boot
+  once `userData` was persisted.
+
+  VERIFIED 2026-09-11 11:13 by a full app restart (dev tree stopped, orphaned sidecar/vite
+  swept, `pnpm tauri:dev` relaunched). Fresh boot log ~/Library/Logs/GameLib/gamelib.log,
+  boot marker 11:13:37:
+    grep -c 'userData not present' -> 0
+    grep -c '404'                  -> 0
+    (11:13:37) [Gog]: Checking if login is valid
+    (11:13:40) [Gog]: Saved username to config file
+    (11:13:40) [Gog]: GOG presence set
+  The warning does not fire when `gog_store/config.json` already holds `userData` at process
+  start, which it now does. No code change was needed or made for this residual.
+
+  METHOD NOTE for future live gates: the log DOES rotate on boot (gamelib.log -> .old), but
+  macOS REUSED the inode, so an inode-change watcher reported no rotation and would have
+  timed out against a boot that had already happened. Detect a new boot by the
+  `[bootstrap] appRoot resolved` line's timestamp, not by inode or mtime.
 
 ## Related
 
-- todo: .planning/todos/pending/2026-09-10-gog-getuserdetails-404s-on-api-gog-com-upstream-uses-users-gog-com.md
+- todo (closed): .planning/todos/completed/2026-09-10-gog-getuserdetails-404s-on-api-gog-com-upstream-uses-users-gog-com.md
 - prior session (different cause, similar surface): .planning/debug/resolved/gog-login-ui-never-updates.md
 - suspect commit: b0776ab8d (shipped api.gog.com)
 - upstream reference: Heroic b1a87c958 (uses users.gog.com)
