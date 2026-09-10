@@ -836,9 +836,10 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       )
     })
 
-    // REWRITE: All/__tests__ called this "GROUP SCOPING" because settleAction
-    // was gated on which collapsible group (REVEALED/REDEEMED/...) a key sat
-    // in, rendered through HumbleKeyGroup. The unified list has no groups at
+    // REWRITE: the deleted grouped-presentation test suite called this
+    // "GROUP SCOPING" because settleAction was gated on which collapsible
+    // group (REVEALED/REDEEMED/...) a key sat in, rendered through its own
+    // group-heading component. The unified list has no groups at
     // all -- every key is a flat sibling -- so the only thing left to prove
     // is the substance the name always meant: settleAction is keyed strictly
     // on the annotation, never on any positional/structural property of

@@ -1221,6 +1221,12 @@ function isTCallDefaultValueProperty(
 // out of proportion to a hole with zero live instances. If you reopen this,
 // re-run the census FIRST: the footprint grew 4 -> 6 files between the review
 // and its closure, so the numbers above are a snapshot, not a constant.
+//
+// 2026-09-10 (Phase 43, plan 43-08): `HumbleKeyGroup/index.tsx` was deleted
+// (the unified Humble Keys list retired the grouped presentation), taking
+// the scope count from 174 to 170. The table above is not re-measured here —
+// per its own instruction, a reopener must re-run the census first — but the
+// row is stale: five live users of the shape remain, not six.
 // ---------------------------------------------------------------------------
 
 // Requires at least one literal `.` after an optional `ns:` prefix, matching

@@ -778,9 +778,8 @@ describe('--rewrite-scope guard', () => {
    * 2026-09-10 (Phase 43, plan 43-08): scope 174 -> 170, fork-touched
    * 216 -> 212, unscanned debt UNCHANGED at 42. Four files removed from BOTH
    * artifacts (which is why the debt does not move): the unified Humble Keys
-   * list retired its three tab containers (`Keys/All/index.tsx`,
-   * `Keys/Spares/index.tsx`, `Keys/Waiting/index.tsx`) and their shared
-   * group-heading component (`components/HumbleKeyGroup/index.tsx`). Hand-
+   * list retired its three per-tab container components and their shared
+   * group-heading component, all now deleted from the tree entirely. Hand-
    * edited surgically, NOT regenerated, per the 260901-w9e / 260902-qs4 /
    * 260905-d33 precedent above.
    *

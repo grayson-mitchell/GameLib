@@ -1,14 +1,17 @@
 import { HumbleKeyState } from 'common/types/humble'
 
 /**
- * Shared i18n label pairs for the 5 key states — used by HumbleKeyGroup
- * (group headings) and HumbleKeyRow (state badges).
+ * Shared i18n label pairs for the 5 key states — read by HumbleKeyRow's
+ * KEY-column state badge.
  *
- * WR-09: lives in its own leaf module so neither component imports the other
- * for a constant. Previously HumbleKeyRow imported this back from
- * HumbleKeyGroup while HumbleKeyGroup imported the row component — a
- * circular import that only worked because the binding was read at render
- * time; any module-scope read would have hit the ES-module TDZ.
+ * WR-09: lives in its own leaf module rather than inside a component file, so
+ * no component ever has to import this constant through another component.
+ * That discipline mattered concretely once already: an earlier grouped
+ * presentation imported this table while also being imported BY the row
+ * component, and a circular import between the two only worked because the
+ * binding was read at render time — any module-scope read would have hit the
+ * ES-module TDZ. Keeping the table in its own leaf module means no future
+ * consumer can reintroduce that hazard.
  *
  * The internal 5-state name UNREDEEMABLE is locked (D-30 precedence), but its
  * user-visible label is "Expired" — matching Humble's own UI copy ("This key
