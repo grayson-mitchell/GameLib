@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import React, { useContext, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import './App.css'
@@ -6,6 +6,7 @@ import {
   createHashRouter,
   Navigate,
   Outlet,
+  RouteObject,
   RouterProvider,
   useLocation,
   useRouteError
@@ -210,7 +211,22 @@ function makeLazyFunc(
   }
 }
 
-const router = createHashRouter([
+// Phase 43 (Task 2 deviation, Rule 3 -- blocking issue): exported as a
+// plain, side-effect-free route-config array rather than passed straight
+// into `createHashRouter(...)` at module scope. `createHashRouter` reaches
+// for `document` immediately when called (confirmed: `node -e
+// "require('react-router-dom').createHashRouter([])"` throws "document is
+// not defined") -- calling it here, at module top level, meant this whole
+// file could never be imported by a plain Node/jest environment (this
+// repo's frontend jest project deliberately runs with no jsdom -- see
+// jest.config.js's own comment). That blocked a route-config test (this
+// plan's Task 3) from importing App.tsx at all. `routes` itself is inert
+// data (JSX elements are just objects until rendered, and every screen
+// import is deferred behind `lazy`), so exporting it costs nothing and
+// `createHashRouter(routes)` is deferred into `App()` below, memoised so it
+// is still constructed exactly once per app lifetime, same as the old
+// module-scope singleton.
+export const routes: RouteObject[] = [
   {
     path: '/',
     element: <Root />,
@@ -261,25 +277,29 @@ const router = createHashRouter([
         lazy: makeLazyFunc(import('./screens/WineManager'))
       },
       {
+        // Phase 43: the three-tab shell (Keys waiting / Giftable spares /
+        // All keys, each its own routed child + <Outlet/>) is retired --
+        // one leaf route renders the unified, searchable/sortable flat list
+        // directly, no children.
         path: 'humble-keys',
-        // Parent: shared route guard + sync header + tab nav + <Outlet/>.
-        lazy: makeLazyFunc(import('./screens/Humble/Keys')),
-        children: [
-          // D-50: default tab is Keys waiting.
-          { index: true, element: <Navigate to="waiting" replace /> },
-          {
-            path: 'waiting',
-            lazy: makeLazyFunc(import('./screens/Humble/Keys/Waiting'))
-          },
-          {
-            path: 'spares',
-            lazy: makeLazyFunc(import('./screens/Humble/Keys/Spares'))
-          },
-          {
-            path: 'all',
-            lazy: makeLazyFunc(import('./screens/Humble/Keys/All'))
-          }
-        ]
+        lazy: makeLazyFunc(import('./screens/Humble/Keys'))
+      },
+      // Phase 43: the three old tab routes are now flat sibling redirects
+      // (not nested under 'humble-keys', matching this array's existing
+      // flat-path convention -- see 'store/:store', 'settings/:type', etc.
+      // above) so any bookmarked/deep-linked old tab URL still resolves
+      // instead of falling through to the catch-all '*' redirect below.
+      {
+        path: 'humble-keys/waiting',
+        element: <Navigate to="/humble-keys" replace />
+      },
+      {
+        path: 'humble-keys/spares',
+        element: <Navigate to="/humble-keys" replace />
+      },
+      {
+        path: 'humble-keys/all',
+        element: <Navigate to="/humble-keys" replace />
       },
       {
         path: 'download-manager',
@@ -299,8 +319,9 @@ const router = createHashRouter([
       }
     ]
   }
-])
+]
 
 export default function App() {
+  const router = useMemo(() => createHashRouter(routes), [])
   return <RouterProvider router={router} />
 }

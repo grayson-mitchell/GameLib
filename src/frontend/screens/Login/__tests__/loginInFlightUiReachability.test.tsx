@@ -157,7 +157,15 @@ describe('F-34.4.2-17 / D-G1, 36-01: what makes a second login tile unreachable 
 
   it('SOURCE GATE (PRESENCE + ABSENCE, 36-01) -- loginweb/:runner remains a SIBLING route of login (still true for Amazon/GOG/Zoom/Humble), while loginweb/steam is gone from the router entirely -- Steam no longer has a route at all, only the co-mounted overlay', () => {
     const source = read(APP_TSX)
-    const routesStart = source.indexOf('const router = createHashRouter([')
+    // Phase 43 Task 2: the route array is no longer passed straight into
+    // `createHashRouter([...])` at module scope -- it is exported as its
+    // own `routes` constant (`createHashRouter(routes)` is now called
+    // inside `App()`, deferred via `useMemo`) so a plain Node/jest
+    // environment can import the route data without `createHashRouter`
+    // reaching for `document` at import time. Marker updated to match;
+    // the `createHashRouter\(/g` count assertion below still pins exactly
+    // one call site, now inside `App()` rather than at module scope.
+    const routesStart = source.indexOf('export const routes: RouteObject[] = [')
     const routesEnd = source.indexOf('export default function App()')
     expect(routesStart).toBeGreaterThan(-1)
     expect(routesEnd).toBeGreaterThan(routesStart)
