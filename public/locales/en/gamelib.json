@@ -85,7 +85,10 @@
         "activateWizardTitle": "Activate this key",
         "activatingBody": "Revealing your key and redeeming it on Steam — this only takes a moment.",
         "activatingTitle": "Activating on Steam…",
+        "claimOnStore": "Claim on {{store}}",
+        "loginAndClaim": "Log into {{store}} and claim",
         "openStore": "Open {{store}}",
+        "pickOnHumble": "Pick on Humble",
         "platformOther": "Other",
         "settledFromOwnership": "Already in your Steam library"
     },
