@@ -55,6 +55,15 @@ type Props = {
    * NEVER calls humbleRevealKey. */
   entryMode: 'claim' | 'finish'
   onDone: () => void
+  /**
+   * DD-1/DD-4 (quick 260911-ftc): `annotation.revealRefusedAt` for this key,
+   * forwarded by the caller (Keys/index.tsx openWizard). When non-null, the
+   * warning step shows the shipped "Humble declined…" notice BEFORE the
+   * reveal can re-fire, on both the Steam and non-Steam branch. Never
+   * blocks the confirm action — DD-1's rollback restored the claim path,
+   * and a silent auto-retry is exactly what it must never become.
+   */
+  priorRefusalAt?: number | null
 }
 
 // D-65: the ONE controlled surface the entire claim UX flows through —
@@ -68,7 +77,8 @@ type Props = {
 export default function HumbleClaimWizard({
   humbleKey,
   entryMode,
-  onDone
+  onDone,
+  priorRefusalAt = null
 }: Props) {
   const { t } = useTranslation()
   // 260823-op3: the redeem-outcome copy lives in the `gamelib` namespace, so
@@ -428,6 +438,16 @@ export default function HumbleClaimWizard({
               'Activate this key on Steam?'
             )}
           </h3>
+          {priorRefusalAt != null && (
+            // DD-1/DD-4: a prior refusal is warned about, never silently
+            // retried — reuses the shipped 'rejected' step copy verbatim.
+            <p className="humbleClaimWizardRejectedNote">
+              {t(
+                'humbleKeys.revealRejectedBody',
+                'Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.'
+              )}
+            </p>
+          )}
           <p className="humbleClaimWizardBody">
             {entryMode === 'claim'
               ? // The reveal has NOT happened yet: this click spends it AND
@@ -468,6 +488,16 @@ export default function HumbleClaimWizard({
         <h3 className="humbleClaimWizardTitle">
           {t('humbleKeys.revealConfirmTitle', 'Reveal this key?')}
         </h3>
+        {priorRefusalAt != null && (
+          // DD-1/DD-4: a prior refusal is warned about, never silently
+          // retried — reuses the shipped 'rejected' step copy verbatim.
+          <p className="humbleClaimWizardRejectedNote">
+            {t(
+              'humbleKeys.revealRejectedBody',
+              'Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.'
+            )}
+          </p>
+        )}
         <p className="humbleClaimWizardBody">
           {t(
             'humbleKeys.revealConfirmBody',

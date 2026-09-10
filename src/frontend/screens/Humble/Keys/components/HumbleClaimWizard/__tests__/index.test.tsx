@@ -137,6 +137,7 @@ type Props = {
   humbleKey: HumbleKey
   entryMode: 'claim' | 'finish'
   onDone: () => void
+  priorRefusalAt?: number | null
 }
 
 function mount(props: Props): ReactElement {
@@ -720,5 +721,92 @@ describe('HumbleClaimWizard', () => {
       machineName: humbleKey.machineName
     })
     expect(onDone).toHaveBeenCalled()
+  })
+
+  // DD-4 (quick 260911-ftc): the warning step is the surface every claim
+  // passes through, so a prior refusal is warned about at the moment of
+  // decision rather than as passive row chrome. Zero new i18n strings — the
+  // notice reuses the ALREADY-SHIPPED `humbleKeys.revealRejectedBody` copy
+  // (same key/default already rendered on the terminal 'rejected' step at
+  // index.tsx:556), so the 816-pair gamelib presence gap (R13) is not
+  // deepened.
+  describe('prior-refusal warning on the confirm step (DD-1/DD-4, quick 260911-ftc)', () => {
+    const REJECTED_BODY =
+      'Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.'
+
+    it('renders the shipped "Humble declined…" notice on a non-Steam warning step when priorRefusalAt is set, and still offers the confirm action', () => {
+      const onDone = jest.fn()
+      const humbleKey = makeHumbleKey({ platform: 'gog' })
+
+      const tree = mount({
+        humbleKey,
+        entryMode: 'claim',
+        onDone,
+        priorRefusalAt: 1788999862004
+      })
+
+      expect(textContent(tree)).toContain(REJECTED_BODY)
+      // The reveal is offered, not blocked — DD-1's whole point is a
+      // restored claim path, never a silent auto-retry.
+      const confirm = findByClassNamePart(
+        tree,
+        'humbleClaimWizardRevealButton'
+      )
+      expect(confirm).toBeDefined()
+    })
+
+    it('does not render the notice when priorRefusalAt is null, or when the prop is omitted entirely', () => {
+      const onDone = jest.fn()
+      const humbleKey = makeHumbleKey({ platform: 'gog' })
+
+      const withNull = mount({
+        humbleKey,
+        entryMode: 'claim',
+        onDone,
+        priorRefusalAt: null
+      })
+      expect(textContent(withNull)).not.toContain(REJECTED_BODY)
+
+      const omitted = mount({ humbleKey, entryMode: 'claim', onDone })
+      expect(textContent(omitted)).not.toContain(REJECTED_BODY)
+    })
+
+    it('renders the notice on the Steam branch of the warning step too', () => {
+      const onDone = jest.fn()
+      const humbleKey = makeHumbleKey({ platform: 'steam' })
+
+      const tree = mount({
+        humbleKey,
+        entryMode: 'claim',
+        onDone,
+        priorRefusalAt: 1788999862004
+      })
+
+      expect(textContent(tree)).toContain(REJECTED_BODY)
+      const confirm = findByClassNamePart(
+        tree,
+        'humbleClaimWizardActivateButton'
+      )
+      expect(confirm).toBeDefined()
+    })
+
+    // Zero-new-strings guard (DD-4): the notice must resolve through the
+    // EXISTING key/default, not a new one — a new key would deepen R13's
+    // already-red 816-pair gamelib presence gap by 48 more pairs.
+    it('resolves the notice through the existing humbleKeys.revealRejectedBody key/default, not a new key', () => {
+      const onDone = jest.fn()
+      const humbleKey = makeHumbleKey({ platform: 'gog' })
+
+      const tree = mount({
+        humbleKey,
+        entryMode: 'claim',
+        onDone,
+        priorRefusalAt: 1788999862004
+      })
+
+      const note = findByClassNamePart(tree, 'humbleClaimWizardRejectedNote')
+      expect(note).toBeDefined()
+      expect(textContent(note)).toBe(REJECTED_BODY)
+    })
   })
 })

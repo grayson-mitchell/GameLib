@@ -291,7 +291,11 @@ export default function HumbleKeys() {
   // D-65: one stateful wizard mount per open, entryMode drives where it
   // starts (D-66: 'finish' resumes at the post-reveal step, never
   // re-reveals).
-  function openWizard(key: HumbleKey, entryMode: 'claim' | 'finish') {
+  function openWizard(
+    key: HumbleKey,
+    entryMode: 'claim' | 'finish',
+    priorRefusalAt: number | null = null
+  ) {
     showDialogModal({
       showDialog: true,
       // 260823-op3: a Steam key is activated in one click, so the dialog
@@ -310,12 +314,14 @@ export default function HumbleKeys() {
             humbleKey={key}
             entryMode="finish"
             onDone={closeWizard}
+            priorRefusalAt={priorRefusalAt}
           />
         ) : (
           <HumbleClaimWizard
             humbleKey={key}
             entryMode="claim"
             onDone={closeWizard}
+            priorRefusalAt={priorRefusalAt}
           />
         ),
       buttons: []
@@ -424,7 +430,8 @@ export default function HumbleKeys() {
             // annotations fetch hasn't landed yet, so no wizard opens
             // against a key whose keyindex status is still unknown.
             keyindexResolved: annotation?.keyindexResolved ?? false,
-            onClaim: () => openWizard(key, 'claim'),
+            onClaim: () =>
+              openWizard(key, 'claim', annotation?.revealRefusedAt ?? null),
             onFinish: () => openWizard(key, 'finish'),
             onUndoRedeem: () =>
               void window.api
