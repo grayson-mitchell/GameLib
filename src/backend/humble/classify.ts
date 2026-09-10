@@ -499,7 +499,8 @@ export function classifyOrder(
       // every tpk expiration. The field name is speculative (Assumption A2),
       // so an unparseable live value must degrade to null (-> the
       // no-deadline display) — a raw copy previously rendered the literal
-      // "Invalid Date" and produced NaN comparisons in byExpiringSoonest.
+      // "Invalid Date" and produced NaN comparisons in the expiration-sort
+      // comparator (viewFilters.ts's compareWaiting).
       const rawDeadline = (rawProduct as Record<string, unknown>).deadline_date
       const deadline =
         typeof rawDeadline === 'string'

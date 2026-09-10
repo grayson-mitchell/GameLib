@@ -1,13 +1,12 @@
 import { HumbleKey, HumbleKeyState } from '../types/humble'
 import { GENERIC_KEY_PLATFORM } from './genericKeyPlatform'
-import { getUrgencyTier } from './urgencyBadge'
 
 /**
- * Pure view-membership + sort helpers for the Keys-waiting and Giftable-
- * spares tabs (D-53/D-54/D-55/D-56, Phase 13). Kept in common/ (no React, no
- * i18n, no I/O) so it is unit-testable from the backend jest project — the
- * frontend tabs only map the returned flat arrays to `HumbleKeyRow`s. Same
- * tier/convention as `groupKeys.ts` and `expirationDisplay.ts`.
+ * Pure view-membership + sort helpers backing the unified Humble Keys list
+ * (D-43-01) and its two backend consumers (StoreSearch, Discounts). Kept in
+ * common/ (no React, no i18n, no I/O) so it is unit-testable from the backend
+ * jest project — the frontend screen only maps the returned flat array to
+ * `HumbleKeyRow`s. Same tier/convention as `expirationDisplay.ts`.
  */
 
 // D-53: the "claim this" set — Keys waiting includes UNPICKED Choice-month
@@ -22,17 +21,15 @@ export const WAITING_STATES: Set<HumbleKeyState> = new Set([
 
 // D-56: dated keys sort soonest-expiring first; a dated key always precedes
 // an undated one; undated keys tiebreak alphabetically by title. Single flat
-// list — no groups (unlike groupKeys.ts's byExpiringSoonest, which sorts
-// within already-partitioned state groups).
+// list — no groups.
 //
-// D-43-06: this is now also the unified Humble Keys list's default
-// "Expiring soonest" comparator. `groupKeys.ts`'s `byExpiringSoonest` is
-// DELETED in plan 43-08 rather than kept as a second implementation — the
-// two differ ONLY in the two-undated case (this function tiebreaks
-// alphabetically by title; `byExpiringSoonest` returns 0, leaving whatever
-// order the input happened to arrive in). That tiebreak is therefore
-// load-bearing, not incidental: it is the one behaviour a caller of the
-// deleted comparator would silently lose.
+// D-43-06: this is also the unified Humble Keys list's default "Expiring
+// soonest" comparator. Plan 43-08 deleted the grouped presentation's own
+// comparator (which tiebreaked two undated keys as equal, leaving whatever
+// order the input happened to arrive in) rather than keeping a second
+// implementation — this function's alphabetical tiebreak is therefore
+// load-bearing, not incidental: it is the one behaviour that deletion could
+// have silently lost.
 export function compareWaiting(a: HumbleKey, b: HumbleKey): number {
   if (a.expiration !== null && b.expiration !== null) {
     return new Date(a.expiration).getTime() - new Date(b.expiration).getTime()
@@ -45,9 +42,9 @@ export function compareWaiting(a: HumbleKey, b: HumbleKey): number {
 /**
  * D-53: game keys the user does not yet own elsewhere AND are in a waiting
  * state. Scoped to game keys only — generic-platform entries (PDF/ebook/
- * publisher-redemption items, `GENERIC_KEY_PLATFORM` from groupKeys.ts) are
- * excluded here regardless of state; they still surface via the All tab's
- * "Other" bucket (round-7 decision), never in Keys waiting. `ownedElsewhere`
+ * publisher-redemption items, `GENERIC_KEY_PLATFORM`) are excluded here
+ * regardless of state; under D-43-01 they still surface as ordinary rows on
+ * the unified Humble Keys list, never in Keys waiting. `ownedElsewhere`
  * is the sole owner signal, consumed as-is regardless of `matchConfidence`
  * (D-54) — Plan 03/04 preserve the D-42 override safety valve so a corrected
  * fuzzy match moves back here via the existing recompute path, not a new
@@ -77,15 +74,6 @@ export function selectKeysWaiting(keys: HumbleKey[]): HumbleKey[] {
 }
 
 /**
- * D-54/D-55: keys already owned elsewhere AND still UNREVEALED. Owned +
- * REVEALED keys are deliberately excluded — reveal forfeits the gift link
- * (spec §2.1), so those rows appear in All keys only, never here.
- */
-export function selectGiftableSpares(keys: HumbleKey[]): HumbleKey[] {
-  return keys.filter((k) => k.ownedElsewhere && k.state === 'UNREVEALED')
-}
-
-/**
  * D-43-10: case-insensitive substring match against `key.title` ONLY — no
  * other field is searched. An empty or whitespace-only query matches every
  * key. `origin` is deliberately excluded: 20 of 33 live Humble keys carry
@@ -105,38 +93,8 @@ export function matchesKeySearch(key: HumbleKey, query: string): boolean {
  * D-54/D-55, per-row form: true for a key already owned elsewhere AND still
  * UNREVEALED — the trigger for scenario 3's "you already own this, want to
  * gift the spare?" affordance. Owned + REVEALED keys are deliberately
- * excluded — reveal forfeits the gift link (spec §2.1). Supersedes the
- * array-returning `selectGiftableSpares` above, which plan 43-08 deletes
- * once its last caller is gone.
+ * excluded — reveal forfeits the gift link (spec §2.1).
  */
 export function isGiftableSpare(key: HumbleKey): boolean {
   return key.ownedElsewhere && key.state === 'UNREVEALED'
-}
-
-/**
- * D-86/D-87/D-88/D-89 (Phase 15): splits an already-`selectKeysWaiting`-
- * filtered/sorted list into a pinned "Expiring soon" set and everything else,
- * for the Keys-waiting view's pinned section. Membership is decided entirely
- * by the existing urgency-tier helper (D-87 — zero new threshold logic, no
- * new numeric literal here): a key is pinned exactly when its urgency badge
- * would be live (`getUrgencyTier(...) !== null`). Single pass over the input
- * so `pinned` and `rest` are guaranteed disjoint and together equal the input
- * (D-88 — a key can never be duplicated or dropped), and both outputs inherit
- * `selectKeysWaiting`'s soonest-first ordering since insertion order is
- * preserved relative to the input.
- */
-export function partitionWaitingByUrgency(waiting: HumbleKey[]): {
-  pinned: HumbleKey[]
-  rest: HumbleKey[]
-} {
-  const pinned: HumbleKey[] = []
-  const rest: HumbleKey[] = []
-  for (const key of waiting) {
-    if (getUrgencyTier(key.state, key.expiration) !== null) {
-      pinned.push(key)
-    } else {
-      rest.push(key)
-    }
-  }
-  return { pinned, rest }
 }
