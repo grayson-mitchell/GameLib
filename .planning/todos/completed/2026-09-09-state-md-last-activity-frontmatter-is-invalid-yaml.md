@@ -6,6 +6,7 @@ severity: medium
 platform: any
 ready: code
 source: "incidental finding during quick-260908-wk0's by-hand STATE.md row append"
+status: "RESOLVED 2026-09-11 by quick-260911-ayu -- both `stopped_at` and `last_activity` converted to `|-` literal block scalars, byte-preserving their prior values (verified by sha256, not by eye). CORRECTION to this todo's own claim: the defect was 2 raw interior quotes in `last_activity`, not 10 -- the '10' count above included the scalar's own delimiters and was measured against a stale offset; `stopped_at` was already clean and needed no repair, only the same conversion for consistency (both fields now share one convention rather than one escaped and one not). `.planning/planning-frontmatter-gate.py` was added as the requested gate, `MINIMUM_EXPECTED_GATES` raised 9 -> 10, and it has been observed RED against the real pre-fix file and GREEN against the fixed one. The gsd-sdk-corruption hypothesis in 'Why it may matter more than it looks' below is NEITHER confirmed NOR refuted by this work -- the standing hand-write ban on gsd-sdk's `state.*` verbs is unchanged either way."
 files:
   - .planning/STATE.md (frontmatter line 8, `last_activity:`)
 resolves_phase: null

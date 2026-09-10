@@ -57,7 +57,20 @@ GATE_SUFFIX = "-gate.py"
 # here: the todo corpus is edited by nearly every session, so this gate is a
 # more attractive thing to delete than most, and `severity:` was free text for
 # months precisely because nothing enforced it.
-MINIMUM_EXPECTED_GATES = 9
+#
+# 9 -> 10 (quick task 260911-ayu): the tenth gate is
+# `.planning/planning-frontmatter-gate.py`, which actually parses
+# `.planning/STATE.md`'s frontmatter as YAML (required) and
+# `.planning/ROADMAP.md`'s (optional). This gate exists because
+# `.planning/STATE.md`'s frontmatter sat invalid for weeks -- a double-quoted
+# `last_activity` scalar with two unescaped interior quotes that terminated it
+# early -- while all nine gates existing at the time reported green, because
+# not one of them had ever actually parsed that block. Leaving the floor at 9
+# would let this exact gate be deleted later with everything else still
+# reporting green, which is precisely the failure mode it was written to
+# close: a defect invisible to nine passing gates is exactly the kind of gate
+# whose own deletion would be equally invisible.
+MINIMUM_EXPECTED_GATES = 10
 
 
 def discover_gates():
