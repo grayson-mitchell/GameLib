@@ -819,6 +819,46 @@ function appendAudit(
   humbleAuditStore.set(key, [...existing, record])
 }
 
+// DD-3 (quick 260911-ftc): the reveal-OUTCOME events in humbleAuditStore's
+// trail — deliberately EXCLUDES 'reveal_attempt'. That event is the
+// write-ahead marker (SC4), is ALWAYS present the instant a reveal is tried,
+// and carries no outcome yet; treating it as an outcome would mask whatever
+// the real outcome record says. Kept as a module-level const so the
+// exclusion is explicit and greppable.
+const REVEAL_OUTCOME_EVENTS = new Set([
+  'reveal_success',
+  'reveal_rejected',
+  'reveal_failed',
+  'reveal_ambiguous'
+])
+
+/**
+ * DD-3 (quick 260911-ftc): derives the "attempted, refused, cause unknown"
+ * fact for one composite key from the existing append-only audit trail,
+ * rather than storing it. Walks the trail BACKWARDS to the first record
+ * whose event is a reveal OUTCOME (see REVEAL_OUTCOME_EVENTS) and returns
+ * its `at` only when that record is `reveal_rejected` — otherwise undefined.
+ * Because this is derived fresh from the trail on every call, a later
+ * reveal_success/reveal_failed/reveal_ambiguous automatically supersedes an
+ * earlier refusal with no second writer to keep in sync, and a key with no
+ * audit trail at all (e.g. revealed on Humble's website, D-66) can never
+ * carry one.
+ */
+function deriveRevealRefusedAt(
+  gamekey: string,
+  machineName: string
+): number | undefined {
+  const composite = compositeKey(gamekey, machineName)
+  const trail = humbleAuditStore.get(composite, [])
+  for (let i = trail.length - 1; i >= 0; i--) {
+    const record = trail[i]
+    if (REVEAL_OUTCOME_EVENTS.has(record.event)) {
+      return record.event === 'reveal_rejected' ? record.at : undefined
+    }
+  }
+  return undefined
+}
+
 /**
  * Per-key row annotations for the guided claim flow's IPC surface
  * (`humbleGetClaimAnnotations`). Returns an entry for EVERY cached key —
@@ -827,7 +867,9 @@ function appendAudit(
  * pre-Phase-14 cached row that has not yet been backfilled with a keyindex.
  * `revealedAt` is machineName-keyed (humbleRevealedStore) — an accepted
  * pre-existing limitation (Open Q4); `redeemedAt` is the WR-01-safe
- * composite-keyed local-redeemed timestamp. Never includes a key value.
+ * composite-keyed local-redeemed timestamp. `revealRefusedAt` is DERIVED,
+ * not stored — see `deriveRevealRefusedAt` (DD-3). Never includes a key
+ * value.
  *
  * D-42-01 re-check: `redeemedAt` is emitted identically regardless of
  * `redeemedSource` — the D-77 Undo affordance
@@ -843,6 +885,7 @@ function getClaimAnnotations(): Record<string, ClaimAnnotation> {
       const localRedeemed = humbleLocalRedeemedStore.get(composite)
       result[composite] = {
         revealedAt: humbleRevealedStore.get(key.machineName)?.revealedAt,
+        revealRefusedAt: deriveRevealRefusedAt(gamekey, key.machineName),
         redeemedAt: localRedeemed?.redeemedAt,
         // D-42-01: missing `source` on an existing record reads as 'user'
         // (every pre-Phase-42 entry was written by the explicit action) —
@@ -1361,14 +1404,25 @@ async function doRevealKey(
     }
 
     if (result.status === 'rejected_by_server') {
-      // WR-06 (14-REVIEW): a definitive server DENIAL (e.g. already
-      // redeemed / expired) is not a transport failure — the request reached
-      // Humble and was processed. KEEP the write-ahead REVEALED flag (the
-      // truthful local state is "unconfirmed — sync to check", same as the
-      // ambiguous path): an "already redeemed" denial means the key IS
-      // consumed server-side, so rolling back to UNREVEALED would misreport
-      // "nothing was used up" and invite an endless retry loop against a
-      // consumed key. Never auto-resubmit (T-14-05).
+      // DD-1 (quick 260911-ftc), supersedes WR-06 (14-REVIEW): a definitive
+      // server DENIAL is not a transport failure — the request reached
+      // Humble and was processed — but WR-06's inference that a denial means
+      // "already redeemed upstream" is REFUTED by measurement (Phase 43
+      // probe D-43-11): a real denial left the game ungranted on gog.com.
+      // "Humble said no" and "Humble already gave it to you" are different
+      // facts and the denial does not distinguish them. Keeping the
+      // write-ahead REVEALED flag therefore stranded the ONLY in-app claim
+      // path for a key the user owns and never received — roll it back like
+      // the definitive-failure branch above.
+      //
+      // Rolling back surrenders nothing WR-06 was protecting: if the key
+      // genuinely IS consumed server-side, the very next sync reports that
+      // fact itself — classify.ts:409 sets redeemedKeyValuePresent from a
+      // truthy redeemed_key_val, and classifyTpk (classify.ts:56-60) returns
+      // REVEALED on that server truth alone, with no local flag involved.
+      // Never auto-resubmit (T-14-05) — only an explicit user retry (now
+      // possible again) may call revealKey.
+      humbleRevealedStore.delete(machineName)
       appendAudit(gamekey, machineName, 'reveal_rejected', {
         title: target.title,
         platform: target.platform,
@@ -1376,7 +1430,7 @@ async function doRevealKey(
       })
       logWarning(
         [
-          'Humble reveal: rejected by server (definitive denial, keeping REVEALED flag):',
+          'Humble reveal: rejected by server (definitive denial, rolled back REVEALED flag):',
           gamekey,
           machineName
         ],

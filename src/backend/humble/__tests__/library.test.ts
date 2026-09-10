@@ -2846,18 +2846,24 @@ describe('HumbleLibrary', () => {
       expect(state.cooldownUntil).toBeGreaterThan(Date.now())
     })
 
-    test('WR-06 rejected_by_server: KEEPS the write-ahead REVEALED flag, audits reveal_rejected, no cooldown, returns rejected_by_server', async () => {
+    // DD-1 (quick 260911-ftc), INVERTS the former WR-06 test: measured
+    // (Phase 43 probe D-43-11), a real definitive denial left the game
+    // ungranted on gog.com — "Humble said no" and "Humble already gave it to
+    // you" are different facts, and the denial does not distinguish them.
+    // Keeping the write-ahead REVEALED flag on a refusal therefore stranded
+    // the ONLY in-app claim path for a key the user owns and never received.
+    // Rolling back surrenders nothing WR-06 was protecting: if the key
+    // genuinely IS consumed server-side, the very next sync reports that
+    // itself via `redeemed_key_val` -> classifyTpk's server-truth arm
+    // (classify.ts:409, 56-60) — no local flag involved.
+    test('DD-1 rejected_by_server: ROLLS BACK the write-ahead REVEALED flag, audits reveal_rejected, no cooldown, returns rejected_by_server', async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
       mockAdapterRevealKey.mockResolvedValue({ status: 'rejected_by_server' })
 
       const outcome = await HumbleLibrary.revealKey('gk1', 'gk1_key')
 
       expect(outcome).toEqual({ status: 'rejected_by_server' })
-      // Truthful state is "unconfirmed — sync to check": an already-redeemed
-      // denial means the key IS consumed server-side, so the write-ahead
-      // flag must NOT roll back (rolling back would misreport "nothing was
-      // used up" and invite retries against a consumed key).
-      expect(revealedData.has('gk1_key')).toBe(true)
+      expect(revealedData.has('gk1_key')).toBe(false)
       expect(HumbleLibrary.getRevealedKeyValue('gk1', 'gk1_key')).toBeNull()
       const audit = auditData.get('gk1:gk1_key')
       expect(audit?.map((a) => a.event)).toEqual([
@@ -2867,6 +2873,27 @@ describe('HumbleLibrary', () => {
       expect(audit?.[1].outcome).toBe('rejected_by_server')
       // Not an access_denied — the shared D-33 cooldown must NOT engage.
       expect(HumbleLibrary.getSyncState().cooldownUntil).toBeUndefined()
+    })
+
+    // DD-1: the rollback's whole point is a restored claim path — prove a
+    // SECOND attempt actually reaches the adapter rather than being refused
+    // again by doRevealKey's own eligibility gate.
+    test('DD-1 claim path reachable: a second revealKey after a rejected_by_server reaches the adapter', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValueOnce({
+        status: 'rejected_by_server'
+      })
+      mockAdapterRevealKey.mockResolvedValueOnce({
+        status: 'ok',
+        data: { key: 'REAL-KEY-VALUE' }
+      })
+
+      const first = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+      const second = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(first).toEqual({ status: 'rejected_by_server' })
+      expect(second).not.toEqual({ status: 'ineligible' })
+      expect(mockAdapterRevealKey).toHaveBeenCalledTimes(2)
     })
 
     test('D-78 ambiguous (adapter throws): KEEPS the write-ahead REVEALED flag, persists no key value, audits reveal_ambiguous', async () => {
@@ -3449,7 +3476,9 @@ describe('HumbleLibrary', () => {
 
     // SECURITY PIN (T-42-05): the widening must not smuggle a key value or
     // any other field into the IPC-broadcast-adjacent annotation object.
-    test('every emitted annotation carries exactly revealedAt/redeemedAt/keyindexResolved/redeemedSource', () => {
+    // Widened by quick 260911-ftc (DD-3/T-ftc-01) to include the derived
+    // revealRefusedAt field — still a number-or-undefined, never a key value.
+    test('every emitted annotation carries exactly revealedAt/redeemedAt/keyindexResolved/redeemedSource/revealRefusedAt', () => {
       localRedeemedData.set('gk1:gk1_key', { redeemedAt: 1, source: 'user' })
       libraryData.set(
         'gk1',
@@ -3459,8 +3488,140 @@ describe('HumbleLibrary', () => {
       const annotations = HumbleLibrary.getClaimAnnotations()
 
       expect(Object.keys(annotations['gk1:gk1_key']).sort()).toEqual(
-        ['keyindexResolved', 'redeemedAt', 'redeemedSource', 'revealedAt'].sort()
+        [
+          'keyindexResolved',
+          'redeemedAt',
+          'redeemedSource',
+          'revealedAt',
+          'revealRefusedAt'
+        ].sort()
       )
+    })
+  })
+
+  // DD-3 (quick 260911-ftc): revealRefusedAt is DERIVED from the existing
+  // append-only humbleAuditStore trail (never stored), by scanning backwards
+  // to the LAST reveal-OUTCOME record and emitting its `at` only when that
+  // record is `reveal_rejected`. This buys supersession for free — a later
+  // reveal_success/reveal_failed/reveal_ambiguous record automatically wins,
+  // with no second writer that could drift from the audit trail.
+  describe('HumbleLibrary.getClaimAnnotations() — DD-3 revealRefusedAt derivation', () => {
+    test('reports revealRefusedAt equal to the reveal_rejected record\'s `at`, and revealedAt undefined', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValue({ status: 'rejected_by_server' })
+      await HumbleLibrary.revealKey('gk1', 'gk1_key')
+      const rejectedAt = auditData.get('gk1:gk1_key')?.find(
+        (a) => a.event === 'reveal_rejected'
+      )?.at as number
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBe(rejectedAt)
+      expect(annotations['gk1:gk1_key'].revealedAt).toBeUndefined()
+    })
+
+    test('a later reveal_success supersedes a prior reveal_rejected: revealRefusedAt is undefined', () => {
+      auditData.set('gk1:gk1_key', [
+        { event: 'reveal_attempt', at: 1, title: 't', platform: 'steam' },
+        {
+          event: 'reveal_rejected',
+          at: 2,
+          title: 't',
+          platform: 'steam',
+          outcome: 'rejected_by_server'
+        },
+        { event: 'reveal_attempt', at: 3, title: 't', platform: 'steam' },
+        {
+          event: 'reveal_success',
+          at: 4,
+          title: 't',
+          platform: 'steam',
+          outcome: 'ok'
+        }
+      ])
+      libraryData.set(
+        'gk1',
+        makeRevealableEntry('gk1', { state: 'REVEALED', keyindex: 'idx-1' })
+      )
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBeUndefined()
+    })
+
+    test('a later reveal_failed or reveal_ambiguous also supersedes a prior reveal_rejected', () => {
+      auditData.set('gk1:gk1_key', [
+        {
+          event: 'reveal_rejected',
+          at: 1,
+          title: 't',
+          platform: 'steam',
+          outcome: 'rejected_by_server'
+        },
+        {
+          event: 'reveal_failed',
+          at: 2,
+          title: 't',
+          platform: 'steam',
+          outcome: 'schema_error'
+        }
+      ])
+      auditData.set('gk2:gk2_key', [
+        {
+          event: 'reveal_rejected',
+          at: 1,
+          title: 't',
+          platform: 'steam',
+          outcome: 'rejected_by_server'
+        },
+        { event: 'reveal_ambiguous', at: 2, title: 't', platform: 'steam' }
+      ])
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      libraryData.set('gk2', makeRevealableEntry('gk2', { keyindex: 'idx-2' }))
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBeUndefined()
+      expect(annotations['gk2:gk2_key'].revealRefusedAt).toBeUndefined()
+    })
+
+    test('an audit trail containing ONLY reveal_attempt (write-ahead marker, no outcome yet) yields revealRefusedAt undefined', () => {
+      auditData.set('gk1:gk1_key', [
+        { event: 'reveal_attempt', at: 1, title: 't', platform: 'steam' }
+      ])
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBeUndefined()
+    })
+
+    test('a key with no audit records at all (D-66 website-revealed shape) yields revealRefusedAt undefined', () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      // No auditData entry set for gk1:gk1_key at all.
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBeUndefined()
+    })
+
+    test('a non-reveal record appended AFTER the refusal (e.g. mark_redeemed) does NOT clear it — only reveal-outcome events count', () => {
+      auditData.set('gk1:gk1_key', [
+        {
+          event: 'reveal_rejected',
+          at: 1,
+          title: 't',
+          platform: 'steam',
+          outcome: 'rejected_by_server'
+        },
+        { event: 'mark_redeemed', at: 2, title: 't', platform: 'steam' },
+        { event: 'ownership_settled', at: 3, title: 't', platform: 'steam' }
+      ])
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+
+      const annotations = HumbleLibrary.getClaimAnnotations()
+
+      expect(annotations['gk1:gk1_key'].revealRefusedAt).toBe(1)
     })
   })
 

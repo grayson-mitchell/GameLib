@@ -229,6 +229,20 @@ export type RedeemOutcome = { status: 'ok' } | { status: 'ineligible' }
  */
 export interface ClaimAnnotation {
   revealedAt?: number
+  /**
+   * DD-1/DD-2/DD-3 (quick 260911-ftc): the timestamp of the LAST reveal
+   * attempt when that attempt was REFUSED by Humble's server and no later
+   * reveal outcome has superseded it. This is attempt metadata, not a key
+   * state — the key itself is still UNREVEALED and claimable (the
+   * write-ahead REVEALED flag is rolled back on refusal, see library.ts's
+   * `rejected_by_server` branch). It means "attempted, refused, cause
+   * unknown" — NEVER "already redeemed": Humble's actual refusal reason is
+   * redacted under the C5 isolation wall, and the Phase 43 D-43-11 probe
+   * measured a real refusal where nothing was consumed server-side. Never
+   * carries a key value. Derived (not stored) from `humbleAuditStore` by
+   * `getClaimAnnotations` — see that function for the derivation rule.
+   */
+  revealRefusedAt?: number
   redeemedAt?: number
   /**
    * D-42-01: WHY this key is REDEEMED — 'user' for the explicit
