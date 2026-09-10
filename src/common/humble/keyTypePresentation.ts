@@ -155,3 +155,54 @@ export function getRedeemTarget(
   }
   return { kind: 'help', url: HUMBLE_REDEEM_HELP_URL }
 }
+
+/**
+ * The three stores GameLib itself can be connected to (D-43-12/D-43-13,
+ * Phase 43 plan 06). This is deliberately NOT the same axis as
+ * `HumbleStoreLogoId` or `REDEEM_URL_BUILDERS` — it answers a different
+ * question ("does GameLib have a login concept for this key_type at all?"),
+ * not "does a logo asset exist" or "does a deep link exist".
+ */
+export type HumbleGameLibLoginStore = 'steam' | 'gog' | 'epic'
+
+// D-43-12/D-43-13: closed key_type -> GameLib-login-store table, in the
+// same closed-set spirit as REDEEM_URL_BUILDERS above — a hostile or
+// unrecognised key_type can only ever match one of these exact literals or
+// fall through to `null`, never a fabricated store id.
+const GAMELIB_LOGIN_STORES: Record<string, HumbleGameLibLoginStore> = {
+  steam: 'steam',
+  gog: 'gog',
+  // T-UIC-01 precedent (see REDEEM_URL_BUILDERS' note above): gog_keyless
+  // is branded like `gog` and shares its login store, even though it has
+  // no deep link. Login-store presence and deep-link presence are
+  // independent axes.
+  gog_keyless: 'gog',
+  epic: 'epic',
+  epic_keyless: 'epic'
+}
+
+/**
+ * Resolves a raw Humble `key_type` to the `ContextProvider` store slice
+ * whose `username` field answers "is GameLib connected to this platform?"
+ * (D-43-12). `null` means GameLib has no connectable account for this
+ * platform at all — `origin`, `origin_keyless`, `uplay`, `battlenet`,
+ * `nintendo_direct`, `generic`, and any unrecognised `key_type` all land
+ * here (D-43-13).
+ *
+ * **Read this return value honestly (D-43-12), because a future reader who
+ * treats it as a session predicate will ship a lie in the UI:** a non-null
+ * value names WHICH `ContextProvider` slice (`steam.username` /
+ * `gog.username` / `epic.username`, `frontend/types.ts:90-121`) to check —
+ * it does not itself observe anything. A truthy `username` on that slice
+ * means GameLib's own connection to that store is live (e.g. a `steam-user`
+ * CM session with a refresh token). It is NOT a guarantee that the user has
+ * a live session on the store's OWN WEBSITE — the redeem URL opens in a
+ * completely separate browser context that GameLib cannot see into. The
+ * only honest claim a caller may build on this value is "GameLib is
+ * connected to this store", never "you are logged into {{store}}.com".
+ */
+export function getGameLibLoginStore(
+  keyType: string
+): HumbleGameLibLoginStore | null {
+  return GAMELIB_LOGIN_STORES[keyType] ?? null
+}

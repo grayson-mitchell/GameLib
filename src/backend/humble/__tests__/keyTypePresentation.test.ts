@@ -9,7 +9,9 @@
 
 import {
   HUMBLE_REDEEM_HELP_URL,
+  HumbleGameLibLoginStore,
   HumbleKeyTypePresentation,
+  getGameLibLoginStore,
   getKeyTypePresentation,
   getRedeemTarget
 } from 'common/humble/keyTypePresentation'
@@ -224,6 +226,46 @@ describe('getRedeemTarget', () => {
       kind: 'help',
       url: HUMBLE_REDEEM_HELP_URL
     })
+  })
+})
+
+describe('getGameLibLoginStore (D-43-12/D-43-13, Phase 43 plan 06)', () => {
+  test.each([
+    ['steam', 'steam'],
+    ['gog', 'gog'],
+    ['gog_keyless', 'gog'],
+    ['epic', 'epic'],
+    ['epic_keyless', 'epic']
+  ] satisfies [string, HumbleGameLibLoginStore][])(
+    '%j -> %j (GameLib has a login concept for this platform)',
+    (keyType, expected) => {
+      expect(getGameLibLoginStore(keyType)).toBe(expected)
+    }
+  )
+
+  test.each([
+    'uplay',
+    'battlenet',
+    'origin',
+    'origin_keyless',
+    'nintendo_direct',
+    'generic'
+  ])(
+    '%j -> null (D-43-13: no GameLib login concept for this platform)',
+    (keyType) => {
+      expect(getGameLibLoginStore(keyType)).toBeNull()
+    }
+  )
+
+  test.each(['wibble', '', 'STEAM', 'steam '])(
+    'unrecognised key_type %j -> null, same as a named no-login platform',
+    (keyType) => {
+      expect(getGameLibLoginStore(keyType)).toBeNull()
+    }
+  )
+
+  test('SECURITY PIN (T-43-03): a hostile, URL-shaped key_type cannot reach a fabricated login store', () => {
+    expect(getGameLibLoginStore('https://evil.example/steam')).toBeNull()
   })
 })
 
