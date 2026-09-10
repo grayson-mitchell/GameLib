@@ -127,12 +127,12 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
       expect.anything()
     )
 
-    // The api.gog.com/users/{user_id} fetch must use the SAME token the --code
+    // The users.gog.com/users/{user_id} fetch must use the SAME token the --code
     // exchange returned, and be keyed by the SAME scripted user_id ('u1'),
     // proving both were threaded through rather than silently dropped or
     // re-derived via a redundant getCredentials() call.
     expect(mockedAxiosGet).toHaveBeenCalledWith(
-      'https://api.gog.com/users/u1',
+      'https://users.gog.com/users/u1',
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer fresh-token-from-code-exchange'
@@ -170,7 +170,7 @@ describe('debug/manage-accounts-slow-update -- GOGUser.login redundant gogdl cal
       expect.anything()
     )
     expect(mockedAxiosGet).toHaveBeenCalledWith(
-      'https://api.gog.com/users/u2',
+      'https://users.gog.com/users/u2',
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: 'Bearer refreshed-token-from-disk'
@@ -407,11 +407,11 @@ describe('debug/gog-spawn-reduction fix 1 -- GOGUser.getCredentials() TTL cache'
  * `getUserDetails()` returned `undefined`, `configStore.userData`
  * was never written, and the user appeared logged out even though auth actually
  * succeeded. These tests pin the fix: `getUserDetails()` now fetches the small,
- * fixed-size `https://api.gog.com/users/{user_id}` document instead, and the
+ * fixed-size `https://users.gog.com/users/{user_id}` document instead, and the
  * persisted record is an explicit `{userId, username, galaxyUserId}` projection
  * rather than a passthrough of the response body.
  */
-describe('quick-260821-o34 -- getUserDetails() repointed at api.gog.com/users/{user_id}', () => {
+describe('quick-260821-o34 -- getUserDetails() repointed at users.gog.com/users/{user_id}', () => {
   beforeEach(() => {
     mockConfigStoreGetNodefault.mockImplementation((key: string) =>
       key === 'isLoggedIn' ? true : undefined
@@ -429,7 +429,7 @@ describe('quick-260821-o34 -- getUserDetails() repointed at api.gog.com/users/{u
         loginTime: Date.now()
       })
     )
-    // The small, fixed-size api.gog.com/users/{id} document -- no wishlist,
+    // The small, fixed-size users.gog.com/users/{id} document -- no wishlist,
     // friends, checksum or updates payload, unlike the old embed.gog.com/
     // userData.json endpoint this replaces.
     mockedAxiosGet.mockResolvedValueOnce({
@@ -518,6 +518,46 @@ describe('quick-260821-o34 -- getUserDetails() repointed at api.gog.com/users/{u
       'userData',
       expect.objectContaining({ galaxyUserId: 'galaxy-1' })
     )
+  })
+})
+
+/**
+ * Regression coverage for debug/gog-login-not-registered.md.
+ *
+ * `getUserDetails()` was repointed from `embed.gog.com` to `api.gog.com` by quick-260821-o34,
+ * but `api.gog.com/users/{user_id}` does not exist and 404s for every real account -- the
+ * migration replaced one 404ing endpoint with another. Because the failure is silent by
+ * construction (`.catch()` swallows the error, `if (!response) return` exits before
+ * `configStore.set('userData', ...)`), and the existing quick-260821-o34 suite above mocks
+ * `axios.get` at the HTTP layer, no test could distinguish a *correct* host from a
+ * *plausible-looking but wrong* one -- both return whatever `mockedAxiosGet` is told to
+ * return. That blindness is exactly how this defect shipped once already.
+ *
+ * This test pins the literal host string GOGUser actually calls, independent of what axios
+ * is mocked to return, so a future host regression fails even if the mocked response shape
+ * still looks correct.
+ */
+describe('debug/gog-login-not-registered -- getUserDetails() must call users.gog.com, not api.gog.com', () => {
+  beforeEach(() => {
+    mockConfigStoreGetNodefault.mockImplementation((key: string) =>
+      key === 'isLoggedIn' ? true : undefined
+    )
+    GOGUser.__resetCredentialsCacheForTests()
+    mockedAxiosGet.mockResolvedValueOnce({
+      data: { id: 'galaxy-1', username: 'testuser' }
+    })
+  })
+
+  it('fetches the live GOG account endpoint from users.gog.com, never api.gog.com', async () => {
+    await GOGUser.getUserDetails({
+      access_token: 'tok',
+      user_id: 'galaxy-1'
+    })
+
+    expect(mockedAxiosGet).toHaveBeenCalledTimes(1)
+    const [calledUrl] = mockedAxiosGet.mock.calls[0] as [string, unknown]
+    expect(calledUrl).toBe('https://users.gog.com/users/galaxy-1')
+    expect(calledUrl).not.toContain('api.gog.com')
   })
 })
 

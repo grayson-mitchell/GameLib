@@ -208,7 +208,7 @@ export class GOGUser {
     // value. Measured live (debug/manage-accounts-slow-update.md): that redundant call
     // cost a reproducible ~5s on the critical path between the OAuth window closing and
     // the frontend's in-progress screen clearing. `data.user_id` is threaded through too,
-    // since the api.gog.com endpoint below is keyed by it -- nothing new is spawned to
+    // since the users.gog.com endpoint below is keyed by it -- nothing new is spawned to
     // obtain it, it's already in this exchange's own parsed stdout.
     const userDetails = await this.getUserDetails({
       access_token: data.access_token,
@@ -221,7 +221,7 @@ export class GOGUser {
   // immediately after a `gogdl auth --code` exchange), pass it here to skip
   // `getCredentials()`'s own `gogdl auth` CLI subprocess call. Omit it (as the boot-time
   // caller in main.ts does) to keep the existing disk-read/refresh behavior. It carries
-  // `user_id` alongside `access_token` because the api.gog.com/users/{user_id} endpoint
+  // `user_id` alongside `access_token` because the users.gog.com/users/{user_id} endpoint
   // below is keyed by it -- passing both here means the caller's already-known user_id is
   // reused rather than re-derived, so nothing new is spawned to obtain it.
   public static async getUserDetails(
@@ -251,7 +251,7 @@ export class GOGUser {
       return
     }
     const response = await axios
-      .get(`https://api.gog.com/users/${encodeURIComponent(userId)}`, {
+      .get(`https://users.gog.com/users/${encodeURIComponent(userId)}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'User-Agent': `HeroicGamesLauncher/${app.getVersion()}`
@@ -268,7 +268,7 @@ export class GOGUser {
     const username: string | undefined = response.data?.username
     if (!username) {
       logError(
-        'No username in api.gog.com/users response, not persisting userData',
+        'No username in users.gog.com/users response, not persisting userData',
         LogPrefix.Gog
       )
       return

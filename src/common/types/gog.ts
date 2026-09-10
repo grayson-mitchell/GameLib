@@ -149,7 +149,7 @@ export type SaveFolderVariable =
   | 'DOCUMENTS'
   | 'APPLICATION_SUPPORT'
 
-// Assembled in gog/user.ts from https://api.gog.com/users/{user_id} (a small
+// Assembled in gog/user.ts from https://users.gog.com/users/{user_id} (a small
 // fixed-size document) plus the credential's own user_id -- NOT a passthrough
 // of that endpoint's response body. Deliberately narrowed to the only three
 // fields the codebase actually reads (see the blast-radius sweep in
