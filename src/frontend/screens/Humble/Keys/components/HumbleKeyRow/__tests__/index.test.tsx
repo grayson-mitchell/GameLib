@@ -43,6 +43,8 @@ import { join } from 'path'
 
 import type { ReactElement, ReactNode } from 'react'
 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+
 import { HumbleKey } from 'common/types/humble'
 import HumbleKeyRow, {
   HumbleKeyScenarioId,
@@ -1087,5 +1089,147 @@ describe('HumbleKeyRow settleAction (D-42-01 Exception 4, Phase 42 plan 06)', ()
     undoButtons[0].props.onClick?.()
     expect(onUndoRedeem).toHaveBeenCalledTimes(1)
     expect(onUndoSettle).not.toHaveBeenCalled()
+  })
+})
+
+// D-43-11/REQ-43-24 (Phase 43 plan 09): the probe named on
+// `43-PROBE-D-43-11.md` selected candidate B -- the Phase 40 embedded store
+// browser pointed at Humble's own keys page -- after candidate A (the
+// reveal endpoint) measured a definitive `success=false` denial for a real,
+// precondition-satisfied gog_keyless entitlement, and after the
+// external-browser fallback was rejected as a primary path (operator asked
+// to stay in-app). This block pins that destination: the label names where
+// the click actually goes, and it must never claim GOG's own site is the
+// destination, because the embed opens Humble's, not GOG's.
+//
+// KNOWN LIMIT OF THIS COVERAGE (carried verbatim from the probe's residual
+// unknowns): behaviour when the GOG-to-Humble account link is ABSENT on the
+// operator's Humble account is unmeasured -- there is no second, unlinked
+// test account, and the probe's n=1 sample is now consumed (moved out of
+// UNREVEALED) and cannot be re-attempted. This test suite exercises only
+// the UI destination-and-label contract; it cannot and does not assert
+// anything about server-side behaviour for an unlinked account.
+describe('gog_keyless KEY destination (REQ-43-24, D-43-11)', () => {
+  function makeGogKeylessRow(): ReactElement {
+    return HumbleKeyRow({
+      humbleKey: makeHumbleKey({
+        platform: 'gog_keyless',
+        state: 'UNREVEALED'
+      }),
+      claimAction: {
+        revealedAt: null,
+        redeemedAt: null,
+        keyindexResolved: true,
+        onClaim: jest.fn(),
+        onFinish: jest.fn(),
+        onUndoRedeem: jest.fn()
+      }
+    }) as ReactElement
+  }
+
+  it('renders exactly one claim affordance in humbleKeyColumnCell -- not two, not zero', () => {
+    const tree = makeGogKeylessRow()
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+
+    expect(keyCell).toBeDefined()
+    const buttons = collectElements(keyCell?.props?.children).filter(
+      (el) => el.type === 'button'
+    )
+    expect(buttons).toHaveLength(1)
+  })
+
+  it('the claim button\'s label is exactly "Claim on Humble" -- the SELECTED BRANCH (candidate B) destination', () => {
+    const tree = makeGogKeylessRow()
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+    const button = collectElements(keyCell?.props?.children).find(
+      (el) => el.type === 'button'
+    )
+
+    expect(button).toBeDefined()
+    expect(textContent(button?.props?.children).trim()).toBe(
+      'Claim on Humble'
+    )
+  })
+
+  it('the label does not contain "GOG" -- the click reaches Humble\'s site, not GOG\'s, and must not imply otherwise', () => {
+    const tree = makeGogKeylessRow()
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+    const button = collectElements(keyCell?.props?.children).find(
+      (el) => el.type === 'button'
+    )
+
+    expect(textContent(button?.props?.children)).not.toContain('GOG')
+  })
+
+  // Candidates A and B both stay inside the app (a reveal-and-redeem call
+  // and an embedded browser, respectively) -- only the rejected
+  // external-browser fallback would leave the window, and that branch was
+  // not built. No external-link icon should appear on this row's claim
+  // button.
+  it('renders no faExternalLinkAlt icon on the claim button -- the embed stays inside the app', () => {
+    const tree = makeGogKeylessRow()
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+    const button = collectElements(keyCell?.props?.children).find(
+      (el) => el.type === 'button'
+    )
+
+    const icon = collectElements(button?.props?.children).find(
+      (el) => el.type === FontAwesomeIcon
+    )
+    expect(icon).toBeUndefined()
+  })
+
+  // The destination choice is a KEY-column concern only. gog_keyless still
+  // presents as a branded GOG platform in TYPE (keyTypePresentation.ts:89)
+  // -- the identity of the entitlement and the destination of the claim
+  // click are two different facts, and this plan changes only the second.
+  it('still renders the GOG branded logo in humbleKeyTypeCell -- the destination choice did not leak into platform identity', () => {
+    const tree = makeGogKeylessRow()
+    const typeCell = findByClassNamePart(tree, 'humbleKeyTypeCell')
+    const logo = findByClassNamePart(typeCell?.props?.children, 'humbleKeyRowStoreLogo')
+
+    expect(logo).toBeDefined()
+    expect(logo?.props['aria-label']).toBe('GOG')
+  })
+
+  it('renders exactly three direct children in order, unchanged geometry (43-05)', () => {
+    const tree = makeGogKeylessRow()
+    const children = (tree.props as PropsWithChildren)?.children
+    const flat = (Array.isArray(children) ? children : [children]).filter(
+      (child) => child !== null && child !== undefined && child !== false
+    ) as ReactElement<PropsWithChildren>[]
+
+    expect(flat).toHaveLength(3)
+    expect(flat.map((el) => el.props?.className)).toEqual([
+      'humbleKeyTypeCell',
+      'humbleKeyGameCell',
+      'humbleKeyColumnCell'
+    ])
+  })
+
+  it('renders zero interactive elements (button/a/onClick) inside humbleKeyTypeCell (REQ-43-15)', () => {
+    const tree = makeGogKeylessRow()
+    const typeCell = findByClassNamePart(tree, 'humbleKeyTypeCell')
+    const interactive = collectElements(typeCell?.props?.children).filter(
+      (el) =>
+        el.type === 'button' ||
+        el.type === 'a' ||
+        Boolean((el.props as { onClick?: unknown })?.onClick)
+    )
+
+    expect(interactive).toHaveLength(0)
+  })
+
+  it('renders zero interactive elements (button/a/onClick) inside humbleKeyGameCell (REQ-43-15)', () => {
+    const tree = makeGogKeylessRow()
+    const gameCell = findByClassNamePart(tree, 'humbleKeyGameCell')
+    const interactive = collectElements(gameCell?.props?.children).filter(
+      (el) =>
+        el.type === 'button' ||
+        el.type === 'a' ||
+        Boolean((el.props as { onClick?: unknown })?.onClick)
+    )
+
+    expect(interactive).toHaveLength(0)
   })
 })
