@@ -500,7 +500,7 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-43-21 | Phase 43 | Pending |
 | REQ-43-22 | Phase 43 | Pending |
 | REQ-43-23 | Phase 43 | Pending |
-| REQ-43-24 | Phase 43 | Pending (CONDITIONAL — blocked on D-43-11 spike) |
+| REQ-43-24 | Phase 43 | Complete (plan 43-09, `a25d8d2af`/`7274a6ddc`) |
 
 **Coverage:**
 - v0.2 requirements: 15 total
@@ -1839,10 +1839,15 @@ because each changes what a plan must assert:**
   literal. Source: `43-UI-SPEC.md` "aria-label note". Verified by: `meta/hardcodedStringGate.ts`
   (existing CI gate).
 
-- [ ] **REQ-43-24 (CONDITIONAL)**: **Not shippable until the D-43-11 spike closes.** `gog_keyless`
-  renders scenario 2/3 with the label+destination the spike's outcome selects (candidate A, B, or
-  external-browser fallback). Source decision: D-43-11. Verified by: blocked — see
-  `43-VALIDATION.md`'s Manual-Only Verifications table.
+- [x] **REQ-43-24 (CONDITIONAL)**: **Spike closed 2026-09-10** (`43-PROBE-D-43-11.md`, SELECTED
+  BRANCH: candidate B). `gog_keyless` renders the `claim-and-gift` scenario's KEY button labelled
+  "Claim on Humble," opening the Phase 40 embedded store browser on Humble's own keys page —
+  candidate A (reveal endpoint) was measured dead by a definitive server-side denial, and the
+  external-browser fallback was rejected as a primary path. Source decision: D-43-11. Shipped in
+  plan `43-09` (`a25d8d2af` feat, `7274a6ddc` test — 8 mutation-proven tests pinning the label and
+  its honesty constraint). Verified by: `HumbleKeyRow/__tests__/index.test.tsx`'s
+  `describe('gog_keyless KEY destination (REQ-43-24, D-43-11)')` block (83/83 passing); live
+  embed-compositing/close-UX verification deferred to plan `43-10` per `43-09-SUMMARY.md`.
 
 *Last updated: 2026-09-09 -- Phase 43 (REQ-43-01..24) minted during `/gsd-plan-phase 43` from
 `43-RESEARCH.md`'s `## Requirements (Proposed)` table; `43-CONTEXT.md` D-43-01..D-43-21 supply the

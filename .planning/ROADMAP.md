@@ -5140,25 +5140,28 @@ restructure supersedes.
 
 **Plans:** 10 plans
 
-Plans:
-- [ ] 43-01 — mint REQ-43-01..24 into REQUIREMENTS.md and ROADMAP.md, fill 43-VALIDATION.md's
+Plans: (checkbox state corrected 2026-09-10 by plan 43-09's executor — this checklist had not
+been updated across the phase's execution so far; `[x]` below reflects the SUMMARY.md files
+already on disk for 43-01..43-09, not new work by this plan beyond 43-09 itself)
+- [x] 43-01 — mint REQ-43-01..24 into REQUIREMENTS.md and ROADMAP.md, fill 43-VALIDATION.md's
   Per-Task Verification Map (wave 1)
-- [ ] 43-02 — settle D-43-05 by measurement: does a populated Humble order carry a purchase/order
+- [x] 43-02 — settle D-43-05 by measurement: does a populated Humble order carry a purchase/order
   date field a `Most recent` sort could use (wave 1)
-- [ ] 43-03 — settle D-43-11 by measurement: does the redeem endpoint accept a keyless
+- [x] 43-03 — settle D-43-11 by measurement: does the redeem endpoint accept a keyless
   `gog_keyless` entitlement (wave 1)
-- [ ] 43-04 — land the pure-module changes (export `compareWaiting`, add `matchesKeySearch`/
+- [x] 43-04 — land the pure-module changes (export `compareWaiting`, add `matchesKeySearch`/
   `isGiftableSpare`, relocate `GENERIC_KEY_PLATFORM`) the unified list needs (wave 1)
-- [ ] 43-05 — convert `HumbleKeyRow` from a six-cell flex strip into the three-column CSS Grid
+- [x] 43-05 — convert `HumbleKeyRow` from a six-cell flex strip into the three-column CSS Grid
   the UI-SPEC specifies (wave 1)
-- [ ] 43-06 — turn the KEY cell into the enumerated scenario set the phase is named for, and mint
+- [x] 43-06 — turn the KEY cell into the enumerated scenario set the phase is named for, and mint
   the strings those scenarios need (wave 2)
-- [ ] 43-07 — replace the three-tab route shell with the unified list: search, controls, column
+- [x] 43-07 — replace the three-tab route shell with the unified list: search, controls, column
   header, and scenario-driven rows (wave 3)
-- [ ] 43-08 — delete the four gate-scoped tab files and their dead code atomically with the gate
+- [x] 43-08 — delete the four gate-scoped tab files and their dead code atomically with the gate
   configuration that enrols them (wave 4)
-- [ ] 43-09 — ship the `gog_keyless` claim path plan 43-03's probe selects, closing REQ-43-24
-  (wave 4)
+- [x] 43-09 — ship the `gog_keyless` claim path plan 43-03's probe selects, closing REQ-43-24
+  (wave 4) — DONE 2026-09-10, candidate B (Phase 40 embedded browser), `a25d8d2af`/`7274a6ddc`,
+  see `43-09-SUMMARY.md`
 - [ ] 43-10 — author and run the packaged-Tauri-build live gate for REQ-43-19's column geometry
   and row separator (wave 5)
 

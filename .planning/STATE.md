@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Phase 43 UI-SPEC approved (43-UI-SPEC.md, 6/6 dimensions)
-last_updated: "2026-09-09T22:20:00.000Z"
+stopped_at: "Completed 43-09-PLAN.md -- gog_keyless KEY destination (candidate B), REQ-43-24 closed. NOTE (43-09): the prior value here (\"Phase 43 UI-SPEC approved\") was already stale against disk -- 43-01 through 43-08 all have SUMMARY.md files predating this session -- not reconstructed here per this plan's own scope boundary; flagged for a future history-reconciliation pass."
+last_updated: "2026-09-10T15:33:38+12:00"
 last_activity: "2026-08-25 -- Phase 34.16 LIVE GATE SCORED: **VERDICT FAIL**, 1 passed / 1 failed / 4 not attempted. RUN ATTEMPT 2 = run 32817077782, after the developer pushed the 249-commit feature branch and re-pushed the workflow blob. Attempt 1s three findings ALL CLEARED (A resolved, B fixed by fa231e3dc, C resolved) -- the ref guard ran and PASSED, printing its confirmation naming the ref. Item 1 PASS with 3 recorded deviations. Item 2 FAIL at §8 criterion 3: the arm64 leg concluded failure at "Build the three onedir runners"; x64 never dequeued. Items 3-6 NOT ATTEMPTED (§13 ordering). BLOCKER **F-34.16-D**: legendary 0.21.0 migrated its build to `uv run --module PyInstaller`, but `extractUpstreamPyinstallerCommand` (meta/buildRunnersOnedir.ts, written 2026-08-07) requires the first token to be literally `pyinstaller`. The 2026-08-22 runner bump 0034ad265 invalidated the extraction contract with NO tripwire, and this build path had never run in CI so nothing caught it. legendary ONLY -- gogdl v1.3.0 and nile v1.2.0 still use bare `run: pyinstaller`. Open sub-question: the replaced pin 0.20.43 resolves to NO TAG upstream today. Also F-34.16-E (gate §7 criterion 4 hardcodes `A`, aborts on the CORRECT `M` for a mandated re-push) and F-34.16-F (attempt 2 skipped the §6 re-capture; Preconditions record a superseded sha). NEXT: /gsd-plan-phase 34.16 --gaps -- widen the extractor + add a version-drift tripwire. That is Phase 34.9 code, NOT plan 34.16-06s to author."
 progress:
   total_phases: 39
   completed_phases: 34
   total_plans: 481
-  completed_plans: 474
+  completed_plans: 475
   percent: 87
 ---
 
@@ -5987,6 +5987,35 @@ Recent decisions affecting current work:
 > narrative before this edit -- a gap this file's own prior NOTEs flag as a standing
 > disagreement between readers, not newly introduced here. Demoted into its own "prior
 > session (37-discuss), preserved as history" block, unchanged in content.
+
+> NOTE (43-09, 2026-09-10): hand-updated per this file's own standing prohibition (see the
+> NOTE (35-23) above) on any `gsd-sdk` `state.*`/`roadmap.*` verb -- `state.advance-plan` and
+> `state.update-progress` were invoked once this session, confirmed corrupting UNRELATED
+> historical text (the Phase 35 "Plan: 12 of 19" narrative line and two "Status: Executing
+> Phase N" lines rewritten to "Ready to execute"), and reverted via `git checkout --
+> .planning/STATE.md` before any further edit. All updates below are hand-applied instead. The
+> prior `Last session`/`Stopped at` pair (35-23's Epic-cookie-census completion, itself already
+> mismatched against its own truncated `Stopped at: Phase 43 context gathered` first line --
+> a pre-existing instance of this cluster's recurring orphaned-body defect, NOT fixed here per
+> this plan's own scope boundary) is demoted below into its own "prior session (35-23), preserved
+> as history" block, unchanged in content.
+
+Last session: 2026-09-10T15:33:38+12:00
+Stopped at: Completed 43-09-PLAN.md -- shipped the gog_keyless KEY destination (candidate B: the
+Phase 40 embedded store browser opens Humble's own keys page, labelled "Claim on Humble") per the
+D-43-11 probe's SELECTED BRANCH, closing REQ-43-24. Task 1 (`a25d8d2af`) wired the button and
+excluded gog_keyless from the login-and-claim scenario (Rule 1 fix -- that scenario's premise does
+not apply to a destination that isn't GOG's own site). Task 2 (`7274a6ddc`) added a mutation-proven
+describe block (8 tests, HumbleKeyRow suite now 75 -> 83 passing) pinning the label, its absence of
+"GOG", its absence of the external-link icon, and unchanged TYPE/geometry; the probe's unmeasured
+GOG-Humble-account-link-absent case is recorded in a test-file comment. `hardcodedStringGate.test.ts`
+151/151, `meta/lintScoped.cjs` both scopes PASS at the existing zero-headroom ceiling (production
+1123 / tests 638, unchanged). No backend change to `revealKey`/`doRevealKey` (confirmed via
+`git diff --name-only` against adapter.ts/library.ts/adapter.test.ts, all three untouched). See
+`43-09-SUMMARY.md`. Next: plan `43-10` (the live gate for REQ-43-19's embed-compositing/close-UX
+verification this plan's Known Stubs section flags as unverified by this plan's jsdom-less tests).
+
+--- prior session (35-23), preserved as history ---
 
 Last session: 2026-09-09T01:34:16.055Z
 Stopped at: Phase 43 context gathered
