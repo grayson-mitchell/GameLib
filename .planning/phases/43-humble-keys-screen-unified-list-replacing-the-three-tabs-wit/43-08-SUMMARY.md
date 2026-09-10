@@ -153,3 +153,11 @@ Everything the unified Humble Keys list made dead is now gone: the three tab con
 ---
 *Phase: 43-humble-keys-screen-unified-list-replacing-the-three-tabs-wit*
 *Completed: 2026-09-10*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/43-humble-keys-screen-unified-list-replacing-the-three-tabs-wit/43-08-SUMMARY.md`
+- FOUND: `edec139b` (Task 1 commit)
+- FOUND: `f1ceb2fa` (Task 2 commit)
+- FOUND: `93602fb6` (Task 3 commit)
+- FOUND: `1bfe8a409` (SUMMARY-only docs commit)
