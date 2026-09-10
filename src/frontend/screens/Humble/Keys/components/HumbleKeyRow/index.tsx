@@ -182,7 +182,13 @@ export type HumbleKeyScenarioId =
  *  2. UNREDEEMABLE always wins next (D-43-03) — "you lost it" is a
  *     different fact from "you have it", never folded into scenario 4.
  *  3. An exact-match auto-settle (Phase 42) beats a fuzzy-match override —
- *     an exact AppID match is trusted, no override question applies.
+ *     an exact AppID match is trusted, no override question applies. Gated
+ *     on `!hasClaimAction`, mirroring the pre-existing defensive
+ *     `!claimAction && settleAction` guard this scenario replaces: no real
+ *     caller supplies both props on the same key (an `ownedElsewhere` key
+ *     never reaches Keys-waiting, so it never carries a `claimAction`), but
+ *     if one ever did, `claimAction`'s richer Keys-waiting affordance must
+ *     win outright rather than this branch racing it for the row.
  *  4. `undoOverride` and the fuzzy-match override question are mutually
  *     exclusive on the SAME row, keyed strictly on the override record's
  *     existence (`undoOverride`), never re-derived from the fuzzy/owned
@@ -229,7 +235,8 @@ export function resolveKeyScenario(params: {
   if (
     humbleKey.ownedElsewhere &&
     humbleKey.matchConfidence === 'exact' &&
-    hasSettleAction
+    hasSettleAction &&
+    !hasClaimAction
   ) {
     return 'settled'
   }

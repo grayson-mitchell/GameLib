@@ -44,7 +44,10 @@ import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
 
 import { HumbleKey } from 'common/types/humble'
-import HumbleKeyRow from '../index'
+import HumbleKeyRow, {
+  HumbleKeyScenarioId,
+  resolveKeyScenario
+} from '../index'
 import UrgencyBadge from '../../UrgencyBadge'
 
 jest.mock('react-i18next', () => ({
@@ -410,28 +413,37 @@ describe('HumbleKeyRow store indicator (D-42-03, redesigned 260908-vo4)', () => 
 // before this plan — the row was a flat six-child flex strip with no single
 // place interactivity was required to live.
 describe('HumbleKeyRow three-column structure (43-05, D-43-13/14/15/17)', () => {
-  // A key configured to render every KEY-cell affordance at once: the
-  // fuzzy-match ownership override (and, via `undoOverride`, its reversal
-  // counterpart), plus `claimAction` and `giftAction`. Used by the
-  // REQ-43-15 zero-interactivity gate below so that a pass is NOT vacuous —
-  // a row with no affordances configured would trivially have zero buttons
+  // A key configured to render every KEY-cell affordance that CAN
+  // legitimately coexist on one row at once: `claimAction` and
+  // `giftAction` together, which resolveKeyScenario resolves to the
+  // 'claim-and-gift' scenario (D-43-17). Used by the REQ-43-15
+  // zero-interactivity gate below so that a pass is NOT vacuous — a row
+  // with no affordances configured would trivially have zero buttons
   // anywhere, proving nothing about where they are forbidden from
   // appearing. `claimAction`'s `redeemedAt: null` / `revealedAt: null` /
   // `keyindexResolved: true` combination selects its "Claim"/"Activate"
   // button branch (rather than the Undo or Finish-activation branches),
   // which is the one live `<button>` claimAction can render alongside a
   // gift button on the same row.
+  //
+  // 43-06 (D-43-17/D-43-14): this fixture PREVIOUSLY also set
+  // `ownedElsewhere: true, matchConfidence: 'fuzzy', undoOverride: true`
+  // to combine the ownership-override affordances into the same "fully
+  // affordanced" row. That combination is no longer reachable:
+  // resolveKeyScenario now resolves any ownedElsewhere+fuzzy key straight
+  // to 'override-pending' or 'override-undo' (whichever the `undoOverride`
+  // flag selects), which structurally EXCLUDES claimAction/giftAction
+  // content from rendering on that same row (Rule 1 bug fix — see
+  // SUMMARY.md). The fixture is narrowed here to the one combination that
+  // remains valid under the new one-scenario-per-row model.
   function makeFullyAffordancedRow(): ReactElement {
     return HumbleKeyRow({
       humbleKey: makeHumbleKey({
         platform: 'steam',
         state: 'UNREVEALED',
-        expiration: '2999-01-01T00:00:00.000Z',
-        ownedElsewhere: true,
-        matchConfidence: 'fuzzy'
+        expiration: '2999-01-01T00:00:00.000Z'
       }),
       urgencyTier: 'warning',
-      undoOverride: true,
       claimAction: {
         revealedAt: null,
         redeemedAt: null,
@@ -506,10 +518,12 @@ describe('HumbleKeyRow three-column structure (43-05, D-43-13/14/15/17)', () => 
 
     expect(keyCell).toBeDefined()
     const interactive = collectInteractive(keyCell?.props?.children)
-    // The override button, its undo-override counterpart, the claim
-    // button, and the gift button — four distinct affordances on this one
-    // configuration.
-    expect(interactive.length).toBeGreaterThanOrEqual(4)
+    // The claim button and the gift button — two distinct affordances
+    // co-rendered in the 'claim-and-gift' scenario. The override button and
+    // its undo-override counterpart belong to a DIFFERENT, mutually
+    // exclusive scenario (D-43-14) and cannot appear on this row at all —
+    // see makeFullyAffordancedRow's comment above.
+    expect(interactive).toHaveLength(2)
   })
 
   // REQ-43-13: the status line (state badge + expiration) lives in KEY, not
@@ -570,7 +584,23 @@ describe('HumbleKeyRow three-column structure (43-05, D-43-13/14/15/17)', () => 
   // plus the WR-04 undo-override counterpart, all moved from the old
   // .humbleKeyRowInfo (GAME today) into KEY — this is the specific thing
   // this plan's move changes about D-42's affordance placement.
-  it('renders the ownership badge and both override buttons inside humbleKeyColumnCell, not humbleKeyGameCell', () => {
+  //
+  // 43-06 (D-43-17/D-43-14, Rule 1 bug fix): this test PREVIOUSLY asserted
+  // `ownedBadgesInKey.toHaveLength(2)` for a key with BOTH
+  // `ownedElsewhere: true, matchConfidence: 'fuzzy'` AND `undoOverride:
+  // true` supplied simultaneously — i.e. it asserted that the
+  // 'override-pending' badge (with its "Not the same game" button) and the
+  // 'override-undo' badge (with its "Undo — I do own this game" button)
+  // rendered TOGETHER on the same row. That is exactly the bug D-43-14
+  // forbids: an override record's existence (`undoOverride`) and the raw
+  // fuzzy-match flags are two different signals about the SAME override
+  // question, and only one of the two answers can ever be true at once for
+  // a real key. resolveKeyScenario now enforces this — `undoOverride` is
+  // checked BEFORE the fuzzy-match override-pending branch and wins
+  // outright — so this scenario resolves to exactly ONE badge. The two
+  // branches are re-pinned as separate tests below, each independently
+  // proving KEY-not-GAME placement.
+  it("renders ONLY the override-undo badge inside humbleKeyColumnCell when undoOverride is set, even though the key's raw flags also look like a pending fuzzy override (D-43-14 mutual exclusion)", () => {
     const key = makeHumbleKey({
       platform: 'steam',
       ownedElsewhere: true,
@@ -595,10 +625,341 @@ describe('HumbleKeyRow three-column structure (43-05, D-43-13/14/15/17)', () => 
         typeof el.props?.className === 'string' &&
         el.props.className.split(' ').includes('humbleKeyOwnedBadge')
     )
-    // One badge for the fuzzy-match override, one for the undoOverride
-    // counterpart — both in KEY.
-    expect(ownedBadgesInKey).toHaveLength(2)
+    expect(ownedBadgesInKey).toHaveLength(1)
     expect(ownedBadgesInGame).toHaveLength(0)
+    expect(textContent(ownedBadgesInKey[0])).toContain(
+      'Undo — I do own this game'
+    )
+    expect(textContent(ownedBadgesInKey[0])).not.toContain(
+      'Not the same game'
+    )
+  })
+
+  it('renders ONLY the override-pending badge (with "Not the same game") inside humbleKeyColumnCell when undoOverride is absent', () => {
+    const key = makeHumbleKey({
+      platform: 'steam',
+      ownedElsewhere: true,
+      matchConfidence: 'fuzzy'
+    })
+    const tree = HumbleKeyRow({ humbleKey: key }) as ReactElement
+    const gameCell = findByClassNamePart(tree, 'humbleKeyGameCell')
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+
+    const ownedBadgesInKey = collectElements(keyCell?.props?.children).filter(
+      (el) =>
+        typeof el.props?.className === 'string' &&
+        el.props.className.split(' ').includes('humbleKeyOwnedBadge')
+    )
+    const ownedBadgesInGame = collectElements(
+      gameCell?.props?.children
+    ).filter(
+      (el) =>
+        typeof el.props?.className === 'string' &&
+        el.props.className.split(' ').includes('humbleKeyOwnedBadge')
+    )
+    expect(ownedBadgesInKey).toHaveLength(1)
+    expect(ownedBadgesInGame).toHaveLength(0)
+    expect(textContent(ownedBadgesInKey[0])).toContain('Not the same game')
+    expect(textContent(ownedBadgesInKey[0])).not.toContain(
+      'Undo — I do own this game'
+    )
+  })
+})
+
+// 43-06 (D-43-17): one describe per row of the UI-SPEC's KEY-Column
+// Scenario Matrix, plus the two REQ-43-01/REQ-43-11 mutation-proof targets
+// recorded verbatim in 43-06-SUMMARY.md.
+describe('HumbleKeyRow KEY-column scenario resolution (D-43-17, Phase 43 plan 06)', () => {
+  function makeClaimAction(
+    overrides: Partial<{
+      revealedAt: number | null
+      redeemedAt: number | null
+      keyindexResolved: boolean
+    }> = {}
+  ) {
+    return {
+      revealedAt: null,
+      redeemedAt: null,
+      keyindexResolved: true,
+      onClaim: jest.fn(),
+      onFinish: jest.fn(),
+      onUndoRedeem: jest.fn(),
+      ...overrides
+    }
+  }
+
+  // 'pick' (REQ-43-02). Extends, does not replace, the pre-existing
+  // UNPICKED pin (no caption, no store logo, TYPE cell still renders) —
+  // that pin lives in the 'store indicator' describe block above.
+  it("renders exactly one button — the pickOnHumble default — inside humbleKeyColumnCell for an UNPICKED key ('pick' scenario, REQ-43-02)", () => {
+    const onPickOnHumble = jest.fn()
+    const key = makeHumbleKey({ state: 'UNPICKED', platform: 'steam' })
+    const tree = HumbleKeyRow({ humbleKey: key, onPickOnHumble }) as ReactElement
+
+    const buttons = collectElements(tree).filter((el) => el.type === 'button')
+    expect(buttons).toHaveLength(1)
+    expect(textContent(buttons[0])).toBe('Pick on Humble')
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+    expect(
+      collectElements(keyCell?.props?.children).some(
+        (el) => el.type === 'button'
+      )
+    ).toBe(true)
+    ;(buttons[0].props as { onClick?: () => void }).onClick?.()
+    expect(onPickOnHumble).toHaveBeenCalledTimes(1)
+  })
+
+  // 'expired' (REQ-43-03). Asserts absence directly — configured WITH both
+  // a claimAction and a giftAction so the zero-buttons result is proof, not
+  // vacuity: 'expired' suppresses every affordance outright, never folded
+  // into 'settled' (D-43-03 — "you have it" and "you lost it" are
+  // different facts).
+  it("renders ZERO button elements anywhere for an UNREDEEMABLE key, and its state badge reads the Expired label, even when claim/gift actions are supplied ('expired' scenario, REQ-43-03)", () => {
+    const key = makeHumbleKey({ state: 'UNREDEEMABLE', platform: 'steam' })
+    const tree = HumbleKeyRow({
+      humbleKey: key,
+      claimAction: makeClaimAction(),
+      giftAction: { giftedAt: null, onGift: jest.fn() }
+    }) as ReactElement
+
+    const buttons = collectElements(tree).filter((el) => el.type === 'button')
+    expect(buttons).toHaveLength(0)
+    const badge = findByClassNamePart(tree, 'humbleKeyStateBadge')
+    expect(textContent(badge)).toBe('Expired')
+  })
+
+  // 'login-and-claim' (REQ-43-10). The toggle from false to true, with
+  // every other input identical, is what makes this non-vacuous.
+  it("renders exactly one full-width button naming the store when storeLoginConnected is false, and switches to the claim-and-gift pair when true, with everything else identical ('login-and-claim' scenario, REQ-43-10)", () => {
+    const onLoginAndClaim = jest.fn()
+    const claimAction = makeClaimAction()
+    const key = makeHumbleKey({ platform: 'steam' })
+
+    const disconnectedTree = HumbleKeyRow({
+      humbleKey: key,
+      claimAction,
+      storeLoginConnected: false,
+      onLoginAndClaim
+    }) as ReactElement
+    const disconnectedButtons = collectElements(disconnectedTree).filter(
+      (el) => el.type === 'button'
+    )
+    expect(disconnectedButtons).toHaveLength(1)
+    expect(textContent(disconnectedButtons[0])).toBe('Log into Steam and claim')
+    ;(disconnectedButtons[0].props as { onClick?: () => void }).onClick?.()
+    expect(onLoginAndClaim).toHaveBeenCalledTimes(1)
+
+    const connectedTree = HumbleKeyRow({
+      humbleKey: key,
+      claimAction,
+      storeLoginConnected: true,
+      onLoginAndClaim
+    }) as ReactElement
+    const connectedButtons = collectElements(connectedTree).filter(
+      (el) => el.type === 'button'
+    )
+    expect(connectedButtons).toHaveLength(1)
+    expect(textContent(connectedButtons[0])).toBe('Activate')
+  })
+
+  // 'claim-and-gift' (REQ-43-11/D-43-13). MUTATION PROOF 1 TARGET — see
+  // 43-06-SUMMARY.md "Mutation Proofs" for the verbatim before/after run.
+  // storeLoginConnected is deliberately `undefined` here (the realistic
+  // value a caller passes for a platform with no login store at all) —
+  // this is what makes the proof meaningful: if resolveKeyScenario were
+  // mutated to return 'login-and-claim' for uplay unconditionally, THIS
+  // test (not just a hypothetical storeLoginConnected: false case) would
+  // fail, because D-43-13 says scenario 1 must be structurally
+  // unreachable for a no-login-store platform regardless of caller input.
+  it.each([
+    'uplay',
+    'battlenet',
+    'origin',
+    'origin_keyless',
+    'nintendo_direct',
+    'generic'
+  ])(
+    "%s (no GameLib login store, D-43-13) never renders login-and-claim's text even though it has a claimAction (REQ-43-11)",
+    (platform) => {
+      const tree = HumbleKeyRow({
+        humbleKey: makeHumbleKey({ platform }),
+        claimAction: makeClaimAction(),
+        storeLoginConnected: undefined
+      }) as ReactElement
+
+      expect(textContent(tree)).not.toContain('Log into')
+    }
+  )
+
+  it("a Steam claim-and-gift row still says 'Activate'; a non-Steam claim-and-gift row says 'Claim on {{store}}' (REQ-43-11)", () => {
+    const claimAction = makeClaimAction()
+    const steamTree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({ platform: 'steam' }),
+      claimAction
+    }) as ReactElement
+    const gogTree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({ platform: 'gog' }),
+      claimAction
+    }) as ReactElement
+
+    const steamButton = collectElements(steamTree).find(
+      (el) => el.type === 'button'
+    )
+    const gogButton = collectElements(gogTree).find(
+      (el) => el.type === 'button'
+    )
+    expect(textContent(steamButton)).toBe('Activate')
+    expect(textContent(gogButton)).toBe('Claim on GOG')
+  })
+
+  // Pitfall C: a disabled state is a caption, never a `disabled` button.
+  it('renders humbleKeyClaimDisabledCaption and zero claim buttons when keyindexResolved is false (Pitfall C)', () => {
+    const key = makeHumbleKey({ platform: 'steam' })
+    const tree = HumbleKeyRow({
+      humbleKey: key,
+      claimAction: makeClaimAction({ keyindexResolved: false })
+    }) as ReactElement
+
+    const caption = findByClassNamePart(tree, 'humbleKeyClaimDisabledCaption')
+    expect(caption).toBeDefined()
+    expect(textContent(caption)).toBe('Sync to enable claiming')
+    const buttons = collectElements(tree).filter((el) => el.type === 'button')
+    expect(buttons).toHaveLength(0)
+  })
+
+  // MUTATION PROOF 2 TARGET — see 43-06-SUMMARY.md "Mutation Proofs" for
+  // the verbatim before/after run. Exhaustively covers every combination of
+  // the three inputs resolveKeyScenario's override branch reads, so a
+  // regression that lets 'override-pending' and 'override-undo' both
+  // render cannot hide behind an untested combination.
+  it('across every combination of ownedElsewhere, matchConfidence and undoOverride, at most one humbleKeyOwnedOverride-classed element ever renders (D-43-14, REQ-43-12)', () => {
+    const ownedElsewhereValues = [true, false]
+    const matchConfidenceValues: Array<HumbleKey['matchConfidence']> = [
+      'exact',
+      'fuzzy',
+      'none'
+    ]
+    const undoOverrideValues: Array<boolean | undefined> = [
+      true,
+      false,
+      undefined
+    ]
+
+    for (const ownedElsewhere of ownedElsewhereValues) {
+      for (const matchConfidence of matchConfidenceValues) {
+        for (const undoOverride of undoOverrideValues) {
+          const key = makeHumbleKey({
+            platform: 'steam',
+            ownedElsewhere,
+            matchConfidence
+          })
+          const tree = HumbleKeyRow({
+            humbleKey: key,
+            undoOverride
+          }) as ReactElement
+
+          const overrideButtons = collectElements(tree).filter(
+            (el) =>
+              typeof el.props?.className === 'string' &&
+              el.props.className.split(' ').includes('humbleKeyOwnedOverride')
+          )
+          expect(overrideButtons.length).toBeLessThanOrEqual(1)
+        }
+      }
+    }
+  })
+
+  // REQ-43-01: generic-platform rows get NO special scenario — whichever
+  // scenario the SAME state/ownedElsewhere/matchConfidence combination
+  // resolves to for any other platform. Proven two ways: (1) direct
+  // resolver equality across all 5 states, with platform as the only
+  // variable, and (2) a rendered check that a generic row with a
+  // claimAction gets the SAME claim-and-gift button shape as steam,
+  // differing only in the button's label (TYPE cell content is the only
+  // other difference, already pinned by the PLATFORM_CASES table above).
+  it.each([
+    'UNPICKED',
+    'UNREVEALED',
+    'REVEALED',
+    'REDEEMED',
+    'UNREDEEMABLE'
+  ] as const)(
+    'a generic-platform key in %s state resolves to the same scenario a steam key in that state would (REQ-43-01)',
+    (state) => {
+      const common = {
+        hasGiftAction: false,
+        hasClaimAction: false,
+        hasSettleAction: false,
+        undoOverride: false,
+        storeLoginConnected: undefined
+      }
+      const steamScenario: HumbleKeyScenarioId = resolveKeyScenario({
+        humbleKey: {
+          state,
+          ownedElsewhere: false,
+          matchConfidence: 'none',
+          platform: 'steam'
+        },
+        ...common
+      })
+      const genericScenario: HumbleKeyScenarioId = resolveKeyScenario({
+        humbleKey: {
+          state,
+          ownedElsewhere: false,
+          matchConfidence: 'none',
+          platform: 'generic'
+        },
+        ...common
+      })
+      expect(genericScenario).toBe(steamScenario)
+    }
+  )
+
+  it('a generic-platform row with a claimAction renders the same claim-and-gift button shape as steam, differing only in the label (D-43-01: no special generic scenario)', () => {
+    const claimAction = makeClaimAction()
+    const steamTree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({ platform: 'steam' }),
+      claimAction
+    }) as ReactElement
+    const genericTree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({ platform: 'generic' }),
+      claimAction
+    }) as ReactElement
+
+    const steamButtons = collectElements(steamTree).filter(
+      (el) => el.type === 'button'
+    )
+    const genericButtons = collectElements(genericTree).filter(
+      (el) => el.type === 'button'
+    )
+    expect(steamButtons).toHaveLength(1)
+    expect(genericButtons).toHaveLength(1)
+    expect(textContent(steamButtons[0])).toBe('Activate')
+    expect(textContent(genericButtons[0])).toBe('Claim on Other')
+  })
+
+  // REQ-43-15 re-run (43-05's gate), against a row rendering
+  // 'claim-and-gift' WITH an override pending elsewhere in the suite
+  // (see makeFullyAffordancedRow above) — the new buttons this plan adds
+  // must not have leaked interactivity into TYPE or GAME either.
+  it('renders zero interactive elements inside humbleKeyTypeCell or humbleKeyGameCell for a login-and-claim row (REQ-43-15 re-run)', () => {
+    const tree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({ platform: 'steam' }),
+      claimAction: makeClaimAction(),
+      storeLoginConnected: false,
+      onLoginAndClaim: jest.fn()
+    }) as ReactElement
+    const typeCell = findByClassNamePart(tree, 'humbleKeyTypeCell')
+    const gameCell = findByClassNamePart(tree, 'humbleKeyGameCell')
+
+    const interactiveInType = collectElements(typeCell?.props?.children).filter(
+      (el) => el.type === 'button' || el.type === 'a'
+    )
+    const interactiveInGame = collectElements(gameCell?.props?.children).filter(
+      (el) => el.type === 'button' || el.type === 'a'
+    )
+    expect(interactiveInType).toHaveLength(0)
+    expect(interactiveInGame).toHaveLength(0)
   })
 })
 
@@ -650,9 +1011,20 @@ describe('HumbleKeyRow settleAction (D-42-01 Exception 4, Phase 42 plan 06)', ()
     ) as ReactElement<PropsWithChildren & { onClick?: () => void }>[]
   }
 
+  // 43-06 (D-43-17): `resolveKeyScenario` only reaches the 'settled'
+  // scenario for `ownedElsewhere: true, matchConfidence: 'exact'` — the
+  // exact shape D-48's keep-last-known behaviour actually leaves on a real
+  // auto-settled key (library.ts:258-259 carries `ownedElsewhere`/
+  // `matchConfidence` forward through the settle, never clearing them).
+  // These fixtures now set both explicitly, where the pre-scenario-resolver
+  // version of this test did not need to.
   it('renders a humbleKeyUndoButton and calls onUndoSettle exactly once when clicked', () => {
     const onUndoSettle = jest.fn()
-    const key = makeHumbleKey({ platform: 'steam' })
+    const key = makeHumbleKey({
+      platform: 'steam',
+      ownedElsewhere: true,
+      matchConfidence: 'exact'
+    })
     const tree = HumbleKeyRow({
       humbleKey: key,
       settleAction: { settledAt: 1700000000000, onUndoSettle }
@@ -665,7 +1037,11 @@ describe('HumbleKeyRow settleAction (D-42-01 Exception 4, Phase 42 plan 06)', ()
   })
 
   it('renders the "Already in your Steam library" caption', () => {
-    const key = makeHumbleKey({ platform: 'steam' })
+    const key = makeHumbleKey({
+      platform: 'steam',
+      ownedElsewhere: true,
+      matchConfidence: 'exact'
+    })
     const tree = HumbleKeyRow({
       humbleKey: key,
       settleAction: { settledAt: 1700000000000, onUndoSettle: jest.fn() }
