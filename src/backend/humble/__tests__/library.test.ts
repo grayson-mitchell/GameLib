@@ -2896,6 +2896,53 @@ describe('HumbleLibrary', () => {
       expect(mockAdapterRevealKey).toHaveBeenCalledTimes(2)
     })
 
+    // The test above deliberately does NOT cross a sync, and on its own it
+    // cannot detect the stranding: doRevealKey's eligibility gate reads the
+    // CACHED state, and the cached state only absorbs the write-ahead flag
+    // when classifyTpk re-runs on the next sync. That is exactly where the
+    // strand was measured (D-43-11: "the cached key state moved UNREVEALED
+    // -> REVEALED on the next sync"), so the real regression guard has to
+    // drive a sync BETWEEN the two attempts. Verified load-bearing: with the
+    // DD-1 rollback removed this test fails, while the one above still passes.
+    test('DD-1 strand regression: a refused key survives a SYNC as UNREVEALED and is still claimable', async () => {
+      libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
+      mockAdapterRevealKey.mockResolvedValueOnce({
+        status: 'rejected_by_server'
+      })
+      mockAdapterRevealKey.mockResolvedValueOnce({
+        status: 'ok',
+        data: { key: 'REAL-KEY-VALUE' }
+      })
+      // The server reports NOTHING revealed (redeemed_key_value stays null) --
+      // the measured D-43-11 shape: Humble declined AND granted nothing. The
+      // keyindex must survive the re-classification, or the second attempt
+      // would return 'ineligible' for the unrelated Pitfall C reason.
+      const base = makeRawOrder('gk1')
+      const rawOrder = {
+        ...base,
+        tpkd_dict: {
+          all_tpks: [{ ...base.tpkd_dict.all_tpks[0], keyindex: 'idx-1' }]
+        }
+      }
+      mockGetGamekeys.mockResolvedValue({ status: 'ok', data: ['gk1'] })
+      mockGetOrderDetail.mockResolvedValue({ status: 'ok', data: rawOrder })
+
+      const first = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+      await HumbleLibrary.sync()
+
+      // Pre-fix this read REVEALED: the write-ahead flag survived the refusal
+      // and classifyTpk's isLocallyRevealed arm consumed it on the re-sync.
+      expect(
+        HumbleLibrary.getKeys().find((k) => k.machineName === 'gk1_key')?.state
+      ).toBe('UNREVEALED')
+
+      const second = await HumbleLibrary.revealKey('gk1', 'gk1_key')
+
+      expect(first).toEqual({ status: 'rejected_by_server' })
+      expect(second).not.toEqual({ status: 'ineligible' })
+      expect(mockAdapterRevealKey).toHaveBeenCalledTimes(2)
+    })
+
     test('D-78 ambiguous (adapter throws): KEEPS the write-ahead REVEALED flag, persists no key value, audits reveal_ambiguous', async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
       mockAdapterRevealKey.mockRejectedValue(new Error('ECONNRESET'))
