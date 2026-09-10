@@ -85,6 +85,7 @@
         "activateWizardTitle": "Activate this key",
         "activatingBody": "Revealing your key and redeeming it on Steam — this only takes a moment.",
         "activatingTitle": "Activating on Steam…",
+        "claimOnHumble": "Claim on Humble",
         "claimOnStore": "Claim on {{store}}",
         "clearFilters": "Clear search and filters",
         "columnGame": "Game",
