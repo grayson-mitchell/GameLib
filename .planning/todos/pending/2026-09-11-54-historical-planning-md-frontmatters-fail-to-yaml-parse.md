@@ -55,6 +55,35 @@ every SDK consumer** — i.e. invisible to every GSD tool except a human reading
 Affected keys include `notes` (22 occurrences), `description` (11), `disposition_note` (8),
 `evidence`, `rationale`, `resolution`, and five `gap_*` fields.
 
+### Those numbers are already stale — and this task is why. Re-measure before sweeping.
+
+**The two buckets are not disjoint.** A file that fails js-yaml AND contains a block scalar is
+absent from the block-scalar census *only because it does not parse* — the census skips
+unparseable files. Repair it for js-yaml and it is **promoted** into the affected population.
+
+Both files repaired above did exactly that:
+
+| file | block-scalar field(s) | chars now lost through the SDK |
+| --- | --- | --- |
+| `debug/resolved/epic-login-non-interactive.md` | `root_cause_scope: \|` | 953 |
+| `34.1-VERIFICATION.md` | `audit_tool_note: >`, `ledger_defect_note: >` | 1,144 |
+
+So the population moved **as a direct result of this task's own fixes**:
+
+| | at baseline `1b8dda82` | at HEAD (`5dd82ed06`) |
+| --- | --- | --- |
+| js-yaml failures | 53 | **51** |
+| block-scalar files | 64 | **66** |
+| block-scalar fields | 92 | **103** |
+| fields read as a bare indicator | 56 | **59** |
+| characters invisible to every GSD tool | 53,081 | **55,178** |
+
+53,081 + 953 + 1,144 = 55,178 — the arithmetic closes exactly, so this is promotion, not drift.
+
+**Consequence for whoever picks this up:** every remaining js-yaml failure you repair may enlarge
+this sweep rather than shrink it. Re-measure both censuses at your own HEAD before quoting a
+number, and treat the block-scalar count as a floor, not a total.
+
 **Correction to a claim in this task's own authoring plan:** the plan that produced this rescope
 asserted "`audit-open.js` genuinely reads `description`." A bounded check against the two
 currently-resolved copies of that tool (`~/.claude/get-shit-done/bin/lib/audit.cjs`, and the
