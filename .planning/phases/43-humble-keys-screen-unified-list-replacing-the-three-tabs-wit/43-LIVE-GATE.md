@@ -441,8 +441,16 @@ own command, verbatim, against the file as committed produces the number above; 
 instruction ("if your count differs, your count is the answer"), the executed command's output —
 not any hand arithmetic — is what this VERDICT line reports.
 
-**VERDICT: FAIL — 20 PASS / 3 FAIL across 23 scored sub-checks (run 1 + run 2 combined, `SUPERSEDED`
-rows excluded).** 6 further sub-checks are unscored and explicitly dispositioned: 3 NOT ATTEMPTABLE,
+> **SUPERSEDED BY RUN 3 — this is the historical run-1+run-2 verdict, NOT the current one.**
+> The current verdict is the `**VERDICT:**` line further down this document (run 1 + run 2 + run 3
+> combined). This block is preserved unedited as the record of how the run-2 verdict was reached
+> and recounted; it is not deleted, because the counting-discipline note above it is the evidence
+> that the recount was executed rather than hand-derived. Note that the `ready: human` todo it
+> cites below has since been RESOLVED (the operator decided left-alignment on 2026-09-11) and the
+> three FAIL rows it reports are now all `SUPERSEDED by run 3` with PASS.
+
+**VERDICT (SUPERSEDED, run 1 + run 2 only): FAIL — 20 PASS / 3 FAIL across 23 scored sub-checks
+(`SUPERSEDED` rows excluded).** 6 further sub-checks are unscored and explicitly dispositioned: 3 NOT ATTEMPTABLE,
 1 NOT OBSERVED, 1 INCONCLUSIVE, 1 NOT PERFORMED, plus 2 NOT RECORDED (run 2).
 
 **Phase 43 does not close on this verdict.** Three FAIL rows remain, and all three trace to the
