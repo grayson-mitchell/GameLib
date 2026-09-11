@@ -26,7 +26,8 @@ import {
   compareWaiting,
   matchesKeySearch,
   isGiftable,
-  WAITING_STATES
+  WAITING_STATES,
+  REDEEMABLE_ONLY_STATES
 } from 'common/humble/viewFilters'
 import { GENERIC_KEY_PLATFORM } from 'common/humble/genericKeyPlatform'
 import { getUrgencyTier } from 'common/humble/urgencyBadge'
@@ -508,9 +509,15 @@ export default function HumbleKeys() {
   // D-43-10: search matches `key.title` only. D-43-06: "Expiring soonest"
   // (compareWaiting, dated-first/undated-alphabetical) is the default;
   // "Alphabetical" is the only other shipped option.
+  //
+  // 260911-t0p: this checkbox filters on REDEEMABLE_ONLY_STATES
+  // ({UNPICKED, UNREVEALED}), not the WAITING_STATES set used above for
+  // the claim gate and by selectKeysWaiting — a REVEALED key is
+  // deliberately excluded here even though it is still a WAITING_STATES
+  // member, superseding the original Phase 43 D-43-08 selection.
   const filteredKeys = keys
     .filter((key) => matchesKeySearch(key, query))
-    .filter((key) => !redeemableOnly || WAITING_STATES.has(key.state))
+    .filter((key) => !redeemableOnly || REDEEMABLE_ONLY_STATES.has(key.state))
     .sort(
       sortOption === 'alphabetical'
         ? (a, b) => a.title.localeCompare(b.title)

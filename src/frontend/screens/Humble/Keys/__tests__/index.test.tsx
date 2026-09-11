@@ -371,14 +371,18 @@ function findHumbleKeyRowProps(
   )
 }
 
-// The "Redeemable keys only" checkbox defaults to true (WAITING_STATES
-// only -- see index.tsx line ~502), which excludes REDEEMED keys from
-// `filteredKeys` (and therefore from the rendered row list) unless it is
-// turned off. Every ported D-42-01 settle-undo assertion below operates on
-// a REDEEMED key, so each needs this before it can find its row at all --
-// this was NOT a concern in the retired `All` tab (it had no "waiting
-// only" concept), which is exactly the "adapted only for the unified
-// list's shape" adjustment the plan calls for.
+// The "Redeemable keys only" checkbox defaults to true and filters on
+// REDEEMABLE_ONLY_STATES (`{UNPICKED, UNREVEALED}` as of 260911-t0p,
+// formerly WAITING_STATES -- see index.tsx's filteredKeys), which excludes
+// REDEEMED keys (both sets) AND, as of 260911-t0p, REVEALED keys too (only
+// REDEEMABLE_ONLY_STATES) from `filteredKeys` (and therefore from the
+// rendered row list) unless it is turned off. Every ported D-42-01
+// settle-undo assertion below operates on a REDEEMED key, and several
+// REVEALED-key assertions elsewhere in this file also need this, so each
+// needs this before it can find its row at all -- this was NOT a concern
+// in the retired `All` tab (it had no "waiting only" concept), which is
+// exactly the "adapted only for the unified list's shape" adjustment the
+// plan calls for.
 function turnOffRedeemableOnly(tree: ReactElement): ReactElement {
   const toggle = collectElements(tree).find(
     (el) => el.type === ToggleSwitchStub
@@ -559,8 +563,15 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
 
         const tree = mount()
         await flushPromises()
+        // 260911-t0p: "Redeemable keys only" now filters on
+        // REDEEMABLE_ONLY_STATES, which excludes REVEALED (defect 3's
+        // fix) -- this test's subject is the row's claimAction CONTENT
+        // (onFinish vs onClaim, the "Revealed" annotation), not whether
+        // the row is visible under the checkbox, so turning the checkbox
+        // off to reach the row is the correct fix, not a workaround.
+        const visible = turnOffRedeemableOnly(tree)
 
-        const props = findHumbleKeyRowProps(tree, 'gk-1', 'mn-1')
+        const props = findHumbleKeyRowProps(visible, 'gk-1', 'mn-1')
         expect(props).toBeDefined()
         expect(props!.claimAction!.revealedAt).toBeNull()
 
@@ -594,8 +605,12 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
 
         const tree = mount()
         await flushPromises()
+        // 260911-t0p: see the sibling test above -- this test's subject is
+        // the dialog opened by claimAction.onFinish (CONTENT), not the
+        // row's visibility under the checkbox.
+        const visible = turnOffRedeemableOnly(tree)
 
-        const props = findHumbleKeyRowProps(tree, 'gk-1', 'mn-1')
+        const props = findHumbleKeyRowProps(visible, 'gk-1', 'mn-1')
         props!.claimAction!.onFinish()
 
         expect(showDialogModal).toHaveBeenCalledTimes(1)
@@ -879,10 +894,16 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
           })
         )
 
-        mount()
+        const initial = mount()
         await flushPromises()
+        // 260911-t0p: this test's subject is settleAction CONTENT (defined
+        // regardless of structural position), not the row's visibility --
+        // REVEALED is now excluded by "Redeemable keys only" (defect 3's
+        // fix), so the checkbox must be turned off to reach the row at
+        // all; capture mount()'s return so it can be passed through.
+        const visible = turnOffRedeemableOnly(initial)
 
-        const props = findHumbleKeyRowProps(rerender(), 'gk-1', 'mn-1')
+        const props = findHumbleKeyRowProps(visible, 'gk-1', 'mn-1')
         expect(props).toBeDefined()
         expect(props?.settleAction).toBeDefined()
       })
@@ -930,6 +951,35 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       )
       expect(toggle).toBeDefined()
       expect((toggle!.props as { value?: boolean }).value).toBe(true)
+    })
+
+    it('260911-t0p defect 3: a REVEALED key is absent from the list at the checkbox\'s default (true) state, and appears once the checkbox is turned off', () => {
+      // This is the discriminating case the rest of the file's REVEALED-key
+      // tests do not cover: every other REVEALED-state test in this file
+      // calls `turnOffRedeemableOnly` up front to reach the row and then
+      // asserts on its CONTENT (claimAction shape, dialog mode, etc.) --
+      // none of them assert on VISIBILITY at the unmodified default. Before
+      // 260911-t0p, `WAITING_STATES` (which includes REVEALED) backed this
+      // checkbox, so a REVEALED key was wrongly still shown when
+      // "Redeemable keys only" was checked -- this test pins that the fix
+      // (`REDEEMABLE_ONLY_STATES`, which excludes REVEALED) actually holds
+      // at the component level, not just in the pure `viewFilters.ts`
+      // predicate unit tests.
+      const key = makeHumbleKey({ state: 'REVEALED' })
+      contextValue = defaultContext([key])
+      let tree = mount()
+
+      expect(findHumbleKeyRowProps(tree, 'gk-1', 'mn-1')).toBeUndefined()
+
+      const toggle = collectElements(tree).find(
+        (el) => el.type === ToggleSwitchStub
+      )
+      ;(
+        toggle!.props as { handleChange: (e: { target: { checked: boolean } }) => void }
+      ).handleChange({ target: { checked: false } })
+      tree = rerender()
+
+      expect(findHumbleKeyRowProps(tree, 'gk-1', 'mn-1')).toBeDefined()
     })
 
     it("REQ-43-06: a fresh mount always starts at query '', sort 'expiring' and checkbox true -- and nothing in the component reads localStorage/sessionStorage", () => {
@@ -1121,10 +1171,12 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
     })
 
     it('REQ-43-20b: a non-empty library filtered to zero renders the filtered-empty state, and its clear button resets the query and the checkbox to false', () => {
-      // Checkbox defaults to true (WAITING_STATES only); a REDEEMED-only
-      // library is non-empty but produces zero filtered rows on first
-      // render -- exactly the "checkbox default hits an all-terminal
-      // library" case D-43-20/D-43-09 name.
+      // Checkbox defaults to true (REDEEMABLE_ONLY_STATES as of 260911-t0p,
+      // formerly WAITING_STATES); a REDEEMED-only library is non-empty but
+      // produces zero filtered rows on first render -- exactly the
+      // "checkbox default hits an all-terminal library" case D-43-20/
+      // D-43-09 name. REDEEMED is excluded from both sets, so this case is
+      // unaffected by the 260911-t0p predicate change.
       contextValue = defaultContext([makeHumbleKey({ state: 'REDEEMED' })])
       let tree = mount()
 

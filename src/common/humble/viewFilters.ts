@@ -19,6 +19,24 @@ export const WAITING_STATES: Set<HumbleKeyState> = new Set([
   'REVEALED'
 ])
 
+// 260911-t0p: backs ONLY the Humble Keys screen's "Redeemable keys only"
+// checkbox (`screens/Humble/Keys/index.tsx`) -- nothing else reads this
+// constant. It deliberately EXCLUDES REVEALED, where WAITING_STATES above
+// includes it: a REVEALED key already has a redeemed_key_val (Phase 14
+// gap closure 14-07's classification, see selectKeysWaiting's doc comment)
+// and is not itself "redeemable" in the sense this checkbox's label
+// promises, an operator override recorded in this quick task superseding
+// the original Phase 43 D-43-08 selection. WAITING_STATES itself is
+// UNCHANGED by this addition and continues to own `selectKeysWaiting` and
+// the per-row claim gate (`hasClaimEligibleState`,
+// `screens/Humble/Keys/index.tsx`) -- a future reader should not
+// "deduplicate" these two sets into one; they answer different questions
+// and are pinned as separate by `viewFilters.test.ts`.
+export const REDEEMABLE_ONLY_STATES: Set<HumbleKeyState> = new Set([
+  'UNPICKED',
+  'UNREVEALED'
+])
+
 // D-56: dated keys sort soonest-expiring first; a dated key always precedes
 // an undated one; undated keys tiebreak alphabetically by title. Single flat
 // list — no groups.

@@ -12,7 +12,8 @@ import {
   matchesKeySearch,
   isGiftableSpare,
   isGiftable,
-  WAITING_STATES
+  WAITING_STATES,
+  REDEEMABLE_ONLY_STATES
 } from 'common/humble/viewFilters'
 import { GENERIC_KEY_PLATFORM } from 'common/humble/genericKeyPlatform'
 
@@ -186,7 +187,16 @@ describe('compareWaiting — the surviving comparator (REQ-43-05)', () => {
   })
 })
 
-describe('WAITING_STATES as the Redeemable-keys-only predicate (REQ-43-07)', () => {
+/**
+ * 260911-t0p: this describe block previously called WAITING_STATES "the
+ * Redeemable-keys-only predicate" -- as of this quick task that is no
+ * longer true (see the REDEEMABLE_ONLY_STATES describe block below, which
+ * is the actual predicate the checkbox now uses). WAITING_STATES itself is
+ * UNCHANGED and these membership assertions remain correct for its real
+ * consumers (selectKeysWaiting, the claimGateHolds mirror below) -- only
+ * the block's framing needed correcting, not its assertions.
+ */
+describe('WAITING_STATES membership (REQ-43-07 origin; claim-gate/selectKeysWaiting consumer as of 260911-t0p)', () => {
   test.each<HumbleKeyState>([
     'UNPICKED',
     'UNREVEALED',
@@ -225,6 +235,67 @@ describe('WAITING_STATES as the Redeemable-keys-only predicate (REQ-43-07)', () 
   test('D-43-08: UNREDEEMABLE is OUT of the set', () => {
     expect(WAITING_STATES.has('UNREDEEMABLE')).toBe(false)
   })
+
+  test('260911-t0p regression pin: REVEALED remains IN this set -- protects StoreSearch/Discounts (selectKeysWaiting, hasClaimEligibleState) from a future "tidy-up" merge of WAITING_STATES and REDEEMABLE_ONLY_STATES into one', () => {
+    expect(WAITING_STATES.has('REVEALED')).toBe(true)
+  })
+})
+
+/**
+ * 260911-t0p: the actual predicate behind the Humble Keys screen's
+ * "Redeemable keys only" checkbox (`screens/Humble/Keys/index.tsx`),
+ * replacing the WAITING_STATES-based predicate this describe block's
+ * sibling above used to document. Named after the defect it fixes: a
+ * REVEALED key is deliberately OUT of this set even though it remains IN
+ * WAITING_STATES.
+ */
+describe('REDEEMABLE_ONLY_STATES as the Redeemable-keys-only predicate (REQ-43-07, 260911-t0p)', () => {
+  test.each<HumbleKeyState>([
+    'UNPICKED',
+    'UNREVEALED',
+    'REVEALED',
+    'REDEEMED',
+    'UNREDEEMABLE'
+  ])(
+    'membership for state %s is identical regardless of ownership/platform/matchConfidence',
+    (state) => {
+      const unowned = makeKey({
+        state,
+        ownedElsewhere: false,
+        platform: 'steam',
+        matchConfidence: 'none'
+      })
+      const ownedGeneric = makeKey({
+        state,
+        ownedElsewhere: true,
+        platform: GENERIC_KEY_PLATFORM,
+        matchConfidence: 'fuzzy'
+      })
+      expect(REDEEMABLE_ONLY_STATES.has(unowned.state)).toBe(
+        REDEEMABLE_ONLY_STATES.has(ownedGeneric.state)
+      )
+    }
+  )
+
+  test('260911-t0p: UNPICKED is IN the set', () => {
+    expect(REDEEMABLE_ONLY_STATES.has('UNPICKED')).toBe(true)
+  })
+
+  test('260911-t0p: UNREVEALED is IN the set', () => {
+    expect(REDEEMABLE_ONLY_STATES.has('UNREVEALED')).toBe(true)
+  })
+
+  test('260911-t0p defect fix: REVEALED is OUT of the set -- the whole point of this quick task', () => {
+    expect(REDEEMABLE_ONLY_STATES.has('REVEALED')).toBe(false)
+  })
+
+  test('260911-t0p: REDEEMED is OUT of the set', () => {
+    expect(REDEEMABLE_ONLY_STATES.has('REDEEMED')).toBe(false)
+  })
+
+  test('260911-t0p: UNREDEEMABLE is OUT of the set', () => {
+    expect(REDEEMABLE_ONLY_STATES.has('UNREDEEMABLE')).toBe(false)
+  })
 })
 
 describe('matchesKeySearch — title only (REQ-43-09, REQ-43-21)', () => {
@@ -253,15 +324,22 @@ describe('matchesKeySearch — title only (REQ-43-09, REQ-43-21)', () => {
     expect(matchesKeySearch(key, '   ')).toBe(true)
   })
 
-  test('REQ-43-21: a title match AND WAITING_STATES membership compose as the screen will use them', () => {
-    const redeemedMatch = makeKey({
+  test('REQ-43-21/260911-t0p: a title match AND REDEEMABLE_ONLY_STATES membership compose as the screen will use them', () => {
+    // 260911-t0p: repointed from WAITING_STATES, which the screen's
+    // "Redeemable keys only" checkbox no longer uses (see index.tsx's
+    // filteredKeys). A REDEEMED key would compose to `false` against
+    // EITHER set (REDEEMED is out of both), which would not prove this
+    // test tracks the real call site -- REVEALED is the discriminating
+    // state (IN WAITING_STATES, OUT of REDEEMABLE_ONLY_STATES), so using
+    // it here is load-bearing, not incidental.
+    const revealedMatch = makeKey({
       title: 'Some Game',
-      state: 'REDEEMED',
+      state: 'REVEALED',
       ownedElsewhere: false
     })
     const composed =
-      matchesKeySearch(redeemedMatch, 'some game') &&
-      WAITING_STATES.has(redeemedMatch.state)
+      matchesKeySearch(revealedMatch, 'some game') &&
+      REDEEMABLE_ONLY_STATES.has(revealedMatch.state)
     expect(composed).toBe(false)
   })
 })
