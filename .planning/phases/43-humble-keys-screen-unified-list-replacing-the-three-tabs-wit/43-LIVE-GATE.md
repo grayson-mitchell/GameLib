@@ -320,13 +320,13 @@ Must print nothing.
 
 ---
 
-## Verdict
+## Verdict — run 1 (20260911T043842Z) and run 2 (20260911T062945Z)
 
 **This section was authored empty. The author of this contract did not fill it in.** The operator
 (plan 43-10 Task 2) fills every cell below from their own run, then plan 43-10 Task 3 transcribes
 it verbatim into the `**VERDICT:**` line and disposes of the two folded todos accordingly.
 
-> **FILLED 2026-09-11 by plan 43-10 Task 3**, from the measured run recorded in
+> **FILLED 2026-09-11 by plan 43-10 Task 3 (RUN 1)**, from the measured run recorded in
 > `/tmp/gamelib-gate-20260911T043842Z/terminal.log` (28.5 KB transcript, 24 evidence files,
 > raw numbers in `measurements-raw.txt`, scorecard in `verdict-notes.txt`). The pre-run
 > instruction above is preserved verbatim as the record of how this document was authored; it is
@@ -334,38 +334,104 @@ it verbatim into the `**VERDICT:**` line and disposes of the two folded todos ac
 > `d60fcc85c` — **note this predates `2c68c17fe`**, the gift-gate fix, which is why item 2's
 > side-by-side pair is NOT ATTEMPTABLE here and would need a rebuild to score.
 
-| Item | Sub-check | Launch ordinal | Raw measurement | Threshold | Result |
-|---|---|---|---|---|---|
-| 1 | TYPE width, header vs. rows | 1 | data content left edge **220.0** on all 18 rows sampled, spread **0.0**; header "Type" label centred 271.5 vs track centre 272.0 | ±2 CSS px agreement | PASS |
-| 2 | KEY width, shape: full-width button | 1 | 1124.0 → 1443.5 (Hard West 2, CryoFall, Racine) | ±2 CSS px agreement | PASS |
-| 2 | KEY width, shape: side-by-side pair | — | shape cannot render: `claimAction` needs `!ownedElsewhere`, `giftAction` needed `ownedElsewhere` | ±2 CSS px agreement | NOT ATTEMPTABLE |
-| 2 | KEY width, shape: bare text + text-link | 1 | left edge 1124.0 (Californium, Darkest Dungeon, FRONTIERS) | ±2 CSS px agreement | PASS |
-| 2 | KEY width, shape: bare text, no control | 1 | left edge 1124.0 (Crusader Kings III; Alchemy VTT generic) | ±2 CSS px agreement | PASS |
-| 2 | KEY width, shape: Pitfall-C disabled caption | — | no row in the library carries `keyindexResolved === false` | ±2 CSS px agreement | NOT OBSERVED |
-| 3 | GAME left edge, logo row | 1 | title-text left edges **618.5..702.5**, spread **84.0** (capture 1); see note below | ±2 CSS px agreement | **FAIL** |
-| 3 | GAME left edge, no-logo row | 1 | generic row title-text left edge **486.0** vs logo rows 626.5..702.5, spread **216.5** (capture 2) | ±2 CSS px agreement | **FAIL** |
-| 3 | GAME left edge, UNPICKED row | — | P6 inventory: **0** UNPICKED entitlements in the library | ±2 CSS px agreement | NOT ATTEMPTABLE |
-| 3 | GAME title wraps (no overflow) on a long title | 1 | longest title occupies 475.5 of a 768.0 track — no overflow, but no wrap triggered either | wraps, does not overflow its column | NOT ATTEMPTABLE |
-| 4 | Separator hairline present between rows | 1 | dark theme `[20,23,41]`: delta **108–109**. dark theme `[26,28,33]`: delta **11–19**. light theme `[237,239,244]`: delta **2** | ≥3/255 RGB delta at seam | **FAIL** (light theme only; PASS in both dark themes) |
-| 4 | Separator absent after last row | 1 | max channel delta below the final row = **2**, measured in dark `[26,28,33]` where a present separator reads 11–19 | <3/255 RGB delta below last row | PASS |
-| 5 | Icon height vs. target 19.2px | 1 | Steam **19.0 × 19.0**; GOG **19.0 × 17.5** (viewBox 34:31 in a square box → 19.2 × 31/34 = 17.5) | ±2 CSS px | PASS |
-| 5 | Icon top-edge alignment to title, 1-line row | 1 | deltas **−1.5 to −3.5** across 8 rows | ±2 CSS px | INCONCLUSIVE — metric compares an icon BOX top to a glyph INK top; ~2–3px is the expected internal-leading gap at 16px/1.2 |
-| 5 | Icon top-edge alignment to title, 2-line row | — | no 2-line row exists (no title wraps) | ±2 CSS px | NOT ATTEMPTABLE |
-| 6 | Icon colour, light theme | 1 | Steam `[57,59,64]` == `--text-secondary #393b41`. **GOG `[33,36,43]` ≠ `--text-secondary`** | matches `--text-secondary` resolved value | **FAIL** (GOG; Steam passes) |
-| 6 | Icon colour, dark theme | 1 | Steam `[177,177,177]` == `--text-secondary #b1b1b1` | matches `--text-secondary` resolved value | PASS (Steam) |
-| 7 | Title row / controls row left edge vs row list | 1 | controls row 220.5 vs row-list 220.0, spread **0.5** | ±2 CSS px agreement | PASS |
-| 7 | Header row column boundaries vs data rows | 1 | tracks identical on header and rows: TYPE 220.0→324.0, GAME 340.0→1108.0, KEY 1124.0→1444.0 | ±2 CSS px agreement (shared with item 1/2) | PASS |
-| — | Build command + exit status | — | `pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && pnpm exec tauri build` → **exit 0**, 2026-09-11T04:40:26Z | release build, no `--debug` | PASS |
-| — | Bundle path recovered | — | `GameLib_0.7.0_aarch64.dmg` → `$SESSION/GameLib.app`; `gamelib-shell` sha256 `92e31568…f3d08` identical to `target/release/gamelib-shell` | `.app` from DMG, hash-verified | PASS |
-| — | `pgrep` count, before first launch | — | 0 (asserted twice) | 0 | PASS |
-| — | `pgrep` count, while running (each launch) | 1 | 1 throughout; PID 50567 unchanged across the whole session | 1 | PASS |
-| — | `pgrep` count, after final quit | — | **app was not quit** — session left running at the operator's discretion | 0 | NOT PERFORMED |
-| — | Closing inventory, zero-length files | — | none (24 evidence files, all non-zero) | none | PASS |
+> **RE-RUN 2026-09-11 by quick task 260911-qds (RUN 2)**, transcribed verbatim from
+> `/tmp/gamelib-gate-20260911T062945Z/measurements-rerun.md`, preserved at
+> `43-11-evidence/measurements-rerun.md`. Build under test: `gamelib-shell` sha256
+> `1cd1e843…3f5a`, HEAD `0d2ae9862`, which **carries `2c68c17fe`** (the gift-gate fix run 1 was
+> missing) and `c690a117a` (the divider-fallback + scoped-`gogIcon` fix from quick `260911-p6s`).
+> Run 2 re-scores exactly the three sub-checks that changed as a result of those two commits —
+> item 4's separator-present check, item 6's light-theme icon colour, and item 2's side-by-side
+> pair, now reachable for the first time. Every other sub-check's run-1 value stands unrevisited;
+> run 2 did not re-measure them.
 
-**VERDICT: FAIL — 14 PASS / 4 FAIL across 18 scored sub-checks.** 7 further sub-checks are unscored
-and explicitly dispositioned: 4 NOT ATTEMPTABLE, 1 NOT OBSERVED, 1 INCONCLUSIVE, 1 NOT PERFORMED.
+| Run | Item | Sub-check | Launch ordinal | Raw measurement | Threshold | Result |
+|---|---|---|---|---|---|---|
+| 1 | 1 | TYPE width, header vs. rows | 1 | data content left edge **220.0** on all 18 rows sampled, spread **0.0**; header "Type" label centred 271.5 vs track centre 272.0 | ±2 CSS px agreement | PASS |
+| 1 | 2 | KEY width, shape: full-width button | 1 | 1124.0 → 1443.5 (Hard West 2, CryoFall, Racine) | ±2 CSS px agreement | PASS |
+| 1 | 2 | KEY width, shape: side-by-side pair | — | shape cannot render: `claimAction` needs `!ownedElsewhere`, `giftAction` needed `ownedElsewhere` | ±2 CSS px agreement | SUPERSEDED by run 2 (was NOT ATTEMPTABLE) |
+| 2 | 2 | KEY width, shape: side-by-side pair | 1 | KEY-column CONTENT left edge **934.0 CSS px** across all 7 sampled shapes (Hard West 2, Asguaard, Californium, Crusader Kings III, CryoFall, Darkest Dungeon, Dex), spread **0.0**; the `"Key"` HEADER label's left edge is **1085.5**, a **151.5 CSS px** divergence. The Asguaard row now renders the Claim+Gift pair side by side (`Activate` + `Gift on Humble`), so this sub-check is ATTEMPTABLE for the first time (gift-gate fix `2c68c17fe`). Scored **FAIL** against the contract's literal metric (header label left edge vs content left edge) — **not** re-scored against the friendlier content-to-content metric after seeing the result. See the retitled note below. | ±2 CSS px agreement | **FAIL** |
+| 1 | 2 | KEY width, shape: bare text + text-link | 1 | left edge 1124.0 (Californium, Darkest Dungeon, FRONTIERS) | ±2 CSS px agreement | PASS |
+| 1 | 2 | KEY width, shape: bare text, no control | 1 | left edge 1124.0 (Crusader Kings III; Alchemy VTT generic) | ±2 CSS px agreement | PASS |
+| 1 | 2 | KEY width, shape: Pitfall-C disabled caption | — | no row in the library carries `keyindexResolved === false` | ±2 CSS px agreement | NOT OBSERVED |
+| 1 | 3 | GAME left edge, logo row | 1 | title-text left edges **618.5..702.5**, spread **84.0** (capture 1); see note below | ±2 CSS px agreement | **FAIL** |
+| 1 | 3 | GAME left edge, no-logo row | 1 | generic row title-text left edge **486.0** vs logo rows 626.5..702.5, spread **216.5** (capture 2) | ±2 CSS px agreement | **FAIL** |
+| 1 | 3 | GAME left edge, UNPICKED row | — | P6 inventory: **0** UNPICKED entitlements in the library | ±2 CSS px agreement | NOT ATTEMPTABLE |
+| 1 | 3 | GAME title wraps (no overflow) on a long title | 1 | longest title occupies 475.5 of a 768.0 track — no overflow, but no wrap triggered either | wraps, does not overflow its column | NOT ATTEMPTABLE |
+| 1 | 4 | Separator hairline present between rows | 1 | dark theme `[20,23,41]`: delta **108–109**. dark theme `[26,28,33]`: delta **11–19**. light theme `[237,239,244]`: delta **2** | ≥3/255 RGB delta at seam | SUPERSEDED by run 2 (was **FAIL** (light theme only; PASS in both dark themes)) |
+| 2 | 4 | Separator hairline present between rows | 1 | light theme `[237,239,244]`: 7 separators, each full-width at 107/107 sampled columns, peak seam `[209,210,215]` → max channel delta **29** (was 2). dark theme `[26,28,33]`: peak seam `[51,57,64]` → max channel delta **31** (was 11–19). Predicted-value corroboration: `color-mix(in srgb, currentColor 14%, transparent)` with `--text-default #20242c` over `[237,239,244]` computes `[208,211,216]`; measured `[209,210,215]`, agreement within ±1 — confirms the PASS is attributable to the new `color-mix` declaration actually painting, not to a theme change. | ≥3/255 RGB delta at seam | PASS |
+| 1 | 4 | Separator absent after last row | 1 | max channel delta below the final row = **2**, measured in dark `[26,28,33]` where a present separator reads 11–19 | <3/255 RGB delta below last row | PASS |
+| 1 | 5 | Icon height vs. target 19.2px | 1 | Steam **19.0 × 19.0**; GOG **19.0 × 17.5** (viewBox 34:31 in a square box → 19.2 × 31/34 = 17.5) | ±2 CSS px | PASS |
+| 1 | 5 | Icon top-edge alignment to title, 1-line row | 1 | deltas **−1.5 to −3.5** across 8 rows | ±2 CSS px | INCONCLUSIVE — metric compares an icon BOX top to a glyph INK top; ~2–3px is the expected internal-leading gap at 16px/1.2 |
+| 1 | 5 | Icon top-edge alignment to title, 2-line row | — | no 2-line row exists (no title wraps) | ±2 CSS px | NOT ATTEMPTABLE |
+| 1 | 6 | Icon colour, light theme | 1 | Steam `[57,59,64]` == `--text-secondary #393b41`. **GOG `[33,36,43]` ≠ `--text-secondary`** | matches `--text-secondary` resolved value | SUPERSEDED by run 2 (was **FAIL** (GOG; Steam passes)) |
+| 2 | 6 | Icon colour, light theme | 1 | GOG glyph (Racine) ink `[57,59,64]`; Steam glyph (Paths & Danger) ink `[57,59,64]`; Steam glyph (Satellite Reign) ink `[57,59,64]`; `--text-secondary #393b41` = `[57,59,65]`. All three match the token within ±1 — GOG now matches Steam exactly. Fixed by the scoped `.humbleKeyRowStoreLogo .gogIcon { fill: currentColor }` escape (quick `260911-p6s`); `_colors.scss:101`'s global `.gogIcon` rule and `GamePage/index.css:619` deliberately untouched. | matches `--text-secondary` resolved value | PASS |
+| 1 | 6 | Icon colour, dark theme | 1 | Steam `[177,177,177]` == `--text-secondary #b1b1b1` | matches `--text-secondary` resolved value | PASS (Steam) |
+| 1 | 7 | Title row / controls row left edge vs row list | 1 | controls row 220.5 vs row-list 220.0, spread **0.5** | ±2 CSS px agreement | PASS |
+| 1 | 7 | Header row column boundaries vs data rows | 1 | tracks identical on header and rows: TYPE 220.0→324.0, GAME 340.0→1108.0, KEY 1124.0→1444.0 | ±2 CSS px agreement (shared with item 1/2) | PASS |
+| 1 | — | Build command + exit status | — | `pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && pnpm exec tauri build` → **exit 0**, 2026-09-11T04:40:26Z | release build, no `--debug` | PASS |
+| 1 | — | Bundle path recovered | — | `GameLib_0.7.0_aarch64.dmg` → `$SESSION/GameLib.app`; `gamelib-shell` sha256 `92e31568…f3d08` identical to `target/release/gamelib-shell` | `.app` from DMG, hash-verified | PASS |
+| 1 | — | `pgrep` count, before first launch | — | 0 (asserted twice) | 0 | PASS |
+| 1 | — | `pgrep` count, while running (each launch) | 1 | 1 throughout; PID 50567 unchanged across the whole session | 1 | PASS |
+| 1 | — | `pgrep` count, after final quit | — | **app was not quit** — session left running at the operator's discretion | 0 | NOT PERFORMED |
+| 1 | — | Closing inventory, zero-length files | — | none (24 evidence files, all non-zero) | none | PASS |
+| 2 | — | Build command + exit status | — | `pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && pnpm exec tauri build` → **exit 0** | release build, no `--debug` | PASS |
+| 2 | — | Bundle path recovered | — | `GameLib_0.7.0_aarch64.dmg` (101,411,459 bytes) → `$SESSION/GameLib.app`; `gamelib-shell` sha256 `1cd1e843…3f5a` identical on both sides; `bundle/macos/` confirmed emptied by tauri's own cleanup step (P3) | `.app` from DMG, hash-verified | PASS |
+| 2 | — | `pgrep` count, before first launch | — | 0, `p1-precondition.log` | 0 | PASS |
+| 2 | — | `pgrep` count, while running (each launch) | 1 | 1 (window CGWindowID 4428, 1280x800 pt, launch showed exactly 1 instance) | 1 | PASS |
+| 2 | — | `pgrep` count, after final quit | — | the run-2 provenance evidences no post-quit `pgrep` — not invented as a PASS | 0 | NOT RECORDED (run 2) |
+| 2 | — | Closing inventory, zero-length files | — | the run-2 provenance evidences no closing inventory — not invented as a PASS | none | NOT RECORDED (run 2) |
 
-### Note on item 3's two FAIL rows — the metric failed, the property did not
+**Census (post-edit table, run exactly as the plan specifies, `SUPERSEDED` rows excluded from the
+count):**
+
+```
+awk '/^## Verdict/,/^### Note on item/' 43-LIVE-GATE.md | grep '^| ' \
+  | awk -F'|' '{print $(NF-1)}' | sed 's/^ *//;s/ *$//' | sort | uniq -c | sort -rn
+```
+
+     19 PASS
+      3 NOT ATTEMPTABLE
+      3 **FAIL**
+      2 NOT RECORDED (run 2)
+      1 SUPERSEDED by run 2 (was NOT ATTEMPTABLE)
+      1 SUPERSEDED by run 2 (was **FAIL** (light theme only; PASS in both dark themes))
+      1 SUPERSEDED by run 2 (was **FAIL** (GOG; Steam passes))
+      1 Result
+      1 PASS (Steam)
+      1 NOT PERFORMED
+      1 NOT OBSERVED
+      1 INCONCLUSIVE — metric compares an icon BOX top to a glyph INK top; ~2–3px is the expected internal-leading gap at 16px/1.2
+
+`PASS` (19) and `PASS (Steam)` (1) are both PASS — the item-6 dark-theme row's cell text differs
+only because it names which glyph passed, not because its verdict differs. Excluding the header
+row (`Result`, 1) and the three `SUPERSEDED …` buckets (1 + 1 + 1 = 3): **20 PASS / 3 FAIL across
+23 scored.** 6 further rows are unscored and dispositioned: 3 NOT ATTEMPTABLE, 1 NOT OBSERVED,
+1 INCONCLUSIVE, 1 NOT PERFORMED, plus 2 NOT RECORDED (run 2) counted separately.
+
+**This matches the planner's cross-check prediction of 20 PASS / 3 FAIL across 23 scored exactly.**
+An earlier hand-computed draft of this section (before this awk command was actually executed
+against the edited table) miscounted the FAIL bucket as 5 rather than 3, by double-counting the
+`SUPERSEDED` rows into the FAIL total instead of excluding all three of them. Running the plan's
+own command, verbatim, against the file as committed produces the number above; per the plan's own
+instruction ("if your count differs, your count is the answer"), the executed command's output —
+not any hand arithmetic — is what this VERDICT line reports.
+
+**VERDICT: FAIL — 20 PASS / 3 FAIL across 23 scored sub-checks (run 1 + run 2 combined, `SUPERSEDED`
+rows excluded).** 6 further sub-checks are unscored and explicitly dispositioned: 3 NOT ATTEMPTABLE,
+1 NOT OBSERVED, 1 INCONCLUSIVE, 1 NOT PERFORMED, plus 2 NOT RECORDED (run 2).
+
+**Phase 43 does not close on this verdict.** Three FAIL rows remain, and all three trace to the
+same single cause: the inherited `.App { text-align: center }` rule (`src/frontend/App.css:24`).
+Item 3 fails twice (GAME column, logo row and no-logo row, run 1) and item 2 fails once (KEY
+column, run 2) — three sub-checks, one root cause, tracked as an open `ready: human` design-decision
+todo (`2026-09-11-humble-keys-game-titles-are-centre-aligned-by-inherited-app-rule.md`), not a
+defect with an obvious code fix. The other two run-1 FAIL rows (item 2 side-by-side pair, item 6
+GOG colour) are the ones run 2 superseded to PASS and no longer block anything. Phase 43 closes
+once a human decides whether centring is intended (restate the two gate items' metric against
+track boundaries) or accidental (add `align-items: flex-start` / `text-align: start` locally) —
+see that todo for the two remedy paths.
+
+### Note on item 3's two FAIL rows, and item 2's run-2 FAIL row — the metric failed, the property did not
 
 Both item-3 FAILs are against this contract's **stated metric** ("the title-text left edge on every
 sampled row must agree within ±2 CSS px"). Scored honestly, they fail: the spread is 84.0 and 216.5.
@@ -385,6 +451,22 @@ proxy for column left edge under left alignment, which the Column Geometry Contr
 Recorded as FAIL rather than silently re-scored against the friendlier metric. Whether centred
 titles are intended is a design decision, not a gate outcome.
 
+**Run 2's item-2 FAIL is the same rule, a second time, in a different column.** Once the
+side-by-side pair became reachable (`2c68c17fe`), the contract's literal metric for item 2 is the
+`"Key"` header label's left edge against the column content's left edge — and those diverge for
+the same structural reason as item 3: `.humbleKeyColumnCell` (the header cell) inherits
+`.App { text-align: center }` with no local `align-items: flex-start` override for its label, while
+the content rows below it are left-aligned by their own row layout. Measured: 7 sampled KEY-column
+content shapes all start at **934.0**, spread **0.0** — the column box itself is exactly as
+immovable as items 1 and 7 already proved. The `"Key"` header label centres inside its own track
+(934.0→1254.0, width 320.0, centre 1094.0) at left edge **1085.5** — 8.5 px left of true centre,
+consistent with variable glyph width around a centred anchor, not with any left-alignment. Divergence
+from the content's 934.0 is **151.5 CSS px**, far outside the ±2 px threshold. This was scored FAIL
+against the literal header-vs-content metric, matching how item 3 was handled — **not** re-scored
+against the friendlier content-vs-content metric (934.0 vs 934.0, spread 0.0, which would trivially
+PASS) after seeing that number. Same root cause as item 3, same disposition: a design-decision
+todo, not a code defect with an obvious fix.
+
 ---
 
 ## Declared deviations from this document's own protocol
@@ -403,11 +485,47 @@ titles are intended is a design decision, not a gate outcome.
    recorded as skipped rather than quietly satisfied.
 4. **The app was not quit**, so the closing `pgrep == 0` assertion is NOT PERFORMED.
 
+### Run-2-scoped deviations (20260911T062945Z, quick task 260911-qds)
+
+5. **P5's "one sync" came from automatic startup, not the refresh control.** As in run 1's deviation
+   2 / defect 1, `GlobalState.componentDidMount()` fires a sync at launch before any operator action
+   is possible. Run 2 did not additionally trigger a manual sync (run 1 did, and hit the same
+   P5/P8 conflict twice). The contract's *intent* — measure against library data that reflects a
+   completed sync, not a stale/empty pre-sync state — is satisfied: the sync that ran was allowed to
+   finish before any capture. The letter of "trigger a sync from the refresh control" was not
+   honoured, same underlying defect as run-1 defect 1, not re-litigated here.
+6. **`osascript`/System Events remained unusable for window geometry**, confirming run-1 defect 2
+   independently on this session's process. `gamelib-shell` again reports 0 AX windows via System
+   Events regardless of process-name correction. Window geometry was obtained via CoreGraphics/JXA
+   (`ObjC.castRefToObject` bridging `CGWindowListCopyWindowInfo`'s CFArray into JXA-usable objects),
+   not the GUI-scripting path the contract prescribes. Recorded because **a zero window count from
+   this probe is not evidence of absence of the window** — it is evidence the probe cannot see AX
+   windows in this app at all, a distinction the contract's own language does not draw and a future
+   reader must not mistake for "no window was open."
+7. **Window-ID capture succeeded this run with the target window on a different Space than the
+   operator's terminal**, directly contradicting run-1 defect 4's finding that
+   `screencapture -l <windowid>` fails with *"could not create image from window"* across Spaces.
+   Run 2 used `screencapture -l 4428` (the CGWindowID obtained via the CoreGraphics/JXA path in
+   deviation 6) successfully with GameLib's window on a Space other than the active one. **Run-1's
+   defect-4 text is left intact above, unedited** — this entry records the contradiction as an
+   open question, not a correction: the two runs may differ in wry/WKWebView window backing-store
+   behaviour, in which Space each was "active" at capture time, in some other environmental variable
+   neither run captured, or run 1's finding may itself have been an artifact of a transient state.
+   No claim is made here about which run is "correct"; a future contract revision should treat
+   `screencapture -l` reliability across Spaces as unresolved, not as fixed by this run.
+8. **Item 6's light-theme colour measurement used the in-app search box** to isolate the three
+   sampled rows (Racine, Paths & Danger, Satellite Reign) rather than scrolling, since the
+   full unfiltered list no longer fit the visible capture area after the gift-gate fix added a
+   second control to the Asguaard row. This stays within P7 (no DevTools, no non-UI state
+   mutation) — the search box is ordinary in-app UI, and filtering does not alter row rendering,
+   only row inclusion.
+
 ## Contract defects found BY this run
 
-These are defects in **this document**, not in the software under test. All four survived the
-34-row Structural Reachability Review, and three share one blind spot: the review verified that the
-*things being measured* were reachable, never that its own *instructions would execute*.
+These are defects in **this document**, not in the software under test. All four run-1 defects
+below survived the 34-row Structural Reachability Review, and three share one blind spot: the
+review verified that the *things being measured* were reachable, never that its own *instructions
+would execute*.
 
 1. **P5 and P8 are mutually unsatisfiable.** P5 mandates triggering a sync from the app's refresh
    control; `GlobalState.componentDidMount()` (`GlobalState.tsx:1716`) has always already run one
@@ -427,5 +545,26 @@ These are defects in **this document**, not in the software under test. All four
    macOS Space from the operator's editor, `screencapture -l <windowid>` fails with *"could not
    create image from window"* (a window on an inactive Space has no readable backing store) and
    region capture only ever sees the active Space. Any future contract must either require both
-   windows on one Space or specify a timed/burst capture.
+   windows on one Space or specify a timed/burst capture. **See run-2 deviation 7 above: this
+   finding did not reproduce on the next run**, under conditions this document did not capture
+   closely enough to say whether they differed.
+
+### Run-2-scoped contract defect (20260911T062945Z, quick task 260911-qds)
+
+5. **`claim-and-gift` is `resolveKeyScenario`'s fall-through default, not a dedicated branch.**
+   `resolveKeyScenario()` (`HumbleKeyRow/index.tsx:210-278`, full path
+   `src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx`) gates the `gift-only`
+   branch on `isGiftableSpare` (`:256`, requiring `ownedElsewhere && UNREVEALED`) but has no
+   equivalent named condition for the side-by-side pair — `claim-and-gift` is simply what the
+   function returns at `index.tsx:277` (`return 'claim-and-gift'`) when none of the earlier `if`
+   branches matched. This was proven
+   live via the Alchemy VTT row, which this document's own P6 Structural Reachability Review
+   inventory (Test 7) never flagged, because Test 7 checks named `HumbleKeyScenarioId` values
+   against the operator's library data, not against the function's control-flow structure — a
+   fall-through default has no name to search the inventory for. Consequence for this contract:
+   **item 2's side-by-side pair could not be found through the prescribed P6 shape-inventory
+   process at all**, in either run. Run 2 located it only by direct pixel observation of the
+   Asguaard row after the gift-gate fix (`2c68c17fe`) made it visible, not by consulting the
+   inventory. A future revision of P6 needs a control-flow read of `resolveKeyScenario`, not just a
+   data census against its named branches, to catch scenarios reachable only via fall-through.
 
