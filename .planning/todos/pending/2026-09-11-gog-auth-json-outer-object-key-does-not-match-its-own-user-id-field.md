@@ -2,7 +2,9 @@
 created: 2026-09-11
 title: "GOG `gog_store/auth.json`'s outer object key does not match its own nested `user_id` field"
 area: store/gog
-status: OPEN
+status: CLOSED
+closed: 2026-09-11
+closed_by: "quick-260911-h49; not-a-defect, premise falsified"
 severity: minor
 platform: any
 ready: code
@@ -56,3 +58,42 @@ stdout is persisted) and determine what the outer key is supposed to represent.
 
 - .planning/debug/resolved/gog-login-not-registered.md -- where this was first noticed (host
   bug, unrelated to and unaffected by this mismatch)
+
+## Resolution (2026-09-11, quick-260911-h49)
+
+**NOT A DEFECT.** The premise is falsified: the outer object key is gogdl's OAuth
+`client_id` namespace, not a user id, and it was never meant to equal the nested `user_id`
+field. Traced in `.build-tools/runners-onedir/src/gogdl/gogdl/auth.py`: `CLIENT_ID =
+"46899977096215655"` (`:11`) -- exactly the value this todo flagged -- and the file is a
+dict keyed by client_id by design (`:39-63` `get_credentials(self, client_id=None, ...)`,
+`:114` `refresh_credentials`, `:130` the `--code` exchange path). The docstring at `:1-2`
+even names the reason: "with ability to have multiple tokens (will come in handy in the
+future)".
+
+Both observed values were correct and have been re-confirmed live: outer key
+`46899977096215655`, nested `user_id` `54283569140944678`. The filer made no measurement
+error -- the observation stands; only the interpretation ("mismatch", "oddity") was wrong.
+
+Corroboration: this repo already ships `46899977096215655` as a `client_id` at
+`src/frontend/screens/WebView/loginRoutes.ts:48`. And gogdl itself emits `user_id` and
+`client_id` as two separate segments of one cloud-save URL --
+`.build-tools/runners-onedir/src/gogdl/gogdl/saves.py:202`
+(`get_credentials(self.client_id, self.client_secret)`) and `:212`
+(`f"{GOG_CLOUDSTORAGE}/v1/{self.credentials['user_id']}/{self.client_id}"`) -- proving the
+two are distinct identifier spaces that legitimately coexist, exactly the "multiple tokens"
+case the docstring anticipates.
+
+This also answers the Fix-sketch's own question directly: nothing in this repo writes
+`auth.json`. `constants.ts:7` defines the path, `library.ts:1521-1532` only passes it to
+the gogdl binary via `--auth-config-path`, and `user.ts:360-361`'s only other touch is
+`unlinkSync` on logout. Nothing reads the outer key either -- `user.ts:245` reads
+`resolved.user_id`. gogdl owns the shape entirely; there is no fix to make here.
+
+**The forward-looking risk above is inverted, corrected here.** Multiple outer keys mean
+multiple client *scopes* for the *same* account, never multiple accounts -- the opposite of
+what was warned. The real hazard: every GOG account collides on the single key
+`46899977096215655`, so signing into a second account overwrites the first account's token
+in place, since `refresh_credentials` (`auth.py:97`) hardcodes `CLIENT_ID` as the one
+refresh slot it reads from. Multi-account support would need a different keying scheme
+entirely, not a reconciliation of key vs field. Recorded here as a design note, not filed
+as a todo -- it describes a feature that does not exist.
