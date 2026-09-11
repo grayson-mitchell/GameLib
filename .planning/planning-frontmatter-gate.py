@@ -39,6 +39,47 @@ frontmatter at all, and a gate that silently skips an optional target is itself 
 check, so its absence is reported by an explicit `NOTE:` line and counted separately in the
 summary. "Skipped" must never be mistaken for "checked".
 
+DIVERGENCE-SHAPE CHECK (quick task 260911-j88). Parsing under js-yaml is necessary but not
+sufficient: the SDK's own consumers (`sdk/dist/query/frontmatter.js`'s hand-rolled
+`parseFrontmatterYamlLines`, used by `gsd-sdk query frontmatter.get`, `audit-uat`, `progress`,
+`state`, `phase-lifecycle`, and `workstream`) do not use js-yaml at all, and disagree with it on
+specific known shapes. This gate's OWN self-test used to ACCEPT, as its positive control, a
+document with both narrative fields written as `|-` block scalars -- exactly the shape that empties
+those fields for every one of those consumers, because `parseFrontmatterYamlLines` has no
+block-scalar support and returns the literal indicator string (`"|-"`), which
+`phase-lifecycle.js:1122`'s `stopped_at:` + regex rewrite (`.` does not cross newlines) then uses
+it to orphan every line beneath it. The positive control was the bug.
+
+The fix is `check_divergence_shapes()`: a SHAPE-BASED check, not a second parser. It rejects a bare
+block-scalar indicator (`|`, `|-`, `|+`, `>`, `>-`, `>+`, each optionally carrying a digit indent
+indicator and/or a trailing comment) as a key's value, and a double-quoted scalar containing a
+backslash-escaped `\"` (js-yaml unescapes it; the SDK strips only the *surrounding* quotes and
+keeps the backslashes -- a different string reaches every consumer). It is deliberately NOT a port
+of `parseFrontmatterYamlLines` and does NOT `require()` the installed SDK: the SDK resolves to an
+npx-cache path with a content-hash directory name
+(`~/.npm/_npx/<hash>/node_modules/get-shit-done-cc/`) that is neither committed to this repo nor
+present in CI, so requiring it would make this gate fail-open (silently skip when the path is
+absent) or fail-spuriously (break on an unrelated cache eviction); a vendored COPY would silently
+drift from the real parser over time, and the gate would then be asserting agreement with a
+fiction it no longer matches -- the same "adjacent to the truth" failure this gate exists to end
+(see the PARSER CHOICE note above).
+
+The positive control is now a single-line, single-quoted document -- the shape `STATE.md` ships
+today. Single-quoting has exactly ONE known divergence from js-yaml, and it is deliberately
+ACCEPTED rather than rejected: an apostrophe is written doubled (`''`) inside a single-quoted
+scalar; js-yaml folds it back to one apostrophe, the SDK's hand-rolled parser does not, so the
+SDK's read carries one extra character per apostrophe (368 vs 367 chars on the live `stopped_at`
+field today -- the entire price of this convention). Rejecting `''` would convict `STATE.md` as it
+stands today for a one-character divergence with no `phase-lifecycle.js`-style data-loss
+consequence -- a gate can convict correct code, and this one must not.
+
+THE LIMIT, STATED EXPLICITLY: this check catches three known shapes on two named targets
+(`STATE.md`, `ROADMAP.md`). It CANNOT catch a divergence shape nobody has found yet, and it does
+not run against any of the other ~2400 frontmatter-bearing files under `.planning/` (that sweep is
+tracked separately as an open todo). A gate that implied it caught "frontmatter divergence" in
+general, rather than these specific known shapes on these specific targets, would overstate its
+own reach -- which is worse than a narrow, honestly-scoped check.
+
 THE SELF-TEST FIXTURE CARRIES REAL HISTORICAL BYTES, HASH-GUARDED. `HISTORICAL_EXCERPT` below is
 a 90-byte window sliced out of the actual pre-fix `last_activity` line (extracted
 programmatically from git history during this task's planning and authoring, never retyped from
@@ -60,6 +101,7 @@ import contextlib
 import hashlib
 import io
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -224,6 +266,59 @@ def check_required_keys(value: dict) -> list[str]:
     return problems
 
 
+# Matches a frontmatter key line, INCLUDING list-item keys (`- test: "..."`), capturing the
+# value with trailing whitespace stripped. Pure regex, not a YAML parser -- this is deliberately a
+# SHAPE check (see docstring), not a second implementation of the real thing.
+KEY_LINE_RE = re.compile(r"^\s*(?:-\s+)?[A-Za-z0-9_-]+:\s*(.*?)\s*$")
+
+# A value that IS, exactly, a block-scalar indicator: `|` or `>`, optionally `+`/`-`, optionally a
+# single digit indent indicator, optionally a trailing ` #comment`. Anchored on both ends so a `|`
+# INSIDE a quoted value (`note: "a | b"`) cannot match -- the value must be exactly the indicator.
+BLOCK_SCALAR_INDICATOR_RE = re.compile(r"^[|>][+-]?[0-9]?(?:\s+#.*)?$")
+
+
+def check_divergence_shapes(frontmatter_text: str) -> list[str]:
+    """Pure function: given raw frontmatter TEXT (not the parsed value -- these are shapes in the
+    source bytes, not properties of the parsed result), return every known SDK-divergence problem
+    found ([] if clean). Reports every problem in one pass rather than stopping at the first.
+
+    Rejects two shapes (see docstring for why each is a real divergence, and why it is a shape
+    check rather than a second parser):
+      - a bare block-scalar indicator (`|`, `|-`, `|+`, `>`, `>-`, `>+`) as a key's value -- the
+        SDK's parser has no block-scalar support and yields the literal indicator string.
+      - a double-quoted scalar containing a backslash-escaped `\\"` -- js-yaml unescapes it, the
+        SDK's parser strips only the surrounding quotes and keeps the backslashes.
+
+    Deliberately does NOT reject a single-quoted scalar containing `''` (a doubled apostrophe).
+    That divergence is real (js-yaml folds it to one apostrophe, the SDK does not) but it is the
+    convention this repo has chosen, already live in STATE.md today -- convicting it would convict
+    correct code (T5 in the authoring plan).
+    """
+    problems: list[str] = []
+    for lineno, line in enumerate(frontmatter_text.split("\n"), start=1):
+        match = KEY_LINE_RE.match(line)
+        if not match:
+            continue
+        value = match.group(1)
+        if not value:
+            continue
+        if BLOCK_SCALAR_INDICATOR_RE.match(value):
+            problems.append(
+                f"line {lineno}: value is a bare block-scalar indicator {value!r} -- the SDK's "
+                f"hand-rolled parser has no block-scalar support and returns the literal "
+                f"indicator string {value!r}; phase-lifecycle.js:1122's `stopped_at:\\s*.+` "
+                "rewrite (`.` does not cross newlines) then orphans every line beneath it"
+            )
+            continue
+        if len(value) >= 2 and value[0] == '"' and value[-1] == '"' and '\\"' in value[1:-1]:
+            problems.append(
+                f'line {lineno}: double-quoted scalar contains a backslash-escaped \\" -- '
+                "js-yaml unescapes it, but the SDK's parser strips only the surrounding quotes "
+                "and keeps the backslashes -- a different string reaches every SDK consumer"
+            )
+    return problems
+
+
 def check_document(text: str, required: bool, node: str, label: str) -> tuple[bool, str]:
     """Pure except for the injected `run_parser` call. The SAME function is used against every
     real target file and every self-test document -- never a reimplementation. Returns (passed,
@@ -250,11 +345,23 @@ def check_document(text: str, required: bool, node: str, label: str) -> tuple[bo
         )
 
     fm_line_count = len(fm.split("\n"))
+
+    # Divergence-shape check runs for BOTH required and optional targets, and BEFORE the
+    # `not required` early return -- an optional target that skips this check is the fail-open
+    # shape this check exists to end (T6 in the authoring plan).
+    divergence_problems = check_divergence_shapes(fm)
+    if divergence_problems:
+        return (
+            False,
+            f"{label} — frontmatter parses, but diverges from what the SDK's own parser reads: "
+            + "; ".join(divergence_problems),
+        )
+
     if not required:
         return (
             True,
             f"OK: {label} — frontmatter ({fm_line_count} lines) parses as a mapping with "
-            f"{len(value)} key(s).",
+            f"{len(value)} key(s); free of known SDK-divergence shapes.",
         )
 
     problems = check_required_keys(value)
@@ -267,7 +374,8 @@ def check_document(text: str, required: bool, node: str, label: str) -> tuple[bo
         True,
         f"OK: {label} — frontmatter ({fm_line_count} lines) parses as a mapping with "
         f"{len(value)} keys; all {len(REQUIRED_STATE_KEYS)} required keys present; "
-        f"stopped_at {stopped_at_len} chars, last_activity {last_activity_len} chars.",
+        f"stopped_at {stopped_at_len} chars, last_activity {last_activity_len} chars; "
+        "free of known SDK-divergence shapes.",
     )
 
 
@@ -280,10 +388,9 @@ VALID_STATE_DOCUMENT = (
     "---\n"
     "gsd_state_version: 1\n"
     "status: ACTIVE\n"
-    'stopped_at: |-\n'
-    '  a plain narrative sentence with a raw "quote" inside it, no escaping needed\n'
-    'last_activity: |-\n'
-    f'  {HISTORICAL_EXCERPT}\n'
+    "stopped_at: 'a plain narrative sentence with a raw \"quote\" inside it and it''s got an "
+    "apostrophe too'\n"
+    f"last_activity: '{HISTORICAL_EXCERPT}'\n"
     "last_updated: 2026-09-11\n"
     "progress:\n"
     "  total_phases: 39\n"
@@ -292,6 +399,26 @@ VALID_STATE_DOCUMENT = (
     "\n"
     "# Body\n"
 )
+
+
+def mutate(base: str, old: str, new: str, why: str) -> str:
+    """Route EVERY mutation of VALID_STATE_DOCUMENT through here (T1 in the authoring plan). If
+    the document's shape changes and an anchor string is left stale, `str.replace()` silently
+    no-ops and hands a REJECT case an UNMUTATED, still-valid document -- a real check quietly
+    turned vacuous. Fails loudly, instead, in both failure modes:
+      - `old` is not present in `base` at all (the anchor was missed), or
+      - the replacement produced no change (old == new, a copy-paste slip).
+    """
+    if old not in base:
+        fail(
+            f"mutate() anchor missed ({why}): {old!r} was not found in the base document -- this "
+            "would silently hand a REJECT case an UNMUTATED, still-valid document instead of the "
+            "intended mutation"
+        )
+    result = base.replace(old, new, 1)
+    if result == base:
+        fail(f"mutate() produced no change ({why}) -- `old` and `new` were identical")
+    return result
 
 
 def _case_reject(label: str, text: str, required: bool, node: str) -> None:
@@ -342,9 +469,11 @@ def self_test() -> None:
     # excerpt that broke STATE.md for weeks.
     reject(
         "the real historical defect: raw quotes inside a double-quoted last_activity scalar",
-        VALID_STATE_DOCUMENT.replace(
-            f'last_activity: |-\n  {HISTORICAL_EXCERPT}\n',
+        mutate(
+            VALID_STATE_DOCUMENT,
+            f"last_activity: '{HISTORICAL_EXCERPT}'\n",
             f'last_activity: "{HISTORICAL_EXCERPT}"\n',
+            "historical raw-quote defect case",
         ),
     )
 
@@ -409,10 +538,13 @@ def self_test() -> None:
         "last_updated: 2026-09-11\nprogress:\n  total_phases: 39\n---\n",
     )
 
-    # Case: the positive control for the whole fix -- a valid STATE-shaped document carrying
-    # BOTH narrative fields as `|-` blocks with raw `"` inside them, no escaping.
+    # Case: the positive control for the whole fix (D1) -- a valid STATE-shaped document, single-
+    # line SINGLE-QUOTED narrative fields, one carrying a raw `"` AND an apostrophe doubled as
+    # `''`. This is the shape STATE.md ships today; `|-` blocks are now a REJECT case below, not
+    # the positive control.
     accept(
-        "valid STATE-shaped document, both narrative fields as |- blocks with raw quotes inside",
+        "valid STATE-shaped document, single-line single-quoted narrative fields (STATE.md's "
+        "live shape) -- raw quote and doubled-apostrophe divergence both present and accepted",
         VALID_STATE_DOCUMENT,
     )
 
@@ -421,6 +553,66 @@ def self_test() -> None:
         "document with no frontmatter block at all, optional target",
         "# ROADMAP\n\nJust prose, no frontmatter.\n",
         required=False,
+    )
+
+    # Case: D1's flip -- `|-` is now a REJECT, not the positive control. Real SDK/phase-lifecycle
+    # consequence named in the failure message itself (see check_divergence_shapes docstring).
+    reject(
+        "last_activity as a |- block scalar (the SDK's hand-rolled parser has no block-scalar "
+        "support and returns the literal '|-'; phase-lifecycle.js:1122's regex rewrite then "
+        "orphans everything beneath it)",
+        mutate(
+            VALID_STATE_DOCUMENT,
+            f"last_activity: '{HISTORICAL_EXCERPT}'\n",
+            f"last_activity: |-\n  {HISTORICAL_EXCERPT}\n",
+            "|- block scalar divergence case",
+        ),
+    )
+
+    # Case: the `>-` folded-scalar sibling of the same divergence.
+    reject(
+        "last_activity as a >- folded scalar (same SDK/phase-lifecycle consequence as |-)",
+        mutate(
+            VALID_STATE_DOCUMENT,
+            f"last_activity: '{HISTORICAL_EXCERPT}'\n",
+            f"last_activity: >-\n  {HISTORICAL_EXCERPT}\n",
+            ">- folded scalar divergence case",
+        ),
+    )
+
+    # Case: a double-quoted scalar with backslash-escaped `\"` -- js-yaml unescapes it, the SDK's
+    # parser keeps the backslashes, so the two parsers read different strings.
+    reject(
+        'last_activity as a double-quoted scalar with a backslash-escaped \\" (js-yaml unescapes '
+        "it; the SDK's parser strips only the surrounding quotes and keeps the backslashes)",
+        mutate(
+            VALID_STATE_DOCUMENT,
+            f"last_activity: '{HISTORICAL_EXCERPT}'\n",
+            'last_activity: "an escaped \\"quote\\" inside a double-quoted scalar"\n',
+            "backslash-escaped-quote divergence case",
+        ),
+    )
+
+    # Case: the divergence check is NOT gated on `required` -- an OPTIONAL target carrying a
+    # block scalar must still fail (T6). If this ever accepts, the check has regressed to only
+    # running on required targets, which is the fail-open shape it exists to end.
+    reject(
+        "block scalar in an OPTIONAL target (proves the divergence check runs regardless of "
+        "`required`)",
+        "---\nnote: |-\n  optional-target narrative that must still be rejected\n---\n",
+        required=False,
+    )
+
+    # Case: the ONE divergence this repo deliberately keeps -- a single-quoted scalar containing
+    # `''` (a doubled apostrophe). js-yaml folds it to one apostrophe, the SDK's parser does not,
+    # but that costs one character and is the live convention (T5) -- must NOT be convicted.
+    accept(
+        "single-quoted scalar containing '' (doubled apostrophe) -- the one divergence this repo "
+        "deliberately keeps, matching STATE.md's live stopped_at shape -- must not be convicted",
+        "---\ngsd_state_version: 1\nstatus: ACTIVE\n"
+        "stopped_at: 'it''s a clean sentence with a doubled apostrophe'\n"
+        'last_activity: "clean"\n'
+        "last_updated: 2026-09-11\nprogress:\n  total_phases: 39\n---\n",
     )
 
     # Case (scan-level): a missing target FILE. Exercised against check_document's caller
@@ -450,9 +642,12 @@ def self_test() -> None:
 
     print(
         f"\nAll REQUIRED_STATE_KEYS proved capable of catching deletion, `last_activity` proved "
-        "incapable of being silenced by emptying, the historical defect and a synthetic "
-        "equivalent both proved rejectable, the new |- un-indentation trap is covered, and the "
-        f"positive control (both fields as |- blocks with raw quotes) is correctly accepted "
+        "incapable of being silenced by emptying, the historical raw-quote defect and a synthetic "
+        "equivalent both proved rejectable, the |- un-indentation trap is covered, the "
+        "divergence-shape check rejects |-, >-, and backslash-escaped \\\" scalars on both "
+        "required AND optional targets, and the positive control -- a single-line single-quoted "
+        "document, the shape STATE.md ships today, apostrophes doubled as '' -- is correctly "
+        "accepted while that one deliberately-kept '' divergence is not convicted "
         f"({case_count} self-test case(s) total)."
     )
 
