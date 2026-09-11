@@ -615,10 +615,6 @@
       height: 46px;
       padding: var(--space-2xs);
       border-radius: 10px;
-
-      &.gogIcon {
-        padding: 0px var(--space-3xs) var(--space-3xs);
-      }
     }
   }
 
