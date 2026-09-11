@@ -57,3 +57,31 @@ boundary rather than the title-text left edge, and record the alignment choice i
 ## Related
 
 - `43-LIVE-GATE.md` § Verdict, item 3's two FAIL rows and the note beneath them.
+
+## Update (2026-09-11, quick task 260911-qds) — REQ-43-19 run 2: the same rule fails a SECOND column
+
+**Still `status: OPEN`, still `ready: human` — this update does not close the todo.** The gift-gate
+fix (`2c68c17fe`) made item 2's side-by-side-pair sub-check reachable for the first time in run 2,
+and once measured, it fails the same way item 3 already did, against the same inherited rule.
+
+Measured (session `/tmp/gamelib-gate-20260911T062945Z`, preserved at `43-11-evidence/`): the
+KEY column's **content** left edge is **934.0 CSS px** across all 7 sampled shapes (Hard West 2,
+Asguaard, Californium, Crusader Kings III, CryoFall, Darkest Dungeon, Dex), spread **0.0** — the
+column box itself is exactly as immovable as items 1 and 7 already proved, same as TYPE (220.0)
+and the original KEY-content reading (1124.0) in run 1. But the `"Key"` **header label**'s left
+edge is **1085.5** — a **151.5 CSS px** divergence from the content it sits above.
+
+The arithmetic is centring, not drift: the KEY column spans **934.0 → 1254.0**, centre **1094.0**;
+a ~17 CSS px `"Key"` label centred there starts at **1085.5**, which is what was measured. This is
+the same `.App { text-align: center }` (`src/frontend/App.css:24`) rule, reaching a different
+column's header cell this time — `.humbleKeyColumnCell`'s `align-items: flex-start` insulates its
+*row content* (the button/text-link cells item 2 already tracked in run 1) but its **header**
+label was never given the same defence, so the inherited centring reaches it.
+
+**One rule, two columns, two runs.** Item 2's run-2 row is scored FAIL against the literal
+header-vs-content metric in `43-LIVE-GATE.md`, the same way item 3 was — not re-scored against the
+friendlier content-vs-content reading (934.0 vs 934.0, spread 0.0, which trivially passes) after
+seeing the number. As with GAME, the metric failed and the property did not: the same
+either-the-alignment-is-wrong-or-the-metric-is-wrong decision this todo already poses for the GAME
+column now governs the KEY column's header too. Not decided here — that is what `ready: human`
+means, and it now covers one more sub-check than it did when filed.
