@@ -174,4 +174,151 @@ describe('stripSourceComments integrity for this file (guards against comment pr
     const stripped = stripSourceComments(fixture)
     expect(stripped.match(ANY_GOGICON_RULE)?.length ?? 0).toBe(0)
   })
+
+  it('SANITY (260911-r8u): a comment naming align-items: flex-start and text-align: start as prose above a block declaring neither cannot satisfy either alignment assertion -- guards against Task 1\'s own rationale comment faking Task 2\'s results', () => {
+    const fixture = `
+      /* 260911-r8u: this rule defends against inherited align-items:
+         flex-start and text-align: start, described here in prose only. */
+      .humbleKeyGameCell {
+        display: flex;
+        flex-direction: column;
+      }
+    `
+    const stripped = stripSourceComments(fixture)
+    const match = /\.humbleKeyGameCell\s*\{([^}]*)\}/.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(/align-items:\s*flex-start/)
+    expect(match?.[1]).not.toMatch(/text-align:\s*start/)
+  })
+})
+
+/**
+ * Block-scoped anchor for `.humbleKeyGameCell`. Uses the same
+ * `\.SELECTOR\s*\{([^}]*)\}` block-exec idiom as the `.gogIcon` test above --
+ * this proves the declaration lives INSIDE the right rule, not merely
+ * somewhere in the file.
+ */
+const HUMBLE_KEY_GAME_CELL_BLOCK = /\.humbleKeyGameCell\s*\{([^}]*)\}/
+const ALIGN_ITEMS_FLEX_START = /align-items:\s*flex-start/
+
+/** Block-scoped anchor for `.humbleKeyRowTitle`. */
+const HUMBLE_KEY_ROW_TITLE_BLOCK = /\.humbleKeyRowTitle\s*\{([^}]*)\}/
+const TEXT_ALIGN_START = /text-align:\s*start/
+
+/**
+ * `.humbleKeysColumnHeader` appears TWICE in the stylesheet: once as part of
+ * the combined `.humbleKeysColumnHeader,\n.humbleKeyRow {` grid declaration
+ * (a comma follows the selector there, which is neither `\s` nor `{`, so
+ * this anchor does NOT match it) and once as its own standalone typography
+ * block. This anchor resolves to the standalone block only -- load-bearing,
+ * not incidental. The SANITY control below proves the combined form is
+ * excluded, so a future reformat of that selector fails loudly here instead
+ * of silently reading the wrong block.
+ */
+const HUMBLE_KEYS_COLUMN_HEADER_STANDALONE_BLOCK =
+  /\.humbleKeysColumnHeader\s*\{([^}]*)\}/
+
+/**
+ * `.humbleKeysEmptyState` also has a `.humbleKeysEmptyState h5` rule. The
+ * same `\s*\{` anchoring excludes it -- the SANITY control below proves it,
+ * because a `[^}]*` body scan that silently latched onto the wrong block
+ * would be a green check proving nothing.
+ */
+const HUMBLE_KEYS_EMPTY_STATE_BLOCK = /\.humbleKeysEmptyState\s*\{([^}]*)\}/
+const HUMBLE_KEYS_FILTERED_EMPTY_STATE_BLOCK =
+  /\.humbleKeysFilteredEmptyState\s*\{([^}]*)\}/
+const TEXT_ALIGN_CENTER = /text-align:\s*center/
+
+describe('Humble Keys text alignment (REQ-43-19, 260911-r8u)', () => {
+  const stripped = read(KEYS_CSS)
+
+  it('.humbleKeyGameCell declares align-items: flex-start', () => {
+    const match = HUMBLE_KEY_GAME_CELL_BLOCK.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(ALIGN_ITEMS_FLEX_START)
+  })
+
+  it('SANITY: the align-items check above fails against a known-bad input missing the declaration -- proves it is not vacuously true', () => {
+    const badFixture = '.humbleKeyGameCell {\n  display: flex;\n}'
+    const match = HUMBLE_KEY_GAME_CELL_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(ALIGN_ITEMS_FLEX_START)
+  })
+
+  it('.humbleKeyRowTitle declares text-align: start', () => {
+    const match = HUMBLE_KEY_ROW_TITLE_BLOCK.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(TEXT_ALIGN_START)
+  })
+
+  it('SANITY: the text-align check above fails against a known-bad input missing the declaration -- proves it is not vacuously true', () => {
+    const badFixture = '.humbleKeyRowTitle {\n  font-size: 1rem;\n}'
+    const match = HUMBLE_KEY_ROW_TITLE_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(TEXT_ALIGN_START)
+  })
+
+  it('the standalone .humbleKeysColumnHeader block declares text-align: start', () => {
+    const match = HUMBLE_KEYS_COLUMN_HEADER_STANDALONE_BLOCK.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(TEXT_ALIGN_START)
+  })
+
+  it('SANITY: the standalone-block check above fails against a known-bad input missing the declaration -- proves it is not vacuously true', () => {
+    const badFixture = '.humbleKeysColumnHeader {\n  font-size: 1rem;\n}'
+    const match = HUMBLE_KEYS_COLUMN_HEADER_STANDALONE_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(TEXT_ALIGN_START)
+  })
+
+  it('SANITY: the standalone-block anchor does NOT match the combined `.humbleKeysColumnHeader, .humbleKeyRow` grid declaration -- proves it resolves to the correct block, not the guarded combined form', () => {
+    const combinedFormOnly = `
+      .humbleKeysColumnHeader,
+      .humbleKeyRow {
+        grid-template-columns: 6.5rem minmax(0, 1fr) 20rem;
+        display: grid;
+        column-gap: var(--space-md);
+        align-items: start;
+      }
+    `
+    const match =
+      HUMBLE_KEYS_COLUMN_HEADER_STANDALONE_BLOCK.exec(combinedFormOnly)
+    expect(match).toBeNull()
+  })
+})
+
+describe('Humble Keys empty-state centring is deliberate and preserved', () => {
+  const stripped = read(KEYS_CSS)
+
+  it('.humbleKeysEmptyState still declares text-align: center', () => {
+    const match = HUMBLE_KEYS_EMPTY_STATE_BLOCK.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(TEXT_ALIGN_CENTER)
+  })
+
+  it('SANITY: the empty-state check above fails against a known-bad input missing the declaration -- proves it is not vacuously true', () => {
+    const badFixture = '.humbleKeysEmptyState {\n  padding: 1rem;\n}'
+    const match = HUMBLE_KEYS_EMPTY_STATE_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(TEXT_ALIGN_CENTER)
+  })
+
+  it('SANITY: the .humbleKeysEmptyState anchor does NOT match the .humbleKeysEmptyState h5 rule -- proves it resolves to the base block only, not the wrong nested rule', () => {
+    const h5OnlyFixture = '.humbleKeysEmptyState h5 {\n  font-weight: 600;\n}'
+    const match = HUMBLE_KEYS_EMPTY_STATE_BLOCK.exec(h5OnlyFixture)
+    expect(match).toBeNull()
+  })
+
+  it('.humbleKeysFilteredEmptyState still declares text-align: center', () => {
+    const match = HUMBLE_KEYS_FILTERED_EMPTY_STATE_BLOCK.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(TEXT_ALIGN_CENTER)
+  })
+
+  it('SANITY: the filtered-empty-state check above fails against a known-bad input missing the declaration -- proves it is not vacuously true', () => {
+    const badFixture = '.humbleKeysFilteredEmptyState {\n  padding: 1rem;\n}'
+    const match = HUMBLE_KEYS_FILTERED_EMPTY_STATE_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(TEXT_ALIGN_CENTER)
+  })
 })
