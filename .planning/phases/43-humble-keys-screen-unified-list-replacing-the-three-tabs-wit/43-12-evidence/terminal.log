@@ -1,0 +1,160 @@
+=== GATE BUILD RUN 3 — 2026-09-11T07:54:59Z — HEAD 3ccc6e689 ===
+=== GATE BUILD RUN 3 — 2026-09-11T07:54:59Z — HEAD 3ccc6e689 ===
+vite v6.3.5 building for production...
+[prune-stale-helper-binaries] nothing to prune
+transforming...
+✓ 13153 modules transformed.
+Export "install" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Library/components/GameCard/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "launch" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Library/components/GameCard/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "repair" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Game/GameSubMenu/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "install" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/components/UI/DLCList/DLC/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "launch" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Game/GamePage/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "updateGame" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/Game/GamePage/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "launch" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/ConsoleMode/components/LaunchOverlay/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "install" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/ConsoleMode/InstallOverlay/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+Export "updateGame" of module "src/frontend/helpers/library.ts" was reexported through module "src/frontend/helpers/index.ts" while both modules are dependencies of each other and will end up in different chunks by current Rollup settings. This scenario is not well supported at the moment as it will produce a circular dependency between chunks and will likely lead to broken execution order.
+Either change the import in "src/frontend/screens/ConsoleMode/index.tsx" to point directly to the exporting module or reconfigure "output.manualChunks" to ensure these modules end up in the same chunk.
+rendering chunks...
+[plugin vite:reporter] 
+(!) /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/index.tsx is dynamically imported by /Users/graysonmitchell/Projects/GameLib/src/frontend/App.tsx but also statically imported by /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/AdvertiseAvxForRosetta.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/AutoDXVK.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/AutoDXVKNVAPI.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/AutoVKD3D.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/CrossoverBottle.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/DisableUMU.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/EnableDXVKFpsLimit.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/EnableMsync.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/PreferSystemLibs.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/WinePrefix.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/components/WineVersionSelector.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/sections/GamesSettings/index.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Settings/sections/SyncSaves/index.tsx, dynamic import will not move module into another chunk.
+
+[plugin vite:reporter] 
+(!) /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Login/index.tsx is dynamically imported by /Users/graysonmitchell/Projects/GameLib/src/frontend/App.tsx but also statically imported by /Users/graysonmitchell/Projects/GameLib/src/frontend/components/UI/HumbleExpiryToast/index.tsx, /Users/graysonmitchell/Projects/GameLib/src/frontend/screens/Humble/Keys/index.tsx, dynamic import will not move module into another chunk.
+
+build/index.html                                               0.71 kB
+build/assets/SteamDeck_X-DwNz7cO3.png                          4.22 kB
+build/assets/Switch_Left_Stick-CWpl1pz1.png                    4.30 kB
+build/assets/PS5_Square-MF_dhaoW.png                           4.32 kB
+build/assets/SteamDeck_R1-BpoU8NKQ.png                         4.32 kB
+build/assets/rubik-hebrew-400-normal-DNObuXye.woff2            4.40 kB
+build/assets/PS4_Left_Stick-Cl1iGT5u.png                       4.43 kB
+build/assets/PS5_Cross-nKvb2zFH.png                            4.54 kB
+build/assets/PS4_Circle-D75wZQZ5.png                           4.56 kB
+build/assets/PS4_Right_Stick-Ajpmj18o.png                      4.68 kB
+build/assets/PS5_Triangle-D12MO93J.png                         4.72 kB
+build/assets/PS5_Left_Stick-Boc4jN1F.png                       5.13 kB
+build/assets/SteamDeck_Left_Stick-DJTqmJ0Q.png                 5.18 kB
+build/assets/XboxSeriesX_Left_Stick-Cji4AZEG.png               5.20 kB
+build/assets/PS5_Circle-DCilCbz_.png                           5.36 kB
+build/assets/PS5_Right_Stick-H1EufGXy.png                      5.43 kB
+build/assets/XboxSeriesX_Right_Stick-Bs9FE3IW.png              5.51 kB
+build/assets/SteamDeck_Right_Stick-CHgGJqZU.png                5.62 kB
+build/assets/rubik-cyrillic-ext-400-normal-B_ISZE4R.woff2      5.83 kB
+build/assets/PS5_Dpad-CUUVZ112.png                             6.14 kB
+build/assets/rubik-cyrillic-400-normal-CFCITy_P.woff2          7.30 kB
+build/assets/cabin-latin-ext-400-normal-CrIKaydt.woff2         8.32 kB
+build/assets/rubik-latin-ext-400-normal-BvADScal.woff2         8.93 kB
+build/assets/cabin-latin-400-normal-Csq5M_Nd.woff2            15.48 kB
+build/assets/rubik-latin-400-normal-CRbIWQXK.woff2            17.42 kB
+build/assets/cabin-all-400-normal-DslYAS_m.woff               35.50 kB
+build/assets/rubik-all-400-normal-LeYnpOeC.woff               51.78 kB
+build/assets/gamelib_card-Bv2CpHlk.svg                        78.99 kB
+build/assets/gamelib_card_missing-Bv06edlW.svg                79.11 kB
+build/assets/login-background-1536x864-CfEy_sdA.jpg          254.88 kB
+build/assets/gamelib-icon-B0ktIo4B.png                       667.34 kB
+build/assets/NotoColorEmoji.subset-C9pS9TGB.ttf              847.88 kB
+build/assets/index-BSLnMj59.css                                1.04 kB
+build/assets/index-Bj7w1EBI.css                                1.61 kB
+build/assets/index-lagMOwZj.css                                2.01 kB
+build/assets/index-BiHDWGwU.css                                2.37 kB
+build/assets/index-CAPgwDuK.css                                3.51 kB
+build/assets/index-C2REhoER.css                                3.91 kB
+build/assets/index-CqrVUnvK.css                                4.78 kB
+build/assets/index-CnE6nPeu.css                               10.75 kB
+build/assets/index-B1DOP_Eq.css                               11.57 kB
+build/assets/index-BQJrISzw.css                               17.14 kB
+build/assets/index-Cy4k4YPO.css                               19.82 kB
+build/assets/index-BrpVnAcJ.css                               27.65 kB
+build/assets/App-Dua1VRYD.css                                 53.32 kB
+build/assets/themeLabels-EpiVDjbk.css                         93.88 kB
+build/assets/index-CS0_1Y2y.css                              122.23 kB
+build/assets/tiny-invariant-BaFNuDhB.js                        0.08 kB
+build/assets/ExpandMore-DZw8Rcp9.js                            0.16 kB
+build/assets/play-icon-CPOulhvC.js                             0.32 kB
+build/assets/stop-icon-tPrFIqCe.js                             0.44 kB
+build/assets/index-_kloFKxw.js                                 0.47 kB
+build/assets/down-icon-DKtxAIu_.js                             0.53 kB
+build/assets/viewFilters-C0IWOJJI.js                           0.67 kB
+build/assets/gamelib_card_missing-CfVe-vlI.js                  0.79 kB
+build/assets/badges-CE3rfqYh.js                                1.16 kB
+build/assets/index-7u3AZ5_m.js                                 2.23 kB
+build/assets/hasStatus-DYOJj3b5.js                             3.79 kB
+build/assets/index-DculS78f.js                                 4.60 kB
+build/assets/index-WsbeeQWS.js                                 5.81 kB
+build/assets/index-CFELeLeU.js                                 7.42 kB
+build/assets/index-gsN43CzO.js                                10.42 kB
+build/assets/index-TbIeOm-H.js                                12.23 kB
+build/assets/index-BDONmBWd.js                                23.95 kB
+build/assets/index-_LMcJ0hM.js                                26.10 kB
+build/assets/Tooltip-CIAThafM.js                              33.17 kB
+build/assets/index-BzPKcG8z.js                                55.65 kB
+build/assets/index-dJum64O_.js                                74.21 kB
+build/assets/index-CrzpkBg3.js                                74.61 kB
+build/assets/index-CJVIC4PG.js                               366.07 kB
+build/assets/index-R1bmuVEL.js                               391.92 kB
+build/assets/themeLabels-C4W0Q34S.js                         594.97 kB
+build/assets/App-Bxb8iril.js                               1,230.62 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 5.08s
+[preserve-runner-symlinks] restored 12 symlink(s), skipped 0, rejected 0
+[assemble-renderer-dist] assembled 73 bundle key(s) + static files into /Users/graysonmitchell/Projects/GameLib/build/renderer
+
+> gamelib@0.7.0 build:sidecar-sea /Users/graysonmitchell/Projects/GameLib
+> pnpm build:sidecar && node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildSidecarSea.ts
+
+
+> gamelib@0.7.0 build:sidecar /Users/graysonmitchell/Projects/GameLib
+> esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --outfile=build/main/sidecar.js src/sidecar/index.ts
+
+
+  build/main/sidecar.js  1.3mb ⚠️
+
+⚡ Done in 19ms
+
+  ...5qx6zm74fqyjf22r0000gn/T/gamelib-runts-jc2e3G/buildSidecarSea.cjs  24.1kb
+
+⚡ Done in 19ms
+[build:sidecar-sea] decompress worker bundled and embedded as SEA asset "decompressWorker.js" -- consumed at runtime by DecompressPool via node:sea.getAsset().
+[build:sidecar-sea] Resolved target triple: aarch64-apple-darwin (native build)
+[build:sidecar-sea] native LZMA addon embedded as SEA asset "lzma_native.node" from node_modules/lzma-native/prebuilds/darwin-arm64/node.napi.node
+[build:sidecar-sea] lzma-native resolved paths baked for the worker bundle (root=/Users/graysonmitchell/Projects/GameLib/node_modules/lzma-native)
+SEA sidecar arch verified: arm64 (aarch64-apple-darwin)
+SEA sidecar compiled -> src-tauri/binaries/gamelib-sidecar-aarch64-apple-darwin
+
+> gamelib@0.7.0 build:decompress-worker-dev /Users/graysonmitchell/Projects/GameLib
+> node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDecompressWorkerDev.ts
+
+
+  ...fqyjf22r0000gn/T/gamelib-runts-gwirql/buildDecompressWorkerDev.cjs  8.0kb
+
+⚡ Done in 2ms
+[build:decompress-worker-dev] esbuild-aliased worker bundle -> build/main/decompressWorker.js
+        Info Looking up installed tauri packages to check mismatched versions...
+   Compiling gamelib-shell v0.7.0 (/Users/graysonmitchell/Projects/GameLib/src-tauri)
+    Finished `release` profile [optimized] target(s) in 46.89s
+       Built application at: /Users/graysonmitchell/Projects/GameLib/src-tauri/target/release/gamelib-shell
+    Bundling GameLib.app (/Users/graysonmitchell/Projects/GameLib/src-tauri/target/release/bundle/macos/GameLib.app)
+    Bundling GameLib_0.7.0_aarch64.dmg (/Users/graysonmitchell/Projects/GameLib/src-tauri/target/release/bundle/dmg/GameLib_0.7.0_aarch64.dmg)
+     Running bundle_dmg.sh
+        Warn The bundler was configured to create updater artifacts but no updater-enabled targets were built. Please enable one of these targets: app, appimage, msi, nsis
+    Cleaning /Users/graysonmitchell/Projects/GameLib/src-tauri/target/release/bundle/macos/GameLib.app
+    Finished 1 bundle at:
+        /Users/graysonmitchell/Projects/GameLib/src-tauri/target/release/bundle/dmg/GameLib_0.7.0_aarch64.dmg
+
+=== BUILD EXIT: 0 — 2026-09-11T07:56:23Z ===
+50d3c940d9aa007325d60b31d85997bc121759d52505eb145c65c5a1b54c3211  /tmp/gamelib-gate-20260911T075450Z/GameLib.app/Contents/MacOS/gamelib-shell
+50d3c940d9aa007325d60b31d85997bc121759d52505eb145c65c5a1b54c3211  src-tauri/target/release/gamelib-shell
+=== GATE LAUNCH 1 (run 3) — 2026-09-11T07:56:53Z ===
+70156 /private/tmp/gamelib-gate-20260911T075450Z/GameLib.app/Contents/MacOS/gamelib-shell

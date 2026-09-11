@@ -320,7 +320,7 @@ Must print nothing.
 
 ---
 
-## Verdict — run 1 (20260911T043842Z) and run 2 (20260911T062945Z)
+## Verdict — run 1 (20260911T043842Z), run 2 (20260911T062945Z), and run 3 (20260911T075450Z)
 
 **This section was authored empty. The author of this contract did not fill it in.** The operator
 (plan 43-10 Task 2) fills every cell below from their own run, then plan 43-10 Task 3 transcribes
@@ -344,27 +344,44 @@ it verbatim into the `**VERDICT:**` line and disposes of the two folded todos ac
 > pair, now reachable for the first time. Every other sub-check's run-1 value stands unrevisited;
 > run 2 did not re-measure them.
 
+> **RE-RUN 2026-09-11 by quick task 260911-s4f (RUN 3)**, transcribed verbatim from
+> `/tmp/gamelib-gate-20260911T075450Z/measurements-run3.md`, preserved at
+> `43-12-evidence/measurements-run3.md`. Build under test: HEAD `3ccc6e689`, carrying `2c68c17fe`
+> (the gift-gate fix), `c690a117a` (the divider-fallback + scoped-`gogIcon` fix from quick
+> `260911-p6s`), and `e344f589d` (the left-alignment fix from quick `260911-r8u`, the operator's
+> resolution of the design-decision todo runs 1 and 2 could not close); `gamelib-shell` sha256
+> `50d3c940…c3211`. Run 3 re-scores exactly the four sub-checks that changed as a result of
+> `e344f589d` — item 2's KEY-column header-vs-content alignment, item 3's GAME-column alignment,
+> item 4's separator (re-confirmed on new theme backgrounds), and item 6's icon colour
+> (re-confirmed on new sampled rows). Every other sub-check's earlier value stands unrevisited;
+> run 3 did not re-measure them.
+
 | Run | Item | Sub-check | Launch ordinal | Raw measurement | Threshold | Result |
 |---|---|---|---|---|---|---|
 | 1 | 1 | TYPE width, header vs. rows | 1 | data content left edge **220.0** on all 18 rows sampled, spread **0.0**; header "Type" label centred 271.5 vs track centre 272.0 | ±2 CSS px agreement | PASS |
 | 1 | 2 | KEY width, shape: full-width button | 1 | 1124.0 → 1443.5 (Hard West 2, CryoFall, Racine) | ±2 CSS px agreement | PASS |
 | 1 | 2 | KEY width, shape: side-by-side pair | — | shape cannot render: `claimAction` needs `!ownedElsewhere`, `giftAction` needed `ownedElsewhere` | ±2 CSS px agreement | SUPERSEDED by run 2 (was NOT ATTEMPTABLE) |
-| 2 | 2 | KEY width, shape: side-by-side pair | 1 | KEY-column CONTENT left edge **934.0 CSS px** across all 7 sampled shapes (Hard West 2, Asguaard, Californium, Crusader Kings III, CryoFall, Darkest Dungeon, Dex), spread **0.0**; the `"Key"` HEADER label's left edge is **1085.5**, a **151.5 CSS px** divergence. The Asguaard row now renders the Claim+Gift pair side by side (`Activate` + `Gift on Humble`), so this sub-check is ATTEMPTABLE for the first time (gift-gate fix `2c68c17fe`). Scored **FAIL** against the contract's literal metric (header label left edge vs content left edge) — **not** re-scored against the friendlier content-to-content metric after seeing the result. See the retitled note below. | ±2 CSS px agreement | **FAIL** |
+| 2 | 2 | KEY width, shape: side-by-side pair | 1 | KEY-column CONTENT left edge **934.0 CSS px** across all 7 sampled shapes (Hard West 2, Asguaard, Californium, Crusader Kings III, CryoFall, Darkest Dungeon, Dex), spread **0.0**; the `"Key"` HEADER label's left edge is **1085.5**, a **151.5 CSS px** divergence. The Asguaard row now renders the Claim+Gift pair side by side (`Activate` + `Gift on Humble`), so this sub-check is ATTEMPTABLE for the first time (gift-gate fix `2c68c17fe`). Scored **FAIL** against the contract's literal metric (header label left edge vs content left edge) — **not** re-scored against the friendlier content-to-content metric after seeing the result. See the retitled note below. | ±2 CSS px agreement | SUPERSEDED by run 3 (was **FAIL**) |
+| 3 | 2 | KEY width, header vs. content, re-scored after the `e344f589d` alignment fix | 1 | `"Key"` header label left edge **934.5**, KEY-column content left edge **934.0** on all 7 sampled rows, spread **0.5 CSS px**. Same literal header-vs-content metric run 2 failed at 151.5 divergence — the metric did not move, the layout did. | ±2 CSS px agreement | PASS |
 | 1 | 2 | KEY width, shape: bare text + text-link | 1 | left edge 1124.0 (Californium, Darkest Dungeon, FRONTIERS) | ±2 CSS px agreement | PASS |
 | 1 | 2 | KEY width, shape: bare text, no control | 1 | left edge 1124.0 (Crusader Kings III; Alchemy VTT generic) | ±2 CSS px agreement | PASS |
 | 1 | 2 | KEY width, shape: Pitfall-C disabled caption | — | no row in the library carries `keyindexResolved === false` | ±2 CSS px agreement | NOT OBSERVED |
-| 1 | 3 | GAME left edge, logo row | 1 | title-text left edges **618.5..702.5**, spread **84.0** (capture 1); see note below | ±2 CSS px agreement | **FAIL** |
-| 1 | 3 | GAME left edge, no-logo row | 1 | generic row title-text left edge **486.0** vs logo rows 626.5..702.5, spread **216.5** (capture 2) | ±2 CSS px agreement | **FAIL** |
+| 1 | 3 | GAME left edge, logo row | 1 | title-text left edges **618.5..702.5**, spread **84.0** (capture 1); see note below | ±2 CSS px agreement | SUPERSEDED by run 3 (was **FAIL**) |
+| 1 | 3 | GAME left edge, no-logo row | 1 | generic row title-text left edge **486.0** vs logo rows 626.5..702.5, spread **216.5** (capture 2) | ±2 CSS px agreement | SUPERSEDED by run 3 (was **FAIL**) |
+| 3 | 3 | GAME title-to-title left-edge agreement, re-scored after the `e344f589d` alignment fix — coverage across logo/GOG-logo/no-logo shapes | 1 | Sample composition, stated explicitly so the coverage claim is auditable: capture-2-top.png (near-black theme) gave **6 titles, all Steam-logo rows** — Aksun Playtest, Dredge, Fabledom, Persona 5 Royal, Warhammer 40,000: Rogue Trader, Settlement Survival, left edges 340.0-341.0, spread **1.0**. A second sample from capture-3-gog.png (light theme, taken to close the gap that the first six were all logoed) gave **9 titles covering all three TYPE-cell shapes** — 7 Steam-logo rows, 1 GOG-logo row (Racine), 1 no-logo/"Other"-text-label row (Alchemy VTT) — left edges 340.5-341.0, spread **0.5**. **Combined: 15 rows, two themes, three TYPE-cell shapes, title left edges 340.0-341.0, total spread 1.0 CSS px.** This directly supersedes both run-1 FAIL rows above (84.0 and 216.5) with evidence covering the same shapes, not by inference — the no-logo sub-check specifically is now covered by the Alchemy VTT row, not left unaddressed. | ±2 CSS px agreement | PASS |
+| 3 | 3 | GAME header label left edge vs. title left edges (new sub-check, first attemptable now that title-to-title agreement is resolved) | 1 | `"Game"` header label left edge **335.5**; six title left edges (capture-2-top.png sample) 340.0-341.0. Header-vs-titles divergence **5.5 CSS px**, EXCEEDS ±2. Scored against this contract's literal per-row metric applied to the header cell — **not** re-scored against the friendlier title-to-title agreement (1.0, which would trivially PASS) after seeing the result, matching the discipline already applied to item 3's run-1 rows and item 2's run-2 row. Cause unestablished; tracked by `2026-09-11-humble-keys-game-column-header-label-sits-5px-left-of-row-titles.md`. | ±2 CSS px agreement | **FAIL** |
 | 1 | 3 | GAME left edge, UNPICKED row | — | P6 inventory: **0** UNPICKED entitlements in the library | ±2 CSS px agreement | NOT ATTEMPTABLE |
 | 1 | 3 | GAME title wraps (no overflow) on a long title | 1 | longest title occupies 475.5 of a 768.0 track — no overflow, but no wrap triggered either | wraps, does not overflow its column | NOT ATTEMPTABLE |
 | 1 | 4 | Separator hairline present between rows | 1 | dark theme `[20,23,41]`: delta **108–109**. dark theme `[26,28,33]`: delta **11–19**. light theme `[237,239,244]`: delta **2** | ≥3/255 RGB delta at seam | SUPERSEDED by run 2 (was **FAIL** (light theme only; PASS in both dark themes)) |
-| 2 | 4 | Separator hairline present between rows | 1 | light theme `[237,239,244]`: 7 separators, each full-width at 107/107 sampled columns, peak seam `[209,210,215]` → max channel delta **29** (was 2). dark theme `[26,28,33]`: peak seam `[51,57,64]` → max channel delta **31** (was 11–19). Predicted-value corroboration: `color-mix(in srgb, currentColor 14%, transparent)` with `--text-default #20242c` over `[237,239,244]` computes `[208,211,216]`; measured `[209,210,215]`, agreement within ±1 — confirms the PASS is attributable to the new `color-mix` declaration actually painting, not to a theme change. | ≥3/255 RGB delta at seam | PASS |
+| 2 | 4 | Separator hairline present between rows | 1 | light theme `[237,239,244]`: 7 separators, each full-width at 107/107 sampled columns, peak seam `[209,210,215]` → max channel delta **29** (was 2). dark theme `[26,28,33]`: peak seam `[51,57,64]` → max channel delta **31** (was 11–19). Predicted-value corroboration: `color-mix(in srgb, currentColor 14%, transparent)` with `--text-default #20242c` over `[237,239,244]` computes `[208,211,216]`; measured `[209,210,215]`, agreement within ±1 — confirms the PASS is attributable to the new `color-mix` declaration actually painting, not to a theme change. | ≥3/255 RGB delta at seam | SUPERSEDED by run 3 (was PASS) |
+| 3 | 4 | Separator hairline present between rows, re-confirmed on new theme backgrounds | 1 | near-black bg `[8,10,11]` seam `[41,47,49]` → max channel delta **38**; light bg `[237,239,244]` seam `[208,209,215]` → max channel delta **30**; 7 separators, 103/103 sampled columns. Four distinct theme backgrounds have now passed across runs 2 and 3 (deltas 29, 30, 31, 38). | ≥3/255 RGB delta at seam | PASS |
 | 1 | 4 | Separator absent after last row | 1 | max channel delta below the final row = **2**, measured in dark `[26,28,33]` where a present separator reads 11–19 | <3/255 RGB delta below last row | PASS |
 | 1 | 5 | Icon height vs. target 19.2px | 1 | Steam **19.0 × 19.0**; GOG **19.0 × 17.5** (viewBox 34:31 in a square box → 19.2 × 31/34 = 17.5) | ±2 CSS px | PASS |
 | 1 | 5 | Icon top-edge alignment to title, 1-line row | 1 | deltas **−1.5 to −3.5** across 8 rows | ±2 CSS px | INCONCLUSIVE — metric compares an icon BOX top to a glyph INK top; ~2–3px is the expected internal-leading gap at 16px/1.2 |
 | 1 | 5 | Icon top-edge alignment to title, 2-line row | — | no 2-line row exists (no title wraps) | ±2 CSS px | NOT ATTEMPTABLE |
 | 1 | 6 | Icon colour, light theme | 1 | Steam `[57,59,64]` == `--text-secondary #393b41`. **GOG `[33,36,43]` ≠ `--text-secondary`** | matches `--text-secondary` resolved value | SUPERSEDED by run 2 (was **FAIL** (GOG; Steam passes)) |
-| 2 | 6 | Icon colour, light theme | 1 | GOG glyph (Racine) ink `[57,59,64]`; Steam glyph (Paths & Danger) ink `[57,59,64]`; Steam glyph (Satellite Reign) ink `[57,59,64]`; `--text-secondary #393b41` = `[57,59,65]`. All three match the token within ±1 — GOG now matches Steam exactly. Fixed by the scoped `.humbleKeyRowStoreLogo .gogIcon { fill: currentColor }` escape (quick `260911-p6s`); `_colors.scss:101`'s global `.gogIcon` rule and `GamePage/index.css:619` deliberately untouched. | matches `--text-secondary` resolved value | PASS |
+| 2 | 6 | Icon colour, light theme | 1 | GOG glyph (Racine) ink `[57,59,64]`; Steam glyph (Paths & Danger) ink `[57,59,64]`; Steam glyph (Satellite Reign) ink `[57,59,64]`; `--text-secondary #393b41` = `[57,59,65]`. All three match the token within ±1 — GOG now matches Steam exactly. Fixed by the scoped `.humbleKeyRowStoreLogo .gogIcon { fill: currentColor }` escape (quick `260911-p6s`); `_colors.scss:101`'s global `.gogIcon` rule and `GamePage/index.css:619` deliberately untouched. | matches `--text-secondary` resolved value | SUPERSEDED by run 3 (was PASS) |
+| 3 | 6 | Icon colour, light theme, re-confirmed on new sampled rows | 1 | GOG glyph (Racine) ink `[57,59,64]`; Steam glyphs (Darkest Dungeon, Satellite Reign, Dex) each ink `[57,59,64]`; `--text-secondary #393b41` = `[57,59,65]`. All four match the token within ±1 and are identical to each other. The bboxes independently corroborate the OPEN non-square-glyph todo (`2026-09-11-gog-logo-svg-renders-non-square-and-is-malformed.md`): GOG renders 19.0 × 17.5 against Steam's square 19.0 × 19.0. | matches `--text-secondary` resolved value | PASS |
 | 1 | 6 | Icon colour, dark theme | 1 | Steam `[177,177,177]` == `--text-secondary #b1b1b1` | matches `--text-secondary` resolved value | PASS (Steam) |
 | 1 | 7 | Title row / controls row left edge vs row list | 1 | controls row 220.5 vs row-list 220.0, spread **0.5** | ±2 CSS px agreement | PASS |
 | 1 | 7 | Header row column boundaries vs data rows | 1 | tracks identical on header and rows: TYPE 220.0→324.0, GAME 340.0→1108.0, KEY 1124.0→1444.0 | ±2 CSS px agreement (shared with item 1/2) | PASS |
@@ -380,9 +397,17 @@ it verbatim into the `**VERDICT:**` line and disposes of the two folded todos ac
 | 2 | — | `pgrep` count, while running (each launch) | 1 | 1 (window CGWindowID 4428, 1280x800 pt, launch showed exactly 1 instance) | 1 | PASS |
 | 2 | — | `pgrep` count, after final quit | — | the run-2 provenance evidences no post-quit `pgrep` — not invented as a PASS | 0 | NOT RECORDED (run 2) |
 | 2 | — | Closing inventory, zero-length files | — | the run-2 provenance evidences no closing inventory — not invented as a PASS | none | NOT RECORDED (run 2) |
+| 3 | — | Build command + exit status | — | `pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && pnpm exec tauri build` → **exit 0** | release build, no `--debug` | PASS |
+| 3 | — | Bundle path recovered | — | `.app` recovered from the DMG; `bundle/macos/` emptied by tauri's own cleanup step (P3); `gamelib-shell` sha256 `50d3c940d9aa007325d60b31d85997bc121759d52505eb145c65c5a1b54c3211` identical on both sides (P4); DMG 101,415,126 bytes | `.app` from DMG, hash-verified | PASS |
+| 3 | — | `pgrep` count, before first launch | — | 0, `p1-precondition.log` (the run-2 instance, PID 61734, was quit by the orchestrator) | 0 | PASS |
+| 3 | — | `pgrep` count, while running (each launch) | 1 | 1, window CGWindowID 4705, 1280x800 pt, captures 2560x1600, SCALE 2.0000 exact; P2 release build, no `--debug` | 1 | PASS |
+| 3 | — | P5 sync | 1 | `Humble sync finished: gamekeys=34 fetched=6/6 frozen=28 ok=6 schema_error=0` (19:57:13) — the same 34 keys as runs 1 and 2, so all three runs are like-for-like | non-empty synced list | PASS |
+| 3 | — | Alignment declarations present in the embedded renderer bundle, confirmed BEFORE measuring | — | All three of `e344f589d`'s declarations (`align-items: flex-start` on `.humbleKeyGameCell`, `text-align: start` on `.humbleKeysColumnHeader`, `text-align: start` on `.humbleKeyRowTitle`) confirmed present in `build/renderer` before any measurement was taken. This row exists because run 1's verdict was undermined by a build that predated a fix (`d60fcc85c`, missing `2c68c17fe`) — this pre-measurement check is the countermeasure that closed that hole, and it is what makes run 3's numbers trustworthy. | fix present in the measured build | PASS |
+| 3 | — | `pgrep` count, after final quit | — | the run-3 provenance evidences no post-quit `pgrep` — the app is still running (PID 70156) at the operator's discretion, per this plan's own hard constraint not to touch it — not invented as a PASS | 0 | NOT PERFORMED (run 3) |
+| 3 | — | Closing inventory, zero-length files | — | the run-3 provenance evidences no closing inventory — not invented as a PASS | none | NOT RECORDED (run 3) |
 
-**Census (post-edit table, run exactly as the plan specifies, `SUPERSEDED` rows excluded from the
-count):**
+**Historical run-2 census** (post run-1+run-2 edit, before run 3 was transcribed; retitled here,
+numbers kept verbatim, so this document does not carry two live counts):
 
 ```
 awk '/^## Verdict/,/^### Note on item/' 43-LIVE-GATE.md | grep '^| ' \
@@ -431,9 +456,75 @@ once a human decides whether centring is intended (restate the two gate items' m
 track boundaries) or accidental (add `align-items: flex-start` / `text-align: start` locally) —
 see that todo for the two remedy paths.
 
-### Note on item 3's two FAIL rows, and item 2's run-2 FAIL row — the metric failed, the property did not
+**Run-3 census** (post run-3 edit, this document's live count — executed against the file as
+committed, not predicted):
 
-Both item-3 FAILs are against this contract's **stated metric** ("the title-text left edge on every
+```
+awk '/^## Verdict/,/^### Note on item/' 43-LIVE-GATE.md | grep '^| ' \
+  | awk -F'|' '{print $(NF-1)}' | sed 's/^ *//;s/ *$//' | sort | uniq -c | sort -rn
+```
+
+```
+     27 PASS
+      3 SUPERSEDED by run 3 (was **FAIL**)
+      3 NOT ATTEMPTABLE
+      2 SUPERSEDED by run 3 (was PASS)
+      2 NOT RECORDED (run 2)
+      1 SUPERSEDED by run 2 (was NOT ATTEMPTABLE)
+      1 SUPERSEDED by run 2 (was **FAIL** (light theme only; PASS in both dark themes))
+      1 SUPERSEDED by run 2 (was **FAIL** (GOG; Steam passes))
+      1 Result
+      1 PASS (Steam)
+      1 NOT RECORDED (run 3)
+      1 NOT PERFORMED (run 3)
+      1 NOT PERFORMED
+      1 NOT OBSERVED
+      1 INCONCLUSIVE — metric compares an icon BOX top to a glyph INK top; ~2–3px is the expected internal-leading gap at 16px/1.2
+      1 **FAIL**
+```
+
+`PASS` (27) and `PASS (Steam)` (1) are both PASS, for the same reason as the run-2 census above.
+Excluding the header row (`Result`, 1) and every `SUPERSEDED …` bucket (3 + 2 + 1 + 1 + 1 = 8):
+**28 PASS / 1 FAIL across 29 scored.** 10 further rows are unscored and dispositioned: 3 NOT
+ATTEMPTABLE, 1 NOT OBSERVED, 1 INCONCLUSIVE, 1 NOT PERFORMED, 1 NOT PERFORMED (run 3), 1 NOT
+RECORDED (run 3), plus 2 NOT RECORDED (run 2).
+
+**This matches the plan's own stated expectation: "one remaining FAIL (item 3) is the
+expectation."** The count agrees — the single surviving `**FAIL**` row is item 3's new
+header-vs-titles sub-check (335.5 vs 340.0–341.0, divergence 5.5, EXCEEDS ±2). Per the same
+counting discipline as the run-2 census: the executed command's output, not hand arithmetic, is
+what this line reports, and here the two agree.
+
+**VERDICT: FAIL — 28 PASS / 1 FAIL across 29 scored sub-checks (run 1 + run 2 + run 3 combined,
+`SUPERSEDED` rows excluded).** 10 further sub-checks are unscored and explicitly dispositioned: 3
+NOT ATTEMPTABLE, 1 NOT OBSERVED, 1 INCONCLUSIVE, 1 NOT PERFORMED, 1 NOT PERFORMED (run 3), 1 NOT
+RECORDED (run 3), plus 2 NOT RECORDED (run 2).
+
+**Phase 43 does not close on this verdict.** The three FAIL rows the run-2 verdict carried —
+item 3 twice (GAME column, logo row and no-logo row, run 1) and item 2 once (KEY column, run
+2) — are now all `SUPERSEDED by run 3` with PASS, resolved by `e344f589d`'s alignment fix (items
+2 and 4 and 6 also flipped from PASS-with-old-evidence to PASS-with-run-3-evidence, since run 3
+re-measured them under the same build). **One new FAIL row remains, and it is not the same
+defect**: item 3's `GAME` column header label sits 5.5 CSS px left of the row titles it labels
+(335.5 vs 340.0–341.0), a small, previously-masked offset that the 216.5 px centring spread hid
+until `e344f589d` shrank it away. This is tracked as an open `ready: code` todo
+(`2026-09-11-humble-keys-game-column-header-label-sits-5px-left-of-row-titles.md`), not the
+`ready: human` design-decision todo the run-2 verdict pointed at — that todo's centring question
+is now moot, since titles agree with each other to 1.0 CSS px and no longer diverge by alignment
+choice. Phase 43 closes once the header offset's cause is established (a `tauri:dev` DOM
+inspection, per that todo) and fixed.
+
+### Note on item 3's run-1/run-2 FAIL rows (now SUPERSEDED) and item 3's new run-3 FAIL row — the metric failed, the property did not
+
+**As of run 3, every FAIL row this note originally discussed is `SUPERSEDED by run 3` with PASS.**
+`e344f589d` fixed the `.App { text-align: center }` inheritance this whole note is about — item
+3's two run-1 rows and item 2's run-2 row are all superseded (see the Verdict table and the
+run-3 census above). The analysis below is kept verbatim as the historical record of *why* those
+three rows failed and *what property held anyway* while they did; it is no longer live scoring.
+A distinct, much smaller FAIL survives item 3 under run 3 — see the paragraph after this note's
+original text for that one.
+
+Both item-3 FAILs (run 1) were against this contract's **stated metric** ("the title-text left edge on every
 sampled row must agree within ±2 CSS px"). Scored honestly, they fail: the spread is 84.0 and 216.5.
 
 The property item 3 exists to protect — *"the `GAME` column's left edge never shifts row to row"* —
@@ -466,6 +557,23 @@ against the literal header-vs-content metric, matching how item 3 was handled �
 against the friendlier content-vs-content metric (934.0 vs 934.0, spread 0.0, which would trivially
 PASS) after seeing that number. Same root cause as item 3, same disposition: a design-decision
 todo, not a code defect with an obvious fix.
+
+**Run 3's item-3 FAIL is a different rule, not the same one recurring.** With the centring defect
+gone, run 3 remeasured title-to-title agreement directly: six titles in `capture-2-top.png` land
+340.0–341.0, spread 1.0 CSS px, comfortably inside ±2 — and the run-3 ADDENDUM sample (nine more
+rows from `capture-3-gog.png`, covering the GOG-logo and no-logo TYPE-cell shapes the first
+sample lacked) confirms the same spread across 15 rows, two themes, three TYPE-cell shapes. That
+sub-check now PASSes and is recorded as its own row rather than folded into a superseded one. What
+remains is a **new** sub-check this document could not previously attempt: the `"Game"` header
+label's own left edge (335.5) against those now-converged title left edges (340.0–341.0) — a
+divergence of 5.5 CSS px, still outside ±2. This was scored against that literal per-row metric,
+**not** re-scored against the friendlier title-to-title number that had just passed — the same
+discipline this note already applied twice above. Cause is not established (see the todo,
+`2026-09-11-humble-keys-game-column-header-label-sits-5px-left-of-row-titles.md`); the header is
+three plain `<span>` grid items (`Keys/index.tsx:634-638`) while the title is a plain `<span>` with
+no padding (`HumbleKeyRow/index.tsx:729`), so no obvious markup asymmetry explains it. Filed as a
+`ready: code` todo, distinct from the (now-moot) `ready: human` centring todo the run-1/run-2 rows
+pointed at.
 
 ---
 
@@ -520,6 +628,22 @@ todo, not a code defect with an obvious fix.
    mutation) — the search box is ordinary in-app UI, and filtering does not alter row rendering,
    only row inclusion.
 
+### Run-3-scoped deviations (20260911T075450Z, quick task 260911-s4f)
+
+Numbering continues from run 2, which used 5-8 above (four items, not three) — the plan text
+that authored this task predicted run 3 would start at 8; the document's actual tail is 9.
+
+9. **The app launched to the Library tab, not Humble Keys**, so the operator navigated manually;
+   `capture-1-probe.png` documents the launch state.
+10. **"Redeemable keys only" was turned OFF** for the item-3 sample, so the row set would be
+    large and title lengths varied.
+11. **Item 6 again used the search box** to surface Racine — filtering, not shape manufacture, so
+    within P7 (which prohibits ownership-override clicks, not filtering). Reprises the same
+    run-2 deviation (8) above.
+12. **Items 2 and 3 were measured in a near-black theme while items 4 and 6 were measured in a
+    light theme**, because 2 and 3 are geometry and theme-independent whereas 4 and 6 are colour.
+    No item was scored across a theme switch.
+
 ## Contract defects found BY this run
 
 These are defects in **this document**, not in the software under test. All four run-1 defects
@@ -568,3 +692,11 @@ would execute*.
    inventory. A future revision of P6 needs a control-flow read of `resolveKeyScenario`, not just a
    data census against its named branches, to catch scenarios reachable only via fall-through.
 
+
+### Run-3-scoped contract defect (20260911T075450Z, quick task 260911-s4f)
+
+`measurements-run3.md` surfaced no new defect in this document itself. Run 3 exposed a defect in
+the *software under test* (the GAME header offset, now filed as
+`2026-09-11-humble-keys-game-column-header-label-sits-5px-left-of-row-titles.md`), but nothing
+in the run 3 evidence points at a flaw in this contract's own preconditions, evidence-capture
+protocol, or Structural Reachability Review — recorded here as a finding, not an omission.

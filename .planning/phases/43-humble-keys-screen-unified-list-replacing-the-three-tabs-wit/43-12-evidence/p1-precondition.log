@@ -1,0 +1,3 @@
+=== P1 (zero pre-existing instances) — 2026-09-11T07:54:50Z ===
+pgrep -fl gamelib-shell -> EMPTY (run-2 instance PID 61734 quit by orchestrator)
+P1 SATISFIED prior to first launch of run 3.
