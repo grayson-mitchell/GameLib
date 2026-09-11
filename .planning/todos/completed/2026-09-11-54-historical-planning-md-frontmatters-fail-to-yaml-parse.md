@@ -153,3 +153,103 @@ an open todo").
   live gate is needed (no UI, no OS-specific behavior) and no human decision remains outstanding;
   the parser-choice decision that used to block this was resolved in `260911-hyy`.
 - **`platform: any`** (unchanged) — correct, no OS dependency.
+
+## CLOSURE RECORD 2026-09-11 — quick `260911-vox` (the sweep), baseline HEAD `0265026ba`
+
+The one remaining item — the block-scalar sweep — is done. Every block-scalar frontmatter field in
+`.planning/` is now a single-line single-quoted scalar, and a fresh corpus census reports
+`blockScalarFields: 0` and `bareThroughSDK: 0`.
+
+### The population this todo records is an UNDERCOUNT. Do not quote it.
+
+This todo's body records **59 fields / 55,178 chars across 66 files**, and its own frontmatter title
+still says 56 / 64. Both are wrong, and wrong in the same direction, for the same reason: **every
+census run against this population walked top-level frontmatter keys only.** Re-measured at HEAD
+`0265026ba` with a census that walks nested values too:
+
+| | this todo's recorded figure | actually measured |
+| --- | --- | --- |
+| files holding block-scalar frontmatter fields | 66 | **68** |
+| block-scalar frontmatter fields | 103 | **160** |
+| fields read as a bare indicator through the SDK | 59 | **160 — every one of them** |
+| characters of narrative invisible to every GSD tool | 55,178 | **at least 87,962** |
+
+**96 of the 160 were nested inside list items and had never been counted** — `human_verification.[0].prior_state`,
+`gaps.[0].description` and the like. Only 64 were top-level keys, which is approximately the figure
+this todo kept re-deriving. Most-affected keys: `prior_state` x27, `notes` x22, `reason` x11,
+`description` x11, `disposition_note` x8, `result` x6.
+
+87,962 is a **floor, not a total**: 57 of the 160 sit in the two files js-yaml cannot parse, so
+their true character count is unmeasurable. Indicator breakdown was `>` x113, `|` x27, `>-` x19,
+`|-` x1 — no `+` chomping and no explicit indent indicators anywhere.
+
+This todo warned its successor to "treat the block-scalar count as a floor, not a total" and to
+re-measure at their own HEAD. That warning was correct and it is the only reason this was caught.
+
+### This todo's severity reasoning was wrong on its stated premise
+
+The `severity: medium` justification above rests on a bounded check that "found **no codepath** in
+either that reads `description`, `notes`, `disposition_note`, `evidence`, `rationale`, `resolution`
+or `gap_*` from frontmatter at all." **That check was scoped to `audit-open`. It never checked
+`audit-uat`.**
+
+At HEAD `0265026ba`, `gsd-sdk query audit-uat` emitted 59 items across 8 phases, and **4 fields in
+that output were the bare indicator string** — a live GSD tool printing `"|"` and `">"` where an
+operator expects a sentence. The live consumer this todo could not find existed the whole time.
+
+The four split into two unrelated populations, which is what made them useful as a post-condition:
+
+- **2 were Phase 38 frontmatter** (`38-VERIFICATION.md`, test 6 `expected` and `why_human`) — in
+  scope, **fixed by this sweep**; they now carry their real prose.
+- **2 were `27-UAT.md` BODY blocks** (`reason: |` at file lines 31 and 51, while that file's
+  frontmatter fences sit at lines 1 and 7) — `audit-uat`'s item parser reads YAML in document
+  bodies too, not only frontmatter. **Out of scope and still emitting `"|"` today.** Filed as
+  `.planning/todos/pending/2026-09-11-audit-uat-reads-block-scalars-in-document-bodies.md`. That
+  body population has **never been measured**, so the new todo asks for a census before any fix.
+
+By this todo's own stated rule — "if a future check finds a live reader of `notes`, `description`
+or any `gap_*` field on one of these files, severity should be revisited" — the trigger fired.
+
+### A second defect nobody had recorded: the SDK FABRICATES keys
+
+The SDK's line-based parser did not merely return the bare indicator. Where a block-scalar body
+line happened to contain `word:`, it read that as a mapping key. The sweep eliminated **19 such
+phantom keys across 12 files**, each one proven absorbed into its converted parent value.
+
+The clearest example, in `38-VERIFICATION.md`: the prose "That is now fixed: meta/trayIconVariants.ts
+generates icon-tray-{dark,light}{,@2x,@3x}.png from the" sat mid-sentence inside a `prior_state: >`
+body. The SDK truncated the sentence at "That is now " and manufactured a leaf
+`human_verification.[0].fixed` out of the remainder. Other fabricated keys included `VERDICT`,
+`ARITHMETIC`, `RESOLVED`, `UNCHANGED`, `PASS`, `FAIL` and the bare date `2026-08-22`. So the damage
+was not only invisible narrative — it was **plausible-looking structure that was never written**.
+
+### The conversion is NOT lossless
+
+Flattening to one line **destroyed paragraph structure in 25 fields and list structure in 3**,
+irreversibly, for any human reading the raw `.md`. 0 markdown tables were affected — the one shape
+that would have become unreadable rather than merely worse. This was accepted because the SDK's
+parser is line-based with no block-scalar support and no shape satisfies both parsers, **not
+because it was free**.
+
+### Un-gated residual — nothing holds this line
+
+`planning-frontmatter-gate.py` still covers only `STATE.md` and `ROADMAP.md`. **Nothing checks the
+68 files this sweep touched**, so a regression in any of them will turn nothing red. Widening the
+gate's `TARGETS` remains D3 in quick `260911-j88`, deliberately out of scope here.
+
+### Also deliberately untouched
+
+The **51 js-yaml-only failures stay broken**. Quick `260911-j88` proved repairing them is the wrong
+remedy: 51 of them contain an apostrophe, and single-quoting them to satisfy js-yaml would inject
+the `''` divergence into 51 SDK reads that are correct today. The post-sweep census still reports
+`jsyamlFail: 51`, unchanged.
+
+### Verification discharged
+
+V1 js-yaml value preservation (103 fields, whitespace-normalised object equality). V2 SDK
+correctness (160 fields non-bare; 103 SDK-vs-js-yaml exact pairs after de-doubling `''`; corpus
+census 0/0). V3 the two js-yaml-failing files (57 fields, full SDK-object diff, both still failing
+with the same reason, column and byte-identical offending line — `34.4.1`'s error line merely
+renumbered 83 to 68 because 15 lines were removed above it). V4 `audit-uat` shape identical
+(8 phases / 59 items, Phase 38 still 34 `human_needed`) with bare fields **4 -> exactly 2**.
+V5 post-fence bytes byte-identical in all 68 files. V6 both gates green before and after.
