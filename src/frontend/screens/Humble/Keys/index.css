@@ -264,12 +264,23 @@
    (`minmax(0, 1fr)`) track: a flexible grid child without it can
    overflow its column instead of wrapping, the same trap the
    library-filtering sketch's `min-width: 0` note names for its grid
-   container. */
+   container.
+
+   Operator decided left-alignment on 2026-09-11 (quick task 260911-r8u),
+   resolving the `ready: human` fork the alignment todo posed. `align-items:
+   flex-start` below exists ONLY to defend against the inherited
+   `src/frontend/App.css:24` `.App { text-align: center }` rule -- it is NOT
+   redundant with any default, and deleting it silently re-centres the
+   title. This places the title BOX at the track start; it shrink-wraps a
+   single-line title so centring inside the box becomes a no-op, but it does
+   NOT left-align the lines of a title that WRAPS to two lines -- that is
+   `.humbleKeyRowTitle`'s `text-align: start` below. */
 .humbleKeyGameCell {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
   min-width: 0;
+  align-items: flex-start;
 }
 
 /* Column 3 (KEY), 43-UI-SPEC "KEY column internal layout": fixed 20rem
@@ -325,11 +336,17 @@
   justify-content: center;
 }
 
+/* 260911-r8u: defends against inherited `.App { text-align: center }`
+   (`src/frontend/App.css:24`) reaching a WRAPPED two-line title. The
+   `.humbleKeyGameCell` `align-items: flex-start` above only shrink-wraps the
+   title box to its longest line -- the shorter of two wrapped lines would
+   still be centred inside that box without this declaration. */
 .humbleKeyRowTitle {
   font-size: var(--text-md);
   font-weight: var(--regular);
   color: var(--text-default);
   line-height: var(--humble-key-row-title-line-height);
+  text-align: start;
 }
 
 .humbleKeyRowCaption {
@@ -612,12 +629,21 @@
 /* 43-UI-SPEC "Screen Layout Contract" item 3: the column-header row,
    rendered by plan 43-07. Its column boundaries come from the combined
    `.humbleKeysColumnHeader, .humbleKeyRow` grid declaration above — this
-   block adds only its own typography, not layout. */
+   block adds only its own typography, not layout.
+
+   260911-r8u: `text-align: start` below defends against inherited
+   `.App { text-align: center }` (`src/frontend/App.css:24`) reaching the
+   three label grid-items (Type / Game / Key). This container is GRID, not
+   flex, so the flex-only `align-items: flex-start` instrument used on
+   `.humbleKeyGameCell` does not apply here -- the labels stretch to their
+   tracks regardless, and `text-align` is the only mechanism that moves the
+   text inside them. */
 .humbleKeysColumnHeader {
   padding-bottom: var(--space-xs);
   font-size: var(--text-xs);
   font-weight: var(--semibold);
   color: var(--text-secondary);
+  text-align: start;
   /* Same white-biased-fallback fix as .humbleKeyRow's border-bottom
      above -- see that comment for the measurement and the reason
      `--divider` cannot simply be defined per theme instead. */
