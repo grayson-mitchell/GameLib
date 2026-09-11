@@ -40,7 +40,10 @@ const registry = new Map<LongLivedChildId, Teardown>()
  * any given time, by construction of every current caller (D-03's shared-helper
  * singleton, and the single comet child per game session).
  */
-function registerLongLivedChild(id: LongLivedChildId, teardown: Teardown): () => void {
+function registerLongLivedChild(
+  id: LongLivedChildId,
+  teardown: Teardown
+): () => void {
   registry.set(id, teardown)
   return () => {
     // Only clear the entry if it still points at THIS registration -- guards against a

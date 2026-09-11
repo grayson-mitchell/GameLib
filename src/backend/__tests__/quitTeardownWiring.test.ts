@@ -48,7 +48,13 @@ const CARGO_TOML_PATH = join(
   'Cargo.toml'
 )
 
-const GOG_GAMES_TS_PATH = join(__dirname, '..', 'storeManagers', 'gog', 'games.ts')
+const GOG_GAMES_TS_PATH = join(
+  __dirname,
+  '..',
+  'storeManagers',
+  'gog',
+  'games.ts'
+)
 
 const BACKEND_SRC_DIR = join(__dirname, '..')
 
@@ -199,10 +205,7 @@ describe('No stale main.ts before-quit claim survives in src/backend (quick 2609
       const raw = readFileSync(file, 'utf-8')
       const lines = raw.split('\n')
       lines.forEach((line, i) => {
-        if (
-          line.includes(TARGET) &&
-          !/deleted|no longer exists/.test(line)
-        ) {
+        if (line.includes(TARGET) && !/deleted|no longer exists/.test(line)) {
           offenders.push(`${file}:${i + 1}: ${line.trim()}`)
         }
       })

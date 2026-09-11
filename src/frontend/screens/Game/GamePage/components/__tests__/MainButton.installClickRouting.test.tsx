@@ -164,9 +164,7 @@ function findInstallButtonsSpan(tree: ReactElement): ReactElement | undefined {
   )[0]
 }
 
-function installButtonOf(
-  tree: ReactElement
-): ReactElement<{
+function installButtonOf(tree: ReactElement): ReactElement<{
   onClick: () => Promise<void>
   disabled?: boolean
 }> {
@@ -199,9 +197,7 @@ interface ProbeResult {
   callsHandleInstall: boolean
 }
 
-async function probe(
-  flag: keyof GameContextType['is']
-): Promise<ProbeResult> {
+async function probe(flag: keyof GameContextType['is']): Promise<ProbeResult> {
   resetContext({ is: { ...DEFAULT_IS, [flag]: true } })
   // `openInstallGameModal` is a module-level mock shared across every call to
   // `probe()` within a single test (R2/R3 call it once per flag, in a loop).

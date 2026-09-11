@@ -539,8 +539,8 @@ export default function HumbleKeyRow({
   // `giftAction` prop. D-59 double-gift guard: once a gift has been
   // confirmed for this key, show the annotation instead of re-rendering the
   // button.
-  const giftContent = (scenario === 'gift-only' ||
-    scenario === 'claim-and-gift') &&
+  const giftContent =
+    (scenario === 'gift-only' || scenario === 'claim-and-gift') &&
     giftAction &&
     (giftAction.giftedAt !== null ? (
       <span className="humbleKeyGiftedAnnotation">
@@ -621,8 +621,10 @@ export default function HumbleKeyRow({
       case 'override-undo':
         return undoOverrideBadge
       case 'gift-only':
-        return giftContent && (
-          <span className="humbleKeyActionRow">{giftContent}</span>
+        return (
+          giftContent && (
+            <span className="humbleKeyActionRow">{giftContent}</span>
+          )
         )
       case 'login-and-claim':
         // D-43-12: ONE full-width button. Means "connect this store to
@@ -740,9 +742,7 @@ export default function HumbleKeyRow({
         {scenario === 'pick' ? (
           expirationLabel !== null && (
             <span className="humbleKeyStatusLine">
-              <span className="humbleKeyRowExpiration">
-                {expirationLabel}
-              </span>
+              <span className="humbleKeyRowExpiration">{expirationLabel}</span>
             </span>
           )
         ) : (
@@ -753,9 +753,7 @@ export default function HumbleKeyRow({
               {t(labelKey, labelDefault)}
             </span>
             {expirationLabel !== null && (
-              <span className="humbleKeyRowExpiration">
-                {expirationLabel}
-              </span>
+              <span className="humbleKeyRowExpiration">{expirationLabel}</span>
             )}
           </span>
         )}

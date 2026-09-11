@@ -46,10 +46,7 @@ import type { ReactElement, ReactNode } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import { HumbleKey } from 'common/types/humble'
-import HumbleKeyRow, {
-  HumbleKeyScenarioId,
-  resolveKeyScenario
-} from '../index'
+import HumbleKeyRow, { HumbleKeyScenarioId, resolveKeyScenario } from '../index'
 import UrgencyBadge from '../../UrgencyBadge'
 
 jest.mock('react-i18next', () => ({
@@ -620,9 +617,7 @@ describe('HumbleKeyRow three-column structure (43-05, D-43-13/14/15/17)', () => 
         typeof el.props?.className === 'string' &&
         el.props.className.split(' ').includes('humbleKeyOwnedBadge')
     )
-    const ownedBadgesInGame = collectElements(
-      gameCell?.props?.children
-    ).filter(
+    const ownedBadgesInGame = collectElements(gameCell?.props?.children).filter(
       (el) =>
         typeof el.props?.className === 'string' &&
         el.props.className.split(' ').includes('humbleKeyOwnedBadge')
@@ -632,9 +627,7 @@ describe('HumbleKeyRow three-column structure (43-05, D-43-13/14/15/17)', () => 
     expect(textContent(ownedBadgesInKey[0])).toContain(
       'Undo — I do own this game'
     )
-    expect(textContent(ownedBadgesInKey[0])).not.toContain(
-      'Not the same game'
-    )
+    expect(textContent(ownedBadgesInKey[0])).not.toContain('Not the same game')
   })
 
   it('renders ONLY the override-pending badge (with "Not the same game") inside humbleKeyColumnCell when undoOverride is absent', () => {
@@ -652,9 +645,7 @@ describe('HumbleKeyRow three-column structure (43-05, D-43-13/14/15/17)', () => 
         typeof el.props?.className === 'string' &&
         el.props.className.split(' ').includes('humbleKeyOwnedBadge')
     )
-    const ownedBadgesInGame = collectElements(
-      gameCell?.props?.children
-    ).filter(
+    const ownedBadgesInGame = collectElements(gameCell?.props?.children).filter(
       (el) =>
         typeof el.props?.className === 'string' &&
         el.props.className.split(' ').includes('humbleKeyOwnedBadge')
@@ -696,7 +687,10 @@ describe('HumbleKeyRow KEY-column scenario resolution (D-43-17, Phase 43 plan 06
   it("renders exactly one button — the pickOnHumble default — inside humbleKeyColumnCell for an UNPICKED key ('pick' scenario, REQ-43-02)", () => {
     const onPickOnHumble = jest.fn()
     const key = makeHumbleKey({ state: 'UNPICKED', platform: 'steam' })
-    const tree = HumbleKeyRow({ humbleKey: key, onPickOnHumble }) as ReactElement
+    const tree = HumbleKeyRow({
+      humbleKey: key,
+      onPickOnHumble
+    }) as ReactElement
 
     const buttons = collectElements(tree).filter((el) => el.type === 'button')
     expect(buttons).toHaveLength(1)
@@ -974,17 +968,16 @@ describe('HumbleKeyRow KEY-column scenario resolution (D-43-17, Phase 43 plan 06
 // gate.
 describe('Humble Keys index.css column geometry (source census only, REQ-43-19 verified live in 43-09)', () => {
   it('declares exactly one grid-template-columns rule, on the combined .humbleKeysColumnHeader, .humbleKeyRow selector', () => {
-    const css = readFileSync(
-      join(__dirname, '../../../index.css'),
-      'utf-8'
-    )
+    const css = readFileSync(join(__dirname, '../../../index.css'), 'utf-8')
 
     const matches = css.match(/grid-template-columns/g) ?? []
     expect(matches).toHaveLength(1)
 
     const declarationIndex = css.indexOf('grid-template-columns')
     const precedingCss = css.slice(0, declarationIndex)
-    const selectorBlockStart = precedingCss.lastIndexOf('.humbleKeysColumnHeader')
+    const selectorBlockStart = precedingCss.lastIndexOf(
+      '.humbleKeysColumnHeader'
+    )
     // The selector list must appear immediately before the declaration
     // (i.e. no closing brace of an unrelated rule in between).
     const closingBraceBetween = precedingCss
@@ -1146,9 +1139,7 @@ describe('gog_keyless KEY destination (REQ-43-24, D-43-11)', () => {
     )
 
     expect(button).toBeDefined()
-    expect(textContent(button?.props?.children).trim()).toBe(
-      'Claim on Humble'
-    )
+    expect(textContent(button?.props?.children).trim()).toBe('Claim on Humble')
   })
 
   it('the label does not contain "GOG" -- the click reaches Humble\'s site, not GOG\'s, and must not imply otherwise', () => {
@@ -1186,7 +1177,10 @@ describe('gog_keyless KEY destination (REQ-43-24, D-43-11)', () => {
   it('still renders the GOG branded logo in humbleKeyTypeCell -- the destination choice did not leak into platform identity', () => {
     const tree = makeGogKeylessRow()
     const typeCell = findByClassNamePart(tree, 'humbleKeyTypeCell')
-    const logo = findByClassNamePart(typeCell?.props?.children, 'humbleKeyRowStoreLogo')
+    const logo = findByClassNamePart(
+      typeCell?.props?.children,
+      'humbleKeyRowStoreLogo'
+    )
 
     expect(logo).toBeDefined()
     expect(logo?.props['aria-label']).toBe('GOG')

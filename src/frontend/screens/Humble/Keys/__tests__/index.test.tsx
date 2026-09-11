@@ -194,7 +194,9 @@ jest.mock('react', () => {
     },
     useMemo: (factory: () => unknown, deps?: unknown[]) => {
       const idx = cursor++
-      const prev = slots[idx] as { deps?: unknown[]; value: unknown } | undefined
+      const prev = slots[idx] as
+        | { deps?: unknown[]; value: unknown }
+        | undefined
       const changed =
         deps === undefined ||
         prev === undefined ||
@@ -314,7 +316,9 @@ function textContent(node: ReactNode): string {
     return node.map((child) => textContent(child as ReactNode)).join('')
   }
   if (typeof node === 'object' && 'props' in node) {
-    return textContent((node as ReactElement<PropsWithChildren>).props?.children)
+    return textContent(
+      (node as ReactElement<PropsWithChildren>).props?.children
+    )
   }
   return ''
 }
@@ -376,9 +380,13 @@ function findHumbleKeyRowProps(
 // only" concept), which is exactly the "adapted only for the unified
 // list's shape" adjustment the plan calls for.
 function turnOffRedeemableOnly(tree: ReactElement): ReactElement {
-  const toggle = collectElements(tree).find((el) => el.type === ToggleSwitchStub)
+  const toggle = collectElements(tree).find(
+    (el) => el.type === ToggleSwitchStub
+  )
   ;(
-    toggle!.props as { handleChange: (e: { target: { checked: boolean } }) => void }
+    toggle!.props as {
+      handleChange: (e: { target: { checked: boolean } }) => void
+    }
   ).handleChange({ target: { checked: false } })
   return rerender()
 }
@@ -524,7 +532,9 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
         mockApi.humbleGetClaimAnnotations.mockResolvedValue({
           'gk-1:mn-1': { redeemedAt: 999, keyindexResolved: true }
         })
-        mockApi.humbleUndoRedeemed.mockRejectedValue(new Error('ipc channel gone'))
+        mockApi.humbleUndoRedeemed.mockRejectedValue(
+          new Error('ipc channel gone')
+        )
 
         const initial = mount()
         await flushPromises()
@@ -606,7 +616,8 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
 
         mount()
         await flushPromises()
-        const callsAfterMount = mockApi.humbleGetClaimAnnotations.mock.calls.length
+        const callsAfterMount =
+          mockApi.humbleGetClaimAnnotations.mock.calls.length
 
         mockApi.humbleGetClaimAnnotations.mockResolvedValue({
           'gk-1:mn-1': { keyindexResolved: true },
@@ -617,9 +628,9 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
         rerender()
         await flushPromises()
 
-        expect(mockApi.humbleGetClaimAnnotations.mock.calls.length).toBeGreaterThan(
-          callsAfterMount
-        )
+        expect(
+          mockApi.humbleGetClaimAnnotations.mock.calls.length
+        ).toBeGreaterThan(callsAfterMount)
 
         const rows = findAllHumbleKeyRowProps(rerender())
         expect(rows).toHaveLength(2)
@@ -635,7 +646,8 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
 
         mount()
         await flushPromises()
-        const callsAfterMount = mockApi.humbleGetClaimAnnotations.mock.calls.length
+        const callsAfterMount =
+          mockApi.humbleGetClaimAnnotations.mock.calls.length
 
         rerender()
         await flushPromises()
@@ -653,15 +665,16 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
 
         mount()
         await flushPromises()
-        const callsAfterMount = mockApi.humbleGetClaimAnnotations.mock.calls.length
+        const callsAfterMount =
+          mockApi.humbleGetClaimAnnotations.mock.calls.length
 
         contextValue = defaultContext([makeHumbleKey({ gamekey: 'gk-9' })])
         rerender()
         await flushPromises()
 
-        expect(mockApi.humbleGetClaimAnnotations.mock.calls.length).toBeGreaterThan(
-          callsAfterMount
-        )
+        expect(
+          mockApi.humbleGetClaimAnnotations.mock.calls.length
+        ).toBeGreaterThan(callsAfterMount)
       })
 
       it('a key-set change does not latch mountedRef, so later fetches still apply', async () => {
@@ -770,7 +783,9 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
             keyindexResolved: true
           })
         )
-        mockApi.humbleUndoRedeemed.mockRejectedValue(new Error('ipc channel gone'))
+        mockApi.humbleUndoRedeemed.mockRejectedValue(
+          new Error('ipc channel gone')
+        )
 
         const initial = mount()
         await flushPromises()
@@ -808,7 +823,10 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
         },
         {
           name: 'redeemedSource is "ownership-exact" but redeemedAt is absent',
-          annotation: { redeemedSource: 'ownership-exact', keyindexResolved: true }
+          annotation: {
+            redeemedSource: 'ownership-exact',
+            keyindexResolved: true
+          }
         }
       ]
 
@@ -907,27 +925,37 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       contextValue = defaultContext([makeHumbleKey()])
       const tree = mount()
 
-      const toggle = collectElements(tree).find((el) => el.type === ToggleSwitchStub)
+      const toggle = collectElements(tree).find(
+        (el) => el.type === ToggleSwitchStub
+      )
       expect(toggle).toBeDefined()
       expect((toggle!.props as { value?: boolean }).value).toBe(true)
     })
 
-    it('REQ-43-06: a fresh mount always starts at query \'\', sort \'expiring\' and checkbox true -- and nothing in the component reads localStorage/sessionStorage', () => {
+    it("REQ-43-06: a fresh mount always starts at query '', sort 'expiring' and checkbox true -- and nothing in the component reads localStorage/sessionStorage", () => {
       contextValue = defaultContext([makeHumbleKey()])
       const tree = mount()
 
-      const search = collectElements(tree).find((el) => el.type === SearchBarStub)
-      const select = collectElements(tree).find((el) => el.type === SelectFieldStub)
-      const toggle = collectElements(tree).find((el) => el.type === ToggleSwitchStub)
+      const search = collectElements(tree).find(
+        (el) => el.type === SearchBarStub
+      )
+      const select = collectElements(tree).find(
+        (el) => el.type === SelectFieldStub
+      )
+      const toggle = collectElements(tree).find(
+        (el) => el.type === ToggleSwitchStub
+      )
 
       // Drive every control away from its default via the mocked React
       // useState setters, exactly as a user interacting with the real
       // controls would.
-      ;(search!.props as { onInputChanged: (v: string) => void }).onInputChanged(
-        'zzz'
-      )
       ;(
-        select!.props as { onChange: (e: { target: { value: string } }) => void }
+        search!.props as { onInputChanged: (v: string) => void }
+      ).onInputChanged('zzz')
+      ;(
+        select!.props as {
+          onChange: (e: { target: { value: string } }) => void
+        }
       ).onChange({ target: { value: 'alphabetical' } })
       ;(
         toggle!.props as {
@@ -972,16 +1000,22 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       contextValue = defaultContext([key])
       let tree = mount()
 
-      const search = collectElements(tree).find((el) => el.type === SearchBarStub)
-      ;(search!.props as { onInputChanged: (v: string) => void }).onInputChanged(
-        'Redeemed'
+      const search = collectElements(tree).find(
+        (el) => el.type === SearchBarStub
       )
+      ;(
+        search!.props as { onInputChanged: (v: string) => void }
+      ).onInputChanged('Redeemed')
       tree = rerender()
       expect(findHumbleKeyRowProps(tree, 'gk-1', 'mn-1')).toBeUndefined()
 
-      const toggle = collectElements(tree).find((el) => el.type === ToggleSwitchStub)
+      const toggle = collectElements(tree).find(
+        (el) => el.type === ToggleSwitchStub
+      )
       ;(
-        toggle!.props as { handleChange: (e: { target: { checked: boolean } }) => void }
+        toggle!.props as {
+          handleChange: (e: { target: { checked: boolean } }) => void
+        }
       ).handleChange({ target: { checked: false } })
       tree = rerender()
       expect(findHumbleKeyRowProps(tree, 'gk-1', 'mn-1')).toBeDefined()
@@ -995,10 +1029,12 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       contextValue = defaultContext([key])
       let tree = mount()
 
-      const search = collectElements(tree).find((el) => el.type === SearchBarStub)
-      ;(search!.props as { onInputChanged: (v: string) => void }).onInputChanged(
-        'Springtime'
+      const search = collectElements(tree).find(
+        (el) => el.type === SearchBarStub
       )
+      ;(
+        search!.props as { onInputChanged: (v: string) => void }
+      ).onInputChanged('Springtime')
       tree = rerender()
 
       expect(findHumbleKeyRowProps(tree, 'gk-1', 'mn-1')).toBeUndefined()
@@ -1047,14 +1083,19 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       expect(
         collectElements(tree).some((el) => {
           const cls = (el.props as { className?: string }).className
-          return typeof cls === 'string' && /GroupCount|humbleKeyGroupCount/.test(cls)
+          return (
+            typeof cls === 'string' &&
+            /GroupCount|humbleKeyGroupCount/.test(cls)
+          )
         })
       ).toBe(false)
     })
 
     it('REQ-43-17: no pinned-section element or standalone "Expiring soon" heading text renders anywhere', () => {
       contextValue = defaultContext([
-        makeHumbleKey({ expiration: new Date(Date.now() + 86400000).toISOString() })
+        makeHumbleKey({
+          expiration: new Date(Date.now() + 86400000).toISOString()
+        })
       ])
       const tree = mount()
 
@@ -1074,7 +1115,9 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       const tree = mount()
 
       expect(findByClassName(tree, 'humbleKeysEmptyState')).toBeDefined()
-      expect(findByClassName(tree, 'humbleKeysFilteredEmptyState')).toBeUndefined()
+      expect(
+        findByClassName(tree, 'humbleKeysFilteredEmptyState')
+      ).toBeUndefined()
     })
 
     it('REQ-43-20b: a non-empty library filtered to zero renders the filtered-empty state, and its clear button resets the query and the checkbox to false', () => {
@@ -1086,7 +1129,10 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       let tree = mount()
 
       expect(findByClassName(tree, 'humbleKeysEmptyState')).toBeUndefined()
-      const filteredEmpty = findByClassName(tree, 'humbleKeysFilteredEmptyState')
+      const filteredEmpty = findByClassName(
+        tree,
+        'humbleKeysFilteredEmptyState'
+      )
       expect(filteredEmpty).toBeDefined()
 
       const clearButton = collectElements(filteredEmpty).find(
@@ -1096,8 +1142,12 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       clearButton!.props.onClick()
 
       tree = rerender()
-      const search = collectElements(tree).find((el) => el.type === SearchBarStub)
-      const toggle = collectElements(tree).find((el) => el.type === ToggleSwitchStub)
+      const search = collectElements(tree).find(
+        (el) => el.type === SearchBarStub
+      )
+      const toggle = collectElements(tree).find(
+        (el) => el.type === ToggleSwitchStub
+      )
       expect((search!.props as { value: string }).value).toBe('')
       // Resets to false, NOT back to the true default -- re-applying the
       // default is what produced the filtered-empty state in the first place.
@@ -1149,7 +1199,9 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
         expect(pathIndex).toBeGreaterThan(-1)
         const blockEnd = source.indexOf('}', pathIndex)
         const block = source.slice(pathIndex, blockEnd)
-        expect(block).toContain('element: <Navigate to="/humble-keys" replace />')
+        expect(block).toContain(
+          'element: <Navigate to="/humble-keys" replace />'
+        )
       }
 
       const leafIndex = source.indexOf("path: 'humble-keys'")

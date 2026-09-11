@@ -200,7 +200,8 @@ describe('non-collision with the capture harness, drift-proof', () => {
   })
 
   test('a rendered new abandonment line matches NEITHER harness regex', () => {
-    const sample = '[shell] invoke abandoned (timeout): id=1575 channel=getCookies'
+    const sample =
+      '[shell] invoke abandoned (timeout): id=1575 channel=getCookies'
 
     expect(sample).not.toMatch(new RegExp(TARGET_DROP_RE_SOURCE))
     expect(sample).not.toMatch(new RegExp(LEGACY_TARGET_DROP_RE_SOURCE))

@@ -102,7 +102,8 @@ function loginPathForStore(store: HumbleGameLibLoginStore): string {
 export default function HumbleKeys() {
   const { t } = useTranslation()
   const { t: tGamelib } = useTranslation('gamelib')
-  const { humble, steam, gog, epic, showDialogModal } = useContext(ContextProvider)
+  const { humble, steam, gog, epic, showDialogModal } =
+    useContext(ContextProvider)
   const navigate = useNavigate()
 
   const [cooldownUntil, setCooldownUntil] = useState<number | undefined>(
@@ -347,9 +348,7 @@ export default function HumbleKeys() {
           text: t('humbleKeys.giftConfirmAction', 'Open Humble'),
           onClick: () => {
             void window.api.humbleRecordGiftLinkOpened(key.machineName)
-            window.api.openExternalUrl(
-              'https://www.humblebundle.com/home/keys'
-            )
+            window.api.openExternalUrl('https://www.humblebundle.com/home/keys')
             setGiftedMap((prev) => ({
               ...prev,
               [key.machineName]: Date.now()
@@ -648,7 +647,10 @@ export default function HumbleKeys() {
       ) : filteredKeys.length === 0 ? (
         <div className="humbleKeysFilteredEmptyState">
           <h5>
-            {tGamelib('gamelib:humbleKeys.filteredEmptyHeading', 'No keys match')}
+            {tGamelib(
+              'gamelib:humbleKeys.filteredEmptyHeading',
+              'No keys match'
+            )}
           </h5>
           <p>
             {tGamelib(

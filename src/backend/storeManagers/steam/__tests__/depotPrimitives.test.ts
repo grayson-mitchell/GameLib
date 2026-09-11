@@ -2339,21 +2339,22 @@ describe('decompress', () => {
           // mock forever, which is exactly the interleaving this test hits
           // (the external signal aborts WHILE still inside the token await,
           // before fetchChunk ever reaches its own fetch() call).
-          global.fetch = jest.fn((_url: unknown, opts?: { signal?: AbortSignal }) =>
-            new Promise((_resolve, reject) => {
-              const rejectAborted = () => {
-                const err = new Error('This operation was aborted')
-                err.name = 'AbortError'
-                reject(err)
-              }
-              if (opts?.signal?.aborted) {
-                rejectAborted()
-                return
-              }
-              opts?.signal?.addEventListener('abort', rejectAborted, {
-                once: true
+          global.fetch = jest.fn(
+            (_url: unknown, opts?: { signal?: AbortSignal }) =>
+              new Promise((_resolve, reject) => {
+                const rejectAborted = () => {
+                  const err = new Error('This operation was aborted')
+                  err.name = 'AbortError'
+                  reject(err)
+                }
+                if (opts?.signal?.aborted) {
+                  rejectAborted()
+                  return
+                }
+                opts?.signal?.addEventListener('abort', rejectAborted, {
+                  once: true
+                })
               })
-            })
           ) as unknown as typeof fetch
 
           const chunk = {

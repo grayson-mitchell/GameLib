@@ -167,7 +167,10 @@ function resetStoreMocks() {
     localRedeemedData.get(k)
   )
   mockLocalRedeemedStore.set.mockImplementation(
-    (k: string, v: { redeemedAt: number; source?: 'user' | 'ownership-exact' }) => {
+    (
+      k: string,
+      v: { redeemedAt: number; source?: 'user' | 'ownership-exact' }
+    ) => {
       localRedeemedData.set(k, v)
     }
   )
@@ -2664,9 +2667,9 @@ describe('HumbleLibrary', () => {
 
       expect(secondRedeemedAt).toBe(firstRedeemedAt)
       const audit = auditData.get('gk-churn:gk-churn_key')
-      expect(
-        audit?.filter((a) => a.event === 'ownership_settled').length
-      ).toBe(1)
+      expect(audit?.filter((a) => a.event === 'ownership_settled').length).toBe(
+        1
+      )
     })
   })
 
@@ -3553,13 +3556,13 @@ describe('HumbleLibrary', () => {
   // reveal_success/reveal_failed/reveal_ambiguous record automatically wins,
   // with no second writer that could drift from the audit trail.
   describe('HumbleLibrary.getClaimAnnotations() — DD-3 revealRefusedAt derivation', () => {
-    test('reports revealRefusedAt equal to the reveal_rejected record\'s `at`, and revealedAt undefined', async () => {
+    test("reports revealRefusedAt equal to the reveal_rejected record's `at`, and revealedAt undefined", async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
       mockAdapterRevealKey.mockResolvedValue({ status: 'rejected_by_server' })
       await HumbleLibrary.revealKey('gk1', 'gk1_key')
-      const rejectedAt = auditData.get('gk1:gk1_key')?.find(
-        (a) => a.event === 'reveal_rejected'
-      )?.at as number
+      const rejectedAt = auditData
+        .get('gk1:gk1_key')
+        ?.find((a) => a.event === 'reveal_rejected')?.at as number
 
       const annotations = HumbleLibrary.getClaimAnnotations()
 

@@ -480,12 +480,14 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     writeSend(input, 'quit-2', 'quit', [])
     await flush()
 
-    const registryOrder = mockedShutdownLongLivedChildren.mock.invocationCallOrder[0]
+    const registryOrder =
+      mockedShutdownLongLivedChildren.mock.invocationCallOrder[0]
     const exitCallIndex = mockRequestRustInvoke.mock.calls.findIndex(
       ([channel]) => channel === RUST_APP_EXIT
     )
     expect(exitCallIndex).toBeGreaterThanOrEqual(0)
-    const exitOrder = mockRequestRustInvoke.mock.invocationCallOrder[exitCallIndex]
+    const exitOrder =
+      mockRequestRustInvoke.mock.invocationCallOrder[exitCallIndex]
     expect(registryOrder).toBeLessThan(exitOrder)
   })
 

@@ -748,10 +748,7 @@ describe('HumbleClaimWizard', () => {
       expect(textContent(tree)).toContain(REJECTED_BODY)
       // The reveal is offered, not blocked — DD-1's whole point is a
       // restored claim path, never a silent auto-retry.
-      const confirm = findByClassNamePart(
-        tree,
-        'humbleClaimWizardRevealButton'
-      )
+      const confirm = findByClassNamePart(tree, 'humbleClaimWizardRevealButton')
       expect(confirm).toBeDefined()
     })
 
