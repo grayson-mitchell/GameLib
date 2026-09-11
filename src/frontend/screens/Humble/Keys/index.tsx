@@ -25,7 +25,7 @@ import { ClaimAnnotation, HumbleKey } from 'common/types/humble'
 import {
   compareWaiting,
   matchesKeySearch,
-  isGiftableSpare,
+  isGiftable,
   WAITING_STATES
 } from 'common/humble/viewFilters'
 import { GENERIC_KEY_PLATFORM } from 'common/humble/genericKeyPlatform'
@@ -443,7 +443,12 @@ export default function HumbleKeys() {
           }
         : undefined
 
-    const giftAction = isGiftableSpare(key)
+    // 260911-nyq: gated on `isGiftable` (may this key be given away at all),
+    // NOT `isGiftableSpare` (is this key surplus to me). The spare test
+    // requires `ownedElsewhere` and the claim gate above requires
+    // `!ownedElsewhere`, so gating the affordance on the classification made
+    // the UI-SPEC scenario-2 Claim+Gift pair unreachable for every key.
+    const giftAction = isGiftable(key)
       ? {
           giftedAt: giftedMap[key.machineName] ?? null,
           onGift: () => openGiftDialog(key)

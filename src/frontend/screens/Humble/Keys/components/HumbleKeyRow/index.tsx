@@ -16,6 +16,7 @@ import {
   HumbleKeyTypePresentation,
   HumbleStoreLogoId
 } from 'common/humble/keyTypePresentation'
+import { isGiftableSpare } from 'common/humble/viewFilters'
 import { STATE_LABEL_KEYS } from '../../stateLabels'
 import UrgencyBadge from '../UrgencyBadge'
 
@@ -246,12 +247,13 @@ export function resolveKeyScenario(params: {
   if (humbleKey.ownedElsewhere && humbleKey.matchConfidence === 'fuzzy') {
     return 'override-pending'
   }
-  if (
-    humbleKey.ownedElsewhere &&
-    humbleKey.state === 'UNREVEALED' &&
-    hasGiftAction &&
-    !hasClaimAction
-  ) {
+  // 260911-nyq: `isGiftableSpare` is the article, not a re-derivation. This
+  // branch previously inlined its `ownedElsewhere && UNREVEALED` body, making
+  // the spare rule a second mirror that could drift from the exported one.
+  // The SPARE classification is still what selects scenario 3 (full-width
+  // single gift button); the gift AFFORDANCE is a wider question, answered by
+  // `isGiftable` at the caller.
+  if (isGiftableSpare(humbleKey) && hasGiftAction && !hasClaimAction) {
     return 'gift-only'
   }
   if (hasClaimAction) {

@@ -95,6 +95,49 @@ export function matchesKeySearch(key: HumbleKey, query: string): boolean {
  * gift the spare?" affordance. Owned + REVEALED keys are deliberately
  * excluded — reveal forfeits the gift link (spec §2.1).
  */
-export function isGiftableSpare(key: HumbleKey): boolean {
+export function isGiftableSpare(
+  key: Pick<HumbleKey, 'ownedElsewhere' | 'state'>
+): boolean {
   return key.ownedElsewhere && key.state === 'UNREVEALED'
+}
+
+/**
+ * Quick task 260911-nyq. Whether the GIFT AFFORDANCE may be offered for this
+ * key at all -- deliberately NOT the same question as `isGiftableSpare`
+ * above, which classifies a key as a spare (you already own the game, so
+ * this copy is surplus).
+ *
+ * Gating the affordance on the spare CLASSIFICATION was the defect: the claim
+ * gate (`screens/Humble/Keys/index.tsx:421-424`) requires `!ownedElsewhere`
+ * and the spare test requires `ownedElsewhere`, so no key could hold both and
+ * `43-UI-SPEC.md:313` scenario 2's Claim+Gift pair was unreachable for every
+ * key in every library. Owning a game elsewhere is not a precondition for
+ * being allowed to give a key away.
+ *
+ * Two clauses, each load-bearing for a different reason:
+ *
+ * - `state === 'UNREVEALED'` is a DOMAIN constraint carried over from
+ *   `isGiftableSpare`: revealing a key forfeits Humble's gift link (spec
+ *   2.1), so a REVEALED key cannot be gifted no matter who owns it. Because
+ *   `HumbleKeyState` is a single enum, this clause also excludes REDEEMED,
+ *   UNREDEEMABLE (expired) and UNPICKED without naming them.
+ * - `gog_keyless` is excluded because a keyless entitlement redeems
+ *   server-side to the linked GOG account and carries no code to transfer --
+ *   the same reason `REDEEM_URL_BUILDERS` (`keyTypePresentation.ts:121-125`)
+ *   omits it. Offering "gift" there would promise a hand-off the user cannot
+ *   complete.
+ *
+ * Both predicates take the narrow `Pick` they actually read rather than a
+ * whole `HumbleKey`, so `resolveKeyScenario` -- which itself receives only a
+ * projection -- can call them instead of re-deriving their bodies inline.
+ *
+ * `GENERIC_KEY_PLATFORM` is deliberately NOT excluded: the claim gate drops
+ * it for want of a redeem destination, but `openGiftDialog` needs no
+ * destination -- it records the open and sends the user to Humble's own keys
+ * page, which is platform-agnostic.
+ */
+export function isGiftable(
+  key: Pick<HumbleKey, 'state' | 'platform'>
+): boolean {
+  return key.state === 'UNREVEALED' && key.platform !== 'gog_keyless'
 }

@@ -11,6 +11,7 @@ import {
   compareWaiting,
   matchesKeySearch,
   isGiftableSpare,
+  isGiftable,
   WAITING_STATES
 } from 'common/humble/viewFilters'
 import { GENERIC_KEY_PLATFORM } from 'common/humble/genericKeyPlatform'
@@ -284,5 +285,104 @@ describe('isGiftableSpare (scenario 3)', () => {
   test('false for owned + REDEEMED', () => {
     const key = makeKey({ ownedElsewhere: true, state: 'REDEEMED' })
     expect(isGiftableSpare(key)).toBe(false)
+  })
+})
+
+/**
+ * Quick task 260911-nyq. The defect these tests exist for: the gift
+ * affordance was gated on `isGiftableSpare` (`ownedElsewhere && UNREVEALED`)
+ * while the claim affordance is gated on `!ownedElsewhere`, so no key could
+ * ever hold both and `43-UI-SPEC.md:313` scenario 2's Claim+Gift pair was
+ * unreachable for every key in every library.
+ *
+ * `claimGateHolds` below MIRRORS the real claim gate at
+ * `screens/Humble/Keys/index.tsx:421-424`. It is a mirror, not the article
+ * itself, because that gate is an inline expression inside a React component
+ * closure with no exported form to import. If the real gate is ever changed,
+ * this mirror must change with it — the co-occurrence assertion is only as
+ * honest as this copy.
+ */
+function claimGateHolds(key: HumbleKey): boolean {
+  return (
+    !key.ownedElsewhere &&
+    key.platform !== GENERIC_KEY_PLATFORM &&
+    (WAITING_STATES.has(key.state) || key.state === 'REDEEMED')
+  )
+}
+
+describe('the claim gate and the gift gate are NOT mutually exclusive', () => {
+  test('a single key satisfies BOTH gates -- UI-SPEC scenario 2s pair is reachable', () => {
+    const key = makeKey({
+      ownedElsewhere: false,
+      state: 'UNREVEALED',
+      platform: 'steam'
+    })
+    expect(claimGateHolds(key)).toBe(true)
+    expect(isGiftable(key)).toBe(true)
+  })
+
+  test('the old spare-based gate could NEVER co-occur with the claim gate', () => {
+    const shapes: HumbleKey[] = [
+      makeKey({ ownedElsewhere: false, state: 'UNREVEALED' }),
+      makeKey({ ownedElsewhere: true, state: 'UNREVEALED' }),
+      makeKey({ ownedElsewhere: false, state: 'REVEALED' }),
+      makeKey({ ownedElsewhere: true, state: 'REVEALED' }),
+      makeKey({ ownedElsewhere: false, state: 'REDEEMED' }),
+      makeKey({ ownedElsewhere: true, state: 'REDEEMED' })
+    ]
+    // Regression anchor: this is the exact contradiction the bug was made of.
+    // It must stay true of `isGiftableSpare`, which keeps its spare meaning.
+    expect(shapes.some((k) => claimGateHolds(k) && isGiftableSpare(k))).toBe(
+      false
+    )
+    // ...and must now be FALSE of the affordance gate that replaced it.
+    expect(shapes.some((k) => claimGateHolds(k) && isGiftable(k))).toBe(true)
+  })
+})
+
+describe('isGiftable (the affordance gate)', () => {
+  test('true for an unowned UNREVEALED key -- the shape the old gate refused', () => {
+    expect(
+      isGiftable(makeKey({ ownedElsewhere: false, state: 'UNREVEALED' }))
+    ).toBe(true)
+  })
+
+  test('still true for an owned UNREVEALED key -- gift-only must not regress', () => {
+    expect(
+      isGiftable(makeKey({ ownedElsewhere: true, state: 'UNREVEALED' }))
+    ).toBe(true)
+  })
+
+  test('spec 2.1: false once REVEALED -- reveal forfeits the gift link', () => {
+    expect(
+      isGiftable(makeKey({ ownedElsewhere: false, state: 'REVEALED' }))
+    ).toBe(false)
+    expect(
+      isGiftable(makeKey({ ownedElsewhere: true, state: 'REVEALED' }))
+    ).toBe(false)
+  })
+
+  test('false for REDEEMED, UNREDEEMABLE and UNPICKED', () => {
+    for (const state of [
+      'REDEEMED',
+      'UNREDEEMABLE',
+      'UNPICKED'
+    ] as HumbleKeyState[]) {
+      expect(isGiftable(makeKey({ state }))).toBe(false)
+    }
+  })
+
+  test('false for gog_keyless -- a keyless entitlement has no code to transfer', () => {
+    expect(
+      isGiftable(makeKey({ state: 'UNREVEALED', platform: 'gog_keyless' }))
+    ).toBe(false)
+  })
+
+  test('true for a generic-platform key -- gifting needs no redeem destination', () => {
+    expect(
+      isGiftable(
+        makeKey({ state: 'UNREVEALED', platform: GENERIC_KEY_PLATFORM })
+      )
+    ).toBe(true)
   })
 })
