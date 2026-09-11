@@ -2,7 +2,7 @@
 created: 2026-09-11
 title: "Humble Keys GAME titles and column headers are centre-aligned by an inherited .App rule"
 area: humble-keys-ui
-status: OPEN
+status: RESOLVED
 severity: minor
 platform: any
 ready: human
@@ -85,3 +85,52 @@ seeing the number. As with GAME, the metric failed and the property did not: the
 either-the-alignment-is-wrong-or-the-metric-is-wrong decision this todo already poses for the GAME
 column now governs the KEY column's header too. Not decided here — that is what `ready: human`
 means, and it now covers one more sub-check than it did when filed.
+
+## Resolution (2026-09-11, quick task 260911-r8u)
+
+**The operator's decision: left-aligned.** The `ready: human` fork this todo posed — "if the
+alignment is deliberate, the gate's metric is wrong; if the alignment is accidental, the code is
+wrong" — was answered in favour of the **CODE being wrong**. Both the GAME title and all three
+column-header labels (Type, Game, Key) are now left-aligned.
+
+**The CODE changed and the gate metric did NOT.** `43-LIVE-GATE.md` items 2 and 3 keep their
+thresholds exactly as written, unedited — see "what was deliberately left untouched" below.
+
+**Exactly which declarations were added**, all three in
+`src/frontend/screens/Humble/Keys/index.css`:
+
+- `align-items: flex-start` on `.humbleKeyGameCell` — places the title box at the track start,
+  matching the defence `.humbleKeyTypeCell` and `.humbleKeyColumnCell` already carry.
+- `text-align: start` on `.humbleKeyRowTitle` — the one that handles WRAPPED two-line titles,
+  which `align-items: flex-start` alone does not left-align (it only shrink-wraps the box to its
+  longest line; the shorter line inside that box would still be centred without this).
+- `text-align: start` on the **standalone** `.humbleKeysColumnHeader` block (the typography-only
+  block, not the combined `.humbleKeysColumnHeader, .humbleKeyRow` grid declaration that fixes
+  column boundaries) — the header is a grid container, not flex, so the flex-only instrument used
+  on `.humbleKeyGameCell` does not apply; its three labels stretch to their tracks and
+  `text-align` is the mechanism that moves the text inside them.
+
+**What was deliberately left untouched, and why:**
+
+- `src/frontend/App.css`'s `.App { text-align: center }` (`:24`) — blast radius is every screen
+  in the application; this todo's own prescribed fix was the local defence added above, not
+  touching the inherited rule.
+- `.humbleKeysEmptyState` and `.humbleKeysFilteredEmptyState` — both deliberate empty-state
+  messages, both still declare `text-align: center`. A new gate assertion now protects both so a
+  future start-alignment sweep of this file cannot silently de-centre them.
+
+**The new gate**: `src/frontend/screens/Humble/Keys/__tests__/humbleKeysStylesheet.test.ts` gained
+five new positive assertions (three alignment, two empty-state-preservation), each with a paired
+SANITY negative control firing the same regex at an inline known-bad fixture, plus two
+regex-hazard-specific SANITY controls (the `.humbleKeysColumnHeader` anchor excludes the combined
+grid form; the `.humbleKeysEmptyState` anchor excludes the nested `... h5` rule) and one more
+stripper-integrity SANITY test proving the new rationale comments in `index.css` — which
+deliberately name `align-items: flex-start` and `text-align: start` as prose — cannot fake either
+assertion. Same honest limitation the rest of that file carries: the Frontend jest project is
+`testEnvironment: 'node'` with no CSS engine, so this proves the SOURCE says the right thing and
+can never prove it RENDERS.
+
+**`43-LIVE-GATE.md` items 2 and 3 remain FAIL**, the file itself unedited, pending a future live
+re-measurement against a packaged build containing this fix. Re-scoring them from a source change
+would be substituting an inference for a measurement — exactly the substitution this todo's own
+fork warned against. **This re-measurement is now the ONLY thing blocking Phase 43 closure.**
