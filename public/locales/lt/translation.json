@@ -802,7 +802,6 @@
         "disable_dialog_backdrop_close": "Neleisti dialogų langų uždarymą spaustėlius ne jo lange",
         "actions_font_family_default": "Veiksmų šrifto „šeima“ (Numatyta: {{fontFamily}})",
         "content_font_family_default": "Turinio šrifto „šeima“ (Numatyta: {{fontFamily}})",
-        "disable_smooth_scrolling": "Išjungti švelnų slinkimą (reikalauja paleidimo iš naujo)",
         "disable_animations": "Išjungti grafinės sąsajos animacijas"
     },
     "add_game": "Pridėti žaidimą",

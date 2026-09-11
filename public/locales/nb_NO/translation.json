@@ -10,7 +10,6 @@
         "titles_always_visible": "Vis alltid titler i biblioteket",
         "content_font_family_default": "Content Font Family (Standard: {{fontFamily}})",
         "actions_font_family_default": "Actions Font Family (Standard: {{fontFamily}}",
-        "disable_smooth_scrolling": "Skru av jevn rulling (krever omstart)",
         "disable_animations": "Skru av animasjoner i brukergrensesnittet"
     },
     "add_game": "Legg til spill",

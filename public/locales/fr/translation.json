@@ -10,7 +10,6 @@
         "titles_always_visible": "Toujours afficher les titres dans la bibliothèque",
         "content_font_family_default": "Famille de polices pour les contenus (par défaut : {{fontFamily}})",
         "actions_font_family_default": "Famille de polices pour les actions (par défaut : {{fontFamily}})",
-        "disable_smooth_scrolling": "Désactiver le défilement doux (requiert un redémarrage)",
         "disable_animations": "Désactiver les animations de l'interface"
     },
     "add_game": "Ajouter un jeu",

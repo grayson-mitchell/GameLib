@@ -10,7 +10,6 @@
         "titles_always_visible": "Заўсёды паказваць загалоўкі ў бібліятэцы",
         "actions_font_family_default": "Шрыфт для дзеянняў (Прадвызначаны: {{fontFamily}})",
         "content_font_family_default": "Шрыфт для змесціва (Прадвызначаны: {{fontFamily}})",
-        "disable_smooth_scrolling": "Адключыць плаўную пракрутку (патрабуецца перазапуск)",
         "disable_animations": "Адключыць анімацыі інтэрфейсу"
     },
     "add_game": "Дадаць гульню",

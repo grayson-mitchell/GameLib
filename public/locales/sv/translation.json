@@ -10,7 +10,6 @@
         "titles_always_visible": "Visa alltid titlar i bibliotek",
         "actions_font_family_default": "Åtgärd teckensnittsfamilj (Standard: {{fontFamily}})",
         "content_font_family_default": "Innehåll teckensnittsfamilj (Standard: {{fontFamily}})",
-        "disable_smooth_scrolling": "Avaktivera mjuk skrollning (kräver omstart)",
         "disable_animations": "Inaktivera UI animationer"
     },
     "add_game": "Lägg till spel",

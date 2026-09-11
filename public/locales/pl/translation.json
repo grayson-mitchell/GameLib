@@ -10,7 +10,6 @@
         "titles_always_visible": "Zawsze pokazuj tytuły w bibliotece",
         "actions_font_family_default": "Rodzaj czcionki akcji (domyślna: {{fontFamily}})",
         "content_font_family_default": "Rodzaj czcionki treści (domyślna: {{fontFamily}})",
-        "disable_smooth_scrolling": "Wyłącz płynne przewijanie (wymagany restart)",
         "disable_animations": "Wyłącz animacje interfejsu"
     },
     "add_game": "Dodaj grę",

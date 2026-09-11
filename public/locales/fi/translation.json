@@ -10,7 +10,6 @@
         "titles_always_visible": "Näytä nimet kirjastossa aina",
         "actions_font_family_default": "Toimintojen kirjasinperhe (vakio: {{fontFamily}})",
         "content_font_family_default": "Sisältöjen kirjasinperhe (vakio: {{fontFamily}})",
-        "disable_smooth_scrolling": "Kytke pois sulava vieritys (uudelleenkäynnistys vaaditaan)",
         "disable_animations": "Poista käyttöliittymän animoinnit käytöstä"
     },
     "add_game": "Lisää peli",

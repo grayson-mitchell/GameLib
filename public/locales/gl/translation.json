@@ -10,7 +10,6 @@
         "content_font_family_default": "Tipografía dos contidos (Por defecto: {{fontFamily}})",
         "titles_always_visible": "Mostrar sempre os títulos na biblioteca",
         "disable_dialog_backdrop_close": "Desactivar o peche das caixas de diálogo ao premer fóra delas",
-        "disable_smooth_scrolling": "Desactivar o suavizado de scroll (precisa reiniciar)",
         "disable_animations": "Desactivar animacións da interfaz de usuario (UI)"
     },
     "add_game": "Engadir xogo",

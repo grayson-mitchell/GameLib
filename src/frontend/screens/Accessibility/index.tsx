@@ -12,7 +12,6 @@ import classNames from 'classnames'
 import { SelectField } from 'frontend/components/UI'
 import { ThemeSelector } from 'frontend/components/UI/ThemeSelector'
 import ToggleSwitch from 'frontend/components/UI/ToggleSwitch'
-import useSetting from '../../hooks/useSetting'
 import SettingsContext from '../Settings/SettingsContext'
 import useSettingsContext from '../../hooks/useSettingsContext'
 import './index.css'
@@ -47,10 +46,6 @@ const Accessibility = React.memo(function Accessibility() {
   const [fonts, setFonts] = useState<string[]>([])
   const [contentFont, setContentFont] = useState('')
   const [actionFont, setActionFont] = useState('')
-  const [smoothScrollingDisabled, setSmoothScrollingDisabled] = useSetting(
-    'disableSmoothScrolling',
-    false
-  )
 
   const defaultPrimaryFont = getComputedStyle(
     document.documentElement
@@ -221,22 +216,6 @@ const Accessibility = React.memo(function Accessibility() {
               title={t(
                 'accessibility.disable_dialog_backdrop_close',
                 'Disable closing dialogs by clicking outside'
-              )}
-            />
-          </label>
-        </span>
-
-        <span className="setting">
-          <label className={classNames('toggleWrapper', { isRTL: isRTL })}>
-            <ToggleSwitch
-              htmlId="disableSmoothScrolling"
-              value={smoothScrollingDisabled}
-              handleChange={() => {
-                setSmoothScrollingDisabled(!smoothScrollingDisabled)
-              }}
-              title={t(
-                'accessibility.disable_smooth_scrolling',
-                'Disable smooth scrolling (requires restart)'
               )}
             />
           </label>

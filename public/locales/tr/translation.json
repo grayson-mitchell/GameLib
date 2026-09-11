@@ -10,7 +10,6 @@
         "titles_always_visible": "Kütüphanede her zaman başlıkları göster",
         "content_font_family_default": "İçerik Yazı Tipi Ailesi (Varsayılan: {{fontFamily}})",
         "actions_font_family_default": "Eylemler Yazı Tipi Ailesi (Varsayılan: {{fontFamily}})",
-        "disable_smooth_scrolling": "Yumuşak kaydırmayı devre dışı bırak (yeniden başlatma gerekir)",
         "disable_animations": "Arayüz animasyonlarını devre dışı bırak"
     },
     "add_game": "Oyun Ekle",

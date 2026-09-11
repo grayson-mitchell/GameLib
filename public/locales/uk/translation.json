@@ -10,7 +10,6 @@
         "titles_always_visible": "Завжди показувати назви в бібліотеці",
         "actions_font_family_default": "Шрифт для дій (Типово: {{fontFamily}})",
         "content_font_family_default": "Шрифт для вмісту (Типово: {{fontFamily}})",
-        "disable_smooth_scrolling": "Вимкнути плавне гортання (потрібен перезапуск)",
         "disable_animations": "Вимкнути анімації інтерфейсу"
     },
     "add_game": "Додати гру",

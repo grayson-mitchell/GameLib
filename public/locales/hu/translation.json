@@ -10,7 +10,6 @@
         "content_font_family_default": "Tartalom betűkészlete (Alapértelmezett: {{fontFamily}})",
         "titles_always_visible": "Címek megjelenítése mindig a könyvtárban",
         "actions_font_family_default": "Műveletek betűkészlete (Alapértelmezett: {{fontFamily}})",
-        "disable_smooth_scrolling": "Sima görgetés letiltása (újraindítást igényel)",
         "disable_animations": "A felhasználói felület animációinak letiltása"
     },
     "add_game": "Játék hozzáadása",

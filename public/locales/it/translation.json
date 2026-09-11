@@ -10,7 +10,6 @@
         "titles_always_visible": "Mostra sempre i titoli in libreria",
         "actions_font_family_default": "Famiglia Font Azioni (Predefinito: {{fontFamily}})",
         "content_font_family_default": "Famiglia Font Contenuto (Predefinito: {{fontFamily}})",
-        "disable_smooth_scrolling": "Disabilita lo smooth scrolling (richiede il riavvio)",
         "disable_animations": "Disattiva le animazioni dell’interfaccia"
     },
     "add_game": "Aggiungi Gioco",

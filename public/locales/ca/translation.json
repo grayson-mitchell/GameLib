@@ -10,7 +10,6 @@
         "titles_always_visible": "Mostra sempre els títols a la biblioteca",
         "actions_font_family_default": "Tipus de lletra de les accions (per defecte, {{fontFamily}})",
         "content_font_family_default": "Tipus de lletra dels continguts (per defecte, {{fontFamily}})",
-        "disable_smooth_scrolling": "Desactiva el desplaçament suau (cal reiniciar)",
         "disable_animations": "Desactiva les animacions de la interfície"
     },
     "add_game": "Afegeix un joc",

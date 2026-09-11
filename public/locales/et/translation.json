@@ -10,7 +10,6 @@
         "titles_always_visible": "Alati näita pealkirjasid varamus",
         "actions_font_family_default": "Toimingute fondiperekond (Vaikimisi: {{fontFamily}})",
         "content_font_family_default": "Sisu fondiperekond (Vaikimisi: {{fontFamily}})",
-        "disable_smooth_scrolling": "Keela sujuv kerimine (nõuab restarti)",
         "disable_animations": "Keela kasutajaliidese animatsioonid"
     },
     "add_game": "Lisa mäng",

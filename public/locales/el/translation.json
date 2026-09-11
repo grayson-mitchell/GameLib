@@ -10,7 +10,6 @@
         "titles_always_visible": "Να εμφανίζονται πάντα οι τίτλοι στη βιβλιοθήκη",
         "content_font_family_default": "Γραμματοσειρά Περιεχομένου (Προεπιλογή: {{fontFamily}})",
         "actions_font_family_default": "Γραμματοσειρά Ενεργειών (Προεπιλογή: {{fontFamily}})",
-        "disable_smooth_scrolling": "Απενεργοποίηση ομαλής κύλισης (απαιτείται επανεκκίνηση)",
         "disable_animations": "Απενεργοποίηση κινούμενων εικόνων UI"
     },
     "add_game": "Προσθήκη Παιχνιδιού",

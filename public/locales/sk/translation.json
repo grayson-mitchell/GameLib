@@ -10,7 +10,6 @@
         "titles_always_visible": "Vždy zobrazovať tituly hier v knižnici",
         "content_font_family_default": "Obsah Font Family (Default: {{fontFamily}})",
         "actions_font_family_default": "Akcie Font Family (Default: {{fontFamily}})",
-        "disable_smooth_scrolling": "Vypnúť smooth scrolling (vyžaduje reštart)",
         "disable_animations": ""
     },
     "add_game": "Pridať Hru",

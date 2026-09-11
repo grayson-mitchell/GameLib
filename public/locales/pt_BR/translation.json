@@ -10,7 +10,6 @@
         "titles_always_visible": "Sempre exibir títulos dos jogos na biblioteca",
         "actions_font_family_default": "Ações de família de fontes (padrão: {{fontFamily}})",
         "content_font_family_default": "Conteúdo de família de fontes (padrão: {{fontFamily}})",
-        "disable_smooth_scrolling": "Desativar rolagem suave (O GameLib precisará ser reiniciado)",
         "disable_animations": "Desativar animações da interface de usuário"
     },
     "add_game": "Adicionar jogo",

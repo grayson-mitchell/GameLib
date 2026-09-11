@@ -10,7 +10,6 @@
         "titles_always_visible": "Vždy zobrazovat názvy v knihovně",
         "actions_font_family_default": "Rodina písem akcí (výchozí: {{fontFamily}})",
         "content_font_family_default": "Rodina písem obsahu (výchozí: {{fontFamily}})",
-        "disable_smooth_scrolling": "Zakázat plynulé posouvání (vyžaduje restart)",
         "disable_animations": "Zakázat animace uživatelského rozhraní"
     },
     "add_game": "Přidat hru",

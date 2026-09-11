@@ -186,7 +186,6 @@
         "content_font_family_default": "Породица фонтова садржаја (Подразумевано:{{fontFamily}}",
         "disable_animations": "Онемогући анимације интерфејса",
         "titles_always_visible": "Увек приказуј наслове у библиотеци игара",
-        "disable_smooth_scrolling": "Онемогући глатко скроловање (потребно је поновно покретање)",
         "disable_dialog_backdrop_close": "Онемогућите затварање дијалога кликом ван"
     },
     "add_game": "Додај игру",

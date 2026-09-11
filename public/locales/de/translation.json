@@ -10,7 +10,6 @@
         "titles_always_visible": "Immer Spieltitel in Bibliothek anzeigen",
         "content_font_family_default": "Schriftfamilie-Inhalt (Standard: {{fontFamily}})",
         "actions_font_family_default": "Schriftfamilie-Aktionen (Standard: {{fontFamily}})",
-        "disable_smooth_scrolling": "Sanftes Scrollen deaktivieren (benötigt Neustart)",
         "disable_animations": "Deaktiviere die Animationen des Nutzerinterfaces"
     },
     "add_game": "Spiel hinzufügen",

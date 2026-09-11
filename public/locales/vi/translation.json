@@ -10,7 +10,6 @@
         "content_font_family_default": "Họ Phông Chữ Nội Dung (Mặc Định: {{fontFamily}})",
         "disable_animations": "Tắt hoạt ảnh UI",
         "disable_dialog_backdrop_close": "Vô hiệu hóa việc đóng hộp thoại bằng cách nhấp vào bên ngoài",
-        "disable_smooth_scrolling": "Tắt tính năng cuộn mượt mà (yêu cầu khởi động lại)",
         "titles_always_visible": "Luôn hiển thị tiêu đề trong thư viện"
     },
     "add_game": "Thêm Trò Chơi",

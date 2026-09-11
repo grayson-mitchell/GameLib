@@ -9,7 +9,6 @@
         "disable_dialog_backdrop_close": "قم بتعطيل مربعات الحوار الختامية من خلال النقر بالخارج",
         "titles_always_visible": "أظهر العنواين في المكتبة دائماً",
         "disable_animations": "عطّل تأثيرات الواجهة",
-        "disable_smooth_scrolling": "عطّل السحب السلس (يتطلب اعادة التشغيل)",
         "actions_font_family_default": "",
         "content_font_family_default": ""
     },

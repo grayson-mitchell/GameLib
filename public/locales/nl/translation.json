@@ -10,8 +10,7 @@
         "titles_always_visible": "Laat altijd titels in mijn bibliotheek zien",
         "actions_font_family_default": "Acties Lettertypefamilie (Standaard: {{fontFamily}})",
         "content_font_family_default": "Content Font Family (Default:",
-        "disable_animations": "UI animaties uitschakelen",
-        "disable_smooth_scrolling": "Glad scrollen uitschakelen (vereist herstart)"
+        "disable_animations": "UI animaties uitschakelen"
     },
     "add_game": "Voeg game toe",
     "All": "Allemaal",

@@ -10,7 +10,6 @@
         "content_font_family_default": "Familia fontului de conținut (Implicit:{{fontFamily}})",
         "disable_animations": "Dezactivează animațiile UI",
         "disable_dialog_backdrop_close": "Dezactivează închiderea dialogurilor făcând clic în exterior",
-        "disable_smooth_scrolling": "Dezactivează derulare lină",
         "titles_always_visible": "Afișează întotdeauna titlurile în bibliotecă"
     },
     "add_game": "Adaugă joc",

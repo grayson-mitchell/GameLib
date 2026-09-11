@@ -10,7 +10,6 @@
         "titles_always_visible": "Mostrar sempre os títulos na biblioteca",
         "content_font_family_default": "Família de Fontes para Conteúdos (Predefinição: {{fontFamily}})",
         "actions_font_family_default": "Família de Fontes para Ações (Predefinição: {{fontFamily}})",
-        "disable_smooth_scrolling": "Desativar o deslocamento suave (é necessário reiniciar a aplicação)",
         "disable_animations": "Desativar animações da interface do utilizador"
     },
     "add_game": "Adicionar Jogo",

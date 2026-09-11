@@ -10,8 +10,7 @@
         "titles_always_visible": "Selalu tampilkan judul di perpustakaan",
         "actions_font_family_default": "Keluarga Font Aksi (Default: {{fontFamily}})",
         "content_font_family_default": "Keluarga Font Konten (Default: {{fontFamily}})",
-        "disable_animations": "Nonaktifkan animasi antarmuka",
-        "disable_smooth_scrolling": "Nonaktifkan pengguliran halus (memerlukan restart)"
+        "disable_animations": "Nonaktifkan animasi antarmuka"
     },
     "add_game": "Tambahkan Gim",
     "All": "Semua",

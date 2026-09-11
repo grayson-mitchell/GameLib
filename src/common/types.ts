@@ -130,7 +130,6 @@ export interface AppSettings extends GameSettings {
   defaultWinePrefixDir: string
   disableController: boolean
   disablePlaytimeSync: boolean
-  disableSmoothScrolling: boolean
   disableLogs: boolean
   disableAnimations: boolean
   discordRPC: boolean

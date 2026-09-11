@@ -10,7 +10,6 @@
         "titles_always_visible": "ライブラリのタイトルを常に表示",
         "actions_font_family_default": "アクション用フォント （既定: {{fontFamily}}）",
         "content_font_family_default": "コンテンツ用フォント （既定: {{fontFamily}}）",
-        "disable_smooth_scrolling": "スムーズスクロールを無効化（要再起動）",
         "disable_animations": "UIアニメーションを無効化"
     },
     "add_game": "ゲームを追加",

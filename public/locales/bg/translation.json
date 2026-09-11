@@ -10,7 +10,6 @@
         "titles_always_visible": "Винаги да се показват заглавията в библиотеката",
         "actions_font_family_default": "Шрифт за действията (по подразбиране: {{fontFamily}})",
         "content_font_family_default": "Шрифт за съдържанието (по подразбиране: {{fontFamily}})",
-        "disable_smooth_scrolling": "Изключване на плавното превъртане (изисква рестартиране)",
         "disable_animations": "Изключване на анимациите в интерфейса"
     },
     "add_game": "Добавяне на игра",

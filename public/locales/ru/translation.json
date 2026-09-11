@@ -10,7 +10,6 @@
         "titles_always_visible": "Всегда показывать названия в библиотеке",
         "actions_font_family_default": "Шрифт для действий (По умолчанию: {{fontFamily}})",
         "content_font_family_default": "Шрифт для содержимого (По умолчанию: {{fontFamily}})",
-        "disable_smooth_scrolling": "Отключить плавную прокрутку (требуется перезапуск)",
         "disable_animations": "Отключить анимации пользовательского интерфейса"
     },
     "add_game": "Добавить игру",

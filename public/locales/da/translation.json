@@ -190,8 +190,7 @@
         "titles_always_visible": "Vis altid titler i biblioteket",
         "actions_font_family_default": "Handlinger Skrifttypefamilie (Standard: {{fontFamily}})",
         "content_font_family_default": "Indhold skrifttypefamilie (Standard: {{fontFamily}})",
-        "disable_animations": "Deaktivér grænseflade-animationer",
-        "disable_smooth_scrolling": "Deaktivér jævn rulning (kræver genstart)"
+        "disable_animations": "Deaktivér grænseflade-animationer"
     },
     "info": {
         "version": "Wine-version",

@@ -10,7 +10,6 @@
         "titles_always_visible": "Siempre mostrar títulos en biblioteca",
         "actions_font_family_default": "Tipografía de acciones (Por Defecto: {{fontFamily}})",
         "content_font_family_default": "Tipografía de contenido (Por Defecto: {{fontFamily}})",
-        "disable_smooth_scrolling": "Desactivar scroll suave (requiere reiniciar)",
         "disable_animations": "Desactivar animaciones de la interfaz de usuario (IU)"
     },
     "add_game": "Añadir juego",
