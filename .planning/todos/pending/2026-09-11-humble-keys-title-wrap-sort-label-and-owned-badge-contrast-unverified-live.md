@@ -65,3 +65,31 @@ in a real WKWebView. This mirrors the same P2 constraint already recorded in `43
 `ready: live-gate` — the fixes are landed and source-pinned; only rendered/visual verification on
 a live run is outstanding. `platform: any` — none of the three is platform-specific; the
 adjudicating harness happening to be the operator's Mac is incidental, not a requirement.
+
+## 2026-09-11 UPDATE — items 1 and 3 ADJUDICATED; item 2 re-opened by two later changes
+
+Live gate run: `260911-t0p-UAT.md` (quick task `260911-t0p`), measured from `screencapture`
+pixels on a running `tauri:dev` build, not scored by eye.
+
+- **Item 1 (title one line) — PASS, CLOSED.** Exactly one dark-text band at 21.0 CSS px over the
+  title's own column range. *Near-miss worth keeping:* a first scan found TWO bands and would
+  have scored a FALSE FAIL; the second band is 11.0 CSS px — the `Last synced` indicator in
+  `--text-xs`, a different element. Band-count alone is not sufficient; check glyph height.
+- **Item 3 (owned-badge contrast) — PASS, CLOSED.** Badge text sampled `#425231` against
+  `#eceff4` = **7.34:1** measured, versus the 7.35:1 predicted here (residue is antialiasing).
+  Pre-fix `#0ce396` = 1.46:1. Clears 4.5:1 AA.
+- **Item 2 (sort label placement) — STILL OPEN, and its claim has CHANGED.** The original claim
+  ("label renders to the RIGHT of the select") was measured PASS and then **deliberately
+  reversed**: on seeing it, the operator asked for label-first, shipped by `260911-ue4`
+  (`a2c670f2a`) as `grid-template-areas: 'label select'`. Separately `260911-umj` (`e368075c3`)
+  shrank the select 40px → 34px app-wide. **Restated measurable claim for the next run:** the
+  `Sort` label renders to the **LEFT** of the select, vertically centred against the **34px**
+  control, with `Expiring soonest` not clipped in the `12rem` track. The horizontal sub-claims
+  were re-confirmed post-flip; the **vertical centring against the new 34px height has NOT been
+  measured**.
+
+Also unmeasured by any run so far: `260911-umj`'s own app-wide claim that `SearchBar` and
+`SelectField` both render at **34 CSS px** on Humble Keys, Settings, InstallModal and the
+Library header. Those figures are the executing agent's; the orchestrator's attempted
+independent re-measure was **invalidated** (the app had been left on a different screen and the
+scan returned a nonsense 80.0 px), so they are unconfirmed.
