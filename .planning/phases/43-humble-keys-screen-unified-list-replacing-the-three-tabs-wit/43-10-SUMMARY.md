@@ -37,10 +37,10 @@ key-decisions:
   - "Added P10 and P11 preconditions closing a T-43-01 threat-register gap found during authoring: the contract's own measurement protocol never required opening HumbleClaimWizard, but nothing in the original draft said so explicitly, and pasting a raw gamelib.log/terminal.log excerpt into a report could leak a real Humble redemption code that the shipping adapter.ts redaction (which only covers backend logging) does not catch"
   - "Login-and-claim and override-pending/override-undo row shapes marked CONDITIONAL/NOT ATTEMPTABLE rather than REACHABLE, because reaching them on the operator's real, already-Steam-connected library would require either an unreachable structural precondition or a real, permanent ownership-override mutation that P7 forbids manufacturing solely for the test"
 
-requirements-completed: []
+requirements-completed: [REQ-43-19]
 
 # Metrics
-duration: unavailable (session resumed after context compaction; Task 1 authoring spanned two sessions)
+duration: unavailable (session resumed after context compaction; Task 1 authoring spanned two sessions; Tasks 2-3 run 2026-09-11)
 completed: 2026-09-10
 ---
 
@@ -118,3 +118,60 @@ Task 1 is complete and committed. This plan cannot proceed further without a hum
 - `grep -c 'looks correct\|looks right\|looks aligned\|appears to'` = 0
 - `grep -c 'REACHABLE\|CONDITIONAL'` = 34, matching the document's stated row count
 - P7 precondition row confirmed byte-for-byte intact after the P10/P11 insertion
+
+
+---
+
+# Tasks 2 and 3 — executed 2026-09-11
+
+**VERDICT: FAIL — 14 PASS / 4 FAIL across 18 scored sub-checks**, plus 4 NOT ATTEMPTABLE,
+1 NOT OBSERVED, 1 INCONCLUSIVE, 1 NOT PERFORMED. Full table in `43-LIVE-GATE.md` § Verdict.
+
+Build under test: `gamelib-shell` sha256 `92e31568…f3d08`, release, recovered from the DMG and
+hash-verified against `target/release/`. Source `d60fcc85c`. Single instance (PID 50567) for the
+whole session. Evidence: `/tmp/gamelib-gate-20260911T043842Z/` — 28.5 KB `terminal.log`, 24 files,
+zero zero-length.
+
+## The four failures
+
+1. **Item 6 — the GOG logo never resolves through `fill: currentColor`.** `.gogIcon { fill:
+   var(--text-default) }` (`_colors.scss:101`) matches the `<svg>` directly and beats the
+   `currentColor` that `.humbleKeyRowStoreLogo` only passes down by inheritance. Steam's logo is
+   correct in both themes (`[177,177,177]`=`#b1b1b1` dark, `[57,59,64]`=`#393b41` light).
+2. **Item 4 — the row separator is invisible in light themes.** Delta **2** against a ≥3
+   threshold, versus 108 and 11–19 in the two dark themes measured. Same 1.0 CSS px line; purely
+   contrast.
+3. **Item 3 ×2 — the metric failed, the property did not.** Title-text left edges spread 216.5,
+   but the tracks are immovable (TYPE 220.0 / KEY 1124.0, spread 0.0 on all 18 rows). Titles are
+   centre-aligned by inherited `.App { text-align: center }`. Scored FAIL against the contract as
+   written rather than re-scored against the friendlier metric.
+
+## Todo disposition
+
+- `2026-09-08-…-store-icon-geometry-unverified-live.md` → **CLOSED**, item 5 PASS (19.0×19.0 vs
+  19.2 target; TYPE left edge 220.0 on all 18 rows).
+- `2026-09-08-…-store-logo-fill-currentcolor-unverified-live.md` → **STAYS OPEN**, upgraded from
+  "unverified" to "verified broken, cause identified". `minor`→`medium`, `live-gate`→`code`.
+- Two NEW todos filed: the light-theme separator, and the centre-alignment design question
+  (`ready: human` — it is a decision, and the same answer determines whether item 3's metric or
+  the code is what needs changing).
+
+## Four defects in the CONTRACT, found by running it
+
+P5/P8 mutually unsatisfiable; step 8's bounds command names the wrong process AND cannot work
+anyway (AX reports 0 windows for a wry window); item 2's pair unreachable for everyone; the
+prescribed Preview/Digital-Color-Meter method unusable when the app is on another macOS Space.
+
+**Three of the four share one blind spot**: the 34-row Structural Reachability Review verified
+that the things being *measured* were reachable, and never that its own *instructions would
+execute*. Recommended addition to `references/live-gate-contract-authoring.md`: every command a
+contract says to "paste verbatim" must be run once against a live process before publication, and
+shape reachability must be checked against the CODE, not only against the operator's data.
+
+## Protocol steps skipped, recorded as skipped
+
+P8 (impossible — see defect 1). P9 (operator changed theme twice mid-session without the run
+pausing; no ordinal opened, no log re-archive — but no item was scored across a switch, so no
+measurement is contaminated). Closing `pgrep == 0` NOT PERFORMED — the app was left running.
+Measurement method deviated from Preview.app to programmatic pixel reads; declared in the
+document.

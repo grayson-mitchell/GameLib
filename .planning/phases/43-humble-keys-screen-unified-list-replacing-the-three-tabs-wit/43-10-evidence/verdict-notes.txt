@@ -1,0 +1,80 @@
+=== REQ-43-19 MEASUREMENTS, LAUNCH 1 — 2026-09-11T05:36:56Z ===
+capture: capture-1-columns.png 2940x1846, window 1470x923 pts, SCALE=2.0000 exact
+METHOD DEVIATION (declared): x-coords and RGB read programmatically from the PNG (upng-js) instead of Preview.app drag + Digital Color Meter. Same pixels, same thresholds, re-verifiable from the saved capture.
+
+TRACK MODEL (derived from measured content edges, confirmed 3 independent ways):
+  TYPE 220.0 -> 324.0 CSS px (104.0 = 6.5rem)   gap 16
+  GAME 340.0 -> 1108.0 (768.0)                  gap 16
+  KEY  1124.0 -> 1444.0 (320.0 = 20rem)
+  confirmations: header label centres measured 271.5/723.75/1284.0 vs track centres 272.0/724.0/1284.0
+
+ITEM 1 TYPE width header vs rows: data content left edge 220.0 on ALL 8 rows, spread 0.0. PASS (thr +/-2)
+ITEM 2 KEY width across shapes:  content left edge 1124.0 on ALL 8 rows, spread 0.0. PASS for the 4 shapes present.
+   full-width button  Hard West 2 / CryoFall / Racine   1124.0..1443.5 (319.5 wide)
+   bare text+link     Californium / Darkest Dungeon / FRONTIERS  1124.0..1329.0
+   bare text no ctrl  Crusader Kings III                 1124.0..1256.5
+   text + button      Dex: Enhanced Version              1124.0..1256.5
+   side-by-side pair  NOT ATTEMPTABLE (structural; fix 2c68c17fe not in this build)
+   Pitfall-C caption  NOT OBSERVED in this viewport
+ITEM 3 GAME: column left edge FIXED (TYPE 220.0 and KEY 1124.0 both spread 0.0 => track boundaries do not move). PASS on the property.
+   BUT the contract's literal metric, title-TEXT left edge, spreads 84.0 CSS px (618.5..702.5) => FAIL as written.
+   CAUSE: titles are CENTRED. All 8 title centres 723.5..724.0 vs track centre 724.0 (spread 0.5).
+   SOURCE: .App { text-align: center } App.css:24, inherited. .humbleKeyColumnCell defends with align-items:flex-start; .humbleKeyGameCell has no defence.
+   wrap-not-overflow: NOT MEASURED (no title in this viewport is long enough to wrap)
+   no-logo + UNPICKED rows: NOT SAMPLED (not in this viewport)
+ITEM 4 separator: 9 seams, each exactly 2 device px = 1.0 CSS px, x 420..2887 uniform.
+   seam RGB [128,128,128] vs neighbours +/-3 CSS px [~20,22,41]; max channel delta 108-109. PASS (thr >=3)
+   absent-after-last-row: NOT MEASURABLE (list scrolled; last row off-screen)
+ITEM 5 logo: 19.0 x 19.0 CSS px on 7 of 8 rows (Racine 19.0 x 17.5, different SVG). Target 19.2 +/-2 => PASS
+   top-edge vs title: deltas -1.5..-3.5 CSS px. INCONCLUSIVE, NOT scored FAIL: the metric compares an icon BOX top to a glyph INK top, which are different datums; ~2-3px is the expected internal-leading gap for 16px/1.2.
+ITEM 6 logo colour dark theme: dominant [177,177,177] == --text-secondary #b1b1b1 (themes.scss:3) EXACT. PASS
+   light theme: NOT MEASURED (needs a UI theme switch)
+ITEM 7 controls row left edge 220.5 vs row-list left edge 220.0 => 0.5 spread. PASS
+   header-vs-data column BOUNDARIES agree exactly; header LABELS are centred while data content is left-aligned (same App.css:24 cause).
+
+=== LAUNCH 1, CAPTURE 2 (burst-4..7 identical), LIGHT THEME, SCROLLED TO END — 2026-09-11T05:47:31Z ===
+NOTE: operator switched theme between captures; light-theme frame arrived unannounced, which is why it also serves item 6's light half.
+bg=[237,239,244]; 10 separators; 10 row bands; window 1470x923, SCALE 2.0
+
+ITEM 3 (no-logo + long title, NOW SAMPLED):
+  band 8 = generic 'The Roleplaying Game Complete Collection for Alchemy VTT - $18 Tier'
+    TYPE renders the TEXT 'Other' at left edge 220.5 vs 220.0 on the 9 logo rows => spread 0.5. PASS (thr +/-2)
+    GAME title spans 486.0..961.5 = 475.5 CSS px inside a 768.0 track => NO OVERFLOW
+    WRAP still NOT EXERCISED: no title in the library is long enough to need a second line
+  KEY left edge 1124.0 on ALL 10 bands, spread 0.0
+  GAME title left edges 486.0..702.5 => spread 216.5; CENTRES 723.3..724.0 => spread 0.7. Centring reconfirmed over a 3x wider title-length range.
+
+ITEM 4 LIGHT THEME — THE SEPARATOR IS EFFECTIVELY INVISIBLE:
+  10 seams, each exactly 1.0 CSS px tall, full width. seam [238,240,245] vs neighbours [237,239,244].
+  max channel delta = 2 on 7 of 8 sampled seams, 3 on one. THRESHOLD IS >=3 => FAIL in light theme.
+  Same separator in DARK theme measured delta 108-109. Dark PASS, light FAIL.
+  ABSENCE-AFTER-LAST-ROW: no separator below the final row (same >90%-span criterion that found all 10). PASS,
+    but WEAK EVIDENCE in light theme, where a present separator is only delta 2 above noise. Re-run in DARK to make it discriminating.
+
+ITEM 6 LIGHT THEME — SPLIT RESULT, ONE REAL DEFECT:
+  Steam logo [57,59,64] == --text-secondary #393b41 [57,59,65] (themes.scss:367), and == the caption text colour. PASS
+  GOG logo (Racine) [33,36,43] != --text-secondary. FAIL
+  CAUSE: src/frontend/styles/_colors.scss:101 '.gogIcon { fill: var(--text-default) }'. gog-logo.svg's root carries class=gogIcon,
+    so that rule matches the <svg> DIRECTLY and beats the 'fill: currentColor' that .humbleKeyRowStoreLogo (index.css:376) only
+    passes down by INHERITANCE. A directly-matching declaration always wins over an inherited one. The GOG logo therefore never
+    resolves through currentColor at all -- it is not mis-tinted, it is on a different mechanism.
+  Dark theme Steam logo measured [177,177,177] == --text-secondary #b1b1b1 => Steam PASSES BOTH themes, satisfying item 6's
+    'at least two themes, at least one dark' for the Steam logo only.
+
+ITEM 5 addendum: GOG logo measures 19.0 x 17.5 CSS px vs Steam 19.0 x 19.0 (target 19.2).
+  FULLY EXPLAINED: gog-logo.svg viewBox is '0 0 34 31' (non-square) with preserveAspectRatio='xMidYMax meet' inside a 19.2 square box;
+  19.2 * 31/34 = 17.5 EXACTLY as measured. Within +/-2 so it passes, but the cause is recorded rather than left as noise.
+
+gog-logo.svg is additionally MALFORMED: a <symbol> nested inside the <use> that references it, and className= (a React attribute,
+  not valid SVG) instead of class= on its path. Not the colour cause -- .gogIcon is -- but it is on the same asset.
+
+=== LAUNCH 1, CAPTURE 3, DARK THEME #2, SCROLLED TO END — 2026-09-11T05:52:22Z ===
+bg=[26,28,33] -- a DIFFERENT dark theme from capture 1's [20,23,41]. Operator changed theme twice during the session.
+ITEM 4 PRESENCE: 10 separators, heights 1.0-1.5 CSS px, min channel delta across 5 x-samples = 11..19. Threshold >=3. PASS
+ITEM 4 ABSENCE AFTER LAST ROW: last separator ends y=1663, last content ink y=1780, then 32.5 CSS px of clear space.
+  Same >90%-span criterion that found all 10 separators finds NONE below the last row.
+  Max channel delta anywhere below the last row (4 x-samples) = 2, threshold for absence <3. PASS -- and DISCRIMINATING,
+  because in this theme a PRESENT separator measures 11-19, so 2 is a real negative rather than the light theme's noise floor.
+
+SEPARATOR VISIBILITY VARIES BY THEME, MEASURED: dark#1 [20,23,41] delta 108 | dark#2 [26,28,33] delta 11-19 | light [237,239,244] delta 2 (FAIL).
+  One CSS declaration, three renderings, one of them below the contract's own legibility threshold.

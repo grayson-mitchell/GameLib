@@ -5162,8 +5162,16 @@ already on disk for 43-01..43-09, not new work by this plan beyond 43-09 itself)
 - [x] 43-09 — ship the `gog_keyless` claim path plan 43-03's probe selects, closing REQ-43-24
   (wave 4) — DONE 2026-09-10, candidate B (Phase 40 embedded browser), `a25d8d2af`/`7274a6ddc`,
   see `43-09-SUMMARY.md`
-- [ ] 43-10 — author and run the packaged-Tauri-build live gate for REQ-43-19's column geometry
-  and row separator (wave 5)
+- [x] 43-10 — author and run the packaged-Tauri-build live gate for REQ-43-19's column geometry
+  and row separator (wave 5) — **RAN 2026-09-11, VERDICT FAIL, 14 PASS / 4 FAIL of 18 scored**
+  (+4 NOT ATTEMPTABLE, 1 NOT OBSERVED, 1 INCONCLUSIVE, 1 NOT PERFORMED). Failures: the GOG logo
+  never resolves through `fill: currentColor` (`.gogIcon` beats inheritance); the row separator
+  is invisible in light themes (delta 2 vs ≥3); and item 3's title-text metric fails at 216.5
+  spread while the property it proxies — immovable column tracks — passes at spread 0.0. Folded
+  todo 1 CLOSED (item 5 PASS), folded todo 2 STAYS OPEN now diagnosed, 2 new todos filed. The run
+  also found FOUR defects in the contract itself, three sharing one blind spot: the Structural
+  Reachability Review never checked that its own instructions would execute. See
+  `43-LIVE-GATE.md` § Verdict and `43-10-SUMMARY.md`. **Phase 43 does NOT close on this verdict.**
 
 ---
 

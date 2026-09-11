@@ -1,0 +1,46 @@
+=== ITEM 4: separator hairline, RGB delta at seam vs +/-3 CSS px (6 dev px) ===
+  seam y=499 (CSS 249.5)  seam=[128,128,128]  above=[20,22,40]  below=[19,23,41]  maxdelta above=108 below=109
+  seam y=665 (CSS 332.5)  seam=[128,128,128]  above=[20,22,41]  below=[20,22,41]  maxdelta above=108 below=108
+  seam y=816 (CSS 408.0)  seam=[128,128,128]  above=[19,23,40]  below=[20,23,40]  maxdelta above=109 below=108
+  seam y=928 (CSS 464.0)  seam=[128,128,128]  above=[20,23,40]  below=[20,23,40]  maxdelta above=108 below=108
+  seam y=1094 (CSS 547.0)  seam=[128,128,128]  above=[20,23,40]  below=[20,23,41]  maxdelta above=108 below=108
+  seam y=1245 (CSS 622.5)  seam=[128,128,128]  above=[20,23,41]  below=[19,23,41]  maxdelta above=108 below=109
+  seam y=1448 (CSS 724.0)  seam=[128,128,128]  above=[20,22,41]  below=[20,23,41]  maxdelta above=108 below=108
+  seam y=1599 (CSS 799.5)  seam=[128,128,128]  above=[19,23,41]  below=[19,23,41]  maxdelta above=109 below=109
+  seam y=1765 (CSS 882.5)  seam=[128,128,128]  above=[20,22,41]  below=[19,23,41]  maxdelta above=108 below=109
+
+=== ITEM 5: TYPE logo bounding box per row ===
+  Hard West 2          logo 19.0x19.0 CSS px  logo top y=266.0  title top y=269.5  delta=-3.5
+  Californium          logo 19.0x19.0 CSS px  logo top y=350.0  title top y=352.5  delta=-2.5
+  Crusader Kings III   logo 19.0x19.0 CSS px  logo top y=425.0  title top y=428.0  delta=-3.0
+  CryoFall             logo 19.0x19.0 CSS px  logo top y=481.0  title top y=484.0  delta=-3.0
+  Darkest Dungeon      logo 19.0x19.0 CSS px  logo top y=564.0  title top y=567.0  delta=-3.0
+  Dex: Enhanced        logo 19.0x19.0 CSS px  logo top y=640.0  title top y=642.5  delta=-2.5
+  FRONTIERS            logo 19.0x19.0 CSS px  logo top y=741.0  title top y=744.0  delta=-3.0
+  Racine               logo 19.0x17.5 CSS px  logo top y=818.5  title top y=820.0  delta=-1.5
+
+=== ITEM 6: logo RGB (dark theme, current) ===
+  Hard West 2          dominant logo px: [177,177,177] x639  [176,176,176] x7
+  Californium          dominant logo px: [177,177,177] x639  [176,176,176] x7
+  Crusader Kings III   dominant logo px: [177,177,177] x639  [176,176,176] x7
+SCALE = 2940/1470 = 2.0000
+
+--- COLUMN HEADER band (y 440..496) ---
+  TYPE  ink x=441..628 dev  => left edge 220.5 CSS px
+  GAME  ink x=660..1476 dev  => left edge 330.0 CSS px
+  KEY   ink x=2551..2585 dev  => left edge 1275.5 CSS px
+
+--- DATA ROWS ---
+  Hard West 2              TYPE 220.0  GAME 683.5..764.0  KEY 1124.0..1443.5
+  Californium              TYPE 220.0  GAME 685.0..762.0  KEY 1124.0..1329.0
+  Crusader Kings III       TYPE 220.0  GAME 666.5..780.0  KEY 1124.0..1256.5
+  CryoFall                 TYPE 220.0  GAME 697.5..750.5  KEY 1124.0..1443.5
+  Darkest Dungeon (EA)     TYPE 220.0  GAME 618.5..829.0  KEY 1124.0..1329.0
+  Dex: Enhanced Version    TYPE 220.0  GAME 647.5..800.0  KEY 1124.0..1256.5
+  FRONTIERS (EA)           TYPE 220.0  GAME 636.5..811.0  KEY 1124.0..1329.0
+  Racine                   TYPE 220.0  GAME 702.5..745.5  KEY 1124.0..1443.5
+
+--- SPREADS (CSS px) ---
+  TYPE content left-edge spread: 0.0
+  GAME title  left-edge spread: 84.0
+  KEY  content left-edge spread: 0.0

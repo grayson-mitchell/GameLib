@@ -2,7 +2,7 @@
 created: 2026-09-08
 title: "HumbleKeyRow store icon size, position, and alignment are code-level only — never verified against a live render"
 area: humble-keys-ui
-status: OPEN
+status: RESOLVED
 severity: minor
 platform: any
 ready: live-gate
@@ -11,6 +11,8 @@ files:
   - src/frontend/screens/Humble/Keys/index.css (.humbleKeyRowStoreLogo, .humbleKeyRowTitle)
   - src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx
 resolves_phase: null
+resolved: 2026-09-11
+resolved_by: "43-10 Task 2 live gate, item 5 PASS"
 ---
 
 # Store icon geometry never proven against a live render
@@ -84,3 +86,27 @@ Specifically check a two-line row (`ownedElsewhere` badge present) for
 vertical alignment. Verify together with the amended colour todo
 (`2026-09-08-humble-key-row-store-logo-fill-currentcolor-unverified-live.md`)
 in one session — both need the same screenshot set.
+
+
+## Resolution (2026-09-11) — REQ-43-19 live gate, item 5: PASS
+
+Measured on a packaged release build (`gamelib-shell` sha256 `92e31568…f3d08`) from screenshot
+pixels at SCALE 2.0, not from CSS:
+
+- **Icon size:** Steam logo **19.0 × 19.0 CSS px** against the `calc(16px * 1.2)` = 19.2px target.
+  Delta 0.2, threshold ±2. PASS.
+- **Icon position:** the TYPE cell's content left edge is **220.0 CSS px on every one of the 18
+  rows sampled across two captures** (spread 0.0), including the `generic` no-logo row which
+  renders the text "Other" at 220.5 (spread 0.5). The icon does not shift the column.
+- **Alignment to the title's line-box:** measured deltas −1.5 to −3.5 CSS px. Recorded
+  **INCONCLUSIVE, not FAIL** — the measurement compares an icon BOX top to a glyph INK top, which
+  are different datums, and ~2–3px is the expected internal-leading gap for 16px text at
+  line-height 1.2. Convicting on that number would convict correct code.
+
+**One thing this measurement found that the todo did not ask for:** the GOG logo renders
+**19.0 × 17.5**, not square. Fully explained — `gog-logo.svg` has `viewBox="0 0 34 31"` with
+`preserveAspectRatio="xMidYMax meet"` inside a 19.2px square box, so 19.2 × 31/34 = 17.5 exactly.
+Still inside ±2 of the target, so it does not fail this todo, but it is carried into the new
+`gog-logo.svg` todo alongside the colour defect.
+
+See `43-LIVE-GATE.md` § Verdict and `/tmp/gamelib-gate-20260911T043842Z/measurements-raw.txt`.

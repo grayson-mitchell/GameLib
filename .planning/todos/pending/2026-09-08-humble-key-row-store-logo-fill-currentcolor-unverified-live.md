@@ -3,9 +3,9 @@ created: 2026-09-08
 title: "HumbleKeyRow store logo fill:currentColor is a code-level guarantee only — never verified against a live render"
 area: humble-keys-ui
 status: OPEN
-severity: minor
+severity: medium
 platform: any
-ready: live-gate
+ready: code
 source: "phase 42 plan 04 (D-42-03 store indicator), CONTEXT.md 'Both themes' UI note; premise corrected by quick task 260908-vo4 (2026-09-08) after the icon moved out of .humbleKeyRowCaption"
 files:
   - src/frontend/screens/Humble/Keys/index.css (.humbleKeyRowStoreLogo)
@@ -82,3 +82,49 @@ is actually reaching the SVG's `fill` in a live engine. Verify together
 with the geometry todo
 (`2026-09-08-humble-key-row-store-icon-geometry-unverified-live.md`) in
 one session — both need the same screenshot.
+
+
+## Live-gate outcome (2026-09-11) — REQ-43-19 item 6: **FAIL for GOG, PASS for Steam**
+
+This todo is **NOT closed**. It was filed as "unverified"; it is now **verified broken, with the
+cause identified**. Severity raised `minor` → `medium` and `ready` moved `live-gate` → `code`,
+because nothing further needs measuring — the fix is a desk edit.
+
+Measured from screenshot pixels on a packaged release build, both themes:
+
+| Logo | Theme | Measured | `--text-secondary` | Verdict |
+|---|---|---|---|---|
+| Steam | dark `[20,23,41]` | `[177,177,177]` | `#b1b1b1` = `[177,177,177]` | PASS (exact) |
+| Steam | light `[237,239,244]` | `[57,59,64]` | `#393b41` = `[57,59,65]` | PASS (±1, antialiasing) |
+| **GOG** | light | **`[33,36,43]`** | `#393b41` | **FAIL** |
+
+### Cause — the GOG logo never resolves through `currentColor` at all
+
+`src/frontend/styles/_colors.scss:101`:
+
+```css
+.gogIcon { fill: var(--text-default); }
+```
+
+`gog-logo.svg`'s root element carries `class="gogIcon"`. That rule matches the `<svg>` **directly**,
+so it beats the `fill: currentColor` that `.humbleKeyRowStoreLogo` (`Keys/index.css:376`) only
+passes down by **inheritance** — a directly-matching declaration always wins over an inherited
+value, regardless of specificity. The GOG logo is therefore not mis-tinted; it is on a different
+colour mechanism entirely, and `--text-secondary` never reaches it.
+
+Steam's logo has no class, inherits normally, and is correct in both themes.
+
+### Fix options (a decision, not just an edit)
+
+1. Scope the escape: `.humbleKeyRowStoreLogo .gogIcon { fill: currentColor; }` — narrow, local,
+   leaves every other `.gogIcon` consumer untouched. **Recommended.**
+2. Drop `class="gogIcon"` from the Humble row's import — but the asset is shared, so check
+   `GamePage/index.css:619`'s `&.gogIcon` first.
+3. Change the global rule — widest blast radius, needs its own audit.
+
+### Also on this asset (carried from item 5, not a colour defect)
+
+`gog-logo.svg` renders **19.0 × 17.5** rather than square (`viewBox="0 0 34 31"` +
+`preserveAspectRatio="xMidYMax meet"` in a 19.2 box). It is also malformed: a `<symbol>` nested
+inside the `<use>` element that references it, and React's `className=` instead of SVG's `class=`
+on its path.

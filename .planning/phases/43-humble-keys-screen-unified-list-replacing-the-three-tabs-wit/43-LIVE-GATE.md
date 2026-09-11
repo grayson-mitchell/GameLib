@@ -322,38 +322,110 @@ Must print nothing.
 
 ## Verdict
 
-**This section is authored empty. The author of this contract does not fill it in.** The operator
+**This section was authored empty. The author of this contract did not fill it in.** The operator
 (plan 43-10 Task 2) fills every cell below from their own run, then plan 43-10 Task 3 transcribes
 it verbatim into the `**VERDICT:**` line and disposes of the two folded todos accordingly.
 
-| Item | Sub-check | Launch ordinal | Raw measurement | Threshold | Result (PASS/FAIL/NOT ATTEMPTED) |
-|---|---|---|---|---|---|
-| 1 | TYPE width, header vs. rows | | | ±2 CSS px agreement | |
-| 2 | KEY width, shape: full-width button | | | ±2 CSS px agreement | |
-| 2 | KEY width, shape: side-by-side pair | | | ±2 CSS px agreement | |
-| 2 | KEY width, shape: bare text + text-link | | | ±2 CSS px agreement | |
-| 2 | KEY width, shape: bare text, no control | | | ±2 CSS px agreement | |
-| 2 | KEY width, shape: Pitfall-C disabled caption | | | ±2 CSS px agreement | |
-| 3 | GAME left edge, logo row | | | ±2 CSS px agreement | |
-| 3 | GAME left edge, no-logo row | | | ±2 CSS px agreement | |
-| 3 | GAME left edge, UNPICKED row | | | ±2 CSS px agreement | |
-| 3 | GAME title wraps (no overflow) on a long title | | | wraps, does not overflow its column | |
-| 4 | Separator hairline present between rows | | | ≥3/255 RGB delta at seam | |
-| 4 | Separator absent after last row | | | <3/255 RGB delta below last row | |
-| 5 | Icon height vs. target 19.2px | | | ±2 CSS px | |
-| 5 | Icon top-edge alignment to title, 1-line row | | | ±2 CSS px | |
-| 5 | Icon top-edge alignment to title, 2-line row | | | ±2 CSS px | |
-| 6 | Icon colour, light theme | | | matches `--text-secondary` resolved value | |
-| 6 | Icon colour, dark theme | | | matches `--text-secondary` resolved value | |
-| 7 | Title row / controls row left edge vs. row list | | | ±2 CSS px agreement | |
-| 7 | Header row column boundaries vs. data rows | | | ±2 CSS px agreement (shared with item 1/2) | |
-| — | Build command + exit status | | | release build, no `--debug` | |
-| — | Bundle path recovered | | | `.app` from DMG, hash-verified | |
-| — | `pgrep` count, before first launch | | | 0 | |
-| — | `pgrep` count, while running (each launch) | | | 1 | |
-| — | `pgrep` count, after final quit | | | 0 | |
-| — | Closing inventory, zero-length files | | | none | |
+> **FILLED 2026-09-11 by plan 43-10 Task 3**, from the measured run recorded in
+> `/tmp/gamelib-gate-20260911T043842Z/terminal.log` (28.5 KB transcript, 24 evidence files,
+> raw numbers in `measurements-raw.txt`, scorecard in `verdict-notes.txt`). The pre-run
+> instruction above is preserved verbatim as the record of how this document was authored; it is
+> no longer an instruction. Build under test: `gamelib-shell` sha256 `92e31568…f3d08`, source
+> `d60fcc85c` — **note this predates `2c68c17fe`**, the gift-gate fix, which is why item 2's
+> side-by-side pair is NOT ATTEMPTABLE here and would need a rebuild to score.
 
-The overall `**VERDICT:**` line itself is intentionally absent from this document — Task 3 adds it,
-reading `PASS` or `FAIL n/m`, once the table above is filled from the operator's report.
+| Item | Sub-check | Launch ordinal | Raw measurement | Threshold | Result |
+|---|---|---|---|---|---|
+| 1 | TYPE width, header vs. rows | 1 | data content left edge **220.0** on all 18 rows sampled, spread **0.0**; header "Type" label centred 271.5 vs track centre 272.0 | ±2 CSS px agreement | PASS |
+| 2 | KEY width, shape: full-width button | 1 | 1124.0 → 1443.5 (Hard West 2, CryoFall, Racine) | ±2 CSS px agreement | PASS |
+| 2 | KEY width, shape: side-by-side pair | — | shape cannot render: `claimAction` needs `!ownedElsewhere`, `giftAction` needed `ownedElsewhere` | ±2 CSS px agreement | NOT ATTEMPTABLE |
+| 2 | KEY width, shape: bare text + text-link | 1 | left edge 1124.0 (Californium, Darkest Dungeon, FRONTIERS) | ±2 CSS px agreement | PASS |
+| 2 | KEY width, shape: bare text, no control | 1 | left edge 1124.0 (Crusader Kings III; Alchemy VTT generic) | ±2 CSS px agreement | PASS |
+| 2 | KEY width, shape: Pitfall-C disabled caption | — | no row in the library carries `keyindexResolved === false` | ±2 CSS px agreement | NOT OBSERVED |
+| 3 | GAME left edge, logo row | 1 | title-text left edges **618.5..702.5**, spread **84.0** (capture 1); see note below | ±2 CSS px agreement | **FAIL** |
+| 3 | GAME left edge, no-logo row | 1 | generic row title-text left edge **486.0** vs logo rows 626.5..702.5, spread **216.5** (capture 2) | ±2 CSS px agreement | **FAIL** |
+| 3 | GAME left edge, UNPICKED row | — | P6 inventory: **0** UNPICKED entitlements in the library | ±2 CSS px agreement | NOT ATTEMPTABLE |
+| 3 | GAME title wraps (no overflow) on a long title | 1 | longest title occupies 475.5 of a 768.0 track — no overflow, but no wrap triggered either | wraps, does not overflow its column | NOT ATTEMPTABLE |
+| 4 | Separator hairline present between rows | 1 | dark theme `[20,23,41]`: delta **108–109**. dark theme `[26,28,33]`: delta **11–19**. light theme `[237,239,244]`: delta **2** | ≥3/255 RGB delta at seam | **FAIL** (light theme only; PASS in both dark themes) |
+| 4 | Separator absent after last row | 1 | max channel delta below the final row = **2**, measured in dark `[26,28,33]` where a present separator reads 11–19 | <3/255 RGB delta below last row | PASS |
+| 5 | Icon height vs. target 19.2px | 1 | Steam **19.0 × 19.0**; GOG **19.0 × 17.5** (viewBox 34:31 in a square box → 19.2 × 31/34 = 17.5) | ±2 CSS px | PASS |
+| 5 | Icon top-edge alignment to title, 1-line row | 1 | deltas **−1.5 to −3.5** across 8 rows | ±2 CSS px | INCONCLUSIVE — metric compares an icon BOX top to a glyph INK top; ~2–3px is the expected internal-leading gap at 16px/1.2 |
+| 5 | Icon top-edge alignment to title, 2-line row | — | no 2-line row exists (no title wraps) | ±2 CSS px | NOT ATTEMPTABLE |
+| 6 | Icon colour, light theme | 1 | Steam `[57,59,64]` == `--text-secondary #393b41`. **GOG `[33,36,43]` ≠ `--text-secondary`** | matches `--text-secondary` resolved value | **FAIL** (GOG; Steam passes) |
+| 6 | Icon colour, dark theme | 1 | Steam `[177,177,177]` == `--text-secondary #b1b1b1` | matches `--text-secondary` resolved value | PASS (Steam) |
+| 7 | Title row / controls row left edge vs row list | 1 | controls row 220.5 vs row-list 220.0, spread **0.5** | ±2 CSS px agreement | PASS |
+| 7 | Header row column boundaries vs data rows | 1 | tracks identical on header and rows: TYPE 220.0→324.0, GAME 340.0→1108.0, KEY 1124.0→1444.0 | ±2 CSS px agreement (shared with item 1/2) | PASS |
+| — | Build command + exit status | — | `pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && pnpm exec tauri build` → **exit 0**, 2026-09-11T04:40:26Z | release build, no `--debug` | PASS |
+| — | Bundle path recovered | — | `GameLib_0.7.0_aarch64.dmg` → `$SESSION/GameLib.app`; `gamelib-shell` sha256 `92e31568…f3d08` identical to `target/release/gamelib-shell` | `.app` from DMG, hash-verified | PASS |
+| — | `pgrep` count, before first launch | — | 0 (asserted twice) | 0 | PASS |
+| — | `pgrep` count, while running (each launch) | 1 | 1 throughout; PID 50567 unchanged across the whole session | 1 | PASS |
+| — | `pgrep` count, after final quit | — | **app was not quit** — session left running at the operator's discretion | 0 | NOT PERFORMED |
+| — | Closing inventory, zero-length files | — | none (24 evidence files, all non-zero) | none | PASS |
+
+**VERDICT: FAIL — 14 PASS / 4 FAIL across 18 scored sub-checks.** 7 further sub-checks are unscored
+and explicitly dispositioned: 4 NOT ATTEMPTABLE, 1 NOT OBSERVED, 1 INCONCLUSIVE, 1 NOT PERFORMED.
+
+### Note on item 3's two FAIL rows — the metric failed, the property did not
+
+Both item-3 FAILs are against this contract's **stated metric** ("the title-text left edge on every
+sampled row must agree within ±2 CSS px"). Scored honestly, they fail: the spread is 84.0 and 216.5.
+
+The property item 3 exists to protect — *"the `GAME` column's left edge never shifts row to row"* —
+**holds, and was measured**: the TYPE cell's content left edge is 220.0 and the KEY cell's is 1124.0
+on **all 18 rows across both captures, spread 0.0**, including the no-logo `generic` row (220.5,
+spread 0.5). The grid tracks are immovable.
+
+The two diverge because the GAME titles are **centre-aligned**, so their left edges track title
+length while the column box stays put. All 18 title centres land within **723.3..724.0** against a
+track centre of 724.0 (spread 0.7). Cause: `.App { text-align: center }`
+(`src/frontend/App.css:24`) is inherited app-wide; `.humbleKeyColumnCell` defends itself with
+`align-items: flex-start`, `.humbleKeyGameCell` does not. Title-text left edge is only a valid
+proxy for column left edge under left alignment, which the Column Geometry Contract never asserts.
+
+Recorded as FAIL rather than silently re-scored against the friendlier metric. Whether centred
+titles are intended is a design decision, not a gate outcome.
+
+---
+
+## Declared deviations from this document's own protocol
+
+1. **Measurement method.** Step 8 prescribes dragging a selection in Preview.app and sampling with
+   Digital Color Meter. Every x-coordinate and RGB value above was instead read **programmatically**
+   from the saved PNGs (`upng-js`). Same pixels, same thresholds, but deterministic and
+   re-verifiable by anyone from `capture-*.png` — no hand-drag error term. The GUI method was also
+   not merely inconvenient but unusable for part of the run (see defect 4).
+2. **P8 (one sync) could not be honoured.** See defect 1.
+3. **P9 (theme switch = new launch ordinal) was not honoured.** The operator changed theme twice
+   mid-session (dark `[20,23,41]` → light → dark `[26,28,33]`) without the run being paused, so no
+   new ordinal was opened and `gamelib.log` was not re-archived per switch. **No item was scored
+   across a switch** — items 1/2/3/7 come from capture 1 alone, item 4's light row is explicitly
+   labelled by theme — so no measurement is contaminated, but the protocol step was skipped and is
+   recorded as skipped rather than quietly satisfied.
+4. **The app was not quit**, so the closing `pgrep == 0` assertion is NOT PERFORMED.
+
+## Contract defects found BY this run
+
+These are defects in **this document**, not in the software under test. All four survived the
+34-row Structural Reachability Review, and three share one blind spot: the review verified that the
+*things being measured* were reachable, never that its own *instructions would execute*.
+
+1. **P5 and P8 are mutually unsatisfiable.** P5 mandates triggering a sync from the app's refresh
+   control; `GlobalState.componentDidMount()` (`GlobalState.tsx:1716`) has always already run one
+   at launch. Every possible run of this contract produces ≥2 syncs, so P8 ("exactly one sync") can
+   never hold. Measured live: syncs finished 16:42:06 (automatic, `origin=mount`) and 16:43:21
+   (operator). Harmless here — both preceded every screenshot, and the two summary lines are
+   byte-identical — but P8 needs rewriting to "no sync after the first measurement".
+2. **Step 8's bounds command cannot work.** It names process `"GameLib"`; System Events knows the
+   process as **`gamelib-shell`** and errors `-1719` as written. Correcting the name does not
+   rescue it: AX reports **0 windows** for the wry window in either case. Window bounds must come
+   from CoreGraphics (`CGWindowListCopyWindowInfo`), which returned them immediately.
+3. **Item 2's "side-by-side pair" was never reachable.** Not library-specific — structural, for
+   every key and every user. The review's Test 7 rows checked shape reachability against *this
+   operator's data* and correctly flagged `login-and-claim` and the override shapes, but never
+   asked whether the pair was reachable **at all**. Fixed after the run in `2c68c17fe`.
+4. **The prescribed measurement method is unusable across Spaces.** With the app on a different
+   macOS Space from the operator's editor, `screencapture -l <windowid>` fails with *"could not
+   create image from window"* (a window on an inactive Space has no readable backing store) and
+   region capture only ever sees the active Space. Any future contract must either require both
+   windows on one Space or specify a timed/burst capture.
 
