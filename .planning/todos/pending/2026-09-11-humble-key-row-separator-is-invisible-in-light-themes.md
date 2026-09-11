@@ -2,7 +2,7 @@
 created: 2026-09-11
 title: "Humble Keys row separator is effectively invisible in light themes (RGB delta 2 vs 108 in dark)"
 area: humble-keys-ui
-status: OPEN
+status: RESOLVED
 severity: medium
 platform: any
 ready: live-gate
@@ -91,3 +91,25 @@ least one light and one dark theme and requires ≥3/255 in both, same as this t
 Desk-level evidence: `src/frontend/screens/Humble/Keys/__tests__/humbleKeysStylesheet.test.ts`
 asserts the `color-mix` fallback's source text at all three sites, that no white-biased fallback
 survives, and that no bare `var(--divider)` was introduced.
+
+## RESOLVED (2026-09-11, quick task 260911-qds) — REQ-43-19 run 2, item 4: PASS
+
+Session `/tmp/gamelib-gate-20260911T062945Z`, preserved at `43-11-evidence/`. Build under test:
+`gamelib-shell` sha256 `1cd1e843…3f5a`, HEAD `0d2ae9862` (carries the `c690a117a` fix above).
+
+| Theme background | Seam colour | Max channel delta vs neighbours | Threshold ≥3 | Was (run 1) |
+|---|---|---|---|---|
+| light `[237,239,244]` | `[209,210,215]` | **29** | PASS | delta **2** (FAIL) |
+| dark `[26,28,33]` | `[51,57,64]` | **31** | PASS | delta 11–19 |
+
+This is exactly the closure condition this todo's own "Fix applied" section stated: the seam delta
+is now ≥3/255 in at least one light AND one dark theme, same threshold `43-LIVE-GATE.md` item 4
+already defines. 7 separators were sampled per capture, each full-width at 107/107 sampled columns.
+
+**Predicted-value corroboration, proving the PASS is attributable to the fix and not a theme
+change:** `color-mix(in srgb, currentColor 14%, transparent)` with `--text-default #20242c` over
+the light background `[237,239,244]` computes `[208,211,216]`; the measured seam is
+`[209,210,215]` — agreement within ±1. The `color-mix` declaration is confirmed to be the thing
+actually painting, not an incidental change elsewhere.
+
+Todo closed. No further live-gate work is owed to this finding.
