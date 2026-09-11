@@ -2,9 +2,9 @@
 created: 2026-09-11
 title: "`audit-uat` reads YAML blocks in document BODIES, not just frontmatter — a second, never-measured block-scalar population reaches its output as the literal `|`"
 area: planning-records
-severity: medium
+severity: major
 platform: any
-ready: code
+ready: human
 source: "quick task 260911-vox (the frontmatter block-scalar sweep) — found while proving that sweep's V4 post-condition; deliberately left OUT OF SCOPE there"
 files:
   - .planning/phases/27-tauri-shell-walking-skeleton/27-UAT.md
@@ -12,6 +12,198 @@ resolves_phase: null
 ---
 
 # `audit-uat` parses body YAML too, and that population has never been counted
+
+## RE-MEASURED 2026-09-12 at HEAD 6c0c2a96d (quick 260912-9v7) — read this before the sections above
+
+Everything below this section is preserved exactly as written on 2026-09-11. Where this section
+contradicts it, **this section governs**. Nothing was deleted, because the point of the record is to
+show that the figures moved.
+
+### Remedy decision: SWEEP NOTHING — but NOT via gate clause G1 or G2
+
+The plan's gate **opened**, and then the plan's own hard exclusions emptied its scope to zero fields.
+That is a different outcome from "the premise was confirmed at its floor", and the distinction
+matters to whoever picks this up next:
+
+- **G1 is REFUTED.** G1 required the reachable count to be `<= 2`. It is **3**. A reachable field
+  exists **outside** the two `27-UAT.md` `reason:` fields this todo already knew about:
+  `.planning/debug/deep-link-open-url-abort.md:231` `hypothesis: |`, which reaches **`audit-open`**.
+- **G2 therefore also fails** its second clause, which requires the reachable remainder to be covered
+  by G1.
+- **All three reachable fields are multi-paragraph** (3, 2 and 2 paragraphs). The plan hard-excludes
+  any block containing a fence, a markdown table, or more than one paragraph from flattening
+  *regardless of reachability*. Sweepable scope after exclusions: **0 fields**.
+
+So: no file was converted, and each reachable field is recorded as **needing a different remedy
+shape** — a flattening remedy is the wrong instrument for all three.
+
+### The body population — measured, not estimated
+
+| axis | measured at `6c0c2a96d` |
+| --- | --- |
+| body block-scalar fields | **652** |
+| files carrying them | **51** |
+| characters | **883,704** (a FLOOR, see below) |
+| top-level / nested | 406 / 246 (6 in list items, 240 merely indented) |
+| excluded as inside a fenced code block | 7 |
+| inverse-population candidates | 294 |
+
+Bucketed: `debug/resolved/` **509** fields / 19 files · `phases/` **102** / 12 · `debug/` (open)
+**40** / 19 · `milestones/` **1** / 1. `todos/` and `quick/` carry **zero** — this defect does not
+live in either.
+
+**Delta against this todo's own stated floor ("one file, 3 lines"):** the floor was accurate but
+under-sized by **51x in files and 217x in fields**. `27-UAT.md`'s three lines are confirmed exactly
+at L31, L51 and L86.
+
+**Delta against quick `260912-9v7`'s planner sizing (55 files / 663 fields):** −4 files, −11 fields,
+and the difference is **fully accounted**, not waved at: **7** were YAML-shaped lines sitting inside
+fenced code blocks (documentation, not fields) and **4** were block-scalar lines nested inside
+another block scalar's body, which belong to that outer block's value and must not be counted twice.
+The planner's figure was a candidate-line count; this one resolves fields.
+
+The character total is a **floor**, for three reasons: a block scalar nested inside another block's
+body is counted once as part of the outer value rather than twice; characters are counted on the
+dedented raw extent, which is not the string a YAML parser would emit (chomping `|- |+ >- >+` and
+folded `>` line-joining change the final length); and trailing blank lines are trimmed.
+
+### Which body blocks a tool actually reads — and by what rule
+
+| class | count |
+| --- | --- |
+| `reaches-as-bare-indicator` | **3** |
+| `reaches-truncated` | 0 |
+| `reaches-fabricated-structure` | 0 |
+| `reaches-correctly` | 4 |
+| `not-read-by-any-verb` | **628** |
+| `unmeasured` (milestone-hidden) | **17** |
+| total | 652 |
+
+The three reachable fields, each verified from captured tool **output**, not from source:
+
+| field | tool | emitted value |
+| --- | --- | --- |
+| `27-UAT.md:31` `reason: \|` | `audit-uat` | `"\|"` |
+| `27-UAT.md:51` `reason: \|` | `audit-uat` | `"\|"` |
+| `debug/deep-link-open-url-abort.md:231` `hypothesis: \|` | `audit-open` | `"hypothesis: \|"` |
+
+**The body mechanism is a RAW REGEX, not `parseFrontmatterYamlLines`.** That function appears in
+exactly one dist module (`frontmatter.js`) and never touches document bodies. This defect is
+therefore **a different mechanism from its parent**, and `260911-vox`'s fabricated-keys behaviour
+does **not** transfer — `reaches-fabricated-structure` is measured at **0**. Per-tool rules:
+
+- **`audit-uat`** finds body fields with `blockText.match(/reason:\s*(.+)/)` (`uat.js:158`) and the
+  `blocked_by` equivalent (`:159`). Unanchored, no `m` flag, first match wins, `.` stops at the
+  newline — so `reason: |` yields the one-character string `"|"`.
+- **`audit-open`** does not parse YAML at all. It slices the first non-empty line after
+  `## Current Focus` to 100 characters (`audit-open.js:46-50`), so `hypothesis: |` is emitted
+  verbatim — **key and indicator together**. This is a second tool reading body blocks, which this
+  todo listed as an open question.
+- **`uat render-checkpoint`** deliberately matches `expected: |` and dedents it (`uat.js:81-82`).
+  All 4 `reaches-correctly` fields reach through this verb.
+
+### The named open question, answered: `27-UAT.md` L86 `detail: |` does **NOT** reach
+
+Answered from output, not by reading the parser: the probes `ORIGINAL BLOCKER`, `detail`,
+`Retestable` and `SEAM.md` are **all absent** from `gsd-sdk query audit-uat`. `parseUatItems` only
+ever looks for `reason:` and `blocked_by:`; `detail:` is not a key it reads, and test 5's block had
+already matched `reason:` at L51 (first match wins).
+
+### A worse defect than this todo describes: `expected: |` **suppresses the entire file**
+
+`parseUatItems`' `testPattern` (`uat.js:150`) requires `expected:` to carry inline text **and**
+`result:` to be the very next line. A block scalar puts the body in between, so the pattern never
+matches and **every item in the file vanishes from `audit-uat`**.
+
+Proved by control, not inference: `34.5-UAT.md` carries 22 `### N.` items, 23 `expected: |` blocks
+and 3 `result: blocked`. Phase 34.5 is **absent** from `audit-uat`. Flattening the **single**
+`expected: |` of item 18 in a scratch copy made phase 34.5 **appear**, with exactly one item
+(test 18, `blocked`, `reason: "|"`). Nothing else was changed. Affected visible files:
+`34.5-UAT.md` (23), `34.6-UAT.md` (2), `34.3-UAT.md` (1).
+
+This is **suppression**, not truncation, and it is strictly worse: truncation shows an operator an
+obviously-wrong `"|"`; suppression shows them a clean, complete-looking audit that is missing three
+`blocked` items.
+
+### The reader asymmetry, confirmed — it bounds any future remedy
+
+Same file, same syntax, opposite outcomes, both from tool output:
+`uat render-checkpoint --file .../34.5-UAT.md` returns test 5 with its `expected: |` block (L104)
+**fully dedented and intact**, while `audit-uat` omits phase 34.5 **entirely** because of that same
+syntax. **Flattening body `expected: |` would regress `render-checkpoint`, which is correct today,
+in order to repair `audit-uat`.** Any future remedy must price that trade.
+
+### Flattening hazard — `260911-vox`'s "0 tables" reasoning does NOT carry over
+
+`260911-vox` accepted flattening partly because it measured **0** markdown tables in its population —
+"the one shape that would have become unreadable rather than merely worse". **That zero does not
+hold here.** In this body population: **37** blocks contain a fenced code block, **11** contain a
+markdown table, **242** are multi-paragraph. Only 348 of 652 are plain single-paragraph prose.
+The `note: |` blocks in `.planning/debug/resolved/epic-login-non-interactive.md` wrap verbatim log
+excerpts in fences; flattening those is destructive, not lossy. **Re-measure; do not reuse the zero.**
+
+### Reported as UNMEASURED — not as zero
+
+**17 fields across `17-UAT.md`, `18-UAT.md` and `23.2-HUMAN-UAT.md` are UNMEASURED.** Their phase
+dirs are removed by `getMilestonePhaseFilter` before any file is opened, so `audit-uat` never sees
+them and no statement about their reachability is possible. Measured empirically: a syntactically
+perfect item was injected into all **62** phase dirs of a scratch copy; **39** surfaced, **23** did
+not. (`17-UAT.md:22` is the one exception — it reaches `render-checkpoint`, which takes an explicit
+`--file` and so is not subject to the milestone filter.) **If the current milestone advances, these
+enter scope with no gate noticing.**
+
+Reconciliation: **82** UAT/VERIFICATION files on disk, **8** emitted. Omissions: 36 milestone-filtered,
+22 VERIFICATION files whose status is not `human_needed`/`gaps_found`, 16 UAT-type files with no
+result the `testPattern` can reach.
+
+### The four known `audit-uat` lies — disposition
+
+- **Ruled OUT — `gaps_found` hides a phase.** Exactly one file on disk carries `gaps_found`
+  (`13-VERIFICATION.md`) and it is milestone-hidden, so its status is not what excludes it.
+  `uat.js:306` explicitly admits `gaps_found`.
+- **CONFIRMED LIVE — `status` hides items.** Only `pending|skipped|blocked` are emitted
+  (`uat.js:154`). The on-disk result vocabulary totals **98** result lines of which only **10** are
+  in the accepted set. **88 of 98 are invisible regardless of block scalars.**
+- **CONFIRMED LIVE — dropped `id:`, positional emission.** `38-VERIFICATION.md` carries **36** `id:`
+  keys; emitted items have no `id` and are numbered positionally 1..**34** (`uat.js:188-215`).
+- **Ruled OUT — empty `human_verification` scrapes prose.** All 7 verification results came from a
+  populated frontmatter array, so the body fallback (`uat.js:231+`) was never reached.
+
+### Severity RAISED: `medium` -> `major`
+
+This todo set its own revisit condition: *"If the census in step 1 finds the body population is
+large, or step 2 finds more tools reading it, revisit."* **Both fired.** Against the `CLAUDE.md`
+vocabulary, `major` = "a feature is broken or **a measurement is silently contaminated**":
+
+- the population is **652 fields / 51 files**, not "two fields, one file";
+- a **second tool** (`audit-open`) reads body blocks, so "one tool" no longer holds;
+- decisively, the stated reason for staying below `major` was that *"the operator sees an
+  obviously-wrong `|` rather than plausible-but-false prose."* **The suppression defect breaks
+  exactly that assumption.** `audit-uat` silently omits phase 34.5 and its three `blocked` items,
+  and its `summary` reports 8 phases / 59 items with no indication anything is missing. That is a
+  silently contaminated measurement.
+
+`ready:` moved `code` -> `human`. It is no longer desk work: the sweep was **declined on
+measurement**, and what remains is a decision — whether to restructure UAT files at all, given that
+any `expected: |` flattening trades a `render-checkpoint` regression for an `audit-uat` repair, in a
+parser that lives in an upstream npx package this repo does not control. Leaving `ready: code` would
+invite the next author to run precisely the sweep this measurement forbids.
+
+### Measurement provenance
+
+SDK pinned at execution time: `gsd-sdk` -> `~/.npm/_npx/4db0de1f85c3165e/.../bin/gsd-sdk.js`,
+**v1.42.3**. (The second cache, `9785a834b31d581d` v1.27.0, has no `sdk/dist/query/` and did not
+answer.) All line citations were verified against that resolution rather than inherited.
+The `debug/resolved/` finding carries a **passing negative control**: the specimen is absent at
+`debug/resolved/` with an open status (the readdir never descends) **and** absent at `debug/` with
+`status: resolved` (the status skip), while the **positive control** — same file, open status, at
+`debug/` top level — is **present**, which is what rules out "the probe does nothing".
+
+### Noted, deliberately NOT done
+
+The census strengthens the argument that `planning-frontmatter-gate.py`'s `TARGETS` should widen to
+cover bodies — **nothing in CI catches any of this**. That remains **D3 in quick `260911-j88`**,
+deliberately deferred. It is recorded here as an argument, not adopted.
 
 ## What was proved
 
