@@ -725,29 +725,20 @@
    260911-ue4: live UAT on the shipped t0p fix found the label reading to
    the *right* of the picker unnatural, so the area order and matching
    track order are flipped here -- label first, select second. The select
-   track width is unchanged from t0p's value, which the same live UAT
-   already measured as rendering "Expiring soonest" with room to spare, so
-   there is no new clipping risk from the reorder alone. */
+   track width stays at t0p's original value, unchanged and unshrunk: a
+   separate operator-directed descope moved the app-wide bulky-control fix
+   (the same 40px-tall, heavy-drop-shadow chrome the operator confirmed is
+   inherited by 6 SearchBar call sites and 21 other SelectField call
+   sites) out of this file entirely, to land later on the shared
+   SearchBar/index.scss and SelectField/index.css instead of a
+   Humble-Keys-scoped override here that would only fight it. Keeping the
+   track at its original width means "Expiring soonest" keeps the same
+   clearance this live UAT already measured, with the font-size unchanged
+   at --text-md. */
 .humbleKeysSortPicker {
   grid-template-areas: 'label select';
   grid-template-columns: max-content 12rem;
   column-gap: var(--space-sm);
-}
-
-/* 260911-ue4: the global `.selectFieldWrapper .MuiOutlinedInput-root` rule
-   (SelectField/index.css:6-39) is (0,2,0) specificity -- identical to a
-   naive `.humbleKeysSortPicker .MuiOutlinedInput-root` override, so that
-   form would tie and be resolved by bundle source order rather than by this
-   file. `SelectField/index.tsx:34` puts both `selectFieldWrapper` and the
-   `extraClass` on the same element, so the compound form below --
-   `.humbleKeysSortPicker.selectFieldWrapper` -- is (0,3,0) and wins
-   outright regardless of source order. Compacting height/font/shadow only;
-   the track width above is untouched, so text-fit is unaffected by this
-   rule. */
-.humbleKeysSortPicker.selectFieldWrapper .MuiOutlinedInput-root {
-  height: 32px;
-  font-size: var(--text-sm);
-  box-shadow: none;
 }
 
 .humbleKeysSortPicker .MuiSelect-select,
