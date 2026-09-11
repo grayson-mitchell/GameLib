@@ -2,11 +2,13 @@
 created: 2026-09-11
 title: "Gift button gate is mutually exclusive with the claim gate, so UI-SPEC scenario 2's Claim+Gift pair can never render"
 area: humble-keys-ui
-status: OPEN
+status: RESOLVED
 severity: major
 platform: any
 ready: code
 source: "Phase 43 plan 43-10 Task 2 live gate, operator run 2026-09-11 (session /tmp/gamelib-gate-20260911T043842Z)"
+resolved: 2026-09-11
+resolved_by: "quick task 260911-nyq, commit 2c68c17fe"
 files:
   - src/frontend/screens/Humble/Keys/index.tsx (claimAction gate :421-424, giftAction gate :446)
   - src/common/humble/viewFilters.ts (isGiftableSpare :98-100)
@@ -95,3 +97,22 @@ but the fix itself is desk work.
   grounds) and never asked whether the pair was reachable **at all**. Worth folding into
   `references/live-gate-contract-authoring.md` as a distinct test: for every shape a contract
   scores, check reachability against the CODE, not only against the operator's data.
+
+
+## Resolution (2026-09-11, quick task `260911-nyq`, `2c68c17fe`)
+
+FIXED. `isGiftable` (`UNREVEALED && platform !== 'gog_keyless'`) now gates the gift affordance;
+`isGiftableSpare` keeps its spare-classification meaning and still selects scenario 3. The two
+gates can co-occur, so the pair is structurally reachable.
+
+**One claim in the Solution section above was WRONG and is corrected here:** it said
+`resolveKeyScenario`'s `gift-only` branch "depends on" `isGiftableSpare`. It did not — it
+re-derived `ownedElsewhere && state === 'UNREVEALED'` inline. Following the prescription as
+written would have orphaned the export and reddened `ts-prune --error`. The branch now calls the
+predicate, which also collapses the duplicate condition.
+
+**`gog_keyless` was excluded as a judgment call**, so on this operator's library the fix renders
+no new pair — Racine is `gog_keyless` and the only other unowned+UNREVEALED key is `generic`
+(no claim action). Reachable, not present.
+
+See `.planning/quick/260911-nyq-fix-humble-keys-gift-button-gate-mutual-/SUMMARY.md`.
