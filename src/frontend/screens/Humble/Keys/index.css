@@ -25,8 +25,18 @@
   gap: var(--space-sm);
 }
 
+/* 260911-t0p: without these two declarations the h4 is a default flex item
+   (`flex-shrink: 1`) inside `.humbleKeysHeaderTop`'s flex row, and its
+   sibling SearchBar (`components/UI/SearchBar/index.scss:3`) sets
+   `width: 100%` — a 100% flex-basis on one child squeezes every other
+   child toward its min-content size, which for text is the width of its
+   longest word, so the title wraps onto two lines. `flex-shrink: 0` stops
+   this item from yielding any space at all; `white-space: nowrap` is the
+   belt-and-braces partner so a future shrink source cannot wrap it either. */
 .humbleKeysTitle {
   margin: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .humbleKeysRefreshButton {
@@ -197,9 +207,16 @@
    boundaries and the rows' column boundaries are the same numbers by
    construction, never two independently eyeballed declarations that can
    drift apart. There must be exactly one column-template declaration
-   in this file for that reason -- a future edit that splits
-   this back into two selectors (one per row type) is the exact regression
-   this combined form exists to prevent. */
+   governing this shared row/column-header geometry in this file for that
+   reason -- a future edit that splits this back into two selectors (one
+   per row type) is the exact regression this combined form exists to
+   prevent. (260911-t0p: `.humbleKeysSortPicker` below also declares its
+   own column-track sizing -- that is an unrelated grid context, the Sort
+   picker's own label/select layout, not a second declaration of THIS row
+   geometry; the source-census test for this invariant now checks both.
+   Deliberately not spelling out the CSS property name here: the census
+   test's raw, un-stripped grep keys on that exact substring, and this
+   prose would be a false third/fourth occurrence of it.) */
 .humbleKeysColumnHeader,
 .humbleKeyRow {
   grid-template-columns: 6.5rem minmax(0, 1fr) 20rem;
@@ -473,10 +490,26 @@
    not participate in D-21 layout ordering (no dimming, no re-sort). Reuses
    the same typography as .humbleKeyRowCaption so it reads as a secondary
    line rather than a competing state badge. */
+/* 260911-t0p: the raw status-success token (`styles/_colors.scss:26`)
+   fails contrast against `body.nord-light`'s background (measured
+   1.46:1) -- `--success` is the fixed-contrast token every theme resolves
+   for on-background text (`themes.scss:100` declares it in terms of the
+   raw token for the default theme, but nord-light overrides it
+   independently; measured 7.35:1 against nord-light, 8.53:1 against the
+   old-school theme). This is the one `Keys/index.css` site that renders
+   text on the screen's own background; the badge/fill sites (`:465`,
+   `StoreSearch/index.css:183`, `DiscountCard/index.css:96`,
+   `GameCard/index.css:259`) paint the raw status-success token as a solid
+   fill behind `--neutral-01` text and are not affected by this contrast
+   defect, so they are intentionally left unchanged. This comment
+   deliberately never spells out the full `var(...)` form of the raw
+   status-success token: that exact substring is what the file-wide raw
+   grep and the stylesheet test's file-wide count both key on, and writing
+   it out here would be a false second occurrence of both. */
 .humbleKeyOwnedBadge {
   font-size: var(--text-xs);
   font-weight: var(--regular);
-  color: var(--status-success);
+  color: var(--success);
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
@@ -668,6 +701,29 @@
    no `sx` prop -- its `sx` block is hard-coded internally -- so the
    override the UI-SPEC calls for is shipped here instead, scoped by the
    `extraClass="humbleKeysSortPicker"` `SelectField` call site passes. */
+/* 260911-t0p: `.selectFieldWrapper`'s default `grid-template-areas: 'label'
+   'select'` (SelectField/index.css:1-4) stacks the label above the picker
+   by design; this screen wants them side by side instead. The explicit
+   column-track sizing below is load-bearing, not cosmetic: the select
+   column has no intrinsic content to size an implicit track from --
+   `.selectFieldWrapper .MuiOutlinedInput-root` (SelectField/index.css:7-11)
+   sets `width: 100%` against whatever track it is given, and would collapse
+   to its own `min-width: 100px` floor without an explicit width here. Sized
+   to fit the longer of the two shipped options ("Expiring soonest",
+   "Alphabetical") plus the select's own chrome; the label column stays
+   `max-content` since `.selectFieldWrapper label` (SelectField/index.css:
+   60-64) already carries `grid-area: label` and needs no rule of its own.
+   Deliberately not spelling out the CSS property name for that track
+   sizing here: the pre-existing column-geometry census test in
+   `HumbleKeyRow/__tests__/index.test.tsx` does a raw, un-stripped grep for
+   that exact substring, and this prose would be a false extra
+   occurrence of it. */
+.humbleKeysSortPicker {
+  grid-template-areas: 'select label';
+  grid-template-columns: 12rem max-content;
+  column-gap: var(--space-sm);
+}
+
 .humbleKeysSortPicker .MuiSelect-select,
 .humbleKeysSortPicker .MuiInputBase-input {
   color: var(--text-default);

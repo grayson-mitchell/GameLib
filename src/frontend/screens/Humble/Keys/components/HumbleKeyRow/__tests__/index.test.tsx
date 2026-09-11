@@ -967,11 +967,19 @@ describe('HumbleKeyRow KEY-column scenario resolution (D-43-17, Phase 43 plan 06
 // computed width. REQ-43-19's actual verification is plan 43-09's live
 // gate.
 describe('Humble Keys index.css column geometry (source census only, REQ-43-19 verified live in 43-09)', () => {
-  it('declares exactly one grid-template-columns rule, on the combined .humbleKeysColumnHeader, .humbleKeyRow selector', () => {
+  it('declares exactly one grid-template-columns rule for the shared row/column-header geometry, on the combined .humbleKeysColumnHeader, .humbleKeyRow selector', () => {
     const css = readFileSync(join(__dirname, '../../../index.css'), 'utf-8')
 
+    // 260911-t0p added a second, unrelated grid-template-columns
+    // declaration scoped to `.humbleKeysSortPicker` (an explicit
+    // column-width fix for that picker's own label/select layout -- see
+    // the fix comment on that rule) -- this test's invariant is about the
+    // SHARED row/column-header geometry only, so it now expects exactly
+    // two file-wide occurrences; the sibling test below separately proves
+    // the second one is that deliberate sort-picker rule and not a stray
+    // duplicate of the row geometry.
     const matches = css.match(/grid-template-columns/g) ?? []
-    expect(matches).toHaveLength(1)
+    expect(matches).toHaveLength(2)
 
     const declarationIndex = css.indexOf('grid-template-columns')
     const precedingCss = css.slice(0, declarationIndex)
@@ -986,6 +994,33 @@ describe('Humble Keys index.css column geometry (source census only, REQ-43-19 v
     expect(selectorBlockStart).toBeGreaterThan(-1)
     expect(closingBraceBetween).toBe(-1)
     expect(precedingCss.slice(selectorBlockStart)).toContain('.humbleKeyRow')
+  })
+
+  it('the second grid-template-columns occurrence is the deliberate .humbleKeysSortPicker rule, not a stray duplicate of the row geometry (260911-t0p)', () => {
+    const css = readFileSync(join(__dirname, '../../../index.css'), 'utf-8')
+
+    const firstIndex = css.indexOf('grid-template-columns')
+    const secondIndex = css.indexOf('grid-template-columns', firstIndex + 1)
+    expect(secondIndex).toBeGreaterThan(-1)
+
+    const precedingSecond = css.slice(0, secondIndex)
+    const secondSelectorBlockStart = precedingSecond.lastIndexOf(
+      '.humbleKeysSortPicker'
+    )
+    // The selector must appear immediately before the declaration (i.e. no
+    // closing brace of an unrelated rule in between).
+    const closingBraceBetween = precedingSecond
+      .slice(secondSelectorBlockStart)
+      .indexOf('}')
+    expect(secondSelectorBlockStart).toBeGreaterThan(-1)
+    expect(closingBraceBetween).toBe(-1)
+  })
+
+  it('SANITY: the two-occurrence check above fails against a known-bad input with only one declaration -- proves it is not vacuously true', () => {
+    const oneDeclarationOnly =
+      '.humbleKeysColumnHeader,\n.humbleKeyRow {\n  grid-template-columns: 1fr;\n}'
+    const matches = oneDeclarationOnly.match(/grid-template-columns/g) ?? []
+    expect(matches).toHaveLength(1)
   })
 })
 

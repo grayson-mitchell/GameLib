@@ -287,6 +287,112 @@ describe('Humble Keys text alignment (REQ-43-19, 260911-r8u)', () => {
   })
 })
 
+/** Block-scoped anchor for `.humbleKeysTitle`. */
+const HUMBLE_KEYS_TITLE_BLOCK = /\.humbleKeysTitle\s*\{([^}]*)\}/
+const FLEX_SHRINK_0 = /flex-shrink:\s*0/
+const WHITE_SPACE_NOWRAP = /white-space:\s*nowrap/
+
+/**
+ * Block-scoped anchor for the new `.humbleKeysSortPicker` layout rule. This
+ * file already has a `.humbleKeysSortPicker .MuiSelect-select,` descendant
+ * selector immediately below it -- the `\s*\{` anchor cannot match that
+ * form (the next non-whitespace character after `.humbleKeysSortPicker` is
+ * `.`, not `{`), so placing the bare rule first makes the first regex match
+ * unambiguous, the same reasoning already documented for
+ * `.humbleKeysSortPicker`'s sibling column-header anchor above.
+ */
+const HUMBLE_KEYS_SORT_PICKER_BLOCK = /\.humbleKeysSortPicker\s*\{([^}]*)\}/
+const GRID_TEMPLATE_AREAS_SELECT_LABEL =
+  /grid-template-areas:\s*'select label'/
+const GRID_TEMPLATE_COLUMNS_DECLARED = /grid-template-columns:/
+
+/** Block-scoped anchor for `.humbleKeyOwnedBadge`. */
+const HUMBLE_KEY_OWNED_BADGE_BLOCK = /\.humbleKeyOwnedBadge\s*\{([^}]*)\}/
+const COLOR_VAR_SUCCESS = /color:\s*var\(--success\)/
+const VAR_STATUS_SUCCESS = /var\(--status-success\)/
+
+describe('Humble Keys title no longer yields to SearchBar (REQ-43-19, 260911-t0p defect 1)', () => {
+  const stripped = read(KEYS_CSS)
+
+  it('.humbleKeysTitle declares both flex-shrink: 0 and white-space: nowrap', () => {
+    const match = HUMBLE_KEYS_TITLE_BLOCK.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(FLEX_SHRINK_0)
+    expect(match?.[1]).toMatch(WHITE_SPACE_NOWRAP)
+  })
+
+  it('SANITY: the check above fails against a known-bad input missing both declarations -- proves it is not vacuously true', () => {
+    const badFixture = '.humbleKeysTitle {\n  margin: 0;\n}'
+    const match = HUMBLE_KEYS_TITLE_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(FLEX_SHRINK_0)
+    expect(match?.[1]).not.toMatch(WHITE_SPACE_NOWRAP)
+  })
+})
+
+describe('Humble Keys sort picker label sits beside, not above, the select (REQ-43-19, 260911-t0p defect 2)', () => {
+  const stripped = read(KEYS_CSS)
+
+  it('.humbleKeysSortPicker declares grid-template-areas: \'select label\' and an explicit grid-template-columns', () => {
+    const match = HUMBLE_KEYS_SORT_PICKER_BLOCK.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(GRID_TEMPLATE_AREAS_SELECT_LABEL)
+    expect(match?.[1]).toMatch(GRID_TEMPLATE_COLUMNS_DECLARED)
+  })
+
+  it('SANITY: the check above fails against a known-bad input missing both declarations -- proves it is not vacuously true', () => {
+    const badFixture = '.humbleKeysSortPicker {\n  color: red;\n}'
+    const match = HUMBLE_KEYS_SORT_PICKER_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(GRID_TEMPLATE_AREAS_SELECT_LABEL)
+    expect(match?.[1]).not.toMatch(GRID_TEMPLATE_COLUMNS_DECLARED)
+  })
+
+  it('SANITY: the block anchor does NOT match the descendant `.humbleKeysSortPicker .MuiSelect-select,` selector that follows it in this file -- proves it resolves to the bare rule, not the descendant form', () => {
+    const descendantFormOnly = `
+      .humbleKeysSortPicker .MuiSelect-select,
+      .humbleKeysSortPicker .MuiInputBase-input {
+        color: var(--text-default);
+      }
+    `
+    const match = HUMBLE_KEYS_SORT_PICKER_BLOCK.exec(descendantFormOnly)
+    expect(match).toBeNull()
+  })
+})
+
+describe('Humble Keys owned-badge contrast fix (REQ-43-19, 260911-t0p defect 4)', () => {
+  const stripped = read(KEYS_CSS)
+
+  it('.humbleKeyOwnedBadge declares color: var(--success) and does not contain var(--status-success)', () => {
+    const match = HUMBLE_KEY_OWNED_BADGE_BLOCK.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(COLOR_VAR_SUCCESS)
+    expect(match?.[1]).not.toMatch(VAR_STATUS_SUCCESS)
+  })
+
+  it('SANITY: the check above fails against a known-bad input still using var(--status-success) -- proves it is not vacuously true', () => {
+    const badFixture =
+      '.humbleKeyOwnedBadge {\n  color: var(--status-success);\n}'
+    const match = HUMBLE_KEY_OWNED_BADGE_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(COLOR_VAR_SUCCESS)
+    expect(match?.[1]).toMatch(VAR_STATUS_SUCCESS)
+  })
+
+  it('var(--status-success) occurs exactly once file-wide (the surviving .humbleKeyStateBadge--REDEEMED fill)', () => {
+    expect(stripped.match(/var\(--status-success\)/g) ?? []).toHaveLength(1)
+  })
+
+  it('var(--success) occurs exactly once file-wide (matched with a closing paren so it cannot also catch var(--success-hover))', () => {
+    expect(stripped.match(/var\(--success\)/g) ?? []).toHaveLength(1)
+  })
+
+  it('SANITY: the exact-match regex above correctly excludes var(--success-hover) -- proves it is not vacuously true', () => {
+    const fixture = 'color: var(--success-hover);'
+    expect(fixture.match(/var\(--success\)/g) ?? []).toHaveLength(0)
+  })
+})
+
 describe('Humble Keys empty-state centring is deliberate and preserved', () => {
   const stripped = read(KEYS_CSS)
 
