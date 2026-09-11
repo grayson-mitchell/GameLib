@@ -1,6 +1,6 @@
 ---
 created: 2026-09-12
-title: "gog-logo.svg centring fix owes a live re-measure on Humble Keys and GamePage (both themes)"
+title: "gog-logo.svg centring fix owes a live re-measure on Humble Keys, GamePage and the Login runner tile (both themes)"
 area: humble-keys-ui
 status: OPEN
 severity: minor
@@ -10,6 +10,7 @@ source: "Follow-up filed while closing .planning/todos/completed/2026-09-11-gog-
 files:
   - src/frontend/assets/gog-logo.svg
   - src/frontend/screens/Game/GamePage/index.css
+  - src/frontend/screens/Login/components/Runner/index.css
 resolves_phase: null
 ---
 
@@ -42,6 +43,24 @@ including GOG, since its override was deleted).
   it — all four now share the identical symmetric padding rule with none singled out.
 - **What to check:** GOG should no longer look larger or offset relative to its neighbours (the
   effect the deleted `&.gogIcon` override used to hand-correct for the old bottom-flush glyph).
+
+## Surface 3 — Login runner tile (folded in, and the WEAKEST claim here)
+
+A sweep for other per-consumer compensating overrides found exactly one more, on this same
+asset: `Runner/index.css` carried `.runnerIcon.gog img { margin-top: -1px; }` against a base
+rule of `.runnerIcon img, .runnerIcon svg { width: 100%; padding: 10px; }`. It was deleted.
+
+**The static reading says this deletion is a no-op**, because the override named `img` while all
+six runner tiles render inlined SVG components (`<EpicLogo/>`, `<GOGLogo/>`, `<AmazonLogo/>`,
+`<ZoomLogo/>`, `<SteamLogo/>`, `<HumbleLogo/>`, all imported via `?react`), so no `<img>` ever
+exists under `.runnerIcon.gog` for it to match. The fingerprint of the rot is the asymmetry: the
+base rule was widened to cover `img, svg` at some point and the store-qualified nudge was not.
+
+- **Expected:** the GOG tile on the Login screen is pixel-identical before and after. This is the
+  one surface here where the prediction is "nothing changed at all".
+- **What to check:** that it genuinely is unchanged. **This is a code-read prediction, not a
+  measurement** — if the GOG login tile shifts by ~1px, the static reading was wrong and the rule
+  was live after all. That outcome is the finding, not a regression to paper over.
 
 ## Not in scope here
 
