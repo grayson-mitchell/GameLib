@@ -1,0 +1,76 @@
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/private/tmp/gamelib-gate-20260911T062945Z/GameLib.app/Contents/MacOS/gamelib-shell
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/private/tmp/gamelib-gate-20260911T062945Z/GameLib.app/Contents/Resources/build exists=true
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/private/tmp/gamelib-gate-20260911T062945Z/GameLib.app/Contents/Resources/build/bin/arm64/darwin/legendary exists=true
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/private/tmp/gamelib-gate-20260911T062945Z/GameLib.app/Contents/Resources/build/bin/arm64/darwin/gogdl exists=true
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/private/tmp/gamelib-gate-20260911T062945Z/GameLib.app/Contents/Resources/build/bin/arm64/darwin/nile exists=true
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/private/tmp/gamelib-gate-20260911T062945Z/GameLib.app/Contents/Resources/build/bin/arm64/darwin/comet exists=true
+(18:33:36) [INFO]:    [Steam]:           Steam TokenStore implementation set to SidecarKeyringTokenStore
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] Humble secret store installed: keyring-backed (humble-session/humble-csrf slots)
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] steamgrid secret store: keyring
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] secret stores: keyring
+(18:33:36) [INFO]:    [Connection]:      Connectivity: check-online
+(18:33:36) [INFO]:    [Connection]:      Pinging external endpoints
+(18:33:36) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not from this module — a persisted Steam queue head is still never auto-started, since the startup flag is itself the Steam suppression (downloadqueue.ts initQueue doc comment)
+(18:33:36) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/private/tmp/gamelib-gate-20260911T062945Z/GameLib.app/Contents/Resources source=GAMELIB_APP_ROOT
+(18:33:36) [INFO]:    [Connection]:      Connectivity: online
+(18:33:36) [INFO]:    [Backend]:         User Not Found, removing it from Store
+(18:33:36) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /private/tmp/gamelib-gate-20260911T062945Z/GameLib.app/Contents/Resources/build/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(18:33:36) [INFO]:    [Gog]:             Checking if login is valid
+(18:33:36) [DEBUG]:   [Backend]:         Logging to file(s) /Users/graysonmitchell/Library/Logs/GameLib/runners/gog.log
+(18:33:36) [INFO]:    [Gog]:             Running command: GOGDL_CONFIG_PATH="/Users/graysonmitchell/Library/Application Support/GameLib/gogdlConfig" /private/tmp/gamelib-gate-20260911T062945Z/GameLib.app/Contents/Resources/build/bin/arm64/darwin/gogdl/gogdl --auth-config-path "/Users/graysonmitchell/Library/Application Support/GameLib/gog_store/auth.json" auth
+(18:33:36) [INFO]:    [Backend]:         Rosetta is available on this system.
+(18:33:36) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(18:33:36) [INFO]:    [WineDownloader]:  Fetching upstream information...
+(18:33:36) [INFO]:    [WineDownloader]:  Updating wine versions info
+(18:33:36) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(18:33:36) [DEBUG]:   [Backend]:         AreWeAnticheatYet data did not change. Skipping.
+(18:33:36) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=mount
+(18:33:36) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(18:33:36) [WARNING]: refresh not implemented on Sideload Library Manager
+(18:33:36) [INFO]:    [Legendary]:       Refreshing library...
+(18:33:36) [INFO]:    [Steam]:           Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(18:33:36) [INFO]:    [Backend]:         Frontend Ready
+(18:33:36) [INFO]:    [Gog]:             Getting GOG library
+(18:33:36) [INFO]:    [Backend]:         [GAMELIB_SIDECAR_SEND_HANDLER] frontendReady
+(18:33:36) [INFO]:    [Gog]:             GOG presence set
+(18:33:36) [INFO]:    [Gog]:             Saved username to config file
+(18:33:39) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:33:41) [INFO]:    [Backend]:         Starting the Download Queue
+(18:33:42) [INFO]:    [Gog]:             Saved games data
+(18:33:42) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(18:33:43) [WARNING]: listUpdateableGames not implemented on Sideload Library Manager
+(18:33:43) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:33:45) [INFO]:    [Gog]:             Found 0 game(s) to update
+(18:33:46) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:33:46) [ERROR]:   [WineDownloader]:  Error: Could not fetch available releases from https://api.github.com/repos/Gcenx/macOS_Wine_builds/releases with error:
+ AxiosError: timeout of 10000ms exceeded
+    at build/main/sidecar-sea-bundle.js:75400:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+(18:33:46) [INFO]:    [WineDownloader]:  wine versions updated
+(18:33:47) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): keyring_get ok present=true len=208 trigger=unspecified elapsed=10199ms
+(18:33:47) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-csrf).getToken(): issuing keyring_get (may prompt) trigger=unspecified
+(18:33:59) [INFO]:    [Steam]:           SidecarKeyringSlotStore(humble-csrf).getToken(): keyring_get ok present=true len=29 trigger=unspecified elapsed=11814ms
+(18:33:59) [DEBUG]:   [Steam]:           SidecarKeyringSlotStore(humble-session).getToken(): served from cache, no keyring_get issued trigger=unspecified
+(18:34:01) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:34:02) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: 8h3rr66WWXqDrBEn tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,gamekey,exclusive_countries,num_days_until_expired,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,instructions_html,display_separately,direct_redeem,+6 more]
+(18:34:02) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:34:02) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:34:02) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: wKrVcDU4xqzVSNBt tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,gamekey,exclusive_countries,num_days_until_expired,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,instructions_html,display_separately,direct_redeem,+6 more]
+(18:34:02) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: U55dBC8dVKUvUyts tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,gamekey,exclusive_countries,disallowed_countries,show_custom_instructions_in_user_libraries,third_party_product_id,visible,sold_out,instructions_html,display_separately,direct_redeem,+3 more]
+(18:34:02) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:34:02) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:34:02) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: kySCdN5SvVpwXK2v tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,gamekey,exclusive_countries,num_days_until_expired,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,instructions_html,display_separately,direct_redeem,+6 more]
+(18:34:02) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:34:04) [INFO]:    [Backend]:         Humble sync: order has keys with no extractable expiration: UPcpetxeqmV2uPAF tpksMissingExpiration=1 candidateFields=[is_expired,key_type,human_name,machine_name,keyindex,exclusive_countries,gamekey,custom_instructions_html,disallowed_countries,show_custom_instructions_in_user_libraries,visible,sold_out,display_separately,direct_redeem,key_type_human_name,+3 more]
+(18:34:04) [INFO]:    [Backend]:         Humble sync finished: gamekeys=34 fetched=6/6 frozen=28 ok=6 schema_error=0 denied=0 expired=0 transient=0 zeroKeyOrders=0 keysCached=34
+(18:34:04) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:34:04) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:34:04) [ERROR]:   [Frontend]:        Library: 1 owned Steam game(s) silently excluded from the library grid by a stale nonAvailableGames entry: 38410
+(18:34:25) [INFO]:    [Frontend]:        [WebView] store/wiki route pathname=/store/gog startUrl=https://www.gog.com/en/?utm_campaign=adtraction&utm_medium=affiliate&utm_source=adtraction
+(18:34:25) [INFO]:    [Frontend]:        [WebView] D-32 gap: adtraction/ad-block detection is not implemented under the Tauri embed -- no navigation-failure signal exists (40-EMBED-API-VERIFICATION.md Q3: ABSENT) and on_navigation carries no frame-type flag to safely arm a fallback -- see .planning/todos/pending/ for the filed citation
+(18:34:25) [INFO]:    [Frontend]:        [WebView] store/wiki route pathname=/store/gog startUrl=https://www.gog.com/en/?utm_campaign=adtraction&utm_medium=affiliate&utm_source=adtraction
+(18:34:29) [INFO]:    [Frontend]:        [WebView] store/wiki route pathname=/store/gog startUrl=https://www.gog.com/en/?utm_campaign=adtraction&utm_medium=affiliate&utm_source=adtraction
+(18:34:34) [INFO]:    [Frontend]:        [WebView] store/wiki route pathname=/store/gog startUrl=https://www.gog.com/en/?utm_campaign=adtraction&utm_medium=affiliate&utm_source=adtraction
+(18:35:52) [INFO]:    [Frontend]:        [WebView] store/wiki route pathname=/store/gog startUrl=https://www.gog.com/en/?utm_campaign=adtraction&utm_medium=affiliate&utm_source=adtraction
+(18:35:52) [INFO]:    [Frontend]:        [WebView] D-32 gap: adtraction/ad-block detection is not implemented under the Tauri embed -- no navigation-failure signal exists (40-EMBED-API-VERIFICATION.md Q3: ABSENT) and on_navigation carries no frame-type flag to safely arm a fallback -- see .planning/todos/pending/ for the filed citation
+(18:35:52) [INFO]:    [Frontend]:        [WebView] store/wiki route pathname=/store/gog startUrl=https://www.gog.com/en/?utm_campaign=adtraction&utm_medium=affiliate&utm_source=adtraction
