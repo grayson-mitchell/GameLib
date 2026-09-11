@@ -5,7 +5,7 @@ area: humble-keys-ui
 status: OPEN
 severity: medium
 platform: any
-ready: code
+ready: live-gate
 source: "Phase 43 plan 43-10 Task 2 live gate, REQ-43-19 item 4, operator run 2026-09-11"
 files:
   - src/frontend/screens/Humble/Keys/index.css (.humbleKeyRow border-bottom, :214-224)
@@ -57,3 +57,37 @@ require ≥3/255 in both, which is the threshold `43-LIVE-GATE.md` item 4 alread
 - Found by the REQ-43-19 gate, which scored item 4 PASS in two dark themes and FAIL in light.
   The absence-after-last-row half PASSED and is unaffected.
 - `43-LIVE-GATE.md` § Verdict carries the full measurement.
+
+## Fix applied (2026-09-11, quick task 260911-p6s) — `ready` moved `code` → `live-gate`
+
+Answer to the question this todo posed ("worth checking which before fixing, because the remedy
+differs"): the token is **missing, not badly defined**. `--divider` is declared in only 2 of the
+11 theme blocks in `themes.scss` (`:97` `var(--neutral-03)` and `:145` `gray`) — every other
+theme, including all the light ones, fell through to the literal `rgba(255, 255, 255, 0.08)`
+fallback, which is what actually painted the measured delta-2 seam.
+
+Defining `--divider` per theme was **not available** as the remedy: two existing NavShell gates
+actively forbid universalising the token —
+`src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts:285` (census asserting
+`--divider` is declared in strictly fewer theme blocks than the file defines) and
+`src/frontend/components/UI/NavShell/__tests__/appShellLayout.test.ts:282` (SANITY asserting
+`tokenResolvesInEveryTheme('divider') === false`). So the fix taken is the "theme-agnostic
+alternative" this todo already named: the fallback at all **three** `--divider` sites in
+`Keys/index.css` (not just the one measured — `.humbleKeyRow` border-bottom, `:224`;
+`.humbleKeysColumnHeader` border-bottom, `:588`; `.humbleKeysSortPicker
+.MuiOutlinedInput-notchedOutline` border-color, `:614`) is now
+`color-mix(in srgb, currentColor 14%, transparent)`. `currentColor` is a CSS-wide keyword, not a
+custom property, so it cannot be undefined in any theme regardless of whether `--divider` itself
+is ever declared there.
+
+What remains unproven: the colour deltas cannot be confirmed without a packaged rebuild and a
+live operator run — the Frontend jest project has no jsdom and no CSS engine
+(`testEnvironment: 'node'`), so `color-mix` resolution is a source-level guarantee only.
+
+Closure condition: the next Phase 43 REQ-43-19 live gate run re-measures the seam delta in at
+least one light and one dark theme and requires ≥3/255 in both, same as this todo's own
+"Solution" section already specified.
+
+Desk-level evidence: `src/frontend/screens/Humble/Keys/__tests__/humbleKeysStylesheet.test.ts`
+asserts the `color-mix` fallback's source text at all three sites, that no white-biased fallback
+survives, and that no bare `var(--divider)` was introduced.

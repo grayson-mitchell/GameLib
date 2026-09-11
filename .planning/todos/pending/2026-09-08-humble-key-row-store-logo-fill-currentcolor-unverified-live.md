@@ -5,7 +5,7 @@ area: humble-keys-ui
 status: OPEN
 severity: medium
 platform: any
-ready: code
+ready: live-gate
 source: "phase 42 plan 04 (D-42-03 store indicator), CONTEXT.md 'Both themes' UI note; premise corrected by quick task 260908-vo4 (2026-09-08) after the icon moved out of .humbleKeyRowCaption"
 files:
   - src/frontend/screens/Humble/Keys/index.css (.humbleKeyRowStoreLogo)
@@ -128,3 +128,35 @@ Steam's logo has no class, inherits normally, and is correct in both themes.
 `preserveAspectRatio="xMidYMax meet"` in a 19.2 box). It is also malformed: a `<symbol>` nested
 inside the `<use>` element that references it, and React's `className=` instead of SVG's `class=`
 on its path.
+
+## Fix applied (2026-09-11, quick task 260911-p6s) — `ready` moved `code` → `live-gate`
+
+Option 1 above was taken: the scoped escape, added immediately after `.humbleKeyRowStoreLogo svg`
+in `Keys/index.css`:
+
+```css
+.humbleKeyRowStoreLogo .gogIcon {
+  fill: currentColor;
+}
+```
+
+`src/frontend/styles/_colors.scss:101` (the global `.gogIcon { fill: var(--text-default) }` rule)
+and `src/frontend/screens/Game/GamePage/index.css:619` (`&.gogIcon`, padding only) were
+**deliberately left untouched** — this is a scoped escape, not a global change, and neither of
+those two other `.gogIcon` consumers is affected.
+
+What remains unproven, and why `ready` moves to `live-gate` rather than `completed/`: whether
+`currentColor` actually reaches through `gog-logo.svg`'s `<use>`/`<symbol>` indirection in
+WKWebView specifically — the Frontend jest project has no jsdom and no CSS engine
+(`testEnvironment: 'node'`), so this can only be a source-level guarantee, never a rendered one.
+Only a live render on this Mac can show the GOG glyph actually painting `--text-secondary`
+against both a light and a dark theme background. The non-square `viewBox` / malformed-asset
+findings above (item "Also on this asset") remain untouched and out of scope for this fix.
+
+Closure condition: the next Phase 43 REQ-43-19 live gate run re-measures the GOG glyph pixel
+colour against `--text-secondary` in a light theme (the theme that FAILED above) and confirms it
+now matches within antialiasing tolerance, the same way Steam already does.
+
+Desk-level evidence: `src/frontend/screens/Humble/Keys/__tests__/humbleKeysStylesheet.test.ts`
+asserts the scoped rule's source text and that no unscoped `.gogIcon` rule was reintroduced in
+this file.
