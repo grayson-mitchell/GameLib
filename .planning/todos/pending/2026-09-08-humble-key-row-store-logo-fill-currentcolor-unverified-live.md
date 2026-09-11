@@ -2,7 +2,7 @@
 created: 2026-09-08
 title: "HumbleKeyRow store logo fill:currentColor is a code-level guarantee only — never verified against a live render"
 area: humble-keys-ui
-status: OPEN
+status: RESOLVED
 severity: medium
 platform: any
 ready: live-gate
@@ -160,3 +160,38 @@ now matches within antialiasing tolerance, the same way Steam already does.
 Desk-level evidence: `src/frontend/screens/Humble/Keys/__tests__/humbleKeysStylesheet.test.ts`
 asserts the scoped rule's source text and that no unscoped `.gogIcon` rule was reintroduced in
 this file.
+
+## RESOLVED (2026-09-11, quick task 260911-qds) — REQ-43-19 run 2, item 6: PASS
+
+Session `/tmp/gamelib-gate-20260911T062945Z`, preserved at `43-11-evidence/`. Build under test:
+`gamelib-shell` sha256 `1cd1e843…3f5a`, HEAD `0d2ae9862` (carries the `c690a117a` fix above).
+
+| Logo | Theme | Measured | `--text-secondary` | Verdict |
+|---|---|---|---|---|
+| GOG (Racine) | light `[237,239,244]` | `[57,59,64]` | `#393b41` = `[57,59,65]` | PASS (±1) |
+| Steam (Paths & Danger) | light | `[57,59,64]` | `#393b41` = `[57,59,65]` | PASS (±1) |
+| Steam (Satellite Reign) | light | `[57,59,64]` | `#393b41` = `[57,59,65]` | PASS (±1) |
+
+The GOG glyph now matches `--text-secondary` within the same antialiasing tolerance as both
+sampled Steam glyphs — pixel-identical to them, in fact. This satisfies the closure condition this
+todo itself stated ("re-measures the GOG glyph pixel colour against `--text-secondary` in a light
+theme … confirms it now matches within antialiasing tolerance, the same way Steam already does").
+
+The scoped fix from quick task 260911-p6s
+(`.humbleKeyRowStoreLogo .gogIcon { fill: currentColor; }`) is what closed this. The global
+`.gogIcon` rule (`src/frontend/styles/_colors.scss:101`) and `GamePage/index.css:619` remain
+deliberately untouched — this was a scoped escape, not a global change, and neither of those two
+other consumers was in scope.
+
+**The "reversed" / solid-block silhouette difference between the GOG and Steam glyphs is NOT a
+defect.** `gog-logo.svg` is a filled rounded square with the "gog.com" wordmark knocked out of it;
+Steam's glyph is a disc with its own mark knocked out. The two silhouettes are simply different
+shapes by design — the *ink colour* is identical (`[57,59,64]` for both, matching
+`--text-secondary`), which is the only thing this todo ever measured or claimed. This was
+investigated and dismissed as a non-issue during this closure so a future reader does not mistake
+the silhouette difference for the colour bug this todo tracked.
+
+The GOG glyph's non-square rendering (19.0 × 17.5 vs a 19.2 target, carried from item 5) is a
+**separate, still-open finding** handed off to
+`.planning/todos/pending/2026-09-11-gog-logo-svg-renders-non-square-and-is-malformed.md`
+(filed 2026-09-11, same session, before this todo closed).
