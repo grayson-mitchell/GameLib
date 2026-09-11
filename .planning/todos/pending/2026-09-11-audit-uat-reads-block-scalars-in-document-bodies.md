@@ -8,6 +8,8 @@ ready: human
 source: "quick task 260911-vox (the frontmatter block-scalar sweep) — found while proving that sweep's V4 post-condition; deliberately left OUT OF SCOPE there"
 files:
   - .planning/phases/27-tauri-shell-walking-skeleton/27-UAT.md
+  - .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/34.5-UAT.md
+  - .planning/debug/deep-link-open-url-abort.md
 resolves_phase: null
 ---
 
