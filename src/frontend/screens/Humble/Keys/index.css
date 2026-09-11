@@ -220,8 +220,25 @@
      row-separator landmine"). Re-verify live per D-43-21: this phase
      changes the layout mechanism (flex -> grid) around this exact
      declaration, so the prior "it renders as a hairline" assumption does
-     not automatically carry over. */
-  border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
+     not automatically carry over.
+
+     2026-09-11: the fallback here was white-biased `rgba(255, 255, 255,
+     0.08)` until this date, which the Phase 43 REQ-43-19 live gate
+     measured as delta 2 against a light background (237 +
+     0.08*(255-237) = 238.4; measured seam [238,240,245] vs background
+     [237,239,244]) against the required >=3 -- effectively invisible.
+     `--divider` itself is declared in only 2 of 11 `themes.scss` blocks
+     on purpose (NavShell/__tests__/themeTokens.test.ts:285's census
+     forbids universalising it; NavShell/__tests__/appShellLayout.test.ts:282
+     has a SANITY test asserting the token does NOT resolve in every
+     theme), so the fallback below is the load-bearing half for every
+     theme that never defines the token. `currentColor` is a CSS-wide
+     keyword, not a custom property, so it cannot be undefined in any
+     theme -- the same class of failure this codebase already has scar
+     tissue for (see NavShell/index.scss:101-159). See
+     .planning/todos/pending/2026-09-11-humble-key-row-separator-is-invisible-in-light-themes.md. */
+  border-bottom: 1px solid
+    var(--divider, color-mix(in srgb, currentColor 14%, transparent));
 }
 
 .humbleKeyRow:last-child {
@@ -379,6 +396,22 @@
 .humbleKeyRowStoreLogo svg {
   width: 100%;
   height: 100%;
+}
+
+/* Scoped escape for the GOG store logo only: `gog-logo.svg`'s root
+   `<svg>` carries `class="gogIcon"`, and `styles/_colors.scss:101`'s
+   global `.gogIcon { fill: var(--text-default) }` matches that element
+   DIRECTLY, which beats the `fill: currentColor` `.humbleKeyRowStoreLogo`
+   supplies only by INHERITANCE -- a directly-matching declaration wins
+   over an inherited value regardless of specificity. This descendant
+   selector is `0,2,0` and out-specifies the global rule's `0,1,0` while
+   leaving every other `.gogIcon` consumer (styles/_colors.scss,
+   Game/GamePage/index.css) untouched. Steam and Epic carry no class on
+   their root <svg> and never needed this. Do not change
+   .humbleKeyRowStoreLogo's own `color`/`fill` declarations above. See
+   .planning/todos/pending/2026-09-08-humble-key-row-store-logo-fill-currentcolor-unverified-live.md. */
+.humbleKeyRowStoreLogo .gogIcon {
+  fill: currentColor;
 }
 
 .humbleKeyRowExpiration {
@@ -585,7 +618,11 @@
   font-size: var(--text-xs);
   font-weight: var(--semibold);
   color: var(--text-secondary);
-  border-bottom: 1px solid var(--divider, rgba(255, 255, 255, 0.08));
+  /* Same white-biased-fallback fix as .humbleKeyRow's border-bottom
+     above -- see that comment for the measurement and the reason
+     `--divider` cannot simply be defined per theme instead. */
+  border-bottom: 1px solid
+    var(--divider, color-mix(in srgb, currentColor 14%, transparent));
 }
 
 /* 43-UI-SPEC "Screen Layout Contract" item 2: sort picker + redeemable-only
@@ -611,7 +648,13 @@
 }
 
 .humbleKeysSortPicker .MuiOutlinedInput-notchedOutline {
-  border-color: var(--divider, rgba(255, 255, 255, 0.08));
+  /* Same white-biased-fallback fix as .humbleKeyRow's border-bottom
+     above -- see that comment for the measurement and the reason
+     `--divider` cannot simply be defined per theme instead. */
+  border-color: var(
+    --divider,
+    color-mix(in srgb, currentColor 14%, transparent)
+  );
 }
 
 /* 43-UI-SPEC "Empty States": filtered-to-zero state (search text and/or
