@@ -138,6 +138,14 @@ reasoning_checkpoint:
     like a possible separate, pre-existing oddity worth a follow-up look (not blocking this fix
     since getUserDetails() reads resolved.user_id, never the outer key).
 
+    CORRECTION 2026-09-11 (quick-260911-h49): the sentence above is superseded, and there is
+    nothing left to follow up. The outer key is gogdl's OAuth client_id
+    (CLIENT_ID = "46899977096215655" at
+    .build-tools/runners-onedir/src/gogdl/gogdl/auth.py:11), not a user id, and was never
+    meant to equal the nested user_id -- this repo ships that same value as a client_id at
+    loginRoutes.ts:48. Full write-up:
+    .planning/todos/completed/2026-09-11-gog-auth-json-outer-object-key-does-not-match-its-own-user-id-field.md
+
 ## Evidence
 
 - timestamp: 2026-09-11T09:51:23+12:00
