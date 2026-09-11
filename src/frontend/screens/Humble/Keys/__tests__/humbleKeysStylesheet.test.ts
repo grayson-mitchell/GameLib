@@ -175,7 +175,7 @@ describe('stripSourceComments integrity for this file (guards against comment pr
     expect(stripped.match(ANY_GOGICON_RULE)?.length ?? 0).toBe(0)
   })
 
-  it('SANITY (260911-r8u): a comment naming align-items: flex-start and text-align: start as prose above a block declaring neither cannot satisfy either alignment assertion -- guards against Task 1\'s own rationale comment faking Task 2\'s results', () => {
+  it("SANITY (260911-r8u): a comment naming align-items: flex-start and text-align: start as prose above a block declaring neither cannot satisfy either alignment assertion -- guards against Task 1's own rationale comment faking Task 2's results", () => {
     const fixture = `
       /* 260911-r8u: this rule defends against inherited align-items:
          flex-start and text-align: start, described here in prose only. */
