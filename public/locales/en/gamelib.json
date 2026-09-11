@@ -101,10 +101,10 @@
         "platformOther": "Other",
         "redeemableOnly": "Redeemable keys only",
         "searchPlaceholder": "Search your keys",
+        "settledFromOwnership": "Already in your Steam library",
         "sortAlphabetical": "Alphabetical",
         "sortExpiringSoonest": "Expiring soonest",
-        "sortLabel": "Sort",
-        "settledFromOwnership": "Already in your Steam library"
+        "sortLabel": "Sort"
     },
     "info": {
         "refresh-rating": "Refresh rating"
