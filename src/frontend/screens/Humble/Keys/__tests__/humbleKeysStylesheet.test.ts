@@ -302,8 +302,8 @@ const WHITE_SPACE_NOWRAP = /white-space:\s*nowrap/
  * `.humbleKeysSortPicker`'s sibling column-header anchor above.
  */
 const HUMBLE_KEYS_SORT_PICKER_BLOCK = /\.humbleKeysSortPicker\s*\{([^}]*)\}/
-const GRID_TEMPLATE_AREAS_SELECT_LABEL =
-  /grid-template-areas:\s*'select label'/
+const GRID_TEMPLATE_AREAS_LABEL_SELECT =
+  /grid-template-areas:\s*'label select'/
 const GRID_TEMPLATE_COLUMNS_DECLARED = /grid-template-columns:/
 
 /** Block-scoped anchor for `.humbleKeyOwnedBadge`. */
@@ -330,13 +330,13 @@ describe('Humble Keys title no longer yields to SearchBar (REQ-43-19, 260911-t0p
   })
 })
 
-describe('Humble Keys sort picker label sits beside, not above, the select (REQ-43-19, 260911-t0p defect 2)', () => {
+describe('Humble Keys sort picker label sits to the left of the select, not above and not to its right (REQ-43-19, 260911-t0p defect 2, reordered by 260911-ue4)', () => {
   const stripped = read(KEYS_CSS)
 
-  it('.humbleKeysSortPicker declares grid-template-areas: \'select label\' and an explicit grid-template-columns', () => {
+  it('.humbleKeysSortPicker declares grid-template-areas: \'label select\' and an explicit grid-template-columns', () => {
     const match = HUMBLE_KEYS_SORT_PICKER_BLOCK.exec(stripped)
     expect(match).not.toBeNull()
-    expect(match?.[1]).toMatch(GRID_TEMPLATE_AREAS_SELECT_LABEL)
+    expect(match?.[1]).toMatch(GRID_TEMPLATE_AREAS_LABEL_SELECT)
     expect(match?.[1]).toMatch(GRID_TEMPLATE_COLUMNS_DECLARED)
   })
 
@@ -344,8 +344,17 @@ describe('Humble Keys sort picker label sits beside, not above, the select (REQ-
     const badFixture = '.humbleKeysSortPicker {\n  color: red;\n}'
     const match = HUMBLE_KEYS_SORT_PICKER_BLOCK.exec(badFixture)
     expect(match).not.toBeNull()
-    expect(match?.[1]).not.toMatch(GRID_TEMPLATE_AREAS_SELECT_LABEL)
+    expect(match?.[1]).not.toMatch(GRID_TEMPLATE_AREAS_LABEL_SELECT)
     expect(match?.[1]).not.toMatch(GRID_TEMPLATE_COLUMNS_DECLARED)
+  })
+
+  it("SANITY: the check above fails against the pre-ue4 order (label read to the right of the select, shipped and live-verified by 260911-t0p) -- this is the exact regression this pin now guards against, not a generic negative control", () => {
+    const badFixture =
+      ".humbleKeysSortPicker {\n  grid-template-areas: 'select label';\n  grid-template-columns: 12rem max-content;\n}"
+    const match = HUMBLE_KEYS_SORT_PICKER_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).not.toMatch(GRID_TEMPLATE_AREAS_LABEL_SELECT)
+    expect(match?.[1]).toMatch(GRID_TEMPLATE_COLUMNS_DECLARED)
   })
 
   it('SANITY: the block anchor does NOT match the descendant `.humbleKeysSortPicker .MuiSelect-select,` selector that follows it in this file -- proves it resolves to the bare rule, not the descendant form', () => {

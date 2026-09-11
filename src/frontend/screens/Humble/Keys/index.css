@@ -685,13 +685,17 @@
 }
 
 /* 43-UI-SPEC "Screen Layout Contract" item 2: sort picker + redeemable-only
-   checkbox, left-aligned, sitting below the title row at --space-lg (24px)
-   vertical gap. No result count anywhere in this row (D-43-04). */
+   checkbox, left-aligned, sitting below the title row. No result count
+   anywhere in this row (D-43-04). 260911-ue4: top and bottom margins are
+   equal -- t0p's fix shipped with a top-only margin, leaving a lopsided
+   40px-above / 5.5px-below gap around this row (measured live); matching
+   values reads as one intentional block of breathing room instead. */
 .humbleKeysControlsRow {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  margin-top: var(--space-lg);
+  margin-top: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
 /* 43-UI-SPEC "Sort Picker Contract": GameLib's MUI theme is light and
@@ -717,11 +721,33 @@
    sizing here: the pre-existing column-geometry census test in
    `HumbleKeyRow/__tests__/index.test.tsx` does a raw, un-stripped grep for
    that exact substring, and this prose would be a false extra
-   occurrence of it. */
+   occurrence of it.
+   260911-ue4: live UAT on the shipped t0p fix found the label reading to
+   the *right* of the picker unnatural, so the area order and matching
+   track order are flipped here -- label first, select second. The select
+   track width is unchanged from t0p's value, which the same live UAT
+   already measured as rendering "Expiring soonest" with room to spare, so
+   there is no new clipping risk from the reorder alone. */
 .humbleKeysSortPicker {
-  grid-template-areas: 'select label';
-  grid-template-columns: 12rem max-content;
+  grid-template-areas: 'label select';
+  grid-template-columns: max-content 12rem;
   column-gap: var(--space-sm);
+}
+
+/* 260911-ue4: the global `.selectFieldWrapper .MuiOutlinedInput-root` rule
+   (SelectField/index.css:6-39) is (0,2,0) specificity -- identical to a
+   naive `.humbleKeysSortPicker .MuiOutlinedInput-root` override, so that
+   form would tie and be resolved by bundle source order rather than by this
+   file. `SelectField/index.tsx:34` puts both `selectFieldWrapper` and the
+   `extraClass` on the same element, so the compound form below --
+   `.humbleKeysSortPicker.selectFieldWrapper` -- is (0,3,0) and wins
+   outright regardless of source order. Compacting height/font/shadow only;
+   the track width above is untouched, so text-fit is unaffected by this
+   rule. */
+.humbleKeysSortPicker.selectFieldWrapper .MuiOutlinedInput-root {
+  height: 32px;
+  font-size: var(--text-sm);
+  box-shadow: none;
 }
 
 .humbleKeysSortPicker .MuiSelect-select,
