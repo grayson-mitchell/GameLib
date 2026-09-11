@@ -5,7 +5,12 @@
   display: inline-flex;
   background: var(--search-bar-background, var(--input-background));
   border-radius: var(--space-md);
-  padding: var(--space-xs);
+  // Vertical is a bare 5px, not a spacing token: at button padding
+  // var(--space-3xs) (4px) and the searchButton's 16px icon, 2*5 + 2*4 + 16
+  // measures exactly 34px live -- the nearest token step (var(--space-2xs),
+  // 6px) measured 36px. Horizontal keeps a token since it does not affect
+  // the height this task is matching.
+  padding: 5px var(--space-2xs);
 
   &:focus-within {
     box-shadow: 0px 0px 0px 3px
@@ -61,7 +66,7 @@
   // inline style was already producing; only the horizontal 12px -> 6px is a
   // deliberate change.
   .searchButton {
-    padding: var(--space-2xs);
+    padding: var(--space-3xs);
     align-self: center;
   }
 
