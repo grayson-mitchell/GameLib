@@ -4,11 +4,7 @@ slug: close-out-34-10-review-md-frontmatter-an
 date: 2026-08-25
 status: complete
 type: docs
-description: >
-  Closed 34.10-REVIEW.md (issues_found -> resolved). Its last two open findings, WR-02 and
-  IN-01, are CLOSED BY DELETION — both cite files Phase 34.11 plan 09 removed. Captured the
-  mirror-image defect found while proving IN-01 moot (LibraryTour targets two deleted
-  data-tour anchors) as a pending todo owned by Phase 34.12.
+description: 'Closed 34.10-REVIEW.md (issues_found -> resolved). Its last two open findings, WR-02 and IN-01, are CLOSED BY DELETION — both cite files Phase 34.11 plan 09 removed. Captured the mirror-image defect found while proving IN-01 moot (LibraryTour targets two deleted data-tour anchors) as a pending todo owned by Phase 34.12.'
 files_touched:
   - .planning/phases/34.10-navigation-shell-horizontal-card-tabs-replace-the-sidebar/34.10-REVIEW.md
   - .planning/todos/pending/2026-08-25-librarytour-targets-two-deleted-data-tour-anchors.md

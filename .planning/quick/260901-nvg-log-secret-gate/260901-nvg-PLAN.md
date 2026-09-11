@@ -2,11 +2,7 @@
 quick_id: 260901-nvg
 slug: log-secret-gate
 date: 2026-09-01
-description: >-
-  Add a ts-morph AST gate that fails CI when a backend log call interpolates raw
-  process output (stdout/stderr) or a secret-named identifier without a
-  length/presence guard. Closes the enforcement gap left open by
-  .planning/todos/pending/log-upload-boundary-scrub-decision.md.
+description: 'Add a ts-morph AST gate that fails CI when a backend log call interpolates raw process output (stdout/stderr) or a secret-named identifier without a length/presence guard. Closes the enforcement gap left open by .planning/todos/pending/log-upload-boundary-scrub-decision.md.'
 status: in-progress
 ---
 

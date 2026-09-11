@@ -3,10 +3,7 @@ quick_id: 260825-qdy
 slug: clear-the-7-repo-wide-eslint-errors-bloc
 date: 2026-08-25
 type: chore
-description: >
-  Clear the last 7 repo-wide eslint errors so `pnpm lint` exits 0 and stops being one of the two
-  gates failing `.husky/pre-push`. All 7 are in 4 test files; none is dirty in the working tree,
-  so none collides with the concurrent 34.16 / 08.1 session.
+description: 'Clear the last 7 repo-wide eslint errors so `pnpm lint` exits 0 and stops being one of the two gates failing `.husky/pre-push`. All 7 are in 4 test files; none is dirty in the working tree, so none collides with the concurrent 34.16 / 08.1 session.'
 tasks: 4
 ---
 

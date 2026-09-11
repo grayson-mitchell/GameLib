@@ -9,38 +9,11 @@ resolved_gaps:
   - truth: "There is exactly one module in the codebase that reads or writes configStore's refreshToken key (28-03 must-have, supports REQ-28-02/REQ-28-03/D-09)"
     status: resolved
     fix_commit: "45b6519f"
-    reason: >
-      SteamUser.logout() now routes the refresh token through getTokenStore().clearToken()
-      (the D-09 seam) instead of calling configStore.clear() directly. The blanket clear()
-      was replaced with targeted configStore.delete('isLoggedIn')/delete('userData') calls so
-      Electron's observable logout behavior is unchanged (verified by the actual configStore
-      key set enumerated via grep: isLoggedIn/userData in user.ts, TOKEN_STORE_KEY only in
-      tokenStore.ts — confirmed no other keys exist). logout() is now async (clearToken() may
-      RPC to Rust in the sidecar build); main.ts's addListener('logoutSteam', ...) was updated
-      to await it via the same async fire-and-forget IPC convention already used elsewhere in
-      that file (e.g. addListener('quit', async () => handleExit())) — no floating promise.
-      A regression test was added asserting isLoggedIn/userData are explicitly cleared (not
-      just the token) — this test fails under the naive one-line clear()->clearToken() swap
-      that would otherwise silently stop clearing session state. Re-verified: user.test.ts
-      64/64 pass, sidecar+tokenStore suites 52/52 pass, `tsc --noEmit` clean, real Electron
-      store md5 unchanged before/after (958bf6829589f20a8de935ebf7c2502b), grep confirms zero
-      remaining configStore.clear() calls and zero TOKEN_STORE_KEY references outside
-      tokenStore.ts/constants.ts in the steam store manager. tokenStore.ts's "ONLY module
-      permitted to read or write TOKEN_STORE_KEY" docstring claim is now true.
+    reason: 'SteamUser.logout() now routes the refresh token through getTokenStore().clearToken() (the D-09 seam) instead of calling configStore.clear() directly. The blanket clear() was replaced with targeted configStore.delete(''isLoggedIn'')/delete(''userData'') calls so Electron''s observable logout behavior is unchanged (verified by the actual configStore key set enumerated via grep: isLoggedIn/userData in user.ts, TOKEN_STORE_KEY only in tokenStore.ts — confirmed no other keys exist). logout() is now async (clearToken() may RPC to Rust in the sidecar build); main.ts''s addListener(''logoutSteam'', ...) was updated to await it via the same async fire-and-forget IPC convention already used elsewhere in that file (e.g. addListener(''quit'', async () => handleExit())) — no floating promise. A regression test was added asserting isLoggedIn/userData are explicitly cleared (not just the token) — this test fails under the naive one-line clear()->clearToken() swap that would otherwise silently stop clearing session state. Re-verified: user.test.ts 64/64 pass, sidecar+tokenStore suites 52/52 pass, `tsc --noEmit` clean, real Electron store md5 unchanged before/after (958bf6829589f20a8de935ebf7c2502b), grep confirms zero remaining configStore.clear() calls and zero TOKEN_STORE_KEY references outside tokenStore.ts/constants.ts in the steam store manager. tokenStore.ts''s "ONLY module permitted to read or write TOKEN_STORE_KEY" docstring claim is now true.'
 gaps:
   - truth: "The pre-existing openExternal frame from the sidecar now actually opens a URL instead of being discarded (28-02 must-have, REQ-28-05 incidental fix)"
     status: partial
-    reason: >
-      Code-level artifact exists and is substantive: src-tauri/src/main.rs's start_reader()
-      has a dedicated `kind == "openExternal"` branch (confirmed by direct read, lines 457-466)
-      that calls app.opener().open_url(...), and `cargo build` compiles clean. But per
-      28-PROOF.md Step 5 and this phase's own hardware checkpoint, it was never exercised
-      end-to-end on real hardware — the Tauri build starts signed-out by design (D-02/D-03),
-      so no game was ever launchable during this phase's checkpoint to actually trigger a
-      steam://rungameid/<id> open. This is honestly recorded as NOT VERIFIED in 28-PROOF.md
-      itself (not a case of the phase hiding it), but the task's own instruction is explicit
-      that this must not be marked verified, so it is carried into this report as a real,
-      unclosed gap rather than folded into the passing score.
+    reason: 'Code-level artifact exists and is substantive: src-tauri/src/main.rs''s start_reader() has a dedicated `kind == "openExternal"` branch (confirmed by direct read, lines 457-466) that calls app.opener().open_url(...), and `cargo build` compiles clean. But per 28-PROOF.md Step 5 and this phase''s own hardware checkpoint, it was never exercised end-to-end on real hardware — the Tauri build starts signed-out by design (D-02/D-03), so no game was ever launchable during this phase''s checkpoint to actually trigger a steam://rungameid/<id> open. This is honestly recorded as NOT VERIFIED in 28-PROOF.md itself (not a case of the phase hiding it), but the task''s own instruction is explicit that this must not be marked verified, so it is carried into this report as a real, unclosed gap rather than folded into the passing score.'
     artifacts:
       - path: "src-tauri/src/main.rs"
         issue: "openExternal reader branch (lines 452-466) compiles and passes code review but has zero runtime/hardware evidence of actually opening a URL"

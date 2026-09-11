@@ -6,37 +6,7 @@ severity: medium
 platform: any
 ready: code
 source: "incidental finding during quick-260908-wk0's by-hand STATE.md row append"
-status: |-
-  RESOLVED 2026-09-11 by quick-260911-ayu -- both `stopped_at` and `last_activity` converted to
-  `|-` literal block scalars, byte-preserving their prior values (verified by sha256, not by eye).
-  `.planning/planning-frontmatter-gate.py` was added as the requested gate, `MINIMUM_EXPECTED_GATES`
-  raised 9 -> 10, and the gate has been observed RED against the real pre-fix file and GREEN against
-  the fixed one.
-
-  THIS TODO'S "10 RAW QUOTES" COUNT WAS CORRECT WHEN WRITTEN. An earlier close-out note here claimed
-  the 10 "included the scalar's own delimiters and was measured against a stale offset". Both halves
-  of that claim are FALSE and it has been retracted: the todo explicitly subtracted the two delimiters
-  (12 - 2 = 10), and its cited offset 9453 was accurate for the file as it then stood.
-
-  What actually happened is worth more than the correction. Traced through git history by counting
-  unescaped quotes in `last_activity` at every STATE.md commit: the scalar held 10 interior raw quotes
-  continuously from `e29bf8d7c` through `47cf59108`, growing 18681 -> 31165 chars. Commit `1ffa0b05d`
-  ("docs(state): record phase 43 context session", 2026-09-09) then REPLACED that value wholesale with
-  a 1475-char one, discarding ~29,700 characters of narrative and, incidentally, 8 of the 10 quotes.
-  The remaining 2 still broke the parse, which is why the file was still red at HEAD two days later.
-  So the count did not drift; the FIELD was overwritten by an unrelated by-hand STATE.md append.
-
-  That is the same by-hand append path this todo blamed for the raw quotes in the first place, and it
-  destroys narrative silently -- no gate saw a 29,700-character deletion. The `|-` block-scalar form
-  now in place removes the escaping burden that motivated the truncation-prone editing, but nothing
-  yet detects a large unexplained shrink in these fields.
-
-  `stopped_at` needed no repair -- it was already correctly escaped -- and was converted only so both
-  fields share one convention rather than one escaped and one not.
-
-  The gsd-sdk-corruption hypothesis in "Why it may matter more than it looks" below is NEITHER
-  confirmed NOR refuted by this work; the standing hand-write ban on gsd-sdk's `state.*` verbs is
-  unchanged either way.
+status: 'RESOLVED 2026-09-11 by quick-260911-ayu -- both `stopped_at` and `last_activity` converted to `|-` literal block scalars, byte-preserving their prior values (verified by sha256, not by eye). `.planning/planning-frontmatter-gate.py` was added as the requested gate, `MINIMUM_EXPECTED_GATES` raised 9 -> 10, and the gate has been observed RED against the real pre-fix file and GREEN against the fixed one. THIS TODO''S "10 RAW QUOTES" COUNT WAS CORRECT WHEN WRITTEN. An earlier close-out note here claimed the 10 "included the scalar''s own delimiters and was measured against a stale offset". Both halves of that claim are FALSE and it has been retracted: the todo explicitly subtracted the two delimiters (12 - 2 = 10), and its cited offset 9453 was accurate for the file as it then stood. What actually happened is worth more than the correction. Traced through git history by counting unescaped quotes in `last_activity` at every STATE.md commit: the scalar held 10 interior raw quotes continuously from `e29bf8d7c` through `47cf59108`, growing 18681 -> 31165 chars. Commit `1ffa0b05d` ("docs(state): record phase 43 context session", 2026-09-09) then REPLACED that value wholesale with a 1475-char one, discarding ~29,700 characters of narrative and, incidentally, 8 of the 10 quotes. The remaining 2 still broke the parse, which is why the file was still red at HEAD two days later. So the count did not drift; the FIELD was overwritten by an unrelated by-hand STATE.md append. That is the same by-hand append path this todo blamed for the raw quotes in the first place, and it destroys narrative silently -- no gate saw a 29,700-character deletion. The `|-` block-scalar form now in place removes the escaping burden that motivated the truncation-prone editing, but nothing yet detects a large unexplained shrink in these fields. `stopped_at` needed no repair -- it was already correctly escaped -- and was converted only so both fields share one convention rather than one escaped and one not. The gsd-sdk-corruption hypothesis in "Why it may matter more than it looks" below is NEITHER confirmed NOR refuted by this work; the standing hand-write ban on gsd-sdk''s `state.*` verbs is unchanged either way.'
 files:
   - .planning/STATE.md (frontmatter line 8, `last_activity:`)
 resolves_phase: null

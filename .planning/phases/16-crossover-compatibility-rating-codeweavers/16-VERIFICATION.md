@@ -4,47 +4,11 @@ verified: 2026-07-10T19:30:00Z
 status: passed
 score: 8/8 must-haves verified
 overrides_applied: 0
-gap_resolution: >
-  The single gap (D-08 Extra-info tab reachability) was closed inline during
-  this execution by commit cf022f4d: `hasWikiInfo` in
-  src/frontend/screens/Game/GamePage/index.tsx now includes
-  `wikiInfo?.codeweavers?.rating != null`, so the Extra-info tab (and the
-  CrossOver row) surfaces on Linux whenever a live CodeWeavers rating exists,
-  independent of applegamingwiki/HLTB/PCGamingWiki/Steam data. The gate uses
-  `rating != null` rather than a raw `codeweavers` truthy check because a
-  genuine soft-404 miss caches a truthy EMPTY marker ({rating:null,...}), which
-  would otherwise open the tab for every Mac/Linux game. Verified via
-  `pnpm codecheck` (exit 0) and code inspection. All 3 success criteria and
-  locked constraints now satisfied.
+gap_resolution: 'The single gap (D-08 Extra-info tab reachability) was closed inline during this execution by commit cf022f4d: `hasWikiInfo` in src/frontend/screens/Game/GamePage/index.tsx now includes `wikiInfo?.codeweavers?.rating != null`, so the Extra-info tab (and the CrossOver row) surfaces on Linux whenever a live CodeWeavers rating exists, independent of applegamingwiki/HLTB/PCGamingWiki/Steam data. The gate uses `rating != null` rather than a raw `codeweavers` truthy check because a genuine soft-404 miss caches a truthy EMPTY marker ({rating:null,...}), which would otherwise open the tab for every Mac/Linux game. Verified via `pnpm codecheck` (exit 0) and code inspection. All 3 success criteria and locked constraints now satisfied.'
 gaps:
   - truth: "CrossOver row renders on Linux independently of AppleGamingWiki (D-08)"
     status: resolved
-    reason: >
-      AppleWikiInfo.tsx's own render logic is correctly decoupled from
-      applegamingwiki (the CrossOver <a> block is gated only on `codeweavers`
-      presence, per src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx:56).
-      However the PARENT "Extra info" tab — the only UI entry point into the
-      component containing this row — is gated by a `hasWikiInfo` boolean in
-      src/frontend/screens/Game/GamePage/index.tsx:375-380 that does NOT include
-      `wikiInfo?.codeweavers`:
-        const hasWikiInfo =
-          wikiInfo?.applegamingwiki ||
-          wikiInfo?.howlongtobeat ||
-          wikiInfo?.pcgamingwiki?.metacritic.score ||
-          wikiInfo?.pcgamingwiki?.opencritic.score ||
-          wikiInfo?.steamInfo
-      On Linux, `applegamingwiki` is always null (isMac-gated fetch), so for a
-      title whose ONLY enriched wiki data is a CodeWeavers hit (no HLTB entry,
-      no PCGamingWiki metacritic/opencritic score, and no Steam linkage so
-      steamInfo stays null), the "Extra info" Tab button itself never renders
-      (GamePage/index.tsx:515 `{hasWikiInfo && <Tab value="extra" .../>}`), and
-      `currentTab` can only change via clicking that Tab
-      (GamePage/index.tsx:177-179, 487-488) — so the CrossOver row is
-      unreachable in the UI even though `wikiInfo.codeweavers` was fetched and
-      populated correctly. This is a real violation of D-08 ("renders on
-      Linux") and puts SC-1 at risk for exactly the class of Linux titles the
-      phase's stated goal targets (sideloaded/non-Steam-linked games with a
-      CodeWeavers listing but no other wiki source).
+    reason: 'AppleWikiInfo.tsx''s own render logic is correctly decoupled from applegamingwiki (the CrossOver <a> block is gated only on `codeweavers` presence, per src/frontend/screens/Game/GamePage/components/AppleWikiInfo.tsx:56). However the PARENT "Extra info" tab — the only UI entry point into the component containing this row — is gated by a `hasWikiInfo` boolean in src/frontend/screens/Game/GamePage/index.tsx:375-380 that does NOT include `wikiInfo?.codeweavers`: const hasWikiInfo = wikiInfo?.applegamingwiki || wikiInfo?.howlongtobeat || wikiInfo?.pcgamingwiki?.metacritic.score || wikiInfo?.pcgamingwiki?.opencritic.score || wikiInfo?.steamInfo On Linux, `applegamingwiki` is always null (isMac-gated fetch), so for a title whose ONLY enriched wiki data is a CodeWeavers hit (no HLTB entry, no PCGamingWiki metacritic/opencritic score, and no Steam linkage so steamInfo stays null), the "Extra info" Tab button itself never renders (GamePage/index.tsx:515 `{hasWikiInfo && <Tab value="extra" .../>}`), and `currentTab` can only change via clicking that Tab (GamePage/index.tsx:177-179, 487-488) — so the CrossOver row is unreachable in the UI even though `wikiInfo.codeweavers` was fetched and populated correctly. This is a real violation of D-08 ("renders on Linux") and puts SC-1 at risk for exactly the class of Linux titles the phase''s stated goal targets (sideloaded/non-Steam-linked games with a CodeWeavers listing but no other wiki source).'
     artifacts:
       - path: "src/frontend/screens/Game/GamePage/index.tsx"
         issue: "hasWikiInfo (lines 375-380) omits wikiInfo?.codeweavers, so the Extra-info tab (and therefore the CrossOver row) can be hidden even when live CodeWeavers data exists"

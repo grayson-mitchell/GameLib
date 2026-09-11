@@ -3,12 +3,7 @@ phase: 24
 reviewers: [claude]
 reviewed_at: 2026-07-18T10:41:43Z
 plans_reviewed: [24-01-PLAN.md, 24-02-PLAN.md, 24-03-PLAN.md, 24-04-PLAN.md, 24-05-PLAN.md, 24-06-PLAN.md, 24-07-PLAN.md, 24-08-PLAN.md, 24-09-PLAN.md, 24-10-PLAN.md]
-independence_note: >
-  Intended external reviewers were unavailable at review time — gemini/codex/qwen/cursor/coderabbit
-  not installed; opencode installed but had no working credentials (invalid ANTHROPIC_API_KEY in env
-  + OpenCode Zen "Insufficient balance"). Per user direction, the review was run through a separate
-  `claude -p` session as a same-model-family fallback. Treat this as a single-reviewer pass with
-  weaker independence than a true cross-AI review; re-run with a non-Claude CLI when credentials allow.
+independence_note: 'Intended external reviewers were unavailable at review time — gemini/codex/qwen/cursor/coderabbit not installed; opencode installed but had no working credentials (invalid ANTHROPIC_API_KEY in env + OpenCode Zen "Insufficient balance"). Per user direction, the review was run through a separate `claude -p` session as a same-model-family fallback. Treat this as a single-reviewer pass with weaker independence than a true cross-AI review; re-run with a non-Claude CLI when credentials allow.'
 ---
 
 # Cross-AI Plan Review — Phase 24: macOS Native Steam Bridge

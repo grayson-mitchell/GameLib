@@ -9,23 +9,7 @@ verdict: PASS — all 3 items pass. Item 3 passed only on RE-RUN after fix b4517
 run_date: 2026-09-05 (launches 3 and 4; blocked attempt on c78ff3d30 recorded separately)
 items_total: 3
 items_passed: 3
-notes: |
-  Authored by the plan-40-11 Task 1 executor, BEFORE any live run took place. Per this
-  plan's `autonomous: false` and Task 2's `checkpoint:human-verify gate="blocking"`, the
-  run itself is performed by a human operator (or an agent explicitly resumed past that
-  checkpoint) — never by the agent that authored this contract. No verdict, pass/fail,
-  percentage, or narrative outcome may be written into this file until that run actually
-  happens. Every RESULT slot below reads "NOT YET RUN" until then. Author and runner are
-  deliberately separated so this contract cannot grade its own homework.
-
-  RUN PROVENANCE (added at completion, 2026-09-05). The run was performed by the human
-  operator on real macOS hardware; the agent built, launched, asserted single-instance at
-  all three points, archived both sinks, and performed the pixel measurement for Item 1.
-  Items 2 and 3 are the operator's verbatim verdicts and were NOT scored by the agent —
-  Item 3's FAIL is the operator's own finding, reversing their own earlier "resize is
-  smooth" once the gesture was run in the shape the item specifies. The gate BLOCKED on its
-  first attempt at c78ff3d30 (no verdict recorded, embed never opened); evidence here is
-  taken against the fix commit 54ca5b400.
+notes: 'Authored by the plan-40-11 Task 1 executor, BEFORE any live run took place. Per this plan''s `autonomous: false` and Task 2''s `checkpoint:human-verify gate="blocking"`, the run itself is performed by a human operator (or an agent explicitly resumed past that checkpoint) — never by the agent that authored this contract. No verdict, pass/fail, percentage, or narrative outcome may be written into this file until that run actually happens. Every RESULT slot below reads "NOT YET RUN" until then. Author and runner are deliberately separated so this contract cannot grade its own homework. RUN PROVENANCE (added at completion, 2026-09-05). The run was performed by the human operator on real macOS hardware; the agent built, launched, asserted single-instance at all three points, archived both sinks, and performed the pixel measurement for Item 1. Items 2 and 3 are the operator''s verbatim verdicts and were NOT scored by the agent — Item 3''s FAIL is the operator''s own finding, reversing their own earlier "resize is smooth" once the gesture was run in the shape the item specifies. The gate BLOCKED on its first attempt at c78ff3d30 (no verdict recorded, embed never opened); evidence here is taken against the fix commit 54ca5b400.'
 ---
 
 # Phase 40 Plan 11 — Live Gate: Embedded Store Suppression, Feel, and Resize (macOS)

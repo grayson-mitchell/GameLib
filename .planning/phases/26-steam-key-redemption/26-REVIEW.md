@@ -27,11 +27,7 @@ resolution:
   resolved_at: 2026-07-20
   resolved: [WR-01, WR-02, WR-03]
   out_of_scope: [IN-01, IN-02]
-  note: >-
-    All 3 Warnings fixed and committed atomically on
-    fix/steam-native-install-stability. Info items IN-01/IN-02 intentionally
-    left open (out of scope for this fix pass). Verification: user.test.ts
-    62/62 green, tsc --noEmit clean, eslint 0 errors on edited files.
+  note: 'All 3 Warnings fixed and committed atomically on fix/steam-native-install-stability. Info items IN-01/IN-02 intentionally left open (out of scope for this fix pass). Verification: user.test.ts 62/62 green, tsc --noEmit clean, eslint 0 errors on edited files.'
 ---
 
 # Phase 26: Code Review Report

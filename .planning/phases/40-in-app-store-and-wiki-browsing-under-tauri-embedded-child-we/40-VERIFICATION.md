@@ -5,79 +5,29 @@ status: gaps_closed_partially
 score: 11/14 requirements verified; 2 PARTIAL (REQ-40-06, REQ-40-14); 1 requirement's own gates left RED by the phase (REQ-40-10's i18n-scope pin)
 overrides_applied: 0
 verified_against_commit: cabc2c7d1
-note_on_head: >
-  HEAD moved to f200869e1 mid-verification (a concurrent orchestrator commit touching
-  .planning/STATE.md only). `git diff --name-only cabc2c7d1..f200869e1` = one file,
-  .planning/STATE.md. Zero source files differ, so every measurement below holds at HEAD.
+note_on_head: 'HEAD moved to f200869e1 mid-verification (a concurrent orchestrator commit touching .planning/STATE.md only). `git diff --name-only cabc2c7d1..f200869e1` = one file, .planning/STATE.md. Zero source files differ, so every measurement below holds at HEAD.'
 gap_closure:
   closed_at: 2026-09-05
   closed_in: [646969a63, fbf26afdf, 653e2fdd5, 63a8f7f83]
-  summary: >
-    GAP-A, GAP-B and GAP-C are FIXED and re-measured. GAP-D is FILED, not fixed,
-    by explicit operator decision. GAP-E remains OPEN and unqueued. One further
-    blocker this report MISSED was found and fixed. The original findings below
-    are retained verbatim; nothing in them has been softened or deleted.
-  gap_a: >
-    CLOSED. `pnpm lint` exits 0 at 4149 -- eight below the 4157 ratchet and four
-    below the 4153 pre-phase baseline, so the phase now returns lint debt rather
-    than adding it. Fixed at source (untyped jest mocks in the two logoutCookies
-    suites returning `any`), NOT by raising the ratchet, which would invert
-    REQ-39-01's monotonic-downward intent.
-  gap_b: >
-    CLOSED. hardcodedStringGate green. The gate already owned this decision --
-    it exempts getItem/setItem storage keys and its comment names `last-url-`
-    -- and plan 40-09 moved the literal out of that check's syntactic reach.
-    Restored via a name-gated builder-body exemption, with 4 narrowness tests.
-    The allowlist route was rejected: T-34.8-30 pins it at exactly two entries
-    and calls growing it "a decision, not a way to reach green".
-  gap_c: >
-    CLOSED, and the prescribed fix was INCOMPLETE. Following this report's
-    `missing` list verbatim (add 5 files to the fork pin, move 208 -> 213) would
-    have left A-03 red, because those five then land in the unscanned-debt set
-    unless they also enter i18nGateScope.json. Rather than declare five brand-new
-    files as permanently unscanned debt, all five were added to the SCANNED scope
-    (164 -> 169). Four are clean; the fifth needed a resolution-gated exemption
-    for its one-line window.api.logInfo wrapper (3 more narrowness tests).
-  gap_d: >
-    FILED, NOT FIXED, per operator decision. Now a real queue item at
-    .planning/todos/pending/2026-09-05-in-embed-navigation-never-reaches-the-renderer-back-forward-de.md
-    with both fix options and a definition of done requiring a test that fails
-    today. The phase therefore ships with this known functional gap, named here
-    rather than written up as a caveat on a pass.
-  gap_e: >
-    OPEN and still unqueued. The six minted keys remain English-only (de/fr 0/6);
-    a live ANTHROPIC_API_KEY is needed. The RETIRED half of it is fixed (below).
-  missed_by_this_report: >
-    gamelibCatalogParity was RED at HEAD across 48 locale tests and this report
-    does not list it. The orphaned keys were recorded as a FACT under GAP-E and
-    scored a WARNING, but the suite that turns that fact into a CI blocker was
-    never run -- `pnpm test:ci` has no project filter, so it was breaking
-    .github/workflows/test.yml exactly as GAP-B was. Fixed in fbf26afdf by
-    pruning the two retired keys from 48 catalogs and their 48 gamelib.mt.json
-    provenance sidecars. Recorded because a verification that misses a red suite
-    is a more useful finding than the red suite itself.
+  summary: 'GAP-A, GAP-B and GAP-C are FIXED and re-measured. GAP-D is FILED, not fixed, by explicit operator decision. GAP-E remains OPEN and unqueued. One further blocker this report MISSED was found and fixed. The original findings below are retained verbatim; nothing in them has been softened or deleted.'
+  gap_a: 'CLOSED. `pnpm lint` exits 0 at 4149 -- eight below the 4157 ratchet and four below the 4153 pre-phase baseline, so the phase now returns lint debt rather than adding it. Fixed at source (untyped jest mocks in the two logoutCookies suites returning `any`), NOT by raising the ratchet, which would invert REQ-39-01''s monotonic-downward intent.'
+  gap_b: 'CLOSED. hardcodedStringGate green. The gate already owned this decision -- it exempts getItem/setItem storage keys and its comment names `last-url-` -- and plan 40-09 moved the literal out of that check''s syntactic reach. Restored via a name-gated builder-body exemption, with 4 narrowness tests. The allowlist route was rejected: T-34.8-30 pins it at exactly two entries and calls growing it "a decision, not a way to reach green".'
+  gap_c: 'CLOSED, and the prescribed fix was INCOMPLETE. Following this report''s `missing` list verbatim (add 5 files to the fork pin, move 208 -> 213) would have left A-03 red, because those five then land in the unscanned-debt set unless they also enter i18nGateScope.json. Rather than declare five brand-new files as permanently unscanned debt, all five were added to the SCANNED scope (164 -> 169). Four are clean; the fifth needed a resolution-gated exemption for its one-line window.api.logInfo wrapper (3 more narrowness tests).'
+  gap_d: 'FILED, NOT FIXED, per operator decision. Now a real queue item at .planning/todos/pending/2026-09-05-in-embed-navigation-never-reaches-the-renderer-back-forward-de.md with both fix options and a definition of done requiring a test that fails today. The phase therefore ships with this known functional gap, named here rather than written up as a caveat on a pass.'
+  gap_e: 'OPEN and still unqueued. The six minted keys remain English-only (de/fr 0/6); a live ANTHROPIC_API_KEY is needed. The RETIRED half of it is fixed (below).'
+  missed_by_this_report: 'gamelibCatalogParity was RED at HEAD across 48 locale tests and this report does not list it. The orphaned keys were recorded as a FACT under GAP-E and scored a WARNING, but the suite that turns that fact into a CI blocker was never run -- `pnpm test:ci` has no project filter, so it was breaking .github/workflows/test.yml exactly as GAP-B was. Fixed in fbf26afdf by pruning the two retired keys from 48 catalogs and their 48 gamelib.mt.json provenance sidecars. Recorded because a verification that misses a red suite is a more useful finding than the red suite itself.'
   verified_after_closure:
     - "pnpm lint -> exit 0, 4149 warnings"
     - "pnpm codecheck (tsc --noEmit) -> exit 0"
     - "jest --selectProjects Meta -> 36/36 suites, 974 passed, 1 skipped, exit 0"
     - "jest logoutCookies -> 2 suites, 17/17"
     - "prettier --check across every changed file -> clean (run as a dry-run FIRST; it flagged 3 files, and every gate above was re-run AFTER the reformat, not before)"
-  not_verified_after_closure: >
-    A full `pnpm test:ci` was NOT run. The suites this work could plausibly
-    disturb were run individually and are green, but the whole-suite run that CI
-    performs has not been reproduced locally, and this project has a recorded
-    case of a full run manufacturing a different failure set under load.
+  not_verified_after_closure: 'A full `pnpm test:ci` was NOT run. The suites this work could plausibly disturb were run individually and are green, but the whole-suite run that CI performs has not been reproduced locally, and this project has a recorded case of a full run manufacturing a different failure set under load.'
 
 gaps:
   - truth: "`pnpm lint` exits 0 — the Phase 39 ratchet holds"
     status: failed
-    reason: >
-      4159 warnings against a `--max-warnings 4157` ratchet. This is NOT pre-existing: measured
-      with `--no-cache` on a `git archive` of 8ac3a8c12 (the last commit before Phase 40's first),
-      the count is 4153 — four UNDER the ratchet, i.e. GREEN. Phase 40 added 20 warnings and
-      removed 14, net +6, taking it to 4159. Every file in the before/after delta is a Phase 40
-      file. `pnpm lint` runs in `.github/workflows/lint.yml` on every PR to main/stable AND in
-      `.husky/pre-push`, so this blocks both push and CI.
+    reason: '4159 warnings against a `--max-warnings 4157` ratchet. This is NOT pre-existing: measured with `--no-cache` on a `git archive` of 8ac3a8c12 (the last commit before Phase 40''s first), the count is 4153 — four UNDER the ratchet, i.e. GREEN. Phase 40 added 20 warnings and removed 14, net +6, taking it to 4159. Every file in the before/after delta is a Phase 40 file. `pnpm lint` runs in `.github/workflows/lint.yml` on every PR to main/stable AND in `.husky/pre-push`, so this blocks both push and CI.'
     artifacts:
       - path: "src/backend/storeManagers/nile/__tests__/logoutCookies.test.ts"
         issue: "+6 warnings (1 no-unsafe-assignment, 5 no-unsafe-return) — new file, plan 40-04"
@@ -100,14 +50,7 @@ gaps:
       - "Do NOT raise the ratchet: Phase 39 REQ-39-01 established it as a monotonic-downward gate, and raising it to absorb Phase 40's own additions inverts that requirement"
   - truth: "`pnpm test:ci` exits 0 — no jest suite is left red by this phase"
     status: failed
-    reason: >
-      `hardcodedStringGate` FAILS at HEAD with exactly one violation, and that violation is in a
-      Phase 40 file. Proven a regression, not a known-red baseline item: a hookless git worktree at
-      8ac3a8c12 (`git -c core.hooksPath=/dev/null worktree add --detach`) runs
-      `jest genI18nGateScope hardcodedStringGate` GREEN — 2 suites passed, 159 passed / 1 skipped.
-      At HEAD the same two suites give 2 failed / 3 failing tests. `test:ci` is
-      `jest --runInBand --silent` with no project filter, so the Meta project is in scope and
-      `.github/workflows/test.yml` is red.
+    reason: '`hardcodedStringGate` FAILS at HEAD with exactly one violation, and that violation is in a Phase 40 file. Proven a regression, not a known-red baseline item: a hookless git worktree at 8ac3a8c12 (`git -c core.hooksPath=/dev/null worktree add --detach`) runs `jest genI18nGateScope hardcodedStringGate` GREEN — 2 suites passed, 159 passed / 1 skipped. At HEAD the same two suites give 2 failed / 3 failing tests. `test:ci` is `jest --runInBand --silent` with no project filter, so the Meta project is in scope and `.github/workflows/test.yml` is red.'
     artifacts:
       - path: "src/frontend/screens/WebView/index.tsx"
         issue: "line 29, column 49: hardcoded user-facing-shaped literal `last-url-` inside `lastUrlStorageKey` (plan 40-09). Fails `hardcodedStringGate › scope orchestration › scans the whole committed scope and finds zero violations outside the allowlist (D-12: blocking, no advisory grace period)` and the `W4: no collateral` sibling assertion."
@@ -116,15 +59,7 @@ gaps:
       - "Re-run `npx jest hardcodedStringGate` and require 133/133 as at the 8ac3a8c12 baseline"
   - truth: "The A-17 i18n fork-scope pin stays consistent with the live tree (REQ-40-10's own dispositioned gate)"
     status: failed
-    reason: >
-      `genI18nGateScope › staleness guard -- the reverse direction (REQ-34.10-14) › with a real git
-      diff against the upstream merge-base › A-17 ANTI-ROT: the committed
-      meta/i18nForkTouchedFiles.json equals the LIVE git derivation` FAILS at HEAD with five files
-      present in the live derivation and absent from the committed pin. Plan 40-01 correctly
-      dispositioned the two DELETED-file pins (210 -> 208) and verified green at that point
-      (40-01-SUMMARY.md:123). Plans 40-06/07/08/09 then ADDED five new frontend files carrying
-      user-facing strings and nobody re-ran the gate, so the pin is now stale in the opposite
-      direction. Same suite is green at 8ac3a8c12.
+    reason: '`genI18nGateScope › staleness guard -- the reverse direction (REQ-34.10-14) › with a real git diff against the upstream merge-base › A-17 ANTI-ROT: the committed meta/i18nForkTouchedFiles.json equals the LIVE git derivation` FAILS at HEAD with five files present in the live derivation and absent from the committed pin. Plan 40-01 correctly dispositioned the two DELETED-file pins (210 -> 208) and verified green at that point (40-01-SUMMARY.md:123). Plans 40-06/07/08/09 then ADDED five new frontend files carrying user-facing strings and nobody re-ran the gate, so the pin is now stale in the opposite direction. Same suite is green at 8ac3a8c12.'
     artifacts:
       - path: "meta/i18nForkTouchedFiles.json"
         issue: "208 entries; live derivation wants 213. Missing: src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx, src/frontend/components/UI/StoreEmbedControls/index.tsx, src/frontend/screens/WebView/components/StoreEmbedPlaceholder.tsx, src/frontend/screens/WebView/storeEmbedOrigins.ts, src/frontend/screens/WebView/useStoreEmbedHost.ts"
@@ -136,29 +71,7 @@ gaps:
       - "Re-run `npx jest genI18nGateScope` and require 26 passed / 1 skipped"
   - truth: "The store chrome's back/forward availability and host label reflect the embed's actual current page"
     status: partial
-    reason: >
-      REQ-40-06's inversion is only half-built. Rust records main-frame history correctly
-      (`main.rs:4913-4922`, `on_page_load` + `PageLoadEvent::Finished` -> `StoreEmbedState::push`,
-      with seven passing unit tests for the cursor semantics). But NOTHING carries that state back
-      to the renderer. The `on_page_load` closure only mutates the Mutex — it emits no event.
-      `StoreEmbedSeam.takeNavEvents()` throws a declared-unimplemented Error
-      (`storeEmbedFlowRegistration.ts:236-241`), `RUST_STORE_EMBED_TAKE_NAV_EVENTS` has no Rust
-      dispatch arm (the nine registered arms at `main.rs:7322-7406` do not include it), and the
-      renderer runs no poller. The renderer's `navState` is therefore only ever updated by
-      `applyNavResult` from the RETURN VALUE of a back/forward/reload/navigate call the user
-      themselves initiated (`useStoreEmbedHost.ts:99-111`).
-      USER-VISIBLE CONSEQUENCE: open /store/steam, click a game — Rust's `canGoBack` is now true,
-      the renderer's is still `false`, and `StoreEmbedControls` renders
-      `disabled={!backAvailable}` (`StoreEmbedControls/index.tsx:82`), so the Back button stays
-      greyed out and the user cannot go back. The host label is likewise frozen at the start URL's
-      host, which is user-visible on /store/gog where the start URL is the affiliate host
-      `af.gog.com` and the landing page is `www.gog.com`. Only pressing Reload resynchronises.
-      The live gate did exercise an in-page link click, but Item 2's pass condition is input FEEL,
-      not chrome correctness — nobody looked at the Back button. The seam's own doc comment says
-      "no future plan has been assigned ownership yet", and there is no todo, no backlog row and
-      no Phase 38 ledger entry for it: the item currently exists in code comments only. That is
-      the exact three-prose-locations-and-zero-queues shape this phase's own ROADMAP preamble
-      exists to prevent.
+    reason: 'REQ-40-06''s inversion is only half-built. Rust records main-frame history correctly (`main.rs:4913-4922`, `on_page_load` + `PageLoadEvent::Finished` -> `StoreEmbedState::push`, with seven passing unit tests for the cursor semantics). But NOTHING carries that state back to the renderer. The `on_page_load` closure only mutates the Mutex — it emits no event. `StoreEmbedSeam.takeNavEvents()` throws a declared-unimplemented Error (`storeEmbedFlowRegistration.ts:236-241`), `RUST_STORE_EMBED_TAKE_NAV_EVENTS` has no Rust dispatch arm (the nine registered arms at `main.rs:7322-7406` do not include it), and the renderer runs no poller. The renderer''s `navState` is therefore only ever updated by `applyNavResult` from the RETURN VALUE of a back/forward/reload/navigate call the user themselves initiated (`useStoreEmbedHost.ts:99-111`). USER-VISIBLE CONSEQUENCE: open /store/steam, click a game — Rust''s `canGoBack` is now true, the renderer''s is still `false`, and `StoreEmbedControls` renders `disabled={!backAvailable}` (`StoreEmbedControls/index.tsx:82`), so the Back button stays greyed out and the user cannot go back. The host label is likewise frozen at the start URL''s host, which is user-visible on /store/gog where the start URL is the affiliate host `af.gog.com` and the landing page is `www.gog.com`. Only pressing Reload resynchronises. The live gate did exercise an in-page link click, but Item 2''s pass condition is input FEEL, not chrome correctness — nobody looked at the Back button. The seam''s own doc comment says "no future plan has been assigned ownership yet", and there is no todo, no backlog row and no Phase 38 ledger entry for it: the item currently exists in code comments only. That is the exact three-prose-locations-and-zero-queues shape this phase''s own ROADMAP preamble exists to prevent.'
     artifacts:
       - path: "src-tauri/src/main.rs"
         issue: "line ~4913 `on_page_load` pushes to STORE_EMBED_STATE but emits nothing; no `store_embed_take_nav_events` arm exists in the dispatch table at 7322-7406"
@@ -174,16 +87,7 @@ gaps:
       - "Add a test that fails today: assert canGoBack/host update after a simulated in-embed page load"
   - truth: "Every user-facing string this phase mints gets the project's standard localisation treatment in-phase (REQ-40-14 final clause)"
     status: failed
-    reason: >
-      Measured by flattening every `public/locales/*/gamelib.json`: 49 locales carry the catalog;
-      exactly ONE (en) holds any of the six newly minted keys. de and fr — the two locales the
-      project's own D-08 per-phase machine-fill convention targets — hold 0/6. 48 locales still
-      hold the two RETIRED keys (`webview.unavailable.heading`, `webview.unavailable.body`) that
-      no longer exist in en. `GAMELIB_MT_LOCALES=de,fr pnpm machine-fill-gamelib` failed HTTP 401
-      because ANTHROPIC_API_KEY in the execution environment was the literal placeholder
-      `sk-ant-...`. That is an honest environment limitation, correctly recorded in
-      40-I18N-CENSUS.md and 40-10-SUMMARY.md:143-161 — but it was never routed into a queue. No
-      todo, no backlog row, no ledger entry names it.
+    reason: 'Measured by flattening every `public/locales/*/gamelib.json`: 49 locales carry the catalog; exactly ONE (en) holds any of the six newly minted keys. de and fr — the two locales the project''s own D-08 per-phase machine-fill convention targets — hold 0/6. 48 locales still hold the two RETIRED keys (`webview.unavailable.heading`, `webview.unavailable.body`) that no longer exist in en. `GAMELIB_MT_LOCALES=de,fr pnpm machine-fill-gamelib` failed HTTP 401 because ANTHROPIC_API_KEY in the execution environment was the literal placeholder `sk-ant-...`. That is an honest environment limitation, correctly recorded in 40-I18N-CENSUS.md and 40-10-SUMMARY.md:143-161 — but it was never routed into a queue. No todo, no backlog row, no ledger entry names it.'
     artifacts:
       - path: "public/locales/de/gamelib.json"
         issue: "0/6 minted keys; still holds webview.unavailable.heading and webview.unavailable.body"

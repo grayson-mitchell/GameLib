@@ -7,10 +7,7 @@ tags: [electron-store, jest-tdd, ownership-dedup, state-machine]
 # Dependency graph
 requires:
   - phase: 42-humble-key-platform-identity-evidenced-key-type-table-drivin (plan 02)
-    provides: >
-      HumbleLocalRedeemedRecord.source (optional, 'user' | 'ownership-exact'),
-      exported from electronStores.ts; markRedeemed stamps 'user';
-      getClaimAnnotations derives redeemedSource with a missing-source-defaults-to-'user' rule.
+    provides: 'HumbleLocalRedeemedRecord.source (optional, ''user'' | ''ownership-exact''), exported from electronStores.ts; markRedeemed stamps ''user''; getClaimAnnotations derives redeemedSource with a missing-source-defaults-to-''user'' rule.'
 provides:
   - "recomputeOwnership auto-settles exact-match owned+REVEALED Humble keys to REDEEMED (D-42-01/D-42-02)"
   - "Auto-settle is guarded by 5 named conditions; fuzzy matches NEVER auto-settle (REQ-42-05)"

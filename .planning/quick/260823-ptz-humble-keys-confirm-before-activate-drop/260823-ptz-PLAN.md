@@ -3,10 +3,7 @@ quick_id: 260823-ptz
 slug: humble-keys-confirm-before-activate-drop
 date: 2026-08-23
 status: planned
-description: >-
-  Humble Keys follow-up to 260823-op3 — add a confirmation step before Activate
-  on Steam keys, and remove the humbleKeysBlurb helper text from the
-  Keys-waiting and Giftable Spares tabs.
+description: 'Humble Keys follow-up to 260823-op3 — add a confirmation step before Activate on Steam keys, and remove the humbleKeysBlurb helper text from the Keys-waiting and Giftable Spares tabs.'
 ---
 
 # Quick Task 260823-ptz — Confirm before Activate; drop the tab blurbs

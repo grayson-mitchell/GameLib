@@ -3,11 +3,7 @@ quick_id: 260825-qiy
 slug: clear-the-pnpm-prettier-gate-gitignore-t
 date: 2026-08-25
 type: chore
-description: >
-  Take `pnpm prettier` from 30 failing files to 2, clearing the last self-inflicted blocker on
-  `.husky/pre-push`. Ignore `test-results/` (untracked Playwright output) in BOTH `.prettierignore`
-  and `.gitignore`, then run a formatting-only pass over the 27 files that are not being edited by
-  the concurrent session.
+description: 'Take `pnpm prettier` from 30 failing files to 2, clearing the last self-inflicted blocker on `.husky/pre-push`. Ignore `test-results/` (untracked Playwright output) in BOTH `.prettierignore` and `.gitignore`, then run a formatting-only pass over the 27 files that are not being edited by the concurrent session.'
 tasks: 3
 ---
 

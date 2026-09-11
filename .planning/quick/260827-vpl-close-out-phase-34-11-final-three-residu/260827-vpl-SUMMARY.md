@@ -3,13 +3,7 @@ task: 260827-vpl-close-out-phase-34-11-final-three-residu
 reconstructed: true
 reconstructed_by: "verification subagent (goal-backward verifier), post-hoc"
 reconstructed_on: 2026-08-28
-reconstructed_reason: >
-  The original executor stalled mid-verification of Task 3 and never wrote
-  this file. This SUMMARY.md was reconstructed entirely from the committed
-  git history (commits 7bf5c2f89, b04601b8a, 4e975f3b9, e52a6759c) and from
-  independent measurement (test runs, diffs, arithmetic re-derivation)
-  performed by the verifier, NOT from any executor-authored notes. Treat
-  every claim below as externally re-derived evidence, not self-report.
+reconstructed_reason: 'The original executor stalled mid-verification of Task 3 and never wrote this file. This SUMMARY.md was reconstructed entirely from the committed git history (commits 7bf5c2f89, b04601b8a, 4e975f3b9, e52a6759c) and from independent measurement (test runs, diffs, arithmetic re-derivation) performed by the verifier, NOT from any executor-authored notes. Treat every claim below as externally re-derived evidence, not self-report.'
 commits:
   - sha: 7bf5c2f89
     subject: "test(34.11-quick-vpl): add failing assertions WR-10/WR-11/D-08a (alphabet letter filter)"

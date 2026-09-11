@@ -7,17 +7,7 @@ overrides_applied: 0
 gaps:
   - truth: "The two new en/gamelib.json keys (emptyAlphabetLetter, emptyAlphabetNumber) are machine-filled into all other gamelib.json locales, per the plan's Task 1 done-criteria"
     status: partial
-    reason: >
-      pnpm machine-fill-gamelib was not run (or did not run successfully) for these two
-      keys. de/gamelib.json and fr/gamelib.json — the only other locales with a
-      gamelib.json — still lack both keys, while sibling pre-existing keys in the same
-      file (chipNoStorePageOnly, emptyBody, emptyHeading, viewFavourites, etc.) are
-      translated. pnpm lint-translations:gamelib exits 0 regardless, because
-      meta/lintTranslations.ts structurally can only detect extra/malformed keys in a
-      translated file, never a key present in English but absent from a translation
-      (confirmed by reading the full script). This means the plan's own trigger
-      condition ("if the lint tool reports them missing, run machine-fill") never fires,
-      so the omission is silent to CI.
+    reason: 'pnpm machine-fill-gamelib was not run (or did not run successfully) for these two keys. de/gamelib.json and fr/gamelib.json — the only other locales with a gamelib.json — still lack both keys, while sibling pre-existing keys in the same file (chipNoStorePageOnly, emptyBody, emptyHeading, viewFavourites, etc.) are translated. pnpm lint-translations:gamelib exits 0 regardless, because meta/lintTranslations.ts structurally can only detect extra/malformed keys in a translated file, never a key present in English but absent from a translation (confirmed by reading the full script). This means the plan''s own trigger condition ("if the lint tool reports them missing, run machine-fill") never fires, so the omission is silent to CI.'
     artifacts:
       - path: "public/locales/de/gamelib.json"
         issue: "missing library.filterPanel.emptyAlphabetLetter and .emptyAlphabetNumber"

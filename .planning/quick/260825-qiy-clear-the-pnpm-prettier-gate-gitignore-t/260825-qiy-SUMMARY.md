@@ -4,10 +4,7 @@ slug: clear-the-pnpm-prettier-gate-gitignore-t
 date: 2026-08-25
 status: complete
 type: chore
-description: >
-  `pnpm prettier` goes 30 failing files → 2. The 2 remaining are another session's in-flight files,
-  deliberately not touched. Along the way: prettier reflowed a line and silently broke an
-  `eslint-disable-next-line`, turning `pnpm lint` red again.
+description: '`pnpm prettier` goes 30 failing files → 2. The 2 remaining are another session''s in-flight files, deliberately not touched. Along the way: prettier reflowed a line and silently broke an `eslint-disable-next-line`, turning `pnpm lint` red again.'
 files_touched:
   - .prettierignore
   - .gitignore

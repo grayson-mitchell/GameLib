@@ -7,36 +7,8 @@ overrides_applied: 0
 gaps:
   - truth: "REQ-37-02 / D-10: the new noStorePage tri-state facet inherits the chip row, the group badge, AND zero-result handling — the same three things showHidden/showNonAvailable get"
     status: RESOLVED
-    reason: >-
-      The chip row (FilterChipRow/index.tsx + chipLabels.ts), the group badge
-      (MORE_FILTER_KINDS + describeActiveFilters + selectionCount.ts), and
-      clearAllFilters are all correctly extended to cover noStorePage (verified
-      by direct source read; clearAllFilters was the one the live gate caught
-      and fixed in 6cada93a7). The one inheritance point NOT extended is
-      EmptyLibrary/index.tsx's LIB-09 context-aware empty-state message: it
-      branches on `showHidden === 'only'` and `showNonAvailable === 'only'`
-      to render a specific "No hidden games" / "No non-available games"
-      message, but has no equivalent branch for `noStorePage === 'only'`.
-      Selecting "No store page only" on a library with zero delisted games
-      (or after external state changes) falls through to the generic "The
-      current filters produced no results" message instead of a dedicated
-      one. This does not hide any game and does not affect the phase's core
-      goal clauses (a/b/c) — Dead Island's live-gate visibility, launchability
-      and filterability are all independently confirmed — but it is a literal
-      unmet clause of a must_have truth recorded in 37-03b-PLAN.md's own
-      frontmatter, and nothing in any SUMMARY or the code review flagged it.
-    resolution: >-
-      CLOSED 2026-08-22 in commit 57416750e, after this report was written.
-      EmptyLibrary now branches on noStorePage === 'only' and renders
-      "No games without a store page in your library" from a new
-      gamelib:library.no_no_store_page_games key (gamelib: namespace per
-      37-03b's convention and D-06, not the upstream translation.json).
-      The branch block was reworked to an explicit `onlyCount`, so the
-      multi-'only' union case is deliberate rather than emergent. Six tests
-      added -- the first EmptyLibrary has ever had -- which RENDER the
-      component rather than scanning its source, covering each tri-state
-      alone plus the two- and three-way unions. Mutation-checked: removing
-      the new branch fails exactly one test and leaves the other five green.
+    reason: 'The chip row (FilterChipRow/index.tsx + chipLabels.ts), the group badge (MORE_FILTER_KINDS + describeActiveFilters + selectionCount.ts), and clearAllFilters are all correctly extended to cover noStorePage (verified by direct source read; clearAllFilters was the one the live gate caught and fixed in 6cada93a7). The one inheritance point NOT extended is EmptyLibrary/index.tsx''s LIB-09 context-aware empty-state message: it branches on `showHidden === ''only''` and `showNonAvailable === ''only''` to render a specific "No hidden games" / "No non-available games" message, but has no equivalent branch for `noStorePage === ''only''`. Selecting "No store page only" on a library with zero delisted games (or after external state changes) falls through to the generic "The current filters produced no results" message instead of a dedicated one. This does not hide any game and does not affect the phase''s core goal clauses (a/b/c) — Dead Island''s live-gate visibility, launchability and filterability are all independently confirmed — but it is a literal unmet clause of a must_have truth recorded in 37-03b-PLAN.md''s own frontmatter, and nothing in any SUMMARY or the code review flagged it.'
+    resolution: 'CLOSED 2026-08-22 in commit 57416750e, after this report was written. EmptyLibrary now branches on noStorePage === ''only'' and renders "No games without a store page in your library" from a new gamelib:library.no_no_store_page_games key (gamelib: namespace per 37-03b''s convention and D-06, not the upstream translation.json). The branch block was reworked to an explicit `onlyCount`, so the multi-''only'' union case is deliberate rather than emergent. Six tests added -- the first EmptyLibrary has ever had -- which RENDER the component rather than scanning its source, covering each tri-state alone plus the two- and three-way unions. Mutation-checked: removing the new branch fails exactly one test and leaves the other five green.'
     artifacts:
       - path: "src/frontend/screens/Library/components/EmptyLibrary/index.tsx"
         issue: "RESOLVED — noStorePage === 'only' branch added (57416750e)"

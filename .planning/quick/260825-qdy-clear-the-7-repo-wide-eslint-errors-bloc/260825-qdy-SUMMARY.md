@@ -4,10 +4,7 @@ slug: clear-the-7-repo-wide-eslint-errors-bloc
 date: 2026-08-25
 status: complete
 type: chore
-description: >
-  `pnpm lint` now exits 0. The last 7 repo-wide eslint errors are cleared — one of the two gates
-  failing `.husky/pre-push`. One of the seven was not a violation at all but a dead suppression
-  naming a rule that no longer exists.
+description: '`pnpm lint` now exits 0. The last 7 repo-wide eslint errors are cleared — one of the two gates failing `.husky/pre-push`. One of the seven was not a violation at all but a dead suppression naming a rule that no longer exists.'
 files_touched:
   - src/backend/storeManagers/steam/__tests__/depotPrimitives.test.ts
   - src/backend/storeManagers/steam/__tests__/installLocation.test.ts
