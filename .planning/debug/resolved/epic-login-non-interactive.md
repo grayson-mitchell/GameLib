@@ -19,7 +19,6 @@ resolved: 2026-08-03T22:15:00
 finding: F-34.5-G6-01
 finding_status: CLOSED
 phase: 34.5
-finding: F-34.5-G6-01
 ---
 
 # Epic login form non-interactive under Tauri
