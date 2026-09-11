@@ -5,7 +5,9 @@ area: tooling
 severity: medium
 platform: any
 ready: code
-status: OPEN
+status: CLOSED
+closed: 2026-09-11
+closed_by: 'ba612dd3c (formatting, quick-260911-ijv) + 94396bf92 (i18n ordering, quick-260911-ijv); lint half was already fixed by quick 260909-s8x (1c1345064, 8f0d7ff20, 7392244d0)'
 found_by: 'Quick 260909-r4h, when `git push origin fix/steam-native-install-stability` was rejected by the pre-push hook'
 resolves_phase: ''
 files:
@@ -101,3 +103,40 @@ than assumed: the lint count is **4253 both before and after** that work, and no
 prettier offenders is among the files it touched. Nothing of that task's was hidden by the
 bypass; `codecheck` and `i18n` were confirmed passing first, so the bypass covered exactly the
 two known pre-existing failures.
+
+## Resolution (2026-09-11, quick 260911-ijv)
+
+**The LINT half was NOT fixed by this task.** Quick `260909-s8x` fixed it on 2026-09-09 — the
+same day this todo was filed — via commits `1c1345064`, `8f0d7ff20`, `7392244d0`. It replaced
+`eslint --max-warnings 4157 .` with `node meta/lintScoped.cjs` and its two independent
+ceilings (`SRC_CEILING`, `TESTS_CEILING`, at `meta/lintScoped.cjs:58-59`), each with a
+`minFiles` scope-collapse floor. This todo must not claim credit for that work.
+
+This todo's central number is **obsolete, not merely stale**: `--max-warnings` no longer
+exists in `package.json`, so "4253 vs 4157" describes a gate that is gone. The 4253 → ~1761
+drop it references was not a cleanup sweep — the test override already set
+`no-explicit-any: 'off'` while the five `no-unsafe-*` rules stayed on globally, so the config
+was warning about a construct it also permitted. That contradiction was resolved, not papered
+over.
+
+**The PRETTIER half is what this task actually fixed**, and it had grown from the 7 files this
+todo recorded to 12. The 5 extra are the `src/frontend/screens/Humble/Keys/**` files, committed
+2026-09-10 and 2026-09-11 — i.e. the debt was still accruing while this todo sat open.
+`npx prettier --write` was run against the explicit 12-path list (never `.` — `src/preload/`
+carries its own `printWidth: 120` override) and committed as `ba612dd3c`. `pnpm lint` counts
+were re-measured after the rewrap and came back unchanged (production 1123/1124, tests
+638/638), confirming no `eslint-disable-next-line` was orphaned by the reformat.
+
+A leg this todo never recorded: `pnpm i18n --fail-on-update` exits 0 but rewrote
+`public/locales/en/gamelib.json` on every run (the `settledFromOwnership` key moving into
+alphabetical order). Fixed by committing the parser's own key order in `94396bf92` — a pure
+2-insertion/2-deletion reorder, no key or value change, and the one catalog `pnpm
+i18n-churn-guard` (D-05) permits `pnpm i18n` to touch. Re-running `pnpm i18n --fail-on-update`
+after that commit now leaves `public/locales` clean — a genuine fixpoint, not just an exit 0.
+
+**Measured baseline after the fix:** `pnpm lint` — production 1123/1124, tests 638/638.
+`pnpm prettier` exits 0. `pnpm i18n --fail-on-update` exits 0 and leaves the tree clean.
+`pnpm codecheck` exits 0.
+
+The two `--no-verify` bypasses (quicks `260909-r4h`, `260909-rvx`) are now discharged: the
+gate is green, so no further bypass is needed.
