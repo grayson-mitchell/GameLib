@@ -9,7 +9,8 @@
   width: 100%;
   appearance: none;
   background: transparent;
-  font: var(--font-secondary-bold);
+  font-family: var(--secondary-font-family);
+  font-weight: var(--medium);
   color: var(--text-secondary);
   padding: 0 var(--space-lg);
   border: none;

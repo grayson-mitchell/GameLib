@@ -94,7 +94,8 @@
     width: 100%;
     appearance: none;
     background: transparent;
-    font: var(--font-secondary-bold);
+    font-family: var(--secondary-font-family);
+    font-weight: var(--medium);
     // Inline-start is 0, not --space-2xs: the icon's own 6px trailing padding
     // already separates the glyph from the text, and stacking both put 18px
     // between them. The end side keeps its 6px -- that one buffers the text

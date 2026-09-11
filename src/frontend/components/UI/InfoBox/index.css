@@ -36,5 +36,6 @@
 
 .infoBox > strong {
   color: var(--accent);
-  font: var(--font-secondary-bold);
+  font-family: var(--secondary-font-family);
+  font-weight: var(--medium);
 }
