@@ -10,6 +10,14 @@
   // measures exactly 34px live -- the nearest token step (var(--space-2xs),
   // 6px) measured 36px. Horizontal keeps a token since it does not affect
   // the height this task is matching.
+  //
+  // 260911-umj follow-up: the off-scale value was put to the operator
+  // explicitly -- 34px off-scale versus 36px on-scale -- and they chose 34px.
+  // So this is a deliberate, sanctioned break in the token discipline, NOT an
+  // executor's inference that nobody reviewed. Matching SelectField's 34px is
+  // what buys it: the two controls sit together on Humble Keys and in the
+  // Discounts filters, and 36 vs 34 would have left them visibly mismatched.
+  // Do not "tidy" this back to a token without re-measuring both controls.
   padding: 5px var(--space-2xs);
 
   &:focus-within {

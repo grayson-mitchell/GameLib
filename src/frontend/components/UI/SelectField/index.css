@@ -14,7 +14,13 @@
   font-size: var(--text-md);
   color: var(--text-secondary);
   border: none;
-  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  /* 260911-umj follow-up, operator decision: no drop shadow. The old
+     `0 4px 4px rgba(0, 0, 0, 0.25)` was the remaining half of the "large and
+     clunky" report -- umj shrank the height 40px -> 34px but left the shadow,
+     so the control still sat proud of the page. The separation from the
+     background is carried by `--input-background` above, which every theme
+     defines. Applies to all SelectField call sites, which is intended: the
+     whole point of this pass was that the chrome is shared, not per-screen. */
   cursor: pointer;
   background-image:
     linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
