@@ -1770,9 +1770,15 @@ because each changes what a plan must assert:**
   fresh render/mount — nothing reads `localStorage` or route state. Source decision: D-43-07.
   Verified by: component.
 
-- [ ] **REQ-43-07**: The checkbox predicate is exactly `WAITING_STATES.has(key.state)` — toggling
-  `ownedElsewhere`, `platform`, or `matchConfidence` alone never changes inclusion. Source
-  decision: D-43-08. Verified by: unit (field-independence parametrized test).
+- [ ] **REQ-43-07**: The checkbox predicate is exactly `REDEEMABLE_ONLY_STATES.has(key.state)` —
+  toggling `ownedElsewhere`, `platform`, or `matchConfidence` alone never changes inclusion. Source
+  decision: D-43-08. Verified by: unit (field-independence parametrized test). **Superseded by
+  260911-t0p:** the predicate was originally `WAITING_STATES.has(key.state)`; a direct user
+  instruction to that quick task reversed REVEALED's membership for this checkbox specifically
+  (a REVEALED key is not itself "redeemable"), so the checkbox now reads a new, separate
+  constant, `REDEEMABLE_ONLY_STATES` = `{UNPICKED, UNREVEALED}` (`viewFilters.ts`).
+  `WAITING_STATES` itself is unchanged and still backs `selectKeysWaiting` and the per-row claim
+  gate — this supersession touches only this requirement's predicate.
 
 - [ ] **REQ-43-08**: The checkbox's initial rendered value is checked (`true`). Source decision:
   D-43-09. Verified by: component.

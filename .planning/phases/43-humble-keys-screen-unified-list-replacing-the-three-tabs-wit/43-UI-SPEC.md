@@ -371,9 +371,15 @@ regardless of what the user picked last visit.
   warranted, unlike the store-search use case that motivated `SearchBar`'s `loading` prop.
 - **Redeemable-only checkbox** — `components/UI/ToggleSwitch`, `htmlId="humbleKeysRedeemableOnly"`,
   label `humbleKeys.redeemableOnly` ("Redeemable keys only"), **checked by default** (D-43-09).
-  Predicate: `WAITING_STATES.has(key.state)` (`viewFilters.ts:20` = `{UNPICKED, UNREVEALED,
-  REVEALED}`) — zero new predicate code, state-only, reads no ownership/platform/confidence
-  field (D-43-08). Unchecking it shows everything, including REDEEMED and UNREDEEMABLE rows.
+  Predicate: `REDEEMABLE_ONLY_STATES.has(key.state)` (`viewFilters.ts` = `{UNPICKED,
+  UNREVEALED}`) — state-only, reads no ownership/platform/confidence field (D-43-08). Unchecking
+  it shows everything, including REVEALED, REDEEMED and UNREDEEMABLE rows.
+  **Superseded by 260911-t0p:** originally specified as `WAITING_STATES.has(key.state)`
+  (`viewFilters.ts:20` = `{UNPICKED, UNREVEALED, REVEALED}`, "zero new predicate code"). A direct
+  user instruction to that quick task reversed REVEALED's membership for this checkbox
+  specifically — a REVEALED key is not itself "redeemable" — so a new, separate constant,
+  `REDEEMABLE_ONLY_STATES`, now backs this predicate. `WAITING_STATES` itself is unchanged and
+  still backs `selectKeysWaiting` and the per-row claim gate.
 - **Nothing persists** (D-43-07) — search text resets to `''`, checkbox resets to `true`, sort
   resets to `Expiring soonest`, on every mount. No `localStorage`, no lifted route state.
 - **Combination semantics** — search and the checkbox AND together (a row must match both to
@@ -415,7 +421,7 @@ new empty-state visual language, only new copy and the one new recovery button.
 | `keyTypePresentation.ts` (`getKeyTypePresentation`, `getRedeemTarget`, `resolvePlatformDisplay`, `resolveStoreLogo`) | `common/humble/keyTypePresentation.ts`, `HumbleKeyRow/index.tsx` | Reused unchanged, drives `TYPE` |
 | `STATE_LABEL_KEYS` | `screens/Humble/Keys/stateLabels.ts` | Reused unchanged (kept per D-43-20) |
 | `GENERIC_KEY_PLATFORM` | currently `groupKeys.ts`, **must move to its own leaf module before `groupKeys.ts`/`HumbleKeyGroup` are deleted** (landmine 2) | Reused, relocated |
-| `WAITING_STATES` | `common/humble/viewFilters.ts` | Reused unchanged, becomes the filter predicate (D-43-08) |
+| `WAITING_STATES` | `common/humble/viewFilters.ts` | Reused unchanged, still backs `selectKeysWaiting` and the per-row claim gate. **Superseded by 260911-t0p:** originally listed as also becoming the checkbox's filter predicate (D-43-08); a direct user instruction to that quick task reversed REVEALED's membership for the checkbox specifically, so the checkbox predicate now reads a new, separate constant, `REDEEMABLE_ONLY_STATES` = `{UNPICKED, UNREVEALED}` (`viewFilters.ts`), instead. |
 | `.humbleKeyGiftButton`, `.humbleKeyUndoButton`, `.humbleKeyOwnedOverride`, `.humbleKeyClaimGroup`, `.humbleKeyClaimAnnotation`, `.humbleKeyClaimDisabledCaption` | `index.css` | Reused unchanged chrome, relocated into the new `KEY` grid cell |
 | `.humbleKeyStateBadge` family, `.humbleUrgencyBadge` family | `index.css` | Reused unchanged |
 | `HumbleKeyGroup`, `groupAndSortKeys`, `partitionWaitingByUrgency` | `components/HumbleKeyGroup`, `common/humble/groupKeys.ts`, `common/humble/viewFilters.ts` | **Deleted** (D-43-19, D-43-20) |

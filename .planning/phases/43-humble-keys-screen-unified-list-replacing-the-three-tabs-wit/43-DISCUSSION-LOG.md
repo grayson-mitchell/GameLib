@@ -208,6 +208,14 @@ redeemed". Combined with the On default, the list opens on the redeemable set. A
 confirmed UNPICKED belongs **in** the redeemable set, which lands the predicate exactly on the
 shipped, unit-tested `WAITING_STATES` constant (`viewFilters.ts:20`) — no new predicate needed.
 
+**Superseded by 260911-t0p:** live use showed a REVEALED key (already redeemed on Humble, only
+needing on-platform activation) still appearing under "Redeemable keys only", which the checkbox's
+own corrected label promises it will not. A direct user instruction to that quick task reversed
+this selection for REVEALED specifically: the checkbox now filters on a new, separate constant,
+`REDEEMABLE_ONLY_STATES` = `{UNPICKED, UNREVEALED}` (`viewFilters.ts`), which excludes REVEALED.
+`WAITING_STATES` itself is unchanged and still backs `selectKeysWaiting` and the per-row claim
+gate — this supersession touches only the checkbox predicate.
+
 ### UNPICKED in or out of "redeemable"
 
 | Option | Description | Selected |
@@ -217,6 +225,10 @@ shipped, unit-tested `WAITING_STATES` constant (`viewFilters.ts:20`) — no new 
 
 **Notes:** Literal accuracy lost to D-53 — UNPICKED is the one row type whose deadline is silent
 and unrecoverable, so hiding it defeats the screen's purpose.
+
+**Superseded by 260911-t0p:** the selected "reuse `WAITING_STATES`" wiring is no longer what the
+checkbox uses — see the supersession note above the preceding table. UNPICKED itself is still IN
+the redeemable set (`REDEEMABLE_ONLY_STATES` retains it); only REVEALED's membership changed.
 
 ---
 
