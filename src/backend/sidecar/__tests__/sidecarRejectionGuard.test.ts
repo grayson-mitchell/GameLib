@@ -1293,10 +1293,9 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         .mockImplementation(() => true)
 
       try {
-        const destroyedError = Object.assign(
-          new Error('write after end'),
-          { code: 'ERR_STREAM_DESTROYED' }
-        )
+        const destroyedError = Object.assign(new Error('write after end'), {
+          code: 'ERR_STREAM_DESTROYED'
+        })
         const mysteryError = new Error('mystery')
 
         expect(() => a.emit('error', destroyedError)).not.toThrow()
@@ -1321,9 +1320,7 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
     // uncapped, recurses until the stack blows. Restoring the line made this test pass
     // again. The depth check is therefore proven load-bearing, not merely present.
     it('synchronous re-entrancy bound: a sink that re-emits uncaughtException is invoked exactly once', () => {
-      let installUncaughtExceptionGuard!: (
-        target?: NodeJS.EventEmitter
-      ) => void
+      let installUncaughtExceptionGuard!: (target?: NodeJS.EventEmitter) => void
       let setUncaughtExceptionLogSink!: (
         sink: ((message: string) => void) | null
       ) => void
@@ -1372,7 +1369,9 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       expect(stripped).toMatch(/^installStdioErrorGuards\(\)$/m)
 
       const stdioIndex = stripped.indexOf('installStdioErrorGuards()')
-      const rejectionIndex = stripped.indexOf('installUnhandledRejectionGuard()')
+      const rejectionIndex = stripped.indexOf(
+        'installUnhandledRejectionGuard()'
+      )
       const exceptionIndex = stripped.indexOf('installUncaughtExceptionGuard()')
 
       expect(stdioIndex).toBeGreaterThan(-1)
