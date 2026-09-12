@@ -382,7 +382,7 @@
 }
 
 .gameListItem.installed:not(.notAvailable) span {
-  color: var(--status-sucess, var(--success));
+  color: var(--success);
 }
 
 .gameListItem.installed:not(.notAvailable):hover span {
@@ -489,7 +489,7 @@
 }
 
 .cancelIcon:hover svg circle {
-  fill: var(--cancel-button-overlay, var(--warning-hover));
+  fill: var(--cancel-button-overlay, var(--status-warning-hover));
 }
 
 .queueIcon svg {
@@ -498,7 +498,7 @@
 }
 
 .queueIcon:hover svg {
-  fill: var(--cancel-button-overlay, var(--warning-hover));
+  fill: var(--cancel-button-overlay, var(--status-warning-hover));
 }
 
 .notAvailableIcon circle {

@@ -26,7 +26,7 @@
 }
 
 .downloadManagerListItem .cancelIcon:hover circle {
-  fill: var(--cancel-button-hover, var(--danger-hover));
+  fill: var(--danger-hover);
 }
 
 .downloadManagerListItem .playIcon circle {
@@ -42,7 +42,7 @@
 }
 
 .downloadManagerListItem .installIcon:hover circle {
-  fill: var(--install-button-hover, var(--accent-overlay));
+  fill: var(--accent-overlay);
 }
 
 .downloadManagerListItem {
