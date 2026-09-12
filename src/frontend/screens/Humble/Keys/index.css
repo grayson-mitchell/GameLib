@@ -221,7 +221,24 @@
 .humbleKeyRow {
   grid-template-columns: 6.5rem minmax(0, 1fr) 20rem;
   display: grid;
-  column-gap: var(--space-md);
+  /* 260912-d84: this gap must stay a FIXED token, not the em-relative
+     `--space-md` (`_spacing.scss:8` declares it `1em`) -- this declaration
+     is shared by two selectors with different computed font-sizes: the
+     standalone header block below sets `font-size: var(--text-xs)`
+     (11.11px at the 16px root, `_typography.scss:29-33`) while the rows
+     set none and inherit 16px. An `em` length in a non-font-size property
+     resolves against the element's OWN font-size, so one shared line was
+     silently producing two different gaps -- 324 + 11.11px vs 324 + 16px,
+     a 4.89px divergence that put the GAME header label that far left of
+     every row title (REQ-43-19 item 3, run 3: header ink 335.5 vs titles
+     341.0). `--space-md-fixed` is `calc(1 * 16px)` (`_spacing.scss:12,17`),
+     exactly what the rows already resolved to, so the rows are
+     pixel-unchanged here -- only the header moves right to meet them. Any
+     future length declared on this combined selector must stay
+     font-size-independent for the same reason. This correction is
+     arithmetic and source-census-tested only, NOT re-measured live -- see
+     the todo closed by quick-260912-d84. */
+  column-gap: var(--space-md-fixed);
   align-items: start;
 }
 
