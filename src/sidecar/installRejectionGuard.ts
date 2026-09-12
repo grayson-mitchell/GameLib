@@ -2,16 +2,25 @@
  * Side-effect-only module whose sole job is to be the FIRST import of
  * `src/sidecar/index.ts` (Phase 34.2 gap cycle 1, WR-04 — closed 2026-08-23).
  *
- * SCOPE (Phase 35, D-35-10-01). This file now installs BOTH of the sidecar's
- * process-level guards: `unhandledRejection` (34.2) and `uncaughtException` (the
- * replacement for the `main.ts:618` handler that plan 35-14 deletes). The FILENAME
- * is deliberately left as `installRejectionGuard.ts` and is therefore narrower than
- * its contents: it is the first-import position that is load-bearing here, gated by
- * a source-text assertion on this exact path in `sidecarRejectionGuard.test.ts`
- * Group 3, and a rename buys nothing while touching a boot-ordering invariant whose
- * only real check is `pnpm smoke:sidecar`. Read it as "install the process guards".
- * Both guards need the same first-import position, for the same reason: a throw or
- * a rejection in any other module's scope must already be covered when it happens.
+ * SCOPE (Phase 35, D-35-10-01; extended quick-260912-e6k). This file now installs
+ * THREE things: the stdio error guards, then `unhandledRejection` (34.2), then
+ * `uncaughtException` (the replacement for the `main.ts:618` handler that plan 35-14
+ * deletes). The FILENAME is deliberately left as `installRejectionGuard.ts` and is
+ * therefore narrower than its contents: it is the first-import position that is
+ * load-bearing here, gated by a source-text assertion on this exact path in
+ * `sidecarRejectionGuard.test.ts` Group 3, and a rename buys nothing while touching a
+ * boot-ordering invariant whose only real check is `pnpm smoke:sidecar`. Read it as
+ * "install the process guards". All three need the same first-import position, for the
+ * same reason: a throw, a rejection, or a dead-pipe stream error in any other module's
+ * scope must already be covered when it happens.
+ *
+ * ORDER WITHIN THIS FILE MATTERS (quick-260912-e6k). `installStdioErrorGuards()` is
+ * called FIRST, ahead of both guards below, because it removes the escalation path
+ * that used to feed a dead stdio pipe's write failure back into `uncaughtException`
+ * as an unbounded 100%-CPU loop -- see that function's own doc comment in
+ * `processGuards.ts` for the full mechanism. The other two guards must still be
+ * installed for every OTHER uncaught exception or rejection; this ordering only
+ * ensures the specific escalation path is closed before anything else runs.
  *
  * WHY A SEPARATE FILE. `index.ts` used to call `installUnhandledRejectionGuard()`
  * as its first executable statement and claim in its docstring that the guard was
@@ -38,9 +47,11 @@
  */
 
 import {
+  installStdioErrorGuards,
   installUncaughtExceptionGuard,
   installUnhandledRejectionGuard
 } from 'backend/sidecar/processGuards'
 
+installStdioErrorGuards()
 installUnhandledRejectionGuard()
 installUncaughtExceptionGuard()

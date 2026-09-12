@@ -457,6 +457,7 @@ function loadFreshUncaughtExceptionGuard(): {
  * raw loads cost nothing against the IN-06 ceiling below, while the logger-bound helpers do.
  */
 function loadRawProcessGuards(): {
+  installStdioErrorGuards: (streams?: NodeJS.EventEmitter[]) => void
   installUncaughtExceptionGuard: (target?: NodeJS.EventEmitter) => void
   installUnhandledRejectionGuard: (target?: NodeJS.EventEmitter) => void
 } {
@@ -464,11 +465,16 @@ function loadRawProcessGuards(): {
   jest.isolateModules(() => {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const {
+      installStdioErrorGuards,
       installUncaughtExceptionGuard,
       installUnhandledRejectionGuard
     } = require('../processGuards')
     /* eslint-enable @typescript-eslint/no-require-imports */
-    harness = { installUncaughtExceptionGuard, installUnhandledRejectionGuard }
+    harness = {
+      installStdioErrorGuards,
+      installUncaughtExceptionGuard,
+      installUnhandledRejectionGuard
+    }
   })
   return harness
 }
@@ -1197,6 +1203,183 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
         '[sidecar] uncaught exception: <unstringifiable error>',
         expect.anything()
       )
+    })
+  })
+
+  describe('Group 2c: stdio error guards + re-entrancy bound (quick-260912-e6k — the EPIPE self-feed)', () => {
+    it('installation: registers exactly one error listener on each given stream', () => {
+      const { installStdioErrorGuards } = loadRawProcessGuards()
+      const a = new EventEmitter()
+      const b = new EventEmitter()
+
+      installStdioErrorGuards([a, b])
+
+      expect(a.listenerCount('error')).toBe(1)
+      expect(b.listenerCount('error')).toBe(1)
+    })
+
+    it('idempotency: a second call with the same fakes registers no second listener', () => {
+      const { installStdioErrorGuards } = loadRawProcessGuards()
+      const a = new EventEmitter()
+      const b = new EventEmitter()
+
+      installStdioErrorGuards([a, b])
+      installStdioErrorGuards([a, b])
+
+      expect(a.listenerCount('error')).toBe(1)
+      expect(b.listenerCount('error')).toBe(1)
+    })
+
+    it('swallow: an EPIPE-shaped error event does not throw out of emit()', () => {
+      const { installStdioErrorGuards } = loadRawProcessGuards()
+      const a = new EventEmitter()
+
+      installStdioErrorGuards([a])
+
+      // Non-vacuity control: a bare `emit('error', ...)` with NO listener throws
+      // synchronously out of `emit()` -- that asymmetry (unique to the 'error' event on a
+      // real EventEmitter) is exactly what makes this assertion worth writing down. If the
+      // listener were never attached, this test would fail here rather than pass by luck.
+      expect(a.listenerCount('error')).toBe(1)
+
+      const epipeError = Object.assign(new Error('write EPIPE'), {
+        code: 'EPIPE',
+        syscall: 'write'
+      })
+
+      expect(() => a.emit('error', epipeError)).not.toThrow()
+    })
+
+    it('writes nothing: an EPIPE-shaped error results in zero writes to stdout or stderr', () => {
+      const { installStdioErrorGuards } = loadRawProcessGuards()
+      const a = new EventEmitter()
+      installStdioErrorGuards([a])
+
+      const stdoutWriteSpy = jest
+        .spyOn(process.stdout, 'write')
+        .mockImplementation(() => true)
+      const stderrWriteSpy = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+
+      try {
+        const epipeError = Object.assign(new Error('write EPIPE'), {
+          code: 'EPIPE',
+          syscall: 'write'
+        })
+
+        expect(() => a.emit('error', epipeError)).not.toThrow()
+        // Pins both constraint 2 (never write diagnostics to stdout -- it carries the RPC
+        // frame stream) and the "no new write path at all" doctrine, in one assertion.
+        expect(stdoutWriteSpy).not.toHaveBeenCalled()
+        expect(stderrWriteSpy).not.toHaveBeenCalled()
+      } finally {
+        stderrWriteSpy.mockRestore()
+        stdoutWriteSpy.mockRestore()
+      }
+    })
+
+    it('other codes are also swallowed, with no writes: ERR_STREAM_DESTROYED and a plain, code-less Error', () => {
+      const { installStdioErrorGuards } = loadRawProcessGuards()
+      const a = new EventEmitter()
+      const b = new EventEmitter()
+      installStdioErrorGuards([a, b])
+
+      const stdoutWriteSpy = jest
+        .spyOn(process.stdout, 'write')
+        .mockImplementation(() => true)
+      const stderrWriteSpy = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true)
+
+      try {
+        const destroyedError = Object.assign(
+          new Error('write after end'),
+          { code: 'ERR_STREAM_DESTROYED' }
+        )
+        const mysteryError = new Error('mystery')
+
+        expect(() => a.emit('error', destroyedError)).not.toThrow()
+        expect(() => b.emit('error', mysteryError)).not.toThrow()
+        expect(stdoutWriteSpy).not.toHaveBeenCalled()
+        expect(stderrWriteSpy).not.toHaveBeenCalled()
+      } finally {
+        stderrWriteSpy.mockRestore()
+        stdoutWriteSpy.mockRestore()
+      }
+    })
+
+    // Defence-in-depth only -- see the doc comment on `uncaughtExceptionHandlerDepth` in
+    // processGuards.ts for exactly what this does and does not cover (synchronous re-entry
+    // only; the observed loop re-enters asynchronously via a stream 'error' event, which is
+    // what the four tests above (and `installStdioErrorGuards` itself) cover instead).
+    //
+    // RED-PROOF (performed, not merely asserted -- recorded here and in the SUMMARY):
+    // temporarily deleting the `if (uncaughtExceptionHandlerDepth > 0) return` line from
+    // `installUncaughtExceptionGuard` and re-running this exact test produced
+    // "RangeError: Maximum call stack size exceeded" -- the sink's synchronous re-emit,
+    // uncapped, recurses until the stack blows. Restoring the line made this test pass
+    // again. The depth check is therefore proven load-bearing, not merely present.
+    it('synchronous re-entrancy bound: a sink that re-emits uncaughtException is invoked exactly once', () => {
+      let installUncaughtExceptionGuard!: (
+        target?: NodeJS.EventEmitter
+      ) => void
+      let setUncaughtExceptionLogSink!: (
+        sink: ((message: string) => void) | null
+      ) => void
+      jest.isolateModules(() => {
+        /* eslint-disable @typescript-eslint/no-require-imports */
+        const mod = require('../processGuards')
+        /* eslint-enable @typescript-eslint/no-require-imports */
+        installUncaughtExceptionGuard = mod.installUncaughtExceptionGuard
+        setUncaughtExceptionLogSink = mod.setUncaughtExceptionLogSink
+      })
+
+      const target = new EventEmitter()
+      let sinkCallCount = 0
+      setUncaughtExceptionLogSink(() => {
+        sinkCallCount += 1
+        // Unconditional re-emit, deliberately: this sink call happens INSIDE the guard's
+        // listener body (half 2, the logging call), so re-emitting here from inside it is
+        // genuinely synchronous re-entry, not the asynchronous stream-'error' case
+        // `installStdioErrorGuards` covers. Making the re-emit unconditional (rather than
+        // firing only once) is what makes the RED-proof meaningful: WITH the depth check,
+        // the depth guard short-circuits the re-entrant call before it reaches the sink
+        // again, so this still terminates and `sinkCallCount` stays at 1. WITHOUT the
+        // depth check, this recurses unboundedly and blows the call stack -- confirmed by
+        // temporarily deleting the check and re-running this test (see the RED-PROOF note
+        // above and the SUMMARY).
+        target.emit('uncaughtException', new Error('synchronous re-entry'))
+      })
+      installUncaughtExceptionGuard(target)
+
+      expect(() =>
+        target.emit('uncaughtException', new Error('original'))
+      ).not.toThrow()
+      // Exactly once, not twice, not unbounded: the re-entrant emit's own listener
+      // invocation is short-circuited by the depth check before it can reach the sink a
+      // second time.
+      expect(sinkCallCount).toBe(1)
+    })
+
+    it('Group 3, source text: installStdioErrorGuards() is called at module scope, before both guard installs', () => {
+      const source = readFileSync(
+        join(__dirname, '../../../sidecar/installRejectionGuard.ts'),
+        'utf-8'
+      )
+      const stripped = stripComments(source)
+
+      expect(stripped).toMatch(/^installStdioErrorGuards\(\)$/m)
+
+      const stdioIndex = stripped.indexOf('installStdioErrorGuards()')
+      const rejectionIndex = stripped.indexOf('installUnhandledRejectionGuard()')
+      const exceptionIndex = stripped.indexOf('installUncaughtExceptionGuard()')
+
+      expect(stdioIndex).toBeGreaterThan(-1)
+      expect(rejectionIndex).toBeGreaterThan(-1)
+      expect(exceptionIndex).toBeGreaterThan(-1)
+      expect(stdioIndex).toBeLessThan(rejectionIndex)
+      expect(stdioIndex).toBeLessThan(exceptionIndex)
     })
   })
 

@@ -219,6 +219,27 @@ function setUncaughtExceptionLogSink(
 let uncaughtExceptionGuardInstalled = false
 
 /**
+ * quick-260912-e6k — synchronous re-entrancy bound, DEFENCE-IN-DEPTH, NOT THE FIX.
+ *
+ * `installStdioErrorGuards()` above is what actually closes the EPIPE self-feed loop, by
+ * removing the escalation path that re-enters this listener in the first place. This counter
+ * only bounds a re-entry that happens SYNCHRONOUSLY, inside the same call stack -- e.g. the
+ * late-bound sink itself throwing in a way that somehow re-triggers `uncaughtException`
+ * before this listener returns. It CANNOT see the loop that was actually observed: that one
+ * re-enters ASYNCHRONOUSLY (a stream `'error'` event fires on a later tick, after this
+ * listener has already returned and the `finally` below has already reset the counter to 0),
+ * so a depth counter reset by `finally` never sees more than one level of that case. Do not
+ * treat this as a general rate limiter -- a timer or a sliding window would add new state and
+ * a new failure mode to a guard whose whole doctrine is minimalism, to cover a case that
+ * `installStdioErrorGuards()` already closes at the source.
+ *
+ * Applied to `installUncaughtExceptionGuard` ONLY, deliberately not to its
+ * `unhandledRejection` sibling: the sibling is not part of the observed loop, and symmetry is
+ * not a reason to touch a guard with its own regression history (CR-02).
+ */
+let uncaughtExceptionHandlerDepth = 0
+
+/**
  * Installs a log-only `uncaughtException` listener on `target` (defaults to the real
  * `process`). Idempotent — a second call is a no-op, so re-importing this module (or calling
  * it twice from a test) never registers a second listener. `target` is parameterized purely
@@ -236,44 +257,122 @@ function installUncaughtExceptionGuard(
   uncaughtExceptionGuardInstalled = true
 
   target.on('uncaughtException', (error: unknown) => {
-    // Half 1 — message construction, inside its OWN try (CR-02 regression, gap cycle 2):
-    // `String(error)` throws for a null-prototype value or a throwing/absent
-    // `toString`/`Symbol.toPrimitive`, and `error.stack` can be a throwing getter. A throw
-    // HERE would escape the listener and re-enter Node as a fresh uncaught exception, which
-    // Node terminates on unconditionally — the guard becoming the crash it exists to prevent.
-    // The initializer is a hardcoded, non-interpolated literal so there is still a signal.
-    let message = '[sidecar] uncaught exception: <unstringifiable error>'
-    try {
-      message = `[sidecar] uncaught exception: ${
-        error instanceof Error ? (error.stack ?? error.message) : String(error)
-      }`
-    } catch {
-      // keep the fallback message
+    // quick-260912-e6k: synchronous re-entrancy bound -- see the doc comment on
+    // `uncaughtExceptionHandlerDepth` above for what this does and, more importantly, does
+    // not cover.
+    if (uncaughtExceptionHandlerDepth > 0) {
+      return
     }
-    // Half 2 — the logging call, inside a SECOND try.
+    uncaughtExceptionHandlerDepth += 1
     try {
-      if (uncaughtExceptionLogSink === null) {
-        // Early boot: bootstrap.init() has not run initLogger() yet, so there is no
-        // logger to route through. stderr is the signal. Never stdout: that stream
-        // carries the RPC frame protocol and a non-frame byte corrupts it.
-        process.stderr.write(`${message}\n`)
-      } else {
-        uncaughtExceptionLogSink(message)
-      }
-    } catch {
-      // The sink itself threw (heroicLogWriter unset, a writer mid-rotation, ...).
-      // Falling back to a direct stderr write keeps this guard from ever becoming a
-      // new crash path.
+      // Half 1 — message construction, inside its OWN try (CR-02 regression, gap cycle 2):
+      // `String(error)` throws for a null-prototype value or a throwing/absent
+      // `toString`/`Symbol.toPrimitive`, and `error.stack` can be a throwing getter. A throw
+      // HERE would escape the listener and re-enter Node as a fresh uncaught exception, which
+      // Node terminates on unconditionally — the guard becoming the crash it exists to prevent.
+      // The initializer is a hardcoded, non-interpolated literal so there is still a signal.
+      let message = '[sidecar] uncaught exception: <unstringifiable error>'
       try {
-        process.stderr.write(`${message}\n`)
+        message = `[sidecar] uncaught exception: ${
+          error instanceof Error
+            ? (error.stack ?? error.message)
+            : String(error)
+        }`
       } catch {
-        // Nothing further we can safely do -- swallow. Never re-throw, never exit.
+        // keep the fallback message
       }
+      // Half 2 — the logging call, inside a SECOND try.
+      try {
+        if (uncaughtExceptionLogSink === null) {
+          // Early boot: bootstrap.init() has not run initLogger() yet, so there is no
+          // logger to route through. stderr is the signal. Never stdout: that stream
+          // carries the RPC frame protocol and a non-frame byte corrupts it.
+          process.stderr.write(`${message}\n`)
+        } else {
+          uncaughtExceptionLogSink(message)
+        }
+      } catch {
+        // The sink itself threw (heroicLogWriter unset, a writer mid-rotation, ...).
+        // Falling back to a direct stderr write keeps this guard from ever becoming a
+        // new crash path.
+        try {
+          process.stderr.write(`${message}\n`)
+        } catch {
+          // Nothing further we can safely do -- swallow. Never re-throw, never exit.
+        }
+      }
+    } finally {
+      uncaughtExceptionHandlerDepth -= 1
     }
   })
 }
 
+/**
+ * quick-260912-e6k — THE FIX for the sidecar's EPIPE self-feeding spin loop.
+ *
+ * ROOT CAUSE. `installUncaughtExceptionGuard` above writes `error.stack` to a stream
+ * (`process.stderr` directly, or a late-bound sink that itself eventually writes somewhere).
+ * When that stream is a pipe whose read end has already gone away (the parent process died,
+ * or a shell pipeline closed its end after reading one byte), the write does not throw
+ * synchronously -- it raises `EPIPE` ASYNCHRONOUSLY, as an `'error'` EVENT on the stream, on a
+ * later tick. That event fires structurally OUTSIDE both of the guard's `try`/`catch` halves,
+ * so neither can catch it. An `EventEmitter` `'error'` event with no listener is what Node
+ * escalates into a fresh `uncaughtException` -- which re-enters this same listener, which
+ * formats `error.stack` again, which writes to the same dead pipe again, forever. The guard's
+ * own "never exit, never re-throw" doctrine (necessary and correct on its own) is exactly what
+ * turns that into an unbounded 100%-CPU loop instead of a crash: confirmed live via `sample(1)`
+ * showing 2149 of 2149 main-thread samples cycling through
+ * `TriggerUncaughtException -> ErrorStackGetter -> FormatStackTrace -> TriggerUncaughtException`.
+ *
+ * THE FIX. Attach a listener to the stdio streams' own `'error'` event. A stream with an
+ * `'error'` listener attached does NOT escalate that event into an `uncaughtException` --
+ * Node only does that when the event has no listener at all. With this installed, a dead pipe
+ * write raises an `'error'` event, this function's listener consumes it, and the escalation
+ * path -- the loop's only fuel -- no longer exists. This is why `installStdioErrorGuards()` is
+ * called FIRST in `installRejectionGuard.ts`, ahead of both guards below: the guards remain
+ * necessary for every OTHER uncaught exception, but this removes the one specific class that
+ * used to feed itself back through them.
+ *
+ * WHY THE BODY IS SILENT rather than "log the unexpected ones". Every byte written from
+ * inside a stream-error handler is fuel for the exact loop this function exists to
+ * extinguish -- and a stdio stream that just errored has, by definition, no surviving channel
+ * to report on (writing to the OTHER stream is not obviously safe either: both `stdout` and
+ * `stderr` can go away together, e.g. a parent that closes both pipes on exit). Branching on
+ * `error.code` would only change which branch returns silently, since every branch's action is
+ * "do nothing" -- so the function does not branch at all. Named here so a future reader knows
+ * these were considered, not overlooked: `EPIPE` (write to a pipe with no reader, the observed
+ * case), `ERR_STREAM_DESTROYED` (write after the stream was already torn down), `EBADF` (write
+ * to an already-closed file descriptor, e.g. stdio redirected to a file that was removed).
+ *
+ * DEFENCE-IN-DEPTH, NOT THE FIX: the synchronous re-entrancy bound added to
+ * `installUncaughtExceptionGuard` below. This function is what actually closes the loop.
+ */
+let stdioErrorGuardsInstalled = false
+
+function installStdioErrorGuards(
+  streams: NodeJS.EventEmitter[] = [process.stdout, process.stderr]
+): void {
+  if (stdioErrorGuardsInstalled) {
+    return
+  }
+  stdioErrorGuardsInstalled = true
+
+  for (const stream of streams) {
+    try {
+      stream.on('error', () => {
+        // Deliberately empty. See the doc comment above this function: writing anything
+        // here -- to this stream, to the other stream, through the log sink, anywhere --
+        // is fuel for the loop this guard exists to stop. Swallow unconditionally.
+      })
+    } catch {
+      // The stream was already destroyed enough that even attaching a listener threw.
+      // Nothing further we can safely do -- swallow. Never re-throw, never exit.
+    }
+  }
+}
+
 export {
+  installStdioErrorGuards,
   installUncaughtExceptionGuard,
   installUnhandledRejectionGuard,
   setUncaughtExceptionLogSink,
