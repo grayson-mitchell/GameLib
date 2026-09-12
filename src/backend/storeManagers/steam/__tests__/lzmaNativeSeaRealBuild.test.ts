@@ -55,7 +55,9 @@
 // gate above: the hang is NOT native-specific. With native confirmed
 // gated off (nativeWorkers:0), the exact same real-sized decode STILL
 // times out via the pure-JS path, reproduced twice independently. See the
-// second test.skip below and the debug file's own "CRITICAL CORRECTION"
+// second test below (NO LONGER SKIPPED as of 2026-09-12 -- it is green now;
+// this paragraph is the historical record of when it was not) and the debug
+// file's own "CRITICAL CORRECTION"
 // entry for the full record -- the gate is still a real, worthwhile fix
 // (lzma-native's own resolution is now provably correct), but it does NOT
 // make a packaged SEA install's worker-pool decode path safe end-to-end.
@@ -193,7 +195,8 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // operator directed, 2026-08-18, same session): native decode is now
   // gated OFF by default (NATIVE_LZMA_DECODE_ENABLED, lzmaLoader.ts) --
   // see `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md` for
-  // why, and this file's own second (test.skip'd) test below for the
+  // why, and this file's own second test below (skipped when this comment
+  // was written; un-skipped and green since 2026-09-12) for the
   // original finding this test used to assert against directly. With the
   // gate in place, a real compiled SEA binary's pool must still spawn
   // cleanly (the FIRST round's fix, unaffected by this gate) but must now
@@ -256,10 +259,38 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md`'s own
   // "CRITICAL CORRECTION" entry for the full record.
   //
-  // Left as `test.skip`, not deleted: same reasoning as the native-path
-  // case below -- this is the correct, currently-true target, not
-  // something to weaken or hide.
-  test.skip('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the gated (pure-JS) path -- KNOWN FAILING (see CRITICAL CORRECTION comment above: this is NOT native-specific), do not un-skip without a real fix + real green run', async () => {
+  // UN-SKIPPED 2026-09-12 (todo `2026-09-12-lzma-sea-real-sized-decode-
+  // test-skip-may-now-pass`). Everything above is the historical record of
+  // when this test was RED; it no longer describes current behaviour, and
+  // is kept because the arc matters. What changed in the measurement:
+  //
+  //   - 20/20 direct runs of the real compiled binary
+  //     (`GAMELIB_SIDECAR_SELFTEST=decompress-pool`, fake HOME) reported
+  //     `SELFTEST decode=ok bytes=65536 match=true` at exactly this test's
+  //     asserted conditions (`inlineFallback:false, nativeWorkers:0`).
+  //   - A prior /gsd-debug session (2026-08-18) had already failed to
+  //     reproduce the hang 40/40, including ~4.6x CPU oversubscription.
+  //
+  // WHAT IS **NOT** CLAIMED: that anyone knows what fixed it. The original
+  // hang was real and specifically instrumented -- this is "trigger
+  // condition still unidentified", NOT "the bug never existed". Candidate
+  // commits landing after the 2026-08-18 closure are `f3f63fd72`
+  // (2026-08-22, Stored PK chunk truncation) and the SEA bundling changes
+  // `af0602e9b` / `7ed470b19` (2026-08-29) -- the latter plausible for a
+  // worker that never entered `handleDecodeMessage()`. **Attribution was
+  // not established**; proving it needs a bisect with a real SEA rebuild
+  // per step. Do not credit any of them in a future comment without doing
+  // that work.
+  //
+  // IF THIS GOES RED AGAIN, IT IS NOT A FLAKE TO RETRY. It is the fresh
+  // recurrence the 2026-08-18 closure explicitly asked for and could not
+  // manufacture. Capture diagnostics at that moment -- that run is the
+  // only thing that can identify the trigger. Note the prior session
+  // already exhausted the CPU-load axis; try memory/IO contention or
+  // whatever environmental signal is present instead. A skipped test could
+  // never deliver that signal, which is the main reason this one is back
+  // on.
+  test('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the gated (pure-JS) path', async () => {
     const result = await spawnCapture(binaryPath, [], {
       ...process.env,
       GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
@@ -354,7 +385,30 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // a temporary, local, uncommitted flip of NATIVE_LZMA_DECODE_ENABLED to
   // `true` before rebuilding, same as any other investigation step
   // described in the debug file.
-  test.skip('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the NATIVE path once the kill switch is (locally, temporarily) forced back on -- KNOWN FAILING, see comment above and the linked debug file, do not un-skip without a real fix + real green run', async () => {
+  // STAYS SKIPPED 2026-09-12, and NOT for the reason above. Its sibling
+  // (the pure-JS case) was un-skipped on the same day after 20/20 green,
+  // so "KNOWN FAILING" is no longer why this one is off. Two independent
+  // reasons hold it:
+  //
+  //   1. Running it at all requires a local, uncommitted flip of
+  //      `NATIVE_LZMA_DECODE_ENABLED` to `true`. That flip is under a
+  //      STANDING OPERATOR DECISION (2026-08-18, coordinator-directed):
+  //      the kill switch stays false and is not to be flipped without a
+  //      fresh recurrence and fresh diagnostics. A test cannot un-make
+  //      that decision, so this is not a measurement question.
+  //   2. The native path carries its own SEPARATE, later-diagnosed defect:
+  //      lzma-native@8.0.6 bundles liblzma 5.2.3, whose
+  //      `lzma_alone_decoder` rejects the known-size+EOS alone stream that
+  //      is the ONLY shape this codebase produces. Fixed in `b79765af2`
+  //      inside `createNativeAdapter()` -- but that fix has never been
+  //      exercised end-to-end inside a real compiled SEA binary, because
+  //      the kill switch has masked this path throughout.
+  //
+  // So the honest status is "gated off by decision, and unverified behind
+  // the gate", not "known failing". Re-enabling native decode needs both:
+  // the operator's call on the kill switch, AND a real green run of this
+  // test against a build that includes `b79765af2`.
+  test.skip('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the NATIVE path once the kill switch is (locally, temporarily) forced back on -- SKIPPED BY OPERATOR DECISION on NATIVE_LZMA_DECODE_ENABLED, not by known failure; see comment above', async () => {
     const result = await spawnCapture(binaryPath, [], {
       ...process.env,
       GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
