@@ -2,7 +2,7 @@
 created: 2026-09-12
 title: "39 references to 23 CSS custom properties that are declared nowhere — including two typos in shipped components"
 area: shared-ui-tokens
-status: OPEN
+status: CLOSED 2026-09-12 (quick 260912-it4)
 severity: medium
 platform: any
 ready: code
@@ -123,3 +123,47 @@ Re-run the sweep and expect 0 undefined references, or an explicit allowlist nam
 survivor and why it is a legitimate theme extension point. Re-measure any element whose rendered
 font or colour changes — per this project's measure-do-not-eyeball rule, the current
 silent-inherit fallback looks plausible in some themes.
+
+---
+
+## CLOSED 2026-09-12 by quick task `260912-it4`
+
+39 references / 23 names -> **1 reference / 1 name**, the one survivor being
+`--installing-effect`, explicitly allowlisted in the new gate and spun out as
+`.planning/todos/pending/2026-09-12-installing-effect-grayscale-amount-is-unrecoverable-needs-a-design-decision.md`
+(`ready: human` -- it is a number with no recoverable value, so it needs a design
+decision, not a code fix).
+
+Gate installed: `src/frontend/components/UI/NavShell/__tests__/cssTokenSweep.test.ts`.
+Both negative controls were run and both turned it RED before being reverted.
+
+### Three corrections to this todo's premises
+
+1. **`--status-sucess` must NOT be spelling-corrected.** `GameCard/index.css:385` read
+   `color: var(--status-sucess, var(--success));` -- the fallback arm is declared, so the
+   site rendered correctly already. `--status-success` is a RAW Figma constant that
+   `body.nord-light` does not override, so "fixing the typo" would have made installed-game
+   labels near-invisible on that theme. Collapsed to `var(--success)` instead. Zero delta.
+2. **`--token` was never a reference.** `PathSelectionBox/index.css:9` is prose inside that
+   file's opening block comment ("every colour is a `var(--token, fallback)`"). The fix was
+   in the sweep, not the stylesheet.
+3. **This todo's `files:` list omitted `SideloadDialog/index.scss`**, which carries the
+   third `--font-size-sm` reference (`:109`).
+
+### Two names this todo never saw
+
+- **`--text-primary` x5** (PopoverComponent, WineItem, WineManager x3). Hidden because
+  `SteamLogin/index.scss:86` carries a `//` comment whose text is literally
+  `grep -rn -- "--text-primary:" src/frontend` -- the census matched that prose as a
+  DECLARATION and concluded the token was declared. The comment documenting the token as
+  dead is what hid its five live references.
+- **`--primary-button-hover` x1** (`themes.scss:596`). Hidden because prettier wraps the
+  declaration, and a line-by-line ref scan cannot see `var(\n  --primary-button-hover,`.
+
+### One premise that turned out to be a non-defect
+
+The execution plan predicted that `WineManager/index.css:206` and `WineItem/index.css:113`
+were bare `border-bottom: var(--border-color);` and would remain visually inert for want of
+a `border-style`, and directed a follow-up todo. Measured: all seven `--border-color` sites
+carry an explicit `1px solid` (or `0 0 0 1px` for the box-shadow). No such gap exists, so no
+todo was filed for it.
