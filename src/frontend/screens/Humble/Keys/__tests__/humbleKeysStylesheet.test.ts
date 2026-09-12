@@ -190,6 +190,19 @@ describe('stripSourceComments integrity for this file (guards against comment pr
     expect(match?.[1]).not.toMatch(/align-items:\s*flex-start/)
     expect(match?.[1]).not.toMatch(/text-align:\s*start/)
   })
+
+  it("SANITY (260912-d84): a comment naming the em-relative --space-md token as prose above a block declaring the fixed one does not survive stripping, so the shared-gap assertion below cannot be defeated by Task 1's own rationale comment", () => {
+    const fixture = `
+      /* this gap must stay a FIXED token, not the em-relative --space-md,
+         described here in prose only. */
+      .humbleKeysColumnHeader,
+      .humbleKeyRow {
+        column-gap: var(--space-md-fixed);
+      }
+    `
+    const stripped = stripSourceComments(fixture)
+    expect(stripped).not.toMatch(COLUMN_GAP_EM_RELATIVE)
+  })
 })
 
 /**
@@ -277,13 +290,97 @@ describe('Humble Keys text alignment (REQ-43-19, 260911-r8u)', () => {
       .humbleKeyRow {
         grid-template-columns: 6.5rem minmax(0, 1fr) 20rem;
         display: grid;
-        column-gap: var(--space-md);
+        column-gap: var(--space-md-fixed);
         align-items: start;
       }
     `
     const match =
       HUMBLE_KEYS_COLUMN_HEADER_STANDALONE_BLOCK.exec(combinedFormOnly)
     expect(match).toBeNull()
+  })
+})
+
+/**
+ * Block-scoped anchor for the combined `.humbleKeysColumnHeader,
+ * .humbleKeyRow` declaration (260912-d84). Deliberate INVERSE of
+ * `HUMBLE_KEYS_COLUMN_HEADER_STANDALONE_BLOCK` above: that anchor's `\s*\{`
+ * cannot match this comma form, and this anchor's `,\s*\.humbleKeyRow\s*\{`
+ * cannot match the standalone form -- together the two anchors partition the
+ * file's two `.humbleKeysColumnHeader` occurrences with no overlap.
+ */
+const HUMBLE_KEYS_SHARED_ROW_GEOMETRY_BLOCK =
+  /\.humbleKeysColumnHeader,\s*\.humbleKeyRow\s*\{([^}]*)\}/
+
+/** The fixed-token form this plan shipped. */
+const COLUMN_GAP_FONT_SIZE_INDEPENDENT = /column-gap:\s*var\(--space-md-fixed\)/
+
+/**
+ * The pre-fix em-relative form. The closing paren is ANCHORED right after
+ * `--space-md` deliberately: `var(--space-md-fixed)` contains
+ * `var(--space-md` as a substring, so an unanchored form (e.g. dropping the
+ * trailing `\)`) would match the fixed token too, and this negative
+ * assertion would be permanently, silently false. The SANITY test below
+ * proves the anchor matters.
+ */
+const COLUMN_GAP_EM_RELATIVE = /column-gap:\s*var\(--space-md\)/
+
+/**
+ * Humble Keys shared row/column-header gap is font-size-independent
+ * (REQ-43-19 item 3, 260912-d84).
+ *
+ * Cause: the combined `.humbleKeysColumnHeader, .humbleKeyRow` declaration's
+ * `column-gap` used the em-relative `--space-md` (`_spacing.scss:8` = `1em`),
+ * which resolves against each matched element's OWN computed font-size. The
+ * standalone header block sets `font-size: var(--text-xs)` (11.11px at the
+ * 16px root) while the rows inherit 16px, so one shared declaration produced
+ * two different gaps -- a 4.89px divergence that put the GAME header label
+ * that far left of every row title.
+ *
+ * This is a SOURCE census: it proves the string was written, nothing more.
+ * The Frontend jest project runs `testEnvironment: 'node'` with no jsdom and
+ * no CSS engine here (same framing as
+ * `HumbleKeyRow/__tests__/index.test.tsx:962-968`), so nothing added here can
+ * render anything or compute a used value. The 4.89px figure is arithmetic,
+ * not a measurement of the fixed build -- live adjudication is still
+ * outstanding, tracked by the todo this plan closes:
+ * .planning/todos/completed/2026-09-11-humble-keys-game-column-header-label-sits-5px-left-of-row-titles-unverified-live.md
+ */
+describe('Humble Keys shared row/column-header gap is font-size-independent (REQ-43-19 item 3, 260912-d84)', () => {
+  const stripped = read(KEYS_CSS)
+
+  it("the shared .humbleKeysColumnHeader, .humbleKeyRow declaration's column-gap uses the fixed token, not the em-relative one", () => {
+    const match = HUMBLE_KEYS_SHARED_ROW_GEOMETRY_BLOCK.exec(stripped)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(COLUMN_GAP_FONT_SIZE_INDEPENDENT)
+    expect(match?.[1]).not.toMatch(COLUMN_GAP_EM_RELATIVE)
+  })
+
+  it('SANITY: the check above fails against a known-bad input carrying the em-relative token -- proves it is not vacuously true', () => {
+    const badFixture = `
+      .humbleKeysColumnHeader,
+      .humbleKeyRow {
+        grid-template-columns: 6.5rem minmax(0, 1fr) 20rem;
+        display: grid;
+        column-gap: var(--space-md);
+        align-items: start;
+      }
+    `
+    const match = HUMBLE_KEYS_SHARED_ROW_GEOMETRY_BLOCK.exec(badFixture)
+    expect(match).not.toBeNull()
+    expect(match?.[1]).toMatch(COLUMN_GAP_EM_RELATIVE)
+    expect(match?.[1]).not.toMatch(COLUMN_GAP_FONT_SIZE_INDEPENDENT)
+  })
+
+  it('SANITY: the combined anchor does NOT match the standalone .humbleKeysColumnHeader typography block -- proves it resolves to the shared declaration, not the wrong block', () => {
+    const standaloneOnly = '.humbleKeysColumnHeader {\n  font-size: 1rem;\n}'
+    const match = HUMBLE_KEYS_SHARED_ROW_GEOMETRY_BLOCK.exec(standaloneOnly)
+    expect(match).toBeNull()
+  })
+
+  it('SANITY: the em-relative regex does not fire on the fixed token -- proves the anchored closing paren is load-bearing', () => {
+    const fixedDeclaration = 'column-gap: var(--space-md-fixed);'
+    expect(fixedDeclaration).not.toMatch(COLUMN_GAP_EM_RELATIVE)
+    expect(fixedDeclaration).toMatch(COLUMN_GAP_FONT_SIZE_INDEPENDENT)
   })
 })
 
@@ -302,8 +399,7 @@ const WHITE_SPACE_NOWRAP = /white-space:\s*nowrap/
  * `.humbleKeysSortPicker`'s sibling column-header anchor above.
  */
 const HUMBLE_KEYS_SORT_PICKER_BLOCK = /\.humbleKeysSortPicker\s*\{([^}]*)\}/
-const GRID_TEMPLATE_AREAS_LABEL_SELECT =
-  /grid-template-areas:\s*'label select'/
+const GRID_TEMPLATE_AREAS_LABEL_SELECT = /grid-template-areas:\s*'label select'/
 const GRID_TEMPLATE_COLUMNS_DECLARED = /grid-template-columns:/
 
 /** Block-scoped anchor for `.humbleKeyOwnedBadge`. */
@@ -333,7 +429,7 @@ describe('Humble Keys title no longer yields to SearchBar (REQ-43-19, 260911-t0p
 describe('Humble Keys sort picker label sits to the left of the select, not above and not to its right (REQ-43-19, 260911-t0p defect 2, reordered by 260911-ue4)', () => {
   const stripped = read(KEYS_CSS)
 
-  it('.humbleKeysSortPicker declares grid-template-areas: \'label select\' and an explicit grid-template-columns', () => {
+  it(".humbleKeysSortPicker declares grid-template-areas: 'label select' and an explicit grid-template-columns", () => {
     const match = HUMBLE_KEYS_SORT_PICKER_BLOCK.exec(stripped)
     expect(match).not.toBeNull()
     expect(match?.[1]).toMatch(GRID_TEMPLATE_AREAS_LABEL_SELECT)
@@ -348,7 +444,7 @@ describe('Humble Keys sort picker label sits to the left of the select, not abov
     expect(match?.[1]).not.toMatch(GRID_TEMPLATE_COLUMNS_DECLARED)
   })
 
-  it("SANITY: the check above fails against the pre-ue4 order (label read to the right of the select, shipped and live-verified by 260911-t0p) -- this is the exact regression this pin now guards against, not a generic negative control", () => {
+  it('SANITY: the check above fails against the pre-ue4 order (label read to the right of the select, shipped and live-verified by 260911-t0p) -- this is the exact regression this pin now guards against, not a generic negative control', () => {
     const badFixture =
       ".humbleKeysSortPicker {\n  grid-template-areas: 'select label';\n  grid-template-columns: 12rem max-content;\n}"
     const match = HUMBLE_KEYS_SORT_PICKER_BLOCK.exec(badFixture)
