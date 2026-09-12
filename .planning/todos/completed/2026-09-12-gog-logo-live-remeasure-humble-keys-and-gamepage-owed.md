@@ -2,7 +2,7 @@
 created: 2026-09-12
 title: "gog-logo.svg centring fix owes a live re-measure on Humble Keys, GamePage and the Login runner tile (both themes)"
 area: humble-keys-ui
-status: OPEN
+status: RESOLVED
 severity: minor
 platform: macos
 ready: live-gate
@@ -68,3 +68,36 @@ Re-litigating whether the icon should be forced to a literal square render — t
 already measured and rejected in the closed todo (a square viewBox + `meet` is a no-op; forcing
 true square distorts the rounded corners into ellipses). This todo is purely about confirming
 the shipped centring fix in a live render.
+
+## Resolution — quick task 260912-k09 (2026-09-12)
+
+Measured live against the packaged release build `/private/tmp/gamelib-gate-20260912T164819Z`
+(binary sha256 `e7bbeb664…`, source `16ec08de3`, carrying all three fix commits). Full record,
+including method and the seven estimator traps hit on the way, in
+`.planning/quick/260912-k09-gog-logo-centring-live-re-measure/evidence/measurements.md`.
+
+**Prediction fixed before measuring** (OLD vs NEW rendered into identical square viewports): centred
+→ centroid offset `+0.032` device px; bottom-flush → `+1.726`.
+
+| surface | theme | measured | verdict |
+|---|---|---|---|
+| Surface 1, Humble Keys "Racine" | nord-light | GOG − Steam centroid **−0.088 device** | PASS |
+| Surface 1, Humble Keys "Racine" | nord-dark | GOG − Steam centroid **+0.415 device** | PASS |
+| Surface 2, GamePage store icon | nord-light | box **46.0 CSS** (= Steam's), gaps 15/15, asym **0** | PASS |
+| Surface 2, GamePage store icon | nord-dark | box **46.0 CSS** (= Steam's), gaps 15/15, asym **0** | PASS |
+| Surface 3, Login runner tile | — | no `<img>` exists under `.runnerIcon.gog` | resolved by code-read |
+
+**Surface 2's neighbour concern does not materialise**: GOG's painted box matches Steam's to the
+device pixel in both themes. GOG's glyph is 31.0 CSS tall vs Steam's 33.0 — the 34:31 vs 496:512
+brand aspect, not a size defect.
+
+**Surface 3 is deliberately NOT claimed as a live PASS.** `Login/index.tsx:302` passes
+`icon={() => <GOGLogo />}` (a `?react` import) into `Runner/index.tsx:124`, so every tile is an
+inlined SVG and the deleted `.runnerIcon.gog img` rule matched no element — the static reading in
+this todo is confirmed. "Pixel-identical before and after" is a counterfactual that would require a
+second release build of `39e1e62bb^`; it was not taken, and no screenshot substitutes for it.
+
+**One expectation in this todo was wrong.** It predicted Humble ink of 19.2 × 17.5 CSS; the measured
+extent is **19.0 × 18.0** across thresholds 16–40 (17.5 appears only at threshold ≥60). Extent is
+threshold-dependent and is not the discriminator — the centroid is, and it moves 0.002 device px
+across that same threshold range.
