@@ -115,7 +115,7 @@
 
 .goToLibrary {
   position: relative;
-  font-family: var(--font-primary-bold);
+  font-family: var(--primary-font-family);
   font-weight: 700;
   color: var(--background);
   background: var(--primary-button, var(--accent));
@@ -154,7 +154,7 @@
 }
 
 .title {
-  font-family: var(--actions-font-family);
+  font-family: var(--primary-font-family);
   font-size: 18px;
   margin: 0;
   color: var(--accent);
@@ -162,7 +162,7 @@
 
 .subtitle {
   font-size: 12px;
-  font-family: var(--actions-font-family);
+  font-family: var(--primary-font-family);
   font-weight: 400;
   color: var(--text-default);
 }

@@ -183,7 +183,8 @@
       label {
         cursor: default;
         margin-bottom: var(--space-md);
-        font: var(--font-secondary-regular);
+        font-family: var(--secondary-font-family);
+        font-weight: var(--regular);
         font-size: var(--text-md);
         line-height: var(--space-lg);
         color: var(--text-secondary);

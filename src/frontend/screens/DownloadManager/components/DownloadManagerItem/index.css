@@ -114,7 +114,7 @@
   bottom: -38px;
   left: -38px;
   color: var(--success);
-  font-family: var(--actions-font-family);
+  font-family: var(--primary-font-family);
   font-style: italic;
   font-weight: normal;
   line-height: 12px;
@@ -137,7 +137,7 @@
   color: var(--text-default);
   font-size: 14px;
   line-height: 26px;
-  font-family: var(--actions-font-family);
+  font-family: var(--primary-font-family);
   cursor: pointer;
   text-align: start;
 }

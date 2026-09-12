@@ -24,7 +24,8 @@
 .ModifyInstall__dialog .Field label {
   cursor: default;
   margin-bottom: var(--space-md);
-  font: var(--font-secondary-regular);
+  font-family: var(--secondary-font-family);
+  font-weight: var(--regular);
   font-size: var(--text-md);
   line-height: var(--space-lg);
   color: var(--text-secondary);
@@ -79,7 +80,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font: var(--font-secondary-regular-italic);
+  font-family: var(--secondary-font-family);
+  font-weight: var(--regular);
+  font-style: italic;
   font-size: var(--text-sm);
   line-height: var(--space-md);
   /* identical to box height */
@@ -91,7 +94,9 @@
   padding-block: var(--space-xs);
   display: flex;
   align-items: center;
-  font: var(--font-secondary-regular-italic);
+  font-family: var(--secondary-font-family);
+  font-weight: var(--regular);
+  font-style: italic;
   font-size: var(--text-sm);
   line-height: var(--space-md);
   /* identical to box height */
