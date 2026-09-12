@@ -55,7 +55,7 @@
 .wineItem .version {
   font-weight: 500;
   padding-inline-end: 16px;
-  color: var(--text-primary);
+  color: var(--text-default);
   background: transparent;
   border: none;
   text-align: start;

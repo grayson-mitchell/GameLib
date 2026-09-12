@@ -60,7 +60,7 @@
 }
 
 .downloadManagerListItem:hover {
-  background-color: var(--background-hover);
+  background-color: var(--background);
 }
 
 .downloadManagerTitleList {
@@ -106,7 +106,7 @@
   z-index: 5;
   grid-area: cover;
   font-weight: 500;
-  background: var(--background-gradient);
+  background: var(--background-darker-80);
   padding: 2px 5px;
   border-radius: 4px;
   color: var(--success);

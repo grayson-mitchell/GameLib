@@ -30,7 +30,7 @@
       border: 1px solid var(--border-color);
       border-radius: 8px;
       padding: 8px 12px;
-      color: var(--text-primary);
+      color: var(--text-default);
       cursor: pointer;
       transition: all 0.2s ease;
       display: flex;
@@ -81,12 +81,12 @@
 
         &.Mui-selected {
           background: var(--background);
-          color: var(--text-primary);
+          color: var(--text-default);
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         &:hover:not(.Mui-selected) {
-          color: var(--text-primary);
+          color: var(--text-default);
         }
       }
     }
@@ -108,7 +108,7 @@
       gap: 0;
       grid-template-columns: 33% 30% 20% 17%;
       padding: 12px 24px;
-      background: var(--bg-primary);
+      background: var(--body-background);
       border-bottom: 1px solid var(--border-color);
       align-items: center;
       position: sticky;
@@ -157,7 +157,7 @@
 
     &.errorState {
       justify-content: center;
-      color: var(--error);
+      color: var(--danger);
       font-weight: 500;
     }
   }

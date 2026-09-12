@@ -162,7 +162,7 @@ a {
 
 .button.is-footer:hover,
 .button.is-footer:focus-visible {
-  background-color: var(--stop-button);
+  background-color: var(--background-darker);
   color: var(--text-hover);
   box-shadow: 0px 0px 0px 3px var(--danger, var(--text-default));
 }

@@ -7,6 +7,13 @@ body {
   --cancel-button: var(--status-warning);
   --cancel-button-overlay: var(--status-warning-hover);
   --background-darker-80: var(--eighty-percent-black);
+  /* 7 consumers across 4 components used --border-color as if it were a
+     shared token; `git log -S "--border-color:" --all` shows it was never
+     declared in any revision, so all 7 rendered NO border at all. --divider
+     is the repo's divider token but is declared in only 2 of 11 theme
+     blocks, so --neutral-03 (the value themes.scss:97 itself uses) makes it
+     universal. Themes may now override. */
+  --border-color: var(--divider, var(--neutral-03));
 
   --anticheat-denied: #a25d21;
   --anticheat-broken: var(--status-warning);
@@ -585,10 +592,7 @@ body.zombie-classic {
 body.zombie .alphabet-filter-button--active,
 body.zombie-classic .alphabet-filter-button--active {
   --alphabet-filter-accent-color: var(--primary-button);
-  --alphabet-filter-accent-hover: var(
-    --primary-button-hover,
-    var(--primary-button)
-  );
+  --alphabet-filter-accent-hover: var(--primary-button);
 }
 
 body.old-school {

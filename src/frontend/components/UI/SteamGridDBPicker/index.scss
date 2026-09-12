@@ -32,7 +32,7 @@
   &__error {
     color: var(--danger);
     padding: 1rem;
-    background: rgba(var(--danger-rgb), 0.1);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
     border-radius: 4px;
   }
 
@@ -55,7 +55,7 @@
         border-radius: 4px;
 
         &:hover {
-          background: var(--background-hover);
+          background: var(--background);
         }
       }
     }
@@ -101,6 +101,6 @@
   &__no-results {
     text-align: center;
     padding: 1rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
   }
 }
