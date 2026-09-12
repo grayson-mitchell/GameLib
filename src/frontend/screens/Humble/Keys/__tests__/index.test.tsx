@@ -953,7 +953,7 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       expect((toggle!.props as { value?: boolean }).value).toBe(true)
     })
 
-    it('260911-t0p defect 3: a REVEALED key is absent from the list at the checkbox\'s default (true) state, and appears once the checkbox is turned off', () => {
+    it("260911-t0p defect 3: a REVEALED key is absent from the list at the checkbox's default (true) state, and appears once the checkbox is turned off", () => {
       // This is the discriminating case the rest of the file's REVEALED-key
       // tests do not cover: every other REVEALED-state test in this file
       // calls `turnOffRedeemableOnly` up front to reach the row and then
@@ -975,7 +975,9 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
         (el) => el.type === ToggleSwitchStub
       )
       ;(
-        toggle!.props as { handleChange: (e: { target: { checked: boolean } }) => void }
+        toggle!.props as {
+          handleChange: (e: { target: { checked: boolean } }) => void
+        }
       ).handleChange({ target: { checked: false } })
       tree = rerender()
 
