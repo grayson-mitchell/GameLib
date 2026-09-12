@@ -60,6 +60,7 @@
 // (lzma-native's own resolution is now provably correct), but it does NOT
 // make a packaged SEA install's worker-pool decode path safe end-to-end.
 
+import type { ChildProcess } from 'node:child_process'
 import { execFileSync, spawn } from 'node:child_process'
 import { mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -74,6 +75,33 @@ interface SpawnResult {
   stderr: string
 }
 
+/**
+ * quick-260912-e6k — Layer 2 of the sidecar-EPIPE-spin fix (2026-09-06 orphan todo).
+ *
+ * Tracks every child this suite's own `spawnCapture()` starts, so an interrupted jest run
+ * (Ctrl-C, a CI job killed, the whole process SIGTERM'd) can reap them instead of leaving a
+ * spinning SEA binary behind at ppid 1.
+ *
+ * HONEST LIMIT, stated because a reader will otherwise assume this alone closes the todo: a
+ * SIGKILL on THIS jest process cannot be intercepted by anything -- Node gives no hook for it,
+ * by design. This reaper covers SIGINT/SIGTERM/normal exit/afterAll only. What actually
+ * closes the todo is `processGuards.ts`'s `installStdioErrorGuards()` (this same quick task,
+ * Task 1): a reaped-parent child now terminates on its own once its stdio pipe dies, instead
+ * of spinning forever, which is why that fix had to live in shipping code and not here.
+ */
+const liveChildren = new Set<ChildProcess>()
+
+function reapLiveChildren(): void {
+  for (const child of liveChildren) {
+    try {
+      child.kill('SIGKILL')
+    } catch {
+      // Already exited -- nothing useful to do with the error.
+    }
+  }
+  liveChildren.clear()
+}
+
 function spawnCapture(
   command: string,
   args: string[],
@@ -84,6 +112,7 @@ function spawnCapture(
       env,
       stdio: ['ignore', 'pipe', 'pipe']
     })
+    liveChildren.add(child)
     let stdout = ''
     let stderr = ''
     child.stdout.on('data', (d) => {
@@ -92,10 +121,31 @@ function spawnCapture(
     child.stderr.on('data', (d) => {
       stderr += d.toString()
     })
-    child.on('error', rejectPromise)
-    child.on('close', (code) => resolvePromise({ code, stdout, stderr }))
+    child.on('error', (err) => {
+      // A spawn that never started still needs its handle removed -- otherwise a dead
+      // handle sits in the set forever, since 'close' never fires for it.
+      liveChildren.delete(child)
+      rejectPromise(err)
+    })
+    child.on('close', (code) => {
+      liveChildren.delete(child)
+      resolvePromise({ code, stdout, stderr })
+    })
   })
 }
+
+// Module-scope registrations. Deliberately does NOT call process.exit() from any of these --
+// jest already installs its own SIGINT handler, replacing Node's default termination, so
+// these only ADD cleanup ahead of jest's own teardown rather than pre-empting it.
+//
+// Known interaction: `process.once('exit', ...)` adds one listener to the same `process`
+// whose exit-listener count `sidecarRejectionGuard.test.ts`'s IN-06 gate bounds at
+// EXIT_LISTENER_CEILING = 32 when the two files share a jest worker. Last measured there: 23.
+// One more is comfortably inside the headroom, but if IN-06 ever goes red, this is not a
+// mysterious cause.
+process.once('exit', reapLiveChildren)
+process.once('SIGINT', reapLiveChildren)
+process.once('SIGTERM', reapLiveChildren)
 
 describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, round 2 regression)', () => {
   let fakeHome: string
@@ -133,6 +183,11 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   afterAll(() => {
     if (fakeHome) rmSync(fakeHome, { recursive: true, force: true })
   })
+
+  // quick-260912-e6k: reap any child this suite's own spawnCapture() left live (a
+  // hung/timed-out test, or a test that threw before its spawn settled). See the
+  // liveChildren/reapLiveChildren doc comment above for what this does and does not cover.
+  afterAll(reapLiveChildren)
 
   // Phase 23.1 plan 05, THIRD finding's own follow-up (coordinator/human-
   // operator directed, 2026-08-18, same session): native decode is now
