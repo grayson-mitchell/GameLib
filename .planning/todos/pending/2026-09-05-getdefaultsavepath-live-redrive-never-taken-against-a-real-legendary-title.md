@@ -56,3 +56,40 @@ after a manual full-library refresh papers over it.
 
 `resolves_phase: null` -- not owned by a live phase. Not externally blocked, just requires hardware
 with an installed legendary title and has not yet been scheduled.
+
+## 2026-09-12 update -- desk half now MEASURED (quick 260912-qop)
+
+The mechanism claim in "What was verified" above (`getGameInfo(appName, true)` merging install
+fields from the stale, module-scope `installedGames` map instead of re-reading `installed.json`)
+was previously only a static reading of source. It has now been turned into a repeatable, hermetic
+jest measurement:
+
+- Test file: `src/backend/storeManagers/legendary/__tests__/getGameInfoForceReloadStaleness.test.ts`
+  (commit `7d6a9dbd4`).
+- Sentinels: `/qop/OLD-stale-save-path` (written to `installed.json` before the simulated
+  `sync-saves` rewrite) and `/qop/NEW-fresh-save-path` (written after, simulating what
+  `legendary sync-saves --accept-path` does inside `getDefaultLegendarySavePath()`).
+- Result: `manager.getGameInfo('Iris', true)` returns `save_path = OLD_SENTINEL` immediately after
+  `installed.json` on disk already holds `NEW_SENTINEL` (confirmed by a write-through control
+  reading the file directly), and returns `NEW_SENTINEL` only after an explicit
+  `manager.refreshInstalled()` is called before the same `getGameInfo` call (positive control). A
+  trap guard (`toBeDefined()`, title, `is_installed === true`) rules out the five `loadFile()`
+  early-return paths as an alternate explanation.
+- Two negative controls proved the probe can genuinely fail (verbatim output in
+  `.planning/quick/260912-qop-getgameinfo-forcereload-stale-map/260912-qop-SUMMARY.md`):
+  - NC-1 (flip the defect assertion's expected value to the NEW sentinel): failed with
+    `Received: "/qop/OLD-stale-save-path"` -- the stale arm is reading a real value, not
+    `undefined` and not a mock.
+  - NC-2 (remove the disk-rewrite step): failed at the write-through control with
+    `Expected: "/qop/NEW-fresh-save-path"` / `Received: "/qop/OLD-stale-save-path"` (jest's
+    fail-fast semantics surface this arm first in the sequential `it()` block); a supplementary
+    isolated run with the write-through control's own assertion also suppressed surfaced the
+    identical failure signature precisely at the positive-control assertion, confirming that arm
+    is genuinely disk-driven and not decorative.
+- No production source was modified: `src/backend/save_sync.ts` and
+  `src/backend/storeManagers/legendary/library.ts` are unchanged.
+
+**This does NOT discharge this todo.** The discharge condition remains a LIVE gate: a live session
+against a real, installed legendary title confirming the save-path field populates on the first
+call. The 500ms `installedJsonWatcher` debounce race is still unmeasured -- it is a live-timing
+property, out of scope for a desk-level jest probe. This todo stays in `pending/`.
