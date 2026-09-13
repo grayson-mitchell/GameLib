@@ -2,7 +2,7 @@
 created: 2026-09-05T00:00:00.000Z
 title: "getDefaultSavePath live re-drive against a real legendary title -- never taken since the installed.json watcher was ported"
 area: tauri-sidecar
-status: OPEN
+status: RESOLVED 2026-09-13 (quick 260912-rvv, live AFTER-run)
 severity: medium
 platform: any
 ready: live-gate
@@ -117,3 +117,68 @@ session against a real, installed legendary title confirming the Cloud Saves Syn
 field populates on the FIRST call. Only a live AFTER-run satisfies that; this quick task fixed
 the code and desk-proved the fix, but took no live measurement. This todo stays in `pending/`
 with `status: OPEN`, `severity: medium`, `platform: any`, `ready: live-gate` unchanged.
+
+## 2026-09-13 -- DISCHARGED. Live BEFORE and AFTER runs taken; this todo is CLOSED
+
+The discharge condition has now been satisfied in full, and the defect was proven live *before*
+being fixed so the AFTER run is a comparison rather than a bare assertion.
+
+**This todo's own premise was FALSE, and that is the most important finding here.** The title says
+the re-drive was owed "since the `installed.json` watcher was ported", implying the watcher had
+plausibly fixed the symptom. It had not, and could not: `getGameInfo(appName, forceReload=true)`
+never re-reads `installed.json` (it merges install fields from the module-scope `installedGames`
+map that only `refreshInstalled()` writes), so the watcher's 500ms debounce was racing a readback
+it cannot win.
+
+**LIVE BEFORE-RUN -- 2026-09-12 20:03, real Epic account (`soreluel`), Phoenix Point (`Iris`),
+field populated from a genuine first call in the session:**
+
+```
+(20:03:18) [Legendary]: Computing default save path for Iris
+(20:03:18) [Legendary]: Getting default save path: ... legendary sync-saves Iris --skip-upload --skip-download --accept-path
+(20:03:19) [Legendary]: installed.json updated, refreshing library      <- watcher fires
+(20:03:19) [Legendary]: installed.json updated, refreshing library
+(20:03:20) [ERROR]    : Unable to compute default save path for Iris    <- THE DEFECT
+(20:03:20) [Frontend] : [refreshLibrary] runner=legendary origin=push   <- debounced refresh lands AFTER
+```
+
+After that run `installed.json` held the CORRECT path on disk (directory verified to exist) while
+the UI persisted `savesPath: ''`. Correct value on disk, empty value in the field. The watcher
+fired a full second BEFORE the error and still lost -- its `refreshLibrary` push is logged AFTER
+the error, which is the ordering proof that it loses this race by construction.
+
+**LIVE AFTER-RUN -- 2026-09-13 06:12, same title, same gesture, same armed fixture, one line of
+code different:**
+
+```
+(06:12:31) [Legendary]: Computing default save path for Iris
+(06:12:31) [Legendary]: Getting default save path: ... legendary sync-saves Iris --skip-upload --skip-download --accept-path
+(06:12:32) [Legendary]: installed.json updated, refreshing library
+(06:12:32) [Legendary]: Computed save path: /Users/<user>/Library/Application Support/com.snapshotgames.phoenixpoint/EGS/b6746a71...
+```
+
+`Computed save path:` replaced `Unable to compute default save path for Iris`, and
+`GamesConfig/Iris.json` persisted the REAL path where the BEFORE run had persisted `''` -- the
+same field, which is what makes this like-for-like. The field populated on the FIRST call: not
+after a restart, not after a manual full-library refresh.
+
+**The running BUNDLE was verified to carry the fix before the gesture**, not merely the source:
+`build/main/sidecar.js` was re-sliced around the readback and shows
+`libraryManagerMap["legendary"].refreshInstalled();` immediately preceding
+`getGameInfo(appName, true)`. A bare symbol count would NOT have shown this -- `refreshInstalled`
+already appears 19 times in that bundle via the watcher and `init()`.
+
+**Gate hygiene notes for whoever runs the next live gate here.**
+- The gate is MUTATING: `getDefaultLegendarySavePath()` deliberately nulls `save_path` in the real
+  `installed.json` before running `sync-saves`. Back it up first. (Operator config was verified
+  afterwards to have self-healed to its exact pre-gate values.)
+- Arming it requires TWO changes, and missing either makes the run measure nothing:
+  `GamesConfig/<app>.json`'s `savesPath` must be EMPTY (the `useEffect` bails on
+  `if (savesPath.length && !retry) return`), and `installed.json`'s `save_path` must be NULL
+  (otherwise the stale read returns a correct-looking value and the defect hides behind its own
+  symptom).
+- Logs preserved: `gamelib.log.qop-livegate-BEFORE-fix-20260912-200406` and
+  `gamelib.log.qop-livegate-AFTER-fix-20260913-061317`.
+
+Fix commits: `df3dc3de6` (regression test, born red), `d3bc389d1` (the one-line fix),
+`52a47888d` (lint). Measurement: quick `260912-qop`. Fix: quick `260912-rvv`.
