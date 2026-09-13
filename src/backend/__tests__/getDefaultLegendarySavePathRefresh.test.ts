@@ -374,7 +374,7 @@ describe(
           save_path: ''
         }),
         isNative: () => true,
-        getSettings: async () => ({})
+        getSettings: () => Promise.resolve({})
       } as unknown as LegendaryGame
       jest.spyOn(manager, 'getGame').mockReturnValue(fakeGame)
 
@@ -384,12 +384,12 @@ describe(
       // resolves without this write would make the test pass with or without the fix.
       const runRunnerCommandSpy = jest
         .spyOn(manager, 'runRunnerCommand')
-        .mockImplementation(async () => {
+        .mockImplementation(() => {
           writeFileSync(
             installedJsonPath,
             JSON.stringify(installedJsonFixture(NEW_SENTINEL))
           )
-          return { stdout: '', stderr: '' }
+          return Promise.resolve({ stdout: '', stderr: '' })
         })
 
       return runRunnerCommandSpy
