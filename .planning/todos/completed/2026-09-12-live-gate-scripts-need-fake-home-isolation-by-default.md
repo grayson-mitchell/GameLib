@@ -145,11 +145,17 @@ population, with "do it by hand" as the existing workaround.
 - **It cannot be reused as-is.** It exports only `{ containmentRoot, realHomeAtSetup }` and is wired
   as a jest `setupFiles` entry; it mutates its OWN process env, so it cannot build a child-process
   env for a spawned binary.
-- **Three hand-rolled spawn blocks exist, each narrower than the standard one directory away:**
-  `lzmaNativeSeaRealBuild.test.ts:209` and `:297`, and `decompressWorkerRealBuild.test.ts:115`.
-  Each sets roughly `HOME`/`XDG_STATE_HOME`/`LOCALAPPDATA` — missing five of the eight. So these
-  sites are not merely unconventioned, they are **measurably leakier than the jest containment
-  beside them**. That is a defect, not a style gap.
+- **FOUR hand-rolled spawn blocks exist, each narrower than the standard one directory away:**
+  `lzmaNativeSeaRealBuild.test.ts` carries THREE of them (`spawnCapture` calls at `:206`, `:294`
+  and `:412`, env blocks at `:209`, `:297` and `:415`), plus
+  `decompressWorkerRealBuild.test.ts:115`. Each block sets `HOME`, `USERPROFILE`, `XDG_STATE_HOME`
+  and `LOCALAPPDATA` — missing **four** of the eight: `APPDATA`, `XDG_CONFIG_HOME`,
+  `XDG_DATA_HOME`, `XDG_CACHE_HOME`. So these sites are not merely unconventioned, they are
+  **measurably leakier than the jest containment beside them**. That is a defect, not a style gap.
+  <br>*(Corrected in place 2026-09-13. This bullet originally read "Three" and "missing five of
+  the eight", and omitted `USERPROFILE`; both were the orchestrator's miscounts, caught by
+  quick-260913-arr's planner and confirmed against the tree at `31b833a52`. The error is kept on
+  the record in the corrections note below.)*
 - Those two jest sites DO already clean up correctly (`mkdtempSync` + `afterAll(rmSync recursive
   force)`). The hygiene gap is not there — it is in ad-hoc scratchpad runs, which is exactly where
   `260913-901` left 103 MB and two unredacted diagnostic reports sitting until deleted by hand.
@@ -218,7 +224,7 @@ implementation finds it painful, measure it rather than reaching for reuse.
 
 1. `CLAUDE.md` `## Conventions` — the two-profile rule, with the unenforceable half labelled as such.
 2. The helper in `src/backend/testUtils/`, with the eight-var block, `mkdtemp 0700`, and disposal.
-3. Convert the three hand-rolled sites (this fixes the five-missing-vars leak on its own merits).
+3. Convert the FOUR hand-rolled sites (this fixes the four-missing-vars leak on its own merits).
 4. `captureShellScrollback.ts` converted; `buildSidecarSea.ts` inspected and decided.
 5. The exemption comment in `meta/sidecarStartupSmoke.cjs`, stating why isolation would break it.
 6. A gate asserting no in-repo file spawns the compiled binary with a hand-rolled env.
@@ -236,12 +242,19 @@ implementation finds it painful, measure it rather than reaching for reuse.
 
 ### Corrections to this todo's own numbers, measured at execution
 
-- **"Three hand-rolled spawn blocks exist"** — there are **FOUR**.
+Both were the **orchestrator's** miscounts, not the executor's, and both were stated to the operator
+as fact before quick-260913-arr's planner caught them. The originating sentences have since been
+**corrected in place** (2026-09-13) in "Facts established while deciding" above. This note stays so
+the error remains on the record rather than being quietly overwritten — a corrected document that
+hides having been wrong teaches nobody anything.
+
+- **Originally: "Three hand-rolled spawn blocks exist"** — there are **FOUR**.
   `lzmaNativeSeaRealBuild.test.ts` has THREE `spawnCapture` sites (the todo named two),
   plus the `fork()` in `decompressWorkerRealBuild.test.ts`.
-- **"missing five of the eight"** — it was **four**. Each block set `HOME`, `USERPROFILE`,
-  `XDG_STATE_HOME`, `LOCALAPPDATA`; the missing four were `APPDATA`, `XDG_CONFIG_HOME`,
-  `XDG_DATA_HOME`, `XDG_CACHE_HOME`. The leak was real; only its magnitude was overstated.
+- **Originally: "missing five of the eight", listing only `HOME`/`XDG_STATE_HOME`/`LOCALAPPDATA`**
+  — it was **four**. Each block already set `USERPROFILE` too, which the original sentence omitted.
+  The missing four were `APPDATA`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`. The leak
+  was real; only its magnitude was overstated.
 
 ### Evidence
 
