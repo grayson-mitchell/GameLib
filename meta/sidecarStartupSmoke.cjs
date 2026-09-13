@@ -67,6 +67,25 @@ const REPO_ROOT = join(__dirname, '..')
 const BUNDLE = join(REPO_ROOT, 'build', 'main', 'sidecar.js')
 const STARTUP_TIMEOUT_MS = 30_000
 
+/**
+ * The line `bootstrap.init()` writes to stdout once it has finished — the gate's
+ * real success signal. HARDCODED, and it has to be: this file is CommonJS, run
+ * straight off disk by `node`, so it cannot require the TypeScript export
+ * `READY_SENTINEL` from `src/common/types/sidecarTransport.ts`.
+ *
+ * That duplication is bound rather than trusted. `sidecarRejectionGuard.test.ts`
+ * (Group 3) re-reads THIS file and asserts the value below still equals that
+ * export, so renaming or retyping the sentinel cannot silently disarm the gate.
+ */
+const READY_SENTINEL = '__GAMELIB_SIDECAR_READY__'
+
+/**
+ * The exact prefix `installUncaughtExceptionGuard()` writes to stderr while the
+ * log sink is still null — `processGuards.ts:274`, a hardcoded non-interpolated
+ * literal there for the same reason it is one here.
+ */
+const UNCAUGHT_EXCEPTION_PREFIX = '[sidecar] uncaught exception:'
+
 function fail(message, extra) {
   console.error(`\n[sidecar-smoke] FAIL: ${message}`)
   if (extra) console.error(extra)
@@ -107,4 +126,45 @@ if (run.status !== 0) {
   )
 }
 
-console.log('[sidecar-smoke] PASS: built, started, exited 0 on stdin EOF.')
+// THE REAL SIGNAL (quick-260913-lkk). Everything above this line can be satisfied
+// by a completely dead sidecar, and was: the negative control recorded in
+// quick-260913-901 put a module-scope `throw` in `bootstrap.ts`, and this gate
+// printed PASS. The reason is that `installUncaughtExceptionGuard()` catches a
+// module-evaluation throw, logs it, and lets the process exit 0 on stdin EOF
+// (`processGuards.ts`) -- registering ANY `uncaughtException` listener suppresses
+// Node's default non-zero exit. That guard is CORRECT and must not be weakened;
+// the defect was this gate's choice of signal. So assert something the guard
+// cannot forge: `init()` ran to completion and wrote the READY sentinel.
+if (!(run.stdout || '').includes(READY_SENTINEL)) {
+  fail(
+    `the sidecar exited ${run.status} but never wrote ${READY_SENTINEL} to stdout, ` +
+      'so `bootstrap.init()` never reached its end — the process was dead on arrival. ' +
+      'THE EXIT CODE IS NOT THE SIGNAL for this failure class: the uncaughtException ' +
+      'guard keeps a dead sidecar at 0. Almost always an import/evaluation-ORDER ' +
+      'problem. The swallowed stack follows.',
+    run.stderr
+  )
+}
+
+// Faults the guard swallowed during EARLY boot. Scope, stated rather than implied:
+// the guard only writes to stderr while its log sink is null, i.e. before
+// `bootstrap.init()` installs it (`bootstrap.ts:786`). After that point a swallowed
+// fault goes to the logger, not to stderr, so this arm does NOT see faults occurring
+// between there and the READY write at `bootstrap.ts:1256`. What it does cover is the
+// module-evaluation window -- the class this gate exists for -- where a fault can
+// leave a half-initialised process that still reaches READY and still exits 0.
+// Measured quick-260913-lkk: four consecutive clean boots against the operator's real
+// profile emitted ZERO stderr bytes, so any occurrence here is a real fault, not noise.
+if ((run.stderr || '').includes(UNCAUGHT_EXCEPTION_PREFIX)) {
+  fail(
+    'the sidecar reached READY, but its uncaughtException guard swallowed at least ' +
+      'one fault during early boot. The process survives in a partly-initialised ' +
+      'state and still exits 0, so no exit code will ever report this.',
+    run.stderr
+  )
+}
+
+console.log(
+  `[sidecar-smoke] PASS: built, started, wrote ${READY_SENTINEL}, no swallowed ` +
+    'early-boot fault, exited 0 on stdin EOF.'
+)

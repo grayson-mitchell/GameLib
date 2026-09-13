@@ -72,6 +72,7 @@ import { readFileSync, readdirSync } from 'fs'
 import { join, resolve, relative, isAbsolute } from 'path'
 import { tmpdir } from 'os'
 import { getLogFilePath } from 'backend/logger/paths'
+import { READY_SENTINEL } from 'common/types/sidecarTransport'
 import { stripSourceComments as stripComments } from 'backend/testUtils/stripSourceComments'
 
 // ── i18next — defeat Jest's project-wide automatic manual mock (same load-bearing reasoning
@@ -1466,6 +1467,36 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // Positive control: the file really was read and really does contain the guard,
       // so the two negatives above cannot pass against an empty or missing read.
       expect(stripped).toContain('installUnhandledRejectionGuard')
+    })
+
+    it('quick-260913-lkk: the smoke gate’s hardcoded READY literal still equals READY_SENTINEL', () => {
+      // WHY THIS BINDING EXISTS. `meta/sidecarStartupSmoke.cjs` is the only check that
+      // runs the real bundled sidecar, and since quick-260913-lkk its success signal is
+      // the READY sentinel in the child's stdout -- NOT the exit code, which the
+      // uncaughtException guard pins at 0 even for a sidecar that died during module
+      // evaluation. That gate is CommonJS, run straight off disk by `node`, so it cannot
+      // require the TypeScript export and has to hardcode the sentinel's VALUE.
+      //
+      // Nothing else in the tree connects the two. Rename or retype `READY_SENTINEL` and
+      // the gate would go on asserting a string the sidecar no longer writes -- and the
+      // failure direction is the bad one: someone would "fix" the red gate by deleting
+      // the arm, silently restoring the fail-open state this all exists to end.
+      const source = readFileSync(
+        join(__dirname, '../../../../meta/sidecarStartupSmoke.cjs'),
+        'utf-8'
+      )
+      // Stripped, not raw. The sentinel is named in that file's PROSE as well as its
+      // code, and a source gate satisfied by the comment that names it is a recorded
+      // failure mode in this repo.
+      const stripped = stripComments(source)
+
+      // Positive control: prove the read landed on the gate file and that comment
+      // stripping left its code behind, so the assertion below cannot pass vacuously
+      // against an empty, wrong-path, or over-stripped read.
+      expect(stripped).toContain('STARTUP_TIMEOUT_MS')
+      expect(stripped).toContain('spawnSync')
+
+      expect(stripped).toContain(READY_SENTINEL)
     })
 
     it('WR-04: installRejectionGuard.ts imports nothing but processGuards, so its own graph stays empty too', () => {
