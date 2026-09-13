@@ -145,6 +145,66 @@ fits. Never widen the vocabulary in the gate to admit the value that failed; a v
 grows to fit whatever was typed is free text with extra steps, which is the exact condition the
 gate exists to end. Scope is `pending/` only — `completed/` is deliberately exempt.
 
+### Fake-HOME isolation for direct binary runs (two-profile rule)
+
+**The rule is NOT "always fake the HOME".** It is the **two-profile rule**, and it has two halves
+that are both mandatory:
+
+1. **Isolated by default** — every run whose purpose is _not_ profile-dependent (spawning the
+   compiled sidecar or SEA binary from a test, a `meta/` harness, or a scratchpad command) gets a
+   fresh, disposable fake profile.
+2. **A named, deliberate real-profile arm** — for defects that can only arm under a _populated_
+   profile. This arm is declared and justified where it lives; it is not an oversight to be
+   tidied away.
+
+**Both halves exist because both failure modes have been measured on this repo.**
+
+- Isolation is needed: a direct run of the compiled sidecar with the real `HOME` wrote genuine
+  local GOG session data (`userId`/`username`/`galaxyUserId`) into a scratchpad log — **twice**,
+  in `260912-e6k` and again in `260913-901`, the second time despite a written threat-model entry
+  saying to delete the captures.
+- Isolation is also **dangerous**: the `major`, PR-blocking defect `260913-901` fixed — an
+  un-`unref()`-ed 5-minute `setInterval` armed by `setPresence()` at `gog/presence.ts:39` — is
+  created only behind `GOGUser.isLoggedIn()`. Measured same day, same tree, same command: real
+  `HOME` **never exits** (no exit at 120s, reproduced twice); a cold empty fake `HOME` exits 0 in
+  27.7s. An isolated-by-default gate would have been permanently, confidently green against it.
+
+A convention saying only "always fake the HOME" would buy safety by making a whole class of
+real-profile-only defects structurally invisible — the same failure mode as a gate that cannot see
+the crash it was built for.
+
+**What is enforced, and what is not.** In-repo spawn sites are enforced by
+`src/backend/__tests__/fakeHomeIsolation.test.ts`: no file under `src/` or `meta/` may spawn a
+child with a hand-rolled `env` literal assigning the home/config/state variables. Use
+`createFakeHomeProfile()` from `src/backend/testUtils/fakeHomeProfile.ts`. The one exemption,
+`meta/sidecarStartupSmoke.cjs`, is declared in that gate's `EXEMPTIONS` table with its reason, and
+the gate re-reads the exempt file to prove the reason is still written there.
+
+**The ad-hoc/scratchpad half rests on discipline and is NOT enforceable.** Nothing can observe a
+command typed into a scratchpad, and a gate that appeared to cover it would be the
+green-check-proving-nothing pattern this project keeps stamping out. This sentence is the whole
+enforcement mechanism for that half. Do not read it as stronger than it is.
+
+**The eight variables and the `mkdtemp 0700` reasoning are DERIVED from
+`src/backend/jest.setupContainment.ts`**, not invented: `HOME`, `USERPROFILE`, `APPDATA`,
+`LOCALAPPDATA`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`. That file
+also records the measured correction worth keeping: `mkdtemp`'s 0700 is the **security control**
+(umask can only ever _remove_ bits, so the directory can never carry group/other bits), and the
+following `chmodSync` is **not** redundant — it restores owner-write, because `mkdtemp`'s
+requested mode is masked and `umask 0277` yields 0500.
+
+**Cleanup and redaction belong to the harness, not to your memory.** `createFakeHomeProfile()`
+returns a disposing handle: `dispose()` shreds the profile and every path passed to
+`registerCapture()`. Register raw diagnostic reports and `*.out` captures — a Node diagnostic
+report embeds `environmentVariables`, `commandLine` and `cwd` verbatim. `260913-901` specified
+deletion in writing and still left 103 MB of unredacted captures on disk until they were removed
+by hand.
+
+**Fresh profile per invocation, always.** No reuse-for-speed: a reused profile is a different
+experiment carrying state capable of masking a defect. If a run is too slow, pin it offline or
+stub the network — never recycle a profile. Reuse is permitted only as an explicitly-named opt-in
+for a test whose _purpose_ is warm-path behaviour, justified at the call site.
+
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
