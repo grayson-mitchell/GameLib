@@ -1,100 +1,110 @@
 ---
 created: 2026-09-12
-title: "pnpm smoke:sidecar hangs at the exact 30s timeout -- boot-time network handles keep the event loop alive past stdin EOF"
+title: "pnpm smoke:sidecar hangs at the exact 30s timeout -- an un-unref'd GOG presence keep-alive interval keeps the event loop alive past stdin EOF"
 area: backend/sidecar boot / CI gate
 severity: major
 platform: any
 ready: code
-status: pending
+status: completed
 source: quick-260912-e6k (fix sidecar uncaughtException guard EPIPE self-feed), discovered running the plan's own required `pnpm smoke:sidecar` verification step
+resolved: 2026-09-13
+resolved_by: quick-260913-901 (fix smoke:sidecar hang)
 files:
-  - src/backend/online_monitor.ts
-  - src/backend/sidecar/bootstrap.ts
+  - src/backend/storeManagers/gog/presence.ts
 resolves_phase: null
 ---
 
-# `pnpm smoke:sidecar` hangs at the exact 30s timeout -- boot-time network handles keep the event loop alive past stdin EOF
+# `pnpm smoke:sidecar` hangs at the exact 30s timeout -- an un-unref'd GOG presence keep-alive holds the event loop past stdin EOF
+
+**RESOLVED 2026-09-13 by quick-260913-901.** `setPresence()`'s 5-minute keep-alive interval is now
+`.unref()`'d at its creation site (`src/backend/storeManagers/gog/presence.ts:39`).
+`pnpm smoke:sidecar` went from `rc=1` at 30.7s (ETIMEDOUT arm) to `rc=0` in **1.9s**.
 
 ## What was observed
 
 `pnpm smoke:sidecar` (`meta/sidecarStartupSmoke.cjs`, run in CI via `.github/workflows/test.yml`)
-fails consistently and reproducibly at HEAD, in two independent runs, both timing out at exactly
-`30000ms`:
+failed consistently and reproducibly, timing out at exactly `30000ms`:
 
 ```
 [sidecar-smoke] FAIL: the sidecar did not exit within 30000ms of stdin EOF. It is hanging at
 startup rather than crashing, which is its own defect.
 ```
 
-This is the same failure class the gate's own header comment names as its founding incident: "On
-the day it was first run it was already RED: plan 35-10's `installed.json` watcher held an
-un-unref'd FSWatcher, so the sidecar hung forever on stdin EOF instead of exiting 0." That specific
-cause was fixed at the time; this is a **new** instance of the same failure class with a different
-root resource.
+Reproduced repeatedly on 2026-09-13: the raw bundle, run under the operator's real `HOME` exactly
+as the gate runs it, did not exit within **60 seconds** and had to be SIGKILLed.
 
-## Root-caused via active-handle introspection, NOT theorized
+## Root cause -- measured AT THE TIMEOUT MOMENT (this section was rewritten; see below)
 
-Ran the built bundle (`build/main/sidecar.js`) directly with `stdin` from `/dev/null` and a fake
-`HOME`/`XDG_STATE_HOME`/`LOCALAPPDATA` (see the sibling todo on live-gate HOME isolation), then
-called `process._getActiveHandles()` / `process._getActiveRequests()` 3 seconds after boot:
+**HOLDER: the repeating 5-minute `setInterval` armed by `setPresence()` in
+`src/backend/storeManagers/gog/presence.ts:39`
+(`interval = setInterval(setPresence, 5 * 60 * 1000)`), never `.unref()`'d, so it referenced the
+libuv event loop for the life of the process.**
 
-```
-ACTIVE_HANDLES: ["TLSSocket","TLSSocket","TLSSocket","TLSSocket","TLSSocket"]
-ACTIVE_REQUESTS_COUNT: 0
-```
+Two independent instruments, both taken while the process was hung (not at t=3s):
 
-Five live TLS sockets, zero pending abstract requests -- i.e. real, established HTTPS connections
-are what is keeping the event loop alive, not a crash, not a pending promise, and not anything in
-`processGuards.ts`/`installRejectionGuard.ts` (those two files only attach inert `'error'`
-listeners to `process.stdout`/`process.stderr`, which cannot hold an event loop open by
-construction).
+1. **Node diagnostic report** (`--report-on-signal`, SIGUSR2 at t=40s). Of 14 `libuv` entries,
+   **exactly one was both `is_active` and `is_referenced`: a `timer`**. Its address sat inside
+   Node's internal per-`Environment` handle block — i.e. `env->timer_handle()`, the single libuv
+   timer that drives all JS timers. Both `tcp` handles were `is_referenced: false`, and the
+   `installed.json` `fs_event` was `is_referenced: false` (its existing `unref()` holds).
 
-`src/backend/online_monitor.ts`'s `pingSites()` fires four concurrent real HTTPS HEAD requests at
-boot (`github.com`, `store.epicgames.com`, `gog.com`, `cloudflare-dns.com`, each with a 10s axios
-timeout) and settles via `Promise.any`. Once connectivity resolves, `bootstrap.ts`'s several
-`runOnceWhenOnline(...)`-gated blocks (GOG presence, playtime-sync drain, store-user
-reconciliation, releases fetch, anticheat data download -- Blocks E/G/H plus
-`fetchLastestReleases`/`downloadAntiCheatData`) all fire their own real network calls as soon as
-`'online'` is detected. Outbound network itself is NOT broken in the environment this was
-diagnosed in (`curl https://github.com` returned `200` in under a second at the same time), so
-this is not simply "no internet" -- something in this boot-time network fan-out is taking close to
-30 seconds end-to-end even when individual endpoints are fast, and running it a second, unmodified
-time reproduced the *exact* same ~30.7s wall time both times, not the flaky pattern you'd expect
-from ordinary network jitter.
+2. **`async_hooks` timer probe** (its own dump timer `unref()`'d so it could not be the artefact).
+   Identical at t=10s, 20s, 30s and 40s:
 
-## Why this is NOT the EPIPE fix's fault
+   ```
+   --- REFD Timeout asyncId=1714 _idleTimeout=300000 _repeat=300000
+       at setInterval (node:timers:161:19)
+       at Object.setPresence (build/main/sidecar.js:2481:18)
+   ===== REFD_TIMER_COUNT=1 =====
+   ```
 
-- `processGuards.ts`/`installRejectionGuard.ts` (the only files quick-260912-e6k's Task 1/2
-  touched) do not create handles, timers, or sockets of any kind -- they only attach listeners.
-- The specific regression class `pnpm smoke:sidecar` exists to catch (a module-evaluation-order
-  crash, like the 2026-08-23 `727be5dbb` incident) did NOT occur here: the direct-invocation
-  capture shows the bundle building, booting, reaching `__GAMELIB_SIDECAR_READY__`, and processing
-  RPC frames correctly (`tray_set_icon`, `storeChanged`, `connectivity-changed`) before the process
-  is left idling on open sockets. That is a distinct failure mode from what this gate was built to
-  detect.
-- Reverting the two touched files to their pre-quick-260912-e6k state to rebuild-and-compare was
-  attempted but blocked by this environment's own destructive-action guard (rebuilding a
-  deliberately-reverted security-relevant fix was refused); the active-handle evidence above was
-  gathered against the CURRENT (fixed) build instead, and is sufficient to rule the two touched
-  files out by mechanism, independent of a side-by-side rebuild.
+`beforeExit` never fired, which is exactly what a ref'd timer produces: the loop never drains.
 
-## Suggested next step
+### Why the earlier "five live TLSSockets" root cause was WRONG
 
-1. Instrument (or re-run with) `process._getActiveHandles()`/an equivalent flag at the moment the
-   smoke script's 30s timeout fires, to name exactly which of the boot-time network calls is the
-   long pole (most likely `downloadAntiCheatData()`, which can genuinely be a real file download,
-   or a `runOnceWhenOnline` chain that isn't resolving/settling as expected in a stdin-less,
-   headless invocation).
-2. Whatever it turns out to be, the fix shape matches the gate's own founding incident: either
-   `.unref()` the offending handle/timer so it cannot block process exit, or give
-   `meta/sidecarStartupSmoke.cjs` an explicit `CI`/offline-style environment flag so the smoke
-   invocation does not depend on live external network calls succeeding or settling at all (the
-   gate's whole premise is a network-free, evaluation-order check; `pingSites()` already has a
-   `process.env.CI === 'e2e'` short-circuit that skips real pinging -- consider whether the smoke
-   script should set that, or an equivalent, before spawning).
-3. Do NOT assume this is caused by quick-260912-e6k's guard changes -- see the mechanism section
-   above. Verify independently which commit/Block first introduced boot-time network calls heavy
-   enough to hit this before crediting a specific one.
-4. This is a currently-red CI gate (`.github/workflows/test.yml` runs `pnpm smoke:sidecar` on
-   every PR to `main`/`stable`) -- confirm current `main` state, since this may already be blocking
-   merges.
+The previous version of this section reported five `TLSSocket`s from `pingSites()` and blamed
+boot-time network fan-out. That snapshot was taken **3 seconds** after boot, while the pings were
+still in flight — it measured the boot transient, not the hang. At the timeout moment the pings
+had long since SUCCEEDED (`connectivity-changed {status:"online"}` was emitted) and **no socket
+was referenced at all**. Network was never the holder.
+
+### Why it looked impossible, and why `_getActiveHandles()` lied
+
+The original investigation reasonably concluded "zero non-stdio handles, zero pending requests,
+yet no exit", which looks self-contradictory. It was an **instrument artefact**:
+`process._getActiveHandles()` only reports libuv handles that have a JS wrapper object. Node
+multiplexes *every* JS `setTimeout`/`setInterval` onto one internal `uv_timer_t` with no JS
+wrapper, so a ref'd JS timer is invisible to it by construction, and
+`process._getActiveRequests()` does not report timers either.
+`process.getActiveResourcesInfo()` would have shown it.
+
+### Why it only reproduced on some machines
+
+`setPresence()` returns early unless a GOG account is logged in
+(`!GOGUser.isLoggedIn()`), so the interval is only ever armed under a profile with a live GOG
+session. Under an empty fake `HOME` it is never created and the sidecar exits normally. This is
+why the failure looked environment-dependent.
+
+## Hypotheses falsified along the way
+
+- **stdout backpressure** — three real-HOME runs with fd 1 pointing at an undrained pipe, a file,
+  and `/dev/null` all hung identically; total output was 713 bytes against a ~64KB pipe buffer.
+- **`installed.json` FSWatcher regression** — its `fs_event` is `is_referenced: false`.
+- **A blocked native Keychain/keyring thread** — the process was demonstrably responsive
+  throughout (it serviced the probe's own 10s dump interval at t=10/20/30/40s). The project also
+  ships no native keyring/keytar/fsevents addon.
+- **Un-unref'd `requestRustInvoke` boot-time timers** — already `.unref()`'d at
+  `sidecarRpc.ts:392`; `REFD_TIMER_COUNT` was 1, and that one was `setPresence`'s.
+
+## What is still unknown / spun out
+
+Two separate defects were found while diagnosing this one. Neither is fixed by the `unref()`, and
+each has its own pending todo:
+
+1. **`2026-09-13-cold-sidecar-boot-holds-pooled-keepalive-tls-sockets-for-26s-against-a-30s-ci-budget.md`**
+   — a cold boot sits referenced on ~25 pooled keep-alive TLS sockets for ~26s, leaving the gate a
+   2.3s margin on an always-cold CI runner.
+2. **`2026-09-13-smoke-sidecar-cannot-detect-a-module-evaluation-crash-the-uncaughtexception-guard-makes-the-exit-code-always-zero.md`**
+   — the gate's negative control FAILED: a `throw` at `bootstrap.ts` module scope still produces
+   `PASS`, because the `uncaughtException` guard makes the child's exit code unconditionally 0.
+   The gate's ETIMEDOUT arm (the one that caught *this* todo) is still sound.

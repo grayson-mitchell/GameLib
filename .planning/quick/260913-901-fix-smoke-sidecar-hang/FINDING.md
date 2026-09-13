@@ -209,6 +209,79 @@ and are a separate, cold-boot-only issue), not Branch C (`beforeExit` never fire
 
 ---
 
-## Task 3 — negative control receipt
+## Task 3 negative control — BLOCKING: THE GATE CANNOT DETECT ITS OWN FOUNDING REGRESSION CLASS
 
-See `## Negative control` appended below after Task 3 ran.
+Protocol run as specified: `cp` backup + `shasum -a 256`
+(`64cbc468979817a64ef2635fa4d4763166c5e47014d87cbc28bd821f6af5add7`), then
+`throw new Error('NEGATIVE CONTROL 260913-901')` inserted as the first module-scope statement of
+`src/backend/sidecar/bootstrap.ts` after its imports (line 173) — a backend module scope dying
+during evaluation, exactly the 2026-08-23 `727be5dbb` class the gate was built for.
+
+**Expected:** non-zero exit via the "exited N at startup" arm.
+**Actual:**
+
+```
+NEGATIVE-CONTROL rc=0
+[sidecar-smoke] PASS: built, started, exited 0 on stdin EOF.
+```
+
+The plan says a gate that exits 0 here is broken independently of this task and is a blocking
+finding to be reported rather than worked around. It is reported, not worked around, and not
+"fixed" opportunistically inside this quick task.
+
+### Mechanism — proven, not theorised
+
+The break really was compiled in, and the throw really did fire:
+
+```
+break present in SOURCE:            bootstrap.ts:173
+break present in BUILT BUNDLE:      1 occurrence
+direct run (fake HOME, stdin EOF):  EXITED rc=0 elapsed=0.52s
+its STDERR:
+  [sidecar] uncaught exception: Error: NEGATIVE CONTROL 260913-901
+      at Object.<anonymous> (build/main/sidecar.js:38365:7)
+      at Module._compile (node:internal/modules/cjs/loader:1873:14)
+__GAMELIB_SIDECAR_READY__ present in STDOUT:   0
+```
+
+`src/sidecar/index.ts`'s FIRST import is `./installRejectionGuard`, which calls
+`installUncaughtExceptionGuard()`. That guard's own doc comment in
+`src/backend/sidecar/processGuards.ts:161-167` states the mechanism outright:
+
+> LOG AND CONTINUE — DELIBERATE, and a deviation from Node's default. Registering ANY
+> `uncaughtException` listener suppresses Node's default behaviour of printing the stack and
+> exiting non-zero, so this listener is what keeps the process alive.
+
+So a module-evaluation throw is caught, logged to stderr, and the process survives with `init()`
+never having completed. It then exits **0** on stdin EOF. The sidecar is completely dead — it
+never emits `__GAMELIB_SIDECAR_READY__` — and the gate reports PASS.
+
+The guard is correct and must not be removed (it exists so a backend throw does not black-screen
+the app). The defect is that **the gate's only success signal is the child's exit code**, and the
+guard makes that exit code unconditionally 0. `meta/sidecarStartupSmoke.cjs` already captures the
+child's stdout and never inspects it; asserting `__GAMELIB_SIDECAR_READY__` is present would
+restore the gate with a one-line change. That is left to its own todo, deliberately not done here.
+
+This also falsifies a claim currently shipped in `src/sidecar/installRejectionGuard.ts:42-46`,
+which tells future readers that the boot-ordering invariant is checked by "`pnpm smoke:sidecar`,
+which runs the real bundled sidecar — the only check that catches this class of regression".
+It does not, and has not since the `uncaughtException` guard was added (D-35-10-01, after the
+gate's founding incident).
+
+**What the gate CAN still do:** its ETIMEDOUT arm works, and is what caught this task's hang
+(`rc=1` at 30.7s before the fix). The blindness is specific to the "exited N at startup" arm.
+That is why the presence fix below is still trustworthy: it was verified by direct measurement of
+the bundle, not by the gate's exit code alone.
+
+### Restore receipt (byte-for-byte)
+
+```
+actual:   64cbc468979817a64ef2635fa4d4763166c5e47014d87cbc28bd821f6af5add7
+expected: 64cbc468979817a64ef2635fa4d4763166c5e47014d87cbc28bd821f6af5add7
+git diff --stat -- src/   ->  (empty)
+pnpm smoke:sidecar        ->  PASS
+```
+
+Restored with `cp`, never `git checkout --` (standing finding
+`git-checkout-fires-post-checkout-hook`). No broken bundle left behind: the gate rebuilds and
+passes.
