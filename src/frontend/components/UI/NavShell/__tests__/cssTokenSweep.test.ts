@@ -107,15 +107,7 @@ const REFERENCE = /var\(\s*(--[A-Za-z0-9_-]+)/g
  * and survived a green suite for 14 days) is a guard that stops measuring
  * without stopping passing.
  */
-const ALLOWLIST: readonly string[] = [
-  // `GameCard/index.css:406`: `filter: grayscale(var(--installing-effect))`.
-  // This is a NUMBER, not a colour, and `git log -S "--installing-effect:"
-  // --all` is empty -- the intended value (0? 0.5? 1?) is not recoverable
-  // from history. Guessing changes the appearance of every non-installed
-  // tile in the library grid, so this needs a design decision, not a code
-  // fix. Tracked as a pending todo (`ready: human`).
-  '--installing-effect'
-]
+const ALLOWLIST: readonly string[] = []
 
 const declaredNames = (): Set<string> => {
   const declared = new Set<string>()

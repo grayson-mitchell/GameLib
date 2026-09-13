@@ -401,6 +401,23 @@
     opacity 0.5s;
 }
 
+/* The live value is set per-card in `index.tsx` on the <a> that wraps both
+   images: 100% when idle, `125% - progress` while installing, so the tile
+   colours in as the download advances. This is the idle value, declared for
+   the same reason DownloadsRing and WineItem declare theirs -- it documents
+   the default and lets themes override.
+
+   Scoped to the two card roots ON PURPOSE. `GamePicture` also renders
+   `.gameImg`/`.gameLogo` and never applies `.installed`, so it matches the
+   rule below; declaring this on `body` instead would desaturate the game
+   page's hero art. Declaring it on `.gameImg` itself would be worse still --
+   a declaration on the element beats the INHERITED inline value, freezing
+   the install ramp. */
+.gameCard,
+.gameListItem {
+  --installing-effect: 100%;
+}
+
 .gameImg:not(.installed),
 .gameLogo:not(.installed) {
   filter: grayscale(var(--installing-effect));
