@@ -9,6 +9,29 @@
  * Tauri `externalBin` (34-05) and CI matrix (34-06) both consume this.
  * Run with `pnpm build:sidecar-sea` (chains `pnpm build:sidecar` first).
  *
+ * ── Fake-HOME two-profile rule: DECIDED, NOT CONVERTED (quick-260913-arr) ──
+ * Inspected against CLAUDE.md's "Fake-HOME isolation for direct binary runs"
+ * convention and DELIBERATELY LEFT ON THE REAL PROFILE. Recorded here because
+ * a reasoned "no" is a deliverable, not a non-event.
+ *
+ * Two grounds, both re-verified at implementation time:
+ *
+ * 1. THIS SCRIPT NEVER EXECUTES ITS OWN PRODUCT. It is a build script, not a
+ *    run harness. Every `spawnArgv()` call site below spawns a TOOL --
+ *    esbuild, `node` (SEA blob), `tar`, `postject`, `codesign`, `lipo`. The
+ *    produced binary appears only ever as an ARGUMENT (`lipo -archs
+ *    <binaryPath>`, `codesign --sign - <binaryPath>`), never as the command.
+ *    `verifyBinaryArch()` INSPECTS the output; nothing runs it. So there is no
+ *    child that could read a profile, and therefore no isolation to gain.
+ * 2. ITS CHILDREN LEGITIMATELY NEED THE REAL PROFILE. `codesign --sign -`
+ *    reads the macOS keychain, which is NOT `HOME`-isolated in any case, and
+ *    esbuild/postject resolve through `node_modules` with caches under the
+ *    real `HOME`. Faking `HOME` here would risk the signing path for zero
+ *    isolation benefit.
+ *
+ * If a future change makes this script SPAWN the binary it produces, that
+ * flips ground 1 and this decision must be revisited.
+ *
  * Follows the `meta/buildSteamBridgeShims.ts` packaging-time build-script
  * convention: argv-form spawn only (T-24-06, never a shell string), pure
  * exported argv-builders so tests can assert command construction without

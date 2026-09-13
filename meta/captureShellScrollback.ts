@@ -64,9 +64,12 @@ import {
   writeFileSync
 } from 'node:fs'
 import { spawn, spawnSync } from 'node:child_process'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 
+import {
+  createFakeHomeProfile,
+  type FakeHomeEnvKey
+} from '../src/backend/testUtils/fakeHomeProfile'
 import { stripSourceComments } from '../src/backend/testUtils/stripSourceComments'
 import {
   RUST_HUMBLE_LOGIN_COOKIES,
@@ -589,21 +592,26 @@ function preflightRefuseIfRunning(): void {
   process.exit(3)
 }
 
-function resolveGamelibLogPath(): string {
+function resolveGamelibLogPath(
+  env: Readonly<Record<FakeHomeEnvKey, string>>
+): string {
   // Mirrors src/backend/logger/paths.ts's getBaseLogPath()/getLogFilePath({}) exactly, but
   // reimplemented locally rather than imported -- that module pulls in `../constants/environment`
   // and this CLI half must stay import-light and side-effect-free (see module docblock).
+  //
+  // quick-260913-arr: resolves against the FAKE PROFILE this harness spawns the app with,
+  // NOT the harness's own `homedir()`/`process.env`. Both halves had to move together --
+  // giving the child an isolated profile while still snapshotting the REAL
+  // `~/Library/Logs/GameLib/gamelib.log` would leave `gamelibLogSnapshot` stale or empty,
+  // and `analyzeCapture`'s cookie-leg detection would silently measure nothing while still
+  // reporting a verdict. Only the root changes; the platform branches are untouched.
   if (process.platform === 'win32') {
-    const localAppData =
-      process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local')
-    return join(localAppData, 'GameLib', 'logs', 'gamelib.log')
+    return join(env.LOCALAPPDATA, 'GameLib', 'logs', 'gamelib.log')
   }
   if (process.platform === 'darwin') {
-    return join(homedir(), 'Library', 'Logs', 'GameLib', 'gamelib.log')
+    return join(env.HOME, 'Library', 'Logs', 'GameLib', 'gamelib.log')
   }
-  const stateHome =
-    process.env.XDG_STATE_HOME ?? join(homedir(), '.local', 'state')
-  return join(stateHome, 'GameLib', 'logs', 'gamelib.log')
+  return join(env.XDG_STATE_HOME, 'GameLib', 'logs', 'gamelib.log')
 }
 
 function gitOutput(args: string[]): string {
@@ -638,6 +646,20 @@ function reportOrphans(): void {
 
 function runCapture(): void {
   preflightRefuseIfRunning()
+
+  // quick-260913-arr: isolated by default, per CLAUDE.md's two-profile rule. This
+  // harness launches the WHOLE APP, so an un-isolated run reads -- and echoes into the
+  // capture files written below -- the operator's real GOG/Epic/Humble session data.
+  // That exposure has already been realised twice (260912-e6k, 260913-901).
+  //
+  // Nothing is passed to `registerCapture()` here, deliberately: the five `scratchpad/`
+  // artefacts are this harness's DELIVERABLE -- it prints `capturePaths` and asks the
+  // operator to paste the verdict block back -- so shredding them on exit would destroy
+  // the very thing the harness exists to produce. The profile itself IS disposed, on
+  // both exit paths.
+  const profile = createFakeHomeProfile({
+    prefix: 'gamelib-captureShellScrollback-'
+  })
 
   const scratchDir = join(REPO_ROOT, 'scratchpad')
   mkdirSync(scratchDir, { recursive: true })
@@ -685,6 +707,7 @@ function runCapture(): void {
   // 3. `command: 'pnpm tauri:dev'` in meta.json stays literal and true.
   const child = spawn('pnpm', ['tauri:dev'], {
     cwd: REPO_ROOT,
+    env: profile.childEnv(),
     stdio: ['inherit', 'pipe', 'pipe']
   })
 
@@ -716,7 +739,7 @@ function runCapture(): void {
 
     let gamelibSnapshot = ''
     try {
-      copyFileSync(resolveGamelibLogPath(), gamelibSnapshotPath)
+      copyFileSync(resolveGamelibLogPath(profile.env), gamelibSnapshotPath)
       gamelibSnapshot = readFileSync(gamelibSnapshotPath, 'utf-8')
     } catch (e) {
       console.error(
@@ -756,11 +779,15 @@ function runCapture(): void {
 
     reportOrphans()
 
+    // After the snapshot above has been copied OUT of the profile, never before.
+    profile.dispose()
+
     process.exit(result.verdict === 'INVALID_ANCHORS' ? 2 : 0)
   }
 
   child.on('error', (err) => {
     console.error(`Failed to launch \`pnpm tauri:dev\`: ${err.message}`)
+    profile.dispose()
     process.exit(1)
   })
   child.on('exit', finish)

@@ -28,15 +28,20 @@
 //
 // See `fixtures/decompressWorkerRealBuildChild.js`'s own header comment for
 // why the real worker under test is spawned from inside a genuinely
-// separate `child_process` (with an explicit `env.HOME` override), rather
-// than directly from this jest process or via `worker_threads.Worker`'s own
-// `env` option — both were tried and empirically proven insufficient to
-// keep this test off the developer's real `~/Library/Logs/GameLib`.
+// separate `child_process` (with an explicit fake-profile env override —
+// `createFakeHomeProfile()`, quick-260913-arr), rather than directly from
+// this jest process or via `worker_threads.Worker`'s own `env` option — both
+// were tried and empirically proven insufficient to keep this test off the
+// developer's real `~/Library/Logs/GameLib`.
 
 import { execFileSync, fork, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+
+import {
+  createFakeHomeProfile,
+  type FakeHomeProfile
+} from '../../../testUtils/fakeHomeProfile'
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..', '..')
 const DEV_WORKER_BUNDLE_PATH = join(
@@ -61,7 +66,7 @@ interface ChildResult {
 }
 
 describe('decompressWorker.ts real compiled worker spawn (Phase 23.1 plan 05 regression)', () => {
-  let fakeHome: string
+  let profile: FakeHomeProfile
 
   beforeAll(() => {
     // Real build, via the EXACT command `pnpm tauri:dev`'s own pipeline
@@ -95,13 +100,17 @@ describe('decompressWorker.ts real compiled worker spawn (Phase 23.1 plan 05 reg
     )
     expect(existsSync(DEV_WORKER_BUNDLE_PATH)).toBe(true)
 
-    fakeHome = mkdtempSync(
-      join(tmpdir(), 'gamelib-decompressWorkerRealBuild-home-')
-    )
+    // quick-260913-arr: was a hand-rolled `mkdtempSync` + a four-variable env
+    // block that left APPDATA, XDG_CONFIG_HOME, XDG_DATA_HOME and
+    // XDG_CACHE_HOME pointing at the operator's real profile. The helper owns
+    // all eight, the 0700 root, and disposal. See CLAUDE.md's two-profile rule.
+    profile = createFakeHomeProfile({
+      prefix: 'gamelib-decompressWorkerRealBuild-home-'
+    })
   }, 60000)
 
   afterAll(() => {
-    if (fakeHome) rmSync(fakeHome, { recursive: true, force: true })
+    profile?.dispose()
   })
 
   function runChildFixture(): Promise<ChildResult> {
@@ -110,13 +119,7 @@ describe('decompressWorker.ts real compiled worker spawn (Phase 23.1 plan 05 reg
         CHILD_FIXTURE_PATH,
         [DEV_WORKER_BUNDLE_PATH],
         {
-          env: {
-            ...process.env,
-            HOME: fakeHome,
-            USERPROFILE: fakeHome,
-            XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
-            LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
-          },
+          env: profile.childEnv(),
           stdio: ['ignore', 'pipe', 'pipe', 'ipc']
         }
       )

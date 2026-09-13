@@ -64,9 +64,13 @@
 
 import type { ChildProcess } from 'node:child_process'
 import { execFileSync, spawn } from 'node:child_process'
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+
+import {
+  createFakeHomeProfile,
+  type FakeHomeProfile
+} from '../../../testUtils/fakeHomeProfile'
 
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..', '..')
 const BINARIES_DIR = join(REPO_ROOT, 'src-tauri', 'binaries')
@@ -150,7 +154,7 @@ process.once('SIGINT', reapLiveChildren)
 process.once('SIGTERM', reapLiveChildren)
 
 describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, round 2 regression)', () => {
-  let fakeHome: string
+  let profile: FakeHomeProfile
   let binaryPath: string
 
   beforeAll(() => {
@@ -177,13 +181,18 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
     }
     binaryPath = join(BINARIES_DIR, bins[0])
 
-    fakeHome = mkdtempSync(
-      join(tmpdir(), 'gamelib-lzmaNativeSeaRealBuild-home-')
-    )
+    // quick-260913-arr: was a hand-rolled `mkdtempSync` + a four-variable env
+    // block, which was measurably LEAKIER than the jest containment one
+    // directory away (it left APPDATA, XDG_CONFIG_HOME, XDG_DATA_HOME and
+    // XDG_CACHE_HOME pointing at the operator's real profile). The helper owns
+    // all eight, the 0700 root, and disposal. See CLAUDE.md's two-profile rule.
+    profile = createFakeHomeProfile({
+      prefix: 'gamelib-lzmaNativeSeaRealBuild-home-'
+    })
   }, 180000)
 
   afterAll(() => {
-    if (fakeHome) rmSync(fakeHome, { recursive: true, force: true })
+    profile?.dispose()
   })
 
   // quick-260912-e6k: reap any child this suite's own spawnCapture() left live (a
@@ -203,14 +212,14 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // report `nativeWorkers:0` -- proving the kill switch is honored
   // end-to-end inside a genuinely compiled binary, not just in a jest mock.
   test("the REAL compiled SEA binary's worker pool spawns cleanly, with native decode correctly gated OFF (inlineFallback=false, nativeWorkers=0)", async () => {
-    const result = await spawnCapture(binaryPath, [], {
-      ...process.env,
-      GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
-      HOME: fakeHome,
-      USERPROFILE: fakeHome,
-      XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
-      LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
-    })
+    const result = await spawnCapture(
+      binaryPath,
+      [],
+      profile.childEnv({
+        ...process.env,
+        GAMELIB_SIDECAR_SELFTEST: 'decompress-pool'
+      })
+    )
 
     const poolLine = result.stdout
       .split('\n')
@@ -291,14 +300,14 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // never deliver that signal, which is the main reason this one is back
   // on.
   test('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the gated (pure-JS) path', async () => {
-    const result = await spawnCapture(binaryPath, [], {
-      ...process.env,
-      GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
-      HOME: fakeHome,
-      USERPROFILE: fakeHome,
-      XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
-      LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
-    })
+    const result = await spawnCapture(
+      binaryPath,
+      [],
+      profile.childEnv({
+        ...process.env,
+        GAMELIB_SIDECAR_SELFTEST: 'decompress-pool'
+      })
+    )
 
     const decodeLine = result.stdout
       .split('\n')
@@ -409,14 +418,14 @@ describe('SEA sidecar binary real native lzma resolution (Phase 23.1 plan 05, ro
   // the operator's call on the kill switch, AND a real green run of this
   // test against a build that includes `b79765af2`.
   test.skip('the REAL compiled SEA binary correctly decodes a real-sized (64KB) chunk via the NATIVE path once the kill switch is (locally, temporarily) forced back on -- SKIPPED BY OPERATOR DECISION on NATIVE_LZMA_DECODE_ENABLED, not by known failure; see comment above', async () => {
-    const result = await spawnCapture(binaryPath, [], {
-      ...process.env,
-      GAMELIB_SIDECAR_SELFTEST: 'decompress-pool',
-      HOME: fakeHome,
-      USERPROFILE: fakeHome,
-      XDG_STATE_HOME: join(fakeHome, '.local', 'state'),
-      LOCALAPPDATA: join(fakeHome, 'AppData', 'Local')
-    })
+    const result = await spawnCapture(
+      binaryPath,
+      [],
+      profile.childEnv({
+        ...process.env,
+        GAMELIB_SIDECAR_SELFTEST: 'decompress-pool'
+      })
+    )
 
     const decodeLine = result.stdout
       .split('\n')
