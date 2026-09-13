@@ -5,7 +5,7 @@ area: sidecar / live-gate methodology
 severity: medium
 platform: any
 ready: code
-status: pending
+status: completed
 source: quick-260912-e6k (fix sidecar uncaughtException guard EPIPE self-feed), Task 3 live gate
 files:
   - src/backend/storeManagers/steam/__tests__/lzmaNativeSeaRealBuild.test.ts
@@ -222,3 +222,33 @@ implementation finds it painful, measure it rather than reaching for reuse.
 4. `captureShellScrollback.ts` converted; `buildSidecarSea.ts` inspected and decided.
 5. The exemption comment in `meta/sidecarStartupSmoke.cjs`, stating why isolation would break it.
 6. A gate asserting no in-repo file spawns the compiled binary with a hand-rolled env.
+
+## 2026-09-13 — RESOLVED by quick-260913-arr (all six items landed)
+
+| # | Owed | Landed as |
+| - | ---- | --------- |
+| 1 | CLAUDE.md two-profile rule (D1) | `### Fake-HOME isolation for direct binary runs (two-profile rule)`, a sibling of the todo-triage rule inside the `GSD:conventions` markers. Names its enforced half and states plainly that the ad-hoc/scratchpad half **rests on discipline and is NOT enforceable**. |
+| 2 | The helper (D3) | `src/backend/testUtils/fakeHomeProfile.ts` — `createFakeHomeProfile()` + `FAKE_HOME_ENV_KEYS`, eight-variable block, `mkdtemp` 0700 root, disposing handle with `registerCapture()`. Fresh per call per D4, no memoization. |
+| 3 | Convert the hand-rolled sites | **FOUR blocks, not three** — see correction below. All route through `profile.childEnv()`. |
+| 4 | `captureShellScrollback.ts` converted; `buildSidecarSea.ts` decided | Converted (both halves); `buildSidecarSea.ts` decided **NOT converted**, reason written into its module docstring. |
+| 5 | Exemption comment in `sidecarStartupSmoke.cjs` | Added. Behaviour unchanged — still passes NO `env` key, still `{ cwd, encoding, timeout }`. `pnpm smoke:sidecar` PASS. |
+| 6 | The gate | `src/backend/__tests__/fakeHomeIsolation.test.ts`, 5 tests, with a reasoned `EXEMPTIONS` table and a proven negative control. |
+
+### Corrections to this todo's own numbers, measured at execution
+
+- **"Three hand-rolled spawn blocks exist"** — there are **FOUR**.
+  `lzmaNativeSeaRealBuild.test.ts` has THREE `spawnCapture` sites (the todo named two),
+  plus the `fork()` in `decompressWorkerRealBuild.test.ts`.
+- **"missing five of the eight"** — it was **four**. Each block set `HOME`, `USERPROFILE`,
+  `XDG_STATE_HOME`, `LOCALAPPDATA`; the missing four were `APPDATA`, `XDG_CONFIG_HOME`,
+  `XDG_DATA_HOME`, `XDG_CACHE_HOME`. The leak was real; only its magnitude was overstated.
+
+### Evidence
+
+Negative control shown in four states: gate GREEN (5 tests) -> RED naming
+`src/backend/negativeControlFakeHome.ts (assigns HOME, XDG_STATE_HOME)` -> GREEN after deletion ->
+restoration clean. Exemption integrity separately proven: removing `meta/sidecarStartupSmoke.cjs`
+turns the gate RED naming that file, so the exemption is not a free pass.
+
+`tsc --noEmit` 0; `pnpm lint` 0 (production 1123/1124, tests 638/638 — the new gate added zero
+warnings); both RealBuild suites PASS; `pnpm smoke:sidecar` PASS.
