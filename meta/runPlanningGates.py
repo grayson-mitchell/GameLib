@@ -70,7 +70,21 @@ GATE_SUFFIX = "-gate.py"
 # reporting green, which is precisely the failure mode it was written to
 # close: a defect invisible to nine passing gates is exactly the kind of gate
 # whose own deletion would be equally invisible.
-MINIMUM_EXPECTED_GATES = 10
+#
+# 10 -> 11 (quick task 260912-csq): the eleventh gate is
+# `.planning/uat-visibility-gate.py`, a ratcheting VISIBILITY census over the
+# UAT-type documents under `.planning/`. 59 UAT items across 12 files are
+# INVISIBLE to `gsd-sdk query audit-uat` -- its item parser cannot engage with
+# them at all -- while the tool prints a confident, well-formed audit over the
+# items it CAN see and says nothing whatsoever about the ones it cannot. All
+# ten gates existing at the time reported green over that, because not one of
+# them had ever asked whether an item was reachable by the tool that reads it.
+# Leaving the floor at 10 would let this exact gate be deleted later with every
+# remaining gate still reporting green, and the argument is sharper here than
+# usual: this gate's entire subject is a suppression that TEN GREEN GATES COULD
+# NOT SEE, so its own deletion would be equally invisible -- precisely the
+# property this constant exists to hold.
+MINIMUM_EXPECTED_GATES = 11
 
 
 def discover_gates():
