@@ -5,7 +5,7 @@ area: backend/sidecar boot / CI gate
 severity: major
 platform: any
 ready: code
-status: pending
+status: completed
 source: quick-260913-901 (fix smoke:sidecar hang), Task 3 negative control
 files:
   - meta/sidecarStartupSmoke.cjs
@@ -82,7 +82,7 @@ incident, so the gate was disarmed by a later, unrelated, individually-correct c
 `init()` docblock and `meta/sidecarStartupSmoke.cjs`'s header carry the same assumption. Anyone
 reordering imports today is relying on a check that cannot fail.
 
-## What remains
+## What remained — ALL FOUR DONE (quick-260913-lkk, 2026-09-13)
 
 1. Give the gate a signal the guard cannot forge. The cheapest correct one already exists and is
    already captured but never inspected: assert `__GAMELIB_SIDECAR_READY__` is present in the
@@ -100,3 +100,44 @@ reordering imports today is relying on a check that cannot fail.
 Do **not** "fix" this by removing or weakening the `uncaughtException` guard, and do not raise or
 remove `STARTUP_TIMEOUT_MS`. Note the gate's ETIMEDOUT arm is still sound — it correctly caught
 the boot hang that quick-260913-901 fixed. Only the "exited N at startup" arm is dead.
+
+## Resolution (quick-260913-lkk, 2026-09-13)
+
+Item 1 — done. `meta/sidecarStartupSmoke.cjs` now fails unless `run.stdout` contains
+`__GAMELIB_SIDECAR_READY__`. The ETIMEDOUT and `run.status !== 0` arms are untouched and
+`installUncaughtExceptionGuard()` and `STARTUP_TIMEOUT_MS` are unchanged.
+
+Item 2 — done, but with the todo's stated RATIONALE corrected. The stderr arm was measured before
+being written, not assumed: four consecutive clean boots against the real profile emitted **zero**
+stderr bytes and zero `[sidecar] uncaught exception:` lines, so the arm is not flaky. However this
+todo claimed the arm "catches guard-swallowed faults that happen *after* the sentinel is written".
+**That is false.** The guard only writes to stderr while its log sink is null; `bootstrap.init()`
+installs that sink at `bootstrap.ts:786`, and the sentinel is written at `bootstrap.ts:1256`. Every
+fault in between goes to the logger, never to stderr. The arm's real scope is the EARLY-BOOT /
+module-evaluation window — which is the class this gate exists for. The narrower, true scope is
+written on the arm itself rather than the flattering one.
+
+Item 3 — done. The same negative control was re-run: `throw new Error('NEGATIVE CONTROL
+260913-lkk')` at `bootstrap.ts` module scope gave `smoke rc=1` with
+`FAIL: the sidecar exited 0 but never wrote __GAMELIB_SIDECAR_READY__ to stdout`. Note the gate
+itself reports **"exited 0"** — the child still exits 0, so the premise here held exactly. Break
+confirmed compiled in: 1 occurrence in source, 1 in `build/main/sidecar.js`. Restored by `cp`
+(never `git checkout --`), shasum matched and `git diff` empty.
+
+Item 4 — done, plus three more sites found by census.
+
+### This todo's blast-radius claim was PARTLY WRONG
+
+It stated that "`bootstrap.ts`'s own `init()` docblock ... carr[ies] the same assumption".
+`grep -n "smoke" src/backend/sidecar/bootstrap.ts` returns **ZERO hits**. `bootstrap.ts` never
+mentions the gate at all; there was nothing to correct there. The todo also named only
+`installRejectionGuard.ts:42-46` and missed two further live references (`installRejectionGuard.ts:12`,
+`src/sidecar/index.ts:48`, both instructions that are true again now the gate is armed).
+
+### New guard against the fix rotting
+
+`meta/sidecarStartupSmoke.cjs` is CommonJS and cannot require the TypeScript `READY_SENTINEL`
+export, so it hardcodes the value. A drift assertion in `sidecarRejectionGuard.test.ts` Group 3
+binds the two, runs `stripSourceComments` first (so the file's own prose cannot satisfy it), and
+carries positive controls against a vacuous read. It was proven RED against a deliberately wrong
+literal and GREEN when restored.
