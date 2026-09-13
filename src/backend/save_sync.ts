@@ -84,8 +84,16 @@ async function getDefaultLegendarySavePath(appName: string): Promise<string> {
     }
   )
 
-  // If the save path was computed successfully, Legendary will have saved
-  // this path in `installed.json` (so the GameInfo)
+  // `sync-saves --accept-path` above rewrites `save_path` into `installed.json` on DISK, but
+  // `getGameInfo` merges install fields from the module-scope `installedGames` map, which is
+  // only rebuilt by `refreshInstalled()` -- so without an explicit refresh here, the readback
+  // below can return a stale (or absent) value even though the fresh one is already on disk
+  // (measured desk + live by quick task 260912-qop). `sidecar/installedJsonWatcher.ts`'s
+  // 500ms debounce cannot substitute for this call: live evidence shows its `refreshLibrary`
+  // push landing AFTER the "Unable to compute default save path" error, so it loses the race
+  // for this, the very first read. Do not remove or weaken the watcher -- it still correctly
+  // heals the map for subsequent reads; it simply cannot win this particular one.
+  libraryManagerMap['legendary'].refreshInstalled()
   const { save_path: new_save_path } = libraryManagerMap[
     'legendary'
   ].getGameInfo(appName, true)!

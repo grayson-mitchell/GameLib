@@ -32,6 +32,17 @@
  * signal this probe exists to produce — do not "fix" this test if it goes red without first
  * checking whether the underlying defect was fixed.
  *
+ * UPDATE (quick 260912-rvv): the prediction above was WRONG, and this task is the proof. The
+ * fix landed as a `refreshInstalled()` call inserted into `save_sync.ts` — exactly the example
+ * given above — and this probe stayed GREEN, because it pins `getGameInfo` itself, which the
+ * fix does not change. `getGameInfo(appName, true)` still returns whatever `installedGames`
+ * currently holds; the fix's effect is that `save_sync.ts` now calls `refreshInstalled()`
+ * before it reads that value, not that `getGameInfo`'s own behaviour changed. The fix's signal
+ * now lives in `src/backend/__tests__/getDefaultLegendarySavePathRefresh.test.ts`, which drives
+ * the actual `getDefaultSavePath()` call path end to end and DOES flip red without the fix. If
+ * this probe ever does go red, something unintended changed in `library.ts`: STOP and
+ * investigate — do not adjust this test to pass.
+ *
  * OUT OF SCOPE: the 500ms `installedJsonWatcher` debounce race
  * (`src/backend/sidecar/installedJsonWatcher.ts`) is a live-timing property, not
  * desk-provable, and is not asserted here. Neither `save_sync.ts` nor `library.ts` is
