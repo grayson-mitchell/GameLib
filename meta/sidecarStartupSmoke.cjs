@@ -23,7 +23,17 @@
  * So the gate is the crude thing that actually works: BUILD IT AND RUN IT.
  * Costs about a second.
  *
- * Exit 0 = the sidecar reached its RPC loop and shut down cleanly on stdin EOF.
+ * WHAT "PASS" MEANS, precisely (corrected quick-260913-lkk). Exit 0 on its own
+ * proves NOTHING: `installUncaughtExceptionGuard()` holds a sidecar that died
+ * during module evaluation at exit 0. This header used to claim "Exit 0 = the
+ * sidecar reached its RPC loop", and for the weeks between that guard landing
+ * (D-35-10-01, Phase 35) and quick-260913-lkk that claim was false — a measured
+ * negative control killed the sidecar outright and the gate printed PASS.
+ *
+ * PASS now requires the CONJUNCTION: it built, it did not time out, it exited 0,
+ * it wrote the READY sentinel to stdout, and it swallowed no early-boot fault.
+ * The sentinel is the load-bearing one — it is the only signal here that a dead
+ * process cannot produce.
  *
  * ── DELIBERATELY EXEMPT from the fake-HOME two-profile rule ────────────────
  * (quick-260913-arr; see CLAUDE.md, "Fake-HOME isolation for direct binary
@@ -103,8 +113,12 @@ if (!existsSync(BUNDLE))
   fail(`bundle missing at ${BUNDLE} despite a successful build`)
 
 // No stdin: the RPC loop sees EOF immediately and shuts down. A healthy sidecar
-// exits 0; one that dies during module evaluation exits non-zero with the
-// throwing module named in its stack.
+// exits 0 -- but so does a DEAD one. This comment used to say "one that dies
+// during module evaluation exits non-zero with the throwing module named in its
+// stack"; that stopped being true when `installUncaughtExceptionGuard()` landed,
+// because registering any `uncaughtException` listener suppresses Node's default
+// non-zero exit. So the `run.status` arm below is a NECESSARY condition only, and
+// the READY arm after it is what actually separates a live sidecar from a corpse.
 const run = spawnSync(process.execPath, [BUNDLE], {
   cwd: REPO_ROOT,
   encoding: 'utf-8',

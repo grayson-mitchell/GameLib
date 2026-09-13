@@ -44,6 +44,17 @@
  * which runs the real bundled sidecar — the only check that catches this class of
  * regression, since a green jest run and a clean `build:sidecar` both missed
  * attempt (a).
+ *
+ * WHAT MAKES THAT SECOND CHECK REAL, and when it was briefly false
+ * (quick-260913-lkk). `pnpm smoke:sidecar` catches this class only because it
+ * asserts the sidecar wrote `READY_SENTINEL` to stdout. Do NOT read it as "a broken
+ * sidecar exits non-zero, so CI goes red" — `installUncaughtExceptionGuard()`, which
+ * THIS FILE installs, suppresses Node's default non-zero exit, so a sidecar that dies
+ * in module evaluation still exits 0. Between that guard landing (D-35-10-01, Phase
+ * 35) and quick-260913-lkk the gate's only signal WAS that exit code, which made the
+ * paragraph above false: a measured negative control put a throw in `bootstrap.ts`'s
+ * module scope, the sidecar was completely dead, and the gate printed PASS. Anyone
+ * changing the gate's assertions is deciding whether this paragraph stays true.
  */
 
 import {

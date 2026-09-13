@@ -1455,7 +1455,12 @@ describe('sidecarRejectionGuard (Phase 34.2 Plan 09 Task 3 -- REQ-34.2-07 gap #2
       // into evaluation ahead of `installElectronHook`, so `app.getPath()` returns
       // undefined and the sidecar dies before writing READY. Jest cannot observe that
       // (all 176 backend suites stayed green through it) -- this source gate and
-      // `pnpm smoke:sidecar` are the two checks that can.
+      // `pnpm smoke:sidecar` are the two checks that can. The second half of that
+      // sentence is only true again as of quick-260913-lkk, which made that gate
+      // assert the READY sentinel in the child's stdout. While its only signal was
+      // the child's exit code it could not see this failure class at all, because
+      // `installUncaughtExceptionGuard()` holds a dead sidecar at exit 0 -- measured
+      // with a module-scope throw that the gate reported as PASS.
       const source = readFileSync(
         join(__dirname, '../processGuards.ts'),
         'utf-8'
