@@ -37,6 +37,32 @@ async function setPresence() {
 
     if (!interval) {
       interval = setInterval(setPresence, 5 * 60 * 1000)
+      // quick-260913-901: this keep-alive must NEVER be the reason the process cannot exit.
+      //
+      // The sidecar's lifetime is owned by stdin (the RPC frame stream) and it must exit when
+      // the shell closes it. Without this `unref()` the 5-minute repeat referenced the event
+      // loop forever, so `pnpm smoke:sidecar` hung and was killed at its 30s budget on any
+      // machine with a logged-in GOG account -- and, worse than the red gate, a real user's
+      // sidecar would not die when the shell quit, which is the same orphan mechanism the
+      // standing `tauri-dev-shell-does-not-reap-its-node-sidecar` finding describes.
+      //
+      // It took a day to name because it is INVISIBLE to the obvious instrument: Node
+      // multiplexes every JS timer onto a single internal `uv_timer_t` that has no JS wrapper
+      // object, so `process._getActiveHandles()` cannot report it. Introspection therefore said
+      // "two stdio pipes, zero pending requests" while the process sat there forever. It was
+      // finally named by a Node diagnostic report (exactly one referenced+active libuv `timer`)
+      // plus an async_hooks probe resolving that timer's creation stack to this line.
+      //
+      // `unref()` does NOT stop the keep-alive working. It only says "do not keep the process
+      // alive FOR ME" -- for the whole of the sidecar's real life stdin holds the loop open, so
+      // the 5-minute presence POST still fires exactly as before. Behaviour with a live Rust
+      // peer is unchanged; only the no-peer, stdin-EOF case can now exit.
+      //
+      // House pattern, same reasoning: `sidecarRpc.ts:392` and `installedJsonWatcher.ts:130,150`.
+      // The optional call mirrors `installedJsonWatcher.ts:130` -- `gogPresenceKeepAlive.test.ts`
+      // drives this line under jest fake timers, whose Timeout substitute is not required to
+      // implement `unref()`.
+      interval.unref?.()
     }
 
     const payload: PresencePayload = {
