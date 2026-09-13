@@ -36,6 +36,8 @@ symptoms:
 
 ## Current Focus
 
+Decode remains the ceiling now that the SEA worker pool engages; default pool size is confirmed.
+
 reasoning_checkpoint:
   hypothesis: "P/E-CORE FALSIFICATION TEST RESOLVED 2026-08-17T21:40 (live
     HUMANKIND run, coordinator-relayed, GAMELIB_DECOMPRESS_POOL_SIZE=4

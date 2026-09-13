@@ -228,6 +228,8 @@ blocks 35-07 steps 2-5) and is NOT this session's subject.
 
 ## Current Focus
 
+Abort unresolved and not reproducing; the panic hook is armed to self-diagnose the next one.
+
 hypothesis: |
   UNRESOLVED for the abort. The instrument is now in place but the fault has not recurred.
 

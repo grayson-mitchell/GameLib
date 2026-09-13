@@ -7,6 +7,8 @@ updated: 2026-07-21
 
 ## Current Focus
 
+Cause confirmed and fixed; awaiting a live packaged-app cancel and completion confirmation.
+
 reasoning_checkpoint:
   hypothesis: "The synchronous require('backend/storeManagers') in downloadqueue.ts's getLibraryManagerMapSync() (and the identical pattern in launcher.ts's getRunnerCallWithoutCredentials) compiles to a literal, unresolvable require(\"backend/storeManagers\") in the electron-vite production bundle, because Rollup only resolves the vite `resolve.alias` for static `import`/`import()` specifiers, never for arbitrary `require()` call expressions — causing every sync call (cancel/stop/completion-notification, and legendary command-arg building) to throw at runtime."
   confirming_evidence:

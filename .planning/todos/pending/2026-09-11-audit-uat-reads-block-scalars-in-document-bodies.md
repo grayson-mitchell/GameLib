@@ -15,6 +15,47 @@ resolves_phase: null
 
 # `audit-uat` parses body YAML too, and that population has never been counted
 
+## ITEM B CLOSED 2026-09-12 (quick 260912-n9i) — read this first
+
+This section governs where it contradicts the sections below, including the `RE-MEASURED`
+section immediately following. Nothing was deleted from this file.
+
+1. **Item B is DONE.** Four open debug sessions (`deep-link-open-url-abort.md`,
+   `download-queue-require-crash.md`, `humankind-depot-full-stall.md`,
+   `nile-spawn-app-side-latency.md`) now lead their `## Current Focus` section with a
+   sub-100-character ASCII prose line, so `audit-open` emits the finding instead of a key. No
+   YAML was restructured; two lines (one prose line, one blank line) were added per file.
+
+2. **The measured delta, and why it matters.** This todo's own census (the `RE-MEASURED` section
+   below) recorded this population as **1** field reaching `audit-open` — it classified only
+   BLOCK SCALARS, so the only `audit-open`-reachable field it could see was
+   `deep-link-open-url-abort.md:231` `hypothesis: |`. The live tool actually shows **4** sessions
+   reaching the same `audit-open.js:46-50` 100-char first-non-empty-line slice, because **3 of the
+   4 are PLAIN KEYS, not block scalars** (`reasoning_checkpoint:` x2, and nile's parenthesised
+   `reasoning_checkpoint (SUPERSEDED ...):`). The census's own instrument — built to find block
+   scalars — could not see them: the defect `audit-open` actually has is "the first line after the
+   heading is a YAML key of any shape", and block-scalar-ness is incidental to it. Record this as
+   an instrument limitation, not an arithmetic error in the RE-MEASURED section.
+
+3. **Consequence for the RE-MEASURED reachability table.** That table's `reaches-as-bare-indicator:
+   3` row counted `deep-link-open-url-abort.md:231` as one of its three members. That field no
+   longer reaches `audit-open` as a bare indicator — the new prose line is emitted in its place —
+   so the two surviving `reaches-as-bare-indicator` members are `27-UAT.md:31` and `27-UAT.md:51`,
+   both reached via `audit-uat`, not `audit-open`. The block scalar itself is UNCHANGED on disk
+   and still reads correctly for a human; only what the tool slices has moved.
+
+4. **A distinct, unfixed defect.** `knowledge-base.md` and `steam-install-options-opens-nothing.md`
+   emit an EMPTY `hypothesis` from `audit-open`. The cause is different from item B's shape defect:
+   neither file has a `## Current Focus` heading at all, so the tool's first-non-empty-line slice
+   has nothing to take. Writing one is authorship — deciding what that session's current focus IS —
+   not a shape fix, so it was deliberately NOT done as part of this item. Left open and named here
+   so the next author does not mistake it for the same bug as item B.
+
+This todo STAYS OPEN in `pending/`. Item A (the two `reason: |` fields in `27-UAT.md`), item C (the
+`expected: |` whole-file suppression in `audit-uat`), and item D (the 17 milestone-hidden fields)
+are all untouched by this quick task and remain exactly as the `RE-MEASURED` section below
+describes them.
+
 ## RE-MEASURED 2026-09-12 at HEAD 6c0c2a96d (quick 260912-9v7) — read this before the sections above
 
 Everything below this section is preserved exactly as written on 2026-09-11. Where this section
