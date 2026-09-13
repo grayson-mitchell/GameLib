@@ -133,8 +133,46 @@ Options, none yet chosen:
 2. **Give `inet/downloader`'s `axios.get` an explicit `timeout` and agent**, so a
    stalled asset fetch fails fast instead of holding boot. Decide what a failed
    first-run asset fetch should DO before picking a number.
-3. **Do not raise `STARTUP_TIMEOUT_MS`** — the original filing is right that this
+3. **Abort in-flight boot downloads on shutdown** (added 2026-09-13 by the
+   quick-260913-m9c orchestrator; see the caveat below — this is REASONED, not
+   measured). Options 1 and 2 both change what happens on a *healthy* run: option 1
+   alters boot ordering, option 2 can fail a first-run asset fetch on a slow link.
+   This one changes nothing about a healthy run. When the sidecar is already
+   shutting down, cancelling transfers whose results nobody will read costs
+   nothing behaviourally, and it bounds exit time without bounding the download
+   itself. A user on a slow link keeps their full first-run fetch; only a sidecar
+   that has been told to quit gives it up.
+4. **Do not raise `STARTUP_TIMEOUT_MS`** — the original filing is right that this
    hides the signal, and the signal is now firing for real.
+
+### Blocking fact for option 3: there is NO stdin-EOF seam to hang it on
+
+Measured 2026-09-13 at `cf06f4664`. `startRpcServer()`
+(`src/backend/sidecar/sidecarRpc.ts:296-321`) binds **only** `input.on('data', …)`.
+There is no `'end'` handler, no `'close'` handler, and no shutdown path of any
+kind. The sidecar exits *implicitly*, when the event loop happens to drain — which
+is the deeper reason an unbounded download holds it open: nothing observes that we
+were told to quit.
+
+So option 3 is **more work than it first sounds**. It needs, in order:
+
+1. an explicit EOF/shutdown hook in `startRpcServer()` — this does not exist yet
+   and is arguably a defect in its own right, independent of this todo;
+2. an `AbortController` threaded through `inet/downloader`'s `axios.get`
+   (`src/backend/utils/inet/downloader/index.ts:70`), which currently has **no**
+   abort plumbing at all — though `AbortController` is already an established
+   pattern in this backend (`launcher.ts`, `online_monitor.ts`, `utils.ts`,
+   `tools/index.ts`, `downloadmanager/downloadqueue.ts`,
+   `downloadmanager/installStallWatchdog.ts`);
+3. a decision about what a *cancelled* first-run asset fetch leaves behind — a
+   partial file on disk is worse than no file, so this interacts with option 2's
+   unanswered question rather than avoiding it.
+
+**Caveat, stated plainly:** unlike everything else in this file, option 3 was NOT
+measured. It is a design argument from the measured mechanism. Nobody has shown
+that aborting on shutdown actually brings the cold boot under budget, and it
+should be prototyped and timed with `meta/coldBootTiming.ts` before it is chosen
+over options 1 and 2.
 
 Identify which five assets are fetched before choosing; `crossoverIndexDescriptor`
 (`src/backend/crossover_index/index.ts:19`) is one confirmed
