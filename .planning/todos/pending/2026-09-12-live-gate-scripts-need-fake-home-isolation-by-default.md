@@ -2,9 +2,9 @@
 created: 2026-09-12
 title: "Live-gate scripts that run the compiled sidecar directly need fake-HOME isolation by default"
 area: sidecar / live-gate methodology
-severity: minor
+severity: medium
 platform: any
-ready: human
+ready: code
 status: pending
 source: quick-260912-e6k (fix sidecar uncaughtException guard EPIPE self-feed), Task 3 live gate
 files:
@@ -123,7 +123,102 @@ budget.
 
 ### Triage note
 
-Severity left at `minor` and `ready: human` deliberately — this remains a decision, not code. There
-is now an argument for raising it to `medium` (the convention it proposes would have concealed a
-`major` defect), but changing someone else's triage on the strength of one case is exactly the kind
-of quiet vocabulary drift the todo gates exist to prevent. Flagging it for the human instead.
+Superseded — see "Decisions taken" below. Severity is now `medium` and `ready` is now `code`.
+
+## 2026-09-13 — DECISIONS TAKEN (operator, in session)
+
+All four open questions were ruled on directly by the operator. **This todo is no longer a
+decision; it is a specification.** `ready:` moved `human` -> `code` because everything below is desk
+work: no live gate, no second machine. `severity:` moved `minor` -> `medium` because "latent trap
+with no live consequence" is now false — the consequence has been realised twice (real GOG session
+data written to disk in `260912-e6k`, again in `260913-901`), against a named and bounded
+population, with "do it by hand" as the existing workaround.
+
+### Facts established while deciding (none of these were in the todo before)
+
+- **The repo already implements this discipline once, for jest, and it stops at the jest boundary.**
+  `src/backend/jest.setupContainment.ts` redirects **eight** variables — `HOME`, `USERPROFILE`,
+  `APPDATA`, `LOCALAPPDATA`, `XDG_CONFIG_HOME`, `XDG_STATE_HOME`, `XDG_DATA_HOME`, `XDG_CACHE_HOME`
+  — into an `mkdtempSync` root, and `testContainment.test.ts` enforces it. It also records a
+  measured finding that `mkdtemp`'s `0700` is the real security control, because umask can only
+  ever remove bits.
+- **It cannot be reused as-is.** It exports only `{ containmentRoot, realHomeAtSetup }` and is wired
+  as a jest `setupFiles` entry; it mutates its OWN process env, so it cannot build a child-process
+  env for a spawned binary.
+- **Three hand-rolled spawn blocks exist, each narrower than the standard one directory away:**
+  `lzmaNativeSeaRealBuild.test.ts:209` and `:297`, and `decompressWorkerRealBuild.test.ts:115`.
+  Each sets roughly `HOME`/`XDG_STATE_HOME`/`LOCALAPPDATA` — missing five of the eight. So these
+  sites are not merely unconventioned, they are **measurably leakier than the jest containment
+  beside them**. That is a defect, not a style gap.
+- Those two jest sites DO already clean up correctly (`mkdtempSync` + `afterAll(rmSync recursive
+  force)`). The hygiene gap is not there — it is in ad-hoc scratchpad runs, which is exactly where
+  `260913-901` left 103 MB and two unredacted diagnostic reports sitting until deleted by hand.
+- **`meta/` holds three more sidecar-spawning scripts:** `buildSidecarSea.ts`,
+  `captureShellScrollback.ts`, and `sidecarStartupSmoke.cjs`. The smoke gate calls
+  `spawnSync(process.execPath, [BUNDLE], { cwd, encoding, timeout })` with **no `env` key**, so it
+  inherits the operator's real environment on every run.
+- The two RealBuild suites are ACTIVE (un-skipped 2026-09-12), so any cost the helper imposes is
+  paid on every normal test run.
+
+### D1 — the convention exists, and lives in CLAUDE.md
+
+Written under the existing `## Conventions` heading as a sibling to the todo-triage rule, and
+**derived from `jest.setupContainment.ts` rather than written fresh**. `.planning/spikes/CONVENTIONS.md`
+was rejected as the host: it is scoped to spikes (Stack/Structure/Patterns/Tools).
+
+The convention is NOT "always fake the HOME". It is the **two-profile rule**: isolated by default,
+plus a named deliberate real-profile arm for defects that can only arm under a populated profile.
+
+### D2 — enforce what is enforceable, and say so about the rest
+
+Gate the in-repo spawn sites (a test can assert no in-repo file spawns the compiled sidecar/SEA
+binary with a hand-rolled env). Write the ad-hoc/scratchpad half as a stated rule whose own text
+**admits it rests on discipline, not enforcement**. Rejected: extending the gate to cover ad-hoc
+shell invocations — nothing can observe a command typed into a scratchpad, and a gate that appeared
+to cover it would be the green-check-proving-nothing pattern this project keeps stamping out.
+
+### D3 — the helper, and the exemption that is its real content
+
+Helper lives in `src/backend/testUtils/`. It owns exactly three things:
+
+1. the full **eight-variable** env block (per `jest.setupContainment.ts`, not the three this todo
+   originally named, and not the six `260913-901` used);
+2. an `mkdtemp` `0700` root;
+3. a disposing handle that shreds the profile **and any captures** on the way out.
+
+Mandatory for: `lzmaNativeSeaRealBuild.test.ts` (both sites), `decompressWorkerRealBuild.test.ts`,
+and `captureShellScrollback.ts`. `buildSidecarSea.ts` to be decided on inspection.
+
+**`meta/sidecarStartupSmoke.cjs` is EXPLICITLY EXEMPT, and the reason must be written into its
+header.** It has to see a real profile, because that is the only way it catches profile-dependent
+hangs. Had it been isolated by default, it would have been permanently green against the defect
+`260913-901` fixed — a `major` defect that blocked every PR. **The exemption, not the helper, is the
+valuable part of this work.** The helper is about twenty lines; the thing worth writing down is why
+one site must not use it.
+
+### D4 — fresh profile per invocation, always
+
+No reuse-for-speed. The framing that reuse buys speed was **wrong**: the cold cost is not caused by
+freshness, it is caused by the boot doing real network work into an empty profile (see the sibling
+todo on ~25 pooled keep-alive TLS sockets for ~26s). Reuse does not make that work cheaper, it just
+caches the symptom. If a call site is too slow, the lever is pinning that run offline or stubbing
+the network — never recycling a profile, because a reused profile is a different experiment that
+carries state capable of masking a defect.
+
+Reuse is permitted only as an explicitly-named opt-in for a test whose *purpose* is warm-path
+behaviour, justified at the call site.
+
+**Honest limit on the cost numbers:** the 27.7s cold / 1.0s warm / ~51 MB figures were measured
+against `build/main/sidecar.js`, **NOT** against the SEA binaries the two suites actually spawn.
+The cold-vs-warm delta for those suites is UNMEASURED. `d1` was chosen on correctness grounds
+(a passing test means what it says), not because the cost was shown to be acceptable — if the
+implementation finds it painful, measure it rather than reaching for reuse.
+
+### What implementation now owes
+
+1. `CLAUDE.md` `## Conventions` — the two-profile rule, with the unenforceable half labelled as such.
+2. The helper in `src/backend/testUtils/`, with the eight-var block, `mkdtemp 0700`, and disposal.
+3. Convert the three hand-rolled sites (this fixes the five-missing-vars leak on its own merits).
+4. `captureShellScrollback.ts` converted; `buildSidecarSea.ts` inspected and decided.
+5. The exemption comment in `meta/sidecarStartupSmoke.cjs`, stating why isolation would break it.
+6. A gate asserting no in-repo file spawns the compiled binary with a hand-rolled env.
