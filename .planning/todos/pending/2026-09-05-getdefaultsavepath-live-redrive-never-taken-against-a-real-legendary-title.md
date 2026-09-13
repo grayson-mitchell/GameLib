@@ -93,3 +93,27 @@ jest measurement:
 against a real, installed legendary title confirming the save-path field populates on the first
 call. The 500ms `installedJsonWatcher` debounce race is still unmeasured -- it is a live-timing
 property, out of scope for a desk-level jest probe. This todo stays in `pending/`.
+
+## 2026-09-12 update -- code-side cause now FIXED (quick 260912-rvv)
+
+The stale-readback mechanism measured by quick `260912-qop` above has now been fixed at its
+source. `getDefaultLegendarySavePath()` in `src/backend/save_sync.ts` now calls
+`libraryManagerMap['legendary'].refreshInstalled()` immediately before the
+`getGameInfo(appName, true)` readback, so the module-scope `installedGames` map is rebuilt from
+`installed.json` before it is read, closing the staleness window `260912-qop` measured.
+
+Desk-proven by a new regression test,
+`src/backend/__tests__/getDefaultLegendarySavePathRefresh.test.ts`, which drives the real,
+exported `getDefaultSavePath('Iris', 'legendary', [])` end to end (only `getGame` and
+`runRunnerCommand` are stubbed; `getGameInfo` and `refreshInstalled` are real) across two arms
+(an EMPTY start state and a STALE start state), with a `runRunnerCommand` stub that performs the
+same `installed.json` disk write `sync-saves --accept-path` does in production. A verified
+negative control confirms the test is coupled to that one line: removing the
+`refreshInstalled()` call reproduces both arms' pre-fix failures (`Received: ""` and
+`Received: "/rvv/OLD-stale-save-path"`), and restoring it returns both tests to green.
+
+**This still does NOT discharge this todo.** The discharge condition is unchanged: a LIVE
+session against a real, installed legendary title confirming the Cloud Saves Sync save-path
+field populates on the FIRST call. Only a live AFTER-run satisfies that; this quick task fixed
+the code and desk-proved the fix, but took no live measurement. This todo stays in `pending/`
+with `status: OPEN`, `severity: medium`, `platform: any`, `ready: live-gate` unchanged.
