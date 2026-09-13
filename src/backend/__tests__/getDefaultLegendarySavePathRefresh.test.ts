@@ -123,7 +123,9 @@ jest.mock('../storeManagers/legendary/constants', () => {
   const nodeOs = jest.requireActual<typeof import('os')>('os')
 
   const parent = process.env.GAMELIB_JEST_RUN_ROOT ?? nodeOs.tmpdir()
-  const root = nodeFs.mkdtempSync(nodePath.join(parent, 'gamelib-rvv-legendary-'))
+  const root = nodeFs.mkdtempSync(
+    nodePath.join(parent, 'gamelib-rvv-legendary-')
+  )
   // See qop's identical comment: mkdtemp's 0700 request can be masked by the process umask;
   // this restores owner-write. mkdtemp's unpredictable suffix remains the actual control
   // (T-rvv-01).

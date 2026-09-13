@@ -90,7 +90,9 @@ jest.mock('../constants', () => {
   const nodeOs = jest.requireActual<typeof import('os')>('os')
 
   const parent = process.env.GAMELIB_JEST_RUN_ROOT ?? nodeOs.tmpdir()
-  const root = nodeFs.mkdtempSync(nodePath.join(parent, 'gamelib-qop-legendary-'))
+  const root = nodeFs.mkdtempSync(
+    nodePath.join(parent, 'gamelib-qop-legendary-')
+  )
   // Not redundant despite mkdtemp requesting 0700 -- that request is masked by the
   // process umask (see jest.setupContainment.ts's docstring for the measured 0500-under-
   // umask-0277 case). This restores owner-write; mkdtemp's unpredictable suffix remains the
@@ -123,9 +125,10 @@ jest.mock('backend/logger', () => ({
 const mockFormatEpicStoreUrl = jest.fn(
   (title: string) => `https://store.epicgames.com/p/${title}`
 )
-const mockGetLegendaryBin = jest.fn(
-  (..._args: unknown[]) => ({ dir: '/fake', bin: 'legendary' })
-)
+const mockGetLegendaryBin = jest.fn((..._args: unknown[]) => ({
+  dir: '/fake',
+  bin: 'legendary'
+}))
 const mockIsEpicServiceOffline = jest.fn((..._args: unknown[]) =>
   Promise.resolve(false)
 )
@@ -134,7 +137,8 @@ jest.mock('../../../utils', () => ({
   formatEpicStoreUrl: (...args: unknown[]) =>
     mockFormatEpicStoreUrl(...(args as [string])),
   getLegendaryBin: (...args: unknown[]) => mockGetLegendaryBin(...args),
-  isEpicServiceOffline: (...args: unknown[]) => mockIsEpicServiceOffline(...args),
+  isEpicServiceOffline: (...args: unknown[]) =>
+    mockIsEpicServiceOffline(...args),
   getFileSize: (...args: unknown[]) => mockGetFileSize(...args),
   axiosClient: { get: jest.fn() }
 }))
@@ -189,7 +193,10 @@ import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import LegendaryLibraryManager from '../library'
 import { legendaryConfigPath, legendaryMetadata } from '../constants'
-import type { InstalledJsonMetadata, GameMetadataInner } from 'common/types/legendary'
+import type {
+  InstalledJsonMetadata,
+  GameMetadataInner
+} from 'common/types/legendary'
 
 // Two obviously distinct, greppable sentinels -- see the sentinel-distinctness guard below.
 const OLD_SENTINEL = '/qop/OLD-stale-save-path'
@@ -280,7 +287,10 @@ describe('getGameInfo(appName, forceReload=true) stale-map characterisation (qui
 
     installedJsonPath = join(legendaryConfigPath, 'installed.json')
     // Step 1 (plan): installed.json on disk starts with the OLD sentinel.
-    writeFileSync(installedJsonPath, JSON.stringify(installedJsonFixture(OLD_SENTINEL)))
+    writeFileSync(
+      installedJsonPath,
+      JSON.stringify(installedJsonFixture(OLD_SENTINEL))
+    )
 
     mockIsOnline.mockReturnValue(true)
   })
@@ -301,14 +311,16 @@ describe('getGameInfo(appName, forceReload=true) stale-map characterisation (qui
       // Step 3 (plan): rewrite installed.json on disk with the NEW sentinel -- this is what
       // `legendary sync-saves --accept-path` does inside getDefaultLegendarySavePath(),
       // BEFORE the readback and with no refreshInstalled() in between (save_sync.ts L72-91).
-      writeFileSync(installedJsonPath, JSON.stringify(installedJsonFixture(NEW_SENTINEL)))
+      writeFileSync(
+        installedJsonPath,
+        JSON.stringify(installedJsonFixture(NEW_SENTINEL))
+      )
 
       // WRITE-THROUGH CONTROL: the NEW value really is on disk at this point, so the
       // staleness below cannot be blamed on a fixture write that silently failed.
-      const onDisk = JSON.parse(readFileSync(installedJsonPath, 'utf-8')) as Record<
-        string,
-        InstalledJsonMetadata
-      >
+      const onDisk = JSON.parse(
+        readFileSync(installedJsonPath, 'utf-8')
+      ) as Record<string, InstalledJsonMetadata>
       expect(onDisk[APP_NAME].save_path).toBe(NEW_SENTINEL)
 
       // Step 4 (plan): the exact call save_sync.ts L89-91 makes.
