@@ -1,11 +1,13 @@
 ---
 created: 2026-09-13
-title: "The sidecar's stdin-owned exit contract is load-bearing, broken three times in three weeks, documented only in scattered inline comments, and gated only by smoke:sidecar"
+title: "The sidecar's stdin-owned exit contract was load-bearing, broken three times in three weeks, and documented only in scattered inline comments — it is now a CLAUDE.md convention, and the gate question is decided against"
 area: backend/sidecar boot / CI gate
 severity: medium
 platform: any
 ready: code
-status: pending
+status: completed
+resolved: 2026-09-13
+resolved_by: "67ed8767b (item 1 — the CLAUDE.md convention); this file (item 2 — the gate decision, recorded below)"
 source: quick-260913-m9c follow-up; the orchestrator's original "there is no shutdown path" framing was WRONG and is corrected below
 files:
   - src/backend/sidecar/sidecarRpc.ts
@@ -79,7 +81,52 @@ is a blunt instrument for the job:
 - A developer who breaks the contract learns about it from a red CI gate with a 30s timeout,
   not from anything at the call site they are writing.
 
-## What remains
+## RESOLUTION (2026-09-13, quick `260913-ty4` + `260913-uez`)
+
+**Closed.** All three items below are settled. The original text is kept verbatim underneath so
+the reasoning that produced the convention stays readable.
+
+| item | outcome |
+| ---- | ------- |
+| 1. Write the contract down centrally | **SHIPPED** — `67ed8767b` added `### The sidecar's exit contract (stdin owns its lifetime)` to `CLAUDE.md`'s conventions region, beside the two-profile rule. Derived from the `installedJsonWatcher.ts` comment, not composed fresh. States **both halves**, including that `unref()` is the wrong tool for the in-flight class. |
+| 2. Consider a gate | **DECIDED AGAINST — this is a decision, not a deferral.** |
+| 3. Beware the grep spelling | **Never a work item.** It was advice for whoever ran the census; it is now written into the CLAUDE.md convention so the next auditor gets it at the point of use. |
+
+### The gate decision, recorded
+
+No gate is added, on this todo's own argument: a source gate over sidecar-reachable
+`setInterval`/`setTimeout`/watcher/socket creation **would have caught none of the three real
+breaks cleanly**, and it cannot see the in-flight class at all — which is the
+green-check-proving-nothing shape this repo keeps stamping out. An honest sentence that a human
+reads beats a gate that is structurally blind to a third of the failure population.
+
+That argument now lives in `CLAUDE.md` rather than only here, so it is inherited rather than
+re-derived. **If someone later proposes a gate, the burden is to show it can see the in-flight
+class** — not merely to observe that the contract is unguarded, which is already stated.
+
+### Correction to the census in this file
+
+Re-measured at `67ed8767b`. The counts held — 13 sites, 8 optional-call, 5 plain — but one
+citation was rotted: **`shutdown_child()` is at `src-tauri/src/main.rs:1182`, not `:1158`**. Line
+1158 is its doc comment. Called at `:9631` from the `RunEvent::Exit` arm (`:9629`).
+
+The grep trap in item 3 also fired live during that verification, which is the best argument for
+having written it down: a first pass reported "7 plain sites" because bare `grep unref` counts the
+in-situ comment prose. Match both spellings **and** strip comment lines.
+
+### Why this was briefly left open, and why that was wrong
+
+`260913-ty4` shipped item 1 and left the file in `pending/` reasoning that item 2 was "an explicit
+deliberate-decision fence." That conflated *do not add a gate reflexively* (how to decide) with
+*no decision has been made* (a claim about state). The decision had in fact been made and written
+into `CLAUDE.md` in the same commit. Leaving the placeholder behind made the title false at HEAD
+and kept a `ready: code` item in `pending/` with nothing code-ready in it — polluting the exact
+`grep -l 'ready: code'` query the triage convention exists to serve. Recorded because the shape
+recurs: shipping the work and keeping the ticket is not conservatism, it is a stale claim.
+
+---
+
+## What remains (ORIGINAL TEXT — superseded by the resolution above)
 
 1. **Write the contract down once, centrally** — most likely a `CLAUDE.md` convention
    alongside the two-profile rule, derived from the `installedJsonWatcher.ts:133-142` comment
