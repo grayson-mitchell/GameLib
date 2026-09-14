@@ -205,6 +205,69 @@ experiment carrying state capable of masking a defect. If a run is too slow, pin
 stub the network — never recycle a profile. Reuse is permitted only as an explicitly-named opt-in
 for a test whose _purpose_ is warm-path behaviour, justified at the call site.
 
+### The sidecar's exit contract (stdin owns its lifetime)
+
+> **No handle may hold a reference to the event loop past stdin EOF.**
+
+The sidecar has **no explicit shutdown path, and does not need one.** Its lifetime is owned by
+stdin — the RPC frame stream — and it exits by **event-loop drain** when the shell closes that
+stream. `startRpcServer()` therefore has no `'end'`/`'close'` handler _by design_: there is
+nothing to hang a teardown on, and adding one misunderstands the mechanism rather than hardening
+it. The Rust shell reaps the child separately — `shutdown_child()` (`src-tauri/src/main.rs:1182`,
+called at `:9631` from the `RunEvent::Exit` arm) SIGTERMs the whole process group, polls
+`try_wait()` through a bounded grace period, then SIGKILLs. That is the **backstop for a sidecar
+that will not leave, not the normal path**; anything that ever misses that kill leaves an orphan
+holding an authenticated session.
+
+Because exit is by drain, that one invariant carries the whole design — and it has **two halves**.
+
+**1. `unref()` every handle you create.** Timers, watchers, sockets, child handles: anything libuv
+counts. `unref()` does not stop the handle working. It only says _"do not keep the process alive
+FOR ME."_ For the whole of the sidecar's real life stdin holds the loop open, so behaviour with a
+live Rust peer is unchanged; only the no-peer, stdin-EOF case can now exit. This half is derived
+from the in-situ comment at `installedJsonWatcher.ts:133-149`, which states it in full.
+
+**2. Do not leave unbounded in-flight work at boot.** This is the half that gets missed, and
+`unref()` is the **wrong tool** for it. Parked, idle sockets are already unreferenced and hold
+nothing; _in-flight_ requests are referenced by definition, and exit tracks their drain. A bare
+`axios.get` with no agent and no timeout cannot be fixed by unref'ing anything — it has to be
+bounded, or not issued at boot.
+
+**The contract is load-bearing, not theoretical — it has broken three times in three weeks:**
+
+| when                     | what referenced the loop                                     | how it was caught                                                  |
+| ------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------ |
+| 2026-08-29 (`ef77e4a1e`) | the `installed.json` `FSWatcher`                             | `smoke:sidecar` went red; bisection                                |
+| 2026-09-13 (`9e8e1b224`) | an un-`unref()`-ed 5-minute `setInterval` in `setPresence()` | a full day — **invisible to `process._getActiveHandles()`**        |
+| open (`260913-m9c`)      | ~5 in-flight boot downloads on `https.globalAgent`           | a `--report-on-signal` diagnostic report plus an async-hooks probe |
+
+The second row is why half 1 alone is not enough to state: Node multiplexes every JS timer onto a
+single internal `uv_timer_t` with no JS wrapper, so the obvious instrument reports nothing. The
+third row is a **different class** entirely, and is why half 2 has to be written down — someone
+reading only the in-situ comments would reach for `unref()` and it would not move the number.
+
+**What enforces this, honestly: almost nothing.** `pnpm smoke:sidecar`
+(`.github/workflows/test.yml:32`) is the only gate, and it is a blunt instrument for the job. It
+catches **total** failure to exit via its `ETIMEDOUT` arm but **not slow exit**:
+`STARTUP_TIMEOUT_MS` is 30s and `260913-m9c` measured cold boots at 27–39s, so the contract can be
+substantially violated while the gate stays green. It is also the named real-profile exemption of
+the two-profile rule above, so it runs warm locally and only ever sees the cold path in CI. **No
+test asserts the invariant.** The 13 `unref()` call sites across `src/` and `meta/` are 13 places
+someone had to remember this rule unprompted. This paragraph is most of the enforcement; do not
+read it as stronger than it is.
+
+**A gate is not obviously the answer, and is a separate, deliberate decision.** A source gate over
+`setInterval`/`setTimeout`/watcher creation would have caught **none of the three breaks cleanly**,
+and could not see the in-flight class at all — a gate that appears to cover more than it does is
+the green-check-proving-nothing pattern this project keeps stamping out. Decide it on its merits;
+do not add one reflexively.
+
+**Grep trap when auditing this.** `.unref?.()` is the dominant spelling — **8 of the 13** sites use
+the optional call, because jest's fake-timer substitute is not required to implement `unref()`. A
+census grepping `\.unref()` returns **5** real sites and looks complete; grepping bare `unref`
+sweeps in comment prose and inflates the count instead. Match both spellings _and_ strip comment
+lines, or the number you get will be confidently wrong in one direction or the other.
+
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
