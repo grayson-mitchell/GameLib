@@ -665,7 +665,7 @@ rather than as a fresh Tauri-only bug.
 **Source (two related, adjacent, but distinct minor UI items — cite both):**
 `.planning/todos/pending/2026-08-24-eos-remove-dialog-renders-as-a-native-system-dialog-not-app-styled.md`
 AND
-`.planning/todos/pending/2026-08-26-path-rejection-dialog-uses-an-oversized-large-text-window.md`
+`.planning/todos/completed/2026-08-26-path-rejection-dialog-uses-an-oversized-large-text-window.md`
 
 **Repro steps, sub-item (a) — EOS overlay removal dialog:**
 1. Open a Legendary/Epic game with the EOS overlay installed. Trigger "Remove overlay."
