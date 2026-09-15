@@ -56,6 +56,7 @@ import { toolsPath, userHome } from 'backend/constants/paths'
 import { isLinux, isMac, isWindows } from 'backend/constants/environment'
 import './dxmt'
 import { Game } from '../../common/types/game_manager'
+import { parseWinetricksListAll } from './winetricksListParse'
 
 type ReleasesResponse = {
   assets: {
@@ -554,7 +555,8 @@ export const Winetricks = {
     runner: Runner,
     appName: string,
     args: string[],
-    returnOutput = false
+    returnOutput = false,
+    envOverrides?: Record<string, string>
   ) => {
     // Imported lazily to break a circular dependency (tools/index.ts <->
     // storeManagers/index.ts) — see the load-bearing comment in
@@ -632,7 +634,12 @@ export const Winetricks = {
         PATH: `/opt/local/bin:/opt/homebrew/bin:${process.env.PATH}`
       }
 
-      const envs = isMac ? macEnvs : linuxEnvs
+      // envOverrides merges LAST so it wins over both platform branches.
+      // Defaults to undefined, which makes the spread a no-op -- the
+      // run/install/GUI call sites are byte-identical in behaviour to
+      // before this option existed. See listAvailable's LANG=C comment for
+      // why this exists at all.
+      const envs = { ...(isMac ? macEnvs : linuxEnvs), ...envOverrides }
 
       const executeMessages: string[] = []
       let progressUpdated = false
@@ -715,32 +722,28 @@ export const Winetricks = {
   },
   listAvailable: async (runner: Runner, appName: string) => {
     try {
-      const dlls: string[] = []
-      const outputDlls = await Winetricks.runWithArgs(
+      // `list-all` (quick-260915-ajd) replaces the old `dlls list` +
+      // `fonts list` pair: one wine invocation instead of two, it supplies
+      // `category` for free, and it stops silently dropping the apps,
+      // benchmarks and settings verbs winetricks can already install. The
+      // `===== prefix =====` block winetricks emits under `list-all` is
+      // intentionally discarded by parseWinetricksListAll (F-6) -- do not
+      // "restore" it later as a bug fix, it is category names, not verbs.
+      //
+      // LANG is the load-bearing variable here, not LC_ALL: winetricks_list_all
+      // switches on `case ${LANG} in` and localises the [downloadable]/
+      // [cached] flag words for several locales (F-4). LC_ALL=C is set too,
+      // belt-and-braces for any child tool, but would be inert alone. This
+      // override is scoped to ONLY this call -- the install path keeps the
+      // user's locale.
+      const output = await Winetricks.runWithArgs(
         runner,
         appName,
-        ['dlls', 'list'],
-        true
+        ['list-all'],
+        true,
+        { LANG: 'C', LC_ALL: 'C' }
       )
-      if (outputDlls) {
-        // the output is an array of strings, the first word is the component name
-        outputDlls.forEach((component: string) =>
-          dlls.push(component.split(' ', 1)[0])
-        )
-      }
-
-      const fonts: string[] = []
-      const outputFonts = await Winetricks.runWithArgs(
-        runner,
-        appName,
-        ['fonts', 'list'],
-        true
-      )
-      if (outputFonts) {
-        // the output is an array of strings, the first word is the font name
-        outputFonts.forEach((font: string) => fonts.push(font.split(' ', 1)[0]))
-      }
-      return [...dlls, ...fonts]
+      return parseWinetricksListAll(output ?? [])
     } catch {
       return []
     }
