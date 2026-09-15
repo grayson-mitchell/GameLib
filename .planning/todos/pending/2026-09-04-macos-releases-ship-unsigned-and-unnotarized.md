@@ -4,14 +4,55 @@ title: 'macOS releases ship UNSIGNED and un-notarized — no Apple signing secre
 area: build
 severity: major
 platform: macos
-ready: human
-needs: credentials-then-verify
+ready: live-gate
+needs: release-run-then-browser-download-verify
 status: OPEN
 found_by: 'Reconsideration of the two keyring-deferral todos, 2026-09-04 — asked "what actually governs Keychain prompt COUNT?" rather than "how do I implement this todo?"'
 source: '.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md (park note, finding 2)'
 files:
   - .github/workflows/release-tauri.yml
+  - src-tauri/entitlements.plist
+  - src-tauri/tauri.macos.conf.json
 ---
+
+## STATUS 2026-09-14 — credentials DONE and Apple-verified; "No code changes" was FALSE
+
+Apple Developer Program purchased 2026-09-14. **All six secrets are now enrolled** on
+`grayson-mitchell/GameLib` — `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`,
+`APPLE_SIGNING_IDENTITY` (04:57Z) and `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` (05:13Z).
+Identity `Developer ID Application: grayson mitchell (S7U223QWXJ)` — **the CN is lowercase**;
+enrol it byte-for-byte or it will not match at signing time. Team ID is derivable from the
+cert CN parens and never needs to be asked for.
+
+Credentials are verified *working*, not merely present:
+`xcrun notarytool history --keychain-profile gamelib` → `No submission history.` — an
+authenticated round-trip to Apple. A `gh secret list` proves only enrolment.
+
+**Steps 1–4 of Direction below are DONE. Step 5 (Windows) is split out** to
+`2026-09-14-windows-releases-ship-unsigned-no-windows-cert-enrolled.md`.
+
+### The Direction's "No code changes" was measurably wrong (quick-260914-vbw)
+
+Enrolling the certificate **armed a latent defect** rather than only fixing one. Signing
+implies hardened runtime; hardened runtime without `com.apple.security.cs.allow-jit` denies
+V8 its JIT code range; the sidecar is a Node SEA. A local signed build measured
+`flags=0x10000(runtime)` on both the outer `.app` **and** `Contents/MacOS/gamelib-sidecar`,
+with **no entitlements** attached. Running that real Developer-ID-signed sidecar:
+
+```
+exited rc=133  -> signal 5
+# Fatal process out of memory: Failed to reserve virtual memory for CodeRange
+```
+
+So the next release would have shipped an app whose sidecar cannot start — while signing,
+notarization and CI all reported success. Fixed in quick-260914-vbw by adding
+`src-tauri/entitlements.plist` and wiring `bundle.macOS.entitlements` in
+`src-tauri/tauri.macos.conf.json` (the **overlay**, not the base config — the base has no
+`macOS` key at all).
+
+**What remains is exactly the Verification section below**, which is why `ready:` is now
+`live-gate` rather than `human`: no decision or credential is outstanding, only a release run
+and an artifact check.
 
 ## Problem
 
@@ -70,11 +111,14 @@ A `v0.7.0` draft release exists (2026-08-28), so this is not hypothetical.
 
 ## Direction
 
-**No code changes.** `release-tauri.yml` already implements the full signing + notarization path and
-already fails soft with a warning rather than shipping something silently broken. It needs
-credentials, not edits.
+**~~No code changes.~~ SUPERSEDED 2026-09-14 — see the STATUS section above.** This claim was
+wrong, and wrong in a load-bearing way: it was true of `release-tauri.yml` (which does implement
+the full signing + notarization path and fails soft with a warning) but it was read as a claim
+about the *repo*, and the entitlements gap in `src-tauri/tauri.macos.conf.json` was invisible to
+it. Enrolling the cert armed a signal-5 sidecar crash. `release-tauri.yml` itself still needs no
+edits — everything below about it holds.
 
-1. Apple Developer Program membership (~$99/yr) if not already held.
+1. ~~Apple Developer Program membership (~$99/yr)~~ — **DONE 2026-09-14.**
 2. Create a **Developer ID Application** certificate (NOT "Mac App Distribution" — that is for the
    Mac App Store and will not satisfy Gatekeeper for direct download).
 3. Export it as `.p12`, base64-encode it, and enrol:
@@ -84,8 +128,10 @@ credentials, not edits.
      `Developer ID Application: NAME (TEAMID)`
 4. For notarization, enrol an app-specific password (appleid.apple.com, not the account password):
    - `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`
-5. Windows is in the same state (`WINDOWS_CERTIFICATE` et al. absent) — decide separately whether
-   it is in scope; the workflow has a dedicated skip-warning step for it (D-04).
+5. ~~Windows is in the same state~~ — **DECIDED 2026-09-14: split out.** Windows needs a separate
+   certificate purchase that the Apple licence does not cover, so it tracks independently in
+   `2026-09-14-windows-releases-ship-unsigned-no-windows-cert-enrolled.md`. The workflow's
+   dedicated skip-warning step for it (D-04) is unchanged.
 
 ## Verification — do not accept a green build as proof
 
