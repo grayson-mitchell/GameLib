@@ -814,6 +814,22 @@ export interface ToolArgs {
 
 export type StatusPromise = Promise<{ status: 'done' | 'error' | 'abort' }>
 
+// `publisher`/`year` are deliberately NOT split out into their own fields --
+// they stay embedded in `title` exactly as winetricks printed them (e.g.
+// "Adobe AIR (Adobe, 2019)"). With no publisher/year extraction there is no
+// leading `(` to anchor a regex on, which is what makes it structurally
+// impossible to truncate a title that carries its own parentheses (e.g.
+// "All codecs (dirac, ffdshow, ...) except wmp (various, 1995-2009)" --
+// quick-260915-ajd F-12). If a later plan adds `publisher`/`year`, it MUST
+// anchor on the LAST parenthesised group preceding the optional trailing
+// `[flags]`, never the first.
+export interface WinetricksComponent {
+  verb: string
+  title: string
+  category: string
+  cached: boolean
+}
+
 export interface GameScoreInfo {
   score: string
   urlid: string
