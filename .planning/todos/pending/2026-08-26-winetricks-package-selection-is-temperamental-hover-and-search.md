@@ -1,95 +1,141 @@
 ---
 created: 2026-08-26T18:10:00.000Z
-title: "UX FIX: the Winetricks search + package-selection interaction is temperamental — searching repeatedly and hovering is required before the panel commits a selection, and an Install click before that silently does nothing"
+title: "UX FIX (NARROWED 2026-09-15): the Winetricks search box needs repeated typing before it filters usably, and suggestion rows do not highlight under the pointer — the Install-click half shipped in 366e719bb"
 area: ui
 status: OPEN
 severity: major
 platform: any
-ready: code
+ready: live-gate
 files:
   - src/frontend/components/UI/Winetricks/index.tsx
-  - src/frontend/components/UI/Winetricks/WinetricksSearch.tsx
+  - src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx
   - src/frontend/components/UI/SearchBar/index.tsx
+  - src/frontend/components/UI/SearchBar/index.scss
+  - src/frontend/components/UI/SearchBar/searchProbe.ts
 ---
 
-## Observed
+**Filename deliberately retained despite the title change.** ~8 planning documents reference
+this file by its 2026-08-26 name (the 34.6 live gate, `35-10-SUMMARY.md`, `34.18-CONTEXT.md`,
+`43-CONTEXT.md`, the `260826-s2f` quick SUMMARY, and the `260905-upz` staleness audit).
+Renaming it would silently strand every one of those cross-references. Do not "tidy" the
+filename to match the title — the mismatch is intentional.
 
-Operator, 2026-08-26, driving the `34.6-LIVE-GATE.md` Step 4 re-drive (quick task `260826-s2f`),
-verbatim:
+## Status — NARROWED 2026-09-15
+
+The original four-item scope split, on evidence:
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Half B — "Install fires on first click" | **SHIPPED** | `366e719bb` (plan 35-25). A parent (`Winetricks/index.tsx`) `installing`/`loadingInstalled` state flip was remounting the whole `WinetricksSearchBar` mid-mousedown-to-mouseup; fixed by capturing install intent on `mousedown` instead of waiting for `click`. Live-proven: two real installs, `vcrun2005` and `vcrun2008`, in `gamelib.log`. |
+| Item 4 — "correct the stale 'proven by measurement' comment in `SearchBar/index.tsx`" | **SHIPPED** | That comment now carries a `ROOT CAUSE FOUND (Phase 35 Plan 25 ...)` retraction at `SearchBar/index.tsx:129-145`. |
+| Half B — "the highlight must track the mouse without the panel needing to react first" | **REMAINS** | Not touched by `366e719bb` (that commit's only change to `SearchBar/index.tsx` was the comment). |
+| Half A — "typing should filter to a usable result set on the first attempt" | **REMAINS, and never investigated** | Nothing in the record shows Half A was ever tried and failed — it was never opened. Every measurement taken since 2026-08-25 was aimed at the Install-click / highlight symptom, never at search filtering itself. |
+
+The 2026-08-24 todo this file cross-references
+(`.planning/todos/completed/2026-08-24-winetricksinstall-send-channel-is-a-live-silent-no-op.md`)
+is now closed — see that file's own `## RESOLVED 2026-09-15` section for the full mechanism.
+Most of the (A)/(B) IPC-transport narrowing that todo did on 2026-08-24 was itself overturned by
+its own later sections (the defect was never IPC at all); this file does not carry that refuted
+analysis forward. A pointer to the closed file replaces it.
+
+## What remains — Half A: the search box
+
+Carried forward verbatim from the operator, 2026-08-26:
 
 > "very painful, took hovering, typing in search multiple times until line highlighted and then
 > needed the panel to 'react' and allow mouse move to move the highlight"
 
-The install DID eventually succeed — `[GAMELIB_SIDECAR_SEND_HANDLER] winetricksInstall` fired and
-`winetricks -q comctl32ocx` ran. But reaching a committed selection took repeated searching and
-hovering, and the panel had to "react" before mouse movement would move the highlight.
+Two structural facts a future investigator gets for free, and should not re-derive by reading
+the same two files again:
 
-## Why this matters far more than a rough edge
+- `WinetricksSearchBar` (`Winetricks/WinetricksSearch/index.tsx`) has **no debounce at all** —
+  its `useEffect` filters synchronously on every keystroke, with `search.length < 2` as the
+  only gate.
+- `SearchBar` (`SearchBar/index.tsx`) drives its input **uncontrolled**: a native `'input'`
+  listener is attached in a `useEffect` whose dependency array is
+  `[input, value, onInputChanged]`, and a second effect writes `value` back into
+  `input.current.value` whenever it changes externally.
 
-This is the operator's attribution for **live-gate Step 4's original FAIL** — one of the two items
-that put `34.6-LIVE-GATE.md` at `verdict: FAIL 7/9`. In run 1 (2026-08-24) the operator clicked
-Install on a rendered `corefonts` row and **nothing was sent at all**: no D-11 observable, no
-`winetricks -q` invocation, not one byte written to `gamelib.log` for 14 minutes afterwards.
+That pairing — uncontrolled input, plus a value-syncing effect, plus a parent that re-renders
+per keystroke — is where a "needs several attempts" symptom would live **if** it turns out to
+be a code defect rather than a rendering-latency one. **This is stated as the place to LOOK,
+not as a diagnosis.** Nothing about Half A has been measured yet; treat it exactly as
+unexplored.
 
-That cost a full gap cycle to investigate and it is still formally unexplained. If a rendered row
-can be clicked while the panel holds no committed selection, a user gets a dead button with no
-feedback — the exact failure shape this project has hit before (the Phase 30 Steam logout button).
+## What remains — Half B: rows do not highlight under the pointer
 
-## Consistency with what was already measured — read this before re-investigating
+`.planning/todos/pending/2026-08-30-library-search-bar-suggestions-are-mouse-dead-until-a-tab-press.md`
+reports the identical non-highlighting symptom on the **Library** consumer of the same
+`SearchBar` primitive — a different consumer, and per that file's own analysis, not
+necessarily the same underlying cause as anything measured for winetricks. One instrument
+should be able to settle both at once, and that instrument now exists: see `## The instrument`
+below.
 
-`.planning/todos/pending/2026-08-24-winetricksinstall-send-channel-is-a-live-silent-no-op.md`
-narrowed the defect to **(B)**: the frame never reaches `dispatchSend`, strictly between the
-renderer's `window.api.winetricksInstall(...)` call and the sidecar's `handleFrame`. It
-individually EXCLUDED, by measurement: unported; missing from the bundle; stale build; undeclared in
-`SyncIPCFunctions`; Rust-side allowlist drop; the renderer's `declined` guard; the preload binding
-(`winetricksInstall:di` present in the running `build/preload/index.js`); and SyntheticEvent arg
-serialisation.
+## An explicitly UNPROVEN lead: this may be a CONTRAST defect, not a pointer defect
 
-A row that RENDERS but is not SELECTED is consistent with every one of those exclusions
-simultaneously — which is what makes this hypothesis the strongest one yet.
+The 2026-08-24 todo's PARKED section (item 6, dated 2026-08-25) recorded, verbatim: *"The row
+not visibly highlighting on hover is unexplained but may simply be `var(--accent)` being
+low-contrast in this theme — it was NOT treated as evidence."* It was set aside then and never
+taken up.
 
-**It is NOT proven.** No instrumented run has captured the failing and succeeding interactions side
-by side. This project has already had TWO explanations for this defect fail, the `:focus-within`
-theory having been withdrawn as DISPROVEN by live re-drive. Do not treat this todo as a diagnosis.
+Measured at planning time for this rewrite: the only hover styling anywhere on this surface is
+`SearchBar/index.scss:52-55`:
 
-## Scope: this is a FIX request, not only an investigation
+```scss
+&:hover {
+  background-color: var(--accent);
+  color: var(--background);
+}
+```
 
-Operator instruction, 2026-08-26: fix the search UX on the Winetricks panel. The two halves are one
-job and should be done together, because the search box is what produces the rows the selection
-state machine then fails to commit:
+`--accent` has **10** per-theme definitions in `src/frontend/themes.scss`, ranging from vivid
+(`#e0ab40`, `#00ddff`, `#ff9af7`) down to `#30444a` — a dark slate that would be near-invisible
+as a highlight rendered over a dark `--input-background`.
 
-**Half A — search.** Typing in the search box should filter to a usable result set on the first
-attempt. Today it takes several attempts before rows appear/behave, and the operator had to type
-repeatedly. Look at `WinetricksSearch.tsx` and the shared `SearchBar/index.tsx` for debounce,
-re-render and controlled/uncontrolled-value handling; note the search box is shared, so any change
-must not regress other consumers.
+**The consequence, stated sharply:** if this is a contrast defect, the row IS highlighting and
+the pointer IS reaching it, and every hypothesis in this codebase's history about
+pointer-events, overlays, and hit-testing on this surface is chasing a bug that does not exist.
+If it is NOT contrast, that whole family of hypotheses is back in play. These are different
+bugs with different fixes, and this is the cheapest observation that partitions the space —
+exactly what the 2026-08-24 todo said about it on 2026-08-25, before it was set aside.
 
-**Half B — selection.** A row that renders must be selectable on first hover/click, the highlight
-must track the mouse without the panel needing to "react" first, and **Install must never be
-clickable with no committed selection** — either disable it or fail loudly. A silent dead button is
-the failure shape this whole gap cycle was spent chasing.
+**Mark this `UNPROVEN`.** Do not write it up as the likely answer in any future work on this
+file — two confident answers about this surface (IPC transport, then `:focus-within` focus
+loss) have already been formed by code reading and both were wrong.
 
-Acceptance: open the panel cold, type one query, click one row, click Install — and have it work,
-once, without repetition.
+## The instrument
 
-## Suggested approach
+`src/frontend/components/UI/SearchBar/searchProbe.ts` (built by this same batch of work, quick
+task `260915-lhm`) is a default-OFF, opt-in live-measurement harness attached to the shared
+`SearchBar` suggestions list. Retrieval and drive instructions:
+`.planning/quick/260915-lhm-close-2026-08-24-winetricks-todo-narrow-/260915-lhm-PROBE-RETRIEVAL.md`.
 
-1. Read the selection state machine in `Winetricks/index.tsx` and `WinetricksSearch.tsx` — find
-   what actually commits a highlighted row, and whether Install can fire with none committed.
-2. If it can, that is the bug regardless of whether it explains Step 4: make Install either
-   disabled without a selection, or fail loudly.
-3. Only then attempt to reproduce run 1's silent no-op deliberately, which would finally settle the
-   cause.
-4. Note `SearchBar/index.tsx` still carries 34.6-16's `preventDefault` guard with a stale
-   "Proven by measurement / DO NOT REMOVE" comment (`34.6-REVIEW.md` WR-03) whose stated rationale
-   was disproven. Correct or remove that comment while in here — a false "proven" note is worse
-   than none.
+For THIS todo specifically, one drive answers the question in `## An explicitly UNPROVEN
+lead` above: it records, per hovered row, whether `li:hover` matches under the pointer at all,
+the computed background of the hovered row versus the surrounding `<ul>`, and the contrast
+ratio between them. It does not diagnose Half A (the search-filtering symptom) — it was built
+for the pointer/highlight question, not the debounce question.
+
+## Why this file is not closed
+
+Half A has never been investigated, and closing this file would bury that fact — a future
+reader searching `completed/` for "winetricks search" would find nothing, and Half A would be
+lost rather than merely unresolved. This file stays `status: OPEN` in `pending/` until both
+Half A and the highlight half of Half B have an actual measurement behind them, not before.
+
+`ready:` is changed from `code` to `live-gate` here, honestly rather than as bookkeeping: both
+remaining halves are characterised only by operator prose from a live drive, and this project
+has already had **three** hypotheses about this surface formed purely by code reading, all
+three wrong. Marking this `ready: code` would advertise it as desk-pickup-able when the first
+honest step on either remaining half is a live measurement on this Mac, not a code read.
 
 ## Notes
 
-No `resolves_phase:` — 34.6 is verified `passed` and must not auto-close this. Filed because the
-operator believed a todo for it already existed; a search of `pending/` and `completed/` found none,
-so without this file the cause identified during the Step 4 re-drive would have gone unowned.
+No `resolves_phase:` — 34.6 is verified `passed` and must not auto-close this file.
 
 Related: [[a-test-can-pin-the-defect-it-should-catch]] · the Step 4 SUPERSEDES section in
-`34.6-LIVE-GATE.md`.
+`34.6-LIVE-GATE.md` ·
+`.planning/todos/completed/2026-08-24-winetricksinstall-send-channel-is-a-live-silent-no-op.md`
+(closed 2026-09-15) ·
+`.planning/todos/pending/2026-08-30-library-search-bar-suggestions-are-mouse-dead-until-a-tab-press.md`
+(the Library consumer's symptom, and the instrument's other intended use).
