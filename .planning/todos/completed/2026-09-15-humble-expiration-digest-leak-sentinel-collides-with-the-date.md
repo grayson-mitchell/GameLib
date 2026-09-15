@@ -5,7 +5,9 @@ area: test
 severity: minor
 platform: any
 ready: code
-status: OPEN
+status: completed
+resolved: 2026-09-15
+resolved_by: "quick-260915-g9p"
 found_by: 'quick-260914-vbw, 2026-09-14 — appeared as a backend suite red while verifying an unrelated macOS entitlements change; measured pre-existing at baseline sha 7346ac7e6 in a clean worktree'
 files:
   - src/backend/humble/__tests__/expirationAlerts.test.ts
@@ -73,3 +75,41 @@ just as uninformative, and re-arms the same trap for whichever month collides ne
   clean worktree: fails there identically, with the same test name and message.
 - `2026-09-11-humble-keys-title-wrap-sort-label-and-owned-badge-contrast-unverified-live.md` —
   neighbouring Humble-keys work.
+
+## Correction — the premise was wrong
+
+This todo's own title claims "the EXPIRY DATE supplies" the `7` and reads that as a July date.
+Measurement done at execution time (quick-260915-g9p) found that claim false.
+
+The fixture is `expiration: '2026-08-01'` — **August 1**, not July. The `7` came from a
+**UTC-to-local timezone shift**, not from a legitimately-July date. `new Date('2026-08-01')`
+parses a bare `YYYY-MM-DD` string as UTC midnight; `.toLocaleDateString()` then renders it in the
+host's LOCAL timezone, and any zone west of UTC rolls that instant back to the previous calendar
+day:
+
+| TZ                  | rendered   |
+| ------------------- | ---------- |
+| UTC                 | 8/1/2026   |
+| Europe/Berlin       | 8/1/2026   |
+| Asia/Tokyo          | 8/1/2026   |
+| America/New_York    | 7/31/2026  |
+| America/Los_Angeles | 7/31/2026  |
+
+So the todo's own title is itself zone-dependent: "the expiry date supplies the `7`" is only true
+in western-hemisphere zones. In UTC or anything east of it, the rendered date never contains a
+`7` at all, and the previously-bare single-digit assertion would have passed regardless of
+whether a real leak existed — the flaw this todo names was present on both sides of that boundary.
+
+This means "freeze the date" (this todo's direction, item 3) was **necessary but not sufficient**.
+The fixture date was already a frozen literal — the test never read today's date — and a frozen
+bare date still renders differently per host zone. Pinning the fixture to a non-colliding month
+would have re-armed the identical trap for whichever month collides next in whichever zone runs
+the suite.
+
+The fix (quick-260915-g9p) closes the timezone axis directly: the test's expected value is now
+rendered by the exact same `new Date(iso).toLocaleDateString()` call used by the code under test,
+in the same process, so both sides shift together under any host timezone. No `TZ` environment
+variable is pinned anywhere — see the design rationale recorded in that plan's D-1. Distinctive
+sentinel tokens (`ZZ-LEAK-SENTINEL-REVEALED-ZZ` / `ZZ-LEAK-SENTINEL-KEYINDEX-ZZ`) replace the bare
+single-digit substring check named in this todo's Direction section, and each was observed failing
+for the right reason under a temporary, reverted injection into `buildDigestCopy`.
