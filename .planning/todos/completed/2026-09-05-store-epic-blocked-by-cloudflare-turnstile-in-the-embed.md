@@ -3,17 +3,65 @@ created: 2026-09-05T01:20:00.000Z
 title: '`/store/epic` — decide the Turnstile story before un-gating the embed'
 area: webview/store-embed
 needs: spike-then-decision-then-code
-status: OPEN
+status: completed
+resolution: wontfix
+resolved: 2026-09-15
+resolved_by: "quick-260915-hza"
 severity: minor
 platform: any
 ready: human
 blocks: nothing
-origin: spike 024 (3 runs, 2026-09-05)
+origin: spike 024 (3 runs, 2026-09-05); interactive runs 4-5 added 2026-09-15
 files:
   - src/frontend/screens/WebView/storeEmbedOrigins.ts
   - src/frontend/screens/WebView/index.tsx
   - src/frontend/screens/WebView/components/WebviewUnavailablePanel.tsx
   - .planning/spikes/024-epic-store-in-embedded-child-webview/
+---
+
+## RESOLUTION — WONTFIX, 2026-09-15 (quick `260915-hza`)
+
+**The question below was answered: a human CAN click the Turnstile widget, and it does NOT clear.**
+The challenge re-issues. `/store/epic` stays gated exactly as it is — this is the outcome this
+todo itself named as "a perfectly good outcome", and the panel copy is already honest.
+
+| | Run 4 | Run 5 |
+|---|---|---|
+| Viewport at challenge | **969×58 — INVALID** | **986×630, pixel-verified** |
+| Steam positive control | not run | **rendered** |
+| Turnstile issuances | 4 (`68xxg`, `0ryr2`, `jqh5w`, `12326`) | 3 (`98ums`, `1tuf5`, `whqym`) |
+| Verdict | discard | clicked → **re-issued**, ~25 s and ~30 s apart |
+
+Evidence in the spike dir: `shot-epic-INTERACTIVE-challenge-run5.png` (Epic's "One more step" card,
+an **unchecked** `Verify you are human` box at full size) and `run-4-5-interactive.log`. That
+screenshot renders the operator's residential IP, so it is left unstaged pending redaction —
+GameLib is a public fork.
+
+**Three things this todo got wrong, recorded so the next reader does not inherit them:**
+
+1. **The measurement it asked for was impossible with the harness it pointed at.** The interactive
+   panel had buttons for the control origin, Steam and GOG but **no Epic** — Epic existed only in
+   the `SPIKE_AUTORUN` path, i.e. the unattended mode that cannot answer an interactive question.
+   This todo sat `ready: human` for ten days asking a human to click a button that did not exist.
+2. **"Six WebView suites name epic" — it is seven.** Moot now the un-gate branch did not fire, but
+   it would have under-scoped the sweep.
+3. **Run 4 nearly closed this as a false negative.** The embed was created at `h:630` and measured
+   `969×58` by the time the challenge was on screen, because `#logwrap`'s `flex: 0 0 170px` does
+   not stop a flex item expanding to its content height. Spike 024 had **already recorded that
+   defect as a known limitation and never fixed it**, and it then invalidated the very run it was
+   blocking. Fixed in `35309eb4e`. The nav log could never have caught it: `set_embed_bounds` only
+   logs when `!quiet`, so `"category":"bounds"` entries number 0 across every session.
+
+**Not established, deliberately:** whether a different IP would clear it. Runs 1–5 share one
+residential IP, so they cannot separate "Tauri webview is blocked" from "this IP's reputation is
+spent". That needs a different network, and it would not change the decision — the gate cannot be
+conditional on a user's IP reputation.
+
+**Still open as its own item:** Epic's in-embed "Sign in" button (the second decision below). It
+was not touched and does not become moot, since it concerns the login surface, not browsing.
+
+**What would reopen this:** a change in Epic's Cloudflare posture, not a change in our code.
+
 ---
 
 ## Problem
