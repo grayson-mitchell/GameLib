@@ -7,6 +7,7 @@
       "../build/bin/legendary.LICENSE": "build/bin/legendary.LICENSE"
     },
     "macOS": {
+      "entitlements": "entitlements.plist",
       "files": {
         "Resources/build/bin/arm64/darwin": "../build/bin/arm64/darwin"
       }
