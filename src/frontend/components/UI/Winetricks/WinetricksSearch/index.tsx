@@ -29,7 +29,16 @@ export default function WinetricksSearchBar({
     if (search.length < 2) {
       setSearchResults([])
     } else {
-      let filtered = allComponents.filter((c) => c.verb.includes(search))
+      // Match the verb OR the human-readable title. Winetricks verbs are not
+      // guessable vocabulary (`vcrun2019`, `xact`, `art2kmin`), so a verb-only
+      // filter cannot find a component unless you already know its name. The
+      // comparison is case-folded because titles carry capitals ("Visual C++
+      // 2019 libraries") while the verb census is entirely lowercase -- folding
+      // the query therefore widens the title match without narrowing the verb one.
+      const query = search.toLowerCase()
+      let filtered = allComponents.filter(
+        (c) => c.verb.includes(query) || c.title.toLowerCase().includes(query)
+      )
       filtered = filtered.filter((c) => !installed?.includes(c.verb))
       setSearchResults(filtered)
     }

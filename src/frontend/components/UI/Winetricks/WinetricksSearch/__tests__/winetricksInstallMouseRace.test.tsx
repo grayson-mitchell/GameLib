@@ -276,3 +276,68 @@ describe('WinetricksSearchBar Install button mouse-click race (Phase 35 Plan 25)
     expect(onInstallClicked).toHaveBeenCalledWith('vcrun')
   })
 })
+
+describe('WinetricksSearchBar filters on the title as well as the verb', () => {
+  const components: WinetricksComponent[] = [
+    {
+      verb: 'vcrun2019',
+      title: 'Visual C++ 2019 libraries',
+      category: 'dlls',
+      cached: false
+    },
+    {
+      verb: 'corefonts',
+      title: 'MS Arial, Courier, Times fonts',
+      category: 'fonts',
+      cached: true
+    }
+  ]
+
+  // Returns the verbs rendered as suggestions for `query`. Reads them from the
+  // `<span>` each suggestion row renders, not from the element key -- `react` is
+  // mocked in this file, so key handling is not guaranteed to survive.
+  function matchedVerbs(query: string): string[] {
+    const props: Props = {
+      allComponents: components,
+      installed: [],
+      onInstallClicked: () => undefined
+    }
+    let tree = mount(props) as unknown as ElementLike
+    ;(tree.props.onInputChanged as (text: string) => void)(query)
+    // Two re-invocations for the same reason driveToSuggestion needs them: the
+    // filtering effect writes searchResults one render behind its own deps.
+    tree = reinvoke(props) as unknown as ElementLike
+    tree = reinvoke(props) as unknown as ElementLike
+
+    const items =
+      (tree.props as { suggestionsListItems?: unknown[] })
+        .suggestionsListItems ?? []
+    const verbs: string[] = []
+    walk(items as ReactNode, (el) => {
+      if (el.type === 'span' && typeof el.props.children === 'string') {
+        verbs.push(el.props.children)
+      }
+    })
+    return verbs
+  }
+
+  it('matches a query that appears ONLY in the title, never in the verb', () => {
+    // The whole point of carrying `title`. Under the previous verb-only filter
+    // this returned nothing: 'visual c++' is not a substring of 'vcrun2019'.
+    expect(matchedVerbs('Visual C++')).toEqual(['vcrun2019'])
+  })
+
+  it('returns nothing for a query matching neither verb nor title', () => {
+    // Non-vacuity control: proves the driver above can report an empty list, so
+    // the assertions either side of it are not passing by construction.
+    expect(matchedVerbs('zzzznotathing')).toEqual([])
+  })
+
+  it('still matches on the verb', () => {
+    expect(matchedVerbs('corefonts')).toEqual(['corefonts'])
+  })
+
+  it('folds case, so a capitalised query still matches a lowercase verb', () => {
+    expect(matchedVerbs('VCRUN2019')).toEqual(['vcrun2019'])
+  })
+})
