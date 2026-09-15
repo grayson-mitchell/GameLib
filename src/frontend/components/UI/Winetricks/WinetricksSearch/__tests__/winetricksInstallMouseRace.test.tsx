@@ -28,6 +28,7 @@
  * React element graph, re-invoking to observe state written by effects.
  */
 import type { ReactElement, ReactNode } from 'react'
+import type { WinetricksComponent } from 'common/types'
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -128,7 +129,7 @@ function harness(): HookHarness {
 }
 
 interface Props {
-  allComponents: string[]
+  allComponents: WinetricksComponent[]
   installed: string[]
   onInstallClicked: (component: string) => void
 }
@@ -181,7 +182,20 @@ describe('WinetricksSearchBar Install button mouse-click race (Phase 35 Plan 25)
     onInstallClicked: (c: string) => void
   ): ElementLike {
     const props: Props = {
-      allComponents: ['vcrun', 'corefonts'],
+      allComponents: [
+        {
+          verb: 'vcrun',
+          title: 'Visual C++ Runtime',
+          category: 'dlls',
+          cached: false
+        },
+        {
+          verb: 'corefonts',
+          title: 'MS Core Fonts',
+          category: 'fonts',
+          cached: true
+        }
+      ],
       installed: [],
       onInstallClicked
     }

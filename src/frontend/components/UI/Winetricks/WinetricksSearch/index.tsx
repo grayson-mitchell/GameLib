@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import SearchBar from '../../SearchBar'
 import { useTranslation } from 'react-i18next'
+import type { WinetricksComponent } from 'common/types'
 
 interface Props {
-  allComponents: string[]
+  allComponents: WinetricksComponent[]
   installed: string[]
   onInstallClicked: (component: string) => void
 }
@@ -20,16 +21,16 @@ export default function WinetricksSearchBar({
   const onInputChanged = (text: string) => {
     setSearch(text)
   }
-  const [searchResults, setSearchResults] = useState<string[]>([])
+  const [searchResults, setSearchResults] = useState<WinetricksComponent[]>(
+    []
+  )
 
   useEffect(() => {
     if (search.length < 2) {
       setSearchResults([])
     } else {
-      let filtered = allComponents.filter((component) =>
-        component.includes(search)
-      )
-      filtered = filtered.filter((component) => !installed?.includes(component))
+      let filtered = allComponents.filter((c) => c.verb.includes(search))
+      filtered = filtered.filter((c) => !installed?.includes(c.verb))
       setSearchResults(filtered)
     }
   }, [search])
@@ -68,23 +69,23 @@ export default function WinetricksSearchBar({
   // this time) does not double-invoke.
   const suppressNextClick = useRef(false)
 
-  const suggestions = searchResults.map((component) => {
+  const suggestions = searchResults.map((c) => {
     return (
-      <li key={component}>
-        <span>{component}</span>
+      <li key={c.verb}>
+        <span>{c.verb}</span>
         <button
           className="button"
           onMouseDown={(e) => {
             e.preventDefault()
             suppressNextClick.current = true
-            install(component)
+            install(c.verb)
           }}
           onClick={() => {
             if (suppressNextClick.current) {
               suppressNextClick.current = false
               return
             }
-            install(component)
+            install(c.verb)
           }}
         >
           {t('winetricks.install', 'Install')}

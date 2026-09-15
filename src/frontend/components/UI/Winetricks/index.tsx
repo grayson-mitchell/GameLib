@@ -4,7 +4,7 @@ import { ProgressDialog } from '../ProgressDialog'
 import WinetricksSearchBar from './WinetricksSearch'
 import { useTranslation } from 'react-i18next'
 import SettingsContext from 'frontend/screens/Settings/SettingsContext'
-import { Runner } from 'common/types'
+import { Runner, WinetricksComponent } from 'common/types'
 import type { IpcRendererEvent } from 'backend/platform'
 import {
   callOrDeclare,
@@ -54,7 +54,9 @@ export default function Winetricks({ onClose, runner }: Props) {
     listInstalled()
   }, [])
 
-  const [allComponents, setAllComponents] = useState<string[]>([])
+  const [allComponents, setAllComponents] = useState<WinetricksComponent[]>(
+    []
+  )
   useEffect(() => {
     async function listComponents() {
       setLoadingAvailable(true)
