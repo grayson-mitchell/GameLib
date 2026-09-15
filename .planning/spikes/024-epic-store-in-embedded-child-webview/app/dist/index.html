@@ -41,6 +41,10 @@
       <button onclick="createEmbed(CONTROL + '/set')">Create embed → control origin</button>
       <button onclick="createEmbed('https://store.steampowered.com/app/440/Team_Fortress_2/')">Create embed → Steam store</button>
       <button onclick="createEmbed('https://www.gog.com/en/games')">Create embed → GOG store</button>
+      <!-- 024 interactive arm: the autorun path reaches Epic, the panel never did.
+           Answering "can a human click through the Turnstile widget?" needs a button. -->
+      <button onclick="createEmbed('https://www.epicgames.com/store/en-US/')">Create embed → Epic store (configured URL)</button>
+      <button onclick="createEmbed('https://store.epicgames.com/en-US/')">Create embed → Epic store (store. host)</button>
       <button onclick="call('destroy_embed', {label: 'store-embed'})">Destroy embed</button>
       <label class="chk"><input type="checkbox" id="spoofUa" checked> spoof Chrome UA</label>
       <label class="chk"><input type="checkbox" id="isolated"> isolated data store</label>
