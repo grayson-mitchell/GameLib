@@ -412,6 +412,33 @@ export default function GamesSubmenu({
               )}
             </button>
           )}
+          {/* quick-260916-cdb: demoted from a primary-row MainButton door.
+              `sideload` and `thirdPartyManagedApp` games never reach
+              DownloadDialog (`InstallModal/index.tsx:629`, `:706-761`), so
+              this is their ONLY door into import — do NOT add an
+              `isThirdPartyManaged` exclusion here (D-02). Steam stays
+              excluded: `steam/games.ts:945` throws "not implemented" for
+              import. */}
+          {!isInstalled && !isSteam && (
+            <button
+              onClick={() =>
+                openInstallGameModal({
+                  appName,
+                  runner,
+                  gameInfo,
+                  action: 'import'
+                })
+              }
+              disabled={is.installing || is.importing || is.queued}
+              className="link button is-text is-link buttonWithIcon"
+            >
+              <FindInPageIcon />
+              {tGamelib(
+                'gamelib:installFlows.importDoorLabel',
+                'Locate existing installation…'
+              )}
+            </button>
+          )}
           {isInstalled && (
             <>
               <button
