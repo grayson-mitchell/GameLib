@@ -312,7 +312,14 @@ describe('MainButton — D-21 split button (steam)', () => {
     expect(openInstallGameModal).not.toHaveBeenCalled()
   })
 
-  it('S9: the Import button is still absent for Steam and still present for gog', () => {
+  it('S9 (quick-260916-cdb): the Import button is absent for Steam AND for gog — demoted to GameSubMenu for every runner', () => {
+    // Superseded by the 2026-09-16 operator decision: the Import door is no
+    // longer a MainButton primary-row button for ANY runner, Steam or
+    // otherwise — it was demoted into GameSubMenu (D-02). This suite's own
+    // sibling, `MainButton.importDemotion.test.tsx`, is the dedicated gate on
+    // that demotion; this spec is kept only so this suite's own caret-vs-
+    // import discriminator (the class-based predicate below) does not go
+    // stale on a reader who does not know the door moved.
     const steamTree = invoke(makeGameInfo({ runner: 'steam' }))
     const steamImport = findAll(
       steamTree,
@@ -337,7 +344,7 @@ describe('MainButton — D-21 split button (steam)', () => {
         (n.props as { className?: string }).className ===
           'button mainBtn outline'
     )
-    expect(gogImport).toHaveLength(1)
+    expect(gogImport).toHaveLength(0)
   })
 
   it('S10 (34.13 review C-04): renders NO caret for a DELISTED Steam game', () => {
