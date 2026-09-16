@@ -538,7 +538,11 @@ top of it.
 verified directly against source files, project memory (dated and flagged as point-in-time), or
 CONTEXT.md/UI-SPEC's own locked text.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All four questions below were resolved during planning of this phase. Each carries an inline
+> **Resolved** note naming the plan and the mechanism that answered it. Nothing in this section
+> is outstanding.
 
 1. **Should `winetricks.loading` be added to D-20's removal set?**
    - What we know: it's the 9th key in the `translation.json` `winetricks` block, orphaned by
@@ -549,6 +553,7 @@ CONTEXT.md/UI-SPEC's own locked text.
      `.loading-available`) as part of the D-11/D-20 implementation task and decide explicitly;
      this research's grep found zero other consumers, suggesting it should be added to the
      removal set as a 6th key.
+   - **Resolved (plan 44-06):** yes. 44-06 removes **6** keys, not 5 — `winetricks.loading` is included, on the strength of the grep census run in 44-05 (D-20(a)), which must show zero surviving consumers for all 6 before any removal.
 
 2. **How should per-row Errored-state attribution be implemented?**
    - What we know: the existing `' err'` string heuristic works on individual log lines in a
@@ -558,6 +563,7 @@ CONTEXT.md/UI-SPEC's own locked text.
    - Recommendation: plan this as its own explicit task (a pure derivation function taking the
      log array + the currently-installing verb + install history, returning a `Record<verb,
      RowStatus>`), with its own unit tests — not folded silently into "port the heuristic".
+   - **Resolved (plan 44-01):** a dedicated pure derivation, `attributeProgressEvent(current: VerbErrorMap, payload: { messages, installingComponent }) => VerbErrorMap`, exported alongside `deriveRowState()` and `clearVerbError()` and covered by its own unit tests — not folded into the ported `' err'` heuristic.
 
 3. **What replaces `hideProgress`'s `!loadingInstalled` term once D-17 ships?**
    - What we know: the current expression conflates "still loading initial data" with "a
@@ -568,6 +574,7 @@ CONTEXT.md/UI-SPEC's own locked text.
      should explicitly define the new state shape (e.g. `hasInstalledData: boolean` +
      `isRevalidatingInstalled: boolean`) rather than leaving `hideProgress` to be patched
      reactively after the fact.
+   - **Resolved (plan 44-05):** the one `loadingInstalled` boolean splits into three — `hasInstalledData` (sticky, first load only), `isRevalidatingInstalled` (drives the stale-while-revalidate overlay only, never a mount) and `hasAttemptedInstall` (sticky per dialog session). `hideProgress` is redefined against all three.
 
 4. **Does the curated-verb parser fixture (D-03) need to be built, or does one already exist?**
    - What we know: `src/backend/tools/__tests__/winetricksListParse.test.ts`'s existing fixtures
@@ -580,6 +587,7 @@ CONTEXT.md/UI-SPEC's own locked text.
      realistic multi-category chunk containing all 8 curated verbs, or add a small dedicated
      fixture under the new component's `__tests__/` — either satisfies D-03's letter, but the
      planner should pick one explicitly rather than leaving it to be discovered at execution time.
+   - **Resolved (plan 44-01, Task 3):** extend the existing `src/backend/tools/__tests__/winetricksListParse.test.ts` fixture with a realistic multi-category chunk covering all 8 curated verbs, plus D-03's curated-resolution assertion. No new fixture file.
 
 ## Environment Availability
 
