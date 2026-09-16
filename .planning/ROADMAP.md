@@ -5208,13 +5208,30 @@ and routed to the zenity GUI rather than silently failing under `-q`.
 **Plans:** 8 plans in 6 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 44-01-PLAN.md — pure verb/state seams in `src/common/winetricks/`: curated + Needs-GUI constants, row-state precedence, per-verb error attribution, D-03 parser fixture (wave 1)
 - [ ] 44-02-PLAN.md — English copy contract: 13 `winetricksBrowse` keys in `en/gamelib.json`, gamelib gate baseline measured for 44-06 (wave 1)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 44-03-PLAN.md — `WinetricksBrowse/Row/`: six-state action slot, metric parity, token chains, D-19 mouse-race port (wave 2)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 44-04-PLAN.md — `WinetricksBrowse/` container: search chrome, curated + category groups, flat results, single scroll region (wave 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 44-05-PLAN.md — rewire `Winetricks/index.tsx`: remove both mount gates, split the loading state, retire `installedWrapper`, delete `WinetricksSearch/`, D-18 revert-to-red proof (wave 4)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 44-06-PLAN.md — locale catalogs: fill 13 keys × 48 locales, remove 6 orphaned `winetricks.*` keys × 47 dirs (wave 5)
 - [ ] 44-07-PLAN.md — i18n gate artifacts mirror the add/delete; fold Half A then close the 2026-08-26 and 2026-09-15 todos (wave 5)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
 - [ ] 44-08-PLAN.md — D-22 live gate (two measurements) + D-24 theme spot-check — **not autonomous** (wave 6)
 
 ---
