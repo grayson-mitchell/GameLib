@@ -58,6 +58,23 @@ misses, and — most importantly — **wrong hits**. The answer is empirical and
 
 ## Q2 — What does migrating from CheapShark to IsThereAnyDeal actually cost?
 
+> **ANSWERED — SPLIT VERDICT.** Full findings, graded MEASURED / SPEC / UNKNOWN, in
+> `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md`.
+>
+> - **StoreSearch price-checker: migrate.** Phase 20's provider-neutral types survive
+>   essentially intact; `SEARCH_CURRENCY = 'USD'` is close to the only line that dies.
+> - **Discounts screen: do NOT build yet.** ITAD's terms forbid building "a competition to
+>   IsThereAnyDeal" — a full deals-browsing screen plausibly qualifies. This needs a written
+>   reply from `api@isthereanydeal.com`, not code.
+> - **Sleeper cost:** the rate limit (SPEC: 1000 req/5min) is per-key, and one key ships in the
+>   binary — shared across every GameLib install. A result cache becomes required, not optional.
+> - **MEASURED good news:** the Steam AppID → ITAD gid batch lookup works with no API key
+>   (`POST /lookup/id/shop/61/v1`) — better than CheapShark's per-result `steamAppID`.
+> - **UNKNOWN:** the list of covered countries/currencies. The region mechanism (a per-request
+>   `country` param) is SPEC and maps 1:1 onto `CatalogLocaleSettings.countryCode`, but a
+>   14-country sweep returned an identical 34-shop list every time, disproving that endpoint as
+>   a coverage measure — coverage still needs a registered key.
+
 **Raised:** 2026-07-12 (/gsd-explore — aggregated store search)
 **Blocks:** Productionising Phase 20 (Aggregated Store Search) for non-US users; gates the
 aggregated-discovery seed (`.planning/seeds/aggregated-discovery-multi-provider-deals.md`)

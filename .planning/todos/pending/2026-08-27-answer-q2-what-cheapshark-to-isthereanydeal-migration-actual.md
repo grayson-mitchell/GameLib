@@ -13,86 +13,67 @@ files:
   - src/backend/storeSearch/cheapshark.ts:29
   - src/backend/discounts/fetchDiscounts.ts
   - src/common/types/discounts.ts:24
+  - .planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md
 ---
 
 ## Problem
 
-`.planning/research/questions.md` Q2 has been open since 2026-07-12 and is still
-unanswered. It now blocks two things at once, which is why it is worth doing.
+The research is now done — `.planning/research/questions.md` Q2 is marked ANSWERED and the
+full findings live in
+`.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md`.
+What is left is not research, it is three human actions that code cannot substitute for. This
+todo stays open and `ready: human` for exactly that reason.
 
-### 1. The USD-only debt is live in shipped code
+## What is now answered
 
-`src/backend/storeSearch/cheapshark.ts:29`:
+- **Access** is self-service at `isthereanydeal.com/apps/my/`, but the terms carry a "MUST NOT
+  build a competition to IsThereAnyDeal" clause (**SPEC**) — see the human gate below.
+- **Region** is a per-request `country` param (ISO 3166-1 alpha-2) that maps 1:1 onto
+  `CatalogLocaleSettings.countryCode` — no translation layer needed (**SPEC**).
+- **Rate limits** are 1000 req / 5 min *per key*, and GameLib ships one key in the binary, so
+  that budget is shared across the whole user base (**SPEC**) — see the key-strategy gate below.
+- **Steam AppID matching works exactly and in batch, with no API key** — `POST
+  /lookup/id/shop/61/v1` returned real gids for real AppIDs this session (**MEASURED**). This is
+  strictly better than CheapShark's per-result `steamAppID`.
+- **The interface delta is small.** `buildRedirectUrl()` and the Phase 20 double-encoding
+  pitfall both delete themselves — ITAD returns a complete, verbatim deal URL instead.
 
-```ts
-/** D-13: the single place CheapShark's USD-only knowledge is applied. */
-const SEARCH_CURRENCY = 'USD'
-```
+Point at RESEARCH.md for the field-by-field detail; this file only needs the headline.
 
-CheapShark was chosen for Phase 20 deliberately — no API key, no approval, public
-JSON — with the USD-only cost accepted knowingly. The consequence is a **live
-inconsistency inside the app**: the StoreSearch screen shows a UK user dollars,
-while the GOG Deals tab shows the same user pounds correctly via
-`CatalogLocaleSettings = { countryCode, locale, currencyCode }`. The prototype
-provider is strictly less capable than the app around it.
+## What is still open — three human actions
 
-### 2. It gates the multi-provider Deals decision (surfaced 2026-08-27)
+1. **Register an ITAD app** at `isthereanydeal.com/apps/my/`. Needs a human account. Unblocks
+   the country/currency coverage measurement, which is still **UNKNOWN** (a 14-country sweep of
+   `/service/shops/v1` returned an identical 34-shop list for every country, which disproves
+   that endpoint as a coverage measure), and any live test of search / prices / deals.
+2. **Email `api@isthereanydeal.com`** about the "MUST NOT build a competition to IsThereAnyDeal"
+   clause — describe GameLib as a desktop launcher and ask explicitly whether an in-app
+   aggregate deals browser is permitted. **This gates the Discounts-screen half only** — it
+   blocks nothing about the StoreSearch price-checker.
+3. **Decide the shared embedded-key strategy** — request a raised limit, per-user keys, or a
+   GameLib-owned proxy. Each option has a friction or infra cost; this is a product decision,
+   not an implementation detail.
 
-Heroic v2.22.1 shipped GMG (`6d32bae8e`) and Humble (`728bd197e`) deals. Reviewed
-again this session; the 2026-08-15 operator decision **not to port them stands**,
-and the reasoning is now sharper than "they're Heroic's feeds":
+## What this does NOT authorise
 
-- Both providers read static JSON from
-  `raw.githubusercontent.com/Heroic-Games-Launcher/deals-listing/{gmg,humble}-feed/`.
-- That feed is produced by a nightly GitHub Action calling `api.impact.com` with
-  `Basic base64(AccountSID:AuthToken)`. **The mirror exists because those
-  credentials are revenue-bearing and cannot ship in a desktop binary** — not as
-  a caching preference. Heroic even strips the `Uri` field from the feed because
-  it embeds the partner Account SID in its path.
-- So adopting the client modules is inert without also becoming an impact.com
-  partner and running a GameLib-owned mirror repo. That is the real cost, and it
-  is the half a naive plan omits.
-- Secondary consequences of the static-feed shape: locale collapses to a fixed
-  per-currency fan-out (GMG 9 currencies, **Humble USD-only**), `hideOwned` /
-  `wishlistOnly` become impossible (no account to filter against), and prices run
-  up to ~48h stale (24h feed cron + 24h client `CacheStore`).
+Recording the answer is not permission to migrate. `src/backend/storeSearch/cheapshark.ts` is
+untouched and `SEARCH_CURRENCY = 'USD'` still ships. A migration needs its own plan.
 
-**ITAD is the alternative that makes the port unnecessary.** It is localised,
-multi-store, and exposes both a lookup API and a deals/browse API — so one live
-provider could serve the StoreSearch price-checker *and* replace the GOG-only
-Deals screen, with no mirror repo, no affiliate pipeline, and no staleness.
-That is a materially different plan from "port Heroic's two provider files", and
-it cannot be chosen until Q2 is answered.
+## The 2026-08-27 Heroic GMG/Humble reasoning (still live)
 
-## Solution
+Heroic v2.22.1 shipped GMG (`6d32bae8e`) and Humble (`728bd197e`) deals as static JSON mirrored
+from `raw.githubusercontent.com/Heroic-Games-Launcher/deals-listing/`, itself fed by a nightly
+GitHub Action calling `api.impact.com` with revenue-bearing credentials that cannot ship in a
+desktop binary — that mirror-repo requirement, not caching preference, is why adopting the
+client modules as-is is inert. The **2026-08-15 decision not to port them stands**, and two new
+findings now bear on it:
 
-Answer the five questions already specified in `questions.md:78-96`. Roughly a
-few hours: register an app, hit the endpoints, read the terms.
-
-1. **Access** — is the API key self-service/instant or approval-queued? Do the
-   terms of use permit a desktop game launcher? Attribution required? A hard gate
-   here changes the plan, and finding it late would hurt.
-2. **Currency & region coverage** — which countries/currencies actually return
-   prices, and how is region passed (param / key config / account setting)? Does
-   it map onto the existing `CatalogLocaleSettings`, or is a translation layer
-   needed?
-3. **Rate limits & caching** — per-key limits, and whether a per-keystroke search
-   box is viable or must be debounced/cached hard. Shapes the UX, not just the
-   backend. (`useDebouncedStoreSearch` already exists.)
-4. **Identity/matching** — does ITAD expose a Steam AppID the way CheapShark's
-   `steamAppID` does? That field is what makes the "you already own this" badge
-   exact rather than fuzzy for Steam titles. Losing it pushes everything onto
-   fuzzy title matching and raises false-positive risk materially.
-5. **Interface delta** — how much of the Phase 20 provider interface survives?
-   Goal is to keep CheapShark-specific damage contained inside the adapter rather
-   than leaked into shared types and IPC payloads.
-
-**Additionally (new, from the 2026-08-27 review):** check whether ITAD's
-deals/browse endpoint can back the Discounts screen, not just search. If yes,
-this stops being a provider swap and becomes the answer to
-[[aggregated-discovery-multi-provider-deals]] as well — the seed's step 2 already
-names ITAD as the preferred aggregate source over CheapShark for exactly this
-reason.
-
-Record the answer in `questions.md` Q2 (mark ANSWERED with findings, as Q3 was),
-then decide the Deals direction from it.
+- **ITAD's 34-shop list subsumes GMG, Humble, GOG, Epic, Steam, and Fanatical with no mirror
+  repo, no impact.com partnership, and no affiliate pipeline (MEASURED).** `hideOwned` /
+  `wishlistOnly` — impossible under the static-feed model because there is no account to filter
+  against — become possible via ITAD OAuth (**SPEC**).
+- **Amazon Games is absent from ITAD's shop list (MEASURED).** GameLib supports Amazon as a
+  first-class store; ITAD does not track it. An ITAD-backed Discounts screen would be
+  structurally blind to one of GameLib's four stores. Do not let the good news above land
+  without this caveat — it is the reason "ITAD subsumes both Heroic feeds" is not the whole
+  story.

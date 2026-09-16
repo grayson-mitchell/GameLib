@@ -94,7 +94,12 @@ screen fast. Recording it so future-you knows it was a choice, not an oversight:
 - Do not let USD-only leak outward as an assumption in shared types, IPC payloads, or the
   owned-badge logic. Contain it inside the CheapShark adapter.
 
-The migration cost is scoped in `.planning/research/questions.md` (IsThereAnyDeal migration).
+The migration cost is now measured — see `.planning/research/questions.md` Q2 and the full
+findings in
+`.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md`.
+The knowingly-accepted debt turned out to be cheap: the provider-neutral types minted in Phase 20
+survive the migration essentially intact, and `SEARCH_CURRENCY = 'USD'` is close to the only
+line that dies.
 
 ## Flow, settled
 
