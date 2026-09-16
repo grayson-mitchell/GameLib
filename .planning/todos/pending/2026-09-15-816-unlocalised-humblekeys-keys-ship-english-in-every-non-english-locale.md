@@ -9,6 +9,8 @@ status: OPEN
 found_by: 'quick-260914-vbw, 2026-09-15 — PR #5 was the FIRST pull_request ever opened against fix/steam-native-install-stability, which is the only event that runs the ci/lint workflows. The red had been invisible for the whole of Phase 43.'
 files:
   - meta/__tests__/lintTranslations.test.ts
+  - meta/lintTranslations.ts
+  - meta/i18nCatalogPresenceBaseline.json
   - public/locales
 ---
 
@@ -28,12 +30,21 @@ ar.gamelib.humbleKeys.claimOnHumble: a new key is not localised and was not reco
   — fill it or regenerate the baseline
 ```
 
-Sampled keys: `claimOnHumble`, `claimOnStore`, `clearFilters`, `columnGame`, `columnKey`,
-`columnType`, `emptyBody`, `emptyHeading`, `filteredEmptyBody`, `filteredEmptyHeading`, …
+**Measured 2026-09-15 (quick `260915-srx`): 816 = 17 distinct keys × 48 non-English locales.**
+The full 17, not a sample: `claimOnHumble`, `claimOnStore`, `clearFilters`, `columnGame`,
+`columnKey`, `columnType`, `emptyBody`, `emptyHeading`, `filteredEmptyBody`,
+`filteredEmptyHeading`, `loginAndClaim`, `pickOnHumble`, `redeemableOnly`, `searchPlaceholder`,
+`sortAlphabetical`, `sortExpiringSoonest`, `sortLabel`.
 
-These are **Phase 43's unified Humble Keys list** strings (`feat(43-07)`, `feat(43-08)`). They were
-added to the English namespace without the locale fill or baseline regeneration this project's
-standing localisation requirement demands.
+These are **Phase 43's unified Humble Keys list** strings, added to the English namespace without
+the locale fill or baseline regeneration this project's standing localisation requirement demands.
+
+**Attribution corrected.** This todo originally credited `feat(43-07)` and `feat(43-08)`. Replaying
+each commit's `humbleKeys` block gives **13 keys from `feat(43-07)`, 3 from `feat(43-06)`, 1 from
+`feat(43-09)`** — `43-08` contributed none. Do not re-derive this with `git log -S`: a file-wide
+`git log -S'"emptyHeading"'` blames `feat(34.11-08)`, because `library.filterPanel.emptyHeading`
+and `.emptyBody` are same-named leaves elsewhere in the same catalog and `-S` counts occurrences
+across the whole file, not within the `humbleKeys` block.
 
 ## Why it matters
 
@@ -46,20 +57,65 @@ standing localisation requirement demands.
    only stale `CLA Assistant` failures from 2026-09-02. No PR was ever opened for that branch, so
    the gate that exists for exactly this defect never ran. It surfaced only because an unrelated
    macOS-entitlements PR happened to be the first one opened.
-3. **816 is a count of findings, not of keys.** Two tests each report 816, and the same key recurs
-   per locale — establish the real key count before sizing the work.
+3. ~~**816 is a count of findings, not of keys.**~~ **ANSWERED** — 17 keys × 48 locales. Size the
+   `gamelib` half of the work from 17, not 816.
+
+## The remedy this todo originally prescribed is NOT sufficient
+
+**Added 2026-09-15 (quick `260915-srx`).** Filling the 17 `gamelib` keys reaches zero findings and
+turns CI green **without materially closing the user-facing gap this todo describes.**
+
+`public/locales/*/translation.json` holds a second, larger block of fork-added Humble Keys strings —
+inherited Phase 13/14 debt from before the `gamelib` namespace split:
+
+- **84 `humbleKeys.*` keys in `en/translation.json`**, absent from **all 48** non-English locales
+  (46 locales have the file but lack every one of the keys; `br` and `sl` have **no
+  `translation.json` at all**).
+- **59 of those 84 are still referenced in `src/`** after the 43-07 collapse. Those are live
+  English strings on the same screen, in every non-English locale.
+- **25 appear unreferenced** and are probably dead after 43-07 collapsed the three tab screens
+  (`tabAll`, `tabSpares`, `sparesEmptyTitle`, `ownedBlock*`, `revealTitle`, …).
+
+**Why no gate sees this.** `meta/lintTranslations.ts:95` sets
+`FORK_OWNED_NAMESPACES = ['gamelib']`, and `meta/i18nCatalogPresenceBaseline.json` is
+`namespace: gamelib`. The upstream namespaces are excluded by construction, with an in-source
+rationale about not surfacing "a wall of unactionable Weblate-sourced gaps". That rationale is
+sound for genuine upstream Heroic strings — but these 84 are **fork content that happens to live in
+an upstream catalog**, so the exclusion's justification does not cover them. The gate is honest
+about what it measures; what it measures is simply not the thing this todo is about. Reaching zero
+findings is therefore not evidence the screen is localised.
 
 ## Direction
 
-1. Count the distinct keys and locales: the 816 is `keys × locales`, so the actual English-side
-   key set is far smaller. Size the fill from that, not from 816.
-2. Fill the locale entries, or regenerate the presence baseline — the failure message offers both
-   and they are **not** equivalent. Regenerating the baseline records the keys as known-missing and
-   turns the gate green **while the user-facing gap remains**. Filling is the fix; regenerating is
-   only appropriate for keys genuinely not intended for translation.
-3. Beware the recorded traps around this gate: new strings belong in `gamelib.json` rather than
-   `translation.json`; a baseline of 0 still requires filling every locale; and removing a key has
-   its own asymmetric breakage. Check those before bulk-editing.
+**Do the dead-key sweep first, or a third of the translation-namespace work is wasted.**
+
+1. **Sweep the 25 unreferenced `translation.json` keys.** Confirm each is genuinely unreachable
+   after 43-07 before deleting — and note that removing a locale key has its own asymmetric
+   breakage (the count is 47, not 49, and `da`/`id`/`nl` break differently). Deleting first means
+   the fill in step 3 covers 59 keys, not 84.
+2. **Fill the 17 `gamelib` keys across 48 locales.** This is the CI-red half and the smaller one.
+   Insert **order-preservingly** — `en` is sorted but several locales are not, so a global re-sort
+   reflows the file and turns a small diff into a large one.
+3. **Fill the surviving `translation.json` keys across 48 locales**, including creating
+   `translation.json` for `br` and `sl`, which have none. This is the half that actually makes the
+   screen non-English, and **no gate will tell you when it is done** — diff the key sets directly.
+4. **Do not regenerate the presence baseline as the fix.** The failure message offers "fill it or
+   regenerate", and the two are **not** equivalent: the baseline's own `reason` string says it is
+   "a RECORD of a known gap, not a permission to grow it". Regenerating turns the gate green while
+   the user-facing gap remains. It is only appropriate for keys genuinely not intended for
+   translation.
+5. **Decide, separately and on its merits, whether the gate's namespace scope should widen.**
+   Leaving `FORK_OWNED_NAMESPACES = ['gamelib']` means this exact defect can recur in
+   `translation.json` and stay invisible. Widening it wholesale would surface the genuine upstream
+   Weblate gaps the exclusion was written to suppress. A scoped third option exists — gate only the
+   *fork-added* key prefixes within the upstream namespaces — but that needs a decision, not a
+   reflex. **This is a separate change from the fill; do not bundle it.**
+
+**Recorded traps that apply to all of the above:** new strings belong in `gamelib.json`, not
+`translation.json`; a baseline at `totalPairs: 0` means any unfilled key is an immediate red; the
+sanctioned `pnpm machine-fill-gamelib` path was last measured returning **HTTP 401** on the key in
+`~/.gamelib.env`, so plan on hand-filling (which is legal and has been done before) rather than
+budgeting for the machine fill.
 
 ## Verification
 
