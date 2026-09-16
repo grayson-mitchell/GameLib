@@ -107,6 +107,9 @@
         "refresh-rating": "Opdater vurdering"
     },
     "installFlows": {
+        "importConfirmLabel": "Brug denne installation",
+        "importDoorLabel": "Find eksisterende installation…",
+        "importExplainer": "Har du allerede dette spil på disken — fra en anden launcher, eller et andet drev? Peg på de filer i stedet for at downloade det igen.",
         "pathRejectedBodyImport": "GameLib kunne ikke importere fra den placering. Kilden skal være en fuld mappesti uden \"..\"-trin i den. Vælg spillets mappe igen.",
         "pathRejectedBodyMove": "GameLib kunne ikke flytte dette spil dertil. Destinationen skal være en fuld mappesti uden \"..\"-trin i den. Vælg destinationsmappen igen.",
         "pathRejectedTitle": "Kan ikke bruge den placering"

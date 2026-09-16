@@ -107,6 +107,9 @@
         "refresh-rating": "Athnuaigh an rátáil"
     },
     "installFlows": {
+        "importConfirmLabel": "Úsáid an suiteáil seo",
+        "importDoorLabel": "Aimsigh suiteáil atá ann cheana…",
+        "importExplainer": "An bhfuil an cluiche seo agat cheana ar an diosca — ó sheoltóir eile, nó ó thiomántán eile? Cuir in iúl na comhaid sin in ionad é a íoslódáil arís.",
         "pathRejectedBodyImport": "Níorbh fhéidir le GameLib iompórtáil ón suíomh sin. Caithfidh an fhoinse a bheith ina cosán fillteáin iomlán gan aon chéimeanna \"..\" ann. Roghnaigh fillteán an chluiche arís.",
         "pathRejectedBodyMove": "Níorbh fhéidir le GameLib an cluiche seo a bhogadh ansin. Caithfidh an ceann scríbe a bheith ina cosán fillteáin iomlán gan aon chéimeanna \"..\" ann. Roghnaigh an fillteán ceann scríbe arís.",
         "pathRejectedTitle": "Ní féidir an suíomh sin a úsáid"

@@ -107,6 +107,9 @@
         "refresh-rating": "평점 새로고침"
     },
     "installFlows": {
+        "importConfirmLabel": "이 설치 사용",
+        "importDoorLabel": "기존 설치 찾기…",
+        "importExplainer": "이미 디스크에 이 게임이 있나요 — 다른 런처에서, 또는 다른 드라이브에서? 다시 다운로드하는 대신 해당 파일을 가리키세요.",
         "pathRejectedBodyImport": "GameLib가 해당 위치에서 가져올 수 없습니다. 원본 경로는 \"..\" 단계가 없는 전체 폴더 경로여야 합니다. 게임 폴더를 다시 선택하세요.",
         "pathRejectedBodyMove": "GameLib가 이 게임을 그곳으로 이동할 수 없습니다. 대상 경로는 \"..\" 단계가 없는 전체 폴더 경로여야 합니다. 대상 폴더를 다시 선택하세요.",
         "pathRejectedTitle": "해당 위치를 사용할 수 없습니다"

@@ -107,6 +107,9 @@
         "refresh-rating": "Actualizar valoración"
     },
     "installFlows": {
+        "importConfirmLabel": "Usar esta instalación",
+        "importDoorLabel": "Localizar instalación existente…",
+        "importExplainer": "Xa tes este xogo no disco — desde outro launcher, ou outra unidade? Indica eses ficheiros no canto de descargalo de novo.",
         "pathRejectedBodyImport": "GameLib non puido importar desde esa localización. A orixe ten que ser unha ruta de cartafol completa sen pasos \"..\" nela. Escolle de novo o cartafol do xogo.",
         "pathRejectedBodyMove": "GameLib non puido mover este xogo alí. O destino ten que ser unha ruta de cartafol completa sen pasos \"..\" nela. Escolle de novo o cartafol de destino.",
         "pathRejectedTitle": "Non se pode usar esa localización"

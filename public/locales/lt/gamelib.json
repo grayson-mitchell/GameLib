@@ -107,6 +107,9 @@
         "refresh-rating": "Atnaujinti įvertinimą"
     },
     "installFlows": {
+        "importConfirmLabel": "Naudoti šį diegimą",
+        "importDoorLabel": "Rasti esamą diegimą…",
+        "importExplainer": "Ar jau turite šį žaidimą diske — iš kito leistuko, ar kito disko? Nurodykite tuos failus, o ne atsisiųskite iš naujo.",
         "pathRejectedBodyImport": "GameLib nepavyko importuoti iš tos vietos. Šaltinis turi būti pilnas aplanko kelias be „..“ žingsnių jame. Pasirinkite žaidimo aplanką dar kartą.",
         "pathRejectedBodyMove": "GameLib nepavyko perkelti šio žaidimo ten. Paskirties vieta turi būti pilnas aplanko kelias be „..“ žingsnių jame. Pasirinkite paskirties aplanką dar kartą.",
         "pathRejectedTitle": "Negalima naudoti tos vietos"

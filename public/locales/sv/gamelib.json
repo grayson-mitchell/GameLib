@@ -107,6 +107,9 @@
         "refresh-rating": "Uppdatera betyg"
     },
     "installFlows": {
+        "importConfirmLabel": "Använd den här installationen",
+        "importDoorLabel": "Hitta befintlig installation …",
+        "importExplainer": "Har du redan det här spelet på disken — från en annan launcher, eller en annan enhet? Peka på de filerna istället för att ladda ner det igen.",
         "pathRejectedBodyImport": "GameLib kunde inte importera från den platsen. Källan måste vara en fullständig mappsökväg utan \"..\"-steg i sig. Välj spelets mapp igen.",
         "pathRejectedBodyMove": "GameLib kunde inte flytta detta spel dit. Destinationen måste vara en fullständig mappsökväg utan \"..\"-steg i sig. Välj destinationsmappen igen.",
         "pathRejectedTitle": "Kan inte använda den platsen"

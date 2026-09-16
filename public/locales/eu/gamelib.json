@@ -107,6 +107,9 @@
         "refresh-rating": "Freskatu balorazioa"
     },
     "installFlows": {
+        "importConfirmLabel": "Erabili instalazio hau",
+        "importDoorLabel": "Bilatu dagoeneko dagoen instalazioa…",
+        "importExplainer": "Jokoa jada diskoan al duzu — beste abiarazle batetik, edo beste disko batetik? Seinalatu fitxategi horiek berriro deskargatu beharrean.",
         "pathRejectedBodyImport": "GameLib-ek ezin izan du kokapen horretatik inportatu. Iturburuak karpeta-bide osoa izan behar du, \"..\" pausorik gabe. Aukeratu berriro jokoaren karpeta.",
         "pathRejectedBodyMove": "GameLib-ek ezin izan du joko hau hara eraman. Helmugak karpeta-bide osoa izan behar du, \"..\" pausorik gabe. Aukeratu berriro helmugako karpeta.",
         "pathRejectedTitle": "Ezin da kokapen hori erabili"

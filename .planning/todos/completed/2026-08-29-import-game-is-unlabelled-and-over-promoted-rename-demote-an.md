@@ -92,3 +92,50 @@ TBD — sequence once question 3 is settled:
 - `2026-08-24-importgame-does-not-validate-the-folder-matches-the-selected-game` — backend
   correctness; if import is deleted, that todo dies with it.
 - `2026-08-24-importgame-wineprefix-wineversion-not-contained-by-34-6-11` — same dependency.
+
+## Resolution
+
+Closed by `quick-260916-cdb`. The operator's 2026-09-16 decision on the open product question (item
+3) was **keep the feature; fix the label and the placement** — the "keep" branch of the
+recommendation on record above, decided explicitly rather than assumed:
+
+1. **Keep.** No backend, IPC or store-manager code touched. All five `importGame` implementations
+   (legendary, gog, nile, sideload, zoom) are unchanged; the sidecar flow and its path hardening are
+   untouched.
+2. **Label.** Three new self-describing English keys minted in `gamelib.json` under
+   `installFlows`: `importDoorLabel` ("Locate existing installation…", the door label used at both
+   remaining doors), `importConfirmLabel` ("Use this installation", the ImportDialog confirm
+   button — deliberately a DIFFERENT string from the door label so a user does not read the same
+   sentence twice in one flow), and `importExplainer` (the one line of explanatory copy item 2 of
+   the old Solution section asked for, now rendered inside `ImportDialog` above the path picker).
+   All three keys are filled, non-empty, across all 49 `gamelib.json` catalogs (en + 48 translated),
+   by hand — not machine-filled — so they are permanent under `machineFillGamelib.ts`'s
+   never-overwrite rule.
+3. **Placement.** The `MainButton.tsx` instance (the old `:399`/`button.import` primary-install-row
+   door referenced above) was demoted, not deleted in favour of the DownloadDialog hatch — the
+   Solution section's own caveat held: `sideload` and `thirdPartyManagedApp` runners never reach
+   `DownloadDialog` (`InstallModal/index.tsx:629`, `:706-761`), so removing the MainButton door
+   without a replacement would have made import unreachable for them. It was rebuilt inside
+   `GameSubMenu` instead, gated `!isInstalled && !isSteam`, with no `isThirdPartyManaged` exclusion
+   (D-02), and is proven reachable there for those two runners by a source-shaped census, not a
+   render test — `GameSubMenu` cannot be called bare in this repo's jest setup (imports
+   `./index.css` with no `moduleNameMapper`, six `useState` hooks plus effects).
+
+**Five call sites repointed:** `MainButton.tsx` (import door removed entirely — pinned red by
+`MainButton.importDemotion.test.tsx` via a revert-and-check), `GameSubMenu/index.tsx` (import door
+added), `DownloadDialog/index.tsx` (footer hatch relabelled), `ImportDialog/index.tsx` (explainer
+line added, confirm button relabelled), `SideloadDialog/index.tsx` (hint copy relabelled).
+
+**Both Related todos stay OPEN.** They said "if import is deleted, that todo dies with it" — import
+was not deleted, so their backend-correctness scope (`importGame` folder validation; wineprefix/
+wineVersion containment) is unaffected by this quick and remains outstanding.
+
+**What was NOT done, by design:** `gamepage.json`'s `button.import` key (the old label, "Import
+Game") is deliberately left orphaned — unread by any call site, in en and all 47 other translated
+locales. Removing an upstream-owned key from `gamepage.json` was out of scope (it is not a
+`gamelib.json` fork-owned catalog) and the key's presence is harmless once nothing reads it.
+
+**Follow-up filed, not fixed here:** `2026-09-16-sideload-import-hint-trans-uses-key-not-i18nkey.md`
+— a pre-existing, unrelated `<Trans key=... >` vs `i18nKey=...` bug in `SideloadDialog` that predates
+this quick and was deliberately left alone (see that todo for why fixing the prop is not a one-line
+change).

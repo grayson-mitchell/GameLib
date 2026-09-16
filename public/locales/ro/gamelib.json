@@ -107,6 +107,9 @@
         "refresh-rating": "Reîmprospătează evaluarea"
     },
     "installFlows": {
+        "importConfirmLabel": "Folosește această instalare",
+        "importDoorLabel": "Găsește o instalare existentă…",
+        "importExplainer": "Ai deja acest joc pe disc — de la un alt launcher, sau de pe altă unitate? Indică acele fișiere în loc să-l descarci din nou.",
         "pathRejectedBodyImport": "GameLib nu a putut importa din acea locație. Sursa trebuie să fie o cale completă de folder, fără pași \"..\" în ea. Alege din nou folderul jocului.",
         "pathRejectedBodyMove": "GameLib nu a putut muta acest joc acolo. Destinația trebuie să fie o cale completă de folder, fără pași \"..\" în ea. Alege din nou folderul de destinație.",
         "pathRejectedTitle": "Locația nu poate fi folosită"

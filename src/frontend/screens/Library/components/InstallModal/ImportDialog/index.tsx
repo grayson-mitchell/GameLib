@@ -55,6 +55,7 @@ export default function ImportDialog({
 }: Props) {
   const { libraryStatus } = useContext(ContextProvider)
   const { t } = useTranslation('gamepage')
+  const { t: tGamelib } = useTranslation('gamelib')
 
   const [importPath, setImportPath] = React.useState('')
 
@@ -103,6 +104,12 @@ export default function ImportDialog({
             mode, which is what made an import fixture unreachable during the 34.6 live
             gate. A choice that reshapes the form must sit above the form. Gated by
             `InstallModal/__tests__/defaultPlatform.test.ts`. */}
+        <p className="importExplainer">
+          {tGamelib(
+            'gamelib:installFlows.importExplainer',
+            'Already have this game on disk — from another launcher, or another drive? Point to those files instead of downloading it again.'
+          )}
+        </p>
         <PathSelectionBox
           type={pickFile ? 'file' : 'directory'}
           onPathChange={setImportPath}
@@ -124,7 +131,10 @@ export default function ImportDialog({
           {isImportingThisGame ? (
             <FontAwesomeIcon className="fa-spin-pulse" icon={faSpinner} />
           ) : null}
-          {t('button.import', 'Import')}
+          {tGamelib(
+            'gamelib:installFlows.importConfirmLabel',
+            'Use this installation'
+          )}
         </button>
       </DialogFooter>
     </>

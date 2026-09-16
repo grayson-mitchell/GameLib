@@ -268,6 +268,9 @@
         "refresh-rating": "Bewertung aktualisieren"
     },
     "installFlows": {
+        "importConfirmLabel": "Diese Installation verwenden",
+        "importDoorLabel": "Vorhandene Installation suchen…",
+        "importExplainer": "Haben Sie dieses Spiel schon auf der Festplatte — von einem anderen Launcher oder einem anderen Laufwerk? Verweisen Sie auf diese Dateien, anstatt es erneut herunterzuladen.",
         "pathRejectedBodyImport": "GameLib konnte nicht von diesem Ort importieren. Die Quelle muss ein vollständiger Ordnerpfad ohne \"..\"-Schritte sein. Wählen Sie den Spielordner erneut aus.",
         "pathRejectedBodyMove": "GameLib konnte dieses Spiel nicht dorthin verschieben. Das Ziel muss ein vollständiger Ordnerpfad ohne \"..\"-Schritte sein. Wählen Sie den Zielordner erneut aus.",
         "pathRejectedTitle": "Dieser Ort kann nicht verwendet werden"

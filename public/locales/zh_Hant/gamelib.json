@@ -107,6 +107,9 @@
         "refresh-rating": "重新整理評分"
     },
     "installFlows": {
+        "importConfirmLabel": "使用此安裝",
+        "importDoorLabel": "定位現有安裝…",
+        "importExplainer": "已經在磁碟上有這個遊戲了嗎——來自其他啟動器，或其他磁碟機？指向那些檔案，而不是重新下載。",
         "pathRejectedBodyImport": "GameLib 無法從該位置匯入。來源必須是完整的資料夾路徑，且不能含有「..」步驟。請重新選擇遊戲資料夾。",
         "pathRejectedBodyMove": "GameLib 無法將此遊戲移動到那裡。目的地必須是完整的資料夾路徑，且不能含有「..」步驟。請重新選擇目的地資料夾。",
         "pathRejectedTitle": "無法使用該位置"

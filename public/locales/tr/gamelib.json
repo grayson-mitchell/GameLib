@@ -107,6 +107,9 @@
         "refresh-rating": "Puanı yenile"
     },
     "installFlows": {
+        "importConfirmLabel": "Bu kurulumu kullan",
+        "importDoorLabel": "Mevcut kurulumu bul…",
+        "importExplainer": "Bu oyun zaten diskinizde mi — başka bir başlatıcıdan, ya da başka bir sürücüden? Tekrar indirmek yerine o dosyaları işaret edin.",
         "pathRejectedBodyImport": "GameLib bu konumdan içe aktaramadı. Kaynak, içinde \"..\" adımı olmayan tam bir klasör yolu olmalıdır. Oyunun klasörünü tekrar seçin.",
         "pathRejectedBodyMove": "GameLib bu oyunu oraya taşıyamadı. Hedef, içinde \"..\" adımı olmayan tam bir klasör yolu olmalıdır. Hedef klasörü tekrar seçin.",
         "pathRejectedTitle": "Bu konum kullanılamıyor"

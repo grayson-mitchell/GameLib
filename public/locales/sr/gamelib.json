@@ -107,6 +107,9 @@
         "refresh-rating": "Освежи оцену"
     },
     "installFlows": {
+        "importConfirmLabel": "Користи ову инсталацију",
+        "importDoorLabel": "Пронађи постојећу инсталацију…",
+        "importExplainer": "Већ имате ову игру на диску — са другог лансера, или са другог диска? Усмерите на те фајлове уместо поновног преузимања.",
         "pathRejectedBodyImport": "GameLib није успео да увезе са те локације. Извор мора бити пуна путања до фасцикле без \"..\" корака у њој. Изаберите фасциклу игре поново.",
         "pathRejectedBodyMove": "GameLib није успео да premesti ovu igru tamo. Одредиште мора бити пуна путања до фасцикле без \"..\" корака у њој. Изаберите одредишну фасциклу поново.",
         "pathRejectedTitle": "Ta lokacija ne može da se koristi"

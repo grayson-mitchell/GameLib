@@ -107,6 +107,9 @@
         "refresh-rating": "Oppdater vurdering"
     },
     "installFlows": {
+        "importConfirmLabel": "Bruk denne installasjonen",
+        "importDoorLabel": "Finn eksisterende installasjon…",
+        "importExplainer": "Har du allerede dette spillet på disken — fra en annen launcher, eller en annen stasjon? Pek på de filene i stedet for å laste det ned igjen.",
         "pathRejectedBodyImport": "GameLib kunne ikke importere fra den plasseringen. Kilden må være en fullstendig mappebane uten \"..\"-steg i seg. Velg spillets mappe på nytt.",
         "pathRejectedBodyMove": "GameLib kunne ikke flytte dette spillet dit. Målet må være en fullstendig mappebane uten \"..\"-steg i seg. Velg målmappen på nytt.",
         "pathRejectedTitle": "Kan ikke bruke den plasseringen"

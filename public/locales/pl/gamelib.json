@@ -107,6 +107,9 @@
         "refresh-rating": "Odśwież ocenę"
     },
     "installFlows": {
+        "importConfirmLabel": "Użyj tej instalacji",
+        "importDoorLabel": "Znajdź istniejącą instalację…",
+        "importExplainer": "Masz już tę grę na dysku — z innego launchera lub innego dysku? Wskaż te pliki zamiast pobierać ją ponownie.",
         "pathRejectedBodyImport": "GameLib nie mógł zaimportować z tej lokalizacji. Źródło musi być pełną ścieżką folderu bez kroków „..”. Wybierz folder gry ponownie.",
         "pathRejectedBodyMove": "GameLib nie mógł przenieść tej gry w to miejsce. Miejsce docelowe musi być pełną ścieżką folderu bez kroków „..”. Wybierz folder docelowy ponownie.",
         "pathRejectedTitle": "Nie można użyć tej lokalizacji"

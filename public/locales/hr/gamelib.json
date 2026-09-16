@@ -107,6 +107,9 @@
         "refresh-rating": "Osvježi ocjenu"
     },
     "installFlows": {
+        "importConfirmLabel": "Koristi ovu instalaciju",
+        "importDoorLabel": "Pronađi postojeću instalaciju…",
+        "importExplainer": "Već imate ovu igru na disku — s drugog pokretača, ili s drugog diska? Usmjerite na te datoteke umjesto ponovnog preuzimanja.",
         "pathRejectedBodyImport": "GameLib nije mogao uvesti s te lokacije. Izvor mora biti puna putanja mape bez koraka \"..\" u njoj. Ponovno odaberite mapu igre.",
         "pathRejectedBodyMove": "GameLib nije mogao premjestiti ovu igru tamo. Odredište mora biti puna putanja mape bez koraka \"..\" u njoj. Ponovno odaberite odredišnu mapu.",
         "pathRejectedTitle": "Ta lokacija se ne može koristiti"

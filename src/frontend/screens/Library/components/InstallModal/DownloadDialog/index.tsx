@@ -155,6 +155,7 @@ export default function DownloadDialog({
 
   const { i18n, t } = useTranslation('gamepage')
   const { t: tr } = useTranslation()
+  const { t: tGamelib } = useTranslation('gamelib')
 
   const haveSDL = sdls.length > 0
 
@@ -792,7 +793,10 @@ export default function DownloadDialog({
       </DialogContent>
       <DialogFooter>
         <button onClick={handleSwitchToImport} className="button is-secondary">
-          {t('button.import', 'Import Game')}
+          {tGamelib(
+            'gamelib:installFlows.importDoorLabel',
+            'Locate existing installation…'
+          )}
         </button>
         <button
           onClick={async () => handleInstall()}

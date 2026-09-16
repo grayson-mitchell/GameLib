@@ -107,6 +107,9 @@
         "refresh-rating": "Beoordeling vernieuwen"
     },
     "installFlows": {
+        "importConfirmLabel": "Deze installatie gebruiken",
+        "importDoorLabel": "Bestaande installatie zoeken…",
+        "importExplainer": "Heb je dit spel al op de schijf staan — van een andere launcher, of een andere schijf? Wijs naar die bestanden in plaats van het opnieuw te downloaden.",
         "pathRejectedBodyImport": "GameLib kon niet importeren vanaf die locatie. De bron moet een volledig mappad zijn zonder \"..\"-stappen. Kies de map van het spel opnieuw.",
         "pathRejectedBodyMove": "GameLib kon dit spel niet daarheen verplaatsen. De bestemming moet een volledig mappad zijn zonder \"..\"-stappen. Kies de bestemmingsmap opnieuw.",
         "pathRejectedTitle": "Kan die locatie niet gebruiken"

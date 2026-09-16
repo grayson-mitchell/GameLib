@@ -378,8 +378,8 @@ export default function SideloadDialog({
                       <br />
                       Instead, <NavLink to={'/login'}>log into</NavLink> the
                       store, look for the game in your library, open the
-                      installation dialog, and click the &quot;Import Game&quot;
-                      button
+                      installation dialog, and click the &quot;Locate existing
+                      installation…&quot; button
                     </Trans>
                   </div>
                 </InfoBox>
