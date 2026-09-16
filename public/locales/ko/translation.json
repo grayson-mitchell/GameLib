@@ -1010,13 +1010,8 @@
     "prime-gaming": "프라임 게이밍",
     "winetricks": {
         "install": "설치",
-        "loading": "로딩 중",
         "openGUI": "와인트리긋 GUI 열기",
-        "search": "글꼴 또는 구성 요소 검색",
-        "nothingYet": "아직 와인트릭스에서 아무것도 설치되지 않았음",
         "installing": "설치 진행 중: {{component}}",
-        "installed": "설치된 구성 요소:",
-        "no-components": "",
         "loading-available": ""
     },
     "category-settings": {

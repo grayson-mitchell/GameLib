@@ -1022,14 +1022,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Installer",
-        "loading": "Laster inn",
-        "nothingYet": "Ingenting er installert av Winetricks ennå",
         "installing": "Installasjon pågår: {{component}}",
-        "installed": "Installerte komponenter:",
         "openGUI": "Åpne Winetricks GUI",
-        "search": "Søk etter skrifttyper eller komponenter",
-        "loading-available": "Laster tilgjengelige komponenter ...",
-        "no-components": "Ingen tilgjengelige komponenter"
+        "loading-available": "Laster tilgjengelige komponenter ..."
     },
     "category-settings": {
         "cancel": "Avbryt",

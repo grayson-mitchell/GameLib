@@ -1020,14 +1020,9 @@
     "Amazon Games": "Amazon Games",
     "winetricks": {
         "install": "Усталяваць",
-        "loading": "Загрузка",
         "installing": "Выконваецца ўсталяванне: {{component}}",
         "openGUI": "Адкрыць інтэрфейс Winetricks",
-        "search": "Пошук шрыфтоў або кампанентаў",
-        "nothingYet": "З дапамогай Winetricks яшчэ нічога ўсталявана",
-        "installed": "Усталяваныя кампаненты:",
-        "loading-available": "Загрузка даступных кампанентаў...",
-        "no-components": "Няма даступных кампанентаў"
+        "loading-available": "Загрузка даступных кампанентаў..."
     },
     "category-settings": {
         "cancel": "Скасаваць",

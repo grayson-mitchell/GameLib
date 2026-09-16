@@ -1037,14 +1037,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Встановити",
-        "loading": "Завантаження",
         "installing": "Виконується встановлення: {{component}}",
         "openGUI": "Відкрити інтерфейс Winetricks",
-        "search": "Пошук шрифтів або компонентів",
-        "nothingYet": "Winetricks ще нічого не встановив",
-        "installed": "Встановлені компоненти:",
-        "loading-available": "Завантаження доступних компонентів...",
-        "no-components": "Немає доступних компонентів"
+        "loading-available": "Завантаження доступних компонентів..."
     },
     "category-settings": {
         "cancel": "Скасувати",

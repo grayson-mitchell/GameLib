@@ -1008,13 +1008,8 @@
     "prime-gaming": "Prime-gaming",
     "winetricks": {
         "install": "Installeren",
-        "loading": "Laden",
-        "installed": "Geïnstalleerde componenten:",
-        "search": "Zoek naar lettertypen of componenten",
         "installing": "Installatie bezig: {{component}}",
         "loading-available": "Beschikbare componenten laden...",
-        "no-components": "Geen beschikbare componenten",
-        "nothingYet": "Er is nog niets geïnstalleerd door Winetricks",
         "openGUI": "Winetricks GUI openen"
     },
     "category-settings": {

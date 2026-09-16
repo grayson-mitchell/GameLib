@@ -1029,14 +1029,9 @@
     "Amazon Games": "Amazon Games",
     "winetricks": {
         "install": "Zainstaluj",
-        "loading": "Wczytywanie",
         "installing": "Instalacja w trakcie: {{component}}",
         "openGUI": "Otwórz interfejs Winetricks",
-        "search": "Szukaj czcionek lub bibliotek",
-        "nothingYet": "Jeszcze nic nie zostało zainstalowane za pomocą Winetricks",
-        "installed": "Zainstalowane komponenty:",
-        "loading-available": "Wczytywanie dostępnych komponentów...",
-        "no-components": "Brak dostępnych komponentów"
+        "loading-available": "Wczytywanie dostępnych komponentów..."
     },
     "window": {
         "minimize": "Zminimalizuj okno",

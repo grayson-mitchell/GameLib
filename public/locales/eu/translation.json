@@ -1003,14 +1003,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Install",
-        "loading": "Kargatzen",
-        "no-components": "",
         "installing": "",
         "openGUI": "",
-        "search": "",
-        "loading-available": "",
-        "nothingYet": "",
-        "installed": ""
+        "loading-available": ""
     },
     "category-settings": {
         "cancel": "Ezeztatu",

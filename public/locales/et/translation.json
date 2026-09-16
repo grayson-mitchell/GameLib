@@ -1027,14 +1027,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Paigaldus",
-        "loading": "Laadimine",
-        "installed": "Paigaldatud komponendid:",
-        "nothingYet": "Winetricksis ei ole veel midagi paigaldatud",
         "openGUI": "Ava Winetricksi graafiline kasutajaliides",
         "installing": "Paigaldamine: {{component}}",
-        "search": "Otsi fonte või komponente",
-        "loading-available": "Laen saadavalolevaid komponente ...",
-        "no-components": "Komponente pole saadaval"
+        "loading-available": "Laen saadavalolevaid komponente ..."
     },
     "category-settings": {
         "cancel": "Tühista",

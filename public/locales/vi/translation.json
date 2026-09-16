@@ -1003,14 +1003,9 @@
     "prime-gaming": "Trò chơi chính",
     "winetricks": {
         "install": "Cài Đặt",
-        "loading": "Đang Tải",
-        "installed": "Các thành phần được cài đặt:",
         "installing": "Đang tiến hành cài đặt: {{component}}",
         "loading-available": "Đang tải các thành phần có sẵn ...",
-        "no-components": "Không có thành phần có sẵn",
-        "nothingYet": "Chưa có gì được cài đặt bởi Winetricks",
-        "openGUI": "Mở GUI Winetricks",
-        "search": "Tìm kiếm phông chữ hoặc thành phần"
+        "openGUI": "Mở GUI Winetricks"
     },
     "category-settings": {
         "cancel": "Hủy",

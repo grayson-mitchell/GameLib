@@ -1029,14 +1029,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Telepítés",
-        "loading": "Betöltés",
         "installing": "Telepítés folyamatban: {{component}}",
         "openGUI": "Winetricks GUI megnyitása",
-        "search": "Betűkészletek vagy összetevők keresése",
-        "nothingYet": "Egyelőre semmit sem telepített a Winetricks",
-        "installed": "Telepített összetevők:",
-        "loading-available": "Elérhető összetevők betöltése…",
-        "no-components": "Nincsenek elérhető összetevők"
+        "loading-available": "Elérhető összetevők betöltése…"
     },
     "category-settings": {
         "cancel": "Mégse",

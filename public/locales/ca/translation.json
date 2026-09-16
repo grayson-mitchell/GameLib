@@ -1025,14 +1025,9 @@
     "Amazon Games": "Jocs d'Amazon",
     "winetricks": {
         "install": "Instal·la",
-        "loading": "S'està carregant",
         "installing": "Instal·lació en curs: {{component}}",
         "openGUI": "Obre la interfície del Winetricks",
-        "search": "Cerca fonts o components",
-        "nothingYet": "El Winetricks encara no ha instal·lat res",
-        "installed": "Components instal·lats:",
-        "loading-available": "S'estan carregant els components disponibles...",
-        "no-components": "No hi ha complements disponibles."
+        "loading-available": "S'estan carregant els components disponibles..."
     },
     "window": {
         "close": "Tanca",

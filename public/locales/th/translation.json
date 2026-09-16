@@ -771,14 +771,9 @@
     },
     "winetricks": {
         "install": "ติดตั้ง",
-        "loading": "กำลังโหลด…",
-        "no-components": "",
         "installing": "",
         "openGUI": "",
-        "search": "",
-        "loading-available": "",
-        "nothingYet": "",
-        "installed": ""
+        "loading-available": ""
     },
     "store": "ร้านค้า Epic ที่นี่",
     "tour": {

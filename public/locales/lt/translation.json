@@ -782,14 +782,9 @@
     },
     "winetricks": {
         "install": "Įdiegti",
-        "loading": "Kraunama",
-        "search": "Ieškoti šriftų ar komponentų",
-        "installed": "Įdiegti komponentai:",
         "installing": "Įdiegiamas vykdomas: „{{component}}“",
-        "nothingYet": "Kol kas niekas nebuvo įdiegta „Winetricks“",
         "openGUI": "Atidaryti „Winetricks“ grafinę sąsają",
-        "loading-available": "Kraunami pasiekiami komponentai...",
-        "no-components": "Nėra pasiekiamų komponentų"
+        "loading-available": "Kraunami pasiekiami komponentai..."
     },
     "accessibility": {
         "fonts": "Šriftai",

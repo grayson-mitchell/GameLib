@@ -1003,14 +1003,9 @@
     "prime-gaming": "پرایم گیمینگ",
     "winetricks": {
         "install": "Install",
-        "loading": "درحال بارگذاری",
-        "no-components": "",
         "installing": "",
         "openGUI": "",
-        "search": "",
-        "loading-available": "",
-        "nothingYet": "",
-        "installed": ""
+        "loading-available": ""
     },
     "window": {
         "close": "بستن",

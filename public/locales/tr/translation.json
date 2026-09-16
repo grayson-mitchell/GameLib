@@ -1027,13 +1027,8 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Kur",
-        "loading": "Yükleniyor",
         "installing": "Kurulum devam ediyor: {{component}}",
         "openGUI": "Winetricks GUI’yi aç",
-        "search": "Yazı tiplerini ya da bileşenleri ara",
-        "nothingYet": "Winetricks tarafından henüz hiçbir şey kurulmadı",
-        "installed": "Kurulu bileşenler:",
-        "no-components": "Kullanılabilir bileşen yok",
         "loading-available": "Mevcut bileşenler yükleniyor..."
     },
     "window": {

@@ -1010,14 +1010,9 @@
     "Amazon Games": "Amazon Games",
     "winetricks": {
         "install": "Instal",
-        "loading": "Memuat",
-        "installed": "Komponen yang terinstal:",
         "installing": "Proses instalasi sedang berlangsung: {{component}}",
         "loading-available": "Memuat komponen yang tersedia ...",
-        "no-components": "Tidak ada komponen yang tersedia",
-        "nothingYet": "Belum ada yang diinstal oleh Winetricks",
-        "openGUI": "Buka GUI Winetricks",
-        "search": "Cari font atau komponen"
+        "openGUI": "Buka GUI Winetricks"
     },
     "category-settings": {
         "cancel": "Batalkan",

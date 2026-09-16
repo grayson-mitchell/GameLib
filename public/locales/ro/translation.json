@@ -1003,14 +1003,9 @@
     "Amazon Games": "Amazon Games",
     "winetricks": {
         "install": "Install",
-        "loading": "Loading",
-        "no-components": "",
         "installing": "",
         "openGUI": "",
-        "search": "",
-        "loading-available": "",
-        "nothingYet": "",
-        "installed": ""
+        "loading-available": ""
     },
     "category-settings": {
         "cancel": "Cancel",

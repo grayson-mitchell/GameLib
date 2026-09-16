@@ -1030,14 +1030,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Инсталиране",
-        "loading": "Зареждане",
         "installing": "В момента протича инсталация: {{component}}",
         "openGUI": "Отваряне на интерфейса на Winetricks",
-        "search": "Търсене на шрифтове или компоненти",
-        "nothingYet": "Все още няма нищо инсталирано от Winetricks",
-        "installed": "Инсталирани компоненти:",
-        "loading-available": "Зареждане на наличните компоненти…",
-        "no-components": "Няма налични компоненти"
+        "loading-available": "Зареждане на наличните компоненти…"
     },
     "window": {
         "close": "Затваряне",

@@ -1028,13 +1028,8 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Installa",
-        "loading": "Caricamento",
-        "nothingYet": "Ancora nulla installato da Winetricks",
-        "search": "Cerca fonts o componenti",
         "installing": "Installazione in corso: {{component}}",
-        "installed": "Componenti installate:",
         "openGUI": "Apri GUI Winetricks",
-        "no-components": "Nessun componente disponibile",
         "loading-available": "Caricamento delle componenti disponibili..."
     },
     "category-settings": {
