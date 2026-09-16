@@ -5215,7 +5215,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 44-03-PLAN.md — `WinetricksBrowse/Row/`: six-state action slot, metric parity, token chains, D-19 mouse-race port (wave 2)
+- [x] 44-03-PLAN.md — `WinetricksBrowse/Row/`: six-state action slot, metric parity, token chains, D-19 mouse-race port (wave 2)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
