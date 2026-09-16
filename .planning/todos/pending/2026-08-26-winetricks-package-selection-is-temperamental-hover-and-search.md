@@ -71,6 +71,46 @@ necessarily the same underlying cause as anything measured for winetricks. One i
 should be able to settle both at once, and that instrument now exists: see `## The instrument`
 below.
 
+## MEASURED AND REFUTED 2026-09-15: it is NOT a contrast defect
+
+**This section previously carried the contrast idea as the strongest open lead. It has now been
+measured against every theme and it does not hold.** The original framing is kept below the
+measurement, unedited, because it was the reasoning that got the measurement taken.
+
+Contrast of the hover highlight against the list's own background — i.e.
+`contrast(var(--accent), var(--input-background))`, which is what decides whether a hovered row
+looks different from an unhovered one — computed from `src/frontend/themes.scss` at `c83b8741e`:
+
+| theme | `--accent` | `--input-background` | contrast |
+| ----- | ---------- | -------------------- | -------- |
+| dracula-classic | `#bd93f9` | `#44475a` | 3.79:1 |
+| marine-classic | `#d39f37` | `#063442` | 5.57:1 |
+| zombie-classic | `#59c627` | `#323232` | 5.82:1 |
+| old-school | `#ffa800` | `#323232` | 6.63:1 |
+| nord-light | `#30444a` | `#d8dee9` | 7.58:1 |
+| nord-dark | `#a5dceb` | `#2e3440` | 8.35:1 |
+| sweet-dark | `#ff9af7` | `#360a36` | 8.95:1 |
+
+**No theme has a low-contrast hover highlight.** The floor is 3.79:1, which for a wholesale
+background-colour swap is plainly visible.
+
+**The specific error in the reasoning below, named so it is not repeated.** `#30444a` was
+described as "near-invisible ... over a dark `--input-background`". It is **nord-light's**
+accent, and nord-light's `--input-background` is `#d8dee9` — a light grey-blue. The pairing is
+dark-on-light at 7.58:1, among the *most* visible in the set, not the least. The background was
+inferred from the accent's darkness instead of being read.
+
+**Honest gap in the measurement:** three entries did not resolve, because the extraction did not
+handle 8-digit hex (`#262937ff`). They are `#00ddff` on `#262937`, cyan on near-black, so they
+are not low-contrast candidates either — but this table is 7 measured themes, not 10.
+
+**What this costs the investigation:** the contrast branch is closed, so the pointer-events /
+overlay / hit-testing family named in the 2026-08-24 history is **back in play** for any
+consumer where the symptom is still reproducible. See the operator observation immediately
+below, which narrows *where* that is.
+
+### Original framing, retained unedited
+
 ## An explicitly UNPROVEN lead: this may be a CONTRAST defect, not a pointer defect
 
 The 2026-08-24 todo's PARKED section (item 6, dated 2026-08-25) recorded, verbatim: *"The row
@@ -102,6 +142,44 @@ exactly what the 2026-08-24 todo said about it on 2026-08-25, before it was set 
 **Mark this `UNPROVEN`.** Do not write it up as the likely answer in any future work on this
 file — two confident answers about this surface (IPC transport, then `:focus-within` focus
 loss) have already been formed by code reading and both were wrong.
+
+## Operator observation 2026-09-15 — Half B may already be resolved ON THE WINETRICKS CONSUMER
+
+Reported by the operator while attempting the probe drive, verbatim:
+
+> typing 'pr' then search shows list. that list seems responsive, selection changes on mouse
+> move, mouse icon changes when you mouse over button.
+
+Conditions, established rather than assumed:
+
+- **Theme: `nord-light`** — the 7.58:1 row in the table above, so the highlight is expected to
+  be clearly visible, and it was.
+- **Build: `build/index.html` mtime 2026-09-14 22:18.** This POSTDATES `366e719bb` (35-25,
+  2026-08-30) and PREDATES the probe commit `8efb96c02` (2026-09-15 16:06). So this is the
+  currently-shipped Winetricks behaviour, with 35-25's remount fix in it and without any
+  2026-09-15 change.
+
+**This directly contradicts Half B's heading on the winetricks consumer**: rows DO highlight
+under the pointer, and selection tracks mouse movement. Two readings remain open and they are
+not equivalent:
+
+1. **35-25 resolved it as a side effect.** The remount fix stopped rows being torn down mid-
+   gesture; a row that survives the pointer can also hold `:hover`. Plausible, unmeasured.
+2. **It is intermittent** and this drive simply did not arm it. The original 2026-08-26 report
+   was that selection took *repeated* attempts — an intermittent symptom, which a single
+   successful drive cannot refute.
+
+**Do NOT close Half B on this observation alone.** One successful drive against an
+intermittent symptom is exactly the shape of evidence this project has been burned by before.
+What it does justify is narrowing Half B's scope to the **Library** consumer
+(`2026-08-30-...-mouse-dead-until-a-tab-press.md`), which was NOT exercised in this drive and
+whose `<li onClick>` structure means 35-25's fix is structurally inapplicable to it.
+
+**Probe status on this drive: no result.** `::probe-on` produced no badge, but that is fully
+explained — the running build predates the probe commit by ~18 hours and
+`grep SEARCHPROBE build/` returns nothing. The retrieval doc's "no badge is itself a finding"
+rule applies only once the build actually contains the instrument. This drive measured the app,
+not the probe.
 
 ## The instrument
 
