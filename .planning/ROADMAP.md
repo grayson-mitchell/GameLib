@@ -5205,13 +5205,13 @@ and routed to the zenity GUI rather than silently failing under `-q`.
 
 **Requirements**: REQ-44-01, REQ-44-02, REQ-44-03, REQ-44-04, REQ-44-05, REQ-44-06, REQ-44-07, REQ-44-08, REQ-44-09, REQ-44-10, REQ-44-11, REQ-44-12, REQ-44-13, REQ-44-14, REQ-44-15, REQ-44-16, REQ-44-17, REQ-44-18, REQ-44-19, REQ-44-20, REQ-44-21, REQ-44-22, REQ-44-23, REQ-44-24, REQ-44-25, REQ-44-26 — minted 2026-09-16 during `/gsd-plan-phase 44` from `44-CONTEXT.md` D-01..D-24 plus the seams surfaced by `44-RESEARCH.md`/`44-PATTERNS.md`; see `.planning/REQUIREMENTS.md` §"Phase 44 Requirements" for the six planning-time corrections recorded in requirement text. D-21 and D-23 are deliberately not given IDs (verification posture and non-coverage, carried in plan 44-08).
 **Depends on:** Phase 43
-**Plans:** 8 plans in 6 waves
+**Plans:** 8 plans in 6 waves — **EXECUTING, 2/8 (wave 1 COMPLETE 2026-09-16).** `44-01` shipped `src/common/winetricks/{verbs,deriveRowState}.ts` (placed in `common/`, not under the component, so the Backend-project parser test can import them per D-03 and so two fewer files enrol in `meta/i18nForkTouchedFiles.json`); D-03's curated-coverage fixture was negative-controlled by adding a 9th nonexistent verb and confirming the failure names the drifted verb. `44-02` committed the 13-key `winetricksBrowse` block to `en/gamelib.json` and MEASURED the gate baseline plan 44-06 must drive to zero: **624 findings / 624 hard failures** (= 13 keys x 48 locales, matching the plan's prediction). Consequence: `lintTranslations`' jest test is RED 2/32 until 44-06 lands the fill — a DESIGNED window, since `meta/i18nCatalogPresenceBaseline.json` correctly pins `totalPairs: 0` and was deliberately NOT widened. `tsc --noEmit` green at wave close.
 
 Plans:
 **Wave 1**
 
-- [ ] 44-01-PLAN.md — pure verb/state seams in `src/common/winetricks/`: curated + Needs-GUI constants, row-state precedence, per-verb error attribution, D-03 parser fixture (wave 1)
-- [ ] 44-02-PLAN.md — English copy contract: 13 `winetricksBrowse` keys in `en/gamelib.json`, gamelib gate baseline measured for 44-06 (wave 1)
+- [x] 44-01-PLAN.md — pure verb/state seams in `src/common/winetricks/`: curated + Needs-GUI constants, row-state precedence, per-verb error attribution, D-03 parser fixture (wave 1)
+- [x] 44-02-PLAN.md — English copy contract: 13 `winetricksBrowse` keys in `en/gamelib.json`, gamelib gate baseline measured for 44-06 (wave 1)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
