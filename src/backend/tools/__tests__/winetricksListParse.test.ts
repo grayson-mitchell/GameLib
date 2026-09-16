@@ -10,6 +10,41 @@
  * coalescing deterministically at all.
  */
 import { parseWinetricksListAll } from '../winetricksListParse'
+import { CURATED_WINETRICKS_VERBS } from 'common/winetricks/verbs'
+
+// D-03 / 44-VALIDATION.md Wave 0 / 44-RESEARCH.md Open Question 4: no
+// committed fixture covered all 8 curated verbs, so D-03's "a unit test
+// over the committed parser fixture fails if any of the 8 stops resolving"
+// assertion could not be written. This fixture closes that gap with
+// realistic, multi-category, multi-chunk content (the real
+// `listAvailable()` path feeds the parser a chunk array, not one string --
+// the `===== fonts =====` header below is the LAST line of the first chunk
+// element, landing exactly at the chunk boundary, with `fonts`' own verb
+// line beginning the second chunk element). It also seeds 2 of the 8
+// Needs-GUI verbs (`3dmark06`, `ubisoftconnect`) so plan 44-03's routing has
+// fixture-backed vocabulary, and one deliberately-duplicated verb
+// (`corefonts`, first under `fonts` then again under `settings`) so the
+// parser's first-occurrence-wins dedup stays exercised across two different
+// categories, not just within one.
+const CURATED_COVERAGE_CHUNKS: string[] = [
+  '===== apps =====\n' +
+    'ubisoftconnect          Ubisoft Connect [downloadable]\n' +
+    '===== benchmarks =====\n' +
+    '3dmark06                3DMark06 [downloadable]\n' +
+    '===== dlls =====\n' +
+    'vcrun2019               Visual C++ 2019 Libraries [downloadable,cached]\n' +
+    'vcrun2013               Visual C++ 2013 Libraries [downloadable]\n' +
+    'vcrun2010               Visual C++ 2010 Libraries [downloadable,cached]\n' +
+    'd3dx9                   MS d3dx9 (June 2010) [downloadable,cached]\n' +
+    'xact                    MS XACT Engine [downloadable]\n' +
+    'physx                   PhysX (Feb 2010) [downloadable,cached]\n' +
+    'dotnet48                MS .NET 4.8 [downloadable]\n' +
+    '===== fonts =====\n',
+  'corefonts               MS Core Fonts [downloadable,cached]\n' +
+    '===== settings =====\n' +
+    'sound=alsa              Set sound driver to alsa \n' +
+    'corefonts               MS Core Fonts (dup, wrong category) [cached]\n'
+]
 
 describe('parseWinetricksListAll', () => {
   it('parses the plain printf shape (no publisher/year)', () => {
@@ -270,6 +305,54 @@ describe('parseWinetricksListAll', () => {
       title: 'First Title',
       category: 'dlls',
       cached: false
+    })
+  })
+
+  describe('D-03 curated coverage fixture', () => {
+    it('parses the multi-category, multi-chunk fixture structurally', () => {
+      const result = parseWinetricksListAll(CURATED_COVERAGE_CHUNKS)
+
+      // apps(1) + benchmarks(1) + dlls(7) + fonts(1) + settings(1) = 11
+      // distinct entries; the duplicate `corefonts` under `settings` is
+      // dropped by first-occurrence dedup and adds nothing.
+      expect(result).toHaveLength(11)
+
+      const allowedCategories = new Set([
+        'apps',
+        'benchmarks',
+        'dlls',
+        'fonts',
+        'settings'
+      ])
+      for (const entry of result) {
+        expect(allowedCategories.has(entry.category)).toBe(true)
+      }
+
+      const byVerb = new Map(result.map((c) => [c.verb, c]))
+      expect(byVerb.get('vcrun2019')?.cached).toBe(true)
+      expect(byVerb.get('vcrun2013')?.cached).toBe(false)
+      expect(byVerb.get('vcrun2010')?.cached).toBe(true)
+      expect(byVerb.get('corefonts')?.cached).toBe(true)
+      expect(byVerb.get('sound=alsa')?.cached).toBe(false)
+
+      // The duplicated verb appears exactly once, with its FIRST-occurrence
+      // category (`fonts`) even though a second occurrence under `settings`
+      // follows it in the fixture.
+      const corefontsEntries = result.filter((c) => c.verb === 'corefonts')
+      expect(corefontsEntries).toHaveLength(1)
+      expect(corefontsEntries[0].title).toBe('MS Core Fonts')
+      expect(corefontsEntries[0].category).toBe('fonts')
+    })
+
+    it('D-03: every curated verb resolves against the committed parse fixture', () => {
+      const result = parseWinetricksListAll(CURATED_COVERAGE_CHUNKS)
+      const parsedVerbs = new Set(result.map((c) => c.verb))
+
+      const unresolved = CURATED_WINETRICKS_VERBS.filter(
+        (verb) => !parsedVerbs.has(verb)
+      )
+
+      expect(unresolved).toEqual([])
     })
   })
 })
