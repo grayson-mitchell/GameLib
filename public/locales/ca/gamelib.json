@@ -376,6 +376,21 @@
         "unavailable": "La gestió de components de Winetricks no està disponible en aquesta versió",
         "unavailableDetail": "El suport de Winetricks s'ha ajornat a una versió futura (D-03, Fase 34.6) i no es pot llistar ni instal·lar des d'aquesta versió."
     },
+    "winetricksBrowse": {
+        "cachedTag": "En memòria cau (s'instal·la sense connexió)",
+        "clearSearch": "Esborra la cerca",
+        "curatedGroup": "Necessari habitualment",
+        "emptyBody": "No s'han pogut carregar les metadades de Winetricks per a aquesta bottle.",
+        "emptyHeading": "No hi ha components disponibles",
+        "installFailedTag": "La instal·lació ha fallat",
+        "installedTag": "Instal·lat",
+        "installingRow": "S'està instal·lant…",
+        "needsGuiTag": "Necessita la interfície gràfica de Winetricks",
+        "resultsHeading": "{{total}} resultats",
+        "retry": "Torna-ho a provar",
+        "searchPlaceholder": "Cerca components…",
+        "zeroResultHeading": "Cap component coincideix amb “{{query}}”."
+    },
     "donate": {
         "navLabel": "Fes una donació"
     },

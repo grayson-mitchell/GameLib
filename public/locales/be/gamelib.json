@@ -376,6 +376,21 @@
         "unavailable": "Кіраванне кампанентамі Winetricks недаступна ў гэтай зборцы",
         "unavailableDetail": "Падтрымка Winetricks адкладзена да будучага выпуску (D-03, Phase 34.6) і не можа быць паказана або ўстаноўлена з гэтай зборкі."
     },
+    "winetricksBrowse": {
+        "cachedTag": "У кэшы (усталёўваецца без сеткі)",
+        "clearSearch": "Ачысціць пошук",
+        "curatedGroup": "Часта патрэбныя",
+        "emptyBody": "Не ўдалося загрузіць метаданыя Winetricks для гэтай бутэлькі.",
+        "emptyHeading": "Няма даступных кампанентаў",
+        "installFailedTag": "Установка не ўдалася",
+        "installedTag": "Установлена",
+        "installingRow": "Устаноўка…",
+        "needsGuiTag": "Патрабуецца графічны інтэрфейс Winetricks",
+        "resultsHeading": "{{total}} рэзультатаў",
+        "retry": "Паўторыць",
+        "searchPlaceholder": "Пошук кампанентаў…",
+        "zeroResultHeading": "Няма кампанентаў, якія адпавядаюць “{{query}}”."
+    },
     "donate": {
         "navLabel": "Ахвяраваць"
     },

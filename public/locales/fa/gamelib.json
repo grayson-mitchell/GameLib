@@ -376,6 +376,21 @@
         "unavailable": "مدیریت اجزای Winetricks در این نسخه در دسترس نیست",
         "unavailableDetail": "پشتیبانی از Winetricks به نسخه‌ای در آینده (D-03, Phase 34.6) موکول شده و از این نسخه قابل فهرست‌کردن یا نصب نیست."
     },
+    "winetricksBrowse": {
+        "cachedTag": "ذخیره‌شده (نصب بدون اینترنت)",
+        "clearSearch": "پاک‌کردن جستجو",
+        "curatedGroup": "معمولاً لازم",
+        "emptyBody": "فراداده‌های Winetricks برای این bottle بار نشد.",
+        "emptyHeading": "هیچ مؤلفه‌ای موجود نیست",
+        "installFailedTag": "نصب ناموفق بود",
+        "installedTag": "نصب‌شده",
+        "installingRow": "در حال نصب…",
+        "needsGuiTag": "به رابط گرافیکی Winetricks نیاز دارد",
+        "resultsHeading": "{{total}} نتیجه",
+        "retry": "تلاش دوباره",
+        "searchPlaceholder": "جستجوی مؤلفه‌ها…",
+        "zeroResultHeading": "هیچ مؤلفه‌ای با “{{query}}” مطابقت ندارد."
+    },
     "donate": {
         "navLabel": "اهدای مالی"
     },

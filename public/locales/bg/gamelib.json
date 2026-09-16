@@ -376,6 +376,21 @@
         "unavailable": "Управлението на компоненти на Winetricks не е налично в тази версия",
         "unavailableDetail": "Поддръжката на Winetricks е отложена за бъдещо издание (D-03, Фаза 34.6) и не може да се преглежда или инсталира от тази версия."
     },
+    "winetricksBrowse": {
+        "cachedTag": "В кеша (инсталира се офлайн)",
+        "clearSearch": "Изчистване на търсенето",
+        "curatedGroup": "Често необходими",
+        "emptyBody": "Метаданните на Winetricks не можаха да се заредят за тази bottle.",
+        "emptyHeading": "Няма налични компоненти",
+        "installFailedTag": "Инсталирането е неуспешно",
+        "installedTag": "Инсталиран",
+        "installingRow": "Инсталиране…",
+        "needsGuiTag": "Изисква графичен интерфейс на Winetricks",
+        "resultsHeading": "{{total}} резултата",
+        "retry": "Нов опит",
+        "searchPlaceholder": "Търсене на компоненти…",
+        "zeroResultHeading": "Няма компонент, отговарящ на “{{query}}”."
+    },
     "donate": {
         "navLabel": "Дарете"
     },

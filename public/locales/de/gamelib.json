@@ -376,6 +376,21 @@
         "unavailable": "Die Verwaltung von Winetricks-Komponenten ist in diesem Build nicht verfügbar",
         "unavailableDetail": "Die Unterstützung für Winetricks ist auf eine zukünftige Version verschoben (D-03, Phase 34.6) und kann in diesem Build nicht aufgelistet oder installiert werden."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Zwischengespeichert (Offline-Installation)",
+        "clearSearch": "Suche zurücksetzen",
+        "curatedGroup": "Häufig benötigt",
+        "emptyBody": "Die Winetricks-Metadaten konnten für diese Bottle nicht geladen werden.",
+        "emptyHeading": "Keine Komponenten verfügbar",
+        "installFailedTag": "Installation fehlgeschlagen",
+        "installedTag": "Installiert",
+        "installingRow": "Wird installiert…",
+        "needsGuiTag": "Erfordert die Winetricks-GUI",
+        "resultsHeading": "{{total}} Ergebnisse",
+        "retry": "Erneut versuchen",
+        "searchPlaceholder": "Komponenten suchen…",
+        "zeroResultHeading": "Keine Komponente entspricht “{{query}}”."
+    },
     "donate": {
         "navLabel": "Spenden"
     },

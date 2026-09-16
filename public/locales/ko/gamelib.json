@@ -376,6 +376,21 @@
         "unavailable": "이 빌드에서는 Winetricks 구성 요소 관리를 사용할 수 없습니다",
         "unavailableDetail": "Winetricks 지원은 향후 릴리스(D-03, 34.6단계)로 연기되었으며, 이 빌드에서는 나열하거나 설치할 수 없습니다."
     },
+    "winetricksBrowse": {
+        "cachedTag": "캐시됨(오프라인 설치)",
+        "clearSearch": "검색 지우기",
+        "curatedGroup": "일반적으로 필요함",
+        "emptyBody": "이 bottle의 Winetricks 메타데이터를 불러올 수 없습니다.",
+        "emptyHeading": "사용 가능한 구성 요소가 없습니다",
+        "installFailedTag": "설치 실패",
+        "installedTag": "설치됨",
+        "installingRow": "설치 중…",
+        "needsGuiTag": "Winetricks GUI가 필요합니다",
+        "resultsHeading": "{{total}}개 결과",
+        "retry": "다시 시도",
+        "searchPlaceholder": "구성 요소 검색…",
+        "zeroResultHeading": "“{{query}}”와 일치하는 구성 요소가 없습니다."
+    },
     "donate": {
         "navLabel": "기부"
     },

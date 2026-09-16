@@ -376,6 +376,21 @@
         "unavailable": "Gestionarea componentelor Winetricks nu este disponibilă în această versiune",
         "unavailableDetail": "Suportul pentru Winetricks este amânat pentru o versiune viitoare (D-03, Faza 34.6) și nu poate fi listat sau instalat din această versiune."
     },
+    "winetricksBrowse": {
+        "cachedTag": "În cache (se instalează offline)",
+        "clearSearch": "Șterge căutarea",
+        "curatedGroup": "Necesare frecvent",
+        "emptyBody": "Metadatele Winetricks nu au putut fi încărcate pentru acest bottle.",
+        "emptyHeading": "Nu există componente disponibile",
+        "installFailedTag": "Instalarea a eșuat",
+        "installedTag": "Instalat",
+        "installingRow": "Se instalează…",
+        "needsGuiTag": "Necesită interfața grafică Winetricks",
+        "resultsHeading": "{{total}} rezultate",
+        "retry": "Reîncearcă",
+        "searchPlaceholder": "Caută componente…",
+        "zeroResultHeading": "Nicio componentă nu corespunde cu “{{query}}”."
+    },
     "donate": {
         "navLabel": "Donează"
     },

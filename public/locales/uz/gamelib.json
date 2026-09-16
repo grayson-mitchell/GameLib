@@ -376,6 +376,21 @@
         "unavailable": "Winetricks komponentlarini boshqarish ushbu qurilmada mavjud emas",
         "unavailableDetail": "Winetricks qo'llab-quvvatlashi keyingi versiyaga qoldirilgan (D-03, 34.6-bosqich) va ushbu qurilmadan ro'yxatga olinishi yoki o'rnatilishi mumkin emas."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Keshda (oflayn o'rnatiladi)",
+        "clearSearch": "Qidiruvni tozalash",
+        "curatedGroup": "Ko'pincha kerak bo'ladiganlar",
+        "emptyBody": "Bu bottle uchun Winetricks metama'lumotlarini yuklab bo'lmadi.",
+        "emptyHeading": "Mavjud komponentlar yo'q",
+        "installFailedTag": "O'rnatish amalga oshmadi",
+        "installedTag": "O'rnatilgan",
+        "installingRow": "O'rnatilmoqda…",
+        "needsGuiTag": "Winetricks GUI talab qiladi",
+        "resultsHeading": "{{total}} natija",
+        "retry": "Qayta urinish",
+        "searchPlaceholder": "Komponentlarni qidirish…",
+        "zeroResultHeading": "“{{query}}”ga mos komponent topilmadi."
+    },
     "donate": {
         "navLabel": "Xayriya qilish"
     },

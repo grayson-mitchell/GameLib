@@ -376,6 +376,21 @@
         "unavailable": "Manajemen komponen Winetricks tidak tersedia pada build ini",
         "unavailableDetail": "Dukungan Winetricks ditunda ke rilis mendatang (D-03, Fase 34.6) dan tidak dapat ditampilkan atau dipasang dari build ini."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Dalam tembolok (terpasang tanpa koneksi)",
+        "clearSearch": "Hapus pencarian",
+        "curatedGroup": "Umumnya diperlukan",
+        "emptyBody": "Metadata Winetricks tidak dapat dimuat untuk bottle ini.",
+        "emptyHeading": "Tidak ada komponen yang tersedia",
+        "installFailedTag": "Pemasangan gagal",
+        "installedTag": "Terpasang",
+        "installingRow": "Memasang…",
+        "needsGuiTag": "Memerlukan GUI Winetricks",
+        "resultsHeading": "{{total}} hasil",
+        "retry": "Coba lagi",
+        "searchPlaceholder": "Cari komponen…",
+        "zeroResultHeading": "Tidak ada komponen yang cocok dengan “{{query}}”."
+    },
     "donate": {
         "navLabel": "Donasi"
     },

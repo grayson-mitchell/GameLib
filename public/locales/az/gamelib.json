@@ -376,6 +376,21 @@
         "unavailable": "Winetricks komponent idarəetməsi bu versiyada mövcud deyil",
         "unavailableDetail": "Winetricks dəstəyi gələcək buraxılış üçün təxirə salınıb (D-03, Faza 34.6) və bu versiyadan siyahıya alına və ya quraşdırıla bilməz."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Keşlənib (oflayn quraşdırılır)",
+        "clearSearch": "Axtarışı təmizlə",
+        "curatedGroup": "Tez-tez lazım olanlar",
+        "emptyBody": "Bu bottle üçün Winetricks məlumatları yüklənə bilmədi.",
+        "emptyHeading": "Heç bir komponent mövcud deyil",
+        "installFailedTag": "Quraşdırma alınmadı",
+        "installedTag": "Quraşdırılıb",
+        "installingRow": "Quraşdırılır…",
+        "needsGuiTag": "Winetricks GUI tələb edir",
+        "resultsHeading": "{{total}} nəticə",
+        "retry": "Yenidən cəhd et",
+        "searchPlaceholder": "Komponentləri axtar…",
+        "zeroResultHeading": "“{{query}}” ilə uyğun komponent yoxdur."
+    },
     "donate": {
         "navLabel": "İanə et"
     },

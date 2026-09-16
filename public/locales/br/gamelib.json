@@ -376,6 +376,21 @@
         "unavailable": "N'eo ket hegerz merañ parzhioù Winetricks war ar savadur-mañ",
         "unavailableDetail": "Dilezet eo skor Winetricks evit un embannadur da zont (D-03, Fazenn 34.6) ha ne c'hall ket bezañ rollet pe staliet diwar ar savadur-mañ."
     },
+    "winetricksBrowse": {
+        "cachedTag": "War gof (staliañ hep kevreadur)",
+        "clearSearch": "Skarzhañ ar c'hlask",
+        "curatedGroup": "Ezhommet alies",
+        "emptyBody": "N'eus ket bet gallet kargañ roadennoù Winetricks evit ar voutailh-mañ.",
+        "emptyHeading": "N'eus parzhioù hegerz ebet",
+        "installFailedTag": "C'hwitet ar staliañ",
+        "installedTag": "Staliet",
+        "installingRow": "O staliañ…",
+        "needsGuiTag": "Ret eo GUI Winetricks",
+        "resultsHeading": "{{total}} disoc'h",
+        "retry": "Adklask",
+        "searchPlaceholder": "Klask parzhioù…",
+        "zeroResultHeading": "Parzh ebet a glot gant “{{query}}”."
+    },
     "donate": {
         "navLabel": "Reiñ arc'hant"
     },

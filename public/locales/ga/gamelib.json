@@ -376,6 +376,21 @@
         "unavailable": "Níl bainistíocht comhpháirteanna Winetricks ar fáil sa tógáil seo",
         "unavailableDetail": "Cuirtear tacaíocht Winetricks siar go dtí eisiúint sa todhchaí (D-03, Céim 34.6) agus ní féidir í a liostú ná a shuiteáil ón tógáil seo."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Curtha i dtaisce (suiteáiltear as líne)",
+        "clearSearch": "Glan an cuardach",
+        "curatedGroup": "De ghnáth riachtanach",
+        "emptyBody": "Níorbh fhéidir meiteashonraí Winetricks a luchtú don bhuidéal seo.",
+        "emptyHeading": "Níl aon chomhpháirteanna ar fáil",
+        "installFailedTag": "Theip ar an suiteáil",
+        "installedTag": "Suiteáilte",
+        "installingRow": "Ag suiteáil…",
+        "needsGuiTag": "Teastaíonn GUI Winetricks",
+        "resultsHeading": "{{total}} toradh",
+        "retry": "Bain triail eile as",
+        "searchPlaceholder": "Cuardaigh comhpháirteanna…",
+        "zeroResultHeading": "Níl aon chomhpháirt ag teacht le “{{query}}”."
+    },
     "donate": {
         "navLabel": "Deonaigh"
     },

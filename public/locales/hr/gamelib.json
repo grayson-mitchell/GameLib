@@ -376,6 +376,21 @@
         "unavailable": "Upravljanje Winetricks komponentama nije dostupno u ovoj inačici",
         "unavailableDetail": "Podrška za Winetricks odgođena je za buduće izdanje (D-03, faza 34.6) i ne može se popisati ni instalirati u ovoj inačici."
     },
+    "winetricksBrowse": {
+        "cachedTag": "U predmemoriji (instalira se izvanmrežno)",
+        "clearSearch": "Obriši pretragu",
+        "curatedGroup": "Često potrebno",
+        "emptyBody": "Metapodatke za Winetricks nije bilo moguće učitati za ovu bottle.",
+        "emptyHeading": "Nema dostupnih komponenti",
+        "installFailedTag": "Instalacija nije uspjela",
+        "installedTag": "Instalirano",
+        "installingRow": "Instaliranje…",
+        "needsGuiTag": "Potreban je Winetricks GUI",
+        "resultsHeading": "{{total}} rezultata",
+        "retry": "Pokušaj ponovno",
+        "searchPlaceholder": "Pretraži komponente…",
+        "zeroResultHeading": "Nijedna komponenta ne odgovara “{{query}}”."
+    },
     "donate": {
         "navLabel": "Doniraj"
     },

@@ -376,6 +376,21 @@
         "unavailable": "Quản lý thành phần Winetricks không khả dụng trên bản dựng này",
         "unavailableDetail": "Hỗ trợ Winetricks được hoãn lại cho bản phát hành trong tương lai (D-03, Phase 34.6) và không thể liệt kê hoặc cài đặt từ bản dựng này."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Đã lưu vào bộ nhớ đệm (cài đặt ngoại tuyến)",
+        "clearSearch": "Xóa tìm kiếm",
+        "curatedGroup": "Thường cần thiết",
+        "emptyBody": "Không thể tải siêu dữ liệu Winetricks cho bottle này.",
+        "emptyHeading": "Không có thành phần khả dụng",
+        "installFailedTag": "Cài đặt không thành công",
+        "installedTag": "Đã cài đặt",
+        "installingRow": "Đang cài đặt…",
+        "needsGuiTag": "Yêu cầu GUI của Winetricks",
+        "resultsHeading": "{{total}} kết quả",
+        "retry": "Thử lại",
+        "searchPlaceholder": "Tìm kiếm thành phần…",
+        "zeroResultHeading": "Không có thành phần nào khớp với “{{query}}”."
+    },
     "donate": {
         "navLabel": "Quyên góp"
     },

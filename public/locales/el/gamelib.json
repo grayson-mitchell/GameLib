@@ -376,6 +376,21 @@
         "unavailable": "Η διαχείριση στοιχείων Winetricks δεν είναι διαθέσιμη σε αυτή την έκδοση",
         "unavailableDetail": "Η υποστήριξη Winetricks έχει μετατεθεί σε μελλοντική έκδοση (D-03, Φάση 34.6) και δεν μπορεί να προβληθεί ή να εγκατασταθεί από αυτή την έκδοση."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Στην προσωρινή μνήμη (εγκαθίσταται εκτός σύνδεσης)",
+        "clearSearch": "Καθαρισμός αναζήτησης",
+        "curatedGroup": "Συχνά απαιτούμενα",
+        "emptyBody": "Δεν ήταν δυνατή η φόρτωση των μεταδεδομένων του Winetricks για αυτό το bottle.",
+        "emptyHeading": "Δεν υπάρχουν διαθέσιμα στοιχεία",
+        "installFailedTag": "Η εγκατάσταση απέτυχε",
+        "installedTag": "Εγκατεστημένο",
+        "installingRow": "Εγκατάσταση…",
+        "needsGuiTag": "Απαιτεί το γραφικό περιβάλλον του Winetricks",
+        "resultsHeading": "{{total}} αποτελέσματα",
+        "retry": "Δοκιμάστε ξανά",
+        "searchPlaceholder": "Αναζήτηση στοιχείων…",
+        "zeroResultHeading": "Κανένα στοιχείο δεν ταιριάζει με “{{query}}”."
+    },
     "donate": {
         "navLabel": "Δωρεά"
     },

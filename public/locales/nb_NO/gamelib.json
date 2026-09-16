@@ -376,6 +376,21 @@
         "unavailable": "Håndtering av Winetricks-komponenter er ikke tilgjengelig i dette bygget",
         "unavailableDetail": "Støtte for Winetricks er utsatt til en fremtidig utgivelse (D-03, fase 34.6) og kan ikke listes eller installeres fra dette bygget."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Bufret (installeres uten nett)",
+        "clearSearch": "Fjern søk",
+        "curatedGroup": "Ofte nødvendige",
+        "emptyBody": "Winetricks-metadata kunne ikke lastes for denne bottlen.",
+        "emptyHeading": "Ingen komponenter tilgjengelig",
+        "installFailedTag": "Installasjonen mislyktes",
+        "installedTag": "Installert",
+        "installingRow": "Installerer…",
+        "needsGuiTag": "Krever Winetricks-GUI",
+        "resultsHeading": "{{total}} resultater",
+        "retry": "Prøv igjen",
+        "searchPlaceholder": "Søk i komponenter…",
+        "zeroResultHeading": "Ingen komponent samsvarer med “{{query}}”."
+    },
     "donate": {
         "navLabel": "Doner"
     },

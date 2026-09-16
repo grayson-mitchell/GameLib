@@ -376,6 +376,21 @@
         "unavailable": "此版本不支援 Winetricks 元件管理",
         "unavailableDetail": "Winetricks 支援已延後至未來版本推出（D-03，第 34.6 階段），此版本無法列出或安裝相關元件。"
     },
+    "winetricksBrowse": {
+        "cachedTag": "已快取（離線安裝）",
+        "clearSearch": "清除搜尋",
+        "curatedGroup": "常用元件",
+        "emptyBody": "無法載入此 bottle 的 Winetricks 元資料。",
+        "emptyHeading": "沒有可用的元件",
+        "installFailedTag": "安裝失敗",
+        "installedTag": "已安裝",
+        "installingRow": "正在安裝…",
+        "needsGuiTag": "需要 Winetricks 圖形介面",
+        "resultsHeading": "{{total}} 項結果",
+        "retry": "重試",
+        "searchPlaceholder": "搜尋元件…",
+        "zeroResultHeading": "沒有與「{{query}}」相符的元件。"
+    },
     "donate": {
         "navLabel": "捐款"
     },

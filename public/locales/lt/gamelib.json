@@ -376,6 +376,21 @@
         "unavailable": "Winetricks komponentų valdymas šioje versijoje negalimas",
         "unavailableDetail": "Winetricks palaikymas atidėtas iki būsimos versijos (D-03, 34.6 etapas) ir šioje versijoje negali būti rodomas ar diegiamas."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Talpykloje (diegiama neprisijungus)",
+        "clearSearch": "Išvalyti paiešką",
+        "curatedGroup": "Dažniausiai reikalingi",
+        "emptyBody": "Nepavyko įkelti Winetricks metaduomenų šiam bottle.",
+        "emptyHeading": "Nėra pasiekiamų komponentų",
+        "installFailedTag": "Diegimas nepavyko",
+        "installedTag": "Įdiegta",
+        "installingRow": "Diegiama…",
+        "needsGuiTag": "Reikalinga Winetricks GUI",
+        "resultsHeading": "{{total}} rezultatai",
+        "retry": "Bandyti iš naujo",
+        "searchPlaceholder": "Ieškoti komponentų…",
+        "zeroResultHeading": "Nėra komponento, atitinkančio “{{query}}”."
+    },
     "donate": {
         "navLabel": "Aukoti"
     },

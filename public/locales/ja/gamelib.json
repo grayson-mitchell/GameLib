@@ -376,6 +376,21 @@
         "unavailable": "このビルドではWinetricksコンポーネント管理は利用できません",
         "unavailableDetail": "Winetricksのサポートは将来のリリース（D-03、フェーズ34.6）に延期されており、このビルドでは一覧表示やインストールができません。"
     },
+    "winetricksBrowse": {
+        "cachedTag": "キャッシュ済み（オフラインでインストール）",
+        "clearSearch": "検索をクリア",
+        "curatedGroup": "よく必要になるもの",
+        "emptyBody": "このボトルのWinetricksメタデータを読み込めませんでした。",
+        "emptyHeading": "利用可能なコンポーネントがありません",
+        "installFailedTag": "インストールに失敗しました",
+        "installedTag": "インストール済み",
+        "installingRow": "インストール中…",
+        "needsGuiTag": "Winetricks GUIが必要です",
+        "resultsHeading": "{{total}}件の結果",
+        "retry": "再試行",
+        "searchPlaceholder": "コンポーネントを検索…",
+        "zeroResultHeading": "「{{query}}」に一致するコンポーネントはありません。"
+    },
     "donate": {
         "navLabel": "寄付"
     },

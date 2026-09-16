@@ -376,6 +376,21 @@
         "unavailable": "A xestión de compoñentes de Winetricks non está dispoñible nesta compilación",
         "unavailableDetail": "O soporte de Winetricks quédase para unha versión futura (D-03, Fase 34.6) e non se pode listar nin instalar desde esta compilación."
     },
+    "winetricksBrowse": {
+        "cachedTag": "En caché (instálase sen conexión)",
+        "clearSearch": "Limpar busca",
+        "curatedGroup": "Necesarios habitualmente",
+        "emptyBody": "Non se puideron cargar os metadatos de Winetricks para esta bottle.",
+        "emptyHeading": "Non hai compoñentes dispoñibles",
+        "installFailedTag": "A instalación fallou",
+        "installedTag": "Instalado",
+        "installingRow": "Instalando…",
+        "needsGuiTag": "Precisa a GUI de Winetricks",
+        "resultsHeading": "{{total}} resultados",
+        "retry": "Reintentar",
+        "searchPlaceholder": "Buscar compoñentes…",
+        "zeroResultHeading": "Ningún compoñente coincide con “{{query}}”."
+    },
     "donate": {
         "navLabel": "Doar"
     },

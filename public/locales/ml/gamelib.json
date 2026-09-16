@@ -376,6 +376,21 @@
         "unavailable": "ഈ ബിൽഡിൽ Winetricks ഘടക മാനേജ്മെന്റ് ലഭ്യമല്ല",
         "unavailableDetail": "Winetricks പിന്തുണ ഭാവിയിലെ ഒരു റിലീസിലേക്ക് (D-03, Phase 34.6) മാറ്റിവച്ചിരിക്കുന്നു, ഈ ബിൽഡിൽ നിന്ന് ലിസ്റ്റ് ചെയ്യാനോ ഇൻസ്റ്റാൾ ചെയ്യാനോ കഴിയില്ല."
     },
+    "winetricksBrowse": {
+        "cachedTag": "കാഷെ ചെയ്തത് (ഓഫ്‌ലൈനിൽ ഇൻസ്റ്റാൾ ചെയ്യുന്നു)",
+        "clearSearch": "തിരയൽ മായ്ക്കുക",
+        "curatedGroup": "സാധാരണയായി ആവശ്യമുള്ളവ",
+        "emptyBody": "ഈ bottle-നായി Winetricks മെറ്റാഡാറ്റ ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല.",
+        "emptyHeading": "ലഭ്യമായ ഘടകങ്ങളില്ല",
+        "installFailedTag": "ഇൻസ്റ്റാൾ പരാജയപ്പെട്ടു",
+        "installedTag": "ഇൻസ്റ്റാൾ ചെയ്തു",
+        "installingRow": "ഇൻസ്റ്റാൾ ചെയ്യുന്നു…",
+        "needsGuiTag": "Winetricks GUI ആവശ്യമാണ്",
+        "resultsHeading": "{{total}} ഫലങ്ങൾ",
+        "retry": "വീണ്ടും ശ്രമിക്കുക",
+        "searchPlaceholder": "ഘടകങ്ങൾ തിരയുക…",
+        "zeroResultHeading": "“{{query}}” എന്നതുമായി പൊരുത്തപ്പെടുന്ന ഘടകമില്ല."
+    },
     "donate": {
         "navLabel": "സംഭാവന ചെയ്യുക"
     },

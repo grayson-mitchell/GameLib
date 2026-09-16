@@ -376,6 +376,21 @@
         "unavailable": "A Winetricks komponenskezelés nem érhető el ebben a build-ben",
         "unavailableDetail": "A Winetricks támogatás egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a build-ben nem listázható és nem telepíthető."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Gyorsítótárban (offline telepíthető)",
+        "clearSearch": "Keresés törlése",
+        "curatedGroup": "Gyakran szükséges",
+        "emptyBody": "A Winetricks metaadatait nem sikerült betölteni ehhez a bottle-hoz.",
+        "emptyHeading": "Nincs elérhető összetevő",
+        "installFailedTag": "A telepítés sikertelen",
+        "installedTag": "Telepítve",
+        "installingRow": "Telepítés…",
+        "needsGuiTag": "A Winetricks GUI-ját igényli",
+        "resultsHeading": "{{total}} eredmény",
+        "retry": "Újra",
+        "searchPlaceholder": "Összetevők keresése…",
+        "zeroResultHeading": "Nincs a “{{query}}” kifejezésnek megfelelő összetevő."
+    },
     "donate": {
         "navLabel": "Adományozás"
     },

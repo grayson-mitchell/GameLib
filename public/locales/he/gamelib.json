@@ -376,6 +376,21 @@
         "unavailable": "ניהול רכיבי Winetricks אינו זמין בגרסה זו",
         "unavailableDetail": "תמיכה ב-Winetricks נדחתה לגרסה עתידית (D-03, Phase 34.6) ולא ניתן להציגה או להתקינה בגרסה זו."
     },
+    "winetricksBrowse": {
+        "cachedTag": "במטמון (מותקן ללא חיבור לאינטרנט)",
+        "clearSearch": "ניקוי חיפוש",
+        "curatedGroup": "נדרשים בדרך כלל",
+        "emptyBody": "לא ניתן היה לטעון את נתוני העל של Winetricks עבור ה-bottle הזה.",
+        "emptyHeading": "אין רכיבים זמינים",
+        "installFailedTag": "ההתקנה נכשלה",
+        "installedTag": "מותקן",
+        "installingRow": "מתקין…",
+        "needsGuiTag": "דורש את מנשק המשתמש הגרפי של Winetricks",
+        "resultsHeading": "{{total}} תוצאות",
+        "retry": "ניסיון חוזר",
+        "searchPlaceholder": "חיפוש רכיבים…",
+        "zeroResultHeading": "אין רכיב שמתאים ל־“{{query}}”."
+    },
     "donate": {
         "navLabel": "תרומה"
     },

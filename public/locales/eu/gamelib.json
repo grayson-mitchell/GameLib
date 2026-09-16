@@ -376,6 +376,21 @@
         "unavailable": "Winetricks osagaien kudeaketa ez dago erabilgarri bertsio honetan",
         "unavailableDetail": "Winetricks euskarria etorkizuneko bertsio baterako utzi da (D-03, 34.6 fasea) eta ezin da bertsio honetatik zerrendatu edo instalatu."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Cachean (lineaz kanpo instalatzen da)",
+        "clearSearch": "Garbitu bilaketa",
+        "curatedGroup": "Sarritan behar direnak",
+        "emptyBody": "Ezin izan dira Winetricks-en metadatuak kargatu botila honentzat.",
+        "emptyHeading": "Ez dago osagairik eskuragarri",
+        "installFailedTag": "Instalazioak huts egin du",
+        "installedTag": "Instalatuta",
+        "installingRow": "Instalatzen…",
+        "needsGuiTag": "Winetricks-en GUIa behar du",
+        "resultsHeading": "{{total}} emaitza",
+        "retry": "Saiatu berriro",
+        "searchPlaceholder": "Bilatu osagaiak…",
+        "zeroResultHeading": "Ez dago “{{query}}”(r)ekin bat datorren osagairik."
+    },
     "donate": {
         "navLabel": "Dohaintza eman"
     },

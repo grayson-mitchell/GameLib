@@ -376,6 +376,21 @@
         "unavailable": "La gestion des composants Winetricks n'est pas disponible sur cette version",
         "unavailableDetail": "La prise en charge de Winetricks est reportée à une version future (D-03, Phase 34.6) et ne peut pas être listée ou installée depuis cette version."
     },
+    "winetricksBrowse": {
+        "cachedTag": "En cache (installation hors ligne)",
+        "clearSearch": "Effacer la recherche",
+        "curatedGroup": "Couramment nécessaires",
+        "emptyBody": "Les métadonnées de Winetricks n'ont pas pu être chargées pour cette bottle.",
+        "emptyHeading": "Aucun composant disponible",
+        "installFailedTag": "L'installation a échoué",
+        "installedTag": "Installé",
+        "installingRow": "Installation en cours…",
+        "needsGuiTag": "Nécessite l'interface graphique de Winetricks",
+        "resultsHeading": "{{total}} résultats",
+        "retry": "Réessayer",
+        "searchPlaceholder": "Rechercher des composants…",
+        "zeroResultHeading": "Aucun composant ne correspond à “{{query}}”."
+    },
     "donate": {
         "navLabel": "Faire un don"
     },

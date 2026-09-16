@@ -376,6 +376,21 @@
         "unavailable": "Správa komponent Winetricks není v tomto sestavení k dispozici",
         "unavailableDetail": "Podpora Winetricks je odložena na budoucí vydání (D-03, fáze 34.6) a v tomto sestavení ji nelze zobrazit ani nainstalovat."
     },
+    "winetricksBrowse": {
+        "cachedTag": "V mezipaměti (instaluje se offline)",
+        "clearSearch": "Vymazat vyhledávání",
+        "curatedGroup": "Často potřebné",
+        "emptyBody": "Metadata Winetricks se pro tuto bottle nepodařilo načíst.",
+        "emptyHeading": "Žádné dostupné komponenty",
+        "installFailedTag": "Instalace se nezdařila",
+        "installedTag": "Nainstalováno",
+        "installingRow": "Instaluje se…",
+        "needsGuiTag": "Vyžaduje grafické rozhraní Winetricks",
+        "resultsHeading": "{{total}} výsledků",
+        "retry": "Zkusit znovu",
+        "searchPlaceholder": "Hledat komponenty…",
+        "zeroResultHeading": "Žádná komponenta neodpovídá “{{query}}”."
+    },
     "donate": {
         "navLabel": "Přispět"
     },

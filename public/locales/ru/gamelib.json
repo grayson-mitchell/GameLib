@@ -376,6 +376,21 @@
         "unavailable": "Управление компонентами Winetricks недоступно в этой сборке",
         "unavailableDetail": "Поддержка Winetricks отложена до будущего релиза (D-03, этап 34.6) и не может быть отображена или установлена из этой сборки."
     },
+    "winetricksBrowse": {
+        "cachedTag": "В кэше (устанавливается офлайн)",
+        "clearSearch": "Очистить поиск",
+        "curatedGroup": "Часто необходимые",
+        "emptyBody": "Не удалось загрузить метаданные Winetricks для этой bottle.",
+        "emptyHeading": "Нет доступных компонентов",
+        "installFailedTag": "Установка не удалась",
+        "installedTag": "Установлено",
+        "installingRow": "Установка…",
+        "needsGuiTag": "Требуется графический интерфейс Winetricks",
+        "resultsHeading": "{{total}} результатов",
+        "retry": "Повторить",
+        "searchPlaceholder": "Поиск компонентов…",
+        "zeroResultHeading": "Нет компонентов, соответствующих “{{query}}”."
+    },
     "donate": {
         "navLabel": "Пожертвовать"
     },

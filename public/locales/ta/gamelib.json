@@ -376,6 +376,21 @@
         "unavailable": "இந்த பதிப்பில் Winetricks கூறு மேலாண்மை கிடைக்கவில்லை",
         "unavailableDetail": "Winetricks ஆதரவு எதிர்கால வெளியீட்டிற்கு (D-03, Phase 34.6) ஒத்திவைக்கப்பட்டுள்ளது, இந்த பதிப்பிலிருந்து பட்டியலிடவோ நிறுவவோ முடியாது."
     },
+    "winetricksBrowse": {
+        "cachedTag": "தற்காலிக நினைவகத்தில் (இணையம் இல்லாமல் நிறுவப்படும்)",
+        "clearSearch": "தேடலை அழி",
+        "curatedGroup": "பொதுவாகத் தேவைப்படுபவை",
+        "emptyBody": "இந்த bottle-க்கான Winetricks மேலான தரவை ஏற்ற முடியவில்லை.",
+        "emptyHeading": "கூறுகள் எதுவும் இல்லை",
+        "installFailedTag": "நிறுவல் தோல்வியடைந்தது",
+        "installedTag": "நிறுவப்பட்டது",
+        "installingRow": "நிறுவுகிறது…",
+        "needsGuiTag": "Winetricks GUI தேவை",
+        "resultsHeading": "{{total}} முடிவுகள்",
+        "retry": "மீண்டும் முயற்சிக்கவும்",
+        "searchPlaceholder": "கூறுகளைத் தேடு…",
+        "zeroResultHeading": "“{{query}}” உடன் பொருந்தும் கூறு இல்லை."
+    },
     "donate": {
         "navLabel": "நன்கொடை"
     },

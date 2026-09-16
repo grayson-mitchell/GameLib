@@ -376,6 +376,21 @@
         "unavailable": "Winetricks კომპონენტების მართვა ამ ვერსიაზე მიუწვდომელია",
         "unavailableDetail": "Winetricks-ის მხარდაჭერა გადადებულია მომავალ გამოშვებამდე (D-03, ფაზა 34.6) და ამ ვერსიიდან მისი ჩამონათვალის ნახვა ან დაყენება შეუძლებელია."
     },
+    "winetricksBrowse": {
+        "cachedTag": "ქეშირებულია (ინსტალირდება ინტერნეტის გარეშე)",
+        "clearSearch": "ძებნის გასუფთავება",
+        "curatedGroup": "ხშირად საჭირო",
+        "emptyBody": "ამ bottle-ისთვის Winetricks-ის მეტამონაცემების ჩატვირთვა ვერ მოხერხდა.",
+        "emptyHeading": "კომპონენტები არ არის ხელმისაწვდომი",
+        "installFailedTag": "ინსტალაცია ვერ მოხერხდა",
+        "installedTag": "დაინსტალირებული",
+        "installingRow": "ინსტალაცია…",
+        "needsGuiTag": "Winetricks-ის გრაფიკული ინტერფეისია საჭირო",
+        "resultsHeading": "{{total}} შედეგი",
+        "retry": "თავიდან ცდა",
+        "searchPlaceholder": "კომპონენტების ძებნა…",
+        "zeroResultHeading": "“{{query}}”-ს შესატყვისი კომპონენტი არ არის."
+    },
     "donate": {
         "navLabel": "დონაცია"
     },

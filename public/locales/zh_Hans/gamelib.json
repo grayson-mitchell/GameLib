@@ -376,6 +376,21 @@
         "unavailable": "此版本不支持 Winetricks 组件管理",
         "unavailableDetail": "Winetricks 支持已推迟至未来版本（D-03，第 34.6 阶段），此版本无法列出或安装。"
     },
+    "winetricksBrowse": {
+        "cachedTag": "已缓存（离线安装）",
+        "clearSearch": "清除搜索",
+        "curatedGroup": "常用组件",
+        "emptyBody": "无法加载此 bottle 的 Winetricks 元数据。",
+        "emptyHeading": "没有可用组件",
+        "installFailedTag": "安装失败",
+        "installedTag": "已安装",
+        "installingRow": "正在安装…",
+        "needsGuiTag": "需要 Winetricks 图形界面",
+        "resultsHeading": "{{total}} 个结果",
+        "retry": "重试",
+        "searchPlaceholder": "搜索组件…",
+        "zeroResultHeading": "没有与“{{query}}”匹配的组件。"
+    },
     "donate": {
         "navLabel": "捐赠"
     },

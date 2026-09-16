@@ -376,6 +376,21 @@
         "unavailable": "Winetricks-komponenttien hallinta ei ole käytettävissä tässä versiossa",
         "unavailableDetail": "Winetricks-tuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi luetella tai asentaa tästä versiosta."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Välimuistissa (asentuu offline-tilassa)",
+        "clearSearch": "Tyhjennä haku",
+        "curatedGroup": "Usein tarvitut",
+        "emptyBody": "Winetricks-metatietoja ei voitu latata tälle bottlelle.",
+        "emptyHeading": "Ei saatavilla olevia komponentteja",
+        "installFailedTag": "Asennus epäonnistui",
+        "installedTag": "Asennettu",
+        "installingRow": "Asennetaan…",
+        "needsGuiTag": "Vaatii Winetricksin graafisen käyttöliittymän",
+        "resultsHeading": "{{total}} tulosta",
+        "retry": "Yritä uudelleen",
+        "searchPlaceholder": "Hae komponentteja…",
+        "zeroResultHeading": "Mikään komponentti ei vastaa hakua “{{query}}”."
+    },
     "donate": {
         "navLabel": "Lahjoita"
     },

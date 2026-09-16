@@ -373,6 +373,21 @@
         "unavailable": "Winetricks komponentide haldamine pole selles versioonis saadaval",
         "unavailableDetail": "Winetricks tugi on lükatud edasi järgmisesse väljalaskesse (D-03, faas 34.6) ja seda ei saa selles versioonis loetleda ega paigaldada."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Vahemälus (installitakse võrguühenduseta)",
+        "clearSearch": "Tühjenda otsing",
+        "curatedGroup": "Sageli vajalikud",
+        "emptyBody": "Selle bottle'i jaoks ei õnnestunud Winetricksi metaandmeid laadida.",
+        "emptyHeading": "Komponente ei ole saadaval",
+        "installFailedTag": "Installimine ebaõnnestus",
+        "installedTag": "Installitud",
+        "installingRow": "Installimine…",
+        "needsGuiTag": "Vajab Winetricksi graafilist liidest",
+        "resultsHeading": "{{total}} tulemust",
+        "retry": "Proovi uuesti",
+        "searchPlaceholder": "Otsi komponente…",
+        "zeroResultHeading": "Ükski komponent ei vasta “{{query}}”."
+    },
     "sidebar": {
         "redeemSteamKey": "Lunasta Steami võti"
     },

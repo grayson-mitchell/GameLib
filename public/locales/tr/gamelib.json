@@ -376,6 +376,21 @@
         "unavailable": "Winetricks bileşen yönetimi bu sürümde kullanılamıyor",
         "unavailableDetail": "Winetricks desteği ileriki bir sürüme ertelenmiştir (D-03, Aşama 34.6) ve bu sürümden listelenip yüklenemez."
     },
+    "winetricksBrowse": {
+        "cachedTag": "Önbellekte (çevrimdışı yüklenir)",
+        "clearSearch": "Aramayı temizle",
+        "curatedGroup": "Sık gereken",
+        "emptyBody": "Bu bottle için Winetricks meta verileri yüklenemedi.",
+        "emptyHeading": "Kullanılabilir bileşen yok",
+        "installFailedTag": "Yükleme başarısız oldu",
+        "installedTag": "Yüklendi",
+        "installingRow": "Yükleniyor…",
+        "needsGuiTag": "Winetricks GUI gerektirir",
+        "resultsHeading": "{{total}} sonuç",
+        "retry": "Yeniden dene",
+        "searchPlaceholder": "Bileşen ara…",
+        "zeroResultHeading": "“{{query}}” ile eşleşen bileşen yok."
+    },
     "donate": {
         "navLabel": "Bağış Yap"
     },
