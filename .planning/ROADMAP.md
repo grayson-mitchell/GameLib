@@ -5223,11 +5223,11 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 44-05-PLAN.md — rewire `Winetricks/index.tsx`: remove both mount gates, split the loading state, retire `installedWrapper`, delete `WinetricksSearch/`, D-18 revert-to-red proof (wave 4)
+- [x] 44-05-PLAN.md — rewire `Winetricks/index.tsx`: remove both mount gates, split the loading state, retire `installedWrapper`, delete `WinetricksSearch/`, D-18 revert-to-red proof (wave 4)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 44-06-PLAN.md — locale catalogs: fill 13 keys × 48 locales, remove 6 orphaned `winetricks.*` keys × 47 dirs (wave 5)
+- [ ] 44-06-PLAN.md — locale catalogs: fill 13 keys × 48 locales, remove **5** orphaned `winetricks.*` keys × 47 dirs (wave 5). CORRECTED from 6 by 44-05 D-20(a) census and independently re-verified by the orchestrator: `winetricks.installing` is NOT orphaned — it survives via a consumer shipped by 44-04 at `WinetricksBrowse/Row/index.tsx:164`, independent of the old consumer 44-05 removed. Deleting it would break a live string.
 - [ ] 44-07-PLAN.md — i18n gate artifacts mirror the add/delete; fold Half A then close the 2026-08-26 and 2026-09-15 todos (wave 5)
 
 **Wave 6** *(blocked on Wave 5 completion)*
