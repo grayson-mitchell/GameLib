@@ -107,6 +107,9 @@
         "refresh-rating": "Làm mới xếp hạng"
     },
     "installFlows": {
+        "importConfirmLabel": "Sử dụng bản cài đặt này",
+        "importDoorLabel": "Tìm bản cài đặt hiện có…",
+        "importExplainer": "Bạn đã có trò chơi này trên đĩa — từ một launcher khác, hoặc một ổ đĩa khác? Hãy trỏ đến các tệp đó thay vì tải xuống lại.",
         "pathRejectedBodyImport": "GameLib không thể nhập từ vị trí đó. Nguồn phải là đường dẫn thư mục đầy đủ, không chứa bước \"..\". Hãy chọn lại thư mục của game.",
         "pathRejectedBodyMove": "GameLib không thể di chuyển game này đến đó. Đích đến phải là đường dẫn thư mục đầy đủ, không chứa bước \"..\". Hãy chọn lại thư mục đích.",
         "pathRejectedTitle": "Không thể dùng vị trí đó"

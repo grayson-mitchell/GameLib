@@ -107,6 +107,9 @@
         "refresh-rating": "Reytinqi yenilə"
     },
     "installFlows": {
+        "importConfirmLabel": "Bu quraşdırmadan istifadə et",
+        "importDoorLabel": "Mövcud quraşdırmanı tap…",
+        "importExplainer": "Bu oyun artıq diskinizdə var? Başqa bir başlatıcıdan, yaxud başqa bir diskdən? Onu yenidən yükləmək əvəzinə həmin fayllara işarə edin.",
         "pathRejectedBodyImport": "GameLib həmin yerdən idxal edə bilmədi. Mənbə \"..\" addımı olmayan tam qovluq yolu olmalıdır. Oyunun qovluğunu yenidən seçin.",
         "pathRejectedBodyMove": "GameLib bu oyunu ora köçürə bilmədi. Hədəf \"..\" addımı olmayan tam qovluq yolu olmalıdır. Hədəf qovluğu yenidən seçin.",
         "pathRejectedTitle": "Bu yer istifadə edilə bilməz"

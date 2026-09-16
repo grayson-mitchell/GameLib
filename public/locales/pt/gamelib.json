@@ -107,6 +107,9 @@
         "refresh-rating": "Atualizar avaliação"
     },
     "installFlows": {
+        "importConfirmLabel": "Usar esta instalação",
+        "importDoorLabel": "Localizar instalação existente…",
+        "importExplainer": "Já tem este jogo no disco — de outro launcher, ou de outra unidade? Aponte para esses ficheiros em vez de os transferir novamente.",
         "pathRejectedBodyImport": "O GameLib não conseguiu importar dessa localização. A origem precisa ser um caminho de pasta completo sem etapas \"..\". Escolha a pasta do jogo novamente.",
         "pathRejectedBodyMove": "O GameLib não conseguiu mover este jogo para lá. O destino precisa ser um caminho de pasta completo sem etapas \"..\". Escolha a pasta de destino novamente.",
         "pathRejectedTitle": "Não é possível usar essa localização"

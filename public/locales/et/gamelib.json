@@ -107,6 +107,9 @@
         "refresh-rating": "Värskenda hinnangut"
     },
     "installFlows": {
+        "importConfirmLabel": "Kasuta seda paigaldust",
+        "importDoorLabel": "Leia olemasolev paigaldus…",
+        "importExplainer": "Kas see mäng on juba kettal — teisest käivitajast või teiselt kettalt? Osuta neile failidele, selle asemel et uuesti alla laadida.",
         "pathRejectedBodyImport": "GameLib ei saanud sellest asukohast importida. Allikas peab olema täielik kaustatee, milles pole \"..\" samme. Vali mängu kaust uuesti.",
         "pathRejectedBodyMove": "GameLib ei saanud mängu sinna teisaldada. Sihtkoht peab olema täielik kaustatee, milles pole \"..\" samme. Vali sihtkaust uuesti.",
         "pathRejectedTitle": "Seda asukohta ei saa kasutada"

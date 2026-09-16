@@ -107,6 +107,9 @@
         "refresh-rating": "Segarkan rating"
     },
     "installFlows": {
+        "importConfirmLabel": "Gunakan instalasi ini",
+        "importDoorLabel": "Temukan instalasi yang sudah ada…",
+        "importExplainer": "Sudah punya gim ini di disk — dari peluncur lain, atau drive lain? Arahkan ke berkas tersebut daripada mengunduhnya lagi.",
         "pathRejectedBodyImport": "GameLib tidak dapat mengimpor dari lokasi tersebut. Sumbernya harus berupa jalur folder lengkap tanpa langkah \"..\" di dalamnya. Pilih kembali folder gim tersebut.",
         "pathRejectedBodyMove": "GameLib tidak dapat memindahkan gim ini ke sana. Tujuan harus berupa jalur folder lengkap tanpa langkah \"..\" di dalamnya. Pilih kembali folder tujuan.",
         "pathRejectedTitle": "Tidak dapat menggunakan lokasi tersebut"

@@ -107,6 +107,9 @@
         "refresh-rating": "評価を更新"
     },
     "installFlows": {
+        "importConfirmLabel": "このインストールを使用",
+        "importDoorLabel": "既存のインストールを探す…",
+        "importExplainer": "このゲームはすでにディスク上にありますか？別のランチャーや別のドライブからですか？再度ダウンロードする代わりに、そのファイルを指定してください。",
         "pathRejectedBodyImport": "GameLibはその場所からインポートできませんでした。ソースは「..」を含まない完全なフォルダパスである必要があります。ゲームのフォルダを再度選択してください。",
         "pathRejectedBodyMove": "GameLibはこのゲームをそこに移動できませんでした。移動先は「..」を含まない完全なフォルダパスである必要があります。移動先フォルダを再度選択してください。",
         "pathRejectedTitle": "その場所は使用できません"

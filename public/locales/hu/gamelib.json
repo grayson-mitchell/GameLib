@@ -107,6 +107,9 @@
         "refresh-rating": "Értékelés frissítése"
     },
     "installFlows": {
+        "importConfirmLabel": "Ennek a telepítésnek a használata",
+        "importDoorLabel": "Meglévő telepítés megkeresése…",
+        "importExplainer": "Már megvan ez a játék a lemezen — másik indítóból, vagy másik meghajtóról? Mutass rá azokra a fájlokra az újbóli letöltés helyett.",
         "pathRejectedBodyImport": "A GameLib nem tudott importálni arról a helyről. A forrásnak teljes mappaútvonalnak kell lennie, „..” lépések nélkül. Válaszd ki újra a játék mappáját.",
         "pathRejectedBodyMove": "A GameLib nem tudta oda áthelyezni ezt a játékot. A célhelynek teljes mappaútvonalnak kell lennie, „..” lépések nélkül. Válaszd ki újra a célmappát.",
         "pathRejectedTitle": "Ez a hely nem használható"

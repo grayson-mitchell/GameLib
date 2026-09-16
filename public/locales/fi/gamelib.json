@@ -107,6 +107,9 @@
         "refresh-rating": "Päivitä arvostelu"
     },
     "installFlows": {
+        "importConfirmLabel": "Käytä tätä asennusta",
+        "importDoorLabel": "Etsi olemassa oleva asennus…",
+        "importExplainer": "Onko peli jo levyllä — toisesta käynnistimestä tai toiselta asemalta? Osoita niihin tiedostoihin sen lataamisen sijaan uudelleen.",
         "pathRejectedBodyImport": "GameLib ei voinut tuoda kyseisestä sijainnista. Lähteen on oltava täydellinen kansiopolku ilman \"..\"-askeleita. Valitse pelin kansio uudelleen.",
         "pathRejectedBodyMove": "GameLib ei voinut siirtää tätä peliä sinne. Kohteen on oltava täydellinen kansiopolku ilman \"..\"-askeleita. Valitse kohdekansio uudelleen.",
         "pathRejectedTitle": "Tätä sijaintia ei voi käyttää"

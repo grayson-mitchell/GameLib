@@ -107,6 +107,9 @@
         "refresh-rating": "Reytingni yangilash"
     },
     "installFlows": {
+        "importConfirmLabel": "Ushbu o'rnatishdan foydalanish",
+        "importDoorLabel": "Mavjud o'rnatishni topish…",
+        "importExplainer": "Bu o'yin diskda allaqachon bormi — boshqa ishga tushirgichdan yoki boshqa diskdan? Qayta yuklab olish o'rniga o'sha fayllarni ko'rsating.",
         "pathRejectedBodyImport": "GameLib bu manzildan import qila olmadi. Manba \"..\" qadamlarisiz to'liq papka yo'li bo'lishi kerak. O'yin papkasini qaytadan tanlang.",
         "pathRejectedBodyMove": "GameLib bu o'yinni u yerga ko'chira olmadi. Manzil \"..\" qadamlarisiz to'liq papka yo'li bo'lishi kerak. Manzil papkasini qaytadan tanlang.",
         "pathRejectedTitle": "Bu manzildan foydalanib bo'lmaydi"

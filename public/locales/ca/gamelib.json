@@ -107,6 +107,9 @@
         "refresh-rating": "Actualitza la valoració"
     },
     "installFlows": {
+        "importConfirmLabel": "Utilitza aquesta instal·lació",
+        "importDoorLabel": "Localitza una instal·lació existent…",
+        "importExplainer": "Ja tens aquest joc al disc — d'un altre llançador, o d'una altra unitat? Indica aquests fitxers en lloc de tornar-los a baixar.",
         "pathRejectedBodyImport": "GameLib no ha pogut importar des d'aquesta ubicació. L'origen ha de ser un camí de carpeta complet sense passos \"..\". Torna a triar la carpeta del joc.",
         "pathRejectedBodyMove": "GameLib no ha pogut moure aquest joc allà. La destinació ha de ser un camí de carpeta complet sense passos \"..\". Torna a triar la carpeta de destinació.",
         "pathRejectedTitle": "No es pot utilitzar aquesta ubicació"

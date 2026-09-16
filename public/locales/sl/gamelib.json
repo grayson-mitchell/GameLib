@@ -107,6 +107,9 @@
         "refresh-rating": "Osveži oceno"
     },
     "installFlows": {
+        "importConfirmLabel": "Uporabi to namestitev",
+        "importDoorLabel": "Poišči obstoječo namestitev …",
+        "importExplainer": "Ali imate to igro že na disku — iz drugega zaganjalnika ali drugega diska? Namesto ponovnega prenosa pokažite na te datoteke.",
         "pathRejectedBodyImport": "GameLib ni mogel uvoziti iz te lokacije. Vir mora biti popolna pot do mape brez korakov \"..\" v njej. Ponovno izberite mapo igre.",
         "pathRejectedBodyMove": "GameLib ni mogel premakniti te igre tja. Cilj mora biti popolna pot do mape brez korakov \"..\" v njej. Ponovno izberite ciljno mapo.",
         "pathRejectedTitle": "Te lokacije ni mogoče uporabiti"

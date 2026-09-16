@@ -107,6 +107,9 @@
         "refresh-rating": "Obnoviť hodnotenie"
     },
     "installFlows": {
+        "importConfirmLabel": "Použiť túto inštaláciu",
+        "importDoorLabel": "Nájsť existujúcu inštaláciu…",
+        "importExplainer": "Máte túto hru už na disku — z iného launchera, alebo z iného disku? Ukážte na tieto súbory namiesto opätovného sťahovania.",
         "pathRejectedBodyImport": "GameLib sa nepodarilo importovať z tohto umiestnenia. Zdroj musí byť úplná cesta k priečinku bez krokov „..“. Vyberte priečinok hry znova.",
         "pathRejectedBodyMove": "GameLib nemohol túto hru tam presunúť. Cieľ musí byť úplná cesta k priečinku bez krokov „..“. Vyberte cieľový priečinok znova.",
         "pathRejectedTitle": "Toto umiestnenie nie je možné použiť"
