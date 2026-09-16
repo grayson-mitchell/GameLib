@@ -167,6 +167,12 @@ npx tsc --noEmit -p tsconfig.json   # no errors in any file touched
 npx eslint <all 5 touched/created files>   # no errors
 ```
 
+## Self-Check: PASSED
+
+All 5 created/modified files confirmed present on disk; all 5 commit hashes
+(`f1f8f98ac`, `4206e6cc2`, `fa9d3059b`, `1e7057c7f`, `23211634f`) confirmed
+present in `git log --oneline --all`.
+
 ---
 *Phase: 44-in-app-winetricks-browse-ui-replacing-the-search-only-panel*
 *Plan: 01*
