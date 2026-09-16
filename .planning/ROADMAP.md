@@ -5203,12 +5203,19 @@ unattended (`3dmark03`, `3dmark06`, `fontxplorer`, `foobar2000`, `stalker_pripya
 `ubisoftconnect`, `unigine_heaven`, `utorrent` — all benchmarks/apps, no DLLs or fonts) must be marked
 and routed to the zenity GUI rather than silently failing under `-q`.
 
-**Requirements**: TBD
+**Requirements**: REQ-44-01, REQ-44-02, REQ-44-03, REQ-44-04, REQ-44-05, REQ-44-06, REQ-44-07, REQ-44-08, REQ-44-09, REQ-44-10, REQ-44-11, REQ-44-12, REQ-44-13, REQ-44-14, REQ-44-15, REQ-44-16, REQ-44-17, REQ-44-18, REQ-44-19, REQ-44-20, REQ-44-21, REQ-44-22, REQ-44-23, REQ-44-24, REQ-44-25, REQ-44-26 — minted 2026-09-16 during `/gsd-plan-phase 44` from `44-CONTEXT.md` D-01..D-24 plus the seams surfaced by `44-RESEARCH.md`/`44-PATTERNS.md`; see `.planning/REQUIREMENTS.md` §"Phase 44 Requirements" for the six planning-time corrections recorded in requirement text. D-21 and D-23 are deliberately not given IDs (verification posture and non-coverage, carried in plan 44-08).
 **Depends on:** Phase 43
-**Plans:** 0 plans
+**Plans:** 8 plans in 6 waves
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 44 to break down)
+- [ ] 44-01-PLAN.md — pure verb/state seams in `src/common/winetricks/`: curated + Needs-GUI constants, row-state precedence, per-verb error attribution, D-03 parser fixture (wave 1)
+- [ ] 44-02-PLAN.md — English copy contract: 13 `winetricksBrowse` keys in `en/gamelib.json`, gamelib gate baseline measured for 44-06 (wave 1)
+- [ ] 44-03-PLAN.md — `WinetricksBrowse/Row/`: six-state action slot, metric parity, token chains, D-19 mouse-race port (wave 2)
+- [ ] 44-04-PLAN.md — `WinetricksBrowse/` container: search chrome, curated + category groups, flat results, single scroll region (wave 3)
+- [ ] 44-05-PLAN.md — rewire `Winetricks/index.tsx`: remove both mount gates, split the loading state, retire `installedWrapper`, delete `WinetricksSearch/`, D-18 revert-to-red proof (wave 4)
+- [ ] 44-06-PLAN.md — locale catalogs: fill 13 keys × 48 locales, remove 6 orphaned `winetricks.*` keys × 47 dirs (wave 5)
+- [ ] 44-07-PLAN.md — i18n gate artifacts mirror the add/delete; fold Half A then close the 2026-08-26 and 2026-09-15 todos (wave 5)
+- [ ] 44-08-PLAN.md — D-22 live gate (two measurements) + D-24 theme spot-check — **not autonomous** (wave 6)
 
 ---
 
