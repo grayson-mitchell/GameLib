@@ -5219,7 +5219,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 44-04-PLAN.md — `WinetricksBrowse/` container: search chrome, curated + category groups, flat results, single scroll region (wave 3)
+- [x] 44-04-PLAN.md — `WinetricksBrowse/` container: search chrome, curated + category groups, flat results, single scroll region (wave 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
