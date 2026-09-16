@@ -82,9 +82,26 @@
         "activateWizardTitle": "Aktywuj ten klucz",
         "activatingBody": "Odsłanianie klucza i aktywowanie go na Steam — to potrwa tylko chwilę.",
         "activatingTitle": "Aktywowanie na Steam…",
+        "claimOnHumble": "Odbierz na Humble",
+        "claimOnStore": "Odbierz na {{store}}",
+        "clearFilters": "Wyczyść wyszukiwanie i filtry",
+        "columnGame": "Gra",
+        "columnKey": "Klucz",
+        "columnType": "Typ",
+        "emptyBody": "Zsynchronizuj swoje konto Humble Bundle, aby zobaczyć tutaj swoje klucze.",
+        "emptyHeading": "Brak kluczy Humble",
+        "filteredEmptyBody": "Spróbuj innego wyszukiwania lub wyłącz „Tylko klucze do zrealizowania”.",
+        "filteredEmptyHeading": "Brak pasujących kluczy",
+        "loginAndClaim": "Zaloguj się w {{store}} i odbierz",
         "openStore": "Otwórz {{store}}",
+        "pickOnHumble": "Wybierz na Humble",
         "platformOther": "Inne",
-        "settledFromOwnership": "Już w Twojej bibliotece Steam"
+        "redeemableOnly": "Tylko klucze do zrealizowania",
+        "searchPlaceholder": "Szukaj w swoich kluczach",
+        "settledFromOwnership": "Już w Twojej bibliotece Steam",
+        "sortAlphabetical": "Alfabetycznie",
+        "sortExpiringSoonest": "Najszybciej wygasające",
+        "sortLabel": "Sortuj"
     },
     "info": {
         "refresh-rating": "Odśwież ocenę"

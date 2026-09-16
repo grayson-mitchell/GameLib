@@ -82,9 +82,26 @@
         "activateWizardTitle": "Актываваць гэты ключ",
         "activatingBody": "Раскрыццё вашага ключа і яго актывацыя ў Steam — гэта зойме толькі момант.",
         "activatingTitle": "Актывацыя ў Steam…",
+        "claimOnHumble": "Атрымаць на Humble",
+        "claimOnStore": "Атрымаць на {{store}}",
+        "clearFilters": "Ачысціць пошук і фільтры",
+        "columnGame": "Гульня",
+        "columnKey": "Ключ",
+        "columnType": "Тып",
+        "emptyBody": "Сінхранізуйце свой уліковы запіс Humble Bundle, каб убачыць свае ключы тут.",
+        "emptyHeading": "Пакуль няма ключоў Humble",
+        "filteredEmptyBody": "Паспрабуйце іншы пошук або выключыце «Толькі ключы для актывацыі».",
+        "filteredEmptyHeading": "Няма супадзенняў",
+        "loginAndClaim": "Увайдзіце ў {{store}} і атрымайце",
         "openStore": "Адкрыць {{store}}",
+        "pickOnHumble": "Выбраць на Humble",
         "platformOther": "Іншае",
-        "settledFromOwnership": "Ужо ў вашай бібліятэцы Steam"
+        "redeemableOnly": "Толькі ключы для актывацыі",
+        "searchPlaceholder": "Пошук па ключах",
+        "settledFromOwnership": "Ужо ў вашай бібліятэцы Steam",
+        "sortAlphabetical": "Па алфавіце",
+        "sortExpiringSoonest": "Тэрмін сканчаецца хутчэй",
+        "sortLabel": "Сартаванне"
     },
     "info": {
         "refresh-rating": "Абнавіць рэйтынг"

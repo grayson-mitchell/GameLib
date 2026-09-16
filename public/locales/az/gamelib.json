@@ -82,9 +82,26 @@
         "activateWizardTitle": "Bu açarı aktivləşdir",
         "activatingBody": "Açarınız üzə çıxarılır və Steam-də aktivləşdirilir — bu bir anlıq çəkir.",
         "activatingTitle": "Steam-də aktivləşdirilir…",
+        "claimOnHumble": "Humble-də al",
+        "claimOnStore": "{{store}} saytında al",
+        "clearFilters": "Axtarış və filtrləri təmizlə",
+        "columnGame": "Oyun",
+        "columnKey": "Açar",
+        "columnType": "Növ",
+        "emptyBody": "Açarlarınızı burada görmək üçün Humble Bundle hesabınızı sinxronlaşdırın.",
+        "emptyHeading": "Hələ Humble açarı yoxdur",
+        "filteredEmptyBody": "Başqa axtarış sınayın və ya «Yalnız istifadə oluna bilən açarlar» seçimini söndürün.",
+        "filteredEmptyHeading": "Uyğun açar yoxdur",
+        "loginAndClaim": "{{store}} hesabına daxil olun və alın",
         "openStore": "{{store}} aç",
+        "pickOnHumble": "Humble-də seç",
         "platformOther": "Digər",
-        "settledFromOwnership": "Artıq Steam kitabxananızda"
+        "redeemableOnly": "Yalnız istifadə oluna bilən açarlar",
+        "searchPlaceholder": "Açarlarınızı axtarın",
+        "settledFromOwnership": "Artıq Steam kitabxananızda",
+        "sortAlphabetical": "Əlifba sırası",
+        "sortExpiringSoonest": "Ən tez bitənlər",
+        "sortLabel": "Sırala"
     },
     "info": {
         "refresh-rating": "Reytinqi yenilə"

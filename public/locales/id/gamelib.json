@@ -82,9 +82,26 @@
         "activateWizardTitle": "Aktifkan kunci ini",
         "activatingBody": "Mengungkap kunci Anda dan menukarkannya di Steam — ini hanya butuh waktu sebentar.",
         "activatingTitle": "Mengaktifkan di Steam…",
+        "claimOnHumble": "Klaim di Humble",
+        "claimOnStore": "Klaim di {{store}}",
+        "clearFilters": "Hapus pencarian dan filter",
+        "columnGame": "Game",
+        "columnKey": "Kunci",
+        "columnType": "Tipe",
+        "emptyBody": "Sinkronkan akun Humble Bundle Anda untuk melihat kunci Anda di sini.",
+        "emptyHeading": "Belum ada kunci Humble",
+        "filteredEmptyBody": "Coba pencarian lain, atau matikan «Hanya kunci yang dapat ditukarkan».",
+        "filteredEmptyHeading": "Tidak ada kunci yang cocok",
+        "loginAndClaim": "Masuk ke {{store}} lalu klaim",
         "openStore": "Buka {{store}}",
+        "pickOnHumble": "Pilih di Humble",
         "platformOther": "Lainnya",
-        "settledFromOwnership": "Sudah ada di perpustakaan Steam Anda"
+        "redeemableOnly": "Hanya kunci yang dapat ditukarkan",
+        "searchPlaceholder": "Cari kunci Anda",
+        "settledFromOwnership": "Sudah ada di perpustakaan Steam Anda",
+        "sortAlphabetical": "Alfabetis",
+        "sortExpiringSoonest": "Paling cepat kedaluwarsa",
+        "sortLabel": "Urutkan"
     },
     "info": {
         "refresh-rating": "Segarkan rating"

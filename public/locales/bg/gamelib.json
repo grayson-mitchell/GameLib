@@ -82,9 +82,26 @@
         "activateWizardTitle": "Активиране на този ключ",
         "activatingBody": "Разкриваме ключа ви и го активираме в Steam — това отнема само momент.",
         "activatingTitle": "Активиране в Steam…",
+        "claimOnHumble": "Вземи от Humble",
+        "claimOnStore": "Вземи от {{store}}",
+        "clearFilters": "Изчисти търсенето и филтрите",
+        "columnGame": "Игра",
+        "columnKey": "Ключ",
+        "columnType": "Тип",
+        "emptyBody": "Синхронизирайте акаунта си в Humble Bundle, за да видите ключовете си тук.",
+        "emptyHeading": "Още няма ключове от Humble",
+        "filteredEmptyBody": "Опитайте друго търсене или изключете „Само активируеми ключове“.",
+        "filteredEmptyHeading": "Няма съвпадащи ключове",
+        "loginAndClaim": "Влезте в {{store}} и вземете",
         "openStore": "Отвори {{store}}",
+        "pickOnHumble": "Избери от Humble",
         "platformOther": "Други",
-        "settledFromOwnership": "Вече във вашата библиотека в Steam"
+        "redeemableOnly": "Само активируеми ключове",
+        "searchPlaceholder": "Търсене в ключовете",
+        "settledFromOwnership": "Вече във вашата библиотека в Steam",
+        "sortAlphabetical": "По азбучен ред",
+        "sortExpiringSoonest": "Изтичащи най-скоро",
+        "sortLabel": "Подреждане"
     },
     "info": {
         "refresh-rating": "Опресняване на рейтинга"

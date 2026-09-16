@@ -82,9 +82,26 @@
         "activateWizardTitle": "הפעלת המפתח הזה",
         "activatingBody": "חושפים את המפתח שלך ומממשים אותו ב-Steam — זה ייקח רק רגע.",
         "activatingTitle": "מפעילים ב-Steam…",
+        "claimOnHumble": "קבלו ב-Humble",
+        "claimOnStore": "קבלו ב-{{store}}",
+        "clearFilters": "נקו חיפוש ומסננים",
+        "columnGame": "משחק",
+        "columnKey": "מפתח",
+        "columnType": "סוג",
+        "emptyBody": "סנכרנו את חשבון Humble Bundle שלכם כדי לראות כאן את המפתחות שלכם.",
+        "emptyHeading": "אין עדיין מפתחות Humble",
+        "filteredEmptyBody": "נסו חיפוש אחר, או כבו את «מפתחות למימוש בלבד».",
+        "filteredEmptyHeading": "אין מפתחות תואמים",
+        "loginAndClaim": "התחברו ל-{{store}} וקבלו",
         "openStore": "פתח את {{store}}",
+        "pickOnHumble": "בחרו ב-Humble",
         "platformOther": "אחר",
-        "settledFromOwnership": "כבר בספריית Steam שלך"
+        "redeemableOnly": "מפתחות למימוש בלבד",
+        "searchPlaceholder": "חפשו במפתחות שלכם",
+        "settledFromOwnership": "כבר בספריית Steam שלך",
+        "sortAlphabetical": "לפי א-ב",
+        "sortExpiringSoonest": "פג תוקף בקרוב",
+        "sortLabel": "מיון"
     },
     "info": {
         "refresh-rating": "רענון דירוג"

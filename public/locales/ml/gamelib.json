@@ -82,9 +82,26 @@
         "activateWizardTitle": "ഈ കീ സജീവമാക്കുക",
         "activatingBody": "നിങ്ങളുടെ കീ വെളിപ്പെടുത്തി Steam-ൽ റിഡീം ചെയ്യുന്നു — ഇത് ഒരു നിമിഷം മാത്രമേ എടുക്കൂ.",
         "activatingTitle": "Steam-ൽ സജീവമാക്കുന്നു…",
+        "claimOnHumble": "Humble-ൽ നേടുക",
+        "claimOnStore": "{{store}}-ൽ നേടുക",
+        "clearFilters": "തിരയലും ഫിൽട്ടറുകളും മായ്ക്കുക",
+        "columnGame": "ഗെയിം",
+        "columnKey": "കീ",
+        "columnType": "തരം",
+        "emptyBody": "നിങ്ങളുടെ കീകൾ ഇവിടെ കാണാൻ Humble Bundle അക്കൗണ്ട് സമന്വയിപ്പിക്കുക.",
+        "emptyHeading": "ഇതുവരെ Humble കീകളില്ല",
+        "filteredEmptyBody": "മറ്റൊരു തിരയൽ പരീക്ഷിക്കുക, അല്ലെങ്കിൽ „ഉപയോഗിക്കാവുന്ന കീകൾ മാത്രം“ ഓഫ് ചെയ്യുക.",
+        "filteredEmptyHeading": "കീകളൊന്നും പൊരുത്തപ്പെടുന്നില്ല",
+        "loginAndClaim": "{{store}}-ൽ ലോഗിൻ ചെയ്ത് നേടുക",
         "openStore": "{{store}} തുറക്കുക",
+        "pickOnHumble": "Humble-ൽ തിരഞ്ഞെടുക്കുക",
         "platformOther": "മറ്റുള്ളവ",
-        "settledFromOwnership": "ഇതിനകം നിങ്ങളുടെ Steam ലൈബ്രറിയിൽ"
+        "redeemableOnly": "ഉപയോഗിക്കാവുന്ന കീകൾ മാത്രം",
+        "searchPlaceholder": "നിങ്ങളുടെ കീകളിൽ തിരയുക",
+        "settledFromOwnership": "ഇതിനകം നിങ്ങളുടെ Steam ലൈബ്രറിയിൽ",
+        "sortAlphabetical": "അക്ഷരമാലാക്രമം",
+        "sortExpiringSoonest": "ആദ്യം കാലഹരണപ്പെടുന്നവ",
+        "sortLabel": "അടുക്കുക"
     },
     "info": {
         "refresh-rating": "റേറ്റിംഗ് പുതുക്കുക"

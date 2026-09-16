@@ -82,9 +82,26 @@
         "activateWizardTitle": "激活此密钥",
         "activatingBody": "正在显示您的密钥并在 Steam 上兑换 — 这只需片刻。",
         "activatingTitle": "正在 Steam 上激活…",
+        "claimOnHumble": "在 Humble 领取",
+        "claimOnStore": "在 {{store}} 领取",
+        "clearFilters": "清除搜索和筛选",
+        "columnGame": "游戏",
+        "columnKey": "密钥",
+        "columnType": "类型",
+        "emptyBody": "同步你的 Humble Bundle 账户即可在此查看你的密钥。",
+        "emptyHeading": "尚无 Humble 密钥",
+        "filteredEmptyBody": "换一个搜索词，或关闭「仅可兑换的密钥」。",
+        "filteredEmptyHeading": "没有匹配的密钥",
+        "loginAndClaim": "登录 {{store}} 并领取",
         "openStore": "打开 {{store}}",
+        "pickOnHumble": "在 Humble 选择",
         "platformOther": "其他",
-        "settledFromOwnership": "已在你的 Steam 库中"
+        "redeemableOnly": "仅可兑换的密钥",
+        "searchPlaceholder": "搜索你的密钥",
+        "settledFromOwnership": "已在你的 Steam 库中",
+        "sortAlphabetical": "按字母顺序",
+        "sortExpiringSoonest": "最快到期",
+        "sortLabel": "排序"
     },
     "info": {
         "refresh-rating": "刷新评分"

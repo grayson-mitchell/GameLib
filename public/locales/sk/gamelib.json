@@ -82,9 +82,26 @@
         "activateWizardTitle": "Aktivovať tento kľúč",
         "activatingBody": "Odhaľujeme váš kľúč a uplatňujeme ho na Steam — chvíľu to potrvá.",
         "activatingTitle": "Aktivuje sa na Steam…",
+        "claimOnHumble": "Získať na Humble",
+        "claimOnStore": "Získať na {{store}}",
+        "clearFilters": "Vymazať hľadanie a filtre",
+        "columnGame": "Hra",
+        "columnKey": "Kľúč",
+        "columnType": "Typ",
+        "emptyBody": "Synchronizujte svoj účet Humble Bundle, aby ste tu videli svoje kľúče.",
+        "emptyHeading": "Zatiaľ žiadne kľúče Humble",
+        "filteredEmptyBody": "Skúste iné hľadanie alebo vypnite „Iba uplatniteľné kľúče“.",
+        "filteredEmptyHeading": "Žiadne zodpovedajúce kľúče",
+        "loginAndClaim": "Prihláste sa na {{store}} a získajte",
         "openStore": "Otvoriť {{store}}",
+        "pickOnHumble": "Vybrať na Humble",
         "platformOther": "Other",
-        "settledFromOwnership": "Už vo vašej Steam knižnici"
+        "redeemableOnly": "Iba uplatniteľné kľúče",
+        "searchPlaceholder": "Hľadať vo svojich kľúčoch",
+        "settledFromOwnership": "Už vo vašej Steam knižnici",
+        "sortAlphabetical": "Abecedne",
+        "sortExpiringSoonest": "Najskôr vypršia",
+        "sortLabel": "Zoradiť"
     },
     "info": {
         "refresh-rating": "Obnoviť hodnotenie"

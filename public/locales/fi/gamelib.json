@@ -82,9 +82,26 @@
         "activateConfirmTitle": "Aktivoidaanko tämä avain Steamissa?",
         "activatingBody": "Avaimesi paljastetaan ja lunastetaan Steamissa — tämä kestää vain hetken.",
         "activatingTitle": "Aktivoidaan Steamissa…",
+        "claimOnHumble": "Lunasta Humblessa",
+        "claimOnStore": "Lunasta palvelussa {{store}}",
+        "clearFilters": "Tyhjennä haku ja suodattimet",
+        "columnGame": "Peli",
+        "columnKey": "Avain",
+        "columnType": "Tyyppi",
+        "emptyBody": "Synkronoi Humble Bundle -tilisi nähdäksesi avaimesi täällä.",
+        "emptyHeading": "Ei vielä Humble-avaimia",
+        "filteredEmptyBody": "Kokeile toista hakua tai poista käytöstä ”Vain lunastettavat avaimet”.",
+        "filteredEmptyHeading": "Ei osumia",
+        "loginAndClaim": "Kirjaudu palveluun {{store}} ja lunasta",
         "openStore": "Avaa {{store}}",
+        "pickOnHumble": "Valitse Humblessa",
         "platformOther": "Muu",
-        "settledFromOwnership": "Jo Steam-kirjastossasi"
+        "redeemableOnly": "Vain lunastettavat avaimet",
+        "searchPlaceholder": "Hae avaimistasi",
+        "settledFromOwnership": "Jo Steam-kirjastossasi",
+        "sortAlphabetical": "Aakkosjärjestys",
+        "sortExpiringSoonest": "Vanhenee ensin",
+        "sortLabel": "Lajittele"
     },
     "info": {
         "refresh-rating": "Päivitä arvostelu"

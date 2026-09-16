@@ -43,9 +43,26 @@
         "activatedTitle": "Aktiviert",
         "activatingBody": "Ihr Key wird aufgedeckt und auf Steam eingelöst — das dauert nur einen Moment.",
         "activatingTitle": "Wird auf Steam aktiviert…",
+        "claimOnHumble": "Auf Humble abholen",
+        "claimOnStore": "Auf {{store}} abholen",
+        "clearFilters": "Suche und Filter zurücksetzen",
+        "columnGame": "Spiel",
+        "columnKey": "Key",
+        "columnType": "Typ",
+        "emptyBody": "Synchronisieren Sie Ihr Humble Bundle-Konto, um Ihre Keys hier zu sehen.",
+        "emptyHeading": "Noch keine Humble-Keys",
+        "filteredEmptyBody": "Versuchen Sie eine andere Suche oder deaktivieren Sie „Nur einlösbare Keys“.",
+        "filteredEmptyHeading": "Keine Keys gefunden",
+        "loginAndClaim": "Bei {{store}} anmelden und abholen",
         "openStore": "{{store}} öffnen",
+        "pickOnHumble": "Auf Humble auswählen",
         "platformOther": "Andere",
-        "settledFromOwnership": "Bereits in Ihrer Steam-Bibliothek"
+        "redeemableOnly": "Nur einlösbare Keys",
+        "searchPlaceholder": "Ihre Keys durchsuchen",
+        "settledFromOwnership": "Bereits in Ihrer Steam-Bibliothek",
+        "sortAlphabetical": "Alphabetisch",
+        "sortExpiringSoonest": "Läuft am ehesten ab",
+        "sortLabel": "Sortieren"
     },
     "library": {
         "filterPanel": {

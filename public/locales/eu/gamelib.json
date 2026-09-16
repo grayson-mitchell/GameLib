@@ -82,9 +82,26 @@
         "activateWizardTitle": "Aktibatu gako hau",
         "activatingBody": "Zure gakoa agerian jarri eta Steam-en berreskuratzen — une bat baino ez du behar.",
         "activatingTitle": "Steam-en aktibatzen…",
+        "claimOnHumble": "Eskuratu Humble-n",
+        "claimOnStore": "Eskuratu {{store}}-n",
+        "clearFilters": "Garbitu bilaketa eta iragazkiak",
+        "columnGame": "Jokoa",
+        "columnKey": "Gakoa",
+        "columnType": "Mota",
+        "emptyBody": "Sinkronizatu zure Humble Bundle kontua zure gakoak hemen ikusteko.",
+        "emptyHeading": "Oraindik ez dago Humble gakorik",
+        "filteredEmptyBody": "Saiatu beste bilaketa batekin edo desaktibatu «Gako berreskuragarriak soilik».",
+        "filteredEmptyHeading": "Ez dago bat datorren gakorik",
+        "loginAndClaim": "Hasi saioa {{store}}-n eta eskuratu",
         "openStore": "Ireki {{store}}",
+        "pickOnHumble": "Aukeratu Humble-n",
         "platformOther": "Bestela",
-        "settledFromOwnership": "Jada zure Steam bibliotekan"
+        "redeemableOnly": "Gako berreskuragarriak soilik",
+        "searchPlaceholder": "Bilatu zure gakoetan",
+        "settledFromOwnership": "Jada zure Steam bibliotekan",
+        "sortAlphabetical": "Alfabetikoa",
+        "sortExpiringSoonest": "Lehenago iraungitzen",
+        "sortLabel": "Ordenatu"
     },
     "info": {
         "refresh-rating": "Freskatu balorazioa"

@@ -82,9 +82,26 @@
         "activateWizardTitle": "Aktivér denne nøgle",
         "activatingBody": "Afslører din nøgle og indløser den på Steam — dette tager kun et øjeblik.",
         "activatingTitle": "Aktiverer på Steam…",
+        "claimOnHumble": "Hent på Humble",
+        "claimOnStore": "Hent på {{store}}",
+        "clearFilters": "Ryd søgning og filtre",
+        "columnGame": "Spil",
+        "columnKey": "Nøgle",
+        "columnType": "Type",
+        "emptyBody": "Synkroniser din Humble Bundle-konto for at se dine nøgler her.",
+        "emptyHeading": "Ingen Humble-nøgler endnu",
+        "filteredEmptyBody": "Prøv en anden søgning, eller slå »Kun indløselige nøgler« fra.",
+        "filteredEmptyHeading": "Ingen nøgler matcher",
+        "loginAndClaim": "Log ind på {{store}} og hent",
         "openStore": "Åbn {{store}}",
+        "pickOnHumble": "Vælg på Humble",
         "platformOther": "Andet",
-        "settledFromOwnership": "Allerede i dit Steam-bibliotek"
+        "redeemableOnly": "Kun indløselige nøgler",
+        "searchPlaceholder": "Søg i dine nøgler",
+        "settledFromOwnership": "Allerede i dit Steam-bibliotek",
+        "sortAlphabetical": "Alfabetisk",
+        "sortExpiringSoonest": "Udløber først",
+        "sortLabel": "Sortér"
     },
     "info": {
         "refresh-rating": "Opdater vurdering"

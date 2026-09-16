@@ -82,9 +82,26 @@
         "activateWizardTitle": "Ativar esta chave",
         "activatingBody": "Revelando sua chave e resgatando-a na Steam — isso leva apenas um instante.",
         "activatingTitle": "Ativando na Steam…",
+        "claimOnHumble": "Reclamar na Humble",
+        "claimOnStore": "Reclamar na {{store}}",
+        "clearFilters": "Limpar pesquisa e filtros",
+        "columnGame": "Jogo",
+        "columnKey": "Chave",
+        "columnType": "Tipo",
+        "emptyBody": "Sincroniza a tua conta Humble Bundle para veres aqui as tuas chaves.",
+        "emptyHeading": "Ainda não há chaves Humble",
+        "filteredEmptyBody": "Experimenta outra pesquisa ou desativa «Apenas chaves resgatáveis».",
+        "filteredEmptyHeading": "Nenhuma chave corresponde",
+        "loginAndClaim": "Inicia sessão na {{store}} e reclama",
         "openStore": "Abrir {{store}}",
+        "pickOnHumble": "Escolher na Humble",
         "platformOther": "Outro",
-        "settledFromOwnership": "Já está na tua biblioteca Steam"
+        "redeemableOnly": "Apenas chaves resgatáveis",
+        "searchPlaceholder": "Pesquisa nas tuas chaves",
+        "settledFromOwnership": "Já está na tua biblioteca Steam",
+        "sortAlphabetical": "Alfabética",
+        "sortExpiringSoonest": "A expirar primeiro",
+        "sortLabel": "Ordenar"
     },
     "info": {
         "refresh-rating": "Atualizar avaliação"

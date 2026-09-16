@@ -82,9 +82,26 @@
         "activateWizardTitle": "このキーを有効化",
         "activatingBody": "キーを表示し、Steamで引き換えています — 少々お待ちください。",
         "activatingTitle": "Steamで有効化中…",
+        "claimOnHumble": "Humble で受け取る",
+        "claimOnStore": "{{store}}で受け取る",
+        "clearFilters": "検索とフィルターをクリア",
+        "columnGame": "ゲーム",
+        "columnKey": "キー",
+        "columnType": "種類",
+        "emptyBody": "Humble Bundle アカウントを同期すると、ここにキーが表示されます。",
+        "emptyHeading": "Humble のキーはまだありません",
+        "filteredEmptyBody": "別の検索を試すか、「引き換え可能なキーのみ」をオフにしてください。",
+        "filteredEmptyHeading": "一致するキーがありません",
+        "loginAndClaim": "{{store}}にログインして受け取る",
         "openStore": "{{store}}を開く",
+        "pickOnHumble": "Humble で選ぶ",
         "platformOther": "その他",
-        "settledFromOwnership": "すでにあなたのSteamライブラリにあります"
+        "redeemableOnly": "引き換え可能なキーのみ",
+        "searchPlaceholder": "キーを検索",
+        "settledFromOwnership": "すでにあなたのSteamライブラリにあります",
+        "sortAlphabetical": "アルファベット順",
+        "sortExpiringSoonest": "有効期限が近い順",
+        "sortLabel": "並べ替え"
     },
     "info": {
         "refresh-rating": "評価を更新"

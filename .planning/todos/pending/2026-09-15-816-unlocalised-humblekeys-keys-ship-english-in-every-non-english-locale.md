@@ -1,10 +1,10 @@
 ---
 created: 2026-09-15T00:00:00.000Z
-title: '816 unlocalised `humbleKeys.*` keys ship English in EVERY non-English locale — Phase 43 added the strings without filling locales or regenerating the baseline'
+title: '84 fork-added `humbleKeys.*` keys in `translation.json` ship English in EVERY non-English locale, outside the gate — the 816 `gamelib` keys this todo was filed for are FIXED'
 area: i18n
 severity: major
 platform: any
-ready: code
+ready: human
 status: OPEN
 found_by: 'quick-260914-vbw, 2026-09-15 — PR #5 was the FIRST pull_request ever opened against fix/steam-native-install-stability, which is the only event that runs the ci/lint workflows. The red had been invisible for the whole of Phase 43.'
 files:
@@ -14,9 +14,24 @@ files:
   - public/locales
 ---
 
-## Problem
+> **STATUS 2026-09-15 — the half this todo was filed for is FIXED; the larger half is not.**
+>
+> Quick `260915-t13` filled all **17** `gamelib` keys across all **48** non-English locales (816
+> hand-written strings). `lintTranslations` went from 2 failed / 816 findings to **32 passed**, and
+> `gamelibCatalogParity` passes **198**. The presence baseline was **not** regenerated and
+> `gamelib.mt.json` was **not** touched.
+>
+> **What remains open, and why this todo is not closed:** `translation.json` holds **84** further
+> fork-added `humbleKeys.*` keys absent from all 48 non-English locales, **59 of them still
+> referenced in `src/`**. The Humble Keys screen therefore still renders English to every
+> non-English user. That half is invisible to the gate by construction and needs an operator
+> decision — see the two sections below, which are the live scope.
+>
+> The filename still says "816" for cross-reference stability; the `title:` field is authoritative.
 
-`meta/__tests__/lintTranslations.test.ts` fails two tests against the committed tree:
+## Problem (HISTORICAL — resolved by quick `260915-t13`)
+
+`meta/__tests__/lintTranslations.test.ts` **had been failing** two tests against the committed tree:
 
 - `lintTranslations (REQ-41-02) › live tree › zero hard failures for the gamelib namespace` —
   **816** findings
@@ -49,8 +64,9 @@ across the whole file, not within the `humbleKeys` block.
 ## Why it matters
 
 1. **It is a shipped user-facing gap, not a test-only red.** Every non-English user sees English
-   across the entire Humble Keys screen — column headers, empty states, filter controls, and the
-   claim actions. This is the whole screen, not an edge case.
+   across the Humble Keys screen. **Still true after the `gamelib` fill** — the column headers,
+   empty states, filter controls and claim actions are now localised, but the 59 live
+   `translation.json` keys on the same screen are not.
 2. **It went undetected for the whole of Phase 43 because nothing could see it.** The `ci` and
    `lint` workflows fire on `pull_request` only. `fix/steam-native-install-stability` has **no
    `ci`/`lint` runs at all** — `gh run list --branch fix/steam-native-install-stability` returns
@@ -93,9 +109,10 @@ findings is therefore not evidence the screen is localised.
    after 43-07 before deleting — and note that removing a locale key has its own asymmetric
    breakage (the count is 47, not 49, and `da`/`id`/`nl` break differently). Deleting first means
    the fill in step 3 covers 59 keys, not 84.
-2. **Fill the 17 `gamelib` keys across 48 locales.** This is the CI-red half and the smaller one.
-   Insert **order-preservingly** — `en` is sorted but several locales are not, so a global re-sort
-   reflows the file and turns a small diff into a large one.
+2. ~~**Fill the 17 `gamelib` keys across 48 locales.**~~ **DONE** — quick `260915-t13`. The
+   order-preserving warning was load-bearing and is worth reusing for step 3: the 7 locales whose
+   key order is not an `en` subsequence came out at 19 insertions / 1 deletion each, where a global
+   re-sort would have rewritten the whole block.
 3. **Fill the surviving `translation.json` keys across 48 locales**, including creating
    `translation.json` for `br` and `sl`, which have none. This is the half that actually makes the
    screen non-English, and **no gate will tell you when it is done** — diff the key sets directly.
@@ -121,7 +138,9 @@ budgeting for the machine fill.
 
 - `npx jest --testPathPattern lintTranslations` — no project filter needed; the suite is in the
   `Meta` project, so a `--selectProjects Backend` run **silently matches nothing and exits 0**.
-- Both tests must reach 0 findings, not just the first.
+- Both tests must reach 0 findings, not just the first. **As of 2026-09-15 both do** (32 passed) —
+  so for the remaining scope this gate is **green and blind**, not a progress signal. The
+  `translation.json` half must be verified by diffing key sets directly, never by an exit code.
 - Confirm on a real render that a non-English locale shows translated Humble Keys copy — the gate
   measures presence, not correctness, so a green gate does not prove the strings are right.
 

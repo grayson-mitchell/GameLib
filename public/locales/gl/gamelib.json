@@ -82,9 +82,26 @@
         "activateWizardTitle": "Activar esta clave",
         "activatingBody": "Revelando a túa clave e canxeándoa en Steam — isto só levará un momento.",
         "activatingTitle": "Activando en Steam…",
+        "claimOnHumble": "Reclamar en Humble",
+        "claimOnStore": "Reclamar en {{store}}",
+        "clearFilters": "Limpar a busca e os filtros",
+        "columnGame": "Xogo",
+        "columnKey": "Clave",
+        "columnType": "Tipo",
+        "emptyBody": "Sincroniza a túa conta de Humble Bundle para ver aquí as túas claves.",
+        "emptyHeading": "Aínda non hai claves de Humble",
+        "filteredEmptyBody": "Proba outra busca ou desactiva «Só claves canxeables».",
+        "filteredEmptyHeading": "Ningunha clave coincide",
+        "loginAndClaim": "Inicia sesión en {{store}} e reclama",
         "openStore": "Abrir {{store}}",
+        "pickOnHumble": "Escoller en Humble",
         "platformOther": "Outro",
-        "settledFromOwnership": "Xa na túa biblioteca de Steam"
+        "redeemableOnly": "Só claves canxeables",
+        "searchPlaceholder": "Busca nas túas claves",
+        "settledFromOwnership": "Xa na túa biblioteca de Steam",
+        "sortAlphabetical": "Alfabético",
+        "sortExpiringSoonest": "Caducan antes",
+        "sortLabel": "Ordenar"
     },
     "info": {
         "refresh-rating": "Actualizar valoración"

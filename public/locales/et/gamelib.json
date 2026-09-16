@@ -82,9 +82,26 @@
         "activateConfirmTitle": "Aktiveerida see võti Steamis?",
         "activatingBody": "Sinu võtme paljastamine ja lunastamine Steamis — see võtab vaid hetke.",
         "activatingTitle": "Aktiveerimine Steamis…",
+        "claimOnHumble": "Võta Humble kaudu",
+        "claimOnStore": "Võta {{store}} kaudu",
+        "clearFilters": "Tühjenda otsing ja filtrid",
+        "columnGame": "Mäng",
+        "columnKey": "Võti",
+        "columnType": "Tüüp",
+        "emptyBody": "Sünkroonige oma Humble Bundle konto, et näha siin oma võtmeid.",
+        "emptyHeading": "Humble võtmeid veel pole",
+        "filteredEmptyBody": "Proovige teist otsingut või lülitage välja „Ainult lunastatavad võtmed“.",
+        "filteredEmptyHeading": "Ühtegi sobivat võtit",
+        "loginAndClaim": "Logige sisse teenusesse {{store}} ja võtke",
         "openStore": "Ava {{store}}",
+        "pickOnHumble": "Vali Humble kaudu",
         "platformOther": "Muu",
-        "settledFromOwnership": "Juba teie Steami raamatukogus"
+        "redeemableOnly": "Ainult lunastatavad võtmed",
+        "searchPlaceholder": "Otsi oma võtmetest",
+        "settledFromOwnership": "Juba teie Steami raamatukogus",
+        "sortAlphabetical": "Tähestikuline",
+        "sortExpiringSoonest": "Aegub kõige varem",
+        "sortLabel": "Sorteeri"
     },
     "info": {
         "refresh-rating": "Värskenda hinnangut"

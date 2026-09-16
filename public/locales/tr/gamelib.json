@@ -82,9 +82,26 @@
         "activateWizardTitle": "Bu anahtarı etkinleştir",
         "activatingBody": "Anahtarınız ortaya çıkarılıyor ve Steam'de kullanılıyor — bu sadece bir an sürer.",
         "activatingTitle": "Steam'de etkinleştiriliyor…",
+        "claimOnHumble": "Humble'da al",
+        "claimOnStore": "{{store}} üzerinden al",
+        "clearFilters": "Aramayı ve filtreleri temizle",
+        "columnGame": "Oyun",
+        "columnKey": "Anahtar",
+        "columnType": "Tür",
+        "emptyBody": "Anahtarlarınızı burada görmek için Humble Bundle hesabınızı senkronize edin.",
+        "emptyHeading": "Henüz Humble anahtarı yok",
+        "filteredEmptyBody": "Farklı bir arama deneyin veya «Yalnızca kullanılabilir anahtarlar» seçeneğini kapatın.",
+        "filteredEmptyHeading": "Eşleşen anahtar yok",
+        "loginAndClaim": "{{store}} hesabınıza giriş yapıp alın",
         "openStore": "{{store}} Aç",
+        "pickOnHumble": "Humble'da seç",
         "platformOther": "Diğer",
-        "settledFromOwnership": "Zaten Steam kitaplığınızda"
+        "redeemableOnly": "Yalnızca kullanılabilir anahtarlar",
+        "searchPlaceholder": "Anahtarlarınızda arayın",
+        "settledFromOwnership": "Zaten Steam kitaplığınızda",
+        "sortAlphabetical": "Alfabetik",
+        "sortExpiringSoonest": "En yakında sona erecek",
+        "sortLabel": "Sırala"
     },
     "info": {
         "refresh-rating": "Puanı yenile"

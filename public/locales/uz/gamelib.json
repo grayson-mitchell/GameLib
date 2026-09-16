@@ -82,9 +82,26 @@
         "activateWizardTitle": "Ushbu kalitni faollashtirish",
         "activatingBody": "Kalitingiz ochilmoqda va Steam'da faollashtirilmoqda — bu bir zum vaqt oladi.",
         "activatingTitle": "Steam'da faollashtirilmoqda…",
+        "claimOnHumble": "Humble'da olish",
+        "claimOnStore": "{{store}}'da olish",
+        "clearFilters": "Qidiruv va filtrlarni tozalash",
+        "columnGame": "Oʻyin",
+        "columnKey": "Kalit",
+        "columnType": "Turi",
+        "emptyBody": "Kalitlaringizni shu yerda koʻrish uchun Humble Bundle hisobingizni sinxronlang.",
+        "emptyHeading": "Hali Humble kalitlari yoʻq",
+        "filteredEmptyBody": "Boshqa qidiruvni sinab koʻring yoki «Faqat ishlatiladigan kalitlar» ni oʻchiring.",
+        "filteredEmptyHeading": "Mos kalit topilmadi",
+        "loginAndClaim": "{{store}} ga kiring va oling",
         "openStore": "{{store}} ochish",
+        "pickOnHumble": "Humble'da tanlash",
         "platformOther": "Boshqa",
-        "settledFromOwnership": "Allaqachon Steam kutubxonangizda"
+        "redeemableOnly": "Faqat ishlatiladigan kalitlar",
+        "searchPlaceholder": "Kalitlaringizni qidiring",
+        "settledFromOwnership": "Allaqachon Steam kutubxonangizda",
+        "sortAlphabetical": "Alifbo boʻyicha",
+        "sortExpiringSoonest": "Eng tez tugaydigan",
+        "sortLabel": "Saralash"
     },
     "info": {
         "refresh-rating": "Reytingni yangilash"

@@ -82,9 +82,26 @@
         "activateWizardTitle": "Activeer deze key",
         "activatingBody": "Je key wordt onthuld en verzilverd op Steam — dit duurt maar even.",
         "activatingTitle": "Activeren op Steam…",
+        "claimOnHumble": "Ophalen op Humble",
+        "claimOnStore": "Ophalen op {{store}}",
+        "clearFilters": "Zoekopdracht en filters wissen",
+        "columnGame": "Game",
+        "columnKey": "Key",
+        "columnType": "Type",
+        "emptyBody": "Synchroniseer je Humble Bundle-account om je keys hier te zien.",
+        "emptyHeading": "Nog geen Humble-keys",
+        "filteredEmptyBody": "Probeer een andere zoekopdracht of schakel «Alleen inwisselbare keys» uit.",
+        "filteredEmptyHeading": "Geen keys gevonden",
+        "loginAndClaim": "Log in op {{store}} en haal op",
         "openStore": "{{store}} openen",
+        "pickOnHumble": "Kiezen op Humble",
         "platformOther": "Overig",
-        "settledFromOwnership": "Al in je Steam-bibliotheek"
+        "redeemableOnly": "Alleen inwisselbare keys",
+        "searchPlaceholder": "Zoek in je keys",
+        "settledFromOwnership": "Al in je Steam-bibliotheek",
+        "sortAlphabetical": "Alfabetisch",
+        "sortExpiringSoonest": "Verloopt het eerst",
+        "sortLabel": "Sorteren"
     },
     "info": {
         "refresh-rating": "Beoordeling vernieuwen"

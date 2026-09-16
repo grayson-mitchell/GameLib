@@ -82,9 +82,26 @@
         "activateWizardTitle": "Aktivera denna nyckel",
         "activatingBody": "Visar din nyckel och löser in den på Steam — detta tar bara ett ögonblick.",
         "activatingTitle": "Aktiverar på Steam…",
+        "claimOnHumble": "Hämta på Humble",
+        "claimOnStore": "Hämta på {{store}}",
+        "clearFilters": "Rensa sökning och filter",
+        "columnGame": "Spel",
+        "columnKey": "Nyckel",
+        "columnType": "Typ",
+        "emptyBody": "Synkronisera ditt Humble Bundle-konto för att se dina nycklar här.",
+        "emptyHeading": "Inga Humble-nycklar än",
+        "filteredEmptyBody": "Prova en annan sökning eller stäng av ”Endast inlösbara nycklar”.",
+        "filteredEmptyHeading": "Inga nycklar matchar",
+        "loginAndClaim": "Logga in på {{store}} och hämta",
         "openStore": "Öppna {{store}}",
+        "pickOnHumble": "Välj på Humble",
         "platformOther": "Övrigt",
-        "settledFromOwnership": "Redan i ditt Steam-bibliotek"
+        "redeemableOnly": "Endast inlösbara nycklar",
+        "searchPlaceholder": "Sök bland dina nycklar",
+        "settledFromOwnership": "Redan i ditt Steam-bibliotek",
+        "sortAlphabetical": "Alfabetisk",
+        "sortExpiringSoonest": "Går ut först",
+        "sortLabel": "Sortera"
     },
     "info": {
         "refresh-rating": "Uppdatera betyg"

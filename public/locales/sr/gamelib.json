@@ -82,9 +82,26 @@
         "activateWizardTitle": "Активирај овај кључ",
         "activatingBody": "Откривамо ваш кључ и активирамо га на Steam-у — ово траје само тренутак.",
         "activatingTitle": "Активирање на Steam-у…",
+        "claimOnHumble": "Преузми на Humble",
+        "claimOnStore": "Преузми на {{store}}",
+        "clearFilters": "Очисти претрагу и филтере",
+        "columnGame": "Игра",
+        "columnKey": "Кључ",
+        "columnType": "Врста",
+        "emptyBody": "Синхронизујте свој Humble Bundle налог да бисте овде видели своје кључеве.",
+        "emptyHeading": "Још нема Humble кључева",
+        "filteredEmptyBody": "Покушајте другу претрагу или искључите „Само искористиви кључеви“.",
+        "filteredEmptyHeading": "Нема подударних кључева",
+        "loginAndClaim": "Пријавите се на {{store}} и преузмите",
         "openStore": "Отвори {{store}}",
+        "pickOnHumble": "Изабери на Humble",
         "platformOther": "Остало",
-        "settledFromOwnership": "Већ у вашој Steam библиотеци"
+        "redeemableOnly": "Само искористиви кључеви",
+        "searchPlaceholder": "Претражите своје кључеве",
+        "settledFromOwnership": "Већ у вашој Steam библиотеци",
+        "sortAlphabetical": "Азбучно",
+        "sortExpiringSoonest": "Прво истичу",
+        "sortLabel": "Сортирај"
     },
     "info": {
         "refresh-rating": "Освежи оцену"

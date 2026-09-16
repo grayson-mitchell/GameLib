@@ -82,9 +82,26 @@
         "activateWizardTitle": "Activa aquesta clau",
         "activatingBody": "Revelant la teva clau i bescanviant-la a Steam — només trigarà un moment.",
         "activatingTitle": "Activant a Steam…",
+        "claimOnHumble": "Reclama a Humble",
+        "claimOnStore": "Reclama a {{store}}",
+        "clearFilters": "Neteja la cerca i els filtres",
+        "columnGame": "Joc",
+        "columnKey": "Clau",
+        "columnType": "Tipus",
+        "emptyBody": "Sincronitzeu el vostre compte de Humble Bundle per veure les vostres claus aquí.",
+        "emptyHeading": "Encara no hi ha claus de Humble",
+        "filteredEmptyBody": "Proveu una altra cerca o desactiveu «Només claus canjables».",
+        "filteredEmptyHeading": "Cap clau coincideix",
+        "loginAndClaim": "Inicieu la sessió a {{store}} i reclameu",
         "openStore": "Obre {{store}}",
+        "pickOnHumble": "Tria a Humble",
         "platformOther": "Altres",
-        "settledFromOwnership": "Ja a la vostra biblioteca de Steam"
+        "redeemableOnly": "Només claus canjables",
+        "searchPlaceholder": "Cerca les vostres claus",
+        "settledFromOwnership": "Ja a la vostra biblioteca de Steam",
+        "sortAlphabetical": "Alfabètic",
+        "sortExpiringSoonest": "Caduquen abans",
+        "sortLabel": "Ordena"
     },
     "info": {
         "refresh-rating": "Actualitza la valoració"

@@ -82,9 +82,26 @@
         "activateWizardTitle": "Kích hoạt key này",
         "activatingBody": "Đang tiết lộ key của bạn và đổi trên Steam — chỉ mất một chút thời gian.",
         "activatingTitle": "Đang kích hoạt trên Steam…",
+        "claimOnHumble": "Nhận trên Humble",
+        "claimOnStore": "Nhận trên {{store}}",
+        "clearFilters": "Xóa tìm kiếm và bộ lọc",
+        "columnGame": "Trò chơi",
+        "columnKey": "Mã key",
+        "columnType": "Loại",
+        "emptyBody": "Đồng bộ tài khoản Humble Bundle của bạn để xem các mã key tại đây.",
+        "emptyHeading": "Chưa có mã key Humble nào",
+        "filteredEmptyBody": "Hãy thử tìm kiếm khác, hoặc tắt «Chỉ mã key có thể sử dụng».",
+        "filteredEmptyHeading": "Không có mã key nào khớp",
+        "loginAndClaim": "Đăng nhập {{store}} và nhận",
         "openStore": "Mở {{store}}",
+        "pickOnHumble": "Chọn trên Humble",
         "platformOther": "Khác",
-        "settledFromOwnership": "Đã có trong thư viện Steam của bạn"
+        "redeemableOnly": "Chỉ mã key có thể sử dụng",
+        "searchPlaceholder": "Tìm trong mã key của bạn",
+        "settledFromOwnership": "Đã có trong thư viện Steam của bạn",
+        "sortAlphabetical": "Theo bảng chữ cái",
+        "sortExpiringSoonest": "Hết hạn sớm nhất",
+        "sortLabel": "Sắp xếp"
     },
     "info": {
         "refresh-rating": "Làm mới xếp hạng"

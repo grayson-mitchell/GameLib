@@ -82,9 +82,26 @@
         "activateConfirmTitle": "Aktiválod ezt a kulcsot a Steamen?",
         "activatingBody": "Kulcsod felfedése és beváltása a Steamen — ez csak egy pillanatot vesz igénybe.",
         "activatingTitle": "Aktiválás a Steamen…",
+        "claimOnHumble": "Igénylés a Humble-ön",
+        "claimOnStore": "Igénylés itt: {{store}}",
+        "clearFilters": "Keresés és szűrők törlése",
+        "columnGame": "Játék",
+        "columnKey": "Kulcs",
+        "columnType": "Típus",
+        "emptyBody": "Szinkronizáld a Humble Bundle fiókodat, hogy itt lásd a kulcsaidat.",
+        "emptyHeading": "Még nincsenek Humble kulcsok",
+        "filteredEmptyBody": "Próbálj másik keresést, vagy kapcsold ki a „Csak beváltható kulcsok” lehetőséget.",
+        "filteredEmptyHeading": "Nincs találat",
+        "loginAndClaim": "Jelentkezz be ide: {{store}}, majd igényeld",
         "openStore": "{{store}} megnyitása",
+        "pickOnHumble": "Választás a Humble-ön",
         "platformOther": "Egyéb",
-        "settledFromOwnership": "Már a Steam könyvtáradban van"
+        "redeemableOnly": "Csak beváltható kulcsok",
+        "searchPlaceholder": "Keresés a kulcsaid között",
+        "settledFromOwnership": "Már a Steam könyvtáradban van",
+        "sortAlphabetical": "Betűrend",
+        "sortExpiringSoonest": "Leghamarabb lejáró",
+        "sortLabel": "Rendezés"
     },
     "info": {
         "refresh-rating": "Értékelés frissítése"

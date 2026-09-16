@@ -82,9 +82,26 @@
         "activateWizardTitle": "Gníomhachtaigh an eochair seo",
         "activatingBody": "Do chuid eochrach á nochtadh agus á fuascailt ar Steam — ní thógann sé ach nóiméad.",
         "activatingTitle": "Á ghníomhachtú ar Steam…",
+        "claimOnHumble": "Éiligh ar Humble",
+        "claimOnStore": "Éiligh ar {{store}}",
+        "clearFilters": "Glan an cuardach agus na scagairí",
+        "columnGame": "Cluiche",
+        "columnKey": "Eochair",
+        "columnType": "Cineál",
+        "emptyBody": "Sioncronaigh do chuntas Humble Bundle chun d'eochracha a fheiceáil anseo.",
+        "emptyHeading": "Níl aon eochair Humble ann fós",
+        "filteredEmptyBody": "Bain triail as cuardach eile, nó múch „Eochracha infhuascailte amháin“.",
+        "filteredEmptyHeading": "Níl aon eochair comhoiriúnach",
+        "loginAndClaim": "Logáil isteach i {{store}} agus éiligh",
         "openStore": "Oscail {{store}}",
+        "pickOnHumble": "Roghnaigh ar Humble",
         "platformOther": "Eile",
-        "settledFromOwnership": "Cheana féin i do leabharlann Steam"
+        "redeemableOnly": "Eochracha infhuascailte amháin",
+        "searchPlaceholder": "Cuardaigh d'eochracha",
+        "settledFromOwnership": "Cheana féin i do leabharlann Steam",
+        "sortAlphabetical": "Aibítreach",
+        "sortExpiringSoonest": "Ag dul in éag ar dtús",
+        "sortLabel": "Sórtáil"
     },
     "info": {
         "refresh-rating": "Athnuaigh an rátáil"

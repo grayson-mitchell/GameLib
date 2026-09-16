@@ -82,9 +82,26 @@
         "activateWizardTitle": "Aktivañ an alc'hwez-mañ",
         "activatingBody": "O tiskuliañ hoc'h alc'hwez hag oc'h adprenañ anezhañ war Steam — un tammig amzer nemetken a bad an dra-se.",
         "activatingTitle": "Oc'h aktivañ war Steam…",
+        "claimOnHumble": "Tapout war Humble",
+        "claimOnStore": "Tapout war {{store}}",
+        "clearFilters": "Skarzhañ ar c'hlask hag ar siloù",
+        "columnGame": "C'hoari",
+        "columnKey": "Alc'hwez",
+        "columnType": "Seurt",
+        "emptyBody": "Goubredit ho kont Humble Bundle evit gwelet hoc'h alc'hwezioù amañ.",
+        "emptyHeading": "Alc'hwez Humble ebet c'hoazh",
+        "filteredEmptyBody": "Klaskit un dra all, pe lazhit «Alc'hwezioù talvoudus hepken».",
+        "filteredEmptyHeading": "Alc'hwez klotus ebet",
+        "loginAndClaim": "Kevreit ouzh {{store}} ha tapit",
         "openStore": "Digeriñ {{store}}",
+        "pickOnHumble": "Dibab war Humble",
         "platformOther": "All",
-        "settledFromOwnership": "Already in your Steam library"
+        "redeemableOnly": "Alc'hwezioù talvoudus hepken",
+        "searchPlaceholder": "Klask en hoc'h alc'hwezioù",
+        "settledFromOwnership": "Already in your Steam library",
+        "sortAlphabetical": "Dre urzh al lizherenneg",
+        "sortExpiringSoonest": "O tont da vout dispredet da gentañ",
+        "sortLabel": "Rummañ"
     },
     "info": {
         "refresh-rating": "Freskaat ar priziadur"

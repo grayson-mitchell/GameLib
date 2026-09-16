@@ -82,9 +82,26 @@
         "activateWizardTitle": "இந்த கீயை செயல்படுத்தவும்",
         "activatingBody": "உங்கள் கீயை வெளிப்படுத்தி Steam-இல் மீட்டெடுக்கிறது — இதற்கு ஒரு நொடி மட்டுமே ஆகும்.",
         "activatingTitle": "Steam-இல் செயல்படுத்துகிறது…",
+        "claimOnHumble": "Humble-இல் பெறுக",
+        "claimOnStore": "{{store}}-இல் பெறுக",
+        "clearFilters": "தேடலையும் வடிப்பான்களையும் அழி",
+        "columnGame": "விளையாட்டு",
+        "columnKey": "விசை",
+        "columnType": "வகை",
+        "emptyBody": "உங்கள் விசைகளை இங்கே காண Humble Bundle கணக்கை ஒத்திசைக்கவும்.",
+        "emptyHeading": "இதுவரை Humble விசைகள் இல்லை",
+        "filteredEmptyBody": "வேறு தேடலை முயற்சிக்கவும், அல்லது „பயன்படுத்தக்கூடிய விசைகள் மட்டும்“ என்பதை அணைக்கவும்.",
+        "filteredEmptyHeading": "பொருந்தும் விசைகள் இல்லை",
+        "loginAndClaim": "{{store}}-இல் உள்நுழைந்து பெறுக",
         "openStore": "{{store}} திற",
+        "pickOnHumble": "Humble-இல் தேர்ந்தெடுக்கவும்",
         "platformOther": "மற்றவை",
-        "settledFromOwnership": "ஏற்கனவே உங்கள் Steam நூலகத்தில்"
+        "redeemableOnly": "பயன்படுத்தக்கூடிய விசைகள் மட்டும்",
+        "searchPlaceholder": "உங்கள் விசைகளில் தேடுக",
+        "settledFromOwnership": "ஏற்கனவே உங்கள் Steam நூலகத்தில்",
+        "sortAlphabetical": "அகரவரிசை",
+        "sortExpiringSoonest": "விரைவில் காலாவதியாகும்",
+        "sortLabel": "வரிசைப்படுத்து"
     },
     "info": {
         "refresh-rating": "மதிப்பீட்டை புதுப்பிக்கவும்"

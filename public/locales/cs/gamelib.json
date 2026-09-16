@@ -82,9 +82,26 @@
         "activateWizardTitle": "Aktivovat tento klíč",
         "activatingBody": "Odhalujeme váš klíč a uplatňujeme ho na Steam — chvilku to potrvá.",
         "activatingTitle": "Aktivace na Steam…",
+        "claimOnHumble": "Získat na Humble",
+        "claimOnStore": "Získat na {{store}}",
+        "clearFilters": "Vymazat hledání a filtry",
+        "columnGame": "Hra",
+        "columnKey": "Klíč",
+        "columnType": "Typ",
+        "emptyBody": "Synchronizujte svůj účet Humble Bundle, abyste zde viděli své klíče.",
+        "emptyHeading": "Zatím žádné klíče Humble",
+        "filteredEmptyBody": "Zkuste jiné hledání nebo vypněte „Pouze uplatnitelné klíče“.",
+        "filteredEmptyHeading": "Žádné odpovídající klíče",
+        "loginAndClaim": "Přihlaste se na {{store}} a získejte",
         "openStore": "Otevřít {{store}}",
+        "pickOnHumble": "Vybrat na Humble",
         "platformOther": "Ostatní",
-        "settledFromOwnership": "Již ve vaší knihovně Steam"
+        "redeemableOnly": "Pouze uplatnitelné klíče",
+        "searchPlaceholder": "Hledat ve svých klíčích",
+        "settledFromOwnership": "Již ve vaší knihovně Steam",
+        "sortAlphabetical": "Abecedně",
+        "sortExpiringSoonest": "Nejdříve vyprší",
+        "sortLabel": "Řadit"
     },
     "info": {
         "refresh-rating": "Obnovit hodnocení"

@@ -82,9 +82,26 @@
         "activateWizardTitle": "Activează această cheie",
         "activatingBody": "Se dezvăluie cheia și se activează pe Steam — durează doar o clipă.",
         "activatingTitle": "Se activează pe Steam…",
+        "claimOnHumble": "Revendică pe Humble",
+        "claimOnStore": "Revendică pe {{store}}",
+        "clearFilters": "Șterge căutarea și filtrele",
+        "columnGame": "Joc",
+        "columnKey": "Cheie",
+        "columnType": "Tip",
+        "emptyBody": "Sincronizează-ți contul Humble Bundle pentru a-ți vedea cheile aici.",
+        "emptyHeading": "Încă nu există chei Humble",
+        "filteredEmptyBody": "Încearcă o altă căutare sau dezactivează „Doar chei valorificabile”.",
+        "filteredEmptyHeading": "Nicio cheie nu se potrivește",
+        "loginAndClaim": "Conectează-te la {{store}} și revendică",
         "openStore": "Deschide {{store}}",
+        "pickOnHumble": "Alege pe Humble",
         "platformOther": "Altele",
-        "settledFromOwnership": "Deja în biblioteca ta Steam"
+        "redeemableOnly": "Doar chei valorificabile",
+        "searchPlaceholder": "Caută în cheile tale",
+        "settledFromOwnership": "Deja în biblioteca ta Steam",
+        "sortAlphabetical": "Alfabetic",
+        "sortExpiringSoonest": "Expiră cel mai curând",
+        "sortLabel": "Sortează"
     },
     "info": {
         "refresh-rating": "Reîmprospătează evaluarea"

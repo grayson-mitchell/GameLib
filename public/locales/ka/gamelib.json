@@ -82,9 +82,26 @@
         "activateWizardTitle": "ამ გასაღების გააქტიურება",
         "activatingBody": "თქვენი გასაღების გამოვლენა და Steam-ზე გამოსყიდვა — ეს მხოლოდ ერთ წამს წაიღებს.",
         "activatingTitle": "Steam-ზე გააქტიურება…",
+        "claimOnHumble": "მიღება Humble-ზე",
+        "claimOnStore": "მიღება {{store}}-ზე",
+        "clearFilters": "ძიებისა და ფილტრების გასუფთავება",
+        "columnGame": "თამაში",
+        "columnKey": "გასაღები",
+        "columnType": "ტიპი",
+        "emptyBody": "დაასინქრონეთ თქვენი Humble Bundle ანგარიში, რომ თქვენი გასაღებები აქ იხილოთ.",
+        "emptyHeading": "Humble-ის გასაღებები ჯერ არ არის",
+        "filteredEmptyBody": "სცადეთ სხვა ძიება ან გამორთეთ „მხოლოდ გამოსაყენებელი გასაღებები“.",
+        "filteredEmptyHeading": "შესაბამისი გასაღები არ მოიძებნა",
+        "loginAndClaim": "შედით {{store}}-ზე და მიიღეთ",
         "openStore": "გახსენით {{store}}",
+        "pickOnHumble": "არჩევა Humble-ზე",
         "platformOther": "სხვა",
-        "settledFromOwnership": "უკვე თქვენს Steam ბიბლიოთეკაშია"
+        "redeemableOnly": "მხოლოდ გამოსაყენებელი გასაღებები",
+        "searchPlaceholder": "მოძებნეთ თქვენს გასაღებებში",
+        "settledFromOwnership": "უკვე თქვენს Steam ბიბლიოთეკაშია",
+        "sortAlphabetical": "ანბანური",
+        "sortExpiringSoonest": "ვადა ყველაზე მალე იწურება",
+        "sortLabel": "დალაგება"
     },
     "info": {
         "refresh-rating": "რეიტინგის განახლება"

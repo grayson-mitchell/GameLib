@@ -82,9 +82,26 @@
         "activateWizardTitle": "Aktyvuoti šį raktą",
         "activatingBody": "Atskleidžiamas jūsų raktas ir jis aktyvuojamas Steam — tai užtruks tik akimirką.",
         "activatingTitle": "Aktyvuojama Steam…",
+        "claimOnHumble": "Atsiimti Humble platformoje",
+        "claimOnStore": "Atsiimti {{store}} platformoje",
+        "clearFilters": "Išvalyti paiešką ir filtrus",
+        "columnGame": "Žaidimas",
+        "columnKey": "Raktas",
+        "columnType": "Tipas",
+        "emptyBody": "Sinchronizuokite savo Humble Bundle paskyrą, kad čia matytumėte savo raktus.",
+        "emptyHeading": "Humble raktų dar nėra",
+        "filteredEmptyBody": "Pabandykite kitą paiešką arba išjunkite „Tik panaudojami raktai“.",
+        "filteredEmptyHeading": "Nėra atitinkančių raktų",
+        "loginAndClaim": "Prisijunkite prie {{store}} ir atsiimkite",
         "openStore": "Atverti {{store}}",
+        "pickOnHumble": "Pasirinkti Humble platformoje",
         "platformOther": "Kita/-s/-i",
-        "settledFromOwnership": "Jau jūsų Steam bibliotekoje"
+        "redeemableOnly": "Tik panaudojami raktai",
+        "searchPlaceholder": "Ieškoti savo raktuose",
+        "settledFromOwnership": "Jau jūsų Steam bibliotekoje",
+        "sortAlphabetical": "Abėcėlės tvarka",
+        "sortExpiringSoonest": "Greičiausiai baigiasi",
+        "sortLabel": "Rikiuoti"
     },
     "info": {
         "refresh-rating": "Atnaujinti įvertinimą"

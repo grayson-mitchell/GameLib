@@ -82,9 +82,26 @@
         "activatingBody": "Otkrivamo vaš ključ i unosimo ga na Steam — ovo traje samo trenutak.",
         "activatingTitle": "Aktiviranje na Steam…",
         "activateConfirmTitle": "Aktivirati ovaj ključ na Steamu?",
+        "claimOnHumble": "Preuzmi na Humbleu",
+        "claimOnStore": "Preuzmi na {{store}}",
+        "clearFilters": "Očisti pretragu i filtre",
+        "columnGame": "Igra",
+        "columnKey": "Ključ",
+        "columnType": "Vrsta",
+        "emptyBody": "Sinkronizirajte svoj Humble Bundle račun kako biste ovdje vidjeli svoje ključeve.",
+        "emptyHeading": "Još nema Humble ključeva",
+        "filteredEmptyBody": "Pokušajte s drugom pretragom ili isključite „Samo iskoristivi ključevi“.",
+        "filteredEmptyHeading": "Nema podudarnih ključeva",
+        "loginAndClaim": "Prijavite se na {{store}} i preuzmite",
         "openStore": "Otvori {{store}}",
+        "pickOnHumble": "Odaberi na Humbleu",
         "platformOther": "Ostalo",
-        "settledFromOwnership": "Već u vašoj Steam knjižnici"
+        "redeemableOnly": "Samo iskoristivi ključevi",
+        "searchPlaceholder": "Pretražite svoje ključeve",
+        "settledFromOwnership": "Već u vašoj Steam knjižnici",
+        "sortAlphabetical": "Abecedno",
+        "sortExpiringSoonest": "Prvo istječu",
+        "sortLabel": "Sortiraj"
     },
     "info": {
         "refresh-rating": "Osvježi ocjenu"

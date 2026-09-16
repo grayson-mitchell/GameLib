@@ -82,9 +82,26 @@
         "activateWizardTitle": "이 키 활성화",
         "activatingBody": "키를 공개하고 Steam에서 사용 등록하는 중입니다 — 잠시만 기다려 주세요.",
         "activatingTitle": "Steam에서 활성화하는 중…",
+        "claimOnHumble": "Humble에서 받기",
+        "claimOnStore": "{{store}}에서 받기",
+        "clearFilters": "검색 및 필터 지우기",
+        "columnGame": "게임",
+        "columnKey": "키",
+        "columnType": "유형",
+        "emptyBody": "Humble Bundle 계정을 동기화하면 여기에 키가 표시됩니다.",
+        "emptyHeading": "아직 Humble 키가 없습니다",
+        "filteredEmptyBody": "다른 검색을 시도하거나 「사용 가능한 키만」을 꺼 보세요.",
+        "filteredEmptyHeading": "일치하는 키가 없습니다",
+        "loginAndClaim": "{{store}}에 로그인하고 받기",
         "openStore": "{{store}} 열기",
+        "pickOnHumble": "Humble에서 선택",
         "platformOther": "기타",
-        "settledFromOwnership": "이미 Steam 라이브러리에 있음"
+        "redeemableOnly": "사용 가능한 키만",
+        "searchPlaceholder": "키 검색",
+        "settledFromOwnership": "이미 Steam 라이브러리에 있음",
+        "sortAlphabetical": "가나다순",
+        "sortExpiringSoonest": "만료 임박순",
+        "sortLabel": "정렬"
     },
     "info": {
         "refresh-rating": "평점 새로고침"

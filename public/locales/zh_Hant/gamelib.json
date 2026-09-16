@@ -82,9 +82,26 @@
         "activateWizardTitle": "啟用此金鑰",
         "activatingBody": "正在顯示您的金鑰並在 Steam 上兌換 — 只需片刻。",
         "activatingTitle": "正在於 Steam 上啟用…",
+        "claimOnHumble": "在 Humble 領取",
+        "claimOnStore": "在 {{store}} 領取",
+        "clearFilters": "清除搜尋與篩選",
+        "columnGame": "遊戲",
+        "columnKey": "金鑰",
+        "columnType": "類型",
+        "emptyBody": "同步你的 Humble Bundle 帳戶即可在此查看你的金鑰。",
+        "emptyHeading": "尚無 Humble 金鑰",
+        "filteredEmptyBody": "換一個搜尋詞，或關閉「僅可兌換的金鑰」。",
+        "filteredEmptyHeading": "沒有符合的金鑰",
+        "loginAndClaim": "登入 {{store}} 並領取",
         "openStore": "開啟 {{store}}",
+        "pickOnHumble": "在 Humble 選擇",
         "platformOther": "其它",
-        "settledFromOwnership": "已在你的 Steam 庫中"
+        "redeemableOnly": "僅可兌換的金鑰",
+        "searchPlaceholder": "搜尋你的金鑰",
+        "settledFromOwnership": "已在你的 Steam 庫中",
+        "sortAlphabetical": "依字母順序",
+        "sortExpiringSoonest": "最快到期",
+        "sortLabel": "排序"
     },
     "info": {
         "refresh-rating": "重新整理評分"

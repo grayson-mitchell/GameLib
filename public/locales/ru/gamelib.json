@@ -82,9 +82,26 @@
         "activateWizardTitle": "Активировать этот ключ",
         "activatingBody": "Раскрываем ваш ключ и активируем его в Steam — это займёт всего мгновение.",
         "activatingTitle": "Активация в Steam…",
+        "claimOnHumble": "Получить в Humble",
+        "claimOnStore": "Получить в {{store}}",
+        "clearFilters": "Очистить поиск и фильтры",
+        "columnGame": "Игра",
+        "columnKey": "Ключ",
+        "columnType": "Тип",
+        "emptyBody": "Синхронизируйте свой аккаунт Humble Bundle, чтобы увидеть здесь свои ключи.",
+        "emptyHeading": "Ключей Humble пока нет",
+        "filteredEmptyBody": "Попробуйте другой поиск или отключите «Только активируемые ключи».",
+        "filteredEmptyHeading": "Нет подходящих ключей",
+        "loginAndClaim": "Войдите в {{store}} и получите",
         "openStore": "Открыть {{store}}",
+        "pickOnHumble": "Выбрать в Humble",
         "platformOther": "Другое",
-        "settledFromOwnership": "Уже в вашей библиотеке Steam"
+        "redeemableOnly": "Только активируемые ключи",
+        "searchPlaceholder": "Поиск по ключам",
+        "settledFromOwnership": "Уже в вашей библиотеке Steam",
+        "sortAlphabetical": "По алфавиту",
+        "sortExpiringSoonest": "Истекают раньше",
+        "sortLabel": "Сортировка"
     },
     "info": {
         "refresh-rating": "Обновить рейтинг"

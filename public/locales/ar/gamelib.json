@@ -82,9 +82,26 @@
         "activateWizardTitle": "تفعيل هذا المفتاح",
         "activatingBody": "يتم كشف مفتاحك واستبداله على Steam — لن يستغرق هذا سوى لحظة.",
         "activatingTitle": "جارٍ التفعيل على Steam…",
+        "claimOnHumble": "المطالبة على Humble",
+        "claimOnStore": "المطالبة على {{store}}",
+        "clearFilters": "مسح البحث والمرشحات",
+        "columnGame": "اللعبة",
+        "columnKey": "المفتاح",
+        "columnType": "النوع",
+        "emptyBody": "زامن حساب Humble Bundle الخاص بك لرؤية مفاتيحك هنا.",
+        "emptyHeading": "لا توجد مفاتيح Humble بعد",
+        "filteredEmptyBody": "جرّب بحثًا مختلفًا، أو أوقف «المفاتيح القابلة للاستخدام فقط».",
+        "filteredEmptyHeading": "لا توجد مفاتيح مطابقة",
+        "loginAndClaim": "سجّل الدخول إلى {{store}} وطالب بالمفتاح",
         "openStore": "افتح {{store}}",
+        "pickOnHumble": "الاختيار على Humble",
         "platformOther": "آخر",
-        "settledFromOwnership": "موجود بالفعل في مكتبة Steam الخاصة بك"
+        "redeemableOnly": "المفاتيح القابلة للاستخدام فقط",
+        "searchPlaceholder": "ابحث في مفاتيحك",
+        "settledFromOwnership": "موجود بالفعل في مكتبة Steam الخاصة بك",
+        "sortAlphabetical": "أبجديًا",
+        "sortExpiringSoonest": "الأقرب انتهاءً",
+        "sortLabel": "ترتيب"
     },
     "info": {
         "refresh-rating": "تحديث التقييم"
