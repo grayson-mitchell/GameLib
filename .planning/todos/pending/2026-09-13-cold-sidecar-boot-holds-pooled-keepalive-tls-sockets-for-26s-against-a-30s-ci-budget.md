@@ -1,202 +1,162 @@
 ---
 created: 2026-09-13
-title: "A cold sidecar boot spends ~27-33s in UNBOUNDED boot-time downloads on https.globalAgent, overrunning smoke:sidecar's 30s budget in 1 of 4 measured runs"
+title: "A warm macOS profile with Wine-Staging-macOS installed still issues an UNBOUNDED boot-time DXMT tarball fetch (EasyDl, 5 connections, no timeout) that delays sidecar exit — the cold-profile case is fixed"
 area: backend/sidecar boot / CI gate
-severity: major
-platform: any
+severity: medium
+platform: macos
 ready: human
 status: pending
-source: quick-260913-901 (fix smoke:sidecar hang), measured while attributing the cold-boot cost in Task 1 Step 1.7; DIAGNOSIS CORRECTED by quick-260913-m9c
+source: quick-260913-901 (fix smoke:sidecar hang); DIAGNOSIS CORRECTED by quick-260913-m9c; ATTRIBUTION CORRECTED and cold-profile case FIXED by quick-260916-9vh
 files:
-  - src/backend/utils/inet/downloader/index.ts
-  - src/backend/sidecar/bootstrap.ts
+  - src/backend/tools/dxmt.ts
+  - src/backend/utils.ts
+  - meta/coldBootTiming.ts
   - meta/sidecarStartupSmoke.cjs
 resolves_phase: null
 ---
 
-# A cold sidecar boot overruns the 30s smoke budget on unbounded boot-time downloads
+# The cold-boot case is fixed; an unbounded boot-time fetch remains for warm macOS profiles
 
-> **THE ORIGINAL DIAGNOSIS IN THIS FILE WAS WRONG, AND THE FILENAME PRESERVES IT.**
-> This todo was filed as "the process sits REFERENCED on ~25 pooled keep-alive TLS
-> sockets". quick-260913-m9c measured that claim directly and **refuted it**. The
-> filename is deliberately left unchanged so the breadcrumb from the originating
-> task still resolves; read the corrected mechanism below, not the title slug.
-> The **symptom** (a ~2.3s margin on a 30s CI budget) was real and is now WORSE
-> than originally reported.
+> **THE FILENAME AND THE ORIGINAL DIAGNOSIS ARE BOTH WRONG, AND BOTH ARE KEPT ON PURPOSE.**
+> Filed as "the process sits REFERENCED on ~25 pooled keep-alive TLS sockets";
+> `quick-260913-m9c` refuted that. `quick-260916-9vh` then refuted m9c's *call-site
+> attribution* too. The filename is left unchanged so the breadcrumbs from both
+> originating tasks still resolve. Read the mechanism below, not the title slug.
 
-## What quick-260913-m9c measured
+## Status at HEAD: the measured symptom is GONE
 
-Harness: `meta/coldBootTiming.ts` (committed, re-runnable), a FRESH
-`createFakeHomeProfile()` per run. Tree `6b91b2448`, Node v26.2.0, macOS.
+`quick-260916-9vh` (2026-09-16) gated the boot-time DXMT fetch on there actually being an
+installed `Wine-Staging-macOS` to update (`src/backend/tools/dxmt.ts`). Measured with the
+committed harness, fresh `createFakeHomeProfile()` per run, macOS, Node v26.2.0:
 
-```
-node meta/runTs.cjs --bundle --platform=node --target=node22 \
-  meta/coldBootTiming.ts --runs 2 --label baseline
-```
+| tree | runs | elapsed | margin vs `STARTUP_TIMEOUT_MS=30_000` |
+| ---- | ---- | ------- | ------------------------------------- |
+| before (`396f400fd`) | 2 | 27.26s, 28.00s | +2.74s, +2.00s |
+| after (`260916-9vh`) | 2 | **1.34s, 1.28s** | **+28.66s, +28.72s** |
 
-Six cold runs against six fresh empty profiles:
+`ready=YES`, `exit=0`, `stderrBytes=0` on all four runs. A ~21x reduction, and the budget
+is no longer anywhere near contended on a cold profile.
 
-| run | elapsed | margin vs STARTUP_TIMEOUT_MS=30_000 |
-| --- | ------- | ----------------------------------- |
-| baseline-1  | 27.89s | +2.11s |
-| baseline-2  | 27.26s | +2.74s |
-| baseline2-1 | **33.33s** | **-3.33s — EXCEEDS THE BUDGET** |
-| baseline2-2 | 29.09s | +0.91s |
-| probed2-1   | 27.37s | +2.63s |
-| probed-1    | **39.29s** | **-9.29s — EXCEEDS THE BUDGET** |
+## The mechanism, settled by a request-level probe
 
-**This is no longer latent.** 2 of 6 measured cold runs exceed the budget, so
-`pnpm smoke:sidecar` would have failed outright with `ETIMEDOUT` on them. That is
-why `severity` is raised from `medium` to `major`.
-
-The 12-second spread (27.26s → 39.29s) is itself diagnostic: idle sockets parked
-waiting for a remote FIN would cost a roughly CONSTANT time. Bandwidth-dependent
-download work is what varies like this.
-
-## The mechanism, settled by measurement
-
-A diagnostic report (`--report-on-signal` + SIGUSR2 at t=15s) on a cold run:
+`quick-260916-9vh` re-ran `meta/coldBootTiming.ts` under a `--preload` hook wrapping
+`https.request`/`http.request`, so the in-flight transfers named themselves instead of
+being inferred from a host string:
 
 ```
-tcp handles: referenced+active=5  referenced+idle=0  unreferenced=3
+ 628ms REQ#7  api.github.com/repos/3Shain/dxmt/releases/latest   agent=custom(axiosClient)
+ 748ms REQ#9  github.com/3Shain/dxmt/releases/download/v0.80/dxmt-v0.80-builtin.tar.gz
+ 972ms REQ#11 ...same URL...                                     agent=https.globalAgent -> 302
+1168ms REQ#13..#17  release-assets.githubusercontent.com  x5      agent=https.globalAgent
+1201ms   RES#13 status=206   (... #14-#17 all 206 ...)
+...      #18-#23 follow-on chunks as workers finish
+27103ms  END#22    <- last chunk
+         process exit at 27.26s
 ```
 
-An agent-pool probe (constructor wrap on `https.Agent` plus an
-`http.Agent.prototype.addRequest` hook, so no agent can be missed) found exactly
-**two** agents ever serve a request, and the split is unambiguous and stable from
-t=2s to t=26s:
+The owning chain:
 
 ```
-https.globalAgent   keepAlive=true  options.timeout=5000
-  FREE     github.com:443=1(ref:0)          <- gone by t=8s
-  INFLIGHT release-assets.githubusercontent.com:443=5(ref:0)
-
-agent#0 (= the axiosClient agent)  keepAlive=true  options.timeout=undefined
-  FREE     raw.githubusercontent.com:443=1(ref:0)
-           api.github.com:443=1(ref:0)
-           release-assets.githubusercontent.com:443=1(ref:0)
-  INFLIGHT (none)
+init() Block B -> fetchLastestReleases()             [axiosClient, bounded]
+  -> 'releasesInfoReady' -> tools/dxmt.ts            [Mac-only: `if (!isMac) return`]
+    -> DXMT.getLatest() -> installOrUpdateTool()      tools/index.ts:106
+      -> downloadFile()                                backend/utils.ts:1489
+        -> EasyDl { connections: 5 }                   on https.globalAgent, NO timeout
 ```
 
-The report's three buckets map exactly onto that census:
-
-- **`unreferenced=3`** are `axiosClient`'s three PARKED sockets. Node's
-  `keepSocketAlive()` `unref()` **does** reach them — `hasRef()` is false in the
-  probe AND `is_referenced` is false in the report, by two independent
-  instruments. They hold nothing.
-- **`referenced+active=5`** are five **IN-FLIGHT** requests on
-  `https.globalAgent` to `release-assets.githubusercontent.com`.
-
-Process exit tracks download completion, measured twice: in `probed-1` the
-in-flight count drained 5→4→3→2 across t=32–38s and the process exited at
-39.27s; in `probed2-1` the downloads were still in flight at t=26s and it exited
-at 27.37s. The boot is not idling — it is waiting for real transfers.
-
-**The owning call site.** `src/backend/utils/inet/downloader/index.ts:70` issues
-a bare `axios.get(url, {...})` on the **default axios instance** — no
-`httpsAgent`, and **no `timeout`**. So it uses `https.globalAgent` and is
-completely unbounded. This also answers the question the originating task could
-not: the 10s `axiosClient.timeout` never bounded these requests because they
-never go through `axiosClient` at all.
+**The "five in-flight requests" are not five assets.** They are `206 Partial Content`
+range requests — EasyDl's `connections: 5` chunk workers pulling ONE file. Process exit
+tracks the last chunk's drain. Corroboration: the `axiosClient` free socket to
+`release-assets` that m9c's agent census saw is the `axiosClient.head(url)` size probe at
+`utils.ts:1502` that `downloadFile` issues before starting EasyDl.
 
 ## What was REFUTED, so nobody re-derives it
 
-1. **"~25 referenced pooled keep-alive sockets."** The originating `async_hooks`
-   probe counted sockets that were alive AND `hasRef()`, but could not separate
-   `agent.freeSockets` from `agent.sockets`. The parked pool is 3 sockets and
-   every one is unreferenced.
-2. **"~2s of work then ~26s of idle parking."** There are five in-flight
-   transfers for essentially the whole window.
-3. **All three candidate remedies in the original filing are aimed at the wrong
-   object.** `keepAlive: false`, destroying the agent after boot, and hand-rolled
-   `unref()` of idle sockets all target `axiosClient`'s parked sockets, which are
-   already unreferenced and already cost nothing.
+1. **"~25 referenced pooled keep-alive sockets."** (original filing) The parked pool is 3
+   sockets and every one is unreferenced. Refuted by `m9c`.
+2. **"~2s of work then ~26s of idle parking."** (original filing) There are in-flight
+   transfers for essentially the whole window. Refuted by `m9c`.
+3. **"The owning call site is `src/backend/utils/inet/downloader/index.ts:70`."**
+   (m9c's correction) **WRONG — refuted by `260916-9vh`.** That bare `axios.get` NEVER
+   FIRES at boot; it is the winetricks path (`tools/index.ts:540`), and its host is
+   `raw.githubusercontent.com`, which appears only as a parked `axiosClient` socket.
+   Anyone who had "fixed" that line would have changed nothing. **This is the second time
+   this todo's prescribed remedy pointed at the wrong object.**
 4. **Adding `timeout: 5000` to the `axiosClient` agent is INERT for this defect.**
-   It was the planned fix for quick-260913-m9c and was deliberately NOT shipped:
-   the measurement shows it cannot move the wall time, and a config-pin test
-   asserting it would have been a green check proving nothing. `keepAlive` with
-   no agent `timeout` remains true of that agent, but it is measured-benign here.
+   Confirmed by `m9c`; unchanged.
 
-## What remains
+## The three options in the original filing, adjudicated
 
-The remedy needs a DECISION, not just code — which is why this is `ready: human`.
-Bounding the download is not obviously correct: these are first-run assets, and a
-timeout that aborts them trades a CI flake for a broken cold start on a slow link.
+- **Option 1 — "do not block `init()` on boot-time downloads": REFUTED, false premise.**
+  `init()` already does not block on them. `READY_SENTINEL` is the second-to-last
+  statement of `init()`, and this download begins later via `runOnceWhenOnline` -> event
+  -> listener. Measured `ready=YES` on every run while exit sat at 27s. **The coupling is
+  exit-time only**, never READY-time. Reordering `init()` against its load-bearing Block
+  D/E/G/H comments would have bought nothing.
+- **Option 2 — "give `inet/downloader`'s `axios.get` a timeout": INERT.** Wrong path; see
+  refutation 3.
+- **Option 3 — "abort in-flight boot downloads on shutdown": FENCED. DO NOT BUILD IT.**
+  It requires an `'end'`/`'close'` handler on `startRpcServer()`, which is explicitly
+  ruled out in three places:
+  - `.planning/todos/completed/2026-09-13-sidecar-stdin-owned-exit-contract-is-undocumented-centrally-and-gated-only-by-smoke-sidecar.md`,
+    "Not in scope": *"Do not 'fix' this by adding an `'end'`/`'close'` handler to
+    `startRpcServer()` ... The first misunderstands the design."*
+  - `260913-ty4-PLAN.md`, "Out of scope".
+  - `CLAUDE.md`: *"`startRpcServer()` therefore has no `'end'`/`'close'` handler by design
+    ... adding one misunderstands the mechanism rather than hardening it."*
 
-Options, none yet chosen:
+  `CLAUDE.md` admits exactly two remedies for the in-flight class: **bounded, or not
+  issued at boot.** `260916-9vh` shipped the second.
+- **Option 4 — "do not raise `STARTUP_TIMEOUT_MS`": still correct, still unchanged.**
 
-1. **Do not block `init()` on boot-time downloads.** Let them proceed in the
-   background and reach `READY_SENTINEL` without waiting. This attacks the actual
-   coupling — the gate measures time-to-exit-on-stdin-EOF, and the process cannot
-   exit while five transfers are open. Note the hard constraint: **do not reorder
-   `init()`**; Blocks D/E/G/H carry load-bearing ordering comments.
-2. **Give `inet/downloader`'s `axios.get` an explicit `timeout` and agent**, so a
-   stalled asset fetch fails fast instead of holding boot. Decide what a failed
-   first-run asset fetch should DO before picking a number.
-3. **Abort in-flight boot downloads on shutdown** (added 2026-09-13 by the
-   quick-260913-m9c orchestrator; see the caveat below — this is REASONED, not
-   measured). Options 1 and 2 both change what happens on a *healthy* run: option 1
-   alters boot ordering, option 2 can fail a first-run asset fetch on a slow link.
-   This one changes nothing about a healthy run. When the sidecar is already
-   shutting down, cancelling transfers whose results nobody will read costs
-   nothing behaviourally, and it bounds exit time without bounding the download
-   itself. A user on a slow link keeps their full first-run fetch; only a sidecar
-   that has been told to quit gives it up.
-4. **Do not raise `STARTUP_TIMEOUT_MS`** — the original filing is right that this
-   hides the signal, and the signal is now firing for real.
+## Open question 3 is ANSWERED, and the answer is benign
 
-### Blocking fact for option 3: there is NO stdin-EOF seam to hang it on
+The filing asked what a cancelled/partial first-run asset fetch leaves behind. Read at
+`tools/index.ts`: `installOrUpdateTool` writes the `latest_<tool>` version marker **only
+after a successful extract**, and `rmSync`s the archive once extracted; EasyDl is
+constructed with `existBehavior: 'overwrite'`. So a partial tarball is unconditionally
+overwritten on the next attempt and the version marker never falsely advances. There is
+no corruption or resume-poisoning path here.
 
-Measured 2026-09-13 at `cf06f4664`. `startRpcServer()`
-(`src/backend/sidecar/sidecarRpc.ts:296-321`) binds **only** `input.on('data', …)`.
-There is no `'end'` handler, no `'close'` handler, and no shutdown path of any
-kind. The sidecar exits *implicitly*, when the event loop happens to drain — which
-is the deeper reason an unbounded download holds it open: nothing observes that we
-were told to quit.
+## Severity re-scoped `major` -> `medium`, and why
 
-So option 3 is **more work than it first sounds**. It needs, in order:
+The filing raised this to `major` on "2 of 6 cold runs exceed the CI budget". That framing
+overstated the CI exposure: `.github/workflows/test.yml:11` runs `ubuntu-latest`, and the
+listener returns at `if (!isMac)` before issuing anything. **The 30s CI budget was very
+likely never at risk.** Stated plainly: this is **REASONED, not measured** — no Linux cold
+boot was run, and nobody should treat it as measured until one is.
 
-1. an explicit EOF/shutdown hook in `startRpcServer()` — this does not exist yet
-   and is arguably a defect in its own right, independent of this todo;
-2. an `AbortController` threaded through `inet/downloader`'s `axios.get`
-   (`src/backend/utils/inet/downloader/index.ts:70`), which currently has **no**
-   abort plumbing at all — though `AbortController` is already an established
-   pattern in this backend (`launcher.ts`, `online_monitor.ts`, `utils.ts`,
-   `tools/index.ts`, `downloadmanager/downloadqueue.ts`,
-   `downloadmanager/installStallWatchdog.ts`);
-3. a decision about what a *cancelled* first-run asset fetch leaves behind — a
-   partial file on disk is worse than no file, so this interacts with option 2's
-   unanswered question rather than avoiding it.
+The honest win from `260916-9vh` is the cold-macOS boot (27s -> 1.3s) and the elimination
+of a first-run download that served no purpose.
 
-**Caveat, stated plainly:** unlike everything else in this file, option 3 was NOT
-measured. It is a design argument from the measured mechanism. Nobody has shown
-that aborting on shutdown actually brings the cold boot under budget, and it
-should be prototyped and timed with `meta/coldBootTiming.ts` before it is chosen
-over options 1 and 2.
+## What remains — and it still needs a DECISION, not just code
 
-Identify which five assets are fetched before choosing; `crossoverIndexDescriptor`
-(`src/backend/crossover_index/index.ts:19`) is one confirmed
-`releases/download/...` URL that redirects to `release-assets.githubusercontent.com`.
+**A warm macOS profile with `Wine-Staging-macOS` installed still takes the full path.**
+For those users the boot still issues an unbounded, un-timed-out EasyDl fetch over five
+connections, and the sidecar still cannot exit until it drains. `260916-9vh` deliberately
+did NOT widen into this.
 
-## Second-order finding: the smoke gate's cold stderr arm is SAFE
+The undecided question is the same one the filing could not answer, now correctly scoped:
+**should `downloadFile`/EasyDl carry a timeout, and what should a failed tool update do?**
+A timeout trades a slow-exit case for a broken tool update on a slow link. That is a
+product call, which is why this stays `ready: human`.
 
-`meta/sidecarStartupSmoke.cjs` gained an
-`'[sidecar] uncaught exception:'` stderr assertion in `8e2e42168`, justified on
-4/4 clean boots that all inherited the operator's **warm real** profile. It had
-never been validated against a **cold fake** profile, which is what CI runs.
+Constraints on whoever picks it up:
 
-Measured here: **4 clean cold fake-profile boots emitted 0 stderr bytes and the
-uncaught-exception prefix in NONE of them** (the two probed runs emitted 80 bytes,
-which is Node's own "Writing Node.js report to file" notice from
-`--report-on-signal`, not a fault). The arm will not flake cold. **Risk retired**;
-no follow-up needed.
+- Do **not** reach for option 3. It is fenced (above).
+- `downloadFile` (`backend/utils.ts:1489`) is shared by game installs, wine/proton
+  downloads and tool updates. A blanket timeout there is **not** a local change — it would
+  bound real multi-GB game downloads. Scope any timeout to the caller, not the primitive.
+- The abort plumbing already exists on this path and is worth knowing about before
+  redesigning anything: `installOrUpdateTool` passes
+  `abortSignal: createAbortController(tool.name).signal`, and `downloadFile` already wires
+  `abortSignal -> dl.destroy()`.
 
 ## How to verify (why this is not `ready: code`)
 
-`pnpm smoke:sidecar` CANNOT reproduce this: it is the named real-profile
-exemption of the two-profile rule, so a local run inherits a warm profile and
-finishes in ~1s. Use the committed harness, which mints a fresh empty profile per
-run:
+`pnpm smoke:sidecar` CANNOT reproduce this: it is the named real-profile exemption of the
+two-profile rule, so a local run inherits a warm profile. Use the committed harness, which
+mints a fresh empty profile per run:
 
 ```
 pnpm build:sidecar
@@ -204,7 +164,19 @@ node meta/runTs.cjs --bundle --platform=node --target=node22 \
   meta/coldBootTiming.ts --runs 2 --label check
 ```
 
-**Do not use the shell repro this todo originally carried.** It set only 6 of the
-8 required variables — `USERPROFILE` and `XDG_CACHE_HOME` were MISSING — because
-it predates `createFakeHomeProfile()`, which landed an hour later in `d7d021a05`.
-It has been deleted from this file rather than left to be copied forward.
+To exercise the REMAINING case you must simulate a populated profile — an empty fake
+profile now exits in ~1.3s precisely because it has no installed wine, so it can no longer
+see this defect at all.
+
+**Do not use the shell repro this todo originally carried.** It set only 6 of the 8
+required variables (`USERPROFILE` and `XDG_CACHE_HOME` were MISSING) because it predates
+`createFakeHomeProfile()`. It was deleted from this file rather than left to be copied
+forward.
+
+## Second-order finding: the smoke gate's cold stderr arm is SAFE (unchanged, still valid)
+
+`meta/sidecarStartupSmoke.cjs` gained an `'[sidecar] uncaught exception:'` stderr assertion
+in `8e2e42168`, justified on 4/4 clean boots that all inherited the operator's **warm real**
+profile. `m9c` measured it against cold fake profiles: 4 clean cold boots emitted 0 stderr
+bytes and the prefix in NONE of them. `260916-9vh` re-confirmed `stderrBytes=0` and
+`uncaughtOnStderr=NO` on 2 further cold runs. **Risk retired**; no follow-up needed.
