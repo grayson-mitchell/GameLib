@@ -207,6 +207,34 @@ has already had **three** hypotheses about this surface formed purely by code re
 three wrong. Marking this `ready: code` would advertise it as desk-pickup-able when the first
 honest step on either remaining half is a live measurement on this Mac, not a code read.
 
+## RESOLVED 2026-09-16 (Phase 44, D-15/D-16)
+
+Closed per D-15 — an operator decision, made against the recommendation to narrow-and-keep-open.
+That recommendation's concern, recorded in `44-CONTEXT.md`, was that closing early would bury
+Half A (the never-investigated search-filtering symptom) with no other home; that concern is
+answered below by folding Half A elsewhere first, not overridden silently.
+
+Per-half resolution, stated honestly:
+
+- **Half B — "Install fires on first click"** — already shipped in `366e719bb` (plan 35-25).
+  Unchanged by this closure.
+- **Item 4 — stale "proven by measurement" comment correction** — already shipped, at
+  `SearchBar/index.tsx:129-145`. Unchanged by this closure.
+- **Half B — "the highlight must track the mouse without the panel needing to react first" — and
+  Half A — "typing needs repeated attempts before it filters usably"** — both are properties of
+  `SearchBar`'s `.autoComplete` focus-conditional overlay, which Winetricks (via Phase 44's
+  `WinetricksBrowse/`) stops rendering into entirely (UI-SPEC Interaction Contract §1). Neither
+  was *fixed*; the surface they were reported against was removed. Stated plainly rather than
+  implying a fix: this closure does not claim either half was measured, diagnosed, or repaired.
+- **Where Half A went** — folded, verbatim, into
+  `2026-08-30-library-search-bar-suggestions-are-mouse-dead-until-a-tab-press.md`
+  (`.planning/todos/pending/`) under its own `## Inherited from the 2026-08-26 Winetricks todo`
+  section, per D-16. The identical non-highlighting symptom (Half B) already survives for
+  `LibrarySearchBar` in that same file — it needed no fold, only Half A did.
+
+No `resolves_phase:` was ever set on this file (see `## Notes` below), so this closure is a
+manual `git mv`, not an automatic phase-completion sweep.
+
 ## Notes
 
 No `resolves_phase:` — 34.6 is verified `passed` and must not auto-close this file.
