@@ -151,3 +151,10 @@ Per this execution's explicit instructions (project-specific hard ban on `gsd-sd
 ---
 *Phase: 44-in-app-winetricks-browse-ui-replacing-the-search-only-panel*
 *Completed: 2026-09-16*
+
+## Self-Check: PASSED
+
+- FOUND: `public/locales/en/gamelib.json` (modified, committed)
+- FOUND: commit `5fe16754d` (Task 1)
+- FOUND: this SUMMARY.md file on disk
+- `.planning/STATE.md` and `.planning/ROADMAP.md` confirmed untouched (`git status --porcelain` empty for both)
