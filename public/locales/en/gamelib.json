@@ -386,5 +386,20 @@
     "winetricks": {
         "unavailable": "Winetricks component management is unavailable on this build",
         "unavailableDetail": "Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Cached (installs offline)",
+        "clearSearch": "Clear search",
+        "curatedGroup": "Commonly needed",
+        "emptyBody": "Winetricks metadata could not be loaded for this bottle.",
+        "emptyHeading": "No components available",
+        "installFailedTag": "Install failed",
+        "installedTag": "Installed",
+        "installingRow": "Installing…",
+        "needsGuiTag": "Needs the Winetricks GUI",
+        "resultsHeading": "{{total}} results",
+        "retry": "Retry",
+        "searchPlaceholder": "Search components…",
+        "zeroResultHeading": "No components match “{{query}}”."
     }
 }
