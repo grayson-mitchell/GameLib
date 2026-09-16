@@ -1,0 +1,170 @@
+// Phase 44, plan 03. Styling for the Winetricks Browse UI's per-row
+// component (Row/index.tsx). Scoped under the existing
+// `.progressDialog.winetricksDialog` dialog root (see
+// `../../index.scss`) so nothing here can leak app-wide -- this repo has
+// already paid for a cross-context CSS leak twice (`Dropdown` styling its
+// panel's CONTENTS, and the unscoped `.MuiTabs-root` incident). D-05.
+//
+// Token-survival fallback chains (CR-01/CR-03). An undefined custom
+// property with no fallback drops the ENTIRE declaration at computed-value
+// time, silently, in whichever theme block lacks it -- `--navbar-active` is
+// declared in only 4 of 11 theme blocks. Declared FILE-LOCALLY below (not
+// imported) so a census gate can assert every consumer's copy matches, per
+// `FilterFacetGroup/index.scss`'s own header comment. Chains copied
+// verbatim from that file / `NavItem/index.scss`, not invented:
+//   --winetricks-active-color:   var(--navbar-active, var(--accent-overlay, var(--accent)))
+//   --winetricks-inactive-color: var(--navbar-inactive, var(--navbar-accent))
+//   --winetricks-hover-color:    var(--text-hover, var(--accent))
+//
+// `--success` / `--danger` are consumed BARE below, deliberately, per this
+// plan's own Task 2 instruction. Unlike `--navbar-active`, they are NOT a
+// token declared in only a handful of theme blocks -- they are this
+// codebase's established theme-adaptive status-colour ALIASES (contrast
+// with the raw `--status-success` / `--status-danger` pair, which has no
+// light-theme override and measured 2.27:1 on nord-light, a WCAG failure
+// already shipped and fixed once; reserved for fills only, and this
+// stylesheet needs none). Already consumed bare at ~10 other call sites
+// repo-wide (App.css, Settings/index.css, DownloadManagerItem/index.css,
+// ProgressHeader/index.css, Humble/Keys/index.css, WineManager/index.css,
+// Discounts/DiscountCard/index.css), so this is the established pattern,
+// not a new risk. See `.planning/phases/44-.../44-RESEARCH.md` Pitfall 5.
+.progressDialog.winetricksDialog {
+  --winetricks-active-color: var(
+    --navbar-active,
+    var(--accent-overlay, var(--accent))
+  );
+  --winetricks-inactive-color: var(--navbar-inactive, var(--navbar-accent));
+  --winetricks-hover-color: var(--text-hover, var(--accent));
+
+  // Fixed row metrics (UI-SPEC Layout). Load-bearing, not polish: the
+  // Installing -> Installed swap fires at the exact instant the post-install
+  // stale-while-revalidate refresh resolves, and if that swap is not
+  // metrically identical across every one of the six treatments, rows below
+  // shift VERTICALLY under a pointer that was about to act on a different
+  // row -- the vertical twin of the horizontal hazard Interaction Contract
+  // §5 guards against. Three class tokens here
+  // (`.progressDialog` + `.winetricksDialog` + `.WinetricksBrowse__row`) is
+  // (0,3,0), which is what this rule needs to out-specify
+  // `.dropdownContainer .button` (Dropdown/index.scss, (0,2,0)) regardless
+  // of which stylesheet's import lands second.
+  .WinetricksBrowse__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    height: 44px;
+    min-width: 0;
+    padding-inline: var(--space-sm);
+    box-sizing: border-box;
+
+    &:hover {
+      background: var(--winetricks-active-color);
+    }
+  }
+
+  .WinetricksBrowse__rowTitle {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: var(--regular);
+    color: var(--winetricks-inactive-color);
+  }
+
+  .WinetricksBrowse__rowVerb {
+    flex: 0 0 auto;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+  }
+
+  // Non-colour signal (C-3): every badge below pairs an icon (declared in
+  // Row/index.tsx's markup) with text. No rule here expresses a state
+  // through colour alone.
+  .WinetricksBrowse__tag {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    font-size: var(--text-xs);
+    white-space: nowrap;
+  }
+
+  .WinetricksBrowse__tag--cached {
+    color: var(--winetricks-hover-color);
+  }
+
+  .WinetricksBrowse__tag--installed {
+    color: var(--success);
+  }
+
+  .WinetricksBrowse__tag--errored {
+    color: var(--danger);
+  }
+
+  // Routing, not failure -- neutral `--text-secondary`, not accent, not
+  // danger (Row/index.tsx's own comment on this branch).
+  .WinetricksBrowse__tag--needsGui {
+    color: var(--text-secondary);
+  }
+
+  .WinetricksBrowse__tag--installing {
+    color: var(--text-secondary);
+  }
+
+  // Fixed BOTH dimensions across all six treatments (min-width AND height,
+  // same line-height/vertical padding) -- see the row-metrics comment above
+  // for why this is load-bearing rather than cosmetic.
+  .WinetricksBrowse__actionSlot {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2xs);
+    min-width: 9rem;
+    height: 32px;
+    line-height: 32px;
+    padding-block: 0;
+  }
+
+  // Out-specification (Pitfall 3, recurred twice already --
+  // `FilterFacetRow` `260815-mk1`, `NavItem` `260815-nmq`). Nested two
+  // levels inside the compound `.progressDialog.winetricksDialog` root, each
+  // button selector below compiles to FOUR class tokens
+  // (`.progressDialog` + `.winetricksDialog` + `.WinetricksBrowse__row` +
+  // the button's own class), i.e. (0,4,0) -- comfortably past the (0,2,1)
+  // `.dropdownContainer .dropdown button` rule this must beat regardless of
+  // import order. `margin-inline-start: 0` explicitly resets that rule's
+  // leaked `0.5rem` rather than leaving it to be inherited unopposed.
+  .WinetricksBrowse__row .WinetricksBrowse__installButton,
+  .WinetricksBrowse__row .WinetricksBrowse__retryButton,
+  .WinetricksBrowse__row .WinetricksBrowse__guiButton {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3xs);
+    margin-inline-start: 0;
+    align-self: center;
+    font-size: var(--text-sm);
+    line-height: 1;
+    height: 32px;
+    padding: var(--space-3xs) var(--space-sm);
+    border: 0;
+    border-radius: var(--space-3xs);
+    background: var(--accent);
+    color: var(--text-default);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--winetricks-hover-color);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+}
