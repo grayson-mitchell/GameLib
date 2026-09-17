@@ -12,9 +12,19 @@
 // time, silently, in whichever theme block lacks it -- `--navbar-active` is
 // declared in only 4 of 11 theme blocks. Declared FILE-LOCALLY below (not
 // imported), matching `Row/index.scss`'s own copy of the identical chain
-// verbatim, so a census gate can assert every consumer's copy matches:
+// verbatim, so a census gate can assert every consumer's copy matches.
+//
+// `--winetricks-inactive-color` was changed from
+// `var(--navbar-inactive, var(--navbar-accent))` to `var(--text-default)` by
+// the D-24 live gate (2026-09-17): it measured **1.15:1** for
+// `.WinetricksBrowse__groupHeader` below on nord-light, `#ffffff` text on the
+// `#edeff4` dialog surface. `--navbar-inactive` is white in every theme
+// BECAUSE the navbar is dark in every theme; this is a dialog. The full
+// reasoning, including why a dark theme hides the same defect at 15.10:1,
+// lives in `Row/index.scss`'s header -- keep the two copies in step, since
+// the whole point of the file-local declaration is that they match:
 //   --winetricks-active-color:   var(--navbar-active, var(--accent-overlay, var(--accent)))
-//   --winetricks-inactive-color: var(--navbar-inactive, var(--navbar-accent))
+//   --winetricks-inactive-color: var(--text-default)   <-- D-24, see above
 //   --winetricks-hover-color:    var(--text-hover, var(--accent))
 //
 // `--modal-background` is consumed BARE below (the sticky search bar's
@@ -34,7 +44,7 @@
     --navbar-active,
     var(--accent-overlay, var(--accent))
   );
-  --winetricks-inactive-color: var(--navbar-inactive, var(--navbar-accent));
+  --winetricks-inactive-color: var(--text-default);
   --winetricks-hover-color: var(--text-hover, var(--accent));
 
   .WinetricksBrowse {
