@@ -237,6 +237,69 @@ AND a named light theme is what caught it.
 Also worth recording: `--text-secondary` — already consumed three lines away in the same file for
 the verb id, and measured at **9.74:1** in nord light — was the correct token the whole time.
 
+## D-24 RE-RUN after the fix — 2026-09-17, commit `6b094c015`
+
+Packaged release rebuilt at 10:57 and **signed by Tauri itself** (`APPLE_SIGNING_IDENTITY` set in
+the build environment, so no manual re-sign): `flags=0x10000(runtime)`, `TeamIdentifier=S7U223QWXJ`,
+`allow-jit`. Embedded renderer confirmed fresh (`index-D6FMVfKo.js` present in the binary).
+
+**Pre-flight, before any ratio was read:** the compiled stylesheet was checked directly, because a
+source fix that never reaches the bundle would measure as a fix that did not work. 5/5 —
+`--winetricks-inactive-color` is `--text-default`, the old `--navbar-inactive` chain is gone, the
+button uses `--background`, the separator box-shadow is present, and the `color-mix` divider chain
+is present. (The first version of that checker returned two FALSE FAILS by hard-coding the
+minified spelling `:var(`; the minifier preserved spaces in exactly those declarations. Patterns
+are whitespace-tolerant now — do not assert on a minifier's whitespace.)
+
+### Light arm — nord light, dialog surface `#edeff4`
+
+| Element / row state | Before | **After (live)** | C-3 icon AND text | Verdict |
+|---|---|---|---|---|
+| Available — row name text | 1.15:1 | **13.50:1** | n/a, plain text | **PASS** |
+| Available — Install button label | 1.51:1 | **8.93:1** | icon + text | **PASS** |
+| Available + Cached — tag | 3.51:1 | **9.74:1** | icon + text | **PASS** |
+| **Installed** — badge | NOT REACHED | **7.35:1** (`#425231`) | icon + text (green check + "Installed") | **PASS** |
+| Group header | 1.15:1 | **13.50:1** | — | **PASS** |
+| Hover state | NOT TESTED | fill `#d2ddfc` vs `#edeff4` = **1.179:1**; row text on fill **11.46:1** | — | **PASS** — perceptible and still readable |
+| Row separator (defect 4) | none, zero variance | `#d1d2d8` = **1.31:1** | — | present but SUBTLE |
+
+Every live figure matched the ratio predicted from the token declarations to within **0.05**
+(13.52/8.88/13.52/9.73 predicted), so the token reasoning and the rendered result agree.
+
+The separator was located empirically rather than assumed: a 1-CSS-px line at device y=454-455.
+Its 1.31:1 is recorded as a partial close, not a pass.
+
+**Install pipeline verified end to end, incidentally.** `dotnetcore2` was installed live at
+11:10:22-11:10:37; `$WINEPREFIX/winetricks.log` (which is what `listInstalled` reads —
+`tools/index.ts:751`, a plain file read with no subprocess and therefore no log line) gained the
+`dotnetcore2` entry at 11:10:37, and the row's `Installed` badge is on screen. install -> event ->
+refetch -> badge works.
+
+### Still NOT REACHED after the re-run
+
+- **Every dark-arm cell** post-fix. The pre-fix dark arm was measured (Install button 1.01:1,
+  everything else 15.10-15.34:1) but the theme was not switched back after the rebuild.
+- **Installing (this row)** and **Installing (elsewhere)**, both themes — transient states; the
+  one install performed was not captured (see the D-22 note below).
+- **Needs GUI** and **Errored**, both themes.
+- `:focus-visible` ring, both themes; carets, both themes.
+
+### D-22: NOT RUN, and one attempt was wasted
+
+An attempt was made and produced no usable transition data. The burst-capture loop was announced
+as sampling every ~1.2s over ~96s but **contained no `sleep`**: it actually captured 77 frames in
+**8 seconds** (11:10:58-11:11:06) at ~0.10s/frame. Excellent temporal resolution, aimed at the
+wrong 8 seconds — the install had already run at 11:10:22-11:10:37, before the burst began.
+
+A valid D-22 run needs: baseline captured first, burst armed and CONFIRMED capturing, and only
+then the click. The baseline metric to compare against is recorded and reusable —
+**row boundaries at device y = 428, 540, 652, 764, 876, 988, 1100, a uniform 112 device px
+(56.0 CSS px) pitch across all seven.** A reflow from the Installing->Installed swap breaks that
+pitch; that is the numeric form of D-22.2.
+
+D-22 must also be run on the **grouped browse list**. The attempt drifted into the flat search
+pane (query "Core"), which is explicitly not what the D-22 claims are about.
+
 ## Not covered by this gate (D-23)
 
 Required by D-23, and written down so no later document claims coverage this phase does not have.
