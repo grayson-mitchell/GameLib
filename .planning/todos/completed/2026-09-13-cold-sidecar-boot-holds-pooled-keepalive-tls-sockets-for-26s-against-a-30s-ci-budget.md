@@ -1,12 +1,13 @@
 ---
 created: 2026-09-13
-title: "A warm macOS profile with Wine-Staging-macOS installed still issues an UNBOUNDED boot-time DXMT tarball fetch (EasyDl, 5 connections, no timeout) that delays sidecar exit — the cold-profile case is fixed"
+title: "The cold-profile boot download is FIXED (27.3s -> 1.3s); the residual — a once-per-DXMT-release unbounded fetch on macOS profiles with Wine-Staging installed — was ACCEPTED by the operator on 2026-09-17 and this is closed as won't-fix"
 area: backend/sidecar boot / CI gate
-severity: medium
+severity: minor
 platform: macos
 ready: human
-status: pending
-source: quick-260913-901 (fix smoke:sidecar hang); DIAGNOSIS CORRECTED by quick-260913-m9c; ATTRIBUTION CORRECTED and cold-profile case FIXED by quick-260916-9vh
+status: "CLOSED 2026-09-17 by operator decision -- accept the residual, do not bound it. The cold-profile half was FIXED by quick-260916-9vh (27.26s/28.00s -> 1.34s/1.28s). The remaining half was re-scoped on 2026-09-17 and found MUCH narrower than this file had claimed: `tools/dxmt.ts:156` (`if (releasesInfo['dxmt'].tag === currentDXMTVersion) return`) pre-dates the 9vh fix and short-circuits the listener whenever DXMT is already current, so the fetch arms roughly ONCE PER UPSTREAM DXMT RELEASE, not on every warm boot as this todo previously stated. That earlier claim was written without tracing above the edited line and was FALSE; it is corrected in the body below. Accepted because the harm is a few-seconds-slower sidecar EXIT (never startup, never readiness), already backstopped by shutdown_child()'s SIGTERM/grace/SIGKILL, and a killed fetch is benign per the answered open question 3. NOT fixed, deliberately: a timeout would cost users on slow links their DXMT updates entirely. See `## Why this was closed rather than fixed` for the one case that argues the other way and remains UNMEASURED."
+closed_by: operator decision 2026-09-17 (scope correction + adjudication, no code change)
+source: quick-260913-901 (fix smoke:sidecar hang); DIAGNOSIS CORRECTED by quick-260913-m9c; ATTRIBUTION CORRECTED and cold-profile case FIXED by quick-260916-9vh; SCOPE CORRECTED and CLOSED 2026-09-17
 files:
   - src/backend/tools/dxmt.ts
   - src/backend/utils.ts
@@ -58,11 +59,23 @@ The owning chain:
 
 ```
 init() Block B -> fetchLastestReleases()             [axiosClient, bounded]
-  -> 'releasesInfoReady' -> tools/dxmt.ts            [Mac-only: `if (!isMac) return`]
-    -> DXMT.getLatest() -> installOrUpdateTool()      tools/index.ts:106
+  -> 'releasesInfoReady' -> tools/dxmt.ts            [Mac-only: `if (!isMac) return`]     :149
+       GATE 2: `if (releasesInfo['dxmt'].tag === currentDXMTVersion) return`              :156
+       GATE 3: `if (installedWineStagingVersions.length === 0) return`   [260916-9vh]     :185
+    -> DXMT.getLatest() -> installOrUpdateTool()      tools/index.ts:106                  :187
       -> downloadFile()                                backend/utils.ts:1489
         -> EasyDl { connections: 5 }                   on https.globalAgent, NO timeout
 ```
+
+**All THREE gates must fall through before a byte is fetched**, and the middle one is the
+reason this closed rather than shipping a timeout. `getCurrentDXMTVersion()`
+(`tools/dxmt.ts:59-66`) reads the `latest_dxmt` marker under `toolsPath`, returning `''`
+when absent. `installOrUpdateTool` writes that marker **only after a successful extract**.
+So once DXMT is current, gate 2 returns before anything is issued, on every subsequent
+boot, forever — until upstream 3Shain/dxmt publishes a new tag.
+
+**Gate 2 pre-dates the `260916-9vh` fix.** It was always there; the 2026-09-16 rewrite of
+this file simply failed to read above the line it had just edited.
 
 **The "five in-flight requests" are not five assets.** They are `206 Partial Content`
 range requests — EasyDl's `connections: 5` chunk workers pulling ONE file. Process exit
@@ -129,28 +142,63 @@ boot was run, and nobody should treat it as measured until one is.
 The honest win from `260916-9vh` is the cold-macOS boot (27s -> 1.3s) and the elimination
 of a first-run download that served no purpose.
 
-## What remains — and it still needs a DECISION, not just code
+## CORRECTION 2026-09-17 — this file overstated its own residual
 
-**A warm macOS profile with `Wine-Staging-macOS` installed still takes the full path.**
-For those users the boot still issues an unbounded, un-timed-out EasyDl fetch over five
-connections, and the sidecar still cannot exit until it drains. `260916-9vh` deliberately
-did NOT widen into this.
+The 2026-09-16 rewrite of this todo claimed, in its "What remains" section:
 
-The undecided question is the same one the filing could not answer, now correctly scoped:
-**should `downloadFile`/EasyDl carry a timeout, and what should a failed tool update do?**
-A timeout trades a slow-exit case for a broken tool update on a slow link. That is a
-product call, which is why this stays `ready: human`.
+> *"A warm macOS profile with `Wine-Staging-macOS` installed still takes the full path."*
 
-Constraints on whoever picks it up:
+**That is FALSE, and it was false when written.** It omits gate 2 (`:156`). The full path
+requires macOS **AND** an installed `Wine-Staging-macOS` **AND** a DXMT that is stale or
+never provisioned. In steady state the listener returns at `:156` having issued nothing.
 
-- Do **not** reach for option 3. It is fenced (above).
-- `downloadFile` (`backend/utils.ts:1489`) is shared by game installs, wine/proton
-  downloads and tool updates. A blanket timeout there is **not** a local change — it would
-  bound real multi-GB game downloads. Scope any timeout to the caller, not the primitive.
-- The abort plumbing already exists on this path and is worth knowing about before
-  redesigning anything: `installOrUpdateTool` passes
-  `abortSignal: createAbortController(tool.name).signal`, and `downloadFile` already wires
-  `abortSignal -> dl.destroy()`.
+The error was made by editing at `:180-187` and describing the listener's behaviour without
+reading the 30 lines above the edit. It is recorded rather than quietly patched because it
+is the third time this one file has carried a confidently-wrong claim about its own
+mechanism (see "What was REFUTED" — the socket census, then the call-site attribution, now
+the residual's frequency).
+
+## Why this was closed rather than fixed
+
+Operator decision, 2026-09-17: **accept the residual.** No code change.
+
+The question put was not the one this file had been asking. Once the frequency was correct,
+"should `downloadFile`/EasyDl carry a timeout" stopped being the decision; the decision was
+simply *is a few-seconds-slower sidecar exit, once per DXMT release, on macOS, acceptable?*
+Answer: yes.
+
+The grounds, stated so a future reader can overturn them on evidence rather than taste:
+
+- **The cost is to EXIT, never to startup or readiness.** `READY_SENTINEL` is written before
+  the download begins; `ready=YES` was measured on every run while exit sat at 27s.
+- **It is already backstopped.** `shutdown_child()` (`src-tauri/src/main.rs:1182`) SIGTERMs
+  the process group, polls a bounded grace period, then SIGKILLs. The app quits regardless.
+- **A killed fetch is benign** — open question 3, answered above: the `latest_<tool>` marker
+  is written only after a successful extract, and EasyDl uses `existBehavior: 'overwrite'`.
+  No corruption, no resume poisoning, no falsely-advanced version.
+- **A timeout has a real victim.** `installOrUpdateTool`'s abort plumbing already exists
+  (`abortSignal: createAbortController(tool.name).signal` -> `dl.destroy()`), so a timeout
+  is cheap to BUILD — but a user on a slow link would then never complete a DXMT update at
+  all. Trading a few seconds of exit latency for a permanently broken tool update is a bad
+  trade at this frequency.
+
+### The one case that argues the other way, and is UNMEASURED
+
+A user whose DXMT update **repeatedly fails** never writes the `latest_dxmt` marker, so gate
+2 never short-circuits and they pay this cost on **every** boot — and they are precisely the
+population a timeout would hurt most. Nobody has measured whether that population exists.
+
+**If this is reopened, that is the measurement to take first.** Reopen on evidence of
+repeated-failure profiles, not on the aesthetics of an unbounded fetch.
+
+### Fences that survive this closure
+
+- Do **not** reach for option 3. It is fenced in three places (above) and closing this todo
+  does not unfence it.
+- `downloadFile` (`backend/utils.ts:1489`) is shared by game installs, wine/proton downloads
+  and tool updates. A blanket timeout there is **not** a local change — it would bound real
+  multi-GB game downloads. Any future timeout must be scoped to the caller, not the
+  primitive.
 
 ## How to verify (why this is not `ready: code`)
 
