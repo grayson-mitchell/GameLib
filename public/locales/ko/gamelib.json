@@ -82,14 +82,34 @@
         "activateWizardTitle": "이 키 활성화",
         "activatingBody": "키를 공개하고 Steam에서 사용 등록하는 중입니다 — 잠시만 기다려 주세요.",
         "activatingTitle": "Steam에서 활성화하는 중…",
+        "claimOnHumble": "Humble에서 받기",
+        "claimOnStore": "{{store}}에서 받기",
+        "clearFilters": "검색 및 필터 지우기",
+        "columnGame": "게임",
+        "columnKey": "키",
+        "columnType": "유형",
+        "emptyBody": "Humble Bundle 계정을 동기화하면 여기에 키가 표시됩니다.",
+        "emptyHeading": "아직 Humble 키가 없습니다",
+        "filteredEmptyBody": "다른 검색을 시도하거나 「사용 가능한 키만」을 꺼 보세요.",
+        "filteredEmptyHeading": "일치하는 키가 없습니다",
+        "loginAndClaim": "{{store}}에 로그인하고 받기",
         "openStore": "{{store}} 열기",
+        "pickOnHumble": "Humble에서 선택",
         "platformOther": "기타",
-        "settledFromOwnership": "이미 Steam 라이브러리에 있음"
+        "redeemableOnly": "사용 가능한 키만",
+        "searchPlaceholder": "키 검색",
+        "settledFromOwnership": "이미 Steam 라이브러리에 있음",
+        "sortAlphabetical": "가나다순",
+        "sortExpiringSoonest": "만료 임박순",
+        "sortLabel": "정렬"
     },
     "info": {
         "refresh-rating": "평점 새로고침"
     },
     "installFlows": {
+        "importConfirmLabel": "이 설치 사용",
+        "importDoorLabel": "기존 설치 찾기…",
+        "importExplainer": "이미 디스크에 이 게임이 있나요 — 다른 런처에서, 또는 다른 드라이브에서? 다시 다운로드하는 대신 해당 파일을 가리키세요.",
         "pathRejectedBodyImport": "GameLib가 해당 위치에서 가져올 수 없습니다. 원본 경로는 \"..\" 단계가 없는 전체 폴더 경로여야 합니다. 게임 폴더를 다시 선택하세요.",
         "pathRejectedBodyMove": "GameLib가 이 게임을 그곳으로 이동할 수 없습니다. 대상 경로는 \"..\" 단계가 없는 전체 폴더 경로여야 합니다. 대상 폴더를 다시 선택하세요.",
         "pathRejectedTitle": "해당 위치를 사용할 수 없습니다"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "이 빌드에서는 Winetricks 구성 요소 관리를 사용할 수 없습니다",
         "unavailableDetail": "Winetricks 지원은 향후 릴리스(D-03, 34.6단계)로 연기되었으며, 이 빌드에서는 나열하거나 설치할 수 없습니다."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "캐시됨(오프라인 설치)",
+        "clearSearch": "검색 지우기",
+        "curatedGroup": "일반적으로 필요함",
+        "emptyBody": "이 bottle의 Winetricks 메타데이터를 불러올 수 없습니다.",
+        "emptyHeading": "사용 가능한 구성 요소가 없습니다",
+        "installFailedTag": "설치 실패",
+        "installedTag": "설치됨",
+        "installingRow": "설치 중…",
+        "needsGuiTag": "Winetricks GUI가 필요합니다",
+        "resultsHeading": "{{total}}개 결과",
+        "retry": "다시 시도",
+        "searchPlaceholder": "구성 요소 검색…",
+        "zeroResultHeading": "“{{query}}”와 일치하는 구성 요소가 없습니다."
     },
     "donate": {
         "navLabel": "기부"

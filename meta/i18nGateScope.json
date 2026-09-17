@@ -41,6 +41,8 @@
     "src/frontend/components/UI/StoreLogos/index.tsx",
     "src/frontend/components/UI/ThemeSelector/index.tsx",
     "src/frontend/components/UI/ThemeSelector/themeLabels.ts",
+    "src/frontend/components/UI/Winetricks/WinetricksBrowse/Row/index.tsx",
+    "src/frontend/components/UI/Winetricks/WinetricksBrowse/index.tsx",
     "src/frontend/helpers/electronStores.ts",
     "src/frontend/helpers/epicAuthCode.ts",
     "src/frontend/helpers/gamepad.ts",

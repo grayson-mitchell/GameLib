@@ -15,6 +15,8 @@
  *    lifts.
  *  - Pitfall 5: digest copy is built exclusively from HumbleKey's
  *    display-safe title/expiration fields — never revealedKeyValue/keyindex.
+ *    Checked by exact structural equality against the permitted-fields-only
+ *    body, plus improbable-token sentinels on both secret fields.
  *
  * Mock boundaries:
  *  - electron                -> Notification (class double capturing ctor
@@ -27,6 +29,7 @@
  */
 
 import type { HumbleKey } from 'common/types/humble'
+import type { HumbleKeyInternal } from '../electronStores'
 
 // ── electron mock (Notification class double) ──────────────────────────────
 const mockNotificationCtor = jest.fn()
@@ -116,6 +119,18 @@ jest.mock('i18next', () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────
 import { detectAndNotifyExpirationTransitions } from '../expirationAlerts'
+
+// Pitfall 5 sentinels: distinctive, improbable tokens that cannot occur in a
+// rendered date, a game title, or any i18n fallback string — see the comment
+// above the Pitfall 5 assertions for why a one-character substring cannot do
+// this job. Shared as constants so the fixture and the assertions cannot
+// drift apart.
+const REVEALED_SENTINEL = 'ZZ-LEAK-SENTINEL-REVEALED-ZZ'
+const KEYINDEX_SENTINEL = 'ZZ-LEAK-SENTINEL-KEYINDEX-ZZ'
+// Full ISO instant, matching what production actually stores
+// (extractExpiration in classify.ts returns `.toISOString()`), frozen so the
+// test never depends on today's date.
+const FROZEN_EXPIRATION = '2026-08-01T00:00:00.000Z'
 
 function makeKey(overrides: Partial<HumbleKey> = {}): HumbleKey {
   return {
@@ -426,20 +441,42 @@ describe('detectAndNotifyExpirationTransitions', () => {
   })
 
   test('Pitfall 5: digest copy reads only title/expiration — never revealedKeyValue/keyindex', () => {
-    const key = {
-      ...makeKey({ title: 'Safe Title', expiration: '2026-08-01' }),
-      keyindex: 7,
-      revealedKeyValue: 'SECRET-KEY-VALUE'
-    } as HumbleKey & { keyindex: number; revealedKeyValue: string }
+    const key: HumbleKeyInternal = {
+      ...makeKey({ title: 'Safe Title', expiration: FROZEN_EXPIRATION }),
+      keyindex: KEYINDEX_SENTINEL,
+      revealedKeyValue: REVEALED_SENTINEL
+    }
 
     detectAndNotifyExpirationTransitions([key], {
       suppressNotifications: false
     })
 
     const opts = mockNotificationCtor.mock.calls[0][0]
-    expect(opts.body).not.toContain('SECRET-KEY-VALUE')
-    expect(opts.body).not.toContain('7')
-    expect(opts.title).not.toContain('SECRET-KEY-VALUE')
+
+    // Why sentinels rather than incidental values: a one-character sentinel
+    // (the assertion this replaces) passes whether or not a real leak
+    // exists, because an incidental character is not distinctive. These
+    // tokens are improbable enough that their presence in the digest can
+    // only mean the secret field leaked.
+    expect(opts.body).not.toContain(REVEALED_SENTINEL)
+    expect(opts.body).not.toContain(KEYINDEX_SENTINEL)
+    expect(opts.title).not.toContain(REVEALED_SENTINEL)
+    expect(opts.title).not.toContain(KEYINDEX_SENTINEL)
+
+    // Structural check: the body must equal a string composed only from the
+    // permitted title/expiration fields — any extra token fails, not just
+    // the sentinels named above. `expectedDate` is rendered by the SAME
+    // `new Date(...).toLocaleDateString()` call as the value under test, in
+    // the same process, so both sides shift together under any host
+    // timezone and any host locale — this assertion is therefore
+    // independent of the machine it runs on. It deliberately does NOT
+    // assert that the rendered date is *correct* relative to the source
+    // data; that is a separate, uncaptured concern.
+    const expectedDate = new Date(FROZEN_EXPIRATION).toLocaleDateString()
+    expect(opts.body).toBe(
+      `Safe Title's Humble key now expires on ${expectedDate}`
+    )
+    expect(opts.title).toBe('Humble key expiring')
   })
 
   test('no newly-expiring keys: no notification, no store writes', () => {

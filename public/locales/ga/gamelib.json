@@ -82,14 +82,34 @@
         "activateWizardTitle": "Gníomhachtaigh an eochair seo",
         "activatingBody": "Do chuid eochrach á nochtadh agus á fuascailt ar Steam — ní thógann sé ach nóiméad.",
         "activatingTitle": "Á ghníomhachtú ar Steam…",
+        "claimOnHumble": "Éiligh ar Humble",
+        "claimOnStore": "Éiligh ar {{store}}",
+        "clearFilters": "Glan an cuardach agus na scagairí",
+        "columnGame": "Cluiche",
+        "columnKey": "Eochair",
+        "columnType": "Cineál",
+        "emptyBody": "Sioncronaigh do chuntas Humble Bundle chun d'eochracha a fheiceáil anseo.",
+        "emptyHeading": "Níl aon eochair Humble ann fós",
+        "filteredEmptyBody": "Bain triail as cuardach eile, nó múch „Eochracha infhuascailte amháin“.",
+        "filteredEmptyHeading": "Níl aon eochair comhoiriúnach",
+        "loginAndClaim": "Logáil isteach i {{store}} agus éiligh",
         "openStore": "Oscail {{store}}",
+        "pickOnHumble": "Roghnaigh ar Humble",
         "platformOther": "Eile",
-        "settledFromOwnership": "Cheana féin i do leabharlann Steam"
+        "redeemableOnly": "Eochracha infhuascailte amháin",
+        "searchPlaceholder": "Cuardaigh d'eochracha",
+        "settledFromOwnership": "Cheana féin i do leabharlann Steam",
+        "sortAlphabetical": "Aibítreach",
+        "sortExpiringSoonest": "Ag dul in éag ar dtús",
+        "sortLabel": "Sórtáil"
     },
     "info": {
         "refresh-rating": "Athnuaigh an rátáil"
     },
     "installFlows": {
+        "importConfirmLabel": "Úsáid an suiteáil seo",
+        "importDoorLabel": "Aimsigh suiteáil atá ann cheana…",
+        "importExplainer": "An bhfuil an cluiche seo agat cheana ar an diosca — ó sheoltóir eile, nó ó thiomántán eile? Cuir in iúl na comhaid sin in ionad é a íoslódáil arís.",
         "pathRejectedBodyImport": "Níorbh fhéidir le GameLib iompórtáil ón suíomh sin. Caithfidh an fhoinse a bheith ina cosán fillteáin iomlán gan aon chéimeanna \"..\" ann. Roghnaigh fillteán an chluiche arís.",
         "pathRejectedBodyMove": "Níorbh fhéidir le GameLib an cluiche seo a bhogadh ansin. Caithfidh an ceann scríbe a bheith ina cosán fillteáin iomlán gan aon chéimeanna \"..\" ann. Roghnaigh an fillteán ceann scríbe arís.",
         "pathRejectedTitle": "Ní féidir an suíomh sin a úsáid"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Níl bainistíocht comhpháirteanna Winetricks ar fáil sa tógáil seo",
         "unavailableDetail": "Cuirtear tacaíocht Winetricks siar go dtí eisiúint sa todhchaí (D-03, Céim 34.6) agus ní féidir í a liostú ná a shuiteáil ón tógáil seo."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Curtha i dtaisce (suiteáiltear as líne)",
+        "clearSearch": "Glan an cuardach",
+        "curatedGroup": "De ghnáth riachtanach",
+        "emptyBody": "Níorbh fhéidir meiteashonraí Winetricks a luchtú don bhuidéal seo.",
+        "emptyHeading": "Níl aon chomhpháirteanna ar fáil",
+        "installFailedTag": "Theip ar an suiteáil",
+        "installedTag": "Suiteáilte",
+        "installingRow": "Ag suiteáil…",
+        "needsGuiTag": "Teastaíonn GUI Winetricks",
+        "resultsHeading": "{{total}} toradh",
+        "retry": "Bain triail eile as",
+        "searchPlaceholder": "Cuardaigh comhpháirteanna…",
+        "zeroResultHeading": "Níl aon chomhpháirt ag teacht le “{{query}}”."
     },
     "donate": {
         "navLabel": "Deonaigh"

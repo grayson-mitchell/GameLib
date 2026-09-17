@@ -82,14 +82,34 @@
         "activateConfirmTitle": "Aktiválod ezt a kulcsot a Steamen?",
         "activatingBody": "Kulcsod felfedése és beváltása a Steamen — ez csak egy pillanatot vesz igénybe.",
         "activatingTitle": "Aktiválás a Steamen…",
+        "claimOnHumble": "Igénylés a Humble-ön",
+        "claimOnStore": "Igénylés itt: {{store}}",
+        "clearFilters": "Keresés és szűrők törlése",
+        "columnGame": "Játék",
+        "columnKey": "Kulcs",
+        "columnType": "Típus",
+        "emptyBody": "Szinkronizáld a Humble Bundle fiókodat, hogy itt lásd a kulcsaidat.",
+        "emptyHeading": "Még nincsenek Humble kulcsok",
+        "filteredEmptyBody": "Próbálj másik keresést, vagy kapcsold ki a „Csak beváltható kulcsok” lehetőséget.",
+        "filteredEmptyHeading": "Nincs találat",
+        "loginAndClaim": "Jelentkezz be ide: {{store}}, majd igényeld",
         "openStore": "{{store}} megnyitása",
+        "pickOnHumble": "Választás a Humble-ön",
         "platformOther": "Egyéb",
-        "settledFromOwnership": "Már a Steam könyvtáradban van"
+        "redeemableOnly": "Csak beváltható kulcsok",
+        "searchPlaceholder": "Keresés a kulcsaid között",
+        "settledFromOwnership": "Már a Steam könyvtáradban van",
+        "sortAlphabetical": "Betűrend",
+        "sortExpiringSoonest": "Leghamarabb lejáró",
+        "sortLabel": "Rendezés"
     },
     "info": {
         "refresh-rating": "Értékelés frissítése"
     },
     "installFlows": {
+        "importConfirmLabel": "Ennek a telepítésnek a használata",
+        "importDoorLabel": "Meglévő telepítés megkeresése…",
+        "importExplainer": "Már megvan ez a játék a lemezen — másik indítóból, vagy másik meghajtóról? Mutass rá azokra a fájlokra az újbóli letöltés helyett.",
         "pathRejectedBodyImport": "A GameLib nem tudott importálni arról a helyről. A forrásnak teljes mappaútvonalnak kell lennie, „..” lépések nélkül. Válaszd ki újra a játék mappáját.",
         "pathRejectedBodyMove": "A GameLib nem tudta oda áthelyezni ezt a játékot. A célhelynek teljes mappaútvonalnak kell lennie, „..” lépések nélkül. Válaszd ki újra a célmappát.",
         "pathRejectedTitle": "Ez a hely nem használható"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "A Winetricks komponenskezelés nem érhető el ebben a build-ben",
         "unavailableDetail": "A Winetricks támogatás egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a build-ben nem listázható és nem telepíthető."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Gyorsítótárban (offline telepíthető)",
+        "clearSearch": "Keresés törlése",
+        "curatedGroup": "Gyakran szükséges",
+        "emptyBody": "A Winetricks metaadatait nem sikerült betölteni ehhez a bottle-hoz.",
+        "emptyHeading": "Nincs elérhető összetevő",
+        "installFailedTag": "A telepítés sikertelen",
+        "installedTag": "Telepítve",
+        "installingRow": "Telepítés…",
+        "needsGuiTag": "A Winetricks GUI-ját igényli",
+        "resultsHeading": "{{total}} eredmény",
+        "retry": "Újra",
+        "searchPlaceholder": "Összetevők keresése…",
+        "zeroResultHeading": "Nincs a “{{query}}” kifejezésnek megfelelő összetevő."
     },
     "donate": {
         "navLabel": "Adományozás"

@@ -82,14 +82,34 @@
         "activateWizardTitle": "Aktyvuoti šį raktą",
         "activatingBody": "Atskleidžiamas jūsų raktas ir jis aktyvuojamas Steam — tai užtruks tik akimirką.",
         "activatingTitle": "Aktyvuojama Steam…",
+        "claimOnHumble": "Atsiimti Humble platformoje",
+        "claimOnStore": "Atsiimti {{store}} platformoje",
+        "clearFilters": "Išvalyti paiešką ir filtrus",
+        "columnGame": "Žaidimas",
+        "columnKey": "Raktas",
+        "columnType": "Tipas",
+        "emptyBody": "Sinchronizuokite savo Humble Bundle paskyrą, kad čia matytumėte savo raktus.",
+        "emptyHeading": "Humble raktų dar nėra",
+        "filteredEmptyBody": "Pabandykite kitą paiešką arba išjunkite „Tik panaudojami raktai“.",
+        "filteredEmptyHeading": "Nėra atitinkančių raktų",
+        "loginAndClaim": "Prisijunkite prie {{store}} ir atsiimkite",
         "openStore": "Atverti {{store}}",
+        "pickOnHumble": "Pasirinkti Humble platformoje",
         "platformOther": "Kita/-s/-i",
-        "settledFromOwnership": "Jau jūsų Steam bibliotekoje"
+        "redeemableOnly": "Tik panaudojami raktai",
+        "searchPlaceholder": "Ieškoti savo raktuose",
+        "settledFromOwnership": "Jau jūsų Steam bibliotekoje",
+        "sortAlphabetical": "Abėcėlės tvarka",
+        "sortExpiringSoonest": "Greičiausiai baigiasi",
+        "sortLabel": "Rikiuoti"
     },
     "info": {
         "refresh-rating": "Atnaujinti įvertinimą"
     },
     "installFlows": {
+        "importConfirmLabel": "Naudoti šį diegimą",
+        "importDoorLabel": "Rasti esamą diegimą…",
+        "importExplainer": "Ar jau turite šį žaidimą diske — iš kito leistuko, ar kito disko? Nurodykite tuos failus, o ne atsisiųskite iš naujo.",
         "pathRejectedBodyImport": "GameLib nepavyko importuoti iš tos vietos. Šaltinis turi būti pilnas aplanko kelias be „..“ žingsnių jame. Pasirinkite žaidimo aplanką dar kartą.",
         "pathRejectedBodyMove": "GameLib nepavyko perkelti šio žaidimo ten. Paskirties vieta turi būti pilnas aplanko kelias be „..“ žingsnių jame. Pasirinkite paskirties aplanką dar kartą.",
         "pathRejectedTitle": "Negalima naudoti tos vietos"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Winetricks komponentų valdymas šioje versijoje negalimas",
         "unavailableDetail": "Winetricks palaikymas atidėtas iki būsimos versijos (D-03, 34.6 etapas) ir šioje versijoje negali būti rodomas ar diegiamas."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Talpykloje (diegiama neprisijungus)",
+        "clearSearch": "Išvalyti paiešką",
+        "curatedGroup": "Dažniausiai reikalingi",
+        "emptyBody": "Nepavyko įkelti Winetricks metaduomenų šiam bottle.",
+        "emptyHeading": "Nėra pasiekiamų komponentų",
+        "installFailedTag": "Diegimas nepavyko",
+        "installedTag": "Įdiegta",
+        "installingRow": "Diegiama…",
+        "needsGuiTag": "Reikalinga Winetricks GUI",
+        "resultsHeading": "{{total}} rezultatai",
+        "retry": "Bandyti iš naujo",
+        "searchPlaceholder": "Ieškoti komponentų…",
+        "zeroResultHeading": "Nėra komponento, atitinkančio “{{query}}”."
     },
     "donate": {
         "navLabel": "Aukoti"

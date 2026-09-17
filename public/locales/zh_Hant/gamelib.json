@@ -82,14 +82,34 @@
         "activateWizardTitle": "啟用此金鑰",
         "activatingBody": "正在顯示您的金鑰並在 Steam 上兌換 — 只需片刻。",
         "activatingTitle": "正在於 Steam 上啟用…",
+        "claimOnHumble": "在 Humble 領取",
+        "claimOnStore": "在 {{store}} 領取",
+        "clearFilters": "清除搜尋與篩選",
+        "columnGame": "遊戲",
+        "columnKey": "金鑰",
+        "columnType": "類型",
+        "emptyBody": "同步你的 Humble Bundle 帳戶即可在此查看你的金鑰。",
+        "emptyHeading": "尚無 Humble 金鑰",
+        "filteredEmptyBody": "換一個搜尋詞，或關閉「僅可兌換的金鑰」。",
+        "filteredEmptyHeading": "沒有符合的金鑰",
+        "loginAndClaim": "登入 {{store}} 並領取",
         "openStore": "開啟 {{store}}",
+        "pickOnHumble": "在 Humble 選擇",
         "platformOther": "其它",
-        "settledFromOwnership": "已在你的 Steam 庫中"
+        "redeemableOnly": "僅可兌換的金鑰",
+        "searchPlaceholder": "搜尋你的金鑰",
+        "settledFromOwnership": "已在你的 Steam 庫中",
+        "sortAlphabetical": "依字母順序",
+        "sortExpiringSoonest": "最快到期",
+        "sortLabel": "排序"
     },
     "info": {
         "refresh-rating": "重新整理評分"
     },
     "installFlows": {
+        "importConfirmLabel": "使用此安裝",
+        "importDoorLabel": "定位現有安裝…",
+        "importExplainer": "已經在磁碟上有這個遊戲了嗎——來自其他啟動器，或其他磁碟機？指向那些檔案，而不是重新下載。",
         "pathRejectedBodyImport": "GameLib 無法從該位置匯入。來源必須是完整的資料夾路徑，且不能含有「..」步驟。請重新選擇遊戲資料夾。",
         "pathRejectedBodyMove": "GameLib 無法將此遊戲移動到那裡。目的地必須是完整的資料夾路徑，且不能含有「..」步驟。請重新選擇目的地資料夾。",
         "pathRejectedTitle": "無法使用該位置"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "此版本不支援 Winetricks 元件管理",
         "unavailableDetail": "Winetricks 支援已延後至未來版本推出（D-03，第 34.6 階段），此版本無法列出或安裝相關元件。"
+    },
+    "winetricksBrowse": {
+        "cachedTag": "已快取（離線安裝）",
+        "clearSearch": "清除搜尋",
+        "curatedGroup": "常用元件",
+        "emptyBody": "無法載入此 bottle 的 Winetricks 元資料。",
+        "emptyHeading": "沒有可用的元件",
+        "installFailedTag": "安裝失敗",
+        "installedTag": "已安裝",
+        "installingRow": "正在安裝…",
+        "needsGuiTag": "需要 Winetricks 圖形介面",
+        "resultsHeading": "{{total}} 項結果",
+        "retry": "重試",
+        "searchPlaceholder": "搜尋元件…",
+        "zeroResultHeading": "沒有與「{{query}}」相符的元件。"
     },
     "donate": {
         "navLabel": "捐款"

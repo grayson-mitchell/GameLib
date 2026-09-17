@@ -82,14 +82,34 @@
         "activateConfirmTitle": "Aktiveerida see võti Steamis?",
         "activatingBody": "Sinu võtme paljastamine ja lunastamine Steamis — see võtab vaid hetke.",
         "activatingTitle": "Aktiveerimine Steamis…",
+        "claimOnHumble": "Võta Humble kaudu",
+        "claimOnStore": "Võta {{store}} kaudu",
+        "clearFilters": "Tühjenda otsing ja filtrid",
+        "columnGame": "Mäng",
+        "columnKey": "Võti",
+        "columnType": "Tüüp",
+        "emptyBody": "Sünkroonige oma Humble Bundle konto, et näha siin oma võtmeid.",
+        "emptyHeading": "Humble võtmeid veel pole",
+        "filteredEmptyBody": "Proovige teist otsingut või lülitage välja „Ainult lunastatavad võtmed“.",
+        "filteredEmptyHeading": "Ühtegi sobivat võtit",
+        "loginAndClaim": "Logige sisse teenusesse {{store}} ja võtke",
         "openStore": "Ava {{store}}",
+        "pickOnHumble": "Vali Humble kaudu",
         "platformOther": "Muu",
-        "settledFromOwnership": "Juba teie Steami raamatukogus"
+        "redeemableOnly": "Ainult lunastatavad võtmed",
+        "searchPlaceholder": "Otsi oma võtmetest",
+        "settledFromOwnership": "Juba teie Steami raamatukogus",
+        "sortAlphabetical": "Tähestikuline",
+        "sortExpiringSoonest": "Aegub kõige varem",
+        "sortLabel": "Sorteeri"
     },
     "info": {
         "refresh-rating": "Värskenda hinnangut"
     },
     "installFlows": {
+        "importConfirmLabel": "Kasuta seda paigaldust",
+        "importDoorLabel": "Leia olemasolev paigaldus…",
+        "importExplainer": "Kas see mäng on juba kettal — teisest käivitajast või teiselt kettalt? Osuta neile failidele, selle asemel et uuesti alla laadida.",
         "pathRejectedBodyImport": "GameLib ei saanud sellest asukohast importida. Allikas peab olema täielik kaustatee, milles pole \"..\" samme. Vali mängu kaust uuesti.",
         "pathRejectedBodyMove": "GameLib ei saanud mängu sinna teisaldada. Sihtkoht peab olema täielik kaustatee, milles pole \"..\" samme. Vali sihtkaust uuesti.",
         "pathRejectedTitle": "Seda asukohta ei saa kasutada"
@@ -355,6 +375,21 @@
     "winetricks": {
         "unavailable": "Winetricks komponentide haldamine pole selles versioonis saadaval",
         "unavailableDetail": "Winetricks tugi on lükatud edasi järgmisesse väljalaskesse (D-03, faas 34.6) ja seda ei saa selles versioonis loetleda ega paigaldada."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Vahemälus (installitakse võrguühenduseta)",
+        "clearSearch": "Tühjenda otsing",
+        "curatedGroup": "Sageli vajalikud",
+        "emptyBody": "Selle bottle'i jaoks ei õnnestunud Winetricksi metaandmeid laadida.",
+        "emptyHeading": "Komponente ei ole saadaval",
+        "installFailedTag": "Installimine ebaõnnestus",
+        "installedTag": "Installitud",
+        "installingRow": "Installimine…",
+        "needsGuiTag": "Vajab Winetricksi graafilist liidest",
+        "resultsHeading": "{{total}} tulemust",
+        "retry": "Proovi uuesti",
+        "searchPlaceholder": "Otsi komponente…",
+        "zeroResultHeading": "Ükski komponent ei vasta “{{query}}”."
     },
     "sidebar": {
         "redeemSteamKey": "Lunasta Steami võti"

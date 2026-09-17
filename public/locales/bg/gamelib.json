@@ -82,14 +82,34 @@
         "activateWizardTitle": "Активиране на този ключ",
         "activatingBody": "Разкриваме ключа ви и го активираме в Steam — това отнема само momент.",
         "activatingTitle": "Активиране в Steam…",
+        "claimOnHumble": "Вземи от Humble",
+        "claimOnStore": "Вземи от {{store}}",
+        "clearFilters": "Изчисти търсенето и филтрите",
+        "columnGame": "Игра",
+        "columnKey": "Ключ",
+        "columnType": "Тип",
+        "emptyBody": "Синхронизирайте акаунта си в Humble Bundle, за да видите ключовете си тук.",
+        "emptyHeading": "Още няма ключове от Humble",
+        "filteredEmptyBody": "Опитайте друго търсене или изключете „Само активируеми ключове“.",
+        "filteredEmptyHeading": "Няма съвпадащи ключове",
+        "loginAndClaim": "Влезте в {{store}} и вземете",
         "openStore": "Отвори {{store}}",
+        "pickOnHumble": "Избери от Humble",
         "platformOther": "Други",
-        "settledFromOwnership": "Вече във вашата библиотека в Steam"
+        "redeemableOnly": "Само активируеми ключове",
+        "searchPlaceholder": "Търсене в ключовете",
+        "settledFromOwnership": "Вече във вашата библиотека в Steam",
+        "sortAlphabetical": "По азбучен ред",
+        "sortExpiringSoonest": "Изтичащи най-скоро",
+        "sortLabel": "Подреждане"
     },
     "info": {
         "refresh-rating": "Опресняване на рейтинга"
     },
     "installFlows": {
+        "importConfirmLabel": "Използване на тази инсталация",
+        "importDoorLabel": "Откриване на съществуваща инсталация…",
+        "importExplainer": "Вече имате тази игра на диска — от друг лончър или от друг диск? Посочете тези файлове, вместо да я изтегляте отново.",
         "pathRejectedBodyImport": "GameLib не можа да импортира от това местоположение. Източникът трябва да е пълен път до папка без стъпки \"..\" в него. Изберете отново папката на играта.",
         "pathRejectedBodyMove": "GameLib не можа да премести тази игра там. Дестинацията трябва да е пълен път до папка без стъпки \"..\" в него. Изберете отново папката за местоназначение.",
         "pathRejectedTitle": "Не може да се използва това местоположение"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Управлението на компоненти на Winetricks не е налично в тази версия",
         "unavailableDetail": "Поддръжката на Winetricks е отложена за бъдещо издание (D-03, Фаза 34.6) и не може да се преглежда или инсталира от тази версия."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "В кеша (инсталира се офлайн)",
+        "clearSearch": "Изчистване на търсенето",
+        "curatedGroup": "Често необходими",
+        "emptyBody": "Метаданните на Winetricks не можаха да се заредят за тази bottle.",
+        "emptyHeading": "Няма налични компоненти",
+        "installFailedTag": "Инсталирането е неуспешно",
+        "installedTag": "Инсталиран",
+        "installingRow": "Инсталиране…",
+        "needsGuiTag": "Изисква графичен интерфейс на Winetricks",
+        "resultsHeading": "{{total}} резултата",
+        "retry": "Нов опит",
+        "searchPlaceholder": "Търсене на компоненти…",
+        "zeroResultHeading": "Няма компонент, отговарящ на “{{query}}”."
     },
     "donate": {
         "navLabel": "Дарете"

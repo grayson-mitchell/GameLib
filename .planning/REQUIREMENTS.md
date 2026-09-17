@@ -1867,3 +1867,258 @@ the four deleted files, so REQ-43-22's scope is both json artifacts; (4) the two
 existing test suites do not cover the pinned "Expiring soon"/`GROUP_ORDER`/collapse behaviour the
 research predicted, so REQ-43-12/-17 require porting those 22 assertions forward rather than
 deleting them. ROADMAP.md's Phase 43 `**Requirements**: TBD` line is replaced by these IDs.*
+
+
+## Phase 44 Requirements — In-app Winetricks browse UI replacing the search-only panel
+
+Minted 2026-09-16 during `/gsd-plan-phase 44` from `44-CONTEXT.md`'s D-01..D-24 plus the seams
+surfaced by `44-RESEARCH.md` (Pitfalls 1-5, Open Questions 1-4) and `44-PATTERNS.md` (its two
+explicit "no analog" calls). ROADMAP.md read `**Requirements**: TBD` and **no `/gsd-spec-phase` was
+run** — `44-UI-SPEC.md` is a UI-SPEC, not a requirements SPEC, and says so itself. Minting at plan
+time follows the precedent this file already records for **Phase 34.5 and Phase 34.6** (both minted
+during `/gsd-plan-phase` from `CONTEXT.md`'s D-list plus the research candidate table), in the
+`- [ ] **REQ-<phase>-<NN>**: <PASS/FAIL-scoreable text>` shape used by Phases 37/40/23/43.
+
+`44-UI-SPEC.md` (approved, gsd-ui-checker iteration 2) is the binding design contract for
+REQ-44-05, -06, -09, -11, -19, -23, -25 and -26 — the requirement text below does not re-derive
+layout, state or copy detail the UI-SPEC already settles. **Where `44-CONTEXT.md` and
+`44-UI-SPEC.md` conflict, CONTEXT.md wins**, and it names the three overrides itself: D-06 drops
+the spec's 240px per-category inner scroll, D-09 cuts the 5 `winetricksBrowse.category.*` keys, and
+D-13 reverses the spec on installed rows in search results.
+
+**Six planning-time corrections are recorded in requirement text rather than left in a plan,
+because each changes what a plan must assert:**
+
+1. **The locale key count is 13, not D-09's 11** (REQ-44-08). The UI-SPEC's own 16-key copy table
+   was already short two strings its own contract requires, and D-09's subtraction of the 5
+   `category.*` keys inherited the shortfall. `SearchBar`'s `placeholder` prop is **required**
+   (`SearchBar/index.tsx:8-18`) and its current supplier `winetricks.search` is deleted by D-20, so
+   `winetricksBrowse.searchPlaceholder` is required; and UI-SPEC Interaction Contract §2 mandates a
+   results header for which no key was listed, so `winetricksBrowse.resultsHeading` is required.
+   The latter interpolates `{{total}}`, **not** `{{count}}` — `count` is a reserved i18next
+   interpolation name that would switch the key into plural resolution and demand per-locale
+   `_one`/`_few`/`_many`/`_other` variants across 49 locales. Corrected arithmetic: **13 × 49 = 637
+   total, 13 × 48 = 624 non-English.** D-09's "11 × 48 = 528" and `44-PATTERNS.md`'s "11 × 49 = 539"
+   are both superseded.
+2. **The `translation.json` removal set is 6 keys, not D-20's 5** (REQ-44-18). `44-PATTERNS.md`
+   measured the block at **9** keys, not 8; the 9th is a bare `"loading": "Loading"` whose only
+   consumer was `Winetricks/index.tsx:210` inside the `installedWrapper` D-11 retires. RESEARCH
+   Open Question 1 recommends adding it. Shipping it across 47 locale dirs with zero consumers is
+   the exact orphaned-key pattern D-20 exists to close, just missed for this one.
+3. **`winetricks.installing` DID have a live consumer**, answering D-20(a)'s grep obligation:
+   `Winetricks/index.tsx:190`, the "Installation in progress: {{component}}" paragraph. It is
+   orphaned only once REQ-44-15's gate removal deletes that block — so the removal is ordered after
+   it, not before.
+4. **`winetricks.unavailableDetail` is collateral inside the block D-11 retires** (REQ-44-10).
+   `installedWrapper` (`:199-221`) is not inside the `!declined` gate; it is a sibling, and it hosts
+   the `declined` branch rendering `tGamelib('winetricks.unavailableDetail', …)` at `:204` — grep
+   confirms that is its only consumer in `src/`. Retiring the block wholesale without relocating
+   that branch silently drops the declined state's only explanation. D-11 is about the "Installed
+   components: a, b, c" summary and does not mention it.
+5. **This phase moves the BLOCKING i18n gate's artifacts** (REQ-44-22), which no upstream artifact
+   mentions. `meta/i18nForkTouchedFiles.json` enrols
+   `src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx` — the file this phase deletes —
+   and `meta/__tests__/genI18nGateScope.test.ts`'s `DECLARED_UNSCANNED_DEBT` lists it while `A-03`
+   pins `forkTouched \ scope` exactly by name, `A-17` compares the committed artifact to a live git
+   derivation, and `A0` pins three literal counts. The phase also adds two new non-test `.tsx` files
+   under `src/frontend`, which the derivation picks up. Both lists must move together or A-03 goes
+   red; and A-17 stays red until the deletion is in **HEAD**, not merely staged.
+6. **The row-level Errored state has no data model to reuse** (REQ-44-20). `ProgressDialog`'s
+   `' err'` heuristic (`index.tsx:68-91`) classifies lines in one flat, undifferentiated shared log
+   for CSS styling and performs **no per-verb attribution** — confirmed by direct read and by
+   `44-PATTERNS.md`'s explicit "no analog" call. The UI-SPEC's "reuse the existing heuristic" is
+   true about the string match and silent about the attribution. `onWinetricksProgress`'s
+   `payload.installingComponent` is the only correlation key, and it is available only at the event,
+   not retroactively over the log array.
+
+**Two decisions are deliberately NOT given requirement IDs, and that is recorded rather than left
+silent.** D-21 (the verification posture: component tests plus one live gate) and D-23 (that
+Needs-GUI routing and pointer-driven browse/search were *not* selected for live coverage) are
+statements about how requirements are verified and what this phase does not claim, not behaviours a
+plan can assert. Both are carried in plan 44-08's `must_haves`/`truths` and both are required to
+appear in `44-LIVE-GATE.md`.
+
+- [ ] **REQ-44-01**: The curated "Commonly needed" group renders exactly the verbs from the
+  hand-maintained 8-entry constant that resolve against `listAvailable()`'s parsed output, in
+  curated-list order, and is open by default. The constant is not derived from `cached` or
+  `installed` state. Source decisions: D-01, "decision #3". Verified by: unit (`Common`) + component.
+
+- [ ] **REQ-44-02**: A curated verb also appears in its own category group — curated is a shortcut
+  view, not a partition — so category counts stay honest against the parse. Source decision: D-02.
+  Verified by: component (assert two occurrences of the same verb, not one).
+
+- [ ] **REQ-44-03**: A curated verb absent from the parsed set is skipped silently by the UI (no
+  placeholder, no permanently-dead disabled row), AND a unit test over the committed parser fixture
+  fails, naming the drifted verb, if any of the 8 stops resolving. Source decision: D-03. Verified
+  by: unit (`Backend`, `winetricksListParse.test.ts`) with a revert-to-red control.
+
+- [ ] **REQ-44-04**: Category expand/collapse state resets to Default (curated open, all category
+  groups collapsed) on every dialog open, and no `localStorage`/context/ref persistence surface is
+  introduced. Within a session, clearing the search restores prior expand state. Source decision:
+  D-04. Verified by: component (fresh mount asserts collapsed; search round-trip asserts survival).
+
+- [ ] **REQ-44-05**: The category group is a new panel-scoped component built on the shared
+  `Dropdown` primitive under its own CSS scope. `FilterFacetGroup/index.scss` is neither edited nor
+  de-scoped from `.NavShell__tier2Portal`, and `FilterFacetRow` (a `role="checkbox"` toggle) is not
+  reused for an install-action row. Source decision: D-05. Verified by: source census
+  (`git status --porcelain src/frontend/components/UI/NavShell/` empty) + compiled-CSS assertion.
+
+- [ ] **REQ-44-06**: Exactly one inner scroll container exists in the browse surface —
+  `max-height: min(50vh, 420px)` on the browse region. No per-category 240px inner scroll exists,
+  and `Dropdown`'s own `.dropdown.expanded` 50vh scroll is neutralised for this panel. **OVERRIDES
+  `44-UI-SPEC.md` Layout**; resolves the spec's own flagged-and-unresolved P-7. Source decision:
+  D-06. Verified by: compiled CSS (`overflow-y` occurrence count is exactly 1; no `240px`).
+
+- [ ] **REQ-44-07**: Every row renders; no virtualisation or windowing library is introduced and
+  `package.json` is unchanged. Source decision: D-07. Verified by: source census +
+  `git diff --quiet package.json`.
+
+- [ ] **REQ-44-08**: 13 new `winetricksBrowse.*` keys exist in all 49 `gamelib.json` catalogs
+  (13 × 49 = 637 values; 624 of them non-English), with bidirectional placeholder parity, glossary
+  survival, no empty values, no `winetricksBrowse.category.*` key and no reserved `{{count}}`
+  interpolation. `pnpm lint-translations:gamelib` and `gamelibCatalogParity` are green. Source
+  decisions: D-08, D-09, D-10; see planning-time correction 1 for why 13 and not 11. Verified by:
+  repo gates + a structural per-catalog assertion.
+
+- [ ] **REQ-44-09**: Category headers render the parser's own raw category values (`apps`,
+  `benchmarks`, `dlls`, `fonts`, `settings`) uppercased via CSS, with no translation key and no
+  mapping table. **Recorded consequence: the header reads `DLLS`, not the UI-SPEC's drawn
+  `DLLS & LIBRARIES`.** The group list is derived from the data in first-occurrence order, not
+  hardcoded to five. Source decision: D-09. Verified by: component + compiled CSS
+  (`text-transform: uppercase`).
+
+- [ ] **REQ-44-10**: The bottom `installedWrapper` "Installed components: a, b, c" summary is
+  retired wholesale — not kept, not merged, not replaced by a count — AND
+  `winetricks.unavailableDetail` is relocated into the `declined` block so the declined state keeps
+  its explanation. Source decision: D-11; see planning-time correction 4. Verified by: source
+  census (`installedWrapper` → 0 hits; `unavailableDetail` → exactly 1, inside `declined`).
+
+- [ ] **REQ-44-11**: An installed row renders a badge and no reinstall affordance — no Install
+  button and no Retry button. (`winetricksInstall(verb)` remains technically re-invocable; the
+  decision is product, not capability.) Source decision: D-12. Verified by: component.
+
+- [ ] **REQ-44-12**: Installed components appear in search results, badged. **REVERSES shipped
+  behaviour** at `WinetricksSearch/index.tsx:42`
+  (`filtered.filter((c) => !installed?.includes(c.verb))`), under which searching for an installed
+  component returned nothing and read as "not available". Source decision: D-13. Verified by:
+  component with a revert-to-red control (re-adding the filter must turn the test red).
+
+- [ ] **REQ-44-13**: Rows appear in `winetricks list-all`'s own emission order within every group,
+  preserved by the parser's first-occurrence dedup. No `.sort()` exists in the browse component or
+  the curated resolver — no divergence from the zenity GUI and no locale/collation exposure on the
+  title column. Source decision: D-14. Verified by: component with a revert-to-red control (adding
+  a `.sort()` must turn the test red).
+
+- [ ] **REQ-44-14**: Half A of the 2026-08-26 todo ("typing needs repeated attempts before it
+  filters usably", never investigated on any surface) is folded into
+  `2026-08-30-library-search-bar-suggestions-are-mouse-dead-until-a-tab-press.md` with the
+  operator's account carried **verbatim** and its stated caveat intact — **before** the 2026-08-26
+  todo is closed, which is then closed under its original filename with a note pointing at where
+  Half A went. Source decisions: D-15, D-16. Verified by: file assertions + `pnpm planning-gates`.
+
+- [ ] **REQ-44-15**: Neither `installing` nor any installed-list loading flag gates whether the
+  browse list is mounted — **both** stacked conditionals (`Winetricks/index.tsx:156` outer
+  `!loadingInstalled`, `:158` inner `!installing`) are gone, `installWrapper`'s only remaining
+  condition is `!declined`, and the post-install `listInstalled()` refetch drives a
+  stale-while-revalidate overlay rather than a mount gate. Source decision: D-17; UI-SPEC `C-1`;
+  ROADMAP scope fence 1. Verified by: component (`remountSafety.test.tsx`) + source census
+  (`loadingInstalled` → 0 hits).
+
+- [ ] **REQ-44-16**: A component test drives an install **start** and an install **completion**
+  independently and asserts the same row nodes stay mounted through both, AND **reverting each fix
+  separately turns its own case red** with the verbatim failure output recorded. A combined revert
+  does not satisfy this — `35-25` (`366e719bb`) closed only half this defect precisely because only
+  half was tested. Source decision: D-18. Verified by: component + two recorded revert-to-red
+  transcripts.
+
+- [ ] **REQ-44-17**: Every clickable row action (Install, Retry, Open GUI) captures intent on
+  `mousedown` with a `suppressNextClick` guard, and keyboard activation via `click` still fires
+  exactly once. The `35-25` mouse-race test is **ported** to the new Row rather than deleted with
+  `WinetricksSearch/`. Source decision: D-19; UI-SPEC Interaction Contract §5. Verified by:
+  component (`winetricksInstallMouseRace.test.tsx` at its new location).
+
+- [ ] **REQ-44-18**: Six orphaned `winetricks.*` keys (`search`, `no-components`, `installed`,
+  `nothingYet`, `installing`, `loading`) are removed from all **47** `translation.json` catalogs —
+  not 49; `br` and `sl` have no `translation.json` at all — with zero surviving consumers in `src/`
+  confirmed by grep both before and after. `install`, `openGUI` and `loading-available` survive and
+  still have consumers. Every touched file re-parses as JSON and no file is round-tripped through a
+  serialiser (`public/locales/` is `.prettierignore`'d). Source decision: D-20; see planning-time
+  corrections 2 and 3. Verified by: structural per-catalog assertion + grep census.
+
+- [ ] **REQ-44-19**: The 8 verbs winetricks cannot install unattended (`3dmark03`, `3dmark06`,
+  `fontxplorer`, `foobar2000`, `stalker_pripyat_bench`, `ubisoftconnect`, `unigine_heaven`,
+  `utorrent`) render **no Install button in any state** and are routed to the zenity GUI instead of
+  failing silently under `-q`. The row-state derivation places this branch unconditionally first.
+  Source: ROADMAP scope fence 3; UI-SPEC `C-4`. Verified by: component, parametrised over all 8
+  verbs × the cross-product of installed/installing/errored (≥64 cases), with a revert-to-red
+  control.
+
+- [ ] **REQ-44-20**: An error log line is attributed to the verb named in the **same** progress
+  event (`payload.installingComponent`), not to every row, and the attribution map returns a
+  reference-identical value when nothing changed so a chatty install does not re-render every row.
+  A verb's error clears the moment a new install attempt starts on it. Source: UI-SPEC row-level
+  Errored state; RESEARCH Pitfall 2 / Assumption A3; see planning-time correction 6. Verified by:
+  unit (`Common`) with reference-identity assertions (`toBe`, not `toEqual`).
+
+- [ ] **REQ-44-21**: `hideProgress` no longer reads a boolean conflating "no data yet" with
+  "background refresh in flight". It is re-derived as
+  `!guiOpen && !installing && !hasAttemptedInstall && hasInstalledData && !loadingAvailable`, where
+  `hasInstalledData` never returns to false and `isRevalidatingInstalled` gates only the overlay,
+  never a mount. Source: RESEARCH Open Question 3, delegated to the planner by `44-CONTEXT.md`.
+  Verified by: source assertion + component.
+
+- [ ] **REQ-44-22**: `meta/i18nForkTouchedFiles.json`, `meta/i18nGateScope.json` and
+  `meta/__tests__/genI18nGateScope.test.ts` (`DECLARED_UNSCANNED_DEBT` plus the A0 literal count
+  pins **and their `it()` titles**) reflect this phase's one `src/frontend` deletion and two
+  additions, derived from `git diff --name-status <baseCommit> HEAD -- src/frontend` rather than
+  hand-typed. The two new components go into **scope** (scanned), not into the debt set; `A-03`,
+  `A-17` and `A0` are green; `generatedAt` is held constant and `pnpm gen-i18n-gate-scope` is not
+  run. Source: planning-time correction 5. Verified by: `npx jest --selectProjects Meta
+  genI18nGateScope`.
+
+- [ ] **REQ-44-23**: No new CSS declaration consumes a theme custom property bare (every one carries
+  a fallback chain ending in a universally-resolving token), no row-state foreground colour uses a
+  raw `--status-*` constant (the theme-adaptive `--success`/`--danger` aliases are used instead),
+  every row rule nested inside a `Dropdown` reaches ≥(0,3,0) specificity verified against
+  **compiled** CSS rather than source nesting, and a spot-check in one dark and one light theme
+  records a **measured** contrast ratio per row state. Source decision: D-24; RESEARCH Pitfalls 3
+  and 5. Verified by: the existing undefined-custom-property gate + compiled-CSS assertions + a
+  recorded manual spot-check.
+
+- [ ] **REQ-44-24**: A live gate on the operator's Mac measures exactly two things, each scored with
+  numbers rather than adjectives: (1) a real mouse-click install runs to completion with the browse
+  list staying mounted through **both** the install-start and install-completion transitions, scored
+  as two independent observations; (2) the Installed badge appears **in place** on that same row
+  afterwards with numerically-measured scroll-offset and row-position deltas. The record also states
+  explicitly what the gate does **not** cover (D-23). Source decisions: D-21, D-22, D-23. Verified
+  by: manual-only, recorded in `44-LIVE-GATE.md`.
+
+- [ ] **REQ-44-25**: The zero-result state names the query and offers an inline "Clear search"
+  recovery action wired to the same clear path as the search bar's own control; the data-empty state
+  shows a heading and body with **no** recovery action, because there is nothing to clear. Source:
+  UI-SPEC States > List-level. Verified by: component.
+
+- [ ] **REQ-44-26**: Install is always a specific row's own action — the value bound to every action
+  handler is that row's own resolved `verb` string, never a value read out of search-box state or a
+  separately-tracked highlight, and no shared "current selection" variable exists in the browse
+  component. The three non-actionable cases are handled by **not rendering an enabled Install
+  button** (Needs-GUI renders none; in-flight-elsewhere disables with an explanation; the
+  `WINETRICKS_DECLINED_GUARD` state is unchanged and still gates the whole surface). Source: ROADMAP
+  scope fence 2; UI-SPEC `C-2` / Interaction Contract §3. Verified by: component (assert the bound
+  verb, and assert the browse component holds exactly one `useState`).
+
+*Last updated: 2026-09-16 -- Phase 44 (REQ-44-01..26) minted during `/gsd-plan-phase 44` from
+`44-CONTEXT.md` D-01..D-24 plus the seams surfaced by `44-RESEARCH.md` and `44-PATTERNS.md`,
+following the Phase 34.5/34.6 mint-at-plan-time precedent recorded above. `44-UI-SPEC.md` (approved,
+iteration 2) is the binding design contract, overridden by CONTEXT.md at D-06, D-09 and D-13. **Six
+planning-time corrections are recorded in requirement text rather than left in a plan**: (1) the
+locale key count is 13, not 11 — `searchPlaceholder` and `resultsHeading` are required by the
+UI-SPEC's own contract but absent from its copy table, and `resultsHeading` must interpolate
+`{{total}}` because `{{count}}` is reserved; (2) the `translation.json` removal set is 6, not 5 —
+the block has 9 keys and the orphaned `loading` was missed; (3) `winetricks.installing` DID have a
+live consumer, answering D-20(a); (4) `winetricks.unavailableDetail` is collateral inside the block
+D-11 retires and must be relocated; (5) this phase moves the BLOCKING i18n gate's artifacts, which
+no upstream artifact mentions; (6) the row-level Errored state has no per-verb attribution to reuse.
+D-21 and D-23 are deliberately not given requirement IDs — they are statements about verification
+posture and non-coverage, carried in plan 44-08 and required to appear in `44-LIVE-GATE.md`.
+ROADMAP.md's Phase 44 `**Requirements**: TBD` line is replaced by these IDs.*

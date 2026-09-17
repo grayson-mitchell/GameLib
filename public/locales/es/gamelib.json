@@ -82,14 +82,34 @@
         "activateWizardTitle": "Activar esta clave",
         "activatingBody": "Revelando tu clave y canjeándola en Steam. Esto solo tomará un momento.",
         "activatingTitle": "Activando en Steam…",
+        "claimOnHumble": "Reclamar en Humble",
+        "claimOnStore": "Reclamar en {{store}}",
+        "clearFilters": "Borrar búsqueda y filtros",
+        "columnGame": "Juego",
+        "columnKey": "Clave",
+        "columnType": "Tipo",
+        "emptyBody": "Sincroniza tu cuenta de Humble Bundle para ver tus claves aquí.",
+        "emptyHeading": "Aún no hay claves de Humble",
+        "filteredEmptyBody": "Prueba otra búsqueda o desactiva «Solo claves canjeables».",
+        "filteredEmptyHeading": "Ninguna clave coincide",
+        "loginAndClaim": "Inicia sesión en {{store}} y reclama",
         "openStore": "Abrir {{store}}",
+        "pickOnHumble": "Elegir en Humble",
         "platformOther": "Otros",
-        "settledFromOwnership": "Ya está en tu biblioteca de Steam"
+        "redeemableOnly": "Solo claves canjeables",
+        "searchPlaceholder": "Busca en tus claves",
+        "settledFromOwnership": "Ya está en tu biblioteca de Steam",
+        "sortAlphabetical": "Alfabético",
+        "sortExpiringSoonest": "Caducan antes",
+        "sortLabel": "Ordenar"
     },
     "info": {
         "refresh-rating": "Actualizar valoración"
     },
     "installFlows": {
+        "importConfirmLabel": "Usar esta instalación",
+        "importDoorLabel": "Localizar instalación existente…",
+        "importExplainer": "¿Ya tienes este juego en el disco? ¿Desde otro launcher, o desde otra unidad? Señala esos archivos en lugar de volver a descargarlo.",
         "pathRejectedBodyImport": "GameLib no pudo importar desde esa ubicación. El origen debe ser una ruta de carpeta completa sin pasos \"..\". Selecciona la carpeta del juego de nuevo.",
         "pathRejectedBodyMove": "GameLib no pudo mover este juego allí. El destino debe ser una ruta de carpeta completa sin pasos \"..\". Selecciona la carpeta de destino de nuevo.",
         "pathRejectedTitle": "No se puede usar esa ubicación"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "La gestión de componentes de Winetricks no está disponible en esta compilación",
         "unavailableDetail": "El soporte de Winetricks se ha diferido a una versión futura (D-03, Fase 34.6) y no se puede listar ni instalar desde esta compilación."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "En caché (se instala sin conexión)",
+        "clearSearch": "Borrar búsqueda",
+        "curatedGroup": "Necesarios habitualmente",
+        "emptyBody": "No se han podido cargar los metadatos de Winetricks para esta bottle.",
+        "emptyHeading": "No hay componentes disponibles",
+        "installFailedTag": "Error al instalar",
+        "installedTag": "Instalado",
+        "installingRow": "Instalando…",
+        "needsGuiTag": "Necesita la GUI de Winetricks",
+        "resultsHeading": "{{total}} resultados",
+        "retry": "Reintentar",
+        "searchPlaceholder": "Buscar componentes…",
+        "zeroResultHeading": "Ningún componente coincide con “{{query}}”."
     },
     "donate": {
         "navLabel": "Donar"

@@ -82,14 +82,34 @@
         "activateWizardTitle": "Aktivañ an alc'hwez-mañ",
         "activatingBody": "O tiskuliañ hoc'h alc'hwez hag oc'h adprenañ anezhañ war Steam — un tammig amzer nemetken a bad an dra-se.",
         "activatingTitle": "Oc'h aktivañ war Steam…",
+        "claimOnHumble": "Tapout war Humble",
+        "claimOnStore": "Tapout war {{store}}",
+        "clearFilters": "Skarzhañ ar c'hlask hag ar siloù",
+        "columnGame": "C'hoari",
+        "columnKey": "Alc'hwez",
+        "columnType": "Seurt",
+        "emptyBody": "Goubredit ho kont Humble Bundle evit gwelet hoc'h alc'hwezioù amañ.",
+        "emptyHeading": "Alc'hwez Humble ebet c'hoazh",
+        "filteredEmptyBody": "Klaskit un dra all, pe lazhit «Alc'hwezioù talvoudus hepken».",
+        "filteredEmptyHeading": "Alc'hwez klotus ebet",
+        "loginAndClaim": "Kevreit ouzh {{store}} ha tapit",
         "openStore": "Digeriñ {{store}}",
+        "pickOnHumble": "Dibab war Humble",
         "platformOther": "All",
-        "settledFromOwnership": "Already in your Steam library"
+        "redeemableOnly": "Alc'hwezioù talvoudus hepken",
+        "searchPlaceholder": "Klask en hoc'h alc'hwezioù",
+        "settledFromOwnership": "Already in your Steam library",
+        "sortAlphabetical": "Dre urzh al lizherenneg",
+        "sortExpiringSoonest": "O tont da vout dispredet da gentañ",
+        "sortLabel": "Rummañ"
     },
     "info": {
         "refresh-rating": "Freskaat ar priziadur"
     },
     "installFlows": {
+        "importConfirmLabel": "Implijout ar staliañ-mañ",
+        "importDoorLabel": "Kavout ar staliañ a zo dija…",
+        "importExplainer": "Ur staliañ zo dija ganeoc'h war ar bladenn — eus ul lañser all, pe eus ur bladenn all? Diskouezit ar restroù-se e-lec'h o adpellgargañ.",
         "pathRejectedBodyImport": "N'eus ket gallet GameLib enporzhiañ eus al lec'h-se. Ret eo d'ar mammenn bezañ un treug renkell klok hep pazenn \"..\" ennañ. Dibabit adarre renkell ar c'hoari.",
         "pathRejectedBodyMove": "N'eus ket gallet GameLib dilec'hiañ ar c'hoari-mañ eno. Ret eo d'ar bal bezañ un treug renkell klok hep pazenn \"..\" ennañ. Dibabit adarre ar renkell bal.",
         "pathRejectedTitle": "N'haller ket implijout al lec'h-se"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "N'eo ket hegerz merañ parzhioù Winetricks war ar savadur-mañ",
         "unavailableDetail": "Dilezet eo skor Winetricks evit un embannadur da zont (D-03, Fazenn 34.6) ha ne c'hall ket bezañ rollet pe staliet diwar ar savadur-mañ."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "War gof (staliañ hep kevreadur)",
+        "clearSearch": "Skarzhañ ar c'hlask",
+        "curatedGroup": "Ezhommet alies",
+        "emptyBody": "N'eus ket bet gallet kargañ roadennoù Winetricks evit ar voutailh-mañ.",
+        "emptyHeading": "N'eus parzhioù hegerz ebet",
+        "installFailedTag": "C'hwitet ar staliañ",
+        "installedTag": "Staliet",
+        "installingRow": "O staliañ…",
+        "needsGuiTag": "Ret eo GUI Winetricks",
+        "resultsHeading": "{{total}} disoc'h",
+        "retry": "Adklask",
+        "searchPlaceholder": "Klask parzhioù…",
+        "zeroResultHeading": "Parzh ebet a glot gant “{{query}}”."
     },
     "donate": {
         "navLabel": "Reiñ arc'hant"

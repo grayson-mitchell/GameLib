@@ -1002,14 +1002,9 @@
     "Amazon Games": "Амазон игре",
     "winetricks": {
         "install": "Инсталирај",
-        "loading": "Лоадинг",
-        "no-components": "",
         "installing": "",
         "openGUI": "",
-        "search": "",
-        "loading-available": "",
-        "nothingYet": "",
-        "installed": ""
+        "loading-available": ""
     },
     "category-settings": {
         "cancel": "Откажи",

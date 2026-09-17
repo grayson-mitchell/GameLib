@@ -82,14 +82,34 @@
         "activateWizardTitle": "Ushbu kalitni faollashtirish",
         "activatingBody": "Kalitingiz ochilmoqda va Steam'da faollashtirilmoqda — bu bir zum vaqt oladi.",
         "activatingTitle": "Steam'da faollashtirilmoqda…",
+        "claimOnHumble": "Humble'da olish",
+        "claimOnStore": "{{store}}'da olish",
+        "clearFilters": "Qidiruv va filtrlarni tozalash",
+        "columnGame": "Oʻyin",
+        "columnKey": "Kalit",
+        "columnType": "Turi",
+        "emptyBody": "Kalitlaringizni shu yerda koʻrish uchun Humble Bundle hisobingizni sinxronlang.",
+        "emptyHeading": "Hali Humble kalitlari yoʻq",
+        "filteredEmptyBody": "Boshqa qidiruvni sinab koʻring yoki «Faqat ishlatiladigan kalitlar» ni oʻchiring.",
+        "filteredEmptyHeading": "Mos kalit topilmadi",
+        "loginAndClaim": "{{store}} ga kiring va oling",
         "openStore": "{{store}} ochish",
+        "pickOnHumble": "Humble'da tanlash",
         "platformOther": "Boshqa",
-        "settledFromOwnership": "Allaqachon Steam kutubxonangizda"
+        "redeemableOnly": "Faqat ishlatiladigan kalitlar",
+        "searchPlaceholder": "Kalitlaringizni qidiring",
+        "settledFromOwnership": "Allaqachon Steam kutubxonangizda",
+        "sortAlphabetical": "Alifbo boʻyicha",
+        "sortExpiringSoonest": "Eng tez tugaydigan",
+        "sortLabel": "Saralash"
     },
     "info": {
         "refresh-rating": "Reytingni yangilash"
     },
     "installFlows": {
+        "importConfirmLabel": "Ushbu o'rnatishdan foydalanish",
+        "importDoorLabel": "Mavjud o'rnatishni topish…",
+        "importExplainer": "Bu o'yin diskda allaqachon bormi — boshqa ishga tushirgichdan yoki boshqa diskdan? Qayta yuklab olish o'rniga o'sha fayllarni ko'rsating.",
         "pathRejectedBodyImport": "GameLib bu manzildan import qila olmadi. Manba \"..\" qadamlarisiz to'liq papka yo'li bo'lishi kerak. O'yin papkasini qaytadan tanlang.",
         "pathRejectedBodyMove": "GameLib bu o'yinni u yerga ko'chira olmadi. Manzil \"..\" qadamlarisiz to'liq papka yo'li bo'lishi kerak. Manzil papkasini qaytadan tanlang.",
         "pathRejectedTitle": "Bu manzildan foydalanib bo'lmaydi"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Winetricks komponentlarini boshqarish ushbu qurilmada mavjud emas",
         "unavailableDetail": "Winetricks qo'llab-quvvatlashi keyingi versiyaga qoldirilgan (D-03, 34.6-bosqich) va ushbu qurilmadan ro'yxatga olinishi yoki o'rnatilishi mumkin emas."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Keshda (oflayn o'rnatiladi)",
+        "clearSearch": "Qidiruvni tozalash",
+        "curatedGroup": "Ko'pincha kerak bo'ladiganlar",
+        "emptyBody": "Bu bottle uchun Winetricks metama'lumotlarini yuklab bo'lmadi.",
+        "emptyHeading": "Mavjud komponentlar yo'q",
+        "installFailedTag": "O'rnatish amalga oshmadi",
+        "installedTag": "O'rnatilgan",
+        "installingRow": "O'rnatilmoqda…",
+        "needsGuiTag": "Winetricks GUI talab qiladi",
+        "resultsHeading": "{{total}} natija",
+        "retry": "Qayta urinish",
+        "searchPlaceholder": "Komponentlarni qidirish…",
+        "zeroResultHeading": "“{{query}}”ga mos komponent topilmadi."
     },
     "donate": {
         "navLabel": "Xayriya qilish"

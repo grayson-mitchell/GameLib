@@ -82,14 +82,34 @@
         "activateWizardTitle": "ამ გასაღების გააქტიურება",
         "activatingBody": "თქვენი გასაღების გამოვლენა და Steam-ზე გამოსყიდვა — ეს მხოლოდ ერთ წამს წაიღებს.",
         "activatingTitle": "Steam-ზე გააქტიურება…",
+        "claimOnHumble": "მიღება Humble-ზე",
+        "claimOnStore": "მიღება {{store}}-ზე",
+        "clearFilters": "ძიებისა და ფილტრების გასუფთავება",
+        "columnGame": "თამაში",
+        "columnKey": "გასაღები",
+        "columnType": "ტიპი",
+        "emptyBody": "დაასინქრონეთ თქვენი Humble Bundle ანგარიში, რომ თქვენი გასაღებები აქ იხილოთ.",
+        "emptyHeading": "Humble-ის გასაღებები ჯერ არ არის",
+        "filteredEmptyBody": "სცადეთ სხვა ძიება ან გამორთეთ „მხოლოდ გამოსაყენებელი გასაღებები“.",
+        "filteredEmptyHeading": "შესაბამისი გასაღები არ მოიძებნა",
+        "loginAndClaim": "შედით {{store}}-ზე და მიიღეთ",
         "openStore": "გახსენით {{store}}",
+        "pickOnHumble": "არჩევა Humble-ზე",
         "platformOther": "სხვა",
-        "settledFromOwnership": "უკვე თქვენს Steam ბიბლიოთეკაშია"
+        "redeemableOnly": "მხოლოდ გამოსაყენებელი გასაღებები",
+        "searchPlaceholder": "მოძებნეთ თქვენს გასაღებებში",
+        "settledFromOwnership": "უკვე თქვენს Steam ბიბლიოთეკაშია",
+        "sortAlphabetical": "ანბანური",
+        "sortExpiringSoonest": "ვადა ყველაზე მალე იწურება",
+        "sortLabel": "დალაგება"
     },
     "info": {
         "refresh-rating": "რეიტინგის განახლება"
     },
     "installFlows": {
+        "importConfirmLabel": "ამ ინსტალაციის გამოყენება",
+        "importDoorLabel": "არსებული ინსტალაციის მოძებნა…",
+        "importExplainer": "უკვე გაქვთ ეს თამაში დისკზე — სხვა გამშვებიდან, ან სხვა დისკიდან? მიუთითეთ ის ფაილები ხელახლა ჩამოტვირთვის ნაცვლად.",
         "pathRejectedBodyImport": "GameLib-მა ვერ შეძლო ამ მდებარეობიდან იმპორტი. წყარო უნდა იყოს სრული საქაღალდის ბილიკი, რომელშიც არ არის \"..\" ნაბიჯები. კვლავ აირჩიეთ თამაშის საქაღალდე.",
         "pathRejectedBodyMove": "GameLib-მა ვერ შეძლო ამ თამაშის იქ გადატანა. დანიშნულების ადგილი უნდა იყოს სრული საქაღალდის ბილიკი, რომელშიც არ არის \"..\" ნაბიჯები. კვლავ აირჩიეთ დანიშნულების საქაღალდე.",
         "pathRejectedTitle": "ამ მდებარეობის გამოყენება შეუძლებელია"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Winetricks კომპონენტების მართვა ამ ვერსიაზე მიუწვდომელია",
         "unavailableDetail": "Winetricks-ის მხარდაჭერა გადადებულია მომავალ გამოშვებამდე (D-03, ფაზა 34.6) და ამ ვერსიიდან მისი ჩამონათვალის ნახვა ან დაყენება შეუძლებელია."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "ქეშირებულია (ინსტალირდება ინტერნეტის გარეშე)",
+        "clearSearch": "ძებნის გასუფთავება",
+        "curatedGroup": "ხშირად საჭირო",
+        "emptyBody": "ამ bottle-ისთვის Winetricks-ის მეტამონაცემების ჩატვირთვა ვერ მოხერხდა.",
+        "emptyHeading": "კომპონენტები არ არის ხელმისაწვდომი",
+        "installFailedTag": "ინსტალაცია ვერ მოხერხდა",
+        "installedTag": "დაინსტალირებული",
+        "installingRow": "ინსტალაცია…",
+        "needsGuiTag": "Winetricks-ის გრაფიკული ინტერფეისია საჭირო",
+        "resultsHeading": "{{total}} შედეგი",
+        "retry": "თავიდან ცდა",
+        "searchPlaceholder": "კომპონენტების ძებნა…",
+        "zeroResultHeading": "“{{query}}”-ს შესატყვისი კომპონენტი არ არის."
     },
     "donate": {
         "navLabel": "დონაცია"

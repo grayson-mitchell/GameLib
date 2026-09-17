@@ -82,14 +82,34 @@
         "activateWizardTitle": "Bu anahtarı etkinleştir",
         "activatingBody": "Anahtarınız ortaya çıkarılıyor ve Steam'de kullanılıyor — bu sadece bir an sürer.",
         "activatingTitle": "Steam'de etkinleştiriliyor…",
+        "claimOnHumble": "Humble'da al",
+        "claimOnStore": "{{store}} üzerinden al",
+        "clearFilters": "Aramayı ve filtreleri temizle",
+        "columnGame": "Oyun",
+        "columnKey": "Anahtar",
+        "columnType": "Tür",
+        "emptyBody": "Anahtarlarınızı burada görmek için Humble Bundle hesabınızı senkronize edin.",
+        "emptyHeading": "Henüz Humble anahtarı yok",
+        "filteredEmptyBody": "Farklı bir arama deneyin veya «Yalnızca kullanılabilir anahtarlar» seçeneğini kapatın.",
+        "filteredEmptyHeading": "Eşleşen anahtar yok",
+        "loginAndClaim": "{{store}} hesabınıza giriş yapıp alın",
         "openStore": "{{store}} Aç",
+        "pickOnHumble": "Humble'da seç",
         "platformOther": "Diğer",
-        "settledFromOwnership": "Zaten Steam kitaplığınızda"
+        "redeemableOnly": "Yalnızca kullanılabilir anahtarlar",
+        "searchPlaceholder": "Anahtarlarınızda arayın",
+        "settledFromOwnership": "Zaten Steam kitaplığınızda",
+        "sortAlphabetical": "Alfabetik",
+        "sortExpiringSoonest": "En yakında sona erecek",
+        "sortLabel": "Sırala"
     },
     "info": {
         "refresh-rating": "Puanı yenile"
     },
     "installFlows": {
+        "importConfirmLabel": "Bu kurulumu kullan",
+        "importDoorLabel": "Mevcut kurulumu bul…",
+        "importExplainer": "Bu oyun zaten diskinizde mi — başka bir başlatıcıdan, ya da başka bir sürücüden? Tekrar indirmek yerine o dosyaları işaret edin.",
         "pathRejectedBodyImport": "GameLib bu konumdan içe aktaramadı. Kaynak, içinde \"..\" adımı olmayan tam bir klasör yolu olmalıdır. Oyunun klasörünü tekrar seçin.",
         "pathRejectedBodyMove": "GameLib bu oyunu oraya taşıyamadı. Hedef, içinde \"..\" adımı olmayan tam bir klasör yolu olmalıdır. Hedef klasörü tekrar seçin.",
         "pathRejectedTitle": "Bu konum kullanılamıyor"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Winetricks bileşen yönetimi bu sürümde kullanılamıyor",
         "unavailableDetail": "Winetricks desteği ileriki bir sürüme ertelenmiştir (D-03, Aşama 34.6) ve bu sürümden listelenip yüklenemez."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Önbellekte (çevrimdışı yüklenir)",
+        "clearSearch": "Aramayı temizle",
+        "curatedGroup": "Sık gereken",
+        "emptyBody": "Bu bottle için Winetricks meta verileri yüklenemedi.",
+        "emptyHeading": "Kullanılabilir bileşen yok",
+        "installFailedTag": "Yükleme başarısız oldu",
+        "installedTag": "Yüklendi",
+        "installingRow": "Yükleniyor…",
+        "needsGuiTag": "Winetricks GUI gerektirir",
+        "resultsHeading": "{{total}} sonuç",
+        "retry": "Yeniden dene",
+        "searchPlaceholder": "Bileşen ara…",
+        "zeroResultHeading": "“{{query}}” ile eşleşen bileşen yok."
     },
     "donate": {
         "navLabel": "Bağış Yap"

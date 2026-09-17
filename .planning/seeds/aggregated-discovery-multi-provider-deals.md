@@ -34,7 +34,14 @@ currency model* too, on a screen that today handles currency correctly.
 1. Refactor `backend/discounts` from hardcoded GOG → the provider interface Phase 20 proved out.
    GOG becomes one implementation among several, not the shape of the API.
 2. Add providers behind it. Prefer IsThereAnyDeal (localised, multi-store) over CheapShark
-   (USD-only) as the aggregate source for this surface — see the ITAD migration research question.
+   (USD-only) as the aggregate source for this surface — the migration is now researched, see
+   `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md`.
+   Two things cut both ways: ITAD's 34-shop list subsumes Heroic's GMG and Humble feeds with no
+   mirror repo (**MEASURED**), which strengthens the 2026-08-15 do-not-port decision — but
+   **Amazon Games is absent from ITAD (MEASURED)**, so an ITAD-backed browse surface is
+   structurally blind to one of GameLib's four stores, which this seed's "every store" ambition
+   does not currently anticipate. This step is also **gated on a written reply from
+   `api@isthereanydeal.com`** about the "no competition" clause — settle that before building.
 3. Extend `hideOwned` to use the generalized cross-store ownership matcher (from `humble/dedup.ts`),
    not just GOG ownership.
 4. Merge/dedup the same game appearing from multiple providers — otherwise the shelves fill with

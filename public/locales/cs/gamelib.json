@@ -82,14 +82,34 @@
         "activateWizardTitle": "Aktivovat tento klíč",
         "activatingBody": "Odhalujeme váš klíč a uplatňujeme ho na Steam — chvilku to potrvá.",
         "activatingTitle": "Aktivace na Steam…",
+        "claimOnHumble": "Získat na Humble",
+        "claimOnStore": "Získat na {{store}}",
+        "clearFilters": "Vymazat hledání a filtry",
+        "columnGame": "Hra",
+        "columnKey": "Klíč",
+        "columnType": "Typ",
+        "emptyBody": "Synchronizujte svůj účet Humble Bundle, abyste zde viděli své klíče.",
+        "emptyHeading": "Zatím žádné klíče Humble",
+        "filteredEmptyBody": "Zkuste jiné hledání nebo vypněte „Pouze uplatnitelné klíče“.",
+        "filteredEmptyHeading": "Žádné odpovídající klíče",
+        "loginAndClaim": "Přihlaste se na {{store}} a získejte",
         "openStore": "Otevřít {{store}}",
+        "pickOnHumble": "Vybrat na Humble",
         "platformOther": "Ostatní",
-        "settledFromOwnership": "Již ve vaší knihovně Steam"
+        "redeemableOnly": "Pouze uplatnitelné klíče",
+        "searchPlaceholder": "Hledat ve svých klíčích",
+        "settledFromOwnership": "Již ve vaší knihovně Steam",
+        "sortAlphabetical": "Abecedně",
+        "sortExpiringSoonest": "Nejdříve vyprší",
+        "sortLabel": "Řadit"
     },
     "info": {
         "refresh-rating": "Obnovit hodnocení"
     },
     "installFlows": {
+        "importConfirmLabel": "Použít tuto instalaci",
+        "importDoorLabel": "Najít existující instalaci…",
+        "importExplainer": "Máte tuto hru už na disku — z jiného launcheru, nebo z jiného disku? Ukažte na tyto soubory místo opětovného stahování.",
         "pathRejectedBodyImport": "GameLib nemohl importovat z tohoto umístění. Zdroj musí být úplná cesta ke složce bez kroků \"..\" v ní. Vyberte složku hry znovu.",
         "pathRejectedBodyMove": "GameLib nemohl tuto hru přesunout tam. Cíl musí být úplná cesta ke složce bez kroků \"..\" v ní. Vyberte cílovou složku znovu.",
         "pathRejectedTitle": "Toto umístění nelze použít"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Správa komponent Winetricks není v tomto sestavení k dispozici",
         "unavailableDetail": "Podpora Winetricks je odložena na budoucí vydání (D-03, fáze 34.6) a v tomto sestavení ji nelze zobrazit ani nainstalovat."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "V mezipaměti (instaluje se offline)",
+        "clearSearch": "Vymazat vyhledávání",
+        "curatedGroup": "Často potřebné",
+        "emptyBody": "Metadata Winetricks se pro tuto bottle nepodařilo načíst.",
+        "emptyHeading": "Žádné dostupné komponenty",
+        "installFailedTag": "Instalace se nezdařila",
+        "installedTag": "Nainstalováno",
+        "installingRow": "Instaluje se…",
+        "needsGuiTag": "Vyžaduje grafické rozhraní Winetricks",
+        "resultsHeading": "{{total}} výsledků",
+        "retry": "Zkusit znovu",
+        "searchPlaceholder": "Hledat komponenty…",
+        "zeroResultHeading": "Žádná komponenta neodpovídá “{{query}}”."
     },
     "donate": {
         "navLabel": "Přispět"

@@ -1013,14 +1013,9 @@
     "prime-gaming": "Amazon Prime Gaming",
     "winetricks": {
         "install": "Asenna",
-        "loading": "Ladataan",
         "openGUI": "Avaa Winetricksin käyttöliittymä",
         "installing": "Asennus meneillään: {{component}}",
-        "search": "Etsi fontteja tai komponentteja",
-        "installed": "Asennetut komponentit:",
-        "loading-available": "Ladataan saatavilla olevia komponentteja...",
-        "no-components": "Ei saatavilla olevia komponentteja",
-        "nothingYet": ""
+        "loading-available": "Ladataan saatavilla olevia komponentteja..."
     },
     "window": {
         "close": "Sulje",

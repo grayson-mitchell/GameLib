@@ -82,14 +82,34 @@
         "activateWizardTitle": "فعال کردن این کلید",
         "activatingBody": "کلید شما در حال آشکارسازی و بازخرید در Steam است — این فقط لحظه‌ای طول می‌کشد.",
         "activatingTitle": "در حال فعال‌سازی روی Steam…",
+        "claimOnHumble": "دریافت در Humble",
+        "claimOnStore": "دریافت در {{store}}",
+        "clearFilters": "پاک کردن جستجو و فیلترها",
+        "columnGame": "بازی",
+        "columnKey": "کلید",
+        "columnType": "نوع",
+        "emptyBody": "حساب Humble Bundle خود را همگام‌سازی کنید تا کلیدهایتان اینجا نمایش داده شوند.",
+        "emptyHeading": "هنوز کلید Humble ندارید",
+        "filteredEmptyBody": "جستجوی دیگری را امتحان کنید یا «فقط کلیدهای قابل استفاده» را خاموش کنید.",
+        "filteredEmptyHeading": "کلیدی مطابقت ندارد",
+        "loginAndClaim": "به {{store}} وارد شوید و دریافت کنید",
         "openStore": "باز کردن {{store}}",
+        "pickOnHumble": "انتخاب در Humble",
         "platformOther": "بقیه",
-        "settledFromOwnership": "از قبل در کتابخانه Steam شما"
+        "redeemableOnly": "فقط کلیدهای قابل استفاده",
+        "searchPlaceholder": "جستجو در کلیدهای شما",
+        "settledFromOwnership": "از قبل در کتابخانه Steam شما",
+        "sortAlphabetical": "الفبایی",
+        "sortExpiringSoonest": "زودتر منقضی می‌شود",
+        "sortLabel": "مرتب‌سازی"
     },
     "info": {
         "refresh-rating": "تازه‌سازی امتیاز"
     },
     "installFlows": {
+        "importConfirmLabel": "استفاده از این نصب",
+        "importDoorLabel": "یافتن نصب موجود…",
+        "importExplainer": "آیا این بازی از قبل روی دیسک شما هست — از یک لانچر دیگر، یا یک درایو دیگر؟ به‌جای دانلود دوباره، به آن فایل‌ها اشاره کنید.",
         "pathRejectedBodyImport": "GameLib نتوانست از آن مکان وارد کند. مبدأ باید یک مسیر پوشه کامل بدون مرحله \"..\" در آن باشد. پوشه بازی را دوباره انتخاب کنید.",
         "pathRejectedBodyMove": "GameLib نتوانست این بازی را به آنجا منتقل کند. مقصد باید یک مسیر پوشه کامل بدون مرحله \"..\" در آن باشد. پوشه مقصد را دوباره انتخاب کنید.",
         "pathRejectedTitle": "نمی‌توان از آن مکان استفاده کرد"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "مدیریت اجزای Winetricks در این نسخه در دسترس نیست",
         "unavailableDetail": "پشتیبانی از Winetricks به نسخه‌ای در آینده (D-03, Phase 34.6) موکول شده و از این نسخه قابل فهرست‌کردن یا نصب نیست."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "ذخیره‌شده (نصب بدون اینترنت)",
+        "clearSearch": "پاک‌کردن جستجو",
+        "curatedGroup": "معمولاً لازم",
+        "emptyBody": "فراداده‌های Winetricks برای این bottle بار نشد.",
+        "emptyHeading": "هیچ مؤلفه‌ای موجود نیست",
+        "installFailedTag": "نصب ناموفق بود",
+        "installedTag": "نصب‌شده",
+        "installingRow": "در حال نصب…",
+        "needsGuiTag": "به رابط گرافیکی Winetricks نیاز دارد",
+        "resultsHeading": "{{total}} نتیجه",
+        "retry": "تلاش دوباره",
+        "searchPlaceholder": "جستجوی مؤلفه‌ها…",
+        "zeroResultHeading": "هیچ مؤلفه‌ای با “{{query}}” مطابقت ندارد."
     },
     "donate": {
         "navLabel": "اهدای مالی"

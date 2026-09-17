@@ -82,14 +82,34 @@
         "activateWizardTitle": "เปิดใช้งานคีย์นี้",
         "activatingBody": "กำลังเปิดเผยคีย์ของคุณและแลกใช้บน Steam — ใช้เวลาสักครู่เท่านั้น",
         "activatingTitle": "กำลังเปิดใช้งานบน Steam…",
+        "claimOnHumble": "รับที่ Humble",
+        "claimOnStore": "รับที่ {{store}}",
+        "clearFilters": "ล้างการค้นหาและตัวกรอง",
+        "columnGame": "เกม",
+        "columnKey": "คีย์",
+        "columnType": "ประเภท",
+        "emptyBody": "ซิงค์บัญชี Humble Bundle ของคุณเพื่อดูคีย์ของคุณที่นี่",
+        "emptyHeading": "ยังไม่มีคีย์ Humble",
+        "filteredEmptyBody": "ลองค้นหาแบบอื่น หรือปิด «เฉพาะคีย์ที่ใช้ได้»",
+        "filteredEmptyHeading": "ไม่มีคีย์ที่ตรงกัน",
+        "loginAndClaim": "เข้าสู่ระบบ {{store}} แล้วรับ",
         "openStore": "เปิด {{store}}",
+        "pickOnHumble": "เลือกที่ Humble",
         "platformOther": "อื่นๆ",
-        "settledFromOwnership": "มีอยู่ในคลังเกม Steam ของคุณแล้ว"
+        "redeemableOnly": "เฉพาะคีย์ที่ใช้ได้",
+        "searchPlaceholder": "ค้นหาคีย์ของคุณ",
+        "settledFromOwnership": "มีอยู่ในคลังเกม Steam ของคุณแล้ว",
+        "sortAlphabetical": "ตามตัวอักษร",
+        "sortExpiringSoonest": "หมดอายุเร็วที่สุด",
+        "sortLabel": "เรียงลำดับ"
     },
     "info": {
         "refresh-rating": "รีเฟรชคะแนน"
     },
     "installFlows": {
+        "importConfirmLabel": "ใช้การติดตั้งนี้",
+        "importDoorLabel": "ค้นหาการติดตั้งที่มีอยู่…",
+        "importExplainer": "มีเกมนี้อยู่ในดิสก์แล้วหรือไม่ — จากตัวเรียกใช้งานอื่น หรือไดรฟ์อื่น? ชี้ไปที่ไฟล์เหล่านั้นแทนการดาวน์โหลดใหม่อีกครั้ง",
         "pathRejectedBodyImport": "GameLib ไม่สามารถนำเข้าจากตำแหน่งนั้นได้ ต้นทางต้องเป็นเส้นทางโฟลเดอร์แบบเต็มที่ไม่มีขั้นตอน \"..\" อยู่ในนั้น กรุณาเลือกโฟลเดอร์ของเกมอีกครั้ง",
         "pathRejectedBodyMove": "GameLib ไม่สามารถย้ายเกมนี้ไปที่นั่นได้ ปลายทางต้องเป็นเส้นทางโฟลเดอร์แบบเต็มที่ไม่มีขั้นตอน \"..\" อยู่ในนั้น กรุณาเลือกโฟลเดอร์ปลายทางอีกครั้ง",
         "pathRejectedTitle": "ไม่สามารถใช้ตำแหน่งนั้นได้"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "การจัดการคอมโพเนนต์ Winetricks ไม่พร้อมใช้งานในบิลด์นี้",
         "unavailableDetail": "การรองรับ Winetricks ถูกเลื่อนไปเป็นรุ่นถัดไป (D-03, Phase 34.6) และไม่สามารถแสดงรายการหรือติดตั้งได้จากบิลด์นี้"
+    },
+    "winetricksBrowse": {
+        "cachedTag": "แคชไว้แล้ว (ติดตั้งแบบออฟไลน์)",
+        "clearSearch": "ล้างการค้นหา",
+        "curatedGroup": "ที่ต้องใช้บ่อย",
+        "emptyBody": "ไม่สามารถโหลดข้อมูลเมทาของ Winetricks สำหรับ bottle นี้ได้",
+        "emptyHeading": "ไม่มีคอมโพเนนต์ที่ใช้ได้",
+        "installFailedTag": "การติดตั้งล้มเหลว",
+        "installedTag": "ติดตั้งแล้ว",
+        "installingRow": "กำลังติดตั้ง…",
+        "needsGuiTag": "ต้องใช้ GUI ของ Winetricks",
+        "resultsHeading": "{{total}} ผลลัพธ์",
+        "retry": "ลองใหม่",
+        "searchPlaceholder": "ค้นหาคอมโพเนนต์…",
+        "zeroResultHeading": "ไม่มีคอมโพเนนต์ที่ตรงกับ “{{query}}”."
     },
     "donate": {
         "navLabel": "บริจาค"

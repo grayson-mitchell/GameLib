@@ -1030,14 +1030,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "安装",
-        "loading": "加载中",
         "installing": "正在安装：{{component}}",
         "openGUI": "打开 Winetricks 用户界面",
-        "search": "搜索字体或部件",
-        "nothingYet": "Winetricks 还没安装任何东西",
-        "installed": "已安装的部件：",
-        "loading-available": "正在加载可用组件…",
-        "no-components": "无可用组件"
+        "loading-available": "正在加载可用组件…"
     },
     "window": {
         "minimize": "最小化窗口",

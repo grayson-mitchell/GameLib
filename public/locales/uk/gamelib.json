@@ -82,14 +82,34 @@
         "activateWizardTitle": "Активувати цей ключ",
         "activatingBody": "Розкриваємо ваш ключ і активуємо його в Steam — це триває лише мить.",
         "activatingTitle": "Активація в Steam…",
+        "claimOnHumble": "Отримати в Humble",
+        "claimOnStore": "Отримати в {{store}}",
+        "clearFilters": "Очистити пошук і фільтри",
+        "columnGame": "Гра",
+        "columnKey": "Ключ",
+        "columnType": "Тип",
+        "emptyBody": "Синхронізуйте свій обліковий запис Humble Bundle, щоб побачити тут свої ключі.",
+        "emptyHeading": "Ключів Humble ще немає",
+        "filteredEmptyBody": "Спробуйте інший пошук або вимкніть «Лише ключі для активації».",
+        "filteredEmptyHeading": "Немає відповідних ключів",
+        "loginAndClaim": "Увійдіть у {{store}} та отримайте",
         "openStore": "Відкрити {{store}}",
+        "pickOnHumble": "Вибрати в Humble",
         "platformOther": "Інше",
-        "settledFromOwnership": "Вже у вашій бібліотеці Steam"
+        "redeemableOnly": "Лише ключі для активації",
+        "searchPlaceholder": "Пошук за ключами",
+        "settledFromOwnership": "Вже у вашій бібліотеці Steam",
+        "sortAlphabetical": "За абеткою",
+        "sortExpiringSoonest": "Спливають найшвидше",
+        "sortLabel": "Сортування"
     },
     "info": {
         "refresh-rating": "Оновити рейтинг"
     },
     "installFlows": {
+        "importConfirmLabel": "Використати це встановлення",
+        "importDoorLabel": "Знайти наявне встановлення…",
+        "importExplainer": "Уже маєте цю гру на диску — з іншого лаунчера чи іншого диска? Вкажіть на ці файли замість повторного завантаження.",
         "pathRejectedBodyImport": "GameLib не вдалося імпортувати з цього розташування. Джерело має бути повним шляхом до папки без кроків \"..\". Виберіть папку гри ще раз.",
         "pathRejectedBodyMove": "GameLib не вдалося перемістити цю гру туди. Призначення має бути повним шляхом до папки без кроків \"..\". Виберіть папку призначення ще раз.",
         "pathRejectedTitle": "Неможливо використати це розташування"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Керування компонентами Winetricks недоступне у цій збірці",
         "unavailableDetail": "Підтримка Winetricks відкладена до майбутнього випуску (D-03, Фаза 34.6) і не може бути показана або встановлена з цієї збірки."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "У кеші (установлюється офлайн)",
+        "clearSearch": "Очистити пошук",
+        "curatedGroup": "Часто потрібні",
+        "emptyBody": "Не вдалося завантажити метадані Winetricks для цієї bottle.",
+        "emptyHeading": "Немає доступних компонентів",
+        "installFailedTag": "Встановлення не вдалося",
+        "installedTag": "Встановлено",
+        "installingRow": "Встановлення…",
+        "needsGuiTag": "Потрібен графічний інтерфейс Winetricks",
+        "resultsHeading": "{{total}} результатів",
+        "retry": "Повторити",
+        "searchPlaceholder": "Пошук компонентів…",
+        "zeroResultHeading": "Немає компонента, що відповідає “{{query}}”."
     },
     "donate": {
         "navLabel": "Підтримати"

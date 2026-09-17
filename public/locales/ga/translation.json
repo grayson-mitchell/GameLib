@@ -1076,14 +1076,9 @@
     },
     "winetricks": {
         "install": "Suiteáil",
-        "installed": "Comhpháirteanna suiteáilte:",
         "installing": "Suiteáil ar siúl: {{component}}",
-        "loading": "Ag luchtú",
         "loading-available": "Ag lódáil comhpháirteanna atá ar fáil ...",
-        "no-components": "Gan aon chomhpháirteanna ar fáil",
-        "nothingYet": "Níl aon rud suiteáilte ag Winetricks go fóill",
-        "openGUI": "Oscail Comhéadan Úsáideora Winetricks",
-        "search": "Cuardaigh clónna nó comhpháirteanna"
+        "openGUI": "Oscail Comhéadan Úsáideora Winetricks"
     },
     "amazon-luna": "Amazon Luna",
     "zoom-store": "Siopa Zoom",

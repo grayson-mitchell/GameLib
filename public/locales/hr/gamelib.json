@@ -82,14 +82,34 @@
         "activatingBody": "Otkrivamo vaš ključ i unosimo ga na Steam — ovo traje samo trenutak.",
         "activatingTitle": "Aktiviranje na Steam…",
         "activateConfirmTitle": "Aktivirati ovaj ključ na Steamu?",
+        "claimOnHumble": "Preuzmi na Humbleu",
+        "claimOnStore": "Preuzmi na {{store}}",
+        "clearFilters": "Očisti pretragu i filtre",
+        "columnGame": "Igra",
+        "columnKey": "Ključ",
+        "columnType": "Vrsta",
+        "emptyBody": "Sinkronizirajte svoj Humble Bundle račun kako biste ovdje vidjeli svoje ključeve.",
+        "emptyHeading": "Još nema Humble ključeva",
+        "filteredEmptyBody": "Pokušajte s drugom pretragom ili isključite „Samo iskoristivi ključevi“.",
+        "filteredEmptyHeading": "Nema podudarnih ključeva",
+        "loginAndClaim": "Prijavite se na {{store}} i preuzmite",
         "openStore": "Otvori {{store}}",
+        "pickOnHumble": "Odaberi na Humbleu",
         "platformOther": "Ostalo",
-        "settledFromOwnership": "Već u vašoj Steam knjižnici"
+        "redeemableOnly": "Samo iskoristivi ključevi",
+        "searchPlaceholder": "Pretražite svoje ključeve",
+        "settledFromOwnership": "Već u vašoj Steam knjižnici",
+        "sortAlphabetical": "Abecedno",
+        "sortExpiringSoonest": "Prvo istječu",
+        "sortLabel": "Sortiraj"
     },
     "info": {
         "refresh-rating": "Osvježi ocjenu"
     },
     "installFlows": {
+        "importConfirmLabel": "Koristi ovu instalaciju",
+        "importDoorLabel": "Pronađi postojeću instalaciju…",
+        "importExplainer": "Već imate ovu igru na disku — s drugog pokretača, ili s drugog diska? Usmjerite na te datoteke umjesto ponovnog preuzimanja.",
         "pathRejectedBodyImport": "GameLib nije mogao uvesti s te lokacije. Izvor mora biti puna putanja mape bez koraka \"..\" u njoj. Ponovno odaberite mapu igre.",
         "pathRejectedBodyMove": "GameLib nije mogao premjestiti ovu igru tamo. Odredište mora biti puna putanja mape bez koraka \"..\" u njoj. Ponovno odaberite odredišnu mapu.",
         "pathRejectedTitle": "Ta lokacija se ne može koristiti"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Upravljanje Winetricks komponentama nije dostupno u ovoj inačici",
         "unavailableDetail": "Podrška za Winetricks odgođena je za buduće izdanje (D-03, faza 34.6) i ne može se popisati ni instalirati u ovoj inačici."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "U predmemoriji (instalira se izvanmrežno)",
+        "clearSearch": "Obriši pretragu",
+        "curatedGroup": "Često potrebno",
+        "emptyBody": "Metapodatke za Winetricks nije bilo moguće učitati za ovu bottle.",
+        "emptyHeading": "Nema dostupnih komponenti",
+        "installFailedTag": "Instalacija nije uspjela",
+        "installedTag": "Instalirano",
+        "installingRow": "Instaliranje…",
+        "needsGuiTag": "Potreban je Winetricks GUI",
+        "resultsHeading": "{{total}} rezultata",
+        "retry": "Pokušaj ponovno",
+        "searchPlaceholder": "Pretraži komponente…",
+        "zeroResultHeading": "Nijedna komponenta ne odgovara “{{query}}”."
     },
     "donate": {
         "navLabel": "Doniraj"

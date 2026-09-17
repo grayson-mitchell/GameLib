@@ -1016,13 +1016,8 @@
     "prime-gaming": "لعب برايم",
     "winetricks": {
         "install": "ثبِّت",
-        "loading": "يحمَّل",
         "installing": "يُثبَّت: {{component}}",
         "openGUI": "افتح واجهة واين.تركس",
-        "search": "ابحث عن خطوط أو مكونات",
-        "nothingYet": "لم يثبِّت واين.تركس شيئًا بعد",
-        "installed": "المكونات المثبَّتة:",
-        "no-components": "",
         "loading-available": ""
     },
     "window": {

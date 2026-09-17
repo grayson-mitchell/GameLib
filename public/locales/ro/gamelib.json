@@ -82,14 +82,34 @@
         "activateWizardTitle": "Activează această cheie",
         "activatingBody": "Se dezvăluie cheia și se activează pe Steam — durează doar o clipă.",
         "activatingTitle": "Se activează pe Steam…",
+        "claimOnHumble": "Revendică pe Humble",
+        "claimOnStore": "Revendică pe {{store}}",
+        "clearFilters": "Șterge căutarea și filtrele",
+        "columnGame": "Joc",
+        "columnKey": "Cheie",
+        "columnType": "Tip",
+        "emptyBody": "Sincronizează-ți contul Humble Bundle pentru a-ți vedea cheile aici.",
+        "emptyHeading": "Încă nu există chei Humble",
+        "filteredEmptyBody": "Încearcă o altă căutare sau dezactivează „Doar chei valorificabile”.",
+        "filteredEmptyHeading": "Nicio cheie nu se potrivește",
+        "loginAndClaim": "Conectează-te la {{store}} și revendică",
         "openStore": "Deschide {{store}}",
+        "pickOnHumble": "Alege pe Humble",
         "platformOther": "Altele",
-        "settledFromOwnership": "Deja în biblioteca ta Steam"
+        "redeemableOnly": "Doar chei valorificabile",
+        "searchPlaceholder": "Caută în cheile tale",
+        "settledFromOwnership": "Deja în biblioteca ta Steam",
+        "sortAlphabetical": "Alfabetic",
+        "sortExpiringSoonest": "Expiră cel mai curând",
+        "sortLabel": "Sortează"
     },
     "info": {
         "refresh-rating": "Reîmprospătează evaluarea"
     },
     "installFlows": {
+        "importConfirmLabel": "Folosește această instalare",
+        "importDoorLabel": "Găsește o instalare existentă…",
+        "importExplainer": "Ai deja acest joc pe disc — de la un alt launcher, sau de pe altă unitate? Indică acele fișiere în loc să-l descarci din nou.",
         "pathRejectedBodyImport": "GameLib nu a putut importa din acea locație. Sursa trebuie să fie o cale completă de folder, fără pași \"..\" în ea. Alege din nou folderul jocului.",
         "pathRejectedBodyMove": "GameLib nu a putut muta acest joc acolo. Destinația trebuie să fie o cale completă de folder, fără pași \"..\" în ea. Alege din nou folderul de destinație.",
         "pathRejectedTitle": "Locația nu poate fi folosită"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Gestionarea componentelor Winetricks nu este disponibilă în această versiune",
         "unavailableDetail": "Suportul pentru Winetricks este amânat pentru o versiune viitoare (D-03, Faza 34.6) și nu poate fi listat sau instalat din această versiune."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "În cache (se instalează offline)",
+        "clearSearch": "Șterge căutarea",
+        "curatedGroup": "Necesare frecvent",
+        "emptyBody": "Metadatele Winetricks nu au putut fi încărcate pentru acest bottle.",
+        "emptyHeading": "Nu există componente disponibile",
+        "installFailedTag": "Instalarea a eșuat",
+        "installedTag": "Instalat",
+        "installingRow": "Se instalează…",
+        "needsGuiTag": "Necesită interfața grafică Winetricks",
+        "resultsHeading": "{{total}} rezultate",
+        "retry": "Reîncearcă",
+        "searchPlaceholder": "Caută componente…",
+        "zeroResultHeading": "Nicio componentă nu corespunde cu “{{query}}”."
     },
     "donate": {
         "navLabel": "Donează"

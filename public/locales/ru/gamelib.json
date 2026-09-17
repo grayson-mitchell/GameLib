@@ -82,14 +82,34 @@
         "activateWizardTitle": "Активировать этот ключ",
         "activatingBody": "Раскрываем ваш ключ и активируем его в Steam — это займёт всего мгновение.",
         "activatingTitle": "Активация в Steam…",
+        "claimOnHumble": "Получить в Humble",
+        "claimOnStore": "Получить в {{store}}",
+        "clearFilters": "Очистить поиск и фильтры",
+        "columnGame": "Игра",
+        "columnKey": "Ключ",
+        "columnType": "Тип",
+        "emptyBody": "Синхронизируйте свой аккаунт Humble Bundle, чтобы увидеть здесь свои ключи.",
+        "emptyHeading": "Ключей Humble пока нет",
+        "filteredEmptyBody": "Попробуйте другой поиск или отключите «Только активируемые ключи».",
+        "filteredEmptyHeading": "Нет подходящих ключей",
+        "loginAndClaim": "Войдите в {{store}} и получите",
         "openStore": "Открыть {{store}}",
+        "pickOnHumble": "Выбрать в Humble",
         "platformOther": "Другое",
-        "settledFromOwnership": "Уже в вашей библиотеке Steam"
+        "redeemableOnly": "Только активируемые ключи",
+        "searchPlaceholder": "Поиск по ключам",
+        "settledFromOwnership": "Уже в вашей библиотеке Steam",
+        "sortAlphabetical": "По алфавиту",
+        "sortExpiringSoonest": "Истекают раньше",
+        "sortLabel": "Сортировка"
     },
     "info": {
         "refresh-rating": "Обновить рейтинг"
     },
     "installFlows": {
+        "importConfirmLabel": "Использовать эту установку",
+        "importDoorLabel": "Найти существующую установку…",
+        "importExplainer": "Игра уже есть на диске — из другого лаунчера или с другого диска? Укажите эти файлы вместо повторной загрузки.",
         "pathRejectedBodyImport": "GameLib не удалось импортировать из этого места. Источник должен быть полным путём к папке без шагов «..». Выберите папку игры заново.",
         "pathRejectedBodyMove": "GameLib не удалось переместить игру туда. Место назначения должно быть полным путём к папке без шагов «..». Выберите папку назначения заново.",
         "pathRejectedTitle": "Нельзя использовать это расположение"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Управление компонентами Winetricks недоступно в этой сборке",
         "unavailableDetail": "Поддержка Winetricks отложена до будущего релиза (D-03, этап 34.6) и не может быть отображена или установлена из этой сборки."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "В кэше (устанавливается офлайн)",
+        "clearSearch": "Очистить поиск",
+        "curatedGroup": "Часто необходимые",
+        "emptyBody": "Не удалось загрузить метаданные Winetricks для этой bottle.",
+        "emptyHeading": "Нет доступных компонентов",
+        "installFailedTag": "Установка не удалась",
+        "installedTag": "Установлено",
+        "installingRow": "Установка…",
+        "needsGuiTag": "Требуется графический интерфейс Winetricks",
+        "resultsHeading": "{{total}} результатов",
+        "retry": "Повторить",
+        "searchPlaceholder": "Поиск компонентов…",
+        "zeroResultHeading": "Нет компонентов, соответствующих “{{query}}”."
     },
     "donate": {
         "navLabel": "Пожертвовать"

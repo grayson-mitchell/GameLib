@@ -82,14 +82,34 @@
         "activateWizardTitle": "تفعيل هذا المفتاح",
         "activatingBody": "يتم كشف مفتاحك واستبداله على Steam — لن يستغرق هذا سوى لحظة.",
         "activatingTitle": "جارٍ التفعيل على Steam…",
+        "claimOnHumble": "المطالبة على Humble",
+        "claimOnStore": "المطالبة على {{store}}",
+        "clearFilters": "مسح البحث والمرشحات",
+        "columnGame": "اللعبة",
+        "columnKey": "المفتاح",
+        "columnType": "النوع",
+        "emptyBody": "زامن حساب Humble Bundle الخاص بك لرؤية مفاتيحك هنا.",
+        "emptyHeading": "لا توجد مفاتيح Humble بعد",
+        "filteredEmptyBody": "جرّب بحثًا مختلفًا، أو أوقف «المفاتيح القابلة للاستخدام فقط».",
+        "filteredEmptyHeading": "لا توجد مفاتيح مطابقة",
+        "loginAndClaim": "سجّل الدخول إلى {{store}} وطالب بالمفتاح",
         "openStore": "افتح {{store}}",
+        "pickOnHumble": "الاختيار على Humble",
         "platformOther": "آخر",
-        "settledFromOwnership": "موجود بالفعل في مكتبة Steam الخاصة بك"
+        "redeemableOnly": "المفاتيح القابلة للاستخدام فقط",
+        "searchPlaceholder": "ابحث في مفاتيحك",
+        "settledFromOwnership": "موجود بالفعل في مكتبة Steam الخاصة بك",
+        "sortAlphabetical": "أبجديًا",
+        "sortExpiringSoonest": "الأقرب انتهاءً",
+        "sortLabel": "ترتيب"
     },
     "info": {
         "refresh-rating": "تحديث التقييم"
     },
     "installFlows": {
+        "importConfirmLabel": "استخدام هذا التثبيت",
+        "importDoorLabel": "تحديد التثبيت الموجود…",
+        "importExplainer": "ألديك هذه اللعبة بالفعل على القرص؟ من مشغل آخر، أو من محرك أقراص آخر؟ أشر إلى تلك الملفات بدلاً من تنزيلها مرة أخرى.",
         "pathRejectedBodyImport": "تعذر على GameLib الاستيراد من هذا الموقع. يجب أن يكون المصدر مسار مجلد كامل بدون أي خطوات \"..\" فيه. اختر مجلد اللعبة مرة أخرى.",
         "pathRejectedBodyMove": "تعذر على GameLib نقل هذه اللعبة إلى هناك. يجب أن تكون الوجهة مسار مجلد كامل بدون أي خطوات \"..\" فيه. اختر مجلد الوجهة مرة أخرى.",
         "pathRejectedTitle": "لا يمكن استخدام هذا الموقع"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "إدارة مكوّنات Winetricks غير متاحة في هذا الإصدار",
         "unavailableDetail": "تم تأجيل دعم Winetricks إلى إصدار مستقبلي (D-03، المرحلة 34.6) ولا يمكن إدراجه أو تثبيته من هذا الإصدار."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "مخزّن مؤقتًا (يتم التثبيت دون اتصال)",
+        "clearSearch": "مسح البحث",
+        "curatedGroup": "المطلوبة غالبًا",
+        "emptyBody": "تعذّر تحميل بيانات Winetricks لهذه الزجاجة.",
+        "emptyHeading": "لا تتوفر مكوّنات",
+        "installFailedTag": "فشل التثبيت",
+        "installedTag": "مثبَّت",
+        "installingRow": "جارٍ التثبيت…",
+        "needsGuiTag": "يتطلب واجهة Winetricks الرسومية",
+        "resultsHeading": "{{total}} نتيجة",
+        "retry": "إعادة المحاولة",
+        "searchPlaceholder": "بحث في المكوّنات…",
+        "zeroResultHeading": "لا يوجد مكوّن يطابق “{{query}}”."
     },
     "donate": {
         "navLabel": "تبرّع"

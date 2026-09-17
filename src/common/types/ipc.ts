@@ -43,6 +43,7 @@ import type {
   WineCommandArgs,
   WineInstallation,
   WineManagerStatus,
+  WinetricksComponent,
   WineVersionInfo
 } from '../types'
 import type { CatalogLocaleSettings, CatalogProduct } from './discounts'
@@ -190,7 +191,10 @@ interface AsyncIPCFunctions {
     args: WineCommandArgs
   ) => Promise<{ stdout: string; stderr: string }>
   winetricksInstalled: (runner: Runner, appName: string) => Promise<string[]>
-  winetricksAvailable: (runner: Runner, appName: string) => Promise<string[]>
+  winetricksAvailable: (
+    runner: Runner,
+    appName: string
+  ) => Promise<WinetricksComponent[]>
   checkGameUpdates: () => Promise<string[]>
   getEpicGamesStatus: () => Promise<boolean>
   updateAll: () => Promise<({ status: 'done' | 'error' | 'abort' } | null)[]>

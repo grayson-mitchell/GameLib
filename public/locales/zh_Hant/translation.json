@@ -1002,14 +1002,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "安裝",
-        "loading": "載入中",
         "installing": "正在安裝： {{component}}",
-        "installed": "已安裝元件：",
-        "search": "搜尋字型或元件",
-        "no-components": "",
         "openGUI": "",
-        "loading-available": "",
-        "nothingYet": ""
+        "loading-available": ""
     },
     "category-settings": {
         "cancel": "取消",

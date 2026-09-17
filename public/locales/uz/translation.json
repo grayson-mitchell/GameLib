@@ -1053,15 +1053,10 @@
         "title": ""
     },
     "winetricks": {
-        "no-components": "",
         "install": "",
-        "loading": "",
         "installing": "",
         "openGUI": "",
-        "search": "",
-        "loading-available": "",
-        "nothingYet": "",
-        "installed": ""
+        "loading-available": ""
     },
     "categories-manager": {
         "confirm-rename": "",

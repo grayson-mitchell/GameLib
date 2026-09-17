@@ -3,9 +3,9 @@ spike: 024
 name: epic-store-in-embedded-child-webview
 type: standard
 validates: "Given a Tauri-managed child webview (`Window::add_child`, spike 016's harness) pointed at Epic's storefront, when the page loads with the injected Tauri globals PRESENT, then observe whether Talon/Cloudflare blocks STORE browsing the way it blocks the LOGIN endpoint"
-verdict: PARTIAL — the store is NOT reliably browsable; it rendered on FIRST contact and was Cloudflare-challenged on both later runs, including from a fresh container
-run_date: 2026-09-05
-runs: 3
+verdict: RESOLVED — the store is NOT browsable in a Tauri-managed child webview. Interactive runs 4–5 (2026-09-15) closed the open question: a human CAN click the Turnstile widget, and it does NOT clear — the challenge re-issues indefinitely
+run_date: 2026-09-15
+runs: 5
 related: [013, 016, 017, 018]
 tags: [tauri, webview, epic, talon, cloudflare, turnstile, anti-bot, embed, store-browser, macos]
 ---
@@ -25,6 +25,38 @@ on both subsequent runs.** One run in three is not "browsable".
 
 The **Steam positive control rendered in all three runs** (`bodyLen` ~295 k, real text), so no run
 can be dismissed as a broken harness or a dead network.
+
+### Runs 4–5 — the INTERACTIVE arm (2026-09-15, quick `260915-hza`)
+
+A human clicked the widget. It does not clear.
+
+| Run | Container | Viewport at challenge | Turnstile issuances | Result |
+|---|---|---|---|---|
+| **4** | fresh (`spike024d`) | **969×58 — INVALID** | 4 (`68xxg`, `0ryr2`, `jqh5w`, `12326`) | **Discard.** See the harness defect below |
+| **5** | `spike024d` | **986×630, pixel-verified** | 3 (`98ums`, `1tuf5`, `whqym`) | Clicked "Verify you are human" → challenge **re-issued**, ~25 s and ~30 s apart |
+
+Run 5's Steam positive control rendered first (`add_child` at 986×630, two `on_page_load`, then
+destroyed), so the harness and network were sound in the same session.
+
+`shot-epic-INTERACTIVE-challenge-run5.png` is the evidence: Epic's "One more step" card with an
+**unchecked** `Verify you are human` box at full size, plus a Cloudflare `Session ID`. Nav logs for
+both runs are in `run-4-5-interactive.log`.
+
+⚠️ **The run-5 screenshot renders the operator's residential IP** (Cloudflare prints it on the
+challenge card). This repo is a public fork. Redact before committing or publishing that image.
+
+⚠️ **Run 4 was invalidated by a defect in THIS harness, listed below as a known limitation and
+never fixed.** `#logwrap` was `flex: 0 0 170px`, but a flex item's automatic `min-height` is its
+content height, so the growing event log expanded the panel and starved `#slot` — the embed was
+created at `h:630` and measured **969×58** by the time the challenge was on screen. A Turnstile
+widget rendered into a 58 px viewport cannot support any conclusion. Fixed in `35309eb4e`
+(`min-height:0` + `max-height:170px`); run 5 is the first valid interactive sample.
+**The known limitation the spike recorded went on to contaminate the very arm it was blocking.**
+
+Note the log **cannot** corroborate viewport size over time: `syncBounds(false)` passes
+`quiet: true` and `set_embed_bounds` only logs when `!quiet` (`main.rs:341`), so
+`"category":"bounds"` entries number **0** across every session. Pixel capture is the only bounds
+evidence there is — which is exactly why run 4's contamination was invisible in the log.
 
 ⚠️ **An earlier version of this file said VALIDATED on the strength of run 1 alone. That was
 wrong** — it generalised from a single sample of a service whose posture is known to vary. Runs 2
@@ -49,11 +81,9 @@ and 3 were what caught it.
 
 ## What is NOT established
 
-- **Whether a human can click through the challenge.** Turnstile in normal mode is often an
-  interactive checkbox. **These runs were fully automated and never clicked anything.** So
-  "challenged" here does **not** mean "a user cannot browse the Epic store in-app" — it means the
-  unattended probe never got past it. This is the single most important open question and it is
-  cheap to answer: launch the harness interactively and click the widget.
+- ~~**Whether a human can click through the challenge.**~~ — **ANSWERED by runs 4–5, and the
+  answer is no.** The widget is genuinely interactive and clickable at full size; clicking it
+  re-issues the challenge rather than clearing it. See the runs 4–5 table above.
 - **Why run 1 passed.** Two candidates were considered; one is now dead:
   - ~~Container/cookie state~~ — **falsified.** Run 3 used a brand-new container and was still
     challenged.
@@ -64,7 +94,14 @@ and 3 were what caught it.
   interstitial ~21 s after navigate. Not forever, just longer than the probe waited.
 - Product pages, search, cart, and **anything behind sign-in** (still the known-blocked surface,
   deliberately untouched per D-07).
-- Full-viewport layout: the embed had shrunk to ~`986×117` logical by capture time.
+- ~~Full-viewport layout: the embed had shrunk to ~`986×117` logical by capture time.~~ — **fixed
+  in `35309eb4e`**, but only after this exact defect silently invalidated run 4. Recording a
+  measurement defect as a known limitation does not stop it contaminating the next run.
+- **Whether a different IP would clear it.** Runs 4–5 share one residential IP with runs 1–3, so
+  they cannot separate "Tauri webview is blocked" from "this IP's reputation is spent". Run 1
+  remains the only unchallenged contact and it was this IP's first. Testing this
+  needs a different network, not another run here — and it does not change the product decision,
+  since the gate cannot be conditional on a user's IP reputation.
 
 ## Method notes worth keeping
 
@@ -95,6 +132,12 @@ Change `identifier` in `tauri.conf.json` to force a fresh WKWebsiteDataStore.
 
 ## Consequence for `/store/epic`
 
-**Keep it scoped out for now.** D-05's decision stands, and this spike does not overturn it. The
-follow-up is no longer "flip `embeddable: false`" — it is "find out whether a user can clear the
-Turnstile challenge in-app, and decide what the embed shows when they cannot." Filed as a todo.
+**Keep it scoped out — permanently, not "for now".** D-05's decision stands and is now backed by
+the interactive measurement rather than by an unanswered question. `/store/epic` stays gated
+(`embeddable: false`, the `store === 'epic'` guard in `WebView/index.tsx`, and
+`WebviewUnavailablePanel reason="epic"`); the panel copy is already honest about it.
+
+The follow-up todo closed WONTFIX on 2026-09-15 (quick `260915-hza`) with runs 4–5 attached. What
+would reopen it is a change in Epic's posture, not a change in our code — so re-probe only if
+there is a reason to think Cloudflare's configuration moved, and re-run the interactive arm more
+than once when you do.

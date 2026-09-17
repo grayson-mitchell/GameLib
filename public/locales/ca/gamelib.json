@@ -82,14 +82,34 @@
         "activateWizardTitle": "Activa aquesta clau",
         "activatingBody": "Revelant la teva clau i bescanviant-la a Steam — només trigarà un moment.",
         "activatingTitle": "Activant a Steam…",
+        "claimOnHumble": "Reclama a Humble",
+        "claimOnStore": "Reclama a {{store}}",
+        "clearFilters": "Neteja la cerca i els filtres",
+        "columnGame": "Joc",
+        "columnKey": "Clau",
+        "columnType": "Tipus",
+        "emptyBody": "Sincronitzeu el vostre compte de Humble Bundle per veure les vostres claus aquí.",
+        "emptyHeading": "Encara no hi ha claus de Humble",
+        "filteredEmptyBody": "Proveu una altra cerca o desactiveu «Només claus canjables».",
+        "filteredEmptyHeading": "Cap clau coincideix",
+        "loginAndClaim": "Inicieu la sessió a {{store}} i reclameu",
         "openStore": "Obre {{store}}",
+        "pickOnHumble": "Tria a Humble",
         "platformOther": "Altres",
-        "settledFromOwnership": "Ja a la vostra biblioteca de Steam"
+        "redeemableOnly": "Només claus canjables",
+        "searchPlaceholder": "Cerca les vostres claus",
+        "settledFromOwnership": "Ja a la vostra biblioteca de Steam",
+        "sortAlphabetical": "Alfabètic",
+        "sortExpiringSoonest": "Caduquen abans",
+        "sortLabel": "Ordena"
     },
     "info": {
         "refresh-rating": "Actualitza la valoració"
     },
     "installFlows": {
+        "importConfirmLabel": "Utilitza aquesta instal·lació",
+        "importDoorLabel": "Localitza una instal·lació existent…",
+        "importExplainer": "Ja tens aquest joc al disc — d'un altre llançador, o d'una altra unitat? Indica aquests fitxers en lloc de tornar-los a baixar.",
         "pathRejectedBodyImport": "GameLib no ha pogut importar des d'aquesta ubicació. L'origen ha de ser un camí de carpeta complet sense passos \"..\". Torna a triar la carpeta del joc.",
         "pathRejectedBodyMove": "GameLib no ha pogut moure aquest joc allà. La destinació ha de ser un camí de carpeta complet sense passos \"..\". Torna a triar la carpeta de destinació.",
         "pathRejectedTitle": "No es pot utilitzar aquesta ubicació"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "La gestió de components de Winetricks no està disponible en aquesta versió",
         "unavailableDetail": "El suport de Winetricks s'ha ajornat a una versió futura (D-03, Fase 34.6) i no es pot llistar ni instal·lar des d'aquesta versió."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "En memòria cau (s'instal·la sense connexió)",
+        "clearSearch": "Esborra la cerca",
+        "curatedGroup": "Necessari habitualment",
+        "emptyBody": "No s'han pogut carregar les metadades de Winetricks per a aquesta bottle.",
+        "emptyHeading": "No hi ha components disponibles",
+        "installFailedTag": "La instal·lació ha fallat",
+        "installedTag": "Instal·lat",
+        "installingRow": "S'està instal·lant…",
+        "needsGuiTag": "Necessita la interfície gràfica de Winetricks",
+        "resultsHeading": "{{total}} resultats",
+        "retry": "Torna-ho a provar",
+        "searchPlaceholder": "Cerca components…",
+        "zeroResultHeading": "Cap component coincideix amb “{{query}}”."
     },
     "donate": {
         "navLabel": "Fes una donació"

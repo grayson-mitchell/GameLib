@@ -1048,14 +1048,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Installer",
-        "loading": "Indlæser",
-        "installed": "Installerede komponenter:",
         "installing": "Installation i gang: {{component}}",
         "loading-available": "Indlæser tilgængelige komponenter ...",
-        "no-components": "Ingen tilgængelige komponenter",
-        "nothingYet": "Der er endnu ikke installeret noget af Winetricks",
-        "openGUI": "Åbn Winetricks GUI",
-        "search": "Søg efter skrifttyper eller komponenter"
+        "openGUI": "Åbn Winetricks GUI"
     },
     "adtraction-locked": {
         "description": "Domænet track.adtraction.com syntes at være ulæseligt eller blokeret. Med adtraction støtter ethvert køb, du foretager i GOG-butikken, GameLib økonomisk. Overvej at fjerne blokeringen, hvis du ønsker at bidrage.",

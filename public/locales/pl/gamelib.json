@@ -82,14 +82,34 @@
         "activateWizardTitle": "Aktywuj ten klucz",
         "activatingBody": "Odsłanianie klucza i aktywowanie go na Steam — to potrwa tylko chwilę.",
         "activatingTitle": "Aktywowanie na Steam…",
+        "claimOnHumble": "Odbierz na Humble",
+        "claimOnStore": "Odbierz na {{store}}",
+        "clearFilters": "Wyczyść wyszukiwanie i filtry",
+        "columnGame": "Gra",
+        "columnKey": "Klucz",
+        "columnType": "Typ",
+        "emptyBody": "Zsynchronizuj swoje konto Humble Bundle, aby zobaczyć tutaj swoje klucze.",
+        "emptyHeading": "Brak kluczy Humble",
+        "filteredEmptyBody": "Spróbuj innego wyszukiwania lub wyłącz „Tylko klucze do zrealizowania”.",
+        "filteredEmptyHeading": "Brak pasujących kluczy",
+        "loginAndClaim": "Zaloguj się w {{store}} i odbierz",
         "openStore": "Otwórz {{store}}",
+        "pickOnHumble": "Wybierz na Humble",
         "platformOther": "Inne",
-        "settledFromOwnership": "Już w Twojej bibliotece Steam"
+        "redeemableOnly": "Tylko klucze do zrealizowania",
+        "searchPlaceholder": "Szukaj w swoich kluczach",
+        "settledFromOwnership": "Już w Twojej bibliotece Steam",
+        "sortAlphabetical": "Alfabetycznie",
+        "sortExpiringSoonest": "Najszybciej wygasające",
+        "sortLabel": "Sortuj"
     },
     "info": {
         "refresh-rating": "Odśwież ocenę"
     },
     "installFlows": {
+        "importConfirmLabel": "Użyj tej instalacji",
+        "importDoorLabel": "Znajdź istniejącą instalację…",
+        "importExplainer": "Masz już tę grę na dysku — z innego launchera lub innego dysku? Wskaż te pliki zamiast pobierać ją ponownie.",
         "pathRejectedBodyImport": "GameLib nie mógł zaimportować z tej lokalizacji. Źródło musi być pełną ścieżką folderu bez kroków „..”. Wybierz folder gry ponownie.",
         "pathRejectedBodyMove": "GameLib nie mógł przenieść tej gry w to miejsce. Miejsce docelowe musi być pełną ścieżką folderu bez kroków „..”. Wybierz folder docelowy ponownie.",
         "pathRejectedTitle": "Nie można użyć tej lokalizacji"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Zarządzanie komponentami Winetricks jest niedostępne w tym buildzie",
         "unavailableDetail": "Obsługa Winetricks została odłożona do przyszłej wersji (D-03, Faza 34.6) i nie może być wyświetlana ani instalowana w tym buildzie."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "W pamięci podręcznej (instaluje się offline)",
+        "clearSearch": "Wyczyść wyszukiwanie",
+        "curatedGroup": "Często potrzebne",
+        "emptyBody": "Nie udało się wczytać metadanych Winetricks dla tej bottle.",
+        "emptyHeading": "Brak dostępnych komponentów",
+        "installFailedTag": "Instalacja nie powiodła się",
+        "installedTag": "Zainstalowano",
+        "installingRow": "Instalowanie…",
+        "needsGuiTag": "Wymaga interfejsu graficznego Winetricks",
+        "resultsHeading": "{{total}} wyników",
+        "retry": "Spróbuj ponownie",
+        "searchPlaceholder": "Szukaj komponentów…",
+        "zeroResultHeading": "Żaden komponent nie odpowiada “{{query}}”."
     },
     "donate": {
         "navLabel": "Wesprzyj"

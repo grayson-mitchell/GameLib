@@ -155,12 +155,36 @@ backendEvents.on('releasesInfoReady', async (releasesInfo) => {
 
   if (releasesInfo['dxmt'].tag === currentDXMTVersion) return
 
-  await DXMT.getLatest()
-
+  // Quick 260916-9vh: the installed-wine census runs BEFORE the download, and returns
+  // early when there is nothing to update. It used to run after, which meant a cold
+  // profile fetched the DXMT tarball and then copied it into ZERO wine installs.
+  //
+  // MEASURED (meta/coldBootTiming.ts with an https.request probe, 2 cold
+  // createFakeHomeProfile() runs, macOS): that fetch is the ENTIRE cold-boot cost.
+  // `installOrUpdateTool` -> `downloadFile` (backend/utils.ts) -> EasyDl with
+  // `connections: 5` issues five parallel 206-range requests on `https.globalAgent`;
+  // the last chunk ended at 27.10s and the process exited at 27.26s. Exit tracks the
+  // download drain, so an unbounded fetch nobody needs delays sidecar exit by ~27s.
+  //
+  // This implements CLAUDE.md's "not issued at boot" remedy for the in-flight class.
+  // The alternative -- an 'end'/'close' handler on startRpcServer() that aborts in
+  // flight -- is explicitly FENCED by the completed exit-contract todo and CLAUDE.md
+  // ("adding one misunderstands the mechanism rather than hardening it"). Do not
+  // reintroduce it here.
+  //
+  // This CANNOT starve a new wine install: the `wineVersionInstalled` listener above
+  // calls `DXMT.getLatest()` itself before `copyWineAndConfigure`, so a freshly
+  // installed Wine-Staging-macOS still provisions DXMT on demand. This listener only
+  // ever UPDATES DXMT inside `-DXMT` wines that already exist, which is exactly what
+  // its own header comment says it is for.
   const availableWines = wineDownloaderInfoStore.get('wine-releases', [])
   const installedWineStagingVersions = availableWines.filter(
     (wine) => wine.type === 'Wine-Staging-macOS' && wine.isInstalled
   )
+
+  if (installedWineStagingVersions.length === 0) return
+
+  await DXMT.getLatest()
 
   installedWineStagingVersions.forEach((wine) => {
     const wineWithDXMTFilePath = `${wine.installDir}-DXMT`

@@ -82,14 +82,34 @@
         "activateWizardTitle": "Aktifkan kunci ini",
         "activatingBody": "Mengungkap kunci Anda dan menukarkannya di Steam — ini hanya butuh waktu sebentar.",
         "activatingTitle": "Mengaktifkan di Steam…",
+        "claimOnHumble": "Klaim di Humble",
+        "claimOnStore": "Klaim di {{store}}",
+        "clearFilters": "Hapus pencarian dan filter",
+        "columnGame": "Game",
+        "columnKey": "Kunci",
+        "columnType": "Tipe",
+        "emptyBody": "Sinkronkan akun Humble Bundle Anda untuk melihat kunci Anda di sini.",
+        "emptyHeading": "Belum ada kunci Humble",
+        "filteredEmptyBody": "Coba pencarian lain, atau matikan «Hanya kunci yang dapat ditukarkan».",
+        "filteredEmptyHeading": "Tidak ada kunci yang cocok",
+        "loginAndClaim": "Masuk ke {{store}} lalu klaim",
         "openStore": "Buka {{store}}",
+        "pickOnHumble": "Pilih di Humble",
         "platformOther": "Lainnya",
-        "settledFromOwnership": "Sudah ada di perpustakaan Steam Anda"
+        "redeemableOnly": "Hanya kunci yang dapat ditukarkan",
+        "searchPlaceholder": "Cari kunci Anda",
+        "settledFromOwnership": "Sudah ada di perpustakaan Steam Anda",
+        "sortAlphabetical": "Alfabetis",
+        "sortExpiringSoonest": "Paling cepat kedaluwarsa",
+        "sortLabel": "Urutkan"
     },
     "info": {
         "refresh-rating": "Segarkan rating"
     },
     "installFlows": {
+        "importConfirmLabel": "Gunakan instalasi ini",
+        "importDoorLabel": "Temukan instalasi yang sudah ada…",
+        "importExplainer": "Sudah punya gim ini di disk — dari peluncur lain, atau drive lain? Arahkan ke berkas tersebut daripada mengunduhnya lagi.",
         "pathRejectedBodyImport": "GameLib tidak dapat mengimpor dari lokasi tersebut. Sumbernya harus berupa jalur folder lengkap tanpa langkah \"..\" di dalamnya. Pilih kembali folder gim tersebut.",
         "pathRejectedBodyMove": "GameLib tidak dapat memindahkan gim ini ke sana. Tujuan harus berupa jalur folder lengkap tanpa langkah \"..\" di dalamnya. Pilih kembali folder tujuan.",
         "pathRejectedTitle": "Tidak dapat menggunakan lokasi tersebut"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Manajemen komponen Winetricks tidak tersedia pada build ini",
         "unavailableDetail": "Dukungan Winetricks ditunda ke rilis mendatang (D-03, Fase 34.6) dan tidak dapat ditampilkan atau dipasang dari build ini."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Dalam tembolok (terpasang tanpa koneksi)",
+        "clearSearch": "Hapus pencarian",
+        "curatedGroup": "Umumnya diperlukan",
+        "emptyBody": "Metadata Winetricks tidak dapat dimuat untuk bottle ini.",
+        "emptyHeading": "Tidak ada komponen yang tersedia",
+        "installFailedTag": "Pemasangan gagal",
+        "installedTag": "Terpasang",
+        "installingRow": "Memasang…",
+        "needsGuiTag": "Memerlukan GUI Winetricks",
+        "resultsHeading": "{{total}} hasil",
+        "retry": "Coba lagi",
+        "searchPlaceholder": "Cari komponen…",
+        "zeroResultHeading": "Tidak ada komponen yang cocok dengan “{{query}}”."
     },
     "donate": {
         "navLabel": "Donasi"

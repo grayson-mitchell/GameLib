@@ -1024,13 +1024,8 @@
     "Amazon Games": "Amazon Spiele",
     "winetricks": {
         "install": "Installieren",
-        "loading": "Ladevorgang läuft",
         "installing": "Installation läuft: {{component}}",
         "openGUI": "Winetricks-GUI öffnen",
-        "search": "Schriftarten oder Komponenten suchen",
-        "nothingYet": "Es wurde noch nichts von Winetricks installiert",
-        "installed": "Installierte Komponenten:",
-        "no-components": "Keine verfügbaren Komponenten",
         "loading-available": "Verfügbare Komponenten werden geladen …"
     },
     "category-settings": {

@@ -1031,14 +1031,9 @@
     "Amazon Games": "Amazon Games",
     "winetricks": {
         "install": "Instalar",
-        "loading": "Cargando",
         "installing": "Instalación en curso: {{component}}",
         "openGUI": "Abrir la GUI de Winetricks",
-        "search": "Buscar fuentes o componentes",
-        "nothingYet": "Winetricks aún no ha instalado nada",
-        "installed": "Componentes instalados:",
-        "loading-available": "Cargando componentes disponibles ...",
-        "no-components": "Ningún componente disponible"
+        "loading-available": "Cargando componentes disponibles ..."
     },
     "window": {
         "maximize": "Maximizar la ventana",

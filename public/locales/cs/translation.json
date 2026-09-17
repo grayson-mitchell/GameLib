@@ -1037,14 +1037,9 @@
     "Amazon Games": "Hry Amazon",
     "winetricks": {
         "install": "Instalovat",
-        "loading": "Načítání",
         "installing": "Probíhá instalace: {{component}}",
         "openGUI": "Otevřít rozhraní Winetricks",
-        "search": "Hledat písma nebo komponenty",
-        "nothingYet": "Pomocí Winetricks zatím nebylo nic nainstalováno",
-        "installed": "Nainstalované komponenty:",
-        "loading-available": "Načítání dostupných komponentů…",
-        "no-components": "Žádné dostupné komponenty"
+        "loading-available": "Načítání dostupných komponentů…"
     },
     "window": {
         "close": "Zavřít",

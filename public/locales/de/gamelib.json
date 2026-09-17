@@ -43,9 +43,26 @@
         "activatedTitle": "Aktiviert",
         "activatingBody": "Ihr Key wird aufgedeckt und auf Steam eingelöst — das dauert nur einen Moment.",
         "activatingTitle": "Wird auf Steam aktiviert…",
+        "claimOnHumble": "Auf Humble abholen",
+        "claimOnStore": "Auf {{store}} abholen",
+        "clearFilters": "Suche und Filter zurücksetzen",
+        "columnGame": "Spiel",
+        "columnKey": "Key",
+        "columnType": "Typ",
+        "emptyBody": "Synchronisieren Sie Ihr Humble Bundle-Konto, um Ihre Keys hier zu sehen.",
+        "emptyHeading": "Noch keine Humble-Keys",
+        "filteredEmptyBody": "Versuchen Sie eine andere Suche oder deaktivieren Sie „Nur einlösbare Keys“.",
+        "filteredEmptyHeading": "Keine Keys gefunden",
+        "loginAndClaim": "Bei {{store}} anmelden und abholen",
         "openStore": "{{store}} öffnen",
+        "pickOnHumble": "Auf Humble auswählen",
         "platformOther": "Andere",
-        "settledFromOwnership": "Bereits in Ihrer Steam-Bibliothek"
+        "redeemableOnly": "Nur einlösbare Keys",
+        "searchPlaceholder": "Ihre Keys durchsuchen",
+        "settledFromOwnership": "Bereits in Ihrer Steam-Bibliothek",
+        "sortAlphabetical": "Alphabetisch",
+        "sortExpiringSoonest": "Läuft am ehesten ab",
+        "sortLabel": "Sortieren"
     },
     "library": {
         "filterPanel": {
@@ -251,6 +268,9 @@
         "refresh-rating": "Bewertung aktualisieren"
     },
     "installFlows": {
+        "importConfirmLabel": "Diese Installation verwenden",
+        "importDoorLabel": "Vorhandene Installation suchen…",
+        "importExplainer": "Haben Sie dieses Spiel schon auf der Festplatte — von einem anderen Launcher oder einem anderen Laufwerk? Verweisen Sie auf diese Dateien, anstatt es erneut herunterzuladen.",
         "pathRejectedBodyImport": "GameLib konnte nicht von diesem Ort importieren. Die Quelle muss ein vollständiger Ordnerpfad ohne \"..\"-Schritte sein. Wählen Sie den Spielordner erneut aus.",
         "pathRejectedBodyMove": "GameLib konnte dieses Spiel nicht dorthin verschieben. Das Ziel muss ein vollständiger Ordnerpfad ohne \"..\"-Schritte sein. Wählen Sie den Zielordner erneut aus.",
         "pathRejectedTitle": "Dieser Ort kann nicht verwendet werden"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Die Verwaltung von Winetricks-Komponenten ist in diesem Build nicht verfügbar",
         "unavailableDetail": "Die Unterstützung für Winetricks ist auf eine zukünftige Version verschoben (D-03, Phase 34.6) und kann in diesem Build nicht aufgelistet oder installiert werden."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Zwischengespeichert (Offline-Installation)",
+        "clearSearch": "Suche zurücksetzen",
+        "curatedGroup": "Häufig benötigt",
+        "emptyBody": "Die Winetricks-Metadaten konnten für diese Bottle nicht geladen werden.",
+        "emptyHeading": "Keine Komponenten verfügbar",
+        "installFailedTag": "Installation fehlgeschlagen",
+        "installedTag": "Installiert",
+        "installingRow": "Wird installiert…",
+        "needsGuiTag": "Erfordert die Winetricks-GUI",
+        "resultsHeading": "{{total}} Ergebnisse",
+        "retry": "Erneut versuchen",
+        "searchPlaceholder": "Komponenten suchen…",
+        "zeroResultHeading": "Keine Komponente entspricht “{{query}}”."
     },
     "donate": {
         "navLabel": "Spenden"

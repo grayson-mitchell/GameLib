@@ -2,10 +2,13 @@
 created: 2026-08-27
 title: "The install stall watchdog reports failure but never cancels the download — the depot loop runs on indefinitely"
 area: steam-depot
-status: OPEN
+status: completed
 severity: major
 platform: any
 ready: human
+resolved: 2026-09-16
+resolved_by: "quick-260916-bes"
+resolution: "CLOSED ON A FALSE TITLE, DELIBERATELY. The download IS cancelled at HEAD (measured 2026-09-08). The two questions this file left unanswered were split into their own pending todos BEFORE the close — see the closure section at the foot of this file."
 files:
   - src/backend/downloadmanager/installStallWatchdog.ts
   - src/backend/storeManagers/steam/depot.ts
@@ -348,3 +351,57 @@ to transfer.
 - ~~Whether other `withStallTimeout` callers (non-Steam runners) leak the same way.~~ Settled by F5
   above (2026-09-07): coverage is intermittent for the four CLI runners and absent for sideload
   installs, not a leak specific to Steam.
+
+## CLOSED — 2026-09-16, quick 260916-bes
+
+**This file is closed because its TITLE is false at HEAD, not because the work it describes is
+finished.** Read that sentence before citing this closure for anything.
+
+### What the title claims, and what is true
+
+The title says the watchdog "never cancels the download" and "the depot loop runs on
+indefinitely". On the **2026-09-08 live gate** (Tauri shell, BATTLETECH `637090`, stall forced by
+`pf` packet-drop on the in-use CDN IPs) the watchdog tripped at 480s, **both** abort paths took
+their INFO branch against a live controller, the depot loop emitted one final stats line in the
+same second and then nothing, and it did **not revive** when the network was restored three
+minutes later. Contrast the observation this file was opened for: 5081 rotations and 51 minutes of
+continued streaming after the terminal line.
+
+A `major` todo whose title asserts a defect that provably does not exist at HEAD costs more than
+it carries. That is the whole justification for the close.
+
+### What shipped, and where to verify it
+
+| quick | change | verify at HEAD |
+|---|---|---|
+| `260907-sxp` | `trip()` calls `callAbortController(appName)` itself, gated on `hasAbortController`, synchronously and BEFORE it rejects | `src/backend/downloadmanager/installStallWatchdog.ts:101-107` |
+| `260908-asd` | the live gate above; refuted Hypothesis A | this file's `LIVE GATE` section |
+| `260909-q2o` | `AbortSignal` threaded through `CdnAuthTokenCache.getToken`; neutralised Hypothesis B | `cdnAuth.ts:441` and `awaitOrAbort` at `:503`; call-site check is `grep -q 'cdnAuth\.getToken(depotId, host, signal)' src/backend/storeManagers/steam/depot/decompress.ts` |
+
+### What was NOT resolved, and where it went
+
+**The 2026-08-27 wedge's cause is still unidentified.** Both named hypotheses are off the table —
+A refuted, B neutralised-but-never-tested — and no runnable experiment has been proposed for a
+third. Closing this file does not answer that, and must not be read as answering it.
+
+Both surviving questions were written to `pending/` **before** this move, so the close discards
+nothing:
+
+- `.planning/todos/pending/2026-09-16-the-2026-08-27-depot-stall-cause-is-unidentified-with-no-proposed-experiment.md`
+  — `severity: medium`, `ready: human`. Carries the refuted/neutralised table, the four forcing
+  methods already measured to fail, and the `pf` method that worked.
+- `.planning/todos/pending/2026-09-16-whether-the-cdn-auth-token-failures-were-self-inflicted-is-untested.md`
+  — `severity: minor`, `ready: live-gate`. The never-tested throttling question from the
+  `Not yet established` section below.
+
+The third item in `Not yet established` — whether other `withStallTimeout` callers leak the same
+way — is **not** a survivor and got no file: F5 settled it on 2026-09-07 as a measured finding, and
+it is already struck through below.
+
+### Gate hygiene for anyone auditing this later
+
+This file is now under `completed/`, which `todo-frontmatter-gate.py` **deliberately does not
+scan**. Its `severity`/`platform`/`ready` keys are left intact for the record, but nothing checks
+them from here on. The `severity: major` it retains describes the grade the defect was filed
+under in August, not a live assessment — the residual carries `medium`, with its reasoning written
+out in that file.

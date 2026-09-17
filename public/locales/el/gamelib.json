@@ -82,14 +82,34 @@
         "activateWizardTitle": "Ενεργοποίηση αυτού του κλειδιού",
         "activatingBody": "Αποκάλυψη του κλειδιού σας και εξαργύρωσή του στο Steam — αυτό διαρκεί μόνο λίγο.",
         "activatingTitle": "Ενεργοποίηση στο Steam…",
+        "claimOnHumble": "Απόκτηση στο Humble",
+        "claimOnStore": "Απόκτηση στο {{store}}",
+        "clearFilters": "Εκκαθάριση αναζήτησης και φίλτρων",
+        "columnGame": "Παιχνίδι",
+        "columnKey": "Κλειδί",
+        "columnType": "Τύπος",
+        "emptyBody": "Συγχρονίστε τον λογαριασμό σας Humble Bundle για να δείτε εδώ τα κλειδιά σας.",
+        "emptyHeading": "Δεν υπάρχουν ακόμη κλειδιά Humble",
+        "filteredEmptyBody": "Δοκιμάστε διαφορετική αναζήτηση ή απενεργοποιήστε την επιλογή «Μόνο εξαργυρώσιμα κλειδιά».",
+        "filteredEmptyHeading": "Δεν ταιριάζει κανένα κλειδί",
+        "loginAndClaim": "Συνδεθείτε στο {{store}} και αποκτήστε",
         "openStore": "Άνοιγμα {{store}}",
+        "pickOnHumble": "Επιλογή στο Humble",
         "platformOther": "Άλλα",
-        "settledFromOwnership": "Ήδη στη βιβλιοθήκη σας στο Steam"
+        "redeemableOnly": "Μόνο εξαργυρώσιμα κλειδιά",
+        "searchPlaceholder": "Αναζήτηση στα κλειδιά σας",
+        "settledFromOwnership": "Ήδη στη βιβλιοθήκη σας στο Steam",
+        "sortAlphabetical": "Αλφαβητικά",
+        "sortExpiringSoonest": "Λήγουν συντομότερα",
+        "sortLabel": "Ταξινόμηση"
     },
     "info": {
         "refresh-rating": "Ανανέωση βαθμολογίας"
     },
     "installFlows": {
+        "importConfirmLabel": "Χρήση αυτής της εγκατάστασης",
+        "importDoorLabel": "Εντοπισμός υπάρχουσας εγκατάστασης…",
+        "importExplainer": "Έχετε ήδη αυτό το παιχνίδι στον δίσκο — από άλλο πρόγραμμα εκκίνησης, ή άλλο δίσκο; Υποδείξτε αυτά τα αρχεία αντί να το κατεβάσετε ξανά.",
         "pathRejectedBodyImport": "Το GameLib δεν μπόρεσε να εισάγει από αυτή την τοποθεσία. Η πηγή πρέπει να είναι μια πλήρης διαδρομή φακέλου χωρίς βήματα \"..\". Επιλέξτε ξανά τον φάκελο του παιχνιδιού.",
         "pathRejectedBodyMove": "Το GameLib δεν μπόρεσε να μετακινήσει αυτό το παιχνίδι εκεί. Ο προορισμός πρέπει να είναι μια πλήρης διαδρομή φακέλου χωρίς βήματα \"..\". Επιλέξτε ξανά τον φάκελο προορισμού.",
         "pathRejectedTitle": "Δεν είναι δυνατή η χρήση αυτής της τοποθεσίας"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Η διαχείριση στοιχείων Winetricks δεν είναι διαθέσιμη σε αυτή την έκδοση",
         "unavailableDetail": "Η υποστήριξη Winetricks έχει μετατεθεί σε μελλοντική έκδοση (D-03, Φάση 34.6) και δεν μπορεί να προβληθεί ή να εγκατασταθεί από αυτή την έκδοση."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Στην προσωρινή μνήμη (εγκαθίσταται εκτός σύνδεσης)",
+        "clearSearch": "Καθαρισμός αναζήτησης",
+        "curatedGroup": "Συχνά απαιτούμενα",
+        "emptyBody": "Δεν ήταν δυνατή η φόρτωση των μεταδεδομένων του Winetricks για αυτό το bottle.",
+        "emptyHeading": "Δεν υπάρχουν διαθέσιμα στοιχεία",
+        "installFailedTag": "Η εγκατάσταση απέτυχε",
+        "installedTag": "Εγκατεστημένο",
+        "installingRow": "Εγκατάσταση…",
+        "needsGuiTag": "Απαιτεί το γραφικό περιβάλλον του Winetricks",
+        "resultsHeading": "{{total}} αποτελέσματα",
+        "retry": "Δοκιμάστε ξανά",
+        "searchPlaceholder": "Αναζήτηση στοιχείων…",
+        "zeroResultHeading": "Κανένα στοιχείο δεν ταιριάζει με “{{query}}”."
     },
     "donate": {
         "navLabel": "Δωρεά"

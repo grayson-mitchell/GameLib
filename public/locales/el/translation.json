@@ -1007,14 +1007,9 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Εγκατάσταση",
-        "loading": "Φόρτωση",
-        "installed": "Εγκατεστημένα στοιχεία:",
         "installing": "Εγκατάσταση σε εξέλιξη: {{component}}",
         "loading-available": "Φόρτωση διαθέσιμων στοιχείων...",
-        "no-components": "Δεν υπάρχουν διαθέσιμα στοιχεία",
-        "nothingYet": "Δεν έχει εγκατασταθεί τίποτα ακόμα από το Winetricks",
-        "openGUI": "Άνοιγμα γραφικού περιβάλλοντος του Winetricks",
-        "search": "Αναζήτηση γραμματοσειρών ή στοιχείων"
+        "openGUI": "Άνοιγμα γραφικού περιβάλλοντος του Winetricks"
     },
     "category-settings": {
         "cancel": "Ακύρωση",

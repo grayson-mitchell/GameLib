@@ -82,14 +82,34 @@
         "activateWizardTitle": "激活此密钥",
         "activatingBody": "正在显示您的密钥并在 Steam 上兑换 — 这只需片刻。",
         "activatingTitle": "正在 Steam 上激活…",
+        "claimOnHumble": "在 Humble 领取",
+        "claimOnStore": "在 {{store}} 领取",
+        "clearFilters": "清除搜索和筛选",
+        "columnGame": "游戏",
+        "columnKey": "密钥",
+        "columnType": "类型",
+        "emptyBody": "同步你的 Humble Bundle 账户即可在此查看你的密钥。",
+        "emptyHeading": "尚无 Humble 密钥",
+        "filteredEmptyBody": "换一个搜索词，或关闭「仅可兑换的密钥」。",
+        "filteredEmptyHeading": "没有匹配的密钥",
+        "loginAndClaim": "登录 {{store}} 并领取",
         "openStore": "打开 {{store}}",
+        "pickOnHumble": "在 Humble 选择",
         "platformOther": "其他",
-        "settledFromOwnership": "已在你的 Steam 库中"
+        "redeemableOnly": "仅可兑换的密钥",
+        "searchPlaceholder": "搜索你的密钥",
+        "settledFromOwnership": "已在你的 Steam 库中",
+        "sortAlphabetical": "按字母顺序",
+        "sortExpiringSoonest": "最快到期",
+        "sortLabel": "排序"
     },
     "info": {
         "refresh-rating": "刷新评分"
     },
     "installFlows": {
+        "importConfirmLabel": "使用此安装",
+        "importDoorLabel": "定位现有安装…",
+        "importExplainer": "已经在磁盘上有这个游戏了吗——来自其他启动器，或其他驱动器？指向那些文件，而不是重新下载。",
         "pathRejectedBodyImport": "GameLib 无法从该位置导入。来源必须是完整的文件夹路径，且不能包含“..”步骤。请重新选择游戏文件夹。",
         "pathRejectedBodyMove": "GameLib 无法将此游戏移动到那里。目标必须是完整的文件夹路径，且不能包含“..”步骤。请重新选择目标文件夹。",
         "pathRejectedTitle": "无法使用该位置"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "此版本不支持 Winetricks 组件管理",
         "unavailableDetail": "Winetricks 支持已推迟至未来版本（D-03，第 34.6 阶段），此版本无法列出或安装。"
+    },
+    "winetricksBrowse": {
+        "cachedTag": "已缓存（离线安装）",
+        "clearSearch": "清除搜索",
+        "curatedGroup": "常用组件",
+        "emptyBody": "无法加载此 bottle 的 Winetricks 元数据。",
+        "emptyHeading": "没有可用组件",
+        "installFailedTag": "安装失败",
+        "installedTag": "已安装",
+        "installingRow": "正在安装…",
+        "needsGuiTag": "需要 Winetricks 图形界面",
+        "resultsHeading": "{{total}} 个结果",
+        "retry": "重试",
+        "searchPlaceholder": "搜索组件…",
+        "zeroResultHeading": "没有与“{{query}}”匹配的组件。"
     },
     "donate": {
         "navLabel": "捐赠"

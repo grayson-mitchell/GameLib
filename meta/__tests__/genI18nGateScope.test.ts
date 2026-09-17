@@ -270,6 +270,21 @@ const FIXTURE_DIFF_LINES = [
  * the recorded `importing-a-meta-script-runs-its-main` hazard. The artifact's
  * md5 was checked before and after the derivation to prove it had not moved.
  * Applied by hand with `generatedAt` held constant, per the precedent above.
+ *
+ * 2026-09-16 (Phase 44, plan 44-07): unscanned debt UNCHANGED at 42, but the
+ * SET moves by two. `Winetricks/WinetricksSearch/index.tsx` leaves this
+ * array -- plan 44-05 deletes the file outright. `SearchBar/searchProbe.ts`
+ * enters it: a pre-existing, pre-Phase-44 addition (quick `260915-lhm`) that
+ * only surfaced now because A-17 had gone unchecked since it landed. It is a
+ * temporary, opt-in, `SEARCHPROBE-REMOVE-ME`-marked diagnostic instrument
+ * with no `t()` calls and no translatable surface, so it is declared here
+ * rather than promoted into `meta/i18nGateScope.json`. `Winetricks/index.tsx`
+ * (the surrounding container, still fork-touched but not moved by this
+ * phase) is untouched. The two NEW Phase 44 files --
+ * `Winetricks/WinetricksBrowse/index.tsx` and
+ * `Winetricks/WinetricksBrowse/Row/index.tsx` -- do NOT enter this array;
+ * they are promoted straight into scope instead (see the dated entry in the
+ * `--rewrite-scope guard` header below for the measurement backing that).
  */
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
@@ -282,8 +297,8 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/PathSelectionBox/index.tsx',
   'src/frontend/components/UI/ProgressDialog/index.tsx',
   'src/frontend/components/UI/SliderField/index.tsx',
+  'src/frontend/components/UI/SearchBar/searchProbe.ts',
   'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
-  'src/frontend/components/UI/Winetricks/WinetricksSearch/index.tsx',
   'src/frontend/components/UI/Winetricks/index.tsx',
   'src/frontend/helpers/declaredUnavailable.ts',
   'src/frontend/helpers/gamepad_layouts/nintendo.ts',
@@ -783,8 +798,47 @@ describe('--rewrite-scope guard', () => {
    * edited surgically, NOT regenerated, per the 260901-w9e / 260902-qs4 /
    * 260905-d33 precedent above.
    *
+   * 2026-09-16 (Phase 44, plan 44-07): scope 170 -> 172, fork-touched
+   * 212 -> 214, unscanned debt UNCHANGED at 42 (the SET changed, the count
+   * did not). Phase 44 replaced the Winetricks search-only panel with a
+   * browseable list. `WinetricksBrowse/index.tsx` (44-04) and
+   * `WinetricksBrowse/Row/index.tsx` (44-03) are NEW and enter BOTH
+   * artifacts, promoted straight into `meta/i18nGateScope.json` rather than
+   * left as debt -- both carry live `t()`/`tGamelib()` calls for a
+   * user-facing surface, and `pnpm lint-translations` /
+   * `pnpm lint-translations:gamelib` were run against the promoted scope
+   * before this entry was written and reported zero violations against
+   * either file. `WinetricksSearch/index.tsx` is DELETED (44-05) and leaves
+   * every list, including `DECLARED_UNSCANNED_DEBT`.
+   *
+   * Also entering, but deliberately NOT part of this phase's own delta and
+   * NOT promoted into scope: `SearchBar/searchProbe.ts`. It predates Phase
+   * 44 (quick `260915-lhm`, landed before this plan started) and only
+   * surfaced here because A-17 had gone unchecked since; its own header
+   * marks it `SEARCHPROBE-REMOVE-ME`, a temporary opt-in diagnostic
+   * instrument with no `t()` calls and no translatable surface at all
+   * (pure colour arithmetic plus a `localStorage`-gated attach). It is
+   * genuinely fork-touched, so it enters `i18nForkTouchedFiles.json`, but
+   * declared as debt rather than scanned -- promoting a self-deleting probe
+   * into the blocking gate would widen it for zero translatable surface.
+   * `WinetricksSearch/index.tsx` leaving the debt array and
+   * `searchProbe.ts` entering it is why the unscanned COUNT holds at 42
+   * while the SET moves by two.
+   *
+   * Derived from a real `git diff --name-status` against the merge-base
+   * with `deriveScopeFiles`' own filters applied by hand (parsing every
+   * `R100`-style rename line by its LAST tab-separated field, per the
+   * generator's own `parseDiffLine`, not the naive second field -- an
+   * earlier pass in this same task misread two unrelated `Sidebar` ->
+   * `NavShell` renames as phantom drift before correcting the parse), then
+   * cross-checked file-by-file against the committed arrays before editing
+   * either. `DEFERRED_FILES` (SteamLogin, useTauriOAuthLogin) already
+   * excluded both of its entries from every count above and required no
+   * change. Hand-edited surgically, NOT regenerated, per this file's own
+   * precedent.
+   *
    * Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 170 -> 212 delta this task exists to
+   * so the specs below assert the REAL 172 -> 214 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -810,10 +864,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 170-file hand-curated snapshot and the fresh snapshot is the REAL 212', () => {
-    expect(scopeSnapshot.files.length).toBe(170)
-    expect(forkTouchedSnapshot.files.length).toBe(212)
-    expect(freshSnapshot().files.length).toBe(212)
+  it('A0 fixture sanity: the seeded scope is the REAL 172-file hand-curated snapshot and the fresh snapshot is the REAL 214', () => {
+    expect(scopeSnapshot.files.length).toBe(172)
+    expect(forkTouchedSnapshot.files.length).toBe(214)
+    expect(freshSnapshot().files.length).toBe(214)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -839,7 +893,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 170 -> 212 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 172 -> 214 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -862,7 +916,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 213', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 214', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -875,12 +929,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(212)
+    expect(rewritten.files.length).toBe(214)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 215 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 214 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -893,7 +947,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(212)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(214)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

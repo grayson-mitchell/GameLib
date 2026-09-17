@@ -2,6 +2,8 @@ import { Fragment, useCallback, useEffect, useRef } from 'react'
 import './index.scss'
 import { faSearch, faSpinner, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+// SEARCHPROBE-REMOVE-ME: see searchProbe.ts's own header for the removal recipe.
+import { attachSearchProbe } from './searchProbe'
 
 interface Props {
   suggestionsListItems?: JSX.Element[]
@@ -23,6 +25,8 @@ export default function SearchBar({
   loading = false
 }: Props) {
   const input = useRef<HTMLInputElement>(null)
+  // SEARCHPROBE-REMOVE-ME: default-OFF live instrument, see searchProbe.ts.
+  const suggestionsList = useRef<HTMLUListElement>(null)
 
   // we have to use an event listener instead of the react
   // onChange callback so it works with the virtual keyboard
@@ -49,6 +53,12 @@ export default function SearchBar({
       input.current.value = value
     }
   }, [value])
+
+  // SEARCHPROBE-REMOVE-ME: no-op unless armed via `::probe-on`; see searchProbe.ts.
+  useEffect(
+    () => attachSearchProbe(suggestionsList.current, value),
+    [value]
+  )
 
   const onClear = useCallback(() => {
     onInputChanged('')
@@ -143,7 +153,11 @@ export default function SearchBar({
               was not the winetricks button's mechanism. Do not delete it on the
               strength of this finding; `LibrarySearchBar`'s shared consumption of this
               same `<ul>` still depends on it. */}
-          <ul className="autoComplete" onMouseDown={(e) => e.preventDefault()}>
+          <ul
+            className="autoComplete"
+            onMouseDown={(e) => e.preventDefault()}
+            ref={suggestionsList}
+          >
             {suggestionsListItems &&
               suggestionsListItems.length > 0 &&
               suggestionsListItems.map((li, idx) => (

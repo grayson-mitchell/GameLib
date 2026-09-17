@@ -1031,13 +1031,8 @@
     "prime-gaming": "Prime Gaming",
     "winetricks": {
         "install": "Instalar",
-        "loading": "Carregando",
         "installing": "Instalando: {{component}}",
         "openGUI": "Abrir a GUI do Winetricks",
-        "search": "Procurar fontes ou componentes",
-        "nothingYet": "Ainda não há nada instalado pelo Winetricks",
-        "installed": "Componentes instalados:",
-        "no-components": "Nenhum componentes disponíveis",
         "loading-available": "Carregando os componentes disponíveis..."
     },
     "category-settings": {

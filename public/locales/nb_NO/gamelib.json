@@ -82,14 +82,34 @@
         "activateWizardTitle": "Aktiver denne nøkkelen",
         "activatingBody": "Avslører nøkkelen din og løser den inn på Steam — dette tar bare et øyeblikk.",
         "activatingTitle": "Aktiverer på Steam …",
+        "claimOnHumble": "Hent på Humble",
+        "claimOnStore": "Hent på {{store}}",
+        "clearFilters": "Tøm søk og filtre",
+        "columnGame": "Spill",
+        "columnKey": "Nøkkel",
+        "columnType": "Type",
+        "emptyBody": "Synkroniser Humble Bundle-kontoen din for å se nøklene dine her.",
+        "emptyHeading": "Ingen Humble-nøkler ennå",
+        "filteredEmptyBody": "Prøv et annet søk, eller slå av «Kun innløsbare nøkler».",
+        "filteredEmptyHeading": "Ingen nøkler samsvarer",
+        "loginAndClaim": "Logg inn på {{store}} og hent",
         "openStore": "Åpne {{store}}",
+        "pickOnHumble": "Velg på Humble",
         "platformOther": "Annen",
-        "settledFromOwnership": "Allerede i Steam-biblioteket ditt"
+        "redeemableOnly": "Kun innløsbare nøkler",
+        "searchPlaceholder": "Søk i nøklene dine",
+        "settledFromOwnership": "Allerede i Steam-biblioteket ditt",
+        "sortAlphabetical": "Alfabetisk",
+        "sortExpiringSoonest": "Utløper først",
+        "sortLabel": "Sorter"
     },
     "info": {
         "refresh-rating": "Oppdater vurdering"
     },
     "installFlows": {
+        "importConfirmLabel": "Bruk denne installasjonen",
+        "importDoorLabel": "Finn eksisterende installasjon…",
+        "importExplainer": "Har du allerede dette spillet på disken — fra en annen launcher, eller en annen stasjon? Pek på de filene i stedet for å laste det ned igjen.",
         "pathRejectedBodyImport": "GameLib kunne ikke importere fra den plasseringen. Kilden må være en fullstendig mappebane uten \"..\"-steg i seg. Velg spillets mappe på nytt.",
         "pathRejectedBodyMove": "GameLib kunne ikke flytte dette spillet dit. Målet må være en fullstendig mappebane uten \"..\"-steg i seg. Velg målmappen på nytt.",
         "pathRejectedTitle": "Kan ikke bruke den plasseringen"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Håndtering av Winetricks-komponenter er ikke tilgjengelig i dette bygget",
         "unavailableDetail": "Støtte for Winetricks er utsatt til en fremtidig utgivelse (D-03, fase 34.6) og kan ikke listes eller installeres fra dette bygget."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "Bufret (installeres uten nett)",
+        "clearSearch": "Fjern søk",
+        "curatedGroup": "Ofte nødvendige",
+        "emptyBody": "Winetricks-metadata kunne ikke lastes for denne bottlen.",
+        "emptyHeading": "Ingen komponenter tilgjengelig",
+        "installFailedTag": "Installasjonen mislyktes",
+        "installedTag": "Installert",
+        "installingRow": "Installerer…",
+        "needsGuiTag": "Krever Winetricks-GUI",
+        "resultsHeading": "{{total}} resultater",
+        "retry": "Prøv igjen",
+        "searchPlaceholder": "Søk i komponenter…",
+        "zeroResultHeading": "Ingen komponent samsvarer med “{{query}}”."
     },
     "donate": {
         "navLabel": "Doner"

@@ -82,14 +82,34 @@
         "activateWizardTitle": "இந்த கீயை செயல்படுத்தவும்",
         "activatingBody": "உங்கள் கீயை வெளிப்படுத்தி Steam-இல் மீட்டெடுக்கிறது — இதற்கு ஒரு நொடி மட்டுமே ஆகும்.",
         "activatingTitle": "Steam-இல் செயல்படுத்துகிறது…",
+        "claimOnHumble": "Humble-இல் பெறுக",
+        "claimOnStore": "{{store}}-இல் பெறுக",
+        "clearFilters": "தேடலையும் வடிப்பான்களையும் அழி",
+        "columnGame": "விளையாட்டு",
+        "columnKey": "விசை",
+        "columnType": "வகை",
+        "emptyBody": "உங்கள் விசைகளை இங்கே காண Humble Bundle கணக்கை ஒத்திசைக்கவும்.",
+        "emptyHeading": "இதுவரை Humble விசைகள் இல்லை",
+        "filteredEmptyBody": "வேறு தேடலை முயற்சிக்கவும், அல்லது „பயன்படுத்தக்கூடிய விசைகள் மட்டும்“ என்பதை அணைக்கவும்.",
+        "filteredEmptyHeading": "பொருந்தும் விசைகள் இல்லை",
+        "loginAndClaim": "{{store}}-இல் உள்நுழைந்து பெறுக",
         "openStore": "{{store}} திற",
+        "pickOnHumble": "Humble-இல் தேர்ந்தெடுக்கவும்",
         "platformOther": "மற்றவை",
-        "settledFromOwnership": "ஏற்கனவே உங்கள் Steam நூலகத்தில்"
+        "redeemableOnly": "பயன்படுத்தக்கூடிய விசைகள் மட்டும்",
+        "searchPlaceholder": "உங்கள் விசைகளில் தேடுக",
+        "settledFromOwnership": "ஏற்கனவே உங்கள் Steam நூலகத்தில்",
+        "sortAlphabetical": "அகரவரிசை",
+        "sortExpiringSoonest": "விரைவில் காலாவதியாகும்",
+        "sortLabel": "வரிசைப்படுத்து"
     },
     "info": {
         "refresh-rating": "மதிப்பீட்டை புதுப்பிக்கவும்"
     },
     "installFlows": {
+        "importConfirmLabel": "இந்த நிறுவலைப் பயன்படுத்தவும்",
+        "importDoorLabel": "இருக்கும் நிறுவலைக் கண்டறியவும்…",
+        "importExplainer": "இந்த விளையாட்டு ஏற்கனவே வட்டில் உள்ளதா — வேறு லாஞ்சரிலிருந்தா, அல்லது வேறு டிரைவிலிருந்தா? மீண்டும் பதிவிறக்கம் செய்வதற்குப் பதிலாக அந்த கோப்புகளைச் சுட்டிக்காட்டவும்.",
         "pathRejectedBodyImport": "GameLib அந்த இடத்திலிருந்து இறக்குமதி செய்ய முடியவில்லை. மூலமானது \"..\" படிகள் இல்லாத முழு கோப்புறை பாதையாக இருக்க வேண்டும். விளையாட்டின் கோப்புறையை மீண்டும் தேர்ந்தெடுக்கவும்.",
         "pathRejectedBodyMove": "GameLib இந்த விளையாட்டை அங்கு நகர்த்த முடியவில்லை. இலக்கானது \"..\" படிகள் இல்லாத முழு கோப்புறை பாதையாக இருக்க வேண்டும். இலக்கு கோப்புறையை மீண்டும் தேர்ந்தெடுக்கவும்.",
         "pathRejectedTitle": "அந்த இடத்தைப் பயன்படுத்த முடியாது"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "இந்த பதிப்பில் Winetricks கூறு மேலாண்மை கிடைக்கவில்லை",
         "unavailableDetail": "Winetricks ஆதரவு எதிர்கால வெளியீட்டிற்கு (D-03, Phase 34.6) ஒத்திவைக்கப்பட்டுள்ளது, இந்த பதிப்பிலிருந்து பட்டியலிடவோ நிறுவவோ முடியாது."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "தற்காலிக நினைவகத்தில் (இணையம் இல்லாமல் நிறுவப்படும்)",
+        "clearSearch": "தேடலை அழி",
+        "curatedGroup": "பொதுவாகத் தேவைப்படுபவை",
+        "emptyBody": "இந்த bottle-க்கான Winetricks மேலான தரவை ஏற்ற முடியவில்லை.",
+        "emptyHeading": "கூறுகள் எதுவும் இல்லை",
+        "installFailedTag": "நிறுவல் தோல்வியடைந்தது",
+        "installedTag": "நிறுவப்பட்டது",
+        "installingRow": "நிறுவுகிறது…",
+        "needsGuiTag": "Winetricks GUI தேவை",
+        "resultsHeading": "{{total}} முடிவுகள்",
+        "retry": "மீண்டும் முயற்சிக்கவும்",
+        "searchPlaceholder": "கூறுகளைத் தேடு…",
+        "zeroResultHeading": "“{{query}}” உடன் பொருந்தும் கூறு இல்லை."
     },
     "donate": {
         "navLabel": "நன்கொடை"

@@ -1,6 +1,6 @@
 ---
 created: 2026-09-04T00:00:00.000Z
-title: 'macOS releases ship UNSIGNED and un-notarized — no Apple signing secret is enrolled, so Gatekeeper quarantines every download and the Keychain ACL breaks on every update'
+title: 'macOS releases still ship unsigned until a release is CUT — all six Apple secrets enrolled and Apple-verified 2026-09-14, entitlements gap fixed, but no signed/notarized artifact has ever been published or verified'
 area: build
 severity: major
 platform: macos

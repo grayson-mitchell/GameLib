@@ -981,14 +981,9 @@
     "gog-store": "חנות GOG",
     "winetricks": {
         "install": "התקן",
-        "loading": "טוען",
-        "no-components": "",
         "installing": "",
         "openGUI": "",
-        "search": "",
-        "loading-available": "",
-        "nothingYet": "",
-        "installed": ""
+        "loading-available": ""
     },
     "category-settings": {
         "cancel": "בטל",

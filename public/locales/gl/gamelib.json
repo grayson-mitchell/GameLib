@@ -82,14 +82,34 @@
         "activateWizardTitle": "Activar esta clave",
         "activatingBody": "Revelando a túa clave e canxeándoa en Steam — isto só levará un momento.",
         "activatingTitle": "Activando en Steam…",
+        "claimOnHumble": "Reclamar en Humble",
+        "claimOnStore": "Reclamar en {{store}}",
+        "clearFilters": "Limpar a busca e os filtros",
+        "columnGame": "Xogo",
+        "columnKey": "Clave",
+        "columnType": "Tipo",
+        "emptyBody": "Sincroniza a túa conta de Humble Bundle para ver aquí as túas claves.",
+        "emptyHeading": "Aínda non hai claves de Humble",
+        "filteredEmptyBody": "Proba outra busca ou desactiva «Só claves canxeables».",
+        "filteredEmptyHeading": "Ningunha clave coincide",
+        "loginAndClaim": "Inicia sesión en {{store}} e reclama",
         "openStore": "Abrir {{store}}",
+        "pickOnHumble": "Escoller en Humble",
         "platformOther": "Outro",
-        "settledFromOwnership": "Xa na túa biblioteca de Steam"
+        "redeemableOnly": "Só claves canxeables",
+        "searchPlaceholder": "Busca nas túas claves",
+        "settledFromOwnership": "Xa na túa biblioteca de Steam",
+        "sortAlphabetical": "Alfabético",
+        "sortExpiringSoonest": "Caducan antes",
+        "sortLabel": "Ordenar"
     },
     "info": {
         "refresh-rating": "Actualizar valoración"
     },
     "installFlows": {
+        "importConfirmLabel": "Usar esta instalación",
+        "importDoorLabel": "Localizar instalación existente…",
+        "importExplainer": "Xa tes este xogo no disco — desde outro launcher, ou outra unidade? Indica eses ficheiros no canto de descargalo de novo.",
         "pathRejectedBodyImport": "GameLib non puido importar desde esa localización. A orixe ten que ser unha ruta de cartafol completa sen pasos \"..\" nela. Escolle de novo o cartafol do xogo.",
         "pathRejectedBodyMove": "GameLib non puido mover este xogo alí. O destino ten que ser unha ruta de cartafol completa sen pasos \"..\" nela. Escolle de novo o cartafol de destino.",
         "pathRejectedTitle": "Non se pode usar esa localización"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "A xestión de compoñentes de Winetricks non está dispoñible nesta compilación",
         "unavailableDetail": "O soporte de Winetricks quédase para unha versión futura (D-03, Fase 34.6) e non se pode listar nin instalar desde esta compilación."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "En caché (instálase sen conexión)",
+        "clearSearch": "Limpar busca",
+        "curatedGroup": "Necesarios habitualmente",
+        "emptyBody": "Non se puideron cargar os metadatos de Winetricks para esta bottle.",
+        "emptyHeading": "Non hai compoñentes dispoñibles",
+        "installFailedTag": "A instalación fallou",
+        "installedTag": "Instalado",
+        "installingRow": "Instalando…",
+        "needsGuiTag": "Precisa a GUI de Winetricks",
+        "resultsHeading": "{{total}} resultados",
+        "retry": "Reintentar",
+        "searchPlaceholder": "Buscar compoñentes…",
+        "zeroResultHeading": "Ningún compoñente coincide con “{{query}}”."
     },
     "donate": {
         "navLabel": "Doar"

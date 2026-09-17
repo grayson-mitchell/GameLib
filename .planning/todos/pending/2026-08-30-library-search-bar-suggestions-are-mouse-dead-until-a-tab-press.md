@@ -73,6 +73,50 @@ That framing is at least incomplete: the guard may well be load-bearing, but it 
 **not sufficient** for the Library consumer, which is broken in the field. The next person reading
 that comment would reasonably conclude the Library path is healthy. Amend it when this is fixed.
 
+## Inherited from the 2026-08-26 Winetricks todo (folded 2026-09-16, Phase 44 D-16)
+
+Folded per D-16
+(`.planning/phases/44-in-app-winetricks-browse-ui-replacing-the-search-only-panel/44-CONTEXT.md`),
+before closing
+`2026-08-26-winetricks-package-selection-is-temperamental-hover-and-search.md` (D-15). That
+file's Half B (rows do not highlight under the pointer) is already this file's own symptom and
+needed no folding. **Half A — "typing needs repeated attempts before it filters usably" — was
+never investigated on any surface and has no other home**, so it is carried here verbatim rather
+than being allowed to evaporate on that file's close.
+
+Carried forward verbatim from the operator, 2026-08-26 (reported against the old Winetricks
+search surface):
+
+> "very painful, took hovering, typing in search multiple times until line highlighted and then
+> needed the panel to 'react' and allow mouse move to move the highlight"
+
+Two structural facts the 2026-08-26 investigation recorded, so a future investigator does not
+re-derive them by reading the same files again:
+
+- The old `WinetricksSearchBar` (`Winetricks/WinetricksSearch/index.tsx`, deleted by Phase 44
+  plan 44-05) had **no debounce at all** — its `useEffect` filtered synchronously on every
+  keystroke, with `search.length < 2` as the only gate.
+- `SearchBar` (`SearchBar/index.tsx`) — the primitive this file's own symptom is against — drives
+  its input **uncontrolled**: a native `'input'` listener is attached in a `useEffect` whose
+  dependency array is `[input, value, onInputChanged]`, and a second effect writes `value` back
+  into `input.current.value` whenever it changes externally.
+
+That pairing — uncontrolled input, plus a value-syncing effect, plus a parent that re-renders per
+keystroke — is where a "needs several attempts" symptom would live if it turns out to be a code
+defect rather than a rendering-latency one. **This is stated as the place to LOOK, not as a
+diagnosis** — nothing about Half A has been measured on any surface. Do not treat it as more than
+that.
+
+The Winetricks surface Half A was originally reported against no longer exists: Phase 44 retired
+`WinetricksSearch/`, and its replacement, `WinetricksBrowse/`, never renders into `SearchBar`'s
+`.autoComplete` overlay at all (it passes no `suggestionsListItems`). Half A therefore now
+survives only as a question about `LibrarySearchBar` — the consumer this file already covers —
+which is why this todo inherits it rather than Half A getting a file of its own.
+
+Origin: `2026-08-26-winetricks-package-selection-is-temperamental-hover-and-search.md`, closed per
+D-15/D-16 (now under `.planning/todos/completed/` — see its own `## RESOLVED 2026-09-16`
+section).
+
 ## Ownership
 
 Unowned. No `resolves_phase:` is set deliberately — Phase 35's gap-closure scope fence covers the

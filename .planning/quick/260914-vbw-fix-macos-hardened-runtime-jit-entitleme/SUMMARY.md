@@ -66,6 +66,21 @@ assertion is calendar-dependent and **will self-heal to green in August without 
 which is worse than staying red: the next reader sees green and concludes the sentinel works.
 Pre-existing, not caused here. Filing deferred to the operator.
 
+> **CORRECTION 2026-09-16 — the causal claim above is WRONG.** Quick `260915-g9p` measured it
+> at execution time: the fixture is **`2026-08-01` (August)**, and the `7` came from a
+> **UTC-to-local timezone shift in `.toLocaleDateString()`**, which renders that date as
+> `7/31/2026` in western-hemisphere zones. It is a zone-dependent rendering defect, not a
+> calendar coincidence.
+>
+> Everything downstream of "the date supplies the `7`" is therefore false, including the
+> prediction that it "will self-heal to green in August" — the opposite is nearer the truth,
+> and the claim itself only held west of UTC. The error was reading the *rendered* string and
+> inferring the *input*, when the rendering was the defect under investigation; the fixture was
+> never opened. `260915-g9p` hardened the test and closed the todo with its premise corrected.
+>
+> Left in place rather than rewritten, because this SUMMARY is a merged artifact and the wrong
+> reasoning is more useful visible than silently deleted.
+
 ## Three self-inflicted traps, each of which looked like a result
 
 1. **`plutil -lint` returns `OK` on an entitlements plist containing XML comments; codesign's

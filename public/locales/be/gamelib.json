@@ -82,14 +82,34 @@
         "activateWizardTitle": "Актываваць гэты ключ",
         "activatingBody": "Раскрыццё вашага ключа і яго актывацыя ў Steam — гэта зойме толькі момант.",
         "activatingTitle": "Актывацыя ў Steam…",
+        "claimOnHumble": "Атрымаць на Humble",
+        "claimOnStore": "Атрымаць на {{store}}",
+        "clearFilters": "Ачысціць пошук і фільтры",
+        "columnGame": "Гульня",
+        "columnKey": "Ключ",
+        "columnType": "Тып",
+        "emptyBody": "Сінхранізуйце свой уліковы запіс Humble Bundle, каб убачыць свае ключы тут.",
+        "emptyHeading": "Пакуль няма ключоў Humble",
+        "filteredEmptyBody": "Паспрабуйце іншы пошук або выключыце «Толькі ключы для актывацыі».",
+        "filteredEmptyHeading": "Няма супадзенняў",
+        "loginAndClaim": "Увайдзіце ў {{store}} і атрымайце",
         "openStore": "Адкрыць {{store}}",
+        "pickOnHumble": "Выбраць на Humble",
         "platformOther": "Іншае",
-        "settledFromOwnership": "Ужо ў вашай бібліятэцы Steam"
+        "redeemableOnly": "Толькі ключы для актывацыі",
+        "searchPlaceholder": "Пошук па ключах",
+        "settledFromOwnership": "Ужо ў вашай бібліятэцы Steam",
+        "sortAlphabetical": "Па алфавіце",
+        "sortExpiringSoonest": "Тэрмін сканчаецца хутчэй",
+        "sortLabel": "Сартаванне"
     },
     "info": {
         "refresh-rating": "Абнавіць рэйтынг"
     },
     "installFlows": {
+        "importConfirmLabel": "Выкарыстаць гэтую ўстаноўку",
+        "importDoorLabel": "Знайсці існуючую ўстаноўку…",
+        "importExplainer": "Ужо маеце гэту гульню на дыску — з іншага лаунчара, або з іншага дыска? Пакажыце на гэтыя файлы замест паўторнага спампавання.",
         "pathRejectedBodyImport": "GameLib не змог імпартаваць з гэтага месца. Крыніца павінна быць поўным шляхам да папкі без крокаў \"..\". Выберыце папку гульні зноў.",
         "pathRejectedBodyMove": "GameLib не змог перамясціць гэтую гульню туды. Прызначэнне павінна быць поўным шляхам да папкі без крокаў \"..\". Выберыце папку прызначэння зноў.",
         "pathRejectedTitle": "Немагчыма выкарыстаць гэта месца"
@@ -358,6 +378,21 @@
     "winetricks": {
         "unavailable": "Кіраванне кампанентамі Winetricks недаступна ў гэтай зборцы",
         "unavailableDetail": "Падтрымка Winetricks адкладзена да будучага выпуску (D-03, Phase 34.6) і не можа быць паказана або ўстаноўлена з гэтай зборкі."
+    },
+    "winetricksBrowse": {
+        "cachedTag": "У кэшы (усталёўваецца без сеткі)",
+        "clearSearch": "Ачысціць пошук",
+        "curatedGroup": "Часта патрэбныя",
+        "emptyBody": "Не ўдалося загрузіць метаданыя Winetricks для гэтай бутэлькі.",
+        "emptyHeading": "Няма даступных кампанентаў",
+        "installFailedTag": "Установка не ўдалася",
+        "installedTag": "Установлена",
+        "installingRow": "Устаноўка…",
+        "needsGuiTag": "Патрабуецца графічны інтэрфейс Winetricks",
+        "resultsHeading": "{{total}} рэзультатаў",
+        "retry": "Паўторыць",
+        "searchPlaceholder": "Пошук кампанентаў…",
+        "zeroResultHeading": "Няма кампанентаў, якія адпавядаюць “{{query}}”."
     },
     "donate": {
         "navLabel": "Ахвяраваць"

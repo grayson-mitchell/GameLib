@@ -392,3 +392,94 @@ Then re-measure with **`search` and `searchResults.length` logged on every rende
 review, and two produced confident fixes with green tests. Every real advance came from a
 MEASUREMENT — the 427-send trace, the mouse/keyboard asymmetry, the pointer-sequence probe, the
 unmount probe. See [[focus-within-popover-unmounts-what-you-click]].
+
+
+---
+
+## RESOLVED 2026-09-15 — fixed by Phase 35 Plan 25
+
+### 1. What the title asserted, and why it is now false
+
+The title of this file claims `winetricksInstall` is a **LIVE SILENT NO-OP** under Tauri.
+It is not, and has not been since `366e719bb`. Clicking Install on a rendered, selected row
+with the mouse now sends the frame and runs winetricks, exactly as the keyboard path already
+did. A title that asserts a false thing about the current tree is the test for closing this
+file — not the absence of remaining work on the surface (there is some; see §7 below).
+
+### 2. What resolved it
+
+Commit `366e719bb`, 2026-08-30 21:01 +1200, "fix(35-25): capture winetricks Install on
+mousedown to beat parent remount race". The mechanism, stated as the measurement found it
+rather than as any of the three theories this file tried and discarded first: a parent
+(`Winetricks/index.tsx`) state flip on `installing` / `loadingInstalled` unmounted-and-
+remounted the whole `WinetricksSearchBar` — including its `<ul>` — as a single batch
+**~4ms after `mousedown` and ~60ms before `mouseup`**, so `mouseup` re-hit-tested onto the
+underlying progress dialog and no `click` was ever synthesized. `document.activeElement`
+stayed on the search `<input>` throughout, which is what ruled out the `:focus-within` family
+for this surface (the REOPENED section above had already disproven that theory once; this
+measurement is what explains why it was disproven). The fix captures install intent on
+`mousedown`, with a `suppressNextClick` ref preventing double-invocation on the rare occasion
+a real `click` also lands.
+
+### 3. Which of the PARKED section's two candidate owners it was
+
+The PARKED §"WHERE IT LIVES" named two candidate owners for the unmount and did not decide
+between them: `Winetricks/index.tsx`'s `loadingInstalled` gate, or `WinetricksSearchBar`'s own
+local state. It was the **parent**, `Winetricks/index.tsx`'s `installing` / `loadingInstalled`
+state flip. The PARKED section poses this as an open question; this closure answers it.
+
+### 4. The live evidence, named
+
+Steps 3 and 5 of plan `35-25`'s blocking human gate PASSED, with **real mouse-driven installs
+of `vcrun2005` and `vcrun2008` proven in `gamelib.log`** — two successes, by mouse, not one.
+This is recorded independently in
+`.planning/todos/pending/2026-08-30-library-search-bar-suggestions-are-mouse-dead-until-a-tab-press.md`,
+a file written to report a **different** defect on a different `SearchBar` consumer — so this
+is not the fixing plan marking its own homework.
+
+### Still unexplained: the probe that never fired
+
+The PARKED section recorded a `useEffect` probe added to `Winetricks/index.tsx`, logging all
+six gating values, that **never fired once** — zero lines — despite being inside the
+component, having no early return before it, carrying a dep array, and living in the SAME
+bundle chunk (`App-DENVkc7C.js`) as the row probe that demonstrably DID fire. PARKED said
+"anyone resuming should start by explaining it".
+
+**Nobody did. It was made MOOT by a different measurement, not answered.** `35-25` reached the
+cause via DOM-mutation timing instead — the per-row MOUNT/UNMOUNT probe and the pointer-
+sequence probe — and never needed that `useEffect` probe's output, so the contradiction it
+raised was routed around rather than resolved. Say this plainly: nobody explained why a
+mounted, dependency-carrying `useEffect` with no early return above it produced zero log
+lines. That is not the same as showing the gating state did not change.
+
+A reader of this closure must not come away believing the anomaly was explained — it was
+not answered, it was made moot. The one consequence that outlives the closure: until it IS
+explained, a silent `useEffect` probe in this codebase cannot safely be read as evidence that
+the state it watches did not change. Same shape as
+`[[getactivehandles-is-blind-to-js-timers]]` — an instrument's silence mistaken for the
+system's silence.
+
+### 6. What survives closure
+
+Two instruments kept in the tree by the PARKED section remain useful and are **not** removed
+by this closure:
+- the `SearchBar` mousedown `preventDefault` guard (`af94c7ebe`) — real defense-in-depth for
+  the focus-race mechanism it documents, independently of whether it was ever the winetricks
+  button's mechanism;
+- the Rust `sidecar_send` trace (`cc99cbe93`, opt-in via `GAMELIB_TRACE_SEND=1`) — the only
+  instrument that can see a silent send at the Rust boundary.
+
+### 7. What this closure does NOT close
+
+- `.planning/todos/pending/2026-08-26-winetricks-package-selection-is-temperamental-hover-and-search.md`
+  — Half A (search filtering needing several attempts) and the hover-highlight half of Half B
+  are untouched by `366e719bb`; that file is narrowed, not closed, in this same batch of work.
+- `.planning/todos/pending/2026-08-30-library-search-bar-suggestions-are-mouse-dead-until-a-tab-press.md`
+  — a different consumer (`LibrarySearchBar`) of the same `SearchBar` primitive, failing for a
+  different reason: it passes bare `<li onClick>` suggestions with **no `<button>` and no
+  `onMouseDown`**, so `35-25`'s mousedown-capture fix is structurally inapplicable there. That
+  file also names a record correction still owed on `SearchBar/index.tsx`'s comment (the
+  comment already carries a `ROOT CAUSE FOUND` retraction as of `366e719bb`, but the follow-on
+  correction requested by the 2026-08-30 file — amending the claim that the Library consumer's
+  guard is sufficient — has not been made, since that consumer is demonstrably still broken in
+  the field).
