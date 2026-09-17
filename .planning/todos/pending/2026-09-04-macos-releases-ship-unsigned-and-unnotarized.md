@@ -54,6 +54,26 @@ notarization and CI all reported success. Fixed in quick-260914-vbw by adding
 `live-gate` rather than `human`: no decision or credential is outstanding, only a release run
 and an artifact check.
 
+## STATUS 2026-09-17 — notarization has now RUN, and FAILED
+
+Notarization is no longer untested. It ran in GitHub Actions run 35223308954 (throwaway
+annotated tag `v0.7.0-notarize-test1`, commit cc2d66248, tag since deleted from origin and
+locally) and Apple returned `Invalid` — submission id b55513c6-5b60-42bd-b69b-6e0dda7bab23,
+`"statusSummary": "Archive contains critical validation errors"`.
+
+The blocker is now a NEW and LARGER one: 253 unsigned binaries under `Contents/Resources/`, none
+of which Tauri's signing pass touches. This todo's remaining work grew rather than shrank.
+
+The `allow-jit` entitlement fix from quick-260914-vbw is VINDICATED — the sidecar
+(`Contents/MacOS/gamelib-sidecar`) drew zero notarization complaints.
+
+Full detail, measured counts, and direction:
+`2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md`.
+
+The Windows leg never reached signing (it died in install-deps), so
+`2026-09-14-windows-releases-ship-unsigned-no-windows-cert-enrolled.md` gained NO information
+from this run. Do not mistake a failed run for evidence either way on that todo.
+
 ## Problem
 
 `.github/workflows/release-tauri.yml` builds `macos-latest` / `aarch64-apple-darwin` and is
