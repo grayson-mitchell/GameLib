@@ -246,7 +246,9 @@ beforeEach(() => {
 describe('MainButton — import door demotion (260916-cdb)', () => {
   it('R1: gog, uninstalled — no button routes action:"import", door label absent from the graph', async () => {
     resetContext({ runner: 'gog', is: { ...DEFAULT_IS } })
-    await assertNoImportDoor(makeGameInfo({ runner: 'gog', is_installed: false }))
+    await assertNoImportDoor(
+      makeGameInfo({ runner: 'gog', is_installed: false })
+    )
   })
 
   it('R2: sideload, uninstalled — no button routes action:"import" (sideload never reaches DownloadDialog, D-02)', async () => {

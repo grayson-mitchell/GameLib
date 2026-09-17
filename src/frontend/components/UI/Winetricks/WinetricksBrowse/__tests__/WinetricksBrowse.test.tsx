@@ -104,7 +104,10 @@ jest.mock('../../../Dropdown', () => {
       }
       return ''
     }
-    if (typeof node === 'object' && 'props' in (node as Record<string, unknown>)) {
+    if (
+      typeof node === 'object' &&
+      'props' in (node as Record<string, unknown>)
+    ) {
       const children = (node as { props?: { children?: unknown } }).props
         ?.children
       return firstTextLeaf(children)
@@ -260,7 +263,10 @@ function hasClass(el: ElementLike, token: string): boolean {
   return typeof cn === 'string' && cn.split(/\s+/).includes(token)
 }
 
-function findByClass(tree: ElementLike, token: string): ElementLike | undefined {
+function findByClass(
+  tree: ElementLike,
+  token: string
+): ElementLike | undefined {
   let found: ElementLike | undefined
   walk(tree, (el) => {
     if (!found && hasClass(el, token)) found = el
@@ -279,7 +285,9 @@ function findAllByType(tree: ElementLike, type: unknown): ElementLike[] {
 function findMockSearchBar(tree: ElementLike): ElementLike {
   const [el] = findAllByType(tree, SearchBar)
   if (!el) {
-    throw new Error('no mock-searchbar element found -- this test proves nothing')
+    throw new Error(
+      'no mock-searchbar element found -- this test proves nothing'
+    )
   }
   return el
 }
@@ -293,17 +301,67 @@ function findMockSearchBar(tree: ElementLike): ElementLike {
 // entry ('grommet') whose title matches a query its verb does not.
 // ---------------------------------------------------------------------------
 const FIXTURE: WinetricksComponent[] = [
-  { verb: 'vcrun2019', title: 'Visual C++ 2019 libraries', category: 'zeta', cached: false },
-  { verb: 'vcrun2013', title: 'Visual C++ 2013 libraries', category: 'zeta', cached: false },
-  { verb: 'dotnet48', title: '.NET Framework 4.8', category: 'zeta', cached: false },
-  { verb: 'corefonts', title: 'MS Core Fonts', category: 'alpha', cached: true },
-  { verb: 'physx', title: 'PhysX runtime libraries', category: 'alpha', cached: false },
+  {
+    verb: 'vcrun2019',
+    title: 'Visual C++ 2019 libraries',
+    category: 'zeta',
+    cached: false
+  },
+  {
+    verb: 'vcrun2013',
+    title: 'Visual C++ 2013 libraries',
+    category: 'zeta',
+    cached: false
+  },
+  {
+    verb: 'dotnet48',
+    title: '.NET Framework 4.8',
+    category: 'zeta',
+    cached: false
+  },
+  {
+    verb: 'corefonts',
+    title: 'MS Core Fonts',
+    category: 'alpha',
+    cached: true
+  },
+  {
+    verb: 'physx',
+    title: 'PhysX runtime libraries',
+    category: 'alpha',
+    cached: false
+  },
   { verb: 'xact', title: 'XACT audio engine', category: 'mid', cached: false },
-  { verb: '3dmark03', title: '3DMark03 benchmark suite', category: 'mid', cached: false },
-  { verb: 'grommet', title: 'Special Zonk Item', category: 'mid', cached: false },
-  { verb: 'd3dx9', title: 'DirectX 9 libraries', category: 'zeta', cached: false },
-  { verb: 'notacurated1', title: 'Random Tool One', category: 'alpha', cached: false },
-  { verb: 'notacurated2', title: 'Random Tool Two', category: 'zeta', cached: false },
+  {
+    verb: '3dmark03',
+    title: '3DMark03 benchmark suite',
+    category: 'mid',
+    cached: false
+  },
+  {
+    verb: 'grommet',
+    title: 'Special Zonk Item',
+    category: 'mid',
+    cached: false
+  },
+  {
+    verb: 'd3dx9',
+    title: 'DirectX 9 libraries',
+    category: 'zeta',
+    cached: false
+  },
+  {
+    verb: 'notacurated1',
+    title: 'Random Tool One',
+    category: 'alpha',
+    cached: false
+  },
+  {
+    verb: 'notacurated2',
+    title: 'Random Tool Two',
+    category: 'zeta',
+    cached: false
+  },
   { verb: 'zzzlast', title: 'ZZZ Last Tool', category: 'omega', cached: false }
 ]
 
@@ -413,7 +471,9 @@ describe('D-14: parser emission order, never alphabetical', () => {
   it('category groups appear in first-occurrence order', () => {
     const tree = mountContainer(baseProps())
     const dropdownEls = findAllByType(tree, Dropdown)
-    const categoryOrder = dropdownEls.map((el) => mockDropdown().textOf(el.props.title))
+    const categoryOrder = dropdownEls.map((el) =>
+      mockDropdown().textOf(el.props.title)
+    )
 
     expect(categoryOrder).toEqual(['zeta', 'alpha', 'mid', 'omega'])
     // Sanity: alphabetical order would visibly differ -- proves this
@@ -447,7 +507,9 @@ describe('D-02: curated duplication (curated is a shortcut, not a partition)', (
   it('a curated verb present in the fixture appears BOTH in the curated group and in its own category group', () => {
     const tree = mountContainer(baseProps())
     const vcrunRows = findAllByType(tree, Row).filter(
-      (el) => (el.props as { component: WinetricksComponent }).component.verb === 'vcrun2019'
+      (el) =>
+        (el.props as { component: WinetricksComponent }).component.verb ===
+        'vcrun2019'
     )
     expect(vcrunRows).toHaveLength(2)
   })
@@ -494,7 +556,9 @@ describe('search -> flat list', () => {
     expect(hasClass(flatPane, 'WinetricksBrowse__pane--hidden')).toBe(false)
 
     const flatVerbs = findAllByType(flatPane, Row)
-      .map((el) => (el.props as { component: WinetricksComponent }).component.verb)
+      .map(
+        (el) => (el.props as { component: WinetricksComponent }).component.verb
+      )
       .sort()
     expect(flatVerbs).toEqual(['vcrun2013', 'vcrun2019'])
   })
@@ -596,7 +660,12 @@ describe('D-04: expand/collapse resets to Default on every fresh mount', () => {
     // is guaranteed by what the container passes, not a coincidence of this
     // test's own bookkeeping.
     for (const el of findAllByType(tree, Dropdown)) {
-      for (const forbidden of ['isExpanded', 'expanded', 'defaultExpanded', 'open']) {
+      for (const forbidden of [
+        'isExpanded',
+        'expanded',
+        'defaultExpanded',
+        'open'
+      ]) {
         expect((el.props as Record<string, unknown>)[forbidden]).toBeUndefined()
       }
     }
@@ -619,9 +688,8 @@ describe('UI-SPEC Interaction Contract §2: expand-state survives a search round
     // merely hidden via CSS.
     expect(findAllByType(tree, Dropdown)).toHaveLength(4)
 
-    const clearOnInputChanged = findMockSearchBar(tree).props.onInputChanged as (
-      text: string
-    ) => void
+    const clearOnInputChanged = findMockSearchBar(tree).props
+      .onInputChanged as (text: string) => void
     clearOnInputChanged('')
     tree = reinvokeContainer(baseProps())
 
@@ -629,7 +697,7 @@ describe('UI-SPEC Interaction Contract §2: expand-state survives a search round
   })
 })
 
-describe('C-2 / REQ-44-26: no selection state; every action bound to the row\'s own verb', () => {
+describe("C-2 / REQ-44-26: no selection state; every action bound to the row's own verb", () => {
   it('holds exactly one useState call in source', () => {
     const source = readFileSync(join(__dirname, '..', 'index.tsx'), 'utf8')
     // Anchored on the assignment (`= useState(`), not bare `useState(` --
@@ -643,11 +711,13 @@ describe('C-2 / REQ-44-26: no selection state; every action bound to the row\'s 
     expect(matches).toHaveLength(1)
   })
 
-  it('an available row\'s Install button invokes onInstall with that row\'s own verb', () => {
+  it("an available row's Install button invokes onInstall with that row's own verb", () => {
     const onInstall = jest.fn()
     const tree = mountContainer(baseProps({ onInstall }))
     const rowEl = findAllByType(tree, Row).find(
-      (el) => (el.props as { component: WinetricksComponent }).component.verb === 'notacurated1'
+      (el) =>
+        (el.props as { component: WinetricksComponent }).component.verb ===
+        'notacurated1'
     )
     expect(rowEl).toBeDefined()
 
@@ -663,13 +733,15 @@ describe('C-2 / REQ-44-26: no selection state; every action bound to the row\'s 
     expect(onInstall).toHaveBeenCalledWith('notacurated1')
   })
 
-  it('an errored row\'s Retry button invokes onInstall with that row\'s own verb', () => {
+  it("an errored row's Retry button invokes onInstall with that row's own verb", () => {
     const onInstall = jest.fn()
     const tree = mountContainer(
       baseProps({ onInstall, erroredVerbs: { grommet: true } })
     )
     const rowEl = findAllByType(tree, Row).find(
-      (el) => (el.props as { component: WinetricksComponent }).component.verb === 'grommet'
+      (el) =>
+        (el.props as { component: WinetricksComponent }).component.verb ===
+        'grommet'
     )
     expect(rowEl).toBeDefined()
 

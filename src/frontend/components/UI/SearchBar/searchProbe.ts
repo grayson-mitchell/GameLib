@@ -67,7 +67,12 @@ export function parseRgb(input: string): RgbColor | null {
   const g = Number(match[2])
   const b = Number(match[3])
   const a = match[4] === undefined ? 1 : Number(match[4])
-  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b) || Number.isNaN(a)) {
+  if (
+    Number.isNaN(r) ||
+    Number.isNaN(g) ||
+    Number.isNaN(b) ||
+    Number.isNaN(a)
+  ) {
     return null
   }
   return { r, g, b, a }
@@ -203,7 +208,10 @@ interface ProbeMeta {
 }
 
 function nowMs(): number {
-  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+  if (
+    typeof performance !== 'undefined' &&
+    typeof performance.now === 'function'
+  ) {
     return performance.now()
   }
   return Date.now()
@@ -255,7 +263,11 @@ function isProbeMeta(x: unknown): x is ProbeMeta {
   )
 }
 
-function readJson<T>(key: string, isValid: (x: unknown) => x is T, fallback: T): T {
+function readJson<T>(
+  key: string,
+  isValid: (x: unknown) => x is T,
+  fallback: T
+): T {
   try {
     const raw = window.localStorage.getItem(key)
     if (!raw) {
@@ -403,7 +415,8 @@ function surfaceFor(ul: HTMLUListElement): string {
     if (testId) {
       return testId
     }
-    const rawClass = typeof node.className === 'string' ? node.className.trim() : ''
+    const rawClass =
+      typeof node.className === 'string' ? node.className.trim() : ''
     if (rawClass.length > 0) {
       return rawClass.split(/\s+/)[0]
     }
@@ -429,7 +442,11 @@ function ulDisplayValue(ul: HTMLUListElement): string {
 }
 
 // ---- C-1: does the hover rule apply at all? (the cheapest partition; F-4) ----
-function recordHoverSample(li: Element, ul: HTMLUListElement, surface: string): void {
+function recordHoverSample(
+  li: Element,
+  ul: HTMLUListElement,
+  surface: string
+): void {
   const liStyle = window.getComputedStyle(li)
   const ulStyle = window.getComputedStyle(ul)
   const rootStyle = window.getComputedStyle(document.documentElement)
@@ -471,14 +488,20 @@ function recordPointerSequence(
     t: nowMs(),
     surface,
     origin,
-    targetDescriptor: describeElement(target instanceof Element ? target : null),
+    targetDescriptor: describeElement(
+      target instanceof Element ? target : null
+    ),
     targetIsRow
   }
   appendRecord(record)
 }
 
 // ---- C-3: document.activeElement across the mousedown -> mouseup window ----
-function recordFocusSample(elapsed: number, ul: HTMLUListElement, surface: string): void {
+function recordFocusSample(
+  elapsed: number,
+  ul: HTMLUListElement,
+  surface: string
+): void {
   const record: FocusSampleRecord = {
     kind: 'focus-sample',
     t: elapsed,
@@ -492,14 +515,20 @@ function recordFocusSample(elapsed: number, ul: HTMLUListElement, surface: strin
 }
 
 // ---- C-4: hit-testing at the pointer during mousedown ----
-function recordHitTest(e: MouseEvent, li: Element | null, surface: string): void {
+function recordHitTest(
+  e: MouseEvent,
+  li: Element | null,
+  surface: string
+): void {
   const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY)
   const stack =
     typeof document.elementsFromPoint === 'function'
       ? document.elementsFromPoint(e.clientX, e.clientY)
       : []
   const elementFromPointIsRow =
-    li !== null && elementAtPoint !== null && (elementAtPoint === li || li.contains(elementAtPoint))
+    li !== null &&
+    elementAtPoint !== null &&
+    (elementAtPoint === li || li.contains(elementAtPoint))
   const record: HitTestRecord = {
     kind: 'hit-test',
     t: nowMs(),
@@ -554,7 +583,12 @@ function recordTabSample(
   appendRecord(record)
 }
 
-const UL_POINTER_KINDS: PointerSeqKind[] = ['pointerdown', 'mousedown', 'mouseup', 'click']
+const UL_POINTER_KINDS: PointerSeqKind[] = [
+  'pointerdown',
+  'mousedown',
+  'mouseup',
+  'click'
+]
 const DOCUMENT_POINTER_KINDS: Array<'mouseup' | 'click'> = ['mouseup', 'click']
 
 function attachArmedProbe(ul: HTMLUListElement): () => void {
@@ -621,7 +655,8 @@ function attachArmedProbe(ul: HTMLUListElement): () => void {
       recordFocusSample(elapsed, ul, surface)
       const pastHardCap = elapsed >= RAF_HARD_CAP_MS
       const pastPostMouseupWindow =
-        mouseupAtForSampler !== null && nowMs() - mouseupAtForSampler >= RAF_POST_MOUSEUP_MS
+        mouseupAtForSampler !== null &&
+        nowMs() - mouseupAtForSampler >= RAF_POST_MOUSEUP_MS
       if (pastHardCap || pastPostMouseupWindow) {
         samplerCancelled = true
         return
@@ -636,14 +671,22 @@ function attachArmedProbe(ul: HTMLUListElement): () => void {
     mouseupAtForSampler = nowMs()
   }
   document.addEventListener('mouseup', handleMouseupForSampler, true)
-  cleanups.push(() => document.removeEventListener('mouseup', handleMouseupForSampler, true))
+  cleanups.push(() =>
+    document.removeEventListener('mouseup', handleMouseupForSampler, true)
+  )
 
   // -- C-2 (ul side) + triggers C-3/C-4 on mousedown --
   for (const kind of UL_POINTER_KINDS) {
     const handler = (e: Event): void => {
       const target = e.target
       const li = target instanceof Element ? target.closest('li') : null
-      recordPointerSequence(kind, target, li !== null && ul.contains(li), surface, 'ul')
+      recordPointerSequence(
+        kind,
+        target,
+        li !== null && ul.contains(li),
+        surface,
+        'ul'
+      )
       if (kind === 'mousedown') {
         mousedownAt = nowMs()
         if (e instanceof MouseEvent) {
@@ -661,7 +704,13 @@ function attachArmedProbe(ul: HTMLUListElement): () => void {
     const handler = (e: Event): void => {
       const target = e.target
       const li = target instanceof Element ? target.closest('li') : null
-      recordPointerSequence(kind, target, li !== null && ul.contains(li), surface, 'document')
+      recordPointerSequence(
+        kind,
+        target,
+        li !== null && ul.contains(li),
+        surface,
+        'document'
+      )
     }
     document.addEventListener(kind, handler, true)
     cleanups.push(() => document.removeEventListener(kind, handler, true))
@@ -701,7 +750,9 @@ function attachArmedProbe(ul: HTMLUListElement): () => void {
     }, TAB_SAMPLE_DELAY_MS)
   }
   document.addEventListener('keydown', handleKeydown, true)
-  cleanups.push(() => document.removeEventListener('keydown', handleKeydown, true))
+  cleanups.push(() =>
+    document.removeEventListener('keydown', handleKeydown, true)
+  )
 
   return () => {
     cleanups.forEach((cleanup) => cleanup())

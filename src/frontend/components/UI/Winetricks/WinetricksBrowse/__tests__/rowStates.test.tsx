@@ -105,7 +105,10 @@ function hasClass(el: ElementLike, token: string): boolean {
   return typeof cn === 'string' && cn.split(/\s+/).includes(token)
 }
 
-function findByClass(tree: ElementLike, token: string): ElementLike | undefined {
+function findByClass(
+  tree: ElementLike,
+  token: string
+): ElementLike | undefined {
   let found: ElementLike | undefined
   walk(tree, (el) => {
     if (!found && hasClass(el, token)) found = el
@@ -159,16 +162,12 @@ describe('available', () => {
 
   it('no Installed badge exists', () => {
     const tree = mountTree()
-    expect(existsByClass(tree, 'WinetricksBrowse__tag--installed')).toBe(
-      false
-    )
+    expect(existsByClass(tree, 'WinetricksBrowse__tag--installed')).toBe(false)
   })
 
   it('no spinner (installing indicator) exists', () => {
     const tree = mountTree()
-    expect(existsByClass(tree, 'WinetricksBrowse__tag--installing')).toBe(
-      false
-    )
+    expect(existsByClass(tree, 'WinetricksBrowse__tag--installing')).toBe(false)
   })
 })
 
@@ -189,16 +188,12 @@ describe('installing (this row)', () => {
 
   it('the installing text (spinner badge) exists', () => {
     const tree = mountTree(overrides)
-    expect(existsByClass(tree, 'WinetricksBrowse__tag--installing')).toBe(
-      true
-    )
+    expect(existsByClass(tree, 'WinetricksBrowse__tag--installing')).toBe(true)
   })
 
   it('no Install button exists', () => {
     const tree = mountTree(overrides)
-    expect(
-      findByClass(tree, 'WinetricksBrowse__installButton')
-    ).toBeUndefined()
+    expect(findByClass(tree, 'WinetricksBrowse__installButton')).toBeUndefined()
   })
 })
 
@@ -232,16 +227,12 @@ describe('installed', () => {
 
   it('the Installed badge exists', () => {
     const tree = mountTree(overrides)
-    expect(existsByClass(tree, 'WinetricksBrowse__tag--installed')).toBe(
-      true
-    )
+    expect(existsByClass(tree, 'WinetricksBrowse__tag--installed')).toBe(true)
   })
 
   it('no Install button exists (D-12: badge only, no reinstall affordance)', () => {
     const tree = mountTree(overrides)
-    expect(
-      findByClass(tree, 'WinetricksBrowse__installButton')
-    ).toBeUndefined()
+    expect(findByClass(tree, 'WinetricksBrowse__installButton')).toBeUndefined()
   })
 
   it('no Retry button exists', () => {
@@ -283,9 +274,7 @@ const NEEDS_GUI_COMPONENT: WinetricksComponent = {
 describe('needsGui', () => {
   it('no Install button exists', () => {
     const tree = mountTree({ component: NEEDS_GUI_COMPONENT })
-    expect(
-      findByClass(tree, 'WinetricksBrowse__installButton')
-    ).toBeUndefined()
+    expect(findByClass(tree, 'WinetricksBrowse__installButton')).toBeUndefined()
   })
 
   it('an Open GUI button exists', () => {

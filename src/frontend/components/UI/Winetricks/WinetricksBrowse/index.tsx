@@ -154,10 +154,7 @@ export default function WinetricksBrowse({
             `isRevalidatingInstalled`): an overlay only. It must never gate
             whether the panes or their rows below render. */}
         {isRevalidatingInstalled && (
-          <div
-            className="WinetricksBrowse__revalidating"
-            aria-hidden="true"
-          />
+          <div className="WinetricksBrowse__revalidating" aria-hidden="true" />
         )}
 
         {isFirstLoad && (
@@ -210,10 +207,7 @@ export default function WinetricksBrowse({
             <div className="WinetricksBrowse__group WinetricksBrowse__group--curated">
               <div className="WinetricksBrowse__groupHeader WinetricksBrowse__groupHeader--curated">
                 <span className="WinetricksBrowse__groupTitle">
-                  {tGamelib(
-                    'winetricksBrowse.curatedGroup',
-                    'Commonly needed'
-                  )}
+                  {tGamelib('winetricksBrowse.curatedGroup', 'Commonly needed')}
                 </span>
                 <span className="WinetricksBrowse__groupCount">
                   {curatedComponents.length}
@@ -221,7 +215,11 @@ export default function WinetricksBrowse({
               </div>
               <div className="WinetricksBrowse__groupBody">
                 {curatedComponents.map((component) => (
-                  <Row key={component.verb} component={component} {...rowProps} />
+                  <Row
+                    key={component.verb}
+                    component={component}
+                    {...rowProps}
+                  />
                 ))}
               </div>
             </div>
@@ -236,26 +234,32 @@ export default function WinetricksBrowse({
               no windowing, no slicing, no virtualisation library. A curated
               verb is NOT filtered out of its category (D-02), so category
               counts stay honest against the parse. */}
-          {Array.from(categoryGroups.entries()).map(([category, components]) => (
-            <Dropdown
-              key={category}
-              className="WinetricksBrowse__group"
-              title={
-                <>
-                  <span className="WinetricksBrowse__groupTitle">
-                    {category}
-                  </span>
-                  <span className="WinetricksBrowse__groupCount">
-                    {components.length}
-                  </span>
-                </>
-              }
-            >
-              {components.map((component) => (
-                <Row key={component.verb} component={component} {...rowProps} />
-              ))}
-            </Dropdown>
-          ))}
+          {Array.from(categoryGroups.entries()).map(
+            ([category, components]) => (
+              <Dropdown
+                key={category}
+                className="WinetricksBrowse__group"
+                title={
+                  <>
+                    <span className="WinetricksBrowse__groupTitle">
+                      {category}
+                    </span>
+                    <span className="WinetricksBrowse__groupCount">
+                      {components.length}
+                    </span>
+                  </>
+                }
+              >
+                {components.map((component) => (
+                  <Row
+                    key={component.verb}
+                    component={component}
+                    {...rowProps}
+                  />
+                ))}
+              </Dropdown>
+            )
+          )}
         </div>
 
         <div
@@ -266,11 +270,9 @@ export default function WinetricksBrowse({
           )}
         >
           <div className="WinetricksBrowse__resultsHeading">
-            {tGamelib(
-              'winetricksBrowse.resultsHeading',
-              '{{total}} results',
-              { total: searchResults.length }
-            )}
+            {tGamelib('winetricksBrowse.resultsHeading', '{{total}} results', {
+              total: searchResults.length
+            })}
           </div>
 
           {searchResults.length === 0 ? (
