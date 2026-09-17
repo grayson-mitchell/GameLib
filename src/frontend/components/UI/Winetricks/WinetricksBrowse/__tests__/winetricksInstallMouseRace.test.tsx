@@ -173,9 +173,7 @@ function findButton(tree: ElementLike, className: string): ElementLike {
     if (el.props.className === className) found = el
   })
   if (!found) {
-    throw new Error(
-      `no ${className} button found -- this test proves nothing`
-    )
+    throw new Error(`no ${className} button found -- this test proves nothing`)
   }
   return found
 }
@@ -328,9 +326,7 @@ describe('Row Open GUI button mouse-click race (D-19 extension: needsGui state)'
 
   it('renders an Open GUI button at all (non-vacuity anchor)', () => {
     const tree = mountNeedsGui(() => undefined)
-    expect(() =>
-      findButton(tree, 'WinetricksBrowse__guiButton')
-    ).not.toThrow()
+    expect(() => findButton(tree, 'WinetricksBrowse__guiButton')).not.toThrow()
   })
 
   it('mousedown alone fires onOpenGui exactly once', () => {

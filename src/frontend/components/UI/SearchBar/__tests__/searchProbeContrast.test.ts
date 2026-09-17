@@ -41,7 +41,10 @@ describe('searchProbe: parseRgb', () => {
 describe('searchProbe: relativeLuminance', () => {
   it('computes 0 for pure black and 1 for pure white', () => {
     expect(relativeLuminance({ r: 0, g: 0, b: 0, a: 1 })).toBeCloseTo(0, 6)
-    expect(relativeLuminance({ r: 255, g: 255, b: 255, a: 1 })).toBeCloseTo(1, 6)
+    expect(relativeLuminance({ r: 255, g: 255, b: 255, a: 1 })).toBeCloseTo(
+      1,
+      6
+    )
   })
 })
 

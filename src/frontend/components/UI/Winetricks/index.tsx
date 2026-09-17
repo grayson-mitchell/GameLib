@@ -36,8 +36,7 @@ export default function Winetricks({ onClose, runner }: Props) {
   // named facts below; none of them may ever gate whether `WinetricksBrowse`
   // is mounted (see the `installWrapper` comment below).
   const [hasInstalledData, setHasInstalledData] = useState(false)
-  const [isRevalidatingInstalled, setIsRevalidatingInstalled] =
-    useState(true)
+  const [isRevalidatingInstalled, setIsRevalidatingInstalled] = useState(true)
   const [loadingAvailable, setLoadingAvailable] = useState(true)
   // True once either invoke-kind probe below declines under Tauri (D-03) -- the panel then
   // renders an explicit unavailable state and gates the send-kind winetricksInstall call
@@ -73,9 +72,7 @@ export default function Winetricks({ onClose, runner }: Props) {
     listInstalled()
   }, [])
 
-  const [allComponents, setAllComponents] = useState<WinetricksComponent[]>(
-    []
-  )
+  const [allComponents, setAllComponents] = useState<WinetricksComponent[]>([])
   useEffect(() => {
     async function listComponents() {
       setLoadingAvailable(true)

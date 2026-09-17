@@ -55,10 +55,7 @@ export default function SearchBar({
   }, [value])
 
   // SEARCHPROBE-REMOVE-ME: no-op unless armed via `::probe-on`; see searchProbe.ts.
-  useEffect(
-    () => attachSearchProbe(suggestionsList.current, value),
-    [value]
-  )
+  useEffect(() => attachSearchProbe(suggestionsList.current, value), [value])
 
   const onClear = useCallback(() => {
     onInputChanged('')

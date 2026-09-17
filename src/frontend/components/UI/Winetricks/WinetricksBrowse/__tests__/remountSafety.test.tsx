@@ -290,7 +290,12 @@ async function flush(times = 8): Promise<void> {
 }
 
 const FIXTURE_COMPONENTS: WinetricksComponent[] = [
-  { verb: 'vcrun2019', title: 'Visual C++ 2019 libraries', category: 'dlls', cached: false },
+  {
+    verb: 'vcrun2019',
+    title: 'Visual C++ 2019 libraries',
+    category: 'dlls',
+    cached: false
+  },
   { verb: 'xact', title: 'XACT audio engine', category: 'dlls', cached: false }
 ]
 
@@ -428,7 +433,7 @@ describe('Winetricks remount safety (D-17/D-18, C-1)', () => {
     expect(browseRowKeys(afterRefetch)).toEqual(baselineKeys)
   })
 
-  it('stale-while-revalidate contract (positive): the revalidating indicator IS present during Case B\'s in-flight window, not merely absent evidence of rows disappearing', async () => {
+  it("stale-while-revalidate contract (positive): the revalidating indicator IS present during Case B's in-flight window, not merely absent evidence of rows disappearing", async () => {
     const { props } = await mountSettled()
 
     capturedInstallingListener()({}, '')

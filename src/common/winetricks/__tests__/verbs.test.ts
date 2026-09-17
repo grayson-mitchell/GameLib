@@ -10,7 +10,7 @@ function component(verb: string, category = 'dlls'): WinetricksComponent {
 }
 
 describe('CURATED_WINETRICKS_VERBS', () => {
-  it('has exactly 8 verbs in D-01\'s exact order', () => {
+  it("has exactly 8 verbs in D-01's exact order", () => {
     expect(CURATED_WINETRICKS_VERBS).toEqual([
       'vcrun2019',
       'vcrun2013',
