@@ -33,9 +33,14 @@ todo itself named as "a perfectly good outcome", and the panel copy is already h
 | Verdict | discard | clicked → **re-issued**, ~25 s and ~30 s apart |
 
 Evidence in the spike dir: `shot-epic-INTERACTIVE-challenge-run5.png` (Epic's "One more step" card,
-an **unchecked** `Verify you are human` box at full size) and `run-4-5-interactive.log`. That
+an **unchecked** `Verify you are human` box at full size) and `run-4-5-interactive.log`. ~~That
 screenshot renders the operator's residential IP, so it is left unstaged pending redaction —
-GameLib is a public fork.
+GameLib is a public fork.~~
+
+**REDACTED 2026-09-18 — the pending-redaction condition is discharged.** The residential IP and
+the Cloudflare `Session ID` are covered by an opaque black bar; the cited **unchecked** checkbox
+is untouched. Verified never published: `git log --all` over that path returns zero commits, the
+file was untracked throughout, and the IP string appears in no tracked text file.
 
 **Three things this todo got wrong, recorded so the next reader does not inherit them:**
 

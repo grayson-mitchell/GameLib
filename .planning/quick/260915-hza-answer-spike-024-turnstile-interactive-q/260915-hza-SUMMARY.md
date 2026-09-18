@@ -29,8 +29,15 @@ outcome the todo itself named as "a perfectly good outcome".
 Evidence: `shot-epic-INTERACTIVE-challenge-run5.png` (Epic's "One more step" card, an **unchecked**
 `Verify you are human` box at full size) and `run-4-5-interactive.log`, both in the spike directory.
 
-⚠️ **That screenshot renders the operator's residential IP** — Cloudflare prints it on the challenge
-card. GameLib is a public fork, so the image is deliberately left **unstaged** pending redaction.
+⚠️ ~~**That screenshot renders the operator's residential IP** — Cloudflare prints it on the challenge
+card. GameLib is a public fork, so the image is deliberately left **unstaged** pending redaction.~~
+
+✅ **REDACTED AND STAGED 2026-09-18.** The residential IP and the Cloudflare `Session ID` are now
+covered by an opaque black bar; the **unchecked** `Verify you are human` box this summary cites as
+evidence is untouched and still fully legible. The image was never committed while it carried the
+IP — `git log --all` over that path returned zero commits — so nothing was ever published. The
+"deliberately left unstaged" decision recorded above was correct and held for three days until the
+redaction was done.
 
 ## What made this nearly go wrong
 

@@ -39,11 +39,24 @@ Run 5's Steam positive control rendered first (`add_child` at 986×630, two `on_
 destroyed), so the harness and network were sound in the same session.
 
 `shot-epic-INTERACTIVE-challenge-run5.png` is the evidence: Epic's "One more step" card with an
-**unchecked** `Verify you are human` box at full size, plus a Cloudflare `Session ID`. Nav logs for
-both runs are in `run-4-5-interactive.log`.
+**unchecked** `Verify you are human` box at full size. Nav logs for both runs are in
+`run-4-5-interactive.log`.
 
-⚠️ **The run-5 screenshot renders the operator's residential IP** (Cloudflare prints it on the
-challenge card). This repo is a public fork. Redact before committing or publishing that image.
+✅ **REDACTED 2026-09-18 — the warning below is DISCHARGED; the image is now safe to commit.**
+Cloudflare printed the operator's residential IP and a `Session ID` at the foot of the challenge
+card. Both are now covered by a solid black bar (pixels `1400,1020`–`1960,1170`, decoded and
+re-encoded losslessly with `upng-js`; the re-encode also dropped the original's text chunk). The
+evidentiary content is untouched: the "One more step" heading and the **unchecked** `Verify you
+are human` box are both fully legible, as is the event log beneath. The bar is deliberately
+opaque black rather than the card's background colour, so the redaction is visible as a
+deliberate act rather than looking like a render glitch.
+
+Note this supersedes the earlier description of the image, which listed "a Cloudflare `Session
+ID`" as part of the evidence — that value is no longer readable, by design.
+
+⚠️ ~~**The run-5 screenshot renders the operator's residential IP** (Cloudflare prints it on the
+challenge card). This repo is a public fork. Redact before committing or publishing that
+image.~~ — done, see above.
 
 ⚠️ **Run 4 was invalidated by a defect in THIS harness, listed below as a known limitation and
 never fixed.** `#logwrap` was `flex: 0 0 170px`, but a flex item's automatic `min-height` is its
