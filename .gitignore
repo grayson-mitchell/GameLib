@@ -74,6 +74,24 @@ scratchpad/
 # bridge during local dev. Never part of a build.
 steam_appid.txt
 
+# Third-party Claude skill, installed from GitHub (`tt-a1i/archify`, MIT,
+# v2.17.0-dev.1 on its "development" channel): 191 files / 7.3M, of which ~5M is
+# `examples/` and `test/`. `skills-lock.json` at the repo root pins the install
+# -- source, sourceType and a computedHash -- so the tree is reproducible from
+# 4KB and does not need vendoring into a public fork.
+#
+# Vendoring it wholesale would also ship a subtly INCOMPLETE copy: the global
+# `package-lock.json` rule at line 28 above silently excludes
+# `archify/package-lock.json` (confirmed with `git check-ignore -v`), so the
+# committed tree would NOT match the hash `skills-lock.json` records. If this is
+# ever reversed and the skill is vendored deliberately, that rule needs a
+# `!` negation for this path or the copy ships quietly wrong.
+#
+# The two skills that ARE tracked -- `sketch-findings-gamelib` and
+# `spike-findings-gamelib` -- are first-party GameLib content, not external
+# tooling, which is the line being drawn here.
+.claude/skills/archify/
+
 # Python bytecode. The `.planning/` tree carries stdlib-only planning gates
 # (`*-gate.py`, discovered and run by meta/runPlanningGates.py). Two of their
 # `__pycache__/*.pyc` files were tracked, which was always wrong and became
