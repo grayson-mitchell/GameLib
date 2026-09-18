@@ -1,8 +1,8 @@
 ---
 created: 2026-09-11
-title: "`audit-uat` reads YAML blocks in document BODIES, not just frontmatter — a second, never-measured block-scalar population reaches its output as the literal `|`"
+title: "`audit-uat` reads YAML blocks in document BODIES too — a MEASURED 652-field population (51 files); its worst defect (whole-file suppression) is now ledgered by a gate and closed off for new files by a CLAUDE.md convention, with item A (27-UAT.md) and item D (milestone-hidden) still open"
 area: planning-records
-severity: major
+severity: medium
 platform: any
 ready: human
 source: "quick task 260911-vox (the frontmatter block-scalar sweep) — found while proving that sweep's V4 post-condition; deliberately left OUT OF SCOPE there"
@@ -12,6 +12,106 @@ files:
   - .planning/debug/deep-link-open-url-abort.md
 resolves_phase: null
 ---
+
+## DECISION 2026-09-18 — remedy option 2 adopted (quick `260918-amq`) — read this first
+
+This section governs where it contradicts every section below, including `ITEM B CLOSED` and
+`RE-MEASURED`. Nothing was deleted from this file; older sections are superseded in place, not
+removed.
+
+**Superseded claim, named explicitly.** The `# ` body heading below this section — "`audit-uat`
+parses body YAML too, and that population has never been counted" — is FALSE as of the
+`RE-MEASURED 2026-09-12` section further down: the population HAS been counted (652 fields / 51
+files). That heading is left in place because this file is append-only, but a reader must not take
+it at face value; see `RE-MEASURED` for the actual count and see this section for the decision made
+against it.
+
+**What was decided.** The 26 existing `expected: |` blocks in `34.3-UAT.md`, `34.5-UAT.md`, and
+`34.6-UAT.md` are accepted as permanently ledgered — they stay hidden from `audit-uat`, and that
+fact is now asserted every `pnpm planning-gates` run by `.planning/uat-visibility-gate.py`, which
+fails if the invisible count drifts in either direction. What changes is authoring: a new CLAUDE.md
+convention stops the NEXT UAT file being born suppressed, by teaching the inline `expected:`/
+`result:` shape and forbidding the block-scalar form outright.
+
+**What was rejected, and why.** Flattening the 26 existing blocks to repair `audit-uat`.
+`uatRenderCheckpoint` (`uat.js:81-82`) deliberately matches `expected: |` and dedents it
+correctly — it reads these files right, today. Flattening would regress a reader that already
+works in order to repair one that does not, and both parsers live in the same upstream npx package
+(`get-shit-done-cc`, pinned `v1.42.3`) that this repo does not control.
+
+**Where the convention now lives.** `CLAUDE.md`, `GSD:conventions` region, under the heading
+`### UAT item shape (`expected:` inline, never a block scalar)` — the fourth convention alongside
+the three that predate it.
+
+**Root cause, confirmed out of scope.** The upstream scaffold
+(`~/.claude/get-shit-done/templates/UAT.md:23` and `workflows/verify-work.md:230`) emits
+`expected: |` by default, so a freshly scaffolded UAT file starts non-conforming. Those files live
+outside this repo and are not being changed by this decision — the CLAUDE.md convention exists
+precisely because the scaffold cannot be fixed from here.
+
+**All four items, restated by current status:**
+
+- **B — CLOSED** 2026-09-12 (quick `260912-n9i`). See `ITEM B CLOSED` below; unchanged by this
+  decision.
+- **C — DECIDED, accepted as ledgered, NOT fixed.** The whole-file suppression defect (`expected:
+  |` deleting every item in a UAT file from `audit-uat`) is the defect this decision addresses —
+  by convention for new files, not by repair of old ones. The live residue is named honestly:
+  phase 34.5's 22 items and 3 `blocked` results are STILL invisible to `audit-uat` today. That
+  invisibility is no longer a silent, unmeasured unknown — it is a known, ledgered, CI-asserted
+  condition (`uat-visibility-gate.py` names it exactly) — but the items themselves are still not
+  in `audit-uat`'s output.
+- **A — still OPEN.** The two `reason: |` fields at `27-UAT.md` L31/L51 still emit the literal
+  `"|"`. The trap for the next author: both are MULTI-PARAGRAPH (3 paragraphs at L31, 2 at L51),
+  and this todo's own `RE-MEASURED` census hard-excludes multi-paragraph blocks from flattening —
+  so item A cannot be closed by the same flattening remedy this todo already used elsewhere
+  (`260911-vox`, `260912-n9i`). It needs a different remedy shape, not yet chosen.
+- **D — still OPEN and LATENT.** 17 milestone-hidden fields across `17-UAT.md`, `18-UAT.md`, and
+  `23.2-HUMAN-UAT.md` remain UNMEASURED — their phase dirs are filtered out before `audit-uat` ever
+  opens them. Milestone is still `v0.8`; they enter scope with no gate noticing the moment it
+  advances.
+
+**Severity reassessed: `major` → `medium`, argued against the CLAUDE.md vocabulary.** `major` means
+"a feature is broken or a measurement is silently contaminated"; `medium` means "real defect,
+bounded blast radius, workaround exists." The tension is real and both readings have merit:
+
+- *For staying `major`:* `audit-uat`'s own JSON output carries zero internal indicator that phase
+  34.5 is missing — `summary` just reports a smaller, clean-looking count. A consumer who trusts
+  that JSON alone, without cross-referencing `uat-visibility-gate.py`, is exactly as misled today
+  as before this decision. The measurement itself is unchanged.
+- *For `medium` (the call made here):* the word doing the work in `major`'s definition is
+  **silently**. Before this decision, the suppressed population was unmeasured and unwatched by
+  anything — nobody could say how big it was or whether it was growing. After it: the exact bound
+  (26 blocks, 3 files, 22 items, 3 `blocked`) is enumerated in this file AND independently asserted
+  by a passing CI gate on every commit (`OK: 36 UAT-type file(s), ... 59 invisible across 12
+  file(s) -- exactly matching the ledger`), which fails the build the moment a NEW invisible item
+  appears anywhere, including in a file absent from its ledger. A defect with an exact, CI-enforced
+  bound and a documented workaround (run the gate, or read this file, to know what `audit-uat`
+  won't show you) fits `medium`'s "bounded blast radius, workaround exists" better than it fits
+  `major`'s "silently contaminated." The residual risk named above (a bare `audit-uat` consumer is
+  still misled) is real but is now a KNOWN, NAMED gap rather than an undiscovered one — that is the
+  distinction this call rests on.
+
+**Readiness reassessed: `human` stays — NOT rubber-stamped to `code`, argued.** The decision that
+was outstanding when `ready: human` was set ("should the 26 ledgered blocks be flattened at all,
+given the `render-checkpoint` trade?") has now been ANSWERED: no. But `ready: code` would be a
+rubber stamp, not an honest reflection of what remains:
+
+- Item A still needs a remedy SHAPE chosen before any code is written — flattening is
+  hard-excluded by its own multi-paragraph census, and no alternative shape (rewrite to
+  single-paragraph prose? accept as ledgered like C? something else?) has been decided. That is a
+  human decision, not a mechanical edit.
+- This file already set the precedent that authorship counts as a human decision, not desk work:
+  `ITEM B CLOSED` deliberately did NOT write a `## Current Focus` line for `knowledge-base.md` /
+  `steam-install-options-opens-nothing.md`, reasoning that "writing one is authorship — deciding
+  what that session's current focus IS — not a shape fix." Item A's remedy is the same kind of
+  authorship call, one level up: deciding the correct SHAPE for two specific multi-paragraph
+  fields is not typing a fix, it is judgment.
+- The REMAINING human question differs from the one just answered: the earlier question was
+  "flatten or not, given the render-checkpoint trade" (now closed, answered no, for the 26
+  ledgered blocks). The remaining question is narrower and specific to item A: "given flattening is
+  excluded for these two multi-paragraph fields, what remedy shape applies instead?" Item D is not
+  a readiness blocker today — it is correctly `UNMEASURED`/latent pending a milestone change, not
+  something a human needs to decide right now.
 
 # `audit-uat` parses body YAML too, and that population has never been counted
 
