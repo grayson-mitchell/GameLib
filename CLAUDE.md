@@ -1,4 +1,11 @@
-<!-- GSD:project-start source:PROJECT.md -->
+**These `<!-- GSD:*-start source:... -->` regions are hand-maintained.** The `source:` marker is
+historical provenance, not live generation. No tool reads or rewrites these regions today —
+`gsd-sdk` contains no reference to the markers and `get-shit-done-cc` is not installed — and the
+conventions below were hand-written straight into this file (`c33f98771`, `d7d021a05`,
+`67ed8767b`). Edit the regions here, directly; content written into a named source file will not
+propagate. A region marked `source:hand-maintained` has no source document at all.
+
+<!-- GSD:project-start source:.planning/PROJECT.md -->
 
 ## Project
 
@@ -15,7 +22,7 @@ GameLib is a public fork of Heroic Games Launcher that adds Steam as a first-cla
 - **Steam auth**: Approach TBD during research phase — Steamworks SDK, steam-user npm package, or browser-based login
 <!-- GSD:project-end -->
 
-<!-- GSD:stack-start source:research/STACK.md -->
+<!-- GSD:stack-start source:.planning/research/STACK.md -->
 
 ## Technology Stack
 
@@ -100,7 +107,7 @@ GameLib is a public fork of Heroic Games Launcher that adds Steam as a first-cla
 - [node-steam-user issue #144: getOwnedApps() performance](https://github.com/DoctorMcKay/node-steam-user/issues/144)
 <!-- GSD:stack-end -->
 
-<!-- GSD:conventions-start source:CONVENTIONS.md -->
+<!-- GSD:conventions-start source:hand-maintained -->
 
 ## Conventions
 
@@ -270,15 +277,24 @@ lines, or the number you get will be confidently wrong in one direction or the o
 
 <!-- GSD:conventions-end -->
 
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
+<!-- GSD:architecture-start source:.planning/research/ARCHITECTURE.md -->
 
 ## Architecture
 
-Architecture not yet mapped. Follow existing patterns found in the codebase.
+No whole-app architecture is mapped. That is the honest state, not a placeholder awaiting a tool.
+
+The repo's one architecture study is `.planning/research/ARCHITECTURE.md` (391 lines, researched
+2026-07-05) — read it, but read it in scope. It is titled _Architecture Research — Humble Bundle
+Integration_ and describes a key-management overlay on an **Electron** launcher. It predates the
+Rust/Tauri shell, which landed 2026-07-20 in `83dc57a76`, by fifteen days: it mentions Electron
+13 times and Tauri 0. Treat its process, IPC and packaging model as pre-rearchitecture.
+
+For current structure, orient with `graphify query` (see the graphify section at the end of this
+file) and follow the patterns already in the codebase.
 
 <!-- GSD:architecture-end -->
 
-<!-- GSD:skills-start source:skills/ -->
+<!-- GSD:skills-start source:.claude/skills/ -->
 
 ## Project Skills
 

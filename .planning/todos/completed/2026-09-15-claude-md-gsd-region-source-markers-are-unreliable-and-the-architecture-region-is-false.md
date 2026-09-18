@@ -5,7 +5,7 @@ area: planning/docs
 severity: medium
 platform: any
 ready: code
-status: pending
+status: completed
 source: raised three times during the 2026-09-13 session as a "regeneration will delete the conventions" hazard; that framing was WRONG and is corrected below
 files:
   - CLAUDE.md
@@ -106,3 +106,39 @@ from where agents actually read it. Add or edit conventions **directly inside th
 CLAUDE.md, then `npx prettier --write CLAUDE.md` and assert `git diff --numstat -- CLAUDE.md`
 shows **0 deletions**; a non-zero deletion count means prettier rewrapped pre-existing lines and
 the diff is wider than the change.
+
+## Resolution (2026-09-18, quick 260918-a1a)
+
+- **Item 1 (architecture region):** the todo's own cheapest remedy — point the region at
+  `.planning/research/ARCHITECTURE.md` — was measured and REJECTED as a trap. That document is
+  Humble-scoped, Electron-era, researched 2026-07-05, and predates the Rust/Tauri shell
+  (`83dc57a76`, 2026-07-20) by fifteen days; citing it bare swaps a false sentence for a stale
+  one, which is worse because agents trust a cited document more than an admission of ignorance.
+  Took the third option: the region now states no whole-app architecture is mapped, names the
+  391-line study with its real scope and its Electron/Tauri mention counts (measured fresh at
+  execution time: 13 Electron / 0 Tauri, matching the orchestrator's prior numbers), and points at
+  `graphify query` for current structure.
+- **Item 2 (marker semantics):** adopted **Nominal**. A note above the first region marker —
+  outside every region, so it is the first thing read and cannot be clobbered by a region
+  rewrite — states the regions are hand-maintained and `source:` is historical provenance.
+- **Item 3 (repo-relative paths):** four markers now carry real repo-relative paths
+  (`.planning/PROJECT.md`, `.planning/research/STACK.md`, `.planning/research/ARCHITECTURE.md`,
+  `.claude/skills/`). The fifth — `conventions` — got `source:hand-maintained` instead of a path.
+  Record the reasoning: `.planning/spikes/CONVENTIONS.md` is 144 lines of "Spike Conventions" and
+  contains none of the region's content, so writing that path would have committed the exact
+  defect this todo was filed against. The region genuinely has no source document.
+- **Item 4 (skills list):** **closed with NO EDIT, deliberately.** `.claude/skills/` holds three
+  dirs, but `archify` is a third-party skill installed from GitHub — `skills-lock.json` pins
+  `tt-a1i/archify`, sourceType `github`, 192 files / 7.3 MB of vendor output. The region is
+  headed "Project Skills" and documents skills that teach an agent about THIS project; the two
+  listed entries are GameLib-authored findings. `archify` teaches nothing about GameLib, so its
+  omission is correct and was confirmed, not overlooked.
+
+Verification evidence: conventions region byte-identical to the pre-edit copy (`diff` printed
+`CONVENTIONS-BODY-IDENTICAL`); exactly six deleted lines in `git diff -- CLAUDE.md`, matching the
+five marker comments plus the false architecture sentence, nothing else; 7/7 `GSD:*-start`/`-end`
+marker pairs, same names, same order; `npx prettier --check CLAUDE.md` was already clean before
+any edit (negative control) and remained clean/idempotent after; `pnpm planning-gates` reported
+10/11 — the one failure (`uat-visibility-gate.py`, flagging `.planning/phases/43-.../43-UAT.md`)
+is a pre-existing, untracked, unrelated file present in the working tree before this quick task
+began and out of this plan's scope to touch.
