@@ -275,6 +275,60 @@ census grepping `\.unref()` returns **5** real sites and looks complete; greppin
 sweeps in comment prose and inflates the count instead. Match both spellings _and_ strip comment
 lines, or the number you get will be confidently wrong in one direction or the other.
 
+### UAT item shape (`expected:` inline, never a block scalar)
+
+**The shape.** In a `*-UAT.md` item, `expected:` carries its text **inline** on the same line as
+the key, and `result:` is the **very next line** — both sitting directly under the item's numbered
+heading (`### N. <item name>`, unchanged from how it is today). Never write `expected: |`.
+
+Conforming — inline text, `result:` on the next line:
+
+```yaml
+expected: Games appear as cards with title, artwork, and an Install button.
+result: pending
+```
+
+Non-conforming — a block scalar here silently deletes every item in the file, not just this one:
+
+```yaml
+expected: |
+  Games appear as cards with title, artwork, and an Install button.
+result: pending
+```
+
+**The mechanism, so it is not mistaken for style.** `parseUatItems`'s `testPattern`
+(`uat.js:150`) requires inline `expected:` text **and** `result:` on the next line. A block
+scalar puts the body text in between the two, the pattern never matches, and **every** `### N.`
+item in that file disappears from `audit-uat` — not just the one item carrying the block.
+
+**Suppression, not truncation — and strictly worse.** A flattening mistake elsewhere shows an
+operator an obviously-wrong `"|"` in the output; that is at least visible. This defect shows a
+clean, complete-looking audit with items missing and no indicator anything is gone. Phase 34.5 is
+the live proof: it carries 22 items and 3 `blocked` results, all currently invisible to
+`audit-uat`, whose `summary` reports its reduced count with nothing to signal the loss.
+
+**What is enforced, honestly.** `.planning/uat-visibility-gate.py` ratchets: it fails on a new
+invisible item, including in a file **absent from its ledger entirely** (its self-test "direction
+2: a file ABSENT from the ledger carries an invisible item"). So CI does catch this — but only
+**after** the item is written and the file is already suppressed. This convention exists so the
+shape is right at authoring time; do not read the gate as preventing the mistake, only as
+detecting it afterward.
+
+**Prohibition — do not flatten the 26 existing blocks.** `34.3-UAT.md`, `34.5-UAT.md`, and
+`34.6-UAT.md` carry 26 `expected: |` blocks between them, and they are staying that way.
+`uatRenderCheckpoint` (`uat.js:81-82`) deliberately matches `expected: |` and dedents it
+correctly — it reads these files right, today. Flattening them would regress a reader that
+already works in order to repair one that does not, and both parsers live in the same upstream
+npx package (`get-shit-done-cc`, pinned `v1.42.3`) that this repo does not control. If you hit the
+`audit-uat` gate and are tempted to flatten an existing block to make it pass: don't — write the
+new item inline instead and leave the old ones ledgered.
+
+**The upstream trap.** A UAT file scaffolded from `~/.claude/get-shit-done/templates/UAT.md`
+starts non-conforming out of the box — its line 23 emits `expected: |`, and
+`workflows/verify-work.md:230` does the same — so a freshly scaffolded file must be hand-corrected
+to the inline shape at authoring time. Those template files are outside this repo and are not
+being changed here.
+
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:.planning/research/ARCHITECTURE.md -->
