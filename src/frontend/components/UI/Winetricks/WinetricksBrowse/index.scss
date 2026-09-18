@@ -96,7 +96,18 @@
     z-index: 2;
     height: 2px;
     overflow: hidden;
-    background: var(--winetricks-active-color);
+    // D-24 SECOND ROUND: was `var(--winetricks-active-color)`, i.e.
+    // `--navbar-active` = `#d0ddff` on nord-light, measuring **1.18:1** against
+    // the `#edeff4` surface -- and that is BEFORE the `opacity: 0.6` below, which
+    // pushes it further toward invisible. A 2px revalidation bar nobody can see
+    // is a loading signal that does not exist, which is worse than no bar: the
+    // D-17/D-18 design leans on this to show a background refresh is in flight
+    // while rows stay visible underneath.
+    //
+    // `--accent` measures 8.90:1 on nord-light and 17.02:1 on midnightMirage, so
+    // it is perceptible in both. Nothing is drawn ON this bar, so the only
+    // requirement is visibility against the surface.
+    background: var(--accent);
     opacity: 0.6;
   }
 
@@ -213,8 +224,18 @@
     padding-block: var(--space-2xs);
   }
 
+  // D-24 SECOND ROUND: `--winetricks-hover-color` resolves to `--text-hover`,
+  // which is `#5e81ac` on nord-light and measures **3.50:1** as text on
+  // `#edeff4`. That clears the 3:1 bar for UI components but FAILS the 4.5:1 bar
+  // this needs. `--text-hover` is a LINK colour and was never tuned for body
+  // copy -- the same reason the cached tag moved off it in the first round.
+  //
+  // Perverse consequence worth naming: hovering a group header made it HARDER to
+  // read than not hovering it, since the base state is `--text-default` at
+  // 13.50:1. `--accent` is 8.90:1 / 17.02:1, so hover still shifts colour but
+  // never drops below AA.
   .WinetricksBrowse .WinetricksBrowse__group .dropdownButton:hover {
-    color: var(--winetricks-hover-color);
+    color: var(--accent);
   }
 
   .WinetricksBrowse .WinetricksBrowse__group .dropdownButton:focus-visible {
@@ -297,13 +318,31 @@
     align-self: center;
     background: none;
     border: 0;
-    color: var(--winetricks-active-color);
+    // D-24 SECOND ROUND: was `var(--winetricks-active-color)`. That chain ends
+    // at `--navbar-active`, which is `#d0ddff` on nord-light -- as TEXT on the
+    // `#edeff4` dialog surface it fails BOTH the 4.5:1 and 3:1 bars. Third
+    // instance of the same category error in this stylesheet pair (row title,
+    // Install button, row hover being the others): a navbar token consumed
+    // where nothing guarantees it contrasts with what it is drawn on.
+    //
+    // This one escaped the first round because the button only renders while a
+    // search query is active, so it was absent from every capture. It was found
+    // by grepping the token's consumers rather than by looking -- worth
+    // remembering that the census finds what the screenshot cannot.
+    //
+    // `--text-default` measures 13.50:1 on nord-light and 16.86:1 on
+    // midnightMirage. The `text-decoration: underline` below already carries the
+    // affordance, so the link does not need colour to read as actionable -- and
+    // `:hover` still shifts to `--winetricks-hover-color` for feedback.
+    color: var(--text-default);
     text-decoration: underline;
     cursor: pointer;
     font-size: var(--text-sm);
 
+    // D-24 SECOND ROUND: same 3.50:1 `--text-hover` failure as the group-header
+    // hover above, and same remedy. See that comment for the reasoning.
     &:hover {
-      color: var(--winetricks-hover-color);
+      color: var(--accent);
     }
   }
 }

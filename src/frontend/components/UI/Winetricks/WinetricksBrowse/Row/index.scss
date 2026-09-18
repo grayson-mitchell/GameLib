@@ -115,8 +115,36 @@
       box-shadow: none;
     }
 
+    // D-24 SECOND ROUND, found by the operator 2026-09-17 after the first fix
+    // shipped: was `background: var(--winetricks-active-color)`, which measured
+    // **1.10:1** on midnightMirage -- fill `#b5ebfb` under near-white glyphs
+    // `#d2f2fc`. The hovered row was the least readable thing on the surface,
+    // and the verb id vanished into the fill entirely.
+    //
+    // Root cause is the SAME category error as the Install button: a token with
+    // no contrast relationship to the text drawn over it. Here it is starker --
+    // `themes.scss:98` sets `--navbar-active: var(--text-secondary)` in
+    // midnightMirage, i.e. a TEXT token used as a FILL.
+    //
+    // The obvious fix -- dark text on hover -- is WRONG, and the numbers say so.
+    // The fill is pale in BOTH themes, so forcing dark hover text fixes
+    // midnightMirage and breaks nord-light (whose row text is already dark, on a
+    // `#d0ddff` fill). Tinting toward the ACCENT is also wrong: nord-light's
+    // `#d0ddff` over `#edeff4` barely moves luma, measuring 1.02-1.09:1 at every
+    // percentage from 12% to 50% -- less perceptible than what it replaces.
+    //
+    // Tinting toward `currentColor` is correct BY CONSTRUCTION in every theme:
+    // it moves the surface a fixed fraction toward the text colour, so the fill
+    // always differs from the surface AND the text always stays far from the
+    // fill. No theme can invert it. Measured at 14%: midnightMirage text
+    // 12.36:1 with the row 1.36:1 against its surface; nord-light 10.35:1 and
+    // 1.30:1 -- the light arm ends up MORE perceptible than the 1.179:1 solid
+    // fill it replaces, not less.
+    //
+    // 14% matches the divider chain above deliberately; same idiom, same
+    // strength, one less magic number.
     &:hover {
-      background: var(--winetricks-active-color);
+      background: color-mix(in srgb, currentColor 14%, transparent);
     }
   }
 
