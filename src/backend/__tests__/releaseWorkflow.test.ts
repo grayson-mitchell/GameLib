@@ -12,6 +12,7 @@
  * and prerelease assertions below are the mitigation -- a regression here
  * would silently remove the D-09 human-review gate before publish.
  */
+import { load as loadYaml } from 'js-yaml'
 import {
   existsSync,
   mkdirSync,
@@ -1101,5 +1102,155 @@ describe('release-tauri.yml job-level env has no APPLE_ keys (GAP-A regression g
     expect(stepsStart).toBeGreaterThan(envStart)
     const jobEnvSlice = stripped.slice(envStart, stepsStart)
     expect(jobEnvSlice).not.toMatch(/APPLE_/)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Quick task 260917-uik: the macOS helper-tree signing step.
+//
+// DELIBERATE CONVENTION DEVIATION, declared rather than silent. This file's
+// header states it uses raw-text assertions and no YAML parser. This block
+// uses one (`js-yaml`, already a direct devDependency and already imported by
+// src/backend/__tests__/runnersOnedirWorkflow.test.ts, so it adds nothing).
+//
+// The reason is the ORDERING invariant. A raw-text `indexOf(a) < indexOf(b)`
+// over this file is UNSOUND here: the step comment this task added
+// legitimately mentions `tauri-action`, `--deep`, `--entitlements` and
+// `sign:macos-resources` while explaining them, so the first textual match is
+// a comment, not a step. Parsing to a `steps` array and comparing array
+// INDICES is the only form of the assertion that cannot be satisfied by
+// prose -- this repo's recurring gate-failure mode. The existing raw-text
+// blocks above are deliberately left alone.
+//
+// The GAP-A assertion below is likewise parsed rather than grepped. A naive
+// `grep 'APPLE_CERTIFICATE: ${{'` FALSE-FIRES on the enrolment step's
+// legitimate `IN_APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}` input
+// map, because the forbidden name is a SUBSTRING of the permitted one.
+// Keys are therefore tested with `startsWith('APPLE_')` against parsed env
+// maps, which cannot confuse the two.
+// ---------------------------------------------------------------------------
+
+interface ParsedReleaseStep {
+  name?: string
+  uses?: string
+  if?: string
+  run?: string
+  env?: Record<string, unknown>
+}
+
+interface ParsedReleaseWorkflow {
+  jobs: Record<
+    string,
+    { env?: Record<string, unknown>; steps: ParsedReleaseStep[] }
+  >
+}
+
+function parseReleaseSteps(): ParsedReleaseStep[] {
+  const parsed = loadYaml(loadReleaseWorkflow()) as ParsedReleaseWorkflow
+  return parsed.jobs.release.steps
+}
+
+const SIGN_SCRIPT = 'sign:macos-resources'
+
+describe('release-tauri.yml signs the macOS helper tree before bundling (260917-uik)', () => {
+  test('a step invokes the sign:macos-resources script against build/bin/arm64/darwin', () => {
+    const steps = parseReleaseSteps()
+    const signStep = steps.find((s) => (s.run ?? '').includes(SIGN_SCRIPT))
+
+    expect(signStep).toBeDefined()
+    expect(signStep?.run).toContain('--dir build/bin/arm64/darwin')
+    expect(signStep?.run).toContain('--keychain')
+  })
+
+  test('the step is macOS-only AND gated on APPLE_SIGNING_IDENTITY (D-04: a secrets-less run skips it, job stays green)', () => {
+    const steps = parseReleaseSteps()
+    const signStep = steps.find((s) => (s.run ?? '').includes(SIGN_SCRIPT))
+
+    expect(signStep?.if).toContain("startsWith(matrix.platform, 'macos')")
+    expect(signStep?.if).toContain("env.APPLE_SIGNING_IDENTITY != ''")
+  })
+
+  test('ORDERING INVARIANT: its steps-array index is strictly between the prune step and tauri-action', () => {
+    const steps = parseReleaseSteps()
+    const signIdx = steps.findIndex((s) => (s.run ?? '').includes(SIGN_SCRIPT))
+    const tauriIdx = steps.findIndex((s) =>
+      (s.uses ?? '').includes('tauri-action')
+    )
+    const pruneIdx = steps.findIndex((s) =>
+      (s.name ?? '').includes('Prune non-frontend build intermediates')
+    )
+
+    // Non-vacuity: all three must actually be found, or `-1 < 0` would pass.
+    expect(signIdx).toBeGreaterThanOrEqual(0)
+    expect(tauriIdx).toBeGreaterThanOrEqual(0)
+    expect(pruneIdx).toBeGreaterThanOrEqual(0)
+
+    expect(pruneIdx).toBeLessThan(signIdx)
+    expect(signIdx).toBeLessThan(tauriIdx)
+  })
+
+  test('WR-01 ORDERING: the trap is installed at a LOWER offset than the base64 decode that writes the P12', () => {
+    const steps = parseReleaseSteps()
+    const body = steps.find((s) => (s.run ?? '').includes(SIGN_SCRIPT))?.run
+
+    expect(body).toBeDefined()
+    const trapAt = (body ?? '').indexOf('trap ')
+    const decodeAt = (body ?? '').indexOf('base64 --decode')
+
+    // Positional, not merely present: WR-01 on the Windows leg existed
+    // precisely because the cleanup was registered AFTER key material hit
+    // disk, so a failure in between leaked it.
+    expect(trapAt).toBeGreaterThanOrEqual(0)
+    expect(decodeAt).toBeGreaterThan(0)
+    expect(trapAt).toBeLessThan(decodeAt)
+  })
+
+  test('the step never echoes the cert, the cert password or the keychain password', () => {
+    const steps = parseReleaseSteps()
+    const body =
+      steps.find((s) => (s.run ?? '').includes(SIGN_SCRIPT))?.run ?? ''
+    const instructions = stripHashComments(body)
+
+    expect(instructions).not.toMatch(/echo .*\$APPLE_CERTIFICATE/)
+    expect(instructions).not.toMatch(/echo .*\$KEYCHAIN_PW/)
+    expect(instructions).not.toMatch(/set -x/)
+  })
+
+  test('GAP-A: no env: map anywhere in the job defines a key beginning APPLE_', () => {
+    const parsed = loadYaml(loadReleaseWorkflow()) as ParsedReleaseWorkflow
+    const job = parsed.jobs.release
+
+    const offenders: string[] = []
+    for (const key of Object.keys(job.env ?? {})) {
+      if (key.startsWith('APPLE_')) offenders.push(`job env: ${key}`)
+    }
+    for (const step of job.steps) {
+      for (const key of Object.keys(step.env ?? {})) {
+        if (key.startsWith('APPLE_')) {
+          offenders.push(`${step.name ?? step.uses ?? '?'} env: ${key}`)
+        }
+      }
+    }
+
+    expect(offenders).toEqual([])
+  })
+
+  test('POSITIVE CONTROL: the GAP-A key predicate fires on a mapped APPLE_ key and NOT on the legitimate IN_APPLE_ inputs', () => {
+    // Without this, the assertion above could pass because the predicate is
+    // broken rather than because the workflow is clean -- and the substring
+    // trap it exists to avoid would go unnoticed.
+    const offends = (key: string): boolean => key.startsWith('APPLE_')
+
+    expect(offends('APPLE_CERTIFICATE')).toBe(true)
+    expect(offends('IN_APPLE_CERTIFICATE')).toBe(false)
+
+    // The enrolment step's IN_APPLE_* inputs really are present in this
+    // workflow, so the negative half above is about a live shape, not a
+    // hypothetical one.
+    const parsed = loadYaml(loadReleaseWorkflow()) as ParsedReleaseWorkflow
+    const allEnvKeys = parsed.jobs.release.steps.flatMap((s) =>
+      Object.keys(s.env ?? {})
+    )
+    expect(allEnvKeys).toContain('IN_APPLE_CERTIFICATE')
   })
 })

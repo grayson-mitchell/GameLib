@@ -428,6 +428,101 @@ jobs:
             test -d build/bin
           fi
 
+      # Quick task 260917-uik. Run 35223308954 (the first tag push this
+      # workflow has ever completed) built and SIGNED the macOS leg, then
+      # failed notarization: `"status": "Invalid"`, "Archive contains
+      # critical validation errors", across 253 distinct paths, 100% of them
+      # under Contents/Resources/build/bin/arm64/darwin/. Measured locally
+      # the same day: `find build/bin/arm64/darwin -type f | xargs file |
+      # grep -c Mach-O` returns 253 of 277 regular files -- the same
+      # population, file for file.
+      #
+      # Tauri's signing pass signs EXACTLY Contents/MacOS/* and the outer
+      # .app. It does not recurse Contents/Resources, and tauri-action
+      # exposes no hook between "copy resources" and "sign the app".
+      #
+      # WHY AT THE SOURCE PATH rather than inside the bundle: the .app does
+      # not exist until the bundler runs, so there is nothing to reach into.
+      # Signing here instead satisfies "innermost-first, before Tauri signs
+      # the outer .app" BY CONSTRUCTION -- everything is signed before a
+      # bundle exists at all. A Mach-O signature lives in the file's own
+      # LC_CODE_SIGNATURE load command, not an xattr and not a sidecar file,
+      # so a byte-preserving copy carries it. Tauri's later outer-.app pass
+      # then seals these inner signatures into CodeResources by hash; it does
+      # not pass --deep, so it neither re-signs nor strips them.
+      # `beforeBundleCommand` was rejected: it fires at the same moment
+      # relative to the copy, and would additionally fire on the Linux and
+      # Windows legs and on every local `tauri build` with no Developer ID.
+      #
+      # WHY A KEYCHAIN IS CREATED HERE: at this point in the job the
+      # Developer ID cert is in NO keychain -- Tauri's bundler does its own
+      # `security import` later, during `tauri build`. The throwaway keychain
+      # below is deleted and the original search list restored by a trap, so
+      # Tauri's own keychain sequence sees clean state.
+      #
+      # NEITHER --deep NOR --entitlements is ever passed to a helper (the
+      # script enforces this and its suite asserts it from a captured dry
+      # run, not a source grep -- so this comment naming both flags cannot
+      # satisfy the assertion). --deep would apply the OUTER entitlements to
+      # nested content and seal the Python.framework bundles this tree
+      # deliberately leaves unsealed; src-tauri/entitlements.plist is the
+      # app/sidecar file whose allow-jit the failed run vindicated, and must
+      # never reach a helper.
+      #
+      # No APPLE_* env: map here, deliberately (GAP-A). APPLE_CERTIFICATE,
+      # APPLE_CERTIFICATE_PASSWORD and APPLE_SIGNING_IDENTITY are already in
+      # this step's environment, written to $GITHUB_ENV by "Enable Apple
+      # signing only when a complete cert secret set is enrolled" and ONLY on
+      # a fully-enrolled run. A mapped secret would resolve to
+      # defined-and-empty when absent; reading the inherited environment is
+      # what keeps D-04's "a secrets-less run skips this and the job stays
+      # green" invariant.
+      #
+      # UNPROVEN LIVE, stated plainly in the same spirit as this file's own
+      # header: whether this throwaway keychain coexists with Tauri's later
+      # keychain manipulation has NEVER been observed. Neither has the
+      # signature surviving the bundle.macOS.files copy, nor a notarization
+      # `Accepted`, nor any helper actually launching under the hardened
+      # runtime with no entitlements. Do not read a green run of this step as
+      # evidence for any of those.
+      - name: Sign every Mach-O in the macOS helper tree before bundling
+        if: startsWith(matrix.platform, 'macos') && env.APPLE_SIGNING_IDENTITY != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          KEYCHAIN="$RUNNER_TEMP/gamelib-helpers.keychain-db"
+          P12="$RUNNER_TEMP/gamelib-helpers.p12"
+          KEYCHAIN_PW="$(openssl rand -base64 24)"
+
+          ORIG_KEYCHAINS="$(security list-keychains -d user | sed -e 's/[\"[:space:]]//g' | tr '\n' ' ')"
+
+          # Installed BEFORE the P12 is written, so it fires on failure as
+          # well as success. This is the WR-01 lesson from the Windows leg
+          # restated: that bug existed precisely because the cleanup was
+          # registered after key material hit disk.
+          cleanup() {
+            security list-keychains -d user -s $ORIG_KEYCHAINS 2>/dev/null || true
+            security delete-keychain "$KEYCHAIN" 2>/dev/null || true
+            rm -f "$P12"
+          }
+          trap cleanup EXIT
+
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$P12"
+
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          # Without this the keychain can relock partway through a
+          # multi-minute 253-file signing run.
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security import "$P12" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          # Omitting this makes codesign fail with errSecInternalComponent on
+          # a headless runner. Output redirected: it echoes the keychain dump.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PW" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $ORIG_KEYCHAINS
+
+          pnpm sign:macos-resources -- --dir build/bin/arm64/darwin --keychain "$KEYCHAIN"
+
       - uses: tauri-apps/tauri-action@v1
         with:
           tagName: v__VERSION__
