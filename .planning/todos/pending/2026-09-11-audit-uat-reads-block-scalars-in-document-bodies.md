@@ -1,17 +1,111 @@
 ---
 created: 2026-09-11
-title: "`audit-uat` reads YAML blocks in document BODIES too — a MEASURED 652-field population (51 files); its worst defect (whole-file suppression) is now ledgered by a gate and closed off for new files by a CLAUDE.md convention, with item A (27-UAT.md) and item D (milestone-hidden) still open"
+title: "`audit-uat` reads YAML blocks in document BODIES too — the 652-field body population is MEASURED (51 files); the whole-file suppression defect is ledgered by a gate and CI-asserted; item A (27-UAT.md) is CLOSED by relocation; only latent item D (milestone-hidden) remains; PARKED pending the v0.8 milestone advancing"
 area: planning-records
-severity: medium
+severity: minor
 platform: any
-ready: human
+ready: blocked
 source: "quick task 260911-vox (the frontmatter block-scalar sweep) — found while proving that sweep's V4 post-condition; deliberately left OUT OF SCOPE there"
 files:
   - .planning/phases/27-tauri-shell-walking-skeleton/27-UAT.md
   - .planning/phases/34.5-tauri-ipc-re-plumb-slice-8-non-steam-runners-wine-and-shortc/34.5-UAT.md
   - .planning/debug/deep-link-open-url-abort.md
+  - .planning/phases/17-steam-on-macos-via-crossover-wine-windows-only-steam-games-i/17-UAT.md
+  - .planning/phases/18-macos-32-bit-detection-badge-crossover-routing/18-UAT.md
+  - .planning/phases/23.2-steam-depot-selection-required-vs-optional-depots-and-skip-a/23.2-HUMAN-UAT.md
 resolves_phase: null
 ---
+
+## PARKED 2026-09-18 — item A CLOSED by relocation, item D is all that remains (quick `260918-c6a`)
+
+This section governs where it contradicts every section above, **including the
+`## DECISION 2026-09-18` section from `260918-amq`** — specifically its `**A — still OPEN.**`
+bullet, which that section's own "All four items, restated by current status" list carried. That
+bullet is now superseded: item A is CLOSED. Nothing below was deleted; this file stays append-only.
+
+1. **What item A's remedy actually was, and why flattening stayed excluded.** The two `reason: |`
+   blocks at `27-UAT.md` L31/L51 were NOT flattened — the `RE-MEASURED 2026-09-12` census's
+   multi-paragraph exclusion (3 paragraphs at L31, 2 at L51) still holds and was not overridden.
+   `reason: |` became `reason: <one-line summary sentence>`, and the full narrative moved below it
+   into the document body, dedented and verbatim, inside `<!-- reason-narrative:test-N:start -->`
+   / `:end` HTML-comment markers. The mechanism that makes this legible to `audit-uat` without
+   corrupting anything: `uat.js:158`'s `blockText.match(/reason:\s*(.+)/)` is unanchored, carries
+   no `m` flag, and `.` does not cross a newline — it only ever consumes the first line, so a
+   one-line summary on the key plus prose below it works exactly as designed. `categorizeItem`
+   (`uat.js:116-146`) reads its `reason` argument only on the `result === 'skipped'` branch; both
+   target items are `result: pending`, which returns `'pending'` before that branch is ever
+   reached, so `category` could not move. Measured evidence, not asserted: `gsd-sdk query
+   audit-uat` differed from its pre-edit baseline in exactly two string values (both phase-27
+   `reason` fields, `"|"` -> a real sentence, nothing else in the 59-item/8-file JSON moved), and
+   `.planning/uat-visibility-gate.py` printed the identical `36 / 154 / 95 / 59 across 12` both
+   before and after the edit.
+
+2. **This did NOT violate the `260918-amq` convention.** That convention governs `expected: |`
+   block scalars — `uatRenderCheckpoint` (`uat.js:81-82`) reads those correctly today, and the
+   convention exists to stop new UAT files being authored with that shape. This task touched only
+   `reason:` keys, which no verb in the resolved SDK (`get-shit-done-cc` v1.42.3) dedents or
+   block-parses (confirmed: the only two `expected:\s*\|`-matching dedent sites in the whole dist
+   are `uat.js:81` and `uat.js:82`), in a file the convention does not name. Writing this down so
+   the next reader does not mistake a `reason:` relocation for an `expected:` flattening — they are
+   different keys, different files in spirit, and neither regresses the other.
+
+3. **Why the ORDER mattered — park AFTER resolving, never before.** Parking first would have buried
+   item A the same way `2026-08-17-keyring-available-is-a-silent-prompt-channel.md` was buried on
+   2026-09-04 and resurfaced the next day as a **duplicate capture** from someone who did not know
+   the file existed — despite its body stating **twice in bold** that the item was not parked. The
+   generalisation this precedent forces: **every cheap reader takes the frontmatter key as the
+   file's whole state**, and no amount of bold body prose compensates for a `ready:` value that
+   says otherwise. Therefore: resolve every live sub-item first, park only when nothing live
+   remains. This instruction is addressed to whoever next considers reversing that order on this or
+   any other todo.
+
+4. **`severity:` re-argued against the CLAUDE.md vocabulary — both sides recorded, then the call.**
+   The call is **`minor`**.
+   - *For `minor`:* the vocabulary reads "polish, rough edge, or **a latent trap with no live
+     consequence**." With A closed and C decided-and-ledgered (see the `260918-amq` section above),
+     item D is all that is left, and D's live consequence today is not merely assumed nil — it was
+     **measured** on 2026-09-12: a syntactically perfect item was injected into all 62 phase dirs
+     of a scratch copy, 39 surfaced and 23 did not, and D's 17 fields are inside the 23.
+     `getMilestonePhaseFilter` removes their phase dirs before any file is opened, so no tool can
+     reach them while the milestone is `v0.8`. That is the definition of latent.
+   - *For staying `medium` (the argument that loses, and why):* D is **UNMEASURED** past the
+     trigger — its consequence is *unknown*, not known-nil, and unknown normally cuts upward. The
+     rebuttal: the unknown is about the defect's **magnitude after the trigger fires**, not about
+     its existence today; `severity` grades the defect as it currently stands, and re-grading after
+     the trigger is exactly what the unpark step (below) is for.
+   - *The strongest objection, named and answered rather than ignored:* downgrading severity **and**
+     parking in the same edit applies two visibility suppressions at once — which is the very
+     burial mechanism item 3 above describes. The answer is that the correct remedy for a
+     visibility problem is the **trigger and the breadcrumb** (item 5), not an inflated severity.
+     Holding `medium` to keep a file visible would be using `severity` as a visibility lever rather
+     than as a grading of the defect — the same category error as widening a ledger to make a gate
+     green. If a future reader concludes the trigger is not load-bearing enough, the honest move is
+     to strengthen the trigger, not to re-inflate the severity.
+
+5. **UNPARK TRIGGER — explicit and testable.** The trigger is: *the active milestone advances past
+   `v0.8`.* Made checkable, not vibed, by resolving where the milestone is actually recorded with a
+   bounded command (not `STATE.md` read whole):
+   `ls .planning/milestones/ 2>/dev/null; grep -n -i -m 5 'milestone' .planning/STATE.md` — measured
+   result: `.planning/milestones/` holds only `v0.1-MILESTONE-AUDIT.md`, `v0.1-REQUIREMENTS.md`,
+   `v0.1-ROADMAP.md`, `v0.1-phases` — no `v0.8` milestone file exists yet; the live record is
+   `.planning/STATE.md` line 3, `milestone: v0.8`. **The concrete check: `STATE.md`'s `milestone:`
+   field must read something other than `v0.8`.**
+   Breadcrumb, verified rather than assumed: this todo previously claimed the string
+   `getMilestonePhaseFilter` "appears in this todo and in nothing else under `.planning/`". That
+   claim is **FALSE as measured today** — `grep -rl 'getMilestonePhaseFilter' .planning/ | sort`
+   returns **five** files, not one: `.planning/STATE.md`,
+   `.planning/quick/260912-9v7-census-the-audit-uat-body-block-scalar-p/260912-9v7-SUMMARY.md`,
+   `.planning/quick/260912-csq-add-a-uat-visibility-planning-gate-that-/260912-csq-SUMMARY.md`,
+   `.planning/quick/260918-c6a-uat-reason-inline-then-park/260918-c6a-PLAN.md`, and this todo
+   itself. Recording the true result rather than perpetuating the old claim — the breadcrumb still
+   works (grepping the string surfaces this file among the five), it is just not exclusive.
+   What unparking requires, plainly: measure the 17 fields, re-grade severity against that
+   measurement, and restore `ready:` to a live value.
+
+6. **What is still true and unfixed**, so this park does not read as a completion: `audit-uat`'s
+   JSON still carries no internal indicator that phase 34.5 is absent (item C's accepted residue,
+   held by `uat-visibility-gate.py`, not repaired), and nothing in CI covers the body block-scalar
+   population at large — that remains D3 in quick `260911-j88`.
 
 ## DECISION 2026-09-18 — remedy option 2 adopted (quick `260918-amq`) — read this first
 
