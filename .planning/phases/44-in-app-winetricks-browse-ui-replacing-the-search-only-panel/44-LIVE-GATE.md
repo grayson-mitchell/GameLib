@@ -275,16 +275,99 @@ Its 1.31:1 is recorded as a partial close, not a pass.
 `dotnetcore2` entry at 11:10:37, and the row's `Installed` badge is on screen. install -> event ->
 refetch -> badge works.
 
+### Dark arm — midnight mirage, dialog surface `#080a0b`
+
+| Element / row state | Before | **After (live)** | Verdict |
+|---|---|---|---|
+| Available — row name text | 15.10:1 | **16.86:1** | **PASS** |
+| **Available — Install button label** | **1.01:1** | **14.76:1** | **PASS** |
+| Available + Cached — tag | 15.34:1 | **15.34:1** | **PASS** |
+| Group header | 15.10:1 | **16.86:1** | **PASS** |
+| **Installing (this row)** | NOT REACHED | **15.34:1** | **PASS** |
+| **Installed** | NOT REACHED | **12.03:1** (`#68e09c`) | **PASS** |
+| Row separator (defect 4) | none, zero variance | **1.46:1** at device y=454-455 | present but SUBTLE |
+
+Predicted 14.78 / 1.45 from the token declarations; measured **14.76 / 1.46**. The worst pairing
+in the phase went **1.01:1 -> 14.76:1**. The `Installed` figure was measured twice from different
+frames and reproduced at 12.03:1 both times.
+
 ### Still NOT REACHED after the re-run
 
-- **Every dark-arm cell** post-fix. The pre-fix dark arm was measured (Install button 1.01:1,
-  everything else 15.10-15.34:1) but the theme was not switched back after the rebuild.
-- **Installing (this row)** and **Installing (elsewhere)**, both themes — transient states; the
-  one install performed was not captured (see the D-22 note below).
-- **Needs GUI** and **Errored**, both themes.
+- **Needs GUI** and **Errored**, both themes. Errored needs a verb that fails; Needs-GUI needs one
+  of the 8 unattended-incapable verbs, which D-23 already excludes from live coverage.
+- **Installing (elsewhere)** — the row-state of a DIFFERENT row while one row installs. Only one
+  verb was installed per run, so this was never exercised.
 - `:focus-visible` ring, both themes; carets, both themes.
 
-### D-22: NOT RUN, and one attempt was wasted
+### D-22 RUN AND PASSED — 2026-09-17 21:19-21:24, `corefonts` on the Alan Wake GPTK prefix
+
+Fourth attempt; the first three are recorded below because their failure modes are the
+instructive part. Method: baseline captured on a stable view, burst armed and **verified
+capturing before the click** (19 frames on disk with the manifest advancing), 300s at ~0.95s
+cadence, 244 frames, operator hands off the scroll and search box throughout.
+
+**Timeline, from the app's own log plus the frame manifest:**
+
+| moment | time | evidence |
+|---|---|---|
+| click / `winetricksInstall` fired | 21:20:52 | `gamelib.log:801,805` — `winetricks -q corefonts` |
+| row hover fill engaged | 21:20:51 | frame 0071, -12,010 bytes |
+| `Installing…` + spinner visible | 21:20:56.978 | frame 0077, +14,156 bytes |
+| `Installed` badge | 21:22:25.171 | frame 0170, +2,342 bytes |
+| install recorded on disk | — | `$WINEPREFIX/winetricks.log` gained `corefonts` plus `andale arial comicsans courier georgia impact times trebuchet verdana webdings` |
+
+Duration ~93s. The `Installing` indicator appeared **5 seconds after** the invoke — noted, not
+scored; D-22 does not make a latency claim.
+
+**Baseline geometry (the measurement everything below is relative to):** row boundaries at device
+y = **478, 574, 670, 766, 862, 958, 1054**, pitch `[96, 96, 96, 96, 96, 96]` — uniform, zero
+variance, 96 device px = **48.0 CSS px**. `xact` 862-958, **`corefonts` 958-1054**, `physx`
+1054-1150.
+
+**Measurement 1a — mounted at install START: PASS.** Boundaries 478-958 identical before, at, and
+through the start. List-region stddev went **UP**, 41.69 -> 79.71, never toward 0 — the region
+gained contrast, it did not blank. Rows stayed visible and enumerable in every frame.
+
+**Measurement 1b — mounted at COMPLETION: PASS.** Scored independently of 1a, because `35-25`
+closed only half this defect precisely by checking only half. Frames either side of the swap:
+
+| frame | time | stddev | action-slot ratio | boundaries |
+|---|---|---|---|---|
+| 0166 | 21:22:21.385 | 41.69 | 15.34:1 (Installing) | 478,574,670,766,862,958,1054 |
+| 0169 | 21:22:24.202 | 41.69 | 15.34:1 (Installing) | 478,574,670,766,862,958,1054 |
+| **0170** | 21:22:25.171 | 41.69 | **12.03:1 (Installed)** | **478,574,670,766,862,958,1054** |
+| 0175 | 21:22:29.918 | 41.69 | 12.03:1 (Installed) | 478,574,670,766,862,958,1054 |
+
+**Measurement 2 — no reflow, no scroll jump: PASS.** Every boundary is **byte-identical across
+the swap**: zero shift on the installing row and zero on `physx` below it, which is the row that
+would move first. The 96px pitch is unbroken. Deltas are therefore **0 px** on scroll offset, on
+the installing row's Y, and on the rows below — the fixed action-slot height is doing its job.
+
+**A trap in my own instrument, recorded so the next reader is not misled by the raw numbers.**
+Between frames 0071-0076 the `1054` boundary *disappeared* from my detector and returned at
+exactly 1054 afterwards, which reads like a reflow and is not one. The separator scan samples a
+strip at x 430-470 looking for a LIGHT line on a DARK surface; during those frames the pointer sat
+on the row and the pre-fix solid pale hover fill covered that strip, so the line became
+undetectable. Geometry never changed — had `corefonts` changed height, `physx` would have MOVED to
+a different y rather than the boundary vanishing and reappearing at the identical value. A
+detector that depends on the surface it measures against will lie whenever that surface changes.
+
+**Verdict: D-22 PASS (1a, 1b and 2).**
+
+**Caveat, unchanged and not overstated:** at ~0.95s sampling this resolves settled states. A
+sub-frame flicker (~4ms) would pass between captures unseen, so the correct reading is "no
+blanking detectable at ~1s sampling", NOT "no blanking occurred". Proving the stronger claim needs
+a screen recording.
+
+**Build under test for D-22** was the 10:57 packaged release, which carries the defect 1-4 fixes
+but predates 5-8. Those are colour-only changes (`color`, `background`) with no layout effect, so
+this geometry result transfers to current `HEAD`. The frames incidentally captured defect 5 live:
+at 0073 the hovered `corefonts` row shows near-white text on solid pale cyan, with the `Cached`
+tag swallowed entirely — the operator's report, confirmed on film.
+
+### D-22 attempts 1-3: how they failed
+
+
 
 An attempt was made and produced no usable transition data. The burst-capture loop was announced
 as sampling every ~1.2s over ~96s but **contained no `sleep`**: it actually captured 77 frames in
@@ -328,13 +411,36 @@ as sufficient.**
 
 ## Overall verdict
 
-**FAIL** — D-24 failed on four defects (table above). D-22 was **not run**: it was deferred by
-operator decision because the unreadable surface made further visual observation an eye-strain
-cost for no diagnostic gain. The colour defects do not block D-22 mechanically — the Install
-button is unreadable but still clickable — so D-22 is simply outstanding, not blocked.
+**FIRST PASS: FAIL.** D-24 failed on four defects, all found by the operator unaided. D-22 was
+deferred at that point because the unreadable surface made further visual observation an
+eye-strain cost for no diagnostic gain.
 
-**Sequencing decided with the operator:** fix defects 1-4, then run D-22 against a legible
-surface, then re-run D-24 to confirm the fixes. That ordering also means D-24's ten NOT REACHED
-cells get measured on the re-run rather than needing a third pass.
+**AFTER REMEDIATION: D-22 PASS, D-24 PASS on every reachable cell, with two items open.**
 
-Phase 44 therefore does **not** complete green. Plan 44-08 stays open.
+| Item | Status |
+|---|---|
+| D-22.1a — mounted at install start | **PASS** |
+| D-22.1b — mounted at completion (scored independently) | **PASS** |
+| D-22.2 — no reflow, no scroll jump | **PASS** — 0 px delta, every boundary byte-identical |
+| D-24 light arm | **PASS** — 13.50 / 8.93 / 9.74 / 7.35 / hover 10.35 |
+| D-24 dark arm | **PASS** — 16.86 / 14.76 / 15.34 / 15.34 / 12.03 |
+| Defect 4 — row definition | **PARTIAL** — separator exists (1.31:1 light, 1.46:1 dark) where there was zero variance, but subtle |
+| Defect 9 — Install button `:hover` bg | **OPEN, needs a decision** — 3.50:1 on nord-light and no token fixes it (`--accent-overlay` is worse at 2.34:1; base `--accent` passes at 8.88:1 but means no visible hover). Needs a new per-theme token or a non-colour hover treatment |
+| D-24 Needs GUI / Errored / Installing-elsewhere | **NOT REACHED** |
+
+**Nine defects were found by this gate. The suite was green against all nine.** Four in the first
+pass, four more in a census triggered by the operator finding a fifth after the first fix shipped,
+and one that has no token-only remedy. Every one is the same category error: a `--navbar-*` or
+`--text-hover` token consumed where nothing guaranteed it contrasted with what was drawn on or
+under it. The Frontend jest project has no compositor, so it can assert a declaration EXISTS but
+never what it RESOLVES TO against its surface — which is why `lint-translations`-style token gates
+(absence detectors) were structurally incapable of seeing any of them.
+
+**The load-bearing methodological finding:** defect 1 manifests only in light themes — on
+midnightMirage the identical wrong token yields white-on-black at 15.10:1 and looks perfect.
+Defect 5 is the mirror: it manifests only in DARK. A single-theme spot-check would have passed
+each of them. D-24's insistence on a named dark theme AND a named light theme is the only reason
+either was caught, and it is the rule worth carrying to every future colour gate.
+
+Plan 44-08 stays open pending the defect 9 decision. Everything else this gate set out to measure
+has been measured.
