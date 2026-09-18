@@ -5,7 +5,9 @@ area: store-embed
 severity: minor
 platform: any
 ready: human
-status: pending
+status: CLOSED
+closed: 2026-09-17
+closed_by: "quick task 260917-u4d -- operator decision, resolution path 1 (do nothing further)"
 resolves_phase: ""
 found_by: "Phase 40 Plan 09, Task 3 (D-32 re-derivation)"
 files:
@@ -104,3 +106,24 @@ Per D-32's own escape clause ("raise it rather than shipping a detection that ca
 Low. GOG remains fully usable; the only lost behavior is the specific fallback + one-time warning
 when `track.adtraction.com` is blocked. This is a narrower regression than "GOG is broken" — it
 is "one specific redirect-chain failure mode has no explanatory UI."
+
+## Resolution
+
+**CLOSED 2026-09-17 — operator decision, resolution path 1 ("do nothing further").**
+
+The declared gap IS the shipped outcome. This is not a deferral and not a won't-fix pending
+revisit: path 1 above was chosen on its merits, because GOG's affiliate redirect chain works
+normally whenever `track.adtraction.com` is not blocked, and the residual regression is narrow —
+one specific redirect-chain failure mode has no explanatory UI.
+
+What Phase 40 Plan 09 shipped stays in place as the deliverable this close blesses, not as a
+placeholder awaiting replacement:
+
+- the gap comment and the once-per-GOG-store-visit `window.api.logInfo('[WebView] D-32 gap: ...')`
+  call in `src/frontend/screens/WebView/index.tsx`
+- `src/frontend/screens/WebView/__tests__/WebViewAdtractionGapDeclared.test.ts` (10 tests),
+  which asserts that gap line's gating and content and that no adtraction Dialog or state
+  remains reachable
+
+Paths 2 and 3 are recorded above and remain available, but nobody is carrying them. Anyone
+reopening this should open a new todo citing this one rather than reviving this file.

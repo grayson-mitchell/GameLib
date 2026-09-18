@@ -277,7 +277,7 @@ The warning `Dialog` is REMOVED, not left unreachable, and its orphaned state wa
 gap is logged at the point the detection would have run, gated on `store === 'gog'`
 (`WebView/index.tsx:296-317`) so it fires once per GOG visit, and the log line cites
 `40-EMBED-API-VERIFICATION.md` Q3: ABSENT. The todo
-`.planning/todos/pending/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`
+`.planning/todos/completed/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`
 exists, carries the vendored-source citation, and corrects D-32's own inverted caveat.
 `WebViewAdtractionGapDeclared.test.ts` passes.
 

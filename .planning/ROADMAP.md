@@ -4968,7 +4968,7 @@ the `is_none()` conjunction.
   → `todos/pending/2026-09-05-confirm-the-gap-d-nav-drain-on-store-gog-on-real-hardware.md`
 - D-32 adtraction ad-block detection has no derivable signal under Tauri (wry 0.55.1 implements no
   navigation-failure callback at all — the retired detection's premise was inverted).
-  → `todos/pending/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`
+  → `todos/completed/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`
 
 **Deferred out, not closed:** `38-E01`/`38-E02` (Windows WebView2 and Linux webkit2gtk `add_child`
 — no code path exists to test; `unstable` is target-gated to macOS), and `38-E03`/`38-E04`

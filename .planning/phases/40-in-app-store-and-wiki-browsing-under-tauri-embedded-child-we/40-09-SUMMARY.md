@@ -24,7 +24,7 @@ key-files:
     - src/frontend/screens/WebView/__tests__/storeEmbedOrigins.test.ts
     - src/frontend/screens/WebView/__tests__/WebViewDeepLinkAndRestore.test.ts
     - src/frontend/screens/WebView/__tests__/WebViewAdtractionGapDeclared.test.ts
-    - .planning/todos/pending/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md
+    - .planning/todos/completed/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md
   modified:
     - src/frontend/screens/WebView/index.tsx
     - src/frontend/screens/WebView/useStoreEmbedHost.ts
@@ -200,7 +200,7 @@ kind survived the platform change.
   retired handler ever applied to), that calls `window.api.logInfo(...)` once per GOG store visit,
   naming the gap as D-32 and citing Q3's ABSENT verdict.
 - Filed
-  `.planning/todos/pending/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`,
+  `.planning/todos/completed/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`,
   carrying the full vendored-source citation, the corrected caveat, and three possible future
   resolution paths (do nothing; a hand-rolled `objc2` `WKNavigationDelegate` for the store embed,
   mirroring `EpicPristineNavDelegate`; or a generic main-frame stall detector unrelated to the

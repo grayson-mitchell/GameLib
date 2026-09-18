@@ -24,7 +24,7 @@
  * detection that cannot fire: the orphaned state is REMOVED (not left unreachable), a
  * "logged, never silent" gap line fires once per GOG store visit, and a todo is filed carrying
  * the vendored-source citation
- * (`.planning/todos/pending/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`).
+ * (`.planning/todos/completed/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`).
  *
  * WHY A SOURCE-TEXT GATE
  *
