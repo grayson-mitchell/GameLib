@@ -93,3 +93,71 @@ Also unmeasured by any run so far: `260911-umj`'s own app-wide claim that `Searc
 Library header. Those figures are the executing agent's; the orchestrator's attempted
 independent re-measure was **invalidated** (the app had been left on a different screen and the
 scan returned a nonsense 80.0 px), so they are unconfirmed.
+
+## 2026-09-11 RESOLVED — item 2 re-measured against the 34px control; all three items now PASS
+
+Re-measured on the live `tauri:dev` window after `260911-ue4` (label flip) and `260911-umj`
+(34px shrink), with the operator having navigated back to Humble Keys:
+
+- **Label is LEFT of the select.** `Sort` glyph ink x=221.0..246.0 CSS; select box
+  x=258.0..454.5 CSS (**197.0 px wide**, track unchanged). Gap 12.0 CSS px = `--space-sm`.
+- **Vertically centred against the 34px control.** Select box measured **border-to-border
+  141.0..174.0 = 34.0 CSS px** exactly — the declared height took effect. The label's ink band
+  (152.0..163.5) sits **entirely within** it; ink-centre offset **3.50 CSS px**, essentially
+  unchanged from the 3.0 px measured against the old 40px control, so it is the same
+  no-descender artifact and NOT a misalignment introduced by the shrink.
+- **`Expiring soonest` is NOT clipped.** ⚠ A crude ink-extent heuristic first reported
+  `CLIPPED? YES` — a **FALSE POSITIVE**: it counted the painted dropdown arrow (drawn as a dark
+  `linear-gradient` background-image in the right ~40px of chrome) as text ink. Confirmed
+  complete by inspecting the capture. Recording this because the pixel method that correctly
+  caught a false FAIL on item 1 produced a false FAIL of its own here — the measurement must be
+  validated against WHAT it is measuring, not just executed.
+
+Also independently confirmed on this screen: `SearchBar` renders at **34.0 CSS px** (header
+band 58.0..91.5), matching `260911-umj`'s claim.
+
+**Still unconfirmed, carried forward:** `260911-umj`'s 34px figures for **Settings,
+InstallModal and the Library header** remain the executing agent's measurements. Only Humble
+Keys has been independently re-measured.
+
+**~~Remaining open question, not a defect:~~ BOTH HALVES RESOLVED — annotated 2026-09-18 when
+this section was recovered (see the note below); the text above was written 2026-09-11 and went
+stale within hours.**
+
+- **The drop shadow is GONE.** The original text said `SelectField/index.css:17` "still carries
+  `box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25)`" and awaited an operator decision. That decision
+  was taken the SAME DAY: `0265026ba` ("drop the shared SelectField drop shadow; ratify the
+  off-scale 34px", 2026-09-11, ancestor of `main`) removed it. `grep box-shadow` on that file now
+  returns nothing, and line 17 — the exact line cited above — is today the opening of the comment
+  recording the decision: _"260911-umj follow-up, operator decision: no drop shadow."_
+- **The `5px`-vs-token question is settled too.** It was answered in favour of the token by
+  `260912-d84`, which swapped the shared `.humbleKeysColumnHeader, .humbleKeyRow` `column-gap`
+  from `var(--space-md)` to `var(--space-md-fixed)`; its todo is closed in `completed/` as
+  `2026-09-11-humble-keys-game-column-header-label-sits-5px-left-of-row-titles-unverified-live.md`.
+
+Note that `260912-d84`'s fix, like this todo, is closed `-unverified-live`: the source token is
+pinned by test, but no live render has confirmed it.
+
+## Provenance of this section — it was written 2026-09-11 and committed 2026-09-18
+
+**This entire `## 2026-09-11 RESOLVED` section sat UNCOMMITTED in the working tree for seven
+days, and the commit that claims to contain it does not.** `fa44e58db`
+("docs(260911-umj): close the live-gate todo — item 2 re-measured against the 34px control",
+2026-09-11) is a **pure rename**: `git show --name-status -M` reports `R100`
+`pending/... -> completed/...`, and its diffstat is `1 file changed, 0 insertions(+),
+0 deletions(-)`. A `git mv` commits the content at `HEAD`, silently dropping unstaged working-tree
+edits — so the re-measurement the commit message advertises was never in it.
+`git log --all -S "RESOLVED — item 2 re-measured"` returns **nothing**: this text had never been
+committed anywhere until now.
+
+Nothing detected it. `planning-gates` was green throughout, because a todo that is missing a
+section it was never known to have is indistinguishable from one that is complete.
+
+Two consequences worth carrying:
+
+1. **A commit message is not evidence its content landed.** This one names the measurement
+   precisely and contains none of it. Check `R100`/`RM` in `--name-status -M`, and assert the
+   staged blob, not the working tree.
+2. **Recovered text must be re-checked before it is trusted.** Both claims in the closing
+   paragraph above had gone stale within hours of being written, and committing them verbatim
+   seven days later would have shipped two false statements into a closed todo.
