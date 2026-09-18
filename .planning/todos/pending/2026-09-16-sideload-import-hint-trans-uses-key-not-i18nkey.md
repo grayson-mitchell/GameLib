@@ -1,6 +1,6 @@
 ---
 created: 2026-09-16T00:00:00.000Z
-title: "SideloadDialog's import hint <Trans> passes key= instead of i18nKey=, so it never localises and its 47 translated copies are dead"
+title: "SideloadDialog's import hint <Trans> passes key= instead of i18nKey=, so it never localises and its 46 translated copies are dead"
 area: i18n
 severity: minor
 platform: any
@@ -32,12 +32,13 @@ door into `GameSubMenu`). That quick deliberately changed ONLY the quoted label 
 
 ## Why this is not a one-line fix
 
-The obvious repair — rename the prop from `key` to `i18nKey` — is a trap. All 47 non-English
-translated copies of `sideload.import-hint.content` (in each locale's `translation.json` or
-equivalent catalog) still quote the **OLD** "Import Game" label, because they were translated
+The obvious repair — rename the prop from `key` to `i18nKey` — is a trap. All 46 non-English
+translated copies of `sideload.import-hint.content` live in `public/locales/<lang>/gamepage.json`
+— the `gamepage` namespace, per `useTranslation('gamepage')` at `index.tsx:64`, NOT
+`translation.json` — and they still quote the **OLD** "Import Game" label, because they were translated
 before this quick's rename and this quick did not touch them (its Task 1/2 scope was `gamelib.json`
 only, and this key does not live there). If the prop is fixed in isolation, `Trans` would start
-resolving those 47 stale catalog entries — and 47 locales would start telling users to click a
+resolving those 46 stale catalog entries — and 46 locales would start telling users to click a
 button named "Import Game" that no longer exists anywhere in the app (it was renamed to "Locate
 existing installation…" by the same quick that filed this todo). That is strictly worse than the
 current dead-but-harmless state, where every locale at least shows the (English, but currently
@@ -45,7 +46,7 @@ accurate) inline children.
 
 A correct fix needs both halves together, in one change:
 1. `key=` → `i18nKey=` on the `<Trans>` element.
-2. A sweep of all 47 translated `sideload.import-hint.content` values to match the new "Locate
+2. A sweep of all 46 translated `sideload.import-hint.content` values to match the new "Locate
    existing installation…" wording, matching the pattern already used for the door label's own
    48-locale hand-translation (see `quick-260916-cdb`'s SUMMARY for that precedent and its
    per-locale ellipsis convention).
@@ -54,9 +55,12 @@ A correct fix needs both halves together, in one change:
 
 TBD:
 1. Rename `key=` to `i18nKey=` at `SideloadDialog/index.tsx:376`.
-2. In the same change, update all 47 non-English `sideload.import-hint.content` translations to
+2. In the same change, update all 46 non-English `sideload.import-hint.content` translations to
    reference the new door label wording, not the old "Import Game" text — by hand, per-locale,
    matching the conventions established for `installFlows.importDoorLabel`.
 3. Re-run whatever gate covers `<Trans>` prop correctness (if any exists) plus a targeted
    i18n-catalog test for this key across all 49 locales, to confirm the fix does not silently ship
-   a partial sweep.
+   a partial sweep. Note the counts differ on purpose: 49 locale directories exist under
+   `public/locales/`, but only 47 carry `sideload.import-hint.content` — `br` and `sl` have no copy
+   at all — and one of those 47 is `en`, leaving 46 non-English copies to sweep. A test asserting
+   "49" will fail on `br`/`sl` for a reason unrelated to this defect.
