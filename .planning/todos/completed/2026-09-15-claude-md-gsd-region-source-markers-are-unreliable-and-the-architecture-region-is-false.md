@@ -138,7 +138,18 @@ Verification evidence: conventions region byte-identical to the pre-edit copy (`
 `CONVENTIONS-BODY-IDENTICAL`); exactly six deleted lines in `git diff -- CLAUDE.md`, matching the
 five marker comments plus the false architecture sentence, nothing else; 7/7 `GSD:*-start`/`-end`
 marker pairs, same names, same order; `npx prettier --check CLAUDE.md` was already clean before
-any edit (negative control) and remained clean/idempotent after; `pnpm planning-gates` reported
-10/11 — the one failure (`uat-visibility-gate.py`, flagging `.planning/phases/43-.../43-UAT.md`)
-is a pre-existing, untracked, unrelated file present in the working tree before this quick task
-began and out of this plan's scope to touch.
+any edit (negative control) and remained clean/idempotent after.
+
+`pnpm planning-gates` was measured twice and gave two different answers, which is worth recording
+because neither number is a fact about this change:
+
+- **At execution time: 10/11**, the single failure being `uat-visibility-gate.py` on
+  `.planning/phases/43-.../43-UAT.md`.
+- **Re-measured by the orchestrator minutes later at `38cb39cc9`: 11/11**, that same gate PASSING.
+
+The delta is not this task. `43-UAT.md` is **untracked** and belongs to a **concurrent session**
+that rewrote it at 07:22:31 while the executor was mid-run (a new pending todo from the same
+session landed at 07:21:56). Because the file is untracked, a CI checkout never sees it at all —
+so it was never a real red, and the later green is not a fix. The lesson is the standing one: a
+planning gate reads the **working tree**, not the commit, and on a repo with a live concurrent
+session the tree is not a stable measurement surface.
