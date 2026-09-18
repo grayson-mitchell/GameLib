@@ -5173,7 +5173,44 @@ already on disk for 43-01..43-09, not new work by this plan beyond 43-09 itself)
   Reachability Review never checked that its own instructions would execute. See
   `43-LIVE-GATE.md` § Verdict and `43-10-SUMMARY.md`. **Phase 43 does NOT close on this verdict.**
 
-### Phase 44: In-app Winetricks browse UI replacing the search-only panel
+### Phase 44: In-app Winetricks browse UI replacing the search-only panel — ⛔ SUPERSEDED BY PHASE 45 (2026-09-18)
+
+**Status:** ⛔ SUPERSEDED 2026-09-18 by Phase 45 — 7 of 8 plans executed and shipped; only `44-08`
+(the D-22 two-measurement live gate plus the D-24 theme spot-check) remains, and it is **abandoned
+rather than finished**, because Phase 45 replaces the entire screen it was gating. All artifacts
+retained, nothing deleted.
+
+**Why:** The operator's verdict against a live packaged build on 2026-09-17 was that the resulting
+UX is unusable, and the evidence supports that well beyond colour: rows labelled with raw upstream
+strings that winetricks itself pre-truncates at 95 characters, beside a bare verb id; 567 verbs
+filed behind five raw parser-string headers (D-09); a raw wine/curl stderr dump serving as the
+progress UI; and no guidance anywhere on what to install or why. The root cause is recorded on
+Phase 45's entry — `44-UI-SPEC.md` was produced by `/gsd-ui-phase` **before any
+`/gsd-discuss-phase` ran**, so the phase had a design contract and no CONTEXT.md, and that spec
+leans on constraint IDs `C-1`..`C-6` which exist in no artifact on disk.
+
+**What was delivered, and stands.** Waves 1–5 complete; `44-01` through `44-07` executed and
+committed. The D-22 live gate itself **PASSED** on its fourth attempt (2026-09-17, `corefonts`,
+21:20:52→21:22:25, ~93s): measurement 1a PASS (row boundaries held, region stddev rose
+41.69→79.71), 1b PASS scored independently, and measurement 2 PASS (boundaries byte-identical
+across the Installing→Installed swap at frame 0170 — `478, 574, 670, 766, 862, 958, 1054` both
+before and after, zero px reflow). The D-24 theme spot-check found nine contrast defects, of which
+**eight were fixed and verified** across both a light and a dark arm (`6b094c015`, `35d2c7d76`,
+`97d003c46`, `dcf7a8ef3`).
+
+**What is being abandoned — named, not quietly dropped.** (1) **Contrast defect 9 is UNFIXED and
+shipped**: the install button's `:hover` background sits at **3.50:1 in nord light** and no existing
+theme token resolves it; it dies with the screen rather than being repaired. (2) The D-24
+`Needs GUI`, `Errored` and `Installing-elsewhere` row-state cells were **never reached** during the
+live gate, so those three states remain unverified on the shipped surface. (3) D-23 was explicitly
+not covered. **This phase must NOT be recorded as fully verified — it is superseded with known
+residue.**
+
+**Carried into Phase 45, not rebuilt:** the pure tested seams `src/common/winetricks/verbs.ts` and
+`src/common/winetricks/deriveRowState.ts`, the 13 frozen `winetricksBrowse` keys in
+`public/locales/en/gamelib.json`, and the token lesson from the nine contrast defects — every one
+traced to a `--navbar-*` or `--text-hover` token used on a surface where nothing guaranteed
+contrast with what was drawn on or under it.
 
 **Goal:** Replace the Winetricks panel's type-to-reveal search with a browse-first categorised UI, keeping the zenity GUI as an escape hatch.
 
@@ -5205,7 +5242,7 @@ and routed to the zenity GUI rather than silently failing under `-q`.
 
 **Requirements**: REQ-44-01, REQ-44-02, REQ-44-03, REQ-44-04, REQ-44-05, REQ-44-06, REQ-44-07, REQ-44-08, REQ-44-09, REQ-44-10, REQ-44-11, REQ-44-12, REQ-44-13, REQ-44-14, REQ-44-15, REQ-44-16, REQ-44-17, REQ-44-18, REQ-44-19, REQ-44-20, REQ-44-21, REQ-44-22, REQ-44-23, REQ-44-24, REQ-44-25, REQ-44-26 — minted 2026-09-16 during `/gsd-plan-phase 44` from `44-CONTEXT.md` D-01..D-24 plus the seams surfaced by `44-RESEARCH.md`/`44-PATTERNS.md`; see `.planning/REQUIREMENTS.md` §"Phase 44 Requirements" for the six planning-time corrections recorded in requirement text. D-21 and D-23 are deliberately not given IDs (verification posture and non-coverage, carried in plan 44-08).
 **Depends on:** Phase 43
-**Plans:** 8 plans in 6 waves — **EXECUTING, 2/8 (wave 1 COMPLETE 2026-09-16).** `44-01` shipped `src/common/winetricks/{verbs,deriveRowState}.ts` (placed in `common/`, not under the component, so the Backend-project parser test can import them per D-03 and so two fewer files enrol in `meta/i18nForkTouchedFiles.json`); D-03's curated-coverage fixture was negative-controlled by adding a 9th nonexistent verb and confirming the failure names the drifted verb. `44-02` committed the 13-key `winetricksBrowse` block to `en/gamelib.json` and MEASURED the gate baseline plan 44-06 must drive to zero: **624 findings / 624 hard failures** (= 13 keys x 48 locales, matching the plan's prediction). Consequence: `lintTranslations`' jest test is RED 2/32 until 44-06 lands the fill — a DESIGNED window, since `meta/i18nCatalogPresenceBaseline.json` correctly pins `totalPairs: 0` and was deliberately NOT widened. `tsc --noEmit` green at wave close.
+**Plans:** 8 plans in 6 waves — **SUPERSEDED 2026-09-18 at 7/8 executed; `44-08` abandoned, NOT failed.** (The prior status line here read "EXECUTING, 2/8 (wave 1 COMPLETE 2026-09-16)", which was stale in both numbers.) `44-01` shipped `src/common/winetricks/{verbs,deriveRowState}.ts` (placed in `common/`, not under the component, so the Backend-project parser test can import them per D-03 and so two fewer files enrol in `meta/i18nForkTouchedFiles.json`); D-03's curated-coverage fixture was negative-controlled by adding a 9th nonexistent verb and confirming the failure names the drifted verb. `44-02` committed the 13-key `winetricksBrowse` block to `en/gamelib.json` and MEASURED the gate baseline plan 44-06 must drive to zero: **624 findings / 624 hard failures** (= 13 keys x 48 locales, matching the plan's prediction). Consequence: `lintTranslations`' jest test is RED 2/32 until 44-06 lands the fill — a DESIGNED window, since `meta/i18nCatalogPresenceBaseline.json` correctly pins `totalPairs: 0` and was deliberately NOT widened. `tsc --noEmit` green at wave close.
 
 Plans:
 **Wave 1**
