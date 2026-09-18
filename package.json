@@ -73,6 +73,7 @@
     "clean:dist-win": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/cleanDist.ts --platform=win",
     "clean:dist-linux": "node meta/runTs.cjs --bundle --platform=node --target=node21 meta/cleanDist.ts --platform=linux",
     "verify:updater-key": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/verifyUpdaterSigningKey.ts",
+    "sign:macos-resources": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/signMachOResources.ts",
     "gen-tray-icon-variants": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/trayIconVariants.ts",
     "graph:viz": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/graphifyCodeViz.ts",
     "smoke:sidecar": "node meta/sidecarStartupSmoke.cjs"
