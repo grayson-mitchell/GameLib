@@ -5234,6 +5234,111 @@ Plans:
 
 - [ ] 44-08-PLAN.md — D-22 live gate (two measurements) + D-24 theme spot-check — **not autonomous** (wave 6)
 
+### Phase 45: Native in-app Winetricks UI redesigned from scratch: one self-explanatory surface replacing both the Phase 44 browse panel and the Open Winetricks GUI escape hatch
+
+**Goal:** Replace both the Phase 44 browse panel and the `Open Winetricks GUI` escape hatch with one native in-app Winetricks surface that a user who has never heard of a "verb" or a "wineprefix" can use unaided.
+
+NOTE: `roadmap.get-phase` truncates `goal` at the first newline, so the line above is deliberately a
+complete, self-contained sentence. Everything below is visible when reading ROADMAP.md directly but
+NOT via the parser's `goal` field — do not put load-bearing scope there and assume tooling sees it.
+
+**Why Phase 44 is replaced rather than polished.** Operator verdict 2026-09-17, given against a live
+packaged build: "this ux is rubbish". The evidence agrees and is not only about colour. The shipped
+panel labels each row with a raw upstream string that winetricks itself has already truncated at 95
+characters (`w_metadata` `title`, e.g. "MS d3dx9_??.dll from DirectX 9 redistributable (Microsoft,
+2010)") beside a bare verb id; it files 567 verbs behind five raw parser-string headers (`DLLS` 328,
+`SETTINGS` 132, `APPS` 57, `FONTS` 42, `BENCHMARKS` 8) per decision D-09; it renders progress as a
+raw wine/curl stderr dump; and it offers no guidance anywhere about what to install or why — which is
+the actual job a Winetricks front-end exists to do. The 44-08 live gate also found **nine** contrast
+defects in this one surface, every one invisible to 2,648 passing frontend tests.
+
+**Root cause, and the process constraint it imposes.** `44-UI-SPEC.md` was produced by
+`/gsd-ui-phase` **before any `/gsd-discuss-phase` ran**, so Phase 44 had a design contract and no
+CONTEXT.md, and that spec leans on constraint IDs `C-1`..`C-6` that exist in no artifact on disk
+(`C-1` alone drives its entire Interaction Contract §1). The interaction model being discarded here
+came from premises that were never externalised, so nothing could challenge them.
+**This phase MUST run `/gsd-discuss-phase` BEFORE `/gsd-ui-phase`.** Note also that
+`discuss-phase`'s `check_spec` glob is `*-SPEC.md | grep -v AI-SPEC`, which *matches* a UI-SPEC and
+would load a visual design contract as locked requirements.
+
+**The upstream UI inventory is already done** (2026-09-17, read from the exact script GameLib
+downloads and runs: winetricks `20260125-next`, sha256 `f35c2973…`, at
+`~/Library/Application Support/GameLib/tools/winetricks`) and is the model to design against.
+Winetricks' GUI is a zenity state machine of six functions driven by `WINETRICKS_CURMENU`, entering
+at the **prefix chooser** (`:4948`). Screen 1 is a `--radiolist`: help / Install an application /
+Install a benchmark / Select the default wineprefix / Create new wineprefix / one row per discovered
+prefix / plus a silent-install **toggle rendered as a list row**. Screen 2 is a 13-row `--radiolist`
+(`dlls fonts settings winecfg regedit taskmgr explorer uninstaller winecmd wine_misc_exe shell
+folder annihilate`) which notably does **not** contain `apps` or `benchmarks` — they exist only on
+screen 1 — and which seats "Delete ALL DATA AND APPLICATIONS INSIDE THIS WINEPREFIX" as a peer of
+"Run regedit". Verb lists are a **multi-select `--checklist`** with columns Package / Title /
+Publisher / Year / Media / Status.
+
+**Five inventory findings that should shape the design.** (1) Upstream **overloads the checkbox**:
+installed verbs are emitted pre-ticked *and* written to `installed.txt`, then filtered out of the
+result with `grep -F -v -x -f`, so a ticked row is a status badge that does nothing on submit — do
+NOT copy that ambiguity. (2) **Batch select-then-apply is upstream's native model**; ours is
+one-button-per-row, so installing five things is five separate waits. (3) **Structured per-verb
+metadata exists and we discard nearly all of it** — across the script: `title` 580, `publisher` 434,
+`year` 433, `media` 431, `installed_file1` 347, `installed_exe1` 45, `homepage` 42, while we consume
+only `code` and `title`, which is why our rows show one unparsed blob where upstream shows sortable
+columns. (4) The 95-char truncation is **upstream's**, not our CSS. (5) **Prefix-first navigation is
+wrong for a per-game launcher** — two screens stand between the user and their game, and the first
+asks a question GameLib already knows the answer to.
+
+**Three findings folded into this phase's scope** (deliberately NOT filed as separate todos):
+
+(a) `src/backend/tools/index.ts:679-683` sends **every** winetricks stderr line to both `logError`
+and `appendMessage`, so the log and the user-visible progress panel are the same firehose. Measured
+on one session's log: **846** `[ERROR]` lines, of which 125 are wine `fixme:` noise and 178 are curl
+progress bars — 40% of the entire 2124-line log — which means a genuine winetricks failure has
+nowhere to stand out. The redesign must **classify** output (environment warnings persistent and not
+red, progress as a bar, real errors surfaced and kept) rather than echo it.
+
+(b) `src/backend/tools/index.ts:721` launches the GUI as `['-q', '--gui']`, asking winetricks to be
+interactive and to suppress interaction at once. `-q` sets `W_OPT_UNATTENDED`, which sends `w_warn()`
+down its `zenity --timeout 5 --error` branch, so **winetricks' own warnings self-dismiss after 5
+seconds** — this is why the operator could not read the wine-7.7-unsupported-upstream warning, which
+fires on every launch because GPTK 1.1 is wine 7.7 and is therefore unavoidable on macOS — and
+`w_warn_cancel` loses its cancel affordance the same way. If this phase removes the escape hatch
+that code path dies with it; otherwise it needs fixing, and dropping `-q` is **not** free because it
+also makes component installs prompt instead of running unattended.
+
+(c) `src/common/winetricks/verbs.ts:33` claims its 8 `needsGui` verbs are "the complete set
+winetricks cannot install unattended under `-q`", but that matches no derivable signal. Only **six**
+verbs actually call `w_download_manual` (`foobar2000 utorrent 3dmark03 3dmark06
+stalker_pripyat_bench unigine_heaven`); our list adds `fontxplorer` and `ubisoftconnect`, which both
+pass `${W_OPT_UNATTENDED:+/S}` and so appear to have a silent path; and winetricks' own
+`media="manual_download"` flags `gdiplus_winxp` and `protectionid`, which we omit and which use
+ordinary `w_download`. Upstream's `media` field is unreliable in **both** directions. This phase has
+to decide which verbs get an install affordance, so it must settle this — needs a live arm.
+
+**Carry forward, do not rebuild.** `src/common/winetricks/verbs.ts` and
+`src/common/winetricks/deriveRowState.ts` are pure, tested seams independent of layout; the 13 frozen
+`winetricksBrowse` keys in `public/locales/en/gamelib.json`; and above all the **token lesson** from
+the nine contrast defects — every one had a single root cause, a `--navbar-*` or `--text-hover` token
+consumed on a surface where nothing guaranteed contrast with what was drawn on or under it, so a
+redesign that reuses `--navbar-*` tokens on a dialog surface reintroduces all nine. Defect 1
+manifested **only** in light themes (1.15:1 nord-light vs 15.10:1 dark) and defect 5 **only** in
+dark, so verification must spot-check both a light and a dark theme or it passes both. New strings go
+in `gamelib.json`, never `translation.json`.
+
+**Discard:** the grouped-browse-with-search IA, the per-row install button, the raw-stderr progress
+panel.
+
+**Roadmap bookkeeping.** Phase 44 is still open on its 44-08 live gate — one unresolved contrast
+defect (install-button `:hover` at 3.50:1 in nord light, for which no existing token works) plus
+`Needs GUI` / `Errored` / `Installing-elsewhere` D-24 cells never reached. If this phase replaces
+that screen, those die with it rather than being fixed, and 44 should be closed as **superseded by
+45** — but that edit must NOT go through `gsd-sdk state.*` / `roadmap.*` / `phase.complete` /
+`query commit`, which previously truncated ~99,000 chars of STATE.md.
+**Requirements**: TBD
+**Depends on:** Phase 44
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 45 to break down)
+
 ---
 
 ## Parked / Superseded Phases
