@@ -113,3 +113,48 @@ variable is pinned anywhere — see the design rationale recorded in that plan's
 sentinel tokens (`ZZ-LEAK-SENTINEL-REVEALED-ZZ` / `ZZ-LEAK-SENTINEL-KEYINDEX-ZZ`) replace the bare
 single-digit substring check named in this todo's Direction section, and each was observed failing
 for the right reason under a temporary, reverted injection into `buildDigestCopy`.
+
+## Duplicate capture — this todo was resurrected after it was closed (quick-260919-8nr, 2026-09-19)
+
+**A second copy of this file reappeared in `pending/` a day after it was closed, and sat there for
+four days.** It was actioned again on 2026-09-19 as though it were open work.
+
+The mechanism, measured:
+
+| commit      | author date               | commit date               | effect                                    |
+| ----------- | ------------------------- | ------------------------- | ----------------------------------------- |
+| `fa2ad5030` | 2026-09-15 06:34:55 -0700 | 2026-09-15 06:34:55 -0700 | filed this todo in `pending/`              |
+| `6652c5519` | 2026-09-15 12:17:13 -0700 | 2026-09-15 12:17:13 -0700 | closed it, moved it to `completed/`        |
+| `ab8709ff1` | 2026-09-15 06:34:55 -0700 | 2026-09-16 14:57:01 +1200 | **re-added the `pending/` path**           |
+
+`ab8709ff1` carries the *same author date and the same commit message* as `fa2ad5030` but a commit
+date a day later in a different timezone, and `git merge-base --is-ancestor 6652c5519 ab8709ff1`
+returns false — it is a **replay of the original filing commit from a line that had not seen the
+close**. The rebase/cherry-pick preserved the author date, so the duplicate looked older than the
+close and sorted as if it had always been there.
+
+**Why the `git log` reads confusingly:** `--follow` on the `pending/` path lists `ab8709ff1` first
+and `fa2ad5030` last with identical subjects, which looks like one filing commit reported twice.
+Only `--diff-filter=A` distinguishes them — it names `ab8709ff1` alone as the commit that added the
+file now on disk.
+
+**What was re-verified on 2026-09-19 rather than taken on this document's word.** A green run of
+this test proves nothing, because self-healing to green is the exact defect this todo names — so
+the prior SUMMARY's claim that the negative control was observed is a document, not a measurement.
+Both arms were re-run independently: injecting `revealedKeyValue` into `buildDigestCopy` failed at
+line 461 naming `ZZ-LEAK-SENTINEL-REVEALED-ZZ`; injecting `keyindex` failed at line 462 naming
+`ZZ-LEAK-SENTINEL-KEYINDEX-ZZ`. Each arm failed at the assertion naming its *own* sentinel. The
+source was reverted with the Edit tool (not `git checkout --`, which fires this repo's
+post-checkout hook) and confirmed byte-identical to HEAD by `git diff --exit-code`; the suite
+returned to 15/15. **The shipped fix is real.**
+
+The `pending/` duplicate was deleted after `diff` proved this copy is a strict superset of it —
+it differed only by the resolution frontmatter and the `Correction` section above, so no untested
+sibling was discarded. The one residual concern (date correctness west of UTC) was already carried
+by its own live todo, `2026-09-15-humble-expiry-dates-may-render-one-day-early-west-of-utc.md`,
+which remains open.
+
+**The generalisable trap:** a todo being in `completed/` does not mean it is absent from
+`pending/`. A corpus-wide scan for files present in both directories found this was the only such
+pair (1 of 26 pending files); that scan is cheap and is the check that would have caught this on
+day one.
