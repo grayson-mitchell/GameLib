@@ -1,6 +1,6 @@
 ---
 created: 2026-09-15T00:00:00.000Z
-title: '84 fork-added `humbleKeys.*` keys in `translation.json` ship English in EVERY non-English locale, outside the gate — the 816 `gamelib` keys this todo was filed for are FIXED'
+title: '59 LIVE fork-added `humbleKeys.*` keys in `translation.json` ship English in EVERY non-English locale, outside the gate — the 25 dead keys are SWEPT (260919-8yq) and the 816 `gamelib` keys this todo was filed for are FIXED; what remains is one operator decision (fill in place vs migrate to the `gamelib` namespace) and ~2832 strings'
 area: i18n
 severity: major
 platform: any
@@ -21,11 +21,30 @@ files:
 > `gamelibCatalogParity` passes **198**. The presence baseline was **not** regenerated and
 > `gamelib.mt.json` was **not** touched.
 >
-> **What remains open, and why this todo is not closed:** `translation.json` holds **84** further
-> fork-added `humbleKeys.*` keys absent from all 48 non-English locales, **59 of them still
-> referenced in `src/`**. The Humble Keys screen therefore still renders English to every
-> non-English user. That half is invisible to the gate by construction and needs an operator
-> decision — see the two sections below, which are the live scope.
+> **What remains open, and why this todo is not closed:** `translation.json` holds **59** further
+> fork-added `humbleKeys.*` keys absent from all 46 non-English `translation.json` files
+> (`br` and `sl` have none at all). The Humble Keys screen therefore still renders English to
+> every non-English user. That half is invisible to the gate by construction and needs an
+> operator decision — see the two sections below, which are the live scope.
+
+> **STATUS 2026-09-19 — Direction step 1 is DONE; the fill is still the live scope.**
+>
+> Quick `260919-8yq` (`074bea408`) deleted the **25 dead** keys: `humbleKeys` went **84 → 59**
+> leaves in one file. All 25 were unreferenced in `src/` and `meta/`, and six still carried
+> byte-identical English to a surviving live twin (`ownedBlockBody`/`c2Body`,
+> `revealTitle`/`revealConfirmTitle`, `yourKey`/`keyShownTitle`,
+> `ambiguousOutcome`/`revealAmbiguousBody`, `cooldownRetry`/`revealCooldownBody`,
+> `ownedPassiveNote`/`finishOwnedNote`) — 43-07 renamed them and left the originals stranded.
+> The presence baseline was **not** regenerated; no locale file was touched.
+>
+> **Correction to the two traps this todo cited for the sweep:** neither armed. No locale
+> carries any of these keys, so the `da`/`id`/`nl` trailing-comma trap and the 47-vs-49
+> population trap are both irrelevant to a deletion here — it touched exactly **one** file. The
+> trap that did arm was unrecorded: `yourKey` sorts **last** in the block, so deleting it
+> stranded a comma on the preceding line.
+>
+> **The remaining work is now 59 keys, not 84**, and it needs the operator decision in step 3a
+> below before anyone starts writing strings.
 >
 > The filename still says "816" for cross-reference stability; the `title:` field is authoritative.
 
@@ -89,8 +108,11 @@ inherited Phase 13/14 debt from before the `gamelib` namespace split:
   `translation.json` at all**).
 - **59 of those 84 are still referenced in `src/`** after the 43-07 collapse. Those are live
   English strings on the same screen, in every non-English locale.
-- **25 appear unreferenced** and are probably dead after 43-07 collapsed the three tab screens
-  (`tabAll`, `tabSpares`, `sparesEmptyTitle`, `ownedBlock*`, `revealTitle`, …).
+- ~~**25 appear unreferenced**~~ **CONFIRMED DEAD AND DELETED 2026-09-19** (quick `260919-8yq`,
+  `074bea408`) — they were dead after 43-07 collapsed the three tab screens (`tabAll`,
+  `tabSpares`, `sparesEmptyTitle`, `ownedBlock*`, `revealTitle`, …). **Do not re-run this sweep.**
+  The two counts above are the 2026-09-15 measurement and are now historical: `en/translation.json`
+  holds **59** `humbleKeys.*` keys today, all of them live.
 
 **Why no gate sees this.** `meta/lintTranslations.ts:95` sets
 `FORK_OWNED_NAMESPACES = ['gamelib']`, and `meta/i18nCatalogPresenceBaseline.json` is
@@ -103,19 +125,39 @@ findings is therefore not evidence the screen is localised.
 
 ## Direction
 
-**Do the dead-key sweep first, or a third of the translation-namespace work is wasted.**
+~~**Do the dead-key sweep first, or a third of the translation-namespace work is wasted.**~~
+**The sweep is done.** The fill is now the whole of the remaining scope.
 
-1. **Sweep the 25 unreferenced `translation.json` keys.** Confirm each is genuinely unreachable
-   after 43-07 before deleting — and note that removing a locale key has its own asymmetric
-   breakage (the count is 47, not 49, and `da`/`id`/`nl` break differently). Deleting first means
-   the fill in step 3 covers 59 keys, not 84.
+1. ~~**Sweep the 25 unreferenced `translation.json` keys.**~~ **DONE** — quick `260919-8yq`
+   (`074bea408`), 84 → 59 leaves, one file. Each was confirmed unreachable in `src/` **and**
+   `meta/` before deletion, and the file was checked for a duplicate `humbleKeys` block first
+   (there is none — the second match is `sidebar.humbleKeys`). The asymmetric-breakage warning
+   this step carried **did not apply**: no locale held any of these keys, so neither the 47-vs-49
+   population trap nor the `da`/`id`/`nl` trailing-comma trap could arm on a deletion here.
 2. ~~**Fill the 17 `gamelib` keys across 48 locales.**~~ **DONE** — quick `260915-t13`. The
    order-preserving warning was load-bearing and is worth reusing for step 3: the 7 locales whose
    key order is not an `en` subsequence came out at 19 insertions / 1 deletion each, where a global
    re-sort would have rewritten the whole block.
-3. **Fill the surviving `translation.json` keys across 48 locales**, including creating
-   `translation.json` for `br` and `sl`, which have none. This is the half that actually makes the
+3. **DECIDE FIRST, then fill the surviving 59 keys.** This is the half that actually makes the
    screen non-English, and **no gate will tell you when it is done** — diff the key sets directly.
+   The two options are not equivalent and the choice changes where the strings go, so it is a
+   decision, not a preference:
+
+   - **(a) Fill in place** — 59 × 46 locales, plus creating `translation.json` for `br` and `sl`,
+     which have none: ≈ **2,832** strings. Cheapest to start. The keys stay in an upstream catalog
+     and therefore stay **permanently outside every gate**, so this exact defect can recur here
+     and be invisible again.
+   - **(b) Migrate the 59 into the `gamelib` namespace, then fill** — the same string volume
+     (59 × 48, and `gamelib.json` already exists in all 49 dirs, so no file creation). It puts
+     fork content in the fork namespace, which is what D-06 and the standing convention say
+     should have happened in the first place, and the presence baseline at `totalPairs: 0` then
+     makes any future gap **CI-visible instead of silent**. Costs: ~7 `src/` call sites
+     re-prefixed to `gamelib:`, and CI is red from the moment the English keys land until the
+     fill completes — so it **must ship atomically**, not incrementally.
+
+   Note that (b) is **not** the same change as step 5: it relocates fork content into the
+   already-gated namespace rather than widening the gate over upstream namespaces. Step 5 stays
+   separate either way.
 4. **Do not regenerate the presence baseline as the fix.** The failure message offers "fill it or
    regenerate", and the two are **not** equivalent: the baseline's own `reason` string says it is
    "a RECORD of a known gap, not a permission to grow it". Regenerating turns the gate green while
