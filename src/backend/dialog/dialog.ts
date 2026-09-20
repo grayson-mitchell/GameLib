@@ -5,6 +5,30 @@ import { getMainWindow } from '../main_window'
 import { sendFrontendMessage } from '../ipc'
 import { isSteamDeckGameMode } from 'backend/constants/environment'
 
+// 260919-sch: native-vs-in-app dialog policy, recorded here because this is
+// the module a future caller reads when choosing a path.
+//
+// 1. In-app (showDialogBoxModalAuto, below): anything reached from a
+//    settings surface, any nag or warning, and anything needing more than
+//    two buttons or a checkbox. The native path structurally cannot express
+//    those -- the Rust dialog command only accepts a buttons array when its
+//    length is exactly 2, and the underlying dialog plugin has no checkbox
+//    support at all.
+// 2. Native (dialog.showMessageBox): quit confirmation, updater,
+//    pre-window-ready prompts, and Rosetta -- cases that must work before or
+//    independently of the renderer being alive.
+// 3. Any ASKING dialog moved to the renderer must gather its answer
+//    renderer-side, because this path is one-way -- it only
+//    sendFrontendMessage's outward and cannot carry a reply back. Either
+//    pass the answer back as an argument (the eos_overlay.ts remove(confirmed)
+//    precedent) or act on the answer entirely in the renderer, dispatched
+//    off a serializable ButtonOptions.action discriminator.
+//
+// Motivation for rule 3: on the native path, dismissing a dialog (Escape or
+// close) returns a false response, which native dialog.showMessageBox maps
+// to its second button index. Any "don't show again" affordance sitting at
+// that index fires on Escape, silently persisting a suppression the user
+// never chose. The in-app path has no such coupling.
 function showDialogBoxModalAuto(props: {
   event?: IpcMainInvokeEvent
   title: string

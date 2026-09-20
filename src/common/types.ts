@@ -45,7 +45,13 @@ export interface ButtonOptions {
   // (e.g. `'steamSignIn'` -> `navigate('/login')`) before the button is
   // ever rendered. Never a URL or arbitrary string — an enum, so no
   // externally-influenced value can become a navigation target.
-  action?: 'steamSignIn'
+  // 260919-sch: also carries the VCRuntime download/skip and Snap-warning
+  // suppress actions, moved off the native dialog shim onto this path.
+  action?:
+    | 'steamSignIn'
+    | 'vcRuntimeDownload'
+    | 'vcRuntimeSkip'
+    | 'snapWarningSuppress'
 }
 
 export type LaunchParams = {
