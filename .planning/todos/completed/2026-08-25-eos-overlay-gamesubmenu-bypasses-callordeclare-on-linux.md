@@ -52,9 +52,16 @@ src/frontend/screens/Game/GameSubMenu/index.tsx` returned **zero matches**.
 `231-281`. A future reader should not trust a rendered line number in an old todo without
 re-measuring against current `HEAD`.
 
-**On the deferral id:** the original report named a different, incorrect single-digit deferral
-id. The correct id, and the one the exported `DEFERRAL_D03` constant in
-`declaredUnavailable.ts` actually represents, is **`D-03`**.
+**On the deferral id:** the original report named **`D-08`**. That id is wrong. The correct one,
+and the one the exported `DEFERRAL_D03` constant in `declaredUnavailable.ts` actually represents,
+is **`D-03`**.
+
+The wrong id is named here on purpose, so that a future reader grepping `D-08` lands on its
+correction. The executing plan carried a `! grep -q 'D-08'` verify command intended to prove the
+id had been fixed, but that check cannot distinguish a stale claim from prose *describing* the
+stale claim -- it convicted correct text, and the first response was to reword the correction
+until the substring disappeared. That trade (a passing check bought by a less useful document)
+is the wrong way round; the wording is restored and the check is retired.
 
 ## Why it matters -- traced, not just asserted
 
