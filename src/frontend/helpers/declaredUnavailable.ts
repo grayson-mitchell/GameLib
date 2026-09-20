@@ -119,9 +119,17 @@ export const WINETRICKS_CHANNELS = [
  * These strings are never rendered to a user -- they only ever reach `callOrDeclare`'s internal
  * `window.api.logError` line -- so centralizing them here is a correctness fix, not a
  * workaround around the gate's intent.
+ *
+ * [Quick task 260919-tms] `EOS_FEATURE` extends the same reasoning to the EOS overlay cluster.
+ * `GameSubMenu/index.tsx` (unlike `AdvancedSettings/index.tsx`, which keeps its own local
+ * `EOS_FEATURE`/`EOS_DEFERRAL` duplicate and is intentionally left untouched) IS listed in
+ * `meta/i18nGateScope.json`, so a local `const EOS_FEATURE = 'EOS Overlay'` there would be
+ * flagged the same way. Centralizing it here keeps GameSubMenu's five wrapped EOS call sites
+ * out of gate scope for the identical, measured reason.
  */
 export const STEAMGRIDDB_FEATURE = 'SteamGridDB artwork'
 export const WINETRICKS_FEATURE = 'Winetricks'
+export const EOS_FEATURE = 'EOS Overlay'
 export const DEFERRAL_D03 = 'D-03'
 
 /**

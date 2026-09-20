@@ -21,6 +21,11 @@ import useGlobalState from 'frontend/state/GlobalStateV2'
 import EditGameDialog from 'frontend/components/UI/EditGameDialog'
 import { reportRepairFailure } from './repairFailure'
 import useOpenDialog from 'frontend/hooks/useOpenDialog'
+import {
+  callOrDeclare,
+  DEFERRAL_D03,
+  EOS_FEATURE
+} from 'frontend/helpers/declaredUnavailable'
 
 import {
   ArrowUpward as ArrowUpwardIcon,
@@ -231,12 +236,32 @@ export default function GamesSubmenu({
   async function handleEosOverlay() {
     setEosOverlayRefresh(true)
     if (eosOverlayEnabled) {
-      await window.api.disableEosOverlay(appName)
-      setEosOverlayEnabled(false)
+      const disableResult = await callOrDeclare({
+        channel: 'disableEosOverlay',
+        feature: EOS_FEATURE,
+        deferral: DEFERRAL_D03,
+        call: () => window.api.disableEosOverlay(appName)
+      })
+      // Runs on BOTH branches (ok and not-ok) -- callOrDeclare never throws, so this
+      // release is no longer reachable only on success the way a bare, unwrapped await
+      // used to leave it stuck true forever on a rejection.
       setEosOverlayRefresh(false)
+      if (!disableResult.ok) {
+        return
+      }
+      setEosOverlayEnabled(false)
     } else {
-      const initialEnableResult = await window.api.enableEosOverlay(appName)
-      const { installNow, wasEnabled } = initialEnableResult
+      const initialEnableResult = await callOrDeclare({
+        channel: 'enableEosOverlay',
+        feature: EOS_FEATURE,
+        deferral: DEFERRAL_D03,
+        call: () => window.api.enableEosOverlay(appName)
+      })
+      if (!initialEnableResult.ok) {
+        setEosOverlayRefresh(false)
+        return
+      }
+      const { installNow, wasEnabled } = initialEnableResult.value
 
       // Phase 35 plan 26 (REQ-35-17): `enable()`'s not-installed branch used to ask
       // "install now?" itself via a native `dialog.showMessageBox` and fold the answer into
@@ -258,11 +283,29 @@ export default function GamesSubmenu({
             {
               text: tDefault('box.yes'),
               onClick: async () => {
-                await window.api.installEosOverlay()
-                const { wasEnabled: enabledAfterInstall } =
-                  await window.api.enableEosOverlay(appName)
-                setEosOverlayEnabled(enabledAfterInstall)
+                const installResult = await callOrDeclare({
+                  channel: 'installEosOverlay',
+                  feature: EOS_FEATURE,
+                  deferral: DEFERRAL_D03,
+                  call: () => window.api.installEosOverlay()
+                })
+                if (!installResult.ok) {
+                  setEosOverlayRefresh(false)
+                  return
+                }
+                const enableAfterInstallResult = await callOrDeclare({
+                  channel: 'enableEosOverlay',
+                  feature: EOS_FEATURE,
+                  deferral: DEFERRAL_D03,
+                  call: () => window.api.enableEosOverlay(appName)
+                })
+                // Runs on BOTH branches -- see the identical comment above.
                 setEosOverlayRefresh(false)
+                if (enableAfterInstallResult.ok) {
+                  setEosOverlayEnabled(
+                    enableAfterInstallResult.value.wasEnabled
+                  )
+                }
               }
             },
             {
@@ -318,9 +361,18 @@ export default function GamesSubmenu({
         )[0] || {}
       setEosOverlayRefresh(status === 'installing')
 
-      window.api
-        .isEosOverlayEnabled(appName)
-        .then((enabled) => setEosOverlayEnabled(enabled))
+      // This probe owns no spinner state -- eosOverlayRefresh is driven by libraryStatus
+      // immediately above, not by this call.
+      callOrDeclare({
+        channel: 'isEosOverlayEnabled',
+        feature: EOS_FEATURE,
+        deferral: DEFERRAL_D03,
+        call: () => window.api.isEosOverlayEnabled(appName)
+      }).then((result) => {
+        if (result.ok) {
+          setEosOverlayEnabled(result.value)
+        }
+      })
     }
   }, [isInstalled])
 
