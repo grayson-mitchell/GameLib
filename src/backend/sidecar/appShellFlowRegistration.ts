@@ -143,7 +143,7 @@
 
 import i18next from 'i18next'
 
-import { ipcMain, app, powerSaveBlocker, dialog } from '../platform'
+import { ipcMain, app, powerSaveBlocker } from '../platform'
 import { isSnap, isCLINoGui } from '../constants/environment'
 import { heroicGithubURL, customThemesWikiLink } from '../constants/urls'
 import {
@@ -157,7 +157,7 @@ import {
   getCurrentChangelogEntry
 } from '../appshell/releases'
 import { changeLanguage } from '../appshell/language'
-import { notify } from '../dialog/dialog'
+import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
 import { handleExit, openUrlOrFile } from '../utils'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { GlobalConfig } from '../config'
@@ -197,8 +197,9 @@ let trayColorTimer: NodeJS.Timeout | undefined
 // CR-02 (35-REVIEW.md, plan 35-21): `frontendReady`'s boot-time download-queue auto-resume
 // must run at most once per sidecar process. The registration stays `ipcMain.on` (not
 // `ipcMain.once`) because the send-kind observability (`logSendHandlerReached`, the
-// `logInfo('Frontend Ready', ...)` line) and the Snap warning dialog are allowed to repeat --
-// T-35-107 dispositions a repeated informational dialog as "accept", not a defect -- while
+// `logInfo('Frontend Ready', ...)` line) and the Snap warning dialog (260919-sch: now pushed
+// via the in-app `showDialogBoxModalAuto`/`showDialog` path, not a native box) are allowed to
+// repeat -- T-35-107 dispositions a repeated informational dialog as "accept", not a defect -- while
 // `initQueue(true)` is NOT: it has no re-entrancy guard, so a second concurrent call against
 // the same queue head would run two downloaders against one install directory. Guarding only
 // the boot half is the narrower fix of the review's two candidates. Set to `true` BEFORE the
@@ -385,28 +386,36 @@ export function registerAppShellFlows(
       if (isSnap) {
         const showSnapWarning = configStore.get('showSnapWarning', true)
         if (showSnapWarning) {
-          dialog
-            .showMessageBox({
-              title: i18next.t(
-                'box.warning.snap.title',
-                'GameLib is running as a Snap'
-              ),
-              message: i18next.t('box.warning.snap.message', {
-                defaultValue:
-                  'Some features are not available in the Snap version of the app for now and we are trying to fix it.{{newLine}}Current limitations are: {{newLine}}GameLib will not be able to find Proton from Steam or Wine from Lutris.{{newLine}}{{newLine}}Gamescope, GameMode and MangoHud will also not work since GameLib cannot have access to them.{{newLine}}{{newLine}}To have access to this feature please install GameLib as a Flatpak, DEB or from the AppImage.',
-                newLine: '\n'
-              }),
-              checkboxLabel: i18next.t('box.warning.snap.checkbox', {
-                defaultValue: 'Do not show this message again'
-              }),
-              checkboxChecked: false
-            })
-            .then((result) => {
-              if (result.checkboxChecked) {
-                configStore.set('showSnapWarning', false)
+          // 260919-sch: moved off the native dialog's checkbox onto the
+          // in-app path -- the native shim hard-codes `checkboxChecked:
+          // false` on every return path, so `configStore.set('showSnapWarning',
+          // false)` could never actually run. `showDialogBoxModalAuto` is
+          // synchronous and never throws (it carries its own internal
+          // try/catch, dialog.ts's showDialogBoxModalAuto), so no
+          // `.then`/`.catch` is needed here -- this handler's own outer
+          // try/catch (this function's body) still satisfies this module's
+          // "every send-kind body is wrapped" discipline.
+          showDialogBoxModalAuto({
+            type: 'MESSAGE',
+            title: i18next.t(
+              'box.warning.snap.title',
+              'GameLib is running as a Snap'
+            ),
+            message: i18next.t('box.warning.snap.message', {
+              defaultValue:
+                'Some features are not available in the Snap version of the app for now and we are trying to fix it.{{newLine}}Current limitations are: {{newLine}}GameLib will not be able to find Proton from Steam or Wine from Lutris.{{newLine}}{{newLine}}Gamescope, GameMode and MangoHud will also not work since GameLib cannot have access to them.{{newLine}}{{newLine}}To have access to this feature please install GameLib as a Flatpak, DEB or from the AppImage.',
+              newLine: '\n'
+            }),
+            buttons: [
+              { text: i18next.t('box.ok', 'OK') },
+              {
+                text: i18next.t('box.warning.snap.checkbox', {
+                  defaultValue: 'Do not show this message again'
+                }),
+                action: 'snapWarningSuppress'
               }
-            })
-            .catch((error) => logSendFailure('frontendReady', error))
+            ]
+          })
         }
       }
 

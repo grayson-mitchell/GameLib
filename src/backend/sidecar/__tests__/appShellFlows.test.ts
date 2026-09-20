@@ -244,6 +244,17 @@ jest.mock('../../protocol', () => ({
   handleProtocol: jest.fn()
 }))
 
+// ── dialog mock (260919-sch) — the Snap warning dialog now moves through
+// `showDialogBoxModalAuto` instead of the native `dialog.showMessageBox`, so
+// the CR-02 repeat-count test below asserts against this jest.fn() instead
+// of a `RUST_DIALOG_MESSAGE` invoke count. Same narrow-override shape as
+// `shellFilesFlows.test.ts` (spread the real module, override only this
+// export) — `notify` and everything else in `dialog.ts` stays real.
+jest.mock('../../dialog/dialog', () => ({
+  ...jest.requireActual('../../dialog/dialog'),
+  showDialogBoxModalAuto: jest.fn()
+}))
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
@@ -1109,6 +1120,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     // into the (isSnap: false) assumption every other test in this file relies on.
     it('CR-02: the Snap warning dialog is allowed to repeat across two ISOLATED deliveries (T-35-107: accept)', async () => {
       let isolatedRequestRustInvoke!: jest.Mock
+      let isolatedShowDialogBoxModalAuto!: jest.Mock
       let frontendReadyListener!: () => void
       // Captured so `isSnap` can be reset to `false` in `finally` below. `jest.mock`'s
       // manual-mock factory return value for `backend/constants/environment` was observed
@@ -1151,6 +1163,9 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
           isolatedRequestRustInvoke = require('../sidecarRpc')
             .requestRustInvoke as jest.Mock
           isolatedRequestRustInvoke.mockResolvedValue(undefined)
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          isolatedShowDialogBoxModalAuto = require('../../dialog/dialog')
+            .showDialogBoxModalAuto as jest.Mock
           // Forces the `showSnapWarning` branch open on BOTH deliveries regardless of
           // whatever this fresh, tmp-dir-backed store instance already has on disk from an
           // earlier test -- the property under test is the repeat COUNT, not the store's
@@ -1188,10 +1203,16 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         frontendReadyListener()
         await flush()
 
+        // 260919-sch: the Snap warning moved off the native RUST_DIALOG_MESSAGE
+        // path onto showDialogBoxModalAuto -- assert BOTH sides: the repeat
+        // count is preserved at exactly 2 on the new path, and the native
+        // count is 0 (a partial revert raising both dialogs would otherwise
+        // leave the count-of-2 assertion green).
         const snapDialogCalls = isolatedRequestRustInvoke.mock.calls.filter(
           ([channel]) => channel === RUST_DIALOG_MESSAGE
         )
-        expect(snapDialogCalls).toHaveLength(2)
+        expect(snapDialogCalls).toHaveLength(0)
+        expect(isolatedShowDialogBoxModalAuto).toHaveBeenCalledTimes(2)
       } finally {
         // `process.env.X = undefined` stringifies to `"undefined"` (Node coerces every
         // assignment to `process.env` to a string) rather than clearing the var, so an
