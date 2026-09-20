@@ -1,16 +1,58 @@
 ---
 created: 2026-08-24T00:00:00.000Z
-title: "Two live dialog-shim collapse defects (VCRuntime 'don't show again', Snap checkbox) plus one dead-code site, across 10 native showMessageBox sites — and the still-unresolved native-vs-in-app policy question"
+title: "CLOSED — both live dialog-shim collapse defects (VCRuntime 'don't show again', Snap checkbox) fixed by moving off the native shim onto the in-app showDialog path; native-vs-in-app policy recorded. Residue (dead code, a cosmetic CSS block, a polarity trap, and the shim's latent axis-3 gap) re-filed separately"
 area: ui-dialogs
-status: OPEN
+status: CLOSED
 severity: minor
 platform: any
 ready: human
-files:
-  - src/backend/platform/index.ts
-  - src/backend/utils.ts
-  - src/backend/sidecar/appShellFlowRegistration.ts
-  - src/backend/storeManagers/storeManagerCommon/games.ts
+closed: 2026-09-19
+closed_by: quick-260919-sch
+closing_commits: '3c71b9cb2 (widen ButtonOptions.action, wire renderer handlers, record policy), e592f2e92 (VCRuntime dialog moved in-app — defect 1), 453e3cc9c (Snap warning moved in-app — defect 2), 92f8a1225 (frontend regression test)'
+---
+
+## Closing note (2026-09-19, quick `260919-sch`)
+
+**Both live defects from "The dialog-shim collapse defects" section below are fixed.**
+
+- **Defect 1 (VCRuntime "Don't show again" unreachable)** — `src/backend/utils.ts`'s
+  `detectVCRedist` no longer calls the native 3-button `dialog.showMessageBox` at all. It now
+  raises an in-app `showDialogBoxModalAuto` dialog whose "Download now" and "Don't show again"
+  buttons carry the new `vcRuntimeDownload`/`vcRuntimeSkip` `ButtonOptions.action` discriminators,
+  resolved renderer-side in `DialogHandler`. The native path's 2-button ceiling (`main.rs:5803`)
+  is no longer in the loop, so the third button's response can no longer be lost.
+- **Defect 2 (Snap warning checkbox never reads back)** — `appShellFlowRegistration.ts`'s Snap
+  branch now raises the warning through the same `showDialogBoxModalAuto` path, with a
+  `snapWarningSuppress` action button in place of the native `checkboxLabel`/`checkboxChecked`
+  round trip the shim could never satisfy.
+- **The native-vs-in-app policy question (Suggested shape item 2) is recorded**, as a 3-rule
+  docstring above `showDialogBoxModalAuto` in `src/backend/dialog/dialog.ts`, referencing the
+  `main.rs:5803` 2-button ceiling as the reason native dialogs cannot be widened instead.
+
+**Honesty caveats — read before treating either defect as observed-fixed:**
+
+- **No live verification was possible on this machine for either defect.** Defect 1 is
+  Windows-only (the VCRuntime check only runs on Windows); defect 2 is Linux/Snap-only (`isSnap`
+  gate). Both fixes are backed only by mocked regression tests
+  (`src/backend/__tests__/detectVCRedistDialog.test.ts`,
+  `src/backend/sidecar/__tests__/appShellFlows.test.ts`'s re-pointed CR-02 case,
+  `src/frontend/components/UI/DialogHandler/__tests__/buttonActions.test.tsx`) and static
+  reading, never a real Windows or Snap run.
+- **`detectVCRedist` has no call site at HEAD** (see
+  `.planning/todos/pending/2026-09-06-detectvcredist-never-runs-on-windows.md`, left unmodified
+  by this closure — its own disposition is a separate, still-open item). This closure fixes the
+  function's *internal* dialog behaviour structurally; it does not make Windows users see it,
+  because nothing calls it. Do not read this closing note as claiming the Windows-facing defect
+  that todo describes is fixed live — it is unreachable code either way, exactly as before.
+
+**What is NOT closed by this work** — re-filed as
+`.planning/todos/pending/2026-09-19-native-dialog-residue-after-the-vcruntime-and-snap-migrations.md`:
+the dead-code sideloaded-game unload confirmation (section 3 below), the inverted-polarity quit
+confirmation at `utils.ts:281` (still live, untouched), the cosmetic dead CSS in
+`Dialog/index.css`, and the shim's latent axis-3 trap (`showMessageBoxSync`'s always-`0` no-op).
+None of the other 8 native `showMessageBox` census sites below were touched by this quick task —
+only the two defects it targeted.
+
 ---
 
 ## Rewrite notice (2026-09-07)
