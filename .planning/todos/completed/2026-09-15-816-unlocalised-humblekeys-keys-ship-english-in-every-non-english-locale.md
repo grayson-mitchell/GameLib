@@ -1,11 +1,14 @@
 ---
 created: 2026-09-15T00:00:00.000Z
-title: '59 LIVE fork-added `humbleKeys.*` keys in `translation.json` ship English in EVERY non-English locale, outside the gate — the 25 dead keys are SWEPT (260919-8yq) and the 816 `gamelib` keys this todo was filed for are FIXED; what remains is one operator decision (fill in place vs migrate to the `gamelib` namespace) and ~2832 strings'
+title: 'CLOSED — the Humble Keys screen is localised in all 48 non-English locales: 30 dead `humbleKeys.*` keys swept, the 54 live ones MIGRATED into the fork-owned `gamelib` namespace and filled, so the gap is closed AND permanently CI-visible'
 area: i18n
 severity: major
 platform: any
-ready: human
-status: OPEN
+ready: code
+status: CLOSED
+closed: 2026-09-19
+closed_by: quick-260919-9gu
+closing_commits: '074bea408 (sweep 25), bd2349577 (sweep 5), cb11c2b0d (migrate 54 + fill 48 locales)'
 found_by: 'quick-260914-vbw, 2026-09-15 — PR #5 was the FIRST pull_request ever opened against fix/steam-native-install-stability, which is the only event that runs the ci/lint workflows. The red had been invisible for the whole of Phase 43.'
 files:
   - meta/__tests__/lintTranslations.test.ts
@@ -13,6 +16,30 @@ files:
   - meta/i18nCatalogPresenceBaseline.json
   - public/locales
 ---
+
+> **CLOSED 2026-09-19 (quick `260919-9gu`) — both halves done, and the blind spot with them.**
+>
+> The operator chose **option (b)**: migrate rather than fill in place. The 54 live keys now
+> live in `gamelib`, all **48** non-English catalogs are filled, and `en/translation.json`
+> carries **no `humbleKeys` block at all**. All 49 locales sit at 316 `gamelib` leaves.
+>
+> **`FORK_OWNED_NAMESPACES` was NOT widened** — step 5 below stays open as a separate
+> question, exactly as this todo asked. Relocation needed no gate change.
+>
+> **Step 3's `br`/`sl` requirement dissolved:** every locale already carries `gamelib.json`,
+> so no `translation.json` had to be created for them.
+>
+> **The presence baseline was NOT regenerated.** After a complete fill it is still correct
+> at `totalPairs: 0`, untouched — step 4's warning honoured.
+>
+> **This todo's counts were wrong, and so were two of my own re-counts.** Final: **54 live,
+> 30 dead** — not 59/25. `t('humbleKeys.X'` misses WRAPPED calls (most of this screen), and
+> a literal sweep whose character class omits DIGITS cannot match `c2Action`/`c2Body`/
+> `c2Title`. The two bad greps erred in opposite directions.
+>
+> **What this actually bought:** a green `lintTranslations` used to be evidence about
+> `gamelib` only and *no* evidence about this screen. The screen's strings are now
+> `gamelib`, so the check finally means what a reader would assume.
 
 > **STATUS 2026-09-15 — the half this todo was filed for is FIXED; the larger half is not.**
 >
