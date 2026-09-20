@@ -309,7 +309,7 @@ export default function HumbleKeys() {
               'gamelib:humbleKeys.activateWizardTitle',
               'Activate this key'
             )
-          : t('humbleKeys.claimWizardTitle', 'Claim this key'),
+          : tGamelib('gamelib:humbleKeys.claimWizardTitle', 'Claim this key'),
       message:
         entryMode === 'finish' ? (
           <HumbleClaimWizard
@@ -335,9 +335,9 @@ export default function HumbleKeys() {
   function openGiftDialog(key: HumbleKey) {
     showDialogModal({
       showDialog: true,
-      title: t('humbleKeys.giftConfirmTitle', 'Gift this key?'),
-      message: t(
-        'humbleKeys.giftConfirmBody',
+      title: tGamelib('gamelib:humbleKeys.giftConfirmTitle', 'Gift this key?'),
+      message: tGamelib(
+        'gamelib:humbleKeys.giftConfirmBody',
         "Anyone with this link can claim the key — once redeemed, it's gone for good. You'll finish gifting it on Humble's own site."
       ),
       buttons: [
@@ -346,7 +346,7 @@ export default function HumbleKeys() {
           onClick: () => showDialogModal({ showDialog: false })
         },
         {
-          text: t('humbleKeys.giftConfirmAction', 'Open Humble'),
+          text: tGamelib('gamelib:humbleKeys.giftConfirmAction', 'Open Humble'),
           onClick: () => {
             void window.api.humbleRecordGiftLinkOpened(key.machineName)
             window.api.openExternalUrl('https://www.humblebundle.com/home/keys')
@@ -537,7 +537,7 @@ export default function HumbleKeys() {
       <div className="humbleKeysHeader">
         <div className="humbleKeysHeaderTop">
           <h4 className="humbleKeysTitle">
-            {t('humbleKeys.title', 'Humble Keys')}
+            {tGamelib('gamelib:humbleKeys.title', 'Humble Keys')}
           </h4>
           <SearchBar
             value={query}
@@ -551,15 +551,15 @@ export default function HumbleKeys() {
             className={classNames('humbleKeysRefreshButton', {
               spinning: humble.syncing
             })}
-            aria-label={t('humbleKeys.refresh', 'Refresh Humble Keys')}
+            aria-label={tGamelib('gamelib:humbleKeys.refresh', 'Refresh Humble Keys')}
             title={
               inCooldown
-                ? t(
-                    'humbleKeys.cooldown',
+                ? tGamelib(
+                    'gamelib:humbleKeys.cooldown',
                     'Temporarily unavailable — retry in {{minutes}}m',
                     { minutes: cooldownMinutes }
                   )
-                : t('humbleKeys.refresh', 'Refresh Humble Keys')
+                : tGamelib('gamelib:humbleKeys.refresh', 'Refresh Humble Keys')
             }
             disabled={humble.syncing || inCooldown}
             onClick={() => window.api.humbleSync()}
@@ -576,7 +576,7 @@ export default function HumbleKeys() {
               icon={faSyncAlt}
               className="humbleKeysSyncSpinner"
             />
-            {t('humbleKeys.syncing', 'Syncing… {{done}}/{{total}} orders', {
+            {tGamelib('gamelib:humbleKeys.syncing', 'Syncing… {{done}}/{{total}} orders', {
               done: progress?.done ?? 0,
               total: progress?.total ?? 0
             })}
@@ -584,7 +584,7 @@ export default function HumbleKeys() {
         ) : (
           relativeTime !== null && (
             <span className="humbleKeysSyncIndicator">
-              {t('humbleKeys.lastSynced', 'Last synced {{time}} ago', {
+              {tGamelib('gamelib:humbleKeys.lastSynced', 'Last synced {{time}} ago', {
                 time: relativeTime
               })}
             </span>
@@ -595,12 +595,12 @@ export default function HumbleKeys() {
       {showBanner && (
         <WarningMessage className="humbleSyncBanner">
           {humble.syncError === 'partial'
-            ? t(
-                'humbleKeys.syncErrorPartial',
+            ? tGamelib(
+                'gamelib:humbleKeys.syncErrorPartial',
                 "Couldn't finish refresh — showing the latest data available"
               )
-            : t(
-                'humbleKeys.syncError',
+            : tGamelib(
+                'gamelib:humbleKeys.syncError',
                 "Couldn't refresh — showing data from {{time}}",
                 { time: relativeTime ?? '' }
               )}

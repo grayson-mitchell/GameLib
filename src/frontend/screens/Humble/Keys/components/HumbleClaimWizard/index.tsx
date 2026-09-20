@@ -80,10 +80,14 @@ export default function HumbleClaimWizard({
   onDone,
   priorRefusalAt = null
 }: Props) {
-  const { t } = useTranslation()
-  // 260823-op3: the redeem-outcome copy lives in the `gamelib` namespace, so
-  // it needs its own Suspense-resolved `t` — same two-hook-with-alias pattern
-  // RedeemSteamKeyDialog uses (Phase 34.8-07, REQ-34.8-12/-13).
+  // 260823-op3, amended by quick 260919-9gu: this component used to hold the
+  // two-hook-with-alias pattern RedeemSteamKeyDialog uses (Phase 34.8-07,
+  // REQ-34.8-12/-13) — a plain `t` for upstream strings alongside `tGamelib`.
+  // The `humbleKeys` block has since moved wholesale into the fork-owned
+  // `gamelib` namespace, so nothing here reads `translation` any more and the
+  // plain hook is gone. The alias NAME is kept deliberately: it keeps the
+  // explicit `gamelib:` prefix at every call site reading as intentional
+  // rather than incidental.
   const { t: tGamelib } = useTranslation('gamelib')
   const navigate = useNavigate()
   const { refreshLibrary } = useContext(ContextProvider)
@@ -442,8 +446,8 @@ export default function HumbleClaimWizard({
             // DD-1/DD-4: a prior refusal is warned about, never silently
             // retried — reuses the shipped 'rejected' step copy verbatim.
             <p className="humbleClaimWizardRejectedNote">
-              {t(
-                'humbleKeys.revealRejectedBody',
+              {tGamelib(
+                'gamelib:humbleKeys.revealRejectedBody',
                 'Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.'
               )}
             </p>
@@ -486,21 +490,21 @@ export default function HumbleClaimWizard({
     return (
       <div className="humbleClaimWizard">
         <h3 className="humbleClaimWizardTitle">
-          {t('humbleKeys.revealConfirmTitle', 'Reveal this key?')}
+          {tGamelib('gamelib:humbleKeys.revealConfirmTitle', 'Reveal this key?')}
         </h3>
         {priorRefusalAt != null && (
           // DD-1/DD-4: a prior refusal is warned about, never silently
           // retried — reuses the shipped 'rejected' step copy verbatim.
           <p className="humbleClaimWizardRejectedNote">
-            {t(
-              'humbleKeys.revealRejectedBody',
+            {tGamelib(
+              'gamelib:humbleKeys.revealRejectedBody',
               'Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.'
             )}
           </p>
         )}
         <p className="humbleClaimWizardBody">
-          {t(
-            'humbleKeys.revealConfirmBody',
+          {tGamelib(
+            'gamelib:humbleKeys.revealConfirmBody',
             "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo."
           )}
         </p>
@@ -510,7 +514,7 @@ export default function HumbleClaimWizard({
             className="button is-secondary outline humbleClaimWizardDismissButton"
             onClick={onDone}
           >
-            {t('humbleKeys.revealDismiss', "Don't reveal yet")}
+            {tGamelib('gamelib:humbleKeys.revealDismiss', "Don't reveal yet")}
           </button>
           <button
             type="button"
@@ -518,7 +522,7 @@ export default function HumbleClaimWizard({
             disabled={busy}
             onClick={() => void handleReveal()}
           >
-            {t('humbleKeys.revealConfirmAction', 'Reveal key')}
+            {tGamelib('gamelib:humbleKeys.revealConfirmAction', 'Reveal key')}
           </button>
         </div>
       </div>
@@ -530,11 +534,11 @@ export default function HumbleClaimWizard({
       <div className="humbleClaimWizard">
         <div className="humbleClaimWizardC2Panel">
           <h3 className="humbleClaimWizardTitle">
-            {t('humbleKeys.c2Title', 'You already own this on Steam')}
+            {tGamelib('gamelib:humbleKeys.c2Title', 'You already own this on Steam')}
           </h3>
           <p className="humbleClaimWizardBody">
-            {t(
-              'humbleKeys.c2Body',
+            {tGamelib(
+              'gamelib:humbleKeys.c2Body',
               'This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.'
             )}
           </p>
@@ -545,7 +549,7 @@ export default function HumbleClaimWizard({
             className="button is-secondary outline humbleClaimWizardC2Button"
             onClick={handleC2Confirm}
           >
-            {t('humbleKeys.c2Action', 'Go to Giftable spares')}
+            {tGamelib('gamelib:humbleKeys.c2Action', 'Go to Giftable spares')}
           </button>
         </div>
       </div>
@@ -556,8 +560,8 @@ export default function HumbleClaimWizard({
     return (
       <div className="humbleClaimWizard">
         <p className="humbleClaimWizardAmbiguousNote">
-          {t(
-            'humbleKeys.revealAmbiguousBody',
+          {tGamelib(
+            'gamelib:humbleKeys.revealAmbiguousBody',
             "We couldn't confirm this finished — sync to check"
           )}
         </p>
@@ -567,7 +571,7 @@ export default function HumbleClaimWizard({
             className="button is-secondary outline humbleClaimWizardSyncButton"
             onClick={handleSyncNow}
           >
-            {t('humbleKeys.syncNow', 'Sync now')}
+            {tGamelib('gamelib:humbleKeys.syncNow', 'Sync now')}
           </button>
         </div>
       </div>
@@ -582,8 +586,8 @@ export default function HumbleClaimWizard({
     return (
       <div className="humbleClaimWizard">
         <p className="humbleClaimWizardRejectedNote">
-          {t(
-            'humbleKeys.revealRejectedBody',
+          {tGamelib(
+            'gamelib:humbleKeys.revealRejectedBody',
             'Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.'
           )}
         </p>
@@ -593,7 +597,7 @@ export default function HumbleClaimWizard({
             className="button is-secondary outline humbleClaimWizardSyncButton"
             onClick={handleSyncNow}
           >
-            {t('humbleKeys.syncNow', 'Sync now')}
+            {tGamelib('gamelib:humbleKeys.syncNow', 'Sync now')}
           </button>
         </div>
       </div>
@@ -604,8 +608,8 @@ export default function HumbleClaimWizard({
     return (
       <div className="humbleClaimWizard">
         <p className="humbleClaimWizardFailedNote">
-          {t(
-            'humbleKeys.revealFailedBody',
+          {tGamelib(
+            'gamelib:humbleKeys.revealFailedBody',
             "Couldn't reveal this key — nothing was used up. You can try again."
           )}
         </p>
@@ -619,7 +623,7 @@ export default function HumbleClaimWizard({
             // the user on 'keyShown' doing the manual work by hand.
             onClick={() => void (isSteam ? runActivate() : handleReveal())}
           >
-            {t('humbleKeys.tryAgain', 'Try again')}
+            {tGamelib('gamelib:humbleKeys.tryAgain', 'Try again')}
           </button>
         </div>
       </div>
@@ -634,8 +638,8 @@ export default function HumbleClaimWizard({
     return (
       <div className="humbleClaimWizard">
         <p className="humbleClaimWizardCooldownNote">
-          {t(
-            'humbleKeys.revealCooldownBody',
+          {tGamelib(
+            'gamelib:humbleKeys.revealCooldownBody',
             'Temporarily unavailable — retry in {{N}}m',
             { N: minutes }
           )}
@@ -648,7 +652,7 @@ export default function HumbleClaimWizard({
   return (
     <div className="humbleClaimWizard">
       <h3 className="humbleClaimWizardTitle">
-        {t('humbleKeys.keyShownTitle', 'Your key')}
+        {tGamelib('gamelib:humbleKeys.keyShownTitle', 'Your key')}
       </h3>
       {/* 260823-op3: only ever set when the one-click activate reached Steam
           and Steam said no (invalid / rate-limited / error). The reveal is
@@ -662,7 +666,7 @@ export default function HumbleClaimWizard({
       )}
       {revealedKey === null ? (
         <p className="humbleClaimWizardLoading">
-          {t('humbleKeys.keyLoading', 'Loading…')}
+          {tGamelib('gamelib:humbleKeys.keyLoading', 'Loading…')}
         </p>
       ) : (
         <>
@@ -676,7 +680,7 @@ export default function HumbleClaimWizard({
               onClick={() => window.api.clipboardWriteText(revealedKey)}
             >
               <FontAwesomeIcon icon={faCopy} />
-              {t('humbleKeys.copyKey', 'Copy key')}
+              {tGamelib('gamelib:humbleKeys.copyKey', 'Copy key')}
             </button>
           </div>
           <div className="humbleClaimWizardActions">
@@ -708,7 +712,7 @@ export default function HumbleClaimWizard({
 
               let label: string
               if (activationKind === 'steam') {
-                label = t('humbleKeys.openSteam', 'Open Steam')
+                label = tGamelib('gamelib:humbleKeys.openSteam', 'Open Steam')
               } else if (activationKind === 'deep-link') {
                 label = tGamelib(
                   'gamelib:humbleKeys.openStore',
@@ -716,8 +720,8 @@ export default function HumbleClaimWizard({
                   { store: displayName }
                 )
               } else if (activationKind === 'help') {
-                label = t(
-                  'humbleKeys.redeemOnPlatform',
+                label = tGamelib(
+                  'gamelib:humbleKeys.redeemOnPlatform',
                   'Redeem on {{platform}}',
                   { platform: displayName }
                 )
@@ -748,15 +752,15 @@ export default function HumbleClaimWizard({
               disabled={busy}
               onClick={() => void handleMarkRedeemed()}
             >
-              {t('humbleKeys.markRedeemed', 'Mark as redeemed')}
+              {tGamelib('gamelib:humbleKeys.markRedeemed', 'Mark as redeemed')}
             </button>
           </div>
           {/* D-72: passive-only, never blocking — the finish step always
               works for REVEALED keys regardless of ownership. */}
           {entryMode === 'finish' && humbleKey.ownedElsewhere && (
             <p className="humbleClaimWizardOwnedNote">
-              {t(
-                'humbleKeys.finishOwnedNote',
+              {tGamelib(
+                'gamelib:humbleKeys.finishOwnedNote',
                 'You already own this on Steam — activation will likely fail there.'
               )}
             </p>

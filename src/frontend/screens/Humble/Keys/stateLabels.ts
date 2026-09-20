@@ -19,9 +19,9 @@ import { HumbleKeyState } from 'common/types/humble'
  * `state.unredeemable`.
  */
 export const STATE_LABEL_KEYS: Record<HumbleKeyState, [string, string]> = {
-  UNPICKED: ['humbleKeys.state.unpicked', 'Unpicked'],
-  UNREVEALED: ['humbleKeys.state.unrevealed', 'Unrevealed'],
-  REVEALED: ['humbleKeys.state.revealed', 'Revealed'],
-  REDEEMED: ['humbleKeys.state.redeemed', 'Redeemed'],
-  UNREDEEMABLE: ['humbleKeys.state.unredeemable', 'Expired']
+  UNPICKED: ['gamelib:humbleKeys.state.unpicked', 'Unpicked'],
+  UNREVEALED: ['gamelib:humbleKeys.state.unrevealed', 'Unrevealed'],
+  REVEALED: ['gamelib:humbleKeys.state.revealed', 'Revealed'],
+  REDEEMED: ['gamelib:humbleKeys.state.redeemed', 'Redeemed'],
+  UNREDEEMABLE: ['gamelib:humbleKeys.state.unredeemable', 'Expired']
 }

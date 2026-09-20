@@ -17,7 +17,7 @@ type Props = {
 // `.humbleUrgencyBadge` class so it reads as a sibling badge, not a
 // competing visual language.
 export default function UrgencyBadge({ tier, expiration }: Props) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('gamelib')
 
   if (tier === null || expiration === null) {
     return null
@@ -30,10 +30,10 @@ export default function UrgencyBadge({ tier, expiration }: Props) {
 
   const label =
     parts.kind === 'hours'
-      ? t('humbleKeys.urgencyHoursLeft', '{{H}}h left', { H: parts.value })
+      ? t('gamelib:humbleKeys.urgencyHoursLeft', '{{H}}h left', { H: parts.value })
       : parts.value === 1
-        ? t('humbleKeys.urgencyOneDayLeft', '1 day left')
-        : t('humbleKeys.urgencyDaysLeft', '{{N}} days left', {
+        ? t('gamelib:humbleKeys.urgencyOneDayLeft', '1 day left')
+        : t('gamelib:humbleKeys.urgencyDaysLeft', '{{N}} days left', {
             N: parts.value
           })
 
