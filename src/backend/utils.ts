@@ -51,10 +51,6 @@ import * as fileSize from 'filesize'
 import { Client as discordClient } from '@xhayper/discord-rpc'
 import { showDialogBoxModalAuto } from './dialog/dialog'
 import { getMainWindow } from './main_window'
-// D-35-13-03: the BrowserWindow TYPE cannot come from `backend/platform` -- index.ts already
-// exports a value of that name, so re-exporting the interface beside it is TS2323. Same split
-// as utils/openDialog.ts.
-import type { BrowserWindow as BrowserWindowType } from 'backend/platform/types'
 import { sendFrontendMessage } from './ipc'
 import { GlobalConfig } from './config'
 import { GameConfig } from './game_config'
@@ -779,7 +775,7 @@ function removeQuoteIfNecessary(stringToUnquote: string) {
  *
  * Only works on Windows of course
  */
-function detectVCRedist(mainWindow: BrowserWindowType) {
+function detectVCRedist() {
   if (!isWindows) {
     return
   }
@@ -829,7 +825,7 @@ function detectVCRedist(mainWindow: BrowserWindowType) {
     return
   })
 
-  child.on('close', async (code: number) => {
+  child.on('close', (code: number) => {
     if (code) {
       // log-secret-gate-exempt: stderr of the powershell Get-ItemProperty VCRuntime probe
       logError(
@@ -840,33 +836,30 @@ function detectVCRedist(mainWindow: BrowserWindowType) {
     }
     // VCR installers install both the "Minimal" and "Additional" runtime, and we have 2 installers (x86 and x64) -> 4 installations in total
     if (detectedVCRInstallations.length < 4) {
-      const { response } = await dialog.showMessageBox(mainWindow, {
+      // 260919-sch: moved off the native 3-button dialog.showMessageBox onto
+      // showDialogBoxModalAuto because the Rust dialog command's `buttons`
+      // array only maps to a native dialog when its length is exactly 2 --
+      // it cannot express a third "don't show again" button. Do not restore
+      // this natively; see dialog.ts's policy docstring.
+      showDialogBoxModalAuto({
+        type: 'MESSAGE',
         title: t('box.vcruntime.notfound.title', 'VCRuntime not installed'),
         message: t(
           'box.vcruntime.notfound.message',
           'The Microsoft Visual C++ Runtimes are not installed, which are required by some games'
         ),
         buttons: [
-          t('box.downloadNow', 'Download now'),
-          t('box.ok', 'Ok'),
-          t('box.dontShowAgain', "Don't show again")
+          {
+            text: t('box.downloadNow', 'Download now'),
+            action: 'vcRuntimeDownload'
+          },
+          { text: t('box.ok', 'Ok') },
+          {
+            text: t('box.dontShowAgain', "Don't show again"),
+            action: 'vcRuntimeSkip'
+          }
         ]
       })
-
-      if (response === 2) {
-        return configStore.set('skipVcRuntime', true)
-      }
-
-      if (response === 0) {
-        openUrlOrFile('https://aka.ms/vs/17/release/vc_redist.x86.exe')
-        openUrlOrFile('https://aka.ms/vs/17/release/vc_redist.x64.exe')
-        dialog.showMessageBox(mainWindow, {
-          message: t(
-            'box.vcruntime.install.message',
-            'The download links for the Visual C++ Runtimes have been opened. Please install both the x86 and x64 versions.'
-          )
-        })
-      }
     } else {
       logInfo('VCRuntime is installed', LogPrefix.Backend)
     }
