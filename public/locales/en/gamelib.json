@@ -123,9 +123,9 @@
         "ownedOnSteam": "Owned on Steam",
         "pickOnHumble": "Pick on Humble",
         "platformOther": "Other",
-        "redeemOnPlatform": "Redeem on {{platform}}",
         "redeemableOnly": "Redeemable keys only",
         "redeemedAnnotation": "Redeemed {{date}}",
+        "redeemOnPlatform": "Redeem on {{platform}}",
         "refresh": "Refresh Humble Keys",
         "revealAmbiguousBody": "We couldn't confirm this finished — sync to check",
         "revealConfirmAction": "Reveal key",
@@ -141,6 +141,13 @@
         "sortAlphabetical": "Alphabetical",
         "sortExpiringSoonest": "Expiring soonest",
         "sortLabel": "Sort",
+        "state": {
+            "redeemed": "Redeemed",
+            "revealed": "Revealed",
+            "unpicked": "Unpicked",
+            "unredeemable": "Expired",
+            "unrevealed": "Unrevealed"
+        },
         "syncError": "Couldn't refresh — showing data from {{time}}",
         "syncErrorPartial": "Couldn't finish refresh — showing the latest data available",
         "syncing": "Syncing… {{done}}/{{total}} orders",
@@ -153,14 +160,7 @@
         "unpickedTitle": "{{title}} · games not picked",
         "urgencyDaysLeft": "{{N}} days left",
         "urgencyHoursLeft": "{{H}}h left",
-        "urgencyOneDayLeft": "1 day left",
-        "state": {
-            "redeemed": "Redeemed",
-            "revealed": "Revealed",
-            "unpicked": "Unpicked",
-            "unredeemable": "Expired",
-            "unrevealed": "Unrevealed"
-        }
+        "urgencyOneDayLeft": "1 day left"
     },
     "info": {
         "refresh-rating": "Refresh rating"

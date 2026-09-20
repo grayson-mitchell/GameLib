@@ -551,7 +551,10 @@ export default function HumbleKeys() {
             className={classNames('humbleKeysRefreshButton', {
               spinning: humble.syncing
             })}
-            aria-label={tGamelib('gamelib:humbleKeys.refresh', 'Refresh Humble Keys')}
+            aria-label={tGamelib(
+              'gamelib:humbleKeys.refresh',
+              'Refresh Humble Keys'
+            )}
             title={
               inCooldown
                 ? tGamelib(
@@ -576,17 +579,25 @@ export default function HumbleKeys() {
               icon={faSyncAlt}
               className="humbleKeysSyncSpinner"
             />
-            {tGamelib('gamelib:humbleKeys.syncing', 'Syncing… {{done}}/{{total}} orders', {
-              done: progress?.done ?? 0,
-              total: progress?.total ?? 0
-            })}
+            {tGamelib(
+              'gamelib:humbleKeys.syncing',
+              'Syncing… {{done}}/{{total}} orders',
+              {
+                done: progress?.done ?? 0,
+                total: progress?.total ?? 0
+              }
+            )}
           </span>
         ) : (
           relativeTime !== null && (
             <span className="humbleKeysSyncIndicator">
-              {tGamelib('gamelib:humbleKeys.lastSynced', 'Last synced {{time}} ago', {
-                time: relativeTime
-              })}
+              {tGamelib(
+                'gamelib:humbleKeys.lastSynced',
+                'Last synced {{time}} ago',
+                {
+                  time: relativeTime
+                }
+              )}
             </span>
           )
         )}

@@ -30,7 +30,9 @@ export default function UrgencyBadge({ tier, expiration }: Props) {
 
   const label =
     parts.kind === 'hours'
-      ? t('gamelib:humbleKeys.urgencyHoursLeft', '{{H}}h left', { H: parts.value })
+      ? t('gamelib:humbleKeys.urgencyHoursLeft', '{{H}}h left', {
+          H: parts.value
+        })
       : parts.value === 1
         ? t('gamelib:humbleKeys.urgencyOneDayLeft', '1 day left')
         : t('gamelib:humbleKeys.urgencyDaysLeft', '{{N}} days left', {

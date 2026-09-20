@@ -347,9 +347,13 @@ export default function HumbleKeyRow({
   // into `title`, so we append the "not picked yet" qualifier rather than
   // re-deriving month/year (not carried on HumbleKey).
   const displayTitle = isUnpicked
-    ? tGamelib('gamelib:humbleKeys.unpickedTitle', '{{title}} · games not picked', {
-        title: humbleKey.title
-      })
+    ? tGamelib(
+        'gamelib:humbleKeys.unpickedTitle',
+        '{{title}} · games not picked',
+        {
+          title: humbleKey.title
+        }
+      )
     : humbleKey.title
 
   // Per-state expiration text (live-UAT round 5): REDEEMED always renders
@@ -364,7 +368,10 @@ export default function HumbleKeyRow({
           date: new Date(display.iso).toLocaleDateString()
         })
       : display.kind === 'no-deadline'
-        ? tGamelib('gamelib:humbleKeys.noDeadline', 'No pick deadline available')
+        ? tGamelib(
+            'gamelib:humbleKeys.noDeadline',
+            'No pick deadline available'
+          )
         : display.kind === 'no-expiration'
           ? tGamelib('gamelib:humbleKeys.noExpiration', 'No expiration')
           : null // 'blank' — render nothing, not placeholder text
@@ -410,7 +417,10 @@ export default function HumbleKeyRow({
     <span className="humbleKeyOwnedBadge">
       {humbleKey.matchConfidence === 'exact'
         ? tGamelib('gamelib:humbleKeys.ownedOnSteam', 'Owned on Steam')
-        : tGamelib('gamelib:humbleKeys.likelyOwnedOnSteam', 'Likely owned on Steam')}
+        : tGamelib(
+            'gamelib:humbleKeys.likelyOwnedOnSteam',
+            'Likely owned on Steam'
+          )}
       {scenario === 'override-pending' && (
         <button
           type="button"
@@ -443,7 +453,10 @@ export default function HumbleKeyRow({
           window.api.humbleClearOwnershipOverride(humbleKey.machineName)
         }
       >
-        {tGamelib('gamelib:humbleKeys.undoOwnershipOverride', 'Undo — I do own this game')}
+        {tGamelib(
+          'gamelib:humbleKeys.undoOwnershipOverride',
+          'Undo — I do own this game'
+        )}
       </button>
     </span>
   )
@@ -464,9 +477,13 @@ export default function HumbleKeyRow({
     (claimAction.redeemedAt !== null ? (
       <span className="humbleKeyClaimGroup">
         <span className="humbleKeyClaimAnnotation">
-          {tGamelib('gamelib:humbleKeys.redeemedAnnotation', 'Redeemed {{date}}', {
-            date: new Date(claimAction.redeemedAt).toLocaleDateString()
-          })}
+          {tGamelib(
+            'gamelib:humbleKeys.redeemedAnnotation',
+            'Redeemed {{date}}',
+            {
+              date: new Date(claimAction.redeemedAt).toLocaleDateString()
+            }
+          )}
         </span>
         <button
           type="button"
@@ -488,9 +505,13 @@ export default function HumbleKeyRow({
       <span className="humbleKeyClaimGroup">
         {claimAction.revealedAt !== null && (
           <span className="humbleKeyClaimAnnotation">
-            {tGamelib('gamelib:humbleKeys.revealedAnnotation', 'Revealed {{date}}', {
-              date: new Date(claimAction.revealedAt).toLocaleDateString()
-            })}
+            {tGamelib(
+              'gamelib:humbleKeys.revealedAnnotation',
+              'Revealed {{date}}',
+              {
+                date: new Date(claimAction.revealedAt).toLocaleDateString()
+              }
+            )}
           </span>
         )}
         <button
@@ -503,7 +524,10 @@ export default function HumbleKeyRow({
               re-revealing), so it gets the same verb as a fresh one. */}
           {isSteam
             ? tGamelib('gamelib:humbleKeys.activate', 'Activate')
-            : tGamelib('gamelib:humbleKeys.finishActivation', 'Finish activation')}
+            : tGamelib(
+                'gamelib:humbleKeys.finishActivation',
+                'Finish activation'
+              )}
         </button>
       </span>
     ) : claimAction.keyindexResolved ? (
@@ -534,7 +558,10 @@ export default function HumbleKeyRow({
       </button>
     ) : (
       <span className="humbleKeyClaimDisabledCaption">
-        {tGamelib('gamelib:humbleKeys.syncToEnableClaiming', 'Sync to enable claiming')}
+        {tGamelib(
+          'gamelib:humbleKeys.syncToEnableClaiming',
+          'Sync to enable claiming'
+        )}
       </span>
     ))
 
@@ -548,9 +575,13 @@ export default function HumbleKeyRow({
     giftAction &&
     (giftAction.giftedAt !== null ? (
       <span className="humbleKeyGiftedAnnotation">
-        {tGamelib('gamelib:humbleKeys.giftedAnnotation', 'Opened Humble gift page {{date}}', {
-          date: new Date(giftAction.giftedAt).toLocaleDateString()
-        })}
+        {tGamelib(
+          'gamelib:humbleKeys.giftedAnnotation',
+          'Opened Humble gift page {{date}}',
+          {
+            date: new Date(giftAction.giftedAt).toLocaleDateString()
+          }
+        )}
       </span>
     ) : (
       <button
@@ -596,11 +627,15 @@ export default function HumbleKeyRow({
               <span className="humbleKeyActionRow">
                 <span className="humbleKeyClaimGroup">
                   <span className="humbleKeyClaimAnnotation">
-                    {tGamelib('gamelib:humbleKeys.redeemedAnnotation', 'Redeemed {{date}}', {
-                      date: new Date(
-                        settleAction.settledAt
-                      ).toLocaleDateString()
-                    })}
+                    {tGamelib(
+                      'gamelib:humbleKeys.redeemedAnnotation',
+                      'Redeemed {{date}}',
+                      {
+                        date: new Date(
+                          settleAction.settledAt
+                        ).toLocaleDateString()
+                      }
+                    )}
                   </span>
                   <span className="humbleKeyClaimAnnotation">
                     {tGamelib(

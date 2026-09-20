@@ -490,7 +490,10 @@ export default function HumbleClaimWizard({
     return (
       <div className="humbleClaimWizard">
         <h3 className="humbleClaimWizardTitle">
-          {tGamelib('gamelib:humbleKeys.revealConfirmTitle', 'Reveal this key?')}
+          {tGamelib(
+            'gamelib:humbleKeys.revealConfirmTitle',
+            'Reveal this key?'
+          )}
         </h3>
         {priorRefusalAt != null && (
           // DD-1/DD-4: a prior refusal is warned about, never silently
@@ -534,7 +537,10 @@ export default function HumbleClaimWizard({
       <div className="humbleClaimWizard">
         <div className="humbleClaimWizardC2Panel">
           <h3 className="humbleClaimWizardTitle">
-            {tGamelib('gamelib:humbleKeys.c2Title', 'You already own this on Steam')}
+            {tGamelib(
+              'gamelib:humbleKeys.c2Title',
+              'You already own this on Steam'
+            )}
           </h3>
           <p className="humbleClaimWizardBody">
             {tGamelib(
