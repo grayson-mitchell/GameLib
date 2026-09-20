@@ -292,6 +292,9 @@
             "images": "Slike",
             "otherBinaries": "Ostale binarne datoteke",
             "scripts": "Skripte"
+        },
+        "import-hint": {
+            "content": "NEMOJTE koristiti ovu funkciju za to.<br />Umjesto toga, <3>prijavite se</3> na trgovinu, pronađite igru u svojoj biblioteci, otvorite dijalog instalacije i kliknite na dugme &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

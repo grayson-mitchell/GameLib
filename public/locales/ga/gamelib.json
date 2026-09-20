@@ -292,6 +292,9 @@
             "images": "Íomhánna",
             "otherBinaries": "Dénártha Eile",
             "scripts": "Scripteanna"
+        },
+        "import-hint": {
+            "content": "NÁ húsáid an ghné seo chuige sin.<br />Ina áit sin, <3>logáil isteach</3> sa siopa, cuardaigh an cluiche i do leabharlann, oscail an dialóg suiteála, agus cliceáil an cnaipe &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

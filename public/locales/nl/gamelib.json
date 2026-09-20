@@ -292,6 +292,9 @@
             "images": "Afbeeldingen",
             "otherBinaries": "Overige binaries",
             "scripts": "Scripts"
+        },
+        "import-hint": {
+            "content": "Gebruik deze functie daar NIET voor.<br />Log in plaats daarvan <3>in bij</3> de winkel, zoek het spel in je bibliotheek, open het installatievenster en klik op de knop &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

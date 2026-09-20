@@ -292,6 +292,9 @@
             "images": "Irudiak",
             "otherBinaries": "Beste bitar batzuk",
             "scripts": "Script-ak"
+        },
+        "import-hint": {
+            "content": "EZ erabili eginbide hau horretarako.<br />Horren ordez, <3>hasi saioa</3> dendan, bilatu jokoa zure liburutegian, ireki instalazio-elkarrizketa eta egin klik &quot;{{doorLabel}}&quot; botoian"
         }
     },
     "status": {

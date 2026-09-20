@@ -289,6 +289,9 @@
             "images": "Pildid",
             "otherBinaries": "Muud binaarfailid",
             "scripts": "Skriptid"
+        },
+        "import-hint": {
+            "content": "Ärge kasutage selleks seda funktsiooni.<br />Selle asemel <3>logige sisse</3> poodi, otsige mäng oma varamust üles, avage paigaldusaken ja klikkige nupul &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

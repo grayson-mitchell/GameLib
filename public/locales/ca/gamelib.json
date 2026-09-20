@@ -292,6 +292,9 @@
             "images": "Imatges",
             "otherBinaries": "Altres binaris",
             "scripts": "Scripts"
+        },
+        "import-hint": {
+            "content": "No facis servir aquesta funció per a això.<br />En el seu lloc, <3>inicia la sessió</3> a la botiga, cerca el joc a la teva biblioteca, obre el diàleg d'instal·lació i fes clic al botó &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

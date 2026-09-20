@@ -292,6 +292,9 @@
             "images": "Obrázky",
             "otherBinaries": "Ostatní binární soubory",
             "scripts": "Skripty"
+        },
+        "import-hint": {
+            "content": "Tuto funkci k této akci NEPOUŽÍVEJTE.<br />Namísto toho se <3>přihlaste do obchodu</3>, vyhledejte hru ve své knihovně, otevřete instalační dialog a klikněte na tlačítko &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

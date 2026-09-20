@@ -292,6 +292,9 @@
             "images": "Rasmlar",
             "otherBinaries": "Boshqa ikkilik fayllar",
             "scripts": "Skriptlar"
+        },
+        "import-hint": {
+            "content": "Bu xususiyatdan shu maqsadda FOYDALANMANG.<br />Buning o'rniga do'konga <3>kiring</3>, o'yinni kutubxonangizdan toping, o'rnatish oynasini oching va &quot;{{doorLabel}}&quot; tugmasini bosing"
         }
     },
     "status": {

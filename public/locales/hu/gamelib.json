@@ -292,6 +292,9 @@
             "images": "Képek",
             "otherBinaries": "Egyéb binárisok",
             "scripts": "Szkriptek"
+        },
+        "import-hint": {
+            "content": "NE használd erre ezt a funkciót.<br />Helyette <3>jelentkezz be</3> az áruházba, keresd meg a játékot a könyvtáradban, nyisd meg a telepítési párbeszédablakot, és kattints a „{{doorLabel}}” gombra"
         }
     },
     "status": {

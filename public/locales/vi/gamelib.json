@@ -292,6 +292,9 @@
             "images": "Hình ảnh",
             "otherBinaries": "Tệp nhị phân khác",
             "scripts": "Tập lệnh"
+        },
+        "import-hint": {
+            "content": "KHÔNG sử dụng tính năng này cho mục đích đó.<br />Thay vào đó, hãy <3>đăng nhập vào</3> cửa hàng, tìm trò chơi trong thư viện của bạn, mở hộp thoại cài đặt và nhấp vào nút &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

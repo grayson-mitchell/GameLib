@@ -292,6 +292,9 @@
             "images": "Imagini",
             "otherBinaries": "Alte binare",
             "scripts": "Scripturi"
+        },
+        "import-hint": {
+            "content": "NU folosiți această funcție pentru asta.<br />În schimb, <3>conectați-vă</3> la magazin, căutați jocul în biblioteca dvs., deschideți fereastra de instalare și faceți clic pe butonul &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

@@ -292,6 +292,9 @@
             "images": "Gambar",
             "otherBinaries": "Biner Lainnya",
             "scripts": "Skrip"
+        },
+        "import-hint": {
+            "content": "JANGAN gunakan fitur ini untuk tujuan tersebut.<br />Sebagai gantinya, <3>masuk ke</3> toko, cari game di pustaka Anda, buka dialog instalasi, lalu klik tombol &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

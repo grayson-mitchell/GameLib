@@ -292,6 +292,9 @@
             "images": "Bilder",
             "otherBinaries": "Andre binærfiler",
             "scripts": "Skript"
+        },
+        "import-hint": {
+            "content": "IKKE bruk denne funksjonen til det.<br />Logg i stedet <3>inn på</3> butikken, let etter spillet i biblioteket ditt, åpne installasjonsdialogen og klikk på knappen &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

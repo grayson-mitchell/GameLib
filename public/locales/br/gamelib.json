@@ -292,6 +292,9 @@
             "images": "Skeudennoù",
             "otherBinaries": "Restroù daouredel all",
             "scripts": "Skriptoù"
+        },
+        "import-hint": {
+            "content": "Na implijit KET an arc'hweladur-mañ evit se.<br />E-lec'h-se, <3>kennaskit</3> ouzh ar stal, klaskit ar c'hoari en ho levraoueg, digorit prenestr ar staliañ ha klikit war an afell &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

@@ -292,6 +292,9 @@
             "images": "이미지",
             "otherBinaries": "기타 바이너리",
             "scripts": "스크립트"
+        },
+        "import-hint": {
+            "content": "이 기능을 그 용도로 사용하지 마세요.<br />대신 상점에 <3>로그인</3>한 뒤 라이브러리에서 게임을 찾아 설치 대화 상자를 열고 &quot;{{doorLabel}}&quot; 버튼을 클릭하세요."
         }
     },
     "status": {

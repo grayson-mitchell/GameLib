@@ -292,6 +292,9 @@
             "images": "圖片",
             "otherBinaries": "其他執行檔",
             "scripts": "指令碼"
+        },
+        "import-hint": {
+            "content": "請勿使用此功能來新增。<br />正確做法是，<3>登入</3>商店帳號，在你的遊戲庫中尋找該遊戲，開啟安裝對話框，點擊&quot;{{doorLabel}}&quot;按鈕"
         }
     },
     "status": {

@@ -292,6 +292,9 @@
             "images": "Imaxes",
             "otherBinaries": "Outros binarios",
             "scripts": "Scripts"
+        },
+        "import-hint": {
+            "content": "NON uses esta función para iso.<br />No seu lugar, <3>inicia sesión</3> na tenda, busca o xogo na túa biblioteca, abre o diálogo de instalación e fai clic no botón &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

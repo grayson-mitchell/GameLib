@@ -292,6 +292,9 @@
             "images": "Levykuvat",
             "otherBinaries": "Muut binaaritiedostot",
             "scripts": "Komentosarjat"
+        },
+        "import-hint": {
+            "content": "Älä käytä tätä ominaisuutta siihen.<br />Sen sijaan <3>kirjaudu</3> kauppaan, etsi peli kirjastostasi, avaa asennusikkuna ja klikkaa &quot;{{doorLabel}}&quot;-painiketta"
         }
     },
     "status": {

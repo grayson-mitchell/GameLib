@@ -292,6 +292,9 @@
             "images": "Immagini",
             "otherBinaries": "Altri binari",
             "scripts": "Script"
+        },
+        "import-hint": {
+            "content": "NON utilizzare questa funzionalità per fare questo.<br />Invece, <3>accedi</3> al negozio, cerca il gioco nella tua libreria, apri la finestra d'installazione e clicca il tasto &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

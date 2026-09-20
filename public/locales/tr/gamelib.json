@@ -292,6 +292,9 @@
             "images": "Görseller",
             "otherBinaries": "Diğer İkili Dosyalar",
             "scripts": "Betikler"
+        },
+        "import-hint": {
+            "content": "Bu özelliği bu amaç için KULLANMAYIN.<br />Bunun yerine, mağazaya <3>giriş yapın</3>, kütüphanenizde oyunu bulun, yükleme penceresini açın ve &quot;{{doorLabel}}&quot; düğmesine tıklayın"
         }
     },
     "status": {

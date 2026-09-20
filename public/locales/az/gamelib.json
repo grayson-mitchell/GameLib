@@ -292,6 +292,9 @@
             "images": "Şəkillər",
             "otherBinaries": "Digər İkili Fayllar",
             "scripts": "Skriptlər"
+        },
+        "import-hint": {
+            "content": "Bu xüsusiyyəti bunun üçün İSTİFADƏ ETMƏYİN.<br />Bunun əvəzinə mağazaya <3>daxil olun</3>, oyunu kitabxananızda tapın, quraşdırma pəncərəsini açın və &quot;{{doorLabel}}&quot; düyməsini klikləyin"
         }
     },
     "status": {

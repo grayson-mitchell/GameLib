@@ -220,6 +220,9 @@
             "images": "Bilder",
             "otherBinaries": "Andere Binärdateien",
             "scripts": "Skripte"
+        },
+        "import-hint": {
+            "content": "Verwende diese Funktion NICHT dafür.<br />Melde dich stattdessen <3>im Store an</3>, suche das Spiel in deiner Bibliothek, öffne den Installationsdialog und klicke auf die Schaltfläche &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

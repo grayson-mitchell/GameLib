@@ -292,6 +292,9 @@
             "images": "Imagens",
             "otherBinaries": "Outros binários",
             "scripts": "Scripts"
+        },
+        "import-hint": {
+            "content": "NÃO utilize esta funcionalidade para isso.<br />Em vez disso, <3>inicie sessão</3> na loja, procure o jogo na sua biblioteca, abra a janela de instalação e clique no botão &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

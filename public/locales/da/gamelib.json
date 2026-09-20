@@ -292,6 +292,9 @@
             "images": "Billeder",
             "otherBinaries": "Andre binærfiler",
             "scripts": "Scripts"
+        },
+        "import-hint": {
+            "content": "Brug IKKE denne funktion til det.<br />Log i stedet <3>ind på</3> butikken, find spillet i dit bibliotek, åbn installationsdialogen og klik på knappen &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

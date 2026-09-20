@@ -292,6 +292,9 @@
             "images": "Bilder",
             "otherBinaries": "Andra binärfiler",
             "scripts": "Skript"
+        },
+        "import-hint": {
+            "content": "Använd INTE den här funktionen för detta.<br />Logga i stället <3>in på</3> butiken, leta efter spelet i ditt bibliotek, öppna installationsdialogrutan och klicka på knappen &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {

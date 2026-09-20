@@ -292,6 +292,9 @@
             "images": "镜像",
             "otherBinaries": "其他二进制文件",
             "scripts": "脚本"
+        },
+        "import-hint": {
+            "content": "不要用此功能来添加。<br />正确做法是，<3>登录</3>商店账号，在你的库中寻找该游戏，打开安装对话框，单击&quot;{{doorLabel}}&quot;按钮"
         }
     },
     "status": {

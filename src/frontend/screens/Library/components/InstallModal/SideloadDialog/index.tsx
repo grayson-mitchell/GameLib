@@ -373,7 +373,22 @@ export default function SideloadDialog({
                   )}
                 >
                   <div className="sideloadImportHint">
-                    <Trans i18n={i18n} key="sideload.import-hint.content">
+                    {/* `i18nKey` (NOT `key` -- React's reserved prop, invisible
+                        to Trans) plus an explicit `ns`: this key lives in the
+                        fork-owned `gamelib` namespace, while i18next's
+                        defaultNS is `translation`. Both are required; either
+                        alone renders the English children in every locale.
+                        `doorLabel` is interpolated rather than written into all
+                        49 catalogs so renaming the button cannot strand this
+                        sentence again -- which is how it broke before. */}
+                    <Trans
+                      i18n={i18n}
+                      i18nKey="sideload.import-hint.content"
+                      ns="gamelib"
+                      values={{
+                        doorLabel: tGamelib('installFlows.importDoorLabel')
+                      }}
+                    >
                       Do NOT use this feature for that.
                       <br />
                       Instead, <NavLink to={'/login'}>log into</NavLink> the

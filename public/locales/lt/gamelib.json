@@ -292,6 +292,9 @@
             "images": "Atvaizdai",
             "otherBinaries": "Kiti dvejetainiai failai",
             "scripts": "Scenarijai"
+        },
+        "import-hint": {
+            "content": "NENAUDOKITE šios funkcijos tam.<br />Vietoj to <3>prisijunkite prie</3> parduotuvės, susiraskite žaidimą savo bibliotekoje, atidarykite jo įdiegimo langą ir spustelėkite mygtuką „{{doorLabel}}“"
         }
     },
     "status": {

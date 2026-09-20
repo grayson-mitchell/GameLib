@@ -292,6 +292,9 @@
             "images": "Obrazy",
             "otherBinaries": "Inne pliki binarne",
             "scripts": "Skrypty"
+        },
+        "import-hint": {
+            "content": "NIE używaj do tego tej funkcjonalności.<br />Zamiast tego <3>zaloguj się</3> do sklepu, poszukaj gry w swojej bibliotece, otwórz okno dialogowe instalacji i kliknij przycisk &quot;{{doorLabel}}&quot;"
         }
     },
     "status": {
