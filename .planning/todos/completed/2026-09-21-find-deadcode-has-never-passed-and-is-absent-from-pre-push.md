@@ -6,10 +6,74 @@ severity: medium
 platform: any
 ready: human
 found_by: "quick-260921-thi (CI check after push)"
+resolved_by: "quick-260922-9um"
+resolution: "fixed -- baseline ratchet replaces `ts-prune --error`; gate exits 0 for the first time and now runs in pre-push"
 files:
   - package.json
   - .husky/pre-push
   - .github/workflows/lint.yml
+---
+
+## Resolution (`quick-260922-9um`, 2026-09-21)
+
+**Fixed. The `ready: human` policy choice was made: option 2 (ratchet on a committed baseline,
+the way `lintScoped.cjs` does), split into TWO populations rather than one count.**
+
+`pnpm find-deadcode` is now `node meta/findDeadcode.cjs`, which checks `unreachable` (52) and
+`used-in-module` (204) against `meta/deadcode-baseline-unreachable.txt` and
+`meta/deadcode-baseline-used-in-module.txt` as independent, exact SET comparisons. Real captured
+exit code, not through a pipe:
+
+```
+unreachable: 52 OK | used-in-module: 204 OK     exit 0
+```
+
+**That is the first exit 0 in this fork's recorded history.** Before: exit 1, 256 findings.
+
+Two populations rather than one count, because a single ceiling would let a regression in either
+be absorbed by the other — the same reason `lintScoped.cjs` split its one warning ceiling in two
+— and because the two have genuinely different remedies (delete the symbol vs. drop the `export`
+keyword), so collapsing them would collapse the instruction the failure message can give.
+
+Both diff directions FAIL, zero headroom, **proven by probe rather than argued**:
+
+- deleted `src/backend/images_cache.ts - initImagesCache` from the ledger → exit 1,
+  `+ src/backend/images_cache.ts - initImagesCache`, and the three legitimate at-the-source
+  remedies named;
+- appended a junk `src/does/not/exist.ts - neverExistedSymbol` → exit 1,
+  `- src/does/not/exist.ts - neverExistedSymbol`, naming the one line to delete.
+
+Both arms restored byte-identically (md5 vs `HEAD`, empty `git diff --stat`).
+
+**No `--update-baseline` path exists, deliberately** — it would delete the `#` annotations that
+document this population, and would be a one-keystroke way to admit a new finding. The ledger can
+only shrink.
+
+The rejected options from the list below are recorded in `meta/findDeadcode.cjs`'s header comment
+so they read as decided rather than overlooked — including "drop `--error`", which this file
+already called out as the forbidden widen-the-gate move.
+
+`.husky/pre-push` now runs the fifth gate, so **a green pre-push predicts CI's Lint job**, which
+was the other half of this todo. Measured cost: 4.7s.
+
+### This todo's "contaminated three ways" section was right, and is now annotated in place
+
+The `#` comment blocks in the two ledgers turn the opaque 256 into a documented inventory: the 18
+`types.usage.test.ts` compile-time assertions, and the `satisfies`/`Record`/`readonly`/`Parameters`
+parse artifacts quoted with the source line that produces each.
+
+**One cluster this todo did not know about, measured during the fix:** `meta/` exports whose only
+importer is a `meta/__tests__/` file are structurally invisible to ts-prune. `tsconfig.json` has
+`include: ["src"]`, so ts-morph loads 1141 source files of which exactly **7** are under `meta/`
+and **zero** under `meta/__tests__/`. That accounts for 51 of the 204 and 2 of the 52 — all false
+positives with live callers (verified per entry). Widening `tsconfig.json` would dissolve the
+cluster but is its own decision with its own blast radius; not done here.
+
+The observation that CI triggers only on `pull_request` and never on a push to `main` is
+**unaddressed** — it was deliberately not bundled into this todo and still is not.
+
+Follow-up filed: `.planning/todos/pending/2026-09-21-the-204-entry-used-in-module-ledger-freezes-an-export-keyword-cleanup.md`.
+
 ---
 
 ## Measured
