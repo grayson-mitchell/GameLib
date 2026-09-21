@@ -35,6 +35,13 @@ import {
 
 const ARCH = 'arm64'
 
+// `codesign` ships with macOS and exists nowhere else. When the spawn itself fails,
+// getSignatureState's result.error branch (verifyRunnerBundle.ts:533-540) returns
+// `unknown:${result.error.message.slice(0,200)}` -- on the Linux CI runner this is the verbatim
+// `unknown:spawnSync codesign ENOENT` from the 2026-09-15 CI log. That degraded report is
+// arguably the correct Linux answer, so it is asserted below, not skipped (quick-260921-o95).
+const HOST_HAS_CODESIGN = process.platform === 'darwin'
+
 // C2-04's own PACKAGE_JSON_PATH, module-scope, identical form to
 // cleanDistMac.test.ts:32. Deliberately declared here rather than imported
 // from that file -- see the rationale comment above the describe block below.
@@ -337,7 +344,11 @@ describe('verifyRunnerBundle', () => {
     for (const r of results) {
       expect(r.machoCount).toBeGreaterThan(0)
       for (const m of r.machoFiles) {
-        expect(m.signature).toBe('unsigned')
+        if (HOST_HAS_CODESIGN) {
+          expect(m.signature).toBe('unsigned')
+        } else {
+          expect(m.signature).toMatch(/^unknown:/)
+        }
       }
     }
   })

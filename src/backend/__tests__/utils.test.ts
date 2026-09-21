@@ -129,6 +129,15 @@ describe('backend/utils.ts', () => {
     // `utils` module (whose `publicDir` was already computed correctly, once,
     // before the first reset) and varying only the mocked `existsSync` sidesteps
     // that Jest mock-identity behaviour entirely.
+    const originalArch = process.arch
+    const setArch = (arch: string) =>
+      Object.defineProperty(process, 'arch', {
+        value: arch,
+        configurable: true
+      })
+
+    afterEach(() => setArch(originalArch))
+
     it('returns the arch-native path when it exists (unchanged behaviour)', () => {
       ;(existsSync as jest.Mock).mockImplementation(() => true)
 
@@ -137,7 +146,19 @@ describe('backend/utils.ts', () => {
       expect(join(dir, bin)).toContain(join('bin', process.arch))
     })
 
+    // The premise ("arch-native missing, x64 present") is UNCONSTRUCTIBLE on an x64 host: on
+    // x64, `archSpecificBinary`'s arch-native candidate (built from process.arch, utils.ts:544)
+    // and its x64 fallback (built from the literal 'x64') are the SAME path, so the mock below
+    // denies both and the production code correctly throws "neither exists on disk" -- the
+    // Linux CI runner is x64, and the 2026-09-15 log's failure printed those two byte-identical
+    // paths. This is therefore NOT a darwin-vs-linux (process.platform) defect, it is a
+    // non-x64-vs-x64 (process.arch) one, and would fail identically on an x64 Mac while passing
+    // on arm64 Linux. Pinning a non-x64 arch makes the two candidates distinct on every host.
+    // A process.platform guard here would be WRONG: it would be a green check proving nothing on
+    // every Intel Mac, and would silently stop exercising the documented box64 x64-fallback case
+    // on arm64 Linux -- the exact platform this case is about (quick-260921-o95).
     it('falls back to the x64 path when the arch-native path is missing but x64 exists (unchanged behaviour -- the documented box64 compatibility-layer case)', () => {
+      setArch('arm64')
       ;(existsSync as jest.Mock).mockImplementation((path: string) => {
         // Arch-native candidate absent, x64 candidate present.
         return !path.includes(join('bin', process.arch))

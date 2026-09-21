@@ -169,9 +169,18 @@ describe('260905-mv5 Task 1: premise re-verification (plan evidence item 5)', ()
     const [desktopFile, menuFile] = shortcutFiles('')
     expect(desktopFile).toBeTruthy()
     expect(menuFile).toBeTruthy()
-    // Plan evidence item 5: on darwin this is a SHARED path
-    // (~/Applications/.app) for desktopFile and menuFile alike.
-    expect(desktopFile).toEqual(menuFile)
+    // shortcuts.ts:159-176 switches on process.platform (not the isMac mock above, which is
+    // irrelevant to this assertion): darwin collapses both entries onto one shared
+    // ~/Applications/<name>.app path, while linux returns <desktop>/<name>.desktop and
+    // ~/.local/share/applications/<name>.desktop, which must differ -- the exact pair the
+    // 2026-09-15 Linux CI log's diff printed (quick-260921-o95). Plan evidence item 5 (260905-mv5
+    // Task 1) recorded only the darwin half; both arms are real assertions, not a bypass -- the
+    // non-darwin arm would go red if shortcutFiles ever collapsed the pair on linux.
+    if (process.platform === 'darwin') {
+      expect(desktopFile).toEqual(menuFile)
+    } else {
+      expect(desktopFile).not.toEqual(menuFile)
+    }
   })
 
   it('addShortcuts({} as GameInfo) THROWS (rejects) at is_dlc, before ever reaching shortcutFiles (matches plan measurement)', async () => {
