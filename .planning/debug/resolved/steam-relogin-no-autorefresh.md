@@ -191,4 +191,3 @@ reasoning_checkpoint:
   files_changed:
     - src/frontend/state/GlobalState.tsx
     - src/backend/storeManagers/steam/user.ts
-</content>

@@ -639,5 +639,3 @@ summary that way. Write the file. Then, as a separate tool call, run jest.
 Create `.planning/quick/260907-odi-fix-gog-playtime-sync-lock-never-release/260907-odi-SUMMARY.md`
 when done.
 </output>
-</content>
-</invoke>

@@ -420,5 +420,3 @@ locales_touched). Also record explicitly that the phase-42 A1 assumption is now
 corrected — Humble sends `gog_keyless` for a direct-redeem GOG entitlement, and
 `gog` remains the evidenced value for a keyed one.
 </output>
-</content>
-</invoke>

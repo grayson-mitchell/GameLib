@@ -512,5 +512,3 @@ gate (`9/9 planning gates passed.`), and the VS Code Explorer (2-char badge + re
 <output>
 Create `.planning/quick/260908-gye-todo-triage-decorations-normalize-todo-f/260908-gye-SUMMARY.md` when done.
 </output>
-</content>
-</invoke>

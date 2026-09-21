@@ -417,5 +417,3 @@ closes only on a Gate A pass. Do NOT touch the sibling todo
 <output>
 Create `.planning/quick/260817-dib-make-the-install-watchdog-a-progress-bas/260817-dib-SUMMARY.md` when done.
 </output>
-</content>
-</invoke>

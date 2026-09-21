@@ -384,5 +384,3 @@ Not run, deliberately: `pnpm test:ci` (RED at HEAD, leaked timer in `sidecarRpc.
 <output>
 Create `.planning/quick/260907-dbh-fix-pause-cancel-button-opening-install-/260907-dbh-SUMMARY.md` when done.
 </output>
-</content>
-</invoke>

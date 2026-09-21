@@ -129,4 +129,3 @@ Matches the baseline of 11/11 measured at HEAD `0188b54a9` before any edit.
 
 - `44a6f3720` — docs(quick-260921-pec): fold live WKWebView measurement into the bare-.Dialog todo
 - `cb7f1af86` — docs(quick-260921-pec): narrow the stray-paren live gate, re-triage the Steam-key input todo
-</content>

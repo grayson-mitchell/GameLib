@@ -467,5 +467,3 @@ the three commits is empty; three atomic commits exist on
 <output>
 Create `.planning/quick/260815-bjr-port-heroic-2-22-1-fixes/260815-bjr-SUMMARY.md` when done.
 </output>
-</content>
-</invoke>

@@ -546,5 +546,3 @@ completion, recording at minimum: the confirmed-or-differing eight-variable list
 lzma site count; the `buildSidecarSea.ts` decision and its reason; the negative control's red
 message; the measured lint/planning-gates counts; and the N3 CLAUDE.md marker-block risk.
 </output>
-</content>
-</invoke>

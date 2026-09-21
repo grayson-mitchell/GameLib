@@ -657,5 +657,3 @@ after, side by side; the Frontend jest pass count before and after; the three to
 their severity/ready values; and an explicit statement that deletion was chosen over re-anchoring
 by precedent, with the Settings-dialog consequence that decided it.
 </output>
-</content>
-</invoke>

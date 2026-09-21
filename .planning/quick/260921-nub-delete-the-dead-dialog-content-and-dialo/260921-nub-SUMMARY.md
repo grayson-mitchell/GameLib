@@ -136,4 +136,3 @@ Verified on disk:
 - `.planning/todos/completed/2026-09-20-dialog-content-and-headertitle-are-dead-across-four-other-stylesheets.md`
   exists and contains the closing note plus all three new todo filenames.
 - `grep -rn 'Dialog__content\|Dialog__headerTitle\|Dialog__input' src/` returns zero lines.
-</content>

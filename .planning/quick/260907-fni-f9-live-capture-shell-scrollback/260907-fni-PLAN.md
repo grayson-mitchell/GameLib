@@ -561,5 +561,3 @@ exists with `closes_todo: false`. Docs committed with explicit pathspecs, verifi
 <output>
 Create `.planning/quick/260907-fni-f9-live-capture-shell-scrollback/SUMMARY.md` when done.
 </output>
-</content>
-</invoke>

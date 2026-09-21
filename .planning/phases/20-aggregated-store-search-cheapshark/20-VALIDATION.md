@@ -97,4 +97,3 @@ All eight Wave 0 test files exist and are green as of this plan's full-suite gat
 - [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** approved 2026-07-15 — live human verification passed (20-07 Task 2), see Manual-Only Verifications note above
-</content>

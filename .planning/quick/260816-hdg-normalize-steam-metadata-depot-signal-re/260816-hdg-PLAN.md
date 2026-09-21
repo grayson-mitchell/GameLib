@@ -426,5 +426,3 @@ this plan's §3 explicitly preserves those two mac gates.
 <output>
 Create `.planning/quick/260816-hdg-normalize-steam-metadata-depot-signal-re/260816-hdg-SUMMARY.md` when done
 </output>
-</content>
-</invoke>

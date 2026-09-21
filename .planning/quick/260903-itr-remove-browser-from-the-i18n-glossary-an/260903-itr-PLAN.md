@@ -436,5 +436,3 @@ git show HEAD:"$S" | grep -q 'containsTermLoose' || { echo "FAIL: deferred follo
 <output>
 Create `.planning/quick/260903-itr-remove-browser-from-the-i18n-glossary-an/260903-itr-SUMMARY.md` when done.
 </output>
-</content>
-</invoke>
