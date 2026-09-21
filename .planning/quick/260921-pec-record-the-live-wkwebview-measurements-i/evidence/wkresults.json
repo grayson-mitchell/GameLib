@@ -1,0 +1,96 @@
+{
+  "href": "http://localhost:5173/",
+  "boot": {
+    "title": "GameLib",
+    "styleSheetsAtLoad": 143,
+    "bodyClass": "midnightMirage",
+    "hasTauriGlobal": false,
+    "hasWindowApi": true
+  },
+  "sheetLoads": {
+    "/src/frontend/components/UI/Dialog/index.css": "ok",
+    "/src/frontend/screens/Library/components/InstallModal/index.scss": "ok",
+    "/src/frontend/components/UI/Winetricks/index.scss": "ok",
+    "/src/frontend/App.css": "ok",
+    "/src/frontend/index.scss": "ok"
+  },
+  "styleSheetsAfterInject": 143,
+  "p1_dialogMarginHorizontal": {
+    "tokenAtRoot": "",
+    "tokenAtBody": "",
+    "anticheatInfo_asShipped": {
+      "top": "0px",
+      "right": "0px",
+      "bottom": "0px",
+      "left": "0px"
+    },
+    "anticheatInfo_tokenSeen": "",
+    "anticheatInfo_underDialogAncestor": {
+      "top": "16px",
+      "right": "32px",
+      "bottom": "0px",
+      "left": "32px"
+    },
+    "installWrapper_asShipped": {
+      "top": "16px",
+      "right": "0px",
+      "bottom": "16px",
+      "left": "0px"
+    },
+    "installWrapper_underDialogAncestor": {
+      "top": "16px",
+      "right": "32px",
+      "bottom": "16px",
+      "left": "32px"
+    },
+    "sanity_spaceMd": "1em",
+    "elementsCarryingBareDialogClass": 2
+  },
+  "p2_logsWrapperParen": {
+    "rulesKeptFromInjectedPair": [
+      ".probe-paren:has(.logs-wrapper) { max-height: 71%; }",
+      ".probe-paren-after { color: rgb(1, 2, 3); }"
+    ],
+    "ruleCount": 2,
+    "ruleAfterMalformedStillApplies": "rgb(1, 2, 3)",
+    "maxHeightOnMatchingElement": "71%",
+    "hasSupported": true,
+    "malformedSelectorThrowsInQuerySelector": "SyntaxError"
+  },
+  "p3_steamKeyInput": {
+    "appInput": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "borderTopWidth": "2px",
+      "borderTopStyle": "inset",
+      "borderTopColor": "rgb(128, 128, 128)",
+      "borderRadius": "0px",
+      "paddingTop": "2px",
+      "paddingLeft": "5px",
+      "fontFamily": "system-ui",
+      "fontSize": "11px",
+      "width": "155.875px",
+      "height": "21px"
+    },
+    "pristineInput": {
+      "backgroundColor": "rgb(255, 255, 255)",
+      "color": "rgb(0, 0, 0)",
+      "borderTopWidth": "2px",
+      "borderTopStyle": "inset",
+      "borderTopColor": "rgb(128, 128, 128)",
+      "borderRadius": "0px",
+      "paddingTop": "2px",
+      "paddingLeft": "5px",
+      "fontFamily": "system-ui",
+      "fontSize": "11px",
+      "width": "141.875px",
+      "height": "13px"
+    },
+    "differingProperties": [
+      "width",
+      "height"
+    ],
+    "identicalToPristine": false,
+    "methodControl_dialogFooterDisplay": "flex"
+  }
+}
