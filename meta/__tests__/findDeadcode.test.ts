@@ -10,6 +10,7 @@
  * which no pure-half assertion can establish.
  */
 import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 // ---------------------------------------------------------------------------
@@ -108,6 +109,86 @@ describe('meta/findDeadcode.cjs partitionFindings', () => {
       'e'
     ])
     expect(unreachable.length + usedInModule.length).toBe(findings.length)
+  })
+})
+
+describe('meta/findDeadcode.cjs KNOWN_PARSE_ARTIFACTS / excludeKnownParseArtifacts', () => {
+  const REPO_UNREACHABLE_BASELINE = join(
+    __dirname,
+    '..',
+    'deadcode-baseline-unreachable.txt'
+  )
+  const REPO_USED_IN_MODULE_BASELINE = join(
+    __dirname,
+    '..',
+    'deadcode-baseline-used-in-module.txt'
+  )
+
+  test('drops a known parse-artifact identity from the measured population', () => {
+    // 260922-e01: a real measured finding on this tree -- ts-prune
+    // mis-reads `} as const satisfies Record<DownloadedBinary, string>`
+    // (meta/releaseTags.ts:35) and reports `satisfies` as an exported
+    // symbol. It is not a real export and must not reach partitioning.
+    const findings = [
+      { path: 'meta/releaseTags.ts', name: 'satisfies', usedInModule: false },
+      {
+        path: 'src/backend/images_cache.ts',
+        name: 'initImagesCache',
+        usedInModule: false
+      }
+    ]
+    const survivors = findDeadcode.excludeKnownParseArtifacts(findings)
+    expect(survivors.map((f: { name: string }) => f.name)).toEqual([
+      'initImagesCache'
+    ])
+  })
+
+  test('is identity-scoped, not name-scoped -- a same-named finding at a different path survives', () => {
+    // The property that protects the real population: `Record` and
+    // `Parameters` are legal TypeScript identifiers, so a bare-name filter
+    // would silently hide a genuine dead export sharing one of those
+    // names elsewhere in the tree. Without this assertion, a future
+    // refactor to a name-only filter would pass every other test in this
+    // suite while blinding the gate.
+    const findings = [
+      // Same NAME as a known artifact, but a DIFFERENT path.
+      {
+        path: 'src/backend/somewhere/else.ts',
+        name: 'Record',
+        usedInModule: false
+      },
+      {
+        path: 'src/backend/somewhere/else.ts',
+        name: 'Parameters',
+        usedInModule: true
+      }
+    ]
+    const survivors = findDeadcode.excludeKnownParseArtifacts(findings)
+    expect(survivors).toHaveLength(2)
+    expect(survivors.map((f: { name: string }) => f.name).sort()).toEqual([
+      'Parameters',
+      'Record'
+    ])
+  })
+
+  test('the artifact list is non-empty and none of its entries is ledgered', () => {
+    // Anti-vacuity: an identity cannot be both excluded upstream AND
+    // present in a committed ledger -- if it were, that ledger line could
+    // never match a real finding again (the finding never reaches
+    // partitioning), which is a dead line masquerading as a live one.
+    expect(findDeadcode.KNOWN_PARSE_ARTIFACTS.size).toBeGreaterThan(0)
+
+    const unreachableBaseline = findDeadcode.parseBaseline(
+      readFileSync(REPO_UNREACHABLE_BASELINE, 'utf-8')
+    )
+    const usedInModuleBaseline = findDeadcode.parseBaseline(
+      readFileSync(REPO_USED_IN_MODULE_BASELINE, 'utf-8')
+    )
+
+    for (const identity of findDeadcode.KNOWN_PARSE_ARTIFACTS) {
+      expect(unreachableBaseline.has(identity)).toBe(false)
+      expect(usedInModuleBaseline.has(identity)).toBe(false)
+    }
   })
 })
 
