@@ -47,7 +47,6 @@
     "src/frontend/components/UI/RedeemSteamKeyDialog/copy.ts",
     "src/frontend/components/UI/RedeemSteamKeyDialog/index.tsx",
     "src/frontend/components/UI/SearchBar/index.tsx",
-    "src/frontend/components/UI/SearchBar/searchProbe.ts",
     "src/frontend/components/UI/SliderField/index.tsx",
     "src/frontend/components/UI/SteamGridDBPicker/index.tsx",
     "src/frontend/components/UI/StoreEmbedControls/index.tsx",

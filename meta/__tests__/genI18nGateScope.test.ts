@@ -297,7 +297,6 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/components/UI/PathSelectionBox/index.tsx',
   'src/frontend/components/UI/ProgressDialog/index.tsx',
   'src/frontend/components/UI/SliderField/index.tsx',
-  'src/frontend/components/UI/SearchBar/searchProbe.ts',
   'src/frontend/components/UI/SteamGridDBPicker/index.tsx',
   'src/frontend/components/UI/Winetricks/index.tsx',
   'src/frontend/helpers/declaredUnavailable.ts',
@@ -825,6 +824,19 @@ describe('--rewrite-scope guard', () => {
    * `searchProbe.ts` entering it is why the unscanned COUNT holds at 42
    * while the SET moves by two.
    *
+   * 2026-09-21 (closing the library-searchbar-mouse-dead debug session / the
+   * 2026-08-30 Library SearchBar todo): fork-touched 214 -> 213, unscanned
+   * debt 42 -> 41, scope UNCHANGED at 172. `SearchBar/searchProbe.ts`
+   * DELETED outright -- given the live-drive findings, the operator chose to
+   * remove the whole `.autoComplete` suggestions overlay from
+   * `LibrarySearchBar`/`SearchBar` rather than fix its hover defect (see
+   * `.planning/todos/completed/2026-08-30-library-search-bar-suggestions-
+   * are-mouse-dead-until-a-tab-press.md`). Same precedent as `260901-w9e`: a
+   * deleted file leaves both artifacts. Removed from `DECLARED_UNSCANNED_DEBT`
+   * above and from `meta/i18nForkTouchedFiles.json`, `generatedAt` held
+   * constant per this file's own precedent. Hand-edited surgically, NOT
+   * regenerated via `pnpm gen-i18n-gate-scope`.
+   *
    * Derived from a real `git diff --name-status` against the merge-base
    * with `deriveScopeFiles`' own filters applied by hand (parsing every
    * `R100`-style rename line by its LAST tab-separated field, per the
@@ -838,7 +850,7 @@ describe('--rewrite-scope guard', () => {
    * precedent.
    *
    * Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 172 -> 214 delta this task exists to
+   * so the specs below assert the REAL 172 -> 213 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -864,10 +876,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 172-file hand-curated snapshot and the fresh snapshot is the REAL 214', () => {
+  it('A0 fixture sanity: the seeded scope is the REAL 172-file hand-curated snapshot and the fresh snapshot is the REAL 213', () => {
     expect(scopeSnapshot.files.length).toBe(172)
-    expect(forkTouchedSnapshot.files.length).toBe(214)
-    expect(freshSnapshot().files.length).toBe(214)
+    expect(forkTouchedSnapshot.files.length).toBe(213)
+    expect(freshSnapshot().files.length).toBe(213)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -893,7 +905,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 172 -> 214 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 172 -> 213 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -916,7 +928,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 214', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 213', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -929,12 +941,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(214)
+    expect(rewritten.files.length).toBe(213)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 214 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 213 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -947,7 +959,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(214)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(213)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

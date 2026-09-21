@@ -126,3 +126,54 @@ auto-close when Phase 35 completes.
 Needs the same live-measurement treatment `35-25` Task 1 gave winetricks: an instrumented
 `pnpm tauri:dev` build, DOM mutation + focus instrumentation across the `mousedown`/`mouseup`
 window, and rival hypotheses ruled out with direct evidence rather than reasoning.
+
+## RESOLVED 2026-09-21
+
+Closed via `.planning/debug/resolved/library-searchbar-mouse-dead.md`, following a live drive
+under `pnpm tauri:dev` on the operator's real HOME profile — the first live measurement this
+surface has ever produced, after three prior code-read hypotheses on it were all wrong.
+
+**The headline claim was MEASURED FALSE.** Clicking a suggestion row worked first time, no Tab
+required, on the drive that reproduced the surface at all (a GOG query). The 2026-08-30
+"MOUSE-DEAD until a Tab press" symptom this file was filed against did not reproduce as
+described.
+
+**Three findings from the drive, then an operator decision:**
+
+- **Hover defect — reproduced, but NEVER DIAGNOSED.** Rows did not highlight under the pointer
+  on the GOG query that produced suggestion rows. This half was live-confirmed but the
+  investigation stopped there: the operator, given the choice between diagnosing the hover
+  defect and removing the dropdown outright, chose removal (see below). Stated plainly, per the
+  precedent in `completed/2026-08-26-winetricks-package-selection-is-temperamental-hover-and-
+  search.md`: this closure does not claim the hover defect was measured to a root cause,
+  diagnosed, or repaired. The surface carrying it no longer exists.
+- **Steam-omission defect — found, and MOOTED by the removal.** Code read during the same
+  session found `LibrarySearchBar` built its suggestion list from epic + gog +
+  sideloadedLibrary + amazon + zoom only, never steam — `ContextProvider` exposes `steam:`
+  alongside the others but `LibrarySearchBar` never read it, so Steam titles never appeared as
+  suggestions. Live-confirmed independently: the operator's Steam query narrowed the main
+  Library grid correctly (2 game cards, clickable as normal) while producing zero suggestion
+  rows. Since the whole `.autoComplete` suggestions surface is now removed and the grid-filter
+  path already includes Steam correctly, this defect is moot — there is no longer a suggestions
+  list for Steam titles to be missing from.
+- **Half A — spun out, not mooted.** "Typing needs repeated attempts before it filters usably"
+  is a property of the surviving input/filter chrome, not the removed dropdown. Given its own
+  home: `.planning/todos/pending/2026-09-21-library-search-typing-needs-repeated-attempts-
+  before-it-filters-usably.md`.
+
+**Operator decision — remove, not fix.** Asked directly, with the alternative (wire Steam into
+the suggestion list and diagnose the hover defect) spelled out, the operator chose to remove
+`SearchBar`'s `.autoComplete` suggestions overlay entirely. Reasoning: the search is modelled on
+Playnite — typing narrows the main grid, and list view already gives the row-like presentation
+the dropdown was offering. The operator had not known the dropdown existed. Verbatim: "I think
+this feature is superceeded."
+
+**What shipped:** `SearchBar`/`LibrarySearchBar`'s `.autoComplete` `<ul>`, its `onMouseDown`
+`preventDefault()` guard and accompanying comment block, the `.autoComplete` SCSS rules (the
+sibling `&:focus-within { box-shadow }` input-chrome rule was kept), `searchProbe.ts` and its
+test, and `suggestionFocusRace.test.tsx`. `LibrarySearchBar` lost its suggestion-building path
+(`handleClick`/`navigate`, `fixFilter`, `normalizeTitle`, the `list` useMemo, `RUNNER_TO_STORE`)
+along with the rows it fed; the input itself survives as filter chrome, unchanged in behaviour.
+`meta/__tests__/genI18nGateScope.test.ts` and its committed artifacts were updated to drop the
+deleted `searchProbe.ts` entry. `pnpm codecheck`, `pnpm lint`, and the Frontend/Meta jest
+projects were run clean after the removal.

@@ -1,12 +1,9 @@
-import { Fragment, useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import './index.scss'
 import { faSearch, faSpinner, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-// SEARCHPROBE-REMOVE-ME: see searchProbe.ts's own header for the removal recipe.
-import { attachSearchProbe } from './searchProbe'
 
 interface Props {
-  suggestionsListItems?: JSX.Element[]
   onInputChanged: (text: string) => void
   value: string
   placeholder: string
@@ -18,15 +15,12 @@ interface Props {
 }
 
 export default function SearchBar({
-  suggestionsListItems,
   onInputChanged,
   value,
   placeholder,
   loading = false
 }: Props) {
   const input = useRef<HTMLInputElement>(null)
-  // SEARCHPROBE-REMOVE-ME: default-OFF live instrument, see searchProbe.ts.
-  const suggestionsList = useRef<HTMLUListElement>(null)
 
   // we have to use an event listener instead of the react
   // onChange callback so it works with the virtual keyboard
@@ -53,9 +47,6 @@ export default function SearchBar({
       input.current.value = value
     }
   }, [value])
-
-  // SEARCHPROBE-REMOVE-ME: no-op unless armed via `::probe-on`; see searchProbe.ts.
-  useEffect(() => attachSearchProbe(suggestionsList.current, value), [value])
 
   const onClear = useCallback(() => {
     onInputChanged('')
@@ -92,80 +83,9 @@ export default function SearchBar({
         className="searchBarInput"
       />
       {value.length > 0 && (
-        <>
-          {/* FOCUS RACE mitigation (Phase 34.6 Plan 16). Keep this handler: the
-              mechanism below is real, independently of what caused any particular bug.
-
-              `index.scss` renders this list ONLY while the search bar has focus:
-              `.autoComplete { display: none }` plus `&:focus-within ul.autoComplete
-              { display: block }`. Without the guard below, clicking anything inside
-              the list destroys the thing being clicked, mid-click:
-
-                1. mousedown inside the list blurs the `<input>` above
-                2. the mousedown target does not take focus in its place -- an `<li>`
-                   is not focusable in any engine, and macOS/WebKit does not focus a
-                   `<button>` on click either
-                3. `:focus-within` goes false, so this `<ul>` flips to `display: none`
-                4. mouseup therefore lands somewhere else, and a `click` event only
-                   fires when mousedown and mouseup share a target -- so the item's
-                   own `onClick` NEVER RUNS
-
-              The failure is completely silent and reads as a dead button.
-
-              ⚠ CAUSAL CLAIM RETRACTED (34.6-REVIEW.md WR-03, corrected 2026-08-26).
-              This comment previously stated that the above was "the cause of live-gate
-              Step 4's FAIL" and that this was "proven by measurement". **It is not
-              established, and two separate live runs contradict it.** Plan 34.6-17's
-              re-drive shipped this guard, verified it in the running bundle, and the
-              winetricksInstall button was STILL dead to the mouse -- so the theory was
-              withdrawn as DISPROVEN. The 2026-08-26 Step 4 re-drive then passed via a
-              different route entirely: repeated searching, hovering, and a selection the
-              panel is slow to commit (see `34.6-LIVE-GATE.md` § SUPERSEDES and
-              the winetricks selection-UI todo dated 2026-08-26). Treat the four steps above as a real
-              mechanism worth guarding, NOT as a closed root-cause explanation for any
-              dead-button report.
-
-              `preventDefault()` on mousedown suppresses only the focus change, so the
-              input keeps focus, `:focus-within` holds, the list stays mounted and the
-              click completes normally. The cost is that text inside the list is no
-              longer selectable by dragging -- correct for a suggestions list.
-
-              This is the shared primitive: `LibrarySearchBar` also passes clickable
-              `<li onClick=...>` suggestions, so it carried the identical defect.
-
-              ROOT CAUSE FOUND (Phase 35 Plan 25, 2026-08-30, closing REQ-35-16 /
-              35-VERIFICATION.md gap 2). Live-measured on the actual winetricks dead-
-              button symptom via an instrumented `pnpm tauri:dev` build: this focus-loss
-              mechanism was NOT what was happening. `document.activeElement` stayed on
-              the search `<input>` throughout the failing mousedown, so `:focus-within`
-              never dropped and this `<ul>` never left `display: block`. The real cause
-              was one level up, in `Winetricks/WinetricksSearch/index.tsx`: a parent
-              (`Winetricks/index.tsx`) state flip (`installing` / `loadingInstalled`)
-              unmounted-and-remounted the whole `WinetricksSearchBar` -- including this
-              `<ul>` -- as a single batch, ~4ms after mousedown and ~60ms before mouseup,
-              which is why mouseup landed on an unrelated element and `click` never
-              fired. See the fix and its own comment in
-              `Winetricks/WinetricksSearch/index.tsx`. This guard above is UNCHANGED and
-              still correct, independently, for the mechanism it documents -- it simply
-              was not the winetricks button's mechanism. Do not delete it on the
-              strength of this finding; `LibrarySearchBar`'s shared consumption of this
-              same `<ul>` still depends on it. */}
-          <ul
-            className="autoComplete"
-            onMouseDown={(e) => e.preventDefault()}
-            ref={suggestionsList}
-          >
-            {suggestionsListItems &&
-              suggestionsListItems.length > 0 &&
-              suggestionsListItems.map((li, idx) => (
-                <Fragment key={idx}>{li}</Fragment>
-              ))}
-          </ul>
-
-          <button className="clearSearchButton" onClick={onClear} tabIndex={-1}>
-            <FontAwesomeIcon icon={faXmark} />
-          </button>
-        </>
+        <button className="clearSearchButton" onClick={onClear} tabIndex={-1}>
+          <FontAwesomeIcon icon={faXmark} />
+        </button>
       )}
     </div>
   )
