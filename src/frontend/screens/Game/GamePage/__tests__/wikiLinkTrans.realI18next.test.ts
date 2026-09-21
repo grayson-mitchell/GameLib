@@ -34,6 +34,18 @@
  * (`readGermanCatalogValue()`, A2's `&nbsp;`-based split) are German-shaped
  * and are not being generalised here.
  *
+ * WIDENED AGAIN, and EXTENDED (quick task 260922-8xv): that named set is now
+ * 17 locales, not 2 -- `de`, `fr`, and the 15 `FILLED_LOCALES` whose
+ * `wikiLink` 260922-8xv filled from empty. A SIXTH assertion (A6) was added
+ * with them, because A3 cannot stand in for it: an empty catalog value does
+ * NOT fall through to the element's English children (the sentinels A3
+ * watches), it resolves up the `fallbackLng` chain to the real English
+ * catalog text, so A3 -- and A4, and A5 -- all stay green while the user
+ * reads English. Measured by mutation, not assumed: re-emptying `sk` failed
+ * A6 alone with A4/A5 green, and re-breaking `ko`'s entity failed A4 alone
+ * with A6 green. Each assertion sees its own defect and is blind to the
+ * other's; neither one subsumes the other.
+ *
  * LIMITATION, stated honestly: the element rendered below is a
  * *reconstructed* element -- built from the `i18nKey`/`ns`/`shouldUnescape`
  * attributes read out of the production source, with sentinel/placeholder
@@ -90,6 +102,29 @@ if (!existsSync(SOURCE_PATH)) {
 const TARGET_KEY_SUBSTRING = 'wikiLink'
 const TEXT_SENTINEL = '__K2D_ENGLISH_TEXT_MUST_NOT_RENDER__'
 const LINK_SENTINEL = '__K2D_ENGLISH_LINK_MUST_NOT_RENDER__'
+
+// Quick task 260922-8xv filled these 15 locales' `wikiLink`, which had
+// carried an empty string `""` since before 260921-k2d. They are named
+// explicitly rather than globbed: `br` and `sl` still have no
+// `gamepage.json` at all and would render the English fallback, which
+// passes A4/A5 for a reason that has nothing to do with what they assert.
+const FILLED_LOCALES = [
+  'az',
+  'bs',
+  'eu',
+  'fa',
+  'he',
+  'hr',
+  'ka',
+  'ko',
+  'ml',
+  'ro',
+  'sk',
+  'sr',
+  'th',
+  'uz',
+  'zh_Hant'
+]
 
 function stripJsxComments(source: string): string {
   return source.replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
@@ -225,11 +260,11 @@ function renderReconstructed(instance: I18nInstance): string {
   return renderToStaticMarkup(element)
 }
 
-function readGermanCatalogValue(): string {
-  const catalogPath = join(LOCALES_DIR, 'de', `${EXTRACTED.ns}.json`)
+function readCatalogValue(lng: string): string {
+  const catalogPath = join(LOCALES_DIR, lng, `${EXTRACTED.ns}.json`)
   if (!existsSync(catalogPath)) {
     throw new Error(
-      `readGermanCatalogValue: ${catalogPath} does not exist. If this ` +
+      `readCatalogValue: ${catalogPath} does not exist. If this ` +
         'happened while running the wrong-ns negative control, this is ' +
         "expected -- read the A3 assertion's failure instead, not this one."
     )
@@ -239,6 +274,12 @@ function readGermanCatalogValue(): string {
     unknown
   >
   return getNestedCatalogValue(catalog, EXTRACTED.i18nKey, EXTRACTED.ns)
+}
+
+// A2/A2b stay German-shaped, per this file's header note -- this wrapper
+// keeps them reading as before now that the reader itself takes a locale.
+function readGermanCatalogValue(): string {
+  return readCatalogValue('de')
 }
 
 describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)', () => {
@@ -285,13 +326,21 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
     expect(markup).not.toContain(LINK_SENTINEL)
   })
 
-  // A4 runs over a named, explicit locale set -- 'de' and 'fr' -- because the
-  // malformed-entity defect this assertion exists to catch was, historically,
-  // French-only and a German-only run could never have seen it (see the file
-  // header's "WIDENED" note). Do not widen this to all 49 locale dirs: 15
-  // carry an empty wikiLink value and 2 have no gamepage.json at all, so a
-  // 49-locale run would be green for reasons unrelated to this assertion.
-  it.each(['de', 'fr'])(
+  // A4 runs over a named, explicit locale set, because the malformed-entity
+  // defect this assertion exists to catch was, historically, French-only and
+  // a German-only run could never have seen it (see the file header's
+  // "WIDENED" note).
+  //
+  // WIDENED AGAIN (quick task 260922-8xv): this comment used to read "do not
+  // widen this to all 49 locale dirs: 15 carry an empty wikiLink value and 2
+  // have no gamepage.json at all". The first half of that reason is gone --
+  // 260922-8xv filled those 15 -- so they are now in the set, and every one
+  // of the 15 hand-written values is proven here to render without mojibake
+  // rather than merely to parse as JSON. The second half still holds: `br`
+  // and `sl` have no gamepage.json, would render the English fallback, and
+  // would be green for a reason unrelated to this assertion. The set is
+  // therefore 17 named locales, never a glob over `public/locales/`.
+  it.each(['de', 'fr', ...FILLED_LOCALES])(
     'A4: the rendered markup contains no &amp;nbsp mojibake (locale: %s)',
     async (lng) => {
       const instance = await createRealInstance(lng)
@@ -311,13 +360,44 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
   // French carries the U+00A0 before its colon, which is correct French
   // typography and must never be "corrected" away), but the rendered run of
   // whitespace after the colon is one space in every locale.
-  it.each(['de', 'fr'])(
+  it.each(['de', 'fr', ...FILLED_LOCALES])(
     'A5: the rendered markup has no doubled whitespace (locale: %s)',
     async (lng) => {
       const instance = await createRealInstance(lng)
       const markup = renderReconstructed(instance)
 
       expect(markup).not.toMatch(/\s{2}/)
+    }
+  )
+
+  // A6 -- the assertion A3 cannot make for these locales. A3 catches a
+  // fall-through to the element's own English CHILDREN (the sentinels), but
+  // that is not how an empty catalog value fails: with `returnEmptyString:
+  // false`, an empty value resolves up the `fallbackLng` chain to the real
+  // ENGLISH CATALOG TEXT, so the sentinels never appear and A3 stays green
+  // while the user reads English. That is precisely the condition
+  // 260922-8xv closed in 15 locales, and nothing above would notice it
+  // coming back. A6 pins the locale's OWN link text instead -- a
+  // generalisation of A2b past German -- which is false the moment a value
+  // is emptied, deleted, or reverted to the English `Open page`.
+  it.each(FILLED_LOCALES)(
+    "A6: the rendered markup carries the locale's own <1> link text, not English (locale: %s)",
+    async (lng) => {
+      const linkTextMatch = /<1>([^<]*)<\/1>/.exec(readCatalogValue(lng))
+      if (!linkTextMatch) {
+        throw new Error(
+          `A6: no <1>...</1> segment in the ${lng} catalog value -- the ` +
+            'value is empty, missing its tag markers, or the catalog shape ' +
+            'changed. This is a catalog failure, not an extractor failure.'
+        )
+      }
+      expect(linkTextMatch[1].trim()).not.toBe('')
+      expect(linkTextMatch[1]).not.toBe('Open page')
+
+      const instance = await createRealInstance(lng)
+      const markup = renderReconstructed(instance)
+
+      expect(markup).toContain(escapeLikeReact(linkTextMatch[1]))
     }
   )
 })
