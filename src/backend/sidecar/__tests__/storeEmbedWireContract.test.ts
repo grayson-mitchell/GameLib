@@ -76,15 +76,76 @@ const flush = async (): Promise<void> => {
   await new Promise((resolve) => setImmediate(resolve))
 }
 
+/**
+ * Settlement of the most recent `fireWithNoRustPeer()` call for a given channel: the rejection
+ * `Error` once the 60s timeout fires, or `null` if the call ever resolves instead. Read by the
+ * Leg A regression gate below (`describe('regression gate...')`).
+ */
+const noPeerSettlements = new Map<string, Promise<Error | null>>()
+
+/**
+ * Fires a seam call against a transport that has **no Rust peer** and records how it settles,
+ * instead of leaving it floating.
+ *
+ * `startTransport()` wires `startRpcServer` over two `PassThrough`s and nothing ever writes a
+ * response frame to `input`, so `requestRustInvoke`'s 60s timer (`sidecarRpc.ts:367-388`) is
+ * CERTAIN to fire and the call can only ever reject. Not awaiting the call here is deliberate and
+ * must stay: every assertion in this describe block is about the frame the seam *emits*, and a
+ * response will never arrive for it to await. What was wrong is that a bare `void`-ed seam call
+ * installs no rejection handler at all, so jest attaches the eventual rejection to whichever test
+ * happens to be mid-flight when the 60s timer lands — see the archived todo
+ * `.planning/todos/completed/2026-09-21-leaked-store-embed-rpc-timer-now-blames-an-unrelated-test.md`
+ * for the bystander this produced (a Humble ownership-overlay security test, on 2026-09-21). This
+ * helper gives every no-peer call a real handler and records its settlement so the regression gate
+ * below (Leg A) can make a positive assertion about it.
+ *
+ * `pending: unknown` (not `Promise<unknown>`) is deliberate: `StoreEmbedSeam#setBounds` is
+ * declared `void` but actually returns a promise (`storeEmbedFlowRegistration.ts`, `return
+ * (async () => {...})() as unknown as void`) — `Promise.resolve()` adopts a thenable at runtime
+ * regardless of its declared type, which is what lets the `setBounds` call site below drop its
+ * `as unknown as Promise<void>` cast.
+ *
+ * Passing the promise in ARGUMENT position (not a bare statement) is what satisfies
+ * `no-floating-promises` structurally — no `void` operator, no eslint-disable, nothing for a
+ * future call site to forget.
+ *
+ * Three things this is deliberately NOT, so the next reader does not "simplify" it back:
+ * - NOT `.catch(() => {})`: discarding the rejection would stop the leak but leave nothing for
+ *   Leg A to assert against — a gate built on that shape could only ever check an absence.
+ * - NOT `unref()`: the 60s timer is already correctly `unref()`-ed at `sidecarRpc.ts:392`, with
+ *   its own comment explaining why. `unref()` governs whether a timer keeps the event loop alive;
+ *   it has nothing to do with whether a rejection has a handler. Reaching for it here would be a
+ *   misread of the defect.
+ * - Also not touched: `RUST_INVOKE_TIMEOUT_MS` is not shortened, `requestRustInvoke` is not
+ *   mocked, and no global unhandled-rejection swallow is installed — each would hide the defect
+ *   this helper exists to surface, not fix it.
+ *
+ * Second instance of this class: `appShellFlowRegistration.ts`'s `sidecar-init-rustinvoke-leak`
+ * comment describes the identical failure mode from a different call site — an assertion settling
+ * before a test drained its own pending rustInvoke calls, leaving a real timer to reject into a
+ * later, unrelated suite. Same class, different call site; that one was fixed by
+ * `skipInitialTraySync`.
+ */
+function fireWithNoRustPeer(pending: unknown, channel: string): void {
+  noPeerSettlements.set(
+    channel,
+    Promise.resolve(pending).then(
+      () => null,
+      (reason: unknown) =>
+        reason instanceof Error ? reason : new Error(String(reason))
+    )
+  )
+}
+
 describe('store-embed wire contract — the sidecar emits exactly what the Rust parsers accept', () => {
   it('store_embed_open emits the fixture payload verbatim (object, not positional)', async () => {
     const { frames } = startTransport()
     const [expected] = wireFixture.store_embed_open
-    void createRustStoreEmbedSeam().open(
+    fireWithNoRustPeer(createRustStoreEmbedSeam().open(
       expected.url,
       { x: expected.x, y: expected.y, w: expected.w, h: expected.h },
       'steam'
-    )
+    ), RUST_STORE_EMBED_OPEN)
     await flush()
 
     const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_OPEN)
@@ -99,12 +160,12 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
   it('store_embed_set_bounds emits the fixture payload verbatim (object, not positional)', async () => {
     const { frames } = startTransport()
     const [expected] = wireFixture.store_embed_set_bounds
-    void (createRustStoreEmbedSeam().setBounds({
+    fireWithNoRustPeer(createRustStoreEmbedSeam().setBounds({
       x: expected.x,
       y: expected.y,
       w: expected.w,
       h: expected.h
-    }) as unknown as Promise<void>)
+    }), RUST_STORE_EMBED_SET_BOUNDS)
     await flush()
 
     const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_SET_BOUNDS)
@@ -117,7 +178,7 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
   it('store_embed_navigate emits the fixture payload verbatim (object, not positional)', async () => {
     const { frames } = startTransport()
     const [expected] = wireFixture.store_embed_navigate
-    void createRustStoreEmbedSeam().navigate(expected.url)
+    fireWithNoRustPeer(createRustStoreEmbedSeam().navigate(expected.url), RUST_STORE_EMBED_NAVIGATE)
     await flush()
 
     const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_NAVIGATE)
