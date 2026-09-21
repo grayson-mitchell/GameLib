@@ -40,7 +40,7 @@
     "debug:react": "pnpm start & npx react-devtools",
     "codecheck": "tsc --noEmit",
     "planning-gates": "python3 meta/runPlanningGates.py",
-    "find-deadcode": "ts-prune --error",
+    "find-deadcode": "node meta/findDeadcode.cjs",
     "test": "jest",
     "test-watch": "jest --watch --maxWorkers=25%",
     "test:ci": "jest --runInBand --silent",
