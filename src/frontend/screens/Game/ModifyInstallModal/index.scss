@@ -4,11 +4,6 @@
     max-height: 95vh;
     overflow-x: hidden;
 
-    & .Dialog__content {
-      width: 65vw;
-      max-width: 800px;
-    }
-
     & .button {
       margin: 0 var(--space-md);
       min-width: 40%;

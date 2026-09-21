@@ -3,14 +3,6 @@
   width: 100%;
 }
 
-.errorDialog .Dialog__content {
-  width: 100%;
-}
-
-.errorDialog .Dialog__headerTitle {
-  color: red;
-}
-
 /* Phase 35 plan 11: `height: 25em` was a FIXED, content-independent height, so
    every `type: 'ERROR'` dialog rendered as a ~400px-tall scrollable console box
    regardless of how short its message was. That is the "oversized large text
