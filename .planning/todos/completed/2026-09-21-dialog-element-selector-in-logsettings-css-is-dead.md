@@ -1,10 +1,12 @@
 ---
 created: 2026-09-21
-title: "LogSettings/index.css:52's `dialog .logs-wrapper` block is dead — bare `dialog` element selector, MUI's Paper is a div"
+title: "RESOLVED — LogSettings/index.css:52's `dialog .logs-wrapper` block is dead — bare `dialog` element selector, MUI's Paper is a div"
 area: ui-dialogs
 severity: minor
 platform: any
 ready: code
+resolved: 2026-09-21
+resolved_by: "quick-260922-8kv, commit bb8c26f45"
 source: "quick-260921-qru, carried out of the stray-paren todo so it would not be discarded when that file closed"
 files:
   - src/frontend/screens/Settings/sections/LogSettings/index.css
@@ -12,6 +14,39 @@ files:
 ---
 
 # `dialog .logs-wrapper` has never matched anything
+
+## RESOLVED 2026-09-21 — the block was DELETED, not retargeted
+
+**Decision:** the operator decided this in the `260922-8kv` plan's decision record: delete the
+entire block outright. No re-litigation, no alternatives were offered at execution time.
+
+**Why deletion and not a retarget, in this todo's own terms:** the block does three things, and
+only item 1 (`height: 15em`) is a height. Item 2, `.log-buttongroup { display: none }`, hides the
+log-picker UI entirely — that is an unreviewed UX change that has never been in front of a user.
+Retargeting the selector at `.settingsDialogContent` would silently ship it. This repo has already
+rejected exactly this revive-unreviewed-dead-styling move at this same component: see
+`Dialog.tsx:109-120`, where an `.Dialog__element` `maxWidth`/`paddingTop` pair was deliberately
+DROPPED rather than realized, for the same reason. That precedent is binding here.
+
+**What actually shipped:** 12 lines removed from `LogSettings/index.css` (the 11-line block plus
+one trailing blank) — the file goes from 118 to 106 lines. Zero user-visible effect, because the
+rule never matched anything: this is the deletion of an already-inert rule, not a styling change.
+
+**What was explicitly NOT done:** no retarget at `.settingsDialogContent` or any other selector; no
+preservation of `height: 15em` at a new selector; no change to `Dialog.tsx` (its `:has(.logs-wrapper)`
+selectors at lines 56 and 59 are untouched); no change to the log-picker UI or `.log-buttongroup`.
+
+**Gate results measured at close:**
+- `dialog .logs-wrapper` repo-wide: 0 hits (was 1)
+- bare `dialog` element selector in any `.css`/`.scss` under `src/`: 0 (was 1)
+- `LogSettings/index.css`: 118 -> 106 lines
+- `.log-buttongroup` occurrences in that file: 2 -> 1
+- `.setting.log-box` occurrences in that file: 2 -> 1
+- `.logs-wrapper` occurrences in that file: 4 -> 3
+- `pnpm exec prettier --check` on the file: exit 0
+- `pnpm codecheck`: exit 0
+
+**Commit:** `bb8c26f45` (`fix(quick-260922-8kv): delete the dead dialog .logs-wrapper block in LogSettings`)
 
 ## Measured facts
 
