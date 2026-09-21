@@ -2,7 +2,7 @@
 created: 2026-09-21T00:00:00.000Z
 title: "Library search bar: typing needs repeated attempts before it filters usably (Half A, spun out of the mouse-dead debug session)"
 area: ui-search
-severity: minor
+severity: medium
 platform: any
 ready: live-gate
 files:
@@ -61,6 +61,18 @@ session for the full record). Measure before theorizing further.
 ## Ownership
 
 Unowned. No `resolves_phase:` set.
+
+**Severity was `minor` at filing, raised to `medium` by the operator on 2026-09-21**, recorded
+here because the original carried no rationale anywhere in the file. `minor` is defined in
+CLAUDE.md as "polish, rough edge, or a latent trap with **no live consequence**", and that does
+not fit: the symptom was reported by the operator as "very painful" against a live surface, and
+the surface it now points at — the Library search input — is the primary way the library gets
+filtered, used on essentially every session. `medium` ("real defect, bounded blast radius,
+workaround exists") is the honest cell; the workaround is simply typing again. Note the
+severity trap that argues the other way and was considered: the symptom has **never been
+measured on this consumer at all**, only on the deleted Winetricks one. Unmeasured is not
+evidence of `minor` either, which is why this is `medium` and `ready: live-gate` rather than
+scored down on absent data.
 
 Needs the same live-measurement treatment the mouse-dead investigation eventually got: an
 instrumented `pnpm tauri:dev` drive on the operator's real Mac, typing a query into the Library
