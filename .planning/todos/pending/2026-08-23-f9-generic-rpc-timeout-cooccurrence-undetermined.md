@@ -401,3 +401,34 @@ task.
 
 Q1's answer is, and remains, UNDETERMINED and is not rounded to "no." This task closes no box,
 checks nothing, and is `closes_todo: false`.
+
+## Cross-reference (2026-09-21, quick task `260921-saw`) — a LOOK-ALIKE that is NOT a Q2 recurrence
+
+A reader who greps a `pnpm test:ci` log, or who has seen the phrase `timed out` in this repo's RPC
+layer recently, will meet this line:
+
+```
+rustInvoke timed out after 60000ms: store_embed_open
+    at Timeout._onTimeout (src/backend/sidecar/sidecarRpc.ts:339:24)
+```
+
+**It is not a Q2 recurrence and cannot become one.** Filed separately at
+`.planning/todos/pending/2026-09-21-leaked-store-embed-rpc-timer-now-blames-an-unrelated-test.md`.
+Checked before writing this note:
+
+- **Wrong leg.** Q2's unpark condition greps `invoke abandoned\|unknown/timed-out` — the Rust
+  shell's own diagnostics. That line is the *opposite* leg, `sidecarRpc.ts`'s sidecar→Rust
+  timeout.
+- **Wrong source, and structurally so.** `sidecarRpc.ts` never writes `gamelib-shell.log`
+  (verified). Q2's grep cannot see this event, and this event can never satisfy Q2's unpark
+  condition no matter how often it fires.
+- **Wrong channels.** `store_embed_open` / `store_embed_set_bounds` / `store_embed_navigate` — not
+  a cookie operation, which is the only thing Q2 asks about.
+- **Wrong environment.** It is a leaked jest timer with no responding sidecar, not a live app run.
+
+They share only the substring `timed out`. Recorded here because the two dispositions above
+(`260907-fni`, `260907-j8n`) both had to spend paragraphs correcting exactly this class of
+mistake — a diagnostic read out of the wrong source and mistaken for evidence about this todo.
+
+**Nothing about Q1 or Q2 changes. Q1 stays closed as UNDETERMINED, never "no." Q2 stays PARKED
+with its unpark condition unchanged. No box checked, `closes_todo: false`.**
