@@ -1,9 +1,9 @@
 ---
 created: 2026-09-20
-title: "Dialog.tsx:59's StyledPaper logs-wrapper height rule has a stray paren and has never applied"
+title: "Confirm the now-live Dialog.tsx :has(.logs-wrapper) maxHeight renders correctly, and kill the dead `dialog .logs-wrapper` sibling"
 area: ui-dialogs
 severity: minor
-platform: any
+platform: macos
 ready: live-gate
 source: "quick-260921-nub, surfaced while measuring the .Dialog__content/.Dialog__headerTitle census"
 files:
@@ -14,7 +14,47 @@ files:
 
 # Dialog.tsx:59's `&:has(.logs-wrapper))` selector has a stray extra `)` and has never fired
 
-## Measured facts
+## The paren is FIXED — read this before the sections below
+
+2026-09-21, quick `260921-qru`, commit `7cc01a936`. The stray `)` is deleted; `Dialog.tsx:59` now
+reads `'&:has(.logs-wrapper)': { maxHeight: '80%' }` and the rule is live for the first time since
+`b11b483c9`. Gates at that commit: `pnpm codecheck` exit 0; `pnpm lint` byte-identical to the
+pre-edit baseline — production 1119 problems (0 errors), tests 638 problems (0 errors), both PASS.
+
+**Everything below this section was written BEFORE that fix and is preserved as the historical
+measurement record. Its present tense is now wrong about the paren** — "has never applied", "has
+never fired", "gets neither height constraint" all described HEAD before `7cc01a936`. Do not read
+those sentences as current state.
+
+**Two things survive, and they are why this file is still in `pending/`:**
+
+1. **The live render check — never run, and now inverted.** The gate was always the user-visible
+   half: the `260921-pec` WKWebView harness proved the rule never applied, but measured selector
+   parsing against the app's real stylesheets, NOT the running app's webview, React tree, or
+   emotion's runtime-injected styles. It therefore never scored whether the missing cap had any
+   visible consequence. The fix flips the question rather than answering it: a declaration that has
+   never once applied in this app's history is now active on every Dialog whose subtree contains
+   `.logs-wrapper`, so the open question is no longer "does it overflow without the cap" but "does
+   the revived cap render correctly, and did activating it regress anything". That still needs a
+   live run on a real viewport.
+
+2. **The co-located dead rule was NOT touched.** `LogSettings/index.css:52`
+   `dialog .logs-wrapper { height: 15em }` is still dead, still for the independent reason recorded
+   below — a bare `dialog` ELEMENT selector, and MUI's Paper is a `div`, never a `<dialog>`. Quick
+   `260921-qru` was scoped by the operator to the paren alone and deliberately left this alone. If
+   this file is ever closed on the paren fix, THIS finding is what evaporates with it.
+
+Re-triaged `platform: any` → `macos`: what is left is a live app run, and this Mac is the machine
+to hand.
+
+**Scope note on the revived selector, unresolved:** `:56` is gated on `.settingsDialogContent`;
+`:59` as fixed is NOT, so it matches any Dialog containing `.logs-wrapper`. A source census of
+`logs-wrapper` across `src/` (2026-09-21) finds it only in `LogSettings/index.{tsx,css}` and these
+two `Dialog.tsx` keys, so today the unguarded form has no second consumer — but nothing enforces
+that, and `LogSettings/index.css:38` `.logs-wrapper.game-log` hints at a second render context.
+Whether `:59` should carry the same `.settingsDialogContent` guard as `:56` was never decided.
+
+## Measured facts (pre-fix — see the section above)
 
 `Dialog.tsx:59` reads:
 
@@ -94,9 +134,13 @@ left is the user-visible half only: does the Settings log dialog actually overfl
 window? That is a rendering question on a real viewport that this harness did not and could not
 measure, so it still needs a live run to score, not a source read or another WKWebView probe.
 
-## Not fixed here
+## Not fixed here (superseded — see the fix section at the top)
 
 Quick task `260921-nub` records this rather than repairing it — `Dialog.tsx` is required to remain
 byte-identical for that task (its own Task 1/Task 2 verify assert `git diff --quiet` on this file).
 Quick task `260921-pec` measured the mechanism live and narrowed this gate; it made no source
 change either — no file under `src/` or `src-tauri/` is touched by that task.
+
+That byte-identical constraint expired when both tasks completed. Quick `260921-qru` made the
+one-character repair on 2026-09-21 (`7cc01a936`); this section describes why the two EARLIER tasks
+declined it, not the current state.
