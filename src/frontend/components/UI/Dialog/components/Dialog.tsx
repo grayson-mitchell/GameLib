@@ -56,7 +56,7 @@ const StyledPaper = styled(Paper)(() => ({
   '&:has(.settingsDialogContent):not(:has(.logs-wrapper))': {
     height: '80%'
   },
-  '&:has(.logs-wrapper))': {
+  '&:has(.logs-wrapper)': {
     maxHeight: '80%'
   }
 }))
