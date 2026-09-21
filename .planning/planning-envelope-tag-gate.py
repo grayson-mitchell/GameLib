@@ -65,9 +65,10 @@ to add an exemption ledger entry. Both moves would recreate the maintenance burd
 design was chosen specifically to avoid.
 
 SPLIT LITERALS, BOTH HALVES OF THE TRAP. Every joined tag-punctuation literal for the two
-envelope names (`<content>`, `</content>`, `<invoke>`, `</invoke>`) is built by string
-concatenation from parts, in this module AND in its self-test fixtures -- never typed as a
-contiguous string literal. Two reasons, stated once: (1) self-conviction -- this gate's own
+envelope names -- the open and close shapes of `` `content` `` and `` `invoke` ``, written here
+as `` `</content` `` + `` `>` `` and `` `</invoke` `` + `` `>` `` rather than joined up -- is
+built by string concatenation from parts, in this module AND in its self-test fixtures -- never
+typed as a contiguous string literal. Two reasons, stated once: (1) self-conviction -- this gate's own
 source lives under `.planning/`, and the moment its corpus widens to `.py` a joined literal in
 this very docstring would convict this file; (2) grep poisoning -- every future census of this
 artifact is a grep, and prose that spells the literal is indistinguishable from the artifact
