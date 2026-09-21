@@ -15,6 +15,39 @@ files:
 
 # Native dialog residue after the VCRuntime and Snap migrations
 
+## Closing note (quick task `260921-mzl`)
+
+**Item 3 was DONE** by quick task `260921-mzl`. It deleted the dead
+`src/frontend/components/UI/Dialog/index.css` blocks named below: `.Dialog__element`,
+`.Dialog__element::backdrop`, the `.Dialog__element:popover-open, .Dialog__element[open]`
+variant, `.Dialog__header`, `.Dialog__Close`, the combined `.Dialog__Close, .Dialog__header`,
+`.Dialog__CloseButton` (plus its `:focus-visible`/`:hover`/`:active`), and `.Dialog__CloseIcon` —
+six named blocks in total, reducing the stylesheet to its five surviving live/kept rules. That
+deletion made two existing, otherwise-correct comments false (three blocks in `Dialog.tsx`, three
+sites in `dialogWindowChrome.test.ts`), which is why the change touched four files rather than
+one: each comment describing `.Dialog__element` as a dead-but-*present* rule was restated to say
+the rule was deleted, in the present tense, without changing any assertion or executable line.
+
+**Items 1, 2 and 4 were verified accurate at HEAD `39f024e6a` and deliberately left unfixed**,
+each because its warning already lives in situ:
+
+- **Item 1** — `src/backend/storeManagers/storeManagerCommon/games.ts` carries a "DEGRADED UNDER
+  TAURI" comment ledgering D-35-15-01 directly above the call; the real owner is D-35-15-01's
+  Tauri child-window work.
+- **Item 2** — `src/backend/utils.ts` carries a 16-line CR-04 comment above `cancelId: 0` spelling
+  out the inverted polarity and the fail-safe reasoning.
+- **Item 4** — `src/backend/platform/index.ts:440-442` documents the logged-no-op D-03 decision,
+  and the stub at `:506-511` warns on every call.
+
+**The census correction this task surfaced is carried forward, not discarded.** Deleting item 3's
+blocks required measuring the full `Dialog__*` class census, which showed the item-3 list itself
+was incomplete: `.Dialog__headerTitle` and `.Dialog__content` are equally dead but were kept
+because their deadness fans out into five rules across four other stylesheets nobody has visually
+verified — a materially wider blast radius than item 3's self-contained blocks. That correction is
+filed separately at
+`.planning/todos/pending/2026-09-20-dialog-content-and-headertitle-are-dead-across-four-other-stylesheets.md`,
+so closing this todo does not lose it.
+
 Quick task `260919-sch` moved the two live, verified dialog-shim collapse defects (VCRuntime
 "Don't show again", the Snap warning checkbox) off the native `dialog.showMessageBox` shim onto
 the in-app `showDialog` path — see the closing note at the top of
