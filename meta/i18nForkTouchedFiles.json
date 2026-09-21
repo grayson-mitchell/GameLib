@@ -179,6 +179,7 @@
     "src/frontend/screens/Settings/components/NotifyHumbleExpirations.tsx",
     "src/frontend/screens/Settings/components/PreferedLanguage.tsx",
     "src/frontend/screens/Settings/components/ResetHeroic.tsx",
+    "src/frontend/screens/Settings/components/SettingsModal/index.tsx",
     "src/frontend/screens/Settings/components/ShowValveProton.tsx",
     "src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx",
     "src/frontend/screens/Settings/components/Tools/index.tsx",

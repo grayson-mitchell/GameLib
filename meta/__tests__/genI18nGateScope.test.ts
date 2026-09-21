@@ -866,8 +866,43 @@ describe('--rewrite-scope guard', () => {
    * lists in the same sorted slot, so unscanned holds at 41, same mechanism
    * as `260902-wbd` above. Hand-edited surgically, NOT regenerated.
    *
+   * 2026-09-21, quick `260921-saw` (refresh the i18n fork-touched snapshot):
+   * fork-touched 214 -> 215, scope 173 -> 174, unscanned debt UNCHANGED at
+   * 41. `5d220d1cd` ("fix(quick-260921-nub): delete dead SettingsModal.scss
+   * and Dialog__input className") made
+   * `src/frontend/screens/Settings/components/SettingsModal/index.tsx`
+   * fork-touched for the first time, but nobody refreshed
+   * `meta/i18nForkTouchedFiles.json`, so `A-17 ANTI-ROT` went RED at HEAD.
+   * The audit-mode `scanScope({ extraFiles: [...] })` run BEFORE any
+   * promotion (per this file's own precedent -- `extraFiles` de-dupes
+   * against an already-promoted `scope.files`, so running it after
+   * promotion would be a silent, vacuous zero) found 174 files scanned and
+   * ONE real violation: a bare literal `category: 'Categories'` inside
+   * `titleTypeLiterals`, sitting between two sibling entries that both
+   * already went through `t()`. That is a genuine STOP (Route B in the
+   * task's own plan) -- the file could not be promoted with a live
+   * violation, and this task did not fix it or widen the debt array on its
+   * own initiative. The operator chose to fix the violation rather than
+   * grow declared debt 41 -> 42 (commit `8eac712b8`, reusing the existing,
+   * already-41-locale-filled `header.categories` key rather than minting a
+   * new one -- it belongs to the live `header.*` family this fork already
+   * uses throughout the NavShell filter UI). Re-running the same audit
+   * after `8eac712b8` landed: 174 files scanned, 0 violations, confirming
+   * Route A. Regenerated via `pnpm gen-i18n-gate-scope` (not `:rewrite`)
+   * for the fork-touched artifact, with `generatedAt` restored by hand so
+   * only `files` moved -- the generator's raw write also re-escapes the
+   * `purpose` field's em dash, an unrelated formatting artifact, so the
+   * one true semantic line (the new entry) was hand-applied to the
+   * original bytes instead of taking the generator's output verbatim, per
+   * this file's `2026-09-04`-era precedent; hand-edited surgically for the
+   * scope artifact, since `--rewrite-scope` is forbidden here and
+   * `generatedBy`/`generatedAt` are off-limits per `A5 PROVENANCE RATCHET`.
+   * The file enters BOTH lists in the same sorted slot, so the unscanned
+   * COUNT holds at 41 while the SET grows by one -- same mechanism as
+   * `260902-wbd` and `2026-09-21 continued` above.
+   *
    * Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 173 -> 214 delta this task exists to
+   * so the specs below assert the REAL 174 -> 215 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -893,10 +928,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 173-file hand-curated snapshot and the fresh snapshot is the REAL 214', () => {
-    expect(scopeSnapshot.files.length).toBe(173)
-    expect(forkTouchedSnapshot.files.length).toBe(214)
-    expect(freshSnapshot().files.length).toBe(214)
+  it('A0 fixture sanity: the seeded scope is the REAL 174-file hand-curated snapshot and the fresh snapshot is the REAL 215', () => {
+    expect(scopeSnapshot.files.length).toBe(174)
+    expect(forkTouchedSnapshot.files.length).toBe(215)
+    expect(freshSnapshot().files.length).toBe(215)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -922,7 +957,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 173 -> 214 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 174 -> 215 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -945,7 +980,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 214', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 215', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -958,12 +993,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(214)
+    expect(rewritten.files.length).toBe(215)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 214 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 215 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -976,7 +1011,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(214)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(215)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {
