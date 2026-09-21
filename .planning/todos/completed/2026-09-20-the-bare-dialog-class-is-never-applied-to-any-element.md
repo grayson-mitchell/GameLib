@@ -174,3 +174,33 @@ That re-measurement uses the same compiled Swift harness and probe quick `260921
 (`.planning/quick/260921-pec-record-the-live-wkwebview-measurements-i/evidence/wkprobe.swift` and
 `.../evidence/probe_wk.js`) and is the orchestrator's to run, not this executor's. This item closes
 only if that re-measurement confirms the prediction; until then it stays in `pending/`.
+
+## Re-measured live 2026-09-21 — prediction CONFIRMED, item CLOSED
+
+Evidence: `.planning/quick/260921-q9v-move-dialog-margin-horizontal-to-root-an/evidence/wkresults_after.json`.
+Same harness, same probe, same dev server, same 143-stylesheet boot and `midnightMirage` body as
+the `260921-pec` baseline — only the two stylesheet edits differ.
+
+| element | BEFORE (`260921-pec`) | AFTER (this run) | PREDICTED | verdict |
+| --- | --- | --- | --- | --- |
+| `anticheatInfo_asShipped` | `0px/0px/0px/0px` | `16px/32px/0px/32px` | `16px/32px/0px/32px` | MATCH |
+| `installWrapper_asShipped` | `16px/0px/16px/0px` | `16px/32px/16px/32px` | `16px/32px/16px/32px` | MATCH |
+
+`tokenAtRoot` and `tokenAtBody` now both read `32px`, where the baseline read `""`.
+
+**Two controls make this a result rather than a coincidence:**
+
+1. **The positive-control column did NOT move.** `anticheatInfo_underDialogAncestor` and
+   `installWrapper_underDialogAncestor` read identically before and after
+   (`16px/32px/0px/32px` and `16px/32px/16px/32px`). That matters: the prediction was that the
+   "as shipped" column would *become* the control column, and a control that drifted to meet the
+   result would have proven nothing. It held still while the measured column moved to it.
+2. **`sanity_spaceMd` still reads `1em`** through the same getter, so the non-blank token readings
+   are the getter working, not a changed probe.
+
+**Scope limit, unchanged and still binding:** this is CSS cascade resolution in WebKit against the
+app's real stylesheets, not the running app's own webview, React tree, or emotion runtime styles.
+It proves the two `margin` shorthands now resolve and compute to their authored values. It does
+NOT prove anyone has looked at the anticheat banner or the Winetricks dialog on screen and judged
+32px to be right — that was the authored intent before this defect was introduced, and restoring
+authored intent is what this item was scoped to do.
