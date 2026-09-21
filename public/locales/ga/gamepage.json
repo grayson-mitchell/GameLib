@@ -349,7 +349,7 @@
         "notice1": "Tá an cluiche seo á bhainistiú ag feidhmchlár tríú páirtí: \"{{application_name}}\"",
         "notice2": "Tar éis cliceáil ar Suiteáil, rithfidh GameLib an feidhmchlár chun an próiseas suiteála a chríochnú"
     },
-    "wikiLink": "Eolas tábhachtach faoin gcluiche seo, léigh seo:<1>Oscail an leathanach</1>",
+    "wikiLink": "Eolas tábhachtach faoin gcluiche seo, léigh seo:&nbsp;<1>Oscail an leathanach</1>",
     "open-saves-folder": "Oscail Fillteán Sábhálann",
     "edit-game": {
         "advanced": "Ardleibhéil",

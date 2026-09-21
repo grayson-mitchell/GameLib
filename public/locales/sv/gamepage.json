@@ -339,7 +339,7 @@
             "pause": "Pausa nedladdning"
         }
     },
-    "wikiLink": "Viktig information om det här spelet, läs detta:<1>Öppna sida</1>",
+    "wikiLink": "Viktig information om det här spelet, läs detta:&nbsp;<1>Öppna sida</1>",
     "open-saves-folder": "Öppna mappen med sparningar",
     "edit-game": {
         "advanced": "Avancerat",
