@@ -53,6 +53,43 @@ free slot.
 Both ceilings are byte-identical across the edit. A local assertion also confirms every `&:has(...)`
 key in the file now has balanced parens.
 
+## The live gate WAS run, and it retracted one of my own findings
+
+Everything in the section below this one was written before the live gate ran. It is preserved
+because its caution was right, but its "rendering is unverified" framing is now stale.
+
+The gate ran the same day. The app's real Settings log modal was driven in a WKWebView — the app's
+own zustand store reached through Vite's module registry, so the measured Paper is the one emotion
+actually styled in the running React tree. Results:
+
+- **The todo's premise was wrong.** The dialog was never uncapped; MUI's default
+  `max-height: calc(100% - 64px)` applied all along. My pinned prediction of `none` was wrong. The
+  fix replaced a looser cap with a tighter one rather than adding one.
+- **The fix is a no-op at ordinary viewports** — 900px renders 630px in both arms, identically. The
+  two caps cross over at a 320px viewport, so above that `80%` is always the tighter.
+- **I then reported a spill defect, and it was wrong.** I claimed log content overflowed the Paper
+  unreachably in both arms. `.settingsDialogContent` is not the Paper's child — MUI's own
+  `MuiDialogContent-root` sits between them and is the actual scroll container (clientH 400,
+  scrollH 630, scrolls to its end in both arms). A child's `getBoundingClientRect()` inside a
+  scrollport legitimately extends past it; I read scrollable overflow as clipping. My probe's
+  ancestor walk ran upward from the Paper, so the descendant scroller was structurally invisible
+  to it. **Retracted in `811f9ec1e`.**
+- An option-3 remedy (`min-height: 0; overflow-y: auto`) was written for that non-existent defect,
+  measured, falsified (`clientHeight` stayed 522 — it is a block child of a block scroller, not a
+  flex item), and **reverted**.
+
+**Net user-visible effect of `7cc01a936`: 36px more scrolling in the log dialog on an unusually
+short window. Nothing else.**
+
+## Outcome
+
+Operator chose **option A** — keep the fix. The todo is closed to
+`.planning/todos/completed/2026-09-20-dialog-styledpaper-logs-wrapper-rule-has-a-stray-paren.md`.
+
+The surviving dead-CSS finding was **carried out before the close** rather than buried with it:
+`.planning/todos/pending/2026-09-21-dialog-element-selector-in-logsettings-css-is-dead.md`. That
+todo also records why the dead block must not simply be repointed — it hides the log-picker UI.
+
 ## What this does NOT prove, and what was deliberately left alone
 
 **The rendering is unverified.** The `260921-pec` harness measured selector parsing and CSS error
@@ -75,11 +112,8 @@ the cap" but "does the revived cap render correctly, and did activating it regre
 `Dialog.tsx` keys, so there is no second consumer today — but nothing enforces that, and
 `LogSettings/index.css:38` `.logs-wrapper.game-log` hints at a second render context.
 
-## Todo disposition
+## Todo disposition (superseded — see `## Outcome` above)
 
-`.planning/todos/pending/2026-09-20-dialog-styledpaper-logs-wrapper-rule-has-a-stray-paren.md` was
-**updated, not closed.** Closing it would have discarded finding 2 above, which lives only in its
-body. Its title said the rule "has never applied", which this commit made false, so it was retitled
-to name the residual; the pre-fix measurement sections are preserved verbatim under an explicit
-banner saying their present tense is now wrong about the paren. Re-triaged `platform: any` →
-`macos`, since what is left is a live app run.
+This section described the interim state, when the todo was updated rather than closed because the
+live gate had not yet run. It has since run, the operator chose option A, and the todo is closed to
+`completed/` with the dead-CSS finding re-filed as its own pending item first.

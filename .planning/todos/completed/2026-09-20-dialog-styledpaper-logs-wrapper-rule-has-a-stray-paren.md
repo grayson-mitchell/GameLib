@@ -1,10 +1,12 @@
 ---
 created: 2026-09-20
-title: "Decide whether the revived :has(.logs-wrapper) 80% cap should stay — measured a no-op at normal viewports and worth 36px of extra scrolling at short ones"
+title: "RESOLVED — Dialog.tsx:59's stray paren deleted and the 80% cap kept (option A), on a live measurement that retracted this todo's own spill claim"
 area: ui-dialogs
 severity: minor
 platform: any
 ready: human
+resolved: 2026-09-21
+resolved_by: "quick-260921-qru, commits 7cc01a936 (fix) + 811f9ec1e (retraction)"
 source: "quick-260921-nub, surfaced while measuring the .Dialog__content/.Dialog__headerTitle census"
 files:
   - src/frontend/components/UI/Dialog/components/Dialog.tsx
@@ -13,6 +15,30 @@ files:
 ---
 
 # Dialog.tsx:59's `&:has(.logs-wrapper))` selector has a stray extra `)` and has never fired
+
+## RESOLVED 2026-09-21 — option A, decided by the operator
+
+The stray `)` is deleted (`7cc01a936`) and the `maxHeight: '80%'` cap **stays**. Operator chose
+option A from the two live options recorded below, after the measurement established that the
+choice was a preference and not a correctness question.
+
+What shipped: a one-character source change. Its entire measured user-visible effect is that on an
+unusually short window the log dialog is 36px shorter, so 36px more scrolling in a scroll container
+that was already scrolling. At ordinary viewports it is a measured no-op (900px renders 630px in
+both arms, identically).
+
+Gates at close: `pnpm codecheck` exit 0; `pnpm lint` byte-identical to the pre-edit baseline
+(production 1119 / tests 638 problems, 0 errors, both PASS); `pnpm planning-gates` 11/11.
+
+**This item closes with one finding deliberately carried out of it rather than buried:** the dead
+`dialog .logs-wrapper` rule at `LogSettings/index.css:52`. It is re-filed as its own pending todo
+(`2026-09-21-dialog-element-selector-in-logsettings-css-is-dead.md`) because it lived only in this
+file's body, and closing this file on the paren fix would have discarded it — see `## Still not
+fixed, and now outranked` below for the measured detail.
+
+**Read the retraction immediately below before trusting anything else in this file.** The most
+useful thing in this todo is not the fix; it is that a confident, measured-sounding finding in it
+was wrong, and how.
 
 ## RETRACTION — finding 3 below is WRONG. There is no spill and nothing is clipped.
 
