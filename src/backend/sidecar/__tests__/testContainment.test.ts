@@ -543,11 +543,20 @@ const IN_SCOPE_SUITES = [
  * no `electron`/`electron-store` mocking, drives the real `sidecarRpc`
  * transport via `startRpcServer()`. Its one additional import is a static
  * JSON fixture (`meta/fixtures/store-embed-wire-args.json`), read via
- * `import` at module scope; a JSON asset opens no containment surface --
- * it touches no filesystem API at test time and pulls in no module graph.
- * It exists because the live gate found the sidecar emitting POSITIONAL
- * args where the Rust parsers read an OBJECT, with every suite green
- * because each side was tested only against itself.
+ * `import` at module scope; a JSON asset opens no containment surface and
+ * pulls in no module graph. It exists because the live gate found the
+ * sidecar emitting POSITIONAL args where the Rust parsers read an OBJECT,
+ * with every suite green because each side was tested only against itself.
+ * quick task 260921-thi (2026-09-21) added a second, narrower filesystem
+ * contact: its own source-shape regression gate reads its own source text
+ * off disk via plain `fs.readFileSync` for static text analysis only --
+ * mirroring the wording already used above in this file for the other
+ * source-reading suites (`seamBranchParity.test.ts`,
+ * `appRootResolution.test.ts`, `invokeReturnValueSweep.test.ts`,
+ * `externalDynamicImportGate.test.ts`) and precedented by
+ * `electronUntouched.test.ts`, already in this same list, which reads
+ * files at its own lines 54/166. No module is imported, required, or
+ * executed by that read, so it opens no new containment surface.
  *
  * `oauthLoginCapture.test.ts` (Phase 34.4.1 Plan 09) is classified as
  * structurally contained: it factory-mocks only `backend/logger` (mirrors

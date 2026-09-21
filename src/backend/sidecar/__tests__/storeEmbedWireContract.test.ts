@@ -24,6 +24,8 @@
  * Both sides were covered in isolation; the contract between them was not. Coverage of each
  * end is not coverage of the boundary.
  */
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 
 import { createRustStoreEmbedSeam } from '../storeEmbedFlowRegistration'
@@ -33,6 +35,10 @@ import {
   RUST_STORE_EMBED_SET_BOUNDS,
   RUST_STORE_EMBED_NAVIGATE
 } from '../../../common/types/sidecarTransport'
+import {
+  stripSourceComments,
+  stripTrailingLineCommentTs
+} from '../../testUtils/stripSourceComments'
 
 import wireFixture from '../../../../meta/fixtures/store-embed-wire-args.json'
 
@@ -200,5 +206,111 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
       'store_embed_open',
       'store_embed_set_bounds'
     ])
+  })
+})
+
+/**
+ * Regression gate for the 2026-09-21 leaked-timer defect (archived todo:
+ * `.planning/todos/completed/2026-09-21-leaked-store-embed-rpc-timer-now-blames-an-unrelated-test.md`).
+ *
+ * **Location decision, and why both legs live in THIS file rather than a new one.** (1) A new
+ * `*.test.ts` under `src/backend/sidecar/__tests__/` trips `testContainment.test.ts`'s Block C
+ * set-equality gate as `unclassified` — a separate file would cost a ledger entry and a written
+ * classification paragraph for no gain. (2) Both legs are *about this file*: Leg A exercises this
+ * file's `fireWithNoRustPeer` helper, Leg B reads this file's own source. Hosting them elsewhere
+ * would let someone delete the helper here and leave a green gate over there.
+ *
+ * **Scope decision on the general rule — weighed, and declined.** A repo-wide ban on `void`-ed
+ * `requestRustInvoke` calls was considered and rejected: `void` plus an explicit `.catch` is
+ * legitimate, `void` is legitimate for non-promise expressions, and a negative gate that outlaws
+ * more than the decision behind it is a known recurring cost in this repo. The three sites in this
+ * file were the only `void`-ed rustInvoke sites in the whole repo, so a repo-wide gate would today
+ * police an empty set at permanent interpretive expense. This is a recorded decision, not an
+ * omission.
+ *
+ * **Honest limits of this gate, stated rather than implied:** it reads the working TREE, not the
+ * commit, and it sees only THIS file — a `void`-ed rustInvoke elsewhere in the repo is entirely
+ * out of its scope.
+ */
+describe('regression gate: the leaked store_embed rustInvoke rejection now has a handler (2026-09-21)', () => {
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('Leg A (behavioural, POSITIVE): the no-peer store_embed_open call is caught by a handler, not left floating', async () => {
+    // Why POSITIVE and not "assert no unhandled rejection": this is forced, not a preference.
+    // `process.on('unhandledRejection')` sees ZERO here -- jest intercepts the rejection first
+    // and attributes it to whichever test is mid-flight when the 60s timer fires (that
+    // misattribution is the defect this whole file exists to fix). A gate hung on that listener
+    // would be GREEN against the pre-fix code, i.e. green-check-proving-nothing. Asserting that a
+    // handler DID receive the exact timeout Error is the only observable, and it is strictly
+    // stronger than an absence claim.
+    jest.useFakeTimers()
+    startTransport()
+    const [expected] = wireFixture.store_embed_open
+
+    fireWithNoRustPeer(createRustStoreEmbedSeam().open(
+      expected.url,
+      { x: expected.x, y: expected.y, w: expected.w, h: expected.h },
+      'steam'
+    ), RUST_STORE_EMBED_OPEN)
+
+    // No Rust peer ever writes a response frame, so the 60s rustInvoke timer is certain to fire.
+    // Advancing fake timers makes that deterministic instead of duration-dependent. Awaiting a
+    // real promise under fake timers is fine: the microtask queue is not faked by
+    // `jest.useFakeTimers()`.
+    jest.advanceTimersByTime(60_000)
+
+    const settlement = noPeerSettlements.get(RUST_STORE_EMBED_OPEN)
+    expect(settlement).toBeDefined()
+    const result = await settlement
+    expect(result).toBeInstanceOf(Error)
+    expect((result as Error).message).toBe(
+      'rustInvoke timed out after 60000ms: store_embed_open'
+    )
+  })
+
+  it('Leg B (source-shape census): every createRustStoreEmbedSeam call in this file routes through fireWithNoRustPeer, and no void-ed seam call survives', () => {
+    // Reads this file's OWN source text off disk for static text analysis only -- no module is
+    // imported, required, or executed by this read. See the containment ledger amendment in
+    // testContainment.test.ts for why this opens no new containment surface.
+    const source = readFileSync(
+      join(__dirname, 'storeEmbedWireContract.test.ts'),
+      'utf8'
+    )
+
+    // Both passes are required. `stripSourceComments` alone leaves a trailing `//` comment on a
+    // code line intact by design (see its own doc comment) -- which is precisely how a source
+    // gate gets satisfied by the prose that names it, rather than by the code it is meant to
+    // police.
+    const blockAndLineCommentsStripped = stripSourceComments(source)
+    const trailingCommentsStripped = blockAndLineCommentsStripped
+      .split('\n')
+      .map(stripTrailingLineCommentTs)
+      .join('\n')
+
+    // Collapsed ACROSS THE WHOLE STRING, not per line: the `open(...)` call above spans five
+    // physical lines, and a line-scoped regex cannot see across that break.
+    const collapsed = trailingCommentsStripped.replace(/\s+/g, ' ')
+
+    // The optional `(` is load-bearing. The historical setBounds shape was
+    // `void (createRustStoreEmbedSeam()...` -- a paren between `void` and the call -- and
+    // omitting the `\(?` from this pattern undercounts 3 call sites as 2 (measured while
+    // re-verifying this plan's baseline).
+    const voidedSeamCalls =
+      collapsed.match(/\bvoid\s+\(?\s*createRustStoreEmbedSeam\s*\(/g) ?? []
+    expect(voidedSeamCalls).toEqual([])
+
+    const totalSeamCalls = collapsed.match(/createRustStoreEmbedSeam\(/g) ?? []
+    const handledSeamCalls =
+      collapsed.match(/fireWithNoRustPeer\(createRustStoreEmbedSeam\(/g) ?? []
+    // Leg A's own call site above is included in both counts by construction -- it uses the
+    // helper too, so this is the same requirement applied to a fourth call site, not a double
+    // standard. A future call site that invokes the seam directly (reverting to bare `void` or
+    // anything else) is caught here even if it never uses the literal word `void`.
+    expect(handledSeamCalls.length).toBe(totalSeamCalls.length)
+    // Anti-vacuity floor: without this, the gate could pass by the seam disappearing from the
+    // file entirely (0 handled === 0 total).
+    expect(totalSeamCalls.length).toBeGreaterThanOrEqual(3)
   })
 })
