@@ -49,18 +49,6 @@
   }
 }
 
-dialog .logs-wrapper {
-  grid-template-columns: 1fr;
-  flex-grow: 1;
-  height: 15em;
-  .log-buttongroup {
-    display: none;
-  }
-  .setting.log-box {
-    grid-column: 1;
-  }
-}
-
 .log-buttons.log-choosen,
 .log-buttons.log-choosen:hover {
   color: var(--accent);
