@@ -21,6 +21,19 @@
  * would be the "prose satisfies the gate" anti-pattern this repo keeps
  * stamping out.
  *
+ * WIDENED (quick task 260921-rmj): A4 originally asserted
+ * `not.toContain('&amp;nbsp;')` against German only. That exact string never
+ * matches the French catalog's malformed variant, which carries
+ * `&nbsp` + U+202F (narrow no-break space) + `;` instead of a well-formed
+ * `&nbsp;` -- so the exact-string form PASSED against a value the user still
+ * saw rendered as `&amp;nbsp ;`. A4 now matches the malformed FAMILY (any
+ * markup containing `&amp;nbsp`, with or without a trailing `;`, with or
+ * without an intervening codepoint) and runs over a named locale set,
+ * `['de', 'fr']`, because the German-only form could never have seen a
+ * French-only defect. A1/A2/A2b/A3 stay German-only: their helpers
+ * (`readGermanCatalogValue()`, A2's `&nbsp;`-based split) are German-shaped
+ * and are not being generalised here.
+ *
  * LIMITATION, stated honestly: the element rendered below is a
  * *reconstructed* element -- built from the `i18nKey`/`ns`/`shouldUnescape`
  * attributes read out of the production source, with sentinel/placeholder
@@ -177,13 +190,13 @@ function escapeLikeReact(text: string): string {
     .replace(/'/g, '&#x27;')
 }
 
-async function createRealInstance(): Promise<I18nInstance> {
+async function createRealInstance(lng: string): Promise<I18nInstance> {
   const instance = createInstance()
   await instance.use(Backend).init({
     backend: {
       loadPath: join(LOCALES_DIR, '{{lng}}', '{{ns}}.json')
     },
-    lng: 'de',
+    lng,
     fallbackLng: 'en',
     ns: ['translation', 'gamepage', 'gamelib'],
     defaultNS: 'translation',
@@ -235,7 +248,7 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
   })
 
   it('A2: that (i18nKey, ns) pair resolves to the real German catalog text', async () => {
-    const instance = await createRealInstance()
+    const instance = await createRealInstance('de')
     const markup = renderReconstructed(instance)
 
     const fullValue = readGermanCatalogValue()
@@ -247,7 +260,7 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
   })
 
   it("A2b: the catalog's <1> child maps onto the element at index 1 (the link)", async () => {
-    const instance = await createRealInstance()
+    const instance = await createRealInstance('de')
     const markup = renderReconstructed(instance)
 
     const fullValue = readGermanCatalogValue()
@@ -265,17 +278,26 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
   })
 
   it('A3: the reconstructed element does NOT fall back to its English sentinel children', async () => {
-    const instance = await createRealInstance()
+    const instance = await createRealInstance('de')
     const markup = renderReconstructed(instance)
 
     expect(markup).not.toContain(TEXT_SENTINEL)
     expect(markup).not.toContain(LINK_SENTINEL)
   })
 
-  it('A4: the rendered markup contains no escaped &amp;nbsp; entity mojibake', async () => {
-    const instance = await createRealInstance()
-    const markup = renderReconstructed(instance)
+  // A4 runs over a named, explicit locale set -- 'de' and 'fr' -- because the
+  // malformed-entity defect this assertion exists to catch was, historically,
+  // French-only and a German-only run could never have seen it (see the file
+  // header's "WIDENED" note). Do not widen this to all 49 locale dirs: 15
+  // carry an empty wikiLink value and 2 have no gamepage.json at all, so a
+  // 49-locale run would be green for reasons unrelated to this assertion.
+  it.each(['de', 'fr'])(
+    'A4: the rendered markup contains no &amp;nbsp mojibake (locale: %s)',
+    async (lng) => {
+      const instance = await createRealInstance(lng)
+      const markup = renderReconstructed(instance)
 
-    expect(markup).not.toContain('&amp;nbsp;')
-  })
+      expect(markup).not.toMatch(/&amp;nbsp/)
+    }
+  )
 })
