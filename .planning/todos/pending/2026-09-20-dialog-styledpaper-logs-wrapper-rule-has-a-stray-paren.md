@@ -49,19 +49,55 @@ reason — it is a bare `dialog` ELEMENT selector, and MUI's Paper is a `div`, n
 Provenance: `git log -S "logs-wrapper))"` blames `b11b483c9 "[UI/UX] Some themes and style fixes
 (#4695)"` as the commit the text arrived in.
 
+## Measured live under WKWebView
+
+2026-09-21, quick 260921-pec. Evidence:
+`.planning/quick/260921-pec-record-the-live-wkwebview-measurements-i/evidence/wkresults.json`.
+
+The emotion-shaped rule pair plus a trailing sentinel rule were injected into the live page: 3
+rules went in, `ruleCount: 2` came out. WebKit kept the well-formed rule and the sentinel and
+dropped the malformed one — the one-declaration blast radius claimed in `## Measured facts` above
+was reasoned from source; it is now MEASURED.
+
+The sentinel rule placed AFTER the malformed one still applied (`rgb(1, 2, 3)`), confirming error
+recovery consumes exactly the one bad rule and nothing beyond it.
+
+An element matching `:has(.logs-wrapper)` picked up the well-formed control rule's value
+(`maxHeightOnMatchingElement: "71%"`), proving the element WOULD have matched had the selector
+parsed — `.logs-wrapper` really is reachable by a selector of this shape.
+
+`CSS.supports('selector(:has(.x))')` is `true`, so this is not an engine support gap, and
+`document.querySelector(':has(.logs-wrapper))')` throws `SyntaxError` — the stray paren really is
+what breaks it, not a WebKit `:has()` limitation.
+
+**Scope limit, and here it bites:** this measured selector parsing and CSS error recovery in
+WebKit against the app's real stylesheets. It did NOT use the running app's own webview instance,
+its React tree, or emotion's runtime-injected styles. It therefore proves the rule NEVER APPLIES,
+but says nothing about the USER-VISIBLE consequence — whether the Settings log dialog actually
+overflows on a short window without it. That distinction is the whole reason this todo keeps its
+live gate while its two siblings lose theirs.
+
 ## Severity and readiness reasoning
 
 `minor`: `25em` is ~400px, and on ordinary viewports 80% of the dialog height exceeds that, so the
 missing cap does not bind and there is no live consequence today — it arms only on a short window.
-This is the rubric's "latent trap with no live consequence"; not inflated to `medium`.
+This is the rubric's "latent trap with no live consequence"; not inflated to `medium`. The
+2026-09-21 WKWebView measurement above does not move this: that "does not bind except on a short
+window" reasoning is about rendered layout on a real viewport, and this harness measured cascade
+and selector-parsing behaviour, not rendered dimensions — it neither confirms nor changes the
+viewport-arming claim.
 
-`live-gate` not `code`: the edit is one character, but applying it ACTIVATES a rule that has never
-run, which is a visual change this `testEnvironment: 'node'` project cannot observe. The first step
-is to look at the rendered Settings-log dialog on a short viewport and decide whether the intended
-80% cap is correct, not to type the character.
+`live-gate` not `code`, and NARROWED by the measurement above: the mechanism half — does the
+selector actually fail to apply, and how much of the rule does it take with it — is now settled
+(see `## Measured live under WKWebView`) and is dropped from the gate's remaining scope. What's
+left is the user-visible half only: does the Settings log dialog actually overflow on a short
+window? That is a rendering question on a real viewport that this harness did not and could not
+measure, so it still needs a live run to score, not a source read or another WKWebView probe.
 
 ## Not fixed here
 
 Quick task `260921-nub` records this rather than repairing it — `Dialog.tsx` is required to remain
 byte-identical for that task (its own Task 1/Task 2 verify assert `git diff --quiet` on this file).
+Quick task `260921-pec` measured the mechanism live and narrowed this gate; it made no source
+change either — no file under `src/` or `src-tauri/` is touched by that task.
 </content>
