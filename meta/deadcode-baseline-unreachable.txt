@@ -1,4 +1,4 @@
-# POPULATION: unreachable (52 identities)
+# POPULATION: unreachable (47 identities)
 #
 # ts-prune found NO importer for these exports anywhere in the analysed
 # project. That is the stronger of its two signals -- but read the `#`
@@ -60,22 +60,18 @@
 meta/buildRunnersOnedir.ts - toOnedirCommand
 meta/buildSidecarSea.ts - buildSeaConfigPath
 #
-# MIXED GROUP -- two of the next three lines are PARSE ARTIFACTS, one is
-# a real unused export. Do not treat them alike.
-#
 # meta/releaseTags.ts:35 is
 #   } as const satisfies Record<DownloadedBinary, string>
 # ts-prune mis-reads the `satisfies` expression and reports the keyword
 # `satisfies` and the TS utility type `Record` as exported symbols of
-# this file. Neither is an identifier declared here; there is nothing to
-# delete. The tool is wrong.
+# this file. Neither is an identifier declared here. As of quick task
+# 260922-e01 these two are excluded at the MEASURED POPULATION, not
+# ledgered here -- see KNOWN_PARSE_ARTIFACTS in meta/findDeadcode.cjs.
 #
 # `SupportedPlatform` (line 20) IS a real exported type alias with no
 # importer -- a genuine finding, kept because deleting it is a source
 # change out of scope for the task that created this ledger.
-meta/releaseTags.ts - Record
 meta/releaseTags.ts - SupportedPlatform
-meta/releaseTags.ts - satisfies
 src/backend/constants/paths.ts - webviewPreloadPath
 src/backend/constants/urls.ts - GITHUB_API
 src/backend/electron_store.ts - getRegisteredStoreNames
@@ -118,18 +114,12 @@ src/backend/storeManagers/steam/depot/flagsCensus.ts - FLAGS_CENSUS_LOG_PREFIX
 src/common/types/sidecarTransport.ts - RUST_INVOKE_KIND
 src/common/types/steam.ts - SteamCredentials
 #
-# PARSE ARTIFACTS. selectionCount.ts:46 is
-#   ] as const satisfies readonly DescriptorKind[]
-# ts-prune reports the keywords `readonly` and `satisfies` as two
-# separate exported symbols of the file. Neither is an identifier.
-#
-# Both sit at the SAME line (46). They are two DISTINCT identities
-# because the identity drops the line number and keeps the name, so
-# nothing here is being deduped away -- recorded because a same-file,
-# same-line pair reads like a duplicate at a glance and is not one.
-# Measured: this ledger contains no duplicate identities at all.
-src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts - readonly
-src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts - satisfies
+# selectionCount.ts:46 is `] as const satisfies readonly DescriptorKind[]`.
+# ts-prune used to report `readonly` and `satisfies` here as two more
+# parse-artifact "exports". As of quick task 260922-e01 both are excluded
+# at the MEASURED POPULATION, not ledgered here -- see
+# KNOWN_PARSE_ARTIFACTS in meta/findDeadcode.cjs. Neither line is present
+# in this ledger any more.
 src/frontend/helpers/library.ts - amazonCategories
 src/frontend/helpers/library.ts - epicCategories
 src/frontend/helpers/library.ts - gogCategories
@@ -139,11 +129,12 @@ src/frontend/helpers/library.ts - zoomCategories
 src/frontend/screens/Game/GamePage/components/__tests__/faithfulTranslate.ts - faithfulReactI18next
 src/frontend/screens/Login/components/LoginWarning/index.tsx - default
 #
-# PARSE ARTIFACT. InstallProgress.ts:16 is
+# InstallProgress.ts:16 is
 #   selector: Parameters<typeof useShallow<StoreType, T>>[0]
 # `Parameters` is a TS utility type in a type position, not an export of
-# this file. Same ts-prune mis-read as the `satisfies` cases above.
-src/frontend/state/InstallProgress.ts - Parameters
+# this file. Same ts-prune mis-read as the `satisfies` cases above. As of
+# quick task 260922-e01 it is excluded at the MEASURED POPULATION, not
+# ledgered here -- see KNOWN_PARSE_ARTIFACTS in meta/findDeadcode.cjs.
 src/frontend/types.ts - Category
 src/frontend/types.ts - CrossoverRatingFilters
 src/frontend/types.ts - PlatformsFilters

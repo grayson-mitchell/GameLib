@@ -1,4 +1,4 @@
-# POPULATION: used-in-module (204 identities)
+# POPULATION: used-in-module (203 identities)
 #
 # ts-prune found these exports USED -- inside their own declaring file.
 # So this population is NOT dead code: it is an unnecessarily broad
@@ -254,7 +254,6 @@ src/frontend/__tests__/muiTabsSelectorScoping.test.ts - findUnscopedMuiTabsSelec
 src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx - StoreEmbedSuppressionContext
 src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx - SuppressionAction
 src/frontend/components/UI/NavShell/Tier2PortalContext.tsx - Tier2PortalValue
-src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts - DescriptorKind
 src/frontend/components/UI/NavShell/navTabs.ts - NavTabId
 src/frontend/components/UI/RedeemSteamKeyDialog/copy.ts - RedeemOutcomeCopy
 src/frontend/components/UI/ThemeSelector/index.tsx - resolveThemeLabel

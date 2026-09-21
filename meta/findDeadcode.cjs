@@ -116,6 +116,79 @@ const FINDING_RE = /^(.+):(\d+) - (.+?)( \(used in module\))?$/
 const USED_IN_MODULE_SUFFIX = ' (used in module)'
 
 /**
+ * ts-prune mis-parses `satisfies` expressions and the `Parameters<>` type
+ * operator, emitting keywords and type-reference names as if they were
+ * exported identifiers of the declaring file. None of the six below is a
+ * real export:
+ *
+ *   - `meta/releaseTags.ts:35` is
+ *     `} as const satisfies Record<DownloadedBinary, string>` -- ts-prune
+ *     reports the keyword `satisfies` and the TS utility type `Record` as
+ *     exported symbols. Neither is an identifier declared in this file.
+ *   - `.../FilterFacetGroup/selectionCount.ts:46` is
+ *     `] as const satisfies readonly DescriptorKind[]` -- ts-prune reports
+ *     the keywords `satisfies` and `readonly` as two more exported
+ *     symbols. `DescriptorKind` itself is declared at line 26 as
+ *     `type DescriptorKind = ActiveFilterDescriptor['kind']` with NO
+ *     `export` keyword at all, so ts-prune's report of it is an artifact
+ *     too, not a real export ts-prune merely mis-scoped.
+ *   - `src/frontend/state/InstallProgress.ts:16` is
+ *     `selector: Parameters<typeof useShallow<StoreType, T>>[0]` --
+ *     `Parameters` is a TS utility type used in a type position, not an
+ *     export of this file. Same ts-prune mis-read as the `satisfies`
+ *     cases above.
+ *
+ * WHICH of these ts-prune emits is ENVIRONMENT-DEPENDENT: measured Node
+ * v26.2.0 (macOS, this repo's dev machines) emits all six; Node v24.20.0
+ * (ubuntu-latest, CI run 35648042450) emits NONE of them. That mismatch is
+ * exactly why `260922-9um`'s baseline was green on macOS and red in CI --
+ * the ledgers it generated captured a population that only exists on one
+ * platform. Excluding these six from the MEASURED POPULATION (not merely
+ * deleting them from the ledgers) is what makes the population the same
+ * on every machine regardless of which artifacts that machine's ts-prune
+ * happens to emit.
+ *
+ * Keyed on the FULL IDENTITY (`path - name`), never on the bare name.
+ * `Record` and `Parameters` are legal TypeScript identifiers, and a
+ * name-only filter would silently hide a real dead export named either.
+ * `satisfies` and `readonly` are only *contextually* reserved words --
+ * `const readonly = 1` is legal TS -- so they get no special treatment
+ * either. Every entry below is pinned to its exact declaring file.
+ *
+ * This is not widening the gate: none of these six is an export, so
+ * removing them removes noise the tool itself is wrong about. A real dead
+ * export at any of these paths, under a different name, is still caught
+ * everywhere. If a seventh artifact ever appears, the gate goes RED (a
+ * NEW finding) rather than silently absorbing it -- adding to this list
+ * must stay a deliberate, commented act, the same discipline as the
+ * ledgers themselves.
+ *
+ * @type {Set<string>}
+ */
+const KNOWN_PARSE_ARTIFACTS = new Set([
+  'meta/releaseTags.ts - satisfies',
+  'meta/releaseTags.ts - Record',
+  'src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts - satisfies',
+  'src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts - readonly',
+  'src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts - DescriptorKind',
+  'src/frontend/state/InstallProgress.ts - Parameters'
+])
+
+/**
+ * Drops any finding whose identity is a known ts-prune parse artifact (see
+ * KNOWN_PARSE_ARTIFACTS above) from the MEASURED POPULATION, before it is
+ * ever partitioned or diffed against a ledger.
+ *
+ * @param {Array<{ path: string, name: string }>} findings
+ * @returns {object[]}
+ */
+function excludeKnownParseArtifacts(findings) {
+  return findings.filter(
+    (finding) => !KNOWN_PARSE_ARTIFACTS.has(identityOf(finding))
+  )
+}
+
+/**
  * Reads the `ignore` pattern from `.ts-prunerc`, which stays the SINGLE
  * source of that pattern -- it is not duplicated into this file, so the
  * committed rc and the gate can never drift apart.
@@ -254,10 +327,10 @@ function identityOf(finding) {
  * Splits findings into two INDEPENDENT populations:
  *
  * - `unreachable`: no ` (used in module)` suffix. ts-prune found no
- *   importer at all (52 today).
+ *   importer at all (47 today, after KNOWN_PARSE_ARTIFACTS exclusion).
  * - `usedInModule`: has the suffix. The export IS used, inside its own
  *   file, so this is an unnecessarily-broad `export` keyword rather than
- *   dead code (204 today).
+ *   dead code (203 today, after KNOWN_PARSE_ARTIFACTS exclusion).
  *
  * They are checked separately, carried across from `lintScoped.cjs`'s
  * header: a regression in either population must never be absorbable by
@@ -454,7 +527,9 @@ function checkPopulation(population, findings) {
  * are independently visible.
  */
 function main() {
-  const findings = collectFindings().map(parseFinding)
+  const findings = excludeKnownParseArtifacts(
+    collectFindings().map(parseFinding)
+  )
   const partitioned = partitionFindings(findings)
 
   const results = [
@@ -493,5 +568,7 @@ module.exports = {
   parseBaseline,
   diffAgainstBaseline,
   readIgnorePattern,
-  collectFindings
+  collectFindings,
+  KNOWN_PARSE_ARTIFACTS,
+  excludeKnownParseArtifacts
 }
