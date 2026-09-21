@@ -890,11 +890,17 @@ describe('--rewrite-scope guard', () => {
    * after `8eac712b8` landed: 174 files scanned, 0 violations, confirming
    * Route A. Regenerated via `pnpm gen-i18n-gate-scope` (not `:rewrite`)
    * for the fork-touched artifact, with `generatedAt` restored by hand so
-   * only `files` moved -- the generator's raw write also re-escapes the
-   * `purpose` field's em dash, an unrelated formatting artifact, so the
-   * one true semantic line (the new entry) was hand-applied to the
-   * original bytes instead of taking the generator's output verbatim, per
-   * this file's `2026-09-04`-era precedent; hand-edited surgically for the
+   * only `files` moved: the one true semantic line (the new entry) was
+   * hand-applied to the original bytes rather than taking the generator's
+   * output verbatim, per this file's `2026-09-04`-era precedent, which is
+   * what holds `generatedAt` constant the way every dated entry here does.
+   * (This task's summary first justified that by claiming the generator
+   * also re-escapes the `purpose` field's em dash. It does NOT -- measured
+   * against the committed bytes, `pnpm gen-i18n-gate-scope` differs on
+   * `generatedAt` ALONE, with `purpose` byte-identical and `files` equal.
+   * Corrected here so the reason on record is true; the action it led to
+   * was right for the precedent reason above, not for that one.)
+   * Hand-edited surgically for the
    * scope artifact, since `--rewrite-scope` is forbidden here and
    * `generatedBy`/`generatedAt` are off-limits per `A5 PROVENANCE RATCHET`.
    * The file enters BOTH lists in the same sorted slot, so the unscanned
