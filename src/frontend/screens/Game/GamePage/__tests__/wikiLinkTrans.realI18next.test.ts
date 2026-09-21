@@ -300,4 +300,24 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
       expect(markup).not.toMatch(/&amp;nbsp/)
     }
   )
+
+  // A5 -- the repair that fixed the French entity (260921-rmj) first landed
+  // with the malformed entity's LEADING ORDINARY SPACE left behind:
+  // `ceci\u00a0: &nbsp;<1>` rather than `ceci\u00a0:&nbsp;<1>`. Because
+  // shouldUnescape decodes the entity to a second U+0020, French rendered a
+  // visible DOUBLE space where en/de/es/it render one -- and every assertion
+  // above stayed green, A4 included, because none of them looks at spacing.
+  // This pins the rendered spacing instead: the catalog values differ (only
+  // French carries the U+00A0 before its colon, which is correct French
+  // typography and must never be "corrected" away), but the rendered run of
+  // whitespace after the colon is one space in every locale.
+  it.each(['de', 'fr'])(
+    'A5: the rendered markup has no doubled whitespace (locale: %s)',
+    async (lng) => {
+      const instance = await createRealInstance(lng)
+      const markup = renderReconstructed(instance)
+
+      expect(markup).not.toMatch(/\s{2}/)
+    }
+  )
 })
