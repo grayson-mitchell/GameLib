@@ -1,6 +1,6 @@
 ---
 created: 2026-09-20
-title: "Decide whether the revived :has(.logs-wrapper) 80% cap should stay — it is a no-op at normal viewports and worsens a pre-existing log-dialog spill at short ones"
+title: "Decide whether the revived :has(.logs-wrapper) 80% cap should stay — measured a no-op at normal viewports and worth 36px of extra scrolling at short ones"
 area: ui-dialogs
 severity: minor
 platform: any
@@ -13,6 +13,48 @@ files:
 ---
 
 # Dialog.tsx:59's `&:has(.logs-wrapper))` selector has a stray extra `)` and has never fired
+
+## RETRACTION — finding 3 below is WRONG. There is no spill and nothing is clipped.
+
+2026-09-21, quick `260921-qru`, second measurement round. **I retract finding 3 in the section
+below.** It claimed log content "spills past the bottom of the dialog box and nothing scrolls",
+making it unreachable. That is false. Evidence: `evidence/structure.json`,
+`evidence/scroll_fixed500.json`, `evidence/scroll_unfixed500.json`.
+
+**How the error was made, because the mechanism matters more than the conclusion:**
+`.settingsDialogContent` is **not** a child of the Paper. MUI's own `MuiDialogContent-root` sits
+between them — `Dialog.tsx:151` wraps every dialog's children in MUI's `<DialogContent>` — and THAT
+is the real scroll container. My probe measured `.settingsDialogContent` and the Paper and never
+looked at the element between them; its ancestor walk went UPWARD from the Paper, so a descendant
+scroll container was structurally invisible to it. A child's `getBoundingClientRect()` inside a
+scrollport legitimately extends past that scrollport — **that is scrollable overflow, not clipping**,
+and I read it as clipping.
+
+**What is actually true, measured by driving the scroll container to its end:**
+
+| viewport | arm | paper | scrollport clientH | scrollH | hidden | `scrollTop` moved | reached bottom |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 500px | unfixed | 436 | 436 | 630 | 194px | 0 → 194 | **yes** |
+| 500px | fixed | 400 | 400 | 630 | 230px | 0 → 230 | **yes** |
+
+In both arms the log box's bottom edge lands inside the scrollport after scrolling. **No content is
+unreachable, before or after the fix.** The `overflow-y: auto` on the Paper reporting
+`scrollHeight === clientHeight` — which I cited as proof nothing scrolls — is simply because the
+Paper is not the scroller; its child is.
+
+**Consequence for the fix:** the entire user-visible effect of `7cc01a936` is that on a short window
+the log dialog is 36px shorter, so 36px more scrolling. At 900px it is a measured no-op. That is
+all. It is not a correctness regression and there is no defect to repair.
+
+**Consequence for option 3:** an attempted `min-height: 0; overflow-y: auto` on
+`.settingsDialogContent` was written, measured (`evidence/option3_attempt_500.json`), and
+**reverted**. It did not shrink the element (`clientHeight` stayed 522) because the flex-item
+diagnosis was wrong too — `.settingsDialogContent` is a block child of a block scroll container, not
+a flex item of the Paper. All it achieved was growing the element's rect 522 → 532 and adding a
+second, inert nested scroller. Source is unchanged from `7cc01a936`.
+
+Findings 1 and 2 below **stand** — they were measured correctly and are unaffected by this
+retraction.
 
 ## LIVE GATE RUN AND CLOSED — and the answer is not the one this todo expected
 
@@ -201,8 +243,19 @@ measurement says about each:
    cap clips a scroll container rather than the content itself — then a tighter cap is a feature
    rather than a regression. This is the only option that addresses finding 3.
 
-Recommendation: 3, or 2 as a cheap interim. **Do not close this todo by picking 1 silently** — the
-measurement says 1 is the only option that makes the sole affected case worse.
+**SUPERSEDED by the retraction at the top of this file.** Option 3 ("repair the spill") had no
+referent — there is no spill. It was attempted, measured, and reverted. The live options are now:
+
+- **A. Keep `7cc01a936`.** Malformed selector gone, author's intent restored, measured no-op at
+  ordinary viewports, 36px more scrolling on short ones.
+- **B. Delete the `'&:has(.logs-wrapper)'` block outright.** Also removes the malformed text, and
+  returns the logs case to MUI's default `calc(100% - 64px)` — the looser cap, better at every
+  viewport above 320px. Costs the author's intent. Note `:56`'s `:not(:has(.logs-wrapper))` carve-out
+  still does real work under B: it keeps `height: 80%` off the logs case.
+
+Recommendation: **A**, on the grounds that the difference is 36px of scrolling in a log viewer on an
+unusually short window, and A is already committed and verified. B is defensible if you would rather
+the log dialog be as tall as possible; it is a preference, not a correctness question.
 
 ## Still not fixed, and now outranked
 

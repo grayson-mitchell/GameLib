@@ -1,0 +1,24 @@
+{
+  "viewport": {
+    "w": 1280,
+    "h": 500
+  },
+  "sentinel_borderRadius": "10px",
+  "paper_maxHeight": "80%",
+  "paper_h": 400,
+  "scrollContainer": {
+    "overflowY": "auto",
+    "clientH": 400,
+    "scrollH": 630,
+    "canScroll": true,
+    "hiddenPx": 230
+  },
+  "scroll_before": 0,
+  "scroll_after": 230,
+  "scroll_moved": true,
+  "scroll_reachedBottom": true,
+  "logBox_bottom_before": 1160,
+  "logBox_bottom_after": 930,
+  "logBox_bottom_within_scrollport": true,
+  "scrollport_bottom": 950
+}

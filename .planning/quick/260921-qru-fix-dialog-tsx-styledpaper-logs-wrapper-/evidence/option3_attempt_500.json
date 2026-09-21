@@ -1,0 +1,74 @@
+{
+  "viewport": {
+    "w": 1280,
+    "h": 500
+  },
+  "sentinel_borderRadius": "10px",
+  "computed_maxHeight": "80%",
+  "rendered_height": 400,
+  "viewport_h": 500,
+  "eighty_pct": 400,
+  "a_transform": "none",
+  "a_opacity": "1",
+  "a_rect_top": 550,
+  "a_rect_bottom": 950,
+  "a_offsetTop": 50,
+  "a_offsetHeight": 400,
+  "a_container_class": "MuiDialog-container MuiDialog-scrollPaper css-hz1bth-MuiDialog-container",
+  "a_container_rect": {
+    "top": 500,
+    "h": 500
+  },
+  "a_container_alignItems": "center",
+  "a_rect_top_transformCleared": 550,
+  "a_rect_bottom_transformCleared": 950,
+  "a_height_transformCleared": 400,
+  "a_spills_after_clearing": true,
+  "b_paper_overflowY": "auto",
+  "b_paper_scrollHeight": 400,
+  "b_paper_clientHeight": 400,
+  "b_paper_canScroll": false,
+  "b_content_overflowY": "auto",
+  "b_content_scrollHeight": 522,
+  "b_content_clientHeight": 522,
+  "b_content_rect_h": 532,
+  "b_content_canScroll": false,
+  "b_content_bottom_minus_paper_bottom": 220,
+  "b_logsWrapper_height": "400px",
+  "b_logsWrapper_rect_h": 400,
+  "b_logsWrapper_bottom_minus_paper_bottom": 210,
+  "b_logBox_rect_h": 400,
+  "b_logBox_bottom_minus_paper_bottom": 210,
+  "b_logBox_scrollHeight": 400,
+  "b_logBox_clientHeight": 400,
+  "b_chain": [
+    {
+      "cls": "MuiPaper-root MuiPaper-elevation MuiPaper-rounded MuiPaper-e",
+      "overflowY": "auto",
+      "h": 400,
+      "scrollH": 400,
+      "clientH": 400
+    },
+    {
+      "cls": "MuiDialog-container MuiDialog-scrollPaper css-hz1bth-MuiDial",
+      "overflowY": "visible",
+      "h": 500,
+      "scrollH": 500,
+      "clientH": 500
+    },
+    {
+      "cls": "MuiDialog-root MuiModal-root css-zw3mfo-MuiModal-root-MuiDia",
+      "overflowY": "visible",
+      "h": 500,
+      "scrollH": 1000,
+      "clientH": 500
+    },
+    {
+      "cls": "midnightMirage",
+      "overflowY": "auto",
+      "h": 500,
+      "scrollH": 500,
+      "clientH": 500
+    }
+  ]
+}
