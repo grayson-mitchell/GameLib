@@ -1,6 +1,8 @@
 ---
 created: 2026-09-21T00:00:00.000Z
+completed: 2026-09-21T00:00:00.000Z
 title: "15 gamepage.json locales carry wikiLink present but empty, not absent -- falls back to English; br/sl have no gamepage.json at all"
+resolved_by: "quick-260922-8xv"
 area: i18n
 severity: minor
 platform: any
@@ -83,6 +85,45 @@ Closing it needs 15 real human translations of the `wikiLink` string (see
 `public/locales/en/gamepage.json`'s `wikiLink` value for the English source text), not a code
 change. `severity: minor` because the fallback renders correct, readable English -- nothing is
 broken, corrupted, or lost; it is a completeness gap, not a defect with live consequences.
+
+## Closing note (`quick-260922-8xv`) -- and a correction to "Why this stays `ready: human`"
+
+**All 15 values are filled** (`ecbfa3a1b`). The census above reproduced exactly at task start
+(49 dirs / 0 absent / 15 empty / 2 file-less / 32 non-empty) and re-runs clean: `0` locales still
+carry an empty `wikiLink`, and `pnpm lint-translations` reported 15 findings naming
+`gamepage.wikiLink` before the change and 0 after.
+
+**The `ready: human` section above was wrong, and its own sibling is the proof.** It argued that
+closing this "needs 15 real human translations ... not a code change". The `fr` sibling
+(`.planning/todos/completed/2026-09-20-fr-gamepage-wikilink-catalog-entity-is-malformed.md`) was
+filed `ready: human` on the identical grounds -- "still needs an actual French translation of
+'Open page', which this task has no source for" -- and was then closed by `quick-260921-rmj`
+writing a real French translation into the catalog by hand, recording the route as settled
+precedent (`474c26c02`, `a9436fa9d`). Filing a translation gap as `ready: human` when the
+established route through it is a hand-edit parks work that is desk-ready.
+
+Each value follows the catalog's established shape, `<sentence>:&nbsp;<1><link text></1>`, with no
+space between colon and entity, and terminology matched per locale against that file's own
+`submenu.store` / `info.clickToOpen` values (`sr` Cyrillic, `uz` Latin, per each file's existing
+script).
+
+**Verified by rendering, not by reading the diff** (`1915c19a5`): A4/A5 in
+`wikiLinkTrans.realI18next.test.ts` now run over 17 named locales instead of 2, and a new A6 pins
+each locale's own `<1>` link text. A6 exists because **A3 cannot see this defect** -- an empty
+value does not fall through to the element's English children, it resolves up the `fallbackLng`
+chain to the real English catalog text, so A3/A4/A5 stay green while the user reads English.
+Proven by mutation in both directions: re-emptying `sk` failed A6 alone with A4/A5 green;
+re-breaking `ko`'s entity failed A4 alone with A6 green.
+
+Both out-of-scope conditions named in the plan were filed, not dropped:
+
+- `.planning/todos/pending/2026-09-21-br-and-sl-ship-with-two-whole-namespaces-missing.md` -- the
+  `br`/`sl` condition, re-measured: they are missing `translation.json` as well as `gamepage.json`,
+  and `uz` is additionally missing `login.json`.
+- `.planning/todos/pending/2026-09-21-seven-locales-carry-a-degraded-non-empty-wikilink-value.md`
+  -- 7 of the 32 non-empty values are degraded (`ar`/`gl` space before entity, `pt_BR` English link
+  text, `ga`/`sv`/`vi` no entity, `ta` `& nbsp;`), and measurement shows the widened gate catches
+  only 3 of the 7.
 
 ## Related
 
