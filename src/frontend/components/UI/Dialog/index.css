@@ -1,16 +1,3 @@
-.Dialog {
-  padding: 0;
-  text-align: start;
-
-  /* quick-260921-nub: kept because InstallModal/index.scss:27 and
-     Winetricks/index.scss:3 still reference it by name, and
-     cssTokenSweep.test.ts would go red without this declaration. Whether it
-     actually resolves at those two sites is a separate, open question --
-     no element under src/ is ever given the bare class this rule targets --
-     see .planning/todos/pending/2026-09-20-the-bare-dialog-class-is-never-applied-to-any-element.md */
-  --dialog-margin-horizontal: 32px;
-}
-
 .log-upload-result {
   max-width: 500px !important;
 }

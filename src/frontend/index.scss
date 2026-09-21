@@ -11,6 +11,12 @@
   /* Effects */
   --blur-light: 4px;
   --blur-strong: 16px;
+  /* Layout */
+  /* Moved here from Dialog/index.css by quick 260921-q9v: this token sat on
+     the .Dialog selector, which no element in src/ ever carries, so it never
+     resolved. See
+     .planning/todos/pending/2026-09-20-the-bare-dialog-class-is-never-applied-to-any-element.md */
+  --dialog-margin-horizontal: 32px;
 }
 
 // Example breakpoint
