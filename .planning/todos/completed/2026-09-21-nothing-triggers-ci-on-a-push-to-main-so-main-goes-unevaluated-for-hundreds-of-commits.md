@@ -121,10 +121,9 @@ Notes so this is not "fixed" wrongly:
 CI"* — a local pre-push run is the warm path, which is the one that cannot see the defect the gate
 exists for. Local execution is not a substitute for CI execution here; it is the weaker half.
 
-## Open question, not answered here
+## Open question, since answered
 
-Whether `pnpm test:ci` is green at `48215a893` was being measured when this was filed and is
-**not** recorded as a result — see the Quick Tasks row for `260922-9um` if it landed there. The
-2026-09-21 hand dispatch at `b7686dcbb` reported `Test … success`, and HEAD is **24 commits** past
-that point, so the honest statement is that the last 24 commits are unevaluated rather than that
-anything is known to be broken.
+`pnpm test:ci` is green: exit 0 — 440 suites, 9025 passed, 2 skipped, zero failures (measured at
+`f12a8bfc4`, the baseline HEAD for the remedy in this todo). The 2026-09-21 hand dispatch at
+`b7686dcbb` reported `Test … success`, and this measurement confirms the tree stayed green through
+the commits after it, closing the gap the earlier "not answered here" framing left open.

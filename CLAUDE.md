@@ -254,7 +254,7 @@ third row is a **different class** entirely, and is why half 2 has to be written
 reading only the in-situ comments would reach for `unref()` and it would not move the number.
 
 **What enforces this, honestly: almost nothing.** `pnpm smoke:sidecar`
-(`.github/workflows/test.yml:32`) is the only gate, and it is a blunt instrument for the job. It
+(`.github/workflows/test.yml:41`) is the only gate, and it is a blunt instrument for the job. It
 catches **total** failure to exit via its `ETIMEDOUT` arm but **not slow exit**:
 `STARTUP_TIMEOUT_MS` is 30s and `260913-m9c` measured cold boots at 27–39s, so the contract can be
 substantially violated while the gate stays green. It is also the named real-profile exemption of
