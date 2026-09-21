@@ -118,7 +118,7 @@ function extractTransAttributes(): ExtractedTransAttributes {
   if (!i18nKeyMatch) {
     throw new Error(
       'extractTransAttributes: no i18nKey attribute found on the Trans tag -- ' +
-        "the source is still writing React's reserved \"key\" prop (or some " +
+        'the source is still writing React\'s reserved "key" prop (or some ' +
         'other attribute) instead of "i18nKey", so Trans has nothing to ' +
         'resolve and falls through to its English children.'
     )
@@ -126,7 +126,7 @@ function extractTransAttributes(): ExtractedTransAttributes {
   if (!nsMatch) {
     throw new Error(
       'extractTransAttributes: no ns attribute found on the Trans tag -- ' +
-        "i18next's defaultNS is \"translation\", not \"gamepage\", so an " +
+        'i18next\'s defaultNS is "translation", not "gamepage", so an ' +
         'omitted ns silently mis-resolves the key to the wrong namespace.'
     )
   }
@@ -241,14 +241,12 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
     const fullValue = readGermanCatalogValue()
     // The leading segment up to the entity is free of both tags and
     // entities, which is why this split is used rather than a `<1>` split.
-    const leadingSegment = escapeLikeReact(
-      fullValue.split('&nbsp;')[0].trim()
-    )
+    const leadingSegment = escapeLikeReact(fullValue.split('&nbsp;')[0].trim())
 
     expect(markup).toContain(leadingSegment)
   })
 
-  it('A2b: the catalog\'s <1> child maps onto the element at index 1 (the link)', async () => {
+  it("A2b: the catalog's <1> child maps onto the element at index 1 (the link)", async () => {
     const instance = await createRealInstance()
     const markup = renderReconstructed(instance)
 

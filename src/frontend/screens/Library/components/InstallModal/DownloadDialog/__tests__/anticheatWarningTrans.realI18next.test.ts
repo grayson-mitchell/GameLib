@@ -116,7 +116,7 @@ function extractTransAttributes(): ExtractedTransAttributes {
   if (!i18nKeyMatch) {
     throw new Error(
       'extractTransAttributes: no i18nKey attribute found on the Trans tag -- ' +
-        "the source is still writing React's reserved \"key\" prop (or some " +
+        'the source is still writing React\'s reserved "key" prop (or some ' +
         'other attribute) instead of "i18nKey", so Trans has nothing to ' +
         'resolve and falls through to its English children.'
     )
@@ -124,7 +124,7 @@ function extractTransAttributes(): ExtractedTransAttributes {
   if (!nsMatch) {
     throw new Error(
       'extractTransAttributes: no ns attribute found on the Trans tag -- ' +
-        "i18next's defaultNS is \"translation\", not \"gamepage\", so an " +
+        'i18next\'s defaultNS is "translation", not "gamepage", so an ' +
         'omitted ns silently mis-resolves the key to the wrong namespace.'
     )
   }
