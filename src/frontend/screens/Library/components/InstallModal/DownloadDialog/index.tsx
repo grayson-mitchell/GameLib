@@ -225,9 +225,18 @@ export default function DownloadDialog({
       showDialogModal({
         title,
         message: (
+          /* `i18nKey` (NOT `key` -- React's reserved prop, invisible to
+             Trans) plus an explicit `ns`: i18next's `defaultNS` is
+             `translation`, while this key lives in the `gamepage`
+             namespace. Both are required; either alone renders the English
+             children in every locale. Unlike the SideloadDialog case this
+             fixed, this is a pre-existing `gamepage` key with 35 live
+             non-English translations already in the catalog -- no catalog
+             change is involved here. */
           <Trans
-            key="install.anticheat-warning.disabled_installation"
             i18n={i18n}
+            i18nKey="install.anticheat-warning.disabled_installation"
+            ns="gamepage"
           >
             This game uses anticheat software that is not compatible with your
             operating system or the support was not enabled by the game
