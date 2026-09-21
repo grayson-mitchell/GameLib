@@ -41,9 +41,13 @@
 # job runs all red back to 2026-07-14.
 #
 #
-# CLUSTER: meta/ exports whose ONLY importer is a meta/__tests__ file.
-# FALSE POSITIVES, structurally -- the importer is not in the analysed
-# project at all.
+# CLUSTER: the 51 meta/ entries below. MIXED -- 36 are structural false
+# positives, 15 are NOT. Do not treat the cluster as uniform; the split is
+# measured and listed at the end of this block.
+#
+# The false-positive mechanism: a meta/ export whose ONLY importer is a
+# meta/__tests__ file is invisible to ts-prune, because that importer is
+# not in the analysed project at all.
 #
 # Measured with ts-morph against tsconfig.json: the project loads 1141
 # source files, of which exactly 7 live under meta/ and ZERO live under
@@ -54,20 +58,42 @@
 # archiveName is absent below while its 14 siblings are present).
 #
 # An export consumed only from meta/__tests__/ therefore looks unimported
-# to ts-prune even though it has live callers. Verified for both entries
-# immediately below: toOnedirCommand is imported by
-# meta/__tests__/buildRunnersOnedir.test.ts and
-# meta/__tests__/runnerBuildInvocations.test.ts; buildSeaConfigPath by
-# meta/__tests__/buildSidecarSea.test.ts.
+# to ts-prune even though it has live callers. The two entries where that
+# mechanism is the WHOLE story (no in-module use at all) are ledgered in
+# the sibling file, meta/deadcode-baseline-unreachable.txt, directly under
+# its copy of this note -- toOnedirCommand and buildSeaConfigPath. They are
+# not in THIS file. Do not read the next lines below as those two.
 #
-# Widening tsconfig.json to cover meta/ would dissolve this whole cluster,
-# but that is a tsconfig decision with its own blast radius and is NOT
-# part of this task.
+# Widening tsconfig.json to cover meta/ would dissolve the false-positive
+# part of this cluster, but that is a tsconfig decision with its own blast
+# radius and is NOT part of this task.
 #
-# This cluster is the first 51 lines below (every meta/ entry). Here the
-# export is additionally seen used inside its own file, so ts-prune
-# downgrades it to "used in module" rather than unreachable -- but the
-# reason it is reported at all is the same missing importer.
+# Here the export is ALSO seen used inside its own declaring file, so
+# ts-prune downgrades it to "used in module" rather than unreachable. That
+# changes the remedy, and it is why this cluster is NOT uniform:
+#
+#   * 36 of the 51 have a live meta/__tests__ importer. Dropping `export`
+#     WOULD BREAK THAT TEST. Use `// ts-prune-ignore-next` with a reason,
+#     or widen tsconfig; do not un-export.
+#   * 15 of the 51 have NO importer anywhere -- not in meta/__tests__, not
+#     in src/**/__tests__, nowhere. For these the "structurally invisible
+#     importer" explanation does NOT apply: they are genuine over-broad
+#     `export` keywords and are safe un-export candidates. They are:
+#       buildRunnersOnedir.ts  - InvocationForm, OnedirCommandResult,
+#                                OnedirInvocationResult, OnedirRunnerSpec,
+#                                UpstreamPyinstallerCommand, buildRunner
+#       buildSidecarSea.ts     - DECOMPRESS_WORKER_ENTRY_PATH
+#       releaseTags.ts         - DownloadedBinary
+#       signMachOResources.ts  - CliOptions, SignResult,
+#                                TIMESTAMP_RETRY_DELAYS_MS
+#       trayIconVariants.ts    - DecodedPng, HUE_SPLIT_DEGREES,
+#                                buildHueSegmentedTemplateAlpha, encodeRgba
+#
+# Measured 2026-09-21 by whole-word name search over all 459 test/mock
+# TS files, 41 of them under meta/__tests__. The 36/15 split corrects an
+# earlier revision of this note, which called all 51 false positives --
+# that would have parked the 15 as untouchable forever. Re-derive before
+# acting; a name search can be wrong in both directions.
 meta/buildRunnersOnedir.ts - InvocationForm
 meta/buildRunnersOnedir.ts - ONEDIR_RUNNERS
 meta/buildRunnersOnedir.ts - OnedirCommandResult
