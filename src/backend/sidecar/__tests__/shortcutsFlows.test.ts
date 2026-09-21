@@ -206,19 +206,29 @@ const mockGetIcon = getIcon as jest.Mock
 // Generated at test-file load time by converting a file that ships with every macOS install
 // (GenericDocumentIcon.icns, present since at least 10.x) to a real PNG via the real `sips` binary
 // -- never a committed binary fixture, and never hand-rolled fake bytes (`Buffer.from('fake-fixture-icon-bytes')`
-// is not a decodable image and fails the real shim).
+// is not a decodable image and fails the real shim). `sips` is macOS-only; its ENOENT at this line
+// failed this whole suite at IMPORT on the Linux CI runner (2026-09-15 log), so the spawn itself is
+// gated on the module-scope host constant below (quick-260921-o95). Only Describe 5 -- the only
+// describe that actually drives `getIcon` -> `convertPngToICNS` -> the real sips chain -- reads
+// FIXTURE_ICON_PATH's contents; it is gated too, so on a non-darwin host the path is computed but
+// never read.
+const HOST_IS_DARWIN = process.platform === 'darwin'
+const describeOnDarwin = HOST_IS_DARWIN ? describe : describe.skip
+
 const FIXTURE_ICON_PATH = join(
   tmpdir(),
   `gamelib-shortcuts-test-fixture-icon-${process.pid}.png`
 )
-execFileSync('/usr/bin/sips', [
-  '-s',
-  'format',
-  'png',
-  '/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericDocumentIcon.icns',
-  '--out',
-  FIXTURE_ICON_PATH
-])
+if (HOST_IS_DARWIN) {
+  execFileSync('/usr/bin/sips', [
+    '-s',
+    'format',
+    'png',
+    '/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericDocumentIcon.icns',
+    '--out',
+    FIXTURE_ICON_PATH
+  ])
+}
 
 // Registered ONCE for this whole file (not per-test) -- `listenerRegistry`/`handlerRegistry` are
 // module-scope maps; calling registerShortcutsFlows() more than once would stack a duplicate
@@ -525,147 +535,164 @@ describe('processShortcut — six-case switch behaviour', () => {
 // (b)/(c) would pass for the wrong reason (run.sh never written regardless of GAMELIB_SHELL_EXE).
 // A DIFFERENT game title is used per case so each gets its own `.app` folder — reusing one folder
 // across cases would let an earlier case's run.sh/plist leak into a later case's assertions.
-describe("addShortcut's darwin GAMELIB_SHELL_EXE pin (T-34.5-65/66, D-10 rejects process.execPath)", () => {
-  let originalPlatform: string
-  let savedShellExe: string | undefined
+//
+// Gated on describeOnDarwin (quick-260921-o95): this describe drives the REAL darwin `.app`/
+// `run.sh`/`.icns` write path through the real sips-backed shim (via FIXTURE_ICON_PATH above).
+// `generateMacOsApp` (`shortcuts.ts:181`) is darwin-only production code, so the surface it pins
+// does not exist on Linux. The other six describes in this file are deliberately left ungated —
+// they do not reach sips and their coverage is platform-independent.
+describeOnDarwin(
+  "addShortcut's darwin GAMELIB_SHELL_EXE pin (T-34.5-65/66, D-10 rejects process.execPath)",
+  () => {
+    let originalPlatform: string
+    let savedShellExe: string | undefined
 
-  beforeEach(() => {
-    originalPlatform = overrideProcessPlatform('darwin')
-    savedShellExe = process.env.GAMELIB_SHELL_EXE
-    mockGetGame.mockImplementation((appName: string) =>
-      // fromMenu is NOT passed by the caller in these cases — addStartMenuShortcuts: true
-      // (this file's shared beforeEach) is the darwin gate that reaches generateMacOsApp instead.
-      makeFakeGame(makeGameInfo({ title: appName }))
-    )
-  })
-
-  afterEach(() => {
-    overrideProcessPlatform(originalPlatform)
-    if (savedShellExe === undefined) {
-      delete process.env.GAMELIB_SHELL_EXE
-    } else {
-      process.env.GAMELIB_SHELL_EXE = savedShellExe
-    }
-  })
-
-  it('CONTROL (must run and pass first): a plausible absolute GAMELIB_SHELL_EXE containing a space produces a run.sh with that exact value, never process.execPath', async () => {
-    process.env.GAMELIB_SHELL_EXE =
-      '/Applications/GameLib Test.app/Contents/MacOS/GameLib'
-    const title = 'Exe Pin Control Game'
-
-    const listener = listenerRegistry.get('addShortcut')?.[0]
-    listener?.(null, title, 'legendary', undefined)
-    await flush()
-
-    const [, menuFile] = shortcutFiles(title)
-    const runShPath = `${menuFile}/Contents/MacOS/run.sh`
-    const icnsPath = `${menuFile}/Contents/Resources/shortcut.icns`
-
-    // F-34.5-G6-07: with the real nativeImage shim + real IconIcns, convertPngToICNS's
-    // downstream artifact (shortcut.icns) exists alongside run.sh -- both files, not one.
-    expect(existsSync(icnsPath)).toBe(true)
-    expect(statSync(icnsPath).size).toBeGreaterThan(0)
-
-    expect(existsSync(runShPath)).toBe(true)
-    const contents = readFileSync(runShPath, 'utf-8')
-    // T-34.5-C6-17 (plan 34.5-45): exe path double-quoted, gamelib:// URL single-quoted.
-    expect(contents).toContain(
-      '"/Applications/GameLib Test.app/Contents/MacOS/GameLib" --no-gui \'gamelib://launch?appName='
-    )
-    expect(contents).not.toContain(process.execPath)
-
-    // F-34.5-G6-07: convertPngToICNS succeeded for real -- no swallowed-throw failure line.
-    const sawFailure = mockLogError.mock.calls.some((call) =>
-      JSON.stringify(call).includes('Error generating MacOS App')
-    )
-    expect(sawFailure).toBe(false)
-  })
-
-  // Injection proof (T-34.5-C6-17, F-34.5-G6-07 follow-on) — plan 34.5-45's Task 1 makes
-  // generateMacOsApp reachable for the first time, which makes the injection this template opens
-  // reachable too. Proven RED first: with the encodeURIComponent calls temporarily reverted
-  // (`shortcuts.ts`'s `gamelibUrl` built from the raw, un-encoded `app_name`/`runner`), this exact
-  // test FAILED -- see 34.5-45-SUMMARY.md for the verbatim failure output. Restored, it passes.
-  it('a malicious app_name cannot inject a shell command into run.sh (RED-proven, see SUMMARY for the failing-run transcript)', async () => {
-    process.env.GAMELIB_SHELL_EXE =
-      '/Applications/GameLib.app/Contents/MacOS/GameLib'
-    const maliciousAppName = 'x&runner=gog;touch /tmp/gamelib-pwned'
-    const title = 'Injection Pin Game'
-
-    mockGetGame.mockImplementation(() =>
-      makeFakeGame(
-        makeGameInfo({ title, app_name: maliciousAppName, runner: 'legendary' })
+    beforeEach(() => {
+      originalPlatform = overrideProcessPlatform('darwin')
+      savedShellExe = process.env.GAMELIB_SHELL_EXE
+      mockGetGame.mockImplementation((appName: string) =>
+        // fromMenu is NOT passed by the caller in these cases — addStartMenuShortcuts: true
+        // (this file's shared beforeEach) is the darwin gate that reaches generateMacOsApp instead.
+        makeFakeGame(makeGameInfo({ title: appName }))
       )
-    )
+    })
 
-    const listener = listenerRegistry.get('addShortcut')?.[0]
-    listener?.(null, title, 'legendary', undefined)
-    await flush()
+    afterEach(() => {
+      overrideProcessPlatform(originalPlatform)
+      if (savedShellExe === undefined) {
+        delete process.env.GAMELIB_SHELL_EXE
+      } else {
+        process.env.GAMELIB_SHELL_EXE = savedShellExe
+      }
+    })
 
-    const [, menuFile] = shortcutFiles(title)
-    const runShPath = `${menuFile}/Contents/MacOS/run.sh`
-    expect(existsSync(runShPath)).toBe(true)
-    const contents = readFileSync(runShPath, 'utf-8')
+    it('CONTROL (must run and pass first): a plausible absolute GAMELIB_SHELL_EXE containing a space produces a run.sh with that exact value, never process.execPath', async () => {
+      process.env.GAMELIB_SHELL_EXE =
+        '/Applications/GameLib Test.app/Contents/MacOS/GameLib'
+      const title = 'Exe Pin Control Game'
 
-    const urlMatch = /'(gamelib:\/\/[^']*)'/.exec(contents)
-    expect(urlMatch).not.toBeNull()
-    const parsedAppName = new URL(urlMatch![1]).searchParams.get('appName')
-    expect(parsedAppName).toBe(maliciousAppName)
+      const listener = listenerRegistry.get('addShortcut')?.[0]
+      listener?.(null, title, 'legendary', undefined)
+      await flush()
 
-    // No bare `;` or `&` outside the single-quoted URL region -- strip that region and assert
-    // what remains (the launch command's exe/flag portion) contains neither. Once percent-encoded,
-    // the malicious payload lives entirely inside the single-quoted URL, so a passing assertion
-    // here means nothing of it escaped into unquoted shell syntax.
-    const withoutUrl = contents.replace(/'gamelib:\/\/[^']*'/, "''")
-    expect(withoutUrl).not.toContain(';')
-    expect(withoutUrl).not.toContain('&')
-  })
+      const [, menuFile] = shortcutFiles(title)
+      const runShPath = `${menuFile}/Contents/MacOS/run.sh`
+      const icnsPath = `${menuFile}/Contents/Resources/shortcut.icns`
 
-  it('UNSET: deleting GAMELIB_SHELL_EXE writes no run.sh, does not reject the listener, and logs the failure', async () => {
-    delete process.env.GAMELIB_SHELL_EXE
-    const title = 'Exe Pin Unset Game'
-    const [, menuFile] = shortcutFiles(title)
-    const runShPath = `${menuFile}/Contents/MacOS/run.sh`
+      // F-34.5-G6-07: with the real nativeImage shim + real IconIcns, convertPngToICNS's
+      // downstream artifact (shortcut.icns) exists alongside run.sh -- both files, not one.
+      expect(existsSync(icnsPath)).toBe(true)
+      expect(statSync(icnsPath).size).toBeGreaterThan(0)
 
-    const listener = listenerRegistry.get('addShortcut')?.[0]
-    expect(() => listener?.(null, title, 'legendary', undefined)).not.toThrow()
-    await flush()
+      expect(existsSync(runShPath)).toBe(true)
+      const contents = readFileSync(runShPath, 'utf-8')
+      // T-34.5-C6-17 (plan 34.5-45): exe path double-quoted, gamelib:// URL single-quoted.
+      expect(contents).toContain(
+        '"/Applications/GameLib Test.app/Contents/MacOS/GameLib" --no-gui \'gamelib://launch?appName='
+      )
+      expect(contents).not.toContain(process.execPath)
 
-    // PLAN-TIME CORRECTION: `generateMacOsApp` creates the `.app`/Resources/MacOS folders and
-    // writes `Info.plist` BEFORE the `getPath('exe')` throw (the throw happens while building
-    // `launchCommand`, the line immediately before the run.sh write) — so the directory is NOT
-    // byte-for-byte unchanged; the plist/icon scaffold IS written regardless. The
-    // security-relevant guarantee this plan's threat model actually needs (T-34.5-65) is
-    // specifically that `run.sh` — the file whose contents would embed an empty/absent launch
-    // command — is never written, which is what this assertion pins.
-    expect(existsSync(runShPath)).toBe(false)
-    const found = mockLogWarning.mock.calls.some(
-      (call) =>
-        JSON.stringify(call).includes('addShortcut') &&
-        JSON.stringify(call).includes('GAMELIB_SHELL_EXE was not set')
-    )
-    expect(found).toBe(true)
-  })
+      // F-34.5-G6-07: convertPngToICNS succeeded for real -- no swallowed-throw failure line.
+      const sawFailure = mockLogError.mock.calls.some((call) =>
+        JSON.stringify(call).includes('Error generating MacOS App')
+      )
+      expect(sawFailure).toBe(false)
+    })
 
-  it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — no run.sh, no reject, logged failure', async () => {
-    process.env.GAMELIB_SHELL_EXE = ''
-    const title = 'Exe Pin Empty Game'
-    const [, menuFile] = shortcutFiles(title)
-    const runShPath = `${menuFile}/Contents/MacOS/run.sh`
+    // Injection proof (T-34.5-C6-17, F-34.5-G6-07 follow-on) — plan 34.5-45's Task 1 makes
+    // generateMacOsApp reachable for the first time, which makes the injection this template opens
+    // reachable too. Proven RED first: with the encodeURIComponent calls temporarily reverted
+    // (`shortcuts.ts`'s `gamelibUrl` built from the raw, un-encoded `app_name`/`runner`), this exact
+    // test FAILED -- see 34.5-45-SUMMARY.md for the verbatim failure output. Restored, it passes.
+    it('a malicious app_name cannot inject a shell command into run.sh (RED-proven, see SUMMARY for the failing-run transcript)', async () => {
+      process.env.GAMELIB_SHELL_EXE =
+        '/Applications/GameLib.app/Contents/MacOS/GameLib'
+      const maliciousAppName = 'x&runner=gog;touch /tmp/gamelib-pwned'
+      const title = 'Injection Pin Game'
 
-    const listener = listenerRegistry.get('addShortcut')?.[0]
-    expect(() => listener?.(null, title, 'legendary', undefined)).not.toThrow()
-    await flush()
+      mockGetGame.mockImplementation(() =>
+        makeFakeGame(
+          makeGameInfo({
+            title,
+            app_name: maliciousAppName,
+            runner: 'legendary'
+          })
+        )
+      )
 
-    expect(existsSync(runShPath)).toBe(false)
-    const found = mockLogWarning.mock.calls.some(
-      (call) =>
-        JSON.stringify(call).includes('addShortcut') &&
-        JSON.stringify(call).includes('GAMELIB_SHELL_EXE was not set')
-    )
-    expect(found).toBe(true)
-  })
-})
+      const listener = listenerRegistry.get('addShortcut')?.[0]
+      listener?.(null, title, 'legendary', undefined)
+      await flush()
+
+      const [, menuFile] = shortcutFiles(title)
+      const runShPath = `${menuFile}/Contents/MacOS/run.sh`
+      expect(existsSync(runShPath)).toBe(true)
+      const contents = readFileSync(runShPath, 'utf-8')
+
+      const urlMatch = /'(gamelib:\/\/[^']*)'/.exec(contents)
+      expect(urlMatch).not.toBeNull()
+      const parsedAppName = new URL(urlMatch![1]).searchParams.get('appName')
+      expect(parsedAppName).toBe(maliciousAppName)
+
+      // No bare `;` or `&` outside the single-quoted URL region -- strip that region and assert
+      // what remains (the launch command's exe/flag portion) contains neither. Once percent-encoded,
+      // the malicious payload lives entirely inside the single-quoted URL, so a passing assertion
+      // here means nothing of it escaped into unquoted shell syntax.
+      const withoutUrl = contents.replace(/'gamelib:\/\/[^']*'/, "''")
+      expect(withoutUrl).not.toContain(';')
+      expect(withoutUrl).not.toContain('&')
+    })
+
+    it('UNSET: deleting GAMELIB_SHELL_EXE writes no run.sh, does not reject the listener, and logs the failure', async () => {
+      delete process.env.GAMELIB_SHELL_EXE
+      const title = 'Exe Pin Unset Game'
+      const [, menuFile] = shortcutFiles(title)
+      const runShPath = `${menuFile}/Contents/MacOS/run.sh`
+
+      const listener = listenerRegistry.get('addShortcut')?.[0]
+      expect(() =>
+        listener?.(null, title, 'legendary', undefined)
+      ).not.toThrow()
+      await flush()
+
+      // PLAN-TIME CORRECTION: `generateMacOsApp` creates the `.app`/Resources/MacOS folders and
+      // writes `Info.plist` BEFORE the `getPath('exe')` throw (the throw happens while building
+      // `launchCommand`, the line immediately before the run.sh write) — so the directory is NOT
+      // byte-for-byte unchanged; the plist/icon scaffold IS written regardless. The
+      // security-relevant guarantee this plan's threat model actually needs (T-34.5-65) is
+      // specifically that `run.sh` — the file whose contents would embed an empty/absent launch
+      // command — is never written, which is what this assertion pins.
+      expect(existsSync(runShPath)).toBe(false)
+      const found = mockLogWarning.mock.calls.some(
+        (call) =>
+          JSON.stringify(call).includes('addShortcut') &&
+          JSON.stringify(call).includes('GAMELIB_SHELL_EXE was not set')
+      )
+      expect(found).toBe(true)
+    })
+
+    it('EMPTY: an empty-string GAMELIB_SHELL_EXE behaves identically to unset — no run.sh, no reject, logged failure', async () => {
+      process.env.GAMELIB_SHELL_EXE = ''
+      const title = 'Exe Pin Empty Game'
+      const [, menuFile] = shortcutFiles(title)
+      const runShPath = `${menuFile}/Contents/MacOS/run.sh`
+
+      const listener = listenerRegistry.get('addShortcut')?.[0]
+      expect(() =>
+        listener?.(null, title, 'legendary', undefined)
+      ).not.toThrow()
+      await flush()
+
+      expect(existsSync(runShPath)).toBe(false)
+      const found = mockLogWarning.mock.calls.some(
+        (call) =>
+          JSON.stringify(call).includes('addShortcut') &&
+          JSON.stringify(call).includes('GAMELIB_SHELL_EXE was not set')
+      )
+      expect(found).toBe(true)
+    })
+  }
+)
 
 // ── Describe 6: addToSteam's GAMELIB_SHELL_EXE pin (plan 34.5-11) ─────────────────────────────
 //
