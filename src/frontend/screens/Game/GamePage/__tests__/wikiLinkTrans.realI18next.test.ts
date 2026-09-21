@@ -62,7 +62,7 @@
  * for a full component render.
  */
 
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -104,10 +104,8 @@ const TEXT_SENTINEL = '__K2D_ENGLISH_TEXT_MUST_NOT_RENDER__'
 const LINK_SENTINEL = '__K2D_ENGLISH_LINK_MUST_NOT_RENDER__'
 
 // Quick task 260922-8xv filled these 15 locales' `wikiLink`, which had
-// carried an empty string `""` since before 260921-k2d. They are named
-// explicitly rather than globbed: `br` and `sl` still have no
-// `gamepage.json` at all and would render the English fallback, which
-// passes A4/A5 for a reason that has nothing to do with what they assert.
+// carried an empty string `""` since before 260921-k2d. Kept as a named
+// list because A5 is scoped to them (see A5).
 const FILLED_LOCALES = [
   'az',
   'bs',
@@ -125,6 +123,37 @@ const FILLED_LOCALES = [
   'uz',
   'zh_Hant'
 ]
+
+// Every locale that actually HAS a gamepage.json, read off disk rather than
+// hand-listed (quick task 260922-99m). `br` and `sl` are excluded by
+// construction -- they have no gamepage.json, so they would render the
+// English fallback and pass every assertion below for a reason unrelated to
+// what it asserts. That exclusion used to be a sentence in a comment telling
+// people not to widen the set; it is now a property of how the set is built.
+//
+// The count is PINNED. A glob that matches nothing yields an empty list, and
+// `it.each([])` does not fail -- it silently contributes zero tests, which is
+// the scope-collapse shape `meta/lintScoped.cjs` carries its `minFiles` floor
+// to catch. If this number must change, change it deliberately: 49 locale
+// dirs minus `br` and `sl`.
+const EXPECTED_GAMEPAGE_LOCALES = 47
+const ALL_GAMEPAGE_LOCALES = readdirSync(LOCALES_DIR)
+  .filter((entry) => existsSync(join(LOCALES_DIR, entry, 'gamepage.json')))
+  .sort()
+if (ALL_GAMEPAGE_LOCALES.length !== EXPECTED_GAMEPAGE_LOCALES) {
+  throw new Error(
+    `wikiLinkTrans.realI18next.test.ts: found ` +
+      `${ALL_GAMEPAGE_LOCALES.length} locale dirs with a gamepage.json, ` +
+      `expected ${EXPECTED_GAMEPAGE_LOCALES}. A locale was added or removed ` +
+      '-- update EXPECTED_GAMEPAGE_LOCALES deliberately. Do not delete this ' +
+      'check: without it, a glob that matches nothing makes every it.each ' +
+      'below contribute zero tests and the file passes while asserting ' +
+      'nothing.'
+  )
+}
+const NON_ENGLISH_GAMEPAGE_LOCALES = ALL_GAMEPAGE_LOCALES.filter(
+  (lng) => lng !== 'en'
+)
 
 function stripJsxComments(source: string): string {
   return source.replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
@@ -326,27 +355,31 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
     expect(markup).not.toContain(LINK_SENTINEL)
   })
 
-  // A4 runs over a named, explicit locale set, because the malformed-entity
-  // defect this assertion exists to catch was, historically, French-only and
-  // a German-only run could never have seen it (see the file header's
-  // "WIDENED" note).
+  // A4 began German-only, was widened to ['de', 'fr'] by 260921-rmj for the
+  // French malformed entity, and to 17 named locales by 260922-8xv once the
+  // 15 empty values were filled.
   //
-  // WIDENED AGAIN (quick task 260922-8xv): this comment used to read "do not
-  // widen this to all 49 locale dirs: 15 carry an empty wikiLink value and 2
-  // have no gamepage.json at all". The first half of that reason is gone --
-  // 260922-8xv filled those 15 -- so they are now in the set, and every one
-  // of the 15 hand-written values is proven here to render without mojibake
-  // rather than merely to parse as JSON. The second half still holds: `br`
-  // and `sl` have no gamepage.json, would render the English fallback, and
-  // would be green for a reason unrelated to this assertion. The set is
-  // therefore 17 named locales, never a glob over `public/locales/`.
-  it.each(['de', 'fr', ...FILLED_LOCALES])(
-    'A4: the rendered markup contains no &amp;nbsp mojibake (locale: %s)',
+  // WIDENED TO ALL 47, AND STRENGTHENED (quick task 260922-99m). Two changes,
+  // for two different reasons:
+  //
+  // 1. The SET. Each previous widening was a hand-edited list, and each one
+  //    was exactly as wide as the defect someone had already found -- which
+  //    is why `ta`'s mojibake sat in the catalog, rendering visibly wrong,
+  //    through three separate tasks that each looked at this assertion. The
+  //    set is now every locale that has a gamepage.json, read off disk.
+  // 2. The PATTERN. `/&amp;nbsp/` did not match `ta`'s `&amp; nbsp;` -- the
+  //    space between `&` and `nbsp` defeated it. So the assertion that exists
+  //    to catch visible entity mojibake was blind to the worst instance of it
+  //    in the repo. It now rejects ANY `&amp;` in the rendered markup, which
+  //    is measurably safe: no locale's repaired value contains an ampersand
+  //    for any other purpose.
+  it.each(ALL_GAMEPAGE_LOCALES)(
+    'A4: the rendered markup contains no escaped ampersand at all (locale: %s)',
     async (lng) => {
       const instance = await createRealInstance(lng)
       const markup = renderReconstructed(instance)
 
-      expect(markup).not.toMatch(/&amp;nbsp/)
+      expect(markup).not.toMatch(/&amp;/)
     }
   )
 
@@ -380,7 +413,15 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
   // coming back. A6 pins the locale's OWN link text instead -- a
   // generalisation of A2b past German -- which is false the moment a value
   // is emptied, deleted, or reverted to the English `Open page`.
-  it.each(FILLED_LOCALES)(
+  //
+  // WIDENED to every non-English locale (quick task 260922-99m). Scoped to
+  // the 15 it was written for, it could not see `pt_BR`, which had shipped a
+  // literal English `Open page` as its link text -- the exact string the
+  // assertion names -- in a locale that was simply not in the list. It also
+  // now rejects PADDED link text (`<1> foo </1>`, which `ta` carried),
+  // because padding renders through into the markup as leading and trailing
+  // spaces inside the anchor.
+  it.each(NON_ENGLISH_GAMEPAGE_LOCALES)(
     "A6: the rendered markup carries the locale's own <1> link text, not English (locale: %s)",
     async (lng) => {
       const linkTextMatch = /<1>([^<]*)<\/1>/.exec(readCatalogValue(lng))
@@ -393,11 +434,49 @@ describe('GamePage wikiLink <Trans> against a REAL i18next instance (260921-k2d)
       }
       expect(linkTextMatch[1].trim()).not.toBe('')
       expect(linkTextMatch[1]).not.toBe('Open page')
+      expect(linkTextMatch[1]).toBe(linkTextMatch[1].trim())
 
       const instance = await createRealInstance(lng)
       const markup = renderReconstructed(instance)
 
       expect(markup).toContain(escapeLikeReact(linkTextMatch[1]))
+    }
+  )
+
+  // A7 -- the first POSITIVE assertion in this file, and the reason it had to
+  // be written (quick task 260922-99m).
+  //
+  // A4, A5 and A6 are all negative: no mojibake, no doubled whitespace, not
+  // the English string. Negative assertions cannot see an ABSENCE. `ga` and
+  // `sv` carried no separator at all between the sentence and the link and
+  // rendered `léigh seo:<a ...>` -- visibly wrong, and green under every one
+  // of them: nothing is doubled, nothing is escaped, the link text is real
+  // Irish and Swedish. No amount of widening the negative set would have
+  // caught it, which is the answer to the question the filed todo asked.
+  //
+  // The subject is deliberately the RENDERED gap, not the catalog's spelling
+  // of it. A catalog-shape rule ("a literal &nbsp; must sit before <1>")
+  // would fail `vi`, which writes a plain space and renders IDENTICALLY to
+  // `en` -- `shouldUnescape` decodes `&nbsp;` to an ordinary U+0020, so the
+  // two spellings are the same character to a reader. Gating the render
+  // leaves `vi` alone, correctly, with no exemption list.
+  it.each(ALL_GAMEPAGE_LOCALES)(
+    'A7: exactly one space separates the sentence from the link (locale: %s)',
+    async (lng) => {
+      const instance = await createRealInstance(lng)
+      const markup = renderReconstructed(instance)
+
+      const anchorStart = markup.indexOf('<a ')
+      if (anchorStart === -1) {
+        throw new Error(
+          `A7: no <a> element in the rendered ${lng} markup -- the <1> marker ` +
+            'did not map onto the link element. This is a catalog or Trans ' +
+            'failure, not a spacing failure.'
+        )
+      }
+
+      const gap = /(\s*)$/.exec(markup.slice(0, anchorStart))![1]
+      expect(gap).toBe(' ')
     }
   )
 })
