@@ -68,8 +68,37 @@ route is acceptable for a churn-guarded catalog -- not something to resolve by e
 
 - `quick-260921-k2d` (this finding's origin) -- see its corrected todo at
   `.planning/todos/completed/2026-09-19-gamepage-wikilink-trans-uses-key-not-i18nkey.md`.
-- **Separate, deliberately-untouched pre-existing condition:** 15 locales (`az`, `bs`, `eu`, `fa`,
-  `he`, `hr`, `ka`, `ko`, `ml`, `ro`, `sk`, `sr`, `th`, `uz`, `zh_Hant`) have no `wikiLink` key at
-  all in `gamepage.json` and fall back to English. That is not this todo's problem and should not
-  be conflated with the `fr` malformed-entity defect above -- it is a missing-key condition, not a
-  malformed-entity one.
+- **Separate, deliberately-untouched pre-existing condition -- CORRECTED at closing time
+  (`quick-260921-rmj`).** This paragraph originally claimed 15 locales have "no `wikiLink` key at
+  all in `gamepage.json`". That claim was wrong about its mechanism. Re-measured across all 49
+  locale dirs at closing time: the key is PRESENT but carries an empty string `""` in 15 locales
+  (`az`, `bs`, `eu`, `fa`, `he`, `hr`, `ka`, `ko`, `ml`, `ro`, `sk`, `sr`, `th`, `uz`, `zh_Hant`),
+  and a third, previously-unnamed condition exists: `br` and `sl` have no `gamepage.json` file at
+  all. The *effect* is the same as originally described -- these locales fall back to English,
+  because i18next is initialised with `returnEmptyString: false` -- but "no key" and "empty-string
+  key" are different mechanisms, and `br`/`sl` are a third condition, not a fourth entry in the
+  15. The corrected finding, with the full re-measured census, is re-filed as its own pending todo
+  at `.planning/todos/pending/2026-09-21-fifteen-locales-carry-an-empty-wikilink-value.md` -- this
+  paragraph is deliberately not the last word on that condition; read the new todo for the current
+  state. It is not this todo's problem and must not be conflated with the `fr` malformed-entity
+  defect above.
+
+## Closing note (`quick-260921-rmj`)
+
+The `fr` malformed entity and untranslated link text described above are both fixed: the value now
+reads (Python escape notation)
+`"Information importante au sujet de ce jeu, lisez ceci :&nbsp;<1>Ouvrir la page</1>"` -- a
+well-formed `&nbsp;` entity and a real French translation of the link text. The U+00A0 before the
+colon was left unchanged, as this todo specified. `wikiLinkTrans.realI18next.test.ts`'s A4
+assertion was widened from an exact-string match against German only to a family match
+(`not.toMatch(/&amp;nbsp/)`) run over `['de', 'fr']`, and proven by mutation: RED against the
+restored pre-fix value, GREEN against the repair.
+
+The `gamelib` re-namespace route named above as a candidate repair was considered and **REJECTED**
+as disproportionate -- it would mean deleting a key from 49 locale files and back-filling 48 to fix
+one malformed entity in one locale, and it carries three separately-recorded traps: a bulk
+namespace sweep can strand key pins invisibly in other files; removing a locale key lands on 47,
+not 49, and specifically breaks `da`/`id`/`nl`; and `machine-fill-gamelib` is dead when run under a
+gateway-scoped key. The hand-edit route was used instead, following the settled precedent that
+hand-editing a legacy (not upstream-owned, see CLAUDE.md) catalog file is an established, previously
+shipped-green pattern (`474c26c02`, `a9436fa9d`).
