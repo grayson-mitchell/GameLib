@@ -84,7 +84,20 @@ GATE_SUFFIX = "-gate.py"
 # usual: this gate's entire subject is a suppression that TEN GREEN GATES COULD
 # NOT SEE, so its own deletion would be equally invisible -- precisely the
 # property this constant exists to hold.
-MINIMUM_EXPECTED_GATES = 11
+#
+# 11 -> 12 (quick task 260922-7pv): the twelfth gate is
+# `.planning/planning-envelope-tag-gate.py`, holding a recurring authoring
+# artifact -- an agent's own tool-call envelope leaking a raw closing tag
+# (`content` or `invoke`) as the trailing line of a file it was writing. 33
+# distinct commits across 78 days introduced it into 43 git-tracked
+# `.planning/**/*.md` files, and all eleven gates existing at the time reported
+# green the whole time, because none of them ever looked at a file's trailing
+# lines for this shape. The gate's hardest job is NOT convicting the ~800
+# files that legitimately end in a paired `</output>` tag -- a gate that
+# convicted those would be deleted within the day. Leaving the floor at 11
+# would let this exact gate be deleted later with every remaining gate still
+# reporting green, exactly the property this constant exists to hold.
+MINIMUM_EXPECTED_GATES = 12
 
 
 def discover_gates():
