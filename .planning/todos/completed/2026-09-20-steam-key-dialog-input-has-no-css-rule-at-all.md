@@ -63,3 +63,36 @@ person to decide, not a live run and not an edit.
 `260921-nub` removed only the dead className; it did not add a replacement rule. `260921-pec`
 measured the cascade live and re-triaged this file; it made no source change either — no file
 under `src/` or `src-tauri/` is touched by that task.
+
+## Resolved
+
+2026-09-21, quick `260922-7hg`. The open item here was the DESIGN DECISION flagged by `ready:
+human`, and the decision taken was: do not author a rule for this input — render it through
+`TextInputField`, the shared themed input already used by `EditGameDialog`, `SideloadDialog`,
+`CategoriesManager`, `WineSelector`, `BranchSelector` and six Settings sections. The dialog now
+inherits the shipped `.textInputFieldWrapper input[type='text']` rule
+(`src/frontend/components/UI/TextInputField/index.css`) instead of an unreviewed new style.
+
+Behaviour preserved verbatim: `autoFocus`, `disabled={busy}`, the
+`tGamelib('redeemSteamKey.placeholder')` placeholder, and the `onChange` that sets the key AND
+clears a prior non-success outcome for inline retry (D-06/D-08). The one prop-shape difference is
+that `TextInputField`'s `onChange` receives `(newValue: string)`, not a React change event,
+because it drives the input from a native `'input'` listener so the virtual keyboard works.
+
+Deliberately NOT done, and each has a reason:
+
+- **No label prop.** The dialog header already names the task, and a label would add a new
+  user-visible string — a `gamelib.json` key plus 47 locale pairs — which is a scope this todo
+  never asked for.
+- **No new CSS rule anywhere.** That was the whole point of declining in `260921-nub` and it still
+  holds.
+- **The sibling dead classNames were not swept in.** `redeemSteamKey__success` and
+  `redeemSteamKey__error` on the outcome `<p>` have no rule either — same whole-repo sweep, zero
+  stylesheet files mention `redeemsteamkey` at all — but that fix is a different decision, not
+  this one, so it is filed as
+  `.planning/todos/pending/2026-09-21-redeem-steam-key-outcome-copy-classnames-have-no-css-rule.md`
+  rather than guessed at here.
+
+Evidence at close: `tsc --noEmit` clean, `prettier --check` clean, `eslint` clean on the file,
+`lint:src` 1119/1124 PASS (unchanged), and the two suites that touch this component green
+(54/54).

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 import { Dialog, DialogContent, DialogFooter, DialogHeader } from '../Dialog'
+import TextInputField from '../TextInputField'
 import ContextProvider from '../../../state/ContextProvider'
 import {
   normalizeKey,
@@ -117,8 +118,17 @@ export default function RedeemSteamKeyDialog() {
       </DialogHeader>
       <DialogContent>
         {outcome !== 'success' && (
-          <input
-            type="text"
+          // 260922-7hg: the shared themed input, not a raw <input>. A bare
+          // <input> here resolved against ZERO rules -- 260921-pec measured
+          // every painted property byte-identical to a pristine input in a
+          // stylesheet-free iframe -- so it rendered with browser defaults
+          // inside an otherwise-themed dialog. TextInputField carries the
+          // shipped `.textInputFieldWrapper input[type='text']` rule, so this
+          // reuses a reviewed style rather than inventing one. No label: the
+          // dialog header already names the task, and the placeholder is the
+          // string that ships today.
+          <TextInputField
+            htmlId="redeem-steam-key-input"
             autoFocus
             disabled={busy}
             value={key}
@@ -126,8 +136,8 @@ export default function RedeemSteamKeyDialog() {
               'redeemSteamKey.placeholder',
               'Enter your Steam key'
             )}
-            onChange={(e) => {
-              setKey(e.target.value)
+            onChange={(newKey) => {
+              setKey(newKey)
               // Clear a prior non-success outcome so the user can retry
               // inline without closing the dialog (D-06/D-08: stays open).
               if (outcome) setOutcome(null)
