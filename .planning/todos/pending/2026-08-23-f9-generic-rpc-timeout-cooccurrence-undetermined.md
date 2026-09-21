@@ -413,7 +413,8 @@ rustInvoke timed out after 60000ms: store_embed_open
 ```
 
 **It is not a Q2 recurrence and cannot become one.** Filed separately at
-`.planning/todos/pending/2026-09-21-leaked-store-embed-rpc-timer-now-blames-an-unrelated-test.md`.
+`.planning/todos/completed/2026-09-21-leaked-store-embed-rpc-timer-now-blames-an-unrelated-test.md`
+(fixed by quick task `260921-thi`, 2026-09-21).
 Checked before writing this note:
 
 - **Wrong leg.** Q2's unpark condition greps `invoke abandoned\|unknown/timed-out` — the Rust

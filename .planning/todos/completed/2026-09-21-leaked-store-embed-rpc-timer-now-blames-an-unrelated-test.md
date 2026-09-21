@@ -81,20 +81,45 @@ If `store_embed_open` / `store_embed_set_bounds` / `store_embed_navigate` appear
 the log, the named failing test is a bystander. Confirm by re-running that suite alone; a pass in
 isolation plus a `rustInvoke timed out` in the full log is the signature.
 
-## What is NOT known, stated plainly
+## Resolved
 
-- **Which test issues the unanswered `store_embed_*` RPC is not identified here.** The recorded
-  note says "some test issues `rustInvoke('store_embed_open')` without a responding sidecar and
-  nothing cancels the 60s rejection timer", and names `storeEmbedFlows.test.ts` /
-  `storeEmbedWireContract.test.ts` as the suites to look at -- but **running those two alone does
-  NOT reproduce the crash** (62 tests, 2 suites, clean), because the process exits long before 60s
-  elapses. Do not conclude from a clean isolated run that those suites are innocent.
-- **Whether the three channels (`open`/`set_bounds`/`navigate`) leak from one call site or three is
-  not established.** Three separate timeouts fired in the same window.
-- This todo does **not** propose a fix. The plausible shapes -- cancel the rejection timer on
-  teardown, `unref()` it, or stub the transport so the RPC is answered -- have not been evaluated
-  against `sidecarRpc.ts:339`, and picking one from the armchair is how this repo's recorded
-  "sound measurement, wrong remedy" pattern happens.
+Fixed by quick task `260921-thi` (2026-09-21). All three of this todo's "not known" questions are
+now answered; this section replaces that one rather than appending a note that would contradict
+it.
+
+- **Which test issues the unanswered RPC (was "not identified"): three `void`-ed sites in
+  `storeEmbedWireContract.test.ts`** (lines 83/102/120 at `c10fd00a5`), which were the only
+  `void`-ed rustInvoke sites in the repo. The todo's warning that running the two obvious suites
+  alone does not reproduce (E6) was correct, and here is why: the process exits long before the
+  60s mark, so reproduction needs **jest fake timers**, not a bigger run -- confirmed by this
+  fix's own Leg A regression test, which reproduces the timeout deterministically via
+  `jest.advanceTimersByTime(60_000)`.
+- **One call site or three (was "not established"): three**, one per channel
+  (`store_embed_open` / `store_embed_set_bounds` / `store_embed_navigate`). This settles the
+  question the todo left open.
+- **The attribution mechanism (new -- the part this todo never had):**
+  `process.on('unhandledRejection')` sees **ZERO**. Jest intercepts the rejection and attributes
+  it to whichever test is executing when the 60s timer fires. This is what makes both historical
+  shapes ("exit 1 with zero failing tests" and "a named `FAIL`") one defect: which reading you get
+  depends only on whether a test happened to be mid-flight at the 60s mark. It is also why no
+  `unhandledRejection`-listener gate could ever have caught this -- the fix's own regression gate
+  had to assert a *positive* claim (a handler received the exact Error) instead.
+- **Production was never affected.** Every `requestRustInvoke` in `storeEmbedFlowRegistration.ts`
+  is awaited (lines 193, 209, 221, 230, 239, 252, 263, 269). This was a test-only defect and
+  `sidecarRpc.ts` was not changed by the fix.
+- **The fix and the gate (was "does not propose a fix"):** the three sites now route through a
+  named helper, `fireWithNoRustPeer`, which records each call's settlement instead of discarding
+  it; a two-leg regression gate beside them in the same file is mutation-proven (restoring a
+  `void`-ed site reds the source-shape leg while the behavioural leg stays green; stripping the
+  helper's handler reds the behavioural leg and reproduces the exact leaked diagnostic inside the
+  gate). Of the three shapes this todo left unevaluated, `unref()` was the wrong one: the timer
+  was **already** `unref()`-ed at `sidecarRpc.ts:392`, and `unref()` governs event-loop retention,
+  not rejection handling -- it does not touch whether a rejection has a handler.
+- **Second instance of a known class.** `appShellFlowRegistration.ts:585-600` carries a
+  `sidecar-init-rustinvoke-leak` comment describing the identical failure mode from a different
+  call site -- an assertion settling before a test drained its own pending rustInvoke calls,
+  leaving a real timer to reject into a later, unrelated suite. That one was fixed by
+  `skipInitialTraySync`; this is the same class, a different call site.
 
 ## This is NOT the F-9 todo, and must not be filed there
 
