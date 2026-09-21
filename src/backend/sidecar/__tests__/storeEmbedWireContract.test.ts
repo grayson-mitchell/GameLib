@@ -147,11 +147,14 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
   it('store_embed_open emits the fixture payload verbatim (object, not positional)', async () => {
     const { frames } = startTransport()
     const [expected] = wireFixture.store_embed_open
-    fireWithNoRustPeer(createRustStoreEmbedSeam().open(
-      expected.url,
-      { x: expected.x, y: expected.y, w: expected.w, h: expected.h },
-      'steam'
-    ), RUST_STORE_EMBED_OPEN)
+    fireWithNoRustPeer(
+      createRustStoreEmbedSeam().open(
+        expected.url,
+        { x: expected.x, y: expected.y, w: expected.w, h: expected.h },
+        'steam'
+      ),
+      RUST_STORE_EMBED_OPEN
+    )
     await flush()
 
     const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_OPEN)
@@ -166,12 +169,15 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
   it('store_embed_set_bounds emits the fixture payload verbatim (object, not positional)', async () => {
     const { frames } = startTransport()
     const [expected] = wireFixture.store_embed_set_bounds
-    fireWithNoRustPeer(createRustStoreEmbedSeam().setBounds({
-      x: expected.x,
-      y: expected.y,
-      w: expected.w,
-      h: expected.h
-    }), RUST_STORE_EMBED_SET_BOUNDS)
+    fireWithNoRustPeer(
+      createRustStoreEmbedSeam().setBounds({
+        x: expected.x,
+        y: expected.y,
+        w: expected.w,
+        h: expected.h
+      }),
+      RUST_STORE_EMBED_SET_BOUNDS
+    )
     await flush()
 
     const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_SET_BOUNDS)
@@ -184,7 +190,10 @@ describe('store-embed wire contract — the sidecar emits exactly what the Rust 
   it('store_embed_navigate emits the fixture payload verbatim (object, not positional)', async () => {
     const { frames } = startTransport()
     const [expected] = wireFixture.store_embed_navigate
-    fireWithNoRustPeer(createRustStoreEmbedSeam().navigate(expected.url), RUST_STORE_EMBED_NAVIGATE)
+    fireWithNoRustPeer(
+      createRustStoreEmbedSeam().navigate(expected.url),
+      RUST_STORE_EMBED_NAVIGATE
+    )
     await flush()
 
     const frame = frames.find((f) => f.channel === RUST_STORE_EMBED_NAVIGATE)
@@ -249,11 +258,14 @@ describe('regression gate: the leaked store_embed rustInvoke rejection now has a
     startTransport()
     const [expected] = wireFixture.store_embed_open
 
-    fireWithNoRustPeer(createRustStoreEmbedSeam().open(
-      expected.url,
-      { x: expected.x, y: expected.y, w: expected.w, h: expected.h },
-      'steam'
-    ), RUST_STORE_EMBED_OPEN)
+    fireWithNoRustPeer(
+      createRustStoreEmbedSeam().open(
+        expected.url,
+        { x: expected.x, y: expected.y, w: expected.w, h: expected.h },
+        'steam'
+      ),
+      RUST_STORE_EMBED_OPEN
+    )
 
     // No Rust peer ever writes a response frame, so the 60s rustInvoke timer is certain to fire.
     // Advancing fake timers makes that deterministic instead of duration-dependent. Awaiting a
@@ -302,8 +314,15 @@ describe('regression gate: the leaked store_embed rustInvoke rejection now has a
     expect(voidedSeamCalls).toEqual([])
 
     const totalSeamCalls = collapsed.match(/createRustStoreEmbedSeam\(/g) ?? []
+    // The `\s*` after `fireWithNoRustPeer\(` is load-bearing for the same reason the `\(?` above
+    // is, and it was MEASURED, not anticipated: `pnpm prettier` (a pre-push gate) rewraps these
+    // call sites to put `createRustStoreEmbedSeam(` on its own line. The collapse above turns
+    // that newline into a single SPACE, so a pattern demanding the two tokens be adjacent
+    // matched 0 of 4 and reported this gate RED against correct, correctly-formatted code.
     const handledSeamCalls =
-      collapsed.match(/fireWithNoRustPeer\(createRustStoreEmbedSeam\(/g) ?? []
+      collapsed.match(
+        /fireWithNoRustPeer\(\s*createRustStoreEmbedSeam\s*\(/g
+      ) ?? []
     // Leg A's own call site above is included in both counts by construction -- it uses the
     // helper too, so this is the same requirement applied to a fourth call site, not a double
     // standard. A future call site that invokes the seam directly (reverting to bare `void` or
