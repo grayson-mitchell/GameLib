@@ -4,13 +4,14 @@ title: "--dialog-margin-horizontal is declared on a bare .Dialog class that no e
 area: ui-dialogs
 severity: medium
 platform: any
-ready: code
+ready: live-gate
 source: "quick-260921-nub, surfaced while measuring the .Dialog__content/.Dialog__headerTitle census"
 files:
   - src/frontend/components/UI/Dialog/index.css
   - src/frontend/components/UI/Dialog/components/Dialog.tsx
   - src/frontend/screens/Library/components/InstallModal/index.scss
   - src/frontend/components/UI/Winetricks/index.scss
+  - src/frontend/index.scss
 ---
 
 # `.Dialog` (bare) is never applied to any element — its one surviving token likely resolves nowhere
@@ -93,16 +94,83 @@ instead of the intended `32px` on each — now MEASURED rather than inferred. Th
 unchanged: bounded to the same two `margin` declarations, not a `minor` polish item, but not
 `major` either since neither surface is broken, just unmargined.
 
-`ready: code`: the live question — what does the browser actually do with this undefined token? —
-is now measured above, not merely inferred from source. Nothing further needs a live run to score.
-What remains is a DECISION about where the token should live (re-scope it to a class that is
-actually applied, move the declaration to `:root`, or repoint the two consumers to a token that
-resolves) plus the edit itself — desk work against a known, measured cascade outcome, not a live
-gate.
+`ready: live-gate` (was `ready: code`): the decision that was still open when this file last read
+`ready: code` — where the token should live — has now been made and shipped (see
+`## Remedy shipped` below). What remains is no longer desk work: it is the live WKWebView
+re-measurement that confirms the shipped edit actually changes what the browser renders. That
+re-measurement is gated on the operator's Mac and the orchestrator's run, not on any further code
+change here, so this item now reads `ready: live-gate` per the vocabulary table in this project's
+`CLAUDE.md`. `platform` stays `any`: the underlying defect was, and remains, reproducible and
+fixable on any machine — a CSS cascade resolution question, not something that needed this
+specific Mac. Only the orchestrator's chosen *measuring instrument* for closing this item happens
+to be a macOS WKWebView harness, and an instrument's platform requirement does not become the
+defect's platform.
 
-## Not fixed here
+## Remedy shipped 2026-09-21 (quick 260921-q9v) — NOT YET CLOSED
 
-Quick task `260921-nub` kept the declaration exactly as it was (see the in-situ comment above it in
-`Dialog/index.css`) and did not attempt a remedy. Quick task `260921-pec` measured the live
-cascade behaviour and re-triaged this file; it did not attempt a remedy either — no file under
-`src/` or `src-tauri/` is touched by that task.
+**What shipped:** `--dialog-margin-horizontal: 32px` was moved out of the bare `.Dialog` rule in
+`Dialog/index.css` and into the `:root` block of `src/frontend/index.scss`, grouped under a new
+`/* Layout */` comment alongside the existing `/* Effects */` group (`--blur-light`,
+`--blur-strong`). The now-entirely-dead bare `.Dialog { padding: 0; text-align: start; }` rule —
+and the `quick-260921-nub` comment that had guarded its token — was deleted outright.
+`Dialog/index.css` survives as a file (required by `Dialog/index.ts`'s `import './index.css'`)
+with its two live rules, `.log-upload-result` and `.Dialog__footer`, unchanged.
+
+**Why this remedy (moving to `:root`) and not either alternative considered:**
+
+- **Rejected: apply the `Dialog` class to the Paper in `Dialog.tsx`.** This would make the bare
+  rule match — and would therefore activate `padding: 0` and `text-align: start` on all ~25 Dialog
+  consumers at once. That is a far wider visual change than the defect being fixed here, and it
+  repeats the exact "reviving unreviewed styling as a side effect" pattern that `Dialog.tsx:109-120`
+  already records as rejected precedent for this same component (reviving an unreviewed
+  `min(700px, 85vw)`/`paddingTop` pair there would have changed sizing for all 25 Dialog consumers
+  as an undiscussed side effect).
+- **Rejected: repoint the two consumers (`InstallModal/index.scss:27`, `Winetricks/index.scss:3`)
+  to a different token or a literal.** This would scatter a magic `32px` across two unrelated
+  files and leave the orphan declaration behind in `Dialog/index.css`, unfixed and still
+  documented as broken.
+- **Chosen: move the declaration to `:root`.** `src/frontend/index.scss`'s `:root` block is
+  already the home for exactly this kind of non-themed global layout constant — `--blur-light: 4px`
+  and `--blur-strong: 16px` live there and are consumed from other stylesheets
+  (`Login/index.scss:130`, `Login/components/Runner/index.css:11`). That file is loaded globally
+  via `src/frontend/index.tsx:28`'s `import './index.scss'`, so both existing consumers now
+  resolve without a single reference site changing.
+
+**Why this does not violate the `## Why the gate stays green` warning above:** that section's "the
+declaration must NOT be deleted" is a warning about the *declaration* — the
+`--dialog-margin-horizontal: 32px` custom-property line — not about the `.Dialog` selector that
+happened to surround it. `cssTokenSweep.test.ts` is a NAME gate (its own documented blind spot B:
+it can prove a name is declared somewhere, not that the selector it sits on ever matches an
+element). The declaration still exists, now in `:root` instead of on `.Dialog`, so the name is
+still found and the gate stays green. Deleting the `.Dialog` rule around it removes zero
+declarations — `padding: 0` and `text-align: start` were dropped, deliberately, because per
+`## Measured facts` above no element in `src/` is ever given that bare class, so neither
+declaration has ever applied to anything; re-homing them would have been the first rejected
+option above, smuggled in under a token fix.
+
+**Gates run, and what each one does and does not prove:**
+
+- `grep -rn "dialog-margin-horizontal" src/` → exactly 3 hits, in exactly 3 files
+  (`src/frontend/index.scss`, `InstallModal/index.scss`, `Winetricks/index.scss`), zero under
+  `src/frontend/components/UI/Dialog/`.
+- `pnpm codecheck` → clean, exit 0.
+- `npx jest --selectProjects Frontend` → 167 suites / 2655 tests, all green, including
+  `cssTokenSweep.test.ts`'s 2 tests. **This proves only that the NAME
+  `--dialog-margin-horizontal` is declared somewhere findable by static analysis — not that
+  anything renders differently.** `cssTokenSweep.test.ts`'s own header states it "can NEVER prove
+  that anything renders," and this repo's Frontend jest project runs with `testEnvironment:
+  'node'` — there is no CSS engine in that process to evaluate cascade or layout.
+- `pnpm lint` → production `1119` warnings (ceiling `1124`, unchanged), tests `638` warnings
+  (ceiling `638`, unchanged) — both scopes numerically identical to the pre-edit tree, as expected
+  since this change touches only `.scss`/`.css` and ESLint here scopes to `.ts`/`.tsx`.
+- `pnpm planning-gates` → 11/11 passed.
+
+**Why this stays open, not closed:** the falsifiable prediction this remedy exists to satisfy has
+not yet been re-measured live. Per `## Measured live under WKWebView` above,
+`anticheatInfo_asShipped` must now read `16px` top, `32px` right, `0px` bottom, `32px` left, and
+`installWrapper_asShipped` must now read `16px` top/bottom, `32px` left/right — i.e. the "as
+shipped" column must become identical to the "under a `.Dialog` ancestor" positive-control column.
+That re-measurement uses the same compiled Swift harness and probe quick `260921-pec` used
+(`.planning/quick/260921-pec-record-the-live-wkwebview-measurements-i/evidence/wkprobe.swift` and
+`.../evidence/probe_wk.js`) and is the orchestrator's to run, not this executor's. This item closes
+only if that re-measurement confirms the prediction; until then it stays in `pending/`.
