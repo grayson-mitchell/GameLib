@@ -125,9 +125,9 @@ describe('anti-vacuity: the wiring predicate rejects near-misses', () => {
         on: {
           push: { branches: ['main'] },
           pull_request: { branches: ['main'] },
-          workflow_dispatch: null,
+          workflow_dispatch: null
         },
-        concurrency: { 'cancel-in-progress': true },
+        concurrency: { 'cancel-in-progress': true }
       })
     ).toBe(false)
   })
@@ -138,8 +138,8 @@ describe('anti-vacuity: the wiring predicate rejects near-misses', () => {
         on: {
           push: { branches: ['main'], 'paths-ignore': ['**.md'] },
           pull_request: { branches: ['main'] },
-          workflow_dispatch: null,
-        },
+          workflow_dispatch: null
+        }
       })
     ).toBe(false)
   })
