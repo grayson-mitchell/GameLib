@@ -849,8 +849,25 @@ describe('--rewrite-scope guard', () => {
    * change. Hand-edited surgically, NOT regenerated, per this file's own
    * precedent.
    *
+   * 2026-09-21 continued, SAME session, caught by re-running A-17 after
+   * committing the removal above: fork-touched 213 -> 214, scope 172 -> 173,
+   * unscanned debt UNCHANGED at 41. The removal edited
+   * `LibrarySearchBar/index.tsx` down to a thin wrapper around `SearchBar`
+   * (see the removal entry above) -- that edit is this file's FIRST-EVER
+   * divergence from upstream Heroic (`git diff <baseCommit> HEAD~1 --
+   * LibrarySearchBar/index.tsx` is empty; only the post-removal HEAD diffs),
+   * so it was correctly absent from both artifacts until this edit and is
+   * correctly present in both now. Promoted straight into
+   * `meta/i18nGateScope.json` rather than left as debt: the rewritten file
+   * carries one live `t('search', 'Search for Games')` call (an existing
+   * key, standard `t(key, defaultValue)` shape) and no other string literal,
+   * confirmed by an audit-mode `scanScope({ extraFiles: [...] })` run before
+   * this entry was written -- 173 files scanned, 0 violations. Enters BOTH
+   * lists in the same sorted slot, so unscanned holds at 41, same mechanism
+   * as `260902-wbd` above. Hand-edited surgically, NOT regenerated.
+   *
    * Built from the committed artifacts rather than invented numbers,
-   * so the specs below assert the REAL 172 -> 213 delta this task exists to
+   * so the specs below assert the REAL 173 -> 214 delta this task exists to
    * prevent.
    */
   function freshSnapshot(): ScopeSnapshot {
@@ -876,10 +893,10 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 172-file hand-curated snapshot and the fresh snapshot is the REAL 213', () => {
-    expect(scopeSnapshot.files.length).toBe(172)
-    expect(forkTouchedSnapshot.files.length).toBe(213)
-    expect(freshSnapshot().files.length).toBe(213)
+  it('A0 fixture sanity: the seeded scope is the REAL 173-file hand-curated snapshot and the fresh snapshot is the REAL 214', () => {
+    expect(scopeSnapshot.files.length).toBe(173)
+    expect(forkTouchedSnapshot.files.length).toBe(214)
+    expect(freshSnapshot().files.length).toBe(214)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
 
@@ -905,7 +922,7 @@ describe('--rewrite-scope guard', () => {
     expect(result.refusal).toBeNull()
   })
 
-  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 172 -> 213 diff and writes nothing', () => {
+  it('A2 REFUSAL NAMES WHAT IT WOULD HAVE DONE: --rewrite-scope on a hand-curated file refuses with the real 173 -> 214 diff and writes nothing', () => {
     const { outDir, scopePath, seededBytes } = seedScope()
 
     const result = writeArtifacts({
@@ -928,7 +945,7 @@ describe('--rewrite-scope guard', () => {
     expect(refusal.provenance).toBe(scopeSnapshot.generatedBy)
   })
 
-  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 213', () => {
+  it('A3 NON-VACUITY / POSITIVE CONTROL: --rewrite-scope on a GENERATOR-provenance file DOES rewrite it to 214', () => {
     // The load-bearing spec. Without it, A1/A2's "the file did not change"
     // would be satisfied just as well by a writer that cannot write at all —
     // a guard that refuses everything is not a fix, it is a different bug.
@@ -941,12 +958,12 @@ describe('--rewrite-scope guard', () => {
     })
 
     const rewritten = JSON.parse(readFileSync(scopePath, 'utf-8'))
-    expect(rewritten.files.length).toBe(213)
+    expect(rewritten.files.length).toBe(214)
     expect(result.wroteScope).toBe(scopePath)
     expect(result.refusal).toBeNull()
   })
 
-  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 213 files', () => {
+  it('A4 BOOTSTRAP: an ABSENT scope file is not hand-curated, so --rewrite-scope creates it with 214 files', () => {
     const outDir = makeTmpDir()
     const scopePath = join(outDir, 'i18nGateScope.json')
     expect(existsSync(scopePath)).toBe(false)
@@ -959,7 +976,7 @@ describe('--rewrite-scope guard', () => {
 
     expect(result.refusal).toBeNull()
     expect(result.wroteScope).toBe(scopePath)
-    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(213)
+    expect(JSON.parse(readFileSync(scopePath, 'utf-8')).files.length).toBe(214)
   })
 
   it('A5 PROVENANCE RATCHET ON THE REAL ARTIFACT: the committed marker still reads as hand-curated', () => {

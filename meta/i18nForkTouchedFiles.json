@@ -21,6 +21,7 @@
     "src/frontend/components/UI/Header/index.tsx",
     "src/frontend/components/UI/HumbleExpiryToast/index.tsx",
     "src/frontend/components/UI/LanguageSelector/index.tsx",
+    "src/frontend/components/UI/LibrarySearchBar/index.tsx",
     "src/frontend/components/UI/LogFileUploadDialog/index.tsx",
     "src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx",
     "src/frontend/components/UI/NavShell/Tier2PortalContext.tsx",
