@@ -1,10 +1,10 @@
 ---
 created: 2026-09-20
-title: "Confirm the now-live Dialog.tsx :has(.logs-wrapper) maxHeight renders correctly, and kill the dead `dialog .logs-wrapper` sibling"
+title: "Decide whether the revived :has(.logs-wrapper) 80% cap should stay — it is a no-op at normal viewports and worsens a pre-existing log-dialog spill at short ones"
 area: ui-dialogs
 severity: minor
-platform: macos
-ready: live-gate
+platform: any
+ready: human
 source: "quick-260921-nub, surfaced while measuring the .Dialog__content/.Dialog__headerTitle census"
 files:
   - src/frontend/components/UI/Dialog/components/Dialog.tsx
@@ -13,6 +13,57 @@ files:
 ---
 
 # Dialog.tsx:59's `&:has(.logs-wrapper))` selector has a stray extra `)` and has never fired
+
+## LIVE GATE RUN AND CLOSED — and the answer is not the one this todo expected
+
+2026-09-21, quick `260921-qru`. Evidence: `.planning/quick/260921-qru-*/evidence/` — `prediction.md`
+(pinned BEFORE any measurement), `measure2.js`, `wkprobe.swift`, and four result files.
+
+Method: the app's real frontend loaded in a real WKWebView at a controlled viewport, with the app's
+OWN zustand store reached through Vite's module registry (`import('/src/frontend/state/GlobalStateV2.ts')`
+— same module instance the running React tree uses) and driven via
+`settingsModalProps: { isOpen: true, type: 'log' }`. This is the half `260921-pec` could not do: pec
+injected synthetic rules and measured selector parsing; this drives the real component tree and
+reads rendered dimensions off the actual emotion-styled MUI Paper.
+
+Controls held: sentinel `borderRadius` read `10px` in every arm (same `styled()` object, never
+malformed — proves the probe was on the right element), and `.logs-wrapper` was confirmed inside the
+measured Paper in every arm.
+
+| viewport | arm | computed `max-height` | rendered paper | content past paper's bottom |
+| --- | --- | --- | --- | --- |
+| 500px | unfixed | `calc(100% - 64px)` → 436 | 436px | **+174px** |
+| 500px | **fixed** | `80%` → 400 | 400px | **+210px** |
+| 900px | unfixed | `calc(100% - 64px)` → 836 | 630px | −20px (fits) |
+| 900px | **fixed** | `80%` → 720 | 630px | −20px (fits) |
+
+**Three findings, and two of them contradict this todo's own premise.**
+
+**1. This todo's central factual claim is WRONG.** It says a Settings dialog showing logs "gets
+**neither** height constraint" and is therefore uncapped. Measured: the Paper was NEVER uncapped —
+MUI's own default `max-height: calc(100% - 64px)` was applying the whole time. My pinned prediction
+P1 said the unfixed arm would read `none`; it read `calc(100% - 64px)`. **My prediction was wrong**,
+and recording that is the point of pinning it. The paren fix did not add a cap where none existed;
+it *replaced a looser cap with a tighter one*.
+
+**2. At ordinary viewports the fix is a NO-OP.** At 900px both arms render 630px, byte-identical,
+because neither cap binds — content is content-sized. The two caps cross over at a 320px viewport
+(`0.8h = h − 64`), so at every realistic window size `80%` is the TIGHTER of the two. The fix can
+therefore only ever make the log dialog smaller, never larger.
+
+**3. The real defect is PRE-EXISTING, worse than the paren, and untouched by the fix.** At 500px
+`.settingsDialogContent` renders 522px tall with `overflow-y: visible` inside a Paper capped at 400,
+so log content spills **past the bottom of the dialog box** — and nothing scrolls. The Paper has
+`overflow-y: auto` yet reports `scrollHeight === clientHeight`, so it never becomes scrollable
+(flex item refusing to shrink below content). **This spill is present in BOTH arms** — 174px unfixed,
+210px fixed. The paren was never what caused it; the fix worsens it by exactly the 36px it tightens
+the cap.
+
+**So the user-visible half of the gate is answered: yes, the log dialog clips on a short window —
+and it clipped before the fix too.** The mechanism half was already settled by `260921-pec`. Nothing
+about this rule needs another live run, so the gate is closed.
+
+**What this leaves open is a DECISION, not a measurement** — see `## Open decision` below.
 
 ## The paren is FIXED — read this before the sections below
 
@@ -133,6 +184,32 @@ selector actually fail to apply, and how much of the rule does it take with it �
 left is the user-visible half only: does the Settings log dialog actually overflow on a short
 window? That is a rendering question on a real viewport that this harness did not and could not
 measure, so it still needs a live run to score, not a source read or another WKWebView probe.
+
+## Open decision
+
+Re-triaged `ready: live-gate` → `human` and `platform: macos` → `any`: the measuring is done and
+the remainder is a judgement call that no further probe can settle. Three options, with what the
+measurement says about each:
+
+1. **Keep `7cc01a936` as-is.** Restores the original author's intent and is provably harmless at
+   ordinary viewports (measured identical at 900px). But it is strictly worse at the only viewport
+   where it binds, so it buys intent-fidelity at the cost of 36px more clipping on short windows.
+2. **Revert the paren fix.** Returns to MUI's looser default cap, which is the better of the two
+   at every viewport above 320px. Costs nothing visible and reduces the spill by 36px — but leaves
+   a knowingly-malformed selector in the source, which is how this todo started.
+3. **Keep the fix AND repair the spill** (the honest fix). Make the log content scrollable so the
+   cap clips a scroll container rather than the content itself — then a tighter cap is a feature
+   rather than a regression. This is the only option that addresses finding 3.
+
+Recommendation: 3, or 2 as a cheap interim. **Do not close this todo by picking 1 silently** — the
+measurement says 1 is the only option that makes the sole affected case worse.
+
+## Still not fixed, and now outranked
+
+`LogSettings/index.css:52` `dialog .logs-wrapper { height: 15em }` remains dead — bare `dialog`
+ELEMENT selector, MUI's Paper is a `div`. Confirmed live: the rule IS injected into the page (it
+appears in the probe's stylesheet census) and matches nothing. Note that `15em` = 240px would have
+fit inside the 400px cap; the dead rule and the spill are the same story told twice.
 
 ## Not fixed here (superseded — see the fix section at the top)
 
