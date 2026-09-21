@@ -119,7 +119,6 @@ export default function RedeemSteamKeyDialog() {
         {outcome !== 'success' && (
           <input
             type="text"
-            className="Dialog__input"
             autoFocus
             disabled={busy}
             value={key}
