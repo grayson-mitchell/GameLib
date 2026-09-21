@@ -1,0 +1,274 @@
+# POPULATION: used-in-module (204 identities)
+#
+# ts-prune found these exports USED -- inside their own declaring file.
+# So this population is NOT dead code: it is an unnecessarily broad
+# `export` keyword. The usual remedy is to drop `export`, which is
+# mechanical and low risk, but it is a source change per entry and is why
+# these are ledgered rather than swept.
+#
+# Kept as a population SEPARATE from `unreachable` on purpose: a
+# regression in either must never be absorbable by the other, and the two
+# have different remedies, so collapsing them would also collapse the
+# instruction the failure message can give.
+#
+# THIS IS A FROZEN LEGACY LEDGER THAT MAY ONLY SHRINK.
+#
+# It is read by meta/findDeadcode.cjs (`pnpm find-deadcode`, and the fifth
+# gate in .husky/pre-push). Each non-comment line is an IDENTITY:
+# "<repo-relative path> - <symbol>". The line number is deliberately not
+# part of the identity, so an ordinary edit above a finding does not churn
+# this file.
+#
+# THERE IS NO REGENERATION COMMAND, and that is deliberate. A
+# --update-baseline flag would delete every `#` annotation below (which is
+# where this population is actually documented) and would be a
+# one-keystroke way to admit a new finding. Consequently the gate has no
+# code path that ADDS a line here.
+#
+# Both diff directions are a FAILURE:
+#   * a finding not listed here  -> fix it AT THE SOURCE (delete the dead
+#     export; or drop the `export` keyword; or, if the export is
+#     deliberate, mark the site with `// ts-prune-ignore-next` plus a
+#     comment saying why -- this fork already does that at
+#     src/backend/utils.ts:1809, src/backend/recent_games/recent_games.ts:64
+#     and src/common/types/ipc.ts:81 and :185).
+#   * a line here with no matching finding -> the code is gone. Delete that
+#     one line. A ledger carrying stale entries is not an accurate census.
+#
+# Measured 2026-09-21 at commit 8a7d46ea9 (HEAD of quick task 260922-9um
+# Task 2). Before that task `pnpm find-deadcode` was `ts-prune --error` and
+# had NEVER exited 0 on this fork: 256 findings, exit 1, five recorded Lint
+# job runs all red back to 2026-07-14.
+#
+#
+# CLUSTER: meta/ exports whose ONLY importer is a meta/__tests__ file.
+# FALSE POSITIVES, structurally -- the importer is not in the analysed
+# project at all.
+#
+# Measured with ts-morph against tsconfig.json: the project loads 1141
+# source files, of which exactly 7 live under meta/ and ZERO live under
+# meta/__tests__/. tsconfig.json has `include: ["src"]`, so those 7 meta
+# modules are pulled in only because some src/**/__tests__ file imports
+# them (e.g. src/backend/__tests__/runnersOnedirWorkflow.test.ts imports
+# archiveName from ../../../meta/buildRunnersOnedir -- which is why
+# archiveName is absent below while its 14 siblings are present).
+#
+# An export consumed only from meta/__tests__/ therefore looks unimported
+# to ts-prune even though it has live callers. Verified for both entries
+# immediately below: toOnedirCommand is imported by
+# meta/__tests__/buildRunnersOnedir.test.ts and
+# meta/__tests__/runnerBuildInvocations.test.ts; buildSeaConfigPath by
+# meta/__tests__/buildSidecarSea.test.ts.
+#
+# Widening tsconfig.json to cover meta/ would dissolve this whole cluster,
+# but that is a tsconfig decision with its own blast radius and is NOT
+# part of this task.
+#
+# This cluster is the first 51 lines below (every meta/ entry). Here the
+# export is additionally seen used inside its own file, so ts-prune
+# downgrades it to "used in module" rather than unreachable -- but the
+# reason it is reported at all is the same missing importer.
+meta/buildRunnersOnedir.ts - InvocationForm
+meta/buildRunnersOnedir.ts - ONEDIR_RUNNERS
+meta/buildRunnersOnedir.ts - OnedirCommandResult
+meta/buildRunnersOnedir.ts - OnedirInvocationResult
+meta/buildRunnersOnedir.ts - OnedirRunnerName
+meta/buildRunnersOnedir.ts - OnedirRunnerSpec
+meta/buildRunnersOnedir.ts - RunnerBuildResult
+meta/buildRunnersOnedir.ts - UpstreamPyinstallerCommand
+meta/buildRunnersOnedir.ts - buildManifestObject
+meta/buildRunnersOnedir.ts - buildRunner
+meta/buildRunnersOnedir.ts - deriveOnedirInvocation
+meta/buildRunnersOnedir.ts - extractUpstreamPyinstallerCommand
+meta/buildRunnersOnedir.ts - formatSha256Sums
+meta/buildRunnersOnedir.ts - main
+meta/buildSidecarSea.ts - DECOMPRESS_WORKER_ENTRY_PATH
+meta/buildSidecarSea.ts - NATIVE_LZMA_REQUIRED_TRIPLES
+meta/buildSidecarSea.ts - SEA_WORKER_ASSET_KEY
+meta/buildSidecarSea.ts - assertNodeGypBuildSingleConsumer
+meta/buildSidecarSea.ts - buildCodesignArgv
+meta/buildSidecarSea.ts - buildEsbuildArgv
+meta/buildSidecarSea.ts - buildPostjectArgv
+meta/buildSidecarSea.ts - buildSeaBlobArgv
+meta/buildSidecarSea.ts - buildSeaConfig
+meta/buildSidecarSea.ts - buildWorkerEsbuildArgv
+meta/buildSidecarSea.ts - expectedMachoArch
+meta/buildSidecarSea.ts - hostTriple
+meta/buildSidecarSea.ts - lzmaNativePrebuildDir
+meta/buildSidecarSea.ts - lzmaNativePrebuildPath
+meta/buildSidecarSea.ts - main
+meta/buildSidecarSea.ts - nodeDistName
+meta/buildSidecarSea.ts - nodeDistUrls
+meta/buildSidecarSea.ts - resolveEsbuildCli
+meta/buildSidecarSea.ts - resolvePostjectCli
+meta/buildSidecarSea.ts - resolveTriple
+meta/buildSidecarSea.ts - seaEsbuildFlags
+meta/buildSidecarSea.ts - sidecarOutputPath
+meta/buildSidecarSea.ts - spawnArgv
+meta/buildSidecarSea.ts - triplePlatform
+meta/buildSidecarSea.ts - writeLzmaNativeResolvedPaths
+meta/esbuildWorkerBundleShared.ts - LZMA_NATIVE_RESOLVED_PATHS_MODULE_PATH
+meta/esbuildWorkerBundleShared.ts - findOtherNodeGypBuildConsumers
+meta/esbuildWorkerBundleShared.ts - resolveLzmaNativePkgRoot
+meta/releaseTags.ts - DownloadedBinary
+meta/signMachOResources.ts - CliOptions
+meta/signMachOResources.ts - SignResult
+meta/signMachOResources.ts - TIMESTAMP_RETRY_DELAYS_MS
+meta/signMachOResources.ts - main
+meta/trayIconVariants.ts - DecodedPng
+meta/trayIconVariants.ts - HUE_SPLIT_DEGREES
+meta/trayIconVariants.ts - buildHueSegmentedTemplateAlpha
+meta/trayIconVariants.ts - encodeRgba
+src/backend/__tests__/constants.test.ts - overrideProcessPlatform
+src/backend/__tests__/helpers/workflowSteps.ts - StepRunResult
+src/backend/electron_store.ts - RegisteredStore
+src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedCactus
+src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedFramed
+src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedIntoTheBreach
+src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedPortal2
+src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedStardew
+src/backend/humble/classify.ts - ZeroKeyDiagnosis
+src/backend/humble/electronStores.ts - HumbleLocalRedeemedRecord
+src/backend/humble/electronStores.ts - HumbleOrderCacheEntryInternal
+src/backend/humble/loginWindowSeam.ts - LoginWindowRevealPostResult
+src/backend/ipc.ts - addOneTimeListener
+src/backend/jest.setupContainment.ts - containmentRoot
+src/backend/recent_games/recent_games.ts - maxRecentGames
+src/backend/sidecar/__tests__/externalDynamicImportGate.test.ts - DynamicImportHit
+src/backend/sidecar/__tests__/externalDynamicImportGate.test.ts - FORBIDDEN_DYNAMIC_IMPORT_MODULES
+src/backend/sidecar/__tests__/externalDynamicImportGate.test.ts - findForbiddenDynamicImports
+src/backend/sidecar/__tests__/flowRegistrationCensus.test.ts - claimedTotal
+src/backend/sidecar/__tests__/flowRegistrationCensus.test.ts - registerFnDocstring
+src/backend/sidecar/__tests__/helpers/sidecarHarness.ts - collectFrames
+src/backend/sidecar/bootstrap.ts - deliverStartupProtocolUrl
+src/backend/sidecar/bootstrap.ts - registerProtocolUrlHandler
+src/backend/sidecar/fileStore.ts - FileStoreOptions
+src/backend/sidecar/humbleFlowRegistration.ts - isPackagedSidecar
+src/backend/sidecar/installedJsonWatcher.ts - InstalledJsonWatcherOptions
+src/backend/sidecar/oauthLoginCapture.ts - OAuthCaptureOutcome
+src/backend/sidecar/oauthLoginCapture.ts - OAuthRedirectMatch
+src/backend/sidecar/oauthLoginCapture.ts - resolveUserAgent
+src/backend/sidecar/processGuards.ts - UncaughtExceptionLogSink
+src/backend/sidecar/processGuards.ts - UnhandledRejectionLogSink
+src/backend/storeManagers/steam/__tests__/fixtures/cdnAuthSendFixture.ts - FakeSendCall
+src/backend/storeManagers/steam/bridge/allowlist.ts - BridgeAllowlist
+src/backend/storeManagers/steam/bridge/helperProcess.ts - BridgeHelperReadyStatus
+src/backend/storeManagers/steam/bridge/helperProcess.ts - EnsureBridgeHelperReadyResult
+src/backend/storeManagers/steam/bridge/importScan.ts - ImportScanResult
+src/backend/storeManagers/steam/bridge/protocol.ts - ControlSlotName
+src/backend/storeManagers/steam/bridge/protocol.ts - DecodedRequest
+src/backend/storeManagers/steam/bridge/protocol.ts - DecodedResponse
+src/backend/storeManagers/steam/bridge/shimGenerate.ts - PlaceShimResult
+src/backend/storeManagers/steam/clientSetup.ts - EnsureSteamClientReadyResult
+src/backend/storeManagers/steam/clientSetup.ts - StartGuidedInstallResult
+src/backend/storeManagers/steam/clientSetup.ts - StartGuidedInstallStatus
+src/backend/storeManagers/steam/clientSetup.ts - SteamClientReadyStatus
+src/backend/storeManagers/steam/depot.ts - DepotDownloadOutcome
+src/backend/storeManagers/steam/depot.ts - DepotDownloadResult
+src/backend/storeManagers/steam/depot.ts - DepotModeCounters
+src/backend/storeManagers/steam/depot.ts - DepotPlanChunk
+src/backend/storeManagers/steam/depot.ts - DepotPlanEntry
+src/backend/storeManagers/steam/depot.ts - DownloadDepotFilesOpts
+src/backend/storeManagers/steam/depot.ts - DownloadSteamDepotsOpts
+src/backend/storeManagers/steam/depot.ts - FILE_CONCURRENCY
+src/backend/storeManagers/steam/depot.ts - FinalizeDepotEntry
+src/backend/storeManagers/steam/depot.ts - PLAN_BUILD_RETRY_DELAY_MS
+src/backend/storeManagers/steam/depot.ts - TARGET_INFLIGHT_CHUNKS
+src/backend/storeManagers/steam/depot/decompress.ts - CHUNK_FETCH_MAX_BACKOFF_MS
+src/backend/storeManagers/steam/depot/decompress.ts - ChunkAttemptEvent
+src/backend/storeManagers/steam/depot/decompress.ts - ChunkAttemptOutcome
+src/backend/storeManagers/steam/depot/decompress.ts - DECODE_STAGE_ERROR_CODES
+src/backend/storeManagers/steam/depot/decompress.ts - wantsCdnAuthToken
+src/backend/storeManagers/steam/depot/decompressPool.ts - DECOMPRESS_POOL_MAX_WORKERS
+src/backend/storeManagers/steam/depot/decompressPool.ts - DecompressPoolOpts
+src/backend/storeManagers/steam/depot/fileAttributes.ts - ApplyDepotFileFlagsResult
+src/backend/storeManagers/steam/depot/fileAttributes.ts - FileAttributePlatform
+src/backend/storeManagers/steam/depot/flagsCensus.ts - DepotFlagsCensus
+src/backend/storeManagers/steam/depot/hostHealth.ts - HostAttemptOutcome
+src/backend/storeManagers/steam/depot/hostHealth.ts - HostStatsSnapshot
+src/backend/storeManagers/steam/depot/hostHealth.ts - LATENCY_SCORE_DIVISOR_MS
+src/backend/storeManagers/steam/depot/hostHealth.ts - WEIGHTEDLOAD_PRIOR_DIVISOR
+src/backend/storeManagers/steam/depot/manifest.ts - InstalledDepotEntry
+src/backend/storeManagers/steam/depot/pathCollisions.ts - PathCollisionReport
+src/backend/storeManagers/steam/depot/reconcile.ts - ReconcileJob
+src/backend/storeManagers/steam/depot/reconcile.ts - ReconcileResult
+src/backend/storeManagers/steam/depot/reconcile.ts - ShapeFailure
+src/backend/storeManagers/steam/depot/reconcile.ts - ShapeResult
+src/backend/storeManagers/steam/depot/reconcile.ts - StructuralFailureReason
+src/backend/storeManagers/steam/depot/reconcile.ts - StructuralMismatch
+src/backend/storeManagers/steam/depot/reconcile.ts - StructuralVerifyResult
+src/backend/storeManagers/steam/depot/stallTracker.ts - STALL_TIMEOUT_MS
+src/backend/storeManagers/steam/depotErrors.ts - ClassifiedDepotError
+src/backend/storeManagers/steam/electronStores.ts - SteamBottleConfig
+src/backend/storeManagers/steam/installLocation.ts - SteamInstallTarget
+src/backend/storeManagers/steam/installLocation.ts - SteamLibraryTarget
+src/backend/storeManagers/steam/platformCapture.ts - AppCommonOslist
+src/backend/storeManagers/steam/platformCapture.ts - PlatformCaptureSummary
+src/backend/storeManagers/steam/removeAllCopies.ts - RemoveAllCopiesResult
+src/backend/storeManagers/steam/withTimeout.ts - TimeoutError
+src/backend/store_backend.ts - translateStoreOptions
+src/backend/testUtils/fakeHomeProfile.ts - CreateFakeHomeProfileOptions
+src/backend/testUtils/fakeHomeProfile.ts - FakeHomeEnvKey
+src/backend/wiki_game_info/howlongtobeat/titleMatch.ts - MIN_MARGIN
+src/backend/wiki_game_info/howlongtobeat/titleMatch.ts - TitleCandidate
+src/backend/wiki_game_info/pcgamingwiki/utils.ts - PCGamingWikiResult
+src/common/humble/expirationDisplay.ts - HumbleExpirationDisplay
+src/common/humble/keyTypePresentation.ts - HumbleRedeemTarget
+src/common/humble/loginChromeCss.ts - HUMBLE_LOGIN_CHROME_HOST
+src/common/humble/loginChromeCss.ts - HUMBLE_LOGIN_CHROME_HOST_SUFFIX
+src/common/humble/urgencyBadge.ts - UrgencyCountdownParts
+src/common/types.ts - WikiFetchStatus
+src/common/types/ipc.ts - SteamSyncFailureReason
+src/common/types/sidecarTransport.ts - SidecarRpcKind
+src/common/types/storePolicy.ts - DISALLOWED_KEY_PATH_SEGMENTS
+src/common/types/storePolicy.ts - ValidStoreName
+src/common/types/storePolicy.ts - WRITE_DENIED_FIELDS
+src/common/winetricks/deriveRowState.ts - WinetricksRowState
+src/frontend/__tests__/muiTabsSelectorScoping.test.ts - findUnscopedMuiTabsSelectors
+src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx - StoreEmbedSuppressionContext
+src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx - SuppressionAction
+src/frontend/components/UI/NavShell/Tier2PortalContext.tsx - Tier2PortalValue
+src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts - DescriptorKind
+src/frontend/components/UI/NavShell/navTabs.ts - NavTabId
+src/frontend/components/UI/RedeemSteamKeyDialog/copy.ts - RedeemOutcomeCopy
+src/frontend/components/UI/ThemeSelector/index.tsx - resolveThemeLabel
+src/frontend/helpers/declaredUnavailable.ts - DeclaredResult
+src/frontend/helpers/declaredUnavailable.ts - WINETRICKS_CHANNELS
+src/frontend/hooks/hasStatus.ts - DerivedStatusKind
+src/frontend/screens/ConsoleMode/InstallOverlay/consoleSteamTarget.ts - ConsoleSteamVerdict
+src/frontend/screens/DownloadManager/components/DownloadManagerItem/status.ts - DMItemStatusInfo
+src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - VoidApiChain
+src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - asyncHandlerWirings
+src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - depsOf
+src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - sliceAsyncHandler
+src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - sliceIntervalEffects
+src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - sliceVoidApiChains
+src/frontend/screens/Game/GamePage/components/appleRating.ts - RatingTier
+src/frontend/screens/Library/components/InstallModal/index.tsx - SteamLibraryFetch
+src/frontend/screens/Library/components/InstallModal/steamPlatformRow.ts - ResolveDepotAvailabilityOutput
+src/frontend/screens/Library/components/SteamSyncNotice/index.tsx - SteamSyncNoticeProps
+src/frontend/screens/Library/engineWiring.ts - LibraryGridPipeline
+src/frontend/screens/Library/filterEngine.ts - passesCollection
+src/frontend/screens/Library/filterEngine.ts - passesMore
+src/frontend/screens/Library/filterEngine.ts - passesRunnability
+src/frontend/screens/Library/filterEngine.ts - passesSearch
+src/frontend/screens/Library/filterEngine.ts - passesStore
+src/frontend/screens/Library/filterEngine.ts - passesView
+src/frontend/screens/Library/librarySyncIndicator.ts - SteamSyncIndicatorOutput
+src/frontend/screens/StoreSearch/helpers.ts - OwnedBadgeLabel
+src/frontend/screens/StoreSearch/hooks/useDebouncedStoreSearch.ts - StoreSearchStatus
+src/frontend/screens/WebView/components/WebviewUnavailablePanel.tsx - WebviewUnavailableReason
+src/frontend/screens/WebView/storeEmbedOrigins.ts - StoreEmbedConfig
+src/frontend/screens/WebView/useStoreEmbedHost.ts - UseStoreEmbedHostOptions
+src/frontend/screens/WebView/useTauriOAuthLogin.ts - OAuthLoginCompletionDeps
+src/frontend/state/GlobalState.tsx - SleepAssertionCall
+src/frontend/state/GlobalState.tsx - SleepAssertionKind
+src/frontend/state/GlobalState.tsx - SleepAssertionState
+src/frontend/state/GlobalState.tsx - classifySleepAssertionKind
+src/frontend/state/GlobalState.tsx - reconcileSleepAssertionCalls
+src/frontend/state/SteamClientSetup.ts - SteamClientSetupReason
+src/frontend/state/SteamSignOut.ts - PerformSteamLogoutDeps
+src/frontend/state/SteamSignOut.ts - STEAM_SIGN_OUT_DEFAULT_INTERVAL_MS
+src/frontend/state/SteamSignOut.ts - STEAM_SIGN_OUT_DEFAULT_MAX_ATTEMPTS
+src/frontend/state/SteamSignOut.ts - WaitForSteamSignedOutOptions
+src/preload/tauriTransport.ts - hydrateStore

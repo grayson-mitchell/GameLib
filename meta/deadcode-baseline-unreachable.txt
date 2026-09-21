@@ -1,0 +1,150 @@
+# POPULATION: unreachable (52 identities)
+#
+# ts-prune found NO importer for these exports anywhere in the analysed
+# project. That is the stronger of its two signals -- but read the `#`
+# annotations below before treating any line as a deletion: a large share
+# of this population is false-positive by construction.
+#
+# THIS IS A FROZEN LEGACY LEDGER THAT MAY ONLY SHRINK.
+#
+# It is read by meta/findDeadcode.cjs (`pnpm find-deadcode`, and the fifth
+# gate in .husky/pre-push). Each non-comment line is an IDENTITY:
+# "<repo-relative path> - <symbol>". The line number is deliberately not
+# part of the identity, so an ordinary edit above a finding does not churn
+# this file.
+#
+# THERE IS NO REGENERATION COMMAND, and that is deliberate. A
+# --update-baseline flag would delete every `#` annotation below (which is
+# where this population is actually documented) and would be a
+# one-keystroke way to admit a new finding. Consequently the gate has no
+# code path that ADDS a line here.
+#
+# Both diff directions are a FAILURE:
+#   * a finding not listed here  -> fix it AT THE SOURCE (delete the dead
+#     export; or drop the `export` keyword; or, if the export is
+#     deliberate, mark the site with `// ts-prune-ignore-next` plus a
+#     comment saying why -- this fork already does that at
+#     src/backend/utils.ts:1809, src/backend/recent_games/recent_games.ts:64
+#     and src/common/types/ipc.ts:81 and :185).
+#   * a line here with no matching finding -> the code is gone. Delete that
+#     one line. A ledger carrying stale entries is not an accurate census.
+#
+# Measured 2026-09-21 at commit 8a7d46ea9 (HEAD of quick task 260922-9um
+# Task 2). Before that task `pnpm find-deadcode` was `ts-prune --error` and
+# had NEVER exited 0 on this fork: 256 findings, exit 1, five recorded Lint
+# job runs all red back to 2026-07-14.
+#
+#
+# CLUSTER: meta/ exports whose ONLY importer is a meta/__tests__ file.
+# FALSE POSITIVES, structurally -- the importer is not in the analysed
+# project at all.
+#
+# Measured with ts-morph against tsconfig.json: the project loads 1141
+# source files, of which exactly 7 live under meta/ and ZERO live under
+# meta/__tests__/. tsconfig.json has `include: ["src"]`, so those 7 meta
+# modules are pulled in only because some src/**/__tests__ file imports
+# them (e.g. src/backend/__tests__/runnersOnedirWorkflow.test.ts imports
+# archiveName from ../../../meta/buildRunnersOnedir -- which is why
+# archiveName is absent below while its 14 siblings are present).
+#
+# An export consumed only from meta/__tests__/ therefore looks unimported
+# to ts-prune even though it has live callers. Verified for both entries
+# immediately below: toOnedirCommand is imported by
+# meta/__tests__/buildRunnersOnedir.test.ts and
+# meta/__tests__/runnerBuildInvocations.test.ts; buildSeaConfigPath by
+# meta/__tests__/buildSidecarSea.test.ts.
+#
+# Widening tsconfig.json to cover meta/ would dissolve this whole cluster,
+# but that is a tsconfig decision with its own blast radius and is NOT
+# part of this task.
+meta/buildRunnersOnedir.ts - toOnedirCommand
+meta/buildSidecarSea.ts - buildSeaConfigPath
+#
+# MIXED GROUP -- two of the next three lines are PARSE ARTIFACTS, one is
+# a real unused export. Do not treat them alike.
+#
+# meta/releaseTags.ts:35 is
+#   } as const satisfies Record<DownloadedBinary, string>
+# ts-prune mis-reads the `satisfies` expression and reports the keyword
+# `satisfies` and the TS utility type `Record` as exported symbols of
+# this file. Neither is an identifier declared here; there is nothing to
+# delete. The tool is wrong.
+#
+# `SupportedPlatform` (line 20) IS a real exported type alias with no
+# importer -- a genuine finding, kept because deleting it is a source
+# change out of scope for the task that created this ledger.
+meta/releaseTags.ts - Record
+meta/releaseTags.ts - SupportedPlatform
+meta/releaseTags.ts - satisfies
+src/backend/constants/paths.ts - webviewPreloadPath
+src/backend/constants/urls.ts - GITHUB_API
+src/backend/electron_store.ts - getRegisteredStoreNames
+src/backend/electron_store.ts - getRegisteredStoreOptions
+src/backend/humble/adapter.ts - OrderDetailTpk
+src/backend/humble/constants.ts - HUMBLE_FUZZY_MATCH_THRESHOLD
+src/backend/humble/constants.ts - HUMBLE_LOGIN_PARTITION
+src/backend/humble/ipc_handler.ts - registerHumbleIpcHandlers
+src/backend/images_cache.ts - initImagesCache
+#
+# CLUSTER: the 18 assert_* helpers in
+# src/backend/platform/__tests__/types.usage.test.ts. FALSE POSITIVES BY
+# DESIGN.
+#
+# These are exported deliberately as COMPILE-TIME type assertions: the
+# `export` keyword is what stops TypeScript treating them as unused
+# locals, and tsc checking their bodies IS the test. Nothing imports
+# them and nothing should. There is no runtime caller to find.
+src/backend/platform/__tests__/types.usage.test.ts - assert_browserWindowConstructorOptions
+src/backend/platform/__tests__/types.usage.test.ts - assert_browserWindowHandle
+src/backend/platform/__tests__/types.usage.test.ts - assert_crossProcessExportsTray
+src/backend/platform/__tests__/types.usage.test.ts - assert_crossProcessExportsTrayIsTyped
+src/backend/platform/__tests__/types.usage.test.ts - assert_display
+src/backend/platform/__tests__/types.usage.test.ts - assert_displayAndCtorOptionsAreTyped
+src/backend/platform/__tests__/types.usage.test.ts - assert_electronEvent
+src/backend/platform/__tests__/types.usage.test.ts - assert_fileFilterAndOpenDialogOptions
+src/backend/platform/__tests__/types.usage.test.ts - assert_inputEventTypesAreLiteralUnions
+src/backend/platform/__tests__/types.usage.test.ts - assert_inputEvents
+src/backend/platform/__tests__/types.usage.test.ts - assert_ipcMainEvent
+src/backend/platform/__tests__/types.usage.test.ts - assert_ipcMainInvokeEvent
+src/backend/platform/__tests__/types.usage.test.ts - assert_ipcRendererEvent
+src/backend/platform/__tests__/types.usage.test.ts - assert_menuItemConstructorOptions
+src/backend/platform/__tests__/types.usage.test.ts - assert_messageBoxOptions
+src/backend/platform/__tests__/types.usage.test.ts - assert_opaqueHandlesStayOpaque
+src/backend/platform/__tests__/types.usage.test.ts - assert_optionBagsRejectBadLiterals
+src/backend/platform/__tests__/types.usage.test.ts - assert_shortcutDetails
+src/backend/store/storeEmbedSeam.ts - getStoreEmbedSeam
+src/backend/storeManagers/steam/bridge/protocol.ts - InterfaceOrdinalName
+src/backend/storeManagers/steam/depot/flagsCensus.ts - FLAGS_CENSUS_LOG_PREFIX
+src/common/types/sidecarTransport.ts - RUST_INVOKE_KIND
+src/common/types/steam.ts - SteamCredentials
+#
+# PARSE ARTIFACTS. selectionCount.ts:46 is
+#   ] as const satisfies readonly DescriptorKind[]
+# ts-prune reports the keywords `readonly` and `satisfies` as two
+# separate exported symbols of the file. Neither is an identifier.
+#
+# Both sit at the SAME line (46). They are two DISTINCT identities
+# because the identity drops the line number and keeps the name, so
+# nothing here is being deduped away -- recorded because a same-file,
+# same-line pair reads like a duplicate at a glance and is not one.
+# Measured: this ledger contains no duplicate identities at all.
+src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts - readonly
+src/frontend/components/UI/NavShell/components/FilterFacetGroup/selectionCount.ts - satisfies
+src/frontend/helpers/library.ts - amazonCategories
+src/frontend/helpers/library.ts - epicCategories
+src/frontend/helpers/library.ts - gogCategories
+src/frontend/helpers/library.ts - sideloadedCategories
+src/frontend/helpers/library.ts - steamCategories
+src/frontend/helpers/library.ts - zoomCategories
+src/frontend/screens/Game/GamePage/components/__tests__/faithfulTranslate.ts - faithfulReactI18next
+src/frontend/screens/Login/components/LoginWarning/index.tsx - default
+#
+# PARSE ARTIFACT. InstallProgress.ts:16 is
+#   selector: Parameters<typeof useShallow<StoreType, T>>[0]
+# `Parameters` is a TS utility type in a type position, not an export of
+# this file. Same ts-prune mis-read as the `satisfies` cases above.
+src/frontend/state/InstallProgress.ts - Parameters
+src/frontend/types.ts - Category
+src/frontend/types.ts - CrossoverRatingFilters
+src/frontend/types.ts - PlatformsFilters
+src/frontend/types.ts - StoresFilters
