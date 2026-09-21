@@ -29,10 +29,11 @@
 //
 // `--modal-background` is consumed BARE below (the sticky search bar's
 // background). This is not a CR-01 violation: it is the SAME token
-// `Dialog/components/Dialog.tsx:51` and `Dialog/index.css:20,73` already
-// consume bare for this exact dialog's own surface -- if it were undefined
-// in any shipped theme the dialog itself would already be broken, so this
-// is an established-safe precedent, the identical class of exception
+// `Dialog/components/Dialog.tsx:53` (StyledPaper's own `backgroundColor`)
+// already consumes bare for the dialog's own surface -- if it were
+// undefined in any shipped theme the dialog itself would already be broken
+// before this sticky search bar ever rendered, so this is an
+// established-safe precedent, the identical class of exception
 // Row/index.scss's own header comment carves out for `--success`/`--danger`.
 // `--space-*` / `--text-*` tokens below are the project's unthemed sizing
 // scale (declared once, globally, not per theme block -- see

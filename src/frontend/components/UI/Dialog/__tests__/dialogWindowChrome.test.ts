@@ -61,12 +61,13 @@ describe('quick-260820-kq0 round 3: the shared Dialog primitive carries a rounde
     )
   })
 
-  it('SOURCE GATE (PRESENCE) -- StyledPaper (the PaperComponent every Dialog consumer renders through) sets a 10px border radius, replacing the dead .Dialog__element rule at the primitive so every consumer inherits it, not just one caller', () => {
+  it('SOURCE GATE (PRESENCE) -- StyledPaper (the PaperComponent every Dialog consumer renders through) sets a 10px border radius, replacing the .Dialog__element rule deleted by quick task 260921-mzl at the primitive so every consumer inherits it, not just one caller', () => {
     const source = read(DIALOG_TSX)
 
     // Breaks if: the radius override is removed from StyledPaper, or its
-    // value drifts from 10px (the value the dead .Dialog__element rule and
-    // every other literal radius in this codebase already use).
+    // value drifts from 10px (the value the .Dialog__element rule -- deleted
+    // by quick task 260921-mzl -- and every other literal radius in this
+    // codebase already use).
     expect(source).toMatch(/const StyledPaper = styled\(Paper\)/)
     const styledPaperBlock = source
       .split('const StyledPaper')[1]
@@ -99,8 +100,9 @@ describe('quick-260820-kq0 round 3: the shared Dialog primitive carries a rounde
     const source = read(DIALOG_TSX)
 
     // Breaks if: a BackdropComponent or BackdropProps prop is added to
-    // MuiDialog, which combined with the dead .Dialog__element::backdrop /
-    // box-shadow hack (if ever revived) would double up the dimming layer.
+    // MuiDialog, which combined with the .Dialog__element::backdrop /
+    // box-shadow hack -- deleted from Dialog/index.css by quick task
+    // 260921-mzl -- (if ever reintroduced) would double up the dimming layer.
     expect(source).not.toMatch(/BackdropComponent/)
     expect(source).not.toMatch(/BackdropProps/)
   })
@@ -110,10 +112,12 @@ describe('quick-260820-kq0 round 3: the shared Dialog primitive carries a rounde
 
     // Breaks if: a future edit applies `.Dialog__element` directly to the
     // Paper/root (e.g. via `className="Dialog__element"` or
-    // `PaperProps={{ className: 'Dialog__element' }}`) -- since that class's
-    // visible state in index.css is gated on `:popover-open`/`[open]`,
-    // pseudo-states a plain rendered element can never match, doing so
-    // would make the dialog permanently invisible (opacity: 0 forever).
+    // `PaperProps={{ className: 'Dialog__element' }}`). The rule that class
+    // named was deleted from Dialog/index.css by quick task 260921-mzl, so
+    // applying the class today does nothing at all -- this guard exists to
+    // stop the stale class name being reintroduced into the primitive, and
+    // to stop a future reader re-adding the deleted rule just to "make the
+    // class work" again.
     expect(source).not.toMatch(/className[^}]*Dialog__element/)
   })
 })
