@@ -15,6 +15,46 @@ files:
   - src/frontend/components/UI/RedeemSteamKeyDialog/index.tsx
 ---
 
+## Closed by quick task `260921-nub`
+
+**What was deleted:** the two primitive declarations (`.Dialog__headerTitle`, `.Dialog__content`)
+in `Dialog/index.css`; all five downstream rules across four files listed below (`SettingsModal/index.scss`
+was deleted outright, taking its import with it); the two orphaned `--dialog-margin-vertical`/
+`--dialog-gap` tokens whose only references were the deleted rules; and the `Dialog__input`
+className on `RedeemSteamKeyDialog`'s input.
+
+**DELETION was chosen over re-anchoring, deliberately, not by default.** This todo's own body
+framed the choice as open ("deleting or re-anchoring"). `Dialog.tsx:106-120` records this repo's
+binding precedent, set by `260820-kq0` and restated by `260921-mzl`: an inert `maxWidth`/
+`paddingTop` pair was "Deliberately DROPPED rather than realized", because reviving an unreviewed
+rule here would change sizing for all 25 `Dialog` consumers as an undiscussed side effect. The same
+reasoning decided this case, hardest at Settings: re-anchoring the compound
+`.Dialog__content.settingsDialogContent` selector to a bare `.settingsDialogContent` would have
+ACTIVATED `width: 65vw; display: flex; flex: 1 1 60vh; max-width: 800px; min-height: 64vh` on the
+Settings dialog **for the first time ever** — a live visual change with no requirement behind it,
+in a `testEnvironment: 'node'` project with no jsdom and no CSS engine that could observe whether
+it looks right. Re-anchoring remains available to a future, deliberately-visual, live-gated task —
+it was not available to this one.
+
+**Two deliberate KEEPs, so nobody "finishes the cleanup" later:**
+
+- `className="settingsDialogContent"` on `SettingsModal`'s `DialogContent` was kept — its only
+  remaining purpose is that `Dialog.tsx:56`'s live `StyledPaper`
+  `:has(.settingsDialogContent):not(:has(.logs-wrapper))` height rule is keyed on it, and removing
+  it would silently change the Settings dialog's height.
+- `--dialog-margin-horizontal` in `Dialog/index.css` was kept — `cssTokenSweep.test.ts` would go
+  red without it (two external consumers still reference it by name). Whether it actually resolves
+  at those two sites is a separate, open scope question: see
+  `2026-09-20-the-bare-dialog-class-is-never-applied-to-any-element.md`.
+
+**Three adjacent findings surfaced while measuring, recorded rather than fixed, by filename:**
+
+- `2026-09-20-dialog-styledpaper-logs-wrapper-rule-has-a-stray-paren.md`
+- `2026-09-20-steam-key-dialog-input-has-no-css-rule-at-all.md`
+- `2026-09-20-the-bare-dialog-class-is-never-applied-to-any-element.md`
+
+---
+
 # .Dialog__content and .Dialog__headerTitle are dead, and their deadness fans out
 
 Quick task `260921-mzl` deleted item 3's named dead blocks from
