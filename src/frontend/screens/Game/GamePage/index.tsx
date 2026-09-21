@@ -449,7 +449,21 @@ export default React.memo(function GamePage(): JSX.Element | null {
         <p className="wikiLink">
           <Info />
           <span>
-            <Trans key="wikiLink" i18n={i18n}>
+            {/* `i18nKey` (NOT `key` -- React's reserved prop, invisible to
+                Trans) plus an explicit `ns`: this key lives in the
+                `gamepage` namespace, while i18next's defaultNS is
+                `translation`. Either attribute alone renders the English
+                children in every locale. `shouldUnescape` is also required:
+                the catalog stores a literal `&nbsp;` entity, and without
+                this flag React escapes the `&` and the user sees the text
+                `&nbsp;` -- a visible regression across ~31 locales. Trade,
+                stated: `shouldUnescape` decodes that entity to an ordinary
+                space (U+0020), not a true non-breaking space (U+00A0), so
+                one non-breaking space is deliberately downgraded to a
+                breaking one, in English too. Accepted -- the alternative is
+                either 31 dead translations or visible mojibake, and
+                repairing the catalog is out of scope here (REQ-34.8-04). */}
+            <Trans i18n={i18n} i18nKey="wikiLink" ns="gamepage" shouldUnescape>
               Important information about this game, read this:&nbsp;
               <Link to={knownFixes.wikiLink}>Open page</Link>
             </Trans>
