@@ -100,4 +100,3 @@ Quick task `260921-nub` records this rather than repairing it — `Dialog.tsx` i
 byte-identical for that task (its own Task 1/Task 2 verify assert `git diff --quiet` on this file).
 Quick task `260921-pec` measured the mechanism live and narrowed this gate; it made no source
 change either — no file under `src/` or `src-tauri/` is touched by that task.
-</content>

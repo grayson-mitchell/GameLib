@@ -63,4 +63,3 @@ person to decide, not a live run and not an edit.
 `260921-nub` removed only the dead className; it did not add a replacement rule. `260921-pec`
 measured the cascade live and re-triaged this file; it made no source change either — no file
 under `src/` or `src-tauri/` is touched by that task.
-</content>

@@ -106,4 +106,3 @@ Quick task `260921-nub` kept the declaration exactly as it was (see the in-situ 
 `Dialog/index.css`) and did not attempt a remedy. Quick task `260921-pec` measured the live
 cascade behaviour and re-triaged this file; it did not attempt a remedy either — no file under
 `src/` or `src-tauri/` is touched by that task.
-</content>

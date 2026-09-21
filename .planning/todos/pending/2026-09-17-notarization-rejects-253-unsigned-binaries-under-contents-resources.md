@@ -283,4 +283,3 @@ so the control list was empty and `diff` reported a difference that proved nothi
   failure from the same run, unrelated cause.
 - `2026-09-17-windows-release-leg-dies-in-install-deps-tar-reads-c-as-a-remote-host.md` — sibling
   failure from the same run, unrelated cause.
-</content>

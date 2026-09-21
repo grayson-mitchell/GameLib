@@ -63,4 +63,3 @@ green macOS leg proves nothing about this, which is the whole point of the secti
 Shared provenance: this was the FIRST tag push `release-tauri.yml` has ever completed — its
 header comment says "UNPROVEN LIVE: this pipeline has never completed a real tag-push run" — all
 three matrix legs failed, for three UNRELATED reasons, and all three defects are pre-existing.
-</content>
