@@ -695,9 +695,10 @@ export interface ContentServerHostMeta {
  *  testable pure function rather than an inline expression at each of
  *  fetchChunk's two use sites (the token-fetch call and the 401/403
  *  invalidate gate) so both stay in lockstep by construction. */
-export function wantsCdnAuthToken(
-  meta: ContentServerHostMeta | undefined
-): boolean {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- no
+// external consumer references it).
+function wantsCdnAuthToken(meta: ContentServerHostMeta | undefined): boolean {
   return meta?.usetokenauth === true || meta?.type === 'CDN'
 }
 
@@ -1254,14 +1255,18 @@ export async function fetchChunk(
  *  never by which host served the bytes or how many times it's retried (see
  *  the debug session's "Cycle 16 supplementary data" evidence: the identical
  *  encrypted chunk failed `unknown_container` on ALL 6 hosts, all 555
- *  attempts, byte-identical ciphertext across hosts). Exported so
- *  `downloadFileChunks` (depot.ts) can recognize a fully-exhausted
- *  `fetchChunk` call's final error as decode-stage (via `isDecodeStageError`
- *  below) and stop re-queuing it — re-queuing a deterministic failure for
- *  another 8-attempt/6-host pass cannot ever succeed and is exactly the
- *  mechanism that collapsed one hardware run to 11,063 total attempt
- *  rotations (one single chunk alone: 555) before this fix. */
-export const DECODE_STAGE_ERROR_CODES: ReadonlySet<string> = new Set([
+ *  attempts, byte-identical ciphertext across hosts). `downloadFileChunks`
+ *  (depot.ts) recognizes a fully-exhausted `fetchChunk` call's final error as
+ *  decode-stage via the exported `isDecodeStageError` below (which reads
+ *  this set internally) and stops re-queuing it — re-queuing a deterministic
+ *  failure for another 8-attempt/6-host pass cannot ever succeed and is
+ *  exactly the mechanism that collapsed one hardware run to 11,063 total
+ *  attempt rotations (one single chunk alone: 555) before this fix. */
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- no
+// external consumer references this set directly; `depot.ts` only imports
+// `isDecodeStageError`, below, which reads it).
+const DECODE_STAGE_ERROR_CODES: ReadonlySet<string> = new Set([
   'bad_footer_magic',
   'unknown_container',
   'sha1_mismatch',

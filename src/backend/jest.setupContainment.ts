@@ -615,4 +615,13 @@ process.env.XDG_CACHE_HOME = join(containmentRoot, '.cache')
   }
 }
 
-export { containmentRoot, realHomeAtSetup }
+export {
+  // Consumed by src/backend/__tests__/jestGlobalSetup.test.ts via
+  // `const { containmentRoot } = require('../jest.setupContainment')`
+  // (line ~349), then read directly. `require()`'s return type is `any`, so
+  // this reference is invisible to ts-prune despite both files being in
+  // tsconfig `include`.
+  // ts-prune-ignore-next
+  containmentRoot,
+  realHomeAtSetup
+}

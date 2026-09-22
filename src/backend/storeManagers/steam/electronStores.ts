@@ -1,7 +1,6 @@
 import { TypeCheckedStoreBackend } from '../../electron_store'
 import CacheStore from '../../cache'
 import { GameInfo, ExtraInfo } from 'common/types'
-import type { SteamBottleConfig } from 'common/types/steam'
 
 const configStore = new TypeCheckedStoreBackend('steamConfigStore', {
   cwd: 'steam_store'
@@ -145,7 +144,13 @@ export interface SteamMetadataCacheEntry {
   mac_arch_source?: 'minos' | 'macho'
 }
 
-export type { SteamBottleConfig }
+// The `import type { SteamBottleConfig }` and its `export type { ... }`
+// re-export that used to sit here were both dropped (260922-vzw): all three
+// hits outside this module (src/common/types/electron_store.ts,
+// src/common/types/ipc.ts, src/common/types/steam.ts) import
+// `SteamBottleConfig` directly from `common/types/steam` (the original
+// declaration), never from this re-export, and this file itself never
+// referenced the type beyond that re-export.
 export {
   configStore,
   steamLibraryStore,

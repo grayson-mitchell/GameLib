@@ -102,6 +102,12 @@ function assertContained(candidate: string, root: string, label: string): void {
  * caller alone. Phase 18's lesson applies: `path.join` is not containment —
  * use resolve+relative.
  */
+// Consumed by src/backend/__tests__/cache.test.ts via
+// `const { translateStoreOptions } = jest.requireActual('../store_backend')`
+// (line ~115), then CALLED and asserted on. `jest.requireActual`'s return
+// type is `any`, so this reference is invisible to ts-prune despite both
+// files being in tsconfig `include`.
+// ts-prune-ignore-next
 export function translateStoreOptions<T extends Record<string, unknown>>(
   options: StoreOptions<T> = {}
 ): TranslatedOptions<T> {

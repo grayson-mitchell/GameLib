@@ -289,6 +289,12 @@ let i18nReady: Promise<void> = Promise.resolve()
  * function with a synthetic argv instead of reconstructing the call site
  * (`test-must-exercise-production-call-shape`).
  */
+// Consumed by src/backend/sidecar/__tests__/bootstrapWirings.test.ts via
+// `const { init, deliverStartupProtocolUrl } = require('../bootstrap')`
+// (line ~253), then actually CALLED. `require()`'s return type is `any`, so
+// this reference is invisible to ts-prune despite both files being in
+// tsconfig `include`.
+// ts-prune-ignore-next
 export function deliverStartupProtocolUrl(
   argv: string[] = process.argv
 ): boolean {
@@ -332,7 +338,13 @@ export function deliverStartupProtocolUrl(
  * Task 1), so a handler that awaited `handleLaunch` would block the shell's accept thread
  * until `INVOKE_TIMEOUT` (60s) fired mid-game.
  */
-export function registerProtocolUrlHandler(): void {
+// Not exported: no file imports `registerProtocolUrlHandler` from this
+// module -- the only outside references
+// (src/backend/sidecar/__tests__/bootstrapWirings.test.ts) are source-text
+// checks (`initBody.toContain('registerProtocolUrlHandler()')`), a call-site
+// string match indifferent to the `export` keyword. Called internally by
+// `init()` below.
+function registerProtocolUrlHandler(): void {
   if (protocolUrlHandlerRegistered) return
   protocolUrlHandlerRegistered = true
   electronStub.ipcMain.handle(

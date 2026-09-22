@@ -78,7 +78,11 @@ export interface LoginWindowNavEvent {
  * `humblePostRequest`'s Electron transport already uses -- this seam changes the transport
  * only, never the response contract.
  */
-export interface LoginWindowRevealPostResult {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- no
+// external consumer imports this type by name; it is only the return type
+// of `LoginWindowSeam.revealPost` in this same file).
+interface LoginWindowRevealPostResult {
   status: number
   body: string
 }

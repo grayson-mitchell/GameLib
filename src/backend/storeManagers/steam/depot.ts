@@ -981,7 +981,11 @@ export const CHUNK_CONCURRENCY = 4
  *  to FILE_CONCURRENCY x CHUNK_CONCURRENCY = 128); the real bound is now
  *  `TARGET_INFLIGHT_CHUNKS`, enforced by `InflightLimiter` at the network
  *  boundary, not the product of these two pool sizes. */
-export const FILE_CONCURRENCY = 32
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- no
+// external consumer references it; every hit outside this file is a prose
+// comment).
+const FILE_CONCURRENCY = 32
 /** Quick 260817-ihr (IHR-02): the explicit run-wide in-flight chunk-fetch
  *  budget — the concurrency the pre-existing FILE_CONCURRENCY *
  *  CHUNK_CONCURRENCY design always intended (8 x 4 = 32) and never actually

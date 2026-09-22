@@ -43,7 +43,10 @@
  * with LITERALLY zero bytes written anywhere for this long -- e.g. every
  * content-server host has gone unreachable at once -- is treated as dead.
  */
-export const STALL_TIMEOUT_MS = 3 * 60 * 1000
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- no
+// external consumer references it).
+const STALL_TIMEOUT_MS = 3 * 60 * 1000
 
 /**
  * Per-download-run forward-progress clock. `now` is accepted as an explicit

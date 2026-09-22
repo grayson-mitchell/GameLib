@@ -139,21 +139,6 @@
 # repo-wide search including non-test files, and found the 3 above have a
 # real importer. The lesson holds either way this note gets re-measured:
 # re-derive before acting, over ALL tracked files, not just test files.
-src/backend/humble/loginWindowSeam.ts - LoginWindowRevealPostResult
-src/backend/ipc.ts - addOneTimeListener
-src/backend/jest.setupContainment.ts - containmentRoot
-src/backend/sidecar/bootstrap.ts - deliverStartupProtocolUrl
-src/backend/sidecar/bootstrap.ts - registerProtocolUrlHandler
-src/backend/sidecar/humbleFlowRegistration.ts - isPackagedSidecar
-src/backend/sidecar/oauthLoginCapture.ts - resolveUserAgent
-src/backend/storeManagers/steam/depot.ts - FILE_CONCURRENCY
-src/backend/storeManagers/steam/depot/decompress.ts - DECODE_STAGE_ERROR_CODES
-src/backend/storeManagers/steam/depot/decompress.ts - wantsCdnAuthToken
-src/backend/storeManagers/steam/depot/stallTracker.ts - STALL_TIMEOUT_MS
-src/backend/storeManagers/steam/electronStores.ts - SteamBottleConfig
-src/backend/storeManagers/steam/installLocation.ts - SteamInstallTarget
-src/backend/store_backend.ts - translateStoreOptions
-src/backend/testUtils/fakeHomeProfile.ts - FakeHomeEnvKey
 src/common/types/storePolicy.ts - ValidStoreName
 src/common/types/storePolicy.ts - WRITE_DENIED_FIELDS
 src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx - StoreEmbedSuppressionContext

@@ -19,16 +19,6 @@ function addListener<ChannelName extends keyof SyncIPCFunctions>(
   ipcMain.on(channel, listener as never)
 }
 
-function addOneTimeListener<ChannelName extends keyof SyncIPCFunctions>(
-  channel: ChannelName,
-  listener: (
-    e: IpcMainEvent,
-    ...args: Parameters<SyncIPCFunctions[ChannelName]>
-  ) => void
-) {
-  ipcMain.once(channel, listener as never)
-}
-
 function addTestOnlyListener<ChannelName extends keyof TestSyncIPCFunctions>(
   channel: ChannelName,
   listener: (...args: Parameters<TestSyncIPCFunctions[ChannelName]>) => void
@@ -82,10 +72,9 @@ function sendFrontendMessage<ChannelName extends keyof FrontendMessages>(
   return true
 }
 
-export {
-  addListener,
-  addOneTimeListener,
-  addTestOnlyListener,
-  addHandler,
-  sendFrontendMessage
-}
+// addOneTimeListener was dropped from this export list (260922-vzw): the
+// only hit outside this module is a `jest.doMock('../../ipc', () => ({
+// addOneTimeListener: jest.fn(), ... }))` mock-object property name in
+// src/backend/sidecar/__tests__/wineToolsFlows.test.ts -- coincidental, not
+// an import of this function. No file imports it from `ipc.ts`.
+export { addListener, addTestOnlyListener, addHandler, sendFrontendMessage }

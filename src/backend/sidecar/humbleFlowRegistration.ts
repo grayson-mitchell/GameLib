@@ -141,12 +141,18 @@ import { runHumbleValidation } from '../humble/validation'
  * safe-default rationale, and why a build-time constant was rejected as
  * fail-OPEN.
  *
- * RE-EXPORTED, not merely relocated: this name has been part of this module's
- * public surface since Phase 34.4 plan 05, so a caller the move's grep did not
- * find still resolves.
+ * Import kept for this file's own internal use below (guardrail (c),
+ * `registerHumbleFlows`'s packaged-build check). The RE-EXPORT that used to
+ * sit here was dropped (260922-vzw): a full repo-wide search (all tracked
+ * files, comments stripped) found no remaining importer of `isPackagedSidecar`
+ * from this module -- `devSecretVault.test.ts`'s own in-situ comment confirms
+ * its mock was "repointed by Phase 35 plan 04 from '../humbleFlowRegistration'
+ * to '../isPackagedSidecar'", and `humbleFlows.test.ts`'s
+ * `require('../humbleFlowRegistration')` destructures only
+ * `registerHumbleFlows`. The caller this re-export was hedging against was
+ * never found because it does not exist.
  */
 import { isPackagedSidecar } from './isPackagedSidecar'
-export { isPackagedSidecar }
 
 /**
  * Registers all 16 Humble channels this slice owns. Called once from

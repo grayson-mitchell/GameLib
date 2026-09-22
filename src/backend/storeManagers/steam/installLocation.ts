@@ -35,7 +35,11 @@ const NUMERIC_APP_ID = /^\d+$/
  *  input — appId itself is guarded by NUMERIC_APP_ID before it can reach here. */
 const FALLBACK_INSTALLDIR_PREFIX = 'app_'
 
-export interface SteamInstallTarget {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- no
+// external consumer references it; only the return type of
+// resolveSteamInstallTarget below, in this same file).
+interface SteamInstallTarget {
   targetSteamappsDir: string
   installdir: string
   /** D-04 (second half): true when PICS returned no usable `config.installdir`

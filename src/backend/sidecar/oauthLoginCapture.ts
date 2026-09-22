@@ -96,7 +96,12 @@ const DEFAULT_POLL_MS = 500
  * This is a DIAGNOSTIC-ONLY seam. Removing it later requires a live re-proof of whichever user
  * agent the discriminator (`34.5-G6-EPIC-DISCRIMINATOR.md`) selects as correct.
  */
-export function resolveUserAgent(runner: OAuthRunner): string {
+// Not exported: no file imports `resolveUserAgent` from this module -- its
+// only outside reference (oauthLoginCapture.test.ts's describe title
+// "resolveUserAgent -- diagnostic UA override, exercised via
+// captureOAuthLogin") exercises it INDIRECTLY through `captureOAuthLogin`,
+// never by importing it. Called internally below.
+function resolveUserAgent(runner: OAuthRunner): string {
   const envVar = `GAMELIB_OAUTH_UA_${runner.toUpperCase()}`
   const override = process.env[envVar]
   if (override !== undefined && override.trim() !== '') {
