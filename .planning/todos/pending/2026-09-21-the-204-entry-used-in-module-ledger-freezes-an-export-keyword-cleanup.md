@@ -1,6 +1,6 @@
 ---
 created: 2026-09-21T00:00:00.000Z
-title: "The used-in-module dead-code ledger (170 identities remaining, down from 204) still freezes a mechanical `export`-keyword cleanup into perpetual one-line baseline edits"
+title: "The used-in-module dead-code ledger (170 identities remaining, down from the 203 this todo was filed against) still freezes a mechanical `export`-keyword cleanup into perpetual one-line baseline edits"
 area: tooling
 severity: minor
 platform: any
