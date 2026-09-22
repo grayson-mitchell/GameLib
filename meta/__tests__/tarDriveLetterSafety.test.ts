@@ -31,7 +31,7 @@
 import { spawn } from 'child_process'
 import { mkdtemp, mkdir, rm, writeFile, stat, readFile } from 'fs/promises'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { basename, dirname, join } from 'path'
 
 import { extractTarGz, listTarEntries } from '../downloadHelperBinaries'
 
@@ -45,20 +45,37 @@ let stagingDir = ''
 let archiveDir = ''
 let extractDir = ''
 let relativeCwdDir = ''
+let hazardRootDir = ''
 let archivePath = ''
 
 const originalCwd = process.cwd()
 
-/** Runs the real tar to BUILD the fixture archive. Rejects on any failure. */
+/**
+ * Runs the real tar to BUILD the fixture archive. Rejects on any failure.
+ *
+ * `outPath` is an ABSOLUTE, drive-lettered path on Windows (mkdtemp under
+ * os.tmpdir()) -- exactly the pre-fix `-f` shape (fd7d085fb) if passed to
+ * tar with no `cwd`. This builder itself is not the subject under test, so
+ * it must NOT reproduce that bug: it uses the same cwd+basename remedy as
+ * listTarEntries/extractTarGz (a bare basename `-f` operand with `cwd` set
+ * to the archive's own directory) so it builds correctly under GNU tar on
+ * Windows too. `-C fromDir` stays absolute -- it names the staging tree to
+ * read FROM while building, a separate operand from the one under test.
+ */
 function buildFixtureArchive(
   outPath: string,
   fromDir: string,
   entryDirName: string
 ): Promise<void> {
   return new Promise((resolveP, reject) => {
-    const child = spawn('tar', ['-czf', outPath, '-C', fromDir, entryDirName], {
-      stdio: ['ignore', 'pipe', 'pipe']
-    })
+    const child = spawn(
+      'tar',
+      ['-czf', basename(outPath), '-C', fromDir, entryDirName],
+      {
+        cwd: dirname(outPath),
+        stdio: ['ignore', 'pipe', 'pipe']
+      }
+    )
     let stderr = ''
     child.stderr?.on('data', (d) => {
       stderr += d.toString()
@@ -86,6 +103,7 @@ beforeAll(async () => {
   archiveDir = await mkdtemp(join(tmpdir(), 'p57-archive-'))
   extractDir = await mkdtemp(join(tmpdir(), 'p57-extract-'))
   relativeCwdDir = await mkdtemp(join(tmpdir(), 'p57-relcwd-'))
+  hazardRootDir = await mkdtemp(join(tmpdir(), 'txw-hazard-'))
 
   await mkdir(join(stagingDir, ENTRY_DIR), { recursive: true })
   await writeFile(join(stagingDir, ENTRY_DIR, INNER_FILE), INNER_CONTENT)
@@ -100,7 +118,13 @@ afterEach(() => {
 
 afterAll(async () => {
   process.chdir(originalCwd)
-  for (const dir of [stagingDir, archiveDir, extractDir, relativeCwdDir]) {
+  for (const dir of [
+    stagingDir,
+    archiveDir,
+    extractDir,
+    relativeCwdDir,
+    hazardRootDir
+  ]) {
     if (dir) await rm(dir, { recursive: true, force: true })
   }
 })
@@ -162,5 +186,21 @@ describe('extractTarGz against the real system tar', () => {
     await expect(
       extractTarGz(join(archiveDir, 'no-such-archive.tar.gz'), extractDir)
     ).rejects.toThrow(/tar extraction failed/)
+  })
+
+  it('quick-260922-txw: extracts into a destDir whose segments include "bin" and "arm64" -- the real GNU-tar --unquote escape-sequence hazard (\\b, \\a), not the drive-letter remote-host one above', async () => {
+    // Mirrors the real production shape, resolve('public/bin/arm64/darwin'):
+    // a "bin" segment starting a backslash escape (\b = backspace) and an
+    // "arm64" segment starting one too (\a = bell). Pre-fix (-C passed
+    // through with native OS separators unconverted), GNU tar unescapes
+    // those in-place and the chdir target no longer names this directory.
+    const destDir = join(hazardRootDir, 'public', 'bin', 'arm64', 'darwin')
+    await mkdir(destDir, { recursive: true })
+
+    await extractTarGz(archivePath, destDir)
+
+    const extracted = join(destDir, ENTRY_DIR, INNER_FILE)
+    expect(await pathExists(extracted)).toBe(true)
+    expect(await readFile(extracted, 'utf-8')).toBe(INNER_CONTENT)
   })
 })

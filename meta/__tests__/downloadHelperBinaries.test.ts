@@ -90,7 +90,8 @@ import {
   computeLayoutMarker,
   darwinLayoutMarker,
   downloadOnedirAsset,
-  storeDownloadedTags
+  storeDownloadedTags,
+  toTarPathOperand
 } from '../downloadHelperBinaries'
 
 // The SAME object reference downloadHelperBinaries.ts imports (ES module
@@ -344,12 +345,44 @@ describe('downloadOnedirAsset', () => {
       // --force-local overrides, and it overrides the archive name only), so
       // it stays ABSOLUTE deliberately: cwd now points at tmpdir(), and a
       // repo-relative destDir would silently relocate the extraction out of
-      // public/bin.
+      // public/bin. It is ALSO run through toTarPathOperand() -- a separate
+      // GNU-tar --unquote escape-sequence hazard (see extractTarGz's
+      // docblock), not the drive-letter remote-parsing one above -- so on a
+      // POSIX host (where toTarPathOperand is a no-op) this equals the plain
+      // resolve() form, and on Windows it equals that same path with
+      // backslashes converted to forward slashes.
       expect(isAbsolute(destOperand)).toBe(true)
       expect(destOperand).toBe(
-        resolve(join('public', 'bin', 'arm64', 'darwin'))
+        toTarPathOperand(resolve(join('public', 'bin', 'arm64', 'darwin')))
       )
     })
+  })
+
+  describe('toTarPathOperand (pure, GNU-tar --unquote escape-sequence fix)', () => {
+    it('converts a win32-shaped absolute path to forward slashes when handed the win32 separator', () => {
+      expect(
+        toTarPathOperand('C:\\x\\public\\bin\\arm64\\darwin', '\\')
+      ).toBe('C:/x/public/bin/arm64/darwin')
+    })
+
+    it('leaves a POSIX-shaped path unchanged when handed the POSIX separator', () => {
+      expect(toTarPathOperand('/x/public/bin/arm64/darwin', '/')).toBe(
+        '/x/public/bin/arm64/darwin'
+      )
+    })
+
+    it('is a no-op for a path with no separator characters at all, regardless of separator', () => {
+      expect(toTarPathOperand('singlesegment', '\\')).toBe('singlesegment')
+    })
+
+    // Mutation-proof (not an executed self-test -- see PLAN's Task/report
+    // instructions): with toTarPathOperand temporarily replaced by an
+    // identity function (`(p) => p`), the FIRST test in this block goes RED
+    // -- `Expected: "C:/x/public/bin/arm64/darwin"`, `Received:
+    // "C:\\x\\public\\bin\\arm64\\darwin"` -- proving the assertion actually
+    // depends on the conversion rather than being vacuously true. Restoring
+    // the real implementation returns it to green. Recorded verbatim in the
+    // 260922-txw SUMMARY rather than left as a permanent skipped mutant.
   })
 
   describe('no recursive chmod', () => {

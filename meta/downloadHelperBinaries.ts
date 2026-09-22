@@ -3,7 +3,7 @@ import { spawn } from 'child_process'
 import { createWriteStream } from 'fs'
 import { chmod, mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
-import { basename, dirname, join, resolve } from 'path'
+import { basename, dirname, join, resolve, sep } from 'path'
 import { Readable } from 'stream'
 import { finished } from 'stream/promises'
 
@@ -148,19 +148,51 @@ async function assertArchiveEntriesAreSafe(
 }
 
 /**
+ * Converts an OS-native path into the operand shape GNU tar's `-C` argument
+ * needs on Windows: forward slashes only, never backslashes. A no-op
+ * wherever `separator` is already `/` (every POSIX host, including the
+ * default `path.sep`-driven call below when run on macOS/Linux/CI).
+ *
+ * Pure and side-effect-free -- exported for direct unit test.
+ */
+export function toTarPathOperand(p: string, separator: string = sep): string {
+  return p.split(separator).join('/')
+}
+
+/**
  * Argv-form spawn -- extraction only runs after assertArchiveEntriesAreSafe
  * has already passed.
  *
- * Same drive-letter rule as listTarEntries: the `-f` operand is a bare
- * basename with `cwd` at the archive's directory. `-C` stays ABSOLUTE on
- * purpose -- GNU tar remote-parses the ARCHIVE NAME only (which is exactly
- * the scope of its local-archive override flag); a `-C` chdir target is
- * passed through verbatim, so it carries no drive-letter hazard. It must be
- * resolved HERE,
- * in the parent, while process.cwd() is still the repo root: the only caller
- * passes a repo-relative `public/bin/{arch}/darwin`, and leaving it relative
- * once cwd moves to tmpdir() would extract the runner tree into the system
- * temp directory and leave public/bin empty.
+ * Same `-f` rule as listTarEntries: the archive operand is a bare basename
+ * with `cwd` at the archive's directory. `-C` stays ABSOLUTE on purpose and
+ * is resolved HERE, in the parent, while process.cwd() is still the repo
+ * root: the only caller passes a repo-relative `public/bin/{arch}/darwin`,
+ * and leaving it relative once cwd moves to tmpdir() would extract the
+ * runner tree into the system temp directory and leave public/bin empty.
+ *
+ * The resolved `-C` operand is ALSO run through toTarPathOperand() before
+ * being handed to tar. This is a DIFFERENT mechanism from the drive-letter
+ * remote-host defect `-f` has (see listTarEntries above) -- `-C` is a chdir
+ * target and is never remote-parsed, so the "carries no drive-letter hazard"
+ * half of that reasoning still holds. What was missed: GNU tar's default
+ * --unquote behaviour UNESCAPES backslash escape sequences (`\t \b \a \n \r
+ * \f \v`, octal, ...) inside every operand before using it, including `-C`.
+ * A real Windows destDir -- e.g. resolve('public/bin/arm64/darwin') --
+ * contains `\b` (from `...\bin\...`) and `\a` (from `...\arm64\...`); GNU
+ * tar reads those as backspace/bell control characters instead of literal
+ * path separators, so the chdir target no longer names the real directory:
+ * `tar: C\:\...\public\bin\arm64\darwin: Cannot open: No such file or
+ * directory`, exit 2, nothing extracted. Measured on a Windows host: the
+ * same backslash `-C` operand fails; the identical path with forward
+ * slashes succeeds (exit 0); System32 bsdtar accepts either form unchanged.
+ * Do not reach for `--no-unquote` here -- GNU-only, and bsdtar rejects it
+ * outright, same reason `--force-local` was rejected for the `-f` fix
+ * above. Do not hardcode System32's tar as the fix either --
+ * toTarPathOperand() is PATH-agnostic and a no-op on POSIX. See
+ * .planning/todos/pending/2026-09-17-windows-release-leg-dies-in-install-
+ * deps-tar-reads-c-as-a-remote-host.md (RETRACTION note against its
+ * "`-C` ... carries no drive-letter hazard" claim -- that claim is still
+ * true; this is a different mechanism it did not anticipate).
  *
  * Exported for test (meta/__tests__/tarDriveLetterSafety.test.ts).
  */
@@ -169,10 +201,11 @@ export function extractTarGz(
   destDir: string
 ): Promise<void> {
   const absoluteDestDir = resolve(destDir)
+  const tarDestOperand = toTarPathOperand(absoluteDestDir)
   return new Promise((resolveP, reject) => {
     const child = spawn(
       'tar',
-      ['-xzf', basename(archivePath), '-C', absoluteDestDir],
+      ['-xzf', basename(archivePath), '-C', tarDestOperand],
       {
         cwd: dirname(archivePath),
         stdio: ['ignore', 'pipe', 'pipe']
