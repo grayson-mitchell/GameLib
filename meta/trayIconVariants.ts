@@ -387,11 +387,7 @@ function makeChunk(type: string, data: Buffer): Buffer {
  * generator, not a size-optimising encoder), then IEND. No ancillary
  * chunks are emitted (no EXIF/authorship/path metadata).
  */
-function encodeRgba(
-  width: number,
-  height: number,
-  pixels: Buffer
-): Buffer {
+function encodeRgba(width: number, height: number, pixels: Buffer): Buffer {
   const bytesPerPixel = 4
   const stride = width * bytesPerPixel
   if (pixels.length !== stride * height) {
