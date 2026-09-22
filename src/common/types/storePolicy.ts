@@ -26,12 +26,12 @@
  *
  * This module must be importable from BOTH the sidecar (which may never import
  * `electron`) and the renderer preload bundle. It therefore:
- *   - imports ONLY the `ValidStoreName` TYPE from './electron_store' (type-only import,
- *     erased at compile time — no runtime coupling to electron-store);
+ *   - has no runtime coupling to electron-store (260922-vzw dropped the former
+ *     type-only `ValidStoreName` re-export -- see the D-13 comment near
+ *     `STORE_UNIVERSE` below for why);
  *   - has zero imports of Electron, `fs`, or `path`;
  *   - has zero side effects — every export below is pure data or a pure function.
  */
-import type { ValidStoreName } from './electron_store'
 
 /**
  * CR-01 (Phase 29 code review): key path segments that may NEVER appear in a store
@@ -307,7 +307,10 @@ export function isAllowedStoreField(storeName: string, key: string): boolean {
  * any of these fields. Settings changes route through the typed
  * `requestAppSettings`/`setSetting` IPC, not through `storeSet`.
  */
-export const WRITE_DENIED_FIELDS: Record<string, readonly string[]> = {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- no
+// external consumer references it).
+const WRITE_DENIED_FIELDS: Record<string, readonly string[]> = {
   configStore: ['settings', 'userHome', 'userInfo'],
   gogConfigStore: ['userData'],
   zoomConfigStore: ['userData'],
@@ -411,9 +414,12 @@ export const STORE_UNIVERSE: readonly string[] = [
 /**
  * Compile-time reminder: `BOOT_SET_STORES`/`LAZY_STORES` are declared as plain
  * `readonly string[]`, not typed against `ValidStoreName`, because `BOOT_SET_STORES`
- * also carries the four non-`ValidStoreName` cache-store names (D-13). The type import
- * above exists so this module (and any consumer) can still reference `ValidStoreName`
- * where a stricter type is useful, without forcing that constraint onto the mixed
- * boot-set list.
+ * also carries the four non-`ValidStoreName` cache-store names (D-13).
+ *
+ * The `export type { ValidStoreName }` re-export that used to sit here was dropped
+ * (260922-vzw): every current consumer (`src/backend/electron_store.ts`,
+ * `src/frontend/helpers/electronStores.ts`) imports `ValidStoreName` directly from
+ * `common/types/electron_store` (the original declaration), never from this
+ * re-export, and this module's own comment-only mentions above never needed the
+ * type import at runtime either.
  */
-export type { ValidStoreName }

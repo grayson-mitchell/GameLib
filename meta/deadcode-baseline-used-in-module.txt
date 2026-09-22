@@ -1,4 +1,4 @@
-# POPULATION: used-in-module (67 identities)
+# POPULATION: used-in-module (0 identities)
 #
 # ts-prune found these exports USED -- inside their own declaring file.
 # So this population is NOT dead code: it is an unnecessarily broad
@@ -48,107 +48,35 @@
 # ledgered. `unreachable` was unaffected, staying at 47 throughout.
 #
 #
-# CLUSTER: the 39 meta/ entries below (51 before quick task 260922-k2o
-# removed 12 genuine over-broad exports). MIXED -- 36 are structural false
-# positives, 3 are NOT. Do not treat the cluster as uniform; the split is
-# measured and listed at the end of this block.
+# CLOSED 2026-09-22 (quick task 260922-vzw): the 67 remaining identities --
+# bucket B (64: meta/ 37, src/ 27) plus the 3 parked meta/ traps this note
+# used to list above (InvocationForm, DECOMPRESS_WORKER_ENTRY_PATH) and the
+# 1 parked src/ trap (FakeHomeEnvKey, ledgered under
+# src/backend/testUtils/fakeHomeProfile.ts) -- were all resolved, taking
+# this population to 0. Full per-entry verdict, evidence and remedy are in
+# `.planning/quick/260922-vzw-clear-bucket-b-of-the-used-in-module-dea/
+# 260922-vzw-CLASSIFICATION.md`, not repeated here.
 #
-# The false-positive mechanism: a meta/ export whose ONLY importer is a
-# meta/__tests__ file is invisible to ts-prune, because that importer is
-# not in the analysed project at all.
+# Two remedies, split roughly evenly:
+#   * UNEXPORT (29 identities) -- dropped `export`, or dropped one specifier
+#     from a re-export `export { }` list while the underlying `import`
+#     stayed for the file's own internal use. A few of these surfaced a
+#     genuinely dead symbol once un-exported (no internal use either) and
+#     were deleted outright rather than left as eslint no-unused-vars noise.
+#   * `// ts-prune-ignore-next` (38 identities, including the former 4
+#     parked traps) -- for a real consumer ts-prune's static reference
+#     search cannot see. Two distinct invisibility mechanisms recurred, not
+#     one: (a) the tsconfig-scope blind spot this note originally described
+#     (meta/ is outside `include: ["src"]`, so a meta/__tests__ or other
+#     non-analysed meta/ script importer is invisible regardless of which
+#     side of the src//meta boundary the DECLARATION sits on -- confirmed by
+#     FakeHomeEnvKey, declared in src/, consumed only from meta/); and (b) a
+#     NEW mechanism this task found even fully inside src/: a
+#     `require()`/`jest.requireActual()` destructure is invisible to
+#     ts-prune's reference search because TypeScript types the return of
+#     `require` as `any`, giving the checker no static symbol to walk
+#     (containmentRoot, deliverStartupProtocolUrl, translateStoreOptions).
 #
-# Measured with ts-morph against tsconfig.json: the project loads 1141
-# source files, of which exactly 7 live under meta/ and ZERO live under
-# meta/__tests__/. tsconfig.json has `include: ["src"]`, so those 7 meta
-# modules are pulled in only because some src/**/__tests__ file imports
-# them (e.g. src/backend/__tests__/runnersOnedirWorkflow.test.ts imports
-# archiveName from ../../../meta/buildRunnersOnedir -- which is why
-# archiveName is absent below while its 14 siblings are present).
-#
-# An export consumed only from meta/__tests__/ therefore looks unimported
-# to ts-prune even though it has live callers. The two entries where that
-# mechanism is the WHOLE story (no in-module use at all) are ledgered in
-# the sibling file, meta/deadcode-baseline-unreachable.txt, directly under
-# its copy of this note -- toOnedirCommand and buildSeaConfigPath. They are
-# not in THIS file. Do not read the next lines below as those two.
-#
-# Widening tsconfig.json to cover meta/ dissolves the false-positive part of
-# this cluster -- and MEASURED 2026-09-22 (quick 260922-n7s), it makes the
-# combined ledger BIGGER, not smaller. Do not reach for it as a shortcut.
-#
-# That earlier framing did only half the arithmetic. Adding `meta` to
-# `include` also makes ~60 meta/ build scripts analysed FOR THE FIRST TIME,
-# and their own exports immediately become findings:
-#
-#   used-in-module   67 -> 108   (32 dissolved, 73 newly exposed)
-#   unreachable      47 ->  45   ( 3 dissolved,  1 newly exposed)
-#
-# Net +41 on the population this ledger exists to shrink. The 73 newcomers
-# are ordinary exports in buildCrossoverIndex.ts, captureShellScrollback.ts,
-# gen_vtables.ts, genI18nGateScope.ts, graphifyCodeViz.ts,
-# hardcodedStringGate.ts and others -- scripts nothing has ever analysed.
-#
-# It is also not free to switch on: `tsc` with meta/ included exits 2 with
-# 12 real type errors across 6 files. Nothing typechecks those scripts
-# today. That gap is filed as its own pending todo
-# (2026-09-22-meta-build-scripts-are-not-typechecked.md) because it is a
-# genuine coverage win INDEPENDENT of dead code -- widening conflates two
-# different goods, and only one of them is real. Decide them separately.
-#
-# Method, so it is reproducible and was not asserted: a throwaway
-# tsconfig.measure.json ({"extends":"./tsconfig.json","include":["src","meta"]})
-# at repo root, ts-prune/lib/runner invoked against it with .ts-prunerc's own
-# ignore, findings passed through THIS gate's parseFinding /
-# excludeKnownParseArtifacts / partitionFindings, diffed against both
-# committed baselines. Config deleted afterwards.
-#
-# Here the export is ALSO seen used inside its own declaring file, so
-# ts-prune downgrades it to "used in module" rather than unreachable. That
-# changes the remedy, and it is why this cluster is NOT uniform:
-#
-#   * 36 of the 39 have a live meta/__tests__ importer. Dropping `export`
-#     WOULD BREAK THAT TEST. Use `// ts-prune-ignore-next` with a reason,
-#     or widen tsconfig; do not un-export.
-#   * 3 of the 39 are NOT safe to un-export, for a THIRD reason this note
-#     originally missed: each has a live production (non-test) importer
-#     that is invisible to ts-prune for the same tsconfig-scope reason as
-#     the meta/__tests__ cluster above -- the importer just happens to be
-#     a non-test meta/ file rather than a test file. They are:
-#       buildRunnersOnedir.ts  - InvocationForm
-#         imported by meta/runnerBuildInvocations.ts:62
-#         (`import type { InvocationForm, OnedirRunnerName } from
-#         './buildRunnersOnedir'`).
-#       buildSidecarSea.ts     - DECOMPRESS_WORKER_ENTRY_PATH
-#         not a declaration at all -- a deliberate re-export
-#         (buildSidecarSea.ts:159-166) of a symbol owned by
-#         meta/esbuildWorkerBundleShared.ts:31, carrying an in-situ
-#         comment explaining why the block exists.
-#       releaseTags.ts         - DownloadedBinary
-#         imported by meta/downloadHelperBinaries.ts:15
-#         (`import { ... type DownloadedBinary } from './releaseTags'`).
-#
-# Measured 2026-09-21 by whole-word name search over all 459 test/mock
-# TS files, 41 of them under meta/__tests__. The 36/15 split (as it stood
-# 2026-09-21) corrected an earlier revision of this note, which called all
-# 51 false positives -- that would have parked the 15 as untouchable
-# forever. That grep-only search was ITSELF wrong in both directions: it
-# covered test/mock files only, so a non-test meta/ importer was invisible
-# to it too. Quick task 260922-k2o re-derived the 15 by requiring the
-# gate's OWN parseFinding/excludeKnownParseArtifacts/partitionFindings
-# helpers and cross-checking every "no importer anywhere" claim against a
-# repo-wide search including non-test files, and found the 3 above have a
-# real importer. The lesson holds either way this note gets re-measured:
-# re-derive before acting, over ALL tracked files, not just test files.
-src/common/types/storePolicy.ts - ValidStoreName
-src/common/types/storePolicy.ts - WRITE_DENIED_FIELDS
-src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx - StoreEmbedSuppressionContext
-src/frontend/components/UI/NavShell/Tier2PortalContext.tsx - Tier2PortalValue
-src/frontend/components/UI/ThemeSelector/index.tsx - resolveThemeLabel
-src/frontend/screens/Library/filterEngine.ts - passesMore
-src/frontend/screens/Library/filterEngine.ts - passesView
-src/frontend/state/GlobalState.tsx - SleepAssertionCall
-src/frontend/state/GlobalState.tsx - SleepAssertionKind
-src/frontend/state/GlobalState.tsx - SleepAssertionState
-src/frontend/state/GlobalState.tsx - classifySleepAssertionKind
-src/frontend/state/GlobalState.tsx - reconcileSleepAssertionCalls
-src/preload/tauriTransport.ts - hydrateStore
+# The widening-tsconfig measurement recorded in this note's prior revision
+# (260922-n7s: net +41, makes the combined ledger bigger) remains accurate
+# and is not re-litigated by this closure -- it was never the chosen path.

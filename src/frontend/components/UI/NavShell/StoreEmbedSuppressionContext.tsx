@@ -127,8 +127,14 @@ export const defaultSuppressionValue: StoreEmbedSuppressionValue = {
   }
 }
 
-export const StoreEmbedSuppressionContext =
-  createContext<StoreEmbedSuppressionValue>(defaultSuppressionValue)
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- every
+// consumer imports `StoreEmbedSuppressionProvider`, `useSuppressStoreEmbed`,
+// `useSuppressStoreEmbedWhile`, or `useStoreEmbedSuppressed` from this file,
+// never the raw context object by this name).
+const StoreEmbedSuppressionContext = createContext<StoreEmbedSuppressionValue>(
+  defaultSuppressionValue
+)
 
 /**
  * Mounted in `App.tsx`'s `Root()`, wrapping the entire non-console render

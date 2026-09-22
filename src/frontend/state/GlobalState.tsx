@@ -222,8 +222,32 @@ const applyGameOverrides = (
  * here; the throw is the runtime backstop for a value that reaches this function despite that,
  * e.g. via an `as Status` cast on untrusted data.
  */
-export type SleepAssertionKind = 'display' | 'system' | null
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- the
+// only outside reference is inside a source-text search marker (see the
+// comment above the function below), which depends on THAT function's own
+// `export` keyword, not on this type's).
+//
+// DELIBERATE: this comment must never spell out the marker string verbatim
+// on one unbroken line -- GlobalStateSleepAssertionClassification.test.ts's
+// `extractFunctionSource` does a plain substring search, and a comment
+// containing an exact copy of the marker would match FIRST, extracting this
+// comment's own text instead of the real function below (caught empirically
+// while writing this edit: reconcileSleepAssertionCalls' marker did exactly
+// that against its own doc comment, and had to be reworded the same way).
+type SleepAssertionKind = 'display' | 'system' | null
 
+// Consumed by
+// src/frontend/state/__tests__/GlobalStateSleepAssertionClassification.test.ts,
+// which reads this file's SOURCE TEXT at test time (this file cannot be
+// `import`-ed under the frontend jest project's jsdom-less config -- see
+// that test's own docstring) and does a plain substring search for this
+// function's full declaration line (starting with the `export` keyword
+// through the open brace) to extract and transpile the real function body.
+// Dropping `export` breaks that search. Do not spell that declaration line
+// out verbatim anywhere in a comment above this function -- see the
+// DELIBERATE note above reconcileSleepAssertionCalls below for why.
+// ts-prune-ignore-next
 export function classifySleepAssertionKind(status: Status): SleepAssertionKind {
   switch (status) {
     case 'launching':
@@ -258,12 +282,21 @@ export function classifySleepAssertionKind(status: Status): SleepAssertionKind {
   }
 }
 
-export interface SleepAssertionState {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- the
+// test suite that exercises this file declares its OWN separate, identically
+// named local type rather than importing this one -- see
+// GlobalStateSleepAssertionClassification.test.ts:148, a coincidental match,
+// not a consumer).
+interface SleepAssertionState {
   display: boolean
   system: boolean
 }
 
-export interface SleepAssertionCall {
+// Not exported: same reasoning as SleepAssertionState above --
+// GlobalStateSleepAssertionClassification.test.ts:149 declares its own
+// separate, identically named local type.
+interface SleepAssertionCall {
   channel: 'lock' | 'unlock'
   playing?: boolean
 }
@@ -285,6 +318,19 @@ export interface SleepAssertionCall {
  * `document.body.classList.toggle(...)`, so it cannot be unit-tested directly. Extracting the
  * decision here is what makes it testable at all.
  */
+// Consumed by
+// src/frontend/state/__tests__/GlobalStateSleepAssertionClassification.test.ts,
+// which reads this file's SOURCE TEXT at test time and does a plain
+// substring search for this function's declaration line (starting with the
+// `export` keyword through the open paren) to extract and transpile the
+// real function body. Dropping `export` breaks that search.
+//
+// DELIBERATE: do not spell that declaration line out verbatim anywhere in
+// this comment block -- the test's search is a plain substring match, so a
+// comment reproducing it exactly would be found FIRST and extracted instead
+// of the real function below (measured while writing this edit: an earlier
+// revision of this exact comment did precisely that).
+// ts-prune-ignore-next
 export function reconcileSleepAssertionCalls(
   previous: SleepAssertionState,
   next: SleepAssertionState

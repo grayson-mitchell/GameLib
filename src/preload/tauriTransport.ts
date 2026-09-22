@@ -258,7 +258,10 @@ export async function hydrateStoreSnapshot(): Promise<void> {
  * from a synchronous read) can blank the window, the same failure class as the 27-05
  * boot-time crash.
  */
-export async function hydrateStore(storeName: string): Promise<void> {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- no
+// external consumer references it anywhere in the repo).
+async function hydrateStore(storeName: string): Promise<void> {
   const existing = inflight.get(storeName)
   if (existing) return existing
 

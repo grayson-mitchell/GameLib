@@ -8,7 +8,12 @@ import { hasHelp } from 'frontend/hooks/hasHelp'
 import { MenuItem } from '@mui/material'
 import { defaultThemes, resolveThemeLabel } from './themeLabels'
 
-export { defaultThemes, resolveThemeLabel }
+export { defaultThemes }
+// resolveThemeLabel was dropped from this export list (260922-vzw):
+// src/frontend/components/UI/ThemeSelector/__tests__/index.test.tsx imports
+// it directly from '../themeLabels' (the original declaration), never from
+// this re-export, and no other file imports it from here either. The
+// import above stays for this file's own internal use below.
 
 export const ThemeSelector = () => {
   const { theme, setTheme } = useContext(ContextProvider)

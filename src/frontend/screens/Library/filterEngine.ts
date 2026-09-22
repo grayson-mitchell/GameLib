@@ -152,7 +152,12 @@ export function runnabilityRowsForHost(
   return ['native', 'bottle', 'wontRun', 'notChecked']
 }
 
-export function passesView(
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- its
+// only outside hit is a test-title prose mention in
+// engineWiring.test.ts:265, not an import; that file imports only
+// `gameKey` from this module).
+function passesView(
   game: GameInfo,
   view: LibraryView,
   deps: FilterEngineDeps
@@ -275,7 +280,11 @@ export function isNonAvailableGame(
 // updates-only, plus the showHidden/showNonAvailable/noStorePage tri-state
 // block ported verbatim from `Library/index.tsx:570-580` and `L639-654`,
 // then extended by 37-03b (REQ-37-02, D-11).
-export function passesMore(
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- its
+// only outside hit is a test-title prose mention in
+// filterEngine.test.ts:154, not an import).
+function passesMore(
   game: GameInfo,
   state: FilterEngineState,
   deps: FilterEngineDeps

@@ -21,22 +21,49 @@ This todo is about an artifact created by quick task `260922-9um`. **If
 `meta/deadcode-baseline-used-in-module.txt` does not exist, that task did not land and this todo
 is moot** — close it rather than reconstructing the premise.
 
-## Status — 136 of 203 shipped; 67 remain
+## Status — 203 of 203 shipped; 0 remain — CLOSED
 
 | task | date | shipped | ledger after |
 | ---- | ---- | ------- | ------------- |
 | `260922-9um` | 2026-09-21 | built the ratchet | 204 (203 after `260922-e01`) |
 | `260922-k2o` | 2026-09-22 | 33 — bucket A (21) + `meta/` bucket C (12) | **170** |
 | `260922-lh4` | 2026-09-22 | 103 — the whole `src/` half of bucket C | **67** |
+| `260922-vzw` | 2026-09-22/23 | 67 — bucket B (64) + the 3 remaining parked traps | **0** |
 
-`pnpm find-deadcode` green throughout: `unreachable: 47 OK | used-in-module: 67 OK`. **`unreachable`
+`pnpm find-deadcode` green throughout: `unreachable: 47 OK | used-in-module: 0 OK`. **`unreachable`
 has never moved off 47**, and **no line has ever been ADDED to either baseline** — verified by
-diffing each task's full commit range.
+diffing each task's full commit range (`git diff b61bd6677..HEAD -- meta/deadcode-baseline-*.txt |
+grep -E '^\+[^+#]'` returns nothing).
 
-**The mechanical half of this todo is finished.** Bucket C is exhausted apart from three entries
-that are permanently parked (below). What remains is bucket B, which is *not* mechanical.
+**Both the mechanical half and bucket B are now finished. See the Closed section immediately
+below; everything after it is the pre-closure record, retained for method, not for state.**
 
-## What remains — 67 = bucket B (64) + 3 parked
+## Closed — 2026-09-23 (`260922-vzw`)
+
+The ledger is at **0**. `meta/deadcode-baseline-used-in-module.txt` retains its header and the
+closure note; it carries no identity lines.
+
+Two remedies, split roughly evenly across the final 67:
+
+| remedy | count | when it applies |
+| ------ | ----- | --------------- |
+| dropped `export` (or one specifier from an `export { }` list) | 29 | no consumer outside the declaring module. A few proved dead outright once un-exported and were deleted rather than left as `no-unused-vars` noise. |
+| `// ts-prune-ignore-next` + a one-line reason naming the consumer | 38 | a real consumer ts-prune's static reference search cannot see. Includes all 4 formerly-parked traps. |
+
+**A second invisibility mechanism was found, and it is not the tsconfig-scope one.** Fully inside
+`src/`, a `require()` / `jest.requireActual()` destructure is invisible to ts-prune because
+TypeScript types `require`'s return as `any`, leaving the checker no static symbol to walk. Hit on
+`containmentRoot`, `deliverStartupProtocolUrl`, `translateStoreOptions`. The scope blind spot
+described further down this file is real but was never the whole story — check for both.
+
+Per-entry verdict, evidence and remedy for all 67:
+`.planning/quick/260922-vzw-clear-bucket-b-of-the-used-in-module-dea/260922-vzw-CLASSIFICATION.md`.
+
+**Widening `tsconfig.json` was never the chosen path and this closure does not re-open it.** The
+`260922-n7s` measurement (net **+41** on the combined ledger) stands. The independent typecheck
+gap is its own todo: `2026-09-22-meta-build-scripts-are-not-typechecked.md`.
+
+## What remained at 67 — bucket B (64) + 3 parked (historical; all now resolved)
 
 Re-derived at `69fbc76ad` by `require`-ing `meta/findDeadcode.cjs`'s own exported helpers
 (`collectFindings` → `parseFinding` → `excludeKnownParseArtifacts` → `partitionFindings`), so the

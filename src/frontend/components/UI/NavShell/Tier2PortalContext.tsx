@@ -25,7 +25,10 @@ import React, { useMemo, useState } from 'react'
  * 34.10-01) to the `Library` side (plan 34.10-06) without either side
  * needing to reach across the React tree by any other means.
  */
-export interface Tier2PortalValue {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- no
+// external consumer references it anywhere in the repo).
+interface Tier2PortalValue {
   target: HTMLElement | null
   setTarget: (el: HTMLElement | null) => void
   filled: boolean
