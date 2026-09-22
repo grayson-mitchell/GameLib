@@ -1,2 +1,67 @@
 #!/bin/bash
 #pnpm lint-fix
+
+# Prettier, over the STAGED CONTENT of the files this commit touches.
+#
+# Why this exists: `.husky/pre-push` runs `pnpm prettier` (`--check .`), and that is the
+# only thing in the repo that checks formatting. It fires long after the commits are made,
+# so an unformatted file lands in history and the push is rejected later -- three times
+# now (2026-09-02, 2026-09-21, 2026-09-23), each costing a separate formatting commit.
+#
+# Why `git show :$f` and not the path on disk: a hook that reads the working tree is not
+# reading what is being committed. `git add -p`, or an edit made after staging, and the
+# two differ -- so a worktree check can pass a commit whose staged bytes are unformatted,
+# which is the exact false green this hook exists to close. It also keeps a concurrent
+# session's unstaged edits to a shared file out of this commit's verdict.
+#
+# `--stdin-filepath` with the ABSOLUTE path is what makes the content check honest:
+# prettier resolves config and ignores from that path, so `src/preload/.prettierrc`'s
+# `printWidth: 120` is applied to preload files and the root width to everything else.
+# A temp copy would silently resolve a different config. Ignored paths and files with no
+# inferable parser exit 0, so `.planning/*.md`, `public/locales/**` and binaries pass
+# through untouched.
+#
+# `--check`, never `--write`: formatting swept into a behavioural commit buries the real
+# diff, and a hook that rewrites files mid-commit leaves you guessing what got staged.
+#
+# Do not "optimise" this into a single `prettier --check <paths>` call: that reads the
+# working tree rather than the index, and with an EMPTY path list prettier falls back to
+# reading stdin and HANGS the commit.
+
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+prettier_bin="$repo_root/node_modules/.bin/prettier"
+
+# Fresh clone before `pnpm install` -- do not block the commit on a missing toolchain.
+if [ ! -x "$prettier_bin" ]; then
+  echo "pre-commit: $prettier_bin not found, skipping the prettier check" >&2
+  exit 0
+fi
+
+# ACMR: added, copied, modified, renamed. Deletions have no content to check.
+#
+# The NUL-delimited list is piped straight into the loop and NEVER captured in a variable:
+# /bin/bash here is 3.2.57, where `$(cmd)` SILENTLY DROPS NUL bytes -- `$(printf 'a\0b\0')`
+# yields the single string `ab`. Capturing it would fuse every staged path into one
+# nonsense path and the check would be uniformly, quietly wrong.
+unformatted=""
+while IFS= read -r -d '' file; do
+  if ! git show ":$file" 2>/dev/null |
+    "$prettier_bin" --check --stdin-filepath "$repo_root/$file" >/dev/null 2>&1; then
+    unformatted="$unformatted$file"$'\n'
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+
+if [ -n "$unformatted" ]; then
+  echo "" >&2
+  echo "pre-commit: prettier would reformat the staged content of:" >&2
+  printf '%s' "$unformatted" | sed 's/^/  /' >&2
+  echo "" >&2
+  echo "Fix, then re-stage -- scope to these paths, never '.', because" >&2
+  echo "src/preload/.prettierrc sets a different printWidth:" >&2
+  echo "" >&2
+  printf '  npx prettier --write %s\n' "$(printf '%s' "$unformatted" | tr '\n' ' ' | sed 's/ *$//')" >&2
+  echo "" >&2
+  echo "Or bypass with: git commit --no-verify" >&2
+  echo "" >&2
+  exit 1
+fi
