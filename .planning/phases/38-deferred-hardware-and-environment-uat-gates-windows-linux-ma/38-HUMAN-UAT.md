@@ -71,14 +71,32 @@ line ABSENT. Operator's words: "test passes, platform row and notice only items.
 Reached via the `GameCard` context-menu door (D-27 row 3), NOT the `MainButton` caret — see the
 caret defect below.
 
-**Three defects found, all NEW and all filed as todos.** None was on record anywhere:
+**`38-S08` - FAIL, on row 4 only.** Matrix row 6 on Windows, tauri runtime, native installs ON
+with the operator's two real Steam libraries. Scored independently: read-only "Windows" platform
+row PRESENT (pass), library dropdown PRESENT (pass), wine section ABSENT (pass), **free-space
+line ABSENT where the item requires PRESENT (FAIL)**.
+
+The failure is NOT in the section-gating matrix. `steamSectionGating.ts:284` sets
+`freeSpaceLine = libraryDropdown`, so with the dropdown present the verdict is correctly true.
+The render carries three conditions the item never mentions -
+`gating.freeSpaceLine && diskSpace && diskSpace.validPath && diskSpace.validFlatpakPath`
+(`SteamDialog/index.tsx:493-497`) - and `validPath` is false. Root cause proven by running the
+same `Get-Acl` the backend runs: `isWritable_windows` matches ACLs by INDIVIDUAL username, and
+neither Steam library carries a per-user ACE. Filed as
+`2026-09-23-iswritable-windows-only-true-inside-the-user-profile.md`.
+
+**Four defects found, all NEW and all filed as todos.** None was on record anywhere:
 
 1. `2026-09-23-checknintendo-trusts-standard-mapping-on-non-standard-pads.md` — blocked the whole
    controller leg. See the controller note below.
 2. `2026-09-23-steam-install-caret-dropdown-closes-itself-via-synthetic-tab.md` — the caret opens
    ~1 click in 10.
-3. `2026-09-23-library-card-art-never-recovers-from-a-missed-visible-cards-event.md` — a block of
-   library cards renders blank art permanently.
+3. `2026-09-23-library-card-art-never-recovers-from-a-missed-visible-cards-event.md` — library
+   cards render blank art permanently. Hit TWICE in this sitting, with a DIFFERENT victim set each
+   time (contiguous block, then scattered), which refuted the first occurrence's tidy
+   commit-boundary explanation and is recorded in the todo as such.
+4. `2026-09-23-iswritable-windows-only-true-inside-the-user-profile.md` — the cause of the
+   `38-S08` row-4 FAIL above, with a wider blast radius than the item.
 
 **CONTROLLER LEG NOT RUN — and the reason is a defect, not an absence of hardware.** The operator
 has a PowerA Advantage Wired Controller for Nintendo Switch 2. Detection works correctly
