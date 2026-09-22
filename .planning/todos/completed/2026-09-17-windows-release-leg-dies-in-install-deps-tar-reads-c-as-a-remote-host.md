@@ -6,7 +6,9 @@ severity: major
 platform: windows
 ready: code
 needs: run-the-negative-control-and-the-repro-on-a-windows-box-code-half-is-shipped
-status: OPEN
+status: completed
+resolved: 2026-09-22
+resolved_by: quick-260922-txw
 found_by: 'GitHub Actions run 35223308954 on grayson-mitchell/GameLib, triggered by the throwaway annotated tag v0.7.0-notarize-test1 at commit cc2d66248. The tag was deleted from origin and locally after the run.'
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md'
 files:
@@ -67,6 +69,20 @@ construction rather than its argv shape.
 remote-parses the `-f` ARCHIVE OPERAND ONLY — that is exactly the scope of `--force-local`
 ("archive file is local even if it has a colon"). A `-C` chdir target is passed through verbatim
 and is never remote-parsed. So the requirement is:
+
+> **PARTIAL RETRACTION 2026-09-22 (quick-260922-txw) — true as far as it goes, incomplete.** The
+> "never remote-parsed" claim about `-C` above is still correct and is NOT what this note
+> retracts. What it missed: GNU tar's default `--unquote` behaviour separately UNESCAPES
+> backslash escape sequences (`\t \b \a \n \r \f \v`, octal, ...) inside EVERY operand before use
+> — including `-C`, which is passed through verbatim only in the sense of not being remote-parsed,
+> not in the sense of being used byte-for-byte. A real Windows destDir,
+> `resolve('public/bin/arm64/darwin')`, contains `\b` (from `...\bin\...`) and `\a` (from
+> `...\arm64\...`); GNU tar reads those as backspace/bell control characters instead of path
+> separators and the chdir target stops naming the real directory. This is a SEPARATE mechanism
+> from the `-f` drive-letter remote-parsing defect this todo names, found live on this Windows box
+> during the verification this todo's Verification section calls for. See the Resolution section
+> at the end of this file for the measured negative/positive pair and the fix
+> (`toTarPathOperand()`, quick-260922-txw).
 
 > **The `-f` operand must carry no drive letter. Every other path operand may stay absolute.**
 
@@ -311,3 +327,108 @@ anything about the tar defect.
 Shared provenance: this was the FIRST tag push `release-tauri.yml` has ever completed — its
 header comment says "UNPROVEN LIVE: this pipeline has never completed a real tag-push run" — all
 three matrix legs failed, for three UNRELATED reasons, and all three defects are pre-existing.
+
+## Resolution (2026-09-22, quick 260922-txw)
+
+**Host:** Windows 11 10.0.26200, Git Bash (`C:\Program Files\Git`), node v24.19.0. PowerShell was
+NOT used this session (no PowerShell tool available to this agent) — the Layer A PowerShell leg
+and Task 3's PowerShell jest leg named by the plan are NOT DONE, see below.
+
+**Decision rule applied:** close WITH A RESIDUAL iff ALL of (1) Layer A Git Bash negative control
+reproduced (tar=GNU, `pre_list` FAILED with "Cannot connect to C: resolve failed"); (2) Layer A
+Git Bash `post_list`/`post_extract_abs`/`post_extract_rel` all PASS; (3) Layer B is NOT T-TAR. All
+three held — see the verdict table below — so this todo is closed with the residuals listed at the
+end carried forward rather than held open for them.
+
+**A second, NEW defect was found and fixed during this verification, not merely the one this todo
+names.** The `-f` drive-letter remote-parsing defect (`fb9f0d458`) was confirmed fixed exactly as
+designed. But re-running the fixed code on this Windows box surfaced a SEPARATE mechanism at the
+same `:138` `-C` operand: GNU tar's default `--unquote` behaviour unescapes backslash sequences
+(`\t \b \a \n \r \f \v`, octal) inside every operand before use, including `-C`. The real
+`destDir`, `resolve('public/bin/arm64/darwin')`, contains `\b` (from `...\bin\...`) and `\a` (from
+`...\arm64\...`); GNU tar reads those as control characters and the chdir target no longer names
+the real directory — measured exit 2, "Cannot open: No such file or directory", nothing extracted.
+See the PARTIAL RETRACTION note inline above (near "passed through verbatim") — the "`-C` is never
+remote-parsed" claim there is still correct; what it did not anticipate is `--unquote`. Fixed this
+session in `meta/downloadHelperBinaries.ts` (commit `86ed30f42`) by adding `toTarPathOperand()`, a
+small pure PATH-agnostic helper that forward-slashes the resolved `-C` operand (no-op on POSIX).
+Not `--no-unquote` (GNU-only, bsdtar rejects it, same reason `--force-local` was rejected for `-f`
+above) and not a hardcoded System32 tar path.
+
+**A THIRD, pre-existing defect was found and fixed in the test harness itself, not in product
+code.** `meta/__tests__/tarDriveLetterSafety.test.ts`'s own `buildFixtureArchive` helper spawned
+`tar -czf <absolute C:\... path> -C <fromDir> <entry>` with no `cwd` — the exact pre-fix `-f` shape
+this todo's remedy exists to avoid. Measured directly (mutation-proof, reverted after): under GNU
+tar on this box it fails in `beforeAll` with `fixture tar -czf failed (exit 2): tar (child):
+Cannot connect to C: resolve failed`, taking all 6 tests in the file down with it — a defect in the
+harness, not evidence against the fix. Fixed to the same `cwd` + `basename` shape as the functions
+under test (commit `86ed30f42`, same commit as the `-C` fix). No new pending todo was filed for
+this — unlike the plan's default assumption, the defect was fixed in the same session it was
+measured, so there is nothing left to track as open work.
+
+**Developer Mode / symlink privilege (planner finding 2, measured, not assumed):**
+`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock\AllowDevelopmentWithoutDevLicense`
+= `0x1` (Developer Mode IS enabled in the registry, confirming
+`2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md`'s claim over the
+conflicting "no Developer Mode" brief). However `whoami /priv` for the CURRENT session does NOT
+list `SeCreateSymbolicLinkPrivilege` at all — Developer Mode was very likely enabled after this
+session's logon and has not yet propagated to this process's token. This is exactly the shape that
+produced the Layer B T-SYMLINK result below.
+
+**Two-profile rule (CLAUDE.md):** does NOT apply. Every command run this session (`tar`,
+`node meta/runTs.cjs ...`, `pnpm download-helper-binaries`) is a `meta/` build script reading no
+HOME/APPDATA/XDG profile and creating no session. No fake HOME was used.
+
+**Commands (from repo root, Git Bash), Layer A:**
+
+```
+git show fd7d085fb:meta/downloadHelperBinaries.ts > meta/_txw_prefix_downloadHelperBinaries.ts
+# + one appended re-export line; meta/_txw_harness.ts drives both the pre-fix copy and HEAD
+# over a self-built symlink-free fixture archive. Both temp files deleted at the end of the task,
+# never staged.
+JEST_WORKER_ID=txw node meta/runTs.cjs --bundle --platform=node --target=node21 meta/_txw_harness.ts
+```
+
+**Verdict table:**
+
+| Check | Result |
+|---|---|
+| Layer A Git Bash `where`/`tar --version` | `C:\Program Files\Git\usr\bin\tar.exe` resolves first, `C:\Windows\System32\tar.exe` second; `tar (GNU tar) 1.35`. Confirms the Hypothesis section's "nobody has run `where tar`" for this local Git Bash, again (also measured 2026-09-22, quick-260922-toc, same result) — still NOT a measurement of `windows-latest` CI. |
+| Layer A Git Bash `pre_list` (pre-fix `fd7d085fb` code, real functions, real tar) | FAIL: `tar -tzf failed (exit 2): tar (child): Cannot connect to C: resolve failed` — negative control REPRODUCED verbatim. |
+| Layer A Git Bash `pre_extract` | FAIL: `tar extraction failed (exit 2): tar (child): Cannot connect to C: resolve failed` — same mechanism, same site pairing this todo's TRAP section describes. |
+| Layer A Git Bash `post_list` | PASS. |
+| Layer A Git Bash `post_extract_abs` (separate absolute destDir, not beside the archive) | PASS. |
+| Layer A Git Bash `post_extract_rel` (destDir resolved against caller cwd, not archive dir) | PASS — the `:138` relocation trap this todo names is specifically proven closed. |
+| Layer A Git Bash exit code | 0 (all required conditions met). |
+| Layer A PowerShell | NOT DONE this session (no PowerShell tool available). Previously measured 2026-09-22 (quick-260922-toc) for the SIBLING `runTs.cjs` defect only, not for this one. |
+| Layer B (`pnpm download-helper-binaries`, forced re-download, Git Bash, HEAD incl. both fixes) | **T-SYMLINK.** Exit 1. Verbatim: `tar: gogdl/_internal/Python: Cannot create symlink to 'Python.framework/Versions/3.12/Python': No such file or directory` (+2 more, same file, same cause). No `tar -tzf failed` line anywhere in the run — `:89` listing passed for all three archives; extraction reached `:138` and got past the `-f`/`-C` argv entirely (non-symlink entries DID extract — `gogdl/gogdl` landed, 61 files under `gogdl/`) before failing on the 3 `Python.framework` symlink entries specifically. NOT T-TAR — closure condition (3) holds. |
+| Layer B run-tree link types (before restore) | `SYMLINK: 0`, `SYMLINKD: 0`, `JUNCTION: 0` — a full creation FAILURE this time (0 links created), a DIFFERENT shape from the pre-existing hand-repaired tree's Layer 1 (created, but mis-typed). Appended as new evidence to the symlink todo. |
+| Layer B restore | Four-way check (sha256 of `.release_tags`, full `find public/bin` listing, `dir /AL /S` link listing, `git status --porcelain`) — all four matched the pre-run snapshot exactly. `public/bin`, including the hand-repaired links, is untouched. |
+| jest, Git Bash, both Meta suites (`tarDriveLetterSafety` + `downloadHelperBinaries`) | 2 suites / 59 tests, all PASS, post-fix. `toTarPathOperand` pure unit tests mutation-proven (identity mutant observed RED, reverted). The new "bin"/"arm64"-segment extraction case (the real `-C` hazard shape) measured RED against the pre-fix `-C` argv (verbatim: `tar: C\:\...\public\bin\arm64\darwin: Cannot open: No such file or directory`, exit 2) and GREEN after, in the same Git Bash / GNU tar 1.35. |
+| jest, PowerShell | NOT DONE this session (no PowerShell tool available). |
+| `pnpm codecheck` (`tsc --noEmit`) | Exit 0, no output. Scope note: `tsconfig.json`'s `include` is `["src"]` only (per quick-260922-n7s) — `meta/` is NOT typechecked by this gate at all; `meta/`'s only type coverage is `ts-jest` inside the Meta jest project, exercised by the suite run above. |
+| `pnpm lint` (`node meta/lintScoped.cjs`) | 0 errors, 638 pre-existing warnings (none new, none in the touched files beyond the ones already counted pre-change) — `meta/` files ARE covered by this gate (17 warning lines under `meta/` in the full run, none touching the files this task changed). `production: PASS | tests: PASS`. |
+| `pnpm planning-gates` (`python meta/runPlanningGates.py`; `python3` is the WindowsApps Store stub on this box, `python` used instead, both recorded) | 11/12 passed. The one failure, `planning-envelope-tag-gate.py` on `.planning/quick/260922-p57-make-tar-invocations-drive-letter-safe-o/260922-p57-PLAN.md`, is the pre-existing known finding named in the plan — not touched, not fixed by this task. |
+
+**NOT DONE / NOT MEASURED by this task, unchanged from before:**
+- The throwaway tag-push step (Verification step 5) — not done.
+- Which `tar` wins PATH on the `windows-latest` CI runner — not measured. The remedy (both the
+  original `-f` fix and this session's `-C` fix) is deliberately PATH-agnostic, so this remains an
+  unmeasured fact rather than an open risk to the fix itself. Given `\a`/`\b` sit inside the exact
+  segment names GitHub Actions would also use (`D:\a\...\public\bin\arm64\darwin` also contains
+  `\a` and `\b`), a `windows-latest` run would very likely have hit the SAME `-C` defect this
+  session found, had it reached `:138` before this fix landed — recorded as an inference, not a
+  measurement.
+- Windows code signing — never reached; unrelated to this todo, tracked in the sibling todo below.
+- The other three `spawn('tar', ...)` sites named in the census above — unchanged, not executed on
+  the Windows leg, not exercised by this task.
+- Layer A PowerShell and the PowerShell leg of Task 3's jest run — no PowerShell tool available to
+  this agent this session.
+
+**Related, carried forward:**
+- `2026-09-14-windows-releases-ship-unsigned-no-windows-cert-enrolled.md` — carried residual
+  appended: the first real Windows tag push must also confirm `install-deps` passes and that
+  `public/bin/arm64/darwin/{legendary,gogdl,nile}/{name}` exist on the runner.
+- `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` — evidence appended: this
+  session's T-SYMLINK Layer B result, as a NEW instance of that todo's Layer 0/1 mechanism (full
+  creation failure, not mis-typed-but-created), not a new todo.
