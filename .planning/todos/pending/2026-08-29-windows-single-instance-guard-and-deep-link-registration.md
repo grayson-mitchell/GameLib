@@ -142,3 +142,37 @@ precondition will silently fail (no registration at all, rather than a working o
 
 Filed **without** `resolves_phase:` so it cannot be auto-closed by association. Plan 07's macOS/Linux
 registration is complete work; this is a separate platform.
+
+## Addendum 2026-09-22 (later the same day): installer-level check ACHIEVED
+
+**This supersedes every "installer-level check NOT ACHIEVED" statement above.** The operator enabled
+Windows Developer Mode, which lifts the `SeCreateSymbolicLinkPrivilege` EPERM. Three further local
+Windows build blockers then had to be cleared first. None of them relates to this change; they are
+filed in `.planning/todos/pending/2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md`.
+After that, `pnpm tauri build --debug --bundles nsis` reached `makensis` and produced
+`GameLib_0.7.0_x64-setup.exe`. It then exited 1 only at the updater-artifact signing step
+(`TAURI_SIGNING_PRIVATE_KEY` is not on this machine), which runs after `installer.nsi` and the setup
+.exe are written. The installer was NOT run and the registry was not touched.
+
+Generated `src-tauri/target/debug/nsis/x64/installer.nsi`, grepped for `Classes\gamelib`:
+
+| Run | Config | `Classes\gamelib` lines | `URL Protocol` lines |
+|---|---|---|---|
+| Override (committed state) | `tauri.windows.conf.json` `schemes: []` | **0** | **0** |
+| Control | same, plus `-c '{"plugins":{"deep-link":{"desktop":{"schemes":["gamelib"]}}}}'` (no file edited) | **6** | 1 |
+
+The control lines, verbatim:
+
+```
+922:  WriteRegStr SHCTX "Software\Classes\gamelib" "URL Protocol" ""
+923:  WriteRegStr SHCTX "Software\Classes\gamelib" "" "URL:${BUNDLEID} protocol"
+924:  WriteRegStr SHCTX "Software\Classes\gamelib\DefaultIcon" "" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\",0"
+925:  WriteRegStr SHCTX "Software\Classes\gamelib\shell\open\command" "" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\" $\"%1$\""
+1272: ReadRegStr $R7 SHCTX "Software\Classes\gamelib\shell\open\command" ""
+1274: DeleteRegKey SHCTX "Software\Classes\gamelib"
+```
+
+So the control is valid: the template DOES register `gamelib://` when the scheme is present, and the
+committed override removes all six lines. The only other difference between the two scripts is the
+ordering of `CreateDirectory` lines (hash-set iteration). This confirms the original finding (the
+installer would have registered it) and the fix, at installer-script level.
