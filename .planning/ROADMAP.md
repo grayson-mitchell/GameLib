@@ -4645,7 +4645,18 @@ same run. Note that 37-03 explains **9** of those 22 games and closing it will N
 
 **Plans:** 0 — see the item ledger in `38-VERIFICATION.md`, which is the phase's source of truth and the array `gsd-sdk query audit-uat` reads.
 
-**Items: 34 as of 2026-09-04.** 4 new items (`38-E01`..`38-E04`) joined from Phase 40 Plan 10 (D-04):
+**Items: 25 as of 2026-09-23.** Quick `260923-89z` RETIRED the nine electron-runtime items —
+`38-S01`, `38-S03`, `38-S05`, `38-S07`, `38-S09`, `38-S11`, `38-S13`, `38-S15` and `38-C07` —
+because Phase 35 removed the Electron build and `package.json` carries no `electron` dependency,
+devDependency or script, so none of the nine can execute on any host this project owns. **This is
+a RETIREMENT, not a discharge and not a pass**: nothing was observed, and the nine entries now
+live in `38-VERIFICATION.md`'s `human_verification_retired` array rather than
+`human_verification_discharged`. Their surviving TAURI siblings are unaffected and remain the
+load-bearing observations — including `38-S16`, which is still scored on BOTH matrix row 5
+(Windows) AND matrix row 7 (Linux), so it still needs BOTH machines; `38-S15`'s retirement does
+NOT make `38-S16` Windows-only.
+
+**Items: 34 as of 2026-09-04** (historical, superseded by the 2026-09-23 count above). 4 new items (`38-E01`..`38-E04`) joined from Phase 40 Plan 10 (D-04):
 whether Tauri's `Window::add_child` embed mechanism works at all on the Windows WebView2 backend
 (`38-E01`); the same question for the Linux webkit2gtk backend (`38-E02`); retina/HiDPI embed
 behaviour at `scale_factor` 2.0 on hardware other than the one macOS host Phase 40's own live gate

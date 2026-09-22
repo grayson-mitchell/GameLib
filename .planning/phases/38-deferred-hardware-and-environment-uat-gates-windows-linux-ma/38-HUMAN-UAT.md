@@ -26,6 +26,21 @@ run on this machine", but they unblock separately:
   the hardware appears, and should be run in **one sitting** — all five exercise the same
   module, and no phase since 34.1 has had a controller available.
 
+## Retired
+
+Nine electron-runtime items were RETIRED on 2026-09-23 by quick `260923-89z`: `38-S01`,
+`38-S03`, `38-S05`, `38-S07`, `38-S09`, `38-S11`, `38-S13`, `38-S15` and `38-C07`. Phase 35
+removed the Electron build, so no host — Windows, Linux, or otherwise — can run them; they were
+never run and nothing was observed, so this is NOT a pass. A Windows or Linux operator planning a
+sitting off this file should NOT go looking for an electron row among the retired ids above.
+`38-S16` is unaffected and still needs BOTH the Windows and the Linux machine (it is scored on
+BOTH matrix row 5 and matrix row 7); `38-S15`'s retirement does not narrow that. The full record,
+including each item's `retired_reason`, lives in `38-VERIFICATION.md`'s `human_verification_retired`
+array. Separately, and left deliberately unfixed by this retirement: the "6 items seeded" line in
+`## Current Test` below was already stale before this change — the ledger held 34 items, not 6 —
+for a reason unrelated to this retirement; `38-VERIFICATION.md` remains the authoritative count,
+as the blockquote below already says.
+
 ## Before the controller sitting
 
 1. **Re-derive the action list from the code.** `src/frontend/helpers/gamepad.ts` and

@@ -2,7 +2,7 @@
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 verified: null
 status: human_needed
-score: N/A — collection phase, no must-haves. 34 relocated items, 0 discharged. (Was 30 until 2026-09-04, when plan 40-10 Task 2 filed `38-E01`..`38-E04` — the Windows/Linux embed-backend feasibility questions and the retina/drag-resize non-macOS cases, per D-04. Was 29 until 2026-09-01, when quick `260901-vuy` relocated `38-W06`, the off-macOS Epic-logout observation, out of Phase 35's resolved debug session. Confirmed at the tool: `audit-uat` moved 29 -> 30 and 54 -> 55 total, which is the check that the array still parses — a FLAT count after an insert would mean the item was silently dropped.)
+score: N/A — collection phase, no must-haves. 25 relocated items, 0 discharged, 9 retired. (Was 34 until 2026-09-23, when quick `260923-89z` RETIRED the nine electron-runtime items — `38-S01`, `38-S03`, `38-S05`, `38-S07`, `38-S09`, `38-S11`, `38-S13`, `38-S15` and `38-C07` — because Phase 35 removed the Electron build and `package.json` carries no `electron` dependency, devDependency or script; this is NOT a discharge and NOT a pass, nothing was observed. Confirmed at the tool: `audit-uat` moved 34 -> 25 and 59 -> 50, which is the check that the array still parses — a FLAT count after a removal would mean the edit did not register or the array failed to parse. Was 30 until 2026-09-04, when plan 40-10 Task 2 filed `38-E01`..`38-E04` — the Windows/Linux embed-backend feasibility questions and the retina/drag-resize non-macOS cases, per D-04. Was 29 until 2026-09-01, when quick `260901-vuy` relocated `38-W06`, the off-macOS Epic-logout observation, out of Phase 35's resolved debug session. Confirmed at the tool: `audit-uat` moved 29 -> 30 and 54 -> 55 total, which is the check that the array still parses — a FLAT count after an insert would mean the item was silently dropped.)
 audit_tool_note: '`status` MUST stay `human_needed`. `gsd-sdk query audit-uat` admits a VERIFICATION.md when status is `human_needed` OR `gaps_found`, but `parseVerificationItems` only emits items when status === ''human_needed'' — so `gaps_found` is admitted and then always yields ZERO items, and the phase disappears from the audit entirely. Verified live on Phase 34.1 (2026-08-13): switching that field dropped it from 10 open items to 0. The tool also counts EVERY entry in `human_verification` regardless of any `result:` field, so a discharged item must be MOVED to `human_verification_discharged` rather than annotated in place. Both failure modes are silent. This matters more here than anywhere else: this phase''s ENTIRE content is that array. Break it and the project''s whole deferred-hardware backlog vanishes with nothing turning red. THE `id:` FIELD DOES NOT SURVIVE INTO THE AUDIT OUTPUT. `audit-uat` emits each item with a POSITIONAL integer as `test:` and the `test:` prose as `name`; the `id:` is dropped entirely, so there is no key to join the audit back to this file except the prose. Worse, positions do not track ids, because this array is in ARRIVAL order, not id order. Measured 2026-08-23: audit position 1 is `38-W02` (the tray item) and position 2 is `38-W01` (window buttons) — off by one in a way that silently reverses. Positions 3..8 happen to line up with W03 and C01..C05 today, which is exactly what makes the hazard easy to miss: a spot-check anywhere but the first two rows confirms a mapping that is false. CROSS-REFERENCE BY THE `test:` PROSE, NEVER BY POSITION, and never quote an audit position as if it were an ID. This bites hardest on relocation receipts: rule (3) below has each origin phase name an item ID in its `human_verification_relocated` receipt, so a reader who follows that ID by counting rows in the audit output lands on the wrong item. Adding an item to this array renumbers every position after it; the IDs never move.'
 purpose: 'A collection phase. Every item below was relocated from a phase that could otherwise not close, because the item cannot be observed on the macOS development machine — it needs a different OS, or a game controller. Nothing here ships code. THE HARDWARE IS OWNED AND AVAILABLE. Corrected 2026-09-01 (quick `260901-vm1`): a Windows machine, a Linux machine and an Xbox controller (plus a second controller) are all on hand. NOT ONE of the 29 items below is blocked on an acquisition. The only reason they are batched is the SWITCHING COST — booting another machine, pairing a controller, and on four items registering a second Steam library. This phase is schedulable at will. This correction matters because the two framings behave differently. "Needs an OS this project does not have" reads as indefinitely blocked and unfalsifiable, so it is never scheduled and never re-examined; "costs a machine switch" is a known price that competes for time like any other task. The prior text asserted the former, and it was wrong.'
 deferral_note: 'The `blocked_by:` KEY NAME IS HISTORICAL. Its values no longer name a missing capability — as of 2026-09-01 each one states the COST of running that item (a machine switch, a controller pairing, or a two-library Steam setup step). The key was deliberately NOT renamed: `audit-uat` does not read it, but origin-phase `human_verification_relocated` receipts reference the concept, so a rename has a wider blast radius than the correction warranted. Read `blocked_by` as "deferral cost", not as "blocker". Relocation rule (2) below is what caught this. Its own cautionary example — an unfalsifiable prose blocker that "rots without anyone noticing" — is precisely what all 29 values had become. The rule was right and the ledger had violated it 29 times.'
@@ -132,18 +132,6 @@ human_verification:
     prior_state: 'Deferred TWICE without ever being scheduled -- no controller in 34.10 or 34.11. `34.11-VERIFICATION.md` flags it as "the one item worth escalating... risks becoming an invisible standing gap if deferred a third time", yet that file has NO `human_verification` key at all, so `gsd-sdk query audit-uat` could not see it. Same invisibility 38-C05''s own `prior_state` records for 34.10''s version. This relocation gives it an owner for the first time.'
     scope_note: 'Run in the same sitting as 38-C01..C05 -- one controller discharges all six, and C05 and C06 are best run back to back so the two scroll containers are compared under identical input.'
 
-  - id: "38-C07"
-    test: "Gamepad — the D-21 Steam install-options caret is controller-reachable, on ELECTRON. Two surfaces, both required: (a) the split-button caret beside the primary Install half on the game page's MainButton, and (b) the 'Install with options…' entry in the GameCard context menu."
-    expected: "The caret is reachable by controller-driven focus; reaching it does NOT make the primary install half unreachable (the split button's two halves are both focusable, in a stable order); and the focus order around the caret is stable across repeated traversals in both directions."
-    why_human: "Requires a physical controller. Focus dispatch has no keyboard entry point."
-    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
-    surface_note: 'READ THIS BEFORE RECORDING A FAIL. The two surfaces do NOT look alike. On MainButton the affordance IS a caret — `className="SteamInstallCaret"` (src/frontend/screens/Game/GamePage/components/MainButton.tsx:356), a real split-button half. On the GameCard there is NO caret: the entry is a CONTEXT-MENU item labelled `gamelib:steam.install.withOptionsLabel` ("Install with options…") at src/frontend/screens/Library/components/GameCard/index.tsx:386-397. An operator who goes looking for a caret on the card will find none and would record a false FAIL against a surface that was never specified to have one.'
-    unmount_note: 'The caret is taken out of the tab order by UNMOUNTING, not by `disabled` (MainButton.tsx:334-339 says so in comment form). So on a non-Steam or non-installable game the correct observation is that no caret element exists at all — not that a present caret refuses focus. Same shape as the recorded lesson that a tile can be unreachable by unmount rather than by disable.'
-    platform_gate: "src/frontend/helpers/gamepad.ts:559,678 — `window.api.gamepadAction` is dispatched ONLY from the `navigator.getGamepads()` polling loop; there is no keyboard entry point. Same gate as 38-C01..C06."
-    origin_phase: "34.13"
-    origin_item: "G-GAMEPAD-CARET / electron (34.13-UAT.md, PART C)"
-    electron_cutover_risk: 'Phase 35 removes the Electron build. If 35 lands before a controller is available, this item becomes unobservable BY CONSTRUCTION — the same shape as 38-W03, which is a correct fix on a surface this hardware cannot render. It would then be retired as unscoreable, NOT recorded as a pass and NOT silently dropped. 38-C08 (the tauri half) is unaffected and remains the load-bearing observation. Recorded here so the decision is deliberate when it arrives.'
-
   - id: "38-C08"
     test: "Gamepad — the D-21 Steam install-options caret is controller-reachable, on TAURI (`pnpm tauri:dev`, never bare `tauri dev`). Same two surfaces as 38-C07."
     expected: "Same as 38-C07: caret reachable, the primary install half is not lost, focus order stable across repeated traversals."
@@ -153,17 +141,7 @@ human_verification:
     platform_gate: "src/preload/api/tauriGamepadInput.ts:57 (`hasZeroArea` filter in `getFocusableElements`) — the Tauri-only predicate that makes this an independent observation. Dispatch gate is shared: src/frontend/helpers/gamepad.ts:559,678."
     origin_phase: "34.13"
     origin_item: "G-GAMEPAD-CARET / tauri (34.13-UAT.md, PART C)"
-    scope_note: 'Run in the same sitting as 38-C01..C06 — one controller discharges all eight. Run C07 and C08 back to back on the same game so the two runtimes'' focus orders are compared under identical library state.'
-
-  - id: "38-S01"
-    test: "Steam quick install on a WINDOWS host, electron runtime — native install ON and >1 registered Steam library. Click the PRIMARY half of Install (the button face, not the caret)."
-    expected: "NOTHING opens — no dialog, modal, overlay or picker, and no flash-and-close — and the install lands in the PRIMARY Steam library. Verify the landing ON DISK (content plus appmanifest_<appId>.acf in the primary), not from the badge."
-    why_human: "Requires a Windows host. The equivalent macOS row (G-QUICK-DEFAULT) is PASS on both runtimes, but the Windows path takes a different platformRow branch."
-    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
-    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
-    origin_phase: "34.13"
-    origin_item: "G-QUICK-WIN / electron (34.13-UAT.md)"
-    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
+    scope_note: 'Run in the same sitting as 38-C01..C06 — one controller discharges all SEVEN surviving controller items (38-C01..C06 plus this one). The C07/C08 back-to-back runtime comparison this note used to call for is no longer possible: `38-C07` was retired on 2026-09-23 by quick `260923-89z`, because Phase 35 removed the Electron build. This item now stands ALONE as the only observation of the caret''s controller reachability.'
 
   - id: "38-S02"
     test: "Steam quick install on a WINDOWS host, tauri runtime — native install ON and >1 registered Steam library. Click the PRIMARY half of Install (the button face, not the caret)."
@@ -173,16 +151,6 @@ human_verification:
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-QUICK-WIN / tauri (34.13-UAT.md)"
-    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
-
-  - id: "38-S03"
-    test: "Steam quick install on a LINUX host, electron runtime — native installs OFF, or ON with <=1 library. Click the PRIMARY half of Install."
-    expected: "NOTHING opens — no dialog, modal, overlay or picker, no flash-and-close."
-    why_human: "Requires a Linux host. On Linux the platform row does not render at all (D-18), a branch unreachable on macOS."
-    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
-    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
-    origin_phase: "34.13"
-    origin_item: "G-QUICK-LINUX / electron (34.13-UAT.md)"
     prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
 
   - id: "38-S04"
@@ -195,16 +163,6 @@ human_verification:
     origin_item: "G-QUICK-LINUX / tauri (34.13-UAT.md)"
     prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
 
-  - id: "38-S05"
-    test: "Section-gating matrix row 5 on a WINDOWS host, electron runtime — native installs OFF, or ON with <=1 library."
-    expected: "A read-only 'Windows' platform row (D-19); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). Check each of the four independently — an absent section inferred from another is exactly what this matrix exists to prevent."
-    why_human: "Requires a Windows host for the readonly-windows branch."
-    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
-    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
-    origin_phase: "34.13"
-    origin_item: "G-ROW-5 / electron (34.13-UAT.md)"
-    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
-
   - id: "38-S06"
     test: "Section-gating matrix row 5 on a WINDOWS host, tauri runtime — native installs OFF, or ON with <=1 library."
     expected: "A read-only 'Windows' platform row (D-19); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). Check each of the four independently — an absent section inferred from another is exactly what this matrix exists to prevent."
@@ -213,16 +171,6 @@ human_verification:
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-5 / tauri (34.13-UAT.md)"
-    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
-
-  - id: "38-S07"
-    test: "Section-gating matrix row 6 on a WINDOWS host, electron runtime — hasChoice (native installs ON and >1 library)."
-    expected: "A read-only 'Windows' platform row (D-19); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
-    why_human: "Requires a Windows host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
-    blocked_by: "machine switch + setup -- boot the Windows machine (OWNED and available), then register a SECOND Steam library on it"
-    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
-    origin_phase: "34.13"
-    origin_item: "G-ROW-6 / electron (34.13-UAT.md)"
     prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
 
   - id: "38-S08"
@@ -235,16 +183,6 @@ human_verification:
     origin_item: "G-ROW-6 / tauri (34.13-UAT.md)"
     prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
 
-  - id: "38-S09"
-    test: "Section-gating matrix row 7 on a LINUX host, electron runtime — native installs OFF, or ON with <=1 library."
-    expected: "The platform row does NOT render at all (D-18); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). All four checked independently."
-    why_human: "Requires a Linux host. 'Platform row absent' is a distinct state from 'platform row present but read-only' and cannot be produced on macOS or Windows."
-    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
-    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
-    origin_phase: "34.13"
-    origin_item: "G-ROW-7 / electron (34.13-UAT.md)"
-    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
-
   - id: "38-S10"
     test: "Section-gating matrix row 7 on a LINUX host, tauri runtime — native installs OFF, or ON with <=1 library."
     expected: "The platform row does NOT render at all (D-18); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). All four checked independently."
@@ -253,16 +191,6 @@ human_verification:
     platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
     origin_phase: "34.13"
     origin_item: "G-ROW-7 / tauri (34.13-UAT.md)"
-    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
-
-  - id: "38-S11"
-    test: "Section-gating matrix row 8 on a LINUX host, electron runtime — hasChoice (native installs ON and >1 library)."
-    expected: "The platform row does NOT render (D-18); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
-    why_human: "Requires a Linux host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
-    blocked_by: "machine switch + setup -- boot the Linux machine (OWNED and available), then register a SECOND Steam library on it"
-    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
-    origin_phase: "34.13"
-    origin_item: "G-ROW-8 / electron (34.13-UAT.md)"
     prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
 
   - id: "38-S12"
@@ -275,16 +203,6 @@ human_verification:
     origin_item: "G-ROW-8 / tauri (34.13-UAT.md)"
     prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
 
-  - id: "38-S13"
-    test: "Content-light dialog on a WINDOWS host with no library choice, electron runtime — matrix row 5. Run BOTH sub-cases: (a) native installs OFF at any library count, (b) native installs ON with <=1 library."
-    expected: "One read-only 'Windows' row, the content-light notice, Cancel + Install, and NOTHING else — no empty-state illustration or heading. Install completes normally. The two sub-cases must render DIFFERENT COPY: (a) gamelib:steam.install.contentLightNotice, (b) gamelib:steam.install.contentLightSingleLibraryNotice. Identical rendering is a FAIL."
-    why_human: "Requires a Windows host."
-    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
-    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
-    origin_phase: "34.13"
-    origin_item: "G-D20-CONTENTLIGHT / electron (34.13-UAT.md)"
-    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL). Corrected by 34.13 review A-08: an earlier wording said the two sub-cases render IDENTICALLY. Review WR-04 deliberately made them differ, so identical rendering is now the FAIL condition. Do not run this against the pre-A-08 wording.'
-
   - id: "38-S14"
     test: "Content-light dialog on a WINDOWS host with no library choice, tauri runtime — matrix row 5. Run BOTH sub-cases: (a) native installs OFF at any library count, (b) native installs ON with <=1 library."
     expected: "One read-only 'Windows' row, the content-light notice, Cancel + Install, and NOTHING else — no empty-state illustration or heading. Install completes normally. The two sub-cases must render DIFFERENT COPY: (a) gamelib:steam.install.contentLightNotice, (b) gamelib:steam.install.contentLightSingleLibraryNotice. Identical rendering is a FAIL."
@@ -295,16 +213,6 @@ human_verification:
     origin_item: "G-D20-CONTENTLIGHT / tauri (34.13-UAT.md)"
     prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL). Corrected by 34.13 review A-08: an earlier wording said the two sub-cases render IDENTICALLY. Review WR-04 deliberately made them differ, so identical rendering is now the FAIL condition. Do not run this against the pre-A-08 wording.'
 
-  - id: "38-S15"
-    test: "Content-light notice COPY and container, electron runtime — scored per branch, on BOTH matrix row 5 (Windows) and row 7 (Linux)."
-    expected: "The notice renders in an `.infoBox`, NOT in ThirdPartyDialog's `.noticeIcon`/`.noticeInfo`. Copy must match the catalogue EXACTLY, per branch: native installs OFF -> gamelib:steam.install.contentLightNotice; native installs ON with <=1 library -> gamelib:steam.install.contentLightSingleLibraryNotice. Verify against public/locales/en/gamelib.json, never by eye."
-    why_human: "Requires BOTH a Windows and a Linux host, since the row is scored on matrix rows 5 and 7."
-    blocked_by: "machine switch x2 -- boot BOTH the Windows and the Linux machine (both OWNED and available); scored on matrix rows 5 and 7"
-    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
-    origin_phase: "34.13"
-    origin_item: "G-D20-Q6-COPY / electron (34.13-UAT.md)"
-    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL). Corrected by 34.13 review A-08 into a TWO-BRANCH split (review WR-04). A single-branch run does not discharge this item.'
-
   - id: "38-S16"
     test: "Content-light notice COPY and container, tauri runtime — scored per branch, on BOTH matrix row 5 (Windows) and row 7 (Linux)."
     expected: "The notice renders in an `.infoBox`, NOT in ThirdPartyDialog's `.noticeIcon`/`.noticeInfo`. Copy must match the catalogue EXACTLY, per branch: native installs OFF -> gamelib:steam.install.contentLightNotice; native installs ON with <=1 library -> gamelib:steam.install.contentLightSingleLibraryNotice. Verify against public/locales/en/gamelib.json, never by eye."
@@ -314,6 +222,7 @@ human_verification:
     origin_phase: "34.13"
     origin_item: "G-D20-Q6-COPY / tauri (34.13-UAT.md)"
     prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL). Corrected by 34.13 review A-08 into a TWO-BRANCH split (review WR-04). A single-branch run does not discharge this item.'
+    pair_note: 'The ELECTRON half of this pair, `38-S15`, was retired on 2026-09-23 by quick `260923-89z` — Phase 35 removed the Electron build, so that half is unrunnable everywhere. THIS item''s scope is UNCHANGED: it is still scored on BOTH matrix row 5 (Windows) AND matrix row 7 (Linux), so it still needs BOTH machines. S15''s retirement does NOT make this item Windows-only — the Linux/row-7 half was never S15''s to carry, it was always this item''s own. The `blocked_by` field above ("machine switch x2 ... BOTH the Windows and the Linux machine") already states this and is left unchanged because it remains correct.'
 
   - id: "38-E01"
     test: "Windows backend feasibility — does `Window::add_child` (the Tauri API GameLib's in-app store/wiki embed calls, behind the `unstable` cargo feature) actually work on the Windows WebView2 wry backend the way it does on macOS's WKWebView backend?"
@@ -356,6 +265,118 @@ sweep_notes:
   re_derive_before_running: 'Do NOT run these items against the action list as written. `src/frontend/helpers/gamepad.ts` and `src/frontend/helpers/gamepad_layouts/nintendo.ts` were under active modification on 2026-08-22 (the nintendo-layout + key-repeat todo closed that day), so the set of actions and layouts has moved since Phase 34.1 wrote these items. Re-derive the action list from the code at sweep time. A gate literal here would go stale by BEHAVIOUR long before the hardware arrives — the failure mode where a check still exists in source but no longer fires on the route the item drives.'
   why_the_module_is_high_risk: 'tauriGamepadInput.ts is not a port. Electron injected synthetic input via webContents.sendInputEvent (main.ts:1377), which fed Chromium''s own built-in spatial navigation; WKWebView and WebView2 implement none of it, so all twelve action cases plus a hand-written geometric nearest-in-direction focus algorithm were re-derived from scratch against DOM semantics. This is the largest untested surface left in Phase 34.1.'
   windows_linux_dependency: '38-W01, 38-W04 and 38-W05 need Phase 34''s Windows/Linux builds to exist; 38-W04/W05 additionally need a `release-tauri.yml` run against the Phase 35-gated commit to have produced the installer/AppImage they launch. The eight controller items do not — they are gated only on hardware access and can be discharged earlier, independently.'
+
+human_verification_retired:
+  - id: "38-C07"
+    test: "Gamepad — the D-21 Steam install-options caret is controller-reachable, on ELECTRON. Two surfaces, both required: (a) the split-button caret beside the primary Install half on the game page's MainButton, and (b) the 'Install with options…' entry in the GameCard context menu."
+    expected: "The caret is reachable by controller-driven focus; reaching it does NOT make the primary install half unreachable (the split button's two halves are both focusable, in a stable order); and the focus order around the caret is stable across repeated traversals in both directions."
+    why_human: "Requires a physical controller. Focus dispatch has no keyboard entry point."
+    blocked_by: "controller pairing -- pair the Xbox controller (OWNED and available; the cost is the pairing, not the hardware)"
+    surface_note: 'READ THIS BEFORE RECORDING A FAIL. The two surfaces do NOT look alike. On MainButton the affordance IS a caret — `className="SteamInstallCaret"` (src/frontend/screens/Game/GamePage/components/MainButton.tsx:356), a real split-button half. On the GameCard there is NO caret: the entry is a CONTEXT-MENU item labelled `gamelib:steam.install.withOptionsLabel` ("Install with options…") at src/frontend/screens/Library/components/GameCard/index.tsx:386-397. An operator who goes looking for a caret on the card will find none and would record a false FAIL against a surface that was never specified to have one.'
+    unmount_note: 'The caret is taken out of the tab order by UNMOUNTING, not by `disabled` (MainButton.tsx:334-339 says so in comment form). So on a non-Steam or non-installable game the correct observation is that no caret element exists at all — not that a present caret refuses focus. Same shape as the recorded lesson that a tile can be unreachable by unmount rather than by disable.'
+    platform_gate: "src/frontend/helpers/gamepad.ts:559,678 — `window.api.gamepadAction` is dispatched ONLY from the `navigator.getGamepads()` polling loop; there is no keyboard entry point. Same gate as 38-C01..C06."
+    origin_phase: "34.13"
+    origin_item: "G-GAMEPAD-CARET / electron (34.13-UAT.md, PART C)"
+    electron_cutover_risk: 'Phase 35 removes the Electron build. If 35 lands before a controller is available, this item becomes unobservable BY CONSTRUCTION — the same shape as 38-W03, which is a correct fix on a surface this hardware cannot render. It would then be retired as unscoreable, NOT recorded as a pass and NOT silently dropped. 38-C08 (the tauri half) is unaffected and remains the load-bearing observation. Recorded here so the decision is deliberate when it arrives.'
+    retired: 2026-09-23
+    retired_by: "quick 260923-89z"
+    retired_reason: 'Phase 35 removed the Electron build; `package.json` carries no `electron` dependency, devDependency or script (re-verified 2026-09-23), so NO host can execute an electron-runtime row — this item is UNRUNNABLE EVERYWHERE, not merely deferred. It was NEVER RUN and NO OBSERVATION IS CLAIMED: this is a retirement, NOT a pass and NOT a discharge, which is why it is not in `human_verification_discharged`. Its surviving TAURI sibling (`38-C08`) is UNAFFECTED and remains the load-bearing observation. This is the return half of its own `electron_cutover_risk` field, which predicted exactly this disposition — retired as unscoreable, NOT recorded as a pass and NOT silently dropped.'
+  - id: "38-S01"
+    test: "Steam quick install on a WINDOWS host, electron runtime — native install ON and >1 registered Steam library. Click the PRIMARY half of Install (the button face, not the caret)."
+    expected: "NOTHING opens — no dialog, modal, overlay or picker, and no flash-and-close — and the install lands in the PRIMARY Steam library. Verify the landing ON DISK (content plus appmanifest_<appId>.acf in the primary), not from the badge."
+    why_human: "Requires a Windows host. The equivalent macOS row (G-QUICK-DEFAULT) is PASS on both runtimes, but the Windows path takes a different platformRow branch."
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-QUICK-WIN / electron (34.13-UAT.md)"
+    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
+    retired: 2026-09-23
+    retired_by: "quick 260923-89z"
+    retired_reason: 'Phase 35 removed the Electron build; `package.json` carries no `electron` dependency, devDependency or script (re-verified 2026-09-23), so NO host can execute an electron-runtime row — this item is UNRUNNABLE EVERYWHERE, not merely deferred. It was NEVER RUN and NO OBSERVATION IS CLAIMED: this is a retirement, NOT a pass and NOT a discharge, which is why it is not in `human_verification_discharged`. Its surviving TAURI sibling (`38-S02`) is UNAFFECTED and remains the load-bearing observation.'
+  - id: "38-S03"
+    test: "Steam quick install on a LINUX host, electron runtime — native installs OFF, or ON with <=1 library. Click the PRIMARY half of Install."
+    expected: "NOTHING opens — no dialog, modal, overlay or picker, no flash-and-close."
+    why_human: "Requires a Linux host. On Linux the platform row does not render at all (D-18), a branch unreachable on macOS."
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-QUICK-LINUX / electron (34.13-UAT.md)"
+    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
+    retired: 2026-09-23
+    retired_by: "quick 260923-89z"
+    retired_reason: 'Phase 35 removed the Electron build; `package.json` carries no `electron` dependency, devDependency or script (re-verified 2026-09-23), so NO host can execute an electron-runtime row — this item is UNRUNNABLE EVERYWHERE, not merely deferred. It was NEVER RUN and NO OBSERVATION IS CLAIMED: this is a retirement, NOT a pass and NOT a discharge, which is why it is not in `human_verification_discharged`. Its surviving TAURI sibling (`38-S04`) is UNAFFECTED and remains the load-bearing observation.'
+  - id: "38-S05"
+    test: "Section-gating matrix row 5 on a WINDOWS host, electron runtime — native installs OFF, or ON with <=1 library."
+    expected: "A read-only 'Windows' platform row (D-19); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). Check each of the four independently — an absent section inferred from another is exactly what this matrix exists to prevent."
+    why_human: "Requires a Windows host for the readonly-windows branch."
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-5 / electron (34.13-UAT.md)"
+    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
+    retired: 2026-09-23
+    retired_by: "quick 260923-89z"
+    retired_reason: 'Phase 35 removed the Electron build; `package.json` carries no `electron` dependency, devDependency or script (re-verified 2026-09-23), so NO host can execute an electron-runtime row — this item is UNRUNNABLE EVERYWHERE, not merely deferred. It was NEVER RUN and NO OBSERVATION IS CLAIMED: this is a retirement, NOT a pass and NOT a discharge, which is why it is not in `human_verification_discharged`. Its surviving TAURI sibling (`38-S06`) is UNAFFECTED and remains the load-bearing observation.'
+  - id: "38-S07"
+    test: "Section-gating matrix row 6 on a WINDOWS host, electron runtime — hasChoice (native installs ON and >1 library)."
+    expected: "A read-only 'Windows' platform row (D-19); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
+    why_human: "Requires a Windows host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
+    blocked_by: "machine switch + setup -- boot the Windows machine (OWNED and available), then register a SECOND Steam library on it"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-6 / electron (34.13-UAT.md)"
+    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
+    retired: 2026-09-23
+    retired_by: "quick 260923-89z"
+    retired_reason: 'Phase 35 removed the Electron build; `package.json` carries no `electron` dependency, devDependency or script (re-verified 2026-09-23), so NO host can execute an electron-runtime row — this item is UNRUNNABLE EVERYWHERE, not merely deferred. It was NEVER RUN and NO OBSERVATION IS CLAIMED: this is a retirement, NOT a pass and NOT a discharge, which is why it is not in `human_verification_discharged`. Its surviving TAURI sibling (`38-S08`) is UNAFFECTED and remains the load-bearing observation.'
+  - id: "38-S09"
+    test: "Section-gating matrix row 7 on a LINUX host, electron runtime — native installs OFF, or ON with <=1 library."
+    expected: "The platform row does NOT render at all (D-18); library dropdown, wine section and free-space line ALL ABSENT; content-light notice PRESENT (D-20/Q6). All four checked independently."
+    why_human: "Requires a Linux host. 'Platform row absent' is a distinct state from 'platform row present but read-only' and cannot be produced on macOS or Windows."
+    blocked_by: "machine switch -- boot the Linux machine (OWNED and available; the cost is the switch, not the hardware)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-7 / electron (34.13-UAT.md)"
+    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
+    retired: 2026-09-23
+    retired_by: "quick 260923-89z"
+    retired_reason: 'Phase 35 removed the Electron build; `package.json` carries no `electron` dependency, devDependency or script (re-verified 2026-09-23), so NO host can execute an electron-runtime row — this item is UNRUNNABLE EVERYWHERE, not merely deferred. It was NEVER RUN and NO OBSERVATION IS CLAIMED: this is a retirement, NOT a pass and NOT a discharge, which is why it is not in `human_verification_discharged`. Its surviving TAURI sibling (`38-S10`) is UNAFFECTED and remains the load-bearing observation.'
+  - id: "38-S11"
+    test: "Section-gating matrix row 8 on a LINUX host, electron runtime — hasChoice (native installs ON and >1 library)."
+    expected: "The platform row does NOT render (D-18); library dropdown PRESENT; wine section ABSENT; free-space line PRESENT. All four checked independently."
+    why_human: "Requires a Linux host AND two registered libraries. `hasChoice` = native Steam installs ON **and** >1 registered library. `getSteamLibraries()` (src/backend/utils.ts:671) filters candidates through `existsSync`, so library COUNT is what the gate reads."
+    blocked_by: "machine switch + setup -- boot the Linux machine (OWNED and available), then register a SECOND Steam library on it"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-ROW-8 / electron (34.13-UAT.md)"
+    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL).'
+    retired: 2026-09-23
+    retired_by: "quick 260923-89z"
+    retired_reason: 'Phase 35 removed the Electron build; `package.json` carries no `electron` dependency, devDependency or script (re-verified 2026-09-23), so NO host can execute an electron-runtime row — this item is UNRUNNABLE EVERYWHERE, not merely deferred. It was NEVER RUN and NO OBSERVATION IS CLAIMED: this is a retirement, NOT a pass and NOT a discharge, which is why it is not in `human_verification_discharged`. Its surviving TAURI sibling (`38-S12`) is UNAFFECTED and remains the load-bearing observation.'
+  - id: "38-S13"
+    test: "Content-light dialog on a WINDOWS host with no library choice, electron runtime — matrix row 5. Run BOTH sub-cases: (a) native installs OFF at any library count, (b) native installs ON with <=1 library."
+    expected: "One read-only 'Windows' row, the content-light notice, Cancel + Install, and NOTHING else — no empty-state illustration or heading. Install completes normally. The two sub-cases must render DIFFERENT COPY: (a) gamelib:steam.install.contentLightNotice, (b) gamelib:steam.install.contentLightSingleLibraryNotice. Identical rendering is a FAIL."
+    why_human: "Requires a Windows host."
+    blocked_by: "machine switch -- boot the Windows machine (OWNED and available; the cost is the switch, not the hardware)"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-D20-CONTENTLIGHT / electron (34.13-UAT.md)"
+    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL). Corrected by 34.13 review A-08: an earlier wording said the two sub-cases render IDENTICALLY. Review WR-04 deliberately made them differ, so identical rendering is now the FAIL condition. Do not run this against the pre-A-08 wording.'
+    retired: 2026-09-23
+    retired_by: "quick 260923-89z"
+    retired_reason: 'Phase 35 removed the Electron build; `package.json` carries no `electron` dependency, devDependency or script (re-verified 2026-09-23), so NO host can execute an electron-runtime row — this item is UNRUNNABLE EVERYWHERE, not merely deferred. It was NEVER RUN and NO OBSERVATION IS CLAIMED: this is a retirement, NOT a pass and NOT a discharge, which is why it is not in `human_verification_discharged`. Its surviving TAURI sibling (`38-S14`) is UNAFFECTED and remains the load-bearing observation.'
+  - id: "38-S15"
+    test: "Content-light notice COPY and container, electron runtime — scored per branch, on BOTH matrix row 5 (Windows) and row 7 (Linux)."
+    expected: "The notice renders in an `.infoBox`, NOT in ThirdPartyDialog's `.noticeIcon`/`.noticeInfo`. Copy must match the catalogue EXACTLY, per branch: native installs OFF -> gamelib:steam.install.contentLightNotice; native installs ON with <=1 library -> gamelib:steam.install.contentLightSingleLibraryNotice. Verify against public/locales/en/gamelib.json, never by eye."
+    why_human: "Requires BOTH a Windows and a Linux host, since the row is scored on matrix rows 5 and 7."
+    blocked_by: "machine switch x2 -- boot BOTH the Windows and the Linux machine (both OWNED and available); scored on matrix rows 5 and 7"
+    platform_gate: "src/frontend/screens/Library/components/InstallModal/steamSectionGating.ts:182-207 — `platformRow` branches on `input.hostPlatform`: `'readonly-windows'` requires `=== 'win32'`, and `'absent'` requires NEITHER `'darwin'` NOR `'win32'` (i.e. Linux). On macOS the branch under test is unreachable by construction, not by accident."
+    origin_phase: "34.13"
+    origin_item: "G-D20-Q6-COPY / electron (34.13-UAT.md)"
+    prior_state: 'Pending in 34.13''s ledger from 2026-08-15 to 2026-08-28. Never attempted: this project''s only host is an Apple Silicon Mac, so the branch never rendered. Relocated at gate close-out once every macOS-runnable row was resolved (44 PASS / 0 FAIL). Corrected by 34.13 review A-08 into a TWO-BRANCH split (review WR-04). A single-branch run does not discharge this item.'
+    retired: 2026-09-23
+    retired_by: "quick 260923-89z"
+    retired_reason: 'Phase 35 removed the Electron build; `package.json` carries no `electron` dependency, devDependency or script (re-verified 2026-09-23), so NO host can execute an electron-runtime row — this item is UNRUNNABLE EVERYWHERE, not merely deferred. It was NEVER RUN and NO OBSERVATION IS CLAIMED: this is a retirement, NOT a pass and NOT a discharge, which is why it is not in `human_verification_discharged`. Its surviving TAURI sibling (`38-S16`) is UNAFFECTED and remains the load-bearing observation.'
 
 human_verification_discharged: []
 ---
