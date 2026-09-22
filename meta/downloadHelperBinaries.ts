@@ -3,7 +3,7 @@ import { spawn } from 'child_process'
 import { createWriteStream } from 'fs'
 import { chmod, mkdir, readFile, rm, stat, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
-import { dirname, join } from 'path'
+import { basename, dirname, join, resolve } from 'path'
 import { Readable } from 'stream'
 import { finished } from 'stream/promises'
 
@@ -82,11 +82,27 @@ async function fetchArchiveBuffer(url: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
-// Argv-form spawn (T-34.9-03, mirrors meta/downloadZig.ts's T-24-06 control)
-// -- never a shell string. Lists an archive's entries WITHOUT extracting.
-function listTarEntries(archivePath: string): Promise<string[]> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('tar', ['-tzf', archivePath], {
+/**
+ * Argv-form spawn (T-34.9-03, mirrors meta/downloadZig.ts's T-24-06 control)
+ * -- never a shell string. Lists an archive's entries WITHOUT extracting.
+ *
+ * The `-f` operand is a BARE BASENAME with `cwd` set to the archive's
+ * directory, and must stay that way: GNU tar parses a drive-lettered archive
+ * path (`C:\Users\...\x.tar.gz`) as a `host:path` REMOTE SPEC and dies with
+ * "Cannot connect to C: resolve failed" -- that is what killed the Windows
+ * release leg in install-deps before signing was ever reached. Do not
+ * "simplify" the cwd back out. GNU tar's local-archive override flag is NOT
+ * the remedy here and must not be added: it is GNU-only, macOS bsdtar
+ * rejects it outright, and this helper is shared cross-platform. See
+ * .planning/todos/pending/2026-09-17-windows-release-leg-dies-in-install-
+ * deps-tar-reads-c-as-a-remote-host.md.
+ *
+ * Exported for test (meta/__tests__/tarDriveLetterSafety.test.ts).
+ */
+export function listTarEntries(archivePath: string): Promise<string[]> {
+  return new Promise((resolveP, reject) => {
+    const child = spawn('tar', ['-tzf', basename(archivePath)], {
+      cwd: dirname(archivePath),
       stdio: ['ignore', 'pipe', 'pipe']
     })
     let stdout = ''
@@ -100,7 +116,7 @@ function listTarEntries(archivePath: string): Promise<string[]> {
     child.on('error', reject)
     child.on('close', (code) => {
       if (code === 0) {
-        resolve(stdout.split('\n').filter((line) => line.length > 0))
+        resolveP(stdout.split('\n').filter((line) => line.length > 0))
       } else {
         reject(new Error(`tar -tzf failed (exit ${code}): ${stderr}`))
       }
@@ -131,20 +147,44 @@ async function assertArchiveEntriesAreSafe(
   }
 }
 
-// Argv-form spawn -- extraction only runs after assertArchiveEntriesAreSafe
-// has already passed.
-function extractTarGz(archivePath: string, destDir: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn('tar', ['-xzf', archivePath, '-C', destDir], {
-      stdio: ['ignore', 'pipe', 'pipe']
-    })
+/**
+ * Argv-form spawn -- extraction only runs after assertArchiveEntriesAreSafe
+ * has already passed.
+ *
+ * Same drive-letter rule as listTarEntries: the `-f` operand is a bare
+ * basename with `cwd` at the archive's directory. `-C` stays ABSOLUTE on
+ * purpose -- GNU tar remote-parses the ARCHIVE NAME only (which is exactly
+ * the scope of its local-archive override flag); a `-C` chdir target is
+ * passed through verbatim, so it carries no drive-letter hazard. It must be
+ * resolved HERE,
+ * in the parent, while process.cwd() is still the repo root: the only caller
+ * passes a repo-relative `public/bin/{arch}/darwin`, and leaving it relative
+ * once cwd moves to tmpdir() would extract the runner tree into the system
+ * temp directory and leave public/bin empty.
+ *
+ * Exported for test (meta/__tests__/tarDriveLetterSafety.test.ts).
+ */
+export function extractTarGz(
+  archivePath: string,
+  destDir: string
+): Promise<void> {
+  const absoluteDestDir = resolve(destDir)
+  return new Promise((resolveP, reject) => {
+    const child = spawn(
+      'tar',
+      ['-xzf', basename(archivePath), '-C', absoluteDestDir],
+      {
+        cwd: dirname(archivePath),
+        stdio: ['ignore', 'pipe', 'pipe']
+      }
+    )
     let stderr = ''
     child.stderr?.on('data', (d) => {
       stderr += d.toString()
     })
     child.on('error', reject)
     child.on('close', (code) => {
-      if (code === 0) resolve()
+      if (code === 0) resolveP()
       else reject(new Error(`tar extraction failed (exit ${code}): ${stderr}`))
     })
   })
