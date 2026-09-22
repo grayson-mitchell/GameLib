@@ -40,9 +40,17 @@
 # had NEVER exited 0 on this fork: 256 findings, exit 1, five recorded Lint
 # job runs all red back to 2026-07-14.
 #
+# Measured 2026-09-22 (quick task 260922-k2o): 33 identities removed
+# (203 -> 170), all individually verified to have no importer in any
+# tracked file -- 21 bucket-A test-internal symbols, 12 verified-safe
+# meta/ bucket-C symbols. The 3 meta/ entries this task found were NOT
+# safe (see the CLUSTER note below) were left exported and remain
+# ledgered. `unreachable` was unaffected, staying at 47 throughout.
 #
-# CLUSTER: the 51 meta/ entries below. MIXED -- 36 are structural false
-# positives, 15 are NOT. Do not treat the cluster as uniform; the split is
+#
+# CLUSTER: the 39 meta/ entries below (51 before quick task 260922-k2o
+# removed 12 genuine over-broad exports). MIXED -- 36 are structural false
+# positives, 3 are NOT. Do not treat the cluster as uniform; the split is
 # measured and listed at the end of this block.
 #
 # The false-positive mechanism: a meta/ export whose ONLY importer is a
@@ -72,28 +80,39 @@
 # ts-prune downgrades it to "used in module" rather than unreachable. That
 # changes the remedy, and it is why this cluster is NOT uniform:
 #
-#   * 36 of the 51 have a live meta/__tests__ importer. Dropping `export`
+#   * 36 of the 39 have a live meta/__tests__ importer. Dropping `export`
 #     WOULD BREAK THAT TEST. Use `// ts-prune-ignore-next` with a reason,
 #     or widen tsconfig; do not un-export.
-#   * 15 of the 51 have NO importer anywhere -- not in meta/__tests__, not
-#     in src/**/__tests__, nowhere. For these the "structurally invisible
-#     importer" explanation does NOT apply: they are genuine over-broad
-#     `export` keywords and are safe un-export candidates. They are:
-#       buildRunnersOnedir.ts  - InvocationForm, OnedirCommandResult,
-#                                OnedirInvocationResult, OnedirRunnerSpec,
-#                                UpstreamPyinstallerCommand, buildRunner
+#   * 3 of the 39 are NOT safe to un-export, for a THIRD reason this note
+#     originally missed: each has a live production (non-test) importer
+#     that is invisible to ts-prune for the same tsconfig-scope reason as
+#     the meta/__tests__ cluster above -- the importer just happens to be
+#     a non-test meta/ file rather than a test file. They are:
+#       buildRunnersOnedir.ts  - InvocationForm
+#         imported by meta/runnerBuildInvocations.ts:62
+#         (`import type { InvocationForm, OnedirRunnerName } from
+#         './buildRunnersOnedir'`).
 #       buildSidecarSea.ts     - DECOMPRESS_WORKER_ENTRY_PATH
+#         not a declaration at all -- a deliberate re-export
+#         (buildSidecarSea.ts:159-166) of a symbol owned by
+#         meta/esbuildWorkerBundleShared.ts:31, carrying an in-situ
+#         comment explaining why the block exists.
 #       releaseTags.ts         - DownloadedBinary
-#       signMachOResources.ts  - CliOptions, SignResult,
-#                                TIMESTAMP_RETRY_DELAYS_MS
-#       trayIconVariants.ts    - DecodedPng, HUE_SPLIT_DEGREES,
-#                                buildHueSegmentedTemplateAlpha, encodeRgba
+#         imported by meta/downloadHelperBinaries.ts:15
+#         (`import { ... type DownloadedBinary } from './releaseTags'`).
 #
 # Measured 2026-09-21 by whole-word name search over all 459 test/mock
-# TS files, 41 of them under meta/__tests__. The 36/15 split corrects an
-# earlier revision of this note, which called all 51 false positives --
-# that would have parked the 15 as untouchable forever. Re-derive before
-# acting; a name search can be wrong in both directions.
+# TS files, 41 of them under meta/__tests__. The 36/15 split (as it stood
+# 2026-09-21) corrected an earlier revision of this note, which called all
+# 51 false positives -- that would have parked the 15 as untouchable
+# forever. That grep-only search was ITSELF wrong in both directions: it
+# covered test/mock files only, so a non-test meta/ importer was invisible
+# to it too. Quick task 260922-k2o re-derived the 15 by requiring the
+# gate's OWN parseFinding/excludeKnownParseArtifacts/partitionFindings
+# helpers and cross-checking every "no importer anywhere" claim against a
+# repo-wide search including non-test files, and found the 3 above have a
+# real importer. The lesson holds either way this note gets re-measured:
+# re-derive before acting, over ALL tracked files, not just test files.
 meta/buildRunnersOnedir.ts - InvocationForm
 meta/buildRunnersOnedir.ts - ONEDIR_RUNNERS
 meta/buildRunnersOnedir.ts - OnedirRunnerName
