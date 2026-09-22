@@ -74,7 +74,12 @@ const RUNNERS_OUT_DIR = join(RUNNERS_ROOT_DIR, 'out')
 
 export type OnedirRunnerName = 'legendary' | 'gogdl' | 'nile'
 
-export interface OnedirRunnerSpec {
+// Not exported (this and OnedirCommandResult, OnedirInvocationResult,
+// UpstreamPyinstallerCommand and buildRunner below): verified to have no
+// importer anywhere -- not in meta/__tests__, not in src/**/__tests__,
+// nowhere (`pnpm find-deadcode` / ts-prune flagged the previously-exported
+// forms as over-broad `export` keywords).
+interface OnedirRunnerSpec {
   repo: string
   tag: string
 }
@@ -315,7 +320,7 @@ function matchInvocationForm(command: string): InvocationFormMatch | undefined {
   return undefined
 }
 
-export interface UpstreamPyinstallerCommand {
+interface UpstreamPyinstallerCommand {
   command: string
   // Absolute path the command must run FROM, if the step declared its own
   // `working-directory:` (undefined means repo root).
@@ -429,12 +434,12 @@ export function extractUpstreamPyinstallerCommand(
 // never contain one (T-34.16G-01).
 // ---------------------------------------------------------------------------
 
-export interface OnedirCommandResult {
+interface OnedirCommandResult {
   command: string
   droppedExpressions: string[]
 }
 
-export interface OnedirInvocationResult extends OnedirCommandResult {
+interface OnedirInvocationResult extends OnedirCommandResult {
   args: string[]
 }
 
@@ -787,7 +792,7 @@ export interface RunnerBuildResult {
   machoCount: number
 }
 
-export async function buildRunner(
+async function buildRunner(
   runner: OnedirRunnerName,
   arch: string
 ): Promise<RunnerBuildResult> {

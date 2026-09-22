@@ -81,7 +81,12 @@ const PNG_SIGNATURE = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a
 ])
 
-export interface DecodedPng {
+// Not exported (this and HUE_SPLIT_DEGREES, buildHueSegmentedTemplateAlpha,
+// encodeRgba below): verified to have no importer anywhere -- not in
+// meta/__tests__, not in src/**/__tests__, nowhere (`pnpm find-deadcode` /
+// ts-prune flagged the previously-exported forms as over-broad `export`
+// keywords).
+interface DecodedPng {
   width: number
   height: number
   /** width * height * 4 bytes, RGBA, un-filtered. */
@@ -267,7 +272,7 @@ export function decodeRgba(path: string): DecodedPng {
  * the cat glyph; pixels below it are the starburst background and are
  * excluded from the template.
  */
-export const HUE_SPLIT_DEGREES = 125
+const HUE_SPLIT_DEGREES = 125
 
 function rgbToHueDegrees(r: number, g: number, b: number): number {
   const rn = r / 255
@@ -294,7 +299,7 @@ function rgbToHueDegrees(r: number, g: number, b: number): number {
  * background AND preserves the glyph's original anti-aliasing where it is
  * kept, rather than hard-thresholding to a binary mask.
  */
-export function buildHueSegmentedTemplateAlpha(
+function buildHueSegmentedTemplateAlpha(
   width: number,
   height: number,
   pixels: Buffer,
@@ -382,7 +387,7 @@ function makeChunk(type: string, data: Buffer): Buffer {
  * generator, not a size-optimising encoder), then IEND. No ancillary
  * chunks are emitted (no EXIF/authorship/path metadata).
  */
-export function encodeRgba(
+function encodeRgba(
   width: number,
   height: number,
   pixels: Buffer

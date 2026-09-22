@@ -112,16 +112,20 @@ export const HELPER_ENTITLEMENTS: Record<string, string> = {}
  * not available"). Bounded on purpose -- after the budget the whole run
  * fails, because an unsigned survivor recreates the defect verbatim.
  */
-export const TIMESTAMP_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000]
+// Not exported (this and CliOptions, SignResult below): verified to have no
+// importer anywhere -- not in meta/__tests__, not in src/**/__tests__,
+// nowhere (`pnpm find-deadcode` / ts-prune flagged the previously-exported
+// forms as over-broad `export` keywords).
+const TIMESTAMP_RETRY_DELAYS_MS = [1000, 2000, 4000, 8000]
 
-export interface CliOptions {
+interface CliOptions {
   dir: string
   keychain: string
   identity: string
   dryRun: boolean
 }
 
-export interface SignResult {
+interface SignResult {
   /** Mach-O files selected by magic bytes. */
   detected: number
   /** Files actually signed (0 in a dry run). */

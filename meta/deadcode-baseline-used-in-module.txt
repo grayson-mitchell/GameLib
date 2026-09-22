@@ -1,4 +1,4 @@
-# POPULATION: used-in-module (182 identities)
+# POPULATION: used-in-module (170 identities)
 #
 # ts-prune found these exports USED -- inside their own declaring file.
 # So this population is NOT dead code: it is an unnecessarily broad
@@ -96,14 +96,9 @@
 # acting; a name search can be wrong in both directions.
 meta/buildRunnersOnedir.ts - InvocationForm
 meta/buildRunnersOnedir.ts - ONEDIR_RUNNERS
-meta/buildRunnersOnedir.ts - OnedirCommandResult
-meta/buildRunnersOnedir.ts - OnedirInvocationResult
 meta/buildRunnersOnedir.ts - OnedirRunnerName
-meta/buildRunnersOnedir.ts - OnedirRunnerSpec
 meta/buildRunnersOnedir.ts - RunnerBuildResult
-meta/buildRunnersOnedir.ts - UpstreamPyinstallerCommand
 meta/buildRunnersOnedir.ts - buildManifestObject
-meta/buildRunnersOnedir.ts - buildRunner
 meta/buildRunnersOnedir.ts - deriveOnedirInvocation
 meta/buildRunnersOnedir.ts - extractUpstreamPyinstallerCommand
 meta/buildRunnersOnedir.ts - formatSha256Sums
@@ -137,14 +132,7 @@ meta/esbuildWorkerBundleShared.ts - LZMA_NATIVE_RESOLVED_PATHS_MODULE_PATH
 meta/esbuildWorkerBundleShared.ts - findOtherNodeGypBuildConsumers
 meta/esbuildWorkerBundleShared.ts - resolveLzmaNativePkgRoot
 meta/releaseTags.ts - DownloadedBinary
-meta/signMachOResources.ts - CliOptions
-meta/signMachOResources.ts - SignResult
-meta/signMachOResources.ts - TIMESTAMP_RETRY_DELAYS_MS
 meta/signMachOResources.ts - main
-meta/trayIconVariants.ts - DecodedPng
-meta/trayIconVariants.ts - HUE_SPLIT_DEGREES
-meta/trayIconVariants.ts - buildHueSegmentedTemplateAlpha
-meta/trayIconVariants.ts - encodeRgba
 src/backend/electron_store.ts - RegisteredStore
 src/backend/humble/classify.ts - ZeroKeyDiagnosis
 src/backend/humble/electronStores.ts - HumbleLocalRedeemedRecord
