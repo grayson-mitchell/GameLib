@@ -116,7 +116,11 @@ export function listTarEntries(archivePath: string): Promise<string[]> {
     child.on('error', reject)
     child.on('close', (code) => {
       if (code === 0) {
-        resolveP(stdout.split('\n').filter((line) => line.length > 0))
+        // Windows bsdtar (System32\tar.exe, what PowerShell/cmd resolve)
+        // ends listing lines with CRLF. Splitting on '\n' alone left a
+        // trailing '\r' on every entry, which also let a final `..` segment
+        // (`..\r`) slip past assertArchiveEntriesAreSafe's traversal check.
+        resolveP(stdout.split(/\r?\n/).filter((line) => line.length > 0))
       } else {
         reject(new Error(`tar -tzf failed (exit ${code}): ${stderr}`))
       }

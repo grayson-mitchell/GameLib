@@ -259,7 +259,10 @@ describe('downloadOnedirAsset', () => {
     it.each([
       ['an absolute path', 'nile/\n/etc/evil\n'],
       ['a parent-traversal path', 'nile/\n../evil\n'],
-      ['an entry outside the runner prefix', 'nile/\nother/file\n']
+      ['an entry outside the runner prefix', 'nile/\nother/file\n'],
+      // Windows bsdtar lists with CRLF: a trailing `..` segment must still
+      // be caught, not survive as `..\r` (quick-260922-txw).
+      ['a trailing-.. entry in a CRLF listing', 'nile/\r\nnile/..\r\n']
     ])('throws before extraction for %s', async (_label, listing) => {
       mockFetchOnce(200, FIXTURE_BUFFER)
       queueSpawnResult(listing, 0)
@@ -360,9 +363,9 @@ describe('downloadOnedirAsset', () => {
 
   describe('toTarPathOperand (pure, GNU-tar --unquote escape-sequence fix)', () => {
     it('converts a win32-shaped absolute path to forward slashes when handed the win32 separator', () => {
-      expect(
-        toTarPathOperand('C:\\x\\public\\bin\\arm64\\darwin', '\\')
-      ).toBe('C:/x/public/bin/arm64/darwin')
+      expect(toTarPathOperand('C:\\x\\public\\bin\\arm64\\darwin', '\\')).toBe(
+        'C:/x/public/bin/arm64/darwin'
+      )
     })
 
     it('leaves a POSIX-shaped path unchanged when handed the POSIX separator', () => {
