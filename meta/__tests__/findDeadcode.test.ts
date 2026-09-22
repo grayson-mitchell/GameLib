@@ -142,9 +142,7 @@ describe('meta/findDeadcode.cjs Windows path separators', () => {
   })
 
   test('normalises a nested Windows path with no leading separator', () => {
-    const finding = findDeadcode.parseFinding(
-      'src\\frontend\\a\\b.ts:3 - bar'
-    )
+    const finding = findDeadcode.parseFinding('src\\frontend\\a\\b.ts:3 - bar')
     expect(finding.path).toBe('src/frontend/a/b.ts')
   })
 })
