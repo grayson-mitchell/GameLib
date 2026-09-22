@@ -30,7 +30,16 @@
 
 import { readFileSync } from 'node:fs'
 
-import { CommentRange, Node, Project, SourceFile, ts } from 'ts-morph'
+import {
+  CommentRange,
+  Identifier,
+  JsxElement,
+  JsxSelfClosingElement,
+  Node,
+  Project,
+  SourceFile,
+  ts
+} from 'ts-morph'
 
 // ---------------------------------------------------------------------------
 // Types (contract consumed by plans 04, 05, 06 — do not rename or reshape)
@@ -566,7 +575,8 @@ function isDropdownButtonClassProp(node: Node): boolean {
 /** The tag name of the JSX element owning `attribute`, or undefined. */
 function jsxTagNameOf(attribute: Node): string | undefined {
   const jsxElement = attribute.getFirstAncestor(
-    (n): n is Node => Node.isJsxElement(n) || Node.isJsxSelfClosingElement(n)
+    (n): n is JsxElement | JsxSelfClosingElement =>
+      Node.isJsxElement(n) || Node.isJsxSelfClosingElement(n)
   )
   if (!jsxElement) return undefined
   const tagNameNode = Node.isJsxElement(jsxElement)
@@ -579,7 +589,8 @@ function isInfoBoxTextKeyProp(node: Node): boolean {
   const attribute = node.getFirstAncestor(Node.isJsxAttribute)
   if (!attribute || attribute.getNameNode().getText() !== 'text') return false
   const jsxElement = attribute.getFirstAncestor(
-    (n): n is Node => Node.isJsxElement(n) || Node.isJsxSelfClosingElement(n)
+    (n): n is JsxElement | JsxSelfClosingElement =>
+      Node.isJsxElement(n) || Node.isJsxSelfClosingElement(n)
   )
   if (!jsxElement) return false
   const tagNameNode = Node.isJsxElement(jsxElement)
@@ -1334,7 +1345,7 @@ function isKeyDefaultObjectProperty(node: Node): boolean {
  * 'macArchBadge--warning' : 'macArchBadge--informational'` — not only a
  * direct `const x = 'text'`/`x = 'text'` assignment.
  */
-function findAssignedBindingNameNode(node: Node): Node | undefined {
+function findAssignedBindingNameNode(node: Node): Identifier | undefined {
   const { current, parent } = walkUpThroughComposingWrappers(node)
   if (!parent) return undefined
 
