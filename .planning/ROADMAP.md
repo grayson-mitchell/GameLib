@@ -5376,6 +5376,16 @@ that screen, those die with it rather than being fixed, and 44 should be closed 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 45 to break down)
 
+### Phase 46: Windows single-instance guard and gamelib:// deep-link registration
+
+**Goal:** On Windows, a second GameLib launch or an external `gamelib://` open reaches the RUNNING instance and never starts a second app or a second sidecar. That needs a hand-rolled guard that runs before `tauri::Builder::default()`, mirroring the Unix one (`src-tauri/src/main.rs`, D-44-A: named mutex + named pipe instead of a Unix socket, FAIL-OPEN, stale-holder reasoning redone for Windows semantics, every URL re-validated through `protocol_url_arg()`). Only once that passes live verification on the operator's Windows machine, remove the `plugins.deep-link.desktop.schemes: []` override from `src-tauri/tauri.windows.conf.json` (quick 260922-nx4) so the NSIS installer registers `gamelib://`, inverting `windowsDeepLinkSuppression.test.ts` in the same change. Closes ledger row `U-34.5-18` and todo `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`. `tauri-plugin-single-instance` stays rejected (D-44-A).
+**Requirements**: TBD
+**Depends on:** Nothing blocking. Related: Phase 38 (Windows hardware UAT); todo `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` affects packaged Windows builds used for verification.
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 46 to break down)
+
 ---
 
 ## Parked / Superseded Phases
