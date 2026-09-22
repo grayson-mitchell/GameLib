@@ -414,7 +414,7 @@ export interface FillLocaleResult {
  */
 function stampFilledAt(
   filled: Record<string, string>,
-  priorManifest: MtManifest | undefined,
+  priorManifest: MtManifest | null,
   now: Date
 ): string {
   if (Object.keys(filled).length === 0 && priorManifest?.filledAt) {
