@@ -82,6 +82,9 @@ export const DECOMPRESS_WORKER_ENTRY_PATH = join(
  * never actually distinguish callers once genuinely bundled in the first
  * place.
  */
+// Consumed by meta/__tests__/esbuildWorkerBundleShared.test.ts (meta/ scope,
+// invisible to ts-prune).
+// ts-prune-ignore-next
 export const LZMA_NATIVE_RESOLVED_PATHS_MODULE_PATH = join(
   'src',
   'backend',
@@ -97,6 +100,11 @@ export const LZMA_NATIVE_RESOLVED_PATHS_MODULE_PATH = join(
  * separately from {@link writeLzmaNativeResolvedPaths} so a test can assert
  * the resolved value without touching the filesystem.
  */
+// Consumed by meta/__tests__/esbuildWorkerBundleShared.test.ts (meta/ scope,
+// invisible to ts-prune). src/backend/storeManagers/steam/depot/
+// lzmaNativeBinding.ts declares its OWN separate, module-private function of
+// the same name -- coincidental, not an importer of this one.
+// ts-prune-ignore-next
 export function resolveLzmaNativePkgRoot(): string {
   try {
     return dirname(require.resolve('lzma-native/package.json'))
@@ -146,6 +154,9 @@ export function writeLzmaNativeResolvedPaths(): string {
  * cannot be defeated by the exact same aliasing/bundling collapse this
  * whole fix exists to route around.
  */
+// Consumed by meta/__tests__/esbuildWorkerBundleShared.test.ts (meta/ scope,
+// invisible to ts-prune).
+// ts-prune-ignore-next
 export function findOtherNodeGypBuildConsumers(
   nodeModulesDir: string = 'node_modules'
 ): string[] {

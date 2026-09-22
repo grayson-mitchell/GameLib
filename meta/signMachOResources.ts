@@ -473,7 +473,11 @@ export function parseArgs(
   return { dir, keychain, identity, dryRun }
 }
 
-export async function main(): Promise<void> {
+// Not exported: no file imports `main` from this module -- it is only ever
+// self-invoked by this file's own bottom guard (`node meta/runTs.cjs` runs
+// this script directly), which is why ts-prune reports it as "used in
+// module" rather than unreachable.
+async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2))
   await signMachOResources(options)
 }

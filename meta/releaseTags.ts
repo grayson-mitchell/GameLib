@@ -19,6 +19,10 @@
 
 export type SupportedPlatform = 'win32' | 'darwin' | 'linux'
 
+// Parked (260922-vzw decision): imported by
+// meta/downloadHelperBinaries.ts:15 (`import { ... type DownloadedBinary }
+// from './releaseTags'`), a production meta/ script invisible to ts-prune.
+// ts-prune-ignore-next
 export type DownloadedBinary =
   | 'legendary'
   | 'gogdl'

@@ -72,6 +72,10 @@ const RUNNERS_OUT_DIR = join(RUNNERS_ROOT_DIR, 'out')
 // cannot drift from meta/downloadHelperBinaries.ts's pinned versions.
 // ---------------------------------------------------------------------------
 
+// Consumed by meta/checkRunnerInvocations.ts:60 (production, type import) and
+// meta/runnerBuildInvocations.ts:62 (production, type import) -- both are meta/
+// scripts outside tsconfig `include`, invisible to ts-prune.
+// ts-prune-ignore-next
 export type OnedirRunnerName = 'legendary' | 'gogdl' | 'nile'
 
 // Not exported (this and OnedirCommandResult, OnedirInvocationResult,
@@ -84,6 +88,9 @@ interface OnedirRunnerSpec {
   tag: string
 }
 
+// Consumed by meta/checkRunnerInvocations.ts:60 (production) and this file's
+// own meta/__tests__ suite -- both invisible to ts-prune (meta/ scope).
+// ts-prune-ignore-next
 export const ONEDIR_RUNNERS: Record<OnedirRunnerName, OnedirRunnerSpec> = {
   legendary: {
     repo: 'legendary-gl/legendary',
@@ -278,6 +285,10 @@ function extractRunValues(text: string): RunValueMatch[] {
 // --module PyInstaller` does NOT match, and that is intended -- a new
 // upstream flag must trip the zero-match tripwire and be widened by a
 // human decision, never absorbed silently (F-34.16-D, T-34.16G-03).
+// Parked (260922-vzw decision): imported by meta/runnerBuildInvocations.ts:62
+// (`import type { InvocationForm, OnedirRunnerName } from './buildRunnersOnedir'`),
+// a production meta/ script invisible to ts-prune.
+// ts-prune-ignore-next
 export type InvocationForm = 'bare' | 'uv-run-module' | 'python-m'
 
 interface InvocationFormMatch {
@@ -335,6 +346,10 @@ interface UpstreamPyinstallerCommand {
   pyinstallerArgs: string[]
 }
 
+// Consumed by meta/checkRunnerInvocations.ts:60 (production, non-test meta/
+// script) and this file's own meta/__tests__ suite -- both invisible to
+// ts-prune (meta/ scope).
+// ts-prune-ignore-next
 export function extractUpstreamPyinstallerCommand(
   repoDir: string
 ): UpstreamPyinstallerCommand {
@@ -443,6 +458,9 @@ interface OnedirInvocationResult extends OnedirCommandResult {
   args: string[]
 }
 
+// Consumed by this file's own meta/__tests__ suite (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function deriveOnedirInvocation(
   upstream: Pick<UpstreamPyinstallerCommand, 'pyinstallerArgs'>
 ): OnedirInvocationResult {
@@ -776,6 +794,9 @@ async function captureVersion(bin: string, args: string[]): Promise<string> {
 // buildRunner -- the full pipeline for one runner/arch pair.
 // ---------------------------------------------------------------------------
 
+// Consumed by this file's own meta/__tests__ suite (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export interface RunnerBuildResult {
   runner: OnedirRunnerName
   repo: string
@@ -882,6 +903,9 @@ async function buildRunner(
 // writers below are thin wrappers that perform the actual writeFileSync.
 // ---------------------------------------------------------------------------
 
+// Consumed by this file's own meta/__tests__ suite (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function formatSha256Sums(
   arch: string,
   results: RunnerBuildResult[]
@@ -895,6 +919,10 @@ export function formatSha256Sums(
 // `runId` is a TOP-LEVEL SIBLING of the three runner keys (legendary/gogdl/
 // nile), not nested inside any of them -- any future code iterating this
 // object's keys as "one entry per runner" must exclude `runId` explicitly.
+//
+// Consumed by this file's own meta/__tests__ suite (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function buildManifestObject(
   arch: string,
   results: RunnerBuildResult[]
@@ -978,7 +1006,11 @@ function parseArgs(argv: string[]): {
   return { arch, runner: runnerValue }
 }
 
-export async function main(): Promise<void> {
+// Not exported: no file imports `main` from this module -- it is only ever
+// self-invoked by this file's own bottom guard (`pnpm build-runners-onedir`
+// runs this script directly), which is why ts-prune reports it as
+// "used in module" rather than unreachable.
+async function main(): Promise<void> {
   const { arch, runner } = parseArgs(process.argv.slice(2))
   const runners: OnedirRunnerName[] = runner
     ? [runner]

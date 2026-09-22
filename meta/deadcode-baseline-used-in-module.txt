@@ -139,45 +139,6 @@
 # repo-wide search including non-test files, and found the 3 above have a
 # real importer. The lesson holds either way this note gets re-measured:
 # re-derive before acting, over ALL tracked files, not just test files.
-meta/buildRunnersOnedir.ts - InvocationForm
-meta/buildRunnersOnedir.ts - ONEDIR_RUNNERS
-meta/buildRunnersOnedir.ts - OnedirRunnerName
-meta/buildRunnersOnedir.ts - RunnerBuildResult
-meta/buildRunnersOnedir.ts - buildManifestObject
-meta/buildRunnersOnedir.ts - deriveOnedirInvocation
-meta/buildRunnersOnedir.ts - extractUpstreamPyinstallerCommand
-meta/buildRunnersOnedir.ts - formatSha256Sums
-meta/buildRunnersOnedir.ts - main
-meta/buildSidecarSea.ts - DECOMPRESS_WORKER_ENTRY_PATH
-meta/buildSidecarSea.ts - NATIVE_LZMA_REQUIRED_TRIPLES
-meta/buildSidecarSea.ts - SEA_WORKER_ASSET_KEY
-meta/buildSidecarSea.ts - assertNodeGypBuildSingleConsumer
-meta/buildSidecarSea.ts - buildCodesignArgv
-meta/buildSidecarSea.ts - buildEsbuildArgv
-meta/buildSidecarSea.ts - buildPostjectArgv
-meta/buildSidecarSea.ts - buildSeaBlobArgv
-meta/buildSidecarSea.ts - buildSeaConfig
-meta/buildSidecarSea.ts - buildWorkerEsbuildArgv
-meta/buildSidecarSea.ts - expectedMachoArch
-meta/buildSidecarSea.ts - hostTriple
-meta/buildSidecarSea.ts - lzmaNativePrebuildDir
-meta/buildSidecarSea.ts - lzmaNativePrebuildPath
-meta/buildSidecarSea.ts - main
-meta/buildSidecarSea.ts - nodeDistName
-meta/buildSidecarSea.ts - nodeDistUrls
-meta/buildSidecarSea.ts - resolveEsbuildCli
-meta/buildSidecarSea.ts - resolvePostjectCli
-meta/buildSidecarSea.ts - resolveTriple
-meta/buildSidecarSea.ts - seaEsbuildFlags
-meta/buildSidecarSea.ts - sidecarOutputPath
-meta/buildSidecarSea.ts - spawnArgv
-meta/buildSidecarSea.ts - triplePlatform
-meta/buildSidecarSea.ts - writeLzmaNativeResolvedPaths
-meta/esbuildWorkerBundleShared.ts - LZMA_NATIVE_RESOLVED_PATHS_MODULE_PATH
-meta/esbuildWorkerBundleShared.ts - findOtherNodeGypBuildConsumers
-meta/esbuildWorkerBundleShared.ts - resolveLzmaNativePkgRoot
-meta/releaseTags.ts - DownloadedBinary
-meta/signMachOResources.ts - main
 src/backend/humble/loginWindowSeam.ts - LoginWindowRevealPostResult
 src/backend/ipc.ts - addOneTimeListener
 src/backend/jest.setupContainment.ts - containmentRoot

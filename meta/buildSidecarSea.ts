@@ -157,13 +157,25 @@ import {
 } from './esbuildWorkerBundleShared'
 
 export {
+  // Parked (260922-vzw decision): not a declaration -- a deliberate
+  // re-export of a symbol owned by meta/esbuildWorkerBundleShared.ts:31,
+  // used internally in this file (see the decompress-worker build path
+  // below).
+  // ts-prune-ignore-next
   DECOMPRESS_WORKER_ENTRY_PATH,
-  resolveEsbuildCli,
-  seaEsbuildFlags,
-  spawnArgv,
-  assertNodeGypBuildSingleConsumer,
-  writeLzmaNativeResolvedPaths
+  // Consumed by meta/__tests__/buildSidecarSea.test.ts, which imports this
+  // BY NAME from '../buildSidecarSea' (this re-export path itself) -- a
+  // meta/__tests__ file, invisible to ts-prune.
+  // ts-prune-ignore-next
+  resolveEsbuildCli
 }
+// seaEsbuildFlags, spawnArgv, assertNodeGypBuildSingleConsumer and
+// writeLzmaNativeResolvedPaths were dropped from the re-export list above
+// (260922-vzw): nothing imports them FROM this module -- their real
+// consumers (meta/buildDecompressWorkerDev.ts, this file's own body below,
+// and meta/__tests__/esbuildWorkerBundleShared.test.ts) all go through
+// meta/esbuildWorkerBundleShared.ts directly. The import above is
+// unchanged; only the re-export was removed.
 
 // Official/fixed sentinel fuse string -- do not alter
 // (https://nodejs.org/api/single-executable-applications.html).
@@ -201,6 +213,9 @@ const SEA_WORKER_BUNDLE_PATH = join(
 /** SEA asset key both this build script and decompressPool.ts's runtime
  *  `sea.getAsset()` call must agree on verbatim -- exported so a test can
  *  assert the two sides never drift apart. */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export const SEA_WORKER_ASSET_KEY = 'decompressWorker.js'
 
 // 23.1-02 (spike 023 VALIDATED, 23.1-01-SUMMARY): the native lzma-native
@@ -244,6 +259,9 @@ const LZMA_NATIVE_PREBUILDS_ROOT = join(
  * (sidecarOutputPath, nodeDistUrls, triplePlatform, expectedMachoArch, etc.)
  * still supports that triple for ad-hoc/local builds elsewhere in this file.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export const NATIVE_LZMA_REQUIRED_TRIPLES: readonly string[] = [
   'aarch64-apple-darwin',
   'x86_64-unknown-linux-gnu',
@@ -274,6 +292,9 @@ const SIDECAR_BIN_DIR = join('src-tauri', 'binaries')
  * (imported/re-exported above) -- `resolvePostjectCli()` below stays here,
  * it is SEA-packaging-only and has no dev-mode-worker-bundle consumer.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function resolvePostjectCli(): string {
   try {
     return require.resolve('postject/dist/cli.js')
@@ -314,6 +335,9 @@ export function buildSeaConfigPath(): string {
  * macOS/Linux -- 34-05's `externalBin` entry expects the bare
  * `binaries/gamelib-sidecar` sidecar-name convention per triple.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function sidecarOutputPath(triple: string): string {
   const ext = triple.includes('windows') ? '.exe' : ''
   return join(SIDECAR_BIN_DIR, `gamelib-sidecar-${triple}${ext}`)
@@ -326,6 +350,9 @@ export function sidecarOutputPath(triple: string): string {
  * can assert the exact command construction, incl. the fixed sentinel
  * fuse string, without invoking the real `postject` binary.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function buildPostjectArgv(
   binaryPath: string,
   blobPath: string,
@@ -389,6 +416,9 @@ export function buildPostjectArgv(
  * trigger the full SEA build as a module-scope side effect -- see this
  * module's own bottom guard).
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function buildEsbuildArgv(
   platform: NodeJS.Platform = process.platform
 ): { command: string; args: string[] } {
@@ -412,6 +442,9 @@ export function buildEsbuildArgv(
  * (file header) inside the worker isolate. `--packages=external` stays
  * ABSENT for the same reason it is absent from `buildEsbuildArgv()`.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function buildWorkerEsbuildArgv(
   platform: NodeJS.Platform = process.platform
 ): { command: string; args: string[] } {
@@ -432,6 +465,9 @@ export function buildWorkerEsbuildArgv(
  * post-injection `--sign -` ad-hoc re-sign (so Gatekeeper doesn't reject
  * the binary outright). Windows/Linux never codesign -- returns `[]`.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function buildCodesignArgv(
   binaryPath: string,
   platform: NodeJS.Platform = process.platform
@@ -453,6 +489,9 @@ export function buildCodesignArgv(
 // the same reason as `seaEsbuildFlags()`.
 
 /** Matches the plan's verify-command host-triple resolution exactly. */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function hostTriple(): string {
   if (process.platform === 'win32') {
     return 'x86_64-pc-windows-msvc'
@@ -481,6 +520,9 @@ export function hostTriple(): string {
  * renders an unset matrix field as the empty string, so `''` is also
  * treated as unset.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function resolveTriple(env: NodeJS.ProcessEnv = process.env): string {
   const override = env.GAMELIB_SIDECAR_TARGET_TRIPLE
   if (typeof override === 'string' && override.length > 0) {
@@ -495,6 +537,9 @@ export function resolveTriple(env: NodeJS.ProcessEnv = process.env): string {
  * derived this from the HOST platform (`process.platform`) rather than the
  * TARGET triple -- the same host-vs-target bug family as CR-01.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function triplePlatform(triple: string): NodeJS.Platform {
   if (triple.endsWith('-apple-darwin')) {
     return 'darwin'
@@ -513,6 +558,9 @@ export function triplePlatform(triple: string): NodeJS.Platform {
  * gate (`verifyBinaryArch()`) is darwin-only by design, so this throws for
  * any non-darwin triple.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function expectedMachoArch(triple: string): string {
   if (triple === 'aarch64-apple-darwin') {
     return 'arm64'
@@ -524,6 +572,9 @@ export function expectedMachoArch(triple: string): string {
 }
 
 /** Maps a Rust target triple to Node's dist platform-arch segment. */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function nodeDistName(triple: string): string {
   switch (triple) {
     case 'aarch64-apple-darwin':
@@ -554,6 +605,9 @@ export function nodeDistName(triple: string): string {
  * Pure; never reads `process.platform`/`process.arch` (CR-01 host-vs-target
  * discipline -- driven only by the TARGET triple parameter).
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function lzmaNativePrebuildDir(triple: string): string {
   switch (triple) {
     case 'aarch64-apple-darwin':
@@ -578,6 +632,9 @@ export function lzmaNativePrebuildDir(triple: string): string {
  * separately by `resolveNativeLzmaAsset()` below, keeping this function
  * usable in a plain unit test with no real `node_modules` tree required.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function lzmaNativePrebuildPath(triple: string): string {
   return join(
     LZMA_NATIVE_PREBUILDS_ROOT,
@@ -636,6 +693,9 @@ async function resolveNativeLzmaAsset(
  * not a host filesystem path -- built with forward slashes verbatim, never
  * `path.join`.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function nodeDistUrls(
   triple: string,
   version: string = process.version
@@ -679,6 +739,9 @@ export function nodeDistUrls(
  * without a filesystem, matching this file's established pure-argv-builder
  * discipline.
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function buildSeaConfig(nativeLzmaPath?: string): {
   main: string
   output: string
@@ -815,6 +878,9 @@ async function bundleWorkerForSea(): Promise<void> {
  * documented invariant true by construction (and matches GAP-2's stated
  * rationale for the esbuild/postject spawns).
  */
+// Consumed by meta/__tests__/buildSidecarSea.test.ts (meta/ scope, invisible
+// to ts-prune).
+// ts-prune-ignore-next
 export function buildSeaBlobArgv(): { command: string; args: string[] } {
   return {
     command: process.execPath,
@@ -1054,7 +1120,11 @@ async function verifyBinaryArch(
   console.log(`SEA sidecar arch verified: ${actual} (${triple})`)
 }
 
-export async function main(): Promise<void> {
+// Not exported: no file imports `main` from this module -- it is only ever
+// self-invoked by this file's own bottom guard (`pnpm build:sidecar-sea`
+// runs this script directly), which is why ts-prune reports it as
+// "used in module" rather than unreachable.
+async function main(): Promise<void> {
   // Debug/humankind-depot-full-stall (2026-08-17): Pitfall 1 (34-RESEARCH.md)
   // is no longer an accepted tradeoff -- it was the CONFIRMED dominant
   // throughput ceiling behind HUMANKIND taking ~1.5h vs Steam's ~5min (see
