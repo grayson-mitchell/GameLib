@@ -110,10 +110,38 @@ const POPULATIONS = {
 
 // `${file}:${line} - ${name}${usedInModule ? ' (used in module)' : ''}`
 // -- `lib/presenter.js`. `file` is repo-relative (ts-prune strips
-// `process.cwd()` and then a leading `/`).
+// `process.cwd()` and then a leading separator). The leading-separator
+// strip is POSIX-only: on Windows what remains starts with `\` and uses
+// `\` separators throughout (e.g. `\meta\x.ts`), which parseFinding
+// normalises via `normaliseFindingPath` below -- see
+// todo 2026-09-22-pre-push-hook-cannot-pass-on-a-windows-checkout.md.
 const FINDING_RE = /^(.+):(\d+) - (.+?)( \(used in module\))?$/
 
 const USED_IN_MODULE_SUFFIX = ' (used in module)'
+
+/**
+ * Normalises a raw ts-prune `file` segment to the forward-slash,
+ * no-leading-separator shape the baselines are keyed by.
+ *
+ * Uses a global backslash-to-forward-slash replace, NOT
+ * `rawPath.split(path.sep).join('/')` -- `path.sep` is `/` on macOS/Linux,
+ * so a `path.sep`-based split would be a no-op there and this normaliser
+ * would never be exercised by a host-OS-independent unit test. What
+ * matters is the SHAPE of ts-prune's own Windows output (`\`-separated),
+ * not this process's platform.
+ *
+ * Exactly one leading `/` is stripped (mirroring ts-prune's own POSIX
+ * behaviour), never more.
+ *
+ * @param {string} rawPath
+ * @returns {string}
+ */
+function normaliseFindingPath(rawPath) {
+  const forwardSlashed = rawPath.replace(/\\/g, '/')
+  return forwardSlashed.startsWith('/')
+    ? forwardSlashed.slice(1)
+    : forwardSlashed
+}
 
 /**
  * ts-prune mis-parses `satisfies` expressions and the `Parameters<>` type
@@ -300,7 +328,7 @@ function parseFinding(line) {
   }
 
   return {
-    path: match[1],
+    path: normaliseFindingPath(match[1]),
     line: Number(match[2]),
     name: match[3],
     usedInModule: match[4] !== undefined
@@ -570,5 +598,6 @@ module.exports = {
   readIgnorePattern,
   collectFindings,
   KNOWN_PARSE_ARTIFACTS,
-  excludeKnownParseArtifacts
+  excludeKnownParseArtifacts,
+  normaliseFindingPath
 }
