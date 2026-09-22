@@ -6912,13 +6912,33 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     window.close().map_err(|e| e.to_string())?;
                     true
                 }
-                None => match app.get_window(label) {
-                    Some(window) => {
-                        window.close().map_err(|e| e.to_string())?;
-                        true
+                // `get_window` requires the `unstable` Tauri feature, which D-03
+                // (`src-tauri/Cargo.toml`) deliberately scopes to
+                // `[target.'cfg(target_os = "macos")'.dependencies]` only -- so this fallback
+                // must itself be target-gated, matching the convention already used by every
+                // other `unstable`-gated call in this file (e.g. `dispatch_rust_channel`'s
+                // "store_embed_open" arm above). The window this fallback exists to find
+                // (`open_pristine_epic_login_window`'s raw-WKWebView `Window`, never a managed
+                // `WebviewWindow`) is itself `#[cfg(target_os = "macos")]`-gated and can never
+                // exist on Linux/Windows, so resolving `false` there changes no real behavior --
+                // it is the same "missing label is a healthy already-closed state" contract this
+                // arm documents above.
+                None => {
+                    #[cfg(target_os = "macos")]
+                    {
+                        match app.get_window(label) {
+                            Some(window) => {
+                                window.close().map_err(|e| e.to_string())?;
+                                true
+                            }
+                            None => false,
+                        }
                     }
-                    None => false,
-                },
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        false
+                    }
+                }
             };
             if closed {
                 if let Ok(mut guard) = LOGIN_WINDOW_EVENTS.lock() {

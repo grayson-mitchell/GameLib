@@ -4,8 +4,8 @@ title: 'Linux release leg fails to COMPILE: E0599 get_window missing on &AppHand
 area: build
 severity: major
 platform: linux
-ready: code
-needs: identify-feature-drift-then-fix
+ready: live-gate
+needs: verify-fix-on-live-linux-leg
 status: OPEN
 found_by: 'GitHub Actions run 35223308954 on grayson-mitchell/GameLib, triggered by the throwaway annotated tag v0.7.0-notarize-test1 at commit cc2d66248. The tag was deleted from origin and locally after the run.'
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md'
@@ -41,17 +41,47 @@ counting call sites by grep will otherwise find four; there are two actual call 
 The SAME commit compiled fine on macOS — that leg reached notarization. So this is NOT simply
 "the code is wrong", and anyone who reads it that way will fix the wrong thing.
 
-## Hypothesis — NOT established
+## Hypothesis — CONFIRMED (debug session `linux-get-window-e0599`, 2026-09-21)
 
-Suspect per-platform Cargo feature unification: Tauri v2 gates `Manager::get_window` behind the
-`unstable` feature, and a platform-specific dependency may enable it on macOS but not Linux. This
-is unverified. `get_webview_window` is the Tauri v2 rename CANDIDATE — it must NOT be asserted as
-the fix without verification.
+Confirmed against the vendored `tauri-2.11.5` crate source (`src/lib.rs:540-543`):
+`Manager::get_window` carries `#[cfg(feature = "unstable")]`. D-03 scopes `unstable` to
+`[target.'cfg(target_os = "macos")'.dependencies]` only (`Cargo.toml:113`) — this is a
+deliberate, measured decision, not drift; do not reverse it.
 
-## Verification
+**Revision to this todo's own census:** of the two call sites, only ONE is actually broken on
+Linux. `main.rs:5203` (inside `store_embed_open`) is already `#[cfg(target_os = "macos")]`-gated
+at the function level and is correctly absent from the Linux compile unit — it needed no fix.
+`main.rs:6915` (the `get_window` fallback in the `"humble_login_close"` arm of
+`dispatch_rust_channel`, itself uncfg'd) was the sole real E0599 source. This matches the
+verbatim symptom log precisely: "due to **1** previous error", not 2.
 
-`cargo check` for the Linux target (or a tag push reaching a green Linux leg) is the only proof; a
-green macOS leg proves nothing about this, which is the whole point of the section above.
+`get_webview_window` (`tauri-2.11.5/src/lib.rs:576`, no cfg gate — stable) IS the correct
+replacement, confirmed by reading the vendored source, not asserted. It was already tried first
+at the surviving call site; only its `None`-fallback (the actual `get_window` call) needed
+gating.
+
+## Fix applied
+
+`main.rs:6910-6934`: wrapped the `get_window` fallback in
+`#[cfg(target_os = "macos")] { ... } #[cfg(not(target_os = "macos"))] { false }`, matching the
+convention already established elsewhere in this file for `unstable`-gated calls (e.g. the
+`"store_embed_open"` dispatch arm, `main.rs:7663-7676`). The window this fallback exists to find
+(`open_pristine_epic_login_window`'s raw-WKWebView `Window`) is itself macOS-only
+(`main.rs:3157`), so resolving `false` on non-macOS changes no real behavior.
+
+## Verification — INCOMPLETE, needs a live Linux leg
+
+`cargo check --bin gamelib-shell` passes on the macOS host (sanity only — proves nothing about
+Linux). A real `cargo check --target x86_64-unknown-linux-gnu` was attempted from this Mac and
+failed, but for an unrelated reason: `gobject-sys`/`gio-sys`/`gdk-sys` build scripts fail because
+`pkg-config` has no Linux GTK/WebKit2GTK cross-compilation sysroot on this machine — the failure
+occurs before `gamelib-shell`'s own source is reached. **No sound local check exists on this
+host.** This todo stays OPEN, `ready: live-gate`, until a tag push reaches `release-tauri.yml`'s
+`ubuntu-24.04` leg (or an equivalent check runs on a real Linux machine/CI runner with
+GTK/WebKit2GTK dev packages) and comes back green.
+
+Full evidence trail: `.planning/debug/linux-get-window-e0599.md` (session not yet archived —
+awaiting this live verification).
 
 ## Related
 
