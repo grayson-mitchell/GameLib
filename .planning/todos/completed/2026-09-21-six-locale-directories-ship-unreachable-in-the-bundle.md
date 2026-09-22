@@ -78,6 +78,32 @@ exists, because the locales are never resolved.
 at all (`origin` is the fork, and `HEROIC IS NOT UPSTREAM` is recorded convention). If it does not,
 deletion is stable and this becomes `ready: code`.
 
+## Resolution (quick task 260922-hjb, 2026-09-22)
+
+The 532K figure above was an undercount: it measured only `public/locales`, i.e. one shipped
+copy. The six unreachable directories actually ship **twice** -- once via
+`src-tauri/tauri.conf.json`'s wholesale `../build/locales/` resource mapping into `build/locales`,
+and again via `build/renderer/locales` under `frontendDist` (assembled by
+`meta/assembleRendererDist.ts`'s `STATIC_RENDERER_DIRS` copy). Both trees were measured at 49
+directories before this fix; the real shipped weight is ~1000K across the two trees, not 532K
+across one.
+
+The Weblate sync policy question this todo blocked on -- whether the fork still consumes upstream
+syncs, and whether a partially-filled locale should be offered -- is **not** answered by this fix
+and remains genuinely open. It is now moot for the specific defect this todo tracks, though:
+`meta/pruneUnofferedLocalesPlugin()` (wired into `vite.config.ts`, `closeBundle`, ahead of
+`assembleRendererDistPlugin` on the normal enforce tier) prunes both `build/locales` and
+`build/renderer/locales` down to exactly the 43 codes in `src/common/languages.ts`'s
+`supportedLanguages` on every build, regardless of what upstream sync does to `public/locales`.
+`public/locales` itself is deliberately left untouched -- still 49 directories, no diff -- so a
+sync-driven regrowth there no longer costs any shipped bundle weight; a newly-added unreachable
+locale is pruned automatically and turns `meta/__tests__/pruneUnofferedLocales.test.ts`'s live-pin
+test red instead of shipping silently.
+
+If the Weblate policy question is still worth settling on its own merits (trimming `public/locales`
+itself, or adopting `da`/`ka`/`th`/`uz` into the 43-list), that is now source-tree hygiene rather
+than a shipped-bundle defect, and belongs in a new todo rather than reopening this one.
+
 ## Related
 
 - `.planning/todos/completed/2026-09-21-br-and-sl-ship-with-two-whole-namespaces-missing.md` -- the

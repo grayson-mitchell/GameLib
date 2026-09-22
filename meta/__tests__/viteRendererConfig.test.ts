@@ -140,9 +140,7 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
       // from src/common/languages.ts's supportedLanguages out of the build
       // output before assembleRendererDistPlugin rebuilds build/renderer.
       it('keeps pruneUnofferedLocalesPlugin in the plugin set', () => {
-        expect(pluginNames(config)).toContain(
-          'gamelib-prune-unoffered-locales'
-        )
+        expect(pluginNames(config)).toContain('gamelib-prune-unoffered-locales')
       })
 
       // 260901-a2w F4 safety argument: the prune plugin must run at

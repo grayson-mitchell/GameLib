@@ -98,7 +98,10 @@ describe('computeUnofferedLocaleDirs -- temp-dir coverage', () => {
 
   it('returns [] for a non-existent directory', () => {
     expect(
-      computeUnofferedLocaleDirs(join(workDir, 'does-not-exist'), supportedLanguages)
+      computeUnofferedLocaleDirs(
+        join(workDir, 'does-not-exist'),
+        supportedLanguages
+      )
     ).toEqual([])
   })
 
@@ -123,9 +126,9 @@ describe('assessOfferedLocales -- each guard condition in isolation', () => {
     const result = assessOfferedLocales(offered, [...offered, 'xx'], ['xx'])
 
     expect(result.ok).toBe(false)
-    expect(result.reasons.some((r) => r.includes("does not contain 'en'"))).toBe(
-      true
-    )
+    expect(
+      result.reasons.some((r) => r.includes("does not contain 'en'"))
+    ).toBe(true)
   })
 
   it("a prune set containing 'en' -> ok: false", () => {
@@ -164,9 +167,7 @@ describe('pruneUnofferedLocales -- guard FAILING directions throw and leave the 
     writeLocaleDir(localesPath(), 'en')
     writeLocaleDir(localesPath(), 'xx')
 
-    expect(() => pruneUnofferedLocales(localesPath(), ['en'])).toThrow(
-      /floor/
-    )
+    expect(() => pruneUnofferedLocales(localesPath(), ['en'])).toThrow(/floor/)
     expect(existsSync(join(localesPath(), 'xx'))).toBe(true)
     expect(existsSync(join(localesPath(), 'en'))).toBe(true)
   })

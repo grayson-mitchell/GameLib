@@ -62,6 +62,7 @@ import type { Plugin } from 'vite'
 import { assembleRendererDistPlugin } from './meta/assembleRendererDist'
 import { preserveRunnerSymlinksPlugin } from './meta/preserveRunnerSymlinks'
 import { pruneStaleHelperBinariesPlugin } from './meta/pruneStaleHelperBinaries'
+import { pruneUnofferedLocalesPlugin } from './meta/pruneUnofferedLocales'
 
 // Copied, not imported, from `electron.vite.config.ts` on purpose: plan 35-14
 // deletes that file, and an import would take this config down with it.
@@ -139,6 +140,32 @@ export default defineConfig(({ mode }) => ({
     // deletes nothing -- when public/bin is not fully populated. See
     // meta/pruneStaleHelperBinaries.ts for the full guard.
     pruneStaleHelperBinariesPlugin(),
+    // Quick task 260922-hjb: `public/locales` holds 49 directories while
+    // `src/common/languages.ts`'s `supportedLanguages` offers only 43 --
+    // `br`/`da`/`ka`/`sl`/`th`/`uz` are unreachable (no `languageDetector`
+    // is registered in src/frontend/index.tsx, and i18next's
+    // `supportedLngs` resolves an excluded code to `["en"]`) yet ship
+    // TWICE: once via `src-tauri/tauri.conf.json`'s wholesale
+    // `../build/locales/` resource mapping, and again via
+    // `build/renderer/locales` under `frontendDist`. This prunes the BUILD
+    // OUTPUT only -- `public/locales` is deliberately left untouched, so
+    // `pnpm i18n-churn-guard` (which reads `git diff --name-only --
+    // public/locales`, unstaged only) stays out of this task's blast
+    // radius. Runs at `closeBundle`, NOT at `buildStart` like its
+    // `pruneStaleHelperBinariesPlugin` neighbour above: vite's publicDir
+    // copy happens strictly after `buildStart` and would immediately
+    // re-add the six directories this build pass itself just copied in.
+    // Must stay on the normal enforce tier, ahead of
+    // `assembleRendererDistPlugin` below (`enforce: 'post'`) -- that
+    // plugin `rm -rf`s `build/renderer` and re-copies `build/locales` into
+    // it, which is exactly why pruning `build/locales` first fixes BOTH
+    // shipped trees with a single delete. See
+    // meta/__tests__/viteRendererConfig.test.ts, which pins this ordering
+    // by hook identity, enforce tier and array position -- not by array
+    // position alone -- so a future re-order turns that test red instead
+    // of silently landing a half-fix. See meta/pruneUnofferedLocales.ts
+    // for the full guard and lifecycle rationale.
+    pruneUnofferedLocalesPlugin(),
     // F-34.9-01: vite's copyDir (publicDir -> outDir) dereferences
     // symlinks -- every Python.framework symlink inside the onedir
     // runners becomes a real file/directory in build/, which codesign

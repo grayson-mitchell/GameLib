@@ -149,7 +149,9 @@ export function assessOfferedLocales(
   }
 
   if (pruneSet.includes('en')) {
-    reasons.push(`prune set contains 'en' -- refusing to delete the fallback locale`)
+    reasons.push(
+      `prune set contains 'en' -- refusing to delete the fallback locale`
+    )
   }
 
   if (
