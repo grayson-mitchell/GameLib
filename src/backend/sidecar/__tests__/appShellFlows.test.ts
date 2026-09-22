@@ -255,6 +255,17 @@ jest.mock('../../dialog/dialog', () => ({
   showDialogBoxModalAuto: jest.fn()
 }))
 
+// ── utils mock (quick 260922-v2e) — keeps the real powershell VC++ runtime
+// probe (`detectVCRedist`, now wired into frontendReady's one-shot boot
+// block) out of this suite even on a Windows checkout, and lets the wiring
+// itself be asserted. Same narrow-override shape as the dialog mock above --
+// every other export of `backend/utils` (`handleExit`, `openUrlOrFile`, ...)
+// stays real.
+jest.mock('../../utils', () => ({
+  ...jest.requireActual('../../utils'),
+  detectVCRedist: jest.fn()
+}))
+
 // ── Imports (after mocks) ────────────────────────────────────────────────────
 import { startSidecar, writeInvoke, writeSend } from './helpers/sidecarHarness'
 import { GlobalConfig } from 'backend/config'
@@ -1265,6 +1276,162 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       ).toBe(true)
 
       logInfoSpy.mockRestore()
+    })
+  })
+
+  // ── Quick task 260922-v2e: detectVCRedist wired into frontendReady's one-shot
+  // boot block (D1/D2). ISOLATED for the same reason as the CR-02/Phase 35 plan
+  // 11 tests above: `frontendReadyBootWorkDone` is module-scoped and must not
+  // already be flipped by an earlier test in this shared registration.
+  describe('260922-v2e: detectVCRedist wiring', () => {
+    it('is called exactly once, with no arguments, on a single frontendReady delivery into an isolated registration', async () => {
+      let isolatedDetectVCRedist!: jest.Mock
+      let frontendReadyListener!: () => void
+
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedConfigGet = require('backend/config').GlobalConfig
+          .get as jest.Mock
+        isolatedConfigGet.mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedRequestRustInvoke = require('../sidecarRpc')
+          .requestRustInvoke as jest.Mock
+        isolatedRequestRustInvoke.mockResolvedValue(undefined)
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        isolatedDetectVCRedist = require('../../utils')
+          .detectVCRedist as jest.Mock
+
+        // See the "Phase 35 plan 11" test above for why this is required: `frontendReady`
+        // calls `logInfo()` unconditionally, which needs `heroicLogWriter` assigned.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../logger').initHeadless()
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedModule = require('../appShellFlowRegistration')
+        isolatedModule.registerAppShellFlows()
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedPlatform = require('../../platform')
+        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+        ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
+      })
+
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        frontendReadyListener()
+        await flush()
+
+        expect(isolatedDetectVCRedist).toHaveBeenCalledTimes(1)
+        expect(isolatedDetectVCRedist).toHaveBeenCalledWith()
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    it('is called only ONCE (one-shot, D2) across TWO frontendReady deliveries into the same isolated registration', async () => {
+      let isolatedDetectVCRedist!: jest.Mock
+      let frontendReadyListener!: () => void
+
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedConfigGet = require('backend/config').GlobalConfig
+          .get as jest.Mock
+        isolatedConfigGet.mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedRequestRustInvoke = require('../sidecarRpc')
+          .requestRustInvoke as jest.Mock
+        isolatedRequestRustInvoke.mockResolvedValue(undefined)
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        isolatedDetectVCRedist = require('../../utils')
+          .detectVCRedist as jest.Mock
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../logger').initHeadless()
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedModule = require('../appShellFlowRegistration')
+        isolatedModule.registerAppShellFlows()
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedPlatform = require('../../platform')
+        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+        ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
+      })
+
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        frontendReadyListener()
+        await flush()
+        frontendReadyListener()
+        await flush()
+
+        expect(isolatedDetectVCRedist).toHaveBeenCalledTimes(1)
+      } finally {
+        jest.useRealTimers()
+      }
+    })
+
+    it('a synchronous throw from detectVCRedist does not skip initQueue(true) scheduled at 5s (ordering, D2)', async () => {
+      let isolatedDetectVCRedist!: jest.Mock
+      let isolatedInitQueue!: jest.Mock
+      let frontendReadyListener!: () => void
+
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedConfigGet = require('backend/config').GlobalConfig
+          .get as jest.Mock
+        isolatedConfigGet.mockReturnValue({
+          getSettings: () => ({ language: 'en' }),
+          setSetting: jest.fn(),
+          set: jest.fn(),
+          flush: jest.fn()
+        })
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedRequestRustInvoke = require('../sidecarRpc')
+          .requestRustInvoke as jest.Mock
+        isolatedRequestRustInvoke.mockResolvedValue(undefined)
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        isolatedInitQueue = require('../../downloadmanager/downloadqueue')
+          .initQueue as jest.Mock
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        isolatedDetectVCRedist = require('../../utils')
+          .detectVCRedist as jest.Mock
+        isolatedDetectVCRedist.mockImplementation(() => {
+          throw new Error('boom')
+        })
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('../../logger').initHeadless()
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedModule = require('../appShellFlowRegistration')
+        isolatedModule.registerAppShellFlows()
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolatedPlatform = require('../../platform')
+        const isolatedListenerRegistry = isolatedPlatform.listenerRegistry
+        ;[frontendReadyListener] = isolatedListenerRegistry.get('frontendReady')
+      })
+
+      jest.useFakeTimers({ doNotFake: ['setImmediate'] })
+      try {
+        expect(() => frontendReadyListener()).not.toThrow()
+        await flush()
+
+        jest.advanceTimersByTime(5000)
+
+        expect(isolatedInitQueue).toHaveBeenCalledTimes(1)
+        expect(isolatedInitQueue).toHaveBeenCalledWith(true)
+      } finally {
+        jest.useRealTimers()
+      }
     })
   })
 

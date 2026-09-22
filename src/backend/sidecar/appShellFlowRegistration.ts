@@ -129,6 +129,20 @@
  * `frontendReadyBootWorkDone`'s one-shot guard being exactly what makes that
  * true; see CR-02, `35-REVIEW.md`, closed by plan 35-21).
  *
+ * `detectVCRedist()` (quick 260922-v2e) is the second, and so far last, member
+ * of the boot-work half guarded by `frontendReadyBootWorkDone` -- ported from
+ * `main.ts:296`'s `detectVCRedist(mainWindow)` (deleted in 5643c7583^; finding
+ * A7, quick 260906-gej). It runs immediately after the `initQueue(true)`
+ * `setTimeout` is scheduled, not inside its callback, and is wrapped in its
+ * own try/catch (`logSendFailure('frontendReady -> detectVCRedist', error)`)
+ * so a synchronous throw from it can never skip the auto-resume scheduling
+ * above it. Its own powershell probe is independently bounded (see
+ * `VC_REDIST_PROBE_TIMEOUT_MS` in `backend/utils.ts`). Proven behaviourally by
+ * `appShellFlows.test.ts`'s `260922-v2e: detectVCRedist wiring` describe block
+ * (mocked `detectVCRedist`, asserted called exactly once with no arguments,
+ * including across two deliveries into the same isolated registration, and
+ * that a synchronous throw from it does not prevent `initQueue(true)` firing).
+ *
  * Uses electronStub's own `ipcMain` directly (not `backend/ipc`'s typed
  * `addHandler`/`addListener`) — `backend/ipc.ts` itself imports the real
  * `electron` module.
@@ -158,7 +172,7 @@ import {
 } from '../appshell/releases'
 import { changeLanguage } from '../appshell/language'
 import { notify, showDialogBoxModalAuto } from '../dialog/dialog'
-import { handleExit, openUrlOrFile } from '../utils'
+import { handleExit, openUrlOrFile, detectVCRedist } from '../utils'
 import { callAbortController } from '../utils/aborthandler/aborthandler'
 import { GlobalConfig } from '../config'
 import { libraryManagerMap } from '../storeManagers'
@@ -205,6 +219,11 @@ let trayColorTimer: NodeJS.Timeout | undefined
 // the boot half is the narrower fix of the review's two candidates. Set to `true` BEFORE the
 // `setTimeout` below is scheduled, not inside its callback, so two synchronous deliveries in
 // the same tick (no timers involved yet) cannot both observe `false`.
+//
+// Quick task 260922-v2e: `detectVCRedist()` joined this SAME boot half for the SAME reason --
+// a renderer reload must not re-spawn the powershell VC++ runtime probe. It is guarded by
+// this flag inside the same `if (!frontendReadyBootWorkDone)` block as `initQueue`, not by a
+// second, independent flag.
 let frontendReadyBootWorkDone = false
 
 /**
@@ -485,6 +504,35 @@ export function registerAppShellFlows(
           logInfo('Starting the Download Queue', LogPrefix.Backend)
           void initQueue(true)
         }, 5000).unref()
+
+        // Quick task 260922-v2e: ports old `main.ts:296` `detectVCRedist(mainWindow)`
+        // (deleted in 5643c7583^; finding A7, quick 260906-gej) into the Tauri-era
+        // sidecar. WHY HERE and not `bootstrap.ts`'s `init()` (D1): the in-app dialog
+        // path (`showDialogBoxModalAuto` -> `sendFrontendMessage('showDialog')`) is
+        // one-way and is silently dropped if no renderer listener is mounted yet
+        // (`preload/tauriTransport.ts`'s `listen()` has no buffer/replay) -- a call in
+        // `init()` would run the probe before the webview has even loaded and the
+        // dialog would vanish. `frontendReady` is the same hook the Snap warning above
+        // already uses for exactly this reason. WHY AFTER the `initQueue` scheduling
+        // (D2): a synchronous throw from `detectVCRedist` must never skip the
+        // download-queue auto-resume -- ordering matters, not just presence. WHY
+        // ONE-SHOT (D2): matches the old semantics (`createWindow()` ran once per
+        // process) and stops a renderer reload from re-spawning powershell; reusing
+        // `frontendReadyBootWorkDone` (already `true` at this point in this branch)
+        // is exactly the same guard `initQueue` above relies on. The powershell probe
+        // itself is bounded inside `detectVCRedist` (`VC_REDIST_PROBE_TIMEOUT_MS`,
+        // CLAUDE.md "The sidecar's exit contract", half 2, in-flight work) -- this
+        // call site adds no additional bound of its own. No-op off Windows via
+        // `detectVCRedist`'s own `!isWindows` early return -- costs one function call
+        // on macOS/Linux and spawns nothing. Wrapped in its OWN try/catch (rather than
+        // relying solely on this handler's outer one) so a future refactor that
+        // reorders this block still cannot let a `detectVCRedist` throw skip the
+        // `initQueue` scheduling above it.
+        try {
+          detectVCRedist()
+        } catch (error) {
+          logSendFailure('frontendReady -> detectVCRedist', error)
+        }
       }
     } catch (error) {
       logSendFailure('frontendReady', error)

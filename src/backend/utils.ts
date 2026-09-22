@@ -769,11 +769,33 @@ function removeQuoteIfNecessary(stringToUnquote: string) {
   return String(stringToUnquote)
 }
 
+// Quick task 260922-v2e (D3/D4): the probe is referenced work -- its process
+// handle and its stdout/stderr pipes each hold the sidecar's event loop open
+// (CLAUDE.md "The sidecar's exit contract", half 2, in-flight work).
+// `unref()` is the wrong tool here (it would have to cover the child AND all
+// three stdio pipes, and would silently drop the result on a quick quit), so
+// the probe is bounded instead: `spawn(..., { timeout, windowsHide })` kills
+// the child at this bound, the pipes close, and the loop drains normally.
+// Value: must be >= 3x the worst measured probe wall time on the operator's
+// Windows 11 box (cold + warm) and <= 30_000 (D4) -- see quick 260922-v2e's
+// SUMMARY.md for the Task 3 measurement this value is derived from.
+const VC_REDIST_PROBE_TIMEOUT_MS = 15_000
+
 /**
  * Detects MS Visual C++ Redistributable and prompts for its installation if it's not found
  * Many games require this while not actually specifying it, so it's good to have
  *
  * Only works on Windows of course
+ *
+ * Quick task 260922-v2e: called exactly once per sidecar process, from
+ * `appShellFlowRegistration.ts`'s `frontendReady` handler (inside its
+ * one-shot boot-work block) -- NOT from `bootstrap.ts`'s `init()` -- because
+ * the in-app dialog path (`showDialogBoxModalAuto` ->
+ * `sendFrontendMessage('showDialog')`) is one-way and is silently dropped if
+ * no renderer listener is mounted yet; `frontendReady` is the earliest point
+ * a renderer is guaranteed to exist. The powershell probe below is bounded
+ * (see `VC_REDIST_PROBE_TIMEOUT_MS` above) so a hung/slow child cannot keep
+ * the sidecar process alive past the exit contract's in-flight-work bound.
  */
 function detectVCRedist() {
   if (!isWindows) {
@@ -783,6 +805,7 @@ function detectVCRedist() {
   const skip = configStore.get('skipVcRuntime', false)
 
   if (skip) {
+    logInfo('VCRuntime check skipped (skipVcRuntime is set)', LogPrefix.Backend)
     return
   }
 
@@ -791,19 +814,33 @@ function detectVCRedist() {
   // wmic is also deprecated
   const detectedVCRInstallations: string[] = []
   let stderr = ''
+  const probeStartedAt = Date.now()
 
   // get applications
-  const child = spawn('powershell.exe', [
-    'Get-ItemProperty',
-    'HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*,',
-    'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',
-    '|',
-    'Select-Object',
-    'DisplayName',
-    '|',
-    'Format-Table',
-    '-AutoSize'
-  ])
+  //
+  // D6 (260922-v2e): `-NoProfile -NonInteractive` prepended so a user's
+  // powershell profile script cannot add seconds to every probe or hang a
+  // prompt until the timeout below fires. The Get-ItemProperty /
+  // Select-Object / Format-Table tail stays byte-identical.
+  const child = spawn(
+    'powershell.exe',
+    [
+      '-NoProfile',
+      '-NonInteractive',
+      'Get-ItemProperty',
+      'HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*,',
+      'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',
+      '|',
+      'Select-Object',
+      'DisplayName',
+      '|',
+      'Format-Table',
+      '-AutoSize'
+    ],
+    // D3: bounded so a hung/slow probe cannot keep the sidecar's event loop
+    // open past this timeout; windowsHide keeps no console flash on launch.
+    { timeout: VC_REDIST_PROBE_TIMEOUT_MS, windowsHide: true }
+  )
 
   child.stdout.setEncoding('utf-8')
   child.stdout.on('data', (data: string) => {
@@ -825,7 +862,20 @@ function detectVCRedist() {
     return
   })
 
-  child.on('close', (code: number) => {
+  // D5 (260922-v2e): signal-safe. A timeout kill closes with `code === null`
+  // and a signal set; `null` is falsy, so the old `if (code)` guard would
+  // fall through to "fewer than 4 lines -> show the dialog" -- a false nag
+  // caused purely by the bound above. The signal branch returns first and
+  // never shows a dialog; any other non-zero code keeps the pre-existing
+  // logError behaviour, also without a dialog.
+  child.on('close', (code: number | null, signal: NodeJS.Signals | null) => {
+    if (signal) {
+      logWarning(
+        `VCRuntime check killed after exceeding VC_REDIST_PROBE_TIMEOUT_MS (${VC_REDIST_PROBE_TIMEOUT_MS}ms), signal ${signal}`,
+        LogPrefix.Backend
+      )
+      return
+    }
     if (code) {
       // log-secret-gate-exempt: stderr of the powershell Get-ItemProperty VCRuntime probe
       logError(
@@ -861,7 +911,12 @@ function detectVCRedist() {
         ]
       })
     } else {
-      logInfo('VCRuntime is installed', LogPrefix.Backend)
+      // D7 (260922-v2e): count + elapsed only -- no DisplayNames, no stderr.
+      const elapsedMs = Date.now() - probeStartedAt
+      logInfo(
+        `VCRuntime is installed (${detectedVCRInstallations.length} matching entries, probe ${elapsedMs} ms)`,
+        LogPrefix.Backend
+      )
     }
   })
 }
@@ -1787,6 +1842,7 @@ export {
   quoteIfNecessary,
   removeQuoteIfNecessary,
   detectVCRedist,
+  VC_REDIST_PROBE_TIMEOUT_MS,
   killPattern,
   shutdownWine,
   getShellPath,
