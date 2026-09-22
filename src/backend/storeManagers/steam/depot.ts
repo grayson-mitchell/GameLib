@@ -159,7 +159,13 @@ export const HIDDEN_FLAG = 16
  * turns `chmodAttempts` into the fail-closed input for the StateFlags=4/1026
  * decision).
  */
-export interface DepotModeCounters {
+// Not exported (this and DownloadSteamDepotsOpts, DepotPlanChunk, DepotPlanEntry,
+// PLAN_BUILD_RETRY_DELAY_MS, TARGET_INFLIGHT_CHUNKS, DownloadDepotFilesOpts,
+// DepotDownloadResult, FinalizeDepotEntry and DepotDownloadOutcome elsewhere in this
+// file): verified to have no importer anywhere -- every cross-file mention is a prose
+// comment, not an import (`pnpm find-deadcode` / ts-prune flagged the previously-exported
+// forms as over-broad `export` keywords).
+interface DepotModeCounters {
   /** Incremented only on the branch that actually calls `chmod(dest, 0o755)`. */
   chmodAttempts: number
   /** Incremented on every entry to `applyEDepotFileModes`, regardless of
@@ -167,7 +173,7 @@ export interface DepotModeCounters {
   modeCallsites: number
 }
 
-export interface DownloadSteamDepotsOpts {
+interface DownloadSteamDepotsOpts {
   targetSteamappsDir: string
   installdir: string
   /** Required — never defaulted to the host OS here (select.ts's own discipline). */
@@ -179,7 +185,7 @@ export interface DownloadSteamDepotsOpts {
 /** One chunk within a depot manifest file, exactly as steam-user's raw manifest
  *  parser returns it (offset/sha/cb_original — consumed unmodified by Plan 05's
  *  streaming download loop). */
-export interface DepotPlanChunk {
+interface DepotPlanChunk {
   sha: string | Buffer
   cb_original: number | string
   offset: number | string
@@ -202,7 +208,7 @@ export interface DepotPlanFile {
 }
 
 /** One resolved + manifest-fetched depot, ready for Plan 05's chunk download. */
-export interface DepotPlanEntry {
+interface DepotPlanEntry {
   /** Steam depot id. STRING — never coerced to Number (T-21-04). */
   depotId: string
   /** 64-bit manifest GID. STRING — never coerced to Number (T-21-04). */
@@ -385,7 +391,7 @@ export const PLAN_BUILD_MAX_ATTEMPTS = 3
  *  ensureConnected() has already (re)settled — steam-user's own
  *  autoRelogin/ensureConnected already waits out the real reconnect race;
  *  this is just a short courtesy pause before hitting the CM again. */
-export const PLAN_BUILD_RETRY_DELAY_MS = 500
+const PLAN_BUILD_RETRY_DELAY_MS = 500
 
 /** Resolves after `ms`, or immediately if/when `signal` aborts — so a cancel
  *  issued while a plan-build retry is backing off still takes effect
@@ -982,7 +988,7 @@ export const FILE_CONCURRENCY = 32
  *  achieved (see FILE_CONCURRENCY's doc comment). Enforced by one
  *  `InflightLimiter` instance per download run, constructed in
  *  `downloadDepotFiles` alongside the run's `HostHealthTracker`. */
-export const TARGET_INFLIGHT_CHUNKS = 32
+const TARGET_INFLIGHT_CHUNKS = 32
 /** Debug/steam-install-slow-start gap closure: per-chunk retry budget passed to
  *  fetchChunk (host-rotating retry across content servers). fetchChunk's own
  *  docstring documents a ~16% per-chunk transient failure rate at
@@ -1129,7 +1135,7 @@ export function sha1File(path: string): Promise<string> {
   })
 }
 
-export interface DownloadDepotFilesOpts {
+interface DownloadDepotFilesOpts {
   targetSteamappsDir: string
   installdir: string
   /** Content-server hostnames from client.getContentServers() — caller-supplied
@@ -1178,7 +1184,7 @@ export interface DepotDownloadFailure {
   cause?: unknown
 }
 
-export interface DepotDownloadResult {
+interface DepotDownloadResult {
   outcome: 'completed' | 'cancelled'
   failures: DepotDownloadFailure[]
   /** Every planned file for this run was attempted (queue fully drained, no
@@ -2761,7 +2767,7 @@ export async function downloadDepotFiles(
 // .acf (D-07's non-conflicting-paths guarantee).
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface FinalizeDepotEntry {
+interface FinalizeDepotEntry {
   /** Steam depot id. STRING — never coerced to Number (T-21-04). */
   depotId: string
   /** 64-bit manifest GID. STRING — never coerced to Number (T-21-04). */
@@ -3052,7 +3058,7 @@ async function getContentServerHosts(
 // depot/hostHealth.ts's health-aware selection below, which works WITHIN the
 // same fixed host pool instead of trying to refresh it away.
 
-export interface DepotDownloadOutcome {
+interface DepotDownloadOutcome {
   status: 'done' | 'error' | 'cancelled'
   error?: string
   /** 23.2-03 (G-23-01): depot ids skipped by the EResult-40 skip-and-warn

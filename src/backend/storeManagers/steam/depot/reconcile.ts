@@ -28,14 +28,19 @@ const DIRECTORY_FLAG = 64
 const SYMLINK_FLAG = 512
 
 /** Same shape downloadDepotFiles' own job-list builder produces. */
-export interface ReconcileJob {
+// Not exported (this and ReconcileResult, ShapeFailure, ShapeResult,
+// StructuralFailureReason, StructuralMismatch and StructuralVerifyResult elsewhere in
+// this file): verified to have no importer anywhere -- not in any tracked .ts/.tsx file
+// (`pnpm find-deadcode` / ts-prune flagged the previously-exported forms as over-broad
+// `export` keywords).
+interface ReconcileJob {
   depotId: string
   key: Buffer
   file: DepotPlanFile
   fileSeed: number
 }
 
-export interface ReconcileResult {
+interface ReconcileResult {
   /** Reduced job list — only files that are missing, wrong-sized, or failed
    *  a content sha1 check. A file the reconciler trusts as already-complete
    *  is EXCLUDED here, never re-downloaded (D-05: reconciliation fills
@@ -97,9 +102,9 @@ async function zeroSizeVerified(dest: string): Promise<boolean> {
   }
 }
 
-export type ShapeFailure = 'missing' | 'not-a-file' | 'wrong-size'
+type ShapeFailure = 'missing' | 'not-a-file' | 'wrong-size'
 
-export type ShapeResult =
+type ShapeResult =
   | { ok: true; size: number }
   | { ok: false; reason: ShapeFailure; foundSize?: number }
 
@@ -199,7 +204,7 @@ export async function reconcilePartialState(
 // per-run log payload while still counting the true total separately.
 const MISMATCH_REPORT_CAP = 10
 
-export type StructuralFailureReason =
+type StructuralFailureReason =
   | 'missing'
   | 'not-a-file'
   | 'wrong-size'
@@ -207,14 +212,14 @@ export type StructuralFailureReason =
   | 'bad-symlink'
   | 'error'
 
-export interface StructuralMismatch {
+interface StructuralMismatch {
   filename: string
   reason: StructuralFailureReason
   expectedSize?: number
   foundSize?: number
 }
 
-export interface StructuralVerifyResult {
+interface StructuralVerifyResult {
   ok: boolean
   checked: number
   /** TOTAL mismatch count — never truncated, even though `mismatches` is
