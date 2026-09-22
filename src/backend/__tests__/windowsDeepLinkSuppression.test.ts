@@ -106,11 +106,7 @@ function loadJson<T>(path: string): T {
  * for the limits of that claim.
  */
 function mergePatch(target: unknown, patch: unknown): unknown {
-  if (
-    typeof patch !== 'object' ||
-    patch === null ||
-    Array.isArray(patch)
-  ) {
+  if (typeof patch !== 'object' || patch === null || Array.isArray(patch)) {
     return patch
   }
   const result: Record<string, unknown> =
@@ -132,9 +128,7 @@ describe('quick-260922-nx4: Windows install-time gamelib:// deep-link suppressio
     const windowsConf = loadJson<PlatformConfig>(WINDOWS_CONF_PATH)
     const desktop = windowsConf.plugins?.['deep-link']?.desktop
     expect(desktop).toBeDefined()
-    expect(
-      Object.prototype.hasOwnProperty.call(desktop, 'schemes')
-    ).toBe(true)
+    expect(Object.prototype.hasOwnProperty.call(desktop, 'schemes')).toBe(true)
     expect(desktop?.schemes).toEqual([])
   })
 
