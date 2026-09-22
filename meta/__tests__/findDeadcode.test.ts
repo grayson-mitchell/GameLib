@@ -90,6 +90,65 @@ describe('meta/findDeadcode.cjs identityOf', () => {
   })
 })
 
+describe('meta/findDeadcode.cjs Windows path separators', () => {
+  // Todo 2026-09-22-pre-push-hook-cannot-pass-on-a-windows-checkout.md: ts-prune
+  // strips process.cwd() and a leading separator, but on Windows what remains
+  // starts with `\` and uses `\` separators, so every finding read as NEW and
+  // every baseline line read as stale. These literal strings use escaped
+  // backslashes so the test is host-OS independent -- no path.sep, path.win32,
+  // or process.platform anywhere here.
+  test('parses a Windows-shaped line with a leading backslash into a forward-slash path', () => {
+    const finding = findDeadcode.parseFinding('\\meta\\x.ts:12 - foo')
+    expect(finding).toEqual({
+      path: 'meta/x.ts',
+      line: 12,
+      name: 'foo',
+      usedInModule: false
+    })
+  })
+
+  test('parses a Windows-shaped "(used in module)" line into a forward-slash path', () => {
+    const finding = findDeadcode.parseFinding(
+      '\\meta\\x.ts:12 - foo (used in module)'
+    )
+    expect(finding).toEqual({
+      path: 'meta/x.ts',
+      line: 12,
+      name: 'foo',
+      usedInModule: true
+    })
+  })
+
+  test('identityOf agrees between a Windows-shaped path and its POSIX equivalent', () => {
+    const windowsIdentity = findDeadcode.identityOf(
+      findDeadcode.parseFinding('\\meta\\x.ts:12 - foo')
+    )
+    const posixIdentity = findDeadcode.identityOf(
+      findDeadcode.parseFinding('meta/x.ts:12 - foo')
+    )
+    expect(windowsIdentity).toBe('meta/x.ts - foo')
+    expect(posixIdentity).toBe(windowsIdentity)
+  })
+
+  test('identityOf agrees between a Windows-shaped and POSIX "(used in module)" line', () => {
+    const windowsIdentity = findDeadcode.identityOf(
+      findDeadcode.parseFinding('\\meta\\x.ts:12 - foo (used in module)')
+    )
+    const posixIdentity = findDeadcode.identityOf(
+      findDeadcode.parseFinding('meta/x.ts:12 - foo (used in module)')
+    )
+    expect(windowsIdentity).toBe('meta/x.ts - foo')
+    expect(posixIdentity).toBe(windowsIdentity)
+  })
+
+  test('normalises a nested Windows path with no leading separator', () => {
+    const finding = findDeadcode.parseFinding(
+      'src\\frontend\\a\\b.ts:3 - bar'
+    )
+    expect(finding.path).toBe('src/frontend/a/b.ts')
+  })
+})
+
 describe('meta/findDeadcode.cjs partitionFindings', () => {
   test('splits a mixed list into two populations with nothing lost', () => {
     const findings = [
