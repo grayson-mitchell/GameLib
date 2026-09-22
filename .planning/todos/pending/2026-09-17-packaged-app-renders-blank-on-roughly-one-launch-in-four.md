@@ -177,52 +177,60 @@ t+1500ms  root 1280.00x800.00  kids: 1   rows 40px 42px 718px 0px
 **So the boot NORMALLY mounts, empties `#root`, and re-mounts ~60ms later.** The blank
 launch is not a different event — it is this same transient with the re-mount missing.
 
-Why the root empties at all: `GlobalState` is `withTranslation()(GlobalState)`
-(`GlobalState.tsx:1988`) and `index.tsx` renders it **outside** the `<Suspense>` boundary —
-`<GlobalState><I18nextProvider><Suspense fallback={<Loading/>}><App/>`. i18next is
-configured `react: { useSuspense: true }`, so once a namespace load is outstanding
-`withTranslation()` suspends, and a suspension with **no Suspense boundary above it** makes
-React delete the root's committed children. The `i18next-loaded` events land right after
-each `ROOT-EMPTIED`, which is the correlation this predicts.
+**The explanation first written here was WRONG and is kept only as a warning.** It read:
+`GlobalState` is `withTranslation()(GlobalState)` rendered outside the `<Suspense>`
+boundary, i18next is `useSuspense: true`, so a namespace load suspends with no boundary
+above it and React deletes the root's committed children — with the `i18next-loaded` events
+landing right after each `ROOT-EMPTIED` as the predicted correlation. It fits every symptom
+and it is a real React hazard. It was implemented and measured, and the empty-root window
+stayed at 10 launches out of 10. So did the second suspense hypothesis. See
+**TWO REFUTED HYPOTHESES** above.
 
-That also explains why no `<Loading/>` ever appears: the fallback is *below* the component
-that suspends, so it cannot cover this.
+The correlation was real and misleading: `i18next-loaded` lands right after `ROOT-EMPTIED`
+because both trail the same chunk import, not because one causes the other.
 
-**Fix direction (not yet implemented, and deliberately not implemented blind):** stop the
-root from being emptied — put a `<Suspense>` boundary above `GlobalState`, or have the
-namespaces `GlobalState` needs loaded before `root.render` (the `i18next.init` promise is
-already available at that point), or take `withTranslation` off the outermost component. A
-"re-render if `#root` is empty" recovery would paper over the same window and should not be
-the first move.
+What actually empties the root is in **RESOLVED** at the top of this file: the data router's
+initial-load state rendered `null`. The mutation record is what separated the two —
+`removed=[div.UpdateComponent] added=[]` is the `<Suspense>` fallback being taken away with
+nothing put in its place, which no suspend-above-the-boundary story predicts.
 
 ## What is NOT established
 
-- **Why the re-mount sometimes never arrives.** The emptying itself is now explained (see
-  above), but not why React fails to re-commit on the blank launch — a lost wakeup when the
-  suspended promise resolves is a guess, not a measurement. **No error reached the log** on
-  the blank run, and absence was not evidence: the only paths that could have carried one
-  were `bootErrorSurface`'s post-mount `console.error` (invisible on a release build) and
-  `index.tsx`'s `logError(ev.error)`, which never sees a rejection at all. The probe now
-  forwards both.
-- **Whether `hidden` matters.** The blank run went `hidden` between t+500ms and t+1500ms and
-  stayed hidden. But seven deliberate launches booted entirely hidden (display asleep from
-  t+1s, four of them also CPU-saturated) and all mounted normally by t+1500ms. So `hidden`
-  is a correlate, not a demonstrated cause, and CPU load plus `hidden` is not a recipe.
-- **Whether the state is terminal.** The window was still empty ~15s in, after being
-  activated. Nothing has observed it past that point.
-- **Whether the released DMG reproduces.** Still untested as such. The bundle that DID
-  reproduce is release-shaped and signed by the standard build command, which is the
-  closest available proxy; the GitHub draft release's own DMG (2026-08-28, 0 downloads) has
-  not been run.
+Written before the cause was found. Three of these four are now settled; they are kept with
+their outcome so the open one is not lost among them.
+
+- ~~**Why the re-mount sometimes never arrives.**~~ SETTLED. There is no re-mount to wait
+  for: the router rendered `null` for the whole initial-load state, and a route module that
+  never settled left it there forever. Now bounded at 20s onto `errorElement`. The point
+  underneath still stands: **no error reached the log** on the blank run, and that absence
+  was never evidence — the only paths that could have carried one were `bootErrorSurface`'s
+  post-mount `console.error` (invisible on a release build) and `index.tsx`'s
+  `logError(ev.error)`, which never sees a rejection at all. The probe forwards both.
+- ~~**Whether `hidden` matters.**~~ SETTLED as a correlate only, and now moot. Seven
+  deliberate launches booted entirely hidden (display asleep from t+1s, four also
+  CPU-saturated) and all mounted normally by t+1500ms.
+- ~~**Whether the state is terminal.**~~ Moot: the window it describes no longer exists.
+- **Whether the released DMG reproduces.** STILL UNTESTED, and the only one of these worth
+  anything now. The bundle that DID reproduce is release-shaped and signed by the standard
+  build command, which is the closest available proxy; the GitHub draft release's own DMG
+  (2026-08-28, 0 downloads) has not been run. It predates the fix, so a blank launch from it
+  would confirm the mechanism rather than reopen anything.
 
 ## Severity
 
-Held at `major`, deliberately, with the rate corrected downward:
+`minor` since the fix landed (2026-09-23). The frontmatter is the live value; the reasoning
+below is the pre-fix state, kept because the rate correction in it is still the best number
+anyone has.
+
+Before the fix it was held at `major`, deliberately, with the rate corrected downward:
 
 - not `critical` — 1 in 39, no data loss, and relaunching clears it;
-- not `minor` — it is a whole-app failure on a correctly signed artefact produced by the
-  standard release build, reproduced 2026-09-23 at HEAD, and a user who hits it sees a dead
+- not `minor` — it was a whole-app failure on a correctly signed artefact produced by the
+  standard release build, reproduced 2026-09-23 at HEAD, and a user who hit it saw a dead
   window with no error anywhere.
+
+It is `minor` now because the fix is in and measured (0 of 10, against 10 of 10 on each
+failed attempt); what is left is a probe to remove and a release cycle to watch.
 
 ## Solution
 
@@ -244,13 +252,17 @@ console.
 
 ### Next, in order
 
-1. **Wait for a recurrence and read `ROOT-EMPTIED` plus the error lines around it.** That
-   single log window names the mechanism; everything above is inference without it.
-2. Only then decide the remedy. The obvious candidate — re-render when `#root` is found
-   empty post-mount — is a recovery, not a fix, and shipping it before the cause is known
-   would hide the defect while leaving it live.
-3. Remove `blankRenderProbe.ts`, its `index.tsx` import and the `probeMark` call sites when
-   this closes.
+Steps 1 and 2 are DONE — the recurrence was captured (`ROOT-EMPTIED` with its `removed=`
+list), it named the mechanism, and the remedy followed from it rather than from the
+`#root`-is-empty recovery that step 2 warned against. Only step 3 remains, and it waits on
+the close condition in **What remains open** at the top:
+
+1. ~~Wait for a recurrence and read `ROOT-EMPTIED` plus the error lines around it.~~ Done
+   2026-09-23; that single log window did name the mechanism, as this predicted.
+2. ~~Only then decide the remedy.~~ Done. The warning held: the recovery would have papered
+   over the window while leaving the router rendering nothing.
+3. **Remove `blankRenderProbe.ts`, its `index.tsx` import and the `probeMark` call sites**
+   after one clean release cycle, then move this todo to `completed/`.
 
 ## Method notes
 
