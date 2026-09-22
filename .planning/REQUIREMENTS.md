@@ -501,6 +501,17 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-43-22 | Phase 43 | Pending |
 | REQ-43-23 | Phase 43 | Pending |
 | REQ-43-24 | Phase 43 | Complete (plan 43-09, `a25d8d2af`/`7274a6ddc`) |
+| REQ-46-01 | Phase 46 | Pending |
+| REQ-46-02 | Phase 46 | Pending |
+| REQ-46-03 | Phase 46 | Pending |
+| REQ-46-04 | Phase 46 | Pending |
+| REQ-46-05 | Phase 46 | Pending |
+| REQ-46-06 | Phase 46 | Pending |
+| REQ-46-07 | Phase 46 | Pending |
+| REQ-46-08 | Phase 46 | Pending |
+| REQ-46-09 | Phase 46 | Pending |
+| REQ-46-10 | Phase 46 | Pending |
+| REQ-46-11 | Phase 46 | Pending |
 
 **Coverage:**
 - v0.2 requirements: 15 total
@@ -2122,3 +2133,176 @@ no upstream artifact mentions; (6) the row-level Errored state has no per-verb a
 D-21 and D-23 are deliberately not given requirement IDs — they are statements about verification
 posture and non-coverage, carried in plan 44-08 and required to appear in `44-LIVE-GATE.md`.
 ROADMAP.md's Phase 44 `**Requirements**: TBD` line is replaced by these IDs.*
+
+## Phase 46 Requirements — Windows single-instance guard and gamelib:// deep-link registration
+
+Minted 2026-09-22 during `/gsd-plan-phase 46` from `46-RESEARCH.md`'s `<phase_requirements>`
+proposal (REQ-46-01..10), amended as recorded below. ROADMAP.md read `**Requirements**: TBD`. **No
+CONTEXT.md exists**: the operator chose "Continue without context" and "Research first". Research
+recommendations are therefore adopted as planning defaults, and the three genuinely open calls are
+recorded as operator-overridable decision points rather than silently locked (see "Open decision
+points" below). Shape follows the `- [ ] **REQ-<phase>-<NN>**: <PASS/FAIL-scoreable text>` form
+used by Phases 40/43/44.
+
+**Four planning-time corrections are recorded in requirement text rather than left in a plan,
+because each changes what a plan must assert:**
+
+1. **The guard is keyed on the user's token SID, not on the `USERNAME` env var** (REQ-46-02).
+   RESEARCH and PATTERNS proposed `std::env::var("USERNAME")`, sanitized to `[A-Za-z0-9_]`. That
+   has two defects. The env var is inherited process state: a launcher, shortcut, or scheduled
+   task can start GameLib with a different `USERNAME`, which yields a different mutex name and so a
+   second instance. And the sanitizer is lossy: `a.b` and `a_b` collide. The SID read from the
+   process token is authoritative and unique. It is also the only value the pipe DACL can use
+   (correction 2), so reading it once serves both. A malformed SID string is rejected by one pure
+   validator before it reaches a mutex name, a pipe name, or an SDDL string, which closes SDDL
+   injection by construction.
+2. **The pipe DACL names the explicit user SID, not the SDDL `OW` alias** (REQ-46-03). RESEARCH
+   recommended `D:(A;;GA;;;OW)`. `OW` is OWNER RIGHTS: it grants access to whoever the object's
+   owner is, and a new object's owner is the creating token's *default owner*. For an elevated
+   administrator that default owner is `BUILTIN\Administrators`, not the user. An elevated primary
+   would then produce a pipe that the same user's non-elevated secondary cannot open. The plan uses
+   `O:<sid>D:P(A;;GA;;;<sid>)`, which sets both the owner and the only ACE to the same user SID.
+   The trust boundary is still per-user, as RESEARCH intended.
+3. **The pipe name is per-session, matching the `Local\` mutex** (REQ-46-02/03). The `Local\`
+   mutex namespace is per-session, but the named-pipe namespace is machine-global. With a per-user
+   pipe name, the same user in two sessions (RDP, or fast user switching back to a disconnected
+   session) gets two primaries. The second primary's `FILE_FLAG_FIRST_PIPE_INSTANCE` create fails,
+   so that primary runs without a listener, and that session's secondaries deliver their deep links
+   to the OTHER session's window. The pipe name therefore carries the token's session id:
+   `\\.\pipe\gamelib-single-instance-<sid>-s<session>`.
+4. **The secondary authenticates the pipe server before writing** (REQ-46-03, new T-46-01/02).
+   RESEARCH covered who may *connect to* the primary's pipe (DACL, `PIPE_REJECT_REMOTE_CLIENTS`).
+   It did not cover the reverse direction: the pipe namespace is global, so another local user can
+   pre-create the name. Without a check, our secondary would hand that user its URL and would let
+   that server impersonate it. The secondary opens with `SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS`
+   (no impersonation), verifies that the pipe's owner SID equals its own before writing, and exits
+   without writing if the SIDs differ. The primary's first instance uses `FILE_FLAG_FIRST_PIPE_INSTANCE`,
+   so the primary never joins a pre-squatted name. It falls back to fail-open without a listener.
+
+**Open decision points (defaults planned, operator-overridable):**
+
+- **(a) Runtime `register_all()` on Windows: NOT widened.** The NSIS installer alone registers
+  `gamelib://` (HKCU under the default `currentUser` install mode, and it overwrites the stale
+  Electron-era key). This is pinned by the existing Linux-only `cfgGuardAboveRegisterAll` gate plus
+  a REQ-46-06-named test. To override, widen the `#[cfg]` to `any(target_os = "linux", windows)`,
+  keep the `CI=e2e` guard, and flip the pinned string.
+- **(b) Pipe DACL scope: per-user (explicit token-user SID), not logon SID.** This matches the Unix
+  per-`$HOME` boundary. Per-session *routing* comes from the session-scoped pipe name (correction 3),
+  not from the ACL. To override, switch the ACE to the logon SID (`TokenLogonSid` / `TokenGroups`
+  with `SE_GROUP_LOGON_ID`) and state what that changes for a same-user cross-session connect.
+- **(c) Windows `cargo test` / `cargo check` in CI: OUT of scope.** This is filed as a follow-up todo
+  by plan 46-01. The Wave 0 compile break went unnoticed because no workflow runs `cargo test` on
+  any OS.
+
+- [ ] **REQ-46-01**: On Windows, a single-instance guard runs in `main()` BEFORE
+  `tauri::Builder::default()` is constructed. A process that finds another instance holds the guard
+  calls `std::process::exit(0)` before `spawn_sidecar` can run, on every path, whether or not
+  payload delivery succeeded. Every recoverable failure fails OPEN (T-34.5-G6-24): SID lookup
+  failure, mutex creation failure, pipe creation failure, SDDL conversion failure, or accept-loop
+  instance-creation failure. Each one degrades to "primary, with or without a listener" and never
+  aborts startup. A crashed primary never blocks the next launch: the kernel destroys the mutex when
+  its last handle closes, so no stale-holder branch exists or is needed. Source: RESEARCH Q1/Q5;
+  todo properties 1-3. Verified by: source gate (call-site ordering) + live gate checks 3-5.
+
+- [ ] **REQ-46-02**: The primary/secondary decision is `CreateMutexW` on
+  `Local\gamelib-single-instance-<sid>`, where `<sid>` is the current process token's user SID
+  string. The secondary signal is `GetLastError() == ERROR_ALREADY_EXISTS` after a non-null return
+  (Pitfall 1). The mutex handle is non-inheritable and is never closed by the primary. The name
+  derivation is pure: `windows_single_instance_key(user_sid: Option<&str>) -> Option<String>`
+  accepts only `S-1-` followed by one or more `[0-9-]` characters, at most 184 characters in total.
+  `windows_mutex_name` and `windows_pipe_name` are built on that key. It never reads an environment
+  variable (planning-time correction 1). Source: RESEARCH Q1. Verified by: Rust unit tests +
+  source gate.
+
+- [ ] **REQ-46-03**: The payload transport is a named pipe
+  `\\.\pipe\gamelib-single-instance-<sid>-s<session>` with the following properties. It is created
+  `PIPE_ACCESS_INBOUND`, with `FILE_FLAG_FIRST_PIPE_INSTANCE` on the first instance, and
+  `PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS`. Its security
+  descriptor comes from `ConvertStringSecurityDescriptorToSecurityDescriptorW(windows_pipe_sddl(..))`
+  = `O:<sid>D:P(A;;GA;;;<sid>)` with `bInheritHandle = 0`, and is never `NULL`. The first instance is
+  created pre-`Builder`. On the secondary side, the connect is FFI-free (`std::fs::OpenOptions`,
+  write-only) with `security_qos_flags(SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS)`. It retries
+  only `ERROR_FILE_NOT_FOUND` (2) and `ERROR_PIPE_BUSY` (231), 10 attempts at 100 ms each. It
+  verifies that the pipe's owner SID equals its own before writing, and on mismatch writes nothing
+  and exits. The secondary carries the validated URL or the `__GAMELIB_FOCUS__` sentinel, newline
+  terminated. Source: RESEARCH Q2/Q4/Q5; planning-time corrections 2-4. Verified by: Rust unit tests
+  (pure SDDL/retry/owner helpers) + source gates + live gate.
+
+- [ ] **REQ-46-04**: The primary's accept loop, spawned inside `.setup()` after `spawn_sidecar`,
+  never joined, handles `ERROR_PIPE_CONNECTED` as success. It creates the next pipe instance before
+  it reads the current one. It reads through `take(4096)` and a single `read_line` (T-34.5-G6-23).
+  It handles `__GAMELIB_FOCUS__` with the same `run_on_main_thread` show/focus as the Unix loop. It
+  re-validates every other payload through `protocol_url_arg(&[trimmed.to_string()])`
+  (T-34.5-G6-20) before `handleProtocolUrl` dispatch. It logs a rejection as byte count only,
+  never the payload (T-34.5-G6-25). Source: RESEARCH Q4, Don't Hand-Roll. Verified by: source gate
+  (region assertions on the accept-loop function) + live gate check 1.
+
+- [ ] **REQ-46-05**: The `plugins.deep-link` override is deleted from
+  `src-tauri/tauri.windows.conf.json`. This happens in a plan that runs after REQ-46-01..04 are
+  implemented and unit-tested. `bundle.resources` is left byte-identical. In the SAME commit,
+  `windowsDeepLinkSuppression.test.ts` Tests A and E are inverted: Windows declares no
+  `plugins['deep-link']` key, and the merged Windows schemes equal `['gamelib']`. Tests B/C/D stay
+  as controls. The generated `src-tauri/target/debug/nsis/x64/installer.nsi` for that commit
+  contains exactly the 6 `Classes\gamelib` lines recorded by quick 260922-nx4's control run. Source:
+  RESEARCH Q6/Q9; todo "Then, and only then" steps 1-2. Verified by: jest + build-artefact grep.
+
+- [ ] **REQ-46-06**: The runtime `register_all()` decision for Windows is recorded and pinned. The
+  default (decision point (a)) is NOT widened: the single call site stays under
+  `#[cfg(target_os = "linux")]`. The main.rs comment block above it states that Windows registers at
+  INSTALL time via NSIS, and why the runtime call is not needed. A test named for REQ-46-06 in
+  `tauriShellSource.test.ts` pins the gate. Source: RESEARCH Q7; todo step 3. Verified by: source
+  gate.
+
+- [ ] **REQ-46-07**: Every non-FFI decision in the Windows guard is a pure function, NOT
+  `#[cfg(windows)]`-gated, and unit-tested in `#[cfg(test)] mod tests` on any host. This covers
+  `windows_single_instance_key`, `windows_mutex_name`, `windows_pipe_name`, `windows_pipe_sddl`,
+  `windows_pipe_connect_should_retry`, `windows_pipe_owner_matches`, and `single_instance_payload`.
+  The `#[cfg(windows)]` FFI functions follow the `acquire_single_instance` precedent: they are not
+  mock-tested and are exercised by the live gate. Source: RESEARCH Q9. Verified by:
+  `cargo test --bin gamelib-shell windows_` + `single_instance_payload`.
+
+- [ ] **REQ-46-08**: A structural source gate in `tauriShellSource.test.ts` pins this strict order
+  in comment-stripped main.rs: `tauri::Builder::default()` < `.setup(move |app|` < `on_open_url(`.
+  Moving the listener registration earlier would re-open the cold-start double-dispatch question
+  that RESEARCH Q6 closed by version-specific reasoning (tauri 2.11.5 / tauri-plugin-deep-link
+  2.4.9). The gate has a RED self-test. Source: RESEARCH Q6/Q9. Verified by: jest.
+
+- [ ] **REQ-46-09** (Wave 0 prerequisite): `cd src-tauri && cargo test --bin gamelib-shell` compiles
+  and passes on this Windows machine. The four `store_embed_wire_contract_*` tests carry
+  `#[cfg(target_os = "macos")]`, matching the macOS-only helpers they call. No other test is
+  weakened or gated. Source: RESEARCH Q10. Verified by: `cargo test --bin gamelib-shell --no-run`,
+  then the full run.
+
+- [ ] **REQ-46-10**: A live gate on the operator's Windows 11 machine, against an INSTALLED
+  packaged debug NSIS build of the phase's final commit, records PASS/FAIL with numbers for five
+  checks:
+  1. An external `gamelib://` open, including one URL that contains `&`, reaches the RUNNING
+     instance.
+  2. Exactly one `gamelib-sidecar` and one `GameLib` process exist before and after.
+  3. A bare second launch focuses the existing window.
+  4. Two near-simultaneous launches yield one instance.
+  5. After `Stop-Process -Force` of the primary, the next launch starts normally.
+
+  Precondition: `installer.nsi` carries the 6 `Classes\gamelib` lines, and after install
+  `HKCU\Software\Classes\gamelib\shell\open\command` points at the new install path. Installing and
+  running the gate are operator actions. Source: RESEARCH Q9 live protocol; todo Verification.
+  Verified by: manual-only, recorded in `46-LIVE-GATE.md`.
+
+- [ ] **REQ-46-11**: The record matches reality. Comment blocks in `src-tauri/src/main.rs` that say
+  Windows has no guard or is not registered are rewritten when the matching code change lands (the
+  guard-section header, the `U-34.5-18` accepted-gap comment, the `main()` preamble, and the
+  registration block above `register_all()`). The same applies to the header prose of
+  `windowsDeepLinkSuppression.test.ts` and of the `tauriShellSource.test.ts` Phase 35 plan 07
+  describe block. Todo `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md` and
+  ledger row `U-34.5-18` are closed ONLY after REQ-46-10 PASSES. The Windows-CI gap (decision point
+  (c)) is filed as a pending todo. Verified by: grep + file moves recorded in the plan SUMMARYs.
+
+*Last updated: 2026-09-22 -- Phase 46 (REQ-46-01..11) minted during `/gsd-plan-phase 46` from
+`46-RESEARCH.md`'s proposed REQ-46-01..10, plus REQ-46-11 for the record and closure obligations.
+No CONTEXT.md exists (the operator chose to continue without one). Four planning-time corrections
+are recorded in requirement text: (1) key on the token SID, not the `USERNAME` env var; (2) an
+explicit user-SID DACL, not `OW`; (3) a per-session pipe name to match the `Local\` mutex; (4) the
+secondary authenticates the pipe server (SQOS anonymous + owner-SID check). Three decision points
+are planned at their research defaults and flagged as operator-overridable: (a) `register_all()`
+stays Linux-only, (b) a per-user DACL, not logon SID, (c) Windows Rust CI is out of scope and filed
+as a todo. ROADMAP.md's Phase 46 `**Requirements**: TBD` line is replaced by these IDs.*

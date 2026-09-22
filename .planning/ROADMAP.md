@@ -5379,12 +5379,16 @@ Plans:
 ### Phase 46: Windows single-instance guard and gamelib:// deep-link registration
 
 **Goal:** On Windows, a second GameLib launch or an external `gamelib://` open reaches the RUNNING instance and never starts a second app or a second sidecar. That needs a hand-rolled guard that runs before `tauri::Builder::default()`, mirroring the Unix one (`src-tauri/src/main.rs`, D-44-A: named mutex + named pipe instead of a Unix socket, FAIL-OPEN, stale-holder reasoning redone for Windows semantics, every URL re-validated through `protocol_url_arg()`). Only once that passes live verification on the operator's Windows machine, remove the `plugins.deep-link.desktop.schemes: []` override from `src-tauri/tauri.windows.conf.json` (quick 260922-nx4) so the NSIS installer registers `gamelib://`, inverting `windowsDeepLinkSuppression.test.ts` in the same change. Closes ledger row `U-34.5-18` and todo `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`. `tauri-plugin-single-instance` stays rejected (D-44-A).
-**Requirements**: TBD
+**Requirements**: REQ-46-01, REQ-46-02, REQ-46-03, REQ-46-04, REQ-46-05, REQ-46-06, REQ-46-07, REQ-46-08, REQ-46-09, REQ-46-10, REQ-46-11 — minted 2026-09-22 during `/gsd-plan-phase 46` from `46-RESEARCH.md`'s proposed REQ-46-01..10 plus REQ-46-11 (record/closure). No CONTEXT.md (operator chose research-first); see `.planning/REQUIREMENTS.md` §"Phase 46 Requirements" for four planning-time corrections (token-SID key, explicit-SID DACL, per-session pipe name, authenticated secondary) and three operator-overridable decision points: (a) runtime `register_all()` stays Linux-only, (b) per-user DACL not logon SID, (c) Windows Rust CI out of scope (filed as a todo).
 **Depends on:** Nothing blocking. Related: Phase 38 (Windows hardware UAT); todo `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` affects packaged Windows builds used for verification.
-**Plans:** 0 plans
+**Plans:** 5 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 46 to break down)
+- [ ] 46-01-PLAN.md — Wave 0 `cargo test` compile fix on Windows + TDD the seven pure guard helpers (SID key, mutex/pipe names, SDDL, retry, owner match, payload) + file Windows-CI todo
+- [ ] 46-02-PLAN.md — windows-sys dependency + `#[cfg(windows)]` mutex/pipe acquisition, authenticated secondary delivery, and main() wiring before `Builder::default()`
+- [ ] 46-03-PLAN.md — Named-pipe accept loop in `.setup()` (re-validated through `protocol_url_arg`) + Phase 46 source gates incl. REQ-46-08 `on_open_url` ordering
+- [ ] 46-04-PLAN.md — ONE commit: delete the `tauri.windows.conf.json` schemes override + invert `windowsDeepLinkSuppression.test.ts` + REQ-46-06 pin + comment rewrites; then debug NSIS build and `installer.nsi` 6-line proof
+- [ ] 46-05-PLAN.md — NON-AUTONOMOUS live gate on the operator's Windows 11 machine (5 checks) + verdict-gated closure of the todo and ledger row U-34.5-18
 
 ---
 
