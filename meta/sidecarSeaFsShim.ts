@@ -53,14 +53,23 @@ const originalReadFileSync = fsModule.readFileSync
 // worth reproducing here; behavior (not types) is what matters for this
 // runtime patch, and the passthrough delegates untouched to the real
 // implementation for every non-system.pem call.
+// A single rest parameter typed FROM the original, rather than
+// `(path: unknown, ...rest: unknown[])`: the argument list forwarded below
+// is then the real implementation's own parameter tuple by construction, so
+// the passthrough needs no cast. It is also a closer passthrough than the
+// previous `[path, ...rest]` reconstruction, which turned a zero-argument
+// call into a one-argument `[undefined]`.
 fsModule.readFileSync = function patchedReadFileSync(
-  path: unknown,
-  ...rest: unknown[]
+  ...args: Parameters<typeof originalReadFileSync>
 ) {
-  if (isSteamSystemPemPath(path)) {
+  if (isSteamSystemPemPath(args[0])) {
     return STEAM_SYSTEM_PEM
   }
-  // eslint-disable-next-line prefer-spread -- passthrough of an arbitrary,
-  // untyped overloaded signature
-  return originalReadFileSync.apply(fsModule, [path, ...rest])
+  // `.apply(fsModule, args)`, deliberately: the real implementation must be
+  // invoked with `this === fsModule` and with the caller's own argument list,
+  // unmodified. (The former `eslint-disable-next-line prefer-spread` here is
+  // gone because the rule no longer fires -- it flagged the array LITERAL
+  // `[path, ...rest]`, not the `.apply` call; verified by putting the
+  // directive back and seeing eslint report it unused.)
+  return originalReadFileSync.apply(fsModule, args)
 }
