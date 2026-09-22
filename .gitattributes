@@ -1,1 +1,14 @@
 pnpm-lock.yaml linguist-generated=true
+
+# Windows checkouts with core.autocrlf=true materialise the working tree as
+# CRLF, which fails `prettier --check .` (Prettier 3 defaults endOfLine to
+# "lf") and breaks LF-fixture source-text tests (tauriShellSource.test.ts).
+# Pin every text file to LF on checkout, regardless of the checking-out
+# machine's core.autocrlf. See todo 2026-09-22-pre-push-hook-cannot-pass-on-a-windows-checkout.md.
+* text=auto eol=lf
+
+# These 6 files are raw spike-captured terminal output, committed byte-exact
+# with CRLF on purpose (see .planning/spikes/*). They must never be
+# normalised by the `* text=auto eol=lf` rule above -- this line must stay
+# AFTER it, since later .gitattributes lines win.
+*.evidence.txt -text
