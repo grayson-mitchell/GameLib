@@ -146,3 +146,16 @@ working tree is LF everywhere; no edit to the test file was needed or made.
 **macOS:** unaffected by construction — the tree is already LF there, so `* text=auto eol=lf` and
 `*.evidence.txt -text` are no-ops on checkout, and `normaliseFindingPath`'s backslash replace is a no-op on
 forward-slash paths. Not re-run on a Mac in this task; asserted from the diff, not measured.
+
+## Orchestrator follow-up: i18n rewrote catalogs as CRLF (fixed in `057fa02f9`)
+
+The executor's report noted `pnpm i18n` rewriting four `public/locales/en/*.json` catalogs to CRLF
+and reverting them after each measurement. The orchestrator checked it: this was NOT harmless.
+`.husky/pre-push` runs `prettier` BEFORE `i18n`, so the first push left four CRLF catalogs dirty
+and the NEXT push would fail `prettier --check`. The hook was green once, not repeatably.
+
+Cause: `i18next-parser.config.js` had `lineEnding: 'auto'` (OS EOL, so CRLF on Windows). Fixed to
+`'lf'`, pinned in `meta/__tests__/i18nParserConfig.test.ts` (6/6; mutating back to `'auto'` fails
+1/6). After re-running `pnpm i18n` the four catalogs came back byte-identical, and nothing was
+discarded. **`bash .husky/pre-push` then exited 0 on two consecutive runs with a clean tree after
+each run** (`unreachable: 47 OK | used-in-module: 67 OK`).
