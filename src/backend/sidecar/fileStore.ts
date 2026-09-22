@@ -69,7 +69,10 @@ import { dirname, isAbsolute, join, relative, resolve } from 'path'
 import { isSafeKeyPath } from 'common/types/storePolicy'
 import { getPath } from './pathShim'
 
-export interface FileStoreOptions {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface FileStoreOptions {
   cwd?: string
   name?: string
   // electron-store accepts additional options (schema, clearInvalidConfig,

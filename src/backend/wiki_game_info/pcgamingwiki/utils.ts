@@ -23,8 +23,12 @@ import { axiosClient } from 'backend/utils'
  * from "this game is not on PCGamingWiki". The caller could not tell the difference and
  * neither could the UI, which hid the Extra info tab in both cases. See
  * `WikiSourceOutcome` in `common/types`.
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export interface PCGamingWikiResult {
+interface PCGamingWikiResult {
   info: PCGamingWikiInfo | null
   outcome: WikiSourceOutcome
 }

@@ -36,18 +36,30 @@ import { logInfo, logWarning, LogPrefix } from '../logger'
 // Defined in common/types/ (not here) so common/types/ipc.ts's AsyncIPCFunctions.
 // oauthCaptureLogin entry (Task 2) can reference both without common/ importing FROM
 // backend/sidecar — the import direction is always common -> backend/frontend, never the
-// reverse. Re-exported here so every existing caller of this module is unaffected.
+// reverse. `OAuthRunner` re-exported here so every existing caller of this module is
+// unaffected -- `oauthLoginCapture.test.ts` imports it via this path. `OAuthCaptureOutcome`
+// is NOT re-exported: ts-prune / `pnpm find-deadcode` flagged the previously re-exported
+// form as a used-in-module finding -- every real consumer (`oauthLoginFlowRegistration.ts`,
+// `common/types/ipc.ts`, `useTauriOAuthLogin.ts`) imports it directly from
+// `common/types/oauthLogin` rather than through this re-export, so the re-export served no
+// purpose. Still imported below (unqualified) because this module's own function signatures
+// need it.
 import type {
   OAuthRunner,
   OAuthCaptureOutcome
 } from '../../common/types/oauthLogin'
 
-export type { OAuthRunner, OAuthCaptureOutcome }
+export type { OAuthRunner }
 
 /** A single per-runner redirect match. `code` is `null` when the runner consumes the whole
  * redirect url rather than a single query param (reserved for a future runner shape — none of
- * the current four need it: all four resolve a non-null `code`). */
-export interface OAuthRedirectMatch {
+ * the current four need it: all four resolve a non-null `code`).
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode` flagged the
+ * previously-exported form as a used-in-module finding -- there is no external consumer, so
+ * the export served no purpose).
+ */
+interface OAuthRedirectMatch {
   code: string | null
   redirectUrl: string
 }

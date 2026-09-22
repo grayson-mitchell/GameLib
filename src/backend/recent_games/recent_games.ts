@@ -58,7 +58,13 @@ const removeRecentGame = async (appName: string) => {
   }
 }
 
-export { getRecentGames, addRecentGame, removeRecentGame, maxRecentGames }
+// `maxRecentGames` dropped from this list: ts-prune / `pnpm find-deadcode`
+// flagged it as a used-in-module finding. Its only cross-file namesake is
+// `MaxRecentGames.tsx`'s own local `useSetting('maxRecentGames', 5)`
+// destructure -- a separate binding sharing this name plus a string-literal
+// settings key, never an import of this function -- so there is no external
+// consumer to preserve.
+export { getRecentGames, addRecentGame, removeRecentGame }
 
 // Exported only for testing purpose
 // ts-prune-ignore-next

@@ -35,7 +35,10 @@ import {
 // dispatch (the sidecar's storeSet/storeGet handlers, plan 29-05) MUST
 // resolve the live instance through this registry and must NEVER
 // reconstruct a path/instance from the name string itself.
-export interface RegisteredStore {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface RegisteredStore {
   instance: TypeCheckedStoreBackend<ValidStoreName>
   options: StoreOptions<StoreStructure[ValidStoreName]>
 }

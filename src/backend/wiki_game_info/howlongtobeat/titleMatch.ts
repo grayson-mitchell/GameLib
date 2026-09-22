@@ -18,8 +18,12 @@ export const MIN_CONFIDENCE = 0.9
  * How far the best candidate must beat the runner-up. Near-ties are the dangerous case:
  * `Doom` (1993) and `DOOM` (2016) normalize identically, so similarity alone would pick
  * whichever HLTB happened to rank first.
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export const MIN_MARGIN = 0.05
+const MIN_MARGIN = 0.05
 
 const ROMAN_NUMERALS: Record<string, number> = {
   i: 1,
@@ -131,7 +135,10 @@ export function toSearchTerms(title: string): string[] {
     .filter(Boolean)
 }
 
-export interface TitleCandidate<T> {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface TitleCandidate<T> {
   title: string
   value: T
 }

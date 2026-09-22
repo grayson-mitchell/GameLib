@@ -565,8 +565,13 @@ export function classifyOrder(
 // stripped/drifted response shape without an unbounded log line.
 const MAX_DIAGNOSED_FIELDS = 15
 
-/** Redacted zero-key extraction diagnosis (see describeZeroKeyOrder). */
-export interface ZeroKeyDiagnosis {
+/** Redacted zero-key extraction diagnosis (see describeZeroKeyOrder).
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
+ */
+interface ZeroKeyDiagnosis {
   /**
    * true when the structure is UNEXPECTED for a zero-key order: tpkd_dict or
    * all_tpks absent/null/mistyped, or a NON-EMPTY all_tpks with entries that

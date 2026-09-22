@@ -1,4 +1,4 @@
-# POPULATION: used-in-module (170 identities)
+# POPULATION: used-in-module (106 identities)
 #
 # ts-prune found these exports USED -- inside their own declaring file.
 # So this population is NOT dead code: it is an unnecessarily broad
@@ -152,24 +152,13 @@ meta/esbuildWorkerBundleShared.ts - findOtherNodeGypBuildConsumers
 meta/esbuildWorkerBundleShared.ts - resolveLzmaNativePkgRoot
 meta/releaseTags.ts - DownloadedBinary
 meta/signMachOResources.ts - main
-src/backend/electron_store.ts - RegisteredStore
-src/backend/humble/classify.ts - ZeroKeyDiagnosis
-src/backend/humble/electronStores.ts - HumbleLocalRedeemedRecord
-src/backend/humble/electronStores.ts - HumbleOrderCacheEntryInternal
 src/backend/humble/loginWindowSeam.ts - LoginWindowRevealPostResult
 src/backend/ipc.ts - addOneTimeListener
 src/backend/jest.setupContainment.ts - containmentRoot
-src/backend/recent_games/recent_games.ts - maxRecentGames
 src/backend/sidecar/bootstrap.ts - deliverStartupProtocolUrl
 src/backend/sidecar/bootstrap.ts - registerProtocolUrlHandler
-src/backend/sidecar/fileStore.ts - FileStoreOptions
 src/backend/sidecar/humbleFlowRegistration.ts - isPackagedSidecar
-src/backend/sidecar/installedJsonWatcher.ts - InstalledJsonWatcherOptions
-src/backend/sidecar/oauthLoginCapture.ts - OAuthCaptureOutcome
-src/backend/sidecar/oauthLoginCapture.ts - OAuthRedirectMatch
 src/backend/sidecar/oauthLoginCapture.ts - resolveUserAgent
-src/backend/sidecar/processGuards.ts - UncaughtExceptionLogSink
-src/backend/sidecar/processGuards.ts - UnhandledRejectionLogSink
 src/backend/storeManagers/steam/depot.ts - FILE_CONCURRENCY
 src/backend/storeManagers/steam/depot/decompress.ts - DECODE_STAGE_ERROR_CODES
 src/backend/storeManagers/steam/depot/decompress.ts - wantsCdnAuthToken
@@ -177,11 +166,7 @@ src/backend/storeManagers/steam/depot/stallTracker.ts - STALL_TIMEOUT_MS
 src/backend/storeManagers/steam/electronStores.ts - SteamBottleConfig
 src/backend/storeManagers/steam/installLocation.ts - SteamInstallTarget
 src/backend/store_backend.ts - translateStoreOptions
-src/backend/testUtils/fakeHomeProfile.ts - CreateFakeHomeProfileOptions
 src/backend/testUtils/fakeHomeProfile.ts - FakeHomeEnvKey
-src/backend/wiki_game_info/howlongtobeat/titleMatch.ts - MIN_MARGIN
-src/backend/wiki_game_info/howlongtobeat/titleMatch.ts - TitleCandidate
-src/backend/wiki_game_info/pcgamingwiki/utils.ts - PCGamingWikiResult
 src/common/humble/expirationDisplay.ts - HumbleExpirationDisplay
 src/common/humble/keyTypePresentation.ts - HumbleRedeemTarget
 src/common/humble/loginChromeCss.ts - HUMBLE_LOGIN_CHROME_HOST

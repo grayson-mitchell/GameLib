@@ -27,10 +27,10 @@ export type HumbleKeyInternal = HumbleKey & {
   revealedKeyValue?: string
 }
 
-export type HumbleOrderCacheEntryInternal = Omit<
-  HumbleOrderCacheEntry,
-  'keys'
-> & {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+type HumbleOrderCacheEntryInternal = Omit<HumbleOrderCacheEntry, 'keys'> & {
   keys: HumbleKeyInternal[]
 }
 
@@ -128,7 +128,10 @@ const humbleAuditStore = new CacheStore<AuditRecord[], string>(
 // pre-Phase-42 record on disk was written by the explicit action, so a
 // MISSING `source` reads as 'user' — never migrate the file, never default
 // to 'ownership-exact'. NEVER carries the raw key value (C4/D-76).
-export interface HumbleLocalRedeemedRecord {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface HumbleLocalRedeemedRecord {
   redeemedAt: number
   source?: 'user' | 'ownership-exact'
 }

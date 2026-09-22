@@ -378,4 +378,9 @@ export {
   setUncaughtExceptionLogSink,
   setUnhandledRejectionLogSink
 }
-export type { UncaughtExceptionLogSink, UnhandledRejectionLogSink }
+// `UncaughtExceptionLogSink` / `UnhandledRejectionLogSink` dropped from this
+// export: ts-prune / `pnpm find-deadcode` flagged the previously-exported
+// form as a used-in-module finding -- there is no external consumer, so the
+// export served no purpose. Both types stay declared (unexported) above,
+// since `setUncaughtExceptionLogSink`/`setUnhandledRejectionLogSink` still
+// need them for their own parameter types.

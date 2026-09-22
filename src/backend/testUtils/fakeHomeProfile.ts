@@ -122,7 +122,16 @@ export interface FakeHomeProfile {
   dispose(): void
 }
 
-export interface CreateFakeHomeProfileOptions {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose). `FakeHomeEnvKey`
+// above stays exported deliberately: `meta/captureShellScrollback.ts` imports
+// it directly (`import { ... type FakeHomeEnvKey } ... from
+// '../src/backend/testUtils/fakeHomeProfile'`, used at its own line 596),
+// which the ledger's own bucketing missed because that importer lives under
+// `meta/`, outside the analysed tsconfig project -- what decides bucket
+// membership is where the IMPORTER lives, not where the declaration lives.
+interface CreateFakeHomeProfileOptions {
   /**
    * `mkdtemp` prefix, so a stranded directory names the suite that leaked it.
    * Purely diagnostic — it has no bearing on isolation.
