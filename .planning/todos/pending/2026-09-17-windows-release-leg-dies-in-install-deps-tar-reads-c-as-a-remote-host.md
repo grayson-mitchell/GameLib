@@ -4,7 +4,7 @@ title: 'Windows release leg dies in install-deps: tar -tzf reads "C:\...\" as a 
 area: build
 severity: major
 platform: windows
-ready: blocked
+ready: code
 needs: run-the-negative-control-and-the-repro-on-a-windows-box-code-half-is-shipped
 status: OPEN
 found_by: 'GitHub Actions run 35223308954 on grayson-mitchell/GameLib, triggered by the throwaway annotated tag v0.7.0-notarize-test1 at commit cc2d66248. The tag was deleted from origin and locally after the run.'
@@ -253,6 +253,51 @@ pipeline has never reached — see the sibling todo below.
 
 The other three sites are no longer UNAUDITED (see the corrected census), so a green leg neither
 adds nor subtracts information about them; they are not executed on the Windows leg at all.
+
+## Local Windows measurements (2026-09-22, quick 260922-toc)
+
+`ready: blocked` -> `ready: code`. Vocabulary reasoning: the remaining work here — run the negative
+control on `fd7d085fb` and the post-fix repro in Git Bash, confirm `:138` extraction — is desk work
+an agent can run on this box. It is not a live app launch (so not `live-gate`, which this project
+defines as a run on the Mac), it needs no decision or credential (so not `human`), and the hardware
+is now to hand (so no longer `blocked`). The `code` tag's "no other OS" clause is carried
+separately by `platform: windows`, the same pairing used for the pre-push-hook precedent
+(`.planning/todos/completed/2026-09-22-pre-push-hook-cannot-pass-on-a-windows-checkout.md`).
+`needs:` is left unchanged — it still accurately names the next concrete step.
+
+**Local `where tar` / `tar --version` (this session, local Git Bash):**
+
+```
+where tar
+C:\Program Files\Git\usr\bin\tar.exe
+C:\Windows\System32\tar.exe
+tar --version
+tar (GNU tar) 1.35
+```
+
+GNU tar (Git for Windows / msys) resolves FIRST in local Git Bash PATH order, ahead of the
+System32 bsdtar. **Explicit scope caveat: this answers the Hypothesis section's "Nobody has run
+`where tar`" for THIS LOCAL GIT BASH ONLY. It is NOT a measurement of the `windows-latest` CI runner** —
+Actions' Windows shell setup, pnpm's lifecycle-script shell selection, and this operator's local
+Git-for-Windows install/PATH configuration are not guaranteed to match. This result is consistent
+with (not proof of) the msys-GNU-tar-wins-PATH hypothesis; the CI runner's PATH order remains
+NOT measured by this task.
+
+**Task 2 plain-run note (this session):** `pnpm download-helper-binaries` was run plain (no forced
+re-download). It exited 0 and printed `Nothing to download, binaries are up-to-date` — the runTs
+bundle+run phase started and completed successfully, but `public/bin/.release_tags` already matched
+the pinned tags, so the darwin-onedir extraction branch (`extractTarGz`, `:138`) was never reached.
+**Tar extraction was NOT exercised by this task.** The forced run needed to actually exercise `:89`
+/ `:138` under real tar on this box (with `public/bin` state backed up and restored around it) is
+still the next concrete step named by `needs:` above and remains unrun. This todo is NOT closed by
+this task.
+
+**Pre-existing `public/bin` state (uninterpreted, dates only, carried over from planning):**
+`.release_tags` mtime 2026-09-06 12:49 +1200 and `public/bin/x64` 12:48 — roughly 14 minutes before
+`8ed7b8ccd` (13:03 same day); `public/bin/arm64/darwin/{gogdl,legendary,nile}` are onedir
+directories with archive mtimes 2026-08-27. Provenance of that earlier populate is unknown (could be
+a copy, a PowerShell/bsdtar run, or tsx) — recorded as an open observation only, not as evidence of
+anything about the tar defect.
 
 ## Related
 

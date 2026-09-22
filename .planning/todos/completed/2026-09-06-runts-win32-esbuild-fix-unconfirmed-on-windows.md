@@ -5,8 +5,9 @@ area: build
 severity: major
 platform: windows
 ready: blocked
-needs: human-verification-on-windows
-status: pending
+status: completed
+resolved: 2026-09-22
+resolved_by: quick-260922-toc
 found_by: "Quick task 260906-hq8"
 source: ".planning/quick/260906-hq8-fix-runts-cjs-esbuild-spawn-on-windows-b/260906-hq8-PLAN.md"
 files:
@@ -83,3 +84,55 @@ the same file were already correct before this change and were not touched:
 the `fs.symlinkSync(..., 'junction')` call (junctions need no admin rights,
 unlike symlinks) and the second spawn in the same file, which already used
 `process.execPath` for running the compiled output under `node`.
+
+## Resolution (2026-09-22, quick 260922-toc)
+
+**Host:** Windows 11 10.0.26200, Git Bash (`C:\Program Files\Git`), node v24.19.0.
+
+**Decision rule applied:** CONFIRMED iff negative control REPRODUCED (-4058/ENOENT, exit 1) AND
+positive run PASSED AND the plain `pnpm download-helper-binaries` runTs phase passed. All three
+held, so this todo is closed.
+
+**Commands (from repo root, Git Bash):**
+
+```
+git show 8ed7b8ccd^:meta/runTs.cjs > meta/runTs.prefix-260922-toc.cjs   # trap 'rm -f ...' EXIT installed first
+node meta/runTs.prefix-260922-toc.cjs --bundle --platform=node --target=node22 meta/buildDecompressWorkerDev.ts
+# (temp file deleted by trap, never staged)
+pnpm build:decompress-worker-dev
+pnpm download-helper-binaries
+```
+
+**One-commit isolation:** `git log --oneline 8ed7b8ccd^..HEAD -- meta/runTs.cjs` lists exactly one
+commit, `8ed7b8ccd`. The negative control (`8ed7b8ccd^:meta/runTs.cjs`, copied into `meta/` so both
+`require.resolve('esbuild/bin/esbuild')` and the tmpdir junction path resolve the same way) and the
+positive run (current `meta/runTs.cjs`) share identical argv; the runTs file was the only variable.
+
+**Verdict table:**
+
+| Falsifier | Result |
+|---|---|
+| F1 | Orchestrator-measured this session: `require.resolve('esbuild/bin/esbuild')` -> `C:\Users\grays\Projects\GameLib\node_modules\esbuild\bin\esbuild`, first bytes `"#!/usr/bin/env node\n"`. Re-captured in Task 1 Step 0: identical result (`"#!/usr/bin/env node\n"`). Diagnosis precondition holds. |
+| F2 | Plain `pnpm download-helper-binaries`: exit 0, printed `Nothing to download, binaries are up-to-date` — no `failed to launch esbuild`, no -4058. Tar was NOT exercised by this run (public/bin/.release_tags already matched pinned tags, so the darwin-onedir extraction branch was never reached); this is expected per plan, not a gap. |
+| F3 | Negative-control error object: `errno: -4058`, `code: 'ENOENT'`, `syscall: 'spawn C:\Users\grays\Projects\GameLib\node_modules\esbuild\bin\esbuild'`, `path: 'C:\Users\grays\Projects\GameLib\node_modules\esbuild\bin\esbuild'`. Both fields name the resolved esbuild bin exactly — F3 is NOT falsified. |
+
+**Negative/positive pair:**
+- Negative (pre-fix `8ed7b8ccd^:meta/runTs.cjs`, `build:decompress-worker-dev` argv): exit 1,
+  `meta/runTs.cjs: failed to launch esbuild: Error: spawn ...\esbuild ENOENT` with the errno/syscall/path
+  above. REPRODUCED.
+- Positive (current `meta/runTs.cjs`, same argv, via `pnpm build:decompress-worker-dev`): exit 0,
+  log contains `[build:decompress-worker-dev] esbuild-aliased worker bundle -> build\main\decompressWorker.js`,
+  no `failed to launch esbuild`. PASS.
+
+**Tar note:** the forced download-helper-binaries run needed to exercise the tar extraction phase
+was intentionally NOT run as part of this todo's closure (out of scope for the runTs verdict per
+plan). Its outcome, when run, is recorded in the tar todo
+(`2026-09-17-windows-release-leg-dies-in-install-deps-tar-reads-c-as-a-remote-host.md`), not here.
+
+**Two-profile rule:** does not apply. `meta/runTs.cjs` and `meta/buildDecompressWorkerDev.ts` are
+build scripts — they read no HOME/APPDATA/XDG profile and create no session. No fake HOME was used
+for any command in this verification.
+
+**Scope (repeated from above):** this closes verification of **one spawn** in `meta/runTs.cjs`. It
+is not a claim that Windows support is otherwise complete; the two untouched surfaces named in the
+Scope note above remain unaffected and unverified-by-this-task.
