@@ -4,6 +4,7 @@ import { configStore } from 'frontend/helpers/electronStores'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { SelectField } from '..'
 import { MenuItem } from '@mui/material'
+import type { SupportedLanguage } from 'common/languages'
 
 const storage: Storage = window.localStorage
 
@@ -21,7 +22,7 @@ interface Props {
   hideLabel?: boolean
 }
 
-const languageLabels: { [key: string]: string } = {
+const languageLabels: Record<SupportedLanguage, string> = {
   ar: 'العربية',
   az: 'آذربایجان دیلی',
   be: 'беларуская мова',
@@ -67,7 +68,7 @@ const languageLabels: { [key: string]: string } = {
   zh_Hant: '正體字'
 }
 
-const languageFlags: { [key: string]: string } = {
+const languageFlags: Record<SupportedLanguage, string> = {
   ar: '🇸🇦',
   az: '🇦🇿',
   be: '🇧🇾',
@@ -134,7 +135,7 @@ export default function LanguageSelector({
     return window.api.openWeblate()
   }
 
-  const renderOption = (lang: string) => {
+  const renderOption = (lang: SupportedLanguage) => {
     const flag = languageFlags[lang]
     let label = languageLabels[lang]
     if (flagPossition === FlagPosition.PREPEND) label = `${flag} ${label}`
@@ -172,7 +173,14 @@ export default function LanguageSelector({
         extraClass="languageSelector"
         afterSelect={afterSelect}
       >
-        {Object.keys(languageLabels).map((lang) => renderOption(lang))}
+        {/* Object.keys is typed string[] by TS design regardless of the object's key
+            type; the Record<SupportedLanguage, string> annotation above is what proves
+            this literal carries exactly the SupportedLanguage keys at runtime, so this
+            assertion is sound -- not `any`, not `!`, and it does not widen the Record
+            back to an index signature. */}
+        {(Object.keys(languageLabels) as SupportedLanguage[]).map((lang) =>
+          renderOption(lang)
+        )}
       </SelectField>
     </>
   )
