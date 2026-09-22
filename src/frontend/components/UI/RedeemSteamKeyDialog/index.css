@@ -1,0 +1,34 @@
+/* 260922-gxd: the outcome paragraph's two classNames have painted since the
+   dialog shipped with no rule behind either one -- copy.ts computes a
+   success/error tone, index.tsx branches on it, and the paint was discarded.
+   These two rules are the whole fix: a `color` and nothing else. (Why only
+   `color` -- no other property is deliberately omitted here -- is recorded
+   in the SUMMARY and commit message for this task, not here.)
+
+   Token pair, measured against body.nord-light's own dialog surface
+   (--modal-background resolves to --background-light, #eceff4):
+     --success (#3e532d)  -> 7.35:1 against #eceff4
+     --danger  (#bf616a)  -> 3.55:1 against #eceff4, honestly BELOW WCAG AA
+                             for body text (4.5:1). Taken anyway: it is the
+                             theme's own adaptive token, colour is never the
+                             sole signal here (copy.ts renders a distinct
+                             message per outcome), and inventing an unreviewed
+                             replacement colour is worse than an under-AA
+                             adaptive one.
+   Neither declaration carries a fallback arm -- both tokens are declared in
+   themes.scss's base body {} block, so a `var(--x, ...)` fallback here would
+   be noise.
+
+   Fills-vs-text rule (recorded at Keys/index.css:510-525): a raw status
+   token belongs on a fill, never on text sitting on the theme's own
+   background. The raw status-success token measured 1.46:1 as a foreground
+   on this same surface, which is why this file resolves through the
+   theme-adaptive pair instead. */
+
+.redeemSteamKey__success {
+  color: var(--success);
+}
+
+.redeemSteamKey__error {
+  color: var(--danger);
+}
