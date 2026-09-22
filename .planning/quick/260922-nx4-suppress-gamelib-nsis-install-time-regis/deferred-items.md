@@ -38,3 +38,9 @@ to an unrelated test's cross-platform robustness, out of this task's file list
 (`src-tauri/src/main.rs`, `src-tauri/Cargo.toml`,
 `.planning/todos/pending/2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`).
 Recorded here and in `260922-nx4-SUMMARY.md` instead of silently reporting "all suites green."
+
+**Resolved by quick 260922-ok3 (2026-09-22):** the LF pin (`.gitattributes`: `* text=auto eol=lf`)
+fixed it without touching `tauriShellSource.test.ts` at all. Once the working tree was
+re-materialised as LF, `readFileSync(..., 'utf-8')` of `main.rs` stopped being CRLF, so the bare
+`\n`-joined `CENSUS_GUARD` fixture matches again. Measured: `pnpm exec jest
+src/backend/__tests__/tauriShellSource.test.ts` went from 144/146 to **146/146** passing.

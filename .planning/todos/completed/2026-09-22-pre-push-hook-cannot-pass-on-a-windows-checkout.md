@@ -15,6 +15,9 @@ files:
   - meta/deadcode-baseline-unreachable.txt
   - meta/deadcode-baseline-used-in-module.txt
   - src/backend/__tests__/tauriShellSource.test.ts
+status: completed
+resolved: 2026-09-22
+resolved_by: quick-260922-ok3
 ---
 
 # Pre-push hook cannot pass on a Windows checkout
@@ -83,3 +86,63 @@ branch, not this defect. Recorded only so nobody conflates the two.
 
 `.husky/pre-push` exits 0 on a clean Windows checkout of `main` with no `--no-verify`, and still exits 0 on
 macOS.
+
+## Resolution (2026-09-22, quick 260922-ok3)
+
+Both defects fixed on this Windows checkout (HEAD `d17a9d226` at start).
+
+**Commits:**
+- `68e1edcc2` — `fix(quick-260922-ok3): pin LF line endings in .gitattributes, exempt CRLF spike evidence`
+- `d21b05831` — `test(quick-260922-ok3): add failing Windows-path cases for findDeadcode identity` (RED)
+- `6725a1574` — `fix(quick-260922-ok3): normalise ts-prune backslash paths in find-deadcode identities` (GREEN)
+- `1c3f0f059` — `style(quick-260922-ok3): prettier-format findDeadcode Windows-path test cases` (Rule 1 deviation, caught during Task 3 verification)
+
+**Defect 1 (CRLF vs Prettier LF):**
+- `pnpm exec prettier --check . --end-of-line auto` baseline (measured before any change): **0 files** — the
+  1426-file figure from the original report was entirely line-ending noise; the one genuine misformat
+  (`windowsDeepLinkSuppression.test.ts`) was already fixed in `96f15ef4a` before this task started. No
+  additional `style(...)` reformat commit was needed for this step.
+- `.gitattributes` now carries `* text=auto eol=lf` plus `*.evidence.txt -text` (order: `-text` after the LF
+  rule, later lines win). `git add --renormalize .` staged **only** `.gitattributes` — zero repo-content blobs
+  changed.
+- The working tree was re-materialised (`git rm --cached -r -q .` + `git reset --hard HEAD` on a
+  verified-clean tree). `git ls-files --eol` afterward: every text file `w/lf`, and **exactly the 6** committed
+  `*.evidence.txt` spike captures remain `i/crlf w/crlf attr/-text`, byte-exact, per `git ls-files
+  '*.evidence.txt'`:
+  - `.claude/skills/spike-findings-gamelib/sources/005b-bottle-to-host-tcp/bridge_out.evidence.txt`
+  - `.claude/skills/spike-findings-gamelib/sources/005c-min-steam_api-shim/shim_out.evidence.txt`
+  - `.claude/skills/spike-findings-gamelib/sources/006-cpp-vtable-abi/vtable_out.evidence.txt`
+  - `.planning/spikes/005b-bottle-to-host-tcp/bridge_out.evidence.txt`
+  - `.planning/spikes/005c-min-steam_api-shim/shim_out.evidence.txt`
+  - `.planning/spikes/006-cpp-vtable-abi/vtable_out.evidence.txt`
+- No `.prettierrc.json` `endOfLine` change was made (the rejected weaker option stays rejected).
+
+**Defect 2 (backslash paths vs find-deadcode baselines):**
+- Added `normaliseFindingPath()` to `meta/findDeadcode.cjs`, called inside `parseFinding` so `identityOf`,
+  `KNOWN_PARSE_ARTIFACTS` exclusion, partitioning, and baseline diffing all see the normalised path.
+- TDD: RED commit added 5 host-OS-independent test cases (literal escaped-backslash strings, no `path.sep` /
+  `path.win32` / `process.platform`) covering a leading-backslash line, its `(used in module)` variant,
+  cross-notation `identityOf` equality (both variants), and a nested nested path with no leading separator —
+  all failed pre-fix. GREEN commit made all 22 tests in the suite pass, including the CLI end-to-end
+  `exits 0 against the real repo` test.
+- **Mutation proof:** `normaliseFindingPath` temporarily replaced with an identity no-op → all 5 new tests
+  failed (confirmed red under mutation) → implementation restored, `git diff` empty, all 5 tests green again.
+
+**Per-step exit codes (before → after, this Windows machine):**
+
+| Step | Before (`96f15ef4a`, recorded in this todo) | After (quick 260922-ok3) |
+|---|---|---|
+| `codecheck` | exit 0 | exit 0 |
+| `lint` | exit 0 (638 warnings) | exit 0 (638 warnings) |
+| `prettier` | **FAIL** (1426 files) | exit 0 |
+| `i18n --fail-on-update` | exit 0 | exit 0 (rewrites 4 locale JSON files to CRLF as a side effect of its own writer — pre-existing i18n-tool quirk, out of this task's scope; reverted with `git checkout --` after each measurement so the working tree stays clean; not a hook failure) |
+| `find-deadcode` | **FAIL** (`unreachable: 47 FAIL \| used-in-module: 67 FAIL`) | exit 0 (`unreachable: 47 OK \| used-in-module: 67 OK`) |
+| `bash .husky/pre-push` (full hook) | never verified green | **exit 0** |
+
+**tauriShellSource.test.ts:** 144/146 before → **146/146 after**. The 2 `NARROWNESS:` failures (CENSUS_GUARD
+fixture joined with bare `\n` matched against a then-CRLF working-tree `main.rs`) are gone now that the
+working tree is LF everywhere; no edit to the test file was needed or made.
+
+**macOS:** unaffected by construction — the tree is already LF there, so `* text=auto eol=lf` and
+`*.evidence.txt -text` are no-ops on checkout, and `normaliseFindingPath`'s backslash replace is a no-op on
+forward-slash paths. Not re-run on a Mac in this task; asserted from the diff, not measured.
