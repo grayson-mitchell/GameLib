@@ -32,7 +32,10 @@ import type { DepotPlan, DepotPlanFile } from '../depot'
 /** EDepotFileFlag.Directory — same value depot.ts and reconcile.ts use. */
 const DIRECTORY_FLAG = 64
 
-export interface PathCollisionReport {
+// Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
+// file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+interface PathCollisionReport {
   /** Paths where a size-0/chunks-0 Directory entry was dropped in favour of a
    *  real file entry. One entry per PATH, not per dropped record. */
   resolved: string[]

@@ -96,7 +96,11 @@ const DEFAULT_TASK_TIMEOUT_MS = 30_000
  * scoped follow-up (new dependency evaluation, cross-platform build/test
  * risk) -- deliberately NOT attempted in this fix's blast radius.
  */
-export const DECOMPRESS_POOL_MAX_WORKERS = 16
+// Not exported (this and DecompressPoolOpts below): verified to have no importer
+// anywhere -- every cross-file mention of DECOMPRESS_POOL_MAX_WORKERS is a prose
+// comment, not an import (`pnpm find-deadcode` / ts-prune flagged the
+// previously-exported forms as over-broad `export` keywords).
+const DECOMPRESS_POOL_MAX_WORKERS = 16
 
 /** Debug/humankind-depot-full-stall (2026-08-17), P/E-core saturation
  *  hypothesis (Current Focus blind_spots item 1, reopened once
@@ -170,7 +174,7 @@ interface QueuedTask {
   reject: (err: Error) => void
 }
 
-export interface DecompressPoolOpts {
+interface DecompressPoolOpts {
   /** Debug/humankind-depot-full-stall (2026-08-17, follow-up to the
    *  refuted InflightLimiter/decode-decouple fix): defaults to
    *  `GAMELIB_DECOMPRESS_POOL_SIZE` env override if set and valid, else

@@ -35,9 +35,12 @@ const CUSTOM_EXECUTABLE_FLAG = 128
 
 /** `process.platform`'s value, accepted as a plain string so callers/tests
  *  never need to fight NodeJS.Platform's literal union for a mocked value. */
-export type FileAttributePlatform = string
+// Not exported (this and ApplyDepotFileFlagsResult below): verified to have no importer
+// anywhere -- not in any tracked .ts/.tsx file (`pnpm find-deadcode` / ts-prune flagged
+// the previously-exported forms as over-broad `export` keywords).
+type FileAttributePlatform = string
 
-export interface ApplyDepotFileFlagsResult {
+interface ApplyDepotFileFlagsResult {
   ok: boolean
   error?: string
 }

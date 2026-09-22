@@ -49,7 +49,11 @@
 // needs (best prior, weightedload=20, yet only ~12% empirical success).
 
 /** Outcome of a single fetchChunk attempt against one host. */
-export type HostAttemptOutcome = 'success' | 'timeout' | 'error'
+// Not exported (this and HostStatsSnapshot, LATENCY_SCORE_DIVISOR_MS and
+// WEIGHTEDLOAD_PRIOR_DIVISOR below): verified to have no importer anywhere -- not in any
+// tracked .ts/.tsx file (`pnpm find-deadcode` / ts-prune flagged the previously-exported
+// forms as over-broad `export` keywords).
+type HostAttemptOutcome = 'success' | 'timeout' | 'error'
 
 interface MutableHostStats {
   attempts: number
@@ -61,7 +65,7 @@ interface MutableHostStats {
   totalMs: number
 }
 
-export interface HostStatsSnapshot {
+interface HostStatsSnapshot {
   host: string
   attempts: number
   successes: number
@@ -94,7 +98,7 @@ export const MIN_SUCCESS_RATE_FOR_HEALTHY = 0.35
  *  relative to success-rate deltas (max range 1.0) -- it only breaks
  *  near-ties among hosts with comparable reliability. A 0%-success host can
  *  never outrank a 90%-success host purely by failing fast. */
-export const LATENCY_SCORE_DIVISOR_MS = 50_000
+const LATENCY_SCORE_DIVISOR_MS = 50_000
 
 /** Debug/steam-install-slow-start (cycle 5): divisor converting a
  *  content-server directory `weightedload` value (cycle-4 lead (a) --
@@ -107,7 +111,7 @@ export const LATENCY_SCORE_DIVISOR_MS = 50_000
  *  the real Steam client's own near-exclusive preference for the local caches,
  *  while leaving room for empirical evidence to reorder within/across that gap
  *  once real attempt history accumulates (see `score` below). */
-export const WEIGHTEDLOAD_PRIOR_DIVISOR = 50
+const WEIGHTEDLOAD_PRIOR_DIVISOR = 50
 
 /** Debug/steam-install-slow-start (cycle 5): number of attempts at which a
  *  host's directory-weightedload PRIOR and its empirical success/latency

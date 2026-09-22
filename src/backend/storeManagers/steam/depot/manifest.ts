@@ -40,7 +40,10 @@ import { join } from 'node:path'
 /** Numeric-only guard for appId/depotId before any interpolation (T-21-05). */
 const NUMERIC_ID = /^\d+$/
 
-export interface InstalledDepotEntry {
+// Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
+// file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+interface InstalledDepotEntry {
   /** Steam depot id. Guarded numeric — never interpolated unchecked. */
   depotId: string
   /** 64-bit manifest GID. STRING — must never touch a JS Number. */

@@ -28,7 +28,10 @@ import {
 const MAX_DISTINCT_FLAG_VALUES = 1 << 5
 
 /** Aggregate-only EDepotFileFlag census over a single DepotPlan. */
-export interface DepotFlagsCensus {
+// Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
+// file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+interface DepotFlagsCensus {
   /** Total files across every depot in the plan. */
   totalFiles: number
   /** Files where `file.flags` is truthy — mirrors the EXACT production

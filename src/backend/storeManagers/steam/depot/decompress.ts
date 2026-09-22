@@ -502,9 +502,13 @@ export type DecodeFn = (
  *  otherwise: never changes retry count, backoff, or host-rotation order for
  *  any genuine network/timeout/HTTP failure -- only reports what already
  *  happens. */
-export type ChunkAttemptOutcome = 'success' | 'timeout' | 'error'
+// Not exported (this and ChunkAttemptEvent, CHUNK_FETCH_MAX_BACKOFF_MS below): verified
+// to have no importer anywhere -- every cross-file mention of ChunkAttemptEvent is a
+// prose comment, not an import (`pnpm find-deadcode` / ts-prune flagged the
+// previously-exported forms as over-broad `export` keywords).
+type ChunkAttemptOutcome = 'success' | 'timeout' | 'error'
 
-export interface ChunkAttemptEvent {
+interface ChunkAttemptEvent {
   host: string
   /** 0-indexed attempt number within this chunk's own retry loop. */
   attempt: number
@@ -709,7 +713,7 @@ export function wantsCdnAuthToken(
  *  the backoff SHAPE (still exponential, still increasing) unchanged for the
  *  attempts that matter most (the first few, where a genuinely-transient
  *  failure is most likely to be resolved by a short pause). */
-export const CHUNK_FETCH_MAX_BACKOFF_MS = 3000
+const CHUNK_FETCH_MAX_BACKOFF_MS = 3000
 
 /** Debug/steam-install-slow-start (cycle 15): cycle 14's hardware validation
  *  applied the CHUNK_FETCH_HEADERS fix but did NOT unlock the type=CDN
