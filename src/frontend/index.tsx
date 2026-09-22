@@ -18,6 +18,10 @@ import './bootErrorSurface'
 // before this renderer bundle's JS ever starts running.
 import '../preload/tauriAttach'
 
+// TEMPORARY (debug session `packaged-blank-render`): geometry probe for the ~1-in-4
+// blank packaged render. Delete with `src/frontend/blankRenderProbe.ts`.
+import { probeMark } from './blankRenderProbe'
+
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 import HttpApi from 'i18next-http-backend'
 import { lazy, Suspense } from 'react'
@@ -60,6 +64,8 @@ window.addEventListener('error', (ev: ErrorEvent) => {
 // branch (Electron never ran this body -- it had no sidecar to hydrate a snapshot
 // from). Tauri is now the only shell, so the guard always evaluated true; it is
 // removed and this always runs.
+probeMark('before-hydrate')
+
 try {
   // Race against a timeout so a wedged transport (dead sidecar, unregistered command)
   // becomes a visible degraded render within a few seconds instead of hanging the mount
@@ -106,6 +112,7 @@ try {
 // second pass. `applyFramelessDecorations` is idempotent and TOTAL (never throws --
 // see tauriWindowChrome.ts's header), so a redundant re-apply for the common
 // decorated case costs one `setDecorations(true)` and nothing else.
+probeMark('after-hydrate')
 applyFramelessDecorations()
 
 const DEFAULT_THEME = 'midnightMirage'
@@ -167,7 +174,14 @@ i18next
 
 const container = document.getElementById('root')
 const root = createRoot(container!) // createRoot(container!) if you use TypeScript
-const App = lazy(async () => import('./App'))
+const App = lazy(async () => {
+  probeMark('app-chunk-import-start')
+  const mod = await import('./App')
+  probeMark('app-chunk-import-done')
+  return mod
+})
+
+probeMark('before-root-render')
 
 root.render(
   // <React.StrictMode>
@@ -180,6 +194,10 @@ root.render(
   </GlobalState>
   // </React.StrictMode>
 )
+
+probeMark('after-root-render')
+i18next.on('initialized', () => probeMark('i18next-initialized'))
+i18next.on('loaded', () => probeMark('i18next-loaded'))
 
 // helper function to set the theme class and load custom css if needed
 window.setTheme = async (themeClass: string) => {
