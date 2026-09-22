@@ -29,6 +29,10 @@ describe('i18next-parser config', () => {
     expect(config.output).toBe('public/locales/$LOCALE/$NAMESPACE.json')
   })
 
+  it("writes catalogs with LF line endings on every OS (260922-ok3) -- 'auto' means CRLF on Windows, which dirties the en catalogs and fails the next pre-push prettier check", () => {
+    expect(config.lineEnding).toBe('lf')
+  })
+
   it('only ever writes English (D-04)', () => {
     expect(config.locales).toEqual(['en'])
   })

@@ -82,8 +82,11 @@ module.exports = {
     ]
   },
 
-  lineEnding: 'auto',
+  lineEnding: 'lf',
   // Control the line ending. See options at https://github.com/ryanve/eol
+  // 260922-ok3: `'auto'` wrote catalogs with the OS EOL, i.e. CRLF on Windows -- which left the
+  // four en/*.json catalogs dirty after every `pnpm i18n` and failed the NEXT pre-push's
+  // `prettier --check` (it runs before `i18n` in .husky/pre-push). `.gitattributes` pins LF.
 
   locales: ['en'],
   // An array of the locales in your applications
