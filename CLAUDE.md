@@ -329,6 +329,32 @@ starts non-conforming out of the box — its line 23 emits `expected: |`, and
 to the inline shape at authoring time. Those template files are outside this repo and are not
 being changed here.
 
+### A formatter check belongs in every task's `<verify>`
+
+**If a task writes a file, its `<verify>` block must run `npx prettier --check` over the exact
+paths it wrote.** Scope to explicit paths, never `.` — a bare `.` drags in unrelated repo debt and
+`src/preload/.prettierrc` sets `printWidth: 120` against the root's default 80, so the directory a
+path sits in changes the correct answer.
+
+**Why this is a rule and not a nicety: no other gate in this repo sees formatting.** An executor
+can run `pnpm codecheck` (exit 0), `pnpm lint` (both ceilings PASS), its jest project,
+`lint-translations`, `i18n-churn-guard` and `pnpm planning-gates` — every one green — and still
+have written an unformatted file. Measured three times, and the third was not a planned phase at
+all but a `/gsd-debug` session that ran the full battery: 2026-09-02 (phase 39, 7 files),
+2026-09-21 (two quick tasks), 2026-09-23 (the blank-render fix). Each cost a rejected push, a
+separate formatting commit and a re-push.
+
+`.husky/pre-commit` now checks prettier over the **staged content** of every file a commit
+touches, so this is a backstop rather than the only line of defence — but the hook fires at
+`git commit` only. `git rebase`, `cherry-pick` and `merge` create commits without running it, and
+`--no-verify` skips it. The verify block is what keeps the file formatted in the first place.
+
+Both halves of the upstream plan template now carry a reminder
+(`~/.claude/get-shit-done/templates/phase-prompt.md`, `bin/lib/template.cjs`). **Those files are
+outside this repo, unversioned, shared by every project on the machine, and a `gsd` upgrade will
+overwrite them** — the same caveat this file already records for the UAT template. This section is
+the durable copy; treat the template text as a convenience, not as the requirement.
+
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:.planning/research/ARCHITECTURE.md -->
