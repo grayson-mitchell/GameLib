@@ -60,7 +60,55 @@ as the blockquote below already says.
 
 ## Results
 
-None yet. Add a dated session block here when the first sitting happens, then move the
+### Session 1 — 2026-09-23, Windows 11 (operator's machine), `pnpm tauri:dev`
+
+First sitting ever held for this phase. Runtime: Tauri dev build, commit at `6ad1d7cd9`.
+
+**`38-S06` — PASS.** Matrix row 5 on Windows, tauri runtime, native installs OFF. All five
+checks scored independently per the item's own warning: read-only "Windows" platform row
+PRESENT, content-light notice PRESENT, library dropdown ABSENT, wine section ABSENT, free-space
+line ABSENT. Operator's words: "test passes, platform row and notice only items."
+Reached via the `GameCard` context-menu door (D-27 row 3), NOT the `MainButton` caret — see the
+caret defect below.
+
+**Three defects found, all NEW and all filed as todos.** None was on record anywhere:
+
+1. `2026-09-23-checknintendo-trusts-standard-mapping-on-non-standard-pads.md` — blocked the whole
+   controller leg. See the controller note below.
+2. `2026-09-23-steam-install-caret-dropdown-closes-itself-via-synthetic-tab.md` — the caret opens
+   ~1 click in 10.
+3. `2026-09-23-library-card-art-never-recovers-from-a-missed-visible-cards-event.md` — a block of
+   library cards renders blank art permanently.
+
+**CONTROLLER LEG NOT RUN — and the reason is a defect, not an absence of hardware.** The operator
+has a PowerA Advantage Wired Controller for Nintendo Switch 2. Detection works correctly
+(`isNintendoControllerId` TRUE, `detectControllerLayout` -> `'nintendo'`), but the pad reports
+`mapping: ""` and `checkNintendo` assumes Chromium's standard POSITION mapping without ever
+checking it. Measured result: face buttons arrive as `[Y, B, A, X]`, so physical A LAUNCHES the
+game while the hint bar reads "A: Game details", and the d-pad is dead (hat axis, not
+`buttons[12-15]`).
+
+Disposition of the seven surviving controller items, to be applied at the ledger:
+
+- `38-C01` — its text names "the d-pad AND the left stick". Stick half passes, d-pad half FAILS.
+  Compound; per relocation rule (4) it must be SPLIT before either half is recorded.
+- `38-C03`, `38-C04` — UNSCOREABLE on this pad. Both depend on indices now known shifted
+  (`buttons[4]/[5]` shoulders, `buttons[10]/[11]` stick clicks). A result would measure the pad's
+  HID quirk, not the item's subject.
+- `38-C08` — UNSCOREABLE for a SECOND, independent reason: the caret it asks about cannot be
+  reliably opened by mouse, let alone by controller.
+- `38-C02`, `38-C05`, `38-C06` — still scoreable; they ride on `axes[0-3]`, which work. `38-C06`
+  carries a caveat: it exercises the tier-2 filter dropdowns, which share the `Dropdown` primitive
+  implicated in defect 2.
+
+**`38-S14` will not fully close on this machine.** Sub-case (b) needs "native installs ON with
+<=1 library" and the operator's `libraryfolders.vdf` registers TWO real libraries.
+`getSteamLibraries()` (`utils.ts:671`) reads Steam's own file and filters by `existsSync`, so the
+count is not a GameLib setting that can be turned down. Forcing it by repointing
+`defaultSteamPath` was considered and REJECTED: it makes the function return the
+`/usr/share/steam` sentinel, a synthetic single-library state no real user has, and recording a
+pass against that would be recording a pass against a condition that does not occur. Operator
+agreed to skip (b). Sub-case (a) is in scope. Add a dated session block here when the first sitting happens, then move the
 corresponding entries in `38-VERIFICATION.md` from `human_verification` to
 `human_verification_discharged` — annotating in place does not work, because the audit counts
 array membership and ignores any `result:` field.
