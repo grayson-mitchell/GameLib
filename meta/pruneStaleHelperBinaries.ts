@@ -45,7 +45,8 @@ import {
   readdirSync,
   rmSync,
   statSync,
-  type Dirent
+  type Dirent,
+  type Stats
 } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { join, relative, sep } from 'node:path'
@@ -222,7 +223,11 @@ export function assessPublicBin(publicBinDir: string): PublicBinAssessment {
     const runnerDir = join(publicBinDir, 'arm64', 'darwin', runner)
     const binaryPath = join(runnerDir, runner)
 
-    let binaryStat: ReturnType<typeof statSync> | undefined
+    // `Stats`, not `ReturnType<typeof statSync>`: the latter picks up the
+    // bigint overload, widening `.mode` to `number | bigint` so the exec-bit
+    // mask below is rejected. The call is `statSync(path)` with no options,
+    // which returns `Stats` (`mode: number`).
+    let binaryStat: Stats | undefined
     try {
       binaryStat = statSync(binaryPath)
     } catch {

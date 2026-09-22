@@ -272,7 +272,10 @@ export function pruneDeadKeys(localesDir: string): number {
       const data = JSON.parse(original) as Record<string, unknown>
 
       for (const entry of DEAD_HEROIC_KEYS) {
-        const [entryNs, dotted] = entry.split(/:(.*)/s)
+        // `[\s\S]` is the pre-es2018 spelling of the `s` (dotAll) flag; the
+        // repo's tsconfig targets es2017, so the flag itself is unavailable.
+        // Split semantics are identical, newlines included.
+        const [entryNs, dotted] = entry.split(/:([\s\S]*)/)
         if (entryNs !== ns) continue
 
         const segments = dotted.split('.')
