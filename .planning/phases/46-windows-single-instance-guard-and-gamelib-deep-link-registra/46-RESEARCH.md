@@ -425,17 +425,19 @@ std::process::exit(0);
 | A2 | Owner-SID SDDL (`"D:(A;;GA;;;OW)"`) is the right DACL choice over Microsoft's own suggested logon-SID approach, to match this codebase's existing per-user (not per-session) trust boundary | Q2, "Alternatives Considered" | Medium — this is a judgment call about which boundary the operator actually wants (same user, two concurrent RDP sessions: should they share one instance, or not?). If the operator's actual intent is per-session isolation, this recommendation is wrong and should be flipped to logon-SID. Recommend surfacing this explicitly as a discuss-phase question rather than treating it as settled by this research alone. |
 | A3 | GameLib's Windows distribution has no portable/zip target today (only NSIS), which is the basis for recommending against widening runtime `register_all()` to Windows | Q7 | Low-Medium — verified against `tauri.conf.json`'s `bundle.targets: ["nsis", "appimage", "dmg"]` directly (no Windows portable entry), but if a future phase adds a portable Windows distribution, this recommendation should be revisited. |
 
-## Open Questions
+## Open Questions (RESOLVED -- see REQUIREMENTS.md Phase 46 "Open decision points")
 
 1. **Exact Owner-SID vs. logon-SID DACL choice (A2 above).**
    - What we know: Microsoft's own general guidance recommends logon-SID for named-pipe session isolation; this codebase's existing Unix precedent is per-user, not per-session.
    - What's unclear: whether the operator has an actual multi-session-same-user Windows usage pattern (e.g. RDP) where the distinction would matter in practice.
    - Recommendation: proceed with Owner-SID (matches existing precedent) unless the operator flags a specific multi-session need during planning/discuss-phase.
+   - RESOLVED: decision point (b) in REQUIREMENTS.md Phase 46 "Open decision points": per-user token SID, operator-overridable. Signposted on `windows_pipe_sddl` / `current_user_identity` with the logon-SID override recipe (plans 46-01/46-02) and pinned by a Rust unit test (46-01) and a TS source gate (46-03).
 
 2. **Whether to add a CI step that runs `cargo check`/`cargo test` on Windows at all**, given this research found `cargo test` currently does not compile there and CI runs neither command today (`release-tauri.yml` invokes `tauri-action@v1`, which internally does a release `cargo build`, but there is no explicit `cargo check`/`cargo test` step in any workflow).
    - What we know: this phase's own new Rust tests will only ever be exercised by a human running `cargo test` locally on Windows (this machine), never by CI, unless a new CI step is added — which is a larger, separate concern than this phase's own scope.
    - What's unclear: whether adding Windows Rust CI is in scope for this phase or a separate future todo.
    - Recommendation: out of scope for this phase; file as a follow-up todo if not already covered by existing Windows CI gaps (`2026-09-17-windows-release-leg-dies-in-install-deps-tar-reads-c-as-a-remote-host.md` and the darwin-symlink todo already track adjacent Windows CI health issues).
+   - RESOLVED: decision point (c) in REQUIREMENTS.md Phase 46 "Open decision points": out of scope, filed by plan 46-01 as `.planning/todos/pending/2026-09-22-windows-rust-tests-not-run-in-ci.md`.
 
 <phase_requirements>
 ## Phase Requirements
