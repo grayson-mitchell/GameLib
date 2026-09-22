@@ -182,12 +182,16 @@ function countRegistrations(source: string): { invoke: number; send: number } {
   }
 }
 
+// Not exported (this and the symbol below): used only within this module
+// (`pnpm find-deadcode` / ts-prune flagged the previously-exported forms as
+// an over-broad `export` -- there is no external consumer, so the export
+// served no purpose).
 /**
  * The `/** ... *\/` block immediately preceding `export function register…`,
  * comment markers stripped and whitespace collapsed. Returns null when the
  * register function carries no docstring.
  */
-export function registerFnDocstring(source: string): string | null {
+function registerFnDocstring(source: string): string | null {
   const fn = source.search(/export function register\w+/)
   if (fn === -1) return null
   const head = source.slice(0, fn)
@@ -202,7 +206,7 @@ export function registerFnDocstring(source: string): string | null {
  * a number -- which is how "this module states no total" is detected rather
  * than assumed.
  */
-export function claimedTotal(docstring: string): number | null {
+function claimedTotal(docstring: string): number | null {
   const m = docstring.match(
     /Registers\s+(?:the\s+|all\s+|this\s+(?:module|cluster|slice)'s\s+)?(\S+)/
   )

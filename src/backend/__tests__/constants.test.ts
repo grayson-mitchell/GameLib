@@ -1,6 +1,9 @@
 import { fixAsarPath } from 'backend/constants/paths'
 
-export function overrideProcessPlatform(os: string): string {
+// Not exported: used only within this module (`pnpm find-deadcode` / ts-prune
+// flagged the previously-exported form as an over-broad `export` -- there is no
+// external consumer, so the export served no purpose).
+function overrideProcessPlatform(os: string): string {
   const original_os = process.platform
 
   // override process.platform

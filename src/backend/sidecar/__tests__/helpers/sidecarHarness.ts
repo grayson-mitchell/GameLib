@@ -43,8 +43,11 @@ import { init } from '../../bootstrap'
 /** A single newline-delimited JSON frame read off the sidecar's output. */
 export type Frame = Record<string, unknown>
 
+// Not exported: used only within this module (`pnpm find-deadcode` / ts-prune
+// flagged the previously-exported form as an over-broad `export` -- there is no
+// external consumer, so the export served no purpose).
 /** Buffers newline-delimited output from a PassThrough into parsed frames. */
-export function collectFrames(stream: PassThrough): Frame[] {
+function collectFrames(stream: PassThrough): Frame[] {
   const frames: Frame[] = []
   let buffer = ''
   stream.on('data', (chunk: Buffer | string) => {

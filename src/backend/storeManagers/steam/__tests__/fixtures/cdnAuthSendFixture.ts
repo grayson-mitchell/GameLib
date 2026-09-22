@@ -21,7 +21,10 @@ import {
 
 import type { CDNAuthTokenClient } from '../../depot/cdnAuth'
 
-export type FakeSendCall = {
+// Not exported: used only within this module (`pnpm find-deadcode` / ts-prune
+// flagged the previously-exported form as an over-broad `export` -- there is no
+// external consumer, so the export served no purpose).
+type FakeSendCall = {
   methodName: string
   methodData: { app_id: number; depot_id: number; host_name: string }
 }

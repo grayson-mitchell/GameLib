@@ -42,9 +42,13 @@ const REPO_ROOT = resolve(join(__dirname, '../../../..'))
  * `conf` (via the first-party `backend/store_backend.ts`), is not intercepted by anything, so
  * a dynamic import of it would resolve the same module as the static form -- no hazard, and
  * nothing to gate. */
-export const FORBIDDEN_DYNAMIC_IMPORT_MODULES = ['electron']
+// Not exported (this and the two symbols below): used only within this
+// module (`pnpm find-deadcode` / ts-prune flagged the previously-exported
+// forms as an over-broad `export` -- there is no external consumer, so the
+// export served no purpose).
+const FORBIDDEN_DYNAMIC_IMPORT_MODULES = ['electron']
 
-export interface DynamicImportHit {
+interface DynamicImportHit {
   file: string
   line: number
   specifier: string
@@ -54,10 +58,10 @@ export interface DynamicImportHit {
  * Walks a single already-parsed source file for `CallExpression` nodes whose callee is the
  * native `import` keyword (`ts.SyntaxKind.ImportKeyword` -- dynamic `import(...)` parses this
  * way, distinct from a plain `Identifier` named `import`) and whose sole argument is a string
- * literal in `FORBIDDEN_DYNAMIC_IMPORT_MODULES`. Exported (not just used internally) so Gate 3's
- * known-bad self-test can call the exact same detector the real scan uses.
+ * literal in `FORBIDDEN_DYNAMIC_IMPORT_MODULES`. Gate 3's known-bad self-test calls this same
+ * detector within this file, which is the "used in module" use that this un-export preserves.
  */
-export function findForbiddenDynamicImports(
+function findForbiddenDynamicImports(
   sourceFile: ts.SourceFile
 ): DynamicImportHit[] {
   const hits: DynamicImportHit[] = []

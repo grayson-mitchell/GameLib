@@ -101,7 +101,10 @@ export function substituteExpressions(
   return result
 }
 
-export interface StepRunResult {
+// Not exported: used only within this module (`pnpm find-deadcode` / ts-prune
+// flagged the previously-exported form as an over-broad `export` -- there is no
+// external consumer, so the export served no purpose).
+interface StepRunResult {
   status: number | null
   stdout: string
   stderr: string

@@ -22,20 +22,22 @@ function makeSteamGame(appId: string, title: string): GameInfo {
   }
 }
 
+// Not exported (steamOwnedPortal2, steamOwnedCactus, steamOwnedFramed,
+// steamOwnedIntoTheBreach and steamOwnedStardew below): used only within
+// this module (`pnpm find-deadcode` / ts-prune flagged the previously-
+// exported forms as an over-broad `export` -- there is no external
+// consumer, so the export served no purpose).
 /** AppID-tier fixture: Portal 2's real AppID, used for exact-match tests. */
-export const steamOwnedPortal2 = makeSteamGame('620', 'Portal 2')
+const steamOwnedPortal2 = makeSteamGame('620', 'Portal 2')
 
 /** Should fuzzy-match Humble "Assault Android Cactus+" (trailing `+`). */
-export const steamOwnedCactus = makeSteamGame(
-  '250110',
-  'Assault Android Cactus'
-)
+const steamOwnedCactus = makeSteamGame('250110', 'Assault Android Cactus')
 
 /** Should fuzzy-match Humble "FRAMED Collection" (case + edition suffix). */
-export const steamOwnedFramed = makeSteamGame('388390', 'Framed Collection')
+const steamOwnedFramed = makeSteamGame('388390', 'Framed Collection')
 
 /** Should fuzzy-match Humble "Into the Breach" (parenthetical qualifier). */
-export const steamOwnedIntoTheBreach = makeSteamGame(
+const steamOwnedIntoTheBreach = makeSteamGame(
   '590380',
   'Into The Breach (Steam)'
 )
@@ -51,7 +53,7 @@ export const steamOwnedBatmanArkhamKnight = makeSteamGame(
 
 /** Cross-platform (D-45) target: a GOG-platform Humble key for this title
  * still counts as owned-elsewhere. */
-export const steamOwnedStardew = makeSteamGame('413150', 'Stardew Valley')
+const steamOwnedStardew = makeSteamGame('413150', 'Stardew Valley')
 
 /** Full owned-library fixture used by the recomputeOwnership tests. */
 export const ownedSteamLibrary: GameInfo[] = [

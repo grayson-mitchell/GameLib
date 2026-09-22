@@ -1,4 +1,4 @@
-# POPULATION: used-in-module (203 identities)
+# POPULATION: used-in-module (182 identities)
 #
 # ts-prune found these exports USED -- inside their own declaring file.
 # So this population is NOT dead code: it is an unnecessarily broad
@@ -145,14 +145,7 @@ meta/trayIconVariants.ts - DecodedPng
 meta/trayIconVariants.ts - HUE_SPLIT_DEGREES
 meta/trayIconVariants.ts - buildHueSegmentedTemplateAlpha
 meta/trayIconVariants.ts - encodeRgba
-src/backend/__tests__/constants.test.ts - overrideProcessPlatform
-src/backend/__tests__/helpers/workflowSteps.ts - StepRunResult
 src/backend/electron_store.ts - RegisteredStore
-src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedCactus
-src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedFramed
-src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedIntoTheBreach
-src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedPortal2
-src/backend/humble/__tests__/fixtures/steamGames.ts - steamOwnedStardew
 src/backend/humble/classify.ts - ZeroKeyDiagnosis
 src/backend/humble/electronStores.ts - HumbleLocalRedeemedRecord
 src/backend/humble/electronStores.ts - HumbleOrderCacheEntryInternal
@@ -160,12 +153,6 @@ src/backend/humble/loginWindowSeam.ts - LoginWindowRevealPostResult
 src/backend/ipc.ts - addOneTimeListener
 src/backend/jest.setupContainment.ts - containmentRoot
 src/backend/recent_games/recent_games.ts - maxRecentGames
-src/backend/sidecar/__tests__/externalDynamicImportGate.test.ts - DynamicImportHit
-src/backend/sidecar/__tests__/externalDynamicImportGate.test.ts - FORBIDDEN_DYNAMIC_IMPORT_MODULES
-src/backend/sidecar/__tests__/externalDynamicImportGate.test.ts - findForbiddenDynamicImports
-src/backend/sidecar/__tests__/flowRegistrationCensus.test.ts - claimedTotal
-src/backend/sidecar/__tests__/flowRegistrationCensus.test.ts - registerFnDocstring
-src/backend/sidecar/__tests__/helpers/sidecarHarness.ts - collectFrames
 src/backend/sidecar/bootstrap.ts - deliverStartupProtocolUrl
 src/backend/sidecar/bootstrap.ts - registerProtocolUrlHandler
 src/backend/sidecar/fileStore.ts - FileStoreOptions
@@ -176,7 +163,6 @@ src/backend/sidecar/oauthLoginCapture.ts - OAuthRedirectMatch
 src/backend/sidecar/oauthLoginCapture.ts - resolveUserAgent
 src/backend/sidecar/processGuards.ts - UncaughtExceptionLogSink
 src/backend/sidecar/processGuards.ts - UnhandledRejectionLogSink
-src/backend/storeManagers/steam/__tests__/fixtures/cdnAuthSendFixture.ts - FakeSendCall
 src/backend/storeManagers/steam/bridge/allowlist.ts - BridgeAllowlist
 src/backend/storeManagers/steam/bridge/helperProcess.ts - BridgeHelperReadyStatus
 src/backend/storeManagers/steam/bridge/helperProcess.ts - EnsureBridgeHelperReadyResult
@@ -250,7 +236,6 @@ src/common/types/storePolicy.ts - DISALLOWED_KEY_PATH_SEGMENTS
 src/common/types/storePolicy.ts - ValidStoreName
 src/common/types/storePolicy.ts - WRITE_DENIED_FIELDS
 src/common/winetricks/deriveRowState.ts - WinetricksRowState
-src/frontend/__tests__/muiTabsSelectorScoping.test.ts - findUnscopedMuiTabsSelectors
 src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx - StoreEmbedSuppressionContext
 src/frontend/components/UI/NavShell/StoreEmbedSuppressionContext.tsx - SuppressionAction
 src/frontend/components/UI/NavShell/Tier2PortalContext.tsx - Tier2PortalValue
@@ -262,12 +247,6 @@ src/frontend/helpers/declaredUnavailable.ts - WINETRICKS_CHANNELS
 src/frontend/hooks/hasStatus.ts - DerivedStatusKind
 src/frontend/screens/ConsoleMode/InstallOverlay/consoleSteamTarget.ts - ConsoleSteamVerdict
 src/frontend/screens/DownloadManager/components/DownloadManagerItem/status.ts - DMItemStatusInfo
-src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - VoidApiChain
-src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - asyncHandlerWirings
-src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - depsOf
-src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - sliceAsyncHandler
-src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - sliceIntervalEffects
-src/frontend/screens/Game/GamePage/components/__tests__/permanentlyMountedPolls.test.ts - sliceVoidApiChains
 src/frontend/screens/Game/GamePage/components/appleRating.ts - RatingTier
 src/frontend/screens/Library/components/InstallModal/index.tsx - SteamLibraryFetch
 src/frontend/screens/Library/components/InstallModal/steamPlatformRow.ts - ResolveDepotAvailabilityOutput

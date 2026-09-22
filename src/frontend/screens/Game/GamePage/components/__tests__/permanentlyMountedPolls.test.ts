@@ -110,12 +110,17 @@ function censusPermanentlyMountedComponents(): MountedComponent[] {
   return result.sort((a, b) => a.name.localeCompare(b.name))
 }
 
+// Not exported (this and the five symbols below -- depsOf, VoidApiChain,
+// sliceVoidApiChains, sliceAsyncHandler, asyncHandlerWirings): used only
+// within this module (`pnpm find-deadcode` / ts-prune flagged the
+// previously-exported forms as an over-broad `export` -- there is no
+// external consumer, so the export served no purpose).
 /**
  * Slices every `useEffect(...)` that contains `setInterval(` out of a
  * flattened source, bounded by its own dependency array so each obligation is
  * measured against THAT effect and not a neighbouring one.
  */
-export function sliceIntervalEffects(source: string): string[] {
+function sliceIntervalEffects(source: string): string[] {
   const flattened = source.replace(/\s+/g, ' ')
   const effects: string[] = []
   let cursor = 0
@@ -136,7 +141,7 @@ export function sliceIntervalEffects(source: string): string[] {
 }
 
 /** The dependency array of a sliced effect, e.g. `isOpen, phase, appName`. */
-export function depsOf(effect: string): string {
+function depsOf(effect: string): string {
   const match = effect.match(/\}, \[([^\]]*)\]$/)
   if (!match) {
     throw new Error(`depsOf: could not find a dependency array in: ${effect}`)
@@ -153,7 +158,7 @@ export function depsOf(effect: string): string {
  * is an unhandled rejection waiting on a transport this repo has ledgered as
  * failing repeatedly.
  */
-export interface VoidApiChain {
+interface VoidApiChain {
   /** The whole chain text, for RED derivations. */
   text: string
   /**
@@ -166,7 +171,7 @@ export interface VoidApiChain {
   continuations: string[]
 }
 
-export function sliceVoidApiChains(source: string): VoidApiChain[] {
+function sliceVoidApiChains(source: string): VoidApiChain[] {
   const flattened = source.replace(/\s+/g, ' ')
   const marker = 'void window.api'
   const chains: VoidApiChain[] = []
@@ -204,7 +209,7 @@ export function sliceVoidApiChains(source: string): VoidApiChain[] {
  * balanced-brace scan so the try/catch obligation is measured against THAT
  * handler and not the file's other, correctly-guarded code.
  */
-export function sliceAsyncHandler(source: string, name: string): string | null {
+function sliceAsyncHandler(source: string, name: string): string | null {
   const flattened = source.replace(/\s+/g, ' ')
   const start = flattened.indexOf(`const ${name} = async () => {`)
   if (start === -1) return null
@@ -234,7 +239,7 @@ const asyncConfirmSurfaces = census.filter(
  * 34.13 review C-23. Every `const <name> = async` declaration in a source,
  * paired with whether that name is ALSO wired bare to an `onClick`.
  */
-export function asyncHandlerWirings(
+function asyncHandlerWirings(
   source: string
 ): { name: string; wiredBare: boolean }[] {
   const flattened = source.replace(/\s+/g, ' ')

@@ -90,7 +90,10 @@ const TRANSPARENT_AT_RULE = /^@(media|supports|container|layer|document)\b/i
  * variable (`$leak: 8px;` then `.MuiTabs-root {`) is swept into the selector
  * text and its first compound reads `$leak:`, hiding a real offender.
  */
-export function findUnscopedMuiTabsSelectors(
+// Not exported: used only within this module (`pnpm find-deadcode` / ts-prune
+// flagged the previously-exported form as an over-broad `export` -- there is no
+// external consumer, so the export served no purpose).
+function findUnscopedMuiTabsSelectors(
   source: string,
   file: string
 ): Offender[] {
