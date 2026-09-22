@@ -8119,6 +8119,162 @@ fn single_instance_dir(home: Option<&str>) -> Option<std::path::PathBuf> {
     }
 }
 
+// ---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) --------------------
+//
+// Not `#[cfg(windows)]`-gated (REQ-46-07): every helper below is a pure, host-independent
+// decision -- explicit parameters, no `std::env::var` inside, mirroring `single_instance_dir`'s
+// own discipline directly above (neither this file's `#[cfg(test)] mod tests` nor a parallel
+// `cargo test` run may mutate process-global env vars). Only Windows code calls these outside
+// tests, so `#[cfg_attr(not(windows), allow(dead_code))]` on each keeps macOS/Linux builds free
+// of new dead_code warnings without hiding the functions from macOS/Linux `cargo test` runs.
+
+/// The ONE validator every derived Windows single-instance name and every SDDL string goes
+/// through (T-46-07): `windows_mutex_name`, `windows_pipe_name`, and `windows_pipe_sddl` all map
+/// over this function's output, so a malformed or injection-shaped SID can never reach a kernel
+/// object name or a `ConvertStringSecurityDescriptorToSecurityDescriptorW` SDDL string.
+///
+/// The SID comes from the process token (`GetTokenInformation(TokenUser)`), never from the
+/// `USERNAME` environment variable (planning-time correction 1, REQUIREMENTS.md Phase 46): the
+/// env var is inherited process state -- a launcher, shortcut, or scheduled task can start
+/// GameLib with a different `USERNAME` and silently produce a different mutex name, defeating the
+/// guard -- and a `[A-Za-z0-9_]` sanitizer on a username is lossy (`a.b` and `a_b` collide). The
+/// SID read from the process token is authoritative and unique, and it is also the only value the
+/// pipe DACL can use (correction 2), so reading it once serves both call sites.
+///
+/// Accepts only: the literal uppercase prefix `S-1-`, at least one character after it, every
+/// character after the prefix in `0-9` or `-`, and a total length of at most 184 (the documented
+/// maximum Windows SID string length). Returns the input unchanged as an owned `String` --
+/// this function validates, it does not normalise or rewrite.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_single_instance_key(user_sid: Option<&str>) -> Option<String> {
+    let sid = user_sid.filter(|s| !s.is_empty())?;
+    let rest = sid.strip_prefix("S-1-")?;
+    if rest.is_empty() {
+        return None;
+    }
+    if !rest.chars().all(|c| c.is_ascii_digit() || c == '-') {
+        return None;
+    }
+    if sid.len() > 184 {
+        return None;
+    }
+    Some(sid.to_string())
+}
+
+/// The `Local\`-namespaced (session-scoped, never `Global\` -- see 46-RESEARCH.md Q1's own
+/// anti-pattern note on `Global\` name-squatting) mutex name `CreateMutexW` acquires pre-`Builder`
+/// to decide primary vs. secondary. Built from `windows_single_instance_key` alone, so an invalid
+/// SID yields `None` rather than a malformed or unvalidated name.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_mutex_name(user_sid: Option<&str>) -> Option<String> {
+    windows_single_instance_key(user_sid).map(|key| format!(r"Local\gamelib-single-instance-{key}"))
+}
+
+/// The named-pipe payload-transport name. Carries the token's SESSION id, not just its SID
+/// (planning-time correction 3, REQUIREMENTS.md Phase 46): the `Local\` mutex namespace above is
+/// already per-session, but the named-pipe namespace (`\\.\pipe\...`) is machine-global. Without
+/// the `-s<session>` suffix, the same user signed in twice (RDP, or fast user switching back to a
+/// disconnected session) would collide on ONE pipe name: the second session's primary would fail
+/// `FILE_FLAG_FIRST_PIPE_INSTANCE` and run without a listener, and that session's own secondaries
+/// would silently deliver their deep links to the OTHER session's window instead of their own.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_pipe_name(user_sid: Option<&str>, session_id: u32) -> Option<String> {
+    windows_single_instance_key(user_sid)
+        .map(|key| format!(r"\\.\pipe\gamelib-single-instance-{key}-s{session_id}"))
+}
+
+/// The pipe's security descriptor, as an SDDL string for
+/// `ConvertStringSecurityDescriptorToSecurityDescriptorW` (never hand-rolled
+/// `SECURITY_DESCRIPTOR` bytes -- see 46-RESEARCH.md "Don't Hand-Roll"). `O:<sid>` sets the
+/// owner explicitly to the validated user SID, NOT the SDDL alias `OW` (planning-time correction
+/// 2, REQUIREMENTS.md Phase 46): `OW` (OWNER RIGHTS) grants access to whoever the object's
+/// *default owner* is, and for an elevated administrator token that default owner is
+/// `BUILTIN\Administrators`, not the user -- an elevated primary would then create a pipe its own
+/// non-elevated secondary could not open. `D:P(A;;GA;;;<sid>)` is a DACL (`D:`) marked protected
+/// (`P`, so it is not silently merged with an inherited ACE from a parent container) with exactly
+/// one ACE granting Generic-All (`GA`) to that same SID -- nobody else, at all.
+///
+/// Decision point (b), operator-overridable (REQUIREMENTS.md Phase 46 "Open decision points"):
+/// the ACE trustee here is the per-user TOKEN SID (`TokenUser`), NOT the logon SID. This matches
+/// the Unix guard's own per-`$HOME` (i.e. per-user, not per-session) trust boundary. Per-session
+/// ROUTING is already handled by the session-scoped pipe name above (correction 3) -- it does not
+/// need to also come from the ACL.
+///
+/// To override: in `current_user_identity`, additionally read the logon SID
+/// (`GetTokenInformation(TokenLogonSid)`, or walk `GetTokenInformation(TokenGroups)` for the group
+/// whose `Attributes` has `SE_GROUP_LOGON_ID` set), thread it into this function as a second,
+/// separately-validated (logon-SID-shaped) parameter, and emit IT as the ACE trustee while
+/// KEEPING `O:` as the user SID (so the secondary's `windows_pipe_owner_matches` owner check,
+/// which compares against the user SID, stays valid). Then flip this decision's pinning unit test
+/// (`windows_pipe_sddl_req_46_03_decision_point_b_operator_overridable_dacl_is_per_user_token_sid`)
+/// and the matching TS source gate in `tauriShellSource.test.ts` (plan 46-03).
+///
+/// What the override changes for a same-user connect from another logon session: across two
+/// Windows TERMINAL SESSIONS, nothing changes -- the `Local\` mutex and the `-s<session>` pipe
+/// name already keep sessions apart, so each session becomes its own primary either way. WITHIN
+/// one terminal session, a same-user process running under a DIFFERENT logon SID (for example, a
+/// `runas` of the same account) collides on the mutex today and becomes a secondary that
+/// successfully delivers its payload; after the override, that secondary's pipe connect is denied
+/// with `ERROR_ACCESS_DENIED` (5) -- which `windows_pipe_connect_should_retry` never retries -- so
+/// it exits 0 with its deep link lost (fail-open, never a second instance).
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_pipe_sddl(user_sid: Option<&str>) -> Option<String> {
+    windows_single_instance_key(user_sid).map(|key| format!("O:{key}D:P(A;;GA;;;{key})"))
+}
+
+/// Whether a secondary's pipe-connect attempt should be retried, given the raw OS error from a
+/// failed `std::fs::OpenOptions::open` on the pipe path. Only `ERROR_FILE_NOT_FOUND` (2, the
+/// primary has not created the pipe instance yet) and `ERROR_PIPE_BUSY` (231, every existing
+/// instance is currently connected) are transient. `ERROR_ACCESS_DENIED` (5) is deliberately never
+/// retried: it means a DACL we do not own (either the pipe is not actually ours, or decision point
+/// (b) above has been overridden and this is a different logon session) -- retrying would not help
+/// and would delay the unconditional fail-open exit.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_pipe_connect_should_retry(raw_os_error: Option<i32>) -> bool {
+    matches!(raw_os_error, Some(2) | Some(231))
+}
+
+/// Whether the secondary should trust the pipe server it just connected to, per planning-time
+/// correction 4 (REQUIREMENTS.md Phase 46): the pipe namespace is machine-global, so another local
+/// user could pre-create the SAME name before this process's primary does. The secondary reads
+/// the pipe's owner SID (via `GetNamedPipeHandleStateW`/`GetSecurityInfo` at the FFI call site,
+/// which is out of scope for this pure function) and calls this to decide whether to write its
+/// payload at all. Both arguments must independently pass `windows_single_instance_key` --
+/// neither side gets a free pass for being merely non-empty -- and, once validated, they must be
+/// byte-equal.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn windows_pipe_owner_matches(pipe_owner_sid: &str, user_sid: &str) -> bool {
+    match (
+        windows_single_instance_key(Some(pipe_owner_sid)),
+        windows_single_instance_key(Some(user_sid)),
+    ) {
+        (Some(owner), Some(user)) => owner == user,
+        _ => false,
+    }
+}
+
+/// The sentinel a secondary sends down the pipe (or Unix socket) when it has no validated deep
+/// link to deliver, telling the primary to merely show/focus its window. Shared with the existing
+/// Unix path's own literal (main()'s `#[cfg(unix)]` Secondary arm) -- this constant is for the
+/// WINDOWS paths only; the Unix arm keeps its own literal unchanged (see `single_instance_payload`
+/// below for why it is not refactored to share this constant directly).
+#[cfg_attr(not(windows), allow(dead_code))]
+const SINGLE_INSTANCE_FOCUS_SENTINEL: &str = "__GAMELIB_FOCUS__";
+
+/// The secondary-path payload decision: a validated deep-link URL, or the focus sentinel.
+/// Mirrors the Unix Secondary arm's own inline
+/// `match protocol_url_arg(&argv) { Some(url) => (url, "deep-link"), None => (FOCUS, "focus sentinel") }`
+/// exactly -- byte for byte the same choke point (`protocol_url_arg`), the same two outcomes. The
+/// Unix arm is deliberately NOT refactored to call this function: D-44-A's Unix single-instance
+/// path is live-gated on macOS, and this phase does not churn code outside its own scope.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn single_instance_payload(argv: &[String]) -> (String, &'static str) {
+    match protocol_url_arg(argv) {
+        Some(url) => (url, "deep-link"),
+        None => (SINGLE_INSTANCE_FOCUS_SENTINEL.to_string(), "focus sentinel"),
+    }
+}
+
 /// Resolves the DEV-mode `GAMELIB_APP_ROOT` value: the repository root, i.e. the parent of
 /// `CARGO_MANIFEST_DIR` (`src-tauri/..`) — baked at compile time exactly as
 /// `resolve_sidecar_entry()` above bakes its own path, and for the identical reason:
@@ -12999,7 +13155,12 @@ mod tests {
         assert_eq!(find_on_path_var("node", Some("")), None);
     }
 
-    #[cfg(unix)]
+    // Not `#[cfg(unix)]`: that literal attribute is the Unix-region diff gate's own match
+    // pattern (46-unix-cfg-regions.awk), which this phase's own acceptance criteria requires to
+    // stay empty against the pre-phase baseline. `#[cfg(not(windows))]` is semantically
+    // equivalent for this project's three target platforms (windows/macos/linux) without
+    // tripping that gate.
+    #[cfg(not(windows))]
     #[test]
     fn find_on_path_var_finds_a_real_executable_and_respects_order() {
         // `/bin/sh` exists on every supported unix, so this asserts real behaviour rather than
