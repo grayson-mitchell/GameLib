@@ -870,6 +870,7 @@ Plans:
 **Plans:** 5 plans in 4 waves — ALL COMPLETE (2026-08-18). **Native decode ships GATED OFF by default** (`NATIVE_LZMA_DECODE_ENABLED = false` in `lzmaLoader.ts`): plan 05's live-hardware gate surfaced a real-chunk decode-pipeline hang inside the genuinely compiled SEA sidecar binary that reproduces on BOTH the native and pure-JS paths (not native-specific), only inside a real postject-injected binary, not any isolated repro. Tracked as its own open investigation: `.planning/debug/sea-native-lzma-real-chunk-decode-hang.md`. The identity-guard fix (lzma-native's build-time package-root resolution) and the worker-thread logger-init fix both landed as genuine, verified improvements independent of that open question.
 
 Plans:
+
 - [x] 23.1-01-PLAN.md — Wave 1 spike: prove `getRawAsset()` + `process.dlopen()` of a native addon from inside a `{ eval: true }` worker in a REAL compiled SEA binary, measure real-chunk speedup, blocking go/no-go. VALIDATED — 10/10 runs, ~5.8-6.6x real-chunk speedup on darwin-arm64. Operator decision: proceed.
 - [x] 23.1-02-PLAN.md — Wave 2: adopt `lzma-native@8.0.6` (exact pin) and embed the target-triple-resolved prebuild as a second SEA asset in `meta/buildSidecarSea.ts`
 - [x] 23.1-03-PLAN.md — Wave 3: `lzmaNativeBinding.ts`, the SEA-aware `node-gyp-build` replacement, wired via a shared `--alias:node-gyp-build` esbuild flag
@@ -902,6 +903,7 @@ Plans:
 **Outcome — ✅ COMPLETE 2026-08-19.** All four gates discharged: `23.2-REVIEW.md` `clean` (0 critical / 0 warning / 2 info across 12 files), `23.2-VERIFICATION.md` `passed` 9/9, `23.2-HUMAN-UAT.md` `complete` 3/3 on real hardware, `23.2-SECURITY.md` `verified` with `threats_open: 0` (23/23 threats closed, 4 accepted risks). **G-23-01 is RESOLVED** — the acceptance benchmark, unobserved through execution and verification by design, was finally observed: a live GameLib install of KCD2 (appId 1771300) hit the real `eresult=40` refusal on depot 1771304, SKIPPED it, and COMPLETED, writing a manifest matching the official Windows client on every benchmark field (`StateFlags 4` / `SizeOnDisk 96422090071` / `buildid 23914554` / `InstalledDepots 1771302,1771303,1771306`, 1771304 absent), with the skip notice actually shown to the user. It cost **71.5 seconds and zero bytes** rather than the assumed 90 GB: the content was already on disk, so moving the `.acf` aside and resuming made `reconcilePartialState` sha1-verify all 138 entries (`jobCount=0`, `reconciledSkipped=138`). Steam later adopted that manifest unchanged at its next startup, re-adding `SharedDepots` itself, which downgraded the SharedDepots omission from a possible defect to benign. Two honesty limits stand, recorded not buried: the run was a RESUME, so the bulk download path is not re-proven (the defect under test fires in `buildDepotPlan` before any bytes transfer, so it is fully exercised); and GameLib's manifest is not byte-identical to Valve's outside the benchmark fields. One defect surfaced during the run and was routed OUT of this phase to its own debug session (`G-23.2-01`, library-vanish — quick task `260819-r4k`); this phase's `open_gaps` is `[]`.
 
 Plans:
+
 - [x] 23.2-01-PLAN.md — settle the D-08 manifest-write contradiction from source and close the SizeOnDisk lead (docs only; runs before any code change so it reads the pre-fix source)
 - [x] 23.2-02-PLAN.md — D-08 fix: a run that downloaded zero bytes never writes a manifest, behind the `shouldFinalizeAfterThrow` gate, with a bottle-path content-asserting regression test proven red first
 - [x] 23.2-03-PLAN.md — skip-and-warn core: reduce the plan on an EResult-40 key/manifest refusal, record `skippedDepots`, keep all six other non-retryable codes aborting
@@ -1371,19 +1373,23 @@ default branch`) — so nothing here can start from `fix/steam-native-install-st
 - **Item 1 / REQ-34.9-02 — the x64 CI leg.** The x64 onedir build **exists nowhere**: not in CI,
   not on any machine, not in the repo. Six `PENDING-CI-PUBLISH` sentinels in
   `meta/runnersOnedirDigests.json` throw by design until it does.
+
 - **Item 2 / REQ-34.9-03** — the downloader must source darwin archives from the published run.
 - **Item 3 / REQ-34.9-04** — sha256 digest verification against those published artifacts.
 - **Item 12** — the wired `verify:runner-bundle` guard covers **arm64 only**.
 - **Item 13** — that guard has never been exercised in CI at all.
 - **Item 18 / C2-05 — the one with user impact.** Two *separate* mechanisms, which an earlier
   version of this bullet fused into one (corrected 2026-08-23, quick task `260823-rtm`):
+
   - **The CI coverage gap — real, but it publishes nothing.**
     `.github/workflows/build-base.yml:48` runs `pnpm dist:mac --x64 --arm64 **--publish=never**`
     while the guard hardcodes `--arch=arm64`, so both arches are built and only one is verified.
     Nothing from this job reaches a user.
+
   - **The auto-publish path — a human-run release script, not CI.** `release:mac`
     (`package.json:46`, was `:44`) chains `-p always` into the GitHub releases feed
     `electron-updater` consumes, and builds `--x64 --arm64` behind the same arm64-only guard.
+
   - **Together: an unverified x64 macOS build can reach real users' auto-update channel with the
     guard green throughout.** The wiring is live and structural today — but it takes a human
     running `release:mac` to publish, which is the disclosure this bullet previously lost by
@@ -1425,6 +1431,7 @@ instruction predated knowing how small the required push is: one commit adding o
 the dispatch still targeting the feature ref.
 
 Plans:
+
 - [x] 34.16-01-PLAN.md — wave 1 — guard arch coverage (D-05/D-08) and the `electron-builder.yml` coverage prose it makes stale
 - [x] 34.16-02-PLAN.md — wave 1 — the workflow ref guard (D-02) and five RED-proven pins for it
 - [x] 34.16-03-PLAN.md — wave 1 — `runId` provenance in `writeBuildManifest()` plus format-contract tests for both published audit artifacts
@@ -1456,25 +1463,30 @@ keep describing the goal they were actually executed against.
   three-form PyInstaller extractor (34.16-07), the two-layer version-drift tripwire (34.16-08), a
   clean local arm64 onedir build (34.16-09), and settled `meta/` provenance (34.16-10). The **arm64
   leg passed live in CI**, closing F-34.16-D's arm64 half on evidence.
+
 - **Not achieved, and not achievable as specified.** REQ-34.9-02, REQ-34.9-03, REQ-34.9-04,
   REQ-34.16-01, REQ-34.16-02 and REQ-34.16-04 all depend on x64 CI artifacts that cannot exist:
   `F-34.16-G` establishes that `macos-13` was retired 2025-12-04, so the x64 leg was never scheduled
   on any of the three attempts. The six `PENDING-CI-PUBLISH` sentinels in
   `meta/runnersOnedirDigests.json` therefore stand, three of them permanently.
+
 - **F-34.16-D and F-34.16-G both remain `open`/`blocking` against this phase, by design.** They are
   not closed by fiat at phase close; they are superseded by the retirement below, which removes the
   x64 leg those findings are about. **Dated 2026-08-27 follow-on:** see the two dispositions
   immediately below — `F-34.16-D` is dispositioned on its x64 half only, and `F-34.16-G` is closed
   resolved-by-retirement — so a reader who stops at this bullet is not left with a superseded
   statement.
+
 - **No phase verification was run**, and none should be: a verifier scoring this phase against its
   stated goal would correctly return FAIL. The honest record is this block, not a green check.
+
 - **`F-34.16-D` — disposition dated 2026-08-27 (Phase 34.18), x64 half ONLY.** The **arm64 half was
   already FIXED and proven live** in CI by plans 34.16-07/-08/-09 (the three-form PyInstaller
   extractor, the two-layer version-drift tripwire, and a clean local arm64 onedir build) and is NOT
   what this disposition closes — restating that would erase real evidence. The x64 half (whether the
   same extractor/tripwire fix would have covered an x64 onedir tree) is moot-by-retirement: Phase
   34.18 removed the x64 macOS build entirely, so there is no x64 tree left for that half to apply to.
+
 - **`F-34.16-G` — closed resolved-by-retirement, dated 2026-08-27 (Phase 34.18).** This finding's own
   content (`macos-13` was retired by GitHub on 2025-12-04; the x64 leg was never assigned a runner —
   an empty `runner` AND an empty `group` after 25+ minutes — across all three live-gate attempts) is
@@ -1539,9 +1551,11 @@ assets exist:
 3. `meta/downloadHelperBinaries.ts` — arch-keyed darwin download.
 4. `electron-builder.yml` coverage prose, plus the `--x64 --arm64` invocations in
    `.github/workflows/build-base.yml:48` and the `release:mac` script in `package.json`.
+
 5. The arch-parameterised `verify:runner-bundle` guard (34.16-01) and the extractor/tripwire work
    (34.16-07/-08) — all must stay correct with only one arch, which is a real risk: an
    arch-parameterised guard given one arch can go vacuous rather than strict.
+
 6. Any Meta jest suites pinning six assets.
 
 **Also in scope — disposition, so nothing is left open by omission.** These are superseded by the
@@ -1549,9 +1563,11 @@ retirement and must each get a dated disposition rather than being silently aban
 
 - **Findings:** `F-34.16-D` (its x64 half only — the arm64 half is FIXED and proven live) and
   `F-34.16-G`.
+
 - **Requirements:** REQ-34.9-02, REQ-34.9-03, REQ-34.9-04, REQ-34.16-01, REQ-34.16-02, REQ-34.16-04
   — each becomes wholly or partly a non-goal, and *which* part matters: REQ-34.16-01/-02 have arm64
   halves that were achieved.
+
 - **Ledger:** `34.9/deferred-items.md` items **1, 2, 3, 12, 13 and 18/C2-05**.
 
 **Decisions to revisit:** **D-01** (the x64 leg's rationale) and **D-07** (guard behaviour against a
@@ -1581,6 +1597,7 @@ it fetches a `SHA256SUMS-x64` that was never published.
 `pnpm download-helper-binaries` that exits 0 on darwin. Code-ready is explicitly not done.
 
 Plans:
+
 - [x] 34.18-01-PLAN.md — wave 1 — README Intel-drop disclosure (verbatim, RED-proven) + the D-08 non-goal survivor gate that bounds every later sweep from the over-reach direction
 - [x] 34.18-05-PLAN.md — wave 1 — remove `isIntelMac` from all 28 files ATOMICALLY, collapse all EIGHT branches (D-11's prose names 2), rewrite D-14's RED-proof so it outlives the constant
 - [x] 34.18-02-PLAN.md — wave 2 — one arm64 workflow leg, six→three digest slots, arm64-only downloader, D-06 sentinel-message rewrite, `archiveName()` rejects x64
@@ -1609,6 +1626,7 @@ observed during that phase's live gate run):
   `src/frontend/components/UI/TextInputWithIconField/index.tsx:17` **already declares an
   `onKeyDown` prop** — `PathSelectionBox` simply never passes one, so the seam exists and the fix
   does not require widening the primitive's interface.
+
 - **The paste half — SUSPECTED, never independently re-confirmed.** Pasting into the field during
   the 2026-08-11 gate run produced a repeating unrenderable glyph instead of the clipboard text.
   The ledger names `navigator.clipboard` silently no-opping under the Tauri/WKWebView host as the
@@ -1632,12 +1650,14 @@ that fails to reproduce closes it VERIFIED-ABSENT and that is a passing outcome)
 **Plans:** 3 plans, 2 waves — **3/3 executed on disk 2026-08-26.** Both halves are now settled: the Enter half FIXED and proven (34.17-01 Enter-to-commit + two-part double-commit guard, 8/8 jest; 34.17-02 the commit affordance), and the paste half **`VERIFIED-ABSENT`** by live run (34.17-03) — a passing closure on evidence, not a gap. **VERIFICATION RAN 2026-08-26 → `passed`** (9/9 must-haves, 4/4 requirements, 0 gaps open; `34.17-VERIFICATION.md`). It found and closed 2 documentation gaps — 34.9 item 8 had no ENTER-HALF disposition (it fell *between* two correct plans), and REQUIREMENTS.md still read `Planned` for REQ-34.17-03/-04. Caveat recorded in the report: verified by the executing session, not a fresh `gsd-verifier` agent. **PHASE COMPLETE.** Two items a verifier should not have to rediscover: (a) 34.17-02's human-verify gate FOUND A 1px LAYOUT SHIFT that every automated check passed over, fixed in-plan at `d312e93b9` after a first attempt made it worse (1px -> 3px); (b) nord-light legibility was verified against the PRE-FIX build only, at the operator's instruction — Midnight Mirage was re-confirmed post-fix.
 
 **Planning notes (2026-08-25) — two findings recorded here because they change what gets built:**
+
 1. `34.17-RESEARCH.md`'s recommended double-commit guard (compare the incoming value against the
    already-committed `path` prop) is **insufficient at the only call site it exists for**:
    `EgsSettings.tsx`'s `egsPath` is only updated after `window.api.egsSync` resolves, so `path` is
    stale for the whole duration of a commit and the comparison never fires. REQ-34.17-02 therefore
    ships a two-part guard — the prop comparison **plus** a one-shot, value-scoped suppression of
    the blur that immediately follows an Enter commit of the same string.
+
 2. The ledger's suspected paste cause (`navigator.clipboard` no-opping under Tauri) is
    **mechanically implausible** — Phase 34.3 removed every `navigator.clipboard` call site and no
    code path connects that API to a native Cmd+V into a plain `<input>`. The precedented candidate
@@ -1652,10 +1672,12 @@ existing primitive, not new visual design. No UI-SPEC exists and none is require
 Plans:
 
 **Wave 1** *(no dependencies; `34.17-01` and `34.17-03` are independent and may run in parallel)*
+
 - [x] 34.17-01-PLAN.md — Half A: Enter-to-commit through the pre-existing `onKeyDown` seam, plus the two-part double-commit guard, plus a no-DOM jest suite that invokes both handlers [REQ-34.17-01, REQ-34.17-02] — DONE 2026-08-25, see `34.17-01-SUMMARY.md` (RED 6 failed/2 passed -> GREEN 8/8; shipped a two-guard funnel, not RESEARCH.md's single-guard recommendation, because G1 alone is insufficient at EgsSettings.tsx's stale `path` prop)
 - [x] 34.17-03-PLAN.md — Half B: author, run and route the paste reproduction gate on a real macOS Tauri host. **Writes no fix.** `autonomous: false` [REQ-34.17-04] — DONE 2026-08-26, see `34.17-03-SUMMARY.md`. **Verdict `VERIFIED-ABSENT`** (verdict-table row 1: item 1 clean). Cmd+V into `#setting-alt-legendary` delivered all 30 clipboard bytes character-exact; the uncontrolled SearchBar and the menu-bar Edit ▸ Paste route likewise. Both named candidates excluded by evidence — Candidate A has no mechanism reaching a native paste into a DOM `<input>`, Candidate B predicts SILENCE and the full string arrived. Contract authored empty-slot first (`b053d244e`); a stale instance (PID 49913) was found and killed before the run (PID 53657). **This does NOT prove the 2026-08-11 report mistaken** — a defect incidentally fixed is indistinguishable from one that never reproduced, and the record says so. Ledger disposition on 34.9 item 8 scoped to the PASTE HALF ONLY.
 
 **Wave 2** *(blocked on 34.17-01 — same files)*
+
 - [x] 34.17-02-PLAN.md — Half A: the commit affordance (reserved hint row, `gamelib` i18n strings, colocated stylesheet) plus a blocking human-verify checkpoint with screenshot evidence. `autonomous: false` [REQ-34.17-03] — DONE 2026-08-26, see `34.17-02-SUMMARY.md`. The checkpoint FOUND A DEFECT the automated checks could not see: the operator's eye caught a 1px layout shift under the reserved row, which measurement confirmed (empty y=129 vs filled y=130) and which falsified must_haves truth 3. Fixed in-plan (commit `d312e93b9`) after a FIRST ATTEMPT MADE IT WORSE (1px -> 3px): `box-sizing: border-box` is app-wide, so `min-height` must be sized to include its own padding — pinning `line-height` alone grows the line box to consume the whole padding allowance. All five states now measure y=132. Known gap: nord-light legibility verified against the PRE-FIX build only, at the operator's instruction; Midnight Mirage re-confirmed post-fix.
 
 ### Phase 34.13: Steam install-time wine/bottle form (GOG parity) (INSERTED) — ✅ COMPLETE 2026-08-28 — 14/14 plans; `34.13-VERIFICATION.md` status `human_needed` 27/27 code truths, 0 gaps; manual gate CLOSED 72/72 (44 PASS / 0 FAIL), 7 items ACCEPTED OPEN by operator
@@ -1704,14 +1726,17 @@ regression, not the fix.
 **Reported symptom:** "Steam does not open [the] form on install on games requiring bottle (like GOG does)."
 
 **Root cause (traced 2026-08-14, pre-planning):**
+
 - `src/frontend/state/InstallGameModal.ts:71` — `openInstallGameModal` short-circuits **unconditionally** for `runner === 'steam' && action === 'install'`, calling `startSteamInstall` → `installSteamGame`, which hardcodes `platformToInstall: 'Windows'` and passes no wine version, prefix, or bottle. The modal is never rendered for Steam, so `WineSelector` never runs.
 - The bottle is not skipped — it is chosen *for* the user. `SteamGame.install()` (`games.ts:418`) consults `isBottleEligible()` and routes eligible games through the bottle silently, using `getSteamBottleSettings()` defaults.
 
 **Known blockers to design around:**
+
 1. `SteamLibraryManager.getInstallInfo()` (`library.ts:771-782`) is a stub returning `undefined`. This is *why* the short-circuit exists — its own comment notes the modal would loop forever on "Geting download size…" (`DownloadDialog/index.tsx:618`). Naively deleting the short-circuit hangs the dialog. Candidate fix: feed it `buildDepotPlan`'s `totalBytes`, which Phases 21/23 already compute. Note `buildDepotPlan` needs a Steam CM connection + PICS, so cost/latency is a real design input.
 2. `isBottleEligible()` is a **private** method on `SteamGame` (`games.ts:1328`) and is **not exposed over IPC**, so the frontend cannot branch on it today.
 
 **Already-built pieces to reuse (do not rebuild):**
+
 - `WineSelector` already carries a Steam-aware CrossOver branch — the `knownnottowork` advisory gated on `runner === 'steam' && showBottle` (`WineSelector/index.tsx:126`). It was written for this and is currently unreachable.
 - Backend bottle API is complete: `provisionBottle`, `getSteamBottleSettings`, `persistBottleWineVersion`, `bottleWineArch`, `isBottleProvisioned`, `isBottleReady` (`storeManagers/steam/bottle.ts`).
 
@@ -1720,20 +1745,24 @@ regression, not the fix.
 Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` is **DELETED** by D-26 and its number is a **permanent gap** — nothing was renumbered, because plans cross-reference each other by number. `34.13-15` was added for scope the amendment left unowned.)*
 
 **Wave 1**
+
 - [x] 34.13-01 — Shared contracts (`types.ts`, `electronStores.ts`) [D-17, D-26]
 
 **Wave 2** *(blocked on Wave 1)*
+
 - [x] 34.13-02 — Steam backend read-side: `is_windows_native` capture + `checkBottleEligibility()` [D-07, D-09, D-17]
 - [x] 34.13-03 — `WineSelector` Steam props + pure `engineFilter.ts` [D-05, D-16]
 - [x] 34.13-05 — Pure **section-gating** module — the trigger predicate is GONE [D-03, D-11, D-18, D-19, D-20, D-22, D-26]
 - [x] 34.13-08 — **Split button + real install routing** across every entry point [D-21, D-23, D-24, D-27, D-28]
 
 **Wave 3** *(blocked on Wave 2)*
+
 - [x] 34.13-06 — `SteamGame.install()` honors the Windows-via-bottle override [D-17]
 - [x] 34.13-07 — IPC surface, dual-registered (`isSteamBottleEligible`, `persistBottleWineVersion`) [D-09, D-14, D-15]
 - [x] 34.13-15 — **`GameCard` menu Item + `GameSubMenu` entry + Console Mode D-24 check** [D-24, D-27, D-28, D-29]
 
 **Wave 4** *(blocked on Wave 3)*
+
 - [x] 34.13-09 — D-15 handoff: the guided setup READS the persisted choice [D-15]
 - [x] 34.13-14 — Persist the D-17 forced verdict so the install is durable [D-17, closes T-34.13-06-06]
 
@@ -1743,6 +1772,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 **Wave 8** — [x] 34.13-13 — Localisation catalog (11 keys) + blocking manual UAT gate (**36 items**, both runtimes) [D-06, D-20]
 
 **Cross-cutting constraints:**
+
 - **D-13 is RETIRED** (D-26). No always-show setting is built; `settings`/`help.alwaysShowSteamInstallForm` are banned identifiers.
 - **D-22 retired every auto-open trigger** — nothing computes whether the dialog opens; the user is the trigger.
 - **D-25 inverts D-12**: the dialog opens instantly and the loading state lives *inside* it. A half-rendered dialog is CORRECT. Origin-control busy state is a violation.
@@ -1761,6 +1791,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 **Why this exists — a review finding that was mis-specified.** 34.13's code review filed **B-WR-06** (re-raise of B-WR-09) as a cosmetic gap: *"a reachable macOS gating combination renders one disabled control and nothing else"*, remedied by a 9th UI-SPEC row plus new copy. Investigation on 2026-08-16 confirmed the **symptom** and falsified the **cause**. B-WR-06 should be marked **superseded by 34.14**, not fixed as filed — shipping its copy would assert something false. Same failure shape as D-9o0-01 the same day: correct observation, wrong mechanism.
 
 **Verified mechanism (each link checked against HEAD, not inferred):**
+
 1. `hasSteamWindowsDepot` (`InstallModal/steamPlatformRow.ts:54`) is `gameInfo?.is_windows_native === true` — deliberately default-deny; `steamPlatformRow.ts:42` explicitly rejects the `!== false` form.
 2. `is_windows_native` is written **only** after a successful Steam `appdetails` fetch (`storeManagers/steam/games.ts:647`), stamped `platformsCaptured: true`. `getGameInfo()` (`games.ts:525-545`) returns the *uncaptured* value immediately and fires `fetchMetadataIfNeeded()` fire-and-forget.
 3. An uncaptured game therefore routes to `platformRow: 'readonly-macos'` (`steamSectionGating.ts:190-194`), which drops the Windows entry from the picker (`steamPlatformRow.ts:103`). The option is **withheld**, not merely unexplained.
@@ -1769,6 +1800,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 **Operator domain constraint (locked).** Mac-only Steam games are effectively a null set — essentially every macOS Steam game also ships a Windows build, ported or dual-developed. So `readonly-macos` is in practice a **synonym for "metadata not loaded yet"**, and any copy asserting *"this game only has a macOS build"* would read as false nearly every time it rendered.
 
 **Scope:**
+
 - (a) Thread the already-existing `platformsCaptured` signal into the install-modal gating input so "no Windows build" and "not yet captured" stop collapsing into one boolean. Precedent already in-repo: `AppleWikiInfo.tsx:67` gates on `steamPlatformsCaptured === true` for this same reason.
 - (b) Render the not-captured case as a **pending** platform row, reusing the D-25 eligibility-pending pattern this dialog already has — not as macOS-only.
 - (c) Consider letting the open dialog's `gameInfo` snapshot refresh when the fetch lands. Weigh carefully: `closeInstallGameModal`'s own comment records that stale cross-game state has already bitten this store once.
@@ -1779,6 +1811,7 @@ Plans: **14 plans, 8 waves** *(re-planned 2026-08-15 for D-21..D-29. `34.13-04` 
 **Needs a UAT gate** — this is a functional gap in 34.13's headline feature, not a review nit. The cold-cache window is not reproducible on demand from a warm library, so the gate must specify how to force an uncaptured state.
 
 Plans:
+
 - [x] 34.14-01-PLAN.md — Wave 1. Widen `SteamBottleEligibilityVerdict` with two required booleans and populate them in the ONE shared IPC handler body (D-02/D-03). DONE 2026-08-16 (34.14-01-SUMMARY.md).
 - [x] 34.14-02-PLAN.md — Wave 1. The pure gating fix: `'pending'` row mode, the D-03 read-order seam, `resolveDepotAvailability` (D-04 fail-open + D-05 seed/resolve), matrix expanded 96/8 rows → 144/10 with a Row 9/10 RED proof against unmodified HEAD.
 - [x] 34.14-03-PLAN.md — Wave 2. Carry the depot pair through `EligibilityState`/`useSteamBottleEligibility`; correct the first stale "genuinely synchronous" doc-comment. DONE 2026-08-16 (34.14-03-SUMMARY.md).
@@ -1815,20 +1848,24 @@ Plans:
 Plans:
 
 **Wave 1** *(four independent plans, zero file overlap)*
+
 - [x] 34.15-01-PLAN.md — D-01..D-05. New `platformCapture.ts`: the `oslist` parser (absent/empty writes NOTHING), the read-modify-write merge with the full carry-forward table, and the `depotSignalCaptured()`-scoped bulk PICS `getProductInfo` call bounded by `STEAM_PICS_BULK_TIMEOUT_MS`, fail-soft by contract.
 - [x] 34.15-02-PLAN.md — D-06/D-07. The `steamSyncStatus` channel end to end: `ipc.ts` declaration + type unions, the preload listener slot (the phase's highest-risk silent-failure omission), and the `GlobalState`/`types.ts`/`ContextProvider.tsx` tri-state lockstep, with a RED-proven five-touchpoint source gate.
 - [x] 34.15-03-PLAN.md — D-12 (backend half). `SteamBottleEligibilityVerdict` gains `hasMacDepot`, populated in the single unforked `installFormIpc.ts` handler and threaded through `steamEligibilityProbe.ts`. **A gap neither RESEARCH nor PATTERNS surfaced** — the verdict carried no mac field, so D-12 had no `probeHasMacDepot` to read.
 - [x] 34.15-04-PLAN.md — D-12 (resolver half). `resolveDepotAvailability` widened with `seedHasMacDepot`/`probeHasMacDepot` -> `macDepotOffered`, with the fail-open (Windows) / fail-conservative (mac) asymmetry documented, and the 8-fixture block reconciled against the CORRECTED mapping.
 
 **Wave 2** *(depends on wave 1)*
+
 - [x] 34.15-05-PLAN.md — D-03/D-04/D-05/D-07. `refresh()` gains the awaited inline capture between Step 1 and Step 2, plus `steamSyncStatus` emission on **all four** exit paths — including the previously-undocumented uncaught throw from Steps 2-4 (`library.ts:705-847` carries no try/catch at HEAD), forced in test via a throwing `steamLibraryStore.set`.
 - [x] 34.15-06-PLAN.md — D-06/D-09/D-10. `librarySyncIndicator.ts`, the pure render-decision resolver, with a 12-row cross product and three saboteurs — one of which encodes the shipped guard's defect exactly.
 - [x] 34.15-07-PLAN.md — D-05/D-12/D-13/D-14/D-15. `InstallModal` consumes the mac triple and un-freezes `getDefaultplatform`; `SteamDialog` suppresses its ENTIRE glyph row while unresolved; `steamEligibilityWiring.test.ts`'s E2 census widened five -> seven property names (as shipped it would have stayed green with the mac inputs deleted).
 
 **Wave 3** *(depends on 02 + 06)*
+
 - [x] 34.15-08-PLAN.md — D-08/D-09/D-10/D-11. The inline two-mode `SteamSyncNotice` with a Steam-scoped retry, its `gamelib:` namespace strings (BLOCKING localisation gate), the `Library/index.tsx` guard replacement, and a source gate RED-proven against the verbatim `:1013-1018` expression. The D-11-fenced global overlay stays byte-identical.
 
 **Wave 4** *(depends on everything; NOT autonomous)*
+
 - [x] 34.15-09-PLAN.md — D-16. Full-suite + typecheck + lint reconciliation, a shipped-gate census proven BY DIFF (metadataCapture.ts, the three D-17 saboteurs, Group B/B1, the D-11 overlay, the three sibling dialogs), the D-05 non-weakening audit, and the ONE BLOCKING human UAT gate with a concrete forcing procedure per branch (`api.steampowered.com` -> TEST-NET-3 `203.0.113.1`, verified by `curl` exit 28).
 
 ### Phase 34.1: Tauri IPC re-plumb slice 4 — app shell and window chrome (INSERTED)
@@ -2122,12 +2159,15 @@ measurement, and no document may call it verified on that basis.
 **Three residuals — all LIVE-ONLY, no code work remaining, and all PARKED 2026-08-23 by
 operator decision ("park the three remaining items"). Parked is NOT assigned: no phase owns any of
 them, and each carries a concrete revisit trigger rather than an owner.**
+
 - `REQ-34.4.1-GAP-11` — bounded, classified `keyring_get` timeout. Its own body reads "This box
   stays UNCHECKED — live-only". The item with real teeth: an unbounded `keyring_get` can consume
   the sidecar's entire 60s RPC budget.
+
 - `D-29-02` — post-login `/api/v1/user/info` returns a 232-byte HTML 404. Two candidates (path
   moved / an interstitial answering) fit **every offline observation equally**, so this needs a
   live discriminator, not more reading.
+
 - `D-29-06` / **F-9** — a generic RPC timeout fired live (`response for unknown/timed-out id=1575`).
   Co-occurrence with a cookie operation is **UNDETERMINED** and deliberately not rounded to "no".
 
@@ -2220,7 +2260,6 @@ F-10 ∥ F-9 ∥ housekeeping → sweeps → THIRD blocking live gate.**
 - [x] 34.4.1-27-PLAN.md — Housekeeping: `queryLocalFonts` guard, Steam artwork percent-encoding, mint REQ-34.4.1-GAP-13 (wave 5)
 - [x] 34.4.1-28-PLAN.md — Sweeps: `seam-parity-sweep.py` staleness (S-07/S-10/S-11), regression guard re-verification (wave 6)
 - [x] 34.4.1-29-PLAN.md — **THIRD BLOCKING live gate**: full 4-item re-run, owns the GATED `IPC-PORT-INVENTORY.md`/`34.4.1-PORTED-CHANNELS.md` updates via plan 19's 13-row checklist (wave 7, non-autonomous) — **DONE 2026-07-31: VERDICT 4/4 PASS.** F-6 CLOSED live-proven (census 34/34/0 with the reported count agreeing with an independent re-read, and a genuinely fresh re-login: 68 `session_expired` rejections over 6m17s vs run 2's 3s and zero poll lines). WR-07, F-4, F-10 and GAP-13 also closed. Gated set applied. **NOT closed:** domain-scoping is UNTESTED (the contract's own precondition 6 struck the planted cookie, making a required PASS condition unsatisfiable on a single-origin jar), Epic logout is unobserved (→ 34.5), F-9 stays open. 10 findings filed in `deferred-items.md`.
-
 
 **GAP CYCLE 3 (planned 2026-08-23 from `34.4.1-GAP-CYCLE-3-ANALYSIS.md`).** The gap source is
 **not** a VERIFICATION.md — this phase has none, which is itself a deliverable of this cycle. It is
@@ -2958,6 +2997,7 @@ What the fourth run earned, stated without inflation:
   the clean single-instance flow — driven through the REAL UI buttons after the DevTools console
   was confirmed unusable on this build mid-run, not through the console invocations the original
   contract prescribed.
+
 - **Item 1 FAILED on one clause, root-caused rather than merely observed absent.** The GOG login
   mechanism itself worked cleanly (8 of 9 clauses PASS: capture, CLI auth, library population,
   account surface, Manage Accounts resolution) — but the anti-phishing origin-title clause FAILS
@@ -2967,11 +3007,13 @@ What the fourth run earned, stated without inflation:
   user (`F-34.5-G6-16`). By explicit developer decision this is FAIL, not BLOCKED — the observation
   is complete and positive, not merely unreachable. This is a code defect requiring a fix, not a
   re-run.
+
 - **Item 4 (Wine) is NOT ATTEMPTED, and a second contract defect was found alongside it.** The
   wineVersion-repoint prerequisite is independently confirmed, but the DXVK-toggle action itself
   was never clicked — a stale, week-old setting already showed the switch ON, and no click ever
   happened. This gate's own contract also cited the wrong "definitive" evidence line for this
   action (`F-34.5-G6-18`): the install/backup direction never calls `runWineCommand` at all.
+
 - **7 ledger rows retired** on their own named observations (`U-34.5-02/07/08/12/13/15/17`),
   **2 new rows opened** (`U-34.5-29` Amazon library population never observed by any run to date —
   the test account owns zero games; `U-34.5-30` the DXVK toggle never actually exercised),
@@ -3166,6 +3208,7 @@ correct home for them:
 
 - **34.5 UAT test 11, Epic half** — Epic login completed from scratch, library populated.
   (Amazon's half of test 11 never travelled; it stayed in 34.5 as its fourth gate's item 2.)
+
 - **34.5 UAT test 12 — `egsSync`.**
 - **Epic LOGOUT's cookie clear (`clearEpicCookies`) — ADDED 2026-08-23** by Phase 34.4.1 gap cycle 3 plan 34, from `D-29-08`. **This was NOT already covered by the 34.7 inheritance** — that brought the Epic *login* and save-sync legs only, and logout was left owned by nobody: 34.5's own `34.5-26-SUMMARY.md:316` disclaims it, 34.7 is ON HOLD, and `clearEpicCookies` appears in no phase folder except 34.4.1's. Epic's logout calls the **same** Rust arm Humble's disconnect proved fixed, but that is **an inference from shared code, not a measurement** — the exact distinction that let gate run 2's failure hide behind a fully green suite. **No document may call it verified on that basis.** Discharge: an authenticated Epic session, a logout driven live through the UI, and a `clearEpicCookies` count cross-checked against an independent re-read of the jar. ⚠ **AMENDED by `34.6-CONTEXT.md` D-13 — a count is NOT sufficient.** 34.4.1's precondition 6 is UNSTRUCK precisely because a count was arithmetically forced (`survivingNonHumble=0` when `before total=34` equalled `matched=34`). The binding bar is: plant a **named non-Epic cookie** in the jar first, then assert **that exact cookie survives by name** after the clear. Tracked at `.planning/todos/pending/2026-08-23-epic-logout-cookie-clear-unobserved-and-unowned.md`.
 - **34.5 UAT test 13 — legendary save sync.**
@@ -3501,6 +3544,7 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   locate a CLI tool's on-disk path to spawn as a subprocess), fixed by symlinking the project's
   `node_modules` into the private tmpdir (read-only, does not reintroduce the C3-01 race). `pnpm
   test:ci` 250/250 suites green (zero regressions). See `34.9-29-SUMMARY.md`.
+
 - [x] 34.9-30-PLAN.md — close C3-02 (the stale pipe/argv comment in `meta/lintTranslations.ts` AND
   the `34.9-PIPE-AUDIT.md` Section 7 claim that no such comment exists) and C3-03 (polarity check),
   and generalise the sweep to `34.9-REVIEW-SWEEP-CHECK.cjs` — cycle-agnostic, works against a review
@@ -3509,6 +3553,7 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   scope is a deliberate convention, matching `verifyUpdaterSigningKey.ts`'s precedent, names no
   invocation mechanism); `34.9-PIPE-AUDIT.md` Section 7 retracts its own false "no stale claim to
   correct" conclusion and corrects the neighbouring "every `meta/*.ts` comment" overclaim to 11 of
+
   12. The cycle-2-scoped sweep tool (authored by 34.9-28) was renamed (git mv, history preserved) to
   `34.9-REVIEW-SWEEP-CHECK.cjs` and generalised: list A globs `*-REVIEW*.md` and parses every
   `### <ID>` heading (proven against a
@@ -3525,6 +3570,7 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   truth exactly; the 14 already-dispositioned IDs are not in the unmapped list (no regression).
   `pnpm test:ci` 250/250 suites green (4862/4863 tests, 1 pre-existing skip), `pnpm lint` unchanged
   at the pre-existing 3544-problem/53-error baseline, `tsc --noEmit` clean. See `34.9-30-SUMMARY.md`.
+
 - [x] 34.9-31-PLAN.md — author `34.9-WRAPPER-PROOF.md` (author/runner separation: this plan may not
   run any direction), including the mandatory Direction C positive control — **DONE 2026-08-14.**
   Independently re-derived the wrapped-script census from the live `package.json` before writing
@@ -3543,6 +3589,7 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   plan is FORBIDDEN from concurrency harness execution). `directions_total: 43` filled as the sole
   deliberate exception to the unfilled-result-fields rule. `git status --porcelain -- meta/
   package.json` clean throughout. See `34.9-31-SUMMARY.md`.
+
 - [x] 34.9-32-PLAN.md — run the three-direction proof on real macOS arm64 hardware and write its
   verdict (human operator required) — **DONE 2026-08-14.** Verdict **PASS, 43/43 directions, 0
   failed**. Direction A: 30/30 rows PASS (all five criteria, all 14 entry files restored and
@@ -3557,6 +3604,7 @@ shared-outfile defect's own predicate matches **14** scripts, not the 13 gap cyc
   harness. Two honestly-recorded, non-blocking deviations (a live Tauri dev-instance precondition
   miss, and a bash-3.2 associative-array harness retry caught before any file mutation). Checkpoint
   approved by the operator after independent orchestrator verification. See `34.9-32-SUMMARY.md`.
+
 - [x] 34.9-33-PLAN.md — ledger C3-01..C3-03, record the closure protocol, reconcile
   ROADMAP/REQUIREMENTS/STATE, and carry the sweep PAST `code_review_gate` before
   `/gsd-verify-work 34.9` runs — **DONE 2026-08-14.** Task 1 ledgered all three gap-cycle-3
@@ -4189,15 +4237,18 @@ disk; a `/gsd-audit-uat` follow-up mistook it for exactly that before checking t
 created the state.
 
 **Work-list (do not rediscover — this is the phase's input):**
+
 - `src/frontend/components/UI/Sidebar/components/SidebarTour.tsx` — the sole surviving file of the
   retired `Sidebar/` tree, kept ON PURPOSE by plan 34.10-09 Task 3 ("the entire `Sidebar` tree
   **except** `components/SidebarTour.tsx`"). Its 21-line header comment records its own status.
   Its step text and i18n keys are this phase's input, unchanged since 34.10.
+
 - **Known pre-existing defect to FIX, not rediscover:** two different elements carried the same
   `data-tour="sidebar-downloads"` value — the retired `Sidebar/index.tsx`'s `currentDownloads`
   wrapper and the "Downloads" row inside the retired `SidebarLinks`. A selector matching two
   elements is ambiguous; whichever the tour library picked first was never guaranteed to be the
   intended one.
+
 - **34.10 IN-01** — originally described as dead `data-tour` props in `CategoryFilter`/
   `LibraryFilters` that `Dropdown` never reads. Re-verified at 34.12-06 execution time: neither
   component exists at HEAD — phase 34.11 deleted both outright rather than leaving dead props on
@@ -4252,15 +4303,19 @@ Plans:
   *token*, not the first anchor, so plan 01 narrows it in the same plan that introduces the token,
   plan 04 strips the blocks that go vacuous on the move, and plan 06 deletes it only once the
   census replacement is green. Verified by walking all five waves.
+
 - **`NavItem`'s passthrough gates four anchors.** Wine Manager, Accessibility, Documentation and
   Ko-fi cannot carry an anchor until plan 01 lands; enforced structurally by plan 05's `depends_on`.
+
 - **The vacuous gate form is banned.** "All twelve `nav-*` strings appear somewhere in the tree" is
   named and excluded by an explicit acceptance criterion in plans 03 and 06. The gate is a composed
   two-layer proof — per-component correctness (Layer A) *plus* uniqueness census (Layer B) *plus*
   the `NavItem` forwarding bridge — because each layer alone misses a different failure mode.
+
 - **Every gate carries a RED-proof** naming both the assertion that must fail and the assertions
   that must stay green; a proof that reddens everything would show the assertions were not
   independent. 19 across plans 01–06.
+
 - **Wave-2 note for the dispatcher:** plans 03 and 04 share `tourDisabled.test.ts` — 03 reads it,
   04 rewrites it. If wave-2 execution is literally concurrent against one working tree, re-run
   plan 03's check on that file only after plan 04 has fully landed.
@@ -4449,11 +4504,14 @@ tiles' `disabled` prop is wired **only** to `oldMac`, with no login-in-flight st
 clickable again unless something explicitly stops them.
 
 This phase must therefore ALSO:
+
 1. Introduce real login-in-flight state on the Login screen — the other tiles `disabled`,
    `pointer-events: none`, and `inert` while the Steam flow is open.
+
 2. Rewrite `loginInFlightUiReachability.test.tsx` to pin the NEW mechanism. Its current prose
    documents the unmount as the mitigation; leaving that in place would make it a passing test that
    describes something no longer true.
+
 3. Update the threat register for T-34.4.2-39 / T-34.4.2-41 — basis changes from incidental unmount
    to an explicit, stated guard.
 
@@ -4461,17 +4519,21 @@ Operator explicitly approved this threat-model change on 2026-08-20, choosing it
 sequential handoff, on the grounds that an explicit guard is stronger than an incidental one.
 
 **Anchors (verified 2026-08-20):**
+
 - `Login/index.tsx:123-133` already separates `.loginBackground` from `.loginContentWrapper` — the
   background layer is independent, so "background remains" needs no new element.
+
 - The shared `Dialog` primitive already slides up at 500ms via `TransitionComponent`
   (quick task `260820-kq0`, commit `1b7fa0eaa`). The entrance half of the motion exists; the exit
   half and the co-mounting do not.
+
 - `App.tsx:236-239` is where `loginweb/steam` is registered as a sibling route today.
 - Backdrop is NOT the problem: MUI's default is `rgba(0,0,0,0.5)` with no override in the repo. The
   flat-grey appearance is caused by the Login screen being unmounted, leaving nothing behind the
   scrim. This phase fixes that as a side effect.
 
 Plans:
+
 - [x] 36-01-PLAN.md — Overlay conversion + explicit `loginInFlight` guard + crossfade, in one plan: the guard replaces the unmount inside a single task, so no unguarded window exists
 - [x] 36-02-PLAN.md — Fourteenth threat-register update (T-34.4.2-39/-41 basis change) + mint REQ-36-01..05
 - [x] 36-03-PLAN.md — BLOCKING human visual + reachability gate (the animation is the deliverable; no source gate can see it)
@@ -4609,6 +4671,7 @@ the gate has to go find the other document to learn it.
   delta is why it does not close the item: a 0 px result on a *static* rect exercises no rounding
   behaviour in either direction, and the one-logical-pixel tolerance it was checked against was itself
   derived at scale factor **1.0**. The item stays open for any other host and any other scale factor.
+
 - **`38-E04` (embed drag-resize latency) -- OPEN.** `40-11` Item 3 **FAILED** on the first run, was
   fixed in `b4517366e` (a renderer-side leading-edge throttle at a fixed 40 ms interval, replacing a
   trailing-edge debounce that never flushed during continuous motion), and passed on re-run with the
@@ -4633,6 +4696,7 @@ exists for it to have exercised.
 2. **Every item carries a source-level gate, not a prose blocker.** `blocked_by: "a Windows or Linux machine"` is unfalsifiable and rots without anyone noticing; `platform_gate: src/frontend/App.tsx:79` can be grepped and disproven. ⚠ **This rule was VIOLATED by this phase's own ledger, 29 times out of 29, and the violation stood from 2026-08-22 to 2026-09-01** — every `blocked_by` value was exactly the unfalsifiable shape this rule quotes as the bad example, and it rotted precisely as predicted: it encoded hardware the operator *already owned*, and nobody noticed for ten days because an unfalsifiable blocker gives no one anything to check. The values now name the deferral COST instead (see `38-VERIFICATION.md`'s `deferral_note`). **A rule is not self-enforcing — when writing this file, grep your own `blocked_by` values against it.** Phase 34.1's item 5b sat blocked for four sessions on a prose blocker that misdescribed its own predicate — it needed `window.screen.availWidth < 1200`, not the hardware the note named, and passed on the first attempt once someone read the code. **Before relocating anything here, read the predicate that supposedly blocks it.**
 
 Plans:
+
 - [ ] No plan files. Run the sweep directly from `38-VERIFICATION.md` when the hardware is available; record results there and in `38-HUMAN-UAT.md`.
 
 ---
@@ -4650,6 +4714,7 @@ silently excusing itself, which is what happened to plan 34.9-29.
   unrelated `src/` files — unsafe-`any` warnings, unused eslint-disable directives,
   `require-await`, `no-duplicates`. **Treat this as a 2026-08-14 snapshot, not a target.
   Re-measure at plan time.**
+
 - **Confirmed pre-existing, not merely assumed:** that exact figure was observed byte-identically
   both before `meta/runTs.cjs` existed on disk and after all of plan 34.9-29's tasks were
   committed. It is nobody's regression.
@@ -4663,10 +4728,13 @@ with the cutover. **Sequencing is the point of this phase's placement — do not
 
 1. **`pnpm codecheck` says nothing about CI lint.** It is a `tsc` gate. A green codecheck is not
    evidence about any of the 3544.
+
 2. **Count only `severity === 2` as an error.** The 53/3491 split is the whole plan-sizing input;
    conflating warnings with errors mis-scopes the phase by two orders of magnitude.
+
 3. **A lint finding can name the wrong file with the right line numbers** — this project has hit
    that. Verify the file before editing at the reported lines.
+
 4. **The `prettier --check` gate is separately red repo-wide.** It is a *different* gate from
    `pnpm lint`. Never sweep formatting into a behavioural commit to make either one green.
 
@@ -4681,6 +4749,7 @@ cycle; both items were found by that cycle, are cutover fallout, and were owned 
   in CI, 2 silently red" — they are no longer silent. **Each needs a disposition, not necessarily a
   fix:** repair, re-point at the moved artifact, or retire alongside the ten gates `D-35-14-02`
   already re-pointed. Re-measure both at plan time; the 206/217 figure is a 2026-08-30 snapshot.
+
 - **`35-REVIEW.md` WR-01 — 7 dead Electron branches survive behind `getLoginWindowSeam() === null`.**
   Phase 35's `isTauri` sweep was genuinely complete, but it keyed on **one** token. This is the
   *other* dual-build discriminator and it was never swept. Expect these to be a source of lint
@@ -4710,12 +4779,15 @@ gap-closure plans `35-20`..`35-29` should land first: `35-24` touches the i18n g
 `39-08`.
 
 **Planning-time corrections to this section's own figures** — all three snapshots above are stale:
+
 - `pnpm lint` **already exits 0** (0 errors, 4190 warnings, measured 2026-09-02). Phase 35's
   deletions took the error-generating files with them. `REQ-39-01` is therefore a verification and
   regression-prevention requirement, not a bug-fixing one, and a zero-WARNING bar is out of scope.
+
 - The dead-seam census is **13 sites, not 7** — 12 in `39-RESEARCH.md` plus a 13th found by
   `39-PATTERNS.md`. One further match (`humbleLoginFlowRegistration.ts:457`'s smoke-test guard) is
   deliberately kept.
+
 - The gate workstream is **NOT independent of the seam collapse**, contrary to `39-RESEARCH.md`'s
   ordering section. `34.4.1/seam-parity-sweep-gate.py` pins seven of the sites `REQ-39-03` deletes in
   its `EXPECTED_AXIS_A_SITES` floor, and `src/backend/sidecar/__tests__/seamBranchParity.test.ts`
@@ -4724,6 +4796,7 @@ gap-closure plans `35-20`..`35-29` should land first: `35-24` touches the i18n g
 **Plans:** 9 plans
 
 Plans:
+
 - [x] 39-01-PLAN.md — preload-surface gate: re-derive the stale 217 floor to the measured 206 and fix the masked 225-vs-224 Totals defect in the same edit (REQ-39-02)
 - [x] 39-02-PLAN.md — add `getLoginWindowSeamOrThrow()`, collapse `oauthLoginCapture.ts`'s early return, correct two stale doc comments (REQ-39-03)
 - [x] 39-03-PLAN.md — collapse `adapter.ts`'s transport ternary and its orphaned 74-line electron-net function, plus `library.ts`'s label ternary, and re-point three test files (REQ-39-03)
@@ -4747,12 +4820,14 @@ Plans:
   commit (`e981740324`), mutation-proven both directions by the executor, by the orchestrator
   and again by the verifier (`--max-warnings 4156` exits 1). Task 2's auto-fix slice was a
   RECORDED SKIP (71 fixable / ~1.7%), not an omission.
+
 - **REQ-39-02 (planning gates):** `python3 meta/runPlanningGates.py` prints
   **`7/7 planning gates passed.`** — the first 7/7 since the cutover. Both gates were
   dispositioned, not merely silenced, and BOTH were mutation-proven still capable of failing
   (independently, by the orchestrator and the verifier). Plan 39-01 RE-DERIVED the
   preload-surface floor 217→206 and found that deleting `getEpicGamesStatus` broke a *different*
   gate, so the inventory Totals sit deliberately at **207**, one above the union.
+
 - **REQ-39-03 (dead-seam collapse):** 13 sites collapsed behind the new throwing
   `getLoginWindowSeamOrThrow()`. Exactly ONE predicate survives by design —
   `humbleLoginFlowRegistration.ts:458`'s smoke-test guard — independently re-swept and confirmed.
@@ -4832,11 +4907,13 @@ webviews)"**. A planner should start there, not from scratch. The load-bearing f
   compile-time only: no config or capability changes to the existing app surface. **An `<iframe>`
   was rejected outright** — store sites send `X-Frame-Options`/`frame-ancestors`. A separate
   `WebviewWindow` (spike 013's shape) remains the fallback.
+
 - **Spike 017 — the renderer must be the ONLY owner of the embed's geometry.** JS
   `getBoundingClientRect()` → `set_position`/`set_size` in logical px lands exactly. **Two writers
   (backend + renderer) silently last-write-wins with no error.** And **overlay UI cannot render
   above the embed** — it is a native subview, so any modal or dropdown over the store region must
   `hide()` the embed first or avoid its rect. That constraint shapes the UX, not just the code.
+
 - **Spike 018 — one default cookie jar per PROCESS**, shared by all windows and all children.
   Per-store isolation is available on children via `data_store_identifier` (macOS 14+). Quick task
   `260902-8i2` (2026-09-02) confirmed this **live** against both real cookie jars, which has a
@@ -4844,6 +4921,7 @@ webviews)"**. A planner should start there, not from scratch. The load-bearing f
   user's login session — is STRUCTURALLY ABSENT here**, because the login windows and the main
   webview already share one jar. Do not "fix" it by opting into a custom data store without
   deciding that deliberately.
+
 - **All 013–015 rules carry over to embeds unchanged:** `cookies()` never `cookies_for_url()`
   (wry compares domains with string `==`); `on_page_load` not `on_navigation` for deadline-armed
   relays; per-child `.user_agent()` is mandatory and does reach the network; the handle dies with
@@ -4898,6 +4976,7 @@ items *for* Phase 38's ledger — that is a downstream contribution, not a depen
 **Plans:** 11 plans in 7 waves
 
 Plans:
+
 - [x] 40-01-PLAN.md — Model A frontend census by predicate, retirement, and disposition of the three invalidated test pins (wave 1)
 - [x] 40-02-PLAN.md — Rust embed foundation: discharge D-25 against vendored source, target-gate `unstable` to macOS with the exclusion proven, add the `store_embed_*` lifecycle and bounds arms (wave 1)
 - [x] 40-03-PLAN.md — `WebviewTag` shim retirement, four-surface channel re-census, and the mutation-proven Model A retirement gate (wave 3)
@@ -4954,9 +5033,11 @@ narrowness tests proving the relaxed pin still rejects both dropping the Epic te
 the `is_none()` conjunction.
 
 **Open items, all queued — none left in prose only:**
+
 - `/store/epic` is scoped out and Cloudflare-challenged in the embed (spike 024: PARTIAL, 2 of 3
   runs challenged — run 1 alone produced a VALIDATED verdict that runs 2–3 overturned).
   → `todos/pending/2026-09-05-store-epic-blocked-by-cloudflare-turnstile-in-the-embed.md`
+
 - ~~The six minted `gamelib.json` keys are English-only.~~ **CLOSED 2026-09-05** by `260905-c40`:
   de and fr are both 218 keys / 0 missing, 6/6 on the Phase 40 keys. The run filled **11** keys per
   locale, not 6 — five older gaps (`about.*` ×4, `donate.navLabel`) had accumulated uncensused. One
@@ -4964,8 +5045,10 @@ the `is_none()` conjunction.
   rather than script-filled; the provenance caveat is recorded on the commit and the todo. The other
   46 locales remain at 0/6 under their own standing todos.
   → `todos/completed/2026-09-05-phase-40s-six-minted-gamelib-keys-are-english-only-de-fr-0-of-6.md`
+
 - GAP-D's fix shipped with automated coverage green but its live `/store/gog` confirmation unrun.
   → `todos/pending/2026-09-05-confirm-the-gap-d-nav-drain-on-store-gog-on-real-hardware.md`
+
 - D-32 adtraction ad-block detection has no derivable signal under Tauri (wry 0.55.1 implements no
   navigation-failure callback at all — the retired detection's premise was inverted).
   → `todos/completed/2026-09-04-adtraction-ad-block-detection-has-no-derivable-signal-under-tauri.md`
@@ -4987,23 +5070,27 @@ hardcoded-string gate's scope artifact untrustworthy. Scope is `meta/` plus
 `public/locales/en/gamelib.json` — **no runtime code path is touched.**
 
 **Requirements**:
+
 - REQ-41-01 — `lintTranslations.ts` must report a key present in `en` and absent from a scoped
   locale catalog. Today `checkFileAgainstEnglish` (`meta/lintTranslations.ts:140`) enumerates the
   TRANSLATION's own keys and looks English up by them, so an absent key is never visited and the
   gate stays green at zero coverage for it. Invert the direction: enumerate `en`'s keys and assert
   each exists and is non-empty in every scoped catalog.
+
 - REQ-41-02 — Close the two fail-open shapes at the same seam. `checkLanguage`'s
   `if (!content) continue` (`:168`) skips an entirely-missing catalog in silence, so a whole absent
   namespace is exactly as invisible as one absent key. Separately, `pnpm lint-translations:gamelib`
   prints Node ENOENT stack traces for `public/locales/sl/translation.json` and
   `public/locales/uz/login.json` and **still exits 0**. Settle whether that exit 0 is deliberate
   before changing it — the todo flags it as an observation, not a diagnosed bug.
+
 - REQ-41-03 — Author the six `redeemKey.*` strings that are empty in **English**
   (`alreadyOwned`, `error`, `invalid`, `rateLimited`, `successNoPackage`, `successWithPackage`).
   Their source text already exists as the hardcoded defaults at
   `RedeemSteamKeyDialog/copy.ts:43,54,64,74,83,94`. Doing this BEFORE REQ-41-01 is what removes the
   need for a carve-out list in the new check — key the check off `en` being non-empty and no
   exemption register is needed at all.
+
 - REQ-41-04 — Widen the **existing** D-14 tuple-table exemption in `meta/hardcodedStringGate.ts`
   (`:952-956`, `:1180-1185` — it already covers `CrossoverBadge.tsx`'s `labelKeyByTier` and
   `LibraryFilters`' `crossoverRatingLabels`) to reach `facetLabels.ts` and `chipLabels.ts`, and
@@ -5025,6 +5112,7 @@ fail-opens). 41-07 (wave 2, depends on 41-06) is review-derived and optional: it
 guard and rewrites R5, a delivered test that cannot fail.
 
 **Closes three pending todos:**
+
 - `.planning/todos/pending/2026-09-03-lint-translations-is-structurally-blind-to-an-absent-key.md`
 - `.planning/todos/pending/2026-09-03-six-gamelib-keys-are-empty-in-english-so-never-localisable.md`
 - `.planning/todos/pending/2026-08-27-i18n-gate-flags-declaration-site-literals-as-violations.md`
@@ -5037,14 +5125,17 @@ argument for changing both gates under one set of eyes rather than in two passes
 **Selected as an unattended run.** No app launch, no network, no operator gesture, no credentials —
 verified by `pnpm lint-translations:gamelib`, the hardcoded-string gate and jest. Two cautions for
 whoever plans it:
+
 - **Do not trust a gate's exit code as the result.** This project's i18n glossary validator encoded
   English morphology twice across 242 strings and exited 0 both times. Count keys before and after
   and put the numbers in the record.
+
 - **Propagating the six new strings to the other 48 locales needs `machine-fill`, which has 401'd
   before.** That step is explicitly OUT of this phase's unattended scope — REQ-41-03 is the English
   authoring only. Filling the locales is a follow-up needing a working key.
 
 Plans:
+
 - [x] 41-01-PLAN.md — Author the six empty-in-English redeemKey.* strings and gate against a seventh (wave 1, REQ-41-03)
 - [x] 41-02-PLAN.md — Widen the D-14 gate exemptions so the 46 declaration-site false positives go to zero (wave 1, REQ-41-04)
 - [x] 41-03-PLAN.md — Make lintTranslations importable and close both fail-open shapes at the catalog-read seam (wave 2, REQ-41-02)
@@ -5078,6 +5169,7 @@ standing repo constraint, not a dependency.
 **Plans:** 7 plans, all complete
 
 Plans:
+
 - [x] 42-01 — the pure `key_type` -> presentation table (`src/common/humble/keyTypePresentation.ts`) (wave 1)
 - [x] 42-02 — additive `source` provenance on the persisted local-redeemed record (wave 1)
 - [x] 42-03 — exact-match ownership auto-settle with a durable decline store (wave 2)
@@ -5123,6 +5215,7 @@ store indicator. Also depends on quick tasks `260908-uic` (`gog_keyless` classif
 restructure supersedes.
 
 **Open questions — resolve in /gsd-ui-phase before planning:**
+
 1. **`Most recent` may have nothing to sort by.** `HumbleKey` carries no purchase/order date
    (`gamekey machineName state title platform expiration origin steamAppId ownedElsewhere
    matchConfidence`). `revealedAt`/`redeemedAt` live on `ClaimAnnotation` and exist only for
@@ -5134,6 +5227,7 @@ restructure supersedes.
    fired live. A one-off diagnostic on a populated order settles it in a single sync. Do that
    before specifying the sort; if absent, capture requires a backend change plus a
    `HUMBLE_CLASSIFIER_VERSION` bump.
+
 2. **Per-store login state** must be reachable from this screen for scenario 1. Unverified.
 3. **Tab deletion is confirmed** by the operator (2026-09-09) — the three tabs are replaced by
    the unified list, not kept alongside it.
@@ -5143,25 +5237,35 @@ restructure supersedes.
 Plans: (checkbox state corrected 2026-09-10 by plan 43-09's executor — this checklist had not
 been updated across the phase's execution so far; `[x]` below reflects the SUMMARY.md files
 already on disk for 43-01..43-09, not new work by this plan beyond 43-09 itself)
+
 - [x] 43-01 — mint REQ-43-01..24 into REQUIREMENTS.md and ROADMAP.md, fill 43-VALIDATION.md's
   Per-Task Verification Map (wave 1)
+
 - [x] 43-02 — settle D-43-05 by measurement: does a populated Humble order carry a purchase/order
   date field a `Most recent` sort could use (wave 1)
+
 - [x] 43-03 — settle D-43-11 by measurement: does the redeem endpoint accept a keyless
   `gog_keyless` entitlement (wave 1)
+
 - [x] 43-04 — land the pure-module changes (export `compareWaiting`, add `matchesKeySearch`/
   `isGiftableSpare`, relocate `GENERIC_KEY_PLATFORM`) the unified list needs (wave 1)
+
 - [x] 43-05 — convert `HumbleKeyRow` from a six-cell flex strip into the three-column CSS Grid
   the UI-SPEC specifies (wave 1)
+
 - [x] 43-06 — turn the KEY cell into the enumerated scenario set the phase is named for, and mint
   the strings those scenarios need (wave 2)
+
 - [x] 43-07 — replace the three-tab route shell with the unified list: search, controls, column
   header, and scenario-driven rows (wave 3)
+
 - [x] 43-08 — delete the four gate-scoped tab files and their dead code atomically with the gate
   configuration that enrols them (wave 4)
+
 - [x] 43-09 — ship the `gog_keyless` claim path plan 43-03's probe selects, closing REQ-43-24
   (wave 4) — DONE 2026-09-10, candidate B (Phase 40 embedded browser), `a25d8d2af`/`7274a6ddc`,
   see `43-09-SUMMARY.md`
+
 - [x] 43-10 — author and run the packaged-Tauri-build live gate for REQ-43-19's column geometry
   and row separator (wave 5) — **RAN 2026-09-11, VERDICT FAIL, 14 PASS / 4 FAIL of 18 scored**
   (+4 NOT ATTEMPTABLE, 1 NOT OBSERVED, 1 INCONCLUSIVE, 1 NOT PERFORMED). Failures: the GOG logo
@@ -5374,6 +5478,7 @@ that screen, those die with it rather than being fixed, and 44 should be closed 
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 45 to break down)
 
 ### Phase 46: Windows single-instance guard and gamelib:// deep-link registration
@@ -5384,10 +5489,24 @@ Plans:
 **Plans:** 5 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 46-01-PLAN.md — Wave 0 `cargo test` compile fix on Windows + TDD the seven pure guard helpers (SID key, mutex/pipe names, SDDL, retry, owner match, payload) + file Windows-CI todo
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 46-02-PLAN.md — windows-sys dependency + `#[cfg(windows)]` mutex/pipe acquisition, authenticated secondary delivery, and main() wiring before `Builder::default()`
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 46-03-PLAN.md — Named-pipe accept loop in `.setup()` (re-validated through `protocol_url_arg`) + Phase 46 source gates incl. REQ-46-08 `on_open_url` ordering
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 46-04-PLAN.md — ONE commit: delete the `tauri.windows.conf.json` schemes override + invert `windowsDeepLinkSuppression.test.ts` + REQ-46-06 pin + comment rewrites; then debug NSIS build and `installer.nsi` 6-line proof
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 46-05-PLAN.md — NON-AUTONOMOUS live gate on the operator's Windows 11 machine (5 checks) + verdict-gated closure of the todo and ledger row U-34.5-18
 
 ---
@@ -5427,6 +5546,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (promote with /gsd:review-backlog when ready)
 
 **Captured:** 2026-09-04, from the reconsideration that parked
