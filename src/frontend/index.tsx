@@ -35,6 +35,7 @@ import { defaultThemes } from './components/UI/ThemeSelector'
 import Loading from './screens/Loading'
 import { hydrateStoreSnapshot } from '../preload/tauriTransport'
 import { applyFramelessDecorations } from '../preload/api/tauriWindowChrome'
+import { supportedLanguages } from 'common/languages'
 
 initOnlineMonitor()
 
@@ -161,51 +162,7 @@ i18next
     react: {
       useSuspense: true
     },
-    supportedLngs: [
-      'ar',
-      'az',
-      'be',
-      'bg',
-      'bs',
-      'ca',
-      'cs',
-      'de',
-      'el',
-      'en',
-      'es',
-      'et',
-      'eu',
-      'fa',
-      'fi',
-      'fr',
-      'ga',
-      'gl',
-      'he',
-      'hr',
-      'hu',
-      'ja',
-      'ko',
-      'lt',
-      'id',
-      'it',
-      'ml',
-      'nb_NO',
-      'nl',
-      'pl',
-      'pt',
-      'pt_BR',
-      'ro',
-      'ru',
-      'sr',
-      'sk',
-      'sv',
-      'ta',
-      'tr',
-      'uk',
-      'vi',
-      'zh_Hans',
-      'zh_Hant'
-    ]
+    supportedLngs: supportedLanguages
   })
 
 const container = document.getElementById('root')

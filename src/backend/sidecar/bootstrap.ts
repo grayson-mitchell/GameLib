@@ -1005,9 +1005,19 @@ export function init(
           supportedLngs: supportedLanguages,
           // Plan 34.6-19 (REQ-34.6-05, T-34.6-51): fork strings live in their
           // own `gamelib` namespace (public/locales/{{lng}}/gamelib.json),
-          // upstream Heroic strings stay in `translation`. Both i18next init
-          // sites (this one and main.ts's Electron leg) must change together
-          // -- a one-sided change is a build divergence.
+          // upstream Heroic strings stay in `translation`.
+          //
+          // The `supportedLngs` list above is shared with the renderer's own
+          // i18next init (`src/frontend/index.tsx`) via `common/languages` --
+          // that divergence risk is closed structurally, not by convention.
+          //
+          // The `ns`/`defaultNS` pair below is NOT mirrored in the renderer,
+          // and that is correct, not a gap: `src/frontend/index.tsx`'s init
+          // sets no `ns`/`defaultNS` at all, because the renderer loads the
+          // `gamelib` namespace lazily via `useTranslation('gamelib')`
+          // (react-i18next's `loadNamespaces`), used at `src/frontend/App.tsx:189`
+          // and ~30 further call sites. Do not "fix" this by copying `ns` into
+          // the renderer's init.
           ns: ['translation', 'gamelib'],
           defaultNS: 'translation'
         })
