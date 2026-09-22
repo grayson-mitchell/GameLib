@@ -12803,6 +12803,185 @@ mod tests {
         assert_eq!(single_instance_dir(Some("")), None);
     }
 
+    // ---- Windows single-instance guard: pure helpers (Phase 46 plan 46-01) --------------------
+    //
+    // Cross-platform-testable per REQ-46-07: none of these are `#[cfg(windows)]`-gated, so this
+    // whole group runs (and proves the SID validator, name/SDDL derivation, retry classifier and
+    // owner check) on macOS/Linux CI runners too, exactly like `single_instance_dir` above.
+
+    const WINDOWS_TEST_VALID_SID: &str = "S-1-5-21-1004336348-1177238915-682003330-1001";
+    const WINDOWS_TEST_OTHER_VALID_SID: &str = "S-1-5-21-1004336348-1177238915-682003330-1002";
+
+    #[test]
+    fn windows_single_instance_key_accepts_a_valid_sid_unchanged() {
+        assert_eq!(
+            windows_single_instance_key(Some(WINDOWS_TEST_VALID_SID)),
+            Some(WINDOWS_TEST_VALID_SID.to_string())
+        );
+    }
+
+    #[test]
+    fn windows_single_instance_key_returns_none_without_a_sid() {
+        assert_eq!(windows_single_instance_key(None), None);
+        assert_eq!(windows_single_instance_key(Some("")), None);
+    }
+
+    #[test]
+    fn windows_single_instance_key_rejects_malformed_or_injection_shaped_sids() {
+        let oversized = format!("S-1-{}", "1".repeat(181)); // 185 chars total, over the 184 cap
+        assert_eq!(oversized.len(), 185);
+        let rejected = [
+            "S-1-",                        // nothing after the prefix
+            "s-1-5-21-1",                   // lowercase prefix
+            "S-1-5-21-1;(A;;GA;;;WD)",       // SDDL injection
+            "S-1-5-21-1)(A;;GA;;;WD",        // SDDL injection
+            "S-1-5-21-1\\evil",              // backslash
+            "S-1-5-21-1 ",                   // trailing space
+            "grays",                         // a username, not a SID
+            oversized.as_str(),              // over the length cap
+        ];
+        for candidate in rejected {
+            assert_eq!(
+                windows_single_instance_key(Some(candidate)),
+                None,
+                "expected None for {candidate:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn windows_mutex_name_formats_the_validated_key() {
+        assert_eq!(
+            windows_mutex_name(Some(WINDOWS_TEST_VALID_SID)),
+            Some(format!("Local\\gamelib-single-instance-{WINDOWS_TEST_VALID_SID}"))
+        );
+    }
+
+    #[test]
+    fn windows_mutex_name_returns_none_for_an_invalid_sid() {
+        assert_eq!(windows_mutex_name(Some("grays")), None);
+    }
+
+    #[test]
+    fn windows_pipe_name_formats_the_validated_key_and_session() {
+        assert_eq!(
+            windows_pipe_name(Some(WINDOWS_TEST_VALID_SID), 3),
+            Some(format!(
+                "\\\\.\\pipe\\gamelib-single-instance-{WINDOWS_TEST_VALID_SID}-s3"
+            ))
+        );
+        // Two different session ids give two different names.
+        assert_ne!(
+            windows_pipe_name(Some(WINDOWS_TEST_VALID_SID), 3),
+            windows_pipe_name(Some(WINDOWS_TEST_VALID_SID), 4)
+        );
+    }
+
+    #[test]
+    fn windows_pipe_name_returns_none_for_an_invalid_sid() {
+        assert_eq!(windows_pipe_name(Some("grays"), 1), None);
+    }
+
+    #[test]
+    fn windows_pipe_sddl_formats_owner_and_ace_from_the_validated_key() {
+        assert_eq!(
+            windows_pipe_sddl(Some(WINDOWS_TEST_VALID_SID)),
+            Some(format!(
+                "O:{WINDOWS_TEST_VALID_SID}D:P(A;;GA;;;{WINDOWS_TEST_VALID_SID})"
+            ))
+        );
+    }
+
+    #[test]
+    fn windows_pipe_sddl_never_emits_a_well_known_sid_alias_as_the_trustee() {
+        let sddl = windows_pipe_sddl(Some(WINDOWS_TEST_VALID_SID)).expect("valid sid");
+        for alias in ["OW", "WD", "AN", "EV"] {
+            assert!(
+                !sddl.contains(alias),
+                "sddl {sddl:?} must never contain the well-known alias {alias:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn windows_pipe_sddl_returns_none_for_an_invalid_sid() {
+        assert_eq!(windows_pipe_sddl(Some("grays")), None);
+    }
+
+    // REQ-46-03 decision point (b) pin: the ACE trustee is the per-user TOKEN SID, not the logon
+    // SID. Flip this test together with `windows_pipe_sddl`'s own doc-comment override recipe (and
+    // the matching TS source gate in `tauriShellSource.test.ts`, plan 46-03) if that decision is
+    // ever reversed.
+    #[test]
+    fn windows_pipe_sddl_req_46_03_decision_point_b_operator_overridable_dacl_is_per_user_token_sid()
+    {
+        let sddl = windows_pipe_sddl(Some(WINDOWS_TEST_VALID_SID)).expect("valid sid");
+        // Exactly one ACE.
+        assert_eq!(sddl.matches("(A;").count(), 1);
+        // The ACE's trustee is the text after the last ';' and before the closing ')'.
+        let ace_end = sddl.rfind(')').expect("sddl must contain a closing paren");
+        let ace_start = sddl.rfind(';').expect("sddl must contain a trustee separator");
+        let trustee = &sddl[ace_start + 1..ace_end];
+        assert_eq!(trustee, WINDOWS_TEST_VALID_SID);
+        // The owner (`O:`) is also that same SID.
+        assert!(sddl.starts_with(&format!("O:{WINDOWS_TEST_VALID_SID}")));
+        // Never a logon-SID prefix.
+        assert!(!sddl.contains("S-1-5-5-"));
+    }
+
+    #[test]
+    fn windows_pipe_connect_should_retry_only_for_file_not_found_and_pipe_busy() {
+        assert!(windows_pipe_connect_should_retry(Some(2))); // ERROR_FILE_NOT_FOUND
+        assert!(windows_pipe_connect_should_retry(Some(231))); // ERROR_PIPE_BUSY
+        assert!(!windows_pipe_connect_should_retry(Some(5))); // ERROR_ACCESS_DENIED: never retried
+        assert!(!windows_pipe_connect_should_retry(Some(0)));
+        assert!(!windows_pipe_connect_should_retry(None));
+    }
+
+    #[test]
+    fn windows_pipe_owner_matches_requires_both_sids_to_be_valid_and_equal() {
+        assert!(windows_pipe_owner_matches(
+            WINDOWS_TEST_VALID_SID,
+            WINDOWS_TEST_VALID_SID
+        ));
+        assert!(!windows_pipe_owner_matches(
+            WINDOWS_TEST_VALID_SID,
+            WINDOWS_TEST_OTHER_VALID_SID
+        ));
+        assert!(!windows_pipe_owner_matches("grays", "grays"));
+        assert!(!windows_pipe_owner_matches("", ""));
+    }
+
+    #[test]
+    fn single_instance_payload_returns_the_validated_url_for_a_deep_link_arg() {
+        let url = "gamelib://launch?appName=1&runner=gog".to_string();
+        assert_eq!(
+            single_instance_payload(&[url.clone()]),
+            (url, "deep-link")
+        );
+    }
+
+    #[test]
+    fn single_instance_payload_returns_the_focus_sentinel_for_empty_argv() {
+        assert_eq!(
+            single_instance_payload(&[]),
+            (SINGLE_INSTANCE_FOCUS_SENTINEL.to_string(), "focus sentinel")
+        );
+    }
+
+    #[test]
+    fn single_instance_payload_returns_the_focus_sentinel_for_non_deep_link_flags() {
+        assert_eq!(
+            single_instance_payload(&["--no-gui".to_string()]),
+            (SINGLE_INSTANCE_FOCUS_SENTINEL.to_string(), "focus sentinel")
+        );
+        // A non-allow-listed scheme is never forwarded -- it degrades to the focus sentinel too.
+        assert_eq!(
+            single_instance_payload(&["evil://payload".to_string()]),
+            (SINGLE_INSTANCE_FOCUS_SENTINEL.to_string(), "focus sentinel")
+        );
+    }
+
     // ---- Panic reporting (debug session `deep-link-open-url-abort`) ----
 
     #[test]
