@@ -288,11 +288,14 @@ describe('lintTranslations (REQ-41-02)', () => {
   // assertion, not as the proof.
   it('REQ-41-02: importing the module performs no side effects (no main() run on import)', async () => {
     const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
+    // `string | number | null | undefined`, matching @types/node's own
+    // `process.exit(code?: string | number | null)`. The body only ever
+    // feeds `code` to `String()`, which accepts all four.
     const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((
-      code?: number
+      code?: string | number | null
     ) => {
       throw new Error(`process.exit(${String(code)}) called during import`)
-    }) as unknown as (code?: number) => never)
+    }) as unknown as (code?: string | number | null) => never)
 
     const originalEnv = process.env.LINT_TRANSLATIONS_WRITE_BASELINE
     delete process.env.LINT_TRANSLATIONS_WRITE_BASELINE
