@@ -9754,6 +9754,7 @@ mod tests {
             .clone()
     }
 
+    #[cfg(target_os = "macos")]
     #[test]
     fn store_embed_wire_contract_open_parses_the_shipped_payload() {
         let (url, x, y, w, h) = store_embed_open_args(&wire_args("store_embed_open"))
@@ -9762,6 +9763,7 @@ mod tests {
         assert_eq!((x, y, w, h), (12.5, 64.0, 1280.25, 800.0));
     }
 
+    #[cfg(target_os = "macos")]
     #[test]
     fn store_embed_wire_contract_set_bounds_parses_the_shipped_payload() {
         let (x, y, w, h) = store_embed_set_bounds_args(&wire_args("store_embed_set_bounds"))
@@ -9769,6 +9771,7 @@ mod tests {
         assert_eq!((x, y, w, h), (10.5, -3.0, 799.999, 0.0));
     }
 
+    #[cfg(target_os = "macos")]
     #[test]
     fn store_embed_wire_contract_navigate_parses_the_shipped_payload() {
         let url = store_embed_navigate_args(&wire_args("store_embed_navigate"))
@@ -9778,6 +9781,7 @@ mod tests {
 
     // The regression direction: the POSITIONAL shape that actually shipped must be REJECTED, so a
     // revert to it cannot pass. A "does it parse" test alone would be blind to this.
+    #[cfg(target_os = "macos")]
     #[test]
     fn store_embed_wire_contract_rejects_the_positional_shape_that_shipped() {
         let positional = vec![
@@ -12816,6 +12820,7 @@ mod tests {
         assert_eq!(find_on_path_var("node", Some("")), None);
     }
 
+    #[cfg(unix)]
     #[test]
     fn find_on_path_var_finds_a_real_executable_and_respects_order() {
         // `/bin/sh` exists on every supported unix, so this asserts real behaviour rather than
