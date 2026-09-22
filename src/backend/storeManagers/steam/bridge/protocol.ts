@@ -98,7 +98,10 @@ export const CONTROL_SLOT = {
   whoami: 1
 } as const
 
-export type ControlSlotName = keyof typeof CONTROL_SLOT
+// Not exported (this and DecodedRequest, DecodedResponse below): verified to have no
+// importer anywhere -- not in any tracked .ts/.tsx file (`pnpm find-deadcode` / ts-prune
+// flagged the previously-exported forms as over-broad `export` keywords).
+type ControlSlotName = keyof typeof CONTROL_SLOT
 
 // ── Response status codes ───────────────────────────────────────────────────
 
@@ -109,14 +112,14 @@ export const STATUS_ERR = 1
 
 // ── Decoded shapes ──────────────────────────────────────────────────────────
 
-export interface DecodedRequest {
+interface DecodedRequest {
   requestId: number
   ordinal: number
   slot: number
   argBlob: Buffer
 }
 
-export interface DecodedResponse {
+interface DecodedResponse {
   requestId: number
   status: number
   retBlob: Buffer

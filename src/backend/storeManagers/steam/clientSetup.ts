@@ -39,9 +39,13 @@ import {
 
 const NUMERIC_APP_ID = /^\d+$/
 
-export type SteamClientReadyStatus = 'ready' | 'needs-install' | 'needs-launch'
+// Not exported (this and EnsureSteamClientReadyResult, StartGuidedInstallStatus and
+// StartGuidedInstallResult below): verified to have no importer anywhere -- not in any
+// tracked .ts/.tsx file (`pnpm find-deadcode` / ts-prune flagged the previously-exported
+// forms as over-broad `export` keywords).
+type SteamClientReadyStatus = 'ready' | 'needs-install' | 'needs-launch'
 
-export interface EnsureSteamClientReadyResult {
+interface EnsureSteamClientReadyResult {
   status: SteamClientReadyStatus
   // Mirrors `status === 'ready'` — kept alongside `status` so Plan 07's
   // existing games.ts call site (`if (!clientReady.ready)`) needs zero
@@ -142,9 +146,9 @@ export async function ensureSteamClientReady(
 const STEAM_MAC_INSTALLER_URL =
   'https://cdn.cloudflare.steamstatic.com/client/installer/steam.dmg'
 
-export type StartGuidedInstallStatus = 'started' | 'link-opened' | 'error'
+type StartGuidedInstallStatus = 'started' | 'link-opened' | 'error'
 
-export interface StartGuidedInstallResult {
+interface StartGuidedInstallResult {
   status: StartGuidedInstallStatus
   error?: string
 }

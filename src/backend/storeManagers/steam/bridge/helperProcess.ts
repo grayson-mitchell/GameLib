@@ -66,9 +66,12 @@ const PROBE_TIMEOUT_MS = 250
 // outstanding request per socket and no correlation ambiguity.
 const PROBE_REQUEST_ID = 1
 
-export type BridgeHelperReadyStatus = 'ready' | 'not-inited' | 'unreachable'
+// Not exported (this and EnsureBridgeHelperReadyResult below): verified to have no
+// importer anywhere -- not in any tracked .ts/.tsx file (`pnpm find-deadcode` / ts-prune
+// flagged the previously-exported forms as over-broad `export` keywords).
+type BridgeHelperReadyStatus = 'ready' | 'not-inited' | 'unreachable'
 
-export interface EnsureBridgeHelperReadyResult {
+interface EnsureBridgeHelperReadyResult {
   status: BridgeHelperReadyStatus
   ready: boolean
   error?: string

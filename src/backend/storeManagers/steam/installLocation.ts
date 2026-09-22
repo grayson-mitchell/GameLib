@@ -52,7 +52,13 @@ export interface SteamInstallTarget {
  *  (D-09) and consumed internally by resolveSteamInstallTarget's override
  *  matching. `path` is the library ROOT (getSteamLibraries()'s own return
  *  shape), `steamappsDir` is the actual depot-download target directory. */
-export interface SteamLibraryTarget {
+// Not exported: verified to have no importer anywhere -- the frontend's
+// InstallModal/SteamDialog/installTarget.ts declares a structurally-identical
+// SteamLibraryTarget of its own (its own comment says "Declared locally, not imported
+// from" this type), and its only cross-file mention of this name is that comment, not an
+// import (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+interface SteamLibraryTarget {
   path: string
   steamappsDir: string
   isPrimary: boolean

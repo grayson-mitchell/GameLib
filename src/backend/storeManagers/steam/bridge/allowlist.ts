@@ -52,7 +52,10 @@ export const bridgeAllowlistSchema = z.object({
     .min(1)
 })
 
-export type BridgeAllowlist = z.infer<typeof bridgeAllowlistSchema>
+// Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
+// file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+type BridgeAllowlist = z.infer<typeof bridgeAllowlistSchema>
 
 function loadBridgeAllowlist(): BridgeAllowlist {
   // `.parse()` (not `.safeParse()`) is deliberate -- a malformed bundled

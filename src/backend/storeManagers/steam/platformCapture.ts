@@ -47,7 +47,10 @@ import { resolvePlatformWrite } from './platformPrecedence'
  * `common` is not present on every variant, which is exactly why this
  * narrow local cast exists rather than a non-null assertion.
  */
-export interface AppCommonOslist {
+// Not exported (this and PlatformCaptureSummary below): verified to have no importer
+// anywhere -- not in any tracked .ts/.tsx file (`pnpm find-deadcode` / ts-prune flagged
+// the previously-exported forms as over-broad `export` keywords).
+interface AppCommonOslist {
   common?: { oslist?: string }
 }
 
@@ -261,7 +264,7 @@ export interface PlatformCapturePicsClient {
   }>
 }
 
-export interface PlatformCaptureSummary {
+interface PlatformCaptureSummary {
   scopedCount: number
   capturedCount: number
   skippedCount: number

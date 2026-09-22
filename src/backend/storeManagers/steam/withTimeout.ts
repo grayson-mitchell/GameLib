@@ -85,7 +85,10 @@ export const STEAM_INSTALLDIR_CONNECT_TIMEOUT_MS = 20000
  *  FAST on a timeout: a hung CM call re-hangs identically every attempt
  *  against the same stale fast-path socket, so retrying only multiplies the
  *  deadline (WR-02). */
-export interface TimeoutError extends Error {
+// Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
+// file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+interface TimeoutError extends Error {
   isTimeout: true
 }
 

@@ -29,7 +29,10 @@ import type { InstallErrorAction } from 'common/types/game_manager'
  *  there and this backend-local name is just a re-export. */
 export type DepotErrorAction = InstallErrorAction
 
-export interface ClassifiedDepotError {
+// Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
+// file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+interface ClassifiedDepotError {
   /** Locale key the classified message was resolved from — useful for tests
    *  and any future analytics, never shown to the user directly. */
   key: string

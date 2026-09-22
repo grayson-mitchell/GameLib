@@ -22,7 +22,10 @@ import {
 // established convention rather than sharing one import.
 const NUMERIC_APP_ID = /^\d+$/
 
-export interface RemoveAllCopiesResult {
+// Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
+// file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+interface RemoveAllCopiesResult {
   removed: number
   refused: number
   error?: string

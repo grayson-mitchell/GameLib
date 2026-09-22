@@ -37,7 +37,10 @@ const STEAM_API_DLL_HEADING = /DLL Name:\s*steam_api\.dll\s*$/i
 const ANY_DLL_HEADING = /DLL Name:/i
 const STEAM_API_SYMBOL = /\b(SteamAPI_[A-Za-z0-9_]+)\b/
 
-export type ImportScanResult =
+// Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
+// file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+type ImportScanResult =
   | { status: 'ok'; symbols: string[] }
   | { status: 'error'; error: string }
 

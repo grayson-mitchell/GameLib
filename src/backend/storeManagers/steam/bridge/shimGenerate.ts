@@ -75,7 +75,10 @@ const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamAPI_SteamFriends_v018'
 ])
 
-export type PlaceShimResult =
+// Not exported: verified to have no importer anywhere -- not in any tracked .ts/.tsx
+// file (`pnpm find-deadcode` / ts-prune flagged the previously-exported form as an
+// over-broad `export` keyword).
+type PlaceShimResult =
   | { status: 'placed'; shimPath: string }
   | { status: 'already-placed'; shimPath: string }
   | { status: 'shim-not-built' }
