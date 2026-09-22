@@ -35,7 +35,9 @@ const REPO_ROOT = join(__dirname, '..', '..', '..')
 
 const APP = 'src/frontend/App.tsx'
 
-const appSource = stripSourceComments(readFileSync(join(REPO_ROOT, APP), 'utf8'))
+const appSource = stripSourceComments(
+  readFileSync(join(REPO_ROOT, APP), 'utf8')
+)
 
 /** `<RouterProvider ... fallbackElement={...} />` — anything non-empty to render meanwhile. */
 const HAS_FALLBACK_ELEMENT = /<RouterProvider[^>]*\bfallbackElement=\{[^}]+\}/
@@ -51,7 +53,9 @@ describe('the router never renders its initial-load state as nothing', () => {
   it('renders a real component there, not null or a fragment', () => {
     const match = HAS_FALLBACK_ELEMENT.exec(appSource)
     expect(match).not.toBeNull()
-    expect(match![0]).not.toMatch(/fallbackElement=\{(null|undefined|<>\s*<\/>)\}/)
+    expect(match![0]).not.toMatch(
+      /fallbackElement=\{(null|undefined|<>\s*<\/>)\}/
+    )
     // Whatever it is must be imported, i.e. a component and not a bare literal.
     expect(appSource).toMatch(/import Loading from '\.\/screens\/Loading'/)
   })
@@ -82,9 +86,15 @@ describe('the router never renders its initial-load state as nothing', () => {
     })
 
     it.each([
-      ['the unbounded await this replaced', 'const component = await importedFile'],
+      [
+        'the unbounded await this replaced',
+        'const component = await importedFile'
+      ],
       // Caught by mutation: without the \b, a renamed binding slipped straight through.
-      ['a race against something else entirely', 'Promise.race([importedFileX, other])']
+      [
+        'a race against something else entirely',
+        'Promise.race([importedFileX, other])'
+      ]
     ])('catches %s', (_label, snippet) => {
       expect(snippet).not.toMatch(BOUNDED_ROUTE_WAIT)
     })

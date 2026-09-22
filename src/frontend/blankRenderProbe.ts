@@ -149,8 +149,12 @@ if (rootEl) {
       // container is still the one this observer was attached to. Two fixes aimed at
       // i18next suspense left this firing 10 launches out of 10, so the shape of the
       // mutation is the measurement that matters -- not another hypothesis.
-      const removed = records.flatMap((r) => Array.from(r.removedNodes).map(nodeName))
-      const added = records.flatMap((r) => Array.from(r.addedNodes).map(nodeName))
+      const removed = records.flatMap((r) =>
+        Array.from(r.removedNodes).map(nodeName)
+      )
+      const added = records.flatMap((r) =>
+        Array.from(r.addedNodes).map(nodeName)
+      )
       probeMark(
         `ROOT-EMPTIED removed=[${removed.join(',')}] added=[${added.join(',')}] ` +
           `sameContainer=${document.getElementById('root') === rootEl} ` +
