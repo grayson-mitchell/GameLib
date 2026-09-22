@@ -1,16 +1,17 @@
 ---
 created: 2026-08-29
-title: "Windows has no single-instance guard, so `gamelib://` is deliberately NOT registered there"
+title: "Windows has no single-instance guard, so `gamelib://` is deliberately NOT registered there (install-time and runtime)"
 found_during: phase 35 plan 07 decision gate (deep-link registration)
 severity: medium
 area: src-tauri/shell
 platform: windows
 ready: blocked
+blocked_by: "Windows single-instance guard (this todo) -- until it ships, both the install-time tauri.windows.conf.json override and the runtime register_all() Linux-only gate stay in place"
 blocks: "gamelib:// deep links on Windows"
-verifiable_on: "operator has a Windows machine (not primary OS)"
+verifiable_on: "the operator's Windows 11 machine is in active use as of 2026-09-22 (available now, not a hypothetical -- quick 260922-nx4 ran its jest suite and an installer-build attempt on it)"
 ---
 
-# Windows has no single-instance guard, so `gamelib://` is deliberately NOT registered there
+# Windows has no single-instance guard, so `gamelib://` is deliberately NOT registered there (install-time and runtime)
 
 ## The decision this records
 
@@ -60,7 +61,69 @@ Mirror the Unix one's properties, which are load-bearing rather than incidental:
    exception — the socket's own comment establishes that a source is not trusted merely for being
    "internal".
 
+## 2026-09-22 finding (quick 260922-nx4): the installer WOULD have registered it
+
+Runtime omission (`register_all()` being `#[cfg(target_os = "linux")]`) was **not sufficient** to
+keep `gamelib://` off Windows. Reading `tauri-plugin-deep-link` 2.4.9 and `tauri-utils` 2.9.3
+showed that Tauri CLI 2.11.4 independently feeds `plugins.deep-link.desktop` (merged across
+`tauri.conf.json` + the active platform overlay) into its **bundler** settings — and its NSIS
+template loops `deep_link_protocols`, emitting `WriteRegStr SHCTX "Software\Classes\gamelib"` plus
+a `shell\open\command` pointing at the main exe (its WiX template does the equivalent for `.msi`).
+Confirmed against the compiled Windows CLI binary itself
+(`node_modules/@tauri-apps/cli-win32-x64-msvc/cli.win32-x64-msvc.node`):
+`deep_link_protocols` (4 matches), `failed to parse desktop deep links` (1), `WriteRegStr` (34),
+`Software\\Classes` (33), `URL Protocol` (2).
+
+This was never actually shipped to a user only because the Windows release leg is separately
+broken (see
+`.planning/todos/pending/2026-09-17-windows-release-leg-dies-in-install-deps-tar-reads-c-as-a-remote-host.md`)
+— an unrelated build failure was accidentally load-bearing for D-05. That is not a fix, it is luck.
+
+Fixed by an explicit empty `"schemes": []` override in `src-tauri/tauri.windows.conf.json` (never a
+deleted key — `tauri_utils::config::DeepLinkProtocol.schemes` is `#[serde(default)]`, so only an
+explicit `[]`'s meaning is independent of that default holding). Pinned by
+`src/backend/__tests__/windowsDeepLinkSuppression.test.ts` (5 tests, mutation-proven: reverting the
+override to `["gamelib"]` or deleting the `schemes` key both fail Test A).
+
+**Installer-level evidence outcome: NOT ACHIEVED.** `pnpm exec vite build` (the first step of the
+`tauri:dev:packaged` prep chain, required before `tauri build --debug --bundles nsis` can run)
+failed before reaching the Tauri CLI at all: the `gamelib-preserve-runner-symlinks` vite plugin
+(`meta/preserveRunnerSymlinks.ts`) tried to recreate `Python.framework` symlinks under
+`build/bin/arm64/darwin` (restoring what vite's own dereferencing `publicDir` copy had just
+flattened) and hit `EPERM: operation not permitted, symlink 'Python.framework\Versions\3.12\Python'
+-> ...`. This machine has neither `SeCreateSymbolicLinkPrivilege` (confirmed via `whoami /priv`,
+empty result) nor an elevated/Developer-Mode session (confirmed via `net session` -> "Access is
+denied") — creating a symlink on Windows without one of those is refused by the OS, independent of
+this quick task's config change. Enabling Developer Mode requires a registry write
+(`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock\AllowDevelopmentWithoutDevLicense`),
+which this quick task's environment constraints explicitly forbid touching. This is unrelated to
+the `gamelib://` override and was not fixed here — it blocks reaching `installer.nsi` generation on
+this machine today, for control and override runs alike.
+
+Weaker evidence substituted instead (see `260922-nx4-SUMMARY.md` for full detail): the jest
+merge-patch simulation above (mutation-proven), the `tauri-utils::config::DeepLinkProtocol` serde
+shape (`schemes: Vec<String>` with `#[serde(default)]`, no http/https fallback — that fallback
+belongs to a different struct, `AssociatedDomain.scheme`, for mobile app-links), and the compiled
+CLI binary string evidence above. None of these is installer-level proof; the SUMMARY states that
+explicitly and does not claim otherwise.
+
+The leftover HKCU `Software\Classes\gamelib` key on the operator's machine (from a 2026-07-20
+Electron-era install under `C:\Program Files\GameLib`) is known and deliberately untouched by this
+finding and by quick 260922-nx4 — it is a pre-existing artifact of a different, retired build, not
+something the current Tauri build wrote, and touching the registry is out of scope here regardless.
+
 ## Then, and only then
+
+After the Windows guard ships and passes Verification below:
+
+1. Remove the `plugins.deep-link` override from `src-tauri/tauri.windows.conf.json`.
+2. Update `src/backend/__tests__/windowsDeepLinkSuppression.test.ts` in the **same commit** — Test A
+   and Test E as written today assert `schemes` stays `[]`; they must invert to assert Windows
+   matches macOS/Linux (`["gamelib"]`) once the override is gone, or they will fail (correctly) the
+   moment the config changes.
+3. Decide whether Windows also needs a runtime `register_all()` call (widen the
+   `#[cfg(target_os = "linux")]` gate in `src/main.rs`) or can rely on the installer's own
+   registration alone, and update that comment block accordingly.
 
 Register `gamelib://` on Windows and drop the platform gate plan 07 adds.
 
@@ -70,7 +133,10 @@ Needs a real Windows machine — the operator has one, though it is not their pr
 check: with GameLib running, open a `gamelib://launch?appName=...` URL from outside the app and
 confirm it reaches the RUNNING instance rather than starting a second one. Then confirm exactly one
 sidecar process exists afterwards; a second sidecar is the specific failure D-44-A exists to
-prevent, and it is invisible from the UI.
+prevent, and it is invisible from the UI. Before either check, also confirm the generated
+`installer.nsi` for that build contains the gamelib `WriteRegStr SHCTX "Software\Classes\gamelib"`
+lines — the install-time override from quick 260922-nx4 must be removed (step 1 above) or this
+precondition will silently fail (no registration at all, rather than a working one).
 
 ## Not phase 35
 
