@@ -80,3 +80,49 @@ search bar and observing how many keystrokes / how much latency elapses before t
 correctly, with rival hypotheses (debounce, re-render cost, `useMemo` dependency churn in
 `LibrarySearchBar`, something in `LibraryContext`) ruled out with direct evidence rather than
 reasoning from the source alone.
+
+## RESOLVED — 2026-09-21
+
+Debug session: `.planning/debug/resolved/library-search-typing-lag.md` (full evidence log there).
+
+**Root cause.** `SearchBar` drove its uncontrolled input via two `useEffect`s — *passive* effects,
+which React defers to a task after the commit. Because `LibrarySearchBar` hands down a
+fresh-identity `onInputChanged` and a changed `value` on every keystroke (the structural facts
+already recorded above), both effects re-armed every render. A native `'input'` event landing in
+the gap between a render's commit and that render's deferred flush was still routed to the prior,
+not-yet-replaced listener, so it advanced the DOM ahead of the committed `value`; when the
+deferred effect finally flushed, it wrote the stale closed-over `value` back into the DOM and
+erased the character just typed.
+
+Note the file's own comment was wrong about this and is now corrected: it asserted "the effect
+above only runs on mount", which was false — `value` and `onInputChanged` are both in its
+dependency array.
+
+**Fix.** Both DOM-sync effects changed `useEffect` → `useLayoutEffect`
+(`src/frontend/components/UI/SearchBar/index.tsx`). Layout effects run synchronously inside the
+same commit, so there is no task boundary for a native event to land in.
+
+**How the "measure, don't theorize" instruction was honoured.** jsdom is absent from this repo by
+a standing decision documented at `src/frontend/jest.config.js:4-14`, so the RTL reproduction this
+todo asked for was not buildable without a new dependency. A hook-host harness was built instead
+(`src/frontend/components/UI/SearchBar/__tests__/searchBarTypingRace.test.ts`) that drives the
+real, unmodified `SearchBar`. It reproduced the rollback deterministically, a negative control
+isolated the deferred-flush gap as the necessary condition, and revert-and-confirm-red was run
+twice by two different parties with the negative control staying green both ways.
+
+**Honest limits of the evidence.** The harness is a model of React, not React: it treats the
+rollback as permanent where real React — which flushes pending passive effects at the start of the
+next render — would self-correct it into a flicker, with permanent loss only when a further
+keystroke lands in the rolled-back window during sustained typing. This is why `ready: live-gate`
+mattered. The live gate was run: operator drove `pnpm tauri:dev` on their Mac 2026-09-21, typed a
+multi-character query into the Library search bar, and reported no vanishing characters, no
+flicker, no retyping. That run was conducted only in the fixed state, so it confirms the fixed
+state is good rather than constituting a before/after measurement; the before/after is the
+harness's red/green.
+
+**Not addressed here, and deliberately not smuggled into this closure.** `handleSearch` is still a
+bare `setFilterText` with no debounce, and `filterText` still drives the expensive per-keystroke
+fuzzy filter at `src/frontend/screens/Library/index.tsx:706-722`. That is a separate potential
+contributor to perceived sluggishness. The operator raised no grid-lag complaint on the live run,
+so no follow-up todo is being filed on speculation — but this paragraph is the breadcrumb if the
+symptom ever returns in that form.
