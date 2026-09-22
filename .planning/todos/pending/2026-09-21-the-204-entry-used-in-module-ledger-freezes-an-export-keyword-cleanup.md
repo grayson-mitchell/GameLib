@@ -28,8 +28,8 @@ This task is NOT closed by that work: `260922-k2o` shipped bucket A (21 test-int
 the safe two-thirds of the `meta/` half of bucket C (12 symbols), landing at commits `a76bfbb5d`,
 `f7269b413`, `5938867ac`, `6a8f3ef89`. `pnpm find-deadcode` is green throughout:
 `unreachable: 47 OK | used-in-module: 170 OK` (was 203; `unreachable` never moved). The remaining
-scope below — bucket B (64) and the `src/` half of bucket C (104) — is untouched and is what
-picking this todo back up means.
+scope below — bucket B (64), the 2 parked `meta/` entries in bucket C, and the `src/` half of
+bucket C (104) — is untouched and is what picking this todo back up means.
 
 **The re-derivation also corrected the ledger's own annotation, and that correction matters for
 the next reader as much as the count does**: 3 of the 15 entries the ledger called "safe
@@ -64,8 +64,16 @@ non-test:
 | ------ | ----------------- | -------------------------- | ------- | --------- | ---------- |
 | A | 21 | 21 | 21 | **0** | finding lives in a test/mock/fixture file — DONE |
 | B | 63 | 64 | 0 | **64** | production source, name also appears in ≥1 test file |
-| C (`meta/`) | 15 | 15, then found to be 12 safe + 3 NOT safe | 12 | **3, and NOT safe** | see below |
+| C (`meta/`) | 15 | 14, then found to be 12 safe + 2 NOT safe | 12 | **2, and NOT safe** | see below |
 | C (`src/`) | 105 | 104 | 0 | **104** | production source under `src/`, no test-file match |
+
+`DownloadedBinary` is the third named trap below, but it is counted in bucket B, not
+`C (meta/)`: `meta/__tests__/findDeadcode.test.ts` mentions it in a prose comment, which is
+enough for the test-file whole-word search to land it in B. So the reconciliation is
+B + C(`meta/`) + C(`src/`) = 64 + 2 + 104 = **170**, matching `find-deadcode` exactly. The
+earlier draft of this table double-counted it under `C (meta/)` as a 3rd "not safe" row and
+also carried over a stale `15` instead of the re-derived `14`, which together produced a 171
+that never reconciled.
 
 **Both bucket boundaries are still a proxy and still wrong in a known direction** for the remaining
 population — see the original triage note preserved below. **The remedy must re-derive these
@@ -141,7 +149,8 @@ fewer, cleaned in batches. It is a rough edge with no live consequence.
 
 ## Suggested shape, if picked up
 
-Remaining scope: bucket B (64) and the `src/` half of bucket C (104). One commit per file cluster,
+Remaining scope: bucket B (64), the 2 parked `meta/` entries in bucket C, and the `src/` half of
+bucket C (104). One commit per file cluster,
 not one sweep — un-export plus the paired baseline deletions in the same commit, so
 `pnpm find-deadcode` is green at every commit. **Do not** attempt bucket B without checking each
 site's actual test importer first, and **do not** re-attempt the 3 named `meta/` entries above
