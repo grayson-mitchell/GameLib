@@ -1,3 +1,11 @@
+// `as const` here is load-bearing, not stylistic. Without it,
+// `(typeof supportedLanguages)[number]` widens to `string`, and
+// `Record<SupportedLanguage, string>` in
+// `src/frontend/components/UI/LanguageSelector/index.tsx` degrades into a plain
+// index signature -- the compiler gate that map depends on to catch a missing or
+// extra language key would silently stop catching anything. Nothing enforces
+// this constraint staying in place; it is discipline, in the same register as
+// this repo's other unenforceable invariants.
 export const supportedLanguages = [
   'ar',
   'az',
@@ -42,4 +50,6 @@ export const supportedLanguages = [
   'vi',
   'zh_Hans',
   'zh_Hant'
-]
+] as const
+
+export type SupportedLanguage = (typeof supportedLanguages)[number]
