@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useLayoutEffect, useRef } from 'react'
 import './index.scss'
 import { faSearch, faSpinner, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -24,7 +24,25 @@ export default function SearchBar({
 
   // we have to use an event listener instead of the react
   // onChange callback so it works with the virtual keyboard
-  useEffect(() => {
+  //
+  // Deliberately useLayoutEffect, not useEffect (library-search-typing-lag
+  // debug session, 2026-09-21). This effect re-runs on every parent
+  // re-render (LibrarySearchBar defines `onInputChanged` inline, so its
+  // identity changes every time, and `value` also changes on every
+  // keystroke) and unconditionally writes `element.value = value` using
+  // the closed-over `value` from render time. With a plain `useEffect`,
+  // that write is deferred to a passive-effect flush that runs on a later
+  // task -- a real gap in which the browser can dispatch a *further*
+  // native 'input' event (still routed to this effect's own,
+  // not-yet-replaced listener) that advances the DOM ahead of `value`.
+  // When the deferred effect then finally flushes, it stomps that
+  // already-typed character back to the stale `value`, which is exactly
+  // the "typing needs repeated attempts before it filters usably" symptom.
+  // useLayoutEffect runs synchronously as part of the same commit, so
+  // there is no task boundary for a native event to land in. Reproduced
+  // and the fix verified in
+  // src/frontend/components/UI/SearchBar/__tests__/searchBarTypingRace.test.ts.
+  useLayoutEffect(() => {
     if (input.current) {
       const element = input.current
       element.value = value
@@ -40,9 +58,11 @@ export default function SearchBar({
   }, [input, value, onInputChanged])
 
   // Sync external value changes (e.g., a reset button) into the uncontrolled
-  // input. The effect above only runs on mount, so without this a caller
-  // clearing the value wouldn't clear the visible text.
-  useEffect(() => {
+  // input. Also useLayoutEffect, for the same reason as above: this effect
+  // re-runs on every `value` change (i.e. every keystroke, not just an
+  // external reset) and its guarded write is just as vulnerable to the
+  // same stale-value rollback if deferred to a passive-effect task.
+  useLayoutEffect(() => {
     if (input.current && input.current.value !== value) {
       input.current.value = value
     }
