@@ -897,7 +897,13 @@ export interface SteamInfo {
 export type WikiSourceOutcome = 'ok' | 'notfound' | 'error'
 export type HowLongToBeatOutcome = 'ok' | 'notfound' | 'skipped'
 
-export interface WikiFetchStatus {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose). Shared-contract
+// caution (common/types.ts) applied: checked for a "reserved for" intent
+// signal before un-exporting -- none found, this is an ordinary internal
+// field type of `WikiInfo` below, not deliberate API surface.
+interface WikiFetchStatus {
   pcgamingwiki: WikiSourceOutcome
   howlongtobeat: HowLongToBeatOutcome
 }

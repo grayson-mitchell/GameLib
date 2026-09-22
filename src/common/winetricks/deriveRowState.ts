@@ -9,7 +9,13 @@ import { NEEDS_GUI_WINETRICKS_VERBS } from './verbs'
 // is an orthogonal modifier carried on `WinetricksComponent` and rendered as
 // a badge alongside whichever one of these six states applies. Do not add a
 // seventh member for it.
-export type WinetricksRowState =
+//
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding). Its only
+// cross-file mention, `Row/index.tsx:231,234`, is a prose comment naming the
+// type in an exhaustiveness-guard error message -- never an import -- so
+// there is no external consumer to preserve.
+type WinetricksRowState =
   | 'available'
   | 'installing'
   | 'installingElsewhere'

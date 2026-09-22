@@ -647,7 +647,15 @@ interface AsyncIPCFunctions {
 // unions identically, satisfying D-07's cross-runtime representability
 // constraint.
 export type SteamSyncStatus = 'idle' | 'syncing' | 'failed'
-export type SteamSyncFailureReason =
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding). Shared-
+// contract caution (common/types/ipc.ts) applied: checked for a "reserved
+// for" intent signal before un-exporting -- none found, this is an ordinary
+// field type of `FrontendMessages.steamSyncStatus`'s payload below, not
+// deliberate API surface, so the usual `ts-prune-ignore-next` remedy (used
+// twice already in this file, at :81/:185, for genuinely intentional cases)
+// does not apply here.
+type SteamSyncFailureReason =
   | 'client-not-ready'
   | 'owned-apps-failed'
   | 'sync-failed'

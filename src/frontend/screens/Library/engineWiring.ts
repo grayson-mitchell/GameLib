@@ -36,8 +36,12 @@ import { PRESET_UNCATEGORIZED } from './filterEngine'
 /**
  * The grid list plus both facet-count accessors, all three derived from the
  * SAME `libraryUnion`/`state`/`deps` triple.
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export interface LibraryGridPipeline {
+interface LibraryGridPipeline {
   /** The grid's games: every stage applied, nothing skipped. */
   games: GameInfo[]
   countForStore: (value: StoreFacetValue) => number

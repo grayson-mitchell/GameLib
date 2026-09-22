@@ -171,7 +171,12 @@ export function passesView(
   }
 }
 
-export function passesCollection(
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding). Its only
+// cross-file mentions (`engineWiring.ts:189`, `Library/index.tsx:181`) are
+// prose comments naming the function -- never an import -- so there is no
+// external consumer to preserve.
+function passesCollection(
   game: GameInfo,
   collection: string | null,
   deps: FilterEngineDeps
@@ -195,17 +200,23 @@ export function passesCollection(
 
 // D-01: opt-in — an empty selection means no constraint. D-03: OR within a
 // kind — any selected store matches.
-export function passesStore(
-  game: GameInfo,
-  stores: StoreFacetValue[]
-): boolean {
+//
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding). Its only
+// cross-file mention, `Library/index.tsx:614`, is a prose comment naming the
+// function -- never an import -- so there is no external consumer to
+// preserve.
+function passesStore(game: GameInfo, stores: StoreFacetValue[]): boolean {
   if (stores.length === 0) {
     return true
   }
   return stores.includes(game.runner as StoreFacetValue)
 }
 
-export function passesRunnability(
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+function passesRunnability(
   game: GameInfo,
   runnability: RunnabilityTier[],
   deps: FilterEngineDeps
@@ -221,7 +232,10 @@ export function passesRunnability(
   return tier !== null && runnability.includes(tier)
 }
 
-export function passesSearch(
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+function passesSearch(
   game: GameInfo,
   searchMatchedKeys: Set<string> | null
 ): boolean {

@@ -43,8 +43,12 @@ const STORE_ORDER: StoreOwnershipMatch['store'][] = [
  * keyed off `key`) so a single `t(label.key, label.defaultValue,
  * label.values)` call at the render site type-checks against react-i18next's
  * `TFunction` overloads without a per-key switch.
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export interface OwnedBadgeLabel {
+interface OwnedBadgeLabel {
   key:
     | 'storeSearch.badge.ownedOn'
     | 'storeSearch.badge.ownedOnMulti'

@@ -46,8 +46,12 @@ import type { ValidStoreName } from './electron_store'
  * handler. Single-sourced here so the storage layer (`fileStore.ts`), the sidecar
  * write choke point (`storeWriteHandlers.ts`) and the renderer snapshot
  * (`tauriTransport.ts`) cannot drift apart on what "hostile key" means.
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export const DISALLOWED_KEY_PATH_SEGMENTS: readonly string[] = [
+const DISALLOWED_KEY_PATH_SEGMENTS: readonly string[] = [
   '__proto__',
   'prototype',
   'constructor'

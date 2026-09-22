@@ -75,7 +75,10 @@ function logNavCallFailure(label: string, error: unknown): void {
   window.api.logInfo(`[useStoreEmbedHost] ${label} threw: ${String(error)}`)
 }
 
-export interface UseStoreEmbedHostOptions {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface UseStoreEmbedHostOptions {
   /** The slot div's ref — the single geometry oracle. Read, never written, by this hook. */
   slotRef: RefObject<HTMLDivElement>
   /** The route's resolved start URL (from `WebView/index.tsx`'s existing `urls` map/session restore). */

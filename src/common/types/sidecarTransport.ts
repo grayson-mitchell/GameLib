@@ -32,8 +32,12 @@
  *   frames only ever travel sidecar→Rust; the Rust shell must never send a `rustInvoke`
  *   request INTO the sidecar, which is why `isValidRequest()` in sidecarRpc.ts deliberately
  *   does NOT accept it as an inbound kind (T-28-03b).
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export type SidecarRpcKind = 'invoke' | 'send' | 'openExternal' | 'rustInvoke'
+type SidecarRpcKind = 'invoke' | 'send' | 'openExternal' | 'rustInvoke'
 
 /**
  * A request frame written from the Rust shell to the sidecar's stdin (one JSON object per line).

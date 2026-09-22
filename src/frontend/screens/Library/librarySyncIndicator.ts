@@ -58,7 +58,11 @@ export interface SteamSyncIndicatorInput {
   steamCredentialsMissing: boolean
 }
 
-export interface SteamSyncIndicatorOutput {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose). `Mode` and
+// `Input` above stay exported -- neither is flagged.
+interface SteamSyncIndicatorOutput {
   mode: SteamSyncIndicatorMode
 }
 

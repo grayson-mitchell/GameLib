@@ -269,7 +269,11 @@ export interface ResolveDepotAvailabilityInput {
   probeSettled: boolean
 }
 
-export interface ResolveDepotAvailabilityOutput {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose). `Input` above
+// stays exported -- it is not flagged.
+interface ResolveDepotAvailabilityOutput {
   depotSignalResolved: boolean
   windowsDepotOffered: boolean
   macDepotOffered: boolean

@@ -99,8 +99,20 @@ export const WINETRICKS_API_METHODS = [
  * `winetricksListInstalled` -> `winetricksInstalled`; `winetricksListAvailable` ->
  * `winetricksAvailable`; `winetricksInstall` -> `winetricksInstall` (identity -- the send-kind
  * call has no method/channel split).
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose). Un-exporting
+ * surfaced a real `no-unused-vars` false positive: this array's only
+ * reference in the file is `(typeof WINETRICKS_CHANNELS)[number]` inside
+ * `WINETRICKS_CHANNEL_BY_METHOD`'s type position below -- a type-only use an
+ * exported binding is exempt from, but a module-private one is not. There is
+ * no runtime read (contrast `WINETRICKS_API_METHODS` above, kept exported and
+ * unaffected). Disabling rather than adding a synthetic runtime reference:
+ * inventing a fake read would be less honest than naming the real shape.
  */
-export const WINETRICKS_CHANNELS = [
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const WINETRICKS_CHANNELS = [
   'winetricksAvailable',
   'winetricksInstall',
   'winetricksInstalled'
@@ -163,7 +175,10 @@ export const WINETRICKS_CHANNEL_BY_METHOD: Record<
   winetricksInstall: 'winetricksInstall'
 }
 
-export type DeclaredResult<T> =
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+type DeclaredResult<T> =
   | { ok: true; value: T }
   | { ok: false; channel: string; reason: string }
 

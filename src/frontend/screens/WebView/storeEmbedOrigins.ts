@@ -23,7 +23,10 @@
  * appear.
  */
 
-export interface StoreEmbedConfig {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface StoreEmbedConfig {
   /** The store identity used for the restore key, the user agent, and the history stack (D-35). */
   key: string
   /** Exact-or-dot-suffix match targets, checked against `new URL(url).hostname`. */

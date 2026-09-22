@@ -58,8 +58,12 @@ export type HumbleKeyTypePresentation =
  *  - 'help': the static Humble help URL, with the code deliberately
  *    dropped. Every other key_type — including 'generic' and anything
  *    unrecognised — lands here.
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export type HumbleRedeemTarget =
+type HumbleRedeemTarget =
   | { kind: 'deep-link'; url: string }
   | { kind: 'help'; url: string }
 

@@ -45,7 +45,10 @@ import { SteamUserData } from 'common/types/steam'
  * here at all).
  */
 
-export interface WaitForSteamSignedOutOptions {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface WaitForSteamSignedOutOptions {
   /** Total number of `getSteamUserInfo` reads attempted before giving up. */
   maxAttempts?: number
   /** Delay between reads, in milliseconds. */
@@ -62,8 +65,13 @@ const defaultDelay = (ms: number): Promise<void> =>
 // 20 attempts * 150ms = 3s worst-case bound. Generous enough for a keyring
 // RPC round-trip, short enough that a genuinely broken sign-out surfaces the
 // honest failure dialog quickly rather than hanging the UI.
-export const STEAM_SIGN_OUT_DEFAULT_MAX_ATTEMPTS = 20
-export const STEAM_SIGN_OUT_DEFAULT_INTERVAL_MS = 150
+//
+// Not exported (both constants below): used only within this module
+// (ts-prune / `pnpm find-deadcode` flagged the previously-exported form as a
+// used-in-module finding -- there is no external consumer, so the export
+// served no purpose).
+const STEAM_SIGN_OUT_DEFAULT_MAX_ATTEMPTS = 20
+const STEAM_SIGN_OUT_DEFAULT_INTERVAL_MS = 150
 
 /**
  * Polls `getSteamUserInfo` until it reports signed-out (`undefined`/falsy)
@@ -118,7 +126,10 @@ export async function waitForSteamSignedOut(
   return false
 }
 
-export interface PerformSteamLogoutDeps {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface PerformSteamLogoutDeps {
   logoutSteam: () => void
   getSteamUserInfo: () => Promise<SteamUserData | undefined>
   /** Called exactly once, only after sign-out is confirmed. */

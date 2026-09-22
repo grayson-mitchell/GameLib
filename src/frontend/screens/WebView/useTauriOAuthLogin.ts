@@ -110,7 +110,11 @@ export type OAuthLoginCompletionPayload = {
 // context). `setState` is intentionally loosely typed: GlobalState's own `PureComponent<Props>`
 // has no explicit State generic (defaults to `{}`), so `this.setState(...)` already accepts any
 // shape at the call site this factory is bound into.
-export type OAuthLoginCompletionDeps = {
+//
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+type OAuthLoginCompletionDeps = {
   setState: (update: Record<string, unknown>) => void
   handleSuccessfulLogin: (runner: OAuthRunner) => void
 }

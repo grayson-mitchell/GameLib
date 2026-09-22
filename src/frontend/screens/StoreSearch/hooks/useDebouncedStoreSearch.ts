@@ -24,14 +24,13 @@ import type { StoreSearchResult } from 'common/types/storeSearch'
  * `backend/humble/library.ts`'s `currentSyncGeneration()` supersede-
  * detection idiom): every fetch captures its own generation number, and a
  * resolve/reject is discarded if a newer fetch has since started.
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
 
-export type StoreSearchStatus =
-  | 'prompt'
-  | 'loading'
-  | 'results'
-  | 'empty'
-  | 'error'
+type StoreSearchStatus = 'prompt' | 'loading' | 'results' | 'empty' | 'error'
 
 const DEBOUNCE_MS = 400
 const MIN_QUERY_LENGTH = 3

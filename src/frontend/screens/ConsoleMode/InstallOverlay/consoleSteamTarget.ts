@@ -21,7 +21,10 @@ import {
 
 export type ConsoleFocusKey = 'platform' | 'wine' | 'cancel' | 'install'
 
-export type ConsoleSteamVerdict =
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+type ConsoleSteamVerdict =
   | { ok: true }
   | { ok: false; degrade: SteamQuickInstallDegrade }
 

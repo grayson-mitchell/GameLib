@@ -1,7 +1,10 @@
 import type { IpcRendererEvent } from 'backend/platform'
 import { create } from 'zustand'
 
-export type SteamClientSetupReason = 'install' | 'launch-once'
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+type SteamClientSetupReason = 'install' | 'launch-once'
 
 interface SteamClientSetupState {
   isOpen: boolean

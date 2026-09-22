@@ -19,8 +19,12 @@ export type UrgencyTier = 'danger' | 'warning' | null
  * already-rounded value the frontend interpolates directly into its locked
  * copy; 'none' means the badge renders nothing (null or past expiration) —
  * mirrors `expirationDisplay.ts`'s `{ kind: 'blank' }` no-render convention.
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export type UrgencyCountdownParts =
+type UrgencyCountdownParts =
   | { kind: 'hours'; value: number }
   | { kind: 'days'; value: number }
   | { kind: 'none' }

@@ -10,8 +10,12 @@ import { HumbleKeyState } from '../types/humble'
  *  - 'no-expiration' -> "No expiration"
  *  - 'no-deadline'   -> "No pick deadline available" (UNPICKED only)
  *  - 'blank'         -> render nothing at all (no placeholder text)
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export type HumbleExpirationDisplay =
+type HumbleExpirationDisplay =
   | { kind: 'date'; iso: string }
   | { kind: 'no-expiration' }
   | { kind: 'no-deadline' }

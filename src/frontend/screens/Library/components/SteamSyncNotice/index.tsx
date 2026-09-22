@@ -39,7 +39,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ContextProvider from 'frontend/state/ContextProvider'
 import './index.scss'
 
-export interface SteamSyncNoticeProps {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface SteamSyncNoticeProps {
   mode: 'syncing' | 'failed' | 'signedOut'
 }
 

@@ -43,7 +43,10 @@ import React, {
  * kinds) but the shape does, deliberately.
  */
 
-export type SuppressionAction = { type: 'acquire' } | { type: 'release' }
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+type SuppressionAction = { type: 'acquire' } | { type: 'release' }
 
 /**
  * Pure reference-count transition function, exported so its four properties

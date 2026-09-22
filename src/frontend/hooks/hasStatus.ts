@@ -18,8 +18,12 @@ import { getStatusLabel, handleNonAvailableGames } from './constants'
  *   3. is_installed (and not third-party-managed) is 'installed' — the
  *      caller still runs the async delisted-game check on this result
  *   4. otherwise 'notInstalled'
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export type DerivedStatusKind =
+type DerivedStatusKind =
   | 'active'
   | 'notSupportedGame'
   | 'installed'

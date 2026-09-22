@@ -59,8 +59,12 @@ import { DEFAULT_STEAM_BOTTLE_NAME } from 'frontend/screens/Game/GamePage/compon
  * may suppress the dialog's explanatory copy — collapsing them (round 1 set
  * the initial value on rejection) suppressed it forever and left
  * `<DialogContent>` structurally empty on Linux.
+ *
+ * Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+ * flagged the previously-exported form as a used-in-module finding -- there
+ * is no external consumer, so the export served no purpose).
  */
-export type SteamLibraryFetch =
+type SteamLibraryFetch =
   | { phase: 'pending' }
   | { phase: 'ok'; targets: SteamDialogLibraryOption[] }
   | { phase: 'failed' }

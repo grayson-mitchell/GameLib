@@ -7,7 +7,10 @@ import { RedeemKeyOutcome } from 'common/types/steam'
 // across buckets — the user needs to know WHY a redeem did not succeed
 // (already owned vs malformed key vs rate-limited vs a connectivity error).
 
-export interface RedeemOutcomeCopy {
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+interface RedeemOutcomeCopy {
   message: string
   tone: 'success' | 'error'
 }

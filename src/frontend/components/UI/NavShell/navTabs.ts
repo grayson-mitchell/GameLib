@@ -10,7 +10,10 @@
 /** The four tier-1 tabs, in navbar left-to-right order. */
 export const NAV_TAB_IDS = ['accounts', 'games', 'stores', 'settings'] as const
 
-export type NavTabId = (typeof NAV_TAB_IDS)[number]
+// Not exported: used only within this module (ts-prune / `pnpm find-deadcode`
+// flagged the previously-exported form as a used-in-module finding -- there
+// is no external consumer, so the export served no purpose).
+type NavTabId = (typeof NAV_TAB_IDS)[number]
 
 /**
  * accounts -> 0, games -> 1, stores -> 2, settings -> 3.

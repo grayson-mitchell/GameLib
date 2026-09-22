@@ -57,8 +57,13 @@
 export const HUMBLE_LOGIN_CHROME_CSS =
   'footer.site-footer { display: none !important; } .simple-navbar { display: none !important; }'
 
+// Not exported (both constants below): used only within this module
+// (ts-prune / `pnpm find-deadcode` flagged the previously-exported form as a
+// used-in-module finding -- there is no external consumer, so the export
+// served no purpose).
+
 /** Exact-match host. */
-export const HUMBLE_LOGIN_CHROME_HOST = 'humblebundle.com'
+const HUMBLE_LOGIN_CHROME_HOST = 'humblebundle.com'
 
 /**
  * Suffix used to match subdomains (e.g. `www.humblebundle.com`). Anchored at
@@ -71,7 +76,7 @@ export const HUMBLE_LOGIN_CHROME_HOST = 'humblebundle.com'
  * shape can be transliterated into the Rust-side injected JS
  * (`login_chrome_css_script`) byte-for-byte.
  */
-export const HUMBLE_LOGIN_CHROME_HOST_SUFFIX = '.humblebundle.com'
+const HUMBLE_LOGIN_CHROME_HOST_SUFFIX = '.humblebundle.com'
 
 /**
  * True only when `hostname` equals `HUMBLE_LOGIN_CHROME_HOST` exactly, or
