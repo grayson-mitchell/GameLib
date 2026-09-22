@@ -54,9 +54,22 @@
 # meta/__tests__/runnerBuildInvocations.test.ts; buildSeaConfigPath by
 # meta/__tests__/buildSidecarSea.test.ts.
 #
-# Widening tsconfig.json to cover meta/ would dissolve this whole cluster,
-# but that is a tsconfig decision with its own blast radius and is NOT
-# part of this task.
+# Widening tsconfig.json to cover meta/ does dissolve this whole cluster --
+# MEASURED 2026-09-22 (quick 260922-n7s), this population goes 47 -> 45, so
+# 3 dissolve and 1 new one appears. But do NOT reach for it on that basis:
+# the SIBLING population pays for it several times over. Measured in the
+# same run, used-in-module goes 67 -> 108 (32 dissolved, 73 newly exposed),
+# because adding `meta` to `include` makes ~60 meta/ build scripts analysed
+# for the first time and their own exports become findings. Combined net
+# across both ledgers: +41.
+#
+# `tsc` with meta/ included also exits 2 with 12 real type errors across 6
+# files -- nothing typechecks those scripts today. That gap is filed
+# separately as 2026-09-22-meta-build-scripts-are-not-typechecked.md,
+# because typecheck coverage and ledger reduction are two different goods
+# and widening only delivers the first. The full measurement and its
+# reproduction method are recorded in the sibling ledger,
+# meta/deadcode-baseline-used-in-module.txt, under its copy of this note.
 meta/buildRunnersOnedir.ts - toOnedirCommand
 meta/buildSidecarSea.ts - buildSeaConfigPath
 #

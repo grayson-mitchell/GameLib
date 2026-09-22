@@ -72,9 +72,35 @@
 # its copy of this note -- toOnedirCommand and buildSeaConfigPath. They are
 # not in THIS file. Do not read the next lines below as those two.
 #
-# Widening tsconfig.json to cover meta/ would dissolve the false-positive
-# part of this cluster, but that is a tsconfig decision with its own blast
-# radius and is NOT part of this task.
+# Widening tsconfig.json to cover meta/ dissolves the false-positive part of
+# this cluster -- and MEASURED 2026-09-22 (quick 260922-n7s), it makes the
+# combined ledger BIGGER, not smaller. Do not reach for it as a shortcut.
+#
+# That earlier framing did only half the arithmetic. Adding `meta` to
+# `include` also makes ~60 meta/ build scripts analysed FOR THE FIRST TIME,
+# and their own exports immediately become findings:
+#
+#   used-in-module   67 -> 108   (32 dissolved, 73 newly exposed)
+#   unreachable      47 ->  45   ( 3 dissolved,  1 newly exposed)
+#
+# Net +41 on the population this ledger exists to shrink. The 73 newcomers
+# are ordinary exports in buildCrossoverIndex.ts, captureShellScrollback.ts,
+# gen_vtables.ts, genI18nGateScope.ts, graphifyCodeViz.ts,
+# hardcodedStringGate.ts and others -- scripts nothing has ever analysed.
+#
+# It is also not free to switch on: `tsc` with meta/ included exits 2 with
+# 12 real type errors across 6 files. Nothing typechecks those scripts
+# today. That gap is filed as its own pending todo
+# (2026-09-22-meta-build-scripts-are-not-typechecked.md) because it is a
+# genuine coverage win INDEPENDENT of dead code -- widening conflates two
+# different goods, and only one of them is real. Decide them separately.
+#
+# Method, so it is reproducible and was not asserted: a throwaway
+# tsconfig.measure.json ({"extends":"./tsconfig.json","include":["src","meta"]})
+# at repo root, ts-prune/lib/runner invoked against it with .ts-prunerc's own
+# ignore, findings passed through THIS gate's parseFinding /
+# excludeKnownParseArtifacts / partitionFindings, diffed against both
+# committed baselines. Config deleted afterwards.
 #
 # Here the export is ALSO seen used inside its own declaring file, so
 # ts-prune downgrades it to "used in module" rather than unreachable. That

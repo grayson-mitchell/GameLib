@@ -107,14 +107,42 @@ third outcome.
 Bucket B is **not** a mechanical sweep, and the todo has said so since it was filed:
 **do not un-export a bucket-B entry without opening its actual test importer first.**
 
-- **`meta/` 37 of the 64.** Measured: 36 have a live `meta/__tests__` importer. Un-exporting
-  breaks that test. The remedy is `// ts-prune-ignore-next` with a reason — *or* widening
-  `tsconfig.json` to cover `meta/`, which would dissolve all 36 outright. **That widening is the
-  single highest-leverage move left on this todo and is still an open decision** with its own
-  blast radius; it is deliberately not proposed here.
+- **`meta/` 37 of the 64 — CORRECTLY PARKED, not blocked on a pending decision.** Measured: 36
+  have a live `meta/__tests__` importer, so un-exporting breaks that test. The remedy is
+  `// ts-prune-ignore-next` with a reason. **An earlier revision of this todo called widening
+  `tsconfig.json` to cover `meta/` "the single highest-leverage move left." That was measured on
+  2026-09-22 (quick `260922-n7s`) and is FALSE — widening makes the ledger bigger.** See below.
+  Treat these 37 as settled: park them, do not hold them open waiting on a tsconfig call.
 - **`src/` 27 of the 64.** Each needs its named test opened individually. Some will be genuine
   test-only consumers (keep the export, ignore-next); some will be comment/coincidental matches
   like the ones above (safe to un-export).
+
+## Widening `tsconfig.json` — measured, and it is NOT the move
+
+Measured 2026-09-22 (quick `260922-n7s`) with a throwaway
+`tsconfig.measure.json` (`{"extends":"./tsconfig.json","include":["src","meta"]}`), ts-prune run
+against it and the findings passed through this gate's own helpers, diffed against both committed
+baselines:
+
+| population | today | with `meta/` | dissolved | newly exposed |
+| ---------- | ----- | ------------ | --------- | -------------- |
+| used-in-module | 67 | **108** | 32 | **73** |
+| unreachable | 47 | 45 | 3 | 1 |
+
+**Net +41.** The old claim did only half the arithmetic: adding `meta` to `include` also makes
+**~60 `meta/` build scripts analysed for the first time**, and their own exports immediately become
+findings (`buildCrossoverIndex.ts`, `captureShellScrollback.ts`, `gen_vtables.ts`,
+`genI18nGateScope.ts`, `graphifyCodeViz.ts`, `hardcodedStringGate.ts`, …).
+
+It is also not free to switch on: `tsc` with `meta/` included exits 2 with **12 real type errors
+across 6 files**. That gap is genuine and is filed as its own todo,
+`2026-09-22-meta-build-scripts-are-not-typechecked.md` — **typecheck coverage and ledger reduction
+are two different goods, and widening only delivers the first.** Decide them separately; this todo
+is the wrong home for the typecheck one.
+
+3 of the 4 parked traps would dissolve under widening (`InvocationForm`, `DownloadedBinary`,
+`FakeHomeEnvKey`). `DECOMPRESS_WORKER_ENTRY_PATH` survives — it is a genuinely live re-export, not
+a scope artifact.
 
 ## Two gotchas measured while shipping the 136
 
