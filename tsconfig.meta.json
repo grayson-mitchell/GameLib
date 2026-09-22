@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["meta", "src/common/typedefs/*.d.ts"]
+}
