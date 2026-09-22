@@ -82,3 +82,59 @@ the same way.
 On a fresh Windows checkout with Developer Mode on (and ideally without it), `pnpm download-helper-binaries`
 then `pnpm exec vite build` succeeds twice in a row with no manual link repair or `build/` cleanup, and a
 deliberately broken `buildStart` shows its own error message rather than a `closeBundle` one.
+
+## Evidence from quick 260922-txw (2026-09-22)
+
+Quick task 260922-txw forced a real `pnpm download-helper-binaries` re-download (public/bin moved
+aside and restored around the run; see that task's SUMMARY and the now-closed tar todo
+`2026-09-17-windows-release-leg-dies-in-install-deps-tar-reads-c-as-a-remote-host.md` for the full
+procedure) on this same Windows 11 box, in Git Bash, GNU tar 1.35, against HEAD with BOTH tar
+fixes (`-f` drive-letter and `-C` escape-unquoting) applied.
+
+**Classification: T-SYMLINK (per that task's T-OK/T-TAR/T-SYMLINK/T-NET/T-DIGEST/T-OTHER
+taxonomy).** `pnpm download-helper-binaries` exited 1. Verbatim:
+
+```
+Error: tar extraction failed (exit 2): tar: gogdl/_internal/Python: Cannot create symlink to
+'Python.framework/Versions/3.12/Python': No such file or directory
+tar: gogdl/_internal/Python.framework/Python: Cannot create symlink to
+'Versions/Current/Python': No such file or directory
+tar: gogdl/_internal/Python.framework/Resources: Cannot create symlink to
+'Versions/Current/Resources': No such file or directory
+tar: Exiting with failure status due to previous errors
+```
+
+**No `tar -tzf failed` line anywhere in the run** — `:89` listing passed for all three darwin
+archives (legendary, gogdl, nile). Extraction (`:138`) also got past the `-f`/`-C` argv entirely:
+the non-symlink entries in `gogdl` DID extract (`gogdl/gogdl` landed, 61 files total under
+`gogdl/`) before GNU tar hit the 3 `Python.framework` symlink entries specifically and failed on
+those. `legendary` and `nile` show 0 files extracted — the top-level `Promise.all` in `main()`
+rejected as soon as `gogdl`'s extraction failed and the process exited before their downloads
+completed; this is a race artifact of the forced-parallel run, not a separate failure mode.
+
+**Link-type counts in the run tree, before restore:** `SYMLINK: 0`, `SYMLINKD: 0`, `JUNCTION: 0` —
+a full CREATION FAILURE this time (zero links of any type were created), which is a DIFFERENT
+observed shape from this todo's own Layer 1 (links extracted, but as the WRONG type — file
+symlinks instead of directory symlinks). Both are consistent with "no privilege", just diverging in
+how GNU tar's Windows symlink emulation fails without it: sometimes it creates a mistyped link
+anyway (Layer 1, prior session), sometimes it refuses outright with an ENOENT-shaped message
+instead of an EPERM-shaped one (this session). The `error taxonomy in the closed tar todo's Task 2
+step still classifies both as T-SYMLINK — "'tar extraction failed' whose stderr names a symlink /
+'Cannot create symlink' / EPERM / Operation not permitted" — this run's exact stderr contains
+"Cannot create symlink to", which is the literal phrase in that rule.
+
+**Developer Mode measurement (same session):**
+`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock\AllowDevelopmentWithoutDevLicense`
+= `0x1` — Developer Mode IS enabled in the registry, confirming this todo's "the operator enabled
+Developer Mode on 2026-09-22" claim over the conflicting "no Developer Mode" note elsewhere.
+However `whoami /priv` for the CURRENT process does NOT list `SeCreateSymbolicLinkPrivilege` at
+all. The likely explanation: Developer Mode was enabled after this session's logon, and the
+privilege has not propagated to this process's token — Developer Mode alone does not retroactively
+grant it to already-running processes. This is offered as the most likely explanation for the T-SYMLINK
+result above, not as a confirmed root cause; re-measuring `whoami /priv` after a fresh logon
+(Layer 0's own open question) would settle it.
+
+**Unmeasured by this note:** whether the Windows `install-deps` CI leg (a fresh `windows-latest`
+runner, fresh process, Developer Mode's CI-runner-image default unknown) would hit this same class
+— recorded as an open, unmeasured risk, consistent with this todo's existing "A CI Windows runner
+needs the same [Developer Mode], or the code needs to stop depending on it" note under Layer 0.
