@@ -432,3 +432,34 @@ JEST_WORKER_ID=txw node meta/runTs.cjs --bundle --platform=node --target=node21 
 - `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` — evidence appended: this
   session's T-SYMLINK Layer B result, as a NEW instance of that todo's Layer 0/1 mechanism (full
   creation failure, not mis-typed-but-created), not a new todo.
+
+## ADDENDUM 2026-09-22 (orchestrator, quick 260922-txw) — the PowerShell leg, and a third defect it exposed
+
+The executor had no PowerShell tool, so the orchestrator ran the PowerShell leg itself. PowerShell
+resolves `C:\Windows\system32\tar.exe` (bsdtar 3.8.8). Under it,
+`tarDriveLetterSafety.test.ts` went **1 failed / 5 passed**: the absolute-archive listing test
+received `["fixture-runner/\r", …]`. **Windows bsdtar ends `-tzf` lines with CRLF**, and
+`listTarEntries` split on `'\n'` only, so every entry carried a trailing `\r`. This is older than
+both `fb9f0d458` and `86ed30f42`. Git Bash's GNU tar emits LF, which is why the executor's
+Git-Bash-only runs were green.
+
+**The secondary observation above is now partly a real finding.** The T-34.9-02 traversal check
+`entry.split('/').includes('..')` does not match a final segment of `..\r`, so a listing
+entry `nile/..` passed the guard under bsdtar. The prefix check still held, and the archives
+are our own pinned-digest builds, so this is not a live vulnerability. It was still a real
+weakening of the guard on the shell a Windows developer uses by default.
+
+Fixed in `e24acc402`: `stdout.split(/\r?\n/)`. A new traversal-gate case
+(`'nile/\r\nnile/..\r\n'` must throw before extraction) runs on every OS because the spawn
+is mocked. **Mutation-proven:** reverting to `split('\n')` gives 1 failed / 53 passed; with
+the fix restored it is 60/60. That commit also applies the prettier formatting that
+`86ed30f42` left undone in `downloadHelperBinaries.test.ts`.
+
+**Both shells after the fix:** `tarDriveLetterSafety` + `downloadHelperBinaries` are
+**59/59 under PowerShell (bsdtar)** before the new case was added, and **60/60 under Git Bash
+(GNU tar)** after it. Of the 43 Meta suites, 9 others fail under PowerShell on this box
+(`runTsSignals`, `verifyRunnerBundle`, `preserveRunnerSymlinks`, `pruneStaleHelperBinaries`,
+`isTauriRemoved`, `isIntelMacRemoved`, `captureShellScrollback`,
+`loginWindowSeamPredicateRemoved`, and before the fix `tarDriveLetterSafety`). They were not
+investigated. None of the other eight is touched by this task. They record that the Meta project
+has never been run on Windows before, not that this task regressed anything.
