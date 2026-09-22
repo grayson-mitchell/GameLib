@@ -133,12 +133,37 @@ window.addEventListener('unhandledrejection', (ev: PromiseRejectionEvent) => {
 //    `body`'s background -- which is exactly what a "blank launch" looks like.
 const rootEl = document.getElementById('root')
 if (rootEl) {
+  const nodeName = (node: Node) => {
+    if (!(node instanceof Element)) return node.nodeName
+    const cls = node.getAttribute('class')
+    return `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ''}${
+      cls ? `.${cls.split(/\s+/).join('.').slice(0, 40)}` : ''
+    }`
+  }
+
   let hadChildren = rootEl.childElementCount > 0
-  new MutationObserver(() => {
+  new MutationObserver((records) => {
     const has = rootEl.childElementCount > 0
     if (hadChildren && !has) {
-      probeMark('ROOT-EMPTIED -- the mounted tree was removed')
+      // Name what left and what (if anything) arrived in the same batch, and whether the
+      // container is still the one this observer was attached to. Two fixes aimed at
+      // i18next suspense left this firing 10 launches out of 10, so the shape of the
+      // mutation is the measurement that matters -- not another hypothesis.
+      const removed = records.flatMap((r) => Array.from(r.removedNodes).map(nodeName))
+      const added = records.flatMap((r) => Array.from(r.addedNodes).map(nodeName))
+      probeMark(
+        `ROOT-EMPTIED removed=[${removed.join(',')}] added=[${added.join(',')}] ` +
+          `sameContainer=${document.getElementById('root') === rootEl} ` +
+          `bodyKids=${document.body.childElementCount}`
+      )
       sample('root-emptied')
+      // Did it come back, and as what?
+      window.setTimeout(() => {
+        probeMark(
+          `after-emptied +250ms kids=${rootEl.childElementCount} ` +
+            `first=${rootEl.firstElementChild ? nodeName(rootEl.firstElementChild) : 'NONE'}`
+        )
+      }, 250)
     }
     hadChildren = has
   }).observe(rootEl, { childList: true })

@@ -170,7 +170,14 @@ describe('a failing route surfaces an error instead of an empty document', () =>
     const start = source.indexOf('function makeLazyFunc(')
     const body = source.slice(start, source.indexOf('const router', start))
     expect(body).not.toMatch(/\.catch\(/)
-    expect(body).toMatch(/await importedFile/)
+    // The awaited expression was the bare `importedFile` until 2026-09-23, when it became a
+    // race against ROUTE_MODULE_TIMEOUT_MS: a module that REJECTS always reached the
+    // errorElement, but one that never settled reached nothing at all and left `#root` empty
+    // -- the blank-window defect. `Promise.race` still rejects the moment `importedFile`
+    // does, so THIS gate's intent (no swallowing, no re-wrapping) is unchanged; only the
+    // literal moved. The bound itself is gated in
+    // `src/frontend/__tests__/routerInitialLoadFallback.test.ts`.
+    expect(body).toMatch(/await Promise\.race\(\[\s*importedFile\b/)
   })
 })
 

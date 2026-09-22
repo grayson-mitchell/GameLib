@@ -1,19 +1,92 @@
 ---
 created: 2026-09-17T00:00:00.000Z
-title: "Packaged .app renders blank — the React tree MOUNTS and is then REMOVED, leaving #root empty (measured 1 in 39, not 1 in 4)"
+title: "Packaged .app renders blank — FIXED: the data router rendered its initial-load state as nothing; empty-root window measured 10/10 before, 0/10 after"
 area: build
-severity: major
+severity: minor
 platform: macos
 ready: live-gate
 source: phase 44-08 live gate (2026-09-17); incidental finding, not part of that phase's scope
 files:
+  - src/frontend/App.tsx:326
+  - src/frontend/__tests__/routerInitialLoadFallback.test.ts
   - src/frontend/blankRenderProbe.ts
   - src/frontend/index.tsx:23
-  - src/frontend/bootErrorSurface.ts:62
-  - src/frontend/state/GlobalState.tsx:1790
 ---
 
 # Packaged .app renders blank, and #root is EMPTY when it does
+
+## RESOLVED 2026-09-23 — cause found, fixed, and measured
+
+`App()` rendered `<RouterProvider router={router} />` with **no `fallbackElement`**. Every
+route module is behind `lazy:` (`makeLazyFunc`), and while the data router resolves the
+FIRST one it renders `fallbackElement` — which, absent, is `null`. Every route element lives
+inside the router, including the `Root` that owns `<div className="App">`, so for that window
+`#root` is completely empty and the app paints `body`'s theme background and nothing else.
+
+The mutation record is what named it, after two wrong hypotheses (below). Three launches out
+of three, identical:
+
+```
+ROOT-EMPTIED removed=[div.UpdateComponent] added=[] sameContainer=true  t=202ms  rootKids=0
+after-emptied +250ms kids=1 first=div#app.App.frameless.macOverlayTitlebar t=462ms rootKids=1
+```
+
+React's own `<Suspense>` fallback is removed, **nothing replaces it**, and ~260-290ms later
+the real app arrives. A blank launch is that window never closing.
+
+**Fix** (`src/frontend/App.tsx`):
+
+1. `fallbackElement={<Loading />}` on `RouterProvider` — the initial-load state now renders
+   something instead of nothing.
+2. `makeLazyFunc` races the module import against `ROUTE_MODULE_TIMEOUT_MS` (20s). A
+   *rejected* import already landed on `errorElement` (`RouteErrorSurface`); one that never
+   settles landed nowhere, which is exactly what a blank-forever launch looks like. It now
+   becomes a visible error instead of an invisible hang.
+
+**Verification, same bundle shape and same harness throughout:**
+
+| build | ROOT-EMPTIED | launches |
+| --- | --- | --- |
+| before any change | 2 | 3 |
+| after the `GlobalState` hypothesis | 10 | 10 |
+| after the fallback-suspense hypothesis | 10 | 10 |
+| with the mutation-naming probe (diagnosis) | 3 | 3 |
+| **with `fallbackElement` + bounded route wait** | **0** | **10** |
+
+All 10 post-fix launches rendered (9 confirmed by pixels at stddev ~64 against a ~27 desktop
+baseline; the 10th was captured while the page was `hidden`, and its geometry sample confirms
+`#root` 1280x800 with the grid resolved).
+
+Gated by `src/frontend/__tests__/routerInitialLoadFallback.test.ts` — 9 assertions, both
+halves revert-to-red proven (removing `fallbackElement` reds 2; restoring the unbounded
+`await importedFile` reds 1).
+
+### TWO REFUTED HYPOTHESES — do not re-try either
+
+Both were implemented, built, and measured on the packaged app, and both left the empty-root
+window at **10 launches out of 10**. Both have been reverted.
+
+1. **`withTranslation()` on `GlobalState`** — a suspending component rendered above the
+   `<Suspense>` boundary. A real hazard in principle (React deletes a root's committed
+   children when a suspension has no boundary above it), just not what was firing here.
+2. **`useTranslation()` in `screens/Loading` + `UpdateComponent`** — a suspending fallback,
+   same reasoning. Also not it: the fallback was being *removed*, not failing to render.
+
+The lesson worth keeping: both hypotheses were plausible, documented React behaviours that
+explained the symptom, and both were wrong. What settled it was logging the MutationObserver's
+`removedNodes` / `addedNodes` — i.e. asking the DOM what actually changed instead of asking
+which theory fit.
+
+### What remains open
+
+- The historical 1-in-39 blank has NOT been reproduced since the fix, and could not be
+  reproduced on demand before it either. The mechanism it needed is gone and the window it
+  lived in is measured closed, but that is inference, not a reproduction.
+- A genuinely stalled route module now shows a spinner for 20s and then an error screen. That
+  is a visible failure rather than a dead window; it does not make the stall itself go away.
+- **Close condition:** one release cycle with no blank report and no `ROOT-EMPTIED` in any
+  log. Then delete `src/frontend/blankRenderProbe.ts`, its `index.tsx` import and the
+  `probeMark` call sites, and move this todo to `completed/`.
 
 ## Problem
 

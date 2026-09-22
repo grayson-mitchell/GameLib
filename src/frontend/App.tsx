@@ -12,6 +12,7 @@ import {
   useRouteError
 } from 'react-router-dom'
 import ErrorComponent from './components/UI/ErrorComponent'
+import Loading from './screens/Loading'
 import NavShell from './components/UI/NavShell'
 import { Tier2PortalProvider } from './components/UI/NavShell/Tier2PortalContext'
 import { StoreEmbedSuppressionProvider } from './components/UI/NavShell/StoreEmbedSuppressionContext'
@@ -202,12 +203,42 @@ function RouteErrorSurface() {
   return <ErrorComponent message={message} />
 }
 
+/**
+ * A route module import that REJECTS lands on `errorElement` (see `RouteErrorSurface` above).
+ * One that never settles lands nowhere at all: the router stays in its initial-load state
+ * forever, and before `fallbackElement` existed that was an empty `#root` and a blank window
+ * with nothing logged. The bound turns that into the rejecting case, which is visible.
+ *
+ * 20s is deliberately far above any observed value -- these modules are local assets served by
+ * Tauri's own protocol handler, and the whole boot reaches `Frontend Ready` in 1-5s on this
+ * machine -- so it can only fire on a genuine stall, never on a slow-but-working launch.
+ */
+const ROUTE_MODULE_TIMEOUT_MS = 20_000
+
 function makeLazyFunc(
   importedFile: Promise<Record<'default', React.ComponentType>>
 ) {
   return async () => {
-    const component = await importedFile
-    return { Component: component.default }
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      const component = await Promise.race([
+        importedFile,
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `route module did not load within ${ROUTE_MODULE_TIMEOUT_MS}ms`
+                )
+              ),
+            ROUTE_MODULE_TIMEOUT_MS
+          )
+        })
+      ])
+      return { Component: component.default }
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
   }
 }
 
@@ -323,5 +354,20 @@ export const routes: RouteObject[] = [
 
 export default function App() {
   const router = useMemo(() => createHashRouter(routes), [])
-  return <RouterProvider router={router} />
+  // `fallbackElement` is what the data router renders while it resolves the INITIAL route's
+  // `lazy()` module. Without it that state renders `null` -- and because every route element
+  // (including `Root`, which owns `<div className="App">`) lives inside the router, `#root`
+  // goes completely empty for the duration.
+  //
+  // Measured on the packaged build 2026-09-23, three launches out of three: React's own
+  // `<Suspense>` fallback `div.UpdateComponent` is REMOVED with nothing added, `#root` sits
+  // empty for ~260-290ms, and only then does `div#app.App` appear. On 1 launch in 39 it never
+  // appeared and the window stayed blank with `#root` at 1280x0 -- a dead-looking app with no
+  // error anywhere. See
+  // `.planning/todos/pending/2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md`.
+  //
+  // Two earlier hypotheses were measured and REFUTED before this one: `withTranslation()` on
+  // `GlobalState` (above the Suspense boundary) and the `useTranslation()` calls in the
+  // fallback pair. Fixing either left the gap at 10 launches out of 10; do not re-try them.
+  return <RouterProvider router={router} fallbackElement={<Loading />} />
 }

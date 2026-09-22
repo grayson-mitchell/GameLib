@@ -1,6 +1,6 @@
 ---
 slug: packaged-blank-render
-status: investigating  # mechanism named, cause of the missing re-mount still open
+status: resolved
 trigger: "Packaged .app renders blank on roughly one launch in four — DOM is populated and React completes boot, so this is layout/paint, not boot"
 created: 2026-09-23
 updated: 2026-09-23
@@ -59,19 +59,15 @@ rendered window at ~10s; it does not discriminate anything.
 
 ## Current Focus
 
-hypothesis: `GlobalState` is `withTranslation()`-wrapped and rendered OUTSIDE the `<Suspense>`
-  boundary, so a namespace load outstanding after the first commit suspends with no boundary
-  above it and React DELETES the root's committed children. That transient happens on ordinary
-  launches (measured, 2 of 3) and recovers in ~60ms; a blank launch is the same transient with
-  the re-mount missing.
-test: the deliberate starve/hidden arms did NOT reproduce a blank (0 of 7), so the next step
-  is NOT another launch loop — it is to remove the suspension-above-the-boundary condition
-  (a `<Suspense>` above `GlobalState`, or namespaces resolved before `root.render`) and
-  re-measure whether `ROOT-EMPTIED` still appears on ordinary launches at all
-expecting: with no suspension above the boundary, `ROOT-EMPTIED` should disappear from every
-  healthy launch; if it does, the window in which a blank can occur is gone
-next_action: decide the remedy at the boundary; until then the probe makes any recurrence
-  self-documenting (`ROOT-EMPTIED` + forwarded error/rejection text)
+hypothesis: CONFIRMED — `<RouterProvider>` had no `fallbackElement`, so the data router
+  rendered `null` while resolving the initial `lazy:` route module. Every route element,
+  including the `Root` that owns `<div className="App">`, lives inside the router, so `#root`
+  was empty for that whole window.
+test: name the mutation instead of theorising — log the MutationObserver's `removedNodes` /
+  `addedNodes` and re-check 250ms later
+expecting: if the fallback is REMOVED with nothing added and the app arrives later, the gap
+  belongs to the router, not to React suspense
+next_action: none — fixed and verified; see Resolution
 
 ## Reproduced
 
@@ -149,7 +145,7 @@ that pairing is not a recipe either.
 - Real `HOME`, deliberately: this is the named real-profile arm. A fake profile changes the
   theme, the library size and the boot work, which is the content whose layout is in question.
 
-## Eliminated
+## Eliminated (all three implemented and MEASURED, not argued)
 
 - hypothesis: code signing causes the blank render
   refuted_by: blank renders measured on a correctly signed bundle (2026-09-17), and 34 signed
@@ -161,6 +157,15 @@ that pairing is not a recipe either.
 - hypothesis: `document.visibilityState === 'hidden'` during boot is sufficient
   refuted_by: hidden2 and hidden3 booted entirely hidden (display asleep from t+1s) and
     mounted normally by t+1500ms
+- hypothesis: `withTranslation()(GlobalState)` suspends above the `<Suspense>` boundary and
+  React deletes the root's committed children
+  refuted_by: implemented, built and measured — `ROOT-EMPTIED` on 10 of 10 launches with it
+    removed. Reverted. A real hazard in principle; not what was firing.
+- hypothesis: the Suspense FALLBACK suspends (`screens/Loading` and `UpdateComponent` both
+  call `useTranslation()`), so React has nothing to show
+  refuted_by: implemented as `useSuspense: false` on both, built (`useSuspense:!1` verified
+    in the shipped bundle) and measured — `ROOT-EMPTIED` on 10 of 10. Reverted. The mutation
+    record then showed the fallback was being REMOVED, not failing to render.
 
 ## Resolution
 
