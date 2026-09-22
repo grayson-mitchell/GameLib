@@ -136,6 +136,15 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
         expect(pluginNames(config)).toContain('gamelib-assemble-renderer-dist')
       })
 
+      // Quick task 260922-hjb: prunes the six locale directories unreachable
+      // from src/common/languages.ts's supportedLanguages out of the build
+      // output before assembleRendererDistPlugin rebuilds build/renderer.
+      it('keeps pruneUnofferedLocalesPlugin in the plugin set', () => {
+        expect(pluginNames(config)).toContain(
+          'gamelib-prune-unoffered-locales'
+        )
+      })
+
       // 260901-a2w F4 safety argument: the prune plugin must run at
       // buildStart (before vite's publicDir copy) and must NOT be moved
       // onto closeBundle (where the symlink plugin lives) -- that would
@@ -168,6 +177,64 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
 
         expect(symlinkPlugin).toBeDefined()
         expect(symlinkPlugin?.closeBundle).toBeDefined()
+      })
+
+      // 260922-hjb T-hjb-03: a half-fix (prune only build/locales, never
+      // touch build/renderer/locales) must be impossible to land green.
+      // Asserted by HOOK IDENTITY, ENFORCE TIER and SYNCHRONICITY -- not
+      // array position -- so a future re-order or an `async` "simplification"
+      // of pruneUnofferedLocalesPlugin's closeBundle turns this red instead
+      // of silently reopening the race hookParallel's non-await interleaving
+      // depends on staying closed.
+      it('runs the locale prune ahead of assembleRendererDistPlugin, on the normal enforce tier, synchronously', () => {
+        const flattened: Plugin[] = []
+        const walk = (entry: unknown): void => {
+          if (!entry) return
+          if (Array.isArray(entry)) {
+            entry.forEach(walk)
+            return
+          }
+          flattened.push(entry as Plugin)
+        }
+        walk(config.plugins)
+
+        const prunePlugin = flattened.find(
+          (p) => p.name === 'gamelib-prune-unoffered-locales'
+        )
+        const assemblePlugin = flattened.find(
+          (p) => p.name === 'gamelib-assemble-renderer-dist'
+        )
+
+        expect(prunePlugin).toBeDefined()
+        expect(assemblePlugin).toBeDefined()
+
+        // Hook identity: buildStart would be undone by vite's own publicDir
+        // copy, which runs strictly after buildStart fires.
+        expect(prunePlugin?.closeBundle).toBeDefined()
+        expect(prunePlugin?.buildStart).toBeUndefined()
+
+        // Synchronicity: hookParallel does not await between non-sequential
+        // plugins, so the ordering guarantee rests on a sync body completing
+        // inside runHook before the loop reaches the next plugin.
+        expect(typeof prunePlugin?.closeBundle).toBe('function')
+        expect(
+          (prunePlugin?.closeBundle as (...args: unknown[]) => unknown)
+            .constructor.name
+        ).toBe('Function')
+
+        // Enforce tier: no `enforce` key here means sortUserPlugins places
+        // this plugin on the normal tier, strictly before every
+        // `enforce: 'post'` plugin -- including assembleRendererDistPlugin,
+        // whose closeBundle rm -rf's build/renderer and re-copies
+        // build/locales into it. This is what makes the ordering independent
+        // of array position.
+        expect(prunePlugin?.enforce).not.toBe('post')
+        expect(assemblePlugin?.enforce).toBe('post')
+
+        // Belt-and-braces: still precedes it in the flattened array too.
+        expect(flattened.indexOf(prunePlugin as Plugin)).toBeLessThan(
+          flattened.indexOf(assemblePlugin as Plugin)
+        )
       })
 
       it('serves the dev server on the port tauri.conf.json devUrl hardcodes', () => {
@@ -222,6 +289,15 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
 
     it('records that a tauri:dev pass proves nothing about the packaged build', () => {
       expect(source).toContain('not evidence about the packaged build')
+    })
+
+    // F-34.9-01's own pattern, applied to 260922-hjb: without this comment a
+    // future reader sees an unexplained plugin call and reorders/deletes it,
+    // and the resulting half-fix only surfaces as a shipped bundle still
+    // holding six unreachable locale directories.
+    it('keeps the 260922-hjb ordering rationale next to the locale-prune plugin', () => {
+      expect(source).toContain('260922-hjb')
+      expect(source).toMatch(/ahead of|before.*assembleRendererDistPlugin/i)
     })
   })
 })
