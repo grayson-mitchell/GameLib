@@ -53,7 +53,8 @@ tauri-plugin-clipboard-manager = "2"
 #
 # The companion single-instance plugin its README recommends pairing with is deliberately NOT
 # added: decision D-44-A rejected that crate with a mechanism that still holds. The full record,
-# and the reason Windows is not registered at all, live at the single-instance guard in
+# and the reason Windows is not registered (at install time via the `tauri.windows.conf.json`
+# override, at runtime by a Linux-only `register_all()`), live at the single-instance guard in
 # `src/main.rs` -- deliberately named there and not here, because that file's source gate strips
 # comments before matching, whereas a plain grep over this file cannot tell a rationale comment
 # from a dependency line.

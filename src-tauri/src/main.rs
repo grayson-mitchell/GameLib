@@ -9090,17 +9090,34 @@ fn main() {
             //     so calling it would only produce a misleading warning on every launch.
             //   - Linux registers at runtime, via a generated `.desktop` file plus `xdg-mime` /
             //     `update-desktop-database`.
-            //   - Windows is NOT registered, and its absence is DELIBERATE (Phase 35 plan 07
-            //     Task 1, `option-c`, under D-05: never advertise an affordance the app cannot
-            //     honour). `acquire_single_instance()` is `#[cfg(unix)]`, so Windows has no
-            //     guard and no way to hand a `gamelib://` open to the running instance -- every
-            //     external URL would start a SECOND app with a SECOND sidecar over one set of
-            //     store files and one download queue, compounding per URL. That is worse than
-            //     no deep link, so the handler stays unregistered until a Windows guard exists.
-            //     The accepted gap is ledger row `U-34.5-18`; the follow-up work is tracked in
-            //     `.planning/todos/pending/`
+            //   - Windows is NOT registered at EITHER stage, and both are DELIBERATE (Phase 35
+            //     plan 07 Task 1, `option-c`, under D-05: never advertise an affordance the app
+            //     cannot honour). At INSTALL time, the Tauri CLI's NSIS/WiX templates would
+            //     otherwise write `Software\Classes\gamelib` from `plugins.deep-link.desktop`
+            //     regardless of this runtime call ever running -- so `tauri.windows.conf.json`
+            //     overrides `schemes` to an explicit `[]` (quick 260922-nx4; never delete the
+            //     key -- see that override's own comment and
+            //     `src/backend/__tests__/windowsDeepLinkSuppression.test.ts`). At RUNTIME,
+            //     `register_all()` stays Linux-only, as this `#[cfg]` shows. Both exist because
+            //     `acquire_single_instance()` is `#[cfg(unix)]`, so Windows has no guard and no
+            //     way to hand a `gamelib://` open to the running instance -- every external URL
+            //     would start a SECOND app with a SECOND sidecar over one set of store files and
+            //     one download queue, compounding per URL. That is worse than no deep link, so
+            //     the handler stays unregistered at both stages until a Windows guard exists. One
+            //     side effect of the install-time override: the plugin's own argv
+            //     `handle_cli_arguments` path (its `init()`, registered below) now matches no
+            //     scheme on Windows either, so it delivers nothing there -- harmless, because
+            //     argv `gamelib://` forwarding on Windows already goes through this file's own
+            //     `sidecar_forward_args` -> `protocol_url_arg` choke point (neither is
+            //     `#[cfg(unix)]`-gated), so this removes a duplicate delivery path, not the only
+            //     one. The accepted gap is ledger row `U-34.5-18`; the follow-up work is tracked
+            //     in `.planning/todos/pending/`
             //     `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`.
-            //     `tauri-plugin-single-instance` is NOT the fix -- see D-44-A above.
+            //     `tauri-plugin-single-instance` is NOT the fix -- see D-44-A above. Lifting this
+            //     gap means: (1) removing the `plugins.deep-link` override from
+            //     `tauri.windows.conf.json`, (2) updating
+            //     `windowsDeepLinkSuppression.test.ts` in the SAME change, and (3) deciding
+            //     whether this `#[cfg(target_os = "linux")]` should widen to include Windows.
             #[cfg(target_os = "linux")]
             {
                 // Carries `src/backend/main.ts:501`'s `process.env.CI !== 'e2e'` guard forward
