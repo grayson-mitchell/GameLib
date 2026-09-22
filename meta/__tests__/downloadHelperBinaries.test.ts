@@ -21,7 +21,7 @@
  */
 import { readFileSync } from 'fs'
 import { EventEmitter } from 'events'
-import { join } from 'path'
+import { isAbsolute, join, resolve } from 'path'
 
 import { archiveName } from '../buildRunnersOnedir'
 import { RELEASE_TAGS } from '../releaseTags'
@@ -287,10 +287,68 @@ describe('downloadOnedirAsset', () => {
         ).toBeUndefined()
       }
       const [, listArgs] = mockedSpawn.mock.calls[0]
-      expect(listArgs).toEqual(['-tzf', expect.any(String)])
+      expect(listArgs).toEqual(['-tzf', 'nile_macOS_arm64_onedir.tar.gz'])
       const [, extractArgs] = mockedSpawn.mock.calls[1]
       expect(extractArgs[0]).toBe('-xzf')
       expect(extractArgs[2]).toBe('-C')
+    })
+  })
+
+  // The Windows install-deps failure (todo
+  // 2026-09-17-windows-release-leg-dies-in-install-deps-tar-reads-c-as-a-
+  // remote-host): GNU tar parses a drive-lettered ARCHIVE operand
+  // (`C:\Users\...\x.tar.gz`) as a `host:path` remote spec and tries to
+  // connect to host `C`. These pins are the ONLY detector of that defect in
+  // the repo: measured 2026-09-21, macOS bsdtar 3.5.3 does NOT remote-parse a
+  // colon-bearing path, so no EXECUTED test on this host can go red for it.
+  // A pin that is green either side of the defect proves nothing -- each
+  // assertion below was observed RED against the pre-fix argv.
+  describe('drive-letter-safe tar argv (Windows install-deps)', () => {
+    it('passes a bare basename as the -f operand with cwd set to the archive directory, for BOTH the list and the extract call', async () => {
+      mockFetchOnce(200, FIXTURE_BUFFER)
+      queueSpawnResult(SAFE_NILE_ENTRIES, 0) // -tzf
+      queueSpawnResult('', 0) // -xzf
+
+      await downloadOnedirAsset('nile', 'arm64')
+
+      // The path writeFile was actually handed. The rewrite must still name
+      // this exact file -- only decomposed into cwd + basename.
+      const writtenPath = mockedWriteFile.mock.calls[0][0] as string
+      expect(writtenPath).toContain('nile_macOS_arm64_onedir.tar.gz')
+      expect(isAbsolute(writtenPath)).toBe(true)
+
+      expect(mockedSpawn).toHaveBeenCalledTimes(2)
+      for (const call of mockedSpawn.mock.calls) {
+        const [, args, options] = call as [
+          string,
+          string[],
+          Record<string, unknown> | undefined
+        ]
+        // No separator, no colon -- nothing GNU tar can read as `host:path`.
+        expect(args[1]).toMatch(/^[^/\\:]+$/)
+        expect(args[1]).toBe('nile_macOS_arm64_onedir.tar.gz')
+
+        const cwd = options?.cwd
+        expect(typeof cwd).toBe('string')
+        expect(isAbsolute(cwd as string)).toBe(true)
+        // Behaviour preservation: cwd + basename must reconstruct the file
+        // the download actually wrote.
+        expect(join(cwd as string, args[1])).toBe(writtenPath)
+      }
+
+      const [, extractArgs] = mockedSpawn.mock.calls[1] as [string, string[]]
+      const dashCIndex = extractArgs.indexOf('-C')
+      expect(dashCIndex).toBeGreaterThan(-1)
+      const destOperand = extractArgs[dashCIndex + 1]
+      // `-C` is a chdir target, NOT remote-parsed (that is exactly what
+      // --force-local overrides, and it overrides the archive name only), so
+      // it stays ABSOLUTE deliberately: cwd now points at tmpdir(), and a
+      // repo-relative destDir would silently relocate the extraction out of
+      // public/bin.
+      expect(isAbsolute(destOperand)).toBe(true)
+      expect(destOperand).toBe(
+        resolve(join('public', 'bin', 'arm64', 'darwin'))
+      )
     })
   })
 
