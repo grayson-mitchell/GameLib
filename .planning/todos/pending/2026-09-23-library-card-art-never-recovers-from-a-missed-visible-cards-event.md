@@ -1,6 +1,6 @@
 ---
 created: 2026-09-23T00:00:00.000Z
-title: "A contiguous block of library cards renders blank art forever, starting ~3.5 rows down — the `visible-cards` handshake is one-shot, `unobserve()` is permanent, and nothing ever retries"
+title: "Library cards render blank art forever — the `visible-cards` handshake is one-shot, `unobserve()` is permanent, and nothing ever retries. The affected SET VARIES between runs"
 area: library-ui
 severity: major
 platform: any
@@ -16,8 +16,11 @@ files:
 
 **Observed live**, returning to the library after opening a game's install dialog:
 
-- the first **~3.5 rows render their art correctly**, and a **contiguous block immediately after them**
-  renders with no artwork (operator correction: the block does NOT start at the very top)
+- FIRST occurrence: the first **~3.5 rows render correctly**, then a **contiguous block** renders
+  with no artwork (operator correction: the block does NOT start at the very top)
+- SECOND occurrence, same sitting: blanks were **SCATTERED, not contiguous** — so the victim set
+  VARIES between runs. See the dedicated section below; this is the single most important fact
+  here and it refutes the first occurrence's tidy boundary story.
 - it **never recovers** — scrolling away and back does not fix it
 - **everything below the block loads normally** while scrolling
 - **exactly one card inside the block** does show art
@@ -46,7 +49,24 @@ games has loaded, so is not touching those."
 The single card showing art inside the block is consistent rather than anomalous: `justPlayed`
 cards take a different render branch (`GameCard/index.tsx:564`).
 
-## Why the block starts ~3.5 rows down rather than at the top — the strongest clue
+## SECOND OCCURRENCE, 2026-09-23 — the affected set is NOT stable
+
+Later in the same sitting the operator hit it again, and this time **the blank cards were SPREAD
+OUT rather than forming a contiguous block.** Recorded verbatim: "hit the gameart not loading
+issue again, but the 'blank' games are now spread out."
+
+**This falsifies the clean commit-boundary story below.** It was written from the first occurrence
+alone and predicted a contiguous run whose extent tracks `rootMargin`; a scattered set does not
+fit it. What survives, and is now the stronger claim, is the CLASS of fault rather than its exact
+shape: a non-deterministic race whose victim set varies run to run. That is consistent with the
+one-shot handshake above and inconsistent with any deterministic off-by-one.
+
+The section below is KEPT rather than deleted because its `rootMargin` experiment is still the
+right discriminator — but treat its specific prediction as REFUTED by this second observation, not
+as pending confirmation. Anyone picking this up should expect a variable victim set and must not
+tune a fix against a single reproduction.
+
+## (REFUTED AS STATED) Why the first occurrence's block started ~3.5 rows down
 
 The observer is built with `rootMargin: '500px'` (`GamesList/index.tsx:97`), so at mount its FIRST
 callback batch announces every card within the viewport plus 500px — considerably more than one
@@ -79,9 +99,10 @@ at all — they are still the `data-invisible` placeholder, so no load is ever a
 
 - **Which miss is it?** Listener-not-yet-attached, or card-remounted-after-its-event. React runs
   child effects before parent effects WITHIN A SINGLE COMMIT, so a clean one-commit mount should
-  be safe — but a library large enough to render across MULTIPLE commits breaks that guarantee for
-  every card after the first chunk, which is what the ~3.5-row boundary points at. The
-  `rootMargin` experiment above discriminates the two. NOT MEASURED — instrument before fixing.
+  be safe — a library rendering across MULTIPLE commits breaks that guarantee. But the victim set
+  VARIES between runs (contiguous once, scattered once), so whatever the mechanism, it is not a
+  fixed boundary. NOT MEASURED — instrument before fixing, and **reproduce at least three times
+  before believing any pattern**, because this defect has already produced two different shapes.
 - **Does a full app restart clear it?** Unknown. If it does, the blast radius is one session; if
   not, something is persisting. This changes the severity assessment and was not tested.
 - **Is it Steam-specific?** Cannot be concluded — only one store was signed in.
