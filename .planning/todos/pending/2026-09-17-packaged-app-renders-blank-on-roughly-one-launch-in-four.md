@@ -4,7 +4,7 @@ title: "Packaged .app renders blank — FIXED: the data router rendered its init
 area: build
 severity: minor
 platform: macos
-ready: live-gate
+ready: blocked
 source: phase 44-08 live gate (2026-09-17); incidental finding, not part of that phase's scope
 files:
   - src/frontend/App.tsx:326
@@ -87,6 +87,10 @@ which theory fit.
 - **Close condition:** one release cycle with no blank report and no `ROOT-EMPTIED` in any
   log. Then delete `src/frontend/blankRenderProbe.ts`, its `index.tsx` import and the
   `probeMark` call sites, and move this todo to `completed/`.
+- **`ready: blocked`, not `live-gate`** (changed 2026-09-23). Nothing here needs a live run on
+  this Mac any more — the fix is measured. It is parked on a release cycle elapsing. Left as
+  `live-gate` it would keep surfacing in `grep -l 'ready: live-gate'` as pickup-able work and
+  cost whoever picked it up a build and ten launches to learn there is nothing to gate.
 
 ## Problem
 
