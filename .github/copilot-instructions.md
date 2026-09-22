@@ -65,7 +65,11 @@ pnpm download-helper-binaries
 pnpm start                             # dev mode with HMR
 ````
 
-- **Type-check**: `pnpm codecheck` (runs `tsc --noEmit`)
+- **Type-check**: `pnpm codecheck` — typechecks BOTH projects: `src/` via `tsconfig.json`
+  (`tsc --noEmit`) and the `meta/` build/release/gate scripts via
+  `tsc -p tsconfig.meta.json --noEmit`. `tsconfig.meta.json` inherits every compiler
+  setting from `tsconfig.json` and declares no `compilerOptions` of its own, so the two
+  cannot drift; `meta/__tests__/tsconfigMeta.test.ts` guards that and the wiring here.
 - **Lint**: `pnpm lint`
 - **Unit tests**: `pnpm test` (Jest, ts-jest). Tests live in `__tests__/` folders alongside source.
 - **E2E tests**: `pnpm test:e2e` (Playwright). Tests in `e2e/`.
