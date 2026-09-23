@@ -46,9 +46,21 @@ const WORKFLOWS_DIR = join(REPO_ROOT, '.github', 'workflows')
 
 /**
  * The intended artifact set, in the order `tauri.conf.json` declares it.
- * nsis -> Windows, appimage -> Linux, dmg -> macOS.
+ * nsis -> Windows, appimage -> Linux, app + dmg -> macOS.
+ *
+ * `app` was ADDED on 2026-09-24 (quick-260924-f9y) and is NOT target-set creep
+ * of the kind this tripwire exists to catch -- it is the macOS half of the
+ * updater feed. `bundle.createUpdaterArtifacts` is `true`, and the bundler
+ * shipped with the INSTALLED CLI (@tauri-apps/cli 2.11.4) recognises exactly
+ * four updater-enabled targets, which it names in the warning it emits for
+ * this very situation: "no updater-enabled targets were built. Please enable
+ * one of these targets: app, appimage, msi, nsis". With `dmg` alone, macOS
+ * matched none of them, so `GameLib.app.tar.gz` and its `.sig` were never
+ * built and `latest.json` carried only `linux-x86_64*` platforms after release
+ * run 35841476015. `app` is declared BEFORE `dmg` because the dmg bundler
+ * consumes the `.app`.
  */
-const EXPECTED_TARGETS = ['nsis', 'appimage', 'dmg']
+const EXPECTED_TARGETS = ['nsis', 'appimage', 'app', 'dmg']
 
 /**
  * Tokens that name the *publishing* path specifically. Deliberately narrower
@@ -77,7 +89,7 @@ const readScripts = (): Record<string, string> => {
   return pkg.scripts ?? {}
 }
 
-describe('D-11: artifact target set is pinned to nsis/appimage/dmg', () => {
+describe('D-11 (+ quick-260924-f9y): artifact target set is pinned to nsis/appimage/app/dmg', () => {
   it('bundle.targets deep-equals the exact intended array (not merely includes appimage)', () => {
     const targets = readTauriConf().bundle?.targets
 

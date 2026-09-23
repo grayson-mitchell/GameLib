@@ -92,6 +92,27 @@ describe('tauri.conf.json bundle shape (D-01 / D-02 -- real installable build, a
     )
   })
 
+  // 2026-09-24 (quick-260924-f9y): `dmg` is NOT an updater-enabled target.
+  // With `createUpdaterArtifacts: true` and no `app` target the bundler builds
+  // no macOS updater artifact at all, so the updater manifest can never gain a
+  // `darwin-*` platform -- observed on release run 35841476015, whose macOS leg
+  // finished green (notarized, stapled, dmg uploaded) and still produced no
+  // `GameLib.app.tar.gz`/`.sig` for the manifest to reference. The installed CLI
+  // (@tauri-apps/cli 2.11.4) enumerates its updater-enabled targets in the
+  // warning it emits for exactly this case: app, appimage, msi, nsis.
+  //
+  // Asserted separately from the target-set pin in
+  // meta/__tests__/artifactTargets.test.ts so that dropping `app` fails a test
+  // that NAMES what broke, rather than reading as a generic array mismatch.
+  test('when createUpdaterArtifacts is true, bundle.targets includes the updater-enabled macOS target app', () => {
+    const conf = loadTauriConf()
+    const bundle = conf.bundle as Record<string, unknown>
+    const targets = bundle.targets as string[]
+    if (bundle.createUpdaterArtifacts === true) {
+      expect(targets).toContain('app')
+    }
+  })
+
   test('bundle.externalBin includes binaries/gamelib-sidecar (D-06)', () => {
     const conf = loadTauriConf()
     const bundle = conf.bundle as Record<string, unknown>
