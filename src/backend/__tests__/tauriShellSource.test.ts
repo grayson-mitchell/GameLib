@@ -2848,6 +2848,290 @@ describe('Phase 46 Windows single-instance guard (REQ-46-01/03/04/07/08, U-34.5-
     expect(region).toContain('deliver_to_running_instance_windows(')
     expect(region).not.toContain('std::process::exit(0)')
   })
+
+  // ---- 46-06 gap closure: Windows focus-sentinel raise (46-LIVE-GATE.md Check 3) -----------
+  // tao-0.35.3 on Windows: `set_visible(true)` issues no `ShowWindow` call for an
+  // already-visible window, and `set_focus()` is gated on `!is_minimized` -- so `show()` +
+  // `set_focus()` alone leaves a minimized window minimized. `unminimize()`
+  // (`set_minimized(false)`) is the only one of the three that issues
+  // `ShowWindow(hwnd, SW_RESTORE)`, and it must run FIRST. The Unix `__GAMELIB_FOCUS__` socket
+  // arm is deliberately NOT gated here: it is frozen byte-identical to the pre-phase baseline by
+  // the phase-46 Unix-region gate (`46-unix-cfg-regions.awk`), and is out of scope for 46-06.
+
+  /**
+   * Slices the Windows sentinel arm out of the accept loop's own `fnRegion`: from
+   * `if trimmed == SINGLE_INSTANCE_FOCUS_SENTINEL` to the next `protocol_url_arg(&[trimmed`
+   * validation call after it. Ends at the validation call, NOT at `return;` -- the raise
+   * closure may itself contain an early return, so anchoring on `return;` would truncate early.
+   */
+  function sentinelArmRegion(code: string): string | null {
+    const loopRegion = fnRegion(
+      code,
+      'fn run_windows_single_instance_accept_loop('
+    )
+    if (loopRegion === null) return null
+    const start = loopRegion.indexOf(
+      'if trimmed == SINGLE_INSTANCE_FOCUS_SENTINEL'
+    )
+    if (start === -1) return null
+    const end = loopRegion.indexOf('protocol_url_arg(&[trimmed', start)
+    if (end === -1) return null
+    return loopRegion.slice(start, end)
+  }
+
+  function sentinelArmProperties(code: string): {
+    region: string | null
+    unminimizeIdx: number
+    showIdx: number
+    setFocusIdx: number
+    hasReceivedLog: boolean
+  } {
+    const region = sentinelArmRegion(code)
+    if (region === null) {
+      return {
+        region: null,
+        unminimizeIdx: -1,
+        showIdx: -1,
+        setFocusIdx: -1,
+        hasReceivedLog: false
+      }
+    }
+    return {
+      region,
+      unminimizeIdx: region.indexOf('.unminimize()'),
+      showIdx: region.indexOf('.show()'),
+      setFocusIdx: region.indexOf('.set_focus()'),
+      hasReceivedLog: region.includes('received single-instance focus sentinel')
+    }
+  }
+
+  test('46-06 Region: the Windows sentinel arm calls unminimize() before show() before set_focus(), and logs receipt', () => {
+    const props = sentinelArmProperties(loadMainRsCode())
+    expect(props.region).not.toBeNull()
+    expect(props.unminimizeIdx).toBeGreaterThan(-1)
+    expect(props.showIdx).toBeGreaterThan(-1)
+    expect(props.setFocusIdx).toBeGreaterThan(-1)
+    expect(props.unminimizeIdx).toBeLessThan(props.showIdx)
+    expect(props.showIdx).toBeLessThan(props.setFocusIdx)
+    expect(props.hasReceivedLog).toBe(true)
+  })
+
+  test('46-06 self-test (RED proof, unminimize): a sentinel arm with show+set_focus but no unminimize fails', () => {
+    const synthetic =
+      'fn run_windows_single_instance_accept_loop(primary: WindowsPrimaryPipe, accept_state: Arc<SidecarState>, accept_app_handle: AppHandle) {\n' +
+      '    if trimmed == SINGLE_INSTANCE_FOCUS_SENTINEL {\n' +
+      '        let _ = window.show();\n' +
+      '        let _ = window.set_focus();\n' +
+      '        return;\n' +
+      '    }\n' +
+      '    let _ = protocol_url_arg(&[trimmed.to_string()]);\n' +
+      '}\n'
+    const props = sentinelArmProperties(synthetic)
+    expect(props.region).not.toBeNull()
+    expect(props.unminimizeIdx).toBe(-1)
+  })
+
+  test('46-06 self-test (RED proof, unminimize ordering): unminimize AFTER set_focus fails the ordering', () => {
+    const synthetic =
+      'fn run_windows_single_instance_accept_loop(primary: WindowsPrimaryPipe, accept_state: Arc<SidecarState>, accept_app_handle: AppHandle) {\n' +
+      '    if trimmed == SINGLE_INSTANCE_FOCUS_SENTINEL {\n' +
+      '        let _ = window.show();\n' +
+      '        let _ = window.set_focus();\n' +
+      '        let _ = window.unminimize();\n' +
+      '        return;\n' +
+      '    }\n' +
+      '    let _ = protocol_url_arg(&[trimmed.to_string()]);\n' +
+      '}\n'
+    const props = sentinelArmProperties(synthetic)
+    expect(props.unminimizeIdx).toBeGreaterThan(-1)
+    expect(props.showIdx).toBeGreaterThan(-1)
+    expect(props.setFocusIdx).toBeGreaterThan(-1)
+    expect(
+      props.unminimizeIdx < props.showIdx && props.showIdx < props.setFocusIdx
+    ).toBe(false)
+  })
+
+  test('46-06 self-test (RED proof, region discipline): unminimize() OUTSIDE the sentinel arm is not picked up by the region gate', () => {
+    const synthetic =
+      'fn run_windows_single_instance_accept_loop(primary: WindowsPrimaryPipe, accept_state: Arc<SidecarState>, accept_app_handle: AppHandle) {\n' +
+      '    if trimmed == SINGLE_INSTANCE_FOCUS_SENTINEL {\n' +
+      '        let _ = window.show();\n' +
+      '        let _ = window.set_focus();\n' +
+      '        return;\n' +
+      '    }\n' +
+      '    let _ = protocol_url_arg(&[trimmed.to_string()]);\n' +
+      '    let _ = window.unminimize();\n' +
+      '}\n'
+    const props = sentinelArmProperties(synthetic)
+    expect(props.region).not.toBeNull()
+    expect(props.unminimizeIdx).toBe(-1)
+  })
+
+  /**
+   * Slices `code` from `startToken` to the next `endToken` after it -- used for the two tray
+   * raise sites (shared code, outside every `#[cfg(unix)]` region), which have no dedicated
+   * `fn` boundary of their own the way `fnRegion` needs.
+   */
+  function traySliceBetween(
+    code: string,
+    startToken: string,
+    endToken: string
+  ): string | null {
+    const start = code.indexOf(startToken)
+    if (start === -1) return null
+    const end = code.indexOf(endToken, start)
+    if (end === -1) return null
+    return code.slice(start, end)
+  }
+
+  function trayShowArmProperties(code: string): {
+    region: string | null
+    unminimizeIdx: number
+    showIdx: number
+  } {
+    const region = traySliceBetween(code, '"show" =>', '"about" =>')
+    if (region === null) return { region: null, unminimizeIdx: -1, showIdx: -1 }
+    return {
+      region,
+      unminimizeIdx: region.indexOf('.unminimize()'),
+      showIdx: region.indexOf('.show()')
+    }
+  }
+
+  test('46-06 Region: the tray "show" menu arm calls unminimize() before show()', () => {
+    const props = trayShowArmProperties(loadMainRsCode())
+    expect(props.region).not.toBeNull()
+    expect(props.unminimizeIdx).toBeGreaterThan(-1)
+    expect(props.showIdx).toBeGreaterThan(-1)
+    expect(props.unminimizeIdx).toBeLessThan(props.showIdx)
+  })
+
+  test('46-06 self-test (RED proof): a tray "show" arm without unminimize fails', () => {
+    const synthetic =
+      '"show" => {\n' +
+      '    if let Some(window) = app_handle.get_webview_window(MAIN_WINDOW_LABEL) {\n' +
+      '        let _ = window.show();\n' +
+      '        let _ = window.set_focus();\n' +
+      '    }\n' +
+      '}\n' +
+      '"about" => open_about_window_from_tray(app_handle),\n'
+    const props = trayShowArmProperties(synthetic)
+    expect(props.region).not.toBeNull()
+    expect(props.unminimizeIdx).toBe(-1)
+  })
+
+  function trayLeftClickProperties(code: string): {
+    region: string | null
+    unminimizeIdx: number
+    showIdx: number
+  } {
+    const region = traySliceBetween(code, 'MouseButton::Left', '.build(app)')
+    if (region === null) return { region: null, unminimizeIdx: -1, showIdx: -1 }
+    return {
+      region,
+      unminimizeIdx: region.indexOf('.unminimize()'),
+      showIdx: region.indexOf('.show()')
+    }
+  }
+
+  test('46-06 Region: the tray icon left-click handler calls unminimize() before show()', () => {
+    const props = trayLeftClickProperties(loadMainRsCode())
+    expect(props.region).not.toBeNull()
+    expect(props.unminimizeIdx).toBeGreaterThan(-1)
+    expect(props.showIdx).toBeGreaterThan(-1)
+    expect(props.unminimizeIdx).toBeLessThan(props.showIdx)
+  })
+
+  test('46-06 self-test (RED proof): a tray left-click handler without unminimize fails', () => {
+    const synthetic =
+      'if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {\n' +
+      '    let app_handle = tray.app_handle();\n' +
+      '    if let Some(window) = app_handle.get_webview_window(MAIN_WINDOW_LABEL) {\n' +
+      '        let _ = window.show();\n' +
+      '        let _ = window.set_focus();\n' +
+      '    }\n' +
+      '}\n' +
+      '.build(app);\n'
+    const props = trayLeftClickProperties(synthetic)
+    expect(props.region).not.toBeNull()
+    expect(props.unminimizeIdx).toBe(-1)
+  })
+
+  function foregroundGrantProperties(code: string): {
+    region: string | null
+    hasGetPid: boolean
+    hasGrant: boolean
+    ownerBeforeGrant: boolean
+    grantBeforeWrite: boolean
+    hasAsfwAny: boolean
+  } {
+    const region = fnRegion(code, 'fn deliver_to_running_instance_windows(')
+    if (region === null) {
+      return {
+        region: null,
+        hasGetPid: false,
+        hasGrant: false,
+        ownerBeforeGrant: false,
+        grantBeforeWrite: false,
+        hasAsfwAny: false
+      }
+    }
+    const ownerIdx = region.indexOf('windows_pipe_owner_matches(')
+    const grantIdx = region.indexOf('AllowSetForegroundWindow(')
+    const writeIdx = region.indexOf('writeln!(file')
+    return {
+      region,
+      hasGetPid: region.includes('GetNamedPipeServerProcessId('),
+      hasGrant: grantIdx > -1,
+      ownerBeforeGrant: ownerIdx > -1 && grantIdx > -1 && ownerIdx < grantIdx,
+      grantBeforeWrite: grantIdx > -1 && writeIdx > -1 && grantIdx < writeIdx,
+      hasAsfwAny: region.includes('ASFW_ANY')
+    }
+  }
+
+  test('46-06 Region (T-46-16): deliver_to_running_instance_windows pins GetNamedPipeServerProcessId(/AllowSetForegroundWindow(, granted AFTER the owner check and BEFORE the payload write, never ASFW_ANY', () => {
+    const props = foregroundGrantProperties(loadMainRsCode())
+    expect(props.region).not.toBeNull()
+    expect(props.hasGetPid).toBe(true)
+    expect(props.hasGrant).toBe(true)
+    expect(props.ownerBeforeGrant).toBe(true)
+    expect(props.grantBeforeWrite).toBe(true)
+    expect(props.hasAsfwAny).toBe(false)
+  })
+
+  test('46-06 self-test (RED proof, AllowSetForegroundWindow ordering): a grant issued BEFORE the owner check fails the ordering', () => {
+    const regressed =
+      'fn deliver_to_running_instance_windows(pipe_name: &str, user_sid: &str, payload: &str) -> Result<(), String> {\n' +
+      '    let mut file = std::fs::OpenOptions::new().write(true).open(pipe_name).unwrap();\n' +
+      '    unsafe { AllowSetForegroundWindow(server_pid); }\n' +
+      '    let owner_sid = GetSecurityInfo(handle);\n' +
+      '    if !windows_pipe_owner_matches(&owner_sid, user_sid) {\n' +
+      '        return Err("no".to_string());\n' +
+      '    }\n' +
+      '    unsafe { GetNamedPipeServerProcessId(handle, &mut server_pid); }\n' +
+      '    writeln!(file, "{payload}").map_err(|e| format!("write failed: {e}")).unwrap();\n' +
+      '    Ok(())\n' +
+      '}\n'
+    const props = foregroundGrantProperties(regressed)
+    expect(props.hasGetPid).toBe(true)
+    expect(props.hasGrant).toBe(true)
+    expect(props.ownerBeforeGrant).toBe(false)
+  })
+
+  test('46-06 self-test (RED proof, AllowSetForegroundWindow least privilege): passing ASFW_ANY fails the least-privilege check', () => {
+    const regressed =
+      'fn deliver_to_running_instance_windows(pipe_name: &str, user_sid: &str, payload: &str) -> Result<(), String> {\n' +
+      '    if !windows_pipe_owner_matches(&owner_sid, user_sid) {\n' +
+      '        return Err("no".to_string());\n' +
+      '    }\n' +
+      '    unsafe { AllowSetForegroundWindow(ASFW_ANY); }\n' +
+      '    writeln!(file, "{payload}").map_err(|e| format!("write failed: {e}")).unwrap();\n' +
+      '    Ok(())\n' +
+      '}\n'
+    const props = foregroundGrantProperties(regressed)
+    expect(props.hasGrant).toBe(true)
+    expect(props.hasAsfwAny).toBe(true)
+  })
 })
 
 // Debug session `finder-reveal-no-selection` (2026-08-23), closing Phase 34.3 live-gate item 2 /
