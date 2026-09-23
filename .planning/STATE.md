@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 46-04-PLAN.md -- gamelib:// registered on Windows (nx4 override dropped; installer.nsi carries 6 Classes\gamelib lines)
-last_updated: "2026-09-23T11:52:34.000Z"
-last_activity: 2026-09-23 -- Completed 46-04 (un-suppressed gamelib:// on Windows; debug NSIS setup built at 607089433, not run); 46-05 live gate next
+stopped_at: 46-05 live gate FAIL at Check 3 (minimized primary not restored by the focus sentinel) -- operator chose fix-forward via /gsd-plan-phase 46 --gaps
+last_updated: "2026-09-24T00:00:00.000Z"
+last_activity: 2026-09-24 -- 46-05 live gate run on Windows 11: P0 + Checks 1-2 PASS (deep links delivered warm, 1 shell / 1 sidecar), Check 3 FAIL, Checks 4-5 not run (46-LIVE-GATE.md, 9aaece168)
 progress:
   total_phases: 42
   completed_phases: 35
@@ -6156,7 +6156,7 @@ Recent decisions affecting current work:
 > as history" block, unchanged in content.
 
 Last session: 2026-09-23T11:11:31.839Z
-Stopped at: Completed 46-04-PLAN.md -- gamelib:// registered on Windows; 46-05 live gate next
+Stopped at: 46-05 live gate FAIL at Check 3 -- fix-forward via /gsd-plan-phase 46 --gaps
 
 --- prior session (43-09), preserved as history ---
 Last session: 2026-09-10T15:33:38+12:00
