@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 46-02-PLAN.md -- Windows single-instance guard FFI wired into main()
-last_updated: "2026-09-23T11:11:31.881Z"
-last_activity: 2026-09-23
+stopped_at: Completed 46-03-PLAN.md -- Windows named-pipe accept loop + Phase 46 source gates
+last_updated: "2026-09-23T12:10:00.000Z"
+last_activity: 2026-09-23 -- Completed 46-03 (Windows named-pipe accept loop spawned in .setup(); 39 comment-stripped source gates with RED pairs)
 progress:
   total_phases: 42
   completed_phases: 35
   total_plans: 504
-  completed_plans: 493
+  completed_plans: 494
   percent: 83
 ---
 
@@ -4908,6 +4908,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P27 | 20min | 3 tasks | 2 files |
 | Phase 46 P01 | 6min | 2 tasks | 2 files |
 | Phase 46 P02 | 45min | 2 tasks | 3 files |
+| Phase 46 P03 | 25min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -6150,7 +6151,7 @@ Recent decisions affecting current work:
 > as history" block, unchanged in content.
 
 Last session: 2026-09-23T11:11:31.839Z
-Stopped at: Completed 46-02-PLAN.md -- Windows single-instance guard FFI wired into main()
+Stopped at: Completed 46-03-PLAN.md -- Windows named-pipe accept loop + Phase 46 source gates
 
 --- prior session (43-09), preserved as history ---
 Last session: 2026-09-10T15:33:38+12:00
