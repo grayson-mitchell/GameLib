@@ -1340,9 +1340,15 @@ describe('release-tauri.yml bounds the tauri-action step (260923-mrx)', () => {
 
   test('the diagnostic step never echoes credentials and never swallows failure via || true', () => {
     const steps = parseReleaseSteps()
-    const body =
-      steps.find((s) => (s.run ?? '').includes('notarytool history'))?.run ?? ''
-    const instructions = stripHashComments(body)
+    const diagStep = steps.find((s) =>
+      (s.run ?? '').includes('notarytool history')
+    )
+
+    // Non-vacuity: otherwise the negative assertions below pass for free
+    // when the step simply doesn't exist yet.
+    expect(diagStep).toBeDefined()
+
+    const instructions = stripHashComments(diagStep?.run ?? '')
 
     expect(instructions).not.toMatch(/set -x/)
     expect(instructions).not.toMatch(/echo .*\$APPLE_PASSWORD/)
