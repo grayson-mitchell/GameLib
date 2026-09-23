@@ -5,7 +5,7 @@ area: build
 severity: minor
 platform: macos
 ready: human
-needs: credentialed-in-app-store-actions-on-a-signed-build + keychain-prompt-count-across-two-signed-releases
+needs: amazon-login-on-a-signed-build + keychain-prompt-count-across-two-signed-releases
 status: OPEN
 found_by: 'Reconsideration of the two keyring-deferral todos, 2026-09-04 — asked "what actually governs Keychain prompt COUNT?" rather than "how do I implement this todo?"'
 source: '.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md (park note, finding 2)'
@@ -439,6 +439,44 @@ Two facts that constrain when it can be run:
 `needs:` has been widened to carry both arms so neither can be closed on the strength of the
 other. They are independent: the credentialed arm needs a person and no new release; this arm
 needs two releases and comparatively little human time.
+
+**14. (c-iii) RUN on 2026-09-24 — two of its three stores are CLOSED GREEN; only Amazon remains.**
+Added in the same follow-up pass as item 13. Item 10 treated (c-iii) as a single credentialed
+errand. It is three, and two of them needed no credentials at all because live sessions already
+existed — so they were run rather than deferred.
+
+- **Epic — CLOSED GREEN, and this is the strongest single result in the item.** The signed,
+  notarized, hardened-runtime `legendary` from the published bundle, pointed at the real Epic
+  config, performed an **authenticated round-trip**: it logged
+  `[Core] INFO: Trying to re-use existing login session...`, exited **rc=0**, and returned live
+  library counts (`games_available` and `games_installed` both non-zero, `egl_sync_enabled` true).
+  This is strictly stronger than item 10's `--version` probe: that proved only that the binary
+  could exec and load its dylibs, whereas this proves the network + on-disk-session + hardened
+  runtime path works end to end in the shipped build. Account identifiers deliberately not
+  recorded here.
+- **GOG — exercised, but state the claim precisely.** `gog_store/auth.json` was rewritten at
+  **07:11:42**, and the signed build's shell started at **07:11:36**, with no other GameLib
+  instance running (the orphan described in item 9 had been terminated earlier). A token refresh
+  is an authenticated round-trip with GOG, and it is attributable to the signed build by strict
+  time ordering. What this does NOT separately prove is that the `gogdl` binary specifically was
+  invoked — GOG auth is handled by the sidecar. Do not upgrade this to "gogdl exercised".
+- **Amazon — BLOCKED, and this is the ENTIRE remainder of (c-iii).** `nile_store/config.json` is
+  **2 bytes** (`{}`), i.e. no Amazon session has ever been established on this machine. Unlike
+  Epic and GOG there is nothing to re-use, so this arm genuinely requires a human to log in with
+  real credentials. `needs:` has been narrowed from the whole credentialed group to this one arm.
+
+**A structural fact that explains why a person is required, recorded so it is not rediscovered.**
+The Tauri webview is **invisible to macOS Accessibility**: `System Events` reports window 1 of
+process `GameLib` as having 4 UI elements whose names are all `missing value`, and a raw
+coordinate click returns error **-25208**. So the app's UI cannot be driven programmatically at
+all — not for this arm and not for any future live gate that needs an in-app click. This is the
+same shape as the existing lesson that AX is blind to the Tauri native dialog.
+
+**One weak signal, explicitly NOT evidence for consequence 2.** Launching the signed build against
+the real profile produced **no Keychain prompt**. That is encouraging but nearly worthless as
+evidence: the store sessions read at boot live in JSON files under Application Support, not in the
+Keychain, so no prompt was expected either way. Consequence 2 still requires the N -> N+1 test in
+item 13, and nothing here shortens it.
 
 ## Related
 
