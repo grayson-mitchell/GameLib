@@ -165,10 +165,94 @@ nothing here. This project has a standing lesson about exactly this shape
 - Download the published asset **through a browser** (not `curl`, which does not set the quarantine
   attribute) on a machine that has never built the app, and confirm it opens with no Gatekeeper
   interstitial.
-- Confirm the run log contains NO `::warning::Signing skipped` line.
+- Confirm the run log emits no signing-skipped ANNOTATION — grep the job log for `##[warning]`,
+  which is the runner's rendering of an EMITTED annotation, and cross-check that
+  `grep -c 'Notarizing'` over the same log returns 2, which means notarization actually ran and
+  the app was stapled.
+  - **TRAP — do NOT grep for the bare `::warning::` form.** Measured on the 2026-09-23 PASSING run
+    `35841476015`: the string `::warning::Apple notarization credentials are set but signing is not
+    fully configured; skipping notarization` DOES appear in that macOS job log — as the step's own
+    SCRIPT SOURCE, echoed by the runner with a cyan `[36;1m` prefix, NOT as an emitted annotation.
+    The only real `##[warning]` in that whole job is the Node.js 20 deprecation notice. A reader
+    following the old wording of this bullet literally would have reached the OPPOSITE of the truth
+    on a run that passed.
 
 Only after that is the claim in consequence (2) testable: install release N, grant the Keychain
 prompt once, update to release N+1, and confirm no re-prompt.
+
+## STATUS 2026-09-23 (quick-260923-uvt) — three of the five Verification bullets are SATISFIED
+
+This section does NOT revise `## STATUS 2026-09-14` or `## STATUS 2026-09-17` above it. Each
+records what was believed then and is left intact; this one adds what was measured on 2026-09-23.
+The frontmatter is unchanged.
+
+**1. The run.** Tag `v0.7.0-notarize-test3` at commit `c946239ce`; GitHub Actions run
+`35841476015`; macOS job `107117309605`. Apple returned submission
+`0f65332c-56c8-484d-822a-13163bc14ddb` as **`Accepted`** in 1m09s, and the app was then stapled
+(`Stapling app...`). The artifact everything below was measured against is
+`GameLib_0.7.0_aarch64.dmg`, 97083599 bytes, sha256
+`c74717b59421119eaacce55c51ff153222c9e03296f87d817ed422423dba669c`, from draft release `378785323`.
+
+**2. Three of THIS TODO'S OWN five Verification bullets are SATISFIED** — and satisfied on a REAL
+PUBLISHED ARTIFACT rather than a local build, which is precisely the distinction the Verification
+section above insists on.
+
+| Verification bullet | verbatim evidence |
+| --- | --- |
+| `codesign -dv --verbose=4 GameLib.app` — must name the Developer ID authority, not `adhoc` | `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)`, `CodeDirectory v=20500 size=26621 flags=0x10000(runtime) hashes=821+7 location=embedded`, `Notarization Ticket=stapled`, `TeamIdentifier=S7U223QWXJ`. Not adhoc. |
+| `spctl -a -vvv -t install GameLib.app` — must report `accepted` / `source=Notarized Developer ID` | `GameLib.app: accepted`, `source=Notarized Developer ID`, `origin=Developer ID Application: grayson mitchell (S7U223QWXJ)`, `SPCTL_RC=0` |
+| `xcrun stapler validate GameLib.app` — must confirm the ticket is stapled | `The validate action worked!`, `STAPLER_RC=0` |
+
+**3. The fourth bullet is STILL OWED — this is residual (a).** The browser-download arm: fetch the
+published asset **through a browser**, on a machine that has never built the app, and confirm it
+opens with no Gatekeeper interstitial. `needs: release-run-then-browser-download-verify` already
+names exactly this, and needs no change — this todo has been carrying the right `needs:` value all
+along.
+
+**4. The near-miss, recorded because it is worth recording.** This todo WARNED IN ADVANCE that
+`curl` does not set the quarantine attribute. The 2026-09-23 verification fetched the dmg through
+the GitHub API anyway and hit precisely that trap: `xattr -l` on the downloaded dmg showed
+`com.apple.diskimages.recentcksum` and `com.apple.provenance` only — **no `com.apple.quarantine`**.
+`spctl -t exec` is an assessment performed on request; it is NOT the quarantined first-launch
+dialog a real user meets. The warning written into this file was right, and it was not heeded. That
+is the accurate framing — not "the check was slightly incomplete".
+
+**5. Residual (c), carried here from the now-closed notarization todo (its u3o item 8(c)).** Recipe
+step 6's in-app invocations — an Epic login via `legendary`, an Amazon library refresh via `nile`,
+a GOG action via `gogdl` — were NOT performed; they need credentials and a human. It is a
+human-gated errand rather than a defect risk, which is why it was never in that todo's `needs:`.
+It is tracked HERE because it is the same shape as the browser-download bullet above: both are
+live-gate errands against a published artifact, and they should be run in the same sitting.
+Deliberately NOT added to `needs:` — named in prose instead.
+
+**6. The 60-minute bound — one sentence, because the file that used to hold it is now closed.**
+`timeout-minutes: 60` on the `tauri-action` step (shipped by quick-260923-mrx) was exercised once
+and never approached — step 19 took 8m32s end to end, of which notarization was 1m09s — which is
+ONE datapoint, on a DIFFERENT submission from np3's: it SUPPORTS but does not prove that np3's
+2h05m37s of silence was `notarytool`'s wait rather than Apple being slow, and it does NOT settle
+p95 item 6, because Apple exposes `uploadDate` and no `completedDate`.
+
+**7. This todo's TITLE is now partly false — stated plainly.** A signed and notarized artifact HAS
+been published, to the `v0.7.0` draft release, and HAS been verified. The todo stays OPEN because
+the browser-download arm of `needs:` is genuinely outstanding. Two changes follow from that and are
+recorded here as **PROPOSALS AWAITING THE OPERATOR — deliberately NOT applied by quick-260923-uvt**:
+
+- **Proposal 1 — `severity: major` is arguably now `minor`.** CLAUDE.md defines `major` as "a
+  feature is broken or a measurement is silently contaminated". The feature — a signed, notarized,
+  stapled macOS build — is MEASURED WORKING on a published artifact. What remains is two unverified
+  arms with no known defect behind either, which is CLAUDE.md's `minor`: "polish, rough edge, or a
+  latent trap with no live consequence". This is the same reasoning u3o applied when it moved the
+  notarization todo `major` -> `minor`.
+- **Proposal 2 — restate the title.** It reads "no signed/notarized artifact has ever been
+  published or verified". One has. The title is defensible as a historical record of why this todo
+  exists — the same footing the notarization todo's title sat on when it was closed — but if titles
+  should describe the world rather than the origin, this is the one to change.
+
+**8. The closed sibling.** `2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md`
+is CLOSED and now lives at
+`.planning/todos/completed/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md`,
+closed by `quick-260923-uvt`. Its `### STATUS 2026-09-23 (quick-260923-u3o)` section is the full
+evidence trail for everything above.
 
 ## Related
 
