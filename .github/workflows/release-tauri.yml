@@ -33,6 +33,37 @@
 # secret set is present, and the invariant is proven by executed tests
 # (releaseWorkflow.test.ts's "Apple signing env gate, executed" block)
 # reading resolved $GITHUB_ENV content, not asserted by comment prose alone.
+#
+# 2026-09-23 (quick task 260923-mrx, run 35808881023): before this task,
+# nothing in this file set timeout-minutes anywhere, so every leg inherited
+# GitHub's 360-minute job default. The macOS leg of that run sat silently
+# inside `xcrun notarytool submit --wait` for 2h05m37s before a hand
+# cancellation. The tauri-action step now carries timeout-minutes: 60, and a
+# macOS-only if: failure() step immediately after it asks
+# `notarytool history` what happened to the submission, so a future timeout
+# is self-explaining in the run's own log instead of requiring a human with
+# local Apple credentials to find out by hand.
+#
+# Stated plainly rather than implied: a step-level timeout-minutes on
+# tauri-action CONFLATES build time with notarization time. It is a blunt
+# bound over the whole bundle+sign+notarize step, not a notarization-specific
+# one -- tauri-bundler hardcodes --wait on its own `xcrun notarytool submit`
+# call and exposes neither a timeout flag nor an environment variable for it
+# (see this task's locked decisions for the upstream PRs checked). Accepting
+# that conflation is a deliberate tradeoff forced by that gap, not an
+# oversight.
+#
+# The bound applies to all three matrix legs, because timeout-minutes is set
+# on one step shared by the whole strategy.matrix. Linux measured 4m53s
+# end-to-end on tauri-action on run 35808881023 (60 min is ~12x headroom).
+# No equivalent measurement of this step exists for Windows on that run --
+# the Windows leg died earlier, at updater signing -- so 60 minutes there is
+# an inference from this workflow's own GAP-B header entry on a different
+# run (~13-20 min for the bundle), not a measurement of tauri-action itself.
+# On a cold swatinem/rust-cache, a first-run Rust build alone could plausibly
+# consume a large fraction of 60 minutes; if a cold leg ever trips this bound,
+# the correct response is to raise the number with the new measurement
+# recorded, not to remove the bound.
 name: Release Tauri
 
 on:
@@ -524,6 +555,7 @@ jobs:
           pnpm sign:macos-resources -- --dir build/bin/arm64/darwin --keychain "$KEYCHAIN"
 
       - uses: tauri-apps/tauri-action@v1
+        timeout-minutes: 60
         with:
           tagName: v__VERSION__
           releaseName: 'GameLib v__VERSION__'
@@ -531,3 +563,44 @@ jobs:
           releaseDraft: true
           prerelease: true
           args: ${{ steps.build_args.outputs.args }}
+
+      # Quick task 260923-mrx. Run 35808881023 (tag v0.7.0-notarize-test2): the
+      # macOS leg's tauri-action step sat silent inside `xcrun notarytool
+      # submit --wait` for 2h05m37s between "Notarizing .../GameLib.app" and a
+      # hand cancellation, then left an orphan notarytool pid. The
+      # timeout-minutes: 60 bound above turns that silent hang into a failed
+      # step -- but the log a timeout leaves behind says only "The operation
+      # was canceled.", so whether the submission was Accepted, In Progress or
+      # Invalid still required a human with local Apple credentials to find
+      # out. This step closes that gap by asking Apple from inside the same
+      # run, but only once the job has already failed and only on macOS.
+      #
+      # continue-on-error: true, NOT `|| true`. Both would keep the job green,
+      # but only continue-on-error also leaves a visible "this step failed"
+      # annotation if notarytool itself errors (bad credentials, network,
+      # etc) -- `|| true` would swallow that signal too, making a broken
+      # diagnostic indistinguishable in the UI from a successful empty query.
+      # Picking one only, per this task's locked decision.
+      #
+      # Gated on all three of APPLE_ID/APPLE_PASSWORD/APPLE_TEAM_ID being
+      # non-empty, same env.X != '' style as "Warn if Windows signing will be
+      # skipped" above -- those three names are written to $GITHUB_ENV by
+      # "Enable Apple signing only when a complete cert secret set is
+      # enrolled" ONLY on a fully-enrolled run, so on a secrets-less run this
+      # `if:` is false and the step is skipped (an unset context value
+      # coerces to '' in a GitHub expression comparison).
+      #
+      # No APPLE_* env: map here, deliberately (GAP-A, restated from the
+      # signing step above): the three values are already in this step's
+      # process environment via $GITHUB_ENV, read the same way
+      # $APPLE_CERTIFICATE is read by "Sign every Mach-O...". No set -x, no
+      # echo of the command line or of $APPLE_PASSWORD (an app-specific
+      # password) -- GitHub masks registered secrets in logs, but that
+      # masking is not relied on here as the only control.
+      - name: Diagnose a notarization timeout (diagnostic only, never fails the job)
+        if: failure() && startsWith(matrix.platform, 'macos') && env.APPLE_ID != '' && env.APPLE_PASSWORD != '' && env.APPLE_TEAM_ID != ''
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun notarytool history --apple-id "$APPLE_ID" --password "$APPLE_PASSWORD" --team-id "$APPLE_TEAM_ID"
