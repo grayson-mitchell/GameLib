@@ -596,3 +596,116 @@ describe('preserveRunnerSymlinks', () => {
     }
   })
 })
+
+describe('preserveRunnerSymlinksPlugin -- Layer 3 (quick 260923-tip): closeBundle rethrows an earlier build error instead of masking it', () => {
+  function driveHooks(plugin: ReturnType<typeof preserveRunnerSymlinksPlugin>) {
+    const buildEnd = plugin.buildEnd as unknown as (err?: Error) => void
+    const closeBundle = plugin.closeBundle as unknown as () => void
+    return { buildEnd, closeBundle }
+  }
+
+  it("buildEnd(err) then closeBundle() throws the SAME error instance, not the plugin's own message", () => {
+    // An orphan-dest fixture would normally make this plugin's OWN
+    // "refusing to emit" throw fire -- proving the recorded error wins even
+    // when the plugin's own guard would otherwise have something to say.
+    const { sourceRoot, destRoot } = buildOrphanDestFixture()
+    const plugin = preserveRunnerSymlinksPlugin({
+      sourceDir: sourceRoot,
+      destDir: destRoot
+    })
+    const { buildEnd, closeBundle } = driveHooks(plugin)
+    const firstCause = new Error('first cause')
+
+    buildEnd(firstCause)
+
+    let thrown: unknown
+    try {
+      closeBundle()
+    } catch (error) {
+      thrown = error
+    }
+    expect(thrown).toBe(firstCause)
+  })
+
+  it('in the errored case, restoreSymlinks performs NO work -- no links are created against the temp dest tree', () => {
+    const { sourceRoot, destRoot } = buildKnownBadFixture()
+    const plugin = preserveRunnerSymlinksPlugin({
+      sourceDir: sourceRoot,
+      destDir: destRoot
+    })
+    const { buildEnd, closeBundle } = driveHooks(plugin)
+
+    buildEnd(new Error('first cause'))
+    expect(() => closeBundle()).toThrow('first cause')
+
+    // The known-bad fixture's Versions/Current is still whatever cp -RL
+    // left it as (a real, dereferenced directory) -- NOT a symlink, proving
+    // restoreSymlinks never ran.
+    const versionsCurrentDest = join(
+      destRoot,
+      ...GOGDL_INTERNAL.split(sep),
+      'Python.framework',
+      'Versions',
+      'Current'
+    )
+    expect(lstatSync(versionsCurrentDest).isSymbolicLink()).toBe(false)
+  })
+
+  it('buildEnd() called with NO argument (the success path) leaves normal behaviour unchanged: closeBundle still throws its OWN error for skipped/rejected, and still succeeds on a healthy tree', () => {
+    const orphan = buildOrphanDestFixture()
+    const orphanPlugin = preserveRunnerSymlinksPlugin({
+      sourceDir: orphan.sourceRoot,
+      destDir: orphan.destRoot
+    })
+    const orphanHooks = driveHooks(orphanPlugin)
+    orphanHooks.buildEnd(undefined)
+    expect(() => orphanHooks.closeBundle()).toThrow(
+      /refusing to emit a bundle with unrestored symlink\(s\)/
+    )
+
+    const healthy = buildKnownBadFixture()
+    const healthyPlugin = preserveRunnerSymlinksPlugin({
+      sourceDir: healthy.sourceRoot,
+      destDir: healthy.destRoot
+    })
+    const healthyHooks = driveHooks(healthyPlugin)
+    healthyHooks.buildEnd(undefined)
+    expect(() => healthyHooks.closeBundle()).not.toThrow()
+  })
+
+  it('closeBundle() with buildEnd never called at all behaves like the success path (a plugin instance must not require the hook to have fired)', () => {
+    const { sourceRoot, destRoot } = buildKnownBadFixture()
+    const plugin = preserveRunnerSymlinksPlugin({
+      sourceDir: sourceRoot,
+      destDir: destRoot
+    })
+    const { closeBundle } = driveHooks(plugin)
+
+    expect(() => closeBundle()).not.toThrow()
+  })
+
+  it('each plugin instance is independent: a recorded error on one instance does not leak into a second instance created in the same process', () => {
+    const errored = buildOrphanDestFixture()
+    const erroredPlugin = preserveRunnerSymlinksPlugin({
+      sourceDir: errored.sourceRoot,
+      destDir: errored.destRoot
+    })
+    const erroredHooks = driveHooks(erroredPlugin)
+    erroredHooks.buildEnd(new Error('first cause on instance A'))
+
+    const healthy = buildKnownBadFixture()
+    const healthyPlugin = preserveRunnerSymlinksPlugin({
+      sourceDir: healthy.sourceRoot,
+      destDir: healthy.destRoot
+    })
+    const healthyHooks = driveHooks(healthyPlugin)
+
+    // Instance B never had buildEnd called with an error -- it must not see
+    // instance A's recorded error.
+    expect(() => healthyHooks.closeBundle()).not.toThrow()
+    // Instance A still rethrows its own recorded error.
+    expect(() => erroredHooks.closeBundle()).toThrow(
+      'first cause on instance A'
+    )
+  })
+})

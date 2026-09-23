@@ -270,6 +270,23 @@ export function restoreSymlinks(
  * Its failing direction is proven at UNIT level only (see the module's
  * test file); no comment here claims a live or build-level observation of
  * this throw firing.
+ *
+ * Quick task 260923-tip, Layer 3: rollup still runs every plugin's
+ * `closeBundle` hook even after an earlier `buildStart`/copy failure, so
+ * whichever guard throws there (this one, or `assembleRendererDist`'s)
+ * REPLACES the real first cause in `vite build`'s printed output -- the
+ * actual error (e.g. `pruneStaleHelperBinaries: refusing to prune ...`) was
+ * previously visible only by calling `build()` through vite's JS API with a
+ * `buildEnd(err)` hook. `buildEnd(err)` is the only hook that sees that
+ * first error; `closeBundle` has no other way to learn of it. `earlierBuildError`
+ * is a CLOSURE-LOCAL recorder (not module scope), matching
+ * `assembleRendererDistPlugin`'s own `bundleKeys` precedent -- multiple
+ * plugin instances coexist in one process (e.g. across jest test cases) and
+ * must never contaminate each other. When an earlier error was recorded,
+ * `closeBundle` rethrows that SAME error instance (no wrapping, no message
+ * prefix) and skips its own body entirely -- restoring links over a
+ * half-copied `build/` tree is exactly what produced the dangling links
+ * that poisoned the NEXT build (Layer 2's own cascade).
  */
 export function preserveRunnerSymlinksPlugin(options?: {
   sourceDir?: string
@@ -278,11 +295,20 @@ export function preserveRunnerSymlinksPlugin(options?: {
   const sourceDir = options?.sourceDir ?? join(__dirname, '..', 'public')
   const destDir = options?.destDir ?? join(__dirname, '..', 'build')
 
+  let earlierBuildError: Error | undefined
+
   return {
     name: 'gamelib-preserve-runner-symlinks',
     apply: 'build',
     enforce: 'post',
+    buildEnd(err) {
+      if (err) earlierBuildError = err
+    },
     closeBundle() {
+      if (earlierBuildError) {
+        throw earlierBuildError
+      }
+
       const { restored, skipped, rejected } = restoreSymlinks(
         sourceDir,
         destDir

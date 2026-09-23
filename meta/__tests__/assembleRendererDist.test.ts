@@ -26,6 +26,7 @@ import { join } from 'node:path'
 
 import {
   assembleRendererDist,
+  assembleRendererDistPlugin,
   STATIC_RENDERER_DIRS,
   STATIC_RENDERER_FILES
 } from '../assembleRendererDist'
@@ -247,5 +248,125 @@ describe('assembleRendererDist -- exported constants', () => {
   test('STATIC_RENDERER_FILES and STATIC_RENDERER_DIRS match the design', () => {
     expect(STATIC_RENDERER_FILES).toEqual(['icon.png'])
     expect(STATIC_RENDERER_DIRS).toEqual(['locales'])
+  })
+})
+
+describe('assembleRendererDistPlugin -- Layer 3 (quick 260923-tip): closeBundle rethrows an earlier build error instead of masking it', () => {
+  function driveHooks(plugin: ReturnType<typeof assembleRendererDistPlugin>) {
+    const generateBundle = plugin.generateBundle as unknown as (
+      options: unknown,
+      bundle: Record<string, unknown>
+    ) => void
+    const buildEnd = plugin.buildEnd as unknown as (err?: Error) => void
+    const closeBundle = plugin.closeBundle as unknown as () => void
+    return { generateBundle, buildEnd, closeBundle }
+  }
+
+  test("buildEnd(err) then closeBundle() throws the SAME error instance, not the plugin's own message", () => {
+    const outDir = outDirPath()
+    const rendererDir = rendererDirPath()
+    // Deliberately an EMPTY outDir -- this would normally make the plugin's
+    // own "bundleKeys is empty" throw fire, proving the recorded error wins
+    // even when the plugin's own guard would otherwise have something to
+    // say.
+    const plugin = assembleRendererDistPlugin({ outDir, rendererDir })
+    const { buildEnd, closeBundle } = driveHooks(plugin)
+    const firstCause = new Error('first cause')
+
+    buildEnd(firstCause)
+
+    let thrown: unknown
+    try {
+      closeBundle()
+    } catch (error) {
+      thrown = error
+    }
+    expect(thrown).toBe(firstCause)
+  })
+
+  test("in the errored case, assembleRendererDist performs NO work -- rendererDir is not rm -rf'd, a sentinel file survives", () => {
+    const outDir = outDirPath()
+    const rendererDir = rendererDirPath()
+    const bundleKeys = seedValidOutDir(outDir)
+    writeFile(join(rendererDir, 'sentinel.txt'), 'must-survive')
+
+    const plugin = assembleRendererDistPlugin({ outDir, rendererDir })
+    const { generateBundle, buildEnd, closeBundle } = driveHooks(plugin)
+    generateBundle({}, Object.fromEntries(bundleKeys.map((key) => [key, {}])))
+    buildEnd(new Error('first cause'))
+
+    expect(() => closeBundle()).toThrow('first cause')
+    expect(existsSync(join(rendererDir, 'sentinel.txt'))).toBe(true)
+  })
+
+  test("buildEnd() with NO argument leaves normal behaviour unchanged: closeBundle still throws the plugin's OWN error for an empty bundle-key list", () => {
+    const outDir = outDirPath()
+    const rendererDir = rendererDirPath()
+    seedValidOutDir(outDir)
+
+    const plugin = assembleRendererDistPlugin({ outDir, rendererDir })
+    const { generateBundle, buildEnd, closeBundle } = driveHooks(plugin)
+    generateBundle({}, {})
+    buildEnd(undefined)
+
+    expect(() => closeBundle()).toThrow(/bundleKeys is empty/)
+  })
+
+  test('buildEnd() with NO argument leaves normal behaviour unchanged: closeBundle still succeeds on a good tree', () => {
+    const outDir = outDirPath()
+    const rendererDir = rendererDirPath()
+    const bundleKeys = seedValidOutDir(outDir)
+
+    const plugin = assembleRendererDistPlugin({ outDir, rendererDir })
+    const { generateBundle, buildEnd, closeBundle } = driveHooks(plugin)
+    generateBundle({}, Object.fromEntries(bundleKeys.map((key) => [key, {}])))
+    buildEnd(undefined)
+
+    expect(() => closeBundle()).not.toThrow()
+    expect(existsSync(join(rendererDir, 'index.html'))).toBe(true)
+  })
+
+  test('closeBundle() with buildEnd never called at all behaves like the success path (a plugin instance must not require the hook to have fired)', () => {
+    const outDir = outDirPath()
+    const rendererDir = rendererDirPath()
+    const bundleKeys = seedValidOutDir(outDir)
+
+    const plugin = assembleRendererDistPlugin({ outDir, rendererDir })
+    const { generateBundle, closeBundle } = driveHooks(plugin)
+    generateBundle({}, Object.fromEntries(bundleKeys.map((key) => [key, {}])))
+
+    expect(() => closeBundle()).not.toThrow()
+  })
+
+  test('each plugin instance is independent: a recorded error on one instance does not leak into a second instance created in the same process', () => {
+    const outDirA = join(workDir, 'a', 'build')
+    const rendererDirA = join(workDir, 'a', 'build', 'renderer')
+    seedValidOutDir(outDirA)
+    const pluginA = assembleRendererDistPlugin({
+      outDir: outDirA,
+      rendererDir: rendererDirA
+    })
+    const hooksA = driveHooks(pluginA)
+    hooksA.generateBundle({}, {})
+    hooksA.buildEnd(new Error('first cause on instance A'))
+
+    const outDirB = join(workDir, 'b', 'build')
+    const rendererDirB = join(workDir, 'b', 'build', 'renderer')
+    const bundleKeysB = seedValidOutDir(outDirB)
+    const pluginB = assembleRendererDistPlugin({
+      outDir: outDirB,
+      rendererDir: rendererDirB
+    })
+    const hooksB = driveHooks(pluginB)
+    hooksB.generateBundle(
+      {},
+      Object.fromEntries(bundleKeysB.map((key) => [key, {}]))
+    )
+
+    // Instance B never had buildEnd called with an error -- it must not see
+    // instance A's recorded error.
+    expect(() => hooksB.closeBundle()).not.toThrow()
+    // Instance A still rethrows its own recorded error.
+    expect(() => hooksA.closeBundle()).toThrow('first cause on instance A')
   })
 })

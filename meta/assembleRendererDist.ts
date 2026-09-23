@@ -212,6 +212,19 @@ export function assembleRendererDist(
  * `meta/pruneStaleHelperBinaries.ts` -- NOT derived from `config.build.outDir`,
  * so the plugin has no implicit dependency on vite's own config resolution
  * order.
+ *
+ * Quick task 260923-tip, Layer 3: rollup still runs every plugin's
+ * `closeBundle` hook even after an earlier `buildStart`/copy failure, so
+ * this plugin's own "bundleKeys is empty" throw would otherwise REPLACE the
+ * real first cause in `vite build`'s printed output. `buildEnd(err)` is the
+ * only hook that sees that first error. `earlierBuildError` is a
+ * CLOSURE-LOCAL recorder (not module scope) -- the same reason `bundleKeys`
+ * above is already a closure variable: multiple plugin instances coexist in
+ * one process (e.g. across jest test cases) and must never contaminate each
+ * other. When an earlier error was recorded, `closeBundle` rethrows that
+ * SAME error instance (no wrapping, no message prefix) and skips its own
+ * body entirely -- assembling (and `rm -rf`-ing `rendererDir` first) over a
+ * build that already failed is exactly the kind of work that must not run.
  */
 export function assembleRendererDistPlugin(options?: {
   outDir?: string
@@ -222,6 +235,7 @@ export function assembleRendererDistPlugin(options?: {
     options?.rendererDir ?? join(__dirname, '..', 'build', 'renderer')
 
   let bundleKeys: string[] = []
+  let earlierBuildError: Error | undefined
 
   return {
     name: 'gamelib-assemble-renderer-dist',
@@ -230,7 +244,14 @@ export function assembleRendererDistPlugin(options?: {
     generateBundle(_options, bundle) {
       bundleKeys = Object.keys(bundle)
     },
+    buildEnd(err) {
+      if (err) earlierBuildError = err
+    },
     closeBundle() {
+      if (earlierBuildError) {
+        throw earlierBuildError
+      }
+
       assembleRendererDist(outDir, rendererDir, bundleKeys)
       console.log(
         `[assemble-renderer-dist] assembled ${bundleKeys.length} bundle key(s) + static files into ${rendererDir}`
