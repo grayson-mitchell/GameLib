@@ -124,7 +124,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > # ◆ PHASE 35 EXECUTING — started 2026-08-28. `/gsd-execute-phase 35`, no `--wave` filter.
 >
 > **Phase:** 35 (electron-cutover-remove-the-electron-build) — EXECUTING
-> **Plan:** 13 of 19 (`35-10` PARTIAL) · **Wave:** 6 DONE (re-planned), wave 7 part-run. `35-13` UNBLOCKED — 35-09 code-complete. **FOUR human gates queued:** 35-07 packaged deep-link, 35-08 live wake-lock, **35-09 the 34.6 Step 8 re-run (BOTH clauses — do NOT accept (a) alone)**, 34.6 Step 4 winetricks. **`D-35-10-01` DEADLINE WAVE 8.** **NOTE (2026-08-30): this "12 of 19" line is STALE and predates waves 7-13 — see ROADMAP.md's phase-35 row for the current wave-plan count (18/19, only `35-19` remains) and the gap-closure bullet immediately below for the newer 10-plan cycle; left uncorrected here per SCOPE BOUNDARY, fixing it is unrelated to the plan that added this note.**
+> **Plan:** 12 of 19 (`35-10` PARTIAL) · **Wave:** 6 DONE (re-planned), wave 7 part-run. `35-13` UNBLOCKED — 35-09 code-complete. **FOUR human gates queued:** 35-07 packaged deep-link, 35-08 live wake-lock, **35-09 the 34.6 Step 8 re-run (BOTH clauses — do NOT accept (a) alone)**, 34.6 Step 4 winetricks. **`D-35-10-01` DEADLINE WAVE 8.** **NOTE (2026-08-30): this "12 of 19" line is STALE and predates waves 7-13 — see ROADMAP.md's phase-35 row for the current wave-plan count (18/19, only `35-19` remains) and the gap-closure bullet immediately below for the newer 10-plan cycle; left uncorrected here per SCOPE BOUNDARY, fixing it is unrelated to the plan that added this note.**
 > **Gap-closure cycle 1, wave 1 (2026-08-30).** `35-26` **COMPLETE** (7/10 gap-closure plans). Closed
 > `REQ-35-17`'s EOS half and resolved `D-35-11-01`. Task 1 (`81794b7bd`) moved `remove()`/`enable()`'s
 > native `dialog.showMessageBox` confirmations to an explicit backend `confirmed: boolean` param
@@ -6150,6 +6150,10 @@ Recent decisions affecting current work:
 
 Last session: 2026-09-23T11:11:31.839Z
 Stopped at: Completed 46-02-PLAN.md -- Windows single-instance guard FFI wired into main()
+
+--- prior session (43-09), preserved as history ---
+Last session: 2026-09-10T15:33:38+12:00
+Stopped at: Completed 43-09-PLAN.md -- shipped the gog_keyless KEY destination (candidate B: the
 Phase 40 embedded store browser opens Humble's own keys page, labelled "Claim on Humble") per the
 D-43-11 probe's SELECTED BRANCH, closing REQ-43-24. Task 1 (`a25d8d2af`) wired the button and
 excluded gog_keyless from the login-and-claim scenario (Rule 1 fix -- that scenario's premise does
