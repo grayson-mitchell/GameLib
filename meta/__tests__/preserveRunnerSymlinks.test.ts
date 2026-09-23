@@ -43,6 +43,7 @@ import {
   readFileSync,
   readlinkSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync
 } from 'node:fs'
@@ -54,7 +55,8 @@ import {
   isContainedSymlinkTarget,
   preserveRunnerSymlinksPlugin,
   resolveDestPath,
-  restoreSymlinks
+  restoreSymlinks,
+  symlinkTypeFor
 } from '../preserveRunnerSymlinks'
 
 const GOGDL_INTERNAL = join('bin', 'arm64', 'darwin', 'gogdl', '_internal')
@@ -238,6 +240,129 @@ function buildEscapingTargetFixture(): {
 
   return { sourceRoot, destRoot, relPath, escapingTarget }
 }
+
+/**
+ * Builds a well-formed source/destination pair via `buildKnownBadFixture`
+ * (a real `cp -RL` clone -- so every SIBLING path the `Versions/Current`
+ * symlink target depends on, notably the real `Versions/3.14/` directory,
+ * already exists in `destRoot`), then further corrupts the `Versions/Current`
+ * destination entry specifically: `cp -RL` already left a dereferenced
+ * real DIRECTORY there (matching the target's own kind), but this replaces
+ * it with an unrelated real FILE, so the destination disagrees with BOTH a
+ * file link and a directory link -- a stronger "wrong kind" than `cp -RL`
+ * produces on its own, and enough to prove `symlinkTypeFor`'s
+ * source-vs-destination independence against a destination kind that
+ * cannot be confused for the right answer by coincidence.
+ */
+function buildWrongKindDestFixture(): {
+  sourceRoot: string
+  destRoot: string
+  relPath: string
+} {
+  const { sourceRoot, destRoot, relPaths } = buildKnownBadFixture()
+  const relPath = relPaths.find((p) => p.endsWith('Versions/Current')) as string
+  const destPath = join(destRoot, ...relPath.split('/'))
+  rmSync(destPath, { recursive: true, force: true })
+  writeFileSync(destPath, 'wrong-kind-real-file')
+
+  return { sourceRoot, destRoot, relPath }
+}
+
+describe('symlinkTypeFor (quick 260923-tip Layer 2 fix)', () => {
+  it('returns "dir" when the target resolves to a directory (Versions/Current -> 3.14)', () => {
+    const sourceRoot = mktemp('gamelib-symlink-src-typefor-dir-')
+    buildFrameworkFixture(sourceRoot)
+    const relPath = join(
+      GOGDL_INTERNAL,
+      'Python.framework',
+      'Versions',
+      'Current'
+    )
+      .split(sep)
+      .join('/')
+
+    expect(symlinkTypeFor(sourceRoot, { relPath, target: '3.14' })).toBe('dir')
+  })
+
+  it('returns "file" when the target resolves to a regular file (Python.framework/Python -> Versions/Current/Python)', () => {
+    const sourceRoot = mktemp('gamelib-symlink-src-typefor-file-')
+    buildFrameworkFixture(sourceRoot)
+    const relPath = join(GOGDL_INTERNAL, 'Python.framework', 'Python')
+      .split(sep)
+      .join('/')
+
+    expect(
+      symlinkTypeFor(sourceRoot, {
+        relPath,
+        target: 'Versions/Current/Python'
+      })
+    ).toBe('file')
+  })
+
+  it('returns "file" as a fallback when the target does not resolve at all in the source tree (dangling source link)', () => {
+    const sourceRoot = mktemp('gamelib-symlink-src-typefor-dangling-')
+    mkdirSync(join(sourceRoot, 'a'), { recursive: true })
+
+    expect(
+      symlinkTypeFor(sourceRoot, {
+        relPath: 'a/dangling-link',
+        target: 'does-not-exist-anywhere'
+      })
+    ).toBe('file')
+  })
+
+  it('resolves through a CHAIN: a link whose target is itself a directory-symlink still yields "dir" (Resources -> Versions/Current/Resources, where Current is itself a link)', () => {
+    const sourceRoot = mktemp('gamelib-symlink-src-typefor-chain-')
+    buildFrameworkFixture(sourceRoot)
+    const relPath = join(GOGDL_INTERNAL, 'Python.framework', 'Resources')
+      .split(sep)
+      .join('/')
+
+    expect(
+      symlinkTypeFor(sourceRoot, {
+        relPath,
+        target: 'Versions/Current/Resources'
+      })
+    ).toBe('dir')
+  })
+
+  it('is computed against sourceDir, NOT destDir: a destination holding the WRONG kind at that path still yields the type the SOURCE target resolves to', () => {
+    const { sourceRoot, relPath } = buildWrongKindDestFixture()
+
+    // destDir is never passed to symlinkTypeFor at all -- there is no
+    // parameter for it. This is the point: the function structurally
+    // cannot see whatever the (possibly wrong-kind) destination holds.
+    expect(symlinkTypeFor(sourceRoot, { relPath, target: '3.14' })).toBe('dir')
+  })
+
+  it('restoreSymlinks recreates a dir-typed link even when the destination previously held the WRONG kind (a real file where a directory-link belongs), and the result resolves as a directory', () => {
+    const { sourceRoot, destRoot, relPath } = buildWrongKindDestFixture()
+
+    const { restored } = restoreSymlinks(sourceRoot, destRoot)
+
+    expect(restored.some((r) => r.relPath === relPath)).toBe(true)
+    const destPath = join(destRoot, ...relPath.split('/'))
+    expect(lstatSync(destPath).isSymbolicLink()).toBe(true)
+    // The load-bearing assertion (T-tip-Layer-2): an UNTYPED symlinkSync
+    // call on Windows defaults to 'file', which would NOT resolve as a
+    // directory here. This assertion holds on POSIX too (the type argument
+    // is ignored there), so it is not Windows-only coverage.
+    expect(statSync(destPath).isDirectory()).toBe(true)
+  })
+
+  it('restoreSymlinks over the known-bad (cp -RL) fixture restores Versions/Current so it resolves as a directory, not just as a symlink', () => {
+    const { sourceRoot, destRoot, relPaths } = buildKnownBadFixture()
+
+    restoreSymlinks(sourceRoot, destRoot)
+
+    const versionsCurrentRel = relPaths.find((p) =>
+      p.endsWith('Versions/Current')
+    ) as string
+    const destPath = join(destRoot, ...versionsCurrentRel.split('/'))
+    expect(lstatSync(destPath).isSymbolicLink()).toBe(true)
+    expect(statSync(destPath).isDirectory()).toBe(true)
+  })
+})
 
 describe('preserveRunnerSymlinks', () => {
   it('known-bad fixture: cp -RL genuinely dereferences Versions/Current before any restore runs (vacuity guard)', () => {

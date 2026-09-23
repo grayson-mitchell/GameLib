@@ -22,6 +22,7 @@ import {
   readdirSync,
   readlinkSync,
   rmSync,
+  statSync,
   symlinkSync,
   type Dirent
 } from 'node:fs'
@@ -138,6 +139,62 @@ export function isContainedSymlinkTarget(
 }
 
 /**
+ * Quick task 260923-tip, Layer 2 (defense in depth). Decides which type
+ * argument `symlinkSync` needs to recreate `record` correctly ON WINDOWS.
+ *
+ * Windows symlinks are TYPED. Node defaults to `'file'` unless the target
+ * already resolves at creation time. A file symlink pointing at a directory
+ * does not resolve as a directory, so vite's `copyDir` `statSync`s it,
+ * fails, and aborts the `publicDir` copy partway through -- the exact Layer
+ * 2 cascade in the source todo, where the previous build's output poisoned
+ * the next build's copy (see
+ * .planning/todos/pending/2026-09-22-windows-packaged-build-breaks-on-
+ * darwin-runner-symlinks.md).
+ *
+ * The type is computed against the SOURCE tree, never the destination: at
+ * the moment the link is created, the destination sibling may not exist yet
+ * (the common case -- this runs before the link is created) or may hold
+ * vite's dereferenced WRONG-KIND copy from a prior pass. The source tree is
+ * the only place the truth is available.
+ *
+ * `'junction'` is deliberately NOT used. Node resolves a junction target
+ * against `process.cwd()`, and junctions require an absolute path; every
+ * target here is relative by design (`isContainedSymlinkTarget` refuses
+ * absolute targets outright), so `'dir'` is the only correct value for a
+ * directory-shaped target.
+ *
+ * The type argument is IGNORED on POSIX (Node accepts and discards it), so
+ * this function -- and the `symlinkSync` call it feeds -- is a no-op change
+ * for the macOS -> macOS build that exercises this code today. Keep it even
+ * though quick 260923-tip's Layer 1 fix (meta/downloadHelperBinaries.ts /
+ * meta/pruneStaleHelperBinaries.ts) stops darwin sources reaching a Windows
+ * build in the FIRST place: macOS builds still run this path on every
+ * build, and a future cross-platform or `GAMELIB_RUNNER_TARGET_PLATFORM`
+ * leg could reintroduce the trees -- this is not dead code to delete later.
+ *
+ * Resolves `record.target` from the LINK'S OWN directory inside
+ * `sourceDir` (matching real symlink resolution semantics, and mirroring
+ * `isContainedSymlinkTarget`'s own resolution idiom), then `statSync`s it --
+ * which FOLLOWS links, so a target that is itself a directory-symlink (the
+ * real `Resources -> Versions/Current/Resources` shape, where `Current` is
+ * itself a link) still resolves through the chain to `'dir'`. A target that
+ * does not resolve at all (a dangling source link) falls back to `'file'`.
+ */
+export function symlinkTypeFor(
+  sourceDir: string,
+  record: SymlinkRecord
+): 'dir' | 'file' {
+  const linkPath = resolve(sourceDir, record.relPath)
+  const targetPath = resolve(dirname(linkPath), record.target)
+
+  try {
+    return statSync(targetPath).isDirectory() ? 'dir' : 'file'
+  } catch {
+    return 'file'
+  }
+}
+
+/**
  * Re-creates every symlink from `sourceDir` inside `destDir`, replacing
  * whatever vite's dereferencing copy left in its place (a real file or a
  * real directory). Idempotent: `rmSync(destPath, { recursive: true, force:
@@ -189,7 +246,7 @@ export function restoreSymlinks(
     }
 
     rmSync(destPath, { recursive: true, force: true })
-    symlinkSync(record.target, destPath)
+    symlinkSync(record.target, destPath, symlinkTypeFor(sourceDir, record))
     restored.push(record)
   }
 
