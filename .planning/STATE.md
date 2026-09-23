@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: Completed 46-03-PLAN.md -- Windows named-pipe accept loop + Phase 46 source gates
-last_updated: "2026-09-23T12:10:00.000Z"
-last_activity: 2026-09-23 -- Completed 46-03 (Windows named-pipe accept loop spawned in .setup(); 39 comment-stripped source gates with RED pairs)
+stopped_at: Completed 46-04-PLAN.md -- gamelib:// registered on Windows (nx4 override dropped; installer.nsi carries 6 Classes\gamelib lines)
+last_updated: "2026-09-23T11:52:34.000Z"
+last_activity: 2026-09-23 -- Completed 46-04 (un-suppressed gamelib:// on Windows; debug NSIS setup built at 607089433, not run); 46-05 live gate next
 progress:
   total_phases: 42
   completed_phases: 35
   total_plans: 504
-  completed_plans: 494
+  completed_plans: 495
   percent: 83
 ---
 
@@ -4909,6 +4909,7 @@ Closed/parked native-install phases:
 | Phase 46 P01 | 6min | 2 tasks | 2 files |
 | Phase 46 P02 | 45min | 2 tasks | 3 files |
 | Phase 46 P03 | 25min | 2 tasks | 3 files |
+| Phase 46 P04 | 11min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -6151,7 +6152,7 @@ Recent decisions affecting current work:
 > as history" block, unchanged in content.
 
 Last session: 2026-09-23T11:11:31.839Z
-Stopped at: Completed 46-03-PLAN.md -- Windows named-pipe accept loop + Phase 46 source gates
+Stopped at: Completed 46-04-PLAN.md -- gamelib:// registered on Windows; 46-05 live gate next
 
 --- prior session (43-09), preserved as history ---
 Last session: 2026-09-10T15:33:38+12:00
