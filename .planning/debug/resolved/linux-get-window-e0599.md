@@ -1,10 +1,10 @@
 ---
 slug: linux-get-window-e0599
-status: awaiting_human_verify
+status: resolved
 trigger: 'Linux release leg fails to COMPILE: E0599 no method named `get_window` found for reference `&AppHandle`, at src-tauri/src/main.rs:5203 and :6915. The SAME commit compiled fine on macOS.'
 created: 2026-09-21
-updated: 2026-09-21
-source_todo: .planning/todos/pending/2026-09-17-linux-release-leg-fails-to-compile-get-window-missing-on-apphandle.md
+updated: 2026-09-23
+source_todo: .planning/todos/completed/2026-09-17-linux-release-leg-fails-to-compile-get-window-missing-on-apphandle.md
 ---
 
 # Debug: Linux E0599 `get_window` on `&AppHandle`
@@ -242,6 +242,13 @@ sysroot present) — the failure occurs in transitive GTK dependency build scrip
 incomplete and requires a live CI leg (a tag push reaching `release-tauri.yml`'s
 `ubuntu-24.04` matrix leg, or an equivalent `cargo check --target x86_64-unknown-linux-gnu`
 run on an actual Linux machine or CI runner with GTK/WebKit2GTK dev packages installed).
+
+live_verification: That live CI leg ran on 2026-09-23 — GitHub Actions run `35808881023`, tag
+`v0.7.0-notarize-test2` at commit `77f3b4388`, Linux job `107015694055`, matrix leg
+`ubuntu-24.04`, conclusion **success**. Measured, not inferred: the downloaded 3090-line job
+log contains zero occurrences of `E0599` and zero occurrences of `get_window`;
+`gamelib-shell` was built at 02:08:57 (`Built application at:
+.../src-tauri/target/release/gamelib-shell`). This closes the exact gate this field named.
 
 files_changed:
 - src-tauri/src/main.rs (call site 2 fallback arm, `humble_login_close`, lines ~6910-6934:

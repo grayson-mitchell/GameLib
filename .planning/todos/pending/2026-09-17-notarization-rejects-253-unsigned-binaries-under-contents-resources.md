@@ -461,7 +461,6 @@ are unchanged, because the gate ran but did not answer.
   failure from the same run, unrelated cause.
 - `2026-09-17-windows-release-leg-dies-in-install-deps-tar-reads-c-as-a-remote-host.md` — sibling
   failure from the same run, unrelated cause.
-- **STALE pointer:** the Linux sibling above
-  (`2026-09-17-linux-release-leg-fails-to-compile-get-window-missing-on-apphandle.md`) looks STALE —
-  its leg SUCCEEDED on run 35808881023 at 02:10:27. Not reopened or edited here; flagged for
-  whoever picks it up next.
+- **CLOSED:** the Linux sibling above is verified by run 35808881023 (Linux job
+  `107015694055`, `ubuntu-24.04`, success at 02:10:27) and is now
+  `.planning/todos/completed/2026-09-17-linux-release-leg-fails-to-compile-get-window-missing-on-apphandle.md`.

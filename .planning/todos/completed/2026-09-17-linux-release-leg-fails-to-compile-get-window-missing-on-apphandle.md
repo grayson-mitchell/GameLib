@@ -6,7 +6,9 @@ severity: major
 platform: linux
 ready: live-gate
 needs: verify-fix-on-live-linux-leg
-status: OPEN
+status: completed
+resolved: 2026-09-23
+resolved_by: quick-260923-ohg
 found_by: 'GitHub Actions run 35223308954 on grayson-mitchell/GameLib, triggered by the throwaway annotated tag v0.7.0-notarize-test1 at commit cc2d66248. The tag was deleted from origin and locally after the run.'
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md'
 files:
@@ -69,19 +71,32 @@ convention already established elsewhere in this file for `unstable`-gated calls
 (`open_pristine_epic_login_window`'s raw-WKWebView `Window`) is itself macOS-only
 (`main.rs:3157`), so resolving `false` on non-macOS changes no real behavior.
 
-## Verification — INCOMPLETE, needs a live Linux leg
+## Verification — SATISFIED 2026-09-23 by run 35808881023
 
 `cargo check --bin gamelib-shell` passes on the macOS host (sanity only — proves nothing about
 Linux). A real `cargo check --target x86_64-unknown-linux-gnu` was attempted from this Mac and
 failed, but for an unrelated reason: `gobject-sys`/`gio-sys`/`gdk-sys` build scripts fail because
 `pkg-config` has no Linux GTK/WebKit2GTK cross-compilation sysroot on this machine — the failure
 occurs before `gamelib-shell`'s own source is reached. **No sound local check exists on this
-host.** This todo stays OPEN, `ready: live-gate`, until a tag push reaches `release-tauri.yml`'s
-`ubuntu-24.04` leg (or an equivalent check runs on a real Linux machine/CI runner with
-GTK/WebKit2GTK dev packages) and comes back green.
+host.** This todo stayed OPEN, `ready: live-gate`, until a tag push reached `release-tauri.yml`'s
+`ubuntu-24.04` leg (or an equivalent check ran on a real Linux machine/CI runner with
+GTK/WebKit2GTK dev packages) and came back green.
 
-Full evidence trail: `.planning/debug/linux-get-window-e0599.md` (session not yet archived —
-awaiting this live verification).
+### Live evidence — 2026-09-23
+
+That condition was met by GitHub Actions run `35808881023`, tag `v0.7.0-notarize-test2` at commit
+`77f3b4388`, Linux job `107015694055`, matrix leg `ubuntu-24.04`, conclusion **success**. The
+`tauri-action` step ran 02:05:34 -> 02:10:27 (4m53s). Measured, not inferred: the downloaded
+3090-line job log contains **zero** occurrences of `E0599` and **zero** occurrences of
+`get_window`; `Built application at: .../src-tauri/target/release/gamelib-shell` appears at
+02:08:57; the AppImage was produced and uploaded at 02:10:24.
+
+This proves the Linux leg COMPILES and LINKS `gamelib-shell` at `77f3b4388`. It does **not** prove
+anything about the resulting AppImage running, and it does **not** prove anything about the
+notarization question that shared the run — that remains the separate, still-open concern owned
+by `2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md`.
+
+Full evidence trail: `.planning/debug/resolved/linux-get-window-e0599.md`.
 
 ## Related
 
