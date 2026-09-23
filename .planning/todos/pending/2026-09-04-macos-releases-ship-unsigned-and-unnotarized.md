@@ -1,11 +1,11 @@
 ---
 created: 2026-09-04T00:00:00.000Z
-title: 'macOS signing and notarization are VERIFIED end-to-end on a published artifact including the quarantined Gatekeeper path — only the credentialed in-app store actions (Epic/Amazon/GOG login) on a signed build remain unexercised'
+title: 'macOS signing and notarization are VERIFIED end-to-end on a published artifact — Gatekeeper, and all three store helpers under the hardened runtime, are measured working; only consequence 2 (Keychain prompt COUNT across an update) remains, and it needs a SECOND signed release'
 area: build
 severity: minor
 platform: macos
 ready: human
-needs: amazon-login-on-a-signed-build + keychain-prompt-count-across-two-signed-releases
+needs: keychain-prompt-count-across-two-signed-releases
 status: OPEN
 found_by: 'Reconsideration of the two keyring-deferral todos, 2026-09-04 — asked "what actually governs Keychain prompt COUNT?" rather than "how do I implement this todo?"'
 source: '.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md (park note, finding 2)'
@@ -477,6 +477,47 @@ the real profile produced **no Keychain prompt**. That is encouraging but nearly
 evidence: the store sessions read at boot live in JSON files under Application Support, not in the
 Keychain, so no prompt was expected either way. Consequence 2 still requires the N -> N+1 test in
 item 13, and nothing here shortens it.
+
+
+**15. AMAZON CLOSED GREEN — (c-iii) is now fully discharged. Filed 2026-09-24.**
+
+**First, the correction that matters: the operator's login did NOT close this arm.** They logged
+into Amazon and refreshed, but the process doing it was `target/debug/gamelib-shell` — the
+**unsigned local debug build**, not the notarized bundle. Nothing about a debug build's behaviour
+is evidence about the hardened-runtime signed one, which is the whole subject of this todo. That
+was caught by checking the process path rather than accepting "logged in and refreshed" at face
+value — the same discipline that caught the orphan in item 9.
+
+**What the login DID do was remove the blocker.** Item 14 recorded Amazon as blocked because no
+session existed to re-use (`nile_store/config.json` was 2 bytes). Once a session existed, the arm
+stopped needing credentials and became runnable the same way Epic was in item 14 — by invoking the
+signed binary directly and bypassing the UI entirely.
+
+**Measured against the signed, notarized `nile` from the published bundle**
+(`Authority=Developer ID Application: ...`, `flags=0x10000(runtime)`), pointed at the real profile:
+
+| command | result |
+| --- | --- |
+| `nile auth --status` | `rc=0`, `{"Username":<redacted>,"LoggedIn":true}` |
+| `nile library sync` | `rc=0`, `INFO [LIBRARY]: Synchronizing library` / `INFO [LIBRARY]: Successfully synced the library` |
+
+**`library sync` is the one that carries the weight, and the write is what proves it.**
+`auth --status` on its own is weak evidence — it can be satisfied by reading a local token file.
+The sync rewrote both `library.json` and **`syncpoint.raw`** at 07:25; a syncpoint is a
+server-issued cursor, so it cannot be produced without a real round-trip to Amazon. That is the
+same standard item 14 applied to Epic and deliberately withheld from GOG.
+
+**Caveat, stated because it genuinely limits the result: the account owns ZERO Amazon games**
+(`library list` -> `*** TOTAL 0 ***`, `library.json` parses to 0 entries). So what is proven is
+that the signed `nile` authenticates and completes a sync under the hardened runtime. Fetching and
+parsing a NON-EMPTY Amazon library is **not** exercised, and an empty result must not be
+mistaken for a broken one — or for a fuller one than it is.
+
+**Consequence for this todo.** All three stores of (c-iii) are now green: Epic (item 14), GOG
+(item 14, narrowly), Amazon (here). `needs:` therefore drops to consequence 2 alone, and the title
+has been restated a second time — it had gone false again by naming the store actions as the
+remaining work. Consequence 2 is now the only thing standing between this todo and closure, and it
+cannot start until a second signed release exists.
 
 ## Related
 
