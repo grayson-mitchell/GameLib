@@ -46,6 +46,7 @@ is never signalled" — has been measured false.
 | **A — registry clobber.** A restart replaces the appId's controller in `abortControllers`, stranding the first run's. | **REFUTED** | 2026-09-08 live gate: the controller was live, the abort was delivered, the loop died in the same second. The `No in-flight download to abort` WARNING was separately reproduced twice but ONLY on resolved-error paths, where `runNativeDepotDownload`'s `finally` has already deleted the controller by design. It is not clobber evidence. |
 | **B — abort-blind CDN auth path.** `cdnAuth.ts` consulted no `AbortSignal`, so the empty-token rotation loop could not be cancelled. | **NEUTRALISED, never tested** | quick 260909-q2o threaded the existing signal through `getToken`. It can no longer produce the symptom *even if it was true*. No live reproduction was attempted. Neutralised is not the same as settled. |
 | **Non-Steam runners leak the same way.** | **SETTLED as a finding** | F5, 2026-09-07: coverage is intermittent for the four CLI runners and absent for sideload installs, by design. This is why the `hasAbortController` gate in `trip()` is load-bearing. |
+| **C — account/IP throttling.** The 2026-08-27 session had started and cancelled several large downloads (Baldur's Gate EE, ELEX, Resident Evil Village) beforehand, so Steam was throttling the account or IP and that produced the wall of empty auth tokens. | **ELIMINATED** | quick 260923-vnv, 2026-09-23, desk measurement over five preserved captures spanning three titles, four depots and three dates. `CDN auth token acquired` appears **zero** times in any capture ever preserved — there is no working baseline to have been throttled away from. The control log has all three hosts returning empty tokens at `17:46:46`, the FIRST token request of a cold-connect session with no prior cancel in it. And every response is `eresult=1` (`k_EResultOK`) with a constant `rawBodyBytes=8` body — a deliberate tokenless OK, not a rejection; a throttle would surface as a non-OK `eresult`. See the sibling's Resolution section. |
 
 **The condition the parent blamed is a constant, not an outage.** The empty-auth-token error
 (`eresult=1`, every host, both depots) was reproduced unprompted on Californium on 2026-09-07 —
@@ -95,5 +96,8 @@ controller. Nothing about cancellation *delivery* is known to be missing. Do not
 
 ## Related
 
-- `.planning/todos/pending/2026-09-16-whether-the-cdn-auth-token-failures-were-self-inflicted-is-untested.md`
-  — the sibling split out of the same parent.
+- `.planning/todos/completed/2026-09-16-whether-the-cdn-auth-token-failures-were-self-inflicted-is-untested.md`
+  — the sibling split out of the same parent, **CLOSED 2026-09-23** as REFUTED at the desk. Its
+  Resolution section carries the five-capture census behind row C above, and corrects a trap worth
+  knowing before reading any depot log: the empty-token WARNING is emitted at most once per
+  depot+host per 60s (the `negativeCache` cooldown), **not** once per attempt.

@@ -390,9 +390,11 @@ nothing:
 - `.planning/todos/pending/2026-09-16-the-2026-08-27-depot-stall-cause-is-unidentified-with-no-proposed-experiment.md`
   — `severity: medium`, `ready: human`. Carries the refuted/neutralised table, the four forcing
   methods already measured to fail, and the `pf` method that worked.
-- `.planning/todos/pending/2026-09-16-whether-the-cdn-auth-token-failures-were-self-inflicted-is-untested.md`
-  — `severity: minor`, `ready: live-gate`. The never-tested throttling question from the
-  `Not yet established` section below.
+- `.planning/todos/completed/2026-09-16-whether-the-cdn-auth-token-failures-were-self-inflicted-is-untested.md`
+  — `severity: minor`. The throttling question from the `Not yet established` section below.
+  **CLOSED 2026-09-23 as REFUTED**, at the desk rather than by the live gate it carried: the
+  condition is present at the first token request of a cold session, and no successful CDN auth
+  token has ever been logged in any preserved capture.
 
 The third item in `Not yet established` — whether other `withStallTimeout` callers leak the same
 way — is **not** a survivor and got no file: F5 settled it on 2026-09-07 as a measured finding, and

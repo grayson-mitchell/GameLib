@@ -2,11 +2,13 @@
 created: 2026-09-17T00:00:00.000Z
 title: 'macOS notarization REJECTED (not merely untested): Apple returned Invalid on 253 unsigned Contents/Resources binaries Tauri never signs'
 area: build
-severity: major
+severity: minor
 platform: macos
 ready: live-gate
-needs: launch-helpers-under-hardened-runtime
-status: OPEN
+needs: quarantined-first-launch-and-sidecar-spawned-helper
+status: completed
+resolved: 2026-09-23
+resolved_by: quick-260923-uvt
 found_by: 'GitHub Actions run 35223308954 on grayson-mitchell/GameLib, triggered by the throwaway annotated tag v0.7.0-notarize-test1 at commit cc2d66248. The tag was deleted from origin and locally after the run.'
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md'
 files:
@@ -207,6 +209,17 @@ failure.
 is clean. The sidecar's `allow-jit` is intact, and that file is never passed to a helper codesign
 call. Passing it would be a silent grant of JIT to 253 binaries not shown to need it.
 
+**CORRECTION, dated 2026-09-23 (quick-260923-q6w) — stated as a correction, not quietly patched.**
+The enumeration above ("legendary/nile/gogdl loading their own `libssl.3.dylib`,
+`Python.framework/Versions/3.12/Python` and `*.cpython-312-darwin.so` are same-team loads") was
+CORRECT, and remains correct today — none of those three needs an entitlement. It MISSED that
+`steam-bridge-helper` dlopens a THIRD-PARTY dylib belonging to Valve
+(`libsteam_api.dylib`), loaded out of the user's installed Steam client: not one of the 253, not
+in our tree at all, never our Team ID, and unreachable by any amount of signing our own files. The
+"all 253 get the SAME Team ID" premise the enumeration rested on was true for the files it
+enumerated and false for the one case it did not consider. See
+`### STATUS 2026-09-23 (quick-260923-q6w)` below for the observed crash and the proven remedy.
+
 ### Placement decision
 
 Signing happens at the **SOURCE path** (`build/bin/arm64/darwin` in the runner workspace), in a
@@ -255,7 +268,9 @@ defect:
    `e7ec58a5-acd7-4dad-9bee-fca7b2bea039`: `statusSummary: "Ready for distribution"`,
    `statusCode: 0`, `issues: None`. See `### STATUS 2026-09-23 (quick-260923-p95)` below.
 4. **Whether any helper crashes at runtime under the hardened runtime with no entitlements.**
-   UNOBSERVED, and a notarization `Accepted` says NOTHING about it.
+   **OBSERVED, and remedied for exactly one helper.** See
+   `### STATUS 2026-09-23 (quick-260923-q6w)` below for the method, the per-helper result table,
+   the verbatim cause, all three controls, and what remains NOT VERIFIED.
 
 ### The only real verification
 
@@ -548,6 +563,369 @@ written.
   did NOT undo this, because `tagName: v__VERSION__` pointed the run at the real `v0.7.0` release
   rather than at the tag. **That draft must not be published until a complete run regenerates the
   manifest** — publishing it as-is would promote an updater feed with no macOS entry at all.
+
+### STATUS 2026-09-23 (quick-260923-q6w) — hazard 4 OBSERVED, and remedied for exactly one helper
+
+This sub-section does NOT revise `## STATUS 2026-09-17 (quick-260917-uik)`,
+`### STATUS 2026-09-23 (quick-260923-ihw)`, `### STATUS 2026-09-23 (quick-260923-np3)`, or
+`### STATUS 2026-09-23 (quick-260923-p95)` above. Each records what was believed then and is left
+intact; this one adds what was measured today.
+
+**`needs:` moved** `launch-helpers-under-hardened-runtime` ->
+`notarize-and-run-steam-bridge-helper-with-disable-library-validation`. The old value described a
+gate that has now been run; the new one names what is actually left: notarizing a build that
+carries this entitlement, and exercising the helper from inside the real `.app`. `severity: major`,
+`platform: macos`, `ready: live-gate` and `status: OPEN` are unchanged.
+
+**1. Method.** `ditto`'d `build/bin/arm64/darwin` to a scratchpad copy — the real tree was never
+touched. Signed the copy through the PRODUCTION script `pnpm sign:macos-resources`, with the login
+keychain and the real Developer ID identity: `signed 253/253` in 74s. Then executed each helper.
+
+**2. Per-helper result table.**
+
+| helper               | invocation                          | result                                             |
+| --------------------- | ------------------------------------ | --------------------------------------------------- |
+| `legendary`            | `--version`, `status`                | OK (rc=0; `status` exercises network/`_ssl`)         |
+| `gogdl`                 | `--version`, `auth`                  | OK (rc=0)                                            |
+| `nile`                  | `--version`                          | OK                                                   |
+| `comet`                 | `--help`                             | OK                                                   |
+| `steam-bridge-helper`   | (launch)                             | **FATAL** `dlopen`, dies before `SteamAPI_Init`      |
+
+**3. The verbatim cause.** `steam-bridge-helper` reports: "code signature ... not valid for use in
+process: mapping process and mapped file (non-platform) have **different Team IDs**". The failing
+path resolves inside the user's installed `Steam.AppBundle` — the dylib is Valve's, not ours.
+
+**4. All three controls.**
+
+- **(1) A/B, same binary, same real profile, only the signature differing.** Ad-hoc
+  `flags=0x20002(adhoc,linker-signed)` loads Valve's dylib and reaches `SteamAPI_Init()` (failing
+  there only because Steam isn't running locally, a normal condition). Developer ID +
+  `flags=0x10000(runtime)` with no entitlement dies at `dlopen`.
+- **(2) The Python helpers fail IDENTICALLY signed and unsigned.** `legendary list --json` and
+  `nile library list` both rc=1 with the same PyInstaller unhandled-exception tail in both variants
+  (no auth configured in a fresh profile); `gogdl auth` rc=0 in both. So the hardened runtime is
+  NOT implicated for the three Python helpers — this is why they get no `HELPER_ENTITLEMENTS`
+  entry.
+- **(3) The remedy was PROVEN, not assumed.** Re-signing only `steam-bridge-helper` with the new
+  one-key `meta/steam-bridge-helper.entitlements.plist` keeps `flags=0x10000(runtime)` and the
+  Developer ID authority intact, shows the entitlement under `codesign -d --entitlements -`, and
+  the binary then reaches `SteamAPI_Init()` — exactly like the ad-hoc control in (1).
+
+**5. Open question (b) corrected, not quietly patched.** See the `CORRECTION, dated 2026-09-23
+(quick-260923-q6w)` paragraph inside `### Open question (b)` above: the original enumeration was
+correct for legendary/nile/gogdl and missed that `steam-bridge-helper` dlopens a THIRD-PARTY dylib
+belonging to Valve, never our Team ID.
+
+**6. Methodological note — CLAUDE.md's two-profile rule earning its keep.** Under an isolated fake
+`HOME`, this defect presents as a *missing-file* `dlopen` error, because Steam is not installed in
+a fresh profile — a shape that reads like a harmless test artifact, not a security-relevant crash.
+Only the real-profile arm exposed the actual cause: a genuine Team ID mismatch against an installed
+third-party dylib. This is exactly the direction CLAUDE.md's two-profile rule warns about: isolation
+is necessary for most runs, but a defect can exist that arms ONLY under a populated profile, and
+an isolated-only gate would have stayed green against it forever.
+
+**7. `--options runtime` was KEPT on `steam-bridge-helper`, deliberately.** Dropping it would also
+fix the `dlopen` — but it would get the build REJECTED at notarization, which is where this whole
+thread began (see `## Problem` above). The entitlement grant is the correct remedy; removing the
+hardened runtime is not an option that was ever on the table.
+
+**8. What remains NOT VERIFIED.**
+
+- **(i) Whether Apple notarizes a binary carrying `disable-library-validation`.** It is permitted
+  for Developer ID distribution, but permitted is not observed — and this todo's entire history is
+  about exactly that distinction.
+- **(ii) Whether the helper works from inside the real notarized `.app`**, as opposed to a locally
+  re-signed scratchpad copy. Recipe step 6 (launching each helper from inside the app) is still
+  owed, now against a build carrying this entitlement.
+
+**Bottom line.** Hazard 4 moves from UNOBSERVED to OBSERVED-and-remedied for exactly one helper.
+The todo stays OPEN, stays in `pending/`, and the two items in (8) are what the next live gate
+must answer.
+
+### STATUS 2026-09-23 (quick-260923-u3o) — the live gate RAN; recipe steps 2-6 all pass
+
+This sub-section does NOT revise `## STATUS 2026-09-17 (quick-260917-uik)`,
+`### STATUS 2026-09-23 (quick-260923-ihw)`, `### STATUS 2026-09-23 (quick-260923-np3)`,
+`### STATUS 2026-09-23 (quick-260923-p95)`, or `### STATUS 2026-09-23 (quick-260923-q6w)` above.
+Each records what was believed then and is left intact; this one adds what was measured today.
+
+**`severity:` moved** `major` -> `minor`, and **`needs:` moved**
+`notarize-and-run-steam-bridge-helper-with-disable-library-validation` ->
+`quarantined-first-launch-and-sidecar-spawned-helper`. The old value named a gate that has now
+been run; the new one names what is genuinely left. Both moves are justified in item 9 below.
+`platform: macos`, `ready: live-gate` and `status: OPEN` are unchanged. The todo stays OPEN and
+stays in `pending/`.
+
+**1. The run.** Tag `v0.7.0-notarize-test3` at commit `c946239ce`; GitHub Actions run
+`35841476015`. The macOS job `107117309605` ran on `macos-latest` targeting
+`aarch64-apple-darwin`: **success**, 13m50s. The Linux job: success. The Windows job: **failure**
+at step 5 `install-deps`, with:
+
+```
+tar: gogdl/_internal/Python: Cannot create symlink to 'Python.framework/Versions/3.12/Python': No such file or directory
+```
+
+then `Error: tar extraction failed (exit 2)`. That cause belongs to the separate pending todo
+`2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` and is NOT adopted into
+this todo. It is, however, the ONLY reason the overall run reads `failure` — a reader who sees the
+red run and stops there will draw the wrong conclusion about macOS.
+
+| step | conclusion | duration |
+| --- | --- | --- |
+| 18. Sign every Mach-O in the macOS helper tree before bundling | success | 0:00:23 |
+| 19. Run tauri-apps/tauri-action@v1 | success | 0:08:32 |
+| 20. Diagnose a notarization timeout (diagnostic only, never fails the job) | skipped | — |
+
+**2. Notarization Accepted, and the app was stapled.** Verbatim from the job log:
+
+```
+2026-09-23T09:21:59Z Notarizing /Users/runner/work/GameLib/GameLib/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/GameLib.app
+2026-09-23T09:23:08Z Notarizing Finished with status Accepted for id 0f65332c-56c8-484d-822a-13163bc14ddb (Processing complete)
+2026-09-23T09:23:08Z Stapling app...
+```
+
+Submission id `0f65332c-56c8-484d-822a-13163bc14ddb`, elapsed 1m09s, and then `Stapling app...` —
+stapling, which p95 item 5 recorded as never having happened, now happened. Cross-check:
+`grep -c 'Notarizing'` over the job log returns 2, i.e. those are exactly the two such lines in
+the whole job, so nothing about the verdict is being read out of context.
+
+**A NOTE that a later reader must not misread.** The string
+`::warning::Apple notarization credentials are set but signing is not fully configured; skipping
+notarization` DOES appear in this job log. It is NOT an emitted annotation — it is the step's own
+SCRIPT SOURCE being echoed by the runner, carrying the cyan `[36;1m` prefix the runner uses when
+it echoes a script it is about to execute. The only real `##[warning]` in the whole macOS job is
+the Node.js 20 deprecation notice. This is written down deliberately, because it is exactly the
+kind of line a later session greps out of a log, reads as "notarization was skipped", and then
+reopens a discharged question over. Do not cite that echo as evidence that notarization was
+skipped: it was not.
+
+**3. The CI signing path ran green for the first time.** Step 18, "Sign every Mach-O in the macOS
+helper tree before bundling", conclusion success, 23 seconds. That was the third of the three
+items q6w listed as NOT VERIFIED. What carries it, stated honestly: step 18's own log was NOT
+separately read. What is being relied on is its exit status, plus item 6's per-binary evidence
+that the binaries in the PUBLISHED artifact are Developer-ID-signed under the hardened runtime and
+that the survivor count over all 253 is 0. That is an inference from the output of the step rather
+than an inspection of the step, and it should not be recorded as a log inspection.
+
+**4. The 60-minute bound was never approached — one datapoint, and it does not settle p95 item 6.**
+Step 19 (`tauri-apps/tauri-action@v1`) took 8m32s end to end, of which notarization was 1m09s,
+against the `timeout-minutes: 60` shipped by quick-260923-mrx. Frame this exactly as EVIDENCE and
+no further: it is ONE datapoint, on a DIFFERENT submission from np3's. It SUPPORTS — it does not
+prove — the reading that np3's 2h05m37s of silence was `notarytool`'s wait rather than Apple being
+slow. It does NOT settle p95 item 6, because Apple still exposes `uploadDate` and no
+`completedDate`, so for THAT submission the two candidate explanations remain formally
+indistinguishable. Related: step 20, the macOS-only `if: failure()` `xcrun notarytool history`
+diagnostic, shows `skipped` — it never fired, so that diagnostic remains itself unproven live.
+
+**5. Recipe steps 2, 4 and 5, against the DOWNLOADED artifact.** The artifact is
+`GameLib_0.7.0_aarch64.dmg`, 97083599 bytes, from draft release `378785323`, sha256
+`c74717b59421119eaacce55c51ff153222c9e03296f87d817ed422423dba669c`. `xattr -l` on it showed
+`com.apple.diskimages.recentcksum` and `com.apple.provenance` only — **no
+`com.apple.quarantine`**, because it was fetched via the GitHub API rather than a browser. That
+absence is not cosmetic; see item 8(a), where it is what bounds this whole exercise.
+
+Step 2, verbatim:
+
+```
+Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)
+Authority=Developer ID Certification Authority
+Authority=Apple Root CA
+CodeDirectory v=20500 size=26621 flags=0x10000(runtime) hashes=821+7 location=embedded
+Timestamp=23 Sep 2026 at 9:21:45 PM
+Notarization Ticket=stapled
+TeamIdentifier=S7U223QWXJ
+Sealed Resources version=2 rules=13 files=514
+```
+
+```
+GameLib.app: accepted
+source=Notarized Developer ID
+origin=Developer ID Application: grayson mitchell (S7U223QWXJ)
+SPCTL_RC=0
+```
+
+```
+Processing: .../GameLib.app
+The validate action worked!
+STAPLER_RC=0
+```
+
+Steps 4 and 5, the survivor count. The loop used was this todo's OWN step-4 loop, unmodified,
+saved as a `.sh` and invoked by path — not retyped and not adjusted.
+
+| target | result |
+| --- | --- |
+| NEGATIVE control: scratch dir, Apple-signed `/bin/ls` + `/bin/cat` + one plain text file | `files=3 mach-o=2 survivors=0` |
+| POSITIVE control: untouched local ad-hoc `build/bin/arm64/darwin` | `files=277 mach-o=253 survivors=253` |
+| REAL: notarized bundle's `Contents/Resources` | `files=501 mach-o=253 survivors=0` |
+
+**BOTH controls were run BEFORE the real count**, which is the whole point of step 5 and is stated
+here rather than left implied: the negative control returned `survivors=0` on a scratch dir and
+the positive control returned `survivors=253` on the untouched ad-hoc tree, and only then did the
+real bundle return `files=501 mach-o=253 survivors=0`. A `survivors=0` from a loop that has not
+first been shown capable of returning a non-zero number is a green check proving nothing.
+
+**6. Recipe step 3, and the ANSWER to q6w item 8(i).** All four helper binaries in the published
+bundle carry `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)`,
+`flags=0x10000(runtime)`, `TeamIdentifier=S7U223QWXJ`, and are timestamped.
+
+| binary (under Contents/Resources/build/bin/arm64/darwin) | entitlements |
+| --- | --- |
+| `legendary/legendary` | none |
+| `nile/_internal/Python.framework/Versions/3.12/Python` | none |
+| `comet` | none |
+| `steam-bridge-helper` | exactly one: `com.apple.security.cs.disable-library-validation` |
+
+**This ANSWERS q6w item 8(i).** Apple notarized AND stapled a bundle carrying
+`disable-library-validation`. q6w wrote of that entitlement that "it is permitted for Developer ID
+distribution, but permitted is not observed — and this todo's entire history is about exactly that
+distinction." It is now OBSERVED, in a published artifact, with the ticket stapled to it. The
+distinction q6w was careful to preserve is discharged by measurement rather than by argument.
+
+**7. Recipe step 6 — the `dlopen` crash is gone in the published build.** The bundle was `ditto`'d
+off the read-only dmg, and everything below ran on that copy.
+
+```
+codesign --verify --deep --strict --verbose=2 GameLib.app
+  GameLib.app: valid on disk
+  GameLib.app: satisfies its Designated Requirement
+  rc=0
+```
+
+The helper's single entitlement is still present after the copy. On this machine
+`libsteam_api.dylib` resolves at
+`~/Library/Application Support/Steam/Steam.AppBundle/Steam/Contents/MacOS/Frameworks/Steam Helper.app/Contents/MacOS/libsteam_api.dylib`.
+`steam-bridge-helper`, run from inside the copied notarized bundle:
+
+```
+[S_API FAIL] SteamAPI_Init() failed; ipcserver GetSteamPath failed.
+[S_API] SteamAPI_Init(): SteamAPI_IsSteamRunning() did not locate a running instance of Steam.
+[S_API] SteamAPI_Init(): Could not determine Steam client install directory.
+[2026-09-23T09:35:21Z] INIT   InitFlat failed r=1 err=Could not determine Steam client install directory. (is Steam running + signed in?) -- serving HEALTH only until a real session is live
+[2026-09-23T09:35:21Z] LISTEN 127.0.0.1:54550 (loopback-only, persistent-channel)
+```
+
+It was still alive when killed at 10s. **THE REASONING, which is the load-bearing part.** Those
+`[S_API]` lines are emitted BY Valve's dylib. Their presence therefore proves that `dlopen`
+SUCCEEDED: the process got far enough to be running Valve's code, reached `SteamAPI_Init()`, and
+failed there only because Steam is not running — which is the normal condition on this machine and
+is identical to q6w's ad-hoc control (1). The Team ID mismatch that killed the helper in q6w is
+gone. Note per CLAUDE.md's two-profile rule that this was the deliberate real-profile arm: the
+defect under test arms only under a populated profile, since a fresh fake `HOME` has no Steam
+installed and the same failure presents there as a harmless missing-file error.
+
+The other three helpers, from inside the same notarized bundle: `legendary --version` rc=0
+(`legendary version "0.21.0", codename "Lowlife"`), `gogdl --version` rc=0 (`1.3.0`),
+`nile --version` rc=0 (`1.2.0 Robert Speedwagon`), `comet --help` rc=0. The app itself was
+launched from the copied bundle with `open -n`: `gamelib-shell` and `gamelib-sidecar` were both
+alive and stable at 5/10/15/20/25/30s, with no matching entries in
+`~/Library/Logs/DiagnosticReports`. `spctl -a -vvv -t exec` on the copy: `accepted`,
+`source=Notarized Developer ID`, rc=0.
+
+**8. What step 6 did NOT cover.** Three residuals, stated without softening, because the value of
+the above depends on not overstating it:
+
+- **(a) The real first-launch Gatekeeper flow was NEVER exercised.** There was no
+  `com.apple.quarantine` xattr on the dmg, because it was fetched via the GitHub API rather than a
+  browser. `spctl -t exec` is an assessment performed on request; it is not the quarantined
+  first-launch dialog a real user meets. Nothing here tests that flow.
+- **(b) `steam-bridge-helper` was never spawned BY the sidecar.** Steam was not running, so the
+  app never needed it. What is proven is direct exec from inside the bundle — which is what item 7
+  claims and no more.
+- **(c) Step 6's in-app invocations were NOT performed** — Epic login via legendary, Amazon
+  library refresh via nile, a GOG action via gogdl. They need credentials and a human.
+
+Residuals (a) and (b) are what the new `needs: quarantined-first-launch-and-sidecar-spawned-helper`
+names. (c) is real but is a human-gated errand rather than a defect risk.
+
+**9. Triage movement, and the ground under the title.** `severity` moves `major` -> `minor`,
+justified in CLAUDE.md's OWN vocabulary rather than by feel. `major` is defined there as "a feature
+is broken or a measurement is silently contaminated" — and the feature in question, a signed,
+notarized, stapled macOS build whose helpers actually run, is now MEASURED WORKING in the published
+artifact. What remains is two unverified arms with no known defect behind either, which is exactly
+`minor`: "polish, rough edge, or a latent trap with no live consequence". `ready: live-gate` is
+unchanged, because those residuals still need a live run to close. `platform: macos` and
+`status: OPEN` are unchanged.
+
+Every clause of this todo's TITLE is now measured false as a live condition. "macOS notarization
+REJECTED (not merely untested)" — Apple returned Accepted. "Apple returned Invalid on 253 unsigned
+Contents/Resources binaries Tauri never signs" — the survivor count over those same 253 is 0 in the
+published artifact. The title is retained as the historical record of why this todo exists; it is
+no longer a description of the world. RECOMMENDED: a later session closes this todo and moves it to
+`completed/`, once item 8's residuals are carried into a todo of their own.
+
+**This session does NOT move the file and does NOT change `status:`.** Closure is out of scope for
+a recording task and is the operator's call.
+
+**10. Cleanup owed.** Tag `v0.7.0-notarize-test3` is still on origin and locally **as of this
+writing**. It is scoped with that phrase deliberately, the way np3 item 7 scoped its equivalent —
+p95 item 8 records that np3's "still on origin as of this writing" was TRUE when written, is
+correctly scoped as history, and must not be "fixed". Writing this the same way means a later
+section can discharge it the same way np3's was discharged: by addition, in new text, rather than
+by editing this one.
+
+**The updater manifest — EXTRACTED, not restated.** p95 item 8 recorded the macOS-less
+`latest.json` as "STILL OWED", pending a complete run. The macOS leg of run `35841476015` WAS
+complete — Accepted, stapled, dmg uploaded — and the manifest still gained no macOS entry, so
+re-running can never fix it. That defect does not belong to this todo and has been extracted to
+`2026-09-23-macos-updater-manifest-can-never-gain-a-macos-entry-bundle-targets-omits-app.md`,
+which carries the measurement and the correction. p95 item 8 is NOT edited: it is correct as a
+record of what was believed then.
+
+**Bottom line.** The live gate this todo has been waiting for since 2026-09-17 has now run, and
+the whole chain holds end to end: Apple Accepted and stapled, the published artifact has zero
+unsigned survivors among its 253 Mach-O files, and `steam-bridge-helper` loads Valve's dylib from
+inside the notarized bundle. What is left is two unverified arms — quarantined first launch, and a
+sidecar-spawned helper — neither of which has a known defect behind it.
+
+## CLOSED 2026-09-23 (quick-260923-uvt) — discharged, residuals carried out first
+
+This section does NOT revise anything above it. The evidence for this closure is already in this
+file: **see `### STATUS 2026-09-23 (quick-260923-u3o)`**, which is pointed at rather than restated
+here — its tables are not duplicated.
+
+**What discharged this todo: every clause of its TITLE is measured false as a LIVE condition.**
+
+- "macOS notarization REJECTED (not merely untested)" — Apple returned `Accepted` for submission
+  `0f65332c-56c8-484d-822a-13163bc14ddb` in 1m09s, and then stapled the app.
+- "Apple returned Invalid on 253 unsigned Contents/Resources binaries Tauri never signs" — the
+  survivor count over those same 253, in the PUBLISHED artifact, is `files=501 mach-o=253
+  survivors=0`. **Both controls were run FIRST**: the negative control returned `survivors=0` and
+  the positive control returned `survivors=253`, so the zero came from a loop already shown capable
+  of returning a non-zero number.
+
+All four helper binaries in the published bundle carry
+`Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)` under `flags=0x10000(runtime)`,
+and `steam-bridge-helper` reaches `SteamAPI_Init()` from inside the notarized bundle.
+
+**Where every residual went — named, with paths. Nothing was discarded by this move.**
+
+| residual | destination |
+| --- | --- |
+| (a) quarantined first launch | `.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md` — its existing `needs: release-run-then-browser-download-verify` already named this arm and needed no change |
+| (b) `steam-bridge-helper` never spawned BY the sidecar | `.planning/todos/pending/2026-09-23-steam-bridge-helper-never-spawned-by-the-sidecar-only-direct-exec-proven.md` — new, `severity: minor`, `ready: live-gate` |
+| (c) recipe step 6's in-app invocations (Epic via `legendary`, Amazon via `nile`, GOG via `gogdl`) | the same parent `2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md`, item 5 of its uvt STATUS section |
+| the 60-minute `timeout-minutes` bound (u3o item 4 / p95 item 6) | the same parent `2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md`, item 6 of its uvt STATUS section |
+
+quick-260923-uvt **considered and rejected** giving (c) and the 60-minute bound each their own
+file. (c) is a live-gate errand against a published artifact, structurally identical to the parent
+todo's browser-download bullet, and splitting one sitting across two todos helps no one. The
+60-minute bound belongs to quick-260923-mrx's change rather than to this signing defect, and with
+1m09s measured against a 60-minute bound the headroom is ~52x — `minor` under CLAUDE.md's
+vocabulary, where a new `major` file would be inflation.
+
+**Item 10's cleanup is discharged BY ADDITION, here, without editing item 10.** Measured
+2026-09-23 by quick-260923-uvt: `git ls-remote --tags origin` and `git for-each-ref refs/tags` both
+return nothing matching `notarize`, so tag `v0.7.0-notarize-test3` is gone from origin AND locally.
+Item 10's "still on origin and locally **as of this writing**" was TRUE when written and is
+correctly scoped as history — p95 item 8 sets that precedent explicitly and says not to "fix" it,
+so it has not been touched.
+
+**The bound on this closure, stated so it cannot be over-read.** Closing this file does NOT mean
+macOS signing is finished. It means THIS defect — Apple rejecting 253 unsigned binaries under
+`Contents/Resources` — is discharged, and its residuals have moved to files that are still open.
+The parent `2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md` remains **OPEN**, with the
+browser-download arm genuinely outstanding.
 
 ## Related
 
