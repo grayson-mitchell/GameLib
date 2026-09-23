@@ -1,0 +1,79 @@
+name: Rust test
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, stable]
+    paths-ignore:
+      - '.planning/**'
+      - '**.md'
+    # No positive `paths:` filter on the src-tauri tree, deliberately. This job is meant to become
+    # a REQUIRED check (see the todo this closes), and GitHub never reports a status for a workflow
+    # its `paths:` filter skipped -- so a PR touching no Rust would sit un-mergeable forever,
+    # waiting on a check that never arrives. Do not "optimise" this back in.
+  pull_request:
+    branches: [main, stable]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Why this exists: nothing in CI ran `cargo test` or even `cargo check` on any OS. A real compile
+# break in src-tauri/src/main.rs's `#[cfg(test)] mod tests` (four `store_embed_wire_contract_*`
+# functions calling `#[cfg(target_os = "macos")]`-gated helpers with no matching guard on the test
+# functions themselves) sat on `main` unnoticed, because `cargo check` -- the non-test build
+# `release-tauri.yml` exercises via `tauri-action` -- was clean the whole time. Only
+# `cargo test --bin gamelib-shell` failed, and nothing in CI ever ran it. It was found only when
+# Phase 46 research ran the harness by hand on a Windows machine (see
+# .planning/todos/completed/2026-09-22-windows-rust-tests-not-run-in-ci.md).
+#
+# Measured baseline: `cd src-tauri && cargo test --bin gamelib-shell` on this Windows machine,
+# 2026-09-23 -- 234 passed; 0 failed; 2 ignored. The break the todo describes is already fixed, so
+# this job lands green on day one, not red.
+#
+# Why the vite build is a real step and not overhead: src-tauri/src/main.rs calls
+# `tauri::generate_context!()`, which embeds `frontendDist` (`../build/renderer` per
+# tauri.conf.json) at COMPILE time. Without that directory the crate does not compile at all --
+# tests included. A stub `build/renderer/index.html` was considered and rejected: a fake input
+# means a real asset/codegen break would pass this gate and only surface at release time.
+#
+# What this does NOT catch, stated plainly per this repo's standing rule about gates that appear
+# to cover more than they do:
+#   (a) No Linux leg. `src-tauri` needs libwebkit2gtk-4.1-dev/libappindicator3-dev/librsvg2-dev to
+#       build at all (release-tauri.yml), and the only Linux-specific Rust code is the `cfg(unix)`
+#       `libc::kill` arm, which the macOS leg already compiles -- but a genuinely Linux-only break
+#       is invisible here.
+#   (b) Compile and unit tests only -- no app launch, no webview, no IPC round trip. Anything
+#       runtime- or event-loop-ordering-dependent is out of scope here exactly as it is for jest
+#       (cf. the `smoke:sidecar` note in test.yml).
+#   (c) `dtolnay/rust-toolchain@stable` tracks an unpinned, moving toolchain -- this job can go red
+#       from a Rust release with no repo change at all.
+#   (d) The 2 `#[ignore]`d tests in the 234-test baseline above still run nowhere, in this job or
+#       any other.
+# And: passing here does not make this a "required check" on `main`. That is a GitHub
+# branch-protection/ruleset setting under Settings -> Branches, performed by a repo admin, and is
+# NOT established by this file.
+jobs:
+  cargo-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/install-deps
+      - name: Build renderer web assets (vite)
+        shell: bash
+        run: pnpm exec vite build
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+      - name: cargo test (Tauri shell crate)
+        shell: bash
+        working-directory: src-tauri
+        run: cargo test --bin gamelib-shell
