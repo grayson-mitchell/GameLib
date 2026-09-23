@@ -114,3 +114,53 @@ export function selectVisibleSteamLibrary<TGame extends SteamVisibilityGame>(
   // library, unchanged from the shipped behaviour.
   return input.library
 }
+
+/** The pair `resolveSteamVisibility` hands back to each call site. */
+export interface SteamVisibility<TGame extends SteamVisibilityGame> {
+  /** The Games grid slice -- exactly `selectVisibleSteamLibrary`'s return. */
+  games: TGame[]
+  /** Whether the Store facet panel should render a Steam row at all. */
+  storeConnected: boolean
+}
+
+/**
+ * quick/260924-g7r -- the Store-facet half of threat T-34.11-12 (Spoofing).
+ *
+ * Before this function existed, `Library/index.tsx`'s `connectedStores` memo
+ * pushed `'steam'` on `steam?.username` alone, while `makeLibrary` ran the
+ * auth-aware `selectVisibleSteamLibrary` above. For a persisted identity with
+ * a `'failed'` sync and zero installed games, those two disagreed: the panel
+ * advertised a Steam row over a grid with no Steam games -- a permanently-0
+ * row, the exact shape T-34.11-12 exists to prevent, and one that already
+ * shipped once for Amazon (`connectedStores` read `amazon.username` while
+ * `makeLibrary` read `amazon.user_id`). This function is the single value
+ * both sites now read, so the panel and the grid cannot drift apart again.
+ *
+ * `'failed'` is the term that is NEW relative to `selectVisibleSteamLibrary`
+ * alone. On a provably-failed sync the grid above already drops the
+ * not-installed half (branch 2); if that also empties the installed half,
+ * `storeConnected` goes false too, so a user with zero INSTALLED Steam games
+ * on an expired session gets no Steam row rather than a permanently-0 one.
+ *
+ * On a NON-failed sync the row is kept even when `games` is empty,
+ * DELIBERATELY: that matches every other store (a connected account with an
+ * empty library still shows a 0 row) and such a row is not PERMANENTLY 0 -- a
+ * future sync can still fill it. Only a `'failed'` sync with nothing
+ * installed is disqualified, because no future event un-fails it.
+ *
+ * UX consequence, and its measured refutation: Steam does not vanish from the
+ * Library screen when the row goes. `SteamSyncNotice` renders in
+ * `signedOut`/`failed` mode on this same screen whenever `steam?.username` is
+ * truthy (`librarySyncIndicator.ts` branches 2-3, rendered at
+ * `index.tsx:1185` for any mode but `'hidden'`), so the user gets a banner
+ * naming the real problem instead of a filter row that filters to nothing.
+ */
+export function resolveSteamVisibility<TGame extends SteamVisibilityGame>(
+  input: SteamLibraryVisibilityInput<TGame>
+): SteamVisibility<TGame> {
+  const games = selectVisibleSteamLibrary(input)
+  const storeConnected =
+    Boolean(input.steamUsername) &&
+    (input.steamSyncStatus !== 'failed' || games.length > 0)
+  return { games, storeConnected }
+}
