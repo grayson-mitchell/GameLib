@@ -5,7 +5,7 @@ area: frontend
 severity: medium
 platform: any
 ready: code
-status: OPEN
+status: RESOLVED
 found_by: 'debug/steam-library-shows-logged-out, 2026-09-24 — deleting the `showSteam` local to route the grid through the new resolver turned connectedStoresParity.test.ts red (4 failures); restoring `showSteam` turned it green again, which exposed that the green is TEXTUAL and the underlying invariant is now weaker than the test reports.'
 source: '.planning/debug/steam-library-shows-logged-out.md'
 files:
@@ -72,3 +72,45 @@ Live-gate the parent fix first (`.planning/debug/steam-library-shows-logged-out.
 expired session may make the UX question in option 2 answer itself. The condition here needs an
 expired session **and** an empty installed set, so reproducing it means a profile with a synced
 Steam library and nothing installed.
+
+## Resolution
+
+quick/260924-g7r, 2026-09-24.
+
+**Option 2 taken.** Both `connectedStores` and `makeLibrary` in
+`src/frontend/screens/Library/index.tsx` now read one `steamVisibility` memo, computed once by
+`resolveSteamVisibility` (new export in `src/frontend/screens/Library/steamLibraryVisibility.ts`).
+`steamVisibility.storeConnected` is `Boolean(steamUsername) && (steamSyncStatus !== 'failed' ||
+games.length > 0)`, so a `'failed'` sync with zero installed games now yields no Steam row instead
+of a permanently-0 one. The Steam gate is pinned to that value by name in
+`src/frontend/screens/Library/__tests__/connectedStoresParity.test.ts`, and the outcome invariant
+is proven by a full matrix in `src/frontend/screens/Library/__tests__/steamLibraryVisibility.test.ts`.
+
+**Option 3 deliberately NOT taken, as a scope decision — not a deferral to a future todo.**
+Evaluating all five stores' gates over a fixture matrix requires extracting `connectedStores` and
+all five `show*` gates out of `index.tsx` into a pure module: a refactor of every store's login
+gate, in a file with no jsdom coverage, disproportionate to one store's divergence. That is the
+whole reason; there is no follow-up todo for it.
+
+**The todo's own UX objection to option 2 is FALSE, and that is the measured reason option 2 was
+safe to build.** This todo said "Steam vanishes from the facet panel on an expired session, which
+may be worse UX than an empty row — the Manage Accounts tile is the only other place the user
+would see Steam at all." That is wrong: `SteamSyncNotice` renders on the SAME Library screen in
+exactly this state — `resolveSteamSyncIndicator` returns `'signedOut'` (failed +
+credentialsMissing) or `'failed'` (failed) whenever `steam?.username` is truthy
+(`librarySyncIndicator.ts:96,106`), and `index.tsx:1185` renders it for any mode but `'hidden'`.
+Steam does not vanish from the screen when the row goes; the user gets a banner naming the real
+problem instead of a filter row that filters to nothing.
+
+**The "live-gate the parent fix first" prerequisite is ALREADY SATISFIED** — the parent session
+`.planning/debug/resolved/steam-library-shows-logged-out.md:220` records `## Live gate — PASSED,
+2026-09-24`.
+
+**What was NOT live-gated by THIS change.** Nobody has observed the expired-session-plus-
+zero-installed state on a real profile — the operator's live gate ran on a profile WITH installed
+Steam games. This change is desk-verified by unit test only. Recorded as written; no live
+observation is implied.
+
+The parity gate's second failure mode, one line: a matching pair of gate expressions can still be
+wrong when one site applies an extra filter a text compare cannot see; the outcome invariant now
+lives in `steamLibraryVisibility.test.ts`.
