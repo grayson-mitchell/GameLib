@@ -5,7 +5,7 @@ area: build
 severity: minor
 platform: macos
 ready: human
-needs: credentialed-in-app-store-actions-on-a-signed-build
+needs: credentialed-in-app-store-actions-on-a-signed-build + keychain-prompt-count-across-two-signed-releases
 status: OPEN
 found_by: 'Reconsideration of the two keyring-deferral todos, 2026-09-04 — asked "what actually governs Keychain prompt COUNT?" rather than "how do I implement this todo?"'
 source: '.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md (park note, finding 2)'
@@ -405,7 +405,40 @@ scratchpad is empty. `/Applications/GameLib.app` was deliberately NOT touched (s
 - D-04 — the title is restated per Proposal 2, so a reader of the todo — not only a reader of the plan
   that produced this session — can see that item 7's two proposals were answered.
 
-`status:` stays `OPEN`: (c-iii) is genuinely outstanding.
+`status:` stays `OPEN`: (c-iii) is genuinely outstanding. **And so is consequence 2 — see item 13, which
+was missed when this section was first written.**
+
+**13. CONSEQUENCE 2 IS NOW TESTABLE AND WAS NOT TRACKED — filed 2026-09-24 after the fact.**
+This item was added in a follow-up pass. Items 1–12 above did not mention it, and that omission
+is the point of recording it here rather than quietly folding it in.
+
+`## Verification` ends with a gating sentence: *"Only after that is the claim in consequence (2)
+testable: install release N, grant the Keychain prompt once, update to release N+1, and confirm
+no re-prompt."* That gate was **discharged by this very session** — the artifact is now verified
+signed, notarized and stapled. So consequence 2 became testable on 2026-09-24 and nothing said so:
+it appeared in no item of this section, and `needs:` named only the credentialed arm. On that
+trajectory it would have been lost.
+
+Why it matters more than its position in the file suggests: **consequence 2 is the ORIGINAL
+reason this todo exists.** `found_by` records the question as *"what actually governs Keychain
+prompt COUNT?"* — not Gatekeeper. Gatekeeper is consequence 1 and is now closed; the question the
+todo was opened to answer is still open.
+
+Two facts that constrain when it can be run:
+
+- **It needs TWO signed releases, and only one exists.** `gh release list` shows a single
+  `v0.7.0` **draft**; the test is inherently N -> N+1, so it cannot start until a second signed
+  release exists. This is the longest pole in the todo by a wide margin, and it is gated on
+  cutting releases, not on desk work.
+- **A parked sibling is blocked on it.**
+  `2026-08-17-humble-slots-still-prompt-unattended-at-startup.md` is `ready: blocked` and its
+  park note states in as many words that *"shipped-build prompt count is governed by Apple code
+  signing, not read timing"* — i.e. it is waiting on this arm specifically. Closing this todo
+  without running consequence 2 would strand that sibling with nothing pointing at it.
+
+`needs:` has been widened to carry both arms so neither can be closed on the strength of the
+other. They are independent: the credentialed arm needs a person and no new release; this arm
+needs two releases and comparatively little human time.
 
 ## Related
 
