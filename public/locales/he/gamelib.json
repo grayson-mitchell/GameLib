@@ -163,6 +163,7 @@
         "refresh-rating": "רענון דירוג"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} פנויים מתוך {{total}}",
         "importConfirmLabel": "השתמש בהתקנה זו",
         "importDoorLabel": "אתר התקנה קיימת…",
         "importExplainer": "כבר יש לך את המשחק הזה על הדיסק — מהפעלה אחרת, או מכונן אחר? הצבע על הקבצים האלה במקום להוריד אותו שוב.",

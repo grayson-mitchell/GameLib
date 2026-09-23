@@ -163,6 +163,7 @@
         "refresh-rating": "Oppdater vurdering"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} ledig av {{total}}",
         "importConfirmLabel": "Bruk denne installasjonen",
         "importDoorLabel": "Finn eksisterende installasjon…",
         "importExplainer": "Har du allerede dette spillet på disken — fra en annen launcher, eller en annen stasjon? Pek på de filene i stedet for å laste det ned igjen.",

@@ -163,6 +163,7 @@
         "refresh-rating": "重新整理評分"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "共 {{total}}，剩餘 {{free}}",
         "importConfirmLabel": "使用此安裝",
         "importDoorLabel": "定位現有安裝…",
         "importExplainer": "已經在磁碟上有這個遊戲了嗎——來自其他啟動器，或其他磁碟機？指向那些檔案，而不是重新下載。",

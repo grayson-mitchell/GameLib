@@ -163,6 +163,7 @@
         "refresh-rating": "Освежи оцену"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} slobodno od {{total}}",
         "importConfirmLabel": "Користи ову инсталацију",
         "importDoorLabel": "Пронађи постојећу инсталацију…",
         "importExplainer": "Већ имате ову игру на диску — са другог лансера, или са другог диска? Усмерите на те фајлове уместо поновног преузимања.",

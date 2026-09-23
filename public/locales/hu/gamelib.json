@@ -163,6 +163,7 @@
         "refresh-rating": "Értékelés frissítése"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} szabad a {{total}}-ból",
         "importConfirmLabel": "Ennek a telepítésnek a használata",
         "importDoorLabel": "Meglévő telepítés megkeresése…",
         "importExplainer": "Már megvan ez a játék a lemezen — másik indítóból, vagy másik meghajtóról? Mutass rá azokra a fájlokra az újbóli letöltés helyett.",

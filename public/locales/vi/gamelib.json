@@ -163,6 +163,7 @@
         "refresh-rating": "Làm mới xếp hạng"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} trống trên tổng {{total}}",
         "importConfirmLabel": "Sử dụng bản cài đặt này",
         "importDoorLabel": "Tìm bản cài đặt hiện có…",
         "importExplainer": "Bạn đã có trò chơi này trên đĩa — từ một launcher khác, hoặc một ổ đĩa khác? Hãy trỏ đến các tệp đó thay vì tải xuống lại.",

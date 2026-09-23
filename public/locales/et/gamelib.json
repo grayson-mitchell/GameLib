@@ -163,6 +163,7 @@
         "refresh-rating": "Värskenda hinnangut"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} vaba {{total}}-st",
         "importConfirmLabel": "Kasuta seda paigaldust",
         "importDoorLabel": "Leia olemasolev paigaldus…",
         "importExplainer": "Kas see mäng on juba kettal — teisest käivitajast või teiselt kettalt? Osuta neile failidele, selle asemel et uuesti alla laadida.",

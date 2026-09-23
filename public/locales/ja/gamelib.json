@@ -163,6 +163,7 @@
         "refresh-rating": "評価を更新"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{total}} 中 {{free}} 空き",
         "importConfirmLabel": "このインストールを使用",
         "importDoorLabel": "既存のインストールを探す…",
         "importExplainer": "このゲームはすでにディスク上にありますか？別のランチャーや別のドライブからですか？再度ダウンロードする代わりに、そのファイルを指定してください。",

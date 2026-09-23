@@ -163,6 +163,7 @@
         "refresh-rating": "Reytinqi yenilə"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} boş, {{total}} ümumi",
         "importConfirmLabel": "Bu quraşdırmadan istifadə et",
         "importDoorLabel": "Mövcud quraşdırmanı tap…",
         "importExplainer": "Bu oyun artıq diskinizdə var? Başqa bir başlatıcıdan, yaxud başqa bir diskdən? Onu yenidən yükləmək əvəzinə həmin fayllara işarə edin.",

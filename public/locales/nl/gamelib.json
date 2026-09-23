@@ -163,6 +163,7 @@
         "refresh-rating": "Beoordeling vernieuwen"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} vrij van {{total}}",
         "importConfirmLabel": "Deze installatie gebruiken",
         "importDoorLabel": "Bestaande installatie zoeken…",
         "importExplainer": "Heb je dit spel al op de schijf staan — van een andere launcher, of een andere schijf? Wijs naar die bestanden in plaats van het opnieuw te downloaden.",

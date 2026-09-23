@@ -163,6 +163,7 @@
         "refresh-rating": "평점 새로고침"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{total}} 중 {{free}} 여유 공간",
         "importConfirmLabel": "이 설치 사용",
         "importDoorLabel": "기존 설치 찾기…",
         "importExplainer": "이미 디스크에 이 게임이 있나요 — 다른 런처에서, 또는 다른 드라이브에서? 다시 다운로드하는 대신 해당 파일을 가리키세요.",

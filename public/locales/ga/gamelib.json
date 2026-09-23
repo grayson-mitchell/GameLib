@@ -163,6 +163,7 @@
         "refresh-rating": "Athnuaigh an rátáil"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} saor as {{total}}",
         "importConfirmLabel": "Úsáid an suiteáil seo",
         "importDoorLabel": "Aimsigh suiteáil atá ann cheana…",
         "importExplainer": "An bhfuil an cluiche seo agat cheana ar an diosca — ó sheoltóir eile, nó ó thiomántán eile? Cuir in iúl na comhaid sin in ionad é a íoslódáil arís.",

@@ -163,6 +163,7 @@
         "refresh-rating": "تحديث التقييم"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} متاحة من {{total}}",
         "importConfirmLabel": "استخدام هذا التثبيت",
         "importDoorLabel": "تحديد التثبيت الموجود…",
         "importExplainer": "ألديك هذه اللعبة بالفعل على القرص؟ من مشغل آخر، أو من محرك أقراص آخر؟ أشر إلى تلك الملفات بدلاً من تنزيلها مرة أخرى.",

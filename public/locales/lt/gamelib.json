@@ -163,6 +163,7 @@
         "refresh-rating": "Atnaujinti įvertinimą"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} laisva iš {{total}}",
         "importConfirmLabel": "Naudoti šį diegimą",
         "importDoorLabel": "Rasti esamą diegimą…",
         "importExplainer": "Ar jau turite šį žaidimą diske — iš kito leistuko, ar kito disko? Nurodykite tuos failus, o ne atsisiųskite iš naujo.",

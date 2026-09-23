@@ -166,6 +166,7 @@
         "refresh-rating": "Refresh rating"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} free of {{total}}",
         "importConfirmLabel": "Use this installation",
         "importDoorLabel": "Locate existing installation…",
         "importExplainer": "Already have this game on disk — from another launcher, or another drive? Point to those files instead of downloading it again.",

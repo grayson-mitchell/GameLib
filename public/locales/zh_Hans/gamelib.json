@@ -163,6 +163,7 @@
         "refresh-rating": "刷新评分"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "共 {{total}}，剩余 {{free}}",
         "importConfirmLabel": "使用此安装",
         "importDoorLabel": "定位现有安装…",
         "importExplainer": "已经在磁盘上有这个游戏了吗——来自其他启动器，或其他驱动器？指向那些文件，而不是重新下载。",

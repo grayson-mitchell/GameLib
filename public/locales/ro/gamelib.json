@@ -163,6 +163,7 @@
         "refresh-rating": "Reîmprospătează evaluarea"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} liberi din {{total}}",
         "importConfirmLabel": "Folosește această instalare",
         "importDoorLabel": "Găsește o instalare existentă…",
         "importExplainer": "Ai deja acest joc pe disc — de la un alt launcher, sau de pe altă unitate? Indică acele fișiere în loc să-l descarci din nou.",

@@ -163,6 +163,7 @@
         "refresh-rating": "Osveži oceno"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} prostora od {{total}}",
         "importConfirmLabel": "Uporabi to namestitev",
         "importDoorLabel": "Poišči obstoječo namestitev …",
         "importExplainer": "Ali imate to igro že na disku — iz drugega zaganjalnika ali drugega diska? Namesto ponovnega prenosa pokažite na te datoteke.",

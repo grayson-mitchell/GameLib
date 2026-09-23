@@ -163,6 +163,7 @@
         "refresh-rating": "Оновити рейтинг"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} вільно з {{total}}",
         "importConfirmLabel": "Використати це встановлення",
         "importDoorLabel": "Знайти наявне встановлення…",
         "importExplainer": "Уже маєте цю гру на диску — з іншого лаунчера чи іншого диска? Вкажіть на ці файли замість повторного завантаження.",

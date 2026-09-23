@@ -163,6 +163,7 @@
         "refresh-rating": "Puanı yenile"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{total}} üzerinden {{free}} boş",
         "importConfirmLabel": "Bu kurulumu kullan",
         "importDoorLabel": "Mevcut kurulumu bul…",
         "importExplainer": "Bu oyun zaten diskinizde mi — başka bir başlatıcıdan, ya da başka bir sürücüden? Tekrar indirmek yerine o dosyaları işaret edin.",

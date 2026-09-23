@@ -163,6 +163,7 @@
         "refresh-rating": "Päivitä arvostelu"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} vapaana, yhteensä {{total}}",
         "importConfirmLabel": "Käytä tätä asennusta",
         "importDoorLabel": "Etsi olemassa oleva asennus…",
         "importExplainer": "Onko peli jo levyllä — toisesta käynnistimestä tai toiselta asemalta? Osoita niihin tiedostoihin sen lataamisen sijaan uudelleen.",

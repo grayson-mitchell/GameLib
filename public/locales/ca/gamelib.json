@@ -163,6 +163,7 @@
         "refresh-rating": "Actualitza la valoració"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} lliures de {{total}}",
         "importConfirmLabel": "Utilitza aquesta instal·lació",
         "importDoorLabel": "Localitza una instal·lació existent…",
         "importExplainer": "Ja tens aquest joc al disc — d'un altre llançador, o d'una altra unitat? Indica aquests fitxers en lloc de tornar-los a baixar.",

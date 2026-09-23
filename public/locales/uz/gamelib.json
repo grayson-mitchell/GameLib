@@ -163,6 +163,7 @@
         "refresh-rating": "Reytingni yangilash"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{total}} dan {{free}} bo'sh",
         "importConfirmLabel": "Ushbu o'rnatishdan foydalanish",
         "importDoorLabel": "Mavjud o'rnatishni topish…",
         "importExplainer": "Bu o'yin diskda allaqachon bormi — boshqa ishga tushirgichdan yoki boshqa diskdan? Qayta yuklab olish o'rniga o'sha fayllarni ko'rsating.",

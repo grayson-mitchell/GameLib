@@ -1,7 +1,7 @@
 {
   "locale": "az",
   "model": "claude-sonnet-5",
-  "filledAt": "2026-09-19T14:02:36.294Z",
+  "filledAt": "2026-09-23T10:55:17.728Z",
   "keys": [
     "about.license",
     "about.navLabel",
@@ -107,6 +107,7 @@
     "humbleKeys.urgencyHoursLeft",
     "humbleKeys.urgencyOneDayLeft",
     "info.refresh-rating",
+    "installFlows.diskSpaceFreeOfTotal",
     "installFlows.pathRejectedBodyImport",
     "installFlows.pathRejectedBodyMove",
     "installFlows.pathRejectedTitle",

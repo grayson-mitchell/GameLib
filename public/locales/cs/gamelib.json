@@ -163,6 +163,7 @@
         "refresh-rating": "Obnovit hodnocení"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} volných z {{total}}",
         "importConfirmLabel": "Použít tuto instalaci",
         "importDoorLabel": "Najít existující instalaci…",
         "importExplainer": "Máte tuto hru už na disku — z jiného launcheru, nebo z jiného disku? Ukažte na tyto soubory místo opětovného stahování.",

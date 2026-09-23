@@ -163,6 +163,7 @@
         "refresh-rating": "Odśwież ocenę"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} wolne z {{total}}",
         "importConfirmLabel": "Użyj tej instalacji",
         "importDoorLabel": "Znajdź istniejącą instalację…",
         "importExplainer": "Masz już tę grę na dysku — z innego launchera lub innego dysku? Wskaż te pliki zamiast pobierać ją ponownie.",

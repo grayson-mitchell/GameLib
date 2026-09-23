@@ -163,6 +163,7 @@
         "refresh-rating": "Freskatu balorazioa"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} libre {{total}}-tik",
         "importConfirmLabel": "Erabili instalazio hau",
         "importDoorLabel": "Bilatu dagoeneko dagoen instalazioa…",
         "importExplainer": "Jokoa jada diskoan al duzu — beste abiarazle batetik, edo beste disko batetik? Seinalatu fitxategi horiek berriro deskargatu beharrean.",

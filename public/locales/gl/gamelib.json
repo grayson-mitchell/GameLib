@@ -163,6 +163,7 @@
         "refresh-rating": "Actualizar valoración"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} libres de {{total}}",
         "importConfirmLabel": "Usar esta instalación",
         "importDoorLabel": "Localizar instalación existente…",
         "importExplainer": "Xa tes este xogo no disco — desde outro launcher, ou outra unidade? Indica eses ficheiros no canto de descargalo de novo.",

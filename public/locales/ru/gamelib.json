@@ -163,6 +163,7 @@
         "refresh-rating": "Обновить рейтинг"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} свободно из {{total}}",
         "importConfirmLabel": "Использовать эту установку",
         "importDoorLabel": "Найти существующую установку…",
         "importExplainer": "Игра уже есть на диске — из другого лаунчера или с другого диска? Укажите эти файлы вместо повторной загрузки.",

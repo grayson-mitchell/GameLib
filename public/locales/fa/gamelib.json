@@ -163,6 +163,7 @@
         "refresh-rating": "تازه‌سازی امتیاز"
     },
     "installFlows": {
+        "diskSpaceFreeOfTotal": "{{free}} آزاد از {{total}}",
         "importConfirmLabel": "استفاده از این نصب",
         "importDoorLabel": "یافتن نصب موجود…",
         "importExplainer": "آیا این بازی از قبل روی دیسک شما هست — از یک لانچر دیگر، یا یک درایو دیگر؟ به‌جای دانلود دوباره، به آن فایل‌ها اشاره کنید.",
