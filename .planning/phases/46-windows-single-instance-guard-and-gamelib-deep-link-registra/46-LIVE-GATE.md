@@ -1,11 +1,11 @@
 ---
-status: in-progress
+status: failed
 phase: 46-windows-single-instance-guard-and-gamelib-deep-link-registra
 plan: 46-05
 build_sha: 607089433ac79bff3b54cf99b0b6651898244565
 build_type: debug NSIS installer (`pnpm tauri build --debug --bundles nsis`)
 built_at: 2026-09-23T23:48:15+12:00
-operator: [NAME]
+operator: Grayson Mitchell (window behaviour reported by the operator; commands run in-session by the orchestrator at the operator's direction)
 started: 2026-09-23
 ---
 
@@ -29,8 +29,8 @@ started: 2026-09-23
 | `installer.nsi` path | `src-tauri/target/debug/nsis/x64/installer.nsi` |
 | `installer.nsi` `Classes\gamelib` line count | **6** (`grep -cF 'Classes\gamelib' src-tauri/target/debug/nsis/x64/installer.nsi`, re-confirmed at Task 1 time) |
 | Machine | Windows 11 Home 10.0.26200 |
-| `<appid>` used for `launch` checks | [RECORD — a real installed or owned appName the operator picks] |
-| `<runner>` used for `launch` checks | [RECORD — the runner for the chosen appid, e.g. `gog`, `legendary`, `nile`, `steam`] |
+| `<appid>` used for `launch` checks | `2706020` (All Will Fall, installed under `D:\SteamLibrary`) |
+| `<runner>` used for `launch` checks | `steam` |
 
 ## Why this build, not a fresh one
 
@@ -57,8 +57,8 @@ Get-Process GameLib, gamelib-sidecar -ErrorAction SilentlyContinue
 
 | Item | Expected | Observed | Result |
 |---|---|---|---|
-| `reg query ... /ve` value | Points at the NEW install path (NOT `C:\Program Files\GameLib\GameLib.exe`) with `"%1"` appended | _pending_ | _pending_ |
-| `Get-Process GameLib, gamelib-sidecar` before launch | Zero rows (no output) | _pending_ | _pending_ |
+| `reg query ... /ve` value | Points at the NEW install path (NOT `C:\Program Files\GameLib\GameLib.exe`) with `"%1"` appended | `"C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe" "%1"` (before install: `"C:\Program Files\GameLib\GameLib.exe" "%1"`) | PASS |
+| `Get-Process GameLib, gamelib-sidecar` before launch | Zero rows (no output) | 0 rows | PASS |
 
 ---
 
@@ -86,13 +86,13 @@ Start-Process 'gamelib://launch?appName=<appid>&runner=<runner>'
 
 | Item | Expected | Observed | Result |
 |---|---|---|---|
-| `gamelib-sidecar` count after first launch | 1 | _pending_ | _pending_ |
-| `GameLib` count after first launch | 1 | _pending_ | _pending_ |
-| Console line after `ping` open | `delivered single-instance deep link to sidecar: ok` | _pending_ | _pending_ |
-| New window appears after `ping` open | No | _pending_ | _pending_ |
-| `gamelib-sidecar` / `GameLib` counts after `ping` open | 1 / 1 | _pending_ | _pending_ |
-| Behavior after `launch` open | Running instance reacts (launches the game, shows its page, or shows an error) — no second window | _pending_ | _pending_ |
-| Console line after `launch` open | (record verbatim) | _pending_ | _pending_ |
+| `gamelib-sidecar` count after first launch | 1 | 1 (debug build: `node ...\build\main\sidecar.js`, PID 23236) | PASS |
+| `GameLib` count after first launch | 1 | 1 (the process is `gamelib-shell`, PID 29020) | PASS |
+| Console line after `ping` open | `delivered single-instance deep link to sidecar: ok` | `[shell] delivered single-instance deep link to sidecar: ok` | PASS |
+| New window appears after `ping` open | No | No (operator: "only one gamelib instance") | PASS |
+| `gamelib-sidecar` / `GameLib` counts after `ping` open | 1 / 1 | 1 / 1 | PASS |
+| Behavior after `launch` open | Running instance reacts (launches the game, shows its page, or shows an error) — no second window | The running instance launched All Will Fall; no second window. Side note: a dialog asked to confirm opening Steam (Steam was closed), but Steam opened independently of it, so the dialog had no effect. Not a Phase 46 defect. | PASS |
+| Console line after `launch` open | (record verbatim) | `[shell] delivered single-instance deep link to sidecar: ok` | PASS |
 
 ---
 
@@ -108,11 +108,11 @@ Get-CimInstance Win32_Process -Filter "Name='GameLib.exe'" | Select ProcessId,Pa
 
 | Item | Expected | Observed | Result |
 |---|---|---|---|
-| `gamelib-sidecar` count (5s after `ping` open) | 1 | _pending_ | _pending_ |
-| `GameLib` count (5s after `ping` open) | 1 | _pending_ | _pending_ |
-| `gamelib-sidecar` count (5s after `launch` open) | 1 | _pending_ | _pending_ |
-| `GameLib` count (5s after `launch` open) | 1 | _pending_ | _pending_ |
-| `gamelib-sidecar.exe` ParentProcessId | Equals the single `GameLib.exe` ProcessId | _pending_ | _pending_ |
+| `gamelib-sidecar` count (5s after `ping` open) | 1 | 1 (at 6s) | PASS |
+| `GameLib` count (5s after `ping` open) | 1 | 1 (at 6s) | PASS |
+| `gamelib-sidecar` count (5s after `launch` open) | 1 | 1 (at 6s) | PASS |
+| `GameLib` count (5s after `launch` open) | 1 | 1 (at 6s) | PASS |
+| `gamelib-sidecar.exe` ParentProcessId | Equals the single `GameLib.exe` ProcessId | sidecar 23236, parent 29020 = the single `gamelib-shell` | PASS |
 
 ---
 
@@ -127,10 +127,10 @@ $LASTEXITCODE
 
 | Item | Expected | Observed | Result |
 |---|---|---|---|
-| Console line from the second launch | `another GameLib instance is already running -- sending focus sentinel to it and exiting` | _pending_ | _pending_ |
-| `$LASTEXITCODE` of the second launch | 0 | _pending_ | _pending_ |
-| Existing window | Restored and focused | _pending_ | _pending_ |
-| `gamelib-sidecar` / `GameLib` counts after | 1 / 1 | _pending_ | _pending_ |
+| Console line from the second launch | `another GameLib instance is already running -- sending focus sentinel to it and exiting` | `[shell] another GameLib instance is already running -- sending focus sentinel to it and exiting` | PASS |
+| `$LASTEXITCODE` of the second launch | 0 | 0 | PASS |
+| Existing window | Restored and focused | NOT restored (operator: "no it did not") | **FAIL** |
+| `gamelib-sidecar` / `GameLib` counts after | 1 / 1 | 1 / 1 | PASS |
 
 ---
 
@@ -189,7 +189,9 @@ Start-Process 'gamelib://launch?appName=<appid>'
 
 ## Verdict
 
-`Verdict: _pending_`
+`Verdict: FAIL (first failing: Check 3 — the minimized primary window was not restored or focused by the focus sentinel)`
+
+Checks 4 and 5 were NOT run, per the failure branch below.
 
 (Set to `PASS` only if P0 and Checks 1-5 all match Expected. Check 5's pre-existing
 orphan-sidecar observation does not by itself fail the gate. Otherwise:
@@ -209,3 +211,30 @@ orphan-sidecar observation does not by itself fail the gate. Otherwise:
      Windows is unregistered again (D-05).
 - The todo (`2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`) and
   ledger row `U-34.5-18` stay open either way.
+
+## Recorded failure (2026-09-24)
+
+**Check 3, "Existing window".** The secondary delivered the sentinel and exited 0, and the
+counts stayed 1 / 1, but the minimized primary window was not restored or focused.
+
+**Console output.** The primary logs nothing when it receives a focus sentinel, because the
+Windows handler's sentinel arm has no `eprintln!`. Its log shows only the two deep-link delivery
+lines from Check 1, so the log cannot say whether the sentinel reached the handler.
+
+**Suspected cause (orchestrator diagnosis, not yet verified).** The Windows accept loop's
+sentinel arm (`handle_windows_single_instance_connection` in `main.rs`) calls `show()` +
+`set_focus()` with no `unminimize()`. The comment on `open_about_window_from_tray` says that
+pair is sufficient and that the `__GAMELIB_FOCUS__` handler has "NO latent minimized-window
+gap". That was measured on macOS only, where `show()` is AppKit `makeKeyAndOrderFront:` and
+de-miniaturizes the window. On Windows, tao's `show()` does not restore a minimized window, and
+`set_focus()` is gated on the window not being minimized. A second candidate is the Windows
+foreground lock: the secondary is the foreground process and does not call
+`AllowSetForegroundWindow` before it exits.
+
+**Other observations (not failures).**
+
+- The installed exe is `gamelib-shell.exe`, not `GameLib.exe`, so this gate's
+  `Get-Process GameLib` commands were run as `Get-Process gamelib-shell`.
+- The debug build spawns the sidecar as `node <repo>\build\main\sidecar.js`, not
+  `gamelib-sidecar.exe`. Sidecar counts were taken as node processes whose command line
+  contains `sidecar.js`.
