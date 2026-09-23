@@ -505,13 +505,13 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-46-02 | Phase 46 | Complete |
 | REQ-46-03 | Phase 46 | Complete |
 | REQ-46-04 | Phase 46 | Complete |
-| REQ-46-05 | Phase 46 | Pending |
-| REQ-46-06 | Phase 46 | Pending |
+| REQ-46-05 | Phase 46 | Complete |
+| REQ-46-06 | Phase 46 | Complete |
 | REQ-46-07 | Phase 46 | Complete |
 | REQ-46-08 | Phase 46 | Complete |
 | REQ-46-09 | Phase 46 | Pending |
 | REQ-46-10 | Phase 46 | Pending |
-| REQ-46-11 | Phase 46 | Pending |
+| REQ-46-11 | Phase 46 | Complete |
 
 **Coverage:**
 - v0.2 requirements: 15 total
@@ -2237,7 +2237,7 @@ because each changes what a plan must assert:**
   never the payload (T-34.5-G6-25). Source: RESEARCH Q4, Don't Hand-Roll. Verified by: source gate
   (region assertions on the accept-loop function) + live gate check 1.
 
-- [ ] **REQ-46-05**: The `plugins.deep-link` override is deleted from
+- [x] **REQ-46-05**: The `plugins.deep-link` override is deleted from
   `src-tauri/tauri.windows.conf.json`. This happens in a plan that runs after REQ-46-01..04 are
   implemented and unit-tested. `bundle.resources` is left byte-identical. In the SAME commit,
   `windowsDeepLinkSuppression.test.ts` Tests A and E are inverted: Windows declares no
@@ -2246,7 +2246,7 @@ because each changes what a plan must assert:**
   contains exactly the 6 `Classes\gamelib` lines recorded by quick 260922-nx4's control run. Source:
   RESEARCH Q6/Q9; todo "Then, and only then" steps 1-2. Verified by: jest + build-artefact grep.
 
-- [ ] **REQ-46-06**: The runtime `register_all()` decision for Windows is recorded and pinned. The
+- [x] **REQ-46-06**: The runtime `register_all()` decision for Windows is recorded and pinned. The
   default (decision point (a)) is NOT widened: the single call site stays under
   `#[cfg(target_os = "linux")]`. The main.rs comment block above it states that Windows registers at
   INSTALL time via NSIS, and why the runtime call is not needed. A test named for REQ-46-06 in
@@ -2288,7 +2288,7 @@ because each changes what a plan must assert:**
   running the gate are operator actions. Source: RESEARCH Q9 live protocol; todo Verification.
   Verified by: manual-only, recorded in `46-LIVE-GATE.md`.
 
-- [ ] **REQ-46-11**: The record matches reality. Comment blocks in `src-tauri/src/main.rs` that say
+- [x] **REQ-46-11**: The record matches reality. Comment blocks in `src-tauri/src/main.rs` that say
   Windows has no guard or is not registered are rewritten when the matching code change lands (the
   guard-section header, the `U-34.5-18` accepted-gap comment, the `main()` preamble, and the
   registration block above `register_all()`). The same applies to the header prose of
