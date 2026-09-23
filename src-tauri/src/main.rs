@@ -720,35 +720,51 @@ fn update_tray_recent_games(app: &AppHandle, games: Vec<TrayRecentGame>) {
 ///
 /// Three calls raise the window before the eval. Referenced against the vendored runtime
 /// (`tao-0.35.3`, `src/platform_impl/macos/window.rs`) -- but read the LOAD-BEARING line
-/// carefully, because only one of the three actually carries the fix:
-///   1. `show()` is THE call that fixes this. `set_visible(true)` (`:668-673`) is
+/// carefully, because only one of the three actually carries the fix ON MACOS:
+///   1. On macOS, `show()` is THE call that fixes this. `set_visible(true)` (`:668-673`) is
 ///      `util::make_key_and_order_front_sync` -> `makeKeyAndOrderFront:`
 ///      (`util/async.rs:212-217`), which AppKit defines as deminiaturizing a miniaturized
-///      window AND making it key. So `show()` alone un-minimizes, raises and focuses.
-///   2. `unminimize()` is DEFENCE IN DEPTH, not a requirement. See the correction note below.
-///      It is free on every non-minimized path: internally `set_minimized(false)`
+///      window AND making it key. So on macOS, `show()` alone un-minimizes, raises and focuses.
+///   2. On macOS, `unminimize()` is DEFENCE IN DEPTH, not a requirement. See the correction note
+///      below. It is free on every non-minimized path: internally `set_minimized(false)`
 ///      (`:1035-1050`) early-returns when the window is already not miniaturized.
 ///   3. `set_focus()` is a no-op in the minimized case by design -- it gates on
 ///      `!is_minimized && is_visible` (`:677-685`) -- and does the real work only for a
 ///      window that is already visible but backgrounded. The eval comes LAST so the window is
 ///      already up when the About modal mounts inside it.
 ///
-/// CORRECTION (quick `260907-9co`, after the live gate). This comment previously claimed
-/// `unminimize()` was mandatory -- that "a minimized `main` would otherwise never focus at
-/// all" -- reasoning from `set_focus()`'s `!is_minimized` guard alone. That premise is true and
-/// the conclusion was FALSE: it never traced what `show()` does to a miniaturized window.
-/// DISPROVED BY MEASUREMENT, not by re-reading: the tray's own "Show GameLib" arm is
-/// `show()` + `set_focus()` with no `unminimize()`, and it restores a Dock-minimized `main`
-/// correctly. `unminimize()` is kept here as an explicit, free statement of intent, but it is
-/// not what makes the minimized case work. Do not cite this site as precedent for it being
-/// required.
+/// CORRECTION (quick `260907-9co`, after the live gate; scoped to macOS). This comment
+/// previously claimed `unminimize()` was mandatory -- that "a minimized `main` would otherwise
+/// never focus at all" -- reasoning from `set_focus()`'s `!is_minimized` guard alone. That
+/// premise is true and the conclusion was FALSE ON MACOS: it never traced what `show()` does to
+/// a miniaturized window there. DISPROVED BY MEASUREMENT, not by re-reading: the tray's own
+/// "Show GameLib" arm was `show()` + `set_focus()` with no `unminimize()`, and it restored a
+/// Dock-minimized `main` correctly on macOS. `unminimize()` is kept here as an explicit, free
+/// statement of intent, but on macOS it is not what makes the minimized case work. Do not cite
+/// this site as precedent for it being required on macOS.
 ///
-/// Consequently there is NO latent minimized-window gap at the four sibling raise sites
+/// CORRECTED AGAIN (plan 46-06, `46-LIVE-GATE.md` Check 3, 2026-09-24). The prior revision went
+/// on to say the four sibling raise sites
 /// (`build_tray_menu`'s child-window attachment fallback, the `__GAMELIB_FOCUS__`
 /// single-instance socket handler, the tray menu `"show"` arm, and the tray icon left-click
-/// handler). Their `show()` + `set_focus()` pair is sufficient. An earlier revision of this
-/// comment asserted the opposite; it was wrong, and the three-vs-two asymmetry here is a
-/// stylistic surplus rather than a fix those sites still need.
+/// handler) shared this fix, leaving nothing outstanding at any of them. That held on macOS
+/// only, and was FALSE on Windows. Per tao-0.35.3's Windows implementation
+/// (`platform_impl/windows/window.rs:164-172,175-186`;
+/// `platform_impl/windows/window_state.rs:390-402`), `set_visible(true)` issues no `ShowWindow`
+/// call when the window is already visible (only the VISIBLE flag is diffed, and a
+/// minimized-but-visible window has no flag diff), and `set_focus()` is gated on
+/// `!is_minimized` -- so `show()` + `set_focus()` alone leaves a minimized window minimized on
+/// Windows, exactly as measured live at Check 3. On Windows, `unminimize()`
+/// (`set_minimized(false)`, `window.rs:584-597`) IS the load-bearing call: it is the only one of
+/// the three that issues `ShowWindow(hwnd, SW_RESTORE)`. As of plan 46-06, the Windows
+/// focus-sentinel arm (`handle_windows_single_instance_connection`) and the tray `"show"` menu
+/// arm and left-click handler all call `unminimize()` before `show()` and `set_focus()`, for
+/// this reason. The Unix socket handler named above is UNCHANGED by plan 46-06 -- it sits inside
+/// a `#[cfg(unix)]` region pinned byte-identical to the pre-phase baseline by the phase-46
+/// Unix-region gate, and this site's macOS measurement covers it there too. On Linux, tao's
+/// `platform_impl/linux/window.rs:567-576` gates `set_focus()` on `!minimized` the same way
+/// Windows does, so that pair is UNMEASURED and suspect on Linux -- see
+/// `.planning/todos/pending/2026-09-24-linux-unix-focus-sentinel-arm-may-not-restore-a-minimized-window.md`.
 ///
 /// Note the CONSEQUENCE for whoever edits the preload name next: the eval below is
 /// optional-chained, so if `window.api.showAboutWindow` ever stops existing this menu item does
@@ -8700,6 +8716,14 @@ fn acquire_single_instance_windows(user_sid: &str, session_id: u32) -> WindowsSi
 /// No error string returned here ever carries `payload` or the URL (T-34.5-G6-25): only a fixed
 /// English reason, or an OS error's own `Display` text (which reports what the OS says about the
 /// open/write attempt itself, never what we tried to write).
+///
+/// Since plan 46-06 (T-46-16, closing `46-LIVE-GATE.md` Check 3's foreground-lock candidate),
+/// this function also grants the verified server process foreground rights via
+/// `AllowSetForegroundWindow`, AFTER the owner-SID check above passes and BEFORE the payload is
+/// written. This secondary is the process the user just launched -- it may itself hold the
+/// Windows foreground lock -- and it exits immediately after writing, so pre-authorizing the
+/// verified primary here gives the primary's own raise (`SetForegroundWindow` inside
+/// `force_window_active`) its best chance of succeeding without the Alt-key `SendInput` fallback.
 #[cfg(windows)]
 fn deliver_to_running_instance_windows(
     pipe_name: &str,
@@ -8717,6 +8741,8 @@ fn deliver_to_running_instance_windows(
     use windows_sys::Win32::Storage::FileSystem::{
         READ_CONTROL, SECURITY_ANONYMOUS, SECURITY_SQOS_PRESENT,
     };
+    use windows_sys::Win32::System::Pipes::GetNamedPipeServerProcessId;
+    use windows_sys::Win32::UI::WindowsAndMessaging::AllowSetForegroundWindow;
 
     // Reads the connected pipe's owner SID off `file`'s raw handle. Returns the raw WIN32_ERROR
     // status on failure (never `Ok` unless `status == 0`), so the caller can special-case
@@ -8827,6 +8853,35 @@ fn deliver_to_running_instance_windows(
         return Err(
             "running-instance pipe is not owned by the current user; refusing to deliver"
                 .to_string(),
+        );
+    }
+
+    // Grant the verified server process the right to take the foreground (T-46-16, defence in
+    // depth for the Windows foreground lock). Issued only AFTER the owner-SID check above
+    // passes, and only BEFORE the payload is written, so the grant only ever reaches a process
+    // this same user already owns. A failed grant is a WARN, never fatal -- the running
+    // instance's window may simply flash in the taskbar instead of coming to the front, and
+    // delivery must proceed regardless.
+    //
+    // SAFETY: `file`'s raw handle is valid for the duration of this call. `server_pid` is only
+    // read after `GetNamedPipeServerProcessId` reports success.
+    let mut server_pid: u32 = 0;
+    let got_pid = unsafe {
+        GetNamedPipeServerProcessId(file.as_raw_handle() as HANDLE, &mut server_pid) != 0
+    };
+    if !got_pid {
+        eprintln!(
+            "[shell] WARN: could not grant foreground rights to the running instance (GetNamedPipeServerProcessId failed: {}) -- its window may flash in the taskbar instead of coming to the front",
+            std::io::Error::last_os_error()
+        );
+    } else if unsafe { AllowSetForegroundWindow(server_pid) } != 0 {
+        // Pass the verified server PID only -- never the wildcard: least privilege, so only the
+        // verified same-user owner may take the foreground.
+        eprintln!("[shell] granted foreground rights to the running instance (pid={server_pid})");
+    } else {
+        eprintln!(
+            "[shell] WARN: could not grant foreground rights to the running instance (AllowSetForegroundWindow failed: {}) -- its window may flash in the taskbar instead of coming to the front",
+            std::io::Error::last_os_error()
         );
     }
 
@@ -8955,14 +9010,48 @@ fn run_windows_single_instance_accept_loop(
         }
         let trimmed = line.trim();
 
+        // On Windows, `unminimize()` is the load-bearing call here, not `show()` + `set_focus()`
+        // alone -- measured wrong at `46-LIVE-GATE.md` Check 3 (2026-09-24); see the corrected
+        // `open_about_window_from_tray` comment above for the full correction. Per tao-0.35.3
+        // (`platform_impl/windows/window.rs:164-172`), `set_visible(true)` only diffs the
+        // VISIBLE flag -- on a window that is already visible-but-minimized that diff is empty,
+        // so no `ShowWindow` call is issued and the window stays minimized. `set_focus()`
+        // (`window.rs:175-186`) is gated on `!is_minimized && is_visible`, so it is a no-op while
+        // minimized. Only `set_minimized(false)` (`unminimize()`, `window.rs:584-597`) issues
+        // `ShowWindow(hwnd, SW_RESTORE)` (`window_state.rs:390-402`), and it runs synchronously
+        // because `execute_in_thread` executes inline when already on the event-loop thread --
+        // which `run_on_main_thread` guarantees -- so by the time `set_focus()` runs next, the
+        // MINIMIZED flag is already cleared.
         if trimmed == SINGLE_INSTANCE_FOCUS_SENTINEL {
+            eprintln!("[shell] received single-instance focus sentinel -- raising the main window");
             let focus_handle = accept_app_handle.clone();
-            let _ = accept_app_handle.run_on_main_thread(move || {
-                if let Some(window) = focus_handle.get_webview_window(MAIN_WINDOW_LABEL) {
-                    let _ = window.show();
-                    let _ = window.set_focus();
+            let scheduled = accept_app_handle.run_on_main_thread(move || {
+                let render = |r: tauri::Result<()>| match r {
+                    Ok(()) => "ok".to_string(),
+                    Err(e) => format!("err={e}"),
+                };
+                match focus_handle.get_webview_window(MAIN_WINDOW_LABEL) {
+                    Some(window) => {
+                        let unminimize_result = render(window.unminimize());
+                        let show_result = render(window.show());
+                        let set_focus_result = render(window.set_focus());
+                        eprintln!(
+                            "[shell] focus sentinel raise: unminimize={}, show={}, set_focus={}",
+                            unminimize_result, show_result, set_focus_result
+                        );
+                    }
+                    None => {
+                        eprintln!(
+                            "[shell] WARN: focus sentinel: no '{MAIN_WINDOW_LABEL}' window to raise"
+                        );
+                    }
                 }
             });
+            if let Err(e) = scheduled {
+                eprintln!(
+                    "[shell] WARN: focus sentinel: could not schedule the raise on the main thread: {e}"
+                );
+            }
             return;
         }
 
@@ -10208,6 +10297,7 @@ fn main() {
                                         if let Some(window) =
                                             app_handle.get_webview_window(MAIN_WINDOW_LABEL)
                                         {
+                                            let _ = window.unminimize();
                                             let _ = window.show();
                                             let _ = window.set_focus();
                                         }
@@ -10246,6 +10336,7 @@ fn main() {
                                     if let Some(window) =
                                         app_handle.get_webview_window(MAIN_WINDOW_LABEL)
                                     {
+                                        let _ = window.unminimize();
                                         let _ = window.show();
                                         let _ = window.set_focus();
                                     }

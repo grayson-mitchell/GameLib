@@ -259,6 +259,7 @@ windows-sys = { version = "0.60", features = [
     "Win32_Security",                # SECURITY_ATTRIBUTES, TOKEN_USER, GetTokenInformation
     "Win32_Security_Authorization",  # ConvertStringSecurityDescriptorToSecurityDescriptorW,
                                       # ConvertSidToStringSidW, GetSecurityInfo
+    "Win32_UI_WindowsAndMessaging",  # AllowSetForegroundWindow (plan 46-06, secondary foreground grant)
 ] }
 # RESEARCH's Standard Stack listed a 7th feature, `Win32_System_Memory`, for `LocalFree`. Grepping
 # the vendored `windows-sys-0.60.2` source directly (as this task's own read_first requires) shows
