@@ -234,6 +234,35 @@ objc2-web-kit = { version = "0.3.2", default-features = false, features = [
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.186"
 
+# Phase 46 (D-44-A's Windows half): the Windows single-instance guard (`CreateMutexW` decision,
+# `CreateNamedPipeW` transport, `ConvertStringSecurityDescriptorToSecurityDescriptorW` DACL) needs
+# a handful of Win32 FFI calls std has no equivalent for. ALREADY resolved in this workspace's
+# tree at this exact version (0.45.0/0.52.0/0.59.0/0.60.2/0.61.2 are all transitively present via
+# `arboard`, `keyring`, `tauri-plugin-updater`, `rfd`, `tokio`, `mio`, `socket2`, `tempfile`,
+# `tray-icon`, `muda`, confirmed with `cargo tree -i windows-sys`) -- this line only declares what
+# `src/main.rs` directly calls, same "declare what your own code directly needs, even if already
+# present" discipline the `dispatch2`/`libc` comments above established. No new crate NAME enters
+# the tree, so `cargoFeatures.test.ts`'s Cargo.lock crate-name pin stays unchanged.
+# `windows-sys`, not the higher-level `windows` crate: narrow FFI surface, matching every other
+# Win32-FFI dependency already in this tree (`keyring`'s own `windows-native` feature above,
+# `tray-icon`, `muda`, `tauri-plugin-updater` all use `windows-sys` for the identical reason).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = [
+    "Win32_Foundation",              # HANDLE, WIN32_ERROR, GetLastError, CloseHandle, LocalFree
+    "Win32_System_Threading",        # CreateMutexW, OpenProcessToken, GetCurrentProcess
+    "Win32_System_Pipes",            # CreateNamedPipeW and the PIPE_* dwPipeMode constants
+    "Win32_Storage_FileSystem",      # FILE_FLAG_FIRST_PIPE_INSTANCE, PIPE_ACCESS_INBOUND,
+                                      # SECURITY_SQOS_PRESENT/SECURITY_ANONYMOUS (open-mode flags)
+    "Win32_Security",                # SECURITY_ATTRIBUTES, TOKEN_USER, GetTokenInformation
+    "Win32_Security_Authorization",  # ConvertStringSecurityDescriptorToSecurityDescriptorW,
+                                      # ConvertSidToStringSidW, GetSecurityInfo
+] }
+# RESEARCH's Standard Stack listed a 7th feature, `Win32_System_Memory`, for `LocalFree`. Grepping
+# the vendored `windows-sys-0.60.2` source directly (as this task's own read_first requires) shows
+# `LocalFree`/`HLOCAL` are declared in `Win32/Foundation/mod.rs`, gated by `Win32_Foundation`
+# alone -- `Win32_System_Memory` gates a different module (`Win32_System_Memory::VirtualAlloc` and
+# friends) that nothing here calls. Omitted rather than guessed in as harmless dead weight.
+
 [profile.release]
 opt-level = "s"
 lto = true

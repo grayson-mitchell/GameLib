@@ -8312,14 +8312,17 @@ fn resolve_packaged_app_root(app: &AppHandle) -> String {
     app_root_env_value(app.path().resource_dir().map_err(|e| e.to_string()))
 }
 
-// ---- Single-instance guard (Phase 34.5 gap cycle 6 plan 44, D-44-A) -----------------------
+// ---- Single-instance guard (Phase 34.5 gap cycle 6 plan 44, D-44-A; Windows half added
+// Phase 46) -----------------------------------------------------------------------------------
 //
-// Hand-rolled, std-only, Unix-only. No crate is added (`tauri-plugin-single-instance` is
-// rejected -- see the plan's own decision record D-44-A): a plugin-based guard cannot run
-// before `tauri::Builder::default()`, so a secondary process would still reach `.setup()` and
-// spawn its own sidecar before the plugin could ever tell it "you are secondary". This guard
-// runs at the very top of `main()`, before the builder is even constructed, so a secondary
-// process's `std::process::exit(0)` fires before `spawn_sidecar` can ever be called.
+// Hand-rolled. Unix is std-only (`std::os::unix::net`); Windows (Phase 46) uses `windows-sys` FFI
+// (`CreateMutexW`/`CreateNamedPipeW`), since std has no cross-platform single-instance primitive.
+// No plugin crate is added for either target (`tauri-plugin-single-instance` is rejected -- see
+// the plan's own decision record D-44-A): a plugin-based guard cannot run before
+// `tauri::Builder::default()`, so a secondary process would still reach `.setup()` and spawn its
+// own sidecar before the plugin could ever tell it "you are secondary". This guard runs at the
+// very top of `main()`, before the builder is even constructed, so a secondary process's
+// `std::process::exit(0)` fires before `spawn_sidecar` can ever be called.
 
 /// Outcome of a single-instance acquisition attempt. `Primary` holds the bound listener the
 /// accept loop in `main()`'s `.setup()` closure will service; `PrimaryWithoutListener` behaves
@@ -8378,10 +8381,309 @@ fn acquire_single_instance(socket_path: &std::path::Path) -> SingleInstanceRole 
     }
 }
 
-// D-44-A accepted cost, ledger row `U-34.5-18`: `std::os::unix::net` has no non-unix
-// equivalent, so `acquire_single_instance` is never called on a non-unix target at all (see
-// `main()`'s `#[cfg(not(unix))]` arm below) -- Windows keeps TODAY's behaviour (a second
-// launch starts a second instance), a named, accepted gap, not a silent regression.
+// `std::os::unix::net` has no non-unix equivalent, so `acquire_single_instance` above is never
+// called on a non-unix target -- Windows gets its own guard below (`acquire_single_instance_windows`,
+// mutex decision + named-pipe transport), closing ledger row `U-34.5-18` (Phase 46). See that
+// function's own doc comment for the mutex+pipe split and how Windows's self-cleaning kernel-object
+// lifetime (46-RESEARCH.md Q1) removes the stale-socket-removal branch `acquire_single_instance`
+// above needs on Unix.
+
+// ---- Windows single-instance guard: FFI (Phase 46 plan 46-02) -----------------------------
+//
+// Everything below is `#[cfg(windows)]`-only and calls `windows-sys` Win32 FFI directly -- unlike
+// the pure name/SDDL helpers above (plan 46-01), these functions are not unit-tested (mirrors
+// `acquire_single_instance`'s own precedent: exercised by the live gate, REQ-46-10, not `cargo
+// test`). Every failure here degrades to `PrimaryWithoutListener` or `None` (T-34.5-G6-24,
+// fail-open) -- never a panic, never an abort.
+
+/// Windows counterpart to `SingleInstanceRole` above. `Primary` holds the first pipe instance the
+/// accept loop in `main()`'s `.setup()` closure will service (wired in plan 46-03, not this one).
+/// `PrimaryWithoutListener` behaves identically to a primary process (spawns the sidecar, opens
+/// the window) but has no pipe to accept connections on -- the FAIL-OPEN path (T-34.5-G6-24) for
+/// every recoverable failure: SID/session lookup failure, mutex creation failure, SDDL derivation
+/// failure, or pipe creation failure. `Secondary` means another instance already holds the mutex.
+///
+/// Stricter than the Unix `PrimaryWithoutListener`: a Windows `PrimaryWithoutListener` STILL
+/// holds the mutex (acquired before this enum is even constructed), so every LATER launch in this
+/// session still exits as a `Secondary` -- it loses the deep link (no pipe to write to) but never
+/// becomes a second full instance. The Unix `PrimaryWithoutListener` has no mutex-equivalent
+/// holding it exclusive, so the Unix guard's next launch can still bind the socket and become
+/// primary itself.
+#[cfg(windows)]
+struct WindowsPrimaryPipe {
+    first_instance: std::os::windows::io::OwnedHandle,
+    #[allow(dead_code)] // consumed by plan 46-03's accept loop, not this plan
+    pipe_name: String,
+    #[allow(dead_code)] // consumed by plan 46-03's accept loop, not this plan
+    sddl: String,
+}
+
+#[cfg(windows)]
+enum WindowsSingleInstanceRole {
+    Primary(WindowsPrimaryPipe),
+    PrimaryWithoutListener,
+    Secondary { pipe_name: String, user_sid: String },
+}
+
+/// Reads the current process token's user SID (as an `S-1-...` string) and Terminal Services
+/// session id -- the two values `windows_mutex_name`/`windows_pipe_name`/`windows_pipe_sddl`
+/// derive every Windows single-instance name and DACL from. Returns `None` on ANY failure
+/// (T-34.5-G6-24, fail-open): a missing/unreadable token, a `GetTokenInformation` failure, or a
+/// SID-string conversion failure all fall back to `PrimaryWithoutListener`/no guard at the call
+/// site, never a panic. The token handle is closed on every exit path -- there is no early
+/// `return`/`?` between a successful `OpenProcessToken` and the final `CloseHandle` below.
+///
+/// Decision point (b), operator-overridable: see `windows_pipe_sddl`'s doc comment (plan 46-01,
+/// REQUIREMENTS.md Phase 46 "Open decision points") for the full override recipe and its
+/// same-user cross-logon-session consequence. This function reads the token's USER SID
+/// (`TokenUser`) only, and deliberately does NOT read the logon SID (`TokenLogonSid`, or
+/// `TokenGroups` walked for `SE_GROUP_LOGON_ID`) -- the pipe DACL default is per-user, not
+/// per-logon-session. Do not add either of those calls here without also flipping
+/// `windows_pipe_sddl`'s pinned decision unit test and the matching TS source gate (plan 46-03).
+#[cfg(windows)]
+fn current_user_identity() -> Option<(String, u32)> {
+    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, LocalFree};
+    use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
+    use windows_sys::Win32::Security::{
+        GetTokenInformation, TOKEN_QUERY, TOKEN_USER, TokenSessionId, TokenUser,
+    };
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+
+    // SAFETY: every Win32 call below is documented at its own call site. `token`, once
+    // successfully opened by `OpenProcessToken`, is closed exactly once via the unconditional
+    // `CloseHandle(token)` after the IIFE below returns -- the IIFE itself never closes it, so no
+    // path (success or any of its early `None` returns) can double-close or leak the handle.
+    unsafe {
+        let mut token: HANDLE = std::ptr::null_mut();
+        if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
+            return None;
+        }
+
+        let result: Option<(String, u32)> = (|| {
+            // Two-call size-probe pattern: the first call with a zero-length buffer reports the
+            // required size via `needed`, regardless of its own BOOL return value.
+            let mut needed: u32 = 0;
+            GetTokenInformation(token, TokenUser, std::ptr::null_mut(), 0, &mut needed);
+            if needed == 0 {
+                return None;
+            }
+            let mut buf: Vec<u8> = vec![0u8; needed as usize];
+            let mut written = needed;
+            if GetTokenInformation(
+                token,
+                TokenUser,
+                buf.as_mut_ptr() as *mut core::ffi::c_void,
+                needed,
+                &mut written,
+            ) == 0
+            {
+                return None;
+            }
+            // SAFETY: `buf` was sized by the probe call above and filled by this call for
+            // `TokenUser`, which documents its output as a `TOKEN_USER` struct at the start of
+            // the buffer.
+            let token_user = &*(buf.as_ptr() as *const TOKEN_USER);
+
+            let mut sid_str_ptr: windows_sys::core::PWSTR = std::ptr::null_mut();
+            if ConvertSidToStringSidW(token_user.User.Sid, &mut sid_str_ptr) == 0 {
+                return None;
+            }
+            // SAFETY: on success `sid_str_ptr` is a non-null, NUL-terminated wide string, per
+            // `ConvertSidToStringSidW`'s documented contract; copied into an owned `String` and
+            // freed with `LocalFree` immediately below, so the allocation never outlives this
+            // scope.
+            let sid_len = (0..).take_while(|&i| *sid_str_ptr.add(i) != 0).count();
+            let sid_slice = std::slice::from_raw_parts(sid_str_ptr, sid_len);
+            let sid = String::from_utf16_lossy(sid_slice);
+            LocalFree(sid_str_ptr as *mut core::ffi::c_void);
+
+            let mut session_id: u32 = 0;
+            let mut session_len: u32 = std::mem::size_of::<u32>() as u32;
+            if GetTokenInformation(
+                token,
+                TokenSessionId,
+                &mut session_id as *mut u32 as *mut core::ffi::c_void,
+                session_len,
+                &mut session_len,
+            ) == 0
+            {
+                return None;
+            }
+
+            Some((sid, session_id))
+        })();
+
+        CloseHandle(token);
+        result
+    }
+}
+
+/// Creates one instance of the single-instance named pipe, from a pure SDDL string (never
+/// hand-rolled `SECURITY_DESCRIPTOR` bytes -- see 46-RESEARCH.md "Don't Hand-Roll"). `first` sets
+/// `FILE_FLAG_FIRST_PIPE_INSTANCE`: on the primary's very first pipe instance this makes
+/// `CreateNamedPipeW` FAIL (rather than silently join) if another process already created a pipe
+/// of the same name (T-46-01) -- a squatted or cross-session-collided name falls back to
+/// `PrimaryWithoutListener` at the call site, never a hard error.
+///
+/// `lpSecurityAttributes` is never `NULL`: the default pipe DACL grants Everyone/Anonymous read
+/// (46-RESEARCH.md Q2), far broader than this per-user guard's trust boundary. Uses
+/// `PIPE_ACCESS_INBOUND`, not the more permissive `PIPE_ACCESS_DUPLEX` RESEARCH sketched: the
+/// primary only ever reads a payload off this pipe (deviation from RESEARCH, least privilege).
+#[cfg(windows)]
+fn create_single_instance_pipe_instance(
+    pipe_name: &str,
+    sddl: &str,
+    first: bool,
+) -> std::io::Result<std::os::windows::io::OwnedHandle> {
+    use windows_sys::Win32::Foundation::{INVALID_HANDLE_VALUE, LocalFree};
+    use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
+    use windows_sys::Win32::Security::Authorization::{
+        ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1,
+    };
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_FLAG_FIRST_PIPE_INSTANCE, PIPE_ACCESS_INBOUND,
+    };
+    use windows_sys::Win32::System::Pipes::{
+        CreateNamedPipeW, PIPE_READMODE_BYTE, PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE,
+        PIPE_UNLIMITED_INSTANCES, PIPE_WAIT,
+    };
+
+    let name_w: Vec<u16> = pipe_name.encode_utf16().chain(std::iter::once(0)).collect();
+    let sddl_w: Vec<u16> = sddl.encode_utf16().chain(std::iter::once(0)).collect();
+
+    // SAFETY: `name_w`/`sddl_w` are NUL-terminated wide strings kept alive for the duration of
+    // this block. `psd` is allocated by `ConvertStringSecurityDescriptorToSecurityDescriptorW` on
+    // success and freed by the `LocalFree(psd)` below on every path -- including the error path,
+    // since `result` (which may already carry the captured last-error) is computed BEFORE
+    // `LocalFree` runs, so `LocalFree` can never clobber the error this function returns.
+    unsafe {
+        let mut psd: *mut core::ffi::c_void = std::ptr::null_mut();
+        if ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            sddl_w.as_ptr(),
+            SDDL_REVISION_1,
+            &mut psd,
+            std::ptr::null_mut(),
+        ) == 0
+        {
+            return Err(std::io::Error::last_os_error());
+        }
+
+        let sa = SECURITY_ATTRIBUTES {
+            nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+            lpSecurityDescriptor: psd,
+            bInheritHandle: 0,
+        };
+
+        let open_mode =
+            PIPE_ACCESS_INBOUND | if first { FILE_FLAG_FIRST_PIPE_INSTANCE } else { 0 };
+        let handle = CreateNamedPipeW(
+            name_w.as_ptr(),
+            open_mode,
+            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS,
+            PIPE_UNLIMITED_INSTANCES,
+            4096,
+            4096,
+            0,
+            &sa,
+        );
+
+        let result = if handle == INVALID_HANDLE_VALUE {
+            Err(std::io::Error::last_os_error())
+        } else {
+            use std::os::windows::io::{FromRawHandle, OwnedHandle, RawHandle};
+            Ok(OwnedHandle::from_raw_handle(handle as RawHandle))
+        };
+
+        LocalFree(psd);
+        result
+    }
+}
+
+/// Acquires this process's Windows single-instance role. `CreateMutexW` on
+/// `Local\gamelib-single-instance-<sid>` decides primary vs. secondary (Pitfall 1: check
+/// `GetLastError()` IMMEDIATELY after a non-null return, never rely on the handle's nullness
+/// alone -- `CreateMutexW` returns a valid handle to the EXISTING mutex even when
+/// `ERROR_ALREADY_EXISTS` fires). Called with a NULL `lpMutexAttributes`, which Microsoft
+/// documents as non-inheritable (Pitfall 2).
+///
+/// The mutex handle is DELIBERATELY never closed on the primary path: it is held for the
+/// process's entire lifetime, and OS teardown at exit is what releases it (46-RESEARCH.md Q1).
+/// There is no stale-holder branch, unlike the Unix guard's own connect-then-unlink dance --
+/// Windows named-object lifetime is reference-counted and self-cleaning: the kernel destroys the
+/// mutex when its last handle closes, including on a crash, so the next launch's `CreateMutexW`
+/// simply succeeds cleanly with no cleanup code needed here.
+///
+/// T-46-03 accepted residual, Microsoft's own documented caveat: "a malicious user can create
+/// this mutex before you do and prevent your application from starting." This is shared by every
+/// named-mutex single-instance implementation (including `tauri-plugin-single-instance`'s own),
+/// not something this design introduces -- a denial-of-service against availability, not a
+/// confidentiality/integrity issue; fail-open does not help here, because the attacker IS holding
+/// the mutex successfully, not causing an error.
+///
+/// 46-RESEARCH.md Q8's shared-with-Unix residual, recorded here rather than fixed: the mutex is
+/// released (self-cleaning, near-instantaneous on process exit) before `shutdown_child()` finishes
+/// reaping the sidecar, so a narrow window exists where a NEW launch could start spawning its own
+/// sidecar while the PREVIOUS instance's sidecar is still tearing down -- already an accepted,
+/// shared-with-Unix category of risk, out of this phase's scope to close.
+#[cfg(windows)]
+fn acquire_single_instance_windows(user_sid: &str, session_id: u32) -> WindowsSingleInstanceRole {
+    use windows_sys::Win32::Foundation::{ERROR_ALREADY_EXISTS, GetLastError};
+    use windows_sys::Win32::System::Threading::CreateMutexW;
+
+    let (Some(mutex_name), Some(pipe_name), Some(sddl)) = (
+        windows_mutex_name(Some(user_sid)),
+        windows_pipe_name(Some(user_sid), session_id),
+        windows_pipe_sddl(Some(user_sid)),
+    ) else {
+        eprintln!(
+            "[shell] WARN: could not derive the Windows single-instance mutex/pipe name from the current SID -- continuing as primary without a listener (fail-open, T-34.5-G6-24)"
+        );
+        return WindowsSingleInstanceRole::PrimaryWithoutListener;
+    };
+
+    let mutex_name_w: Vec<u16> = mutex_name.encode_utf16().chain(std::iter::once(0)).collect();
+
+    // SAFETY: `mutex_name_w` is a NUL-terminated wide string built immediately above and kept
+    // alive for the duration of this call. A NULL `lpMutexAttributes` is documented as safe and
+    // yields a non-inheritable handle (Pitfall 2).
+    let handle = unsafe { CreateMutexW(std::ptr::null(), 0, mutex_name_w.as_ptr()) };
+
+    if handle.is_null() {
+        eprintln!(
+            "[shell] WARN: CreateMutexW failed for the Windows single-instance mutex -- continuing as primary without a listener (fail-open, T-34.5-G6-24)"
+        );
+        return WindowsSingleInstanceRole::PrimaryWithoutListener;
+    }
+
+    // Pitfall 1: read GetLastError() immediately -- a non-null handle is returned even when
+    // ERROR_ALREADY_EXISTS fires, so nullness alone cannot distinguish primary from secondary.
+    let already_exists = unsafe { GetLastError() } == ERROR_ALREADY_EXISTS;
+
+    if already_exists {
+        // Deliberately does not close `handle`: this process exits shortly after (main()'s
+        // Secondary arm), and OS teardown reclaims it -- mirrors the primary path's own "never
+        // CloseHandle" discipline below.
+        return WindowsSingleInstanceRole::Secondary {
+            pipe_name,
+            user_sid: user_sid.to_string(),
+        };
+    }
+
+    // Primary: the mutex handle above is deliberately never closed (see doc comment).
+    match create_single_instance_pipe_instance(&pipe_name, &sddl, true) {
+        Ok(first_instance) => WindowsSingleInstanceRole::Primary(WindowsPrimaryPipe {
+            first_instance,
+            pipe_name,
+            sddl,
+        }),
+        Err(e) => {
+            eprintln!(
+                "[shell] WARN: single-instance pipe creation failed ({e}) -- continuing as primary without a listener (fail-open, T-34.5-G6-24)"
+            );
+            WindowsSingleInstanceRole::PrimaryWithoutListener
+        }
+    }
+}
 
 /// DEV MODE: spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a
 /// spawn/path failure is visible in the `tauri dev` terminal (previously the whole leg was
