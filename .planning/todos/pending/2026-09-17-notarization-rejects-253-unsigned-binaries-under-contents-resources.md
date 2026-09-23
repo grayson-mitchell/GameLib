@@ -5,7 +5,7 @@ area: build
 severity: major
 platform: macos
 ready: live-gate
-needs: launch-helpers-under-hardened-runtime
+needs: notarize-and-run-steam-bridge-helper-with-disable-library-validation
 status: OPEN
 found_by: 'GitHub Actions run 35223308954 on grayson-mitchell/GameLib, triggered by the throwaway annotated tag v0.7.0-notarize-test1 at commit cc2d66248. The tag was deleted from origin and locally after the run.'
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md'
@@ -207,6 +207,17 @@ failure.
 is clean. The sidecar's `allow-jit` is intact, and that file is never passed to a helper codesign
 call. Passing it would be a silent grant of JIT to 253 binaries not shown to need it.
 
+**CORRECTION, dated 2026-09-23 (quick-260923-q6w) — stated as a correction, not quietly patched.**
+The enumeration above ("legendary/nile/gogdl loading their own `libssl.3.dylib`,
+`Python.framework/Versions/3.12/Python` and `*.cpython-312-darwin.so` are same-team loads") was
+CORRECT, and remains correct today — none of those three needs an entitlement. It MISSED that
+`steam-bridge-helper` dlopens a THIRD-PARTY dylib belonging to Valve
+(`libsteam_api.dylib`), loaded out of the user's installed Steam client: not one of the 253, not
+in our tree at all, never our Team ID, and unreachable by any amount of signing our own files. The
+"all 253 get the SAME Team ID" premise the enumeration rested on was true for the files it
+enumerated and false for the one case it did not consider. See
+`### STATUS 2026-09-23 (quick-260923-q6w)` below for the observed crash and the proven remedy.
+
 ### Placement decision
 
 Signing happens at the **SOURCE path** (`build/bin/arm64/darwin` in the runner workspace), in a
@@ -255,7 +266,9 @@ defect:
    `e7ec58a5-acd7-4dad-9bee-fca7b2bea039`: `statusSummary: "Ready for distribution"`,
    `statusCode: 0`, `issues: None`. See `### STATUS 2026-09-23 (quick-260923-p95)` below.
 4. **Whether any helper crashes at runtime under the hardened runtime with no entitlements.**
-   UNOBSERVED, and a notarization `Accepted` says NOTHING about it.
+   **OBSERVED, and remedied for exactly one helper.** See
+   `### STATUS 2026-09-23 (quick-260923-q6w)` below for the method, the per-helper result table,
+   the verbatim cause, all three controls, and what remains NOT VERIFIED.
 
 ### The only real verification
 
@@ -548,6 +561,84 @@ written.
   did NOT undo this, because `tagName: v__VERSION__` pointed the run at the real `v0.7.0` release
   rather than at the tag. **That draft must not be published until a complete run regenerates the
   manifest** — publishing it as-is would promote an updater feed with no macOS entry at all.
+
+### STATUS 2026-09-23 (quick-260923-q6w) — hazard 4 OBSERVED, and remedied for exactly one helper
+
+This sub-section does NOT revise `## STATUS 2026-09-17 (quick-260917-uik)`,
+`### STATUS 2026-09-23 (quick-260923-ihw)`, `### STATUS 2026-09-23 (quick-260923-np3)`, or
+`### STATUS 2026-09-23 (quick-260923-p95)` above. Each records what was believed then and is left
+intact; this one adds what was measured today.
+
+**`needs:` moved** `launch-helpers-under-hardened-runtime` ->
+`notarize-and-run-steam-bridge-helper-with-disable-library-validation`. The old value described a
+gate that has now been run; the new one names what is actually left: notarizing a build that
+carries this entitlement, and exercising the helper from inside the real `.app`. `severity: major`,
+`platform: macos`, `ready: live-gate` and `status: OPEN` are unchanged.
+
+**1. Method.** `ditto`'d `build/bin/arm64/darwin` to a scratchpad copy — the real tree was never
+touched. Signed the copy through the PRODUCTION script `pnpm sign:macos-resources`, with the login
+keychain and the real Developer ID identity: `signed 253/253` in 74s. Then executed each helper.
+
+**2. Per-helper result table.**
+
+| helper               | invocation                          | result                                             |
+| --------------------- | ------------------------------------ | --------------------------------------------------- |
+| `legendary`            | `--version`, `status`                | OK (rc=0; `status` exercises network/`_ssl`)         |
+| `gogdl`                 | `--version`, `auth`                  | OK (rc=0)                                            |
+| `nile`                  | `--version`                          | OK                                                   |
+| `comet`                 | `--help`                             | OK                                                   |
+| `steam-bridge-helper`   | (launch)                             | **FATAL** `dlopen`, dies before `SteamAPI_Init`      |
+
+**3. The verbatim cause.** `steam-bridge-helper` reports: "code signature ... not valid for use in
+process: mapping process and mapped file (non-platform) have **different Team IDs**". The failing
+path resolves inside the user's installed `Steam.AppBundle` — the dylib is Valve's, not ours.
+
+**4. All three controls.**
+
+- **(1) A/B, same binary, same real profile, only the signature differing.** Ad-hoc
+  `flags=0x20002(adhoc,linker-signed)` loads Valve's dylib and reaches `SteamAPI_Init()` (failing
+  there only because Steam isn't running locally, a normal condition). Developer ID +
+  `flags=0x10000(runtime)` with no entitlement dies at `dlopen`.
+- **(2) The Python helpers fail IDENTICALLY signed and unsigned.** `legendary list --json` and
+  `nile library list` both rc=1 with the same PyInstaller unhandled-exception tail in both variants
+  (no auth configured in a fresh profile); `gogdl auth` rc=0 in both. So the hardened runtime is
+  NOT implicated for the three Python helpers — this is why they get no `HELPER_ENTITLEMENTS`
+  entry.
+- **(3) The remedy was PROVEN, not assumed.** Re-signing only `steam-bridge-helper` with the new
+  one-key `meta/steam-bridge-helper.entitlements.plist` keeps `flags=0x10000(runtime)` and the
+  Developer ID authority intact, shows the entitlement under `codesign -d --entitlements -`, and
+  the binary then reaches `SteamAPI_Init()` — exactly like the ad-hoc control in (1).
+
+**5. Open question (b) corrected, not quietly patched.** See the `CORRECTION, dated 2026-09-23
+(quick-260923-q6w)` paragraph inside `### Open question (b)` above: the original enumeration was
+correct for legendary/nile/gogdl and missed that `steam-bridge-helper` dlopens a THIRD-PARTY dylib
+belonging to Valve, never our Team ID.
+
+**6. Methodological note — CLAUDE.md's two-profile rule earning its keep.** Under an isolated fake
+`HOME`, this defect presents as a *missing-file* `dlopen` error, because Steam is not installed in
+a fresh profile — a shape that reads like a harmless test artifact, not a security-relevant crash.
+Only the real-profile arm exposed the actual cause: a genuine Team ID mismatch against an installed
+third-party dylib. This is exactly the direction CLAUDE.md's two-profile rule warns about: isolation
+is necessary for most runs, but a defect can exist that arms ONLY under a populated profile, and
+an isolated-only gate would have stayed green against it forever.
+
+**7. `--options runtime` was KEPT on `steam-bridge-helper`, deliberately.** Dropping it would also
+fix the `dlopen` — but it would get the build REJECTED at notarization, which is where this whole
+thread began (see `## Problem` above). The entitlement grant is the correct remedy; removing the
+hardened runtime is not an option that was ever on the table.
+
+**8. What remains NOT VERIFIED.**
+
+- **(i) Whether Apple notarizes a binary carrying `disable-library-validation`.** It is permitted
+  for Developer ID distribution, but permitted is not observed — and this todo's entire history is
+  about exactly that distinction.
+- **(ii) Whether the helper works from inside the real notarized `.app`**, as opposed to a locally
+  re-signed scratchpad copy. Recipe step 6 (launching each helper from inside the app) is still
+  owed, now against a build carrying this entitlement.
+
+**Bottom line.** Hazard 4 moves from UNOBSERVED to OBSERVED-and-remedied for exactly one helper.
+The todo stays OPEN, stays in `pending/`, and the two items in (8) are what the next live gate
+must answer.
 
 ## Related
 
