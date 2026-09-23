@@ -12,6 +12,9 @@ files:
   - meta/pruneStaleHelperBinaries.ts
   - meta/assembleRendererDist.ts:114-118
   - vite.config.ts
+status: completed
+resolved: 2026-09-23
+resolved_by: quick-260923-tip
 ---
 
 # Windows packaged build breaks on the darwin runner symlinks
@@ -139,12 +142,10 @@ runner, fresh process, Developer Mode's CI-runner-image default unknown) would h
 — recorded as an open, unmeasured risk, consistent with this todo's existing "A CI Windows runner
 needs the same [Developer Mode], or the code needs to stop depending on it" note under Layer 0.
 
-## Partial resolution — quick 260923-tip (2026-09-23)
+## Resolution (2026-09-23, quick 260923-tip)
 
-**Code for all three layers has landed** in `60db2ecfd`, `0df292bd0`, `1a75da601`. Re-triaged
-`ready: code` → `ready: live-gate`. **This todo stays OPEN**, and the reason is precise: the
-"Done when" above demands a **fresh Windows checkout**, and no fresh checkout was exercised. See
-"What is still NOT proven" below before closing it.
+**All three layers fixed and the "Done when" gate PASSED on a genuine fresh Windows checkout.**
+Code: `60db2ecfd`, `0df292bd0`, `1a75da601`. Gate evidence in "Live gate" below.
 
 **Layer 1 — scoped, per this todo's own "Best" direction.** New
 `resolveRunnerTargetPlatform(env, hostPlatform)` in `meta/releaseTags.ts`, host-keyed off
@@ -186,25 +187,55 @@ previously printed `bundleKeys is empty`. Note the cosmetic wart: vite tags a re
 the *rethrowing* plugin's name, so the tag names the wrong plugin while the message is right. That
 is the part that was getting misdiagnosed, so it is good enough; do not read the tag as provenance.
 
-### Live gate — what WAS proven on the operator's Windows 11 box, 2026-09-23
+### Live gate — PASSED, operator's Windows 11 box, 2026-09-23
 
-`npx vite build` run **twice in a row**, both exit 0, no manual link repair and no `build/` cleanup
-between them. Both runs reported `[preserve-runner-symlinks] restored 12 symlink(s), skipped 0,
-rejected 0`. The second run is the meaningful one: it previously reported
+Run in **two trees**, because they prove different things.
+
+**Tree A — fresh checkout (this is the "Done when" gate).** A `git worktree` at `HEAD` in a short
+path, sparse-checked-out without `.planning`, holding only the 4 tracked files under `public/bin`
+(`.gitignore`, `legendary.LICENSE`, the two `vulkan-helper` binaries) — i.e. exactly the state a
+clean clone lands in. The operator's own `public/bin` was **never moved or touched**; an attempt to
+move it aside was refused, and the worktree approach that replaced it is both safer and a truer
+reading of "a fresh Windows checkout".
+
+| step | result |
+| ---- | ------ |
+| `pnpm download-helper-binaries` | **exit 0** — previously exit 1, `tar extraction failed … Cannot create symlink` |
+| darwin onedir | `Skipping legendary/gogdl/nile darwin onedir download -- target platform is win32` (×3) |
+| symlinks anywhere under `public/bin` | **0** (`dir /AL /S`) — the defect class is absent, not repaired |
+| `npx vite build` run 1 | exit 0, `restored 0 symlink(s), skipped 0, rejected 0` |
+| `npx vite build` run 2, no cleanup between | exit 0, identical — previously `skipped (destination parent missing): 9` and refused to emit |
+| symlinks under `build/bin` | **0** |
+| win32 payload the NSIS bundle maps | intact — `x64/win32`: legendary, gogdl, nile, comet, GalaxyCommunication, EpicGamesLauncher; `arm64/win32`: legendary, gogdl, comet |
+| deliberately broken `buildStart` | surfaces its own error, not `bundleKeys is empty` |
+
+**Tree B — the operator's working tree, darwin tree still present.** Proves Layers 2 and 3 on the
+*harder* path, where the symlinks do exist and must be recreated correctly: two consecutive
+`vite build` runs, both exit 0, both `restored 12 symlink(s), skipped 0, rejected 0`, link types
+corrected as tabulated above. The second run is the meaningful one — it previously reported
 `skipped (destination parent missing): 9` and refused to emit, because run 1 had poisoned `build/`
-with dangling file links. That failure mode is gone.
+with dangling file links.
 
-### What is still NOT proven — why this stays OPEN
+**Layer 0 is discharged, by the "stop depending on it" route this todo itself named.** Two findings:
 
-1. **Layer 1's fresh-checkout claim is UNPROVEN.** This box's `public/bin/arm64/darwin` is the
-   operator's hand-repaired tree from 2026-09-22 and was deliberately left untouched. So the builds
-   above prove Layers 2 and 3 on the **harder** darwin-tree-present path, but they cannot show that a
-   fresh checkout now skips the darwin download entirely. `pnpm download-helper-binaries` on a clean
-   tree was never run.
-2. **Layer 0 is untouched and still open.** Nothing here removes the symlink-privilege dependency on
-   a box that still has the darwin tree; it removes the *reason to have the tree* on win32. The
-   `whoami /priv` re-measurement after a fresh logon is still unanswered.
-3. **The `windows-latest` CI leg is still unmeasured**, exactly as the note above says.
+1. **`whoami /priv` was the WRONG INSTRUMENT**, so the earlier note's conclusion does not hold.
+   Developer Mode does not add `SeCreateSymbolicLinkPrivilege` to the token at all — it makes
+   `CreateSymbolicLink` accept `SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE`. Measured directly:
+   `AllowDevelopmentWithoutDevLicense = 0x1`, the privilege **still absent** from `whoami /priv`,
+   and yet a `symlinkSync` probe creates **both** `'file'` and `'dir'` links successfully. The
+   earlier "has not propagated to this process's token" hypothesis should not be carried forward.
+2. **The win32 build path now creates zero symlinks**, so the privilege question is moot there by
+   construction. The "(and ideally without it)" half of the Done-when was not tested by actually
+   disabling Developer Mode, but against a measured symlink count of 0 there is nothing left to
+   need it.
+
+**Still unmeasured:** the `windows-latest` CI leg was not run. The risk is much smaller than when
+this todo was written — that leg no longer downloads, extracts or copies any symlink-bearing archive
+on win32 — but it is not zero and has not been observed.
+
+**Noted in passing, not a regression:** `build/bin/arm64/win32` has no `nile.exe` because nile
+publishes no win32-arm64 release (visible in the download log: nile ships linux x64, win32 x64,
+linux arm64 only). Pre-existing and unrelated to this work.
 
 ### Pre-existing failures found while verifying (NOT caused by this work)
 
