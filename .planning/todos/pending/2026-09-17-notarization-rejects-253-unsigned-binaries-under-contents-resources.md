@@ -2,10 +2,10 @@
 created: 2026-09-17T00:00:00.000Z
 title: 'macOS notarization REJECTED (not merely untested): Apple returned Invalid on 253 unsigned Contents/Resources binaries Tauri never signs'
 area: build
-severity: critical
+severity: major
 platform: macos
 ready: live-gate
-needs: retag-and-confirm-notarization-accepted
+needs: launch-helpers-under-hardened-runtime
 status: OPEN
 found_by: 'GitHub Actions run 35223308954 on grayson-mitchell/GameLib, triggered by the throwaway annotated tag v0.7.0-notarize-test1 at commit cc2d66248. The tag was deleted from origin and locally after the run.'
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md'
@@ -16,10 +16,17 @@ files:
 
 ## Problem
 
-The macOS leg built and signed successfully, then FAILED at notarization. `severity: critical` is
-correct and is justified here rather than left bare: this is a shipped claim that is false — the
-pipeline reports a signing path it does not actually complete, and no macOS release can be
-published at all until it is fixed.
+The macOS leg built and signed successfully, then FAILED at notarization. `severity: critical` was
+correct when this was written on 2026-09-17, and is justified here rather than left bare:
+this is a shipped claim that is false — the pipeline reports a signing path it does not actually
+complete, and no macOS release can be published at all until it is fixed.
+
+That ground was **discharged on 2026-09-23**, when Apple returned `Accepted` for submission
+`e7ec58a5-acd7-4dad-9bee-fca7b2bea039` — see `### STATUS 2026-09-23 (quick-260923-p95)` below. The
+pipeline now completes the signing path and Apple certifies the result, so the false-shipped-claim
+ground is gone. What remains is whether a helper crashes at runtime under the hardened runtime with
+no entitlements — a feature possibly broken, not a false shipped claim — so the file is now
+`severity: major`.
 
 Verbatim:
 
@@ -236,11 +243,17 @@ defect:
    after the step's keychain teardown, with no collision — see
    `### STATUS 2026-09-23 (quick-260923-np3)` below for the evidence.
 2. **Whether the signature survives Tauri's `bundle.macOS.files` copy into `Contents/Resources`** —
-   argued from how Mach-O signatures are stored (in the file, not an xattr, not a sidecar). Run
-   35808881023 bundled the `.app`, but that is NOT evidence for this hazard: no artifact was ever
-   published or downloaded, so nothing was inspected.
-   UNOBSERVED.
-3. **Whether notarization returns `Accepted`.** UNOBSERVED.
+   argued from how Mach-O signatures are stored (in the file, not an xattr, not a sidecar).
+   **CONFIRMED**, dated 2026-09-23, citing submission `e7ec58a5-acd7-4dad-9bee-fca7b2bea039`. This is
+   **DIRECT** evidence, not an inference from "Apple accepted, so the signatures must have been
+   intact" — the notarization ticket enumerates all 253 by their in-bundle paths with per-file
+   cdhashes, so Apple verified them where they sit inside the `.app`. The argument from how Mach-O
+   signatures are stored is now corroborated by measurement, superseding the earlier note that run
+   35808881023's bundle step was not evidence for this hazard — the ticket is the evidence that note
+   said did not exist. See `### STATUS 2026-09-23 (quick-260923-p95)` below for the ticket detail.
+3. **Whether notarization returns `Accepted`.** **CONFIRMED**, dated 2026-09-23, same submission
+   `e7ec58a5-acd7-4dad-9bee-fca7b2bea039`: `statusSummary: "Ready for distribution"`,
+   `statusCode: 0`, `issues: None`. See `### STATUS 2026-09-23 (quick-260923-p95)` below.
 4. **Whether any helper crashes at runtime under the hardened runtime with no entitlements.**
    UNOBSERVED, and a notarization `Accepted` says NOTHING about it.
 
@@ -452,6 +465,76 @@ fact is what would tell us whether the 253-binary signing fix actually worked.
 **Bottom line: inconclusive on the headline question.** No verdict is not a pass. The todo stays
 OPEN, stays in `pending/`, and `ready: live-gate` / `needs: retag-and-confirm-notarization-accepted`
 are unchanged, because the gate ran but did not answer.
+
+### STATUS 2026-09-23 (quick-260923-p95) — Apple ACCEPTED the submission
+
+This sub-section does NOT revise `## STATUS 2026-09-17 (quick-260917-uik)`,
+`### STATUS 2026-09-23 (quick-260923-ihw)`, or `### STATUS 2026-09-23 (quick-260923-np3)` above.
+Each records what was believed then and is left intact; this one adds what was measured today.
+
+**1. How the verdict was finally obtained.** `xcrun notarytool history --keychain-profile gamelib`
+was run for the first time, because Apple notarization credentials were stored on this Mac for the
+first time. The Team ID `S7U223QWXJ` was recovered from `security find-identity -v -p codesigning`
+and matches the CI log's `organization "grayson mitchell"`. This directly answers np3 item 8, which
+recorded that no Apple credentials existed on this Mac.
+
+**2. The verdict, with the cross-check.**
+
+```
+createdDate: 2026-09-23T02:13:22.426Z  id: e7ec58a5-acd7-4dad-9bee-fca7b2bea039  name: GameLib.zip  status: Accepted
+createdDate: 2026-09-17T12:56:42.401Z  id: b55513c6-5b60-42bd-b69b-6e0dda7bab23  name: GameLib.zip  status: Invalid
+```
+
+The `Invalid` id above is byte-identical to the one quoted verbatim in this todo's own
+`## Problem` section — the same two runs, not a coincidence of dates.
+
+**3. The parsed ticket.** `xcrun notarytool log e7ec58a5-acd7-4dad-9bee-fca7b2bea039`:
+`status: Accepted`, `statusSummary: "Ready for distribution"`, `statusCode: 0`, `issues: None`,
+`uploadDate: 2026-09-23T02:13:27.920Z`,
+`sha256: e95d65456458b89c9f1c289fe18da4cd028d63353e4cc1bb3fa7785fb81eab68`,
+`ticketContents: 257 entries`, of which 253 are under `Contents/Resources` across 253 DISTINCT
+paths: legendary 98 · nile 97 · gogdl 56 · comet 1 · steam-bridge-helper 1 = 253. Three
+independent counts now agree on 253: Apple's 2026-09-17 rejection set, the local tree's Mach-O
+census (recorded above, both 2026-09-17 and 2026-09-23), and Apple's notarization ticket.
+
+**4. What this settles.** Hazard 3 is answered outright: `Accepted`. Hazard 2 is confirmed by
+**direct** evidence — the ticket enumerates all 253 by their in-bundle paths with per-file
+cdhashes, so Apple verified them where they sit inside the `.app`. That is stronger than the weak
+inference "Apple accepted, so the signatures must have been intact", and it corroborates by
+measurement the argument the uik section made from how Mach-O signatures are stored. Hazard 1 was
+already OBSERVED WORKING via np3 and is unchanged.
+
+**5. What this does NOT settle.**
+
+- Hazard 4 is untouched and still **UNOBSERVED**. An `Accepted` verdict says nothing about a
+  helper crashing at runtime under the hardened runtime with no entitlements. Recipe step 6 is
+  still owed and is still the only thing that tests the no-entitlements decision.
+- Recipe steps 2–5 were never run — `codesign -dv --verbose=4`, `spctl`, `xcrun stapler validate`,
+  and the survivor count — because no artifact was ever published or downloaded; the run was
+  cancelled before stapling and upload. `Accepted` is stronger evidence than steps 2–5 would be
+  for the signing question, but they were not performed.
+- Stapling never happened.
+
+**6. The open risk to the 60-minute bound shipped by quick-260923-mrx.** Apple's API exposes
+`uploadDate` but no `completedDate`, so it is impossible to tell which of these is true: (a) Apple
+genuinely took longer than the 2h05m37s that elapsed before the manual cancel, in which case
+`timeout-minutes: 60` is too tight and will kill legitimate runs; or (b) Apple finished quickly and
+`notarytool`'s wait was what hung, in which case 60 is fine. `tauri-bundler` swallows notarytool's
+progress output, so the job log has nothing between `Notarizing` and the cancel. The 60 was sized
+on BUILD headroom, not on any notarization measurement, and the macOS-only `if: failure()` step
+running `xcrun notarytool history` makes the next timeout self-diagnosing inside the run. The
+workflow is not changed here; the risk is recorded only.
+
+**7. Triage movement.** `severity` moved `critical` → `major` and `needs` moved
+`retag-and-confirm-notarization-accepted` → `launch-helpers-under-hardened-runtime`: the `critical`
+ground (a false shipped claim) is discharged, and what remains (a possibly-broken helper) is
+`major`. `ready: live-gate`, `platform: macos` and `status: OPEN` are unchanged. The todo stays
+OPEN and stays in `pending/`, because hazard 4 and recipe step 6 remain.
+
+**8. Cleanup still owed, carried forward.** np3 item 7 recorded that the tag
+`v0.7.0-notarize-test2` is still on origin, and np3 item 6 recorded that `latest.json` in the
+`v0.7.0` draft release was overwritten with a macOS-less manifest. Neither was addressed by this
+task; both are carried forward as still-owed rather than letting an `Accepted` verdict bury them.
 
 ## Related
 
