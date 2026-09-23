@@ -109,3 +109,39 @@ render on Windows for the first time. It was previously suppressed there entirel
 false), which is why the ambiguity was never observed before: **the fix did not create this
 defect, it revealed it.** Recorded as an incidental finding under "Sitting 2" in
 `.planning/phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma/38-HUMAN-UAT.md`.
+
+## Closure -- quick 260923-vdq
+
+**Shipped.** Option 1 from this todo's own "Solution" section: label BOTH figures. New
+interpolated key `gamelib:installFlows.diskSpaceFreeOfTotal` (`{{free}} free of {{total}}`),
+built in the FRONTEND via a new shared helper (`InstallModal/diskSpaceLabels.ts`, `filesize`'s
+`partial({ base: 2 })` -- byte-identical to the sidecar's `getFileSize`), never in the sidecar.
+Both render sites now read `Space Available: <free> free of <total>`:
+`SteamDialog/index.tsx` and `DownloadDialog/index.tsx`. Filled across all 49 locales in one
+commit (en + 48 authored in-session, `machine-fill-gamelib`'s CLI could not reach
+`api.anthropic.com` from this environment -- see that plan's discovered-constraint 3). The
+`installFlows` key lives in `gamelib.json`, NOT `gamepage.json` as this todo's own body
+originally proposed (`install.disk-space-free-of-total`) -- `gamepage.json` is upstream-owned
+Weblate data and `meta/i18nCatalogChurnGuard.ts` forbids writing to it; corrected during planning,
+not execution.
+
+**The `message` residue.** `DiskSpaceData.message` (`common/types.ts:808`) is still built by
+`shellFilesFlowRegistration.ts:333` and still on the type, but now has ZERO consumers -- the only
+two call sites (the exact two dialogs this todo names) were rewired to `freeLabel`/`totalLabel`
+instead. Deliberately left in place: removing it touches the sidecar, `common/types.ts` and the
+backend test suites, out of scope for a presentation-only fix. Not an oversight.
+
+**The D-06 naming collision, not filed as a separate todo.** `SteamDialog/__tests__/
+steamDialogSource.test.ts` bans the bare token `diskSize` in that dialog's executable source to
+enforce "the Install button is never gated on the GAME's size" (D-06). `DiskSpaceData.diskSize`
+(the VOLUME's total capacity) is a different quantity that happens to share the name, and would
+have tripped that same gate had the free/total formatting been inlined into `SteamDialog`
+directly. Routed around it with the shared `diskSpaceLabels.ts` helper (which SteamDialog imports
+but never spells `diskSize` in) rather than weakening the gate. The helper is the right structure
+on DRY grounds regardless (`DownloadDialog` needed the identical two labels), so there is no live
+defect left to track separately.
+
+Arithmetic (`notEnoughDiskSpace`, `spaceLeftAfter`, `getDiskInfo`) is untouched throughout --
+this was a presentation defect only, exactly as this todo's own severity reasoning states.
+
+Full task record: `.planning/quick/260923-vdq-label-both-figures-in-the-install-dialog/`.
