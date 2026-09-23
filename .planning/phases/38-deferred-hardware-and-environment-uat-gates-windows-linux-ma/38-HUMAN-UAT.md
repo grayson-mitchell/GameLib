@@ -126,7 +126,71 @@ count is not a GameLib setting that can be turned down. Forcing it by repointing
 `defaultSteamPath` was considered and REJECTED: it makes the function return the
 `/usr/share/steam` sentinel, a synthetic single-library state no real user has, and recording a
 pass against that would be recording a pass against a condition that does not occur. Operator
-agreed to skip (b). Sub-case (a) is in scope. Add a dated session block here when the first sitting happens, then move the
+agreed to skip (b). Sub-case (a) is in scope.
+
+Add a dated session block here when each sitting happens, then move the
 corresponding entries in `38-VERIFICATION.md` from `human_verification` to
 `human_verification_discharged` — annotating in place does not work, because the audit counts
 array membership and ignores any `result:` field.
+
+
+## Sitting 2 — 2026-09-23, Windows 11, tauri dev build `2cf170c14`
+
+**Scope: one item.** A re-score of `38-S08` row 4, which sitting 1 recorded as the single failing
+check and made conditional on a named code fix landing first.
+
+**Preconditions, verified at the tool before the observation.** The fix lives in the sidecar
+bundle, which does NOT hot-reload — vite had been hot-reloading the frontend for eleven hours
+against a `build/main/sidecar.js` timestamped 06:27:21, i.e. predating the 17:38:50 source edit.
+The shell was stopped, its seven orphaned node children reaped, the exe lock confirmed free, and
+the app relaunched. The loaded bundle was then checked directly: `gamelib-write-probe` present
+(1 hit), `FileSystemRights,IdentityReference` gone (0 hits). Without that check the sitting would
+have re-measured the pre-fix code and recorded a false FAIL.
+
+**Result: PASS on all four checks, scored independently.**
+
+| #   | Check            | Expected                     | Sitting 1 | Sitting 2 |
+| --- | ---------------- | ---------------------------- | --------- | --------- |
+| 1   | Platform row     | PRESENT, read-only "Windows" | PASS      | PASS      |
+| 2   | Library dropdown | PRESENT                      | PASS      | PASS      |
+| 3   | Wine section     | ABSENT                       | PASS      | PASS      |
+| 4   | Free-space line  | PRESENT                      | **FAIL**  | **PASS**  |
+
+**The falsifiable prediction held.** Sitting 1 wrote that row 4 should pass "WITHOUT any change to
+`steamSectionGating.ts` -- if a fix there is proposed instead, the diagnosis was wrong." No change
+was made there. The entire fix was in `isWritable_windows`.
+
+**Artifacts (procedure step 2 — proving the branch was armed).**
+
+1. The rendered line read `301.44 GiB / 537.15 GiB`. Measured independently at the same sitting
+   via `Win32_LogicalDisk`: C: is 301.44 free / 537.15 total; D: is 578.60 / 897.97. The rendered
+   figures match C: byte-for-byte. This is the armed-branch proof, not merely a plausibility
+   check: `SteamDialog/index.tsx:493-497` suppresses the line ENTIRELY unless
+   `gating.freeSpaceLine && diskSpace && diskSpace.validPath && diskSpace.validFlatpakPath`. A
+   visible line carrying live disk geometry therefore proves `checkDiskSpace` ran AND returned
+   `validPath: true` — which is exactly the value that was false in sitting 1.
+2. `gamelib.log` at 18:41:48 — a `[BLANKPROBE]` frontend line reporting the viewport centre as
+   `cls":"selectFieldWrapper Field "`, where every earlier probe that session reported
+   `cls":"gameList"`. Timestamped machine evidence that the install dialog was open.
+
+**Honest limit on the evidence.** The `checkDiskSpace` handler emits no log line, so there is no
+direct verbatim artifact for the free-space text itself. The PRESENCE or ABSENCE of each of the
+four elements is operator-reported. Artifacts 1 and 2 corroborate it from the machine side; they
+do not replace it. Closing this gap properly would mean instrumenting the branch through the
+`logInfo` listener, as this file's own procedure step 1 prefers.
+
+**Re-score caveat.** Sitting 1 ran at `6ad1d7cd9` and sitting 2 at `2cf170c14`, so this is not a
+clean single-variable comparison. The five intervening commits are the fix, its tests and planning
+documents; none touches the gating path.
+
+**Incidental finding, filed separately.** The operator could not tell what the two numbers meant
+("not quite sure why there are two numbers?"). The string is built at
+`shellFilesFlowRegistration.ts:333` as `${getFileSize(freeSpace)} / ${getFileSize(totalSpace)}` —
+free over total — with no label on either side. Filed as a todo; not a defect in this item, and
+row 4 passes regardless, since the item asks only whether the line is present.
+
+**Not observed, and deliberately not claimed.** The library dropdown was not switched to the
+second (D:) library, so this sitting confirms the repaired probe on ONE of the operator's two
+Steam libraries. The pre-fix code was wrong about both. Switching the dropdown and confirming the
+figures change to `578.60 GiB / 897.97 GiB` would extend the result to both libraries and prove
+the probe runs per-path rather than being cached from first render.
