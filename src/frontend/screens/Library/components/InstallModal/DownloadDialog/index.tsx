@@ -34,6 +34,7 @@ import {
   install,
   getPreferredInstallLanguage
 } from 'frontend/helpers'
+import { diskSpaceLabels } from '../diskSpaceLabels'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { InstallProgress } from 'frontend/types'
 import React, {
@@ -68,7 +69,8 @@ interface Props {
 
 type DiskSpaceInfo = {
   notEnoughDiskSpace: boolean
-  message: string
+  freeLabel: string
+  totalLabel: string
   validPath: boolean
   validFlatpakPath: boolean
   spaceLeftAfter: string
@@ -144,7 +146,8 @@ export default function DownloadDialog({
   const installFolder = gameStatus?.folder || installPath
 
   const [spaceLeft, setSpaceLeft] = useState<DiskSpaceInfo>({
-    message: '',
+    freeLabel: '',
+    totalLabel: '',
     notEnoughDiskSpace: false,
     validPath: true,
     validFlatpakPath: true,
@@ -465,8 +468,8 @@ export default function DownloadDialog({
 
   useEffect(() => {
     const getSpace = async () => {
-      const { message, free, validPath, validFlatpakPath } =
-        await window.api.checkDiskSpace(installPath)
+      const disk = await window.api.checkDiskSpace(installPath)
+      const { free, validPath, validFlatpakPath } = disk
       if (diskSize) {
         let notEnoughDiskSpace = free < diskSize
         let spaceLeftAfter = size(free - Number(diskSize))
@@ -478,7 +481,7 @@ export default function DownloadDialog({
         }
 
         setSpaceLeft({
-          message,
+          ...diskSpaceLabels(disk),
           notEnoughDiskSpace,
           validPath,
           validFlatpakPath,
@@ -571,7 +574,8 @@ export default function DownloadDialog({
     validPath,
     validFlatpakPath,
     notEnoughDiskSpace,
-    message,
+    freeLabel,
+    totalLabel,
     spaceLeftAfter
   } = spaceLeft
   const title = gameInfo?.title
@@ -698,7 +702,13 @@ export default function DownloadDialog({
                       {`${t('install.disk-space-left', 'Space Available')}: `}
                     </span>
                     <span>
-                      <strong>{`${message}`}</strong>
+                      <strong>
+                        {tGamelib(
+                          'gamelib:installFlows.diskSpaceFreeOfTotal',
+                          '{{free}} free of {{total}}',
+                          { free: freeLabel, total: totalLabel }
+                        )}
+                      </strong>
                     </span>
                     {!notEnoughDiskSpace && (
                       <>

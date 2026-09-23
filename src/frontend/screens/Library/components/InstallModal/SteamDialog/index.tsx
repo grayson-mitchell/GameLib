@@ -68,6 +68,7 @@ import {
   resolveSteamInstallPath
 } from './installTarget'
 import { isBottleCapableEngine } from '../WineSelector/engineFilter'
+import { diskSpaceLabels } from '../diskSpaceLabels'
 
 interface Props {
   backdropClick: () => void
@@ -144,7 +145,8 @@ interface Props {
 }
 
 interface DiskSpaceInfo {
-  message: string
+  freeLabel: string
+  totalLabel: string
   validPath: boolean
   validFlatpakPath: boolean
 }
@@ -205,8 +207,11 @@ export default function SteamDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [steamLibraries])
 
-  // Effect B -- D-08 free space, selected-library drive only. Never reads
-  // free/diskSize -- only message/validPath/validFlatpakPath.
+  // Effect B -- D-08 free space, selected-library drive only. Reads
+  // free/diskSize ONLY to format the two labels via the shared
+  // diskSpaceLabels() helper (quick 260923-vdq) -- the bare token `diskSize`
+  // still never appears in THIS file's executable source (D-06), because the
+  // helper is what reads it, not this component.
   useEffect(() => {
     if (!gating.freeSpaceLine || !selectedPath) {
       setDiskSpace(null)
@@ -228,12 +233,15 @@ export default function SteamDialog({
       // different directories for the same library let this dialog render a
       // healthy free-space line for a library `startSteamQuickInstall` had
       // just degraded as `library-missing`.
-      const { message, validPath, validFlatpakPath } =
-        await window.api.checkDiskSpace(
-          resolveFreeSpaceProbeSubject(selectedPath, steamLibraries)
-        )
+      const disk = await window.api.checkDiskSpace(
+        resolveFreeSpaceProbeSubject(selectedPath, steamLibraries)
+      )
       if (!cancelled) {
-        setDiskSpace({ message, validPath, validFlatpakPath })
+        setDiskSpace({
+          ...diskSpaceLabels(disk),
+          validPath: disk.validPath,
+          validFlatpakPath: disk.validFlatpakPath
+        })
       }
     }
     // WR-03: `.catch` (not a bare `void`) -- a rejected checkDiskSpace is an
@@ -496,7 +504,13 @@ export default function SteamDialog({
               diskSpace.validFlatpakPath ? (
                 <span className="smallInputInfo">
                   {`${t('install.disk-space-left', 'Space Available')}: `}
-                  <strong>{diskSpace.message}</strong>
+                  <strong>
+                    {tGamelib(
+                      'gamelib:installFlows.diskSpaceFreeOfTotal',
+                      '{{free}} free of {{total}}',
+                      { free: diskSpace.freeLabel, total: diskSpace.totalLabel }
+                    )}
+                  </strong>
                 </span>
               ) : undefined
             }

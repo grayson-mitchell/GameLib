@@ -563,7 +563,13 @@ describe('required wiring', () => {
     // WR-04: the "turn it on in Settings" sentence is only true when the
     // setting is actually OFF.
     'gamelib:steam.install.contentLightSingleLibraryNotice',
-    'nativeInstallOn'
+    'nativeInstallOn',
+    // quick 260923-vdq, B-WR-05: the free-space line now names BOTH
+    // figures via this interpolated key. Extending the list here (not just
+    // adding a new describe block) is deliberate -- B-WR-05's own finding
+    // was that a new branch landing WITHOUT extending this list leaves every
+    // gate green if the wiring is later reverted.
+    'gamelib:installFlows.diskSpaceFreeOfTotal'
   ])('requires "%s" in the stripped source', (token) => {
     expectPresent(stripped, token, 'required wiring')
   })
