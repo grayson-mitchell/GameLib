@@ -504,11 +504,11 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-46-01 | Phase 46 | Complete |
 | REQ-46-02 | Phase 46 | Complete |
 | REQ-46-03 | Phase 46 | Complete |
-| REQ-46-04 | Phase 46 | Pending |
+| REQ-46-04 | Phase 46 | Complete |
 | REQ-46-05 | Phase 46 | Pending |
 | REQ-46-06 | Phase 46 | Pending |
-| REQ-46-07 | Phase 46 | Pending |
-| REQ-46-08 | Phase 46 | Pending |
+| REQ-46-07 | Phase 46 | Complete |
+| REQ-46-08 | Phase 46 | Complete |
 | REQ-46-09 | Phase 46 | Pending |
 | REQ-46-10 | Phase 46 | Pending |
 | REQ-46-11 | Phase 46 | Pending |
@@ -2228,7 +2228,7 @@ because each changes what a plan must assert:**
   terminated. Source: RESEARCH Q2/Q4/Q5; planning-time corrections 2-4. Verified by: Rust unit tests
   (pure SDDL/retry/owner helpers) + source gates + live gate.
 
-- [ ] **REQ-46-04**: The primary's accept loop, spawned inside `.setup()` after `spawn_sidecar`,
+- [x] **REQ-46-04**: The primary's accept loop, spawned inside `.setup()` after `spawn_sidecar`,
   never joined, handles `ERROR_PIPE_CONNECTED` as success. It creates the next pipe instance before
   it reads the current one. It reads through `take(4096)` and a single `read_line` (T-34.5-G6-23).
   It handles `__GAMELIB_FOCUS__` with the same `run_on_main_thread` show/focus as the Unix loop. It
@@ -2253,7 +2253,7 @@ because each changes what a plan must assert:**
   `tauriShellSource.test.ts` pins the gate. Source: RESEARCH Q7; todo step 3. Verified by: source
   gate.
 
-- [ ] **REQ-46-07**: Every non-FFI decision in the Windows guard is a pure function, NOT
+- [x] **REQ-46-07**: Every non-FFI decision in the Windows guard is a pure function, NOT
   `#[cfg(windows)]`-gated, and unit-tested in `#[cfg(test)] mod tests` on any host. This covers
   `windows_single_instance_key`, `windows_mutex_name`, `windows_pipe_name`, `windows_pipe_sddl`,
   `windows_pipe_connect_should_retry`, `windows_pipe_owner_matches`, and `single_instance_payload`.
@@ -2261,7 +2261,7 @@ because each changes what a plan must assert:**
   mock-tested and are exercised by the live gate. Source: RESEARCH Q9. Verified by:
   `cargo test --bin gamelib-shell windows_` + `single_instance_payload`.
 
-- [ ] **REQ-46-08**: A structural source gate in `tauriShellSource.test.ts` pins this strict order
+- [x] **REQ-46-08**: A structural source gate in `tauriShellSource.test.ts` pins this strict order
   in comment-stripped main.rs: `tauri::Builder::default()` < `.setup(move |app|` < `on_open_url(`.
   Moving the listener registration earlier would re-open the cold-start double-dispatch question
   that RESEARCH Q6 closed by version-specific reasoning (tauri 2.11.5 / tauri-plugin-deep-link
