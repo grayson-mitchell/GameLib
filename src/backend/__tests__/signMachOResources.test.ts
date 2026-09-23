@@ -323,6 +323,29 @@ describe('codesignArgs -- the argv shape, built once and used by both paths', ()
     expect(parsed['com.apple.security.cs.allow-jit']).toBeUndefined()
   })
 
+  test('the entitlements plist is well-formed for AMFI: no double hyphen inside an XML comment', () => {
+    // The parsePlist assertion above CANNOT see this, and that is the point.
+    // Measured 2026-09-23: the first committed version of this plist carried
+    // `--` inside its XML comment (illegal in XML). The plist npm package
+    // parsed it happily and the suite was green, but codesign refused the
+    // whole file:
+    //   Failed to parse entitlements: AMFIUnserializeXML: syntax error near line 11
+    // which would have signed steam-bridge-helper with NO entitlement and
+    // returned the dlopen crash this grant exists to fix -- a green suite over
+    // a binary that dies on launch. Two parsers, two answers; this covers the
+    // stricter one.
+    const resolved = resolveEntitlementsPath(
+      HELPER_ENTITLEMENTS['steam-bridge-helper'],
+      REPO_ROOT
+    )
+    const comments = readFileSync(resolved, 'utf-8').match(/<!--[\s\S]*?-->/g)
+
+    expect(comments).not.toBeNull()
+    for (const comment of comments ?? []) {
+      expect(comment.slice(4, -3)).not.toContain('--')
+    }
+  })
+
   test('positive control: the --entitlements seam DOES fire when a path is mapped', () => {
     // Without this, the "never carries --entitlements" assertion above could
     // pass against a builder that has no entitlements support at all, and the
