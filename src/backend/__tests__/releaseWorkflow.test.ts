@@ -1136,6 +1136,8 @@ interface ParsedReleaseStep {
   if?: string
   run?: string
   env?: Record<string, unknown>
+  'timeout-minutes'?: number
+  'continue-on-error'?: boolean
 }
 
 interface ParsedReleaseWorkflow {
@@ -1252,5 +1254,114 @@ describe('release-tauri.yml signs the macOS helper tree before bundling (260917-
       Object.keys(s.env ?? {})
     )
     expect(allEnvKeys).toContain('IN_APPLE_CERTIFICATE')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Quick task 260923-mrx. Run 35808881023 (tag v0.7.0-notarize-test2): the
+// macOS leg's tauri-action step sat silent inside `xcrun notarytool submit
+// --wait` for a measured 2h05m37s of total silence between "Notarizing
+// .../GameLib.app" at 02:13:17 and a hand cancellation at 04:18:54, which
+// then reaped an orphan notarytool pid. This block asserts on the PARSED
+// YAML (reusing parseReleaseSteps(), no second parser), never on a source
+// grep -- this repo's header comment for this very task legitimately
+// contains the strings "timeout-minutes", "notarytool" and "60", so a raw
+// text assertion could pass against prose alone.
+// ---------------------------------------------------------------------------
+
+describe('release-tauri.yml bounds the tauri-action step (260923-mrx)', () => {
+  test('the tauri-action step carries timeout-minutes: 60', () => {
+    const steps = parseReleaseSteps()
+    const tauriStep = steps.find((s) => (s.uses ?? '').includes('tauri-action'))
+
+    expect(tauriStep).toBeDefined()
+    expect(tauriStep?.['timeout-minutes']).toBe(60)
+  })
+
+  test('blast-radius census: exactly one step in the job carries timeout-minutes, and it is tauri-action', () => {
+    const steps = parseReleaseSteps()
+    const withTimeout = steps.filter((s) => s['timeout-minutes'] !== undefined)
+
+    expect(withTimeout).toHaveLength(1)
+    expect(withTimeout[0]?.uses ?? '').toContain('tauri-action')
+  })
+
+  test('a macOS notarytool history diagnostic step exists', () => {
+    const steps = parseReleaseSteps()
+    const diagStep = steps.find((s) =>
+      (s.run ?? '').includes('notarytool history')
+    )
+
+    expect(diagStep).toBeDefined()
+  })
+
+  test('the diagnostic step is gated on failure(), macOS, and all three Apple notarization envs', () => {
+    const steps = parseReleaseSteps()
+    const diagStep = steps.find((s) =>
+      (s.run ?? '').includes('notarytool history')
+    )
+
+    // Non-vacuity first: the negative assertions below would otherwise pass
+    // when the step simply doesn't exist.
+    expect(diagStep).toBeDefined()
+
+    expect(diagStep?.if).toContain('failure()')
+    expect(diagStep?.if).toContain("startsWith(matrix.platform, 'macos')")
+    expect(diagStep?.if).toContain("env.APPLE_ID != ''")
+    expect(diagStep?.if).toContain("env.APPLE_PASSWORD != ''")
+    expect(diagStep?.if).toContain("env.APPLE_TEAM_ID != ''")
+  })
+
+  test('the diagnostic step is continue-on-error: true, so it never turns the job red', () => {
+    const steps = parseReleaseSteps()
+    const diagStep = steps.find((s) =>
+      (s.run ?? '').includes('notarytool history')
+    )
+
+    expect(diagStep?.['continue-on-error']).toBe(true)
+  })
+
+  test('ORDERING: the diagnostic step sits immediately after tauri-action', () => {
+    const steps = parseReleaseSteps()
+    const tauriIdx = steps.findIndex((s) =>
+      (s.uses ?? '').includes('tauri-action')
+    )
+    const diagIdx = steps.findIndex((s) =>
+      (s.run ?? '').includes('notarytool history')
+    )
+
+    // Non-vacuity: both must actually be found, or -1 could satisfy the
+    // arithmetic below by accident.
+    expect(tauriIdx).toBeGreaterThanOrEqual(0)
+    expect(diagIdx).toBeGreaterThanOrEqual(0)
+
+    expect(diagIdx).toBe(tauriIdx + 1)
+  })
+
+  test('the diagnostic step never echoes credentials and never swallows failure via || true', () => {
+    const steps = parseReleaseSteps()
+    const body =
+      steps.find((s) => (s.run ?? '').includes('notarytool history'))?.run ?? ''
+    const instructions = stripHashComments(body)
+
+    expect(instructions).not.toMatch(/set -x/)
+    expect(instructions).not.toMatch(/echo .*\$APPLE_PASSWORD/)
+    // The locked decision is continue-on-error XOR `|| true`, not both: a
+    // trailing `|| true` would swallow notarytool's own failure signal, the
+    // exact belt-and-braces the decision forbids.
+    expect(instructions).not.toMatch(/\|\|\s*true/)
+  })
+
+  test('GAP-A: the diagnostic step defines no env: key beginning APPLE_', () => {
+    const steps = parseReleaseSteps()
+    const diagStep = steps.find((s) =>
+      (s.run ?? '').includes('notarytool history')
+    )
+
+    expect(diagStep).toBeDefined()
+    const offenders = Object.keys(diagStep?.env ?? {}).filter((k) =>
+      k.startsWith('APPLE_')
+    )
+    expect(offenders).toEqual([])
   })
 })
