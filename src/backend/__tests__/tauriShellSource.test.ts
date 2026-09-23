@@ -2275,13 +2275,16 @@ describe('Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09) deep-link/single-instanc
  *   2. The callback's dispatch is guarded by `protocol_url_arg`, this file's single
  *      input-validation choke point (T-35-25 / T-34.5-G6-20) -- reached indirectly through
  *      `deep_link_decision`, so BOTH links are asserted, not just the outer one.
- *   3. Runtime `register()` is unreachable on Windows (T-35-28 / D-05 / `U-34.5-18`). This is
- *      the assertion that carries the Task 1 decision: `acquire_single_instance()` is
- *      `#[cfg(unix)]`, so a Windows registration would make every external `gamelib://` open
- *      start a SECOND app with a SECOND sidecar over one set of store files and one download
- *      queue. It is pinned STRUCTURALLY (the nearest enclosing `#[cfg(...)]` must be the Linux
- *      one) rather than by a "does not contain windows" substring search, because a substring
- *      gate cannot tell a cfg-gated call from an ungated one.
+ *   3. Runtime `register_all()` stays Linux-only (T-35-28 / REQ-46-06 decision point (a)).
+ *      Windows now has a single-instance guard (phase 46: `CreateMutexW` + the named-pipe
+ *      accept loop, `src-tauri/src/main.rs`) and registers `gamelib://` at INSTALL time via
+ *      the NSIS template instead -- the reason this cfg stays Linux-only is no longer the
+ *      missing guard. `register_all()`'s own documented purpose is to cover installs that
+ *      bypass a proper installer (e.g. an AppImage), which has no Windows analogue here:
+ *      GameLib ships Windows exclusively via NSIS. The decision is operator-overridable (see
+ *      the REQ-46-06 pin below). It is pinned STRUCTURALLY (the nearest enclosing `#[cfg(...)]`
+ *      must be the Linux one) rather than by a "does not contain windows" substring search,
+ *      because a substring gate cannot tell a cfg-gated call from an ungated one.
  *
  * This block is the replacement for the deep-link half of the D-44-A negative gate above,
  * which plan 35-07 narrowed. Every assertion is paired with a RED self-test driving
@@ -2377,6 +2380,28 @@ describe('Phase 35 plan 07 main.rs OS deep-link registration (D-07/D-05)', () =>
       'fn setup() {\n    #[cfg(windows)]\n    {\n        let _ = app.deep_link().register_all();\n    }\n}\n'
     expect(cfgGuardAboveRegisterAll(windowsGated)).toBe('#[cfg(windows)]')
     expect(cfgGuardAboveRegisterAll(windowsGated)).not.toBe(
+      '#[cfg(target_os = "linux")]'
+    )
+  })
+
+  // REQ-46-06 (decision point a): once Windows has a single-instance guard (phase 46), the
+  // question of whether runtime `register_all()` should ALSO run there is a deliberate,
+  // operator-overridable decision, not a leftover consequence of the missing guard. This test
+  // pins the research default (RESEARCH.md Q7): stay Linux-only, because `register_all()`'s own
+  // documented purpose -- covering installs that bypass a proper installer, e.g. an AppImage --
+  // has no Windows analogue for a project that ships Windows exclusively via NSIS. To override:
+  // widen the cfg to `#[cfg(any(target_os = "linux", windows))]`, keep the existing
+  // `process.env.CI as_deref() == Ok("e2e")` guard so automated/CI Windows launches do not
+  // rewrite the host's protocol association, and flip this test's expected string to
+  // `#[cfg(any(target_os = "linux", windows))]`.
+  test('REQ-46-06 (decision point a, operator-overridable): Windows relies on the NSIS installer alone -- register_all() stays #[cfg(target_os = "linux")]', () => {
+    expect(cfgGuardAboveRegisterAll()).toBe('#[cfg(target_os = "linux")]')
+  })
+
+  test('self-test (RED proof, REQ-46-06): a register_all() widened to cover Windows does not satisfy the Linux-only pin', () => {
+    const widened =
+      'fn setup() {\n    #[cfg(any(target_os = "linux", windows))]\n    {\n        let _ = app.deep_link().register_all();\n    }\n}\n'
+    expect(cfgGuardAboveRegisterAll(widened)).not.toBe(
       '#[cfg(target_os = "linux")]'
     )
   })

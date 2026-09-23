@@ -1,42 +1,46 @@
 /**
- * quick-260922-nx4: pins that the Tauri CLI's install-time NSIS/WiX bundling does NOT register
- * `gamelib://` on Windows, even though the RUNTIME `register_all()` call in `src-tauri/src/main.rs`
- * is already `#[cfg(target_os = "linux")]` and therefore never runs there.
+ * quick-260922-nx4 (history): pinned that the Tauri CLI's install-time NSIS/WiX bundling did NOT
+ * register `gamelib://` on Windows, even though the RUNTIME `register_all()` call in
+ * `src-tauri/src/main.rs` was already `#[cfg(target_os = "linux")]` and therefore never ran there.
  *
- * The hazard this closes: the Tauri CLI reads `plugins.deep-link.desktop` (merged across
+ * The hazard that override closed: the Tauri CLI reads `plugins.deep-link.desktop` (merged across
  * `tauri.conf.json` + the active platform overlay) into its bundler settings, and the NSIS
  * template loops `deep_link_protocols`, emitting `WriteRegStr SHCTX "Software\Classes\<protocol>"`
  * plus a `shell\open\command` pointing at the main exe (the WiX template does the equivalent for
- * `.msi`). Windows currently has NO single-instance guard
- * (`acquire_single_instance()` in `src-tauri/src/main.rs` is `#[cfg(unix)]`), so if the installer
- * registered `gamelib://`, every external open would spawn a SECOND app with a SECOND sidecar over
- * one set of store files and one download queue -- the exact D-05 hazard Phase 35 plan 07's
- * option-c decision exists to prevent (see `.planning/todos/pending/`
+ * `.msi`). At the time, Windows had NO single-instance guard
+ * (`acquire_single_instance()` in `src-tauri/src/main.rs` was `#[cfg(unix)]`), so if the installer
+ * had registered `gamelib://`, every external open would have spawned a SECOND app with a SECOND
+ * sidecar over one set of store files and one download queue -- the exact D-05 hazard Phase 35
+ * plan 07's option-c decision existed to prevent (see `.planning/todos/pending/`
  * `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`).
  *
- * Fix: `src-tauri/tauri.windows.conf.json` adds an EXPLICIT `"schemes": []` override. It must be
- * an explicit empty array, never a deleted key -- `tauri_utils::config::DeepLinkProtocol` (the
- * struct the CLI deserializes `plugins.deep-link.desktop` into) has `schemes: Vec<String>` marked
- * `#[serde(default)]`, so a deleted key and an explicit `[]` both deserialize to an empty Vec
- * TODAY, but only the explicit form's meaning does not depend on that default staying empty. Test
- * A's own-property assertion is the guard against a future edit "cleaning up" the key back into
- * silence.
+ * The nx4 fix: `src-tauri/tauri.windows.conf.json` added an EXPLICIT `"schemes": []` override,
+ * chosen over a deleted key because `tauri_utils::config::DeepLinkProtocol` (the struct the CLI
+ * deserializes `plugins.deep-link.desktop` into) has `schemes: Vec<String>` marked
+ * `#[serde(default)]` -- a deleted key and an explicit `[]` both deserialized to an empty Vec at
+ * the time, but only the explicit form's meaning did not depend on that default staying empty.
  *
- * macOS and Linux are NOT touched -- `tauri.macos.conf.json` / `tauri.linux.conf.json` declare no
- * `plugins.deep-link` key at all, so they keep inheriting the base's `["gamelib"]` and keep
- * registering the protocol (macOS at build time via `CFBundleURLTypes`, Linux at runtime via
- * `register_all()`).
+ * **Phase 46 lifts the override.** Plans 46-02/46-03 shipped a real Windows single-instance guard
+ * (`CreateMutexW` primary/secondary decision, `CreateNamedPipeW` warm-delivery accept loop --
+ * `run_windows_single_instance_accept_loop`, `src-tauri/src/main.rs`), so the D-05 hazard above no
+ * longer applies: every external `gamelib://` open now reaches a single running instance, on
+ * Windows exactly as it already did on macOS/Linux. `tauri.windows.conf.json`'s `plugins` key was
+ * deleted in the SAME commit as this file's Test A/E inversion (REQ-46-05), so the base
+ * `tauri.conf.json`'s `["gamelib"]` now flows through to Windows unmodified -- the Windows overlay
+ * is the same shape as the macOS/Linux overlays with respect to `plugins`: absent (Test D's
+ * pre-existing shape is now what Test A also asserts of Windows).
+ *
+ * Test A now guards the OPPOSITE failure mode from its nx4 original: it fails if a future edit
+ * silently reintroduces a `plugins.deep-link` override, which would quietly kill Windows deep
+ * links again without any other signal. Test E pins full three-platform parity: base, macOS,
+ * Linux and (now) Windows all merge to `schemes: ["gamelib"]`. Tests B, C and D are unchanged
+ * controls (Test D already asserted the macOS/Linux "no override key" shape Windows now shares).
  *
  * Test E's merge-patch helper simulates Tauri's documented platform-config merge (RFC 7396 JSON
  * Merge Patch: objects merge recursively, arrays/scalars are replaced wholesale, `null` deletes a
  * key) purely in-test. It is NOT a claim that this reproduces the Tauri CLI's actual merge
  * implementation byte-for-byte -- the empirical, installer-level check (generated `installer.nsi`
- * with and without the override) lives in this quick task's Task 2 and is recorded in
- * `260922-nx4-SUMMARY.md`, not here.
- *
- * Lifting this override is the unblock step named in the todo above: once a Windows
- * single-instance guard exists, remove the override from `tauri.windows.conf.json` AND update this
- * test in the same change (see Task 3 rewrite of `## Then, and only then` in that todo).
+ * now carrying the 6 `Classes\gamelib` lines) is recorded in `46-04-SUMMARY.md`, not here.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -123,13 +127,10 @@ function mergePatch(target: unknown, patch: unknown): unknown {
   return result
 }
 
-describe('quick-260922-nx4: Windows install-time gamelib:// deep-link suppression', () => {
-  test('Test A: tauri.windows.conf.json declares an OWN "schemes" property, explicitly empty (not deleted)', () => {
+describe('Windows gamelib:// deep-link registration (quick-260922-nx4 suppression, lifted by phase 46)', () => {
+  test('Test A (inverted, phase 46): tauri.windows.conf.json declares NO plugins["deep-link"] key -- Windows inherits the base schemes now that a single-instance guard exists', () => {
     const windowsConf = loadJson<PlatformConfig>(WINDOWS_CONF_PATH)
-    const desktop = windowsConf.plugins?.['deep-link']?.desktop
-    expect(desktop).toBeDefined()
-    expect(Object.prototype.hasOwnProperty.call(desktop, 'schemes')).toBe(true)
-    expect(desktop?.schemes).toEqual([])
+    expect(windowsConf.plugins?.['deep-link']).toBeUndefined()
   })
 
   test('Test B (preservation control): tauri.windows.conf.json bundle.resources is unchanged by this override', () => {
@@ -151,7 +152,7 @@ describe('quick-260922-nx4: Windows install-time gamelib:// deep-link suppressio
     expect(linuxConf.plugins?.['deep-link']).toBeUndefined()
   })
 
-  test('Test E (merge-patch simulation): merging the windows overlay over base yields schemes === [], macOS/linux still yield ["gamelib"]', () => {
+  test('Test E (merge-patch simulation, inverted): merging the windows overlay over base now yields schemes === ["gamelib"], matching macOS/linux -- full three-platform parity', () => {
     const baseConf = loadJson<PlatformConfig>(BASE_CONF_PATH)
     const windowsConf = loadJson<PlatformConfig>(WINDOWS_CONF_PATH)
     const macosConf = loadJson<PlatformConfig>(MACOS_CONF_PATH)
@@ -161,7 +162,9 @@ describe('quick-260922-nx4: Windows install-time gamelib:// deep-link suppressio
     const mergedMacos = mergePatch(baseConf, macosConf) as PlatformConfig
     const mergedLinux = mergePatch(baseConf, linuxConf) as PlatformConfig
 
-    expect(mergedWindows.plugins?.['deep-link']?.desktop?.schemes).toEqual([])
+    expect(mergedWindows.plugins?.['deep-link']?.desktop?.schemes).toEqual([
+      'gamelib'
+    ])
     expect(mergedMacos.plugins?.['deep-link']?.desktop?.schemes).toEqual([
       'gamelib'
     ])

@@ -6,12 +6,5 @@
       "../build/bin/arm64/win32/": "build/bin/arm64/win32",
       "../build/bin/legendary.LICENSE": "build/bin/legendary.LICENSE"
     }
-  },
-  "plugins": {
-    "deep-link": {
-      "desktop": {
-        "schemes": []
-      }
-    }
   }
 }

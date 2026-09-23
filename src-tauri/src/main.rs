@@ -9823,8 +9823,11 @@ fn main() {
             //
             // Platform reality (the plugin's own README): the event fires on macOS only. On
             // Linux and Windows the OS spawns a NEW process with the URL as a CLI argument
-            // instead, which is why the argv + single-instance-socket path above is not
-            // redundant with this one -- it is the ONLY delivery path on Linux.
+            // instead, which is why the argv + single-instance-guard paths above are not
+            // redundant with this one -- it is the ONLY delivery path on Linux (via the Unix
+            // socket accept loop) and on Windows (via the named-pipe accept loop, phase 46's
+            // `run_windows_single_instance_accept_loop`) once a second launch's argv has been
+            // handed to the running instance.
             // NOT `deep_link().get_current()`. That is the plugin's documented "was the app
             // STARTED by a deep link" accessor, and it was measured here on 2026-08-29 and does
             // NOT serve that purpose for this app: on three cold starts it reported `None` at
@@ -9916,41 +9919,53 @@ fn main() {
                 }
             });
 
-            // Runtime `register()` is LINUX-ONLY, and each of the three platforms is a decision,
-            // not an accident:
+            // Runtime `register_all()` stays LINUX-ONLY, and each of the three platforms is a
+            // decision, not an accident:
             //   - macOS registers `CFBundleURLTypes` at BUILD time from `plugins.deep-link` in
             //     `tauri.conf.json`; the runtime call returns `Error::UnsupportedPlatform` there,
             //     so calling it would only produce a misleading warning on every launch.
             //   - Linux registers at runtime, via a generated `.desktop` file plus `xdg-mime` /
-            //     `update-desktop-database`.
-            //   - Windows is NOT registered at EITHER stage, and both are DELIBERATE (Phase 35
-            //     plan 07 Task 1, `option-c`, under D-05: never advertise an affordance the app
-            //     cannot honour). At INSTALL time, the Tauri CLI's NSIS/WiX templates would
-            //     otherwise write `Software\Classes\gamelib` from `plugins.deep-link.desktop`
-            //     regardless of this runtime call ever running -- so `tauri.windows.conf.json`
-            //     overrides `schemes` to an explicit `[]` (quick 260922-nx4; never delete the
-            //     key -- see that override's own comment and
-            //     `src/backend/__tests__/windowsDeepLinkSuppression.test.ts`). At RUNTIME,
-            //     `register_all()` stays Linux-only, as this `#[cfg]` shows. Both exist because
-            //     `acquire_single_instance()` is `#[cfg(unix)]`, so Windows has no guard and no
-            //     way to hand a `gamelib://` open to the running instance -- every external URL
-            //     would start a SECOND app with a SECOND sidecar over one set of store files and
-            //     one download queue, compounding per URL. That is worse than no deep link, so
-            //     the handler stays unregistered at both stages until a Windows guard exists. One
-            //     side effect of the install-time override: the plugin's own argv
-            //     `handle_cli_arguments` path (its `init()`, registered below) now matches no
-            //     scheme on Windows either, so it delivers nothing there -- harmless, because
-            //     argv `gamelib://` forwarding on Windows already goes through this file's own
-            //     `sidecar_forward_args` -> `protocol_url_arg` choke point (neither is
-            //     `#[cfg(unix)]`-gated), so this removes a duplicate delivery path, not the only
-            //     one. The accepted gap is ledger row `U-34.5-18`; the follow-up work is tracked
-            //     in `.planning/todos/pending/`
-            //     `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`.
-            //     `tauri-plugin-single-instance` is NOT the fix -- see D-44-A above. Lifting this
-            //     gap means: (1) removing the `plugins.deep-link` override from
-            //     `tauri.windows.conf.json`, (2) updating
-            //     `windowsDeepLinkSuppression.test.ts` in the SAME change, and (3) deciding
-            //     whether this `#[cfg(target_os = "linux")]` should widen to include Windows.
+            //     `update-desktop-database`. `register_all()`'s own documented purpose is to
+            //     cover installs that bypass a proper installer (e.g. an AppImage that was not
+            //     otherwise registered).
+            //   - Windows now registers at INSTALL time only (phase 46, REQ-46-05/REQ-46-06,
+            //     decision point (a)). The NSIS template writes HKCU
+            //     `Software\Classes\gamelib` (the project's default `installMode`,
+            //     `NSISInstallerMode::CurrentUser`) from `plugins.deep-link.desktop`, sourced
+            //     from the base `tauri.conf.json` now that `tauri.windows.conf.json` no longer
+            //     overrides `schemes` to `[]` (that quick-260922-nx4 override was removed in the
+            //     same commit as this rewrite -- see
+            //     `src/backend/__tests__/windowsDeepLinkSuppression.test.ts`). Re-running the
+            //     installer overwrites the stale 2026-07-20 Electron-era HKCU key
+            //     unconditionally (`WriteRegStr` is not a conditional write), self-healing it
+            //     with no extra code (RESEARCH.md Q7). Runtime `register_all()` stays
+            //     `#[cfg(target_os = "linux")]` by DECISION, not by the same D-05 hazard that
+            //     used to block Windows entirely: GameLib ships Windows exclusively via NSIS
+            //     (no portable/zip target), so `register_all()`'s AppImage-shaped justification
+            //     has no Windows analogue here today. This decision is operator-overridable --
+            //     see the REQ-46-06 pin and override recipe in
+            //     `src/backend/__tests__/tauriShellSource.test.ts`.
+            //   - The guard that makes registering Windows at all SAFE is this file's own
+            //     phase-46 single-instance guard (`CreateMutexW` primary/secondary decision,
+            //     `run_windows_single_instance_accept_loop`'s named-pipe warm delivery, wired
+            //     into `main()` before `tauri::Builder::default()`): every external
+            //     `gamelib://` open now reaches the one running instance instead of starting a
+            //     SECOND app with a SECOND sidecar over one set of store files and one download
+            //     queue. `tauri-plugin-single-instance` is NOT the fix -- see D-44-A above.
+            //   - Timing note (RESEARCH.md Q6, pinned by the REQ-46-08 ordering gate below): now
+            //     that Windows `schemes` is non-empty, the plugin's own cold-start argv path
+            //     (`handle_cli_arguments`, run during `init_deep_link` at PLUGIN init) fires
+            //     BEFORE this `.setup()` closure registers `on_open_url` -- Tauri does not
+            //     replay past events to a listener registered after the fact, so that emission
+            //     has no listener and is dropped. Argv delivery therefore stays exclusively
+            //     `sidecar_forward_args` -> `protocol_url_arg`, with no double dispatch. This
+            //     holds for tauri 2.11.5 / tauri-plugin-deep-link 2.4.9 specifically (both
+            //     version-pinned in `Cargo.lock`); re-verify on upgrade.
+            //   - Ledger row `U-34.5-18` and the todo
+            //     `.planning/todos/pending/`
+            //     `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`
+            //     close on the phase 46 live gate (REQ-46-10, plan 46-05), which is the only
+            //     remaining proof that a real Windows process pair behaves correctly end-to-end.
             #[cfg(target_os = "linux")]
             {
                 // Carries `src/backend/main.ts:501`'s `process.env.CI !== 'e2e'` guard forward
