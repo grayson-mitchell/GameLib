@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Its ONLY consumer is HELPER_ENTITLEMENTS in meta/signMachOResources.ts, which
+  is why it lives here in meta/ rather than in src-tauri/.
+
+  This is deliberately NOT src-tauri/entitlements.plist. That is the
+  app/sidecar file, carrying the JIT entitlement, and both the code comment
+  at meta/signMachOResources.ts:250-257 and the notarization todo
+  (.planning/todos/pending/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md)
+  forbid it ever reaching a helper -- passing it here would be a silent grant
+  of JIT to 253 binaries not shown to need it.
+
+  The measured reason for this grant: signed Developer ID + --options runtime
+  with no entitlements, steam-bridge-helper dies at dlopen before reaching
+  SteamAPI_Init with "code signature ... not valid for use in process: mapping
+  process and mapped file (non-platform) have different Team IDs", because it
+  loads Valve's libsteam_api.dylib out of the user's installed Steam --
+  third-party, outside the 253, never our Team ID.
+
+  This key is granted to steam-bridge-helper ALONE and must never be applied
+  to the other 252.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

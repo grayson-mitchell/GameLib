@@ -39,17 +39,25 @@
  * Run through `meta/runTs.cjs` via the `sign:macos-resources` package
  * script. See `.planning/quick/260917-uik-sign-every-mach-o-under-contents-resourc/`.
  *
- * HONESTY NOTE: nothing this file does is verified. A green local dry-run
- * proves the detector and the argv only. Whether the signature survives
- * Tauri's copy, whether the temp keychain the workflow step creates coexists
- * with Tauri's own keychain handling, and whether notarization returns
- * `Accepted` are all LIVE-ONLY questions. So is whether a helper crashes at
- * runtime under the hardened runtime with no entitlements -- a notarization
- * `Accepted` says nothing about that.
+ * HONESTY NOTE: nothing this file does is fully verified. A green local
+ * dry-run proves the detector and the argv only. Whether the signature
+ * survives Tauri's copy, whether the temp keychain the workflow step creates
+ * coexists with Tauri's own keychain handling, and whether notarization
+ * returns `Accepted` are all LIVE-ONLY questions.
+ *
+ * "Whether a helper crashes at runtime under the hardened runtime with no
+ * entitlements" is now ANSWERED for `steam-bridge-helper` (it crashed; see
+ * `HELPER_ENTITLEMENTS`'s doc comment for the observed cause and the proven
+ * remedy) and remains unobserved-but-fine for the other four (legendary,
+ * nile, gogdl, comet fail IDENTICALLY signed and unsigned, so the hardened
+ * runtime is not implicated for them). Still NOT VERIFIED: whether Apple
+ * notarizes a binary carrying `disable-library-validation` -- it is
+ * permitted for Developer ID distribution, but permitted is not observed.
  */
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { lstat, open, readdir } from 'node:fs/promises'
-import { join, relative, sep } from 'node:path'
+import { dirname, join, relative, sep } from 'node:path'
 
 /**
  * Bytes read per candidate file: 4 for the magic, plus 4 more so a fat
@@ -86,24 +94,118 @@ const MAX_PLAUSIBLE_FAT_ARCH = 32
 
 /**
  * Per-path entitlements, keyed by path relative to the scanned directory.
+ * Values are repo-relative POSIX paths to a `.plist`, resolved at runtime by
+ * `preflightEntitlements` -- never `__dirname`-derived (see that function's
+ * doc comment for why).
  *
- * DELIBERATELY EMPTY, and shipping empty. Entitlements are not a
- * notarization input at all: none of Apple's four complaints above is about
- * an entitlement. `disable-library-validation` is unnecessary because all
- * 253 files get the SAME Team ID, so a helper loading its own
- * `libssl.3.dylib` / `Python.framework/Versions/3.12/Python` /
- * `*.cpython-312-darwin.so` is a same-team load. CPython 3.12 has no JIT
- * (the copy-and-patch JIT is 3.13+ and opt-in at build time).
+ * The map now has EXACTLY ONE entry, added 2026-09-23 for an OBSERVED crash,
+ * not a hunch -- this repo's own history is the reason that bar exists: the
+ * sidecar's `allow-jit` was added for a PREDICTED failure that turned out not
+ * to be the failure.
  *
- * This map is the designated seam for the one case that WOULD justify an
- * entry: a live run showing a specific helper crashing under the hardened
- * runtime -- plausibly libffi/ctypes wanting `MAP_JIT`, which would need
- * `com.apple.security.cs.allow-jit` on that ONE helper. Adding an entry
- * requires an OBSERVED crash, not a hunch. This repo's own history is the
- * argument: the sidecar's `allow-jit` was added for a predicted failure that
- * turned out not to be the failure.
+ * `steam-bridge-helper`, signed Developer ID + `--options runtime` with no
+ * entitlements, dies at `dlopen` before reaching `SteamAPI_Init`: "code
+ * signature ... not valid for use in process: mapping process and mapped
+ * file (non-platform) have different Team IDs". It loads Valve's
+ * `libsteam_api.dylib` out of the user's installed Steam -- a THIRD-PARTY
+ * dylib, never our Team ID.
+ *
+ * A/B control (same binary, same real profile, only the signature
+ * differing): ad-hoc `flags=0x20002(adhoc,linker-signed)` reaches
+ * `SteamAPI_Init()`; Developer ID + `flags=0x10000(runtime)` dies at
+ * `dlopen`. The Python helpers (legendary, nile, gogdl) fail IDENTICALLY
+ * signed and unsigned, so the hardened runtime is not implicated for them --
+ * this is why they get no entry here.
+ *
+ * The remedy was PROVEN, not assumed: re-signing only `steam-bridge-helper`
+ * with `meta/steam-bridge-helper.entitlements.plist` keeps
+ * `flags=0x10000(runtime)` and the Developer ID authority, shows the
+ * entitlement under `codesign -d --entitlements -`, and the binary then
+ * reaches `SteamAPI_Init()`.
+ *
+ * WHY THE OLD REASONING MISSED THIS: the previous version of this comment
+ * argued "all 253 get the SAME Team ID", enumerating legendary / nile / gogdl
+ * loading their OWN `libssl.3.dylib` / `Python.framework` /
+ * `*.cpython-312-darwin.so`. That was CORRECT for those three -- same-team
+ * loads, no entitlement needed -- and it missed the third-party dylib
+ * entirely, because `steam-bridge-helper` is not loading its own code.
+ *
+ * `--options runtime` STAYS on every file, this one included: dropping it
+ * would also fix the `dlopen`, and would get the build REJECTED at
+ * notarization -- which is where this whole thread began.
  */
-export const HELPER_ENTITLEMENTS: Record<string, string> = {}
+export const HELPER_ENTITLEMENTS: Record<string, string> = {
+  'steam-bridge-helper': 'meta/steam-bridge-helper.entitlements.plist'
+}
+
+/**
+ * Resolves a repo-relative POSIX path (an `HELPER_ENTITLEMENTS` value) to an
+ * absolute path on disk, by walking UPWARD from `startDir` and testing
+ * `join(dir, relPath)` at each level until one exists.
+ *
+ * WHY NOT `__dirname` OR `import.meta.url`: `meta/runTs.cjs` esbuild-bundles
+ * this script into an `fs.mkdtempSync`-created PRIVATE TEMP DIRECTORY and
+ * runs it from there (its own header says so, and it never sets a `cwd` for
+ * the child). `__dirname` inside the bundled script therefore points at that
+ * temp dir, not at `meta/` -- a path derived from either resolves to a
+ * nonexistent file at CI time. `HELPER_ENTITLEMENTS` values are repo-relative
+ * on purpose, and this function is the only thing allowed to turn one into an
+ * absolute path.
+ *
+ * The upward walk exists because CI invokes `pnpm sign:macos-resources` with
+ * the repo root as cwd (a bare cwd-join would be enough there), but a local
+ * invocation from a subdirectory (e.g. `src/backend`) would otherwise resolve
+ * to a nonexistent path.
+ *
+ * Throws, naming EVERY directory it tried, if none of them contain the file
+ * -- callers must not silently proceed with an unresolved path.
+ */
+export function resolveEntitlementsPath(
+  relPath: string,
+  startDir: string = process.cwd()
+): string {
+  const tried: string[] = []
+  let dir = startDir
+  for (;;) {
+    const candidate = join(dir, relPath)
+    tried.push(candidate)
+    if (existsSync(candidate)) {
+      return candidate
+    }
+    const parent = dirname(dir)
+    if (parent === dir) {
+      break
+    }
+    dir = parent
+  }
+  throw new Error(
+    `resolveEntitlementsPath: could not find "${relPath}" from ` +
+      `"${startDir}" upward. Tried:\n${tried.join('\n')}`
+  )
+}
+
+/**
+ * Resolves EVERY value in `map` to an absolute path, ONCE, before returning.
+ *
+ * Called at the top of `signMachOResources`, before any codesign spawn and
+ * in dry-run mode too, so a wrong or missing plist path is DETECTED rather
+ * than silently producing an unentitled (or worse, mis-entitled) binary. We
+ * do not rely on codesign's unmeasured behaviour when handed a missing
+ * `--entitlements` path -- that behaviour is unmeasured, and this repo's
+ * notarization todo's whole history is about the difference between
+ * permitted and observed. A wrong path must die at file 0, naming every
+ * directory it searched, rather than after 253 signatures.
+ */
+export function preflightEntitlements(
+  map: Record<string, string>,
+  startDir: string = process.cwd()
+): Record<string, string> {
+  const resolved: Record<string, string> = {}
+  for (const [key, relPath] of Object.entries(map)) {
+    resolved[key] = resolveEntitlementsPath(relPath, startDir)
+  }
+  return resolved
+}
 
 /**
  * Backoff schedule for Apple's timestamp authority. `--timestamp` makes a
@@ -252,8 +354,10 @@ export async function collectMachOFiles(dir: string): Promise<string[]> {
  * input, and `src-tauri/entitlements.plist` (the app/sidecar file whose
  * `allow-jit` the failed run vindicated) must never reach a helper -- passing
  * it here would be a silent grant of JIT to 253 binaries not shown to need
- * it. The optional parameter exists only for `HELPER_ENTITLEMENTS`, which is
- * empty.
+ * it. The optional parameter is wired to `HELPER_ENTITLEMENTS`, which now
+ * carries exactly one entry (`steam-bridge-helper`); every other file's
+ * `entitlements` argument stays `undefined` and no `--entitlements` flag is
+ * emitted for it.
  */
 export function codesignArgs(
   file: string,
@@ -356,6 +460,12 @@ async function signOne(args: string[], file: string): Promise<void> {
 export async function signMachOResources(
   options: CliOptions
 ): Promise<SignResult> {
+  // Resolved before the walk and before any codesign spawn -- including in
+  // dry-run mode -- so a wrong or missing entitlements path fails LOUDLY at
+  // file 0, never silently producing an unentitled binary. See
+  // preflightEntitlements's doc comment.
+  const resolvedEntitlements = preflightEntitlements(HELPER_ENTITLEMENTS)
+
   const files = await collectMachOFiles(options.dir)
 
   if (files.length === 0) {
@@ -376,7 +486,7 @@ export async function signMachOResources(
 
   for (const file of files) {
     const rel = relative(options.dir, file)
-    const entitlements: string | undefined = HELPER_ENTITLEMENTS[rel]
+    const entitlements: string | undefined = resolvedEntitlements[rel]
     const args = codesignArgs(
       file,
       options.identity,
