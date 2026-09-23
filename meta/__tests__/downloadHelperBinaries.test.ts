@@ -706,7 +706,7 @@ describe('runner target platform scoping (quick 260923-tip Layer 1 fix)', () => 
     // downloads to actually succeed.
     mockedFetch.mockResolvedValue({
       status: 404,
-      arrayBuffer: async () => new ArrayBuffer(0)
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0))
     })
 
     await Promise.allSettled([
