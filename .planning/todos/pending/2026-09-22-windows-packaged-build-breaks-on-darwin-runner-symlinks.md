@@ -4,7 +4,7 @@ title: "Windows packaged build (`vite build`) breaks on the darwin runner `Pytho
 area: build
 severity: major
 platform: windows
-ready: code
+ready: live-gate
 found_by: "Re-running quick 260922-nx4's installer-level check on the operator's Windows 11 machine after enabling Developer Mode, 2026-09-22"
 files:
   - meta/downloadHelperBinaries.ts:173-175
@@ -138,3 +138,80 @@ result above, not as a confirmed root cause; re-measuring `whoami /priv` after a
 runner, fresh process, Developer Mode's CI-runner-image default unknown) would hit this same class
 — recorded as an open, unmeasured risk, consistent with this todo's existing "A CI Windows runner
 needs the same [Developer Mode], or the code needs to stop depending on it" note under Layer 0.
+
+## Partial resolution — quick 260923-tip (2026-09-23)
+
+**Code for all three layers has landed** in `60db2ecfd`, `0df292bd0`, `1a75da601`. Re-triaged
+`ready: code` → `ready: live-gate`. **This todo stays OPEN**, and the reason is precise: the
+"Done when" above demands a **fresh Windows checkout**, and no fresh checkout was exercised. See
+"What is still NOT proven" below before closing it.
+
+**Layer 1 — scoped, per this todo's own "Best" direction.** New
+`resolveRunnerTargetPlatform(env, hostPlatform)` in `meta/releaseTags.ts`, host-keyed off
+`process.platform` with a `GAMELIB_RUNNER_TARGET_PLATFORM` override mirroring the repo's existing
+`GAMELIB_SIDECAR_TARGET_TRIPLE`/`resolveTriple` idiom. It deliberately does **not** live in
+`downloadHelperBinaries.ts`: importing that module from `pruneStaleHelperBinaries.ts` would start a
+real network download mid-`vite build`. Host keying is defensible because
+`.github/actions/install-deps` runs `download-helper-binaries` on each matrix leg's own runner OS.
+It gates the three `downloadOnedirAsset` calls, the `__darwin_layout` re-download branch and the
+marker write. Only the symlink-bearing onedir archives are scoped; flat assets stay unscoped
+because `.release_tags` is per-runner.
+
+**The population guard was narrowed, not weakened** — the distinction this todo's "Direction"
+implicitly required. `assessPublicBin`'s `__darwin_layout` (P1) and onedir exec-bit/file-count-floor
+(P2) checks became darwin-only, and a **new P3 per-platform `FLAT_BINARY_TABLE`** took over on
+win32/linux (exec bit demanded on linux, skipped on win32 where `.exe` carries no meaningful mode).
+Failing-direction tests pin it: missing `.exe`, zero-byte `.exe`, stale tag.
+
+**Layer 2 — typed symlinks, and MEASURED on this box.** New pure `symlinkTypeFor(sourceDir, record)`
+resolves the target from the link's own directory inside the **SOURCE** tree and follows the
+resolution chain, then is passed as `symlinkSync`'s third argument
+(`meta/preserveRunnerSymlinks.ts:249`). `'junction'` was considered and **explicitly rejected**: it
+requires absolute targets and every target here is relative by design.
+
+`dir /AL /S build\bin` after a real build now shows, per runner (×3 = the 12 restored links):
+
+| link | type now | was |
+| ---- | -------- | --- |
+| `Resources -> Versions\Current\Resources` | `<SYMLINKD>` | `<SYMLINK>` — the Layer 1/2 defect |
+| `Current -> 3.12` | `<SYMLINKD>` | `<SYMLINK>` — incl. the chained case |
+| `Python -> Python.framework\Versions\3.12\Python` | `<SYMLINK>` | `<SYMLINK>` — correct, target is a real file |
+
+**Layer 3 — unmasked, and MEASURED.** Both `preserveRunnerSymlinksPlugin` and
+`assembleRendererDistPlugin` record `buildEnd(err)` in a closure-local var and rethrow that error
+**by identity** from `closeBundle`, doing none of their own work. A live probe (a `enforce: 'pre'`
+plugin whose `buildStart` throws a sentinel, driven through vite's JS API) now surfaces
+`[gamelib-assemble-renderer-dist] LAYER3_PROBE_FIRST_CAUSE_SENTINEL` — the **first cause**, where it
+previously printed `bundleKeys is empty`. Note the cosmetic wart: vite tags a rethrown error with
+the *rethrowing* plugin's name, so the tag names the wrong plugin while the message is right. That
+is the part that was getting misdiagnosed, so it is good enough; do not read the tag as provenance.
+
+### Live gate — what WAS proven on the operator's Windows 11 box, 2026-09-23
+
+`npx vite build` run **twice in a row**, both exit 0, no manual link repair and no `build/` cleanup
+between them. Both runs reported `[preserve-runner-symlinks] restored 12 symlink(s), skipped 0,
+rejected 0`. The second run is the meaningful one: it previously reported
+`skipped (destination parent missing): 9` and refused to emit, because run 1 had poisoned `build/`
+with dangling file links. That failure mode is gone.
+
+### What is still NOT proven — why this stays OPEN
+
+1. **Layer 1's fresh-checkout claim is UNPROVEN.** This box's `public/bin/arm64/darwin` is the
+   operator's hand-repaired tree from 2026-09-22 and was deliberately left untouched. So the builds
+   above prove Layers 2 and 3 on the **harder** darwin-tree-present path, but they cannot show that a
+   fresh checkout now skips the darwin download entirely. `pnpm download-helper-binaries` on a clean
+   tree was never run.
+2. **Layer 0 is untouched and still open.** Nothing here removes the symlink-privilege dependency on
+   a box that still has the darwin tree; it removes the *reason to have the tree* on win32. The
+   `whoami /priv` re-measurement after a fresh logon is still unanswered.
+3. **The `windows-latest` CI leg is still unmeasured**, exactly as the note above says.
+
+### Pre-existing failures found while verifying (NOT caused by this work)
+
+`meta/__tests__/pruneStaleHelperBinaries.test.ts` T10/T18/T19 fail on this box because
+`chmodSync(path, 0o755)` sets no real POSIX exec bit on NTFS, in fixture code this work never
+touched. **This was verified rather than asserted:** the pre-change tree at `84a44811d` was rebuilt
+in a sparse worktree and reproduced the same three test names byte-identically. That suite went
+19 passing → 26 passing. Five other Meta suites (`captureShellScrollback`, `genI18nGateScope`,
+`loginWindowSeamPredicateRemoved`, `verifyRunnerBundle`, `runTsSignals`) also fail pre-existing
+here and may deserve their own todo.
