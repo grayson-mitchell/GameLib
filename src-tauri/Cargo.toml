@@ -251,6 +251,9 @@ windows-sys = { version = "0.60", features = [
     "Win32_Foundation",              # HANDLE, WIN32_ERROR, GetLastError, CloseHandle, LocalFree
     "Win32_System_Threading",        # CreateMutexW, OpenProcessToken, GetCurrentProcess
     "Win32_System_Pipes",            # CreateNamedPipeW and the PIPE_* dwPipeMode constants
+    "Win32_System_IO",                # ConnectNamedPipe (plan 46-03) -- gates on the OVERLAPPED
+                                      # parameter type, per windows-sys-0.60.2's own
+                                      # `#[cfg(feature = "Win32_System_IO")]` on that symbol
     "Win32_Storage_FileSystem",      # FILE_FLAG_FIRST_PIPE_INSTANCE, PIPE_ACCESS_INBOUND,
                                       # SECURITY_SQOS_PRESENT/SECURITY_ANONYMOUS (open-mode flags)
     "Win32_Security",                # SECURITY_ATTRIBUTES, TOKEN_USER, GetTokenInformation

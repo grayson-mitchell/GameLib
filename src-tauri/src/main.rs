@@ -8836,6 +8836,160 @@ fn deliver_to_running_instance_windows(
     Ok(())
 }
 
+/// The primary's warm-delivery accept loop for the Windows named pipe (REQ-46-04). Mirrors the
+/// `#[cfg(unix)] if let Some(listener) = primary_listener { ... listener.incoming() ... }` loop
+/// above byte-for-byte in intent: a bounded (4096-byte) single-line read, the
+/// `__GAMELIB_FOCUS__` sentinel's show+focus dance, and re-validation of every non-sentinel
+/// payload through `protocol_url_arg` before it ever reaches the sidecar -- this pipe is the
+/// THIRD `gamelib://` source into this process (after argv and the Unix single-instance socket
+/// accept loop above; see the OS deep-link section below for the fourth). It is a trust boundary
+/// even with the per-user owner-only DACL `windows_pipe_sddl` builds (T-34.5-G6-20, defence in
+/// depth): a per-user DACL narrows WHO can write, it does not certify WHAT they wrote.
+///
+/// `ConnectNamedPipe` returning zero with `GetLastError() == ERROR_PIPE_CONNECTED` means a
+/// client connected in the window between `CreateNamedPipeW` and this call -- documented Win32
+/// behaviour (Microsoft Learn, `ConnectNamedPipe` function reference; matches
+/// 46-RESEARCH.md Q4/A1), treated identically to a nonzero (successful) return, never as an
+/// error.
+///
+/// The NEXT pipe instance is always created before the current connection is read
+/// (T-34.5-G6-24): a listening instance exists continuously, so a fast second launch is never
+/// refused. If a later instance cannot be created, the already-accepted connection is still
+/// serviced once, and this function then returns -- the WARN below, not a panic or an abort --
+/// ending only THIS thread; the app and its main window keep running (fail-open).
+#[cfg(windows)]
+fn run_windows_single_instance_accept_loop(
+    primary: WindowsPrimaryPipe,
+    accept_state: Arc<SidecarState>,
+    accept_app_handle: AppHandle,
+) {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::{GetLastError, HANDLE};
+    use windows_sys::Win32::System::Pipes::ConnectNamedPipe;
+
+    let WindowsPrimaryPipe {
+        first_instance,
+        pipe_name,
+        sddl,
+    } = primary;
+    let mut current = first_instance;
+
+    loop {
+        // SAFETY: `current` is a valid, open pipe-instance handle for the duration of this
+        // call. `lpOverlapped` is NULL: the pipe was created without `FILE_FLAG_OVERLAPPED`
+        // (`PIPE_WAIT`, synchronous), so a blocking `ConnectNamedPipe` call is correct here.
+        let connected =
+            unsafe { ConnectNamedPipe(current.as_raw_handle() as HANDLE, std::ptr::null_mut()) };
+        if connected == 0 {
+            // SAFETY: called immediately after the failing `ConnectNamedPipe` return, per its
+            // documented contract.
+            let last_error = unsafe { GetLastError() };
+            if last_error != windows_sys::Win32::Foundation::ERROR_PIPE_CONNECTED {
+                eprintln!(
+                    "[shell] WARN: single-instance ConnectNamedPipe failed: {}",
+                    std::io::Error::from_raw_os_error(last_error as i32)
+                );
+                drop(current);
+                match create_single_instance_pipe_instance(&pipe_name, &sddl, false) {
+                    Ok(replacement) => {
+                        current = replacement;
+                        continue;
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "[shell] WARN: could not create the next single-instance pipe instance ({e}) -- warm deep-link delivery disabled for this session (fail-open, T-34.5-G6-24)"
+                        );
+                        return;
+                    }
+                }
+            }
+            // else: ERROR_PIPE_CONNECTED -- a client connected between create and connect.
+            // Not an error; fall through and treat this exactly like a successful connect.
+        }
+
+        // Create the NEXT instance BEFORE reading the current connection, so a listening
+        // instance always exists and a near-simultaneous secondary is not refused
+        // (T-34.5-G6-24).
+        match create_single_instance_pipe_instance(&pipe_name, &sddl, false) {
+            Ok(next) => {
+                handle_windows_single_instance_connection(
+                    current,
+                    &accept_state,
+                    &accept_app_handle,
+                );
+                current = next;
+            }
+            Err(e) => {
+                eprintln!(
+                    "[shell] WARN: could not create the next single-instance pipe instance ({e}) -- warm deep-link delivery disabled for this session (fail-open, T-34.5-G6-24)"
+                );
+                handle_windows_single_instance_connection(
+                    current,
+                    &accept_state,
+                    &accept_app_handle,
+                );
+                return;
+            }
+        }
+    }
+
+    // Handles one already-connected pipe instance: bounded read (T-34.5-G6-23), the
+    // `__GAMELIB_FOCUS__` sentinel's show+focus dance, or `protocol_url_arg` re-validation and
+    // dispatch (T-34.5-G6-20/25) -- the same steps the Unix loop's own per-connection body runs.
+    // A nested `fn`, not a closure: Rust hoists nested `fn` items to the top of their enclosing
+    // block, so the loop above can call it even though it is written after the loop -- every
+    // branch that skips ahead (an empty/errored read, or the focus sentinel) returns from here
+    // without touching `current`, so the loop above always reaches its own `current = next`
+    // reassignment and a listening instance is never left absent.
+    fn handle_windows_single_instance_connection(
+        handle: std::os::windows::io::OwnedHandle,
+        accept_state: &Arc<SidecarState>,
+        accept_app_handle: &AppHandle,
+    ) {
+        let file = std::fs::File::from(handle);
+        let mut reader = BufReader::new(file.take(4096));
+        let mut line = String::new();
+        match reader.read_line(&mut line) {
+            Ok(0) | Err(_) => return,
+            Ok(_) => {}
+        }
+        let trimmed = line.trim();
+
+        if trimmed == SINGLE_INSTANCE_FOCUS_SENTINEL {
+            let focus_handle = accept_app_handle.clone();
+            let _ = accept_app_handle.run_on_main_thread(move || {
+                if let Some(window) = focus_handle.get_webview_window(MAIN_WINDOW_LABEL) {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            });
+            return;
+        }
+
+        // Defence in depth (T-34.5-G6-20): re-validate through the SAME allow-list used for
+        // argv and the Unix socket, never trusting the pipe because it is "internal" -- the
+        // pipe is a trust boundary even inside an owner-only DACL.
+        match protocol_url_arg(&[trimmed.to_string()]) {
+            Some(url) => {
+                match accept_state.invoke("handleProtocolUrl".to_string(), vec![Value::String(url)])
+                {
+                    Ok(_) => eprintln!("[shell] delivered single-instance deep link to sidecar: ok"),
+                    Err(e) => {
+                        eprintln!("[shell] delivered single-instance deep link to sidecar: err={e}")
+                    }
+                }
+            }
+            None => {
+                // T-34.5-G6-25: the REASON and byte count only, never the payload.
+                eprintln!(
+                    "[shell] rejected single-instance payload (failed protocol_url_arg validation), bytes={}",
+                    trimmed.len()
+                );
+            }
+        }
+    }
+}
+
 /// DEV MODE: spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a
 /// spawn/path failure is visible in the `tauri dev` terminal (previously the whole leg was
 /// invisible: a piped stdout consumed by the reader thread and no diagnostics meant even a
@@ -9638,12 +9792,16 @@ fn main() {
                     }
                 });
             }
-            // Plan 46-03 replaces this with the Windows named-pipe accept loop, mirroring the
-            // `#[cfg(unix)]` block above -- this plan only acquires the pipe pre-`Builder`, it
-            // does not yet service it. Keeps `primary_listener` (and its `OwnedHandle`) alive
-            // and compiles warning-free until then.
+            // Windows counterpart to the `#[cfg(unix)]` accept-loop thread above (Phase 46 plan
+            // 46-03, REQ-46-04). Spawned here for the identical reason: AFTER `app.manage(state)`
+            // below would be too late for the clone captured here -- clone first, manage the
+            // original. The thread is never joined, exactly like the Unix thread above.
             #[cfg(windows)]
-            let _ = &primary_listener;
+            if let Some(primary) = primary_listener {
+                let accept_state = state.clone();
+                let accept_app_handle = app.handle().clone();
+                thread::spawn(move || run_windows_single_instance_accept_loop(primary, accept_state, accept_app_handle));
+            }
 
             #[cfg(not(any(unix, windows)))]
             let _ = &primary_listener;
@@ -9652,15 +9810,16 @@ fn main() {
             // Replaces `src/backend/main.ts:501-507`'s `protocol.handle('gamelib', ...)` +
             // `app.setAsDefaultProtocolClient('gamelib')`, which die with the Electron build.
             //
-            // This callback is the THIRD source of a `gamelib://` URL into this process, after
-            // argv (`sidecar_forward_args`) and the single-instance socket accept loop above.
-            // It is NOT an exception to the validation the other two perform: every URL goes
-            // through `deep_link_decision` -> `protocol_url_arg`, this file's single
-            // input-validation choke point (ASVS V5), before it can reach the sidecar. Defence
-            // in depth (T-34.5-G6-20) -- the socket path's own comment above establishes the
-            // rule this follows: never trust a source because it is "internal", and the OS is
-            // not even internal. Anyone adding a FOURTH source: put it through the same
-            // function, not through a new copy of the checks.
+            // This callback is the FOURTH source of a `gamelib://` URL into this process, after
+            // argv (`sidecar_forward_args`), the Unix single-instance socket accept loop above,
+            // and the Windows single-instance pipe accept loop above (Phase 46,
+            // `run_windows_single_instance_accept_loop`). It is NOT an exception to the
+            // validation the other three perform: every URL goes through `deep_link_decision` ->
+            // `protocol_url_arg`, this file's single input-validation choke point (ASVS V5),
+            // before it can reach the sidecar. Defence in depth (T-34.5-G6-20) -- the socket
+            // path's own comment above establishes the rule this follows: never trust a source
+            // because it is "internal", and the OS is not even internal. Anyone adding a FIFTH
+            // source: put it through the same function, not through a new copy of the checks.
             //
             // Platform reality (the plugin's own README): the event fires on macOS only. On
             // Linux and Windows the OS spawns a NEW process with the URL as a CLI argument
