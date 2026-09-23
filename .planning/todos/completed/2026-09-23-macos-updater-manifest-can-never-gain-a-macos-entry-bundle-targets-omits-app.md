@@ -1,13 +1,15 @@
 ---
 created: 2026-09-23T00:00:00.000Z
-title: 'macOS updater manifest can never gain a macOS entry: bundle.targets omits the updater-enabled target, so no updater artifact is ever built'
+title: 'FIXED (config half): bundle.targets omitted `app`, the updater-enabled macOS target, so no macOS updater artifact was ever built — corrected in quick-260924-f9y. The manifest entry itself is still UNPROVEN and was carried to a successor todo BEFORE this close.'
 area: build
 severity: major
 platform: any
 ready: code
 found_by: 'GitHub Actions run 35841476015, macOS job 107117309605, on tag v0.7.0-notarize-test3 at commit c946239ce. Extracted by quick task 260923-u3o.'
 source: '.planning/todos/completed/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md'
-status: OPEN
+status: completed
+resolved: 2026-09-24
+resolved_by: quick-260924-f9y
 files:
   - src-tauri/tauri.conf.json
   - .github/workflows/release-tauri.yml
@@ -147,3 +149,78 @@ closing it on the plausibility of the fix, not on its observed effect.
   `.planning/todos/completed/`.
 - `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` — the reason the Windows
   half of the target question is untestable today.
+
+## RESOLUTION 2026-09-24 (quick-260924-f9y) — the CONFIG half, and only that half
+
+Commit `598fac565`. `bundle.targets` is now `["nsis", "appimage", "app", "dmg"]`.
+
+### Requirement 1 — the target name, measured against the INSTALLED CLI
+
+The todo forbade asserting the name from memory, and was right to: the bundler's warning stopped at
+its colon and the enumeration never printed. That enumeration is not lost — it is a string literal
+inside the binary shipped with `@tauri-apps/cli` **2.11.4** (the installed version, read from that
+package's own `package.json`, not from the `^2.11.4` range in `package.json`):
+
+```
+$ strings -a node_modules/@tauri-apps/cli-darwin-arm64/cli.darwin-arm64.node \
+    | grep 'updater-enabled targets'
+The bundler was configured to create updater artifacts but no updater-enabled targets were built.
+Please enable one of these targets: app, appimage, msi, nsis
+```
+
+So `app` — the todo's own first candidate, reached from the artifact name `GameLib.app.tar.gz` — is
+confirmed, from the very binary that emitted the truncated warning. It is independently a valid
+`BundleType` in that package's `config.schema.json` (`enum: ["app"]`, "The macOS application bundle
+(.app)"), so the config also stays schema-valid.
+
+### Requirement 2 — `nsis` and Windows, stated with its bound
+
+**`nsis` IS in that enumeration.** So yes: the Windows target already in `bundle.targets` is
+updater-enabled, and Windows was never making this mistake.
+
+**That is a fact about the bundler's list and nothing more.** No Windows updater artifact has ever
+been observed, because the Windows leg has never produced any artifact — it dies at step 5
+`install-deps`, tracked by `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md`.
+The todo asked for this to be stated honestly rather than written down as measured; it is not
+measured.
+
+### Ordering, and why the other legs are unaffected
+
+`app` is declared BEFORE `dmg` because the dmg bundler consumes the `.app`. tauri-bundler is
+believed to sort package types by priority so that ordering would not matter, but that sort was NOT
+read — declaring the producer first is correct under either behaviour, so the question did not need
+answering.
+
+Adding `app` is a no-op on Linux and Windows, and this is not an assumption: run `35841476015`
+carried the SAME target list on all three legs and each built only its own platform's bundle. The
+bundler already intersects `bundle.targets` with the target platform's own set.
+
+### Gates moved with it
+
+- `meta/__tests__/artifactTargets.test.ts` deep-equals the target array. Its header calls itself
+  "a tripwire, not a prohibition" and requires a deliberate change to update it — done, with the
+  reason recorded in place so a later reader does not mistake `app` for target-set creep. Its
+  "exactly one Linux target" assertion is untouched (`app` is not in that filter) and its
+  over-reach control still holds.
+- `src/backend/__tests__/tauriConf.test.ts` gains one named assertion, so that dropping `app` fails
+  a test that says WHAT broke rather than reporting a generic array mismatch.
+- **Negative control run, not assumed:** reverting the config alone turned exactly those two red
+  (2 failed / 47 passed), and both returned green with it restored. `pnpm lint` 1107/1124 src and
+  638/638 tests — the zero-headroom tests scope did not move. `pnpm codecheck` rc=0.
+  `npx prettier --check` rc=0 over the three changed paths.
+
+### What this close does NOT claim
+
+Nothing here observed a macOS updater artifact existing. This closes the FIX; the todo's own
+"Readiness split" said the PROOF is not desk-reachable, and it still is not. Per CARRY BEFORE
+CLOSE, the residual was given a home BEFORE this file moved:
+
+`.planning/todos/pending/2026-09-24-macos-updater-entry-in-latest-json-is-unproven-until-a-release-run.md`
+(`severity: major`, `ready: live-gate`) carries the five-item gate — `Found artifacts:` listing the
+`.tar.gz` pair, no "Signature not found" line, both assets on the release, a `darwin-aarch64` entry
+in `latest.json` ALONGSIDE the surviving `linux-x86_64*` entries, and a macOS-leg `pub_date` — plus
+the throwaway-tag trap and one question this desk run deliberately left open: whether the
+`.app.tar.gz` is built from the notarized-and-stapled app or from a pre-notarization copy.
+
+The predecessor's publishing hazard is therefore NOT retired by this commit. It moves to the
+successor todo intact.
