@@ -31,7 +31,12 @@ import type { DiskSpaceData } from 'common/types'
 
 const formatBytes = fileSize.partial({ base: 2 }) as (arg: unknown) => string
 
-export interface DiskSpaceLabels {
+// Not exported: the shape is only ever named here, as `diskSpaceLabels`'s
+// return type. Callers destructure `freeLabel`/`totalLabel` structurally and
+// never need the name, so exporting it would be a dead export -- which is
+// exactly what `pnpm find-deadcode`'s used-in-module scope reports. Export it
+// again if and when a caller genuinely needs to name the type.
+interface DiskSpaceLabels {
   freeLabel: string
   totalLabel: string
 }
