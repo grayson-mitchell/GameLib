@@ -259,12 +259,32 @@ codesign -dv --verbose=4 GameLib.app/Contents/Resources/build/bin/arm64/darwin/l
 codesign -dv --verbose=4 GameLib.app/Contents/Resources/build/bin/arm64/darwin/nile/_internal/Python.framework/Versions/3.12/Python
 codesign -dv --verbose=4 GameLib.app/Contents/Resources/build/bin/arm64/darwin/comet
 
-# 4. count survivors -- this must be ZERO
-find GameLib.app/Contents/Resources -type f -print0 | xargs -0 -n1 codesign -dv 2>&1 \
-  | grep -c 'adhoc\|code object is not signed'
+# 4. count SURVIVORS -- FILES, and Mach-O only. This must be 0.
+#    NOTE: bash/zsh only -- `done < <(...)` is process substitution, not POSIX sh.
+#    Do NOT use the old one-liner form
+#    (`find ... | xargs -0 -n1 codesign -dv 2>&1 | grep -c 'adhoc|not signed'`):
+#    it counts LINES not FILES (~2x inflated) and never reaches 0 because every
+#    non-Mach-O resource reports "not signed at all" forever. See the
+#    2026-09-23 sub-section below for the measurement.
+root=GameLib.app/Contents/Resources; n=0
+while IFS= read -r -d '' f; do
+  file -b "$f" | grep -q 'Mach-O' || continue
+  if codesign -dv "$f" 2>&1 | grep -qE 'adhoc|code object is not signed'; then
+    n=$((n + 1)); printf 'SURVIVOR %s\n' "$f"
+  fi
+done < <(find "$root" -type f -print0)
+echo "survivors=$n"     # must be 0
 
-# 5. step 4 above is a POSITIVE-CONTROL trap: run it against a known-adhoc file first
-#    and confirm it reports 1, or a zero from a broken pipeline reads as success
+# 5. step 4 is a CONTROL trap and needs BOTH directions, run BEFORE trusting a zero.
+#    POSITIVE: point the SAME loop at the untouched local helper tree
+#      build/bin/arm64/darwin, which is 100% ad-hoc. It must report 253
+#      (measured 2026-09-23). A single-file control is NOT enough: one ad-hoc
+#      file returns 2 under the OLD pipeline, not 1, and one file can never
+#      expose the non-Mach-O contamination at all.
+#    NEGATIVE: point the SAME loop at a scratch dir holding Apple-signed
+#      /bin/ls and /bin/cat PLUS one plain text file. It must report 0
+#      (measured 2026-09-23). The text file is the part that matters -- it
+#      proves the Mach-O restriction actually suppresses the non-Mach-O noise.
 
 # 6. LAUNCH the app and actually invoke each helper once (an Epic login via legendary,
 #    an Amazon library refresh via nile, a GOG action via gogdl). This is the only thing
@@ -273,7 +293,78 @@ find GameLib.app/Contents/Resources -type f -print0 | xargs -0 -n1 codesign -dv 
 
 **Step 6 is not optional and is not covered by steps 1-5.** Step 5 is not optional either: this
 task already caught one positive control passing for the wrong reason (BSD `head -n -1` is illegal,
-so the control list was empty and `diff` reported a difference that proved nothing).
+so the control list was empty and `diff` reported a difference that proved nothing). As of
+2026-09-23 it has now caught a SECOND one -- step 4's own former control, which would not have
+caught either of step 4's two defects -- which is why step 5 now demands BOTH a positive and a
+negative control rather than a single-file check. See `### STATUS 2026-09-23 (quick-260923-ihw)`
+below for the record.
+
+### STATUS 2026-09-23 (quick-260923-ihw) — step 4 of that recipe was unachievable by construction
+
+This sub-section does NOT revise `## STATUS 2026-09-17 (quick-260917-uik)` above. That section
+records what was believed then and is left intact; this one adds what was measured today.
+
+Step 4 of `### The only real verification`, as originally written, could never reach its own
+stated pass condition of zero. Measured today, before this correction was written, against the
+real local helper tree `build/bin/arm64/darwin` — the same tree the CI step signs, and the correct
+tree to use as a positive control because it is 100% ad-hoc-signed and untouched by any fix:
+
+**1. The todo's step-4 command, run VERBATIM, returns 530. Not 253.**
+
+**2. The 530 breaks down exactly:**
+
+| component      | count   | what it is                                                                                |
+| --------------- | ------- | ------------------------------------------------------------------------------------------ |
+| adhoc lines     | 506     | 253 Mach-O files x TWO matching lines each: a `flags=0x2(adhoc)` line AND a `Signature=adhoc` line |
+| unsigned lines  | 24      | the 24 non-Mach-O regular files, each emitting "code object is not signed at all"          |
+| **total**       | **530** |                                                                                              |
+
+Out of 277 regular files in the tree: 253 Mach-O, 24 non-Mach-O.
+
+**3. Two independent defects follow, both real, both present in the original recipe:**
+
+- **(a) `grep -c` counts LINES, not FILES.** The count is inflated roughly 2x for the population it
+  is supposed to measure.
+- **(b) The command does not restrict to Mach-O, so the pass condition is unreachable by construction.**
+  Every non-Mach-O resource reports "code object is not signed at all" FOREVER —
+  after a perfect signing run just as much as before it, because the signer deliberately and
+  correctly never touches non-Mach-O files. This is WORSE in the real app than in this subtree: the
+  recipe runs over the whole `GameLib.app/Contents/Resources`, which holds the entire non-Mach-O
+  frontend bundle, so a correct, fully-notarized app would report a large positive number and read
+  as a FAILURE.
+- **(c) Step 5's old control would NOT have caught either defect.** A single ad-hoc file returns
+  **2** under the old pipeline, not 1, and a single-file control can never expose the non-Mach-O
+  contamination at all. This is the SAME SHAPE this todo already documents once — the BSD
+  `head -n -1` control (see `## STATUS 2026-09-17`) that passed for the wrong reason. It is now the
+  second instance of that shape in this same todo, which is why step 5 now demands a negative
+  control as well as a positive one, not a single-file check.
+
+**4. The controls run on the corrected form, both exact, both measured 2026-09-23:**
+
+- **POSITIVE** — the corrected loop, pointed at the untouched, all-ad-hoc
+  `build/bin/arm64/darwin`, returns **253**. Exactly the population Apple rejected. The todo's own
+  original form returns 530 on this same tree.
+- **NEGATIVE** — the corrected loop, pointed at a directory holding Apple-signed `/bin/ls` and
+  `/bin/cat` plus one plain text file, returns **0**. This is the control the original recipe
+  lacked entirely: it proves the loop CAN report zero, so a zero from the real run is not just a
+  broken pipeline. The plain text file is the part that matters — it proves the Mach-O restriction
+  actually suppresses the non-Mach-O noise, not merely that the loop runs.
+
+**5. The detector was independently re-measured at HEAD today, 2026-09-23, and still holds:**
+
+`build/bin/arm64/darwin` still holds 277 regular files, 253 Mach-O — unchanged from the 2026-09-17
+measurement. `pnpm sign:macos-resources -- --dir build/bin/arm64/darwin --keychain ... --identity
+FAKE --dry-run` still reports "would sign 253 file(s)", and its selection is the IDENTICAL SET to a
+`file -b`-derived ground truth — compared as a SET with `diff` over two sorted path lists, which
+produced EMPTY output, not merely by count. The 2026-09-17 claim about the detector still holds at
+HEAD. `meta/signMachOResources.ts` was NOT edited as part of this correction: the defect was in
+this todo's verification prose only, never in the signer.
+
+**6. Nothing about the live gate changed.** The tag push has NOT happened. No throwaway tag exists
+locally or on origin. The live gate is entirely unrun. Every item under `### NOTHING HERE IS
+VERIFIED` above is still UNOBSERVED, including notarization returning `Accepted`. This change
+corrected a recipe; it verified nothing. The todo stays OPEN, stays in `pending/`, and
+`ready: live-gate` / `needs: retag-and-confirm-notarization-accepted` are unchanged.
 
 ## Related
 
