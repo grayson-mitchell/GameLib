@@ -250,15 +250,13 @@ export default React.memo(function Library(): JSX.Element {
   // upstream cannot leave the two disagreeing. See
   // `steamLibraryVisibility.ts`'s `resolveSteamVisibility` header for the
   // mechanism (threat T-34.11-12, Spoofing).
-  const steamVisibility = useMemo(
-    () =>
-      resolveSteamVisibility({
-        library: steam?.library ?? [],
-        steamUsername: steam?.username,
-        steamSyncStatus
-      }),
-    [steam?.library, steam?.username, steamSyncStatus]
-  )
+  const steamVisibility = useMemo(() => {
+    return resolveSteamVisibility({
+      library: steam?.library ?? [],
+      steamUsername: steam?.username,
+      steamSyncStatus
+    })
+  }, [steam?.library, steam?.username, steamSyncStatus])
 
   // D-04: the store facet values whose account is connected, reusing the
   // same gating expressions makeLibrary() already uses below -- the Store

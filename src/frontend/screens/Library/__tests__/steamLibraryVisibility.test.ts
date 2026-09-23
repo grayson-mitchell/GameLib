@@ -1,4 +1,5 @@
 import {
+  resolveSteamVisibility,
   selectVisibleSteamLibrary,
   SteamLibraryVisibilityInput,
   SteamVisibilityGame
@@ -38,6 +39,10 @@ const OWNED_B: Fixture = { app_name: 'owned-b', is_installed: false }
  * cannot pass.
  */
 const LIBRARY: Fixture[] = [OWNED_A, INSTALLED_A, OWNED_B, INSTALLED_B]
+
+/** All-installed and all-not-installed library states, for the resolver's own matrix below. */
+const INSTALLED_ONLY: Fixture[] = [INSTALLED_A, INSTALLED_B]
+const NOT_INSTALLED_ONLY: Fixture[] = [OWNED_A, OWNED_B]
 
 const names = (games: Fixture[]) => games.map((game) => game.app_name)
 
@@ -233,6 +238,151 @@ describe('saboteur -- the shipped implementation must fail this suite', () => {
 })
 
 /**
+ * quick/260924-g7r -- `resolveSteamVisibility` adds `storeConnected` on top
+ * of `selectVisibleSteamLibrary`'s `games`. Full cross product: steamUsername
+ * (absent | present) x steamSyncStatus ('idle' | 'syncing' | 'failed') x
+ * library state (empty | installed-only | not-installed-only | mixed) = 24
+ * rows. Both fields are asserted on every row.
+ */
+describe('resolveSteamVisibility -- outcome matrix (games + storeConnected)', () => {
+  const LIBRARY_STATES: { name: string; games: Fixture[] }[] = [
+    { name: 'empty', games: [] },
+    { name: 'installed-only', games: INSTALLED_ONLY },
+    { name: 'not-installed-only', games: NOT_INSTALLED_ONLY },
+    { name: 'mixed', games: LIBRARY }
+  ]
+
+  describe('no Steam account: no row, no games, regardless of sync or library state', () => {
+    const syncStatuses: SteamSyncStatus[] = ['idle', 'syncing', 'failed']
+    syncStatuses.forEach((steamSyncStatus) => {
+      LIBRARY_STATES.forEach((lib) => {
+        it(`${steamSyncStatus}, ${lib.name} library -> no row, no games`, () => {
+          const result = resolveSteamVisibility({
+            library: lib.games,
+            steamUsername: undefined,
+            steamSyncStatus
+          })
+          expect(names(result.games)).toEqual([])
+          expect(result.storeConnected).toBe(false)
+        })
+      })
+    })
+  })
+
+  describe('signed in, idle or syncing: row always kept, games unchanged from the library', () => {
+    const syncStatuses: SteamSyncStatus[] = ['idle', 'syncing']
+    syncStatuses.forEach((steamSyncStatus) => {
+      LIBRARY_STATES.forEach((lib) => {
+        it(`${steamSyncStatus}, ${lib.name} library -> row kept, full library (even when empty -- the deliberate 0-row case)`, () => {
+          const result = resolveSteamVisibility({
+            library: lib.games,
+            steamUsername: 'someone',
+            steamSyncStatus
+          })
+          expect(names(result.games)).toEqual(names(lib.games))
+          expect(result.storeConnected).toBe(true)
+        })
+      })
+    })
+  })
+
+  describe('signed in, failed -- the defect this closes: row survives only when the installed-only slice is non-empty', () => {
+    it('empty library -> NO row, no games', () => {
+      const result = resolveSteamVisibility({
+        library: [],
+        steamUsername: 'someone',
+        steamSyncStatus: 'failed'
+      })
+      expect(names(result.games)).toEqual([])
+      expect(result.storeConnected).toBe(false)
+    })
+
+    it('installed-only library -> row kept, installed slice', () => {
+      const result = resolveSteamVisibility({
+        library: INSTALLED_ONLY,
+        steamUsername: 'someone',
+        steamSyncStatus: 'failed'
+      })
+      expect(names(result.games)).toEqual(names(INSTALLED_ONLY))
+      expect(result.storeConnected).toBe(true)
+    })
+
+    it('not-installed-only library -> NO row -- zero INSTALLED games on an expired session', () => {
+      const result = resolveSteamVisibility({
+        library: NOT_INSTALLED_ONLY,
+        steamUsername: 'someone',
+        steamSyncStatus: 'failed'
+      })
+      expect(names(result.games)).toEqual([])
+      expect(result.storeConnected).toBe(false)
+    })
+
+    it('mixed library -> row kept, installed subset only', () => {
+      const result = resolveSteamVisibility({
+        library: LIBRARY,
+        steamUsername: 'someone',
+        steamSyncStatus: 'failed'
+      })
+      expect(names(result.games)).toEqual(['installed-a', 'installed-b'])
+      expect(result.storeConnected).toBe(true)
+    })
+  })
+
+  /**
+   * Stated as its OWN test, separate from the table above, so it cannot be
+   * lost inside a row: the facet row is never offered over an empty grid on
+   * an expired session. This is the actual security property T-34.11-12
+   * requires; every row above is evidence for it, this is the claim itself.
+   */
+  it('INVARIANT: for every failed-session row, storeConnected implies games.length > 0', () => {
+    LIBRARY_STATES.forEach((lib) => {
+      const result = resolveSteamVisibility({
+        library: lib.games,
+        steamUsername: 'someone',
+        steamSyncStatus: 'failed'
+      })
+      if (result.storeConnected) {
+        expect(result.games.length).toBeGreaterThan(0)
+      }
+    })
+  })
+})
+
+/**
+ * RED-PROOF. Proves this suite can actually SEE the defect it closes -- a
+ * regression test that never fails against the broken shape is worth
+ * nothing, and that failure mode is invisible once the fix is in the tree.
+ * The pre-fix Store-facet predicate is reproduced verbatim (it was
+ * `Boolean(steamUsername)` alone, ignoring sync status and installed count
+ * entirely) and run against the fixture the todo names: an expired session
+ * with zero INSTALLED Steam games.
+ */
+describe('saboteur -- the shipped Store-facet predicate must fail this suite', () => {
+  /** `connectedStores`'s Steam gate before this change, verbatim in behaviour. */
+  const shippedPanelPredicate = (
+    input: SteamLibraryVisibilityInput<Fixture>
+  ): boolean => Boolean(input.steamUsername)
+
+  /** Expired session, zero INSTALLED games -- the exact reopened defect. */
+  const expiredZeroInstalled: SteamLibraryVisibilityInput<Fixture> = {
+    library: NOT_INSTALLED_ONLY,
+    steamUsername: 'someone',
+    steamSyncStatus: 'failed'
+  }
+
+  it('the shipped predicate would still advertise a Steam row over an empty grid', () => {
+    expect(shippedPanelPredicate(expiredZeroInstalled)).toBe(true)
+    expect(resolveSteamVisibility(expiredZeroInstalled).games).toEqual([])
+  })
+
+  it('the fixed predicate discriminates: it returns false for the same fixture', () => {
+    expect(resolveSteamVisibility(expiredZeroInstalled).storeConnected).toBe(
+      false
+    )
+  })
+})
+
+/**
  * Everything above proves the MODULE is correct. None of it proves the grid
  * actually calls the module -- rewire `index.tsx` back to the inline
  * `showSteam ? steam.library : []` and every assertion above stays green
@@ -244,6 +394,13 @@ describe('saboteur -- the shipped implementation must fail this suite', () => {
  * `Library/index.tsx` opens with `import './index.css'` -- mounting it, or
  * importing anything from it, is impossible here. Same idiom as
  * `libraryPipeline.test.ts` and `tier2Portal.test.ts`.
+ *
+ * quick/260924-g7r REPAIR: the wiring moved from a direct call inside
+ * `makeLibrary` to a memo->two-consumers shape -- `resolveSteamVisibility`
+ * is now called once, in a `steamVisibility` memo, and both `makeLibrary`
+ * and `connectedStores` read its output. The assertions below are re-pointed
+ * at that new shape, at the SAME strength as before: "the module is
+ * correct" still does not prove "the grid (and the panel) call it".
  */
 describe('the Games grid call site is wired to this module', () => {
   const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..')
@@ -282,13 +439,22 @@ describe('the Games grid call site is wired to this module', () => {
     'const makeLibrary = useCallback(() => {'
   )
 
-  it('builds its Steam slice through selectVisibleSteamLibrary', () => {
-    expect(makeLibrary).toContain('selectVisibleSteamLibrary(')
+  const steamVisibilityMemo = functionRegion(
+    librarySource,
+    'const steamVisibility = useMemo(() => {'
+  )
+
+  it('resolves Steam visibility once, through resolveSteamVisibility', () => {
+    // Re-points assertion (1) from the pre-repair suite: the resolver call
+    // moved out of `makeLibrary` and into this memo under Task 2.
+    expect(steamVisibilityMemo).toContain('resolveSteamVisibility(')
   })
 
   it('imports the resolver rather than redeclaring one locally', () => {
+    // Re-points assertion (2): the import line was renamed from
+    // `selectVisibleSteamLibrary` to `resolveSteamVisibility`.
     expect(librarySource).toContain(
-      "import { selectVisibleSteamLibrary } from './steamLibraryVisibility'"
+      "import { resolveSteamVisibility } from './steamLibraryVisibility'"
     )
   })
 
@@ -302,16 +468,23 @@ describe('the Games grid call site is wired to this module', () => {
     expect(makeLibrary).not.toMatch(/showSteam\s*\?\s*steam\.library\s*:/)
   })
 
+  it('makeLibrary reads the resolved games, not a fresh selectVisibleSteamLibrary call', () => {
+    expect(makeLibrary).toContain('steamVisibility.games')
+  })
+
   it('feeds the resolver the live sync status, not just the username', () => {
-    // `steamSyncStatus` must be both passed AND declared as a `useCallback`
-    // dependency; without the dep the grid keeps a stale slice after a sync
-    // flips to 'failed', which looks exactly like the original bug.
-    expect(makeLibrary).toContain('steamSyncStatus')
+    // Re-points assertions (3) and (4): `steamSyncStatus` and `steam?.library`
+    // are now passed to the resolver, and declared as a dependency, inside
+    // the `steamVisibility` memo rather than inside `makeLibrary`. Without
+    // the dep the memo keeps a stale slice after a sync flips to 'failed',
+    // which looks exactly like the original bug.
+    expect(steamVisibilityMemo).toContain('steamSyncStatus')
+    expect(steamVisibilityMemo).toContain('steam?.library')
     const depsRegion = librarySource.slice(
-      librarySource.indexOf('const makeLibrary = useCallback(() => {')
+      librarySource.indexOf('const steamVisibility = useMemo(() => {')
     )
     expect(depsRegion.slice(0, depsRegion.indexOf('])'))).toContain(
-      'steamSyncStatus,'
+      'steamSyncStatus'
     )
   })
 })
