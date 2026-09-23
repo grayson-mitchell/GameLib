@@ -531,10 +531,23 @@ ground (a false shipped claim) is discharged, and what remains (a possibly-broke
 `major`. `ready: live-gate`, `platform: macos` and `status: OPEN` are unchanged. The todo stays
 OPEN and stays in `pending/`, because hazard 4 and recipe step 6 remain.
 
-**8. Cleanup still owed, carried forward.** np3 item 7 recorded that the tag
-`v0.7.0-notarize-test2` is still on origin, and np3 item 6 recorded that `latest.json` in the
-`v0.7.0` draft release was overwritten with a macOS-less manifest. Neither was addressed by this
-task; both are carried forward as still-owed rather than letting an `Accepted` verdict bury them.
+**8. Cleanup: one DISCHARGED, one still owed.** np3 items 6 and 7 each recorded a piece of
+cleanup. They have since diverged, and this item is the correction — an earlier draft of this
+section carried BOTH forward as still-owed, which was false for the tag by the time it was
+written.
+
+- **DISCHARGED 2026-09-23 — the throwaway tag.** `v0.7.0-notarize-test2` was deleted from origin
+  and locally. `git push origin :refs/tags/v0.7.0-notarize-test2` reported
+  `- [deleted]  v0.7.0-notarize-test2`; `git tag -d` reported
+  `Deleted tag 'v0.7.0-notarize-test2' (was 88acab90a)`. Verified by re-query afterwards, not by
+  the commands' own output: `git ls-remote --tags origin` and `git for-each-ref refs/tags` both
+  return nothing matching `notarize`. Note np3's item 7 said "still on origin **as of this
+  writing**" — that was TRUE when written and is correctly scoped as history; do not "fix" it.
+- **STILL OWED — the updater manifest.** `latest.json` in the `v0.7.0` draft release remains
+  macOS-less, reading `platforms: ['linux-x86_64', 'linux-x86_64-appimage']`. Deleting the tag
+  did NOT undo this, because `tagName: v__VERSION__` pointed the run at the real `v0.7.0` release
+  rather than at the tag. **That draft must not be published until a complete run regenerates the
+  manifest** — publishing it as-is would promote an updater feed with no macOS entry at all.
 
 ## Related
 
