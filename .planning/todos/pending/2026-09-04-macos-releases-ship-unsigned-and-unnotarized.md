@@ -1,11 +1,11 @@
 ---
 created: 2026-09-04T00:00:00.000Z
-title: 'macOS releases still ship unsigned until a release is CUT — all six Apple secrets enrolled and Apple-verified 2026-09-14, entitlements gap fixed, but no signed/notarized artifact has ever been published or verified'
+title: 'macOS signing and notarization are VERIFIED end-to-end on a published artifact including the quarantined Gatekeeper path — only the credentialed in-app store actions (Epic/Amazon/GOG login) on a signed build remain unexercised'
 area: build
-severity: major
+severity: minor
 platform: macos
-ready: live-gate
-needs: release-run-then-browser-download-verify
+ready: human
+needs: credentialed-in-app-store-actions-on-a-signed-build
 status: OPEN
 found_by: 'Reconsideration of the two keyring-deferral todos, 2026-09-04 — asked "what actually governs Keychain prompt COUNT?" rather than "how do I implement this todo?"'
 source: '.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md (park note, finding 2)'
@@ -253,6 +253,159 @@ is CLOSED and now lives at
 `.planning/todos/completed/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md`,
 closed by `quick-260923-uvt`. Its `### STATUS 2026-09-23 (quick-260923-u3o)` section is the full
 evidence trail for everything above.
+
+## STATUS 2026-09-24 (quick-260924-962) — the browser-download arm ran; wording falsified, intent confirmed
+
+This section does not revise `## STATUS 2026-09-14`, `## STATUS 2026-09-17` or `## STATUS 2026-09-23`
+above it. Each records what was measured on its own date and is left intact; this one adds what was
+measured on 2026-09-24, following the same convention `## STATUS 2026-09-23` states in its own first
+paragraph.
+
+**1. Run context.** Measured 2026-09-24 on the operator's Mac (Darwin 25.6.0, arm64). Artifact
+`GameLib_0.7.0_aarch64.dmg` from draft release `378785323`, asset id `583428514`, 97083599 bytes,
+sha256 `c74717b59421119eaacce55c51ff153222c9e03296f87d817ed422423dba669c` — byte-identical to the
+artifact `## STATUS 2026-09-23` measured.
+
+**2. The fourth Verification bullet could NOT be run as literally written.** The asset lives on an
+UNPUBLISHED DRAFT release. Its `browser_download_url` is
+`https://github.com/grayson-mitchell/GameLib/releases/download/untagged-15f75eb2dbc69bc57563/GameLib_0.7.0_aarch64.dmg`.
+Opened in Safari, GitHub rendered its 404 page ("This is not the web page you are looking for") and
+the nav bar showed "Sign in" / "Sign up" — Safari is not authenticated to GitHub. Anonymous `curl` on
+the same URL also returns HTTP 404. The bullet is unrunnable on two counts at once: the release is
+not published, and this browser has no GitHub session. Publishing the `v0.7.0` draft to satisfy the
+bullet was REJECTED as out of scope — it is a public, hard-to-reverse act, and there is an open todo
+(`2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md`) against this very build.
+
+**3. The substitute route.** The byte-identical artifact was fetched with an authenticated API call,
+served from `127.0.0.1:8931`, and downloaded THROUGH SAFARI. **Negative control first:** the
+API-fetched copy carried `com.apple.provenance` and NO `com.apple.quarantine` — reproducing the exact
+trap this todo warned about and that the 2026-09-23 verification fell into. The Safari-downloaded
+copy carried a real browser-set attribute:
+
+```
+com.apple.quarantine: 0083;6ab41d0e;Safari;C42D10F2-0A4B-4E85-8380-B96FD266E6FD
+```
+
+with sha256 identical to the published asset.
+
+**4. What this run does NOT prove.** Two clauses of the bullet remain unmet, and neither is claimed:
+(a) the recorded origin is localhost, not github.com (`kMDItemWhereFroms` reads
+`http://127.0.0.1:8931/...`), and the release itself is still a DRAFT, not published; (b) the machine
+used is the one that BUILDS the app, not a machine that has never built it. Gatekeeper's verdict does
+not consult the origin URL, but the "machine that has never built the app" clause is NOT satisfied.
+`/usr/bin/syspolicy_check distribution` is named here as the cache-independent instrument that
+mitigates that specific contamination worry — a mitigation, not a substitute for running on a
+genuinely clean machine.
+
+**5. Quarantine propagation.** The `.app` inside the mounted dmg carries no quarantine xattr of its
+own; quarantine rides on the dmg. Copied out with `ditto`, the `.app` gained
+`0283;00000000;;C42D10F2-0A4B-4E85-8380-B96FD266E6FD` — the same download UUID as the Safari
+download, i.e. genuine propagation.
+
+**6. Assessments on the quarantined copy** (not a local build):
+
+| instrument | result |
+| --- | --- |
+| `spctl -a -vvv -t exec` | `accepted`, `source=Notarized Developer ID`, `origin=Developer ID Application: grayson mitchell (S7U223QWXJ)`, `SPCTL_RC=0` |
+| `/usr/bin/syspolicy_check distribution` | `App passed all pre-distribution checks and is ready for distribution.` — cache-independent |
+| `xcrun stapler validate` | `The validate action worked!` |
+| `codesign -dv --verbose=4` | `Identifier=com.gamelib.shell`; `CodeDirectory v=20500 size=26621 flags=0x10000(runtime) hashes=821+7 location=embedded`; `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)`; `Notarization Ticket=stapled`; `TeamIdentifier=S7U223QWXJ` |
+
+**7. THE HEADLINE.** First launch of the quarantined app DID show an interstitial. Verbatim:
+
+```
+"GameLib" is an app downloaded from the internet. Are you sure you want to open it?
+Safari downloaded this file today at 6:40 AM. Apple checked it for malicious software
+and none was detected.
+[Cancel]  [Open]      <- Open is the default (highlighted) button
+```
+
+This is the **BENIGN notarized-app confirmation, NOT a block.** The blocking form ("... cannot be
+opened because Apple could not verify it is free of malicious software", offering only Move to Trash
+/ Done and requiring System Settings -> Privacy & Security -> "Open Anyway") did NOT appear. So the
+bullet as WORDED ("confirm it opens with no Gatekeeper interstitial") is FALSIFIED — one did appear —
+while the thing it was actually guarding against is CONFIRMED ABSENT. This is not "it opened fine"
+and it is not "the check failed" — it is both at once, and the distinction is the entire finding. Log
+corroboration: `SecTranslocateCreateSecureDirectoryForURL` created an App Translocation copy;
+`runningboardd` tracked `app<application.com.gamelib.shell...>`; no denial was logged.
+
+**8. The correction to `## Why it matters` consequence 1 — by name, from inside this section, NOT
+edited in place.** Consequence 1's claim that "the user must go to System Settings -> Privacy &
+Security -> 'Open Anyway'" is no longer true for the signed, notarized artifact: one click on the
+default `Open` button in the benign dialog above suffices. Consequence 1's own
+`[ASSUMED — the exact modern-macOS bypass UX should be confirmed on hardware...]` marker is now
+DISCHARGED by this measurement.
+
+**9. The near-miss.** After clicking Open a GameLib window was frontmost and fully rendered, and it
+would have been easy to record "it opens". It was MEASURED instead: the frontmost pid was **82738** —
+an ORPHANED GameLib instance left running since `Wed Sep 23 21:36:16` by the previous session. The
+newly launched translocated copy had hit GameLib's single-instance guard, handed focus to the orphan,
+and exited. The screenshot that "proved" the launch was a picture of a DIFFERENT PROCESS. The orphan
+(shell 82738 + sidecar 82751) was terminated; an AppleScript `quit` did not take it down within 15s,
+but `kill -TERM` on the shell removed both shell and sidecar. Re-launched clean with no other instance
+running: shell pid **98884** + sidecar pid **98891**. Frontmost pid was then confirmed **== 98884**.
+The UI rendered fully (Library tab, `All Games 387`, artwork and per-store badges present — not
+blank). No crash reports. Incidental, previously unmeasured: the app ran correctly
+APP-TRANSLOCATED, the real path for any user who launches from Downloads rather than dragging to
+`/Applications`. No second Gatekeeper dialog on the second launch; the quarantine flags had advanced
+`0283 -> 02c3`, i.e. the approval is recorded per download UUID.
+
+**10. Residual (c) is now SPLIT, and its larger half is CLOSED GREEN.** `## STATUS 2026-09-23` item 5
+conflated two very different risks. Separated and measured:
+
+- **(c-i) — can the bundled helpers EXEC AT ALL under the hardened runtime**, from the signed and
+  notarized bundle? Needs no credentials. MEASURED, all from the mounted published dmg, each run
+  under an isolated fake HOME (`mkdtemp` 0700, all eight containment variables set per CLAUDE.md's
+  two-profile rule; profile shredded afterwards):
+
+  ```
+  legendary --version  -> rc=0   legendary version "0.21.0", codename "Lowlife"
+  gogdl --version      -> rc=0   1.3.0
+  nile --version       -> rc=0   1.2.0 Robert Speedwagon
+  comet --help         -> rc=0   Usage: comet [OPTIONS] --username <USERNAME> [COMMAND]
+  ```
+
+  Signing census: all carry `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)` and
+  `flags=0x10000(runtime)`; `legendary`, `gogdl`, `nile` and `comet` carry no entitlements; only
+  `steam-bridge-helper` carries `com.apple.security.cs.disable-library-validation`. No AMFI,
+  library-validation or code-signature denials were logged for any of them. **CLOSED GREEN.**
+- **(c-ii) — `steam-bridge-helper`, the one that must `dlopen` Valve's `libsteam_api.dylib`**, a dylib
+  signed by Valve, not by us, which is precisely what its `disable-library-validation` entitlement
+  exists for. Under the fake HOME it died instantly and correctly with
+  `FATAL dlopen(...libsteam_api.dylib...) (no such file)` — no Steam in the fake profile. Under a
+  DECLARED real-profile arm, with Valve's dylib present, it did NOT hit that FATAL and stayed alive
+  past 120s before being terminated, and no library-validation denial was logged. **CLOSED GREEN** —
+  the entitlement works and the dylib loads under hardened runtime. Side observation, not chased here:
+  `steam-bridge-helper --help` blocking for over 120s instead of printing help and exiting is parked
+  to the existing pending todo
+  `2026-09-23-steam-bridge-helper-never-spawned-by-the-sidecar-only-direct-exec-proven.md` by
+  filename.
+- **(c-iii) — WHAT GENUINELY REMAINS:** only the AUTHENTICATED round-trips — an actual Epic login, an
+  actual Amazon library refresh, an actual GOG action — which need real credentials and a person at
+  the keyboard. This is the entire residue of this todo.
+
+**11. Cleanup.** App quit, localhost server stopped, dmg detached, fake profile shredded, all
+screenshots and the Gatekeeper log deleted, the downloaded dmg removed from `~/Downloads`. The
+scratchpad is empty. `/Applications/GameLib.app` was deliberately NOT touched (still the Sep 1 build)
+— the test app was installed to the scratchpad instead.
+
+**12. Frontmatter changes, forward-referenced.** `## STATUS 2026-09-23` item 7's **Proposal 1** and
+**Proposal 2** are both ENACTED by this session (Task 2 of quick-260924-962):
+
+- D-01 — severity `major` -> `minor`. Justification: CLAUDE.md defines `major` as "a feature is
+  broken or a measurement is silently contaminated". The feature — a signed, notarized, stapled macOS
+  build that clears Gatekeeper on a real quarantined download — is now MEASURED WORKING end to end,
+  and the helper binaries execute under the hardened runtime. What is left is one credentialed errand
+  with no known defect behind it, which is CLAUDE.md's `minor`: "polish, rough edge, or a latent trap
+  with no live consequence".
+- D-02 — ready `live-gate` -> `human`. Everything desk-testable and everything gate-testable without
+  credentials has now been run. The only remaining arm needs credentials and a person.
+- D-03 — needs `release-run-then-browser-download-verify` -> the credentialed-in-app-store-actions
+  value described in Task 2.
+- D-04 — the title is restated per Proposal 2, so a reader of the todo — not only a reader of the plan
+  that produced this session — can see that item 7's two proposals were answered.
+
+`status:` stays `OPEN`: (c-iii) is genuinely outstanding.
 
 ## Related
 
