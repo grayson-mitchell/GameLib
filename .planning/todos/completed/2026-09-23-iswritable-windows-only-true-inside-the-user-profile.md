@@ -11,6 +11,9 @@ files:
   - src/backend/sidecar/shellFilesFlowRegistration.ts:316-338
   - src/frontend/screens/Library/components/InstallModal/SteamDialog/index.tsx:493-501
   - src/frontend/screens/Library/components/InstallModal/DownloadDialog/index.tsx:695-726
+status: completed
+resolved: 2026-09-23
+resolved_by: quick-260923-o2s
 ---
 
 # `isWritable_windows` is true only inside the user's own profile
@@ -89,3 +92,47 @@ is itself a cost this rewrite could remove.
 false }` (`windows.ts:75-80`). **A single-entry ACL makes `ConvertTo-Json` emit an OBJECT, not an
 array**, so the array parse throws and the function returns `false` for a second, independent
 reason. Any rewrite should not simply patch the identity match and leave this shape in place.
+
+## Resolution (2026-09-23, quick 260923-o2s)
+
+**What replaced the ACL match:** `isWritable_windows` is now a real write probe. It `stat`s the
+path (false on ENOENT, preserving `getDiskInfo`'s "path does not have to exist" contract), then
+either `open()`s an existing file with `'r+'` (write permission required, nothing truncated or
+written) or creates a `randomUUID()`-suffixed zero-byte probe file inside the target directory
+with `writeFile(..., { flag: 'wx' })`, returns the write's success/failure as the verdict, and
+unlinks the probe in a `finally` whose own failure cannot change the verdict. The
+`genericSpawnWrapper('powershell', ...)` spawn this todo flagged as removable is gone entirely from
+the `isWritable` path — `getDiskInfo_windows` still uses it for `Win32_LogicalDisk`, unchanged.
+
+**The single-entry-ACL trap named in "Watch out":** removed structurally, not patched around. The
+`AccessControlEntry` zod schema, `FileSystemRightModify`, and the `import { userInfo } from 'os'`
+are all deleted from `windows.ts` — there is no `ConvertTo-Json`-emits-an-object path left to throw
+into a `catch { return false }`, because the new implementation never calls `Get-Acl` or parses ACL
+JSON at all.
+
+**`isWritable_unix` was deliberately NOT changed.** It stays `access(path)` with no mode argument —
+an `F_OK` existence check — because `findFirstExistingPath` (`unix.ts:26-32`) depends on exactly
+that semantics: its `while` loop climbs toward the root until the path *exists*, and a real
+writability check would make it climb past existing-but-unwritable directories, falsifying the
+function's own name and silently breaking `getDiskInfo_unix`'s `df` target selection.
+`isWritable_windows` deliberately answers the *stronger* question. `unix.ts` now carries a comment
+recording this so the asymmetry survives the next reader. Harmonising the two platforms so both
+answer the writability question is a separate, wider task with its own Unix/macOS live gate.
+
+**What is evidenced and what is not:**
+
+- **Symptom 1** (the Steam dialog's free-space line / `38-S08` row 4): this task does not re-score
+  `38-S08` — that verdict belongs to the phase-38 orchestrator. What this task DOES evidence, on
+  this Windows 11 host, is that the underlying predicate itself is fixed: real `D:\SteamLibrary`
+  probed FALSE before this change and TRUE after it, through the actual `isWritable_windows`
+  function (not a re-implementation of the predicate), with an opt-in live jest arm
+  (`GAMELIB_LIVE_WRITE_PROBE=1`) as the reproducible record.
+- **Symptom 2** (`DownloadDialog`'s "Warning: path might not be writable"): was never observed live
+  when this todo was filed — it was read from source — and this task does not observe it live
+  either. It is not claimed as confirmed fixed here, only that its root cause (the same
+  `isWritable_windows` false) is addressed.
+
+Mocked jest coverage (`windows.test.ts`) proves the new control flow only, including the exact
+group-only ACL shape this todo measured for `D:\SteamLibrary` and the single-entry-ACL shape from
+"Watch out" — both no longer produce a false `false`. The live arm on this real Windows box is the
+only evidence that touches actual Windows ACL authorization.
