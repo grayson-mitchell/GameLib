@@ -501,9 +501,9 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-43-22 | Phase 43 | Pending |
 | REQ-43-23 | Phase 43 | Pending |
 | REQ-43-24 | Phase 43 | Complete (plan 43-09, `a25d8d2af`/`7274a6ddc`) |
-| REQ-46-01 | Phase 46 | Pending |
-| REQ-46-02 | Phase 46 | Pending |
-| REQ-46-03 | Phase 46 | Pending |
+| REQ-46-01 | Phase 46 | Complete |
+| REQ-46-02 | Phase 46 | Complete |
+| REQ-46-03 | Phase 46 | Complete |
 | REQ-46-04 | Phase 46 | Pending |
 | REQ-46-05 | Phase 46 | Pending |
 | REQ-46-06 | Phase 46 | Pending |
@@ -2194,7 +2194,7 @@ because each changes what a plan must assert:**
   by plan 46-01. The Wave 0 compile break went unnoticed because no workflow runs `cargo test` on
   any OS.
 
-- [ ] **REQ-46-01**: On Windows, a single-instance guard runs in `main()` BEFORE
+- [x] **REQ-46-01**: On Windows, a single-instance guard runs in `main()` BEFORE
   `tauri::Builder::default()` is constructed. A process that finds another instance holds the guard
   calls `std::process::exit(0)` before `spawn_sidecar` can run, on every path, whether or not
   payload delivery succeeded. Every recoverable failure fails OPEN (T-34.5-G6-24): SID lookup
@@ -2204,7 +2204,7 @@ because each changes what a plan must assert:**
   its last handle closes, so no stale-holder branch exists or is needed. Source: RESEARCH Q1/Q5;
   todo properties 1-3. Verified by: source gate (call-site ordering) + live gate checks 3-5.
 
-- [ ] **REQ-46-02**: The primary/secondary decision is `CreateMutexW` on
+- [x] **REQ-46-02**: The primary/secondary decision is `CreateMutexW` on
   `Local\gamelib-single-instance-<sid>`, where `<sid>` is the current process token's user SID
   string. The secondary signal is `GetLastError() == ERROR_ALREADY_EXISTS` after a non-null return
   (Pitfall 1). The mutex handle is non-inheritable and is never closed by the primary. The name
@@ -2214,7 +2214,7 @@ because each changes what a plan must assert:**
   variable (planning-time correction 1). Source: RESEARCH Q1. Verified by: Rust unit tests +
   source gate.
 
-- [ ] **REQ-46-03**: The payload transport is a named pipe
+- [x] **REQ-46-03**: The payload transport is a named pipe
   `\\.\pipe\gamelib-single-instance-<sid>-s<session>` with the following properties. It is created
   `PIPE_ACCESS_INBOUND`, with `FILE_FLAG_FIRST_PIPE_INSTANCE` on the first instance, and
   `PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT | PIPE_REJECT_REMOTE_CLIENTS`. Its security

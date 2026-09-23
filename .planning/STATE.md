@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: "Completed 43-09-PLAN.md -- shipped the gog_keyless KEY destination (candidate B: the"
-last_updated: "2026-09-23T04:52:19.000Z"
-last_activity: 2026-09-23 -- Completed quick task 260923-b31 -- added .github/workflows/rust-test.yml (cargo test on windows-latest + macos-latest), retired the no-CI-cargo-test todo with the branch-protection required-check step named as an open operator follow-up
+stopped_at: Completed 46-02-PLAN.md -- Windows single-instance guard FFI wired into main()
+last_updated: "2026-09-23T11:11:31.881Z"
+last_activity: 2026-09-23
 progress:
   total_phases: 42
   completed_phases: 35
   total_plans: 504
-  completed_plans: 492
+  completed_plans: 493
   percent: 83
 ---
 
@@ -124,7 +124,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > # ◆ PHASE 35 EXECUTING — started 2026-08-28. `/gsd-execute-phase 35`, no `--wave` filter.
 >
 > **Phase:** 35 (electron-cutover-remove-the-electron-build) — EXECUTING
-> **Plan:** 12 of 19 (`35-10` PARTIAL) · **Wave:** 6 DONE (re-planned), wave 7 part-run. `35-13` UNBLOCKED — 35-09 code-complete. **FOUR human gates queued:** 35-07 packaged deep-link, 35-08 live wake-lock, **35-09 the 34.6 Step 8 re-run (BOTH clauses — do NOT accept (a) alone)**, 34.6 Step 4 winetricks. **`D-35-10-01` DEADLINE WAVE 8.** **NOTE (2026-08-30): this "12 of 19" line is STALE and predates waves 7-13 — see ROADMAP.md's phase-35 row for the current wave-plan count (18/19, only `35-19` remains) and the gap-closure bullet immediately below for the newer 10-plan cycle; left uncorrected here per SCOPE BOUNDARY, fixing it is unrelated to the plan that added this note.**
+> **Plan:** 13 of 19 (`35-10` PARTIAL) · **Wave:** 6 DONE (re-planned), wave 7 part-run. `35-13` UNBLOCKED — 35-09 code-complete. **FOUR human gates queued:** 35-07 packaged deep-link, 35-08 live wake-lock, **35-09 the 34.6 Step 8 re-run (BOTH clauses — do NOT accept (a) alone)**, 34.6 Step 4 winetricks. **`D-35-10-01` DEADLINE WAVE 8.** **NOTE (2026-08-30): this "12 of 19" line is STALE and predates waves 7-13 — see ROADMAP.md's phase-35 row for the current wave-plan count (18/19, only `35-19` remains) and the gap-closure bullet immediately below for the newer 10-plan cycle; left uncorrected here per SCOPE BOUNDARY, fixing it is unrelated to the plan that added this note.**
 > **Gap-closure cycle 1, wave 1 (2026-08-30).** `35-26` **COMPLETE** (7/10 gap-closure plans). Closed
 > `REQ-35-17`'s EOS half and resolved `D-35-11-01`. Task 1 (`81794b7bd`) moved `remove()`/`enable()`'s
 > native `dialog.showMessageBox` confirmations to an explicit backend `confirmed: boolean` param
@@ -4907,6 +4907,7 @@ Closed/parked native-install phases:
 | Phase 34.9 P26 | 75min | 3 tasks | 2 files |
 | Phase 34.9 P27 | 20min | 3 tasks | 2 files |
 | Phase 46 P01 | 6min | 2 tasks | 2 files |
+| Phase 46 P02 | 45min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -5512,6 +5513,9 @@ Recent decisions affecting current work:
 - [Phase 34.13-14]: T-34.13-06-06 CLOSED -- all five escalated lifecycle surfaces (getSettings/isNative/launch/uninstall/install-state-detection) now consistent; install-state detection was found already-correct (library.ts never called isBottleEligible() at all) and was pinned (S1/S2) rather than changed
 - [Phase quick-260816-qcn]: Freshest-write-wins precedence (D-A) for the two Steam platform-signal writers (appdetails, PICS oslist), timestamp-based, symmetric, neither source authoritative -- closes WR-02's root mechanism (Phase 34.15 CR-01). Legacy entries with no platformsCapturedAt handled at the read boundary, no Migration added (D-D). `gsd-sdk query state.add-decision` was invoked once for this entry and reproduced the standing whole-file corruption defect (reverted status/stopped_at/last_activity/last_updated to a stale Phase 34.5 banner, deleted the ~350-line counter-convention comment block, wiped total_phases/completed_phases/total_plans/completed_plans/percent to 27/19/353/340/70 vs the correct 26/20/344/339/98) -- reverted byte-for-byte from a pre-call `cp` snapshot and this single decision line hand-applied instead. No further gsd-sdk state.*/roadmap.* verb was invoked this session.
 - [Phase 34.6-01]: `steamgrid/secretStore.ts`'s `isAvailable()` probes `secureKey.ts`'s crypto primitives indirectly (`isEncryptedValue(encryptApiKey('probe'))`) rather than exporting a new `encryptionAvailable()` from `secureKey.ts` -- keeps that module's three-export surface unchanged (plan's explicit instruction) while still satisfying the acceptance criterion that `secretStore.ts` never imports `electron` directly. No gsd-sdk state.*/roadmap.* verb was invoked for this plan's STATE.md/ROADMAP.md updates (known corruption defect); both hand-applied instead, per the standing protocol documented throughout this section.
+- [Phase 46]: windows-sys feature list drops Win32_System_Memory; LocalFree/HLOCAL resolve under Win32_Foundation in the vendored 0.60.2 source — RESEARCH's Standard Stack sketched Win32_System_Memory for LocalFree, but grepping the vendored crate directly showed it is declared inside Win32/Foundation/mod.rs, already covered by the Win32_Foundation feature
+- [Phase 46]: Windows single-instance pipe uses PIPE_ACCESS_INBOUND, not RESEARCH's sketched PIPE_ACCESS_DUPLEX — The primary only ever reads a payload off this pipe, so inbound-only access is least privilege
+- [Phase 46-02]: THE STANDING WHOLE-FILE CORRUPTION DEFECT RECURRED A THIRD TIME, this time from `state.advance-plan`/`state.record-session` (not `state.add-decision`, which is the only verb the 260816-qcn note above names) -- confirming the defect is not scoped to one verb. Symptom this time: two archived historical lines deep in this file (`Phase: 34.16 (macos-runner-onedir-x64-ci-leg) — EXECUTING` and `Plan: 5 of 6 — 34.16-06 LIVE GATE SCORED...`, both far below the real "Current Position" banner) were overwritten with the CURRENT position's `Phase:`/`Plan:` values, and a ~700-word historical "Last activity" narrative (THREE SESSIONS, 260923-p95/o2s/tip) was truncated to its own date stub -- i.e. some field-replace helper matches a bare `Phase: `/`Plan: `/`Last activity: ` prefix anywhere in the file rather than anchoring to the frontmatter or the single "Current Position" banner. No `cp` snapshot was taken before this session's calls (the earlier entry's own recommended protocol), so recovery used `git show HEAD:.planning/STATE.md` to pull back the exact original text for the three corrupted lines by hand (all three lines were untouched between the last commit and this session's pre-existing dirty state, confirmed by their content matching unrelated, older phase history that this plan's own work could not plausibly have touched). ROADMAP.md and REQUIREMENTS.md updates from the same session (`roadmap.update-plan-progress`, `requirements.mark-complete`) were verified clean -- the defect is STATE.md-specific. Future sessions: `cp .planning/STATE.md /tmp/state-pre-sdk.md` (or the Windows equivalent) BEFORE the first `state.*` mutation call of the session, every time, regardless of which verb -- and diff-review every `state.*`/`roadmap.*` call's actual effect before committing, not just the frontmatter fields you intended to change.
 
 ### Pending Todos
 
@@ -6144,8 +6148,8 @@ Recent decisions affecting current work:
 > this plan's own scope boundary) is demoted below into its own "prior session (35-23), preserved
 > as history" block, unchanged in content.
 
-Last session: 2026-09-10T15:33:38+12:00
-Stopped at: Completed 43-09-PLAN.md -- shipped the gog_keyless KEY destination (candidate B: the
+Last session: 2026-09-23T11:11:31.839Z
+Stopped at: Completed 46-02-PLAN.md -- Windows single-instance guard FFI wired into main()
 Phase 40 embedded store browser opens Humble's own keys page, labelled "Claim on Humble") per the
 D-43-11 probe's SELECTED BRANCH, closing REQ-43-24. Task 1 (`a25d8d2af`) wired the button and
 excluded gog_keyless from the login-and-claim scenario (Rule 1 fix -- that scenario's premise does
