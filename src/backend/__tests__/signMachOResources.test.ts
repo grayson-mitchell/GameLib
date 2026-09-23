@@ -31,6 +31,7 @@
  */
 import { spawnSync } from 'node:child_process'
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -39,7 +40,9 @@ import {
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
+
+import { parse as parsePlist } from 'plist'
 
 import {
   codesignArgs,
@@ -48,6 +51,8 @@ import {
   isMachO,
   isTimestampServiceFailure,
   parseArgs,
+  preflightEntitlements,
+  resolveEntitlementsPath,
   signMachOResources,
   HELPER_ENTITLEMENTS,
   MACHO_HEADER_BYTES
@@ -71,6 +76,7 @@ const fixture = {
   machO32be: '',
   machO32le: '',
   fatUniversal: '',
+  steamBridgeHelper: '',
   javaClass: '',
   textNamedLikeABinary: '',
   textNamedLikeASharedObject: '',
@@ -94,6 +100,10 @@ beforeAll(() => {
   fixture.machO32be = join(deep, 'macho32be')
   fixture.machO32le = join(internal, 'macho32le')
   fixture.fatUniversal = join(fixtureRoot, 'fat-universal')
+  // Top-level, exactly like the real tree -- build/bin/arm64/darwin/steam-bridge-helper
+  // is a top-level file, so relative(fixtureRoot, file) is exactly
+  // 'steam-bridge-helper', the same key shape HELPER_ENTITLEMENTS uses.
+  fixture.steamBridgeHelper = join(fixtureRoot, 'steam-bridge-helper')
   fixture.javaClass = join(fixtureRoot, 'Decoy.class')
   fixture.textNamedLikeABinary = join(fixtureRoot, 'legendary')
   fixture.textNamedLikeASharedObject = join(
@@ -134,6 +144,12 @@ beforeAll(() => {
   writeBytes(
     fixture.javaClass,
     [0xca, 0xfe, 0xba, 0xbe, 0x00, 0x00, 0x00, 0x34]
+  )
+  // MH_CIGAM_64, same bytes as machO64le -- this is the file HELPER_ENTITLEMENTS
+  // maps by name, exercising the mapping rather than merely a decoy count.
+  writeBytes(
+    fixture.steamBridgeHelper,
+    [0xcf, 0xfa, 0xed, 0xfe, 0x0c, 0x00, 0x00, 0x01]
   )
 
   writeFileSync(fixture.textNamedLikeABinary, '#!/bin/sh\necho not a Mach-O\n')
@@ -199,7 +215,8 @@ describe('collectMachOFiles -- selection over a synthetic tree', () => {
         fixture.machO32be,
         fixture.machO32le,
         fixture.machO64be,
-        fixture.machO64le
+        fixture.machO64le,
+        fixture.steamBridgeHelper
       ].sort()
     )
   })
@@ -231,7 +248,8 @@ describe('collectMachOFiles -- selection over a synthetic tree', () => {
       fixture.machO64be,
       fixture.machO64le,
       fixture.machO32le,
-      fixture.fatUniversal
+      fixture.fatUniversal,
+      fixture.steamBridgeHelper
     ])
   })
 
@@ -277,8 +295,32 @@ describe('codesignArgs -- the argv shape, built once and used by both paths', ()
     expect(args).not.toContain('--entitlements')
   })
 
-  test('HELPER_ENTITLEMENTS ships EMPTY -- an entry requires an observed crash', () => {
-    expect(Object.keys(HELPER_ENTITLEMENTS)).toEqual([])
+  test('HELPER_ENTITLEMENTS has exactly one entry, steam-bridge-helper, granting exactly disable-library-validation', () => {
+    // Retires the old "ships EMPTY" tripwire -- its bar (an entry requires an
+    // observed crash) has been met. These assertions are STRICTER than what
+    // it protected: not just "one entry exists" but the exact key, that the
+    // path it names resolves and exists, that the plist it names parses to
+    // exactly one key, and that key is the one we intend -- never allow-jit.
+    const keys = Object.keys(HELPER_ENTITLEMENTS)
+    expect(keys).toHaveLength(1)
+    expect(keys[0]).toBe('steam-bridge-helper')
+
+    const resolved = resolveEntitlementsPath(
+      HELPER_ENTITLEMENTS['steam-bridge-helper'],
+      REPO_ROOT
+    )
+    expect(existsSync(resolved)).toBe(true)
+
+    const parsed = parsePlist(readFileSync(resolved, 'utf-8')) as Record<
+      string,
+      unknown
+    >
+    const entitlementKeys = Object.keys(parsed)
+    expect(entitlementKeys).toHaveLength(1)
+    expect(entitlementKeys[0]).toBe(
+      'com.apple.security.cs.disable-library-validation'
+    )
+    expect(parsed['com.apple.security.cs.allow-jit']).toBeUndefined()
   })
 
   test('positive control: the --entitlements seam DOES fire when a path is mapped', () => {
@@ -291,8 +333,48 @@ describe('codesignArgs -- the argv shape, built once and used by both paths', ()
   })
 })
 
+describe('resolveEntitlementsPath -- fail-fast, repo-relative, never __dirname', () => {
+  test('resolves the real plist the same way from the repo root and from a subdirectory', () => {
+    const fromRoot = resolveEntitlementsPath(
+      'meta/steam-bridge-helper.entitlements.plist',
+      REPO_ROOT
+    )
+    const fromSubdirectory = resolveEntitlementsPath(
+      'meta/steam-bridge-helper.entitlements.plist',
+      join(REPO_ROOT, 'src', 'backend')
+    )
+
+    expect(existsSync(fromRoot)).toBe(true)
+    expect(fromSubdirectory).toBe(fromRoot)
+  })
+
+  test('throws, naming the searched directories, for a path that does not exist anywhere upward', () => {
+    expect(() =>
+      resolveEntitlementsPath('meta/no-such-file.plist', REPO_ROOT)
+    ).toThrow(/no-such-file\.plist/)
+  })
+})
+
+describe('preflightEntitlements -- resolves every mapped path before any codesign spawn', () => {
+  test('resolves a map of one good path to an absolute, existing path', () => {
+    const resolved = preflightEntitlements(
+      { 'steam-bridge-helper': 'meta/steam-bridge-helper.entitlements.plist' },
+      REPO_ROOT
+    )
+
+    expect(resolved['steam-bridge-helper'].startsWith('/')).toBe(true)
+    expect(existsSync(resolved['steam-bridge-helper'])).toBe(true)
+  })
+
+  test('throws for a map containing a path that does not exist', () => {
+    expect(() =>
+      preflightEntitlements({ nile: 'meta/no-such-file.plist' }, REPO_ROOT)
+    ).toThrow(/no-such-file\.plist/)
+  })
+})
+
 describe('signMachOResources -- driver behaviour, captured from a dry run', () => {
-  test('emits one argv per detected Mach-O, none of them with --deep or --entitlements', async () => {
+  test('emits one argv per detected Mach-O; exactly one carries --entitlements, targeting steam-bridge-helper; none carry --deep', async () => {
     const result = await signMachOResources({
       dir: fixtureRoot,
       identity: 'DESK-CHECK',
@@ -300,9 +382,28 @@ describe('signMachOResources -- driver behaviour, captured from a dry run', () =
       dryRun: true
     })
 
-    expect(result.detected).toBe(5)
+    expect(result.detected).toBe(6)
     expect(result.signed).toBe(0)
-    expect(result.commands).toHaveLength(5)
+    expect(result.commands).toHaveLength(6)
+
+    // The "other 252 unaffected" assertion, in fixture form: exactly one argv
+    // out of six carries --entitlements.
+    const entitledCommands = result.commands.filter((args) =>
+      args.includes('--entitlements')
+    )
+    expect(entitledCommands).toHaveLength(1)
+
+    const entitledArgs = entitledCommands[0]
+    expect(basename(entitledArgs[entitledArgs.length - 1])).toBe(
+      'steam-bridge-helper'
+    )
+    const entitlementsValue =
+      entitledArgs[entitledArgs.indexOf('--entitlements') + 1]
+    expect(entitlementsValue.startsWith('/')).toBe(true)
+    expect(existsSync(entitlementsValue)).toBe(true)
+    expect(basename(entitlementsValue)).toBe(
+      'steam-bridge-helper.entitlements.plist'
+    )
 
     for (const args of result.commands) {
       expect(args).toContain('--force')
@@ -311,7 +412,10 @@ describe('signMachOResources -- driver behaviour, captured from a dry run', () =
       expect(args[args.indexOf('--sign') + 1]).toBe('DESK-CHECK')
       expect(args[args.indexOf('--keychain') + 1]).toBe('/dev/null')
       expect(args).not.toContain('--deep')
-      expect(args).not.toContain('--entitlements')
+
+      if (args !== entitledArgs) {
+        expect(args).not.toContain('--entitlements')
+      }
     }
   })
 
@@ -507,11 +611,24 @@ function spawnPackageScript(keepJestWorkerId: boolean): SpawnedRun {
 }
 
 describe('the real package script, spawned end to end', () => {
-  test('sign:macos-resources --dry-run emits one `codesign ` line per Mach-O', () => {
+  test('sign:macos-resources --dry-run emits one `codesign ` line per Mach-O; exactly one carries --entitlements', () => {
+    // This is the DETECTOR for the path-resolution trap: it spawns the real
+    // package script through meta/runTs.cjs, which esbuild-bundles the
+    // script into an fs.mkdtempSync-created temp dir and runs it from there.
+    // A __dirname-based (or import.meta.url-based) resolution of the
+    // entitlements plist would resolve to that temp dir, not to meta/, and
+    // this test would go RED -- never green for the wrong reason.
     const run = spawnPackageScript(false)
 
     expect(run.status).toBe(0)
-    expect(run.codesignLines).toHaveLength(5)
+    expect(run.codesignLines).toHaveLength(6)
+
+    const entitledLines = run.codesignLines.filter((line) =>
+      line.includes('--entitlements')
+    )
+    expect(entitledLines).toHaveLength(1)
+    expect(entitledLines[0]).toContain('steam-bridge-helper.entitlements.plist')
+    expect(entitledLines[0]).toContain('steam-bridge-helper')
 
     for (const line of run.codesignLines) {
       expect(line).toContain('--force')
@@ -519,7 +636,10 @@ describe('the real package script, spawned end to end', () => {
       expect(line).toContain('--timestamp')
       expect(line).toContain('--sign DESK-CHECK')
       expect(line).not.toContain('--deep')
-      expect(line).not.toContain('--entitlements')
+
+      if (!entitledLines.includes(line)) {
+        expect(line).not.toContain('--entitlements')
+      }
     }
   }, 180000)
 
