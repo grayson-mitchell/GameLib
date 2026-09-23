@@ -2397,6 +2397,434 @@ describe('Phase 35 plan 07 main.rs OS deep-link registration (D-07/D-05)', () =>
   })
 })
 
+/**
+ * Phase 46 (REQ-46-01/03/04/07/08, U-34.5-18): the Windows half of the single-instance guard
+ * (plans 46-01/46-02/46-03). The FFI itself (`CreateMutexW`/`CreateNamedPipeW`/Win32 security
+ * calls) is live-gated only (REQ-46-10, plan 46-05) -- these are the automated source gates:
+ * every security-relevant token or ordering pinned here fails CI the moment it is removed or
+ * reordered, without needing a Windows machine to run `cargo test` on.
+ */
+describe('Phase 46 Windows single-instance guard (REQ-46-01/03/04/07/08, U-34.5-18)', () => {
+  // Each token carries a trailing `(` boundary deliberately, for the identical reason the
+  // D-44-A block above (`tauriShellSource.test.ts:2196-2203`) documents: this file's own
+  // `#[cfg(test)] mod tests` names test fns like
+  // `windows_pipe_sddl_returns_none_for_an_invalid_sid` -- without the paren boundary,
+  // `'fn windows_pipe_sddl'` is a SUBSTRING of that test function's own name, so the gate
+  // would pass vacuously off the TEST declaration even if the real `fn windows_pipe_sddl(`
+  // helper were deleted.
+  const POSITIVE_TOKENS = [
+    'fn windows_single_instance_key(',
+    'fn windows_mutex_name(',
+    'fn windows_pipe_name(',
+    'fn windows_pipe_sddl(',
+    'fn windows_pipe_connect_should_retry(',
+    'fn windows_pipe_owner_matches(',
+    'fn single_instance_payload(',
+    'fn acquire_single_instance_windows(',
+    'fn create_single_instance_pipe_instance(',
+    'fn deliver_to_running_instance_windows(',
+    'fn run_windows_single_instance_accept_loop('
+  ]
+
+  test.each(POSITIVE_TOKENS)('the real source contains %s', (token) => {
+    expect(loadMainRsCode()).toContain(token)
+  })
+
+  test.each(POSITIVE_TOKENS)(
+    'self-test (RED proof): a synthetic source lacking %s does NOT satisfy the gate',
+    (token) => {
+      const syntheticSource = 'fn some_other_helper() {}\n'
+      expect(loadMainRsCode(syntheticSource)).not.toContain(token)
+    }
+  )
+
+  /**
+   * Returns the substring of `code` from `code.indexOf(fnToken)` up to the next top-level item
+   * boundary (`\nfn ` or `\n#[cfg`, i.e. a line starting at column 0), or to the end of the
+   * file if there is no such boundary. Returns `null` if `fnToken` itself is absent. A REGION,
+   * not two independent substrings anywhere in the file (the file's own established rule --
+   * see `T-35-25: deep_link_decision itself calls protocol_url_arg` above) -- generalised from
+   * that test's fixed 400-character slice because these Windows FFI function bodies exceed
+   * 400 characters.
+   */
+  function fnRegion(code: string, fnToken: string): string | null {
+    const start = code.indexOf(fnToken)
+    if (start === -1) return null
+    const searchFrom = start + fnToken.length
+    const nextFn = code.indexOf('\nfn ', searchFrom)
+    const nextCfg = code.indexOf('\n#[cfg', searchFrom)
+    const boundaries = [nextFn, nextCfg].filter((i) => i !== -1)
+    const end = boundaries.length > 0 ? Math.min(...boundaries) : code.length
+    return code.slice(start, end)
+  }
+
+  test('fnRegion self-test: absent token returns null', () => {
+    expect(fnRegion('fn other() {}\n', 'fn missing(')).toBeNull()
+  })
+
+  // ---- create_single_instance_pipe_instance: pipe security flags (T-46-01) ----------------
+
+  test('Region (PIPE_REJECT_REMOTE_CLIENTS, T-46-01): create_single_instance_pipe_instance pins FILE_FLAG_FIRST_PIPE_INSTANCE, PIPE_REJECT_REMOTE_CLIENTS, ConvertStringSecurityDescriptorToSecurityDescriptorW, and bInheritHandle: 0', () => {
+    const region = fnRegion(
+      loadMainRsCode(),
+      'fn create_single_instance_pipe_instance('
+    )
+    expect(region).not.toBeNull()
+    expect(region).toContain('PIPE_REJECT_REMOTE_CLIENTS')
+    expect(region).toContain('FILE_FLAG_FIRST_PIPE_INSTANCE')
+    expect(region).toContain(
+      'ConvertStringSecurityDescriptorToSecurityDescriptorW'
+    )
+    expect(region).toContain('bInheritHandle: 0')
+  })
+
+  test('self-test (RED proof, PIPE_REJECT_REMOTE_CLIENTS): a synthetic function lacking it, with the token placed in a DIFFERENT function, fails the region gate', () => {
+    const synthetic =
+      'fn create_single_instance_pipe_instance(pipe_name: &str, sddl: &str, first: bool) -> std::io::Result<OwnedHandle> {\n' +
+      '    let open_mode = PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE;\n' +
+      '    ConvertStringSecurityDescriptorToSecurityDescriptorW(sddl_w.as_ptr(), SDDL_REVISION_1, &mut psd, std::ptr::null_mut());\n' +
+      '    let sa = SECURITY_ATTRIBUTES { bInheritHandle: 0, lpSecurityDescriptor: psd };\n' +
+      '    Ok(handle)\n' +
+      '}\n' +
+      'fn some_other_pipe_helper() {\n' +
+      '    let flags = PIPE_REJECT_REMOTE_CLIENTS;\n' +
+      '}\n'
+    const region = fnRegion(
+      loadMainRsCode(synthetic),
+      'fn create_single_instance_pipe_instance('
+    )
+    expect(region).not.toBeNull()
+    expect(region).not.toContain('PIPE_REJECT_REMOTE_CLIENTS')
+  })
+
+  // ---- deliver_to_running_instance_windows: SQOS + owner check before write (T-46-01/02) --
+
+  function deliverRegionProperties(code: string): {
+    region: string | null
+    hasSecurityQos: boolean
+    hasGetSecurityInfo: boolean
+    hasOwnerCheck: boolean
+    ownerCheckBeforeWrite: boolean
+  } {
+    const region = fnRegion(code, 'fn deliver_to_running_instance_windows(')
+    if (region === null) {
+      return {
+        region: null,
+        hasSecurityQos: false,
+        hasGetSecurityInfo: false,
+        hasOwnerCheck: false,
+        ownerCheckBeforeWrite: false
+      }
+    }
+    // `writeln!(file` (not the bare word "write") is the specific token for the PAYLOAD write
+    // -- a bare "write" substring would match `.write(true)` on the earlier OpenOptions call,
+    // which only requests write ACCESS, not the actual write of the payload.
+    const ownerIdx = region.indexOf('windows_pipe_owner_matches(')
+    const writeIdx = region.indexOf('writeln!(file')
+    return {
+      region,
+      hasSecurityQos: region.includes('security_qos_flags('),
+      hasGetSecurityInfo: region.includes('GetSecurityInfo'),
+      hasOwnerCheck: ownerIdx > -1,
+      ownerCheckBeforeWrite:
+        ownerIdx > -1 && writeIdx > -1 && ownerIdx < writeIdx
+    }
+  }
+
+  test('Region (T-46-01/02): deliver_to_running_instance_windows pins security_qos_flags(/GetSecurityInfo/windows_pipe_owner_matches(, checked BEFORE the payload write', () => {
+    const props = deliverRegionProperties(loadMainRsCode())
+    expect(props.hasSecurityQos).toBe(true)
+    expect(props.hasGetSecurityInfo).toBe(true)
+    expect(props.hasOwnerCheck).toBe(true)
+    expect(props.ownerCheckBeforeWrite).toBe(true)
+  })
+
+  test('self-test (RED proof): a writer that checks ownership AFTER writing fails the order check', () => {
+    const regressed =
+      'fn deliver_to_running_instance_windows(pipe_name: &str, user_sid: &str, payload: &str) -> Result<(), String> {\n' +
+      '    let mut file = std::fs::OpenOptions::new().write(true).security_qos_flags(SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS).open(pipe_name).unwrap();\n' +
+      '    writeln!(file, "{payload}").map_err(|e| format!("write failed: {e}")).unwrap();\n' +
+      '    let owner_sid = GetSecurityInfo(handle);\n' +
+      '    if !windows_pipe_owner_matches(&owner_sid, user_sid) {\n' +
+      '        return Err("no".to_string());\n' +
+      '    }\n' +
+      '    Ok(())\n' +
+      '}\n'
+    const props = deliverRegionProperties(regressed)
+    expect(props.hasSecurityQos).toBe(true)
+    expect(props.hasGetSecurityInfo).toBe(true)
+    expect(props.hasOwnerCheck).toBe(true)
+    expect(props.ownerCheckBeforeWrite).toBe(false)
+  })
+
+  // ---- run_windows_single_instance_accept_loop: bounded read + validate-before-dispatch ----
+  // (T-34.5-G6-20/23/25, T-46-09's own choke point)
+
+  function acceptLoopProperties(code: string): {
+    region: string | null
+    hasAllTokens: boolean
+    validatesBeforeDispatch: boolean
+  } {
+    const region = fnRegion(code, 'fn run_windows_single_instance_accept_loop(')
+    if (region === null) {
+      return {
+        region: null,
+        hasAllTokens: false,
+        validatesBeforeDispatch: false
+      }
+    }
+    const hasAllTokens =
+      region.includes('protocol_url_arg(&[trimmed.to_string()])') &&
+      region.includes('.take(4096)') &&
+      region.includes('ERROR_PIPE_CONNECTED') &&
+      region.includes('bytes={}')
+    const validateIdx = region.indexOf(
+      'protocol_url_arg(&[trimmed.to_string()])'
+    )
+    const dispatchIdx = region.indexOf('"handleProtocolUrl"')
+    const validatesBeforeDispatch =
+      validateIdx > -1 && dispatchIdx > -1 && validateIdx < dispatchIdx
+    return { region, hasAllTokens, validatesBeforeDispatch }
+  }
+
+  test('Region (T-34.5-G6-20/23/25): run_windows_single_instance_accept_loop pins protocol_url_arg(&[trimmed.to_string()]), .take(4096), ERROR_PIPE_CONNECTED, and bytes={}, validating BEFORE dispatch', () => {
+    const props = acceptLoopProperties(loadMainRsCode())
+    expect(props.hasAllTokens).toBe(true)
+    expect(props.validatesBeforeDispatch).toBe(true)
+  })
+
+  test('self-test (RED proof): a loop that dispatches before validating fails the order check', () => {
+    const regressed =
+      'fn run_windows_single_instance_accept_loop(primary: WindowsPrimaryPipe, accept_state: Arc<SidecarState>, accept_app_handle: AppHandle) {\n' +
+      '    let mut reader = BufReader::new(file.take(4096));\n' +
+      '    match accept_state.invoke("handleProtocolUrl".to_string(), vec![Value::String(trimmed.to_string())]) {\n' +
+      '        Ok(_) => {}\n' +
+      '        Err(_) => {}\n' +
+      '    }\n' +
+      '    let _ = protocol_url_arg(&[trimmed.to_string()]);\n' +
+      '    eprintln!("bytes={}", trimmed.len());\n' +
+      '    let _ = ERROR_PIPE_CONNECTED;\n' +
+      '}\n'
+    const props = acceptLoopProperties(regressed)
+    expect(props.hasAllTokens).toBe(true)
+    expect(props.validatesBeforeDispatch).toBe(false)
+  })
+
+  // ---- windows_pipe_sddl: DACL trustee is the validated SID, never a well-known alias ------
+  // (REQ-46-03 default, decision point (b))
+
+  function sddlRegionProperties(code: string): {
+    region: string | null
+    hasDaclAce: boolean
+    hasForbiddenAlias: boolean
+  } {
+    const region = fnRegion(code, 'fn windows_pipe_sddl(')
+    if (region === null) {
+      return { region: null, hasDaclAce: false, hasForbiddenAlias: false }
+    }
+    const forbiddenTokens = [';;;OW)', ';;;WD)', ';;;AN)']
+    return {
+      region,
+      hasDaclAce: region.includes('D:P(A;;GA;;;'),
+      hasForbiddenAlias: forbiddenTokens.some((t) => region.includes(t))
+    }
+  }
+
+  test('Region (REQ-46-03 default): windows_pipe_sddl emits D:P(A;;GA;;; and never a well-known SDDL alias (OW/WD/AN) as the trustee', () => {
+    const props = sddlRegionProperties(loadMainRsCode())
+    expect(props.hasDaclAce).toBe(true)
+    expect(props.hasForbiddenAlias).toBe(false)
+  })
+
+  test('self-test (RED proof): an OW-based SDDL fails the alias gate', () => {
+    const owBased =
+      'fn windows_pipe_sddl(user_sid: Option<&str>) -> Option<String> {\n' +
+      '    windows_single_instance_key(user_sid).map(|key| format!("O:{key}D:P(A;;GA;;;OW)"))\n' +
+      '}\n'
+    const props = sddlRegionProperties(owBased)
+    expect(props.hasDaclAce).toBe(true)
+    expect(props.hasForbiddenAlias).toBe(true)
+  })
+
+  // ---- Ordering (REQ-46-01): the guard runs before the Tauri builder is constructed --------
+
+  function mainRegion(code: string): string | null {
+    const start = code.indexOf('fn main(')
+    if (start === -1) return null
+    return code.slice(start)
+  }
+
+  test('Ordering (REQ-46-01): inside fn main(, acquire_single_instance_windows( precedes tauri::Builder::default()', () => {
+    const region = mainRegion(loadMainRsCode())
+    expect(region).not.toBeNull()
+    const guardIdx = region!.indexOf('acquire_single_instance_windows(')
+    const builderIdx = region!.indexOf('tauri::Builder::default()')
+    expect(guardIdx).toBeGreaterThan(-1)
+    expect(builderIdx).toBeGreaterThan(-1)
+    expect(guardIdx).toBeLessThan(builderIdx)
+  })
+
+  test('self-test (RED proof, REQ-46-01): a synthetic main calling the guard AFTER Builder::default() fails', () => {
+    const regressed =
+      'fn main() {\n' +
+      '    tauri::Builder::default()\n' +
+      '        .setup(move |app| {\n' +
+      '            let _ = acquire_single_instance_windows("x", 1);\n' +
+      '            Ok(())\n' +
+      '        });\n' +
+      '}\n'
+    const region = mainRegion(regressed)
+    expect(region).not.toBeNull()
+    const guardIdx = region!.indexOf('acquire_single_instance_windows(')
+    const builderIdx = region!.indexOf('tauri::Builder::default()')
+    expect(guardIdx).toBeGreaterThan(builderIdx)
+  })
+
+  // ---- Ordering (REQ-46-08): Builder::default() < .setup( < on_open_url( ------------------
+  // Pins T-46-09 (cold-start double dispatch once Windows schemes become non-empty, plan
+  // 46-04): RESEARCH Q6 proves the deep-link plugin's emit precedes listener registration for
+  // tauri 2.11.5 / deep-link 2.4.9, so on_open_url must stay registered inside .setup(),
+  // strictly after the builder exists.
+
+  function builderSetupOnOpenUrlIndices(code: string): {
+    builderIdx: number
+    setupIdx: number
+    onOpenUrlIdx: number
+  } {
+    return {
+      builderIdx: code.indexOf('tauri::Builder::default()'),
+      setupIdx: code.indexOf('.setup(move |app|'),
+      onOpenUrlIdx: code.indexOf('on_open_url(')
+    }
+  }
+
+  test('Ordering (REQ-46-08, on_open_url cold-start double dispatch): tauri::Builder::default() < .setup(move |app| < on_open_url(', () => {
+    const idx = builderSetupOnOpenUrlIndices(loadMainRsCode())
+    expect(idx.builderIdx).toBeGreaterThan(-1)
+    expect(idx.setupIdx).toBeGreaterThan(-1)
+    expect(idx.onOpenUrlIdx).toBeGreaterThan(-1)
+    expect(idx.builderIdx).toBeLessThan(idx.setupIdx)
+    expect(idx.setupIdx).toBeLessThan(idx.onOpenUrlIdx)
+  })
+
+  test('self-test (RED proof, REQ-46-08): on_open_url placed BEFORE .setup( fails the ordering gate', () => {
+    const regressed =
+      'fn main() {\n' +
+      '    on_open_url(move |event| {});\n' +
+      '    tauri::Builder::default()\n' +
+      '        .setup(move |app| { Ok(()) });\n' +
+      '}\n'
+    const idx = builderSetupOnOpenUrlIndices(regressed)
+    const inOrder =
+      idx.builderIdx > -1 &&
+      idx.setupIdx > -1 &&
+      idx.onOpenUrlIdx > -1 &&
+      idx.builderIdx < idx.setupIdx &&
+      idx.setupIdx < idx.onOpenUrlIdx
+    expect(inOrder).toBe(false)
+  })
+
+  test('self-test (RED proof, REQ-46-08): on_open_url placed BEFORE tauri::Builder::default( fails the ordering gate', () => {
+    const regressed =
+      'fn main() {\n' +
+      '    on_open_url(move |event| {});\n' +
+      '    let _ = 1;\n' +
+      '    tauri::Builder::default();\n' +
+      '}\n'
+    const idx = builderSetupOnOpenUrlIndices(regressed)
+    expect(idx.onOpenUrlIdx).toBeGreaterThan(-1)
+    expect(idx.builderIdx).toBeGreaterThan(-1)
+    expect(idx.onOpenUrlIdx).toBeLessThan(idx.builderIdx)
+  })
+
+  // ---- Decision point (b) pin (REQ-46-03): the pipe DACL is per-user, not per-logon-session -
+
+  function decisionPointBProperties(code: string): {
+    identityRegion: string | null
+    sddlRegion: string | null
+    identityHasTokenUser: boolean
+    identityHasLogonSid: boolean
+    identityHasSeGroupLogonId: boolean
+    sddlHasDaclAce: boolean
+  } {
+    const identityRegion = fnRegion(code, 'fn current_user_identity(')
+    const sddlRegion = fnRegion(code, 'fn windows_pipe_sddl(')
+    return {
+      identityRegion,
+      sddlRegion,
+      identityHasTokenUser:
+        identityRegion !== null && identityRegion.includes('TokenUser'),
+      identityHasLogonSid:
+        identityRegion !== null && identityRegion.includes('TokenLogonSid'),
+      identityHasSeGroupLogonId:
+        identityRegion !== null && identityRegion.includes('SE_GROUP_LOGON_ID'),
+      sddlHasDaclAce: sddlRegion !== null && sddlRegion.includes('D:P(A;;GA;;;')
+    }
+  }
+
+  test('REQ-46-03 (decision point b, operator-overridable): pipe DACL is per-user token SID', () => {
+    const props = decisionPointBProperties(loadMainRsCode())
+    expect(props.identityHasTokenUser).toBe(true)
+    expect(props.identityHasLogonSid).toBe(false)
+    expect(props.identityHasSeGroupLogonId).toBe(false)
+    expect(props.sddlHasDaclAce).toBe(true)
+  })
+
+  // To override this decision, see `windows_pipe_sddl`'s own doc comment in main.rs for the
+  // full recipe (read the logon SID via `TokenLogonSid` or `TokenGroups`/`SE_GROUP_LOGON_ID`,
+  // thread it in as a second parameter, keep `O:` as the user SID) -- then flip this test AND
+  // the Rust
+  // `windows_pipe_sddl_req_46_03_decision_point_b_operator_overridable_dacl_is_per_user_token_sid`
+  // unit test together.
+  test('self-test (RED proof, decision point b): a synthetic current_user_identity reading TokenLogonSid fails the pin', () => {
+    const regressed =
+      'fn current_user_identity() -> Option<(String, u32)> {\n' +
+      '    let mut logon_sid: Vec<u8> = Vec::new();\n' +
+      '    GetTokenInformation(token, TokenLogonSid, logon_sid.as_mut_ptr() as *mut core::ffi::c_void, 0, &mut 0);\n' +
+      '    None\n' +
+      '}\n'
+    const props = decisionPointBProperties(regressed)
+    expect(props.identityHasLogonSid).toBe(true)
+  })
+
+  // ---- Secondary exit: delivers, then unconditionally exits (46-RESEARCH.md Q5) ------------
+
+  function secondaryExitRegion(code: string): string | null {
+    // `lastIndexOf`, not `indexOf`: `WindowsSingleInstanceRole::Secondary` also appears once
+    // earlier in the file, inside `acquire_single_instance_windows`'s own `return` statement
+    // (constructing the variant, not exiting the process) -- the match ARM inside `main()` is
+    // what this gate targets, and it is the LAST occurrence of the token in the file.
+    const start = code.lastIndexOf('WindowsSingleInstanceRole::Secondary')
+    if (start === -1) return null
+    const end = code.indexOf('WindowsSingleInstanceRole::Primary', start)
+    return end === -1 ? code.slice(start) : code.slice(start, end)
+  }
+
+  test('Secondary exit: the Secondary match arm delivers over the pipe, then unconditionally exits', () => {
+    const region = secondaryExitRegion(loadMainRsCode())
+    expect(region).not.toBeNull()
+    expect(region).toContain('deliver_to_running_instance_windows(')
+    expect(region).toContain('std::process::exit(0)')
+    expect(
+      region!.indexOf('deliver_to_running_instance_windows(')
+    ).toBeLessThan(region!.indexOf('std::process::exit(0)'))
+  })
+
+  test('self-test (RED proof): a Secondary arm without exit fails', () => {
+    const regressed =
+      'match role {\n' +
+      '    WindowsSingleInstanceRole::Secondary { pipe_name, user_sid } => {\n' +
+      '        let _ = deliver_to_running_instance_windows(&pipe_name, &user_sid, "x");\n' +
+      '    }\n' +
+      '    WindowsSingleInstanceRole::Primary(pipe) => Some(pipe),\n' +
+      '}\n'
+    const region = secondaryExitRegion(regressed)
+    expect(region).not.toBeNull()
+    expect(region).toContain('deliver_to_running_instance_windows(')
+    expect(region).not.toContain('std::process::exit(0)')
+  })
+})
+
 // Debug session `finder-reveal-no-selection` (2026-08-23), closing Phase 34.3 live-gate item 2 /
 // gap G1 (REQ-34.3-11 item 2). `showItemInFolder` opened the correct folder but never SELECTED
 // the target, because of a systemic macOS/Finder defect: the selection half of a reveal is
