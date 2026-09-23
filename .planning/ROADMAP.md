@@ -5497,7 +5497,7 @@ Plans:
 **Goal:** On Windows, a second GameLib launch or an external `gamelib://` open reaches the RUNNING instance and never starts a second app or a second sidecar. That needs a hand-rolled guard that runs before `tauri::Builder::default()`, mirroring the Unix one (`src-tauri/src/main.rs`, D-44-A: named mutex + named pipe instead of a Unix socket, FAIL-OPEN, stale-holder reasoning redone for Windows semantics, every URL re-validated through `protocol_url_arg()`). Only once that passes live verification on the operator's Windows machine, remove the `plugins.deep-link.desktop.schemes: []` override from `src-tauri/tauri.windows.conf.json` (quick 260922-nx4) so the NSIS installer registers `gamelib://`, inverting `windowsDeepLinkSuppression.test.ts` in the same change. Closes ledger row `U-34.5-18` and todo `2026-08-29-windows-single-instance-guard-and-deep-link-registration.md`. `tauri-plugin-single-instance` stays rejected (D-44-A).
 **Requirements**: REQ-46-01, REQ-46-02, REQ-46-03, REQ-46-04, REQ-46-05, REQ-46-06, REQ-46-07, REQ-46-08, REQ-46-09, REQ-46-10, REQ-46-11 — minted 2026-09-22 during `/gsd-plan-phase 46` from `46-RESEARCH.md`'s proposed REQ-46-01..10 plus REQ-46-11 (record/closure). No CONTEXT.md (operator chose research-first); see `.planning/REQUIREMENTS.md` §"Phase 46 Requirements" for four planning-time corrections (token-SID key, explicit-SID DACL, per-session pipe name, authenticated secondary) and three operator-overridable decision points: (a) runtime `register_all()` stays Linux-only, (b) per-user DACL not logon SID, (c) Windows Rust CI out of scope (filed as a todo).
 **Depends on:** Nothing blocking. Related: Phase 38 (Windows hardware UAT); todo `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` affects packaged Windows builds used for verification.
-**Plans:** 4/7 plans executed (5 wave plans + 2 gap-closure plans)
+**Plans:** 6/7 plans executed
 
 Plans:
 **Wave 1**
@@ -5518,11 +5518,11 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 46-05-PLAN.md — NON-AUTONOMOUS live gate on the operator's Windows 11 machine (5 checks) + verdict-gated closure of the todo and ledger row U-34.5-18
+- [x] 46-05-PLAN.md — NON-AUTONOMOUS live gate on the operator's Windows 11 machine (5 checks) + verdict-gated closure of the todo and ledger row U-34.5-18
 
 **Gap closure** *(46-LIVE-GATE.md FAIL at Check 3, 2026-09-24: minimized primary not restored by the focus sentinel)*
 
-- [ ] 46-06-PLAN.md — Wave 1 (gap): Windows raise fix (`unminimize()` in the sentinel arm + receipt/result logging, owner-verified `AllowSetForegroundWindow` in the secondary, tray unminimize, macOS-scoped About comment, Linux todo) + RED-proven source gates + debug NSIS rebuild + 46-05-SUMMARY (FAIL, closure moved to 46-07)
+- [x] 46-06-PLAN.md — Wave 1 (gap): Windows raise fix (`unminimize()` in the sentinel arm + receipt/result logging, owner-verified `AllowSetForegroundWindow` in the secondary, tray unminimize, macOS-scoped About comment, Linux todo) + RED-proven source gates + debug NSIS rebuild + 46-05-SUMMARY (FAIL, closure moved to 46-07)
 - [ ] 46-07-PLAN.md — Wave 2 (gap), NON-AUTONOMOUS: live re-gate `46-LIVE-GATE-RERUN.md` (P0, Checks 1, 2, 3a terminal, 3b Start menu, 4, 5; S1 tray non-gating) + verdict-gated closure of the todo, U-34.5-18 and REQ-46-10
 
 ---

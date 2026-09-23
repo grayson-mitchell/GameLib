@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
 status: executing
-stopped_at: 46-05 live gate FAIL at Check 3 (minimized primary not restored by the focus sentinel) -- operator chose fix-forward via /gsd-plan-phase 46 --gaps
-last_updated: "2026-09-24T00:00:00.000Z"
-last_activity: 2026-09-24 -- 46-05 live gate run on Windows 11: P0 + Checks 1-2 PASS (deep links delivered warm, 1 shell / 1 sidecar), Check 3 FAIL, Checks 4-5 not run (46-LIVE-GATE.md, 9aaece168)
+stopped_at: 46-05 live gate FAIL at Check 3 -- fix-forward via /gsd-plan-phase 46 --gaps
+last_updated: "2026-09-23T19:20:34.040Z"
+last_activity: 2026-09-23 -- Phase 46 execution started
 progress:
   total_phases: 42
   completed_phases: 35
-  total_plans: 504
+  total_plans: 506
   completed_plans: 495
   percent: 83
 ---
@@ -189,7 +189,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 > start and `.old` is overwritten by the next. Both legs are now preserved as
 > `~/Library/Logs/GameLib/gamelib.log.35-02-ab-{electron,tauri-part1}`. **Copy the log at the end of
 > each leg of any future A/B or gate run.**
-> **Status:** Ready to execute
+> **Status:** Executing Phase 46
 >
 > Worktree isolation is DISABLED project-wide (`workflow.use_worktrees=false`), so all 19 plans
 > execute SEQUENTIALLY on the main working tree regardless of `parallelization: true`. There are
@@ -962,7 +962,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 >   recorded, not taken.
 > - Full detail, findings register and recommended gap-cycle scope: `34.4.1-LIVE-GATE.md` § Verdict.
 
-Phase: 34.16 (macos-runner-onedir-x64-ci-leg) — EXECUTING
+Phase: 46 (windows-single-instance-guard-and-gamelib-deep-link-registra) — EXECUTING
 2026-08-15.** Gap cycle 4 (34.9-29..33) closed the last gap; `34.9-VERIFICATION.md` re-verified
 2026-08-15 `status: passed`, 8/8 truths, 0 gaps, 33/33 plans, no human verification outstanding.
 Every review finding across all five cycles is dispositioned — `34.9-REVIEW-SWEEP-CHECK.cjs` reports
@@ -973,7 +973,7 @@ gap-cycle-3 state follows.
 
 Phase: 34.9 — **gap cycle 3
 COMPLETE, phase remained OPEN pending re-verification** (superseded 2026-08-15 by the block above)
-Plan: 5 of 6 — 34.16-06 LIVE GATE SCORED: VERDICT FAIL (1 pass / 1 fail / 4 not attempted). Gap cycle needed.
+Plan: 1 of 7
 5 waves, plan-checker PASSED) to close the sole remaining verification gap from gap cycle 2's
 re-verification: truth 8 / C2-01 (the `esbuild ... | node`/`| node -` pipe-swallow idiom — a
 compile failure in a wired guard script is invisible because `sh -c` has no `pipefail` and a
@@ -1116,7 +1116,7 @@ set-difference (CR-01, WR-01, WR-02, IN-01, IN-02 landed via 34.9-18..21; IN-03 
 UNPROVEN), corrected the overclaiming "automated tripwire ... cannot go silent again" prose in
 `34.9-LIVE-GATE-RERUN.md`, ROADMAP.md and REQUIREMENTS.md to carry that same scope in every passage,
 and reconciled ROADMAP.md's duplicate `34.9-17` row. See `34.9-22-SUMMARY.md`.
-Status: Ready to execute
+Status: Executing Phase 46
 the ledger this plan's own truth-8 gap named as missing, but this plan does not itself re-score that
 verification report. **Next step: `/gsd-verify-work 34.9`**, to re-score truth 8 against this
 landed evidence. The phase does not close until that re-verification runs.
@@ -3941,7 +3941,7 @@ not the current status):
   up the test tag/release. REQ-34-09 stays unchecked in REQUIREMENTS.md until that run actually
   happens. Next: run the live gate -- CR-01 (correct-arch sidecar), CR-02 (icon.ico), and WR-02
   (cert cleanup) are all now closed and will no longer fail that run.
-Last activity: 2026-09-23 -- FIVE SESSIONS across both hosts, all completed. On the Windows host: (1) Quick task 260923-p95: Apple ACCEPTED the notarization submission, proving the 253-binary signing fix; hazards 2 and 3 CONFIRMED, hazard 4 still UNOBSERVED. (2) Quick task 260923-o2s: fixed isWritable_windows (ACL group-grant blindness), which unblocked Phase 38 item 38-S08 -- re-scored PASS the same day in sitting 2 on the operator's Windows host. (3) Quick task 260923-tip: fixed all three stacked defects behind the Windows packaged build dying on the darwin runners' Python.framework symlinks -- darwin onedir scoped out of non-darwin builds, symlinks typed against the source tree, and closeBundle guards stopped masking the first build error. The live gate was then RUN AND PASSED on a genuine fresh checkout (via a sparse git worktree, leaving the operator's public/bin untouched): download-helper-binaries exit 0 with the three darwin skips, 0 symlinks under public/bin, and vite build twice in a row clean. Todo CLOSED to completed/. Layer 0 discharged with its hypothesis corrected -- whoami /priv is the wrong instrument for Developer Mode. On the macOS host: (4) Quick task 260923-vnv: the CDN-auth self-infliction todo is CLOSED as REFUTED at the desk, its `ready: live-gate` deliberately NOT spent -- `CDN auth token acquired` appears ZERO times in any of five preserved captures (three titles, four depots, three dates), the control log has all three hosts empty at the FIRST token request of a cold session, and every response is `eresult=1` (`k_EResultOK`) with a constant `rawBodyBytes=8` body. Its `## Traps` claim that the line is emitted per attempt was FALSE (60s `negativeCache` cooldown; gateB `17:46:46` then `17:53:12`) and the prescribed experiment was a saturated instrument. Sibling stall-cause todo gained row C: account/IP throttling ELIMINATED. Honest limit recorded: one account, one IP, so a standing permanent throttle is not formally excluded. (5) Quick task 260923-uvt: the notarization todo (Apple rejecting 253 unsigned Contents/Resources binaries) is CLOSED and moved to completed/ with resolved_by: quick-260923-uvt, discharged because every clause of its title is measured false as a live condition -- Apple returned Accepted for submission 0f65332c-56c8-484d-822a-13163bc14ddb in 1m09s and stapled the app, and the survivor count over the same 253 Mach-O files in the PUBLISHED artifact is files=501 mach-o=253 survivors=0 with both controls run first (the evidence is 260923-u3o's live gate, pointed at rather than restated). CARRY BEFORE CLOSE was honoured: every residual got a live home BEFORE the move. Residual (a), the browser-download arm, stays with the parent 2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md, whose existing needs: release-run-then-browser-download-verify already named it and needed no change, and THREE of whose own five Verification bullets are now SATISFIED on a real published artifact (codesign naming the Developer ID authority, spctl source=Notarized Developer ID, stapler rc=0). Residual (b), the sidecar-spawned helper, became a new minor todo -- the helper is proven only by DIRECT exec from inside the notarized bundle. TWO FURTHER live items the plan's grep found in the BODY rather than the title -- recipe step 6's in-app invocations and the 60-minute timeout-minutes bound shipped by 260923-mrx -- were carried into that same parent todo rather than discarded. The parent's fifth Verification bullet was CORRECTED: the bare ::warning::Signing skipped test is unreliable because the runner echoes a step's own script source with a cyan [36;1m prefix, so it now says grep ##[warning] and count Notarizing lines. Documentation only, planning-gates 12/12; severity major -> minor and a title restatement are recorded on the parent as UNAPPLIED proposals for the operator.
+Last activity: 2026-09-23 -- Phase 46 execution started
 defects**. (1) Console Mode's `getActionButtonLabel`/`getBackButtonLabel`
 (`ConsoleMode/controller.ts`) branched only on `layout.startsWith('ps')`, so the `'nintendo'` layout
 that `detectControllerLayout()` already returns fell through to the Xbox default. Chromium's standard
