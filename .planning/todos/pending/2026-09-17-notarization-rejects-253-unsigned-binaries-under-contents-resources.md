@@ -232,15 +232,28 @@ defect:
    (Tauri does its own `security import` later, during `tauri build`), so the step creates one and
    tears it down in a trap. A collision fails the macOS leg loudly at `tauri build`, which is a
    BETTER failure than the current one, but it is still a failure only a real run can reveal.
-   UNOBSERVED.
+   **OBSERVED WORKING as of 2026-09-23**, run 35808881023: Tauri's own signing pass succeeded right
+   after the step's keychain teardown, with no collision — see
+   `### STATUS 2026-09-23 (quick-260923-np3)` below for the evidence.
 2. **Whether the signature survives Tauri's `bundle.macOS.files` copy into `Contents/Resources`** —
-   argued from how Mach-O signatures are stored (in the file, not an xattr, not a sidecar).
+   argued from how Mach-O signatures are stored (in the file, not an xattr, not a sidecar). Run
+   35808881023 bundled the `.app`, but that is NOT evidence for this hazard: no artifact was ever
+   published or downloaded, so nothing was inspected.
    UNOBSERVED.
 3. **Whether notarization returns `Accepted`.** UNOBSERVED.
 4. **Whether any helper crashes at runtime under the hardened runtime with no entitlements.**
    UNOBSERVED, and a notarization `Accepted` says NOTHING about it.
 
 ### The only real verification
+
+**Before pushing any tag: a throwaway tag is NOT side-effect-free.** `tauri-action` is configured
+`tagName: v__VERSION__`, which resolves from `tauri.conf.json`'s version to `v0.7.0` — not from the
+tag that triggered the run. Every test tag therefore writes into the one real `v0.7.0` draft release
+(id `378785323`); that is how run 35808881023 came to overwrite `latest.json` with a macOS-less
+manifest, recorded in `### STATUS 2026-09-23 (quick-260923-np3)` below. The honest bound: nothing is
+live while the release stays a draft, because `promote-updater-feed.yml` fires only on
+`release: types: [published]`. But a draft release is not findable via `releases/tags/<tag>` (that
+404s) — you must list `repos/<owner>/<repo>/releases` and match `.draft==true`.
 
 Push a fresh throwaway tag. Then, in order:
 
@@ -366,6 +379,80 @@ VERIFIED` above is still UNOBSERVED, including notarization returning `Accepted`
 corrected a recipe; it verified nothing. The todo stays OPEN, stays in `pending/`, and
 `ready: live-gate` / `needs: retag-and-confirm-notarization-accepted` are unchanged.
 
+### STATUS 2026-09-23 (quick-260923-np3) — the live gate ran; inconclusive on the headline question
+
+This sub-section does NOT revise `## STATUS 2026-09-17 (quick-260917-uik)` or
+`### STATUS 2026-09-23 (quick-260923-ihw)` above. Both record what was believed then and are left
+intact; this one adds what was measured today, from the first tag-push run this todo's own recipe
+has ever driven.
+
+**Run identity.** Run 35808881023, workflow `release-tauri.yml`, annotated tag
+`v0.7.0-notarize-test2` at commit 77f3b4388, pushed by the operator by hand. macOS job id
+107015694390. Cancelled by hand at 2h14m. All timestamps UTC, verbatim from the downloaded job log.
+
+**1. The helper-signing step ran and passed — its first live execution.** Step 18, "Sign every
+Mach-O in the macOS helper tree before bundling": `02:07:49` -> `02:08:20`, conclusion success, 31
+seconds for the whole tree.
+
+**2. Hazard 1 is now OBSERVED WORKING — the keychain does not collide.** After step 18 created and
+tore down its throwaway keychain, Tauri's own signing pass succeeded. Verbatim: `02:13:01`
+`found cert "***" with organization "grayson mitchell"`; then `Signing` of
+`Contents/MacOS/gamelib-sidecar`, `Contents/MacOS/gamelib-shell`, `GameLib.app` and (at `02:13:17`)
+`GameLib.zip` — each `replacing existing signature`. No `security import` failure, no
+`errSecInternalComponent`, no collision. The trap-based teardown left clean state.
+
+**3. Hazards 2, 3 and 4 remain unobserved.** Hazard 2 (signature surviving Tauri's
+`bundle.macOS.files` copy into `Contents/Resources`): still unobserved — the `.app` was bundled,
+but no artifact was ever published or downloaded, so nothing was inspected. "The bundle step
+succeeded" is NOT evidence for it. Hazard 3 (notarization returns `Accepted`): still unobserved,
+see next. Hazard 4 (a helper crashing at runtime under the hardened runtime with no entitlements):
+still unobserved, untouched, still requires step 6 of the recipe.
+
+**4. Notarization was submitted and Apple never answered.** `02:13:17` `Notarizing
+.../GameLib.app`, then 2h05m37s of complete silence, then `04:18:54` `##[error]The operation was
+canceled.` and `04:18:55` `Terminate orphan process: pid (39170) (notarytool)`. Not `Invalid`, not
+`Accepted` — no verdict at all. Contrast the previous failed run 35223308954 (2026-09-17), where
+Apple returned `Invalid` in 62 seconds. The build was NOT the slow part: `Built application` at
+`02:13:00`, i.e. 4m40s from step start on a warm `swatinem/rust-cache`; the Linux leg's whole
+`tauri-action` step took 4m53s.
+
+**5. Cause of the unbounded wait, and the fix already shipped.** `release-tauri.yml` had no
+`timeout-minutes` anywhere, so it ran against GitHub's 360-minute default. `tauri-bundler`
+hardcodes `--wait` on its `xcrun notarytool submit` call and exposes neither a timeout flag nor an
+env var (`xcrun notarytool submit --timeout` exists, but we do not own that argv; upstream PR
+`tauri-apps/tauri#13521` added `--no-wait`, not a timeout). Quick task 260923-mrx (commits
+`f83b237cc`, `dad059ef2`, `f17d46cff`) shipped `timeout-minutes: 60` on the `tauri-action` step plus
+a macOS-only `if: failure()` step running `xcrun notarytool history`, so a future timeout is
+self-explaining inside the run. That bound is itself unproven live — no run has hit it.
+
+**6. New hazard in this todo's own verification procedure.** `tauri-action` is configured
+`tagName: v__VERSION__`, which resolves from `tauri.conf.json`'s version to `v0.7.0` — not from the
+tag that triggered the run. So every test tag writes into the one real `v0.7.0` draft release (id
+`378785323`). Measured after this run: `GameLib_0.7.0_aarch64.dmg` and `GameLib_0.7.0_x64.dmg`
+untouched at 2026-08-28, while `GameLib_0.7.0_amd64.AppImage`, its `.sig` and `latest.json` were all
+overwritten at 2026-09-23T02:10:24-26Z by the Linux leg, which succeeded at 02:10:27. `latest.json`
+now reads `platforms: ['linux-x86_64', 'linux-x86_64-appimage']` — macOS is gone, replaced by a
+Linux-only manifest from a run whose macOS leg never finished. Bound this honestly: nothing is live,
+because the release is still a draft and `promote-updater-feed.yml` fires only on
+`release: types: [published]`. But publishing that draft as-is would promote a feed with no macOS
+entry. Also: a draft is not findable via `releases/tags/<tag>` (that 404s) — you must list
+`repos/<owner>/<repo>/releases` and match `.draft==true`.
+
+**7. Cleanup still owed.** The tag `v0.7.0-notarize-test2` is still on origin as of this writing
+(re-checked with `git ls-remote --tags origin`), unlike `v0.7.0-notarize-test1`, which this todo's
+own `found_by` records as deleted after its run.
+
+**8. The decisive open question.** `xcrun notarytool history` has not been run. No Apple
+credentials exist on this Mac — `security find-generic-password -s "com.apple.gke.notary.tool"`
+returns "The specified item could not be found in the keychain", and no `APPLE_*` env vars are set;
+the credentials live only as GitHub Actions secrets, whose values cannot be read back. So whether
+the 2026-09-23T02:13 submission ended `Accepted`, `In Progress` or `Invalid` is unknown. That single
+fact is what would tell us whether the 253-binary signing fix actually worked.
+
+**Bottom line: inconclusive on the headline question.** No verdict is not a pass. The todo stays
+OPEN, stays in `pending/`, and `ready: live-gate` / `needs: retag-and-confirm-notarization-accepted`
+are unchanged, because the gate ran but did not answer.
+
 ## Related
 
 - `2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md` — the parent macOS signing todo.
@@ -374,3 +461,7 @@ corrected a recipe; it verified nothing. The todo stays OPEN, stays in `pending/
   failure from the same run, unrelated cause.
 - `2026-09-17-windows-release-leg-dies-in-install-deps-tar-reads-c-as-a-remote-host.md` — sibling
   failure from the same run, unrelated cause.
+- **STALE pointer:** the Linux sibling above
+  (`2026-09-17-linux-release-leg-fails-to-compile-get-window-missing-on-apphandle.md`) looks STALE —
+  its leg SUCCEEDED on run 35808881023 at 02:10:27. Not reopened or edited here; flagged for
+  whoever picks it up next.
