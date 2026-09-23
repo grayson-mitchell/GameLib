@@ -18,6 +18,21 @@ import { join } from 'path'
  * memo cannot be rendered and the invariant can only be read out of the text.
  *
  * A comment claiming parity is what shipped the defect. This asserts it.
+ *
+ * quick/260924-g7r -- a SECOND failure mode this file has now seen, distinct
+ * from the Amazon one above: a matching PAIR of gate expressions can still be
+ * wrong when one site applies an extra filter the text comparison cannot see.
+ * That was the state after debug/steam-library-shows-logged-out:
+ * `showSteam = !!steam?.username` matched the panel's `steam?.username`
+ * exactly, while the grid's real decision was
+ * `showSteam && selectVisibleSteamLibrary(...)` -- and the second term is
+ * invisible to a string compare, so this gate stayed green while the
+ * invariant it names had got weaker. That is why the Steam gate is now
+ * pinned to the resolver-derived value BY NAME below, not just compared for
+ * equality with its sibling. The OUTCOME half of the invariant -- that a
+ * `'failed'` session with the row shown always has non-empty games -- lives
+ * in `steamLibraryVisibility.test.ts`, because this file reads text and
+ * cannot evaluate anything (no jsdom in any jest project here).
  */
 
 const LIBRARY_INDEX = join(__dirname, '..', 'index.tsx')
@@ -118,6 +133,21 @@ describe('connectedStores and makeLibrary gate every store identically (T-34.11-
     // operator decided against on 2026-08-25.
     expect(readConnectedStoreGates(source)['nile']).toBe('amazon.user_id')
     expect(readMakeLibraryGates(source)['nile']).toBe('amazon.user_id')
+  })
+
+  it('reads Steam as steamVisibility.storeConnected at BOTH sites, not username alone', () => {
+    // quick/260924-g7r. Stated separately from the generic parity assertion
+    // for the same reason as the Amazon test above: "they match" would also
+    // be satisfied by a regression of BOTH sites back to a bare
+    // `steam?.username` read -- the two would still agree textually, and the
+    // permanently-0-row defect (T-34.11-12) would reopen with this gate still
+    // green. Pinning the value by name is what forecloses that direction.
+    expect(readConnectedStoreGates(source)['steam']).toBe(
+      'steamVisibility.storeConnected'
+    )
+    expect(readMakeLibraryGates(source)['steam']).toBe(
+      'steamVisibility.storeConnected'
+    )
   })
 
   /**
