@@ -89,6 +89,9 @@ import {
   compareDownloadedTags,
   computeLayoutMarker,
   darwinLayoutMarker,
+  downloadGogdl,
+  downloadLegendary,
+  downloadNile,
   downloadOnedirAsset,
   storeDownloadedTags,
   toTarPathOperand
@@ -154,10 +157,31 @@ function mockFetchOnce(status: number, body: Buffer) {
 // Safe entry listing for a successful nile/arm64 extraction.
 const SAFE_NILE_ENTRIES = 'nile/\nnile/nile\nnile/_internal/lib.so\n'
 
+// quick 260923-tip Layer 1 fix: resolveRunnerTargetPlatform() (imported
+// transitively by downloadHelperBinaries.ts) defaults to the HOST platform
+// (win32 on this box) absent an explicit env override. None of the
+// PRE-EXISTING tests below know about this -- they were all written when
+// darwin onedir sourcing was unconditional -- so every test in this file is
+// pinned to darwin-target behaviour by default here, preserving their
+// original assertions unchanged. The new win32-target tests further down
+// override this within their own test body.
+const RUNNER_TARGET_ENV = 'GAMELIB_RUNNER_TARGET_PLATFORM'
+let previousRunnerTargetEnv: string | undefined
+
 beforeEach(() => {
   jest.clearAllMocks()
   mockedStat.mockResolvedValue({ mode: 0o644 })
   mockedReadFile.mockResolvedValue('{}')
+  previousRunnerTargetEnv = process.env[RUNNER_TARGET_ENV]
+  process.env[RUNNER_TARGET_ENV] = 'darwin'
+})
+
+afterEach(() => {
+  if (previousRunnerTargetEnv === undefined) {
+    delete process.env[RUNNER_TARGET_ENV]
+  } else {
+    process.env[RUNNER_TARGET_ENV] = previousRunnerTargetEnv
+  }
 })
 
 describe('downloadOnedirAsset', () => {
@@ -629,6 +653,73 @@ describe('freshness: compareDownloadedTags + __darwin_layout', () => {
       'public/bin/.release_tags',
       JSON.stringify({ ...RELEASE_TAGS, __darwin_layout: darwinLayoutMarker() })
     )
+  })
+})
+
+describe('runner target platform scoping (quick 260923-tip Layer 1 fix)', () => {
+  it('target win32: compareDownloadedTags does NOT add legendary/gogdl/nile purely because __darwin_layout is absent', async () => {
+    process.env[RUNNER_TARGET_ENV] = 'win32'
+    mockedReadFile.mockResolvedValueOnce(JSON.stringify({ ...RELEASE_TAGS }))
+
+    const result = await compareDownloadedTags()
+
+    expect(result).toEqual([])
+  })
+
+  it('target darwin: compareDownloadedTags still adds legendary/gogdl/nile when __darwin_layout is absent (no-regression pin)', async () => {
+    process.env[RUNNER_TARGET_ENV] = 'darwin'
+    mockedReadFile.mockResolvedValueOnce(JSON.stringify({ ...RELEASE_TAGS }))
+
+    const result = await compareDownloadedTags()
+
+    expect(result).toEqual(['legendary', 'gogdl', 'nile'])
+  })
+
+  it('target win32: storeDownloadedTags writes every RELEASE_TAGS key and does NOT write a __darwin_layout key', async () => {
+    process.env[RUNNER_TARGET_ENV] = 'win32'
+
+    await storeDownloadedTags()
+
+    expect(mockedWriteFile).toHaveBeenCalledWith(
+      'public/bin/.release_tags',
+      JSON.stringify({ ...RELEASE_TAGS })
+    )
+    const written = JSON.parse(mockedWriteFile.mock.calls[0][1] as string)
+    expect(written).not.toHaveProperty('__darwin_layout')
+  })
+
+  it('target darwin: storeDownloadedTags still writes __darwin_layout (no-regression pin)', async () => {
+    process.env[RUNNER_TARGET_ENV] = 'darwin'
+
+    await storeDownloadedTags()
+
+    const written = JSON.parse(mockedWriteFile.mock.calls[0][1] as string)
+    expect(written).toHaveProperty('__darwin_layout', darwinLayoutMarker())
+  })
+
+  it('target win32: downloadLegendary/downloadGogdl/downloadNile never reach downloadOnedirAsset -- no onedir archive URL is fetched, and tar is never spawned', async () => {
+    process.env[RUNNER_TARGET_ENV] = 'win32'
+    // Every downloadFile() call (the win32/linux flat-asset path) fails
+    // fast on a non-200 status, BEFORE it ever touches the real 'fs'
+    // createWriteStream -- this test only needs to observe which URLs were
+    // requested and whether tar was spawned, not for the flat-asset
+    // downloads to actually succeed.
+    mockedFetch.mockResolvedValue({
+      status: 404,
+      arrayBuffer: async () => new ArrayBuffer(0)
+    })
+
+    await Promise.allSettled([
+      downloadLegendary(),
+      downloadGogdl(),
+      downloadNile()
+    ])
+
+    for (const call of mockedFetch.mock.calls) {
+      const url = call[0] as string
+      expect(url).not.toMatch(/_macOS_arm64_onedir\.tar\.gz/)
+    }
+    expect(mockedSpawn).not.toHaveBeenCalled()
   })
 })
 

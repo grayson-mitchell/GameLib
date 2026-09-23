@@ -81,10 +81,14 @@ meta/buildSidecarSea.ts - buildSeaConfigPath
 # 260922-e01 these two are excluded at the MEASURED POPULATION, not
 # ledgered here -- see KNOWN_PARSE_ARTIFACTS in meta/findDeadcode.cjs.
 #
-# `SupportedPlatform` (line 20) IS a real exported type alias with no
-# importer -- a genuine finding, kept because deleting it is a source
-# change out of scope for the task that created this ledger.
-meta/releaseTags.ts - SupportedPlatform
+# `meta/releaseTags.ts - SupportedPlatform` was ledgered here (a real
+# exported type alias ts-prune reported as having no importer, though it
+# genuinely is imported cross-module). Quick task 260923-tip resolved it AT
+# THE SOURCE instead of leaving it ledgered: `SupportedPlatform`'s
+# declaration now carries its own `// ts-prune-ignore-next`, because that
+# task's new resolveRunnerTargetPlatform() references the type WITHIN this
+# module too, which would otherwise have flipped this stale finding into a
+# NEW used-in-module one rather than resolving it.
 src/backend/constants/paths.ts - webviewPreloadPath
 src/backend/constants/urls.ts - GITHUB_API
 src/backend/electron_store.ts - getRegisteredStoreNames

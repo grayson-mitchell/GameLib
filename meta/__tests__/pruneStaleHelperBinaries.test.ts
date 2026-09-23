@@ -43,12 +43,31 @@ const RUNNERS = ['legendary', 'gogdl', 'nile'] as const
 
 let workDir: string
 
+// quick 260923-tip Layer 1 fix: resolveRunnerTargetPlatform() (imported
+// transitively by pruneStaleHelperBinaries.ts) defaults to the HOST
+// platform (win32 on this box) absent an explicit env override. None of the
+// PRE-EXISTING tests below know about this -- they were all written when
+// assessPublicBin's population guard was unconditionally darwin-shaped --
+// so every un-parameterised call site in this file is pinned to
+// darwin-target behaviour here, preserving their original assertions
+// unchanged. The new win32-target tests further down pass targetPlatform
+// EXPLICITLY and are unaffected by this override.
+const RUNNER_TARGET_ENV = 'GAMELIB_RUNNER_TARGET_PLATFORM'
+let previousRunnerTargetEnv: string | undefined
+
 beforeEach(() => {
   workDir = mkdtempSync(join(tmpdir(), 'a2w-prune-'))
+  previousRunnerTargetEnv = process.env[RUNNER_TARGET_ENV]
+  process.env[RUNNER_TARGET_ENV] = 'darwin'
 })
 
 afterEach(() => {
   rmSync(workDir, { recursive: true, force: true })
+  if (previousRunnerTargetEnv === undefined) {
+    delete process.env[RUNNER_TARGET_ENV]
+  } else {
+    process.env[RUNNER_TARGET_ENV] = previousRunnerTargetEnv
+  }
 })
 
 function buildBinPath(): string {
@@ -247,6 +266,117 @@ describe('assessPublicBin', () => {
 
     expect(result.ok).toBe(false)
     expect(result.reasons.some((r) => r.includes('exec bit'))).toBe(true)
+  })
+})
+
+/**
+ * Populates a fully-valid win32-target fixture: `.release_tags` matching
+ * RELEASE_TAGS (no `__darwin_layout` key -- a win32-target build never
+ * writes one) plus every flat `.exe` FLAT_BINARY_TABLE's win32 entry
+ * demands. No `arm64/darwin` tree is ever created here.
+ */
+function populateValidWin32PublicBin(publicBinDir: string): void {
+  writeFile(
+    join(publicBinDir, '.release_tags'),
+    JSON.stringify({ ...RELEASE_TAGS })
+  )
+
+  const win32Files: Record<string, string[]> = {
+    x64: [
+      'legendary.exe',
+      'gogdl.exe',
+      'nile.exe',
+      'comet.exe',
+      'GalaxyCommunication.exe',
+      'EpicGamesLauncher.exe'
+    ],
+    arm64: ['legendary.exe', 'gogdl.exe', 'comet.exe']
+  }
+
+  for (const [arch, filenames] of Object.entries(win32Files)) {
+    for (const filename of filenames) {
+      writeFile(join(publicBinDir, arch, 'win32', filename), 'binary-content')
+    }
+  }
+}
+
+describe('assessPublicBin -- win32 target (quick 260923-tip Layer 1 fix)', () => {
+  it('T22 fully-populated win32 fixture -> ok: true, reasons: [], with no arm64/darwin tree present at all', () => {
+    populateValidWin32PublicBin(publicBinPath())
+    expect(existsSync(join(publicBinPath(), 'arm64', 'darwin'))).toBe(false)
+
+    const result = assessPublicBin(publicBinPath(), 'win32')
+
+    expect(result).toEqual({ ok: true, reasons: [] })
+  })
+
+  it('T23 FAILING DIRECTION (a): a missing win32 .exe -> ok: false, a reason naming the path', () => {
+    populateValidWin32PublicBin(publicBinPath())
+    const missingPath = join(publicBinPath(), 'x64', 'win32', 'nile.exe')
+    rmSync(missingPath)
+
+    const result = assessPublicBin(publicBinPath(), 'win32')
+
+    expect(result.ok).toBe(false)
+    expect(result.reasons.some((r) => r.includes(missingPath))).toBe(true)
+  })
+
+  it('T24 FAILING DIRECTION (b): a win32 .exe present but zero bytes -> ok: false, a reason naming the path', () => {
+    populateValidWin32PublicBin(publicBinPath())
+    const zeroBytePath = join(publicBinPath(), 'arm64', 'win32', 'comet.exe')
+    writeFileSync(zeroBytePath, '')
+
+    const result = assessPublicBin(publicBinPath(), 'win32')
+
+    expect(result.ok).toBe(false)
+    expect(result.reasons.some((r) => r.includes(zeroBytePath))).toBe(true)
+  })
+
+  it('T25 FAILING DIRECTION (c): .release_tags carrying a stale tag -> ok: false naming the stale runner', () => {
+    populateValidWin32PublicBin(publicBinPath())
+    writeFileSync(
+      join(publicBinPath(), '.release_tags'),
+      JSON.stringify({ ...RELEASE_TAGS, legendary: 'stale-tag' })
+    )
+
+    const result = assessPublicBin(publicBinPath(), 'win32')
+
+    expect(result.ok).toBe(false)
+    expect(result.reasons.some((r) => r.includes('legendary'))).toBe(true)
+  })
+
+  it('T26 win32 does not demand an exec bit on .exe files -- a fixture with mode 0o644 still passes', () => {
+    populateValidWin32PublicBin(publicBinPath())
+    chmodSync(join(publicBinPath(), 'x64', 'win32', 'legendary.exe'), 0o644)
+
+    const result = assessPublicBin(publicBinPath(), 'win32')
+
+    expect(result).toEqual({ ok: true, reasons: [] })
+  })
+
+  it('T27 pruneStaleHelperBinaries(buildBin, publicBin, "win32") still throws (deletes nothing) when the win32 assessment fails and the prune set is non-empty', () => {
+    writeFile(join(buildBinPath(), 'stale.txt'))
+    populateValidWin32PublicBin(publicBinPath())
+    rmSync(join(publicBinPath(), 'x64', 'win32', 'nile.exe'))
+
+    expect(() =>
+      pruneStaleHelperBinaries(buildBinPath(), publicBinPath(), 'win32')
+    ).toThrow(/refusing to prune/)
+    expect(existsSync(join(buildBinPath(), 'stale.txt'))).toBe(true)
+  })
+
+  it('T28 pruneStaleHelperBinaries(buildBin, publicBin, "win32") prunes normally when the win32 assessment passes', () => {
+    populateValidWin32PublicBin(publicBinPath())
+    writeFile(join(buildBinPath(), 'stale.txt'))
+
+    const result = pruneStaleHelperBinaries(
+      buildBinPath(),
+      publicBinPath(),
+      'win32'
+    )
+
+    expect(result.guardEvaluated).toBe(true)
+    expect(result.pruned).toEqual(['stale.txt'])
   })
 })
 

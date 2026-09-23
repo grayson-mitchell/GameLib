@@ -37,6 +37,17 @@
  * `meta/runnersOnedirDigests.json`, rather than importing
  * `darwinLayoutMarker()`. The two are pinned equal in this module's own
  * test file, where the import IS safe because jest sets `JEST_WORKER_ID`.
+ *
+ * Quick task 260923-tip (Layer 1 fix): `assessPublicBin`'s population guard
+ * is now scoped to the platform THIS BUILD will actually ship
+ * (`resolveRunnerTargetPlatform()`, imported from `./releaseTags`, shared
+ * with `meta/downloadHelperBinaries.ts`'s own darwin-onedir scoping). The
+ * guard stays fail-loud on every platform -- narrowing WHICH population it
+ * demands must never narrow to "demands nothing": win32/linux get their own
+ * P3 flat-binary check (`FLAT_BINARY_TABLE`) in place of darwin's P2 onedir
+ * check, so the exact missing/empty path is still named and a prune against
+ * an under-populated tree on any platform still refuses and deletes
+ * nothing.
  */
 import {
   existsSync,
@@ -54,7 +65,11 @@ import { join, relative, sep } from 'node:path'
 import type { Plugin } from 'vite'
 
 import { resolveDestPath } from './preserveRunnerSymlinks'
-import { RELEASE_TAGS } from './releaseTags'
+import {
+  RELEASE_TAGS,
+  resolveRunnerTargetPlatform,
+  type SupportedPlatform
+} from './releaseTags'
 import runnersOnedirDigestsRaw from './runnersOnedirDigests.json'
 
 const runnersOnedirDigests = runnersOnedirDigestsRaw as {
@@ -73,6 +88,33 @@ const DARWIN_RUNNERS = ['legendary', 'gogdl', 'nile'] as const
 // EXCLUSIVE there (`fileCount <= FILE_COUNT_FLOOR` fails), so "populated"
 // here means strictly more than 20, i.e. at least 21.
 const RUNNER_FILE_COUNT_FLOOR = 20
+
+/**
+ * Quick 260923-tip Layer 1 fix (NEW P3, see assessPublicBin's docblock): the
+ * flat single-file binaries `pnpm download-helper-binaries` produces for
+ * win32/linux, keyed by arch. Measured 2026-09-23 from a real run of that
+ * script -- `vulkan-helper` is NOT produced by it and must not appear here.
+ * darwin has no entry: its population is fully covered by P2 below (the
+ * onedir exec-bit + file-count-floor checks), and this table exists only to
+ * fill the gap P2 deliberately does not cover for the other two platforms.
+ */
+const FLAT_BINARY_TABLE: Record<'win32' | 'linux', Record<string, string[]>> = {
+  win32: {
+    x64: [
+      'legendary.exe',
+      'gogdl.exe',
+      'nile.exe',
+      'comet.exe',
+      'GalaxyCommunication.exe',
+      'EpicGamesLauncher.exe'
+    ],
+    arm64: ['legendary.exe', 'gogdl.exe', 'comet.exe']
+  },
+  linux: {
+    x64: ['legendary', 'gogdl', 'nile', 'comet'],
+    arm64: ['legendary', 'gogdl', 'nile', 'comet']
+  }
+}
 
 /**
  * Recursively walks `root`, returning a `relPath -> kind` map using `/`
@@ -168,24 +210,42 @@ export interface PublicBinAssessment {
 }
 
 /**
- * Confirms `publicBinDir` is fully populated before any prune is allowed to
- * touch `buildBinDir`. `ok` is true only when:
+ * Confirms `publicBinDir` is fully populated for `targetPlatform` (defaults
+ * to `resolveRunnerTargetPlatform()`, i.e. the host platform absent an
+ * explicit override) before any prune is allowed to touch `buildBinDir`.
+ * The guard asserts the population of the platform THIS BUILD will actually
+ * ship, so an under-populated tree on any platform still refuses to prune
+ * (quick 260923-tip Layer 1 fix -- narrowing by platform must not weaken
+ * the guard into a tags-only check). `ok` is true only when:
  *
- *   P1. `.release_tags` exists, parses as JSON, every RELEASE_TAGS key
- *       matches its stored value, and the stored `__darwin_layout` marker
- *       equals the marker recomputed locally from
+ *   P1. `.release_tags` exists, parses as JSON, and every RELEASE_TAGS key
+ *       matches its stored value (unconditional, every platform). On a
+ *       darwin target ONLY, the stored `__darwin_layout` marker must also
+ *       equal the marker recomputed locally from
  *       `meta/runnersOnedirDigests.json` (sha256 over
  *       `JSON.stringify({layout, digests})` with digest keys sorted --
  *       matching `computeLayoutMarker` in `meta/downloadHelperBinaries.ts`,
- *       pinned equal to it in this module's test file).
- *   P2. for each of legendary/gogdl/nile: `<publicBinDir>/arm64/darwin/{r}/{r}`
- *       is a regular file with an exec bit set, AND
- *       `<publicBinDir>/arm64/darwin/{r}` holds strictly more than
- *       RUNNER_FILE_COUNT_FLOOR (20) regular files -- a bare `existsSync`
- *       would pass a partially-populated runner tree (e.g. 3 files out of
- *       ~100+), which is exactly the case that would lose data.
+ *       pinned equal to it in this module's test file). Non-darwin targets
+ *       never write this key (`storeDownloadedTags`), so it is never
+ *       demanded there.
+ *   P2. darwin target ONLY: for each of legendary/gogdl/nile,
+ *       `<publicBinDir>/arm64/darwin/{r}/{r}` is a regular file with an
+ *       exec bit set, AND `<publicBinDir>/arm64/darwin/{r}` holds strictly
+ *       more than RUNNER_FILE_COUNT_FLOOR (20) regular files -- a bare
+ *       `existsSync` would pass a partially-populated runner tree (e.g. 3
+ *       files out of ~100+), which is exactly the case that would lose
+ *       data.
+ *   P3. win32/linux targets ONLY: every path in `FLAT_BINARY_TABLE` for
+ *       that platform is a regular, non-zero-byte file (and on linux,
+ *       additionally carries an exec bit -- skipped on win32, where `.exe`
+ *       files carry no meaningful mode). This is what keeps the guard
+ *       meaningful on those platforms rather than degrading to "tags-only"
+ *       once P2 is scoped away from them.
  */
-export function assessPublicBin(publicBinDir: string): PublicBinAssessment {
+export function assessPublicBin(
+  publicBinDir: string,
+  targetPlatform: SupportedPlatform = resolveRunnerTargetPlatform()
+): PublicBinAssessment {
   const reasons: string[] = []
 
   const releaseTagsPath = join(publicBinDir, '.release_tags')
@@ -209,52 +269,102 @@ export function assessPublicBin(publicBinDir: string): PublicBinAssessment {
         }
       }
 
-      const expectedMarker = computeDarwinLayoutMarker()
-      if (parsed.__darwin_layout !== expectedMarker) {
-        reasons.push(
-          `${releaseTagsPath}: __darwin_layout marker mismatch ` +
-            `(expected "${expectedMarker}", got ${JSON.stringify(parsed.__darwin_layout)})`
-        )
+      // darwin-only: the __darwin_layout marker is written ONLY on a
+      // darwin-target build (meta/downloadHelperBinaries.ts's
+      // storeDownloadedTags -- quick 260923-tip Layer 1 fix). Demanding it
+      // on win32/linux would fail every checkout on those platforms
+      // forever, since nothing there ever writes it.
+      if (targetPlatform === 'darwin') {
+        const expectedMarker = computeDarwinLayoutMarker()
+        if (parsed.__darwin_layout !== expectedMarker) {
+          reasons.push(
+            `${releaseTagsPath}: __darwin_layout marker mismatch ` +
+              `(expected "${expectedMarker}", got ${JSON.stringify(parsed.__darwin_layout)})`
+          )
+        }
       }
     }
   }
 
-  for (const runner of DARWIN_RUNNERS) {
-    const runnerDir = join(publicBinDir, 'arm64', 'darwin', runner)
-    const binaryPath = join(runnerDir, runner)
+  if (targetPlatform === 'darwin') {
+    // darwin-only (P2): a non-darwin build never downloads these onedir
+    // trees (quick 260923-tip Layer 1 fix), so demanding their presence
+    // there would fail every win32/linux checkout forever.
+    for (const runner of DARWIN_RUNNERS) {
+      const runnerDir = join(publicBinDir, 'arm64', 'darwin', runner)
+      const binaryPath = join(runnerDir, runner)
 
-    // `Stats`, not `ReturnType<typeof statSync>`: the latter picks up the
-    // bigint overload, widening `.mode` to `number | bigint` so the exec-bit
-    // mask below is rejected. The call is `statSync(path)` with no options,
-    // which returns `Stats` (`mode: number`).
-    let binaryStat: Stats | undefined
-    try {
-      binaryStat = statSync(binaryPath)
-    } catch {
-      reasons.push(`${runner}: runner binary missing at ${binaryPath}`)
-    }
+      // `Stats`, not `ReturnType<typeof statSync>`: the latter picks up the
+      // bigint overload, widening `.mode` to `number | bigint` so the
+      // exec-bit mask below is rejected. The call is `statSync(path)` with
+      // no options, which returns `Stats` (`mode: number`).
+      let binaryStat: Stats | undefined
+      try {
+        binaryStat = statSync(binaryPath)
+      } catch {
+        reasons.push(`${runner}: runner binary missing at ${binaryPath}`)
+      }
 
-    if (binaryStat) {
-      if (!binaryStat.isFile()) {
-        reasons.push(`${runner}: ${binaryPath} is not a regular file`)
-      } else if ((binaryStat.mode & 0o111) === 0) {
-        reasons.push(`${runner}: ${binaryPath} has no exec bit set`)
+      if (binaryStat) {
+        if (!binaryStat.isFile()) {
+          reasons.push(`${runner}: ${binaryPath} is not a regular file`)
+        } else if ((binaryStat.mode & 0o111) === 0) {
+          reasons.push(`${runner}: ${binaryPath} has no exec bit set`)
+        }
+      }
+
+      let fileCount = 0
+      if (existsSync(runnerDir)) {
+        fileCount = countRegularFiles(runnerDir)
+      } else {
+        reasons.push(`${runner}: tree missing at ${runnerDir}`)
+      }
+
+      if (fileCount <= RUNNER_FILE_COUNT_FLOOR) {
+        reasons.push(
+          `${runner}: tree at ${runnerDir} has only ${fileCount} files ` +
+            `(floor is >${RUNNER_FILE_COUNT_FLOOR}) -- looks partially ` +
+            'populated, not a full onedir bundle'
+        )
       }
     }
+  } else {
+    // NEW P3 (quick 260923-tip Layer 1 fix): win32/linux never populate the
+    // darwin onedir trees, so without a platform-specific check here the
+    // guard would degrade to "tags-only" on those platforms -- a real
+    // missing or empty flat binary would pass silently. Table measured
+    // 2026-09-23 from a real `pnpm download-helper-binaries` run;
+    // deliberately excludes vulkan-helper, which that script does not
+    // produce.
+    const archTable = FLAT_BINARY_TABLE[targetPlatform]
+    for (const [arch, filenames] of Object.entries(archTable)) {
+      for (const filename of filenames) {
+        const filePath = join(publicBinDir, arch, targetPlatform, filename)
 
-    let fileCount = 0
-    if (existsSync(runnerDir)) {
-      fileCount = countRegularFiles(runnerDir)
-    } else {
-      reasons.push(`${runner}: tree missing at ${runnerDir}`)
-    }
+        let fileStat: Stats | undefined
+        try {
+          fileStat = statSync(filePath)
+        } catch {
+          reasons.push(`missing flat binary at ${filePath}`)
+        }
 
-    if (fileCount <= RUNNER_FILE_COUNT_FLOOR) {
-      reasons.push(
-        `${runner}: tree at ${runnerDir} has only ${fileCount} files ` +
-          `(floor is >${RUNNER_FILE_COUNT_FLOOR}) -- looks partially ` +
-          'populated, not a full onedir bundle'
-      )
+        if (fileStat) {
+          if (!fileStat.isFile()) {
+            reasons.push(`${filePath} is not a regular file`)
+          } else if (fileStat.size === 0) {
+            reasons.push(`${filePath} is zero bytes`)
+          } else if (
+            targetPlatform === 'linux' &&
+            (fileStat.mode & 0o111) === 0
+          ) {
+            // win32 .exe files carry no meaningful mode -- asserting an
+            // exec bit there would fail the guard on every Windows
+            // checkout, which teaches people to ignore a guard that is
+            // always red.
+            reasons.push(`${filePath} has no exec bit set`)
+          }
+        }
+      }
     }
   }
 
@@ -329,7 +439,8 @@ export interface PruneResult {
  */
 export function pruneStaleHelperBinaries(
   buildBinDir: string,
-  publicBinDir: string
+  publicBinDir: string,
+  targetPlatform: SupportedPlatform = resolveRunnerTargetPlatform()
 ): PruneResult {
   const pruneSet = computePruneSet(buildBinDir, publicBinDir)
 
@@ -337,7 +448,7 @@ export function pruneStaleHelperBinaries(
     return { pruned: [], bytesFreed: 0, guardEvaluated: false }
   }
 
-  const assessment = assessPublicBin(publicBinDir)
+  const assessment = assessPublicBin(publicBinDir, targetPlatform)
   if (!assessment.ok) {
     throw new Error(
       [
@@ -404,11 +515,14 @@ function sumApparentBytes(path: string): number {
 export function pruneStaleHelperBinariesPlugin(options?: {
   buildBinDir?: string
   publicBinDir?: string
+  targetPlatform?: SupportedPlatform
 }): Plugin {
   const buildBinDir =
     options?.buildBinDir ?? join(__dirname, '..', 'build', 'bin')
   const publicBinDir =
     options?.publicBinDir ?? join(__dirname, '..', 'public', 'bin')
+  const targetPlatform =
+    options?.targetPlatform ?? resolveRunnerTargetPlatform()
 
   return {
     name: 'gamelib-prune-stale-helper-binaries',
@@ -417,7 +531,8 @@ export function pruneStaleHelperBinariesPlugin(options?: {
     buildStart() {
       const { pruned, bytesFreed } = pruneStaleHelperBinaries(
         buildBinDir,
-        publicBinDir
+        publicBinDir,
+        targetPlatform
       )
       if (pruned.length === 0) {
         console.log('[prune-stale-helper-binaries] nothing to prune')

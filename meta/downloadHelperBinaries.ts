@@ -11,6 +11,7 @@ import { setGlobalDispatcher, ProxyAgent } from 'undici'
 
 import {
   RELEASE_TAGS,
+  resolveRunnerTargetPlatform,
   type SupportedPlatform,
   type DownloadedBinary
 } from './releaseTags'
@@ -379,8 +380,13 @@ async function downloadGithubAssets(
   return Promise.all(downloadPromises)
 }
 
-async function downloadLegendary() {
-  return Promise.all([
+// Exported for test (meta/__tests__/downloadHelperBinaries.test.ts): asserts
+// the darwin onedir call site below is skipped when the resolved target
+// platform is not darwin.
+// ts-prune-ignore-next
+export async function downloadLegendary() {
+  const targetPlatform = resolveRunnerTargetPlatform()
+  const promises: Promise<unknown>[] = [
     downloadGithubAssets(
       'legendary',
       'legendary-gl/legendary',
@@ -395,17 +401,37 @@ async function downloadLegendary() {
           win32: 'legendary_windows_arm64.exe'
         }
       }
-    ),
-    // macOS: onedir archive from the GameLib rolling release, not upstream
-    // (34.9-RESEARCH.md Pitfall 5 -- the single-repo-per-runner assumption
-    // above cannot express a platform-conditional source). Phase 34.18
-    // retired the macOS x64 leg -- arm64 only, below.
-    downloadOnedirAsset('legendary', 'arm64')
-  ])
+    )
+  ]
+  // macOS: onedir archive from the GameLib rolling release, not upstream
+  // (34.9-RESEARCH.md Pitfall 5 -- the single-repo-per-runner assumption
+  // above cannot express a platform-conditional source). Phase 34.18
+  // retired the macOS x64 leg -- arm64 only, below.
+  //
+  // Scoped to darwin-target builds only (quick 260923-tip Layer 1 fix): a
+  // non-darwin build's Tauri bundle config never maps this runner's macOS
+  // onedir tree (`src-tauri/tauri.windows.conf.json` ships only
+  // `build/bin/{x64,arm64}/win32`), so fetching and extracting it on that
+  // host is pure cost -- and its extracted Python.framework symlinks are
+  // what broke the Windows packaged build in the first place (see
+  // .planning/todos/pending/2026-09-22-windows-packaged-build-breaks-on-
+  // darwin-runner-symlinks.md).
+  if (targetPlatform === 'darwin') {
+    promises.push(downloadOnedirAsset('legendary', 'arm64'))
+  } else {
+    console.log(
+      'Skipping legendary darwin onedir download -- target platform is',
+      targetPlatform
+    )
+  }
+  return Promise.all(promises)
 }
 
-async function downloadGogdl() {
-  return Promise.all([
+// Exported for test -- see downloadLegendary()'s comment above.
+// ts-prune-ignore-next
+export async function downloadGogdl() {
+  const targetPlatform = resolveRunnerTargetPlatform()
+  const promises: Promise<unknown>[] = [
     downloadGithubAssets(
       'gogdl',
       'Heroic-Games-Launcher/heroic-gogdl',
@@ -420,13 +446,27 @@ async function downloadGogdl() {
           win32: 'gogdl_windows_arm64.exe'
         }
       }
-    ),
-    downloadOnedirAsset('gogdl', 'arm64')
-  ])
+    )
+  ]
+  // Darwin onedir sourcing, scoped to darwin-target builds only -- see
+  // downloadLegendary()'s comment above for the full rationale (quick
+  // 260923-tip Layer 1 fix).
+  if (targetPlatform === 'darwin') {
+    promises.push(downloadOnedirAsset('gogdl', 'arm64'))
+  } else {
+    console.log(
+      'Skipping gogdl darwin onedir download -- target platform is',
+      targetPlatform
+    )
+  }
+  return Promise.all(promises)
 }
 
-async function downloadNile() {
-  return Promise.all([
+// Exported for test -- see downloadLegendary()'s comment above.
+// ts-prune-ignore-next
+export async function downloadNile() {
+  const targetPlatform = resolveRunnerTargetPlatform()
+  const promises: Promise<unknown>[] = [
     downloadGithubAssets('nile', 'imLinguin/nile', RELEASE_TAGS['nile'], {
       x64: {
         linux: 'nile_linux_x86_64',
@@ -435,11 +475,31 @@ async function downloadNile() {
       arm64: {
         linux: 'nile_linux_arm64'
       }
-    }),
-    downloadOnedirAsset('nile', 'arm64')
-  ])
+    })
+  ]
+  // Darwin onedir sourcing, scoped to darwin-target builds only -- see
+  // downloadLegendary()'s comment above for the full rationale (quick
+  // 260923-tip Layer 1 fix).
+  if (targetPlatform === 'darwin') {
+    promises.push(downloadOnedirAsset('nile', 'arm64'))
+  } else {
+    console.log(
+      'Skipping nile darwin onedir download -- target platform is',
+      targetPlatform
+    )
+  }
+  return Promise.all(promises)
 }
 
+// DELIBERATELY OUT OF SCOPE (quick 260923-tip Layer 1 fix): the flat
+// single-file assets downloadGithubAssets() fetches below for EVERY
+// platform -- including comet's arm64/darwin asset
+// (comet-aarch64-apple-darwin) -- are left downloading on every host. They
+// carry zero symlinks, so they are not part of this defect, and
+// `.release_tags` is keyed per RUNNER, not per platform: narrowing this
+// path would make a tree downloaded on one host report "up to date" while
+// another platform's binaries were missing. Only the SYMLINK-BEARING darwin
+// onedir archives (legendary/gogdl/nile above) are scoped.
 async function downloadComet() {
   return Promise.all([
     downloadGithubAssets(
@@ -548,7 +608,17 @@ export async function compareDownloadedTags(): Promise<DownloadedBinary[]> {
   // Layout-only re-download branch. Deliberately restricted to the three
   // onedir-affected runners -- comet and epic-integration must never be
   // pulled in from here, only from the RELEASE_TAGS comparison above.
-  if (storedTagsParsed.__darwin_layout !== darwinLayoutMarker()) {
+  //
+  // Scoped to darwin-target builds only (quick 260923-tip Layer 1 fix):
+  // without this gate, a non-darwin checkout would perpetually report
+  // "stale" for a `__darwin_layout` marker it will never write (see
+  // storeDownloadedTags() below), forcing a pointless onedir re-download
+  // attempt on every build.
+  const targetPlatform = resolveRunnerTargetPlatform()
+  if (
+    targetPlatform === 'darwin' &&
+    storedTagsParsed.__darwin_layout !== darwinLayoutMarker()
+  ) {
     for (const runner of DARWIN_LAYOUT_RUNNERS) {
       if (!binariesToDownload.includes(runner)) {
         binariesToDownload.push(runner)
@@ -560,10 +630,18 @@ export async function compareDownloadedTags(): Promise<DownloadedBinary[]> {
 }
 
 export async function storeDownloadedTags() {
-  await writeFile(
-    'public/bin/.release_tags',
-    JSON.stringify({ ...RELEASE_TAGS, __darwin_layout: darwinLayoutMarker() })
-  )
+  const targetPlatform = resolveRunnerTargetPlatform()
+  const tagsToWrite: Record<string, string> = { ...RELEASE_TAGS }
+  // Only a darwin-target build ever downloads (or is guaranteed to hold) the
+  // darwin onedir trees, so only a darwin-target build may claim their
+  // layout marker is current (quick 260923-tip Layer 1 fix) -- a marker
+  // written on a host that skipped the darwin download would be a false
+  // claim. `assessPublicBin`'s win32/linux path (meta/pruneStaleHelperBinaries.ts)
+  // never checks for this key.
+  if (targetPlatform === 'darwin') {
+    tagsToWrite.__darwin_layout = darwinLayoutMarker()
+  }
+  await writeFile('public/bin/.release_tags', JSON.stringify(tagsToWrite))
 }
 
 async function main() {
