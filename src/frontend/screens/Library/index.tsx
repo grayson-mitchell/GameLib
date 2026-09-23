@@ -54,6 +54,7 @@ import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalC
 import { configStore, steamConfigStore } from 'frontend/helpers/electronStores'
 import SteamSyncNotice from './components/SteamSyncNotice'
 import { resolveSteamSyncIndicator } from './librarySyncIndicator'
+import { selectVisibleSteamLibrary } from './steamLibraryVisibility'
 // Namespace import: filterEngine's helpers are referenced as
 // `filterEngine.xxx` throughout this file rather than named imports, so a
 // call site is this identifier's only appearance in the file (see the
@@ -644,7 +645,26 @@ export default React.memo(function Library(): JSX.Element {
     const sideloadedApps = sideloadedLibrary
     const amazonLibrary = showAmazon ? amazon.library : []
     const zoomLibrary = showZoom ? zoom.library : []
-    const steamLibrary = showSteam ? steam.library : []
+    // debug/steam-library-shows-logged-out: `showSteam` is retained as the
+    // OUTER gate, in the same `show*` shape as the five stores above, because
+    // `connectedStoresParity.test.ts` reads these locals to prove the Store
+    // facet panel and the grid gate every store identically (threat
+    // T-34.11-12). Dropping it would blind that gate to Steam entirely.
+    //
+    // It is deliberately redundant with the resolver's own branch 1 -- the
+    // resolver re-checks the username because it is also its own contract.
+    // The resolver adds the part `showSteam` CANNOT express: `steam?.username`
+    // is a persisted config value that survives an expired session, so it
+    // cannot decide the not-installed half on its own. See
+    // `steamLibraryVisibility.ts` for the mechanism and for why the decision
+    // lives in a module (no jsdom here, so nothing in this file is testable).
+    const steamLibrary = showSteam
+      ? selectVisibleSteamLibrary({
+          library: steam?.library ?? [],
+          steamUsername: steam?.username,
+          steamSyncStatus
+        })
+      : []
 
     return [
       ...sideloadedApps,
@@ -666,6 +686,7 @@ export default React.memo(function Library(): JSX.Element {
     zoom.library,
     steam?.username,
     steam?.library,
+    steamSyncStatus,
     sideloadedLibrary
   ])
 
