@@ -6,7 +6,7 @@ severity: major
 platform: any
 ready: code
 found_by: 'GitHub Actions run 35841476015, macOS job 107117309605, on tag v0.7.0-notarize-test3 at commit c946239ce. Extracted by quick task 260923-u3o.'
-source: '.planning/todos/pending/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md'
+source: '.planning/todos/completed/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md'
 status: OPEN
 files:
   - src-tauri/tauri.conf.json
@@ -143,5 +143,7 @@ closing it on the plausibility of the fix, not on its observed effect.
 - `2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md` — this defect
   was extracted from its `### STATUS 2026-09-23 (quick-260923-p95)` item 8 by quick task
   `260923-u3o`. The same run, `35841476015`, produced the evidence in both records.
+  That todo is now **completed** (closed by `quick-260923-uvt`, 2026-09-23) and lives under
+  `.planning/todos/completed/`.
 - `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` — the reason the Windows
   half of the target question is untestable today.

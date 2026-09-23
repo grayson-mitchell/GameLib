@@ -6,7 +6,9 @@ severity: minor
 platform: macos
 ready: live-gate
 needs: quarantined-first-launch-and-sidecar-spawned-helper
-status: OPEN
+status: completed
+resolved: 2026-09-23
+resolved_by: quick-260923-uvt
 found_by: 'GitHub Actions run 35223308954 on grayson-mitchell/GameLib, triggered by the throwaway annotated tag v0.7.0-notarize-test1 at commit cc2d66248. The tag was deleted from origin and locally after the run.'
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md'
 files:
@@ -875,6 +877,55 @@ the whole chain holds end to end: Apple Accepted and stapled, the published arti
 unsigned survivors among its 253 Mach-O files, and `steam-bridge-helper` loads Valve's dylib from
 inside the notarized bundle. What is left is two unverified arms — quarantined first launch, and a
 sidecar-spawned helper — neither of which has a known defect behind it.
+
+## CLOSED 2026-09-23 (quick-260923-uvt) — discharged, residuals carried out first
+
+This section does NOT revise anything above it. The evidence for this closure is already in this
+file: **see `### STATUS 2026-09-23 (quick-260923-u3o)`**, which is pointed at rather than restated
+here — its tables are not duplicated.
+
+**What discharged this todo: every clause of its TITLE is measured false as a LIVE condition.**
+
+- "macOS notarization REJECTED (not merely untested)" — Apple returned `Accepted` for submission
+  `0f65332c-56c8-484d-822a-13163bc14ddb` in 1m09s, and then stapled the app.
+- "Apple returned Invalid on 253 unsigned Contents/Resources binaries Tauri never signs" — the
+  survivor count over those same 253, in the PUBLISHED artifact, is `files=501 mach-o=253
+  survivors=0`. **Both controls were run FIRST**: the negative control returned `survivors=0` and
+  the positive control returned `survivors=253`, so the zero came from a loop already shown capable
+  of returning a non-zero number.
+
+All four helper binaries in the published bundle carry
+`Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)` under `flags=0x10000(runtime)`,
+and `steam-bridge-helper` reaches `SteamAPI_Init()` from inside the notarized bundle.
+
+**Where every residual went — named, with paths. Nothing was discarded by this move.**
+
+| residual | destination |
+| --- | --- |
+| (a) quarantined first launch | `.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md` — its existing `needs: release-run-then-browser-download-verify` already named this arm and needed no change |
+| (b) `steam-bridge-helper` never spawned BY the sidecar | `.planning/todos/pending/2026-09-23-steam-bridge-helper-never-spawned-by-the-sidecar-only-direct-exec-proven.md` — new, `severity: minor`, `ready: live-gate` |
+| (c) recipe step 6's in-app invocations (Epic via `legendary`, Amazon via `nile`, GOG via `gogdl`) | the same parent `2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md`, item 5 of its uvt STATUS section |
+| the 60-minute `timeout-minutes` bound (u3o item 4 / p95 item 6) | the same parent `2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md`, item 6 of its uvt STATUS section |
+
+quick-260923-uvt **considered and rejected** giving (c) and the 60-minute bound each their own
+file. (c) is a live-gate errand against a published artifact, structurally identical to the parent
+todo's browser-download bullet, and splitting one sitting across two todos helps no one. The
+60-minute bound belongs to quick-260923-mrx's change rather than to this signing defect, and with
+1m09s measured against a 60-minute bound the headroom is ~52x — `minor` under CLAUDE.md's
+vocabulary, where a new `major` file would be inflation.
+
+**Item 10's cleanup is discharged BY ADDITION, here, without editing item 10.** Measured
+2026-09-23 by quick-260923-uvt: `git ls-remote --tags origin` and `git for-each-ref refs/tags` both
+return nothing matching `notarize`, so tag `v0.7.0-notarize-test3` is gone from origin AND locally.
+Item 10's "still on origin and locally **as of this writing**" was TRUE when written and is
+correctly scoped as history — p95 item 8 sets that precedent explicitly and says not to "fix" it,
+so it has not been touched.
+
+**The bound on this closure, stated so it cannot be over-read.** Closing this file does NOT mean
+macOS signing is finished. It means THIS defect — Apple rejecting 253 unsigned binaries under
+`Contents/Resources` — is discharged, and its residuals have moved to files that are still open.
+The parent `2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md` remains **OPEN**, with the
+browser-download arm genuinely outstanding.
 
 ## Related
 
