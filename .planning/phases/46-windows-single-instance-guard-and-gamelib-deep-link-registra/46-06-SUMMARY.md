@@ -130,3 +130,10 @@ A debug NSIS setup .exe built from this plan's committed fix is ready for plan 4
 ---
 *Phase: 46-windows-single-instance-guard-and-gamelib-deep-link-registra*
 *Completed: 2026-09-24*
+
+## Self-Check: PASSED
+
+All claimed files found on disk (`src-tauri/src/main.rs`, `src-tauri/Cargo.toml`,
+`src/backend/__tests__/tauriShellSource.test.ts`, the new Linux todo, `46-05-SUMMARY.md`,
+`46-06-SUMMARY.md`, the built setup `.exe`). All claimed commit hashes (`919c4dd57`, `5b6201e26`,
+`02a37c4e3`, `4ade96590`) found in `git log --oneline --all`.
