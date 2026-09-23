@@ -1,5 +1,7 @@
 import { z } from 'zod'
-import { userInfo } from 'os'
+import { open, stat, unlink, writeFile } from 'fs/promises'
+import { join } from 'path'
+import { randomUUID } from 'node:crypto'
 
 import type { Path } from 'backend/schemas'
 import { genericSpawnWrapper } from '../os/processes'
@@ -11,16 +13,6 @@ const Win32_LogicalDisk = z.object({
   Size: z.number().nullable()
 })
 type Win32_LogicalDisk = z.infer<typeof Win32_LogicalDisk>
-
-const AccessControlEntry = z.object({
-  FileSystemRights: z.number(),
-  IdentityReference: z
-    .object({ Value: z.string() })
-    .transform((obj) => obj.Value)
-})
-type AccessControlEntry = z.infer<typeof AccessControlEntry>
-// Taken from https://learn.microsoft.com/en-us/dotnet/api/system.security.accesscontrol.filesystemrights
-const FileSystemRightModify = 197055
 
 async function getDiskInfo_windows(path: Path): Promise<DiskInfo> {
   const { stdout } = await genericSpawnWrapper('powershell', [
@@ -60,36 +52,68 @@ async function getDiskInfo_windows(path: Path): Promise<DiskInfo> {
   return { freeSpace: 0, totalSpace: 0 }
 }
 
+// This used to match the ACL's IdentityReference against the current
+// username. That was wrong in two independent ways:
+//  (a) Windows grants write access through GROUPS (`BUILTIN\Users`,
+//      `NT AUTHORITY\Authenticated Users`), and only a user's own profile
+//      tree normally carries an explicit per-user ACE. Resolving group
+//      membership correctly in JS means walking nested groups and weighing
+//      deny ACEs -- i.e. reimplementing Windows authorization. A direct
+//      write probe sidesteps the question entirely by letting the kernel
+//      answer it.
+//  (b) `fs.access(path, W_OK)` is NOT a substitute: on Windows it reflects
+//      only the read-only file ATTRIBUTE, not the ACL at all, so it would
+//      report `C:\Program Files` and other ACL-restricted trees as
+//      writable -- trading a visible false-negative for a silent
+//      false-positive that only surfaces after the user has committed to
+//      the path and the install fails.
+//  (c) The removed array-shaped ACL parse had a SECOND, independent failure
+//      path: a single-entry ACL makes `ConvertTo-Json -Compress` emit an
+//      object, not an array, so parsing it as an array threw and the old
+//      `catch { return false }` returned false for a reason that had
+//      nothing to do with actual access.
+// See unix.ts for why `isWritable_unix` is deliberately NOT the same kind
+// of check.
 async function isWritable_windows(path: Path): Promise<boolean> {
-  const { stdout } = await genericSpawnWrapper('powershell', [
-    '(Get-Acl',
-    `${path}).Access`,
-    '|',
-    'Select-Object',
-    'FileSystemRights,IdentityReference',
-    '|',
-    'ConvertTo-Json',
-    '-Compress'
-  ])
-
-  let parsedAccess: AccessControlEntry[]
+  let stats
   try {
-    parsedAccess = AccessControlEntry.array().parse(JSON.parse(stdout))
+    stats = await stat(path)
   } catch {
+    // Preserves getDiskInfo's "path does not have to exist" contract
+    // (index.ts:9-12): a nonexistent path stays false, exactly as before.
     return false
   }
 
-  const userName = userInfo().username
-  const userAccess = parsedAccess.find((entry) =>
-    entry.IdentityReference.endsWith(userName)
-  )
-  if (!userAccess) return false
+  if (!stats.isDirectory()) {
+    // The sole consumer always passes a directory, but a file path
+    // shouldn't become a new false-negative of the same family this
+    // rewrite removes. `'r+'` requires write permission but neither
+    // truncates nor writes a byte.
+    let handle
+    try {
+      handle = await open(path, 'r+')
+      return true
+    } catch {
+      return false
+    } finally {
+      await handle?.close().catch(() => undefined)
+    }
+  }
 
-  // "Modify" should include everything we need
-  return (
-    (userAccess.FileSystemRights & FileSystemRightModify) ===
-    FileSystemRightModify
-  )
+  const probePath = join(
+    path,
+    `.gamelib-write-probe-${randomUUID()}.tmp`
+  ) as Path
+  try {
+    await writeFile(probePath, '', { flag: 'wx' })
+    return true
+  } catch {
+    return false
+  } finally {
+    // A cleanup failure must not change the verdict nor throw out of this
+    // function.
+    await unlink(probePath).catch(() => undefined)
+  }
 }
 
 export { getDiskInfo_windows, isWritable_windows }

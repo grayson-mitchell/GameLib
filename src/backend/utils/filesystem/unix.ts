@@ -31,6 +31,18 @@ async function findFirstExistingPath(path: Path): Promise<Path> {
   return maybeExistingPath
 }
 
+// This is `access(path)` with NO mode argument -- that is `F_OK`, an
+// EXISTENCE check, not a writability check. `findFirstExistingPath` above
+// DEPENDS on exactly that: its `while` loop climbs toward the root until
+// the path EXISTS. A real writability check here would make it climb PAST
+// existing-but-unwritable directories, falsifying its own name and
+// silently breaking getDiskInfo_unix's `df` target selection.
+//
+// `isWritable_windows` (windows.ts) deliberately answers the STRONGER
+// question -- "can this process actually write here" -- via a real write
+// probe. The two platforms knowingly answer different questions today.
+// Anyone harmonising them must fix `findFirstExistingPath` in the same
+// change; that is a separate, wider task with its own Unix/macOS live gate.
 async function isWritable_unix(path: Path): Promise<boolean> {
   return access(path).then(
     () => true,

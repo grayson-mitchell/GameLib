@@ -1,5 +1,6 @@
 import fs from 'fs'
 import os from 'os'
+import path from 'path'
 import type { FileHandle } from 'fs/promises'
 import * as util_os_processes from '../../os/processes'
 import { getDiskInfo_windows, isWritable_windows } from '../windows'
@@ -218,8 +219,11 @@ describe('isWritable_windows', () => {
       const writePath = writeSpy.mock.calls[0][0] as string
       const unlinkPath = unlinkSpy.mock.calls[0][0] as string
       expect(unlinkPath).toBe(writePath)
-      expect(unlinkPath.startsWith(targetDir)).toBe(true)
-      expect(unlinkPath).not.toBe(targetDir)
+      // `path.join` normalizes separators (backslash on win32), so compare
+      // via `path.dirname` rather than a raw string prefix against the
+      // forward-slash `targetDir` literal.
+      expect(path.dirname(unlinkPath)).toBe(path.normalize(targetDir))
+      expect(unlinkPath).not.toBe(path.normalize(targetDir))
     })
 
     it('an unlink failure cannot change the verdict', async () => {
