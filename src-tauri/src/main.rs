@@ -8411,6 +8411,7 @@ fn acquire_single_instance(socket_path: &std::path::Path) -> SingleInstanceRole 
 /// primary itself.
 #[cfg(windows)]
 struct WindowsPrimaryPipe {
+    #[allow(dead_code)] // consumed by plan 46-03's accept loop, not this plan
     first_instance: std::os::windows::io::OwnedHandle,
     #[allow(dead_code)] // consumed by plan 46-03's accept loop, not this plan
     pipe_name: String,
@@ -8683,6 +8684,156 @@ fn acquire_single_instance_windows(user_sid: &str, session_id: u32) -> WindowsSi
             WindowsSingleInstanceRole::PrimaryWithoutListener
         }
     }
+}
+
+/// Secondary-side authenticated delivery over the Windows single-instance pipe (T-46-01/02,
+/// REQ-46-03). Connects write-only with `SECURITY_ANONYMOUS` quality of service so the pipe
+/// server can never impersonate this client (T-46-02), verifies the pipe's owner SID matches
+/// this process's own BEFORE writing a single byte (T-46-01), and only then writes the payload.
+/// Mirrors the Unix Secondary arm's own fail-open shape exactly (main()'s `#[cfg(unix)]` block,
+/// 46-RESEARCH.md Q5's own quoted excerpt): a delivery failure is returned to the caller for a
+/// WARN-level log only -- the caller always calls `std::process::exit(0)` regardless of this
+/// function's result. A second sidecar over one set of store files and one download queue
+/// (D-44-A's whole reason for existing) is a strictly worse outcome than an occasionally-lost
+/// deep link.
+///
+/// No error string returned here ever carries `payload` or the URL (T-34.5-G6-25): only a fixed
+/// English reason, or an OS error's own `Display` text (which reports what the OS says about the
+/// open/write attempt itself, never what we tried to write).
+#[cfg(windows)]
+fn deliver_to_running_instance_windows(
+    pipe_name: &str,
+    user_sid: &str,
+    payload: &str,
+) -> Result<(), String> {
+    use std::io::Write as _;
+    use std::os::windows::fs::OpenOptionsExt;
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Foundation::{ERROR_ACCESS_DENIED, GENERIC_WRITE, HANDLE, LocalFree};
+    use windows_sys::Win32::Security::Authorization::{
+        ConvertSidToStringSidW, GetSecurityInfo, SE_KERNEL_OBJECT,
+    };
+    use windows_sys::Win32::Security::OWNER_SECURITY_INFORMATION;
+    use windows_sys::Win32::Storage::FileSystem::{
+        READ_CONTROL, SECURITY_ANONYMOUS, SECURITY_SQOS_PRESENT,
+    };
+
+    // Reads the connected pipe's owner SID off `file`'s raw handle. Returns the raw WIN32_ERROR
+    // status on failure (never `Ok` unless `status == 0`), so the caller can special-case
+    // `ERROR_ACCESS_DENIED` for the READ_CONTROL re-open below (step 2's own instruction: "Do
+    // not skip the check").
+    //
+    // SAFETY: `file`'s raw handle is valid for the duration of this closure's call. `psd` is
+    // allocated by `GetSecurityInfo` on success and freed by `LocalFree(psd)` before returning.
+    // `owner_str_ptr` (when set) is allocated by `ConvertSidToStringSidW` and freed immediately
+    // after being copied into an owned `String`, so neither allocation outlives this call.
+    let read_owner_sid = |file: &std::fs::File| -> Result<String, u32> {
+        unsafe {
+            let handle = file.as_raw_handle() as HANDLE;
+            let mut owner: windows_sys::Win32::Security::PSID = std::ptr::null_mut();
+            let mut psd: *mut core::ffi::c_void = std::ptr::null_mut();
+            let status = GetSecurityInfo(
+                handle,
+                SE_KERNEL_OBJECT,
+                OWNER_SECURITY_INFORMATION,
+                &mut owner,
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                std::ptr::null_mut(),
+                &mut psd,
+            );
+            if status != 0 {
+                return Err(status);
+            }
+            let mut owner_str_ptr: windows_sys::core::PWSTR = std::ptr::null_mut();
+            let converted = ConvertSidToStringSidW(owner, &mut owner_str_ptr) != 0;
+            let result = if converted {
+                let len = (0..).take_while(|&i| *owner_str_ptr.add(i) != 0).count();
+                let slice = std::slice::from_raw_parts(owner_str_ptr, len);
+                Ok(String::from_utf16_lossy(slice))
+            } else {
+                // Conversion failure, not itself a WIN32_ERROR -- treated as non-retryable below.
+                Err(0)
+            };
+            if !owner_str_ptr.is_null() {
+                LocalFree(owner_str_ptr as *mut core::ffi::c_void);
+            }
+            LocalFree(psd);
+            result
+        }
+    };
+
+    // Step 1: bounded-retry connect, write-only, anonymous SQOS (T-46-02).
+    let mut file: Option<std::fs::File> = None;
+    for _ in 0..10 {
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .security_qos_flags(SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS)
+            .open(pipe_name)
+        {
+            Ok(f) => {
+                file = Some(f);
+                break;
+            }
+            Err(e) => {
+                if windows_pipe_connect_should_retry(e.raw_os_error()) {
+                    thread::sleep(Duration::from_millis(100));
+                    continue;
+                }
+                return Err(format!("connect failed: {e}"));
+            }
+        }
+    }
+    let Some(mut file) = file else {
+        return Err("running instance's pipe did not become available".to_string());
+    };
+
+    // Step 2: verify the server owns the pipe (T-46-01) BEFORE writing a single byte.
+    let owner_sid = match read_owner_sid(&file) {
+        Ok(sid) => sid,
+        Err(status) if status == ERROR_ACCESS_DENIED => {
+            // A write-only open's GENERIC_WRITE access mask alone does not include
+            // READ_CONTROL, even though the pipe's DACL would grant it via GA to the same-SID
+            // owner -- re-open with READ_CONTROL so the OWNER_SECURITY_INFORMATION query is
+            // permitted, and retry the check exactly once more.
+            drop(file);
+            file = match std::fs::OpenOptions::new()
+                .access_mode(GENERIC_WRITE | READ_CONTROL)
+                .security_qos_flags(SECURITY_SQOS_PRESENT | SECURITY_ANONYMOUS)
+                .open(pipe_name)
+            {
+                Ok(f) => f,
+                Err(e) => return Err(format!("connect failed: {e}")),
+            };
+            match read_owner_sid(&file) {
+                Ok(sid) => sid,
+                Err(_) => {
+                    return Err(
+                        "running-instance pipe is not owned by the current user; refusing to deliver"
+                            .to_string(),
+                    );
+                }
+            }
+        }
+        Err(_) => {
+            return Err(
+                "running-instance pipe is not owned by the current user; refusing to deliver"
+                    .to_string(),
+            );
+        }
+    };
+
+    if !windows_pipe_owner_matches(&owner_sid, user_sid) {
+        return Err(
+            "running-instance pipe is not owned by the current user; refusing to deliver"
+                .to_string(),
+        );
+    }
+
+    // Step 3: only now write the payload.
+    writeln!(file, "{payload}").map_err(|e| format!("write failed: {e}"))?;
+    file.flush().map_err(|e| format!("write failed: {e}"))?;
+    Ok(())
 }
 
 /// DEV MODE: spawn `node <sidecar-entry>` with piped stdio, logging exactly what it runs so a
@@ -9213,13 +9364,16 @@ fn main() {
     install_panic_hook();
 
     // ---- Single-instance guard + deep-link argv (Phase 34.5 gap cycle 6 plan 44,
-    // REQ-34.5-01/05/12, F-34.5-G6-09, D-44-A) -- runs BEFORE `tauri::Builder::default()` so a
-    // secondary process's `std::process::exit(0)` below fires before `.setup()` can ever call
-    // `spawn_sidecar`. This is the entire fix for the "second full GameLib instance" half of
-    // F-34.5-G6-09. Unix-only (`std::os::unix::net` has no non-unix equivalent); on a non-unix
-    // target `single_instance_socket_path_var`/`primary_listener` simply stay `None`, so the
-    // rest of this function behaves identically to today's shipped behaviour there (the
-    // accepted Windows gap, ledger row `U-34.5-18`).
+    // REQ-34.5-01/05/12, F-34.5-G6-09, D-44-A; Windows half added Phase 46, REQ-46-01) -- runs
+    // BEFORE the Tauri builder is constructed so a secondary process's `std::process::exit(0)`
+    // below fires before `.setup()` can ever call `spawn_sidecar`. This is the entire fix for the
+    // "second full GameLib instance" half of F-34.5-G6-09/U-34.5-18. Unix uses the
+    // `std::os::unix::net` socket guard (`acquire_single_instance`); Windows uses the
+    // `windows-sys` mutex+pipe guard (`acquire_single_instance_windows`) -- both run here, before
+    // the builder, with the identical fail-open-and-exit(0) shape. Every other target
+    // (`#[cfg(not(any(unix, windows)))]`) stays unguarded: `single_instance_socket_path_var`/
+    // `primary_listener` simply stay `None` there, so the rest of this function behaves
+    // identically to today's shipped behaviour on those targets.
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let no_gui = cli_no_gui(&argv);
 
@@ -9294,7 +9448,42 @@ fn main() {
             SingleInstanceRole::Primary(listener) => Some(listener),
             SingleInstanceRole::PrimaryWithoutListener => None,
         });
-    #[cfg(not(unix))]
+
+    // Windows counterpart to the `#[cfg(unix)]` block above (Phase 46, REQ-46-01/02/03). Reads
+    // the current process token's SID/session once (`current_user_identity`); a `None` fails
+    // open (T-34.5-G6-24) exactly like a `None` from the Unix arm's own directory-creation
+    // failure. The `Secondary` arm mirrors the Unix `Secondary` arm's shape line-for-line: same
+    // `single_instance_payload` decision, same "warn on delivery failure, never fatal" pattern,
+    // same unconditional `std::process::exit(0)` -- 46-RESEARCH.md Q5's own fail-open policy: a
+    // second sidecar is strictly worse than an occasionally-lost deep link.
+    #[cfg(windows)]
+    let primary_listener: Option<WindowsPrimaryPipe> = match current_user_identity() {
+        None => {
+            eprintln!(
+                "[shell] WARN: could not read the current user's SID/session -- continuing without the single-instance guard (fail-open, T-34.5-G6-24)"
+            );
+            None
+        }
+        Some((sid, session)) => match acquire_single_instance_windows(&sid, session) {
+            WindowsSingleInstanceRole::Secondary { pipe_name, user_sid } => {
+                let (payload, kind) = single_instance_payload(&argv);
+                eprintln!(
+                    "[shell] another GameLib instance is already running -- sending {kind} to it and exiting"
+                );
+                if let Err(e) = deliver_to_running_instance_windows(&pipe_name, &user_sid, &payload)
+                {
+                    eprintln!(
+                        "[shell] WARN: secondary instance failed to deliver {kind} to the running instance: {e}"
+                    );
+                }
+                std::process::exit(0);
+            }
+            WindowsSingleInstanceRole::Primary(pipe) => Some(pipe),
+            WindowsSingleInstanceRole::PrimaryWithoutListener => None,
+        },
+    };
+
+    #[cfg(not(any(unix, windows)))]
     let primary_listener: Option<()> = None;
 
     tauri::Builder::default()
@@ -9449,7 +9638,14 @@ fn main() {
                     }
                 });
             }
-            #[cfg(not(unix))]
+            // Plan 46-03 replaces this with the Windows named-pipe accept loop, mirroring the
+            // `#[cfg(unix)]` block above -- this plan only acquires the pipe pre-`Builder`, it
+            // does not yet service it. Keeps `primary_listener` (and its `OwnedHandle`) alive
+            // and compiles warning-free until then.
+            #[cfg(windows)]
+            let _ = &primary_listener;
+
+            #[cfg(not(any(unix, windows)))]
             let _ = &primary_listener;
 
             // ---- OS deep-link delivery (Phase 35 plan 07, D-07/D-05, REQ-35-05/REQ-35-16) ----
