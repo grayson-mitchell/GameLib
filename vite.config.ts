@@ -97,7 +97,18 @@ export default defineConfig(({ mode }) => ({
     // without it vite silently moves to 5174 and the Tauri window would load
     // whatever else is squatting on 5173, or nothing at all.
     port: 5173,
-    strictPort: true
+    strictPort: true,
+    // Quick task 260924-vat: root is '.', so without this chokidar walks
+    // cargo's src-tauri/target (tens of thousands of files). On Windows,
+    // fs.watch on an exe the linker holds open throws EBUSY, Vite does not
+    // handle that FSWatcher error (ignorePermissionErrors does not cover
+    // EBUSY), and beforeDevCommand dies mid cold build. Vite 6 APPENDS this
+    // list to its own defaults (.git/node_modules/test-results/cacheDir), so
+    // do not restate them here. Only target/ is ignored -- it is the only
+    // cargo output under src-tauri -- do not widen this to src-tauri/**.
+    watch: {
+      ignored: ['**/src-tauri/target/**']
+    }
   },
   build: {
     rollupOptions: {

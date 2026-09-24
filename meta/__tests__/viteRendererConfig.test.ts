@@ -27,6 +27,10 @@
  *      shipped bundle (T-35-10). Both branches are asserted.
  *   5. The dev server drifting off port 5173, which `tauri.conf.json`'s
  *      `devUrl` hardcodes, or losing `strictPort` and silently landing on 5174.
+ *   6. `server.watch.ignored` losing its `src-tauri/target` entry (quick task
+ *      260924-vat). Without it, chokidar walks cargo's build output and, on
+ *      Windows, `fs.watch` on an exe the linker holds open throws `EBUSY` --
+ *      unhandled by Vite -- killing `pnpm tauri:dev` mid cold build.
  *
  * The assertions run against the RESOLVED config object returned by the
  * exported callback, under both `mode: 'production'` and `mode: 'development'`
@@ -240,6 +244,34 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
         expect(config.server?.strictPort).toBe(true)
       })
 
+      // Quick task 260924-vat: without this, chokidar walks src-tauri/target
+      // and a Windows EBUSY on a linker-held exe kills the dev server.
+      it('ignores src-tauri/target in the dev-server watcher', () => {
+        const ignored = config.server?.watch?.ignored
+        expect(Array.isArray(ignored)).toBe(true)
+        expect(ignored).toContain('**/src-tauri/target/**')
+      })
+
+      // A future widening back to the whole src-tauri tree must be a
+      // deliberate test edit, not a drive-by -- only target/ is cargo output.
+      it('does not widen the watcher ignore to the whole src-tauri tree', () => {
+        const ignored = (config.server?.watch?.ignored ?? []) as string[]
+        expect(ignored).not.toContain('**/src-tauri/**')
+        expect(ignored.some((entry) => /src-tauri\/\*\*$/.test(entry))).toBe(
+          false
+        )
+      })
+
+      // Vite 6.3.5's resolveChokidarOptions APPENDS this list to its own
+      // defaults (.git/node_modules/test-results/cacheDir) -- restating them
+      // here would be redundant, not wrong, but it would hide the append
+      // behaviour from a future reader who assumes this list is exhaustive.
+      it('does not restate vite defaults in the watcher ignore list', () => {
+        const ignored = (config.server?.watch?.ignored ?? []) as string[]
+        expect(ignored).not.toContain('**/node_modules/**')
+        expect(ignored).not.toContain('**/.git/**')
+      })
+
       it('carries electron-vite renderer preset defaults that vite does not default to', () => {
         expect(config.build?.modulePreload).toEqual({ polyfill: false })
         expect(config.envPrefix).toEqual(['RENDERER_VITE_', 'VITE_'])
@@ -296,6 +328,11 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
     it('keeps the 260922-hjb ordering rationale next to the locale-prune plugin', () => {
       expect(source).toContain('260922-hjb')
       expect(source).toMatch(/ahead of|before.*assembleRendererDistPlugin/i)
+    })
+
+    it('keeps the 260924-vat EBUSY rationale next to the watcher ignore', () => {
+      expect(source).toContain('260924-vat')
+      expect(source).toContain('EBUSY')
     })
   })
 })
