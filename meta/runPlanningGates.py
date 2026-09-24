@@ -97,7 +97,24 @@ GATE_SUFFIX = "-gate.py"
 # convicted those would be deleted within the day. Leaving the floor at 11
 # would let this exact gate be deleted later with every remaining gate still
 # reporting green, exactly the property this constant exists to hold.
-MINIMUM_EXPECTED_GATES = 12
+#
+# 12 -> 13 (quick task 260924-vku): the thirteenth gate is
+# `.planning/state-sdk-field-anchor-gate.py`, holding the invariant that every
+# `gsd-sdk`-matchable field literal (Phase/Plan/Status/Last activity/Progress/
+# Last session/Stopped at/Resume file, plus every non-canonical literal the SDK
+# reads or writes) matches AT MOST ONCE in STATE.md's body, anchored inside the
+# section the SDK's own regex computes. `gsd-sdk query state.*` mutation verbs
+# (`sdk/src/query/state-document.ts:12,22`) match a bold `**Field:**` ANYWHERE
+# in the body, case-insensitive, first hit -- falling back to the first
+# line-start `Field:` anywhere -- and corrupted archived STATE.md history on at
+# least three separately-discovered occasions (quick-260816-qcn's
+# `state.add-decision`, Phase 34.6-01's hand-apply workaround, Phase 46-02's
+# `state.advance-plan`/`state.record-session`) while every planning gate
+# existing at the time stayed green, because not one of them had ever counted
+# how many times a field literal appeared in the body. Leaving the floor at 12
+# would let this exact gate be deleted later with every remaining gate still
+# reporting green -- exactly the property this constant exists to hold.
+MINIMUM_EXPECTED_GATES = 13
 
 
 def discover_gates():
