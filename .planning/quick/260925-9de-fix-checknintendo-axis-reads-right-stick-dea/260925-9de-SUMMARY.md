@@ -7,37 +7,73 @@ device) and not "one past `axes[3]`". Fixed by branching all four stick-axis rea
 `nintendoStickAxes(mapping)` table, mirroring the shape `nintendoFaceIndices` already established
 for the face buttons.
 
-## Honesty note on this SUMMARY's evidence
+## Provenance of this SUMMARY's evidence
 
-This Task 6 execution is a fresh session with no first-hand memory of Task 1's operator sitting —
-Tasks 1–3 were executed and committed (`75e3dc18f`, `88cd2e4b7`, `4e1ec7f1b`) by prior sessions, and
-Task 5's live checkpoint result was relayed to this session by the orchestrator. Exactly as
-`260923-qe5-SUMMARY.md` records for the same class of gap: the raw `[GAMEPAD-AXIS]`/
-`[GAMEPAD-SCROLL]` console/log transcript from the operator's live sitting was not preserved to a
-file. M1–M3 below are reconstructed from the most specific first-hand record available — the
-values those prior sessions wrote into committed source comments (`nintendo.ts`,
-`nintendoLayout.test.ts`) and commit messages — not a re-captured verbatim log. Where a value is
-not recorded anywhere in the tree, that gap is stated explicitly rather than invented.
+Task 6 ran in a session with no first-hand memory of Task 1's operator sitting: Tasks 1-3 were
+executed and committed (`75e3dc18f`, `88cd2e4b7`, `4e1ec7f1b`) by earlier sessions, and Task 5's
+live checkpoint result was relayed by the orchestrator. Its first draft of this section therefore
+recorded M1-M3 as RECONSTRUCTED from committed source comments, believing the raw sitting transcript
+had not been preserved to a file.
+
+**That was wrong, and is corrected here.** The transcript WAS preserved. Task 1's Piece A routed the
+`[GAMEPAD-AXIS]` lines through `window.api.logInfo` into
+`%LOCALAPPDATA%\GameLib\logs\gamelib.log`, which is exactly where the orchestrator read them
+during checkpoint 1. The figures below are quoted from that log, not inferred from source comments.
+Preserving them here matters because the log rotates.
+
+The one genuine gap is M4's `[GAMEPAD-SCROLL]` line, which went to the DevTools console rather than
+the log and was not captured -- see the M4 entry for why that does not block.
+
+Sample counts are scoped to the checkpoint-1 window (07:39:52-07:42:19) so they exclude the
+post-fix checkpoint-2 sitting, which wrote to the same log.
 
 ## M1–M4, and which `<conditionality>` row applied
 
-- **M1 — the right stick's real Y-axis index and sign.** `axes[5]`. Pushing the right stick fully
-  UP drove axis 5 NEGATIVE through three observed samples — `-0.14510 -> -0.45882 -> -0.97647` —
-  then fully DOWN drove it back POSITIVE (recorded verbatim in `nintendo.ts`'s
-  `RAW_HID_STICK_AXES` comment and `nintendoLayout.test.ts`'s `RIGHT_STICK_Y_NON_STANDARD`
-  comment). UP is therefore NEGATIVE on axis 5, the same sign convention the left stick's
-  `axes[1]` already uses — no per-device sign inversion was needed.
+- **M1 — the right stick's real Y-axis index and sign.** `axes[5]`, from **104 samples** in the
+  checkpoint-1 window, range `-1.00000` to `+1.00000`. The first vertical push (right stick UP)
+  drove it negative and back, verbatim from `gamelib.log` at 07:40:02:
+
+  ```
+  -0.14510  -0.24706  -0.36471  -0.45882  -0.67843  -0.97647
+  -0.81176  -0.64706  -0.43529  -0.19216  -0.01176
+  ```
+
+  UP is therefore NEGATIVE on axis 5 — the same sign convention the left stick's `axes[1]` already
+  uses. So the existing `< -0.5` / `> 0.5` comparisons were already correct and **only the INDEX
+  changed**; no per-device sign inversion was needed.
+- **Temporal attribution — why axis 5 is the RIGHT stick and not something else.** Each axis's first
+  sample lines up with the instructed step order, which is what rules out a mis-attribution:
+
+  | first sample | axis | operator's step |
+  | --- | --- | --- |
+  | 07:39:52 | 9 (n=54) | step 1 — hat / d-pad |
+  | **07:40:02** | **5 (n=104)** | **step 2 — right stick VERTICAL** |
+  | 07:40:09 | 2 (n=45) | step 3 — right stick horizontal |
+  | 07:40:29 | 0 (n=66) and 1 (n=137), together | step 4 — left stick |
+
+  Axes **3, 4, 6, 7 and 8 recorded zero samples** across the entire window.
 - **M2 — right-stick X re-confirmed.** `axes[2]`, re-confirmed on this instrument via the
   `[tauriGamepadInput] unhandled gamepad action "rightStickLeft"` warning still reaching the
   `default` arm at `tauriGamepadInput.ts:394` (Task 1 step d / step e cross-check).
-- **M3 — resting baseline.** Not preserved as a full one-shot ten-axis transcript (the gap named
-  above). What IS recorded, for every axis `checkNintendo`'s stick reads and hat read actually
-  compare against a threshold: `axes[0]=0.00392`, `axes[1]=0.00392`, `axes[2]=0.00392`,
-  `axes[5]=0.00392` — all resting well inside the `±0.5` dispatch threshold, which is why Task 2's
-  optional case (G) ("a resting deflected axis dispatches no right-stick action") was deliberately
-  **not written** — no axis `checkNintendo`'s stick logic reads warrants it. The hat axis (index 9)
-  rests at `3.28571`, outside `±0.5`, but it is never compared against that threshold — only
-  `nintendoHatDirection`'s rounded-value switch reads it, so it does not warrant case (G) either.
+- **M3 — resting baseline.** The full one-shot ten-axis line, verbatim from `gamelib.log`. Emitted
+  on the first frame per controller and byte-identical across all three connects (07:17:40,
+  07:17:49, 07:17:57):
+
+  ```
+  [GAMEPAD-AXIS] first=true 0=0.00392 1=0.00392 2=0.00392 3=0.00000 4=0.00000 5=0.00392
+  6=0.00000 7=0.00000 8=0.00000 9=3.28571
+  ```
+
+  The pattern is the useful part: the four live analogue stick axes (0, 1, 2, 5) all rest at
+  `0.00392`, while every unused axis sits at exactly `0.00000`. That is an independent signature for
+  "this axis is wired to a physical stick", and it agrees with the temporal attribution above.
+
+  All four stick axes rest well inside the `±0.5` dispatch threshold, which is why Task 2's optional
+  case (G) ("a resting deflected axis dispatches no right-stick action") was deliberately **not
+  written**. The hat axis (index 9) rests at `3.28571`, outside `±0.5`, but is never compared against
+  that threshold — only `nintendoHatDirection`'s rounded-value switch reads it — so it does not
+  warrant case (G) either. This also reconfirms quick-260923-qe5's measured hat neutral of
+  `3.28571`, against that plan's predicted `1.28571`.
   **The load-bearing part of M3, stated by the orchestrator relaying the prior session's finding
   and worth recording verbatim because the plan itself flagged it as the likely trap:** the plan
   named `axes[4]` — `checkGamecube`'s row for a different device in the same file — as "the most
@@ -78,9 +114,29 @@ exactly at `0.00000`). A plan that had substituted `axes[4]` for `axes[3]` by sy
 
 ## RED text, labelled BEHAVIOURAL
 
-**Source (reconstructed, not a re-captured jest transcript — see the honesty note above):**
-Task 2's own commit message (`88cd2e4b7`), written by the session that ran the RED proof, is the
-most specific first-hand record available:
+**Source.** These assertion texts were relayed verbatim by the Task 2 executor in its hand-back
+report; they were NOT re-captured from a jest run in this session, and unlike M1-M3 no log file
+preserves them:
+
+```
+(A) dispatches rightStickUp from its MEASURED Y axis
+      Expected value: "rightStickUp"
+      Received array: []
+(B) dispatches rightStickDown from its MEASURED Y axis
+      Expected value: "rightStickDown"
+      Received array: []
+(C) cross-mapping contrast
+      Expected value: not "rightStickUp"
+      Received array: ["rightStickUp"]
+```
+
+(A) and (B) fail by **absence** — pre-fix code reads `axes[3]`, which never moves. (C) fails by
+**presence** — pre-fix, driving `axes[3]` still dispatches. `pnpm codecheck` was **clean, zero TS
+errors** alongside this RED, which is what makes it genuinely behavioural rather than a signature
+error hidden by `isolatedModules: true`.
+
+Task 2's commit message (`88cd2e4b7`), written by the session that ran the proof, records the same
+thing in prose:
 
 > Cases (A)/(B)/(C) are RED against pre-fix source: (A)/(B) fail by absence (dispatched array empty
 > because axes[3] never moves), (C) fails by presence (moveAxis(POWERA_ID, 3, -1, ...) still
@@ -209,8 +265,11 @@ after `files:`.
 
 ## Deviations from Plan
 
-None beyond the honesty reconstruction of M1–M4 already described above (not a code deviation —
-Rules 1–4 do not apply to a documentation gap in a prior session's transcript). No auto-fixed bugs,
+None. One documentation correction was applied to this SUMMARY after Task 6 committed it: its first
+draft recorded M1-M3 as reconstructed from source comments, on the mistaken belief that the sitting
+transcript had not been preserved. It had — in `gamelib.log` — so those entries now quote it
+directly. See **Provenance of this SUMMARY's evidence** above. Not a code deviation; Rules 1-4 do
+not apply to a documentation correction. No auto-fixed bugs,
 no added functionality beyond the plan's own scope, and no architectural changes were needed for
 Task 6's removal-only work.
 
