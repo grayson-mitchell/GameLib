@@ -106,23 +106,32 @@ secrets-less run ships an unsigned `.exe`/NSIS installer and stays green.
    your PC", where the continue affordance is behind **More info → Run anyway**. For a public
    launcher this is severe install friction on every install.
 2. **Reputation does not transfer.** Even once signed, an OV certificate accumulates SmartScreen
-   reputation slowly; an EV certificate gets it immediately but costs substantially more and
-   generally requires a hardware token or cloud HSM, which complicates CI. Decide which before
-   purchasing — this is the actual cost decision, not the signing mechanics.
+   reputation slowly; ~~an EV certificate gets it immediately~~ **SUPERSEDED 2026-09-24 — see the
+   STATUS section above.** EV's instant-SmartScreen bypass was removed in 2024; EV now
+   reputation-builds identically to OV. EV certificates still cost substantially more and generally
+   require a hardware token or cloud HSM, which complicates CI.
 3. **Windows is not the operator's primary OS**, hence `platform: windows` — verification needs
    that machine or a VM.
 
 ## Direction
 
-1. Decide OV vs EV (see 2 above). This is the blocking decision, and it is a spend decision.
-2. Obtain the certificate, export as `.p12`/`.pfx`, base64-encode it.
-3. Enrol `WINDOWS_CERTIFICATE` (base64), `WINDOWS_CERTIFICATE_PASSWORD`, and
-   `WINDOWS_CERT_THUMBPRINT` (SHA-1 thumbprint, no spaces).
-4. No workflow edits are expected — but **do not take that on faith**: the macOS half of this
-   split asserted "No code changes" and was measurably wrong, because the gap was in
-   `tauri.macos.conf.json` rather than in the workflow. Check for a Windows analogue before
-   concluding the same. A cloud-HSM/token EV setup in particular cannot use the
-   `WINDOWS_CERTIFICATE` base64-`.p12` path at all and would need a different signing command.
+1. Apply to SignPath Foundation at https://signpath.org/apply. Manual review, typically 1-2 weeks,
+   possibly with follow-up questions; the application is identity-bound to the maintainer and
+   cannot be automated. Eligibility conditions to check first: an OSI-approved open-source licence
+   with no commercial dual-licensing for any component (GameLib is `GPL-3.0-only` per
+   `package.json`, public repo — plausibly qualifying); no proprietary or non-open-source
+   component; actively maintained; already released in the form that should be signed;
+   functionality described on the download page; 2FA enabled on the GitHub account.
+2. On approval, design the build → sign → re-sign → upload ordering from Finding 4 BEFORE wiring
+   any credentials. Getting credentials working first and the ordering second is how a broken
+   updater ships.
+3. Fall back to an OV certificate from a commercial CA — $150-300/yr, USB token or cloud HSM
+   required, and still needing `signCommand` rather than the base64-`.p12` path — only if SignPath
+   declines.
+
+Whichever route is taken, the three currently-absent secret names recorded in the Problem section
+may no longer be the right secret SHAPE. The Problem section's measurement that they are absent
+stays true as history; it is not being reworded here.
 
 ## Verification — a green build proves nothing
 
@@ -135,6 +144,9 @@ The workflow is green today while shipping unsigned. Verify on the artifact, on 
 - Download the published asset **through a browser** (not `curl`, which does not attach the
   zone-identifier mark-of-the-web) on a machine that has never built the app, and confirm no
   SmartScreen interstitial.
+- After the first signed release, verify that the published `*-setup.exe.sig` verifies against the
+  SIGNED installer bytes, and that an actual in-app update from the prior version completes. A
+  signature that merely exists proves nothing — this is exactly the failure Finding 4 describes.
 
 ## Related
 
