@@ -115,9 +115,25 @@ self-inflicted faults above.
 `loadPath` signature being exercised only in type and by inspection of its source (`:89-90`); the
 sidecar half's scalar signature is exercised for real by the Backend suite.
 
-## Filed, not fixed
+## Filed, then closed as by-design the same day
 
-`.planning/todos/pending/2026-09-24-zh-hans-hant-carry-unreachable-one-plural-keys.md` —
-`zh_Hans`/`zh_Hant` carry `_one` keys that CLDR can never select (Chinese has only `other`). Dead
-weight now that resolution works, and `machine-fill` will re-emit them unless its own plural-form
-call site is fixed too. `minor` / `any` / `code`.
+`.planning/todos/completed/2026-09-24-zh-hans-hant-carry-unreachable-one-plural-keys.md`.
+
+Filed on the observation that `zh_Hans`/`zh_Hant` carry `_one` keys CLDR can never select. The
+premise held; the todo around it did not, and follow-up disproved three of its claims:
+
+- **Not a zh issue.** Seven locales whose only category is `other` (ja, ko, vi, th, id, zh_Hans,
+  zh_Hant) carry the identical 8 `_one` / 8 `_other` shape.
+- **`machine-fill` does not share the root cause the todo guessed at.**
+  `pluralCategoriesFor` (`meta/machineFillGamelib.ts:136`) already does
+  `locale.replace(/_/g, '-')`, with a header naming `zh_Hans`/`pt_BR`. That code never had this
+  bug.
+- **Deleting the keys turns CI red.** `requiredPluralKeys` (`:207-218`) returns the UNION of en's
+  suffixes and the locale's own categories precisely so `lint-translations`' "every en key
+  present" check passes. Measured: removing one took the gate from `7435 findings, 0 hard
+  failures` to `7436 findings, 1 hard failures`.
+
+The keys are inert for i18next and load-bearing for a gate. `requiredPluralKeys`' own comment
+already said so — *"the ja `_one` is a harmless dead key i18next never asks for"*. The filing ran
+a CLDR check and never asked why the key was there; the answer was in a file it had itself listed
+under `files:`.
