@@ -70,7 +70,7 @@ export function isNintendoControllerId(id: string): boolean {
   return !XBOX_ID.test(id) && NINTENDO_ID.test(id)
 }
 
-export type NintendoFaceIndices = {
+type NintendoFaceIndices = {
   action: number
   back: number
   alt: number
@@ -137,7 +137,7 @@ const NON_STANDARD_HAT_AXIS = 9
 // `checkN64Clone1` below uses DIFFERENT constants for a DIFFERENT device, and
 // its own comment and code already disagree with each other -- do not copy
 // that row here, and this function does not change it.
-export function nintendoHatDirection(
+function nintendoHatDirection(
   hatValue: number
 ): 'up' | 'down' | 'left' | 'right' | null {
   switch (Math.round(hatValue * 10)) {
