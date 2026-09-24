@@ -116,6 +116,65 @@ export function nintendoFaceIndices(
   return mapping === 'standard' ? STANDARD_FACE_INDICES : RAW_HID_FACE_INDICES
 }
 
+type NintendoStickAxes = {
+  leftX: number
+  leftY: number
+  rightX: number
+  rightY: number
+}
+
+// THE SINGLE SOURCE OF TRUTH for which axis index carries each stick, on
+// EITHER wire format Chromium may report a Nintendo pad with. Mirrors the
+// `nintendoFaceIndices` shape above -- do not invent a second shape.
+//
+// This row reproduces exactly what shipped before quick-260925-9de -- a
+// refactor of the constants that used to sit inline in `checkNintendo`
+// (leftAxisX = axes[0], leftAxisY = axes[1], rightAxisX = axes[2],
+// rightAxisY = axes[3]), not a change to them.
+const STANDARD_STICK_AXES: NintendoStickAxes = {
+  leftX: 0,
+  leftY: 1,
+  rightX: 2,
+  rightY: 3
+}
+
+// MEASURED against the operator's PowerA Advantage Wired Controller for
+// Nintendo Switch 2 (Vendor: 20d6 Product: a720), 2026-09-25
+// (quick-260925-9de Task 1, operator checkpoint 1):
+//   leftX: 0, leftY: 1 -- MEASURED 2026-09-25 (Task 1 step e), corroborated
+//     by focus moving in all four directions.
+//   rightX: 2 -- CONFIRMED LIVE 2026-09-25 by
+//     `[tauriGamepadInput] unhandled gamepad action "rightStickLeft"`
+//     reaching the default arm at tauriGamepadInput.ts:394; re-confirmed as
+//     M2.
+//   rightY: 5 -- MEASURED 2026-09-25 (Task 1 step b). Pushing the right
+//     stick fully UP drove axis 5 to -0.97647 (via -0.14510, -0.45882);
+//     fully DOWN drove it back positive. UP is therefore NEGATIVE on this
+//     pad's axis 5, the same sign convention the left stick's axes[1] uses.
+// `checkGamecube` at :27-30 uses axes[3]/axes[4] for a DIFFERENT device in
+// this same file, and axes[3] was live-FALSIFIED as this pad's right-stick
+// axis (it never moved) on 2026-09-25. Do not copy that row here. Same rule
+// this file already applies to `checkN64Clone1`'s hat table: derive from
+// observation and say so.
+const RAW_HID_STICK_AXES: NintendoStickAxes = {
+  leftX: 0,
+  leftY: 1,
+  rightX: 2,
+  rightY: 5
+}
+
+// Module-private: unlike `nintendoFaceIndices`, there is no second consumer
+// (Console Mode's `controller.ts` does not read stick axes), and Task 2's
+// cases drive through `initGamepad` rather than importing this directly. An
+// export nothing consumes is API surface that invites the next reader to
+// consume it wrongly.
+function nintendoStickAxes(mapping: GamepadMappingType): NintendoStickAxes {
+  // Branches identically to `nintendoFaceIndices` -- including treating
+  // 'xr-standard' as non-standard, for the reason already written in that
+  // function's comment. Do NOT use a `!== ''` test.
+  return mapping === 'standard' ? STANDARD_STICK_AXES : RAW_HID_STICK_AXES
+}
+
 // Hat-axis index on the non-standard PowerA pad above. MEASURED 2026-09-23
 // (Task 1): axes.length is 10 on this pad, and the hat lives at index 9.
 // This is specific to the measured device's raw HID report, not a general
@@ -172,6 +231,9 @@ function nintendoHatDirection(
 // console itself, and is what makes the on-screen glyph and the acting
 // button agree. Observed non-standard device: PowerA Advantage Wired
 // Controller for Nintendo Switch 2 (Vendor: 20d6 Product: a720), 2026-09-23.
+// The STICK AXES are read from the mapping too (quick-260925-9de) -- closing
+// the gap quick-260923-qe5 deliberately left open when it branched only the
+// buttons and the hat.
 export function checkNintendo(
   buttons: readonly GamepadButton[],
   axes: readonly number[],
@@ -187,11 +249,13 @@ export function checkNintendo(
   const A = buttons[faceIndices.action],
     B = buttons[faceIndices.back],
     Y = buttons[faceIndices.alt],
-    X = buttons[faceIndices.menu],
-    leftAxisX = axes[0],
-    leftAxisY = axes[1],
-    rightAxisX = axes[2],
-    rightAxisY = axes[3]
+    X = buttons[faceIndices.menu]
+
+  const stickAxes = nintendoStickAxes(mapping)
+  const leftAxisX = axes[stickAxes.leftX],
+    leftAxisY = axes[stickAxes.leftY],
+    rightAxisX = axes[stickAxes.rightX],
+    rightAxisY = axes[stickAxes.rightY]
 
   checkAction('mainAction', A?.pressed, controllerIndex)
   checkAction('back', B?.pressed, controllerIndex)
