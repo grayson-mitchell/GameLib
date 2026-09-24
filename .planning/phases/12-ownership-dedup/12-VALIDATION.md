@@ -1,9 +1,10 @@
 ---
 phase: 12
 slug: ownership-dedup
-status: draft
+status: approved
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
+wave_0_verified: 2026-09-25
 created: 2026-07-06
 ---
 
@@ -56,16 +57,18 @@ created: 2026-07-06
 
 ## Wave 0 Requirements
 
+> **Wave 0 CLOSED 2026-09-25 by quick task `260925-ghg`, against artifacts on disk — not against a plan summary claiming them.** This checklist sat unticked while the phase executed and completed; `status:` and `wave_0_complete:` were stale the same way. All six artifacts confirmed on disk; `dedup`/`electronStores`/`classify`/`library` plus `HumbleOriginInfo` suites **331 passed** (2026-09-25).
+
 Created within the plan that first needs them (tests-before-implementation via `tdd="true"` tasks):
 
-- [ ] `src/backend/humble/__tests__/dedup.test.ts` — HDEDUP-01: AppID-exact-final, fuzzy-85%, DLC-guard, UNPICKED-exclusion, cross-platform, keep-last-known (Plan 12-02 T2)
-- [ ] `src/backend/humble/__tests__/fixtures/steamGames.ts` — `GameInfo[]` incl. the documented DLC/edition-variant titles from RESEARCH.md fixture block (Plan 12-02 T2)
-- [ ] `src/backend/humble/__tests__/electronStores.test.ts` — override store disconnect-survival (Plan 12-03 T1; create if absent)
-- [ ] `src/frontend/screens/Game/GamePage/components/__tests__/HumbleOriginInfo.test.tsx` — HDEDUP-02: redeemed-match / non-steam / non-redeemed / no-match (Plan 12-05 T2)
+- [x] `src/backend/humble/__tests__/dedup.test.ts` — HDEDUP-01: AppID-exact-final, fuzzy-85%, DLC-guard, UNPICKED-exclusion, cross-platform, keep-last-known (Plan 12-02 T2)
+- [x] `src/backend/humble/__tests__/fixtures/steamGames.ts` — `GameInfo[]` incl. the documented DLC/edition-variant titles from RESEARCH.md fixture block (Plan 12-02 T2)
+- [x] `src/backend/humble/__tests__/electronStores.test.ts` — override store disconnect-survival (Plan 12-03 T1; create if absent)
+- [x] `src/frontend/screens/Game/GamePage/components/__tests__/HumbleOriginInfo.test.tsx` — HDEDUP-02: redeemed-match / non-steam / non-redeemed / no-match (Plan 12-05 T2)
 
 Extended (already exist):
-- [ ] `src/backend/humble/__tests__/classify.test.ts` — steam_app_id capture cases (Plan 12-01 T2)
-- [ ] `src/backend/humble/__tests__/library.test.ts` — classifier-version backfill + recompute + keep-last-known + override (Plan 12-03 T2)
+- [x] `src/backend/humble/__tests__/classify.test.ts` — steam_app_id capture cases (Plan 12-01 T2)
+- [x] `src/backend/humble/__tests__/library.test.ts` — classifier-version backfill + recompute + keep-last-known + override (Plan 12-03 T2)
 
 ---
 

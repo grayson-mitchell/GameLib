@@ -81,6 +81,14 @@ exists to kill.
 
 ## Wave 0 Requirements
 
+> **DELIBERATELY LEFT `draft` by the 2026-09-25 sweep (quick `260925-ghg`) — this is correct, not
+> an oversight.** Phase 44 is **⛔ SUPERSEDED by Phase 45** (2026-09-18) at 7 of 8 plans, with
+> `44-08` abandoned rather than finished, and it carries named unfixed residue: contrast defect 9
+> ships at 3.50:1 in nord light, and three D-24 row states were never reached. Advancing this
+> document to `approved` would assert a validation contract was satisfied for a screen that was
+> deliberately retired mid-gate. The surviving seams (`src/common/winetricks/{verbs,
+> deriveRowState}.ts`) carried into Phase 45 and are validated there, not here.
+
 - [ ] `src/frontend/components/UI/Winetricks/WinetricksBrowse/__tests__/WinetricksBrowse.test.tsx` —
       search → flat list, zero-result, D-13 installed-in-search, D-04 reset-on-open, C-4 Needs-GUI routing
 - [ ] `src/frontend/components/UI/Winetricks/WinetricksBrowse/__tests__/remountSafety.test.tsx` —

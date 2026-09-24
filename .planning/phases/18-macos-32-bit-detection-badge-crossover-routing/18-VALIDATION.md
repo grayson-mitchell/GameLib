@@ -1,9 +1,10 @@
 ---
 phase: 18
 slug: macos-32-bit-detection-badge-crossover-routing
-status: draft
+status: approved
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
+wave_0_verified: 2026-09-25
 created: 2026-07-12
 ---
 
@@ -52,10 +53,12 @@ Task IDs finalized by the planner; rows below are requirement-anchored seeds. `�
 
 ## Wave 0 Requirements
 
-- [ ] `src/backend/storeManagers/steam/__tests__/fixtures/appinfo-*.json` — captured by 18-01; retained as evidence that PICS carries no mac-arch signal (direction-B pivot). The min-OS parser (MAC32-01) is validated against these titles' real `mac_requirements.minimum` strings, seeded literally in `games.test.ts`.
-- [ ] Extend `src/backend/storeManagers/steam/__tests__/games.test.ts` — RED scaffolds for the min-OS heuristic parser `parseSteamMacMinOSVersion`/`macArchFromMinOS` (MAC32-01) and the `isBottleEligible()` 32-bit OR-branch (MAC32-02).
-- [ ] Extend `src/backend/storeManagers/steam/__tests__/library.test.ts` — RED scaffolds for the Mach-O verdict logic (MAC32-03).
-- [ ] Frontend RTL test scaffold for the OS/arch badge (MAC32-04).
+> **Wave 0 CLOSED 2026-09-25 by quick task `260925-ghg`, against artifacts on disk — not against a plan summary claiming them.** This checklist sat unticked while the phase executed and completed; `status:` and `wave_0_complete:` were stale the same way. `games.test.ts`, `library.test.ts` and `fixtures/appinfo-32bit.json` confirmed on disk; both suites **485 passed** (2026-09-25).
+
+- [x] `src/backend/storeManagers/steam/__tests__/fixtures/appinfo-*.json` — captured by 18-01; retained as evidence that PICS carries no mac-arch signal (direction-B pivot). The min-OS parser (MAC32-01) is validated against these titles' real `mac_requirements.minimum` strings, seeded literally in `games.test.ts`.
+- [x] Extend `src/backend/storeManagers/steam/__tests__/games.test.ts` — RED scaffolds for the min-OS heuristic parser `parseSteamMacMinOSVersion`/`macArchFromMinOS` (MAC32-01) and the `isBottleEligible()` 32-bit OR-branch (MAC32-02).
+- [x] Extend `src/backend/storeManagers/steam/__tests__/library.test.ts` — RED scaffolds for the Mach-O verdict logic (MAC32-03).
+- [x] Frontend RTL test scaffold for the OS/arch badge (MAC32-04).
 
 *Existing jest infrastructure covers the framework — only fixtures + new specs needed.*
 

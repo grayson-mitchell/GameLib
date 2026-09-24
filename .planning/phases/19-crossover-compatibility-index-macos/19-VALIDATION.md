@@ -46,6 +46,21 @@ created: 2026-07-12
 
 ## Wave 0 Requirements
 
+> **LEFT `draft` by the 2026-09-25 sweep (quick `260925-ghg`), and for a DIFFERENT reason than
+> its siblings — read before "fixing" it.** The three items below are **unsubstituted template
+> placeholders**, not real requirements: `{tests/test_file.py}` and `{tests/conftest.py}` are
+> Python paths with the scaffold's braces still on them, in a TypeScript/Rust repo that has no
+> Python test suite. Nothing was ever written here.
+>
+> So this is not staleness — the seven drafts advanced that day had real checklists whose
+> artifacts had landed. Ticking these boxes would assert that three files exist which were never
+> meant to. Advancing `status:` would assert a validation contract that was never authored.
+>
+> **What closing this actually needs:** decide whether Phase 19 needed a Wave 0 at all (the
+> template's own escape hatch, quoted below, is the likely answer), then replace these three
+> lines with that sentence or with the real artifact list. That is a content decision about a
+> completed phase, not a bookkeeping flip, which is why the sweep declined to make it.
+
 - [ ] `{tests/test_file.py}` — stubs for REQ-{XX}
 - [ ] `{tests/conftest.py}` — shared fixtures
 - [ ] `{framework install}` — if no framework detected

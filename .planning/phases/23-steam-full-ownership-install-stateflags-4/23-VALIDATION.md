@@ -1,9 +1,10 @@
 ---
 phase: 23
 slug: steam-full-ownership-install-stateflags-4
-status: draft
+status: approved
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
+wave_0_verified: 2026-09-25
 created: 2026-07-17
 ---
 
@@ -51,11 +52,13 @@ created: 2026-07-17
 
 ## Wave 0 Requirements
 
-- [ ] Unit test coverage for the completeness predicate (4-vs-1026 gate) — pure function, deterministic, fully automatable
-- [ ] Unit test coverage for buildid threading through `buildDepotPlan` → `finalizeToSteam` → `writeAppManifest` (assert non-`"0"` buildid propagates)
-- [ ] Unit test coverage for `EDepotFileFlag` → filesystem-mode mapping (bitflag → chmod/attrib decisions), including the load-bearing exec bit
-- [ ] Unit/integration coverage for resume reconciliation: partial-state detection → re-selection → re-verify → complete-or-fallback
-- [ ] Existing default-off/1026 tests remain green (byte-identical fallback behavior is the safety net — must not regress)
+> **Wave 0 CLOSED 2026-09-25 by quick task `260925-ghg`, against artifacts on disk — not against a plan summary claiming them.** This checklist sat unticked while the phase executed and completed; `status:` and `wave_0_complete:` were stale the same way. Coverage located for all five items — `manifest.test.ts` / `depot.finalize.test.ts` (4-vs-1026 gate, buildid threading), `fileAttributes.test.ts` (`EDepotFileFlag` → mode, exec bit), `games.test.ts` (resume reconciliation). Four suites **312 passed** (2026-09-25).
+
+- [x] Unit test coverage for the completeness predicate (4-vs-1026 gate) — pure function, deterministic, fully automatable
+- [x] Unit test coverage for buildid threading through `buildDepotPlan` → `finalizeToSteam` → `writeAppManifest` (assert non-`"0"` buildid propagates)
+- [x] Unit test coverage for `EDepotFileFlag` → filesystem-mode mapping (bitflag → chmod/attrib decisions), including the load-bearing exec bit
+- [x] Unit/integration coverage for resume reconciliation: partial-state detection → re-selection → re-verify → complete-or-fallback
+- [x] Existing default-off/1026 tests remain green (byte-identical fallback behavior is the safety net — must not regress)
 
 *Existing Jest infrastructure covers the framework; new specs are additive.*
 

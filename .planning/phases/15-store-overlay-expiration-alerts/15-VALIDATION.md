@@ -1,9 +1,10 @@
 ---
 phase: 15
 slug: store-overlay-expiration-alerts
-status: draft
+status: approved
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
+wave_0_verified: 2026-09-25
 created: 2026-07-09
 ---
 
@@ -59,10 +60,12 @@ created: 2026-07-09
 
 ## Wave 0 Requirements
 
-- [ ] `src/common/discounts/badges.ts` + `src/backend/discounts/__tests__/badges.test.ts` — new pure helper, no existing file (Plan 15-01 Task 1)
-- [ ] `src/backend/humble/expirationAlerts.ts` + `src/backend/humble/__tests__/expirationAlerts.test.ts` — new transition-detection + digest-copy logic (Plan 15-03 Task 1)
-- [ ] `src/backend/humble/electronStores.ts` — extend with `humbleNotifiedExpirationStore` (existing file gains an export; extend existing `electronStores.test.ts`, do not replace) (Plan 15-02 Task 2)
-- [ ] Pinned-section membership helper — `partitionWaitingByUrgency` added to `viewFilters.ts` + `viewFilters.test.ts` extension (Plan 15-04 Task 1)
+> **Wave 0 CLOSED 2026-09-25 by quick task `260925-ghg`, against artifacts on disk — not against a plan summary claiming them.** This checklist sat unticked while the phase executed and completed; `status:` and `wave_0_complete:` were stale the same way. `badges.ts`, `expirationAlerts.ts`, `electronStores.ts`, `viewFilters.ts` and each named test confirmed on disk; suites green in the same **331 passed** run (2026-09-25).
+
+- [x] `src/common/discounts/badges.ts` + `src/backend/discounts/__tests__/badges.test.ts` — new pure helper, no existing file (Plan 15-01 Task 1)
+- [x] `src/backend/humble/expirationAlerts.ts` + `src/backend/humble/__tests__/expirationAlerts.test.ts` — new transition-detection + digest-copy logic (Plan 15-03 Task 1)
+- [x] `src/backend/humble/electronStores.ts` — extend with `humbleNotifiedExpirationStore` (existing file gains an export; extend existing `electronStores.test.ts`, do not replace) (Plan 15-02 Task 2)
+- [x] Pinned-section membership helper — `partitionWaitingByUrgency` added to `viewFilters.ts` + `viewFilters.test.ts` extension (Plan 15-04 Task 1)
 
 *(No framework install needed — ts-jest/Jest already fully configured for both `common/` (via backend project) and frontend component tests.)*
 

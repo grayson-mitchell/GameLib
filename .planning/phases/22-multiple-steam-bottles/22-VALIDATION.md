@@ -64,6 +64,13 @@ updated: 2026-07-17
 
 ## Wave 0 Requirements
 
+> **DELIBERATELY LEFT `draft` by the 2026-09-25 sweep (quick `260925-ghg`) — this is correct, not
+> an oversight.** Seven sibling VALIDATION drafts were advanced that day because their phases had
+> executed and their Wave 0 artifacts were on disk. **Phase 22 is `parked` with 0 of 8 plans
+> summarised** — none of this work has happened, so an unticked checklist is an accurate record.
+> Do not advance it to make a colour change; advance it if and when Phase 22 is un-parked and the
+> artifacts below actually exist.
+
 - [ ] `src/backend/storeManagers/steam/__tests__/families.test.ts` — NEW (Plan 02) covering Req 1/2/4/5/7/9: migration (idempotent, preserve wineVersion/provisioned, ACF backfill, schemaVersion), CRUD persist/re-read, last-family delete block, resolver ok/needs-provision, slug/sanitize/unique naming.
 - [ ] `bottle.test.ts` extension (Plan 01) — `getSteamBottleSettings(bottleName)` per-family + fallback; dispatch threading; CR-01 for explicit bottleName.
 - [ ] `library.test.ts` extension (Plan 03) — multi-family `buildBottleInstalledMap` tagging bottleName; readAcfState across families.
