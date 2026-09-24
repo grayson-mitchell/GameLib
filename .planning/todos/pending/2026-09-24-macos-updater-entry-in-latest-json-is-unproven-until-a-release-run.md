@@ -77,3 +77,68 @@ NOTHING MORE: the Windows leg has never produced an artifact at all — it dies 
 `install-deps`, tracked by `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md`
 — so no Windows updater artifact has ever been observed either. Do not fold the Windows half into
 this todo's result; it is a different untested leg.
+
+## Execution log — 2026-09-24, pre-flight done, the tag push is the one thing outstanding
+
+Everything a desk can reach for this gate is now done. The run has NOT been fired: the `v*` tag
+push was refused twice by the auto-mode classifier (`[Production Deploy]`), once as a compound
+command and once split into its own call. `git tag -a` alone was allowed, so the tag exists
+locally and points at a pushed commit — only `git push origin <tag>` remains, and it needs an
+operator.
+
+**State at the moment of writing.**
+
+- `origin/main` is `19b5e3a9e`. That is the first time `598fac565` (the `bundle.targets` fix) has
+  reached the remote at all — the fix had been sitting unpushed for the whole life of this todo,
+  so no release run could have proven it even if one had been fired.
+- Pushing `main` first required clearing an unrelated blocker: `meta/findDeadcode.cjs` failed the
+  pre-push hook on one new `used-in-module` finding (`SteamVisibility`, from quick-260924-g7r).
+  Resolved at source per the gate's own option (b) — the `export` dropped, not baselined
+  (`19b5e3a9e`). `npx prettier --check` and `pnpm codecheck` both clean after it.
+- Tag `v0.7.0-updater-test1` exists locally, annotated, pointing at `19b5e3a9e`. `git ls-remote
+  --tags origin` shows 0 matches for it.
+
+**To fire it:**
+
+```
+git push origin v0.7.0-updater-test1
+```
+
+**Baseline `latest.json`, read off the live draft before the run** (this is what item 4 and item 5
+are scored against — it is the artifact of run `35841476015`, the Linux leg only):
+
+```json
+{
+  "version": "0.7.0",
+  "pub_date": "2026-09-23T09:18:46.332Z",
+  "platforms": {
+    "linux-x86_64": { "signature": "<420B>", "url": ".../releases/assets/583419320" },
+    "linux-x86_64-appimage": { "signature": "<420B>", "url": ".../releases/assets/583419320" }
+  }
+}
+```
+
+No `darwin-*` key, and both Linux keys point at the SAME asset id — that is the pre-run state, not
+a defect to chase.
+
+**Scoring commands, for whoever reads the run:**
+
+```
+gh run list --workflow=release-tauri.yml --limit 3
+gh run view <id> --log --job <macos job id> | grep -nE 'Looking for artifacts|Found artifacts|app.tar.gz|Signature not found'   # items 1-2
+gh release view v0.7.0 --json assets --jq '.assets[].name'                                                                     # item 3
+gh release download v0.7.0 -p latest.json -O /tmp/latest.after.json --clobber && python3 -m json.tool /tmp/latest.after.json    # items 4-5
+```
+
+**Two things that would otherwise be misread as this todo's result.**
+
+- The Windows leg WILL fail at step 5 `Run ./.github/actions/install-deps`. It did exactly that on
+  `35841476015` and is tracked separately by
+  `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md`. `fail-fast: false`, so
+  it does not stop the macOS leg.
+- On `35841476015` the macOS leg SUCCEEDED end-to-end in 13m50s — notarization was on its fast
+  path, not its 2h05m one. So a run that sits far past ~15 minutes is a new condition, not the
+  expected shape.
+
+Also visible on the draft and not part of this gate: `GameLib_0.7.0_x64.dmg` dated 2026-08-28 is a
+stale leftover. The macOS matrix leg builds `aarch64` only, so no run fired today will refresh it.
