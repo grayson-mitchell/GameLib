@@ -177,9 +177,13 @@ and it stays open.
 
 - **The Windows leg SUCCEEDED**, for the first time ever — `GameLib_0.7.0_x64-setup.exe`
   (112,309,170 B) plus `.sig`, and `windows-x86_64` + `windows-x86_64-nsis` keys in `latest.json`.
-  `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` says that leg dies at
-  step 5 `install-deps`; that was true on 35841476015 and is NOT true here. Its premise needs
-  re-reading against this run before anyone trusts either state.
+  This is not a surprise so much as a discharged residual, and the correction is worth stating
+  precisely: `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` is NOT a
+  standing todo — it was closed 2026-09-23 by quick-260923-tip. Its closing note says the
+  `windows-latest` CI leg "was not run … not zero and has not been observed". **This run is that
+  missing observation, and it is green.** The `install-deps` death seen on 35841476015 was the
+  pre-fix state. Recorded here rather than folded into this todo's result: it belongs to that
+  file's residual, not to the updater gate.
 - **`draft-release-mac.yml` and `draft-release-linux.yml` did not run.** This workflow's header
   claims both co-trigger on `v*` and land assets on the same release. Only `Release Tauri` fired
   on this tag. The header is stale on that point.
