@@ -273,4 +273,14 @@ not currently apply — but this was not tested, since no push was made.
 
 ## Self-Check
 
-(completed after commits — see below)
+- `[ -f src/frontend/helpers/gamepad.ts ]` → FOUND
+- `[ -f src/preload/api/tauriGamepadInput.ts ]` → FOUND
+- `[ -f .planning/todos/pending/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md ]` → FOUND
+- `[ -f .planning/quick/260925-9de-fix-checknintendo-axis-reads-right-stick-dea/260925-9de-SUMMARY.md ]` → FOUND
+- Commit `75e3dc18f` (Task 1 instrumentation) → FOUND in `git log --oneline --all`
+- Commit `88cd2e4b7` (Task 2 RED tests) → FOUND
+- Commit `4e1ec7f1b` (Task 3 fix) → FOUND
+- Commit `9e1df4733` (Task 6 diagnostics removal) → FOUND
+- Commit `0dd981a29` (Task 6 todo + SUMMARY) → FOUND
+
+## Self-Check: PASSED
