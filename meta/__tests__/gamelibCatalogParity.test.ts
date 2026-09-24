@@ -2,6 +2,7 @@ import { globSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import {
   validateTranslation,
+  countIsOptionalFor,
   englishSourceFor,
   requiredPluralKeys,
   pluralCategoriesFor,
@@ -85,7 +86,10 @@ describe('gamelib catalog parity', () => {
         continue
       }
 
-      for (const problem of validateTranslation(source, target, glossary)) {
+      const countOptional = countIsOptionalFor(keyPath, locale, english)
+      for (const problem of validateTranslation(source, target, glossary, {
+        countOptional
+      })) {
         failures.push(`${locale}: '${keyPath}' -- ${problem}`)
       }
     }
