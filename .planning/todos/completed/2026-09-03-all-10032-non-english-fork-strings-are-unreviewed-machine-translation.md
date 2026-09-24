@@ -2,7 +2,9 @@
 created: 2026-09-03
 title: "All 10032 non-English fork strings are unreviewed machine translation — full coverage is not reviewed coverage"
 area: i18n
-status: pending
+status: RESOLVED
+resolved: 2026-09-25
+resolved_by: quick-260925-88h
 severity: minor
 platform: any
 ready: human
@@ -102,3 +104,31 @@ run over all 48 locales. Report:
 
 What remains here: human review, via the still-deferred Weblate path or a speaker's spot check.
 40 locales have had no quality check of any kind.
+
+## Resolution — the done-criterion is reframed, not met by human review
+
+Closed by quick task `260925-88h` (2026-09-25), acting on an **operator decision** to reframe this
+todo's done-criterion rather than pursue human review of all 48 languages (no reviewer pool
+exists). The new criterion: **"MT is disclosed in-app, reportable, and has no known systematic
+defect."** Both halves of that criterion are now addressed:
+
+1. **Disclosed in-app + reportable.** `LanguageSelector` now shows a machine-translation notice
+   plus a "Report a translation problem" link for every non-English language (never for English),
+   using the existing `window.api.openExternalUrl` — no new IPC surface. The link opens a prefilled
+   GitHub issue via `.github/ISSUE_TEMPLATE/translation_problem.yaml`. The dead `showWeblateLink`
+   path (never enabled anywhere, pointed at Heroic's own Weblate project which this fork does not
+   pull from) was removed from the picker in the same change.
+2. **No known systematic defect.** The systemic source defects this todo's own 260925-7zf audit
+   found (ambiguous chip label, `m`/`h` abbreviations, missing plural forms, missing translator
+   context for Claim/Redeem/Undo-Cancel/"Giftable spares") are fixed at the source — see
+   `2026-09-25-i18n-source-strings-defeat-translation-ambiguous-chip-minute-abbrev-no-plurals.md`'s
+   own Resolution section for the commit-level detail.
+
+**Human review is no longer the criterion, and is NOT what closes this todo.** The line "48 of 48
+locales reviewed is STILL FALSE" stays true in fact — nothing about that changed. What changed is
+the standard this todo is held to: disclosure + reportability + no known systemic defect, not
+per-language human sign-off. The remaining half-step — actually RE-RUNNING the fill so the fixed
+source strings and translator notes reach the 48 catalogs — is a separate, `ready: human` step
+(needs `ANTHROPIC_API_KEY`), owned by
+`2026-09-25-refill-systemic-mt-defects-found-by-260925-7zf.md`, which this closure does not
+presume has happened.
