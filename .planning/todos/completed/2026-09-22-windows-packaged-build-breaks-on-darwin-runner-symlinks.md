@@ -246,3 +246,25 @@ in a sparse worktree and reproduced the same three test names byte-identically. 
 19 passing → 26 passing. Five other Meta suites (`captureShellScrollback`, `genI18nGateScope`,
 `loginWindowSeamPredicateRemoved`, `verifyRunnerBundle`, `runTsSignals`) also fail pre-existing
 here and may deserve their own todo.
+
+## Residual discharged 2026-09-24: the `windows-latest` CI leg RAN, and it is green
+
+This file closed with one thing explicitly unmeasured — "the `windows-latest` CI leg was not run …
+not zero and has not been observed". It has now been observed.
+
+**Run 35942560790** (tag `v0.7.0-updater-test1`, commit `19b5e3a9e`, fired to score the macOS
+updater todo) built all three matrix legs. The Windows leg finished **success** in 11m36s
+(01:21:36 → 01:33:12) and uploaded `GameLib_0.7.0_x64-setup.exe` (112,309,170 B) plus its `.sig` —
+**the first Windows artifact this project has ever produced.** `latest.json` gained
+`windows-x86_64` and `windows-x86_64-nsis` keys alongside the linux and darwin ones.
+
+For contrast, the last run before the fix (35841476015, 2026-09-23, commit `c946239ce`) died on
+that leg at step 5 `Run ./.github/actions/install-deps` in 1m08s. Same workflow, same runner image
+family, opposite outcome — so the green is attributable to this todo's fix rather than to runner
+luck.
+
+What this does NOT prove: nobody has installed or launched that `.exe`. Building is not running,
+and the Windows updater payload has never been applied. Those remain untested.
+
+Scored by the session actioning
+`.planning/todos/completed/2026-09-24-macos-updater-entry-in-latest-json-is-unproven-until-a-release-run.md`.

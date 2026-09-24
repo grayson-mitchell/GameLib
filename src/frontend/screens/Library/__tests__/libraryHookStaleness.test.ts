@@ -60,14 +60,24 @@ function normalise(expression: string): string {
 }
 
 /**
- * The twelve identifiers `makeLibrary` reads from component props/state --
- * the six login gates (`epic.username`, `gog.username`, `amazon.user_id`,
- * `zoom.enabled`, `zoom.username`, `steam?.username`) plus the six library
- * sources each gate switches on (`epic.library`, `gog.library`,
- * `amazon.library`, `zoom.library`, `steam?.library`, `sideloadedLibrary`).
+ * The twelve identifiers the grid's read surface takes from component
+ * props/state -- the six login gates (`epic.username`, `gog.username`,
+ * `amazon.user_id`, `zoom.enabled`, `zoom.username`, `steam?.username`) plus
+ * the six library sources each gate switches on (`epic.library`,
+ * `gog.library`, `amazon.library`, `zoom.library`, `steam?.library`,
+ * `sideloadedLibrary`).
  * Listed explicitly by name (not derived by parsing the body generically) so
  * that a future accidental deletion of one of these reads is caught by Test H
  * rather than silently shrinking the set the checker looks for.
+ *
+ * quick/260924-g7r -- that surface is no longer ONE function. Ten of the
+ * twelve are still read directly inside `makeLibrary`; `steam?.username` and
+ * `steam?.library` moved up into the `steamVisibility` memo, which
+ * `makeLibrary` then consumes as a single value. The staleness invariant is
+ * unchanged in substance but now spans a hop, so it is checked across BOTH
+ * regions plus the link between them (Test K) rather than lowering this
+ * count to ten -- a count that shrinks whenever a read moves is a gate that
+ * gets weaker exactly when the code gets more indirect.
  */
 const KNOWN_READS = [
   'epic.username',
@@ -96,8 +106,32 @@ describe("makeLibrary's dependency array is complete (WR-01)", () => {
     source,
     'const makeLibrary = useCallback(() => {'
   )
-  const actualReads = readsPresentIn(body).map(normalise)
+  // quick/260924-g7r: the second half of the read surface. Extracted with the
+  // same brace-counting helper, so a memo rewritten to an expression body
+  // (`useMemo(() => resolveSteamVisibility({...}), [...])`) throws here rather
+  // than silently capturing the object literal and reporting zero reads.
+  const { body: steamMemoBody, endIdx: steamMemoEndIdx } = functionRegion(
+    source,
+    'const steamVisibility = useMemo(() => {'
+  )
+  const actualReads = readsPresentIn(body + steamMemoBody).map(normalise)
   const declaredDeps = extractDepsArray(source, endIdx).map(normalise)
+  const steamMemoDeps = extractDepsArray(source, steamMemoEndIdx).map(normalise)
+
+  /**
+   * The WR-01 predicate, region by region: a read must be declared by the
+   * hook that PERFORMS it. Taking the union of both dep arrays instead would
+   * pass a `makeLibrary` that reads `epic.username` while only the Steam memo
+   * declares it -- which is precisely the staleness this file exists to stop.
+   */
+  const missingFor = (libDeps: string[], memoDeps: string[]): string[] => [
+    ...readsPresentIn(body)
+      .map(normalise)
+      .filter((read) => !libDeps.includes(read)),
+    ...readsPresentIn(steamMemoBody)
+      .map(normalise)
+      .filter((read) => !memoDeps.includes(read))
+  ]
 
   it('Test H (non-vacuity): the extracted read set has exactly 12 members and contains epic.username', () => {
     // Without this, a body that had lost every one of these reads (e.g. a
@@ -108,21 +142,54 @@ describe("makeLibrary's dependency array is complete (WR-01)", () => {
     expect(actualReads).toContain(normalise('epic.username'))
   })
 
-  it('Test G: every identifier makeLibrary reads is declared in its useCallback dependency array', () => {
+  it('Test H2 (non-vacuity of the split): the two Steam reads live in the memo, not in makeLibrary', () => {
+    // Pins WHERE each half sits. Without it, Test H's 12 could be satisfied
+    // by both reads drifting back into `makeLibrary` while `steamMemoBody`
+    // contributed nothing -- leaving the memo half of Test G vacuous.
+    expect(readsPresentIn(steamMemoBody).map(normalise).sort()).toEqual([
+      normalise('steam?.library'),
+      normalise('steam?.username')
+    ])
+    expect(readsPresentIn(body).map(normalise)).not.toContain(
+      normalise('steam?.username')
+    )
+  })
+
+  it('Test G: every identifier the grid reads is declared by the hook that reads it', () => {
     // Failing assertion against pre-fix code: before this task there was no
     // useCallback at all, and the libraryUnion memo listed only six of the
     // twelve -- this test reported the six missing login-gate identifiers by
-    // name. It is green now because makeLibrary declares all twelve.
-    const missing = actualReads.filter((read) => !declaredDeps.includes(read))
-    expect(missing).toEqual([])
+    // name. It is green now because each hook declares everything it reads.
+    expect(missingFor(declaredDeps, steamMemoDeps)).toEqual([])
+  })
+
+  it('Test K: makeLibrary consumes the steamVisibility memo AND declares it as a dependency', () => {
+    // The hop itself. Both halves can declare their own reads correctly and
+    // the grid still goes stale if `makeLibrary` closes over `steamVisibility`
+    // without listing it -- the memo would recompute on a sync-status change
+    // while the grid kept the previous Steam slice, which looks exactly like
+    // the bug debug/steam-library-shows-logged-out fixed.
+    expect(normalise(body)).toContain('steamVisibility.')
+    expect(declaredDeps).toContain('steamVisibility')
   })
 
   it('Test I (known-bad): a dependency list missing epic.username is caught, proving the predicate can fail independently of the current file', () => {
     const knownBadDeps = declaredDeps.filter(
       (dep) => dep !== normalise('epic.username')
     )
-    const missing = actualReads.filter((read) => !knownBadDeps.includes(read))
+    const missing = missingFor(knownBadDeps, steamMemoDeps)
     expect(missing).toEqual([normalise('epic.username')])
+  })
+
+  it('Test I2 (known-bad, memo half): a steamVisibility dep list missing steam?.library is caught', () => {
+    // Test I only ever exercises the `makeLibrary` half of `missingFor`. The
+    // memo half is new and needs its own red-proof, or a bug that made it
+    // always return [] would leave Test G green over an undefended memo.
+    const knownBadMemoDeps = steamMemoDeps.filter(
+      (dep) => dep !== normalise('steam?.library')
+    )
+    const missing = missingFor(declaredDeps, knownBadMemoDeps)
+    expect(missing).toEqual([normalise('steam?.library')])
   })
 })
 

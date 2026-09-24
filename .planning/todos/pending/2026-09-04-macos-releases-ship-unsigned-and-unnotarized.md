@@ -1,11 +1,11 @@
 ---
 created: 2026-09-04T00:00:00.000Z
-title: 'macOS releases still ship unsigned until a release is CUT — all six Apple secrets enrolled and Apple-verified 2026-09-14, entitlements gap fixed, but no signed/notarized artifact has ever been published or verified'
+title: 'macOS signing and notarization are VERIFIED end-to-end on a published artifact — Gatekeeper, and all three store helpers under the hardened runtime, are measured working; only consequence 2 (Keychain prompt COUNT across an update) remains, and it needs a SECOND signed release'
 area: build
-severity: major
+severity: minor
 platform: macos
-ready: live-gate
-needs: release-run-then-browser-download-verify
+ready: human
+needs: keychain-prompt-count-across-two-signed-releases
 status: OPEN
 found_by: 'Reconsideration of the two keyring-deferral todos, 2026-09-04 — asked "what actually governs Keychain prompt COUNT?" rather than "how do I implement this todo?"'
 source: '.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md (park note, finding 2)'
@@ -253,6 +253,271 @@ is CLOSED and now lives at
 `.planning/todos/completed/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md`,
 closed by `quick-260923-uvt`. Its `### STATUS 2026-09-23 (quick-260923-u3o)` section is the full
 evidence trail for everything above.
+
+## STATUS 2026-09-24 (quick-260924-962) — the browser-download arm ran; wording falsified, intent confirmed
+
+This section does not revise `## STATUS 2026-09-14`, `## STATUS 2026-09-17` or `## STATUS 2026-09-23`
+above it. Each records what was measured on its own date and is left intact; this one adds what was
+measured on 2026-09-24, following the same convention `## STATUS 2026-09-23` states in its own first
+paragraph.
+
+**1. Run context.** Measured 2026-09-24 on the operator's Mac (Darwin 25.6.0, arm64). Artifact
+`GameLib_0.7.0_aarch64.dmg` from draft release `378785323`, asset id `583428514`, 97083599 bytes,
+sha256 `c74717b59421119eaacce55c51ff153222c9e03296f87d817ed422423dba669c` — byte-identical to the
+artifact `## STATUS 2026-09-23` measured.
+
+**2. The fourth Verification bullet could NOT be run as literally written.** The asset lives on an
+UNPUBLISHED DRAFT release. Its `browser_download_url` is
+`https://github.com/grayson-mitchell/GameLib/releases/download/untagged-15f75eb2dbc69bc57563/GameLib_0.7.0_aarch64.dmg`.
+Opened in Safari, GitHub rendered its 404 page ("This is not the web page you are looking for") and
+the nav bar showed "Sign in" / "Sign up" — Safari is not authenticated to GitHub. Anonymous `curl` on
+the same URL also returns HTTP 404. The bullet is unrunnable on two counts at once: the release is
+not published, and this browser has no GitHub session. Publishing the `v0.7.0` draft to satisfy the
+bullet was REJECTED as out of scope — it is a public, hard-to-reverse act, and there is an open todo
+(`2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md`) against this very build.
+
+**3. The substitute route.** The byte-identical artifact was fetched with an authenticated API call,
+served from `127.0.0.1:8931`, and downloaded THROUGH SAFARI. **Negative control first:** the
+API-fetched copy carried `com.apple.provenance` and NO `com.apple.quarantine` — reproducing the exact
+trap this todo warned about and that the 2026-09-23 verification fell into. The Safari-downloaded
+copy carried a real browser-set attribute:
+
+```
+com.apple.quarantine: 0083;6ab41d0e;Safari;C42D10F2-0A4B-4E85-8380-B96FD266E6FD
+```
+
+with sha256 identical to the published asset.
+
+**4. What this run does NOT prove.** Two clauses of the bullet remain unmet, and neither is claimed:
+(a) the recorded origin is localhost, not github.com (`kMDItemWhereFroms` reads
+`http://127.0.0.1:8931/...`), and the release itself is still a DRAFT, not published; (b) the machine
+used is the one that BUILDS the app, not a machine that has never built it. Gatekeeper's verdict does
+not consult the origin URL, but the "machine that has never built the app" clause is NOT satisfied.
+`/usr/bin/syspolicy_check distribution` is named here as the cache-independent instrument that
+mitigates that specific contamination worry — a mitigation, not a substitute for running on a
+genuinely clean machine.
+
+**5. Quarantine propagation.** The `.app` inside the mounted dmg carries no quarantine xattr of its
+own; quarantine rides on the dmg. Copied out with `ditto`, the `.app` gained
+`0283;00000000;;C42D10F2-0A4B-4E85-8380-B96FD266E6FD` — the same download UUID as the Safari
+download, i.e. genuine propagation.
+
+**6. Assessments on the quarantined copy** (not a local build):
+
+| instrument | result |
+| --- | --- |
+| `spctl -a -vvv -t exec` | `accepted`, `source=Notarized Developer ID`, `origin=Developer ID Application: grayson mitchell (S7U223QWXJ)`, `SPCTL_RC=0` |
+| `/usr/bin/syspolicy_check distribution` | `App passed all pre-distribution checks and is ready for distribution.` — cache-independent |
+| `xcrun stapler validate` | `The validate action worked!` |
+| `codesign -dv --verbose=4` | `Identifier=com.gamelib.shell`; `CodeDirectory v=20500 size=26621 flags=0x10000(runtime) hashes=821+7 location=embedded`; `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)`; `Notarization Ticket=stapled`; `TeamIdentifier=S7U223QWXJ` |
+
+**7. THE HEADLINE.** First launch of the quarantined app DID show an interstitial. Verbatim:
+
+```
+"GameLib" is an app downloaded from the internet. Are you sure you want to open it?
+Safari downloaded this file today at 6:40 AM. Apple checked it for malicious software
+and none was detected.
+[Cancel]  [Open]      <- Open is the default (highlighted) button
+```
+
+This is the **BENIGN notarized-app confirmation, NOT a block.** The blocking form ("... cannot be
+opened because Apple could not verify it is free of malicious software", offering only Move to Trash
+/ Done and requiring System Settings -> Privacy & Security -> "Open Anyway") did NOT appear. So the
+bullet as WORDED ("confirm it opens with no Gatekeeper interstitial") is FALSIFIED — one did appear —
+while the thing it was actually guarding against is CONFIRMED ABSENT. This is not "it opened fine"
+and it is not "the check failed" — it is both at once, and the distinction is the entire finding. Log
+corroboration: `SecTranslocateCreateSecureDirectoryForURL` created an App Translocation copy;
+`runningboardd` tracked `app<application.com.gamelib.shell...>`; no denial was logged.
+
+**8. The correction to `## Why it matters` consequence 1 — by name, from inside this section, NOT
+edited in place.** Consequence 1's claim that "the user must go to System Settings -> Privacy &
+Security -> 'Open Anyway'" is no longer true for the signed, notarized artifact: one click on the
+default `Open` button in the benign dialog above suffices. Consequence 1's own
+`[ASSUMED — the exact modern-macOS bypass UX should be confirmed on hardware...]` marker is now
+DISCHARGED by this measurement.
+
+**9. The near-miss.** After clicking Open a GameLib window was frontmost and fully rendered, and it
+would have been easy to record "it opens". It was MEASURED instead: the frontmost pid was **82738** —
+an ORPHANED GameLib instance left running since `Wed Sep 23 21:36:16` by the previous session. The
+newly launched translocated copy had hit GameLib's single-instance guard, handed focus to the orphan,
+and exited. The screenshot that "proved" the launch was a picture of a DIFFERENT PROCESS. The orphan
+(shell 82738 + sidecar 82751) was terminated; an AppleScript `quit` did not take it down within 15s,
+but `kill -TERM` on the shell removed both shell and sidecar. Re-launched clean with no other instance
+running: shell pid **98884** + sidecar pid **98891**. Frontmost pid was then confirmed **== 98884**.
+The UI rendered fully (Library tab, `All Games 387`, artwork and per-store badges present — not
+blank). No crash reports. Incidental, previously unmeasured: the app ran correctly
+APP-TRANSLOCATED, the real path for any user who launches from Downloads rather than dragging to
+`/Applications`. No second Gatekeeper dialog on the second launch; the quarantine flags had advanced
+`0283 -> 02c3`, i.e. the approval is recorded per download UUID.
+
+**10. Residual (c) is now SPLIT, and its larger half is CLOSED GREEN.** `## STATUS 2026-09-23` item 5
+conflated two very different risks. Separated and measured:
+
+- **(c-i) — can the bundled helpers EXEC AT ALL under the hardened runtime**, from the signed and
+  notarized bundle? Needs no credentials. MEASURED, all from the mounted published dmg, each run
+  under an isolated fake HOME (`mkdtemp` 0700, all eight containment variables set per CLAUDE.md's
+  two-profile rule; profile shredded afterwards):
+
+  ```
+  legendary --version  -> rc=0   legendary version "0.21.0", codename "Lowlife"
+  gogdl --version      -> rc=0   1.3.0
+  nile --version       -> rc=0   1.2.0 Robert Speedwagon
+  comet --help         -> rc=0   Usage: comet [OPTIONS] --username <USERNAME> [COMMAND]
+  ```
+
+  Signing census: all carry `Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)` and
+  `flags=0x10000(runtime)`; `legendary`, `gogdl`, `nile` and `comet` carry no entitlements; only
+  `steam-bridge-helper` carries `com.apple.security.cs.disable-library-validation`. No AMFI,
+  library-validation or code-signature denials were logged for any of them. **CLOSED GREEN.**
+- **(c-ii) — `steam-bridge-helper`, the one that must `dlopen` Valve's `libsteam_api.dylib`**, a dylib
+  signed by Valve, not by us, which is precisely what its `disable-library-validation` entitlement
+  exists for. Under the fake HOME it died instantly and correctly with
+  `FATAL dlopen(...libsteam_api.dylib...) (no such file)` — no Steam in the fake profile. Under a
+  DECLARED real-profile arm, with Valve's dylib present, it did NOT hit that FATAL and stayed alive
+  past 120s before being terminated, and no library-validation denial was logged. **CLOSED GREEN** —
+  the entitlement works and the dylib loads under hardened runtime. Side observation, not chased here:
+  `steam-bridge-helper --help` blocking for over 120s instead of printing help and exiting is parked
+  to the existing pending todo
+  `2026-09-23-steam-bridge-helper-never-spawned-by-the-sidecar-only-direct-exec-proven.md` by
+  filename.
+- **(c-iii) — WHAT GENUINELY REMAINS:** only the AUTHENTICATED round-trips — an actual Epic login, an
+  actual Amazon library refresh, an actual GOG action — which need real credentials and a person at
+  the keyboard. This is the entire residue of this todo.
+
+**11. Cleanup.** App quit, localhost server stopped, dmg detached, fake profile shredded, all
+screenshots and the Gatekeeper log deleted, the downloaded dmg removed from `~/Downloads`. The
+scratchpad is empty. `/Applications/GameLib.app` was deliberately NOT touched (still the Sep 1 build)
+— the test app was installed to the scratchpad instead.
+
+**12. Frontmatter changes, forward-referenced.** `## STATUS 2026-09-23` item 7's **Proposal 1** and
+**Proposal 2** are both ENACTED by this session (Task 2 of quick-260924-962):
+
+- D-01 — severity `major` -> `minor`. Justification: CLAUDE.md defines `major` as "a feature is
+  broken or a measurement is silently contaminated". The feature — a signed, notarized, stapled macOS
+  build that clears Gatekeeper on a real quarantined download — is now MEASURED WORKING end to end,
+  and the helper binaries execute under the hardened runtime. What is left is one credentialed errand
+  with no known defect behind it, which is CLAUDE.md's `minor`: "polish, rough edge, or a latent trap
+  with no live consequence".
+- D-02 — ready `live-gate` -> `human`. Everything desk-testable and everything gate-testable without
+  credentials has now been run. The only remaining arm needs credentials and a person.
+- D-03 — needs `release-run-then-browser-download-verify` -> the credentialed-in-app-store-actions
+  value described in Task 2.
+- D-04 — the title is restated per Proposal 2, so a reader of the todo — not only a reader of the plan
+  that produced this session — can see that item 7's two proposals were answered.
+
+`status:` stays `OPEN`: (c-iii) is genuinely outstanding. **And so is consequence 2 — see item 13, which
+was missed when this section was first written.**
+
+**13. CONSEQUENCE 2 IS NOW TESTABLE AND WAS NOT TRACKED — filed 2026-09-24 after the fact.**
+This item was added in a follow-up pass. Items 1–12 above did not mention it, and that omission
+is the point of recording it here rather than quietly folding it in.
+
+`## Verification` ends with a gating sentence: *"Only after that is the claim in consequence (2)
+testable: install release N, grant the Keychain prompt once, update to release N+1, and confirm
+no re-prompt."* That gate was **discharged by this very session** — the artifact is now verified
+signed, notarized and stapled. So consequence 2 became testable on 2026-09-24 and nothing said so:
+it appeared in no item of this section, and `needs:` named only the credentialed arm. On that
+trajectory it would have been lost.
+
+Why it matters more than its position in the file suggests: **consequence 2 is the ORIGINAL
+reason this todo exists.** `found_by` records the question as *"what actually governs Keychain
+prompt COUNT?"* — not Gatekeeper. Gatekeeper is consequence 1 and is now closed; the question the
+todo was opened to answer is still open.
+
+Two facts that constrain when it can be run:
+
+- **It needs TWO signed releases, and only one exists.** `gh release list` shows a single
+  `v0.7.0` **draft**; the test is inherently N -> N+1, so it cannot start until a second signed
+  release exists. This is the longest pole in the todo by a wide margin, and it is gated on
+  cutting releases, not on desk work.
+- **A parked sibling is blocked on it.**
+  `2026-08-17-humble-slots-still-prompt-unattended-at-startup.md` is `ready: blocked` and its
+  park note states in as many words that *"shipped-build prompt count is governed by Apple code
+  signing, not read timing"* — i.e. it is waiting on this arm specifically. Closing this todo
+  without running consequence 2 would strand that sibling with nothing pointing at it.
+
+`needs:` has been widened to carry both arms so neither can be closed on the strength of the
+other. They are independent: the credentialed arm needs a person and no new release; this arm
+needs two releases and comparatively little human time.
+
+**14. (c-iii) RUN on 2026-09-24 — two of its three stores are CLOSED GREEN; only Amazon remains.**
+Added in the same follow-up pass as item 13. Item 10 treated (c-iii) as a single credentialed
+errand. It is three, and two of them needed no credentials at all because live sessions already
+existed — so they were run rather than deferred.
+
+- **Epic — CLOSED GREEN, and this is the strongest single result in the item.** The signed,
+  notarized, hardened-runtime `legendary` from the published bundle, pointed at the real Epic
+  config, performed an **authenticated round-trip**: it logged
+  `[Core] INFO: Trying to re-use existing login session...`, exited **rc=0**, and returned live
+  library counts (`games_available` and `games_installed` both non-zero, `egl_sync_enabled` true).
+  This is strictly stronger than item 10's `--version` probe: that proved only that the binary
+  could exec and load its dylibs, whereas this proves the network + on-disk-session + hardened
+  runtime path works end to end in the shipped build. Account identifiers deliberately not
+  recorded here.
+- **GOG — exercised, but state the claim precisely.** `gog_store/auth.json` was rewritten at
+  **07:11:42**, and the signed build's shell started at **07:11:36**, with no other GameLib
+  instance running (the orphan described in item 9 had been terminated earlier). A token refresh
+  is an authenticated round-trip with GOG, and it is attributable to the signed build by strict
+  time ordering. What this does NOT separately prove is that the `gogdl` binary specifically was
+  invoked — GOG auth is handled by the sidecar. Do not upgrade this to "gogdl exercised".
+- **Amazon — BLOCKED, and this is the ENTIRE remainder of (c-iii).** `nile_store/config.json` is
+  **2 bytes** (`{}`), i.e. no Amazon session has ever been established on this machine. Unlike
+  Epic and GOG there is nothing to re-use, so this arm genuinely requires a human to log in with
+  real credentials. `needs:` has been narrowed from the whole credentialed group to this one arm.
+
+**A structural fact that explains why a person is required, recorded so it is not rediscovered.**
+The Tauri webview is **invisible to macOS Accessibility**: `System Events` reports window 1 of
+process `GameLib` as having 4 UI elements whose names are all `missing value`, and a raw
+coordinate click returns error **-25208**. So the app's UI cannot be driven programmatically at
+all — not for this arm and not for any future live gate that needs an in-app click. This is the
+same shape as the existing lesson that AX is blind to the Tauri native dialog.
+
+**One weak signal, explicitly NOT evidence for consequence 2.** Launching the signed build against
+the real profile produced **no Keychain prompt**. That is encouraging but nearly worthless as
+evidence: the store sessions read at boot live in JSON files under Application Support, not in the
+Keychain, so no prompt was expected either way. Consequence 2 still requires the N -> N+1 test in
+item 13, and nothing here shortens it.
+
+
+**15. AMAZON CLOSED GREEN — (c-iii) is now fully discharged. Filed 2026-09-24.**
+
+**First, the correction that matters: the operator's login did NOT close this arm.** They logged
+into Amazon and refreshed, but the process doing it was `target/debug/gamelib-shell` — the
+**unsigned local debug build**, not the notarized bundle. Nothing about a debug build's behaviour
+is evidence about the hardened-runtime signed one, which is the whole subject of this todo. That
+was caught by checking the process path rather than accepting "logged in and refreshed" at face
+value — the same discipline that caught the orphan in item 9.
+
+**What the login DID do was remove the blocker.** Item 14 recorded Amazon as blocked because no
+session existed to re-use (`nile_store/config.json` was 2 bytes). Once a session existed, the arm
+stopped needing credentials and became runnable the same way Epic was in item 14 — by invoking the
+signed binary directly and bypassing the UI entirely.
+
+**Measured against the signed, notarized `nile` from the published bundle**
+(`Authority=Developer ID Application: ...`, `flags=0x10000(runtime)`), pointed at the real profile:
+
+| command | result |
+| --- | --- |
+| `nile auth --status` | `rc=0`, `{"Username":<redacted>,"LoggedIn":true}` |
+| `nile library sync` | `rc=0`, `INFO [LIBRARY]: Synchronizing library` / `INFO [LIBRARY]: Successfully synced the library` |
+
+**`library sync` is the one that carries the weight, and the write is what proves it.**
+`auth --status` on its own is weak evidence — it can be satisfied by reading a local token file.
+The sync rewrote both `library.json` and **`syncpoint.raw`** at 07:25; a syncpoint is a
+server-issued cursor, so it cannot be produced without a real round-trip to Amazon. That is the
+same standard item 14 applied to Epic and deliberately withheld from GOG.
+
+**Caveat, stated because it genuinely limits the result: the account owns ZERO Amazon games**
+(`library list` -> `*** TOTAL 0 ***`, `library.json` parses to 0 entries). So what is proven is
+that the signed `nile` authenticates and completes a sync under the hardened runtime. Fetching and
+parsing a NON-EMPTY Amazon library is **not** exercised, and an empty result must not be
+mistaken for a broken one — or for a fuller one than it is.
+
+**Consequence for this todo.** All three stores of (c-iii) are now green: Epic (item 14), GOG
+(item 14, narrowly), Amazon (here). `needs:` therefore drops to consequence 2 alone, and the title
+has been restated a second time — it had gone false again by naming the store actions as the
+remaining work. Consequence 2 is now the only thing standing between this todo and closure, and it
+cannot start until a second signed release exists.
 
 ## Related
 

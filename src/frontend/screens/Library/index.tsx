@@ -54,6 +54,7 @@ import { Tier2PortalContext } from 'frontend/components/UI/NavShell/Tier2PortalC
 import { configStore, steamConfigStore } from 'frontend/helpers/electronStores'
 import SteamSyncNotice from './components/SteamSyncNotice'
 import { resolveSteamSyncIndicator } from './librarySyncIndicator'
+import { resolveSteamVisibility } from './steamLibraryVisibility'
 // Namespace import: filterEngine's helpers are referenced as
 // `filterEngine.xxx` throughout this file rather than named imports, so a
 // call site is this identifier's only appearance in the file (see the
@@ -244,6 +245,19 @@ export default React.memo(function Library(): JSX.Element {
     }
   }, [])
 
+  // quick/260924-g7r: the Games-grid half and the Store-facet half of Steam's
+  // visibility decision now come from one resolver call, so a memo change
+  // upstream cannot leave the two disagreeing. See
+  // `steamLibraryVisibility.ts`'s `resolveSteamVisibility` header for the
+  // mechanism (threat T-34.11-12, Spoofing).
+  const steamVisibility = useMemo(() => {
+    return resolveSteamVisibility({
+      library: steam?.library ?? [],
+      steamUsername: steam?.username,
+      steamSyncStatus
+    })
+  }, [steam?.library, steam?.username, steamSyncStatus])
+
   // D-04: the store facet values whose account is connected, reusing the
   // same gating expressions makeLibrary() already uses below -- the Store
   // group renders a row only for a connected account, never a permanent 0.
@@ -256,13 +270,24 @@ export default React.memo(function Library(): JSX.Element {
   // happen (review WR-03; operator chose user_id, 2026-08-25). Every gate
   // below is now pinned against makeLibrary by connectedStoresParity.test.ts;
   // change one site and CI fails until the other follows.
+  //
+  // Steam had the SAME class of divergence, reopened as T-34.11-12:
+  // `connectedStores` read `steam?.username` alone here while `makeLibrary`
+  // ran the auth-aware `selectVisibleSteamLibrary`, so an expired session
+  // with zero installed games got a permanently-0 Steam row. The parity gate
+  // compares gate TEXT, not outcomes, so it could not see this -- both sites
+  // read `steam?.username`-derived text and matched. It is closed by both
+  // sites reading `steamVisibility.storeConnected`, one shared value rather
+  // than two expressions that happen to read alike; the outcome invariant
+  // itself is pinned in `steamLibraryVisibility.test.ts`, the only suite that
+  // can evaluate it (this file has no jsdom-based test coverage).
   const connectedStores: StoreFacetValue[] = useMemo(() => {
     const stores: StoreFacetValue[] = ['sideload']
     if (gog.username) stores.push('gog')
     if (epic.username) stores.push('legendary')
     if (amazon.user_id) stores.push('nile')
     if (zoom.enabled && zoom.username) stores.push('zoom')
-    if (steam?.username) stores.push('steam')
+    if (steamVisibility.storeConnected) stores.push('steam')
     return stores
   }, [
     gog.username,
@@ -270,7 +295,7 @@ export default React.memo(function Library(): JSX.Element {
     amazon.user_id,
     zoom.enabled,
     zoom.username,
-    steam?.username
+    steamVisibility.storeConnected
   ])
 
   // The Runnability rows this host can compute (plan 01). Empty on Windows.
@@ -637,14 +662,32 @@ export default React.memo(function Library(): JSX.Element {
     const showGog = !!gog.username
     const showAmazon = !!amazon.user_id
     const showZoom = zoom.enabled && !!zoom.username
-    const showSteam = !!steam?.username
 
     const epicLibrary = showEpic ? epic.library : []
     const gogLibrary = showGog ? gog.library : []
     const sideloadedApps = sideloadedLibrary
     const amazonLibrary = showAmazon ? amazon.library : []
     const zoomLibrary = showZoom ? zoom.library : []
-    const steamLibrary = showSteam ? steam.library : []
+    // quick/260924-g7r: `showSteam` is retained in the same `show*` shape as
+    // the five stores above, because `connectedStoresParity.test.ts` reads
+    // this local to prove the Store facet panel and the grid gate every
+    // store identically (threat T-34.11-12). Dropping it would blind that
+    // gate to Steam entirely.
+    //
+    // What changed: both this local and the panel's push condition now read
+    // the SAME `steamVisibility.storeConnected` value -- computed once, in
+    // the memo above `connectedStores` -- rather than each site running its
+    // own expression that happened to look alike. So
+    // `connectedStoresParity.test.ts`'s string match is now a CONSEQUENCE of
+    // a shared value, not a coincidence two independent expressions could
+    // silently stop being. The OUTCOME half of the invariant -- that a
+    // `'failed'` session with `storeConnected` true always has non-empty
+    // `games` -- is proven in `steamLibraryVisibility.test.ts`, the only
+    // suite that can evaluate the resolver (this file has no jsdom coverage).
+    // See `steamLibraryVisibility.ts`'s `resolveSteamVisibility` header for
+    // the full mechanism.
+    const showSteam = steamVisibility.storeConnected
+    const steamLibrary = showSteam ? steamVisibility.games : []
 
     return [
       ...sideloadedApps,
@@ -664,8 +707,7 @@ export default React.memo(function Library(): JSX.Element {
     zoom.enabled,
     zoom.username,
     zoom.library,
-    steam?.username,
-    steam?.library,
+    steamVisibility,
     sideloadedLibrary
   ])
 
