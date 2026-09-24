@@ -2,7 +2,7 @@
 created: 2026-09-25
 title: "Re-fill the systemic MT defects 260925-7zf found — \"Giftable spares\" untranslated in activateConfirmBody in 21/48 locales, English UI words left in sk/ml/hr/nl/az"
 area: i18n
-status: pending
+status: resolved
 severity: medium
 platform: any
 ready: human
@@ -132,3 +132,31 @@ human-reviewed: a model-reviewed re-fill is still machine translation. See the p
 2026-09-25 under the reframed "disclosed + reportable + no known systemic defect" criterion — this
 re-fill is not required for that closure, but is still the right next step to actually correct the
 defects it found).
+
+## Resolution — 2026-09-25 (quick `260925-auy`)
+
+**Done.** The operator ran the fill three times: all 48 locales, then `ar,fi,hu`, then `ar,hu`.
+
+- **Target 1:** `grep -l Giftable public/locales/*/gamelib.json` returns `en` only.
+- **Target 2:** the untranslated-English pairs are re-filled. The presence baseline was
+  re-recorded, and `totalPairs` went from 1932 to **0**. `lint-translations:gamelib` reports 0
+  findings and 0 hard failures, and `gamelibCatalogParity` passes 199/199.
+- **Target 3:** all 12 major findings are covered.
+  - 9 were covered by 260925-88h invalidating the keys.
+  - The other 3 were deleted and re-filled:
+    - fi `sideload.filter.images` became "Kuvat" (pictures, previously "disk images").
+    - fi `webview.login.oauth.timeout.body` now says "took too long" (previously "filled up").
+    - hu `themeSelector.oldSchool` came back "Régi iskolás" ("old schoolchild") again on a plain
+      re-fill. It needed a new translator note, and is now "Retro GameLib".
+  - The re-fill is still machine output. It was not re-reviewed.
+
+**A fill-script defect this surfaced, now fixed** (`fcd1a0cac`, with the parity test in
+`847ce9249`): every run skipped all 7 Arabic plural groups, 42 forms in total. The idiomatic
+Arabic zero, one and two forms leave out the number ("نتيجتان" already means "two results"). The
+placeholder check rejected them for dropping `{{count}}`, and the group-completeness check then
+discarded every sibling form. `countIsOptionalFor()` now allows `{{count}}` to be omitted only
+when a form's CLDR category matches exactly one integer in that locale. Russian and French "one"
+still require it.
+
+**Limit:** all of this is still unreviewed machine translation. In-app disclosure and the "Report
+a translation problem" link (260925-88h) are now the standing channel for anything else.
