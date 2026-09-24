@@ -5,8 +5,8 @@ area: build
 severity: minor
 platform: macos
 ready: live-gate
-needs: quit-the-dev-instance-then-launch-a-bridge-game-from-the-notarized-bundle
-status: OPEN
+needs: none
+status: RESOLVED
 found_by: 'GitHub Actions run 35841476015, macOS job 107117309605, on tag v0.7.0-notarize-test3 at commit c946239ce. Extracted by quick task 260923-uvt from the notarization todo''s u3o item 8(b).'
 source: '.planning/todos/completed/2026-09-17-notarization-rejects-253-unsigned-binaries-under-contents-resources.md'
 files:
@@ -208,3 +208,86 @@ merely that a window appeared.
 - `severity: minor`, `platform: macos`, `ready: live-gate` and `status: OPEN` all UNCHANGED. The
   todo is still confirmation rather than suspicion — items 2 and 3 removed the one mechanism that
   could have made it a real defect, and nothing measured here raises its severity.
+
+## STATUS 2026-09-24 (quick-260924-heo, second session) — GATE PASSED, CLOSING
+
+The operator quit the dev instance, clearing the blocker recorded in item 5 above. The live arm then
+RAN and PASSED. This todo is discharged.
+
+### How the GUI limitation was routed around
+
+`quick-260924-fast2` measured that the **Tauri webview is invisible to Accessibility** (window 1 = 4
+elements, all `missing value`), so "click Play" is not agent-drivable and that is not a temporary
+gap. The trigger used instead was the **deep link**, which reaches the identical production path and
+needs no GUI:
+
+```
+gamelib://launch?appName=206060&runner=steam
+```
+
+`protocol.ts`'s `handleLaunch` -> (`runner: 'steam'` is an explicit member of `RUNNERS`, D-35-19-05)
+-> `dispatchSteamLaunch(appName)` (`launchDispatch.ts:43`) -> `SteamGame.launch()` -> `isBottleEligible()`
+&& `isBridgeEligible()` -> `launchBridgeGame()` -> `ensureBridgeHelperReady()` -> `spawnHelperIfNeeded()`.
+Not a shortcut past the gate — it is the same call chain the Play button takes, entered one frame earlier.
+
+The bundle was launched by **explicit path** (`open -a <scratchpad>/GameLib.app --args <url>`), never
+by LaunchServices scheme resolution, which would have been free to hand the URL to the Sep 1
+`/Applications/GameLib.app` instead — the same absorption hazard as item 5, one layer over.
+
+### The parentage proof — this is the item the todo was opened for
+
+Read from `ps`, not inferred:
+
+```
+  PID  PPID COMM
+28635     1 <bundle>/Contents/MacOS/gamelib-shell
+28648 28635 <bundle>/Contents/MacOS/gamelib-sidecar
+28655 28648 <bundle>/Contents/Resources/build/bin/arm64/darwin/steam-bridge-helper
+```
+
+The helper's parent pid **28648 IS the notarized bundle's own sidecar**, asserted explicitly rather
+than by reading the log alone. `## What is NOT proven`'s "it was never spawned BY the sidecar" is now
+false — it has been.
+
+### The transcript, verbatim
+
+```
+(12:58:05) [INFO]:    [ProtocolHandler]: Received gamelib://launch?appName=206060&runner=steam
+(12:58:05) [INFO]:    [Steam]:           spawnHelperIfNeeded: spawning the shared bridge helper from <bundle>/Contents/Resources/build/bin/arm64/darwin/steam-bridge-helper (D-03)
+(12:58:05) [WARNING]: [Steam]:           bridge helper: [S_API FAIL] SteamAPI_Init() failed; ipcserver GetSteamPath failed.
+(12:58:05) [WARNING]: [Steam]:           bridge helper: [S_API] SteamAPI_Init(): SteamAPI_IsSteamRunning() did not locate a running instance of Steam.
+[S_API] SteamAPI_Init(): Could not determine Steam client install directory.
+(12:58:05) [WARNING]: [Steam]:           bridge helper: [2026-09-24T00:58:05Z] INIT   InitFlat failed r=1 err=Could not determine Steam client install directory. (is Steam running + signed in?) -- serving HEALTH only until a real session is live
+(12:58:05) [WARNING]: [Steam]:           bridge helper: [2026-09-24T00:58:05Z] LISTEN 127.0.0.1:54550 (loopback-only, persistent-channel)
+(12:58:07) [WARNING]: [Steam]:           SteamGame: bridge helper not ready for appId 206060 (status=not-inited) — not launching (no no-identity launch, D-05/D-06)
+(12:58:07) [WARNING]: [Steam]:           ensureBridgeHelperReady: bridge helper is up but not initialized against a live Steam session for appId 206060 (finding #7 -- distinct from unreachable)
+```
+
+### Scoring, against this todo's own pass condition
+
+- **`dlopen` SUCCEEDED.** The `[S_API]` lines are emitted BY Valve's dylib, so their presence proves
+  the process was running Valve's code — the load-bearing reasoning this todo already established.
+  **No "mapping process and mapped file (non-platform) have different Team IDs".** The Team ID
+  mismatch that killed the helper in q6w does not return under a sidecar spawn.
+- **The not-ready status is `not-inited`** — `ensureBridgeHelperReady`'s "up but not initialized
+  against a live Steam session (finding #7)" branch, explicitly **NOT** the "unreachable within the
+  poll budget" branch, which would have been a genuine finding. This is the EXPECTED PASS.
+- **No `bridge helper process error`** — the ENOENT path-resolution defect ruled out at desk in the
+  first session did not materialise live either. The same run re-confirmed
+  `publicDir resolved=<bundle>/Contents/Resources/build exists=true` in the real app.
+- **The Steam client was NOT running** for any of this (only an orphan `ipcserver`), and it did not
+  matter — exactly as item 1 of the previous section argued from this todo's own evidence. The
+  `## Verification` section's "With Steam **running AND signed in**" was never a requirement of the
+  pass condition it states.
+
+The game did not launch, and that is correct, not a shortfall: `launchBridgeGame()` refuses to launch
+without a live Steam identity (D-05/D-06). Launching the game would require a signed-in Steam client
+and tests a different claim than this todo makes.
+
+### Teardown
+
+App quit cleanly; the helper was reaped with it (no `steam-bridge-helper`, `gamelib-sidecar` or
+`gamelib-shell` left), and `gamelib-single-instance.sock` was removed. `/Applications/GameLib.app`
+untouched. No tag pushed, no release run triggered.
+
+**CLOSED.** `status: RESOLVED`, moved to `completed/`.

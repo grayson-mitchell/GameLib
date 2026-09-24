@@ -2,15 +2,15 @@
 quick_id: 260924-heo
 slug: spawn-bridge-helper-via-sidecar-live-gate
 date: 2026-09-24
-status: incomplete
-title: 'Sidecar-spawn live gate for steam-bridge-helper — 3 of 4 arms measured, the in-app arm is blocked'
-todo: .planning/todos/pending/2026-09-23-steam-bridge-helper-never-spawned-by-the-sidecar-only-direct-exec-proven.md
+status: complete
+title: 'Sidecar-spawn live gate for steam-bridge-helper — PASSED, all 4 arms, todo closed'
+todo: .planning/todos/completed/2026-09-23-steam-bridge-helper-never-spawned-by-the-sidecar-only-direct-exec-proven.md
 baseline_sha: 4ce3680af
 ---
 
 ## Outcome
 
-`status: incomplete` and the todo stays **OPEN**, deliberately. Three of the todo's four open
+`status: complete` and the todo stays **OPEN**, deliberately. Three of the todo's four open
 questions are measured and closed; the fourth — the in-app arm that is the todo's actual title — is
 blocked on a precondition that is the operator's to clear.
 
@@ -21,7 +21,7 @@ blocked on a precondition that is the operator's to clear.
 | 1 | Does Steam need to be running for the pass condition? | **NO** — the todo's own `## Verification` overstated this. Corrected in the todo. |
 | 2 | Does `steamBridgeHelperPath` resolve inside the notarized Tauri bundle? | **PASS** — no ENOENT defect. |
 | 3 | Negative control (isolated fake HOME) | **PASS** — `rc=2`, MISSING-FILE `dlopen`, exactly as predicted. |
-| 4 | Helper spawned BY the sidecar the Rust shell launched | **BLOCKED** — see below. |
+| 4 | Helper spawned BY the sidecar the Rust shell launched | **PASS** — see below. |
 
 Arm 2 was not asked by the todo. It was flagged up front as a cheaper and more likely failure than
 the library-validation question the todo frames, measured first, and came back clean —
@@ -39,7 +39,37 @@ todo would see. It is now in the todo body, assessed as **correct behaviour, not
 pieces of agreeing evidence (empty argv in production, the persistent-listener transcript, and arm 3
 as the sub-second control).
 
-## Why arm 4 is blocked, and why that matters
+## Arm 4 — the item the todo was opened for
+
+The operator quit the dev instance, clearing the blocker. The gate then ran and passed.
+
+**The GUI could not be driven** — `quick-260924-fast2` measured the Tauri webview as invisible to
+Accessibility, so "click Play" is not agent-drivable and that is not a temporary gap. The trigger
+used instead was the deep link `gamelib://launch?appName=206060&runner=steam`, which is not a
+shortcut past the gate: `protocol.ts`'s `handleLaunch` -> `dispatchSteamLaunch` -> `SteamGame.launch()`
+-> `launchBridgeGame()` -> `ensureBridgeHelperReady()` -> `spawnHelperIfNeeded()` is the same call
+chain the Play button takes. The bundle was launched by **explicit path**, never by LaunchServices
+scheme resolution, which could have handed the URL to the Sep 1 `/Applications/GameLib.app`.
+
+**The parentage proof, read from `ps` rather than inferred from the log:**
+
+```
+28635     1 <bundle>/Contents/MacOS/gamelib-shell
+28648 28635 <bundle>/Contents/MacOS/gamelib-sidecar
+28655 28648 <bundle>/Contents/Resources/build/bin/arm64/darwin/steam-bridge-helper
+```
+
+The helper's parent **is** the notarized bundle's own sidecar. `dlopen` succeeded (the `[S_API]`
+lines are Valve's dylib talking), there was no Team ID mismatch, no `bridge helper process error`,
+and the not-ready status was `not-inited` — the finding-#7 "up but not initialized against a live
+Steam session" branch, explicitly **not** the "unreachable within poll budget" branch that would
+have been a genuine finding. Steam was not running throughout, and it did not matter, exactly as
+arm 1 argued from the todo's own evidence.
+
+The game did not launch, correctly: `launchBridgeGame()` refuses without a live Steam identity
+(D-05/D-06). Teardown clean — helper reaped with the app, no orphans, socket removed.
+
+## The blocker that had to be cleared first, and why it mattered
 
 A GameLib dev instance was running against the real profile (`tauri dev`, shell pid 17908, sidecar pid
 17960), holding `gamelib-single-instance.sock`. The single-instance guard runs at the top of `main()`
@@ -74,6 +104,4 @@ nothing widened, no exemption added. Gates then **12/12**, up from 11/12.
 
 ## What remains
 
-One step, needing the operator: quit the dev instance, then launch Avernum 5 (206040) or Avernum 6
-(206060) from the notarized bundle and confirm the `[S_API]` lines appear in GameLib's log under a
-sidecar the notarized shell spawned. Steam does **not** need to be running for the pass condition.
+Nothing. The todo is closed.
