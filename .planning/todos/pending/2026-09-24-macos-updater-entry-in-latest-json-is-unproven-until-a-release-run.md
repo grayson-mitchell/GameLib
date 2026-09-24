@@ -142,3 +142,47 @@ gh release download v0.7.0 -p latest.json -O /tmp/latest.after.json --clobber &&
 
 Also visible on the draft and not part of this gate: `GameLib_0.7.0_x64.dmg` dated 2026-08-28 is a
 stale leftover. The macOS matrix leg builds `aarch64` only, so no run fired today will refresh it.
+
+## SCORED — run 35942560790, tag `v0.7.0-updater-test1`, 2026-09-24. All five items PASS.
+
+Commit built: `19b5e3a9e`. All three matrix legs green. macOS leg 01:21:42 → 01:35:08 (13m26s);
+`Notarizing` → `Notarizing Finished with status Accepted for id 83ecfefa-…` took 72s, the fast
+path again.
+
+| # | claim | observed | verdict |
+| - | ----- | -------- | ------- |
+| 1 | `.app.tar.gz` + `.sig` in BOTH the `Looking for artifacts in:` and `Found artifacts:` blocks | both blocks list all four paths — dmg, `.app`, `.app.tar.gz`, `.app.tar.gz.sig` (log 01:33:38) | **PASS** — the asymmetry the predecessor measured is gone |
+| 2 | job does NOT end `Signature not found for the updater JSON. Skipping upload...` | 0 occurrences in the whole macOS job log | **PASS** |
+| 3 | the release carries the tarball and its signature as assets | `GameLib_0.7.0_aarch64.app.tar.gz` (98,024,400 B, 01:33:49Z) and `.sig` (404 B, 01:33:50Z) | **PASS**, see naming note |
+| 4 | `latest.json` gains `darwin-aarch64` with a non-empty signature, Linux keys surviving | `darwin-aarch64` AND `darwin-aarch64-app`, both sig 404 B, both → asset 584932557 = `GameLib_0.7.0_aarch64.app.tar.gz`. `linux-x86_64`/`-appimage` both still present (→ 584926136 = the AppImage) | **PASS** |
+| 5 | `pub_date` is the macOS leg's timestamp or later | `2026-09-24T01:33:50.127Z` — the `.sig` upload moment, 94 s before the leg ended | **PASS** |
+
+**Naming note on item 3.** The todo predicted assets named `GameLib.app.tar.gz`. `tauri-action`
+renames on upload: the on-disk bundle IS `bundle/macos/GameLib.app.tar.gz`, the uploaded asset is
+`GameLib_0.7.0_aarch64.app.tar.gz`. Same file, and `latest.json` points at it by asset id, so
+nothing is broken — but a future check grepping the literal `GameLib.app.tar.gz` against the
+RELEASE rather than the LOG will find nothing and mis-score this.
+
+**The ordering trap is half-resolved, and the half that remains is the Gatekeeper half.** The
+sequence is now read off this run's own log, not inferred: `Bundling GameLib.app` 01:31:10 →
+`Signing …/GameLib.app` 01:31:13 → notarization zip 01:31:23 → `Accepted` 01:32:35 → dmg 01:32:38
+→ **`Bundling …/GameLib.app.tar.gz` 01:33:38**. The updater payload is therefore built from the
+POST-notarization app, not a pre-notarization copy — the worse of the two possibilities the todo
+named is ruled out. What is NOT settled: no `stapler`/`staple` line appears anywhere in the log,
+so whether the ticket is stapled INTO the app the tarball wraps is still unobserved. That is a
+`spctl --assess` / `stapler validate` question against the downloaded asset, not a log question,
+and it stays open.
+
+**Two observations that are NOT this todo's result, recorded so they are not lost:**
+
+- **The Windows leg SUCCEEDED**, for the first time ever — `GameLib_0.7.0_x64-setup.exe`
+  (112,309,170 B) plus `.sig`, and `windows-x86_64` + `windows-x86_64-nsis` keys in `latest.json`.
+  `2026-09-22-windows-packaged-build-breaks-on-darwin-runner-symlinks.md` says that leg dies at
+  step 5 `install-deps`; that was true on 35841476015 and is NOT true here. Its premise needs
+  re-reading against this run before anyone trusts either state.
+- **`draft-release-mac.yml` and `draft-release-linux.yml` did not run.** This workflow's header
+  claims both co-trigger on `v*` and land assets on the same release. Only `Release Tauri` fired
+  on this tag. The header is stale on that point.
+
+Still on the draft and still stale: `GameLib_0.7.0_x64.dmg` dated 2026-08-28. The macOS matrix leg
+is `aarch64` only, so no run refreshes it, and `latest.json` has no `darwin-x86_64` key.
