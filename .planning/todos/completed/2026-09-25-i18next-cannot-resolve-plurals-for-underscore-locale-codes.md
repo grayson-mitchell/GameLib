@@ -2,7 +2,7 @@
 created: 2026-09-25T00:00:00.000Z
 title: "i18next's PluralResolver cannot resolve plural forms for nb_NO/pt_BR/zh_Hans/zh_Hant -- the underscore-named locale directories this app actually ships"
 area: i18n
-status: pending
+status: resolved
 severity: major
 platform: any
 ready: code
@@ -15,6 +15,40 @@ files:
   - public/locales/zh_Hans/
   - public/locales/zh_Hant/
 ---
+
+# RESOLVED 2026-09-24 by quick-260925-bq4
+
+Fixed and pushed: `a27bed9a8` (fix), `44d6401e8` (tests), `c5a666b31` (record), `7d814bc05`
+(spin-off todo closed). Record:
+`.planning/quick/260925-bq4-fix-i18next-plural-resolution-for-underscore/260925-bq4-SUMMARY.md`.
+
+**What was done.** Direction 1 (rename the directories) was rejected for exactly the reason this
+todo gave -- a stored `language: "pt_BR"` would stop matching a real directory. Direction 2 was
+taken in its "convert before delegating" form, but at the APP boundary rather than by overriding
+i18next internals: `toI18nextCode` going in, `toShippedLanguage` coming back out
+(`src/common/languages.ts`), with `i18nextLanguageOptions()` returning `lng` and `supportedLngs`
+together so the two init sites cannot drift.
+
+**Scope was wider than this todo anticipated.** It named `src/frontend/index.tsx` only. The fix
+also had to cover the sidecar init, BOTH `changeLanguage` paths (a runtime language switch would
+otherwise re-break resolution), and two places where `i18n.language` flows back OUT into
+surfaces keyed by the shipped code. One of those, `getLocaleSettings`, would have silently
+flipped Brazil from BR/BRL to PT/EUR.
+
+**Also corrected here: this todo's severity reasoning was right but its symptom was understated.**
+It predicted plural lookups would "silently fail ... render wrong (or fall back to
+English/blank)". Measured, the outcome is specifically the third: i18next recomputes the suffix
+for `en` further down the fallback chain and returns real ENGLISH TEXT. Not blank, not a key --
+the English string, which is why nothing ever noticed.
+
+**Close condition met.** Per this todo's own Verification section, the `toBe('')` pin in
+`meta/__tests__/machineFillGamelib.test.ts` has been updated: the
+`I18NEXT_CANNOT_RESOLVE_UNDERSCORE_CODE` exception set is gone and all 48 non-en locales now run
+the same strict cross-check, fed through `toI18nextCode(dir)`. The empty-suffix assertion survives
+as a deliberate NEGATIVE CONTROL -- upstream i18next is still unfixed, and pinning that is what
+stops the conversion being dismissed as redundant later.
+
+## Original report follows
 
 # i18next cannot resolve plural forms for four of this app's locale codes
 

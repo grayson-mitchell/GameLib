@@ -18,6 +18,7 @@ import {
   type TranslateFn,
   type MtManifest
 } from '../machineFillGamelib'
+import { toI18nextCode } from '../../src/common/languages'
 
 // No network, no fs -- every fixture below is an in-memory object. Grepped
 // by this task's own acceptance criteria to confirm the suite is hermetic.
@@ -708,28 +709,23 @@ describe('pluralCategoriesFor', () => {
 describe('pluralCategoriesFor cross-checked against the real i18next pluralResolver', () => {
   const COUNTS = [0, 1, 2, 3, 4, 5, 11, 21, 22, 25, 100, 101]
 
-  // Pre-existing i18next defect -- NOT introduced or fixed by this task, and
-  // out of this quick task's scope per CLAUDE.md's scope boundary. Filed as
-  // .planning/todos/pending/2026-09-25-i18next-cannot-resolve-plurals-for-underscore-locale-codes.md.
+  // RESOLVED by quick-260925-bq4 (2026-09-24). This block used to carry an
+  // `I18NEXT_CANNOT_RESOLVE_UNDERSCORE_CODE` exception set holding
+  // `nb_NO`/`pt_BR`/`zh_Hans`/`zh_Hant` to `expect(suffix).toBe('')`, because
+  // i18next's PluralResolver.getRule passes the RAW lng code to
+  // `new Intl.PluralRules(code, ...)` and never converts an underscore to the
+  // dash form the API requires.
   //
-  // i18next's PluralResolver.getRule calls `new Intl.PluralRules(code, ...)`
-  // with the RAW lng code it was given
-  // (node_modules/i18next/dist/cjs/i18next.js:1218) and never converts an
-  // underscore-separated code to the dash form Intl.PluralRules requires.
-  // `nb_NO`/`pt_BR`/`zh_Hans`/`zh_Hant` are exactly how these four locale
-  // DIRECTORIES are named, and `loadPath: 'locales/{{lng}}/{{ns}}.json'`
-  // (src/frontend/index.tsx:129) feeds the directory name straight through
-  // as `lng` -- so `new Intl.PluralRules('nb_NO')` throws today, i18next
-  // catches it, warns "no plural rule found", and getSuffix returns ''.
-  // Measured directly against this repo's own i18next dependency. This test
-  // documents that defect instead of hiding it: the OTHER 44 locales are
-  // held to the strict cross-check below.
-  const I18NEXT_CANNOT_RESOLVE_UNDERSCORE_CODE = new Set([
-    'nb_NO',
-    'pt_BR',
-    'zh_Hans',
-    'zh_Hant'
-  ])
+  // **i18next itself is still unfixed** -- that is upstream, and the raw code
+  // still yields '' (pinned by the negative control below). What changed is
+  // that the APP no longer hands it a raw directory name: `toI18nextCode`
+  // converts at every i18next boundary (src/common/languages.ts), so the code
+  // i18next actually receives is `nb-NO`. All 48 non-en locales are therefore
+  // now held to the SAME strict cross-check, with no exception set.
+  //
+  // Feeding `toI18nextCode(dir)` here rather than `dir` is the point: it makes
+  // this suite exercise the conversion the app performs, so it fails if that
+  // conversion is ever dropped.
 
   let i18n: import('i18next').i18n
 
@@ -749,16 +745,30 @@ describe('pluralCategoriesFor cross-checked against the real i18next pluralResol
       expect(categories).not.toBeNull()
 
       for (const n of COUNTS) {
-        const suffix: string = i18n.services.pluralResolver.getSuffix(dir, n)
-
-        if (I18NEXT_CANNOT_RESOLVE_UNDERSCORE_CODE.has(dir)) {
-          expect(suffix).toBe('')
-          continue
-        }
+        const suffix: string = i18n.services.pluralResolver.getSuffix(
+          toI18nextCode(dir),
+          n
+        )
 
         expect(suffix.startsWith('_')).toBe(true)
         expect(categories).toContain(suffix.slice(1))
       }
+    }
+  )
+
+  // Negative control, kept permanently: i18next is NOT fixed upstream. The raw
+  // directory name still resolves no rule and still yields an empty suffix --
+  // which is what made every counted string render in English for these four
+  // locales before quick-260925-bq4. This is the defect `toI18nextCode` exists
+  // to route around, and pinning it here means the conversion above cannot be
+  // dismissed as redundant.
+  it.each(['nb_NO', 'pt_BR', 'zh_Hans', 'zh_Hant'])(
+    '%s: the RAW underscore code still yields no suffix (upstream i18next, unfixed)',
+    (dir) => {
+      expect(i18n.services.pluralResolver.getSuffix(dir, 5)).toBe('')
+      expect(
+        i18n.services.pluralResolver.getSuffix(toI18nextCode(dir), 5)
+      ).toBe('_other')
     }
   )
 })
