@@ -12,6 +12,9 @@ files:
   - src/frontend/screens/ConsoleMode/controller.ts
   - src/frontend/components/UI/ControllerHints/index.tsx
   - src/frontend/helpers/__tests__/nintendoLayout.test.ts
+status: completed
+resolved: 2026-09-23
+resolved_by: quick-260923-qe5
 ---
 
 # `checkNintendo` assumes a mapping it never verifies
@@ -107,3 +110,65 @@ Not cosmetic: it blocked the controller leg of the Phase 38 sitting on 2026-09-2
   failing d-pad half — see relocation rule (4) in `38-VERIFICATION.md`, which exists for exactly
   this shape.
 - `38-C02`, `38-C05`, `38-C06`, `38-C08` ride on `axes[0-3]` and remain scoreable.
+
+## Resolution (2026-09-23, quick 260923-qe5)
+
+**The measured HID report, replacing the deduction at "Why `mapping` is known to be non-standard
+without console access" above.** That section reasoned to a conclusion without reading the value;
+this is the value, read live off the operator's pad on 2026-09-23:
+
+```
+[GAMEPAD] id="PowerA Advantage Wired Controller for Nintendo Switch 2 (Vendor: 20d6 Product: a720)" mapping="" buttons=17 axes=10
+```
+
+- A1/A2 — `mapping` is the literal empty string `""` (non-standard, confirmed rather than
+  deduced), `buttons.length=17`, `axes.length=10`.
+- A3 — face-cap indices: A=2, B=1, X=3, Y=0 (raw HID order `[Y, B, A, X]`) — matches this todo's
+  table exactly.
+- A4 — shoulders L/R/ZL/ZR = **4/5/6/7, IDENTICAL to the standard mapping**. This RETIRES the
+  claim two paragraphs above ("`buttons[4]/[5]` shoulders... now known to be shifted") — it was a
+  deduction and it was wrong; the shoulders were never shifted. Stick clicks (`buttons[10]/[11]`)
+  and Home/Capture were **NOT MEASURED** — no operator time was spent on them once A4's cardinal
+  shoulder question was answered, so `guide` is deliberately left unbound on the non-standard path
+  and the stick-click half of `38-C04` stays unconfirmed by measurement (see spillover todo below).
+- A5 — Home/Capture: **NOT MEASURED** (see A4). No index was captured, so `guide` dispatches
+  nothing on the non-standard path rather than guessing.
+- A6 — hat axis **index 9**: up `-1.00000`, right `-0.42857`, down `0.14286`, left `0.71429`,
+  up-right (diagonal) `-0.71429`, **neutral `3.28571`**. Every cardinal matched the Chromium/W3C
+  generic-hat convention predicted in the plan. Neutral did NOT: the plan predicted `1.28571` from
+  that same convention and the measured value was `3.28571`. This is the one place the prior was
+  wrong, and it mattered — a neutral constant built on the predicted value would have encoded a
+  phantom d-pad direction at rest on this exact pad.
+- A7 — the up-right diagonal reads `-0.71429`, confirming it is distinct from every cardinal and
+  supporting the cardinals-only dispatch decision (a diagonal fires nothing).
+
+**What changed.** `nintendo.ts` gained `nintendoFaceIndices(mapping)`, one exported table with a
+STANDARD row (unchanged from today) and a RAW-HID row (from A3 above), and `nintendoHatDirection`
+reading the hat axis at index 9 against the A6 constants. `checkNintendo` takes `mapping` as a
+fifth parameter and resolves its four face buttons and its d-pad branch through that table instead
+of hard-coded standard-mapping indices. `getActionButtonIndex`/`getBackButtonIndex` in Console
+Mode's `controller.ts` resolve through the SAME table via a required (non-defaulted) `mapping`
+parameter, so the two subsystems read one source of truth and cannot disagree.
+
+**This todo under-scoped its own blast radius.** `ConsoleMode/controller.ts` was listed in
+`files:` above as a plain reference, but it carried a SECOND, INDEPENDENT instance of the same
+defect — `getActionButtonIndex`/`getBackButtonIndex` hard-coded the same standard-mapping
+assumption `checkNintendo` did, with no shared code between them. It was fixed in the same change,
+through the same table. Do not trust a todo's `files:` list as a blast-radius ceiling; read the
+functions it names.
+
+**What is now SCOREABLE (not scored — that is the orchestrator's separate live sitting):**
+`38-C01`'s d-pad half, `38-C03`, `38-C04` and `38-C08`. `38-VERIFICATION.md` and
+`38-HUMAN-UAT.md` are deliberately not edited here.
+
+**What was deliberately NOT fixed:**
+- `checkN64Clone1`'s comment/code disagreement (different device, no hardware to test it here).
+- The multiple-simultaneous-pad limitation in `useGamepadInfo` (reads layout/mapping from the
+  first connected pad only, while `useGamepadButtonPress` applies the result to every pad) —
+  pre-existing, now recorded in a comment at the read site, not fixed.
+- The stick-click index question A4 left unmeasured, and the guide binding A5 left unbound — see
+  the spillover todos filed alongside this retirement.
+
+**Proven by neither this fix nor any test in it:** that a *different* third-party non-standard
+Nintendo-style pad reports the same raw HID order or the same hat axis index. Only this one device
+has been observed; a differently-wired pad would still be wrong and nothing here would detect it.
