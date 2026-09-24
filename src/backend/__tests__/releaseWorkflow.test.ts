@@ -1136,11 +1136,21 @@ interface ParsedReleaseStep {
   if?: string
   run?: string
   env?: Record<string, unknown>
+  with?: Record<string, unknown>
   'timeout-minutes'?: number
   'continue-on-error'?: boolean
 }
 
 interface ParsedReleaseWorkflow {
+  on?: {
+    push?: { tags?: string[] }
+    workflow_dispatch?: {
+      inputs?: Record<
+        string,
+        { type?: string; default?: unknown; description?: string }
+      >
+    } | null
+  }
   jobs: Record<
     string,
     { env?: Record<string, unknown>; steps: ParsedReleaseStep[] }
@@ -1150,6 +1160,105 @@ interface ParsedReleaseWorkflow {
 function parseReleaseSteps(): ParsedReleaseStep[] {
   const parsed = loadYaml(loadReleaseWorkflow()) as ParsedReleaseWorkflow
   return parsed.jobs.release.steps
+}
+
+/**
+ * Parses the whole workflow, trigger block included -- reuses
+ * loadYaml/loadReleaseWorkflow rather than forking a second parser.
+ * parseReleaseSteps() above stays as the narrow steps-only accessor the
+ * existing tests use.
+ */
+function parseReleaseWorkflow(): ParsedReleaseWorkflow {
+  return loadYaml(loadReleaseWorkflow()) as ParsedReleaseWorkflow
+}
+
+/**
+ * A minimal evaluator of GitHub Actions' `&&`/`||` VALUE semantics (NOT
+ * JavaScript's boolean semantics) over the small expression subset this
+ * workflow uses: a single wrapping `${{ ... }}`, `&&`/`||` chains (`&&`
+ * binds tighter, both left-associative), single-quoted string literals,
+ * `<lookup> == '<lit>'` / `!=` comparisons, and bare dotted-key lookups
+ * resolved against `ctx` (missing key -> '').
+ *
+ * GitHub's `&&`/`||` return an OPERAND VALUE, not a coerced boolean: `A && B`
+ * yields `A` when `A` is falsy, else `B`; `A || B` yields `A` when `A` is
+ * truthy, else `B`. An empty string is falsy. The hazard this evaluator must
+ * NOT fall into is DISCARDING OPERAND VALUES in favour of a plain boolean
+ * AND/OR (returning `true`/`false` instead of the operand itself) -- a naive
+ * JS `&&`/`||` reimplementation that stays value-returning would actually
+ * coincide with GitHub's semantics here, because JS's own `&&`/`||` are
+ * already value-returning with the same truthy/falsy rules for strings and
+ * booleans. The POSITIVE CONTROL test below proves this evaluator reproduces
+ * TRAP 1's naive-form empty-string trap rather than silently discarding
+ * operands and returning the "hoped for" boolean answer.
+ */
+function evaluateGithubExpression(
+  expr: string,
+  ctx: Record<string, string | boolean>
+): string | boolean {
+  const wrapped = expr.trim().match(/^\$\{\{\s*([\s\S]*?)\s*\}\}$/)
+  const body = wrapped ? wrapped[1] : expr.trim()
+
+  const isFalsy = (v: string | boolean): boolean => v === false || v === ''
+  const isTruthy = (v: string | boolean): boolean => !isFalsy(v)
+
+  const splitTopLevel = (s: string, op: '&&' | '||'): string[] => {
+    const parts: string[] = []
+    let current = ''
+    let inQuote = false
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i]
+      if (ch === "'") inQuote = !inQuote
+      if (!inQuote && s.slice(i, i + 2) === op) {
+        parts.push(current)
+        current = ''
+        i++
+        continue
+      }
+      current += ch
+    }
+    parts.push(current)
+    return parts
+  }
+
+  const resolveOperand = (raw: string): string | boolean => {
+    const s = raw.trim()
+
+    const literal = s.match(/^'([^']*)'$/)
+    if (literal) return literal[1]
+
+    const comparison = s.match(/^([\w.]+)\s*(==|!=)\s*'([^']*)'$/)
+    if (comparison) {
+      const [, lookup, op, lit] = comparison
+      const actual = Object.prototype.hasOwnProperty.call(ctx, lookup)
+        ? ctx[lookup]
+        : ''
+      const actualStr = typeof actual === 'boolean' ? String(actual) : actual
+      const equal = actualStr === lit
+      return op === '==' ? equal : !equal
+    }
+
+    if (Object.prototype.hasOwnProperty.call(ctx, s)) return ctx[s]
+    return ''
+  }
+
+  const evalAnd = (part: string): string | boolean => {
+    const operands = splitTopLevel(part, '&&')
+    let acc: string | boolean | undefined
+    for (const operand of operands) {
+      const val = resolveOperand(operand)
+      acc = acc === undefined ? val : isFalsy(acc) ? acc : val
+    }
+    return acc as string | boolean
+  }
+
+  const orParts = splitTopLevel(body, '||')
+  let result: string | boolean | undefined
+  for (const part of orParts) {
+    const val = evalAnd(part)
+    result = result === undefined ? val : isTruthy(result) ? result : val
+  }
+  return result as string | boolean
 }
 
 const SIGN_SCRIPT = 'sign:macos-resources'
@@ -1369,5 +1478,196 @@ describe('release-tauri.yml bounds the tauri-action step (260923-mrx)', () => {
       k.startsWith('APPLE_')
     )
     expect(offenders).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Quick task 260924-rbx. `tagName: v__VERSION__` resolves from
+// tauri.conf.json's `version` (0.7.0), NOT from the pushed tag's literal
+// name -- so every throwaway tag pushed this gap cycle
+// (v0.7.0-notarize-test1/2/3, v0.7.0-updater-test1) landed in ONE shared
+// draft release, id 378785323, which still carries a stale
+// GameLib_0.7.0_x64.dmg from 2026-08-28. A manual workflow_dispatch today
+// would do the same. This block gates a `dry_run` dispatch input (default
+// true) that makes a manual dispatch build all three matrix legs WITHOUT
+// creating a git tag or touching that shared draft release.
+//
+// Assertions here read RESOLVED expression values via evaluateGithubExpression
+// (defined above, near parseReleaseSteps), never raw substring greps over
+// dry_run/GAMELIB_DRY_RUN/tagName -- this file's own comments legitimately
+// contain all of those strings, so a raw toContain would be satisfiable by
+// prose alone (this repo's recurring green-check-proving-nothing failure).
+// ---------------------------------------------------------------------------
+
+describe('release-tauri.yml dry-run dispatch mode (260924-rbx)', () => {
+  test('EVALUATOR POSITIVE CONTROL: proves the evaluator reproduces TRAP 1s empty-string trap rather than discarding operand values', () => {
+    // The naive, wrongly-ordered form. This MUST resolve to 'v__VERSION__'
+    // here -- if this evaluator instead returned '', it would be an
+    // operand-discarding/boolean-coercing evaluator, not a GitHub-semantics
+    // one, and every resolved-value assertion below would be worthless.
+    expect(
+      evaluateGithubExpression(
+        "${{ env.D == 'true' && '' || 'v__VERSION__' }}",
+        { 'env.D': 'true' }
+      )
+    ).toBe('v__VERSION__')
+
+    // The corrected, inverted form this task actually ships. MUST resolve to
+    // ''.
+    expect(
+      evaluateGithubExpression(
+        "${{ env.D != 'true' && 'v__VERSION__' || '' }}",
+        { 'env.D': 'true' }
+      )
+    ).toBe('')
+  })
+
+  test('INPUT DECLARATION: dry_run is a boolean workflow_dispatch input defaulting to true', () => {
+    const parsed = parseReleaseWorkflow()
+    const dryRun = parsed.on?.workflow_dispatch?.inputs?.dry_run
+
+    expect(dryRun).toBeDefined()
+    expect(dryRun?.type).toBe('boolean')
+    expect(dryRun?.default).toBe(true)
+  })
+
+  test('the push trigger still targets the v* tag pattern', () => {
+    const parsed = parseReleaseWorkflow()
+    expect(parsed.on?.push?.tags).toContain('v*')
+  })
+
+  describe('SINGLE SOURCE, GATED ON THE EVENT: jobs.release.env.GAMELIB_DRY_RUN', () => {
+    test('is a string expression gated on github.event_name, not a second computation site, and never uses the string-valued github.event.inputs spelling (TRAP 2)', () => {
+      const parsed = parseReleaseWorkflow()
+      const dryRunExpr = parsed.jobs.release.env?.GAMELIB_DRY_RUN
+
+      expect(typeof dryRunExpr).toBe('string')
+      expect(dryRunExpr as string).toContain(
+        "github.event_name == 'workflow_dispatch'"
+      )
+      expect(dryRunExpr as string).not.toContain('github.event.inputs')
+    })
+
+    test('resolves truthy on a workflow_dispatch run with dry_run true', () => {
+      const parsed = parseReleaseWorkflow()
+      const dryRunExpr = parsed.jobs.release.env?.GAMELIB_DRY_RUN as string
+
+      const resolved = evaluateGithubExpression(dryRunExpr, {
+        'github.event_name': 'workflow_dispatch',
+        'inputs.dry_run': true
+      })
+      expect(resolved === true || resolved === 'true').toBe(true)
+    })
+
+    test('resolves falsy on a workflow_dispatch run with dry_run false', () => {
+      const parsed = parseReleaseWorkflow()
+      const dryRunExpr = parsed.jobs.release.env?.GAMELIB_DRY_RUN as string
+
+      const resolved = evaluateGithubExpression(dryRunExpr, {
+        'github.event_name': 'workflow_dispatch',
+        'inputs.dry_run': false
+      })
+      expect(resolved === false || resolved === '').toBe(true)
+    })
+
+    test('FAILING DIRECTION: a push event resolves falsy even when inputs.dry_run resolves true -- a push can never enter dry-run', () => {
+      const parsed = parseReleaseWorkflow()
+      const dryRunExpr = parsed.jobs.release.env?.GAMELIB_DRY_RUN as string
+
+      const resolved = evaluateGithubExpression(dryRunExpr, {
+        'github.event_name': 'push',
+        'inputs.dry_run': true
+      })
+      expect(resolved === false || resolved === '').toBe(true)
+    })
+  })
+
+  describe('REAL-RELEASE PATH CANNOT BE SILENTLY TURNED OFF: the tauri-action step with: block', () => {
+    const findTauriStep = (): ParsedReleaseStep => {
+      const steps = parseReleaseSteps()
+      const step = steps.find((s) => (s.uses ?? '').includes('tauri-action'))
+      if (!step) throw new Error('tauri-action step not found')
+      return step
+    }
+
+    test('non-vacuity: the step and each key this block reads are all defined, so a renamed/removed key cannot pass by undefined', () => {
+      const step = findTauriStep()
+      expect(step.with).toBeDefined()
+      expect(step.with?.tagName).toBeDefined()
+      expect(step.with?.releaseName).toBeDefined()
+      expect(step.with?.releaseDraft).toBeDefined()
+      expect(step.with?.prerelease).toBeDefined()
+      expect(step.with?.releaseId).toBeDefined()
+    })
+
+    test('on a real (non-dry) run, tagName/releaseName resolve non-empty and releaseDraft/prerelease stay true (D-09 guard, restated at the resolved level)', () => {
+      const step = findTauriStep()
+      const ctx = { 'env.GAMELIB_DRY_RUN': 'false' }
+
+      const tagName = evaluateGithubExpression(String(step.with?.tagName), ctx)
+      const releaseName = evaluateGithubExpression(
+        String(step.with?.releaseName),
+        ctx
+      )
+
+      expect(tagName).not.toBe('')
+      expect(tagName).toBe('v__VERSION__')
+      expect(releaseName).not.toBe('')
+
+      expect(step.with?.releaseDraft).toBe(true)
+      expect(step.with?.prerelease).toBe(true)
+    })
+
+    test('on a dry run, tagName/releaseName resolve empty and releaseId is empty', () => {
+      const step = findTauriStep()
+      const ctx = { 'env.GAMELIB_DRY_RUN': 'true' }
+
+      const tagName = evaluateGithubExpression(String(step.with?.tagName), ctx)
+      const releaseName = evaluateGithubExpression(
+        String(step.with?.releaseName),
+        ctx
+      )
+
+      expect(tagName).toBe('')
+      expect(releaseName).toBe('')
+      expect(step.with?.releaseId).toBe('')
+    })
+  })
+
+  describe('INVARIANTS THIS CHANGE MUST NOT DISTURB', () => {
+    test('the notarytool history diagnostic step is still immediately after tauri-action', () => {
+      const steps = parseReleaseSteps()
+      const tauriIdx = steps.findIndex((s) =>
+        (s.uses ?? '').includes('tauri-action')
+      )
+      const diagIdx = steps.findIndex((s) =>
+        (s.run ?? '').includes('notarytool history')
+      )
+
+      expect(tauriIdx).toBeGreaterThanOrEqual(0)
+      expect(diagIdx).toBeGreaterThanOrEqual(0)
+      expect(diagIdx).toBe(tauriIdx + 1)
+    })
+
+    test('exactly one step in the job still carries timeout-minutes, and it is tauri-action', () => {
+      const steps = parseReleaseSteps()
+      const withTimeout = steps.filter(
+        (s) => s['timeout-minutes'] !== undefined
+      )
+
+      expect(withTimeout).toHaveLength(1)
+      expect(withTimeout[0]?.uses ?? '').toContain('tauri-action')
+    })
+
+    test('PARSED: no step in the job carries an upload-artifact or cache action -- deliberately redundant with the raw-text ban at :272-276 (that ban catches the string, this catches a step; a path-confined upload would arm the day the SignPath cert lands, see TRAP 3)', () => {
+      const steps = parseReleaseSteps()
+      const offenders = steps.filter(
+        (s) =>
+          (s.uses ?? '').includes('actions/upload-artifact') ||
+          (s.uses ?? '').includes('actions/cache')
+      )
+
+      expect(offenders).toEqual([])
+    })
   })
 })
