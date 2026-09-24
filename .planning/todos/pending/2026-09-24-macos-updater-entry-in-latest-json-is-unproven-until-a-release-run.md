@@ -5,8 +5,8 @@ area: build
 severity: major
 platform: any
 ready: live-gate
-needs: macos-release-run-then-read-latest-json
-status: OPEN
+needs: none
+status: RESOLVED
 found_by: 'Carried out of 2026-09-23-macos-updater-manifest-can-never-gain-a-macos-entry-bundle-targets-omits-app.md by quick-260924-f9y, 2026-09-24, BEFORE that todo was closed. That todo fixed the config; this is the half of it that a desk run cannot reach.'
 source: '.planning/todos/completed/2026-09-23-macos-updater-manifest-can-never-gain-a-macos-entry-bundle-targets-omits-app.md'
 files:
@@ -186,3 +186,53 @@ and it stays open.
 
 Still on the draft and still stale: `GameLib_0.7.0_x64.dmg` dated 2026-08-28. The macOS matrix leg
 is `aarch64` only, so no run refreshes it, and `latest.json` has no `darwin-x86_64` key.
+
+## The Gatekeeper half, measured — the updater payload is NOTARIZED AND STAPLED
+
+The one thing the five items could not see is now observed rather than reasoned about. The asset
+was downloaded off the draft, extracted, and put to the three tools that can actually answer it:
+
+```
+$ xcrun stapler validate unpack/GameLib.app
+Processing: .../unpack/GameLib.app
+The validate action worked!                                          # exit 0
+
+$ spctl --assess -vvv --type exec unpack/GameLib.app
+.../unpack/GameLib.app: accepted
+source=Notarized Developer ID
+origin=Developer ID Application: grayson mitchell (S7U223QWXJ)       # exit 0
+
+$ codesign --verify --deep --strict --verbose=2 unpack/GameLib.app
+.../unpack/GameLib.app: valid on disk
+.../unpack/GameLib.app: satisfies its Designated Requirement         # exit 0
+```
+
+`stapler validate` succeeding is the decisive one: the notarization ticket is embedded IN the app
+the tarball wraps, so a machine that extracts this payload can verify it **offline**, with no call
+to Apple. `codesign --deep --strict` passing additionally shows the tar round-trip preserved the
+nested signatures — `Contents/MacOS/gamelib-sidecar` validated individually — which a tarball that
+dropped extended attributes or flattened symlinks would not do. Identity
+`Developer ID Application: grayson mitchell (S7U223QWXJ)`, hardened runtime (`flags=0x10000`),
+secure timestamp present.
+
+So the concern the todo raised — "an updater payload that fails Gatekeeper on extraction would
+pass every check in this list" — is closed by measurement, not carried forward as a residual. No
+follow-up todo is owed for it.
+
+One boundary, stated so it is not over-read: `spctl --assess` ran on a file with no quarantine
+attribute, because `gh release download` sets none (see
+`serve-an-artifact-over-localhost-to-get-a-real-safari-quarantine`). That is the right condition
+to test here — an updater replaces an app in place and does not quarantine it — but it is NOT a
+test of the first-launch-from-browser path, which
+`notarized-still-shows-an-interstitial-just-not-a-blocking-one` already covers for the dmg.
+
+## Closed
+
+All five gate items PASS on run 35942560790, and the Gatekeeper question they could not reach is
+measured green as well. The throwaway tag `v0.7.0-updater-test1` has been deleted from `origin`
+and locally, matching the practice already visible there — no `notarize-test*` tag survived
+either. The draft release keeps the artifacts it produced; `latest.json` carries darwin, linux and
+windows entries.
+
+`severity: major` retires with this file: publishing the `v0.7.0` draft no longer promotes an
+updater feed that is blind to macOS.
