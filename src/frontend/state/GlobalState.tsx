@@ -45,6 +45,7 @@ import type { IpcRendererEvent } from 'backend/platform'
 import { NileRegisterData } from 'common/types/nile'
 import { HumbleKey, HumbleSyncState } from 'common/types/humble'
 import { SteamSyncStatus } from 'common/types/ipc'
+import { toShippedLanguage } from 'common/languages'
 import useGlobalState from './GlobalStateV2'
 import { handleSteamBottleSetupRequiredSignal } from './SteamBottleSetup'
 import { handleSteamClientSetupRequiredSignal } from './SteamClientSetup'
@@ -480,7 +481,13 @@ class GlobalState extends PureComponent<Props> {
     wineVersions: wineDownloaderInfoStore.get('wine-releases', []),
     error: false,
     gameUpdates: [],
-    language: this.props.i18n.language,
+    // Converted back OUT of i18next (quick-260925-bq4): `i18n.language` is now
+    // the BCP-47 tag, but this value reaches `LanguageSelector`'s
+    // `currentLanguage`, which indexes `languageLabels`/`languageFlags` (keyed
+    // by the shipped code) and is the <select>'s value. Unconverted, the four
+    // underscore-named locales would show a raw `nb-NO` label with no option
+    // selected.
+    language: toShippedLanguage(this.props.i18n.language),
     libraryStatus: [],
     libraryTopSection: globalSettings?.libraryTopSection || 'disabled',
     platform: window.platform,

@@ -39,7 +39,11 @@ import { defaultThemes } from './components/UI/ThemeSelector'
 import Loading from './screens/Loading'
 import { hydrateStoreSnapshot } from '../preload/tauriTransport'
 import { applyFramelessDecorations } from '../preload/api/tauriWindowChrome'
-import { supportedLanguages } from 'common/languages'
+import {
+  i18nextLanguageOptions,
+  toI18nextCode,
+  toShippedLanguage
+} from 'common/languages'
 
 initOnlineMonitor()
 
@@ -126,7 +130,16 @@ const Backend = new HttpApi(null, {
   // relative to the OLD frontendDist root, not the new one). Removed rather
   // than "fixed", since a dead option pointing at a plausible-looking path
   // is a trap for the next reader. `loadPath` below is LIVE -- do not touch.
-  loadPath: 'locales/{{lng}}/{{ns}}.json'
+  //
+  // quick-260925-bq4: a function rather than the '{{lng}}' string, because the
+  // code i18next resolves is now the BCP-47 tag ('pt-BR') while the directory
+  // on disk keeps its shipped name ('pt_BR'). `toShippedLanguage` maps back.
+  // NOTE the signature: i18next-http-backend 2.7.3 calls loadPath with ARRAYS
+  // (`loadPath(languages, namespaces)`, :89-90); i18next-fs-backend 2.6.0 calls
+  // it with SCALARS. The sidecar's copy of this is therefore NOT identical --
+  // writing one shape for both silently yields '[object Array]' in a path.
+  loadPath: (languages: string[], namespaces: string[]) =>
+    `locales/${toShippedLanguage(languages[0])}/${namespaces[0]}.json`
 })
 
 initGamepad()
@@ -138,7 +151,11 @@ storage.removeItem('nonAvailableGames')
 const languageCode: string =
   configStore.get_nodefault('language') ?? storage.getItem('language') ?? 'en'
 configStore.set('language', languageCode)
-document.querySelector('html')?.setAttribute('lang', languageCode)
+// The BCP-47 tag, not the shipped code: `lang="pt_BR"` is not a valid language
+// tag and the four underscore-named locales would emit one (quick-260925-bq4).
+document
+  .querySelector('html')
+  ?.setAttribute('lang', toI18nextCode(languageCode))
 
 window.setCustomCSS = (cssString: string) => {
   const style = document.createElement('style')
@@ -165,11 +182,14 @@ i18next
     interpolation: {
       escapeValue: false
     },
-    lng: languageCode,
+    // `lng` + `supportedLngs` as one unit -- see i18nextLanguageOptions' header
+    // for why they must stay in step (a BCP-47 `lng` against the underscore
+    // `supportedLngs` list filters the locale out entirely and sends
+    // EVERYTHING to English, not just plurals).
+    ...i18nextLanguageOptions(languageCode),
     react: {
       useSuspense: true
-    },
-    supportedLngs: supportedLanguages
+    }
   })
 
 const container = document.getElementById('root')

@@ -38,7 +38,7 @@ import i18next from 'i18next'
 import * as electronStub from '../platform'
 import { startInstalledJsonWatcher } from './installedJsonWatcher'
 import { READY_SENTINEL } from 'common/types/sidecarTransport'
-import { supportedLanguages } from 'common/languages'
+import { i18nextLanguageOptions, toShippedLanguage } from 'common/languages'
 
 // ---- Step 2: import the backend registration path — AFTER the hook -------
 
@@ -1005,16 +1005,35 @@ export function init(
         .use(Backend)
         .init({
           backend: {
-            addPath: join(publicDir, 'locales', '{{lng}}', '{{ns}}'),
+            // quick-260925-bq4: `addPath` used to sit here as
+            // join(publicDir,'locales','{{lng}}','{{ns}}'). Nothing in this init
+            // sets `saveMissing`, so it was never reached -- and once `{{lng}}`
+            // became a BCP-47 tag it would have pointed at a `pt-BR` directory
+            // that does not exist. Removed rather than "fixed", for the same
+            // reason quick task 260901-b8z removed the renderer's copy: a dead
+            // option pointing at a plausible-looking path is a trap.
             allowMultiLoading: false,
-            loadPath: join(publicDir, 'locales', '{{lng}}', '{{ns}}.json')
+            // A function, not '{{lng}}': the resolved code is now the BCP-47 tag
+            // while the directory keeps its shipped name. NOTE the signature --
+            // i18next-fs-backend 2.6.0 calls loadPath with SCALARS
+            // (`loadPath(language, namespace)`, :52-53), whereas
+            // i18next-http-backend in the renderer passes ARRAYS. The two call
+            // sites are deliberately not identical.
+            loadPath: (language: string, namespace: string) =>
+              join(
+                publicDir,
+                'locales',
+                toShippedLanguage(language),
+                `${namespace}.json`
+              )
           },
           debug: false,
           returnEmptyString: false,
           returnNull: false,
           fallbackLng: 'en',
-          lng: settings.language,
-          supportedLngs: supportedLanguages,
+          // `lng` + `supportedLngs` as one unit (quick-260925-bq4) -- see
+          // i18nextLanguageOptions' header for why they must stay in step.
+          ...i18nextLanguageOptions(settings.language),
           // Plan 34.6-19 (REQ-34.6-05, T-34.6-51): fork strings live in their
           // own `gamelib` namespace (public/locales/{{lng}}/gamelib.json),
           // upstream Heroic strings stay in `translation`.
@@ -1022,6 +1041,11 @@ export function init(
           // The `supportedLngs` list above is shared with the renderer's own
           // i18next init (`src/frontend/index.tsx`) via `common/languages` --
           // that divergence risk is closed structurally, not by convention.
+          // quick-260925-bq4 tightened this further: `lng` and `supportedLngs`
+          // now arrive together from `i18nextLanguageOptions()`, so the two
+          // inits cannot drift on either half independently, and
+          // `languages.realI18next.test.ts` exercises that same function rather
+          // than a hand-rolled copy of these options.
           //
           // The `ns`/`defaultNS` pair below is NOT mirrored in the renderer,
           // and that is correct, not a gap: `src/frontend/index.tsx`'s init

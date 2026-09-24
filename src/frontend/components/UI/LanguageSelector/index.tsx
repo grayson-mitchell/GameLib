@@ -4,7 +4,7 @@ import { configStore } from 'frontend/helpers/electronStores'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { SelectField } from '..'
 import { MenuItem } from '@mui/material'
-import type { SupportedLanguage } from 'common/languages'
+import { toI18nextCode, type SupportedLanguage } from 'common/languages'
 import {
   buildTranslationIssueUrl,
   shouldShowMtNotice
@@ -129,7 +129,12 @@ export default function LanguageSelector({
     window.api.changeLanguage(newLanguage)
     storage.setItem('language', newLanguage)
     configStore.set('language', newLanguage)
-    i18n.changeLanguage(newLanguage)
+    // Only the i18next call takes the BCP-47 tag (quick-260925-bq4). The three
+    // lines above and `setLanguage` below persist / surface the SHIPPED code --
+    // it is what keys `languageLabels`, `languageFlags` and the locale
+    // directories. Without the conversion a runtime language switch re-breaks
+    // plural resolution even though init got it right.
+    i18n.changeLanguage(toI18nextCode(newLanguage))
     setLanguage(newLanguage)
   }
 

@@ -14,6 +14,7 @@ import {
   type DiscountBadge
 } from 'common/discounts/badges'
 import { selectKeysWaiting } from 'common/humble/viewFilters'
+import { toShippedLanguage } from 'common/languages'
 import DiscountCard from './components/DiscountCard'
 import DiscountFilters from './components/DiscountFilters'
 import DiscountPagination from './components/DiscountPagination'
@@ -43,8 +44,14 @@ export default function Discounts() {
   const [regionOverride, setRegionOverride] = useState<string | null>(() =>
     getStoredRegionOverride()
   )
+  // `toShippedLanguage` (quick-260925-bq4): `i18n.language` is the BCP-47 tag,
+  // but `getLocaleSettings` looks up COUNTRY_CURRENCY_MAP, which is keyed by
+  // the SHIPPED code (`pt_BR`, `nb_NO`, `zh_Hans`, `zh_Hant`). Passing the tag
+  // straight through would miss the exact key and fall back to the bare
+  // language part -- flipping Brazil to PT/EUR and Norway to the US/USD
+  // default.
   const localeSettings = useMemo(
-    () => getLocaleSettings(i18n.language, regionOverride),
+    () => getLocaleSettings(toShippedLanguage(i18n.language), regionOverride),
     [i18n.language, regionOverride]
   )
   const { epic, gog, amazon, steam, zoom, humble } = useContext(ContextProvider)

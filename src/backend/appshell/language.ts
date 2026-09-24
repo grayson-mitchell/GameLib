@@ -17,6 +17,7 @@
 
 import i18next from 'i18next'
 
+import { toI18nextCode } from '../../common/languages'
 import { GlobalConfig } from '../config'
 import { backendEvents } from '../backend_events'
 import { gameInfoStore } from '../storeManagers/legendary/electronStores'
@@ -49,7 +50,13 @@ import { logInfo, logWarning, LogPrefix } from '../logger'
 export async function changeLanguage(language: string): Promise<void> {
   logInfo(['Changing Language to:', language], LogPrefix.Backend)
   try {
-    await i18next.changeLanguage(language)
+    // `toI18nextCode` (quick-260925-bq4): `language` is the SHIPPED code, which
+    // for four locales is a directory name i18next cannot parse as a language
+    // tag -- it would silently lose plural resolution and render counted
+    // strings in English. Only the i18next argument is converted; `setSetting`
+    // below MUST keep the shipped form, since that is what configStore,
+    // `languageLabels` and the locale directories are keyed by.
+    await i18next.changeLanguage(toI18nextCode(language))
   } catch (error) {
     logWarning(
       [
