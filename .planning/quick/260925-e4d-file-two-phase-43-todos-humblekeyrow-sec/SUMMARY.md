@@ -100,6 +100,40 @@ the required shape exists in this library — the Pitfall-C disabled caption, th
 a 2-line wrapped title (the longest title occupies 475.5 of a 768.0 track, so no wrap triggers).
 Gaps in the **sample**, not the implementation, and no re-run on this machine closes them.
 
+## Explorer colour — the yellow was TWO artifacts, not one
+
+The phase folder read yellow after the verification landed. Replaying the `gsd-phase-status`
+parser against the real tree, rather than reasoning about it:
+
+| artifact             | frontmatter          | parses as    |
+| -------------------- | -------------------- | ------------ |
+| 10 plans             | —                    | `complete`   |
+| `43-UAT.md`          | `status: complete`   | `complete`   |
+| `43-UI-SPEC.md`      | `status: approved`   | `complete`   |
+| `43-VALIDATION.md`   | `status: draft`      | **`pending`**    |
+| `43-VERIFICATION.md` | `status: gaps_found` | **`inprogress`** |
+
+Rollup → `inprogress`. All four combinations measured: **flipping either artifact alone still
+rolls up `inprogress`.** Both had to move, so the yellow was never attributable to the
+verification alone.
+
+`43-VALIDATION.md` was stale, not a judgement call. Plan 43-01 wrote `wave_0_complete: false`
+with "that work belongs to plans `43-04` through `43-10`" — true on 2026-09-09. Those plans did
+all of it and nobody returned to the file. All six Wave 0 items are now ticked against artifacts
+on disk with per-item evidence, including the two most temptingly tickable on assumption: the
+undated-key tiebreak is `viewFilters.test.ts:160` (its `:156` comment names why it differentiates
+— the deleted comparator returned `0` for two undated keys), and the title-only search case is
+`:307`. → `status: approved`, `wave_0_complete: true`, original paragraph struck through rather
+than deleted.
+
+The ROADMAP entry gained a **strong** marker that is deliberately not green: it previously parsed
+`complete`/`weakOnly: true` — a guess, overwritable by folder state — and now declares
+`🚧 EXECUTED AND VERIFIED, 23/24, ONE OPEN GAP` (`strongStatus` → `inprogress`, `weakOnly: false`).
+The colour did not change; it stopped being a guess that contradicted the folder.
+
+Post-edit replay: roadmap 43 `inprogress`/strong, artifacts `[complete, complete, complete,
+inprogress]`, folder `inprogress` — now from exactly one cause, which is REQ-43-24.
+
 ## Why `gaps_found` and not `passed`
 
 23/24 with a working screen is a good phase. Recording `passed` would need either un-ticking
