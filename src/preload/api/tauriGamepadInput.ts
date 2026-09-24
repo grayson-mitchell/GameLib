@@ -43,6 +43,21 @@ function warn(label: string, error?: unknown): void {
   }
 }
 
+// TEMPORARY -- Task 1 diagnostic only, see 260925-9de-PLAN.md. Deleted in Task 6 once
+// doScroll's target resolution has been measured against the live app. Routed through the
+// existing `warn()` helper (console.warn), NOT window.api.logInfo -- this module runs in the
+// renderer and the DevTools console is a proven-readable channel on this app.
+const SCROLL_DIAG = true
+
+/** tag + id + first class, or the literal "null" -- used only by the SCROLL_DIAG line below. */
+function describeScrollDiagElement(el: Element | null): string {
+  if (!el) return 'null'
+  const tag = el.tagName ? el.tagName.toLowerCase() : 'unknown'
+  const id = (el as HTMLElement).id ? `#${(el as HTMLElement).id}` : ''
+  const firstClass = el.classList && el.classList.length > 0 ? `.${el.classList[0]}` : ''
+  return `${tag}${id}${firstClass}`
+}
+
 function hasZeroArea(rect: DOMRect): boolean {
   return rect.width <= 0 || rect.height <= 0
 }
@@ -203,10 +218,44 @@ function findScrollableAncestor(start: Element | null): Element {
 function doScroll(delta: number): void {
   const center = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2)
   const target = findScrollableAncestor(center)
+
+  // TEMPORARY -- Task 1 diagnostic only (see comment at SCROLL_DIAG above). Captured BEFORE
+  // the real scroll runs. Wrapped in its OWN try/catch, separate from the report below: a
+  // throw here must never skip the scroll that follows it.
+  let diagScrollTopBefore: number | undefined
+  if (SCROLL_DIAG) {
+    try {
+      diagScrollTopBefore = target.scrollTop
+    } catch {
+      // diagnostic only -- must never break the scroll below
+    }
+  }
+
   if (typeof target.scrollBy === 'function') {
     target.scrollBy({ top: delta })
   } else {
     target.scrollTop += delta
+  }
+
+  // TEMPORARY -- Task 1 diagnostic only. Its own try/catch: getComputedStyle and
+  // document.scrollingElement are not implemented by the FakeElement/fakeDocument doubles in
+  // gamepadAction.test.ts, and tauriGamepadAction's OUTER try/catch would swallow a throw here
+  // AND skip the scroll above -- this inner try/catch runs strictly after the scroll, so the
+  // diagnostic is additive only.
+  if (SCROLL_DIAG) {
+    try {
+      const fallbackTarget = document.scrollingElement ?? document.documentElement
+      const usedFallback = target === fallbackTarget
+      const overflowY = getComputedStyle(target).overflowY
+      warn(
+        `[GAMEPAD-SCROLL] delta=${delta} center=${describeScrollDiagElement(center)} ` +
+          `target=${describeScrollDiagElement(target)} usedFallback=${usedFallback} ` +
+          `scrollHeight=${target.scrollHeight} clientHeight=${target.clientHeight} overflowY=${overflowY} ` +
+          `scrollTopBefore=${diagScrollTopBefore} scrollTopAfter=${target.scrollTop}`
+      )
+    } catch {
+      // diagnostic only -- must never break the scroll above
+    }
   }
 }
 
