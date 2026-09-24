@@ -22,6 +22,7 @@
     "humbleKeys.undo": "\"Undo\" (reverse a completed action) and \"Cancel\" (abandon an action before it happens) are DISTINCT actions here -- do not translate them with the same word.",
     "humbleKeys.undoOwnershipOverride": "\"Undo\" (reverse a completed action) and \"Cancel\" (abandon an action before it happens) are DISTINCT actions here -- do not translate them with the same word.",
     "humbleKeys.activateDismiss": "\"Undo\" (reverse a completed action) and \"Cancel\" (abandon an action before it happens) are DISTINCT actions here -- do not translate them with the same word.",
-    "library.filterPanel.chipNoStorePageHidden": "Filter-chip label: games with no store page are currently being HIDDEN from the list (a toggle-state description, not an instruction to the user)."
+    "library.filterPanel.chipNoStorePageHidden": "Filter-chip label: games with no store page are currently being HIDDEN from the list (a toggle-state description, not an instruction to the user).",
+    "themeSelector.oldSchool": "Theme name. \"Old School\" is an idiom meaning retro / classic / old-fashioned-in-a-nostalgic-way -- NOT a literal school or pupil. Use your language's natural word for retro or classic style (or keep \"Old School\" if it is a common loanword). Keep \"GameLib\" verbatim."
   }
 }

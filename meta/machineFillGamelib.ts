@@ -141,6 +141,38 @@ export function pluralCategoriesFor(locale: string): string[] | null {
 }
 
 /**
+ * Whether a plural form may be written WITHOUT `{{count}}` (260925-auy).
+ * True only when the form's CLDR category matches exactly ONE integer in
+ * this locale -- ar `_zero`/`_one`/`_two`, en `_one` -- because only then does
+ * the grammatical form itself say the number (Arabic's dual "نتيجتان" is
+ * already "two results"). ru `_one` also covers 21, 31, ... and fr `_one`
+ * covers 0 and 1, so there the number must stay. The live ar re-fill
+ * rejected every such idiomatic form for "drops {{count}}", which left all
+ * 7 ar plural groups incomplete and skipped them wholesale.
+ */
+export function countIsOptionalFor(
+  keyPath: string,
+  locale: string,
+  enFlat: Record<string, string>
+): boolean {
+  const base = pluralBaseOf(keyPath)
+  if (base === null || enFlat[`${base}_other`] === undefined) return false
+  const category = keyPath.slice(base.length + 1)
+  let rules: Intl.PluralRules
+  try {
+    rules = new Intl.PluralRules(locale.replace(/_/g, '-'))
+  } catch {
+    return false
+  }
+  // CLDR integer rules repeat well inside 0..1000 (the widest is mod 100).
+  let matches = 0
+  for (let n = 0; n <= 1000; n++) {
+    if (rules.select(n) === category && ++matches > 1) return false
+  }
+  return matches === 1
+}
+
+/**
  * Strips a trailing `_zero|_one|_two|_few|_many|_other` suffix, returning
  * the base key path -- or null when the key path does not end with one of
  * those suffixes at all. Whether the base is GENUINELY a plural group in
@@ -485,7 +517,8 @@ function containsTermVerbatim(text: string, term: string): boolean {
 export function validateTranslation(
   source: string,
   target: string,
-  glossary: string[]
+  glossary: string[],
+  options: { countOptional?: boolean } = {}
 ): string[] {
   const problems: string[] = []
 
@@ -493,6 +526,7 @@ export function validateTranslation(
   const targetPlaceholders = extractPlaceholders(target)
 
   for (const placeholder of sourcePlaceholders) {
+    if (placeholder === 'count' && options.countOptional) continue
     if (!targetPlaceholders.has(placeholder)) {
       problems.push(
         `translation drops placeholder {{${placeholder}}} present in the source`
@@ -673,7 +707,9 @@ export async function fillLocale(
       continue
     }
 
-    const problems = validateTranslation(source, targetText, glossary)
+    const problems = validateTranslation(source, targetText, glossary, {
+      countOptional: countIsOptionalFor(keyPath, locale, enFlat)
+    })
     if (problems.length > 0) {
       skipped.push({ keyPath, problems })
       continue

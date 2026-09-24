@@ -4,6 +4,7 @@ import {
   collectMissingKeys,
   buildTranslationMemory,
   validateTranslation,
+  countIsOptionalFor,
   mergeFill,
   fillLocale,
   chunkBatch,
@@ -129,6 +130,43 @@ describe('interpolation and plurals', () => {
       []
     )
     expect(problems).toEqual([])
+  })
+
+  // 260925-auy: a plural form whose CLDR category matches exactly ONE
+  // integer (ar _zero/_one/_two, en _one) is idiomatically written without
+  // the number -- Arabic's dual "نتيجتان" already means "two results". The
+  // live ar re-fill rejected every such form for "drops {{count}}", which
+  // made all 7 ar plural groups incomplete and skipped them wholesale.
+  it('countIsOptionalFor allows omitting {{count}} only in single-integer plural categories', () => {
+    const enFlat = { r_one: '{{count}} result', r_other: '{{count}} results' }
+    expect(countIsOptionalFor('r_zero', 'ar', enFlat)).toBe(true)
+    expect(countIsOptionalFor('r_one', 'ar', enFlat)).toBe(true)
+    expect(countIsOptionalFor('r_two', 'ar', enFlat)).toBe(true)
+    expect(countIsOptionalFor('r_few', 'ar', enFlat)).toBe(false)
+    expect(countIsOptionalFor('r_other', 'ar', enFlat)).toBe(false)
+    // ru "one" also covers 21, 31, ... -- the number must stay.
+    expect(countIsOptionalFor('r_one', 'ru', enFlat)).toBe(false)
+    // fr "one" covers 0 and 1 -- the number must stay.
+    expect(countIsOptionalFor('r_one', 'fr', enFlat)).toBe(false)
+    // Not a plural group in en at all -- never optional.
+    expect(countIsOptionalFor('plain_one', 'ar', enFlat)).toBe(false)
+  })
+
+  it('validateTranslation accepts a dropped {{count}} only when count is declared optional', () => {
+    expect(
+      validateTranslation('{{count}} results', 'نتيجتان', [], {
+        countOptional: true
+      })
+    ).toEqual([])
+    expect(validateTranslation('{{count}} results', 'نتيجتان', [])).not.toEqual(
+      []
+    )
+    // Every OTHER placeholder is still mandatory in an optional-count form.
+    expect(
+      validateTranslation('{{count}} in {{title}}', 'نتيجتان', [], {
+        countOptional: true
+      })
+    ).not.toEqual([])
   })
 
   it('fillLocale skips a filled _one whose _other sibling is not also going to be present', () => {
