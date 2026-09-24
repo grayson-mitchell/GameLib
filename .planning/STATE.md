@@ -5,7 +5,7 @@ milestone_name: — Tauri Shell
 status: executing
 stopped_at: 46-05 live gate FAIL at Check 3 -- fix-forward via /gsd-plan-phase 46 --gaps
 last_updated: "2026-09-24T11:30:00.000Z"
-last_activity: '2026-09-25 -- Quick task 260925-88h: machine translation disclosed and reportable in the language picker; English source strings fixed; stale MT invalidated pending the operator's re-fill.'
+last_activity: '2026-09-25 -- Quick task 260925-88h: machine translation disclosed and reportable in the language picker; English source strings fixed; stale MT invalidated pending the operator''s re-fill.'
 progress:
   total_phases: 42
   completed_phases: 35
