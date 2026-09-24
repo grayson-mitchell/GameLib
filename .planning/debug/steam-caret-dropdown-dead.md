@@ -131,13 +131,61 @@ Chromium. If the cause turns out to need the operator's Windows machine to confi
 explicitly and re-triage the todo's `platform:`/`ready:` keys rather than guessing; do not leave
 `ready: code` standing on a defect that cannot be closed at the desk.
 
+## Windows instrumentation — paste this into the dev build's DevTools console
+
+Needs `pnpm tauri:dev` on the Windows machine: `src-tauri/Cargo.toml` requests no `devtools`
+feature, so a packaged build has no console. Open a Steam GamePage showing the caret, paste, then
+click the caret **once**.
+
+```js
+;(() => {
+  const c = document.querySelector('.SteamInstallCaret')
+  if (!c) return 'no caret on this page — need an owned, not-installed, not-delisted Steam title'
+  const btn = c.querySelector('.dropdownButton')
+  const panel = c.querySelector('.dropdown')
+  const R = (el) => {
+    const r = el.getBoundingClientRect()
+    return `${r.width.toFixed(1)}x${r.height.toFixed(1)}@${r.left.toFixed(0)},${r.top.toFixed(0)}`
+  }
+  const t0 = performance.now()
+  const L = (s) => console.log(`[CARET +${(performance.now() - t0).toFixed(0)}ms] ${s}`)
+  const optBtn = panel.querySelector('button')
+  L(`caret=${R(btn)} panel=${R(panel)} opt=${optBtn ? R(optBtn) : 'NONE'} panelClass=${panel.className}`)
+  const hit = document.elementFromPoint(
+    btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2,
+    btn.getBoundingClientRect().top + btn.getBoundingClientRect().height / 2
+  )
+  L(`elementFromPoint(caret centre) = ${hit ? hit.tagName + '.' + hit.className : 'null'}`)
+  btn.addEventListener('click', () => L('click on caret'), true)
+  c.addEventListener('focusin', (e) => L(`focusin -> ${e.target.className || e.target.tagName}`), true)
+  c.addEventListener(
+    'focusout',
+    (e) =>
+      L(
+        `focusout rel=${e.relatedTarget ? e.relatedTarget.className || e.relatedTarget.tagName : 'null'} inside=${c.contains(e.relatedTarget)}`
+      ),
+    true
+  )
+  new MutationObserver((ms) =>
+    ms.forEach((m) =>
+      L(`MUT ${m.attributeName} -> ${m.target.getAttribute(m.attributeName)} | panelClass=${panel.className} panelBox=${R(panel)}`)
+    )
+  ).observe(c, { attributes: true, subtree: true, attributeFilter: ['class', 'aria-expanded'] })
+  return 'instrumented — now click the caret once'
+})()
+```
+
+`elementFromPoint` at the caret's own centre is the cheapest discriminator in the set: if it
+returns anything other than the caret button or its icon span, the click is being eaten by an
+overlapping box and no amount of focus reasoning matters.
+
 ## Current Focus
 
 ```yaml
-hypothesis: "checkNintendo() binds 'back' to buttons[0] unconditionally; on a non-standard-mapping Nintendo pad (raw HID order Y,B,A,X) buttons[0] is the physical Y cap, so pressing Y fires 'back' -> closeDropdown() while focus sits inside .dropdownContainer immediately after a mouse click opens it"
-test: "NEGATIVE CONTROL first, on the Windows machine: UNPLUG the pad, then click the caret 10x. 10/10 open = hypothesis 3 confirmed as the family; still ~1/10 = eliminated outright, no recollection needed. Only if the pad cannot be unplugged, fall back to: was a gamepad connected during the Phase 38 sitting, and does gamelib.log carry a [GAMEPAD] line with its mapping?"
-expecting: "If a pad was connected AND its logged mapping is non-standard (empty string, not 'standard'), this confirms the mechanism as root cause. If no pad was connected in that sitting, this hypothesis is eliminated and hypothesis 1 (weak, unresolved) is the only remaining open lead."
-next_action: "CHECKPOINT — awaiting operator confirmation of controller presence/mapping for that sitting; do not apply 260923-qe5's fix here duplicatively, and do not fabricate a live-verified outcome"
+hypothesis: "Something WebView2-specific breaks the caret: either the click never reaches the button's handler (hit-testing / an overlapping box under flex-wrap), or the expand commits but paints nothing, or focus leaves .dropdownContainer somewhere a faithful Chromium reproduction of the same CSS does not. All three desk hypotheses are now eliminated or exhausted; the cause is not visible from this machine."
+test: "WINDOWS ONLY, dev build so DevTools exist (`src-tauri/Cargo.toml` carries no `devtools` feature, so a PACKAGED Windows build has no console — it must be `pnpm tauri:dev`). Open a Steam GamePage in a state that shows the caret, paste the instrumentation snippet from the 'Windows instrumentation' section below, then click the caret once and copy every [CARET] line."
+expecting: "The snippet discriminates the three survivors in one click. NO '[CARET] click on caret' line => the click never reaches the handler; the defect is hit-testing/layout, not focus. A click line plus 'MUT aria-expanded -> true' and a non-zero panelBox, but nothing visible on screen => it opens and fails to paint. A click line plus 'focusout ... inside=false' followed by aria-expanded going back to false => focus genuinely escapes the container on WebView2 and the todo's ORIGINAL STRUCTURE was right while its step-2 justification stays refuted."
+next_action: "CHECKPOINT — awaiting the [CARET] log lines from a Windows dev-build run. Do not propose a fix before they arrive: the three survivors need different fixes and two of them have nothing to do with the synthetic Tab."
 ```
 
 ## Evidence
@@ -167,10 +215,24 @@ next_action: "CHECKPOINT — awaiting operator confirmation of controller presen
   found: "`back` carries `repeatDelay: false` (gamepad.ts:75). A HELD button therefore fires EXACTLY ONCE: `triggeredAt` is only reset to 0 on a `!pressed` frame (:140-145), and with `repeatDelay` falsy `shouldRepeat` can never become true (:151), so the `!wasActive || shouldRepeat` gate (:166) admits only the rising edge."
   means: "Hypothesis 3 as WRITTEN — 'the operator pressed the physical Y cap' — does not explain a ~9-in-10 failure rate, and neither does a permanently stuck buttons[0] (that fires once, then never again). The variant that DOES fit the observed rate is an OSCILLATING buttons[0]: an analog/hat input whose resting value flickers across the pressed threshold resets triggeredAt on every !pressed frame and re-fires on every rising edge, dispatching `back` many times per second. That would call closeDropdown() within ~16ms of any mouse-opened caret, nearly every time, with the occasional success being a click that landed in a gap — which is exactly the reported shape. This refinement does not change the suspected FIX (still 260923-qe5's mapping-aware face-index table), but it does change the decisive TEST: unplugging the pad is a cleaner and cheaper discriminator than asking what was pressed, and 260923-qe5's own per-frame button dump would show the oscillation directly."
 
+- timestamp: 2026-09-24
+  what: "OPERATOR ran the negative control, on both machines, and reported the result unprompted"
+  found: "Verbatim: 'on macos caret open everytime, on windows machine carot does not work... does not matter if controller plugged in or not'."
+  means: "THREE things at once. (1) Hypothesis 3 is ELIMINATED — controller presence makes no difference, so no gamepad path can be the cause, and 260923-qe5 does NOT close this defect as a side effect. (2) The rate is worse than filed: on Windows it is not ~1-in-10, it is DEAD; on macOS it is 10/10. The original 'opened once in 10+' remains the only sighting of it ever working on Windows. (3) The split is a PLATFORM split, WKWebView vs WebView2, which retro-confirms the `platform: windows` re-triage — that key was set before this evidence existed and is now measured, not assumed."
+
+- timestamp: 2026-09-24
+  what: "Second Chromium probe, repairing the first one's known infidelity: `.dropdownContainer` rebuilt as a real flex item inside `.installButtons` (display:flex, flex-wrap:wrap, gap) with `.mainBtn{min-width:200px}` and `.SteamInstallCaret .dropdownButton{min-inline-size:44px;min-block-size:44px}`, i.e. the narrow-container geometry the first probe replaced with an 800px block"
+  found: "collapsed container=208.3x68.0 panel=208.3x24.0 opt=176.3x31.6 | focusables=nav1,main,caret,opt,after. The container is NOT 44px wide as predicted: `.dropdown{width:100%}` still participates in the flex item's max-content sizing, so the panel sizes the container. `opt` is again non-zero and again collected. Replaying with the caret focused (the WebView2 condition) STILL settles `dropdown expanded` with active=opt; replaying unfocused (the WKWebView condition) settles expanded with active=nav1, focus never having been inside the container so no focusout fires from it at all."
+  means: "The macOS arm of the operator's result is now EXPLAINED and predicted: on WKWebView a mouse click does not focus a <button>, so doTab starts from activeElement=null, takes the currentIndex===-1 branch, focuses list[0] somewhere up the document, and the container never blurs — the panel stays open, every time. The WINDOWS arm is NOT explained: this engine, with this CSS and this DOM, opens in the Windows focus condition too. So the cause is something WebView2 does that a faithful Chromium reproduction of the CSS/DOM does not — hit-testing, focus order, or the click never reaching the handler. Say plainly what this instrument can and cannot see: it settles layout and focus-order questions about the reproduced markup, and it CANNOT settle a WebView2-specific behaviour. Further desk probing of this shape has hit its limit."
+
 ## Eliminated
 
 - hypothesis: "Dropdown.toggle()'s synthetic Tab lands outside .dropdownContainer because the collapsed panel's children fail hasZeroArea, and the container's onBlur then collapses it"
   refuted_by: "Direct measurement in Chromium (the WebView2 engine): collapsed child rect is 176.3x31.6, non-zero on both axes, and is collected by getFocusableElements(). The Tab lands on the panel's own button, inside the container, so the onBlur collapse branch never runs."
+  date: 2026-09-24
+
+- hypothesis: "checkNintendo() binds 'back' to buttons[0]; on a non-standard-mapping pad that is the physical Y cap, so a gamepad press dispatches 'back' -> closeDropdown() and slams the caret shut"
+  refuted_by: "OPERATOR-RUN NEGATIVE CONTROL, 2026-09-24, both machines: 'does not matter if controller plugged in or not'. With no pad attached the Windows caret is still dead and the macOS caret still opens every time. No gamepad code path can produce a symptom that is invariant to the gamepad's presence. Note this also means 260923-qe5's Task 3 does NOT close this defect — the two are unrelated, and the cross-check the session was going to run before closing is answered: no overlap."
   date: 2026-09-24
 
 - hypothesis: "useSuppressStoreEmbedWhile(isExpanded) disturbs focus or the React tree when the caret's Dropdown expands"
@@ -180,7 +242,8 @@ next_action: "CHECKPOINT — awaiting operator confirmation of controller presen
 ## Resolution
 
 ```yaml
-root_cause: "UNCONFIRMED CANDIDATE, not yet closed. checkNintendo() (nintendo.ts:80-105) hard-binds the 'back' action to buttons[0]. On a non-standard-mapping Nintendo pad (Chromium mapping '', raw HID face order Y,B,A,X -- measured live on the operator's own PowerA Advantage Wired Controller for Nintendo Switch 2 by the concurrent quick-task 260923-qe5, same day as this bug's sighting), buttons[0] is the physical Y cap, not B. Pressing Y therefore dispatches 'back', and gamepad.ts's back handler calls closeDropdown() whenever focus is inside .dropdownContainer -- which it is, immediately after a mouse click opens the caret (already measured in the Chromium replay above). This is a real, code-confirmed, currently-unpatched mechanism (HID_DUMP still true, checkNintendo still has no mapping parameter as of 2026-09-24) whose shape matches the symptom exactly (opens, then immediately closes). It is NOT yet confirmed as root cause because the one missing fact -- whether a gamepad was actually connected during the Phase 38 sitting where this was observed -- is not derivable from source and was already flagged in this file as 'likely but not confirmed.'"
+root_cause: "STILL UNKNOWN as of 2026-09-24. All three hypotheses this session opened with are now closed out: hypothesis 2 refuted by source analysis, hypothesis 3 refuted by the operator's own cross-platform negative control (the symptom is invariant to controller presence), hypothesis 1 weakened with no desk-testable angle left and no explanation for a clean platform split. What IS now measured: the defect is Windows/WebView2-only and total there, macOS/WKWebView opens 10/10, and the macOS arm is fully explained by WKWebView not focusing a <button> on click. The Windows arm is not reproducible on this machine. Next evidence must come from the Windows dev build — see 'Windows instrumentation'. The superseded gamepad candidate is kept below for the record."
+superseded_candidate: "checkNintendo() (nintendo.ts:80-105) hard-binds the 'back' action to buttons[0]. On a non-standard-mapping Nintendo pad (Chromium mapping '', raw HID face order Y,B,A,X -- measured live on the operator's own PowerA Advantage Wired Controller for Nintendo Switch 2 by the concurrent quick-task 260923-qe5, same day as this bug's sighting), buttons[0] is the physical Y cap, not B. Pressing Y therefore dispatches 'back', and gamepad.ts's back handler calls closeDropdown() whenever focus is inside .dropdownContainer -- which it is, immediately after a mouse click opens the caret (already measured in the Chromium replay above). This is a real, code-confirmed, currently-unpatched mechanism (HID_DUMP still true, checkNintendo still has no mapping parameter as of 2026-09-24) whose shape matches the symptom exactly (opens, then immediately closes). It is NOT yet confirmed as root cause because the one missing fact -- whether a gamepad was actually connected during the Phase 38 sitting where this was observed -- is not derivable from source and was already flagged in this file as 'likely but not confirmed.'"
 fix: "NOT APPLIED. If confirmed, the fix is 260923-qe5's already-staged Task 3 (a shared, mapping-aware face-index table consumed by checkNintendo), not a new edit in this session -- applying a duplicate/overlapping fix here without being able to verify it against the real symptom (no Windows machine, no physical controller) would violate this repo's standing rule against a green check that proves nothing."
 verification: "NOT PERFORMED — blocked on operator confirmation of controller presence/mapping for that sitting."
 files_changed: []

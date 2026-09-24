@@ -54,8 +54,13 @@ const toggle = () => {
 3. ~~Focus lands outside `.dropdownContainer`.~~ — **false**, measured (`activeElement=opt`, inside).
 4. ~~The container's `onBlur` sees an outside `relatedTarget` and collapses it.~~ — never runs.
 
-**Current leading hypothesis — mechanism confirmed in source, needs one operator-confirmable fact
-to close.** `src/frontend/helpers/gamepad_layouts/nintendo.ts:80-105`'s `checkNintendo()` binds
+**ELIMINATED 2026-09-24 by an operator-run negative control, on both machines.** Verbatim: *"on
+macos caret open everytime, on windows machine carot does not work... does not matter if
+controller plugged in or not"*. The symptom is **invariant to the controller's presence**, so no
+gamepad path can cause it — and `260923-qe5` does **not** close this defect as a side effect. The
+two are unrelated. The superseded gamepad hypothesis is kept below for the record only:
+
+> `src/frontend/helpers/gamepad_layouts/nintendo.ts:80-105`'s `checkNintendo()` binds
 `back` unconditionally to `buttons[0]` on the (unproven) premise, stated in its own header comment,
 that "Chromium reports these with the 'standard' mapping by physical position". That premise is
 independently known to be **false** for at least one real device: the concurrent, still-in-flight
@@ -76,18 +81,31 @@ dropdown correctly (confirmed by the Chromium replay), and if a non-standard-map
 was connected and its physical Y button was pressed (or read as pressed) in that same window,
 `closeDropdown()` fires and slams it shut — reading exactly as "opened once, mostly dead."
 
-**The one fact this needs to close:** was a gamepad actually connected during the Phase 38 sitting
-where this was observed? The debug session flagged this as "likely (Phase 38 is the controller UAT
-phase) but not confirmed." `gamepad.ts`'s `addgamepad` handler already logs a permanent
-`[GAMEPAD]` line (id, mapping, button/axis counts) via `window.api.logInfo` on connect — check
-`gamelib.log` from that sitting for it, or reproduce live with the same pad and mouse-click the
-caret while resting a thumb near Y. If mapping logs as non-standard (`''`) and a pad was present,
-this is confirmed as the root cause and the fix is `260923-qe5`'s Task 3 (already planned: a
-shared, mapping-aware face-index table) — completing that plan closes this caret defect as a side
-effect. If no pad was connected in that sitting, this hypothesis is eliminated and the two other
-instrumented-but-inconclusive hypotheses (Dropdown unmount via `showSteamMainButtonInstallOptions`
-flicker; `useSuppressStoreEmbedWhile` focus disturbance — the latter effectively refuted by
-React.memo/context-consumer analysis, see the debug session) remain open.
+## What is actually measured, 2026-09-24
+
+- **Windows/WebView2: dead, not flaky.** The filed "~1 in 10" overstates it. The single sighting
+  of it ever opening on Windows remains the only one; the negative control found it simply does
+  not work. The title's "~90% dead" is therefore generous and the `severity: major` stands.
+- **macOS/WKWebView: opens 10/10** — and this arm is now fully *explained*. WKWebView does not
+  focus a `<button>` on mouse click, so `doTab` starts from `activeElement === null`, takes the
+  `currentIndex === -1` branch and focuses `list[0]` somewhere up the document. Focus is never
+  inside `.dropdownContainer`, so the container's `onBlur` never fires and nothing can collapse
+  the panel. macOS works *by accident of a focus quirk*, not by design — worth knowing before
+  anyone "fixes" the Tab ordering and takes that accident away.
+- **The Windows arm is not reproducible at the desk.** A faithful Chromium reproduction — the
+  real `.installButtons` flex-wrap geometry, the 44px caret box, `Dropdown/index.scss` verbatim
+  and the focus collector verbatim — opens in the Windows focus condition too
+  (`collapsed container=208.3x68.0 panel=208.3x24.0 opt=176.3x31.6`, `opt` collected, settles
+  `expanded`). So the cause is something WebView2 does that the reproduced CSS/DOM does not
+  capture.
+
+**Three survivors, needing different fixes.** (a) the click never reaches the handler — an
+overlapping box / hit-testing problem under `flex-wrap`; (b) it opens but paints nothing; (c)
+focus genuinely escapes the container on WebView2, which would restore the todo's *original
+structure* while leaving its step-2 justification refuted. The debug session
+`.planning/debug/steam-caret-dropdown-dead.md` carries a paste-in DevTools snippet that
+discriminates all three in a single click. It needs `pnpm tauri:dev` on Windows —
+`src-tauri/Cargo.toml` requests no `devtools` feature, so a packaged build has no console.
 
 ## Why this is `major`
 
@@ -104,13 +122,18 @@ React.memo/context-consumer analysis, see the debug session) remain open.
 
 ## Fix direction — not prescriptive
 
-**Superseded 2026-09-24.** The original direction ("move the synthetic Tab to after the expand
-commits") targeted the now-refuted `hasZeroArea` chain and is a measured no-op — do not ship it.
-If the leading hypothesis above is confirmed (a controller was connected and its mapping logs as
-non-standard), the fix is `260923-qe5`'s Task 3: a shared, mapping-aware face-index table consumed
-by `checkNintendo`, so `back` resolves to the printed B cap instead of raw `buttons[0]` on
-non-standard pads. That plan is already staged and gated on its own operator checkpoints; this
-todo does not need a second, duplicate fix once it lands. Do not simply delete the
+**Superseded 2026-09-24, twice.** The original direction ("move the synthetic Tab to after the
+expand commits") targeted the refuted `hasZeroArea` chain and is a measured no-op — do not ship
+it. The gamepad direction that briefly replaced it is eliminated too; `260923-qe5` is unrelated
+work and does not touch this.
+
+**Do not write a fix before the Windows instrumentation comes back.** Two of the three survivors
+have nothing to do with focus or the synthetic Tab, so any edit chosen now is a guess with a
+one-in-three prior. If survivor (c) is the one, note that the measured
+`mode=direct-focus` replay — focusing the panel's own first focusable child post-commit instead
+of delegating to the generic Tab walker — is the only variant that landed inside the container in
+**both** focus conditions, i.e. the only one invariant to the WKWebView/WebView2 difference this
+platform split implicates. That is a candidate, not a decision. Do not simply delete the
 `gamepadAction({action: 'tab'})` call — it is what makes the dropdown reachable by controller in
 the first place, which is the very property `38-C08` exists to verify. Equally, do not loosen
 `hasZeroArea`: that filter is load-bearing for the gamepad focus collector and was measured
