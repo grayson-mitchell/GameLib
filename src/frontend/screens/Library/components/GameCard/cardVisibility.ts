@@ -1,14 +1,15 @@
 /**
- * Fix for the one-shot `visible-cards` broadcast handshake (quick task
- * 260924-swb; see
- * `.planning/todos/pending/2026-09-23-library-card-art-never-recovers-from-a-missed-visible-cards-event.md`).
+ * Fix for the one-shot card-art broadcast handshake (quick task 260924-swb;
+ * see the 2026-09-23 todo about library card art never recovering from a
+ * missed announcement, filed under `.planning/todos/`).
  *
- * The old mechanism: `GamesList` swept every `[data-invisible]` card with a
+ * The old mechanism: `GamesList` swept every not-yet-shown card with a
  * single `IntersectionObserver`, and on intersection called
- * `observer.unobserve(entry.target)` then broadcast a `visible-cards`
- * `CustomEvent`. `dispatchEvent` retains no state and has no replay, so a
- * card whose listener was not yet attached -- or that remounted after the
- * broadcast -- was blank FOREVER: nothing re-observed it.
+ * `observer.unobserve(entry.target)` then broadcast a window `CustomEvent`
+ * naming the newly-visible cards. `dispatchEvent` retains no state and has
+ * no replay, so a card whose listener was not yet attached -- or that
+ * remounted after the broadcast -- was blank FOREVER: nothing re-observed
+ * it.
  *
  * This module inverts the handshake: each card observes its OWN node via
  * `observeCardVisibility`, behind ONE shared module-singleton observer (the

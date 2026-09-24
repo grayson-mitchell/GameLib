@@ -32,6 +32,13 @@
  * about the very thing (`calls === 1`) it exists to prove.
  */
 
+import { readFileSync } from 'fs'
+import { join } from 'path'
+import {
+  stripSourceComments,
+  stripTrailingLineComment
+} from 'backend/testUtils/stripSourceComments'
+
 type Entry = { target: Element; intersectionRatio: number }
 
 class FakeIntersectionObserver {
@@ -74,7 +81,7 @@ class FakeIntersectionObserver {
 function loadModule(): typeof import('../cardVisibility') {
   let mod!: typeof import('../cardVisibility')
   jest.isolateModules(() => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     mod = require('../cardVisibility')
   })
   return mod
@@ -199,3 +206,134 @@ describe('observeCardVisibility fallback -- no IntersectionObserver available', 
     expect(() => unsubscribe()).not.toThrow()
   })
 })
+
+/**
+ * Source gates for the three files rewired by Task 2 to consume
+ * `cardVisibility.ts` and delete the old `visible-cards` broadcast. None of
+ * `GameCard/index.tsx`, `GamesList/index.tsx` can be `require()`d here --
+ * both pull in colocated CSS and the full ContextProvider import graph, and
+ * there is no jsdom in this project (see the file header above). These gates
+ * prove the wiring is TEXTUALLY present and the broadcast machinery is
+ * TEXTUALLY gone -- not that either runs. That proof is owed to a live run.
+ *
+ * Every assertion below runs against COMMENT-STRIPPED text. Per CLAUDE.md's
+ * grep-gate hygiene rule, a gate that counts comment lines is
+ * self-invalidating -- and this test file's OWN header comments mention
+ * `visible-cards` by name (to document what was removed), so an unstripped
+ * gate over this file's neighbours would risk false signal if any of them
+ * ever quoted this file back.
+ */
+const GAME_CARD_PATH = join(__dirname, '..', 'index.tsx')
+const GAMES_LIST_PATH = join(__dirname, '..', '..', 'GamesList', 'index.tsx')
+const FRONTEND_TYPES_PATH = join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  '..',
+  '..',
+  'types.ts'
+)
+
+function readGated(path: string): string {
+  return stripSourceComments(readFileSync(path, 'utf8'))
+    .split('\n')
+    .map(stripTrailingLineComment)
+    .join('\n')
+}
+
+describe('GameCard/index.tsx source gate -- self-observation, broadcast removed', () => {
+  const source = readGated(GAME_CARD_PATH)
+
+  it('observes its own node through observeCardVisibility, via a setNode ref', () => {
+    expect(source).toContain('observeCardVisibility')
+    expect(source).toContain('setNode')
+    expect(source).toContain('ref={setNode}')
+  })
+
+  it('no longer references the visible-cards broadcast or a window listener', () => {
+    expect(source).not.toContain('visible-cards')
+    expect(source).not.toContain('addEventListener')
+  })
+
+  it('SANITY: both gates fire against the old mechanism they replaced', () => {
+    const knownBad = gateSourceText(`
+      useEffect(() => {
+        const callback = (e: CustomEvent<{ appNames: string[] }>) => {
+          if (e.detail.appNames.includes(gameInfoFromProps.app_name)) {
+            setVisible(true)
+          }
+        }
+        window.addEventListener('visible-cards', callback)
+        return () => {
+          window.removeEventListener('visible-cards', callback)
+        }
+      }, [])
+    `)
+
+    expect(knownBad).not.toContain('observeCardVisibility')
+    expect(knownBad).toContain('visible-cards')
+    expect(knownBad).toContain('addEventListener')
+  })
+})
+
+describe('GamesList/index.tsx source gate -- sweep deleted, focus effect intact', () => {
+  const source = readGated(GAMES_LIST_PATH)
+
+  it('the IntersectionObserver sweep, broadcast, and data-invisible selector are all gone', () => {
+    expect(source).not.toContain('IntersectionObserver')
+    expect(source).not.toContain('visible-cards')
+    expect(source).not.toContain('dispatchEvent')
+    expect(source).not.toContain('data-invisible')
+  })
+
+  it('the UNRELATED activeController/scrollCardIntoView focus effect is untouched -- a negative-only gate would stay green even if this was deleted by mistake', () => {
+    expect(source).toContain('scrollCardIntoView')
+    expect(source).toContain('activeController')
+  })
+
+  it('SANITY: the negative gate fires against the old sweep it replaced', () => {
+    const knownBad = gateSourceText(`
+      useEffect(() => {
+        const observer = new IntersectionObserver(callback, options)
+        document.querySelectorAll('[data-invisible]').forEach((card) => {
+          observer.observe(card)
+        })
+        window.dispatchEvent(new CustomEvent('visible-cards', { detail: {} }))
+        return () => observer.disconnect()
+      }, [library])
+    `)
+
+    expect(knownBad).toContain('IntersectionObserver')
+    expect(knownBad).toContain('visible-cards')
+    expect(knownBad).toContain('dispatchEvent')
+    expect(knownBad).toContain('data-invisible')
+  })
+})
+
+describe('frontend/types.ts source gate -- WindowEventMap entry removed', () => {
+  const source = readGated(FRONTEND_TYPES_PATH)
+
+  it('no longer declares the visible-cards CustomEvent', () => {
+    expect(source).not.toContain('visible-cards')
+  })
+
+  it('the UNRELATED controller-changed entry survives -- proves the right line was removed, not the whole map', () => {
+    expect(source).toContain('controller-changed')
+  })
+
+  it('SANITY: the negative gate fires against the declaration it replaced', () => {
+    const knownBad = gateSourceText(
+      "interface WindowEventMap {\n  'visible-cards': CustomEvent<{ appNames: string[] }>\n}"
+    )
+
+    expect(knownBad).toContain('visible-cards')
+  })
+})
+
+function gateSourceText(source: string): string {
+  return stripSourceComments(source)
+    .split('\n')
+    .map(stripTrailingLineComment)
+    .join('\n')
+}

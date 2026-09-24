@@ -93,48 +93,6 @@ const GamesList = ({
   const { activeController } = useContext(ContextProvider)
 
   useEffect(() => {
-    if (library.length) {
-      const options = {
-        rootMargin: '500px',
-        threshold: 0
-      }
-
-      const callback: IntersectionObserverCallback = (entries, observer) => {
-        const entered: string[] = []
-        entries.forEach((entry) => {
-          if (entry.intersectionRatio > 0) {
-            // when a card is intersecting the viewport
-            const appName = (entry.target as HTMLDivElement).dataset
-              .appName as string
-
-            // store this appName for later
-            entered.push(appName)
-            // stop observing this element
-            observer.unobserve(entry.target)
-          }
-        })
-
-        // dispatch an event with the newly visible cards
-        // check GameCard for the other side of this detection
-        window.dispatchEvent(
-          new CustomEvent('visible-cards', { detail: { appNames: entered } })
-        )
-      }
-
-      const observer = new IntersectionObserver(callback, options)
-
-      document.querySelectorAll('[data-invisible]').forEach((card) => {
-        observer.observe(card)
-      })
-
-      return () => {
-        observer.disconnect()
-      }
-    }
-    return () => ({})
-  }, [library])
-
-  useEffect(() => {
     if (listRef.current && activeController) {
       listRef.current.addEventListener('focus', scrollCardIntoView, {
         capture: true

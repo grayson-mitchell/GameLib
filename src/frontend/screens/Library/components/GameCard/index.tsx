@@ -32,6 +32,7 @@ import classNames from 'classnames'
 import StoreLogos from 'frontend/components/UI/StoreLogos'
 import UninstallModal from 'frontend/components/UI/UninstallModal'
 import { getCardStatus, getImageFormatting } from './constants'
+import { observeCardVisibility } from './cardVisibility'
 import { hasStatus } from 'frontend/hooks/hasStatus'
 import fallBackImage from 'frontend/assets/gamelib_card.svg?url'
 import fallBackImageMissing from 'frontend/assets/gamelib_card_missing.svg?url'
@@ -84,22 +85,25 @@ const GameCard = ({
   dataTour
 }: Card) => {
   const [visible, setVisible] = useState(false)
+  // Callback ref stored in STATE, not useRef: the placeholder div below only
+  // exists while `!visible`, so it mounts and unmounts across the visible
+  // flip. Mutating a useRef's `.current` would not trigger this effect --
+  // the effect would read `null` on the first pass and never re-fire when
+  // the node actually commits. `ref={setNode}` makes `node` genuinely change
+  // identity on mount AND on remount, so the effect below re-observes every
+  // time. Do not "simplify" this back to useRef -- that reintroduces the
+  // exact race this file was rewired to fix.
+  const [node, setNode] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     // render an empty div until the card enters the viewport
-    // check GameList for the other side of this detection
-    const callback = (e: CustomEvent<{ appNames: string[] }>) => {
-      if (e.detail.appNames.includes(gameInfoFromProps.app_name)) {
-        setVisible(true)
-      }
+    // check cardVisibility.ts for the shared singleton observer
+    if (!node) {
+      return
     }
 
-    window.addEventListener('visible-cards', callback)
-
-    return () => {
-      window.removeEventListener('visible-cards', callback)
-    }
-  }, [])
+    return observeCardVisibility(node, () => setVisible(true))
+  }, [node])
 
   const [gameInfo, setGameInfo] = useState<GameInfo>(gameInfoFromProps)
   const [showUninstallModal, setShowUninstallModal] = useState(false)
@@ -504,9 +508,9 @@ const GameCard = ({
   if (!visible) {
     return (
       <div
+        ref={setNode}
         className={wrapperClasses}
         data-app-name={appName}
-        data-invisible={true}
         data-tour={dataTour}
       ></div>
     )
