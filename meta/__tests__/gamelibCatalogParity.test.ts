@@ -1,6 +1,12 @@
 import { globSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import { validateTranslation, type MtManifest } from '../machineFillGamelib'
+import {
+  validateTranslation,
+  englishSourceFor,
+  requiredPluralKeys,
+  pluralCategoriesFor,
+  type MtManifest
+} from '../machineFillGamelib'
 
 /**
  * D-08/D-09/D-10 parity gate over every COMMITTED `gamelib.json`.
@@ -57,6 +63,12 @@ describe('gamelib catalog parity', () => {
   })
 
   // No locale-count assertion here on purpose -- see the file header.
+  //
+  // The orphan check below reuses `englishSourceFor` -- the SAME resolver
+  // `collectMissingKeys`/`fillLocale` use -- instead of a raw `english[keyPath]`
+  // lookup, so a CLDR-sibling key a locale legitimately needs (e.g. ru's
+  // `_few`/`_many`, which `en` itself never authors) is validated against
+  // en's `_other` fallback rather than flagged as an orphan.
   it.each(translatedPaths)('%s honours every source rule', (path) => {
     const locale = localeOf(path)
     const translated = flatten(readJson<Catalog>(path))
@@ -65,7 +77,7 @@ describe('gamelib catalog parity', () => {
     for (const [keyPath, target] of Object.entries(translated)) {
       if (target === '') continue // an unfilled key falls back to English
 
-      const source = english[keyPath]
+      const source = englishSourceFor(keyPath, english)
       if (source === undefined) {
         failures.push(
           `${locale}: '${keyPath}' is not a key in en/gamelib.json (orphaned translation)`
@@ -81,32 +93,55 @@ describe('gamelib catalog parity', () => {
     expect(failures).toEqual([])
   })
 
+  // Generalises the old pairwise _one/_other check to N-way CLDR groups:
+  // `requiredPluralKeys` (the producer's own rule) returns the union of en's
+  // own suffixes and THIS locale's CLDR categories -- e.g. ru needs
+  // one/few/many/other, ja needs only one/other. A plural group must be
+  // fully present or fully absent in the committed catalog; a locale is
+  // never allowed to ship half a group, because i18next would silently fall
+  // through to English for any count whose category is missing.
   it.each(translatedPaths)(
-    '%s keeps every _one/_other plural sibling paired',
+    '%s keeps each plural group fully present or fully absent, per its own required CLDR forms',
     (path) => {
       const locale = localeOf(path)
       const translated = flatten(readJson<Catalog>(path))
-      const unpaired: string[] = []
+      const problems: string[] = []
 
+      const bases = new Set<string>()
       for (const keyPath of Object.keys(english)) {
-        const match = keyPath.match(/^(.*)_(one|other)$/)
+        const match = keyPath.match(/^(.*)_(zero|one|two|few|many|other)$/)
         if (!match) continue
+        if (english[`${match[1]}_other`] === undefined) continue
+        bases.add(match[1])
+      }
 
-        const sibling = `${match[1]}_${match[2] === 'one' ? 'other' : 'one'}`
-        if (english[sibling] === undefined) continue
+      for (const base of bases) {
+        const required = requiredPluralKeys(base, english, locale)
+        const present = required.filter((k) => Boolean(translated[k]))
 
-        const hasKey = Boolean(translated[keyPath])
-        const hasSibling = Boolean(translated[sibling])
-        if (hasKey !== hasSibling) {
-          unpaired.push(
-            `${locale}: '${keyPath}' and '${sibling}' must both be present or both absent`
+        if (present.length !== 0 && present.length !== required.length) {
+          problems.push(
+            `${locale}: plural group '${base}' is partially present (has ${present.join(', ')}; needs ${required.join(', ')})`
           )
         }
       }
 
-      expect(unpaired).toEqual([])
+      expect(problems).toEqual([])
     }
   )
+
+  // Non-vacuity proof for pluralCategoriesFor itself, over the real
+  // catalog's own bases -- every locale this suite discovers resolves to a
+  // real, non-empty CLDR category set (or the fixed `en`-shaped default of
+  // one/other via requiredPluralKeys' union fallback), so the group check
+  // above is never silently skipping every locale for want of categories.
+  it('pluralCategoriesFor resolves every discovered locale to a non-empty category set', () => {
+    for (const path of translatedPaths) {
+      const locale = localeOf(path)
+      expect(pluralCategoriesFor(locale)).not.toBeNull()
+      expect(pluralCategoriesFor(locale)!.length).toBeGreaterThan(0)
+    }
+  })
 })
 
 // Shared by both assertions below so the live check and its non-vacuity

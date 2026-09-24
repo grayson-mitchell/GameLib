@@ -39,6 +39,7 @@ export type TranslateFn = (
     source: string // English value (or the inline t() default when the value is empty)
     locale: string
     memory: Array<{ source: string; target: string }> // upstream translation memory, D-11
+    note?: string // per-key translator context: CLDR sample counts + i18nTranslatorNotes.json
   }>
 ) => Promise<Array<{ keyPath: string; target: string }>>
 
@@ -110,6 +111,184 @@ function cloneCatalog(obj: Catalog): Catalog {
 }
 
 // ---------------------------------------------------------------------------
+// Plural handling -- locale CLDR categories, per-locale required plural key
+// sets, and the English source a CLDR-sibling key (e.g. ru's `_few`, which
+// en itself never authors) should be translated from. i18next resolves
+// plurals via `new Intl.PluralRules(lng).select(count)` when
+// `compatibilityJSON` is unset/`v4` (confirmed against this repo's own
+// i18next dependency, node_modules/i18next/dist/cjs/i18next.js:1218) -- these
+// helpers mirror that exactly so the fill emits every suffix i18next will
+// actually ask for, not just en's own `_one`/`_other` pair.
+// ---------------------------------------------------------------------------
+
+const PLURAL_SUFFIXES = ['zero', 'one', 'two', 'few', 'many', 'other'] as const
+const PLURAL_SUFFIX_RE = /_(zero|one|two|few|many|other)$/
+
+/**
+ * The CLDR plural categories a locale needs, in canonical order. `null` for
+ * an empty or unparseable code -- never throws. `Intl.PluralRules` requires
+ * a BCP-47 dash-separated tag; this repo's locale directories mix both forms
+ * (`de`, `zh_Hans`, `pt_BR`), so an underscore is mapped to a dash first.
+ */
+export function pluralCategoriesFor(locale: string): string[] | null {
+  if (!locale) return null
+  try {
+    const tag = locale.replace(/_/g, '-')
+    return new Intl.PluralRules(tag).resolvedOptions().pluralCategories
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Strips a trailing `_zero|_one|_two|_few|_many|_other` suffix, returning
+ * the base key path -- or null when the key path does not end with one of
+ * those suffixes at all. Whether the base is GENUINELY a plural group in
+ * `en` is a separate question, answered by `isPluralGroup` below -- this
+ * function alone would misfire on an ordinary key that happens to end
+ * `_one` with no `_other` sibling.
+ */
+export function pluralBaseOf(keyPath: string): string | null {
+  const match = keyPath.match(PLURAL_SUFFIX_RE)
+  if (!match) return null
+  return keyPath.slice(0, -match[0].length)
+}
+
+/**
+ * A base is only ever treated as a plural group when `en` itself carries
+ * `<base>_other` -- this is what stops an ordinary key that happens to end
+ * `_one` (with no sibling) from being expanded into a fake plural group.
+ */
+function isPluralGroup(base: string, enFlat: Record<string, string>): boolean {
+  return enFlat[`${base}_other`] !== undefined
+}
+
+/**
+ * The full set of key paths a locale needs for a plural group: the UNION of
+ * en's own suffixes (so lintTranslations' "every en key present" check is
+ * untouched) and the locale's own CLDR categories (so a Slavic locale gets
+ * `_few`/`_many` even though en only ever authors `_one`/`_other`, and a
+ * `ja`-shaped locale only gets `_one`/`_other` -- the ja `_one` is a
+ * harmless dead key i18next never asks for). Returned in canonical suffix
+ * order.
+ */
+export function requiredPluralKeys(
+  base: string,
+  enFlat: Record<string, string>,
+  locale: string
+): string[] {
+  const enSuffixes = new Set(
+    PLURAL_SUFFIXES.filter((s) => enFlat[`${base}_${s}`] !== undefined)
+  )
+  const categories = pluralCategoriesFor(locale) ?? []
+  const union = new Set<string>([...enSuffixes, ...categories])
+  return PLURAL_SUFFIXES.filter((s) => union.has(s)).map((s) => `${base}_${s}`)
+}
+
+/**
+ * The English text a given key path should be translated FROM. A literal en
+ * key (plural or not) returns its own value. A CLDR-sibling key en does not
+ * carry (e.g. ru's `_few`/`_many`, or any locale's `_zero`/`_two`) falls
+ * back to en's `_other` form -- the closest English has to offer -- except
+ * `_one`, which falls back to en's own `_one`. Returns undefined for a key
+ * that is neither a real en key nor a sibling of a real en plural group.
+ */
+export function englishSourceFor(
+  keyPath: string,
+  enFlat: Record<string, string>
+): string | undefined {
+  if (enFlat[keyPath] !== undefined) return enFlat[keyPath]
+
+  const match = keyPath.match(PLURAL_SUFFIX_RE)
+  if (!match) return undefined
+
+  const base = keyPath.slice(0, -match[0].length)
+  if (!isPluralGroup(base, enFlat)) return undefined
+
+  const suffix = match[1]
+  return suffix === 'one' ? enFlat[`${base}_one`] : enFlat[`${base}_other`]
+}
+
+/**
+ * A handful of representative sample integers (never exhaustive) that
+ * genuinely resolve to `category` under `locale`'s own plural rule --
+ * embedded in a translator note so a human/model translating, say, ru's
+ * `_few` form knows which counts (2, 3, 4, ...) it covers. Never throws;
+ * an unparseable locale yields no samples and the caller simply omits that
+ * part of the note.
+ */
+const PLURAL_SAMPLE_CANDIDATES = [
+  0, 1, 2, 3, 4, 5, 6, 10, 11, 20, 21, 22, 25, 100, 101, 102
+]
+
+function samplePluralIntegers(
+  locale: string,
+  category: string,
+  count = 3
+): number[] {
+  try {
+    const rules = new Intl.PluralRules(locale.replace(/_/g, '-'))
+    const samples: number[] = []
+    for (const n of PLURAL_SAMPLE_CANDIDATES) {
+      if (rules.select(n) === category) {
+        samples.push(n)
+        if (samples.length >= count) break
+      }
+    }
+    return samples
+  } catch {
+    return []
+  }
+}
+
+/**
+ * A translator note applies to a literal key path, OR to a plural BASE path
+ * -- in which case it applies to every form of that group (per this task's
+ * <interfaces>/action (c): "Notes on a plural BASE path apply to every
+ * form").
+ */
+function resolveTranslatorNote(
+  keyPath: string,
+  notes: Record<string, string>
+): string | undefined {
+  if (notes[keyPath]) return notes[keyPath]
+  const base = pluralBaseOf(keyPath)
+  if (base && notes[base]) return notes[base]
+  return undefined
+}
+
+/**
+ * Builds the `note` sent to the translator for one batch item: the CLDR
+ * sample-integers note (plural-category keys only) and the per-key
+ * translator-context note from `meta/i18nTranslatorNotes.json`, joined when
+ * both apply. Returns undefined when neither applies, so the caller can
+ * omit the field entirely (D-09-adjacent: never send a hollow note).
+ */
+function buildNoteFor(
+  keyPath: string,
+  locale: string,
+  notes: Record<string, string>
+): string | undefined {
+  const parts: string[] = []
+
+  const match = keyPath.match(PLURAL_SUFFIX_RE)
+  if (match) {
+    const category = match[1]
+    const samples = samplePluralIntegers(locale, category)
+    if (samples.length > 0) {
+      parts.push(
+        `CLDR plural category "${category}" -- sample count(s): ${samples.join(', ')}`
+      )
+    }
+  }
+
+  const keyNote = resolveTranslatorNote(keyPath, notes)
+  if (keyNote) parts.push(keyNote)
+
+  return parts.length > 0 ? parts.join(' | ') : undefined
+}
+
+// ---------------------------------------------------------------------------
 // D-09: collect which keys a locale is missing relative to English
 // ---------------------------------------------------------------------------
 
@@ -131,20 +310,41 @@ export function collectMissingKeys(
 
   const missing: string[] = []
   const preserved: string[] = []
+  const processedBases = new Set<string>()
 
-  for (const key of Object.keys(enFlat)) {
+  const evaluate = (key: string, englishValue: string): void => {
     const targetValue = targetFlat[key]
     const hasTargetValue = targetValue !== undefined && targetValue !== ''
 
     if (hasTargetValue) {
       preserved.push(key)
-      continue
+      return
     }
 
-    const englishValue = enFlat[key]
     if (englishValue !== '') {
       missing.push(key)
     }
+  }
+
+  for (const key of Object.keys(enFlat)) {
+    const base = pluralBaseOf(key)
+
+    // A genuine plural group (en carries `<base>_other`) is expanded to its
+    // FULL required set -- en's own suffixes unioned with this locale's CLDR
+    // categories -- and processed once per base, not once per en suffix. An
+    // ordinary key that happens to end `_one`/etc. with no `_other` sibling
+    // falls through to the plain per-key path below, unchanged from before.
+    if (base !== null && isPluralGroup(base, enFlat)) {
+      if (processedBases.has(base)) continue
+      processedBases.add(base)
+
+      for (const reqKey of requiredPluralKeys(base, enFlat, locale)) {
+        evaluate(reqKey, englishSourceFor(reqKey, enFlat) ?? '')
+      }
+      continue
+    }
+
+    evaluate(key, enFlat[key])
   }
 
   return { locale, missing, preserved }
@@ -365,21 +565,6 @@ export function mergeFill(
 }
 
 // ---------------------------------------------------------------------------
-// Plural-sibling completeness (D-09) -- validateTranslation only ever sees a
-// single (source, target) string pair, so it cannot know about a sibling
-// key elsewhere in the catalog. This check needs the key PATH, so it lives
-// at the orchestration layer instead.
-// ---------------------------------------------------------------------------
-
-function pluralSiblingOf(keyPath: string): string | null {
-  if (keyPath.endsWith('_one'))
-    return `${keyPath.slice(0, -'_one'.length)}_other`
-  if (keyPath.endsWith('_other'))
-    return `${keyPath.slice(0, -'_other'.length)}_one`
-  return null
-}
-
-// ---------------------------------------------------------------------------
 // Orchestration -- ties collectMissingKeys + the injected TranslateFn +
 // validateTranslation + mergeFill together. Still fully pure/hermetic: the
 // only "impure" input is the injected `translate` function, which a test
@@ -396,6 +581,7 @@ export interface FillLocaleParams {
   priorManifest: MtManifest | null
   model: string
   now: Date
+  notes?: Record<string, string> // per-key translator context, D-notes; defaults to {}
 }
 
 export interface FillLocaleResult {
@@ -435,8 +621,10 @@ export async function fillLocale(
     buildMemory,
     priorManifest,
     model,
-    now
+    now,
+    notes
   } = params
+  const notesMap = notes ?? {}
 
   const plan = collectMissingKeys(en, target, locale)
   const skipped: Array<{ keyPath: string; problems: string[] }> = []
@@ -457,19 +645,24 @@ export async function fillLocale(
   }
 
   const enFlat = flattenCatalog(en as Catalog)
-  const batch = plan.missing.map((keyPath) => ({
-    keyPath,
-    source: enFlat[keyPath],
-    locale,
-    memory: buildMemory(enFlat[keyPath])
-  }))
+  const batch = plan.missing.map((keyPath) => {
+    const source = englishSourceFor(keyPath, enFlat) ?? ''
+    const note = buildNoteFor(keyPath, locale, notesMap)
+    return {
+      keyPath,
+      source,
+      locale,
+      memory: buildMemory(source),
+      ...(note ? { note } : {})
+    }
+  })
 
   const translated = await translate(batch)
   const translatedMap = new Map(translated.map((t) => [t.keyPath, t.target]))
 
   const filled: Record<string, string> = {}
   for (const keyPath of plan.missing) {
-    const source = enFlat[keyPath]
+    const source = englishSourceFor(keyPath, enFlat) ?? ''
     const targetText = translatedMap.get(keyPath)
 
     if (targetText === undefined) {
@@ -489,24 +682,39 @@ export async function fillLocale(
     filled[keyPath] = targetText
   }
 
-  // Plural-sibling completeness: a filled `_one` needs its `_other` sibling
-  // (and vice versa) to ALSO end up present in the merged result -- either
-  // already preserved, or filled in this same run -- otherwise i18next's
-  // plural resolution silently falls through for the count it has no rule
-  // for. A sibling missing from both sets means this key must be skipped
-  // too, not written half-paired.
+  // Plural-GROUP completeness (generalises the old pairwise _one/_other
+  // check): every required form of a triggered plural base -- per
+  // requiredPluralKeys, the union of en's own suffixes and this locale's
+  // CLDR categories -- must end up present in the merged result, either
+  // already preserved or filled in this same run. i18next's plural
+  // resolution silently falls through to English for any count whose
+  // category is missing, so a half-written group is worse than an
+  // untranslated one -- write nothing for that group instead.
+  const triggeredBases = new Set<string>()
+  for (const keyPath of plan.missing) {
+    const base = pluralBaseOf(keyPath)
+    if (base !== null && isPluralGroup(base, enFlat)) {
+      triggeredBases.add(base)
+    }
+  }
+
   const finalKeys = new Set([...plan.preserved, ...Object.keys(filled)])
-  for (const keyPath of Object.keys(filled)) {
-    const sibling = pluralSiblingOf(keyPath)
-    if (sibling && plan.missing.includes(sibling) && !finalKeys.has(sibling)) {
-      skipped.push({
-        keyPath,
-        problems: [
-          `plural sibling '${sibling}' is missing from this fill -- refusing to write an unpaired _one/_other value`
-        ]
-      })
-      delete filled[keyPath]
-      finalKeys.delete(keyPath)
+  for (const base of triggeredBases) {
+    const required = requiredPluralKeys(base, enFlat, locale)
+    const complete = required.every((k) => finalKeys.has(k))
+    if (complete) continue
+
+    for (const keyPath of required) {
+      if (Object.prototype.hasOwnProperty.call(filled, keyPath)) {
+        skipped.push({
+          keyPath,
+          problems: [
+            `plural group '${base}' is missing a required form -- refusing to write an incomplete plural group`
+          ]
+        })
+        delete filled[keyPath]
+        finalKeys.delete(keyPath)
+      }
     }
   }
 
@@ -636,7 +844,14 @@ export function createAnthropicTranslator(
       `  inventing a new translation for a word already translated`,
       `  elsewhere (e.g. match the existing translation of "Install").`,
       `- Keep the translation's tone and length similar to the source --`,
-      `  these are UI labels and dialog copy, not prose.`
+      `  these are UI labels and dialog copy, not prose.`,
+      `- An input item's "note" field, when present, is BINDING translator`,
+      `  context for that specific item -- follow it exactly, even when it`,
+      `  seems to conflict with your own instinct for a natural phrasing.`,
+      `- When a note names a term (e.g. a UI section name) and the SAME`,
+      `  note text appears on more than one item in this batch, translate`,
+      `  that term IDENTICALLY in every one of those items -- do not vary`,
+      `  the wording between them.`
     ].join('\n')
 
     const results: Array<{ keyPath: string; target: string }> = []
@@ -645,7 +860,8 @@ export function createAnthropicTranslator(
       const userPayload = chunk.map((item) => ({
         keyPath: item.keyPath,
         source: item.source,
-        memory: item.memory
+        memory: item.memory,
+        ...(item.note ? { note: item.note } : {})
       }))
 
       // Deliberately no console.log of `system`/`userPayload`/the response
@@ -799,6 +1015,15 @@ function readGlossary(): string[] {
   return raw.terms
 }
 
+function readTranslatorNotes(): {
+  rationale: string
+  notes: Record<string, string>
+} {
+  return JSON.parse(
+    readFileSync(join('meta', 'i18nTranslatorNotes.json'), 'utf-8')
+  ) as { rationale: string; notes: Record<string, string> }
+}
+
 function buildMemoryFor(locale: string) {
   const enTranslation = readJsonFile(
     join(LOCALES_DIR, 'en', 'translation.json')
@@ -842,7 +1067,8 @@ async function fillOneLocale(
     buildMemory: buildMemoryFor(locale),
     priorManifest,
     model,
-    now: new Date()
+    now: new Date(),
+    notes: readTranslatorNotes().notes
   })
 
   console.log(

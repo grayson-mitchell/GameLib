@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'fs'
+import { join } from 'path'
 import {
   collectMissingKeys,
   buildTranslationMemory,
@@ -6,6 +8,11 @@ import {
   fillLocale,
   chunkBatch,
   extractJsonArray,
+  createAnthropicTranslator,
+  pluralCategoriesFor,
+  pluralBaseOf,
+  requiredPluralKeys,
+  englishSourceFor,
   BulkRunRefusedError,
   type TranslateFn,
   type MtManifest
@@ -156,7 +163,7 @@ describe('interpolation and plurals', () => {
       )
       expect(otherSkip).toBeDefined() // rejected by validateTranslation directly
       expect(oneSkip).toBeDefined() // rejected because its sibling never lands
-      expect(oneSkip?.problems.join(' ')).toMatch(/plural sibling/)
+      expect(oneSkip?.problems.join(' ')).toMatch(/plural group/)
     })
   })
 
@@ -620,4 +627,460 @@ describe('BulkRunRefusedError', () => {
     expect(err.name).toBe('BulkRunRefusedError')
     expect(err.message).toBe('refused for testing')
   })
+})
+
+describe('pluralCategoriesFor', () => {
+  it('ru needs one/few/many/other', () => {
+    expect(pluralCategoriesFor('ru')).toEqual(['one', 'few', 'many', 'other'])
+  })
+
+  it('ar needs all six CLDR categories', () => {
+    expect(pluralCategoriesFor('ar')).toEqual([
+      'zero',
+      'one',
+      'two',
+      'few',
+      'many',
+      'other'
+    ])
+  })
+
+  it('ja only needs "other"', () => {
+    expect(pluralCategoriesFor('ja')).toEqual(['other'])
+  })
+
+  it('resolves an underscore-separated code by mapping it to a dash', () => {
+    expect(pluralCategoriesFor('nb_NO')).toEqual(['one', 'other'])
+    expect(pluralCategoriesFor('zh_Hans')).toEqual(['other'])
+    expect(pluralCategoriesFor('pt_BR')).toEqual(['one', 'many', 'other'])
+  })
+
+  it('returns null for an empty locale, never throws', () => {
+    expect(pluralCategoriesFor('')).toBeNull()
+  })
+
+  it('returns null for an unparseable code, never throws', () => {
+    expect(pluralCategoriesFor('not a locale!!')).toBeNull()
+  })
+})
+
+// Cross-checks pluralCategoriesFor against the REAL i18next dependency this
+// app ships, not a re-implementation of its plural logic -- proof the fill
+// emits every suffix i18next will actually ask for.
+describe('pluralCategoriesFor cross-checked against the real i18next pluralResolver', () => {
+  const COUNTS = [0, 1, 2, 3, 4, 5, 11, 21, 22, 25, 100, 101]
+
+  // Pre-existing i18next defect -- NOT introduced or fixed by this task, and
+  // out of this quick task's scope per CLAUDE.md's scope boundary. Filed as
+  // .planning/todos/pending/2026-09-25-i18next-cannot-resolve-plurals-for-underscore-locale-codes.md.
+  //
+  // i18next's PluralResolver.getRule calls `new Intl.PluralRules(code, ...)`
+  // with the RAW lng code it was given
+  // (node_modules/i18next/dist/cjs/i18next.js:1218) and never converts an
+  // underscore-separated code to the dash form Intl.PluralRules requires.
+  // `nb_NO`/`pt_BR`/`zh_Hans`/`zh_Hant` are exactly how these four locale
+  // DIRECTORIES are named, and `loadPath: 'locales/{{lng}}/{{ns}}.json'`
+  // (src/frontend/index.tsx:129) feeds the directory name straight through
+  // as `lng` -- so `new Intl.PluralRules('nb_NO')` throws today, i18next
+  // catches it, warns "no plural rule found", and getSuffix returns ''.
+  // Measured directly against this repo's own i18next dependency. This test
+  // documents that defect instead of hiding it: the OTHER 44 locales are
+  // held to the strict cross-check below.
+  const I18NEXT_CANNOT_RESOLVE_UNDERSCORE_CODE = new Set([
+    'nb_NO',
+    'pt_BR',
+    'zh_Hans',
+    'zh_Hant'
+  ])
+
+  let i18n: import('i18next').i18n
+
+  beforeAll(async () => {
+    i18n = (await import('i18next')).default
+    await i18n.init({ lng: 'en', resources: {} })
+  })
+
+  const dirs = readdirSync(join('public', 'locales'), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name !== 'en')
+    .map((entry) => entry.name)
+
+  it.each(dirs)(
+    '%s: every suffix i18next resolves is a category pluralCategoriesFor emits',
+    (dir) => {
+      const categories = pluralCategoriesFor(dir)
+      expect(categories).not.toBeNull()
+
+      for (const n of COUNTS) {
+        const suffix: string = i18n.services.pluralResolver.getSuffix(dir, n)
+
+        if (I18NEXT_CANNOT_RESOLVE_UNDERSCORE_CODE.has(dir)) {
+          expect(suffix).toBe('')
+          continue
+        }
+
+        expect(suffix.startsWith('_')).toBe(true)
+        expect(categories).toContain(suffix.slice(1))
+      }
+    }
+  )
+})
+
+describe('pluralBaseOf', () => {
+  it('strips a trailing plural suffix', () => {
+    expect(pluralBaseOf('humbleKeys.cooldown_one')).toBe('humbleKeys.cooldown')
+    expect(pluralBaseOf('x_few')).toBe('x')
+    expect(pluralBaseOf('x_other')).toBe('x')
+  })
+
+  it('returns null for a key with no plural suffix', () => {
+    expect(pluralBaseOf('app.title')).toBeNull()
+  })
+})
+
+describe('requiredPluralKeys', () => {
+  const enFlat = { x_one: 'a', x_other: 'b' }
+
+  it('unions en suffixes with the locale categories, in canonical order', () => {
+    expect(requiredPluralKeys('x', enFlat, 'ru')).toEqual([
+      'x_one',
+      'x_few',
+      'x_many',
+      'x_other'
+    ])
+  })
+
+  it('a "other"-only locale stays at just en\'s own one/other', () => {
+    expect(requiredPluralKeys('x', enFlat, 'ja')).toEqual(['x_one', 'x_other'])
+  })
+
+  it("an unresolvable/empty locale code falls back to just en's own suffixes", () => {
+    expect(requiredPluralKeys('x', enFlat, '')).toEqual(['x_one', 'x_other'])
+  })
+})
+
+describe('englishSourceFor', () => {
+  const enFlat = {
+    x_one: '{{count}} thing',
+    x_other: '{{count}} things',
+    plain: 'Plain'
+  }
+
+  it("returns a non-plural key's own en value", () => {
+    expect(englishSourceFor('plain', enFlat)).toBe('Plain')
+  })
+
+  it('returns en x_one for x_one', () => {
+    expect(englishSourceFor('x_one', enFlat)).toBe('{{count}} thing')
+  })
+
+  it('returns en x_other for x_few -- a CLDR sibling en never authors', () => {
+    expect(englishSourceFor('x_few', enFlat)).toBe('{{count}} things')
+  })
+
+  it('returns en x_other for x_zero, x_two and x_many', () => {
+    expect(englishSourceFor('x_zero', enFlat)).toBe('{{count}} things')
+    expect(englishSourceFor('x_two', enFlat)).toBe('{{count}} things')
+    expect(englishSourceFor('x_many', enFlat)).toBe('{{count}} things')
+  })
+
+  it('returns undefined for an unknown key', () => {
+    expect(englishSourceFor('nope', enFlat)).toBeUndefined()
+  })
+
+  it('returns undefined for a key ending _few with no _other sibling in en -- not treated as a fake plural group', () => {
+    const flat = { standalone_one: 'Solo' }
+    expect(englishSourceFor('standalone_few', flat)).toBeUndefined()
+  })
+})
+
+describe('collectMissingKeys -- plural group expansion (per-locale CLDR categories)', () => {
+  const PLURAL_EN = {
+    x_one: '{{count}} thing',
+    x_other: '{{count}} things',
+    plain: 'Plain string'
+  }
+
+  it('ru: expands to the union of en suffixes and its own CLDR categories', () => {
+    const plan = collectMissingKeys(PLURAL_EN, {}, 'ru')
+    const xKeys = plan.missing.filter((k) => k.startsWith('x_'))
+    expect(xKeys.sort()).toEqual(['x_few', 'x_many', 'x_one', 'x_other'].sort())
+  })
+
+  it('ja: union of en suffixes (one/other) and its own single "other" category is still just one/other', () => {
+    const plan = collectMissingKeys(PLURAL_EN, {}, 'ja')
+    const xKeys = plan.missing.filter((k) => k.startsWith('x_'))
+    expect(xKeys.sort()).toEqual(['x_one', 'x_other'])
+  })
+
+  it('an en-shaped locale (no locale code) is unchanged -- still exactly x_one/x_other', () => {
+    const plan = collectMissingKeys(PLURAL_EN, {})
+    const xKeys = plan.missing.filter((k) => k.startsWith('x_'))
+    expect(xKeys.sort()).toEqual(['x_one', 'x_other'])
+  })
+
+  it('a non-plural key is unaffected', () => {
+    const plan = collectMissingKeys(PLURAL_EN, {}, 'ru')
+    expect(plan.missing).toContain('plain')
+  })
+
+  it('an already-filled CLDR-sibling key is preserved, not re-listed as missing', () => {
+    const target = { x_few: 'вже перекладено' }
+    const plan = collectMissingKeys(PLURAL_EN, target, 'ru')
+    expect(plan.preserved).toContain('x_few')
+    expect(plan.missing).not.toContain('x_few')
+  })
+})
+
+describe('fillLocale -- plural GROUP completeness (generalises the pairwise check to N-way CLDR groups)', () => {
+  it('ru: writes nothing for the group when one required form (e.g. _many) is never filled', async () => {
+    const en = { x_one: 'thing', x_other: 'things' }
+    const target = {}
+    const translate: TranslateFn = (batch) =>
+      Promise.resolve(
+        batch
+          .filter((b) => b.keyPath !== 'x_many') // model silently drops one form
+          .map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+      )
+
+    const result = await fillLocale({
+      en,
+      target,
+      locale: 'ru',
+      translate,
+      glossary: [],
+      buildMemory: () => [],
+      priorManifest: null,
+      model: 'test-model',
+      now: new Date('2026-09-25T00:00:00.000Z')
+    })
+
+    const merged = result.merged as Record<string, string>
+    expect(merged.x_one).toBeUndefined()
+    expect(merged.x_few).toBeUndefined()
+    expect(merged.x_other).toBeUndefined()
+    expect(
+      result.skipped.some((s) =>
+        s.problems.join(' ').includes('incomplete plural group')
+      )
+    ).toBe(true)
+  })
+
+  it('ru: fills a complete 4-way group (one/few/many/other) together', async () => {
+    const en = { x_one: 'thing', x_other: 'things' }
+    const target = {}
+    const translate: TranslateFn = (batch) =>
+      Promise.resolve(
+        batch.map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+      )
+
+    const result = await fillLocale({
+      en,
+      target,
+      locale: 'ru',
+      translate,
+      glossary: [],
+      buildMemory: () => [],
+      priorManifest: null,
+      model: 'test-model',
+      now: new Date('2026-09-25T00:00:00.000Z')
+    })
+
+    const merged = result.merged as Record<string, string>
+    expect(merged.x_one).toBe('[x_one]')
+    expect(merged.x_few).toBe('[x_few]')
+    expect(merged.x_many).toBe('[x_many]')
+    expect(merged.x_other).toBe('[x_other]')
+    expect(result.skipped).toEqual([])
+  })
+})
+
+describe('fillLocale -- translator notes threaded onto the batch', () => {
+  it('a plural-category key carries a CLDR sample-count note; a noted key carries its i18nTranslatorNotes entry; both join when a key is both', async () => {
+    const en = { x_one: '{{count}} thing', x_other: '{{count}} things' }
+    const target = {}
+    let capturedBatch: Array<{ keyPath: string; note?: string }> = []
+    const translate: TranslateFn = (batch) => {
+      capturedBatch = batch
+      return Promise.resolve(
+        batch.map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+      )
+    }
+
+    await fillLocale({
+      en,
+      target,
+      locale: 'ru',
+      translate,
+      glossary: [],
+      buildMemory: () => [],
+      priorManifest: null,
+      model: 'test-model',
+      now: new Date('2026-09-25T00:00:00.000Z'),
+      notes: { x: 'This is a shared UI term -- keep it identical everywhere.' }
+    })
+
+    const few = capturedBatch.find((b) => b.keyPath === 'x_few')
+    expect(few?.note).toContain('few')
+    expect(few?.note).toContain('keep it identical everywhere')
+
+    const other = capturedBatch.find((b) => b.keyPath === 'x_other')
+    expect(other?.note).toContain('keep it identical everywhere')
+  })
+
+  it('omits the note field entirely when neither a CLDR note nor a key note applies', async () => {
+    const en = { plain: 'Plain string' }
+    const target = {}
+    let capturedBatch: Array<{ keyPath: string; note?: string }> = []
+    const translate: TranslateFn = (batch) => {
+      capturedBatch = batch
+      return Promise.resolve(
+        batch.map((b) => ({ keyPath: b.keyPath, target: `[${b.keyPath}]` }))
+      )
+    }
+
+    await fillLocale({
+      en,
+      target,
+      locale: 'de',
+      translate,
+      glossary: [],
+      buildMemory: () => [],
+      priorManifest: null,
+      model: 'test-model',
+      now: new Date('2026-09-25T00:00:00.000Z')
+    })
+
+    expect(capturedBatch[0]).not.toHaveProperty('note')
+  })
+})
+
+describe('createAnthropicTranslator -- note passthrough + system prompt rules', () => {
+  const originalFetch = global.fetch
+
+  afterEach(() => {
+    global.fetch = originalFetch
+  })
+
+  it('sends note in the user payload only when present, and states the two note rules in the system prompt', async () => {
+    let capturedBody: {
+      system: string
+      messages: Array<{ content: string }>
+    } | null = null
+
+    global.fetch = jest.fn((_url, init) => {
+      capturedBody = JSON.parse((init as RequestInit).body as string)
+      const userPayload = JSON.parse(
+        capturedBody!.messages[0].content
+      ) as Array<{
+        keyPath: string
+      }>
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            stop_reason: 'end_turn',
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(
+                  userPayload.map((item) => ({
+                    keyPath: item.keyPath,
+                    target: `[${item.keyPath}]`
+                  }))
+                )
+              }
+            ]
+          })
+      })
+    }) as unknown as typeof fetch
+
+    const translate = createAnthropicTranslator({
+      apiKey: 'test-key',
+      model: 'test-model',
+      glossary: []
+    })
+
+    await translate([
+      {
+        keyPath: 'a',
+        source: 'A',
+        locale: 'de',
+        memory: [],
+        note: 'CLDR plural category "few" -- sample count(s): 2, 3, 4'
+      },
+      { keyPath: 'b', source: 'B', locale: 'de', memory: [] }
+    ])
+
+    expect(capturedBody).not.toBeNull()
+    const userPayload = JSON.parse(capturedBody!.messages[0].content) as Array<
+      Record<string, unknown>
+    >
+    expect(userPayload[0]).toHaveProperty(
+      'note',
+      'CLDR plural category "few" -- sample count(s): 2, 3, 4'
+    )
+    expect(userPayload[1]).not.toHaveProperty('note')
+
+    expect(capturedBody!.system).toMatch(/BINDING translator/)
+    expect(capturedBody!.system).toMatch(/IDENTICALLY/)
+  })
+})
+
+describe('meta/i18nTranslatorNotes.json integrity', () => {
+  const notesFile = JSON.parse(
+    readFileSync(join('meta', 'i18nTranslatorNotes.json'), 'utf-8')
+  ) as { rationale: string; notes: Record<string, string> }
+
+  function flattenForTest(
+    obj: Record<string, unknown>,
+    prefix = ''
+  ): Record<string, string> {
+    const out: Record<string, string> = {}
+    for (const key of Object.keys(obj)) {
+      const value = obj[key]
+      const path = prefix ? `${prefix}.${key}` : key
+      if (
+        value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value)
+      ) {
+        Object.assign(
+          out,
+          flattenForTest(value as Record<string, unknown>, path)
+        )
+      } else {
+        out[path] = String(value)
+      }
+    }
+    return out
+  }
+
+  const enFlat = flattenForTest(
+    JSON.parse(
+      readFileSync(join('public', 'locales', 'en', 'gamelib.json'), 'utf-8')
+    ) as Record<string, unknown>
+  )
+
+  it('has a non-empty rationale', () => {
+    expect(typeof notesFile.rationale).toBe('string')
+    expect(notesFile.rationale.length).toBeGreaterThan(0)
+  })
+
+  it('every note is a non-empty string', () => {
+    for (const note of Object.values(notesFile.notes)) {
+      expect(typeof note).toBe('string')
+      expect(note.length).toBeGreaterThan(0)
+    }
+  })
+
+  it.each(Object.keys(notesFile.notes))(
+    'note key %s resolves to a real en key or an en plural base',
+    (key) => {
+      const isLiteralEnKey = enFlat[key] !== undefined
+      const isPluralBase =
+        enFlat[`${key}_one`] !== undefined ||
+        enFlat[`${key}_other`] !== undefined
+      expect(isLiteralEnKey || isPluralBase).toBe(true)
+    }
+  )
 })
