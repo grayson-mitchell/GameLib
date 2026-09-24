@@ -82,6 +82,25 @@ const HAT_LEFT = 0.71429
 const HAT_UP_RIGHT = -0.71429 // diagonal (A7) -- cardinals-only excludes this
 const HAT_NEUTRAL = 3.28571
 
+// Right-stick Y axis index on the non-standard PowerA pad. MEASURED
+// 2026-09-25 (quick-260925-9de Task 1, operator checkpoint 1): pushing the
+// right stick fully UP drove axis 5 NEGATIVE (-0.14510 -> -0.45882 ->
+// -0.97647), then fully DOWN drove it back POSITIVE. This is a MEASURED
+// value, not derived from `checkGamecube`'s axes[4], "one past axes[3]", or
+// symmetry with the left stick -- all three were considered and rejected in
+// the plan's <conditionality> section precisely because axes[4] never moved
+// across the whole sitting.
+const RIGHT_STICK_Y_NON_STANDARD = 5
+
+// LEFT_X/LEFT_Y reproduce the always-true axes[0]/axes[1] read. RIGHT_X was
+// CONFIRMED LIVE 2026-09-25 (M2) by the `[tauriGamepadInput] unhandled
+// gamepad action "rightStickLeft"` warning reaching the default arm at
+// tauriGamepadInput.ts:394 -- re-confirmed on this instrument at Task 1 step
+// d.
+const LEFT_X = 0
+const LEFT_Y = 1
+const RIGHT_X = 2
+
 interface PadOptions {
   mapping?: string
   buttonCount?: number
@@ -276,6 +295,29 @@ function moveHat(id: string, hatValue: number, opts: PadOptions): string[] {
     throw new Error('moveHat requires opts.hatAxis')
   }
 
+  // HARNESS PLUMBING, not a case edit: this body now delegates to `moveAxis`,
+  // which does exactly what this function used to do inline (jest.resetModules,
+  // buildHarness, initGamepad, makePad, connect, priming frame, write axis,
+  // one more frame, return actions). `moveHat`'s SIGNATURE and BEHAVIOUR are
+  // unchanged -- the six existing hat cases keep their exact current meaning.
+  return moveAxis(id, opts.hatAxis, hatValue, opts)
+}
+
+/**
+ * Moves an arbitrary axis to `value` for a single frame and returns the
+ * actions dispatched. A SIBLING to `pressButton`/`moveHat`: same shape
+ * (jest.resetModules, buildHarness, initGamepad, makePad, connect, priming
+ * frame -- the released frame `checkAction` needs to seed `triggeredAt` --
+ * write axis, one more frame), but takes the axis index EXPLICITLY instead of
+ * reading `opts.hatAxis`, so it can drive any of the ten axes on the
+ * measured PowerA pad, not just the hat.
+ */
+function moveAxis(
+  id: string,
+  axisIndex: number,
+  value: number,
+  opts: PadOptions
+): string[] {
   jest.resetModules()
   const harness = buildHarness()
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -285,10 +327,10 @@ function moveHat(id: string, hatValue: number, opts: PadOptions): string[] {
   const pad = makePad(0, id, opts)
   harness.connect(pad)
 
-  // priming frame, hat at rest (opts.hatNeutral)
+  // priming frame -- checkAction only seeds triggeredAt on a released frame
   harness.runFrame()
 
-  pad.axes[opts.hatAxis] = hatValue
+  pad.axes[axisIndex] = value
   harness.runFrame()
 
   return harness.actions()
@@ -457,6 +499,105 @@ describe('helpers/gamepad: Nintendo layout routing, non-standard mapping (measur
     expect(actions).not.toContain('padLeft')
     expect(actions).not.toContain('padRight')
   })
+})
+
+/**
+ * Right-stick vertical axis coverage, driven by Task 1's live measurement of
+ * the operator's PowerA Advantage Wired Controller for Nintendo Switch 2
+ * (2026-09-25, quick-260925-9de). `checkNintendo` assigned all four stick
+ * axes above the mapping branch (rightAxisY = axes[3]), unbranched, and this
+ * pad's real right-stick Y is axes[5] -- MEASURED, not axes[3] and not
+ * `checkGamecube`'s axes[4].
+ */
+describe('helpers/gamepad: Nintendo layout routing, right stick (measured PowerA pad, 2026-09-25)', () => {
+  afterEach(cleanupGlobals)
+
+  it('dispatches rightStickUp from its MEASURED Y axis', () => {
+    // MEASURED 2026-09-25 (Task 1 step b): UP drove axis 5 NEGATIVE, the same
+    // sign convention the left stick's axes[1] already uses -- no inversion
+    // needed here or in case (B) below.
+    const actions = moveAxis(
+      POWERA_ID,
+      RIGHT_STICK_Y_NON_STANDARD,
+      -1,
+      NON_STANDARD
+    )
+    expect(actions).toContain('rightStickUp')
+    expect(actions).not.toContain('rightStickDown')
+  })
+
+  it('dispatches rightStickDown from the same axis pushed the other way', () => {
+    const actions = moveAxis(
+      POWERA_ID,
+      RIGHT_STICK_Y_NON_STANDARD,
+      1,
+      NON_STANDARD
+    )
+    expect(actions).toContain('rightStickDown')
+    expect(actions).not.toContain('rightStickUp')
+  })
+
+  it('cross-mapping contrast: axes[3] is not this pad right stick Y, but it is the Switch Pro Controller', () => {
+    // Without this pair, an implementation that simply moved EVERY Nintendo
+    // pad to the new index would satisfy the two cases above while silently
+    // destroying standard-mapped pads. axes[3] was live-FALSIFIED as this
+    // pad's right-stick Y on 2026-09-25 -- it is this pad's unused axis, not
+    // its stick.
+    const nonStandardActions = moveAxis(POWERA_ID, 3, -1, NON_STANDARD)
+    expect(nonStandardActions).not.toContain('rightStickUp')
+    expect(nonStandardActions).not.toContain('rightStickDown')
+
+    const standardActions = moveAxis(SWITCH_PRO_ID, 3, -1, {})
+    expect(standardActions).toContain('rightStickUp')
+  })
+
+  // CONTRACT PRESERVATION, GREEN pre-fix BY DESIGN -- NOT RED evidence. Pins
+  // that a standard-mapped pad's right stick is unaffected by this change,
+  // both vertical directions plus the horizontal axis. `makePad`'s default
+  // `axisCount` is 4, so indices 0-3 exist with no options bag.
+  it('a standard-mapped pad still reads its right stick from axes[2]/axes[3]', () => {
+    expect(moveAxis(SWITCH_PRO_ID, 3, -1, {})).toContain('rightStickUp')
+    expect(moveAxis(SWITCH_PRO_ID, 3, 1, {})).toContain('rightStickDown')
+    expect(moveAxis(SWITCH_PRO_ID, 2, -1, {})).toContain('rightStickLeft')
+  })
+
+  // GREEN pre-fix -- contract preservation, NOT a re-fix of the horizontal
+  // no-op. axes[2] is this pad's right-stick X, CONFIRMED LIVE 2026-09-25
+  // (M2) by the `unhandled gamepad action "rightStickLeft"` warning.
+  // rightStickLeft/rightStickRight DO reach window.api.gamepadAction from
+  // gamepad.ts:296 and are observable here; they become a no-op only later,
+  // in the PRELOAD switch's default arm, which is out of scope. This case
+  // asserts DISPATCH, not effect.
+  it('right stick horizontal still dispatches on the non-standard pad (axes[2])', () => {
+    expect(moveAxis(POWERA_ID, RIGHT_X, -1, NON_STANDARD)).toContain(
+      'rightStickLeft'
+    )
+    expect(moveAxis(POWERA_ID, RIGHT_X, 1, NON_STANDARD)).toContain(
+      'rightStickRight'
+    )
+  })
+
+  // GREEN pre-fix -- contract preservation. The fix touches the axis-read
+  // block serving all four sticks; this pins that it moved only the one axis
+  // it was supposed to.
+  it('left stick unmoved on the non-standard pad', () => {
+    expect(moveAxis(POWERA_ID, LEFT_X, -1, NON_STANDARD)).toContain(
+      'leftStickLeft'
+    )
+    expect(moveAxis(POWERA_ID, LEFT_Y, -1, NON_STANDARD)).toContain(
+      'leftStickUp'
+    )
+  })
+
+  // Case (G) from the plan -- "a resting deflected axis dispatches no
+  // right-stick action" -- is DELIBERATELY NOT WRITTEN. M3 (Task 1's resting
+  // baseline) showed every axis compared against the +/-0.5 threshold in
+  // checkNintendo's right-stick reads (0, 1, 2, 5) resting inside +/-0.5:
+  // 0=0.00392, 1=0.00392, 2=0.00392, 5=0.00392. Axis 9 rests at 3.28571,
+  // outside +/-0.5, but it is never compared against that threshold -- only
+  // `nintendoHatDirection`'s rounded-value switch reads it. No axis warrants
+  // this case; manufacturing one to look thorough is explicitly against the
+  // plan's instruction.
 })
 
 // Held in module scope so the harness helper names cannot collide with the
