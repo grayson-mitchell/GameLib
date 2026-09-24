@@ -5,13 +5,73 @@ area: build
 severity: major
 platform: windows
 ready: human
-needs: certificate-purchase-then-verify
+needs: signpath-foundation-application-then-verify
 status: OPEN
 found_by: 'Split from the macOS signing todo on 2026-09-14, after the Apple Developer Program purchase closed the macOS half. Windows needs a SEPARATE certificate that the Apple licence does not cover.'
 source: '.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md (Direction step 5)'
 files:
   - .github/workflows/release-tauri.yml
 ---
+
+## STATUS 2026-09-24 (quick 260924-pm3)
+
+This section does not revise `## Problem` or `## Current behaviour` below it — both stay true as
+history of what was measured and believed on 2026-09-14. It adds the operator's 2026-09-24 decision
+and four findings measured that day.
+
+**Operator decision.** Pursue SignPath Foundation — free OV-level code signing for qualifying
+open-source projects, delivered through a managed signing pipeline. The operator is an individual
+developer outside the USA and Canada, which independently rules out Azure Artifact Signing, whose
+individual tier is limited to the USA and Canada. Fallback if SignPath declines: a traditional OV
+certificate from a commercial CA.
+
+**Finding 1 — the todo's own blocking decision is obsolete.** "Why it matters" item 2 says an EV
+certificate "gets it immediately" and calls OV-vs-EV "the actual cost decision". Microsoft's
+code-signing-options doc
+(https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options, ms.date
+2026-08-29) states that EV's instant-SmartScreen-bypass "behavior was removed in 2024", that
+EV-signed files "now go through the same reputation-building process as OV certificates", and that
+paying the EV premium solely to avoid SmartScreen is "no longer justified"; its comparison table
+marks OV and EV identically for SmartScreen. So Direction step 1 as originally written has no
+correct answer — the real decision is which ISSUER, not which validation tier. The consequence that
+governs expectations: NO option buys instant SmartScreen trust. Reputation accrues per consistent
+publisher identity across releases, so the FIRST signed release will still warn. Signing is worth
+doing for that accrual and for the publisher name appearing in the prompt — not as an immediate fix.
+
+**Finding 2 — Direction step 2 is unachievable as written, and this IS the Windows analogue that
+step 4 told us to look for.** Same Microsoft doc: "As of June 2023, the CA/Browser Forum requires
+private keys for OV certificates to be stored on a hardware security module (HSM) or hardware
+token." So "export as `.p12`/`.pfx`, base64-encode it" is not possible for any certificate issued
+today. The entire implemented `WINDOWS_CERTIFICATE` → `Import-PfxCertificate` →
+`certificateThumbprint` path (`release-tauri.yml:354-367`, plus the `--config` override at
+`:409-430`) is dead on arrival for a 2026 acquisition. The shape difference from the macOS half
+changes how to think about it: macOS was a LATENT DEFECT ARMED BY ENROLMENT (hardened runtime
+implied by signing, missing JIT entitlement); this is an IMPLEMENTED PATH THAT NO LONGER MATCHES HOW
+CERTIFICATES ARE ISSUED. Direction step 4's "No workflow edits are expected" is now measurably FALSE
+for every remaining option — the same way the macOS half's "No code changes" was. Tauri v2 documents
+`bundle.windows.signCommand` for exactly this case; this repo has never used it.
+
+**Finding 3 — workflow audit: what is actually CORRECT.** Recorded so a future reader does not
+re-audit it. Verified read-only: the three-branch gate at `release-tauri.yml:409-430` and the
+cert-import gate at `:354` both require all three Windows secrets; no branch calls `exit 1`; D-04's
+"green on any secret combination" invariant holds. `src-tauri/tauri.windows.conf.json` carries only
+`bundle.resources` and declares NO `certificateThumbprint`, so the D-04 anti-pattern guard is
+intact — there is no committed-thumbprint analogue to the macOS entitlements gap. The defect is not
+in what the workflow DOES, it is that the credential SHAPE it was built for is no longer obtainable.
+
+**Finding 4 — NEW, previously unrecorded: SignPath signs POST-BUILD, which collides with
+`createUpdaterArtifacts: true`.** SignPath Foundation's model is submit-artifact / sign / retrieve,
+not an in-build `signCommand`. But `src-tauri/tauri.conf.json` sets `createUpdaterArtifacts: true`,
+so `tauri build` minisigns the updater artifact over the UNSIGNED installer bytes — and
+`.github/workflows/release-tauri.yml` uses `tauri-apps/tauri-action@v1` (`:557`), which BUILDS AND
+UPLOADS to the draft release in ONE step, leaving no seam between build and publish for a post-build
+signer. Publishing the build's original `.sig` alongside a SignPath-signed installer would ship a
+valid-looking updater signature over the wrong bytes, and `promote-updater-feed.yml` would then
+promote that `latest.json`. The required ordering, to be designed once the SignPath account exists:
+build (no upload) → SignPath signs the installer → DELETE the stale `*-setup.exe.sig` and ASSERT its
+absence → re-run `tauri signer sign` over the signed bytes → only then upload. This is a RESTRUCTURE
+of the `tauri-action` step, not a config tweak, and it is the part most likely to ship a
+silently-broken auto-update — a failure no green build would reveal.
 
 ## Problem
 
