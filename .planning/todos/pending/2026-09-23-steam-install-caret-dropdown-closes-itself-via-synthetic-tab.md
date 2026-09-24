@@ -15,6 +15,74 @@ files:
 
 # The install-options caret opens roughly 1 click in 10
 
+---
+
+## ▶ DO THIS NEXT — on the Windows machine, ~5 minutes
+
+Everything below this block is history and reasoning. This is the whole job.
+
+**1. Run a dev build.** `pnpm tauri:dev`. It has to be the dev build: `src-tauri/Cargo.toml`
+requests no `devtools` feature, so a packaged build has no console to paste into.
+
+**2. Open a game page that shows the caret** — an owned Steam title that is not installed, not
+queued and not delisted. If no caret is visible, the gate is off and there is nothing to test.
+
+**3. Open DevTools** (F12, or right-click → Inspect) and paste this into the Console, whole:
+
+```js
+;(() => {
+  const c = document.querySelector('.SteamInstallCaret')
+  if (!c) return 'no caret on this page — need an owned, not-installed, not-delisted Steam title'
+  const btn = c.querySelector('.dropdownButton')
+  const panel = c.querySelector('.dropdown')
+  const R = (el) => {
+    const r = el.getBoundingClientRect()
+    return `${r.width.toFixed(1)}x${r.height.toFixed(1)}@${r.left.toFixed(0)},${r.top.toFixed(0)}`
+  }
+  const t0 = performance.now()
+  const L = (s) => console.log(`[CARET +${(performance.now() - t0).toFixed(0)}ms] ${s}`)
+  const optBtn = panel.querySelector('button')
+  L(`caret=${R(btn)} panel=${R(panel)} opt=${optBtn ? R(optBtn) : 'NONE'} panelClass=${panel.className}`)
+  const b = btn.getBoundingClientRect()
+  const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2)
+  L(`elementFromPoint(caret centre) = ${hit ? hit.tagName + '.' + hit.className : 'null'}`)
+  L(`computed: pointerEvents=${getComputedStyle(btn).pointerEvents} visibility=${getComputedStyle(panel).visibility} display=${getComputedStyle(panel).display}`)
+  btn.addEventListener('click', () => L('CLICK reached the caret handler'), true)
+  c.addEventListener('focusin', (e) => L(`focusin -> ${e.target.className || e.target.tagName}`), true)
+  c.addEventListener(
+    'focusout',
+    (e) =>
+      L(
+        `focusout rel=${e.relatedTarget ? e.relatedTarget.className || e.relatedTarget.tagName : 'null'} inside=${c.contains(e.relatedTarget)}`
+      ),
+    true
+  )
+  new MutationObserver((ms) =>
+    ms.forEach((m) =>
+      L(`MUT ${m.attributeName} -> ${m.target.getAttribute(m.attributeName)} | panelClass=${panel.className} panelBox=${R(panel)}`)
+    )
+  ).observe(c, { attributes: true, subtree: true, attributeFilter: ['class', 'aria-expanded'] })
+  return 'instrumented — now click the caret once'
+})()
+```
+
+**4. Click the caret once.** Copy every `[CARET]` line, including the two printed at paste time.
+That is the deliverable — paste them back and the diagnosis follows from the table below.
+
+### What the lines mean (you do not need to work this out — just grab them)
+
+| what the log shows                                                               | verdict                                                                                                                       |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| no `CLICK reached the caret handler` line at all                                 | the click never reaches the button — hit-testing/overlap. `elementFromPoint` names the thief. Nothing to do with focus.        |
+| `CLICK` fires, `MUT aria-expanded -> true`, non-zero `panelBox`, nothing on screen | it opens and fails to paint — a WebView2 paint/compositing problem.                                                            |
+| `CLICK` fires, then `focusout ... inside=false`, then `aria-expanded -> false`    | focus escapes the container; the todo's ORIGINAL STRUCTURE was right and only its zero-area justification was wrong.           |
+| `CLICK` fires, `aria-expanded -> true`, and it stays true                        | it is working at the DOM level in the dev build — which would mean the dev/packaged builds differ and that is the next thread. |
+
+If DevTools will not open at all, say so and this becomes a `console.log` patch + rebuild
+instead — slower, same questions.
+
+---
+
 **Observed live**: clicking the `SteamInstallCaret` beside the primary Install half produced the
 dropdown **once in 10+ clicks**. Operator's words: "dropdown seems 'mostly dead' I did see the
 dropdown once, but 10+ further clicks and could not reproduce."
@@ -102,10 +170,8 @@ was connected and its physical Y button was pressed (or read as pressed) in that
 **Three survivors, needing different fixes.** (a) the click never reaches the handler — an
 overlapping box / hit-testing problem under `flex-wrap`; (b) it opens but paints nothing; (c)
 focus genuinely escapes the container on WebView2, which would restore the todo's *original
-structure* while leaving its step-2 justification refuted. The debug session
-`.planning/debug/steam-caret-dropdown-dead.md` carries a paste-in DevTools snippet that
-discriminates all three in a single click. It needs `pnpm tauri:dev` on Windows —
-`src-tauri/Cargo.toml` requests no `devtools` feature, so a packaged build has no console.
+structure* while leaving its step-2 justification refuted. The "DO THIS NEXT" block at the top of
+this file discriminates all three in a single click.
 
 ## Why this is `major`
 

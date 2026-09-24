@@ -131,53 +131,17 @@ Chromium. If the cause turns out to need the operator's Windows machine to confi
 explicitly and re-triage the todo's `platform:`/`ready:` keys rather than guessing; do not leave
 `ready: code` standing on a defect that cannot be closed at the desk.
 
-## Windows instrumentation — paste this into the dev build's DevTools console
+## Windows instrumentation
 
-Needs `pnpm tauri:dev` on the Windows machine: `src-tauri/Cargo.toml` requests no `devtools`
-feature, so a packaged build has no console. Open a Steam GamePage showing the caret, paste, then
-click the caret **once**.
+**The runnable copy lives in the todo, not here** —
+`.planning/todos/pending/2026-09-23-steam-install-caret-dropdown-closes-itself-via-synthetic-tab.md`,
+in its "DO THIS NEXT" block at the top of the file: the paste-in DevTools snippet, the dev-build
+requirement (`src-tauri/Cargo.toml` requests no `devtools` feature, so a packaged build has no
+console), and the table mapping each possible `[CARET]` log shape to its verdict.
 
-```js
-;(() => {
-  const c = document.querySelector('.SteamInstallCaret')
-  if (!c) return 'no caret on this page — need an owned, not-installed, not-delisted Steam title'
-  const btn = c.querySelector('.dropdownButton')
-  const panel = c.querySelector('.dropdown')
-  const R = (el) => {
-    const r = el.getBoundingClientRect()
-    return `${r.width.toFixed(1)}x${r.height.toFixed(1)}@${r.left.toFixed(0)},${r.top.toFixed(0)}`
-  }
-  const t0 = performance.now()
-  const L = (s) => console.log(`[CARET +${(performance.now() - t0).toFixed(0)}ms] ${s}`)
-  const optBtn = panel.querySelector('button')
-  L(`caret=${R(btn)} panel=${R(panel)} opt=${optBtn ? R(optBtn) : 'NONE'} panelClass=${panel.className}`)
-  const hit = document.elementFromPoint(
-    btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2,
-    btn.getBoundingClientRect().top + btn.getBoundingClientRect().height / 2
-  )
-  L(`elementFromPoint(caret centre) = ${hit ? hit.tagName + '.' + hit.className : 'null'}`)
-  btn.addEventListener('click', () => L('click on caret'), true)
-  c.addEventListener('focusin', (e) => L(`focusin -> ${e.target.className || e.target.tagName}`), true)
-  c.addEventListener(
-    'focusout',
-    (e) =>
-      L(
-        `focusout rel=${e.relatedTarget ? e.relatedTarget.className || e.relatedTarget.tagName : 'null'} inside=${c.contains(e.relatedTarget)}`
-      ),
-    true
-  )
-  new MutationObserver((ms) =>
-    ms.forEach((m) =>
-      L(`MUT ${m.attributeName} -> ${m.target.getAttribute(m.attributeName)} | panelClass=${panel.className} panelBox=${R(panel)}`)
-    )
-  ).observe(c, { attributes: true, subtree: true, attributeFilter: ['class', 'aria-expanded'] })
-  return 'instrumented — now click the caret once'
-})()
-```
-
-`elementFromPoint` at the caret's own centre is the cheapest discriminator in the set: if it
-returns anything other than the caret button or its icon span, the click is being eaten by an
-overlapping box and no amount of focus reasoning matters.
+It is deliberately NOT duplicated into this file. The todo is what gets opened on the Windows
+machine; a second copy here would drift from it silently, and a stale diagnostic recipe is worse
+than none because it still looks authoritative.
 
 ## Current Focus
 
