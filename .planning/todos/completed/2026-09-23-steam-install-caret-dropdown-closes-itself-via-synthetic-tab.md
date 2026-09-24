@@ -5,6 +5,9 @@ area: library-ui
 severity: major
 platform: windows
 ready: live-gate
+status: completed
+resolved: 2026-09-24
+resolved_by: debug-steam-caret-dropdown-dead
 found_by: "Live Phase 38 sitting on the operator's Windows 11 machine, 2026-09-23, trying to reach the Steam install-options dialog via the split-button caret"
 files:
   - src/frontend/components/UI/Dropdown/index.tsx:30-36
@@ -14,6 +17,28 @@ files:
 ---
 
 # The install-options caret opens roughly 1 click in 10
+
+## Resolution (2026-09-24): FIXED, verified live on Windows
+
+**Root cause: none of the three survivors below.** It was a React batching self-cancellation in
+`Dropdown.toggle()`. WebView2 focuses the caret on click, so the synthetic Tab lands on the panel's
+own child and synchronously fires the panel's `onFocus` -> `setIsExpanded(true)`. `toggle()` then
+queued `prev => !prev`, and in the one click batch that went false -> true -> false, so no expand was ever
+committed. WKWebView does not focus the button on click, so on macOS the Tab lands outside the
+panel and the updater alone yields `true`. That is the entire platform split. The desk Chromium
+replays missed it because they reproduced the CSS and focus collector but not React's batching.
+
+**Measured** over CDP against the running Windows dev build (`--remote-debugging-port=9222`, real
+`Input.dispatchMouseEvent` clicks). The click reached the handler and focus stayed inside the
+container, yet no `aria-expanded` mutation was ever recorded. **Control:** hiding only the panel's
+focusin from React made the identical click open.
+
+**Fix:** `toggle()` uses `const next = !isExpanded; setIsExpanded(next)`, and the Tab is still
+dispatched on expand (38-C08). Two RED->GREEN cases were added to `dropdownDisclosure.test.tsx`.
+Verified live: the click opens, the option is hittable, and a second click closes. The full record
+is `.planning/debug/resolved/steam-caret-dropdown-dead.md`. 38-C08 is now scorable.
+
+Everything below is the pre-resolution history.
 
 ---
 

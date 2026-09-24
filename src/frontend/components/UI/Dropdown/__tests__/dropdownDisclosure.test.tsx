@@ -244,6 +244,53 @@ describe('Dropdown disclosure behaviour', () => {
   })
 })
 
+describe('Dropdown opens when the synthetic Tab focuses its own panel (steam-caret-dropdown-dead)', () => {
+  // Measured live on Windows/WebView2 over CDP, 2026-09-24: a mouse click
+  // focuses the trigger <button>, so the synthetic Tab that toggle()
+  // dispatches lands on the panel's first child and synchronously fires the
+  // panel's onFocus(true) -- inside the same click batch as toggle()'s own
+  // state update. The harness's useState applies updates in call order,
+  // which gives the same final value as React draining the batched queue.
+  // The stub below stands in for tauriGamepadInput's doTab in that
+  // condition.
+  beforeEach(() => {
+    gamepadAction.mockReset()
+  })
+
+  function clickWithTabFocusingPanel(tree: AnyElement): void {
+    gamepadAction.mockImplementation(() => {
+      ;(panel(tree).props.onFocus as () => void)()
+    })
+    ;(button(tree).props.onClick as () => void)()
+  }
+
+  it('a click expands the panel even when the Tab focuses a panel child mid-click', () => {
+    mount()
+    let tree = reinvoke()
+    clickWithTabFocusingPanel(tree)
+    tree = reinvoke()
+
+    expect(gamepadAction).toHaveBeenCalledTimes(1)
+    expect(gamepadAction).toHaveBeenCalledWith({ action: 'tab' })
+    expect(button(tree).props['aria-expanded']).toBe(true)
+    expect(panel(tree).props.className).toBe('dropdown expanded')
+  })
+
+  it('a second click collapses it, and the collapse path does not call gamepadAction', () => {
+    mount()
+    let tree = reinvoke()
+    clickWithTabFocusingPanel(tree)
+    tree = reinvoke()
+    gamepadAction.mockClear()
+    ;(button(tree).props.onClick as () => void)()
+    tree = reinvoke()
+
+    expect(gamepadAction).not.toHaveBeenCalled()
+    expect(button(tree).props['aria-expanded']).toBe(false)
+    expect(panel(tree).props.className).toBe('dropdown collapsed')
+  })
+})
+
 describe('Dropdown acquires store-embed suppression while expanded (Phase 40 Plan 06, D-18/D-20)', () => {
   let acquire: jest.Mock
   let release: jest.Mock

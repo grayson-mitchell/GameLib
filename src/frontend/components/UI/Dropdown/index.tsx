@@ -28,11 +28,22 @@ export default function Dropdown({
   useSuppressStoreEmbedWhile(isExpanded)
 
   const toggle = () => {
-    // focus first component only when expanding
-    if (!isExpanded) {
+    // `next` is computed from the render value on purpose -- do NOT turn
+    // this back into the functional updater `setIsExpanded((prev) => !prev)`.
+    // Where a click focuses the trigger button (WebView2 does, WKWebView does
+    // not), the synthetic Tab below lands on the panel's first child and
+    // synchronously fires the panel's `onFocus` -> `setIsExpanded(true)`
+    // inside this same click batch. A functional updater then runs against
+    // that queued `true` and flips it back: false -> true -> !true = false,
+    // and the dropdown never opens (steam-caret-dropdown-dead, measured
+    // live over CDP). A plain value agrees with the onFocus `true` instead.
+    const next = !isExpanded
+    // focus first component only when expanding -- keeps the panel
+    // controller-reachable (38-C08)
+    if (next) {
       window.api.gamepadAction({ action: 'tab' })
     }
-    setIsExpanded((prev) => !prev)
+    setIsExpanded(next)
   }
 
   return (
