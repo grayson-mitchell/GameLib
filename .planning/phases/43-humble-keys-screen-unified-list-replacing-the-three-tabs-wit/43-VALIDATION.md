@@ -1,10 +1,11 @@
 ---
 phase: 43
 slug: humble-keys-screen-unified-list-replacing-the-three-tabs-wit
-status: draft
+status: approved
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-09-09
+wave_0_verified: 2026-09-25
 ---
 
 # Phase 43 — Validation Strategy
@@ -145,25 +146,48 @@ project's `meta/__tests__/hardcodedStringGate.test.ts` (reading `meta/i18nGateSc
 
 ## Wave 0 Requirements
 
-- [ ] New unit case in `src/backend/humble/__tests__/viewFilters.test.ts` pinning the **undated-key
+> **All six TICKED 2026-09-25 (quick `260925-e4d`), each against the artifact on disk — not
+> against a plan summary claiming it.** This checklist had sat entirely unticked since 2026-09-09
+> while every item was in fact delivered during execution; `status:` and `wave_0_complete:` were
+> stale in the same way. The per-item evidence is recorded inline below.
+
+- [x] New unit case in `src/backend/humble/__tests__/viewFilters.test.ts` pinning the **undated-key
       tiebreak** — the case that differentiates `compareWaiting` from the deleted
       `byExpiringSoonest` (REQ-43-05). A test that passes against either comparator proves nothing
       about which one shipped.
-- [ ] New title-only search predicate + its test file (REQ-43-09), placed so the Backend project
+      **Evidence:** `viewFilters.test.ts:160`, `'two undated keys supplied out of alphabetical
+      order sort alphabetically by title'` — and its comment at `:156` names exactly why this is
+      the differentiating case: the deleted comparator returned `0` for two undated keys.
+- [x] New title-only search predicate + its test file (REQ-43-09), placed so the Backend project
       collects it.
-- [ ] New leaf module for `GENERIC_KEY_PLATFORM` (relocated out of `groupKeys.ts` before that file
+      **Evidence:** `matchesKeySearch` at `src/common/humble/viewFilters.ts:102`; the
+      differentiating case is `viewFilters.test.ts:307`, `'a query matching only origin returns no
+      match'`.
+- [x] New leaf module for `GENERIC_KEY_PLATFORM` (relocated out of `groupKeys.ts` before that file
       is deleted) — a constant, so no test of its own is strictly required, but **both existing
       importers' tests must still pass after the repoint**.
-- [ ] Full rewrite of `HumbleKeyRow/__tests__/index.test.tsx` against the new KEY-column-scenario
+      **Evidence:** `src/common/humble/genericKeyPlatform.ts:25`; `groupKeys.ts` is gone, and both
+      importers' suites pass.
+- [x] Full rewrite of `HumbleKeyRow/__tests__/index.test.tsx` against the new KEY-column-scenario
       prop shape, re-pinning every "must survive" assertion from the research's Deleted-Tab
       Salvage section.
-- [ ] New test file for the unified list screen, replacing `Waiting/__tests__/index.test.tsx` and
+      **Evidence:** file present and green in the 2026-09-25 run.
+- [x] New test file for the unified list screen, replacing `Waiting/__tests__/index.test.tsx` and
       `All/__tests__/index.test.tsx`. Their existing assertions must be **triaged individually** —
       neither bulk-deleted nor bulk-copied. Some pin behaviour that legitimately changes; some pin
       behaviour that must not.
-- [ ] A live-gate contract for REQ-43-19, authored per
+      **Evidence:** `src/frontend/screens/Humble/Keys/__tests__/index.test.tsx`; both tab test
+      files are gone.
+- [x] A live-gate contract for REQ-43-19, authored per
       `.claude/skills/spike-findings-gamelib/references/live-gate-contract-authoring.md`'s
       Structural Reachability Review (all seven tests) **before** the gate's first live run.
+      **Evidence:** `43-LIVE-GATE.md` § "Structural Reachability Review" (line 76), authored
+      before run 1 on 2026-09-11. Recorded honestly: that review is also where the run found four
+      contract defects of its own, three sharing one blind spot — it never checked that its own
+      instructions would execute.
+
+**Measured 2026-09-25 across the whole checklist:** 205/205 Humble frontend+common tests (8
+suites), 61/61 `viewFilters`, 155/155 hardcoded-string gate, `pnpm codecheck` exit 0.
 
 ---
 
@@ -209,7 +233,18 @@ Stated plainly rather than left for the plan-checker to find:
 **Nyquist compliance:** `true` — the Per-Task Verification Map now carries a real task ID, plan,
 wave and non-`-t`-filtered command for all 24 requirements (REQ-43-01..24), filled during plan
 `43-01`.
-**Wave 0 complete:** `false` — the Wave 0 Requirements checklist above (new unit cases, the
+**Wave 0 complete:** ~~`false` — the Wave 0 Requirements checklist above (new unit cases, the
 relocated `GENERIC_KEY_PLATFORM` module, the `HumbleKeyRow` rewrite, the unified-list test file,
 and the REQ-43-19 live-gate contract) has not been executed yet; that work belongs to plans
-`43-04` through `43-10`, not to this requirements-minting plan.
+`43-04` through `43-10`, not to this requirements-minting plan.~~
+
+**CORRECTED 2026-09-25 (quick `260925-e4d`): `true`.** The paragraph above was written by plan
+`43-01` and was correct on 2026-09-09 — it describes work that had not happened *yet*. Plans
+`43-04` through `43-10` then did all of it, and **nobody came back to this file.** Every one of
+the six checklist items is now ticked against the artifact on disk, with per-item evidence
+recorded inline above. `status:` was stale in the same way and is now `approved`.
+
+This is worth naming rather than quietly fixing: a validation contract that says `draft` /
+`wave_0_complete: false` two weeks after its phase finished executing is indistinguishable, to
+any reader or tool, from one whose work never happened. It also kept the phase folder off green
+in the explorer independently of `43-VERIFICATION.md` — measured, both artifacts had to move.
