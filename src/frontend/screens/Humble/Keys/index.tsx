@@ -557,11 +557,13 @@ export default function HumbleKeys() {
             )}
             title={
               inCooldown
-                ? tGamelib(
-                    'gamelib:humbleKeys.cooldown',
-                    'Temporarily unavailable — retry in {{minutes}}m',
-                    { minutes: cooldownMinutes }
-                  )
+                ? tGamelib('gamelib:humbleKeys.cooldown', {
+                    count: cooldownMinutes,
+                    defaultValue:
+                      'Temporarily unavailable — retry in {{count}} minutes',
+                    defaultValue_one:
+                      'Temporarily unavailable — retry in {{count}} minute'
+                  })
                 : tGamelib('gamelib:humbleKeys.refresh', 'Refresh Humble Keys')
             }
             disabled={humble.syncing || inCooldown}
@@ -579,14 +581,12 @@ export default function HumbleKeys() {
               icon={faSyncAlt}
               className="humbleKeysSyncSpinner"
             />
-            {tGamelib(
-              'gamelib:humbleKeys.syncing',
-              'Syncing… {{done}}/{{total}} orders',
-              {
-                done: progress?.done ?? 0,
-                total: progress?.total ?? 0
-              }
-            )}
+            {tGamelib('gamelib:humbleKeys.syncing', {
+              done: progress?.done ?? 0,
+              count: progress?.total ?? 0,
+              defaultValue: 'Syncing… {{done}}/{{count}} orders',
+              defaultValue_one: 'Syncing… {{done}}/{{count}} order'
+            })}
           </span>
         ) : (
           relativeTime !== null && (

@@ -1173,7 +1173,21 @@ function isComposedTCallArgument(node: Node, aliases: Set<string>): boolean {
  * default as the `defaultValue` PROPERTY of an object literal, not as a
  * direct call argument, so `isTCallArgument` cannot see it (the object
  * literal is the direct argument; the string is one level further in).
+ *
+ * 260925-88h: also matches the i18next v4 PLURAL sibling properties
+ * (`defaultValue_zero|one|two|few|many|other`) that `meta/i18nTranslatorNotes.json`'s
+ * consumer, `machineFillGamelib.ts`, and this task's own call sites (e.g.
+ * `library.filterPanel.groupSelectedCount`, `humbleKeys.urgencyDaysLeft`)
+ * use alongside the bare `defaultValue` for the `_other`/base form — see
+ * i18next.js:663-664, `options["defaultValue" + suffix] || options.defaultValue`.
+ * Before this, only bare `defaultValue` was recognised, so every
+ * `defaultValue_one` (etc.) sibling in the SAME object literal was flagged
+ * as an unwrapped hardcoded string even though it reaches the user only
+ * through the same `t()`/`tGamelib()` call as its already-exempt sibling.
  */
+const DEFAULT_VALUE_PROPERTY_RE =
+  /^defaultValue(_(zero|one|two|few|many|other))?$/
+
 function isTCallDefaultValueProperty(
   node: Node,
   aliases: Set<string>
@@ -1184,7 +1198,10 @@ function isTCallDefaultValueProperty(
   }
   if (propertyAssignment.getInitializer() !== node) return false
   const nameNode = propertyAssignment.getNameNode()
-  if (!Node.isIdentifier(nameNode) || nameNode.getText() !== 'defaultValue') {
+  if (
+    !Node.isIdentifier(nameNode) ||
+    !DEFAULT_VALUE_PROPERTY_RE.test(nameNode.getText())
+  ) {
     return false
   }
 

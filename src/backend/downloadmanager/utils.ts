@@ -281,11 +281,13 @@ async function installQueueElement(params: InstallParams): Promise<{
       const observedSeconds = Math.round(error.msSinceProgress / 1000)
       const windowMinutes = Math.round(INSTALL_NO_PROGRESS_TIMEOUT_MS / 60000)
       status = 'error'
-      installErrorReason = i18next.t(
-        'gamelib:box.error.install.stalled',
-        'No download progress for {{minutes}} minutes — the install was stopped',
-        { minutes: windowMinutes }
-      )
+      installErrorReason = i18next.t('gamelib:box.error.install.stalled', {
+        count: windowMinutes,
+        defaultValue:
+          'No download progress for {{count}} minutes — the install was stopped',
+        defaultValue_one:
+          'No download progress for {{count}} minute — the install was stopped'
+      })
       errorMessage(
         `install stalled — no progress observed for ${observedSeconds}s (no-progress bound ${windowMinutes}m)`
       )

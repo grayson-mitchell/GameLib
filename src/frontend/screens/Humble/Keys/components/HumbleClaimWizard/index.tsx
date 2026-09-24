@@ -644,11 +644,13 @@ export default function HumbleClaimWizard({
     return (
       <div className="humbleClaimWizard">
         <p className="humbleClaimWizardCooldownNote">
-          {tGamelib(
-            'gamelib:humbleKeys.revealCooldownBody',
-            'Temporarily unavailable — retry in {{N}}m',
-            { N: minutes }
-          )}
+          {tGamelib('gamelib:humbleKeys.revealCooldownBody', {
+            count: minutes,
+            defaultValue:
+              'Temporarily unavailable — retry in {{count}} minutes',
+            defaultValue_one:
+              'Temporarily unavailable — retry in {{count}} minute'
+          })}
         </p>
       </div>
     )

@@ -36,17 +36,33 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }))
 
+// Supports both call shapes used by this component: the plain
+// `t(key, 'literal default', params)` form, and the i18next v4 plural-group
+// form `t(key, { count, defaultValue, defaultValue_one, ...interp })` that
+// `humbleKeys.revealCooldownBody` now uses (260925-88h) -- picks
+// `defaultValue_one` when `count === 1`, else `defaultValue`.
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (
       _key: string,
-      defaultValue: string,
-      params?: Record<string, unknown>
-    ): string =>
-      Object.entries(params ?? {}).reduce(
+      defaultValueOrOptions?: string | Record<string, unknown>,
+      maybeParams?: Record<string, unknown>
+    ): string => {
+      const usingOptionsForm = typeof defaultValueOrOptions !== 'string'
+      const params = usingOptionsForm ? defaultValueOrOptions : maybeParams
+
+      const defaultValue = usingOptionsForm
+        ? String(
+            (params?.count === 1 ? params?.defaultValue_one : undefined) ??
+              params?.defaultValue
+          )
+        : defaultValueOrOptions
+
+      return Object.entries(params ?? {}).reduce(
         (str: string, [k, v]) => str.replace(`{{${k}}}`, String(v)),
         defaultValue
       )
+    }
   })
 }))
 

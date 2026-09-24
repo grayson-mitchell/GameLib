@@ -168,7 +168,7 @@ export function chipLabelSpec(
           return {
             ns: 'gamelib',
             key: 'gamelib:library.filterPanel.chipNoStorePageHidden',
-            defaultText: 'Hiding no store page'
+            defaultText: 'Hiding games without a store page'
           }
         default:
           return null

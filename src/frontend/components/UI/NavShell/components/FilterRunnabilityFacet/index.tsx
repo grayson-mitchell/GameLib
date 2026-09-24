@@ -108,18 +108,20 @@ export default function FilterRunnabilityFacet() {
       )}
       className="FilterRunnabilityFacet"
       selectedCount={selectedCount}
-      // Literal key AND literal default at this call site, deliberately not
+      // Literal key AND literal defaults at this call site, deliberately not
       // factored into a shared helper -- see the lexer comment at the top of
       // this file for why a variable key or a non-literal default silently
-      // produces blank UI text. Interpolated on `selected`; the name `count`
-      // is reserved by i18next and triggers plural key resolution.
+      // produces blank UI text. `count` IS deliberately passed here
+      // (260925-88h): this is a genuine i18next v4 plural group (`_one`/
+      // `_other`) -- English reads identically either way, but other
+      // locales inflect the participle on the count.
       selectedCountLabel={
         selectedCount > 0
-          ? tGamelib(
-              'gamelib:library.filterPanel.groupSelectedCount',
-              '{{selected}} selected',
-              { selected: selectedCount }
-            )
+          ? tGamelib('gamelib:library.filterPanel.groupSelectedCount', {
+              count: selectedCount,
+              defaultValue: '{{count}} selected',
+              defaultValue_one: '{{count}} selected'
+            })
           : undefined
       }
     >

@@ -15,7 +15,8 @@
             "install": {
                 "failed": "The installation of {{title}} failed: {{error}}",
                 "signInToSteam": "Sign in to Steam",
-                "stalled": "No download progress for {{minutes}} minutes — the install was stopped"
+                "stalled_one": "No download progress for {{count}} minute — the install was stopped",
+                "stalled_other": "No download progress for {{count}} minutes — the install was stopped"
             }
         },
         "filePicker": {
@@ -95,7 +96,8 @@
         "columnGame": "Game",
         "columnKey": "Key",
         "columnType": "Type",
-        "cooldown": "Temporarily unavailable — retry in {{minutes}}m",
+        "cooldown_one": "Temporarily unavailable — retry in {{count}} minute",
+        "cooldown_other": "Temporarily unavailable — retry in {{count}} minutes",
         "copyKey": "Copy key",
         "emptyBody": "Sync your Humble Bundle account to see your keys here.",
         "emptyHeading": "No Humble keys yet",
@@ -131,7 +133,8 @@
         "revealConfirmAction": "Reveal key",
         "revealConfirmBody": "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
         "revealConfirmTitle": "Reveal this key?",
-        "revealCooldownBody": "Temporarily unavailable — retry in {{N}}m",
+        "revealCooldownBody_one": "Temporarily unavailable — retry in {{count}} minute",
+        "revealCooldownBody_other": "Temporarily unavailable — retry in {{count}} minutes",
         "revealDismiss": "Don't reveal yet",
         "revealedAnnotation": "Revealed {{date}}",
         "revealFailedBody": "Couldn't reveal this key — nothing was used up. You can try again.",
@@ -150,7 +153,8 @@
         },
         "syncError": "Couldn't refresh — showing data from {{time}}",
         "syncErrorPartial": "Couldn't finish refresh — showing the latest data available",
-        "syncing": "Syncing… {{done}}/{{total}} orders",
+        "syncing_one": "Syncing… {{done}}/{{count}} order",
+        "syncing_other": "Syncing… {{done}}/{{count}} orders",
         "syncNow": "Sync now",
         "syncToEnableClaiming": "Sync to enable claiming",
         "title": "Humble Keys",
@@ -158,9 +162,10 @@
         "undo": "Undo",
         "undoOwnershipOverride": "Undo — I do own this game",
         "unpickedTitle": "{{title}} · games not picked",
-        "urgencyDaysLeft": "{{N}} days left",
-        "urgencyHoursLeft": "{{H}}h left",
-        "urgencyOneDayLeft": "1 day left"
+        "urgencyDaysLeft_one": "{{count}} day left",
+        "urgencyDaysLeft_other": "{{count}} days left",
+        "urgencyHoursLeft_one": "{{count}} hour left",
+        "urgencyHoursLeft_other": "{{count}} hours left"
     },
     "info": {
         "refresh-rating": "Refresh rating"
@@ -180,7 +185,7 @@
             "chipHiddenOnly": "Hidden only",
             "chipNonAvailableIncluded": "Including non-available",
             "chipNonAvailableOnly": "Non-available only",
-            "chipNoStorePageHidden": "Hiding no store page",
+            "chipNoStorePageHidden": "Hiding games without a store page",
             "chipNoStorePageOnly": "No store page only",
             "clearAll": "Clear all",
             "collections": "Collections",
@@ -189,7 +194,8 @@
             "emptyBody": "No games match {{filters}}.",
             "emptyClearAll": "Clear all filters",
             "emptyHeading": "No games match your filters",
-            "groupSelectedCount": "{{selected}} selected",
+            "groupSelectedCount_one": "{{count}} selected",
+            "groupSelectedCount_other": "{{count}} selected",
             "manageCollections": "Manage collections",
             "moreFilters": "More filters",
             "newCollection": "+ New collection",
@@ -460,7 +466,8 @@
         "installFailedTag": "Install failed",
         "installingRow": "Installing…",
         "needsGuiTag": "Needs the Winetricks GUI",
-        "resultsHeading": "{{total}} results",
+        "resultsHeading_one": "{{count}} result",
+        "resultsHeading_other": "{{count}} results",
         "retry": "Retry",
         "searchPlaceholder": "Search components…",
         "zeroResultHeading": "No components match “{{query}}”."

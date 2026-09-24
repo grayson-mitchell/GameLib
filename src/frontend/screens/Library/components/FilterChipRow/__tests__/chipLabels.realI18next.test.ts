@@ -185,13 +185,35 @@ describe('chipLabelSpec / resolveLabel against a REAL i18next instance (WR-16)',
   })
 
   describe('interpolation-name integrity', () => {
-    it('no filterPanel key is pluralised or uses the reserved {{count}} name', () => {
+    // 260925-88h: `library.filterPanel.groupSelectedCount` is a DELIBERATE,
+    // narrow exception -- it is the tier-2 facet-group badge ("N selected"),
+    // never a `chipLabelSpec`/`resolveLabel` chip label (D-28: "no count
+    // vocabulary anywhere in a CHIP label" -- the badge is not a chip). It is
+    // resolved directly at its three call sites (FilterMoreGroup/
+    // FilterRunnabilityFacet/FilterStoreFacet) via `tGamelib(key, { count,
+    // defaultValue, defaultValue_one })`, which DOES pass `count` -- so it
+    // does not trip the two-argument-shape failure the second test below
+    // guards against. Every OTHER filterPanel key still must never pluralise
+    // or use `{{count}}`, because every other key CAN reach `resolveLabel`'s
+    // two-argument `t(key, defaultText)` call, which silently discards a
+    // plural catalog value (proven non-vacuously by that second test).
+    const GROUP_SELECTED_COUNT_RE = /^groupSelectedCount(_(one|other))?$/
+
+    it('no filterPanel key is pluralised or uses the reserved {{count}} name, except the group-selected-count badge', () => {
       const filterPanel = GAMELIB_CATALOG.library.filterPanel
 
       for (const [key, value] of Object.entries(filterPanel)) {
+        if (GROUP_SELECTED_COUNT_RE.test(key)) continue
         expect(value).not.toMatch(/\{\{count\}\}/)
         expect(key).not.toMatch(/_(zero|one|two|few|many|other)$/)
       }
+    })
+
+    it('the group-selected-count badge IS the one deliberate plural exception, using {{count}}', () => {
+      const filterPanel = GAMELIB_CATALOG.library.filterPanel
+
+      expect(filterPanel['groupSelectedCount_one']).toMatch(/\{\{count\}\}/)
+      expect(filterPanel['groupSelectedCount_other']).toMatch(/\{\{count\}\}/)
     })
 
     it("a plural-variant-only key silently discards its catalog value through resolveLabel's two-argument shape (the failure this gate prevents)", async () => {

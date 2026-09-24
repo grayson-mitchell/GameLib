@@ -59,26 +59,36 @@ jest.mock('react', () => ({
   useContext: () => contextValue
 }))
 
-// The `t` mock now INTERPOLATES its options into the literal default. That
-// is what makes the badge-label assertion below able to tell
-// `{{selected}}` from `{{count}}`: with a plain echo mock, a call site that
-// used i18next's reserved `count` name (which silently triggers plural key
-// resolution -- `_one`/`_other` -- and would render a missing key in the
-// real app) would produce a string indistinguishable from a correct one.
-// Every pre-existing spec in this file calls `t` with no options, where
-// interpolation is a no-op.
+// The `t` mock supports both call shapes the real component uses: the
+// plain `t(key, 'literal default')` form (most specs, where interpolation
+// is a no-op), and the i18next v4 plural-group form
+// `t(key, { count, defaultValue, defaultValue_one, ...interp })` that
+// `selectedCountLabel` now uses (260925-88h) -- it picks `defaultValue_one`
+// when `count === 1`, else `defaultValue`, then interpolates every
+// `{{name}}` placeholder (including `{{count}}` itself) from the options.
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (
       _key: string,
-      defaultValue: string,
-      options?: Record<string, unknown>
-    ): string =>
-      options
-        ? defaultValue.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+      defaultValueOrOptions?: string | Record<string, unknown>,
+      maybeOptions?: Record<string, unknown>
+    ): string => {
+      const usingOptionsForm = typeof defaultValueOrOptions !== 'string'
+      const options = usingOptionsForm ? defaultValueOrOptions : maybeOptions
+
+      const template = usingOptionsForm
+        ? String(
+            (options?.count === 1 ? options?.defaultValue_one : undefined) ??
+              options?.defaultValue
+          )
+        : defaultValueOrOptions
+
+      return options
+        ? template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
             String(options[name])
           )
-        : defaultValue
+        : template
+    }
   })
 }))
 
@@ -202,7 +212,7 @@ describe('FilterStoreFacet', () => {
     expect(tree.props.selectedCount).toBe(2)
   })
 
-  it('supplies an already-translated badge label interpolated on {{selected}}, not {{count}}', () => {
+  it('supplies an already-translated badge label, interpolated via the i18next v4 plural group on {{count}}', () => {
     contextValue = makeContextValue({
       connectedStores: ['gog', 'steam'],
       activeFilterDescriptors: [

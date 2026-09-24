@@ -45,22 +45,23 @@ export default function FilterStoreFacet() {
       title={tGamelib('gamelib:library.filterPanel.storeGroup', 'Store')}
       className="FilterStoreFacet"
       selectedCount={selectedCount}
-      // Literal key AND literal default, spelled out at each of the three
+      // Literal key AND literal defaults, spelled out at each of the three
       // call sites rather than factored into a shared helper: i18next-parser's
       // JavascriptLexer only resolves STRING-LITERAL arguments, so a helper
       // taking the key as a variable is invisible to extraction, and a
       // literal key with a non-literal default extracts an EMPTY default --
       // which i18next then renders in preference to the call-site fallback,
-      // i.e. blank UI text. Interpolated on `selected`; the name `count` is
-      // reserved by i18next and triggers plural key resolution
-      // (`_one`/`_other`), neither of which exists in the catalog.
+      // i.e. blank UI text. `count` IS deliberately passed here (260925-88h):
+      // this is a genuine i18next v4 plural group (`_one`/`_other`) --
+      // English reads identically either way, but other locales inflect the
+      // participle on the count.
       selectedCountLabel={
         selectedCount > 0
-          ? tGamelib(
-              'gamelib:library.filterPanel.groupSelectedCount',
-              '{{selected}} selected',
-              { selected: selectedCount }
-            )
+          ? tGamelib('gamelib:library.filterPanel.groupSelectedCount', {
+              count: selectedCount,
+              defaultValue: '{{count}} selected',
+              defaultValue_one: '{{count}} selected'
+            })
           : undefined
       }
     >

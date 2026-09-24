@@ -138,20 +138,22 @@ export default function FilterMoreGroup() {
       )}
       className="FilterMoreGroup"
       selectedCount={selectedCount}
-      // Literal key AND literal default, repeated verbatim at all three
+      // Literal key AND literal defaults, repeated verbatim at all three
       // group call sites rather than factored into a helper: i18next-parser
       // only resolves STRING-LITERAL arguments, so a helper taking the key
       // as a variable extracts nothing and a non-literal default extracts an
       // EMPTY string that i18next then renders in preference to the
-      // call-site fallback. Interpolated on `selected`; the name `count` is
-      // reserved and triggers plural key resolution (`_one`/`_other`).
+      // call-site fallback. `count` IS deliberately passed here (260925-88h):
+      // this is a genuine i18next v4 plural group (`_one`/`_other`) now --
+      // English reads identically either way, but other locales inflect the
+      // participle on the count.
       selectedCountLabel={
         selectedCount > 0
-          ? tGamelib(
-              'gamelib:library.filterPanel.groupSelectedCount',
-              '{{selected}} selected',
-              { selected: selectedCount }
-            )
+          ? tGamelib('gamelib:library.filterPanel.groupSelectedCount', {
+              count: selectedCount,
+              defaultValue: '{{count}} selected',
+              defaultValue_one: '{{count}} selected'
+            })
           : undefined
       }
     >

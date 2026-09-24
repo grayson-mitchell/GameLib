@@ -270,8 +270,10 @@ export default function WinetricksBrowse({
           )}
         >
           <div className="WinetricksBrowse__resultsHeading">
-            {tGamelib('winetricksBrowse.resultsHeading', '{{total}} results', {
-              total: searchResults.length
+            {tGamelib('winetricksBrowse.resultsHeading', {
+              count: searchResults.length,
+              defaultValue: '{{count}} results',
+              defaultValue_one: '{{count}} result'
             })}
           </div>
 

@@ -496,8 +496,11 @@ describe('installQueueElement — 260817-dib: no-progress (stall) install watchd
     const assertion = resultPromise.then(() => {
       expect(mockT).toHaveBeenCalledWith(
         'gamelib:box.error.install.stalled',
-        expect.any(String),
-        expect.objectContaining({ minutes: expect.any(Number) })
+        expect.objectContaining({
+          count: expect.any(Number),
+          defaultValue: expect.any(String),
+          defaultValue_one: expect.any(String)
+        })
       )
       const dialogCall = (showDialogBoxModalAuto as jest.Mock).mock
         .calls[0][0] as { message: string }

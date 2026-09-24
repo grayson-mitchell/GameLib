@@ -42,14 +42,27 @@ jest.mock('../Row/index.scss', () => ({}))
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     // Unlike the plain pass-through mocks elsewhere in this codebase, this
-    // one actually interpolates `{{token}}` -- the zero-result and
-    // results-heading tests below assert the query/count round-trips, not
-    // merely that a key was looked up.
+    // one actually interpolates `{{token}}` -- the zero-result test below
+    // asserts the query round-trips, not merely that a key was looked up.
+    // Also supports the i18next v4 plural-group call shape
+    // `t(key, { count, defaultValue, defaultValue_one, ...interp })` that
+    // `resultsHeading` now uses (260925-88h): picks `defaultValue_one` when
+    // `count === 1`, else `defaultValue`, before interpolating.
     t: (
       _key: string,
-      defaultValue: string,
-      options?: Record<string, unknown>
+      defaultValueOrOptions?: string | Record<string, unknown>,
+      maybeOptions?: Record<string, unknown>
     ): string => {
+      const usingOptionsForm = typeof defaultValueOrOptions !== 'string'
+      const options = usingOptionsForm ? defaultValueOrOptions : maybeOptions
+
+      const defaultValue = usingOptionsForm
+        ? String(
+            (options?.count === 1 ? options?.defaultValue_one : undefined) ??
+              options?.defaultValue
+          )
+        : defaultValueOrOptions
+
       if (!options) return defaultValue
       let result = defaultValue
       for (const optKey of Object.keys(options)) {

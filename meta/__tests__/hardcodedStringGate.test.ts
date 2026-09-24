@@ -417,6 +417,65 @@ describe('hardcodedStringGate', () => {
 
         expect(result.violations).toHaveLength(1)
       })
+
+      // 260925-88h: the i18next v4 plural-group call shape
+      // `t(key, { count, defaultValue, defaultValue_one, ... })` — real
+      // FilterMoreGroup/index.tsx and UrgencyBadge/index.tsx idiom.
+      it('never flags a defaultValue_one plural sibling on an object passed to t() alongside defaultValue', () => {
+        const source = `
+          function run(t: TFunction, count: number) {
+            return t('library.filterPanel.groupSelectedCount', {
+              count,
+              defaultValue: '{{count}} selected',
+              defaultValue_one: '{{count}} selected'
+            })
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('recognises every CLDR plural suffix (defaultValue_zero/two/few/many/other), not only defaultValue_one', () => {
+        const source = `
+          function run(t: TFunction, count: number) {
+            return t('x', {
+              count,
+              defaultValue: 'other form',
+              defaultValue_zero: 'zero form',
+              defaultValue_two: 'two form',
+              defaultValue_few: 'few form',
+              defaultValue_many: 'many form'
+            })
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(0)
+      })
+
+      it('still flags a defaultValue_one-named property on an object NOT passed to t() — the exemption stays call-site-driven', () => {
+        const source = `
+          const config = { defaultValue_one: 'Some real prose here' }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+      })
+
+      it('still flags a lookalike property name that merely starts with defaultValue (e.g. defaultValueSuffix)', () => {
+        const source = `
+          function run(t: TFunction) {
+            return t('x', {
+              defaultValue: 'other form',
+              defaultValueSuffix: 'Some unrelated real prose here'
+            })
+          }
+        `
+        const result = scanSource('fixture.ts', source, EMPTY_GLOSSARY)
+
+        expect(result.violations).toHaveLength(1)
+      })
     })
 
     describe('<Trans> component children', () => {

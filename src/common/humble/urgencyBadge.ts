@@ -7,8 +7,10 @@ import { HumbleKeyState } from '../types/humble'
  * frontend `UrgencyBadge` component maps `UrgencyTier` to a color class and
  * `UrgencyCountdownParts` to a translated string:
  *
- *  - 'danger'  -> `--status-danger` fill, "{{N}} days left" / "1 day left" /
- *                 "{{H}}h left"
+ *  - 'danger'  -> `--status-danger` fill, i18next v4 plural groups
+ *                 "{{count}} day(s) left" / "{{count}} hour(s) left"
+ *                 (260925-88h: real _one/_other plurals, no "1 day"
+ *                 special-case and no "h"/"m" abbreviations)
  *  - 'warning' -> `--status-warning` fill, same copy forms
  *  - null      -> no badge rendered at all
  */
