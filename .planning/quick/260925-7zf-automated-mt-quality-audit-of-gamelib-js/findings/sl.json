@@ -1,0 +1,385 @@
+{
+  "locale": "sl",
+  "reviewer_model": "opus",
+  "rows_reviewed": 280,
+  "counts": {
+    "ok": 243,
+    "minor": 35,
+    "major": 2,
+    "critical": 0
+  },
+  "findings": [
+    {
+      "key": "humbleKeys.activateConfirmTitle",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Activate this key on Steam?",
+      "tr": "Aktiviraj ta ključ na Steam?",
+      "back_translation": "Activate this key on Steam? (imperative)",
+      "issue": "Brand left uninflected after a locative preposition; Slovenian UI inflects brands (Steamu/Steamom/Humblu), and the bare form reads as machine output. Also a bare imperative phrased as a question.",
+      "suggested": "Želite aktivirati ta ključ v Steamu?"
+    },
+    {
+      "key": "humbleKeys.activatingBody",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Revealing your key and redeeming it on Steam — this only takes a moment.",
+      "tr": "Razkrivamo vaš ključ in ga unovčujemo na Steam — to traja le trenutek.",
+      "back_translation": "We are revealing your key and redeeming it on Steam",
+      "issue": "Brand left uninflected after a locative preposition; Slovenian UI inflects brands (Steamu/Steamom/Humblu), and the bare form reads as machine output.",
+      "suggested": "Razkrivamo vaš ključ in ga unovčujemo v Steamu — to traja le trenutek."
+    },
+    {
+      "key": "humbleKeys.activatingTitle",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Activating on Steam…",
+      "tr": "Aktiviranje na Steam …",
+      "back_translation": "Activating on Steam…",
+      "issue": "Brand left uninflected after a locative preposition; Slovenian UI inflects brands (Steamu/Steamom/Humblu), and the bare form reads as machine output.",
+      "suggested": "Aktiviranje v Steamu …"
+    },
+    {
+      "key": "humbleKeys.c2Title",
+      "severity": "minor",
+      "category": "brand",
+      "en": "You already own this on Steam",
+      "tr": "To že imate v lasti na Steam",
+      "back_translation": "You already own this on Steam",
+      "issue": "Brand left uninflected after a locative preposition; Slovenian UI inflects brands (Steamu/Steamom/Humblu), and the bare form reads as machine output.",
+      "suggested": "To že imate v Steamu"
+    },
+    {
+      "key": "humbleKeys.finishOwnedNote",
+      "severity": "minor",
+      "category": "brand",
+      "en": "You already own this on Steam — activation will likely fail there.",
+      "tr": "To že imate v lasti na Steam — aktivacija tam verjetno ne bo uspela.",
+      "back_translation": "You already own this on Steam — activation there will probably fail.",
+      "issue": "Brand left uninflected after a locative preposition; Slovenian UI inflects brands (Steamu/Steamom/Humblu), and the bare form reads as machine output.",
+      "suggested": "To že imate v Steamu — aktivacija tam verjetno ne bo uspela."
+    },
+    {
+      "key": "humbleKeys.likelyOwnedOnSteam",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Likely owned on Steam",
+      "tr": "Verjetno v lasti na Steam",
+      "back_translation": "Probably owned on Steam",
+      "issue": "Brand left uninflected after a locative preposition; Slovenian UI inflects brands (Steamu/Steamom/Humblu), and the bare form reads as machine output.",
+      "suggested": "Verjetno že v Steamu"
+    },
+    {
+      "key": "humbleKeys.ownedOnSteam",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Owned on Steam",
+      "tr": "V lasti na Steam",
+      "back_translation": "Owned on Steam",
+      "issue": "Brand left uninflected after a locative preposition; Slovenian UI inflects brands (Steamu/Steamom/Humblu), and the bare form reads as machine output.",
+      "suggested": "V lasti v Steamu"
+    },
+    {
+      "key": "redeemKey.alreadyOwned",
+      "severity": "minor",
+      "category": "brand",
+      "en": "This key has already been redeemed — you already own this on Steam.",
+      "tr": "Ta ključ je bil že unovčen — to igro že imate v lasti na Steam.",
+      "back_translation": "This key has already been redeemed — you already own this game on Steam.",
+      "issue": "Brand left uninflected after a locative preposition; Slovenian UI inflects brands (Steamu/Steamom/Humblu), and the bare form reads as machine output.",
+      "suggested": "Ta ključ je bil že unovčen — to igro že imate v Steamu."
+    },
+    {
+      "key": "redeemKey.error",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Couldn't reach Steam to redeem this key. Check your connection and try again.",
+      "tr": "Ni bilo mogoče vzpostaviti povezave s Steam za unovčitev tega ključa. Preverite povezavo in poskusite znova.",
+      "back_translation": "Could not connect with Steam to redeem this key...",
+      "issue": "Instrumental 's Steam' should be 's Steamom'.",
+      "suggested": "Ni bilo mogoče vzpostaviti povezave s Steamom za unovčitev tega ključa. Preverite povezavo in poskusite znova."
+    },
+    {
+      "key": "humbleKeys.giftOnHumble",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Gift on Humble",
+      "tr": "Podari na Humble",
+      "back_translation": "Gift on Humble",
+      "issue": "Brand left uninflected after a locative preposition; Slovenian UI inflects brands (Steamu/Steamom/Humblu), and the bare form reads as machine output.",
+      "suggested": "Podari na Humblu"
+    },
+    {
+      "key": "humbleKeys.c2Action",
+      "severity": "major",
+      "category": "terminology",
+      "en": "Go to Giftable spares",
+      "tr": "Pojdi na Podarljive rezervne kopije",
+      "back_translation": "Go to Giftable backup copies",
+      "issue": "'Giftable spares' is rendered as 'Podarljive rezervne kopije'; 'rezervna kopija' is the standard Slovenian term for a BACKUP, so the feature name reads as 'Giftable backups'. It is also inconsistent with activateConfirmBody, which uses a different term ('razdeljive rezerve').",
+      "suggested": "Pojdi na Rezervne ključe za podaritev"
+    },
+    {
+      "key": "humbleKeys.c2Body",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+      "tr": "Ta ključ je varen med Podarljivimi rezervnimi kopijami — če ga tukaj razkrijete, izgubite možnost, da ga podarite. Namesto tega ga poiščite med Podarljivimi rezervnimi kopijami.",
+      "back_translation": "This key is safe among Giftable backup copies...",
+      "issue": "'Giftable spares' is rendered as 'Podarljive rezervne kopije'; 'rezervna kopija' is the standard Slovenian term for a BACKUP, so the feature name reads as 'Giftable backups'. It is also inconsistent with activateConfirmBody, which uses a different term ('razdeljive rezerve'). (same issue as c2Action)",
+      "suggested": "Ta ključ je varen med Rezervnimi ključi za podaritev — če ga tukaj razkrijete, izgubite možnost, da ga podarite. Namesto tega ga poiščite med Rezervnimi ključi za podaritev."
+    },
+    {
+      "key": "humbleKeys.revealConfirmBody",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
+      "tr": "Razkritje prikaže dejanski ključ in ga za vedno odstrani iz Podarljivih rezervnih kopij. Če te igre še nimate v lasti, se pred nadaljevanjem prepričajte, da je to res tako — dejanja ni mogoče razveljaviti.",
+      "back_translation": "Revealing shows the actual key and permanently removes it from Giftable backup copies...",
+      "issue": "'Giftable spares' is rendered as 'Podarljive rezervne kopije'; 'rezervna kopija' is the standard Slovenian term for a BACKUP, so the feature name reads as 'Giftable backups'. It is also inconsistent with activateConfirmBody, which uses a different term ('razdeljive rezerve'). (same issue as c2Action)",
+      "suggested": "Razkritje prikaže dejanski ključ in ga za vedno odstrani iz Rezervnih ključev za podaritev. Če te igre še nimate v lasti, se pred nadaljevanjem prepričajte, da je to res tako — dejanja ni mogoče razveljaviti."
+    },
+    {
+      "key": "humbleKeys.activateConfirmBody",
+      "severity": "major",
+      "category": "terminology",
+      "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+      "tr": "To razkrije ključ — s tem se trajno odstrani iz razdeljivih rezerv — in ga unovči na vašem Steam računu. Tega ni mogoče razveljaviti.",
+      "back_translation": "This reveals the key — thereby it is permanently removed from distributable reserves — and redeems it on your Steam account.",
+      "issue": "'Giftable spares' here becomes 'razdeljive rezerve' (distributable reserves) while every other row uses 'Podarljive rezervne kopije'; the user cannot connect this irreversible-action warning to the named section it refers to. Also 'na vašem Steam računu' is more naturally 'v vašem računu Steam'.",
+      "suggested": "To razkrije ključ — s tem se trajno odstrani iz Rezervnih ključev za podaritev — in ga unovči v vašem računu Steam. Tega ni mogoče razveljaviti."
+    },
+    {
+      "key": "humbleKeys.markRedeemed",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Mark as redeemed",
+      "tr": "Označi kot uveljavljeno",
+      "back_translation": "Mark as claimed",
+      "issue": "'Redeem' is 'unovčiti' in most rows (redeemKey.*, redeemSteamKey.*, state.redeemed, activate*) but 'uveljaviti' here — and 'uveljaviti' is also used for 'Claim' (claimWizardTitle, giftConfirmBody, syncToEnableClaiming), so two distinct actions collide on one verb.",
+      "suggested": "Označi kot unovčeno"
+    },
+    {
+      "key": "humbleKeys.redeemOnPlatform",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Redeem on {{platform}}",
+      "tr": "Uveljavi na {{platform}}",
+      "back_translation": "Claim on {{platform}}",
+      "issue": "'Redeem' is 'unovčiti' in most rows (redeemKey.*, redeemSteamKey.*, state.redeemed, activate*) but 'uveljaviti' here — and 'uveljaviti' is also used for 'Claim' (claimWizardTitle, giftConfirmBody, syncToEnableClaiming), so two distinct actions collide on one verb.",
+      "suggested": "Unovči na {{platform}}"
+    },
+    {
+      "key": "humbleKeys.redeemedAnnotation",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Redeemed {{date}}",
+      "tr": "Uveljavljeno {{date}}",
+      "back_translation": "Claimed {{date}}",
+      "issue": "'Redeem' is 'unovčiti' in most rows (redeemKey.*, redeemSteamKey.*, state.redeemed, activate*) but 'uveljaviti' here — and 'uveljaviti' is also used for 'Claim' (claimWizardTitle, giftConfirmBody, syncToEnableClaiming), so two distinct actions collide on one verb. It also contradicts state.redeemed = 'Unovčeno' for the same state.",
+      "suggested": "Unovčeno {{date}}"
+    },
+    {
+      "key": "humbleKeys.revealRejectedBody",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.",
+      "tr": "Humble je zavrnil razkritje tega ključa — morda je že uveljavljen ali je potekel. Sinhronizirajte za preverjanje trenutnega stanja.",
+      "back_translation": "Humble refused to reveal this key — it may already be claimed or expired...",
+      "issue": "'Redeem' is 'unovčiti' in most rows (redeemKey.*, redeemSteamKey.*, state.redeemed, activate*) but 'uveljaviti' here — and 'uveljaviti' is also used for 'Claim' (claimWizardTitle, giftConfirmBody, syncToEnableClaiming), so two distinct actions collide on one verb.",
+      "suggested": "Humble je zavrnil razkritje tega ključa — morda je že unovčen ali je potekel. Sinhronizirajte za preverjanje trenutnega stanja."
+    },
+    {
+      "key": "humbleKeys.state.unrevealed",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Unrevealed",
+      "tr": "Neraskrito",
+      "back_translation": "(misspelled) Unrevealed",
+      "issue": "Spelling error: 'Neraskrito' should be 'Nerazkrito' (cf. 'Razkrito' in the adjacent row). Visible as a status label.",
+      "suggested": "Nerazkrito"
+    },
+    {
+      "key": "downloadManager.progressPaused",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Paused",
+      "tr": "Prekinjeno",
+      "back_translation": "Interrupted",
+      "issue": "'Prekinjeno' means interrupted/aborted, which in a download manager can suggest a failure; 'Paused' is a deliberate, resumable state. webview.embedPlaceholder.message already uses 'Začasno ustavljeno'.",
+      "suggested": "Začasno ustavljeno"
+    },
+    {
+      "key": "humbleKeys.cooldown",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Temporarily unavailable — retry in {{minutes}}m",
+      "tr": "Trenutno ni na voljo — poskusite znova čez {{minutes}}m",
+      "back_translation": "Temporarily unavailable — try again in {{minutes}}m",
+      "issue": "'m' is the metre symbol in Slovenian; the minute abbreviation is 'min'.",
+      "suggested": "Trenutno ni na voljo — poskusite znova čez {{minutes}} min"
+    },
+    {
+      "key": "humbleKeys.revealCooldownBody",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Temporarily unavailable — retry in {{N}}m",
+      "tr": "Trenutno ni na voljo — poskusite znova čez {{N}}m",
+      "back_translation": "Temporarily unavailable — try again in {{N}}m",
+      "issue": "'m' is the metre symbol in Slovenian; use 'min'.",
+      "suggested": "Trenutno ni na voljo — poskusite znova čez {{N}} min"
+    },
+    {
+      "key": "humbleKeys.revealDismiss",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Don't reveal yet",
+      "tr": "Ne razkrij še",
+      "back_translation": "Do not reveal yet (odd order)",
+      "issue": "Word order 'Ne razkrij še' is unnatural; Slovenian says 'Še ne razkrij'.",
+      "suggested": "Še ne razkrij"
+    },
+    {
+      "key": "humbleKeys.revealConfirmTitle",
+      "severity": "minor",
+      "category": "register",
+      "en": "Reveal this key?",
+      "tr": "Razkrijete ta ključ?",
+      "back_translation": "You reveal this key?",
+      "issue": "Indicative 2nd-person plural as a question reads oddly; a confirmation title is normally 'Želite razkriti ...?' or 'Razkrijem ...?'.",
+      "suggested": "Želite razkriti ta ključ?"
+    },
+    {
+      "key": "humbleKeys.giftConfirmTitle",
+      "severity": "minor",
+      "category": "register",
+      "en": "Gift this key?",
+      "tr": "Podarite ta ključ?",
+      "back_translation": "Gift (imperative) this key?",
+      "issue": "Imperative used as a question; unnatural for a confirmation title.",
+      "suggested": "Želite podariti ta ključ?"
+    },
+    {
+      "key": "humbleKeys.noDeadline",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "No pick deadline available",
+      "tr": "Ni roka za izbiro",
+      "back_translation": "There is no deadline for picking",
+      "issue": "Drops 'available': the English says the deadline information is unavailable; the translation asserts no deadline exists.",
+      "suggested": "Rok za izbiro ni na voljo"
+    },
+    {
+      "key": "humbleKeys.noExpiration",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "No expiration",
+      "tr": "Brez poteka",
+      "back_translation": "Without expiring",
+      "issue": "'Brez poteka' is clipped and unidiomatic; 'Brez datuma poteka' is the usual form.",
+      "suggested": "Brez datuma poteka"
+    },
+    {
+      "key": "humbleKeys.refresh",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Refresh Humble Keys",
+      "tr": "Posodobi Humble ključe",
+      "back_translation": "Update Humble keys",
+      "issue": "'Refresh' is 'Osveži' elsewhere (info.refresh-rating, extraInfoStaleBody); 'Posodobi' means 'update' and in this app collides with software/overlay updates.",
+      "suggested": "Osveži ključe Humble"
+    },
+    {
+      "key": "installFlows.diskSpaceFreeOfTotal",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "{{free}} free of {{total}}",
+      "tr": "{{free}} prostora od {{total}}",
+      "back_translation": "{{free}} of space of {{total}}",
+      "issue": "Loses 'free': 'prostora od' just means 'of space of', so the reader cannot tell the first number is the free amount.",
+      "suggested": "{{free}} prosto od {{total}}"
+    },
+    {
+      "key": "library.filterPanel.chipNoStorePageHidden",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "Hiding no store page",
+      "tr": "Skrivanje brez trgovinske strani",
+      "back_translation": "Hiding without a store page",
+      "issue": "Reads as 'hiding (done) without a store page' rather than 'games with no store page are hidden'.",
+      "suggested": "Skrite igre brez trgovinske strani"
+    },
+    {
+      "key": "library.filterPanel.runsNatively",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Runs natively",
+      "tr": "Teče nativno",
+      "back_translation": "Runs natively (loanword)",
+      "issue": "'nativno' is a loanword and inconsistent with 'izvorne namestitve' / 'izvorno različico' used for 'native' in steam.install.* rows.",
+      "suggested": "Teče izvorno"
+    },
+    {
+      "key": "steam.install.bottleNameReadonlyHelper",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
+      "tr": "GameLib upravlja eno skupno CrossOver bottle za Steam. Poimenovanje ločene bottle za vsako igro še ni podprto.",
+      "back_translation": "GameLib manages one shared (fem.) CrossOver bottle...",
+      "issue": "'bottle' is left in English but given feminine agreement ('eno skupno', 'ločene'), which is ungrammatical for an undeclined English noun; elsewhere it is used undeclined ('preko bottle', 'Wine bottle'). Pick one treatment across the bottle rows.",
+      "suggested": "GameLib za Steam upravlja eno skupno steklenico (bottle) CrossOver. Poimenovanje ločene steklenice za vsako igro še ni podprto."
+    },
+    {
+      "key": "webview.login.oauth.timeout.heading",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "Signing in to {{runner}} timed out",
+      "tr": "Prijava v {{runner}} je potekla",
+      "back_translation": "Sign-in to {{runner}} expired",
+      "issue": "'je potekla' is the same wording used for 'sign-in expired' (library.steamSync.signedOutTitle, login.steamReconnect), so a timeout and an expired session are indistinguishable.",
+      "suggested": "Čas za prijavo v {{runner}} je potekel"
+    },
+    {
+      "key": "webview.login.oauth.timeout.headingGeneric",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "Sign-in timed out",
+      "tr": "Prijava je potekla",
+      "back_translation": "Sign-in expired",
+      "issue": "Same conflation of 'timed out' with 'expired' as the heading above.",
+      "suggested": "Čas za prijavo je potekel"
+    },
+    {
+      "key": "humbleKeys.urgencyDaysLeft",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "{{N}} days left",
+      "tr": "Še {{N}} dni",
+      "back_translation": "{{N}} more days",
+      "issue": "Slovenian needs dual/paucal forms (2 dneva, 3-4 dnevi, 5+ dni); one string with 'dni' is wrong for N=2-4. The source key has no plural variants, so this needs i18next _one/_two/_few/_other keys.",
+      "suggested": "Use plural keys: Še {{N}} dan / dneva / dnevi / dni"
+    },
+    {
+      "key": "box.error.install.stalled",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "No download progress for {{minutes}} minutes — the install was stopped",
+      "tr": "Ni napredka prenosa že {{minutes}} minut — namestitev je bila ustavljena",
+      "back_translation": "No download progress already for {{minutes}} minutes...",
+      "issue": "'{{minutes}} minut' is wrong for 2-4 (minuti/minute); needs plural keys, like urgencyDaysLeft.",
+      "suggested": "Use plural keys (minuto/minuti/minute/minut)"
+    },
+    {
+      "key": "themeSelector.midnightMirage",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "Midnight Mirage",
+      "tr": "Polnočna prikazen",
+      "back_translation": "Midnight apparition/ghost",
+      "issue": "'prikazen' means ghost/apparition; 'mirage' is 'fatamorgana' or 'privid'. Theme names are also inconsistently translated vs kept in English across themeSelector.*.",
+      "suggested": "Polnočni privid"
+    }
+  ],
+  "terminology_notes": "Main inconsistencies: (1) 'Giftable spares' has two renderings and one of them ('rezervne kopije') means 'backups'; (2) 'Redeem' split between 'unovčiti' and 'uveljaviti', the latter also used for 'Claim'; (3) 'Refresh' split between 'Osveži' and 'Posodobi'; (4) 'native' split between 'nativno' and 'izvorno'; (5) 'Steam knjižnica' vs 'knjižnica Steam' word order varies (both acceptable; 'knjižnica Steam' is more standard); (6) brand inflection: accusative 'v Steam' is correct, but locative/instrumental 'na Steam'/'s Steam' should be 'v Steamu'/'s Steamom'; 'na Humblovi' shows the translator can inflect, so the bare forms are inconsistency, not policy; (7) typography: ellipsis sometimes spaced ('…' vs ' …') and ASCII straight quotes used where Slovenian uses „…“ — not flagged per row; (8) 'bottle' left in English with inconsistent agreement; (9) 'Redeem a Steam key' is 'Unovčite' (formal imperative) in the dialog title but 'Unovči' in the sidebar.",
+  "overall": "The Slovenian translation is generally competent: meaning is preserved in nearly all rows, all {{placeholders}}, the <3></3> tag, <br /> and &quot; entities are intact, and no row inverts or loses a critical meaning. The notable problems are terminology — 'Giftable spares' rendered as 'rezervne kopije' (backups) with a second, different rendering in the irreversible-action warning, and 'Redeem' vs 'Claim' collapsing onto 'uveljaviti' in the Humble Keys flow — plus systematic uninflected brand locatives ('na Steam') and missing Slovenian dual/paucal plural forms. I am confident on the grammar and terminology calls; stylistic calls (question phrasing, theme names) are judgement, and without rendered UI context I did not flag gender agreements that depend on the runtime placeholder value (e.g. '{{packageName}} je bil dodan')."
+}

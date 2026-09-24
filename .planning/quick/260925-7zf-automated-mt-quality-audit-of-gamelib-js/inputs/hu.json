@@ -1,0 +1,1406 @@
+{
+ "locale": "hu",
+ "model": "claude-sonnet-5",
+ "rows": [
+  {
+   "key": "about.license",
+   "en": "License: GPL V3",
+   "tr": "Licenc: GPL V3"
+  },
+  {
+   "key": "about.navLabel",
+   "en": "About",
+   "tr": "Névjegy"
+  },
+  {
+   "key": "about.title",
+   "en": "About GameLib",
+   "tr": "A GameLib névjegye"
+  },
+  {
+   "key": "about.version",
+   "en": "Version: {{version}}",
+   "tr": "Verzió: {{version}}"
+  },
+  {
+   "key": "about.versionUnknown",
+   "en": "unknown",
+   "tr": "ismeretlen"
+  },
+  {
+   "key": "app.routeError",
+   "en": "Something went wrong: {{detail}}",
+   "tr": "Hiba történt: {{detail}}"
+  },
+  {
+   "key": "box.cancel",
+   "en": "Cancel",
+   "tr": "Mégse"
+  },
+  {
+   "key": "box.error.install.failed",
+   "en": "The installation of {{title}} failed: {{error}}",
+   "tr": "A {{title}} telepítése sikertelen: {{error}}"
+  },
+  {
+   "key": "box.error.install.signInToSteam",
+   "en": "Sign in to Steam",
+   "tr": "Jelentkezz be a Steam-be"
+  },
+  {
+   "key": "box.error.install.stalled",
+   "en": "No download progress for {{minutes}} minutes — the install was stopped",
+   "tr": "{{minutes}} perce nincs letöltési folyamat — a telepítés leállítva"
+  },
+  {
+   "key": "box.filePicker.error.message",
+   "en": "GameLib could not open the system file picker, so nothing was selected and no changes were made. ({{error}})",
+   "tr": "A GameLib nem tudta megnyitni a rendszer fájlválasztóját, így semmi nem lett kiválasztva, és nem történt módosítás. ({{error}})"
+  },
+  {
+   "key": "box.filePicker.error.title",
+   "en": "Could not open the file picker",
+   "tr": "Nem sikerült megnyitni a fájlválasztót"
+  },
+  {
+   "key": "box.steam.mac32Detected.confirm",
+   "en": "Reinstall via CrossOver",
+   "tr": "Újratelepítés a CrossOver segítségével"
+  },
+  {
+   "key": "box.steam.mac32Detected.message",
+   "en": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version.",
+   "tr": "A játék macOS-verziója csak 32 bites, így nem futtatható ezen a macOS-verzión. A GameLib újratelepítheti a CrossOver segítségével, ami letölti a Windows-verziót."
+  },
+  {
+   "key": "box.steam.mac32Detected.title",
+   "en": "32-bit macOS build detected",
+   "tr": "32 bites macOS-verzió észlelve"
+  },
+  {
+   "key": "button.close",
+   "en": "Close",
+   "tr": "Bezárás"
+  },
+  {
+   "key": "button.paste",
+   "en": "Paste",
+   "tr": "Beillesztés"
+  },
+  {
+   "key": "consoleMode.installNext",
+   "en": "Next",
+   "tr": "Következő"
+  },
+  {
+   "key": "consoleMode.installPrevious",
+   "en": "Previous",
+   "tr": "Előző"
+  },
+  {
+   "key": "consoleMode.sortAscending",
+   "en": "A → Z",
+   "tr": "A → Z"
+  },
+  {
+   "key": "consoleMode.sortDescending",
+   "en": "Z → A",
+   "tr": "Z → A"
+  },
+  {
+   "key": "consoleMode.steamInstallBlockedTitle",
+   "en": "Can't start this install",
+   "tr": "Nem indítható el ez a telepítés"
+  },
+  {
+   "key": "consoleMode.steamInstallLibraryFull",
+   "en": "There isn't enough free space in your Steam library folder. Free up space and try again.",
+   "tr": "Nincs elég szabad hely a Steam-könyvtár mappájában. Szabadíts fel helyet, és próbáld újra."
+  },
+  {
+   "key": "consoleMode.steamInstallLibraryMissing",
+   "en": "Your Steam library folder isn't available right now. Reconnect the drive and try again.",
+   "tr": "A Steam-könyvtár mappája jelenleg nem elérhető. Csatlakoztasd újra a meghajtót, és próbáld újra."
+  },
+  {
+   "key": "discounts.pegiPrefix",
+   "en": "PEGI ≤ {{value}}",
+   "tr": "PEGI ≤ {{value}}"
+  },
+  {
+   "key": "donate.navLabel",
+   "en": "Donate",
+   "tr": "Adományozás"
+  },
+  {
+   "key": "downloadManager.progressPaused",
+   "en": "Paused",
+   "tr": "Szüneteltetve"
+  },
+  {
+   "key": "edit-game.sgdb.unavailable",
+   "en": "SteamGridDB artwork search is unavailable on this build.",
+   "tr": "A SteamGridDB grafikakeresés nem elérhető ebben a buildben."
+  },
+  {
+   "key": "gamepage.appleRatingUnrated",
+   "en": "Unrated",
+   "tr": "Nincs értékelve"
+  },
+  {
+   "key": "gamepage.etaPrefix",
+   "en": "ETA: {{eta}}",
+   "tr": "Becsült idő: {{eta}}"
+  },
+  {
+   "key": "gamepage.extraInfoEmptyBody",
+   "en": "Metacritic, OpenCritic and HowLongToBeat had nothing for this title.",
+   "tr": "A Metacritic, az OpenCritic és a HowLongToBeat nem talált semmit ehhez a címhez."
+  },
+  {
+   "key": "gamepage.extraInfoEmptyTitle",
+   "en": "No extra info found",
+   "tr": "Nem található extra információ"
+  },
+  {
+   "key": "gamepage.extraInfoErrorBody",
+   "en": "The lookup failed, which is not the same as this game having no data. Try again.",
+   "tr": "A keresés sikertelen volt, ez nem jelenti azt, hogy a játékhoz nincs adat. Próbáld újra."
+  },
+  {
+   "key": "gamepage.extraInfoErrorTitle",
+   "en": "Couldn't load extra info",
+   "tr": "Az extra információk betöltése sikertelen"
+  },
+  {
+   "key": "gamepage.extraInfoRetry",
+   "en": "Retry",
+   "tr": "Újra"
+  },
+  {
+   "key": "gamepage.extraInfoStaleBody",
+   "en": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
+   "tr": "Ez az eredmény a betöltési kimenetek rögzítése előtt lett gyorsítótárazva, így elavult lehet. Frissítsd az ellenőrzéshez."
+  },
+  {
+   "key": "gamepage.tabsAriaLabel",
+   "en": "gameinfo tabs",
+   "tr": "játékinfó fülek"
+  },
+  {
+   "key": "gamepage.wineLabel",
+   "en": "Wine:",
+   "tr": "Wine:"
+  },
+  {
+   "key": "humble.lessThanAMinute",
+   "en": "less than a minute",
+   "tr": "kevesebb mint egy perc"
+  },
+  {
+   "key": "humbleKeys.activate",
+   "en": "Activate",
+   "tr": "Aktiválás"
+  },
+  {
+   "key": "humbleKeys.activateConfirmBody",
+   "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+   "tr": "Ez felfedi a kulcsot — véglegesen eltávolítva az ajándékozható tartalékból —, és beváltja a Steam-fiókodon. Nincs visszavonás."
+  },
+  {
+   "key": "humbleKeys.activateConfirmBodyRevealed",
+   "en": "This redeems your already-revealed key on your Steam account. There's no undo.",
+   "tr": "Ez beváltja a már felfedett kulcsot a Steam-fiókodon. Nincs visszavonás."
+  },
+  {
+   "key": "humbleKeys.activateConfirmTitle",
+   "en": "Activate this key on Steam?",
+   "tr": "Aktiválod ezt a kulcsot a Steamen?"
+  },
+  {
+   "key": "humbleKeys.activateDismiss",
+   "en": "Cancel",
+   "tr": "Mégse"
+  },
+  {
+   "key": "humbleKeys.activateWizardTitle",
+   "en": "Activate this key",
+   "tr": "Kulcs aktiválása"
+  },
+  {
+   "key": "humbleKeys.activatedDone",
+   "en": "Done",
+   "tr": "Kész"
+  },
+  {
+   "key": "humbleKeys.activatedTitle",
+   "en": "Activated",
+   "tr": "Aktiválva"
+  },
+  {
+   "key": "humbleKeys.activatingBody",
+   "en": "Revealing your key and redeeming it on Steam — this only takes a moment.",
+   "tr": "Kulcsod felfedése és beváltása a Steamen — ez csak egy pillanatot vesz igénybe."
+  },
+  {
+   "key": "humbleKeys.activatingTitle",
+   "en": "Activating on Steam…",
+   "tr": "Aktiválás a Steamen…"
+  },
+  {
+   "key": "humbleKeys.c2Action",
+   "en": "Go to Giftable spares",
+   "tr": "Ugrás az Ajándékozható tartalékokhoz"
+  },
+  {
+   "key": "humbleKeys.c2Body",
+   "en": "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+   "tr": "Ez a kulcs biztonságban van az Ajándékozható tartalékok között — ha itt felfednéd, elveszítenéd az ajándékozás lehetőségét. Inkább vidd az Ajándékozható tartalékokhoz."
+  },
+  {
+   "key": "humbleKeys.c2Title",
+   "en": "You already own this on Steam",
+   "tr": "Ez már megvan a Steamen"
+  },
+  {
+   "key": "humbleKeys.claimWizardTitle",
+   "en": "Claim this key",
+   "tr": "Kulcs igénylése"
+  },
+  {
+   "key": "humbleKeys.cooldown",
+   "en": "Temporarily unavailable — retry in {{minutes}}m",
+   "tr": "Átmenetileg nem elérhető — próbáld újra {{minutes}} perc múlva"
+  },
+  {
+   "key": "humbleKeys.copyKey",
+   "en": "Copy key",
+   "tr": "Kulcs másolása"
+  },
+  {
+   "key": "humbleKeys.expiresOn",
+   "en": "Expires {{date}}",
+   "tr": "Lejár: {{date}}"
+  },
+  {
+   "key": "humbleKeys.finishActivation",
+   "en": "Finish activation",
+   "tr": "Aktiválás befejezése"
+  },
+  {
+   "key": "humbleKeys.finishOwnedNote",
+   "en": "You already own this on Steam — activation will likely fail there.",
+   "tr": "Ez már megvan a Steamen — az aktiválás ott valószínűleg sikertelen lesz."
+  },
+  {
+   "key": "humbleKeys.giftConfirmAction",
+   "en": "Open Humble",
+   "tr": "Humble megnyitása"
+  },
+  {
+   "key": "humbleKeys.giftConfirmBody",
+   "en": "Anyone with this link can claim the key — once redeemed, it's gone for good. You'll finish gifting it on Humble's own site.",
+   "tr": "Ezzel a linkkel bárki igényelheti a kulcsot — beváltás után véglegesen elvész. Az ajándékozást a Humble saját oldalán fejezed be."
+  },
+  {
+   "key": "humbleKeys.giftConfirmTitle",
+   "en": "Gift this key?",
+   "tr": "Elajándékozod ezt a kulcsot?"
+  },
+  {
+   "key": "humbleKeys.giftOnHumble",
+   "en": "Gift on Humble",
+   "tr": "Ajándékozás a Humble-on"
+  },
+  {
+   "key": "humbleKeys.giftedAnnotation",
+   "en": "Opened Humble gift page {{date}}",
+   "tr": "Humble ajándékoldal megnyitva: {{date}}"
+  },
+  {
+   "key": "humbleKeys.keyLoading",
+   "en": "Loading…",
+   "tr": "Betöltés…"
+  },
+  {
+   "key": "humbleKeys.keyShownTitle",
+   "en": "Your key",
+   "tr": "A kulcsod"
+  },
+  {
+   "key": "humbleKeys.lastSynced",
+   "en": "Last synced {{time}} ago",
+   "tr": "Utolsó szinkronizálás: {{time}} ezelőtt"
+  },
+  {
+   "key": "humbleKeys.likelyOwnedOnSteam",
+   "en": "Likely owned on Steam",
+   "tr": "Valószínűleg megvan a Steamen"
+  },
+  {
+   "key": "humbleKeys.markRedeemed",
+   "en": "Mark as redeemed",
+   "tr": "Megjelölés beváltottként"
+  },
+  {
+   "key": "humbleKeys.noDeadline",
+   "en": "No pick deadline available",
+   "tr": "Nincs elérhető választási határidő"
+  },
+  {
+   "key": "humbleKeys.noExpiration",
+   "en": "No expiration",
+   "tr": "Nincs lejárat"
+  },
+  {
+   "key": "humbleKeys.notTheSameGame",
+   "en": "Not the same game",
+   "tr": "Nem ugyanaz a játék"
+  },
+  {
+   "key": "humbleKeys.openSteam",
+   "en": "Open Steam",
+   "tr": "Steam megnyitása"
+  },
+  {
+   "key": "humbleKeys.ownedOnSteam",
+   "en": "Owned on Steam",
+   "tr": "Megvan a Steamen"
+  },
+  {
+   "key": "humbleKeys.redeemOnPlatform",
+   "en": "Redeem on {{platform}}",
+   "tr": "Beváltás itt: {{platform}}"
+  },
+  {
+   "key": "humbleKeys.redeemedAnnotation",
+   "en": "Redeemed {{date}}",
+   "tr": "Beváltva: {{date}}"
+  },
+  {
+   "key": "humbleKeys.refresh",
+   "en": "Refresh Humble Keys",
+   "tr": "Humble kulcsok frissítése"
+  },
+  {
+   "key": "humbleKeys.revealAmbiguousBody",
+   "en": "We couldn't confirm this finished — sync to check",
+   "tr": "Nem sikerült megerősíteni, hogy ez befejeződött — szinkronizálj az ellenőrzéshez"
+  },
+  {
+   "key": "humbleKeys.revealConfirmAction",
+   "en": "Reveal key",
+   "tr": "Kulcs felfedése"
+  },
+  {
+   "key": "humbleKeys.revealConfirmBody",
+   "en": "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
+   "tr": "A felfedés megmutatja a tényleges kulcsot, és véglegesen eltávolítja az Ajándékozható tartalékok közül. Ha még nincs meg ez a játékod, győződj meg róla, hogy ez tényleg igaz, mielőtt folytatod — nincs visszavonás."
+  },
+  {
+   "key": "humbleKeys.revealConfirmTitle",
+   "en": "Reveal this key?",
+   "tr": "Felfeded ezt a kulcsot?"
+  },
+  {
+   "key": "humbleKeys.revealCooldownBody",
+   "en": "Temporarily unavailable — retry in {{N}}m",
+   "tr": "Átmenetileg nem elérhető — próbáld újra {{N}} perc múlva"
+  },
+  {
+   "key": "humbleKeys.revealDismiss",
+   "en": "Don't reveal yet",
+   "tr": "Még ne fedd fel"
+  },
+  {
+   "key": "humbleKeys.revealFailedBody",
+   "en": "Couldn't reveal this key — nothing was used up. You can try again.",
+   "tr": "Nem sikerült felfedni ezt a kulcsot — semmi nem lett felhasználva. Próbáld újra."
+  },
+  {
+   "key": "humbleKeys.revealRejectedBody",
+   "en": "Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.",
+   "tr": "A Humble elutasította a kulcs felfedését — lehet, hogy már beváltották vagy lejárt. Szinkronizálj az aktuális állapot ellenőrzéséhez."
+  },
+  {
+   "key": "humbleKeys.revealedAnnotation",
+   "en": "Revealed {{date}}",
+   "tr": "Felfedve: {{date}}"
+  },
+  {
+   "key": "humbleKeys.state.redeemed",
+   "en": "Redeemed",
+   "tr": "Beváltva"
+  },
+  {
+   "key": "humbleKeys.state.revealed",
+   "en": "Revealed",
+   "tr": "Felfedve"
+  },
+  {
+   "key": "humbleKeys.state.unpicked",
+   "en": "Unpicked",
+   "tr": "Nem kiválasztott"
+  },
+  {
+   "key": "humbleKeys.state.unredeemable",
+   "en": "Expired",
+   "tr": "Lejárt"
+  },
+  {
+   "key": "humbleKeys.state.unrevealed",
+   "en": "Unrevealed",
+   "tr": "Nem felfedett"
+  },
+  {
+   "key": "humbleKeys.syncError",
+   "en": "Couldn't refresh — showing data from {{time}}",
+   "tr": "Nem sikerült frissíteni — a(z) {{time}} időpontból származó adatok láthatók"
+  },
+  {
+   "key": "humbleKeys.syncErrorPartial",
+   "en": "Couldn't finish refresh — showing the latest data available",
+   "tr": "Nem sikerült befejezni a frissítést — a legfrissebb elérhető adatok láthatók"
+  },
+  {
+   "key": "humbleKeys.syncNow",
+   "en": "Sync now",
+   "tr": "Szinkronizálás most"
+  },
+  {
+   "key": "humbleKeys.syncToEnableClaiming",
+   "en": "Sync to enable claiming",
+   "tr": "Szinkronizálás a beváltás engedélyezéséhez"
+  },
+  {
+   "key": "humbleKeys.syncing",
+   "en": "Syncing… {{done}}/{{total}} orders",
+   "tr": "Szinkronizálás… {{done}}/{{total}} rendelés"
+  },
+  {
+   "key": "humbleKeys.title",
+   "en": "Humble Keys",
+   "tr": "Humble kulcsok"
+  },
+  {
+   "key": "humbleKeys.tryAgain",
+   "en": "Try again",
+   "tr": "Próbáld újra"
+  },
+  {
+   "key": "humbleKeys.undo",
+   "en": "Undo",
+   "tr": "Visszavonás"
+  },
+  {
+   "key": "humbleKeys.undoOwnershipOverride",
+   "en": "Undo — I do own this game",
+   "tr": "Visszavonás — mégis birtoklom ezt a játékot"
+  },
+  {
+   "key": "humbleKeys.unpickedTitle",
+   "en": "{{title}} · games not picked",
+   "tr": "{{title}} · nem kiválasztott játékok"
+  },
+  {
+   "key": "humbleKeys.urgencyDaysLeft",
+   "en": "{{N}} days left",
+   "tr": "{{N}} nap van hátra"
+  },
+  {
+   "key": "humbleKeys.urgencyHoursLeft",
+   "en": "{{H}}h left",
+   "tr": "{{H}} óra van hátra"
+  },
+  {
+   "key": "humbleKeys.urgencyOneDayLeft",
+   "en": "1 day left",
+   "tr": "1 nap van hátra"
+  },
+  {
+   "key": "info.refresh-rating",
+   "en": "Refresh rating",
+   "tr": "Értékelés frissítése"
+  },
+  {
+   "key": "installFlows.diskSpaceFreeOfTotal",
+   "en": "{{free}} free of {{total}}",
+   "tr": "{{free}} szabad a {{total}}-ból"
+  },
+  {
+   "key": "installFlows.pathRejectedBodyImport",
+   "en": "GameLib couldn't import from that location. The source has to be a full folder path with no \"..\" steps in it. Pick the game's folder again.",
+   "tr": "A GameLib nem tudott importálni arról a helyről. A forrásnak teljes mappaútvonalnak kell lennie, „..” lépések nélkül. Válaszd ki újra a játék mappáját."
+  },
+  {
+   "key": "installFlows.pathRejectedBodyMove",
+   "en": "GameLib couldn't move this game there. The destination has to be a full folder path with no \"..\" steps in it. Pick the destination folder again.",
+   "tr": "A GameLib nem tudta oda áthelyezni ezt a játékot. A célhelynek teljes mappaútvonalnak kell lennie, „..” lépések nélkül. Válaszd ki újra a célmappát."
+  },
+  {
+   "key": "installFlows.pathRejectedTitle",
+   "en": "Can't use that location",
+   "tr": "Ez a hely nem használható"
+  },
+  {
+   "key": "library.filterPanel.chipHiddenIncluded",
+   "en": "Including hidden",
+   "tr": "Rejtettekkel együtt"
+  },
+  {
+   "key": "library.filterPanel.chipHiddenOnly",
+   "en": "Hidden only",
+   "tr": "Csak rejtett"
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageHidden",
+   "en": "Hiding no store page",
+   "tr": "Áruházi oldal nélküliek elrejtve"
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageOnly",
+   "en": "No store page only",
+   "tr": "Csak áruházi oldal nélküli"
+  },
+  {
+   "key": "library.filterPanel.chipNonAvailableIncluded",
+   "en": "Including non-available",
+   "tr": "Nem elérhetőkkel együtt"
+  },
+  {
+   "key": "library.filterPanel.chipNonAvailableOnly",
+   "en": "Non-available only",
+   "tr": "Csak nem elérhető"
+  },
+  {
+   "key": "library.filterPanel.clearAll",
+   "en": "Clear all",
+   "tr": "Összes törlése"
+  },
+  {
+   "key": "library.filterPanel.collections",
+   "en": "Collections",
+   "tr": "Gyűjtemények"
+  },
+  {
+   "key": "library.filterPanel.emptyAlphabetLetter",
+   "en": "Starting with \"{{letter}}\"",
+   "tr": "„{{letter}}” betűvel kezdődik"
+  },
+  {
+   "key": "library.filterPanel.emptyAlphabetNumber",
+   "en": "Starting with a number",
+   "tr": "Számmal kezdődik"
+  },
+  {
+   "key": "library.filterPanel.emptyBody",
+   "en": "No games match {{filters}}.",
+   "tr": "Nincs a szűrőknek megfelelő játék: {{filters}}."
+  },
+  {
+   "key": "library.filterPanel.emptyClearAll",
+   "en": "Clear all filters",
+   "tr": "Összes szűrő törlése"
+  },
+  {
+   "key": "library.filterPanel.emptyHeading",
+   "en": "No games match your filters",
+   "tr": "Nincs a szűrőknek megfelelő játék"
+  },
+  {
+   "key": "library.filterPanel.groupSelectedCount",
+   "en": "{{selected}} selected",
+   "tr": "{{selected}} kiválasztva"
+  },
+  {
+   "key": "library.filterPanel.manageCollections",
+   "en": "Manage collections",
+   "tr": "Gyűjtemények kezelése"
+  },
+  {
+   "key": "library.filterPanel.moreFilters",
+   "en": "More filters",
+   "tr": "Több szűrő"
+  },
+  {
+   "key": "library.filterPanel.newCollection",
+   "en": "+ New collection",
+   "tr": "+ Új gyűjtemény"
+  },
+  {
+   "key": "library.filterPanel.noStorePage",
+   "en": "No store page",
+   "tr": "Nincs áruházi oldal"
+  },
+  {
+   "key": "library.filterPanel.notYetChecked",
+   "en": "Not yet checked",
+   "tr": "Még nincs ellenőrizve"
+  },
+  {
+   "key": "library.filterPanel.removeFilter",
+   "en": "Remove {{filterLabel}} filter",
+   "tr": "{{filterLabel}} szűrő eltávolítása"
+  },
+  {
+   "key": "library.filterPanel.runnabilityGroup",
+   "en": "Runnability",
+   "tr": "Futtathatóság"
+  },
+  {
+   "key": "library.filterPanel.runsNatively",
+   "en": "Runs natively",
+   "tr": "Natívan fut"
+  },
+  {
+   "key": "library.filterPanel.runsViaBottle",
+   "en": "Runs via bottle",
+   "tr": "Bottle-on keresztül fut"
+  },
+  {
+   "key": "library.filterPanel.storeGroup",
+   "en": "Store",
+   "tr": "Áruház"
+  },
+  {
+   "key": "library.filterPanel.viewAll",
+   "en": "All games",
+   "tr": "Összes játék"
+  },
+  {
+   "key": "library.filterPanel.viewFavourites",
+   "en": "Favourites",
+   "tr": "Kedvencek"
+  },
+  {
+   "key": "library.filterPanel.viewInstalled",
+   "en": "Installed",
+   "tr": "Telepítve"
+  },
+  {
+   "key": "library.filterPanel.viewRecentlyPlayed",
+   "en": "Recently played",
+   "tr": "Nemrég játszott"
+  },
+  {
+   "key": "library.filterPanel.wontRun",
+   "en": "Won't run",
+   "tr": "Nem fut"
+  },
+  {
+   "key": "library.header.filteredOfTotal",
+   "en": "{{shown}} of {{total}}",
+   "tr": "{{shown}} / {{total}}"
+  },
+  {
+   "key": "library.noStorePage",
+   "en": "No store page",
+   "tr": "Nincs áruházi oldal"
+  },
+  {
+   "key": "library.no_no_store_page_games",
+   "en": "No games without a store page in your library",
+   "tr": "Nincs áruházi oldal nélküli játék a könyvtáradban"
+  },
+  {
+   "key": "library.steamSync.failedBody",
+   "en": "Your other libraries are still available. Try again, or check that Steam is reachable.",
+   "tr": "A többi könyvtárad továbbra is elérhető. Próbáld újra, vagy ellenőrizd, hogy a Steam elérhető-e."
+  },
+  {
+   "key": "library.steamSync.failedTitle",
+   "en": "Couldn't sync your Steam library",
+   "tr": "Nem sikerült szinkronizálni a Steam könyvtáradat"
+  },
+  {
+   "key": "library.steamSync.retry",
+   "en": "Retry Steam sync",
+   "tr": "Steam szinkronizálás újra"
+  },
+  {
+   "key": "library.steamSync.signedOutAction",
+   "en": "Sign in to Steam",
+   "tr": "Jelentkezz be a Steam-be"
+  },
+  {
+   "key": "library.steamSync.signedOutBody",
+   "en": "Sign in again to sync your Steam library. Your other libraries are still available.",
+   "tr": "Jelentkezz be újra a Steam könyvtárad szinkronizálásához. A többi könyvtárad továbbra is elérhető."
+  },
+  {
+   "key": "library.steamSync.signedOutTitle",
+   "en": "Your Steam sign-in expired",
+   "tr": "A Steam bejelentkezésed lejárt"
+  },
+  {
+   "key": "library.steamSync.syncing",
+   "en": "Syncing your Steam library…",
+   "tr": "Steam könyvtár szinkronizálása…"
+  },
+  {
+   "key": "library.storeOther",
+   "en": "Other",
+   "tr": "Egyéb"
+  },
+  {
+   "key": "login.connected",
+   "en": "Connected",
+   "tr": "Csatlakoztatva"
+  },
+  {
+   "key": "login.humble_dialog_title",
+   "en": "Sign in to Humble Bundle",
+   "tr": "Bejelentkezés a Humble Bundle-be"
+  },
+  {
+   "key": "login.logoutFailedMessage",
+   "en": "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
+   "tr": "A fiókod ki lett jelentkeztetve ezen az eszközön, de a böngésző munkamenetét nem sikerült teljesen törölni. Ha megosztott számítógépet használsz, jelentkezz ki újra, vagy töröld a böngésződ adatait erre az oldalra vonatkozóan, hogy a munkameneted ne maradjon elérhető."
+  },
+  {
+   "key": "login.logoutFailedTitle",
+   "en": "Sign-out incomplete",
+   "tr": "A kijelentkezés nem fejeződött be"
+  },
+  {
+   "key": "login.steamReconnect",
+   "en": "Sign-in expired — Reconnect",
+   "tr": "A bejelentkezés lejárt — Újracsatlakozás"
+  },
+  {
+   "key": "login.steam_logout_failed_message",
+   "en": "Steam sign-out didn't finish in time. Please try again.",
+   "tr": "A Steam kijelentkezés nem fejeződött be időben. Kérjük, próbáld újra."
+  },
+  {
+   "key": "login.steam_logout_failed_title",
+   "en": "Sign-out failed",
+   "tr": "A kijelentkezés sikertelen"
+  },
+  {
+   "key": "pathSelectionBox.saved",
+   "en": "Saved",
+   "tr": "Mentve"
+  },
+  {
+   "key": "pathSelectionBox.unsaved",
+   "en": "Not saved yet — press Enter",
+   "tr": "Még nincs mentve — nyomd meg az Entert"
+  },
+  {
+   "key": "queue.label.failed",
+   "en": "Failed",
+   "tr": "Sikertelen"
+  },
+  {
+   "key": "queue.label.retry",
+   "en": "Retry",
+   "tr": "Újra"
+  },
+  {
+   "key": "redeemKey.alreadyOwned",
+   "en": "This key has already been redeemed — you already own this on Steam.",
+   "tr": "Ezt a kulcsot már beváltották — ez a tartalom már a tiéd a Steamen."
+  },
+  {
+   "key": "redeemKey.error",
+   "en": "Couldn't reach Steam to redeem this key. Check your connection and try again.",
+   "tr": "Nem sikerült elérni a Steamet a kulcs beváltásához. Ellenőrizd a kapcsolatot, és próbáld újra."
+  },
+  {
+   "key": "redeemKey.invalid",
+   "en": "This key doesn't look right. Double-check it and try again.",
+   "tr": "Ez a kulcs nem tűnik helyesnek. Ellenőrizd, és próbáld újra."
+  },
+  {
+   "key": "redeemKey.rateLimited",
+   "en": "Too many attempts — please wait a bit before trying again.",
+   "tr": "Túl sok próbálkozás — kérjük, várj egy kicsit, mielőtt újra megpróbálod."
+  },
+  {
+   "key": "redeemKey.successNoPackage",
+   "en": "Key redeemed! Your Steam library has been updated.",
+   "tr": "A kulcsot beváltottad! A Steam könyvtárad frissült."
+  },
+  {
+   "key": "redeemKey.successWithPackage",
+   "en": "Key redeemed! {{packageName}} has been added to your Steam library.",
+   "tr": "A kulcsot beváltottad! A(z) {{packageName}} bekerült a Steam könyvtáradba."
+  },
+  {
+   "key": "redeemSteamKey.placeholder",
+   "en": "Enter your Steam key",
+   "tr": "Add meg a Steam kulcsodat"
+  },
+  {
+   "key": "redeemSteamKey.redeem",
+   "en": "Redeem",
+   "tr": "Beváltás"
+  },
+  {
+   "key": "redeemSteamKey.redeeming",
+   "en": "Redeeming...",
+   "tr": "Beváltás folyamatban..."
+  },
+  {
+   "key": "redeemSteamKey.title",
+   "en": "Redeem a Steam key",
+   "tr": "Steam kulcs beváltása"
+  },
+  {
+   "key": "redeemSteamKey.viewInLibrary",
+   "en": "View in library",
+   "tr": "Megtekintés a könyvtárban"
+  },
+  {
+   "key": "setting.eosOverlay.unavailable",
+   "en": "The EOS Overlay is unavailable in this build",
+   "tr": "Az EOS Overlay nem érhető el ebben a buildben"
+  },
+  {
+   "key": "setting.eosOverlay.unavailableDetail",
+   "en": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.",
+   "tr": "Az EOS Overlay támogatása egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a buildben nem telepíthető, nem frissíthető és nem távolítható el."
+  },
+  {
+   "key": "settings.eosOverlayInstallConfirmBody",
+   "en": "Install the EOS Overlay now?",
+   "tr": "Telepíted most az EOS Overlayt?"
+  },
+  {
+   "key": "settings.eosOverlayInstallConfirmTitle",
+   "en": "Confirm overlay install",
+   "tr": "Overlay telepítésének megerősítése"
+  },
+  {
+   "key": "settings.eosOverlayUpdateConfirmBody",
+   "en": "Update the EOS Overlay to the latest version?",
+   "tr": "Frissíted az EOS Overlayt a legújabb verzióra?"
+  },
+  {
+   "key": "settings.eosOverlayUpdateConfirmTitle",
+   "en": "Confirm overlay update",
+   "tr": "Overlay frissítésének megerősítése"
+  },
+  {
+   "key": "settings.framelessWindowDescription",
+   "en": "Use frameless window",
+   "tr": "Keret nélküli ablak használata"
+  },
+  {
+   "key": "settings.gamepadInitialRepeatDelay",
+   "en": "Gamepad input initial repeat delay",
+   "tr": "Gamepad bemenet kezdeti ismétlési késleltetése"
+  },
+  {
+   "key": "settings.gamepadRepeatFrequency",
+   "en": "Gamepad input repeat frequency",
+   "tr": "Gamepad bemenet ismétlési gyakorisága"
+  },
+  {
+   "key": "settings.gamescopeFsr",
+   "en": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+   "tr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+  },
+  {
+   "key": "settings.gamescopeUpscaleMethod",
+   "en": "Upscale Method",
+   "tr": "Felskálázási módszer"
+  },
+  {
+   "key": "settings.gamescopeWindowType",
+   "en": "Window Type",
+   "tr": "Ablaktípus"
+  },
+  {
+   "key": "settings.loginBackground",
+   "en": "Manage Accounts background",
+   "tr": "Fiókkezelés háttérkép"
+  },
+  {
+   "key": "settings.loginBackgroundDialogTitle",
+   "en": "Select a background image",
+   "tr": "Válassz egy háttérképet"
+  },
+  {
+   "key": "settings.loginBackgroundFilterName",
+   "en": "Images",
+   "tr": "Képek"
+  },
+  {
+   "key": "settings.loginBackgroundHelp",
+   "en": "Image shown behind the Manage Accounts screen. Clear the field to go back to the bundled artwork. PNG, JPEG, WebP, AVIF and GIF are supported.",
+   "tr": "A Fiókkezelés képernyő mögött megjelenő kép. A mező törlésével visszaállítható a beépített illusztráció. PNG, JPEG, WebP, AVIF és GIF formátumok támogatottak."
+  },
+  {
+   "key": "settings.steamgriddb.apikey.unavailable",
+   "en": "Unavailable on this build",
+   "tr": "Nem elérhető ebben a verzióban"
+  },
+  {
+   "key": "settings.steamgriddb.help.unavailableDetail",
+   "en": "SteamGridDB artwork support is deferred to a future release (D-03, Phase 34.6) and cannot be configured from this build.",
+   "tr": "A SteamGridDB grafikatámogatás egy későbbi kiadásra halasztva (D-03, 34.6. fázis), és ebből a verzióból nem konfigurálható."
+  },
+  {
+   "key": "settings.wineDefaultLabel",
+   "en": "Wine Default",
+   "tr": "Wine alapértelmezett"
+  },
+  {
+   "key": "settings.wineFlatpakPath",
+   "en": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+   "tr": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+  },
+  {
+   "key": "sidebar.redeemSteamKey",
+   "en": "Redeem a Steam key",
+   "tr": "Steam kulcs beváltása"
+  },
+  {
+   "key": "sideload.filter.all",
+   "en": "All",
+   "tr": "Összes"
+  },
+  {
+   "key": "sideload.filter.appExtension",
+   "en": "App",
+   "tr": "App"
+  },
+  {
+   "key": "sideload.filter.appImageExtension",
+   "en": "AppImage",
+   "tr": "AppImage"
+  },
+  {
+   "key": "sideload.filter.appImages",
+   "en": "AppImages",
+   "tr": "AppImage-ek"
+  },
+  {
+   "key": "sideload.filter.apps",
+   "en": "Apps",
+   "tr": "Alkalmazások"
+  },
+  {
+   "key": "sideload.filter.executables",
+   "en": "Executables",
+   "tr": "Futtatható fájlok"
+  },
+  {
+   "key": "sideload.filter.images",
+   "en": "Images",
+   "tr": "Képek"
+  },
+  {
+   "key": "sideload.filter.otherBinaries",
+   "en": "Other Binaries",
+   "tr": "Egyéb binárisok"
+  },
+  {
+   "key": "sideload.filter.scripts",
+   "en": "Scripts",
+   "tr": "Szkriptek"
+  },
+  {
+   "key": "sideload.import-hint.content",
+   "en": "Do NOT use this feature for that.<br />Instead, <3>log into</3> the store, look for the game in your library, open the installation dialog, and click the &quot;{{doorLabel}}&quot; button",
+   "tr": "NE használd erre ezt a funkciót.<br />Helyette <3>jelentkezz be</3> az áruházba, keresd meg a játékot a könyvtáradban, nyisd meg a telepítési párbeszédablakot, és kattints a „{{doorLabel}}” gombra"
+  },
+  {
+   "key": "status.checkingSteamInstallOptions",
+   "en": "Checking install options…",
+   "tr": "Telepítési lehetőségek ellenőrzése…"
+  },
+  {
+   "key": "steam.bottle.statusPollTimeout",
+   "en": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.",
+   "tr": "A GameLib nem kapott több visszajelzést a Steam palack beállításáról. Lehet, hogy még fut — ellenőrizd, van-e Steam telepítő ablak, majd próbáld újra."
+  },
+  {
+   "key": "steam.download.error.connectionDroppedV2",
+   "en": "Steam servers dropped the connection.",
+   "tr": "A Steam szerverek megszakították a kapcsolatot."
+  },
+  {
+   "key": "steam.download.error.decodeFailed",
+   "en": "Downloaded game data could not be unpacked. This is not a network problem.",
+   "tr": "A letöltött játékadatokat nem sikerült kicsomagolni. Ez nem hálózati probléma."
+  },
+  {
+   "key": "steam.download.error.genericV2",
+   "en": "The Steam download failed.",
+   "tr": "A Steam letöltés sikertelen volt."
+  },
+  {
+   "key": "steam.download.error.notSignedIn",
+   "en": "You are not signed in to Steam, so this download could not start.",
+   "tr": "Nem vagy bejelentkezve a Steam-be, ezért a letöltés nem indulhatott el."
+  },
+  {
+   "key": "steam.install.bottleNameReadonlyHelper",
+   "en": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
+   "tr": "A GameLib egyetlen közös CrossOver bottle-t kezel a Steam számára. Külön bottle elnevezése játékonként még nem támogatott."
+  },
+  {
+   "key": "steam.install.contentLightNotice",
+   "en": "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib.",
+   "tr": "Ez a Steam saját kliensén keresztül települ, így itt nincs mit választani. Kapcsold be a natív Steam telepítéseket a Beállításokban, hogy a telepítési helyet és a Windows kompatibilitást a GameLib-ből kezelhesd."
+  },
+  {
+   "key": "steam.install.contentLightSingleLibraryNotice",
+   "en": "There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it.",
+   "tr": "Ezen a rendszeren csak egy Steam könyvtár van, így itt nincs mit választani — a GameLib ide fogja telepíteni a játékot."
+  },
+  {
+   "key": "steam.install.forceWindowsHelp",
+   "en": "This game has a native macOS version, but you can install the Windows version instead through a Wine bottle — useful if the native build is missing features or performs worse.",
+   "tr": "Ennek a játéknak van natív macOS verziója, de a Windows verziót is telepítheted egy Wine palackon keresztül — ez akkor hasznos, ha a natív verzióból hiányoznak funkciók, vagy gyengébben teljesít."
+  },
+  {
+   "key": "steam.install.libraryFullNotice",
+   "en": "Not enough space in your Steam library — choose another below or free up space.",
+   "tr": "Nincs elég hely a Steam könyvtáradban — válassz másikat lent, vagy szabadíts fel helyet."
+  },
+  {
+   "key": "steam.install.libraryFullOnlyNotice",
+   "en": "Not enough space in your Steam library. Free up space, then try again.",
+   "tr": "Nincs elég hely a Steam könyvtáradban. Szabadíts fel helyet, majd próbáld újra."
+  },
+  {
+   "key": "steam.install.libraryMissingNotice",
+   "en": "Your Steam library couldn't be reached — choose another below.",
+   "tr": "A Steam könyvtárad nem érhető el — válassz másikat lent."
+  },
+  {
+   "key": "steam.install.libraryMissingOnlyNotice",
+   "en": "Your Steam library couldn't be reached. Reconnect the drive, then try again.",
+   "tr": "A Steam könyvtárad nem érhető el. Csatlakoztasd újra a meghajtót, majd próbáld újra."
+  },
+  {
+   "key": "steam.install.libraryPickerLabel",
+   "en": "Choose Steam library",
+   "tr": "Steam könyvtár kiválasztása"
+  },
+  {
+   "key": "steam.install.libraryPrimarySuffix",
+   "en": "default",
+   "tr": "alapértelmezett"
+  },
+  {
+   "key": "steam.install.noCrossoverEngine",
+   "en": "No CrossOver installation was found. GameLib will set one up when the install starts.",
+   "tr": "Nem található CrossOver telepítés. A GameLib telepít egyet, amikor a telepítés elindul."
+  },
+  {
+   "key": "steam.install.sharedBottleNotice",
+   "en": "The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.",
+   "tr": "Az itt kiválasztott Wine verziót minden olyan Steam játék használja, amelynek palackra van szüksége — nem csak ez az egy. Ha később módosítod, az azokra a játékokra is hatással lesz."
+  },
+  {
+   "key": "steam.install.withOptionsLabel",
+   "en": "Install with options…",
+   "tr": "Telepítés beállításokkal…"
+  },
+  {
+   "key": "steam.resumeAvailable.notify",
+   "en": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+   "tr": "A(z) {{game}} megszakított telepítése folytatásra kész — kattints a Telepítésre a folytatáshoz"
+  },
+  {
+   "key": "steam.status.resumeInstall",
+   "en": "Resume Install",
+   "tr": "Telepítés folytatása"
+  },
+  {
+   "key": "steam.status.resumeInstallHint",
+   "en": "Install incomplete — resume the download in GameLib",
+   "tr": "A telepítés nem fejeződött be — folytasd a letöltést a GameLib-ben"
+  },
+  {
+   "key": "steam.uninstall.removeAllCopiesConfirmMessage",
+   "en": "This removes every installed copy of this game across all install locations. This cannot be undone.",
+   "tr": "Ez eltávolítja a játék minden telepített példányát az összes telepítési helyről. Ez nem vonható vissza."
+  },
+  {
+   "key": "steam.uninstall.removeAllCopiesConfirmTitle",
+   "en": "Remove all copies?",
+   "tr": "Eltávolítod az összes példányt?"
+  },
+  {
+   "key": "steam.uninstall.removeAllCopiesLabel",
+   "en": "Remove all copies…",
+   "tr": "Összes példány eltávolítása…"
+  },
+  {
+   "key": "steamgriddb.error.unavailable",
+   "en": "SteamGridDB artwork is unavailable on this build",
+   "tr": "A SteamGridDB grafika nem érhető el ebben a verzióban"
+  },
+  {
+   "key": "themeSelector.cyberSpaceOasis",
+   "en": "Cyberspace Oasis",
+   "tr": "Cyberspace Oázis"
+  },
+  {
+   "key": "themeSelector.cyberSpaceOasisAlt",
+   "en": "Cyberspace Oasis Classic",
+   "tr": "Cyberspace Oázis Klasszikus"
+  },
+  {
+   "key": "themeSelector.dracula",
+   "en": "Dracula",
+   "tr": "Dracula"
+  },
+  {
+   "key": "themeSelector.gruvboxDark",
+   "en": "Gruvbox Dark",
+   "tr": "Gruvbox Sötét"
+  },
+  {
+   "key": "themeSelector.highContrast",
+   "en": "High Contrast",
+   "tr": "Nagy Kontraszt"
+  },
+  {
+   "key": "themeSelector.marine",
+   "en": "Marine",
+   "tr": "Tengerész"
+  },
+  {
+   "key": "themeSelector.marineClassic",
+   "en": "Marine Classic",
+   "tr": "Tengerész Klasszikus"
+  },
+  {
+   "key": "themeSelector.midnightMirage",
+   "en": "Midnight Mirage",
+   "tr": "Éjféli Délibáb"
+  },
+  {
+   "key": "themeSelector.nordDark",
+   "en": "Nord Dark",
+   "tr": "Nord Sötét"
+  },
+  {
+   "key": "themeSelector.nordLight",
+   "en": "Nord Light",
+   "tr": "Nord Világos"
+  },
+  {
+   "key": "themeSelector.oldSchool",
+   "en": "Old School GameLib",
+   "tr": "Régi Iskolás GameLib"
+  },
+  {
+   "key": "themeSelector.sweet",
+   "en": "Sweet",
+   "tr": "Édes"
+  },
+  {
+   "key": "themeSelector.zombie",
+   "en": "Zombie",
+   "tr": "Zombi"
+  },
+  {
+   "key": "themeSelector.zombieClassic",
+   "en": "Zombie Classic",
+   "tr": "Zombi Klasszikus"
+  },
+  {
+   "key": "webview.embedPlaceholder.message",
+   "en": "Paused while a window is open",
+   "tr": "Szüneteltetve, amíg egy ablak nyitva van"
+  },
+  {
+   "key": "webview.login.blocked.body",
+   "en": "Your sign-in cannot be completed yet: {{channel}} is not ported to this build. This lands in Phase 34.5.",
+   "tr": "A bejelentkezésed még nem fejezhető be: a(z) {{channel}} nincs átültetve erre a verzióra. Ez a 34.5-ös fázisban valósul meg."
+  },
+  {
+   "key": "webview.login.blocked.heading",
+   "en": "Signing in to {{runner}} is not wired up yet",
+   "tr": "A(z) {{runner}} bejelentkezés még nincs bekötve"
+  },
+  {
+   "key": "webview.login.blocked.headingGeneric",
+   "en": "Signing in is not wired up yet",
+   "tr": "A bejelentkezés még nincs bekötve"
+  },
+  {
+   "key": "webview.login.humble.body",
+   "en": "A sign-in window has opened. Complete sign-in there — this page updates automatically once it succeeds.",
+   "tr": "Megnyílt egy bejelentkezési ablak. Fejezd be ott a bejelentkezést — ez az oldal automatikusan frissül, amint sikerül."
+  },
+  {
+   "key": "webview.login.humble.error.window_unreachable",
+   "en": "the Humble sign-in window closed or could not be reached",
+   "tr": "a Humble bejelentkezési ablak bezárult, vagy nem volt elérhető"
+  },
+  {
+   "key": "webview.login.humble.heading",
+   "en": "Signing in to Humble Bundle",
+   "tr": "Bejelentkezés a Humble Bundle-be"
+  },
+  {
+   "key": "webview.login.oauth.awaiting.body",
+   "en": "A sign-in window has opened. Complete sign-in there.",
+   "tr": "Megnyílt egy bejelentkezési ablak. Fejezd be ott a bejelentkezést."
+  },
+  {
+   "key": "webview.login.oauth.awaiting.heading",
+   "en": "Signing in to {{runner}}",
+   "tr": "Bejelentkezés ide: {{runner}}"
+  },
+  {
+   "key": "webview.login.oauth.awaiting.headingGeneric",
+   "en": "Signing in",
+   "tr": "Bejelentkezés"
+  },
+  {
+   "key": "webview.login.oauth.blocked.body",
+   "en": "Your sign-in was captured successfully, but the {{channel}} backend channel is not ported to this build yet. This lands in Phase 34.5.",
+   "tr": "A bejelentkezésed sikeresen rögzítve lett, de a(z) {{channel}} háttércsatorna még nincs átültetve erre a verzióra. Ez a 34.5-ös fázisban valósul meg."
+  },
+  {
+   "key": "webview.login.oauth.blocked.heading",
+   "en": "Signing in to {{runner}} was captured, but can't finish yet",
+   "tr": "A(z) {{runner}} bejelentkezés rögzítve, de még nem fejezhető be"
+  },
+  {
+   "key": "webview.login.oauth.blocked.headingGeneric",
+   "en": "Sign-in was captured, but can't finish yet",
+   "tr": "A bejelentkezés rögzítve, de még nem fejezhető be"
+  },
+  {
+   "key": "webview.login.oauth.cancelled.body",
+   "en": "The sign-in window was closed before completing. You can try again.",
+   "tr": "A bejelentkezési ablak bezárult, mielőtt a folyamat befejeződött volna. Próbáld meg újra."
+  },
+  {
+   "key": "webview.login.oauth.cancelled.heading",
+   "en": "Signing in to {{runner}} was cancelled",
+   "tr": "A(z) {{runner}} bejelentkezés megszakadt"
+  },
+  {
+   "key": "webview.login.oauth.cancelled.headingGeneric",
+   "en": "Sign-in was cancelled",
+   "tr": "A bejelentkezés megszakadt"
+  },
+  {
+   "key": "webview.login.oauth.error.body",
+   "en": "Something went wrong while signing in: {{message}}",
+   "tr": "Hiba történt a bejelentkezés során: {{message}}"
+  },
+  {
+   "key": "webview.login.oauth.error.heading",
+   "en": "Signing in to {{runner}} failed",
+   "tr": "A(z) {{runner}} bejelentkezés sikertelen"
+  },
+  {
+   "key": "webview.login.oauth.error.headingGeneric",
+   "en": "Sign-in failed",
+   "tr": "A bejelentkezés sikertelen"
+  },
+  {
+   "key": "webview.login.oauth.finalizing.body",
+   "en": "Sign-in captured. Completing the exchange with the store — this can take a few seconds.",
+   "tr": "A bejelentkezés rögzítve. Az áruházzal való egyeztetés folyamatban — ez néhány másodpercig tarthat."
+  },
+  {
+   "key": "webview.login.oauth.finalizing.heading",
+   "en": "Finalizing sign-in with {{runner}}…",
+   "tr": "Bejelentkezés véglegesítése ezzel: {{runner}}…"
+  },
+  {
+   "key": "webview.login.oauth.finalizing.headingGeneric",
+   "en": "Finalizing sign-in…",
+   "tr": "Bejelentkezés véglegesítése…"
+  },
+  {
+   "key": "webview.login.oauth.genericChannel",
+   "en": "the sign-in channel",
+   "tr": "a bejelentkezési csatorna"
+  },
+  {
+   "key": "webview.login.oauth.preparing.body",
+   "en": "The store's sign-in window is being prepared and will open shortly.",
+   "tr": "Az áruház bejelentkezési ablaka előkészítés alatt áll, és hamarosan megnyílik."
+  },
+  {
+   "key": "webview.login.oauth.preparing.heading",
+   "en": "Preparing {{runner}} sign-in…",
+   "tr": "{{runner}} bejelentkezés előkészítése…"
+  },
+  {
+   "key": "webview.login.oauth.preparing.headingGeneric",
+   "en": "Preparing sign-in…",
+   "tr": "Bejelentkezés előkészítése…"
+  },
+  {
+   "key": "webview.login.oauth.retry",
+   "en": "Retry",
+   "tr": "Újra"
+  },
+  {
+   "key": "webview.login.oauth.timeout.body",
+   "en": "The sign-in window took too long to complete. You can try again.",
+   "tr": "A bejelentkezési ablak befejezése túl sokáig tartott. Próbáld újra."
+  },
+  {
+   "key": "webview.login.oauth.timeout.heading",
+   "en": "Signing in to {{runner}} timed out",
+   "tr": "A bejelentkezés túllépte az időkorlátot ennél: {{runner}}"
+  },
+  {
+   "key": "webview.login.oauth.timeout.headingGeneric",
+   "en": "Sign-in timed out",
+   "tr": "A bejelentkezés túllépte az időkorlátot"
+  },
+  {
+   "key": "webview.storeEmbedControls.hostLabel",
+   "en": "Currently viewing {{host}}",
+   "tr": "Jelenleg megtekintve: {{host}}"
+  },
+  {
+   "key": "webview.unavailable.epic.body",
+   "en": "GameLib doesn't yet embed Epic Store pages in-app.",
+   "tr": "A GameLib még nem ágyazza be az Epic Store oldalait az alkalmazáson belül."
+  },
+  {
+   "key": "webview.unavailable.epic.heading",
+   "en": "Epic Store browsing isn't available in-app yet",
+   "tr": "Az Epic Store böngészése még nem érhető el az alkalmazáson belül"
+  },
+  {
+   "key": "webview.unavailable.next-step",
+   "en": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+   "tr": "Ezt külön jövőbeli feladatként tartjuk nyilván -- addig is használd az alábbi gombot, hogy a rendszer böngésződben nyisd meg."
+  },
+  {
+   "key": "webview.unavailable.open-in-browser",
+   "en": "Open in browser",
+   "tr": "Megnyitás böngészőben"
+  },
+  {
+   "key": "webview.unavailable.platform.body",
+   "en": "GameLib's in-app store and wiki browsing is available on macOS. It isn't available on this platform yet.",
+   "tr": "A GameLib alkalmazáson belüli áruház- és wikiböngészése macOS rendszeren érhető el. Ezen a platformon még nem érhető el."
+  },
+  {
+   "key": "webview.unavailable.platform.heading",
+   "en": "In-app store and wiki browsing isn't available on this platform yet",
+   "tr": "Az alkalmazáson belüli áruház- és wikiböngészés még nem érhető el ezen a platformon"
+  },
+  {
+   "key": "winetricks.unavailable",
+   "en": "Winetricks component management is unavailable on this build",
+   "tr": "A Winetricks komponenskezelés nem érhető el ebben a build-ben"
+  },
+  {
+   "key": "winetricks.unavailableDetail",
+   "en": "Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build.",
+   "tr": "A Winetricks támogatás egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a build-ben nem listázható és nem telepíthető."
+  }
+ ]
+}

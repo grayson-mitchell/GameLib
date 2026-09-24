@@ -1,0 +1,225 @@
+{
+ "locale": "hu",
+ "reviewer_model": "opus",
+ "rows_reviewed": 280,
+ "counts": {
+  "ok": 259,
+  "minor": 20,
+  "major": 1,
+  "critical": 0
+ },
+ "findings": [
+  {
+   "key": "box.error.install.failed",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "The installation of {{title}} failed: {{error}}",
+   "tr": "A {{title}} telepítése sikertelen: {{error}}",
+   "back_translation": "The installation of {{title}} failed",
+   "issue": "Before a variable the definite article must be 'A(z)' (the file does this everywhere else); a bare 'A' is wrong for titles starting with a vowel sound.",
+   "suggested": "A(z) {{title}} telepítése sikertelen: {{error}}"
+  },
+  {
+   "key": "box.error.install.signInToSteam",
+   "severity": "minor",
+   "category": "brand",
+   "en": "Sign in to Steam",
+   "tr": "Jelentkezz be a Steam-be",
+   "back_translation": "Sign in to Steam",
+   "issue": "'Steam-be' is hyphenated, which is non-standard (Steam ends in a pronounced consonant) and inconsistent with 'Steamen'/'Steamet' used elsewhere in the file.",
+   "suggested": "Jelentkezz be a Steambe"
+  },
+  {
+   "key": "library.steamSync.signedOutAction",
+   "severity": "minor",
+   "category": "brand",
+   "en": "Sign in to Steam",
+   "tr": "Jelentkezz be a Steam-be",
+   "back_translation": "Sign in to Steam",
+   "issue": "Same hyphenated 'Steam-be' as box.error.install.signInToSteam; inconsistent with 'Steamen'/'Steamet'.",
+   "suggested": "Jelentkezz be a Steambe"
+  },
+  {
+   "key": "steam.download.error.notSignedIn",
+   "severity": "minor",
+   "category": "brand",
+   "en": "You are not signed in to Steam, so this download could not start.",
+   "tr": "Nem vagy bejelentkezve a Steam-be, ezért a letöltés nem indulhatott el.",
+   "back_translation": "You are not signed in to Steam, so the download could not start.",
+   "issue": "Hyphenated 'Steam-be', inconsistent with 'Steamen'/'Steamet'.",
+   "suggested": "Nem vagy bejelentkezve a Steambe, ezért a letöltés nem indulhatott el."
+  },
+  {
+   "key": "box.error.install.stalled",
+   "severity": "minor",
+   "category": "meaning",
+   "en": "No download progress for {{minutes}} minutes — the install was stopped",
+   "tr": "{{minutes}} perce nincs letöltési folyamat — a telepítés leállítva",
+   "back_translation": "For {{minutes}} minutes there has been no download process - the installation stopped",
+   "issue": "'letöltési folyamat' means 'download process', not 'progress'. It reads as if no download is running at all, not that the download has stalled.",
+   "suggested": "{{minutes}} perce nem halad a letöltés — a telepítés leállt"
+  },
+  {
+   "key": "gamepage.extraInfoStaleBody",
+   "severity": "minor",
+   "category": "register",
+   "en": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
+   "tr": "Ez az eredmény a betöltési kimenetek rögzítése előtt lett gyorsítótárazva, így elavult lehet. Frissítsd az ellenőrzéshez.",
+   "back_translation": "This result was cached before load outputs were recorded...",
+   "issue": "'betöltési kimenetek' is a stiff word-for-word calque of 'load outcomes'. 'eredmények' reads more naturally.",
+   "suggested": "Ez az eredmény még a betöltési eredmények rögzítése előtt került gyorsítótárba, így elavult lehet. Frissítsd az ellenőrzéshez."
+  },
+  {
+   "key": "humbleKeys.activateConfirmBody",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+   "tr": "Ez felfedi a kulcsot — véglegesen eltávolítva az ajándékozható tartalékból —, és beváltja a Steam-fiókodon. Nincs visszavonás.",
+   "back_translation": "This reveals the key - permanently removing it from the giftable spare - and redeems it on your Steam account.",
+   "issue": "'Giftable spares' is a named UI section, rendered elsewhere as the capitalised plural 'Ajándékozható tartalékok'. Here it is a lowercase singular, which is inconsistent.",
+   "suggested": "Ez felfedi a kulcsot — véglegesen eltávolítva az Ajándékozható tartalékok közül —, és beváltja a Steam-fiókodon. Nincs visszavonás."
+  },
+  {
+   "key": "humbleKeys.activatingBody",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Revealing your key and redeeming it on Steam — this only takes a moment.",
+   "tr": "Kulcsod felfedése és beváltása a Steamen — ez csak egy pillanatot vesz igénybe.",
+   "back_translation": "Revealing your key and redeeming it on Steam...",
+   "issue": "The definite article is missing before a possessive noun at the start of the sentence ('Kulcsod' should be 'A kulcsod').",
+   "suggested": "A kulcsod felfedése és beváltása a Steamen — ez csak egy pillanat."
+  },
+  {
+   "key": "humbleKeys.syncToEnableClaiming",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Sync to enable claiming",
+   "tr": "Szinkronizálás a beváltás engedélyezéséhez",
+   "back_translation": "Sync to enable redeeming",
+   "issue": "'Claim' is translated 'igénylés' elsewhere (claimWizardTitle, giftConfirmBody), but here it is 'beváltás', the word the file uses for 'redeem'. That blurs two distinct actions.",
+   "suggested": "Szinkronizálj az igénylés engedélyezéséhez"
+  },
+  {
+   "key": "installFlows.diskSpaceFreeOfTotal",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "{{free}} free of {{total}}",
+   "tr": "{{free}} szabad a {{total}}-ból",
+   "back_translation": "{{free}} free of the {{total}}",
+   "issue": "The fixed article 'a' before {{total}} breaks for values starting with a vowel sound (e.g. 'az 500 GB'). Attaching a case suffix to the placeholder is also fragile.",
+   "suggested": "Szabad: {{free}} / {{total}}"
+  },
+  {
+   "key": "library.filterPanel.runsViaBottle",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Runs via bottle",
+   "tr": "Bottle-on keresztül fut",
+   "back_translation": "Runs via bottle",
+   "issue": "'bottle' is left in English here and in steam.install.bottleNameReadonlyHelper, but translated as 'palack' in steam.bottle.statusPollTimeout, steam.install.forceWindowsHelp and steam.install.sharedBottleNotice.",
+   "suggested": "Palackon keresztül fut"
+  },
+  {
+   "key": "steam.install.bottleNameReadonlyHelper",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
+   "tr": "A GameLib egyetlen közös CrossOver bottle-t kezel a Steam számára. Külön bottle elnevezése játékonként még nem támogatott.",
+   "back_translation": "GameLib manages one shared CrossOver bottle for Steam...",
+   "issue": "Uses the English 'bottle', while other rows use 'palack'. Pick one term.",
+   "suggested": "A GameLib egyetlen közös CrossOver-palackot kezel a Steam számára. Külön palack elnevezése játékonként még nem támogatott."
+  },
+  {
+   "key": "library.steamSync.retry",
+   "severity": "minor",
+   "category": "register",
+   "en": "Retry Steam sync",
+   "tr": "Steam szinkronizálás újra",
+   "back_translation": "Steam sync again",
+   "issue": "The noun phrase followed by 'újra' is clipped and awkward for a button label.",
+   "suggested": "Steam-szinkronizálás újrapróbálása"
+  },
+  {
+   "key": "settings.loginBackground",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Manage Accounts background",
+   "tr": "Fiókkezelés háttérkép",
+   "back_translation": "Account management background image",
+   "issue": "Two nouns are juxtaposed without the possessive suffix, which is ungrammatical as a label.",
+   "suggested": "Fiókkezelés háttérképe"
+  },
+  {
+   "key": "steam.install.contentLightNotice",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib.",
+   "tr": "Ez a Steam saját kliensén keresztül települ, így itt nincs mit választani. Kapcsold be a natív Steam telepítéseket a Beállításokban, hogy a telepítési helyet és a Windows kompatibilitást a GameLib-ből kezelhesd.",
+   "back_translation": "...manage from GameLib",
+   "issue": "'GameLib-ből' is hyphenated, but a pronounced final consonant takes the suffix directly ('GameLibből').",
+   "suggested": "...hogy a telepítési helyet és a Windows-kompatibilitást a GameLibből kezelhesd."
+  },
+  {
+   "key": "steam.status.resumeInstallHint",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Install incomplete — resume the download in GameLib",
+   "tr": "A telepítés nem fejeződött be — folytasd a letöltést a GameLib-ben",
+   "back_translation": "Install incomplete - resume the download in GameLib",
+   "issue": "'GameLib-ben' is hyphenated; the standard form is 'GameLibben'.",
+   "suggested": "A telepítés nem fejeződött be — folytasd a letöltést a GameLibben"
+  },
+  {
+   "key": "themeSelector.oldSchool",
+   "severity": "major",
+   "category": "meaning",
+   "en": "Old School GameLib",
+   "tr": "Régi Iskolás GameLib",
+   "back_translation": "Old Schoolboy/Pupil GameLib",
+   "issue": "'Régi Iskolás' literally means 'old pupil/schoolkid', which misses the idiom 'old school' (retro, classic style).",
+   "suggested": "Oldschool GameLib"
+  },
+  {
+   "key": "themeSelector.marine",
+   "severity": "minor",
+   "category": "meaning",
+   "en": "Marine",
+   "tr": "Tengerész",
+   "back_translation": "Sailor",
+   "issue": "'Tengerész' means 'sailor/mariner'. The theme name refers to the sea or a marine colour palette.",
+   "suggested": "Tengeri"
+  },
+  {
+   "key": "themeSelector.marineClassic",
+   "severity": "minor",
+   "category": "meaning",
+   "en": "Marine Classic",
+   "tr": "Tengerész Klasszikus",
+   "back_translation": "Sailor Classic",
+   "issue": "Same 'Tengerész' (sailor) mistranslation as themeSelector.marine.",
+   "suggested": "Tengeri klasszikus"
+  },
+  {
+   "key": "winetricks.unavailable",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Winetricks component management is unavailable on this build",
+   "tr": "A Winetricks komponenskezelés nem érhető el ebben a build-ben",
+   "back_translation": "Winetricks component management is not available in this build",
+   "issue": "'build-ben' is hyphenated (the standard form is 'buildben'). Other rows use 'buildben' or 'verzióban', so the term is also inconsistent.",
+   "suggested": "A Winetricks-komponenskezelés nem érhető el ebben a buildben"
+  },
+  {
+   "key": "winetricks.unavailableDetail",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build.",
+   "tr": "A Winetricks támogatás egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a build-ben nem listázható és nem telepíthető.",
+   "back_translation": "...cannot be listed or installed in this build",
+   "issue": "'build-ben' is hyphenated, the same issue as winetricks.unavailable.",
+   "suggested": "A Winetricks-támogatás egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a buildben nem listázható és nem telepíthető."
+  }
+ ],
+ "terminology_notes": "The core terms are used consistently: telepítés (install), könyvtár (library), áruház (store), beváltás (redeem), felfedés (reveal), szinkronizálás (sync), bejelentkezés (sign-in). The informal 'te' register is used throughout, as is conventional for game UI. Systemic issues, noted once here rather than flagged per row: (1) Hungarian orthography requires a hyphen in proper-noun + common-noun compounds ('Steam-könyvtár', 'Steam-kulcs', 'Steam-fiók'). The file mixes 'Steam-könyvtár' and 'Steam-fiókodon' with the unhyphenated 'Steam könyvtár', 'Steam kulcs', 'Steam szerverek', 'Steam letöltés' and 'Steam telepítő' in most rows. This is common in software, but it is inconsistent. (2) 'build' appears as 'buildben', 'build-ben' and 'verzióban' across the 'unavailable on this build' rows. 'Verzió' also collides with the about.version label. (3) 'bottle' appears as both 'bottle' and 'palack' (flagged). (4) 'claim' appears as both 'igénylés' and 'beváltás' (flagged). The brand inflections 'Steamen', 'Steamet' and 'Humble-on' are correct. 'Humble Bundle-be' is correctly hyphenated. All {{placeholders}}, <br />, <3></3> and the A(z) article convention before variables are preserved correctly. The one exception is a bare 'A {{title}}' (flagged).",
+ "overall": "This is a solid, fluent machine translation. There are no critical errors: no inverted meanings, no broken placeholders and no mistranslated brands. Most issues are orthographic (suffix hyphenation on brand names, mixed hyphenation of Steam compounds) or terminology inconsistencies. There is one real sense error, in the theme names ('Old School' rendered as 'old pupil'; 'Marine' as 'sailor'). Confidence is high on meaning and placeholder checks. Hyphenation and capitalisation judgments follow standard Hungarian orthography (AkH), but software-UI practice varies, so several minors are arguably style preferences. I did not see the strings in rendered UI, so length and truncation were not assessed."
+}

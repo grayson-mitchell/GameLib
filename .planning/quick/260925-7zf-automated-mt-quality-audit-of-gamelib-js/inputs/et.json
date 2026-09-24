@@ -1,0 +1,1406 @@
+{
+ "locale": "et",
+ "model": "claude-sonnet-5",
+ "rows": [
+  {
+   "key": "about.license",
+   "en": "License: GPL V3",
+   "tr": "Litsents: GPL V3"
+  },
+  {
+   "key": "about.navLabel",
+   "en": "About",
+   "tr": "Info"
+  },
+  {
+   "key": "about.title",
+   "en": "About GameLib",
+   "tr": "GameLib teave"
+  },
+  {
+   "key": "about.version",
+   "en": "Version: {{version}}",
+   "tr": "Versioon: {{version}}"
+  },
+  {
+   "key": "about.versionUnknown",
+   "en": "unknown",
+   "tr": "teadmata"
+  },
+  {
+   "key": "app.routeError",
+   "en": "Something went wrong: {{detail}}",
+   "tr": "Midagi läks valesti: {{detail}}"
+  },
+  {
+   "key": "box.cancel",
+   "en": "Cancel",
+   "tr": "Tühista"
+  },
+  {
+   "key": "box.error.install.failed",
+   "en": "The installation of {{title}} failed: {{error}}",
+   "tr": "{{title}} paigaldamine ebaõnnestus: {{error}}"
+  },
+  {
+   "key": "box.error.install.signInToSteam",
+   "en": "Sign in to Steam",
+   "tr": "Logi Steami sisse"
+  },
+  {
+   "key": "box.error.install.stalled",
+   "en": "No download progress for {{minutes}} minutes — the install was stopped",
+   "tr": "{{minutes}} minuti jooksul pole allalaadimine edenenud — paigaldamine peatati"
+  },
+  {
+   "key": "box.filePicker.error.message",
+   "en": "GameLib could not open the system file picker, so nothing was selected and no changes were made. ({{error}})",
+   "tr": "GameLib ei suutnud avada süsteemi failivalijat, seetõttu ei valitud midagi ja muudatusi ei tehtud. ({{error}})"
+  },
+  {
+   "key": "box.filePicker.error.title",
+   "en": "Could not open the file picker",
+   "tr": "Failivalijat ei saanud avada"
+  },
+  {
+   "key": "box.steam.mac32Detected.confirm",
+   "en": "Reinstall via CrossOver",
+   "tr": "Installi uuesti CrossOver kaudu"
+  },
+  {
+   "key": "box.steam.mac32Detected.message",
+   "en": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version.",
+   "tr": "Selle mängu macOS versioon on ainult 32-bitine ega tööta selle macOS versiooniga. GameLib saab selle asemel uuesti paigaldada CrossOver kaudu, mis laadib alla Windowsi versiooni."
+  },
+  {
+   "key": "box.steam.mac32Detected.title",
+   "en": "32-bit macOS build detected",
+   "tr": "Tuvastati 32-bitine macOS versioon"
+  },
+  {
+   "key": "button.close",
+   "en": "Close",
+   "tr": "Sulge"
+  },
+  {
+   "key": "button.paste",
+   "en": "Paste",
+   "tr": "Kleebi"
+  },
+  {
+   "key": "consoleMode.installNext",
+   "en": "Next",
+   "tr": "Järgmine"
+  },
+  {
+   "key": "consoleMode.installPrevious",
+   "en": "Previous",
+   "tr": "Eelmine"
+  },
+  {
+   "key": "consoleMode.sortAscending",
+   "en": "A → Z",
+   "tr": "A → Z"
+  },
+  {
+   "key": "consoleMode.sortDescending",
+   "en": "Z → A",
+   "tr": "Z → A"
+  },
+  {
+   "key": "consoleMode.steamInstallBlockedTitle",
+   "en": "Can't start this install",
+   "tr": "Selle paigaldamist ei saa alustada"
+  },
+  {
+   "key": "consoleMode.steamInstallLibraryFull",
+   "en": "There isn't enough free space in your Steam library folder. Free up space and try again.",
+   "tr": "Sinu Steami teegikaustas pole piisavalt vaba ruumi. Vabasta ruumi ja proovi uuesti."
+  },
+  {
+   "key": "consoleMode.steamInstallLibraryMissing",
+   "en": "Your Steam library folder isn't available right now. Reconnect the drive and try again.",
+   "tr": "Sinu Steami teegikaust pole hetkel kättesaadav. Ühenda draiv uuesti ja proovi uuesti."
+  },
+  {
+   "key": "discounts.pegiPrefix",
+   "en": "PEGI ≤ {{value}}",
+   "tr": "PEGI ≤ {{value}}"
+  },
+  {
+   "key": "donate.navLabel",
+   "en": "Donate",
+   "tr": "Anneta"
+  },
+  {
+   "key": "downloadManager.progressPaused",
+   "en": "Paused",
+   "tr": "Peatatud"
+  },
+  {
+   "key": "edit-game.sgdb.unavailable",
+   "en": "SteamGridDB artwork search is unavailable on this build.",
+   "tr": "SteamGridDB kujunduse otsing pole selle versiooniga saadaval."
+  },
+  {
+   "key": "gamepage.appleRatingUnrated",
+   "en": "Unrated",
+   "tr": "Hindamata"
+  },
+  {
+   "key": "gamepage.etaPrefix",
+   "en": "ETA: {{eta}}",
+   "tr": "Hinnanguline aeg: {{eta}}"
+  },
+  {
+   "key": "gamepage.extraInfoEmptyBody",
+   "en": "Metacritic, OpenCritic and HowLongToBeat had nothing for this title.",
+   "tr": "Metacritic, OpenCritic ja HowLongToBeat ei leidnud selle mängu kohta midagi."
+  },
+  {
+   "key": "gamepage.extraInfoEmptyTitle",
+   "en": "No extra info found",
+   "tr": "Lisainfot ei leitud"
+  },
+  {
+   "key": "gamepage.extraInfoErrorBody",
+   "en": "The lookup failed, which is not the same as this game having no data. Try again.",
+   "tr": "Otsing ebaõnnestus, mis ei tähenda, et mängul andmed puuduvad. Proovi uuesti."
+  },
+  {
+   "key": "gamepage.extraInfoErrorTitle",
+   "en": "Couldn't load extra info",
+   "tr": "Lisainfo laadimine ebaõnnestus"
+  },
+  {
+   "key": "gamepage.extraInfoRetry",
+   "en": "Retry",
+   "tr": "Proovi uuesti"
+  },
+  {
+   "key": "gamepage.extraInfoStaleBody",
+   "en": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
+   "tr": "See tulemus salvestati vahemällu enne laadimistulemuste registreerimist, seega võib see olla vananenud. Värskenda kontrollimiseks."
+  },
+  {
+   "key": "gamepage.tabsAriaLabel",
+   "en": "gameinfo tabs",
+   "tr": "mänguinfo vahekaardid"
+  },
+  {
+   "key": "gamepage.wineLabel",
+   "en": "Wine:",
+   "tr": "Wine:"
+  },
+  {
+   "key": "humble.lessThanAMinute",
+   "en": "less than a minute",
+   "tr": "vähem kui minut"
+  },
+  {
+   "key": "humbleKeys.activate",
+   "en": "Activate",
+   "tr": "Aktiveeri"
+  },
+  {
+   "key": "humbleKeys.activateConfirmBody",
+   "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+   "tr": "See paljastab võtme — eemaldades selle jäädavalt kinkimiseks sobivate hulgast — ja lunastab selle sinu Steami kontol. Seda ei saa tagasi võtta."
+  },
+  {
+   "key": "humbleKeys.activateConfirmBodyRevealed",
+   "en": "This redeems your already-revealed key on your Steam account. There's no undo.",
+   "tr": "See lunastab sinu juba paljastatud võtme sinu Steami kontol. Seda ei saa tagasi võtta."
+  },
+  {
+   "key": "humbleKeys.activateConfirmTitle",
+   "en": "Activate this key on Steam?",
+   "tr": "Aktiveerida see võti Steamis?"
+  },
+  {
+   "key": "humbleKeys.activateDismiss",
+   "en": "Cancel",
+   "tr": "Tühista"
+  },
+  {
+   "key": "humbleKeys.activateWizardTitle",
+   "en": "Activate this key",
+   "tr": "Aktiveeri see võti"
+  },
+  {
+   "key": "humbleKeys.activatedDone",
+   "en": "Done",
+   "tr": "Valmis"
+  },
+  {
+   "key": "humbleKeys.activatedTitle",
+   "en": "Activated",
+   "tr": "Aktiveeritud"
+  },
+  {
+   "key": "humbleKeys.activatingBody",
+   "en": "Revealing your key and redeeming it on Steam — this only takes a moment.",
+   "tr": "Sinu võtme paljastamine ja lunastamine Steamis — see võtab vaid hetke."
+  },
+  {
+   "key": "humbleKeys.activatingTitle",
+   "en": "Activating on Steam…",
+   "tr": "Aktiveerimine Steamis…"
+  },
+  {
+   "key": "humbleKeys.c2Action",
+   "en": "Go to Giftable spares",
+   "tr": "Ava Kingitavad varuvõtmed"
+  },
+  {
+   "key": "humbleKeys.c2Body",
+   "en": "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+   "tr": "See võti on turvaliselt Kingitavates varuvõtmetes — selle paljastamine siin kaotaks võimaluse seda kinkida. Vii see hoopis Kingitavatesse varuvõtmetesse."
+  },
+  {
+   "key": "humbleKeys.c2Title",
+   "en": "You already own this on Steam",
+   "tr": "Sul on see juba Steam'is olemas"
+  },
+  {
+   "key": "humbleKeys.claimWizardTitle",
+   "en": "Claim this key",
+   "tr": "Nõua see võti"
+  },
+  {
+   "key": "humbleKeys.cooldown",
+   "en": "Temporarily unavailable — retry in {{minutes}}m",
+   "tr": "Ajutiselt pole saadaval — proovi uuesti {{minutes}} min pärast"
+  },
+  {
+   "key": "humbleKeys.copyKey",
+   "en": "Copy key",
+   "tr": "Kopeeri võti"
+  },
+  {
+   "key": "humbleKeys.expiresOn",
+   "en": "Expires {{date}}",
+   "tr": "Aegub {{date}}"
+  },
+  {
+   "key": "humbleKeys.finishActivation",
+   "en": "Finish activation",
+   "tr": "Lõpeta aktiveerimine"
+  },
+  {
+   "key": "humbleKeys.finishOwnedNote",
+   "en": "You already own this on Steam — activation will likely fail there.",
+   "tr": "Sul on see juba Steam'is olemas — aktiveerimine seal tõenäoliselt ebaõnnestub."
+  },
+  {
+   "key": "humbleKeys.giftConfirmAction",
+   "en": "Open Humble",
+   "tr": "Ava Humble"
+  },
+  {
+   "key": "humbleKeys.giftConfirmBody",
+   "en": "Anyone with this link can claim the key — once redeemed, it's gone for good. You'll finish gifting it on Humble's own site.",
+   "tr": "Igaüks, kellel on see link, saab võtme endale nõuda — kui see on kasutatud, on see jäädavalt läinud. Kingi lõpuleviimine toimub Humble enda saidil."
+  },
+  {
+   "key": "humbleKeys.giftConfirmTitle",
+   "en": "Gift this key?",
+   "tr": "Kas kinkida see võti?"
+  },
+  {
+   "key": "humbleKeys.giftOnHumble",
+   "en": "Gift on Humble",
+   "tr": "Kingi Humble's"
+  },
+  {
+   "key": "humbleKeys.giftedAnnotation",
+   "en": "Opened Humble gift page {{date}}",
+   "tr": "Humble kingituse leht avatud {{date}}"
+  },
+  {
+   "key": "humbleKeys.keyLoading",
+   "en": "Loading…",
+   "tr": "Laadimine"
+  },
+  {
+   "key": "humbleKeys.keyShownTitle",
+   "en": "Your key",
+   "tr": "Sinu võti"
+  },
+  {
+   "key": "humbleKeys.lastSynced",
+   "en": "Last synced {{time}} ago",
+   "tr": "Viimati sünkroonitud {{time}} tagasi"
+  },
+  {
+   "key": "humbleKeys.likelyOwnedOnSteam",
+   "en": "Likely owned on Steam",
+   "tr": "Tõenäoliselt juba olemas Steam'is"
+  },
+  {
+   "key": "humbleKeys.markRedeemed",
+   "en": "Mark as redeemed",
+   "tr": "Märgi kasutatuks"
+  },
+  {
+   "key": "humbleKeys.noDeadline",
+   "en": "No pick deadline available",
+   "tr": "Valiku tähtaeg pole saadaval"
+  },
+  {
+   "key": "humbleKeys.noExpiration",
+   "en": "No expiration",
+   "tr": "Aegumistähtaeg puudub"
+  },
+  {
+   "key": "humbleKeys.notTheSameGame",
+   "en": "Not the same game",
+   "tr": "Pole sama mäng"
+  },
+  {
+   "key": "humbleKeys.openSteam",
+   "en": "Open Steam",
+   "tr": "Ava Steam"
+  },
+  {
+   "key": "humbleKeys.ownedOnSteam",
+   "en": "Owned on Steam",
+   "tr": "Olemas Steam'is"
+  },
+  {
+   "key": "humbleKeys.redeemOnPlatform",
+   "en": "Redeem on {{platform}}",
+   "tr": "Kasuta platvormil {{platform}}"
+  },
+  {
+   "key": "humbleKeys.redeemedAnnotation",
+   "en": "Redeemed {{date}}",
+   "tr": "Kasutatud {{date}}"
+  },
+  {
+   "key": "humbleKeys.refresh",
+   "en": "Refresh Humble Keys",
+   "tr": "Värskenda Humble võtmeid"
+  },
+  {
+   "key": "humbleKeys.revealAmbiguousBody",
+   "en": "We couldn't confirm this finished — sync to check",
+   "tr": "Me ei suutnud kinnitada, et see lõppes — sünkroonimine kontrollib seda"
+  },
+  {
+   "key": "humbleKeys.revealConfirmAction",
+   "en": "Reveal key",
+   "tr": "Paljasta võti"
+  },
+  {
+   "key": "humbleKeys.revealConfirmBody",
+   "en": "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
+   "tr": "Paljastamine näitab tegelikku võtit ja eemaldab selle jäädavalt Kingitavatest varuvõtmetest. Kui sul seda mängu veel pole, veendu enne jätkamist, et see on tõesti nii — tagasivõtmist pole."
+  },
+  {
+   "key": "humbleKeys.revealConfirmTitle",
+   "en": "Reveal this key?",
+   "tr": "Kas paljastada see võti?"
+  },
+  {
+   "key": "humbleKeys.revealCooldownBody",
+   "en": "Temporarily unavailable — retry in {{N}}m",
+   "tr": "Ajutiselt pole saadaval — proovi uuesti {{N}} min pärast"
+  },
+  {
+   "key": "humbleKeys.revealDismiss",
+   "en": "Don't reveal yet",
+   "tr": "Ära paljasta veel"
+  },
+  {
+   "key": "humbleKeys.revealFailedBody",
+   "en": "Couldn't reveal this key — nothing was used up. You can try again.",
+   "tr": "Selle võtme paljastamine ebaõnnestus — midagi ei kulutatud. Võid uuesti proovida."
+  },
+  {
+   "key": "humbleKeys.revealRejectedBody",
+   "en": "Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.",
+   "tr": "Humble keeldus seda võtit paljastamast — see võib olla juba kasutatud või aegunud. Sünkrooni, et kontrollida selle praegust olekut."
+  },
+  {
+   "key": "humbleKeys.revealedAnnotation",
+   "en": "Revealed {{date}}",
+   "tr": "Paljastatud {{date}}"
+  },
+  {
+   "key": "humbleKeys.state.redeemed",
+   "en": "Redeemed",
+   "tr": "Lunastatud"
+  },
+  {
+   "key": "humbleKeys.state.revealed",
+   "en": "Revealed",
+   "tr": "Avatud"
+  },
+  {
+   "key": "humbleKeys.state.unpicked",
+   "en": "Unpicked",
+   "tr": "Valimata"
+  },
+  {
+   "key": "humbleKeys.state.unredeemable",
+   "en": "Expired",
+   "tr": "Aegunud"
+  },
+  {
+   "key": "humbleKeys.state.unrevealed",
+   "en": "Unrevealed",
+   "tr": "Avamata"
+  },
+  {
+   "key": "humbleKeys.syncError",
+   "en": "Couldn't refresh — showing data from {{time}}",
+   "tr": "Värskendamine ebaõnnestus — kuvatakse andmeid {{time}} eest"
+  },
+  {
+   "key": "humbleKeys.syncErrorPartial",
+   "en": "Couldn't finish refresh — showing the latest data available",
+   "tr": "Värskendamist ei õnnestunud lõpetada — kuvatakse uusimad saadaolevad andmed"
+  },
+  {
+   "key": "humbleKeys.syncNow",
+   "en": "Sync now",
+   "tr": "Sünkrooni kohe"
+  },
+  {
+   "key": "humbleKeys.syncToEnableClaiming",
+   "en": "Sync to enable claiming",
+   "tr": "Sünkroonimine lubab lunastamise"
+  },
+  {
+   "key": "humbleKeys.syncing",
+   "en": "Syncing… {{done}}/{{total}} orders",
+   "tr": "Sünkroonimine… {{done}}/{{total}} tellimust"
+  },
+  {
+   "key": "humbleKeys.title",
+   "en": "Humble Keys",
+   "tr": "Humble võtmed"
+  },
+  {
+   "key": "humbleKeys.tryAgain",
+   "en": "Try again",
+   "tr": "Proovi uuesti"
+  },
+  {
+   "key": "humbleKeys.undo",
+   "en": "Undo",
+   "tr": "Tühista"
+  },
+  {
+   "key": "humbleKeys.undoOwnershipOverride",
+   "en": "Undo — I do own this game",
+   "tr": "Tühista — mul on see mäng olemas"
+  },
+  {
+   "key": "humbleKeys.unpickedTitle",
+   "en": "{{title}} · games not picked",
+   "tr": "{{title}} · valimata mängud"
+  },
+  {
+   "key": "humbleKeys.urgencyDaysLeft",
+   "en": "{{N}} days left",
+   "tr": "{{N}} päeva jäänud"
+  },
+  {
+   "key": "humbleKeys.urgencyHoursLeft",
+   "en": "{{H}}h left",
+   "tr": "{{H}}h jäänud"
+  },
+  {
+   "key": "humbleKeys.urgencyOneDayLeft",
+   "en": "1 day left",
+   "tr": "1 päev jäänud"
+  },
+  {
+   "key": "info.refresh-rating",
+   "en": "Refresh rating",
+   "tr": "Värskenda hinnangut"
+  },
+  {
+   "key": "installFlows.diskSpaceFreeOfTotal",
+   "en": "{{free}} free of {{total}}",
+   "tr": "{{free}} vaba {{total}}-st"
+  },
+  {
+   "key": "installFlows.pathRejectedBodyImport",
+   "en": "GameLib couldn't import from that location. The source has to be a full folder path with no \"..\" steps in it. Pick the game's folder again.",
+   "tr": "GameLib ei saanud sellest asukohast importida. Allikas peab olema täielik kaustatee, milles pole \"..\" samme. Vali mängu kaust uuesti."
+  },
+  {
+   "key": "installFlows.pathRejectedBodyMove",
+   "en": "GameLib couldn't move this game there. The destination has to be a full folder path with no \"..\" steps in it. Pick the destination folder again.",
+   "tr": "GameLib ei saanud mängu sinna teisaldada. Sihtkoht peab olema täielik kaustatee, milles pole \"..\" samme. Vali sihtkaust uuesti."
+  },
+  {
+   "key": "installFlows.pathRejectedTitle",
+   "en": "Can't use that location",
+   "tr": "Seda asukohta ei saa kasutada"
+  },
+  {
+   "key": "library.filterPanel.chipHiddenIncluded",
+   "en": "Including hidden",
+   "tr": "Kaasa arvatud peidetud"
+  },
+  {
+   "key": "library.filterPanel.chipHiddenOnly",
+   "en": "Hidden only",
+   "tr": "Ainult peidetud"
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageHidden",
+   "en": "Hiding no store page",
+   "tr": "Peidab poelehe puudumisega"
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageOnly",
+   "en": "No store page only",
+   "tr": "Ainult ilma poelehata"
+  },
+  {
+   "key": "library.filterPanel.chipNonAvailableIncluded",
+   "en": "Including non-available",
+   "tr": "Kaasa arvatud mittesaadaolevad"
+  },
+  {
+   "key": "library.filterPanel.chipNonAvailableOnly",
+   "en": "Non-available only",
+   "tr": "Ainult mittesaadaolevad"
+  },
+  {
+   "key": "library.filterPanel.clearAll",
+   "en": "Clear all",
+   "tr": "Tühjenda kõik"
+  },
+  {
+   "key": "library.filterPanel.collections",
+   "en": "Collections",
+   "tr": "Kogud"
+  },
+  {
+   "key": "library.filterPanel.emptyAlphabetLetter",
+   "en": "Starting with \"{{letter}}\"",
+   "tr": "Algab tähega \"{{letter}}\""
+  },
+  {
+   "key": "library.filterPanel.emptyAlphabetNumber",
+   "en": "Starting with a number",
+   "tr": "Algab numbriga"
+  },
+  {
+   "key": "library.filterPanel.emptyBody",
+   "en": "No games match {{filters}}.",
+   "tr": "Ükski mäng ei vasta filtritele {{filters}}."
+  },
+  {
+   "key": "library.filterPanel.emptyClearAll",
+   "en": "Clear all filters",
+   "tr": "Tühjenda kõik filtrid"
+  },
+  {
+   "key": "library.filterPanel.emptyHeading",
+   "en": "No games match your filters",
+   "tr": "Ükski mäng ei vasta sinu filtritele"
+  },
+  {
+   "key": "library.filterPanel.groupSelectedCount",
+   "en": "{{selected}} selected",
+   "tr": "{{selected}} valitud"
+  },
+  {
+   "key": "library.filterPanel.manageCollections",
+   "en": "Manage collections",
+   "tr": "Halda kogusid"
+  },
+  {
+   "key": "library.filterPanel.moreFilters",
+   "en": "More filters",
+   "tr": "Rohkem filtreid"
+  },
+  {
+   "key": "library.filterPanel.newCollection",
+   "en": "+ New collection",
+   "tr": "+ Uus kogu"
+  },
+  {
+   "key": "library.filterPanel.noStorePage",
+   "en": "No store page",
+   "tr": "Poeleht puudub"
+  },
+  {
+   "key": "library.filterPanel.notYetChecked",
+   "en": "Not yet checked",
+   "tr": "Veel kontrollimata"
+  },
+  {
+   "key": "library.filterPanel.removeFilter",
+   "en": "Remove {{filterLabel}} filter",
+   "tr": "Eemalda filter {{filterLabel}}"
+  },
+  {
+   "key": "library.filterPanel.runnabilityGroup",
+   "en": "Runnability",
+   "tr": "Käivitatavus"
+  },
+  {
+   "key": "library.filterPanel.runsNatively",
+   "en": "Runs natively",
+   "tr": "Töötab natiivselt"
+  },
+  {
+   "key": "library.filterPanel.runsViaBottle",
+   "en": "Runs via bottle",
+   "tr": "Töötab bottle'i kaudu"
+  },
+  {
+   "key": "library.filterPanel.storeGroup",
+   "en": "Store",
+   "tr": "Pood"
+  },
+  {
+   "key": "library.filterPanel.viewAll",
+   "en": "All games",
+   "tr": "Kõik mängud"
+  },
+  {
+   "key": "library.filterPanel.viewFavourites",
+   "en": "Favourites",
+   "tr": "Lemmikud"
+  },
+  {
+   "key": "library.filterPanel.viewInstalled",
+   "en": "Installed",
+   "tr": "Paigaldatud"
+  },
+  {
+   "key": "library.filterPanel.viewRecentlyPlayed",
+   "en": "Recently played",
+   "tr": "Hiljuti mängitud"
+  },
+  {
+   "key": "library.filterPanel.wontRun",
+   "en": "Won't run",
+   "tr": "Ei käivitu"
+  },
+  {
+   "key": "library.header.filteredOfTotal",
+   "en": "{{shown}} of {{total}}",
+   "tr": "{{shown}} / {{total}}"
+  },
+  {
+   "key": "library.noStorePage",
+   "en": "No store page",
+   "tr": "Poeleht puudub"
+  },
+  {
+   "key": "library.no_no_store_page_games",
+   "en": "No games without a store page in your library",
+   "tr": "Sinu teegis pole ühtegi mängu ilma poeleheta"
+  },
+  {
+   "key": "library.steamSync.failedBody",
+   "en": "Your other libraries are still available. Try again, or check that Steam is reachable.",
+   "tr": "Teie teised teegid on endiselt saadaval. Proovige uuesti või kontrollige, kas Steam on kättesaadav."
+  },
+  {
+   "key": "library.steamSync.failedTitle",
+   "en": "Couldn't sync your Steam library",
+   "tr": "Sinu Steami teeki ei õnnestunud sünkida"
+  },
+  {
+   "key": "library.steamSync.retry",
+   "en": "Retry Steam sync",
+   "tr": "Proovi Steami sünki uuesti"
+  },
+  {
+   "key": "library.steamSync.signedOutAction",
+   "en": "Sign in to Steam",
+   "tr": "Logi Steami sisse"
+  },
+  {
+   "key": "library.steamSync.signedOutBody",
+   "en": "Sign in again to sync your Steam library. Your other libraries are still available.",
+   "tr": "Logi uuesti sisse, et sünkida oma Steami teeki. Sinu teised teegid on endiselt saadaval."
+  },
+  {
+   "key": "library.steamSync.signedOutTitle",
+   "en": "Your Steam sign-in expired",
+   "tr": "Sinu Steami sisselogimine aegus"
+  },
+  {
+   "key": "library.steamSync.syncing",
+   "en": "Syncing your Steam library…",
+   "tr": "Sinu Steami teegi sünkimine…"
+  },
+  {
+   "key": "library.storeOther",
+   "en": "Other",
+   "tr": "Muu"
+  },
+  {
+   "key": "login.connected",
+   "en": "Connected",
+   "tr": "Ühendatud"
+  },
+  {
+   "key": "login.humble_dialog_title",
+   "en": "Sign in to Humble Bundle",
+   "tr": "Logi sisse Humble Bundle'isse"
+  },
+  {
+   "key": "login.logoutFailedMessage",
+   "en": "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
+   "tr": "Sinu konto logiti sellest seadmest välja, kuid veebilehitseja seanssi ei õnnestunud täielikult tühjendada. Jagatud arvutis logi uuesti välja või kustuta selle saidi andmed oma veebilehitsejast, et tagada, et sinu seanss ei jää kättesaadavaks."
+  },
+  {
+   "key": "login.logoutFailedTitle",
+   "en": "Sign-out incomplete",
+   "tr": "Väljalogimine pole lõpetatud"
+  },
+  {
+   "key": "login.steamReconnect",
+   "en": "Sign-in expired — Reconnect",
+   "tr": "Sisselogimine aegunud — Ühenda uuesti"
+  },
+  {
+   "key": "login.steam_logout_failed_message",
+   "en": "Steam sign-out didn't finish in time. Please try again.",
+   "tr": "Steamist väljalogimine ei lõppenud õigeaegselt. Palun proovi uuesti."
+  },
+  {
+   "key": "login.steam_logout_failed_title",
+   "en": "Sign-out failed",
+   "tr": "Väljalogimine ebaõnnestus"
+  },
+  {
+   "key": "pathSelectionBox.saved",
+   "en": "Saved",
+   "tr": "Salvestatud"
+  },
+  {
+   "key": "pathSelectionBox.unsaved",
+   "en": "Not saved yet — press Enter",
+   "tr": "Veel salvestamata — vajutage Enter"
+  },
+  {
+   "key": "queue.label.failed",
+   "en": "Failed",
+   "tr": "Ebaõnnestus"
+  },
+  {
+   "key": "queue.label.retry",
+   "en": "Retry",
+   "tr": "Proovi uuesti"
+  },
+  {
+   "key": "redeemKey.alreadyOwned",
+   "en": "This key has already been redeemed — you already own this on Steam.",
+   "tr": "See võti on juba kasutatud — see mäng on juba sinu Steami kontol olemas."
+  },
+  {
+   "key": "redeemKey.error",
+   "en": "Couldn't reach Steam to redeem this key. Check your connection and try again.",
+   "tr": "Steamiga ei õnnestunud võtme aktiveerimiseks ühendust saada. Kontrolli internetiühendust ja proovi uuesti."
+  },
+  {
+   "key": "redeemKey.invalid",
+   "en": "This key doesn't look right. Double-check it and try again.",
+   "tr": "See võti ei tundu õige olevat. Kontrolli see üle ja proovi uuesti."
+  },
+  {
+   "key": "redeemKey.rateLimited",
+   "en": "Too many attempts — please wait a bit before trying again.",
+   "tr": "Liiga palju katseid — palun oota veidi ja proovi uuesti."
+  },
+  {
+   "key": "redeemKey.successNoPackage",
+   "en": "Key redeemed! Your Steam library has been updated.",
+   "tr": "Võti aktiveeritud! Sinu Steami teek on uuendatud."
+  },
+  {
+   "key": "redeemKey.successWithPackage",
+   "en": "Key redeemed! {{packageName}} has been added to your Steam library.",
+   "tr": "Võti aktiveeritud! {{packageName}} on lisatud sinu Steami teeki."
+  },
+  {
+   "key": "redeemSteamKey.placeholder",
+   "en": "Enter your Steam key",
+   "tr": "Sisesta oma Steami võti"
+  },
+  {
+   "key": "redeemSteamKey.redeem",
+   "en": "Redeem",
+   "tr": "Aktiveeri"
+  },
+  {
+   "key": "redeemSteamKey.redeeming",
+   "en": "Redeeming...",
+   "tr": "Aktiveerimine..."
+  },
+  {
+   "key": "redeemSteamKey.title",
+   "en": "Redeem a Steam key",
+   "tr": "Lunasta Steami võti"
+  },
+  {
+   "key": "redeemSteamKey.viewInLibrary",
+   "en": "View in library",
+   "tr": "Vaata teegis"
+  },
+  {
+   "key": "setting.eosOverlay.unavailable",
+   "en": "The EOS Overlay is unavailable in this build",
+   "tr": "EOS Overlay pole selles versioonis saadaval"
+  },
+  {
+   "key": "setting.eosOverlay.unavailableDetail",
+   "en": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.",
+   "tr": "EOS Overlay tugi on lükatud edasi järgmisesse versiooni (D-03, Phase 34.6) ning seda ei saa selles versioonis paigaldada, uuendada ega eemaldada."
+  },
+  {
+   "key": "settings.eosOverlayInstallConfirmBody",
+   "en": "Install the EOS Overlay now?",
+   "tr": "Paigaldada EOS Overlay kohe?"
+  },
+  {
+   "key": "settings.eosOverlayInstallConfirmTitle",
+   "en": "Confirm overlay install",
+   "tr": "Kinnita overlay paigaldamine"
+  },
+  {
+   "key": "settings.eosOverlayUpdateConfirmBody",
+   "en": "Update the EOS Overlay to the latest version?",
+   "tr": "Uuendada EOS Overlay uusimale versioonile?"
+  },
+  {
+   "key": "settings.eosOverlayUpdateConfirmTitle",
+   "en": "Confirm overlay update",
+   "tr": "Kinnita overlay uuendamine"
+  },
+  {
+   "key": "settings.framelessWindowDescription",
+   "en": "Use frameless window",
+   "tr": "Kasuta raamita akent"
+  },
+  {
+   "key": "settings.gamepadInitialRepeatDelay",
+   "en": "Gamepad input initial repeat delay",
+   "tr": "Mängupuldi sisendi esmase kordamise viivitus"
+  },
+  {
+   "key": "settings.gamepadRepeatFrequency",
+   "en": "Gamepad input repeat frequency",
+   "tr": "Mängupuldi sisendi kordamise sagedus"
+  },
+  {
+   "key": "settings.gamescopeFsr",
+   "en": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+   "tr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+  },
+  {
+   "key": "settings.gamescopeUpscaleMethod",
+   "en": "Upscale Method",
+   "tr": "Suurendamise meetod"
+  },
+  {
+   "key": "settings.gamescopeWindowType",
+   "en": "Window Type",
+   "tr": "Akna tüüp"
+  },
+  {
+   "key": "settings.loginBackground",
+   "en": "Manage Accounts background",
+   "tr": "Kontode haldamise taustapilt"
+  },
+  {
+   "key": "settings.loginBackgroundDialogTitle",
+   "en": "Select a background image",
+   "tr": "Vali taustapilt"
+  },
+  {
+   "key": "settings.loginBackgroundFilterName",
+   "en": "Images",
+   "tr": "Pildid"
+  },
+  {
+   "key": "settings.loginBackgroundHelp",
+   "en": "Image shown behind the Manage Accounts screen. Clear the field to go back to the bundled artwork. PNG, JPEG, WebP, AVIF and GIF are supported.",
+   "tr": "Pilt, mis kuvatakse kontode haldamise ekraani taga. Tühjendage väli, et naasta kaasasoleva pildi juurde. Toetatud on PNG, JPEG, WebP, AVIF ja GIF."
+  },
+  {
+   "key": "settings.steamgriddb.apikey.unavailable",
+   "en": "Unavailable on this build",
+   "tr": "Pole selle versiooniga saadaval"
+  },
+  {
+   "key": "settings.steamgriddb.help.unavailableDetail",
+   "en": "SteamGridDB artwork support is deferred to a future release (D-03, Phase 34.6) and cannot be configured from this build.",
+   "tr": "SteamGridDB kujunduse tugi lisatakse tulevases versioonis (D-03, faas 34.6) ning seda ei saa selles versioonis seadistada."
+  },
+  {
+   "key": "settings.wineDefaultLabel",
+   "en": "Wine Default",
+   "tr": "Wine vaikeversioon"
+  },
+  {
+   "key": "settings.wineFlatpakPath",
+   "en": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+   "tr": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+  },
+  {
+   "key": "sidebar.redeemSteamKey",
+   "en": "Redeem a Steam key",
+   "tr": "Lunasta Steami võti"
+  },
+  {
+   "key": "sideload.filter.all",
+   "en": "All",
+   "tr": "Kõik"
+  },
+  {
+   "key": "sideload.filter.appExtension",
+   "en": "App",
+   "tr": "Rakendus"
+  },
+  {
+   "key": "sideload.filter.appImageExtension",
+   "en": "AppImage",
+   "tr": "AppImage"
+  },
+  {
+   "key": "sideload.filter.appImages",
+   "en": "AppImages",
+   "tr": "AppImage failid"
+  },
+  {
+   "key": "sideload.filter.apps",
+   "en": "Apps",
+   "tr": "Rakendused"
+  },
+  {
+   "key": "sideload.filter.executables",
+   "en": "Executables",
+   "tr": "Käivitatavad failid"
+  },
+  {
+   "key": "sideload.filter.images",
+   "en": "Images",
+   "tr": "Pildid"
+  },
+  {
+   "key": "sideload.filter.otherBinaries",
+   "en": "Other Binaries",
+   "tr": "Muud binaarfailid"
+  },
+  {
+   "key": "sideload.filter.scripts",
+   "en": "Scripts",
+   "tr": "Skriptid"
+  },
+  {
+   "key": "sideload.import-hint.content",
+   "en": "Do NOT use this feature for that.<br />Instead, <3>log into</3> the store, look for the game in your library, open the installation dialog, and click the &quot;{{doorLabel}}&quot; button",
+   "tr": "Ärge kasutage selleks seda funktsiooni.<br />Selle asemel <3>logige sisse</3> poodi, otsige mäng oma varamust üles, avage paigaldusaken ja klikkige nupul &quot;{{doorLabel}}&quot;"
+  },
+  {
+   "key": "status.checkingSteamInstallOptions",
+   "en": "Checking install options…",
+   "tr": "Paigaldusvalikute kontrollimine…"
+  },
+  {
+   "key": "steam.bottle.statusPollTimeout",
+   "en": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.",
+   "tr": "GameLib lõpetas Steami pudeli seadistuse kohta teadete ootamise. See võib siiski töötada — kontrolli, kas Steami installiakent on näha, ja proovi siis uuesti."
+  },
+  {
+   "key": "steam.download.error.connectionDroppedV2",
+   "en": "Steam servers dropped the connection.",
+   "tr": "Steami serverid katkestasid ühenduse."
+  },
+  {
+   "key": "steam.download.error.decodeFailed",
+   "en": "Downloaded game data could not be unpacked. This is not a network problem.",
+   "tr": "Allalaaditud mänguandmeid ei õnnestunud lahti pakkida. See ei ole võrguprobleem."
+  },
+  {
+   "key": "steam.download.error.genericV2",
+   "en": "The Steam download failed.",
+   "tr": "Steami allalaadimine ebaõnnestus."
+  },
+  {
+   "key": "steam.download.error.notSignedIn",
+   "en": "You are not signed in to Steam, so this download could not start.",
+   "tr": "Sa ei ole Steami sisse loginud, seega ei saanud see allalaadimine alata."
+  },
+  {
+   "key": "steam.install.bottleNameReadonlyHelper",
+   "en": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
+   "tr": "GameLib haldab Steami jaoks ühte jagatud CrossOver pudelit. Iga mängu jaoks eraldi pudeli nimetamine pole veel toetatud."
+  },
+  {
+   "key": "steam.install.contentLightNotice",
+   "en": "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib.",
+   "tr": "See paigaldatakse Steami enda kliendi kaudu, seega pole siin midagi valida. Lülita seadetes sisse Steami natiivsed installid, et hallata paigalduskohta ja Windowsi ühilduvust GameLibist."
+  },
+  {
+   "key": "steam.install.contentLightSingleLibraryNotice",
+   "en": "There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it.",
+   "tr": "Selles süsteemis on ainult üks Steami teek, seega pole siin midagi valida — GameLib paigaldab selle mängu sellesse."
+  },
+  {
+   "key": "steam.install.forceWindowsHelp",
+   "en": "This game has a native macOS version, but you can install the Windows version instead through a Wine bottle — useful if the native build is missing features or performs worse.",
+   "tr": "Sellel mängul on natiivne macOS versioon, kuid selle asemel saad paigaldada Windowsi versiooni Wine pudeli kaudu — kasulik, kui natiivsel versioonil puuduvad funktsioonid või see töötab halvemini."
+  },
+  {
+   "key": "steam.install.libraryFullNotice",
+   "en": "Not enough space in your Steam library — choose another below or free up space.",
+   "tr": "Sinu Steami teegis pole piisavalt ruumi — vali allpool teine või vabasta ruumi."
+  },
+  {
+   "key": "steam.install.libraryFullOnlyNotice",
+   "en": "Not enough space in your Steam library. Free up space, then try again.",
+   "tr": "Sinu Steami teegis pole piisavalt ruumi. Vabasta ruumi ja proovi siis uuesti."
+  },
+  {
+   "key": "steam.install.libraryMissingNotice",
+   "en": "Your Steam library couldn't be reached — choose another below.",
+   "tr": "Sinu Steami teeki ei õnnestunud kätte saada — vali allpool teine."
+  },
+  {
+   "key": "steam.install.libraryMissingOnlyNotice",
+   "en": "Your Steam library couldn't be reached. Reconnect the drive, then try again.",
+   "tr": "Sinu Steami teeki ei õnnestunud kätte saada. Ühenda draiv uuesti ja proovi siis uuesti."
+  },
+  {
+   "key": "steam.install.libraryPickerLabel",
+   "en": "Choose Steam library",
+   "tr": "Vali Steami teek"
+  },
+  {
+   "key": "steam.install.libraryPrimarySuffix",
+   "en": "default",
+   "tr": "vaikimisi"
+  },
+  {
+   "key": "steam.install.noCrossoverEngine",
+   "en": "No CrossOver installation was found. GameLib will set one up when the install starts.",
+   "tr": "CrossOver paigaldust ei leitud. GameLib seadistab selle paigaldamise alguses."
+  },
+  {
+   "key": "steam.install.sharedBottleNotice",
+   "en": "The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.",
+   "tr": "Siin valitud wine versiooni kasutatakse iga Steami mängu jaoks, mis vajab pudelit — mitte ainult selle jaoks. Selle hilisem muutmine mõjutab ka nende mängude tööd."
+  },
+  {
+   "key": "steam.install.withOptionsLabel",
+   "en": "Install with options…",
+   "tr": "Paigalda valikutega…"
+  },
+  {
+   "key": "steam.resumeAvailable.notify",
+   "en": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+   "tr": "Katkestatud paigaldus mängule {{game}} on valmis jätkamiseks — jätkamiseks klõpsa „Paigalda“"
+  },
+  {
+   "key": "steam.status.resumeInstall",
+   "en": "Resume Install",
+   "tr": "Jätka paigaldamist"
+  },
+  {
+   "key": "steam.status.resumeInstallHint",
+   "en": "Install incomplete — resume the download in GameLib",
+   "tr": "Paigaldamine pooleli — jätkake allalaadimist GameLib'is"
+  },
+  {
+   "key": "steam.uninstall.removeAllCopiesConfirmMessage",
+   "en": "This removes every installed copy of this game across all install locations. This cannot be undone.",
+   "tr": "See eemaldab kõik selle mängu paigaldatud koopiad kõigist paigalduskohtadest. Seda ei saa tagasi võtta."
+  },
+  {
+   "key": "steam.uninstall.removeAllCopiesConfirmTitle",
+   "en": "Remove all copies?",
+   "tr": "Eemaldada kõik koopiad?"
+  },
+  {
+   "key": "steam.uninstall.removeAllCopiesLabel",
+   "en": "Remove all copies…",
+   "tr": "Eemalda kõik koopiad…"
+  },
+  {
+   "key": "steamgriddb.error.unavailable",
+   "en": "SteamGridDB artwork is unavailable on this build",
+   "tr": "SteamGridDB kujundus pole selle versiooniga saadaval"
+  },
+  {
+   "key": "themeSelector.cyberSpaceOasis",
+   "en": "Cyberspace Oasis",
+   "tr": "Cyberspace Oaas"
+  },
+  {
+   "key": "themeSelector.cyberSpaceOasisAlt",
+   "en": "Cyberspace Oasis Classic",
+   "tr": "Cyberspace Oaas Klassikaline"
+  },
+  {
+   "key": "themeSelector.dracula",
+   "en": "Dracula",
+   "tr": "Dracula"
+  },
+  {
+   "key": "themeSelector.gruvboxDark",
+   "en": "Gruvbox Dark",
+   "tr": "Gruvbox Dark"
+  },
+  {
+   "key": "themeSelector.highContrast",
+   "en": "High Contrast",
+   "tr": "Suur kontrastsus"
+  },
+  {
+   "key": "themeSelector.marine",
+   "en": "Marine",
+   "tr": "Marine"
+  },
+  {
+   "key": "themeSelector.marineClassic",
+   "en": "Marine Classic",
+   "tr": "Marine Klassikaline"
+  },
+  {
+   "key": "themeSelector.midnightMirage",
+   "en": "Midnight Mirage",
+   "tr": "Midnight Mirage"
+  },
+  {
+   "key": "themeSelector.nordDark",
+   "en": "Nord Dark",
+   "tr": "Nord Dark"
+  },
+  {
+   "key": "themeSelector.nordLight",
+   "en": "Nord Light",
+   "tr": "Nord Light"
+  },
+  {
+   "key": "themeSelector.oldSchool",
+   "en": "Old School GameLib",
+   "tr": "Vana Kooli GameLib"
+  },
+  {
+   "key": "themeSelector.sweet",
+   "en": "Sweet",
+   "tr": "Sweet"
+  },
+  {
+   "key": "themeSelector.zombie",
+   "en": "Zombie",
+   "tr": "Zombie"
+  },
+  {
+   "key": "themeSelector.zombieClassic",
+   "en": "Zombie Classic",
+   "tr": "Zombie Klassikaline"
+  },
+  {
+   "key": "webview.embedPlaceholder.message",
+   "en": "Paused while a window is open",
+   "tr": "Peatatud, kuni aken on avatud"
+  },
+  {
+   "key": "webview.login.blocked.body",
+   "en": "Your sign-in cannot be completed yet: {{channel}} is not ported to this build. This lands in Phase 34.5.",
+   "tr": "Sisselogimist ei saa veel lõpetada: {{channel}} pole sellesse versiooni üle kantud. See lisandub faasis 34.5."
+  },
+  {
+   "key": "webview.login.blocked.heading",
+   "en": "Signing in to {{runner}} is not wired up yet",
+   "tr": "Sisselogimine teenusesse {{runner}} pole veel ühendatud"
+  },
+  {
+   "key": "webview.login.blocked.headingGeneric",
+   "en": "Signing in is not wired up yet",
+   "tr": "Sisselogimine pole veel ühendatud"
+  },
+  {
+   "key": "webview.login.humble.body",
+   "en": "A sign-in window has opened. Complete sign-in there — this page updates automatically once it succeeds.",
+   "tr": "Sisselogimisaken on avatud. Lõpeta sisselogimine seal — see leht uueneb automaatselt pärast õnnestumist."
+  },
+  {
+   "key": "webview.login.humble.error.window_unreachable",
+   "en": "the Humble sign-in window closed or could not be reached",
+   "tr": "Humble Bundle'i sisselogimisaken sulgus või polnud ligipääsetav"
+  },
+  {
+   "key": "webview.login.humble.heading",
+   "en": "Signing in to Humble Bundle",
+   "tr": "Sisselogimine Humble Bundle'isse"
+  },
+  {
+   "key": "webview.login.oauth.awaiting.body",
+   "en": "A sign-in window has opened. Complete sign-in there.",
+   "tr": "Sisselogimisaken on avatud. Lõpeta sisselogimine seal."
+  },
+  {
+   "key": "webview.login.oauth.awaiting.heading",
+   "en": "Signing in to {{runner}}",
+   "tr": "Sisselogimine teenusesse {{runner}}"
+  },
+  {
+   "key": "webview.login.oauth.awaiting.headingGeneric",
+   "en": "Signing in",
+   "tr": "Sisselogimine"
+  },
+  {
+   "key": "webview.login.oauth.blocked.body",
+   "en": "Your sign-in was captured successfully, but the {{channel}} backend channel is not ported to this build yet. This lands in Phase 34.5.",
+   "tr": "Sinu sisselogimine salvestati edukalt, kuid {{channel}} taustakanal pole sellesse versiooni üle kantud. See lisandub faasis 34.5."
+  },
+  {
+   "key": "webview.login.oauth.blocked.heading",
+   "en": "Signing in to {{runner}} was captured, but can't finish yet",
+   "tr": "Sisselogimine teenusesse {{runner}} salvestati, kuid ei saa veel lõpetada"
+  },
+  {
+   "key": "webview.login.oauth.blocked.headingGeneric",
+   "en": "Sign-in was captured, but can't finish yet",
+   "tr": "Sisselogimine salvestati, kuid ei saa veel lõpetada"
+  },
+  {
+   "key": "webview.login.oauth.cancelled.body",
+   "en": "The sign-in window was closed before completing. You can try again.",
+   "tr": "Sisselogimisaken suleti enne lõpetamist. Võid uuesti proovida."
+  },
+  {
+   "key": "webview.login.oauth.cancelled.heading",
+   "en": "Signing in to {{runner}} was cancelled",
+   "tr": "Sisselogimine teenusesse {{runner}} tühistati"
+  },
+  {
+   "key": "webview.login.oauth.cancelled.headingGeneric",
+   "en": "Sign-in was cancelled",
+   "tr": "Sisselogimine tühistati"
+  },
+  {
+   "key": "webview.login.oauth.error.body",
+   "en": "Something went wrong while signing in: {{message}}",
+   "tr": "Sisselogimisel läks midagi valesti: {{message}}"
+  },
+  {
+   "key": "webview.login.oauth.error.heading",
+   "en": "Signing in to {{runner}} failed",
+   "tr": "Sisselogimine teenusesse {{runner}} ebaõnnestus"
+  },
+  {
+   "key": "webview.login.oauth.error.headingGeneric",
+   "en": "Sign-in failed",
+   "tr": "Sisselogimine ebaõnnestus"
+  },
+  {
+   "key": "webview.login.oauth.finalizing.body",
+   "en": "Sign-in captured. Completing the exchange with the store — this can take a few seconds.",
+   "tr": "Sisselogimine salvestatud. Vahetuse lõpuleviimine poega — see võib võtta paar sekundit."
+  },
+  {
+   "key": "webview.login.oauth.finalizing.heading",
+   "en": "Finalizing sign-in with {{runner}}…",
+   "tr": "Sisselogimise lõpuleviimine teenusega {{runner}}…"
+  },
+  {
+   "key": "webview.login.oauth.finalizing.headingGeneric",
+   "en": "Finalizing sign-in…",
+   "tr": "Sisselogimise lõpuleviimine…"
+  },
+  {
+   "key": "webview.login.oauth.genericChannel",
+   "en": "the sign-in channel",
+   "tr": "sisselogimiskanal"
+  },
+  {
+   "key": "webview.login.oauth.preparing.body",
+   "en": "The store's sign-in window is being prepared and will open shortly.",
+   "tr": "Poe sisselogimisakent valmistatakse ette ja see avaneb varsti."
+  },
+  {
+   "key": "webview.login.oauth.preparing.heading",
+   "en": "Preparing {{runner}} sign-in…",
+   "tr": "Sisselogimise ettevalmistamine teenusega {{runner}}…"
+  },
+  {
+   "key": "webview.login.oauth.preparing.headingGeneric",
+   "en": "Preparing sign-in…",
+   "tr": "Sisselogimise ettevalmistamine…"
+  },
+  {
+   "key": "webview.login.oauth.retry",
+   "en": "Retry",
+   "tr": "Proovi uuesti"
+  },
+  {
+   "key": "webview.login.oauth.timeout.body",
+   "en": "The sign-in window took too long to complete. You can try again.",
+   "tr": "Sisselogimisaken võttis lõpuleviimiseks liiga kaua aega. Võid uuesti proovida."
+  },
+  {
+   "key": "webview.login.oauth.timeout.heading",
+   "en": "Signing in to {{runner}} timed out",
+   "tr": "Sisselogimine {{runner}} kontole aegus"
+  },
+  {
+   "key": "webview.login.oauth.timeout.headingGeneric",
+   "en": "Sign-in timed out",
+   "tr": "Sisselogimine aegus"
+  },
+  {
+   "key": "webview.storeEmbedControls.hostLabel",
+   "en": "Currently viewing {{host}}",
+   "tr": "Praegu vaatad {{host}}"
+  },
+  {
+   "key": "webview.unavailable.epic.body",
+   "en": "GameLib doesn't yet embed Epic Store pages in-app.",
+   "tr": "GameLib ei kuva veel Epic Store lehti rakenduse sees."
+  },
+  {
+   "key": "webview.unavailable.epic.heading",
+   "en": "Epic Store browsing isn't available in-app yet",
+   "tr": "Epic Store sirvimine pole rakenduses veel saadaval"
+  },
+  {
+   "key": "webview.unavailable.next-step",
+   "en": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+   "tr": "See on eraldi tulevase töö nimekirjas — praegu kasuta allolevat nuppu, et avada see hoopis oma süsteemi veebilehitsejas."
+  },
+  {
+   "key": "webview.unavailable.open-in-browser",
+   "en": "Open in browser",
+   "tr": "Ava veebilehitsejas"
+  },
+  {
+   "key": "webview.unavailable.platform.body",
+   "en": "GameLib's in-app store and wiki browsing is available on macOS. It isn't available on this platform yet.",
+   "tr": "GameLibi rakendusesisene poe ja wiki sirvimine on saadaval macOS-il. Sellel platvormil pole see veel saadaval."
+  },
+  {
+   "key": "webview.unavailable.platform.heading",
+   "en": "In-app store and wiki browsing isn't available on this platform yet",
+   "tr": "Rakendusesisene poe ja wiki sirvimine pole sellel platvormil veel saadaval"
+  },
+  {
+   "key": "winetricks.unavailable",
+   "en": "Winetricks component management is unavailable on this build",
+   "tr": "Winetricks komponentide haldamine pole selles versioonis saadaval"
+  },
+  {
+   "key": "winetricks.unavailableDetail",
+   "en": "Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build.",
+   "tr": "Winetricks tugi on lükatud edasi järgmisesse väljalaskesse (D-03, faas 34.6) ja seda ei saa selles versioonis loetleda ega paigaldada."
+  }
+ ]
+}

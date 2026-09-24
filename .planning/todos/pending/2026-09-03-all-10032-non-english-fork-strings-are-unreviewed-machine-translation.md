@@ -75,3 +75,30 @@ and
 `.planning/todos/completed/2026-09-02-46-locales-have-zero-gamelib-json-fork-string-coverage.md`,
 both closed 2026-09-03. Both state in writing that this residue survives their closure with **no
 owner**.
+
+## Automated audit — 2026-09-25 (quick `260925-7zf`) — this todo stays OPEN
+
+The "cheap first step" above was run as a **second-model review**, not a human review. Each of the
+8 relaxed-glossary locales (`et fi hu hr sl da nb_NO sv`) was reviewed row by row by an
+independent `opus` reviewer. That covered 2,240 rows: **2,015 ok, 213 minor, 12 major, 0
+critical**, with placeholders and tags intact everywhere. A deterministic structural pass was also
+run over all 48 locales. Report:
+`.planning/quick/260925-7zf-automated-mt-quality-audit-of-gamelib-js/260925-7zf-REPORT.md`.
+
+- The line **"No systematic check of translation QUALITY has been run at any point" is no longer
+  true.** One model-based check has run, over 8 of 48 locales.
+- The line **"48 of 48 locales reviewed" is STILL FALSE.** A model reviewing a model shares its
+  blind spots. Every reviewer declared non-native limits on register, and none of them saw the
+  UI. Nothing in `public/locales/` was changed.
+- The relaxed brand-survival check did **not** turn out to hide a cluster of false passes. Brand
+  inflection in these 8 locales is mostly correct. The brand-category minor findings are
+  *missing* inflection or Hungarian hyphenation, not wrong brands.
+- The valuable findings are **systemic**, meaning the same key fails across locales, which a
+  per-language human review would be slow to spot. They are filed as two follow-ups:
+  `2026-09-25-i18n-source-strings-defeat-translation-ambiguous-chip-minute-abbrev-no-plurals.md`
+  (`ready: code`, source fixes first) and `2026-09-25-refill-systemic-mt-defects-found-by-260925-7zf.md`
+  (`ready: human`, needs the API key). The headline follow-up is that "Giftable spares" is left in
+  English in `activateConfirmBody` in **21 of 48** locales.
+
+What remains here: human review, via the still-deferred Weblate path or a speaker's spot check.
+40 locales have had no quality check of any kind.

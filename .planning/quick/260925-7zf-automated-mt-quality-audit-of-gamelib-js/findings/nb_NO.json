@@ -1,0 +1,135 @@
+{
+  "locale": "nb_NO",
+  "reviewer_model": "opus",
+  "rows_reviewed": 280,
+  "counts": {
+    "ok": 268,
+    "minor": 11,
+    "major": 1,
+    "critical": 0
+  },
+  "findings": [
+    {
+      "key": "humbleKeys.activateConfirmBody",
+      "severity": "major",
+      "category": "terminology",
+      "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+      "tr": "Dette avslører nøkkelen — og fjerner den for godt fra Giftable-reservene — og løser den inn på Steam-kontoen din. Dette kan ikke angres.",
+      "back_translation": "This reveals the key and removes it for good from the Giftable reserves, and redeems it on your Steam account. This cannot be undone.",
+      "issue": "Refers to the section as 'Giftable-reservene' (English name left in), while every other row names the same section 'Kan gis bort'. A user looking for the named section will not find it.",
+      "suggested": "Dette avslører nøkkelen — og fjerner den for godt fra «Kan gis bort» — og løser den inn på Steam-kontoen din. Dette kan ikke angres."
+    },
+    {
+      "key": "humbleKeys.c2Body",
+      "severity": "minor",
+      "category": "register",
+      "en": "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+      "tr": "Denne nøkkelen er trygg i Kan gis bort — hvis du avslører den her, forsvinner muligheten til å gi den bort. Gå til Kan gis bort i stedet.",
+      "back_translation": "This key is safe in Can-be-given-away — if you reveal it here, the ability to give it away disappears. Go to Can-be-given-away instead.",
+      "issue": "Section name 'Kan gis bort' used as a bare noun phrase in running text reads as broken grammar; mark it as a name (quotes/guillemets).",
+      "suggested": "Denne nøkkelen er trygg i «Kan gis bort» — hvis du avslører den her, mister du muligheten til å gi den bort. Gå til «Kan gis bort» i stedet."
+    },
+    {
+      "key": "humbleKeys.claimWizardTitle",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Claim this key",
+      "tr": "Innløs denne nøkkelen",
+      "back_translation": "Redeem this key",
+      "issue": "'Claim' (taking the key from Humble) and 'redeem' (activating on Steam) are distinct steps in this flow, but both are rendered 'innløs'. Same in syncToEnableClaiming and giftConfirmBody. Low confusion risk, but the distinction is lost.",
+      "suggested": "Hent denne nøkkelen"
+    },
+    {
+      "key": "humbleKeys.cooldown",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Temporarily unavailable — retry in {{minutes}}m",
+      "tr": "Midlertidig utilgjengelig — prøv igjen om {{minutes}}m",
+      "back_translation": "Temporarily unavailable — try again in {{minutes}}m",
+      "issue": "'m' is metres in Norwegian; the minute abbreviation is 'min'.",
+      "suggested": "Midlertidig utilgjengelig — prøv igjen om {{minutes}} min"
+    },
+    {
+      "key": "humbleKeys.revealCooldownBody",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Temporarily unavailable — retry in {{N}}m",
+      "tr": "Midlertidig utilgjengelig — prøv igjen om {{N}}m",
+      "back_translation": "Temporarily unavailable — try again in {{N}}m",
+      "issue": "Same as cooldown: 'm' should be 'min'.",
+      "suggested": "Midlertidig utilgjengelig — prøv igjen om {{N}} min"
+    },
+    {
+      "key": "humbleKeys.lastSynced",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Last synced {{time}} ago",
+      "tr": "Sist synkronisert {{time}} siden",
+      "back_translation": "Last synced {{time}} ago",
+      "issue": "Norwegian needs 'for ... siden'. Without 'for', '5 minutter siden' is ungrammatical.",
+      "suggested": "Sist synkronisert for {{time}} siden"
+    },
+    {
+      "key": "library.filterPanel.runsViaBottle",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Runs via bottle",
+      "tr": "Kjører via bottle",
+      "back_translation": "Runs via bottle",
+      "issue": "'bottle' is left in English here, but elsewhere it is translated 'flaske' (Steam-flasken, CrossOver-flaske, Wine-flaske).",
+      "suggested": "Kjører via flaske"
+    },
+    {
+      "key": "sideload.import-hint.content",
+      "severity": "minor",
+      "category": "placeholder",
+      "en": "Do NOT use this feature for that.<br />Instead, <3>log into</3> the store, look for the game in your library, open the installation dialog, and click the &quot;{{doorLabel}}&quot; button",
+      "tr": "IKKE bruk denne funksjonen til det.<br />Logg i stedet <3>inn på</3> butikken, let etter spillet i biblioteket ditt, åpne installasjonsdialogen og klikk på knappen &quot;{{doorLabel}}&quot;",
+      "back_translation": "Do NOT use this feature for that. Instead log <link>in to</link> the store, ...",
+      "issue": "Tags are preserved, but the <3> link now wraps only 'inn på' and splits the verb 'logg inn', so the linked text is a fragment. Move the tag to wrap the whole phrase.",
+      "suggested": "IKKE bruk denne funksjonen til det.<br /><3>Logg inn på</3> butikken i stedet, let etter spillet i biblioteket ditt, åpne installasjonsdialogen og klikk på knappen &quot;{{doorLabel}}&quot;"
+    },
+    {
+      "key": "steam.bottle.statusPollTimeout",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.",
+      "tr": "GameLib fikk ikke lenger svar om oppsettet av Steam-flasken. Den kan fortsatt kjøre — se etter et Steam-installasjonsvindu, og prøv deretter igjen.",
+      "back_translation": "... about the setup of the Steam bottle. It (the bottle) may still be running ...",
+      "issue": "'Den' agrees with 'flasken', so it says the bottle may still be running. The English means the setup ('oppsettet', neuter) may still be in progress.",
+      "suggested": "GameLib fikk ikke lenger svar om oppsettet av Steam-flasken. Det kan fortsatt pågå — se etter et Steam-installasjonsvindu, og prøv deretter igjen."
+    },
+    {
+      "key": "themeSelector.oldSchool",
+      "severity": "minor",
+      "category": "register",
+      "en": "Old School GameLib",
+      "tr": "Gammeldags GameLib",
+      "back_translation": "Old-fashioned GameLib",
+      "issue": "The other theme names stay in English. 'Gammeldags' means old-fashioned or outdated and loses the nostalgic sense of 'Old School'.",
+      "suggested": "Old School GameLib"
+    },
+    {
+      "key": "winetricks.unavailable",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Winetricks component management is unavailable on this build",
+      "tr": "Håndtering av Winetricks-komponenter er ikke tilgjengelig i dette bygget",
+      "back_translation": "Winetricks component management is not available in this build",
+      "issue": "'build' is translated three ways across the file: 'versjon' (most rows), 'utgave' (EOS rows) and 'bygget' (Winetricks rows). Pick one term, most likely 'versjon'.",
+      "suggested": "Håndtering av Winetricks-komponenter er ikke tilgjengelig i denne versjonen"
+    },
+    {
+      "key": "app.routeError",
+      "severity": "minor",
+      "category": "register",
+      "en": "Something went wrong: {{detail}}",
+      "tr": "Noe gikk feil: {{detail}}",
+      "back_translation": "Something went wrong: {{detail}}",
+      "issue": "'Noe gikk feil' is less idiomatic than the standard 'Noe gikk galt', which the file itself uses in webview.login.oauth.error.body.",
+      "suggested": "Noe gikk galt: {{detail}}"
+    }
+  ],
+  "terminology_notes": "Consistent: Sign in = Logg inn; Retry = Prøv igjen; library = bibliotek; store = butikk; bottle = flaske (except runsViaBottle); Giftable spares = 'Kan gis bort' (except activateConfirmBody). Redeem uses both 'innløse' (humbleKeys) and 'løse inn' (redeemKey/redeemSteamKey). Both are correct Bokmål, but one should be chosen. 'build' is split across versjon/utgave/bygget. The ellipsis is written both with a preceding space ('Aktiverer på Steam …', 'Løser inn …') and without ('Laster…', 'Synkroniserer…'). Språkrådet allows the spaced form, but the file should pick one. A → Å / Å → A for the sort labels is a correct Norwegian localisation. No Danish or Nynorsk forms were found. Brands and placeholders are intact in all rows, and brand genitives (Steams, Humbles, GameLibs) are correct.",
+  "overall": "A high-quality Bokmål translation: all placeholders and tags are preserved, brands are handled and inflected correctly, and the register fits software UI. The one major issue is the English section name 'Giftable' left in activateConfirmBody, which clashes with 'Kan gis bort' everywhere else. The rest are small consistency and grammar fixes ('for ... siden', 'min' vs 'm', build/bottle terms). Confidence limit: I reviewed without seeing the rendered UI, so how other screens are named (e.g. 'Manage Accounts', the Install button label) and the claim-vs-redeem distinction were judged from key names only."
+}

@@ -1,0 +1,335 @@
+{
+ "locale": "sv",
+ "reviewer_model": "opus",
+ "rows_reviewed": 280,
+ "counts": {
+  "ok": 248,
+  "minor": 31,
+  "major": 1,
+  "critical": 0
+ },
+ "findings": [
+  {
+   "key": "box.error.install.stalled",
+   "severity": "minor",
+   "category": "meaning",
+   "en": "No download progress for {{minutes}} minutes — the install was stopped",
+   "tr": "Ingen nedladdningsförändring på {{minutes}} minuter — installationen stoppades",
+   "back_translation": "No download change for {{minutes}} minutes — the installation was stopped",
+   "issue": "'Progress' rendered as 'förändring' (change); reads oddly for a stall message.",
+   "suggested": "Inga nedladdningsframsteg på {{minutes}} minuter — installationen stoppades"
+  },
+  {
+   "key": "edit-game.sgdb.unavailable",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "SteamGridDB artwork search is unavailable on this build.",
+   "tr": "Sökning efter SteamGridDB-artwork är inte tillgänglig i denna build.",
+   "back_translation": "Search for SteamGridDB artwork is not available in this build.",
+   "issue": "Leaves 'artwork' and 'build' in English, while sibling SteamGridDB rows use 'konstverk' and 'version'. Inconsistent terminology.",
+   "suggested": "Sökning efter SteamGridDB-bilder är inte tillgänglig i denna version."
+  },
+  {
+   "key": "humbleKeys.activateConfirmBody",
+   "severity": "major",
+   "category": "terminology",
+   "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+   "tr": "Detta avslöjar nyckeln — vilket tar bort den från Giftable spares permanent — och löser in den på ditt Steam-konto. Det går inte att ångra.",
+   "back_translation": "This reveals the key — which removes it from Giftable spares permanently — and redeems it on your Steam account. It cannot be undone.",
+   "issue": "The section name 'Giftable spares' stays in English here, but other rows (c2Action, c2Body, revealConfirmBody) translate it as 'Kan ges bort'. In this confirmation for an action that can't be undone, the dialog names a section that doesn't appear under that name in the Swedish UI.",
+   "suggested": "Detta visar nyckeln — vilket tar bort den från ”Kan ges bort” permanent — och löser in den på ditt Steam-konto. Det går inte att ångra."
+  },
+  {
+   "key": "humbleKeys.c2Body",
+   "severity": "minor",
+   "category": "register",
+   "en": "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+   "tr": "Den här nyckeln är säker i Kan ges bort — om du visar den här försvinner möjligheten att ge bort den. Gå till Kan ges bort istället.",
+   "back_translation": "This key is safe in Can-be-given-away — if you show it here the ability to give it away disappears. Go to Can-be-given-away instead.",
+   "issue": "The meaning is right, but using the section name 'Kan ges bort' unquoted inside a sentence reads as broken grammar ('är säker i Kan ges bort'). Put it in quotes, or choose a noun-style label.",
+   "suggested": "Den här nyckeln är säker i ”Kan ges bort” — om du visar den här går det inte längre att ge bort den. Gå till ”Kan ges bort” i stället."
+  },
+  {
+   "key": "humbleKeys.claimWizardTitle",
+   "severity": "minor",
+   "category": "register",
+   "en": "Claim this key",
+   "tr": "Gör anspråk på denna nyckel",
+   "back_translation": "Lay claim to this key",
+   "issue": "'Göra anspråk på' is a legalistic, literal rendering of 'claim'. It also doesn't match syncToEnableClaiming, which uses 'inlösen' for the same concept.",
+   "suggested": "Hämta ut denna nyckel"
+  },
+  {
+   "key": "humbleKeys.cooldown",
+   "severity": "minor",
+   "category": "register",
+   "en": "Temporarily unavailable — retry in {{minutes}}m",
+   "tr": "Tillfälligt otillgänglig — försök igen om {{minutes}}m",
+   "back_translation": "Temporarily unavailable — try again in {{minutes}}m",
+   "issue": "The 'm' abbreviation reads as metres in Swedish. The minute abbreviation is 'min'.",
+   "suggested": "Tillfälligt otillgänglig — försök igen om {{minutes}} min"
+  },
+  {
+   "key": "humbleKeys.expiresOn",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Expires {{date}}",
+   "tr": "Upphör {{date}}",
+   "back_translation": "Ceases {{date}}",
+   "issue": "'Upphör' needs a complement ('upphör att gälla'). On its own it reads as truncated. 'Går ut' is the idiomatic phrasing for a key expiring.",
+   "suggested": "Går ut {{date}}"
+  },
+  {
+   "key": "humbleKeys.noDeadline",
+   "severity": "minor",
+   "category": "register",
+   "en": "No pick deadline available",
+   "tr": "Ingen valdeadline tillgänglig",
+   "back_translation": "No choice-deadline available",
+   "issue": "'valdeadline' is an ad-hoc anglicised compound.",
+   "suggested": "Inget sista datum för val tillgängligt"
+  },
+  {
+   "key": "humbleKeys.noExpiration",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "No expiration",
+   "tr": "Ingen utgångsdatum",
+   "back_translation": "No expiry date",
+   "issue": "Gender agreement error: 'utgångsdatum' is neuter (ett), so it takes 'Inget', not 'Ingen'.",
+   "suggested": "Inget utgångsdatum"
+  },
+  {
+   "key": "humbleKeys.revealConfirmBody",
+   "severity": "minor",
+   "category": "register",
+   "en": "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
+   "tr": "Att visa den avslöjar den faktiska nyckeln och tar bort den från Kan ges bort för gott. Om du inte redan äger detta spel, se till att det verkligen stämmer innan du fortsätter — det går inte att ångra.",
+   "back_translation": "To show it reveals the actual key and removes it from Can-be-given-away for good. ...",
+   "issue": "The opening 'Att visa den avslöjar...' is clumsy and circular (show/reveal). The rest is accurate. The section name also needs quoting, as in c2Body.",
+   "suggested": "Om du visar nyckeln tas den bort från ”Kan ges bort” för gott. Om du inte redan äger spelet, se till att det verkligen stämmer innan du fortsätter — det går inte att ångra."
+  },
+  {
+   "key": "humbleKeys.revealCooldownBody",
+   "severity": "minor",
+   "category": "register",
+   "en": "Temporarily unavailable — retry in {{N}}m",
+   "tr": "Tillfälligt otillgänglig — försök igen om {{N}}m",
+   "back_translation": "Temporarily unavailable — try again in {{N}}m",
+   "issue": "The 'm' abbreviation reads as metres. Use 'min'. Same issue as humbleKeys.cooldown.",
+   "suggested": "Tillfälligt otillgänglig — försök igen om {{N}} min"
+  },
+  {
+   "key": "humbleKeys.revealRejectedBody",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.",
+   "tr": "Humble avböjde att visa denna nyckel — den kan redan vara inlöst eller ha upphört. Synka för att kontrollera dess aktuella status.",
+   "back_translation": "...it may already be redeemed or have ceased...",
+   "issue": "'ha upphört' lacks 'att gälla'. For an expired key, 'ha gått ut' is more natural.",
+   "suggested": "Humble avböjde att visa denna nyckel — den kan redan vara inlöst eller ha gått ut. Synka för att kontrollera dess aktuella status."
+  },
+  {
+   "key": "humbleKeys.state.unrevealed",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Unrevealed",
+   "tr": "Dold",
+   "back_translation": "Hidden",
+   "issue": "'Dold' means hidden. The library filters also use 'dolda' for hidden games, which is a different concept. 'Ej visad' mirrors 'Visad' (Revealed).",
+   "suggested": "Ej visad"
+  },
+  {
+   "key": "humbleKeys.syncToEnableClaiming",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Sync to enable claiming",
+   "tr": "Synkronisera för att möjliggöra inlösen",
+   "back_translation": "Synchronise to enable redemption",
+   "issue": "Uses 'Synkronisera' where every other sync row uses 'Synka'. 'Claiming' is rendered 'inlösen' here but 'göra anspråk' in claimWizardTitle, so one concept gets two terms.",
+   "suggested": "Synka för att kunna hämta ut nycklar"
+  },
+  {
+   "key": "installFlows.pathRejectedBodyImport",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "GameLib couldn't import from that location. The source has to be a full folder path with no \"..\" steps in it. Pick the game's folder again.",
+   "tr": "GameLib kunde inte importera från den platsen. Källan måste vara en fullständig mappsökväg utan \"..\"-steg i sig. Välj spelets mapp igen.",
+   "back_translation": "...a full folder path without '..' steps in itself.",
+   "issue": "'i sig' means 'in itself' and is unidiomatic here. Drop it.",
+   "suggested": "GameLib kunde inte importera från den platsen. Källan måste vara en fullständig mappsökväg utan \"..\"-steg. Välj spelets mapp igen."
+  },
+  {
+   "key": "installFlows.pathRejectedBodyMove",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "GameLib couldn't move this game there. The destination has to be a full folder path with no \"..\" steps in it. Pick the destination folder again.",
+   "tr": "GameLib kunde inte flytta detta spel dit. Destinationen måste vara en fullständig mappsökväg utan \"..\"-steg i sig. Välj destinationsmappen igen.",
+   "back_translation": "...a full folder path without '..' steps in itself.",
+   "issue": "'i sig' is unidiomatic, same as in pathRejectedBodyImport.",
+   "suggested": "GameLib kunde inte flytta detta spel dit. Destinationen måste vara en fullständig mappsökväg utan \"..\"-steg. Välj destinationsmappen igen."
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageHidden",
+   "severity": "minor",
+   "category": "meaning",
+   "en": "Hiding no store page",
+   "tr": "Döljer utan butikssida",
+   "back_translation": "Hiding without store page",
+   "issue": "There's no noun, so it's unclear what is being hidden. The chip means games with no store page are hidden.",
+   "suggested": "Döljer spel utan butikssida"
+  },
+  {
+   "key": "library.filterPanel.runsViaBottle",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Runs via bottle",
+   "tr": "Körs via flaska",
+   "back_translation": "Runs via flask",
+   "issue": "'bottle' is translated literally as 'flaska' here, while five Steam install rows keep the CrossOver/Wine term 'bottle'. Pick one term. Keeping 'bottle' matches CrossOver's own UI.",
+   "suggested": "Körs via bottle"
+  },
+  {
+   "key": "library.filterPanel.viewInstalled",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Installed",
+   "tr": "Installerad",
+   "back_translation": "Installed (singular)",
+   "issue": "This is a view label for a list of games, so it should be plural, like 'Nyligen spelade' and 'Alla spel'.",
+   "suggested": "Installerade"
+  },
+  {
+   "key": "library.filterPanel.wontRun",
+   "severity": "minor",
+   "category": "register",
+   "en": "Won't run",
+   "tr": "Kommer inte att köras",
+   "back_translation": "Will not be run",
+   "issue": "It's a future passive ('will not be run'), not a capability label. A short filter label is expected.",
+   "suggested": "Körs inte"
+  },
+  {
+   "key": "login.logoutFailedMessage",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
+   "tr": "Ditt konto loggades ut på den här enheten, men webbläsarsessionen kunde inte rensas helt. På en delad dator, logga ut igen eller rensa webbläsardata för den här webbplatsen för att säkerställa att din session inte förblir åtkomlig.",
+   "back_translation": "On a shared computer, log out again or clear...",
+   "issue": "After the fronted adverbial 'På en delad dator', the English comma + imperative doesn't carry over into Swedish (V2 word order). It needs a finite verb.",
+   "suggested": "Ditt konto loggades ut på den här enheten, men webbläsarsessionen kunde inte rensas helt. Om du använder en delad dator bör du logga ut igen eller rensa webbläsardata för den här webbplatsen så att din session inte förblir åtkomlig."
+  },
+  {
+   "key": "setting.eosOverlay.unavailable",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "The EOS Overlay is unavailable in this build",
+   "tr": "EOS-overlägget är inte tillgängligt i den här versionen",
+   "back_translation": "The EOS overlay is not available in this version",
+   "issue": "'overlägg' is a hybrid misspelling of the Swedish 'överlägg'. It's consistent across all six EOS rows, so fix them together.",
+   "suggested": "EOS-överlägget är inte tillgängligt i den här versionen"
+  },
+  {
+   "key": "setting.eosOverlay.unavailableDetail",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.",
+   "tr": "Stöd för EOS-overlägg är uppskjutet till en framtida version (D-03, fas 34.6) och kan inte installeras, uppdateras eller tas bort från den här versionen.",
+   "back_translation": "Support for EOS overlay is postponed...",
+   "issue": "Uses 'overlägg' for 'överlägg' (see setting.eosOverlay.unavailable).",
+   "suggested": "Stöd för EOS-överlägg är uppskjutet till en framtida version (D-03, fas 34.6) och kan inte installeras, uppdateras eller tas bort från den här versionen."
+  },
+  {
+   "key": "settings.eosOverlayInstallConfirmBody",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Install the EOS Overlay now?",
+   "tr": "Installera EOS-overlägget nu?",
+   "back_translation": "Install the EOS overlay now?",
+   "issue": "Uses 'overlägg' for 'överlägg'.",
+   "suggested": "Installera EOS-överlägget nu?"
+  },
+  {
+   "key": "settings.eosOverlayInstallConfirmTitle",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Confirm overlay install",
+   "tr": "Bekräfta installation av overlägg",
+   "back_translation": "Confirm installation of overlay",
+   "issue": "Uses 'overlägg' for 'överlägg'.",
+   "suggested": "Bekräfta installation av överlägg"
+  },
+  {
+   "key": "settings.eosOverlayUpdateConfirmBody",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Update the EOS Overlay to the latest version?",
+   "tr": "Uppdatera EOS-overlägget till den senaste versionen?",
+   "back_translation": "Update the EOS overlay to the latest version?",
+   "issue": "Uses 'overlägg' for 'överlägg'.",
+   "suggested": "Uppdatera EOS-överlägget till den senaste versionen?"
+  },
+  {
+   "key": "settings.eosOverlayUpdateConfirmTitle",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Confirm overlay update",
+   "tr": "Bekräfta uppdatering av overlägg",
+   "back_translation": "Confirm update of overlay",
+   "issue": "Uses 'overlägg' for 'överlägg'.",
+   "suggested": "Bekräfta uppdatering av överlägg"
+  },
+  {
+   "key": "settings.steamgriddb.help.unavailableDetail",
+   "severity": "minor",
+   "category": "register",
+   "en": "SteamGridDB artwork support is deferred to a future release (D-03, Phase 34.6) and cannot be configured from this build.",
+   "tr": "Stöd för SteamGridDB-konstverk skjuts upp till en framtida version (D-03, fas 34.6) och kan inte konfigureras i denna version.",
+   "back_translation": "Support for SteamGridDB works of art is postponed...",
+   "issue": "'konstverk' means works of art (paintings). For game cover and grid images, 'bilder' or 'omslagsbilder' is the natural term.",
+   "suggested": "Stöd för SteamGridDB-bilder skjuts upp till en framtida version (D-03, fas 34.6) och kan inte konfigureras i denna version."
+  },
+  {
+   "key": "steamgriddb.error.unavailable",
+   "severity": "minor",
+   "category": "register",
+   "en": "SteamGridDB artwork is unavailable on this build",
+   "tr": "SteamGridDB-konstverk är inte tillgängligt i denna version",
+   "back_translation": "SteamGridDB works of art are not available in this version",
+   "issue": "'konstverk' is too literal for game artwork. Use 'bilder'.",
+   "suggested": "SteamGridDB-bilder är inte tillgängliga i denna version"
+  },
+  {
+   "key": "sideload.import-hint.content",
+   "severity": "minor",
+   "category": "placeholder",
+   "en": "Do NOT use this feature for that.<br />Instead, <3>log into</3> the store, look for the game in your library, open the installation dialog, and click the &quot;{{doorLabel}}&quot; button",
+   "tr": "Använd INTE den här funktionen för detta.<br />Logga i stället <3>in på</3> butiken, leta efter spelet i ditt bibliotek, öppna installationsdialogrutan och klicka på knappen &quot;{{doorLabel}}&quot;",
+   "back_translation": "Instead, log <3>in to</3> the store...",
+   "issue": "The tags are preserved and will render, but the link now wraps only 'in på'. The verb 'Logga' sits outside the link, so the link text is a bare particle.",
+   "suggested": "Använd INTE den här funktionen för detta.<br /><3>Logga i stället in</3> i butiken, leta efter spelet i ditt bibliotek, öppna installationsdialogrutan och klicka på knappen &quot;{{doorLabel}}&quot;"
+  },
+  {
+   "key": "webview.login.humble.body",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "A sign-in window has opened. Complete sign-in there — this page updates automatically once it succeeds.",
+   "tr": "Ett inloggningsfönster har öppnats. Slutför inloggningen där — den här sidan uppdateras automatiskt när det lyckas.",
+   "back_translation": "...this page updates automatically when it succeeds.",
+   "issue": "'det' has no neuter antecedent. The thing that succeeds is 'inloggningen' (common gender), so 'den' or an explicit noun is needed.",
+   "suggested": "Ett inloggningsfönster har öppnats. Slutför inloggningen där — den här sidan uppdateras automatiskt när inloggningen lyckas."
+  },
+  {
+   "key": "webview.unavailable.next-step",
+   "severity": "minor",
+   "category": "meaning",
+   "en": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+   "tr": "Detta spåras som ett separat framtida arbete -- använd knappen nedan för att öppna det i din systemwebbläsare istället.",
+   "back_translation": "This is tracked as a separate future work -- use the button below to open it in your system browser instead.",
+   "issue": "Drops 'for now', which signals that this is a temporary workaround.",
+   "suggested": "Detta spåras som ett separat framtida arbete -- tills vidare kan du använda knappen nedan för att öppna det i din systemwebbläsare i stället."
+  }
+ ],
+ "terminology_notes": "Mostly consistent. Install = installera/installation, Library = bibliotek, Store = butik, Sign in = logga in, Redeem = lösa in, Reveal = visa, Sync = synka, Retry = Försök igen, build = version (except edit-game.sgdb.unavailable). Brands are kept and inflected correctly (Steams, Humbles, GameLibs, Steam-bibliotek, CrossOver-bottle). Inconsistencies: 'Giftable spares' is English in one row and 'Kan ges bort' elsewhere; bottle = 'flaska' in one row and 'bottle' in five; SteamGridDB artwork = 'artwork' in one row and 'konstverk' in two; Claim = 'göra anspråk' vs 'inlösen'; Synka vs Synkronisera. Ellipsis spacing varies ('installationsalternativ …', 'Installera med alternativ …', 'Ta bort alla kopior …' vs 'Laddar…'). Swedish typography allows either, so this is not counted as a finding. A → Ö / Ö → A sort labels are a good localisation.",
+ "overall": "The translation is good. There are no critical errors, all {{placeholders}} are preserved exactly, and meaning is accurate throughout. The one major issue is the untranslated 'Giftable spares' section name in a Humble key confirmation that can't be undone, where other rows call it 'Kan ges bort'. Everything else is minor: a gender slip (Ingen utgångsdatum), the 'overlägg' misspelling repeated across the EOS rows, singular 'Installerad' as a view label, literal 'konstverk'/'flaska', and some awkward phrasing. Confidence is high on grammar and meaning. It is moderate on 'overlägg' vs 'överlägg' as the preferred term, and on whether 'bottle' should be localised at all. Without the live UI I can't confirm how the section-name labels actually render."
+}

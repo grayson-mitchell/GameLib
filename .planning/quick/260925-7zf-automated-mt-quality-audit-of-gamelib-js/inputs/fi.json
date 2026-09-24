@@ -1,0 +1,1406 @@
+{
+ "locale": "fi",
+ "model": "claude-sonnet-5",
+ "rows": [
+  {
+   "key": "about.license",
+   "en": "License: GPL V3",
+   "tr": "Lisenssi: GPL V3"
+  },
+  {
+   "key": "about.navLabel",
+   "en": "About",
+   "tr": "Tietoja"
+  },
+  {
+   "key": "about.title",
+   "en": "About GameLib",
+   "tr": "Tietoja GameLibistä"
+  },
+  {
+   "key": "about.version",
+   "en": "Version: {{version}}",
+   "tr": "Versio: {{version}}"
+  },
+  {
+   "key": "about.versionUnknown",
+   "en": "unknown",
+   "tr": "tuntematon"
+  },
+  {
+   "key": "app.routeError",
+   "en": "Something went wrong: {{detail}}",
+   "tr": "Jokin meni pieleen: {{detail}}"
+  },
+  {
+   "key": "box.cancel",
+   "en": "Cancel",
+   "tr": "Peruuta"
+  },
+  {
+   "key": "box.error.install.failed",
+   "en": "The installation of {{title}} failed: {{error}}",
+   "tr": "Pelin {{title}} asennus epäonnistui: {{error}}"
+  },
+  {
+   "key": "box.error.install.signInToSteam",
+   "en": "Sign in to Steam",
+   "tr": "Kirjaudu Steamiin"
+  },
+  {
+   "key": "box.error.install.stalled",
+   "en": "No download progress for {{minutes}} minutes — the install was stopped",
+   "tr": "Ei latauksen etenemistä {{minutes}} minuuttiin — asennus pysäytettiin"
+  },
+  {
+   "key": "box.filePicker.error.message",
+   "en": "GameLib could not open the system file picker, so nothing was selected and no changes were made. ({{error}})",
+   "tr": "GameLib ei voinut avata järjestelmän tiedostonvalitsinta, joten mitään ei valittu eikä muutoksia tehty. ({{error}})"
+  },
+  {
+   "key": "box.filePicker.error.title",
+   "en": "Could not open the file picker",
+   "tr": "Tiedostonvalitsinta ei voitu avata"
+  },
+  {
+   "key": "box.steam.mac32Detected.confirm",
+   "en": "Reinstall via CrossOver",
+   "tr": "Asenna uudelleen CrossOverin kautta"
+  },
+  {
+   "key": "box.steam.mac32Detected.message",
+   "en": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version.",
+   "tr": "Tämän pelin macOS-versio on vain 32-bittinen, eikä se toimi tässä macOS-versiossa. GameLib voi asentaa sen sen sijaan uudelleen CrossOverin kautta, mikä lataa Windows-version uudelleen."
+  },
+  {
+   "key": "box.steam.mac32Detected.title",
+   "en": "32-bit macOS build detected",
+   "tr": "32-bittinen macOS-versio havaittu"
+  },
+  {
+   "key": "button.close",
+   "en": "Close",
+   "tr": "Sulje"
+  },
+  {
+   "key": "button.paste",
+   "en": "Paste",
+   "tr": "Liitä"
+  },
+  {
+   "key": "consoleMode.installNext",
+   "en": "Next",
+   "tr": "Seuraava"
+  },
+  {
+   "key": "consoleMode.installPrevious",
+   "en": "Previous",
+   "tr": "Edellinen"
+  },
+  {
+   "key": "consoleMode.sortAscending",
+   "en": "A → Z",
+   "tr": "A → Ö"
+  },
+  {
+   "key": "consoleMode.sortDescending",
+   "en": "Z → A",
+   "tr": "Ö → A"
+  },
+  {
+   "key": "consoleMode.steamInstallBlockedTitle",
+   "en": "Can't start this install",
+   "tr": "Tätä asennusta ei voi aloittaa"
+  },
+  {
+   "key": "consoleMode.steamInstallLibraryFull",
+   "en": "There isn't enough free space in your Steam library folder. Free up space and try again.",
+   "tr": "Steam-kirjastokansiossasi ei ole tarpeeksi vapaata tilaa. Vapauta tilaa ja yritä uudelleen."
+  },
+  {
+   "key": "consoleMode.steamInstallLibraryMissing",
+   "en": "Your Steam library folder isn't available right now. Reconnect the drive and try again.",
+   "tr": "Steam-kirjastokansiosi ei ole tällä hetkellä käytettävissä. Yhdistä asema uudelleen ja yritä uudelleen."
+  },
+  {
+   "key": "discounts.pegiPrefix",
+   "en": "PEGI ≤ {{value}}",
+   "tr": "PEGI ≤ {{value}}"
+  },
+  {
+   "key": "donate.navLabel",
+   "en": "Donate",
+   "tr": "Lahjoita"
+  },
+  {
+   "key": "downloadManager.progressPaused",
+   "en": "Paused",
+   "tr": "Keskeytetty"
+  },
+  {
+   "key": "edit-game.sgdb.unavailable",
+   "en": "SteamGridDB artwork search is unavailable on this build.",
+   "tr": "SteamGridDB-kuvahaku ei ole käytettävissä tässä versiossa."
+  },
+  {
+   "key": "gamepage.appleRatingUnrated",
+   "en": "Unrated",
+   "tr": "Ei arvioitu"
+  },
+  {
+   "key": "gamepage.etaPrefix",
+   "en": "ETA: {{eta}}",
+   "tr": "Arvioitu aika: {{eta}}"
+  },
+  {
+   "key": "gamepage.extraInfoEmptyBody",
+   "en": "Metacritic, OpenCritic and HowLongToBeat had nothing for this title.",
+   "tr": "Metacriticilla, OpenCriticilla ja HowLongToBeatilla ei ollut mitään tästä pelistä."
+  },
+  {
+   "key": "gamepage.extraInfoEmptyTitle",
+   "en": "No extra info found",
+   "tr": "Lisätietoja ei löytynyt"
+  },
+  {
+   "key": "gamepage.extraInfoErrorBody",
+   "en": "The lookup failed, which is not the same as this game having no data. Try again.",
+   "tr": "Haku epäonnistui, mikä ei tarkoita, ettei pelistä olisi tietoja. Yritä uudelleen."
+  },
+  {
+   "key": "gamepage.extraInfoErrorTitle",
+   "en": "Couldn't load extra info",
+   "tr": "Lisätietoja ei voitu ladata"
+  },
+  {
+   "key": "gamepage.extraInfoRetry",
+   "en": "Retry",
+   "tr": "Yritä uudelleen"
+  },
+  {
+   "key": "gamepage.extraInfoStaleBody",
+   "en": "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
+   "tr": "Tämä tulos tallennettiin välimuistiin ennen kuin latauksen tuloksia alettiin tallentaa, joten se voi olla vanhentunut. Päivitä tarkistaaksesi."
+  },
+  {
+   "key": "gamepage.tabsAriaLabel",
+   "en": "gameinfo tabs",
+   "tr": "pelitietojen välilehdet"
+  },
+  {
+   "key": "gamepage.wineLabel",
+   "en": "Wine:",
+   "tr": "Wine:"
+  },
+  {
+   "key": "humble.lessThanAMinute",
+   "en": "less than a minute",
+   "tr": "alle minuutti"
+  },
+  {
+   "key": "humbleKeys.activate",
+   "en": "Activate",
+   "tr": "Aktivoi"
+  },
+  {
+   "key": "humbleKeys.activateConfirmBody",
+   "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+   "tr": "Tämä paljastaa avaimen — poistaen sen pysyvästi lahjoitettavista varakappaleista — ja lunastaa sen Steam-tilillesi. Toimintoa ei voi perua."
+  },
+  {
+   "key": "humbleKeys.activateConfirmBodyRevealed",
+   "en": "This redeems your already-revealed key on your Steam account. There's no undo.",
+   "tr": "Tämä lunastaa jo paljastetun avaimesi Steam-tilillesi. Toimintoa ei voi perua."
+  },
+  {
+   "key": "humbleKeys.activateConfirmTitle",
+   "en": "Activate this key on Steam?",
+   "tr": "Aktivoidaanko tämä avain Steamissa?"
+  },
+  {
+   "key": "humbleKeys.activateDismiss",
+   "en": "Cancel",
+   "tr": "Peruuta"
+  },
+  {
+   "key": "humbleKeys.activateWizardTitle",
+   "en": "Activate this key",
+   "tr": "Aktivoi tämä avain"
+  },
+  {
+   "key": "humbleKeys.activatedDone",
+   "en": "Done",
+   "tr": "Valmis"
+  },
+  {
+   "key": "humbleKeys.activatedTitle",
+   "en": "Activated",
+   "tr": "Aktivoitu"
+  },
+  {
+   "key": "humbleKeys.activatingBody",
+   "en": "Revealing your key and redeeming it on Steam — this only takes a moment.",
+   "tr": "Avaimesi paljastetaan ja lunastetaan Steamissa — tämä kestää vain hetken."
+  },
+  {
+   "key": "humbleKeys.activatingTitle",
+   "en": "Activating on Steam…",
+   "tr": "Aktivoidaan Steamissa…"
+  },
+  {
+   "key": "humbleKeys.c2Action",
+   "en": "Go to Giftable spares",
+   "tr": "Siirry lahjoitettaviin varakappaleisiin"
+  },
+  {
+   "key": "humbleKeys.c2Body",
+   "en": "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+   "tr": "Tämä avain on turvassa lahjoitettavissa varakappaleissa — paljastaminen täällä veisi mahdollisuuden lahjoittaa sen. Siirry sen sijaan lahjoitettaviin varakappaleisiin."
+  },
+  {
+   "key": "humbleKeys.c2Title",
+   "en": "You already own this on Steam",
+   "tr": "Omistat tämän jo Steamissa"
+  },
+  {
+   "key": "humbleKeys.claimWizardTitle",
+   "en": "Claim this key",
+   "tr": "Lunasta tämä avain"
+  },
+  {
+   "key": "humbleKeys.cooldown",
+   "en": "Temporarily unavailable — retry in {{minutes}}m",
+   "tr": "Tilapäisesti ei saatavilla — yritä uudelleen {{minutes}} min kuluttua"
+  },
+  {
+   "key": "humbleKeys.copyKey",
+   "en": "Copy key",
+   "tr": "Kopioi avain"
+  },
+  {
+   "key": "humbleKeys.expiresOn",
+   "en": "Expires {{date}}",
+   "tr": "Vanhenee {{date}}"
+  },
+  {
+   "key": "humbleKeys.finishActivation",
+   "en": "Finish activation",
+   "tr": "Viimeistele aktivointi"
+  },
+  {
+   "key": "humbleKeys.finishOwnedNote",
+   "en": "You already own this on Steam — activation will likely fail there.",
+   "tr": "Omistat tämän jo Steamissa — aktivointi epäonnistuu siellä todennäköisesti."
+  },
+  {
+   "key": "humbleKeys.giftConfirmAction",
+   "en": "Open Humble",
+   "tr": "Avaa Humble"
+  },
+  {
+   "key": "humbleKeys.giftConfirmBody",
+   "en": "Anyone with this link can claim the key — once redeemed, it's gone for good. You'll finish gifting it on Humble's own site.",
+   "tr": "Kuka tahansa tämän linkin saanut voi lunastaa avaimen — kerran lunastettuna se on lopullisesti käytetty. Viimeistelet lahjoituksen Humblen omalla sivustolla."
+  },
+  {
+   "key": "humbleKeys.giftConfirmTitle",
+   "en": "Gift this key?",
+   "tr": "Lahjoitetaanko tämä avain?"
+  },
+  {
+   "key": "humbleKeys.giftOnHumble",
+   "en": "Gift on Humble",
+   "tr": "Lahjoita Humblessa"
+  },
+  {
+   "key": "humbleKeys.giftedAnnotation",
+   "en": "Opened Humble gift page {{date}}",
+   "tr": "Humblen lahjasivu avattu {{date}}"
+  },
+  {
+   "key": "humbleKeys.keyLoading",
+   "en": "Loading…",
+   "tr": "Ladataan"
+  },
+  {
+   "key": "humbleKeys.keyShownTitle",
+   "en": "Your key",
+   "tr": "Avaimesi"
+  },
+  {
+   "key": "humbleKeys.lastSynced",
+   "en": "Last synced {{time}} ago",
+   "tr": "Viimeksi synkronoitu {{time}} sitten"
+  },
+  {
+   "key": "humbleKeys.likelyOwnedOnSteam",
+   "en": "Likely owned on Steam",
+   "tr": "Todennäköisesti omistettu Steamissa"
+  },
+  {
+   "key": "humbleKeys.markRedeemed",
+   "en": "Mark as redeemed",
+   "tr": "Merkitse lunastetuksi"
+  },
+  {
+   "key": "humbleKeys.noDeadline",
+   "en": "No pick deadline available",
+   "tr": "Valinnan määräaikaa ei ole saatavilla"
+  },
+  {
+   "key": "humbleKeys.noExpiration",
+   "en": "No expiration",
+   "tr": "Ei vanhenemisaikaa"
+  },
+  {
+   "key": "humbleKeys.notTheSameGame",
+   "en": "Not the same game",
+   "tr": "Ei sama peli"
+  },
+  {
+   "key": "humbleKeys.openSteam",
+   "en": "Open Steam",
+   "tr": "Avaa Steam"
+  },
+  {
+   "key": "humbleKeys.ownedOnSteam",
+   "en": "Owned on Steam",
+   "tr": "Omistettu Steamissa"
+  },
+  {
+   "key": "humbleKeys.redeemOnPlatform",
+   "en": "Redeem on {{platform}}",
+   "tr": "Lunasta alustalla {{platform}}"
+  },
+  {
+   "key": "humbleKeys.redeemedAnnotation",
+   "en": "Redeemed {{date}}",
+   "tr": "Lunastettu {{date}}"
+  },
+  {
+   "key": "humbleKeys.refresh",
+   "en": "Refresh Humble Keys",
+   "tr": "Päivitä Humble-avaimet"
+  },
+  {
+   "key": "humbleKeys.revealAmbiguousBody",
+   "en": "We couldn't confirm this finished — sync to check",
+   "tr": "Emme voineet vahvistaa, että tämä valmistui — synkronoi tarkistaaksesi"
+  },
+  {
+   "key": "humbleKeys.revealConfirmAction",
+   "en": "Reveal key",
+   "tr": "Paljasta avain"
+  },
+  {
+   "key": "humbleKeys.revealConfirmBody",
+   "en": "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
+   "tr": "Paljastaminen näyttää varsinaisen avaimen ja poistaa sen lopullisesti lahjoitettavista varakappaleista. Jos et vielä omista tätä peliä, varmista tämä ennen jatkamista — toimintoa ei voi peruuttaa."
+  },
+  {
+   "key": "humbleKeys.revealConfirmTitle",
+   "en": "Reveal this key?",
+   "tr": "Paljastetaanko tämä avain?"
+  },
+  {
+   "key": "humbleKeys.revealCooldownBody",
+   "en": "Temporarily unavailable — retry in {{N}}m",
+   "tr": "Tilapäisesti ei saatavilla — yritä uudelleen {{N}} min kuluttua"
+  },
+  {
+   "key": "humbleKeys.revealDismiss",
+   "en": "Don't reveal yet",
+   "tr": "Älä paljasta vielä"
+  },
+  {
+   "key": "humbleKeys.revealFailedBody",
+   "en": "Couldn't reveal this key — nothing was used up. You can try again.",
+   "tr": "Avainta ei voitu paljastaa — mitään ei käytetty. Voit yrittää uudelleen."
+  },
+  {
+   "key": "humbleKeys.revealRejectedBody",
+   "en": "Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.",
+   "tr": "Humble kieltäytyi paljastamasta tätä avainta — se saattaa olla jo lunastettu tai vanhentunut. Synkronoi tarkistaaksesi sen nykyisen tilan."
+  },
+  {
+   "key": "humbleKeys.revealedAnnotation",
+   "en": "Revealed {{date}}",
+   "tr": "Paljastettu {{date}}"
+  },
+  {
+   "key": "humbleKeys.state.redeemed",
+   "en": "Redeemed",
+   "tr": "Lunastettu"
+  },
+  {
+   "key": "humbleKeys.state.revealed",
+   "en": "Revealed",
+   "tr": "Paljastettu"
+  },
+  {
+   "key": "humbleKeys.state.unpicked",
+   "en": "Unpicked",
+   "tr": "Valitsematon"
+  },
+  {
+   "key": "humbleKeys.state.unredeemable",
+   "en": "Expired",
+   "tr": "Vanhentunut"
+  },
+  {
+   "key": "humbleKeys.state.unrevealed",
+   "en": "Unrevealed",
+   "tr": "Paljastamaton"
+  },
+  {
+   "key": "humbleKeys.syncError",
+   "en": "Couldn't refresh — showing data from {{time}}",
+   "tr": "Päivitys epäonnistui — näytetään tiedot ajalta {{time}}"
+  },
+  {
+   "key": "humbleKeys.syncErrorPartial",
+   "en": "Couldn't finish refresh — showing the latest data available",
+   "tr": "Päivitystä ei voitu viimeistellä — näytetään viimeisimmät saatavilla olevat tiedot"
+  },
+  {
+   "key": "humbleKeys.syncNow",
+   "en": "Sync now",
+   "tr": "Synkronoi nyt"
+  },
+  {
+   "key": "humbleKeys.syncToEnableClaiming",
+   "en": "Sync to enable claiming",
+   "tr": "Synkronoi ottaaksesi käyttöön lunastuksen"
+  },
+  {
+   "key": "humbleKeys.syncing",
+   "en": "Syncing… {{done}}/{{total}} orders",
+   "tr": "Synkronoidaan… {{done}}/{{total}} tilausta"
+  },
+  {
+   "key": "humbleKeys.title",
+   "en": "Humble Keys",
+   "tr": "Humble-avaimet"
+  },
+  {
+   "key": "humbleKeys.tryAgain",
+   "en": "Try again",
+   "tr": "Yritä uudelleen"
+  },
+  {
+   "key": "humbleKeys.undo",
+   "en": "Undo",
+   "tr": "Kumoa"
+  },
+  {
+   "key": "humbleKeys.undoOwnershipOverride",
+   "en": "Undo — I do own this game",
+   "tr": "Kumoa — omistan tämän pelin"
+  },
+  {
+   "key": "humbleKeys.unpickedTitle",
+   "en": "{{title}} · games not picked",
+   "tr": "{{title}} · valitsemattomat pelit"
+  },
+  {
+   "key": "humbleKeys.urgencyDaysLeft",
+   "en": "{{N}} days left",
+   "tr": "{{N}} päivää jäljellä"
+  },
+  {
+   "key": "humbleKeys.urgencyHoursLeft",
+   "en": "{{H}}h left",
+   "tr": "{{H}} h jäljellä"
+  },
+  {
+   "key": "humbleKeys.urgencyOneDayLeft",
+   "en": "1 day left",
+   "tr": "1 päivä jäljellä"
+  },
+  {
+   "key": "info.refresh-rating",
+   "en": "Refresh rating",
+   "tr": "Päivitä arvostelu"
+  },
+  {
+   "key": "installFlows.diskSpaceFreeOfTotal",
+   "en": "{{free}} free of {{total}}",
+   "tr": "{{free}} vapaana, yhteensä {{total}}"
+  },
+  {
+   "key": "installFlows.pathRejectedBodyImport",
+   "en": "GameLib couldn't import from that location. The source has to be a full folder path with no \"..\" steps in it. Pick the game's folder again.",
+   "tr": "GameLib ei voinut tuoda kyseisestä sijainnista. Lähteen on oltava täydellinen kansiopolku ilman \"..\"-askeleita. Valitse pelin kansio uudelleen."
+  },
+  {
+   "key": "installFlows.pathRejectedBodyMove",
+   "en": "GameLib couldn't move this game there. The destination has to be a full folder path with no \"..\" steps in it. Pick the destination folder again.",
+   "tr": "GameLib ei voinut siirtää tätä peliä sinne. Kohteen on oltava täydellinen kansiopolku ilman \"..\"-askeleita. Valitse kohdekansio uudelleen."
+  },
+  {
+   "key": "installFlows.pathRejectedTitle",
+   "en": "Can't use that location",
+   "tr": "Tätä sijaintia ei voi käyttää"
+  },
+  {
+   "key": "library.filterPanel.chipHiddenIncluded",
+   "en": "Including hidden",
+   "tr": "Mukana piilotetut"
+  },
+  {
+   "key": "library.filterPanel.chipHiddenOnly",
+   "en": "Hidden only",
+   "tr": "Vain piilotetut"
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageHidden",
+   "en": "Hiding no store page",
+   "tr": "Piilotettu ilman kauppasivua"
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageOnly",
+   "en": "No store page only",
+   "tr": "Vain ilman kauppasivua"
+  },
+  {
+   "key": "library.filterPanel.chipNonAvailableIncluded",
+   "en": "Including non-available",
+   "tr": "Mukana ei-saatavilla olevat"
+  },
+  {
+   "key": "library.filterPanel.chipNonAvailableOnly",
+   "en": "Non-available only",
+   "tr": "Vain ei-saatavilla olevat"
+  },
+  {
+   "key": "library.filterPanel.clearAll",
+   "en": "Clear all",
+   "tr": "Tyhjennä kaikki"
+  },
+  {
+   "key": "library.filterPanel.collections",
+   "en": "Collections",
+   "tr": "Kokoelmat"
+  },
+  {
+   "key": "library.filterPanel.emptyAlphabetLetter",
+   "en": "Starting with \"{{letter}}\"",
+   "tr": "Alkaa kirjaimella \"{{letter}}\""
+  },
+  {
+   "key": "library.filterPanel.emptyAlphabetNumber",
+   "en": "Starting with a number",
+   "tr": "Alkaa numerolla"
+  },
+  {
+   "key": "library.filterPanel.emptyBody",
+   "en": "No games match {{filters}}.",
+   "tr": "Yksikään peli ei vastaa suodattimia {{filters}}."
+  },
+  {
+   "key": "library.filterPanel.emptyClearAll",
+   "en": "Clear all filters",
+   "tr": "Tyhjennä kaikki suodattimet"
+  },
+  {
+   "key": "library.filterPanel.emptyHeading",
+   "en": "No games match your filters",
+   "tr": "Yksikään peli ei vastaa suodattimiasi"
+  },
+  {
+   "key": "library.filterPanel.groupSelectedCount",
+   "en": "{{selected}} selected",
+   "tr": "{{selected}} valittu"
+  },
+  {
+   "key": "library.filterPanel.manageCollections",
+   "en": "Manage collections",
+   "tr": "Hallitse kokoelmia"
+  },
+  {
+   "key": "library.filterPanel.moreFilters",
+   "en": "More filters",
+   "tr": "Enemmän suodattimia"
+  },
+  {
+   "key": "library.filterPanel.newCollection",
+   "en": "+ New collection",
+   "tr": "+ Uusi kokoelma"
+  },
+  {
+   "key": "library.filterPanel.noStorePage",
+   "en": "No store page",
+   "tr": "Ei kauppasivua"
+  },
+  {
+   "key": "library.filterPanel.notYetChecked",
+   "en": "Not yet checked",
+   "tr": "Ei vielä tarkistettu"
+  },
+  {
+   "key": "library.filterPanel.removeFilter",
+   "en": "Remove {{filterLabel}} filter",
+   "tr": "Poista suodatin {{filterLabel}}"
+  },
+  {
+   "key": "library.filterPanel.runnabilityGroup",
+   "en": "Runnability",
+   "tr": "Toimivuus"
+  },
+  {
+   "key": "library.filterPanel.runsNatively",
+   "en": "Runs natively",
+   "tr": "Toimii natiivisti"
+  },
+  {
+   "key": "library.filterPanel.runsViaBottle",
+   "en": "Runs via bottle",
+   "tr": "Toimii bottlen kautta"
+  },
+  {
+   "key": "library.filterPanel.storeGroup",
+   "en": "Store",
+   "tr": "Kauppa"
+  },
+  {
+   "key": "library.filterPanel.viewAll",
+   "en": "All games",
+   "tr": "Kaikki pelit"
+  },
+  {
+   "key": "library.filterPanel.viewFavourites",
+   "en": "Favourites",
+   "tr": "Suosikit"
+  },
+  {
+   "key": "library.filterPanel.viewInstalled",
+   "en": "Installed",
+   "tr": "Asennettu"
+  },
+  {
+   "key": "library.filterPanel.viewRecentlyPlayed",
+   "en": "Recently played",
+   "tr": "Äskettäin pelattu"
+  },
+  {
+   "key": "library.filterPanel.wontRun",
+   "en": "Won't run",
+   "tr": "Ei toimi"
+  },
+  {
+   "key": "library.header.filteredOfTotal",
+   "en": "{{shown}} of {{total}}",
+   "tr": "{{shown}} / {{total}}"
+  },
+  {
+   "key": "library.noStorePage",
+   "en": "No store page",
+   "tr": "Ei kauppasivua"
+  },
+  {
+   "key": "library.no_no_store_page_games",
+   "en": "No games without a store page in your library",
+   "tr": "Kirjastossasi ei ole pelejä ilman kauppasivua"
+  },
+  {
+   "key": "library.steamSync.failedBody",
+   "en": "Your other libraries are still available. Try again, or check that Steam is reachable.",
+   "tr": "Muut kirjastosi ovat yhä käytettävissä. Yritä uudelleen tai tarkista, että Steam on tavoitettavissa."
+  },
+  {
+   "key": "library.steamSync.failedTitle",
+   "en": "Couldn't sync your Steam library",
+   "tr": "Steam-kirjastoa ei voitu synkronoida"
+  },
+  {
+   "key": "library.steamSync.retry",
+   "en": "Retry Steam sync",
+   "tr": "Yritä Steam-synkronointia uudelleen"
+  },
+  {
+   "key": "library.steamSync.signedOutAction",
+   "en": "Sign in to Steam",
+   "tr": "Kirjaudu Steamiin"
+  },
+  {
+   "key": "library.steamSync.signedOutBody",
+   "en": "Sign in again to sync your Steam library. Your other libraries are still available.",
+   "tr": "Kirjaudu uudelleen sisään synkronoidaksesi Steam-kirjastosi. Muut kirjastosi ovat yhä käytettävissä."
+  },
+  {
+   "key": "library.steamSync.signedOutTitle",
+   "en": "Your Steam sign-in expired",
+   "tr": "Steam-kirjautumisesi on vanhentunut"
+  },
+  {
+   "key": "library.steamSync.syncing",
+   "en": "Syncing your Steam library…",
+   "tr": "Synkronoidaan Steam-kirjastoasi…"
+  },
+  {
+   "key": "library.storeOther",
+   "en": "Other",
+   "tr": "Muu"
+  },
+  {
+   "key": "login.connected",
+   "en": "Connected",
+   "tr": "Yhdistetty"
+  },
+  {
+   "key": "login.humble_dialog_title",
+   "en": "Sign in to Humble Bundle",
+   "tr": "Kirjaudu Humble Bundleen"
+  },
+  {
+   "key": "login.logoutFailedMessage",
+   "en": "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
+   "tr": "Tilisi kirjattiin ulos tällä laitteella, mutta selainistuntoa ei voitu tyhjentää kokonaan. Jaetulla tietokoneella kirjaudu ulos uudelleen tai tyhjennä tämän sivuston selaintiedot varmistaaksesi, ettei istuntosi jää saataville."
+  },
+  {
+   "key": "login.logoutFailedTitle",
+   "en": "Sign-out incomplete",
+   "tr": "Uloskirjautuminen jäi kesken"
+  },
+  {
+   "key": "login.steamReconnect",
+   "en": "Sign-in expired — Reconnect",
+   "tr": "Kirjautuminen vanhentunut — Yhdistä uudelleen"
+  },
+  {
+   "key": "login.steam_logout_failed_message",
+   "en": "Steam sign-out didn't finish in time. Please try again.",
+   "tr": "Steam-uloskirjautuminen ei valmistunut ajoissa. Yritä uudelleen."
+  },
+  {
+   "key": "login.steam_logout_failed_title",
+   "en": "Sign-out failed",
+   "tr": "Uloskirjautuminen epäonnistui"
+  },
+  {
+   "key": "pathSelectionBox.saved",
+   "en": "Saved",
+   "tr": "Tallennettu"
+  },
+  {
+   "key": "pathSelectionBox.unsaved",
+   "en": "Not saved yet — press Enter",
+   "tr": "Ei vielä tallennettu — paina Enter"
+  },
+  {
+   "key": "queue.label.failed",
+   "en": "Failed",
+   "tr": "Epäonnistui"
+  },
+  {
+   "key": "queue.label.retry",
+   "en": "Retry",
+   "tr": "Yritä uudelleen"
+  },
+  {
+   "key": "redeemKey.alreadyOwned",
+   "en": "This key has already been redeemed — you already own this on Steam.",
+   "tr": "Tämä avain on jo lunastettu — omistat tämän jo Steamissa."
+  },
+  {
+   "key": "redeemKey.error",
+   "en": "Couldn't reach Steam to redeem this key. Check your connection and try again.",
+   "tr": "Steamiin ei saatu yhteyttä avaimen lunastamiseksi. Tarkista yhteytesi ja yritä uudelleen."
+  },
+  {
+   "key": "redeemKey.invalid",
+   "en": "This key doesn't look right. Double-check it and try again.",
+   "tr": "Tämä avain ei näytä oikealta. Tarkista se ja yritä uudelleen."
+  },
+  {
+   "key": "redeemKey.rateLimited",
+   "en": "Too many attempts — please wait a bit before trying again.",
+   "tr": "Liian monta yritystä — odota hetki ennen kuin yrität uudelleen."
+  },
+  {
+   "key": "redeemKey.successNoPackage",
+   "en": "Key redeemed! Your Steam library has been updated.",
+   "tr": "Avain lunastettu! Steam-kirjastosi on päivitetty."
+  },
+  {
+   "key": "redeemKey.successWithPackage",
+   "en": "Key redeemed! {{packageName}} has been added to your Steam library.",
+   "tr": "Avain lunastettu! {{packageName}} on lisätty Steam-kirjastoosi."
+  },
+  {
+   "key": "redeemSteamKey.placeholder",
+   "en": "Enter your Steam key",
+   "tr": "Anna Steam-avaimesi"
+  },
+  {
+   "key": "redeemSteamKey.redeem",
+   "en": "Redeem",
+   "tr": "Lunasta"
+  },
+  {
+   "key": "redeemSteamKey.redeeming",
+   "en": "Redeeming...",
+   "tr": "Lunastetaan..."
+  },
+  {
+   "key": "redeemSteamKey.title",
+   "en": "Redeem a Steam key",
+   "tr": "Lunasta Steam-avain"
+  },
+  {
+   "key": "redeemSteamKey.viewInLibrary",
+   "en": "View in library",
+   "tr": "Näytä kirjastossa"
+  },
+  {
+   "key": "setting.eosOverlay.unavailable",
+   "en": "The EOS Overlay is unavailable in this build",
+   "tr": "EOS-peittokuva ei ole käytettävissä tässä versiossa"
+  },
+  {
+   "key": "setting.eosOverlay.unavailableDetail",
+   "en": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.",
+   "tr": "EOS-peittokuvan tuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi asentaa, päivittää tai poistaa tästä versiosta."
+  },
+  {
+   "key": "settings.eosOverlayInstallConfirmBody",
+   "en": "Install the EOS Overlay now?",
+   "tr": "Asennetaanko EOS-peittokuva nyt?"
+  },
+  {
+   "key": "settings.eosOverlayInstallConfirmTitle",
+   "en": "Confirm overlay install",
+   "tr": "Vahvista peittokuvan asennus"
+  },
+  {
+   "key": "settings.eosOverlayUpdateConfirmBody",
+   "en": "Update the EOS Overlay to the latest version?",
+   "tr": "Päivitetäänkö EOS-peittokuva uusimpaan versioon?"
+  },
+  {
+   "key": "settings.eosOverlayUpdateConfirmTitle",
+   "en": "Confirm overlay update",
+   "tr": "Vahvista peittokuvan päivitys"
+  },
+  {
+   "key": "settings.framelessWindowDescription",
+   "en": "Use frameless window",
+   "tr": "Käytä kehyksetöntä ikkunaa"
+  },
+  {
+   "key": "settings.gamepadInitialRepeatDelay",
+   "en": "Gamepad input initial repeat delay",
+   "tr": "Peliohjaimen syötteen alkuviive toistolle"
+  },
+  {
+   "key": "settings.gamepadRepeatFrequency",
+   "en": "Gamepad input repeat frequency",
+   "tr": "Peliohjaimen syötteen toistotaajuus"
+  },
+  {
+   "key": "settings.gamescopeFsr",
+   "en": "AMD FidelityFX™ Super Resolution 1.0 (FSR)",
+   "tr": "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+  },
+  {
+   "key": "settings.gamescopeUpscaleMethod",
+   "en": "Upscale Method",
+   "tr": "Skaalausmenetelmä"
+  },
+  {
+   "key": "settings.gamescopeWindowType",
+   "en": "Window Type",
+   "tr": "Ikkunatyyppi"
+  },
+  {
+   "key": "settings.loginBackground",
+   "en": "Manage Accounts background",
+   "tr": "Tilien hallinnan tausta"
+  },
+  {
+   "key": "settings.loginBackgroundDialogTitle",
+   "en": "Select a background image",
+   "tr": "Valitse taustakuva"
+  },
+  {
+   "key": "settings.loginBackgroundFilterName",
+   "en": "Images",
+   "tr": "Kuvat"
+  },
+  {
+   "key": "settings.loginBackgroundHelp",
+   "en": "Image shown behind the Manage Accounts screen. Clear the field to go back to the bundled artwork. PNG, JPEG, WebP, AVIF and GIF are supported.",
+   "tr": "Tilien hallinnan näytön takana näytettävä kuva. Tyhjennä kenttä palataksesi mukana tulevaan kuvitukseen. Tuetut muodot ovat PNG, JPEG, WebP, AVIF ja GIF."
+  },
+  {
+   "key": "settings.steamgriddb.apikey.unavailable",
+   "en": "Unavailable on this build",
+   "tr": "Ei käytettävissä tässä versiossa"
+  },
+  {
+   "key": "settings.steamgriddb.help.unavailableDetail",
+   "en": "SteamGridDB artwork support is deferred to a future release (D-03, Phase 34.6) and cannot be configured from this build.",
+   "tr": "SteamGridDB-kuvatuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi määrittää tästä versiosta."
+  },
+  {
+   "key": "settings.wineDefaultLabel",
+   "en": "Wine Default",
+   "tr": "Wine-oletus"
+  },
+  {
+   "key": "settings.wineFlatpakPath",
+   "en": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)",
+   "tr": "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+  },
+  {
+   "key": "sidebar.redeemSteamKey",
+   "en": "Redeem a Steam key",
+   "tr": "Lunasta Steam-avain"
+  },
+  {
+   "key": "sideload.filter.all",
+   "en": "All",
+   "tr": "Kaikki"
+  },
+  {
+   "key": "sideload.filter.appExtension",
+   "en": "App",
+   "tr": "Sovellus"
+  },
+  {
+   "key": "sideload.filter.appImageExtension",
+   "en": "AppImage",
+   "tr": "AppImage"
+  },
+  {
+   "key": "sideload.filter.appImages",
+   "en": "AppImages",
+   "tr": "AppImage-tiedostot"
+  },
+  {
+   "key": "sideload.filter.apps",
+   "en": "Apps",
+   "tr": "Sovellukset"
+  },
+  {
+   "key": "sideload.filter.executables",
+   "en": "Executables",
+   "tr": "Suoritettavat tiedostot"
+  },
+  {
+   "key": "sideload.filter.images",
+   "en": "Images",
+   "tr": "Levykuvat"
+  },
+  {
+   "key": "sideload.filter.otherBinaries",
+   "en": "Other Binaries",
+   "tr": "Muut binaaritiedostot"
+  },
+  {
+   "key": "sideload.filter.scripts",
+   "en": "Scripts",
+   "tr": "Komentosarjat"
+  },
+  {
+   "key": "sideload.import-hint.content",
+   "en": "Do NOT use this feature for that.<br />Instead, <3>log into</3> the store, look for the game in your library, open the installation dialog, and click the &quot;{{doorLabel}}&quot; button",
+   "tr": "Älä käytä tätä ominaisuutta siihen.<br />Sen sijaan <3>kirjaudu</3> kauppaan, etsi peli kirjastostasi, avaa asennusikkuna ja klikkaa &quot;{{doorLabel}}&quot;-painiketta"
+  },
+  {
+   "key": "status.checkingSteamInstallOptions",
+   "en": "Checking install options…",
+   "tr": "Tarkistetaan asennusvaihtoehtoja…"
+  },
+  {
+   "key": "steam.bottle.statusPollTimeout",
+   "en": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.",
+   "tr": "GameLib lakkasi saamasta vastausta Steam-bottlen asetuksesta. Se voi olla edelleen käynnissä — tarkista, avautuiko Steam-asennusikkuna, ja yritä sitten uudelleen."
+  },
+  {
+   "key": "steam.download.error.connectionDroppedV2",
+   "en": "Steam servers dropped the connection.",
+   "tr": "Steamin palvelimet katkaisivat yhteyden."
+  },
+  {
+   "key": "steam.download.error.decodeFailed",
+   "en": "Downloaded game data could not be unpacked. This is not a network problem.",
+   "tr": "Latattua pelidataa ei voitu purkaa. Kyse ei ole verkko-ongelmasta."
+  },
+  {
+   "key": "steam.download.error.genericV2",
+   "en": "The Steam download failed.",
+   "tr": "Steam-lataus epäonnistui."
+  },
+  {
+   "key": "steam.download.error.notSignedIn",
+   "en": "You are not signed in to Steam, so this download could not start.",
+   "tr": "Et ole kirjautunut Steamiin, joten latausta ei voitu aloittaa."
+  },
+  {
+   "key": "steam.install.bottleNameReadonlyHelper",
+   "en": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
+   "tr": "GameLib hallinnoi yhtä jaettua CrossOver-pulloa Steamille. Erillisen pullon nimeäminen jokaiselle pelille ei ole vielä tuettu."
+  },
+  {
+   "key": "steam.install.contentLightNotice",
+   "en": "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib.",
+   "tr": "Tämä asennetaan Steamin oman asiakasohjelman kautta, joten täällä ei ole mitään valittavaa. Ota natiivit Steam-asennukset käyttöön asetuksista hallitaksesi asennussijaintia ja Windows-yhteensopivuutta GameLibistä."
+  },
+  {
+   "key": "steam.install.contentLightSingleLibraryNotice",
+   "en": "There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it.",
+   "tr": "Tässä järjestelmässä on vain yksi Steam-kirjasto, niin tässä ei ole mitään valittavaa — GameLib asentaa tämän pelin siihen."
+  },
+  {
+   "key": "steam.install.forceWindowsHelp",
+   "en": "This game has a native macOS version, but you can install the Windows version instead through a Wine bottle — useful if the native build is missing features or performs worse.",
+   "tr": "Tällä pelillä on natiivi macOS-versio, mutta voit asentaa sen sijaan Windows-version Wine-bottlen kautta — hyödyllistä, jos natiivista versiosta puuttuu ominaisuuksia tai se toimii heikommin."
+  },
+  {
+   "key": "steam.install.libraryFullNotice",
+   "en": "Not enough space in your Steam library — choose another below or free up space.",
+   "tr": "Steam-kirjastossasi ei ole tarpeeksi tilaa — valitse toinen alta tai vapauta tilaa."
+  },
+  {
+   "key": "steam.install.libraryFullOnlyNotice",
+   "en": "Not enough space in your Steam library. Free up space, then try again.",
+   "tr": "Steam-kirjastossasi ei ole tarpeeksi tilaa. Vapauta tilaa ja yritä sitten uudelleen."
+  },
+  {
+   "key": "steam.install.libraryMissingNotice",
+   "en": "Your Steam library couldn't be reached — choose another below.",
+   "tr": "Steam-kirjastoosi ei saatu yhteyttä — valitse toinen alta."
+  },
+  {
+   "key": "steam.install.libraryMissingOnlyNotice",
+   "en": "Your Steam library couldn't be reached. Reconnect the drive, then try again.",
+   "tr": "Steam-kirjastoosi ei saatu yhteyttä. Yhdistä asema uudelleen ja yritä sitten uudelleen."
+  },
+  {
+   "key": "steam.install.libraryPickerLabel",
+   "en": "Choose Steam library",
+   "tr": "Valitse Steam-kirjasto"
+  },
+  {
+   "key": "steam.install.libraryPrimarySuffix",
+   "en": "default",
+   "tr": "oletus"
+  },
+  {
+   "key": "steam.install.noCrossoverEngine",
+   "en": "No CrossOver installation was found. GameLib will set one up when the install starts.",
+   "tr": "CrossOver-asennusta ei löytynyt. GameLib asentaa sen, kun asennus käynnistyy."
+  },
+  {
+   "key": "steam.install.sharedBottleNotice",
+   "en": "The wine version you choose here is used for every Steam game that needs a bottle — not just this one. Changing it later will change how those games run too.",
+   "tr": "Tässä valitsemaasi wine-versiota käytetään kaikissa Steam-peleissä, jotka tarvitsevat bottlen — ei vain tässä. Sen muuttaminen myöhemmin vaikuttaa myös niiden muiden pelien toimintaan."
+  },
+  {
+   "key": "steam.install.withOptionsLabel",
+   "en": "Install with options…",
+   "tr": "Asenna asetuksin…"
+  },
+  {
+   "key": "steam.resumeAvailable.notify",
+   "en": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+   "tr": "Keskeytynyt asennus pelille {{game}} on valmis jatkettavaksi — jatka napsauttamalla Asenna"
+  },
+  {
+   "key": "steam.status.resumeInstall",
+   "en": "Resume Install",
+   "tr": "Jatka asennusta"
+  },
+  {
+   "key": "steam.status.resumeInstallHint",
+   "en": "Install incomplete — resume the download in GameLib",
+   "tr": "Asennus kesken — jatka latausta GameLibissä"
+  },
+  {
+   "key": "steam.uninstall.removeAllCopiesConfirmMessage",
+   "en": "This removes every installed copy of this game across all install locations. This cannot be undone.",
+   "tr": "Tämä poistaa kaikki tämän pelin asennetut kopiot kaikista asennussijainneista. Tätä ei voi kumota."
+  },
+  {
+   "key": "steam.uninstall.removeAllCopiesConfirmTitle",
+   "en": "Remove all copies?",
+   "tr": "Poistetaanko kaikki kopiot?"
+  },
+  {
+   "key": "steam.uninstall.removeAllCopiesLabel",
+   "en": "Remove all copies…",
+   "tr": "Poista kaikki kopiot…"
+  },
+  {
+   "key": "steamgriddb.error.unavailable",
+   "en": "SteamGridDB artwork is unavailable on this build",
+   "tr": "SteamGridDB-kuvat eivät ole käytettävissä tässä versiossa"
+  },
+  {
+   "key": "themeSelector.cyberSpaceOasis",
+   "en": "Cyberspace Oasis",
+   "tr": "Cyberspace Oasis"
+  },
+  {
+   "key": "themeSelector.cyberSpaceOasisAlt",
+   "en": "Cyberspace Oasis Classic",
+   "tr": "Cyberspace Oasis Classic"
+  },
+  {
+   "key": "themeSelector.dracula",
+   "en": "Dracula",
+   "tr": "Dracula"
+  },
+  {
+   "key": "themeSelector.gruvboxDark",
+   "en": "Gruvbox Dark",
+   "tr": "Gruvbox Dark"
+  },
+  {
+   "key": "themeSelector.highContrast",
+   "en": "High Contrast",
+   "tr": "Korkea kontrasti"
+  },
+  {
+   "key": "themeSelector.marine",
+   "en": "Marine",
+   "tr": "Marine"
+  },
+  {
+   "key": "themeSelector.marineClassic",
+   "en": "Marine Classic",
+   "tr": "Marine Classic"
+  },
+  {
+   "key": "themeSelector.midnightMirage",
+   "en": "Midnight Mirage",
+   "tr": "Midnight Mirage"
+  },
+  {
+   "key": "themeSelector.nordDark",
+   "en": "Nord Dark",
+   "tr": "Nord Dark"
+  },
+  {
+   "key": "themeSelector.nordLight",
+   "en": "Nord Light",
+   "tr": "Nord Light"
+  },
+  {
+   "key": "themeSelector.oldSchool",
+   "en": "Old School GameLib",
+   "tr": "Old School GameLib"
+  },
+  {
+   "key": "themeSelector.sweet",
+   "en": "Sweet",
+   "tr": "Sweet"
+  },
+  {
+   "key": "themeSelector.zombie",
+   "en": "Zombie",
+   "tr": "Zombie"
+  },
+  {
+   "key": "themeSelector.zombieClassic",
+   "en": "Zombie Classic",
+   "tr": "Zombie Classic"
+  },
+  {
+   "key": "webview.embedPlaceholder.message",
+   "en": "Paused while a window is open",
+   "tr": "Keskeytetty, kun ikkuna on auki"
+  },
+  {
+   "key": "webview.login.blocked.body",
+   "en": "Your sign-in cannot be completed yet: {{channel}} is not ported to this build. This lands in Phase 34.5.",
+   "tr": "Kirjautumistasi ei voida vielä viimeistellä: {{channel}} ei ole vielä siirretty tähän versioon. Tämä toteutuu vaiheessa 34.5."
+  },
+  {
+   "key": "webview.login.blocked.heading",
+   "en": "Signing in to {{runner}} is not wired up yet",
+   "tr": "Kirjautuminen palveluun {{runner}} ei ole vielä käytössä"
+  },
+  {
+   "key": "webview.login.blocked.headingGeneric",
+   "en": "Signing in is not wired up yet",
+   "tr": "Kirjautuminen ei ole vielä käytössä"
+  },
+  {
+   "key": "webview.login.humble.body",
+   "en": "A sign-in window has opened. Complete sign-in there — this page updates automatically once it succeeds.",
+   "tr": "Kirjautumisikkuna on avautunut. Viimeistele kirjautuminen siellä — tämä sivu päivittyy automaattisesti onnistuneen kirjautumisen jälkeen."
+  },
+  {
+   "key": "webview.login.humble.error.window_unreachable",
+   "en": "the Humble sign-in window closed or could not be reached",
+   "tr": "Humble Bundlen kirjautumisikkuna sulkeutui tai siihen ei saatu yhteyttä"
+  },
+  {
+   "key": "webview.login.humble.heading",
+   "en": "Signing in to Humble Bundle",
+   "tr": "Kirjaudutaan palveluun Humble Bundle"
+  },
+  {
+   "key": "webview.login.oauth.awaiting.body",
+   "en": "A sign-in window has opened. Complete sign-in there.",
+   "tr": "Kirjautumisikkuna on avautunut. Viimeistele kirjautuminen siellä."
+  },
+  {
+   "key": "webview.login.oauth.awaiting.heading",
+   "en": "Signing in to {{runner}}",
+   "tr": "Kirjaudutaan palveluun {{runner}}"
+  },
+  {
+   "key": "webview.login.oauth.awaiting.headingGeneric",
+   "en": "Signing in",
+   "tr": "Kirjaudutaan"
+  },
+  {
+   "key": "webview.login.oauth.blocked.body",
+   "en": "Your sign-in was captured successfully, but the {{channel}} backend channel is not ported to this build yet. This lands in Phase 34.5.",
+   "tr": "Kirjautumisesi otettiin onnistuneesti talteen, mutta {{channel}}-taustakanavaa ei ole vielä siirretty tähän versioon. Tämä toteutuu vaiheessa 34.5."
+  },
+  {
+   "key": "webview.login.oauth.blocked.heading",
+   "en": "Signing in to {{runner}} was captured, but can't finish yet",
+   "tr": "Kirjautuminen palveluun {{runner}} otettiin talteen, mutta sitä ei voida vielä viimeistellä"
+  },
+  {
+   "key": "webview.login.oauth.blocked.headingGeneric",
+   "en": "Sign-in was captured, but can't finish yet",
+   "tr": "Kirjautuminen otettiin talteen, mutta sitä ei voida vielä viimeistellä"
+  },
+  {
+   "key": "webview.login.oauth.cancelled.body",
+   "en": "The sign-in window was closed before completing. You can try again.",
+   "tr": "Kirjautumisikkuna suljettiin ennen kuin kirjautuminen viimeisteltiin. Voit yrittää uudelleen."
+  },
+  {
+   "key": "webview.login.oauth.cancelled.heading",
+   "en": "Signing in to {{runner}} was cancelled",
+   "tr": "Kirjautuminen palveluun {{runner}} peruutettiin"
+  },
+  {
+   "key": "webview.login.oauth.cancelled.headingGeneric",
+   "en": "Sign-in was cancelled",
+   "tr": "Kirjautuminen peruutettiin"
+  },
+  {
+   "key": "webview.login.oauth.error.body",
+   "en": "Something went wrong while signing in: {{message}}",
+   "tr": "Kirjautumisessa tapahtui virhe: {{message}}"
+  },
+  {
+   "key": "webview.login.oauth.error.heading",
+   "en": "Signing in to {{runner}} failed",
+   "tr": "Kirjautuminen palveluun {{runner}} epäonnistui"
+  },
+  {
+   "key": "webview.login.oauth.error.headingGeneric",
+   "en": "Sign-in failed",
+   "tr": "Kirjautuminen epäonnistui"
+  },
+  {
+   "key": "webview.login.oauth.finalizing.body",
+   "en": "Sign-in captured. Completing the exchange with the store — this can take a few seconds.",
+   "tr": "Kirjautuminen otettu talteen. Viimeistellään tiedonvaihtoa kaupan kanssa — tämä voi kestää muutaman sekunnin."
+  },
+  {
+   "key": "webview.login.oauth.finalizing.heading",
+   "en": "Finalizing sign-in with {{runner}}…",
+   "tr": "Viimeistellään kirjautumista palveluun {{runner}}…"
+  },
+  {
+   "key": "webview.login.oauth.finalizing.headingGeneric",
+   "en": "Finalizing sign-in…",
+   "tr": "Viimeistellään kirjautumista…"
+  },
+  {
+   "key": "webview.login.oauth.genericChannel",
+   "en": "the sign-in channel",
+   "tr": "kirjautumiskanava"
+  },
+  {
+   "key": "webview.login.oauth.preparing.body",
+   "en": "The store's sign-in window is being prepared and will open shortly.",
+   "tr": "Kaupan kirjautumisikkunaa valmistellaan ja se avautuu pian."
+  },
+  {
+   "key": "webview.login.oauth.preparing.heading",
+   "en": "Preparing {{runner}} sign-in…",
+   "tr": "Valmistellaan kirjautumista palveluun {{runner}}…"
+  },
+  {
+   "key": "webview.login.oauth.preparing.headingGeneric",
+   "en": "Preparing sign-in…",
+   "tr": "Valmistellaan kirjautumista…"
+  },
+  {
+   "key": "webview.login.oauth.retry",
+   "en": "Retry",
+   "tr": "Yritä uudelleen"
+  },
+  {
+   "key": "webview.login.oauth.timeout.body",
+   "en": "The sign-in window took too long to complete. You can try again.",
+   "tr": "Kirjautumisikkunan täyttyminen kesti liian kauan. Voit yrittää uudelleen."
+  },
+  {
+   "key": "webview.login.oauth.timeout.heading",
+   "en": "Signing in to {{runner}} timed out",
+   "tr": "Kirjautuminen palveluun {{runner}} aikakatkaistiin"
+  },
+  {
+   "key": "webview.login.oauth.timeout.headingGeneric",
+   "en": "Sign-in timed out",
+   "tr": "Kirjautuminen aikakatkaistiin"
+  },
+  {
+   "key": "webview.storeEmbedControls.hostLabel",
+   "en": "Currently viewing {{host}}",
+   "tr": "Katselet nyt kohdetta {{host}}"
+  },
+  {
+   "key": "webview.unavailable.epic.body",
+   "en": "GameLib doesn't yet embed Epic Store pages in-app.",
+   "tr": "GameLib ei vielä upota Epic Storen sivuja sovellukseen."
+  },
+  {
+   "key": "webview.unavailable.epic.heading",
+   "en": "Epic Store browsing isn't available in-app yet",
+   "tr": "Epic Storen selaus ei ole vielä käytettävissä sovelluksessa"
+  },
+  {
+   "key": "webview.unavailable.next-step",
+   "en": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+   "tr": "Tämä on kirjattu omaksi tulevaksi kehitystyöksi -- käytä toistaiseksi alla olevaa painiketta avataksesi sen järjestelmäsi selaimessa."
+  },
+  {
+   "key": "webview.unavailable.open-in-browser",
+   "en": "Open in browser",
+   "tr": "Avaa selaimessa"
+  },
+  {
+   "key": "webview.unavailable.platform.body",
+   "en": "GameLib's in-app store and wiki browsing is available on macOS. It isn't available on this platform yet.",
+   "tr": "GameLibin sovelluksen sisäinen kaupan ja wikin selaus on käytettävissä macOS-käyttöjärjestelmässä. Se ei ole vielä käytettävissä tällä alustalla."
+  },
+  {
+   "key": "webview.unavailable.platform.heading",
+   "en": "In-app store and wiki browsing isn't available on this platform yet",
+   "tr": "Sovelluksen sisäinen kaupan ja wikin selaus ei ole vielä käytettävissä tällä alustalla"
+  },
+  {
+   "key": "winetricks.unavailable",
+   "en": "Winetricks component management is unavailable on this build",
+   "tr": "Winetricks-komponenttien hallinta ei ole käytettävissä tässä versiossa"
+  },
+  {
+   "key": "winetricks.unavailableDetail",
+   "en": "Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build.",
+   "tr": "Winetricks-tuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi luetella tai asentaa tästä versiosta."
+  }
+ ]
+}

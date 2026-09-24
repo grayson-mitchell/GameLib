@@ -1,0 +1,510 @@
+{
+  "locale": "et",
+  "reviewer_model": "opus",
+  "rows_reviewed": 280,
+  "counts": { "ok": 230, "minor": 49, "major": 1, "critical": 0 },
+  "findings": [
+    {
+      "key": "library.filterPanel.chipNoStorePageHidden",
+      "severity": "major",
+      "category": "grammar",
+      "en": "Hiding no store page",
+      "tr": "Peidab poelehe puudumisega",
+      "back_translation": "Hides with the absence of a store page",
+      "issue": "Ungrammatical and unclear filter chip; a user cannot tell that games without a store page are being hidden. Sibling chips use 'Ainult ilma poelehata' / 'Kaasa arvatud ...' patterns.",
+      "suggested": "Poeleheta mängud peidetud"
+    },
+    {
+      "key": "about.title",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "About GameLib",
+      "tr": "GameLib teave",
+      "back_translation": "GameLib information",
+      "issue": "Brand should take the genitive in this construction; the translation elsewhere already inflects it (GameLibi, GameLibist).",
+      "suggested": "GameLibi teave"
+    },
+    {
+      "key": "box.steam.mac32Detected.confirm",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Reinstall via CrossOver",
+      "tr": "Installi uuesti CrossOver kaudu",
+      "back_translation": "Install again via CrossOver",
+      "issue": "Uses 'installima', but nearly every other row uses 'paigaldama' for install.",
+      "suggested": "Paigalda uuesti CrossOveri kaudu"
+    },
+    {
+      "key": "box.steam.mac32Detected.message",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version.",
+      "tr": "Selle mängu macOS versioon on ainult 32-bitine ega tööta selle macOS versiooniga. GameLib saab selle asemel uuesti paigaldada CrossOver kaudu, mis laadib alla Windowsi versiooni.",
+      "back_translation": "This game's macOS version is only 32-bit and does not work with this macOS version. GameLib can instead reinstall via CrossOver, which downloads the Windows version.",
+      "issue": "Estonian orthography needs the hyphenated genitive 'macOS-i versioon'. 'Re-' of redownload is dropped, a small nuance loss.",
+      "suggested": "Selle mängu macOS-i versioon on ainult 32-bitine ega tööta selle macOS-i versiooniga. GameLib saab selle asemel CrossOveri kaudu uuesti paigaldada, mis laadib Windowsi versiooni uuesti alla."
+    },
+    {
+      "key": "edit-game.sgdb.unavailable",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "SteamGridDB artwork search is unavailable on this build.",
+      "tr": "SteamGridDB kujunduse otsing pole selle versiooniga saadaval.",
+      "back_translation": "SteamGridDB design search is not available with this version.",
+      "issue": "'kujundus' (design/layout) is an odd rendering of game artwork; 'pildid' / 'pildimaterjal' fits better. 'selle versiooniga' and 'selles versioonis' are mixed across rows (same for steamgriddb.error.unavailable and settings.steamgriddb.*).",
+      "suggested": "SteamGridDB piltide otsing pole selles versioonis saadaval."
+    },
+    {
+      "key": "humbleKeys.activateConfirmBody",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+      "tr": "See paljastab võtme — eemaldades selle jäädavalt kinkimiseks sobivate hulgast — ja lunastab selle sinu Steami kontol. Seda ei saa tagasi võtta.",
+      "back_translation": "This exposes the key, permanently removing it from among those suitable for gifting, and redeems it on your Steam account. It cannot be undone.",
+      "issue": "'Giftable spares' is a named UI section rendered elsewhere as 'Kingitavad varuvõtmed'. Here it is paraphrased, so the user cannot match it to the section. 'paljastama' (expose/unmask) is also a heavy word for revealing a key.",
+      "suggested": "See avab võtme — eemaldades selle jäädavalt Kingitavatest varuvõtmetest — ja lunastab selle sinu Steami kontol. Seda ei saa tagasi võtta."
+    },
+    {
+      "key": "humbleKeys.c2Title",
+      "severity": "minor",
+      "category": "brand",
+      "en": "You already own this on Steam",
+      "tr": "Sul on see juba Steam'is olemas",
+      "back_translation": "You already have this on Steam",
+      "issue": "Estonian does not use an apostrophe when a word ends in a pronounced consonant, so it should be 'Steamis'. Other rows correctly write 'Steamis' and 'Steami', so this is also inconsistent.",
+      "suggested": "Sul on see juba Steamis olemas"
+    },
+    {
+      "key": "humbleKeys.finishOwnedNote",
+      "severity": "minor",
+      "category": "brand",
+      "en": "You already own this on Steam — activation will likely fail there.",
+      "tr": "Sul on see juba Steam'is olemas — aktiveerimine seal tõenäoliselt ebaõnnestub.",
+      "back_translation": "You already have this on Steam — activation there will probably fail.",
+      "issue": "Same unneeded apostrophe as c2Title ('Steam'is' should be 'Steamis').",
+      "suggested": "Sul on see juba Steamis olemas — aktiveerimine seal tõenäoliselt ebaõnnestub."
+    },
+    {
+      "key": "humbleKeys.likelyOwnedOnSteam",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Likely owned on Steam",
+      "tr": "Tõenäoliselt juba olemas Steam'is",
+      "back_translation": "Probably already present on Steam",
+      "issue": "Unneeded apostrophe ('Steamis').",
+      "suggested": "Tõenäoliselt juba Steamis olemas"
+    },
+    {
+      "key": "humbleKeys.ownedOnSteam",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Owned on Steam",
+      "tr": "Olemas Steam'is",
+      "back_translation": "Present on Steam",
+      "issue": "Unneeded apostrophe ('Steamis'). Word order also reads better as 'Steamis olemas'.",
+      "suggested": "Steamis olemas"
+    },
+    {
+      "key": "humbleKeys.claimWizardTitle",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "Claim this key",
+      "tr": "Nõua see võti",
+      "back_translation": "Demand this key",
+      "issue": "'nõudma' means demand or require, which is the wrong sense for claiming a key in UI. Other rows use 'lunastama' for claiming.",
+      "suggested": "Lunasta see võti"
+    },
+    {
+      "key": "humbleKeys.giftConfirmBody",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Anyone with this link can claim the key — once redeemed, it's gone for good. You'll finish gifting it on Humble's own site.",
+      "tr": "Igaüks, kellel on see link, saab võtme endale nõuda — kui see on kasutatud, on see jäädavalt läinud. Kingi lõpuleviimine toimub Humble enda saidil.",
+      "back_translation": "Anyone who has this link can demand the key for themselves — once used, it's gone forever. Completion of the gift happens on Humble's own site.",
+      "issue": "The brand needs the genitive ('Humble'i enda saidil'). 'Kingituse' reads more naturally than 'Kingi'. 'nõudma' has the same demand sense problem as claimWizardTitle.",
+      "suggested": "Igaüks, kellel on see link, saab võtme endale võtta — kui see on kasutatud, on see jäädavalt läinud. Kingituse viid lõpule Humble'i enda saidil."
+    },
+    {
+      "key": "humbleKeys.giftOnHumble",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Gift on Humble",
+      "tr": "Kingi Humble's",
+      "back_translation": "Gift in Humble('s)",
+      "issue": "'Humble's' looks like an English possessive. The Estonian inessive of Humble (pronounced ending in /l/) is 'Humble'is'.",
+      "suggested": "Kingi Humble'is"
+    },
+    {
+      "key": "humbleKeys.keyLoading",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Loading…",
+      "tr": "Laadimine",
+      "back_translation": "Loading",
+      "issue": "The ellipsis was dropped. Other progress strings keep it.",
+      "suggested": "Laadimine…"
+    },
+    {
+      "key": "humbleKeys.redeemOnPlatform",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Redeem on {{platform}}",
+      "tr": "Kasuta platvormil {{platform}}",
+      "back_translation": "Use on platform {{platform}}",
+      "issue": "'Redeem' is translated three ways across the file: kasutama (here, markRedeemed, redeemedAnnotation), lunastama (state.redeemed, redeemSteamKey.title), and aktiveerima (redeemSteamKey.redeem, redeemKey.*). Pick one; 'lunastama' is the most natural.",
+      "suggested": "Lunasta platvormil {{platform}}"
+    },
+    {
+      "key": "humbleKeys.markRedeemed",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Mark as redeemed",
+      "tr": "Märgi kasutatuks",
+      "back_translation": "Mark as used",
+      "issue": "This doesn't match the state label 'Lunastatud' that the action produces.",
+      "suggested": "Märgi lunastatuks"
+    },
+    {
+      "key": "humbleKeys.revealAmbiguousBody",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "We couldn't confirm this finished — sync to check",
+      "tr": "Me ei suutnud kinnitada, et see lõppes — sünkroonimine kontrollib seda",
+      "back_translation": "We could not confirm it finished — syncing checks it",
+      "issue": "The imperative call to action ('sync to check') became a statement, so the user is no longer told to sync.",
+      "suggested": "Me ei suutnud kinnitada, et see lõpule jõudis — sünkrooni, et kontrollida"
+    },
+    {
+      "key": "humbleKeys.state.revealed",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Revealed",
+      "tr": "Avatud",
+      "back_translation": "Opened",
+      "issue": "Inconsistent with 'Paljastatud' in revealedAnnotation and 'Paljasta võti' for the action. Either choice works, but it must be one term.",
+      "suggested": "Avatud (and use 'Ava võti' / 'Avatud {{date}}' in the reveal rows)"
+    },
+    {
+      "key": "humbleKeys.state.unrevealed",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Unrevealed",
+      "tr": "Avamata",
+      "back_translation": "Unopened",
+      "issue": "Same reveal-term inconsistency as state.revealed.",
+      "suggested": "Avamata (with the reveal term unified)"
+    },
+    {
+      "key": "humbleKeys.syncError",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "Couldn't refresh — showing data from {{time}}",
+      "tr": "Värskendamine ebaõnnestus — kuvatakse andmeid {{time}} eest",
+      "back_translation": "Refresh failed — showing data from {{time}} ago",
+      "issue": "'X eest' reads as 'X ago' and only works if {{time}} is a duration. If it is a timestamp, 'seisuga {{time}}' is correct. Verify what the placeholder contains.",
+      "suggested": "Värskendamine ebaõnnestus — kuvatakse andmeid seisuga {{time}}"
+    },
+    {
+      "key": "humbleKeys.syncToEnableClaiming",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "Sync to enable claiming",
+      "tr": "Sünkroonimine lubab lunastamise",
+      "back_translation": "Synchronization permits redeeming",
+      "issue": "The instruction became a statement, so the user is not told to act.",
+      "suggested": "Sünkrooni, et lunastamine lubada"
+    },
+    {
+      "key": "humbleKeys.undo",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Undo",
+      "tr": "Tühista",
+      "back_translation": "Cancel",
+      "issue": "This is the same word used for Cancel (box.cancel, activateDismiss). Estonian UI convention for Undo is 'Võta tagasi'.",
+      "suggested": "Võta tagasi"
+    },
+    {
+      "key": "humbleKeys.undoOwnershipOverride",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Undo — I do own this game",
+      "tr": "Tühista — mul on see mäng olemas",
+      "back_translation": "Cancel — I have this game",
+      "issue": "Undo rendered with the Cancel term (see humbleKeys.undo).",
+      "suggested": "Võta tagasi — mul on see mäng olemas"
+    },
+    {
+      "key": "humbleKeys.urgencyHoursLeft",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "{{H}}h left",
+      "tr": "{{H}}h jäänud",
+      "back_translation": "{{H}}h left",
+      "issue": "'h' is an English abbreviation. The Estonian abbreviation for tund (hour) is 't', written with a space, parallel to 'min' used in the cooldown rows.",
+      "suggested": "{{H}} t jäänud"
+    },
+    {
+      "key": "library.filterPanel.runsViaBottle",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Runs via bottle",
+      "tr": "Töötab bottle'i kaudu",
+      "back_translation": "Runs via bottle",
+      "issue": "Leaves 'bottle' in English, while all Steam/CrossOver rows translate it as 'pudel'.",
+      "suggested": "Töötab pudeli kaudu"
+    },
+    {
+      "key": "library.steamSync.failedBody",
+      "severity": "minor",
+      "category": "register",
+      "en": "Your other libraries are still available. Try again, or check that Steam is reachable.",
+      "tr": "Teie teised teegid on endiselt saadaval. Proovige uuesti või kontrollige, kas Steam on kättesaadav.",
+      "back_translation": "Your (formal) other libraries are still available. Try again or check whether Steam is reachable.",
+      "issue": "Uses formal 'Teie/Proovige', while the file overwhelmingly uses informal 'sina' (including the sibling signedOutBody).",
+      "suggested": "Sinu teised teegid on endiselt saadaval. Proovi uuesti või kontrolli, kas Steam on kättesaadav."
+    },
+    {
+      "key": "library.steamSync.failedTitle",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Couldn't sync your Steam library",
+      "tr": "Sinu Steami teeki ei õnnestunud sünkida",
+      "back_translation": "Couldn't sync your Steam library",
+      "issue": "'sünkima' is colloquial, while the Humble rows use 'sünkroonima'. The file should use one term.",
+      "suggested": "Sinu Steami teeki ei õnnestunud sünkroonida"
+    },
+    {
+      "key": "library.steamSync.retry",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Retry Steam sync",
+      "tr": "Proovi Steami sünki uuesti",
+      "back_translation": "Retry the Steam sync",
+      "issue": "Colloquial 'sünk'. This is the same inconsistency as failedTitle.",
+      "suggested": "Proovi Steami sünkroonimist uuesti"
+    },
+    {
+      "key": "library.steamSync.signedOutBody",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Sign in again to sync your Steam library. Your other libraries are still available.",
+      "tr": "Logi uuesti sisse, et sünkida oma Steami teeki. Sinu teised teegid on endiselt saadaval.",
+      "back_translation": "Log in again to sync your Steam library. Your other libraries are still available.",
+      "issue": "Colloquial 'sünkida' (see failedTitle).",
+      "suggested": "Logi uuesti sisse, et oma Steami teeki sünkroonida. Sinu teised teegid on endiselt saadaval."
+    },
+    {
+      "key": "library.steamSync.syncing",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Syncing your Steam library…",
+      "tr": "Sinu Steami teegi sünkimine…",
+      "back_translation": "Syncing your Steam library…",
+      "issue": "Colloquial 'sünkimine' (see failedTitle).",
+      "suggested": "Sinu Steami teegi sünkroonimine…"
+    },
+    {
+      "key": "pathSelectionBox.unsaved",
+      "severity": "minor",
+      "category": "register",
+      "en": "Not saved yet — press Enter",
+      "tr": "Veel salvestamata — vajutage Enter",
+      "back_translation": "Not yet saved — press (formal) Enter",
+      "issue": "Formal register, while the rest of the UI uses informal.",
+      "suggested": "Veel salvestamata — vajuta Enter"
+    },
+    {
+      "key": "queue.label.failed",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Failed",
+      "tr": "Ebaõnnestus",
+      "back_translation": "(It) failed",
+      "issue": "As a status label, the participle 'Ebaõnnestunud' is more natural than the finite past verb.",
+      "suggested": "Ebaõnnestunud"
+    },
+    {
+      "key": "redeemSteamKey.redeem",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Redeem",
+      "tr": "Aktiveeri",
+      "back_translation": "Activate",
+      "issue": "The dialog title for the same flow says 'Lunasta Steami võti', but the button says 'Aktiveeri'. 'Aktiveeri' is also the Humble 'Activate' button, so two different English actions share one label.",
+      "suggested": "Lunasta"
+    },
+    {
+      "key": "setting.eosOverlay.unavailableDetail",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.",
+      "tr": "EOS Overlay tugi on lükatud edasi järgmisesse versiooni (D-03, Phase 34.6) ning seda ei saa selles versioonis paigaldada, uuendada ega eemaldada.",
+      "back_translation": "EOS Overlay support is postponed to the next version (D-03, Phase 34.6) and cannot be installed, updated or removed in this version.",
+      "issue": "'järgmisesse' (next) overstates 'a future release'. 'Phase' is left in English, while sibling rows write 'faas 34.6'.",
+      "suggested": "EOS Overlay tugi on lükatud edasi tulevasse väljalaskesse (D-03, faas 34.6) ning seda ei saa selles versioonis paigaldada, uuendada ega eemaldada."
+    },
+    {
+      "key": "settings.eosOverlayInstallConfirmTitle",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Confirm overlay install",
+      "tr": "Kinnita overlay paigaldamine",
+      "back_translation": "Confirm overlay installation",
+      "issue": "Lowercase 'overlay' is untranslated English outside the product name. Use 'ülekate', or refer to the product name.",
+      "suggested": "Kinnita ülekatte paigaldamine"
+    },
+    {
+      "key": "settings.eosOverlayUpdateConfirmTitle",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Confirm overlay update",
+      "tr": "Kinnita overlay uuendamine",
+      "back_translation": "Confirm overlay update",
+      "issue": "Same untranslated 'overlay' as the install title.",
+      "suggested": "Kinnita ülekatte uuendamine"
+    },
+    {
+      "key": "settings.loginBackgroundHelp",
+      "severity": "minor",
+      "category": "register",
+      "en": "Image shown behind the Manage Accounts screen. Clear the field to go back to the bundled artwork. PNG, JPEG, WebP, AVIF and GIF are supported.",
+      "tr": "Pilt, mis kuvatakse kontode haldamise ekraani taga. Tühjendage väli, et naasta kaasasoleva pildi juurde. Toetatud on PNG, JPEG, WebP, AVIF ja GIF.",
+      "back_translation": "Image shown behind the account management screen. Clear (formal) the field to return to the bundled picture. PNG, JPEG, WebP, AVIF and GIF are supported.",
+      "issue": "Formal 'Tühjendage' breaks the informal register used elsewhere.",
+      "suggested": "Pilt, mis kuvatakse kontode haldamise ekraani taga. Tühjenda väli, et naasta kaasasoleva pildi juurde. Toetatud on PNG, JPEG, WebP, AVIF ja GIF."
+    },
+    {
+      "key": "sideload.filter.appImages",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "AppImages",
+      "tr": "AppImage failid",
+      "back_translation": "AppImage files",
+      "issue": "A compound with a foreign proper name needs a hyphen in Estonian.",
+      "suggested": "AppImage-failid"
+    },
+    {
+      "key": "sideload.import-hint.content",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Do NOT use this feature for that.<br />Instead, <3>log into</3> the store, look for the game in your library, open the installation dialog, and click the &quot;{{doorLabel}}&quot; button",
+      "tr": "Ärge kasutage selleks seda funktsiooni.<br />Selle asemel <3>logige sisse</3> poodi, otsige mäng oma varamust üles, avage paigaldusaken ja klikkige nupul &quot;{{doorLabel}}&quot;",
+      "back_translation": "Do not use this feature for that. Instead log in to the store, find the game in your repository, open the installation window and click the \"{{doorLabel}}\" button",
+      "issue": "Tags and placeholder are intact. However, 'varamu' is used for library, while every other row uses 'teek'. The register is formal. The emphasis of 'NOT' is lost.",
+      "suggested": "ÄRA kasuta selleks seda funktsiooni.<br />Selle asemel <3>logi sisse</3> poodi, otsi mäng oma teegist üles, ava paigaldusaken ja klõpsa nupul &quot;{{doorLabel}}&quot;"
+    },
+    {
+      "key": "steam.install.contentLightNotice",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib.",
+      "tr": "See paigaldatakse Steami enda kliendi kaudu, seega pole siin midagi valida. Lülita seadetes sisse Steami natiivsed installid, et hallata paigalduskohta ja Windowsi ühilduvust GameLibist.",
+      "back_translation": "This is installed via Steam's own client, so there is nothing to choose here. Turn on native Steam installs in settings to manage the install location and Windows compatibility from GameLib.",
+      "issue": "Mixes 'installid' with 'paigaldus' in the same sentence.",
+      "suggested": "... Lülita seadetes sisse Steami natiivne paigaldamine, et hallata paigalduskohta ja Windowsi ühilduvust GameLibist."
+    },
+    {
+      "key": "steam.install.forceWindowsHelp",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "This game has a native macOS version, but you can install the Windows version instead through a Wine bottle — useful if the native build is missing features or performs worse.",
+      "tr": "Sellel mängul on natiivne macOS versioon, kuid selle asemel saad paigaldada Windowsi versiooni Wine pudeli kaudu — kasulik, kui natiivsel versioonil puuduvad funktsioonid või see töötab halvemini.",
+      "back_translation": "This game has a native macOS version, but instead you can install the Windows version via a Wine bottle — useful if the native version lacks features or runs worse.",
+      "issue": "Genitive forms of the brands should be hyphenated or apostrophized: 'macOS-i versioon', 'Wine'i pudeli'. The meaning is accurate.",
+      "suggested": "Sellel mängul on natiivne macOS-i versioon, kuid selle asemel saad paigaldada Windowsi versiooni Wine'i pudeli kaudu — kasulik, kui natiivsel versioonil puuduvad funktsioonid või see töötab halvemini."
+    },
+    {
+      "key": "steam.resumeAvailable.notify",
+      "severity": "minor",
+      "category": "register",
+      "en": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+      "tr": "Katkestatud paigaldus mängule {{game}} on valmis jätkamiseks — jätkamiseks klõpsa „Paigalda“",
+      "back_translation": "The interrupted installation for game {{game}} is ready for continuing — to continue click \"Install\"",
+      "issue": "'jätkamiseks' appears twice in a row, which reads clumsily. The placeholder is preserved.",
+      "suggested": "Mängu {{game}} katkestatud paigaldust saab jätkata — klõpsa „Paigalda“"
+    },
+    {
+      "key": "steam.status.resumeInstallHint",
+      "severity": "minor",
+      "category": "brand",
+      "en": "Install incomplete — resume the download in GameLib",
+      "tr": "Paigaldamine pooleli — jätkake allalaadimist GameLib'is",
+      "back_translation": "Installation unfinished — continue (formal) the download in GameLib",
+      "issue": "'GameLib'is' has an unneeded apostrophe; other rows write 'GameLibist' / 'GameLibi'. The register is also formal.",
+      "suggested": "Paigaldamine pooleli — jätka allalaadimist GameLibis"
+    },
+    {
+      "key": "themeSelector.cyberSpaceOasis",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Cyberspace Oasis",
+      "tr": "Cyberspace Oaas",
+      "back_translation": "Cyberspace Oasis",
+      "issue": "A half-translated proper theme name. Other theme names (Midnight Mirage, Nord Dark, Sweet) are kept in English, so this should be all English or all Estonian.",
+      "suggested": "Cyberspace Oasis"
+    },
+    {
+      "key": "themeSelector.cyberSpaceOasisAlt",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Cyberspace Oasis Classic",
+      "tr": "Cyberspace Oaas Klassikaline",
+      "back_translation": "Cyberspace Oasis Classic",
+      "issue": "Half-translated theme name, with an English-style capital on 'Klassikaline'.",
+      "suggested": "Cyberspace Oasis (klassikaline)"
+    },
+    {
+      "key": "themeSelector.oldSchool",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Old School GameLib",
+      "tr": "Vana Kooli GameLib",
+      "back_translation": "Old School GameLib",
+      "issue": "English title case is carried into Estonian, which does not capitalize common nouns here. 'Vana kooli' also reads as a literal calque.",
+      "suggested": "Vana kooli GameLib"
+    },
+    {
+      "key": "webview.login.oauth.finalizing.body",
+      "severity": "minor",
+      "category": "register",
+      "en": "Sign-in captured. Completing the exchange with the store — this can take a few seconds.",
+      "tr": "Sisselogimine salvestatud. Vahetuse lõpuleviimine poega — see võib võtta paar sekundit.",
+      "back_translation": "Sign-in saved. Completing the exchange with the store — this may take a couple of seconds.",
+      "issue": "'Vahetuse lõpuleviimine poega' is grammatical but opaque. 'Vahetus' out of context reads as a trade or swap, and 'poega' also reads as 'son' (partitive of poeg).",
+      "suggested": "Sisselogimine salvestatud. Ühenduse lõpetamine poega — see võib võtta paar sekundit."
+    },
+    {
+      "key": "webview.login.oauth.timeout.heading",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Signing in to {{runner}} timed out",
+      "tr": "Sisselogimine {{runner}} kontole aegus",
+      "back_translation": "Sign-in to the {{runner}} account timed out",
+      "issue": "Every sibling heading uses 'teenusesse {{runner}}'. This one switches to '{{runner}} kontole'.",
+      "suggested": "Sisselogimine teenusesse {{runner}} aegus"
+    },
+    {
+      "key": "webview.storeEmbedControls.hostLabel",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Currently viewing {{host}}",
+      "tr": "Praegu vaatad {{host}}",
+      "back_translation": "You are currently watching {{host}}",
+      "issue": "'vaatama' needs a partitive object, which an uninflected hostname cannot carry. A colon avoids the issue.",
+      "suggested": "Praegu vaatad: {{host}}"
+    },
+    {
+      "key": "webview.unavailable.next-step",
+      "severity": "minor",
+      "category": "register",
+      "en": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+      "tr": "See on eraldi tulevase töö nimekirjas — praegu kasuta allolevat nuppu, et avada see hoopis oma süsteemi veebilehitsejas.",
+      "back_translation": "This is on the list of separate future work — for now use the button below to open it instead in your system browser.",
+      "issue": "The first clause is an awkward calque.",
+      "suggested": "See on plaanis eraldi tulevase tööna — praegu kasuta allolevat nuppu, et avada see oma süsteemi veebilehitsejas."
+    }
+  ],
+  "terminology_notes": "Install = 'paigaldama' is dominant and correct, but 'installima/installid' leaks into three rows. Library = 'teek' is consistent except for one 'varamu' in sideload.import-hint.content. Redeem is split three ways (kasutama / lunastama / aktiveerima), and 'Aktiveeri' is shared by both Activate and Redeem; recommend Redeem = lunastama and Activate = aktiveerima. Reveal is split between 'paljastama' (actions and annotations) and 'avama' (state labels); pick one, preferably 'avama'. Undo is rendered 'Tühista', the same word as Cancel; use 'Võta tagasi'. Sync is split between 'sünkroonima' (Humble) and colloquial 'sünkima' (Steam). 'Giftable spares' is a named section ('Kingitavad varuvõtmed') but is paraphrased in one row. Bottle = 'pudel', except one English 'bottle'i'. Register is informal 'sina' throughout, except about 5 formal 'teie' rows. Brand inflection is mostly right (Steami, Steamis, GameLibist, Humble Bundle'isse), but a few rows add an unneeded apostrophe (Steam'is, GameLib'is) or a wrong one (Humble's), or omit the hyphen on the macOS genitive.",
+  "overall": "The Estonian translation is good overall. Meanings are accurately preserved, all {{placeholders}}, the <br />/<3></3> tags and the &quot; entities are intact, brands are never translated, and there are no critical errors. The one major issue is an ungrammatical filter chip (chipNoStorePageHidden). The remaining findings are consistency problems (redeem, reveal, undo and sync terms, formal vs informal address) and small orthography issues with inflected brands. Confidence limits: I judged the placeholder-inflection cases (syncError's '{{time}} eest', diskSpaceFreeOfTotal's '{{total}}-st') without knowing the runtime placeholder values, and my Estonian register judgments come from a non-native reviewer, so a native speaker should confirm the minor stylistic calls."
+}

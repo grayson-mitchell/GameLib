@@ -1,0 +1,4613 @@
+{
+ "ar": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ]
+  ]
+ },
+ "az": {
+  "keys": 280,
+  "issues": [
+   [
+    "gamepage.tabsAriaLabel",
+    "identical_to_english",
+    "gameinfo tabs"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ]
+  ]
+ },
+ "be": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ]
+  ]
+ },
+ "bg": {
+  "keys": 280,
+  "issues": [
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "br": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ]
+  ]
+ },
+ "bs": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ]
+  ]
+ },
+ "ca": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "sideload.filter.executables",
+    "identical_to_english",
+    "Executables"
+   ],
+   [
+    "sideload.filter.scripts",
+    "identical_to_english",
+    "Scripts"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ]
+  ]
+ },
+ "cs": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "da": {
+  "keys": 280,
+  "issues": [
+   [
+    "about.version",
+    "identical_to_english",
+    "Version: {{version}}"
+   ],
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "sideload.filter.scripts",
+    "identical_to_english",
+    "Scripts"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "de": {
+  "keys": 280,
+  "issues": [
+   [
+    "about.version",
+    "identical_to_english",
+    "Version: {{version}}"
+   ],
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "library.filterPanel.storeGroup",
+    "identical_to_english",
+    "Store"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "el": {
+  "keys": 280,
+  "issues": [
+   [
+    "humbleKeys.activateConfirmTitle",
+    "terminal_punct_dropped",
+    "s key on Steam?",
+    "διού στο Steam;"
+   ],
+   [
+    "humbleKeys.giftConfirmTitle",
+    "terminal_punct_dropped",
+    "Gift this key?",
+    "αυτό το κλειδί;"
+   ],
+   [
+    "humbleKeys.revealConfirmTitle",
+    "terminal_punct_dropped",
+    "eveal this key?",
+    "ύ του κλειδιού;"
+   ],
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "settings.eosOverlayInstallConfirmBody",
+    "terminal_punct_dropped",
+    "OS Overlay now?",
+    "S Overlay τώρα;"
+   ],
+   [
+    "settings.eosOverlayUpdateConfirmBody",
+    "terminal_punct_dropped",
+    "latest version?",
+    "λευταία έκδοση;"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "steam.uninstall.removeAllCopiesConfirmTitle",
+    "terminal_punct_dropped",
+    "ove all copies?",
+    "των αντιγράφων;"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ]
+  ]
+ },
+ "es": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "sideload.filter.scripts",
+    "identical_to_english",
+    "Scripts"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ]
+  ]
+ },
+ "et": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ]
+  ]
+ },
+ "eu": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "fa": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ]
+  ]
+ },
+ "fi": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "fr": {
+  "keys": 280,
+  "issues": [
+   [
+    "library.filterPanel.collections",
+    "identical_to_english",
+    "Collections"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.loginBackgroundFilterName",
+    "identical_to_english",
+    "Images"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "sideload.filter.images",
+    "identical_to_english",
+    "Images"
+   ],
+   [
+    "sideload.filter.scripts",
+    "identical_to_english",
+    "Scripts"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ]
+  ]
+ },
+ "ga": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ]
+  ]
+ },
+ "gl": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "sideload.filter.executables",
+    "identical_to_english",
+    "Executables"
+   ],
+   [
+    "sideload.filter.scripts",
+    "identical_to_english",
+    "Scripts"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ]
+  ]
+ },
+ "he": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ]
+  ]
+ },
+ "hr": {
+  "keys": 280,
+  "issues": [
+   [
+    "library.filterPanel.viewFavourites",
+    "identical_to_english",
+    "Favourites"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "hu": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ]
+  ]
+ },
+ "id": {
+  "keys": 280,
+  "issues": [
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "it": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "ja": {
+  "keys": 280,
+  "issues": [
+   [
+    "humble.lessThanAMinute",
+    "length_ratio",
+    0.22,
+    "less than a minute",
+    "1分未満"
+   ],
+   [
+    "humbleKeys.finishActivation",
+    "length_ratio",
+    0.35,
+    "Finish activation",
+    "有効化を完了"
+   ],
+   [
+    "info.refresh-rating",
+    "length_ratio",
+    0.36,
+    "Refresh rating",
+    "評価を更新"
+   ],
+   [
+    "library.filterPanel.chipHiddenIncluded",
+    "length_ratio",
+    0.38,
+    "Including hidden",
+    "非表示を含む"
+   ],
+   [
+    "library.filterPanel.chipNonAvailableIncluded",
+    "length_ratio",
+    0.3,
+    "Including non-available",
+    "利用不可を含む"
+   ],
+   [
+    "library.filterPanel.chipNonAvailableOnly",
+    "length_ratio",
+    0.33,
+    "Non-available only",
+    "利用不可のみ"
+   ],
+   [
+    "library.filterPanel.emptyAlphabetNumber",
+    "length_ratio",
+    0.27,
+    "Starting with a number",
+    "数字で始まる"
+   ],
+   [
+    "library.filterPanel.notYetChecked",
+    "length_ratio",
+    0.2,
+    "Not yet checked",
+    "未確認"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.loginBackground",
+    "length_ratio",
+    0.38,
+    "Manage Accounts background",
+    "アカウント管理の背景"
+   ],
+   [
+    "settings.loginBackgroundDialogTitle",
+    "length_ratio",
+    0.28,
+    "Select a background image",
+    "背景画像を選択"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ]
+  ]
+ },
+ "ka": {
+  "keys": 280,
+  "issues": [
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ]
+  ]
+ },
+ "ko": {
+  "keys": 280,
+  "issues": [
+   [
+    "humble.lessThanAMinute",
+    "length_ratio",
+    0.28,
+    "less than a minute",
+    "1분 미만"
+   ],
+   [
+    "humbleKeys.finishActivation",
+    "length_ratio",
+    0.35,
+    "Finish activation",
+    "활성화 완료"
+   ],
+   [
+    "humbleKeys.noExpiration",
+    "length_ratio",
+    0.38,
+    "No expiration",
+    "만료 없음"
+   ],
+   [
+    "library.filterPanel.chipHiddenIncluded",
+    "length_ratio",
+    0.31,
+    "Including hidden",
+    "숨김 포함"
+   ],
+   [
+    "library.filterPanel.chipNonAvailableIncluded",
+    "length_ratio",
+    0.35,
+    "Including non-available",
+    "이용 불가 포함"
+   ],
+   [
+    "library.filterPanel.chipNonAvailableOnly",
+    "length_ratio",
+    0.33,
+    "Non-available only",
+    "이용 불가만"
+   ],
+   [
+    "library.filterPanel.emptyAlphabetNumber",
+    "length_ratio",
+    0.27,
+    "Starting with a number",
+    "숫자로 시작"
+   ],
+   [
+    "library.filterPanel.manageCollections",
+    "length_ratio",
+    0.33,
+    "Manage collections",
+    "컬렉션 관리"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.loginBackground",
+    "length_ratio",
+    0.38,
+    "Manage Accounts background",
+    "계정 관리 배경화면"
+   ],
+   [
+    "settings.loginBackgroundDialogTitle",
+    "length_ratio",
+    0.36,
+    "Select a background image",
+    "배경 이미지 선택"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "steam.status.resumeInstall",
+    "length_ratio",
+    0.36,
+    "Resume Install",
+    "설치 재개"
+   ],
+   [
+    "themeSelector.highContrast",
+    "length_ratio",
+    0.23,
+    "High Contrast",
+    "고대비"
+   ],
+   [
+    "webview.login.oauth.genericChannel",
+    "length_ratio",
+    0.32,
+    "the sign-in channel",
+    "로그인 채널"
+   ],
+   [
+    "webview.login.oauth.preparing.body",
+    "length_ratio",
+    0.39,
+    "The store's sign-in window is being prepared and will open shortly.",
+    "스토어의 로그인 창을 준비 중이며 곧 열립니다."
+   ]
+  ]
+ },
+ "lt": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "ml": {
+  "keys": 280,
+  "issues": [
+   [
+    "box.cancel",
+    "identical_to_english",
+    "Cancel"
+   ],
+   [
+    "humbleKeys.activateDismiss",
+    "identical_to_english",
+    "Cancel"
+   ],
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "library.filterPanel.storeGroup",
+    "identical_to_english",
+    "Store"
+   ],
+   [
+    "library.filterPanel.viewFavourites",
+    "identical_to_english",
+    "Favourites"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ]
+  ]
+ },
+ "nb_NO": {
+  "keys": 280,
+  "issues": [
+   [
+    "redeemSteamKey.redeeming",
+    "terminal_punct_dropped",
+    "Redeeming...",
+    "Løser inn …"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "nl": {
+  "keys": 280,
+  "issues": [
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "library.filterPanel.storeGroup",
+    "identical_to_english",
+    "Store"
+   ],
+   [
+    "library.filterPanel.viewFavourites",
+    "identical_to_english",
+    "Favourites"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "sideload.filter.scripts",
+    "identical_to_english",
+    "Scripts"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "pl": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "pt": {
+  "keys": 280,
+  "issues": [
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "sideload.filter.scripts",
+    "identical_to_english",
+    "Scripts"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ]
+  ]
+ },
+ "pt_BR": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "sideload.filter.scripts",
+    "identical_to_english",
+    "Scripts"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ]
+  ]
+ },
+ "ro": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "ru": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ]
+  ]
+ },
+ "sk": {
+  "keys": 280,
+  "issues": [
+   [
+    "about.navLabel",
+    "identical_to_english",
+    "About"
+   ],
+   [
+    "box.cancel",
+    "identical_to_english",
+    "Cancel"
+   ],
+   [
+    "humbleKeys.activateDismiss",
+    "identical_to_english",
+    "Cancel"
+   ],
+   [
+    "library.filterPanel.storeGroup",
+    "identical_to_english",
+    "Store"
+   ],
+   [
+    "library.filterPanel.viewFavourites",
+    "identical_to_english",
+    "Favourites"
+   ],
+   [
+    "library.storeOther",
+    "identical_to_english",
+    "Other"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "sl": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "sr": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "sv": {
+  "keys": 280,
+  "issues": [
+   [
+    "about.version",
+    "identical_to_english",
+    "Version: {{version}}"
+   ],
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "ta": {
+  "keys": 280,
+  "issues": [
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ]
+  ]
+ },
+ "th": {
+  "keys": 280,
+  "issues": [
+   [
+    "box.steam.mac32Detected.message",
+    "terminal_punct_dropped",
+    "indows version.",
+    "ัน Windows ใหม่"
+   ],
+   [
+    "consoleMode.steamInstallLibraryFull",
+    "terminal_punct_dropped",
+    " and try again.",
+    "แล้วลองอีกครั้ง"
+   ],
+   [
+    "consoleMode.steamInstallLibraryMissing",
+    "terminal_punct_dropped",
+    " and try again.",
+    "แล้วลองอีกครั้ง"
+   ],
+   [
+    "edit-game.sgdb.unavailable",
+    "terminal_punct_dropped",
+    " on this build.",
+    "ช้งานในบิลด์นี้"
+   ],
+   [
+    "gamepage.extraInfoEmptyBody",
+    "terminal_punct_dropped",
+    "for this title.",
+    "มูลสำหรับเกมนี้"
+   ],
+   [
+    "gamepage.extraInfoErrorBody",
+    "terminal_punct_dropped",
+    "ata. Try again.",
+    "มูล ลองอีกครั้ง"
+   ],
+   [
+    "gamepage.extraInfoStaleBody",
+    "terminal_punct_dropped",
+    "fresh to check.",
+    "ฟรชเพื่อตรวจสอบ"
+   ],
+   [
+    "humbleKeys.activateConfirmBody",
+    "terminal_punct_dropped",
+    "here's no undo.",
+    "มารถย้อนกลับได้"
+   ],
+   [
+    "humbleKeys.activateConfirmBodyRevealed",
+    "terminal_punct_dropped",
+    "here's no undo.",
+    "มารถย้อนกลับได้"
+   ],
+   [
+    "humbleKeys.activatingBody",
+    "terminal_punct_dropped",
+    "takes a moment.",
+    "สักครู่เท่านั้น"
+   ],
+   [
+    "humbleKeys.c2Body",
+    "terminal_punct_dropped",
+    "spares instead.",
+    "ับให้ผู้อื่นแทน"
+   ],
+   [
+    "humbleKeys.finishOwnedNote",
+    "terminal_punct_dropped",
+    "ely fail there.",
+    "ั่นมักจะล้มเหลว"
+   ],
+   [
+    "humbleKeys.giftConfirmBody",
+    "terminal_punct_dropped",
+    "ble's own site.",
+    "์ของ Humble เอง"
+   ],
+   [
+    "humbleKeys.revealConfirmBody",
+    "terminal_punct_dropped",
+    "here's no undo.",
+    "มารถย้อนกลับได้"
+   ],
+   [
+    "humbleKeys.revealFailedBody",
+    "terminal_punct_dropped",
+    " can try again.",
+    "ามารถลองใหม่ได้"
+   ],
+   [
+    "humbleKeys.revealRejectedBody",
+    "terminal_punct_dropped",
+    "current status.",
+    "อบสถานะปัจจุบัน"
+   ],
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "installFlows.pathRejectedBodyImport",
+    "terminal_punct_dropped",
+    "s folder again.",
+    "์ของเกมอีกครั้ง"
+   ],
+   [
+    "installFlows.pathRejectedBodyMove",
+    "terminal_punct_dropped",
+    "n folder again.",
+    "ปลายทางอีกครั้ง"
+   ],
+   [
+    "library.filterPanel.emptyBody",
+    "terminal_punct_dropped",
+    "ch {{filters}}.",
+    "กับ {{filters}}"
+   ],
+   [
+    "library.steamSync.failedBody",
+    "terminal_punct_dropped",
+    "m is reachable.",
+    "team ได้หรือไม่"
+   ],
+   [
+    "library.steamSync.signedOutBody",
+    "terminal_punct_dropped",
+    "till available.",
+    "ณยังคงใช้งานได้"
+   ],
+   [
+    "login.logoutFailedMessage",
+    "terminal_punct_dropped",
+    "tay accessible.",
+    "ามารถเข้าถึงได้"
+   ],
+   [
+    "login.steam_logout_failed_message",
+    "terminal_punct_dropped",
+    "ease try again.",
+    "ลองใหม่อีกครั้ง"
+   ],
+   [
+    "redeemKey.alreadyOwned",
+    "terminal_punct_dropped",
+    " this on Steam.",
+    " Steam อยู่แล้ว"
+   ],
+   [
+    "redeemKey.error",
+    "terminal_punct_dropped",
+    " and try again.",
+    "แล้วลองอีกครั้ง"
+   ],
+   [
+    "redeemKey.invalid",
+    "terminal_punct_dropped",
+    " and try again.",
+    "รั้งแล้วลองใหม่"
+   ],
+   [
+    "redeemKey.rateLimited",
+    "terminal_punct_dropped",
+    "e trying again.",
+    "ลองใหม่อีกครั้ง"
+   ],
+   [
+    "redeemKey.successNoPackage",
+    "terminal_punct_dropped",
+    "s been updated.",
+    "ับการอัปเดตแล้ว"
+   ],
+   [
+    "redeemKey.successWithPackage",
+    "terminal_punct_dropped",
+    " Steam library.",
+    "team ของคุณแล้ว"
+   ],
+   [
+    "setting.eosOverlay.unavailableDetail",
+    "terminal_punct_dropped",
+    "rom this build.",
+    "กจากบิลด์นี้ได้"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.loginBackgroundHelp",
+    "terminal_punct_dropped",
+    " are supported.",
+    "P, AVIF และ GIF"
+   ],
+   [
+    "settings.steamgriddb.help.unavailableDetail",
+    "terminal_punct_dropped",
+    "rom this build.",
+    "าได้จากบิลด์นี้"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "steam.bottle.statusPollTimeout",
+    "terminal_punct_dropped",
+    "then try again.",
+    "แล้วลองอีกครั้ง"
+   ],
+   [
+    "steam.download.error.connectionDroppedV2",
+    "terminal_punct_dropped",
+    "the connection.",
+    "ตัดการเชื่อมต่อ"
+   ],
+   [
+    "steam.download.error.decodeFailed",
+    "terminal_punct_dropped",
+    "etwork problem.",
+    "กิดจากเครือข่าย"
+   ],
+   [
+    "steam.download.error.genericV2",
+    "terminal_punct_dropped",
+    "ownload failed.",
+    "ก Steam ล้มเหลว"
+   ],
+   [
+    "steam.download.error.notSignedIn",
+    "terminal_punct_dropped",
+    "ould not start.",
+    "ดาวน์โหลดนี้ได้"
+   ],
+   [
+    "steam.install.bottleNameReadonlyHelper",
+    "terminal_punct_dropped",
+    " supported yet.",
+    "เกมยังไม่รองรับ"
+   ],
+   [
+    "steam.install.contentLightNotice",
+    "terminal_punct_dropped",
+    "y from GameLib.",
+    "ows จาก GameLib"
+   ],
+   [
+    "steam.install.contentLightSingleLibraryNotice",
+    "terminal_punct_dropped",
+    "s game into it.",
+    "นี้ลงในคลังนั้น"
+   ],
+   [
+    "steam.install.forceWindowsHelp",
+    "terminal_punct_dropped",
+    "performs worse.",
+    "ทำงานได้แย่กว่า"
+   ],
+   [
+    "steam.install.libraryFullNotice",
+    "terminal_punct_dropped",
+    " free up space.",
+    "พิ่มพื้นที่ว่าง"
+   ],
+   [
+    "steam.install.libraryFullOnlyNotice",
+    "terminal_punct_dropped",
+    "then try again.",
+    "แล้วลองอีกครั้ง"
+   ],
+   [
+    "steam.install.libraryMissingNotice",
+    "terminal_punct_dropped",
+    " another below.",
+    "ลังอื่นด้านล่าง"
+   ],
+   [
+    "steam.install.libraryMissingOnlyNotice",
+    "terminal_punct_dropped",
+    "then try again.",
+    "แล้วลองอีกครั้ง"
+   ],
+   [
+    "steam.install.noCrossoverEngine",
+    "terminal_punct_dropped",
+    "install starts.",
+    "เริ่มการติดตั้ง"
+   ],
+   [
+    "steam.install.sharedBottleNotice",
+    "terminal_punct_dropped",
+    " games run too.",
+    "กมเหล่านั้นด้วย"
+   ],
+   [
+    "steam.uninstall.removeAllCopiesConfirmMessage",
+    "terminal_punct_dropped",
+    "nnot be undone.",
+    "มารถย้อนกลับได้"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "webview.login.blocked.body",
+    "terminal_punct_dropped",
+    " in Phase 34.5.",
+    "มกับ Phase 34.5"
+   ],
+   [
+    "webview.login.humble.body",
+    "terminal_punct_dropped",
+    "ce it succeeds.",
+    "มัติเมื่อสำเร็จ"
+   ],
+   [
+    "webview.login.oauth.awaiting.body",
+    "terminal_punct_dropped",
+    " sign-in there.",
+    "าสู่ระบบที่นั่น"
+   ],
+   [
+    "webview.login.oauth.blocked.body",
+    "terminal_punct_dropped",
+    " in Phase 34.5.",
+    "มกับ Phase 34.5"
+   ],
+   [
+    "webview.login.oauth.cancelled.body",
+    "terminal_punct_dropped",
+    " can try again.",
+    "ใหม่อีกครั้งได้"
+   ],
+   [
+    "webview.login.oauth.finalizing.body",
+    "terminal_punct_dropped",
+    " a few seconds.",
+    "จใช้เวลาสักครู่"
+   ],
+   [
+    "webview.login.oauth.preparing.body",
+    "terminal_punct_dropped",
+    "l open shortly.",
+    "ปิดขึ้นในไม่ช้า"
+   ],
+   [
+    "webview.login.oauth.timeout.body",
+    "terminal_punct_dropped",
+    " can try again.",
+    "ามารถลองใหม่ได้"
+   ],
+   [
+    "webview.unavailable.epic.body",
+    "terminal_punct_dropped",
+    "e pages in-app.",
+    " Store ไว้ในแอป"
+   ],
+   [
+    "webview.unavailable.next-step",
+    "terminal_punct_dropped",
+    "rowser instead.",
+    "เซอร์ของระบบแทน"
+   ],
+   [
+    "webview.unavailable.platform.body",
+    "terminal_punct_dropped",
+    "s platform yet.",
+    "บบนแพลตฟอร์มนี้"
+   ],
+   [
+    "winetricks.unavailableDetail",
+    "terminal_punct_dropped",
+    "rom this build.",
+    "งได้จากบิลด์นี้"
+   ]
+  ]
+ },
+ "tr": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ]
+  ]
+ },
+ "uk": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ]
+  ]
+ },
+ "uz": {
+  "keys": 280,
+  "issues": [
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.oldSchool",
+    "identical_to_english",
+    "Old School GameLib"
+   ],
+   [
+    "themeSelector.sweet",
+    "identical_to_english",
+    "Sweet"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "vi": {
+  "keys": 280,
+  "issues": [
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.wineFlatpakPath",
+    "identical_to_english",
+    "~/.var/app/com.valvesoftware.Steam (Steam Flatpak)"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "identical_to_english",
+    "Cyberspace Oasis"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "identical_to_english",
+    "Cyberspace Oasis Classic"
+   ],
+   [
+    "themeSelector.dracula",
+    "identical_to_english",
+    "Dracula"
+   ],
+   [
+    "themeSelector.gruvboxDark",
+    "identical_to_english",
+    "Gruvbox Dark"
+   ],
+   [
+    "themeSelector.marine",
+    "identical_to_english",
+    "Marine"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "identical_to_english",
+    "Marine Classic"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "identical_to_english",
+    "Midnight Mirage"
+   ],
+   [
+    "themeSelector.nordLight",
+    "identical_to_english",
+    "Nord Light"
+   ],
+   [
+    "themeSelector.zombie",
+    "identical_to_english",
+    "Zombie"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "identical_to_english",
+    "Zombie Classic"
+   ]
+  ]
+ },
+ "zh_Hans": {
+  "keys": 280,
+  "issues": [
+   [
+    "box.filePicker.error.title",
+    "length_ratio",
+    0.3,
+    "Could not open the file picker",
+    "无法打开文件选择器"
+   ],
+   [
+    "consoleMode.steamInstallBlockedTitle",
+    "length_ratio",
+    0.29,
+    "Can't start this install",
+    "无法开始此安装"
+   ],
+   [
+    "consoleMode.steamInstallLibraryFull",
+    "length_ratio",
+    0.31,
+    "There isn't enough free space in your Steam library folder. Free up space and try again.",
+    "您的 Steam 库文件夹空间不足。请清理空间后重试。"
+   ],
+   [
+    "consoleMode.steamInstallLibraryMissing",
+    "length_ratio",
+    0.36,
+    "Your Steam library folder isn't available right now. Reconnect the drive and try again.",
+    "您的 Steam 库文件夹目前不可用。请重新连接驱动器后重试。"
+   ],
+   [
+    "gamepage.extraInfoEmptyTitle",
+    "length_ratio",
+    0.37,
+    "No extra info found",
+    "未找到额外信息"
+   ],
+   [
+    "gamepage.extraInfoErrorBody",
+    "length_ratio",
+    0.26,
+    "The lookup failed, which is not the same as this game having no data. Try again.",
+    "查询失败，这不等于此游戏没有数据。请重试。"
+   ],
+   [
+    "gamepage.extraInfoErrorTitle",
+    "length_ratio",
+    0.33,
+    "Couldn't load extra info",
+    "无法加载额外信息"
+   ],
+   [
+    "gamepage.extraInfoStaleBody",
+    "length_ratio",
+    0.29,
+    "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
+    "此结果是在记录加载结果之前缓存的，可能已过期。请刷新以检查。"
+   ],
+   [
+    "humble.lessThanAMinute",
+    "length_ratio",
+    0.28,
+    "less than a minute",
+    "不到一分钟"
+   ],
+   [
+    "humbleKeys.activateWizardTitle",
+    "length_ratio",
+    0.29,
+    "Activate this key",
+    "激活此密钥"
+   ],
+   [
+    "humbleKeys.c2Body",
+    "length_ratio",
+    0.38,
+    "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+    "此密钥安全地保存在可赠送备用密钥中——在此处揭示它会失去赠送它的能力。请转到可赠送备用密钥进行操作。"
+   ],
+   [
+    "humbleKeys.claimWizardTitle",
+    "length_ratio",
+    0.36,
+    "Claim this key",
+    "领取此密钥"
+   ],
+   [
+    "humbleKeys.finishActivation",
+    "length_ratio",
+    0.24,
+    "Finish activation",
+    "完成激活"
+   ],
+   [
+    "humbleKeys.giftConfirmBody",
+    "length_ratio",
+    0.39,
+    "Anyone with this link can claim the key — once redeemed, it's gone for good. You'll finish gifting it on Humble's own site.",
+    "任何拥有此链接的人都可以领取该密钥——一旦兑换即无法挽回。你需要在 Humble 官网完成赠送。"
+   ],
+   [
+    "humbleKeys.markRedeemed",
+    "length_ratio",
+    0.38,
+    "Mark as redeemed",
+    "标记为已兑换"
+   ],
+   [
+    "humbleKeys.noExpiration",
+    "length_ratio",
+    0.38,
+    "No expiration",
+    "无过期时间"
+   ],
+   [
+    "humbleKeys.revealConfirmBody",
+    "length_ratio",
+    0.33,
+    "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
+    "揭示会显示实际密钥，并将其从可赠送备用密钥中永久移除。如果你还未拥有此游戏，请在继续前确认这一点——此操作无法撤销。"
+   ],
+   [
+    "humbleKeys.revealDismiss",
+    "length_ratio",
+    0.25,
+    "Don't reveal yet",
+    "暂不揭示"
+   ],
+   [
+    "humbleKeys.revealFailedBody",
+    "length_ratio",
+    0.35,
+    "Couldn't reveal this key — nothing was used up. You can try again.",
+    "无法揭示此密钥——未消耗任何资源。你可以重试。"
+   ],
+   [
+    "humbleKeys.revealRejectedBody",
+    "length_ratio",
+    0.37,
+    "Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.",
+    "Humble 拒绝揭示此密钥——它可能已被兑换或已过期。请同步以检查其当前状态。"
+   ],
+   [
+    "humbleKeys.syncErrorPartial",
+    "length_ratio",
+    0.32,
+    "Couldn't finish refresh — showing the latest data available",
+    "无法完成刷新——显示目前可用的最新数据"
+   ],
+   [
+    "humbleKeys.syncToEnableClaiming",
+    "length_ratio",
+    0.3,
+    "Sync to enable claiming",
+    "同步以启用领取"
+   ],
+   [
+    "info.refresh-rating",
+    "length_ratio",
+    0.29,
+    "Refresh rating",
+    "刷新评分"
+   ],
+   [
+    "installFlows.pathRejectedBodyImport",
+    "length_ratio",
+    0.39,
+    "GameLib couldn't import from that location. The source has to be a full folder path with no \"..\" steps in it. Pick the game's folder again.",
+    "GameLib 无法从该位置导入。来源必须是完整的文件夹路径，且不能包含“..”步骤。请重新选择游戏文件夹。"
+   ],
+   [
+    "installFlows.pathRejectedBodyMove",
+    "length_ratio",
+    0.4,
+    "GameLib couldn't move this game there. The destination has to be a full folder path with no \"..\" steps in it. Pick the destination folder again.",
+    "GameLib 无法将此游戏移动到那里。目标必须是完整的文件夹路径，且不能包含“..”步骤。请重新选择目标文件夹。"
+   ],
+   [
+    "installFlows.pathRejectedTitle",
+    "length_ratio",
+    0.3,
+    "Can't use that location",
+    "无法使用该位置"
+   ],
+   [
+    "library.filterPanel.chipHiddenIncluded",
+    "length_ratio",
+    0.31,
+    "Including hidden",
+    "包含已隐藏"
+   ],
+   [
+    "library.filterPanel.chipNoStorePageHidden",
+    "length_ratio",
+    0.35,
+    "Hiding no store page",
+    "隐藏无商店页面"
+   ],
+   [
+    "library.filterPanel.chipNoStorePageOnly",
+    "length_ratio",
+    0.33,
+    "No store page only",
+    "仅无商店页面"
+   ],
+   [
+    "library.filterPanel.chipNonAvailableIncluded",
+    "length_ratio",
+    0.22,
+    "Including non-available",
+    "包含不可用"
+   ],
+   [
+    "library.filterPanel.chipNonAvailableOnly",
+    "length_ratio",
+    0.28,
+    "Non-available only",
+    "仅不可用项"
+   ],
+   [
+    "library.filterPanel.emptyAlphabetNumber",
+    "length_ratio",
+    0.23,
+    "Starting with a number",
+    "以数字开头"
+   ],
+   [
+    "library.filterPanel.manageCollections",
+    "length_ratio",
+    0.28,
+    "Manage collections",
+    "管理收藏集"
+   ],
+   [
+    "library.filterPanel.noStorePage",
+    "length_ratio",
+    0.38,
+    "No store page",
+    "无商店页面"
+   ],
+   [
+    "library.filterPanel.notYetChecked",
+    "length_ratio",
+    0.27,
+    "Not yet checked",
+    "尚未检查"
+   ],
+   [
+    "library.filterPanel.runsNatively",
+    "length_ratio",
+    0.31,
+    "Runs natively",
+    "原生运行"
+   ],
+   [
+    "library.filterPanel.viewRecentlyPlayed",
+    "length_ratio",
+    0.27,
+    "Recently played",
+    "最近玩过"
+   ],
+   [
+    "library.noStorePage",
+    "length_ratio",
+    0.38,
+    "No store page",
+    "无商店页面"
+   ],
+   [
+    "library.no_no_store_page_games",
+    "length_ratio",
+    0.36,
+    "No games without a store page in your library",
+    "您的资料库中没有无商店页面的游戏"
+   ],
+   [
+    "library.steamSync.failedBody",
+    "length_ratio",
+    0.36,
+    "Your other libraries are still available. Try again, or check that Steam is reachable.",
+    "你的其他库仍然可用。请重试，或检查 Steam 是否可以访问。"
+   ],
+   [
+    "library.steamSync.signedOutBody",
+    "length_ratio",
+    0.35,
+    "Sign in again to sync your Steam library. Your other libraries are still available.",
+    "请重新登录以同步你的 Steam 库。你的其他库仍然可用。"
+   ],
+   [
+    "login.logoutFailedMessage",
+    "length_ratio",
+    0.32,
+    "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
+    "您的账户已在此设备上退出登录，但浏览器会话未能完全清除。如果是共享电脑，请再次退出登录或清除此网站的浏览器数据，以确保您的会话不会被他人访问。"
+   ],
+   [
+    "login.logoutFailedTitle",
+    "length_ratio",
+    0.37,
+    "Sign-out incomplete",
+    "退出登录未完成"
+   ],
+   [
+    "login.steam_logout_failed_message",
+    "length_ratio",
+    0.38,
+    "Steam sign-out didn't finish in time. Please try again.",
+    "Steam 退出登录未能及时完成。请重试。"
+   ],
+   [
+    "redeemKey.alreadyOwned",
+    "length_ratio",
+    0.39,
+    "This key has already been redeemed — you already own this on Steam.",
+    "此密钥已被兑换——你已在 Steam 上拥有该游戏。"
+   ],
+   [
+    "redeemKey.invalid",
+    "length_ratio",
+    0.31,
+    "This key doesn't look right. Double-check it and try again.",
+    "此密钥似乎不正确。请仔细检查后重试。"
+   ],
+   [
+    "redeemKey.rateLimited",
+    "length_ratio",
+    0.29,
+    "Too many attempts — please wait a bit before trying again.",
+    "尝试次数过多——请稍等片刻后再试。"
+   ],
+   [
+    "redeemSteamKey.redeeming",
+    "terminal_punct_dropped",
+    "Redeeming...",
+    "正在兑换…"
+   ],
+   [
+    "redeemSteamKey.viewInLibrary",
+    "length_ratio",
+    0.33,
+    "View in library",
+    "在库中查看"
+   ],
+   [
+    "setting.eosOverlay.unavailable",
+    "length_ratio",
+    0.34,
+    "The EOS Overlay is unavailable in this build",
+    "EOS 悬浮层在此版本中不可用"
+   ],
+   [
+    "setting.eosOverlay.unavailableDetail",
+    "length_ratio",
+    0.38,
+    "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.",
+    "EOS 悬浮层支持已推迟到未来版本（D-03，第 34.6 阶段），在此版本中无法安装、更新或移除。"
+   ],
+   [
+    "settings.eosOverlayInstallConfirmTitle",
+    "length_ratio",
+    0.3,
+    "Confirm overlay install",
+    "确认安装悬浮层"
+   ],
+   [
+    "settings.eosOverlayUpdateConfirmTitle",
+    "length_ratio",
+    0.32,
+    "Confirm overlay update",
+    "确认更新悬浮层"
+   ],
+   [
+    "settings.framelessWindowDescription",
+    "length_ratio",
+    0.35,
+    "Use frameless window",
+    "使用无边框窗口"
+   ],
+   [
+    "settings.gamepadInitialRepeatDelay",
+    "length_ratio",
+    0.29,
+    "Gamepad input initial repeat delay",
+    "手柄输入初始重复延迟"
+   ],
+   [
+    "settings.gamepadRepeatFrequency",
+    "length_ratio",
+    0.27,
+    "Gamepad input repeat frequency",
+    "手柄输入重复频率"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.gamescopeUpscaleMethod",
+    "length_ratio",
+    0.29,
+    "Upscale Method",
+    "放大方法"
+   ],
+   [
+    "settings.loginBackground",
+    "length_ratio",
+    0.23,
+    "Manage Accounts background",
+    "账户管理背景"
+   ],
+   [
+    "settings.loginBackgroundDialogTitle",
+    "length_ratio",
+    0.24,
+    "Select a background image",
+    "选择背景图片"
+   ],
+   [
+    "settings.steamgriddb.apikey.unavailable",
+    "length_ratio",
+    0.24,
+    "Unavailable on this build",
+    "此版本不可用"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "status.checkingSteamInstallOptions",
+    "length_ratio",
+    0.36,
+    "Checking install options…",
+    "正在检查安装选项…"
+   ],
+   [
+    "steam.download.error.decodeFailed",
+    "length_ratio",
+    0.27,
+    "Downloaded game data could not be unpacked. This is not a network problem.",
+    "下载的游戏数据无法解包。这不是网络问题。"
+   ],
+   [
+    "steam.download.error.notSignedIn",
+    "length_ratio",
+    0.34,
+    "You are not signed in to Steam, so this download could not start.",
+    "你尚未登录 Steam，因此无法开始此下载。"
+   ],
+   [
+    "steam.install.contentLightSingleLibraryNotice",
+    "length_ratio",
+    0.37,
+    "There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it.",
+    "此系统上只有一个 Steam 库，这里无需选择——GameLib 会将此游戏安装到该库中。"
+   ],
+   [
+    "steam.install.forceWindowsHelp",
+    "length_ratio",
+    0.39,
+    "This game has a native macOS version, but you can install the Windows version instead through a Wine bottle — useful if the native build is missing features or performs worse.",
+    "此游戏有原生 macOS 版本，但你也可以通过 Wine 容器安装 Windows 版本——如果原生版本缺少功能或性能较差，这会很有用。"
+   ],
+   [
+    "steam.install.libraryFullOnlyNotice",
+    "length_ratio",
+    0.34,
+    "Not enough space in your Steam library. Free up space, then try again.",
+    "你的 Steam 库空间不足。请释放空间后重试。"
+   ],
+   [
+    "steam.install.libraryMissingOnlyNotice",
+    "length_ratio",
+    0.36,
+    "Your Steam library couldn't be reached. Reconnect the drive, then try again.",
+    "无法访问你的 Steam 库。请重新连接驱动器后重试。"
+   ],
+   [
+    "steam.install.withOptionsLabel",
+    "length_ratio",
+    0.33,
+    "Install with options…",
+    "使用选项安装…"
+   ],
+   [
+    "steam.resumeAvailable.notify",
+    "length_ratio",
+    0.33,
+    "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "{{game}} 的中断安装已可恢复——点击安装以继续"
+   ],
+   [
+    "steam.status.resumeInstall",
+    "length_ratio",
+    0.29,
+    "Resume Install",
+    "恢复安装"
+   ],
+   [
+    "steam.uninstall.removeAllCopiesConfirmMessage",
+    "length_ratio",
+    0.32,
+    "This removes every installed copy of this game across all install locations. This cannot be undone.",
+    "这将删除此游戏在所有安装位置上的每个已安装副本。此操作无法撤销。"
+   ],
+   [
+    "steam.uninstall.removeAllCopiesConfirmTitle",
+    "length_ratio",
+    0.39,
+    "Remove all copies?",
+    "删除所有副本？"
+   ],
+   [
+    "steam.uninstall.removeAllCopiesLabel",
+    "length_ratio",
+    0.39,
+    "Remove all copies…",
+    "删除所有副本…"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "length_ratio",
+    0.38,
+    "Cyberspace Oasis",
+    "赛博空间绿洲"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "length_ratio",
+    0.38,
+    "Cyberspace Oasis Classic",
+    "赛博空间绿洲经典版"
+   ],
+   [
+    "themeSelector.highContrast",
+    "length_ratio",
+    0.31,
+    "High Contrast",
+    "高对比度"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "length_ratio",
+    0.36,
+    "Marine Classic",
+    "海洋经典版"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "length_ratio",
+    0.27,
+    "Midnight Mirage",
+    "午夜幻影"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "length_ratio",
+    0.36,
+    "Zombie Classic",
+    "僵尸经典版"
+   ],
+   [
+    "webview.embedPlaceholder.message",
+    "length_ratio",
+    0.28,
+    "Paused while a window is open",
+    "窗口打开时已暂停"
+   ],
+   [
+    "webview.login.blocked.headingGeneric",
+    "length_ratio",
+    0.27,
+    "Signing in is not wired up yet",
+    "登录功能尚未接入"
+   ],
+   [
+    "webview.login.humble.body",
+    "length_ratio",
+    0.29,
+    "A sign-in window has opened. Complete sign-in there — this page updates automatically once it succeeds.",
+    "登录窗口已打开，请在其中完成登录——成功后此页面会自动更新。"
+   ],
+   [
+    "webview.login.oauth.awaiting.body",
+    "length_ratio",
+    0.33,
+    "A sign-in window has opened. Complete sign-in there.",
+    "登录窗口已打开，请在其中完成登录。"
+   ],
+   [
+    "webview.login.oauth.blocked.headingGeneric",
+    "length_ratio",
+    0.36,
+    "Sign-in was captured, but can't finish yet",
+    "已捕获登录信息，但暂时无法完成"
+   ],
+   [
+    "webview.login.oauth.cancelled.body",
+    "length_ratio",
+    0.27,
+    "The sign-in window was closed before completing. You can try again.",
+    "登录窗口在完成前已关闭。您可以重试。"
+   ],
+   [
+    "webview.login.oauth.cancelled.headingGeneric",
+    "length_ratio",
+    0.24,
+    "Sign-in was cancelled",
+    "登录已取消"
+   ],
+   [
+    "webview.login.oauth.error.body",
+    "length_ratio",
+    0.38,
+    "Something went wrong while signing in: {{message}}",
+    "登录时出现问题：{{message}}"
+   ],
+   [
+    "webview.login.oauth.error.headingGeneric",
+    "length_ratio",
+    0.29,
+    "Sign-in failed",
+    "登录失败"
+   ],
+   [
+    "webview.login.oauth.finalizing.body",
+    "length_ratio",
+    0.32,
+    "Sign-in captured. Completing the exchange with the store — this can take a few seconds.",
+    "登录信息已捕获。正在与商店完成交换——这可能需要几秒钟。"
+   ],
+   [
+    "webview.login.oauth.finalizing.headingGeneric",
+    "length_ratio",
+    0.37,
+    "Finalizing sign-in…",
+    "正在完成登录…"
+   ],
+   [
+    "webview.login.oauth.genericChannel",
+    "length_ratio",
+    0.21,
+    "the sign-in channel",
+    "登录通道"
+   ],
+   [
+    "webview.login.oauth.preparing.body",
+    "length_ratio",
+    0.27,
+    "The store's sign-in window is being prepared and will open shortly.",
+    "商店的登录窗口正在准备中，即将打开。"
+   ],
+   [
+    "webview.login.oauth.preparing.headingGeneric",
+    "length_ratio",
+    0.39,
+    "Preparing sign-in…",
+    "正在准备登录…"
+   ],
+   [
+    "webview.login.oauth.timeout.body",
+    "length_ratio",
+    0.3,
+    "The sign-in window took too long to complete. You can try again.",
+    "登录窗口耗时过长未能完成。您可以重试。"
+   ],
+   [
+    "webview.login.oauth.timeout.headingGeneric",
+    "length_ratio",
+    0.24,
+    "Sign-in timed out",
+    "登录超时"
+   ],
+   [
+    "webview.unavailable.next-step",
+    "length_ratio",
+    0.3,
+    "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+    "这已被列为未来的独立工作项——目前请使用下方按钮在系统浏览器中打开。"
+   ],
+   [
+    "webview.unavailable.platform.heading",
+    "length_ratio",
+    0.34,
+    "In-app store and wiki browsing isn't available on this platform yet",
+    "此平台尚不支持应用内商店和 wiki 浏览功能"
+   ],
+   [
+    "winetricks.unavailable",
+    "length_ratio",
+    0.37,
+    "Winetricks component management is unavailable on this build",
+    "此版本不支持 Winetricks 组件管理"
+   ]
+  ]
+ },
+ "zh_Hant": {
+  "keys": 280,
+  "issues": [
+   [
+    "box.filePicker.error.title",
+    "length_ratio",
+    0.3,
+    "Could not open the file picker",
+    "無法開啟檔案選擇器"
+   ],
+   [
+    "consoleMode.steamInstallBlockedTitle",
+    "length_ratio",
+    0.29,
+    "Can't start this install",
+    "無法開始此安裝"
+   ],
+   [
+    "consoleMode.steamInstallLibraryFull",
+    "length_ratio",
+    0.35,
+    "There isn't enough free space in your Steam library folder. Free up space and try again.",
+    "您的 Steam 資料庫資料夾空間不足。請釋放空間後再試一次。"
+   ],
+   [
+    "gamepage.extraInfoEmptyTitle",
+    "length_ratio",
+    0.37,
+    "No extra info found",
+    "找不到額外資訊"
+   ],
+   [
+    "gamepage.extraInfoErrorBody",
+    "length_ratio",
+    0.29,
+    "The lookup failed, which is not the same as this game having no data. Try again.",
+    "查詢失敗，這不代表此遊戲沒有資料。請再試一次。"
+   ],
+   [
+    "gamepage.extraInfoErrorTitle",
+    "length_ratio",
+    0.33,
+    "Couldn't load extra info",
+    "無法載入額外資訊"
+   ],
+   [
+    "gamepage.extraInfoStaleBody",
+    "length_ratio",
+    0.31,
+    "This result was cached before load outcomes were recorded, so it may be out of date. Refresh to check.",
+    "此結果是在記錄載入結果之前快取的，可能已過時。請重新整理以確認。"
+   ],
+   [
+    "humble.lessThanAMinute",
+    "length_ratio",
+    0.28,
+    "less than a minute",
+    "不到一分鐘"
+   ],
+   [
+    "humbleKeys.activateWizardTitle",
+    "length_ratio",
+    0.29,
+    "Activate this key",
+    "啟用此金鑰"
+   ],
+   [
+    "humbleKeys.activatingBody",
+    "length_ratio",
+    0.39,
+    "Revealing your key and redeeming it on Steam — this only takes a moment.",
+    "正在顯示您的金鑰並在 Steam 上兌換 — 只需片刻。"
+   ],
+   [
+    "humbleKeys.c2Body",
+    "length_ratio",
+    0.39,
+    "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+    "此序號目前安全地存放於「可贈送備用序號」中——在此顯示會使其失去贈送能力。請改到「可贈送備用序號」處理。"
+   ],
+   [
+    "humbleKeys.claimWizardTitle",
+    "length_ratio",
+    0.36,
+    "Claim this key",
+    "領取此序號"
+   ],
+   [
+    "humbleKeys.finishActivation",
+    "length_ratio",
+    0.24,
+    "Finish activation",
+    "完成啟動"
+   ],
+   [
+    "humbleKeys.markRedeemed",
+    "length_ratio",
+    0.38,
+    "Mark as redeemed",
+    "標示為已兌換"
+   ],
+   [
+    "humbleKeys.noDeadline",
+    "length_ratio",
+    0.35,
+    "No pick deadline available",
+    "沒有可用的選取期限"
+   ],
+   [
+    "humbleKeys.noExpiration",
+    "length_ratio",
+    0.31,
+    "No expiration",
+    "無到期日"
+   ],
+   [
+    "humbleKeys.revealConfirmBody",
+    "length_ratio",
+    0.36,
+    "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
+    "顯示會揭露實際序號，並將其從「可贈送備用序號」中永久移除。若您尚未擁有此遊戲，請在繼續前確認這點是否屬實——此操作無法復原。"
+   ],
+   [
+    "humbleKeys.revealDismiss",
+    "length_ratio",
+    0.25,
+    "Don't reveal yet",
+    "暫不顯示"
+   ],
+   [
+    "humbleKeys.revealFailedBody",
+    "length_ratio",
+    0.35,
+    "Couldn't reveal this key — nothing was used up. You can try again.",
+    "無法顯示此序號——未消耗任何資源，您可以重試。"
+   ],
+   [
+    "humbleKeys.revealRejectedBody",
+    "length_ratio",
+    0.35,
+    "Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.",
+    "Humble 拒絕顯示此序號——可能已被兌換或已過期。請同步以檢查目前狀態。"
+   ],
+   [
+    "humbleKeys.syncErrorPartial",
+    "length_ratio",
+    0.37,
+    "Couldn't finish refresh — showing the latest data available",
+    "無法完成重新整理 — 顯示目前可用的最新資料"
+   ],
+   [
+    "humbleKeys.syncToEnableClaiming",
+    "length_ratio",
+    0.3,
+    "Sync to enable claiming",
+    "同步以啟用領取"
+   ],
+   [
+    "humbleKeys.title",
+    "identical_to_english",
+    "Humble Keys"
+   ],
+   [
+    "installFlows.pathRejectedBodyImport",
+    "length_ratio",
+    0.39,
+    "GameLib couldn't import from that location. The source has to be a full folder path with no \"..\" steps in it. Pick the game's folder again.",
+    "GameLib 無法從該位置匯入。來源必須是完整的資料夾路徑，且不能含有「..」步驟。請重新選擇遊戲資料夾。"
+   ],
+   [
+    "installFlows.pathRejectedTitle",
+    "length_ratio",
+    0.3,
+    "Can't use that location",
+    "無法使用該位置"
+   ],
+   [
+    "library.filterPanel.chipHiddenIncluded",
+    "length_ratio",
+    0.38,
+    "Including hidden",
+    "包含隱藏項目"
+   ],
+   [
+    "library.filterPanel.chipNonAvailableIncluded",
+    "length_ratio",
+    0.3,
+    "Including non-available",
+    "包含不可用項目"
+   ],
+   [
+    "library.filterPanel.chipNonAvailableOnly",
+    "length_ratio",
+    0.33,
+    "Non-available only",
+    "僅不可用項目"
+   ],
+   [
+    "library.filterPanel.emptyAlphabetNumber",
+    "length_ratio",
+    0.23,
+    "Starting with a number",
+    "以數字開頭"
+   ],
+   [
+    "library.filterPanel.manageCollections",
+    "length_ratio",
+    0.28,
+    "Manage collections",
+    "管理收藏集"
+   ],
+   [
+    "library.filterPanel.noStorePage",
+    "length_ratio",
+    0.38,
+    "No store page",
+    "無商店頁面"
+   ],
+   [
+    "library.filterPanel.notYetChecked",
+    "length_ratio",
+    0.27,
+    "Not yet checked",
+    "尚未檢查"
+   ],
+   [
+    "library.filterPanel.runsNatively",
+    "length_ratio",
+    0.31,
+    "Runs natively",
+    "原生執行"
+   ],
+   [
+    "library.filterPanel.viewRecentlyPlayed",
+    "length_ratio",
+    0.27,
+    "Recently played",
+    "最近遊玩"
+   ],
+   [
+    "library.noStorePage",
+    "length_ratio",
+    0.38,
+    "No store page",
+    "無商店頁面"
+   ],
+   [
+    "library.no_no_store_page_games",
+    "length_ratio",
+    0.31,
+    "No games without a store page in your library",
+    "您的庫中沒有無商店頁面的遊戲"
+   ],
+   [
+    "library.steamSync.failedBody",
+    "length_ratio",
+    0.37,
+    "Your other libraries are still available. Try again, or check that Steam is reachable.",
+    "您的其他資料庫仍然可用。請重試，或確認 Steam 是否可連線。"
+   ],
+   [
+    "library.steamSync.signedOutBody",
+    "length_ratio",
+    0.4,
+    "Sign in again to sync your Steam library. Your other libraries are still available.",
+    "請重新登入以同步您的 Steam 資料庫。您的其他資料庫仍然可用。"
+   ],
+   [
+    "login.logoutFailedMessage",
+    "length_ratio",
+    0.32,
+    "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
+    "您的帳號已在此裝置登出，但瀏覽器工作階段未能完全清除。若在共用電腦上使用，請再次登出或清除此網站的瀏覽器資料，以確保您的工作階段不會被他人存取。"
+   ],
+   [
+    "login.logoutFailedTitle",
+    "length_ratio",
+    0.26,
+    "Sign-out incomplete",
+    "登出未完成"
+   ],
+   [
+    "login.steam_logout_failed_message",
+    "length_ratio",
+    0.38,
+    "Steam sign-out didn't finish in time. Please try again.",
+    "Steam 登出未能及時完成，請再試一次。"
+   ],
+   [
+    "login.steam_logout_failed_title",
+    "length_ratio",
+    0.27,
+    "Sign-out failed",
+    "登出失敗"
+   ],
+   [
+    "redeemKey.invalid",
+    "length_ratio",
+    0.34,
+    "This key doesn't look right. Double-check it and try again.",
+    "此金鑰似乎不正確。請仔細檢查後再試一次。"
+   ],
+   [
+    "redeemKey.rateLimited",
+    "length_ratio",
+    0.33,
+    "Too many attempts — please wait a bit before trying again.",
+    "嘗試次數過多 — 請稍候片刻再試一次。"
+   ],
+   [
+    "settings.eosOverlayInstallConfirmTitle",
+    "length_ratio",
+    0.3,
+    "Confirm overlay install",
+    "確認安裝疊加層"
+   ],
+   [
+    "settings.eosOverlayUpdateConfirmTitle",
+    "length_ratio",
+    0.32,
+    "Confirm overlay update",
+    "確認更新疊加層"
+   ],
+   [
+    "settings.framelessWindowDescription",
+    "length_ratio",
+    0.35,
+    "Use frameless window",
+    "使用無邊框視窗"
+   ],
+   [
+    "settings.gamepadInitialRepeatDelay",
+    "length_ratio",
+    0.35,
+    "Gamepad input initial repeat delay",
+    "遊戲手把輸入初始重複延遲"
+   ],
+   [
+    "settings.gamepadRepeatFrequency",
+    "length_ratio",
+    0.33,
+    "Gamepad input repeat frequency",
+    "遊戲手把輸入重複頻率"
+   ],
+   [
+    "settings.gamescopeFsr",
+    "identical_to_english",
+    "AMD FidelityFX™ Super Resolution 1.0 (FSR)"
+   ],
+   [
+    "settings.gamescopeUpscaleMethod",
+    "length_ratio",
+    0.29,
+    "Upscale Method",
+    "放大方法"
+   ],
+   [
+    "settings.loginBackground",
+    "length_ratio",
+    0.23,
+    "Manage Accounts background",
+    "管理帳號背景"
+   ],
+   [
+    "settings.loginBackgroundDialogTitle",
+    "length_ratio",
+    0.24,
+    "Select a background image",
+    "選擇背景圖片"
+   ],
+   [
+    "settings.steamgriddb.apikey.unavailable",
+    "length_ratio",
+    0.28,
+    "Unavailable on this build",
+    "此版本無法使用"
+   ],
+   [
+    "sideload.filter.appImageExtension",
+    "identical_to_english",
+    "AppImage"
+   ],
+   [
+    "sideload.filter.appImages",
+    "identical_to_english",
+    "AppImages"
+   ],
+   [
+    "sideload.filter.otherBinaries",
+    "length_ratio",
+    0.36,
+    "Other Binaries",
+    "其他執行檔"
+   ],
+   [
+    "steam.download.error.decodeFailed",
+    "length_ratio",
+    0.28,
+    "Downloaded game data could not be unpacked. This is not a network problem.",
+    "下載的遊戲資料無法解壓縮，這並非網路問題。"
+   ],
+   [
+    "steam.download.error.notSignedIn",
+    "length_ratio",
+    0.34,
+    "You are not signed in to Steam, so this download could not start.",
+    "您尚未登入 Steam，因此無法開始此下載。"
+   ],
+   [
+    "steam.install.libraryFullOnlyNotice",
+    "length_ratio",
+    0.37,
+    "Not enough space in your Steam library. Free up space, then try again.",
+    "您的 Steam 庫空間不足。請釋放空間後再試一次。"
+   ],
+   [
+    "steam.install.libraryMissingOnlyNotice",
+    "length_ratio",
+    0.39,
+    "Your Steam library couldn't be reached. Reconnect the drive, then try again.",
+    "無法連接到您的 Steam 庫。請重新連接磁碟機後再試一次。"
+   ],
+   [
+    "steam.install.withOptionsLabel",
+    "length_ratio",
+    0.33,
+    "Install with options…",
+    "以選項安裝……"
+   ],
+   [
+    "steam.resumeAvailable.notify",
+    "length_ratio",
+    0.34,
+    "An interrupted install for {{game}} is ready to resume — click Install to continue",
+    "{{game}} 的中斷安裝已可繼續——按一下安裝以繼續"
+   ],
+   [
+    "steam.status.resumeInstall",
+    "length_ratio",
+    0.29,
+    "Resume Install",
+    "繼續安裝"
+   ],
+   [
+    "steam.uninstall.removeAllCopiesConfirmMessage",
+    "length_ratio",
+    0.32,
+    "This removes every installed copy of this game across all install locations. This cannot be undone.",
+    "這會移除此遊戲在所有安裝位置上的每一份安裝副本。此操作無法復原。"
+   ],
+   [
+    "steam.uninstall.removeAllCopiesConfirmTitle",
+    "length_ratio",
+    0.39,
+    "Remove all copies?",
+    "移除所有副本？"
+   ],
+   [
+    "themeSelector.cyberSpaceOasis",
+    "length_ratio",
+    0.25,
+    "Cyberspace Oasis",
+    "賽博綠洲"
+   ],
+   [
+    "themeSelector.cyberSpaceOasisAlt",
+    "length_ratio",
+    0.29,
+    "Cyberspace Oasis Classic",
+    "賽博綠洲經典版"
+   ],
+   [
+    "themeSelector.highContrast",
+    "length_ratio",
+    0.31,
+    "High Contrast",
+    "高對比度"
+   ],
+   [
+    "themeSelector.marineClassic",
+    "length_ratio",
+    0.36,
+    "Marine Classic",
+    "海洋經典版"
+   ],
+   [
+    "themeSelector.midnightMirage",
+    "length_ratio",
+    0.27,
+    "Midnight Mirage",
+    "午夜幻影"
+   ],
+   [
+    "themeSelector.zombieClassic",
+    "length_ratio",
+    0.36,
+    "Zombie Classic",
+    "殭屍經典版"
+   ],
+   [
+    "webview.embedPlaceholder.message",
+    "length_ratio",
+    0.31,
+    "Paused while a window is open",
+    "視窗開啟期間已暫停"
+   ],
+   [
+    "webview.login.blocked.heading",
+    "length_ratio",
+    0.39,
+    "Signing in to {{runner}} is not wired up yet",
+    "尚未支援登入 {{runner}}"
+   ],
+   [
+    "webview.login.blocked.headingGeneric",
+    "length_ratio",
+    0.27,
+    "Signing in is not wired up yet",
+    "尚未支援登入功能"
+   ],
+   [
+    "webview.login.humble.body",
+    "length_ratio",
+    0.31,
+    "A sign-in window has opened. Complete sign-in there — this page updates automatically once it succeeds.",
+    "已開啟登入視窗。請在該視窗中完成登入——成功後此頁面會自動更新。"
+   ],
+   [
+    "webview.login.humble.error.window_unreachable",
+    "length_ratio",
+    0.34,
+    "the Humble sign-in window closed or could not be reached",
+    "Humble 登入視窗已關閉或無法連線"
+   ],
+   [
+    "webview.login.oauth.awaiting.body",
+    "length_ratio",
+    0.37,
+    "A sign-in window has opened. Complete sign-in there.",
+    "已開啟登入視窗。請在該視窗中完成登入。"
+   ],
+   [
+    "webview.login.oauth.blocked.headingGeneric",
+    "length_ratio",
+    0.33,
+    "Sign-in was captured, but can't finish yet",
+    "已擷取登入資訊，但尚無法完成"
+   ],
+   [
+    "webview.login.oauth.cancelled.body",
+    "length_ratio",
+    0.27,
+    "The sign-in window was closed before completing. You can try again.",
+    "登入視窗在完成前已關閉。您可以重試。"
+   ],
+   [
+    "webview.login.oauth.cancelled.headingGeneric",
+    "length_ratio",
+    0.24,
+    "Sign-in was cancelled",
+    "已取消登入"
+   ],
+   [
+    "webview.login.oauth.error.body",
+    "length_ratio",
+    0.38,
+    "Something went wrong while signing in: {{message}}",
+    "登入時發生錯誤：{{message}}"
+   ],
+   [
+    "webview.login.oauth.error.headingGeneric",
+    "length_ratio",
+    0.29,
+    "Sign-in failed",
+    "登入失敗"
+   ],
+   [
+    "webview.login.oauth.finalizing.body",
+    "length_ratio",
+    0.34,
+    "Sign-in captured. Completing the exchange with the store — this can take a few seconds.",
+    "登入資訊已擷取。正在與商店完成交換程序——這可能需要幾秒鐘。"
+   ],
+   [
+    "webview.login.oauth.genericChannel",
+    "length_ratio",
+    0.21,
+    "the sign-in channel",
+    "登入通道"
+   ],
+   [
+    "webview.login.oauth.preparing.body",
+    "length_ratio",
+    0.3,
+    "The store's sign-in window is being prepared and will open shortly.",
+    "商店的登入視窗正在準備中，稍後即會開啟。"
+   ],
+   [
+    "webview.login.oauth.preparing.headingGeneric",
+    "length_ratio",
+    0.39,
+    "Preparing sign-in…",
+    "正在準備登入…"
+   ],
+   [
+    "webview.login.oauth.timeout.body",
+    "length_ratio",
+    0.34,
+    "The sign-in window took too long to complete. You can try again.",
+    "登入視窗花費太多時間才完成。您可以再試一次。"
+   ],
+   [
+    "webview.login.oauth.timeout.headingGeneric",
+    "length_ratio",
+    0.24,
+    "Sign-in timed out",
+    "登入逾時"
+   ],
+   [
+    "webview.unavailable.next-step",
+    "length_ratio",
+    0.34,
+    "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+    "這已列入未來的獨立開發項目 -- 目前請使用下方按鈕改在您系統的瀏覽器中開啟。"
+   ],
+   [
+    "webview.unavailable.platform.heading",
+    "length_ratio",
+    0.37,
+    "In-app store and wiki browsing isn't available on this platform yet",
+    "此平台尚未提供應用程式內商店與 wiki 瀏覽功能"
+   ],
+   [
+    "winetricks.unavailable",
+    "length_ratio",
+    0.37,
+    "Winetricks component management is unavailable on this build",
+    "此版本不支援 Winetricks 元件管理"
+   ]
+  ]
+ }
+}

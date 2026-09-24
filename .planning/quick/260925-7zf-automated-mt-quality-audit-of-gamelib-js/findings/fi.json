@@ -1,0 +1,225 @@
+{
+  "locale": "fi",
+  "reviewer_model": "opus",
+  "rows_reviewed": 280,
+  "counts": {
+    "ok": 259,
+    "minor": 19,
+    "major": 2,
+    "critical": 0
+  },
+  "findings": [
+    {
+      "key": "box.error.install.stalled",
+      "severity": "minor",
+      "category": "register",
+      "en": "No download progress for {{minutes}} minutes — the install was stopped",
+      "tr": "Ei latauksen etenemistä {{minutes}} minuuttiin — asennus pysäytettiin",
+      "back_translation": "No download progress for {{minutes}} minutes, the install was stopped",
+      "issue": "The noun-phrase calque 'Ei latauksen etenemistä' is stiff. A verb clause reads naturally.",
+      "suggested": "Lataus ei ole edennyt {{minutes}} minuuttiin — asennus pysäytettiin"
+    },
+    {
+      "key": "box.steam.mac32Detected.message",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version.",
+      "tr": "Tämän pelin macOS-versio on vain 32-bittinen, eikä se toimi tässä macOS-versiossa. GameLib voi asentaa sen sen sijaan uudelleen CrossOverin kautta, mikä lataa Windows-version uudelleen.",
+      "back_translation": "...GameLib can install it it instead again via CrossOver...",
+      "issue": "'asentaa sen sen sijaan' repeats 'sen' and reads awkwardly.",
+      "suggested": "...GameLib voi sen sijaan asentaa sen uudelleen CrossOverin kautta, jolloin Windows-versio ladataan uudelleen."
+    },
+    {
+      "key": "humbleKeys.giftConfirmBody",
+      "severity": "minor",
+      "category": "register",
+      "en": "Anyone with this link can claim the key — once redeemed, it's gone for good. You'll finish gifting it on Humble's own site.",
+      "tr": "Kuka tahansa tämän linkin saanut voi lunastaa avaimen — kerran lunastettuna se on lopullisesti käytetty. Viimeistelet lahjoituksen Humblen omalla sivustolla.",
+      "back_translation": "Anyone who got this link can claim the key, once redeemed it is finally used...",
+      "issue": "'kerran lunastettuna' is an anglicism, a calque of 'once redeemed'.",
+      "suggested": "Kuka tahansa, jolla on tämä linkki, voi lunastaa avaimen — kun se on lunastettu, se on käytetty lopullisesti. Viimeistelet lahjoituksen Humblen omalla sivustolla."
+    },
+    {
+      "key": "humbleKeys.keyLoading",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Loading…",
+      "tr": "Ladataan",
+      "back_translation": "Loading",
+      "issue": "The ellipsis was dropped. Every other in-progress string in the set keeps it.",
+      "suggested": "Ladataan…"
+    },
+    {
+      "key": "humbleKeys.revealConfirmBody",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
+      "tr": "Paljastaminen näyttää varsinaisen avaimen ja poistaa sen lopullisesti lahjoitettavista varakappaleista. Jos et vielä omista tätä peliä, varmista tämä ennen jatkamista — toimintoa ei voi peruuttaa.",
+      "back_translation": "...the action cannot be cancelled.",
+      "issue": "'There's no undo' is translated three ways: 'ei voi perua' (activateConfirmBody*), 'ei voi peruuttaa' (here), and 'ei voi kumota' (steam.uninstall.removeAllCopiesConfirmMessage). Use one of them. 'kumota' matches the Undo button ('Kumoa').",
+      "suggested": "...varmista tämä ennen jatkamista — toimintoa ei voi kumota."
+    },
+    {
+      "key": "humbleKeys.syncToEnableClaiming",
+      "severity": "minor",
+      "category": "register",
+      "en": "Sync to enable claiming",
+      "tr": "Synkronoi ottaaksesi käyttöön lunastuksen",
+      "back_translation": "Sync to take into use the claiming",
+      "issue": "The word order is awkward.",
+      "suggested": "Synkronoi, jotta voit lunastaa"
+    },
+    {
+      "key": "info.refresh-rating",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Refresh rating",
+      "tr": "Päivitä arvostelu",
+      "back_translation": "Refresh the review",
+      "issue": "This is the Apple compatibility rating (AppleWikiInfo.tsx). 'arvostelu' means a written review. The sibling key gamepage.appleRatingUnrated already uses 'arvioitu'.",
+      "suggested": "Päivitä arvio"
+    },
+    {
+      "key": "library.filterPanel.chipNoStorePageHidden",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "Hiding no store page",
+      "tr": "Piilotettu ilman kauppasivua",
+      "back_translation": "Hidden without a store page",
+      "issue": "This active-filter chip means 'games without a store page are hidden'. The translation reads as the state of something else and is ambiguous.",
+      "suggested": "Piilotetaan ilman kauppasivua"
+    },
+    {
+      "key": "library.filterPanel.viewInstalled",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Installed",
+      "tr": "Asennettu",
+      "back_translation": "Installed (singular)",
+      "issue": "This labels a view that shows a set of games. A plural adjective is natural here.",
+      "suggested": "Asennetut"
+    },
+    {
+      "key": "library.filterPanel.viewRecentlyPlayed",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Recently played",
+      "tr": "Äskettäin pelattu",
+      "back_translation": "Recently played (singular)",
+      "issue": "Same issue as viewInstalled: a game-list view needs the plural.",
+      "suggested": "Äskettäin pelatut"
+    },
+    {
+      "key": "login.logoutFailedMessage",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Your account was signed out on this device, but the browser session could not be fully cleared. On a shared computer, sign out again or clear your browser data for this site to make sure your session doesn't stay accessible.",
+      "tr": "Tilisi kirjattiin ulos tällä laitteella, mutta selainistuntoa ei voitu tyhjentää kokonaan. Jaetulla tietokoneella kirjaudu ulos uudelleen tai tyhjennä tämän sivuston selaintiedot varmistaaksesi, ettei istuntosi jää saataville.",
+      "back_translation": "Your account was logged out on this device...",
+      "issue": "'Tilisi kirjattiin ulos' is unidiomatic. A user is signed out, not an account.",
+      "suggested": "Sinut kirjattiin ulos tililtäsi tällä laitteella, mutta selainistuntoa ei voitu tyhjentää kokonaan. Jaetulla tietokoneella kirjaudu ulos uudelleen tai tyhjennä tämän sivuston selaintiedot varmistaaksesi, ettei istuntosi jää saataville."
+    },
+    {
+      "key": "settings.gamepadInitialRepeatDelay",
+      "severity": "minor",
+      "category": "register",
+      "en": "Gamepad input initial repeat delay",
+      "tr": "Peliohjaimen syötteen alkuviive toistolle",
+      "back_translation": "Gamepad input's initial delay for repeat",
+      "issue": "The word order is awkward.",
+      "suggested": "Peliohjaimen syötteen toiston alkuviive"
+    },
+    {
+      "key": "sideload.filter.images",
+      "severity": "major",
+      "category": "meaning",
+      "en": "Images",
+      "tr": "Levykuvat",
+      "back_translation": "Disk images",
+      "issue": "The filter covers jpg/png/webp/gif/avif picture files (SideloadDialog/filters.ts:30). 'Levykuvat' means disk images (ISO etc.), which misleads the user in a file picker. settings.loginBackgroundFilterName correctly uses 'Kuvat'.",
+      "suggested": "Kuvat"
+    },
+    {
+      "key": "sideload.import-hint.content",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Do NOT use this feature for that.<br />Instead, <3>log into</3> the store, look for the game in your library, open the installation dialog, and click the &quot;{{doorLabel}}&quot; button",
+      "tr": "Älä käytä tätä ominaisuutta siihen.<br />Sen sijaan <3>kirjaudu</3> kauppaan, etsi peli kirjastostasi, avaa asennusikkuna ja klikkaa &quot;{{doorLabel}}&quot;-painiketta",
+      "back_translation": "...and click the \"{{doorLabel}}\" button",
+      "issue": "'klikkaa' is colloquial and does not match 'napsauttamalla' in steam.resumeAvailable.notify. The placeholders and <3> tags are intact.",
+      "suggested": "Älä käytä tätä ominaisuutta siihen.<br />Sen sijaan <3>kirjaudu</3> kauppaan, etsi peli kirjastostasi, avaa asennusikkuna ja napsauta &quot;{{doorLabel}}&quot;-painiketta"
+    },
+    {
+      "key": "steam.bottle.statusPollTimeout",
+      "severity": "minor",
+      "category": "meaning",
+      "en": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.",
+      "tr": "GameLib lakkasi saamasta vastausta Steam-bottlen asetuksesta. Se voi olla edelleen käynnissä — tarkista, avautuiko Steam-asennusikkuna, ja yritä sitten uudelleen.",
+      "back_translation": "...stopped getting a response about the Steam bottle setting",
+      "issue": "'setup' here means the setting-up process, not a setting ('asetus').",
+      "suggested": "GameLib lakkasi saamasta vastausta Steam-bottlen määrityksestä. Se voi olla edelleen käynnissä — tarkista, avautuiko Steam-asennusikkuna, ja yritä sitten uudelleen."
+    },
+    {
+      "key": "steam.download.error.decodeFailed",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Downloaded game data could not be unpacked. This is not a network problem.",
+      "tr": "Latattua pelidataa ei voitu purkaa. Kyse ei ole verkko-ongelmasta.",
+      "back_translation": "Downloaded game data could not be unpacked...",
+      "issue": "Spelling error: 'Latattua' should be 'Ladattua'.",
+      "suggested": "Ladattua pelidataa ei voitu purkaa. Kyse ei ole verkko-ongelmasta."
+    },
+    {
+      "key": "steam.install.bottleNameReadonlyHelper",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "GameLib manages one shared CrossOver bottle for Steam. Naming a separate bottle per game isn't supported yet.",
+      "tr": "GameLib hallinnoi yhtä jaettua CrossOver-pulloa Steamille. Erillisen pullon nimeäminen jokaiselle pelille ei ole vielä tuettu.",
+      "back_translation": "...one shared CrossOver bottle (pullo)...",
+      "issue": "This row translates 'bottle' as 'pullo', but every other row keeps 'bottle' (runsViaBottle, forceWindowsHelp, sharedBottleNotice, statusPollTimeout). Either choice works, but it has to be the same everywhere.",
+      "suggested": "GameLib hallinnoi yhtä jaettua CrossOver-bottlea Steamille. Erillisen bottlen nimeäminen jokaiselle pelille ei ole vielä tuettu."
+    },
+    {
+      "key": "steam.install.contentLightSingleLibraryNotice",
+      "severity": "minor",
+      "category": "register",
+      "en": "There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it.",
+      "tr": "Tässä järjestelmässä on vain yksi Steam-kirjasto, niin tässä ei ole mitään valittavaa — GameLib asentaa tämän pelin siihen.",
+      "back_translation": "...so ('niin') there is nothing to choose here...",
+      "issue": "'niin' for 'so' is colloquial. The sibling row uses 'joten'.",
+      "suggested": "Tässä järjestelmässä on vain yksi Steam-kirjasto, joten tässä ei ole mitään valittavaa — GameLib asentaa tämän pelin siihen."
+    },
+    {
+      "key": "steam.install.withOptionsLabel",
+      "severity": "minor",
+      "category": "terminology",
+      "en": "Install with options…",
+      "tr": "Asenna asetuksin…",
+      "back_translation": "Install with settings…",
+      "issue": "'options' is translated as 'asetuksin' (settings). status.checkingSteamInstallOptions uses 'asennusvaihtoehtoja'.",
+      "suggested": "Asenna valinnoin…"
+    },
+    {
+      "key": "webview.login.blocked.body",
+      "severity": "minor",
+      "category": "grammar",
+      "en": "Your sign-in cannot be completed yet: {{channel}} is not ported to this build. This lands in Phase 34.5.",
+      "tr": "Kirjautumistasi ei voida vielä viimeistellä: {{channel}} ei ole vielä siirretty tähän versioon. Tämä toteutuu vaiheessa 34.5.",
+      "back_translation": "...: {{channel}} has not been ported to this version yet...",
+      "issue": "A negative passive with a nominative subject ('{{channel}} ei ole vielä siirretty') is non-standard. Standard Finnish needs the partitive, which does not work with a raw placeholder. Build the sentence around a fixed noun instead.",
+      "suggested": "Kirjautumistasi ei voida vielä viimeistellä: kanavaa {{channel}} ei ole vielä siirretty tähän versioon. Tämä toteutuu vaiheessa 34.5."
+    },
+    {
+      "key": "webview.login.oauth.timeout.body",
+      "severity": "major",
+      "category": "meaning",
+      "en": "The sign-in window took too long to complete. You can try again.",
+      "tr": "Kirjautumisikkunan täyttyminen kesti liian kauan. Voit yrittää uudelleen.",
+      "back_translation": "The filling-up of the sign-in window took too long.",
+      "issue": "'täyttyminen' means 'filling up', which makes no sense here. The intended meaning is that the sign-in did not complete in time.",
+      "suggested": "Kirjautuminen kesti liian kauan. Voit yrittää uudelleen."
+    }
+  ],
+  "terminology_notes": "Consistent across rows: Retry/Try again = 'Yritä uudelleen', Redeem = 'Lunasta', Reveal = 'Paljasta', Sync = 'Synkronoi', Library = 'kirjasto' (correct game-library sense), Store = 'kauppa' (correct shop sense), build = 'versio', Giftable spares = 'lahjoitettavat varakappaleet' (lowercase generic phrase, used the same way everywhere). Inconsistent: bottle = 'bottle' in 5 rows and 'pullo' in 1; 'no undo' = perua / peruuttaa / kumota; click = 'klikkaa' / 'napsauta'. Brands stay untranslated and take correct inflection (Steamiin, Steamissa, CrossOverin, GameLibistä, Humble Bundleen, Metacriticilla). {{runner}} and {{platform}} are sensibly framed with 'palveluun' and 'alustalla', so the placeholders never need inflecting. The sort labels 'A → Ö' / 'Ö → A' are a deliberate and correct localization. Every placeholder, the <br /> and <3></3> tags, and the &quot; entities are preserved.",
+  "overall": "The Finnish translation is high quality. Meaning is faithful, all placeholders are intact, brands are inflected correctly, and the register suits software UI. Two major issues need fixing: sideload.filter.images says 'disk images' for picture files, and webview.login.oauth.timeout.body says the sign-in window 'filled up'. The minor findings cover terminology consistency, one typo ('Latattua') and a few calques. Confidence is high on meaning and placeholders. Naturalness calls come from a non-native reviewer, so a native speaker may weigh some minor items differently."
+}

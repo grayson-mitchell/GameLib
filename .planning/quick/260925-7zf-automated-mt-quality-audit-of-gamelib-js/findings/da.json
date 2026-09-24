@@ -1,0 +1,285 @@
+{
+ "locale": "da",
+ "reviewer_model": "opus",
+ "rows_reviewed": 280,
+ "counts": {
+  "ok": 253,
+  "minor": 26,
+  "major": 1,
+  "critical": 0
+ },
+ "findings": [
+  {
+   "key": "box.steam.mac32Detected.message",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version.",
+   "tr": "Denne spils macOS-build er kun 32-bit og kan ikke køre på denne version af macOS. GameLib kan i stedet geninstallere det via CrossOver, hvilket vil downloade Windows-versionen igen.",
+   "back_translation": "This game's macOS build is 32-bit only...",
+   "issue": "'spil' is neuter: 'Denne spils' should be 'Dette spils'.",
+   "suggested": "Dette spils macOS-build er kun 32-bit og kan ikke køre på denne version af macOS. GameLib kan i stedet geninstallere det via CrossOver, hvilket vil downloade Windows-versionen igen."
+  },
+  {
+   "key": "humbleKeys.giftConfirmTitle",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Gift this key?",
+   "tr": "Foræ denne nøgle væk?",
+   "back_translation": "Gift away this key?",
+   "issue": "Misspelled imperative: 'Foræ' is not a word; the imperative of 'forære' is 'Forær'. Visible typo in a dialog title.",
+   "suggested": "Forær denne nøgle væk?"
+  },
+  {
+   "key": "humbleKeys.giftOnHumble",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Gift on Humble",
+   "tr": "Foræ væk på Humble",
+   "back_translation": "Gift away on Humble",
+   "issue": "Same typo on a button: 'Foræ' should be 'Forær'.",
+   "suggested": "Forær væk på Humble"
+  },
+  {
+   "key": "humbleKeys.activateConfirmBody",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+   "tr": "Dette afslører nøglen — og fjerner den permanent fra Giftable-reserverne — og indløser den på din Steam-konto. Der er ingen fortryd.",
+   "back_translation": "This reveals the key — and removes it permanently from the Giftable reserves — and redeems it on your Steam account. There is no undo.",
+   "issue": "'Giftable spares' is left half-English here ('Giftable-reserverne') while every other row renders the section as 'Kan foræres'. 'Der er ingen fortryd' uses the verb as a noun; row revealConfirmBody uses 'fortrydelse', and the idiomatic UI phrasing is 'Det kan ikke fortrydes'.",
+   "suggested": "Dette afslører nøglen — og fjerner den permanent fra Kan foræres — og indløser den på din Steam-konto. Det kan ikke fortrydes."
+  },
+  {
+   "key": "humbleKeys.activateConfirmBodyRevealed",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "This redeems your already-revealed key on your Steam account. There's no undo.",
+   "tr": "Dette indløser din allerede afslørede nøgle på din Steam-konto. Der er ingen fortryd.",
+   "back_translation": "This redeems your already revealed key on your Steam account. There is no undo.",
+   "issue": "'Der er ingen fortryd' is unidiomatic (verb used as noun).",
+   "suggested": "Dette indløser din allerede afslørede nøgle på din Steam-konto. Det kan ikke fortrydes."
+  },
+  {
+   "key": "humbleKeys.c2Body",
+   "severity": "minor",
+   "category": "register",
+   "en": "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+   "tr": "Denne nøgle er sikker i Kan foræres — at afsløre den her ville ødelægge muligheden for at forære den væk. Tag den til Kan foræres i stedet.",
+   "back_translation": "This key is safe in Can-be-gifted — revealing it here would destroy the possibility to gift it away. Take it to Can-be-gifted instead.",
+   "issue": "Meaning is right, but using the section name 'Kan foræres' bare inside running prose reads badly ('sikker i Kan foræres'). 'Ødelægge muligheden' is heavier than 'throw away'. Quoting the section name would help.",
+   "suggested": "Denne nøgle er i sikkerhed under »Kan foræres« — hvis du afslører den her, mister du muligheden for at forære den væk. Gå til »Kan foræres« i stedet."
+  },
+  {
+   "key": "humbleKeys.revealConfirmBody",
+   "severity": "minor",
+   "category": "register",
+   "en": "Revealing shows the actual key and removes it from Giftable spares for good. If you don't own this game yet, make sure that's really true before continuing — there's no undo.",
+   "tr": "At afsløre viser den faktiske nøgle og fjerner den fra Kan foræres for altid. Hvis du ikke allerede ejer dette spil, så vær sikker på, at det virkelig er tilfældet, før du fortsætter — der er ingen fortrydelse.",
+   "back_translation": "To reveal shows the actual key and removes it from Can-be-gifted forever...",
+   "issue": "Starting the sentence with the infinitive 'At afsløre viser...' is a calque and reads stiffly. The meaning is correct.",
+   "suggested": "Når du afslører nøglen, vises den faktiske nøgle, og den fjernes permanent fra »Kan foræres«. Hvis du ikke allerede ejer dette spil, så sørg for, at det virkelig passer, før du fortsætter — det kan ikke fortrydes."
+  },
+  {
+   "key": "humbleKeys.claimWizardTitle",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Claim this key",
+   "tr": "Indløs denne nøgle",
+   "back_translation": "Redeem this key",
+   "issue": "'Claim' and 'Redeem' both become 'Indløs', so the claim wizard and the redeem action cannot be told apart. The English keeps them separate, and in Humble 'claim' (take the key from the bundle) is a different step from redeeming it on a platform.",
+   "suggested": "Hent denne nøgle"
+  },
+  {
+   "key": "humbleKeys.cooldown",
+   "severity": "minor",
+   "category": "register",
+   "en": "Temporarily unavailable — retry in {{minutes}}m",
+   "tr": "Midlertidigt utilgængelig — prøv igen om {{minutes}}m",
+   "back_translation": "Temporarily unavailable — try again in {{minutes}}m",
+   "issue": "In Danish, 'm' is the abbreviation for metre. The minutes abbreviation is 'min'. The placeholder is fine.",
+   "suggested": "Midlertidigt utilgængelig — prøv igen om {{minutes}} min"
+  },
+  {
+   "key": "humbleKeys.revealCooldownBody",
+   "severity": "minor",
+   "category": "register",
+   "en": "Temporarily unavailable — retry in {{N}}m",
+   "tr": "Midlertidigt utilgængelig — prøv igen om {{N}}m",
+   "back_translation": "Temporarily unavailable — try again in {{N}}m",
+   "issue": "Same as cooldown: 'm' should be 'min'.",
+   "suggested": "Midlertidigt utilgængelig — prøv igen om {{N}} min"
+  },
+  {
+   "key": "downloadManager.progressPaused",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Paused",
+   "tr": "Pauset",
+   "back_translation": "Paused (colloquial)",
+   "issue": "'Pauset' is colloquial. webview.embedPlaceholder.message uses the standard 'Sat på pause'.",
+   "suggested": "Sat på pause"
+  },
+  {
+   "key": "box.error.install.stalled",
+   "severity": "minor",
+   "category": "register",
+   "en": "No download progress for {{minutes}} minutes — the install was stopped",
+   "tr": "Ingen downloadfremgang i {{minutes}} minutter — installationen blev stoppet",
+   "back_translation": "No download advancement/success in {{minutes}} minutes — the installation was stopped",
+   "issue": "'Fremgang' leans toward 'success/prosperity'. Download progress is normally 'fremskridt'.",
+   "suggested": "Intet downloadfremskridt i {{minutes}} minutter — installationen blev stoppet"
+  },
+  {
+   "key": "humbleKeys.undoOwnershipOverride",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Undo — I do own this game",
+   "tr": "Fortryd — Jeg ejer faktisk dette spil",
+   "back_translation": "Undo — I actually own this game",
+   "issue": "The pronoun 'jeg' should not be capitalized after a dash in Danish.",
+   "suggested": "Fortryd — jeg ejer faktisk dette spil"
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageHidden",
+   "severity": "major",
+   "category": "meaning",
+   "en": "Hiding no store page",
+   "tr": "Skjuler ingen butikside",
+   "back_translation": "Hides no store page",
+   "issue": "Read naturally, the Danish says 'hides no store page', which a user will take to mean nothing is hidden. The chip actually means games without a store page are being hidden. The English is also terse and ambiguous, but the Danish makes the negation more misleading.",
+   "suggested": "Skjuler spil uden butikside"
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageOnly",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "No store page only",
+   "tr": "Kun ingen butikside",
+   "back_translation": "Only no store page",
+   "issue": "'Kun ingen butikside' is ungrammatical and unclear.",
+   "suggested": "Kun spil uden butikside"
+  },
+  {
+   "key": "login.logoutFailedTitle",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Sign-out incomplete",
+   "tr": "Log ud ikke fuldført",
+   "back_translation": "Log out not completed",
+   "issue": "'Log ud' is the imperative verb, used here as a noun. The noun is 'Udlogning' (or rephrase).",
+   "suggested": "Udlogning ikke fuldført"
+  },
+  {
+   "key": "login.steam_logout_failed_title",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Sign-out failed",
+   "tr": "Log ud mislykkedes",
+   "back_translation": "Log out failed",
+   "issue": "Same as logoutFailedTitle: the verb 'Log ud' is used as a noun.",
+   "suggested": "Udlogning mislykkedes"
+  },
+  {
+   "key": "setting.eosOverlay.unavailableDetail",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.",
+   "tr": "Understøttelse af EOS Overlay er udskudt til en fremtidig udgivelse (D-03, Phase 34.6) og kan ikke installeres, opdateres eller fjernes i denne build.",
+   "back_translation": "...deferred to a future release (D-03, Phase 34.6)...",
+   "issue": "'Phase' is left in English here. The sibling rows use 'fase 34.6' (lowercase) and 'Fase 34.5' (capitalized), so there are three different forms.",
+   "suggested": "Understøttelse af EOS Overlay er udskudt til en fremtidig udgivelse (D-03, fase 34.6) og kan ikke installeres, opdateres eller fjernes i denne build."
+  },
+  {
+   "key": "sideload.import-hint.content",
+   "severity": "minor",
+   "category": "placeholder",
+   "en": "Do NOT use this feature for that.<br />Instead, <3>log into</3> the store, look for the game in your library, open the installation dialog, and click the &quot;{{doorLabel}}&quot; button",
+   "tr": "Brug IKKE denne funktion til det.<br />Log i stedet <3>ind på</3> butikken, find spillet i dit bibliotek, åbn installationsdialogen og klik på knappen &quot;{{doorLabel}}&quot;",
+   "back_translation": "Do NOT use this feature for that. Instead <log> into the store...",
+   "issue": "The tags are all intact, but <3></3> now wraps only 'ind på', so the link text splits the particle verb 'logge ind' and 'Log' sits outside the link. It still renders; the link text is just odd.",
+   "suggested": "Brug IKKE denne funktion til det.<br />Gå i stedet til butikken og <3>log ind</3>, find spillet i dit bibliotek, åbn installationsdialogen og klik på knappen &quot;{{doorLabel}}&quot;"
+  },
+  {
+   "key": "steam.bottle.statusPollTimeout",
+   "severity": "minor",
+   "category": "register",
+   "en": "GameLib stopped hearing back about the Steam bottle setup. It may still be running — check for a Steam installer window, then try again.",
+   "tr": "GameLib holdt op med at høre tilbage om opsætningen af Steam-bottlen. Den kører muligvis stadig — kig efter et Steam-installationsvindue, og prøv så igen.",
+   "back_translation": "GameLib stopped hearing back about the setup of the Steam bottle...",
+   "issue": "'Holdt op med at høre tilbage' is a word-for-word copy of the English 'hearing back' and sounds unnatural in Danish.",
+   "suggested": "GameLib har ikke fået svar om opsætningen af Steam-bottlen. Den kører muligvis stadig — kig efter et Steam-installationsvindue, og prøv så igen."
+  },
+  {
+   "key": "steam.download.error.decodeFailed",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Downloaded game data could not be unpacked. This is not a network problem.",
+   "tr": "De downloadede speldata kunne ikke udpakkes. Dette er ikke et netværksproblem.",
+   "back_translation": "The downloaded game data could not be unpacked...",
+   "issue": "'speldata' is misspelled: 'spel' is the Swedish form. Danish is 'spildata'.",
+   "suggested": "De downloadede spildata kunne ikke udpakkes. Dette er ikke et netværksproblem."
+  },
+  {
+   "key": "themeSelector.highContrast",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "High Contrast",
+   "tr": "Høj Kontrast",
+   "back_translation": "High Contrast",
+   "issue": "Danish does not capitalize every word in a title: 'Høj kontrast'. The other theme names are proper names and stay in English, which is fine.",
+   "suggested": "Høj kontrast"
+  },
+  {
+   "key": "webview.login.oauth.timeout.body",
+   "severity": "minor",
+   "category": "register",
+   "en": "The sign-in window took too long to complete. You can try again.",
+   "tr": "Login-vinduet var for længe om at gennemføre. Du kan prøve igen.",
+   "back_translation": "The sign-in window was too long about completing.",
+   "issue": "'Var for længe om at gennemføre' is awkward, and it leaves out what the window was completing.",
+   "suggested": "Login-vinduet tog for lang tid. Du kan prøve igen."
+  },
+  {
+   "key": "humbleKeys.title",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Humble Keys",
+   "tr": "Humble Keys",
+   "back_translation": "Humble Keys",
+   "issue": "The title stays English ('Humble Keys'), but the refresh button says 'Humble-nøgler'. Choose one. Keeping it as a feature name is defensible, but then the button should match.",
+   "suggested": "Humble-nøgler"
+  },
+  {
+   "key": "redeemKey.invalid",
+   "severity": "minor",
+   "category": "register",
+   "en": "This key doesn't look right. Double-check it and try again.",
+   "tr": "Denne nøgle ser ikke korrekt ud. Tjek den igen, og prøv igen.",
+   "back_translation": "This key doesn't look correct. Check it again, and try again.",
+   "issue": "'igen ... igen' repeats. 'Double-check' has a direct Danish equivalent.",
+   "suggested": "Denne nøgle ser ikke korrekt ud. Dobbelttjek den, og prøv igen."
+  },
+  {
+   "key": "consoleMode.steamInstallLibraryMissing",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Your Steam library folder isn't available right now. Reconnect the drive and try again.",
+   "tr": "Din Steam-biblioteksmappe er ikke tilgængelig lige nu. Genforbind drevet og prøv igen.",
+   "back_translation": "...Reconnect the drive and try again.",
+   "issue": "'Genforbind drevet' is unidiomatic, and steam.install.libraryMissingOnlyNotice translates the same English as 'Genopret forbindelsen til drevet'.",
+   "suggested": "Din Steam-biblioteksmappe er ikke tilgængelig lige nu. Tilslut drevet igen, og prøv igen."
+  },
+  {
+   "key": "humbleKeys.activateWizardTitle",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Activate this key",
+   "tr": "Aktivér denne nøgle",
+   "back_translation": "Activate this key",
+   "issue": "Accent spelling of the imperative is inconsistent: 'Aktivér' here but 'Aktiver' in activate/activateConfirmTitle. The same split appears with Opdatér/Opdater and Synkronisér/Synkroniser. Both spellings are allowed; pick one.",
+   "suggested": "Aktiver denne nøgle"
+  }
+ ],
+ "terminology_notes": "Mostly consistent: Library = bibliotek, Store = butik, Redeem = indløs, Reveal = afslør, Sign in = log ind / login (noun), Retry = Prøv igen, Build = 'denne build'. Inconsistencies: (1) Giftable spares appears both as 'Kan foræres' and as 'Giftable-reserverne'. (2) Claim and Redeem both become 'indløs'. (3) Imperatives switch between accented and plain forms (Aktivér/Aktiver, Opdatér/Opdater, Synkronisér/Synkroniser); both are valid, but the UI should use one. (4) Phase appears as 'Phase', 'fase' and 'Fase'. (5) Paused appears as 'Pauset' and 'Sat på pause'. (6) Cancel is 'Afbryd' in dialogs while 'cancelled' is 'annulleret'; 'Annuller' is the more common Danish dialog-button convention, but 'Afbryd' is not wrong, so I did not flag it. (7) The grammatical gender of 'login' varies ('Din login' / 'Din Steam-login'); usage is divided and I am not certain which is standard, so I did not flag it. Brands are kept, and genitives and compounds (Steams, Humbles, GameLibs, Steam-bibliotek, CrossOver-bottle) are inflected correctly.",
+ "overall": "This is a good-quality Danish translation. Every placeholder and tag is preserved, brands are handled correctly, and the register fits software UI. No row inverts meaning or breaks rendering. The one major finding is an ambiguous filter chip ('Skjuler ingen butikside') that reads as 'hides nothing'. The rest are minor: a few real typos ('Foræ', 'speldata', 'Denne spils'), calques, and terminology inconsistencies in the Humble Keys strings. Confidence limits: this was reviewed from strings alone, without seeing the UI; a few calls are style judgments (e.g. Afbryd vs Annuller, the gender of 'login'); and the source for chipNoStorePageHidden is ambiguous itself, so its severity depends on how the chip is displayed."
+}

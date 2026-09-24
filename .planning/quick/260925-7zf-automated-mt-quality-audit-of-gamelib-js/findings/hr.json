@@ -1,0 +1,265 @@
+{
+ "locale": "hr",
+ "reviewer_model": "opus",
+ "rows_reviewed": 280,
+ "counts": {
+  "ok": 255,
+  "minor": 22,
+  "major": 3,
+  "critical": 0
+ },
+ "findings": [
+  {
+   "key": "box.error.install.stalled",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "No download progress for {{minutes}} minutes — the install was stopped",
+   "tr": "Nema napretka preuzimanja {{minutes}} minuta — instalacija je zaustavljena",
+   "back_translation": "No download progress {{minutes}} minutes — installation stopped",
+   "issue": "Duration lacks a preposition ('Nema napretka ... X minuta' reads as a fragment); 'minuta' also only agrees with some numbers (2-4 take 'minute').",
+   "suggested": "Nema napretka preuzimanja već {{minutes}} min — instalacija je zaustavljena"
+  },
+  {
+   "key": "box.steam.mac32Detected.confirm",
+   "severity": "minor",
+   "category": "brand",
+   "en": "Reinstall via CrossOver",
+   "tr": "Ponovno instaliraj putem CrossOver",
+   "back_translation": "Reinstall via CrossOver",
+   "issue": "After 'putem' the brand should take the genitive (CrossOvera), which other rows do ('CrossOver-a'); uninflected form reads unnatural.",
+   "suggested": "Ponovno instaliraj putem CrossOvera"
+  },
+  {
+   "key": "box.steam.mac32Detected.message",
+   "severity": "minor",
+   "category": "brand",
+   "en": "This game's macOS build is 32-bit only and cannot run on this version of macOS. GameLib can reinstall it through CrossOver instead, which will redownload the Windows version.",
+   "tr": "Ova macOS verzija igre je isključivo 32-bitna i ne može se pokrenuti na ovoj verziji macOS-a. GameLib je umjesto toga može ponovno instalirati putem CrossOver, čime će se ponovno preuzeti Windows verzija.",
+   "back_translation": "...reinstall through CrossOver, which will redownload the Windows version.",
+   "issue": "Same uninflected 'putem CrossOver' as the confirm button.",
+   "suggested": "...ponovno instalirati putem CrossOvera, čime će se ponovno preuzeti Windows verzija."
+  },
+  {
+   "key": "gamepage.appleRatingUnrated",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Unrated",
+   "tr": "Nema ocjenu",
+   "back_translation": "Has no rating (ungrammatical accusative)",
+   "issue": "'Nema' takes the genitive: 'Nema ocjene'. 'Bez ocjene' fits a rating label better.",
+   "suggested": "Bez ocjene"
+  },
+  {
+   "key": "humbleKeys.activateConfirmBody",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "This reveals the key — removing it from Giftable spares for good — and redeems it on your Steam account. There's no undo.",
+   "tr": "Ovo otkriva ključ — trajno ga uklanjajući iz Giftable rezervi — i iskorištava ga na vašem Steam računu. Nema poništavanja.",
+   "back_translation": "...removing it permanently from Giftable spares...",
+   "issue": "'Giftable' left in English here, but other rows translate the section name as 'Poklonjive rezerve'. So the same section appears under two names.",
+   "suggested": "Ovo otkriva ključ — trajno ga uklanjajući iz Poklonjivih rezervi — i iskorištava ga na vašem Steam računu. Nema poništavanja."
+  },
+  {
+   "key": "humbleKeys.activatingTitle",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Activating on Steam…",
+   "tr": "Aktiviranje na Steam…",
+   "back_translation": "Activating on Steam…",
+   "issue": "Missing locative inflection. Other rows correctly use 'na Steamu'.",
+   "suggested": "Aktiviranje na Steamu…"
+  },
+  {
+   "key": "humbleKeys.c2Body",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "This key is safe in Giftable spares — revealing it here would throw away the ability to gift it. Take it to Giftable spares instead.",
+   "tr": "Ovaj ključ je siguran u Poklonjivim rezervama — otkrivanjem ovdje izgubili biste mogućnost darivanja. Umjesto toga, odite na Poklonjive rezerve.",
+   "back_translation": "...Instead, go to Giftable spares.",
+   "issue": "'odite' is non-standard; the standard imperative is 'idite'.",
+   "suggested": "...Umjesto toga, idite na Poklonjive rezerve."
+  },
+  {
+   "key": "humbleKeys.giftOnHumble",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Gift on Humble",
+   "tr": "Daruj na Humble",
+   "back_translation": "Gift on Humble",
+   "issue": "Locative should be inflected ('na Humbleu'). Other rows inflect the brand ('Humbleovoj').",
+   "suggested": "Daruj na Humbleu"
+  },
+  {
+   "key": "library.filterPanel.chipNoStorePageHidden",
+   "severity": "major",
+   "category": "meaning",
+   "en": "Hiding no store page",
+   "tr": "Skrivanje bez stranice trgovine",
+   "back_translation": "Hiding without a store page",
+   "issue": "Garbled: it reads as if the act of hiding lacks a store page. The chip means games with no store page are hidden. Also clashes with the chipHiddenIncluded/chipNonAvailableIncluded phrasing.",
+   "suggested": "Skrivene igre bez stranice trgovine"
+  },
+  {
+   "key": "library.filterPanel.viewAll",
+   "severity": "major",
+   "category": "meaning",
+   "en": "All games",
+   "tr": "All Games",
+   "back_translation": "All Games (English, untranslated)",
+   "issue": "Left in English. This is a main library view label.",
+   "suggested": "Sve igre"
+  },
+  {
+   "key": "library.filterPanel.viewFavourites",
+   "severity": "major",
+   "category": "meaning",
+   "en": "Favourites",
+   "tr": "Favourites",
+   "back_translation": "Favourites (English, untranslated)",
+   "issue": "Left in English. This is a main library view label.",
+   "suggested": "Favoriti"
+  },
+  {
+   "key": "library.steamSync.failedBody",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Your other libraries are still available. Try again, or check that Steam is reachable.",
+   "tr": "Vaše ostale knjižnice su još dostupne. Pokušajte ponovo ili provjerite je li Steam dostupan.",
+   "back_translation": "Your other libraries are still available...",
+   "issue": "'knjižnice' (a book library) here, but most rows use 'biblioteka' for a game library. The same concept gets two names. Also 'ponovo' vs the dominant 'ponovno'.",
+   "suggested": "Vaše ostale biblioteke i dalje su dostupne. Pokušajte ponovno ili provjerite je li Steam dostupan."
+  },
+  {
+   "key": "library.steamSync.failedTitle",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Couldn't sync your Steam library",
+   "tr": "Nije moguće sinkronizirati vašu Steam knjižnicu",
+   "back_translation": "Couldn't sync your Steam library",
+   "issue": "'knjižnicu' vs 'biblioteka' used elsewhere.",
+   "suggested": "Nije moguće sinkronizirati vašu Steam biblioteku"
+  },
+  {
+   "key": "library.steamSync.signedOutBody",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Sign in again to sync your Steam library. Your other libraries are still available.",
+   "tr": "Prijavite se ponovo da biste sinkronizirali svoju Steam knjižnicu. Vaše ostale knjižnice su još dostupne.",
+   "back_translation": "Sign in again to sync your Steam library...",
+   "issue": "'knjižnicu/knjižnice' vs 'biblioteka' used elsewhere.",
+   "suggested": "Ponovno se prijavite da biste sinkronizirali svoju Steam biblioteku. Vaše ostale biblioteke i dalje su dostupne."
+  },
+  {
+   "key": "library.steamSync.syncing",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Syncing your Steam library…",
+   "tr": "Sinkronizacija vaše Steam knjižnice…",
+   "back_translation": "Syncing your Steam library…",
+   "issue": "'knjižnice' vs 'biblioteka' used elsewhere.",
+   "suggested": "Sinkronizacija vaše Steam biblioteke…"
+  },
+  {
+   "key": "redeemSteamKey.viewInLibrary",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "View in library",
+   "tr": "Pogledaj u knjižnici",
+   "back_translation": "View in library",
+   "issue": "'knjižnici' vs 'biblioteka' used elsewhere.",
+   "suggested": "Pogledaj u biblioteci"
+  },
+  {
+   "key": "steam.install.libraryPrimarySuffix",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "default",
+   "tr": "zadano",
+   "back_translation": "default (neuter)",
+   "issue": "This is a suffix on a library name (feminine 'biblioteka'), so it should agree: 'zadana'.",
+   "suggested": "zadana"
+  },
+  {
+   "key": "webview.login.blocked.heading",
+   "severity": "minor",
+   "category": "meaning",
+   "en": "Signing in to {{runner}} is not wired up yet",
+   "tr": "Prijava na {{runner}} još nije povezana",
+   "back_translation": "Sign-in to {{runner}} is not connected yet",
+   "issue": "'wired up' = implemented/hooked up, not 'connected'. 'povezana' suggests a network or account-link state.",
+   "suggested": "Prijava na {{runner}} još nije omogućena"
+  },
+  {
+   "key": "webview.login.blocked.headingGeneric",
+   "severity": "minor",
+   "category": "meaning",
+   "en": "Signing in is not wired up yet",
+   "tr": "Prijava još nije povezana",
+   "back_translation": "Sign-in is not connected yet",
+   "issue": "Same 'povezana' sense issue as blocked.heading.",
+   "suggested": "Prijava još nije omogućena"
+  },
+  {
+   "key": "webview.login.oauth.timeout.heading",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Signing in to {{runner}} timed out",
+   "tr": "Isteklo je vrijeme za prijavu u {{runner}}",
+   "back_translation": "Time ran out for sign-in into {{runner}}",
+   "issue": "Uses 'prijava u' while every sibling uses 'prijava na {{runner}}'.",
+   "suggested": "Isteklo je vrijeme za prijavu na {{runner}}"
+  },
+  {
+   "key": "webview.unavailable.next-step",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "This is tracked as its own future work -- for now, use the button below to open it in your system browser instead.",
+   "tr": "Ovo je zabilježeno kao zaseban budući zadatak -- za sada koristite gumb ispod kako biste to otvorili u sistemskom pretraživaču.",
+   "back_translation": "...open it in the system search engine/browser",
+   "issue": "'pretraživač' means search engine in standard Croatian (the browser sense is Serbian/colloquial). login.logoutFailedMessage correctly uses 'preglednik'.",
+   "suggested": "Ovo je zabilježeno kao zaseban budući zadatak -- za sada koristite gumb ispod kako biste to otvorili u pregledniku sustava."
+  },
+  {
+   "key": "webview.unavailable.open-in-browser",
+   "severity": "minor",
+   "category": "grammar",
+   "en": "Open in browser",
+   "tr": "Otvori u pretraživaću",
+   "back_translation": "Open in browser (misspelled)",
+   "issue": "Typo 'pretraživaću' (ć for č), and it uses the non-standard 'pretraživač' for browser. This is a visible button.",
+   "suggested": "Otvori u pregledniku"
+  },
+  {
+   "key": "winetricks.unavailable",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Winetricks component management is unavailable on this build",
+   "tr": "Upravljanje Winetricks komponentama nije dostupno u ovoj inačici",
+   "back_translation": "Winetricks component management is unavailable in this build",
+   "issue": "'build' is 'inačica' here but 'verzija' in every other 'on this build' row.",
+   "suggested": "Upravljanje Winetricks komponentama nije dostupno u ovoj verziji"
+  },
+  {
+   "key": "winetricks.unavailableDetail",
+   "severity": "minor",
+   "category": "terminology",
+   "en": "Winetricks support is deferred to a future release (D-03, Phase 34.6) and cannot be listed or installed from this build.",
+   "tr": "Podrška za Winetricks odgođena je za buduće izdanje (D-03, faza 34.6) i ne može se popisati ni instalirati u ovoj inačici.",
+   "back_translation": "...cannot be listed or installed in this build.",
+   "issue": "'inačici' vs 'verziji' used elsewhere for build.",
+   "suggested": "...i ne može se popisati ni instalirati u ovoj verziji."
+  },
+  {
+   "key": "steam.resumeAvailable.notify",
+   "severity": "minor",
+   "category": "register",
+   "en": "An interrupted install for {{game}} is ready to resume — click Install to continue",
+   "tr": "Prekinuta instalacija za {{game}} spremna je za nastavak — kliknite Instaliraj za nastavak",
+   "back_translation": "Interrupted install for {{game}} is ready for continuation — click Install for continuation",
+   "issue": "'za nastavak' is repeated in one sentence, which is clunky.",
+   "suggested": "Prekinuta instalacija igre {{game}} može se nastaviti — kliknite Instaliraj za nastavak"
+  }
+ ],
+ "terminology_notes": "Game library: 'biblioteka' dominates, but the steamSync rows and viewInLibrary use 'knjižnica'. Standardize on 'biblioteka'. Build: 'verzija' dominates, but the winetricks rows use 'inačica'. Browser: use 'preglednik', not 'pretraživač'. Retry: 'ponovno' dominates, but several rows use 'ponovo'. Both are acceptable; pick one. Button imperatives mix informal 2sg ('Prijavi se', 'Pokušaj ponovno') with formal ('Prijavite se na Humble Bundle'), and body text uses formal 'vi' throughout. Humble section name: use 'Poklonjive rezerve' everywhere, not 'Giftable'. 'bottle' is kept in English and inflected ('bottlea') consistently, which is acceptable. Hyphenated brand inflection ('GameLib-a', 'GameLib-u', 'CrossOver-a') is common in practice, though normative orthography prefers 'GameLiba'. Not flagged per row. 'sistemski' (file picker) vs 'sustav' elsewhere is a mild inconsistency. Not flagged. Redeem = 'iskoristiti' and claim = 'preuzeti' are used consistently. Note that 'preuzeti' is also the download verb.",
+ "overall": "The Croatian is generally fluent and accurate. All placeholders, <3></3>/<br /> tags and &quot; entities are preserved correctly, and there are no meaning inversions. The real defects: two library view labels left in English ('All Games', 'Favourites'), a garbled filter-chip label, a typo on the 'Open in browser' button, and scattered terminology drift (knjižnica/biblioteka, verzija/inačica, pretraživač/preglednik). A few brand locatives are missing ('na Steam', 'na Humble'). Confidence: high on the untranslated strings, the placeholders and the grammar points. Moderate on register and naturalness calls, because I am a non-native reviewer and cannot see the UI context for short fragment labels."
+}
