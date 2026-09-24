@@ -14,7 +14,10 @@
         "error": {
             "install": {
                 "failed": "A instalação de {{title}} falhou: {{error}}",
-                "signInToSteam": "Iniciar sessão no Steam"
+                "signInToSteam": "Iniciar sessão no Steam",
+                "stalled_one": "Sem progresso de download há {{count}} minuto — a instalação foi interrompida",
+                "stalled_many": "Sem progresso de download há {{count}} minutos — a instalação foi interrompida",
+                "stalled_other": "Sem progresso de download há {{count}} minutos — a instalação foi interrompida"
             }
         },
         "filePicker": {
@@ -128,8 +131,44 @@
             "revealed": "Revelado",
             "unpicked": "Não escolhido",
             "unredeemable": "Expirado",
-            "unrevealed": "Não revelado"
-        }
+            "unrevealed": "Não revelado",
+            "redeemed": "Resgatada"
+        },
+        "activateConfirmBody": "Isto revela a chave — removendo-a permanentemente de Sobressalentes para oferta — e resgata-a na sua conta Steam. Não há como desfazer.",
+        "activateConfirmBodyRevealed": "Isto resgata a sua chave já revelada na sua conta Steam. Não há como desfazer.",
+        "activateDismiss": "Cancelar",
+        "activatingBody": "A revelar a sua chave e a resgatá-la na Steam — isto leva apenas um instante.",
+        "c2Action": "Ir para Sobressalentes para oferta",
+        "c2Body": "Esta chave está segura em Sobressalentes para oferta — revelá-la aqui eliminaria a possibilidade de a oferecer. Vá antes a Sobressalentes para oferta.",
+        "claimOnHumble": "Obter na Humble",
+        "claimOnStore": "Obter na {{store}}",
+        "claimWizardTitle": "Obter esta chave",
+        "cooldown_one": "Temporariamente indisponível — tente novamente em {{count}} minuto",
+        "cooldown_many": "Temporariamente indisponível — tente novamente em {{count}} minutos",
+        "cooldown_other": "Temporariamente indisponível — tente novamente em {{count}} minutos",
+        "giftConfirmBody": "Qualquer pessoa com este link pode obter a chave — depois de resgatada, desaparece para sempre. Vai concluir a oferta no próprio site da Humble.",
+        "loginAndClaim": "Iniciar sessão na {{store}} e obter",
+        "markRedeemed": "Marcar como resgatada",
+        "redeemableOnly": "Apenas chaves resgatáveis",
+        "redeemedAnnotation": "Resgatada em {{date}}",
+        "redeemOnPlatform": "Resgatar em {{platform}}",
+        "revealConfirmBody": "Revelar mostra a chave real e remove-a permanentemente de Sobressalentes para oferta. Se ainda não possui este jogo, certifique-se de que isso é mesmo verdade antes de continuar — não há como desfazer.",
+        "revealCooldownBody_one": "Temporariamente indisponível — tente novamente em {{count}} minuto",
+        "revealCooldownBody_many": "Temporariamente indisponível — tente novamente em {{count}} minutos",
+        "revealCooldownBody_other": "Temporariamente indisponível — tente novamente em {{count}} minutos",
+        "revealRejectedBody": "A Humble recusou revelar esta chave — pode já estar resgatada ou expirada. Sincronize para verificar o estado atual.",
+        "syncing_one": "A sincronizar… {{done}}/{{count}} encomenda",
+        "syncing_many": "A sincronizar… {{done}}/{{count}} encomendas",
+        "syncing_other": "A sincronizar… {{done}}/{{count}} encomendas",
+        "syncToEnableClaiming": "Sincronize para ativar a obtenção",
+        "undo": "Desfazer",
+        "undoOwnershipOverride": "Desfazer — eu possuo este jogo",
+        "urgencyDaysLeft_one": "{{count}} dia restante",
+        "urgencyDaysLeft_many": "{{count}} dias restantes",
+        "urgencyDaysLeft_other": "{{count}} dias restantes",
+        "urgencyHoursLeft_one": "{{count}} hora restante",
+        "urgencyHoursLeft_many": "{{count}} horas restantes",
+        "urgencyHoursLeft_other": "{{count}} horas restantes"
     },
     "info": {
         "refresh-rating": "Atualizar avaliação"
@@ -171,7 +210,11 @@
             "viewFavourites": "Favoritos",
             "viewInstalled": "Instalado",
             "viewRecentlyPlayed": "Jogados recentemente",
-            "wontRun": "Não executa"
+            "wontRun": "Não executa",
+            "chipNoStorePageHidden": "A ocultar jogos sem página na loja",
+            "groupSelectedCount_one": "{{count}} selecionado",
+            "groupSelectedCount_many": "{{count}} selecionados",
+            "groupSelectedCount_other": "{{count}} selecionados"
         },
         "header": {
             "filteredOfTotal": "{{shown}} de {{total}}"
@@ -421,7 +464,10 @@
         "needsGuiTag": "Requer a GUI do Winetricks",
         "retry": "Tentar novamente",
         "searchPlaceholder": "Pesquisar componentes…",
-        "zeroResultHeading": "Nenhum componente corresponde a “{{query}}”."
+        "zeroResultHeading": "Nenhum componente corresponde a “{{query}}”.",
+        "resultsHeading_one": "{{count}} resultado",
+        "resultsHeading_many": "{{count}} resultados",
+        "resultsHeading_other": "{{count}} resultados"
     },
     "donate": {
         "navLabel": "Doar"
@@ -433,5 +479,9 @@
         "rateLimited": "Demasiadas tentativas — aguarde um pouco antes de tentar novamente.",
         "successNoPackage": "Chave resgatada! A sua biblioteca da Steam foi atualizada.",
         "successWithPackage": "Chave resgatada! {{packageName}} foi adicionado à sua biblioteca da Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Algum texto neste idioma foi traduzido automaticamente e pode conter erros.",
+        "reportTranslationProblem": "Reportar um problema de tradução"
     }
 }

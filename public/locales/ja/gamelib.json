@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "{{title}} のインストールに失敗しました: {{error}}",
-                "signInToSteam": "Steam にサインイン"
+                "signInToSteam": "Steam にサインイン",
+                "stalled_one": "{{count}} 分間ダウンロードの進行がなかったため、インストールを停止しました",
+                "stalled_other": "{{count}} 分間ダウンロードの進行がなかったため、インストールを停止しました"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "公開済み",
             "unpicked": "未選択",
             "unredeemable": "期限切れ",
-            "unrevealed": "未公開"
-        }
+            "unrevealed": "未公開",
+            "redeemed": "引き換え済み"
+        },
+        "activateConfirmBody": "これによりキーが明らかになり、ギフト用予備からは完全に削除され、Steam アカウントで引き換えられます。元に戻すことはできません。",
+        "activateConfirmBodyRevealed": "これにより、すでに表示済みのキーを Steam アカウントで引き換えます。元に戻すことはできません。",
+        "activateDismiss": "キャンセル",
+        "activatingBody": "キーを表示して Steam で引き換えています — すぐに完了します。",
+        "c2Action": "ギフト用予備を見る",
+        "c2Body": "このキーはギフト用予備に保管されており安全です。ここで表示すると、ギフトする機能が失われます。代わりにギフト用予備で操作してください。",
+        "claimOnHumble": "Humble で受け取る",
+        "claimOnStore": "{{store}} で受け取る",
+        "claimWizardTitle": "このキーを受け取る",
+        "cooldown_one": "一時的に利用できません — {{count}} 分後に再試行してください",
+        "cooldown_other": "一時的に利用できません — {{count}} 分後に再試行してください",
+        "giftConfirmBody": "このリンクを持つ人は誰でもキーを受け取れます — 一度引き換えられると完全に失われます。ギフトの手続きは Humble のサイトで完了します。",
+        "loginAndClaim": "{{store}} にログインして受け取る",
+        "markRedeemed": "引き換え済みにする",
+        "redeemableOnly": "引き換え可能なキーのみ",
+        "redeemedAnnotation": "{{date}} に引き換え済み",
+        "redeemOnPlatform": "{{platform}} で引き換える",
+        "revealConfirmBody": "表示すると実際のキーが明らかになり、ギフト用予備からは完全に削除されます。まだこのゲームを所有していない場合は、続行する前に本当にそれでよいか確認してください — 元に戻すことはできません。",
+        "revealCooldownBody_one": "一時的に利用できません — {{count}} 分後に再試行してください",
+        "revealCooldownBody_other": "一時的に利用できません — {{count}} 分後に再試行してください",
+        "revealRejectedBody": "Humble がこのキーの表示を拒否しました — すでに引き換え済みか、期限切れの可能性があります。同期して現在の状態を確認してください。",
+        "syncing_one": "同期中… {{done}}/{{count}} 件の注文",
+        "syncing_other": "同期中… {{done}}/{{count}} 件の注文",
+        "syncToEnableClaiming": "同期すると受け取りが可能になります",
+        "undo": "元に戻す",
+        "undoOwnershipOverride": "元に戻す — このゲームは所有しています",
+        "urgencyDaysLeft_one": "残り {{count}} 日",
+        "urgencyDaysLeft_other": "残り {{count}} 日",
+        "urgencyHoursLeft_one": "残り {{count}} 時間",
+        "urgencyHoursLeft_other": "残り {{count}} 時間"
     },
     "info": {
         "refresh-rating": "評価を更新"
@@ -171,7 +204,10 @@
             "viewFavourites": "お気に入り",
             "viewInstalled": "インストール済み",
             "viewRecentlyPlayed": "最近プレイした",
-            "wontRun": "実行不可"
+            "wontRun": "実行不可",
+            "chipNoStorePageHidden": "ストアページのないゲームを非表示にしています",
+            "groupSelectedCount_one": "{{count}} 件選択中",
+            "groupSelectedCount_other": "{{count}} 件選択中"
         },
         "header": {
             "filteredOfTotal": "{{total}}件中{{shown}}件"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Winetricks GUIが必要です",
         "retry": "再試行",
         "searchPlaceholder": "コンポーネントを検索…",
-        "zeroResultHeading": "「{{query}}」に一致するコンポーネントはありません。"
+        "zeroResultHeading": "「{{query}}」に一致するコンポーネントはありません。",
+        "resultsHeading_one": "{{count}} 件の結果",
+        "resultsHeading_other": "{{count}} 件の結果"
     },
     "donate": {
         "navLabel": "寄付"
@@ -433,5 +471,9 @@
         "rateLimited": "試行回数が多すぎます — しばらく待ってからもう一度お試しください。",
         "successNoPackage": "キーが利用登録されました！Steam ライブラリが更新されました。",
         "successWithPackage": "キーが利用登録されました！{{packageName}} が Steam ライブラリに追加されました。"
+    },
+    "languageSelector": {
+        "mtNotice": "この言語の一部のテキストは機械翻訳されており、誤りが含まれる場合があります。",
+        "reportTranslationProblem": "翻訳の問題を報告"
     }
 }

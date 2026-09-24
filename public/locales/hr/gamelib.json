@@ -14,7 +14,10 @@
         "error": {
             "install": {
                 "failed": "Instalacija {{title}} nije uspjela: {{error}}",
-                "signInToSteam": "Prijavi se na Steam"
+                "signInToSteam": "Prijavi se na Steam",
+                "stalled_one": "Nema napretka preuzimanja {{count}} minutu — instalacija je zaustavljena",
+                "stalled_few": "Nema napretka preuzimanja {{count}} minute — instalacija je zaustavljena",
+                "stalled_other": "Nema napretka preuzimanja {{count}} minuta — instalacija je zaustavljena"
             }
         },
         "filePicker": {
@@ -128,8 +131,44 @@
             "revealed": "Otkriveno",
             "unpicked": "Neodabrano",
             "unredeemable": "Isteklo",
-            "unrevealed": "Neotkriveno"
-        }
+            "unrevealed": "Neotkriveno",
+            "redeemed": "Iskorišteno"
+        },
+        "activateConfirmBody": "Ovo otkriva ključ — trajno ga uklanjajući iz Poklonjivih rezervi — i iskorištava ga na vašem Steam računu. Nema poništavanja.",
+        "activateConfirmBodyRevealed": "Ovo iskorištava vaš već otkriveni ključ na vašem Steam računu. Nema poništavanja.",
+        "activateDismiss": "Odustani",
+        "activatingBody": "Otkrivanje vašeg ključa i njegovo iskorištavanje na Steamu — to traje samo trenutak.",
+        "c2Action": "Idi na Poklonjive rezerve",
+        "c2Body": "Ovaj ključ je siguran u Poklonjivim rezervama — otkrivanjem ovdje izgubili biste mogućnost da ga poklonite. Umjesto toga, odnesite ga u Poklonjive rezerve.",
+        "claimOnHumble": "Preuzmi na Humble",
+        "claimOnStore": "Preuzmi na {{store}}",
+        "claimWizardTitle": "Preuzmi ovaj ključ",
+        "cooldown_one": "Privremeno nedostupno — pokušajte ponovno za {{count}} minutu",
+        "cooldown_few": "Privremeno nedostupno — pokušajte ponovno za {{count}} minute",
+        "cooldown_other": "Privremeno nedostupno — pokušajte ponovno za {{count}} minuta",
+        "giftConfirmBody": "Svatko s ovom poveznicom može preuzeti ključ — nakon iskorištavanja, zauvijek je izgubljen. Poklanjanje ćete dovršiti na Humbleovoj vlastitoj stranici.",
+        "loginAndClaim": "Prijavite se na {{store}} i preuzmite",
+        "markRedeemed": "Označi kao iskorišteno",
+        "redeemableOnly": "Samo ključevi koji se mogu iskoristiti",
+        "redeemedAnnotation": "Iskorišteno {{date}}",
+        "redeemOnPlatform": "Iskoristi na {{platform}}",
+        "revealConfirmBody": "Otkrivanjem se prikazuje stvarni ključ i trajno se uklanja iz Poklonjivih rezervi. Ako još ne posjedujete ovu igru, provjerite je li to zaista istina prije nego što nastavite — nema poništavanja.",
+        "revealCooldownBody_one": "Privremeno nedostupno — pokušajte ponovno za {{count}} minutu",
+        "revealCooldownBody_few": "Privremeno nedostupno — pokušajte ponovno za {{count}} minute",
+        "revealCooldownBody_other": "Privremeno nedostupno — pokušajte ponovno za {{count}} minuta",
+        "revealRejectedBody": "Humble je odbio otkriti ovaj ključ — možda je već iskorišten ili je istekao. Sinkronizirajte da provjerite njegov trenutni status.",
+        "syncing_one": "Sinkronizacija… {{done}}/{{count}} narudžba",
+        "syncing_few": "Sinkronizacija… {{done}}/{{count}} narudžbe",
+        "syncing_other": "Sinkronizacija… {{done}}/{{count}} narudžbi",
+        "syncToEnableClaiming": "Sinkronizirajte za omogućavanje preuzimanja",
+        "undo": "Poništi",
+        "undoOwnershipOverride": "Poništi — ja posjedujem ovu igru",
+        "urgencyDaysLeft_one": "Preostao je {{count}} dan",
+        "urgencyDaysLeft_few": "Preostala su {{count}} dana",
+        "urgencyDaysLeft_other": "Preostalo je {{count}} dana",
+        "urgencyHoursLeft_one": "Preostao je {{count}} sat",
+        "urgencyHoursLeft_few": "Preostala su {{count}} sata",
+        "urgencyHoursLeft_other": "Preostalo je {{count}} sati"
     },
     "info": {
         "refresh-rating": "Osvježi ocjenu"
@@ -169,7 +208,13 @@
             "storeGroup": "Trgovina",
             "viewInstalled": "Instalirano",
             "viewRecentlyPlayed": "Nedavno igrano",
-            "wontRun": "Neće se pokrenuti"
+            "wontRun": "Neće se pokrenuti",
+            "chipNoStorePageHidden": "Skrivanje igara bez stranice trgovine",
+            "groupSelectedCount_one": "{{count}} odabrana",
+            "groupSelectedCount_few": "{{count}} odabrane",
+            "groupSelectedCount_other": "{{count}} odabranih",
+            "viewAll": "All Games",
+            "viewFavourites": "Favourites"
         },
         "header": {
             "filteredOfTotal": "{{shown}} od {{total}}"
@@ -419,7 +464,10 @@
         "needsGuiTag": "Potreban je Winetricks GUI",
         "retry": "Pokušaj ponovno",
         "searchPlaceholder": "Pretraži komponente…",
-        "zeroResultHeading": "Nijedna komponenta ne odgovara “{{query}}”."
+        "zeroResultHeading": "Nijedna komponenta ne odgovara “{{query}}”.",
+        "resultsHeading_one": "{{count}} rezultat",
+        "resultsHeading_few": "{{count}} rezultata",
+        "resultsHeading_other": "{{count}} rezultata"
     },
     "donate": {
         "navLabel": "Doniraj"
@@ -431,5 +479,9 @@
         "rateLimited": "Previše pokušaja — pričekajte malo prije novog pokušaja.",
         "successNoPackage": "Ključ iskorišten! Vaša Steam biblioteka je ažurirana.",
         "successWithPackage": "Ključ iskorišten! {{packageName}} je dodan u vašu Steam biblioteku."
+    },
+    "languageSelector": {
+        "mtNotice": "Neki tekst na ovom jeziku strojno je preveden i može sadržavati pogreške.",
+        "reportTranslationProblem": "Prijavi problem s prijevodom"
     }
 }

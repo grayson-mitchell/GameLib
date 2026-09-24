@@ -14,7 +14,11 @@
         "error": {
             "install": {
                 "failed": "Устаноўка {{title}} не адбылася: {{error}}",
-                "signInToSteam": "Увайсці ў Steam"
+                "signInToSteam": "Увайсці ў Steam",
+                "stalled_one": "Няма прагрэсу спампоўкі {{count}} хвіліну — устаноўка спынена",
+                "stalled_few": "Няма прагрэсу спампоўкі {{count}} хвіліны — устаноўка спынена",
+                "stalled_many": "Няма прагрэсу спампоўкі {{count}} хвілін — устаноўка спынена",
+                "stalled_other": "Няма прагрэсу спампоўкі {{count}} хвіліны — устаноўка спынена"
             }
         },
         "filePicker": {
@@ -128,8 +132,49 @@
             "revealed": "Раскрыта",
             "unpicked": "Не выбрана",
             "unredeemable": "Прайшоў тэрмін",
-            "unrevealed": "Не раскрыта"
-        }
+            "unrevealed": "Не раскрыта",
+            "redeemed": "Актываваны"
+        },
+        "activateConfirmBody": "Гэта раскрые ключ — беззваротна прыбраўшы яго з Падарункавых запасаў — і актывуе яго на вашым акаўнце Steam. Адрабіць гэта нельга.",
+        "activateConfirmBodyRevealed": "Гэта актывуе ваш ужо раскрыты ключ на акаўнце Steam. Адрабіць гэта нельга.",
+        "activateDismiss": "Скасаваць",
+        "activatingBody": "Раскрыццё вашага ключа і яго актывацыя на Steam — гэта зойме толькі хвіліну.",
+        "c2Action": "Перайсці ў Падарункавыя запасы",
+        "c2Body": "Гэты ключ у бяспецы ў Падарункавых запасах — раскрыццё яго тут пазбавіць магчымасці падарыць яго. Замест гэтага перайдзіце ў Падарункавыя запасы.",
+        "claimOnHumble": "Атрымаць на Humble",
+        "claimOnStore": "Атрымаць на {{store}}",
+        "claimWizardTitle": "Атрымаць гэты ключ",
+        "cooldown_one": "Часова недаступна — паўтарыце праз {{count}} хвіліну",
+        "cooldown_few": "Часова недаступна — паўтарыце праз {{count}} хвіліны",
+        "cooldown_many": "Часова недаступна — паўтарыце праз {{count}} хвілін",
+        "cooldown_other": "Часова недаступна — паўтарыце праз {{count}} хвіліны",
+        "giftConfirmBody": "Кожны, у каго ёсць гэта спасылка, можа атрымаць ключ — пасля актывацыі ён знікае назаўжды. Даслаць падарунак вы завершыце на самім сайце Humble.",
+        "loginAndClaim": "Увайсці ў {{store}} і атрымаць",
+        "markRedeemed": "Пазначыць як актываваны",
+        "redeemableOnly": "Толькі ключы, якія можна актываваць",
+        "redeemedAnnotation": "Актываваны {{date}}",
+        "redeemOnPlatform": "Актываваць на {{platform}}",
+        "revealConfirmBody": "Раскрыццё паказвае сапраўдны ключ і беззваротна прыбірае яго з Падарункавых запасаў. Калі вы яшчэ не валодаеце гэтай гульнёй, пераканайцеся ў гэтым перад працягам — адрабіць гэта нельга.",
+        "revealCooldownBody_one": "Часова недаступна — паўтарыце праз {{count}} хвіліну",
+        "revealCooldownBody_few": "Часова недаступна — паўтарыце праз {{count}} хвіліны",
+        "revealCooldownBody_many": "Часова недаступна — паўтарыце праз {{count}} хвілін",
+        "revealCooldownBody_other": "Часова недаступна — паўтарыце праз {{count}} хвіліны",
+        "revealRejectedBody": "Humble адмовіў у раскрыцці гэтага ключа — магчыма, ён ужо актываваны альбо пратэрмінаваны. Сінхранізуйце, каб праверыць яго бягучы стан.",
+        "syncing_one": "Сінхранізацыя… {{done}}/{{count}} заказ",
+        "syncing_few": "Сінхранізацыя… {{done}}/{{count}} заказы",
+        "syncing_many": "Сінхранізацыя… {{done}}/{{count}} заказаў",
+        "syncing_other": "Сінхранізацыя… {{done}}/{{count}} заказа",
+        "syncToEnableClaiming": "Сінхранізуйце, каб уключыць атрыманне",
+        "undo": "Адрабіць",
+        "undoOwnershipOverride": "Адрабіць — я валодаю гэтай гульнёй",
+        "urgencyDaysLeft_one": "Застаўся {{count}} дзень",
+        "urgencyDaysLeft_few": "Засталося {{count}} дні",
+        "urgencyDaysLeft_many": "Засталося {{count}} дзён",
+        "urgencyDaysLeft_other": "Засталося {{count}} дзён",
+        "urgencyHoursLeft_one": "Засталася {{count}} гадзіна",
+        "urgencyHoursLeft_few": "Засталіся {{count}} гадзіны",
+        "urgencyHoursLeft_many": "Засталося {{count}} гадзін",
+        "urgencyHoursLeft_other": "Засталося {{count}} гадзіны"
     },
     "info": {
         "refresh-rating": "Абнавіць рэйтынг"
@@ -171,7 +216,12 @@
             "viewFavourites": "Выбранае",
             "viewInstalled": "Усталявана",
             "viewRecentlyPlayed": "Нядаўна гуляныя",
-            "wontRun": "Не будзе працаваць"
+            "wontRun": "Не будзе працаваць",
+            "chipNoStorePageHidden": "Гульні без старонкі ў краме схаваны",
+            "groupSelectedCount_one": "Выбрана {{count}}",
+            "groupSelectedCount_few": "Выбрана {{count}}",
+            "groupSelectedCount_many": "Выбрана {{count}}",
+            "groupSelectedCount_other": "Выбрана {{count}}"
         },
         "header": {
             "filteredOfTotal": "{{shown}} з {{total}}"
@@ -421,7 +471,11 @@
         "needsGuiTag": "Патрабуецца графічны інтэрфейс Winetricks",
         "retry": "Паўторыць",
         "searchPlaceholder": "Пошук кампанентаў…",
-        "zeroResultHeading": "Няма кампанентаў, якія адпавядаюць “{{query}}”."
+        "zeroResultHeading": "Няма кампанентаў, якія адпавядаюць “{{query}}”.",
+        "resultsHeading_one": "{{count}} вынік",
+        "resultsHeading_few": "{{count}} вынікі",
+        "resultsHeading_many": "{{count}} вынікаў",
+        "resultsHeading_other": "{{count}} выніку"
     },
     "donate": {
         "navLabel": "Ахвяраваць"
@@ -433,5 +487,9 @@
         "rateLimited": "Занадта шмат спроб — пачакайце крыху, перш чым паспрабаваць зноў.",
         "successNoPackage": "Ключ актываваны! Ваша бібліятэка Steam абноўлена.",
         "successWithPackage": "Ключ актываваны! {{packageName}} дададзена ў вашу бібліятэку Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Частка тэксту на гэтай мове перакладзена машынна і можа змяшчаць памылкі.",
+        "reportTranslationProblem": "Паведаміць пра праблему з перакладам"
     }
 }

@@ -14,7 +14,13 @@
         "error": {
             "install": {
                 "failed": "فشل تثبيت {{title}}: {{error}}",
-                "signInToSteam": "سجّل الدخول إلى Steam"
+                "signInToSteam": "سجّل الدخول إلى Steam",
+                "stalled_zero": "لا يوجد تقدم في التنزيل منذ {{count}} دقيقة — تم إيقاف التثبيت",
+                "stalled_one": "لا يوجد تقدم في التنزيل منذ دقيقة واحدة — تم إيقاف التثبيت",
+                "stalled_two": "لا يوجد تقدم في التنزيل منذ دقيقتين — تم إيقاف التثبيت",
+                "stalled_few": "لا يوجد تقدم في التنزيل منذ {{count}} دقائق — تم إيقاف التثبيت",
+                "stalled_many": "لا يوجد تقدم في التنزيل منذ {{count}} دقيقة — تم إيقاف التثبيت",
+                "stalled_other": "لا يوجد تقدم في التنزيل منذ {{count}} دقيقة — تم إيقاف التثبيت"
             }
         },
         "filePicker": {
@@ -128,8 +134,59 @@
             "revealed": "مُكشوف",
             "unpicked": "غير مُختار",
             "unredeemable": "منتهي الصلاحية",
-            "unrevealed": "غير مكشوف"
-        }
+            "unrevealed": "غير مكشوف",
+            "redeemed": "مُستخدم"
+        },
+        "activateConfirmBody": "يكشف هذا المفتاح — ويزيله نهائيًا من الاحتياطيات القابلة للإهداء — ويستخدمه في حساب Steam الخاص بك. لا يمكن التراجع عن هذا.",
+        "activateConfirmBodyRevealed": "يستخدم هذا مفتاحك المكشوف مسبقًا في حساب Steam الخاص بك. لا يمكن التراجع عن هذا.",
+        "activateDismiss": "ألغِ",
+        "activatingBody": "يتم كشف مفتاحك واستخدامه في Steam — لن يستغرق ذلك سوى لحظة.",
+        "c2Action": "اذهب إلى الاحتياطيات القابلة للإهداء",
+        "c2Body": "هذا المفتاح محفوظ بأمان في الاحتياطيات القابلة للإهداء — كشفه هنا سيفقدك القدرة على إهدائه. انقله إلى الاحتياطيات القابلة للإهداء بدلاً من ذلك.",
+        "claimOnHumble": "احصل عليه من Humble",
+        "claimOnStore": "احصل عليه من {{store}}",
+        "claimWizardTitle": "احصل على هذا المفتاح",
+        "giftConfirmBody": "يمكن لأي شخص يملك هذا الرابط الحصول على المفتاح — وبمجرد استخدامه، يختفي نهائيًا. ستُكمل عملية الإهداء على موقع Humble نفسه.",
+        "loginAndClaim": "سجّل الدخول إلى {{store}} واحصل عليه",
+        "markRedeemed": "ضعه كمُستخدم",
+        "redeemableOnly": "المفاتيح القابلة للاستخدام فقط",
+        "redeemedAnnotation": "استُخدم في {{date}}",
+        "redeemOnPlatform": "استخدمه على {{platform}}",
+        "revealConfirmBody": "يعرض الكشف المفتاح الفعلي ويزيله نهائيًا من الاحتياطيات القابلة للإهداء. إذا كنت لا تملك هذه اللعبة بعد، تأكد فعلاً من ذلك قبل المتابعة — لا يمكن التراجع عن هذا.",
+        "revealRejectedBody": "رفض Humble كشف هذا المفتاح — قد يكون مستخدمًا بالفعل أو منتهي الصلاحية. زامن للتحقق من حالته الحالية.",
+        "syncing_zero": "جارٍ المزامنة… {{done}}/{{count}} طلب",
+        "syncing_one": "جارٍ المزامنة… {{done}}/{{count}} طلب",
+        "syncing_two": "جارٍ المزامنة… {{done}}/{{count}} طلبين",
+        "syncing_few": "جارٍ المزامنة… {{done}}/{{count}} طلبات",
+        "syncing_many": "جارٍ المزامنة… {{done}}/{{count}} طلبًا",
+        "syncing_other": "جارٍ المزامنة… {{done}}/{{count}} طلب",
+        "syncToEnableClaiming": "زامن لتمكين المطالبة",
+        "undo": "تراجع",
+        "undoOwnershipOverride": "تراجع — أنا أملك هذه اللعبة بالفعل",
+        "cooldown_zero": "غير متاح مؤقتًا — أعد المحاولة خلال {{count}} دقيقة",
+        "cooldown_one": "غير متاح مؤقتًا — أعد المحاولة خلال دقيقة واحدة",
+        "cooldown_two": "غير متاح مؤقتًا — أعد المحاولة خلال دقيقتين",
+        "cooldown_few": "غير متاح مؤقتًا — أعد المحاولة خلال {{count}} دقائق",
+        "cooldown_many": "غير متاح مؤقتًا — أعد المحاولة خلال {{count}} دقيقة",
+        "cooldown_other": "غير متاح مؤقتًا — أعد المحاولة خلال {{count}} دقيقة",
+        "revealCooldownBody_zero": "غير متاح مؤقتًا — أعد المحاولة خلال {{count}} دقيقة",
+        "revealCooldownBody_one": "غير متاح مؤقتًا — أعد المحاولة خلال دقيقة واحدة",
+        "revealCooldownBody_two": "غير متاح مؤقتًا — أعد المحاولة خلال دقيقتين",
+        "revealCooldownBody_few": "غير متاح مؤقتًا — أعد المحاولة خلال {{count}} دقائق",
+        "revealCooldownBody_many": "غير متاح مؤقتًا — أعد المحاولة خلال {{count}} دقيقة",
+        "revealCooldownBody_other": "غير متاح مؤقتًا — أعد المحاولة خلال {{count}} دقيقة",
+        "urgencyDaysLeft_zero": "لم يتبقَّ أي يوم",
+        "urgencyDaysLeft_one": "يتبقى يوم واحد",
+        "urgencyDaysLeft_two": "يتبقى يومان",
+        "urgencyDaysLeft_few": "يتبقى {{count}} أيام",
+        "urgencyDaysLeft_many": "يتبقى {{count}} يومًا",
+        "urgencyDaysLeft_other": "يتبقى {{count}} يوم",
+        "urgencyHoursLeft_zero": "لم تتبقَّ أي ساعة",
+        "urgencyHoursLeft_one": "تتبقى ساعة واحدة",
+        "urgencyHoursLeft_two": "تتبقى ساعتان",
+        "urgencyHoursLeft_few": "تتبقى {{count}} ساعات",
+        "urgencyHoursLeft_many": "تتبقى {{count}} ساعة",
+        "urgencyHoursLeft_other": "تتبقى {{count}} ساعة"
     },
     "info": {
         "refresh-rating": "تحديث التقييم"
@@ -171,7 +228,14 @@
             "viewFavourites": "المفضلة",
             "viewInstalled": "مثبت",
             "viewRecentlyPlayed": "شُغِّلت مؤخرًا",
-            "wontRun": "لن يعمل"
+            "wontRun": "لن يعمل",
+            "chipNoStorePageHidden": "إخفاء الألعاب التي لا تحتوي على صفحة متجر",
+            "groupSelectedCount_zero": "لم يتم تحديد أي عنصر",
+            "groupSelectedCount_one": "تم تحديد عنصر واحد",
+            "groupSelectedCount_two": "تم تحديد عنصرين",
+            "groupSelectedCount_few": "تم تحديد {{count}} عناصر",
+            "groupSelectedCount_many": "تم تحديد {{count}} عنصرًا",
+            "groupSelectedCount_other": "تم تحديد {{count}} عنصر"
         },
         "header": {
             "filteredOfTotal": "{{shown}} من {{total}}"
@@ -421,7 +485,13 @@
         "needsGuiTag": "يتطلب واجهة Winetricks الرسومية",
         "retry": "إعادة المحاولة",
         "searchPlaceholder": "بحث في المكوّنات…",
-        "zeroResultHeading": "لا يوجد مكوّن يطابق “{{query}}”."
+        "zeroResultHeading": "لا يوجد مكوّن يطابق “{{query}}”.",
+        "resultsHeading_zero": "لا نتائج",
+        "resultsHeading_one": "نتيجة واحدة",
+        "resultsHeading_two": "نتيجتان",
+        "resultsHeading_few": "{{count}} نتائج",
+        "resultsHeading_many": "{{count}} نتيجة",
+        "resultsHeading_other": "{{count}} نتيجة"
     },
     "donate": {
         "navLabel": "تبرّع"
@@ -433,5 +503,9 @@
         "rateLimited": "عدد محاولات كثير جدًا — يرجى الانتظار قليلًا قبل المحاولة مرة أخرى.",
         "successNoPackage": "تم استخدام المفتاح! تم تحديث مكتبتك على Steam.",
         "successWithPackage": "تم استخدام المفتاح! تمت إضافة {{packageName}} إلى مكتبتك على Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "تمت ترجمة بعض النصوص بهذه اللغة آليًا وقد تحتوي على أخطاء.",
+        "reportTranslationProblem": "الإبلاغ عن مشكلة في الترجمة"
     }
 }

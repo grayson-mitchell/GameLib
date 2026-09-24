@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "{{title}}-ის ინსტალაცია ვერ მოხერხდა: {{error}}",
-                "signInToSteam": "შედით Steam-ში"
+                "signInToSteam": "შედით Steam-ში",
+                "stalled_one": "ჩამოტვირთვა {{count}} წუთია არ მიმდინარეობს — ინსტალაცია შეჩერდა",
+                "stalled_other": "ჩამოტვირთვა {{count}} წუთია არ მიმდინარეობს — ინსტალაცია შეჩერდა"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "გამოჩენილი",
             "unpicked": "აუღებელი",
             "unredeemable": "ვადაგასული",
-            "unrevealed": "დაუმხელი"
-        }
+            "unrevealed": "დაუმხელი",
+            "redeemed": "გააქტიურებული"
+        },
+        "activateConfirmBody": "ეს გამოამჟღავნებს გასაღებს — სამუდამოდ ამოშლის მას სასაჩუქრე სათადარიგოებიდან — და გაააქტიურებს თქვენს Steam ანგარიშზე. დაბრუნება შეუძლებელია.",
+        "activateConfirmBodyRevealed": "ეს გაააქტიურებს თქვენს უკვე გამომჟღავნებულ გასაღებს თქვენს Steam ანგარიშზე. დაბრუნება შეუძლებელია.",
+        "activateDismiss": "გაუქმება",
+        "activatingBody": "თქვენი გასაღების გამომჟღავნება და Steam-ზე გააქტიურება — ეს მხოლოდ წამებს წაიღებს.",
+        "c2Action": "გადასვლა სასაჩუქრე სათადარიგოებზე",
+        "c2Body": "ეს გასაღები უსაფრთხოდაა სასაჩუქრე სათადარიგოებში — აქ მისი გამომჟღავნება წაართმევს მისი ჩუქების შესაძლებლობას. სამაგიეროდ გადადით სასაჩუქრე სათადარიგოებზე.",
+        "claimOnHumble": "აღება Humble-ზე",
+        "claimOnStore": "აღება {{store}}-ზე",
+        "claimWizardTitle": "ამ გასაღების აღება",
+        "cooldown_one": "დროებით მიუწვდომელია — ხელახლა სცადეთ {{count}} წუთში",
+        "cooldown_other": "დროებით მიუწვდომელია — ხელახლა სცადეთ {{count}} წუთში",
+        "giftConfirmBody": "ამ ბმულის მქონე ნებისმიერს შეუძლია გასაღების აღება — გააქტიურების შემდეგ ის სამუდამოდ გაქრება. ჩუქებას დაასრულებთ თავად Humble-ის საიტზე.",
+        "loginAndClaim": "{{store}}-ზე შესვლა და აღება",
+        "markRedeemed": "აღნიშვნა როგორც გააქტიურებული",
+        "redeemableOnly": "მხოლოდ გასააქტიურებელი გასაღებები",
+        "redeemedAnnotation": "გააქტიურდა {{date}}",
+        "redeemOnPlatform": "გააქტიურება {{platform}}-ზე",
+        "revealConfirmBody": "გამომჟღავნება აჩვენებს ნამდვილ გასაღებს და სამუდამოდ ამოშლის მას სასაჩუქრე სათადარიგოებიდან. თუ ეს თამაში ჯერ არ გაქვთ, დარწმუნდით ამაში სანამ გააგრძელებთ — დაბრუნება შეუძლებელია.",
+        "revealCooldownBody_one": "დროებით მიუწვდომელია — ხელახლა სცადეთ {{count}} წუთში",
+        "revealCooldownBody_other": "დროებით მიუწვდომელია — ხელახლა სცადეთ {{count}} წუთში",
+        "revealRejectedBody": "Humble-მა უარი თქვა ამ გასაღების გამომჟღავნებაზე — შესაძლოა უკვე გააქტიურებულია ან ვადა გაუვიდა. სინქრონიზაცია გაუშვით მიმდინარე სტატუსის შესამოწმებლად.",
+        "syncing_one": "სინქრონიზაცია… {{done}}/{{count}} შეკვეთა",
+        "syncing_other": "სინქრონიზაცია… {{done}}/{{count}} შეკვეთა",
+        "syncToEnableClaiming": "სინქრონიზაცია გაუშვით აღების ჩასართავად",
+        "undo": "დაბრუნება",
+        "undoOwnershipOverride": "დაბრუნება — ეს თამაში ჩემი საკუთრებაა",
+        "urgencyDaysLeft_one": "დარჩენილია {{count}} დღე",
+        "urgencyDaysLeft_other": "დარჩენილია {{count}} დღე",
+        "urgencyHoursLeft_one": "დარჩენილია {{count}} საათი",
+        "urgencyHoursLeft_other": "დარჩენილია {{count}} საათი"
     },
     "info": {
         "refresh-rating": "რეიტინგის განახლება"
@@ -171,7 +204,10 @@
             "viewFavourites": "რჩეულები",
             "viewInstalled": "დაყენებულია",
             "viewRecentlyPlayed": "ბოლოს ნათამაშები",
-            "wontRun": "არ გაეშვება"
+            "wontRun": "არ გაეშვება",
+            "chipNoStorePageHidden": "იმალება თამაშები მაღაზიის გვერდის გარეშე",
+            "groupSelectedCount_one": "არჩეულია {{count}}",
+            "groupSelectedCount_other": "არჩეულია {{count}}"
         },
         "header": {
             "filteredOfTotal": "{{shown}} / {{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Winetricks-ის გრაფიკული ინტერფეისია საჭირო",
         "retry": "თავიდან ცდა",
         "searchPlaceholder": "კომპონენტების ძებნა…",
-        "zeroResultHeading": "“{{query}}”-ს შესატყვისი კომპონენტი არ არის."
+        "zeroResultHeading": "“{{query}}”-ს შესატყვისი კომპონენტი არ არის.",
+        "resultsHeading_one": "{{count}} შედეგი",
+        "resultsHeading_other": "{{count}} შედეგი"
     },
     "donate": {
         "navLabel": "დონაცია"
@@ -433,5 +471,9 @@
         "rateLimited": "ძალიან ბევრი მცდელობა — გთხოვთ დაელოდოთ ცოტა ხანს, სანამ ხელახლა სცდით.",
         "successNoPackage": "გასაღები გააქტიურდა! თქვენი Steam ბიბლიოთეკა განახლდა.",
         "successWithPackage": "გასაღები გააქტიურდა! {{packageName}} დაემატა თქვენს Steam ბიბლიოთეკას."
+    },
+    "languageSelector": {
+        "mtNotice": "ამ ენაზე ზოგიერთი ტექსტი მანქანურად ითარგმნა და შესაძლოა შეცდომებს შეიცავდეს.",
+        "reportTranslationProblem": "თარგმანის პრობლემის შეტყობინება"
     }
 }

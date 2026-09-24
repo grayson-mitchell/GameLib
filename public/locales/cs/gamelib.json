@@ -14,7 +14,11 @@
         "error": {
             "install": {
                 "failed": "Instalace {{title}} se nezdařila: {{error}}",
-                "signInToSteam": "Přihlásit se ke Steam"
+                "signInToSteam": "Přihlásit se ke Steam",
+                "stalled_one": "Žádný postup stahování po dobu {{count}} minuty — instalace byla zastavena",
+                "stalled_few": "Žádný postup stahování po dobu {{count}} minut — instalace byla zastavena",
+                "stalled_many": "Žádný postup stahování po dobu {{count}} minuty — instalace byla zastavena",
+                "stalled_other": "Žádný postup stahování po dobu {{count}} minut — instalace byla zastavena"
             }
         },
         "filePicker": {
@@ -128,8 +132,49 @@
             "revealed": "Odhaleno",
             "unpicked": "Nevybráno",
             "unredeemable": "Vypršelo",
-            "unrevealed": "Neodhaleno"
-        }
+            "unrevealed": "Neodhaleno",
+            "redeemed": "Uplatněno"
+        },
+        "activateConfirmBody": "Tímto se klíč odhalí — natrvalo se odebere z Darovatelných náhradních klíčů — a uplatní se na vašem účtu Steam. Tuto akci nelze vzít zpět.",
+        "activateConfirmBodyRevealed": "Tímto se uplatní váš již odhalený klíč na vašem účtu Steam. Tuto akci nelze vzít zpět.",
+        "activateDismiss": "Zrušit",
+        "activatingBody": "Odhalování vašeho klíče a jeho uplatnění na Steam — chvilku to potrvá.",
+        "c2Action": "Přejít na Darovatelné náhradní klíče",
+        "c2Body": "Tento klíč je bezpečně uložen v Darovatelných náhradních klíčích — jeho odhalením zde byste přišli o možnost jej darovat. Přejděte místo toho do Darovatelných náhradních klíčů.",
+        "claimOnHumble": "Vyzvednout na Humble",
+        "claimOnStore": "Vyzvednout na {{store}}",
+        "claimWizardTitle": "Vyzvednout tento klíč",
+        "cooldown_one": "Dočasně nedostupné — zkuste to znovu za {{count}} minutu",
+        "cooldown_few": "Dočasně nedostupné — zkuste to znovu za {{count}} minuty",
+        "cooldown_many": "Dočasně nedostupné — zkuste to znovu za {{count}} minuty",
+        "cooldown_other": "Dočasně nedostupné — zkuste to znovu za {{count}} minut",
+        "giftConfirmBody": "Kdokoli s tímto odkazem může klíč vyzvednout — jakmile je uplatněn, je nenávratně pryč. Darování dokončíte přímo na stránkách Humble.",
+        "loginAndClaim": "Přihlásit se na {{store}} a vyzvednout",
+        "markRedeemed": "Označit jako uplatněné",
+        "redeemableOnly": "Pouze uplatnitelné klíče",
+        "redeemedAnnotation": "Uplatněno {{date}}",
+        "redeemOnPlatform": "Uplatnit na {{platform}}",
+        "revealConfirmBody": "Odhalením se zobrazí skutečný klíč a natrvalo se odebere z Darovatelných náhradních klíčů. Pokud tuto hru ještě nevlastníte, ujistěte se, že je to opravdu tak, než budete pokračovat — tuto akci nelze vzít zpět.",
+        "revealCooldownBody_one": "Dočasně nedostupné — zkuste to znovu za {{count}} minutu",
+        "revealCooldownBody_few": "Dočasně nedostupné — zkuste to znovu za {{count}} minuty",
+        "revealCooldownBody_many": "Dočasně nedostupné — zkuste to znovu za {{count}} minuty",
+        "revealCooldownBody_other": "Dočasně nedostupné — zkuste to znovu za {{count}} minut",
+        "revealRejectedBody": "Humble odmítl odhalit tento klíč — může být již uplatněn nebo prošlý. Synchronizujte a zkontrolujte jeho aktuální stav.",
+        "syncing_one": "Synchronizace… {{done}}/{{count}} objednávka",
+        "syncing_few": "Synchronizace… {{done}}/{{count}} objednávky",
+        "syncing_many": "Synchronizace… {{done}}/{{count}} objednávky",
+        "syncing_other": "Synchronizace… {{done}}/{{count}} objednávek",
+        "syncToEnableClaiming": "Synchronizujte pro povolení vyzvedávání",
+        "undo": "Vrátit zpět",
+        "undoOwnershipOverride": "Vrátit zpět — tuto hru opravdu vlastním",
+        "urgencyDaysLeft_one": "Zbývá {{count}} den",
+        "urgencyDaysLeft_few": "Zbývají {{count}} dny",
+        "urgencyDaysLeft_many": "Zbývá {{count}} dne",
+        "urgencyDaysLeft_other": "Zbývá {{count}} dní",
+        "urgencyHoursLeft_one": "Zbývá {{count}} hodina",
+        "urgencyHoursLeft_few": "Zbývají {{count}} hodiny",
+        "urgencyHoursLeft_many": "Zbývá {{count}} hodiny",
+        "urgencyHoursLeft_other": "Zbývá {{count}} hodin"
     },
     "info": {
         "refresh-rating": "Obnovit hodnocení"
@@ -171,7 +216,12 @@
             "viewFavourites": "Oblíbené",
             "viewInstalled": "Nainstalováno",
             "viewRecentlyPlayed": "Nedávno hrané",
-            "wontRun": "Nepoběží"
+            "wontRun": "Nepoběží",
+            "chipNoStorePageHidden": "Skrývání her bez stránky v obchodě",
+            "groupSelectedCount_one": "Vybráno {{count}}",
+            "groupSelectedCount_few": "Vybrány {{count}}",
+            "groupSelectedCount_many": "Vybráno {{count}}",
+            "groupSelectedCount_other": "Vybráno {{count}}"
         },
         "header": {
             "filteredOfTotal": "{{shown}} z {{total}}"
@@ -421,7 +471,11 @@
         "needsGuiTag": "Vyžaduje grafické rozhraní Winetricks",
         "retry": "Zkusit znovu",
         "searchPlaceholder": "Hledat komponenty…",
-        "zeroResultHeading": "Žádná komponenta neodpovídá “{{query}}”."
+        "zeroResultHeading": "Žádná komponenta neodpovídá “{{query}}”.",
+        "resultsHeading_one": "{{count}} výsledek",
+        "resultsHeading_few": "{{count}} výsledky",
+        "resultsHeading_many": "{{count}} výsledku",
+        "resultsHeading_other": "{{count}} výsledků"
     },
     "donate": {
         "navLabel": "Přispět"
@@ -433,5 +487,9 @@
         "rateLimited": "Příliš mnoho pokusů — počkejte prosím chvíli, než to zkusíte znovu.",
         "successNoPackage": "Klíč uplatněn! Vaše knihovna Steam byla aktualizována.",
         "successWithPackage": "Klíč uplatněn! {{packageName}} byl přidán do vaší knihovny Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Některé texty v tomto jazyce byly přeloženy strojově a mohou obsahovat chyby.",
+        "reportTranslationProblem": "Nahlásit problém s překladem"
     }
 }

@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "A {{title}} telepítése sikertelen: {{error}}",
-                "signInToSteam": "Jelentkezz be a Steam-be"
+                "signInToSteam": "Jelentkezz be a Steam-be",
+                "stalled_one": "Nincs letöltési folyamat {{count}} perce — a telepítés leállt",
+                "stalled_other": "Nincs letöltési folyamat {{count}} perce — a telepítés leállt"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Felfedve",
             "unpicked": "Nem kiválasztott",
             "unredeemable": "Lejárt",
-            "unrevealed": "Nem felfedett"
-        }
+            "unrevealed": "Nem felfedett",
+            "redeemed": "Beváltva"
+        },
+        "activateConfirmBody": "Ez felfedi a kulcsot — véglegesen eltávolítva az Ajándékozható tartalékok közül — és beváltja a Steam-fiókodon. Nincs visszavonás.",
+        "activateConfirmBodyRevealed": "Ez beváltja a már felfedett kulcsodat a Steam-fiókodon. Nincs visszavonás.",
+        "activateDismiss": "Mégse",
+        "activatingBody": "Kulcs felfedése és beváltása a Steamen — ez csak egy pillanat.",
+        "c2Action": "Ugrás az Ajándékozható tartalékokhoz",
+        "c2Body": "Ez a kulcs biztonságban van az Ajándékozható tartalékok között — ha itt felfeded, elveszíted az ajándékozás lehetőségét. Inkább vidd az Ajándékozható tartalékokhoz.",
+        "claimOnHumble": "Igénylés a Humble oldalán",
+        "claimOnStore": "Igénylés itt: {{store}}",
+        "claimWizardTitle": "Kulcs igénylése",
+        "cooldown_one": "Átmenetileg nem elérhető — próbáld újra {{count}} perc múlva",
+        "cooldown_other": "Átmenetileg nem elérhető — próbáld újra {{count}} perc múlva",
+        "giftConfirmBody": "Ezzel a linkkel bárki igényelheti a kulcsot — a beváltás után véglegesen elvész. Az ajándékozást a Humble saját oldalán fejezed be.",
+        "loginAndClaim": "Jelentkezz be itt: {{store}}, és igényeld",
+        "markRedeemed": "Megjelölés beváltottként",
+        "redeemableOnly": "Csak beváltható kulcsok",
+        "redeemedAnnotation": "Beváltva: {{date}}",
+        "redeemOnPlatform": "Beváltás itt: {{platform}}",
+        "revealConfirmBody": "A felfedés megmutatja a tényleges kulcsot, és véglegesen eltávolítja az Ajándékozható tartalékok közül. Ha még nem birtoklod ezt a játékot, győződj meg róla, hogy ez valóban így van, mielőtt folytatod — nincs visszavonás.",
+        "revealCooldownBody_one": "Átmenetileg nem elérhető — próbáld újra {{count}} perc múlva",
+        "revealCooldownBody_other": "Átmenetileg nem elérhető — próbáld újra {{count}} perc múlva",
+        "revealRejectedBody": "A Humble elutasította a kulcs felfedését — lehet, hogy már be lett váltva, vagy lejárt. Szinkronizálj az aktuális állapot ellenőrzéséhez.",
+        "syncing_one": "Szinkronizálás… {{done}}/{{count}} rendelés",
+        "syncing_other": "Szinkronizálás… {{done}}/{{count}} rendelés",
+        "syncToEnableClaiming": "Szinkronizálj az igényléshez",
+        "undo": "Visszavonás",
+        "undoOwnershipOverride": "Visszavonás — valóban birtoklom ezt a játékot",
+        "urgencyDaysLeft_one": "{{count}} nap van hátra",
+        "urgencyDaysLeft_other": "{{count}} nap van hátra",
+        "urgencyHoursLeft_one": "{{count}} óra van hátra",
+        "urgencyHoursLeft_other": "{{count}} óra van hátra"
     },
     "info": {
         "refresh-rating": "Értékelés frissítése"
@@ -171,7 +204,10 @@
             "viewFavourites": "Kedvencek",
             "viewInstalled": "Telepítve",
             "viewRecentlyPlayed": "Nemrég játszott",
-            "wontRun": "Nem fut"
+            "wontRun": "Nem fut",
+            "chipNoStorePageHidden": "Áruházi oldal nélküli játékok elrejtve",
+            "groupSelectedCount_one": "{{count}} kiválasztva",
+            "groupSelectedCount_other": "{{count}} kiválasztva"
         },
         "header": {
             "filteredOfTotal": "{{shown}} / {{total}}"
@@ -327,10 +363,10 @@
         "midnightMirage": "Éjféli Délibáb",
         "nordDark": "Nord Sötét",
         "nordLight": "Nord Világos",
-        "oldSchool": "Régi Iskolás GameLib",
         "sweet": "Édes",
         "zombie": "Zombi",
-        "zombieClassic": "Zombi Klasszikus"
+        "zombieClassic": "Zombi Klasszikus",
+        "oldSchool": "Retro GameLib"
     },
     "webview": {
         "login": {
@@ -421,7 +457,9 @@
         "needsGuiTag": "A Winetricks GUI-ját igényli",
         "retry": "Újra",
         "searchPlaceholder": "Összetevők keresése…",
-        "zeroResultHeading": "Nincs a “{{query}}” kifejezésnek megfelelő összetevő."
+        "zeroResultHeading": "Nincs a “{{query}}” kifejezésnek megfelelő összetevő.",
+        "resultsHeading_one": "{{count}} találat",
+        "resultsHeading_other": "{{count}} találat"
     },
     "donate": {
         "navLabel": "Adományozás"
@@ -433,5 +471,9 @@
         "rateLimited": "Túl sok próbálkozás — kérjük, várj egy kicsit, mielőtt újra megpróbálod.",
         "successNoPackage": "A kulcsot beváltottad! A Steam könyvtárad frissült.",
         "successWithPackage": "A kulcsot beváltottad! A(z) {{packageName}} bekerült a Steam könyvtáradba."
+    },
+    "languageSelector": {
+        "mtNotice": "Ezen a nyelven egyes szövegek gépi fordítással készültek, és hibákat tartalmazhatnak.",
+        "reportTranslationProblem": "Fordítási hiba bejelentése"
     }
 }

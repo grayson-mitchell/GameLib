@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "{{title}} paigaldamine ebaõnnestus: {{error}}",
-                "signInToSteam": "Logi Steami sisse"
+                "signInToSteam": "Logi Steami sisse",
+                "stalled_one": "Allalaadimine ei ole {{count}} minutit edenenud — paigaldamine peatati",
+                "stalled_other": "Allalaadimine ei ole {{count}} minutit edenenud — paigaldamine peatati"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Avatud",
             "unpicked": "Valimata",
             "unredeemable": "Aegunud",
-            "unrevealed": "Avamata"
-        }
+            "unrevealed": "Avamata",
+            "redeemed": "Aktiveeritud"
+        },
+        "activateConfirmBody": "See paljastab võtme — eemaldades selle jäädavalt kingitavate varude hulgast — ja aktiveerib selle sinu Steam kontol. Seda ei saa tagasi võtta.",
+        "activateConfirmBodyRevealed": "See aktiveerib sinu juba paljastatud võtme sinu Steam kontol. Seda ei saa tagasi võtta.",
+        "activateDismiss": "Tühista",
+        "activatingBody": "Võtme paljastamine ja aktiveerimine Steamis — see võtab vaid hetke.",
+        "c2Action": "Ava kingitavad varud",
+        "c2Body": "See võti on kingitavates varudes turvaline — kui paljastad selle siin, kaotad võimaluse seda kinkida. Vii see selle asemel kingitavatesse varudesse.",
+        "claimOnHumble": "Hangi Humble'ist",
+        "claimOnStore": "Hangi teenusest {{store}}",
+        "claimWizardTitle": "Hangi see võti",
+        "cooldown_one": "Ajutiselt pole saadaval — proovi uuesti {{count}} minuti pärast",
+        "cooldown_other": "Ajutiselt pole saadaval — proovi uuesti {{count}} minuti pärast",
+        "giftConfirmBody": "Igaüks, kellel on see link, saab võtme hankida — kui see on aktiveeritud, on see jäädavalt läinud. Kingi lõpuni viimise teed Humble enda saidil.",
+        "loginAndClaim": "Logi teenusesse {{store}} sisse ja hangi",
+        "markRedeemed": "Märgi aktiveerituks",
+        "redeemableOnly": "Ainult aktiveeritavad võtmed",
+        "redeemedAnnotation": "Aktiveeritud {{date}}",
+        "redeemOnPlatform": "Aktiveeri teenuses {{platform}}",
+        "revealConfirmBody": "Paljastamine näitab tegelikku võtit ja eemaldab selle jäädavalt kingitavatest varudest. Kui sul seda mängu veel pole, veendu enne jätkamist, et see on tõesti nii — seda ei saa tagasi võtta.",
+        "revealCooldownBody_one": "Ajutiselt pole saadaval — proovi uuesti {{count}} minuti pärast",
+        "revealCooldownBody_other": "Ajutiselt pole saadaval — proovi uuesti {{count}} minuti pärast",
+        "revealRejectedBody": "Humble keeldus seda võtit paljastamast — see võib olla juba aktiveeritud või aegunud. Sünkrooni, et kontrollida selle praegust olekut.",
+        "syncing_one": "Sünkroonimine… {{done}}/{{count}} tellimus",
+        "syncing_other": "Sünkroonimine… {{done}}/{{count}} tellimust",
+        "syncToEnableClaiming": "Sünkrooni, et lubada hankimist",
+        "undo": "Võta tagasi",
+        "undoOwnershipOverride": "Võta tagasi — mul on see mäng olemas",
+        "urgencyDaysLeft_one": "{{count}} päev jäänud",
+        "urgencyDaysLeft_other": "{{count}} päeva jäänud",
+        "urgencyHoursLeft_one": "{{count}} tund jäänud",
+        "urgencyHoursLeft_other": "{{count}} tundi jäänud"
     },
     "info": {
         "refresh-rating": "Värskenda hinnangut"
@@ -171,7 +204,10 @@
             "viewFavourites": "Lemmikud",
             "viewInstalled": "Paigaldatud",
             "viewRecentlyPlayed": "Hiljuti mängitud",
-            "wontRun": "Ei käivitu"
+            "wontRun": "Ei käivitu",
+            "chipNoStorePageHidden": "Poeleheta mänge peidetakse",
+            "groupSelectedCount_one": "{{count}} valitud",
+            "groupSelectedCount_other": "{{count}} valitud"
         },
         "header": {
             "filteredOfTotal": "{{shown}} / {{total}}"
@@ -418,7 +454,9 @@
         "needsGuiTag": "Vajab Winetricksi graafilist liidest",
         "retry": "Proovi uuesti",
         "searchPlaceholder": "Otsi komponente…",
-        "zeroResultHeading": "Ükski komponent ei vasta “{{query}}”."
+        "zeroResultHeading": "Ükski komponent ei vasta “{{query}}”.",
+        "resultsHeading_one": "{{count}} tulemus",
+        "resultsHeading_other": "{{count}} tulemust"
     },
     "sidebar": {
         "redeemSteamKey": "Lunasta Steami võti"
@@ -433,5 +471,9 @@
         "rateLimited": "Liiga palju katseid — palun oota veidi ja proovi uuesti.",
         "successNoPackage": "Võti aktiveeritud! Sinu Steami teek on uuendatud.",
         "successWithPackage": "Võti aktiveeritud! {{packageName}} on lisatud sinu Steami teeki."
+    },
+    "languageSelector": {
+        "mtNotice": "Osa selles keeles olevast tekstist on masintõlgitud ja võib sisaldada vigu.",
+        "reportTranslationProblem": "Teata tõlkeprobleemist"
     }
 }

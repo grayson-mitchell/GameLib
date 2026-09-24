@@ -14,7 +14,10 @@
         "error": {
             "install": {
                 "failed": "ההתקנה של {{title}} נכשלה: {{error}}",
-                "signInToSteam": "היכנס ל-Steam"
+                "signInToSteam": "היכנס ל-Steam",
+                "stalled_one": "אין התקדמות בהורדה כבר {{count}} דקה — ההתקנה נעצרה",
+                "stalled_two": "אין התקדמות בהורדה כבר {{count}} דקות — ההתקנה נעצרה",
+                "stalled_other": "אין התקדמות בהורדה כבר {{count}} דקות — ההתקנה נעצרה"
             }
         },
         "filePicker": {
@@ -128,8 +131,44 @@
             "revealed": "נחשף",
             "unpicked": "לא נבחר",
             "unredeemable": "פג תוקף",
-            "unrevealed": "לא נחשף"
-        }
+            "unrevealed": "לא נחשף",
+            "redeemed": "מומש"
+        },
+        "activateConfirmBody": "פעולה זו חושפת את המפתח — ומסירה אותו לצמיתות מתוך עותקים להענקה — ומממשת אותו בחשבון Steam שלך. אין דרך לבטל.",
+        "activateConfirmBodyRevealed": "פעולה זו מממשת את המפתח שכבר נחשף בחשבון Steam שלך. אין דרך לבטל.",
+        "activateDismiss": "ביטול",
+        "activatingBody": "חושפים את המפתח שלך וממממשים אותו ב-Steam — זה ייקח רק רגע.",
+        "c2Action": "מעבר לעותקים להענקה",
+        "c2Body": "מפתח זה שמור בבטחה בעותקים להענקה — חשיפתו כאן תבטל את האפשרות להעניק אותו. במקום זאת, עברו אל עותקים להענקה.",
+        "claimOnHumble": "קבלת המפתח ב-Humble",
+        "claimOnStore": "קבלת המפתח ב-{{store}}",
+        "claimWizardTitle": "קבלת המפתח הזה",
+        "cooldown_one": "לא זמין כרגע — נסו שוב בעוד {{count}} דקה",
+        "cooldown_two": "לא זמין כרגע — נסו שוב בעוד {{count}} דקות",
+        "cooldown_other": "לא זמין כרגע — נסו שוב בעוד {{count}} דקות",
+        "giftConfirmBody": "כל מי שברשותו הקישור הזה יכול לקבל את המפתח — לאחר המימוש, הוא נעלם לצמיתות. תשלימו את תהליך ההענקה באתר של Humble עצמו.",
+        "loginAndClaim": "התחברות ל-{{store}} וקבלת המפתח",
+        "markRedeemed": "סימון כממומש",
+        "redeemableOnly": "מפתחות הניתנים למימוש בלבד",
+        "redeemedAnnotation": "מומש בתאריך {{date}}",
+        "redeemOnPlatform": "מימוש ב-{{platform}}",
+        "revealConfirmBody": "חשיפה תציג את המפתח בפועל ותסיר אותו לצמיתות מתוך עותקים להענקה. אם עדיין אין ברשותכם המשחק הזה, ודאו שזה אכן המצב לפני שממשיכים — אין דרך לבטל.",
+        "revealCooldownBody_one": "לא זמין כרגע — נסו שוב בעוד {{count}} דקה",
+        "revealCooldownBody_two": "לא זמין כרגע — נסו שוב בעוד {{count}} דקות",
+        "revealCooldownBody_other": "לא זמין כרגע — נסו שוב בעוד {{count}} דקות",
+        "revealRejectedBody": "Humble סירבה לחשוף את המפתח הזה — ייתכן שהוא כבר מומש או שפג תוקפו. סנכרנו כדי לבדוק את הסטטוס הנוכחי שלו.",
+        "syncing_one": "מסנכרן… {{done}}/{{count}} הזמנה",
+        "syncing_two": "מסנכרן… {{done}}/{{count}} הזמנות",
+        "syncing_other": "מסנכרן… {{done}}/{{count}} הזמנות",
+        "syncToEnableClaiming": "סנכרנו כדי לאפשר קבלת מפתחות",
+        "undo": "בטל פעולה",
+        "undoOwnershipOverride": "בטל פעולה — המשחק כבר ברשותי",
+        "urgencyDaysLeft_one": "נותר {{count}} יום",
+        "urgencyDaysLeft_two": "נותרו {{count}} ימים",
+        "urgencyDaysLeft_other": "נותרו {{count}} ימים",
+        "urgencyHoursLeft_one": "נותרה {{count}} שעה",
+        "urgencyHoursLeft_two": "נותרו {{count}} שעות",
+        "urgencyHoursLeft_other": "נותרו {{count}} שעות"
     },
     "info": {
         "refresh-rating": "רענון דירוג"
@@ -171,7 +210,11 @@
             "viewFavourites": "מועדפים",
             "viewInstalled": "מותקן",
             "viewRecentlyPlayed": "נוגן לאחרונה",
-            "wontRun": "לא יפעל"
+            "wontRun": "לא יפעל",
+            "chipNoStorePageHidden": "הסתרת משחקים ללא עמוד חנות",
+            "groupSelectedCount_one": "{{count}} נבחר",
+            "groupSelectedCount_two": "{{count}} נבחרו",
+            "groupSelectedCount_other": "{{count}} נבחרו"
         },
         "header": {
             "filteredOfTotal": "{{shown}} מתוך {{total}}"
@@ -421,7 +464,10 @@
         "needsGuiTag": "דורש את מנשק המשתמש הגרפי של Winetricks",
         "retry": "ניסיון חוזר",
         "searchPlaceholder": "חיפוש רכיבים…",
-        "zeroResultHeading": "אין רכיב שמתאים ל־“{{query}}”."
+        "zeroResultHeading": "אין רכיב שמתאים ל־“{{query}}”.",
+        "resultsHeading_one": "תוצאה {{count}}",
+        "resultsHeading_two": "{{count}} תוצאות",
+        "resultsHeading_other": "{{count}} תוצאות"
     },
     "donate": {
         "navLabel": "תרומה"
@@ -433,5 +479,9 @@
         "rateLimited": "יותר מדי ניסיונות — אנא המתן מעט לפני שתנסה שוב.",
         "successNoPackage": "המפתח מומש! ספריית ה-Steam שלך עודכנה.",
         "successWithPackage": "המפתח מומש! {{packageName}} נוסף לספריית ה-Steam שלך."
+    },
+    "languageSelector": {
+        "mtNotice": "חלק מהטקסט בשפה הזו תורגם באמצעות תרגום מכונה ועשוי להכיל טעויות.",
+        "reportTranslationProblem": "דיווח על תקלת תרגום"
     }
 }

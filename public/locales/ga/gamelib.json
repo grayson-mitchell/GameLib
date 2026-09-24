@@ -14,7 +14,12 @@
         "error": {
             "install": {
                 "failed": "Theip ar shuiteáil {{title}}: {{error}}",
-                "signInToSteam": "Sínigh isteach i Steam"
+                "signInToSteam": "Sínigh isteach i Steam",
+                "stalled_one": "Gan dul chun cinn íoslódála le {{count}} nóiméad — stopadh an tsuiteáil",
+                "stalled_two": "Gan dul chun cinn íoslódála le {{count}} nóiméad — stopadh an tsuiteáil",
+                "stalled_few": "Gan dul chun cinn íoslódála le {{count}} nóiméad — stopadh an tsuiteáil",
+                "stalled_many": "Gan dul chun cinn íoslódála le {{count}} nóiméad — stopadh an tsuiteáil",
+                "stalled_other": "Gan dul chun cinn íoslódála le {{count}} nóiméad — stopadh an tsuiteáil"
             }
         },
         "filePicker": {
@@ -128,8 +133,54 @@
             "revealed": "Nochtaithe",
             "unpicked": "Gan roghnú",
             "unredeemable": "As feidhm",
-            "unrevealed": "Gan nochtadh"
-        }
+            "unrevealed": "Gan nochtadh",
+            "redeemed": "Fuascailte"
+        },
+        "activateConfirmBody": "Nochtann sé seo an eochair — á baint go buan as Spártha Inbhronnta — agus fuascailtear í ar do chuntas Steam. Níl aon chealú ann.",
+        "activateConfirmBodyRevealed": "Fuascailtear leis seo d'eochair atá nochta cheana féin ar do chuntas Steam. Níl aon chealú ann.",
+        "activateDismiss": "Cealaigh",
+        "activatingBody": "Ag nochtadh d'eochair agus á fuascailt ar Steam — ní thógann sé seo ach nóiméad.",
+        "c2Action": "Téigh go Spártha Inbhronnta",
+        "c2Body": "Tá an eochair seo slán i Spártha Inbhronnta — dá nochtófaí anseo í, chaillfí an cumas í a bhronnadh. Tabhair go Spártha Inbhronnta í ina ionad sin.",
+        "claimOnHumble": "Éiligh ar Humble",
+        "claimOnStore": "Éiligh ar {{store}}",
+        "claimWizardTitle": "Éiligh an eochair seo",
+        "cooldown_one": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "cooldown_two": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "cooldown_few": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "cooldown_many": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "cooldown_other": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "giftConfirmBody": "Is féidir le duine ar bith a bhfuil an nasc seo aige an eochair a éileamh — nuair a fhuascailtear í, tá sí imithe go deo. Críochnóidh tú an bronnadh ar shuíomh féin Humble.",
+        "loginAndClaim": "Logáil isteach ar {{store}} agus éiligh",
+        "markRedeemed": "Marcáil mar fhuascailte",
+        "redeemableOnly": "Eochracha in-fhuascailte amháin",
+        "redeemedAnnotation": "Fuascailte {{date}}",
+        "redeemOnPlatform": "Fuascail ar {{platform}}",
+        "revealConfirmBody": "Léiríonn nochtadh an eochair iarbhír agus baintear as Spártha Inbhronnta go buan í. Mura bhfuil an cluiche seo agat fós, bí cinnte go bhfuil sé sin fíor sula leanann tú ar aghaidh — níl aon chealú ann.",
+        "revealCooldownBody_one": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "revealCooldownBody_two": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "revealCooldownBody_few": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "revealCooldownBody_many": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "revealCooldownBody_other": "Ar fáil arís go luath — bain triail eile as i gceann {{count}} nóiméad",
+        "revealRejectedBody": "Dhiúltaigh Humble an eochair seo a nochtadh — b'fhéidir go bhfuil sí fuascailte nó imithe as feidhm cheana féin. Sioncronaigh chun a stádas reatha a sheiceáil.",
+        "syncing_one": "Ag sioncronú… {{done}}/{{count}} ordú",
+        "syncing_two": "Ag sioncronú… {{done}}/{{count}} ordú",
+        "syncing_few": "Ag sioncronú… {{done}}/{{count}} ordú",
+        "syncing_many": "Ag sioncronú… {{done}}/{{count}} ordú",
+        "syncing_other": "Ag sioncronú… {{done}}/{{count}} ordú",
+        "syncToEnableClaiming": "Sioncronaigh chun éileamh a chumasú",
+        "undo": "Cealaigh gníomh",
+        "undoOwnershipOverride": "Cealaigh — is liom an cluiche seo",
+        "urgencyDaysLeft_one": "{{count}} lá fágtha",
+        "urgencyDaysLeft_two": "{{count}} lá fágtha",
+        "urgencyDaysLeft_few": "{{count}} lá fágtha",
+        "urgencyDaysLeft_many": "{{count}} lá fágtha",
+        "urgencyDaysLeft_other": "{{count}} lá fágtha",
+        "urgencyHoursLeft_one": "{{count}} uair fágtha",
+        "urgencyHoursLeft_two": "{{count}} uair fágtha",
+        "urgencyHoursLeft_few": "{{count}} uair fágtha",
+        "urgencyHoursLeft_many": "{{count}} uair fágtha",
+        "urgencyHoursLeft_other": "{{count}} uair fágtha"
     },
     "info": {
         "refresh-rating": "Athnuaigh an rátáil"
@@ -171,7 +222,13 @@
             "viewFavourites": "Ceanáin",
             "viewInstalled": "Suiteáilte",
             "viewRecentlyPlayed": "Imeartha le déanaí",
-            "wontRun": "Ní ritheann"
+            "wontRun": "Ní ritheann",
+            "chipNoStorePageHidden": "Cluichí gan leathanach siopa á gceilt",
+            "groupSelectedCount_one": "{{count}} roghnaithe",
+            "groupSelectedCount_two": "{{count}} roghnaithe",
+            "groupSelectedCount_few": "{{count}} roghnaithe",
+            "groupSelectedCount_many": "{{count}} roghnaithe",
+            "groupSelectedCount_other": "{{count}} roghnaithe"
         },
         "header": {
             "filteredOfTotal": "{{shown}} as {{total}}"
@@ -421,7 +478,12 @@
         "needsGuiTag": "Teastaíonn GUI Winetricks",
         "retry": "Bain triail eile as",
         "searchPlaceholder": "Cuardaigh comhpháirteanna…",
-        "zeroResultHeading": "Níl aon chomhpháirt ag teacht le “{{query}}”."
+        "zeroResultHeading": "Níl aon chomhpháirt ag teacht le “{{query}}”.",
+        "resultsHeading_one": "{{count}} thoradh",
+        "resultsHeading_two": "{{count}} thoradh",
+        "resultsHeading_few": "{{count}} thoradh",
+        "resultsHeading_many": "{{count}} dtoradh",
+        "resultsHeading_other": "{{count}} toradh"
     },
     "donate": {
         "navLabel": "Deonaigh"
@@ -433,5 +495,9 @@
         "rateLimited": "An iomarca iarrachtaí — fan tamall sula ndéanann tú iarracht eile.",
         "successNoPackage": "Fuasclaíodh an eochair! Nuashonraíodh do leabharlann Steam.",
         "successWithPackage": "Fuasclaíodh an eochair! Cuireadh {{packageName}} le do leabharlann Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Rinneadh meaisínaistriúchán ar chuid den téacs sa teanga seo agus d'fhéadfadh botúin a bheith ann.",
+        "reportTranslationProblem": "Tuairiscigh fadhb aistriúcháin"
     }
 }

@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "A instalación de {{title}} fallou: {{error}}",
-                "signInToSteam": "Inicia sesión en Steam"
+                "signInToSteam": "Inicia sesión en Steam",
+                "stalled_one": "Sen progreso de descarga durante {{count}} minuto — a instalación detívose",
+                "stalled_other": "Sen progreso de descarga durante {{count}} minutos — a instalación detívose"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Revelada",
             "unpicked": "Non escollido",
             "unredeemable": "Caducada",
-            "unrevealed": "Non revelada"
-        }
+            "unrevealed": "Non revelada",
+            "redeemed": "Canxeada"
+        },
+        "activateConfirmBody": "Isto revela a clave — eliminándoa dos Repostos agasallables para sempre — e canxéaa na túa conta de Steam. Non hai marcha atrás.",
+        "activateConfirmBodyRevealed": "Isto canxea a túa clave xa revelada na túa conta de Steam. Non hai marcha atrás.",
+        "activateDismiss": "Cancelar",
+        "activatingBody": "Revelando a túa clave e canxeándoa en Steam — isto só leva un momento.",
+        "c2Action": "Ir a Repostos agasallables",
+        "c2Body": "Esta clave está segura en Repostos agasallables — revelala aquí eliminaría a posibilidade de agasalala. Lévaa a Repostos agasallables no seu lugar.",
+        "claimOnHumble": "Reclamar en Humble",
+        "claimOnStore": "Reclamar en {{store}}",
+        "claimWizardTitle": "Reclamar esta clave",
+        "cooldown_one": "Non dispoñible temporalmente — reintenta en {{count}} minuto",
+        "cooldown_other": "Non dispoñible temporalmente — reintenta en {{count}} minutos",
+        "giftConfirmBody": "Calquera que teña esta ligazón pode reclamar a clave — unha vez canxeada, desaparece para sempre. Rematarás de agasala no propio sitio de Humble.",
+        "loginAndClaim": "Iniciar sesión en {{store}} e reclamar",
+        "markRedeemed": "Marcar como canxeada",
+        "redeemableOnly": "Só claves canxeables",
+        "redeemedAnnotation": "Canxeada o {{date}}",
+        "redeemOnPlatform": "Canxear en {{platform}}",
+        "revealConfirmBody": "Revelar mostra a clave real e elimínaa de Repostos agasallables para sempre. Se aínda non posúes este xogo, asegúrate de que iso é realmente certo antes de continuar — non hai marcha atrás.",
+        "revealCooldownBody_one": "Non dispoñible temporalmente — reintenta en {{count}} minuto",
+        "revealCooldownBody_other": "Non dispoñible temporalmente — reintenta en {{count}} minutos",
+        "revealRejectedBody": "Humble rexeitou revelar esta clave — pode que xa estea canxeada ou caducada. Sincroniza para comprobar o seu estado actual.",
+        "syncing_one": "Sincronizando… {{done}}/{{count}} pedido",
+        "syncing_other": "Sincronizando… {{done}}/{{count}} pedidos",
+        "syncToEnableClaiming": "Sincroniza para activar a reclamación",
+        "undo": "Desfacer",
+        "undoOwnershipOverride": "Desfacer — si que posúo este xogo",
+        "urgencyDaysLeft_one": "Queda {{count}} día",
+        "urgencyDaysLeft_other": "Quedan {{count}} días",
+        "urgencyHoursLeft_one": "Queda {{count}} hora",
+        "urgencyHoursLeft_other": "Quedan {{count}} horas"
     },
     "info": {
         "refresh-rating": "Actualizar valoración"
@@ -171,7 +204,10 @@
             "viewFavourites": "Favoritos",
             "viewInstalled": "Instalado",
             "viewRecentlyPlayed": "Xogados recentemente",
-            "wontRun": "Non se executará"
+            "wontRun": "Non se executará",
+            "chipNoStorePageHidden": "Ocultando xogos sen páxina na tenda",
+            "groupSelectedCount_one": "{{count}} seleccionado",
+            "groupSelectedCount_other": "{{count}} seleccionados"
         },
         "header": {
             "filteredOfTotal": "{{shown}} de {{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Precisa a GUI de Winetricks",
         "retry": "Reintentar",
         "searchPlaceholder": "Buscar compoñentes…",
-        "zeroResultHeading": "Ningún compoñente coincide con “{{query}}”."
+        "zeroResultHeading": "Ningún compoñente coincide con “{{query}}”.",
+        "resultsHeading_one": "{{count}} resultado",
+        "resultsHeading_other": "{{count}} resultados"
     },
     "donate": {
         "navLabel": "Doar"
@@ -433,5 +471,9 @@
         "rateLimited": "Demasiados intentos — agarda un momento antes de tentalo de novo.",
         "successNoPackage": "Clave canxeada! A túa biblioteca de Steam foi actualizada.",
         "successWithPackage": "Clave canxeada! Engadiuse {{packageName}} á túa biblioteca de Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Parte do texto neste idioma foi traducido automaticamente e pode conter erros.",
+        "reportTranslationProblem": "Informar dun problema de tradución"
     }
 }

@@ -14,7 +14,10 @@
         "error": {
             "install": {
                 "failed": "La instal·lació de {{title}} ha fallat: {{error}}",
-                "signInToSteam": "Inicia sessió a Steam"
+                "signInToSteam": "Inicia sessió a Steam",
+                "stalled_one": "Sense progrés de descàrrega des de fa {{count}} minut — la instal·lació s'ha aturat",
+                "stalled_many": "Sense progrés de descàrrega des de fa {{count}} minuts — la instal·lació s'ha aturat",
+                "stalled_other": "Sense progrés de descàrrega des de fa {{count}} minuts — la instal·lació s'ha aturat"
             }
         },
         "filePicker": {
@@ -128,8 +131,44 @@
             "revealed": "Revelada",
             "unpicked": "No triada",
             "unredeemable": "Caducada",
-            "unrevealed": "No revelada"
-        }
+            "unrevealed": "No revelada",
+            "redeemed": "Bescanviada"
+        },
+        "activateConfirmBody": "Això revela la clau — eliminant-la per sempre de Reserves per regalar — i la bescanvia al teu compte de Steam. No es pot desfer.",
+        "activateConfirmBodyRevealed": "Això bescanvia la clau ja revelada al teu compte de Steam. No es pot desfer.",
+        "activateDismiss": "Cancel·la",
+        "activatingBody": "Revelant la teva clau i bescanviant-la a Steam — només trigarà un moment.",
+        "c2Action": "Vés a Reserves per regalar",
+        "c2Body": "Aquesta clau està segura a Reserves per regalar — revelar-la aquí eliminaria la possibilitat de regalar-la. Vés a Reserves per regalar en comptes d'això.",
+        "claimOnHumble": "Reclama a Humble",
+        "claimOnStore": "Reclama a {{store}}",
+        "claimWizardTitle": "Reclama aquesta clau",
+        "cooldown_one": "Temporalment no disponible — torna-ho a provar d'aquí a {{count}} minut",
+        "cooldown_many": "Temporalment no disponible — torna-ho a provar d'aquí a {{count}} minuts",
+        "cooldown_other": "Temporalment no disponible — torna-ho a provar d'aquí a {{count}} minuts",
+        "giftConfirmBody": "Qualsevol persona amb aquest enllaç pot reclamar la clau — un cop bescanviada, es perd per sempre. Acabaràs de regalar-la al mateix lloc de Humble.",
+        "loginAndClaim": "Inicia sessió a {{store}} i reclama",
+        "markRedeemed": "Marca com a bescanviada",
+        "redeemableOnly": "Només claus bescanviables",
+        "redeemedAnnotation": "Bescanviada el {{date}}",
+        "redeemOnPlatform": "Bescanvia a {{platform}}",
+        "revealConfirmBody": "Revelar mostra la clau real i l'elimina per sempre de Reserves per regalar. Si encara no tens aquest joc, assegura't que això és realment cert abans de continuar — no es pot desfer.",
+        "revealCooldownBody_one": "Temporalment no disponible — torna-ho a provar d'aquí a {{count}} minut",
+        "revealCooldownBody_many": "Temporalment no disponible — torna-ho a provar d'aquí a {{count}} minuts",
+        "revealCooldownBody_other": "Temporalment no disponible — torna-ho a provar d'aquí a {{count}} minuts",
+        "revealRejectedBody": "Humble ha rebutjat revelar aquesta clau — pot ser que ja estigui bescanviada o hagi caducat. Sincronitza per comprovar-ne l'estat actual.",
+        "syncing_one": "Sincronitzant… {{done}}/{{count}} comanda",
+        "syncing_many": "Sincronitzant… {{done}}/{{count}} comandes",
+        "syncing_other": "Sincronitzant… {{done}}/{{count}} comandes",
+        "syncToEnableClaiming": "Sincronitza per activar la reclamació",
+        "undo": "Desfés",
+        "undoOwnershipOverride": "Desfés — sí que tinc aquest joc",
+        "urgencyDaysLeft_one": "Queda {{count}} dia",
+        "urgencyDaysLeft_many": "Queden {{count}} dies",
+        "urgencyDaysLeft_other": "Queden {{count}} dies",
+        "urgencyHoursLeft_one": "Queda {{count}} hora",
+        "urgencyHoursLeft_many": "Queden {{count}} hores",
+        "urgencyHoursLeft_other": "Queden {{count}} hores"
     },
     "info": {
         "refresh-rating": "Actualitza la valoració"
@@ -171,7 +210,11 @@
             "viewFavourites": "Preferits",
             "viewInstalled": "Instal·lat",
             "viewRecentlyPlayed": "Jugats recentment",
-            "wontRun": "No s'executarà"
+            "wontRun": "No s'executarà",
+            "chipNoStorePageHidden": "S'amaguen els jocs sense pàgina a la botiga",
+            "groupSelectedCount_one": "{{count}} seleccionat",
+            "groupSelectedCount_many": "{{count}} seleccionats",
+            "groupSelectedCount_other": "{{count}} seleccionats"
         },
         "header": {
             "filteredOfTotal": "{{shown}} de {{total}}"
@@ -421,7 +464,10 @@
         "needsGuiTag": "Necessita la interfície gràfica de Winetricks",
         "retry": "Torna-ho a provar",
         "searchPlaceholder": "Cerca components…",
-        "zeroResultHeading": "Cap component coincideix amb “{{query}}”."
+        "zeroResultHeading": "Cap component coincideix amb “{{query}}”.",
+        "resultsHeading_one": "{{count}} resultat",
+        "resultsHeading_many": "{{count}} resultats",
+        "resultsHeading_other": "{{count}} resultats"
     },
     "donate": {
         "navLabel": "Fes una donació"
@@ -433,5 +479,9 @@
         "rateLimited": "Massa intents — espera una mica abans de tornar-ho a provar.",
         "successNoPackage": "Clau bescanviada! S'ha actualitzat la teva biblioteca de Steam.",
         "successWithPackage": "Clau bescanviada! S'ha afegit {{packageName}} a la teva biblioteca de Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Alguns textos en aquest idioma s'han traduït automàticament i poden contenir errors.",
+        "reportTranslationProblem": "Informa d'un problema de traducció"
     }
 }

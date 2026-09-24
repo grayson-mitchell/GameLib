@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "Installationen av {{title}} misslyckades: {{error}}",
-                "signInToSteam": "Logga in på Steam"
+                "signInToSteam": "Logga in på Steam",
+                "stalled_one": "Ingen nedladdningsförlopp på {{count}} minut — installationen stoppades",
+                "stalled_other": "Ingen nedladdningsförlopp på {{count}} minuter — installationen stoppades"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Visad",
             "unpicked": "Ej vald",
             "unredeemable": "Utgången",
-            "unrevealed": "Dold"
-        }
+            "unrevealed": "Dold",
+            "redeemed": "Inlöst"
+        },
+        "activateConfirmBody": "Detta avslöjar nyckeln — och tar bort den från Presentreserver för gott — och löser in den på ditt Steam-konto. Det går inte att ångra.",
+        "activateConfirmBodyRevealed": "Detta löser in din redan avslöjade nyckel på ditt Steam-konto. Det går inte att ångra.",
+        "activateDismiss": "Avbryt",
+        "activatingBody": "Avslöjar din nyckel och löser in den på Steam — det tar bara ett ögonblick.",
+        "c2Action": "Gå till Presentreserver",
+        "c2Body": "Den här nyckeln är säker i Presentreserver — att avslöja den här skulle förstöra möjligheten att ge bort den. Ta den till Presentreserver istället.",
+        "claimOnHumble": "Hämta på Humble",
+        "claimOnStore": "Hämta på {{store}}",
+        "claimWizardTitle": "Hämta denna nyckel",
+        "cooldown_one": "Tillfälligt otillgänglig — försök igen om {{count}} minut",
+        "cooldown_other": "Tillfälligt otillgänglig — försök igen om {{count}} minuter",
+        "giftConfirmBody": "Vem som helst med den här länken kan hämta nyckeln — när den väl är inlöst är den borta för gott. Du slutför presentgivandet på Humbles egen webbplats.",
+        "loginAndClaim": "Logga in på {{store}} och hämta",
+        "markRedeemed": "Markera som inlöst",
+        "redeemableOnly": "Endast inlösbara nycklar",
+        "redeemedAnnotation": "Inlöst {{date}}",
+        "redeemOnPlatform": "Lös in på {{platform}}",
+        "revealConfirmBody": "Att avslöja visar den faktiska nyckeln och tar bort den från Presentreserver för gott. Om du inte redan äger spelet, se till att det verkligen stämmer innan du fortsätter — det går inte att ångra.",
+        "revealCooldownBody_one": "Tillfälligt otillgänglig — försök igen om {{count}} minut",
+        "revealCooldownBody_other": "Tillfälligt otillgänglig — försök igen om {{count}} minuter",
+        "revealRejectedBody": "Humble vägrade avslöja denna nyckel — den kan redan vara inlöst eller ha gått ut. Synkronisera för att kontrollera dess aktuella status.",
+        "syncing_one": "Synkroniserar… {{done}}/{{count}} beställning",
+        "syncing_other": "Synkroniserar… {{done}}/{{count}} beställningar",
+        "syncToEnableClaiming": "Synkronisera för att aktivera hämtning",
+        "undo": "Ångra",
+        "undoOwnershipOverride": "Ångra — jag äger faktiskt det här spelet",
+        "urgencyDaysLeft_one": "{{count}} dag kvar",
+        "urgencyDaysLeft_other": "{{count}} dagar kvar",
+        "urgencyHoursLeft_one": "{{count}} timme kvar",
+        "urgencyHoursLeft_other": "{{count}} timmar kvar"
     },
     "info": {
         "refresh-rating": "Uppdatera betyg"
@@ -171,7 +204,10 @@
             "viewFavourites": "Favoriter",
             "viewInstalled": "Installerad",
             "viewRecentlyPlayed": "Nyligen spelade",
-            "wontRun": "Kommer inte att köras"
+            "wontRun": "Kommer inte att köras",
+            "chipNoStorePageHidden": "Döljer spel utan butikssida",
+            "groupSelectedCount_one": "{{count}} vald",
+            "groupSelectedCount_other": "{{count}} valda"
         },
         "header": {
             "filteredOfTotal": "{{shown}} av {{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Kräver Winetricks-GUI",
         "retry": "Försök igen",
         "searchPlaceholder": "Sök komponenter…",
-        "zeroResultHeading": "Ingen komponent matchar “{{query}}”."
+        "zeroResultHeading": "Ingen komponent matchar “{{query}}”.",
+        "resultsHeading_one": "{{count}} resultat",
+        "resultsHeading_other": "{{count}} resultat"
     },
     "donate": {
         "navLabel": "Donera"
@@ -433,5 +471,9 @@
         "rateLimited": "För många försök — vänta en stund innan du försöker igen.",
         "successNoPackage": "Nyckeln har lösts in! Ditt Steam-bibliotek har uppdaterats.",
         "successWithPackage": "Nyckeln har lösts in! {{packageName}} har lagts till i ditt Steam-bibliotek."
+    },
+    "languageSelector": {
+        "mtNotice": "En del text på detta språk har maskinöversatts och kan innehålla fel.",
+        "reportTranslationProblem": "Rapportera ett översättningsproblem"
     }
 }

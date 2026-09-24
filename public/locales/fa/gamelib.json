@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "نصب {{title}} ناموفق بود: {{error}}",
-                "signInToSteam": "ورود به Steam"
+                "signInToSteam": "ورود به Steam",
+                "stalled_one": "هیچ پیشرفتی در دانلود طی {{count}} دقیقه رخ نداد — نصب متوقف شد",
+                "stalled_other": "هیچ پیشرفتی در دانلود طی {{count}} دقیقه رخ نداد — نصب متوقف شد"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "آشکار شده",
             "unpicked": "انتخاب‌نشده",
             "unredeemable": "منقضی شده",
-            "unrevealed": "آشکارنشده"
-        }
+            "unrevealed": "آشکارنشده",
+            "redeemed": "فعال‌شده"
+        },
+        "activateConfirmBody": "این کار کلید را آشکار می‌کند — و آن را برای همیشه از یدکی‌های قابل‌هدیه حذف می‌کند — و آن را در حساب Steam شما فعال می‌کند. راه بازگشتی وجود ندارد.",
+        "activateConfirmBodyRevealed": "این کار کلید از قبل آشکارشده‌ی شما را در حساب Steam شما فعال می‌کند. راه بازگشتی وجود ندارد.",
+        "activateDismiss": "انصراف",
+        "activatingBody": "در حال آشکارسازی کلید شما و فعال‌سازی آن در Steam — این فقط لحظه‌ای طول می‌کشد.",
+        "c2Action": "رفتن به یدکی‌های قابل‌هدیه",
+        "c2Body": "این کلید در یدکی‌های قابل‌هدیه امن است — آشکارسازی آن در اینجا امکان هدیه دادنش را از بین می‌برد. به‌جای آن، آن را به یدکی‌های قابل‌هدیه ببرید.",
+        "claimOnHumble": "دریافت در Humble",
+        "claimOnStore": "دریافت در {{store}}",
+        "claimWizardTitle": "دریافت این کلید",
+        "cooldown_one": "موقتاً در دسترس نیست — {{count}} دقیقه دیگر دوباره تلاش کنید",
+        "cooldown_other": "موقتاً در دسترس نیست — {{count}} دقیقه دیگر دوباره تلاش کنید",
+        "giftConfirmBody": "هر کسی که این پیوند را داشته باشد می‌تواند کلید را دریافت کند — پس از فعال‌سازی، برای همیشه از بین می‌رود. هدیه دادن آن را در سایت خود Humble تکمیل خواهید کرد.",
+        "loginAndClaim": "وارد {{store}} شوید و دریافت کنید",
+        "markRedeemed": "علامت‌گذاری به‌عنوان فعال‌شده",
+        "redeemableOnly": "فقط کلیدهای قابل‌فعال‌سازی",
+        "redeemedAnnotation": "فعال‌شده در {{date}}",
+        "redeemOnPlatform": "فعال‌سازی در {{platform}}",
+        "revealConfirmBody": "آشکارسازی، کلید واقعی را نمایش می‌دهد و آن را برای همیشه از یدکی‌های قابل‌هدیه حذف می‌کند. اگر هنوز مالک این بازی نیستید، پیش از ادامه مطمئن شوید که واقعاً چنین است — راه بازگشتی وجود ندارد.",
+        "revealCooldownBody_one": "موقتاً در دسترس نیست — {{count}} دقیقه دیگر دوباره تلاش کنید",
+        "revealCooldownBody_other": "موقتاً در دسترس نیست — {{count}} دقیقه دیگر دوباره تلاش کنید",
+        "revealRejectedBody": "Humble از آشکارسازی این کلید خودداری کرد — ممکن است قبلاً فعال شده یا منقضی شده باشد. برای بررسی وضعیت فعلی آن همگام‌سازی کنید.",
+        "syncing_one": "در حال همگام‌سازی… {{done}}/{{count}} سفارش",
+        "syncing_other": "در حال همگام‌سازی… {{done}}/{{count}} سفارش",
+        "syncToEnableClaiming": "برای فعال کردن دریافت، همگام‌سازی کنید",
+        "undo": "واگرد",
+        "undoOwnershipOverride": "واگرد — من مالک این بازی هستم",
+        "urgencyDaysLeft_one": "{{count}} روز باقی‌مانده",
+        "urgencyDaysLeft_other": "{{count}} روز باقی‌مانده",
+        "urgencyHoursLeft_one": "{{count}} ساعت باقی‌مانده",
+        "urgencyHoursLeft_other": "{{count}} ساعت باقی‌مانده"
     },
     "info": {
         "refresh-rating": "تازه‌سازی امتیاز"
@@ -171,7 +204,10 @@
             "viewFavourites": "علاقه مندی ها",
             "viewInstalled": "نصب شده",
             "viewRecentlyPlayed": "به‌تازگی بازی شده",
-            "wontRun": "اجرا نمی‌شود"
+            "wontRun": "اجرا نمی‌شود",
+            "chipNoStorePageHidden": "مخفی کردن بازی‌های بدون صفحه فروشگاه",
+            "groupSelectedCount_one": "{{count}} مورد انتخاب شده",
+            "groupSelectedCount_other": "{{count}} مورد انتخاب شده"
         },
         "header": {
             "filteredOfTotal": "{{shown}} از {{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "به رابط گرافیکی Winetricks نیاز دارد",
         "retry": "تلاش دوباره",
         "searchPlaceholder": "جستجوی مؤلفه‌ها…",
-        "zeroResultHeading": "هیچ مؤلفه‌ای با “{{query}}” مطابقت ندارد."
+        "zeroResultHeading": "هیچ مؤلفه‌ای با “{{query}}” مطابقت ندارد.",
+        "resultsHeading_one": "{{count}} نتیجه",
+        "resultsHeading_other": "{{count}} نتیجه"
     },
     "donate": {
         "navLabel": "اهدای مالی"
@@ -433,5 +471,9 @@
         "rateLimited": "تعداد تلاش‌ها بیش از حد است — لطفاً کمی صبر کرده و دوباره تلاش کنید.",
         "successNoPackage": "کلید با موفقیت استفاده شد! کتابخانه Steam شما به‌روزرسانی شد.",
         "successWithPackage": "کلید با موفقیت استفاده شد! {{packageName}} به کتابخانه Steam شما اضافه شد."
+    },
+    "languageSelector": {
+        "mtNotice": "برخی از متن‌های این زبان به‌صورت ماشینی ترجمه شده‌اند و ممکن است دارای اشتباه باشند.",
+        "reportTranslationProblem": "گزارش مشکل ترجمه"
     }
 }

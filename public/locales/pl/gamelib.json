@@ -14,7 +14,11 @@
         "error": {
             "install": {
                 "failed": "Instalacja {{title}} nie powiodła się: {{error}}",
-                "signInToSteam": "Zaloguj się do Steam"
+                "signInToSteam": "Zaloguj się do Steam",
+                "stalled_one": "Brak postępu pobierania od {{count}} minuty — instalacja została zatrzymana",
+                "stalled_few": "Brak postępu pobierania od {{count}} minut — instalacja została zatrzymana",
+                "stalled_many": "Brak postępu pobierania od {{count}} minut — instalacja została zatrzymana",
+                "stalled_other": "Brak postępu pobierania od {{count}} minuty — instalacja została zatrzymana"
             }
         },
         "filePicker": {
@@ -128,8 +132,49 @@
             "revealed": "Ujawniony",
             "unpicked": "Nieodebrany",
             "unredeemable": "Wygasł",
-            "unrevealed": "Nieujawniony"
-        }
+            "unrevealed": "Nieujawniony",
+            "redeemed": "Zrealizowany"
+        },
+        "activateConfirmBody": "To ujawni klucz — usuwając go z Kluczy do podarowania na stałe — i zrealizuje go na Twoim koncie Steam. Nie ma cofnięcia.",
+        "activateConfirmBodyRevealed": "To zrealizuje już ujawniony klucz na Twoim koncie Steam. Nie ma cofnięcia.",
+        "activateDismiss": "Anuluj",
+        "activatingBody": "Ujawnianie klucza i realizowanie go na Steam — to zajmie tylko chwilę.",
+        "c2Action": "Przejdź do Kluczy do podarowania",
+        "c2Body": "Ten klucz jest bezpieczny w Kluczach do podarowania — ujawnienie go tutaj oznaczałoby utratę możliwości podarowania go. Przejdź zamiast tego do Kluczy do podarowania.",
+        "claimOnHumble": "Odbierz na Humble",
+        "claimOnStore": "Odbierz na {{store}}",
+        "claimWizardTitle": "Odbierz ten klucz",
+        "cooldown_one": "Tymczasowo niedostępne — spróbuj ponownie za {{count}} minutę",
+        "cooldown_few": "Tymczasowo niedostępne — spróbuj ponownie za {{count}} minuty",
+        "cooldown_many": "Tymczasowo niedostępne — spróbuj ponownie za {{count}} minut",
+        "cooldown_other": "Tymczasowo niedostępne — spróbuj ponownie za {{count}} minuty",
+        "giftConfirmBody": "Każdy, kto ma ten link, może odebrać klucz — po zrealizowaniu przepada on na stałe. Podarowanie dokończysz na stronie Humble.",
+        "loginAndClaim": "Zaloguj się do {{store}} i odbierz",
+        "markRedeemed": "Oznacz jako zrealizowany",
+        "redeemableOnly": "Tylko klucze do zrealizowania",
+        "redeemedAnnotation": "Zrealizowano {{date}}",
+        "redeemOnPlatform": "Zrealizuj na {{platform}}",
+        "revealConfirmBody": "Ujawnienie pokazuje rzeczywisty klucz i usuwa go z Kluczy do podarowania na stałe. Jeśli jeszcze nie posiadasz tej gry, upewnij się, że to naprawdę prawda, zanim będziesz kontynuować — nie ma cofnięcia.",
+        "revealCooldownBody_one": "Tymczasowo niedostępne — spróbuj ponownie za {{count}} minutę",
+        "revealCooldownBody_few": "Tymczasowo niedostępne — spróbuj ponownie za {{count}} minuty",
+        "revealCooldownBody_many": "Tymczasowo niedostępne — spróbuj ponownie za {{count}} minut",
+        "revealCooldownBody_other": "Tymczasowo niedostępne — spróbuj ponownie za {{count}} minuty",
+        "revealRejectedBody": "Humble odmówił ujawnienia tego klucza — może już być zrealizowany lub wygasły. Zsynchronizuj, aby sprawdzić jego aktualny stan.",
+        "syncing_one": "Synchronizowanie… {{done}}/{{count}} zamówienie",
+        "syncing_few": "Synchronizowanie… {{done}}/{{count}} zamówienia",
+        "syncing_many": "Synchronizowanie… {{done}}/{{count}} zamówień",
+        "syncing_other": "Synchronizowanie… {{done}}/{{count}} zamówienia",
+        "syncToEnableClaiming": "Zsynchronizuj, aby włączyć odbieranie",
+        "undo": "Cofnij",
+        "undoOwnershipOverride": "Cofnij — posiadam tę grę",
+        "urgencyDaysLeft_one": "Pozostał {{count}} dzień",
+        "urgencyDaysLeft_few": "Pozostały {{count}} dni",
+        "urgencyDaysLeft_many": "Pozostało {{count}} dni",
+        "urgencyDaysLeft_other": "Pozostało {{count}} dni",
+        "urgencyHoursLeft_one": "Pozostała {{count}} godzina",
+        "urgencyHoursLeft_few": "Pozostały {{count}} godziny",
+        "urgencyHoursLeft_many": "Pozostało {{count}} godzin",
+        "urgencyHoursLeft_other": "Pozostało {{count}} godziny"
     },
     "info": {
         "refresh-rating": "Odśwież ocenę"
@@ -171,7 +216,12 @@
             "viewFavourites": "Ulubione",
             "viewInstalled": "Zainstalowano",
             "viewRecentlyPlayed": "Ostatnio grane",
-            "wontRun": "Nie uruchomi się"
+            "wontRun": "Nie uruchomi się",
+            "chipNoStorePageHidden": "Ukrywanie gier bez strony w sklepie",
+            "groupSelectedCount_one": "Wybrano {{count}}",
+            "groupSelectedCount_few": "Wybrano {{count}}",
+            "groupSelectedCount_many": "Wybrano {{count}}",
+            "groupSelectedCount_other": "Wybrano {{count}}"
         },
         "header": {
             "filteredOfTotal": "{{shown}} z {{total}}"
@@ -421,7 +471,11 @@
         "needsGuiTag": "Wymaga interfejsu graficznego Winetricks",
         "retry": "Spróbuj ponownie",
         "searchPlaceholder": "Szukaj komponentów…",
-        "zeroResultHeading": "Żaden komponent nie odpowiada “{{query}}”."
+        "zeroResultHeading": "Żaden komponent nie odpowiada “{{query}}”.",
+        "resultsHeading_one": "{{count}} wynik",
+        "resultsHeading_few": "{{count}} wyniki",
+        "resultsHeading_many": "{{count}} wyników",
+        "resultsHeading_other": "{{count}} wyniku"
     },
     "donate": {
         "navLabel": "Wesprzyj"
@@ -433,5 +487,9 @@
         "rateLimited": "Zbyt wiele prób — poczekaj chwilę przed kolejną próbą.",
         "successNoPackage": "Klucz zrealizowany! Twoja biblioteka Steam została zaktualizowana.",
         "successWithPackage": "Klucz zrealizowany! {{packageName}} została dodana do Twojej biblioteki Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Część tekstu w tym języku została przetłumaczona automatycznie i może zawierać błędy.",
+        "reportTranslationProblem": "Zgłoś problem z tłumaczeniem"
     }
 }

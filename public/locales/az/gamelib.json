@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "{{title}} quraşdırılması uğursuz oldu: {{error}}",
-                "signInToSteam": "Steam-ə daxil olun"
+                "signInToSteam": "Steam-ə daxil olun",
+                "stalled_one": "{{count}} dəqiqədir endirmə irəliləmir — quraşdırma dayandırıldı",
+                "stalled_other": "{{count}} dəqiqədir endirmə irəliləmir — quraşdırma dayandırıldı"
             }
         },
         "filePicker": {
@@ -64,7 +66,8 @@
         "extraInfoErrorTitle": "Əlavə məlumat yüklənə bilmədi",
         "extraInfoRetry": "Yenidən cəhd et",
         "extraInfoStaleBody": "Bu nəticə yükləmə nəticələri qeydə alınmazdan əvvəl keşlənib, ona görə köhnəlmiş ola bilər. Yoxlamaq üçün yeniləyin.",
-        "wineLabel": "Wine:"
+        "wineLabel": "Wine:",
+        "tabsAriaLabel": "oyun məlumatı tabları"
     },
     "humble": {
         "lessThanAMinute": "bir dəqiqədən az"
@@ -127,8 +130,39 @@
             "revealed": "Açılıb",
             "unpicked": "Seçilməyib",
             "unredeemable": "Vaxtı bitib",
-            "unrevealed": "Açılmayıb"
-        }
+            "unrevealed": "Açılmayıb",
+            "redeemed": "Aktivləşdirilib"
+        },
+        "activateConfirmBody": "Bu, açarı göstərir — onu Hədiyyə ediləbilən ehtiyatlardan həmişəlik çıxarır — və Steam hesabınızda aktivləşdirir. Geri qaytarmaq mümkün deyil.",
+        "activateConfirmBodyRevealed": "Bu, artıq göstərilmiş açarınızı Steam hesabınızda aktivləşdirir. Geri qaytarmaq mümkün deyil.",
+        "activateDismiss": "Ləğv et",
+        "activatingBody": "Açarınız göstərilir və Steam-də aktivləşdirilir — bu bir neçə an çəkir.",
+        "c2Action": "Hədiyyə ediləbilən ehtiyatlara keç",
+        "c2Body": "Bu açar Hədiyyə ediləbilən ehtiyatlarda təhlükəsizdir — onu burada göstərmək onu hədiyyə etmək imkanını itirməyə səbəb olar. Onun əvəzinə Hədiyyə ediləbilən ehtiyatlara aparın.",
+        "claimOnHumble": "Humble-da götür",
+        "claimOnStore": "{{store}} üzərində götür",
+        "claimWizardTitle": "Bu açarı götür",
+        "cooldown_one": "Müvəqqəti əlçatmazdır — {{count}} dəqiqə sonra yenidən cəhd edin",
+        "cooldown_other": "Müvəqqəti əlçatmazdır — {{count}} dəqiqə sonra yenidən cəhd edin",
+        "giftConfirmBody": "Bu linki olan hər kəs açarı götürə bilər — bir dəfə aktivləşdirildikdən sonra o həmişəlik itir. Hədiyyə etməni Humble-ın öz saytında tamamlayacaqsınız.",
+        "loginAndClaim": "{{store}} hesabına daxil ol və götür",
+        "markRedeemed": "Aktivləşdirilmiş kimi qeyd et",
+        "redeemableOnly": "Yalnız aktivləşdirilə bilən açarlar",
+        "redeemedAnnotation": "{{date}} tarixində aktivləşdirilib",
+        "redeemOnPlatform": "{{platform}} üzərində aktivləşdir",
+        "revealConfirmBody": "Göstərmək əsl açarı ortaya çıxarır və onu Hədiyyə ediləbilən ehtiyatlardan həmişəlik silir. Əgər bu oyuna hələ sahib deyilsinizsə, davam etməzdən əvvəl bunun doğru olduğundan əmin olun — geri qaytarmaq mümkün deyil.",
+        "revealCooldownBody_one": "Müvəqqəti əlçatmazdır — {{count}} dəqiqə sonra yenidən cəhd edin",
+        "revealCooldownBody_other": "Müvəqqəti əlçatmazdır — {{count}} dəqiqə sonra yenidən cəhd edin",
+        "revealRejectedBody": "Humble bu açarı göstərməkdən imtina etdi — o, artıq aktivləşdirilmiş və ya vaxtı bitmiş ola bilər. Cari vəziyyətini yoxlamaq üçün sinxronlaşdırın.",
+        "syncing_one": "Sinxronlaşdırılır… {{done}}/{{count}} sifariş",
+        "syncing_other": "Sinxronlaşdırılır… {{done}}/{{count}} sifariş",
+        "syncToEnableClaiming": "Götürməyi aktivləşdirmək üçün sinxronlaşdırın",
+        "undo": "Geri qaytar",
+        "undoOwnershipOverride": "Geri qaytar — bu oyuna həqiqətən sahibəm",
+        "urgencyDaysLeft_one": "{{count}} gün qalıb",
+        "urgencyDaysLeft_other": "{{count}} gün qalıb",
+        "urgencyHoursLeft_one": "{{count}} saat qalıb",
+        "urgencyHoursLeft_other": "{{count}} saat qalıb"
     },
     "info": {
         "refresh-rating": "Reytinqi yenilə"
@@ -170,7 +204,10 @@
             "viewFavourites": "Sevimlilər",
             "viewInstalled": "Quraşdırılıb",
             "viewRecentlyPlayed": "Yaxınlarda oynanılan",
-            "wontRun": "İşləməyəcək"
+            "wontRun": "İşləməyəcək",
+            "chipNoStorePageHidden": "Mağaza səhifəsi olmayan oyunlar gizlədilir",
+            "groupSelectedCount_one": "{{count}} seçilib",
+            "groupSelectedCount_other": "{{count}} seçilib"
         },
         "header": {
             "filteredOfTotal": "{{total}} arasından {{shown}}"
@@ -420,7 +457,9 @@
         "needsGuiTag": "Winetricks GUI tələb edir",
         "retry": "Yenidən cəhd et",
         "searchPlaceholder": "Komponentləri axtar…",
-        "zeroResultHeading": "“{{query}}” ilə uyğun komponent yoxdur."
+        "zeroResultHeading": "“{{query}}” ilə uyğun komponent yoxdur.",
+        "resultsHeading_one": "{{count}} nəticə",
+        "resultsHeading_other": "{{count}} nəticə"
     },
     "donate": {
         "navLabel": "İanə et"
@@ -432,5 +471,9 @@
         "rateLimited": "Çox sayda cəhd edildi — yenidən cəhd etmədən əvvəl bir az gözləyin.",
         "successNoPackage": "Açar aktivləşdirildi! Steam kitabxananız yeniləndi.",
         "successWithPackage": "Açar aktivləşdirildi! {{packageName}} Steam kitabxananıza əlavə edildi."
+    },
+    "languageSelector": {
+        "mtNotice": "Bu dildəki bəzi mətnlər maşın tərcüməsi ilə hazırlanıb və səhvlər ola bilər.",
+        "reportTranslationProblem": "Tərcümə problemi bildirin"
     }
 }

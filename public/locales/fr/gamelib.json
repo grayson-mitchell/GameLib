@@ -90,8 +90,44 @@
             "revealed": "Révélée",
             "unpicked": "Non choisi",
             "unredeemable": "Expirée",
-            "unrevealed": "Non révélée"
-        }
+            "unrevealed": "Non révélée",
+            "redeemed": "Activée"
+        },
+        "activateConfirmBody": "Cela révèle la clé — en la retirant définitivement des Réserves à offrir — et l'active sur votre compte Steam. Cette action est irréversible.",
+        "activateConfirmBodyRevealed": "Cela active votre clé déjà révélée sur votre compte Steam. Cette action est irréversible.",
+        "activateDismiss": "Annuler",
+        "activatingBody": "Révélation de votre clé et activation sur Steam — cela ne prend qu'un instant.",
+        "c2Action": "Aller aux Réserves à offrir",
+        "c2Body": "Cette clé est en sécurité dans les Réserves à offrir — la révéler ici supprimerait définitivement la possibilité de l'offrir. Rendez-vous plutôt dans les Réserves à offrir.",
+        "claimOnHumble": "Récupérer sur Humble",
+        "claimOnStore": "Récupérer sur {{store}}",
+        "claimWizardTitle": "Récupérer cette clé",
+        "cooldown_one": "Temporairement indisponible — réessayez dans {{count}} minute",
+        "cooldown_many": "Temporairement indisponible — réessayez dans {{count}} minutes",
+        "cooldown_other": "Temporairement indisponible — réessayez dans {{count}} minutes",
+        "giftConfirmBody": "Toute personne disposant de ce lien peut récupérer la clé — une fois activée, elle est perdue définitivement. Vous terminerez l'envoi du cadeau sur le site de Humble.",
+        "loginAndClaim": "Se connecter à {{store}} et récupérer",
+        "markRedeemed": "Marquer comme activée",
+        "redeemableOnly": "Clés activables uniquement",
+        "redeemedAnnotation": "Activée le {{date}}",
+        "redeemOnPlatform": "Activer sur {{platform}}",
+        "revealConfirmBody": "Révéler la clé affiche sa valeur réelle et la retire définitivement des Réserves à offrir. Si vous ne possédez pas encore ce jeu, assurez-vous que c'est bien le cas avant de continuer — cette action est irréversible.",
+        "revealCooldownBody_one": "Temporairement indisponible — réessayez dans {{count}} minute",
+        "revealCooldownBody_many": "Temporairement indisponible — réessayez dans {{count}} minutes",
+        "revealCooldownBody_other": "Temporairement indisponible — réessayez dans {{count}} minutes",
+        "revealRejectedBody": "Humble a refusé de révéler cette clé — elle est peut-être déjà activée ou expirée. Synchronisez pour vérifier son statut actuel.",
+        "syncing_one": "Synchronisation… {{done}}/{{count}} commande",
+        "syncing_many": "Synchronisation… {{done}}/{{count}} commandes",
+        "syncing_other": "Synchronisation… {{done}}/{{count}} commandes",
+        "syncToEnableClaiming": "Synchronisez pour activer la récupération",
+        "undo": "Rétablir",
+        "undoOwnershipOverride": "Rétablir — je possède bien ce jeu",
+        "urgencyDaysLeft_one": "{{count}} jour restant",
+        "urgencyDaysLeft_many": "{{count}} jours restants",
+        "urgencyDaysLeft_other": "{{count}} jours restants",
+        "urgencyHoursLeft_one": "{{count}} heure restante",
+        "urgencyHoursLeft_many": "{{count}} heures restantes",
+        "urgencyHoursLeft_other": "{{count}} heures restantes"
     },
     "library": {
         "filterPanel": {
@@ -121,7 +157,11 @@
             "viewRecentlyPlayed": "Joués récemment",
             "wontRun": "Ne s'exécute pas",
             "emptyAlphabetLetter": "Commençant par \"{{letter}}\"",
-            "emptyAlphabetNumber": "Commençant par un chiffre"
+            "emptyAlphabetNumber": "Commençant par un chiffre",
+            "chipNoStorePageHidden": "Masquage des jeux sans page boutique",
+            "groupSelectedCount_one": "{{count}} sélectionné",
+            "groupSelectedCount_many": "{{count}} sélectionnés",
+            "groupSelectedCount_other": "{{count}} sélectionnés"
         },
         "header": {
             "filteredOfTotal": "{{shown}} sur {{total}}"
@@ -267,7 +307,10 @@
         "error": {
             "install": {
                 "failed": "L'installation de {{title}} a échoué : {{error}}",
-                "signInToSteam": "Se connecter à Steam"
+                "signInToSteam": "Se connecter à Steam",
+                "stalled_one": "Aucune progression du téléchargement depuis {{count}} minute — l'installation a été arrêtée",
+                "stalled_many": "Aucune progression du téléchargement depuis {{count}} minutes — l'installation a été arrêtée",
+                "stalled_other": "Aucune progression du téléchargement depuis {{count}} minutes — l'installation a été arrêtée"
             }
         },
         "filePicker": {
@@ -421,7 +464,10 @@
         "needsGuiTag": "Nécessite l'interface graphique de Winetricks",
         "retry": "Réessayer",
         "searchPlaceholder": "Rechercher des composants…",
-        "zeroResultHeading": "Aucun composant ne correspond à “{{query}}”."
+        "zeroResultHeading": "Aucun composant ne correspond à “{{query}}”.",
+        "resultsHeading_one": "{{count}} résultat",
+        "resultsHeading_many": "{{count}} résultats",
+        "resultsHeading_other": "{{count}} résultats"
     },
     "donate": {
         "navLabel": "Faire un don"
@@ -433,5 +479,9 @@
         "rateLimited": "Trop de tentatives — veuillez patienter un peu avant de réessayer.",
         "successNoPackage": "Clé utilisée avec succès ! Votre bibliothèque Steam a été mise à jour.",
         "successWithPackage": "Clé utilisée avec succès ! {{packageName}} a été ajouté à votre bibliothèque Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Certains textes dans cette langue ont été traduits automatiquement et peuvent contenir des erreurs.",
+        "reportTranslationProblem": "Signaler un problème de traduction"
     }
 }

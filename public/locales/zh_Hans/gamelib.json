@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "{{title}} 安装失败：{{error}}",
-                "signInToSteam": "登录 Steam"
+                "signInToSteam": "登录 Steam",
+                "stalled_one": "{{count}} 分钟内没有下载进度 — 安装已停止",
+                "stalled_other": "{{count}} 分钟内没有下载进度 — 安装已停止"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "已显示",
             "unpicked": "未选取",
             "unredeemable": "已过期",
-            "unrevealed": "未显示"
-        }
+            "unrevealed": "未显示",
+            "redeemed": "已兑换"
+        },
+        "activateConfirmBody": "这将显示密钥——使其从可赠送备份中永久移除——并在您的 Steam 账户上兑换。此操作无法撤销。",
+        "activateConfirmBodyRevealed": "这将在您的 Steam 账户上兑换已显示的密钥。此操作无法撤销。",
+        "activateDismiss": "取消",
+        "activatingBody": "正在显示您的密钥并在 Steam 上兑换 — 只需片刻。",
+        "c2Action": "前往可赠送备份",
+        "c2Body": "此密钥在可赠送备份中是安全的——在此处显示会失去赠送它的能力。请改到可赠送备份中操作。",
+        "claimOnHumble": "在 Humble 上领取",
+        "claimOnStore": "在 {{store}} 上领取",
+        "claimWizardTitle": "领取此密钥",
+        "cooldown_one": "暂时不可用 — 请在 {{count}} 分钟后重试",
+        "cooldown_other": "暂时不可用 — 请在 {{count}} 分钟后重试",
+        "giftConfirmBody": "任何拥有此链接的人都可以领取该密钥——一旦兑换，就永久失效了。您需要在 Humble 自己的网站上完成赠送。",
+        "loginAndClaim": "登录 {{store}} 并领取",
+        "markRedeemed": "标记为已兑换",
+        "redeemableOnly": "仅限可兑换的密钥",
+        "redeemedAnnotation": "已于 {{date}} 兑换",
+        "redeemOnPlatform": "在 {{platform}} 上兑换",
+        "revealConfirmBody": "显示会展示实际密钥，并使其从可赠送备份中永久移除。如果您尚未拥有此游戏，请在继续之前确认这一点——此操作无法撤销。",
+        "revealCooldownBody_one": "暂时不可用 — 请在 {{count}} 分钟后重试",
+        "revealCooldownBody_other": "暂时不可用 — 请在 {{count}} 分钟后重试",
+        "revealRejectedBody": "Humble 拒绝显示此密钥——它可能已被兑换或已过期。请同步以检查其当前状态。",
+        "syncing_one": "正在同步… {{done}}/{{count}} 个订单",
+        "syncing_other": "正在同步… {{done}}/{{count}} 个订单",
+        "syncToEnableClaiming": "同步以启用领取",
+        "undo": "撤销",
+        "undoOwnershipOverride": "撤销 — 我确实拥有此游戏",
+        "urgencyDaysLeft_one": "剩余 {{count}} 天",
+        "urgencyDaysLeft_other": "剩余 {{count}} 天",
+        "urgencyHoursLeft_one": "剩余 {{count}} 小时",
+        "urgencyHoursLeft_other": "剩余 {{count}} 小时"
     },
     "info": {
         "refresh-rating": "刷新评分"
@@ -171,7 +204,10 @@
             "viewFavourites": "最爱",
             "viewInstalled": "已安装",
             "viewRecentlyPlayed": "最近玩过",
-            "wontRun": "无法运行"
+            "wontRun": "无法运行",
+            "chipNoStorePageHidden": "正在隐藏没有商店页面的游戏",
+            "groupSelectedCount_one": "已选择 {{count}} 个",
+            "groupSelectedCount_other": "已选择 {{count}} 个"
         },
         "header": {
             "filteredOfTotal": "{{total}} 中的 {{shown}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "需要 Winetricks 图形界面",
         "retry": "重试",
         "searchPlaceholder": "搜索组件…",
-        "zeroResultHeading": "没有与“{{query}}”匹配的组件。"
+        "zeroResultHeading": "没有与“{{query}}”匹配的组件。",
+        "resultsHeading_one": "{{count}} 个结果",
+        "resultsHeading_other": "{{count}} 个结果"
     },
     "donate": {
         "navLabel": "捐赠"
@@ -433,5 +471,9 @@
         "rateLimited": "尝试次数过多——请稍等片刻后再试。",
         "successNoPackage": "密钥兑换成功！你的 Steam 库已更新。",
         "successWithPackage": "密钥兑换成功！{{packageName}} 已添加到你的 Steam 库。"
+    },
+    "languageSelector": {
+        "mtNotice": "此语言中的部分文本是机器翻译，可能存在错误。",
+        "reportTranslationProblem": "报告翻译问题"
     }
 }

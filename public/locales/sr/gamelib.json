@@ -14,7 +14,10 @@
         "error": {
             "install": {
                 "failed": "Инсталација {{title}} није успела: {{error}}",
-                "signInToSteam": "Пријави се на Steam"
+                "signInToSteam": "Пријави се на Steam",
+                "stalled_one": "Нема напретка преузимања {{count}} минут — инсталација је заустављена",
+                "stalled_few": "Нема напретка преузимања {{count}} минута — инсталација је заустављена",
+                "stalled_other": "Нема напретка преузимања {{count}} минута — инсталација је заустављена"
             }
         },
         "filePicker": {
@@ -128,8 +131,44 @@
             "revealed": "Otkriveno",
             "unpicked": "Neizabrano",
             "unredeemable": "Isteklo",
-            "unrevealed": "Neotkriveno"
-        }
+            "unrevealed": "Neotkriveno",
+            "redeemed": "Активирано"
+        },
+        "activateConfirmBody": "Ово открива кључ — уклањајући га заувек из Резерве за поклањање — и активира га на вашем Steam налогу. Нема повратка.",
+        "activateConfirmBodyRevealed": "Ово активира ваш већ откривени кључ на вашем Steam налогу. Нема повратка.",
+        "activateDismiss": "Откажи",
+        "activatingBody": "Откривамо ваш кључ и активирамо га на Steam-у — ово траје само тренутак.",
+        "c2Action": "Иди на Резерву за поклањање",
+        "c2Body": "Овај кључ је безбедан у Резерви за поклањање — откривање овде би заувек уклонило могућност да га поклоните. Уместо тога, однесите га у Резерву за поклањање.",
+        "claimOnHumble": "Преузми на Humble",
+        "claimOnStore": "Преузми на {{store}}",
+        "claimWizardTitle": "Преузми овај кључ",
+        "cooldown_one": "Тренутно недоступно — покушајте поново за {{count}} минут",
+        "cooldown_few": "Тренутно недоступно — покушајте поново за {{count}} минута",
+        "cooldown_other": "Тренутно недоступно — покушајте поново за {{count}} минута",
+        "giftConfirmBody": "Свако ко има овај линк може да преузме кључ — када се једном активира, нестаје заувек. Поклањање ћете завршити на Humble-овом сајту.",
+        "loginAndClaim": "Пријавите се на {{store}} и преузмите",
+        "markRedeemed": "Означи као активиран",
+        "redeemableOnly": "Само кључеви који се могу активирати",
+        "redeemedAnnotation": "Активирано {{date}}",
+        "redeemOnPlatform": "Активирај на {{platform}}",
+        "revealConfirmBody": "Откривање приказује стварни кључ и заувек га уклања из Резерве за поклањање. Ако још увек не поседујете ову игру, проверите да ли је то заиста тако пре него што наставите — нема повратка.",
+        "revealCooldownBody_one": "Тренутно недоступно — покушајте поново за {{count}} минут",
+        "revealCooldownBody_few": "Тренутно недоступно — покушајте поново за {{count}} минута",
+        "revealCooldownBody_other": "Тренутно недоступно — покушајте поново за {{count}} минута",
+        "revealRejectedBody": "Humble је одбио да открије овај кључ — можда је већ активиран или је истекао. Синхронизујте да бисте проверили тренутни статус.",
+        "syncing_one": "Синхронизација… {{done}}/{{count}} наруџбина",
+        "syncing_few": "Синхронизација… {{done}}/{{count}} наруџбине",
+        "syncing_other": "Синхронизација… {{done}}/{{count}} наруџбина",
+        "syncToEnableClaiming": "Синхронизујте да бисте омогућили преузимање",
+        "undo": "Опозови",
+        "undoOwnershipOverride": "Опозови — заиста поседујем ову игру",
+        "urgencyDaysLeft_one": "Преостао {{count}} дан",
+        "urgencyDaysLeft_few": "Преостала {{count}} дана",
+        "urgencyDaysLeft_other": "Преостало {{count}} дана",
+        "urgencyHoursLeft_one": "Преостао {{count}} сат",
+        "urgencyHoursLeft_few": "Преостала {{count}} сата",
+        "urgencyHoursLeft_other": "Преостало {{count}} сати"
     },
     "info": {
         "refresh-rating": "Освежи оцену"
@@ -171,7 +210,11 @@
             "viewFavourites": "Омиљено",
             "viewInstalled": "Инсталирано",
             "viewRecentlyPlayed": "Недавно играно",
-            "wontRun": "Неће се покренути"
+            "wontRun": "Неће се покренути",
+            "chipNoStorePageHidden": "Скривање игара без странице продавнице",
+            "groupSelectedCount_one": "{{count}} изабрана",
+            "groupSelectedCount_few": "{{count}} изабране",
+            "groupSelectedCount_other": "{{count}} изабрано"
         },
         "header": {
             "filteredOfTotal": "{{shown}} од {{total}}"
@@ -421,7 +464,10 @@
         "needsGuiTag": "Захтева Winetricks графички интерфејс",
         "retry": "Покушај поново",
         "searchPlaceholder": "Претражи компоненте…",
-        "zeroResultHeading": "Ниједна компонента се не поклапа са “{{query}}”."
+        "zeroResultHeading": "Ниједна компонента се не поклапа са “{{query}}”.",
+        "resultsHeading_one": "{{count}} резултат",
+        "resultsHeading_few": "{{count}} резултата",
+        "resultsHeading_other": "{{count}} резултата"
     },
     "donate": {
         "navLabel": "Doniraj"
@@ -433,5 +479,9 @@
         "rateLimited": "Previše pokušaja — sačekajte malo pre nego što pokušate ponovo.",
         "successNoPackage": "Ključ je iskorišćen! Vaša Steam biblioteka je ažurirana.",
         "successWithPackage": "Ključ je iskorišćen! {{packageName}} je dodat u vašu Steam biblioteku."
+    },
+    "languageSelector": {
+        "mtNotice": "Део текста на овом језику је машински преведен и може садржати грешке.",
+        "reportTranslationProblem": "Пријавите проблем са преводом"
     }
 }

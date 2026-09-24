@@ -3,7 +3,8 @@
         "license": "Licencia: GPL V3",
         "title": "O aplikácii GameLib",
         "version": "Verzia: {{version}}",
-        "versionUnknown": "neznáma"
+        "versionUnknown": "neznáma",
+        "navLabel": "About"
     },
     "app": {
         "routeError": "Niečo sa pokazilo: {{detail}}"
@@ -12,7 +13,11 @@
         "error": {
             "install": {
                 "failed": "Inštalácia {{title}} zlyhala: {{error}}",
-                "signInToSteam": "Prihlásiť sa do Steam"
+                "signInToSteam": "Prihlásiť sa do Steam",
+                "stalled_one": "Žiadny priebeh sťahovania už {{count}} minútu — instalácia bola zastavená",
+                "stalled_few": "Žiadny priebeh sťahovania už {{count}} minúty — instalácia bola zastavená",
+                "stalled_many": "Žiadny priebeh sťahovania už {{count}} minúty — instalácia bola zastavená",
+                "stalled_other": "Žiadny priebeh sťahovania už {{count}} minút — instalácia bola zastavená"
             }
         },
         "filePicker": {
@@ -27,7 +32,8 @@
                 "message": "macOS verzia tejto hry je iba 32-bitová a nedá sa spustiť na tejto verzii macOS. GameLib ju môže namiesto toho preinštalovať cez CrossOver, čo znova stiahne Windows verziu.",
                 "title": "Zistená 32-bitová macOS verzia"
             }
-        }
+        },
+        "cancel": "Cancel"
     },
     "button": {
         "close": "Zatvoriť",
@@ -126,8 +132,49 @@
             "revealed": "Zobrazené",
             "unpicked": "Nevybraté",
             "unredeemable": "Vypršané",
-            "unrevealed": "Skryté"
-        }
+            "unrevealed": "Skryté",
+            "redeemed": "Uplatnené"
+        },
+        "activateConfirmBody": "Týmto sa kľúč odhalí — natrvalo sa odstráni z Darovateľných rezerv — a uplatní sa na vašom účte Steam. Toto sa nedá vrátiť.",
+        "activateConfirmBodyRevealed": "Týmto sa váš už odhalený kľúč uplatní na vašom účte Steam. Toto sa nedá vrátiť.",
+        "activateDismiss": "Zrušiť",
+        "activatingBody": "Odhaľuje sa váš kľúč a uplatňuje sa na Steam — chvíľku to potrvá.",
+        "c2Action": "Prejsť na Darovateľné rezervy",
+        "c2Body": "Tento kľúč je bezpečne uložený v Darovateľných rezervách — jeho odhalením by ste stratili možnosť ho darovať. Presuňte ho do Darovateľných rezerv.",
+        "claimOnHumble": "Prevziať na Humble",
+        "claimOnStore": "Prevziať na {{store}}",
+        "claimWizardTitle": "Prevziať tento kľúč",
+        "cooldown_one": "Dočasne nedostupné — skúste znova o {{count}} minútu",
+        "cooldown_few": "Dočasne nedostupné — skúste znova o {{count}} minúty",
+        "cooldown_many": "Dočasne nedostupné — skúste znova o {{count}} minúty",
+        "cooldown_other": "Dočasne nedostupné — skúste znova o {{count}} minút",
+        "giftConfirmBody": "Ktokoľvek s týmto odkazom môže kľúč prevziať — po uplatnení je navždy preč. Darovanie dokončíte na stránke Humble.",
+        "loginAndClaim": "Prihlásiť sa na {{store}} a prevziať",
+        "markRedeemed": "Označiť ako uplatnené",
+        "redeemableOnly": "Len uplatniteľné kľúče",
+        "redeemedAnnotation": "Uplatnené {{date}}",
+        "redeemOnPlatform": "Uplatniť na {{platform}}",
+        "revealConfirmBody": "Odhalením sa zobrazí skutočný kľúč a natrvalo sa odstráni z Darovateľných rezerv. Ak túto hru ešte nevlastníte, uistite sa, že to naozaj platí, než budete pokračovať — toto sa nedá vrátiť.",
+        "revealCooldownBody_one": "Dočasne nedostupné — skúste znova o {{count}} minútu",
+        "revealCooldownBody_few": "Dočasne nedostupné — skúste znova o {{count}} minúty",
+        "revealCooldownBody_many": "Dočasne nedostupné — skúste znova o {{count}} minúty",
+        "revealCooldownBody_other": "Dočasne nedostupné — skúste znova o {{count}} minút",
+        "revealRejectedBody": "Humble odmietol odhaliť tento kľúč — možno je už uplatnený alebo vypršal. Synchronizujte a overte jeho aktuálny stav.",
+        "syncing_one": "Synchronizuje sa… {{done}}/{{count}} objednávka",
+        "syncing_few": "Synchronizuje sa… {{done}}/{{count}} objednávky",
+        "syncing_many": "Synchronizuje sa… {{done}}/{{count}} objednávky",
+        "syncing_other": "Synchronizuje sa… {{done}}/{{count}} objednávok",
+        "syncToEnableClaiming": "Synchronizujte, aby ste mohli prevziať kľúče",
+        "undo": "Vrátiť späť",
+        "undoOwnershipOverride": "Vrátiť späť — túto hru vlastním",
+        "urgencyDaysLeft_one": "Zostáva {{count}} deň",
+        "urgencyDaysLeft_few": "Zostávajú {{count}} dni",
+        "urgencyDaysLeft_many": "Zostáva {{count}} dňa",
+        "urgencyDaysLeft_other": "Zostáva {{count}} dní",
+        "urgencyHoursLeft_one": "Zostáva {{count}} hodina",
+        "urgencyHoursLeft_few": "Zostávajú {{count}} hodiny",
+        "urgencyHoursLeft_many": "Zostáva {{count}} hodiny",
+        "urgencyHoursLeft_other": "Zostáva {{count}} hodín"
     },
     "info": {
         "refresh-rating": "Obnoviť hodnotenie"
@@ -167,7 +214,14 @@
             "viewAll": "Všetky hry",
             "viewInstalled": "Nainštalované",
             "viewRecentlyPlayed": "Nedávno hrané",
-            "wontRun": "Nespustí sa"
+            "wontRun": "Nespustí sa",
+            "chipNoStorePageHidden": "Skrývanie hier bez stránky v obchode",
+            "groupSelectedCount_one": "{{count}} vybraná",
+            "groupSelectedCount_few": "{{count}} vybrané",
+            "groupSelectedCount_many": "{{count}} vybraného",
+            "groupSelectedCount_other": "{{count}} vybraných",
+            "storeGroup": "Store",
+            "viewFavourites": "Obľúbené"
         },
         "header": {
             "filteredOfTotal": "{{shown}} z {{total}}"
@@ -182,7 +236,8 @@
             "signedOutBody": "Prihláste sa znova, aby ste mohli synchronizovať svoju knižnicu Steam. Vaše ostatné knižnice sú stále dostupné.",
             "signedOutTitle": "Platnosť vášho prihlásenia do Steam vypršala",
             "syncing": "Synchronizuje sa vaša knižnica Steam…"
-        }
+        },
+        "storeOther": "Iné"
     },
     "login": {
         "connected": "Pripojené",
@@ -416,7 +471,11 @@
         "needsGuiTag": "Vyžaduje grafické rozhranie Winetricks",
         "retry": "Skúsiť znova",
         "searchPlaceholder": "Hľadať komponenty…",
-        "zeroResultHeading": "Žiadny komponent nezodpovedá “{{query}}”."
+        "zeroResultHeading": "Žiadny komponent nezodpovedá “{{query}}”.",
+        "resultsHeading_one": "{{count}} výsledok",
+        "resultsHeading_few": "{{count}} výsledky",
+        "resultsHeading_many": "{{count}} výsledku",
+        "resultsHeading_other": "{{count}} výsledkov"
     },
     "donate": {
         "navLabel": "Prispieť"
@@ -428,5 +487,9 @@
         "rateLimited": "Príliš veľa pokusov — počkajte chvíľu, kým to skúsite znova.",
         "successNoPackage": "Kľúč bol uplatnený! Vaša knižnica Steam bola aktualizovaná.",
         "successWithPackage": "Kľúč bol uplatnený! {{packageName}} bol pridaný do vašej knižnice Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Niektoré texty v tomto jazyku boli strojovo preložené a môžu obsahovať chyby.",
+        "reportTranslationProblem": "Nahlásiť problém s prekladom"
     }
 }

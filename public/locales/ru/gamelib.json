@@ -14,7 +14,11 @@
         "error": {
             "install": {
                 "failed": "Установка {{title}} не удалась: {{error}}",
-                "signInToSteam": "Войти в Steam"
+                "signInToSteam": "Войти в Steam",
+                "stalled_one": "Нет прогресса загрузки в течение {{count}} минуты — установка остановлена",
+                "stalled_few": "Нет прогресса загрузки в течение {{count}} минут — установка остановлена",
+                "stalled_many": "Нет прогресса загрузки в течение {{count}} минут — установка остановлена",
+                "stalled_other": "Нет прогресса загрузки в течение {{count}} минут — установка остановлена"
             }
         },
         "filePicker": {
@@ -128,8 +132,49 @@
             "revealed": "Открыт",
             "unpicked": "Не выбрано",
             "unredeemable": "Истёк",
-            "unrevealed": "Не открыт"
-        }
+            "unrevealed": "Не открыт",
+            "redeemed": "Активирован"
+        },
+        "activateConfirmBody": "Это откроет ключ — он будет навсегда удалён из «Ключей на подарок» — и активирует его на вашем аккаунте Steam. Отменить это будет нельзя.",
+        "activateConfirmBodyRevealed": "Это активирует уже открытый ключ на вашем аккаунте Steam. Отменить это будет нельзя.",
+        "activateDismiss": "Отмена",
+        "activatingBody": "Открываем ваш ключ и активируем его в Steam — это займёт всего мгновение.",
+        "c2Action": "Перейти в «Ключи на подарок»",
+        "c2Body": "Этот ключ в безопасности в «Ключах на подарок» — если открыть его здесь, возможность подарить его будет утрачена. Перейдите в «Ключи на подарок» вместо этого.",
+        "claimOnHumble": "Получить на Humble",
+        "claimOnStore": "Получить на {{store}}",
+        "claimWizardTitle": "Получить этот ключ",
+        "cooldown_one": "Временно недоступно — повторите через {{count}} минуту",
+        "cooldown_few": "Временно недоступно — повторите через {{count}} минуты",
+        "cooldown_many": "Временно недоступно — повторите через {{count}} минут",
+        "cooldown_other": "Временно недоступно — повторите через {{count}} минут",
+        "giftConfirmBody": "Любой, у кого есть эта ссылка, может получить ключ — как только он будет активирован, вернуть его будет нельзя. Завершить процесс дарения нужно будет на самом сайте Humble.",
+        "loginAndClaim": "Войти в {{store}} и получить",
+        "markRedeemed": "Отметить как активированный",
+        "redeemableOnly": "Только активируемые ключи",
+        "redeemedAnnotation": "Активирован {{date}}",
+        "redeemOnPlatform": "Активировать на {{platform}}",
+        "revealConfirmBody": "Открытие ключа показывает его настоящее значение и навсегда удаляет его из «Ключей на подарок». Если вы ещё не владеете этой игрой, убедитесь, что это действительно так, прежде чем продолжить — отменить это будет нельзя.",
+        "revealCooldownBody_one": "Временно недоступно — повторите через {{count}} минуту",
+        "revealCooldownBody_few": "Временно недоступно — повторите через {{count}} минуты",
+        "revealCooldownBody_many": "Временно недоступно — повторите через {{count}} минут",
+        "revealCooldownBody_other": "Временно недоступно — повторите через {{count}} минут",
+        "revealRejectedBody": "Humble отказался открыть этот ключ — возможно, он уже активирован или срок его действия истёк. Выполните синхронизацию, чтобы проверить его текущий статус.",
+        "syncing_one": "Синхронизация… {{done}}/{{count}} заказ",
+        "syncing_few": "Синхронизация… {{done}}/{{count}} заказа",
+        "syncing_many": "Синхронизация… {{done}}/{{count}} заказов",
+        "syncing_other": "Синхронизация… {{done}}/{{count}} заказов",
+        "syncToEnableClaiming": "Синхронизируйте, чтобы получить возможность получения ключей",
+        "undo": "Отменить",
+        "undoOwnershipOverride": "Отменить — я владею этой игрой",
+        "urgencyDaysLeft_one": "Остался {{count}} день",
+        "urgencyDaysLeft_few": "Осталось {{count}} дня",
+        "urgencyDaysLeft_many": "Осталось {{count}} дней",
+        "urgencyDaysLeft_other": "Осталось {{count}} дней",
+        "urgencyHoursLeft_one": "Остался {{count}} час",
+        "urgencyHoursLeft_few": "Осталось {{count}} часа",
+        "urgencyHoursLeft_many": "Осталось {{count}} часов",
+        "urgencyHoursLeft_other": "Осталось {{count}} часа"
     },
     "info": {
         "refresh-rating": "Обновить рейтинг"
@@ -171,7 +216,12 @@
             "viewFavourites": "Избранное",
             "viewInstalled": "Установлено",
             "viewRecentlyPlayed": "Недавно запущенные",
-            "wontRun": "Не запустится"
+            "wontRun": "Не запустится",
+            "chipNoStorePageHidden": "Скрыты игры без страницы в магазине",
+            "groupSelectedCount_one": "Выбрана {{count}}",
+            "groupSelectedCount_few": "Выбрано {{count}}",
+            "groupSelectedCount_many": "Выбрано {{count}}",
+            "groupSelectedCount_other": "Выбрано {{count}}"
         },
         "header": {
             "filteredOfTotal": "{{shown}} из {{total}}"
@@ -421,7 +471,11 @@
         "needsGuiTag": "Требуется графический интерфейс Winetricks",
         "retry": "Повторить",
         "searchPlaceholder": "Поиск компонентов…",
-        "zeroResultHeading": "Нет компонентов, соответствующих “{{query}}”."
+        "zeroResultHeading": "Нет компонентов, соответствующих “{{query}}”.",
+        "resultsHeading_one": "{{count}} результат",
+        "resultsHeading_few": "{{count}} результата",
+        "resultsHeading_many": "{{count}} результатов",
+        "resultsHeading_other": "{{count}} результата"
     },
     "donate": {
         "navLabel": "Пожертвовать"
@@ -433,5 +487,9 @@
         "rateLimited": "Слишком много попыток — подождите немного и попробуйте снова.",
         "successNoPackage": "Ключ активирован! Ваша библиотека Steam обновлена.",
         "successWithPackage": "Ключ активирован! {{packageName}} добавлен в вашу библиотеку Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Часть текста на этом языке переведена автоматически и может содержать ошибки.",
+        "reportTranslationProblem": "Сообщить о проблеме перевода"
     }
 }

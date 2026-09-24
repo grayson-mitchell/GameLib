@@ -14,7 +14,12 @@
         "error": {
             "install": {
                 "failed": "C'hwitet ez eus staliadur {{title}}: {{error}}",
-                "signInToSteam": "Kevreañ ouzh Steam"
+                "signInToSteam": "Kevreañ ouzh Steam",
+                "stalled_one": "Nann kenendigezh pellgargañ abaoe {{count}} vunutenn — paouezet eo bet an staliadur",
+                "stalled_two": "Nann kenendigezh pellgargañ abaoe {{count}} vunutenn — paouezet eo bet an staliadur",
+                "stalled_few": "Nann kenendigezh pellgargañ abaoe {{count}} munutenn — paouezet eo bet an staliadur",
+                "stalled_many": "Nann kenendigezh pellgargañ abaoe {{count}} a vunutennoù — paouezet eo bet an staliadur",
+                "stalled_other": "Nann kenendigezh pellgargañ abaoe {{count}} munutenn — paouezet eo bet an staliadur"
             }
         },
         "filePicker": {
@@ -128,8 +133,54 @@
             "revealed": "Diskuliet",
             "unpicked": "N'eo ket dibabet",
             "unredeemable": "Diamzeret",
-            "unrevealed": "N'eo ket diskuliet"
-        }
+            "unrevealed": "N'eo ket diskuliet",
+            "redeemed": "Adprennet"
+        },
+        "activateConfirmBody": "Diskouezet e vo an alc'hwez — o vezañ lamet da vat eus ar Rezervoù da reiñ — hag adprennet e vo war ho kont Steam. N'eus disober ebet.",
+        "activateConfirmBodyRevealed": "Adprennañ a ra hoc'h alc'hwez dija diskouezet war ho kont Steam. N'eus disober ebet.",
+        "activateDismiss": "Nullañ",
+        "activatingBody": "O tiskouez hoc'h alc'hwez hag oc'h adprennañ anezhañ war Steam — un tammig amzer hepken a gemer.",
+        "c2Action": "Mont d'ar Rezervoù da reiñ",
+        "c2Body": "Surel eo an alc'hwez-mañ er Rezervoù da reiñ — o tiskouez anezhañ amañ e vije kollet ar gwellañ da reiñ anezhañ. Kasit anezhañ d'ar Rezervoù da reiñ kentoc'h.",
+        "claimOnHumble": "Kemer war Humble",
+        "claimOnStore": "Kemer war {{store}}",
+        "claimWizardTitle": "Kemer an alc'hwez-mañ",
+        "cooldown_one": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} vunutenn",
+        "cooldown_two": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} vunutenn",
+        "cooldown_few": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} munutenn",
+        "cooldown_many": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} a vunutennoù",
+        "cooldown_other": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} munutenn",
+        "giftConfirmBody": "Kement den en deus al liamm-mañ a c'hell kemer an alc'hwez — ur wech adprennet, aet eo da vat. Echuiñ a reoc'h reiñ anezhañ war lec'hienn Humble e-unan.",
+        "loginAndClaim": "Kevreañ ouzh {{store}} ha kemer",
+        "markRedeemed": "Merkañ evel adprennet",
+        "redeemableOnly": "Alc'hwezioù adprennus hepken",
+        "redeemedAnnotation": "Adprennet {{date}}",
+        "redeemOnPlatform": "Adprennañ war {{platform}}",
+        "revealConfirmBody": "O tiskouez e vez diskouezet an alc'hwez gwirion ha lamet eo eus ar Rezervoù da reiñ da vat. Ma ne'ho peus ket ar c'hoari-mañ c'hoazh, gwiriit mat kement-se a-raok mont pelloc'h — n'eus disober ebet.",
+        "revealCooldownBody_one": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} vunutenn",
+        "revealCooldownBody_two": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} vunutenn",
+        "revealCooldownBody_few": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} munutenn",
+        "revealCooldownBody_many": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} a vunutennoù",
+        "revealCooldownBody_other": "Nann hegerz evit ar mare — klaskit en-dro a-benn {{count}} munutenn",
+        "revealRejectedBody": "Nac'het en deus Humble diskouez an alc'hwez-mañ — marteze adprennet pe diamzeret eo dija. Kensynchronait evit gwiriañ e stad vremanel.",
+        "syncing_one": "O kensynchronañ… {{done}}/{{count}} urzhiad",
+        "syncing_two": "O kensynchronañ… {{done}}/{{count}} urzhiad",
+        "syncing_few": "O kensynchronañ… {{done}}/{{count}} urzhiad",
+        "syncing_many": "O kensynchronañ… {{done}}/{{count}} a urzhiadoù",
+        "syncing_other": "O kensynchronañ… {{done}}/{{count}} urzhiad",
+        "syncToEnableClaiming": "Kensynchronit evit gweredekaat ar c'hemer",
+        "undo": "Disober",
+        "undoOwnershipOverride": "Disober — Dalc'homp ar c'hoari-mañ",
+        "urgencyDaysLeft_one": "{{count}} devezh a chom",
+        "urgencyDaysLeft_two": "{{count}} zevezh a chom",
+        "urgencyDaysLeft_few": "{{count}} devezh a chom",
+        "urgencyDaysLeft_many": "{{count}} a zevezh a chom",
+        "urgencyDaysLeft_other": "{{count}} devezh a chom",
+        "urgencyHoursLeft_one": "{{count}} eur a chom",
+        "urgencyHoursLeft_two": "{{count}} eur a chom",
+        "urgencyHoursLeft_few": "{{count}} eur a chom",
+        "urgencyHoursLeft_many": "{{count}} a eur a chom",
+        "urgencyHoursLeft_other": "{{count}} eur a chom"
     },
     "info": {
         "refresh-rating": "Freskaat ar priziadur"
@@ -171,7 +222,13 @@
             "viewFavourites": "Muiañ-karet",
             "viewInstalled": "Staliet",
             "viewRecentlyPlayed": "C'hoariet nevez zo",
-            "wontRun": "Ne lañso ket"
+            "wontRun": "Ne lañso ket",
+            "chipNoStorePageHidden": "O kuzhat ar c'hoarioù hep pajenn stal",
+            "groupSelectedCount_one": "{{count}} dibabet",
+            "groupSelectedCount_two": "{{count}} zibabet",
+            "groupSelectedCount_few": "{{count}} dibabet",
+            "groupSelectedCount_many": "{{count}} a zibabet",
+            "groupSelectedCount_other": "{{count}} dibabet"
         },
         "header": {
             "filteredOfTotal": "{{shown}} eus {{total}}"
@@ -421,7 +478,12 @@
         "needsGuiTag": "Ret eo GUI Winetricks",
         "retry": "Adklask",
         "searchPlaceholder": "Klask parzhioù…",
-        "zeroResultHeading": "Parzh ebet a glot gant “{{query}}”."
+        "zeroResultHeading": "Parzh ebet a glot gant “{{query}}”.",
+        "resultsHeading_one": "{{count}} disoc'h",
+        "resultsHeading_two": "{{count}} zisoc'h",
+        "resultsHeading_few": "{{count}} disoc'h",
+        "resultsHeading_many": "{{count}} a zisoc'h",
+        "resultsHeading_other": "{{count}} disoc'h"
     },
     "donate": {
         "navLabel": "Reiñ arc'hant"
@@ -433,5 +495,9 @@
         "rateLimited": "Re a glaskoù — gortozit un tammig kent klask en-dro.",
         "successNoPackage": "Adkemeret eo bet an alc'hwez! Hizivaet eo bet ho levraoueg Steam.",
         "successWithPackage": "Adkemeret eo bet an alc'hwez! Ouzhpennet eo bet {{packageName}} d'ho levraoueg Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Treuzkaset e voe gant ur benveg emgefreek ul lodenn eus an destenn el yezh-mañ ha gallout a ra bezañ gant fazioù.",
+        "reportTranslationProblem": "Danevellañ ur gudenn dreiñ"
     }
 }

@@ -14,7 +14,11 @@
         "error": {
             "install": {
                 "failed": "Не вдалося встановити {{title}}: {{error}}",
-                "signInToSteam": "Увійдіть до Steam"
+                "signInToSteam": "Увійдіть до Steam",
+                "stalled_one": "Немає прогресу завантаження протягом {{count}} хвилини — встановлення зупинено",
+                "stalled_few": "Немає прогресу завантаження протягом {{count}} хвилин — встановлення зупинено",
+                "stalled_many": "Немає прогресу завантаження протягом {{count}} хвилин — встановлення зупинено",
+                "stalled_other": "Немає прогресу завантаження протягом {{count}} хвилини — встановлення зупинено"
             }
         },
         "filePicker": {
@@ -128,8 +132,49 @@
             "revealed": "Відкрито",
             "unpicked": "Не вибрано",
             "unredeemable": "Прострочено",
-            "unrevealed": "Не відкрито"
-        }
+            "unrevealed": "Не відкрито",
+            "redeemed": "Активовано"
+        },
+        "activateConfirmBody": "Це розкриє ключ — назавжди видаливши його з розділу «Запасні для подарунків» — і активує його на вашому обліковому записі Steam. Скасувати цю дію неможливо.",
+        "activateConfirmBodyRevealed": "Це активує ваш уже розкритий ключ на обліковому записі Steam. Скасувати цю дію неможливо.",
+        "activateDismiss": "Скасувати",
+        "activatingBody": "Розкриваємо ваш ключ і активуємо його в Steam — це займе лише мить.",
+        "c2Action": "Перейти до «Запасні для подарунків»",
+        "c2Body": "Цей ключ у безпеці в розділі «Запасні для подарунків» — розкриття тут позбавить можливості подарувати його. Перейдіть натомість до «Запасні для подарунків».",
+        "claimOnHumble": "Отримати на Humble",
+        "claimOnStore": "Отримати на {{store}}",
+        "claimWizardTitle": "Отримати цей ключ",
+        "cooldown_one": "Тимчасово недоступно — повторіть спробу через {{count}} хвилину",
+        "cooldown_few": "Тимчасово недоступно — повторіть спробу через {{count}} хвилини",
+        "cooldown_many": "Тимчасово недоступно — повторіть спробу через {{count}} хвилин",
+        "cooldown_other": "Тимчасово недоступно — повторіть спробу через {{count}} хвилини",
+        "giftConfirmBody": "Отримати ключ за цим посиланням може будь-хто — щойно його активують, він зникає назавжди. Завершити передачу подарунка потрібно буде на сайті Humble.",
+        "loginAndClaim": "Увійти в {{store}} і отримати",
+        "markRedeemed": "Позначити як активований",
+        "redeemableOnly": "Лише ключі, які можна активувати",
+        "redeemedAnnotation": "Активовано {{date}}",
+        "redeemOnPlatform": "Активувати на {{platform}}",
+        "revealConfirmBody": "Розкриття покаже справжній ключ і назавжди видалить його з розділу «Запасні для подарунків». Якщо ви ще не володієте цією грою, переконайтеся, що це справді так, перш ніж продовжити — скасувати цю дію неможливо.",
+        "revealCooldownBody_one": "Тимчасово недоступно — повторіть спробу через {{count}} хвилину",
+        "revealCooldownBody_few": "Тимчасово недоступно — повторіть спробу через {{count}} хвилини",
+        "revealCooldownBody_many": "Тимчасово недоступно — повторіть спробу через {{count}} хвилин",
+        "revealCooldownBody_other": "Тимчасово недоступно — повторіть спробу через {{count}} хвилини",
+        "revealRejectedBody": "Humble відмовився розкрити цей ключ — можливо, він уже активований або застарів. Синхронізуйте, щоб перевірити його поточний стан.",
+        "syncing_one": "Синхронізація… {{done}}/{{count}} замовлення",
+        "syncing_few": "Синхронізація… {{done}}/{{count}} замовлень",
+        "syncing_many": "Синхронізація… {{done}}/{{count}} замовлень",
+        "syncing_other": "Синхронізація… {{done}}/{{count}} замовлення",
+        "syncToEnableClaiming": "Синхронізуйте, щоб увімкнути отримання",
+        "undo": "Скасувати дію",
+        "undoOwnershipOverride": "Скасувати дію — я справді володію цією грою",
+        "urgencyDaysLeft_one": "Залишився {{count}} день",
+        "urgencyDaysLeft_few": "Залишилося {{count}} дні",
+        "urgencyDaysLeft_many": "Залишилося {{count}} днів",
+        "urgencyDaysLeft_other": "Залишилось {{count}} днів",
+        "urgencyHoursLeft_one": "Залишилась {{count}} година",
+        "urgencyHoursLeft_few": "Залишилось {{count}} години",
+        "urgencyHoursLeft_many": "Залишилось {{count}} годин",
+        "urgencyHoursLeft_other": "Залишилось {{count}} годин"
     },
     "info": {
         "refresh-rating": "Оновити рейтинг"
@@ -171,7 +216,12 @@
             "viewFavourites": "Обране",
             "viewInstalled": "Встановлено",
             "viewRecentlyPlayed": "Нещодавно зіграні",
-            "wontRun": "Не запускається"
+            "wontRun": "Не запускається",
+            "chipNoStorePageHidden": "Приховано ігри без сторінки магазину",
+            "groupSelectedCount_one": "Вибрано {{count}}",
+            "groupSelectedCount_few": "Вибрано {{count}}",
+            "groupSelectedCount_many": "Вибрано {{count}}",
+            "groupSelectedCount_other": "Вибрано {{count}}"
         },
         "header": {
             "filteredOfTotal": "{{shown}} із {{total}}"
@@ -421,7 +471,11 @@
         "needsGuiTag": "Потрібен графічний інтерфейс Winetricks",
         "retry": "Повторити",
         "searchPlaceholder": "Пошук компонентів…",
-        "zeroResultHeading": "Немає компонента, що відповідає “{{query}}”."
+        "zeroResultHeading": "Немає компонента, що відповідає “{{query}}”.",
+        "resultsHeading_one": "{{count}} результат",
+        "resultsHeading_few": "{{count}} результати",
+        "resultsHeading_many": "{{count}} результатів",
+        "resultsHeading_other": "{{count}} результатів"
     },
     "donate": {
         "navLabel": "Підтримати"
@@ -433,5 +487,9 @@
         "rateLimited": "Забагато спроб — зачекайте трохи перед наступною спробою.",
         "successNoPackage": "Ключ активовано! Вашу бібліотеку Steam оновлено.",
         "successWithPackage": "Ключ активовано! {{packageName}} додано до вашої бібліотеки Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Частина тексту цією мовою була перекладена машинним способом і може містити помилки.",
+        "reportTranslationProblem": "Повідомити про проблему з перекладом"
     }
 }

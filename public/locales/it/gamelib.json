@@ -14,7 +14,10 @@
         "error": {
             "install": {
                 "failed": "L'installazione di {{title}} non è riuscita: {{error}}",
-                "signInToSteam": "Accedi a Steam"
+                "signInToSteam": "Accedi a Steam",
+                "stalled_one": "Nessun progresso nel download da {{count}} minuto — l'installazione è stata interrotta",
+                "stalled_many": "Nessun progresso nel download da {{count}} minuti — l'installazione è stata interrotta",
+                "stalled_other": "Nessun progresso nel download da {{count}} minuti — l'installazione è stata interrotta"
             }
         },
         "filePicker": {
@@ -128,8 +131,44 @@
             "revealed": "Rivelata",
             "unpicked": "Non scelta",
             "unredeemable": "Scaduta",
-            "unrevealed": "Non rivelata"
-        }
+            "unrevealed": "Non rivelata",
+            "redeemed": "Riscattata"
+        },
+        "activateConfirmBody": "Questo rivela la chiave — rimuovendola definitivamente dalle Riserve regalabili — e la riscatta sul tuo account Steam. Non si può annullare.",
+        "activateConfirmBodyRevealed": "Questo riscatta la tua chiave già rivelata sul tuo account Steam. Non si può annullare.",
+        "activateDismiss": "Annulla",
+        "activatingBody": "Rivelazione della chiave e riscatto su Steam in corso — richiede solo un momento.",
+        "c2Action": "Vai a Riserve regalabili",
+        "c2Body": "Questa chiave è al sicuro nelle Riserve regalabili — rivelarla qui eliminerebbe la possibilità di regalarla. Portala invece nelle Riserve regalabili.",
+        "claimOnHumble": "Rivendica su Humble",
+        "claimOnStore": "Rivendica su {{store}}",
+        "claimWizardTitle": "Rivendica questa chiave",
+        "cooldown_one": "Temporaneamente non disponibile — riprova tra {{count}} minuto",
+        "cooldown_many": "Temporaneamente non disponibile — riprova tra {{count}} minuti",
+        "cooldown_other": "Temporaneamente non disponibile — riprova tra {{count}} minuti",
+        "giftConfirmBody": "Chiunque abbia questo link può rivendicare la chiave — una volta riscattata, sarà persa per sempre. Completerai il regalo sul sito di Humble.",
+        "loginAndClaim": "Accedi a {{store}} e rivendica",
+        "markRedeemed": "Segna come riscattata",
+        "redeemableOnly": "Solo chiavi riscattabili",
+        "redeemedAnnotation": "Riscattata il {{date}}",
+        "redeemOnPlatform": "Riscatta su {{platform}}",
+        "revealConfirmBody": "Rivelandola mostrerai la chiave reale e la rimuoverai definitivamente dalle Riserve regalabili. Se non possiedi ancora questo gioco, assicurati che sia davvero così prima di continuare — non si può annullare.",
+        "revealCooldownBody_one": "Temporaneamente non disponibile — riprova tra {{count}} minuto",
+        "revealCooldownBody_many": "Temporaneamente non disponibile — riprova tra {{count}} minuti",
+        "revealCooldownBody_other": "Temporaneamente non disponibile — riprova tra {{count}} minuti",
+        "revealRejectedBody": "Humble ha rifiutato di rivelare questa chiave — potrebbe essere già stata riscattata o essere scaduta. Sincronizza per verificarne lo stato attuale.",
+        "syncing_one": "Sincronizzazione… {{done}}/{{count}} ordine",
+        "syncing_many": "Sincronizzazione… {{done}}/{{count}} ordini",
+        "syncing_other": "Sincronizzazione… {{done}}/{{count}} ordini",
+        "syncToEnableClaiming": "Sincronizza per abilitare la rivendicazione",
+        "undo": "Ripristina",
+        "undoOwnershipOverride": "Ripristina — possiedo questo gioco",
+        "urgencyDaysLeft_one": "{{count}} giorno rimanente",
+        "urgencyDaysLeft_many": "{{count}} giorni rimanenti",
+        "urgencyDaysLeft_other": "{{count}} giorni rimanenti",
+        "urgencyHoursLeft_one": "{{count}} ora rimanente",
+        "urgencyHoursLeft_many": "{{count}} ore rimanenti",
+        "urgencyHoursLeft_other": "{{count}} ore rimanenti"
     },
     "info": {
         "refresh-rating": "Aggiorna valutazione"
@@ -171,7 +210,11 @@
             "viewFavourites": "Preferiti",
             "viewInstalled": "Installata",
             "viewRecentlyPlayed": "Giocati di recente",
-            "wontRun": "Non si avvia"
+            "wontRun": "Non si avvia",
+            "chipNoStorePageHidden": "I giochi senza pagina store sono nascosti",
+            "groupSelectedCount_one": "{{count}} selezionato",
+            "groupSelectedCount_many": "{{count}} selezionati",
+            "groupSelectedCount_other": "{{count}} selezionati"
         },
         "header": {
             "filteredOfTotal": "{{shown}} di {{total}}"
@@ -421,7 +464,10 @@
         "needsGuiTag": "Richiede la GUI di Winetricks",
         "retry": "Riprova",
         "searchPlaceholder": "Cerca componenti…",
-        "zeroResultHeading": "Nessun componente corrisponde a “{{query}}”."
+        "zeroResultHeading": "Nessun componente corrisponde a “{{query}}”.",
+        "resultsHeading_one": "{{count}} risultato",
+        "resultsHeading_many": "{{count}} risultati",
+        "resultsHeading_other": "{{count}} risultati"
     },
     "donate": {
         "navLabel": "Dona"
@@ -433,5 +479,9 @@
         "rateLimited": "Troppi tentativi — attendi un momento prima di riprovare.",
         "successNoPackage": "Codice riscattato! La tua libreria Steam è stata aggiornata.",
         "successWithPackage": "Codice riscattato! {{packageName}} è stato aggiunto alla tua libreria Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Parte del testo in questa lingua è stata tradotta automaticamente e potrebbe contenere errori.",
+        "reportTranslationProblem": "Segnala un problema di traduzione"
     }
 }

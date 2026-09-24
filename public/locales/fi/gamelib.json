@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "Pelin {{title}} asennus epäonnistui: {{error}}",
-                "signInToSteam": "Kirjaudu Steamiin"
+                "signInToSteam": "Kirjaudu Steamiin",
+                "stalled_one": "Ei latauksen edistymistä {{count}} minuuttiin — asennus pysäytettiin",
+                "stalled_other": "Ei latauksen edistymistä {{count}} minuuttiin — asennus pysäytettiin"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Paljastettu",
             "unpicked": "Valitsematon",
             "unredeemable": "Vanhentunut",
-            "unrevealed": "Paljastamaton"
-        }
+            "unrevealed": "Paljastamaton",
+            "redeemed": "Lunastettu"
+        },
+        "activateConfirmBody": "Tämä paljastaa avaimen — poistaen sen pysyvästi Lahjoitettavista varakappaleista — ja lunastaa sen Steam-tilillesi. Toimintoa ei voi perua.",
+        "activateConfirmBodyRevealed": "Tämä lunastaa jo paljastetun avaimesi Steam-tilillesi. Toimintoa ei voi perua.",
+        "activateDismiss": "Peruuta",
+        "activatingBody": "Paljastetaan avaintasi ja lunastetaan sitä Steamissa — tämä vie vain hetken.",
+        "c2Action": "Siirry Lahjoitettaviin varakappaleisiin",
+        "c2Body": "Tämä avain on turvassa Lahjoitettavissa varakappaleissa — sen paljastaminen täällä poistaisi mahdollisuuden lahjoittaa se. Siirrä se sen sijaan Lahjoitettaviin varakappaleisiin.",
+        "claimOnHumble": "Nouda Humblesta",
+        "claimOnStore": "Nouda kaupasta {{store}}",
+        "claimWizardTitle": "Nouda tämä avain",
+        "cooldown_one": "Väliaikaisesti ei saatavilla — yritä uudelleen {{count}} minuutin kuluttua",
+        "cooldown_other": "Väliaikaisesti ei saatavilla — yritä uudelleen {{count}} minuutin kuluttua",
+        "giftConfirmBody": "Kuka tahansa tämän linkin saanut voi noutaa avaimen — kun se on lunastettu, se on pysyvästi mennyttä. Viimeistelet lahjoittamisen Humblen omalla sivustolla.",
+        "loginAndClaim": "Kirjaudu palveluun {{store}} ja nouda",
+        "markRedeemed": "Merkitse lunastetuksi",
+        "redeemableOnly": "Vain lunastettavat avaimet",
+        "redeemedAnnotation": "Lunastettu {{date}}",
+        "redeemOnPlatform": "Lunasta palvelussa {{platform}}",
+        "revealConfirmBody": "Paljastaminen näyttää todellisen avaimen ja poistaa sen pysyvästi Lahjoitettavista varakappaleista. Jos et vielä omista tätä peliä, varmista se ennen jatkamista — toimintoa ei voi perua.",
+        "revealCooldownBody_one": "Väliaikaisesti ei saatavilla — yritä uudelleen {{count}} minuutin kuluttua",
+        "revealCooldownBody_other": "Väliaikaisesti ei saatavilla — yritä uudelleen {{count}} minuutin kuluttua",
+        "revealRejectedBody": "Humble kieltäytyi paljastamasta tätä avainta — se saattaa olla jo lunastettu tai vanhentunut. Synkronoi tarkistaaksesi sen nykyisen tilan.",
+        "syncing_one": "Synkronoidaan… {{done}}/{{count}} tilaus",
+        "syncing_other": "Synkronoidaan… {{done}}/{{count}} tilausta",
+        "syncToEnableClaiming": "Synkronoi ottaaksesi noutamisen käyttöön",
+        "undo": "Kumoa",
+        "undoOwnershipOverride": "Kumoa — omistan tämän pelin",
+        "urgencyDaysLeft_one": "{{count}} päivä jäljellä",
+        "urgencyDaysLeft_other": "{{count}} päivää jäljellä",
+        "urgencyHoursLeft_one": "{{count}} tunti jäljellä",
+        "urgencyHoursLeft_other": "{{count}} tuntia jäljellä"
     },
     "info": {
         "refresh-rating": "Päivitä arvostelu"
@@ -171,7 +204,10 @@
             "viewFavourites": "Suosikit",
             "viewInstalled": "Asennettu",
             "viewRecentlyPlayed": "Äskettäin pelattu",
-            "wontRun": "Ei toimi"
+            "wontRun": "Ei toimi",
+            "chipNoStorePageHidden": "Piilotetaan pelit ilman kauppasivua",
+            "groupSelectedCount_one": "{{count}} valittu",
+            "groupSelectedCount_other": "{{count}} valittu"
         },
         "header": {
             "filteredOfTotal": "{{shown}} / {{total}}"
@@ -260,9 +296,9 @@
             "appImages": "AppImage-tiedostot",
             "apps": "Sovellukset",
             "executables": "Suoritettavat tiedostot",
-            "images": "Levykuvat",
             "otherBinaries": "Muut binaaritiedostot",
-            "scripts": "Komentosarjat"
+            "scripts": "Komentosarjat",
+            "images": "Kuvat"
         },
         "import-hint": {
             "content": "Älä käytä tätä ominaisuutta siihen.<br />Sen sijaan <3>kirjaudu</3> kauppaan, etsi peli kirjastostasi, avaa asennusikkuna ja klikkaa &quot;{{doorLabel}}&quot;-painiketta"
@@ -380,9 +416,9 @@
                 },
                 "retry": "Yritä uudelleen",
                 "timeout": {
-                    "body": "Kirjautumisikkunan täyttyminen kesti liian kauan. Voit yrittää uudelleen.",
                     "heading": "Kirjautuminen palveluun {{runner}} aikakatkaistiin",
-                    "headingGeneric": "Kirjautuminen aikakatkaistiin"
+                    "headingGeneric": "Kirjautuminen aikakatkaistiin",
+                    "body": "Kirjautumisikkuna kesti liian pitkään. Voit yrittää uudelleen."
                 }
             }
         },
@@ -421,7 +457,9 @@
         "needsGuiTag": "Vaatii Winetricksin graafisen käyttöliittymän",
         "retry": "Yritä uudelleen",
         "searchPlaceholder": "Hae komponentteja…",
-        "zeroResultHeading": "Mikään komponentti ei vastaa hakua “{{query}}”."
+        "zeroResultHeading": "Mikään komponentti ei vastaa hakua “{{query}}”.",
+        "resultsHeading_one": "{{count}} tulos",
+        "resultsHeading_other": "{{count}} tulosta"
     },
     "donate": {
         "navLabel": "Lahjoita"
@@ -433,5 +471,9 @@
         "rateLimited": "Liian monta yritystä — odota hetki ennen kuin yrität uudelleen.",
         "successNoPackage": "Avain lunastettu! Steam-kirjastosi on päivitetty.",
         "successWithPackage": "Avain lunastettu! {{packageName}} on lisätty Steam-kirjastoosi."
+    },
+    "languageSelector": {
+        "mtNotice": "Osa tämän kielen tekstistä on konekäännetty ja voi sisältää virheitä.",
+        "reportTranslationProblem": "Ilmoita käännösongelmasta"
     }
 }

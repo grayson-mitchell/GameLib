@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "Cài đặt {{title}} thất bại: {{error}}",
-                "signInToSteam": "Đăng nhập vào Steam"
+                "signInToSteam": "Đăng nhập vào Steam",
+                "stalled_one": "Không có tiến trình tải xuống trong {{count}} phút — quá trình cài đặt đã dừng",
+                "stalled_other": "Không có tiến trình tải xuống trong {{count}} phút — quá trình cài đặt đã dừng"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Đã hiển thị",
             "unpicked": "Chưa chọn",
             "unredeemable": "Đã hết hạn",
-            "unrevealed": "Chưa hiển thị"
-        }
+            "unrevealed": "Chưa hiển thị",
+            "redeemed": "Đã kích hoạt"
+        },
+        "activateConfirmBody": "Thao tác này sẽ tiết lộ mã khóa — xóa vĩnh viễn khỏi Phần dự phòng có thể tặng — và kích hoạt mã trên tài khoản Steam của bạn. Không thể hoàn tác.",
+        "activateConfirmBodyRevealed": "Thao tác này sẽ kích hoạt mã khóa đã được tiết lộ trên tài khoản Steam của bạn. Không thể hoàn tác.",
+        "activateDismiss": "Hủy",
+        "activatingBody": "Đang tiết lộ mã khóa của bạn và kích hoạt trên Steam — chỉ mất một chút thời gian.",
+        "c2Action": "Đi tới Phần dự phòng có thể tặng",
+        "c2Body": "Mã khóa này đang an toàn trong Phần dự phòng có thể tặng — tiết lộ nó ở đây sẽ mất khả năng tặng. Hãy chuyển đến Phần dự phòng có thể tặng thay vào đó.",
+        "claimOnHumble": "Nhận trên Humble",
+        "claimOnStore": "Nhận trên {{store}}",
+        "claimWizardTitle": "Nhận mã khóa này",
+        "cooldown_one": "Tạm thời không khả dụng — thử lại sau {{count}} phút",
+        "cooldown_other": "Tạm thời không khả dụng — thử lại sau {{count}} phút",
+        "giftConfirmBody": "Bất kỳ ai có liên kết này đều có thể nhận mã khóa — sau khi kích hoạt, mã sẽ mất vĩnh viễn. Bạn sẽ hoàn tất việc tặng trên trang web của Humble.",
+        "loginAndClaim": "Đăng nhập vào {{store}} và nhận",
+        "markRedeemed": "Đánh dấu là đã kích hoạt",
+        "redeemableOnly": "Chỉ mã khóa có thể kích hoạt",
+        "redeemedAnnotation": "Đã kích hoạt {{date}}",
+        "redeemOnPlatform": "Kích hoạt trên {{platform}}",
+        "revealConfirmBody": "Tiết lộ sẽ hiển thị mã khóa thực và xóa vĩnh viễn khỏi Phần dự phòng có thể tặng. Nếu bạn chưa sở hữu trò chơi này, hãy chắc chắn điều đó là đúng trước khi tiếp tục — không thể hoàn tác.",
+        "revealCooldownBody_one": "Tạm thời không khả dụng — thử lại sau {{count}} phút",
+        "revealCooldownBody_other": "Tạm thời không khả dụng — thử lại sau {{count}} phút",
+        "revealRejectedBody": "Humble từ chối tiết lộ mã khóa này — có thể đã được kích hoạt hoặc đã hết hạn. Đồng bộ để kiểm tra trạng thái hiện tại.",
+        "syncing_one": "Đang đồng bộ… {{done}}/{{count}} đơn hàng",
+        "syncing_other": "Đang đồng bộ… {{done}}/{{count}} đơn hàng",
+        "syncToEnableClaiming": "Đồng bộ để bật tính năng nhận mã",
+        "undo": "Hoàn tác",
+        "undoOwnershipOverride": "Hoàn tác — tôi có sở hữu trò chơi này",
+        "urgencyDaysLeft_one": "Còn {{count}} ngày",
+        "urgencyDaysLeft_other": "Còn {{count}} ngày",
+        "urgencyHoursLeft_one": "Còn {{count}} giờ",
+        "urgencyHoursLeft_other": "Còn {{count}} giờ"
     },
     "info": {
         "refresh-rating": "Làm mới xếp hạng"
@@ -171,7 +204,10 @@
             "viewFavourites": "Ưa Thích",
             "viewInstalled": "Đã Cài Đặt",
             "viewRecentlyPlayed": "Chơi gần đây",
-            "wontRun": "Không thể chạy"
+            "wontRun": "Không thể chạy",
+            "chipNoStorePageHidden": "Đang ẩn các trò chơi không có trang cửa hàng",
+            "groupSelectedCount_one": "Đã chọn {{count}}",
+            "groupSelectedCount_other": "Đã chọn {{count}}"
         },
         "header": {
             "filteredOfTotal": "{{shown}} trên {{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Yêu cầu GUI của Winetricks",
         "retry": "Thử lại",
         "searchPlaceholder": "Tìm kiếm thành phần…",
-        "zeroResultHeading": "Không có thành phần nào khớp với “{{query}}”."
+        "zeroResultHeading": "Không có thành phần nào khớp với “{{query}}”.",
+        "resultsHeading_one": "{{count}} kết quả",
+        "resultsHeading_other": "{{count}} kết quả"
     },
     "donate": {
         "navLabel": "Quyên góp"
@@ -433,5 +471,9 @@
         "rateLimited": "Quá nhiều lần thử — vui lòng đợi một chút trước khi thử lại.",
         "successNoPackage": "Đã kích hoạt mã! Thư viện Steam của bạn đã được cập nhật.",
         "successWithPackage": "Đã kích hoạt mã! {{packageName}} đã được thêm vào thư viện Steam của bạn."
+    },
+    "languageSelector": {
+        "mtNotice": "Một số văn bản trong ngôn ngữ này được dịch máy và có thể chứa lỗi.",
+        "reportTranslationProblem": "Báo cáo lỗi bản dịch"
     }
 }

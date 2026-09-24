@@ -14,7 +14,10 @@
         "error": {
             "install": {
                 "failed": "Instalarea {{title}} a eșuat: {{error}}",
-                "signInToSteam": "Conectează-te la Steam"
+                "signInToSteam": "Conectează-te la Steam",
+                "stalled_one": "Nicio activitate de descărcare de {{count}} minut — instalarea a fost oprită",
+                "stalled_few": "Nicio activitate de descărcare de {{count}} minute — instalarea a fost oprită",
+                "stalled_other": "Nicio activitate de descărcare de {{count}} de minute — instalarea a fost oprită"
             }
         },
         "filePicker": {
@@ -128,8 +131,44 @@
             "revealed": "Dezvăluită",
             "unpicked": "Neselectată",
             "unredeemable": "Expirată",
-            "unrevealed": "Nedezvăluită"
-        }
+            "unrevealed": "Nedezvăluită",
+            "redeemed": "Activată"
+        },
+        "activateConfirmBody": "Aceasta dezvăluie cheia — eliminând-o definitiv din Rezerve de dăruit — și o activează pe contul tău Steam. Nu există anulare.",
+        "activateConfirmBodyRevealed": "Aceasta activează cheia deja dezvăluită pe contul tău Steam. Nu există anulare.",
+        "activateDismiss": "Anulare",
+        "activatingBody": "Se dezvăluie cheia și se activează pe Steam — durează doar o clipă.",
+        "c2Action": "Mergi la Rezerve de dăruit",
+        "c2Body": "Această cheie este în siguranță în Rezerve de dăruit — dezvăluirea ei aici ar elimina posibilitatea de a o dărui. Mut-o în Rezerve de dăruit.",
+        "claimOnHumble": "Revendică pe Humble",
+        "claimOnStore": "Revendică pe {{store}}",
+        "claimWizardTitle": "Revendică această cheie",
+        "cooldown_one": "Temporar indisponibil — reîncearcă în {{count}} minut",
+        "cooldown_few": "Temporar indisponibil — reîncearcă în {{count}} minute",
+        "cooldown_other": "Temporar indisponibil — reîncearcă în {{count}} de minute",
+        "giftConfirmBody": "Oricine are acest link poate revendica cheia — odată activată, dispare definitiv. Vei finaliza dăruirea pe site-ul Humble.",
+        "loginAndClaim": "Autentifică-te pe {{store}} și revendică",
+        "markRedeemed": "Marchează ca activată",
+        "redeemableOnly": "Doar cheile activabile",
+        "redeemedAnnotation": "Activată {{date}}",
+        "redeemOnPlatform": "Activează pe {{platform}}",
+        "revealConfirmBody": "Dezvăluirea arată cheia reală și o elimină definitiv din Rezerve de dăruit. Dacă nu deții încă acest joc, asigură-te că e chiar așa înainte de a continua — nu există anulare.",
+        "revealCooldownBody_one": "Temporar indisponibil — reîncearcă în {{count}} minut",
+        "revealCooldownBody_few": "Temporar indisponibil — reîncearcă în {{count}} minute",
+        "revealCooldownBody_other": "Temporar indisponibil — reîncearcă în {{count}} de minute",
+        "revealRejectedBody": "Humble a refuzat să dezvăluie această cheie — este posibil să fie deja activată sau expirată. Sincronizează pentru a-i verifica starea curentă.",
+        "syncing_one": "Se sincronizează… {{done}}/{{count}} comandă",
+        "syncing_few": "Se sincronizează… {{done}}/{{count}} comenzi",
+        "syncing_other": "Se sincronizează… {{done}}/{{count}} de comenzi",
+        "syncToEnableClaiming": "Sincronizează pentru a activa revendicarea",
+        "undo": "Anulează",
+        "undoOwnershipOverride": "Anulează — chiar dețin acest joc",
+        "urgencyDaysLeft_one": "{{count}} zi rămasă",
+        "urgencyDaysLeft_few": "{{count}} zile rămase",
+        "urgencyDaysLeft_other": "{{count}} de zile rămase",
+        "urgencyHoursLeft_one": "{{count}} oră rămasă",
+        "urgencyHoursLeft_few": "{{count}} ore rămase",
+        "urgencyHoursLeft_other": "{{count}} de ore rămase"
     },
     "info": {
         "refresh-rating": "Reîmprospătează evaluarea"
@@ -171,7 +210,11 @@
             "viewFavourites": "Favorite",
             "viewInstalled": "Instalat",
             "viewRecentlyPlayed": "Jucate recent",
-            "wontRun": "Nu va rula"
+            "wontRun": "Nu va rula",
+            "chipNoStorePageHidden": "Se ascund jocurile fără pagină de magazin",
+            "groupSelectedCount_one": "{{count}} selectat",
+            "groupSelectedCount_few": "{{count}} selectate",
+            "groupSelectedCount_other": "{{count}} selectate"
         },
         "header": {
             "filteredOfTotal": "{{shown}} din {{total}}"
@@ -421,7 +464,10 @@
         "needsGuiTag": "Necesită interfața grafică Winetricks",
         "retry": "Reîncearcă",
         "searchPlaceholder": "Caută componente…",
-        "zeroResultHeading": "Nicio componentă nu corespunde cu “{{query}}”."
+        "zeroResultHeading": "Nicio componentă nu corespunde cu “{{query}}”.",
+        "resultsHeading_one": "{{count}} rezultat",
+        "resultsHeading_few": "{{count}} rezultate",
+        "resultsHeading_other": "{{count}} de rezultate"
     },
     "donate": {
         "navLabel": "Donează"
@@ -433,5 +479,9 @@
         "rateLimited": "Prea multe încercări — te rugăm să aștepți puțin înainte de a încerca din nou.",
         "successNoPackage": "Cheie revendicată! Biblioteca ta de Steam a fost actualizată.",
         "successWithPackage": "Cheie revendicată! {{packageName}} a fost adăugat în biblioteca ta de Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "O parte din textul în această limbă a fost tradus automat și poate conține greșeli.",
+        "reportTranslationProblem": "Raportează o problemă de traducere"
     }
 }

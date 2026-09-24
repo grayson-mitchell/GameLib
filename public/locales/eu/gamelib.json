@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "{{title}} instalatzeak huts egin du: {{error}}",
-                "signInToSteam": "Hasi saioa Steam-en"
+                "signInToSteam": "Hasi saioa Steam-en",
+                "stalled_one": "Ez dago deskarga-aurrerapenik {{count}} minutuan — instalazioa gelditu egin da",
+                "stalled_other": "Ez dago deskarga-aurrerapenik {{count}} minutuan — instalazioa gelditu egin da"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Agerian",
             "unpicked": "Aukeratu gabe",
             "unredeemable": "Iraungita",
-            "unrevealed": "Agerian gabe"
-        }
+            "unrevealed": "Agerian gabe",
+            "redeemed": "Errekuperatuta"
+        },
+        "activateConfirmBody": "Honek gakoa erakusten du — betiko kenduz Oparitzeko erreserbetatik — eta zure Steam kontuan errekuperatzen du. Ezin da desegin.",
+        "activateConfirmBodyRevealed": "Honek dagoeneko erakutsitako zure gakoa errekuperatzen du zure Steam kontuan. Ezin da desegin.",
+        "activateDismiss": "Utzi",
+        "activatingBody": "Zure gakoa erakusten eta Steam-en errekuperatzen — une bat baino ez du beharko.",
+        "c2Action": "Joan Oparitzeko erreserbetara",
+        "c2Body": "Gako hau seguru dago Oparitzeko erreserbetan — hemen erakusteak oparitzeko aukera betiko galtzea ekarriko luke. Eraman ezazu Oparitzeko erreserbetara horren ordez.",
+        "claimOnHumble": "Eskuratu Humble-n",
+        "claimOnStore": "Eskuratu {{store}}-n",
+        "claimWizardTitle": "Eskuratu gako hau",
+        "cooldown_one": "Aldi baterako ez dago erabilgarri — saiatu berriro {{count}} minutu barru",
+        "cooldown_other": "Aldi baterako ez dago erabilgarri — saiatu berriro {{count}} minutu barru",
+        "giftConfirmBody": "Esteka hau duen edonork eskura dezake gakoa — behin errekuperatuta, betiko galduko da. Oparitzea Humble-ren beraren gunean amaituko duzu.",
+        "loginAndClaim": "Hasi saioa {{store}}-n eta eskuratu",
+        "markRedeemed": "Markatu errekuperatutzat",
+        "redeemableOnly": "Errekuperatu daitezkeen gakoak soilik",
+        "redeemedAnnotation": "Errekuperatuta {{date}}",
+        "redeemOnPlatform": "Errekuperatu {{platform}}-n",
+        "revealConfirmBody": "Erakusteak benetako gakoa agerian jartzen du eta betiko kentzen du Oparitzeko erreserbetatik. Oraindik joko hau ez baduzu, ziurtatu hori benetan egia dela jarraitu aurretik — ezin da desegin.",
+        "revealCooldownBody_one": "Aldi baterako ez dago erabilgarri — saiatu berriro {{count}} minutu barru",
+        "revealCooldownBody_other": "Aldi baterako ez dago erabilgarri — saiatu berriro {{count}} minutu barru",
+        "revealRejectedBody": "Humble-k gako hau erakustea ukatu du — agian dagoeneko errekuperatuta edo iraungita dago. Sinkronizatu bere uneko egoera egiaztatzeko.",
+        "syncing_one": "Sinkronizatzen… {{done}}/{{count}} eskaera",
+        "syncing_other": "Sinkronizatzen… {{done}}/{{count}} eskaera",
+        "syncToEnableClaiming": "Sinkronizatu eskuratzea gaitzeko",
+        "undo": "Desegin",
+        "undoOwnershipOverride": "Desegin — joko hau badut",
+        "urgencyDaysLeft_one": "Egun {{count}} geratzen da",
+        "urgencyDaysLeft_other": "{{count}} egun geratzen dira",
+        "urgencyHoursLeft_one": "Ordu {{count}} geratzen da",
+        "urgencyHoursLeft_other": "{{count}} ordu geratzen dira"
     },
     "info": {
         "refresh-rating": "Freskatu balorazioa"
@@ -171,7 +204,10 @@
             "viewFavourites": "Gogokoenak",
             "viewInstalled": "Instalatuta",
             "viewRecentlyPlayed": "Duela gutxi jokatutakoak",
-            "wontRun": "Ez da exekutatuko"
+            "wontRun": "Ez da exekutatuko",
+            "chipNoStorePageHidden": "Denda-orririk ez duten jokoak ezkutatzen",
+            "groupSelectedCount_one": "{{count}} hautatuta",
+            "groupSelectedCount_other": "{{count}} hautatuta"
         },
         "header": {
             "filteredOfTotal": "{{shown}}/{{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Winetricks-en GUIa behar du",
         "retry": "Saiatu berriro",
         "searchPlaceholder": "Bilatu osagaiak…",
-        "zeroResultHeading": "Ez dago “{{query}}”(r)ekin bat datorren osagairik."
+        "zeroResultHeading": "Ez dago “{{query}}”(r)ekin bat datorren osagairik.",
+        "resultsHeading_one": "Emaitza {{count}}",
+        "resultsHeading_other": "{{count}} emaitza"
     },
     "donate": {
         "navLabel": "Dohaintza eman"
@@ -433,5 +471,9 @@
         "rateLimited": "Saiakera gehiegi — itxaron pixka bat berriro saiatu aurretik.",
         "successNoPackage": "Kodea erabili da! Zure Steam liburutegia eguneratu da.",
         "successWithPackage": "Kodea erabili da! {{packageName}} zure Steam liburutegira gehitu da."
+    },
+    "languageSelector": {
+        "mtNotice": "Hizkuntza honetako testu bat automatikoki itzulita dago eta akatsak izan ditzake.",
+        "reportTranslationProblem": "Jakinarazi itzulpen arazo bat"
     }
 }

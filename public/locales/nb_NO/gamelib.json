@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "Installasjonen av {{title}} mislyktes: {{error}}",
-                "signInToSteam": "Logg inn på Steam"
+                "signInToSteam": "Logg inn på Steam",
+                "stalled_one": "Ingen nedlastingsfremgang på {{count}} minutt — installasjonen ble stoppet",
+                "stalled_other": "Ingen nedlastingsfremgang på {{count}} minutter — installasjonen ble stoppet"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Avslørt",
             "unpicked": "Ikke valgt",
             "unredeemable": "Utløpt",
-            "unrevealed": "Ikke avslørt"
-        }
+            "unrevealed": "Ikke avslørt",
+            "redeemed": "Løst inn"
+        },
+        "activateConfirmBody": "Dette avslører nøkkelen — og fjerner den fra Nøkler du kan forære bort for godt — og løser den inn på Steam-kontoen din. Dette kan ikke angres.",
+        "activateConfirmBodyRevealed": "Dette løser inn den allerede avslørte nøkkelen din på Steam-kontoen din. Dette kan ikke angres.",
+        "activateDismiss": "Avbryt",
+        "activatingBody": "Avslører nøkkelen din og løser den inn på Steam — dette tar bare et øyeblikk.",
+        "c2Action": "Gå til Nøkler du kan forære bort",
+        "c2Body": "Denne nøkkelen er trygg i Nøkler du kan forære bort — å avsløre den her ville gjøre det umulig å forære den bort. Ta den til Nøkler du kan forære bort i stedet.",
+        "claimOnHumble": "Hent på Humble",
+        "claimOnStore": "Hent på {{store}}",
+        "claimWizardTitle": "Hent denne nøkkelen",
+        "cooldown_one": "Midlertidig utilgjengelig — prøv igjen om {{count}} minutt",
+        "cooldown_other": "Midlertidig utilgjengelig — prøv igjen om {{count}} minutter",
+        "giftConfirmBody": "Alle med denne lenken kan hente nøkkelen — når den er løst inn, er den borte for godt. Du fullfører forærelsen på Humbles egen side.",
+        "loginAndClaim": "Logg inn på {{store}} og hent",
+        "markRedeemed": "Merk som løst inn",
+        "redeemableOnly": "Kun innløsbare nøkler",
+        "redeemedAnnotation": "Løst inn {{date}}",
+        "redeemOnPlatform": "Løs inn på {{platform}}",
+        "revealConfirmBody": "Å avsløre viser den faktiske nøkkelen og fjerner den fra Nøkler du kan forære bort for godt. Hvis du ikke allerede eier dette spillet, må du forsikre deg om at det virkelig stemmer før du fortsetter — dette kan ikke angres.",
+        "revealCooldownBody_one": "Midlertidig utilgjengelig — prøv igjen om {{count}} minutt",
+        "revealCooldownBody_other": "Midlertidig utilgjengelig — prøv igjen om {{count}} minutter",
+        "revealRejectedBody": "Humble avslo å avsløre denne nøkkelen — den kan allerede være løst inn eller utløpt. Synkroniser for å sjekke gjeldende status.",
+        "syncing_one": "Synkroniserer… {{done}}/{{count}} ordre",
+        "syncing_other": "Synkroniserer… {{done}}/{{count}} ordrer",
+        "syncToEnableClaiming": "Synkroniser for å aktivere henting",
+        "undo": "Angre",
+        "undoOwnershipOverride": "Angre — jeg eier dette spillet",
+        "urgencyDaysLeft_one": "{{count}} dag igjen",
+        "urgencyDaysLeft_other": "{{count}} dager igjen",
+        "urgencyHoursLeft_one": "{{count}} time igjen",
+        "urgencyHoursLeft_other": "{{count}} timer igjen"
     },
     "info": {
         "refresh-rating": "Oppdater vurdering"
@@ -171,7 +204,10 @@
             "viewFavourites": "Favoritter",
             "viewInstalled": "Installert",
             "viewRecentlyPlayed": "Nylig spilt",
-            "wontRun": "Vil ikke kjøre"
+            "wontRun": "Vil ikke kjøre",
+            "chipNoStorePageHidden": "Skjuler spill uten butikkside",
+            "groupSelectedCount_one": "{{count}} valgt",
+            "groupSelectedCount_other": "{{count}} valgt"
         },
         "header": {
             "filteredOfTotal": "{{shown}} av {{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Krever Winetricks-GUI",
         "retry": "Prøv igjen",
         "searchPlaceholder": "Søk i komponenter…",
-        "zeroResultHeading": "Ingen komponent samsvarer med “{{query}}”."
+        "zeroResultHeading": "Ingen komponent samsvarer med “{{query}}”.",
+        "resultsHeading_one": "{{count}} resultat",
+        "resultsHeading_other": "{{count}} resultater"
     },
     "donate": {
         "navLabel": "Doner"
@@ -433,5 +471,9 @@
         "rateLimited": "For mange forsøk — vent litt før du prøver igjen.",
         "successNoPackage": "Nøkkel løst inn! Steam-biblioteket ditt har blitt oppdatert.",
         "successWithPackage": "Nøkkel løst inn! {{packageName}} har blitt lagt til i Steam-biblioteket ditt."
+    },
+    "languageSelector": {
+        "mtNotice": "Noe tekst på dette språket ble maskinoversatt og kan inneholde feil.",
+        "reportTranslationProblem": "Rapporter et oversettelsesproblem"
     }
 }

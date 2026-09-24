@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "การติดตั้ง {{title}} ล้มเหลว: {{error}}",
-                "signInToSteam": "ลงชื่อเข้าใช้ Steam"
+                "signInToSteam": "ลงชื่อเข้าใช้ Steam",
+                "stalled_one": "ไม่มีความคืบหน้าในการดาวน์โหลดเป็นเวลา {{count}} นาที — การติดตั้งถูกหยุดแล้ว",
+                "stalled_other": "ไม่มีความคืบหน้าในการดาวน์โหลดเป็นเวลา {{count}} นาที — การติดตั้งถูกหยุดแล้ว"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "เปิดเผยแล้ว",
             "unpicked": "ยังไม่ได้เลือก",
             "unredeemable": "หมดอายุ",
-            "unrevealed": "ยังไม่เปิดเผย"
-        }
+            "unrevealed": "ยังไม่เปิดเผย",
+            "redeemed": "เรียกใช้แล้ว"
+        },
+        "activateConfirmBody": "การทำเช่นนี้จะเปิดเผยคีย์ — ทำให้คีย์นี้ถูกนำออกจากคีย์สำรองสำหรับส่งต่อโดยถาวร — และเรียกใช้คีย์บนบัญชี Steam ของคุณ ไม่สามารถย้อนกลับได้",
+        "activateConfirmBodyRevealed": "การทำเช่นนี้จะเรียกใช้คีย์ที่เปิดเผยไว้แล้วบนบัญชี Steam ของคุณ ไม่สามารถย้อนกลับได้",
+        "activateDismiss": "ยกเลิก",
+        "activatingBody": "กำลังเปิดเผยคีย์ของคุณและเรียกใช้บน Steam — จะใช้เวลาเพียงเล็กน้อย",
+        "c2Action": "ไปที่คีย์สำรองสำหรับส่งต่อ",
+        "c2Body": "คีย์นี้ปลอดภัยอยู่ในคีย์สำรองสำหรับส่งต่อ — การเปิดเผยที่นี่จะทำให้เสียความสามารถในการส่งต่อไป นำไปเปิดที่คีย์สำรองสำหรับส่งต่อแทน",
+        "claimOnHumble": "รับคีย์ที่ Humble",
+        "claimOnStore": "รับคีย์ที่ {{store}}",
+        "claimWizardTitle": "รับคีย์นี้",
+        "cooldown_one": "ใช้งานไม่ได้ชั่วคราว — ลองใหม่ในอีก {{count}} นาที",
+        "cooldown_other": "ใช้งานไม่ได้ชั่วคราว — ลองใหม่ในอีก {{count}} นาที",
+        "giftConfirmBody": "ใครก็ตามที่มีลิงก์นี้สามารถรับคีย์ได้ — เมื่อเรียกใช้แล้ว คีย์จะหายไปตลอดกาล คุณจะดำเนินการส่งต่อให้เสร็จสมบูรณ์บนเว็บไซต์ของ Humble เอง",
+        "loginAndClaim": "เข้าสู่ระบบ {{store}} และรับคีย์",
+        "markRedeemed": "ทำเครื่องหมายว่าเรียกใช้แล้ว",
+        "redeemableOnly": "เฉพาะคีย์ที่เรียกใช้ได้",
+        "redeemedAnnotation": "เรียกใช้แล้วเมื่อ {{date}}",
+        "redeemOnPlatform": "เรียกใช้บน {{platform}}",
+        "revealConfirmBody": "การเปิดเผยจะแสดงคีย์จริงและนำคีย์นี้ออกจากคีย์สำรองสำหรับส่งต่อโดยถาวร หากคุณยังไม่ได้เป็นเจ้าของเกมนี้ ควรตรวจสอบให้แน่ใจก่อนดำเนินการต่อ — ไม่สามารถย้อนกลับได้",
+        "revealCooldownBody_one": "ใช้งานไม่ได้ชั่วคราว — ลองใหม่ในอีก {{count}} นาที",
+        "revealCooldownBody_other": "ใช้งานไม่ได้ชั่วคราว — ลองใหม่ในอีก {{count}} นาที",
+        "revealRejectedBody": "Humble ปฏิเสธที่จะเปิดเผยคีย์นี้ — อาจถูกเรียกใช้ไปแล้วหรือหมดอายุแล้ว ซิงค์เพื่อตรวจสอบสถานะปัจจุบัน",
+        "syncing_one": "กำลังซิงค์… {{done}}/{{count}} ออร์เดอร์",
+        "syncing_other": "กำลังซิงค์… {{done}}/{{count}} ออร์เดอร์",
+        "syncToEnableClaiming": "ซิงค์เพื่อเปิดใช้งานการรับคีย์",
+        "undo": "เลิกทำ",
+        "undoOwnershipOverride": "เลิกทำ — ฉันเป็นเจ้าของเกมนี้จริง",
+        "urgencyDaysLeft_one": "เหลือ {{count}} วัน",
+        "urgencyDaysLeft_other": "เหลือ {{count}} วัน",
+        "urgencyHoursLeft_one": "เหลือ {{count}} ชั่วโมง",
+        "urgencyHoursLeft_other": "เหลือ {{count}} ชั่วโมง"
     },
     "info": {
         "refresh-rating": "รีเฟรชคะแนน"
@@ -171,7 +204,10 @@
             "viewFavourites": "รายการโปรด",
             "viewInstalled": "ติดตั้งแล้ว",
             "viewRecentlyPlayed": "เล่นล่าสุด",
-            "wontRun": "ไม่สามารถรันได้"
+            "wontRun": "ไม่สามารถรันได้",
+            "chipNoStorePageHidden": "กำลังซ่อนเกมที่ไม่มีหน้าร้านค้า",
+            "groupSelectedCount_one": "เลือกแล้ว {{count}} รายการ",
+            "groupSelectedCount_other": "เลือกแล้ว {{count}} รายการ"
         },
         "header": {
             "filteredOfTotal": "{{shown}} จาก {{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "ต้องใช้ GUI ของ Winetricks",
         "retry": "ลองใหม่",
         "searchPlaceholder": "ค้นหาคอมโพเนนต์…",
-        "zeroResultHeading": "ไม่มีคอมโพเนนต์ที่ตรงกับ “{{query}}”."
+        "zeroResultHeading": "ไม่มีคอมโพเนนต์ที่ตรงกับ “{{query}}”.",
+        "resultsHeading_one": "{{count}} ผลลัพธ์",
+        "resultsHeading_other": "{{count}} ผลลัพธ์"
     },
     "donate": {
         "navLabel": "บริจาค"
@@ -433,5 +471,9 @@
         "rateLimited": "พยายามหลายครั้งเกินไป — กรุณารอสักครู่แล้วลองใหม่อีกครั้ง",
         "successNoPackage": "ใช้คีย์สำเร็จ! ไลบรารี Steam ของคุณได้รับการอัปเดตแล้ว",
         "successWithPackage": "ใช้คีย์สำเร็จ! {{packageName}} ถูกเพิ่มเข้าไลบรารี Steam ของคุณแล้ว"
+    },
+    "languageSelector": {
+        "mtNotice": "ข้อความบางส่วนในภาษานี้ได้รับการแปลด้วยเครื่อง และอาจมีข้อผิดพลาด",
+        "reportTranslationProblem": "รายงานปัญหาการแปล"
     }
 }

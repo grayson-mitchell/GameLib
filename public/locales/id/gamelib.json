@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "Pemasangan {{title}} gagal: {{error}}",
-                "signInToSteam": "Masuk ke Steam"
+                "signInToSteam": "Masuk ke Steam",
+                "stalled_one": "Tidak ada progres unduhan selama {{count}} menit — instalasi dihentikan",
+                "stalled_other": "Tidak ada progres unduhan selama {{count}} menit — instalasi dihentikan"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Terungkap",
             "unpicked": "Belum dipilih",
             "unredeemable": "Kedaluwarsa",
-            "unrevealed": "Belum terungkap"
-        }
+            "unrevealed": "Belum terungkap",
+            "redeemed": "Ditebus"
+        },
+        "activateConfirmBody": "Ini akan mengungkap key — menghapusnya dari Cadangan hadiah untuk selamanya — dan menebusnya di akun Steam Anda. Tidak bisa dibatalkan kembali.",
+        "activateConfirmBodyRevealed": "Ini akan menebus key yang sudah diungkap di akun Steam Anda. Tidak bisa dibatalkan kembali.",
+        "activateDismiss": "Batalkan",
+        "activatingBody": "Mengungkap key Anda dan menebusnya di Steam — ini hanya perlu waktu sebentar.",
+        "c2Action": "Buka Cadangan hadiah",
+        "c2Body": "Key ini aman di Cadangan hadiah — mengungkapnya di sini akan menghilangkan kemampuan untuk menghadiahkannya. Bawa ke Cadangan hadiah sebagai gantinya.",
+        "claimOnHumble": "Ambil di Humble",
+        "claimOnStore": "Ambil di {{store}}",
+        "claimWizardTitle": "Ambil key ini",
+        "cooldown_one": "Sementara tidak tersedia — coba lagi dalam {{count}} menit",
+        "cooldown_other": "Sementara tidak tersedia — coba lagi dalam {{count}} menit",
+        "giftConfirmBody": "Siapa pun dengan tautan ini dapat mengambil key tersebut — setelah ditebus, key ini hilang untuk selamanya. Anda akan menyelesaikan pemberian hadiah di situs Humble sendiri.",
+        "loginAndClaim": "Masuk ke {{store}} dan ambil",
+        "markRedeemed": "Tandai sebagai ditebus",
+        "redeemableOnly": "Hanya key yang bisa ditebus",
+        "redeemedAnnotation": "Ditebus {{date}}",
+        "redeemOnPlatform": "Tebus di {{platform}}",
+        "revealConfirmBody": "Mengungkap akan menampilkan key sebenarnya dan menghapusnya dari Cadangan hadiah untuk selamanya. Jika Anda belum memiliki game ini, pastikan itu benar-benar sudah dipastikan sebelum melanjutkan — tidak bisa dibatalkan kembali.",
+        "revealCooldownBody_one": "Sementara tidak tersedia — coba lagi dalam {{count}} menit",
+        "revealCooldownBody_other": "Sementara tidak tersedia — coba lagi dalam {{count}} menit",
+        "revealRejectedBody": "Humble menolak mengungkap key ini — mungkin sudah ditebus atau kedaluwarsa. Sinkronkan untuk memeriksa statusnya saat ini.",
+        "syncing_one": "Menyinkronkan… {{done}}/{{count}} pesanan",
+        "syncing_other": "Menyinkronkan… {{done}}/{{count}} pesanan",
+        "syncToEnableClaiming": "Sinkronkan untuk mengaktifkan pengambilan",
+        "undo": "Urungkan",
+        "undoOwnershipOverride": "Urungkan — saya memang memiliki game ini",
+        "urgencyDaysLeft_one": "{{count}} hari lagi",
+        "urgencyDaysLeft_other": "{{count}} hari lagi",
+        "urgencyHoursLeft_one": "{{count}} jam lagi",
+        "urgencyHoursLeft_other": "{{count}} jam lagi"
     },
     "info": {
         "refresh-rating": "Segarkan rating"
@@ -171,7 +204,10 @@
             "viewFavourites": "Favorit",
             "viewInstalled": "Terinstal",
             "viewRecentlyPlayed": "Baru dimainkan",
-            "wontRun": "Tidak dapat berjalan"
+            "wontRun": "Tidak dapat berjalan",
+            "chipNoStorePageHidden": "Menyembunyikan game tanpa halaman toko",
+            "groupSelectedCount_one": "{{count}} dipilih",
+            "groupSelectedCount_other": "{{count}} dipilih"
         },
         "header": {
             "filteredOfTotal": "{{shown}} dari {{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Memerlukan GUI Winetricks",
         "retry": "Coba lagi",
         "searchPlaceholder": "Cari komponen…",
-        "zeroResultHeading": "Tidak ada komponen yang cocok dengan “{{query}}”."
+        "zeroResultHeading": "Tidak ada komponen yang cocok dengan “{{query}}”.",
+        "resultsHeading_one": "{{count}} hasil",
+        "resultsHeading_other": "{{count}} hasil"
     },
     "donate": {
         "navLabel": "Donasi"
@@ -433,5 +471,9 @@
         "rateLimited": "Terlalu banyak percobaan — mohon tunggu sebentar sebelum mencoba lagi.",
         "successNoPackage": "Kunci berhasil ditukarkan! Perpustakaan Steam Anda telah diperbarui.",
         "successWithPackage": "Kunci berhasil ditukarkan! {{packageName}} telah ditambahkan ke perpustakaan Steam Anda."
+    },
+    "languageSelector": {
+        "mtNotice": "Beberapa teks dalam bahasa ini diterjemahkan oleh mesin dan mungkin mengandung kesalahan.",
+        "reportTranslationProblem": "Laporkan masalah terjemahan"
     }
 }

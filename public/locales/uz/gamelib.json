@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "{{title}} o'rnatilishi muvaffaqiyatsiz tugadi: {{error}}",
-                "signInToSteam": "Steam'ga kiring"
+                "signInToSteam": "Steam'ga kiring",
+                "stalled_one": "{{count}} daqiqadan beri yuklab olish jarayoni yo‘q — o‘rnatish to‘xtatildi",
+                "stalled_other": "{{count}} daqiqadan beri yuklab olish jarayoni yo‘q — o‘rnatish to‘xtatildi"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Ochilgan",
             "unpicked": "Tanlanmagan",
             "unredeemable": "Muddati o'tgan",
-            "unrevealed": "Ochilmagan"
-        }
+            "unrevealed": "Ochilmagan",
+            "redeemed": "Faollashtirilgan"
+        },
+        "activateConfirmBody": "Bu kalitni ochib beradi — uni Sovg'a qilinadigan zaxiralardan butunlay olib tashlaydi — va uni Steam hisobingizda faollashtiradi. Buni ortga qaytarib bo'lmaydi.",
+        "activateConfirmBodyRevealed": "Bu allaqachon ochilgan kalitingizni Steam hisobingizda faollashtiradi. Buni ortga qaytarib bo'lmaydi.",
+        "activateDismiss": "Bekor qilish",
+        "activatingBody": "Kalitingiz ochilmoqda va Steam'da faollashtirilmoqda — bu bir zumda amalga oshadi.",
+        "c2Action": "Sovg'a qilinadigan zaxiralarga o'tish",
+        "c2Body": "Bu kalit Sovg'a qilinadigan zaxiralarda xavfsiz saqlanmoqda — uni bu yerda ochish uni sovg'a qilish imkoniyatini yo'qotadi. Buning o'rniga uni Sovg'a qilinadigan zaxiralarga oling.",
+        "claimOnHumble": "Humble'da olish",
+        "claimOnStore": "{{store}}'da olish",
+        "claimWizardTitle": "Bu kalitni olish",
+        "cooldown_one": "Vaqtincha mavjud emas — {{count}} daqiqadan so'ng qayta urining",
+        "cooldown_other": "Vaqtincha mavjud emas — {{count}} daqiqadan so'ng qayta urining",
+        "giftConfirmBody": "Bu havolaga ega bo'lgan har kim kalitni olishi mumkin — u faollashtirilgach, u butunlay yo'qoladi. Sovg'a qilishni Humble'ning o'z saytida yakunlaysiz.",
+        "loginAndClaim": "{{store}}'ga kiring va oling",
+        "markRedeemed": "Faollashtirilgan deb belgilash",
+        "redeemableOnly": "Faqat faollashtirish mumkin bo'lgan kalitlar",
+        "redeemedAnnotation": "{{date}} sanasida faollashtirilgan",
+        "redeemOnPlatform": "{{platform}}'da faollashtirish",
+        "revealConfirmBody": "Ochish haqiqiy kalitni ko'rsatadi va uni Sovg'a qilinadigan zaxiralardan butunlay olib tashlaydi. Agar bu o'yinga hali egalik qilmagan bo'lsangiz, davom etishdan oldin buning to'g'ri ekaniga ishonch hosil qiling — buni ortga qaytarib bo'lmaydi.",
+        "revealCooldownBody_one": "Vaqtincha mavjud emas — {{count}} daqiqadan so'ng qayta urining",
+        "revealCooldownBody_other": "Vaqtincha mavjud emas — {{count}} daqiqadan so'ng qayta urining",
+        "revealRejectedBody": "Humble bu kalitni ochishni rad etdi — u allaqachon faollashtirilgan yoki muddati o'tgan bo'lishi mumkin. Joriy holatini tekshirish uchun sinxronlashtiring.",
+        "syncing_one": "Sinxronlanmoqda… {{done}}/{{count}} buyurtma",
+        "syncing_other": "Sinxronlanmoqda… {{done}}/{{count}} buyurtma",
+        "syncToEnableClaiming": "Olish imkoniyatini yoqish uchun sinxronlang",
+        "undo": "Ortga qaytarish",
+        "undoOwnershipOverride": "Ortga qaytarish — bu o'yinga egalik qilaman",
+        "urgencyDaysLeft_one": "{{count}} kun qoldi",
+        "urgencyDaysLeft_other": "{{count}} kun qoldi",
+        "urgencyHoursLeft_one": "{{count}} soat qoldi",
+        "urgencyHoursLeft_other": "{{count}} soat qoldi"
     },
     "info": {
         "refresh-rating": "Reytingni yangilash"
@@ -171,7 +204,10 @@
             "viewFavourites": "Sevimlilar",
             "viewInstalled": "Oʻrnatilgan",
             "viewRecentlyPlayed": "Yaqinda o'ynalgan",
-            "wontRun": "Ishlamaydi"
+            "wontRun": "Ishlamaydi",
+            "chipNoStorePageHidden": "Do'kon sahifasiga ega bo'lmagan o'yinlar yashirilmoqda",
+            "groupSelectedCount_one": "{{count}} tanlangan",
+            "groupSelectedCount_other": "{{count}} tanlangan"
         },
         "header": {
             "filteredOfTotal": "{{total}} tadan {{shown}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Winetricks GUI talab qiladi",
         "retry": "Qayta urinish",
         "searchPlaceholder": "Komponentlarni qidirish…",
-        "zeroResultHeading": "“{{query}}”ga mos komponent topilmadi."
+        "zeroResultHeading": "“{{query}}”ga mos komponent topilmadi.",
+        "resultsHeading_one": "{{count}} natija",
+        "resultsHeading_other": "{{count}} natija"
     },
     "donate": {
         "navLabel": "Xayriya qilish"
@@ -433,5 +471,9 @@
         "rateLimited": "Juda ko'p urinish bo'ldi — qayta urinishdan oldin biroz kuting.",
         "successNoPackage": "Kalit faollashtirildi! Steam kutubxonangiz yangilandi.",
         "successWithPackage": "Kalit faollashtirildi! {{packageName}} Steam kutubxonangizga qo'shildi."
+    },
+    "languageSelector": {
+        "mtNotice": "Ushbu tildagi ba'zi matnlar mashina tarjimasi orqali tarjima qilingan va xatolarga ega bo'lishi mumkin.",
+        "reportTranslationProblem": "Tarjima muammosi haqida xabar berish"
     }
 }

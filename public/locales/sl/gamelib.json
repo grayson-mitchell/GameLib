@@ -14,7 +14,11 @@
         "error": {
             "install": {
                 "failed": "Namestitev {{title}} ni uspela: {{error}}",
-                "signInToSteam": "Prijavite se v Steam"
+                "signInToSteam": "Prijavite se v Steam",
+                "stalled_one": "Brez napredka prenosa {{count}} minuto — namestitev je bila ustavljena",
+                "stalled_two": "Brez napredka prenosa {{count}} minuti — namestitev je bila ustavljena",
+                "stalled_few": "Brez napredka prenosa {{count}} minute — namestitev je bila ustavljena",
+                "stalled_other": "Brez napredka prenosa {{count}} minut — namestitev je bila ustavljena"
             }
         },
         "filePicker": {
@@ -128,8 +132,49 @@
             "revealed": "Razkrito",
             "unpicked": "Neizbrano",
             "unredeemable": "Poteklo",
-            "unrevealed": "Neraskrito"
-        }
+            "unrevealed": "Neraskrito",
+            "redeemed": "Unovčeno"
+        },
+        "activateConfirmBody": "S tem se ključ razkrije — za vedno se odstrani iz razdelka Ključi za podarjanje — in se unovči na vašem računu Steam. Tega ni mogoče razveljaviti.",
+        "activateConfirmBodyRevealed": "S tem se vaš že razkriti ključ unovči na vašem računu Steam. Tega ni mogoče razveljaviti.",
+        "activateDismiss": "Prekliči",
+        "activatingBody": "Razkrivanje vašega ključa in unovčenje na Steamu — to traja le trenutek.",
+        "c2Action": "Pojdi na Ključe za podarjanje",
+        "c2Body": "Ta ključ je varen v razdelku Ključi za podarjanje — če ga razkrijete tukaj, izgubite možnost podaritve. Namesto tega ga poiščite v razdelku Ključi za podarjanje.",
+        "claimOnHumble": "Prevzemi na Humble",
+        "claimOnStore": "Prevzemi na {{store}}",
+        "claimWizardTitle": "Prevzemi ta ključ",
+        "cooldown_one": "Trenutno nedosegljivo — poskusite znova čez {{count}} minuto",
+        "cooldown_two": "Trenutno nedosegljivo — poskusite znova čez {{count}} minuti",
+        "cooldown_few": "Trenutno nedosegljivo — poskusite znova čez {{count}} minute",
+        "cooldown_other": "Trenutno nedosegljivo — poskusite znova čez {{count}} minut",
+        "giftConfirmBody": "Kdorkoli s to povezavo lahko prevzame ključ — ko je enkrat unovčen, je za vedno izgubljen. Podaritev boste dokončali na Humblovi spletni strani.",
+        "loginAndClaim": "Prijavite se na {{store}} in prevzemite",
+        "markRedeemed": "Označi kot unovčeno",
+        "redeemableOnly": "Samo ključi, ki jih je mogoče unovčiti",
+        "redeemedAnnotation": "Unovčeno {{date}}",
+        "redeemOnPlatform": "Unovči na {{platform}}",
+        "revealConfirmBody": "Z razkritjem se prikaže dejanski ključ in se za vedno odstrani iz razdelka Ključi za podarjanje. Če te igre še ne posedujete, se pred nadaljevanjem prepričajte, da je to res — tega ni mogoče razveljaviti.",
+        "revealCooldownBody_one": "Trenutno nedosegljivo — poskusite znova čez {{count}} minuto",
+        "revealCooldownBody_two": "Trenutno nedosegljivo — poskusite znova čez {{count}} minuti",
+        "revealCooldownBody_few": "Trenutno nedosegljivo — poskusite znova čez {{count}} minute",
+        "revealCooldownBody_other": "Trenutno nedosegljivo — poskusite znova čez {{count}} minut",
+        "revealRejectedBody": "Humble je zavrnil razkritje tega ključa — morda je že unovčen ali je potekel. Sinhronizirajte za preverjanje trenutnega stanja.",
+        "syncing_one": "Sinhronizacija … {{done}}/{{count}} naročilo",
+        "syncing_two": "Sinhronizacija … {{done}}/{{count}} naročili",
+        "syncing_few": "Sinhronizacija … {{done}}/{{count}} naročila",
+        "syncing_other": "Sinhronizacija … {{done}}/{{count}} naročil",
+        "syncToEnableClaiming": "Sinhronizirajte za omogočanje prevzemanja",
+        "undo": "Razveljavi",
+        "undoOwnershipOverride": "Razveljavi — to igro imam v lasti",
+        "urgencyDaysLeft_one": "Ostal je še {{count}} dan",
+        "urgencyDaysLeft_two": "Ostala sta še {{count}} dneva",
+        "urgencyDaysLeft_few": "Ostali so še {{count}} dnevi",
+        "urgencyDaysLeft_other": "Še {{count}} dni",
+        "urgencyHoursLeft_one": "Še {{count}} ura",
+        "urgencyHoursLeft_two": "Še {{count}} uri",
+        "urgencyHoursLeft_few": "Še {{count}} ure",
+        "urgencyHoursLeft_other": "Še {{count}} ur"
     },
     "info": {
         "refresh-rating": "Osveži oceno"
@@ -171,7 +216,12 @@
             "viewFavourites": "Priljubljene",
             "viewInstalled": "Nameščene",
             "viewRecentlyPlayed": "Nedavno igrane",
-            "wontRun": "Se ne bo zagnala"
+            "wontRun": "Se ne bo zagnala",
+            "chipNoStorePageHidden": "Skrivanje iger brez strani v trgovini",
+            "groupSelectedCount_one": "{{count}} izbrana",
+            "groupSelectedCount_two": "{{count}} izbrani",
+            "groupSelectedCount_few": "{{count}} izbrani",
+            "groupSelectedCount_other": "{{count}} izbranih"
         },
         "header": {
             "filteredOfTotal": "{{shown}} od {{total}}"
@@ -421,7 +471,11 @@
         "needsGuiTag": "Potrebuje grafični vmesnik Winetricks",
         "retry": "Poskusi znova",
         "searchPlaceholder": "Iskanje komponent…",
-        "zeroResultHeading": "Nobena komponenta se ne ujema z “{{query}}”."
+        "zeroResultHeading": "Nobena komponenta se ne ujema z “{{query}}”.",
+        "resultsHeading_one": "{{count}} zadetek",
+        "resultsHeading_two": "{{count}} zadetka",
+        "resultsHeading_few": "{{count}} zadetki",
+        "resultsHeading_other": "{{count}} zadetkov"
     },
     "donate": {
         "navLabel": "Doniraj"
@@ -433,5 +487,9 @@
         "rateLimited": "Preveč poskusov — počakajte trenutek, preden poskusite znova.",
         "successNoPackage": "Ključ unovčen! Vaša knjižnica Steam je bila posodobljena.",
         "successWithPackage": "Ključ unovčen! {{packageName}} je bil dodan v vašo knjižnico Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Nekaj besedila v tem jeziku je bilo strojno prevedeno in lahko vsebuje napake.",
+        "reportTranslationProblem": "Prijavi težavo s prevodom"
     }
 }

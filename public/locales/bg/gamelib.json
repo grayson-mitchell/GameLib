@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "Инсталирането на {{title}} не бе успешно: {{error}}",
-                "signInToSteam": "Влизане в Steam"
+                "signInToSteam": "Влизане в Steam",
+                "stalled_one": "Няма напредък в изтеглянето от {{count}} минута — инсталирането беше спряно",
+                "stalled_other": "Няма напредък в изтеглянето от {{count}} минути — инсталирането беше спряно"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Разкрит",
             "unpicked": "Неизбран",
             "unredeemable": "Изтекъл",
-            "unrevealed": "Неразкрит"
-        }
+            "unrevealed": "Неразкрит",
+            "redeemed": "Активиран"
+        },
+        "activateConfirmBody": "Това разкрива ключа — премахвайки го завинаги от Резерви за подарък — и го активира във вашия акаунт в Steam. Няма връщане назад.",
+        "activateConfirmBodyRevealed": "Това активира вече разкрития ви ключ във вашия акаунт в Steam. Няма връщане назад.",
+        "activateDismiss": "Отказ",
+        "activatingBody": "Разкриване на вашия ключ и активирането му в Steam — това отнема само миг.",
+        "c2Action": "Отиди в Резерви за подарък",
+        "c2Body": "Този ключ е защитен в Резерви за подарък — разкриването му тук би премахнало възможността да го подарите. Вместо това го вземете от Резерви за подарък.",
+        "claimOnHumble": "Вземи от Humble",
+        "claimOnStore": "Вземи от {{store}}",
+        "claimWizardTitle": "Вземане на този ключ",
+        "cooldown_one": "Временно недостъпно — опитайте отново след {{count}} минута",
+        "cooldown_other": "Временно недостъпно — опитайте отново след {{count}} минути",
+        "giftConfirmBody": "Всеки с този линк може да вземе ключа — след като бъде активиран, изчезва завинаги. Ще завършите подаряването му на самия сайт на Humble.",
+        "loginAndClaim": "Влезте в {{store}} и вземете",
+        "markRedeemed": "Маркирай като активиран",
+        "redeemableOnly": "Само активируеми ключове",
+        "redeemedAnnotation": "Активиран на {{date}}",
+        "redeemOnPlatform": "Активирай в {{platform}}",
+        "revealConfirmBody": "Разкриването показва действителния ключ и го премахва завинаги от Резерви за подарък. Ако все още не притежавате тази игра, уверете се, че наистина е така, преди да продължите — няма връщане назад.",
+        "revealCooldownBody_one": "Временно недостъпно — опитайте отново след {{count}} минута",
+        "revealCooldownBody_other": "Временно недостъпно — опитайте отново след {{count}} минути",
+        "revealRejectedBody": "Humble отказа да разкрие този ключ — може вече да е активиран или изтекъл. Синхронизирайте, за да проверите текущия му статус.",
+        "syncing_one": "Синхронизиране… {{done}}/{{count}} поръчка",
+        "syncing_other": "Синхронизиране… {{done}}/{{count}} поръчки",
+        "syncToEnableClaiming": "Синхронизирайте, за да активирате вземането",
+        "undo": "Върни",
+        "undoOwnershipOverride": "Върни — аз наистина притежавам тази игра",
+        "urgencyDaysLeft_one": "{{count}} ден остава",
+        "urgencyDaysLeft_other": "{{count}} дни остават",
+        "urgencyHoursLeft_one": "{{count}} час остава",
+        "urgencyHoursLeft_other": "{{count}} часа остават"
     },
     "info": {
         "refresh-rating": "Опресняване на рейтинга"
@@ -171,7 +204,10 @@
             "viewFavourites": "Любими",
             "viewInstalled": "Инсталирана",
             "viewRecentlyPlayed": "Наскоро играни",
-            "wontRun": "Няма да работи"
+            "wontRun": "Няма да работи",
+            "chipNoStorePageHidden": "Скриване на игри без страница в магазин",
+            "groupSelectedCount_one": "{{count}} избран",
+            "groupSelectedCount_other": "{{count}} избрани"
         },
         "header": {
             "filteredOfTotal": "{{shown}} от {{total}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Изисква графичен интерфейс на Winetricks",
         "retry": "Нов опит",
         "searchPlaceholder": "Търсене на компоненти…",
-        "zeroResultHeading": "Няма компонент, отговарящ на “{{query}}”."
+        "zeroResultHeading": "Няма компонент, отговарящ на “{{query}}”.",
+        "resultsHeading_one": "{{count}} резултат",
+        "resultsHeading_other": "{{count}} резултата"
     },
     "donate": {
         "navLabel": "Дарете"
@@ -433,5 +471,9 @@
         "rateLimited": "Твърде много опити — моля, изчакайте малко, преди да опитате отново.",
         "successNoPackage": "Ключът е активиран! Вашата Steam библиотека е обновена.",
         "successWithPackage": "Ключът е активиран! {{packageName}} беше добавен към вашата Steam библиотека."
+    },
+    "languageSelector": {
+        "mtNotice": "Част от текста на този език е машинно преведен и може да съдържа грешки.",
+        "reportTranslationProblem": "Докладвай проблем с превода"
     }
 }

@@ -90,8 +90,39 @@
             "revealed": "Aufgedeckt",
             "unpicked": "Nicht ausgewählt",
             "unredeemable": "Abgelaufen",
-            "unrevealed": "Nicht aufgedeckt"
-        }
+            "unrevealed": "Nicht aufgedeckt",
+            "redeemed": "Eingelöst"
+        },
+        "activateConfirmBody": "Dadurch wird der Key aufgedeckt — er wird endgültig aus den Verschenkbaren Reserven entfernt — und auf deinem Steam-Konto eingelöst. Das kann nicht rückgängig gemacht werden.",
+        "activateConfirmBodyRevealed": "Dadurch wird dein bereits aufgedeckter Key auf deinem Steam-Konto eingelöst. Das kann nicht rückgängig gemacht werden.",
+        "activateDismiss": "Abbrechen",
+        "activatingBody": "Dein Key wird aufgedeckt und auf Steam eingelöst — das dauert nur einen Moment.",
+        "c2Action": "Zu Verschenkbare Reserven",
+        "c2Body": "Dieser Key ist sicher in den Verschenkbaren Reserven — würdest du ihn hier aufdecken, ginge die Möglichkeit, ihn zu verschenken, verloren. Nimm ihn stattdessen aus den Verschenkbaren Reserven.",
+        "claimOnHumble": "Auf Humble beanspruchen",
+        "claimOnStore": "Auf {{store}} beanspruchen",
+        "claimWizardTitle": "Diesen Key beanspruchen",
+        "cooldown_one": "Vorübergehend nicht verfügbar — erneuter Versuch in {{count}} Minute",
+        "cooldown_other": "Vorübergehend nicht verfügbar — erneuter Versuch in {{count}} Minuten",
+        "giftConfirmBody": "Jeder mit diesem Link kann den Key beanspruchen — sobald er eingelöst wurde, ist er endgültig verbraucht. Du schließt das Verschenken auf Humbles eigener Website ab.",
+        "loginAndClaim": "Bei {{store}} anmelden und beanspruchen",
+        "markRedeemed": "Als eingelöst markieren",
+        "redeemableOnly": "Nur einlösbare Keys",
+        "redeemedAnnotation": "Eingelöst am {{date}}",
+        "redeemOnPlatform": "Auf {{platform}} einlösen",
+        "revealConfirmBody": "Beim Aufdecken wird der tatsächliche Key angezeigt und endgültig aus den Verschenkbaren Reserven entfernt. Falls du dieses Spiel noch nicht besitzt, stelle vorher sicher, dass das wirklich zutrifft — das kann nicht rückgängig gemacht werden.",
+        "revealCooldownBody_one": "Vorübergehend nicht verfügbar — erneuter Versuch in {{count}} Minute",
+        "revealCooldownBody_other": "Vorübergehend nicht verfügbar — erneuter Versuch in {{count}} Minuten",
+        "revealRejectedBody": "Humble hat das Aufdecken dieses Keys abgelehnt — er könnte bereits eingelöst oder abgelaufen sein. Synchronisiere, um den aktuellen Status zu prüfen.",
+        "syncing_one": "Synchronisiere … {{done}}/{{count}} Bestellung",
+        "syncing_other": "Synchronisiere … {{done}}/{{count}} Bestellungen",
+        "syncToEnableClaiming": "Synchronisieren, um das Beanspruchen zu ermöglichen",
+        "undo": "Rückgängig machen",
+        "undoOwnershipOverride": "Rückgängig machen — ich besitze dieses Spiel",
+        "urgencyDaysLeft_one": "Noch {{count}} Tag",
+        "urgencyDaysLeft_other": "Noch {{count}} Tage",
+        "urgencyHoursLeft_one": "Noch {{count}} Stunde",
+        "urgencyHoursLeft_other": "Noch {{count}} Stunden"
     },
     "library": {
         "filterPanel": {
@@ -121,7 +152,10 @@
             "viewRecentlyPlayed": "Kürzlich gespielt",
             "wontRun": "Läuft nicht",
             "emptyAlphabetLetter": "Beginnt mit \"{{letter}}\"",
-            "emptyAlphabetNumber": "Beginnt mit einer Zahl"
+            "emptyAlphabetNumber": "Beginnt mit einer Zahl",
+            "chipNoStorePageHidden": "Spiele ohne Store-Seite werden ausgeblendet",
+            "groupSelectedCount_one": "{{count}} ausgewählt",
+            "groupSelectedCount_other": "{{count}} ausgewählt"
         },
         "header": {
             "filteredOfTotal": "{{shown}} von {{total}}"
@@ -267,7 +301,9 @@
         "error": {
             "install": {
                 "failed": "Die Installation von {{title}} ist fehlgeschlagen: {{error}}",
-                "signInToSteam": "Bei Steam anmelden"
+                "signInToSteam": "Bei Steam anmelden",
+                "stalled_one": "Seit {{count}} Minute kein Download-Fortschritt — die Installation wurde gestoppt",
+                "stalled_other": "Seit {{count}} Minuten kein Download-Fortschritt — die Installation wurde gestoppt"
             }
         },
         "filePicker": {
@@ -421,7 +457,9 @@
         "needsGuiTag": "Erfordert die Winetricks-GUI",
         "retry": "Erneut versuchen",
         "searchPlaceholder": "Komponenten suchen…",
-        "zeroResultHeading": "Keine Komponente entspricht “{{query}}”."
+        "zeroResultHeading": "Keine Komponente entspricht “{{query}}”.",
+        "resultsHeading_one": "{{count}} Ergebnis",
+        "resultsHeading_other": "{{count}} Ergebnisse"
     },
     "donate": {
         "navLabel": "Spenden"
@@ -433,5 +471,9 @@
         "rateLimited": "Zu viele Versuche — bitte warte kurz, bevor du es erneut versuchst.",
         "successNoPackage": "Key eingelöst! Deine Steam-Bibliothek wurde aktualisiert.",
         "successWithPackage": "Key eingelöst! {{packageName}} wurde zu deiner Steam-Bibliothek hinzugefügt."
+    },
+    "languageSelector": {
+        "mtNotice": "Einige Texte in dieser Sprache wurden maschinell übersetzt und können Fehler enthalten.",
+        "reportTranslationProblem": "Ein Übersetzungsproblem melden"
     }
 }

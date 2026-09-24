@@ -14,7 +14,11 @@
         "error": {
             "install": {
                 "failed": "Nepavyko įdiegti {{title}}: {{error}}",
-                "signInToSteam": "Prisijunkite prie Steam"
+                "signInToSteam": "Prisijunkite prie Steam",
+                "stalled_one": "Nėra atsisiuntimo pažangos {{count}} minutę — diegimas sustabdytas",
+                "stalled_few": "Nėra atsisiuntimo pažangos {{count}} minutes — diegimas sustabdytas",
+                "stalled_many": "Nėra atsisiuntimo pažangos {{count}} minutės — diegimas sustabdytas",
+                "stalled_other": "Nėra atsisiuntimo pažangos {{count}} minučių — diegimas sustabdytas"
             }
         },
         "filePicker": {
@@ -128,8 +132,49 @@
             "revealed": "Atskleista",
             "unpicked": "Nepasirinkta",
             "unredeemable": "Nebegalioja",
-            "unrevealed": "Neatskleista"
-        }
+            "unrevealed": "Neatskleista",
+            "redeemed": "Panaudotas"
+        },
+        "activateConfirmBody": "Tai atskleidžia raktą — jis visam laikui pašalinamas iš Dovanojamų atsarginių kopijų — ir jį panaudoja jūsų Steam paskyroje. Šio veiksmo atšaukti negalima.",
+        "activateConfirmBodyRevealed": "Tai panaudoja jau atskleistą raktą jūsų Steam paskyroje. Šio veiksmo atšaukti negalima.",
+        "activateDismiss": "Atšaukti",
+        "activatingBody": "Atskleidžiamas jūsų raktas ir panaudojamas Steam — tai užtruks tik akimirką.",
+        "c2Action": "Eiti į Dovanojamas atsargines kopijas",
+        "c2Body": "Šis raktas saugus Dovanojamose atsarginėse kopijose — jį atskleidus čia, prarastumėte galimybę jį padovanoti. Verčiau nueikite į Dovanojamas atsargines kopijas.",
+        "claimOnHumble": "Pasiimti iš Humble",
+        "claimOnStore": "Pasiimti iš {{store}}",
+        "claimWizardTitle": "Pasiimti šį raktą",
+        "cooldown_one": "Laikinai nepasiekiama — bandykite dar kartą po {{count}} minutės",
+        "cooldown_few": "Laikinai nepasiekiama — bandykite dar kartą po {{count}} minučių",
+        "cooldown_many": "Laikinai nepasiekiama — bandykite dar kartą po {{count}} minutės",
+        "cooldown_other": "Laikinai nepasiekiama — bandykite dar kartą po {{count}} minučių",
+        "giftConfirmBody": "Kiekvienas, turintis šią nuorodą, gali pasiimti raktą — jį panaudojus, jis dingsta visam laikui. Dovanojimą užbaigsite pačioje Humble svetainėje.",
+        "loginAndClaim": "Prisijunkite prie {{store}} ir pasiimkite",
+        "markRedeemed": "Pažymėti kaip panaudotą",
+        "redeemableOnly": "Tik panaudojami raktai",
+        "redeemedAnnotation": "Panaudota {{date}}",
+        "redeemOnPlatform": "Panaudoti {{platform}}",
+        "revealConfirmBody": "Atskleidus parodomas tikrasis raktas, o jis visam laikui pašalinamas iš Dovanojamų atsarginių kopijų. Jei dar nesate šio žaidimo savininkas, prieš tęsdami įsitikinkite, kad taip iš tiesų yra — šio veiksmo atšaukti negalima.",
+        "revealCooldownBody_one": "Laikinai nepasiekiama — bandykite dar kartą po {{count}} minutės",
+        "revealCooldownBody_few": "Laikinai nepasiekiama — bandykite dar kartą po {{count}} minučių",
+        "revealCooldownBody_many": "Laikinai nepasiekiama — bandykite dar kartą po {{count}} minutės",
+        "revealCooldownBody_other": "Laikinai nepasiekiama — bandykite dar kartą po {{count}} minučių",
+        "revealRejectedBody": "Humble atsisakė atskleisti šį raktą — jis gali būti jau panaudotas arba pasibaigęs galiojimas. Sinchronizuokite, kad patikrintumėte dabartinę būseną.",
+        "syncing_one": "Sinchronizuojama… {{done}}/{{count}} užsakymas",
+        "syncing_few": "Sinchronizuojama… {{done}}/{{count}} užsakymai",
+        "syncing_many": "Sinchronizuojama… {{done}}/{{count}} užsakymo",
+        "syncing_other": "Sinchronizuojama… {{done}}/{{count}} užsakymų",
+        "syncToEnableClaiming": "Sinchronizuokite, kad galėtumėte pasiimti",
+        "undo": "Anuliuoti",
+        "undoOwnershipOverride": "Anuliuoti — aš turiu šį žaidimą",
+        "urgencyDaysLeft_one": "Liko {{count}} diena",
+        "urgencyDaysLeft_few": "Liko {{count}} dienos",
+        "urgencyDaysLeft_many": "Liko {{count}} dienos",
+        "urgencyDaysLeft_other": "Liko {{count}} dienų",
+        "urgencyHoursLeft_one": "Liko {{count}} valanda",
+        "urgencyHoursLeft_few": "Liko {{count}} valandos",
+        "urgencyHoursLeft_many": "Liko {{count}} valandos",
+        "urgencyHoursLeft_other": "Liko {{count}} valandų"
     },
     "info": {
         "refresh-rating": "Atnaujinti įvertinimą"
@@ -171,7 +216,12 @@
             "viewFavourites": "Mėgstamiausi",
             "viewInstalled": "Įdiegta",
             "viewRecentlyPlayed": "Neseniai žaista",
-            "wontRun": "Nepaleis"
+            "wontRun": "Nepaleis",
+            "chipNoStorePageHidden": "Slepiami žaidimai be parduotuvės puslapio",
+            "groupSelectedCount_one": "Pasirinktas {{count}}",
+            "groupSelectedCount_few": "Pasirinkti {{count}}",
+            "groupSelectedCount_many": "Pasirinkta {{count}}",
+            "groupSelectedCount_other": "Pasirinkta {{count}}"
         },
         "header": {
             "filteredOfTotal": "{{shown}} iš {{total}}"
@@ -421,7 +471,11 @@
         "needsGuiTag": "Reikalinga Winetricks GUI",
         "retry": "Bandyti iš naujo",
         "searchPlaceholder": "Ieškoti komponentų…",
-        "zeroResultHeading": "Nėra komponento, atitinkančio “{{query}}”."
+        "zeroResultHeading": "Nėra komponento, atitinkančio “{{query}}”.",
+        "resultsHeading_one": "{{count}} rezultatas",
+        "resultsHeading_few": "{{count}} rezultatai",
+        "resultsHeading_many": "{{count}} rezultato",
+        "resultsHeading_other": "{{count}} rezultatų"
     },
     "donate": {
         "navLabel": "Aukoti"
@@ -433,5 +487,9 @@
         "rateLimited": "Per daug bandymų — prašome palaukti prieš bandant vėl.",
         "successNoPackage": "Raktas aktyvuotas! Jūsų „Steam“ biblioteka atnaujinta.",
         "successWithPackage": "Raktas aktyvuotas! „{{packageName}}“ pridėtas prie jūsų „Steam“ bibliotekos."
+    },
+    "languageSelector": {
+        "mtNotice": "Dalis šios kalbos teksto buvo išversta automatiškai ir gali turėti klaidų.",
+        "reportTranslationProblem": "Pranešti apie vertimo problemą"
     }
 }

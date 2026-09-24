@@ -14,7 +14,10 @@
         "error": {
             "install": {
                 "failed": "La instalación de {{title}} falló: {{error}}",
-                "signInToSteam": "Iniciar sesión en Steam"
+                "signInToSteam": "Iniciar sesión en Steam",
+                "stalled_one": "Sin progreso de descarga durante {{count}} minuto — la instalación se detuvo",
+                "stalled_many": "Sin progreso de descarga durante {{count}} minutos — la instalación se detuvo",
+                "stalled_other": "Sin progreso de descarga durante {{count}} minutos — la instalación se detuvo"
             }
         },
         "filePicker": {
@@ -128,8 +131,44 @@
             "revealed": "Revelado",
             "unpicked": "No elegido",
             "unredeemable": "Expirado",
-            "unrevealed": "No revelado"
-        }
+            "unrevealed": "No revelado",
+            "redeemed": "Canjeada"
+        },
+        "activateConfirmBody": "Esto revela la clave — eliminándola de Reservas para regalar para siempre — y la canjea en tu cuenta de Steam. No se puede deshacer.",
+        "activateConfirmBodyRevealed": "Esto canjea tu clave ya revelada en tu cuenta de Steam. No se puede deshacer.",
+        "activateDismiss": "Cancelar",
+        "activatingBody": "Revelando tu clave y canjeándola en Steam — esto solo tomará un momento.",
+        "c2Action": "Ir a Reservas para regalar",
+        "c2Body": "Esta clave está a salvo en Reservas para regalar — revelarla aquí eliminaría la posibilidad de regalarla. Llévala a Reservas para regalar en su lugar.",
+        "claimOnHumble": "Reclamar en Humble",
+        "claimOnStore": "Reclamar en {{store}}",
+        "claimWizardTitle": "Reclamar esta clave",
+        "cooldown_one": "Temporalmente no disponible — reintenta en {{count}} minuto",
+        "cooldown_many": "Temporalmente no disponible — reintenta en {{count}} minutos",
+        "cooldown_other": "Temporalmente no disponible — reintenta en {{count}} minutos",
+        "giftConfirmBody": "Cualquiera con este enlace puede reclamar la clave — una vez canjeada, desaparece para siempre. Terminarás de regalarla en el propio sitio de Humble.",
+        "loginAndClaim": "Iniciar sesión en {{store}} y reclamar",
+        "markRedeemed": "Marcar como canjeada",
+        "redeemableOnly": "Solo claves canjeables",
+        "redeemedAnnotation": "Canjeada el {{date}}",
+        "redeemOnPlatform": "Canjear en {{platform}}",
+        "revealConfirmBody": "Revelarla muestra la clave real y la elimina de Reservas para regalar para siempre. Si aún no tienes este juego, asegúrate de que eso sea realmente cierto antes de continuar — no se puede deshacer.",
+        "revealCooldownBody_one": "Temporalmente no disponible — reintenta en {{count}} minuto",
+        "revealCooldownBody_many": "Temporalmente no disponible — reintenta en {{count}} minutos",
+        "revealCooldownBody_other": "Temporalmente no disponible — reintenta en {{count}} minutos",
+        "revealRejectedBody": "Humble se negó a revelar esta clave — puede que ya esté canjeada o haya expirado. Sincroniza para comprobar su estado actual.",
+        "syncing_one": "Sincronizando… {{done}}/{{count}} pedido",
+        "syncing_many": "Sincronizando… {{done}}/{{count}} pedidos",
+        "syncing_other": "Sincronizando… {{done}}/{{count}} pedidos",
+        "syncToEnableClaiming": "Sincroniza para habilitar el reclamo",
+        "undo": "Deshacer",
+        "undoOwnershipOverride": "Deshacer — sí tengo este juego",
+        "urgencyDaysLeft_one": "Queda {{count}} día",
+        "urgencyDaysLeft_many": "Quedan {{count}} días",
+        "urgencyDaysLeft_other": "Quedan {{count}} días",
+        "urgencyHoursLeft_one": "Queda {{count}} hora",
+        "urgencyHoursLeft_many": "Quedan {{count}} horas",
+        "urgencyHoursLeft_other": "Quedan {{count}} horas"
     },
     "info": {
         "refresh-rating": "Actualizar valoración"
@@ -171,7 +210,11 @@
             "viewFavourites": "Favoritos",
             "viewInstalled": "Instalado",
             "viewRecentlyPlayed": "Jugados recientemente",
-            "wontRun": "No se ejecutará"
+            "wontRun": "No se ejecutará",
+            "chipNoStorePageHidden": "Ocultando juegos sin página de tienda",
+            "groupSelectedCount_one": "{{count}} seleccionado",
+            "groupSelectedCount_many": "{{count}} seleccionados",
+            "groupSelectedCount_other": "{{count}} seleccionados"
         },
         "header": {
             "filteredOfTotal": "{{shown}} de {{total}}"
@@ -421,7 +464,10 @@
         "needsGuiTag": "Necesita la GUI de Winetricks",
         "retry": "Reintentar",
         "searchPlaceholder": "Buscar componentes…",
-        "zeroResultHeading": "Ningún componente coincide con “{{query}}”."
+        "zeroResultHeading": "Ningún componente coincide con “{{query}}”.",
+        "resultsHeading_one": "{{count}} resultado",
+        "resultsHeading_many": "{{count}} resultados",
+        "resultsHeading_other": "{{count}} resultados"
     },
     "donate": {
         "navLabel": "Donar"
@@ -433,5 +479,9 @@
         "rateLimited": "Demasiados intentos. Espera un poco antes de volver a intentarlo.",
         "successNoPackage": "¡Clave canjeada! Se ha actualizado tu biblioteca de Steam.",
         "successWithPackage": "¡Clave canjeada! {{packageName}} se ha añadido a tu biblioteca de Steam."
+    },
+    "languageSelector": {
+        "mtNotice": "Parte del texto en este idioma fue traducido automáticamente y puede contener errores.",
+        "reportTranslationProblem": "Reportar un problema de traducción"
     }
 }

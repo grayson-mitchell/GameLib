@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "De installatie van {{title}} is mislukt: {{error}}",
-                "signInToSteam": "Aanmelden bij Steam"
+                "signInToSteam": "Aanmelden bij Steam",
+                "stalled_one": "Geen downloadvoortgang gedurende {{count}} minuut — de installatie is gestopt",
+                "stalled_other": "Geen downloadvoortgang gedurende {{count}} minuten — de installatie is gestopt"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Onthuld",
             "unpicked": "Niet gekozen",
             "unredeemable": "Verlopen",
-            "unrevealed": "Niet onthuld"
-        }
+            "unrevealed": "Niet onthuld",
+            "redeemed": "Geactiveerd"
+        },
+        "activateConfirmBody": "Dit onthult de key — waardoor deze definitief uit Cadeaureserve wordt verwijderd — en activeert hem op je Steam-account. Dit kan niet ongedaan worden gemaakt.",
+        "activateConfirmBodyRevealed": "Dit activeert je reeds onthulde key op je Steam-account. Dit kan niet ongedaan worden gemaakt.",
+        "activateDismiss": "Annuleren",
+        "activatingBody": "Je key wordt onthuld en geactiveerd op Steam — dit duurt maar even.",
+        "c2Action": "Ga naar Cadeaureserve",
+        "c2Body": "Deze key is veilig opgeborgen in Cadeaureserve — als je hem hier onthult, verlies je de mogelijkheid om hem cadeau te doen. Ga in plaats daarvan naar Cadeaureserve.",
+        "claimOnHumble": "Ophalen op Humble",
+        "claimOnStore": "Ophalen op {{store}}",
+        "claimWizardTitle": "Deze key ophalen",
+        "cooldown_one": "Tijdelijk niet beschikbaar — probeer opnieuw over {{count}} minuut",
+        "cooldown_other": "Tijdelijk niet beschikbaar — probeer opnieuw over {{count}} minuten",
+        "giftConfirmBody": "Iedereen met deze link kan de key ophalen — eenmaal geactiveerd, is hij definitief weg. Je rondt het cadeau doen af op de site van Humble zelf.",
+        "loginAndClaim": "Inloggen bij {{store}} en ophalen",
+        "markRedeemed": "Markeren als geactiveerd",
+        "redeemableOnly": "Alleen activeerbare keys",
+        "redeemedAnnotation": "Geactiveerd op {{date}}",
+        "redeemOnPlatform": "Activeren op {{platform}}",
+        "revealConfirmBody": "Onthullen toont de werkelijke key en verwijdert hem definitief uit Cadeaureserve. Als je dit spel nog niet bezit, controleer dat goed voordat je doorgaat — dit kan niet ongedaan worden gemaakt.",
+        "revealCooldownBody_one": "Tijdelijk niet beschikbaar — probeer opnieuw over {{count}} minuut",
+        "revealCooldownBody_other": "Tijdelijk niet beschikbaar — probeer opnieuw over {{count}} minuten",
+        "revealRejectedBody": "Humble heeft geweigerd deze key te onthullen — mogelijk is hij al geactiveerd of verlopen. Synchroniseer om de huidige status te controleren.",
+        "syncing_one": "Synchroniseren… {{done}}/{{count}} bestelling",
+        "syncing_other": "Synchroniseren… {{done}}/{{count}} bestellingen",
+        "syncToEnableClaiming": "Synchroniseer om ophalen mogelijk te maken",
+        "undo": "Ongedaan maken",
+        "undoOwnershipOverride": "Ongedaan maken — ik bezit dit spel wel",
+        "urgencyDaysLeft_one": "Nog {{count}} dag over",
+        "urgencyDaysLeft_other": "Nog {{count}} dagen over",
+        "urgencyHoursLeft_one": "Nog {{count}} uur over",
+        "urgencyHoursLeft_other": "Nog {{count}} uur over"
     },
     "info": {
         "refresh-rating": "Beoordeling vernieuwen"
@@ -170,7 +203,11 @@
             "viewAll": "Alle Spellen",
             "viewInstalled": "Geïnstalleerd",
             "viewRecentlyPlayed": "Onlangs gespeeld",
-            "wontRun": "Werkt niet"
+            "wontRun": "Werkt niet",
+            "chipNoStorePageHidden": "Spellen zonder winkelpagina worden verborgen",
+            "groupSelectedCount_one": "{{count}} geselecteerd",
+            "groupSelectedCount_other": "{{count}} geselecteerd",
+            "viewFavourites": "Favourites"
         },
         "header": {
             "filteredOfTotal": "{{shown}} van {{total}}"
@@ -420,7 +457,9 @@
         "needsGuiTag": "Vereist de Winetricks-GUI",
         "retry": "Opnieuw proberen",
         "searchPlaceholder": "Onderdelen zoeken…",
-        "zeroResultHeading": "Geen onderdeel komt overeen met “{{query}}”."
+        "zeroResultHeading": "Geen onderdeel komt overeen met “{{query}}”.",
+        "resultsHeading_one": "{{count}} resultaat",
+        "resultsHeading_other": "{{count}} resultaten"
     },
     "donate": {
         "navLabel": "Doneren"
@@ -432,5 +471,9 @@
         "rateLimited": "Te veel pogingen — wacht even voordat je het opnieuw probeert.",
         "successNoPackage": "Key ingewisseld! Je Steam-bibliotheek is bijgewerkt.",
         "successWithPackage": "Key ingewisseld! {{packageName}} is toegevoegd aan je Steam-bibliotheek."
+    },
+    "languageSelector": {
+        "mtNotice": "Sommige tekst in deze taal is machinaal vertaald en kan fouten bevatten.",
+        "reportTranslationProblem": "Een vertaalprobleem melden"
     }
 }

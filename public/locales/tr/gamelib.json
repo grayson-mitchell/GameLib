@@ -14,7 +14,9 @@
         "error": {
             "install": {
                 "failed": "{{title}} kurulumu başarısız oldu: {{error}}",
-                "signInToSteam": "Steam'de oturum aç"
+                "signInToSteam": "Steam'de oturum aç",
+                "stalled_one": "{{count}} dakika boyunca indirme ilerlemesi olmadı — kurulum durduruldu",
+                "stalled_other": "{{count}} dakika boyunca indirme ilerlemesi olmadı — kurulum durduruldu"
             }
         },
         "filePicker": {
@@ -128,8 +130,39 @@
             "revealed": "Açığa çıkarıldı",
             "unpicked": "Seçilmedi",
             "unredeemable": "Süresi doldu",
-            "unrevealed": "Açığa çıkarılmadı"
-        }
+            "unrevealed": "Açığa çıkarılmadı",
+            "redeemed": "Kullanıldı"
+        },
+        "activateConfirmBody": "Bu, anahtarı gösterir — Hediyelik yedekler'den kalıcı olarak kaldırır — ve Steam hesabınızda kullanır. Geri alma yoktur.",
+        "activateConfirmBodyRevealed": "Bu, zaten gösterilmiş anahtarınızı Steam hesabınızda kullanır. Geri alma yoktur.",
+        "activateDismiss": "İptal",
+        "activatingBody": "Anahtarınız gösteriliyor ve Steam'de kullanılıyor — bu sadece bir an sürer.",
+        "c2Action": "Hediyelik yedekler'e git",
+        "c2Body": "Bu anahtar Hediyelik yedekler'de güvende — burada göstermek, hediye etme özelliğini ortadan kaldırır. Bunun yerine Hediyelik yedekler'e gidin.",
+        "claimOnHumble": "Humble'da al",
+        "claimOnStore": "{{store}}'da al",
+        "claimWizardTitle": "Bu anahtarı al",
+        "cooldown_one": "Geçici olarak kullanılamıyor — {{count}} dakika içinde yeniden deneyin",
+        "cooldown_other": "Geçici olarak kullanılamıyor — {{count}} dakika içinde yeniden deneyin",
+        "giftConfirmBody": "Bu bağlantıya sahip herkes anahtarı alabilir — kullanıldığında kalıcı olarak yok olur. Hediye etme işlemini Humble'ın kendi sitesinde tamamlayacaksınız.",
+        "loginAndClaim": "{{store}}'a giriş yapın ve alın",
+        "markRedeemed": "Kullanıldı olarak işaretle",
+        "redeemableOnly": "Yalnızca kullanılabilir anahtarlar",
+        "redeemedAnnotation": "{{date}} tarihinde kullanıldı",
+        "redeemOnPlatform": "{{platform}}'da kullan",
+        "revealConfirmBody": "Göstermek, gerçek anahtarı ortaya çıkarır ve onu Hediyelik yedekler'den kalıcı olarak kaldırır. Bu oyuna henüz sahip değilseniz, devam etmeden önce bunun gerçekten doğru olduğundan emin olun — geri alma yoktur.",
+        "revealCooldownBody_one": "Geçici olarak kullanılamıyor — {{count}} dakika içinde yeniden deneyin",
+        "revealCooldownBody_other": "Geçici olarak kullanılamıyor — {{count}} dakika içinde yeniden deneyin",
+        "revealRejectedBody": "Humble bu anahtarı göstermeyi reddetti — muhtemelen zaten kullanılmış veya süresi dolmuş olabilir. Geçerli durumunu kontrol etmek için senkronize edin.",
+        "syncing_one": "Senkronize ediliyor… {{done}}/{{count}} sipariş",
+        "syncing_other": "Senkronize ediliyor… {{done}}/{{count}} sipariş",
+        "syncToEnableClaiming": "Almayı etkinleştirmek için senkronize edin",
+        "undo": "Geri al",
+        "undoOwnershipOverride": "Geri al — bu oyuna sahibim",
+        "urgencyDaysLeft_one": "{{count}} gün kaldı",
+        "urgencyDaysLeft_other": "{{count}} gün kaldı",
+        "urgencyHoursLeft_one": "{{count}} saat kaldı",
+        "urgencyHoursLeft_other": "{{count}} saat kaldı"
     },
     "info": {
         "refresh-rating": "Puanı yenile"
@@ -171,7 +204,10 @@
             "viewFavourites": "Favoriler",
             "viewInstalled": "Kuruldu",
             "viewRecentlyPlayed": "Son oynananlar",
-            "wontRun": "Çalışmayacak"
+            "wontRun": "Çalışmayacak",
+            "chipNoStorePageHidden": "Mağaza sayfası olmayan oyunlar gizleniyor",
+            "groupSelectedCount_one": "{{count}} seçildi",
+            "groupSelectedCount_other": "{{count}} seçildi"
         },
         "header": {
             "filteredOfTotal": "{{total}} içinden {{shown}}"
@@ -421,7 +457,9 @@
         "needsGuiTag": "Winetricks GUI gerektirir",
         "retry": "Yeniden dene",
         "searchPlaceholder": "Bileşen ara…",
-        "zeroResultHeading": "“{{query}}” ile eşleşen bileşen yok."
+        "zeroResultHeading": "“{{query}}” ile eşleşen bileşen yok.",
+        "resultsHeading_one": "{{count}} sonuç",
+        "resultsHeading_other": "{{count}} sonuç"
     },
     "donate": {
         "navLabel": "Bağış Yap"
@@ -433,5 +471,9 @@
         "rateLimited": "Çok fazla deneme yapıldı — tekrar denemeden önce lütfen biraz bekleyin.",
         "successNoPackage": "Anahtar kullanıldı! Steam kitaplığınız güncellendi.",
         "successWithPackage": "Anahtar kullanıldı! {{packageName}} Steam kitaplığınıza eklendi."
+    },
+    "languageSelector": {
+        "mtNotice": "Bu dildeki bazı metinler makine tarafından çevrilmiştir ve hatalar içerebilir.",
+        "reportTranslationProblem": "Bir çeviri sorunu bildir"
     }
 }
