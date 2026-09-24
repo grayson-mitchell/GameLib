@@ -57,12 +57,51 @@ whose GOG account is unlinked.** Do not read "cannot reproduce" as "fixed".
 - `pnpm planning-gates` → 13/13
 - Commit `8da1eb60a`, on `main`, **not pushed**
 
-## What this does NOT do
+## Phase 43 closure (task extended, same session)
 
-Phase 43 does not close on this. Still outstanding, as named in the session that spawned this task:
+Both follow-ups named above were then done in this task rather than deferred.
 
-1. The `ROADMAP.md:5289` entry still asserts "Phase 43 does NOT close on this verdict" from
-   43-10's live-gate FAIL, but every FAIL that verdict named has since been disposed — all four
-   43-filed defect todos are in `todos/completed/`, and the last surviving `**FAIL**` (the `GAME`
-   header 5.5px offset) was re-measured PASS in `43-UAT.md` item 9. That entry is stale.
-2. There is no `43-VERIFICATION.md`. The phase has never been formally verified or closed.
+**`ROADMAP.md` — superseding note, original verdict preserved verbatim.** The
+"Phase 43 does NOT close on this verdict" sentence was correct on 2026-09-11 and went stale unread
+for two weeks. All four of that verdict's `**FAIL**` rows are discharged by later **measurement**,
+not argument — GOG `currentColor` and the light-theme separator by live-gate runs 2-3 (four theme
+backgrounds, seam deltas 29/30/31/38 against `>=3`), item 3's title spread by run 3 (15 rows, two
+themes, three TYPE-cell shapes, total spread **1.0** against ±2), and the `GAME` header label by
+`43-UAT.md` item 9 (header **340.0** vs titles **340.0-341.0**). All four owning todos sit in
+`todos/completed/`.
+
+**`43-VERIFICATION.md` — `status: gaps_found`, 23/24 requirements.** Re-measured on `bbb493c50`,
+not transcribed from plan summaries:
+
+| check                                    | result                                                   |
+| ---------------------------------------- | -------------------------------------------------------- |
+| Humble frontend + common jest, 8 suites  | 205/205 pass                                             |
+| `viewFilters` unit suite                 | 61/61 pass                                               |
+| `meta/hardcodedStringGate.ts` (REQ-43-23)| 155/155 pass                                             |
+| `pnpm codecheck`                         | exit 0                                                   |
+| deleted-symbol census (REQ-43-18)        | zero code hits; 3 surviving strings are comments         |
+| `i18nGateScope`/`i18nForkTouchedFiles`   | neither lists the four deleted files (REQ-43-22)         |
+
+REQ-43-01..23 ticked in `REQUIREMENTS.md`.
+
+**The one gap is REQ-43-24, and it is a ticked box over a broken feature.** Its own requirement
+text deferred live verification to plan `43-10` — and **43-10 never covered it**. That gate scored
+column geometry and the row separator, nothing about the embed. The tick therefore rested on 83
+unit tests pinning the button's *label*, with nothing ever exercising the click, until UAT item 8
+exercised it and it did nothing. Left **ticked** with a `⚠️` correction block rather than
+un-ticked, so the "it shipped" fact survives alongside the "it does not work" fact.
+
+A second correction went in with it: REQ-43-24's text claims candidate A "was measured dead by a
+definitive server-side denial". That is not what was measured — the probe ran with the GOG account
+link **absent**, i.e. with no grantee. Candidate A is **moot**, not dead.
+
+**Named rather than absorbed:** three live-gate sub-checks are NOT ATTEMPTABLE because no row of
+the required shape exists in this library — the Pitfall-C disabled caption, the UNPICKED row, and
+a 2-line wrapped title (the longest title occupies 475.5 of a 768.0 track, so no wrap triggers).
+Gaps in the **sample**, not the implementation, and no re-run on this machine closes them.
+
+## Why `gaps_found` and not `passed`
+
+23/24 with a working screen is a good phase. Recording `passed` would need either un-ticking
+REQ-43-24 — losing the record that it shipped — or calling a button the operator watched do
+nothing "verified". Neither is true, so the status carries the gap and the gap carries an owner.

@@ -1757,31 +1757,31 @@ because each changes what a plan must assert:**
    behaviour — both predictions are FALSE. Those 22 assertions pin lifecycle behaviour that MUST
    survive, so REQ-43-12/-17's triage is "port forward", not "delete".
 
-- [ ] **REQ-43-01**: A `platform === 'generic'` key renders as an ordinary row (no partition),
+- [x] **REQ-43-01**: A `platform === 'generic'` key renders as an ordinary row (no partition),
   `TYPE` shows the neutral "Other" text at the same column width as a logo row. Source decision:
   D-43-01. Verified by: unit (common) + component.
 
-- [ ] **REQ-43-02**: `state === 'UNPICKED'` renders the full-width "Pick on Humble" button; the
+- [x] **REQ-43-02**: `state === 'UNPICKED'` renders the full-width "Pick on Humble" button; the
   `!isUnpicked` gate still suppresses the store logo/text for UNPICKED rows. Source decision:
   D-43-02. Verified by: component (extends existing UNPICKED pin).
 
-- [ ] **REQ-43-03**: `state === 'UNREDEEMABLE'` renders no button, state text only, the same bare-
+- [x] **REQ-43-03**: `state === 'UNREDEEMABLE'` renders no button, state text only, the same bare-
   text shape as scenario 4's no-button case. Source decision: D-43-03. Verified by: component.
 
-- [ ] **REQ-43-04**: No row count renders anywhere in the title row or controls row. Source
+- [x] **REQ-43-04**: No row count renders anywhere in the title row or controls row. Source
   decision: D-43-04. Verified by: component (assert absence).
 
-- [ ] **REQ-43-05**: Default sort is `Expiring soonest`; exactly one of
+- [x] **REQ-43-05**: Default sort is `Expiring soonest`; exactly one of
   `compareWaiting`/`byExpiringSoonest` survives in the codebase (the other is deleted with
   `groupKeys.ts`); the survivor's undated-key tiebreak is alphabetical. Source decisions: D-43-06,
   D-43-20. Verified by: unit (differentiating case) + source census (grep for the deleted name
   returns 0 hits outside git history).
 
-- [ ] **REQ-43-06**: Search text, sort choice, and checkbox all reset to their defaults on every
+- [x] **REQ-43-06**: Search text, sort choice, and checkbox all reset to their defaults on every
   fresh render/mount — nothing reads `localStorage` or route state. Source decision: D-43-07.
   Verified by: component.
 
-- [ ] **REQ-43-07**: The checkbox predicate is exactly `REDEEMABLE_ONLY_STATES.has(key.state)` —
+- [x] **REQ-43-07**: The checkbox predicate is exactly `REDEEMABLE_ONLY_STATES.has(key.state)` —
   toggling `ownedElsewhere`, `platform`, or `matchConfidence` alone never changes inclusion. Source
   decision: D-43-08. Verified by: unit (field-independence parametrized test). **Superseded by
   260911-t0p:** the predicate was originally `WAITING_STATES.has(key.state)`; a direct user
@@ -1791,68 +1791,68 @@ because each changes what a plan must assert:**
   `WAITING_STATES` itself is unchanged and still backs `selectKeysWaiting` and the per-row claim
   gate — this supersession touches only this requirement's predicate.
 
-- [ ] **REQ-43-08**: The checkbox's initial rendered value is checked (`true`). Source decision:
+- [x] **REQ-43-08**: The checkbox's initial rendered value is checked (`true`). Source decision:
   D-43-09. Verified by: component.
 
-- [ ] **REQ-43-09**: A query string matching only `origin` (not `title`) produces zero matches; a
+- [x] **REQ-43-09**: A query string matching only `origin` (not `title`) produces zero matches; a
   query matching `title` matches regardless of `origin` content. Source decision: D-43-10.
   Verified by: unit (common, new predicate).
 
-- [ ] **REQ-43-10**: Scenario 1 triggers only when the platform has a GameLib login concept AND
+- [x] **REQ-43-10**: Scenario 1 triggers only when the platform has a GameLib login concept AND
   that store's `ContextProvider` username field is falsy. Source decision: D-43-12. Verified by:
   unit/component (toggle username truthy/falsy).
 
-- [ ] **REQ-43-11**: For platforms in `{uplay, battlenet, origin, origin_keyless,
+- [x] **REQ-43-11**: For platforms in `{uplay, battlenet, origin, origin_keyless,
   nintendo_direct, generic, unrecognised}`, `KEY` never renders scenario 1, always renders the
   no-precondition "Claim on [store]" routed to `HUMBLE_REDEEM_HELP_URL`. Source decision: D-43-13.
   Verified by: component.
 
-- [ ] **REQ-43-12**: On the same row, "Not the same game" and "Undo — I do own this game" are
+- [x] **REQ-43-12**: On the same row, "Not the same game" and "Undo — I do own this game" are
   mutually exclusive, keyed strictly on override-record presence, never on cleared fuzzy/owned
   flags. Source decision: D-43-14. Verified by: component (adapts existing WR-04 pattern).
 
-- [ ] **REQ-43-13**: State badge and expiration/annotation text render inside the `KEY` cell,
+- [x] **REQ-43-13**: State badge and expiration/annotation text render inside the `KEY` cell,
   never in `GAME`. Source decision: D-43-15. Verified by: component.
 
-- [ ] **REQ-43-14**: `UrgencyBadge` renders adjacent to the title inside `GAME`, never inside
+- [x] **REQ-43-14**: `UrgencyBadge` renders adjacent to the title inside `GAME`, never inside
   `KEY`. Source decision: D-43-16. Verified by: component.
 
-- [ ] **REQ-43-15**: `TYPE` and `GAME` contain zero click handlers, zero `<button>`/`<a>`
+- [x] **REQ-43-15**: `TYPE` and `GAME` contain zero click handlers, zero `<button>`/`<a>`
   elements, and no `cursor: pointer` rule targets them. Source decision: D-43-17. Verified by:
   component (structural: walk returned element tree for onClick/href props) + CSS census.
 
-- [ ] **REQ-43-16**: `/humble-keys/waiting`, `/spares`, `/all` each redirect to `/humble-keys`;
+- [x] **REQ-43-16**: `/humble-keys/waiting`, `/spares`, `/all` each redirect to `/humble-keys`;
   `/humble-keys` itself renders the unified list, not a 404. Source decision: D-43-18. Verified
   by: component/router test.
 
-- [ ] **REQ-43-17**: No pinned "Expiring soon" section renders anywhere on the unified screen;
+- [x] **REQ-43-17**: No pinned "Expiring soon" section renders anywhere on the unified screen;
   `partitionWaitingByUrgency` has zero remaining call sites. Source decision: D-43-19. Verified
   by: component + source census (grep).
 
-- [ ] **REQ-43-18**: `HumbleKeyGroup` and `groupAndSortKeys` no longer exist in the tree;
+- [x] **REQ-43-18**: `HumbleKeyGroup` and `groupAndSortKeys` no longer exist in the tree;
   `GENERIC_KEY_PLATFORM` and `STATE_LABEL_KEYS` still resolve from their (possibly new) module
   paths; `pnpm codecheck` passes. Source decision: D-43-20. Verified by: build/typecheck + source
   census. **`selectKeysWaiting` is explicitly OUT of this requirement's scope** — see planning-
   time correction 1 above.
 
-- [ ] **REQ-43-19**: The `TYPE` and `KEY` column widths are visually identical across the header
+- [x] **REQ-43-19**: The `TYPE` and `KEY` column widths are visually identical across the header
   row and every KEY-scenario row shape (full-width button / pair / bare text), and the row
   separator renders as a hairline in the packaged Tauri build. Source decision: D-43-21. Verified
   by: **live gate only** — no unit/component substitute exists (frontend jest has no jsdom).
 
-- [ ] **REQ-43-20**: A genuinely-empty library shows the non-recovery empty state; a non-empty
+- [x] **REQ-43-20**: A genuinely-empty library shows the non-recovery empty state; a non-empty
   library filtered to zero rows shows the distinct filtered-empty state with a working "Clear
   search and filters" action that resets checkbox to `false` (not its `true` default). Source:
   `43-UI-SPEC.md` "Empty States". Verified by: component.
 
-- [ ] **REQ-43-21**: Search and the checkbox combine with AND (a row must satisfy both to show).
+- [x] **REQ-43-21**: Search and the checkbox combine with AND (a row must satisfy both to show).
   Source: `43-UI-SPEC.md` "Search & Filter Contract". Verified by: unit/component.
 
-- [ ] **REQ-43-22**: `meta/i18nGateScope.json` **and** `meta/i18nForkTouchedFiles.json` no longer
+- [x] **REQ-43-22**: `meta/i18nGateScope.json` **and** `meta/i18nForkTouchedFiles.json` no longer
   list any of the four deleted files. Source: Landmine 1 (`43-CONTEXT.md`); scope widened by
   planning-time correction 3 above. Verified by: source census (the CI gates themselves).
 
-- [ ] **REQ-43-23**: Every `aria-label` this phase adds/keeps is an expression, never a string
+- [x] **REQ-43-23**: Every `aria-label` this phase adds/keeps is an expression, never a string
   literal. Source: `43-UI-SPEC.md` "aria-label note". Verified by: `meta/hardcodedStringGate.ts`
   (existing CI gate).
 
@@ -1865,6 +1865,27 @@ because each changes what a plan must assert:**
   its honesty constraint). Verified by: `HumbleKeyRow/__tests__/index.test.tsx`'s
   `describe('gog_keyless KEY destination (REQ-43-24, D-43-11)')` block (83/83 passing); live
   embed-compositing/close-UX verification deferred to plan `43-10` per `43-09-SUMMARY.md`.
+
+  ⚠️ **THE TICK ABOVE IS STALE — this requirement FAILED live. Corrected 2026-09-25
+  (`260925-e4d`), left ticked so the "it shipped" fact is not lost, but do not read it as
+  verified.** The deferral in the line above never landed: **plan `43-10` never covered this** —
+  that gate scored column geometry and the row separator, nothing about the embed. So the tick
+  rests entirely on 83 unit tests pinning the button's LABEL, and nothing ever exercised the
+  click. `43-UAT.md` item 8 did, on a packaged release build: the button is **unresponsive**
+  (`severity: major`). `openHumbleKeysEmbed()` (`HumbleKeyRow/index.tsx:304-321`) opens the
+  singleton embed from a row with no host route and no slot, so nothing afterwards sizes, shows or
+  scroll-syncs the native subview. Owned by
+  `.planning/todos/pending/2026-09-25-humble-keys-gog-keyless-claim-button-opens-an-embed-with-no-host-lifecycle.md`;
+  scored as the one gap in `43-VERIFICATION.md` (`status: gaps_found`, 23/24).
+
+  Second correction, same date: this requirement's text says candidate A "was measured dead by a
+  definitive server-side denial". **That is not what was measured.** `43-PROBE-D-43-11.md`'s
+  2026-09-22 observation established that `gog_keyless` is the **unlinked-GOG-account** shape — a
+  post-link GOG entitlement arrives as keyed `gog`, which GameLib already handles end to end via
+  `keyTypePresentation.ts:131`'s `REDEEM_URL_BUILDERS.gog`. The probe's `success=false` was taken
+  with the account link ABSENT, i.e. with no grantee. Candidate A is **MOOT**, not dead: there is
+  no seamless-activation mechanism left to build, because the keyless shape stops occurring once
+  the account is linked. Candidate B remains shipped; only its justification changed.
 
 *Last updated: 2026-09-09 -- Phase 43 (REQ-43-01..24) minted during `/gsd-plan-phase 43` from
 `43-RESEARCH.md`'s `## Requirements (Proposed)` table; `43-CONTEXT.md` D-43-01..D-43-21 supply the

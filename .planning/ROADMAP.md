@@ -5288,6 +5288,37 @@ already on disk for 43-01..43-09, not new work by this plan beyond 43-09 itself)
   Reachability Review never checked that its own instructions would execute. See
   `43-LIVE-GATE.md` § Verdict and `43-10-SUMMARY.md`. **Phase 43 does NOT close on this verdict.**
 
+**SUPERSEDING NOTE — 2026-09-25 (quick `260925-e4d`).** The sentence immediately above was correct
+on 2026-09-11 and went stale unread for two weeks. It is preserved verbatim as the record of the
+verdict; it is **no longer the phase's status.** All four of that verdict's `**FAIL**` rows have
+since been discharged by later MEASUREMENT, not by argument: the GOG `currentColor` failure and the
+light-theme separator by live-gate runs 2 and 3 (four theme backgrounds, seam deltas 29/30/31/38
+against a `>=3` threshold), item 3's title spread by run 3 (15 rows, two themes, three TYPE-cell
+shapes, total spread **1.0** CSS px against ±2), and the last survivor — the `GAME` header label
+sitting 5.5px left of the row titles — by `43-UAT.md` item 9 on a fresh hash-verified release build
+(header **340.0** vs titles **340.0-341.0**). All four owning todos are in `todos/completed/`.
+
+**Phase 43 is now VERIFIED with one gap — `43-VERIFICATION.md`, `status: gaps_found`, 23/24
+requirements.** Re-measured 2026-09-25 rather than transcribed: 205/205 Humble frontend+common
+tests, 61/61 `viewFilters`, 155/155 hardcoded-string gate, `pnpm codecheck` exit 0, and source
+censuses returning zero code hits for `HumbleKeyGroup`, `groupAndSortKeys`, `GROUP_ORDER`,
+`byExpiringSoonest` and `partitionWaitingByUrgency`.
+
+**The gap is REQ-43-24 (`major`), and it is a ticked box over a broken feature.** The `gog_keyless`
+"Claim on Humble" button is unresponsive in the packaged build (`43-UAT.md` item 8). The tick rests
+on 83/83 unit tests that pin the button's LABEL; its own requirement text deferred live
+verification to plan `43-10`, and **43-10 never covered it** — that gate scored column geometry and
+the row separator, nothing about the embed. Root cause is diagnosed and owned by
+`.planning/todos/pending/2026-09-25-humble-keys-gog-keyless-claim-button-opens-an-embed-with-no-host-lifecycle.md`.
+It **cannot be reproduced on this machine any more**: `gog_keyless` is the unlinked-GOG-account
+shape and the operator linked GOG on 2026-09-22, so the branch is unreachable here while still
+shipping for every unlinked user. A second item — a REVEALED `gog_keyless` row rendering a "Finish
+activation" dead end — is inferred, never observed, and carried by its own `ready: live-gate` todo.
+
+Also not verified, and named rather than absorbed: three live-gate sub-checks were NOT ATTEMPTABLE
+because no row of the required shape exists in this library (the Pitfall-C disabled caption, the
+UNPICKED row, and a 2-line wrapped title). Those are gaps in the SAMPLE, not the implementation.
+
 ### Phase 44: In-app Winetricks browse UI replacing the search-only panel — ⛔ SUPERSEDED BY PHASE 45 (2026-09-18)
 
 **Status:** ⛔ SUPERSEDED 2026-09-18 by Phase 45 — 7 of 8 plans executed and shipped; only `44-08`
