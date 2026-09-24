@@ -116,7 +116,7 @@ export function selectVisibleSteamLibrary<TGame extends SteamVisibilityGame>(
 }
 
 /** The pair `resolveSteamVisibility` hands back to each call site. */
-export interface SteamVisibility<TGame extends SteamVisibilityGame> {
+interface SteamVisibility<TGame extends SteamVisibilityGame> {
   /** The Games grid slice -- exactly `selectVisibleSteamLibrary`'s return. */
   games: TGame[]
   /** Whether the Store facet panel should render a Steam row at all. */
