@@ -179,6 +179,10 @@
         "pathRejectedBodyMove": "GameLib couldn't move this game there. The destination has to be a full folder path with no \"..\" steps in it. Pick the destination folder again.",
         "pathRejectedTitle": "Can't use that location"
     },
+    "languageSelector": {
+        "mtNotice": "Some text in this language was machine-translated and may contain mistakes.",
+        "reportTranslationProblem": "Report a translation problem"
+    },
     "library": {
         "filterPanel": {
             "chipHiddenIncluded": "Including hidden",

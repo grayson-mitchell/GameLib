@@ -1,0 +1,47 @@
+name: Translation problem
+description: 'Something in a non-English GameLib language reads wrong? Let us know so it can be corrected.'
+labels: translation
+title: '[Translation] '
+body:
+  - type: markdown
+    attributes:
+      value: |-
+        Non-English text in GameLib is currently **machine-translated**, not reviewed by a human
+        speaker of every language. Corrections from real speakers are very welcome -- thank you
+        for taking the time to report this.
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      description: 'Which language is this about? (e.g. "Deutsch (de)")'
+      placeholder: 'Deutsch (de)'
+    validations:
+      required: true
+  - type: textarea
+    id: location
+    attributes:
+      label: Where in the app
+      description: 'Which screen, button, or message is this? (e.g. "Settings > General > language picker")'
+    validations:
+      required: true
+  - type: textarea
+    id: current_text
+    attributes:
+      label: Current text
+      description: 'The exact text as it appears in the app right now.'
+    validations:
+      required: true
+  - type: textarea
+    id: suggested_text
+    attributes:
+      label: Suggested text
+      description: "The corrected text, if you know it. If you're not sure of the exact wording, a description of what is wrong is fine too."
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
+      description: 'Anything else that might help (context, screenshots, related strings).'
+    validations:
+      required: false

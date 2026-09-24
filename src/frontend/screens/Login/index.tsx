@@ -369,7 +369,6 @@ export default React.memo(function NewLogin() {
         <div className="loginActions">
           <LanguageSelector
             flagPossition={FlagPosition.PREPEND}
-            showWeblateLink={false}
             hideLabel={true}
           />
           <button

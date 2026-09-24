@@ -1,10 +1,14 @@
-import { useContext } from 'react'
+import { useContext, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { configStore } from 'frontend/helpers/electronStores'
 import ContextProvider from 'frontend/state/ContextProvider'
 import { SelectField } from '..'
 import { MenuItem } from '@mui/material'
 import type { SupportedLanguage } from 'common/languages'
+import {
+  buildTranslationIssueUrl,
+  shouldShowMtNotice
+} from './translationIssue'
 
 const storage: Storage = window.localStorage
 
@@ -16,7 +20,6 @@ export enum FlagPosition {
 
 interface Props {
   flagPossition?: FlagPosition
-  showWeblateLink?: boolean
   // Login screen renders the picker bare (no "Choose App Language" label)
   // beside the "Go to Library" button; Settings keeps the labelled form.
   hideLabel?: boolean
@@ -116,7 +119,6 @@ const languageFlags: Record<SupportedLanguage, string> = {
 
 export default function LanguageSelector({
   flagPossition = FlagPosition.NONE,
-  showWeblateLink = false,
   hideLabel = false
 }: Props) {
   const { t, i18n } = useTranslation()
@@ -131,8 +133,20 @@ export default function LanguageSelector({
     setLanguage(newLanguage)
   }
 
-  function handleWeblate() {
-    return window.api.openWeblate()
+  const label =
+    languageLabels[currentLanguage as SupportedLanguage] ?? currentLanguage
+
+  const handleReportTranslationProblem = () => {
+    window.api.openExternalUrl(buildTranslationIssueUrl(currentLanguage, label))
+  }
+
+  const handleReportTranslationProblemKeyDown = (
+    event: KeyboardEvent<HTMLAnchorElement>
+  ) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleReportTranslationProblem()
+    }
   }
 
   const renderOption = (lang: SupportedLanguage) => {
@@ -148,16 +162,40 @@ export default function LanguageSelector({
     )
   }
 
+  // 260925-88h: the app-wide MT disclosure + report link. Never shown for
+  // English -- see shouldShowMtNotice. The Weblate link that used to render
+  // here (its enabling prop, now removed from this component's Props) was
+  // deleted: it was never enabled anywhere (measured -- GeneralSettings used
+  // the default false, Login passed false explicitly), and it pointed at
+  // Heroic's own Weblate project, which GameLib -- an independent fork that
+  // does not pull from Heroic -- never reads corrections from for ANY
+  // string, fork or upstream-copied. The `openWeblate` IPC channel and
+  // `weblateUrl` constant are left in place (removing a channel is a
+  // preload-surface/seam-parity change, out of this quick task's scope) but
+  // are now unreferenced by the frontend.
   let afterSelect = null
-  if (showWeblateLink) {
+  if (shouldShowMtNotice(currentLanguage)) {
     afterSelect = (
-      <a
-        data-testid="buttonWeblate"
-        onClick={handleWeblate}
-        className="smallLink"
-      >
-        {t('other.weblate', 'Help Improve this translation.')}
-      </a>
+      <>
+        <p className="smallLink languageSelectorMtNotice">
+          {t(
+            'gamelib:languageSelector.mtNotice',
+            'Some text in this language was machine-translated and may contain mistakes.'
+          )}
+        </p>
+        <a
+          className="link"
+          role="button"
+          tabIndex={0}
+          onClick={handleReportTranslationProblem}
+          onKeyDown={handleReportTranslationProblemKeyDown}
+        >
+          {t(
+            'gamelib:languageSelector.reportTranslationProblem',
+            'Report a translation problem'
+          )}
+        </a>
+      </>
     )
   }
 
