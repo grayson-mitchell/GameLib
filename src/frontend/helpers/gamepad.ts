@@ -16,18 +16,6 @@ import { VirtualKeyboardController } from './virtualKeyboard'
 
 const SCROLL_REPEAT_DELAY = 50
 
-// TEMPORARY -- Task 1 diagnostic only, see 260923-qe5-PLAN.md. Deleted in Task 5 once the
-// operator's raw HID report (button/axis layout of a non-standard-mapping Nintendo pad) has
-// been captured. Guard every emission with `window.api?.logInfo?.()` inside try/catch --
-// three jest harnesses stub `window.api` with partial shapes and an unguarded call throws
-// inside the `gamepadconnected` listener, taking the existing gamepad suites down with it.
-const HID_DUMP = true
-
-// Previous per-controller button/axis state for HID_DUMP, keyed by controller index, so the
-// dump only logs what changed since the previous frame instead of every value every frame.
-const hidDumpPrevButtons: Record<number, boolean[]> = {}
-const hidDumpPrevAxes: Record<number, number[]> = {}
-
 // Mirror of the `gamepadRepeatDelay` / `gamepadInitialRepeatDelay` defaults in
 // `GlobalConfigV0.getFactoryDefaults` (src/backend/config.ts). They seed
 // `actions` synchronously so a frame that lands before the settings round-trip
@@ -578,35 +566,6 @@ export const initGamepad = () => {
 
       const buttons = controller.buttons
       const axes = controller.axes
-
-      // TEMPORARY -- Task 1 diagnostic only (see comment at HID_DUMP above). Placed before
-      // the id.match() dispatch chain so it fires regardless of which layout function is
-      // selected for this controller.
-      if (HID_DUMP) {
-        try {
-          const prevButtons = hidDumpPrevButtons[index] ?? []
-          buttons.forEach((button, buttonIndex) => {
-            const wasPressed = prevButtons[buttonIndex] ?? false
-            if (button.pressed && !wasPressed) {
-              window.api?.logInfo?.(`[GAMEPAD-BTN] index=${buttonIndex}`)
-            }
-          })
-          hidDumpPrevButtons[index] = buttons.map((button) => button.pressed)
-
-          const prevAxes = hidDumpPrevAxes[index] ?? []
-          axes.forEach((value, axisIndex) => {
-            const prevValue = prevAxes[axisIndex] ?? 0
-            if (Math.abs(value - prevValue) > 0.05) {
-              window.api?.logInfo?.(
-                `[GAMEPAD-AXIS] index=${axisIndex} value=${value.toFixed(5)}`
-              )
-            }
-          })
-          hidDumpPrevAxes[index] = axes.slice()
-        } catch {
-          // diagnostic only -- must never break input handling
-        }
-      }
 
       try {
         if (controller.id.match(/gamecube|0337/i)) {
