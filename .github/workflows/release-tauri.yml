@@ -70,7 +70,35 @@ on:
   push:
     tags:
       - 'v*'
+  # Quick task 260924-rbx: dry_run is a DELIBERATE BEHAVIOUR CHANGE for
+  # workflow_dispatch. Before this input existed, a manual dispatch built all
+  # three matrix legs AND created a real tag AND created/mutated a GitHub
+  # release, identically to a `v*` tag push. After it, the DEFAULT dispatch
+  # does neither.
+  #
+  # WHY default: true and not false: tauri-action's `tagName: v__VERSION__`
+  # resolves from src-tauri/tauri.conf.json's `version` field (0.7.0), NOT
+  # from any pushed tag's literal name. Every throwaway tag pushed this gap
+  # cycle (v0.7.0-notarize-test1/2/3, v0.7.0-updater-test1) therefore landed
+  # in ONE shared draft release, id 378785323, which still carries a stale
+  # GameLib_0.7.0_x64.dmg from 2026-08-28. A dispatch today would do the same.
+  # The SAFE mode is therefore the correct default for a manual dispatch; an
+  # operator who wants a real release opts IN by unticking the box.
+  #
+  # WHAT a dry run delivers: the BUILD LOG, not a binary. It proves
+  # install-deps, tar, symlinks and packaging work on windows-latest and that
+  # the bundler prints what it produced. Nothing is uploaded -- see the
+  # GAMELIB_DRY_RUN comment below for why that is a decision, not an
+  # omission.
+  #
+  # `v*` tag pushes are UNAFFECTED -- see the GAMELIB_DRY_RUN comment below
+  # for the mechanism that guarantees it.
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Build all three legs WITHOUT creating a tag or a GitHub release'
+        type: boolean
+        default: true
 
 jobs:
   release:
@@ -97,6 +125,43 @@ jobs:
       WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
       WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
       WINDOWS_CERT_THUMBPRINT: ${{ secrets.WINDOWS_CERT_THUMBPRINT }}
+      # Quick task 260924-rbx: the ONE place this boolean is computed. Every
+      # other site in this job reads env.GAMELIB_DRY_RUN -- do NOT add a
+      # second computation site anywhere else in this file.
+      #
+      # WHY the github.event_name conjunct is explicit rather than relying on
+      # inputs.dry_run being falsy on a push: a push must be structurally
+      # INCAPABLE of entering dry-run, not incidentally safe -- inputs.* is
+      # only even populated on a workflow_dispatch event.
+      #
+      # WHY the `inputs.` context spelling and NOT
+      # `github.event.inputs.dry_run`: the latter yields the STRING 'false'
+      # for an unticked box, and a non-empty string is TRUTHY in a GitHub
+      # expression, so dry-run could never be turned off.
+      #
+      # Resolves to the string 'true' or 'false'. Note that a job-level env:
+      # map may read `github`/`inputs` but NOT `env` itself -- that is why
+      # the derivation lives here and every consumer below reads env.* instead.
+      #
+      # DEFERRED DECISION, recorded not actioned: all six Apple secrets are
+      # now enrolled, so a dry run DOES perform a real notarization
+      # submission -- slow, and it consumes submissions. Skipping
+      # notarization on dry runs would make them cheaper but would stop them
+      # exercising a path already proven by run 35942560790. That trade-off
+      # is explicitly DEFERRED; this task does not change notarization
+      # behaviour.
+      #
+      # A dry run also deliberately uploads nothing: releaseWorkflow.test.ts
+      # bans the artifact-upload and cache GitHub Actions ABSOLUTELY (see
+      # this file's own "has no upload-artifact or cache step" test), and
+      # that ban is a constraint this workflow satisfies rather than amends.
+      # A path-confined upload was considered and REJECTED -- `Import Windows
+      # signing certificate` writes a PKCS#12 to cert.pfx in the workspace,
+      # and while that step does not fire today (the Windows secrets are not
+      # enrolled), relying on that would plant a latent defect that ARMS the
+      # day the SignPath certificate lands. The dry run's value is the log; a
+      # real tag push is what yields a binary.
+      GAMELIB_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
     steps:
       - uses: actions/checkout@v6
 
@@ -554,11 +619,30 @@ jobs:
 
           pnpm sign:macos-resources -- --dir build/bin/arm64/darwin --keychain "$KEYCHAIN"
 
+      # Quick task 260924-rbx: tagName/releaseName are empty on a dry run, so
+      # tauri-action builds and bundles all three legs WITHOUT creating a git
+      # tag or touching a release. releaseId is unconditionally '' -- it is
+      # absent today, and an absent Actions input and one set to '' are both
+      # read as '', so this is semantically identical on the tag-push path
+      # while making "never touch an existing release by id" explicit and
+      # assertable. Per tauri-action's own README, omitting
+      # tagName/releaseName/releaseId is the documented way to build without
+      # uploading assets.
+      #
+      # The `!=` polarity below is load-bearing, not stylistic. GitHub's
+      # &&/|| return VALUES and an empty string is FALSY, so the natural-
+      # looking `env.GAMELIB_DRY_RUN == 'true' && '' || 'v__VERSION__'` would
+      # evaluate, on a dry run, to 'v__VERSION__' -- i.e. it would create the
+      # tag and mutate the shared draft release, the exact hazard this task
+      # exists to remove, failing in the dangerous direction. Inverting the
+      # condition puts the non-empty branch on the truthy side, which is the
+      # only form that behaves correctly.
       - uses: tauri-apps/tauri-action@v1
         timeout-minutes: 60
         with:
-          tagName: v__VERSION__
-          releaseName: 'GameLib v__VERSION__'
+          tagName: ${{ env.GAMELIB_DRY_RUN != 'true' && 'v__VERSION__' || '' }}
+          releaseName: ${{ env.GAMELIB_DRY_RUN != 'true' && 'GameLib v__VERSION__' || '' }}
+          releaseId: ''
           releaseBody: 'See the assets below to download and install.'
           releaseDraft: true
           prerelease: true
