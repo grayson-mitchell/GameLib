@@ -142,8 +142,13 @@ The workflow is green today while shipping unsigned. Verify on the artifact, on 
   `SignerCertificate.Subject` must name the expected organisation.
 - Confirm the run log contains no `::warning::WINDOWS_CERTIFICATE` skip line.
 - Download the published asset **through a browser** (not `curl`, which does not attach the
-  zone-identifier mark-of-the-web) on a machine that has never built the app, and confirm no
-  SmartScreen interstitial.
+  zone-identifier mark-of-the-web) on a machine that has never built the app. ~~Confirm no
+  SmartScreen interstitial.~~ **SUPERSEDED 2026-09-24 — see Finding 1.** Absence of the
+  interstitial is NOT a pass criterion on a first signed release and must not be treated as one:
+  no issuer buys instant trust, so an interstitial here is the expected result of a correctly
+  signed first release. What to check instead is that the prompt now names the expected publisher
+  rather than an unknown one, and that the interstitial recedes across subsequent releases signed
+  with the same identity. Reading this bullet literally would convict working signing.
 - After the first signed release, verify that the published `*-setup.exe.sig` verifies against the
   SIGNED installer bytes, and that an actual in-app update from the prior version completes. A
   signature that merely exists proves nothing — this is exactly the failure Finding 4 describes.
