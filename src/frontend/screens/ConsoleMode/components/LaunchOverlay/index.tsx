@@ -136,9 +136,9 @@ export default function LaunchOverlay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { layout } = useGamepadInfo()
+  const { layout, mapping } = useGamepadInfo()
   useGamepadButtonHold(
-    getBackButtonIndex(layout),
+    getBackButtonIndex(layout, mapping),
     (held) => (held ? startHold() : stopHold()),
     !!game
   )

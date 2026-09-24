@@ -136,7 +136,34 @@ function makePad(index: number, id: string, opts: PadOptions = {}) {
 
 type MutablePad = ReturnType<typeof makePad>
 
-function buildHarness() {
+// OPT-IN ONLY -- built and used by ONE test (`rightClick follows the printed
+// X cap`) via `buildHarness({ stubFocusedElement: true })`. Every other case
+// in this file gets `fakeDocument.querySelector` returning `null`, exactly
+// as before. A harness-wide focus stub would change `currentElement()` for
+// every case, including the six byte-identical regression cases this whole
+// suite exists to protect -- so this is threaded through as an explicit,
+// per-call option rather than a default.
+//
+// `metadata()` (helpers/gamepad.ts) needs only `tagName` and
+// `getBoundingClientRect()` off the focused element; `rightClick`'s dispatch
+// path never touches `parentElement` or any other DOM API. `tagName: 'DIV'`
+// is deliberate -- `currentElement()` special-cases `'svg'`, so a stub using
+// that tag would exercise a different branch than a real focused button.
+const fakeFocusedElement = {
+  tagName: 'DIV',
+  getBoundingClientRect: () => ({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0
+  })
+}
+
+function buildHarness(options: { stubFocusedElement?: boolean } = {}) {
   const listeners = new Map<string, PadListener[]>()
   const rafQueue: FrameRequestCallback[] = []
   const pads: (Gamepad | null)[] = []
@@ -162,7 +189,8 @@ function buildHarness() {
 
   const fakeDocument = {
     body: { classList: { contains: () => false } },
-    querySelector: () => null
+    querySelector: () =>
+      options.stubFocusedElement ? fakeFocusedElement : null
   }
 
   const requestAnimationFrame = (cb: FrameRequestCallback) => {
@@ -212,10 +240,11 @@ function cleanupGlobals() {
 function pressButton(
   id: string,
   buttonIndex: number,
-  opts?: PadOptions
+  opts?: PadOptions,
+  harnessOpts?: { stubFocusedElement?: boolean }
 ): string[] {
   jest.resetModules()
-  const harness = buildHarness()
+  const harness = buildHarness(harnessOpts)
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
   initGamepad()
@@ -337,16 +366,19 @@ describe('helpers/gamepad: Nintendo layout routing, non-standard mapping (measur
   })
 
   it('rightClick follows the printed X cap', () => {
-    // FLAGGED, NOT REDESIGNED (executor note, quick-260923-qe5 Task 2):
-    // `rightClick` is gated behind `metadata()` in gamepad.ts, which needs
-    // `currentElement()` -> `document.querySelector(':focus')` to return a
-    // real element. This harness's fakeDocument always returns null, so
-    // `rightClick` can NEVER reach `window.api.gamepadAction` here --
-    // structurally impossible in this DOM-less harness, pre-fix AND
-    // post-fix. This assertion is left as the plan specifies rather than
-    // improvised around; it is expected to keep failing after Task 3 too.
-    // See SUMMARY.md for the full writeup and the decision this needs.
-    expect(pressButton(POWERA_ID, RAW_X, NON_STANDARD)).toContain('rightClick')
+    // Task 2 flagged that `rightClick` is gated behind `metadata()`
+    // (helpers/gamepad.ts), which needs `currentElement()` ->
+    // `document.querySelector(':focus')` to return a real element --
+    // structurally impossible with this harness's default `fakeDocument`,
+    // pre-fix AND post-fix. Orchestrator decision (Task 3,
+    // quick-260923-qe5): opt in to the scoped focused-element stub for THIS
+    // case only, via `pressButton`'s 4th argument, so the assertion below is
+    // a genuine positive rather than a vacuous or negative one. See the
+    // `fakeFocusedElement`/`buildHarness` comment above for why this is
+    // opt-in rather than harness-wide.
+    expect(
+      pressButton(POWERA_ID, RAW_X, NON_STANDARD, { stubFocusedElement: true })
+    ).toContain('rightClick')
   })
 
   it('presses the same raw index to different actions across mappings (cross-mapping contrast)', () => {

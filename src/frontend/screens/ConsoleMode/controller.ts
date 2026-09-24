@@ -1,4 +1,7 @@
-import { isNintendoControllerId } from 'frontend/helpers/gamepad_layouts'
+import {
+  isNintendoControllerId,
+  nintendoFaceIndices
+} from 'frontend/helpers/gamepad_layouts'
 
 export type ControllerLayout =
   | 'ps4'
@@ -34,11 +37,28 @@ export const getBackButtonLabel = (layout: ControllerLayout) =>
 // swapping the LABELS instead -- was GameLib's shipped behaviour until this
 // change. Do not reintroduce it on top of this: applying both swaps cancels
 // them out and restores the original defect.
-export const getActionButtonIndex = (layout: ControllerLayout) =>
-  layout === 'nintendo' ? BTN_BACK : BTN_ACTION
+//
+// `mapping` is REQUIRED, not optional-with-a-default: an optional
+// `mapping = 'standard'` would compile at every call site unchanged and let a
+// future call site silently re-acquire the exact defect this parameter
+// exists to close (quick-260923-qe5). The printed cap is a property of the
+// PLASTIC, so `getActionButtonLabel`/`getBackButtonLabel` below deliberately
+// do NOT take a mapping -- the mapping is a property of the HID report, and
+// making the label mapping-dependent would reintroduce the glyph/button
+// disagreement from the other side. For 'nintendo', both helpers resolve
+// through `nintendoFaceIndices` -- THE SAME table `checkNintendo`
+// (helpers/gamepad_layouts/nintendo.ts) resolves through for global spatial
+// navigation -- so Console Mode's overlays and global navigation cannot
+// disagree about a given pad.
+export const getActionButtonIndex = (
+  layout: ControllerLayout,
+  mapping: GamepadMappingType
+) => (layout === 'nintendo' ? nintendoFaceIndices(mapping).action : BTN_ACTION)
 
-export const getBackButtonIndex = (layout: ControllerLayout) =>
-  layout === 'nintendo' ? BTN_ACTION : BTN_BACK
+export const getBackButtonIndex = (
+  layout: ControllerLayout,
+  mapping: GamepadMappingType
+) => (layout === 'nintendo' ? nintendoFaceIndices(mapping).back : BTN_BACK)
 
 export function detectControllerLayout(id: string): ControllerLayout {
   if (/054c|PS3|054c.*09cc|0268|'2563.*0523/i.test(id)) return 'ps4'

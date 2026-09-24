@@ -70,13 +70,108 @@ export function isNintendoControllerId(id: string): boolean {
   return !XBOX_ID.test(id) && NINTENDO_ID.test(id)
 }
 
+export type NintendoFaceIndices = {
+  action: number
+  back: number
+  alt: number
+  menu: number
+}
+
+// THE SINGLE SOURCE OF TRUTH for which physical button index corresponds to
+// the A-CONFIRMS convention on a given Nintendo pad, on EITHER wire format
+// Chromium may report it with. Both `checkNintendo` below (global spatial
+// navigation) and `getActionButtonIndex`/`getBackButtonIndex`
+// (screens/ConsoleMode/controller.ts, Console Mode's overlays) resolve
+// through `nintendoFaceIndices` so the two subsystems cannot disagree about a
+// given pad -- see the SINGLE SOURCE OF TRUTH comment above
+// `isNintendoControllerId`.
+const STANDARD_FACE_INDICES: NintendoFaceIndices = {
+  action: 1, // right cap (A)
+  back: 0, // bottom cap (B)
+  alt: 2, // left cap (Y)
+  menu: 3 // top cap (X)
+}
+
+// RAW HID, classic SNES/Nintendo face order Y, B, A, X. MEASURED against the
+// operator's PowerA Advantage Wired Controller for Nintendo Switch 2 (Vendor:
+// 20d6 Product: a720), 2026-09-23 21:01:12-16 (quick-260923-qe5 Task 1):
+// Chromium reports this pad with mapping `''` (empty string, NOT
+// 'standard'), and its face caps read A=2, B=1, X=3, Y=0.
+const RAW_HID_FACE_INDICES: NintendoFaceIndices = {
+  action: 2, // A
+  back: 1, // B
+  alt: 0, // Y
+  menu: 3 // X
+}
+
+export function nintendoFaceIndices(
+  mapping: GamepadMappingType
+): NintendoFaceIndices {
+  // 'xr-standard' is deliberately treated as non-standard: an XR device is
+  // not a Switch pad, and the raw-HID row is no more wrong for it than the
+  // standard row would be. A `mapping !== ''` test would silently route any
+  // future mapping value back into the position-based assumption this whole
+  // change exists to stop making, so this branches on the one value known to
+  // be safe rather than the one that is merely familiar.
+  return mapping === 'standard' ? STANDARD_FACE_INDICES : RAW_HID_FACE_INDICES
+}
+
+// Hat-axis index on the non-standard PowerA pad above. MEASURED 2026-09-23
+// (Task 1): axes.length is 10 on this pad, and the hat lives at index 9.
+// This is specific to the measured device's raw HID report, not a general
+// convention -- if a future non-standard Nintendo pad reports its hat at a
+// different index, this constant needs a new measurement, not a guess.
+const NON_STANDARD_HAT_AXIS = 9
+
+// Measured hat-axis values for the pad above, 2026-09-23 21:04-21:12:
+//   up:      -1.00000  -> Math.round(v*10) === -10
+//   right:   -0.42857  -> Math.round(v*10) === -4
+//   down:     0.14286  -> Math.round(v*10) === 1
+//   left:     0.71429  -> Math.round(v*10) === 7
+//   up-right: -0.71429 -> Math.round(v*10) === -7 (diagonal, A7 -- excluded)
+//   neutral:   3.28571 -> Math.round(v*10) === 33 (excluded)
+// Every cardinal matched the Chromium/W3C generic-hat convention; NEUTRAL DID
+// NOT -- that convention predicts 1.28571, the measured value is 3.28571.
+// This function uses the MEASURED value: a constant of 1.28571 would encode
+// a phantom d-pad direction at rest.
+// `checkN64Clone1` below uses DIFFERENT constants for a DIFFERENT device, and
+// its own comment and code already disagree with each other -- do not copy
+// that row here, and this function does not change it.
+export function nintendoHatDirection(
+  hatValue: number
+): 'up' | 'down' | 'left' | 'right' | null {
+  switch (Math.round(hatValue * 10)) {
+    case -10:
+      return 'up'
+    case 1:
+      return 'down'
+    case 7:
+      return 'left'
+    case -4:
+      return 'right'
+    default:
+      // Diagonals, neutral, and NaN (an absent hat axis -- `undefined * 10`
+      // -- e.g. on a standard-mapped pad, which never reaches this branch
+      // anyway) all land here, and none of them should dispatch a d-pad
+      // action.
+      return null
+  }
+}
+
 // Nintendo Switch Pro Controller / Joy-Cons (Vendor: 057e)
-// Chromium reports these with the "standard" mapping by physical position, so
-// buttons[0] is the bottom button (labeled B on Switch) and buttons[1] is the
-// right button (labeled A). We bind the ACTIONS to the printed LABELS -- A
-// confirms, B goes back -- which is what a Switch owner's muscle memory
-// expects from the console itself. The same reasoning swaps X/Y: on a Switch
-// pad X is the top cap and Y is the left cap, mirrored from Xbox.
+// Chromium normalises SOME Nintendo pads to the "standard" mapping (by
+// physical position -- buttons[0] is the bottom cap, buttons[1] is the right
+// cap) and passes OTHERS through as raw HID, unchanged, reporting `mapping`
+// as the empty string. The mapping is now READ here, not assumed:
+// `nintendoFaceIndices` above resolves the four face indices for whichever
+// mapping this pad reports. On raw HID the face order is the classic
+// SNES/Nintendo order Y, B, A, X.
+//
+// Either way we bind the ACTIONS to the PRINTED LABEL -- A confirms, B goes
+// back -- which is what a Switch owner's muscle memory expects from the
+// console itself, and is what makes the on-screen glyph and the acting
+// button agree. Observed non-standard device: PowerA Advantage Wired
+// Controller for Nintendo Switch 2 (Vendor: 20d6 Product: a720), 2026-09-23.
 export function checkNintendo(
   buttons: readonly GamepadButton[],
   axes: readonly number[],
@@ -85,17 +180,14 @@ export function checkNintendo(
     action: ValidGamepadAction,
     pressed: boolean,
     ctrlIdx: number
-  ) => void
+  ) => void,
+  mapping: GamepadMappingType
 ) {
-  const B = buttons[0], // bottom cap
-    A = buttons[1], // right cap
-    Y = buttons[2], // left cap
-    X = buttons[3], // top cap
-    up = buttons[12],
-    down = buttons[13],
-    left = buttons[14],
-    right = buttons[15],
-    guideButton = buttons[16],
+  const faceIndices = nintendoFaceIndices(mapping)
+  const A = buttons[faceIndices.action],
+    B = buttons[faceIndices.back],
+    Y = buttons[faceIndices.alt],
+    X = buttons[faceIndices.menu],
     leftAxisX = axes[0],
     leftAxisY = axes[1],
     rightAxisX = axes[2],
@@ -113,11 +205,30 @@ export function checkNintendo(
   checkAction('rightStickRight', rightAxisX > 0.5, controllerIndex)
   checkAction('rightStickUp', rightAxisY < -0.5, controllerIndex)
   checkAction('rightStickDown', rightAxisY > 0.5, controllerIndex)
-  checkAction('padUp', up?.pressed, controllerIndex)
-  checkAction('padDown', down?.pressed, controllerIndex)
-  checkAction('padLeft', left?.pressed, controllerIndex)
-  checkAction('padRight', right?.pressed, controllerIndex)
-  checkAction('guide', guideButton?.pressed, controllerIndex)
+
+  if (mapping === 'standard') {
+    // Standard mapping's d-pad is four discrete buttons at fixed positions.
+    checkAction('padUp', buttons[12]?.pressed, controllerIndex)
+    checkAction('padDown', buttons[13]?.pressed, controllerIndex)
+    checkAction('padLeft', buttons[14]?.pressed, controllerIndex)
+    checkAction('padRight', buttons[15]?.pressed, controllerIndex)
+    checkAction('guide', buttons[16]?.pressed, controllerIndex)
+  } else {
+    // Raw HID: the d-pad is a single hat axis, NOT buttons[12-15] -- on this
+    // device's raw layout those indices are Home and Capture, so reading
+    // them as a d-pad would make Home dispatch padUp given a populated
+    // button array. Cardinals only: a diagonal that fired both of its
+    // components would move spatial navigation twice in one frame.
+    const hatDirection = nintendoHatDirection(axes[NON_STANDARD_HAT_AXIS])
+    checkAction('padUp', hatDirection === 'up', controllerIndex)
+    checkAction('padDown', hatDirection === 'down', controllerIndex)
+    checkAction('padLeft', hatDirection === 'left', controllerIndex)
+    checkAction('padRight', hatDirection === 'right', controllerIndex)
+    // `guide` is deliberately NOT dispatched on the non-standard path: Task 1
+    // of quick-260923-qe5 pressed Home and Capture on the operator's pad and
+    // neither produced an observable button index (measured 2026-09-23). A
+    // guessed guide index is worse than an absent one.
+  }
 }
 
 // Generic USB Joystick (Vendor: 0079 Product: 0006)

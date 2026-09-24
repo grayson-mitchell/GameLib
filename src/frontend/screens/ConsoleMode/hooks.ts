@@ -81,14 +81,25 @@ export function useGamepadButtonHold(
 export function useGamepadInfo() {
   const [connected, setConnected] = useState(false)
   const [layout, setLayout] = useState<ControllerLayout>('xbox')
+  const [mapping, setMapping] = useState<GamepadMappingType>('standard')
 
   useEffect(() => {
     const refresh = () => {
+      // PRE-EXISTING LIMITATION, not fixed here (quick-260923-qe5 decision
+      // record): this reads the FIRST connected pad's layout AND mapping,
+      // while useGamepadButtonPress/useGamepadButtonHold apply the resulting
+      // index to EVERY connected pad. With two simultaneous pads of
+      // different brands/mappings, one of them gets the other's indices.
+      // Widening this to a per-pad resolution is a separate, larger change
+      // touching every hook -- recorded, not addressed here.
       const first = Array.from(navigator.getGamepads()).find(
         (gp): gp is Gamepad => !!gp
       )
       setConnected(!!first)
-      if (first) setLayout(detectControllerLayout(first.id))
+      if (first) {
+        setLayout(detectControllerLayout(first.id))
+        setMapping(first.mapping)
+      }
     }
     refresh()
     window.addEventListener('gamepadconnected', refresh)
@@ -99,7 +110,7 @@ export function useGamepadInfo() {
     }
   }, [])
 
-  return { connected, layout }
+  return { connected, layout, mapping }
 }
 
 export function useColumnCount(

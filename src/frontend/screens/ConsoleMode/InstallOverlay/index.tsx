@@ -319,13 +319,13 @@ export default function InstallOverlay({
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [])
 
-  const { layout } = useGamepadInfo()
-  useGamepadButtonPress(getActionButtonIndex(layout), () => {
+  const { layout, mapping } = useGamepadInfo()
+  useGamepadButtonPress(getActionButtonIndex(layout, mapping), () => {
     const intent = resolveConsoleActionIntent({ runner: game.runner, focused })
     if (intent === 'install') void installGame()
     else if (intent === 'dismiss') onDismiss()
   })
-  useGamepadButtonPress(getBackButtonIndex(layout), onDismiss)
+  useGamepadButtonPress(getBackButtonIndex(layout, mapping), onDismiss)
 
   const showPlatform = availablePlatforms.length > 1
   const wineLabel =

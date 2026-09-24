@@ -102,9 +102,11 @@ export default function ConfirmDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focused, buttons, onBackKey, onConfirm, onCancel, onDismiss])
 
-  const { layout } = useGamepadInfo()
-  useGamepadButtonPress(getActionButtonIndex(layout), () => handlers[focused]())
-  useGamepadButtonPress(getBackButtonIndex(layout), () => onBackKey())
+  const { layout, mapping } = useGamepadInfo()
+  useGamepadButtonPress(getActionButtonIndex(layout, mapping), () =>
+    handlers[focused]()
+  )
+  useGamepadButtonPress(getBackButtonIndex(layout, mapping), () => onBackKey())
 
   const confirmKey = gamepadConnected ? actionButtonLabel : 'Enter'
   const dismissKey = gamepadConnected ? backButtonLabel : 'Esc'

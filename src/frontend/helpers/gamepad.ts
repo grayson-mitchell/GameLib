@@ -620,7 +620,7 @@ export const initGamepad = () => {
         } else if (isNintendoControllerId(controller.id)) {
           // A confirms on Nintendo pads -- same predicate Console Mode uses to
           // pick the glyph, so the two can't disagree. See nintendo.ts.
-          checkNintendo(buttons, axes, index, checkAction)
+          checkNintendo(buttons, axes, index, checkAction, controller.mapping)
         } else {
           // if not specific, fallback to the standard layout, seems
           // to be the most common for now and if not exact it seems
