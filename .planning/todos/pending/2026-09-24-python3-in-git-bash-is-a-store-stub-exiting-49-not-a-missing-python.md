@@ -6,7 +6,10 @@ severity: minor
 platform: windows
 ready: code
 needs: none-desk-ready
-status: OPEN
+status: RESOLVED
+resolved: 2026-09-24
+resolved_by: quick-260924-tjg
+resolution: 'VERIFIED-NOT-A-DEFECT — no code change, no CLAUDE.md note (operator decision). Closed as an honest record of a standing trap, not a fix.'
 found_by: 'Measured during quick 260924-pm3 while resolving a contradiction: the plan asserted `python3` was absent from PATH and `pnpm planning-gates` therefore unrunnable, yet prior task rows recorded that gate passing 12/12. Both were right about different shells.'
 files:
   - package.json:42
@@ -88,6 +91,46 @@ feels like evidence in a way a passing check does not.
   That ordering is the entire reason `pnpm planning-gates` works — if it ever inverts, the gate
   breaks on this box and the diagnosis will look nothing like this todo.
 - `pnpm planning-gates` must still report 12/12.
+
+## Resolution
+
+**Re-measured 2026-09-24 — all four Verification bullets reproduce exactly.** From Git Bash,
+`python3 --version` still prints the Store-stub text — `Python was not found; run without
+arguments to install from the Microsoft Store, or disable this shortcut from Settings > Apps >
+Advanced app settings > App execution aliases.` — and still exits **49**. From Git Bash, `python
+--version` still prints `Python 3.12.10`. Under cmd, `where python3` still lists
+`...\Programs\Python\Python312\python3.cmd` **before**
+`...\Microsoft\WindowsApps\python3.exe` — ordering intact. `pnpm planning-gates` still reports
+**12/12 planning gates passed**.
+
+Beyond the original four, `type -a` was run in Git Bash as extra evidence naming the mechanism
+directly: `type -a python3` returns **only**
+`/c/Users/grays/AppData/Local/Microsoft/WindowsApps/python3` — the `python3.cmd` shim at
+`Programs\Python\Python312\` is invisible to bare-name resolution in Bash. `type -a python`, by
+contrast, returns `/c/Users/grays/AppData/Local/Programs/Python/Python312/python` first. This
+confirms the todo's original diagnosis exactly: Bash does not resolve a bare name to a `.cmd`
+file, so `python3.cmd` is structurally unreachable from a bare `python3` in this shell. It is not
+a PATH-ordering accident, and reordering PATH would not fix it.
+
+**Decision: no code change, and no CLAUDE.md note.** Direction items 1 and 2 were already settled
+— `package.json:42`'s `python3 meta/runPlanningGates.py` invocation stays exactly as written,
+because changing it to `python` would break Linux and macOS, where `python` frequently does not
+exist. Item 4, the single open judgement call — whether a one-line conventions note belongs in
+CLAUDE.md — has now been decided **against** by the operator. No note was added.
+
+**What enforcement now exists: essentially none.** This file, sitting in `completed/`, is the
+entire durable record of the trap. Nothing prevents a future agent from running `python3` in Git
+Bash, reading exit 49 and "Python was not found," and concluding Python is absent from the box —
+which is exactly what happened in quick `260924-pm3`. Prose in a completed todo is weaker than
+prose in CLAUDE.md, and the todo's own Direction section already conceded that CLAUDE.md prose
+would itself be weak. This close-out is not a fix, and is not being written up as one: nothing was
+fixed, hardened, or prevented by closing this todo. It is a record.
+
+**Direction item 3 remains unverified and untested.** Turning off the Store app-execution alias at
+Settings > Apps > Advanced app settings > App execution aliases was **not** measured as part of
+this close-out. The todo's own reasoning suggests it plausibly would not fix Bash anyway, since
+Bash still would not resolve `.cmd` for a bare name even with the alias disabled. It stays a
+hypothesis, not a verified mitigation.
 
 ## Related
 
