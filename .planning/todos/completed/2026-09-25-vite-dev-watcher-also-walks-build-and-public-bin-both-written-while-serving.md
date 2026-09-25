@@ -10,6 +10,8 @@ severity: minor
 platform: windows
 ready: live-gate
 found_by: "Measured while gating quick task 260925-re8 on the operator's Windows 11 machine, 2026-09-25 — a by-product of that gate, not an observed crash"
+resolved: 2026-09-26
+resolved_by: "quick-260926-8vk"
 ---
 
 # Third and fourth candidates in the `260924-vat` / `260925-re8` EBUSY class — measured, never observed failing
@@ -102,3 +104,30 @@ the addition is deliberate, which is the point.
 Do not widen `**/src-tauri/target/**`, and do not restate vite's own defaults
 (`.git`, `node_modules`, `test-results`, cacheDir) — the in-situ comment forbids
 both, with reasons.
+
+## Resolution (2026-09-26): gate run on Windows, did NOT reproduce — closed with no config change
+
+- **When/where:** operator's Windows 11 machine, 2026-09-25. vite 6.3.5 started via
+  `pnpm exec vite` with the repo's own `vite.config.ts`, and kept running throughout both arms.
+- **Arm 1 (`build/`):** `pnpm build:sidecar` run 10 times back-to-back, each rewriting
+  `build/main/sidecar.js` (1.4 MB). No `EBUSY`, no `errno: -4082`, no FSWatcher error event; vite
+  still served HTTP 200 afterwards.
+- **Arm 2 (`public/bin`):** a real `legendary` re-download was forced by setting its tag to
+  `FORCE` in `public/bin/.release_tags`; the original `.release_tags` was restored
+  byte-identical afterwards (note why that restore matters: a win32 run otherwise rewrites the
+  file without the `__darwin_layout` key). `pnpm download-helper-binaries` exited 0, streaming a
+  fresh 17.6 MB `x64/win32/legendary.exe` plus the linux x64/arm64 and win32 arm64 builds into
+  `public/bin` (the darwin onedir build is skipped on win32). No EBUSY; vite still served HTTP
+  200.
+- The vite log contained only its startup banner through both arms.
+- **Limits of this claim, stated plainly:** neither writer holds a file open for long the way the
+  linker held `gamelib_shell.exe` in `260924-vat`, so this is evidence against these paths, not
+  proof of immunity. Only `legendary` was refreshed; `gogdl`, `nile` and `comet` were not
+  rewritten.
+- **Decision:** no change to `server.watch.ignored` (and none to the exact-array assertion in
+  `meta/__tests__/viteRendererConfig.test.ts`), consistent with the measured-failures-only rule
+  recorded above in this file and in `260925-re8`.
+- **Reopen condition:** reopen if an EBUSY naming `build/` or `public/bin` is ever observed; the
+  "If it reproduces" section above remains the recipe.
+- **Side observation (not a new todo):** stopping the backgrounded shell on Windows left the vite
+  node child (listening on 5173) orphaned; it had to be killed by PID.
