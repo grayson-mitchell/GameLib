@@ -509,8 +509,8 @@ Which phases cover which requirements. Populated during roadmap creation.
 | REQ-46-06 | Phase 46 | Complete |
 | REQ-46-07 | Phase 46 | Complete |
 | REQ-46-08 | Phase 46 | Complete |
-| REQ-46-09 | Phase 46 | Pending |
-| REQ-46-10 | Phase 46 | Pending |
+| REQ-46-09 | Phase 46 | Complete (plan 46-01) |
+| REQ-46-10 | Phase 46 | Complete (46-LIVE-GATE-RERUN.md) |
 | REQ-46-11 | Phase 46 | Complete |
 
 **Coverage:**
@@ -2300,13 +2300,13 @@ because each changes what a plan must assert:**
   that RESEARCH Q6 closed by version-specific reasoning (tauri 2.11.5 / tauri-plugin-deep-link
   2.4.9). The gate has a RED self-test. Source: RESEARCH Q6/Q9. Verified by: jest.
 
-- [ ] **REQ-46-09** (Wave 0 prerequisite): `cd src-tauri && cargo test --bin gamelib-shell` compiles
+- [x] **REQ-46-09** (Wave 0 prerequisite): `cd src-tauri && cargo test --bin gamelib-shell` compiles
   and passes on this Windows machine. The four `store_embed_wire_contract_*` tests carry
   `#[cfg(target_os = "macos")]`, matching the macOS-only helpers they call. No other test is
   weakened or gated. Source: RESEARCH Q10. Verified by: `cargo test --bin gamelib-shell --no-run`,
   then the full run.
 
-- [ ] **REQ-46-10**: A live gate on the operator's Windows 11 machine, against an INSTALLED
+- [x] **REQ-46-10**: A live gate on the operator's Windows 11 machine, against an INSTALLED
   packaged debug NSIS build of the phase's final commit, records PASS/FAIL with numbers for five
   checks:
   1. An external `gamelib://` open, including one URL that contains `&`, reaches the RUNNING

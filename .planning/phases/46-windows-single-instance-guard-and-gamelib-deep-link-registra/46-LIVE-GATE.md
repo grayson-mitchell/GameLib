@@ -238,3 +238,9 @@ foreground lock: the secondary is the foreground process and does not call
 - The debug build spawns the sidecar as `node <repo>\build\main\sidecar.js`, not
   `gamelib-sidecar.exe`. Sidecar counts were taken as node processes whose command line
   contains `sidecar.js`.
+
+## Superseded by re-run (2026-09-25)
+
+This FAIL record stays as written above. Plan 46-06 fixed the Windows raise defect this run
+recorded at Check 3, and plan 46-07 re-ran the full gate against that fix on 2026-09-25: see
+`46-LIVE-GATE-RERUN.md`. **Re-run verdict: PASS** (P0, Checks 1, 2, 3a, 3b, 4, 5 all meet intent).

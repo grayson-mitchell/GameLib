@@ -176,3 +176,57 @@ So the control is valid: the template DOES register `gamelib://` when the scheme
 committed override removes all six lines. The only other difference between the two scripts is the
 ordering of `CreateDirectory` lines (hash-set iteration). This confirms the original finding (the
 installer would have registered it) and the fix, at installer-script level.
+
+## Resolution (phase 46, 2026-09-25)
+
+**The Windows guard shipped and passed its live gate. This todo is closed.**
+
+Phase 46 built the Windows single-instance guard this todo asked for, mirroring the Unix guard's
+load-bearing properties (runs before `tauri::Builder::default()`, fails open, re-validates through
+`protocol_url_arg()`), then measured it live on the operator's Windows 11 machine and, after one
+fix cycle, recorded a PASS.
+
+**Commits (phase 46, chronological):**
+- Plan 46-01: seven pure, cross-platform-tested Windows-guard helpers (SID validator, mutex/pipe
+  name derivation, SDDL construction, retry classifier, owner check, payload decision) and the
+  Windows `cargo test` compile fix — unblocked Wave 0 for the rest of the phase.
+- Plan 46-02/46-03/46-04: the guard itself — `CreateMutexW` primary/secondary decision keyed on the
+  user's token SID (REQ-46-02), a per-session named pipe with an explicit-SID DACL (REQ-46-03), the
+  primary's accept loop spawned after `spawn_sidecar` (REQ-46-04), and removal of the
+  `plugins.deep-link` override plus the runtime `register_all()` decision (REQ-46-05/46-06),
+  landing the installer-level `Classes\gamelib` registration this todo's addendum measured at 0→6
+  lines.
+- **46-LIVE-GATE.md (2026-09-24, plan 46-05): first live gate, FAIL at Check 3** — the secondary
+  correctly detected the running primary and exited 0, but the minimized primary window was not
+  restored or focused. Root cause diagnosed: tao 0.35.3's Windows `show()`/`set_focus()` do not
+  restore a minimized window (unlike macOS, where `show()` is AppKit's
+  `makeKeyAndOrderFront:` and de-miniaturizes it) — a call ordering gap, not a guard-architecture
+  defect. A Windows-foreground-lock candidate was also carried forward.
+- **Plan 46-06 (`919c4dd57` fix, `5b6201e26` test, `02a37c4e3` docs): the fix.** Added
+  `window.unminimize()` ahead of `show()`/`set_focus()` at all three Windows raise sites (the pipe
+  sentinel arm, the tray "show" menu arm, the tray left-click handler), added receipt/result
+  logging to the sentinel arm, added a defensive `AllowSetForegroundWindow` grant from the secondary
+  to the owner-verified primary (T-46-16), corrected the doc comment that had wrongly claimed the
+  fix was universal, and rebuilt the debug NSIS installer — 11 new mutation-proven jest gates, `cargo
+  test` 234 passed / 0 failed.
+- **46-LIVE-GATE-RERUN.md (2026-09-25, plan 46-07): re-run, `Verdict: PASS`.** P0 and Checks 1, 2,
+  3a, 3b, 4, 5 all met intent against the rebuilt binary (proven fresh via `git diff` and a
+  `Select-String` check for the new sentinel log literal). The decisive measurements:
+  - **Check 3a** (terminal second launch): `IsIconic($h)` went `True` → `False`, foreground went to
+    `True` (matching the primary's handle), with window A logging
+    `received single-instance focus sentinel -- raising the main window` then
+    `focus sentinel raise: unminimize=ok, show=ok, set_focus=ok`.
+  - **Check 3b** (Start-menu launch, the real user path, exercising the secondary's foreground-lock
+    grant): decided by a continuous 200ms foreground poll (the single 15s-later sample used by the
+    first attempt proved to be a flawed instrument — see the re-run file's Notes). The poll showed
+    `gamelib-shell` holding the foreground handle continuously from the moment it appeared through
+    the end of the sampling window, with `IsIconic` `False` throughout that span.
+  - Checks 4 and 5 (never run before this phase): two near-simultaneous cold launches produced
+    exactly one shell/one sidecar/one visible window; a force-killed primary left no orphan sidecar
+    and did not block the next launch.
+
+**Not evidence for this closure:** S1 (the non-gating tray left-click supplementary check) was not
+run in the re-gate session; it does not affect this todo's resolution.
+
+This closes the Windows half of the gap phase 35 plan 07 deliberately left open. The `gamelib://`
+protocol is now registered and single-instanced on Windows, macOS, and Linux alike.
