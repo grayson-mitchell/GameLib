@@ -277,11 +277,26 @@ const RELATIVE_EXPIRATION_DAYS_FIELD = 'num_days_until_expired'
 
 const MS_PER_DAY = 86_400_000
 
+// i31: a bare `YYYY-MM-DD` value matches this shape. `new Date('YYYY-MM-DD')`
+// is UTC midnight per the ECMAScript spec, but every render path formats the
+// result with `toLocaleDateString()` in the HOST's local zone -- west of UTC
+// that reads back as the previous calendar day. `.toISOString()` further
+// erases the distinction between a date-only value and a genuine UTC-midnight
+// instant, so this cannot be corrected at either display site once it leaves
+// this function. Accepted cost: a cached expiration derived from a date-only
+// value is anchored to the SYNCING machine's zone, so a timezone change
+// between syncs can re-render it by one day until the next sync -- strictly
+// better than today's guaranteed-wrong render everywhere west of UTC.
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
+
 /**
  * Pure, tolerant expiration extraction. Reads whichever recognized field a live
  * tpk carries and normalizes it to an ISO-8601 string:
  *  - an absolute date string (any of ABSOLUTE_EXPIRATION_FIELDS) -> parsed and
- *    re-emitted as ISO (an unparseable string is ignored, never thrown on);
+ *    re-emitted as ISO (an unparseable string is ignored, never thrown on).
+ *    A bare date-only value (matching DATE_ONLY_RE) is anchored to LOCAL
+ *    midnight rather than UTC midnight (i31); any value carrying a time
+ *    and/or zone round-trips byte-identically, unchanged;
  *  - a relative, strictly-positive `num_days_until_expired` number -> `now + N
  *    days` as ISO (0/negative means "no expiry window" — see the field note).
  * Returns null when no recognized, parseable expiration is present. Never
@@ -294,8 +309,20 @@ export function extractExpiration(
   for (const field of ABSOLUTE_EXPIRATION_FIELDS) {
     const value = tpk[field]
     if (typeof value === 'string' && value.trim() !== '') {
+      // `new Date(value)` stays the ONE validity gate deliberately: building
+      // straight from parts cannot double as validation, because
+      // `new Date(2026, 12, 45)` silently rolls over to 2027-02-14 where the
+      // string form `'2026-13-45'` is Invalid. Match the regex against
+      // `value` unmodified -- a whitespace-padded date string is already
+      // parsed as local time by V8 (already correct), so trimming first
+      // would change a currently-correct case.
       const parsed = new Date(value)
       if (!Number.isNaN(parsed.getTime())) {
+        if (DATE_ONLY_RE.test(value)) {
+          const [year, month, day] = value.split('-').map(Number)
+          const localMidnight = new Date(year, month - 1, day)
+          return localMidnight.toISOString()
+        }
         return parsed.toISOString()
       }
     }

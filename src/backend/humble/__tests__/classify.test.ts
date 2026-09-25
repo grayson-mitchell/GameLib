@@ -178,6 +178,24 @@ describe('classifyOrder', () => {
     expect(entry.keys[0].expiration).toBe(null)
   })
 
+  test('i31: a bare date-only deadline_date on the UNPICKED pseudo-entry anchors to LOCAL midnight (WR-07 routing extends the fix here for free)', () => {
+    const bareDate = {
+      ...unpickedChoiceMonthOrder,
+      product: {
+        ...unpickedChoiceMonthOrder.product,
+        deadline_date: '2026-03-31'
+      }
+    }
+    const entry = classifyOrder(bareDate, NEVER_REVEALED)
+    expect(entry.keys).toHaveLength(1)
+    expect(entry.keys[0].state).toBe('UNPICKED')
+    expect(entry.keys[0].expiration).not.toBe(null)
+    const result = new Date(entry.keys[0].expiration as string)
+    expect(result.getFullYear()).toBe(2026)
+    expect(result.getMonth()).toBe(2)
+    expect(result.getDate()).toBe(31)
+  })
+
   test('D-27: unpicked Choice month missing choice_url -> never throws, omits pseudo-entry', () => {
     expect(() =>
       classifyOrder(unpickedChoiceMonthMissingUrlOrder, NEVER_REVEALED)
@@ -701,6 +719,44 @@ describe('extractExpiration — real-world field tolerance', () => {
     expect(
       extractExpiration({ num_days_until_expired: Number.MAX_VALUE }, NOW)
     ).toBe(null)
+  })
+
+  // i31: a bare `YYYY-MM-DD` value is UTC midnight per the Date spec, but
+  // every render path formats with toLocaleDateString() in the HOST's local
+  // zone -- west of UTC that reads back as the PREVIOUS day. These assertions
+  // read local calendar parts off the result (never a literal ISO string) so
+  // they hold identically in every timezone, including the host's.
+  test('i31: bare date-only expiry_date anchors to LOCAL midnight, not UTC midnight', () => {
+    const out = extractExpiration({ expiry_date: '2026-08-01' }, NOW)
+    expect(out).not.toBe(null)
+    const result = new Date(out as string)
+    expect(result.getFullYear()).toBe(2026)
+    expect(result.getMonth()).toBe(7)
+    expect(result.getDate()).toBe(1)
+  })
+
+  test('i31: bare date-only expiration (fallback candidate) anchors to LOCAL midnight too', () => {
+    const out = extractExpiration({ expiration: '2026-08-01' }, NOW)
+    expect(out).not.toBe(null)
+    const result = new Date(out as string)
+    expect(result.getFullYear()).toBe(2026)
+    expect(result.getMonth()).toBe(7)
+    expect(result.getDate()).toBe(1)
+  })
+
+  test('i31: NEGATIVE CONTROL — a full instant round-trips byte-identically (guard is scoped, not a blanket rewrite)', () => {
+    const out = extractExpiration(
+      { expiry_date: '2026-08-01T12:34:56.000Z' },
+      NOW
+    )
+    expect(out).toBe('2026-08-01T12:34:56.000Z')
+  })
+
+  test('i31: NEGATIVE CONTROL — a shape-matching but invalid date-only value still yields null (tolerance not widened)', () => {
+    expect(() =>
+      extractExpiration({ expiry_date: '2026-13-45' }, NOW)
+    ).not.toThrow()
+    expect(extractExpiration({ expiry_date: '2026-13-45' }, NOW)).toBe(null)
   })
 })
 
