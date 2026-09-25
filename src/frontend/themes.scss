@@ -99,8 +99,13 @@ body.midnightMirage {
   --navbar-inactive: var(--neutral-06);
   /* Lighter than --navbar-background (neutral-02), not darker: the previous
      --background-darker (neutral-01, near-black) made active/hovered nav and
-     filter rows read as black holes against the panel. */
-  --navbar-active-background: var(--neutral-03);
+     filter rows read as black holes against the panel. neutral-03 alone was
+     still too faint and neutral-04 too loud, so it sits between (~#363e3f). */
+  --navbar-active-background: color-mix(
+    in srgb,
+    var(--neutral-03),
+    var(--neutral-04) 35%
+  );
   --navbar-accent: var(--text-default);
   --navbar-background: var(--background);
   --divider: var(--neutral-03);
