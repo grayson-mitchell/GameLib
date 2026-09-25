@@ -2276,15 +2276,20 @@ describe('Phase 34.5 gap cycle 6 plan 44 (F-34.5-G6-09) deep-link/single-instanc
  *      input-validation choke point (T-35-25 / T-34.5-G6-20) -- reached indirectly through
  *      `deep_link_decision`, so BOTH links are asserted, not just the outer one.
  *   3. Runtime `register_all()` stays Linux-only (T-35-28 / REQ-46-06 decision point (a)).
- *      Windows now has a single-instance guard (phase 46: `CreateMutexW` + the named-pipe
- *      accept loop, `src-tauri/src/main.rs`) and registers `gamelib://` at INSTALL time via
- *      the NSIS template instead -- the reason this cfg stays Linux-only is no longer the
- *      missing guard. `register_all()`'s own documented purpose is to cover installs that
- *      bypass a proper installer (e.g. an AppImage), which has no Windows analogue here:
- *      GameLib ships Windows exclusively via NSIS. The decision is operator-overridable (see
- *      the REQ-46-06 pin below). It is pinned STRUCTURALLY (the nearest enclosing `#[cfg(...)]`
- *      must be the Linux one) rather than by a "does not contain windows" substring search,
- *      because a substring gate cannot tell a cfg-gated call from an ungated one.
+ *      Windows has a single-instance guard (phase 46: `CreateMutexW` + the named-pipe accept
+ *      loop, `src-tauri/src/main.rs`), registers `gamelib://` at INSTALL time via the NSIS
+ *      template, AND -- since quick-260925-uok -- self-heals that HKCU registration at runtime
+ *      through the much narrower `repair_windows_gamelib_protocol_registration` path (pinned by
+ *      its own describe below). That runtime self-heal is one HKCU subtree read plus a
+ *      conditional write of the four values NSIS already writes; `register_all()` is the
+ *      plugin's whole-scheme registration for every configured scheme. So the broader
+ *      `register_all()` widening is still not needed, and for a second reason as well:
+ *      `register_all()`'s own documented purpose is to cover installs that bypass a proper
+ *      installer (e.g. an AppImage), which has no Windows analogue here -- GameLib ships
+ *      Windows exclusively via NSIS. The decision is operator-overridable (see the REQ-46-06
+ *      pin below). It is pinned STRUCTURALLY (the nearest enclosing `#[cfg(...)]` must be the
+ *      Linux one) rather than by a "does not contain windows" substring search, because a
+ *      substring gate cannot tell a cfg-gated call from an ungated one.
  *
  * This block is the replacement for the deep-link half of the D-44-A negative gate above,
  * which plan 35-07 narrowed. Every assertion is paired with a RED self-test driving
@@ -2387,14 +2392,19 @@ describe('Phase 35 plan 07 main.rs OS deep-link registration (D-07/D-05)', () =>
   // REQ-46-06 (decision point a): once Windows has a single-instance guard (phase 46), the
   // question of whether runtime `register_all()` should ALSO run there is a deliberate,
   // operator-overridable decision, not a leftover consequence of the missing guard. This test
-  // pins the research default (RESEARCH.md Q7): stay Linux-only, because `register_all()`'s own
-  // documented purpose -- covering installs that bypass a proper installer, e.g. an AppImage --
-  // has no Windows analogue for a project that ships Windows exclusively via NSIS. To override:
-  // widen the cfg to `#[cfg(any(target_os = "linux", windows))]`, keep the existing
+  // pins the research default (RESEARCH.md Q7): stay Linux-only. That default now rests on TWO
+  // legs, not one. (i) The AppImage-analogue argument: `register_all()`'s own documented purpose
+  // -- covering installs that bypass a proper installer -- has no Windows analogue for a project
+  // that ships Windows exclusively via NSIS. (ii) Since quick-260925-uok, the specific failure
+  // that would have motivated widening (another application stealing or dangling the HKCU
+  // `gamelib://` key) is handled by `repair_windows_gamelib_protocol_registration`, a targeted
+  // HKCU read-compare-write that is strictly narrower than the plugin's whole-scheme
+  // registration. Leg (ii) is why the 2026-09-25 live-gate hijack did NOT move this pin. To
+  // override: widen the cfg to `#[cfg(any(target_os = "linux", windows))]`, keep the existing
   // `process.env.CI as_deref() == Ok("e2e")` guard so automated/CI Windows launches do not
   // rewrite the host's protocol association, and flip this test's expected string to
   // `#[cfg(any(target_os = "linux", windows))]`.
-  test('REQ-46-06 (decision point a, operator-overridable): Windows relies on the NSIS installer alone -- register_all() stays #[cfg(target_os = "linux")]', () => {
+  test('REQ-46-06 (decision point a, operator-overridable): Windows relies on the NSIS installer plus the narrower runtime HKCU self-heal -- register_all() stays #[cfg(target_os = "linux")]', () => {
     expect(cfgGuardAboveRegisterAll()).toBe('#[cfg(target_os = "linux")]')
   })
 
@@ -2419,6 +2429,215 @@ describe('Phase 35 plan 07 main.rs OS deep-link registration (D-07/D-05)', () =>
     expect(loadMainRsCode('fn main() {}\n')).not.toContain(
       'std::env::var("CI").as_deref() == Ok("e2e")'
     )
+  })
+})
+
+/**
+ * quick-260925-uok: the Windows `gamelib://` HKCU self-heal
+ * (`repair_windows_gamelib_protocol_registration`, added 2026-09-25 to close the todo
+ * `2026-09-25-windows-gamelib-registration-is-install-time-only.md`). Four gates, each paired
+ * with a RED-proof self-test, in the same family as every other block in this file.
+ *
+ * WHAT THESE GATES ARE NOT, stated plainly because this repo's standing rule is that a gate must
+ * never appear to cover more than it does: these are SOURCE gates. They parse the TEXT of
+ * `main.rs` and prove the SHAPE of the code -- that the call site is Windows-gated, that the
+ * `CI=e2e` short-circuit is on the repair path itself rather than merely somewhere in the file,
+ * that the repair path is not a back-door second `register_all()`, and that the body cannot
+ * panic or `?`-propagate out of a registry failure. They prove NOTHING about whether a real
+ * registry repair works on a real machine. No test in this repo reads or writes a real registry
+ * key, and the `#[cfg(windows)]` FFI function is compiled on the Windows CI leg but EXECUTED by
+ * nothing -- it follows the `acquire_single_instance` precedent stated at the FFI-tier banner in
+ * `main.rs`. The gate that would prove the behaviour is a live Windows session (hijack the key
+ * from a second application, then confirm an external `gamelib://` open still reaches the running
+ * instance); it has NOT been run, and it is recorded as outstanding in
+ * `.planning/todos/completed/2026-09-25-windows-gamelib-registration-is-install-time-only.md`.
+ */
+describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
+  const REPAIR_FN_TOKEN = 'fn repair_windows_gamelib_protocol_registration('
+  const REPAIR_CALL_TOKEN =
+    'repair_windows_gamelib_protocol_registration(&app.config()'
+
+  /**
+   * `cfgGuardAboveRegisterAll` (above) generalised over its token: returns the nearest
+   * `#[cfg(...)]` attribute line ABOVE the first line containing `token`, or null if there is
+   * none. Walking UPWARD is what makes it a real gate rather than a substring search -- it
+   * cannot be satisfied by a `#[cfg(windows)]` sitting anywhere else in the file, only by one
+   * actually attached to this call site.
+   *
+   * Re-declared here rather than hoisted, per this file's own established convention (see
+   * `extractBracedBlock`, declared three separate times).
+   */
+  function nearestCfgAbove(
+    source: string | undefined,
+    token: string
+  ): string | null {
+    const lines = loadMainRsCode(source).split('\n')
+    const callIdx = lines.findIndex((line) => line.includes(token))
+    if (callIdx === -1) return null
+    for (let i = callIdx; i >= 0; i--) {
+      const trimmed = lines[i].trim()
+      if (trimmed.startsWith('#[cfg(')) return trimmed
+    }
+    return null
+  }
+
+  /**
+   * Returns the substring of `code` from `code.indexOf(fnToken)` up to the next top-level item
+   * boundary (`\nfn ` or `\n#[cfg`, i.e. a line starting at column 0), or to the end of the file
+   * if there is no such boundary. Returns `null` if `fnToken` itself is absent. A REGION, not
+   * two independent substrings anywhere in the file. Copied verbatim from the Phase 46
+   * single-instance describe below, per this file's per-describe re-declaration convention.
+   */
+  function fnRegion(code: string, fnToken: string): string | null {
+    const start = code.indexOf(fnToken)
+    if (start === -1) return null
+    const searchFrom = start + fnToken.length
+    const nextFn = code.indexOf('\nfn ', searchFrom)
+    const nextCfg = code.indexOf('\n#[cfg', searchFrom)
+    const boundaries = [nextFn, nextCfg].filter((i) => i !== -1)
+    const end = boundaries.length > 0 ? Math.min(...boundaries) : code.length
+    return code.slice(start, end)
+  }
+
+  test('fnRegion self-test: absent token returns null', () => {
+    expect(fnRegion('fn other() {}\n', 'fn missing(')).toBeNull()
+  })
+
+  // ---- Gate 1: the call site exists and is #[cfg(windows)]-gated ---------------------------
+
+  test('the repair function and its call site both exist in the real source', () => {
+    expect(loadMainRsCode()).toContain(REPAIR_FN_TOKEN)
+    expect(loadMainRsCode()).toContain(REPAIR_CALL_TOKEN)
+  })
+
+  test('Gate 1: the repair call site sits under #[cfg(windows)]', () => {
+    expect(nearestCfgAbove(undefined, REPAIR_CALL_TOKEN)).toBe(
+      '#[cfg(windows)]'
+    )
+  })
+
+  test('self-test (RED proof, gate 1A): an UNGATED call site does not satisfy the cfg gate', () => {
+    const ungated =
+      'fn setup() {\n' +
+      '    repair_windows_gamelib_protocol_registration(&app.config().identifier);\n' +
+      '}\n'
+    expect(nearestCfgAbove(ungated, REPAIR_CALL_TOKEN)).toBeNull()
+  })
+
+  test('self-test (RED proof, gate 1B): a call site gated on LINUX does not satisfy the cfg gate', () => {
+    const linuxGated =
+      'fn setup() {\n' +
+      '    #[cfg(target_os = "linux")]\n' +
+      '    repair_windows_gamelib_protocol_registration(&app.config().identifier);\n' +
+      '}\n'
+    expect(nearestCfgAbove(linuxGated, REPAIR_CALL_TOKEN)).toBe(
+      '#[cfg(target_os = "linux")]'
+    )
+    expect(nearestCfgAbove(linuxGated, REPAIR_CALL_TOKEN)).not.toBe(
+      '#[cfg(windows)]'
+    )
+  })
+
+  // ---- Gate 2: the CI=e2e guard is on the REPAIR PATH, region-scoped (T-UOK-02) ------------
+  //
+  // The single most important test in this set. Locked decision (c): unlike the Linux
+  // `register_all()` arm, this path WRITES to the real user registry, so an automated run that
+  // reached it would permanently rewrite the host's `gamelib://` protocol association as a side
+  // effect of merely starting the app. A whole-file `toContain` would pass off the Linux arm's
+  // own copy of the guard string, which is exactly why this one is region-scoped.
+
+  test('Gate 2 (T-UOK-02): the CI=e2e short-circuit is inside the repair function itself', () => {
+    const region = fnRegion(loadMainRsCode(), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    expect(region).toContain('std::env::var("CI").as_deref() == Ok("e2e")')
+  })
+
+  test('self-test (RED proof, gate 2): a repair fn with the guard in a DIFFERENT function fails the region gate', () => {
+    const synthetic =
+      'fn repair_windows_gamelib_protocol_registration(identifier: &str) {\n' +
+      '    let _ = identifier;\n' +
+      '    let _ = std::env::current_exe();\n' +
+      '}\n' +
+      'fn some_other_helper() {\n' +
+      '    if std::env::var("CI").as_deref() == Ok("e2e") {\n' +
+      '        return;\n' +
+      '    }\n' +
+      '}\n'
+    const region = fnRegion(loadMainRsCode(synthetic), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    expect(region).not.toContain('std::env::var("CI").as_deref() == Ok("e2e")')
+  })
+
+  // ---- Gate 3: the repair path is not a second register_all() ------------------------------
+
+  test('Gate 3: the repair path delegates to the unit-tested decision helper and never calls register_all()', () => {
+    const region = fnRegion(loadMainRsCode(), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    expect(region).toContain('gamelib_protocol_repair_needed(')
+    expect(region).not.toContain('register_all()')
+  })
+
+  test('Gate 3 (adjacent re-assertion): register_all() STILL has exactly one call site', () => {
+    // Cheap, and this new describe is where a future reader will look first after adding a
+    // second registration path. The authoritative pin (and its Linux-only cfg assertion) lives
+    // in the Phase 35 plan 07 describe above; this is a deliberate duplicate, not a move.
+    expect(loadMainRsCode().split('register_all()').length - 1).toBe(1)
+  })
+
+  test('self-test (RED proof, gate 3): a repair fn that DOES call register_all() fails the region gate', () => {
+    const synthetic =
+      'fn repair_windows_gamelib_protocol_registration(identifier: &str) {\n' +
+      '    let _ = identifier;\n' +
+      '    let _ = app.deep_link().register_all();\n' +
+      '}\n'
+    const region = fnRegion(loadMainRsCode(synthetic), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    expect(region).toContain('register_all()')
+  })
+
+  // ---- Gate 4: fail-open shape (T-34.5-G6-24 / T-UOK-03) -----------------------------------
+
+  const FORBIDDEN_ON_THE_REPAIR_PATH = [
+    '.unwrap()',
+    '.expect(',
+    'panic!',
+    'unreachable!'
+  ]
+
+  // `?` is checked with `/\?;\s*$/m`, NOT a bare substring: a question mark appears legitimately
+  // inside Windows `\\?\` extended-length path literals and inside URLs, so a substring gate
+  // would fire on prose-free, perfectly fail-open code. The narrower pattern matches only the
+  // try-operator in statement position, which is the thing that can actually propagate an error
+  // out of a function whose whole contract is that it never fails.
+  const TRY_OPERATOR_IN_STATEMENT_POSITION = /\?;\s*$/m
+
+  test.each(FORBIDDEN_ON_THE_REPAIR_PATH)(
+    'Gate 4 (T-UOK-03): the repair path contains no %s',
+    (forbidden) => {
+      const region = fnRegion(loadMainRsCode(), REPAIR_FN_TOKEN)
+      expect(region).not.toBeNull()
+      expect(region).not.toContain(forbidden)
+    }
+  )
+
+  test('Gate 4 (T-UOK-03): the repair path uses no `?` try-operator', () => {
+    const region = fnRegion(loadMainRsCode(), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    expect(region).not.toMatch(TRY_OPERATOR_IN_STATEMENT_POSITION)
+  })
+
+  test('self-test (RED proof, gate 4): a repair fn containing .unwrap() and a `?;` line fails both halves', () => {
+    const synthetic =
+      'fn repair_windows_gamelib_protocol_registration(identifier: &str) -> std::io::Result<()> {\n' +
+      '    let exe = std::env::current_exe().unwrap();\n' +
+      '    let _ = identifier;\n' +
+      '    let _ = some_fallible_call(exe)?;\n' +
+      '    Ok(())\n' +
+      '}\n'
+    const region = fnRegion(loadMainRsCode(synthetic), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    expect(region).toContain('.unwrap()')
+    expect(region).toMatch(TRY_OPERATOR_IN_STATEMENT_POSITION)
   })
 })
 

@@ -2214,11 +2214,20 @@ because each changes what a plan must assert:**
 
 **Open decision points (defaults planned, operator-overridable):**
 
-- **(a) Runtime `register_all()` on Windows: NOT widened.** The NSIS installer alone registers
-  `gamelib://` (HKCU under the default `currentUser` install mode, and it overwrites the stale
-  Electron-era key). This is pinned by the existing Linux-only `cfgGuardAboveRegisterAll` gate plus
-  a REQ-46-06-named test. To override, widen the `#[cfg]` to `any(target_os = "linux", windows)`,
-  keep the `CI=e2e` guard, and flip the pinned string.
+- **(a) Runtime `register_all()` on Windows: NOT widened.** The NSIS installer registers
+  `gamelib://` at INSTALL time (HKCU under the default `currentUser` install mode, and it
+  overwrites the stale Electron-era key), and since **quick-260925-uok** a runtime HKCU
+  **self-heal** (`repair_windows_gamelib_protocol_registration`, `src-tauri/src/main.rs`) rewrites
+  the four installer-shaped values whenever the key is found missing, dangling, or pointing at a
+  different executable. The self-heal is deliberately narrower than `register_all()` — one HKCU
+  subtree read, a comparison, and a conditional write — so `register_all()` itself is still NOT
+  widened and stays pinned by the Linux-only `cfgGuardAboveRegisterAll` gate plus a
+  REQ-46-06-named test. To override, widen the `#[cfg]` to `any(target_os = "linux", windows)`,
+  keep the `CI=e2e` guard, and flip the pinned string. (The self-heal path carries its own
+  `CI=e2e` guard, region-pinned, because unlike the Linux arm it writes to the real user
+  registry.) Motivating incident: the 2026-09-25 live-gate hijack recorded in
+  `.planning/todos/completed/2026-09-25-windows-gamelib-registration-is-install-time-only.md` —
+  whose live Windows verification gate has NOT been run.
 - **(b) Pipe DACL scope: per-user (explicit token-user SID), not logon SID.** This matches the Unix
   per-`$HOME` boundary. Per-session *routing* comes from the session-scoped pipe name (correction 3),
   not from the ACL. To override, switch the ACE to the logon SID (`TokenLogonSid` / `TokenGroups`
@@ -2282,9 +2291,13 @@ because each changes what a plan must assert:**
 - [x] **REQ-46-06**: The runtime `register_all()` decision for Windows is recorded and pinned. The
   default (decision point (a)) is NOT widened: the single call site stays under
   `#[cfg(target_os = "linux")]`. The main.rs comment block above it states that Windows registers at
-  INSTALL time via NSIS, and why the runtime call is not needed. A test named for REQ-46-06 in
-  `tauriShellSource.test.ts` pins the gate. Source: RESEARCH Q7; todo step 3. Verified by: source
-  gate.
+  INSTALL time via NSIS **and** — since quick-260925-uok — self-heals that HKCU registration at
+  runtime through the narrower `repair_windows_gamelib_protocol_registration` path, and why the
+  broader runtime call is still not needed. A test named for REQ-46-06 in
+  `tauriShellSource.test.ts` pins the gate; the self-heal has its own describe with four
+  RED-proofed gates in the same file. Source: RESEARCH Q7; todo step 3. Verified by: source
+  gate. (Rationale updated by quick-260925-uok; the requirement itself is unchanged and still
+  satisfied.)
 
 - [x] **REQ-46-07**: Every non-FFI decision in the Windows guard is a pure function, NOT
   `#[cfg(windows)]`-gated, and unit-tested in `#[cfg(test)] mod tests` on any host. This covers
