@@ -6,6 +6,6 @@
   "files.insertFinalNewline": true,
   "gsdPhaseStatus.plannedMarkers": ["*PLAN.md"],
   "workbench.colorCustomizations": {
-    "charts.red": "#ff2d2d"
+    "charts.red": "#c25450"
   }
 }
