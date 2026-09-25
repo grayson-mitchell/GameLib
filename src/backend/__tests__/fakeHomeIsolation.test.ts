@@ -201,6 +201,21 @@ describe('fake-HOME isolation (quick-260913-arr item 6, CLAUDE.md two-profile ru
     expect(scannedRelPaths).toContain('meta/sidecarStartupSmoke.cjs')
   })
 
+  it('skip list is reachable: every allowed and exempt path can match', () => {
+    // a skip or exempt path written in a form the walk can never produce (the
+    // Windows separator bug that 260926-c07 fixed) silently stops matching;
+    // this catches it on every OS
+    const expectedPaths = [
+      ...ALLOWED_TO_ASSIGN,
+      ...EXEMPTIONS.map((e) => e.file)
+    ]
+    const unreachable = expectedPaths.filter(
+      (p) => !scannedRelPaths.includes(p)
+    )
+
+    expect(unreachable).toEqual([])
+  })
+
   it('imports its key list from the helper, so the two cannot disagree', () => {
     // Non-vacuity of the main rule: if the imported list were ever emptied,
     // the offender scan above would pass by checking nothing at all.
