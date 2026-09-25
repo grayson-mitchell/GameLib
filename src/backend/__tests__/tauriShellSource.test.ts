@@ -2451,6 +2451,11 @@ describe('Phase 35 plan 07 main.rs OS deep-link registration (D-07/D-05)', () =>
  * from a second application, then confirm an external `gamelib://` open still reaches the running
  * instance); it has NOT been run, and it is recorded as outstanding in
  * `.planning/todos/completed/2026-09-25-windows-gamelib-registration-is-install-time-only.md`.
+ *
+ * Gate 5 (quick-260926-f3l) is a SOURCE gate too, for the same reason: it proves WHERE the
+ * dev-build skip sits (after the CI=e2e guard, before the first registry call, logged via
+ * `eprintln!` not `shell_diag`) -- it proves nothing about whether a real `pnpm tauri:dev` run
+ * actually leaves HKCU alone. That live check is Task 3 of quick-260926-f3l.
  */
 describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
   const REPAIR_FN_TOKEN = 'fn repair_windows_gamelib_protocol_registration('
@@ -2638,6 +2643,111 @@ describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
     expect(region).not.toBeNull()
     expect(region).toContain('.unwrap()')
     expect(region).toMatch(TRY_OPERATOR_IN_STATEMENT_POSITION)
+  })
+
+  // ---- Gate 5: dev builds skip the repair (quick-260926-f3l) -------------------------------
+  //
+  // Closes the code half of
+  // `.planning/todos/pending/2026-09-26-gamelib-self-heal-lets-dev-builds-take-over-gamelib-scheme.md`:
+  // every `pnpm tauri:dev` run was rewriting HKCU to point at `src-tauri\target\debug\...`,
+  // last-launch-wins hijacking the scheme away from an installed build. As with every other gate
+  // in this describe, this is a SOURCE gate: it proves the skip sits after the CI=e2e guard and
+  // before the first registry call, and that it logs via `eprintln!` (not `shell_diag`, so a dev
+  // launch does not append to `gamelib-shell.log` on every run). It proves nothing about whether
+  // a real `pnpm tauri:dev` run actually leaves HKCU alone -- that live check is Task 3 of
+  // quick-260926-f3l.
+
+  const DEV_BUILD_CALL_TOKEN = 'gamelib_protocol_exe_is_dev_build('
+  const CI_GUARD_TOKEN = 'std::env::var("CI").as_deref() == Ok("e2e")'
+
+  test('Gate 5A: the dev-build skip runs after the CI=e2e guard and before the first registry call', () => {
+    const region = fnRegion(loadMainRsCode(), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    const ciIdx = region!.indexOf(CI_GUARD_TOKEN)
+    const devBuildIdx = region!.indexOf(DEV_BUILD_CALL_TOKEN)
+    const regOpenIdx = region!.indexOf('RegOpenKeyExW(')
+    expect(ciIdx).toBeGreaterThan(-1)
+    expect(devBuildIdx).toBeGreaterThan(-1)
+    expect(regOpenIdx).toBeGreaterThan(-1)
+    expect(devBuildIdx).toBeGreaterThan(ciIdx)
+    expect(devBuildIdx).toBeLessThan(regOpenIdx)
+  })
+
+  test('Gate 5B: the dev-build skip is baked from compile-time cargo environment', () => {
+    const region = fnRegion(loadMainRsCode(), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    expect(region).toContain('option_env!("CARGO_TARGET_DIR")')
+    expect(region).toContain('env!("CARGO_MANIFEST_DIR")')
+  })
+
+  test('Gate 5C: the dev-build skip logs via eprintln!, not shell_diag', () => {
+    const region = fnRegion(loadMainRsCode(), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    const callIdx = region!.indexOf(DEV_BUILD_CALL_TOKEN)
+    expect(callIdx).toBeGreaterThan(-1)
+    const returnIdx = region!.indexOf('return;', callIdx)
+    expect(returnIdx).toBeGreaterThan(-1)
+    const skipBody = region!.slice(callIdx, returnIdx)
+    expect(skipBody).toContain('eprintln!(')
+    expect(skipBody).not.toContain('shell_diag(')
+  })
+
+  // Region-scoped existence of the pure fns. Each token carries a trailing `(` boundary
+  // deliberately, for the identical reason the Phase 46 describe's POSITIVE_TOKENS note below
+  // (~line 2652) documents: this file's own `#[cfg(test)] mod tests` names test fns like
+  // `gamelib_protocol_exe_is_dev_build_matches_only_inside_the_cargo_target_dir` -- without the
+  // paren boundary, `'fn gamelib_protocol_exe_is_dev_build'` is a SUBSTRING of that test
+  // function's own name, so the gate would pass vacuously off the TEST declaration even if the
+  // real `fn gamelib_protocol_exe_is_dev_build(` helper were deleted.
+  test('Gate 5D: the real source defines both pure dev-build helpers', () => {
+    expect(loadMainRsCode()).toContain('fn gamelib_protocol_exe_is_dev_build(')
+    expect(loadMainRsCode()).toContain('fn gamelib_protocol_dev_build_dirs(')
+  })
+
+  test('self-test (RED proof, gate 5A): a dev-build call AFTER RegOpenKeyExW fails the ordering check', () => {
+    const synthetic =
+      'fn repair_windows_gamelib_protocol_registration(identifier: &str) {\n' +
+      '    let _ = identifier;\n' +
+      '    if std::env::var("CI").as_deref() == Ok("e2e") {\n' +
+      '        return;\n' +
+      '    }\n' +
+      '    let key = RegOpenKeyExW(0, std::ptr::null(), 0, 0, std::ptr::null_mut());\n' +
+      '    if gamelib_protocol_exe_is_dev_build("x", &[]) {\n' +
+      '        return;\n' +
+      '    }\n' +
+      '    let _ = key;\n' +
+      '}\n'
+    const region = fnRegion(loadMainRsCode(synthetic), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    const ciIdx = region!.indexOf(CI_GUARD_TOKEN)
+    const devBuildIdx = region!.indexOf(DEV_BUILD_CALL_TOKEN)
+    const regOpenIdx = region!.indexOf('RegOpenKeyExW(')
+    expect(devBuildIdx).toBeGreaterThan(-1)
+    expect(regOpenIdx).toBeGreaterThan(-1)
+    const orderingOk = devBuildIdx > ciIdx && devBuildIdx < regOpenIdx
+    expect(orderingOk).toBe(false)
+  })
+
+  test('self-test (RED proof, gate 5C): a skip logged via shell_diag fails the eprintln check', () => {
+    const synthetic =
+      'fn repair_windows_gamelib_protocol_registration(identifier: &str) {\n' +
+      '    let _ = identifier;\n' +
+      '    if gamelib_protocol_exe_is_dev_build("x", &[]) {\n' +
+      '        shell_diag("dev build skip");\n' +
+      '        return;\n' +
+      '    }\n' +
+      '}\n'
+    const region = fnRegion(loadMainRsCode(synthetic), REPAIR_FN_TOKEN)
+    expect(region).not.toBeNull()
+    const callIdx = region!.indexOf(DEV_BUILD_CALL_TOKEN)
+    expect(callIdx).toBeGreaterThan(-1)
+    const returnIdx = region!.indexOf('return;', callIdx)
+    expect(returnIdx).toBeGreaterThan(-1)
+    const skipBody = region!.slice(callIdx, returnIdx)
+    expect(skipBody).toContain('shell_diag(')
+    const loggingOk =
+      skipBody.includes('eprintln!(') && !skipBody.includes('shell_diag(')
+    expect(loggingOk).toBe(false)
   })
 })
 
