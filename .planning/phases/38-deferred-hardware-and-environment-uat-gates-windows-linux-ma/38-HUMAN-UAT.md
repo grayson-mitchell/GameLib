@@ -115,8 +115,8 @@ a fixed index. The other three sitting-1 defects — the install-options caret, 
 the controller leg RUNNABLE at the next sitting; it is not itself a result, and no item above is
 scored by this paragraph.
 
-Disposition of the nine surviving controller items, to be applied at the ledger (eight are
-dischargeable in one sitting; `38-C04b` is the exception):
+Disposition of the eight surviving controller items, to be applied at the ledger (all eight are
+dischargeable in one sitting; a ninth, `38-C04b`, was retired on 2026-09-25 -- see below):
 
 - `38-C01a` (d-pad) and `38-C01b` (left stick) — the split is DONE at the ledger, not merely "must
   be split". `38-C01a`'s sitting-1 FAIL is SUPERSEDED: it was measured against code that read only
@@ -128,13 +128,15 @@ dischargeable in one sitting; `38-C04b` is the exception):
   that made it unscoreable (the pad's face-button HID order) is fixed across quicks `260923-qe5`,
   `260925-9de`, `260925-m5i` and `260925-ms5`, so it is scoreable at the next sitting.
 - `38-C04a` (B/back) — scoreable at the next sitting, for the same reason as `38-C03`.
-- `38-C04b` (stick clicks) — OPEN as an unmet expectation, NOT scoreable and NOT retired. No layout
-  in this repo dispatches `buttons[10]`/`buttons[11]` to any action, on any mapping. The indices WERE
-  measured live on this pad (L3 = `buttons[10]`, R3 = `buttons[11]`, quick `260925-ms5`, with a
-  positive control), but measuring an index does not create a dispatch to attach it to, so the item
-  did not become dischargeable. It is deliberately kept in `human_verification` — per the user's
-  locked decision — so this unmet expectation stays visible to `audit-uat` rather than disappearing.
-  See `.planning/todos/pending/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md`.
+- `38-C04b` (stick clicks) — RETIRED 2026-09-25 by quick `260925-oyr`. NOT scored, NOT a pass, NOT
+  a discharge; nothing was observed. The operator chose "Retire the expectation" over implementing
+  stick clicks or leaving it open, because the 34.1 item-7 clause was a misdescription: A /
+  `mainAction` already activates the focused element, and no layout ever dispatched
+  `buttons[10]`/`buttons[11]` (L3/R3 were measured live at 10/11 by quick `260925-ms5`, but no
+  feature exists to attach them to). This SUPERSEDES the earlier locked decision (quick
+  `260925-nxt`) to keep the item in `human_verification` so the unmet expectation stayed visible to
+  `audit-uat` — it now lives in `human_verification_retired`, and `audit-uat` moved 25 -> 24. See
+  `.planning/todos/completed/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md`.
 - `38-C08` — unchanged in substance, but of its two independent sitting-1 blockers, BOTH are now
   fixed: (1) the shifted-index defect is fixed (same fix as `38-C03`/`38-C04a`); (2) the caret being
   ~90% dead to a pointer is ALSO fixed — the install-caret todo is in `.planning/todos/completed/`.
