@@ -8,7 +8,7 @@ sessions:
   - "Session 1 -- 2026-09-23, Windows 11, tauri dev build `6ad1d7cd9` -- 38-S06 PASS; 38-S08 FAIL row 4; four new defects filed; controller leg not run (blocking defect fixed afterward)"
   - "Sitting 2 -- 2026-09-23, Windows 11, tauri dev build `2cf170c14` -- 38-S08 re-scored PASS on all four checks"
   - "Sitting 3 -- 2026-09-25, Windows 11, tauri dev build `cdf07ee95`/`959e5c01b` -- eight controller items (38-C01a, 38-C01b, 38-C02, 38-C03, 38-C04a, 38-C05, 38-C06, 38-C08) all discharged PASS"
-  - "Sitting 4 -- 2026-09-26, Windows 11, tauri dev (debug build) -- 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision"
+  - "Sitting 4 -- 2026-09-26, Windows 11, INSTALLED shell v0.7.0 (built 2026-09-24 07:34 from `5b6201e26`) -- attribution INFERRED from commit dates, not measured; label corrected by quick 260926-bsl -- 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision"
   - "Sitting 5 -- 2026-09-26, Windows 11, INSTALLED shell v0.7.0 (built 2026-09-24 07:34 from `5b6201e26`) with the repo build/main sidecar; label corrected by quick 260926-b5r -- 38-S02 PASS, 38-W06 FAIL accepted; 38-S14 sub-case (a) PASS but item stays OPEN; 38-W04 not run (no CI artifact exists); four defects filed"
 ---
 
@@ -16,8 +16,10 @@ sessions:
 
 [Five sittings held: sitting 1 (2026-09-23), sitting 2 (2026-09-23, a re-score), Sitting 3
 (2026-09-25), which discharged all eight surviving controller items — 38-C01a, 38-C01b, 38-C02,
-38-C03, 38-C04a, 38-C05, 38-C06, 38-C08 — as PASS, and Sitting 4 (2026-09-26), which discharged the
-three Windows sitting items — 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision,
+38-C03, 38-C04a, 38-C05, 38-C06, 38-C08 — as PASS, and Sitting 4 (2026-09-26, run on the same stale
+installed shell as sitting 5 — by inference, not measurement; see the correction in its section),
+which discharged the three Windows sitting items — 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by
+operator decision,
 and Sitting 5 (2026-09-26, run on a stale installed shell, not a dev build of HEAD; see the
 correction in its section), which discharged 38-S02 PASS and 38-W06 FAIL-accepted, scored 38-S14
 sub-case (a) PASS without discharging the item, and recorded 38-W04 as not run.
@@ -427,11 +429,58 @@ sitting — controller focus having no perceptible visual affordance, and a mous
 not conferring real DOM focus — are filed separately as pending todos (see Task 4 of quick
 `260925-r8j`) and are NOT resolved by any PASS recorded here.
 
-## Sitting 4 — 2026-09-26, Windows 11, `tauri dev`
+## Sitting 4 — 2026-09-26, Windows 11, installed shell v0.7.0 (`5b6201e26`), label corrected by inference
 
-**Conditions.** Windows 11, `tauri dev`, DEBUG build. Say "debug build" explicitly — it is what
-makes `38-W04`/`38-W05` (which need a CI-produced NSIS/AppImage artifact) still un-runnable while
-`38-W01` could discharge here.
+**Conditions (corrected 2026-09-26, quick `260926-bsl`) — INFERRED, not measured.** Windows 11; the
+build was almost certainly the stale installed `%LOCALAPPDATA%/GameLib/gamelib-shell.exe` (forward
+slashes, to stay backslash-free), v0.7.0, mtime 2026-09-24 07:34, built from `5b6201e26` (the last
+commit before that mtime). Its sidecar is the repo's `build/main/sidecar.js`, a compile-time path
+(`resolve_sidecar_entry()`, `main.rs:7823`), so the shell and embedded frontend were stale while the
+backend and the shared `gamelib.log` looked current. The single-instance guard makes a concurrent
+`pnpm tauri:dev` hand focus over to that instance and exit, which is how the mislabel happened
+unnoticed. Originally recorded as "Windows 11, `tauri dev`, DEBUG build"; that label is withdrawn.
+The basis, compactly: sitting 4 recorded no clock times and no commit hash at all (sittings 2 and 3
+both carry build hashes), so the only proxy is git author dates — sitting 3's block `5a0edd4a9`
+20:14:47 on 2026-09-25, the `gamelib.log.old` window 21:01 → 05:42 which names the installed exe,
+installed shell pid 12812 started 2026-09-26 05:43:39, sitting 4's content `0736ec037` 06:29:19 and
+its UAT block `a710fe9cc` 06:30:22. Both candidate windows name the installed exe and abut, leaving
+no dev-build window on 2026-09-26 before the 06:30 write-up; the only clean dev-build gap is
+20:14–21:01 on 2026-09-25, which contradicts the recorded date. The build profile is no longer
+established, so no claim is made either way (neither release nor debug). `38-W04`/`38-W05` remain
+un-runnable for a reason that does not depend on the build profile: no `v*` tag exists, so no
+CI-produced NSIS/AppImage artifact exists — the same reason sitting 5 measured, in its own
+Conditions paragraph and in the `38-W04` paragraph below.
+
+**Why `38-W01`, `38-W02` and `38-W03` still stand — a desk diff, not a re-run.** The orchestrator
+diffed `5b6201e26` (the installed build's source) against `0736ec037` (HEAD at this sitting) at the
+desk on 2026-09-26, re-asserted by quick `260926-bsl`. `38-W01` maps to
+`src/frontend/components/UI/WindowControls/` and `src/preload/api/tauriWindowChrome.ts`, both
+unchanged between the two commits. `38-W02` maps to `tray_image()` (`main.rs:141`) inside the first
+8405 lines of `src-tauri/src/main.rs`, byte-identical on both sides at sha1
+`f7af5438ac02bc476a76b6493394243506c98232` — plus the tray assets (`src-tauri/icons`), the tray
+pixel test, and `src/frontend/themes.scss`, all unchanged between those two commits. `38-W03` maps
+to the `on_page_load` origin-only title reset (`main.rs:6491`), also inside that byte-identical
+range. The whole +633-line `main.rs` drift between the two commits is Phase 46 single-instance
+machinery (`acquire_single_instance`, `current_user_identity`,
+`create_single_instance_pipe_instance`, `deliver_to_running_instance_windows`,
+`run_windows_single_instance_accept_loop`, `main()`, and the test module) — outside the identical
+range these three items exercise. **Nothing was re-run on HEAD** — this is an argument from the
+diff that the scores transfer, not an observation. Contrast Sitting 5, whose items (`38-S02`,
+`38-S14(a)`, `38-W06`) were frontend-side, where the stale bundle genuinely did change behaviour
+(the pre-`3a0e62918` `Dropdown.toggle()`), so its desk diff needed a different, larger set of files
+re-checked (see its own "Why the scores transfer to HEAD" paragraph below) — sitting 4's is a
+narrower, purely backend/native-window claim.
+
+**Honest limits of this relabel.** This is an inference, not a measurement — unlike sitting 5,
+whose installed-shell attribution was measured live (the running pid, its log, its bundle's
+pre-`3a0e62918` `Dropdown.toggle()`). An unlogged instance cannot be excluded. The 21:01 → 05:42
+window and its attribution to the installed exe come from the `/gsd-debug
+mouse-dead-dropdown-disclosure` session's record
+(`.planning/debug/resolved/mouse-dead-dropdown-disclosure.md`, commit `1f93c5812`), not from logs
+readable on this Mac; the Windows logs were not re-read for this correction. The clean way to settle
+it is the `GAMELIB_SHELL_EXE received=` lines in `gamelib.log.old` on the operator's Windows
+machine. See
+`.planning/todos/pending/2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.md`.
 
 **`38-W01` — PASS.** All four custom-titlebar window operations (minimize / maximize / restore /
 close) with framelessWindow ON, each driving the real OS window exactly as the equivalent native
@@ -565,7 +614,9 @@ mechanism itself is UNCHANGED and DECLARED unverified, never silently assumed fi
 assumed still broken)."_ It is now measured.
 
 **`38-W04` — NOT RUN, and the reason is now measured rather than assumed.** Sitting 4 recorded
-that a debug build cannot reach this item. Sitting 5 adds _why the artifact does not exist_:
+that a debug build cannot reach this item (that build label is now withdrawn — see `## Sitting 4`
+— but the not-run conclusion does not depend on it). Sitting 5 adds _why the artifact does not
+exist_:
 `git tag` lists nine tags and **none matches `v*`**, so `release-tauri.yml`'s push trigger has
 never fired — its own header states this at `.github/workflows/release-tauri.yml:5-6`. `gh` is
 also not installed on this machine. A locally-built NSIS was considered and **rejected** as a
