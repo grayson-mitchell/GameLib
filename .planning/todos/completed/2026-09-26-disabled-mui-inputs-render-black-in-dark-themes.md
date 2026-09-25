@@ -124,3 +124,18 @@ disabled MUI control in the same theme — was **not performed**. Neither was th
 mechanism ever confirmed with DevTools (the original report explicitly flagged this as an
 inference, not a measured computed style, and that remains true after this fix). This is an
 operator live-check gap, not a gap in the source-level fix.
+
+**Update 2026-09-26 — live verification PERFORMED, PASS.** Operator, Windows 11, `pnpm tauri:dev`
+debug build of HEAD `21ee6feaa` (the log's `GAMELIB_SHELL_EXE` was
+`src-tauri\target\debug\gamelib-shell.exe`, not an installed shell; the `tauriDevPreflight`
+check reported no foreign shell before launch), in a dark theme (the theme's name was not
+recorded):
+
+- Steam install dialog: the read-only "Windows" row's icon and label are legible — **PASS**.
+- A second disabled MUI control in the same theme (suggested: a disabled `SelectField` in the GOG
+  install dialog, "Language" or "Select game version") — **PASS** as reported by the operator.
+  Which of the suggested controls was used was not recorded.
+
+Still not measured: the black-colour mechanism was not confirmed with DevTools computed styles,
+before or after. The fix is confirmed to produce legible disabled controls; the pre-fix cause stays
+an inference from source.
