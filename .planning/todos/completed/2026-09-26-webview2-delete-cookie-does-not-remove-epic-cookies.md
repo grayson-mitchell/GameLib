@@ -1,6 +1,7 @@
 ---
 created: 2026-09-26
 title: 'wry WebView2 delete_cookie() removes nothing — every Epic logout on Windows ends in a user-visible error dialog'
+status: "RESOLVED 2026-09-26 on Windows (debug webview2-delete-cookie-noop). Live-verified: Epic sign-out with no error dialog; gamelib.log post-clear verification — 0 Epic-owned cookie(s) remain across 5 domain(s), five zeroes."
 found_during: Phase 38 sitting 5 (quick 260926-a1l), item 38-W06
 severity: major
 platform: windows
@@ -84,3 +85,24 @@ step throws before the verification sweep runs — its appearance is itself part
 - `.planning/debug/resolved/epic-cookie-clear-read-divergence.md` residual 2 — where this
   originated, now closed with this outcome. That session stays RESOLVED: its subject was the read
   divergence, and the reads are now proven healthy on Windows.
+
+## Resolution (2026-09-26)
+
+Debug session: `.planning/debug/resolved/webview2-delete-cookie-noop.md`. Three stacked causes,
+each measured live on the operator's Windows 11 machine:
+
+1. **Leading dot lost (primary).** wry-0.55.1's WebView2 `delete_cookie` rebuilds the cookie from
+   `cookie::Cookie`, and cookie-0.18.1's `domain()` strips the leading `.` — every domain cookie
+   was deleted as a nonexistent host-only cookie. Fixed by calling `ICoreWebView2CookieManager`
+   directly and deleting the ORIGINAL cookie objects. epicgames.com went 0 → 8 of 9 removed.
+2. **`DeleteCookie` is async** — the async hypothesis above was real but secondary:
+   unrealengine.com's cookie was present on the first re-read, gone on the second. Fixed with a
+   bounded settle re-read (`CLEAR_COOKIES_SETTLE`, 2s).
+3. **Partitioned (CHIPS) cookie.** Cloudflare's `cf_clearance` on `.www.epicgames.com` survived
+   `DeleteCookie` with an unchanged value while `__cf_bm` (identical domain/path/flags) was
+   removed. Fixed by a CDP `Network.deleteCookies` pass with the cookie's `partitionKey`
+   (`issued=1 partitioned=1`, `after=0`).
+
+The legendary/user.ts guard was not touched; the count is still the measured post-removal delta.
+Linux remains unmeasured and is now SUSPECTED to share cause 1 (wry `webkitgtk/mod.rs:975-979`
+reads the same stripped `domain()`).
