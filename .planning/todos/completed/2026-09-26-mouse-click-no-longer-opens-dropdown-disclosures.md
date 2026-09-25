@@ -86,3 +86,14 @@ On Windows, with a mouse only: one click on the `MainButton` Steam install caret
 "Install with options…" panel, and one click on a library nav tier-2 filter group expands it.
 Re-run the existing `dropdownDisclosure.test.tsx` suite, and add a case for whichever focus
 condition turns out to be responsible — the existing suite passes today and did not catch this.
+
+## Resolution (2026-09-26, /gsd-debug mouse-dead-dropdown-disclosure)
+
+**Not a regression.** Sitting 5 ran a stale installed shell (`%LOCALAPPDATA%\GameLib\gamelib-shell.exe`,
+built 2026-09-24 07:34). Its embedded frontend predates `3a0e62918` and still has the
+`prev => !prev` updater, and the single-instance guard makes `pnpm tauri:dev` hand off to it and
+exit. Measured live over CDP. On the stale build the NavShell Store group is dead and its bundle
+shows the pre-fix code. At HEAD under `pnpm tauri:dev`, the Store group and the GamePage caret
+(752590) each open on one click. No code change. See
+`.planning/debug/resolved/mouse-dead-dropdown-disclosure.md`, and the follow-up
+`.planning/todos/pending/2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.md`.
