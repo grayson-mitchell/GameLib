@@ -106,8 +106,23 @@ export default defineConfig(({ mode }) => ({
     // list to its own defaults (.git/node_modules/test-results/cacheDir), so
     // do not restate them here. Only target/ is ignored -- it is the only
     // cargo output under src-tauri -- do not widen this to src-tauri/**.
+    //
+    // Quick task 260925-re8: graphify-out/ is the second member of that same
+    // defect class, on a path 260924-vat deliberately did not cover. Measured on
+    // this config (vite 6.3.5, chokidar 3.6): the dev watcher held 3485 entries
+    // across 8 dirs under graphify-out -- 340 MB of gitignored, regenerable graph
+    // output that CLAUDE.md tells contributors to rewrite via `graphify update .`.
+    // A rewrite of the 57 MB graph.json under an fs.watch is the same EBUSY that
+    // killed the server for target/, and it is worse here: vite dies but the Tauri
+    // window and sidecar stay alive, so the app looks healthy while HMR is gone.
+    //
+    // Each entry below is a MEASURED failure, named as a specific generated
+    // directory. build/ and public/bin are watched too (169 dirs, and the same
+    // written-while-serving shape) and are deliberately NOT here -- no crash has
+    // been observed on them, and keeping this array observation-only is what makes
+    // it auditable. See 260925-re8-GATE.md.
     watch: {
-      ignored: ['**/src-tauri/target/**']
+      ignored: ['**/src-tauri/target/**', '**/graphify-out/**']
     }
   },
   build: {

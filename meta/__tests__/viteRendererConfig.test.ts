@@ -31,6 +31,10 @@
  *      260924-vat). Without it, chokidar walks cargo's build output and, on
  *      Windows, `fs.watch` on an exe the linker holds open throws `EBUSY` --
  *      unhandled by Vite -- killing `pnpm tauri:dev` mid cold build.
+ *   7. `server.watch.ignored` losing its `graphify-out` entry, or growing an
+ *      unmeasured one (quick task 260925-re8). Same EBUSY class as 6, on a
+ *      directory CLAUDE.md instructs you to rewrite; the list is asserted
+ *      exactly so `build/` and `public/bin` cannot be added on reasoning alone.
  *
  * The assertions run against the RESOLVED config object returned by the
  * exported callback, under both `mode: 'production'` and `mode: 'development'`
@@ -252,6 +256,28 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
         expect(ignored).toContain('**/src-tauri/target/**')
       })
 
+      // Quick task 260925-re8: second member of the same defect class. Measured
+      // on this config, the dev watcher held 3485 entries across 8 dirs under
+      // graphify-out/ -- 340 MB of gitignored graph output that CLAUDE.md tells
+      // contributors to rewrite via `graphify update .` while a dev server is up.
+      it('ignores graphify-out in the dev-server watcher', () => {
+        const ignored = config.server?.watch?.ignored
+        expect(Array.isArray(ignored)).toBe(true)
+        expect(ignored).toContain('**/graphify-out/**')
+      })
+
+      // The array is observation-only: every entry is a measured failure. build/
+      // and public/bin are watched (169 dirs) and have the same
+      // written-while-serving shape, but no crash has been observed on them, so
+      // they stay out until one is. Adding either must be a deliberate test edit.
+      it('keeps the watcher ignore list to measured failures only', () => {
+        const ignored = (config.server?.watch?.ignored ?? []) as string[]
+        expect(ignored).toEqual([
+          '**/src-tauri/target/**',
+          '**/graphify-out/**'
+        ])
+      })
+
       // A future widening back to the whole src-tauri tree must be a
       // deliberate test edit, not a drive-by -- only target/ is cargo output.
       it('does not widen the watcher ignore to the whole src-tauri tree', () => {
@@ -333,6 +359,16 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
     it('keeps the 260924-vat EBUSY rationale next to the watcher ignore', () => {
       expect(source).toContain('260924-vat')
       expect(source).toContain('EBUSY')
+    })
+
+    // 260925-re8: the graphify-out entry is the non-obvious one -- it guards a
+    // directory the project's own instructions tell you to rewrite, and its
+    // failure mode (vite dead, Tauri window alive, HMR silently gone) is what a
+    // future reader needs in order not to delete it as build-output noise.
+    it('keeps the 260925-re8 rationale next to the graphify-out ignore', () => {
+      expect(source).toContain('260925-re8')
+      expect(source).toContain('graphify-out')
+      expect(source).toMatch(/HMR is gone|HMR/)
     })
   })
 })
