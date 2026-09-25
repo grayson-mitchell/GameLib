@@ -32,6 +32,12 @@ files:
   running from the stale bundle. On HEAD under `pnpm tauri:dev`, both surfaces open on one click.
 - `gamelib.log.old` (21:01 → 05:42) also names the installed exe. Sitting 4 (2026-09-26) may fall
   inside that window. **Not established**: check the sitting-4 timings before re-labelling it.
+  **Update 2026-09-26 (quick `260926-bsl`):** the sitting-4 timings were checked — there are none.
+  Sitting 4 recorded no clock times and no commit hash, so it was relabelled by INFERENCE from
+  commit dates (both candidate installed-exe windows abut, leaving no dev-build window on
+  2026-09-26 before its 06:30 write-up), and its three results were transferred to HEAD by desk
+  diff rather than re-run. See `## Sitting 4` in `38-HUMAN-UAT.md`. Still not measured: the
+  `GAMELIB_SHELL_EXE received=` lines in `gamelib.log.old` on the Windows machine would settle it.
 - Side observation: when pid 12812 was stopped, its node sidecar did not drain-exit within ~25s
   and had to be stopped by hand. Cause not investigated. It may be the open `260913-m9c`
   in-flight-at-boot class.
@@ -42,6 +48,15 @@ files:
    possibly sitting 4's stand. Backend-side behaviour came from the repo's `build/main`, but its
    exact build time at the sitting is unknown, and the shell (cookie deletion for 38-W06, window
    ops for 38-W01) was the 2026-09-24 07:34 binary. At minimum, correct the "Conditions" lines.
+   **Partially answered 2026-09-26.** Sitting 5 was relabelled by quick `260926-b5r` (MEASURED:
+   the running pid, its log, its bundle's pre-`3a0e62918` `Dropdown.toggle()`), and sitting 4 by
+   quick `260926-bsl` (INFERRED from commit dates — no clock times or commit hash were ever
+   recorded for it). All six results (38-S02, 38-S14(a), 38-W06, 38-W01, 38-W02, 38-W03) stand by
+   desk diff against HEAD; nothing was re-run. The "at minimum, correct the Conditions lines"
+   minimum is now done for both sittings. Still the operator's call: whether to accept the
+   sitting-4 inference as-is or confirm it from the Windows `gamelib.log.old`
+   `GAMELIB_SHELL_EXE received=` lines — and the whole of decision 2 below, which touches the
+   Phase 46 single-instance design. That is why this stays `ready: human`.
 2. **Guard the trap.** Options: (a) uninstall the stale build; (b) make a debug-build secondary
    instance refuse to hand off to a primary running from a different executable, and say so
    loudly; (c) a `tauri:dev` pre-flight that fails when a non-`target\debug` `gamelib-shell.exe`
