@@ -9,16 +9,19 @@ sessions:
   - "Sitting 2 -- 2026-09-23, Windows 11, tauri dev build `2cf170c14` -- 38-S08 re-scored PASS on all four checks"
   - "Sitting 3 -- 2026-09-25, Windows 11, tauri dev build `cdf07ee95`/`959e5c01b` -- eight controller items (38-C01a, 38-C01b, 38-C02, 38-C03, 38-C04a, 38-C05, 38-C06, 38-C08) all discharged PASS"
   - "Sitting 4 -- 2026-09-26, Windows 11, tauri dev (debug build) -- 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision"
+  - "Sitting 5 -- 2026-09-26, Windows 11, tauri dev (debug build) `59df4c1b6` -- 38-S02 PASS, 38-W06 FAIL accepted; 38-S14 sub-case (a) PASS but item stays OPEN; 38-W04 not run (no CI artifact exists); four defects filed"
 ---
 
 ## Current Test
 
-[Four sittings held: sitting 1 (2026-09-23), sitting 2 (2026-09-23, a re-score), Sitting 3
+[Five sittings held: sitting 1 (2026-09-23), sitting 2 (2026-09-23, a re-score), Sitting 3
 (2026-09-25), which discharged all eight surviving controller items — 38-C01a, 38-C01b, 38-C02,
 38-C03, 38-C04a, 38-C05, 38-C06, 38-C08 — as PASS, and Sitting 4 (2026-09-26), which discharged the
-three Windows sitting items — 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision.
-See the "## Sitting 4" section below for the artifacts. `38-VERIFICATION.md` remains authoritative:
-as of 2026-09-26 it holds 13 open items, 13 discharged, 10 retired. The "6 items seeded, 0
+three Windows sitting items — 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision,
+and Sitting 5 (2026-09-26), which discharged 38-S02 PASS and 38-W06 FAIL-accepted, scored 38-S14
+sub-case (a) PASS without discharging the item, and recorded 38-W04 as not run.
+See the "## Sitting 4" and "## Sitting 5" sections below for the artifacts. `38-VERIFICATION.md`
+remains authoritative: as of 2026-09-26 it holds 11 open items, 15 discharged, 10 retired. The "6 items seeded, 0
 discharged" figure this paragraph used to carry was already stale before this reconciliation, for
 reasons unrelated to any of these sittings — see the `## Retired` section's note on that same
 staleness.]
@@ -475,3 +478,88 @@ operator's look. Two todos were filed from this sitting —
 and
 `.planning/todos/pending/2026-09-26-tray-glyph-variant-selection-is-manual-and-theme-blind.md` —
 and neither is resolved by any PASS recorded here.
+
+## Sitting 5 — 2026-09-26, Windows 11, `tauri dev` (debug build) `59df4c1b6`
+
+**Conditions.** Windows 11, `pnpm tauri:dev`, DEBUG build, commit `59df4c1b6`. Say "debug build"
+explicitly, for the same reason sitting 4 did: it is what keeps `38-W04`/`38-W05` un-runnable.
+Two Steam libraries registered (`C:\Program Files (x86)\Steam`, `D:\SteamLibrary`),
+`enableSteamNativeInstall` ON at the start of the sitting.
+
+**Four items were taken in as one batch and three were run.** `38-S02` and `38-S14(a)` need
+_opposite_ settings states, so the batch was ordered to flip `enableSteamNativeInstall` exactly
+once — S02 under the ON state it was already in, then OFF for S14(a) — and `38-W06` was parked
+last so its log read was not interleaved with Steam traffic.
+
+**`38-S02` — PASS.** Avadon 2: The Corruption (appId 233310). Clicking the **primary half** of
+Install opened nothing — no dialog, modal, overlay, picker, and specifically no flash-and-close;
+operator's words: "no nothing appeared, just installed". The landing was verified **on disk**, as
+the item demands rather than from the badge: `appmanifest_233310.acf` present in the primary
+library and absent from `D:\SteamLibrary`, 167 MB of content under `common\Avadon 2`. The
+precondition was proven armed rather than assumed — native installs ON with `libraryCount == 2`
+means a library dropdown genuinely existed to be skipped, which is the whole point of the item.
+
+**`38-S14` — sub-case (a) PASS. THE ITEM STAYS OPEN.** This is the part most likely to be misread
+later, so it is stated plainly: **a passing (a) does not discharge `38-S14`.** Its `test:` requires
+both sub-cases, and (b) needs native installs ON with ≤1 library against this machine's two real
+ones. The entry therefore stays in `human_verification` deliberately — moving a half-run item to
+`human_verification_discharged` would hide it from `audit-uat` permanently, which is precisely the
+silent failure this phase's `audit_tool_note` exists to prevent. What (a) established: one
+read-only "Windows" row, the content-light notice, Cancel + Install, nothing else, no empty-state
+illustration or heading, and the install completed through Steam's own client. The copy
+discrimination — the item's actual FAIL condition since review A-08/WR-04 — is confirmed, because
+the rendered notice carried "Turn on native Steam installs in Settings", a clause that exists only
+in `contentLightNotice` and never in `contentLightSingleLibraryNotice`.
+
+**`38-W06` — FAIL, accepted. The most valuable result of the sitting.** The operator saw this
+dialog verbatim:
+
+    Your account was signed out on this device, but the browser session could not be fully
+    cleared. On a shared computer, sign out again or clear your browser data for this site to
+    make sure your session doesn't stay accessible.
+
+**The item's central unknown is answered, and answered the opposite way from the one it feared.**
+`38-W06` was filed asking whether `cookies_for_domain` succeeds against a window whose page never
+resolves. It does: all five censuses returned `verdict=SUPPORTED_NONEMPTY`. **The reads are
+healthy off macOS**, which retires the "all reads reject" shape the item's own `prior_state`
+called most likely. What fails is the **removal** — `epicgames.com` (10 cookies present) and
+`unrealengine.com` (1) both reported zero removed, and the fail-closed guard at
+`legendary/user.ts:458-467` threw exactly as designed. The other three domains were never
+attempted because their before-census was 0, which is correct behaviour, not a second bug.
+
+This converts a **declared-unverified** assumption into a measured fact. `main.rs:7327-7335` says
+in writing: _"Linux/Windows: UNVERIFIED on the existing wry `delete_cookie()` path … the deletion
+mechanism itself is UNCHANGED and DECLARED unverified, never silently assumed fixed (nor silently
+assumed still broken)."_ It is now measured.
+
+**`38-W04` — NOT RUN, and the reason is now measured rather than assumed.** Sitting 4 recorded
+that a debug build cannot reach this item. Sitting 5 adds _why the artifact does not exist_:
+`git tag` lists nine tags and **none matches `v*`**, so `release-tauri.yml`'s push trigger has
+never fired — its own header states this at `.github/workflows/release-tauri.yml:5-6`. `gh` is
+also not installed on this machine. A locally-built NSIS was considered and **rejected** as a
+substitute: the item's `why_human` is specifically that the *CI* artifact has never been executed,
+so a `tauri build` installer is a different artifact. **A not-run is neither a discharge nor a
+retirement** — nothing was observed.
+
+**THE OBSERVATION TRAP OF THIS SITTING, recorded so the next one does not lose time to it.** The
+`MainButton` **caret did not respond to mouse clicks**, and the dialog for `38-S14(a)` had to be
+opened by right-clicking the game card instead. All three "Install with options…" doors open the
+same dialog with the same label string, so the route does not affect the score — but the caret
+itself is a **regression of a resolved debug session**
+(`.planning/debug/resolved/steam-caret-dropdown-dead.md`, fixed in `3a0e62918` and verified live
+over CDP on this same machine on 2026-09-24). The operator then found the surface is wider than
+the caret: the **library nav expanders were also mouse-dead, while the gamepad opened them
+normally**. That mouse-dead/gamepad-live split is the signature, and it is filed as its own todo
+rather than chased here.
+
+**Honest-limits paragraph.** Three of the four results in this sitting rest on different evidence
+classes and should not be read as equally hard. `38-S02`'s landing half and all of `38-W06` are
+**machine-side** (on-disk manifests and `%LOCALAPPDATA%\GameLib\logs\gamelib.log` respectively);
+`38-S02`'s absence half and all of `38-S14(a)` are **operator-reported**, because no log line
+exists for "a dialog did not open" or "a row rendered". The `38-S14(a)` copy quote was **elided,
+not byte-for-byte** — what it establishes is which of the two strings rendered, not that every
+character matched the catalog default, and the discrimination does not depend on the remainder.
+One claim inside `38-W06` is explicitly an **inference, not a measurement**: a single cookie
+vanished between Rust's post-removal re-read and the TypeScript one, which is _consistent with_ an
+asynchronous `delete_cookie` but does not establish it; two timestamps are not a mechanism. Four
+todos were filed from this sitting and **none is resolved by either PASS recorded here**.
