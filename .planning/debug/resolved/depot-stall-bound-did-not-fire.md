@@ -376,3 +376,177 @@ reasoning_checkpoint:
     - "src/backend/storeManagers/steam/depot.ts — run-scoped hasStalled() check in downloadDepotFiles' file-worker loop; optional injectable stallTracker on DownloadDepotFilesOpts"
     - "src/backend/storeManagers/steam/__tests__/depot.test.ts — new 'run-scoped no-progress bound' describe: stalled arm (the red->green pin) + healthy control arm"
     - ".planning/todos/completed/2026-09-16-the-2026-08-27-depot-stall-cause-is-unidentified-with-no-proposed-experiment.md — 'Why ready: human' and 'The discriminator that would settle it' REWRITTEN, not ticked; closed"
+
+## Post-resolution: TypeScript specialist review of `62f916e58` (2026-09-25, desk)
+
+A specialist review of the shipped fix returned SUGGEST_CHANGE. Four findings; three applied, one
+declined on measured grounds. Follow-up commit, deliberately NOT an amend — `62f916e58` is an
+honest commit and the review trail has value.
+
+### W-1 (WARNING) — CONFIRMED and APPLIED. A regression risk introduced BY the fix.
+
+- checked: "Every call site of `recordProgress()`, and every successful-completion path in
+  `downloadSingleFile` that does not reach it."
+- found: >
+    CONFIRMED on both halves, independently re-measured.
+
+    CENSUS. Population: every tracked `.ts`/`.tsx`/`.js`/`.cjs`/`.mjs` in the repo outside
+    `node_modules`, `graphify-out`, `.git`, `dist`, `build`. Command:
+    `grep -rn "recordProgress" . --include='*.ts' --include='*.tsx' --include='*.js'
+    --include='*.cjs' --include='*.mjs' --exclude-dir=node_modules --exclude-dir=graphify-out
+    --exclude-dir=.git --exclude-dir=dist --exclude-dir=build`.
+    FIVE hits, and exactly ONE is a production invocation:
+      - `depot.ts:1419` — `stallTracker?.recordProgress()`, the only call. Immediately after
+        `await fd.write(...)` in `downloadFileChunks`.
+      - `depot/stallTracker.ts:72` — the declaration.
+      - `depot.ts:2574` — a prose comment.
+      - `__tests__/depot.test.ts:3588` (comment) and `:3597` (a test call).
+    (The first attempt at this census, `grep -rn ... --include=*.ts` unquoted, returned
+    "no matches found" under zsh globbing — a census that is confidently wrong in the
+    ZERO direction. Quote the globs.)
+
+    SECOND HALF. `downloadSingleFile` spans `depot.ts:1483-1687` and has FOUR successful
+    completions that never reach `:1419`: the directory entry (`:1532`), the symlink entry
+    (`:1575`), the zero-byte/zero-chunk entry (`:1621`), and its whole post-chunk tail
+    (`:1653-1686` — a whole-file `sha1File(dest)` re-read, `applyEDepotFileModes`,
+    `applyMachOExecutableFallback`). "Forward progress" therefore meant "a decompressed chunk
+    byte hit disk", NOT "work completed".
+- implication: >
+    The comment shipped at `depot.ts:2568-2574` claiming `hasStalled()` "can only be true when
+    NOTHING landed on disk anywhere in the run" was FALSE. Worse, the fix is what made it matter:
+    before `62f916e58`, `hasStalled()` was advisory, read only inside a per-chunk catch a healthy
+    file never enters, so a stale clock during a verify tail had no effect whatsoever. Sampled
+    unconditionally at the top of the worker loop it is TERMINAL and unrecoverable — once every
+    worker has returned, nothing can reset it. 32 concurrent whole-file SHA1 re-reads of multi-GB
+    paks on a slow or external disk exceeding STALL_TIMEOUT_MS is not exotic.
+- fix: >
+    `stallTracker.recordProgress()` after a successful `downloadSingleFile` return in the worker
+    loop. A failing file THROWS, so the line is unreachable on the failure path and the bound
+    cannot be weakened against the Californium case it was built for (zero files completed there).
+    The false comment was REWRITTEN rather than deleted, and now names the residual honestly: a
+    run whose every worker sits inside one file's verify tail for longer than STALL_TIMEOUT_MS is
+    still misread as stalled; closing that needs progress reporting from inside `sha1File`.
+- verification: >
+    MEASURED RED -> GREEN, not inspected. New test
+    `W-1: files completing via a NON-chunk-writing path (zero-byte entries) count as forward
+    progress`, using a 40-file plan of zero-byte manifest entries (so `fetchChunk` is never
+    called and `:1419` provably cannot fire — asserted) and a `StallTracker` subclass on a
+    VIRTUAL clock advancing 1000ms per `hasStalled()` consult, window 36000ms (chosen to sit
+    strictly between the 32 consults the first pass makes before any file can complete and the
+    40 the whole run makes, 4 consults of margin each side; deterministic, not wall-clock racy).
+    RED before the fix:
+      `- Array []`
+      `+ "error": "download stalled: no forward progress for 37000ms across the whole run`
+      `+           — giving up with 4 file(s) unattempted"`
+    i.e. a run in which every single file completed successfully was declared dead. GREEN after.
+
+### W-2 (WARNING) — CONFIRMED and APPLIED, but NOT as proposed.
+
+- checked: "Every branch of `classifyDepotError` (`depotErrors.ts:88-283`), read in full."
+- found: >
+    CONFIRMED. Eight branches: `isNonRetryableDepotError` (eresult 8/9/15/17/40/42/43),
+    `/no authenticated Steam CM connection/i`, `/ENOSPC/i`, `/traversal/i`, `/sha1 mismatch/i`,
+    `isDecodeStageError`, the network alternation
+    `/CDN \d|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|fetch failed|no content servers/i`, then
+    the fallthrough. The run-scoped message carries NONE of those signatures — note in particular
+    that "no forward progress" is not "no content servers" — so it reached
+    `steam.download.error.generic` -> "The Steam download failed.", the causeless sentence the
+    sibling `steam-depot-unclassified-generic-error` session exists to eliminate. That session
+    was read first: it is about an EISDIR/`master.dat` defect and does not touch
+    `classifyDepotError`'s branch set, so this neither duplicates nor contradicts it.
+- fix: >
+    The review proposed a text regex plus a NEW `gamelib` locale key. Both were declined for
+    something strictly better, on two measurements:
+      1. A NEW key would be en-only. `pnpm lint-translations:gamelib` checks against
+         `meta/i18nCatalogPresenceBaseline.json`, which is at a CLEAN `totalPairs: 0` — every
+         gamelib key is localised in all 48 locales. A new key measured 48 hard failures
+         ("a new key is not localised and was not recorded — fill it or regenerate the
+         baseline"), so it would have forced either a 48-locale fill or the FIRST hole in a
+         clean-at-zero gate. `machine-fill-gamelib` is unavailable here (gateway-scoped key).
+      2. The app ALREADY owns honest, fully-localised stall copy:
+         `gamelib:box.error.install.stalled` ("No download progress for {{count}} minutes — the
+         install was stopped"), rendered by the DownloadManager's own 480s watchdog at
+         `downloadmanager/utils.ts:284`, and filled in all 48 locales.
+    So `depot.ts` now stamps the run-scoped error with the watchdog's OWN existing marker pair
+    (`isStall: true` + `msSinceProgress`, `installStallWatchdog.ts:50-62`), and
+    `classifyDepotError` branches on `isStallError(err)` — the PROPERTY, the same discipline
+    `.eresult` and `.code` already get — and renders that shared string. Zero new locale keys,
+    gate still `0 findings, 0 hard failures`, and the user is told the same sentence about the
+    same condition by whichever of the two bounds trips first. Placed before the network
+    alternation for the documented reason the other property branches are: a genuinely dead
+    run's last chunk error usually DOES carry an ECONNRESET signature. The per-CHUNK stall
+    guard stamps no marker, so nothing existing is reclassified — pinned by a non-vacuity arm
+    asserting the same sentence WITHOUT the marker still classifies as connectionDropped, and
+    a bare one still as generic.
+    Note: `i18next.t` is called in the three-arg `t(key, defaultValue, options)` form, not the
+    options-object form the DownloadManager site uses — a stubbed/uninitialised i18next returns
+    its SECOND argument, so the options-object form leaks a non-string object into `message`
+    (typed `string`). Measured: it did, in this repo's own test environment.
+
+### I-1 (INFO) — CONFIRMED and APPLIED.
+
+- checked: "`file: queue[0]?.file.filename ?? '(run)'` at the stall-record push."
+- found: >
+    BOTH halves confirmed. (1) Misattribution is real and was observed live in the W-1 RED run
+    above, which recorded `"file": "empty-36.bin"` — a file that never failed and was never even
+    attempted; it then prints as `first: file="..."` in `downloadSteamDepots`' aggregate error
+    line. (2) The `?? '(run)'` fallback is DEAD: between `while (queue.length)` and the
+    `queue[0]` read sit only `opts.signal?.aborted` and `stallTracker.hasStalled()`, both
+    synchronous, so `queue[0]` is always defined.
+- fix: "`file: '(run)'` unconditionally — the run-level sentinel the author had already written."
+- residual, named not fixed: >
+    `result.failures.length` still counts the run-scoped record alongside the per-file ones, so
+    the aggregate log reports N+1 for N failed files. That record IS a real failure and belongs
+    in the list; separating run-level from file-level failures is a shape change this follow-up
+    is not entitled to make.
+
+### I-2 (INFO) — DECLINED, with evidence. It fights a documented decision and an unupdatable gate.
+
+- checked: "Whether `FILE_CONCURRENCY` (`depot.ts:988`) can be exported so the test stops
+  hardcoding 32."
+- found: >
+    It is un-exported DELIBERATELY, and says so in situ: "Not exported: used only within this
+    module (ts-prune / `pnpm find-deadcode` flagged the previously-exported form as a
+    used-in-module finding -- no external consumer references it; every hit outside this file is
+    a prose comment)." That was `269952344`'s whole point. `pnpm find-deadcode`
+    (`meta/findDeadcode.cjs`) is a two-population ratchet that goes RED on any change to either
+    population IN EITHER DIRECTION and deliberately has NO `--update-baseline` flag ("it would be
+    a one-keystroke way to admit a new finding. There is no code path in this file that adds an
+    entry to a baseline").
+- verdict: >
+    DECLINED. The benefit is small (a retune of FILE_CONCURRENCY reddens the test for an
+    unrelated reason) and the cost is reversing an explicit, commit-backed decision against a
+    gate with no sanctioned update path. The test's comment now names the coupling instead.
+
+### Coverage gap — APPLIED.
+
+New test `coverage gap: a tracker already stalled at construction attempts ZERO files and records
+the honest run-scoped failure`. Back-dates via `StallTracker`'s own `now` constructor parameter
+rather than a 1ms timeout (which would race real wall clock). Locks the consequence of
+`new StallTracker()` at `depot.ts:2276` ever drifting ABOVE `pool.init()` / `reconcilePartialState`.
+
+### Battery (all actually run against the follow-up tree, none inferred)
+
+- `npx jest --selectProjects Backend --testPathPattern 'storeManagers/steam|downloadmanager'`
+  => 47 suites, 1577 passed, 1 skipped. The steam-only slice is 44 suites / 1506 (1502 at
+  `62f916e58`; +4 new tests). The "worker process has failed to exit gracefully" warning is
+  PRE-EXISTING and already recorded above.
+- `npx tsc --noEmit -p tsconfig.json` => exit 0
+- `pnpm lint` => exit 0, `production: PASS | tests: PASS`. HONEST DELTA: the production count
+  moved 1106 -> 1107. The ONE new warning is `import-x/no-named-as-default-member` on the single
+  new `i18next.t` access in `depotErrors.ts` — the identical rule fires 63 times already in the
+  same pattern, and ANY new classified error in that file costs exactly one, since every branch
+  uses `i18next.t`. It is inside the committed `SRC_CEILING = 1124` (17 of headroom) and was NOT
+  suppressed. The tests ceiling is UNCHANGED at 638, which is exact with zero headroom.
+  Diff method: warning populations at HEAD and after, reduced to `rule -> count` and diffed —
+  that one line is the only difference.
+- `pnpm lint-translations:gamelib` => `0 findings, 0 hard failures` (the clean-at-zero presence
+  baseline is preserved; this is why the new key was declined)
+- `pnpm i18n-churn-guard` => "clean -- no upstream public/locales/ catalog changed"
+- `pnpm find-deadcode` => "unreachable: 46 OK | used-in-module: 0 OK"
+- `npx prettier --check` over the three exact written source paths => all conforming
+- `pnpm planning-gates` => 12/13. The failure SET is byte-identical to the pre-existing one:
+  the same three `.planning/quick/260925-uok-*` files, stray envelope tags, last touched by
+  `20ffb98e7`. Not this session's, not touched.
+
+NOT DONE and not claimed: no live re-drive. Everything above is desk work.

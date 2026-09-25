@@ -15,6 +15,12 @@
 
 import i18next from 'i18next'
 import { isDecodeStageError } from './depot/decompress'
+// debug/depot-stall-bound-did-not-fire, W-2: the `isStall`/`msSinceProgress`
+// marker contract is already owned by the DownloadManager's stall watchdog;
+// depot.ts stamps the SAME shape on its run-scoped give-up so both stall
+// bounds classify and render identically. That module imports only
+// backend_events/logger/common-types, so this introduces no import cycle.
+import { isStallError } from 'backend/downloadmanager/installStallWatchdog'
 import type { InstallErrorAction } from 'common/types/game_manager'
 
 /** 37-02 (D-06): the structured affordance a classified failure carries,
@@ -228,6 +234,66 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
       message: i18next.t(
         'gamelib:steam.download.error.decodeFailed',
         'Downloaded game data could not be unpacked. This is not a network problem.'
+      ),
+      action: 'retry'
+    }
+  }
+
+  // debug/depot-stall-bound-did-not-fire, specialist review W-2
+  // (2026-09-25). downloadDepotFiles' RUN-SCOPED no-progress bound composes
+  // its own failure text ("download stalled: no forward progress for Nms
+  // across the whole run — giving up with N file(s) unattempted"), and that
+  // sentence carries NONE of the network signatures the alternation below
+  // matches, so before this branch it fell straight through to the generic
+  // bucket: "The Steam download failed." — the causeless sentence the
+  // separate debug/steam-depot-unclassified-generic-error session exists to
+  // stop shipping. A stall is a distinguishable cause and the app already
+  // owns honest, fully-localised copy for it.
+  //
+  // Checked via `isStallError(err)` — the `isStall`/`msSinceProgress`
+  // PROPERTY pair, not a text pattern — the same discipline as
+  // `isNonRetryableDepotError` and `isDecodeStageError` above, and placed
+  // here for the same reason: it must run BEFORE the network alternation,
+  // because a genuinely dead run's last chunk error usually DOES carry an
+  // ECONNRESET/CDN signature. Consequence worth stating: the PER-CHUNK stall
+  // guard (downloadFileChunks) composes a similar "download stalled..."
+  // suffix onto the underlying chunk error but stamps NO property, so it
+  // keeps classifying exactly as it does today. Nothing existing is
+  // reclassified.
+  //
+  // DELIBERATELY REUSES `gamelib:box.error.install.stalled`, the string the
+  // DownloadManager's own 480s watchdog already renders
+  // (downloadmanager/utils.ts), rather than minting a new key. Two reasons,
+  // and the second is the stronger one:
+  //   1. The user is being told the same thing about the same condition by
+  //      whichever of the two bounds happens to trip first. One sentence for
+  //      one meaning is better copy than two near-duplicates.
+  //   2. A new `gamelib` key would be en-only, and this fork's
+  //      `lint-translations:gamelib` presence baseline
+  //      (meta/i18nCatalogPresenceBaseline.json) is at a CLEAN
+  //      totalPairs: 0 — every gamelib key is localised in all 48 locales.
+  //      Adding one would force either a 48-locale fill or the first hole in
+  //      that baseline. `box.error.install.stalled` is already filled in all
+  //      48, so this branch ships fully localised on day one.
+  // `.key` stays a `steam.download.error.*` identifier: it is the classifier's
+  // own semantic name (logged by downloadSteamDepots to tell a matched
+  // signature from the generic fallback) and is independent of which locale
+  // key the copy is looked up from — the same split 37-02 established for
+  // connectionDropped/genericV2 below.
+  if (isStallError(err)) {
+    return {
+      key: 'steam.download.error.stalled',
+      // Three-arg `t(key, defaultValue, options)` rather than the
+      // options-object form the DownloadManager call site uses: a stubbed /
+      // uninitialised i18next returns its SECOND argument, so this shape
+      // degrades to a readable English sentence where the options-object
+      // shape degrades to the options object itself (a non-string leaking
+      // into `message`, which is typed `string`). Same defensive reasoning
+      // as the "composed OUTSIDE i18next.t" note on depotUnavailable above.
+      message: i18next.t(
+        'gamelib:box.error.install.stalled',
+        'No download progress for {{count}} minutes — the install was stopped',
+        { count: Math.max(1, Math.round(err.msSinceProgress / 60000)) }
       ),
       action: 'retry'
     }

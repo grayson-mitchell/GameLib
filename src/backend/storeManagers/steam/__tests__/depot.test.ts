@@ -3252,6 +3252,53 @@ describe('classifyDepotError', () => {
     expect(result.key).toBe('steam.download.error.generic')
     expect(result.action).toBe('retry')
   })
+
+  // debug/depot-stall-bound-did-not-fire, specialist review W-2 (2026-09-25).
+  it("W-2: downloadDepotFiles' RUN-SCOPED stall failure classifies as stalled with the honest no-progress copy, never the causeless generic bucket", () => {
+    const err = Object.assign(
+      new Error(
+        'download stalled: no forward progress for 180500ms across the whole run — giving up with 812 file(s) unattempted'
+      ),
+      { isStall: true as const, msSinceProgress: 180500 }
+    )
+    const result = classifyDepotError(err)
+    expect(result.key).toBe('steam.download.error.stalled')
+    expect(result.action).toBe('retry')
+    expect(result.message).not.toMatch(/the steam download failed/i)
+    expect(result.message).toMatch(/no download progress/i)
+  })
+
+  it('W-2 non-vacuity + ordering guard: the SAME sentence WITHOUT the isStall marker is unchanged — a per-chunk stall carrying a genuine network signature still classifies as connectionDropped, and a bare one still falls to generic', () => {
+    // downloadFileChunks composes a similar stall suffix onto the underlying
+    // chunk error but stamps no marker, so this shape — the common one in
+    // the wild — must be untouched by the new branch. Proves the branch
+    // fires on the PROPERTY, not on the "stalled" text the two share.
+    expect(
+      classifyDepotError(
+        new Error(
+          'chunk abc123 failed after 8 attempts: ECONNRESET (download stalled: no forward progress for 180500ms across the whole run)'
+        )
+      ).key
+    ).toBe('steam.download.error.connectionDropped')
+
+    expect(
+      classifyDepotError(
+        new Error(
+          'download stalled: no forward progress for 180500ms across the whole run'
+        )
+      ).key
+    ).toBe('steam.download.error.generic')
+  })
+
+  it('W-2: the stall branch mints NO new locale key — it reuses gamelib:box.error.install.stalled, which is already filled in all 48 locales, so the lint-translations:gamelib presence baseline stays at totalPairs 0', () => {
+    const source = readFileSync(
+      join(__dirname, '..', 'depotErrors.ts'),
+      'utf-8'
+    )
+    expect(source).toContain('gamelib:box.error.install.stalled')
+    // The tempting alternative, and the reason this assertion exists.
+    expect(source).not.toContain('gamelib:steam.download.error.stalled')
+  })
 })
 
 // debug/steam-depot-unclassified-generic-error (F2): `code`/`eresult` are the
@@ -3542,6 +3589,17 @@ describe('downloadDepotFiles', () => {
     // than this so the first pass cannot drain the queue: files beyond this
     // index are reachable only by a worker looping back round for another
     // job, which is exactly where the new run-scoped check sits.
+    //
+    // DUPLICATED, not imported, and that is a decision rather than an
+    // oversight — specialist review I-2 (2026-09-25) proposed exporting the
+    // production constant and was DECLINED. `depot.ts:988` is un-exported
+    // deliberately and says so in situ (`269952344` un-exported it because
+    // ts-prune flagged the exported form as a used-in-module finding), and
+    // `pnpm find-deadcode` is a two-population ratchet that reddens on any
+    // change to either population in either direction with no sanctioned
+    // update path. The real coupling is therefore recorded HERE: if
+    // FILE_CONCURRENCY is ever retuned, this number and the two arms below
+    // must move with it, and they will go red first.
     const FILE_CONCURRENCY = 32
     const FILE_COUNT = 40
 
@@ -3632,6 +3690,138 @@ describe('downloadDepotFiles', () => {
       )
 
       // The run can never be mistaken for a complete one.
+      expect(result.allFilesVerifiedThisRun).toBe(false)
+    })
+
+    // debug/depot-stall-bound-did-not-fire, specialist review W-1
+    // (2026-09-25). The run-scoped check above turned `hasStalled()` from an
+    // advisory read (consulted ONLY inside a per-chunk catch, so it had no
+    // effect at all on a healthy run) into a TERMINAL, unrecoverable verdict
+    // sampled unconditionally at the top of the worker loop. That made a
+    // pre-existing imprecision load-bearing:
+    //
+    //   `recordProgress()` has exactly ONE call site in the whole repo —
+    //   depot.ts:1419, immediately after `await fd.write(...)`. Census:
+    //   `grep -rn recordProgress` over every tracked .ts/.tsx/.js/.cjs/.mjs
+    //   outside node_modules returns 5 hits — that call, the declaration in
+    //   stallTracker.ts, one prose comment in depot.ts, and two lines in this
+    //   file.
+    //
+    // So "forward progress" meant "a decompressed chunk byte hit disk", NOT
+    // "work completed". `downloadSingleFile` (depot.ts:1483-1687) has FOUR
+    // successful-completion paths that never reach that write: the directory
+    // entry (:1532), the symlink entry (:1575), the zero-byte/zero-chunk
+    // entry (:1621), and the whole tail after the chunk loop returns —
+    // sha1File(dest) over the ENTIRE file, applyEDepotFileModes,
+    // applyMachOExecutableFallback (:1653-1686). A run doing only that kind
+    // of work is progressing perfectly and was invisible to the clock.
+    //
+    // This test pins the correction: a successful `downloadSingleFile` return
+    // is itself forward progress. It uses files that complete via the
+    // zero-byte path, so fetchChunk is NEVER called and the :1419 site can
+    // never fire — the only thing that can keep the clock alive is the
+    // worker-loop `recordProgress()` the review added.
+    it('W-1: files completing via a NON-chunk-writing path (zero-byte entries) count as forward progress — a healthy run of them is not terminated by the run-scoped bound', async () => {
+      // A StallTracker on a VIRTUAL clock that advances `TICK_MS` per
+      // hasStalled() consult. This is the real class — only the clock source
+      // is substituted — so the arithmetic under test is production's, not a
+      // mock's, and the result is deterministic rather than wall-clock racy.
+      const TICK_MS = 1000
+      // Chosen to sit strictly BETWEEN the 32 consults the first pass makes
+      // before any file can complete (32 x TICK_MS = 32000) and the 40 total
+      // consults the whole run makes (40000), with a 4-consult margin on each
+      // side. Below 32000 the healthy arm could not start; above 40000 the
+      // unfixed code would never trip and this test would be vacuous.
+      const WINDOW_MS = 36 * TICK_MS
+      class VirtualClockStallTracker extends StallTracker {
+        private virtualNow = 0
+        constructor() {
+          super(WINDOW_MS, 0)
+        }
+        override hasStalled(): boolean {
+          this.virtualNow += TICK_MS
+          return super.hasStalled(this.virtualNow)
+        }
+        override recordProgress(): void {
+          super.recordProgress(this.virtualNow)
+        }
+        override msSinceProgress(): number {
+          return super.msSinceProgress(this.virtualNow)
+        }
+      }
+
+      // Zero-byte manifest entries: `downloadSingleFile` returns at its
+      // size===0 fast path, having created the file and applied no chunks.
+      // No fetchChunk, no fd.write, therefore no :1419 recordProgress.
+      const files: DepotPlanFile[] = Array.from(
+        { length: FILE_COUNT },
+        (_, i) => ({
+          filename: `empty-${String(i).padStart(2, '0')}.bin`,
+          size: 0,
+          sha_content: sha1Hex(Buffer.alloc(0)),
+          chunks: []
+        })
+      )
+      const plan = makePlan(
+        [{ depotId: '889', gid: 'g9', key: Buffer.from('key'), files }],
+        0
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS,
+        stallTracker: new VirtualClockStallTracker()
+      })
+
+      // Non-vacuity: prove the bound really was the only thing that could
+      // have stopped this run, i.e. the :1419 site genuinely never ran.
+      expect(jest.mocked(fetchChunk)).not.toHaveBeenCalled()
+
+      // THE W-1 ASSERTION. Without the worker-loop recordProgress() the
+      // virtual clock crosses WINDOW_MS at consult 37 and the run gives up
+      // with 4 files unattempted and one bogus "stalled" failure — a healthy
+      // run killed by a clock that could not see the work it was doing.
+      expect(result.failures).toEqual([])
+      expect(existsSync(join(dir, 'common', 'SomeGame', 'empty-39.bin'))).toBe(
+        true
+      )
+    })
+
+    // debug/depot-stall-bound-did-not-fire, specialist review coverage gap
+    // (2026-09-25). Nothing pinned the ORDERING property the run-scoped check
+    // silently depends on: `new StallTracker()` is constructed at
+    // depot.ts:2276, AFTER DecompressPool init and reconcilePartialState, so
+    // its clock starts once setup is done and the first worker iteration
+    // cannot trip it. If that construction ever drifts EARLIER — above
+    // pool.init(), or above a long reconcile — a slow-setup run would be
+    // killed before attempting a single file. This locks the consequence of
+    // that ordering being wrong, by simulating it directly: a tracker whose
+    // clock was already dead at construction attempts ZERO files and says so
+    // honestly rather than truncating in silence.
+    it('coverage gap: a tracker already stalled at construction attempts ZERO files and records the honest run-scoped failure (pins "the clock starts after setup")', async () => {
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const result = await downloadDepotFiles(manyFilePlan(), {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS,
+        // Back-dated via the constructor's own `now` parameter rather than a
+        // tiny timeout — `new StallTracker(1)` would depend on at least 1ms
+        // of real wall clock elapsing, which is a race, not a test.
+        stallTracker: new StallTracker(60 * 1000, Date.now() - 10 * 60 * 1000)
+      })
+
+      expect(jest.mocked(fetchChunk)).not.toHaveBeenCalled()
+      expect(existsSync(join(dir, 'common', 'SomeGame', 'file-00.bin'))).toBe(
+        false
+      )
+      // Honest, not silent: exactly one failure, naming the whole plan as
+      // unattempted, and the run is never mistaken for complete.
+      expect(result.failures).toHaveLength(1)
+      expect(result.failures[0].error).toMatch(
+        new RegExp(`${FILE_COUNT} file\\(s\\) unattempted`)
+      )
       expect(result.allFilesVerifiedThisRun).toBe(false)
     })
   })

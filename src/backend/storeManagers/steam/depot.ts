@@ -51,6 +51,10 @@ import {
 import { HostHealthTracker } from './depot/hostHealth'
 import { CdnAuthTokenCache } from './depot/cdnAuth'
 import { StallTracker } from './depot/stallTracker'
+// debug/depot-stall-bound-did-not-fire, W-2: type-only — the run-scoped
+// give-up below stamps the DownloadManager watchdog's existing stall marker
+// so both no-progress bounds classify and render through one contract.
+import type { StallError } from 'backend/downloadmanager/installStallWatchdog'
 import { InflightLimiter } from './depot/inflightLimiter'
 import { DecompressPool } from './depot/decompressPool'
 import { writeAppManifest } from './depot/manifest'
@@ -2564,14 +2568,39 @@ export async function downloadDepotFiles(
             // per worker slot, bounded only by TARGET_INFLIGHT_CHUNKS. The
             // bound fired the whole time; nothing acted on it at run scope.
             //
-            // Deliberately no stricter than the per-chunk guard it completes:
-            // hasStalled() can only be true when NOTHING landed on disk
-            // anywhere in the run for STALL_TIMEOUT_MS, and since a successful
-            // attempt is itself bounded at CHUNK_FETCH_TIMEOUT_MS (15s) and a
-            // full exhaustion at ~132s, that window cannot be reached by a
-            // merely-slow run — every in-flight slot has had at least one full
-            // exhaustion cycle by then. A trickling run keeps calling
-            // recordProgress() and never reaches here.
+            // What "no forward progress" means here, stated precisely —
+            // specialist review W-1 (2026-09-25) CORRECTED the first version
+            // of this comment, which claimed hasStalled() "can only be true
+            // when NOTHING landed on disk anywhere in the run". That was
+            // measurably FALSE and the correction is the reason
+            // `stallTracker.recordProgress()` now runs below on a successful
+            // file. `recordProgress()` had exactly ONE call site in the repo
+            // — after `await fd.write(...)` in downloadFileChunks — so the
+            // clock only ever saw DECOMPRESSED CHUNK BYTES, never work
+            // completed. downloadSingleFile's directory, symlink and
+            // zero-byte branches, and its whole post-chunk tail (a
+            // whole-file sha1File re-read, applyEDepotFileModes,
+            // applyMachOExecutableFallback), all complete a planned file
+            // while writing no chunk at all. 32 concurrent whole-file SHA1
+            // re-reads of multi-GB paks on a slow external disk exceeding
+            // STALL_TIMEOUT_MS is not exotic, and before this check that
+            // mattered to nobody (hasStalled() was advisory, read only
+            // inside a per-chunk catch that a healthy file never enters).
+            // Sampled HERE it is terminal and unrecoverable, so the clock
+            // has to be able to see that work.
+            //
+            // With the recordProgress() below, reaching this point requires
+            // STALL_TIMEOUT_MS in which no chunk byte landed AND no file
+            // completed, anywhere in the run — a genuinely dead run. A
+            // merely-slow one cannot get here: a successful attempt is
+            // bounded at CHUNK_FETCH_TIMEOUT_MS (15s) and a full exhaustion
+            // at ~132s, so every in-flight slot has turned over at least
+            // once inside the window. Residual, named not fixed: a run whose
+            // every worker is simultaneously inside a single file's verify
+            // tail for longer than STALL_TIMEOUT_MS is still misread as
+            // stalled. Closing that needs progress reporting from inside
+            // sha1File, which is a larger change than this fix is entitled
+            // to make.
             //
             // Scope limit, stated honestly: this stops the run TAKING NEW
             // FILES. Files already in flight are not interrupted — they drain
@@ -2581,13 +2610,36 @@ export async function downloadDepotFiles(
             if (stallTracker.hasStalled()) {
               if (!runStallRecorded) {
                 runStallRecorded = true
-                const stalledErr = new Error(
-                  `download stalled: no forward progress for ` +
-                    `${stallTracker.msSinceProgress()}ms across the whole run ` +
-                    `— giving up with ${queue.length} file(s) unattempted`
+                const msSinceProgress = stallTracker.msSinceProgress()
+                // Specialist review W-2 (2026-09-25): stamped with the
+                // DownloadManager watchdog's OWN `StallError` marker pair
+                // (installStallWatchdog.ts) so classifyDepotError can branch
+                // on the property rather than on this sentence's wording —
+                // the same discipline `.eresult`/`.code` already get — and
+                // render the honest, already-localised stall copy instead of
+                // dropping into the causeless generic bucket. Without this
+                // the message below matches none of classifyDepotError's
+                // signatures and the user is told only "The Steam download
+                // failed."
+                const stalledErr: StallError = Object.assign(
+                  new Error(
+                    `download stalled: no forward progress for ` +
+                      `${msSinceProgress}ms across the whole run ` +
+                      `— giving up with ${queue.length} file(s) unattempted`
+                  ),
+                  { isStall: true as const, msSinceProgress }
                 )
                 failures.push({
-                  file: queue[0]?.file.filename ?? '(run)',
+                  // Specialist review I-1 (2026-09-25): this was
+                  // `queue[0]?.file.filename ?? '(run)'`, which named an
+                  // UNATTEMPTED file as the failing one — it then printed as
+                  // `first: file="..."` in downloadSteamDepots' aggregate
+                  // error line, blaming a file that never even ran. The `??`
+                  // fallback was dead too: `while (queue.length)` was
+                  // evaluated with no intervening await, so `queue[0]` is
+                  // always defined here. This is a RUN-level event, so it
+                  // carries the run-level sentinel unconditionally.
+                  file: '(run)',
                   error: stalledErr.message,
                   cause: stalledErr
                 })
@@ -2646,6 +2698,24 @@ export async function downloadDepotFiles(
                 // budget — see depot/inflightLimiter.ts.
                 limiter
               )
+              // debug/depot-stall-bound-did-not-fire, specialist review W-1
+              // (2026-09-25): the SECOND forward-progress signal, and the
+              // reason the run-scoped give-up above is safe. Until this line
+              // the run's only notion of progress was "a decompressed chunk
+              // byte hit disk" (downloadFileChunks' single
+              // recordProgress() call site), which is blind to every file
+              // that completes without writing a chunk — directory entries,
+              // symlinks, zero-byte entries — and to the whole verify/chmod
+              // tail of a file that DID write chunks. A successful return
+              // from downloadSingleFile is unambiguous forward progress by
+              // any definition, so it resets the clock.
+              //
+              // This cannot weaken the bound against the 2026-08-27
+              // Californium case it was built for: a file that fails THROWS,
+              // so this line is unreachable on the failure path, and on that
+              // run zero files completed. It only prevents a run that IS
+              // completing work from being declared dead.
+              stallTracker.recordProgress()
             } catch (err) {
               failures.push({
                 file: job.file.filename,

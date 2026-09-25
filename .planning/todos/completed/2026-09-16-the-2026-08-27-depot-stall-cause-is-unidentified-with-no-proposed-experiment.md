@@ -172,6 +172,24 @@ correct under **both** branches:
   DownloadManager watchdog still trips and aborts, which is proven working on two paths by the
   2026-09-08 live gate.
 
+> **CORRECTION, 2026-09-25 (TypeScript specialist review of `62f916e58`, follow-up commit).** The
+> "Trickle" bullet above was true only by luck, and the sentence "the bound correctly never fires
+> (the run IS progressing)" was WRONG as written. `recordProgress()` had exactly ONE call site in
+> the whole repo — `depot.ts:1419`, immediately after `await fd.write(...)` — so the clock could
+> only see DECOMPRESSED CHUNK BYTES, never work completed. `downloadSingleFile` finishes a planned
+> file via four paths that never reach it: directory entries, symlinks, zero-byte entries, and its
+> entire post-chunk tail (a whole-file `sha1File` re-read, `applyEDepotFileModes`, the Mach-O
+> fallback). A run doing only that kind of work is progressing perfectly and was invisible to the
+> bound. Before this todo's fix that was harmless, because `hasStalled()` was advisory — read only
+> inside a per-chunk catch that a healthy file never enters. **The fix is what made it dangerous:**
+> sampled unconditionally at the top of the worker loop, a stale clock is terminal and
+> unrecoverable, so e.g. 32 concurrent whole-file SHA1 re-reads of multi-GB paks on a slow or
+> external disk could kill a run that was completing every single file. The follow-up commit adds
+> `stallTracker.recordProgress()` after a successful `downloadSingleFile` return — measured
+> RED→GREEN on a plan of zero-byte entries where `fetchChunk` is provably never called — and
+> rewrites the in-code comment that carried the false claim. Full detail in
+> `.planning/debug/resolved/depot-stall-bound-did-not-fire.md`, section "Post-resolution".
+
 Either way there is no longer a branch in which a Steam depot run can continue indefinitely after
 being told it has failed. The unknown was not dissolved; it was made not worth knowing.
 
