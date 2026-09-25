@@ -32,7 +32,7 @@
     "tauri:dev": "cross-env GAMELIB_DEV_SECRET_VAULT=1 pnpm tauri:dev:run",
     "tauri:dev:keyring": "pnpm tauri:dev:run",
     "tauri:dev:vault": "pnpm tauri:dev",
-    "tauri:dev:run": "pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri dev",
+    "tauri:dev:run": "node meta/tauriDevPreflight.cjs && pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri dev",
     "tauri:dev:packaged": "pnpm exec vite build && pnpm build:sidecar && pnpm build:decompress-worker-dev && tauri build --debug",
     "build:sidecar": "esbuild --bundle --platform=node --target=node22 --format=cjs --packages=external --outfile=build/main/sidecar.js src/sidecar/index.ts",
     "build:decompress-worker-dev": "node meta/runTs.cjs --bundle --platform=node --target=node22 meta/buildDecompressWorkerDev.ts",
