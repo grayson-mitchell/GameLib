@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: — Tauri Shell
-status: executing
-stopped_at: 46-05 live gate FAIL at Check 3 -- fix-forward via /gsd-plan-phase 46 --gaps
-last_updated: "2026-09-25T05:39:47.097Z"
-last_activity: "2026-09-25 -- Quick task 260925-ms5: live sitting measured the PowerA pad's last four unknown buttons (L3=10, R3=11, Home=12, Capture=13); the 2026-09-23 Home/Capture null was overturned by a positive-control-backed capture and `guide` is now wired to a measured index on the non-standard arm only."
+status: phase-complete
+stopped_at: Phase 46 complete -- 46-07 live re-gate PASS, verification passed 12/12
+last_updated: "2026-09-25T10:30:00.000Z"
+last_activity: "2026-09-25 -- Phase 46 complete: 46-07 Windows live re-gate PASS (3a/3b minimized-window restore measured), todo + U-34.5-18 + REQ-46-10 closed, verification passed 12/12, code review 0 critical / 2 warning"
 progress:
   total_phases: 43
-  completed_phases: 35
+  completed_phases: 36
   total_plans: 506
-  completed_plans: 497
-  percent: 81
+  completed_plans: 498
+  percent: 84
 ---
 
 # Project State
@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-05)
 
 **Core value:** One launcher that manages your entire game library across Epic, GOG, Amazon, and Steam — without needing to open Steam, Epic, or GOG separately.
-**Current focus:** Phase 46 — windows-single-instance-guard-and-gamelib-deep-link-registra
+**Current focus:** None active — Phase 46 completed 2026-09-25; Phase 47 is gated on the ITAD email reply
 
 > **Version renumber (2026-07-20):** the whole project was renumbered from the
 > inflated `v1.x` planning labels to `0.x` to reflect pre-release status (map:
@@ -70,11 +70,11 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 ## Current Position
 
-Phase: 46 (windows-single-instance-guard-and-gamelib-deep-link-registra) — EXECUTING
-Plan: 7 of 7 — 46-07 re-run Windows live gate (Checks 3-5) + closure bookkeeping
-Status: Executing Phase 46
-Last activity: 2026-09-25 -- Quick task 260925-re8: stopped the vite dev watcher walking `graphify-out/` (`'**/graphify-out/**'` added to `server.watch.ignored`), the second member of `260924-vat`'s EBUSY class. The todo's prescribed `pnpm tauri:dev` + `graphify update .` arm was deliberately not run -- a live dev server with the Tauri window attached was already up, and that arm rewrites the directory it was watching, so it endangered the operator's session no matter which vite process was nominally under test. Gated read-only instead via vite's Node API: 3485 watched entries across 8 dirs under `graphify-out/` before, 0 after, against two controls (`src-tauri/target = 0` proving the ignore mechanism works, `src_dirs = 383` unchanged proving the probe was not blind). EBUSY itself was never re-observed on the fixed config and the SUMMARY says so. `build/` (169 watched dirs, because `emptyOutDir: false` suppresses vite's outDir auto-ignore) and `public/bin` were DECLINED and re-filed as a separate `live-gate` todo, keeping the ignore array observation-only. Earlier activity -- Quick task 260925-pga: gave the highlighted game card a visible `var(--accent)` ring in normal (non-console) mode, matching console mode, in grid and list view. Two planner design calls were reversed by live operator feedback rather than by review -- hover was excluded and had to be folded in, and the resulting stale focus ring ("one tile stuck on") was resolved by letting hover own the highlight while the pointer is over the library. Operator-confirmed live; the 12-assertion source gate reads text, never pixels.
-Progress: [████████░░] 83%
+Phase: 46 (windows-single-instance-guard-and-gamelib-deep-link-registra) — COMPLETE (2026-09-25)
+Plan: 7 of 7 — all executed; 46-07 re-gate PASS, U-34.5-18 and REQ-46-10 closed
+Status: Phase 46 complete
+Last activity: 2026-09-25 -- Phase 46 complete (46-07 re-gate PASS; 46-VERIFICATION.md passed 12/12; 46-REVIEW.md 2 advisory warnings)
+Progress: [████████░░] 84%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 
