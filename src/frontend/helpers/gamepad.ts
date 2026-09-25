@@ -179,8 +179,6 @@ export const initGamepad = () => {
         return
       }
 
-      const requestedAction: ValidGamepadAction = action
-
       // check special cases for the different actions, more details on the wiki
       switch (action) {
         case 'mainAction':
@@ -281,32 +279,6 @@ export const initGamepad = () => {
             }
           }
           break
-      }
-
-      // TEMPORARY -- diagnostic probe for the Phase 38 controller sitting. Removed in the
-      // Phase 38 close-out task. Greppable by the single token GAMEPAD-ACT. Sited here
-      // (post-switch, pre-dispatch) deliberately: a rewritten action is recorded as what
-      // FIRED, not as what was PRESSED. Several branches return before reaching this point
-      // and so emit nothing -- most notably `guide` (Console Mode toggle), which ALWAYS
-      // returns above and will never produce a line; see also `back` under
-      // console-launching/console-modal-open, and the in-switch VirtualKeyboard/dialog/
-      // dropdown/select returns. A missing line for those inputs is expected, not a bug.
-      try {
-        let line = `[GAMEPAD-ACT] action=${action}`
-        if (action !== requestedAction) {
-          line += ` from=${requestedAction}`
-        }
-        line += ` ctrl=${controllerIndex}`
-        line += ` tag=${el ? el.tagName : 'none'}`
-        if (el) {
-          const cls = el.getAttribute('class')
-          if (cls) line += ` cls=${cls.slice(0, 60)}`
-          const testid = el.getAttribute('data-testid')
-          if (testid) line += ` testid=${testid}`
-        }
-        window.api?.logInfo?.(line)
-      } catch {
-        // diagnostic only -- must never break controller dispatch
       }
 
       if (action === 'mainAction') {
