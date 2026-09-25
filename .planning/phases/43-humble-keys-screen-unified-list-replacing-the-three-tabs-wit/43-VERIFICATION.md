@@ -9,9 +9,11 @@ human_verification:
   - '43-LIVE-GATE.md runs 1-3 (2026-09-11), packaged release builds, hash-verified from DMG'
 gaps:
   - id: REQ-43-24
-    severity: major
-    summary: 'The `gog_keyless` "Claim on Humble" button is unresponsive in the shipped build — unit-green, live-broken'
+    severity: medium
+    summary: 'Second-opener defect FIXED in code 2026-09-25 (`260925-gnp`, `c99fdee43`); awaiting one live confirmation that the embed paints'
+    was: 'major — the button was unresponsive in the shipped build: unit-green, live-broken'
     owned_by: '.planning/todos/pending/2026-09-25-humble-keys-gog-keyless-claim-button-opens-an-embed-with-no-host-lifecycle.md'
+    live_check: '/store-page?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys — needs no gog_keyless entitlement'
 ---
 
 # Phase 43 Verification Report
@@ -91,6 +93,26 @@ scroll-syncs the native subview it created.
 **This gap cannot be closed on this machine.** `gog_keyless` is the unlinked-GOG-account shape;
 the operator linked GOG on 2026-09-22, so the branch is now unreachable here. It still ships for
 every unlinked user. Do not read "cannot reproduce" as "fixed".
+
+### ✅ Update 2026-09-25 — fixed in code, and the "cannot be closed here" claim above was WRONG
+
+Quick task `260925-gnp` (`c99fdee43`) repaired it: `openHumbleKeysEmbed()` deleted, the claim
+routed through `/store-page?store-url=` so `useStoreEmbedHost` owns the embed lifetime, Humble
+added to `STORE_EMBED_ORIGINS` (without which the deep-link gate punts to the system browser).
+Four tests now invoke the handler — the original hole was eight tests pinning the button's *label*
+and none invoking it — plus a `storeEmbedSingleOpener` structural gate proven non-vacuous by
+revert-to-red. 1306 tests / 44 suites green, `codecheck` and `lint` exit 0, both ceilings PASS.
+
+**Correcting the paragraph immediately above, which this fix disproved:** it said the gap "cannot
+be closed on this machine" because the *button* is unreachable without an unlinked GOG account.
+True of the button, **false of the destination.** Navigating a running app to
+`/store-page?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys` exercises the origin
+entry, the deep-link gate and the host lifecycle — every part the defect broke — with no
+entitlement of any kind. The unreachable-repro framing had quietly widened from "the button" to
+"the whole defect", and it was wrong for six days.
+
+Severity `major` → `medium`, `ready: code` → `live-gate`. Phase 43 still reads `gaps_found` until
+that one observation is taken: the fix is proven by tests, not by anyone seeing it paint.
 
 ## Second open item, not a requirement gap
 

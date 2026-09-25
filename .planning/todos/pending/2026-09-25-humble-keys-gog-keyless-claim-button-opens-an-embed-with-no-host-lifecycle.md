@@ -2,9 +2,9 @@
 created: 2026-09-25T00:00:00.000Z
 title: 'The `gog_keyless` "Claim on Humble" button is unresponsive — it opens the singleton embed with no host route, no slot and no lifecycle'
 area: humble/keys-screen
-severity: major
+severity: medium
 platform: any
-ready: code
+ready: live-gate
 status: OPEN
 found_by: 'Phase 43 UAT item 8 (2026-09-18), operator on a hash-verified release build: "oh that is broken, button is unresponsive". Root cause below is the UAT''s own lead, PARTLY re-adjudicated by quick-260925-e4d.'
 files:
@@ -13,7 +13,39 @@ files:
   - src/frontend/screens/WebView/index.tsx
 ---
 
-## The defect
+## ✅ FIXED IN CODE 2026-09-25 (quick `260925-gnp`, `c99fdee43`) — what remains is ONE live look
+
+**Read this before anything below: the diagnosis section is preserved as the record of the
+investigation, but the code it describes no longer exists.**
+
+`openHumbleKeysEmbed()` is deleted. `claimAction.onClaim` now arrives from `Keys/index.tsx` and
+navigates to `/store-page?store-url=` so `useStoreEmbedHost` owns the embed's whole lifetime;
+Humble was added to `STORE_EMBED_ORIGINS` (without it the deep-link gate would have punted to the
+system browser). Four new tests invoke the handler — the hole that let this ship was eight tests
+pinning the button's LABEL and none invoking it — plus a `storeEmbedSingleOpener.test.ts`
+structural gate proven non-vacuous by revert-to-red.
+
+**Severity dropped `major` → `medium` and `ready` `code` → `live-gate`.** Nothing is left to type;
+what is left is confirmation that the embed actually paints.
+
+### The live check — and it does NOT need a `gog_keyless` entitlement
+
+That was the trap in the original todo: the button only renders for `gog_keyless` + not-`REVEALED`,
+which is unreachable on this machine since the GOG account was linked. **The destination is
+independently reachable.** Navigate the running app to:
+
+```
+/store-page?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys
+```
+
+PASS = Humble's keys page renders inside the app, correctly sized, scrolling with the window, and
+**not** in the system browser. That exercises the origin-table entry, the deep-link gate and the
+host lifecycle — everything the defect broke. The only thing it does not exercise is the button's
+own `onClick` wiring, which the four new tests pin directly.
+
+Close this todo on that one observation.
+
+## The defect (as diagnosed — code since replaced)
 
 Clicking `Claim on Humble` on a `gog_keyless` row does nothing observable. The button is the one
 plan 43-09 shipped as candidate B (the Phase 40 embedded store browser) for `REQ-43-24`.

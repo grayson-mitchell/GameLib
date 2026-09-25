@@ -1866,9 +1866,17 @@ because each changes what a plan must assert:**
   `describe('gog_keyless KEY destination (REQ-43-24, D-43-11)')` block (83/83 passing); live
   embed-compositing/close-UX verification deferred to plan `43-10` per `43-09-SUMMARY.md`.
 
-  ⚠️ **THE TICK ABOVE IS STALE — this requirement FAILED live. Corrected 2026-09-25
-  (`260925-e4d`), left ticked so the "it shipped" fact is not lost, but do not read it as
-  verified.** The deferral in the line above never landed: **plan `43-10` never covered this** —
+  ✅ **FIXED IN CODE 2026-09-25 (`260925-gnp`, `c99fdee43`).** The second-opener defect described
+  below is repaired: `openHumbleKeysEmbed()` is deleted, the claim navigates to
+  `/store-page?store-url=` so `useStoreEmbedHost` owns the embed lifetime, and Humble is in
+  `STORE_EMBED_ORIGINS`. Four tests now invoke the handler and a `storeEmbedSingleOpener` gate
+  (revert-to-red proven) stops a second opener returning. **Still awaiting ONE live look** —
+  navigate a running app to `/store-page?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys`
+  and confirm the page paints in-app; that check needs no `gog_keyless` entitlement. Tracked by the
+  same todo, now `severity: medium`, `ready: live-gate`.
+
+  ⚠️ **HISTORICAL — why the tick above was stale between 2026-09-10 and 2026-09-25. Corrected
+  (`260925-e4d`), left ticked so the "it shipped" fact is not lost.** The deferral in the line above never landed: **plan `43-10` never covered this** —
   that gate scored column geometry and the row separator, nothing about the embed. So the tick
   rests entirely on 83 unit tests pinning the button's LABEL, and nothing ever exercised the
   click. `43-UAT.md` item 8 did, on a packaged release build: the button is **unresponsive**
