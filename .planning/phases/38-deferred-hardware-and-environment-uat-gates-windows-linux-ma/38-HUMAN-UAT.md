@@ -9,7 +9,7 @@ sessions:
   - "Sitting 2 -- 2026-09-23, Windows 11, tauri dev build `2cf170c14` -- 38-S08 re-scored PASS on all four checks"
   - "Sitting 3 -- 2026-09-25, Windows 11, tauri dev build `cdf07ee95`/`959e5c01b` -- eight controller items (38-C01a, 38-C01b, 38-C02, 38-C03, 38-C04a, 38-C05, 38-C06, 38-C08) all discharged PASS"
   - "Sitting 4 -- 2026-09-26, Windows 11, tauri dev (debug build) -- 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision"
-  - "Sitting 5 -- 2026-09-26, Windows 11, tauri dev (debug build) `59df4c1b6` -- 38-S02 PASS, 38-W06 FAIL accepted; 38-S14 sub-case (a) PASS but item stays OPEN; 38-W04 not run (no CI artifact exists); four defects filed"
+  - "Sitting 5 -- 2026-09-26, Windows 11, INSTALLED shell v0.7.0 (built 2026-09-24 07:34 from `5b6201e26`) with the repo build/main sidecar; label corrected by quick 260926-b5r -- 38-S02 PASS, 38-W06 FAIL accepted; 38-S14 sub-case (a) PASS but item stays OPEN; 38-W04 not run (no CI artifact exists); four defects filed"
 ---
 
 ## Current Test
@@ -18,7 +18,8 @@ sessions:
 (2026-09-25), which discharged all eight surviving controller items — 38-C01a, 38-C01b, 38-C02,
 38-C03, 38-C04a, 38-C05, 38-C06, 38-C08 — as PASS, and Sitting 4 (2026-09-26), which discharged the
 three Windows sitting items — 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision,
-and Sitting 5 (2026-09-26), which discharged 38-S02 PASS and 38-W06 FAIL-accepted, scored 38-S14
+and Sitting 5 (2026-09-26, run on a stale installed shell, not a dev build of HEAD; see the
+correction in its section), which discharged 38-S02 PASS and 38-W06 FAIL-accepted, scored 38-S14
 sub-case (a) PASS without discharging the item, and recorded 38-W04 as not run.
 See the "## Sitting 4" and "## Sitting 5" sections below for the artifacts. `38-VERIFICATION.md`
 remains authoritative: as of 2026-09-26 it holds 11 open items, 15 discharged, 10 retired. The "6 items seeded, 0
@@ -479,12 +480,43 @@ and
 `.planning/todos/pending/2026-09-26-tray-glyph-variant-selection-is-manual-and-theme-blind.md` —
 and neither is resolved by any PASS recorded here.
 
-## Sitting 5 — 2026-09-26, Windows 11, `tauri dev` (debug build) `59df4c1b6`
+## Sitting 5 — 2026-09-26, Windows 11, installed shell v0.7.0 (`5b6201e26`), label corrected
 
-**Conditions.** Windows 11, `pnpm tauri:dev`, DEBUG build, commit `59df4c1b6`. Say "debug build"
-explicitly, for the same reason sitting 4 did: it is what keeps `38-W04`/`38-W05` un-runnable.
+**Conditions (corrected 2026-09-26, quick `260926-b5r`).** Windows 11. The build that actually ran
+was the installed `%LOCALAPPDATA%\GameLib\gamelib-shell.exe`, v0.7.0, mtime 2026-09-24 07:34, built
+from `5b6201e26` (the last commit before that mtime). Its sidecar is the repo's
+`build/main/sidecar.js`, a compile-time path (`resolve_sidecar_entry()`, `main.rs:7823`), so the
+embedded frontend and the Rust shell were stale while the backend and the shared `gamelib.log`
+looked current. The single-instance guard makes a concurrent `pnpm tauri:dev` hand focus to that
+instance and exit. See
+`.planning/debug/resolved/mouse-dead-dropdown-disclosure.md` (commit `1f93c5812`) and the pending
+todo `2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.md` for the full evidence.
+Originally recorded as "`pnpm tauri:dev`, DEBUG build, commit `59df4c1b6`"; that label was wrong.
+This sitting's build profile is not otherwise established (neither release nor debug), so no claim
+is made either way. The `38-W04` not-run reason sitting 5 measured — no `v*` tag, so no CI artifact
+exists — does not depend on the build profile.
 Two Steam libraries registered (`C:\Program Files (x86)\Steam`, `D:\SteamLibrary`),
 `enableSteamNativeInstall` ON at the start of the sitting.
+
+**Why the scores transfer to HEAD: a desk diff, not a re-run.** The orchestrator measured the diff
+`5b6201e26..HEAD` at the desk on 2026-09-26. Only the embedded frontend and the Rust shell were
+stale; the sidecar/backend was the repo build. There are no changes to the install dialog,
+`MainButton`, `GamePage`, or the Steam backend `storeManager`. `contentLightNotice` English copy is
+unchanged — only non-English locale files changed. `main.rs` changes in the range are only
+`9ca63c7d0`/`1fa6e9e93` (Phase 46 WR-01/WR-02 Windows pipe) and `08f24b05d`/`f3972c70f`
+(260925-uok `gamelib://` HKCU self-heal); no cookie lines are touched, and `legendary/user.ts` is
+unchanged. The `downloadmanager/utils.ts` change is the stalled-install message pluralisation only.
+Mapping each score to its reason:
+- `38-S02`: the install path, `MainButton`, `GamePage`, `storeManager` and the dialog are
+  unchanged; the `downloadmanager/utils.ts` pluralisation is not exercised.
+- `38-S14(a)`: the dialog is unchanged, `contentLightNotice` English copy is unchanged, and the
+  copy discrimination is intact.
+- `38-W06`: no cookie lines in `main.rs` changed and `legendary/user.ts` is unchanged, so the FAIL
+  stands against HEAD and the cookie-removal defect is live on current code.
+- The one behavioural difference was `Dropdown.toggle`, which scored nothing (see below).
+
+Nothing was re-run on HEAD. This is an argument from the diff that the scores transfer, not an
+observation.
 
 **Four items were taken in as one batch and three were run.** `38-S02` and `38-S14(a)` need
 _opposite_ settings states, so the batch was ordered to flip `enableSteamNativeInstall` exactly
@@ -545,12 +577,18 @@ retirement** — nothing was observed.
 `MainButton` **caret did not respond to mouse clicks**, and the dialog for `38-S14(a)` had to be
 opened by right-clicking the game card instead. All three "Install with options…" doors open the
 same dialog with the same label string, so the route does not affect the score — but the caret
-itself is a **regression of a resolved debug session**
+itself is a ~~regression of a resolved debug session~~ **[Corrected 2026-09-26, quick
+`260926-b5r`: NOT a regression.]** The stale installed bundle that actually ran this sitting
+carried the pre-`3a0e62918` `Dropdown.toggle()` functional updater, so this was the already-fixed
+defect, not a new one. See
+`.planning/debug/resolved/mouse-dead-dropdown-disclosure.md` (commit `1f93c5812`); the operator
+confirmed on 2026-09-26 that a mouse click opens the dropdowns on HEAD under `pnpm tauri:dev`.
 (`.planning/debug/resolved/steam-caret-dropdown-dead.md`, fixed in `3a0e62918` and verified live
-over CDP on this same machine on 2026-09-24). The operator then found the surface is wider than
-the caret: the **library nav expanders were also mouse-dead, while the gamepad opened them
-normally**. That mouse-dead/gamepad-live split is the signature, and it is filed as its own todo
-rather than chased here.
+over CDP on this same machine on 2026-09-24, names the fix the stale bundle predates.) The operator
+then found the surface is wider than the caret: the **library nav expanders were also mouse-dead,
+while the gamepad opened them normally**. That mouse-dead/gamepad-live split is the signature, and
+it is filed as its own todo rather than chased here; that todo is now in `completed/` as
+not-a-regression.
 
 **Honest-limits paragraph.** Three of the four results in this sitting rest on different evidence
 classes and should not be read as equally hard. `38-S02`'s landing half and all of `38-W06` are
