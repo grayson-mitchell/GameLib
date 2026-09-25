@@ -202,6 +202,30 @@ residuals: |
      default-data-store fallback is `#[cfg(target_os = "macos")]`), now pointed at
      `https://gamelib.invalid/` instead of Epic. Strictly less network than before, but
      no live leg exists on either platform until Phase 38.
+
+     **CLOSED 2026-09-26** (quick `260926-a1l`, Phase 38 sitting 5, Windows 11, `tauri dev`
+     debug build `59df4c1b6`). This residual was relocated to Phase 38 as `38-W06` by quick
+     `260901-vuy` and has now been RUN on Windows. Recording the outcome here so this
+     session's own record does not rot, per Phase 38 relocation rule (4).
+
+     **The residual's own question is answered, and the answer is the opposite of the one
+     this session feared.** The open worry was whether the cookie READS would succeed
+     against a window whose page never resolves. **They do.** All five domain censuses
+     returned `verdict=SUPPORTED_NONEMPTY` on Windows — `epicgames.com` matched 10,
+     `unrealengine.com` matched 1, the other three 0. So the "all reads reject" shape that
+     `38-W06`'s `prior_state` called the most likely off-macOS outcome is REFUTED, not
+     merely unobserved. The `gamelib.invalid` window is readable.
+
+     **What fails instead is the REMOVAL, which this session never suspected.** Both
+     genuinely-populated domains reported zero cookies removed, `clearEpicCookies` threw
+     via the fail-closed guard at `legendary/user.ts:458-467`, and the operator saw a
+     user-visible sign-out error dialog. That is a DIFFERENT defect from anything this
+     session investigated, and it lands exactly where `main.rs:7327-7335` already said it
+     might: that block declares the Linux/Windows `delete_cookie()` path **UNVERIFIED** in
+     writing. It is now verified, and it is broken. Filed as
+     `.planning/todos/pending/2026-09-26-webview2-delete-cookie-does-not-remove-epic-cookies.md`;
+     this session stays RESOLVED and is not reopened, because the failing mechanism is not
+     the read divergence this session was about.
   3. An `api.hcaptcha.com` / `hmt_id` cookie PARTITIONED to `https://epicgames.com`
      survives logout. Correctly out of scope (hcaptcha.com is not Epic-owned; clearing it
      is the REQ-34.4.1-06 harm) and it carries no Epic session — but it means the string
