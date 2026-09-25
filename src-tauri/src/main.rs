@@ -8404,6 +8404,115 @@ fn acquire_single_instance(socket_path: &std::path::Path) -> SingleInstanceRole 
 // lifetime (46-RESEARCH.md Q1) removes the stale-socket-removal branch `acquire_single_instance`
 // above needs on Unix.
 
+// ---- Windows `gamelib://` self-heal: the DECISION half (quick-260925-uok) -------------------
+//
+// (1) These six functions are the deciding half of the Windows `gamelib://` HKCU self-heal;
+// `repair_windows_gamelib_protocol_registration` (in the `#[cfg(windows)]` FFI tier below) does
+// the I/O and nothing else. The split is not stylistic -- it is REQ-46-07's precedent, restated
+// in the banner immediately below this block: every non-FFI decision is a plain function,
+// unit-tested in `#[cfg(test)] mod tests` on ANY host, because the FFI tier is testable nowhere.
+// None of these six is `#[cfg(...)]`-gated, so they compile and are exercised on the macOS and
+// Linux CI legs too. (The `#[cfg_attr(not(windows), allow(dead_code))]` each carries is a
+// conditional LINT attribute, not conditional compilation -- the same annotation every pure
+// `windows_*` single-instance helper above already uses, and for the same reason: their only
+// non-test caller is `#[cfg(windows)]`.)
+//
+// (2) Byte-compatibility with the NSIS installer is the whole correctness criterion for the
+// writer, so the exact shapes are pinned here. The generated installer script writes four values
+// under `SHCTX` (= HKCU: `!define INSTALLMODE "currentUser"`), with `$\"` being NSIS's escaped
+// double-quote:
+//
+//     Software\Classes\gamelib                     "URL Protocol"  = ""            (empty REG_SZ)
+//     Software\Classes\gamelib                     (default)       = "URL:<bundle id> protocol"
+//     Software\Classes\gamelib\DefaultIcon         (default)       = "<exe>",0
+//     Software\Classes\gamelib\shell\open\command  (default)       = "<exe>" "%1"
+//
+// Source: `src-tauri/target/debug/nsis/x64/installer.nsi:922-925` -- NOTE that path is a
+// GENERATED BUILD ARTEFACT (`src-tauri/.gitignore:2`) and does NOT resolve on a clean checkout;
+// re-derive it with a Windows bundle build if you need to re-read it. The bundle id is NEVER
+// hardcoded here: the caller passes `app.config().identifier`, so the written value cannot drift
+// from `tauri.conf.json`.
+//
+// (3) Path comparison is deliberately FILESYSTEM-FREE -- no `canonicalize()`, no `exists()`. The
+// live 2026-09-25 incident that motivated this feature left the stored value pointing at a
+// DELETED executable, so any comparison that touched the disk would fail on precisely the case
+// the repair exists to fix.
+
+/// Extracts the executable path from a `shell\open\command` value, or `None` if the value is
+/// empty, whitespace-only, or malformed. Handles all four shapes Windows accepts: a quoted exe
+/// with a quoted `"%1"`, a quoted exe with a bare `%1`, an unquoted (space-free) exe, and an exe
+/// with no argument at all. An unterminated opening quote yields `None` rather than a guess --
+/// this string is untrusted third-party data written by whatever last claimed the scheme
+/// (T-UOK-04), and `None` routes to "repair needed", which is the safe outcome.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn gamelib_protocol_command_exe(command: &str) -> Option<String> {
+    let trimmed = command.trim();
+    let exe = match trimmed.strip_prefix('"') {
+        Some(rest) => {
+            let end = rest.find('"')?;
+            &rest[..end]
+        }
+        None => trimmed.split_whitespace().next()?,
+    };
+    if exe.trim().is_empty() {
+        return None;
+    }
+    Some(exe.to_string())
+}
+
+/// Whether two executable paths name the same file, for the purposes of the self-heal decision.
+/// Ordinal ignore-case (`eq_ignore_ascii_case`, NOT a locale-aware fold -- Windows path
+/// comparison is ordinal), surrounding whitespace ignored, and a leading `\\?\` extended-length
+/// prefix stripped from either side because `std::env::current_exe()` can return one. Two empty
+/// paths are NOT equivalent: an empty stored value must route to repair, not to "already fine".
+#[cfg_attr(not(windows), allow(dead_code))]
+fn gamelib_protocol_paths_equivalent(a: &str, b: &str) -> bool {
+    fn normalised(path: &str) -> &str {
+        let trimmed = path.trim();
+        match trimmed.strip_prefix(r"\\?\") {
+            Some(rest) => rest,
+            None => trimmed,
+        }
+    }
+    let (a, b) = (normalised(a), normalised(b));
+    !a.is_empty() && a.eq_ignore_ascii_case(b)
+}
+
+/// The self-heal decision itself: does `HKCU\Software\Classes\gamelib\shell\open\command`'s
+/// stored default value need rewriting to point at `current_exe`? `None` (key or value absent),
+/// an empty value, an unparseable value, and a value naming a DIFFERENT executable all mean yes.
+/// A value naming the current executable -- in any case, with or without its `"%1"` argument --
+/// means NO, and that arm is load-bearing: a naive string equality here would rewrite the user's
+/// registry on every single launch for the life of the install.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn gamelib_protocol_repair_needed(stored: Option<&str>, current_exe: &str) -> bool {
+    match stored.and_then(gamelib_protocol_command_exe) {
+        Some(exe) => !gamelib_protocol_paths_equivalent(&exe, current_exe),
+        None => true,
+    }
+}
+
+/// The `shell\open\command` default value the repair writes: `"<exe>" "%1"`, byte-identical in
+/// shape to the installer's row 4 above.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn gamelib_protocol_open_command(exe: &str) -> String {
+    format!("\"{exe}\" \"%1\"")
+}
+
+/// The `Software\Classes\gamelib` default value the repair writes: `URL:<identifier> protocol`,
+/// the installer's row 2. `identifier` is `app.config().identifier`, never a literal.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn gamelib_protocol_default_value(identifier: &str) -> String {
+    format!("URL:{identifier} protocol")
+}
+
+/// The `DefaultIcon` default value the repair writes: `"<exe>",0`, the installer's row 3. There
+/// is deliberately NO space after the comma -- the NSIS output has none.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn gamelib_protocol_default_icon(exe: &str) -> String {
+    format!("\"{exe}\",0")
+}
+
 // ---- Windows single-instance guard: FFI (Phase 46 plan 46-02) -----------------------------
 //
 // Everything below is `#[cfg(windows)]`-only and calls `windows-sys` Win32 FFI directly -- unlike
@@ -13958,6 +14067,170 @@ mod tests {
             single_instance_payload(&["evil://payload".to_string()]),
             (SINGLE_INSTANCE_FOCUS_SENTINEL.to_string(), "focus sentinel")
         );
+    }
+
+    // ---- quick-260925-uok: the Windows `gamelib://` HKCU self-heal decision helpers ----
+    //
+    // The PURE half of the repair, following REQ-46-07's precedent exactly: every non-FFI
+    // decision is a plain function unit-tested on ANY host, while the `#[cfg(windows)]` FFI half
+    // (`repair_windows_gamelib_protocol_registration`) does I/O and nothing else and is exercised
+    // by no test at all. These cases are therefore the ONLY automated coverage of what the repair
+    // decides -- see the completed todo
+    // `.planning/todos/completed/2026-09-25-windows-gamelib-registration-is-install-time-only.md`
+    // for the live Windows gate that has NOT been run.
+
+    #[test]
+    fn gamelib_protocol_command_exe_extracts_the_exe_from_every_shape_the_registry_can_hold() {
+        assert_eq!(
+            gamelib_protocol_command_exe(r#""C:\Program Files\GameLib\gamelib-shell.exe" "%1""#),
+            Some(r"C:\Program Files\GameLib\gamelib-shell.exe".to_string()),
+            "the NSIS installer's own shape"
+        );
+        assert_eq!(
+            gamelib_protocol_command_exe(r#""C:\a\b.exe" %1"#),
+            Some(r"C:\a\b.exe".to_string()),
+            "an UNQUOTED %1 placeholder is still a legal handler command"
+        );
+        assert_eq!(
+            gamelib_protocol_command_exe(r#"C:\nospaces\b.exe "%1""#),
+            Some(r"C:\nospaces\b.exe".to_string()),
+            "an unquoted exe path is legal when it contains no spaces"
+        );
+        assert_eq!(
+            gamelib_protocol_command_exe(r#""C:\a\b.exe""#),
+            Some(r"C:\a\b.exe".to_string()),
+            "no argument at all"
+        );
+        assert_eq!(
+            gamelib_protocol_command_exe(r#"   "C:\a\b.exe" "%1"   "#),
+            Some(r"C:\a\b.exe".to_string()),
+            "surrounding whitespace is not part of the path"
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_command_exe_returns_none_for_every_malformed_shape() {
+        assert_eq!(gamelib_protocol_command_exe(""), None);
+        assert_eq!(gamelib_protocol_command_exe("   "), None);
+        assert_eq!(
+            gamelib_protocol_command_exe(r#""" "%1""#),
+            None,
+            "an EMPTY quoted path is malformed, not a handler living at the empty path"
+        );
+        assert_eq!(
+            gamelib_protocol_command_exe(r#""C:\a\b.exe"#),
+            None,
+            "an unterminated opening quote is malformed -- guessing where it ends would be \
+             inventing data out of an untrusted third-party registry value (T-UOK-04)"
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_paths_equivalent_compares_ordinal_ignore_case_without_touching_the_disk() {
+        assert!(gamelib_protocol_paths_equivalent(
+            r"C:\A\B.EXE",
+            r"c:\a\b.exe"
+        ));
+        assert!(gamelib_protocol_paths_equivalent(
+            r"  C:\a\b.exe  ",
+            r"C:\a\b.exe"
+        ));
+        assert!(
+            gamelib_protocol_paths_equivalent(r"\\?\C:\a\b.exe", r"C:\a\b.exe"),
+            "std::env::current_exe() can return an extended-length prefix"
+        );
+        assert!(gamelib_protocol_paths_equivalent(
+            r"C:\a\b.exe",
+            r"\\?\C:\a\b.exe"
+        ));
+        assert!(!gamelib_protocol_paths_equivalent(
+            r"C:\a\b.exe",
+            r"C:\a\c.exe"
+        ));
+        assert!(
+            !gamelib_protocol_paths_equivalent("", ""),
+            "two empty paths are not a match -- an empty stored value must route to repair"
+        );
+        assert!(
+            gamelib_protocol_paths_equivalent(
+                r"C:\Nonexistent\deleted\gamelib-shell.exe",
+                r"c:\NONEXISTENT\DELETED\gamelib-shell.exe"
+            ),
+            "a DANGLING path must still compare -- canonicalize() would fail on exactly the case \
+             this feature exists for, so the comparison is deliberately filesystem-free"
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_repair_needed_is_true_for_absent_empty_and_malformed_values() {
+        let exe = r"C:\Program Files\GameLib\gamelib-shell.exe";
+        assert!(
+            gamelib_protocol_repair_needed(None, exe),
+            "the key or its default value is absent"
+        );
+        assert!(
+            gamelib_protocol_repair_needed(Some(""), exe),
+            "present but empty"
+        );
+        assert!(
+            gamelib_protocol_repair_needed(Some(r#""C:\a"#), exe),
+            "unparseable -- routes to repair, never to a crash (T-UOK-04)"
+        );
+        assert!(
+            gamelib_protocol_repair_needed(Some(r#""C:\Other\thief.exe" "%1""#), exe),
+            "points at a DIFFERENT executable -- the hijack this feature exists for"
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_repair_needed_is_false_when_the_value_already_points_at_us() {
+        // The anti-churn case. A naive string equality here produces a registry rewrite on
+        // every single launch, forever.
+        let exe = r"C:\Program Files\GameLib\gamelib-shell.exe";
+        assert!(!gamelib_protocol_repair_needed(
+            Some(r#""C:\Program Files\GameLib\gamelib-shell.exe" "%1""#),
+            exe
+        ));
+        assert!(
+            !gamelib_protocol_repair_needed(
+                Some(r#""c:\program files\gamelib\GAMELIB-SHELL.EXE" "%1""#),
+                exe
+            ),
+            "Windows path comparison is ordinal-ignore-case"
+        );
+        assert!(
+            !gamelib_protocol_repair_needed(
+                Some(r#""C:\Program Files\GameLib\gamelib-shell.exe""#),
+                exe
+            ),
+            "still OUR exe with the argument omitted"
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_written_values_are_byte_identical_in_shape_to_the_nsis_installer() {
+        assert_eq!(
+            gamelib_protocol_open_command(r"C:\Program Files\GameLib\gamelib-shell.exe"),
+            r#""C:\Program Files\GameLib\gamelib-shell.exe" "%1""#
+        );
+        assert_eq!(
+            gamelib_protocol_default_value("com.gamelib.shell"),
+            "URL:com.gamelib.shell protocol"
+        );
+        assert_eq!(
+            gamelib_protocol_default_icon(r"C:\Program Files\GameLib\gamelib-shell.exe"),
+            r#""C:\Program Files\GameLib\gamelib-shell.exe",0"#,
+            "NO space after the comma -- the NSIS template writes exactly `\"<exe>\",0`"
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_repair_output_satisfies_its_own_detector() {
+        // The round trip is the one that matters most: a repair whose OWN output still reads as
+        // "repair needed" rewrites the key on every launch for the life of the install.
+        let exe = r"C:\Program Files\GameLib\gamelib-shell.exe";
+        let produced = gamelib_protocol_open_command(exe);
+        assert!(!gamelib_protocol_repair_needed(Some(&produced), exe));
     }
 
     // ---- Panic reporting (debug session `deep-link-open-url-abort`) ----
