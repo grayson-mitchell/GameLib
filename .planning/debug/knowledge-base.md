@@ -102,7 +102,7 @@ Resolved debug sessions. Used by `gsd-debugger` to surface known-pattern hypothe
 - **Date:** 2026-09-26
 - **Error patterns:** Dropdown, mouse click, dead, caret, NavShell, filter group, aria-expanded, gamepad works, regression, Windows, WebView2, tauri dev, another GameLib instance is already running, focus sentinel, installed build, stale bundle
 - **Root cause:** The tester was not running HEAD. An installed `%LOCALAPPDATA%\GameLib\gamelib-shell.exe` (built 2026-09-24 07:34) was running. Its embedded frontend predated the `3a0e62918` Dropdown fix. It loads the repo's `build/main/sidecar.js` (compile-time path) and writes the shared gamelib.log, so backend and log evidence looked current, and the single-instance guard made `pnpm tauri:dev` hand off to it and exit.
-- **Fix:** None in code. Confirmed by CDP on both builds (stale: dead, and the bundle shows `s(l=>!l)`; HEAD: opens on one click). Before scoring any live gate, check the `GAMELIB_SHELL_EXE received=` bootstrap line in gamelib.log, or check that no non-`target\debug` gamelib-shell.exe is running. Follow-up todo: 2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.
+- **Fix:** None in code. Confirmed by CDP on both builds (stale: dead, and the bundle shows `s(l=>!l)`; HEAD: opens on one click). Before scoring any live gate, check the `GAMELIB_SHELL_EXE received=` bootstrap line in gamelib.log, or check that no non-`target\debug` gamelib-shell.exe is running (now automated for `tauri:dev*` by `meta/tauriDevPreflight.cjs`, quick `260926-dxa`). Follow-up todo (closed): `.planning/todos/completed/2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.md`.
 - **Files changed:** none (planning docs only)
 ---
 

@@ -477,10 +477,17 @@ pre-`3a0e62918` `Dropdown.toggle()`). An unlogged instance cannot be excluded. T
 window and its attribution to the installed exe come from the `/gsd-debug
 mouse-dead-dropdown-disclosure` session's record
 (`.planning/debug/resolved/mouse-dead-dropdown-disclosure.md`, commit `1f93c5812`), not from logs
-readable on this Mac; the Windows logs were not re-read for this correction. The clean way to settle
-it is the `GAMELIB_SHELL_EXE received=` lines in `gamelib.log.old` on the operator's Windows
-machine. See
-`.planning/todos/pending/2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.md`.
+readable on this Mac; the Windows logs were not re-read for this correction. The clean way to have
+settled it would have been the `GAMELIB_SHELL_EXE received=` lines in `gamelib.log.old` on the
+operator's Windows machine, but that evidence has since rotated away. See
+`.planning/todos/completed/2026-09-26-tauri-dev-silently-hands-off-to-a-stale-installed-build.md`.
+
+**Inference accepted as final (2026-09-26, quick `260926-dxa`).** The operator accepted the
+commit-date inference above as final. Measured 2026-09-26 on the Windows machine: both
+`%LOCALAPPDATA%/GameLib/logs` files have rotated -- `gamelib.log.old` now starts 09:38 and
+`gamelib.log` 09:40, both 2026-09-26 -- so the `GAMELIB_SHELL_EXE received=` lines that could have
+settled sitting 4's build attribution no longer exist. The label therefore stays INFERRED
+permanently, and the three desk-diff results (`38-W01`, `38-W02`, `38-W03`) below are unchanged.
 
 **`38-W01` — PASS.** All four custom-titlebar window operations (minimize / maximize / restore /
 close) with framelessWindow ON, each driving the real OS window exactly as the equivalent native
