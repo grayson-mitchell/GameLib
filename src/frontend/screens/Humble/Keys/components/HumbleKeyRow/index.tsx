@@ -258,19 +258,23 @@ export function resolveKeyScenario(params: {
     return 'gift-only'
   }
   if (hasClaimAction) {
-    // D-43-11/REQ-43-24 (Phase 43 plan 09): gog_keyless's claim destination
-    // never touches GameLib's own GOG connection -- the probe selected
-    // candidate B (Phase 40 embedded browser pointed at Humble's own keys
-    // page), which relies solely on the Humble session the login webview
-    // already established. "Log into GOG and claim" would send the user to
-    // connect a store the click never reaches, so this platform is excluded
-    // from the login-and-claim branch outright and always gets the ordinary
-    // claim-and-gift affordance instead.
+    // D-43-11/REQ-43-24 (Phase 43 plan 09): a keyless key_type's claim
+    // destination never touches GameLib's own store connection -- the probe
+    // selected candidate B (Phase 40 embedded browser pointed at Humble's
+    // own keys page), which relies solely on the Humble session the login
+    // webview already established. "Log into {{store}} and claim" would
+    // send the user to connect a store the click never reaches, so every
+    // keyless key_type is excluded from the login-and-claim branch outright
+    // and always gets the ordinary claim-and-gift affordance instead.
+    // 260925-kt4 widens this from `gog_keyless` alone: `GAMELIB_LOGIN_STORES`
+    // maps `epic_keyless -> 'epic'`, so `epic_keyless` is the type this
+    // exclusion newly protects (`origin_keyless` resolves to `null` above
+    // and never reached this branch either way).
     const loginStore = getGameLibLoginStore(humbleKey.platform)
     if (
       loginStore !== null &&
       storeLoginConnected === false &&
-      humbleKey.platform !== 'gog_keyless'
+      !isKeylessKeyType(humbleKey.platform)
     ) {
       return 'login-and-claim'
     }
@@ -359,15 +363,14 @@ export default function HumbleKeyRow({
   // (candidate A) -- a well-formed, successfully-parsed `success: false`
   // denial, not a schema failure. The selected branch (candidate B) opens
   // Humble's own keys page in the Phase 40 embedded store browser instead,
-  // so this platform's claim button is relabelled and rewired below rather
-  // than reusing `claimAction.onClaim`'s reveal-and-redeem call.
-  const isGogKeyless = humbleKey.platform === 'gog_keyless'
-
-  // 260925-j58: closed-set predicate over all three direct-redeem
-  // key_types (gog_keyless / epic_keyless / origin_keyless), used by the
-  // revealed arm below to withhold the code-assuming Finish-activation
-  // button. Deliberately broader than `isGogKeyless` above, which answers
-  // a different, narrower question (which CLAIM handler to wire).
+  // so every keyless key_type's claim button is relabelled and rewired
+  // below rather than reusing `claimAction.onClaim`'s reveal-and-redeem
+  // call. 260925-j58/kt4: closed-set predicate over all three direct-redeem
+  // key_types (gog_keyless / epic_keyless / origin_keyless) -- also used by
+  // the revealed arm below to withhold the code-assuming Finish-activation
+  // button, and by the label branch further down to withhold a store-named
+  // claim label. `gog_keyless` was the only member this local named before
+  // 260925-kt4 widened it; that narrower `isGogKeyless` binding is gone.
   const isKeyless = isKeylessKeyType(humbleKey.platform)
 
   // D-42-03: table-driven store indicator, replacing the raw lowercase
@@ -557,18 +560,20 @@ export default function HumbleKeyRow({
         onClick={claimAction.onClaim}
       >
         {/* Steam keeps its one-click "Activate" verb verbatim (existing
-            key, reused unchanged). gog_keyless names the destination the
-            click actually reaches (D-43-11/D-43-12 honesty standard) --
-            "Claim on Humble" -- never namechecking GOG's store here, because
-            the embed opens Humble's site, not GOG's. Every other platform
-            says "Claim on
-            {{store}}" (D-43's copywriting contract) rather than the bare
-            "Claim" — `humbleKeys.claim` is deliberately superseded here,
-            not repurposed: a t() default-argument rename on the SAME key
-            would be a silent no-op for existing translations. */}
+            key, reused unchanged). Every keyless key_type names the
+            destination the click actually reaches (D-43-11/D-43-12 honesty
+            standard) -- "Claim on Humble" -- never namechecking the linked
+            store here, because the embed opens Humble's site, not the
+            store's (260925-kt4 widens this from `gog_keyless` alone: an
+            `epic_keyless` button must not say "Claim on Epic Games" once
+            its click opens the Humble embed). Every other platform says
+            "Claim on {{store}}" (D-43's copywriting contract) rather than
+            the bare "Claim" — `humbleKeys.claim` is deliberately superseded
+            here, not repurposed: a t() default-argument rename on the SAME
+            key would be a silent no-op for existing translations. */}
         {isSteam
           ? tGamelib('gamelib:humbleKeys.activate', 'Activate')
-          : isGogKeyless
+          : isKeyless
             ? tGamelib('gamelib:humbleKeys.claimOnHumble', 'Claim on Humble')
             : tGamelib(
                 'gamelib:humbleKeys.claimOnStore',

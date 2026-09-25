@@ -1430,3 +1430,112 @@ describe('gift affordance transitively withheld for a keyless spare (260925-kt4 
     expect(findByClassNamePart(tree, 'humbleKeyGiftButton')).toBeUndefined()
   })
 })
+
+// 260925-kt4 Task 2, sites 3 and 4: both are consequences of widening site 1
+// (Keys/index.tsx's claim fork) to every keyless key_type, not optional
+// extras -- see the plan's scope finding. Site 3 (login-and-claim exclusion)
+// and site 4 (claim-button label) both now read `isKeyless`
+// (`isKeylessKeyType(humbleKey.platform)`) instead of the narrower,
+// now-deleted `isGogKeyless` local.
+describe('keyless claim-button destination honesty, sites 3+4 (260925-kt4)', () => {
+  function makeClaimAction() {
+    return {
+      revealedAt: null,
+      redeemedAt: null,
+      keyindexResolved: true,
+      onClaim: jest.fn(),
+      onFinish: jest.fn(),
+      onUndoRedeem: jest.fn()
+    }
+  }
+
+  // Site 3: GAMELIB_LOGIN_STORES maps epic_keyless -> 'epic', so before
+  // 260925-kt4 an epic_keyless row with storeLoginConnected: false resolved
+  // to 'login-and-claim' and rendered "Log into Epic and claim" -- while its
+  // claim click (after site 1) opened Humble's embed. That is verbatim the
+  // failure the pre-existing gog_keyless exclusion comment describes.
+  it("epic_keyless with storeLoginConnected false resolves 'claim-and-gift', NOT 'login-and-claim' (site 3)", () => {
+    const scenario = resolveKeyScenario({
+      humbleKey: makeHumbleKey({ platform: 'epic_keyless' }),
+      hasGiftAction: false,
+      hasClaimAction: true,
+      hasSettleAction: false,
+      undoOverride: false,
+      storeLoginConnected: false
+    })
+
+    expect(scenario).toBe('claim-and-gift')
+  })
+
+  it("non-vacuity control: a keyed 'epic' row with the identical props DOES resolve 'login-and-claim'", () => {
+    const scenario = resolveKeyScenario({
+      humbleKey: makeHumbleKey({ platform: 'epic' }),
+      hasGiftAction: false,
+      hasClaimAction: true,
+      hasSettleAction: false,
+      undoOverride: false,
+      storeLoginConnected: false
+    })
+
+    expect(scenario).toBe('login-and-claim')
+  })
+
+  // Site 4: the label must never namecheck a store the click does not
+  // reach (D-43-12 honesty standard). Reuses makeGogKeylessRow's fixture
+  // shape, parameterised by platform.
+  it.each(['epic_keyless', 'origin_keyless'])(
+    "%s: the claim button's label is exactly 'Claim on Humble' (site 4)",
+    (platform) => {
+      const tree = HumbleKeyRow({
+        humbleKey: makeHumbleKey({ platform, state: 'UNREVEALED' }),
+        claimAction: makeClaimAction()
+      }) as ReactElement
+      const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+      const button = collectElements(keyCell?.props?.children).find(
+        (el) => el.type === 'button'
+      )
+
+      expect(button).toBeDefined()
+      expect(textContent(button?.props?.children).trim()).toBe(
+        'Claim on Humble'
+      )
+    }
+  )
+
+  it('epic_keyless: the label does not contain "Epic" -- the click reaches Humble\'s site, not Epic\'s', () => {
+    const tree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({
+        platform: 'epic_keyless',
+        state: 'UNREVEALED'
+      }),
+      claimAction: makeClaimAction()
+    }) as ReactElement
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+    const button = collectElements(keyCell?.props?.children).find(
+      (el) => el.type === 'button'
+    )
+
+    expect(textContent(button?.props?.children)).not.toContain('Epic')
+  })
+
+  // D3 closed-set proof: an unrecognised foo_keyless is not a suffix match
+  // -- its label falls through to the ordinary claimOnStore arm.
+  it("foo_keyless: the label is NOT 'Claim on Humble' -- falls through to 'Claim on Other' (D3)", () => {
+    const tree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({
+        platform: 'foo_keyless',
+        state: 'UNREVEALED'
+      }),
+      claimAction: makeClaimAction()
+    }) as ReactElement
+    const keyCell = findByClassNamePart(tree, 'humbleKeyColumnCell')
+    const button = collectElements(keyCell?.props?.children).find(
+      (el) => el.type === 'button'
+    )
+
+    expect(textContent(button?.props?.children).trim()).not.toBe(
+      'Claim on Humble'
+    )
+    expect(textContent(button?.props?.children).trim()).toBe('Claim on Other')
+  })
+})

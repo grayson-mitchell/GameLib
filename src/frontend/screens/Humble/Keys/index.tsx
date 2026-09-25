@@ -33,7 +33,8 @@ import { GENERIC_KEY_PLATFORM } from 'common/humble/genericKeyPlatform'
 import { getUrgencyTier } from 'common/humble/urgencyBadge'
 import {
   getGameLibLoginStore,
-  HumbleGameLibLoginStore
+  HumbleGameLibLoginStore,
+  isKeylessKeyType
 } from 'common/humble/keyTypePresentation'
 import HumbleKeyRow from './components/HumbleKeyRow'
 import HumbleClaimWizard from './components/HumbleClaimWizard'
@@ -69,10 +70,18 @@ type SortOption = 'expiring' | 'alphabetical'
 // plan's scope (same category as D-43-05's deferred "Most recent" sort gap).
 const HUMBLE_CHOICE_URL = 'https://www.humblebundle.com/subscription/home'
 
-// REQ-43-24 / D-43-11 candidate B: `gog_keyless` has no code to reveal --
-// Humble grants it straight to the linked GOG account server-side -- so the
-// claim destination is Humble's own keys page in the Phase 40 embedded
-// browser, never GameLib's GOG connection and never the system browser.
+// REQ-43-24 / D-43-11 candidate B: every keyless key_type (`isKeylessKeyType`
+// -- `gog_keyless`, `epic_keyless`, `origin_keyless`) has no code to reveal --
+// Humble grants each one straight to the linked store account server-side --
+// so the claim destination is Humble's own keys page in the Phase 40
+// embedded browser, never GameLib's own store connection and never the
+// system browser. The embed destination itself was measured live for
+// `gog_keyless` only (D-43-11); routing `epic_keyless`/`origin_keyless`
+// through the same URL rests on the structural fact at
+// `classify.ts:174-181` (all three share the identical no-key-code shape)
+// and on `humbleKeysEmbedPath()` targeting Humble's own platform-agnostic
+// keys page rather than a store-specific endpoint -- not on a second probe
+// (260925-kt4 D1).
 const HUMBLE_KEYS_URL = 'https://www.humblebundle.com/home/keys'
 
 /**
@@ -455,24 +464,20 @@ export default function HumbleKeys() {
             // annotations fetch hasn't landed yet, so no wizard opens
             // against a key whose keyindex status is still unknown.
             keyindexResolved: annotation?.keyindexResolved ?? false,
-            // REQ-43-24: `gog_keyless` claims in Humble's own embedded keys
-            // page, every other platform in the reveal wizard. The fork lives
-            // HERE, not in `HumbleKeyRow`, for two reasons: this component
-            // already holds `useNavigate` (and already navigates for the
-            // sibling login case below), and `HumbleKeyRow` is deliberately
-            // hook-free -- its suite invokes it as a plain function with no
-            // Router context and says so in writing. Threading the
-            // destination as a callback matches how `settleAction` was
-            // threaded in 43-06.
-            onClaim:
-              key.platform === 'gog_keyless'
-                ? () => navigate(humbleKeysEmbedPath())
-                : () =>
-                    openWizard(
-                      key,
-                      'claim',
-                      annotation?.revealRefusedAt ?? null
-                    ),
+            // REQ-43-24: every keyless key_type (`isKeylessKeyType`) claims
+            // in Humble's own embedded keys page, every keyed platform in
+            // the reveal wizard (260925-kt4 widens this from `gog_keyless`
+            // alone). The fork lives HERE, not in `HumbleKeyRow`, for two
+            // reasons: this component already holds `useNavigate` (and
+            // already navigates for the sibling login case below), and
+            // `HumbleKeyRow` is deliberately hook-free -- its suite invokes
+            // it as a plain function with no Router context and says so in
+            // writing. Threading the destination as a callback matches how
+            // `settleAction` was threaded in 43-06.
+            onClaim: isKeylessKeyType(key.platform)
+              ? () => navigate(humbleKeysEmbedPath())
+              : () =>
+                  openWizard(key, 'claim', annotation?.revealRefusedAt ?? null),
             onFinish: () => openWizard(key, 'finish'),
             onUndoRedeem: () =>
               void window.api

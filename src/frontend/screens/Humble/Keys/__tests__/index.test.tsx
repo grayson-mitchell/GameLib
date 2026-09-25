@@ -1304,7 +1304,7 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
   // completely dead button passed the suite, passed a live gate that never
   // scored it, and was found only when a human clicked it (`43-UAT.md` item
   // 8, `major`). Every test below exercises the CLICK.
-  describe('gog_keyless claim destination (REQ-43-24, D-43-11)', () => {
+  describe('keyless claim destination (REQ-43-24, D-43-11, widened 260925-kt4)', () => {
     const KEYS_DEEP_LINK =
       '/store-page?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys'
 
@@ -1341,10 +1341,62 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       expect(tree).toBeDefined()
     })
 
-    it('leaves every other platform on the reveal wizard — the fork is gog_keyless-only', async () => {
+    it.each(['epic_keyless', 'origin_keyless'])(
+      'navigates to the store-page deep link for %s too, instead of opening the reveal wizard (260925-kt4)',
+      async (platform) => {
+        const showDialogModal = jest.fn()
+        contextValue = {
+          ...defaultContext([makeHumbleKey({ platform, title: 'Racine' })]),
+          showDialogModal
+        }
+        mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+          'gk-1:mn-1': { keyindexResolved: true }
+        })
+
+        mount()
+        await flushPromises()
+
+        const props = findHumbleKeyRowProps(rerender(), 'gk-1', 'mn-1')
+        expect(props?.claimAction).toBeDefined()
+
+        props!.claimAction!.onClaim()
+
+        expect(mockNavigate).toHaveBeenCalledTimes(1)
+        expect(mockNavigate).toHaveBeenCalledWith(KEYS_DEEP_LINK)
+        expect(showDialogModal).not.toHaveBeenCalled()
+      }
+    )
+
+    it.each(['gog', 'steam'])(
+      'leaves keyed platform %s on the reveal wizard — the widened fork is still keyless-only, never a suffix match',
+      async (platform) => {
+        const showDialogModal = jest.fn()
+        contextValue = {
+          ...defaultContext([makeHumbleKey({ platform })]),
+          showDialogModal
+        }
+        mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+          'gk-1:mn-1': { keyindexResolved: true }
+        })
+
+        mount()
+        await flushPromises()
+
+        const props = findHumbleKeyRowProps(rerender(), 'gk-1', 'mn-1')
+        props!.claimAction!.onClaim()
+
+        expect(showDialogModal).toHaveBeenCalledTimes(1)
+        expect(mockNavigate).not.toHaveBeenCalled()
+      }
+    )
+
+    // D3 closed-set proof: an unrecognised `foo_keyless` is NOT a suffix
+    // match against `isKeylessKeyType` -- it must fall through to the
+    // reveal wizard, the SAFE direction, exactly like `gog`/`steam` above.
+    it('an unrecognised foo_keyless opens the reveal wizard and does not navigate (D3)', async () => {
       const showDialogModal = jest.fn()
       contextValue = {
-        ...defaultContext([makeHumbleKey({ platform: 'steam' })]),
+        ...defaultContext([makeHumbleKey({ platform: 'foo_keyless' })]),
         showDialogModal
       }
       mockApi.humbleGetClaimAnnotations.mockResolvedValue({
@@ -1359,6 +1411,48 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
 
       expect(showDialogModal).toHaveBeenCalledTimes(1)
       expect(mockNavigate).not.toHaveBeenCalled()
+    })
+
+    // D2 caller half: `isGiftable` (Task 1) now excludes every keyless
+    // key_type, so `giftAction` must be undefined for all three on this
+    // screen too -- not just resolved correctly inside HumbleKeyRow.
+    // UNREVEALED is in REDEEMABLE_ONLY_STATES, so no visibility toggle is
+    // needed to find these rows.
+    it.each(['gog_keyless', 'epic_keyless', 'origin_keyless'])(
+      '%s: an owned, UNREVEALED, exact-match row gets no giftAction (D2)',
+      (platform) => {
+        contextValue = defaultContext([
+          makeHumbleKey({
+            platform,
+            state: 'UNREVEALED',
+            ownedElsewhere: true,
+            matchConfidence: 'exact'
+          })
+        ])
+        mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
+
+        const tree = mount()
+        const props = findHumbleKeyRowProps(tree, 'gk-1', 'mn-1')
+
+        expect(props?.giftAction).toBeUndefined()
+      }
+    )
+
+    it('gog: the identical owned/UNREVEALED/exact-match shape still gets a defined giftAction -- the widen must not sweep in keyed siblings', () => {
+      contextValue = defaultContext([
+        makeHumbleKey({
+          platform: 'gog',
+          state: 'UNREVEALED',
+          ownedElsewhere: true,
+          matchConfidence: 'exact'
+        })
+      ])
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({})
+
+      const tree = mount()
+      const props = findHumbleKeyRowProps(tree, 'gk-1', 'mn-1')
+
+      expect(props?.giftAction).toBeDefined()
     })
 
     it('percent-encodes the target URL so the query string survives', () => {
