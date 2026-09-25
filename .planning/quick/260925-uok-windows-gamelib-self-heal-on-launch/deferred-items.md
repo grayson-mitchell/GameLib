@@ -40,4 +40,3 @@ test has been passing there and failing for every Windows contributor without an
 
 Suggested fix when picked up: append `process.platform === 'win32' ? '.exe' : ''` to the binary
 name, rather than dropping the assertion.
-</content>

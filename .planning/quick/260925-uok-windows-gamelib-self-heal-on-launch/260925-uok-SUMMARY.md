@@ -205,6 +205,3 @@ All five modified files exist on disk; all three commit hashes resolve in `git l
 `main.rs`, `Win32_System_Registry` in `Cargo.toml`, `gamelib_protocol_repair` in
 `tauriShellSource.test.ts`, `## Resolution` in the completed todo); and the todo is confirmed
 absent from `.planning/todos/pending/`.
-
-</content>
-</invoke>

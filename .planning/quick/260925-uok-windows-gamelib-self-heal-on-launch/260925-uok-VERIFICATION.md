@@ -145,4 +145,3 @@ requiring it to be run within this task.
 
 _Verified: 2026-09-25_
 _Verifier: Claude (gsd-verifier)_
-</content>
