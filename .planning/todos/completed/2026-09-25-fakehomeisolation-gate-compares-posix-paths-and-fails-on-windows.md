@@ -50,3 +50,17 @@ before normalizing the paths, because normalizing hides the signal.
 Normalize once at the source, e.g. `relative(REPO_ROOT, f).split(sep).join('/')` (or
 `path.posix`-style normalization) for both `scannedRelPaths` and `rel`. Then prove the exemption
 is still load-bearing: temporarily drop it and confirm the enforcing test goes RED on every OS.
+
+## Resolution (quick 260926-c07, 2026-09-26)
+
+The enforcing test was green on Windows because the exemption is dead on every OS: both
+`spawnSync` calls in `meta/sidecarStartupSmoke.cjs` pass no `env` key and can never match
+`keyAssignmentRe`, so the exemption never suppressed a live hit anywhere. That also means this
+todo's proof step ("drop the exemption and confirm RED") could not have succeeded as written —
+nothing depends on it. Fixed instead: added `toRepoRel()` as the sole normalization point for
+`scannedRelPaths` and the enforcing loop's `rel`; stopped skipping exempt files in the scan (an
+exemption is from the fake-HOME convention, not from this detector); added an "exempt file honours
+its contract" test making the "passes NO env key" header claim executable; and added a "skip list
+is reachable" test so a path that can no longer match (this bug's shape) goes red on every OS.
+Both negative controls — injecting an `env` key into the smoke file, and reverting the
+normalization — went RED as predicted; see `260926-c07-SUMMARY.md` for verbatim output.

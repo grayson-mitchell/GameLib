@@ -185,7 +185,10 @@ the crash it was built for.
 child with a hand-rolled `env` literal assigning the home/config/state variables. Use
 `createFakeHomeProfile()` from `src/backend/testUtils/fakeHomeProfile.ts`. The one exemption,
 `meta/sidecarStartupSmoke.cjs`, is declared in that gate's `EXEMPTIONS` table with its reason, and
-the gate re-reads the exempt file to prove the reason is still written there.
+the gate re-reads the exempt file to prove the reason is still written there. The exemption is
+from the convention (this file must inherit the operator's real profile), not from the detector:
+the exempt file is still scanned, and the gate asserts it assigns none of the eight variables, so
+adding an `env` block there turns the gate red on every OS (quick 260926-c07).
 
 **The ad-hoc/scratchpad half rests on discipline and is NOT enforceable.** Nothing can observe a
 command typed into a scratchpad, and a gate that appeared to cover it would be the
