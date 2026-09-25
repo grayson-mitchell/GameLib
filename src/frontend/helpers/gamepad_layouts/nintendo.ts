@@ -280,20 +280,52 @@ export function checkNintendo(
     checkAction('padRight', buttons[15]?.pressed, controllerIndex)
     checkAction('guide', buttons[16]?.pressed, controllerIndex)
   } else {
-    // Raw HID: the d-pad is a single hat axis, NOT buttons[12-15] -- on this
-    // device's raw layout those indices are Home and Capture, so reading
-    // them as a d-pad would make Home dispatch padUp given a populated
-    // button array. Cardinals only: a diagonal that fired both of its
-    // components would move spatial navigation twice in one frame.
+    // Raw HID: the d-pad is a single hat axis, NOT buttons[12-15]. Reading
+    // buttons[12]/[13] as a d-pad would make Home/Capture dispatch
+    // padUp/padDown given a populated button array. Cardinals only: a
+    // diagonal that fired both of its components would move spatial
+    // navigation twice in one frame.
+    //
+    // CORRECTED MEASUREMENT (supersedes an earlier overstated claim that all
+    // of buttons[12-15] "are Home and Capture"): on the operator's PowerA
+    // Advantage Wired Controller for Nintendo Switch 2 (Vendor: 20d6
+    // Product: a720), MEASURED 2026-09-25 (quick-260925-ms5 Task 2), one
+    // button at a time, with a live positive control (the A cap, index 2)
+    // confirmed BEFORE either was pressed: buttons[12] = Home, buttons[13] =
+    // Capture. buttons[14] and buttons[15] remain UNMEASURED -- do not
+    // assume they continue the pattern.
     const hatDirection = nintendoHatDirection(axes[NON_STANDARD_HAT_AXIS])
     checkAction('padUp', hatDirection === 'up', controllerIndex)
     checkAction('padDown', hatDirection === 'down', controllerIndex)
     checkAction('padLeft', hatDirection === 'left', controllerIndex)
     checkAction('padRight', hatDirection === 'right', controllerIndex)
-    // `guide` is deliberately NOT dispatched on the non-standard path: Task 1
-    // of quick-260923-qe5 pressed Home and Capture on the operator's pad and
-    // neither produced an observable button index (measured 2026-09-23). A
-    // guessed guide index is worse than an absent one.
+
+    // `guide` bound to the MEASURED Home index. The 2026-09-23
+    // (quick-260923-qe5 A5) null -- Home/Capture produced no observable
+    // button index -- is OVERTURNED by a capture that, unlike the original,
+    // carried a positive control: quick-260925-ms5 Task 2, 2026-09-25,
+    // pressed the A cap (index 2) first and got a live line before Home or
+    // Capture were touched, then measured Home at index 12, reproduced
+    // across two separate presses in the same sitting. Capture was ALSO
+    // measured, at a DIFFERENT index (13, see the comment above) -- it is
+    // recorded but deliberately NOT bound: `guide` means the system/home
+    // button, and binding Capture to it would be a design decision nobody
+    // has made.
+    checkAction('guide', buttons[12]?.pressed, controllerIndex)
+
+    // Stick clicks (L3/R3, buttons[10]/[11]): MEASURED at 10 and 11
+    // respectively, on the same pad, in the same sitting as the Home/Capture
+    // measurement above (2026-09-25, quick-260925-ms5 Task 2) -- confirming
+    // the "probably matches the shoulders" prior this time by measurement,
+    // not by deduction. NOTHING in this repo dispatches these indices on any
+    // mapping: see
+    // .planning/todos/pending/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md,
+    // which independently established (by reading source, not by this
+    // measurement) that no layout wires buttons[10]/[11] to any action, and
+    // that measuring the index does not by itself make that dischargeable.
+    // This is a measurement record only -- do not add a `checkAction` call
+    // here without a separate, deliberate decision to implement stick
+    // clicks.
   }
 }
 

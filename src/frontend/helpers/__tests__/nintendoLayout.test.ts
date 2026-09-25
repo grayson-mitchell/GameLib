@@ -499,6 +499,49 @@ describe('helpers/gamepad: Nintendo layout routing, non-standard mapping (measur
     expect(actions).not.toContain('padLeft')
     expect(actions).not.toContain('padRight')
   })
+
+  it('guide toggles Console Mode via location.hash from the measured Home index on the non-standard pad', () => {
+    // MEASURED 2026-09-25 (quick-260925-ms5 Task 2): Home reproduced at
+    // index 12 twice in the same sitting, with a live positive control (the
+    // A cap, index 2) confirmed BEFORE Home was pressed. This overturns the
+    // 2026-09-23 (quick-260923-qe5 A5) null, which had no positive control.
+    //
+    // `guide` resolves to a `window.location.hash` toggle inside
+    // `checkAction` (gamepad.ts), returning BEFORE the
+    // `window.api.gamepadAction` call every other action here goes through
+    // -- so it is NOT observable via `pressButton`'s `actions()` return
+    // value (see the file header note on why `back`/`altAction` are the
+    // observable half for other actions). Reading `location.hash` back off
+    // the harness's `window` global is the only way to observe this action.
+    pressButton(POWERA_ID, 12, NON_STANDARD)
+    const win = (
+      globalThis as unknown as { window: { location: { hash: string } } }
+    ).window
+    expect(win.location.hash).toBe('#/console')
+  })
+
+  // CONTRACT PRESERVATION, GREEN pre-fix BY DESIGN -- NOT RED evidence. Pins
+  // that binding `guide` on the non-standard path did not touch the
+  // standard path's own buttons[16] read.
+  it('a standard-mapped Nintendo pad still reads guide from buttons[16], unchanged', () => {
+    pressButton(SWITCH_PRO_ID, 16)
+    const win = (
+      globalThis as unknown as { window: { location: { hash: string } } }
+    ).window
+    expect(win.location.hash).toBe('#/console')
+  })
+
+  it('stick clicks (L3/R3) dispatch nothing on the non-standard pad -- measurement record only', () => {
+    // MEASURED 2026-09-25 (quick-260925-ms5 Task 2): L3 at index 10, R3 at
+    // index 11 -- confirming the "probably matches the shoulders" prior by
+    // measurement. Nothing in this repo dispatches these indices on any
+    // mapping; see
+    // .planning/todos/pending/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md.
+    // This pins today's deliberate non-dispatch so a future accidental
+    // wiring is caught.
+    expect(pressButton(POWERA_ID, 10, NON_STANDARD)).toHaveLength(0)
+    expect(pressButton(POWERA_ID, 11, NON_STANDARD)).toHaveLength(0)
+  })
 })
 
 /**
