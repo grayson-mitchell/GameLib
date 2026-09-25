@@ -277,48 +277,24 @@ export function resolveKeyScenario(params: {
   return 'claim-and-gift'
 }
 
-// D-43-11/REQ-43-24 (Phase 43 plan 09): the SELECTED BRANCH named on
-// `43-PROBE-D-43-11.md` -- candidate B, not the reveal endpoint (measured
-// dead for this platform) and not an external-browser fallback (rejected
-// primary path per the same probe: the operator explicitly asked to stay
-// in-app before spending the sample entitlement on a path that leaves it).
-const HUMBLE_KEYS_URL = 'https://www.humblebundle.com/home/keys'
-
-/**
- * Opens the Phase 40 embedded store browser on Humble's own keys page.
- * `gog_keyless` redeems straight to the linked GOG account server-side --
- * there is no code to reveal and no GameLib IPC call to make (`revealKey`
- * is untouched by this plan). The embed inherits the Humble session the
- * login webview already established via the process-wide cookie jar
- * (`tauri-embedded-store-browser.md` Requirement 4), so this never adds a
- * second login step.
- *
- * Bounds are a one-shot snapshot, not a continuously-synced rect: this row
- * is not the store/wiki route's own geometry oracle (`useStoreEmbedHost.ts`
- * owns that ONE `storeEmbedSetBounds` call site) and must not become a
- * second writer against the same singleton embed. `.App .content` is the
- * same scrollable container that route's slot renders inside
- * (`useStoreEmbedHost.ts`'s own scroll-listener comment); falling back to
- * the viewport size only if that selector is ever absent.
- */
-function openHumbleKeysEmbed(): void {
-  const contentRect = document
-    .querySelector('.App .content')
-    ?.getBoundingClientRect()
-  const bounds = contentRect
-    ? {
-        x: contentRect.x,
-        y: contentRect.y,
-        w: contentRect.width,
-        h: contentRect.height
-      }
-    : { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight }
-  // storeEmbedOpen never rejects (T-40-05-03 fail-safe discipline) -- the
-  // resolved `{ status }` is not otherwise actionable here, so this is a
-  // deliberate fire-and-forget, matching every other storeEmbedOpen call
-  // site in the repo.
-  void window.api.storeEmbedOpen(HUMBLE_KEYS_URL, bounds, 'humble')
-}
+// D-43-11/REQ-43-24: the SELECTED BRANCH named on `43-PROBE-D-43-11.md` is
+// still candidate B -- Humble's own keys page in the Phase 40 embedded
+// browser. What CHANGED (quick `260925-gnp`) is who opens it.
+//
+// This file used to carry `HUMBLE_KEYS_URL` and an `openHumbleKeysEmbed()`
+// that called `window.api.storeEmbedOpen()` directly, computing bounds from
+// `.App .content` with a `window.innerWidth/innerHeight` fallback. It read
+// plausibly and it did not work: the embed opened with NO host route and NO
+// slot, so nothing afterwards sized, showed or scroll-synced the native
+// subview, and the button was completely unresponsive from the chair
+// (`43-UAT.md` item 8, `major`). The lesson worth keeping is that the bug was
+// never the RECTANGLE -- a second opener cannot be repaired by giving it a
+// better rect, only by ceasing to be a second opener.
+//
+// The destination now arrives as `claimAction.onClaim` from `Keys/index.tsx`,
+// which navigates to `/store-page?store-url=` and lets `useStoreEmbedHost`
+// own the embed's whole lifetime. This component is back to having exactly
+// ONE way to claim, and stays hook-free for its plain-function test harness.
 
 export default function HumbleKeyRow({
   humbleKey,
@@ -534,7 +510,7 @@ export default function HumbleKeyRow({
       <button
         type="button"
         className="humbleKeyGiftButton"
-        onClick={isGogKeyless ? openHumbleKeysEmbed : claimAction.onClaim}
+        onClick={claimAction.onClaim}
       >
         {/* Steam keeps its one-click "Activate" verb verbatim (existing
             key, reused unchanged). gog_keyless names the destination the

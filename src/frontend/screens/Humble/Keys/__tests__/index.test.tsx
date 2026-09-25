@@ -70,11 +70,19 @@ import HumbleKeyRow from '../components/HumbleKeyRow'
 jest.mock('../index.css', () => ({}))
 jest.mock('../components/HumbleClaimWizard/index.css', () => ({}))
 
+// `mockNavigate` is a SHARED spy, not the per-call `jest.fn()` this mock used
+// to return. REQ-43-24's claim destination is a NAVIGATION now (quick
+// `260925-gnp`), so a test has to be able to assert where it went; a factory
+// handing out a fresh spy per `useNavigate()` call makes that unobservable.
+// The `mock` name prefix is what lets the hoisted `jest.mock` factory close
+// over it.
+const mockNavigate = jest.fn()
+
 jest.mock('react-router-dom', () => ({
   Navigate: function MockNavigate() {
     return null
   },
-  useNavigate: () => jest.fn()
+  useNavigate: () => mockNavigate
 }))
 
 jest.mock('frontend/screens/Login', () => ({
@@ -257,6 +265,13 @@ const mockApi = {
 // Imported after the mocks above (textual order -- this project's ts-jest
 // setup does not hoist jest.mock like babel-jest).
 import HumbleKeys from '../index'
+// Imported UNMOCKED and deliberately: the REQ-43-24 block below asserts the
+// real origin table answers for Humble's keys URL. Stubbing it would let the
+// deep link pass this suite while resolving to `null` in the app.
+import {
+  isEmbeddableOrigin,
+  resolveStoreForUrl
+} from 'frontend/screens/WebView/storeEmbedOrigins'
 import SearchBarStub from 'frontend/components/UI/SearchBar'
 import SelectFieldStub from 'frontend/components/UI/SelectField'
 import ToggleSwitchStub from 'frontend/components/UI/ToggleSwitch'
@@ -1280,6 +1295,102 @@ describe('HumbleKeys (unified list, Phase 43 plan 07)', () => {
       const leafBlock = source.slice(leafIndex, leafBlockEnd)
       expect(leafBlock).not.toContain('children:')
       expect(leafBlock).toContain('lazy:')
+    })
+  })
+
+  // REQ-43-24, quick `260925-gnp`. These tests exist because of a specific
+  // and expensive hole: plan 43-09 shipped EIGHT tests for this button and
+  // every one of them pinned its LABEL. Nothing invoked its handler, so a
+  // completely dead button passed the suite, passed a live gate that never
+  // scored it, and was found only when a human clicked it (`43-UAT.md` item
+  // 8, `major`). Every test below exercises the CLICK.
+  describe('gog_keyless claim destination (REQ-43-24, D-43-11)', () => {
+    const KEYS_DEEP_LINK =
+      '/store-page?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys'
+
+    beforeEach(() => {
+      mockNavigate.mockClear()
+    })
+
+    it('navigates to the store-page deep link instead of opening the reveal wizard', async () => {
+      const showDialogModal = jest.fn()
+      contextValue = {
+        ...defaultContext([
+          makeHumbleKey({ platform: 'gog_keyless', title: 'Racine' })
+        ]),
+        showDialogModal
+      }
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+        'gk-1:mn-1': { keyindexResolved: true }
+      })
+
+      const tree = mount()
+      await flushPromises()
+
+      const props = findHumbleKeyRowProps(rerender(), 'gk-1', 'mn-1')
+      expect(props?.claimAction).toBeDefined()
+
+      props!.claimAction!.onClaim()
+
+      expect(mockNavigate).toHaveBeenCalledTimes(1)
+      expect(mockNavigate).toHaveBeenCalledWith(KEYS_DEEP_LINK)
+      // The other half of the assertion, and the one that would have caught
+      // the original defect's SIBLING failure mode: a keyless entitlement has
+      // no code, so the reveal wizard must never open for it.
+      expect(showDialogModal).not.toHaveBeenCalled()
+      expect(tree).toBeDefined()
+    })
+
+    it('leaves every other platform on the reveal wizard — the fork is gog_keyless-only', async () => {
+      const showDialogModal = jest.fn()
+      contextValue = {
+        ...defaultContext([makeHumbleKey({ platform: 'steam' })]),
+        showDialogModal
+      }
+      mockApi.humbleGetClaimAnnotations.mockResolvedValue({
+        'gk-1:mn-1': { keyindexResolved: true }
+      })
+
+      mount()
+      await flushPromises()
+
+      const props = findHumbleKeyRowProps(rerender(), 'gk-1', 'mn-1')
+      props!.claimAction!.onClaim()
+
+      expect(showDialogModal).toHaveBeenCalledTimes(1)
+      expect(mockNavigate).not.toHaveBeenCalled()
+    })
+
+    it('percent-encodes the target URL so the query string survives', () => {
+      // Not cosmetic: `store-url=https://...` unencoded would still parse, but
+      // any Humble URL carrying its own `?` or `&` would silently truncate at
+      // `URLSearchParams.get('store-url')`. Pinning the encoded form keeps the
+      // builder honest for the next URL someone points it at.
+      expect(KEYS_DEEP_LINK).not.toContain('store-url=https://')
+      expect(
+        decodeURIComponent(
+          new URLSearchParams(KEYS_DEEP_LINK.split('?')[1]).get(
+            'store-url'
+          ) as string
+        )
+      ).toBe('https://www.humblebundle.com/home/keys')
+    })
+
+    it('the destination resolves as an EMBEDDABLE origin — without this the navigation silently opens the system browser', () => {
+      // The load-bearing test, and the one that ties the two files this fix
+      // touches together. `WebView/index.tsx`'s deep-link gate asks exactly
+      // one question of `store-url`: does it resolve to a known, embeddable
+      // store? A Humble URL that answers `null` takes the
+      // `deepLinkShouldOpenExternally` arm — the button would "work", leave
+      // the app, and look like a regression to nobody until a human noticed.
+      // Deleting Humble from `STORE_EMBED_ORIGINS` must fail HERE, loudly.
+      const url = decodeURIComponent(
+        new URLSearchParams(KEYS_DEEP_LINK.split('?')[1]).get(
+          'store-url'
+        ) as string
+      )
+      expect(resolveStoreForUrl(url)?.key).toBe('humble')
+      expect(isEmbeddableOrigin(url)).toBe(true)
     })
   })
 })

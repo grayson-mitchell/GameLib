@@ -70,6 +70,26 @@ const STORE_EMBED_ORIGINS: readonly StoreEmbedConfig[] = [
     apexHosts: ['store.steampowered.com'],
     startUrl: 'https://store.steampowered.com/',
     embeddable: true
+  },
+  // Humble has no `/store/humble` ROUTE -- it is reachable only as a
+  // `store-page?store-url=` deep link, from the Humble Keys screen's
+  // `gog_keyless` claim button (REQ-43-24). It still belongs in this table
+  // rather than beside it: the deep-link gate at `index.tsx:221-233` asks
+  // exactly one question -- "does this URL resolve to a known, embeddable
+  // store" -- and a Humble URL that resolves to `null` there opens in the
+  // SYSTEM BROWSER, which is the outcome D-43-11's probe explicitly
+  // rejected. Quick task `260925-gnp` added this after `43-UAT.md` item 8
+  // found the row opening the embed itself to work around the gap; the row
+  // no longer does, and this entry is what makes the supported path work.
+  //
+  // `apexHosts` is the bare apex, NOT `www.humblebundle.com`: the keys page
+  // is served from `www.`, which the dot-suffix rule already covers, and
+  // pinning the subdomain would miss every other Humble host.
+  {
+    key: 'humble',
+    apexHosts: ['humblebundle.com'],
+    startUrl: 'https://www.humblebundle.com/home/keys',
+    embeddable: true
   }
 ]
 

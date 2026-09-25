@@ -69,6 +69,31 @@ type SortOption = 'expiring' | 'alphabetical'
 // plan's scope (same category as D-43-05's deferred "Most recent" sort gap).
 const HUMBLE_CHOICE_URL = 'https://www.humblebundle.com/subscription/home'
 
+// REQ-43-24 / D-43-11 candidate B: `gog_keyless` has no code to reveal --
+// Humble grants it straight to the linked GOG account server-side -- so the
+// claim destination is Humble's own keys page in the Phase 40 embedded
+// browser, never GameLib's GOG connection and never the system browser.
+const HUMBLE_KEYS_URL = 'https://www.humblebundle.com/home/keys'
+
+/**
+ * The `/store-page?store-url=` deep link (D-34/D-35) -- the ONE supported way
+ * to point the Phase 40 embed at a URL that has no `/store/<key>` route of its
+ * own. The host route resolves the URL against `STORE_EMBED_ORIGINS`, reuses
+ * that store's identity, and hands the embed to `useStoreEmbedHost`, which
+ * owns its bounds, visibility and scroll sync for the whole route lifetime.
+ *
+ * WHY THIS IS A NAVIGATION AND NOT A `storeEmbedOpen` CALL: quick task
+ * `260925-gnp`. `HumbleKeyRow` previously called `window.api.storeEmbedOpen()`
+ * itself, from inside a row, while this route was still mounted -- so the
+ * embed opened with no host and no slot, nothing sized or showed it, and the
+ * button read as completely dead (`43-UAT.md` item 8, `major`). A second
+ * opener cannot be made correct by giving it a better rectangle; it has to
+ * stop being a second opener.
+ */
+function humbleKeysEmbedPath(): string {
+  return `/store-page?store-url=${encodeURIComponent(HUMBLE_KEYS_URL)}`
+}
+
 // D-43-12/D-43-13: the one GameLib route that connects each login store.
 // Exhaustive switch — `pnpm codecheck` fails if `HumbleGameLibLoginStore`
 // ever grows a fourth member without a matching route here.
@@ -430,8 +455,24 @@ export default function HumbleKeys() {
             // annotations fetch hasn't landed yet, so no wizard opens
             // against a key whose keyindex status is still unknown.
             keyindexResolved: annotation?.keyindexResolved ?? false,
-            onClaim: () =>
-              openWizard(key, 'claim', annotation?.revealRefusedAt ?? null),
+            // REQ-43-24: `gog_keyless` claims in Humble's own embedded keys
+            // page, every other platform in the reveal wizard. The fork lives
+            // HERE, not in `HumbleKeyRow`, for two reasons: this component
+            // already holds `useNavigate` (and already navigates for the
+            // sibling login case below), and `HumbleKeyRow` is deliberately
+            // hook-free -- its suite invokes it as a plain function with no
+            // Router context and says so in writing. Threading the
+            // destination as a callback matches how `settleAction` was
+            // threaded in 43-06.
+            onClaim:
+              key.platform === 'gog_keyless'
+                ? () => navigate(humbleKeysEmbedPath())
+                : () =>
+                    openWizard(
+                      key,
+                      'claim',
+                      annotation?.revealRefusedAt ?? null
+                    ),
             onFinish: () => openWizard(key, 'finish'),
             onUndoRedeem: () =>
               void window.api
