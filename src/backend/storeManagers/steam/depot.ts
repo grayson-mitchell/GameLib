@@ -1170,6 +1170,16 @@ interface DownloadDepotFilesOpts {
    *  unchanged (hardcoded https://, no token). */
   hostMeta?: ReadonlyMap<string, ContentServerHostMeta>
   signal?: AbortSignal
+  /** debug/depot-stall-bound-did-not-fire (2026-09-25): this run's
+   *  forward-progress clock — see depot/stallTracker.ts. Caller-supplied for
+   *  the same reason `hosts` above is (this loop stays decoupled and
+   *  testable): StallTracker's give-up window is three real MINUTES, so the
+   *  run-scoped give-up below cannot be exercised deterministically unless a
+   *  test can inject a tracker with its own timeout. Optional — omitting it
+   *  (every production caller; `downloadSteamDepots` at the only non-test
+   *  call site does) constructs a fresh default-window StallTracker exactly
+   *  as before, so behaviour is byte-for-byte unchanged. */
+  stallTracker?: StallTracker
 }
 
 export interface DepotDownloadFailure {
@@ -2258,7 +2268,12 @@ export async function downloadDepotFiles(
     // chunk instead of aborting its whole file, as long as the run overall
     // keeps making progress; only a genuine, sustained run-wide stall gives
     // up honestly.
-    const stallTracker = new StallTracker()
+    //
+    // debug/depot-stall-bound-did-not-fire (2026-09-25): now injectable so
+    // the run-scoped give-up in the file-worker loop below can be tested
+    // without sleeping for STALL_TIMEOUT_MS of real time. Defaults to the
+    // exact `new StallTracker()` this line has always been.
+    const stallTracker = opts.stallTracker ?? new StallTracker()
 
     // Debug/steam-install-slow-start (cycle 2): the chunk-fetch retry/rotation/
     // timeout path was previously completely invisible in the dev log — this
@@ -2513,6 +2528,11 @@ export async function downloadDepotFiles(
     // contract (depot.test.ts's heartbeat-cadence test).
     const STATS_LOG_EVERY_TICKS = 15
     let heartbeatTicks = 0
+    // debug/depot-stall-bound-did-not-fire (2026-09-25): one-shot latch so the
+    // run-scoped give-up below records exactly ONE failure and ONE log line,
+    // not one per file-worker — all FILE_CONCURRENCY workers run on the same
+    // event-loop thread, so this is race-free by construction.
+    let runStallRecorded = false
     const heartbeat = setInterval(() => {
       emitProgress(true)
       heartbeatTicks++
@@ -2527,6 +2547,57 @@ export async function downloadDepotFiles(
             // Checked per-file AND per-chunk (inside downloadFileChunks) so a
             // queue-cancel stops issuing new work promptly (D-02).
             if (opts.signal?.aborted) return
+            // debug/depot-stall-bound-did-not-fire (2026-09-25): the RUN-SCOPED
+            // half of the 180s no-progress bound, which did not exist before
+            // this fix and is the reason the 2026-08-27 Californium wedge ran
+            // for 51 minutes at 0 B/s after both its watchdog and its Cancel.
+            //
+            // Before this check, `stallTracker` was consulted at exactly ONE
+            // site — downloadFileChunks' per-chunk catch (see the hasStalled()
+            // guard there) — whose only power is to stop re-queuing one chunk
+            // and fail ONE FILE. That per-file failure lands in the catch
+            // below, which records it and pulls the NEXT job; `failures.length`
+            // is never a loop-exit condition anywhere. So a run making ZERO
+            // forward progress did not stop: it walked its whole remaining file
+            // queue, burning one full CHUNK_FETCH_ATTEMPTS exhaustion
+            // (8 x CHUNK_FETCH_TIMEOUT_MS + ~12s of backoff, ~132s) per file
+            // per worker slot, bounded only by TARGET_INFLIGHT_CHUNKS. The
+            // bound fired the whole time; nothing acted on it at run scope.
+            //
+            // Deliberately no stricter than the per-chunk guard it completes:
+            // hasStalled() can only be true when NOTHING landed on disk
+            // anywhere in the run for STALL_TIMEOUT_MS, and since a successful
+            // attempt is itself bounded at CHUNK_FETCH_TIMEOUT_MS (15s) and a
+            // full exhaustion at ~132s, that window cannot be reached by a
+            // merely-slow run — every in-flight slot has had at least one full
+            // exhaustion cycle by then. A trickling run keeps calling
+            // recordProgress() and never reaches here.
+            //
+            // Scope limit, stated honestly: this stops the run TAKING NEW
+            // FILES. Files already in flight are not interrupted — they drain
+            // through their own per-chunk guard within one ~132s exhaustion.
+            // Interrupting them needs an abort signal this function does not
+            // own, and is a larger change than this fix is entitled to make.
+            if (stallTracker.hasStalled()) {
+              if (!runStallRecorded) {
+                runStallRecorded = true
+                const stalledErr = new Error(
+                  `download stalled: no forward progress for ` +
+                    `${stallTracker.msSinceProgress()}ms across the whole run ` +
+                    `— giving up with ${queue.length} file(s) unattempted`
+                )
+                failures.push({
+                  file: queue[0]?.file.filename ?? '(run)',
+                  error: stalledErr.message,
+                  cause: stalledErr
+                })
+                logWarning(
+                  `downloadDepotFiles: appId=${plan.appId} ${stalledErr.message}`,
+                  LogPrefix.Steam
+                )
+              }
+              return
+            }
             const job = queue.shift()!
             try {
               await downloadSingleFile(

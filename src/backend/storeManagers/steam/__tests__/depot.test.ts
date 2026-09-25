@@ -3516,6 +3516,126 @@ describe('downloadDepotFiles', () => {
     expect(result.failures[0].error).toMatch(/sha1 mismatch/i)
   })
 
+  // debug/depot-stall-bound-did-not-fire (2026-09-25). On 2026-08-27
+  // Californium (402060) stalled at 46% and the depot loop then ran for 51
+  // MORE MINUTES at 0 B/s across 5081 CDN rotations, surviving both its own
+  // 480s DownloadManager watchdog and the user's Cancel. The 180s
+  // StallTracker bound was live in that build and did not stop it; the same
+  // non-termination is visible again in the 2026-09-08 pf live gate, which
+  // records 475s of established zero progress before an EXTERNAL abort killed
+  // the loop.
+  //
+  // The reason: before this fix `hasStalled()` was consulted at exactly ONE
+  // site — downloadFileChunks' per-chunk catch — whose only power is to fail
+  // ONE FILE. The per-file catch in downloadDepotFiles' worker loop swallows
+  // that into `failures` and pulls the next job, and `failures.length` is
+  // never a loop-exit condition, so a genuinely dead run walked its whole
+  // remaining file queue instead of stopping.
+  //
+  // These tests pin the RUN-SCOPED half: a stalled run stops taking new
+  // files, and a healthy one is completely unaffected. The injected
+  // StallTracker is what makes this deterministic — the real window is three
+  // real minutes.
+  describe('run-scoped no-progress bound (depot/stallTracker.ts)', () => {
+    const content = Buffer.from('DATA')
+    // FILE_CONCURRENCY in depot.ts. The plan deliberately carries MORE files
+    // than this so the first pass cannot drain the queue: files beyond this
+    // index are reachable only by a worker looping back round for another
+    // job, which is exactly where the new run-scoped check sits.
+    const FILE_CONCURRENCY = 32
+    const FILE_COUNT = 40
+
+    function manyFilePlan(): DepotPlan {
+      const files: DepotPlanFile[] = Array.from(
+        { length: FILE_COUNT },
+        (_, i) => ({
+          filename: `file-${String(i).padStart(2, '0')}.bin`,
+          size: content.length,
+          sha_content: sha1Hex(content),
+          chunks: [{ sha: `sha-${i}`, cb_original: content.length, offset: 0 }]
+        })
+      )
+      return makePlan(
+        [{ depotId: '888', gid: 'g8', key: Buffer.from('key'), files }],
+        content.length * FILE_COUNT
+      )
+    }
+
+    it('a run that has NOT stalled is completely unaffected: every one of the 40 files is still attempted and the run completes clean', async () => {
+      jest.mocked(fetchChunk).mockResolvedValue(content)
+
+      const result = await downloadDepotFiles(manyFilePlan(), {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS,
+        // An hour-long window, never reached inside this test — the healthy
+        // control arm. Any spurious firing of the new check shows up here as
+        // a short-changed file count, not as a silent pass.
+        stallTracker: new StallTracker(60 * 60 * 1000)
+      })
+
+      expect(result.failures).toEqual([])
+      expect(jest.mocked(fetchChunk)).toHaveBeenCalledTimes(FILE_COUNT)
+      expect(existsSync(join(dir, 'common', 'SomeGame', 'file-39.bin'))).toBe(
+        true
+      )
+    })
+
+    it('a run with ZERO forward progress stops taking new files instead of grinding the rest of the queue — the 2026-08-27 non-termination', async () => {
+      // The tracker starts healthy (so the run is allowed to begin at all, as
+      // the real one is) and is back-dated by the FIRST chunk fetch, which
+      // then fails. Nothing writes to disk afterwards, so depot.ts's own
+      // `stallTracker?.recordProgress()` never runs to undo it — this models
+      // exactly the observed state: a run that WAS progressing and then
+      // stopped dead.
+      const stallTracker = new StallTracker(60 * 1000)
+      // Returns an already-rejected promise rather than `async () => throw`:
+      // the async form has no `await` in it and trips
+      // @typescript-eslint/require-await, which would push the scoped lint
+      // ceiling over. Behaviourally identical from the caller's side.
+      jest.mocked(fetchChunk).mockImplementation(() => {
+        stallTracker.recordProgress(Date.now() - 10 * 60 * 1000)
+        return Promise.reject(
+          new Error('ECONNRESET (simulated total CDN failure)')
+        )
+      })
+
+      const result = await downloadDepotFiles(manyFilePlan(), {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS,
+        stallTracker
+      })
+
+      // THE ASSERTION THIS WHOLE SESSION EXISTS FOR. Before the fix this was
+      // FILE_COUNT (40): every worker looped back, took another doomed job,
+      // and the run walked the entire queue. Now the first 32 in-flight files
+      // fail and the workers STOP instead of picking up files 32..39.
+      expect(jest.mocked(fetchChunk)).toHaveBeenCalledTimes(FILE_CONCURRENCY)
+      expect(existsSync(join(dir, 'common', 'SomeGame', 'file-39.bin'))).toBe(
+        false
+      )
+
+      // Exactly ONE run-scoped failure is recorded, not one per worker, and
+      // it names how much of the plan was abandoned — an honest failure, not
+      // a silent truncation.
+      const runStall = result.failures.filter((f) =>
+        /across the whole run/.test(f.error)
+      )
+      expect(
+        runStall.filter((f) => /file\(s\) unattempted/.test(f.error))
+      ).toHaveLength(1)
+      expect(
+        runStall.find((f) => /file\(s\) unattempted/.test(f.error))?.error
+      ).toMatch(
+        new RegExp(`${FILE_COUNT - FILE_CONCURRENCY} file\\(s\\) unattempted`)
+      )
+
+      // The run can never be mistaken for a complete one.
+      expect(result.allFilesVerifiedThisRun).toBe(false)
+    })
+  })
+
   // debug/steam-depot-unclassified-generic-error (F2). The 2026-08-27
   // Fallout 2 report reached the UNCLASSIFIED generic bucket ("The Steam
   // download failed.") with NOTHING in the log to classify it by: this
