@@ -30,7 +30,11 @@
    colour must stay a `var(--accent, ...)` token because 11 themes ship and a
    literal would be wrong in 10 of them. Ring-as-`outline` / glow-as-
    `box-shadow` is a deliberate split so a webview without `color-mix()`
-   loses only the glow, never the ring. */
+   loses only the glow, never the ring. Fires on `:hover` as well as
+   `:focus-within` -- this app already treats hover and focus as one
+   "highlighted" state (see the shared `scale(1.05)` transform below), so a
+   mouse user and a gamepad/keyboard user get the same affordance. */
+.gameCard:hover,
 .gameCard:focus-within {
   outline: 3px solid var(--accent, #0080ff);
   outline-offset: -1px;
@@ -356,6 +360,7 @@
   color: var(--accent-overlay);
 }
 
+.gameListItem:hover,
 .gameListItem:focus-within {
   outline: 2px solid var(--accent, #0080ff);
   outline-offset: -2px;
