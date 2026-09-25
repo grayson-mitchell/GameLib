@@ -131,3 +131,10 @@ live. The reorder is simple enough that the structural checks above are adequate
 _Fixed: 2026-09-25_
 _Fixer: Claude (gsd-code-fixer)_
 _Iteration: 1_
+
+## Live check (2026-09-26)
+
+WR-01 was live-verified on Windows on 2026-09-26. With a client connected to the pipe and never
+writing, a `gamelib://` ping was still delivered, and a minimized relaunch still restored and
+focused the window. WR-02 remains review-only, because a genuine `ConnectNamedPipe` failure
+cannot be provoked live. See `46-POSTFIX-LIVE-CHECK.md` (PASS).

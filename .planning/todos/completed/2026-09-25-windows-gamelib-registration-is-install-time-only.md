@@ -155,3 +155,24 @@ otherwise as-is: `.planning/todos/todo-frontmatter-gate.py` scopes to `pending/`
 the file removes it from that gate's census rather than subjecting it to a new one, and no
 frontmatter change is required by the move. (`platform: windows` does remain accurate for the
 one thing still outstanding — the live gate above.)
+
+### Live gate run (2026-09-26)
+
+The live-gate steps above were run on the operator's Windows 11 machine against a debug NSIS build
+of `c3cc2ef44`. **PASS**:
+
+- A correct key produced no repair (anti-churn).
+- A hijacked key was repaired on launch: `repaired the gamelib:// HKCU registration (prior value:
+  points-elsewhere) -- 4/4 ...`.
+- A deleted subtree was recreated with all four values: `(prior value: absent) -- 4/4 ...`.
+- A deep link was delivered after each repair.
+
+The full record is in
+`.planning/phases/46-windows-single-instance-guard-and-gamelib-deep-link-registra/46-POSTFIX-LIVE-CHECK.md`.
+
+Two corrections to step 3 and to what it implies:
+
+- The `repaired ...` line reached the console only. On a normal Windows launch `HOME` is unset, so
+  `shell_diag` writes no `gamelib-shell.log`.
+- A `pnpm tauri:dev` run also triggers the repair and re-points `gamelib://` at
+  `src-tauri\target\debug\gamelib-shell.exe`. This was observed live before the gate.
