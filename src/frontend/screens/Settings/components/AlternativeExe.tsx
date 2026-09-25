@@ -21,7 +21,7 @@ const AlternativeExe = () => {
       path={targetExe}
       pathDialogTitle={t('box.select.exe', 'Select EXE')}
       pathDialogDefaultPath={gameInfo?.install.install_path}
-      placeholder={targetExe || t('box.select.exe', 'Select EXE...')}
+      placeholder={targetExe || t('box.select.exe', 'Select EXE')}
       label={t('setting.change-target-exe', 'Select an alternative EXE to run')}
       htmlId="setinstallpath"
     />

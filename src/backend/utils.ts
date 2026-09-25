@@ -903,7 +903,7 @@ function detectVCRedist() {
             text: t('box.downloadNow', 'Download now'),
             action: 'vcRuntimeDownload'
           },
-          { text: t('box.ok', 'Ok') },
+          { text: t('box.ok', 'OK') },
           {
             text: t('box.dontShowAgain', "Don't show again"),
             action: 'vcRuntimeSkip'

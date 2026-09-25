@@ -638,7 +638,7 @@ export default function DownloadDialog({
                 <div className="InstallModal__sizeValue">{downloadSize}</div>
               </>
             ) : (
-              `${t('game.getting-download-size', 'Geting download size')}...`
+              `${t('game.getting-download-size', 'Getting download size')}...`
             )}
           </div>
           <div className="InstallModal__size">
@@ -656,7 +656,7 @@ export default function DownloadDialog({
                 <div className="InstallModal__sizeValue">{installSize}</div>
               </>
             ) : (
-              `${t('game.getting-install-size', 'Geting install size')}...`
+              `${t('game.getting-install-size', 'Getting install size')}...`
             )}
           </div>
           {previousProgress.folder === installPath && (

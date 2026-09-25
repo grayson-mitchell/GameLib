@@ -87,13 +87,13 @@ const DownloadSizeInfo = ({ gameInfo }: Props) => {
         <CloudDownload />
         <b>{t('game.downloadSize', 'Download Size')}:</b>
         {downloadSize ??
-          `${t('game.getting-download-size', 'Geting download size')}...`}
+          `${t('game.getting-download-size', 'Getting download size')}...`}
       </div>
       <div className="iconWithText">
         <Storage />
         <b>{t('game.installSize', 'Install Size')}:</b>
         {installSize ??
-          `${t('game.getting-install-size', 'Geting install size')}...`}
+          `${t('game.getting-install-size', 'Getting install size')}...`}
       </div>
     </>
   )

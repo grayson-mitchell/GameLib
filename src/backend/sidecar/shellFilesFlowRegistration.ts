@@ -273,7 +273,7 @@ export function registerShellFilesFlows(): void {
             'GameLib Cache Was Cleared!'
           ),
           type: 'MESSAGE',
-          buttons: [{ text: i18next.t('box.ok', 'Ok') }]
+          buttons: [{ text: i18next.t('box.ok', 'OK') }]
         })
       }
     } catch (error) {

@@ -107,7 +107,7 @@ export default function GOGSyncSaves({
         {!featureSupported &&
           t(
             'settings.saves.not_supported',
-            'Cloud Saves are not supported by this game.'
+            'This game does not support Cloud Saves.'
           )}
       </div>
     )
