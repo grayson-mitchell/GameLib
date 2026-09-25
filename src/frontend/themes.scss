@@ -97,7 +97,10 @@ body.midnightMirage {
   /* Sidebar */
   --navbar-active: var(--text-secondary);
   --navbar-inactive: var(--neutral-06);
-  --navbar-active-background: var(--background-darker);
+  /* Lighter than --navbar-background (neutral-02), not darker: the previous
+     --background-darker (neutral-01, near-black) made active/hovered nav and
+     filter rows read as black holes against the panel. */
+  --navbar-active-background: var(--neutral-03);
   --navbar-accent: var(--text-default);
   --navbar-background: var(--background);
   --divider: var(--neutral-03);
