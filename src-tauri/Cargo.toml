@@ -260,12 +260,37 @@ windows-sys = { version = "0.60", features = [
     "Win32_Security_Authorization",  # ConvertStringSecurityDescriptorToSecurityDescriptorW,
                                       # ConvertSidToStringSidW, GetSecurityInfo
     "Win32_UI_WindowsAndMessaging",  # AllowSetForegroundWindow (plan 46-06, secondary foreground grant)
+    "Win32_System_Registry",         # RegOpenKeyExW, RegQueryValueExW, RegCreateKeyExW,
+                                     # RegSetValueExW, RegCloseKey, HKEY, HKEY_CURRENT_USER,
+                                     # KEY_READ/KEY_SET_VALUE, REG_OPTION_NON_VOLATILE, REG_SZ
 ] }
 # RESEARCH's Standard Stack listed a 7th feature, `Win32_System_Memory`, for `LocalFree`. Grepping
 # the vendored `windows-sys-0.60.2` source directly (as this task's own read_first requires) shows
 # `LocalFree`/`HLOCAL` are declared in `Win32/Foundation/mod.rs`, gated by `Win32_Foundation`
 # alone -- `Win32_System_Memory` gates a different module (`Win32_System_Memory::VirtualAlloc` and
 # friends) that nothing here calls. Omitted rather than guessed in as harmless dead weight.
+#
+# quick-260925-uok added the 9th feature, `Win32_System_Registry`, for the Windows `gamelib://`
+# HKCU self-heal (`repair_windows_gamelib_protocol_registration` in `src/main.rs`). Symbols
+# confirmed the same way `Win32_System_Memory` above was REJECTED -- by grepping the vendored
+# `windows-sys-0.60.2` source rather than assuming:
+# `src/Windows/Win32/System/Registry/mod.rs` declares `RegCloseKey`, `RegCreateKeyExW`,
+# `RegOpenKeyExW`, `RegQueryValueExW`, `RegSetValueExW`, `type HKEY`, `HKEY_CURRENT_USER`,
+# `KEY_READ`, `KEY_SET_VALUE`, `REG_OPTION_NON_VOLATILE` and `REG_SZ`, and that crate's own
+# `Cargo.toml` declares `Win32_System_Registry = ["Win32_System"]`. `RegCreateKeyExW` carries an
+# EXTRA `#[cfg(feature = "Win32_Security")]` (for its `SECURITY_ATTRIBUTES` parameter), already
+# satisfied by the `Win32_Security` feature above, so no second feature is needed.
+# `ERROR_SUCCESS` and `WIN32_ERROR` live in `Win32/Foundation/mod.rs` under the already-enabled
+# `Win32_Foundation`. Exactly ONE feature was added.
+#
+# `winreg` and `windows-registry` were considered and rejected. Both are already present in
+# `Cargo.lock` transitively, so neither would have cost a new crate either -- the deciding
+# argument is the "narrow FFI surface" rationale this block already states: five registry calls
+# sit directly beside the single-instance guard's own `windows-sys` FFI in the same file, and a
+# second registry abstraction there would be a departure with no ergonomic payoff large enough to
+# justify it. Adding a FEATURE to an already-declared dependency changes no Cargo.lock crate
+# NAME, so `cargoFeatures.test.ts`'s crate-name pin is unaffected (re-run to prove it, not
+# assumed).
 
 [profile.release]
 opt-level = "s"

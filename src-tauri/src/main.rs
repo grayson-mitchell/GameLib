@@ -8644,6 +8644,218 @@ fn current_user_identity() -> Option<(String, u32)> {
     }
 }
 
+/// Self-heals the Windows `gamelib://` protocol registration under
+/// `HKCU\Software\Classes\gamelib` when it is missing, dangling, or pointing at a different
+/// executable, rewriting all four installer-shaped values to point at the CURRENTLY-RUNNING
+/// executable. Closes the todo
+/// `2026-09-25-windows-gamelib-registration-is-install-time-only.md` (quick-260925-uok, option 1
+/// of its Options list). See the decision-point (a) comment block in `.setup()` for why this is
+/// deliberately narrower than the deep-link plugin's own whole-scheme registration, and for the
+/// last-launch-wins consequence on a machine carrying two GameLib installs.
+///
+/// FAIL OPEN, NEVER FAIL CLOSED (T-34.5-G6-24, T-UOK-03): returns `()` and is infallible by
+/// construction, exactly like `shell_diag`. A missing key, an access-denied, a failed read, a
+/// failed write -- every one logs a warning and moves on. There is no `unwrap()`, `expect(`,
+/// `panic!` or `?` anywhere in this body (pinned by a region-scoped source gate in
+/// `src/backend/__tests__/tauriShellSource.test.ts`), because a protocol registration that could
+/// not be repaired must degrade deep links, never abort startup.
+///
+/// `CI=e2e` returns BEFORE the first registry call (T-UOK-02). That guard is load-bearing HERE in
+/// a way it is not on the Linux `register_all()` arm: this path WRITES to the real user registry,
+/// so an automated run that skipped it would rewrite the host's protocol association as a side
+/// effect of merely starting the app.
+///
+/// LOG DISCIPLINE (T-UOK-01, the same rule as the deep-link path's T-34.5-G6-25): the stored
+/// command value is attacker-controlled, unbounded-length third-party data written by whatever
+/// last claimed the scheme. It is NEVER logged verbatim -- only the registry subkey path (our own
+/// constants), the outcome, and a coarse classification of `absent` / `unparseable` /
+/// `points-elsewhere`.
+///
+/// Like every other function in this tier it is exercised by NO automated test; the decision it
+/// delegates to (`gamelib_protocol_repair_needed`) is the unit-tested half.
+#[cfg(windows)]
+fn repair_windows_gamelib_protocol_registration(identifier: &str) {
+    use windows_sys::Win32::Foundation::ERROR_SUCCESS;
+    use windows_sys::Win32::System::Registry::{
+        HKEY, HKEY_CURRENT_USER, KEY_READ, KEY_SET_VALUE, REG_EXPAND_SZ, REG_OPTION_NON_VOLATILE,
+        REG_SZ, RegCloseKey, RegCreateKeyExW, RegOpenKeyExW, RegQueryValueExW, RegSetValueExW,
+    };
+
+    const ROOT_SUBKEY: &str = r"Software\Classes\gamelib";
+    const ICON_SUBKEY: &str = r"Software\Classes\gamelib\DefaultIcon";
+    const COMMAND_SUBKEY: &str = r"Software\Classes\gamelib\shell\open\command";
+
+    fn wide(value: &str) -> Vec<u16> {
+        value.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    if std::env::var("CI").as_deref() == Ok("e2e") {
+        eprintln!(
+            "[shell] CI=e2e -- skipping the gamelib:// HKCU registration repair (unlike the Linux arm, this path WRITES to the real user registry)"
+        );
+        return;
+    }
+
+    let exe_path = match std::env::current_exe() {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!(
+                "[shell] WARN: gamelib:// HKCU repair skipped -- current_exe() failed ({e}) (fail-open, T-34.5-G6-24)"
+            );
+            return;
+        }
+    };
+    let Some(exe) = exe_path.to_str() else {
+        eprintln!(
+            "[shell] WARN: gamelib:// HKCU repair skipped -- the executable path is not valid UTF-8 (fail-open, T-34.5-G6-24)"
+        );
+        return;
+    };
+
+    // SAFETY: every Win32 call below is a registry call taking NUL-terminated wide strings that
+    // are kept alive (`command_w`, `empty_name_w`, and the per-write `subkey_w`/`value_name_w`/
+    // `value_w`) for the whole of the call that reads them. Both `HKEY`s are local: the read
+    // handle is closed by the unconditional `RegCloseKey(key)` at the end of its own `if` body,
+    // with no early `return` between the successful `RegOpenKeyExW` and that close; each write
+    // handle is closed by the `RegCloseKey(write_key)` immediately after its `RegSetValueExW`,
+    // on both the success and the failure path, before the loop can `continue`. `buf` is sized
+    // from the two-call `cbData` size probe and the read-back length is re-clamped to
+    // `buf.len()` before slicing, so no out-of-bounds read is possible even if the value grew
+    // between the probe and the read.
+    unsafe {
+        let command_w = wide(COMMAND_SUBKEY);
+        let empty_name_w: [u16; 1] = [0];
+
+        let mut stored: Option<String> = None;
+        let mut key: HKEY = std::ptr::null_mut();
+        // ANY non-success open -- including ERROR_FILE_NOT_FOUND, the dangling case -- leaves
+        // `stored` as `None`, which is a legitimate "repair needed" input, not an error to bail
+        // on. That is the whole point of the feature.
+        if RegOpenKeyExW(HKEY_CURRENT_USER, command_w.as_ptr(), 0, KEY_READ, &mut key)
+            == ERROR_SUCCESS
+        {
+            let mut value_type: u32 = 0;
+            let mut cb_data: u32 = 0;
+            // Two-call size probe: the first call with a null `lpData` reports the byte length.
+            if RegQueryValueExW(
+                key,
+                empty_name_w.as_ptr(),
+                std::ptr::null(),
+                &mut value_type,
+                std::ptr::null_mut(),
+                &mut cb_data,
+            ) == ERROR_SUCCESS
+                && (value_type == REG_SZ || value_type == REG_EXPAND_SZ)
+                && cb_data > 0
+            {
+                let mut buf: Vec<u16> = vec![0u16; (cb_data as usize).div_ceil(2)];
+                let mut cb_read = (buf.len() * 2) as u32;
+                if RegQueryValueExW(
+                    key,
+                    empty_name_w.as_ptr(),
+                    std::ptr::null(),
+                    &mut value_type,
+                    buf.as_mut_ptr() as *mut u8,
+                    &mut cb_read,
+                ) == ERROR_SUCCESS
+                    && (value_type == REG_SZ || value_type == REG_EXPAND_SZ)
+                {
+                    let chars = ((cb_read as usize) / 2).min(buf.len());
+                    let slice = &buf[..chars];
+                    // A REG_SZ read back this way is not guaranteed to be NUL-terminated, and
+                    // may carry more than one trailing NUL. Cut at the first one, or take the
+                    // whole slice when there is none.
+                    let end = match slice.iter().position(|&unit| unit == 0) {
+                        Some(index) => index,
+                        None => chars,
+                    };
+                    stored = Some(String::from_utf16_lossy(&slice[..end]));
+                }
+            }
+            RegCloseKey(key);
+        }
+
+        if !gamelib_protocol_repair_needed(stored.as_deref(), exe) {
+            // The overwhelmingly common path: the key already points at us. Write nothing and
+            // log nothing -- a line here would append to the diagnostic file on every launch.
+            return;
+        }
+
+        let classification = match stored.as_deref() {
+            None => "absent",
+            Some(value) if gamelib_protocol_command_exe(value).is_none() => "unparseable",
+            Some(_) => "points-elsewhere",
+        };
+
+        let root_default = gamelib_protocol_default_value(identifier);
+        let icon_default = gamelib_protocol_default_icon(exe);
+        let command_default = gamelib_protocol_open_command(exe);
+
+        // All FOUR of the installer's values, in the installer's own order -- not just the
+        // command. Whatever rewrote `shell\open\command` may equally have rewritten the default
+        // and the icon, and writing the complete installer-shaped set is what leaves the key
+        // byte-compatible with a fresh install rather than a third divergent shape.
+        let writes: [(&str, &str, &str); 4] = [
+            (ROOT_SUBKEY, "URL Protocol", ""),
+            (ROOT_SUBKEY, "", root_default.as_str()),
+            (ICON_SUBKEY, "", icon_default.as_str()),
+            (COMMAND_SUBKEY, "", command_default.as_str()),
+        ];
+
+        let mut written = 0usize;
+        for (subkey, value_name, value) in writes {
+            let subkey_w = wide(subkey);
+            let value_name_w = wide(value_name);
+            let value_w = wide(value);
+
+            let mut write_key: HKEY = std::ptr::null_mut();
+            let created = RegCreateKeyExW(
+                HKEY_CURRENT_USER,
+                subkey_w.as_ptr(),
+                0,
+                std::ptr::null(),
+                REG_OPTION_NON_VOLATILE,
+                KEY_SET_VALUE,
+                std::ptr::null(),
+                &mut write_key,
+                std::ptr::null_mut(),
+            );
+            if created != ERROR_SUCCESS {
+                eprintln!(
+                    "[shell] WARN: gamelib:// HKCU repair could not open HKCU\\{subkey} for writing (error {created}) -- continuing with the remaining values (fail-open, T-34.5-G6-24)"
+                );
+                continue;
+            }
+
+            // `cbData` counts BYTES and must include the NUL terminator `wide()` appended.
+            let set = RegSetValueExW(
+                write_key,
+                value_name_w.as_ptr(),
+                0,
+                REG_SZ,
+                value_w.as_ptr() as *const u8,
+                (value_w.len() * 2) as u32,
+            );
+            RegCloseKey(write_key);
+
+            if set == ERROR_SUCCESS {
+                written += 1;
+            } else {
+                eprintln!(
+                    "[shell] WARN: gamelib:// HKCU repair could not write HKCU\\{subkey} value '{value_name}' (error {set}) -- continuing with the remaining values (fail-open, T-34.5-G6-24)"
+                );
+            }
+        }
+
+        // One line, through the file-backed sink, because a bundled app's stderr is discarded and
+        // "did the repair run, and what did it decide?" is exactly what this sink exists for.
+        // The classification, never the stored value itself (T-UOK-01).
+        shell_diag(&format!(
+            "repaired the gamelib:// HKCU registration (prior value: {classification}) -- {written}/4 installer-shaped values written under HKCU\\{ROOT_SUBKEY}"
+        ));
+    }
+}
+
 /// Creates one instance of the single-instance named pipe, from a pure SDDL string (never
 /// hand-rolled `SECURITY_DESCRIPTOR` bytes -- see 46-RESEARCH.md "Don't Hand-Roll"). `first` sets
 /// `FILE_FLAG_FIRST_PIPE_INSTANCE`: on the primary's very first pipe instance this makes
@@ -10185,23 +10397,58 @@ fn main() {
             //     `update-desktop-database`. `register_all()`'s own documented purpose is to
             //     cover installs that bypass a proper installer (e.g. an AppImage that was not
             //     otherwise registered).
-            //   - Windows now registers at INSTALL time only (phase 46, REQ-46-05/REQ-46-06,
-            //     decision point (a)). The NSIS template writes HKCU
-            //     `Software\Classes\gamelib` (the project's default `installMode`,
-            //     `NSISInstallerMode::CurrentUser`) from `plugins.deep-link.desktop`, sourced
-            //     from the base `tauri.conf.json` now that `tauri.windows.conf.json` no longer
-            //     overrides `schemes` to `[]` (that quick-260922-nx4 override was removed in the
-            //     same commit as this rewrite -- see
+            //   - Windows registers at INSTALL time via the NSIS template (phase 46,
+            //     REQ-46-05/REQ-46-06, decision point (a)) AND, since quick-260925-uok,
+            //     self-heals at RUNTIME via `repair_windows_gamelib_protocol_registration`
+            //     (called immediately below this block). The install-time half is unchanged:
+            //     the NSIS template writes HKCU `Software\Classes\gamelib` (the project's
+            //     default `installMode`, `NSISInstallerMode::CurrentUser`) from
+            //     `plugins.deep-link.desktop`, sourced from the base `tauri.conf.json` now that
+            //     `tauri.windows.conf.json` no longer overrides `schemes` to `[]` (that
+            //     quick-260922-nx4 override was removed -- see
             //     `src/backend/__tests__/windowsDeepLinkSuppression.test.ts`). Re-running the
             //     installer overwrites the stale 2026-07-20 Electron-era HKCU key
             //     unconditionally (`WriteRegStr` is not a conditional write), self-healing it
-            //     with no extra code (RESEARCH.md Q7). Runtime `register_all()` stays
-            //     `#[cfg(target_os = "linux")]` by DECISION, not by the same D-05 hazard that
+            //     with no extra code (RESEARCH.md Q7) -- but only for someone who re-runs the
+            //     installer, which is what the runtime half now removes the need for.
+            //   - The runtime self-heal is deliberately NARROWER than `register_all()`, and the
+            //     distinction is the whole reason decision point (a) did not move.
+            //     `register_all()` is the deep-link plugin's whole-scheme registration: EVERY
+            //     configured scheme, registered through whatever mechanism the platform itself
+            //     provides, with the plugin's own abstraction layer in between. The self-heal is
+            //     one HKCU subtree read, one comparison, and a conditional write of exactly the
+            //     four values the NSIS template already writes -- no plugin surface, no new
+            //     scheme, no platform-abstraction layer, and nothing at all on macOS or Linux.
+            //     Widening the `#[cfg]` on `register_all()` would have been the BROADER change,
+            //     and it was rejected in favour of this one. So runtime `register_all()` stays
+            //     `#[cfg(target_os = "linux")]`, by DECISION rather than by the D-05 hazard that
             //     used to block Windows entirely: GameLib ships Windows exclusively via NSIS
             //     (no portable/zip target), so `register_all()`'s AppImage-shaped justification
-            //     has no Windows analogue here today. This decision is operator-overridable --
-            //     see the REQ-46-06 pin and override recipe in
-            //     `src/backend/__tests__/tauriShellSource.test.ts`.
+            //     still has no Windows analogue here. That decision remains
+            //     operator-overridable -- the REQ-46-06 pin and its override recipe in
+            //     `src/backend/__tests__/tauriShellSource.test.ts` are unchanged and still
+            //     accurate; what changed is only WHY Windows does not need the widening.
+            //   - The evidence that the install-time half alone was insufficient: the
+            //     2026-09-25 live-gate hijack during plan 46-07
+            //     (`46-LIVE-GATE-RERUN.md`, Check 3b / Check 5). A leftover machine-wide
+            //     Electron-era `C:\Program Files\GameLib\GameLib.exe`, sharing this build's
+            //     Start-menu display name, was launched by mistake and re-registered the HKCU
+            //     key to ITSELF at its own runtime launch. The operator then uninstalled it,
+            //     which deleted the exe without restoring the prior value, leaving `gamelib://`
+            //     DANGLING rather than merely stale. Check 5's ping then failed with
+            //     `Start-Process : This command cannot be run due to the error: Application not
+            //     found.`, and a human had to restore the value by hand with `Set-ItemProperty`
+            //     before the re-gate could continue.
+            //   - LAST-LAUNCH-WINS, stated rather than left to be discovered empirically: two
+            //     GameLib installations on one machine will each repair the key to themselves on
+            //     launch, so the most recently launched build owns `gamelib://`. That is the
+            //     intended semantics of "point it at the CURRENT executable" and is strictly
+            //     better than the dangling state it replaces, but it is not a no-op on a
+            //     multiple-install machine.
+            //   - The `CI=e2e` guard is load-bearing on the Windows repair path in a way it is
+            //     not on the Linux arm below: the repair WRITES to the real user registry, so an
+            //     automated run that skipped the guard would rewrite the host's protocol
+            //     association as a side effect of merely starting the app (T-UOK-02).
             //   - The guard that makes registering Windows at all SAFE is this file's own
             //     phase-46 single-instance guard (`CreateMutexW` primary/secondary decision,
             //     `run_windows_single_instance_accept_loop`'s named-pipe warm delivery, wired
@@ -10240,6 +10487,28 @@ fn main() {
                     );
                 }
             }
+
+            // The Windows runtime self-heal (quick-260925-uok). Placement is three decisions,
+            // not an accident:
+            //   (i)   AFTER the `#[cfg(target_os = "linux")]` block above, never before it, so
+            //         the nearest `#[cfg(...)]` ABOVE the file's sole `register_all()`
+            //         occurrence is still the Linux one and `cfgGuardAboveRegisterAll()` in
+            //         `src/backend/__tests__/tauriShellSource.test.ts` keeps returning
+            //         `'#[cfg(target_os = "linux")]'` (REQ-46-06).
+            //   (ii)  in `.setup()` rather than in `main()`, because by this point the
+            //         single-instance decision has already run and every secondary has
+            //         `std::process::exit(0)`'d -- so only the ONE surviving instance ever
+            //         touches the registry.
+            //   (iii) SYNCHRONOUS, not spawned on a thread: four HKCU value writes on the
+            //         worst-case path is sub-millisecond, a thread would add a handle whose
+            //         termination then has to be reasoned about against this shell's exit
+            //         contract for no measurable gain, and a deep link arriving moments after
+            //         launch benefits from the repair having already finished rather than
+            //         racing it.
+            // `app.config().identifier` is read here rather than hardcoded so the written
+            // `URL:<id> protocol` value can never drift from `tauri.conf.json`.
+            #[cfg(windows)]
+            repair_windows_gamelib_protocol_registration(&app.config().identifier);
 
             app.manage(state);
 
