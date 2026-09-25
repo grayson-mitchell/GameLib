@@ -8635,7 +8635,9 @@ fn create_single_instance_pipe_instance(
 /// named-mutex single-instance implementation (including `tauri-plugin-single-instance`'s own),
 /// not something this design introduces -- a denial-of-service against availability, not a
 /// confidentiality/integrity issue; fail-open does not help here, because the attacker IS holding
-/// the mutex successfully, not causing an error.
+/// the mutex successfully, not causing an error. The pipe has a sibling residual in the same
+/// class, after the accept loop gives up: see the 46-REVIEW WR-02 note inside
+/// `run_windows_single_instance_accept_loop`.
 ///
 /// 46-RESEARCH.md Q8's shared-with-Unix residual, recorded here rather than fixed: the mutex is
 /// released (self-cleaning, near-instantaneous on process exit) before `shutdown_child()` finishes
@@ -8947,7 +8949,25 @@ fn run_windows_single_instance_accept_loop(
                     "[shell] WARN: single-instance ConnectNamedPipe failed: {}",
                     std::io::Error::from_raw_os_error(last_error as i32)
                 );
-                drop(current);
+                // 46-REVIEW WR-02: the replacement is created BEFORE the failed instance is
+                // released, never after. Dropping first could leave the pipe name with no
+                // instance at all for a moment, and a same-user process that created an
+                // instance in that gap would be JOINED, not detected -- replacements are created
+                // with `first=false`, so `FILE_FLAG_FIRST_PIPE_INSTANCE` cannot catch it here.
+                // Holding the failed handle until the replacement exists keeps the name
+                // continuously claimed by this process. `current = replacement` drops the old
+                // handle only after the new one is live.
+                //
+                // Residual, accepted in the same class as T-46-03 (see
+                // `acquire_single_instance_windows`): when a replacement CANNOT be created, the
+                // failed instance is released as this function returns, and once no other
+                // instance of it remains open the pipe name is unclaimed for the rest of the
+                // session (the same holds for the terminal branch below). A later same-user instance of that
+                // name is not rejected by the secondary's owner-SID check (T-46-01) -- it has
+                // the same owner SID -- so it would receive the secondary's payload. That is
+                // availability only, inside the per-user trust boundary: a same-user process can
+                // already act as the user directly, and a different-user squatter is still
+                // rejected by T-46-01 before any byte is written.
                 match create_single_instance_pipe_instance(&pipe_name, &sddl, false) {
                     Ok(replacement) => {
                         current = replacement;
