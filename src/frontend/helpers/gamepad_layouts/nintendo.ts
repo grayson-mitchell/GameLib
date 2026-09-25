@@ -193,9 +193,11 @@ const NON_STANDARD_HAT_AXIS = 9
 // NOT -- that convention predicts 1.28571, the measured value is 3.28571.
 // This function uses the MEASURED value: a constant of 1.28571 would encode
 // a phantom d-pad direction at rest.
-// `checkN64Clone1` below uses DIFFERENT constants for a DIFFERENT device, and
-// its own comment and code already disagree with each other -- do not copy
-// that row here, and this function does not change it.
+// `checkN64Clone1` below uses DIFFERENT constants for a DIFFERENT device,
+// deliberately kept as a separate table rather than routed through this
+// helper -- see the rationale written above its four `checkAction` calls. Do
+// not copy that row here, and this function's behaviour is unchanged by
+// that fix.
 function nintendoHatDirection(
   hatValue: number
 ): 'up' | 'down' | 'left' | 'right' | null {
@@ -337,10 +339,28 @@ export function checkN64Clone1(
   // etc ...
   const dPadVal = Math.round(dPadAxis * 10)
 
+  // Each value below is the comment table above multiplied by 10 and
+  // rounded, per this function's own `dPadVal` at :338 -- cardinals only.
+  // The four diagonals and any rest value deliberately match nothing, for
+  // the same reason `checkNintendo`'s non-standard arm gives at :283-285: a
+  // diagonal firing both of its components would move spatial navigation
+  // twice in one frame.
+  //
+  // This function does NOT route through `nintendoHatDirection` above, even
+  // though that helper implements the same four cardinals with the same
+  // rounding and would be behaviourally equivalent here. That helper's
+  // comment is a MEASUREMENT RECORD for one specific device (PowerA
+  // 20d6/a720, 2026-09-23) whose measured NEUTRAL diverged from the generic
+  // convention it otherwise matched; this table is inherited and UNMEASURED
+  // on Vendor 0079 Product 0006 hardware. Two devices, two
+  // independently-sourced tables -- the same rule this file already states
+  // at :154-158 about not borrowing `checkGamecube`'s axis row, which was
+  // live-FALSIFIED for the PowerA pad. Sharing the helper would make one
+  // device's measurement the other's contract.
   checkAction('padUp', dPadVal === -10, controllerIndex)
-  checkAction('padDown', dPadVal === -1, controllerIndex)
+  checkAction('padDown', dPadVal === 1, controllerIndex)
   checkAction('padLeft', dPadVal === 7, controllerIndex)
-  checkAction('padRight', dPadVal === 4, controllerIndex)
+  checkAction('padRight', dPadVal === -4, controllerIndex)
   checkAction('leftStickLeft', axisX < -0.5, controllerIndex)
   checkAction('leftStickRight', axisX > 0.5, controllerIndex)
   checkAction('leftStickUp', axisY < -0.5, controllerIndex)
