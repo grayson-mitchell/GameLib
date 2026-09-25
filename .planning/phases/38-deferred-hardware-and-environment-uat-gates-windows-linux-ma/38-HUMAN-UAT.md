@@ -3,22 +3,25 @@ status: false
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 source: [38-VERIFICATION.md, 34.1-HUMAN-UAT.md items 1a and 7, 34.10-VERIFICATION.md deferred[0]]
 created: 2026-08-22
-updated: 2026-09-25
+updated: 2026-09-26
 sessions:
   - "Session 1 -- 2026-09-23, Windows 11, tauri dev build `6ad1d7cd9` -- 38-S06 PASS; 38-S08 FAIL row 4; four new defects filed; controller leg not run (blocking defect fixed afterward)"
   - "Sitting 2 -- 2026-09-23, Windows 11, tauri dev build `2cf170c14` -- 38-S08 re-scored PASS on all four checks"
   - "Sitting 3 -- 2026-09-25, Windows 11, tauri dev build `cdf07ee95`/`959e5c01b` -- eight controller items (38-C01a, 38-C01b, 38-C02, 38-C03, 38-C04a, 38-C05, 38-C06, 38-C08) all discharged PASS"
+  - "Sitting 4 -- 2026-09-26, Windows 11, tauri dev (debug build) -- 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision"
 ---
 
 ## Current Test
 
-[Three sittings held: sitting 1 (2026-09-23), sitting 2 (2026-09-23, a re-score), and Sitting 3
+[Four sittings held: sitting 1 (2026-09-23), sitting 2 (2026-09-23, a re-score), Sitting 3
 (2026-09-25), which discharged all eight surviving controller items — 38-C01a, 38-C01b, 38-C02,
-38-C03, 38-C04a, 38-C05, 38-C06, 38-C08 — as PASS. See the "## Sitting 3" section below for the
-artifacts. `38-VERIFICATION.md` remains authoritative: as of 2026-09-25 it holds 16 open items, 10
-discharged, 10 retired. The "6 items seeded, 0 discharged" figure this paragraph used to carry was
-already stale before this reconciliation, for reasons unrelated to this sitting — see the
-`## Retired` section's note on that same staleness.]
+38-C03, 38-C04a, 38-C05, 38-C06, 38-C08 — as PASS, and Sitting 4 (2026-09-26), which discharged the
+three Windows sitting items — 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision.
+See the "## Sitting 4" section below for the artifacts. `38-VERIFICATION.md` remains authoritative:
+as of 2026-09-26 it holds 13 open items, 13 discharged, 10 retired. The "6 items seeded, 0
+discharged" figure this paragraph used to carry was already stale before this reconciliation, for
+reasons unrelated to any of these sittings — see the `## Retired` section's note on that same
+staleness.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -419,3 +422,56 @@ because the operator could not visually confirm it. Two defects the operator sur
 sitting — controller focus having no perceptible visual affordance, and a mouse-highlighted card
 not conferring real DOM focus — are filed separately as pending todos (see Task 4 of quick
 `260925-r8j`) and are NOT resolved by any PASS recorded here.
+
+## Sitting 4 — 2026-09-26, Windows 11, `tauri dev`
+
+**Conditions.** Windows 11, `tauri dev`, DEBUG build. Say "debug build" explicitly — it is what
+makes `38-W04`/`38-W05` (which need a CI-produced NSIS/AppImage artifact) still un-runnable while
+`38-W01` could discharge here.
+
+**`38-W01` — PASS.** All four custom-titlebar window operations (minimize / maximize / restore /
+close) with framelessWindow ON, each driving the real OS window exactly as the equivalent native
+title-bar button would. FIRST LIVE CONFIRMATION after five sessions of static-only evidence (plan
+34.1-09 + `windowControlsPlacement.test.ts`).
+
+**`38-W02` — PASS, all three legs.** (1) the swap is real and IMMEDIATE on toggle, no restart,
+beating the item's "~500ms" bar; (2) black glyph against a LIGHT taskbar reads as a cat (Windows
+switched to Light mode, toggle ON); (3) white glyph against a DARK taskbar reads as a cat (back to
+Dark mode, toggle OFF). Each variant judged against the taskbar it was designed for. Record that
+"dark glyph is hard to read on a dark taskbar", observed mid-sitting, is CORRECT behaviour and not
+a failure — same class as the item's own `watch_out`. Record that this is the first live
+confirmation `darkTrayIcon` does anything at all, per the item's `prior_state`.
+
+**`38-W03` — FAIL, accepted.**
+
+    [shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true sheet_presented=false
+    [shell] humble_login_open: title change applied len=22
+
+The bar read `https://www.humblebundle.com` and never became
+`https://www.humblebundle.com — Humble Bundle - Log In`; the hook FIRED (`len=22`), which is
+corroboration and not proof because the title string is never logged (T-34.4.1-106); root cause is
+the `on_page_load` origin-only reset at `main.rs:6491`, reached by elimination across the four
+title-setting sites, with THE EVENT ORDERING INFERRED, NOT OBSERVED, because that closure is
+macOS-gated-silent; operator accepted it as a deliberate deviation from WR-07's letter. See
+`38-W03`'s discharged entry in `38-VERIFICATION.md` for the full record rather than duplicating all
+seven components here.
+
+**THE OBSERVATION TRAP, recorded so the next sitting does not repeat it.** The full-colour cat on
+the Windows TASKBAR BUTTON is the APPLICATION icon and is NOT the tray glyph. The tray glyph lives
+in the notification area, which Windows 11 hides behind the `^` overflow chevron by default. The
+monochrome pair is proven by `src/backend/__tests__/trayIconAssets.test.ts:119-137`, which decodes
+pixels and asserts `isUniformFill(dark, 0)` (:125) and `isUniformFill(light, 255)` (:131) at
+1x/2x/3x — so a coloured tray image is NOT REACHABLE from `tray_image()` at all. Keep this even
+though `38-W02` passed: it is what delayed the score, which makes it MORE valuable as a record, not
+less.
+
+**Honest-limits paragraph.** `38-W03`'s root cause is an inference from source, not a measurement;
+no instrument exists on Windows for that code path. `38-W01` and `38-W02`'s element-level
+observations are operator-reported (there is no log line for a window-manager action or a tray
+repaint) — what is machine-side is the `[shell]` scrollback for `38-W03` and the pixel assertions
+in `trayIconAssets.test.ts` for `38-W02`'s artwork premise, and neither substitutes for the
+operator's look. Two todos were filed from this sitting —
+`.planning/todos/pending/2026-09-26-login-window-on-page-load-overwrites-the-composed-title.md`
+and
+`.planning/todos/pending/2026-09-26-tray-glyph-variant-selection-is-manual-and-theme-blind.md` —
+and neither is resolved by any PASS recorded here.
