@@ -600,6 +600,156 @@ describe('helpers/gamepad: Nintendo layout routing, right stick (measured PowerA
   // plan's instruction.
 })
 
+/**
+ * checkN64Clone1 hat-axis coverage (Generic USB Joystick, Vendor 0079
+ * Product 0006), closing
+ * .planning/todos/pending/2026-09-24-checkn64clone1-dpad-code-contradicts-its-own-comment.md.
+ *
+ * WHAT THESE CASES DO AND DO NOT PROVE: they pin `checkN64Clone1`'s code
+ * (nintendo.ts:299-352) against the convention its OWN comment table
+ * (nintendo.ts:323-337) documents -- which is the entire content of the todo
+ * above. They do NOT confirm that real Vendor 0079 Product 0006 hardware
+ * emits these values -- that table is inherited and UNMEASURED on any pad
+ * available here. The convention itself was measured live on a DIFFERENT pad
+ * (PowerA, 2026-09-23, quick-260923-qe5's `nintendoHatDirection` cases above)
+ * and every cardinal matched, which is the strongest evidence available and
+ * is not the same as a measurement of this device.
+ */
+describe('helpers/gamepad: N64-clone layout routing (checkN64Clone1, hat axis)', () => {
+  afterEach(cleanupGlobals)
+
+  // CONSTRUCTED to satisfy gamepad.ts:575's `/0079.*0006/i` dispatch regex --
+  // NOT measured off hardware. No Vendor 0079 Product 0006 pad exists on this
+  // machine, which is why the todo this plan closes is `ready: code`.
+  const N64_CLONE_ID = 'USB Gamepad (Vendor: 0079 Product: 0006)'
+
+  // From checkN64Clone1's own `dPadAxis = axes[9]` (nintendo.ts:321).
+  const N64_HAT_AXIS = 9
+
+  // RAW table values (nintendo.ts:323-337), not the rounded ones -- each case
+  // must exercise the `Math.round(v * 10)` transform at nintendo.ts:338
+  // rather than bypassing it.
+  const N64_HAT_UP = -1
+  const N64_HAT_RIGHT = -0.42857
+  const N64_HAT_DOWN = 0.14286
+  const N64_HAT_LEFT = 0.71429
+  const N64_HAT_DOWN_RIGHT = -0.14286
+  const N64_HAT_DOWN_LEFT = 0.42857
+
+  // buttonCount 10: checkN64Clone1 reads `B = buttons[8]` UNGUARDED
+  // (`B.pressed`, not `B?.pressed`) -- a shorter array throws into
+  // gamepad.ts's swallowing catch, which would make every `not.toContain`
+  // assertion below pass vacuously. axisCount 10: the hat lives at axes[9].
+  // hatAxis/hatNeutral are deliberately OMITTED from this bag: this pad's
+  // resting hat value has never been measured. `makePad` would seed the hat
+  // with `hatNeutral`'s default `0`, and `0` appears nowhere in the comment
+  // table -- a "no d-pad action at rest" case would assert against a harness
+  // default dressed up as a device fact, green both pre- and post-fix,
+  // proving nothing. Mirrors the precedent at case (G) above (:592-600),
+  // deliberately not written for the same reason. The hat is driven via
+  // `moveAxis` (explicit axis index) rather than `moveHat`, so
+  // `moveHat`'s `opts.hatAxis` requirement is never triggered.
+  const N64_CLONE: PadOptions = { buttonCount: 10, axisCount: 10 }
+
+  it('dispatches padDown from the hat axis (DOWN)', () => {
+    // Pre-fix: checkN64Clone1 compares padDown against -1 (the table's
+    // DOWN-RIGHT row), so this cardinal's raw value 0.14286 -> rounded 1
+    // dispatches nothing at all.
+    const actions = moveAxis(
+      N64_CLONE_ID,
+      N64_HAT_AXIS,
+      N64_HAT_DOWN,
+      N64_CLONE
+    )
+    expect(actions).toContain('padDown')
+    expect(actions).not.toContain('padUp')
+    expect(actions).not.toContain('padLeft')
+    expect(actions).not.toContain('padRight')
+  })
+
+  it('dispatches padRight from the hat axis (RIGHT)', () => {
+    // Pre-fix: checkN64Clone1 compares padRight against 4 (the table's
+    // DOWN-LEFT row), so this cardinal's raw value -0.42857 -> rounded -4
+    // dispatches nothing at all.
+    const actions = moveAxis(
+      N64_CLONE_ID,
+      N64_HAT_AXIS,
+      N64_HAT_RIGHT,
+      N64_CLONE
+    )
+    expect(actions).toContain('padRight')
+    expect(actions).not.toContain('padUp')
+    expect(actions).not.toContain('padDown')
+    expect(actions).not.toContain('padLeft')
+  })
+
+  it('dispatches no d-pad action on the DOWN-RIGHT diagonal', () => {
+    // Pre-fix: this diagonal's rounded value -1 is what padDown wrongly
+    // tests against, so padDown incorrectly fires here.
+    const actions = moveAxis(
+      N64_CLONE_ID,
+      N64_HAT_AXIS,
+      N64_HAT_DOWN_RIGHT,
+      N64_CLONE
+    )
+    expect(actions).not.toContain('padDown')
+    expect(actions).not.toContain('padUp')
+    expect(actions).not.toContain('padLeft')
+    expect(actions).not.toContain('padRight')
+  })
+
+  it('dispatches no d-pad action on the DOWN-LEFT diagonal', () => {
+    // Pre-fix: this diagonal's rounded value 4 is what padRight wrongly
+    // tests against, so padRight incorrectly fires here.
+    const actions = moveAxis(
+      N64_CLONE_ID,
+      N64_HAT_AXIS,
+      N64_HAT_DOWN_LEFT,
+      N64_CLONE
+    )
+    expect(actions).not.toContain('padRight')
+    expect(actions).not.toContain('padUp')
+    expect(actions).not.toContain('padDown')
+    expect(actions).not.toContain('padLeft')
+  })
+
+  // GREEN pre-fix BY DESIGN -- contract preservation, NOT RED evidence. UP
+  // already matches the table (`-10`) before this plan's fix.
+  it('dispatches padUp from the hat axis (UP)', () => {
+    const actions = moveAxis(N64_CLONE_ID, N64_HAT_AXIS, N64_HAT_UP, N64_CLONE)
+    expect(actions).toContain('padUp')
+    expect(actions).not.toContain('padDown')
+    expect(actions).not.toContain('padLeft')
+    expect(actions).not.toContain('padRight')
+  })
+
+  // GREEN pre-fix BY DESIGN -- contract preservation, NOT RED evidence. LEFT
+  // already matches the table (`7`) before this plan's fix.
+  it('dispatches padLeft from the hat axis (LEFT)', () => {
+    const actions = moveAxis(
+      N64_CLONE_ID,
+      N64_HAT_AXIS,
+      N64_HAT_LEFT,
+      N64_CLONE
+    )
+    expect(actions).toContain('padLeft')
+    expect(actions).not.toContain('padUp')
+    expect(actions).not.toContain('padDown')
+    expect(actions).not.toContain('padRight')
+  })
+
+  // GREEN pre-fix BY DESIGN -- contract preservation, NOT RED evidence. This
+  // is the NON-VACUITY PROOF, not decoration: checkN64Clone1 reads
+  // `buttons[8].pressed` unguarded, so a mis-sized pad makes the function
+  // throw into gamepad.ts's swallowing catch, and all four `not.toContain`
+  // assertions above would then pass for entirely the wrong reason. This
+  // case proves the pad is sized correctly and the cases above are reaching
+  // checkN64Clone1 at all.
+  it('routing positive control: buttons[8] reaches back', () => {
+    expect(pressButton(N64_CLONE_ID, 8, N64_CLONE)).toContain('back')
+  })
+})
+
 // Held in module scope so the harness helper names cannot collide with the
 // sibling gamepad suites -- see gamepadRepeatTiming.test.ts.
 export {}
