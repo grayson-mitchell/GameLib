@@ -125,8 +125,9 @@ describe('buildMuiTheme', () => {
 describe('MUI disabled-key colour-maths ratchet (Task 2)', () => {
   const muiPackageJsonPath = require.resolve('@mui/material/package.json')
   const muiRoot = dirname(muiPackageJsonPath)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const muiVersion: string = require(muiPackageJsonPath).version
+  const muiVersion = (
+    JSON.parse(readFileSync(muiPackageJsonPath, 'utf-8')) as { version: string }
+  ).version
 
   /** Top-level component directories only -- skip umd/, legacy/, modern/, node/ and esm duplicates. */
   function collectComponentJsFiles(): string[] {
