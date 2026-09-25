@@ -14,7 +14,8 @@ import {
   getGameLibLoginStore,
   getKeyTypePresentation,
   HumbleKeyTypePresentation,
-  HumbleStoreLogoId
+  HumbleStoreLogoId,
+  isKeylessKeyType
 } from 'common/humble/keyTypePresentation'
 import { isGiftableSpare } from 'common/humble/viewFilters'
 import { STATE_LABEL_KEYS } from '../../stateLabels'
@@ -362,6 +363,13 @@ export default function HumbleKeyRow({
   // than reusing `claimAction.onClaim`'s reveal-and-redeem call.
   const isGogKeyless = humbleKey.platform === 'gog_keyless'
 
+  // 260925-j58: closed-set predicate over all three direct-redeem
+  // key_types (gog_keyless / epic_keyless / origin_keyless), used by the
+  // revealed arm below to withhold the code-assuming Finish-activation
+  // button. Deliberately broader than `isGogKeyless` above, which answers
+  // a different, narrower question (which CLAIM handler to wire).
+  const isKeyless = isKeylessKeyType(humbleKey.platform)
+
   // D-42-03: table-driven store indicator, replacing the raw lowercase
   // key_type token ("steam · Humble RPG Bundle") with a proper display name
   // plus logo (when one exists). Resolved once here, near the other derived
@@ -470,42 +478,78 @@ export default function HumbleKeyRow({
         </button>
       </span>
     ) : claimAction.revealedAt !== null || humbleKey.state === 'REVEALED' ? (
-      // CR-01 (14-REVIEW re-review): the Finish/Claim decision is gated
-      // on server truth (`state === 'REVEALED'`), not solely on the
-      // local reveal annotation — a key revealed on Humble's WEBSITE
-      // carries redeemed_key_val (classifies REVEALED) but has no
-      // humbleRevealedStore record, so `revealedAt` is null. Rendering
-      // "Claim" for it is a dead end: the backend refuses to reveal any
-      // non-UNREVEALED key (D-66 never-re-reveal). The "Revealed {date}"
-      // annotation still renders only when the local timestamp exists.
-      <span className="humbleKeyClaimGroup">
-        {claimAction.revealedAt !== null && (
+      isKeyless ? (
+        // 260925-j58: a code-assuming affordance is never offered to a
+        // keyless entitlement. "Finish activation" routes to
+        // openWizard(key, 'finish') — the reveal/redeem wizard — and there
+        // is no code for it to work on: Humble redeems a direct-redeem
+        // entitlement straight to the linked store account
+        // (classify.ts:174-181). Same rule as T-UIC-01's omission from
+        // REDEEM_URL_BUILDERS and isGiftable's exclusion
+        // (viewFilters.ts:142); third site.
+        //
+        // TWO CONSTRAINTS A LATER READER MUST NOT "SIMPLIFY" AWAY:
+        //
+        // 1. The annotation is not decoration, and a BARE SUPPRESSION IS
+        //    WRONG. For a keyless key `claimAction.revealedAt` is always
+        //    null — no local humbleRevealedStore record can exist for an
+        //    entitlement that was never revealed — so the sibling arm's
+        //    "Revealed {date}" annotation renders nothing. Hiding only the
+        //    button would leave an EMPTY KEY cell and delete the row's
+        //    only information. That is why this branch carries its own
+        //    copy.
+        // 2. Namechecking the store is correct HERE, unlike D-43-11's
+        //    "Claim on Humble". That sibling string names the destination
+        //    the CLICK reaches, and the click opens Humble's embed, not
+        //    GOG's site. This string names where the entitlement actually
+        //    LANDED. Different question, different correct answer.
+        <span className="humbleKeyClaimGroup">
           <span className="humbleKeyClaimAnnotation">
             {tGamelib(
-              'gamelib:humbleKeys.revealedAnnotation',
-              'Revealed {{date}}',
-              {
-                date: new Date(claimAction.revealedAt).toLocaleDateString()
-              }
+              'gamelib:humbleKeys.keylessClaimed',
+              'Claimed on {{store}} — no key needed',
+              { store: platformDisplay.name }
             )}
           </span>
-        )}
-        <button
-          type="button"
-          className="humbleKeyGiftButton"
-          onClick={claimAction.onFinish}
-        >
-          {/* 260823-op3: a REVEALED Steam key still activates in one
+        </span>
+      ) : (
+        // CR-01 (14-REVIEW re-review): the Finish/Claim decision is gated
+        // on server truth (`state === 'REVEALED'`), not solely on the
+        // local reveal annotation — a key revealed on Humble's WEBSITE
+        // carries redeemed_key_val (classifies REVEALED) but has no
+        // humbleRevealedStore record, so `revealedAt` is null. Rendering
+        // "Claim" for it is a dead end: the backend refuses to reveal any
+        // non-UNREVEALED key (D-66 never-re-reveal). The "Revealed {date}"
+        // annotation still renders only when the local timestamp exists.
+        <span className="humbleKeyClaimGroup">
+          {claimAction.revealedAt !== null && (
+            <span className="humbleKeyClaimAnnotation">
+              {tGamelib(
+                'gamelib:humbleKeys.revealedAnnotation',
+                'Revealed {{date}}',
+                {
+                  date: new Date(claimAction.revealedAt).toLocaleDateString()
+                }
+              )}
+            </span>
+          )}
+          <button
+            type="button"
+            className="humbleKeyGiftButton"
+            onClick={claimAction.onFinish}
+          >
+            {/* 260823-op3: a REVEALED Steam key still activates in one
               click (the wizard reads the stored value instead of
               re-revealing), so it gets the same verb as a fresh one. */}
-          {isSteam
-            ? tGamelib('gamelib:humbleKeys.activate', 'Activate')
-            : tGamelib(
-                'gamelib:humbleKeys.finishActivation',
-                'Finish activation'
-              )}
-        </button>
-      </span>
+            {isSteam
+              ? tGamelib('gamelib:humbleKeys.activate', 'Activate')
+              : tGamelib(
+                  'gamelib:humbleKeys.finishActivation',
+                  'Finish activation'
+                )}
+          </button>
+        </span>
+      )
     ) : claimAction.keyindexResolved ? (
       <button
         type="button"
