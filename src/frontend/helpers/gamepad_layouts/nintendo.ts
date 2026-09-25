@@ -319,10 +319,11 @@ export function checkNintendo(
     // the "probably matches the shoulders" prior this time by measurement,
     // not by deduction. NOTHING in this repo dispatches these indices on any
     // mapping: see
-    // .planning/todos/pending/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md,
+    // .planning/todos/completed/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md,
     // which independently established (by reading source, not by this
     // measurement) that no layout wires buttons[10]/[11] to any action, and
-    // that measuring the index does not by itself make that dischargeable.
+    // whose UAT expectation (38-C04b) was retired on 2026-09-25 as a
+    // misdescription (quick-260925-oyr).
     // This is a measurement record only -- do not add a `checkAction` call
     // here without a separate, deliberate decision to implement stick
     // clicks.

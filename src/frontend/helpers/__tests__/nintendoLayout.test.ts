@@ -536,7 +536,7 @@ describe('helpers/gamepad: Nintendo layout routing, non-standard mapping (measur
     // index 11 -- confirming the "probably matches the shoulders" prior by
     // measurement. Nothing in this repo dispatches these indices on any
     // mapping; see
-    // .planning/todos/pending/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md.
+    // .planning/todos/completed/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md.
     // This pins today's deliberate non-dispatch so a future accidental
     // wiring is caught.
     expect(pressButton(POWERA_ID, 10, NON_STANDARD)).toHaveLength(0)

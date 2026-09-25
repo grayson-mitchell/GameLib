@@ -77,3 +77,26 @@ distinct, unscoped feature addition, which this todo deliberately does not do.
 
 Filing this finding is the whole deliverable. Wiring `buttons[10]`/`buttons[11]` to an action is
 out of scope for this todo.
+
+## Resolution
+
+- **Date:** 2026-09-25
+- **resolved_by:** quick 260925-oyr
+- **Disposition:** RETIRED, not implemented.
+
+The operator chose "Retire the expectation" over "Implement stick clicks" and "Leave it open". The
+34.1 item-7 clause ("Left/right stick clicks (the click-equivalents) activate the element currently
+under focus or cursor") was a MISDESCRIPTION, not a deferred feature: A / `mainAction` already
+activates the focused element, and stick clicks were never a feature in this codebase.
+
+`38-C04b` moved from `human_verification` to `human_verification_retired` in `38-VERIFICATION.md`
+(retired, NOT a pass and NOT a discharge -- nothing was observed). Measured at the tool:
+`gsd-sdk query audit-uat` moved 25 -> 24 for Phase 38 and 50 -> 49 in total. This SUPERSEDES the
+decision recorded by quick `260925-nxt` to keep the item open in `human_verification` so the unmet
+expectation stayed visible to `audit-uat`.
+
+NO `src/` executable code changed (two comments were repointed at this file's new `completed/`
+path), and this todo's "Do NOT implement stick clicks" ruling stands. The `nintendoLayout.test.ts`
+"stick clicks (L3/R3) dispatch nothing" test continues to pin the non-dispatch, so any future
+stick-click wiring is a deliberate new feature that needs a new UAT item, not a revival of
+`38-C04b`.
