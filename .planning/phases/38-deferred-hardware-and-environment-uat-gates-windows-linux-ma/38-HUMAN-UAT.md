@@ -3,7 +3,7 @@ status: not_started
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 source: [38-VERIFICATION.md, 34.1-HUMAN-UAT.md items 1a and 7, 34.10-VERIFICATION.md deferred[0]]
 created: 2026-08-22
-updated: 2026-08-22
+updated: 2026-09-25
 sessions: []
 ---
 
@@ -22,7 +22,7 @@ Two independent sittings, not one. They are grouped in a single phase because bo
 run on this machine", but they unblock separately:
 
 - **38-W01** needs a Windows or Linux machine, and needs Phase 34's W/L builds to exist first.
-- **38-C01 … 38-C05** need only a game controller. No phase dependency. These can run today if
+- **38-C01a … 38-C05** need only a game controller. No phase dependency. These can run today if
   the hardware appears, and should be run in **one sitting** — all five exercise the same
   module, and no phase since 34.1 has had a controller available.
 
@@ -98,26 +98,48 @@ neither Steam library carries a per-user ACE. Filed as
 4. `2026-09-23-iswritable-windows-only-true-inside-the-user-profile.md` — the cause of the
    `38-S08` row-4 FAIL above, with a wider blast radius than the item.
 
-**CONTROLLER LEG NOT RUN — and the reason is a defect, not an absence of hardware.** The operator
-has a PowerA Advantage Wired Controller for Nintendo Switch 2. Detection works correctly
-(`isNintendoControllerId` TRUE, `detectControllerLayout` -> `'nintendo'`), but the pad reports
-`mapping: ""` and `checkNintendo` assumes Chromium's standard POSITION mapping without ever
-checking it. Measured result: face buttons arrive as `[Y, B, A, X]`, so physical A LAUNCHES the
-game while the hint bar reads "A: Game details", and the d-pad is dead (hat axis, not
-`buttons[12-15]`).
+**CONTROLLER LEG NOT RUN AT SITTING 1 — the blocking defect is now FIXED, and the leg is RUNNABLE,
+not yet a result.** The operator has a PowerA Advantage Wired Controller for Nintendo Switch 2.
+Detection works correctly (`isNintendoControllerId` TRUE, `detectControllerLayout` -> `'nintendo'`),
+but the pad reports `mapping: ""` and, AT SITTING 1, `checkNintendo` assumed Chromium's standard
+POSITION mapping without ever checking it. Measured result AT SITTING 1 (2026-09-23, preserved as
+historical record): face buttons arrived as `[Y, B, A, X]`, so physical A LAUNCHED the game while
+the hint bar read "A: Game details", and the d-pad was dead (hat axis, not `buttons[12-15]`).
 
-Disposition of the seven surviving controller items, to be applied at the ledger:
+That defect is FIXED, landed across quicks `260923-qe5`, `260925-9de`, `260925-m5i` and
+`260925-ms5`: `checkNintendo` now READS the reported `mapping` instead of assuming standard
+positions, the d-pad hat axis is handled (`nintendoHatDirection`, `axes[NON_STANDARD_HAT_AXIS]`),
+the stick axes are resolved from the mapping too, and actions bind to the PRINTED LABEL rather than
+a fixed index. The other three sitting-1 defects — the install-options caret, library card art, and
+`isWritable_windows` — are likewise resolved and filed in `.planning/todos/completed/`. This makes
+the controller leg RUNNABLE at the next sitting; it is not itself a result, and no item above is
+scored by this paragraph.
 
-- `38-C01` — its text names "the d-pad AND the left stick". Stick half passes, d-pad half FAILS.
-  Compound; per relocation rule (4) it must be SPLIT before either half is recorded.
-- `38-C03`, `38-C04` — UNSCOREABLE on this pad. Both depend on indices now known shifted
-  (`buttons[4]/[5]` shoulders, `buttons[10]/[11]` stick clicks). A result would measure the pad's
-  HID quirk, not the item's subject.
-- `38-C08` — UNSCOREABLE for a SECOND, independent reason: the caret it asks about cannot be
-  reliably opened by mouse, let alone by controller.
-- `38-C02`, `38-C05`, `38-C06` — still scoreable; they ride on `axes[0-3]`, which work. `38-C06`
-  carries a caveat: it exercises the tier-2 filter dropdowns, which share the `Dropdown` primitive
-  implicated in defect 2.
+Disposition of the nine surviving controller items, to be applied at the ledger (eight are
+dischargeable in one sitting; `38-C04b` is the exception):
+
+- `38-C01a` (d-pad) and `38-C01b` (left stick) — the split is DONE at the ledger, not merely "must
+  be split". `38-C01a`'s sitting-1 FAIL is SUPERSEDED: it was measured against code that read only
+  `buttons[12-15]`, and the hat-axis branch (`nintendoHatDirection`, `axes[NON_STANDARD_HAT_AXIS]`)
+  has since been added. `38-C01b`'s sitting-1 PASS is NOT DISCHARGEABLE: it was observed while this
+  half was compounded with the d-pad half, and a compound item resolves to a single pass/fail. Both
+  halves need a fresh run.
+- `38-C03` — the "still unscoreable-as-of-sitting-1" wording is now WRONG. The shifted-index defect
+  that made it unscoreable (the pad's face-button HID order) is fixed across quicks `260923-qe5`,
+  `260925-9de`, `260925-m5i` and `260925-ms5`, so it is scoreable at the next sitting.
+- `38-C04a` (B/back) — scoreable at the next sitting, for the same reason as `38-C03`.
+- `38-C04b` (stick clicks) — OPEN as an unmet expectation, NOT scoreable and NOT retired. No layout
+  in this repo dispatches `buttons[10]`/`buttons[11]` to any action, on any mapping. The indices WERE
+  measured live on this pad (L3 = `buttons[10]`, R3 = `buttons[11]`, quick `260925-ms5`, with a
+  positive control), but measuring an index does not create a dispatch to attach it to, so the item
+  did not become dischargeable. It is deliberately kept in `human_verification` — per the user's
+  locked decision — so this unmet expectation stays visible to `audit-uat` rather than disappearing.
+  See `.planning/todos/pending/2026-09-25-no-layout-dispatches-l3-r3-stick-clicks.md`.
+- `38-C08` — unchanged in substance, but of its two independent sitting-1 blockers, BOTH are now
+  fixed: (1) the shifted-index defect is fixed (same fix as `38-C03`/`38-C04a`); (2) the caret being
+  ~90% dead to a pointer is ALSO fixed — the install-caret todo is in `.planning/todos/completed/`.
+  Scoreable at the next sitting.
+- `38-C02`, `38-C05`, `38-C06` — still scoreable, unchanged.
 
 **`38-S14` will not fully close on this machine.** Sub-case (b) needs "native installs ON with
 <=1 library" and the operator's `libraryfolders.vdf` registers TWO real libraries.
