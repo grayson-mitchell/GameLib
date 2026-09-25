@@ -5569,6 +5569,29 @@ Plans:
 - [x] 46-06-PLAN.md — Wave 1 (gap): Windows raise fix (`unminimize()` in the sentinel arm + receipt/result logging, owner-verified `AllowSetForegroundWindow` in the secondary, tray unminimize, macOS-scoped About comment, Linux todo) + RED-proven source gates + debug NSIS rebuild + 46-05-SUMMARY (FAIL, closure moved to 46-07)
 - [ ] 46-07-PLAN.md — Wave 2 (gap), NON-AUTONOMOUS: live re-gate `46-LIVE-GATE-RERUN.md` (P0, Checks 1, 2, 3a terminal, 3b Start menu, 4, 5; S1 tray non-gating) + verdict-gated closure of the todo, U-34.5-18 and REQ-46-10
 
+### Phase 47: Migrate aggregated store search from CheapShark to IsThereAnyDeal
+
+**Goal:** Replace the USD-only CheapShark adapter behind `/store-search` with a localised IsThereAnyDeal provider, so a non-US user sees prices in their own currency on the price-checker the way they already do on the Deals tab. This is **Stage 1** of the store-price direction: one integration buying breadth (34 shops, including the key resellers where the discounts actually are) with no GameLib-owned feed infrastructure. Retires the D-13 debt — `SEARCH_CURRENCY = 'USD'` (`src/backend/storeSearch/cheapshark.ts:29`) and `formatUsdPrice()` (`src/frontend/screens/StoreSearch/helpers.ts`, which hardcodes `$` and would render a GBP price as `$14.99 GBP`).
+
+**Requirements**: TBD — to be minted during `/gsd-plan-phase 47`.
+**Depends on:** Phase 20 (Aggregated Store Search — CheapShark), which minted the provider-neutral `common/types/storeSearch` vocabulary (D-11/D-12/D-13) this phase is the second implementation of. **Not** Phase 46 — `phase.add` fills `Depends on` with the immediately-preceding phase number as a positional guess, and Phase 46 (Windows single-instance guard) is unrelated; corrected by hand at filing time.
+**Plans:** 0 plans
+
+**Research is already complete** — `.planning/quick/260916-gdg-answer-q2-cheapshark-to-itad-migration-cost/260916-gdg-RESEARCH.md` answers `questions.md` Q2 with claims graded MEASURED / SPEC / UNKNOWN. Do not re-derive it; do preserve its grades when quoting.
+
+**In scope:** the ITAD adapter replacing `cheapshark.ts` (search is 2 calls, not 1 — D-12's "cheapest price inline" breaks); batch Steam AppID matching for the owned badge via `POST /lookup/id/shop/61/v1` (**MEASURED** to work with no API key, so it costs nothing against the quota); `countryCode` locale plumbing from settings through IPC into the adapter; real currency formatting (touches the Currency Contract in `20-UI-SPEC.md` and `formatUsdPrice.test.ts`); a persisted cache (ITAD's terms require one; Phase 20 explicitly rejected one, and `CacheStore` registration lives in four mirrored lists); `429`/`Retry-After` handling degrading to a cached price with a visible timestamp rather than an error; `common/discounts/storeMapping` from CheapShark string IDs to ITAD numeric shop IDs (contained — exactly one production importer, verified 2026-09-24); and passing `obj.deal2.url` through **verbatim** (ITAD's terms forbid altering it, including stripping affiliate tags — comment it as contractual, not stylistic, or a later refactor will "clean up" the URL and breach the terms).
+
+**Explicitly OUT of scope:** the `/discounts` screen — it stays GOG-only and locale-correct; an ITAD-backed deals browser is gated on ITAD's written reply about the "MUST NOT build a competition to IsThereAnyDeal" clause. Also out: **Stage 2**, a GameLib-owned affiliate-feed/mirroring service, which needs partner approvals that require traffic this project does not yet have and a server it does not yet run — years out, not a near-term option. Also out: Amazon price coverage (ITAD does not track Amazon; operator decision 2026-09-24 accepts this — Amazon is retained-because-built, not a first-class store).
+
+**Three human gates, one IN FLIGHT — do not plan the key architecture until it lands:**
+
+1. **Register an ITAD app** at `isthereanydeal.com/apps/my/`. Self-service, needs a human account. Unblocks the one remaining **UNKNOWN** in the research: which countries/currencies are actually covered (a 14-country sweep of `/service/shops/v1` returned an identical 34-shop list every time, disproving that endpoint as a coverage measure).
+2. **Email to `api@isthereanydeal.com` — SENT 2026-09-24, out-of-office received, awaiting reply.** It asks three things: whether the competition clause rules out a deals browser; **whether the rate limit follows the API key or the authenticated account**; and whether a partner arrangement on affiliate links is worth discussing. The middle question **determines what this phase builds** — 1000 req/5min is per-key, and a desktop app ships one key in the binary, so the budget is shared across every install. If OAuth moves it to each user's own ITAD account, this phase builds an OAuth flow (and gets `hideOwned`/`wishlistOnly` for free); if not, it builds an embedded key plus hard caching and a raised-limit request. **These are different phases. Plan around the open question rather than guessing it.**
+3. **Decide the shared-key strategy** — raised limit, optional user-supplied key, or a caching proxy. Depends on (2).
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 47 to break down)
+
 ---
 
 ## Parked / Superseded Phases

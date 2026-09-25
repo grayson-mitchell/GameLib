@@ -2,10 +2,10 @@
 created: 2026-08-27T09:32:35.257Z
 title: "Answer Q2 — what a CheapShark → IsThereAnyDeal migration actually costs"
 area: store-search
-status: OPEN
+status: RESOLVED
 severity: minor
 platform: any
-ready: human
+ready: human # MOOT here — the three human gates moved to Phase 47; see Closure
 files:
   - .planning/research/questions.md:59
   - .planning/notes/aggregated-store-search-foundations.md
@@ -77,3 +77,41 @@ findings now bear on it:
   structurally blind to one of GameLib's four stores. Do not let the good news above land
   without this caveat — it is the reason "ITAD subsumes both Heroic feeds" is not the whole
   story.
+
+---
+
+## Closure — 2026-09-24
+
+**Resolved as ANSWERED, not as done-and-dusted.** The todo's title asks what the migration
+*costs*; that is measured and written up, so the title is true at close. The residue is **not**
+discarded — it moved to a phase that owns it.
+
+**Where each piece went:**
+
+| residue | new owner |
+| --- | --- |
+| The migration work itself | **Phase 47** — Migrate aggregated store search from CheapShark to IsThereAnyDeal (Stage 1) |
+| Human gate 1 — register an ITAD app | Phase 47, gate 1 |
+| Human gate 2 — the terms/quota/partner email | Phase 47, gate 2 — **SENT 2026-09-24, out-of-office received, awaiting reply** |
+| Human gate 3 — shared-key strategy | Phase 47, gate 3 (depends on gate 2) |
+| The Discounts-screen question | Phase 47's explicit OUT-of-scope, gated on gate 2's answer |
+| Aggregated multi-provider browse | `.planning/seeds/aggregated-discovery-multi-provider-deals.md`, unchanged and still a seed |
+
+**Nothing here is closed on an assumption.** Gate 2 is in flight, and its answer to "does the
+rate limit follow the key or the authenticated account" determines whether Phase 47 builds an
+embedded key plus caching or a per-user OAuth flow. Phase 47's roadmap entry says so in terms and
+instructs planning to hold the question open rather than guess it.
+
+**One claim in the body above is now known to be too strong** (found 2026-09-24 while scoping the
+phase): the interface-delta section treats `common/discounts/storeMapping` as a cross-surface
+change shared with the Discounts screen. It is not — `grep` for importers of
+`common/discounts/storeMapping` returns exactly one production file, `cheapshark.ts`. An earlier
+count was inflated by `src/backend/wiki_game_info/umu/utils.ts`, which declares a **local variable**
+of the same name and imports nothing. The migration is cheaper on that axis than this file says.
+
+**Two directions the operator settled while scoping** (2026-09-24), recorded so they are not
+re-litigated: ITAD's missing **Amazon** coverage is accepted — Amazon is retained-because-built,
+not a first-class store — and **Stage 2** (GameLib-owned affiliate feeds and the mirroring service
+they require) is explicitly deferred indefinitely, not merely unscheduled. The affiliate-programme
+research behind that call is in the Phase 47 entry and in this session's transcript, not in a
+separate artifact.
