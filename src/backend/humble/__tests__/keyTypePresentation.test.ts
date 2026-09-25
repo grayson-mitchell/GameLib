@@ -13,7 +13,8 @@ import {
   HumbleKeyTypePresentation,
   getGameLibLoginStore,
   getKeyTypePresentation,
-  getRedeemTarget
+  getRedeemTarget,
+  isKeylessKeyType
 } from 'common/humble/keyTypePresentation'
 
 describe('getKeyTypePresentation', () => {
@@ -266,6 +267,60 @@ describe('getGameLibLoginStore (D-43-12/D-43-13, Phase 43 plan 06)', () => {
 
   test('SECURITY PIN (T-43-03): a hostile, URL-shaped key_type cannot reach a fabricated login store', () => {
     expect(getGameLibLoginStore('https://evil.example/steam')).toBeNull()
+  })
+})
+
+describe('isKeylessKeyType (260925-j58)', () => {
+  // Non-vacuity pin: these three are EXACTLY the three `_keyless` members of
+  // KNOWN_GAME_KEY_TYPES (src/backend/humble/classify.ts:183). Asserted one
+  // by one rather than looped, so a predicate that silently narrowed to two
+  // of them cannot hide behind a table this test also owns.
+  test("'gog_keyless' -> true", () => {
+    expect(isKeylessKeyType('gog_keyless')).toBe(true)
+  })
+
+  test("'epic_keyless' -> true", () => {
+    expect(isKeylessKeyType('epic_keyless')).toBe(true)
+  })
+
+  test("'origin_keyless' -> true", () => {
+    expect(isKeylessKeyType('origin_keyless')).toBe(true)
+  })
+
+  test.each([
+    'gog',
+    'epic',
+    'origin',
+    'steam',
+    'uplay',
+    'battlenet',
+    'nintendo_direct',
+    'generic',
+    ''
+  ])('keyed or non-key_type %j -> false', (keyType) => {
+    expect(isKeylessKeyType(keyType)).toBe(false)
+  })
+
+  // CLOSED-SET PROOF. This single assertion is the ONLY thing in this suite
+  // that distinguishes a literal three-member set from an
+  // `endsWith('_keyless')` implementation: every other case above passes
+  // identically under both. A suffix match would admit an unrecognised —
+  // possibly hostile — key_type into a UI branch that SUPPRESSES an
+  // affordance, which is the exact failure the closed-set discipline in
+  // REDEEM_URL_BUILDERS and GAMELIB_LOGIN_STORES exists to prevent.
+  test("CLOSED-SET PROOF: 'foo_keyless' -> false (a suffix match would return true here)", () => {
+    expect(isKeylessKeyType('foo_keyless')).toBe(false)
+  })
+
+  test.each(['GOG_KEYLESS', 'gog_keyless ', ' gog_keyless', 'keyless'])(
+    'near-miss %j -> false',
+    (keyType) => {
+      expect(isKeylessKeyType(keyType)).toBe(false)
+    }
+  )
+
+  test('SECURITY PIN: a hostile, URL-shaped key_type cannot reach the keyless branch', () => {
+    expect(isKeylessKeyType('https://evil.example/gog_keyless')).toBe(false)
   })
 })
 
