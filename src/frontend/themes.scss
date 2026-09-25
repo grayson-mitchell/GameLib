@@ -262,7 +262,10 @@ body.high-contrast {
   --background-darker: var(--background);
   --current-background: var(--body-background);
   --navbar-background: #121212ff;
-  --navbar-active-background: #202020ff;
+  /* Was #202020 -- 1.15:1 against the #121212 panel, i.e. invisible in the
+     one theme that promises contrast. #4a4a4a is 2.1:1 against the panel
+     and keeps the cyan active text at 5.5:1 (white 8.9:1). */
+  --navbar-active-background: #4a4a4a;
   --gradient-body-background: var(--background);
   --input-background: #262937ff;
   --modal-background: var(--background);
