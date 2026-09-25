@@ -1,4 +1,5 @@
 import { HumbleKey, HumbleKeyState } from '../types/humble'
+import { isKeylessKeyType } from './keyTypePresentation'
 import { GENERIC_KEY_PLATFORM } from './genericKeyPlatform'
 
 /**
@@ -139,11 +140,14 @@ export function isGiftableSpare(
  *   2.1), so a REVEALED key cannot be gifted no matter who owns it. Because
  *   `HumbleKeyState` is a single enum, this clause also excludes REDEEMED,
  *   UNREDEEMABLE (expired) and UNPICKED without naming them.
- * - `gog_keyless` is excluded because a keyless entitlement redeems
- *   server-side to the linked GOG account and carries no code to transfer --
- *   the same reason `REDEEM_URL_BUILDERS` (`keyTypePresentation.ts:121-125`)
- *   omits it. Offering "gift" there would promise a hand-off the user cannot
- *   complete.
+ * - every keyless key_type (`isKeylessKeyType`, `keyTypePresentation.ts`) is
+ *   excluded because a direct-redeem entitlement redeems server-side to the
+ *   linked store account and carries no code to transfer --
+ *   `classify.ts:174-181` gives `gog_keyless`, `epic_keyless` and
+ *   `origin_keyless` the identical no-key-code shape, and the same reason
+ *   `REDEEM_URL_BUILDERS` (`keyTypePresentation.ts:121-125`) omits
+ *   `gog_keyless` applies to all three. Offering "gift" there would promise
+ *   a hand-off the user cannot complete.
  *
  * Both predicates take the narrow `Pick` they actually read rather than a
  * whole `HumbleKey`, so `resolveKeyScenario` -- which itself receives only a
@@ -157,5 +161,5 @@ export function isGiftableSpare(
 export function isGiftable(
   key: Pick<HumbleKey, 'state' | 'platform'>
 ): boolean {
-  return key.state === 'UNREVEALED' && key.platform !== 'gog_keyless'
+  return key.state === 'UNREVEALED' && !isKeylessKeyType(key.platform)
 }

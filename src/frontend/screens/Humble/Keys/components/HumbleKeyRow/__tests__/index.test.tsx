@@ -1320,3 +1320,113 @@ describe('gog_keyless KEY destination (REQ-43-24, D-43-11)', () => {
     expect(interactive).toHaveLength(0)
   })
 })
+
+// 260925-kt4 Task 1: `isGiftable` now excludes every keyless key_type, not
+// just `gog_keyless` (D2). This describe pins the TRANSITIVE consequence at
+// the caller chain's far end: `Keys/index.tsx` builds `giftAction` from
+// `isGiftable(key)`, `HumbleKeyRow` derives `hasGiftAction` from whether
+// `giftAction` is defined, and the `gift-only` scenario requires
+// `hasGiftAction`. An owned, UNREVEALED, `epic_keyless` spare therefore
+// loses its full-width gift button -- the same already-accepted loss
+// `gog_keyless` already carried before this change (D4), now widened.
+describe('gift affordance transitively withheld for a keyless spare (260925-kt4 Task 1, D2)', () => {
+  it("resolveKeyScenario is NOT 'gift-only' for an owned, UNREVEALED, exact-match epic_keyless row once hasGiftAction is false", () => {
+    const scenario = resolveKeyScenario({
+      humbleKey: makeHumbleKey({
+        platform: 'epic_keyless',
+        state: 'UNREVEALED',
+        ownedElsewhere: true,
+        matchConfidence: 'exact'
+      }),
+      hasGiftAction: false,
+      hasClaimAction: false,
+      hasSettleAction: false,
+      undoOverride: false,
+      storeLoginConnected: undefined
+    })
+
+    expect(scenario).not.toBe('gift-only')
+  })
+
+  it("non-vacuity control: the identical shape for a keyed 'steam' row WITH hasGiftAction true still resolves 'gift-only'", () => {
+    const scenario = resolveKeyScenario({
+      humbleKey: makeHumbleKey({
+        platform: 'steam',
+        state: 'UNREVEALED',
+        ownedElsewhere: true,
+        matchConfidence: 'exact'
+      }),
+      hasGiftAction: true,
+      hasClaimAction: false,
+      hasSettleAction: false,
+      undoOverride: false,
+      storeLoginConnected: undefined
+    })
+
+    expect(scenario).toBe('gift-only')
+  })
+
+  it('renders no humbleKeyGiftButton for an owned, UNREVEALED, exact-match epic_keyless row when giftAction is undefined', () => {
+    const tree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({
+        platform: 'epic_keyless',
+        state: 'UNREVEALED',
+        ownedElsewhere: true,
+        matchConfidence: 'exact'
+      }),
+      giftAction: undefined
+    }) as ReactElement
+
+    expect(findByClassNamePart(tree, 'humbleKeyGiftButton')).toBeUndefined()
+  })
+
+  it('render control: the identical shape for a keyed steam row WITH a giftAction DOES render a humbleKeyGiftButton', () => {
+    const tree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({
+        platform: 'steam',
+        state: 'UNREVEALED',
+        ownedElsewhere: true,
+        matchConfidence: 'exact'
+      }),
+      giftAction: { giftedAt: null, onGift: jest.fn() }
+    }) as ReactElement
+
+    expect(findByClassNamePart(tree, 'humbleKeyGiftButton')).toBeDefined()
+  })
+
+  // Same pin, third keyless type -- origin_keyless does not go through
+  // GAMELIB_LOGIN_STORES (it resolves to `null`), so its scenario/render
+  // path is independently worth pinning rather than assumed identical to
+  // epic_keyless's.
+  it("resolveKeyScenario is NOT 'gift-only' for an owned, UNREVEALED, exact-match origin_keyless row once hasGiftAction is false", () => {
+    const scenario = resolveKeyScenario({
+      humbleKey: makeHumbleKey({
+        platform: 'origin_keyless',
+        state: 'UNREVEALED',
+        ownedElsewhere: true,
+        matchConfidence: 'exact'
+      }),
+      hasGiftAction: false,
+      hasClaimAction: false,
+      hasSettleAction: false,
+      undoOverride: false,
+      storeLoginConnected: undefined
+    })
+
+    expect(scenario).not.toBe('gift-only')
+  })
+
+  it('renders no humbleKeyGiftButton for an owned, UNREVEALED, exact-match origin_keyless row when giftAction is undefined', () => {
+    const tree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({
+        platform: 'origin_keyless',
+        state: 'UNREVEALED',
+        ownedElsewhere: true,
+        matchConfidence: 'exact'
+      }),
+      giftAction: undefined
+    }) as ReactElement
+
+    expect(findByClassNamePart(tree, 'humbleKeyGiftButton')).toBeUndefined()
+  })
+})

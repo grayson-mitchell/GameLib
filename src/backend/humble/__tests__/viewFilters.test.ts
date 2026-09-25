@@ -364,6 +364,20 @@ describe('isGiftableSpare (scenario 3)', () => {
     const key = makeKey({ ownedElsewhere: true, state: 'REDEEMED' })
     expect(isGiftableSpare(key)).toBe(false)
   })
+
+  // D2: `isGiftableSpare` is platform-blind and STAYS platform-blind -- this
+  // divergence from `isGiftable` (which now excludes every keyless
+  // key_type) is deliberate, not a gap. The spare CLASSIFICATION answers
+  // "is this copy surplus to me", never "may it be gifted"; only the
+  // affordance gate (`isGiftable`) narrows on platform.
+  test('D2: true for ownedElsewhere + UNREVEALED + epic_keyless -- spare classification is platform-blind, unlike isGiftable', () => {
+    const key = makeKey({
+      ownedElsewhere: true,
+      state: 'UNREVEALED',
+      platform: 'epic_keyless'
+    })
+    expect(isGiftableSpare(key)).toBe(true)
+  })
 })
 
 /**
@@ -450,10 +464,22 @@ describe('isGiftable (the affordance gate)', () => {
     }
   })
 
-  test('false for gog_keyless -- a keyless entitlement has no code to transfer', () => {
+  test('false for every keyless key_type -- none has a code to transfer', () => {
+    for (const platform of ['gog_keyless', 'epic_keyless', 'origin_keyless']) {
+      expect(isGiftable(makeKey({ state: 'UNREVEALED', platform }))).toBe(false)
+    }
+  })
+
+  test('still true for the keyed siblings of the excluded types -- the widen must not sweep them in', () => {
+    for (const platform of ['steam', 'gog', 'epic', 'origin', 'uplay']) {
+      expect(isGiftable(makeKey({ state: 'UNREVEALED', platform }))).toBe(true)
+    }
+  })
+
+  test('D3 closed-set proof: true for an unrecognised foo_keyless -- not a suffix match', () => {
     expect(
-      isGiftable(makeKey({ state: 'UNREVEALED', platform: 'gog_keyless' }))
-    ).toBe(false)
+      isGiftable(makeKey({ state: 'UNREVEALED', platform: 'foo_keyless' }))
+    ).toBe(true)
   })
 
   test('true for a generic-platform key -- gifting needs no redeem destination', () => {
