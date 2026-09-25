@@ -160,6 +160,47 @@ export function getRedeemTarget(
   return { kind: 'help', url: HUMBLE_REDEEM_HELP_URL }
 }
 
+// 260925-j58: keyless-ness is a THIRD independent axis, not derivable from
+// the two tables above. `gog_keyless` is branded (KEY_TYPE_PRESENTATIONS),
+// HAS a GameLib login store (GAMELIB_LOGIN_STORES), has NO deep link
+// (REDEEM_URL_BUILDERS), and is keyless — all four at once. `epic` is
+// branded and has a login store and is NOT keyless. Reading any one of
+// these axes off another ships a wrong answer.
+//
+// The three literals are attested by KNOWN_GAME_KEY_TYPES
+// (src/backend/humble/classify.ts:183) — they are exactly its three
+// `_keyless` members. This is a CLOSED SET, in the same spirit as
+// REDEEM_URL_BUILDERS and GAMELIB_LOGIN_STORES above, and deliberately NOT
+// a `_keyless` suffix test (nor any regex): a suffix match would admit an
+// unrecognised, possibly hostile key_type into a UI branch that SUPPRESSES
+// an affordance. A miss here can only fall through to the keyed path,
+// which is the safe direction. Pinned by the `foo_keyless -> false`
+// assertion in the backend suite.
+const KEYLESS_KEY_TYPES: Record<string, true> = {
+  gog_keyless: true,
+  epic_keyless: true,
+  origin_keyless: true
+}
+
+/**
+ * True when a raw Humble `key_type` names a DIRECT-REDEEM entitlement —
+ * one Humble grants straight to the linked store account, with no key code
+ * ever existing (classify.ts:174-181).
+ *
+ * This generalises two decisions already taken independently: T-UIC-01,
+ * which omits `gog_keyless` from `REDEEM_URL_BUILDERS` because "a keyless
+ * entitlement has no key code", and `isGiftable`'s exclusion of it
+ * (viewFilters.ts:142) because offering a gift "would promise a hand-off
+ * the user cannot complete". The rule both express is the same one: a
+ * code-assuming affordance is never offered to a keyless entitlement.
+ * Callers use this to withhold such an affordance — never to withhold
+ * INFORMATION, since a suppressed button must still leave the cell saying
+ * something true.
+ */
+export function isKeylessKeyType(keyType: string): boolean {
+  return KEYLESS_KEY_TYPES[keyType] === true
+}
+
 /**
  * The three stores GameLib itself can be connected to (D-43-12/D-43-13,
  * Phase 43 plan 06). This is deliberately NOT the same axis as
