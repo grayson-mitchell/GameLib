@@ -8664,16 +8664,19 @@ fn acquire_single_instance(socket_path: &std::path::Path) -> SingleInstanceRole 
 
 // ---- Windows `gamelib://` self-heal: the DECISION half (quick-260925-uok) -------------------
 //
-// (1) These six functions are the deciding half of the Windows `gamelib://` HKCU self-heal;
+// (1) These eight functions are the deciding half of the Windows `gamelib://` HKCU self-heal;
 // `repair_windows_gamelib_protocol_registration` (in the `#[cfg(windows)]` FFI tier below) does
 // the I/O and nothing else. The split is not stylistic -- it is REQ-46-07's precedent, restated
 // in the banner immediately below this block: every non-FFI decision is a plain function,
 // unit-tested in `#[cfg(test)] mod tests` on ANY host, because the FFI tier is testable nowhere.
-// None of these six is `#[cfg(...)]`-gated, so they compile and are exercised on the macOS and
+// None of these eight is `#[cfg(...)]`-gated, so they compile and are exercised on the macOS and
 // Linux CI legs too. (The `#[cfg_attr(not(windows), allow(dead_code))]` each carries is a
 // conditional LINT attribute, not conditional compilation -- the same annotation every pure
 // `windows_*` single-instance helper above already uses, and for the same reason: their only
-// non-test caller is `#[cfg(windows)]`.)
+// non-test caller is `#[cfg(windows)]`.) The last two of the eight
+// (`gamelib_protocol_dev_build_dirs` / `gamelib_protocol_exe_is_dev_build`, quick-260926-f3l) are
+// a second decision bolted onto the same repair: whether the running exe is a dev build of THIS
+// tree, in which case the repair must skip rather than hijack the scheme away from an install.
 //
 // (2) Byte-compatibility with the NSIS installer is the whole correctness criterion for the
 // writer, so the exact shapes are pinned here. The generated installer script writes four values
@@ -8769,6 +8772,107 @@ fn gamelib_protocol_default_value(identifier: &str) -> String {
 #[cfg_attr(not(windows), allow(dead_code))]
 fn gamelib_protocol_default_icon(exe: &str) -> String {
     format!("\"{exe}\",0")
+}
+
+/// The set of directories a `current_exe()` value must be inside for
+/// `gamelib_protocol_exe_is_dev_build` to treat it as a dev build of this repo (quick-260926-f3l).
+/// Baked entirely from compile-time environment -- `env!("CARGO_MANIFEST_DIR")` and
+/// `option_env!("CARGO_TARGET_DIR")` -- never read from disk.
+///
+/// `manifest_dir` contributes `<manifest_dir>\target` (cargo's default output dir) when non-blank
+/// after trimming; a blank `manifest_dir` contributes nothing (never the bare `\target`).
+/// `cargo_target_dir`, when `Some` and non-blank after trimming, contributes a SECOND directory:
+/// used AS-IS when it is Windows-absolute, or joined to `manifest_dir` with `\` otherwise -- this
+/// approximates cargo's own rule that a relative `CARGO_TARGET_DIR` resolves relative to the
+/// directory cargo was invoked from, which for `tauri dev` is `src-tauri` (=
+/// `CARGO_MANIFEST_DIR`). "Windows-absolute" is decided with a plain STRING check (a leading `\\`
+/// or `\`, or a drive letter + `:` + `\`/`/`), never `std::path::Path::is_absolute`, because that
+/// method is host-dependent -- `C:\x` is NOT absolute on the macOS/Linux CI legs, which would make
+/// this function (and its unit tests) disagree across hosts.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn gamelib_protocol_dev_build_dirs(
+    manifest_dir: &str,
+    cargo_target_dir: Option<&str>,
+) -> Vec<String> {
+    fn is_windows_absolute(path: &str) -> bool {
+        if path.starts_with('\\') {
+            return true;
+        }
+        let bytes = path.as_bytes();
+        bytes.len() >= 2
+            && bytes[0].is_ascii_alphabetic()
+            && bytes[1] == b':'
+            && (bytes.len() == 2 || bytes[2] == b'\\' || bytes[2] == b'/')
+    }
+
+    let mut dirs = Vec::new();
+    let manifest_trimmed = manifest_dir.trim();
+    if !manifest_trimmed.is_empty() {
+        dirs.push(format!("{manifest_trimmed}\\target"));
+    }
+    if let Some(target_dir) = cargo_target_dir {
+        let target_trimmed = target_dir.trim();
+        if !target_trimmed.is_empty() {
+            if is_windows_absolute(target_trimmed) {
+                dirs.push(target_trimmed.to_string());
+            } else if !manifest_trimmed.is_empty() {
+                dirs.push(format!("{manifest_trimmed}\\{target_trimmed}"));
+            } else {
+                dirs.push(target_trimmed.to_string());
+            }
+        }
+    }
+    dirs
+}
+
+/// The dev-build decision itself (quick-260926-f3l): is `current_exe` running from inside one of
+/// `build_dirs`? Pure and FILESYSTEM-FREE, for the identical reason as point (3) in the DECISION
+/// block banner above -- no `canonicalize()`, no `exists()`.
+///
+/// Both sides are normalised identically before comparing: trimmed, a leading `\\?\`
+/// extended-length prefix stripped, `/` replaced with `\`, and (for the directory) a trailing `\`
+/// trimmed. The comparison itself is ordinal ASCII ignore-case (`to_ascii_lowercase`), matching
+/// `gamelib_protocol_paths_equivalent`'s own rule -- Windows path comparison is ordinal, not
+/// locale-aware. `current_exe` must start with a `dir` (lowercased) followed by a `\` separator,
+/// AND have at least one character after that separator: `dir` itself is NOT inside `dir`, and a
+/// sibling directory sharing `dir` as a mere text prefix (e.g. `target-other`) is not either --
+/// the separator is the boundary, not a bare `starts_with`.
+///
+/// Every doubt here returns `false`, which routes to REPAIR (T-F3L-01): an empty `current_exe`,
+/// an empty `build_dirs`, or `build_dirs` holding only blank entries. A false positive here would
+/// silently stop an INSTALLED app from self-healing, which is the uok regression this function
+/// must never cause.
+///
+/// Three predicates were considered for "is this a dev build" and this is the CHOSEN one.
+/// `cfg!(debug_assertions)` was rejected because the debug NSIS installer build installed at
+/// `%LOCALAPPDATA%\GameLib` is also a debug build, and it must still self-heal. Allow-listing the
+/// install root was rejected because the NSIS install directory is not fixed -- user-chosen,
+/// per-machine, or a portable copy -- and an allow-list would silently stop repairing every
+/// legitimate install outside the one path it knows. Chosen: deny-list exactly THIS build's own
+/// cargo target dir, baked at compile time via `env!("CARGO_MANIFEST_DIR")` /
+/// `option_env!("CARGO_TARGET_DIR")`, so it names only the tree that produced this binary -- an
+/// installed copy of the same binary never runs from inside it.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn gamelib_protocol_exe_is_dev_build(current_exe: &str, build_dirs: &[String]) -> bool {
+    fn normalised(path: &str) -> String {
+        let trimmed = path.trim();
+        let stripped = trimmed.strip_prefix(r"\\?\").unwrap_or(trimmed);
+        stripped.replace('/', "\\")
+    }
+
+    let exe = normalised(current_exe).to_ascii_lowercase();
+    if exe.is_empty() {
+        return false;
+    }
+    build_dirs.iter().any(|dir| {
+        let dir_normalised = normalised(dir);
+        let dir_trimmed = dir_normalised.trim_end_matches('\\');
+        if dir_trimmed.is_empty() {
+            return false;
+        }
+        let prefix = format!("{}\\", dir_trimmed.to_ascii_lowercase());
+        exe.starts_with(&prefix) && exe.len() > prefix.len()
+    })
 }
 
 // ---- Windows single-instance guard: FFI (Phase 46 plan 46-02) -----------------------------
@@ -8923,6 +9027,13 @@ fn current_user_identity() -> Option<(String, u32)> {
 /// so an automated run that skipped it would rewrite the host's protocol association as a side
 /// effect of merely starting the app.
 ///
+/// Also skips, before any registry call, when the running exe is a DEV BUILD of this repo --
+/// running in place from this build's own cargo target dir (quick-260926-f3l). Without this, every
+/// `pnpm tauri:dev` re-pointed the scheme at `src-tauri\target\debug\gamelib-shell.exe` and left it
+/// there after the dev session ended, last-launch-wins stealing the scheme from an installed copy
+/// (the todo `2026-09-26-gamelib-self-heal-lets-dev-builds-take-over-gamelib-scheme.md`). The
+/// decision is `gamelib_protocol_exe_is_dev_build`, the unit-tested half.
+///
 /// LOG DISCIPLINE (T-UOK-01, the same rule as the deep-link path's T-34.5-G6-25): the stored
 /// command value is attacker-controlled, unbounded-length third-party data written by whatever
 /// last claimed the scheme. It is NEVER logged verbatim -- only the registry subkey path (our own
@@ -8969,6 +9080,17 @@ fn repair_windows_gamelib_protocol_registration(identifier: &str) {
         );
         return;
     };
+
+    let dev_build_dirs = gamelib_protocol_dev_build_dirs(
+        env!("CARGO_MANIFEST_DIR"),
+        option_env!("CARGO_TARGET_DIR"),
+    );
+    if gamelib_protocol_exe_is_dev_build(exe, &dev_build_dirs) {
+        eprintln!(
+            "[shell] dev build running from its cargo target dir -- skipping the gamelib:// HKCU registration repair (the installed app owns the scheme; quick-260926-f3l)"
+        );
+        return;
+    }
 
     // SAFETY: every Win32 call below is a registry call taking NUL-terminated wide strings that
     // are kept alive (`command_w`, `empty_name_w`, and the per-write `subkey_w`/`value_name_w`/
@@ -14758,6 +14880,150 @@ mod tests {
         let exe = r"C:\Program Files\GameLib\gamelib-shell.exe";
         let produced = gamelib_protocol_open_command(exe);
         assert!(!gamelib_protocol_repair_needed(Some(&produced), exe));
+    }
+
+    // ---- quick-260926-f3l: dev builds do not claim gamelib:// ----
+
+    #[test]
+    fn gamelib_protocol_dev_build_dirs_bakes_the_manifest_dir_target() {
+        assert_eq!(
+            gamelib_protocol_dev_build_dirs(r"C:\repo\src-tauri", None),
+            vec![r"C:\repo\src-tauri\target".to_string()]
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_dev_build_dirs_adds_an_absolute_cargo_target_dir() {
+        let dirs = gamelib_protocol_dev_build_dirs(r"C:\repo\src-tauri", Some(r"D:\cargo-out"));
+        assert!(dirs.contains(&r"C:\repo\src-tauri\target".to_string()));
+        assert!(dirs.contains(&r"D:\cargo-out".to_string()));
+        assert_eq!(dirs.len(), 2);
+    }
+
+    #[test]
+    fn gamelib_protocol_dev_build_dirs_joins_a_relative_cargo_target_dir_to_the_manifest_dir() {
+        let dirs = gamelib_protocol_dev_build_dirs(r"C:\repo\src-tauri", Some("out"));
+        assert!(
+            dirs.contains(&r"C:\repo\src-tauri\out".to_string()),
+            "a relative CARGO_TARGET_DIR is joined to the manifest dir, approximating cargo's \
+             own cwd-relative rule: {dirs:?}"
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_dev_build_dirs_treats_blank_cargo_target_dir_as_none() {
+        assert_eq!(
+            gamelib_protocol_dev_build_dirs(r"C:\repo\src-tauri", Some("")),
+            vec![r"C:\repo\src-tauri\target".to_string()]
+        );
+        assert_eq!(
+            gamelib_protocol_dev_build_dirs(r"C:\repo\src-tauri", Some("   ")),
+            vec![r"C:\repo\src-tauri\target".to_string()]
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_dev_build_dirs_yields_no_bare_target_entry_for_a_blank_manifest_dir() {
+        assert_eq!(
+            gamelib_protocol_dev_build_dirs("", None),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            gamelib_protocol_dev_build_dirs("   ", None),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_exe_is_dev_build_matches_only_inside_the_cargo_target_dir() {
+        let target = vec![r"C:\repo\src-tauri\target".to_string()];
+        assert!(gamelib_protocol_exe_is_dev_build(
+            r"C:\repo\src-tauri\target\debug\gamelib-shell.exe",
+            &target
+        ));
+    }
+
+    #[test]
+    fn gamelib_protocol_exe_is_dev_build_ignores_case_slash_style_and_extended_length_prefix() {
+        let target = vec![r"C:\repo\src-tauri\target".to_string()];
+        assert!(
+            gamelib_protocol_exe_is_dev_build(r"c:\REPO\SRC-TAURI\TARGET\debug\x.exe", &target),
+            "case differences must not matter"
+        );
+        assert!(
+            gamelib_protocol_exe_is_dev_build("C:/repo/src-tauri/target/debug/x.exe", &target),
+            "forward slashes must normalise the same as backslashes"
+        );
+        assert!(
+            gamelib_protocol_exe_is_dev_build(r"\\?\C:\repo\src-tauri\target\debug\x.exe", &target),
+            "a \\\\?\\ extended-length prefix on the exe must be stripped"
+        );
+        let target_with_prefix = vec![r"\\?\C:\repo\src-tauri\target".to_string()];
+        assert!(
+            gamelib_protocol_exe_is_dev_build(
+                r"C:\repo\src-tauri\target\debug\x.exe",
+                &target_with_prefix
+            ),
+            "a \\\\?\\ extended-length prefix on the dir must be stripped too"
+        );
+        let target_trailing_slash = vec![r"C:\repo\src-tauri\target\".to_string()];
+        assert!(
+            gamelib_protocol_exe_is_dev_build(
+                r"C:\repo\src-tauri\target\debug\x.exe",
+                &target_trailing_slash
+            ),
+            "a trailing backslash on the dir must not change the outcome"
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_exe_is_dev_build_respects_the_separator_boundary() {
+        let target = vec![r"C:\repo\src-tauri\target".to_string()];
+        assert!(
+            !gamelib_protocol_exe_is_dev_build(r"C:\repo\src-tauri\target-other\x.exe", &target),
+            "a sibling dir sharing `target` as a text prefix must not match"
+        );
+        assert!(
+            !gamelib_protocol_exe_is_dev_build(r"C:\repo\src-tauri\targetx.exe", &target),
+            "a filename sharing `target` as a text prefix must not match"
+        );
+        assert!(
+            !gamelib_protocol_exe_is_dev_build(r"C:\repo\src-tauri\target", &target),
+            "the dir itself, with nothing after the separator, must not match"
+        );
+    }
+
+    #[test]
+    fn gamelib_protocol_exe_is_dev_build_is_false_for_installed_paths() {
+        let target = vec![r"C:\repo\src-tauri\target".to_string()];
+        assert!(!gamelib_protocol_exe_is_dev_build(
+            r"C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe",
+            &target
+        ));
+        assert!(!gamelib_protocol_exe_is_dev_build(
+            r"C:\Program Files\GameLib\gamelib-shell.exe",
+            &target
+        ));
+    }
+
+    #[test]
+    fn gamelib_protocol_exe_is_dev_build_routes_every_doubt_to_repair() {
+        let target = vec![r"C:\repo\src-tauri\target".to_string()];
+        assert!(
+            !gamelib_protocol_exe_is_dev_build("", &target),
+            "an empty exe must route to repair, not to skip"
+        );
+        assert!(
+            !gamelib_protocol_exe_is_dev_build(r"C:\repo\src-tauri\target\debug\x.exe", &[]),
+            "an empty build_dirs must route to repair"
+        );
+        assert!(
+            !gamelib_protocol_exe_is_dev_build(
+                r"C:\repo\src-tauri\target\debug\x.exe",
+                &["".to_string()]
+            ),
+            "build_dirs holding only a blank entry must route to repair"
+        );
     }
 
     // ---- Panic reporting (debug session `deep-link-open-url-abort`) ----
