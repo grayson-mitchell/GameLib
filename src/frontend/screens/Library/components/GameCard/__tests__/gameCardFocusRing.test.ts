@@ -4,15 +4,26 @@
  * What this proves: that `.gameCard` and `.gameListItem` carry a single,
  * token-driven (`var(--accent, ...)`) ring rule shared by BOTH `:hover` and
  * `:focus-within` -- not two separate rules where only one gets the ring --
- * that the old `-webkit-focus-ring-color` hairline is gone, and that
- * `.consoleCard.focused` in `ConsoleMode/index.scss` still spends the same
- * `--accent` token for its own ring.
+ * that the old `-webkit-focus-ring-color` hairline is gone, that a stale
+ * `:focus-within` (left behind by gamepad navigation or a click) is
+ * suppressed back to resting appearance while the pointer hovers the
+ * container and a DIFFERENT card, and that `.consoleCard.focused` in
+ * `ConsoleMode/index.scss` still spends the same `--accent` token for its
+ * own ring.
  *
  * Hover was added after a live operator check reported the ring worked
  * under gamepad focus but was invisible under mouse hover: this app already
  * treats hover and focus as one "highlighted" state (see the pre-existing
  * `.gameCard:hover, .gameCard:focus-within { transform: scale(1.05) }`
  * rule), so the ring now follows that same grouped-selector precedent.
+ *
+ * The stale-focus suppression rules were added after a second live check:
+ * because gamepad navigation and clicks both move real DOM focus,
+ * `:focus-within` held the ring on the last-landed/last-clicked card even
+ * after the pointer moved to hover a different one, producing two rings at
+ * once ("stuck on" tile). The operator chose "hover wins while mousing" --
+ * this file asserts the resulting `:not(:hover)` suppression rules exist
+ * for both the ring/box-shadow/z-index and the shared scale transform.
  *
  * What this does NOT prove: anything about rendered pixels, whether the ring
  * is actually legible against cover art in any given theme, or whether
@@ -56,6 +67,18 @@ const GAME_CARD_RING_RULE =
   /\.gameCard:hover,\s*\.gameCard:focus-within\s*\{[^}]*\}/
 const GAME_LIST_ITEM_RING_RULE =
   /\.gameListItem:hover,\s*\.gameListItem:focus-within\s*\{[^}]*\}/
+
+// Stale-focus suppression: `:not(:hover)` scoped under a `:hover` container
+// selector, so it only fires while the pointer is over the grid/list AND
+// the matched card/row is focused but NOT itself the hovered one. There are
+// two `.gameList:hover .gameCard:focus-within:not(:hover)` rule bodies in
+// the file (ring/box-shadow/z-index, then the scale transform) sharing the
+// same selector text, so this is matched with the global flag and both
+// bodies are inspected independently below.
+const GAME_CARD_STALE_FOCUS_SELECTOR =
+  /\.gameList:hover \.gameCard:focus-within:not\(:hover\)\s*\{[^}]*\}/g
+const GAME_LIST_ITEM_STALE_FOCUS_RULE =
+  /\.gameListLayout:hover \.gameListItem:focus-within:not\(:hover\)\s*\{[^}]*\}/
 
 describe('GameCard highlight ring is token-driven and shared by hover + focus (source gate)', () => {
   it('.gameCard groups :hover with :focus-within under one ring rule', () => {
@@ -120,5 +143,42 @@ describe('GameCard highlight ring is token-driven and shared by hover + focus (s
     const scss = readConsoleModeScss()
 
     expect(scss).toMatch(/0 0 0 3px var\(--accent/)
+  })
+})
+
+describe('Stale-focus suppression while mousing (source gate, round 3)', () => {
+  it('two .gameList:hover .gameCard:focus-within:not(:hover) rule bodies exist -- ring and scale', () => {
+    const css = readGameCardCss()
+    const matches = css.match(GAME_CARD_STALE_FOCUS_SELECTOR)
+
+    expect(matches).not.toBeNull()
+    expect((matches as RegExpMatchArray).length).toBe(2)
+  })
+
+  it('one of those bodies clears the outline and restores the resting box-shadow and z-index -- not just box-shadow: none, which would drop the normal drop shadow', () => {
+    const css = readGameCardCss()
+    const bodies = css.match(GAME_CARD_STALE_FOCUS_SELECTOR) ?? []
+    const ringSuppression = bodies.find((b) => /outline:\s*none/.test(b))
+
+    expect(ringSuppression).toBeDefined()
+    expect(ringSuppression).toMatch(/box-shadow:\s*0px 0px 12px 4px #00000055/)
+    expect(ringSuppression).not.toMatch(/box-shadow:\s*none/)
+    expect(ringSuppression).toMatch(/z-index:\s*auto/)
+  })
+
+  it('the other body suppresses the shared scale(1.05) transform back to resting size', () => {
+    const css = readGameCardCss()
+    const bodies = css.match(GAME_CARD_STALE_FOCUS_SELECTOR) ?? []
+    const scaleSuppression = bodies.find((b) => /transform:/.test(b))
+
+    expect(scaleSuppression).toBeDefined()
+    expect(scaleSuppression).toMatch(/transform:\s*none/)
+  })
+
+  it('.gameListLayout:hover .gameListItem:focus-within:not(:hover) clears the row outline', () => {
+    const css = readGameCardCss()
+    const body = ruleBody(css, GAME_LIST_ITEM_STALE_FOCUS_RULE)
+
+    expect(body).toMatch(/outline:\s*none/)
   })
 })
