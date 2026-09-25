@@ -2184,9 +2184,107 @@ const REVEAL_POST_TIMEOUT: Duration = Duration::from_secs(20);
 /// the sidecar's own 60s `RUST_INVOKE_TIMEOUT_MS`. A timeout here does NOT short-circuit to an
 /// error: the verified count always comes from re-reading the jar, never from whether this
 /// signal arrived, so a missed signal still yields an honest (possibly zero) count rather than
-/// a false failure.
-#[cfg(target_os = "macos")]
+/// a false failure. Windows uses the same bound for `GetCookies`' completion handler
+/// (debug webview2-delete-cookie-noop).
+#[cfg(any(target_os = "macos", windows))]
 const CLEAR_COOKIES_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Windows only: how long `humble_login_clear_cookies` keeps re-reading the jar after issuing
+/// `DeleteCookie`, which returns before the browser process applies the removal. Re-reads stop
+/// as soon as the matched set is empty, so a working clear costs one re-read; only a clear that
+/// genuinely leaves cookies behind waits the full bound. Small against the sidecar's 60s
+/// `RUST_INVOKE_TIMEOUT_MS` even stacked on `CLEAR_COOKIES_TIMEOUT`.
+#[cfg(windows)]
+const CLEAR_COOKIES_SETTLE: Duration = Duration::from_secs(2);
+
+/// Windows only: one Chrome DevTools Protocol call on `window`'s WebView2, returning the parsed
+/// JSON result. Blocks the calling (worker) thread on a channel while the main thread's message
+/// loop services the completion, the same shape as `humble_login_clear_cookies`' Windows arm.
+#[cfg(windows)]
+fn webview2_cdp_call(
+    window: &tauri::WebviewWindow,
+    method: &'static str,
+    params: Value,
+) -> Result<Value, String> {
+    use windows::core::HSTRING;
+    let (tx, rx) = mpsc_channel::<Result<String, String>>();
+    let params_json = params.to_string();
+    window
+        .with_webview(move |webview| {
+            let tx_done = tx.clone();
+            let outcome = (|| -> windows::core::Result<()> {
+                // SAFETY: `controller()` is tauri's live controller for this window, valid for
+                // the closure's duration on the main thread.
+                let core = unsafe { webview.controller().CoreWebView2()? };
+                let handler = webview2_com::CallDevToolsProtocolMethodCompletedHandler::create(
+                    Box::new(move |error_code, result_json| {
+                        let _ = tx_done.send(
+                            error_code
+                                .map(|()| result_json)
+                                .map_err(|e| format!("{method}:{e}")),
+                        );
+                        Ok(())
+                    }),
+                );
+                unsafe {
+                    core.CallDevToolsProtocolMethod(
+                        &HSTRING::from(method),
+                        &HSTRING::from(params_json.as_str()),
+                        &handler,
+                    )?
+                };
+                Ok(())
+            })();
+            if let Err(e) = outcome {
+                let _ = tx.send(Err(format!("{method}:setup:{e}")));
+            }
+        })
+        .map_err(|e| format!("{method}:dispatch:{e}"))?;
+    let raw = rx
+        .recv_timeout(CLEAR_COOKIES_TIMEOUT)
+        .map_err(|_| format!("{method}:timeout"))??;
+    serde_json::from_str(&raw).map_err(|e| format!("{method}:parse:{e}"))
+}
+
+/// Windows only: deletes every cookie matching `domain` through CDP `Network.deleteCookies`,
+/// which -- unlike `ICoreWebView2CookieManager::DeleteCookie` -- accepts a `partitionKey`.
+/// Measured live (debug webview2-delete-cookie-noop): Cloudflare's `cf_clearance` on
+/// `.www.epicgames.com` survived `DeleteCookie` with `S_OK` and an unchanged value, while
+/// `__cf_bm` with the identical domain/path/flags was removed. Returns how many deletes were
+/// ISSUED -- an attempted count, used only for logging; the caller's verified count still comes
+/// from a re-read.
+#[cfg(windows)]
+fn webview2_cdp_delete_matching_cookies(
+    window: &tauri::WebviewWindow,
+    domain: &str,
+) -> Result<(usize, usize), String> {
+    let listed = webview2_cdp_call(window, "Storage.getCookies", serde_json::json!({}))?;
+    let cookies = listed
+        .get("cookies")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let (mut issued, mut partitioned) = (0usize, 0usize);
+    for cookie in cookies {
+        let raw_domain = cookie.get("domain").and_then(Value::as_str).unwrap_or("");
+        let host = raw_domain.strip_prefix('.').unwrap_or(raw_domain);
+        if !cookie_domain_matches(host, Some(domain)) {
+            continue;
+        }
+        let mut params = serde_json::json!({
+            "name": cookie.get("name").cloned().unwrap_or(Value::Null),
+            "domain": raw_domain,
+            "path": cookie.get("path").cloned().unwrap_or(Value::Null),
+        });
+        if let Some(key) = cookie.get("partitionKey") {
+            params["partitionKey"] = key.clone();
+            partitioned += 1;
+        }
+        webview2_cdp_call(window, "Network.deleteCookies", params)?;
+        issued += 1;
+    }
+    Ok((issued, partitioned))
+}
 
 /// Bound on how long `keyring_get` waits for its worker-thread Keychain read before classifying
 /// the call as `keyring:timeout` (34.4.1 gap cycle 2 plan 26, F-9 observability half,
@@ -7322,17 +7420,177 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 ))
             }
 
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(windows)]
             {
-                // ---- Linux/Windows: UNVERIFIED on the existing wry `delete_cookie()`
-                // path (D-09, REQ-34.4.1-13). This bug's root cause (wry's own
-                // `cookie_into_wkwebview()` round trip, wkwebview/mod.rs:1248-1267) is
-                // macOS/WebKit-specific and is NOT proven to exist in wry's `webview2`
-                // (webview2/mod.rs:1681) or `webkitgtk` (webkitgtk/mod.rs:1086)
-                // `delete_cookie` implementations -- separate code paths with their own
-                // conversions. Only the dishonest ATTEMPTED count is fixed here; the
-                // deletion mechanism itself is UNCHANGED and DECLARED unverified, never
-                // silently assumed fixed (nor silently assumed still broken).
+                // ---- Windows: ICoreWebView2CookieManager directly, never wry's
+                // delete_cookie() (debug webview2-delete-cookie-noop). ----
+                //
+                // MEASURED broken (Phase 38 sitting 5, item 38-W06): every `delete_cookie()`
+                // returned `Ok`, the verified delta was 0 for both populated Epic domains.
+                // Root cause, source-verified: wry-0.55.1's `delete_cookie`
+                // (webview2/mod.rs:1681-1689) rebuilds the cookie via `cookie_into_win32`,
+                // which reads `cookie::Cookie::domain()` -- and cookie-0.18.1's `domain()`
+                // (lib.rs:777-785) STRIPS a leading `.`. WebView2 treats `.epicgames.com`
+                // and `epicgames.com` as different domains, so every domain cookie became a
+                // `DeleteCookie` for a host-only cookie that does not exist: `S_OK`, nothing
+                // removed. The same round-trip-loses-a-property shape as the macOS bug above.
+                //
+                // Fix: enumerate with `GetCookies` and hand `DeleteCookie` the ORIGINAL
+                // `ICoreWebView2Cookie` objects, so no property is ever reconstructed. The
+                // match mirrors `count_matching` exactly (leading dot stripped, then
+                // `cookie_domain_matches`), so the removal set is the census set.
+                //
+                // Two further live-measured facts (2026-09-26, Windows 11 WebView2) shape the
+                // rest of this arm:
+                //   - `DeleteCookie` is ASYNC: unrealengine.com's cookie was still present on
+                //     the first re-read and gone on the second. Hence the settle loop.
+                //   - `DeleteCookie` cannot remove a PARTITIONED (CHIPS) cookie. Cloudflare's
+                //     `cf_clearance` on `.www.epicgames.com` survived it with `S_OK` and an
+                //     unchanged value while `__cf_bm`, identical domain/path/flags, was
+                //     removed. CDP `Network.deleteCookies` with the cookie's `partitionKey`
+                //     removed it (`issued=1 partitioned=1`, then `after=0`). Hence the CDP
+                //     pass for survivors.
+                //
+                // Threading: this arm runs on a spawned worker thread (see the macOS arm's
+                // note), so `with_webview` posts the closure to the main thread and returns
+                // at once. The worker blocks on `rx`; the main thread's own message loop
+                // services the `GetCookies` completion. The closure never blocks.
+                use webview2_com::Microsoft::Web::WebView2::Win32::ICoreWebView2_2;
+                use windows::core::{Interface, PCWSTR, PWSTR};
+
+                let (tx, rx) = mpsc_channel::<()>();
+                let target_domain = domain.to_string();
+                if let Err(e) = window.with_webview(move |webview| {
+                    let tx_done = tx.clone();
+                    let outcome = (|| -> windows::core::Result<()> {
+                        // SAFETY: `controller()` is tauri's live `ICoreWebView2Controller`
+                        // for this window, valid for the closure's duration on the main
+                        // thread; every call below is a plain COM method on it or on
+                        // objects it hands back.
+                        let core = unsafe { webview.controller().CoreWebView2()? }
+                            .cast::<ICoreWebView2_2>()?;
+                        let manager = unsafe { core.CookieManager()? };
+                        let manager_for_delete = manager.clone();
+                        let handler = webview2_com::GetCookiesCompletedHandler::create(
+                            Box::new(move |error_code, list| {
+                                let result = (|| -> windows::core::Result<()> {
+                                    error_code?;
+                                    let Some(list) = list else {
+                                        return Ok(());
+                                    };
+                                    let mut count = 0u32;
+                                    unsafe { list.Count(&mut count)? };
+                                    for idx in 0..count {
+                                        let cookie = unsafe { list.GetValueAtIndex(idx)? };
+                                        let mut raw = PWSTR::null();
+                                        unsafe { cookie.Domain(&mut raw)? };
+                                        // Never logged (T-34.4.1-02) -- read only to feed
+                                        // the count-only domain filter.
+                                        let raw_domain = webview2_com::take_pwstr(raw);
+                                        let host =
+                                            raw_domain.strip_prefix('.').unwrap_or(&raw_domain);
+                                        if cookie_domain_matches(host, Some(&target_domain)) {
+                                            // A refused delete is logged and the sweep
+                                            // continues -- one bad cookie must not strand
+                                            // the rest. The re-read still measures it.
+                                            if let Err(e) = unsafe {
+                                                manager_for_delete.DeleteCookie(&cookie)
+                                            } {
+                                                eprintln!(
+                                                    "[shell] humble_login_clear_cookies: DeleteCookie refused: {e}"
+                                                );
+                                            }
+                                        }
+                                    }
+                                    Ok(())
+                                })();
+                                let _ = tx_done.send(());
+                                result
+                            }),
+                        );
+                        unsafe { manager.GetCookies(PCWSTR::null(), &handler)? };
+                        Ok(())
+                    })();
+                    if outcome.is_err() {
+                        // Signal "done" rather than hang the worker until the timeout; the
+                        // re-read below still measures whatever actually happened.
+                        let _ = tx.send(());
+                    }
+                }) {
+                    eprintln!(
+                        "[shell] humble_login_clear_cookies: with_webview dispatch failed: {e}"
+                    );
+                    return Err(format!("humble_login_clear_cookies:dispatch:{e}"));
+                }
+
+                if rx.recv_timeout(CLEAR_COOKIES_TIMEOUT).is_err() {
+                    eprintln!(
+                        "[shell] humble_login_clear_cookies: WebView2 cookie removal timed out waiting for the completion signal"
+                    );
+                    // Fall through to the re-read regardless, as the macOS arm does.
+                }
+
+                // `DeleteCookie` is fire-and-forget: it returns before the browser process
+                // has applied the removal. A bounded settle re-reads until the matched set
+                // is empty or the window closes. The returned count is still the measured
+                // delta of the LAST re-read, never an attempted count -- a removal that
+                // genuinely failed still reports 0 after the window.
+                let settle_deadline = std::time::Instant::now() + CLEAR_COOKIES_SETTLE;
+                let mut after_matching = count_matching(&window)?;
+                let mut settle_rereads = 0u32;
+                while after_matching > 0 && std::time::Instant::now() < settle_deadline {
+                    thread::sleep(Duration::from_millis(100));
+                    after_matching = count_matching(&window)?;
+                    settle_rereads += 1;
+                }
+                // Counts only, never a cookie name or value. Tells the live gate whether the
+                // removal landed synchronously (0 re-reads) or needed the settle window.
+                eprintln!(
+                    "[shell] humble_login_clear_cookies: before={before_matching} after={after_matching} settle_rereads={settle_rereads}"
+                );
+                if after_matching > 0 {
+                    // Survivors of `DeleteCookie`: partitioned (CHIPS) cookies, which that API
+                    // cannot address (measured, see this arm's header). CDP
+                    // `Network.deleteCookies` takes the partition key. A CDP failure is logged,
+                    // not returned -- the re-read below still measures whatever actually
+                    // happened, and the TS guard fails closed on a residual. Cost: a domain
+                    // holding a partitioned cookie waits out the first settle window (2s)
+                    // before this pass runs.
+                    match webview2_cdp_delete_matching_cookies(&window, domain) {
+                        Ok((issued, partitioned)) => eprintln!(
+                            "[shell] humble_login_clear_cookies: CDP cleanup issued={issued} partitioned={partitioned}"
+                        ),
+                        Err(e) => eprintln!(
+                            "[shell] humble_login_clear_cookies: CDP cleanup failed: {e}"
+                        ),
+                    }
+                    let cdp_deadline = std::time::Instant::now() + CLEAR_COOKIES_SETTLE;
+                    after_matching = count_matching(&window)?;
+                    while after_matching > 0 && std::time::Instant::now() < cdp_deadline {
+                        thread::sleep(Duration::from_millis(100));
+                        after_matching = count_matching(&window)?;
+                    }
+                    eprintln!(
+                        "[shell] humble_login_clear_cookies: after CDP cleanup after={after_matching}"
+                    );
+                }
+                Ok(Value::Number(
+                    verified_delete_count(before_matching, after_matching).into(),
+                ))
+            }
+
+            #[cfg(all(not(target_os = "macos"), not(windows)))]
+            {
+                // ---- Linux: UNVERIFIED on the existing wry `delete_cookie()` path (D-09,
+                // REQ-34.4.1-13). Both measured platforms have now shown wry's
+                // `delete_cookie` round trip losing a property (macOS: the NSHTTPCookie
+                // rebuild; Windows: cookie-0.18's `domain()` dropping the leading dot, see
+                // the Windows arm above). wry's `webkitgtk` `delete_cookie`
+                // (webkitgtk/mod.rs:1086) rebuilds via `cookie_into_soup_cookie`, which reads
+                // the same stripped `domain()` (webkitgtk/mod.rs:975-979), so this arm is
+                // SUSPECTED broken for domain cookies, but it has never been measured on a
+                // Linux machine and is DECLARED unverified, never silently assumed fixed
+                // (nor silently assumed broken).
                 let matching: Vec<_> = window
                     .cookies()
                     .map_err(|e| e.to_string())?

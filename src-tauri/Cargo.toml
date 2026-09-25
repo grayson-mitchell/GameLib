@@ -291,6 +291,18 @@ windows-sys = { version = "0.60", features = [
 # justify it. Adding a FEATURE to an already-declared dependency changes no Cargo.lock crate
 # NAME, so `cargoFeatures.test.ts`'s crate-name pin is unaffected (re-run to prove it, not
 # assumed).
+#
+# debug webview2-delete-cookie-noop: `humble_login_clear_cookies`' Windows arm talks to
+# `ICoreWebView2CookieManager` directly instead of wry's `delete_cookie()`, whose
+# `cookie::Cookie` round trip strips the leading dot from a domain cookie's `Domain` and so
+# deletes a host-only cookie that does not exist. Tauri's own `PlatformWebview::controller()`
+# already hands back a `webview2_com` type, so these are the exact versions `wry-0.55.1` and
+# `tauri-2.11.5` resolve (`webview2-com` 0.38.2, `windows` 0.61.x). Both are ALREADY in
+# `Cargo.lock` -- this only declares what `src/main.rs` directly calls; no new crate NAME enters
+# the tree, so `cargoFeatures.test.ts`'s crate-name pin is unaffected. `windows` (not
+# `windows-sys`) because the WebView2 bindings are COM interfaces typed against it.
+webview2-com = "0.38.2"
+windows = "0.61"
 
 [profile.release]
 opt-level = "s"
