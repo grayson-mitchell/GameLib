@@ -89,6 +89,7 @@
         "emptyHeading": "Zatiaľ žiadne kľúče Humble",
         "filteredEmptyBody": "Skúste iné hľadanie alebo vypnite „Iba uplatniteľné kľúče“.",
         "filteredEmptyHeading": "Žiadne zodpovedajúce kľúče",
+        "keylessClaimed": "Prevzaté na {{store}} — kľúč nie je potrebný",
         "openStore": "Otvoriť {{store}}",
         "pickOnHumble": "Vybrať na Humble",
         "platformOther": "Other",

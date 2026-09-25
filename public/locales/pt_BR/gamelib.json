@@ -88,6 +88,7 @@
         "emptyHeading": "Ainda não há chaves da Humble",
         "filteredEmptyBody": "Tente outra busca ou desative «Apenas chaves resgatáveis».",
         "filteredEmptyHeading": "Nenhuma chave corresponde",
+        "keylessClaimed": "Obtido na {{store}} — não precisa de chave",
         "openStore": "Abrir {{store}}",
         "pickOnHumble": "Escolher na Humble",
         "platformOther": "Outros",

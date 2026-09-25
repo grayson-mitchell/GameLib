@@ -87,6 +87,7 @@
         "emptyHeading": "Ei vielä Humble-avaimia",
         "filteredEmptyBody": "Kokeile toista hakua tai poista käytöstä ”Vain lunastettavat avaimet”.",
         "filteredEmptyHeading": "Ei osumia",
+        "keylessClaimed": "Noudettu kaupasta {{store}} — avainta ei tarvita",
         "openStore": "Avaa {{store}}",
         "pickOnHumble": "Valitse Humblessa",
         "platformOther": "Muu",

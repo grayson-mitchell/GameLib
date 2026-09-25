@@ -87,6 +87,7 @@
         "emptyHeading": "Hali Humble kalitlari yoʻq",
         "filteredEmptyBody": "Boshqa qidiruvni sinab koʻring yoki «Faqat ishlatiladigan kalitlar» ni oʻchiring.",
         "filteredEmptyHeading": "Mos kalit topilmadi",
+        "keylessClaimed": "{{store}}'da olingan — kalit kerak emas",
         "openStore": "{{store}} ochish",
         "pickOnHumble": "Humble'da tanlash",
         "platformOther": "Boshqa",

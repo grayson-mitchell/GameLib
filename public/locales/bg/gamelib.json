@@ -87,6 +87,7 @@
         "emptyHeading": "Още няма ключове от Humble",
         "filteredEmptyBody": "Опитайте друго търсене или изключете „Само активируеми ключове“.",
         "filteredEmptyHeading": "Няма съвпадащи ключове",
+        "keylessClaimed": "Взето от {{store}} — не е нужен ключ",
         "openStore": "Отвори {{store}}",
         "pickOnHumble": "Избери от Humble",
         "platformOther": "Други",

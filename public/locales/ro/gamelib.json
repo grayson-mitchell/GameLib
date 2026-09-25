@@ -88,6 +88,7 @@
         "emptyHeading": "Încă nu există chei Humble",
         "filteredEmptyBody": "Încearcă o altă căutare sau dezactivează „Doar chei valorificabile”.",
         "filteredEmptyHeading": "Nicio cheie nu se potrivește",
+        "keylessClaimed": "Revendicat pe {{store}} — nu e nevoie de cheie",
         "openStore": "Deschide {{store}}",
         "pickOnHumble": "Alege pe Humble",
         "platformOther": "Altele",

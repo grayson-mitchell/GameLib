@@ -88,6 +88,7 @@
         "emptyHeading": "Encara no hi ha claus de Humble",
         "filteredEmptyBody": "Proveu una altra cerca o desactiveu «Només claus canjables».",
         "filteredEmptyHeading": "Cap clau coincideix",
+        "keylessClaimed": "Reclamat a {{store}} — no cal cap clau",
         "openStore": "Obre {{store}}",
         "pickOnHumble": "Tria a Humble",
         "platformOther": "Altres",

@@ -87,6 +87,7 @@
         "emptyHeading": "Nog geen Humble-keys",
         "filteredEmptyBody": "Probeer een andere zoekopdracht of schakel «Alleen inwisselbare keys» uit.",
         "filteredEmptyHeading": "Geen keys gevonden",
+        "keylessClaimed": "Opgehaald op {{store}} — geen key nodig",
         "openStore": "{{store}} openen",
         "pickOnHumble": "Kiezen op Humble",
         "platformOther": "Overig",

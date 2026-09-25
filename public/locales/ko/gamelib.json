@@ -87,6 +87,7 @@
         "emptyHeading": "아직 Humble 키가 없습니다",
         "filteredEmptyBody": "다른 검색을 시도하거나 「사용 가능한 키만」을 꺼 보세요.",
         "filteredEmptyHeading": "일치하는 키가 없습니다",
+        "keylessClaimed": "{{store}}에서 받음 — 키가 필요 없음",
         "openStore": "{{store}} 열기",
         "pickOnHumble": "Humble에서 선택",
         "platformOther": "기타",

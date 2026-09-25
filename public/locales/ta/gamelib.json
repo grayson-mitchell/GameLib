@@ -87,6 +87,7 @@
         "emptyHeading": "இதுவரை Humble விசைகள் இல்லை",
         "filteredEmptyBody": "வேறு தேடலை முயற்சிக்கவும், அல்லது „பயன்படுத்தக்கூடிய விசைகள் மட்டும்“ என்பதை அணைக்கவும்.",
         "filteredEmptyHeading": "பொருந்தும் விசைகள் இல்லை",
+        "keylessClaimed": "{{store}} இல் பெறப்பட்டது — கீ தேவையில்லை",
         "openStore": "{{store}} திற",
         "pickOnHumble": "Humble-இல் தேர்ந்தெடுக்கவும்",
         "platformOther": "மற்றவை",

@@ -87,6 +87,7 @@
         "emptyHeading": "Aínda non hai claves de Humble",
         "filteredEmptyBody": "Proba outra busca ou desactiva «Só claves canxeables».",
         "filteredEmptyHeading": "Ningunha clave coincide",
+        "keylessClaimed": "Reclamado en {{store}} — non fai falta clave",
         "openStore": "Abrir {{store}}",
         "pickOnHumble": "Escoller en Humble",
         "platformOther": "Outro",

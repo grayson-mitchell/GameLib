@@ -4,8 +4,8 @@ title: 'A REVEALED `gog_keyless` row renders "Finish activation" into the claim 
 area: humble/keys-screen
 severity: medium
 platform: any
-ready: live-gate
-status: OPEN
+ready: live-gate # MOOT — the gate was CANCELLED, not performed; see the section below
+status: RESOLVED
 found_by: 'Inferred from code in `43-PROBE-D-43-11.md` (2026-09-22), never observed on screen — the operator had navigated away. Branch ordering independently re-confirmed by quick-260925-e4d.'
 files:
   - src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx
@@ -43,15 +43,52 @@ So the branch is right for keyed platforms and wrong for the keyless one. The fi
 `gog_keyless` exemption inside or ahead of that branch — not a reordering that would regress the
 website-revealed case CR-01 was written for.
 
-## What to check (one look, no build required beyond a running app)
+## ✅ FIXED IN CODE 2026-09-25 (quick `260925-j58`) — and the live gate was CANCELLED, not deferred
 
-1. Open Humble Keys on a build with a synced library. Find **Racine**.
-2. Record what its KEY column actually renders. Prediction: a single "Finish activation" button.
-3. Click it. Record what the wizard shows for an entitlement with no code — an error, an empty
-   code field, a spinner, or a usable "already claimed" state.
+**The three-step live check this todo originally prescribed has been deleted rather than ticked,
+because it will never be performed and a dead prescription left standing reads as outstanding
+work.** It said: open Humble Keys on a synced build, find Racine, record its KEY column, click the
+button, and record whether the wizard errors, hangs, or shows a usable "already claimed" state —
+with step 3 deciding severity.
 
-Outcome 3 decides severity. If the wizard states plainly that the game is already in the GOG
-library, this is cosmetic copy at worst. If it errors or hangs, it is a real dead end.
+**Why it was cancelled (operator decision, 2026-09-25).** Its only output was "fix or don't". The
+corrective shipped here is correct under **every** branch of that unknown:
+
+- wizard errors → dead end, fix required;
+- wizard hangs → dead end, fix required;
+- wizard shows a usable already-claimed state → the button is still a code-assuming affordance
+  offered against an entitlement with no code, and the row's KEY cell still says nothing true
+  about where the game actually landed.
+
+Since no outcome changes the action, the unknown was not worth buying a live run for. No UAT item
+was minted. The `ready: live-gate` value in the frontmatter above is retained for provenance only
+(the CI gate that reads it is `pending/`-only) — **nothing in this file argues for a live run any
+more.**
+
+## What shipped
+
+| Piece | Where |
+|-------|-------|
+| `isKeylessKeyType(keyType)` — closed literal set of `gog_keyless` / `epic_keyless` / `origin_keyless`, never a suffix match | `src/common/humble/keyTypePresentation.ts` |
+| The exemption: a REVEALED keyless row renders a non-interactive `humbleKeyClaimAnnotation` instead of the Finish-activation button | `src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx` |
+| New string `humbleKeys.keylessClaimed` = `Claimed on {{store}} — no key needed`, filled in all 49 locales | `public/locales/*/gamelib.json` |
+| Four component tests: `gog_keyless` and `epic_keyless` exemptions, plus CR-01 (`gog` still "Finish activation") and 260823-op3 (`steam` still "Activate") regression guards | `.../HumbleKeyRow/__tests__/index.test.tsx` |
+| Closed-set proof `isKeylessKeyType('foo_keyless') === false` — the one assertion that tells a literal set apart from a suffix match | `src/backend/humble/__tests__/keyTypePresentation.test.ts` |
+
+**The annotation is not decoration.** For a keyless entitlement `claimAction.revealedAt` is always
+null (no local reveal record can exist for something that was never revealed), so the sibling
+arm's "Revealed {date}" text renders nothing. Hiding only the button would have left an EMPTY KEY
+cell and deleted the row's only information — which is why this branch carries its own copy.
+
+The CR-01 comment and the `state === 'REVEALED'` test were **reindented, never reordered**; the
+keyed path comes out byte-identical under `git diff -w`.
+
+## Deliberately NOT fixed here — tracked separately
+
+Two sibling sites still treat only `gog_keyless` as special, so `epic_keyless` and
+`origin_keyless` remain exposed there. Filed as
+`[[2026-09-25-humble-keys-two-sites-still-special-case-only-gog-keyless]]` rather than widened
+into this change.
 
 ## Scope note — this is the other half of a pair
 

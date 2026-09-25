@@ -87,6 +87,7 @@
         "emptyHeading": "Humble võtmeid veel pole",
         "filteredEmptyBody": "Proovige teist otsingut või lülitage välja „Ainult lunastatavad võtmed“.",
         "filteredEmptyHeading": "Ühtegi sobivat võtit",
+        "keylessClaimed": "Hangitud teenusest {{store}} — võtit pole vaja",
         "openStore": "Ava {{store}}",
         "pickOnHumble": "Vali Humble kaudu",
         "platformOther": "Muu",

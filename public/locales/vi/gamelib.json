@@ -87,6 +87,7 @@
         "emptyHeading": "Chưa có mã key Humble nào",
         "filteredEmptyBody": "Hãy thử tìm kiếm khác, hoặc tắt «Chỉ mã key có thể sử dụng».",
         "filteredEmptyHeading": "Không có mã key nào khớp",
+        "keylessClaimed": "Đã nhận trên {{store}} — không cần key",
         "openStore": "Mở {{store}}",
         "pickOnHumble": "Chọn trên Humble",
         "platformOther": "Khác",

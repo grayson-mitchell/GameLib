@@ -89,6 +89,7 @@
         "emptyHeading": "Humble raktų dar nėra",
         "filteredEmptyBody": "Pabandykite kitą paiešką arba išjunkite „Tik panaudojami raktai“.",
         "filteredEmptyHeading": "Nėra atitinkančių raktų",
+        "keylessClaimed": "Pasiimta iš {{store}} — rakto nereikia",
         "openStore": "Atverti {{store}}",
         "pickOnHumble": "Pasirinkti Humble platformoje",
         "platformOther": "Kita/-s/-i",

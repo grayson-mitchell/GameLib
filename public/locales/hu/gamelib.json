@@ -87,6 +87,7 @@
         "emptyHeading": "Még nincsenek Humble kulcsok",
         "filteredEmptyBody": "Próbálj másik keresést, vagy kapcsold ki a „Csak beváltható kulcsok” lehetőséget.",
         "filteredEmptyHeading": "Nincs találat",
+        "keylessClaimed": "Igényelve itt: {{store}} — nem kell kulcs",
         "openStore": "{{store}} megnyitása",
         "pickOnHumble": "Választás a Humble-ön",
         "platformOther": "Egyéb",

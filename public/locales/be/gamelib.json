@@ -89,6 +89,7 @@
         "emptyHeading": "Пакуль няма ключоў Humble",
         "filteredEmptyBody": "Паспрабуйце іншы пошук або выключыце «Толькі ключы для актывацыі».",
         "filteredEmptyHeading": "Няма супадзенняў",
+        "keylessClaimed": "Атрымана на {{store}} — ключ не патрэбны",
         "openStore": "Адкрыць {{store}}",
         "pickOnHumble": "Выбраць на Humble",
         "platformOther": "Іншае",

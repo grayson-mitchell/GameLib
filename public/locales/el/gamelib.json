@@ -87,6 +87,7 @@
         "emptyHeading": "Δεν υπάρχουν ακόμη κλειδιά Humble",
         "filteredEmptyBody": "Δοκιμάστε διαφορετική αναζήτηση ή απενεργοποιήστε την επιλογή «Μόνο εξαργυρώσιμα κλειδιά».",
         "filteredEmptyHeading": "Δεν ταιριάζει κανένα κλειδί",
+        "keylessClaimed": "Παραλήφθηκε στο {{store}} — δεν χρειάζεται κλειδί",
         "openStore": "Άνοιγμα {{store}}",
         "pickOnHumble": "Επιλογή στο Humble",
         "platformOther": "Άλλα",

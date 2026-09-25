@@ -87,6 +87,7 @@
         "emptyHeading": "ഇതുവരെ Humble കീകളില്ല",
         "filteredEmptyBody": "മറ്റൊരു തിരയൽ പരീക്ഷിക്കുക, അല്ലെങ്കിൽ „ഉപയോഗിക്കാവുന്ന കീകൾ മാത്രം“ ഓഫ് ചെയ്യുക.",
         "filteredEmptyHeading": "കീകളൊന്നും പൊരുത്തപ്പെടുന്നില്ല",
+        "keylessClaimed": "{{store}}-ൽ ക്ലെയിം ചെയ്തു — കീ ആവശ്യമില്ല",
         "openStore": "{{store}} തുറക്കുക",
         "pickOnHumble": "Humble-ൽ തിരഞ്ഞെടുക്കുക",
         "platformOther": "മറ്റുള്ളവ",

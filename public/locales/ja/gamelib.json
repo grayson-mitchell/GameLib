@@ -87,6 +87,7 @@
         "emptyHeading": "Humble のキーはまだありません",
         "filteredEmptyBody": "別の検索を試すか、「引き換え可能なキーのみ」をオフにしてください。",
         "filteredEmptyHeading": "一致するキーがありません",
+        "keylessClaimed": "{{store}} で受け取り済み — キーは不要です",
         "openStore": "{{store}}を開く",
         "pickOnHumble": "Humble で選ぶ",
         "platformOther": "その他",

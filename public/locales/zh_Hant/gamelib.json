@@ -87,6 +87,7 @@
         "emptyHeading": "尚無 Humble 金鑰",
         "filteredEmptyBody": "換一個搜尋詞，或關閉「僅可兌換的金鑰」。",
         "filteredEmptyHeading": "沒有符合的金鑰",
+        "keylessClaimed": "已在 {{store}} 領取 — 無需金鑰",
         "openStore": "開啟 {{store}}",
         "pickOnHumble": "在 Humble 選擇",
         "platformOther": "其它",

@@ -88,6 +88,7 @@
         "emptyHeading": "Aún no hay claves de Humble",
         "filteredEmptyBody": "Prueba otra búsqueda o desactiva «Solo claves canjeables».",
         "filteredEmptyHeading": "Ninguna clave coincide",
+        "keylessClaimed": "Reclamado en {{store}} — no hace falta clave",
         "openStore": "Abrir {{store}}",
         "pickOnHumble": "Elegir en Humble",
         "platformOther": "Otros",

@@ -47,6 +47,7 @@
         "emptyHeading": "Noch keine Humble-Keys",
         "filteredEmptyBody": "Versuchen Sie eine andere Suche oder deaktivieren Sie „Nur einlösbare Keys“.",
         "filteredEmptyHeading": "Keine Keys gefunden",
+        "keylessClaimed": "Auf {{store}} beansprucht — kein Key nötig",
         "openStore": "{{store}} öffnen",
         "pickOnHumble": "Auf Humble auswählen",
         "platformOther": "Andere",

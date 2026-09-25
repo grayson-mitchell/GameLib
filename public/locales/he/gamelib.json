@@ -88,6 +88,7 @@
         "emptyHeading": "אין עדיין מפתחות Humble",
         "filteredEmptyBody": "נסו חיפוש אחר, או כבו את «מפתחות למימוש בלבד».",
         "filteredEmptyHeading": "אין מפתחות תואמים",
+        "keylessClaimed": "התקבל ב-{{store}} — אין צורך במפתח",
         "openStore": "פתח את {{store}}",
         "pickOnHumble": "בחרו ב-Humble",
         "platformOther": "אחר",

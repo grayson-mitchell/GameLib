@@ -89,6 +89,7 @@
         "emptyHeading": "Brak kluczy Humble",
         "filteredEmptyBody": "Spróbuj innego wyszukiwania lub wyłącz „Tylko klucze do zrealizowania”.",
         "filteredEmptyHeading": "Brak pasujących kluczy",
+        "keylessClaimed": "Odebrano na {{store}} — klucz niepotrzebny",
         "openStore": "Otwórz {{store}}",
         "pickOnHumble": "Wybierz na Humble",
         "platformOther": "Inne",

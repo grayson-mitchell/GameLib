@@ -1,7 +1,7 @@
 {
   "locale": "ka",
   "model": "claude-sonnet-5",
-  "filledAt": "2026-09-24T19:31:06.570Z",
+  "filledAt": "2026-09-25T02:01:43.457Z",
   "keys": [
     "about.license",
     "about.navLabel",
@@ -72,6 +72,7 @@
     "humbleKeys.giftedAnnotation",
     "humbleKeys.keyLoading",
     "humbleKeys.keyShownTitle",
+    "humbleKeys.keylessClaimed",
     "humbleKeys.lastSynced",
     "humbleKeys.likelyOwnedOnSteam",
     "humbleKeys.loginAndClaim",

@@ -87,6 +87,7 @@
         "emptyHeading": "尚无 Humble 密钥",
         "filteredEmptyBody": "换一个搜索词，或关闭「仅可兑换的密钥」。",
         "filteredEmptyHeading": "没有匹配的密钥",
+        "keylessClaimed": "已在 {{store}} 领取 — 无需密钥",
         "openStore": "打开 {{store}}",
         "pickOnHumble": "在 Humble 选择",
         "platformOther": "其他",

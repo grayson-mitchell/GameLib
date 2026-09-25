@@ -87,6 +87,7 @@
         "emptyHeading": "Humble-ის გასაღებები ჯერ არ არის",
         "filteredEmptyBody": "სცადეთ სხვა ძიება ან გამორთეთ „მხოლოდ გამოსაყენებელი გასაღებები“.",
         "filteredEmptyHeading": "შესაბამისი გასაღები არ მოიძებნა",
+        "keylessClaimed": "აღებულია {{store}}-ზე — გასაღები საჭირო არ არის",
         "openStore": "გახსენით {{store}}",
         "pickOnHumble": "არჩევა Humble-ზე",
         "platformOther": "სხვა",

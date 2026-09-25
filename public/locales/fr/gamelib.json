@@ -47,6 +47,7 @@
         "emptyHeading": "Aucune clé Humble pour le moment",
         "filteredEmptyBody": "Essayez une autre recherche ou désactivez « Clés utilisables uniquement ».",
         "filteredEmptyHeading": "Aucune clé correspondante",
+        "keylessClaimed": "Récupéré sur {{store}} — aucune clé nécessaire",
         "openStore": "Ouvrir {{store}}",
         "pickOnHumble": "Choisir sur Humble",
         "platformOther": "Autre",

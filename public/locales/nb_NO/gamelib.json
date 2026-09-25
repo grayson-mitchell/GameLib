@@ -87,6 +87,7 @@
         "emptyHeading": "Ingen Humble-nøkler ennå",
         "filteredEmptyBody": "Prøv et annet søk, eller slå av «Kun innløsbare nøkler».",
         "filteredEmptyHeading": "Ingen nøkler samsvarer",
+        "keylessClaimed": "Hentet på {{store}} — ingen nøkkel nødvendig",
         "openStore": "Åpne {{store}}",
         "pickOnHumble": "Velg på Humble",
         "platformOther": "Annen",

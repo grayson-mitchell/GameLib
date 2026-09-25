@@ -87,6 +87,7 @@
         "emptyHeading": "Inga Humble-nycklar än",
         "filteredEmptyBody": "Prova en annan sökning eller stäng av ”Endast inlösbara nycklar”.",
         "filteredEmptyHeading": "Inga nycklar matchar",
+        "keylessClaimed": "Hämtad på {{store}} — ingen nyckel behövs",
         "openStore": "Öppna {{store}}",
         "pickOnHumble": "Välj på Humble",
         "platformOther": "Övrigt",

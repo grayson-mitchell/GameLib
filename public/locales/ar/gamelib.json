@@ -91,6 +91,7 @@
         "emptyHeading": "لا توجد مفاتيح Humble بعد",
         "filteredEmptyBody": "جرّب بحثًا مختلفًا، أو أوقف «المفاتيح القابلة للاستخدام فقط».",
         "filteredEmptyHeading": "لا توجد مفاتيح مطابقة",
+        "keylessClaimed": "تم الحصول عليه من {{store}} — لا حاجة إلى مفتاح",
         "openStore": "افتح {{store}}",
         "pickOnHumble": "الاختيار على Humble",
         "platformOther": "آخر",

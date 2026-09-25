@@ -90,6 +90,7 @@
         "emptyHeading": "Níl aon eochair Humble ann fós",
         "filteredEmptyBody": "Bain triail as cuardach eile, nó múch „Eochracha infhuascailte amháin“.",
         "filteredEmptyHeading": "Níl aon eochair comhoiriúnach",
+        "keylessClaimed": "Éilithe ar {{store}} — níl eochair ag teastáil",
         "openStore": "Oscail {{store}}",
         "pickOnHumble": "Roghnaigh ar Humble",
         "platformOther": "Eile",

@@ -87,6 +87,7 @@
         "emptyHeading": "هنوز کلید Humble ندارید",
         "filteredEmptyBody": "جستجوی دیگری را امتحان کنید یا «فقط کلیدهای قابل استفاده» را خاموش کنید.",
         "filteredEmptyHeading": "کلیدی مطابقت ندارد",
+        "keylessClaimed": "در {{store}} دریافت شد — نیازی به کلید نیست",
         "openStore": "باز کردن {{store}}",
         "pickOnHumble": "انتخاب در Humble",
         "platformOther": "بقیه",

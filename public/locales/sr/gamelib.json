@@ -88,6 +88,7 @@
         "emptyHeading": "Још нема Humble кључева",
         "filteredEmptyBody": "Покушајте другу претрагу или искључите „Само искористиви кључеви“.",
         "filteredEmptyHeading": "Нема подударних кључева",
+        "keylessClaimed": "Преузето на {{store}} — кључ није потребан",
         "openStore": "Отвори {{store}}",
         "pickOnHumble": "Изабери на Humble",
         "platformOther": "Остало",

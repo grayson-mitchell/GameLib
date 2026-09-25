@@ -89,6 +89,7 @@
         "emptyHeading": "Zatím žádné klíče Humble",
         "filteredEmptyBody": "Zkuste jiné hledání nebo vypněte „Pouze uplatnitelné klíče“.",
         "filteredEmptyHeading": "Žádné odpovídající klíče",
+        "keylessClaimed": "Vyzvednuto na {{store}} — klíč není potřeba",
         "openStore": "Otevřít {{store}}",
         "pickOnHumble": "Vybrat na Humble",
         "platformOther": "Ostatní",

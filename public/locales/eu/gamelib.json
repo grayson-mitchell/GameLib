@@ -87,6 +87,7 @@
         "emptyHeading": "Oraindik ez dago Humble gakorik",
         "filteredEmptyBody": "Saiatu beste bilaketa batekin edo desaktibatu «Gako berreskuragarriak soilik».",
         "filteredEmptyHeading": "Ez dago bat datorren gakorik",
+        "keylessClaimed": "{{store}}-n eskuratuta — ez da koderik behar",
         "openStore": "Ireki {{store}}",
         "pickOnHumble": "Aukeratu Humble-n",
         "platformOther": "Bestela",

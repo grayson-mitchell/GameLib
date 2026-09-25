@@ -89,6 +89,7 @@
         "emptyHeading": "Ključev Humble še ni",
         "filteredEmptyBody": "Poskusite z drugim iskanjem ali izklopite „Samo unovčljivi ključi“.",
         "filteredEmptyHeading": "Ni ujemajočih se ključev",
+        "keylessClaimed": "Prevzeto na {{store}} — ključ ni potreben",
         "openStore": "Odpri {{store}}",
         "pickOnHumble": "Izberi na Humble",
         "platformOther": "Drugo",

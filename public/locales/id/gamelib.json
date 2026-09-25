@@ -87,6 +87,7 @@
         "emptyHeading": "Belum ada kunci Humble",
         "filteredEmptyBody": "Coba pencarian lain, atau matikan «Hanya kunci yang dapat ditukarkan».",
         "filteredEmptyHeading": "Tidak ada kunci yang cocok",
+        "keylessClaimed": "Diambil di {{store}} — tidak perlu key",
         "openStore": "Buka {{store}}",
         "pickOnHumble": "Pilih di Humble",
         "platformOther": "Lainnya",

@@ -87,6 +87,7 @@
         "emptyHeading": "Hələ Humble açarı yoxdur",
         "filteredEmptyBody": "Başqa axtarış sınayın və ya «Yalnız istifadə oluna bilən açarlar» seçimini söndürün.",
         "filteredEmptyHeading": "Uyğun açar yoxdur",
+        "keylessClaimed": "{{store}} üzərində götürülüb — açar lazım deyil",
         "openStore": "{{store}} aç",
         "pickOnHumble": "Humble-də seç",
         "platformOther": "Digər",

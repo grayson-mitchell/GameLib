@@ -87,6 +87,7 @@
         "emptyHeading": "ยังไม่มีคีย์ Humble",
         "filteredEmptyBody": "ลองค้นหาแบบอื่น หรือปิด «เฉพาะคีย์ที่ใช้ได้»",
         "filteredEmptyHeading": "ไม่มีคีย์ที่ตรงกัน",
+        "keylessClaimed": "รับแล้วที่ {{store}} — ไม่ต้องใช้คีย์",
         "openStore": "เปิด {{store}}",
         "pickOnHumble": "เลือกที่ Humble",
         "platformOther": "อื่นๆ",

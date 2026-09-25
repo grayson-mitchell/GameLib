@@ -87,6 +87,7 @@
         "emptyHeading": "Henüz Humble anahtarı yok",
         "filteredEmptyBody": "Farklı bir arama deneyin veya «Yalnızca kullanılabilir anahtarlar» seçeneğini kapatın.",
         "filteredEmptyHeading": "Eşleşen anahtar yok",
+        "keylessClaimed": "{{store}}'da alındı — anahtar gerekmez",
         "openStore": "{{store}} Aç",
         "pickOnHumble": "Humble'da seç",
         "platformOther": "Diğer",

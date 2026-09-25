@@ -111,6 +111,7 @@
         "giftConfirmTitle": "Gift this key?",
         "giftedAnnotation": "Opened Humble gift page {{date}}",
         "giftOnHumble": "Gift on Humble",
+        "keylessClaimed": "Claimed on {{store}} — no key needed",
         "keyLoading": "Loading…",
         "keyShownTitle": "Your key",
         "lastSynced": "Last synced {{time}} ago",
