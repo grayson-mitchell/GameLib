@@ -144,7 +144,7 @@ body.cyberSpaceOasisAlt {
   --accent: #e0ab40;
   --accent-overlay: #ffbb33;
   --navbar-accent: var(--accent);
-  --navbar-active-background: var(--background-lighter);
+  --navbar-active-background: #3a435c; /* lighter than --navbar-background, so the active row stands out */
   --play-button: #59d0ea;
   --download-button: #3082d9;
   --download-button-overlay: #1372d7;
@@ -212,7 +212,7 @@ body.gruvbox_dark {
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
   --navbar-background: #32302f;
-  --navbar-active-background: #282828;
+  --navbar-active-background: #514f4e; /* lighter than --navbar-background, so the active row stands out */
   // D-31 / CR-01, 34.10-REVIEW.md. Without its own declaration, NavItem's
   // fallback chain (`var(--navbar-active, var(--accent-overlay, var(--accent)))`,
   // NavItem/index.scss:20-23) resolves to `--accent-overlay` (#d79921, a
@@ -305,7 +305,7 @@ body.dracula-classic {
   --current-background: var(--body-background);
   --navbar-background: #44475a;
   --navbar-active: var(--accent);
-  --navbar-active-background: #282a36;
+  --navbar-active-background: #555869; /* lighter than --navbar-background, so the active row stands out */
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-darker) -32px,
@@ -344,7 +344,7 @@ body.nord-light {
   --navbar-accent: #81a1c1;
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
-  --navbar-active-background: #2e3440;
+  --navbar-active-background: #60697a; /* lighter than --navbar-background, so the active row stands out */
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-light) -32px,
@@ -503,7 +503,7 @@ body.nord-dark {
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
   --navbar-background: #2e3440;
-  --navbar-active-background: #191c22;
+  --navbar-active-background: #4f545f; /* lighter than --navbar-background, so the active row stands out */
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-darker) -32px,
@@ -541,7 +541,7 @@ body.marine-classic {
   --background-darker: #031b22;
   --current-background: var(--body-background);
   --navbar-background: #0b3e4b;
-  --navbar-active-background: #042028;
+  --navbar-active-background: #23515d; /* lighter than --navbar-background, so the active row stands out */
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-darker) -32px,
@@ -576,7 +576,7 @@ body.zombie-classic {
   --background-darker: var(--body-background);
   --current-background: var(--body-background);
   --navbar-background: #323232;
-  --navbar-active-background: #232525;
+  --navbar-active-background: #515151; /* lighter than --navbar-background, so the active row stands out */
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-darker) -32px,
@@ -615,7 +615,7 @@ body.old-school {
   --background-darker: #1d1f1f;
   --current-background: var(--body-background);
   --navbar-background: #323232;
-  --navbar-active-background: #222424;
+  --navbar-active-background: #515151; /* lighter than --navbar-background, so the active row stands out */
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-darker) -32px,
@@ -666,7 +666,7 @@ body.sweet-dark {
   --background-darker: #110111;
   --current-background: #110111;
   --navbar-background: #220422;
-  --navbar-active-background: #3b0a3b;
+  --navbar-active-background: #482f48; /* lighter than --navbar-background, so the active row stands out */
   --gradient-body-background: linear-gradient(
     90deg,
     var(--background-darker) -32px,
