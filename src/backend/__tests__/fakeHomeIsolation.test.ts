@@ -26,7 +26,7 @@
  * comment -- stripping there would make it trivially vacuous instead.
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, sep } from 'node:path'
 
 import { FAKE_HOME_ENV_KEYS } from '../testUtils/fakeHomeProfile'
 import { stripSourceComments } from '../testUtils/stripSourceComments'
@@ -63,7 +63,10 @@ const HELPER_REL_PATH = 'src/backend/testUtils/fakeHomeProfile.ts'
  *    PROCESS ITSELF, a different shape and a different purpose from building a
  *    child's env. It does not currently match the rule below at all (it never
  *    writes them as object-literal properties), so this entry documents intent
- *    rather than suppressing a live hit.
+ *    rather than suppressing a live hit. Neither entry currently suppresses a
+ *    live hit at all (quick 260926-c07 finding 3): neither file contains a
+ *    spawn-family call, so this list's skip semantics are not exercised
+ *    today either -- it is here for when one of them grows one.
  */
 const ALLOWED_TO_ASSIGN: readonly string[] = [
   HELPER_REL_PATH,
@@ -82,6 +85,17 @@ const ALLOWED_TO_ASSIGN: readonly string[] = [
  * apart. Both anchors below were copied from the file on disk and verified to
  * sit entirely on ONE line -- an anchor that spans a comment's line wrap greps
  * zero, and an anchor retyped from a display copy silently no-ops.
+ *
+ * IMPORTANT, corrected by quick 260926-c07: an entry here is an exemption from
+ * the CONVENTION (this file must inherit the operator's real, populated
+ * profile), NOT an exemption from THIS DETECTOR. The detector flags a
+ * hand-rolled home/config/state env block on a spawn call; an exempt file
+ * that carried one would violate the very reason it is listed here for. So
+ * exempt files are still scanned below -- this table used to also be
+ * consulted as a skip list, which was dead on every OS (the exempt file below
+ * passes no `env` key at all, so skipping it suppressed nothing) and, on
+ * macOS/Linux, hid the exact regression its own header warns against: adding
+ * an `env` key there would have stayed invisible to the enforcing test.
  */
 interface Exemption {
   readonly file: string
@@ -119,6 +133,18 @@ function keyAssignmentRe(key: string): RegExp {
   return new RegExp(`(?:^|[{,(\\s])${key}\\s*:`, 'm')
 }
 
+/**
+ * `path.relative()` emits `\`-separated paths on Windows, but every literal
+ * compared against its output in this file (`HELPER_REL_PATH`,
+ * `ALLOWED_TO_ASSIGN`, `EXEMPTIONS[].file`, the two inline literals below) is
+ * `/`-separated. This is the ONLY permitted caller of `relative()` in this
+ * file -- normalize once, at the source, rather than at every comparison
+ * site (260926-c07).
+ */
+function toRepoRel(abs: string): string {
+  return relative(REPO_ROOT, abs).split(sep).join('/')
+}
+
 function walk(dir: string, out: string[]): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (PRUNED_DIRS.has(entry.name)) continue
@@ -140,16 +166,15 @@ function collectScannedFiles(): string[] {
 }
 
 const scannedFiles = collectScannedFiles()
-const scannedRelPaths = scannedFiles.map((f) => relative(REPO_ROOT, f))
-const exemptFiles = new Set(EXEMPTIONS.map((e) => e.file))
+const scannedRelPaths = scannedFiles.map((f) => toRepoRel(f))
 
 describe('fake-HOME isolation (quick-260913-arr item 6, CLAUDE.md two-profile rule)', () => {
   it('no in-repo file spawns a child with a hand-rolled home/config/state env block', () => {
     const offenders: string[] = []
 
     for (const absolute of scannedFiles) {
-      const rel = relative(REPO_ROOT, absolute)
-      if (ALLOWED_TO_ASSIGN.includes(rel) || exemptFiles.has(rel)) continue
+      const rel = toRepoRel(absolute)
+      if (ALLOWED_TO_ASSIGN.includes(rel)) continue
 
       const source = stripSourceComments(readFileSync(absolute, 'utf-8'))
       if (!SPAWN_CALL_RE.test(source)) continue
@@ -193,6 +218,31 @@ describe('fake-HOME isolation (quick-260913-arr item 6, CLAUDE.md two-profile ru
     }
 
     expect(drifted).toEqual([])
+  })
+
+  it('exempt file honours its contract: spawns, but assigns none of the eight keys', () => {
+    // the smoke gate's header promises NO env key; this makes that executable
+    const violations: string[] = []
+
+    for (const exemption of EXEMPTIONS) {
+      const path = join(REPO_ROOT, exemption.file)
+      if (!existsSync(path)) continue
+      const source = stripSourceComments(readFileSync(path, 'utf-8'))
+
+      if (!SPAWN_CALL_RE.test(source)) {
+        violations.push(`${exemption.file}: no spawn-family call found`)
+        continue
+      }
+
+      const assigned = FAKE_HOME_ENV_KEYS.filter((key) =>
+        keyAssignmentRe(key).test(source)
+      )
+      if (assigned.length > 0) {
+        violations.push(`${exemption.file} (assigns ${assigned.join(', ')})`)
+      }
+    }
+
+    expect(violations).toEqual([])
   })
 
   it('scanned a real population, including the helper it exists to enforce', () => {
