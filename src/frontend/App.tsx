@@ -24,7 +24,7 @@ import AboutDialogHost from './components/UI/AboutDialog/AboutDialogHost'
 import RedeemSteamKeyDialog from './components/UI/RedeemSteamKeyDialog'
 import WindowControls from './components/UI/WindowControls'
 import classNames from 'classnames'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { ThemeProvider } from '@mui/material/styles'
 import LogFileUploadDialog from './components/UI/LogFileUploadDialog'
 import UploadedLogFilesList from './screens/Settings/sections/LogSettings/components/UploadedLogFilesList'
 import { TourProvider } from './state/TourContext'
@@ -34,6 +34,7 @@ import HumbleExpiryToast from './components/UI/HumbleExpiryToast'
 import SteamBottleSetup from './screens/Game/GamePage/components/SteamBottleSetup'
 import SteamClientSetup from './screens/Game/GamePage/components/SteamClientSetup'
 import SteamBridgeSetup from './screens/Game/GamePage/components/SteamBridgeSetup'
+import { buildMuiTheme } from './muiTheme'
 
 function Root() {
   const {
@@ -82,34 +83,7 @@ function Root() {
 
   const isConsoleMode = useLocation().pathname.startsWith('/console')
 
-  const theme = createTheme({
-    direction: isRTL ? 'rtl' : 'ltr',
-    typography: {
-      fontFamily: 'var(--primary-font-family)'
-    },
-    components: {
-      MuiPaper: {
-        styleOverrides: {
-          root: {
-            color: 'var(--text-default)',
-            backgroundColor: 'var(--background)'
-          }
-        }
-      },
-      MuiTooltip: {
-        styleOverrides: {
-          tooltip: {
-            fontSize: 'var(--text-md)',
-            backgroundColor: 'var(--background-darker)',
-            color: 'var(--text-primary)',
-            padding: 'var(--space-md)',
-            borderRadius: 'var(--space-sm)',
-            maxWidth: '350px'
-          }
-        }
-      }
-    }
-  })
+  const theme = buildMuiTheme(isRTL)
 
   return (
     <div
