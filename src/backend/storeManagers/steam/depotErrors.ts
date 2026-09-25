@@ -293,7 +293,22 @@ export function classifyDepotError(err: unknown): ClassifiedDepotError {
       message: i18next.t(
         'gamelib:box.error.install.stalled',
         'No download progress for {{count}} minutes — the install was stopped',
-        { count: Math.max(1, Math.round(err.msSinceProgress / 60000)) }
+        {
+          count: Math.max(1, Math.round(err.msSinceProgress / 60000)),
+          // The second argument above supplies only the PLURAL wording. With
+          // `count` present, i18next-parser derives BOTH plural forms from it
+          // — so without this line it writes the plural sentence ("minutes")
+          // into `stalled_one`, colliding with the singular the
+          // DownloadManager call site declares and reporting
+          // "Found same keys with different values" for this key. Runtime is
+          // unaffected either way (the key is present in all 49 catalogs, so
+          // both defaults are inert), and the uninitialised-i18next path is
+          // also unchanged — it returns the second argument regardless. This
+          // exists purely so a catalog regenerated from source keeps the
+          // correct singular.
+          defaultValue_one:
+            'No download progress for {{count}} minute — the install was stopped'
+        }
       ),
       action: 'retry'
     }
