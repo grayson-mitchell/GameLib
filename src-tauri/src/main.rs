@@ -8909,7 +8909,10 @@ fn deliver_to_running_instance_windows(
 ///
 /// The NEXT pipe instance is always created before the current connection is read
 /// (T-34.5-G6-24): a listening instance exists continuously, so a fast second launch is never
-/// refused. If a later instance cannot be created, the already-accepted connection is still
+/// refused. Each accepted connection is then read on its own short-lived worker thread, never
+/// on this loop's thread (46-REVIEW WR-01), so one client that connects and never writes cannot
+/// stop the loop from accepting everyone after it. If a later instance cannot be created, the
+/// already-accepted connection is still
 /// serviced once, and this function then returns -- the WARN below, not a panic or an abort --
 /// ending only THIS thread; the app and its main window keep running (fail-open).
 #[cfg(windows)]
@@ -8967,7 +8970,15 @@ fn run_windows_single_instance_accept_loop(
         // (T-34.5-G6-24).
         match create_single_instance_pipe_instance(&pipe_name, &sddl, false) {
             Ok(next) => {
-                handle_windows_single_instance_connection(
+                // 46-REVIEW WR-01: the connection is serviced on its OWN short-lived worker
+                // thread, never inline. The read below is a blocking `PIPE_WAIT` read with no
+                // deadline, so servicing it inline let one same-user client that connects and
+                // never writes or closes park THIS thread forever -- `ConnectNamedPipe` was
+                // never reached again, and every later secondary's write was absorbed by the
+                // pipe buffer and silently never read, for the rest of the session. Handing
+                // the connection off means a stalled client can only ever park its own worker,
+                // which ends by itself the moment that client writes or closes its handle.
+                spawn_windows_single_instance_connection_worker(
                     current,
                     &accept_state,
                     &accept_app_handle,
@@ -8978,6 +8989,8 @@ fn run_windows_single_instance_accept_loop(
                 eprintln!(
                     "[shell] WARN: could not create the next single-instance pipe instance ({e}) -- warm deep-link delivery disabled for this session (fail-open, T-34.5-G6-24)"
                 );
+                // Inline is deliberate here: the loop is ending, so parking this now-terminal
+                // thread on a stalled client costs no future delivery.
                 handle_windows_single_instance_connection(
                     current,
                     &accept_state,
@@ -8985,6 +8998,32 @@ fn run_windows_single_instance_accept_loop(
                 );
                 return;
             }
+        }
+    }
+
+    // 46-REVIEW WR-01: services one connected pipe instance on a detached, short-lived worker
+    // thread so the accept loop above is never blocked by a non-cooperative client. The worker
+    // is detached like the accept thread itself (never joined), so it cannot hold the process
+    // alive past shutdown: process exit tears it down, and the OS closes the pipe handle it
+    // owns. If the spawn itself fails (resource exhaustion), only this one connection is
+    // dropped -- the handle closes with the un-run closure -- and the loop keeps listening
+    // (fail-open, T-34.5-G6-24); the WARN makes that loss observable rather than silent.
+    fn spawn_windows_single_instance_connection_worker(
+        handle: std::os::windows::io::OwnedHandle,
+        accept_state: &Arc<SidecarState>,
+        accept_app_handle: &AppHandle,
+    ) {
+        let worker_state = Arc::clone(accept_state);
+        let worker_app_handle = accept_app_handle.clone();
+        let spawned = thread::Builder::new()
+            .name("gamelib-single-instance-conn".to_string())
+            .spawn(move || {
+                handle_windows_single_instance_connection(handle, &worker_state, &worker_app_handle)
+            });
+        if let Err(e) = spawned {
+            eprintln!(
+                "[shell] WARN: could not spawn a single-instance connection worker ({e}) -- dropping this one connection; the accept loop keeps listening (fail-open, T-34.5-G6-24)"
+            );
         }
     }
 
