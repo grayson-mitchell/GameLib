@@ -44,6 +44,25 @@
   z-index: 2;
 }
 
+/* Stale-focus suppression while mousing (260925-pga, round 3). Both gamepad
+   navigation (gamepad.ts drives simulated tab/arrow focus) and a plain
+   click move REAL DOM focus, and `:focus-within` holds the ring on that
+   card until focus moves elsewhere -- so the last gamepad-landed or
+   last-clicked card kept ringing even after the pointer moved to hover a
+   different card, showing two rings where only one should exist. The
+   operator's chosen resolution: while the pointer is over the grid
+   (`.gameList:hover`), the mouse is the active input and hover alone owns
+   the highlight -- a focused-but-not-hovered card is returned to its
+   resting appearance. This restores the base `box-shadow` from the
+   `.gameCard` rule above rather than clearing it, so the card keeps its
+   normal drop shadow instead of going flat. When the pointer leaves the
+   grid, focus resumes owning the highlight exactly as before this rule. */
+.gameList:hover .gameCard:focus-within:not(:hover) {
+  outline: none;
+  box-shadow: 0px 0px 12px 4px #00000055;
+  z-index: auto;
+}
+
 .gameCard > .gameCardStatus {
   position: absolute;
   z-index: 5;
@@ -202,6 +221,16 @@
 .gameCard:hover,
 .gameCard:focus-within {
   transform: scale(1.05);
+}
+
+/* Deliberate extension of the stale-focus suppression above: the scale is
+   part of the same "highlighted" state as the ring, and leaving a stale
+   focused-but-not-hovered card visibly popped up would only relocate the
+   operator's "stuck on" complaint from the ring to the scale. Restoring the
+   resting (unscaled) size here keeps exactly one tile looking highlighted
+   while the pointer is over the grid. */
+.gameList:hover .gameCard:focus-within:not(:hover) {
+  transform: none;
 }
 
 .gameCard.hidden .gameImg,
@@ -364,6 +393,16 @@
 .gameListItem:focus-within {
   outline: 2px solid var(--accent, #0080ff);
   outline-offset: -2px;
+}
+
+/* Same stale-focus suppression as .gameList above, for list view: a row
+   that still carries DOM focus from a prior gamepad landing or click keeps
+   its outline until focus moves elsewhere, so while the pointer is over
+   the list (`.gameListLayout:hover`) hover alone owns the highlight and a
+   focused-but-not-hovered row is returned to its resting (no-outline)
+   appearance. */
+.gameListLayout:hover .gameListItem:focus-within:not(:hover) {
+  outline: none;
 }
 
 .gameListItem .gameTitle span {
