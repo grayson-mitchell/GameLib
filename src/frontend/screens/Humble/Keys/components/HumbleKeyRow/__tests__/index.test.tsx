@@ -823,6 +823,64 @@ describe('HumbleKeyRow KEY-column scenario resolution (D-43-17, Phase 43 plan 06
     expect(buttons).toHaveLength(0)
   })
 
+  // 260925-j58: a code-assuming affordance is never offered to a keyless
+  // entitlement (the rule T-UIC-01 and isGiftable already express, third
+  // site). "Finish activation" routes to openWizard(key, 'finish') — the
+  // reveal/redeem wizard — against an entitlement that has no code, so the
+  // button is a dead end. These four cases pin the exemption AND both
+  // regressions it must not cause.
+  it.each([
+    ['gog_keyless', 'Claimed on GOG — no key needed'],
+    ['epic_keyless', 'Claimed on Epic Games — no key needed']
+  ])(
+    'a REVEALED %s row renders zero buttons and a humbleKeyClaimAnnotation reading %j (260925-j58)',
+    (platform, expected) => {
+      const tree = HumbleKeyRow({
+        humbleKey: makeHumbleKey({ state: 'REVEALED', platform }),
+        claimAction: makeClaimAction()
+      }) as ReactElement
+
+      const buttons = collectElements(tree).filter((el) => el.type === 'button')
+      expect(buttons).toHaveLength(0)
+
+      // The cell must never be EMPTY. For a keyless key
+      // `claimAction.revealedAt` is always null (no local reveal record can
+      // exist for an entitlement that was never revealed), so the existing
+      // "Revealed {date}" annotation renders nothing — a bare suppression
+      // would delete the row's only information.
+      const annotation = findByClassNamePart(tree, 'humbleKeyClaimAnnotation')
+      expect(annotation).toBeDefined()
+      expect(textContent(annotation)).toBe(expected)
+    }
+  )
+
+  // REGRESSION GUARD (CR-01): the keyed sibling of the case above must come
+  // out byte-identical — a key revealed on Humble's WEBSITE still needs its
+  // Finish-activation path.
+  it("a REVEALED keyed 'gog' row still renders a 'Finish activation' button (CR-01 unregressed, 260925-j58)", () => {
+    const tree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({ state: 'REVEALED', platform: 'gog' }),
+      claimAction: makeClaimAction()
+    }) as ReactElement
+
+    const buttons = collectElements(tree).filter((el) => el.type === 'button')
+    expect(buttons).toHaveLength(1)
+    expect(textContent(buttons[0])).toBe('Finish activation')
+  })
+
+  // REGRESSION GUARD (260823-op3): a REVEALED Steam key still activates in
+  // one click and keeps its own verb.
+  it("a REVEALED 'steam' row still renders an 'Activate' button (260823-op3 unregressed, 260925-j58)", () => {
+    const tree = HumbleKeyRow({
+      humbleKey: makeHumbleKey({ state: 'REVEALED', platform: 'steam' }),
+      claimAction: makeClaimAction()
+    }) as ReactElement
+
+    const buttons = collectElements(tree).filter((el) => el.type === 'button')
+    expect(buttons).toHaveLength(1)
+    expect(textContent(buttons[0])).toBe('Activate')
+  })
+
   // MUTATION PROOF 2 TARGET — see 43-06-SUMMARY.md "Mutation Proofs" for
   // the verbatim before/after run. Exhaustively covers every combination of
   // the three inputs resolveKeyScenario's override branch reads, so a
