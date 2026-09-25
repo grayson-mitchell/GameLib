@@ -1,19 +1,20 @@
 ---
 phase: 43-humble-keys-screen-unified-list-replacing-the-three-tabs-wit
 verified: 2026-09-25T00:00:00Z
-status: gaps_found
-score: 23/24 requirements verified
+status: passed
+score: 24/24 requirements verified
+re_verification:
+  previous_status: gaps_found
+  previous_score: 23/24
+  gaps_closed:
+    - 'REQ-43-24 — fixed in code (`c99fdee43`) and live-confirmed 2026-09-25: the embed paints in-app on Humble''s Keys & Entitlements page'
+  gaps_remaining: []
+  regressions: []
 overrides_applied: 0
 human_verification:
   - '43-UAT.md (2026-09-18/19), 11 items, 10 pass / 1 issue'
   - '43-LIVE-GATE.md runs 1-3 (2026-09-11), packaged release builds, hash-verified from DMG'
-gaps:
-  - id: REQ-43-24
-    severity: medium
-    summary: 'Second-opener defect FIXED in code 2026-09-25 (`260925-gnp`, `c99fdee43`); awaiting one live confirmation that the embed paints'
-    was: 'major — the button was unresponsive in the shipped build: unit-green, live-broken'
-    owned_by: '.planning/todos/pending/2026-09-25-humble-keys-gog-keyless-claim-button-opens-an-embed-with-no-host-lifecycle.md'
-    live_check: '/store-page?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys — needs no gog_keyless entitlement'
+gaps: []
 ---
 
 # Phase 43 Verification Report
@@ -111,8 +112,46 @@ entry, the deep-link gate and the host lifecycle — every part the defect broke
 entitlement of any kind. The unreachable-repro framing had quietly widened from "the button" to
 "the whole defect", and it was wrong for six days.
 
-Severity `major` → `medium`, `ready: code` → `live-gate`. Phase 43 still reads `gaps_found` until
-that one observation is taken: the fix is proven by tests, not by anyone seeing it paint.
+### ✅ LIVE-CONFIRMED 2026-09-25 — the gap is CLOSED, phase status `passed`
+
+The observation was taken. **Humble's keys page paints inside the app.**
+
+| precondition / check                | result                                                                 |
+| ----------------------------------- | ---------------------------------------------------------------------- |
+| instances before launch             | **0** (operator's dev session quit first, port 5173 released)          |
+| build under test                    | HEAD `a9bc2d4ad`, carrying the fix `c99fdee43`                         |
+| instances during                    | **1** (pid 71109) — launch not absorbed                                |
+| window                              | 1280×800 at (118, 65)                                                  |
+| embed renders Humble                | **PASS** — `www.humblebundle.com` in the embed's own URL chrome        |
+| correct page                        | **PASS** — the **Keys & Entitlements** tab is the selected one          |
+| session carried                     | **PASS** — logged in (Purchases / Library / Keys & Entitlements / Coupons) |
+| stayed in-app                       | **PASS** — rendered under GameLib's own STORES tab and sidebar; no browser launched, no `openExternal` in the log |
+| errors                              | **none** — 56-line log, zero errors/panics                             |
+| instances after quit                | **0**; Vite down; port free; `tauri.conf.json` restored, tree clean     |
+
+The only `store_embed` log lines were three `blocked in-embed navigation to unrecognized scheme
+'about'` — the embed's own navigation policy firing on Humble's `about:blank` iframes, which is
+itself evidence the embed was live and governed.
+
+**How it was driven, since this is reusable.** The app uses `createHashRouter`, so
+`tauri.conf.json`'s `devUrl` was temporarily pointed at
+`http://localhost:5173/#/store-page?store-url=…` and the app booted straight onto the route. **No
+code under test was modified** — only the entry URL, which is exactly what a real navigation
+produces. This sidesteps the AX blindness that makes Tauri UI unclickable from a script. Config
+restored immediately afterwards.
+
+**Stated limits of this PASS, so it is not read as more than it is:**
+
+- **Debug build, not packaged.** The renderer and the Rust child-webview host are the same code,
+  but this run cannot see the packaging-specific "blank on ~1 launch in 4" defect that is filed
+  separately.
+- **The button's own `onClick` was not clicked** — it needs an unlinked GOG account, unavailable
+  here. That wiring is pinned by the four tests added in `c99fdee43`, not by this run.
+- **Bounds-sync under resize was not exercised.** The embed was correctly sized at the window's
+  launch geometry; tracking through a live drag is untested here.
+
+Evidence (2 screenshots, log, precondition captures) is deliberately held in the session
+scratchpad and **not committed** — the captures show the operator's real Humble account state.
 
 ## Second open item, not a requirement gap
 

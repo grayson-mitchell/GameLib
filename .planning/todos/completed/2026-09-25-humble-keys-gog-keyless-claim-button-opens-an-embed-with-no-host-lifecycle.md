@@ -5,7 +5,7 @@ area: humble/keys-screen
 severity: medium
 platform: any
 ready: live-gate
-status: OPEN
+status: RESOLVED
 found_by: 'Phase 43 UAT item 8 (2026-09-18), operator on a hash-verified release build: "oh that is broken, button is unresponsive". Root cause below is the UAT''s own lead, PARTLY re-adjudicated by quick-260925-e4d.'
 files:
   - src/frontend/screens/Humble/Keys/components/HumbleKeyRow/index.tsx
@@ -43,7 +43,29 @@ PASS = Humble's keys page renders inside the app, correctly sized, scrolling wit
 host lifecycle — everything the defect broke. The only thing it does not exercise is the button's
 own `onClick` wiring, which the four new tests pin directly.
 
-Close this todo on that one observation.
+### ✅ RUN 2026-09-25 — PASS. This todo is CLOSED.
+
+Build HEAD `a9bc2d4ad` (carries `c99fdee43`). Zero instances before launch, exactly one during
+(pid 71109 — not absorbed), zero after; `tauri.conf.json` restored and tree clean.
+
+**Humble's keys page painted inside the app**: `www.humblebundle.com` in the embed's own URL
+chrome, the **Keys & Entitlements** tab selected, logged in (Purchases / Library / Keys &
+Entitlements / Coupons), rendered under GameLib's STORES tab beside the app sidebar. No browser
+launched, no `openExternal`, zero errors in a 56-line log. The only `store_embed` lines were three
+`blocked in-embed navigation to unrecognized scheme 'about'` — the embed's navigation policy
+firing on Humble's `about:blank` iframes, itself proof the embed was live and governed.
+
+Driven by temporarily pointing `tauri.conf.json`'s `devUrl` at
+`http://localhost:5173/#/store-page?store-url=…` (the app uses `createHashRouter`), so it booted
+straight onto the route with **no code under test modified** — only the entry URL, which is what a
+real navigation produces. That is the workaround for Tauri UI being unclickable via AX.
+
+**Limits, stated:** debug build not packaged (so it cannot see the separately-filed "blank on ~1
+launch in 4"); the button's own `onClick` was not clicked (needs an unlinked GOG account) and is
+pinned by tests instead; bounds-sync under live resize untested.
+
+Evidence held in the session scratchpad and deliberately **not committed** — the captures show a
+real Humble account.
 
 ## The defect (as diagnosed — code since replaced)
 

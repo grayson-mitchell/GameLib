@@ -5191,11 +5191,18 @@ Plans:
 
 ### Phase 43: Humble Keys screen: unified list replacing the three tabs, with search, sort and hide-redeemed filters, a column-header row, and a three-column row whose KEY column is action-scenario driven
 
-🚧 **EXECUTED AND VERIFIED 2026-09-25 — 10/10 plans, 23/24 requirements, ONE OPEN GAP.** Not
-`✅ COMPLETE`, and the marker is deliberate: REQ-43-24's `gog_keyless` "Claim on Humble" button is
-a `major` live failure the operator observed (`43-UAT.md` item 8), so the phase has unmet scope
-even though every plan is summarised. `43-VERIFICATION.md` carries `status: gaps_found` and the
-gap carries an owning todo. Full detail in the superseding note at the end of this entry.
+✅ **COMPLETE 2026-09-25 — 10/10 plans, 24/24 requirements, 0 gaps.** `43-VERIFICATION.md`
+`status: passed`. The phase's one gap — REQ-43-24's `gog_keyless` "Claim on Humble" button, a
+`major` live failure the operator observed (`43-UAT.md` item 8) — was root-caused, fixed
+(`c99fdee43`: the row stopped opening the embed itself and the claim now routes through the Phase
+40 host route) and **live-confirmed the same day**: Humble's keys page paints inside the app on
+the Keys & Entitlements tab, logged in, no browser launched, zero errors. Its todo is closed.
+
+This entry read `🚧 … ONE OPEN GAP` for part of 2026-09-25; that marker is superseded, not
+deleted, because the gap it named was real. Limits of the live confirmation are recorded in
+`43-VERIFICATION.md` rather than here: debug build not packaged, the button's own `onClick` not
+clicked (needs an unlinked GOG account; pinned by tests instead), bounds-sync under resize
+untested. Full detail in the superseding note at the end of this entry.
 
 **Goal:** Bring the Humble Keys screen closer to Humble's own site. Today it is three tabs
 (`Keys waiting` / `Giftable spares` / `All keys`) whose membership is computed by

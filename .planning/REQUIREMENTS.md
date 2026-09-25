@@ -1870,10 +1870,14 @@ because each changes what a plan must assert:**
   below is repaired: `openHumbleKeysEmbed()` is deleted, the claim navigates to
   `/store-page?store-url=` so `useStoreEmbedHost` owns the embed lifetime, and Humble is in
   `STORE_EMBED_ORIGINS`. Four tests now invoke the handler and a `storeEmbedSingleOpener` gate
-  (revert-to-red proven) stops a second opener returning. **Still awaiting ONE live look** —
-  navigate a running app to `/store-page?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys`
-  and confirm the page paints in-app; that check needs no `gog_keyless` entitlement. Tracked by the
-  same todo, now `severity: medium`, `ready: live-gate`.
+  (revert-to-red proven) stops a second opener returning. **LIVE-CONFIRMED 2026-09-25** on HEAD
+  `a9bc2d4ad`: navigating to
+  `/store-page?store-url=https%3A%2F%2Fwww.humblebundle.com%2Fhome%2Fkeys` paints Humble's keys
+  page inside the app — **Keys & Entitlements** tab selected, logged in, no browser launched, zero
+  errors, exactly one instance throughout. The owning todo is CLOSED. Limits recorded in
+  `43-VERIFICATION.md`: debug build not packaged, the button's own `onClick` not clicked (it needs
+  an unlinked GOG account, and is pinned by the four new tests instead), resize bounds-sync
+  untested.
 
   ⚠️ **HISTORICAL — why the tick above was stale between 2026-09-10 and 2026-09-25. Corrected
   (`260925-e4d`), left ticked so the "it shipped" fact is not lost.** The deferral in the line above never landed: **plan `43-10` never covered this** —
