@@ -14,6 +14,45 @@ found_by: "Observed live on the operator's Windows 11 machine, 2026-09-23/24, du
 
 # Same EBUSY class as `260924-vat`, on a path that fix deliberately does not cover
 
+## RESOLVED — 2026-09-25, quick task `260925-re8` (`vite.config.ts` now ignores `**/graphify-out/**`)
+
+**Outcome: RED, but not by the arm this file prescribed.** Read
+`.planning/quick/260925-re8-vite-watch-ignore-graphify-out/260925-re8-GATE.md`
+for the full record. In short:
+
+The `pnpm tauri:dev` + `graphify update .` arm was **not run**. A live dev server
+(PID 14020, started 18:41:49) was already up with the Tauri window attached, and
+`graphify update .` rewrites the very directory that server was watching — so the
+destructive arm endangered the operator's session no matter which vite process was
+nominally under test, and `strictPort: true` blocked a second server anyway.
+
+Instead the watcher was asked directly, read-only, via vite's Node API. On the
+**post-`c9775edac`** config a real dev server held **3485 watched entries across 8
+dirs under `graphify-out/`**, measured against a same-snapshot control of
+`src-tauri/target = 0` that proves the ignore mechanism works and the probe can
+tell covered from uncovered. After the fix: `graphify-out` → **0**, control
+`src/` dirs unchanged at 383.
+
+**The suspicion recorded below was correct on both counts it claimed.** Claim 1
+(`graphify-out/` not in `server.watch.ignored`) and claim 2 (the trigger is an
+instructed action) both held. The file's caution about not recording the old crash
+as a post-fix reproduction was also right, and is preserved: **EBUSY was never
+re-observed on the fixed config.** What closed the gap was showing that the
+post-fix config still *watches* the path; the write→EBUSY link was already
+evidenced by the original stack firing at `_addToNodeFs` on
+`graphify-out/2026-09-23/graph.json`.
+
+**`build/` decided: DECLINED**, and re-filed rather than dropped —
+`build/` (169 watched dirs) and `public/bin` are measurably watched but have never
+been observed failing, so they stay out of an array whose every entry is a measured
+failure. See
+`.planning/todos/pending/2026-09-25-vite-dev-watcher-also-walks-build-and-public-bin-both-written-while-serving.md`.
+That todo also records the non-obvious reason `build/` is watched at all: vite
+auto-ignores its outDir only when `emptyOutDir` is true, and this config sets it
+false.
+
+---
+
 ## Read this before anything else — the claim is deliberately limited
 
 **This is NOT a reproduction against the current config, and must not be recorded as one.**
