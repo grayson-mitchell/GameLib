@@ -103,3 +103,60 @@ rather than scanning the whole body for the first match. Concretely:
   about.
 - This is a DETECTION mechanism, not a PREVENTION mechanism: it catches a re-introduced collision
   the next time the gate runs, not at the moment an `gsd-sdk query state.*` call writes it.
+
+## Resolution (2026-09-25): closed as obsolete — no reportable upstream exists
+
+All facts below were verified live on 2026-09-25 in the parent session (quick task 260925-o9b).
+No network re-verification was performed here; this is a transcription of that research.
+
+**There is nowhere to file.** `gsd-build/get-shit-done` — the repo named in this todo's own
+`bugs` URL — was archived read-only on 2026-06-26. Its issue tracker shows 0 open issues; no
+report can be filed there at all. Its README states development relocated to "GSD Core in the
+Open GSD repository".
+
+**The version GameLib runs is frozen.** `get-shit-done-cc` on npm is deprecated, with the
+deprecation message "Package no longer supported". `dist-tags.latest` is still 1.42.3, published
+2026-05-16; the registry's `time.modified` is 2026-05-23. The consequence is the load-bearing
+one: the defect this todo describes can never be fixed in the version GameLib runs, no matter who
+reports it.
+
+**Development continues elsewhere, as a restructured tree.** The active successor is
+`open-gsd/gsd-core` — `pushed_at` 2026-09-25, 163 open issues, default branch `next`, homepage
+opengsd.net. The SDK sources this todo cites by path have MOVED: `sdk/src/query/state-document.ts`
+is now `src/state-document.cts`, and `sdk/src/query/state-mutation.ts` is now `src/state.cts`.
+Every file:line citation in the body above therefore addresses a tree that no longer exists in
+that shape.
+
+**Three of this todo's four suggested fixes are already fixed upstream in gsd-core.** Suggestion
+3 (require the bold form to be line-start) is FIXED at `src/state-document.cts:572` as
+`^([ \t]*\*\*Field:\*\*[ \t]*)(.*)$`, upstream issue #4243 — and note that its in-code comment
+cites this todo's exact failure mode, a bold field label quoted mid-sentence capturing the
+rewrite and destroying the rest of its line. Suggestion 4 (the `### counts` lookahead trap) is
+FIXED: the `(?=\n##|$)` lookahead was replaced by `collectSection(..., { levelBounded: true })` /
+`tokenizeHeadings` per ADR-1372 T6. The frontmatter-shadowing half is FIXED body-only per upstream
+#1255. Already-closed upstream issues covering this same defect class: #4481 (extract side,
+bold-anywhere), #4823 (plain branch, whole-body and case-insensitive), #4469, #4419.
+
+**Suggestions 1-2 remain PARTLY open upstream.** Section-scoping helpers exist —
+`stateCurrentPositionSlice` (upstream #2956) and `stateReplaceFieldInSession` (#2444) — and some
+callers scope correctly, but `record-session` (`src/state.cts:1991-2023`) and the phase-complete
+path (`src/state.cts:6674-6683`) still pass whole-document content. The in-code comment at
+`src/state.cts:1975` openly acknowledges that `stateReplaceField` "replaces the FIRST
+case-insensitive label match anywhere in the document". This residual is tracked upstream by open
+epic #4629, "STATE.md writes declare intent and are verified".
+
+**Deliberately NOT re-reported upstream, and here is why.** gsd-core's maintainers already track
+the residual in #4629 and document it in their own source comments; GameLib does not run
+gsd-core; and the package GameLib DOES run can never receive the fix. A new issue would duplicate
+closed work on a codebase this project is not a user of.
+
+**GameLib's protection is unaffected.** The existing local workaround stands — the restructured
+`.planning/STATE.md` plus `.planning/state-sdk-field-anchor-gate.py` (the 13th planning gate) —
+and this closure changes nothing about it.
+
+**Operational note.** The `gh` CLI is not installed on this machine (absent from both the Bash
+and the PowerShell PATH), so no upstream issue could have been filed from here regardless.
+
+The live exposure that outlives this todo — GameLib pinned to a deprecated, frozen SDK line — is
+now tracked by
+`.planning/todos/pending/2026-09-25-decide-whether-to-migrate-off-deprecated-get-shit-done-cc.md`.
