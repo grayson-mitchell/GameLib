@@ -25,8 +25,19 @@
   aspect-ratio: 328/205;
 }
 
+/* This ring intentionally mirrors `.consoleCard.focused` in
+   `ConsoleMode/index.scss` -- the two are expected to stay in step. The
+   colour must stay a `var(--accent, ...)` token because 11 themes ship and a
+   literal would be wrong in 10 of them. Ring-as-`outline` / glow-as-
+   `box-shadow` is a deliberate split so a webview without `color-mix()`
+   loses only the glow, never the ring. */
 .gameCard:focus-within {
-  outline: -webkit-focus-ring-color auto 1px;
+  outline: 3px solid var(--accent, #0080ff);
+  outline-offset: -1px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    0 0 22px color-mix(in srgb, var(--accent, #0080ff) 40%, transparent);
+  z-index: 2;
 }
 
 .gameCard > .gameCardStatus {
@@ -343,6 +354,11 @@
 .gameListItem > a:hover,
 .gameListItem > a:focus-within {
   color: var(--accent-overlay);
+}
+
+.gameListItem:focus-within {
+  outline: 2px solid var(--accent, #0080ff);
+  outline-offset: -2px;
 }
 
 .gameListItem .gameTitle span {
