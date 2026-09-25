@@ -48,16 +48,21 @@ anything on any controller, because there is no code path from a stick-click but
 This todo does NOT edit `38-VERIFICATION.md` or `38-HUMAN-UAT.md`. The operator re-scores Phase 38
 as a separate sitting, exactly as was done for `38-S08`.
 
-## Cross-reference: this is not a duplicate of the sibling `ready: human` todo
+## Cross-reference: this is not a duplicate of the sibling (now-resolved) todo
 
-`.planning/todos/pending/2026-09-24-nonstandard-nintendo-pad-stick-clicks-and-guide-unmeasured.md`
-says the stick-click INDICES were never MEASURED on the operator's non-standard-mapping PowerA
-pad specifically (`ready: human` -- it needs the operator and that hardware to capture a value).
+`.planning/todos/completed/2026-09-24-nonstandard-nintendo-pad-stick-clicks-and-guide-unmeasured.md`
+said the stick-click INDICES were never MEASURED on the operator's non-standard-mapping PowerA
+pad specifically (`ready: human` -- it needed the operator and that hardware to capture a value).
 
-This todo says something stronger and independent of any measurement: NO CODE DISPATCHES
+**Update, 2026-09-25 (quick-260925-ms5):** the capture has now been taken. L3 = `buttons[10]`, R3 =
+`buttons[11]`, measured live with a positive control, confirming the "matches the shoulders" prior.
+The sibling todo is RESOLVED and moved to `completed/`.
+
+This todo's own conclusion is UNCHANGED by that measurement: NO CODE DISPATCHES
 `buttons[10]`/`buttons[11]` AT ALL, on ANY mapping, on ANY layout in this repo -- established
-entirely by reading source (`ready: code`). The two are not duplicates and must not be closed as
-one.
+entirely by reading source (`ready: code`), independent of which raw HID index the pad reports.
+Knowing the index does not create a dispatch path where none exists. The two were never duplicates,
+and this one remains open.
 
 **Measuring the non-standard pad's stick-click indices would NOT make `38-C04` dischargeable.**
 Even if a future capture confirmed exactly which raw HID index the PowerA pad's L3/R3 buttons sit

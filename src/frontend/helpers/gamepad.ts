@@ -16,19 +16,6 @@ import { VirtualKeyboardController } from './virtualKeyboard'
 
 const SCROLL_REPEAT_DELAY = 50
 
-// TEMPORARY -- quick-260925-ms5 Task 1 diagnostic only, see 260925-ms5-PLAN.md. Deleted in
-// Task 4 once the operator's L3/R3/Home/Capture indices (or their null observations) have
-// been captured. Guard every emission with `window.api?.logInfo?.()` inside try/catch --
-// three jest harnesses stub `window.api` with partial shapes and an unguarded call throws
-// inside updateStatus's rAF loop, which its own outer try/catch would swallow while silently
-// killing all gamepad input.
-const HID_DUMP = true
-
-// Previous-frame pressed state for HID_DUMP, keyed by controller index. Also doubles as the
-// "have we seen this controller index before" flag that gates the one-shot resting-baseline
-// line below. See HID_DUMP comment above.
-const hidDumpPrevButtons: Record<number, boolean[]> = {}
-
 // Mirror of the `gamepadRepeatDelay` / `gamepadInitialRepeatDelay` defaults in
 // `GlobalConfigV0.getFactoryDefaults` (src/backend/config.ts). They seed
 // `actions` synchronously so a frame that lands before the settings round-trip
@@ -579,37 +566,6 @@ export const initGamepad = () => {
 
       const buttons = controller.buttons
       const axes = controller.axes
-
-      // TEMPORARY -- Task 1 diagnostic only (see HID_DUMP comment above). Placed before the
-      // id.match() dispatch chain so it fires regardless of which layout function is
-      // selected for this controller.
-      if (HID_DUMP) {
-        try {
-          const prevButtons = hidDumpPrevButtons[index]
-          if (!prevButtons) {
-            const pressedAtRest = buttons
-              .map((button, buttonIndex) => (button.pressed ? buttonIndex : -1))
-              .filter((buttonIndex) => buttonIndex !== -1)
-            window.api?.logInfo?.(
-              `[GAMEPAD-BTN] first=true count=${
-                buttons.length
-              } pressed=[${pressedAtRest.join(',')}]`
-            )
-          }
-          const prev = prevButtons ?? []
-          buttons.forEach((button, buttonIndex) => {
-            const wasPressed = prev[buttonIndex] ?? false
-            if (button.pressed !== wasPressed) {
-              window.api?.logInfo?.(
-                `[GAMEPAD-BTN] index=${buttonIndex} pressed=${button.pressed}`
-              )
-            }
-          })
-          hidDumpPrevButtons[index] = buttons.map((button) => button.pressed)
-        } catch {
-          // diagnostic only -- must never break input handling
-        }
-      }
 
       try {
         if (controller.id.match(/gamecube|0337/i)) {
