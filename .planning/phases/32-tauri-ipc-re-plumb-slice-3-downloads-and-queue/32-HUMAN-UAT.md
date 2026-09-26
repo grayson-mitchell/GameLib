@@ -17,7 +17,7 @@ CORRECTION under test 1. Run it and test 2 in the same `pnpm tauri:dev` session.
 
 **Status: PENDING — unblocked 2026-08-22, not yet attempted.**
 
-### CORRECTION 2026-08-22 — both gates are dead, and one was already dead when this was written
+**CORRECTION 2026-08-22 — both gates are dead, and one was already dead when this was written**
 
 The original deferral (preserved below) is superseded. Neither blocker survives:
 

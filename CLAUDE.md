@@ -299,7 +299,7 @@ adjacency-matched `parseUatItems`, under which a single body `expected: |` block
 parser slices each column-0 `### N.` heading to the next heading of any level and reads
 `expected: |` values dedented — probed directly with an in-memory fixture (a block-scalar
 `expected:` plus a separate `## Current Test` block scalar elsewhere in the document): the item
-was returned, its multi-line body dedented, `headingsSeen: 0`. Live `audit-uat --raw` reports 418
+was returned, its multi-line body dedented, `headingsSeen: 0`. Live `audit-uat --raw` reported 418
 outstanding items across 56 files, `parse_gap_files: 2` — against the attributed 1.42.3 comparison
 figure of 42 items across 13 files, measured by the 260926-kkt orchestrator before the old tool
 was removed (`~/.claude/get-shit-done/` no longer exists, so that figure cannot be re-measured).
@@ -312,13 +312,17 @@ anything breaks under gsd-core. The 26 existing `expected: |` blocks across `34.
 **What still goes unread, and it is now LOUD.** gsd-core reports what it cannot read itself:
 `summary.parse_gap_files`, plus per-file `parse_gap: true` and `unparsed_blocks: N`. Two causes
 were reproduced live on 2026-09-26. In `34.6-UAT.md` (`unparsed_blocks: 5`), every `result:` value
-opens with bolded prose (e.g. `result: **PASS** (2026-08-26 19:26)...`) instead of a bare or
+opened with bolded prose (e.g. `result: **PASS** (2026-08-26 19:26)...`) instead of a bare or
 bracketed status word — probed directly: a fixture whose `result:` opens with `**PASS**` is
 dropped from `items` and increments `headingsSeen`. In `32-HUMAN-UAT.md` (`unparsed_blocks: 1`), a
-non-numbered `### CORRECTION 2026-08-22 ...` heading sits between item 1's heading and its own
-`expected:`/`result:` pair, so item 1's block ends at that heading before it ever reaches its
-result. An audit with `parse_gap_files` above 0 is not a clean audit. Neither file is edited here;
-both parse gaps remain open.
+non-numbered `### CORRECTION 2026-08-22 ...` heading sat between item 1's heading and its own
+`expected:`/`result:` pair, so item 1's block ended at that heading before it ever reached its
+result. An audit with `parse_gap_files` above 0 is not a clean audit. Quick task 260926-ky9 closed
+both: each of `34.6-UAT.md`'s five values gained a leading bare `pass — ` status word, with every
+following character kept, because all five were passes on what the test asked and the issues
+behind tests 3 and 4 live in its `## Gaps` entries; `32-HUMAN-UAT.md`'s `### CORRECTION` heading
+became a bold paragraph line. Measured after: `parse_gap_files: 0`, 419 outstanding items across
+55 files.
 
 **What is enforced, honestly.** `.planning/uat-visibility-gate.py` (added in quick task 260912-csq)
 was retired in quick task 260926-kkt: it copied 1.42.3's regex verbatim, so after the migration it
