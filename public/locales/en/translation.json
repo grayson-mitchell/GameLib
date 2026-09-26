@@ -690,6 +690,7 @@
             "error": "Couldn't fetch releases from upstream, maybe because of Github API restrictions! Try again later."
         },
         "uninstalled": "Uninstalled",
+        "uninstallError": "Error uninstalling",
         "uninstallNotConfirmed": "Uninstall not confirmed by Steam — please check Steam and try again",
         "update": {
             "canceled": "Update Canceled",
