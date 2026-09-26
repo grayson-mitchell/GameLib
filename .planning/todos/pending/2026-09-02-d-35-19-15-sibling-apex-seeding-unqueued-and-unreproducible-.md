@@ -1,22 +1,89 @@
 ---
 created: 2026-09-02
-title: "D-35-19-15's four Epic sibling apexes were never proven cleared — the item sat in ZERO queues, and `b5b3464bd` made it unreproducible until Phase 40 restores the embedded browser"
+title: "D-35-19-15's four Epic sibling apexes were never proven cleared — CORRECTED 2026-09-26: a seeding vehicle already exists (the Epic OAuth login window), Phase 40 was never the trigger, and the item still needs a live human-run login+logout jar test"
 area: auth/webview
 status: pending
 severity: medium
 platform: any
-ready: blocked
-blocked_by: "REAL and EXTERNAL — no seeding vehicle exists on this build. The Tauri build embeds no browser view, so no user action can create a non-primary Epic cookie in GameLib's own jar. Phase 40 is the trigger that unblocks it. This is NOT the self-describing-blocker shape corrected on the 2026-08-23 todo; nobody can go obtain the precondition today."
-trigger_phase: "40"
-owner: "NONE — D-35-19-15 has no owning phase. Phase 40 is named as the TRIGGER, not the owner."
+ready: live-gate
+blocked_by: "nothing external — needs a live, human-run Epic login (real credentials/2FA) followed
+  by an independent jar read, then a logout followed by another independent jar read; unscheduled,
+  not blocked. CORRECTED 2026-09-26 (debug session epic-sibling-apex-seeding): the 'no seeding
+  vehicle exists' claim below is stale/false. The Epic OAuth login window
+  (src/frontend/screens/WebView/useTauriOAuthLogin.ts, Phase 34.5, landed 2026-08-20 — 13 days
+  BEFORE this todo was filed) navigates to the exact same URL
+  ('https://www.epicgames.com/id/login?responseType=code') the removed hidden clear-window used to
+  navigate to, and on macOS is routed (src-tauri/src/main.rs's humble_login_open arm,
+  is_epic_login check) through open_pristine_epic_login_window, whose own doc comment states its
+  cookies land in the SAME process-wide WKWebsiteDataStore::defaultDataStore() the cookie-clear/read
+  machinery already reads — i.e. GameLib's own jar. This exact login-then-seed mechanism was
+  already measured live in 35-AB-RETEST.md Item 7 (Phase 35, predating this todo): after logging
+  in through that same window, an independent structured jar read found EPIC_DEVICE present
+  (value length 32) on all four of .fortnite.com, .twinmotion.com, .unrealengine.com and
+  .metahuman.com. Phase 40 was never going to be the trigger either way — it scopes /store/epic
+  out of its embed on every platform (D-05/D-08), and the Cloudflare-embed follow-up
+  (2026-09-05-store-epic-blocked-by-cloudflare-turnstile-in-the-embed.md) was closed WONTFIX
+  2026-09-15: a human clicking the Turnstile widget gets re-challenged, not cleared, so Epic in the
+  embed is permanently dead. What remains blocking full discharge is executional, not structural:
+  the discharge condition (seed one, observe present, logout, observe absent — both by an
+  independent jar read) requires a live app run with a real, human-driven Epic login, which is why
+  this is a live-gate item rather than a blocked one."
+trigger_phase: "NONE — see blocked_by. No future phase unblocks this; the vehicle already exists
+  today. (Superseded field, kept only for history: this used to read '40'.)"
+owner: "NONE — D-35-19-15 has no owning phase and needs none; it needs a human to run the live
+  gate, not a phase to land."
 files:
   - src/backend/storeManagers/legendary/user.ts:97
   - src/backend/storeManagers/legendary/user.ts:406
   - src/backend/storeManagers/legendary/__tests__/epicLogoutDomains.test.ts:549
   - src/frontend/screens/WebView/components/WebviewUnavailablePanel.tsx:43
+  - src/frontend/screens/WebView/useTauriOAuthLogin.ts:209
+  - src/frontend/screens/WebView/loginRoutes.ts:45
+  - src-tauri/src/main.rs:6252
 ---
 
 # D-35-19-15 — the four sibling apexes, unqueued and unreproducible
+
+## CORRECTION 2026-09-26 (debug session `epic-sibling-apex-seeding`)
+
+**This todo's central premise — "no seeding vehicle exists on this build" — is stale/false, and
+"Phase 40 is the trigger that unblocks it" was never true even when written.** Both are corrected
+in the frontmatter (`blocked_by`, `trigger_phase`, `ready`, `owner`) above; this section records
+why, for anyone reading the body sections below, which are left otherwise intact as the historical
+record of the reasoning that led here.
+
+1. **A seeding vehicle exists today, and always has since before this todo was filed.** The Epic
+   OAuth login window (`src/frontend/screens/WebView/useTauriOAuthLogin.ts`, Phase 34.5, landed
+   2026-08-20 — 13 days before this todo's 2026-09-02 filing date) navigates to
+   `https://www.epicgames.com/id/login?responseType=code`, byte-identical to the URL the removed
+   hidden clear-window (`EPIC_LOGIN_ORIGIN`, `legendary/user.ts:39`) used to navigate to before
+   `b5b3464bd`. On macOS this is routed, unconditionally for any Epic login
+   (`src-tauri/src/main.rs`'s `humble_login_open` arm, `is_epic_login` check at :6252), through
+   `open_pristine_epic_login_window`, whose own doc comment (:4154-4167) states its cookies land in
+   the SAME process-wide `WKWebsiteDataStore::defaultDataStore()` the cookie-clear/read machinery
+   already reads — i.e. GameLib's own jar, exactly what the discharge condition below requires.
+2. **This exact mechanism was already measured live, once, predating this todo.**
+   `35-AB-RETEST.md` Item 7 (Phase 35, 2026-08-29ish) logged into Epic through this same window,
+   then independently parsed the on-disk binarycookies jar (not the app's self-report) and found
+   `EPIC_DEVICE` PRESENT (value length 32) on all four of `.fortnite.com`, `.twinmotion.com`,
+   `.unrealengine.com` and `.metahuman.com` after that login. The "before(matched=1)" observation
+   the body below attributes solely to "the removed window" is consistent with either the
+   clear-window OR the login window, since both navigate to the identical origin — the body's own
+   inference that it must have been the clear-window specifically was never actually
+   differentiated, and the Item 7 evidence shows the login window alone produces the same effect.
+3. **Phase 40 was never going to be the trigger, independent of point 1.** Phase 40 shipped
+   2026-09-05 scoping `/store/epic` out of its embed on every platform, by design (D-05/D-08,
+   `WebView/index.tsx:468`), and the one follow-up that might have un-gated it
+   (`2026-09-05-store-epic-blocked-by-cloudflare-turnstile-in-the-embed.md`) was closed WONTFIX
+   2026-09-15 — a human clicking Cloudflare's Turnstile widget gets re-challenged, not cleared, so
+   Epic in the embed is permanently dead. The "Phase 40 is the TRIGGER" section below was already
+   wrong on the day Phase 40 shipped; this correction is not contingent on point 1 at all.
+4. **What is NOT corrected: the discharge condition itself still cannot be executed here.**
+   Confirming this live — seed one of the four cookies via a real Epic login, read the jar, log
+   out, read the jar again, all by an independent read — requires real Epic credentials/2FA that
+   are not available in this sandboxed debugging environment. That gate is not being faked, mocked,
+   or skipped; it is why `ready` is now `live-gate` rather than `blocked`. Some human with real Epic
+   credentials, on a machine that can run the packaged app, still needs to perform this.
 
 ## Why this is being filed on 2026-09-02, and why filing it is not optional
 
@@ -59,7 +126,10 @@ All four report `before(matched=0)` on every run to date. A bare zero is not evi
 it is evidence of nothing being there, which is exactly the "vacuous zero" this project has had to
 argue down before (`35-LIVE-GATE.md:1241`).
 
-## Why it is blocked — a real external precondition, not a symptom
+## Why it is blocked — a real external precondition, not a symptom (STALE — see CORRECTION above)
+
+**This section's conclusion is corrected above (2026-09-26): a seeding vehicle does exist.** Left
+intact below as the historical record of the reasoning at filing time.
 
 `35-LIVE-GATE.md:1729`:
 
@@ -79,7 +149,10 @@ Contrast with the stale blocker corrected on `2026-08-23-epic-logout-cookie-clea
 that one described its own symptom and made the todo permanently un-actionable. This one names a
 precondition that genuinely does not exist yet and identifies what creates it.
 
-## Phase 40 is the TRIGGER, not the owner
+## Phase 40 is the TRIGGER, not the owner (STALE — see CORRECTION above)
+
+**This section's title claim is corrected above (2026-09-26): Phase 40 was never going to be the
+trigger.** Left intact below as the historical record of the reasoning at filing time.
 
 Phase 40 (*In-app store and wiki browsing under Tauri — embedded child webview*, filed 2026-09-02)
 restores `/store/*` and `/wiki` as embedded child webviews. **That is the seeding vehicle
@@ -126,6 +199,11 @@ A green unit suite does not discharge this. Neither does another run reporting `
 - `.planning/phases/35-electron-cutover-remove-the-electron-build/35-LIVE-GATE.md:1714-1745`
   (criterion 21 — PASS on its contract, `D-35-19-15` NOT closed) and `:1876` (the
   unreproducible-by-construction addendum)
+- `.planning/debug/resolved/epic-sibling-apex-seeding.md` — 2026-09-26 debug session that produced
+  the CORRECTION section above: confirms the OAuth login window as a live seeding vehicle
+  (`useTauriOAuthLogin.ts`, `main.rs`'s `open_pristine_epic_login_window`), that Phase 40 was never
+  the trigger, and that the live login+logout jar test itself is a confirmed non-executable-here
+  dependency (real Epic credentials required)
 - `.planning/phases/35-electron-cutover-remove-the-electron-build/35-VERIFICATION.md` — sixth
   adjudication; `bears_on_req_35_07: "No"` recorded twice, by two different passes
 - `.planning/REQUIREMENTS.md:429`, `:1143` — REQ-35-07 Complete, `D-35-19-15` struck as a condition
