@@ -1,6 +1,6 @@
 ---
 created: 2026-09-11
-title: "`audit-uat` reads YAML blocks in document BODIES too — the 652-field body population is MEASURED (51 files); the whole-file suppression defect is ledgered by a gate and CI-asserted; item A (27-UAT.md) is CLOSED by relocation; only latent item D (milestone-hidden) remains; PARKED pending the v0.8 milestone advancing"
+title: "`audit-uat` reads YAML blocks in document BODIES too — the 652-field body population is MEASURED (51 files); the whole-file `expected: |` suppression defect does not occur under `@opengsd/gsd-core` 1.14.0, and its gate was retired in 260926-kkt; item A (27-UAT.md) is CLOSED by relocation; only latent item D remains, narrowed by re-measurement to `23.2-HUMAN-UAT.md` (outside the gsd-core milestone window); PARKED pending the v0.8 milestone advancing"
 area: planning-records
 severity: minor
 platform: any
@@ -15,6 +15,26 @@ files:
   - .planning/phases/23.2-steam-depot-selection-required-vs-optional-depots-and-skip-a/23.2-HUMAN-UAT.md
 resolves_phase: null
 ---
+
+## NOTE 2026-09-26 — gate retired, suppression defect gone under gsd-core, item D narrowed to 23.2 (quick `260926-ky9`)
+
+This note governs where it contradicts the sections below; nothing below was edited.
+
+1. `.planning/uat-visibility-gate.py` was retired in quick `260926-kkt` (deleted in `1fda931c3`).
+   Every statement below that the gate holds, ledgers, or asserts something in
+   `pnpm planning-gates` is now historical.
+2. Under `@opengsd/gsd-core` 1.14.0, a body `expected: |` block scalar no longer suppresses a
+   file. Measured live: `audit-uat` still reads 5 items from `34.3-UAT.md` and 17 from
+   `34.5-UAT.md`, both in full.
+3. Item D, re-measured through `listMilestonePhaseDirs`: phases 17 and 18 sit inside the current
+   milestone window, 23.2 does not. `18-UAT.md` is absent from `audit-uat` because it is
+   all-pass (0 items, `headingsSeen: 0`), not because a filter hides it — this corrects the
+   260926-kkt SUMMARY's follow-up on that point (the SUMMARY itself is history and stays
+   unedited). Item D stays open for `23.2-HUMAN-UAT.md` only (1 item, still absent).
+4. Not established here: why `23.2-HUMAN-UAT.md`'s phase directory sits outside the window, or
+   whether advancing past `v0.8` brings it in. PARKED item 5's unpark trigger is therefore
+   unchanged but unverified under gsd-core.
+5. `severity`, `platform` and `ready` are unchanged.
 
 ## PARKED 2026-09-18 — item A CLOSED by relocation, item D is all that remains (quick `260918-c6a`)
 
