@@ -360,15 +360,26 @@ touches, so this is a backstop rather than the only line of defence — but the 
 `--no-verify` skips it. The verify block is what keeps the file formatted in the first place.
 
 The gsd-core plan template files, `~/.claude/gsd-core/templates/phase-prompt.md` and
-`~/.claude/gsd-core/bin/lib/template.cjs`, do not carry this reminder — measured 2026-09-26, a
-case-insensitive grep for prettier or formatter returns 0 in each. The reminder this paragraph
-used to cite (added with it in `38bcad5b1`) was a
-hand edit to the pre-migration `get-shit-done-cc` 1.42.3 install's copies, and it did not survive
-the move to `@opengsd/gsd-core`. **Those gsd-core files are outside this repo, unversioned,
+`~/.claude/gsd-core/bin/lib/template.cjs`, carry this reminder again — measured 2026-09-26, a
+case-insensitive grep for prettier or formatter returns 7 hits in the template (a 14-line
+`<!-- FORMATTER CHECK IN <verify> ... -->` comment block plus two `<verify>` lines) and 1 in
+`template.cjs` (the `<verify>` string at line 182). The hand edit this paragraph used to cite
+(added with it in `38bcad5b1`) was made to the pre-migration `get-shit-done-cc` 1.42.3 install's
+copies and did not survive the move to `@opengsd/gsd-core` 1.14.0 — but the installer detected
+both files as locally modified and parked them in `~/.claude/gsd-local-patches/`, whose
+`backup-meta.json` records pristine SHA-256 hashes rather than silently clobbering them.
+`/gsd-update --reapply` merged the reminder back into both, and
+`~/.claude/gsd-core/bin/verify-reapply-patches.cjs` reported 2 checked, 0 failures, 0 drifted.
+
+The upgrade path has genuinely improved: `~/.claude/gsd-pristine/` is now seeded with the
+untouched 1.14.0 originals at canonical `gsd-core/` paths, so the next upgrade can do a real
+three-way merge — this one had neither a git repo at `~/.claude` nor a pristine snapshot, and its
+baseline had to be reconstructed from the npm tarball and hash-validated. That improvement has a
+limit, at equal weight: reapply is a MANUAL step the operator must run after every upgrade —
+nothing runs it automatically — and **those gsd-core files remain outside this repo, unversioned,
 shared by every project on the machine, and a `gsd-core` upgrade will overwrite them** — the same
-caveat this file already records for the UAT template, so a reminder re-added there would
-therefore not be durable either. This section is the only copy of the requirement; treat the
-template text as a convenience, not as the requirement.
+caveat this file already records for the UAT template. This section is the durable copy of the
+requirement; treat the template text as a convenience, not as the requirement.
 
 <!-- GSD:conventions-end -->
 
