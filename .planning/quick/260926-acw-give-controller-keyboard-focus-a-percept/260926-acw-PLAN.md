@@ -236,7 +236,7 @@ itself, because other rules may use it. Leave NavTabs' tier-1 `&:focus-visible` 
 `--text-hover`) alone, and list it in the SUMMARY as a remaining surface.
   </action>
   <verify>
-    <automated>cd /c/Users/grays/Projects/GameLib && npx prettier --check src/frontend/themes.scss src/frontend/screens/ConsoleMode/index.scss src/frontend/screens/Game/GamePage/index.css src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss src/frontend/components/UI/NavShell/components/FilterMoreGroup/index.scss src/frontend/components/UI/NavShell/components/NavItem/index.scss && node -e "const s=require('sass');for(const f of process.argv.slice(1)){s.compile(f);console.log('ok',f)}" src/frontend/themes.scss src/frontend/screens/ConsoleMode/index.scss src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss src/frontend/components/UI/NavShell/components/FilterMoreGroup/index.scss src/frontend/components/UI/NavShell/components/NavItem/index.scss && node -e "const s=require('sass');const css=s.compile('src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss').css;if(/body\.controllerLayout\s+\S*\.NavShell|\.NavShell__tier2Portal\s+body/.test(css)){console.error('prefix-form selector leaked');process.exit(1)}if(!/\.FilterFacetRow:focus:is\(body\.controllerLayout \*\)/.test(css)){console.error('FilterFacetRow gamepad arm missing');process.exit(1)}console.log('compiled selectors ok')" && grep -c -- "--focus-ring-color:" src/frontend/themes.scss</automated>
+    <automated>npx prettier --check src/frontend/themes.scss src/frontend/screens/ConsoleMode/index.scss src/frontend/screens/Game/GamePage/index.css src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss src/frontend/components/UI/NavShell/components/FilterMoreGroup/index.scss src/frontend/components/UI/NavShell/components/NavItem/index.scss && node -e "const s=require('sass');for(const f of process.argv.slice(1)){s.compile(f);console.log('ok',f)}" src/frontend/themes.scss src/frontend/screens/ConsoleMode/index.scss src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss src/frontend/components/UI/NavShell/components/FilterMoreGroup/index.scss src/frontend/components/UI/NavShell/components/NavItem/index.scss && node -e "const s=require('sass');const css=s.compile('src/frontend/components/UI/NavShell/components/FilterFacetGroup/index.scss').css;if(/body\.controllerLayout\s+\S*\.NavShell|\.NavShell__tier2Portal\s+body/.test(css)){console.error('prefix-form selector leaked');process.exit(1)}if(!/\.FilterFacetRow:focus:is\(body\.controllerLayout \*\)/.test(css)){console.error('FilterFacetRow gamepad arm missing');process.exit(1)}console.log('compiled selectors ok')" && grep -c -- "--focus-ring-color:" src/frontend/themes.scss</automated>
   </verify>
   <done>
 - The four tokens exist in the base `body {}` block, with the rationale comment.
@@ -306,7 +306,7 @@ In `gameCardFocusRing.test.ts`, update the assertions that encode the old contra
 - Rewrite the file docstring to state the current contract and name 260926-acw.
   </action>
   <verify>
-    <automated>cd /c/Users/grays/Projects/GameLib && npx prettier --check src/frontend/screens/Library/components/GameCard/index.css src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts && npx jest src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts</automated>
+    <automated>npx prettier --check src/frontend/screens/Library/components/GameCard/index.css src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts && npx jest src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts</automated>
   </verify>
   <done>
 - `.gameCard` and `.gameListItem` have separate hover (subtle) and focus-within (loud, token-driven,
@@ -377,7 +377,7 @@ Perceptibility is the live sweep's job.
   separate and unaddressed.
   </action>
   <verify>
-    <automated>cd /c/Users/grays/Projects/GameLib && npx prettier --check src/frontend/styles/__tests__/focusIndicator.test.ts .planning/todos/pending/2026-09-25-controller-focus-has-no-perceptible-affordance.md && npx jest src/frontend/styles/__tests__/focusIndicator.test.ts src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts && pnpm codecheck && pnpm lint && pnpm planning-gates && grep -c "^ready: live-gate$" .planning/todos/pending/2026-09-25-controller-focus-has-no-perceptible-affordance.md</automated>
+    <automated>npx prettier --check src/frontend/styles/__tests__/focusIndicator.test.ts .planning/todos/pending/2026-09-25-controller-focus-has-no-perceptible-affordance.md && npx jest src/frontend/styles/__tests__/focusIndicator.test.ts src/frontend/screens/Library/components/GameCard/__tests__/gameCardFocusRing.test.ts && pnpm codecheck && pnpm lint && pnpm planning-gates && grep -c "^ready: live-gate$" .planning/todos/pending/2026-09-25-controller-focus-has-no-perceptible-affordance.md</automated>
   </verify>
   <done>
 - The new gate passes, and all six assertion groups are present.

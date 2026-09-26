@@ -23,6 +23,35 @@ body {
 
   --alphabet-filter-accent-color: var(--accent);
   --alphabet-filter-accent-hover: var(--accent-overlay, var(--accent));
+
+  /* Shared controller/keyboard focus indicator (quick 260926-acw). Canonical
+     selector pair for every focusable surface this covers:
+       X:focus-visible, X:focus:is(body.controllerLayout *)
+     The second arm exists because Tauri's gamepad input
+     (src/preload/api/tauriGamepadInput.ts) moves focus with a bare
+     `.focus()` after dispatching UNTRUSTED synthetic KeyboardEvents, so
+     Chromium/WebKit's :focus-visible heuristic (matched against the last
+     TRUSTED interaction) frequently does not match. `body.controllerLayout`
+     is toggled by src/frontend/state/GlobalState.tsx on `controller-changed`
+     and is the existing fallback (see UI/InfoIcon/index.css:15).
+
+     Focus is deliberately LOUDER than, and visually distinct from, hover —
+     hover rules must never consume these tokens.
+
+     --focus-ring-fill uses color-mix(); a webview without color-mix support
+     loses only the fill, never the ring itself (same degrade pga used).
+
+     These tokens live on `body`, not `:root`, so `var(--accent)` resolves
+     against whichever `body.<theme>` block is active, not before any theme
+     applies. */
+  --focus-ring-color: var(--accent, #0080ff);
+  --focus-ring-halo: var(--body-background, var(--background-darker, #000));
+  --focus-ring-width: 3px;
+  --focus-ring-fill: color-mix(
+    in srgb,
+    var(--accent, #0080ff) 22%,
+    transparent
+  );
 }
 
 body.alphabet-filter-button--active {

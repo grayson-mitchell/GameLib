@@ -52,9 +52,24 @@
       justify-content: center;
     }
 
-    &:focus-visible {
-      outline: 2px solid var(--navitem-hover-color);
-      outline-offset: -2px;
+    // Focus indicator (quick 260926-acw). Was `outline: 2px solid
+    // var(--navitem-hover-color)`, i.e. `var(--text-hover)` -- undefined in
+    // gruvbox_dark and dracula (see FilterFacetGroup/index.scss's header
+    // comment), which dropped the whole declaration and left
+    // FilterCollectionList__row (a NavItem) with NO focus outline at all in
+    // those themes. Replaced with the shared, theme-survival-checked tokens.
+    // INSET because this row lives inside the scroll-clipped tier-2 column.
+    // `--navitem-hover-color` itself is left untouched -- other rules may
+    // consume it. See themes.scss's base body {} for the token rationale and
+    // the controllerLayout selector arm.
+    &:focus-visible,
+    &:focus:is(body.controllerLayout *) {
+      outline: var(--focus-ring-width, 3px) solid
+        var(--focus-ring-color, var(--accent, #0080ff));
+      outline-offset: calc(-1 * var(--focus-ring-width, 3px));
+      box-shadow: inset 0 0 0 calc(var(--focus-ring-width, 3px) + 2px)
+        var(--focus-ring-halo, #000);
+      background: var(--focus-ring-fill);
     }
 
     &.active {

@@ -112,18 +112,41 @@
     border-color 140ms ease,
     color 140ms ease;
 
-  &:hover,
-  &:focus-visible {
+  &:hover {
     border-color: var(--accent, #0080ff);
     outline: none;
   }
 
-  &:hover.active,
-  &:focus-visible.active {
+  /* Focus is deliberately louder than hover (quick 260926-acw): a two-tone
+     ring plus an accent-tinted fill, driven by the shared tokens in
+     themes.scss. The `:focus:is(body.controllerLayout *)` arm covers
+     gamepad-driven script `.focus()` calls that :focus-visible alone would
+     miss (see gamepad.ts / ConsoleMode/index.tsx doTab). */
+  &:focus-visible,
+  &:focus:is(body.controllerLayout *) {
+    outline: var(--focus-ring-width, 3px) solid
+      var(--focus-ring-color, var(--accent, #0080ff));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-ring-halo, #000);
+    background: var(--focus-ring-fill);
+  }
+
+  &:hover.active {
     border: 1px solid
       color-mix(in srgb, var(--text-title, #eae8e5) 90%, transparent);
     background: color-mix(in srgb, var(--accent, #1a1a20) 60%, transparent);
     outline: none;
+  }
+
+  &.active:focus-visible,
+  &.active:focus:is(body.controllerLayout *) {
+    border: 1px solid
+      color-mix(in srgb, var(--text-title, #eae8e5) 90%, transparent);
+    background: color-mix(in srgb, var(--accent, #1a1a20) 60%, transparent);
+    outline: var(--focus-ring-width, 3px) solid
+      var(--focus-ring-color, var(--accent, #0080ff));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-ring-halo, #000);
   }
 
   &.active {
@@ -156,21 +179,42 @@
     background 140ms ease,
     color 140ms ease;
 
-  &:hover,
-  &:focus-visible {
+  &:hover {
     background: var(--cancel-button, #b94a3a);
     color: var(--text-title, #fff);
     outline: none;
+  }
+
+  /* Focus keeps the hover fill but adds the shared OUTSET ring/halo so it
+     reads as distinct from hover (quick 260926-acw). See themes.scss for
+     the token rationale and the controllerLayout selector arm. */
+  &:focus-visible,
+  &:focus:is(body.controllerLayout *) {
+    background: var(--cancel-button, #b94a3a);
+    color: var(--text-title, #fff);
+    outline: var(--focus-ring-width, 3px) solid
+      var(--focus-ring-color, var(--accent, #0080ff));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--focus-ring-halo, #000);
   }
 
   &.danger {
     border-color: var(--danger);
     color: var(--danger);
 
-    &:hover,
-    &:focus-visible {
+    &:hover {
       background: var(--danger-hover, var(--danger));
       color: var(--text-title, #fff);
+    }
+
+    &:focus-visible,
+    &:focus:is(body.controllerLayout *) {
+      background: var(--danger-hover, var(--danger));
+      color: var(--text-title, #fff);
+      outline: var(--focus-ring-width, 3px) solid
+        var(--focus-ring-color, var(--accent, #0080ff));
+      outline-offset: 2px;
+      box-shadow: 0 0 0 2px var(--focus-ring-halo, #000);
     }
   }
 }

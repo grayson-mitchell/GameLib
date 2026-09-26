@@ -363,6 +363,20 @@
           justify-content: center;
         }
 
+        /* Focus indicator (quick 260926-acw). `.button.outline` in
+           _buttons.scss defines the hover state (2px border) but has no
+           focus rule of its own; this adds one using the shared tokens.
+           See themes.scss's base body {} block for the token rationale and
+           the controllerLayout selector arm. */
+        .SteamInstallCaret .dropdownButton:focus-visible,
+        .SteamInstallCaret .dropdownButton:focus:is(body.controllerLayout *) {
+          outline: var(--focus-ring-width, 3px) solid
+            var(--focus-ring-color, var(--accent, #0080ff));
+          outline-offset: 2px;
+          box-shadow: 0 0 0 2px var(--focus-ring-halo, #000);
+          background: var(--focus-ring-fill);
+        }
+
         .SteamInstallCaret__icon {
           transition: transform 0.12s ease;
         }
