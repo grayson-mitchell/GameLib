@@ -298,6 +298,45 @@ export default React.memo(function Library(): JSX.Element {
     steamVisibility.storeConnected
   ])
 
+  // 260926-gs1: D-08a precedent (`:431-436`, quick 260827-vpl) -- when the
+  // control that governs a filter is hidden, that filter is cleared. Logging
+  // out of a store removes its row from `FilterStoreFacet` (D-04, one row per
+  // `connectedStores`), but nothing pruned the still-selected value out of
+  // `storeFacet`, leaving a live filter with no panel-side control,
+  // persisted across restarts.
+  //
+  // Prune on TRANSITION only, never on first mount: `previousConnectedStores`
+  // starts `null` (never seeded with `connectedStores`) so there is no
+  // baseline until this effect has run once with a real value. Seeding it
+  // non-null would reintroduce the exact mount-time wipe this guards against
+  // -- `gog`/`epic`/`amazon` accounts arrive from `ContextProvider`
+  // asynchronously, so a bare intersection at mount could wipe a
+  // legitimately persisted selection during that account-load window.
+  //
+  // The reference-inequality guard (`pruned !== storeFacet`) is what stops
+  // the `storeFacet` dependency from making this effect self-feeding: once a
+  // prune runs, the baseline below is set to `connectedStores` and
+  // `setStoreFacetPersisted` fires only when something actually changed. The
+  // next pass then finds nothing newly disconnected, `pruneDisconnectedStores`
+  // returns `storeFacet` by identity, and the effect goes quiet.
+  //
+  // `setStoreFacetPersisted` (:150) is deliberately OMITTED from the
+  // dependency array, following the same precedent and rationale already
+  // written above for `setCurrentCollectionPersisted` (:188-191) -- it is
+  // redefined every render, and including it would loop.
+  const previousConnectedStores = useRef<StoreFacetValue[] | null>(null)
+  useEffect(() => {
+    const pruned = filterEngine.pruneDisconnectedStores(
+      storeFacet,
+      previousConnectedStores.current,
+      connectedStores
+    )
+    previousConnectedStores.current = connectedStores
+    if (pruned !== storeFacet) {
+      setStoreFacetPersisted(pruned)
+    }
+  }, [connectedStores, storeFacet])
+
   // The Runnability rows this host can compute (plan 01). Empty on Windows.
   const runnabilityRows = useMemo(
     () => filterEngine.runnabilityRowsForHost(platform),
