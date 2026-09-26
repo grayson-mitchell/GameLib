@@ -278,11 +278,12 @@ census grepping `\.unref()` returns **5** real sites and looks complete; greppin
 sweeps in comment prose and inflates the count instead. Match both spellings _and_ strip comment
 lines, or the number you get will be confidently wrong in one direction or the other.
 
-### UAT item shape (`expected:` inline, never a block scalar)
+### UAT item shape (`expected:` inline by preference; `result:` opens with a status word)
 
-**The shape.** In a `*-UAT.md` item, `expected:` carries its text **inline** on the same line as
-the key, and `result:` is the **very next line** — both sitting directly under the item's numbered
-heading (`### N. <item name>`, unchanged from how it is today). Never write `expected: |`.
+**The shape.** In a `*-UAT.md` item, the `### N. <item name>` heading sits at column 0. `expected:`
+carried inline on the same line as the key is the house preference, with `result:` as the next
+column-0 line. `result:`'s value must open with a bare or bracketed status word (`pending`, `pass`,
+`issue`, `skipped`, `blocked`, or `[pending — note]`); prose may follow the word.
 
 Conforming — inline text, `result:` on the next line:
 
@@ -291,46 +292,48 @@ expected: Games appear as cards with title, artwork, and an Install button.
 result: pending
 ```
 
-Non-conforming — a block scalar here silently deletes every item in the file, not just this one:
+**What changed, and when.** This section used to describe `get-shit-done-cc` 1.42.3's
+adjacency-matched `parseUatItems`, under which a single body `expected: |` block scalar hid every
+`### N.` item in its file. The machine has since moved to `@opengsd/gsd-core` 1.14.0
+(`~/.claude/gsd-core/bin/lib/uat.cjs`, `parseUatItemsWithStats`). Measured 2026-09-26: the new
+parser slices each column-0 `### N.` heading to the next heading of any level and reads
+`expected: |` values dedented — probed directly with an in-memory fixture (a block-scalar
+`expected:` plus a separate `## Current Test` block scalar elsewhere in the document): the item
+was returned, its multi-line body dedented, `headingsSeen: 0`. Live `audit-uat --raw` reports 418
+outstanding items across 56 files, `parse_gap_files: 2` — against the attributed 1.42.3 comparison
+figure of 42 items across 13 files, measured by the 260926-kkt orchestrator before the old tool
+was removed (`~/.claude/get-shit-done/` no longer exists, so that figure cannot be re-measured).
+`34.3-UAT.md` (5 items) and `34.5-UAT.md` (17 items) were both 0 under 1.42.3 and are read in full
+now. Block scalars are no longer a visibility hazard. Inline `expected:` stays the preference
+because it is the shipped template's own `### N.` item shape and diffs cleanly — not because
+anything breaks under gsd-core. The 26 existing `expected: |` blocks across `34.3-UAT.md`,
+`34.5-UAT.md`, and `34.6-UAT.md` stay exactly as written; there is no reason to flatten them.
 
-```yaml
-expected: |
-  Games appear as cards with title, artwork, and an Install button.
-result: pending
-```
+**What still goes unread, and it is now LOUD.** gsd-core reports what it cannot read itself:
+`summary.parse_gap_files`, plus per-file `parse_gap: true` and `unparsed_blocks: N`. Two causes
+were reproduced live on 2026-09-26. In `34.6-UAT.md` (`unparsed_blocks: 5`), every `result:` value
+opens with bolded prose (e.g. `result: **PASS** (2026-08-26 19:26)...`) instead of a bare or
+bracketed status word — probed directly: a fixture whose `result:` opens with `**PASS**` is
+dropped from `items` and increments `headingsSeen`. In `32-HUMAN-UAT.md` (`unparsed_blocks: 1`), a
+non-numbered `### CORRECTION 2026-08-22 ...` heading sits between item 1's heading and its own
+`expected:`/`result:` pair, so item 1's block ends at that heading before it ever reaches its
+result. An audit with `parse_gap_files` above 0 is not a clean audit. Neither file is edited here;
+both parse gaps remain open.
 
-**The mechanism, so it is not mistaken for style.** `parseUatItems`'s `testPattern`
-(`uat.js:150`) requires inline `expected:` text **and** `result:` on the next line. A block
-scalar puts the body text in between the two, the pattern never matches, and **every** `### N.`
-item in that file disappears from `audit-uat` — not just the one item carrying the block.
+**What is enforced, honestly.** `.planning/uat-visibility-gate.py` (added in quick task 260912-csq)
+was retired in quick task 260926-kkt: it copied 1.42.3's regex verbatim, so after the migration it
+was counting against a parser nobody runs. The planning-gates floor moved from 13 to 12, and the
+reason is recorded in `meta/runPlanningGates.py`. Nothing in CI now checks UAT item shape or
+visibility — `audit-uat` runs from the global gsd-core install, which CI does not have, so
+`parse_gap_files` is seen only by someone who actually runs it. The tool's reporting is not
+enforcement.
 
-**Suppression, not truncation — and strictly worse.** A flattening mistake elsewhere shows an
-operator an obviously-wrong `"|"` in the output; that is at least visible. This defect shows a
-clean, complete-looking audit with items missing and no indicator anything is gone. Phase 34.5 is
-the live proof: it carries 22 items and 3 `blocked` results, all currently invisible to
-`audit-uat`, whose `summary` reports its reduced count with nothing to signal the loss.
-
-**What is enforced, honestly.** `.planning/uat-visibility-gate.py` ratchets: it fails on a new
-invisible item, including in a file **absent from its ledger entirely** (its self-test "direction
-2: a file ABSENT from the ledger carries an invisible item"). So CI does catch this — but only
-**after** the item is written and the file is already suppressed. This convention exists so the
-shape is right at authoring time; do not read the gate as preventing the mistake, only as
-detecting it afterward.
-
-**Prohibition — do not flatten the 26 existing blocks.** `34.3-UAT.md`, `34.5-UAT.md`, and
-`34.6-UAT.md` carry 26 `expected: |` blocks between them, and they are staying that way.
-`uatRenderCheckpoint` (`uat.js:81-82`) deliberately matches `expected: |` and dedents it
-correctly — it reads these files right, today. Flattening them would regress a reader that
-already works in order to repair one that does not, and both parsers live in the same upstream
-npx package (`get-shit-done-cc`, pinned `v1.42.3`) that this repo does not control. If you hit the
-`audit-uat` gate and are tempted to flatten an existing block to make it pass: don't — write the
-new item inline instead and leave the old ones ledgered.
-
-**The upstream trap.** A UAT file scaffolded from `~/.claude/get-shit-done/templates/UAT.md`
-starts non-conforming out of the box — its line 23 emits `expected: |`, and
-`workflows/verify-work.md:230` does the same — so a freshly scaffolded file must be hand-corrected
-to the inline shape at authoring time. Those template files are outside this repo and are not
-being changed here.
+**Upstream files.** `~/.claude/gsd-core/templates/UAT.md`, `workflows/verify-work.md`, and
+`workflows/execute-phase.md` still write `expected: |`, but inside the `## Current Test` cursor
+block, not inside a `### N.` item, and gsd-core reads it there — so a freshly scaffolded file needs
+no hand-correction. Those files are outside this repo, unversioned, shared by every project on the
+machine, and overwritten by a `gsd-core` upgrade — the same caveat the formatter section below
+records for the UAT template.
 
 ### A formatter check belongs in every task's `<verify>`
 
