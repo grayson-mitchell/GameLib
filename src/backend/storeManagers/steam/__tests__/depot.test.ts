@@ -23,6 +23,7 @@
 import { createHash } from 'node:crypto'
 import {
   chmodSync,
+  createReadStream,
   existsSync,
   lstatSync,
   mkdirSync,
@@ -51,6 +52,7 @@ import {
   CHUNK_FETCH_ATTEMPTS,
   PLAN_BUILD_MAX_ATTEMPTS,
   reduceContentServers,
+  sha1File,
   DIRECTORY_FLAG,
   SYMLINK_FLAG,
   EXECUTABLE_FLAG,
@@ -189,6 +191,42 @@ jest.mock('i18next', () => ({
     t: (_key: string, fallback = '') => fallback
   }
 }))
+
+// ── node:fs PARTIAL mock — createReadStream ONLY (quick 260926-ju4) ─────────
+// Everything else on node:fs stays REAL via the requireActual spread, because
+// this whole file writes, stats, chmods and reads real files in a real tmpdir
+// and that discipline must not change.
+//
+// Narrow correction to the decompress mock's comment above, which says
+// "jest.mock/jest.spyOn cannot reliably intercept a specific fs call": for
+// `jest.spyOn` that is exactly right and was re-measured here —
+// `jest.spyOn(fs, 'createReadStream')` throws `TypeError: Cannot redefine
+// property` because Node's fs exports are non-configurable. A MODULE FACTORY
+// is a different mechanism (it replaces the registry entry rather than
+// redefining a property on the real one) and does work. The original comment
+// is also about node:fs/PROMISES, which is a separate module and is still
+// untouched here.
+//
+// This seam is what makes the verify-tail stall test expressible at all: the
+// only honest way to show that a long SHA1 re-read now counts as forward
+// progress is to make virtual time advance as a function of that read.
+jest.mock('node:fs', () => ({
+  ...jest.requireActual('node:fs'),
+  createReadStream: jest.fn()
+}))
+const actualCreateReadStream =
+  jest.requireActual<typeof import('node:fs')>('node:fs').createReadStream
+
+// LOAD-BEARING. `resetMocks: true` (src/backend/jest.config.js) wipes every
+// mock implementation before EVERY test in this file, so without this the
+// jest.fn() above returns `undefined` and every pre-existing test that reaches
+// sha1File — the whole-file verify in downloadSingleFile, i.e. most of the
+// downloadDepotFiles suite — breaks. File-scope so no describe block can opt
+// out by omission; the one test that wants a wrapped stream overrides it
+// locally.
+beforeEach(() => {
+  jest.mocked(createReadStream).mockImplementation(actualCreateReadStream)
+})
 
 const APP_ID = '12345'
 const BASE_OPTS = {
@@ -3823,6 +3861,169 @@ describe('downloadDepotFiles', () => {
         new RegExp(`${FILE_COUNT} file\\(s\\) unattempted`)
       )
       expect(result.allFilesVerifiedThisRun).toBe(false)
+    })
+
+    // ── quick 260926-ju4: the post-chunk verify tail is forward progress ───
+    //
+    // The residual the run-scoped check above left open, and named in situ
+    // directly over itself. `recordProgress()` was called from exactly two
+    // places — downloadFileChunks' `await fd.write(...)` and the worker
+    // loop's successful downloadSingleFile return — with downloadSingleFile's
+    // post-chunk tail sitting silently between them. The dominant cost of
+    // that tail is a whole-file sha1File(dest) re-read, and 32 concurrent
+    // SHA1 re-reads of multi-GB paks on a slow external disk can outlast
+    // STALL_TIMEOUT_MS while doing nothing but honest work.
+    //
+    // MEASURED CORRECTION to how that residual was originally framed, and the
+    // reason the second test below drives FAILING files rather than healthy
+    // ones: the success-path recordProgress() is the last statement before
+    // the worker loop returns to its own hasStalled() consult, with no await
+    // in between. A run whose files all succeed therefore cannot be killed at
+    // that consult by any tail, however long — and no other worker sits at
+    // that line without having just recorded progress itself. The consults a
+    // stale clock can really poison are the per-file CATCH (downloadSingleFile
+    // threw, so nothing recorded progress and the clock is stale by the whole
+    // length of the tail that preceded the throw, escalating one honest
+    // per-file failure into a run-level give-up that abandons the queue) and
+    // downloadFileChunks' per-chunk guard, consulted by a DIFFERENT worker
+    // mid-tail. The first is deterministic inside a single worker and is what
+    // is pinned here; the second needs a cross-worker interleaving that would
+    // be a racy test rather than a proof.
+    it('quick 260926-ju4: sha1File reports progress MID-stream rather than once at the end, and the digest is unchanged', async () => {
+      const path = join(dir, 'verify-me.bin')
+      const bytes = Buffer.alloc(300 * 1024, 7)
+      writeFileSync(path, bytes)
+
+      const reported: number[] = []
+      const withCallback = await sha1File(path, (n) => reported.push(n))
+      // depot/reconcile.ts:144's shape. The parameter is optional and must
+      // stay so: the reconciler runs before the run's StallTracker exists.
+      const withoutCallback = await sha1File(path)
+
+      expect(withCallback).toBe(sha1Hex(bytes))
+      expect(withoutCallback).toBe(withCallback)
+      // MORE THAN ONCE is the entire contract. A signal that only fires when
+      // the read completes reports nothing during the minutes the read of a
+      // multi-GB pak actually takes — which is the case this exists for. The
+      // exact count is Node's highWaterMark policy (measured: 5 events at the
+      // 64 KB default for 300 KB), not our contract, hence `>1` not `===5`.
+      expect(reported.length).toBeGreaterThan(1)
+      expect(reported.reduce((a, b) => a + b, 0)).toBe(bytes.length)
+    })
+
+    it('quick 260926-ju4: a genuine per-file sha1 failure after a SLOW verify tail is not escalated into a run-scoped stall — the rest of the queue still runs', async () => {
+      const TICK_MS = 1000
+      // Virtual time advances ONLY from the verify read: one tick per stream
+      // event, i.e. "each 64 KB read costs a second on a slow disk". That is
+      // the only honest driver for this defect — the thing that has to make
+      // time pass is the tail, and the tail makes no hasStalled() consults.
+      // A clock driven by recordProgress() would be circular (it IS the
+      // signal under test), and the consult-driven clock the W-1 test above
+      // uses leaves both arms identical here.
+      const clock = { now: 0 }
+      let readTicks = 0
+      jest.mocked(createReadStream).mockImplementation((path, options) => {
+        const stream = actualCreateReadStream(path, options)
+        // Attached HERE, before sha1File attaches its own handler, so
+        // listener-registration order guarantees the clock advances first and
+        // the progress callback then records against the advanced time.
+        stream.on('data', () => {
+          clock.now += TICK_MS
+          readTicks++
+        })
+        return stream
+      })
+
+      class ReadDrivenStallTracker extends StallTracker {
+        constructor(windowMs: number) {
+          super(windowMs, 0)
+        }
+        override hasStalled(): boolean {
+          return super.hasStalled(clock.now)
+        }
+        override recordProgress(): void {
+          super.recordProgress(clock.now)
+        }
+        override msSinceProgress(): number {
+          return super.msSinceProgress(clock.now)
+        }
+      }
+
+      const READ_CHUNK_BYTES = 64 * 1024 // Node's default highWaterMark
+      const slowContent = Buffer.alloc(8 * READ_CHUNK_BYTES, 3)
+      const TICKS_PER_TAIL = slowContent.length / READ_CHUNK_BYTES
+      const WINDOW_MS = 5 * TICK_MS
+      // Non-vacuity, asserted rather than assumed. The window has to sit
+      // strictly inside a single tail: above it the unfixed code never trips
+      // and this test proves nothing; at zero the fixed code could not
+      // survive either. If highWaterMark or the fixture size ever drifts,
+      // this goes red instead of going quietly vacuous.
+      expect(WINDOW_MS).toBeGreaterThan(0)
+      expect(WINDOW_MS).toBeLessThan(TICKS_PER_TAIL * TICK_MS)
+
+      jest.mocked(fetchChunk).mockResolvedValue(slowContent)
+
+      // Every one of the first FILE_CONCURRENCY files fails its whole-file
+      // sha1 after a long tail. ALL of them must fail: a single success would
+      // reset the clock at the worker loop's own recordProgress() and the
+      // unfixed arm would never arm at all.
+      const files: DepotPlanFile[] = [
+        ...Array.from({ length: FILE_CONCURRENCY }, (_, i) => ({
+          filename: `slow-${String(i).padStart(2, '0')}.bin`,
+          size: slowContent.length,
+          sha_content: sha1Hex(Buffer.from('DIFFERENT CONTENT')),
+          chunks: [
+            { sha: `slow-${i}`, cb_original: slowContent.length, offset: 0 }
+          ]
+        })),
+        // Reachable only by a worker looping back round for another job —
+        // i.e. only if the run was NOT killed by the bound.
+        ...Array.from({ length: FILE_COUNT - FILE_CONCURRENCY }, (_, i) => ({
+          filename: `tail-${String(i).padStart(2, '0')}.bin`,
+          size: slowContent.length,
+          sha_content: sha1Hex(slowContent),
+          chunks: [
+            { sha: `tail-${i}`, cb_original: slowContent.length, offset: 0 }
+          ]
+        }))
+      ]
+      const plan = makePlan(
+        [{ depotId: '890', gid: 'ga', key: Buffer.from('key'), files }],
+        slowContent.length * FILE_COUNT
+      )
+
+      const result = await downloadDepotFiles(plan, {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS,
+        stallTracker: new ReadDrivenStallTracker(WINDOW_MS)
+      })
+
+      // Non-vacuity: the clock really did cross the window while a tail was
+      // in flight. A future change that stops the read advancing it turns
+      // this red rather than leaving a green check proving nothing.
+      expect(readTicks).toBeGreaterThanOrEqual(TICKS_PER_TAIL)
+      expect(clock.now).toBeGreaterThan(WINDOW_MS)
+
+      // The genuine per-file failures are still reported, unchanged...
+      expect(result.failures).toHaveLength(FILE_CONCURRENCY)
+      expect(result.failures.every((f) => /sha1 mismatch/i.test(f.error))).toBe(
+        true
+      )
+      // ...and not one of them is the run-level give-up. MEASURED RED: with
+      // the call site reverted to the one-argument `sha1File(dest)`, this
+      // returned 33 failures, the extra one being
+      //   file="(run)" "download stalled: no forward progress for 239000ms
+      //   across the whole run — giving up with 8 file(s) unattempted"
+      // and `tail-07.bin` absent from disk.
+      expect(
+        result.failures.filter((f) => /across the whole run/.test(f.error))
+      ).toEqual([])
+      // THE ASSERTION THIS TEST EXISTS FOR: the queue was not abandoned. The
+      // files past the first worker pass were attempted and landed.
+      expect(existsSync(join(dir, 'common', 'SomeGame', 'tail-07.bin'))).toBe(
+        true
+      )
     })
   })
 
