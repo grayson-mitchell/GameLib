@@ -24,6 +24,7 @@ import {
   migrateRunnabilityFacetSelection,
   passesHiddenLaneFilter,
   migrateStoreFacetSelection,
+  pruneDisconnectedStores,
   runnabilityRowsForHost
 } from '../filterEngine'
 
@@ -569,5 +570,69 @@ describe('gameKey', () => {
     const game = makeGame({ app_name: 'my-app', runner: 'steam' })
 
     expect(gameKey(game)).toBe('my-app_steam')
+  })
+})
+
+describe('store facet prune on disconnect', () => {
+  it('no baseline yet (first render): the selection is returned untouched, same reference', () => {
+    const selection: StoreFacetValue[] = ['legendary']
+    const result = pruneDisconnectedStores(selection, null, ['sideload'])
+
+    expect(result).toBe(selection)
+  })
+
+  it('genuine disconnect: only the store that dropped out of connectedStores is pruned, a co-selected still-connected store survives', () => {
+    const selection: StoreFacetValue[] = ['legendary', 'gog']
+    const result = pruneDisconnectedStores(
+      selection,
+      ['legendary', 'gog', 'sideload'],
+      ['gog', 'sideload']
+    )
+
+    expect(result).toEqual(['gog'])
+  })
+
+  it('reconnect: a store absent from the baseline but present in current produces no change', () => {
+    const selection: StoreFacetValue[] = ['gog']
+    const result = pruneDisconnectedStores(
+      selection,
+      ['sideload'],
+      ['sideload', 'gog']
+    )
+
+    expect(result).toBe(selection)
+  })
+
+  it('a store selected but never connected in either baseline or current is left alone -- it is not a logout', () => {
+    const selection: StoreFacetValue[] = ['steam']
+    const result = pruneDisconnectedStores(
+      selection,
+      ['sideload'],
+      ['sideload']
+    )
+
+    expect(result).toBe(selection)
+  })
+
+  it('identity: nothing disconnected returns the SAME reference, not merely an equal one', () => {
+    const selection: StoreFacetValue[] = ['gog']
+    const result = pruneDisconnectedStores(
+      selection,
+      ['gog', 'sideload'],
+      ['gog', 'sideload']
+    )
+
+    expect(result).toBe(selection)
+  })
+
+  it('multiple simultaneous disconnects: two stores dropping out in one transition are both pruned in one pass', () => {
+    const selection: StoreFacetValue[] = ['legendary', 'gog', 'steam']
+    const result = pruneDisconnectedStores(
+      selection,
+      ['legendary', 'gog', 'steam', 'sideload'],
+      ['steam', 'sideload']
+    )
+
+    expect(result).toEqual(['steam'])
   })
 })

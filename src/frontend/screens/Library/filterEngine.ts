@@ -657,3 +657,56 @@ export function migrateRunnabilityFacetSelection(
     return []
   }
 }
+
+/**
+ * D-08a precedent (`Library/index.tsx:431-436`, quick 260827-vpl): when the
+ * control that governs a filter is hidden, that filter is cleared. Here, the
+ * control is the `FilterStoreFacet` row for a store (it renders one row per
+ * `connectedStores`, D-04) -- logging out of a store removes its row, but
+ * nothing pruned the still-selected value out of `storeFacet`, leaving a
+ * live filter with no panel-side control, persisted across restarts.
+ *
+ * TRANSITION-ONLY, never a mount-time intersection. `previousConnected` is
+ * `null` on first render and stays `null` until the caller has observed one
+ * real `connectedStores` value -- `gog`/`epic`/`amazon` accounts arrive from
+ * `ContextProvider` asynchronously, so a bare `selection ∩ currentConnected`
+ * at mount would silently wipe a legitimately persisted selection during
+ * that account-load window. A logout is a store that WAS in
+ * `previousConnected` and is ABSENT from `currentConnected` -- nothing else
+ * qualifies, so a store selected but never connected in either snapshot (not
+ * a logout) is left alone.
+ *
+ * Returns the SAME REFERENCE when nothing disconnected (no baseline yet, or
+ * a transition that removed no selected store). This is load-bearing, not an
+ * optimisation: the caller's effect uses reference inequality as its
+ * "something actually changed" signal to decide whether to write state and
+ * localStorage at all -- a fresh array here on every render would make that
+ * effect rewrite both on every pass.
+ */
+export function pruneDisconnectedStores(
+  selection: StoreFacetValue[],
+  previousConnected: StoreFacetValue[] | null,
+  currentConnected: StoreFacetValue[]
+): StoreFacetValue[] {
+  if (previousConnected === null) {
+    return selection
+  }
+
+  const nowDisconnected = previousConnected.filter(
+    (store) => !currentConnected.includes(store)
+  )
+
+  if (nowDisconnected.length === 0) {
+    return selection
+  }
+
+  const stillHasDisconnectedSelection = selection.some((store) =>
+    nowDisconnected.includes(store)
+  )
+
+  if (!stillHasDisconnectedSelection) {
+    return selection
+  }
+
+  return selection.filter((store) => !nowDisconnected.includes(store))
+}
