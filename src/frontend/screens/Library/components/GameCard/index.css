@@ -25,39 +25,55 @@
   aspect-ratio: 328/205;
 }
 
-/* This ring intentionally mirrors `.consoleCard.focused` in
-   `ConsoleMode/index.scss` -- the two are expected to stay in step. The
-   colour must stay a `var(--accent, ...)` token because 11 themes ship and a
-   literal would be wrong in 10 of them. Ring-as-`outline` / glow-as-
-   `box-shadow` is a deliberate split so a webview without `color-mix()`
-   loses only the glow, never the ring. Fires on `:hover` as well as
-   `:focus-within` -- this app already treats hover and focus as one
-   "highlighted" state (see the shared `scale(1.05)` transform below), so a
-   mouse user and a gamepad/keyboard user get the same affordance. */
-.gameCard:hover,
-.gameCard:focus-within {
-  outline: 3px solid var(--accent, #0080ff);
+/* Hover and focus are now deliberately DIFFERENT, not the same rule
+   (quick 260926-acw, superseding 260925-pga's unification -- see that
+   plan's Task 3 human-check steps 1-3 and 5, which this split supersedes).
+   Hover stays SUBTLE (a plain 2px accent outline, no glow): the pointer
+   already shows the user where it is. Focus is LOUD and TWO-TONE, built
+   from the shared --focus-ring-* tokens (themes.scss base body {}): an
+   accent ring plus a page-background halo band, so it reads distinctly in
+   every theme and does not get mistaken for a hover. The `color-mix` glow
+   stays in `box-shadow` only, same split as before -- a webview without
+   `color-mix()` loses only the glow, never the ring. */
+.gameCard:hover {
+  outline: 2px solid var(--accent, #0080ff);
   outline-offset: -1px;
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.6),
-    0 0 22px color-mix(in srgb, var(--accent, #0080ff) 40%, transparent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   z-index: 2;
 }
 
-/* Stale-focus suppression while mousing (260925-pga, round 3). Both gamepad
-   navigation (gamepad.ts drives simulated tab/arrow focus) and a plain
-   click move REAL DOM focus, and `:focus-within` holds the ring on that
-   card until focus moves elsewhere -- so the last gamepad-landed or
-   last-clicked card kept ringing even after the pointer moved to hover a
-   different card, showing two rings where only one should exist. The
-   operator's chosen resolution: while the pointer is over the grid
-   (`.gameList:hover`), the mouse is the active input and hover alone owns
-   the highlight -- a focused-but-not-hovered card is returned to its
-   resting appearance. This restores the base `box-shadow` from the
-   `.gameCard` rule above rather than clearing it, so the card keeps its
-   normal drop shadow instead of going flat. When the pointer leaves the
-   grid, focus resumes owning the highlight exactly as before this rule. */
-.gameList:hover .gameCard:focus-within:not(:hover) {
+.gameCard:focus-within {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--accent, #0080ff));
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--focus-ring-halo, #000),
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    0 0 22px color-mix(in srgb, var(--accent, #0080ff) 40%, transparent);
+  z-index: 3;
+}
+
+/* Stale-focus suppression while mousing (260925-pga, round 3), now scoped
+   to `body:not(.controllerLayout)` (260926-acw). Both gamepad navigation
+   (gamepad.ts drives simulated tab/arrow focus) and a plain click move REAL
+   DOM focus, and `:focus-within` holds the ring on that card until focus
+   moves elsewhere -- so the last gamepad-landed or last-clicked card kept
+   ringing even after the pointer moved to hover a different card, showing
+   two rings where only one should exist. The operator's chosen resolution:
+   while the pointer is over the grid (`.gameList:hover`), the mouse is the
+   active input and hover alone owns the highlight -- a focused-but-not-
+   hovered card is returned to its resting appearance. This restores the
+   base `box-shadow` from the `.gameCard` rule above rather than clearing
+   it, so the card keeps its normal drop shadow instead of going flat. When
+   the pointer leaves the grid, focus resumes owning the highlight exactly
+   as before this rule.
+   The `body:not(.controllerLayout)` scope is new: a cursor merely RESTING
+   over the grid used to erase gamepad focus entirely, because hover and
+   focus were pixel-identical and this suppression could not tell a parked
+   cursor from active mousing. Now that hover and focus look different, the
+   suppression is confined to mouse-only sessions and no longer fires while
+   a controller is active. */
+body:not(.controllerLayout) .gameList:hover .gameCard:focus-within:not(:hover) {
   outline: none;
   box-shadow: 0px 0px 12px 4px #00000055;
   z-index: auto;
@@ -228,8 +244,10 @@
    focused-but-not-hovered card visibly popped up would only relocate the
    operator's "stuck on" complaint from the ring to the scale. Restoring the
    resting (unscaled) size here keeps exactly one tile looking highlighted
-   while the pointer is over the grid. */
-.gameList:hover .gameCard:focus-within:not(:hover) {
+   while the pointer is over the grid. Scoped to `body:not(.controllerLayout)`
+   for the same reason as the ring suppression above (260926-acw): a resting
+   cursor must not erase gamepad focus. */
+body:not(.controllerLayout) .gameList:hover .gameCard:focus-within:not(:hover) {
   transform: none;
 }
 
@@ -389,20 +407,41 @@
   color: var(--accent-overlay);
 }
 
-.gameListItem:hover,
-.gameListItem:focus-within {
+/* Hover stays SUBTLE, focus is LOUD and token-driven (260926-acw, see the
+   `.gameCard` comment above for the full rationale). This row has no
+   resting `box-shadow` or `background` of its own, so the INSET recipe
+   (ring + inset halo + accent-tinted fill) is what makes focus visible --
+   the rows are non-overlapping strips, so an INSET treatment is right. */
+.gameListItem:hover {
   outline: 2px solid var(--accent, #0080ff);
   outline-offset: -2px;
 }
 
-/* Same stale-focus suppression as .gameList above, for list view: a row
-   that still carries DOM focus from a prior gamepad landing or click keeps
-   its outline until focus moves elsewhere, so while the pointer is over
-   the list (`.gameListLayout:hover`) hover alone owns the highlight and a
-   focused-but-not-hovered row is returned to its resting (no-outline)
-   appearance. */
-.gameListLayout:hover .gameListItem:focus-within:not(:hover) {
+.gameListItem:focus-within {
+  outline: var(--focus-ring-width, 3px) solid
+    var(--focus-ring-color, var(--accent, #0080ff));
+  outline-offset: calc(-1 * var(--focus-ring-width, 3px));
+  box-shadow: inset 0 0 0 calc(var(--focus-ring-width, 3px) + 2px)
+    var(--focus-ring-halo, #000);
+  background: var(--focus-ring-fill);
+}
+
+/* Same stale-focus suppression as .gameList above, for list view, now
+   scoped to `body:not(.controllerLayout)` (260926-acw): a row that still
+   carries DOM focus from a prior gamepad landing or click keeps its
+   outline until focus moves elsewhere, so while the pointer is over the
+   list (`.gameListLayout:hover`) hover alone owns the highlight and a
+   focused-but-not-hovered row is returned to its resting (no-outline,
+   no-background) appearance. Confined to mouse-only sessions so a resting
+   cursor over the list does not erase gamepad focus, same reasoning as the
+   grid suppression above. `.gameListItem`'s base rule declares no
+   background or box-shadow, so both reset to `none`. */
+body:not(.controllerLayout)
+  .gameListLayout:hover
+  .gameListItem:focus-within:not(:hover) {
   outline: none;
+  background: none;
+  box-shadow: none;
 }
 
 .gameListItem .gameTitle span {
