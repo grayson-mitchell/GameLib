@@ -1132,13 +1132,35 @@ export function resolveContainedPath(root: string, filename: string): string {
  *  whole-file Buffer re-read (would defeat the point of streaming the write).
  *  Exported for reuse by depot/reconcile.ts (Phase 23, 23-03, D-04) — the
  *  Shared Patterns rule requires reconciliation compose this, not
- *  reimplement it. */
-export function sha1File(path: string): Promise<string> {
+ *  reimplement it.
+ *
+ *  `onProgress` (quick 260926-ju4) fires once per stream `data` event, with
+ *  that event's byte count. It exists because this re-read is the DOMINANT
+ *  cost of downloadSingleFile's post-chunk verify tail: on a multi-GB pak on
+ *  a slow or external disk it runs for minutes while writing nothing, and
+ *  the run's forward-progress clock (depot/stallTracker.ts) has no other way
+ *  to tell that read apart from a wedged run. Per-event, never once at the
+ *  end — a signal that only fires on completion reports nothing during the
+ *  minutes that matter. The callback is a pure side-channel: `hash.update`
+ *  runs first and the digest is unaffected.
+ *
+ *  OPTIONAL, and that is load-bearing rather than politeness:
+ *  depot/reconcile.ts:144 calls this with one argument, and it runs at
+ *  depot.ts:2187 — BEFORE the run's StallTracker is constructed at :2280 —
+ *  so the reconciler's own whole-file SHA1 pass can neither arm the stall
+ *  bound nor use the signal. */
+export function sha1File(
+  path: string,
+  onProgress?: (bytesRead: number) => void
+): Promise<string> {
   return new Promise((resolvePromise, reject) => {
     const hash = createHash('sha1')
     const stream = createReadStream(path)
     stream.on('error', reject)
-    stream.on('data', (chunk: string | Buffer) => hash.update(chunk))
+    stream.on('data', (chunk: string | Buffer) => {
+      hash.update(chunk)
+      onProgress?.(chunk.length)
+    })
     stream.on('end', () => resolvePromise(hash.digest('hex')))
   })
 }
@@ -1656,7 +1678,23 @@ async function downloadSingleFile(
   const expected = Buffer.isBuffer(file.sha_content)
     ? file.sha_content.toString('hex')
     : String(file.sha_content)
-  const got = await sha1File(dest)
+  // Quick 260926-ju4: the THIRD forward-progress signal, and the one that
+  // covers the gap BETWEEN the other two. Until this line the run's clock was
+  // reset at exactly two points — downloadFileChunks' `await fd.write(...)`
+  // (:1423) and the worker loop's successful downloadSingleFile return
+  // (:2718) — with this whole-file re-read sitting silently in between. 32
+  // concurrent SHA1 re-reads of multi-GB paks on a slow external disk can
+  // outlast STALL_TIMEOUT_MS (180s), and since the run-scoped bound landed
+  // (62f916e58) a stale clock is terminal rather than advisory. Reporting
+  // per read event makes the verify tail the forward progress it actually is.
+  //
+  // This cannot weaken the bound against the 2026-08-27 Californium case it
+  // was built for: reaching this line requires every one of the file's chunks
+  // to have already landed on disk, and on that run ZERO files completed
+  // their chunk phase — downloadSingleFile never got here at all. Progress is
+  // reported only from bytes genuinely read back off the disk, never from
+  // merely entering the tail.
+  const got = await sha1File(dest, () => stallTracker?.recordProgress())
   if (got !== expected) {
     throw new Error(
       `downloadDepotFiles: whole-file SHA1 mismatch for ${file.filename}: ${got} != ${expected}`
@@ -2595,12 +2633,28 @@ export async function downloadDepotFiles(
             // merely-slow one cannot get here: a successful attempt is
             // bounded at CHUNK_FETCH_TIMEOUT_MS (15s) and a full exhaustion
             // at ~132s, so every in-flight slot has turned over at least
-            // once inside the window. Residual, named not fixed: a run whose
-            // every worker is simultaneously inside a single file's verify
-            // tail for longer than STALL_TIMEOUT_MS is still misread as
-            // stalled. Closing that needs progress reporting from inside
-            // sha1File, which is a larger change than this fix is entitled
-            // to make.
+            // once inside the window.
+            //
+            // The verify-tail residual this comment used to leave open is
+            // CLOSED (quick 260926-ju4): sha1File now takes a progress
+            // callback and the call site at :1659 feeds it into
+            // recordProgress(), so the whole-file re-read is visible to the
+            // clock as the work it is. That fix also corrected this
+            // paragraph's own overstatement. A run in which every file
+            // SUCCEEDS can never be killed at THIS consult, tail or no tail:
+            // the recordProgress() below is the last statement before the
+            // loop returns here with no await in between, so a worker cannot
+            // read a clock its own tail made stale, and no other worker sits
+            // at this line without having just recorded progress itself. The
+            // consults a long tail could actually poison were the per-file
+            // CATCH below (downloadSingleFile threw, so nothing recorded
+            // progress, and the clock is stale by the whole length of the
+            // tail that preceded the throw — escalating one honest per-file
+            // failure into a run-level give-up) and downloadFileChunks'
+            // per-chunk guard at :1462, consulted by a DIFFERENT worker
+            // mid-tail — which would fail a whole file over one transient
+            // chunk error, the exact outcome StallTracker exists to prevent.
+            // Both are closed by the same signal.
             //
             // Scope limit, stated honestly: this stops the run TAKING NEW
             // FILES. Files already in flight are not interrupted — they drain
