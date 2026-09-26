@@ -759,12 +759,26 @@ fn update_tray_recent_games(app: &AppHandle, games: Vec<TrayRecentGame>) {
 /// the three that issues `ShowWindow(hwnd, SW_RESTORE)`. As of plan 46-06, the Windows
 /// focus-sentinel arm (`handle_windows_single_instance_connection`) and the tray `"show"` menu
 /// arm and left-click handler all call `unminimize()` before `show()` and `set_focus()`, for
-/// this reason. The Unix socket handler named above is UNCHANGED by plan 46-06 -- it sits inside
-/// a `#[cfg(unix)]` region pinned byte-identical to the pre-phase baseline by the phase-46
-/// Unix-region gate, and this site's macOS measurement covers it there too. On Linux, tao's
-/// `platform_impl/linux/window.rs:567-576` gates `set_focus()` on `!minimized` the same way
-/// Windows does, so that pair is UNMEASURED and suspect on Linux -- see
+/// this reason. The Unix socket handler named above was deliberately left UNCHANGED by plan
+/// 46-06 -- at that point it sat inside a `#[cfg(unix)]` region pinned byte-identical to the
+/// pre-phase baseline (`5bc4fa825`) by the phase-46 Unix-region gate (`46-unix-cfg-regions.awk`),
+/// and the Linux case was UNMEASURED and suspect, tracked as
 /// `.planning/todos/pending/2026-09-24-linux-unix-focus-sentinel-arm-may-not-restore-a-minimized-window.md`.
+///
+/// CORRECTED A THIRD TIME (debug session `linux-focus-restore-minimize`, 2026-09-26). Measured
+/// live on real Linux hardware (Pop!_OS 22.04, GNOME Shell/mutter, GTK 3.24.33) via a faithful
+/// GTK3/X11 port of tao-0.35.3's exact call sequence, read from the vendored source
+/// (`platform_impl/linux/window.rs:558-576`, `platform_impl/linux/event_loop.rs:296-324`): tao's
+/// Linux `set_focus()` is gated on `!self.minimized.load(..) && self.window.get_visible()`, the
+/// same shape as Windows, and `show()` (`show_all()`) does not clear GTK/ICCCM iconic state
+/// either. Live EWMH `_NET_WM_STATE` observation confirmed the suspicion: `show()` + `set_focus()`
+/// alone left a minimized window at `_NET_WM_STATE_HIDDEN`; adding `unminimize()`
+/// (`deiconify()`) before them flipped it to `_NET_WM_STATE_FOCUSED`, reproduced on 3/3 runs. The
+/// Unix single-instance socket handler now calls `unminimize()` before `show()` and `set_focus()`,
+/// the same shape as the Windows fix -- a deliberate, on-purpose divergence of this
+/// `#[cfg(unix)]` region from the phase-46 gate's `5bc4fa825` baseline, not a violation of the
+/// pin (the pin only ever scoped "no drive-by edits during phase 46"; this is a targeted,
+/// evidenced fix in a later, separate debug session). The above-named todo is now closed.
 ///
 /// Note the CONSEQUENCE for whoever edits the preload name next: the eval below is
 /// optional-chained, so if `window.api.showAboutWindow` ever stops existing this menu item does
@@ -10600,13 +10614,47 @@ fn main() {
                         let trimmed = line.trim();
 
                         if trimmed == "__GAMELIB_FOCUS__" {
+                            // `unminimize()` is load-bearing here, not `show()` + `set_focus()`
+                            // alone -- measured live on Linux (GNOME Shell/mutter, GTK 3.24.33,
+                            // debug session `linux-focus-restore-minimize`, 2026-09-26). Per
+                            // tao-0.35.3 (`platform_impl/linux/window.rs:558-576` and
+                            // `platform_impl/linux/event_loop.rs:296-324`): `show()` sends
+                            // `WindowRequest::Visible(true)` -> GTK `show_all()`, which does not
+                            // clear WM-level iconic state (ICCCM); `set_focus()` is gated on
+                            // `!self.minimized.load(..) && self.window.get_visible()`, so it never
+                            // even sends `WindowRequest::Focus` (-> `present_with_time`, the call
+                            // that would deiconify) while minimized. Only `set_minimized(false)`
+                            // (`unminimize()`) sends `WindowRequest::Minimized(false)` ->
+                            // `window.deiconify()`, the only call in this sequence that clears
+                            // EWMH `_NET_WM_STATE_HIDDEN`. This is the same defect shape fixed on
+                            // Windows in `handle_windows_single_instance_connection` (plan 46-06);
+                            // this Unix arm was deliberately left unfixed there because it was
+                            // unmeasured on Linux -- now measured and fixed here. This is a
+                            // deliberate, on-purpose divergence of this `#[cfg(unix)]` region from
+                            // the phase-46 `46-unix-cfg-regions.awk` gate's baseline (`5bc4fa825`);
+                            // see `open_about_window_from_tray`'s comment above for the full
+                            // correction history.
                             let focus_handle = accept_app_handle.clone();
                             let _ = accept_app_handle.run_on_main_thread(move || {
-                                if let Some(window) =
-                                    focus_handle.get_webview_window(MAIN_WINDOW_LABEL)
-                                {
-                                    let _ = window.show();
-                                    let _ = window.set_focus();
+                                let render = |r: tauri::Result<()>| match r {
+                                    Ok(()) => "ok".to_string(),
+                                    Err(e) => format!("err={e}"),
+                                };
+                                match focus_handle.get_webview_window(MAIN_WINDOW_LABEL) {
+                                    Some(window) => {
+                                        let unminimize_result = render(window.unminimize());
+                                        let show_result = render(window.show());
+                                        let set_focus_result = render(window.set_focus());
+                                        eprintln!(
+                                            "[shell] focus sentinel raise: unminimize={}, show={}, set_focus={}",
+                                            unminimize_result, show_result, set_focus_result
+                                        );
+                                    }
+                                    None => {
+                                        eprintln!(
+                                            "[shell] WARN: focus sentinel: no '{MAIN_WINDOW_LABEL}' window to raise"
+                                        );
+                                    }
                                 }
                             });
                             continue;
