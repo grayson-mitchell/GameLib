@@ -99,3 +99,8 @@ steam_appid.txt
 # its bytecode against a source file that no longer exists, and now that the
 # gates run in CI every run regenerates these. Bytecode is a build product.
 __pycache__/
+
+# @opengsd/gsd-core runtime state (dispatch-isolation sentinel), rewritten on every
+# workflow run. Machine-local, never source -- and untracked-but-unignored it fails
+# the pre-push `prettier --check .`.
+.gsd/
