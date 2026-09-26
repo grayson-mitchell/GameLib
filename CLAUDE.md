@@ -337,7 +337,7 @@ enforcement.
 block, not inside a `### N.` item, and gsd-core reads it there — so a freshly scaffolded file needs
 no hand-correction. Those files are outside this repo, unversioned, shared by every project on the
 machine, and overwritten by a `gsd-core` upgrade — the same caveat the formatter section below
-records for the UAT template.
+records for the plan template.
 
 ### A formatter check belongs in every task's `<verify>`
 
@@ -359,11 +359,16 @@ touches, so this is a backstop rather than the only line of defence — but the 
 `git commit` only. `git rebase`, `cherry-pick` and `merge` create commits without running it, and
 `--no-verify` skips it. The verify block is what keeps the file formatted in the first place.
 
-Both halves of the upstream plan template now carry a reminder
-(`~/.claude/get-shit-done/templates/phase-prompt.md`, `bin/lib/template.cjs`). **Those files are
-outside this repo, unversioned, shared by every project on the machine, and a `gsd` upgrade will
-overwrite them** — the same caveat this file already records for the UAT template. This section is
-the durable copy; treat the template text as a convenience, not as the requirement.
+The gsd-core plan template files, `~/.claude/gsd-core/templates/phase-prompt.md` and
+`~/.claude/gsd-core/bin/lib/template.cjs`, do not carry this reminder — measured 2026-09-26, a
+case-insensitive grep for prettier or formatter returns 0 in each. The reminder this paragraph
+used to cite (added with it in `38bcad5b1`) was a
+hand edit to the pre-migration `get-shit-done-cc` 1.42.3 install's copies, and it did not survive
+the move to `@opengsd/gsd-core`. **Those gsd-core files are outside this repo, unversioned,
+shared by every project on the machine, and a `gsd-core` upgrade will overwrite them** — the same
+caveat this file already records for the UAT template, so a reminder re-added there would
+therefore not be durable either. This section is the only copy of the requirement; treat the
+template text as a convenience, not as the requirement.
 
 <!-- GSD:conventions-end -->
 
