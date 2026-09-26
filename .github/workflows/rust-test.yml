@@ -41,10 +41,10 @@ concurrency:
 #
 # What this does NOT catch, stated plainly per this repo's standing rule about gates that appear
 # to cover more than they do:
-#   (a) No Linux leg. `src-tauri` needs libwebkit2gtk-4.1-dev/libappindicator3-dev/librsvg2-dev to
-#       build at all (release-tauri.yml), and the only Linux-specific Rust code is the `cfg(unix)`
-#       `libc::kill` arm, which the macOS leg already compiles -- but a genuinely Linux-only break
-#       is invisible here.
+#   (a) No Linux leg. `src-tauri` needs libwebkit2gtk-4.1-dev/libayatana-appindicator3-dev/
+#       librsvg2-dev to build at all (release-tauri.yml), and the only Linux-specific Rust code
+#       is the `cfg(unix)` `libc::kill` arm, which the macOS leg already compiles -- but a
+#       genuinely Linux-only break is invisible here.
 #   (b) Compile and unit tests only -- no app launch, no webview, no IPC round trip. Anything
 #       runtime- or event-loop-ordering-dependent is out of scope here exactly as it is for jest
 #       (cf. the `smoke:sidecar` note in test.yml).
