@@ -56,3 +56,32 @@ the filter by hand), but it presents as data loss to the user, which is why it i
 Select a single store as a library filter, log out of that store, and observe the library. The
 user must end in a state that either shows their remaining games or explains why it is empty —
 never a bare empty library with an invisible active filter.
+
+## Resolution (2026-09-25, quick 260926-gs1)
+
+**What shipped:** a transition-only prune. A pure `pruneDisconnectedStores` helper in
+`filterEngine.ts` (six unit tests in `__tests__/filterEngine.test.ts`, including a `toBe` identity
+assertion), driven by a `useRef` baseline plus a guarded `useEffect` in `Library/index.tsx` that
+persists through `setStoreFacetPersisted`. This is Option 1 above — the operator's own suggestion
+— built on the repo's existing D-08a precedent at `Library/index.tsx:431-436` (when the control
+that governs a filter is hidden, the filter is cleared).
+
+**Why it is transition-only, not a mount-time intersection:** `epic`/`gog`/`amazon` accounts
+arrive from `ContextProvider` asynchronously, so intersecting the persisted selection against
+`connectedStores` at mount would silently wipe a legitimately persisted selection during that
+account-load window. The helper takes an explicit `previousConnected` baseline and only prunes a
+store that was connected in that baseline and has since dropped out of `currentConnected` — no
+baseline (first render) means no prune, ever.
+
+**The headline was MEASURED FALSE at HEAD — do not re-open this as the wrong bug.** There was
+never "a bare empty library with no explanation." `describeActiveFilters` already emitted
+`{kind:'store', value:'legendary'}` for a disconnected-but-selected store; `renderableActiveFilters`
+kept it because `RunnerToStore.legendary === 'Epic Games'` makes `chipLabelSpec` non-null; so
+`activeFilterCount > 0` and `Library/index.tsx:1214` already rendered `FilterZeroResult` ("No games
+match Epic Games." plus a "Clear all filters" button), alongside a removable "Epic Games" chip in
+`FilterChipRow`. The real defect was narrower than the headline claimed: a live filter whose PANEL
+CONTROL had vanished (`FilterStoreFacet` renders one row per `connectedStores`, D-04), persisted
+across restarts with no way to remove it from the panel.
+
+**Option 2 was therefore not implemented, because it already exists.** No new empty state was
+added; `FilterZeroResult` and `FilterChipRow` are byte-for-byte unchanged.
