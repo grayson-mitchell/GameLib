@@ -114,7 +114,20 @@ GATE_SUFFIX = "-gate.py"
 # how many times a field literal appeared in the body. Leaving the floor at 12
 # would let this exact gate be deleted later with every remaining gate still
 # reporting green -- exactly the property this constant exists to hold.
-MINIMUM_EXPECTED_GATES = 13
+#
+# 13 -> 12 (quick task 260926-kkt): the FIRST LOWERING in this history, and it is a deliberate
+# retirement, not convenience. The retired gate was `.planning/uat-visibility-gate.py`, the
+# eleventh gate (see the `10 -> 11` entry above). It copied `get-shit-done-cc` 1.42.3's
+# `parseUatItems` regex verbatim and ledgered UAT items that were invisible to THAT parser. The
+# machine has since moved to `@opengsd/gsd-core` 1.14.0, whose rewritten parser
+# (`parseUatItemsWithStats`) reads `expected: |` block scalars and reports what it still cannot
+# read itself, via `parse_gap_files`. Measured the day of retirement: 418 items across 56 files
+# under gsd-core, against 42 across 13 under 1.42.3. The gate's census was measuring a parser
+# nobody runs. Leaving the floor at 13 over a deliberately deleted gate would keep this runner red
+# forever -- exactly the kind of red that teaches people to ignore it. Lowering by exactly one, to
+# the discovered count, keeps the floor as tight as every entry above it: an accidental deletion
+# of any of the twelve remaining gates still turns the runner red.
+MINIMUM_EXPECTED_GATES = 12
 
 
 def discover_gates():

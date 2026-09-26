@@ -80,7 +80,7 @@ walk the live tree, write nothing. This IS the path `meta/runPlanningGates.py` i
 discovery is by `-gate.py` suffix with no arguments, so the no-argument path has to be the real
 check. Run `python3 planning-envelope-tag-gate.py --self-test` to run only the self-test. There
 is no `--write` flag: this gate produces no committed artifact to regenerate, the same shape as
-`uat-visibility-gate.py` and `todo-frontmatter-gate.py`.
+`todo-frontmatter-gate.py`.
 """
 
 from __future__ import annotations
@@ -291,8 +291,8 @@ def _mutate(base: str, old: str, new: str, why: str) -> str:
     """Route every mutation of BASE_DOC through here. If the document's shape changes and an
     anchor is left stale, `str.replace()` silently no-ops and hands a REJECT case an UNMUTATED,
     still-valid document -- a real check quietly turned vacuous. Fails loudly in both failure
-    modes (anchor missed; replacement produced no change). Modelled on
-    `uat-visibility-gate.py`'s `mutate()`."""
+    modes (anchor missed; replacement produced no change). Modelled on the `mutate()` of
+    `uat-visibility-gate.py` (retired in quick task 260926-kkt; recoverable from git history)."""
     if old not in base:
         fail(f"_mutate() anchor missed ({why}): {old!r} was not found in the base document")
     result = base.replace(old, new, 1)
