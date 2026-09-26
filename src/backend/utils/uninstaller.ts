@@ -120,7 +120,7 @@ export const uninstallGameCallback = async (
   } catch (error) {
     notify({
       title,
-      body: i18next.t('notify.uninstalled.error', 'Error uninstalling')
+      body: i18next.t('notify.uninstallError', 'Error uninstalling')
     })
     logError(error, LogPrefix.Backend)
   }
