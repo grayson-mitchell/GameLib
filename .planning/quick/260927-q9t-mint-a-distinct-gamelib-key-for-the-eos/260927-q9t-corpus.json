@@ -1,0 +1,443 @@
+[
+ {
+  "locale": "ar",
+  "gamelib_unavailable": "طبقة EOS Overlay غير متاحة في هذا الإصدار",
+  "tr_installing": "قيد تثبيت واجهة إي.أو.إس...",
+  "tr_installed": "ثُبتت واجهة إي.أو.إس",
+  "tr_updating": "قيد التحديث...",
+  "tr_updateNow": "حدّث",
+  "has_translation_json": true
+ },
+ {
+  "locale": "az",
+  "gamelib_unavailable": "EOS Overlay bu versiyada əlçatan deyil",
+  "tr_installing": "EOS Overlay quraşdırılır...",
+  "tr_installed": "EOS Overlay quraşdırılıb",
+  "tr_updating": "Yenilənir...",
+  "tr_updateNow": "Yeniləyin",
+  "has_translation_json": true
+ },
+ {
+  "locale": "be",
+  "gamelib_unavailable": "EOS Overlay недаступны ў гэтай зборцы",
+  "tr_installing": "Ідзе ўсталяванне EOS Overlay...",
+  "tr_installed": "EOS Overlay усталяваны",
+  "tr_updating": "Ідзе абнаўленне...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "bg",
+  "gamelib_unavailable": "EOS Overlay не е достъпен в тази версия",
+  "tr_installing": "Слоят на EOS се инсталира…",
+  "tr_installed": "Слоят на EOS е инсталиран",
+  "tr_updating": "Обновяване…",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "br",
+  "gamelib_unavailable": "N'eo ket hegerz an EOS Overlay er stumm-mañ",
+  "tr_installing": null,
+  "tr_installed": null,
+  "tr_updating": null,
+  "tr_updateNow": null,
+  "has_translation_json": false
+ },
+ {
+  "locale": "bs",
+  "gamelib_unavailable": "EOS Overlay nije dostupan u ovoj verziji",
+  "tr_installing": "EOS Overlay se instalira...",
+  "tr_installed": "EOS Overlay je instaliran",
+  "tr_updating": "Ažuriranje...",
+  "tr_updateNow": "Ažuriraj",
+  "has_translation_json": true
+ },
+ {
+  "locale": "ca",
+  "gamelib_unavailable": "L'overlay d'EOS no està disponible en aquesta versió",
+  "tr_installing": "S'està instal·lant la capa de superposició EOS…",
+  "tr_installed": "La capa de superposició EOS està instal·lada.",
+  "tr_updating": "S'està actualitzant…",
+  "tr_updateNow": "Actualitza",
+  "has_translation_json": true
+ },
+ {
+  "locale": "cs",
+  "gamelib_unavailable": "Překryvná vrstva EOS není v této verzi dostupná",
+  "tr_installing": "Překrytí EOS se instaluje...",
+  "tr_installed": "Překrytí EOS je nainstalováno",
+  "tr_updating": "Aktualizuji...",
+  "tr_updateNow": "Aktualizovat",
+  "has_translation_json": true
+ },
+ {
+  "locale": "da",
+  "gamelib_unavailable": "EOS Overlay er ikke tilgængeligt i denne build",
+  "tr_installing": "EOS Overlay er ved at blive installeret...",
+  "tr_installed": "EOS Overlay er installeret",
+  "tr_updating": "Opdaterer...",
+  "tr_updateNow": "Opdater",
+  "has_translation_json": true
+ },
+ {
+  "locale": "de",
+  "gamelib_unavailable": "Das EOS-Overlay ist in dieser Version nicht verfügbar",
+  "tr_installing": "Das EOS-Overlay wird installiert …",
+  "tr_installed": "Das EOS-Overlay ist installiert",
+  "tr_updating": "Wird aktualisiert …",
+  "tr_updateNow": "Aktualisieren",
+  "has_translation_json": true
+ },
+ {
+  "locale": "el",
+  "gamelib_unavailable": "Το EOS Overlay δεν είναι διαθέσιμο σε αυτή την έκδοση",
+  "tr_installing": "Η επικάλυψη EOS εγκαθίσταται...",
+  "tr_installed": "Η επικάλυψη EOS έχει εγκατασταθεί",
+  "tr_updating": "Ενημέρωση...",
+  "tr_updateNow": "Ενημέρωση",
+  "has_translation_json": true
+ },
+ {
+  "locale": "en",
+  "gamelib_unavailable": "The EOS Overlay is unavailable in this build",
+  "tr_installing": "The EOS Overlay is being installed...",
+  "tr_installed": "The EOS Overlay is installed",
+  "tr_updating": "Updating...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "es",
+  "gamelib_unavailable": "El EOS Overlay no está disponible en esta versión",
+  "tr_installing": "El EOS Overlay está siendo instalado...",
+  "tr_installed": "El EOS Overlay está instalado",
+  "tr_updating": "Actualizando...",
+  "tr_updateNow": "Actualizar",
+  "has_translation_json": true
+ },
+ {
+  "locale": "et",
+  "gamelib_unavailable": "EOS Overlay pole selles versioonis saadaval",
+  "tr_installing": "EOS-i ülekatet paigaldatakse...",
+  "tr_installed": "EOS-i ülekate on paigaldatud",
+  "tr_updating": "Uuendamine...",
+  "tr_updateNow": "Uuenda",
+  "has_translation_json": true
+ },
+ {
+  "locale": "eu",
+  "gamelib_unavailable": "EOS Overlay ez dago eskuragarri bertsio honetan",
+  "tr_installing": "EOS Overlay instalatzen ari da...",
+  "tr_installed": "EOS Overlay instalatuta dago",
+  "tr_updating": "Eguneratzen...",
+  "tr_updateNow": "Eguneratu",
+  "has_translation_json": true
+ },
+ {
+  "locale": "fa",
+  "gamelib_unavailable": "روکش EOS در این نسخه در دسترس نیست",
+  "tr_installing": "EOS Overlay در حال نصب شدن است...",
+  "tr_installed": "EOS Overlay نصب شده است",
+  "tr_updating": "در حال به روزرسانی...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "fi",
+  "gamelib_unavailable": "EOS-peittokuva ei ole käytettävissä tässä versiossa",
+  "tr_installing": "EOS-päällistä asennetaan...",
+  "tr_installed": "EOS-päällinen on asennettu",
+  "tr_updating": "Päivitetään...",
+  "tr_updateNow": "Päivitä",
+  "has_translation_json": true
+ },
+ {
+  "locale": "fr",
+  "gamelib_unavailable": "L'overlay EOS n'est pas disponible dans cette version",
+  "tr_installing": "L'interface Epic Online Services (EOS) est en cours d'installation...",
+  "tr_installed": "L'interface Epic Online Services (EOS) est installée",
+  "tr_updating": "Mise à jour en cours...",
+  "tr_updateNow": "Mettre à jour",
+  "has_translation_json": true
+ },
+ {
+  "locale": "ga",
+  "gamelib_unavailable": "Níl an EOS Overlay ar fáil sa leagan seo",
+  "tr_installing": "Tá an EOS Overlay á shuiteáil...",
+  "tr_installed": "Tá an Forleagan EOS suiteáilte",
+  "tr_updating": "Ag nuashonrú...",
+  "tr_updateNow": "Nuashonrú",
+  "has_translation_json": true
+ },
+ {
+  "locale": "gl",
+  "gamelib_unavailable": "O EOS Overlay non está dispoñible nesta versión",
+  "tr_installing": "Estase instalando a superposición de Epic (EOS Overlay)...",
+  "tr_installed": "A superposición de Epic (EOS Overlay) está instalada",
+  "tr_updating": "Actualizando...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "he",
+  "gamelib_unavailable": "שכבת ה-EOS Overlay אינה זמינה בגרסה זו",
+  "tr_installing": "שכבת העל EOS בהתקנה...",
+  "tr_installed": "שכבת העל EOS מותקנת",
+  "tr_updating": "מעדכן...",
+  "tr_updateNow": "עדכן",
+  "has_translation_json": true
+ },
+ {
+  "locale": "hr",
+  "gamelib_unavailable": "EOS Overlay nije dostupan u ovoj verziji",
+  "tr_installing": "The EOS Overlay is being installed...",
+  "tr_installed": "The EOS Overlay is installed",
+  "tr_updating": "Updating...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "hu",
+  "gamelib_unavailable": "Az EOS Overlay nem érhető el ebben a buildben",
+  "tr_installing": "Az EOS átfedés telepítése folyamatban…",
+  "tr_installed": "Az EOS átfedés telepítve van",
+  "tr_updating": "Frissítés…",
+  "tr_updateNow": "Frissítés",
+  "has_translation_json": true
+ },
+ {
+  "locale": "id",
+  "gamelib_unavailable": "EOS Overlay tidak tersedia di build ini",
+  "tr_installing": "EOS Overlay sedang diinstal....",
+  "tr_installed": "EOS Overlay terinstal",
+  "tr_updating": "Memperbarui...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "it",
+  "gamelib_unavailable": "L'overlay EOS non è disponibile in questa build",
+  "tr_installing": "L'installazione dell'EOS Overlay è in corso...",
+  "tr_installed": "EOS Overlay è installato",
+  "tr_updating": "Aggiornando...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "ja",
+  "gamelib_unavailable": "このビルドではEOS Overlayは利用できません",
+  "tr_installing": "EOSオーバーレイをインストール中…",
+  "tr_installed": "EOSオーバーレイはインストールされています",
+  "tr_updating": "アップデート中…",
+  "tr_updateNow": "アップデート",
+  "has_translation_json": true
+ },
+ {
+  "locale": "ka",
+  "gamelib_unavailable": "EOS Overlay ხელმისაწვდომი არ არის ამ ვერსიაში",
+  "tr_installing": "",
+  "tr_installed": "",
+  "tr_updating": "განახლება...",
+  "tr_updateNow": "განახლება",
+  "has_translation_json": true
+ },
+ {
+  "locale": "ko",
+  "gamelib_unavailable": "이 빌드에서는 EOS 오버레이를 사용할 수 없습니다",
+  "tr_installing": "EOS 오버레이 설치 중...",
+  "tr_installed": "EOS 오버레이 설치됨",
+  "tr_updating": "업데이트 중...",
+  "tr_updateNow": "업데이트",
+  "has_translation_json": true
+ },
+ {
+  "locale": "lt",
+  "gamelib_unavailable": "EOS Overlay nepasiekiamas šioje versijoje",
+  "tr_installing": "„EOS“ perdanga yra įdiegiama...",
+  "tr_installed": "„EOS“ perdanga yra įdiegta",
+  "tr_updating": "Atnaujinama...",
+  "tr_updateNow": "Atnaujinti",
+  "has_translation_json": true
+ },
+ {
+  "locale": "ml",
+  "gamelib_unavailable": "ഈ ബിൽഡിൽ EOS ഓവർലേ ലഭ്യമല്ല",
+  "tr_installing": "The EOS Overlay is being installed...",
+  "tr_installed": "The EOS Overlay is installed",
+  "tr_updating": "Updating...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "nb_NO",
+  "gamelib_unavailable": "EOS-overlegget er ikke tilgjengelig i denne utgaven",
+  "tr_installing": "EOS-overlegget blir installert...",
+  "tr_installed": "EOS-overlegget er installert",
+  "tr_updating": "Oppdaterer...",
+  "tr_updateNow": "Oppdater",
+  "has_translation_json": true
+ },
+ {
+  "locale": "nl",
+  "gamelib_unavailable": "De EOS Overlay is niet beschikbaar in deze build",
+  "tr_installing": "De EOS Overlay wordt geïnstalleerd...",
+  "tr_installed": "De EOS Overlay is geïnstalleerd",
+  "tr_updating": "Bezig met updaten...",
+  "tr_updateNow": "Updaten",
+  "has_translation_json": true
+ },
+ {
+  "locale": "pl",
+  "gamelib_unavailable": "Nakładka EOS jest niedostępna w tej wersji",
+  "tr_installing": "Nakładka EOS jest w trakcie instalacji...",
+  "tr_installed": "Nakładka EOS jest zainstalowana",
+  "tr_updating": "Aktualizowanie...",
+  "tr_updateNow": "Aktualizuj",
+  "has_translation_json": true
+ },
+ {
+  "locale": "pt",
+  "gamelib_unavailable": "O EOS Overlay não está disponível nesta compilação",
+  "tr_installing": "A Janela de Sobreposição EOS está a ser instalada...",
+  "tr_installed": "A Janela de Sobreposição EOS está instalada",
+  "tr_updating": "A atualizar...",
+  "tr_updateNow": "Atualizar",
+  "has_translation_json": true
+ },
+ {
+  "locale": "pt_BR",
+  "gamelib_unavailable": "O EOS Overlay não está disponível nesta versão",
+  "tr_installing": "O EOS Overlay está sendo instalado...",
+  "tr_installed": "O EOS Overlay está instalado",
+  "tr_updating": "Atualizando...",
+  "tr_updateNow": "Atualizar",
+  "has_translation_json": true
+ },
+ {
+  "locale": "ro",
+  "gamelib_unavailable": "EOS Overlay nu este disponibil în această versiune",
+  "tr_installing": "EOS Overlay este instalat...",
+  "tr_installed": "EOS Overlay este instalat",
+  "tr_updating": "Se actualizează...",
+  "tr_updateNow": "Actualizează",
+  "has_translation_json": true
+ },
+ {
+  "locale": "ru",
+  "gamelib_unavailable": "Оверлей EOS недоступен в этой сборке",
+  "tr_installing": "Оверлей EOS устанавливается...",
+  "tr_installed": "Оверлей EOS установлен",
+  "tr_updating": "Обновление...",
+  "tr_updateNow": "Обновить",
+  "has_translation_json": true
+ },
+ {
+  "locale": "sk",
+  "gamelib_unavailable": "Prekrytie EOS nie je v tejto verzii k dispozícii",
+  "tr_installing": "The EOS Overlay is being installed...",
+  "tr_installed": "The EOS Overlay is installed",
+  "tr_updating": "Updating...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "sl",
+  "gamelib_unavailable": "Prekritje EOS v tej različici ni na voljo",
+  "tr_installing": null,
+  "tr_installed": null,
+  "tr_updating": null,
+  "tr_updateNow": null,
+  "has_translation_json": false
+ },
+ {
+  "locale": "sr",
+  "gamelib_unavailable": "EOS Overlay није доступан у овој верзији",
+  "tr_installing": "ЕОС Оверлаи се инсталира...",
+  "tr_installed": "ЕОС Оверлаи је инсталиран",
+  "tr_updating": "Ажурирање...",
+  "tr_updateNow": "Ажурирај",
+  "has_translation_json": true
+ },
+ {
+  "locale": "sv",
+  "gamelib_unavailable": "EOS-overlägget är inte tillgängligt i den här versionen",
+  "tr_installing": "EOS Overlay installeras...",
+  "tr_installed": "EOS Overlay är installerat",
+  "tr_updating": "Uppdaterar...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "ta",
+  "gamelib_unavailable": "இந்த பதிப்பில் EOS Overlay கிடைக்கவில்லை",
+  "tr_installing": "EOS மேலடுக்கு நிறுவப்படுகிறது...",
+  "tr_installed": "EOS மேலடுக்கு நிறுவப்பட்டுள்ளது",
+  "tr_updating": "புதுப்பிக்கிறது...",
+  "tr_updateNow": "Update",
+  "has_translation_json": true
+ },
+ {
+  "locale": "th",
+  "gamelib_unavailable": "EOS Overlay ไม่พร้อมใช้งานในบิลด์นี้",
+  "tr_installing": "",
+  "tr_installed": "",
+  "tr_updating": "กำลังอัปเดต",
+  "tr_updateNow": "อัปเดต",
+  "has_translation_json": true
+ },
+ {
+  "locale": "tr",
+  "gamelib_unavailable": "EOS Overlay bu sürümde kullanılamıyor",
+  "tr_installing": "EOS Arayüzü kuruluyor...",
+  "tr_installed": "EOS Arayüzü kuruldu",
+  "tr_updating": "Güncelleniyor...",
+  "tr_updateNow": "Güncelle",
+  "has_translation_json": true
+ },
+ {
+  "locale": "uk",
+  "gamelib_unavailable": "Накладення EOS недоступне в цій збірці",
+  "tr_installing": "Накладання EOS встановлюється...",
+  "tr_installed": "Накладання EOS встановлено",
+  "tr_updating": "Оновлення...",
+  "tr_updateNow": "Оновити",
+  "has_translation_json": true
+ },
+ {
+  "locale": "uz",
+  "gamelib_unavailable": "EOS Overlay ushbu build'da mavjud emas",
+  "tr_installing": "EOS Overlay oʻrnatilmoqda...",
+  "tr_installed": "EOS Overlay o'rnatildi",
+  "tr_updating": "Yangilanmoqda...",
+  "tr_updateNow": "Yangilash",
+  "has_translation_json": true
+ },
+ {
+  "locale": "vi",
+  "gamelib_unavailable": "EOS Overlay không khả dụng trong bản dựng này",
+  "tr_installing": "EOS Overlay đang được cài đặt...",
+  "tr_installed": "EOS Overlay đã được cài đặt",
+  "tr_updating": "Đang Cập Nhật...",
+  "tr_updateNow": "Cập Nhật",
+  "has_translation_json": true
+ },
+ {
+  "locale": "zh_Hans",
+  "gamelib_unavailable": "EOS 悬浮层在此版本中不可用",
+  "tr_installing": "正安装 EOS 叠加...",
+  "tr_installed": "EOS 叠加已安装",
+  "tr_updating": "更新中...",
+  "tr_updateNow": "更新",
+  "has_translation_json": true
+ },
+ {
+  "locale": "zh_Hant",
+  "gamelib_unavailable": "此版本中 EOS Overlay 無法使用",
+  "tr_installing": "正在安裝 EOS 內嵌介面...",
+  "tr_installed": "已安裝 EOS 內嵌介面",
+  "tr_updating": "更新中...",
+  "tr_updateNow": "更新",
+  "has_translation_json": true
+ }
+]

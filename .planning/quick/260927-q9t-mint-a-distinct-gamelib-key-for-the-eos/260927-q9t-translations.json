@@ -1,0 +1,332 @@
+{
+  "key": "setting.eosOverlay.updatingStatus",
+  "namespace": "gamelib",
+  "english": "The EOS Overlay is being updated...",
+  "produced_by": "model (Claude Opus 5), planning agent for quick task 260927-q9t, 2026-09-27",
+  "reviewed_by_native_speaker": false,
+  "honesty": "All 48 values below are MODEL-PRODUCED and UNREVIEWED. No gate in this repo can see translation quality -- lint-translations checks key PRESENCE only, and nothing in CI detects English-side or translation-side drift. A green gate over this file means 48 non-empty strings exist at the right key, and nothing more. The executor applies `locales.<code>.value` verbatim and must NOT author, adjust or 'improve' any value.",
+  "method": {
+    "sources": [
+      "gamelib:setting.eosOverlay.unavailable  -- subject noun-phrase (the sibling in the very same gamelib subtree)",
+      "gamelib:settings.eosOverlayUpdateConfirmBody  -- the update verb/root, IN NAMESPACE (see `corpus_gap` below)",
+      "translation:setting.eosOverlay.updating  -- progressive-update predicate form",
+      "translation:setting.eosOverlay.installing  -- sentence pattern and ellipsis glyph"
+    ],
+    "corpus_gap": "260927-q9t-corpus.json carries only the first, third and fourth of those. A fifth in-namespace parallel exists in all 49 gamelib catalogs and was surveyed live at planning time: `settings.eosOverlayUpdateConfirmBody` ('Update EOS Overlay to the latest version?'). It supplies the update verb the fork itself already chose, in the same namespace as the new key, and it CHANGED FOUR VALUES away from what the corpus alone would have produced -- `fa` (gamelib spells the verb به‌روزرسانی with a ZWNJ, translation.json spells it spaced), `ja` (gamelib uses 更新, translation.json uses アップデート), `ml` (gamelib spells അപ്ഡേറ്റ് with NO zero-width non-joiner), and `nl` (gamelib uses 'bijwerken', translation.json uses the loanword 'updaten'). It also turned `br`, `hr`, `sk`, `sl`, `ta`, `th` and `fi` from authored guesses into in-namespace derivations.",
+    "noun_phrase": "The subject noun-phrase is taken from that locale's own `gamelib:setting.eosOverlay.unavailable` -- namespace-internal terminology consistency, because the new key lives in the same `gamelib.json` subtree as its only sibling. This is the rule even where `translation.json` renders 'EOS Overlay' differently, which it does in roughly 28 of the 46 locales that have both files (e.g. `ar` gamelib 'طبقة EOS Overlay' vs translation 'واجهة إي.أو.إس'; `fr` \"L'overlay EOS\" vs \"L'interface Epic Online Services (EOS)\"; `zh_Hant` 'EOS Overlay' vs 'EOS 內嵌介面'). Accepted, recorded cost: in those locales the new status line names the overlay differently from the three sibling status lines the same widget renders. That cross-namespace divergence pre-dates this task, is visible in the shipped UI today, and is not this task's to fix.",
+    "predicate": "The update verb comes from `gamelib:settings.eosOverlayUpdateConfirmBody` where it is decisive, otherwise from `translation:setting.eosOverlay.updating`, normalised out of any first-person or bare-gerund form that cannot carry a full sentence (e.g. `cs` 'Aktualizuji...' is 1st person -- rendered reflexive as 'se aktualizuje'; `vi` 'Đang Cập Nhật...' is title-cased -- lowercased to match its own installing sibling).",
+    "agreement": "NP-GENDER AGREEMENT RULE. Where the predicate carries gender/number inflection (a participle or predicative adjective), it must agree with the noun-phrase ACTUALLY SHIPPED -- the gamelib one -- and NOT with the noun-phrase of the translation.json string the pattern was lifted from. Those two are different nouns in roughly 28 locales, so an inflection copied across unchanged is a live agreement bug. The authority for the shipped NP's gender is that locale's own gamelib catalog, and `setting.eosOverlay.unavailableDetail` is the strongest witness because it inflects three participles against this exact noun ('cannot be installed, updated or removed'). This rule caught one defect on review -- see `agreement_audit`.",
+    "pattern": "The sentence pattern is taken from that locale's own `translation:setting.eosOverlay.installing` -- the nearest sibling with the same progressive aspect, rendered by the same widget.",
+    "ellipsis": "The glyph comes from that locale's own `translation:setting.eosOverlay.installing`. Measured across the 46 locales that have it: 41 use '...', and `bg`/`ca`/`de`/`hu`/`ja` use '…' (`de` with a preceding space). Where that string is absent, empty, or an English passthrough it carries NO signal for the locale -- `br`/`sl` have no translation.json at all, `ka`/`th` have the key empty, and `hr`/`ml`/`sk` left it byte-identical to English. Those seven fall back to the dominant convention of the file the new string actually lives in, that locale's own gamelib.json. Measured across all 49 gamelib catalogs: '…' dominates every single one (14-19 occurrences vs 0-2 of '...'), and in `sl` alone the dominant multi-word form carries a space before it (10 of 17).",
+    "english_exception": "`en` keeps three dots ('...') to match `translation:setting.eosOverlay.installing` in English -- the same sibling-status-line rule applied to English, as the task brief directs. Note the measured tension this creates and does not resolve: the `en` gamelib catalog is itself 15 '…' to 1 '...', so the new English value is the minority convention in its own file while being the matching convention in its own widget. The widget won. The English value is NOT in this artifact: it is minted by `pnpm i18n` from the `tGamelib()` default at the call site."
+  },
+  "agreement_audit": {
+    "reason": "Post-review sweep for one specific class: a locale whose NP was taken from gamelib but whose predicate inflection was carried over from a translation.json sibling built on a DIFFERENT, gendered native noun. Every locale with gendered predicate agreement was re-checked against its own gamelib catalog.",
+    "audited": [
+      "ar",
+      "be",
+      "bs",
+      "ca",
+      "cs",
+      "es",
+      "gl",
+      "he",
+      "hr",
+      "it",
+      "lt",
+      "pl",
+      "pt",
+      "pt_BR",
+      "ro",
+      "ru",
+      "sk",
+      "sl",
+      "sr",
+      "uk"
+    ],
+    "changed": [
+      "lt"
+    ],
+    "findings": {
+      "lt": "CHANGED. 'atnaujinama' (fem, agreeing with translation.json's 'perdanga') -> 'atnaujinamas' (masc, agreeing with gamelib's 'EOS Overlay', as 'nepasiekiamas' and unavailableDetail's 'įdiegtas, atnaujintas ar pašalintas' both attest).",
+      "pt": "UNCHANGED, and it is the same class: the pattern source is feminine ('A Janela de Sobreposição EOS ... instalada') and the value already re-agreed to masculine. Now double-witnessed by unavailableDetail. Basis strengthened.",
+      "gl": "UNCHANGED. The pattern source's NP is feminine ('a superposición'), but the value uses a GERUND ('Estase actualizando'), which carries no agreement, so nothing could be carried over.",
+      "no-inflection group": "UNCHANGED, no exposure: cs/sk/sl/hr/bs/sr/ru/uk/ro use a 3sg reflexive or plain finite verb; pl uses the prepositional 'jest w trakcie aktualizacji'; be's grammatical subject is the neuter noun 'абнаўленне' with the NP in the genitive; it's subject is the masculine noun \"l'aggiornamento\" under the invariable 'è in corso'; ca uses a gerund; he ('בעדכון') and ar ('قيد تحديث' + iḍāfa) are nominal. es and pt_BR were already masculine against masculine NPs, with no NP swap in the source.",
+      "outside the candidate set": "Swept too, no exposure: da/nb_NO/nl/de/sv participles are invariable here, fi/et are impersonal passives, el/bg are gender-neutral verb forms, and ga's 'á + nuashonrú' is unaffected because n- never lenites. Every remaining locale is genderless."
+    }
+  },
+  "confidence_legend": {
+    "high": "Direct fit -- noun-phrase, verb and pattern all present, mutually consistent, and substitution is mechanical.",
+    "medium": "Sound, but at least one axis required a grammatical adaptation (case, gender, agreement, aspect) or the two namespaces disagreed on terminology and the gamelib rule had to break the tie.",
+    "low": "Missing an in-repo pattern parallel, or morphologically awkward enough that the surface form is authored rather than derived. REVIEW THESE FIRST."
+  },
+  "confidence_summary": {
+    "high": 16,
+    "medium": 26,
+    "low": 6,
+    "review_first": [
+      "br",
+      "et",
+      "ka",
+      "ml",
+      "sl",
+      "th"
+    ],
+    "review_next": [
+      "ar",
+      "fa",
+      "he",
+      "hr",
+      "sk",
+      "ta",
+      "cs",
+      "fi",
+      "hu",
+      "lt",
+      "eu",
+      "ga"
+    ]
+  },
+  "locales": {
+    "ar": {
+      "value": "قيد تحديث طبقة EOS Overlay...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'طبقة EOS Overlay' (translation.json uses 'واجهة إي.أو.إس'; gamelib rule broke the tie). Verb: gamelib updateConfirmBody 'هل تريد تحديث EOS Overlay...' -> تحديث. Pattern+ellipsis: tr_installing 'قيد تثبيت واجهة إي.أو.إس...' -- the 'قيد + verbal noun' frame in construct with the NP, '...'."
+    },
+    "az": {
+      "value": "EOS Overlay yenilənir...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody '... yenilənsin?' -> yenilən-. Predicate: tr_updating 'Yenilənir...'. Pattern+ellipsis: tr_installing 'EOS Overlay quraşdırılır...' -- verb swap only."
+    },
+    "be": {
+      "value": "Ідзе абнаўленне EOS Overlay...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'EOS Overlay'. Verb: gamelib updateConfirmBody 'Абнавіць EOS Overlay...' -> абнаўленне. Predicate: tr_updating 'Ідзе абнаўленне...'. Pattern+ellipsis: tr_installing 'Ідзе ўсталяванне EOS Overlay...' -- the three sources compose exactly, with no adaptation."
+    },
+    "bg": {
+      "value": "EOS Overlay се обновява…",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' (translation.json uses 'Слоят на EOS'). Verb: gamelib updateConfirmBody 'Да се обнови ли EOS Overlay...' -> обнов-. Predicate: tr_updating 'Обновяване…' rendered reflexive. Pattern+ellipsis: tr_installing 'Слоят на EOS се инсталира…' ('…')."
+    },
+    "br": {
+      "value": "Oc'h hizivaat an EOS Overlay…",
+      "confidence": "low",
+      "basis": "No translation.json in this locale, so there is NO pattern parallel and no predicate parallel -- the progressive aspect is authored. NP: gamelib \"N'eo ket hegerz an EOS Overlay er stumm-mañ\" -> 'an EOS Overlay'. Verb: gamelib updateConfirmBody \"Hizivaat an EOS Overlay d'ar stumm diwezhañ?\" -> hizivaat, which is in-namespace corroboration rather than a guess. Aspect: the 'o/oc'h + verbal noun' progressive that br's own gamelib catalog already uses for status lines ('Oc'h aktivañ war Steam…', 'O kargañ…'); oc'h before h-. Ellipsis: br gamelib, 17/17 '…' with no preceding space."
+    },
+    "bs": {
+      "value": "EOS Overlay se ažurira...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay'. Verb: gamelib updateConfirmBody 'Ažurirati EOS Overlay...' -> ažurira-. Predicate: tr_updating 'Ažuriranje...' rendered reflexive. Pattern+ellipsis: tr_installing 'EOS Overlay se instalira...' -- verb swap only."
+    },
+    "ca": {
+      "value": "S'està actualitzant l'overlay d'EOS…",
+      "confidence": "medium",
+      "basis": "NP: gamelib \"L'overlay d'EOS\" (translation.json uses 'la capa de superposició EOS'). Verb: gamelib updateConfirmBody \"Confirma l'actualització de l'overlay\" -> actualitz-. Predicate: tr_updating \"S'està actualitzant…\". Pattern+ellipsis: tr_installing \"S'està instal·lant la capa de superposició EOS…\" ('…')."
+    },
+    "cs": {
+      "value": "Překryvná vrstva EOS se aktualizuje...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'Překryvná vrstva EOS' (translation.json uses the shorter 'Překrytí EOS'). Verb: gamelib updateConfirmBody 'Aktualizovat překryvnou vrstvu EOS...' -> aktualizova-. Predicate: tr_updating 'Aktualizuji...' is FIRST PERSON and was normalised to the reflexive 3rd person a status line needs. Pattern+ellipsis: tr_installing 'Překrytí EOS se instaluje...'."
+    },
+    "da": {
+      "value": "EOS Overlay er ved at blive opdateret...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'EOS Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody 'Opdater EOS Overlay...' -> opdater-. Predicate: tr_updating 'Opdaterer...'. Pattern+ellipsis: tr_installing 'EOS Overlay er ved at blive installeret...' -- participle swap only."
+    },
+    "de": {
+      "value": "Das EOS-Overlay wird aktualisiert …",
+      "confidence": "high",
+      "basis": "NP: gamelib 'Das EOS-Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody 'Das EOS-Overlay auf die neueste Version aktualisieren?' -> aktualisier-. Predicate: tr_updating 'Wird aktualisiert …'. Pattern+ellipsis: tr_installing 'Das EOS-Overlay wird installiert …' -- note the SPACE before '…', which is this locale's own convention and is preserved deliberately."
+    },
+    "el": {
+      "value": "Το EOS Overlay ενημερώνεται...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'Το EOS Overlay' (translation.json uses the feminine 'Η επικάλυψη EOS'; the article stays neuter to agree with the gamelib NP). Verb: gamelib updateConfirmBody 'Ενημέρωση του EOS Overlay...' -> ενημερών-. Predicate: tr_updating 'Ενημέρωση...' rendered as a mediopassive verb. Pattern+ellipsis: tr_installing 'Η επικάλυψη EOS εγκαθίσταται...'."
+    },
+    "es": {
+      "value": "El EOS Overlay está siendo actualizado...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'El EOS Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody '¿Actualizar el EOS Overlay...' -> actualiz-. Predicate: tr_updating 'Actualizando...'. Pattern+ellipsis: tr_installing 'El EOS Overlay está siendo instalado...' -- participle swap only."
+    },
+    "et": {
+      "value": "EOS Overlay'd uuendatakse...",
+      "confidence": "low",
+      "basis": "NP: gamelib 'EOS Overlay' (translation.json uses the fully declinable 'EOS-i ülekate'). Verb: gamelib updateConfirmBody 'Uuendada EOS Overlay uusimale versioonile?' -> uuenda-. Predicate: tr_updating 'Uuendamine...'. Pattern+ellipsis: tr_installing 'EOS-i ülekatet paigaldatakse...' -- an impersonal passive taking a PARTITIVE object, which forces an apostrophe partitive onto the indeclinable gamelib NP. That form is the weak point: a native reviewer may prefer the nominal 'EOS Overlay uuendamine...' or the translation.json NP, 'EOS-i ülekatet uuendatakse...'."
+    },
+    "eu": {
+      "value": "EOS Overlay eguneratzen ari da...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody 'Eguneratu EOS Overlay azken bertsiora?' -> egunera-. Predicate: tr_updating 'Eguneratzen...'. Pattern+ellipsis: tr_installing 'EOS Overlay instalatzen ari da...' -- direct '-tzen ari da' progressive swap."
+    },
+    "fa": {
+      "value": "روکش EOS در حال به‌روزرسانی است...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'روکش EOS' (translation.json leaves 'EOS Overlay' untranslated). Verb AND SPELLING: gamelib updateConfirmBody 'روکش EOS به آخرین نسخه به‌روزرسانی شود؟' -- gamelib writes به‌روزرسانی with a ZWNJ where translation.json writes it spaced; the in-namespace spelling wins. Pattern: tr_installing 'EOS Overlay در حال نصب شدن است...', simplified from 'در حال ... شدن است' to 'در حال ... است' because the doubled verbal noun reads heavily with به‌روزرسانی. Ellipsis: '...'."
+    },
+    "fi": {
+      "value": "EOS-peittokuvaa päivitetään...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS-peittokuva' (translation.json uses a different Finnish coinage, 'EOS-päällinen'), in the partitive the pattern requires. Verb: gamelib updateConfirmBody 'Päivitetäänkö EOS-peittokuva uusimpaan versioon?' -- this corroborates BOTH the NP and the passive verb in namespace. Pattern+ellipsis: tr_installing 'EOS-päällistä asennetaan...'."
+    },
+    "fr": {
+      "value": "L'overlay EOS est en cours de mise à jour...",
+      "confidence": "high",
+      "basis": "NP: gamelib \"L'overlay EOS\" (translation.json uses \"L'interface Epic Online Services (EOS)\"). Verb: gamelib updateConfirmBody \"Mettre à jour l'overlay EOS vers la dernière version ?\" -> mise à jour, and it corroborates the NP exactly. Predicate: tr_updating 'Mise à jour en cours...'. Pattern+ellipsis: tr_installing \"... est en cours d'installation...\" -- the nominal 'est en cours de X' frame carries over unchanged."
+    },
+    "ga": {
+      "value": "Tá an EOS Overlay á nuashonrú...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'an EOS Overlay' (translation.json is itself split -- 'an EOS Overlay' in installing, 'an Forleagan EOS' in installed). Verb: gamelib updateConfirmBody 'An bhfuil fonn ort an EOS Overlay a nuashonrú...' -> nuashonrú, corroborating the NP too. Predicate: tr_updating 'Ag nuashonrú...'. Pattern+ellipsis: tr_installing 'Tá an EOS Overlay á shuiteáil...' -- 'á + verbal noun' progressive passive; n- does not lenite."
+    },
+    "gl": {
+      "value": "Estase actualizando o EOS Overlay...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'O EOS Overlay' (translation.json uses 'a superposición de Epic (EOS Overlay)'), lower-cased mid-sentence. Verb: gamelib updateConfirmBody 'Actualizar o EOS Overlay á última versión?' -> actualiz-, corroborating the NP. Predicate: tr_updating 'Actualizando...'. Pattern+ellipsis: tr_installing 'Estase instalando a superposición de Epic (EOS Overlay)...'."
+    },
+    "he": {
+      "value": "שכבת ה-EOS Overlay בעדכון...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'שכבת ה-EOS Overlay' (translation.json uses 'שכבת העל EOS'). Verb: gamelib updateConfirmBody 'לעדכן את ה-EOS Overlay לגרסה האחרונה?' -> עדכן, corroborating the 'ה-EOS Overlay' form. Predicate: tr_updating 'מעדכן...' is ACTIVE and was normalised to the nominal 'ב+verbal noun' form the installing sibling uses. Pattern+ellipsis: tr_installing 'שכבת העל EOS בהתקנה...'."
+    },
+    "hr": {
+      "value": "EOS Overlay se ažurira…",
+      "confidence": "medium",
+      "basis": "translation.json is an ENGLISH PASSTHROUGH for every EOS key in this locale ('Updating...', 'The EOS Overlay is being installed...'), so it supplies neither predicate nor pattern. Both come from gamelib instead: NP 'EOS Overlay', verb from updateConfirmBody 'Ažurirati EOS Overlay na najnoviju verziju?' -> ažurira-, in the reflexive 3rd-person status shape. Ellipsis: hr gamelib, 16 '…' vs 1 '...'."
+    },
+    "hu": {
+      "value": "Az EOS Overlay frissítése folyamatban…",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'Az EOS Overlay' (translation.json uses 'Az EOS átfedés'). Verb: gamelib updateConfirmBody 'Frissíted az EOS Overlayt a legújabb verzióra?' -> frissít-, corroborating the NP. Predicate: tr_updating 'Frissítés…' in the 3rd-person possessive the frame needs. Pattern+ellipsis: tr_installing 'Az EOS átfedés telepítése folyamatban…' ('…')."
+    },
+    "id": {
+      "value": "EOS Overlay sedang diperbarui...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'EOS Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody 'Perbarui EOS Overlay ke versi terbaru?' -> perbarui, in its di- passive. Predicate: tr_updating 'Memperbarui...'. Pattern+ellipsis: tr_installing 'EOS Overlay sedang diinstal....' -- note that source carries FOUR dots (an upstream typo); three are used here, matching every other id string."
+    },
+    "it": {
+      "value": "L'aggiornamento dell'overlay EOS è in corso...",
+      "confidence": "high",
+      "basis": "NP: gamelib \"L'overlay EOS\". Verb: gamelib updateConfirmBody \"Aggiornare l'overlay EOS all'ultima versione?\" -> aggiorna-, corroborating the NP exactly. Predicate: tr_updating 'Aggiornando...' nominalised. Pattern+ellipsis: tr_installing \"L'installazione dell'EOS Overlay è in corso...\" -- the nominal 'è in corso' frame carries over unchanged."
+    },
+    "ja": {
+      "value": "EOS Overlayを更新中…",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' (translation.json uses 'EOSオーバーレイ'). Verb: gamelib updateConfirmBody 'EOS Overlayを最新バージョンに更新しますか？' -> 更新. The two namespaces DISAGREE on the verb too -- translation.json's tr_updating is 'アップデート中…' -- and the gamelib rule chose 更新 for both noun and verb. Pattern+ellipsis: tr_installing 'EOSオーバーレイをインストール中…' ('…')."
+    },
+    "ka": {
+      "value": "EOS Overlay-ის განახლება…",
+      "confidence": "low",
+      "basis": "tr_installing is EMPTY in this locale, so there is NO pattern parallel -- the verbal-noun status shape is taken instead from ka's own gamelib catalog ('სინქრონიზაცია…', 'გააქტიურება…', 'Steam-ზე გააქტიურება…'), including the -ის genitive clitic on a Latin-script name. NP: gamelib 'EOS Overlay'. Verb: gamelib updateConfirmBody 'განვაახლოთ EOS Overlay უახლეს ვერსიამდე?' plus tr_updating 'განახლება...' -> განახლება. Ellipsis: ka gamelib is 15/15 '…' even though tr_updating writes '...'; the file the string lives in wins."
+    },
+    "ko": {
+      "value": "EOS 오버레이 업데이트 중...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'EOS 오버레이' (both namespaces agree). Verb: gamelib updateConfirmBody 'EOS 오버레이를 최신 버전으로 업데이트하시겠습니까?' -> 업데이트. Predicate: tr_updating '업데이트 중...'. Pattern+ellipsis: tr_installing 'EOS 오버레이 설치 중...' -- noun swap only."
+    },
+    "lt": {
+      "value": "EOS Overlay yra atnaujinamas...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' (translation.json uses '„EOS“ perdanga'). Verb: gamelib updateConfirmBody 'Atnaujinti EOS Overlay iki naujausios versijos?' -> atnaujin-, corroborating the NP. Predicate: tr_updating 'Atnaujinama...'. Pattern: tr_installing '„EOS“ perdanga yra įdiegiama...'. AGREEMENT, corrected after review: the participle is MASCULINE 'atnaujinamas', not the feminine 'atnaujinama' the pattern source carries. That source agrees with 'perdanga' (fem); the shipped NP is gamelib's indeclinable 'EOS Overlay', which this very namespace inflects as MASCULINE -- 'EOS Overlay nepasiekiamas šioje versijoje' and, decisively, unavailableDetail's '...negali būti įdiegtas, atnaujintas ar pašalintas' uses atnaujin-tas for this exact noun. Ellipsis: '...'."
+    },
+    "ml": {
+      "value": "EOS ഓവർലേ അപ്ഡേറ്റ് ചെയ്യുന്നു…",
+      "confidence": "low",
+      "basis": "translation.json is an ENGLISH PASSTHROUGH for every EOS key in this locale, so there is no pattern or predicate parallel and the progressive form ('ചെയ്യുന്നു') is authored. NP: gamelib 'EOS ഓവർലേ'. Verb AND SPELLING: gamelib updateConfirmBody 'EOS ഓവർലേ ഏറ്റവും പുതിയ പതിപ്പിലേക്ക് അപ്ഡേറ്റ് ചെയ്യണോ?' -- the catalog spells അപ്ഡേറ്റ് with NO zero-width non-joiner, and that exact byte sequence is reproduced here. Ellipsis: ml gamelib, 14 '…' vs 1 '...'."
+    },
+    "nb_NO": {
+      "value": "EOS-overlegget blir oppdatert...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'EOS-overlegget' (both namespaces agree). Verb: gamelib updateConfirmBody 'Oppdatere EOS-overlegget til nyeste versjon?' -> oppdater-. Predicate: tr_updating 'Oppdaterer...'. Pattern+ellipsis: tr_installing 'EOS-overlegget blir installert...' -- participle swap only."
+    },
+    "nl": {
+      "value": "De EOS Overlay wordt bijgewerkt...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'De EOS Overlay' (both namespaces agree). Verb: the two namespaces DISAGREE -- gamelib updateConfirmBody says 'De EOS Overlay bijwerken naar de nieuwste versie?' (native 'bijwerken') while translation.json's tr_updating says 'Bezig met updaten...' (loanword). The gamelib rule chose 'bijwerken', which is also the more standard Dutch. Pattern+ellipsis: tr_installing 'De EOS Overlay wordt geïnstalleerd...' -- participle swap only."
+    },
+    "pl": {
+      "value": "Nakładka EOS jest w trakcie aktualizacji...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'Nakładka EOS' (both namespaces agree). Verb: gamelib updateConfirmBody 'Zaktualizować nakładkę EOS do najnowszej wersji?' -> aktualiz-. Predicate: tr_updating 'Aktualizowanie...' in the genitive the frame needs. Pattern+ellipsis: tr_installing 'Nakładka EOS jest w trakcie instalacji...' -- noun swap only."
+    },
+    "pt": {
+      "value": "O EOS Overlay está a ser atualizado...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'O EOS Overlay' (translation.json uses the feminine 'A Janela de Sobreposição EOS'). Verb: gamelib updateConfirmBody 'Atualizar o EOS Overlay para versão mais recente?' -> atualiz-, corroborating the NP. Predicate: tr_updating 'A atualizar...'. Pattern+ellipsis: tr_installing '... está a ser instalada...' (European Portuguese progressive). AGREEMENT: the participle is re-agreed from the pattern source's feminine to MASCULINE, matching the shipped NP and unavailableDetail's 'não pode ser instalado, atualizado ou removido'."
+    },
+    "pt_BR": {
+      "value": "O EOS Overlay está sendo atualizado...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'O EOS Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody 'Atualizar o EOS Overlay para a versão mais recente?' -> atualiz-. Predicate: tr_updating 'Atualizando...'. Pattern+ellipsis: tr_installing 'O EOS Overlay está sendo instalado...' -- participle swap only."
+    },
+    "ro": {
+      "value": "EOS Overlay se actualizează...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'EOS Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody 'Actualizezi EOS Overlay la cea mai recentă versiune?' -> actualiz-. Predicate: tr_updating 'Se actualizează...'. Pattern+ellipsis: tr_installing 'EOS Overlay este instalat...'."
+    },
+    "ru": {
+      "value": "Оверлей EOS обновляется...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'Оверлей EOS' (both namespaces agree). Verb: gamelib updateConfirmBody 'Обновить оверлей EOS до последней версии?' -> обнов-. Predicate: tr_updating 'Обновление...' rendered reflexive. Pattern+ellipsis: tr_installing 'Оверлей EOS устанавливается...' -- verb swap only."
+    },
+    "sk": {
+      "value": "Prekrytie EOS sa aktualizuje…",
+      "confidence": "medium",
+      "basis": "translation.json is an ENGLISH PASSTHROUGH for every EOS key in this locale, so it supplies neither predicate nor pattern. Both come from gamelib instead: NP 'Prekrytie EOS', verb from updateConfirmBody 'Aktualizovať prekrytie EOS na najnovšiu verziu?' -> aktualizova-, in the reflexive 3rd-person status shape. Ellipsis: sk gamelib, 17 '…' vs 1 '...'."
+    },
+    "sl": {
+      "value": "Prekritje EOS se posodablja …",
+      "confidence": "low",
+      "basis": "No translation.json in this locale at all, so there is NO pattern parallel and the imperfective reflexive aspect is authored. NP: gamelib 'Prekritje EOS v tej različici ni na voljo' -> 'Prekritje EOS'. Verb: gamelib updateConfirmBody 'Ali želite posodobiti prekritje EOS na najnovejšo različico?' -> posodob-, taken to the imperfective 'posodablja'. Ellipsis: sl gamelib carries 17 '…' and 0 '...', with a SPACE before it in 10 of 17 -- the space is used here because every multi-word sl string in that file carries it ('Aktiviranje na Steam …', 'Sinhroniziranje vaše knjižnice Steam …'), but it is the single most likely thing a native reviewer will want changed."
+    },
+    "sr": {
+      "value": "EOS Overlay се ажурира...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' -- kept in LATIN script inside the Cyrillic sentence exactly as this locale's gamelib_unavailable and updateConfirmBody both do ('Ажурирати EOS Overlay на најновију верзију?'). translation.json's 'ЕОС Оверлаи' is a letter-by-letter transliteration and was deliberately NOT used. Verb: updateConfirmBody -> ажурира-. Predicate: tr_updating 'Ажурирање...' rendered reflexive. Pattern+ellipsis: tr_installing 'ЕОС Оверлаи се инсталира...'."
+    },
+    "sv": {
+      "value": "EOS-overlägget uppdateras...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'EOS-overlägget' (translation.json leaves 'EOS Overlay' untranslated). Verb: gamelib updateConfirmBody 'Uppdatera EOS-overlägget till den senaste versionen?' -> uppdater-, corroborating the NP. Predicate: tr_updating 'Uppdaterar...' in the -s passive. Pattern+ellipsis: tr_installing 'EOS Overlay installeras...'."
+    },
+    "ta": {
+      "value": "EOS Overlay புதுப்பிக்கப்படுகிறது...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' (translation.json uses 'EOS மேலடுக்கு'). Verb: gamelib updateConfirmBody 'EOS Overlay ஐ சமீபத்திய பதிப்புக்கு புதுப்பிக்கவா?' -> புதுப்பி-, corroborating the untransliterated NP. Predicate: tr_updating 'புதுப்பிக்கிறது...' moved from active to the passive the installing sibling uses. Pattern+ellipsis: tr_installing 'EOS மேலடுக்கு நிறுவப்படுகிறது...'."
+    },
+    "th": {
+      "value": "กำลังอัปเดต EOS Overlay…",
+      "confidence": "low",
+      "basis": "tr_installing is EMPTY in this locale, so there is NO pattern parallel -- the 'กำลัง + verb + object' status shape is taken instead from th's own gamelib catalog ('กำลังซิงค์ไลบรารี Steam ของคุณ…', 'กำลังเปิดใช้งานบน Steam…'). NP: gamelib 'EOS Overlay'. Verb: gamelib updateConfirmBody 'อัปเดต EOS Overlay เป็นเวอร์ชันล่าสุดหรือไม่?' plus tr_updating 'กำลังอัปเดต' -> อัปเดต. Ellipsis: tr_updating carries none at all, so the fallback applies -- th gamelib is 15/15 '…'."
+    },
+    "tr": {
+      "value": "EOS Overlay güncelleniyor...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' (translation.json uses 'EOS Arayüzü', which means 'EOS interface', not 'overlay'). Verb: gamelib updateConfirmBody 'EOS Overlay en son sürüme güncellensin mi?' -> güncellen-, corroborating the NP. Predicate: tr_updating 'Güncelleniyor...'. Pattern+ellipsis: tr_installing 'EOS Arayüzü kuruluyor...'."
+    },
+    "uk": {
+      "value": "Накладення EOS оновлюється...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'Накладення EOS' (translation.json uses the near-identical but distinct 'Накладання EOS'; the gamelib form wins). Verb: gamelib updateConfirmBody 'Оновити накладення EOS до останньої версії?' -> онов-, corroborating the NP. Predicate: tr_updating 'Оновлення...' rendered reflexive. Pattern+ellipsis: tr_installing 'Накладання EOS встановлюється...'."
+    },
+    "uz": {
+      "value": "EOS Overlay yangilanmoqda...",
+      "confidence": "high",
+      "basis": "NP: gamelib 'EOS Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody \"EOS Overlay eng so'nggi versiyaga yangilansinmi?\" -> yangilan-. Predicate: tr_updating 'Yangilanmoqda...'. Pattern+ellipsis: tr_installing 'EOS Overlay oʻrnatilmoqda...' -- verb swap only."
+    },
+    "vi": {
+      "value": "EOS Overlay đang được cập nhật...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' (both namespaces agree). Verb: gamelib updateConfirmBody 'Cập nhật EOS Overlay lên phiên bản mới nhất?' -> cập nhật. Predicate: tr_updating 'Đang Cập Nhật...' is TITLE-CASED and was lower-cased to sentence case, because tr_installing -- the sibling this string sits next to -- is itself lower-case. Pattern+ellipsis: tr_installing 'EOS Overlay đang được cài đặt...'."
+    },
+    "zh_Hans": {
+      "value": "正在更新 EOS 悬浮层...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS 悬浮层' (translation.json uses 'EOS 叠加'). Verb: gamelib updateConfirmBody '将 EOS 悬浮层更新到最新版本吗？' -> 更新, corroborating the NP. Pattern+ellipsis: tr_installing '正安装 EOS 叠加...' -- the verb-object order carries over, with the terse 正 normalised to the standard 正在."
+    },
+    "zh_Hant": {
+      "value": "正在更新 EOS Overlay...",
+      "confidence": "medium",
+      "basis": "NP: gamelib 'EOS Overlay' (translation.json uses 'EOS 內嵌介面'). Verb: gamelib updateConfirmBody '要將 EOS Overlay 更新至最新版本嗎？' -> 更新, corroborating the NP. Pattern+ellipsis: tr_installing '正在安裝 EOS 內嵌介面...' -- frame carries over unchanged."
+    }
+  }
+}
