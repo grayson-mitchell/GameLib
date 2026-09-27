@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "Az EOS Overlay nem érhető el ebben a buildben",
-            "unavailableDetail": "Az EOS Overlay támogatása egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a buildben nem telepíthető, nem frissíthető és nem távolítható el."
+            "unavailableDetail": "Az EOS Overlay támogatása egy jövőbeli kiadásra halasztva (D-03, 34.6. fázis), és ebben a buildben nem telepíthető, nem frissíthető és nem távolítható el.",
+            "updatingStatus": "Az EOS Overlay frissítése folyamatban…"
         }
     },
     "settings": {

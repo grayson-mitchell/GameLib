@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay bu versiyada əlçatan deyil",
-            "unavailableDetail": "EOS Overlay dəstəyi gələcək buraxılışa təxirə salınıb (D-03, Faza 34.6) və bu versiyada quraşdırıla, yenilənə və ya silinə bilməz."
+            "unavailableDetail": "EOS Overlay dəstəyi gələcək buraxılışa təxirə salınıb (D-03, Faza 34.6) və bu versiyada quraşdırıla, yenilənə və ya silinə bilməz.",
+            "updatingStatus": "EOS Overlay yenilənir..."
         }
     },
     "settings": {

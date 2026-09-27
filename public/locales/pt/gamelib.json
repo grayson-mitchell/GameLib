@@ -262,7 +262,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "O EOS Overlay não está disponível nesta compilação",
-            "unavailableDetail": "O suporte para o EOS Overlay foi adiado para uma versão futura (D-03, Fase 34.6) e não pode ser instalado, atualizado ou removido nesta compilação."
+            "unavailableDetail": "O suporte para o EOS Overlay foi adiado para uma versão futura (D-03, Fase 34.6) e não pode ser instalado, atualizado ou removido nesta compilação.",
+            "updatingStatus": "O EOS Overlay está a ser atualizado..."
         }
     },
     "settings": {

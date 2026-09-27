@@ -270,7 +270,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "The EOS Overlay is unavailable in this build",
-            "unavailableDetail": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build."
+            "unavailableDetail": "EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.",
+            "updatingStatus": "The EOS Overlay is being updated..."
         }
     },
     "settings": {

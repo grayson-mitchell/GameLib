@@ -269,7 +269,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay недаступны ў гэтай зборцы",
-            "unavailableDetail": "Падтрымка EOS Overlay адкладзена да будучага выпуску (D-03, Phase 34.6) і не можа быць усталявана, абноўлена або выдалена ў гэтай зборцы."
+            "unavailableDetail": "Падтрымка EOS Overlay адкладзена да будучага выпуску (D-03, Phase 34.6) і не можа быць усталявана, абноўлена або выдалена ў гэтай зборцы.",
+            "updatingStatus": "Ідзе абнаўленне EOS Overlay..."
         }
     },
     "settings": {

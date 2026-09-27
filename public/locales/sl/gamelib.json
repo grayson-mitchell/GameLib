@@ -269,7 +269,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "Prekritje EOS v tej različici ni na voljo",
-            "unavailableDetail": "Podpora za prekritje EOS je odložena na prihodnjo izdajo (D-03, faza 34.6) in je v tej različici ni mogoče namestiti, posodobiti ali odstraniti."
+            "unavailableDetail": "Podpora za prekritje EOS je odložena na prihodnjo izdajo (D-03, faza 34.6) in je v tej različici ni mogoče namestiti, posodobiti ali odstraniti.",
+            "updatingStatus": "Prekritje EOS se posodablja …"
         }
     },
     "settings": {

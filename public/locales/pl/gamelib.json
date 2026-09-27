@@ -269,7 +269,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "Nakładka EOS jest niedostępna w tej wersji",
-            "unavailableDetail": "Obsługa nakładki EOS została odłożona do przyszłej wersji (D-03, Faza 34.6) i nie można jej zainstalować, zaktualizować ani usunąć w tej wersji."
+            "unavailableDetail": "Obsługa nakładki EOS została odłożona do przyszłej wersji (D-03, Faza 34.6) i nie można jej zainstalować, zaktualizować ani usunąć w tej wersji.",
+            "updatingStatus": "Nakładka EOS jest w trakcie aktualizacji..."
         }
     },
     "settings": {

@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS 悬浮层在此版本中不可用",
-            "unavailableDetail": "EOS 悬浮层支持已推迟到未来版本（D-03，第 34.6 阶段），在此版本中无法安装、更新或移除。"
+            "unavailableDetail": "EOS 悬浮层支持已推迟到未来版本（D-03，第 34.6 阶段），在此版本中无法安装、更新或移除。",
+            "updatingStatus": "正在更新 EOS 悬浮层..."
         }
     },
     "settings": {

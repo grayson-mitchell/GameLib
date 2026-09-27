@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS-overlegget er ikke tilgjengelig i denne utgaven",
-            "unavailableDetail": "Støtte for EOS-overlegg er utsatt til en fremtidig utgivelse (D-03, fase 34.6) og kan ikke installeres, oppdateres eller fjernes fra denne utgaven."
+            "unavailableDetail": "Støtte for EOS-overlegg er utsatt til en fremtidig utgivelse (D-03, fase 34.6) og kan ikke installeres, oppdateres eller fjernes fra denne utgaven.",
+            "updatingStatus": "EOS-overlegget blir oppdatert..."
         }
     },
     "settings": {

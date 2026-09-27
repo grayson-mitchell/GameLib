@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay tidak tersedia di build ini",
-            "unavailableDetail": "Dukungan EOS Overlay ditunda ke rilis mendatang (D-03, Fase 34.6) dan tidak dapat dipasang, diperbarui, atau dihapus dari build ini."
+            "unavailableDetail": "Dukungan EOS Overlay ditunda ke rilis mendatang (D-03, Fase 34.6) dan tidak dapat dipasang, diperbarui, atau dihapus dari build ini.",
+            "updatingStatus": "EOS Overlay sedang diperbarui..."
         }
     },
     "settings": {

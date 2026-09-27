@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay ez dago eskuragarri bertsio honetan",
-            "unavailableDetail": "EOS Overlay onarpena etorkizuneko bertsio baterako atzeratu da (D-03, 34.6 fasea) eta ezin da instalatu, eguneratu edo kendu bertsio honetan."
+            "unavailableDetail": "EOS Overlay onarpena etorkizuneko bertsio baterako atzeratu da (D-03, 34.6 fasea) eta ezin da instalatu, eguneratu edo kendu bertsio honetan.",
+            "updatingStatus": "EOS Overlay eguneratzen ari da..."
         }
     },
     "settings": {

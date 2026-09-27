@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "このビルドではEOS Overlayは利用できません",
-            "unavailableDetail": "EOS Overlayのサポートは将来のリリース（D-03、フェーズ34.6）に延期されており、このビルドではインストール、更新、削除ができません。"
+            "unavailableDetail": "EOS Overlayのサポートは将来のリリース（D-03、フェーズ34.6）に延期されており、このビルドではインストール、更新、削除ができません。",
+            "updatingStatus": "EOS Overlayを更新中…"
         }
     },
     "settings": {

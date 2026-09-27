@@ -276,7 +276,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "N'eo ket hegerz an EOS Overlay er stumm-mañ",
-            "unavailableDetail": "Ezvezet eo bet skor an EOS Overlay betek ur stumm da zont (D-03, Phase 34.6) ha ne c'haller ket he staliañ, hizivaat pe zilemel eus ar stumm-mañ."
+            "unavailableDetail": "Ezvezet eo bet skor an EOS Overlay betek ur stumm da zont (D-03, Phase 34.6) ha ne c'haller ket he staliañ, hizivaat pe zilemel eus ar stumm-mañ.",
+            "updatingStatus": "Oc'h hizivaat an EOS Overlay…"
         }
     },
     "settings": {

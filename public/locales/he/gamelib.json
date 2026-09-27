@@ -262,7 +262,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "שכבת ה-EOS Overlay אינה זמינה בגרסה זו",
-            "unavailableDetail": "התמיכה ב-EOS Overlay נדחתה לגרסה עתידית (D-03, Phase 34.6) ולא ניתן להתקין, לעדכן או להסיר אותה מגרסה זו."
+            "unavailableDetail": "התמיכה ב-EOS Overlay נדחתה לגרסה עתידית (D-03, Phase 34.6) ולא ניתן להתקין, לעדכן או להסיר אותה מגרסה זו.",
+            "updatingStatus": "שכבת ה-EOS Overlay בעדכון..."
         }
     },
     "settings": {

@@ -262,7 +262,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay nije dostupan u ovoj verziji",
-            "unavailableDetail": "Podrška za EOS Overlay je odgođena za buduće izdanje (D-03, Faza 34.6) i ne može se instalirati, ažurirati ili ukloniti iz ove verzije."
+            "unavailableDetail": "Podrška za EOS Overlay je odgođena za buduće izdanje (D-03, Faza 34.6) i ne može se instalirati, ažurirati ili ukloniti iz ove verzije.",
+            "updatingStatus": "EOS Overlay se ažurira..."
         }
     },
     "settings": {

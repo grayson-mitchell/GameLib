@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "De EOS Overlay is niet beschikbaar in deze build",
-            "unavailableDetail": "Ondersteuning voor EOS Overlay is uitgesteld tot een toekomstige release (D-03, Fase 34.6) en kan in deze build niet worden geïnstalleerd, bijgewerkt of verwijderd."
+            "unavailableDetail": "Ondersteuning voor EOS Overlay is uitgesteld tot een toekomstige release (D-03, Fase 34.6) en kan in deze build niet worden geïnstalleerd, bijgewerkt of verwijderd.",
+            "updatingStatus": "De EOS Overlay wordt bijgewerkt..."
         }
     },
     "settings": {

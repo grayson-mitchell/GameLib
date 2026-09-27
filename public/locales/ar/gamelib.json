@@ -283,7 +283,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "طبقة EOS Overlay غير متاحة في هذا الإصدار",
-            "unavailableDetail": "تم تأجيل دعم EOS Overlay إلى إصدار مستقبلي (D-03, Phase 34.6) ولا يمكن تثبيته أو تحديثه أو إزالته من هذا الإصدار."
+            "unavailableDetail": "تم تأجيل دعم EOS Overlay إلى إصدار مستقبلي (D-03, Phase 34.6) ولا يمكن تثبيته أو تحديثه أو إزالته من هذا الإصدار.",
+            "updatingStatus": "قيد تحديث طبقة EOS Overlay..."
         }
     },
     "settings": {

@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS-overlägget är inte tillgängligt i den här versionen",
-            "unavailableDetail": "Stöd för EOS-overlägg är uppskjutet till en framtida version (D-03, fas 34.6) och kan inte installeras, uppdateras eller tas bort från den här versionen."
+            "unavailableDetail": "Stöd för EOS-overlägg är uppskjutet till en framtida version (D-03, fas 34.6) och kan inte installeras, uppdateras eller tas bort från den här versionen.",
+            "updatingStatus": "EOS-overlägget uppdateras..."
         }
     },
     "settings": {

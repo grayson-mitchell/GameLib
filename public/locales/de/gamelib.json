@@ -358,7 +358,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "Das EOS-Overlay ist in dieser Version nicht verfügbar",
-            "unavailableDetail": "Die Unterstützung für das EOS-Overlay wurde auf ein zukünftiges Release verschoben (D-03, Phase 34.6) und kann in dieser Version nicht installiert, aktualisiert oder entfernt werden."
+            "unavailableDetail": "Die Unterstützung für das EOS-Overlay wurde auf ein zukünftiges Release verschoben (D-03, Phase 34.6) und kann in dieser Version nicht installiert, aktualisiert oder entfernt werden.",
+            "updatingStatus": "Das EOS-Overlay wird aktualisiert …"
         }
     },
     "sidebar": {

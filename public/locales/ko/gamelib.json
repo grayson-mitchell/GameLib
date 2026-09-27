@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "이 빌드에서는 EOS 오버레이를 사용할 수 없습니다",
-            "unavailableDetail": "EOS 오버레이 지원은 향후 릴리스(D-03, Phase 34.6)로 연기되었으며, 이 빌드에서는 설치, 업데이트 또는 제거할 수 없습니다."
+            "unavailableDetail": "EOS 오버레이 지원은 향후 릴리스(D-03, Phase 34.6)로 연기되었으며, 이 빌드에서는 설치, 업데이트 또는 제거할 수 없습니다.",
+            "updatingStatus": "EOS 오버레이 업데이트 중..."
         }
     },
     "settings": {

@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay er ikke tilgængeligt i denne build",
-            "unavailableDetail": "Understøttelse af EOS Overlay er udskudt til en fremtidig udgivelse (D-03, Phase 34.6) og kan ikke installeres, opdateres eller fjernes i denne build."
+            "unavailableDetail": "Understøttelse af EOS Overlay er udskudt til en fremtidig udgivelse (D-03, Phase 34.6) og kan ikke installeres, opdateres eller fjernes i denne build.",
+            "updatingStatus": "EOS Overlay er ved at blive opdateret..."
         }
     },
     "settings": {

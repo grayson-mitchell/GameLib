@@ -269,7 +269,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay nepasiekiamas šioje versijoje",
-            "unavailableDetail": "EOS Overlay palaikymas atidėtas iki būsimos versijos (D-03, 34.6 etapas) ir šioje versijoje negali būti įdiegtas, atnaujintas ar pašalintas."
+            "unavailableDetail": "EOS Overlay palaikymas atidėtas iki būsimos versijos (D-03, 34.6 etapas) ir šioje versijoje negali būti įdiegtas, atnaujintas ar pašalintas.",
+            "updatingStatus": "EOS Overlay yra atnaujinamas..."
         }
     },
     "settings": {

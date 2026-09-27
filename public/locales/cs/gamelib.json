@@ -269,7 +269,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "Překryvná vrstva EOS není v této verzi dostupná",
-            "unavailableDetail": "Podpora překryvné vrstvy EOS je odložena na budoucí vydání (D-03, fáze 34.6) a v této verzi ji nelze instalovat, aktualizovat ani odebrat."
+            "unavailableDetail": "Podpora překryvné vrstvy EOS je odložena na budoucí vydání (D-03, fáze 34.6) a v této verzi ji nelze instalovat, aktualizovat ani odebrat.",
+            "updatingStatus": "Překryvná vrstva EOS se aktualizuje..."
         }
     },
     "settings": {

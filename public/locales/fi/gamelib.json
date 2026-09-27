@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS-peittokuva ei ole käytettävissä tässä versiossa",
-            "unavailableDetail": "EOS-peittokuvan tuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi asentaa, päivittää tai poistaa tästä versiosta."
+            "unavailableDetail": "EOS-peittokuvan tuki on siirretty tulevaan julkaisuun (D-03, vaihe 34.6), eikä sitä voi asentaa, päivittää tai poistaa tästä versiosta.",
+            "updatingStatus": "EOS-peittokuvaa päivitetään..."
         }
     },
     "settings": {

@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay ხელმისაწვდომი არ არის ამ ვერსიაში",
-            "unavailableDetail": "EOS Overlay-ის მხარდაჭერა გადატანილია მომავალ გამოშვებაზე (D-03, Phase 34.6) და მისი დაყენება, განახლება ან წაშლა ამ ვერსიაში შეუძლებელია."
+            "unavailableDetail": "EOS Overlay-ის მხარდაჭერა გადატანილია მომავალ გამოშვებაზე (D-03, Phase 34.6) და მისი დაყენება, განახლება ან წაშლა ამ ვერსიაში შეუძლებელია.",
+            "updatingStatus": "EOS Overlay-ის განახლება…"
         }
     },
     "settings": {

@@ -365,7 +365,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "L'overlay EOS n'est pas disponible dans cette version",
-            "unavailableDetail": "La prise en charge de l'overlay EOS est reportée à une version future (D-03, Phase 34.6) et ne peut pas être installée, mise à jour ou supprimée dans cette version."
+            "unavailableDetail": "La prise en charge de l'overlay EOS est reportée à une version future (D-03, Phase 34.6) et ne peut pas être installée, mise à jour ou supprimée dans cette version.",
+            "updatingStatus": "L'overlay EOS est en cours de mise à jour..."
         }
     },
     "sidebar": {

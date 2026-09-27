@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay ushbu build'da mavjud emas",
-            "unavailableDetail": "EOS Overlay qo'llab-quvvatlashi keyingi versiyaga qoldirilgan (D-03, Phase 34.6) va bu build'da o'rnatilishi, yangilanishi yoki olib tashlanishi mumkin emas."
+            "unavailableDetail": "EOS Overlay qo'llab-quvvatlashi keyingi versiyaga qoldirilgan (D-03, Phase 34.6) va bu build'da o'rnatilishi, yangilanishi yoki olib tashlanishi mumkin emas.",
+            "updatingStatus": "EOS Overlay yangilanmoqda..."
         }
     },
     "settings": {

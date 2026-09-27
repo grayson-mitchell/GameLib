@@ -269,7 +269,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "Prekrytie EOS nie je v tejto verzii k dispozícii",
-            "unavailableDetail": "Podpora pre prekrytie EOS je odložená na budúce vydanie (D-03, fáza 34.6) a v tejto verzii ju nie je možné nainštalovať, aktualizovať ani odstrániť."
+            "unavailableDetail": "Podpora pre prekrytie EOS je odložená na budúce vydanie (D-03, fáza 34.6) a v tejto verzii ju nie je možné nainštalovať, aktualizovať ani odstrániť.",
+            "updatingStatus": "Prekrytie EOS sa aktualizuje…"
         }
     },
     "settings": {

@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "此版本中 EOS Overlay 無法使用",
-            "unavailableDetail": "EOS Overlay 支援已延後至未來版本推出（D-03，第 34.6 階段），此版本無法安裝、更新或移除。"
+            "unavailableDetail": "EOS Overlay 支援已延後至未來版本推出（D-03，第 34.6 階段），此版本無法安裝、更新或移除。",
+            "updatingStatus": "正在更新 EOS Overlay..."
         }
     },
     "settings": {

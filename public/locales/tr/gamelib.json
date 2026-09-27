@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay bu sürümde kullanılamıyor",
-            "unavailableDetail": "EOS Overlay desteği gelecekteki bir sürüme ertelenmiştir (D-03, Aşama 34.6) ve bu sürümde yüklenemez, güncellenemez veya kaldırılamaz."
+            "unavailableDetail": "EOS Overlay desteği gelecekteki bir sürüme ertelenmiştir (D-03, Aşama 34.6) ve bu sürümde yüklenemez, güncellenemez veya kaldırılamaz.",
+            "updatingStatus": "EOS Overlay güncelleniyor..."
         }
     },
     "settings": {

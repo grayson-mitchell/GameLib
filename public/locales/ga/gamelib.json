@@ -276,7 +276,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "Níl an EOS Overlay ar fáil sa leagan seo",
-            "unavailableDetail": "Cuireadh tacaíocht EOS Overlay siar go dtí eisiúint sa todhchaí (D-03, Céim 34.6) agus ní féidir í a shuiteáil, a nuashonrú ná a bhaint den leagan seo."
+            "unavailableDetail": "Cuireadh tacaíocht EOS Overlay siar go dtí eisiúint sa todhchaí (D-03, Céim 34.6) agus ní féidir í a shuiteáil, a nuashonrú ná a bhaint den leagan seo.",
+            "updatingStatus": "Tá an EOS Overlay á nuashonrú..."
         }
     },
     "settings": {

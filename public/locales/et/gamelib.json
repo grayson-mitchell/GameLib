@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay pole selles versioonis saadaval",
-            "unavailableDetail": "EOS Overlay tugi on lükatud edasi järgmisesse versiooni (D-03, Phase 34.6) ning seda ei saa selles versioonis paigaldada, uuendada ega eemaldada."
+            "unavailableDetail": "EOS Overlay tugi on lükatud edasi järgmisesse versiooni (D-03, Phase 34.6) ning seda ei saa selles versioonis paigaldada, uuendada ega eemaldada.",
+            "updatingStatus": "EOS Overlay'd uuendatakse..."
         }
     },
     "settings": {

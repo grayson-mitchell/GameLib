@@ -262,7 +262,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "L'overlay d'EOS no està disponible en aquesta versió",
-            "unavailableDetail": "El suport de l'overlay d'EOS s'ha ajornat a una versió futura (D-03, Fase 34.6) i no es pot instal·lar, actualitzar ni eliminar en aquesta versió."
+            "unavailableDetail": "El suport de l'overlay d'EOS s'ha ajornat a una versió futura (D-03, Fase 34.6) i no es pot instal·lar, actualitzar ni eliminar en aquesta versió.",
+            "updatingStatus": "S'està actualitzant l'overlay d'EOS…"
         }
     },
     "settings": {

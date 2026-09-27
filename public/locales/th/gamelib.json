@@ -255,7 +255,8 @@
     "setting": {
         "eosOverlay": {
             "unavailable": "EOS Overlay ไม่พร้อมใช้งานในบิลด์นี้",
-            "unavailableDetail": "การรองรับ EOS Overlay ถูกเลื่อนออกไปในเวอร์ชันถัดไป (D-03, Phase 34.6) และไม่สามารถติดตั้ง อัปเดต หรือลบออกจากบิลด์นี้ได้"
+            "unavailableDetail": "การรองรับ EOS Overlay ถูกเลื่อนออกไปในเวอร์ชันถัดไป (D-03, Phase 34.6) และไม่สามารถติดตั้ง อัปเดต หรือลบออกจากบิลด์นี้ได้",
+            "updatingStatus": "กำลังอัปเดต EOS Overlay…"
         }
     },
     "settings": {
