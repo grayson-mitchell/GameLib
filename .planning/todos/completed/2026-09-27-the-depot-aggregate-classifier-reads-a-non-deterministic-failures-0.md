@@ -64,3 +64,46 @@ under the fix, always classify and report the RUN-level stall instead. That is a
 user-facing message change for an ordering that occurs today, not a pure bugfix — it needs its own
 decision record and test coverage for both orderings, which `260927-tpm`'s scope (one aggregate log
 line) did not extend to.
+
+## Resolution
+
+Closed by quick task `260927-v8i`, commits `2b9290bc9` (the helper + both consumer rewires) and
+`d8ea86321` (the completed ordering matrix and the rewritten A2 arm).
+
+**Exported `selectPrimaryDepotFailure(failures)` in `depot.ts`, called ONCE by BOTH consumers** —
+`formatDownloadFailureSummary`'s `first:` fragment and `downloadSteamDepots`' error-path classifier
+argument — replacing their two independent `failures[0]` reads. One call, one const, read twice, so
+the two can no longer disagree on which record describes the run.
+
+**The Cost paragraph's prediction landed exactly as it named.** Ordering A's outcome DID change: a
+run whose file-level failure is a `sha1 mismatch`, recorded before the run-level stall give-up, used
+to classify `steam.download.error.verifyFailed` (`action: 'none'`) and now classifies
+`steam.download.error.stalled` (`action: 'retry'`). Pinned by the rewritten A2 case-A arm
+(`depot.test.ts`, inverted from asserting `first: file="a.bin"` to asserting `first: file="(run)"`)
+and by B1, the new arm that reproduces both orderings directly over the exported helper and asserts
+`classifyDepotError`'s key on each. Ordering B (run-level record already at index 0) is unchanged, as
+the Cost paragraph said it would be — pinned by B2.
+
+**The shipped rule is TWO-TIER, not the three-tier rule this todo's Solution section proposed as the
+open question.** `selectPrimaryDepotFailure` is `failures.find((f) => f.scope === 'run') ?? failures[0]`
+— no preference tier for a non-retryable file-level cause exists. That third tier was gated on
+whether any file-level `DepotDownloadFailure` can carry a `.cause` for which
+`isNonRetryableDepotError` (`depotErrors.ts:81`) returns true, and the answer, measured rather than
+assumed, is no: the only two sites in all of `src/` that ever stamp a numeric `.eresult` property are
+`wrapDepotKeyError` (`depot.ts:610-612`, reached only via `fetchDepotPlanEntry`) and `depot.ts:897`
+(the all-skipped-depots guard) — both live inside `buildDepotPlan`, whose throws are caught by
+`downloadSteamDepots`' own outer `catch` (`depot.ts:3578` at measurement time) and classified
+directly; they never enter the `failures` array at all. Neither of the two actual file-level
+producers (`healReconciledFileModes`'s mode-application failures, and the per-file catch around
+`downloadSingleFile`) can reach either site. So no tier-1 mechanism and no tier-1 test ship for a case
+that cannot happen today — this repo's standing lesson against hand-maintained sets that only list
+cases someone imagined.
+
+**Residual, left deliberately ungated, carried forward from this decision rather than closed by it:**
+if a FUTURE change ever stamps a numeric `.eresult` onto something thrown out of
+`downloadSingleFile` or `healReconciledFileModes`, a permanent, non-retryable cause could be masked
+behind this function's retryable-looking stalled copy — telling a user to retry something that can
+never succeed. Nothing detects that today. The condition is written into `selectPrimaryDepotFailure`'s
+own doc comment in `depot.ts` (where the next reader of that code will see it) as well as here. A
+source gate over `.eresult` assignment sites was considered and declined as too broad and fragile to
+be worth the false confidence it would look like it bought.
