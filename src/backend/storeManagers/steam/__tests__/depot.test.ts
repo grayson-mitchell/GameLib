@@ -58,6 +58,7 @@ import {
   EXECUTABLE_FLAG,
   FAILURE_LOG_CAP,
   describeDepotFailure,
+  formatDownloadFailureSummary,
   type DepotPlan,
   type DepotPlanFile,
   type DepotDownloadFailure,
@@ -1836,6 +1837,132 @@ describe('canWriteFullOwnership', () => {
     expect(canWriteFullOwnership({ ...complete, allModesApplied: false })).toBe(
       false
     )
+  })
+
+  // Quick 260927-tpm (A7, T-tpm-01): a run-level-ONLY failure (tagged
+  // `scope: 'run'`, no per-file failures at all) must still fail this gate
+  // — canWriteFullOwnership reads the UNFILTERED `failures` array, exactly
+  // as before this quick task, so a stalled run can never earn
+  // StateFlags=4 by virtue of its only failure being run-scoped.
+  it('outcome "completed" with only a run-scoped failure -> false (a tagged failure is still a failure)', () => {
+    const runOnlyFailure: DepotDownloadFailure[] = [
+      { file: '(run)', error: 'download stalled', scope: 'run' }
+    ]
+    expect(
+      canWriteFullOwnership({ ...complete, failures: runOnlyFailure })
+    ).toBe(false)
+  })
+})
+
+/**
+ * Quick 260927-tpm (A1-A5): unit tests for formatDownloadFailureSummary, the
+ * function factored out of downloadSteamDepots' aggregate download-failed
+ * log line to correct its file-failure count — a run-scoped stall give-up
+ * (tagged `scope: 'run'`, see DepotDownloadFailure) used to be counted
+ * alongside per-file failures, so N failed files logged as N+1.
+ */
+describe('formatDownloadFailureSummary (quick 260927-tpm)', () => {
+  const fileFailure = (
+    file: string,
+    error = 'boom',
+    cause?: unknown
+  ): DepotDownloadFailure => ({ file, error, cause })
+
+  const runFailure = (
+    error = 'download stalled: no forward progress'
+  ): DepotDownloadFailure => ({
+    file: '(run)',
+    error,
+    scope: 'run'
+  })
+
+  // A1: the defect itself — one file failure plus one run-level give-up
+  // used to report "2 file failure(s)". It must report 1.
+  it('A1: a run-scoped failure alongside file failures does not inflate the file count', () => {
+    const summary = formatDownloadFailureSummary(
+      '480',
+      [fileFailure('a.bin'), runFailure()],
+      'steam.download.error.generic'
+    )
+    expect(summary).toContain('1 file failure(s)')
+    expect(summary).not.toContain('2 file failure(s)')
+  })
+
+  // A2: D-C — first: must still read failures[0] verbatim (byte-for-byte
+  // the same input classifyDepotError was fed), regardless of the file
+  // failure being present. Case A ordering: file first, run second.
+  it('A2: "first:" still reports failures[0] verbatim (D-C, case A ordering)', () => {
+    const summary = formatDownloadFailureSummary(
+      '480',
+      [fileFailure('a.bin', 'sha1 mismatch'), runFailure()],
+      'steam.download.error.verifyFailed'
+    )
+    expect(summary).toContain('first: file="a.bin"')
+    expect(summary).toContain('sha1 mismatch')
+  })
+
+  // A2 (case C ordering): if the run-level record happens to sit at
+  // failures[0] (a stall that overtakes a file failure still resolving),
+  // "first:" reads THAT record — unchanged, D-C-mandated behaviour, not a
+  // new bug introduced by this fix.
+  it('A2: "first:" reads the run-scoped record verbatim when it sits at failures[0] (D-C, case C ordering)', () => {
+    const summary = formatDownloadFailureSummary(
+      '480',
+      [runFailure(), fileFailure('b.bin', 'sha1 mismatch')],
+      'steam.download.error.generic'
+    )
+    expect(summary).toContain('first: file="(run)"')
+  })
+
+  // A3: no run-level failure present -> no run fragment at all, and the
+  // output is byte-for-byte what the aggregate line produced before this
+  // quick task (this is also T-D4's exact shape, reproduced here as a
+  // targeted unit test of the formatter alone).
+  it('A3: no run-scoped failure present -> no "; run:" fragment', () => {
+    const summary = formatDownloadFailureSummary(
+      '480',
+      [fileFailure('a.bin', 'sha1 mismatch')],
+      'steam.download.error.verifyFailed'
+    )
+    expect(summary).not.toContain('; run:')
+    expect(summary).toBe(
+      'downloadSteamDepots: appId=480 download failed — 1 file failure(s), ' +
+        'classified as steam.download.error.verifyFailed; first: ' +
+        'file="a.bin" sha1 mismatch'
+    )
+  })
+
+  // A4: a run-scoped failure with ZERO file-level failures (the coverage-
+  // gap case: stalled before any file ever completed or failed) -> "0 file
+  // failure(s)", the run fragment IS present, and "first:" falls back to
+  // the run record itself (D-C: there is no other failures[0] to read).
+  it('A4: a run-scoped-only failure reports 0 file failures and still surfaces the run reason', () => {
+    const summary = formatDownloadFailureSummary(
+      '480',
+      [runFailure('download stalled: no forward progress for 180000ms')],
+      'steam.download.error.generic'
+    )
+    expect(summary).toContain('0 file failure(s)')
+    expect(summary).toContain('first: file="(run)"')
+    expect(summary).toContain(
+      '; run: download stalled: no forward progress for 180000ms'
+    )
+  })
+
+  // A5: the partition is decided by the `scope` property alone — not by
+  // sniffing the `file` string for the '(run)' sentinel. A file that is
+  // (implausibly) itself literally named "(run)" but carries no `scope`
+  // marker is counted as a file failure, proving the discriminant is the
+  // property, matching the precedent `.eresult`/`.code`/`isStall` already
+  // set on this exact path (installStallWatchdog.ts).
+  it('A5: partitions on the `scope` property, not on the "(run)" file-name string', () => {
+    const summary = formatDownloadFailureSummary(
+      '480',
+      [fileFailure('(run)', 'coincidental filename, no scope marker')],
+      'steam.download.error.generic'
+    )
+    expect(summary).toContain('1 file failure(s)')
+    expect(summary).not.toContain('; run:')
   })
 })
 
@@ -3731,6 +3858,53 @@ describe('downloadDepotFiles', () => {
       expect(result.allFilesVerifiedThisRun).toBe(false)
     })
 
+    // Quick 260927-tpm (A6): the SAME real run as the test directly above —
+    // a genuine downloadDepotFiles call, not a unit call to the formatter —
+    // reused rather than re-derived, because it already produces exactly
+    // the scenario A6 needs: real per-file failures (each in-flight worker's
+    // job dies to the persistent CDN failure) alongside the ONE run-scoped
+    // give-up, from the ACTUAL push site (not a hand-built fixture). This
+    // pins that `scope: 'run'` really reaches the object formatDownload-
+    // FailureSummary partitions on, and that the aggregate line built from
+    // a REAL result reports the file-only count, not the unfiltered total.
+    it('A6: a real run producing both per-file and run-scoped failures reports the file-only count in the aggregate line', async () => {
+      const stallTracker = new StallTracker(60 * 1000)
+      jest.mocked(fetchChunk).mockImplementation(() => {
+        stallTracker.recordProgress(Date.now() - 10 * 60 * 1000)
+        return Promise.reject(
+          new Error('ECONNRESET (simulated total CDN failure)')
+        )
+      })
+
+      const result = await downloadDepotFiles(manyFilePlan(), {
+        targetSteamappsDir: dir,
+        installdir: 'SomeGame',
+        hosts: HOSTS,
+        stallTracker
+      })
+
+      const runLevel = result.failures.filter((f) => f.scope === 'run')
+      const fileLevel = result.failures.filter((f) => f.scope !== 'run')
+
+      // Non-vacuity: this run genuinely produced BOTH kinds of failure —
+      // otherwise this test would not be exercising the partition at all.
+      expect(runLevel).toHaveLength(1)
+      expect(fileLevel.length).toBeGreaterThan(0)
+      expect(result.failures.length).toBe(fileLevel.length + 1)
+
+      const summary = formatDownloadFailureSummary(
+        '480',
+        result.failures,
+        'steam.download.error.generic'
+      )
+      // THE A6 ASSERTION: the file count in the aggregate line matches the
+      // file-only count, never the unfiltered `result.failures.length`
+      // (which before this quick task is what the log line reported).
+      expect(summary).toContain(`${fileLevel.length} file failure(s)`)
+      expect(summary).not.toContain(`${result.failures.length} file failure(s)`)
+      expect(summary).toContain('; run:')
+    })
+
     // debug/depot-stall-bound-did-not-fire, specialist review W-1
     // (2026-09-25). The run-scoped check above turned `hasStalled()` from an
     // advisory read (consulted ONLY inside a per-chunk catch, so it had no
@@ -3861,6 +4035,11 @@ describe('downloadDepotFiles', () => {
         new RegExp(`${FILE_COUNT} file\\(s\\) unattempted`)
       )
       expect(result.allFilesVerifiedThisRun).toBe(false)
+      // Quick 260927-tpm (A7, T-tpm-01): allModesApplied reads the SAME
+      // unfiltered `failures` array (depot.ts's `failures.length === 0`
+      // check) — a run-scoped-only failure must fail this verdict exactly
+      // as a per-file one would, byte-identical to before this quick task.
+      expect(result.allModesApplied).toBe(false)
     })
 
     // ── quick 260926-ju4: the post-chunk verify tail is forward progress ───

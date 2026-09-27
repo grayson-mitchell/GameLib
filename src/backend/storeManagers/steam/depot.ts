@@ -1222,6 +1222,20 @@ export interface DepotDownloadFailure {
    *  producer of a DepotDownloadFailure (e.g. healReconciledFileModes' mode-
    *  application failures) has an original thrown object to preserve. */
   cause?: unknown
+  /** Quick 260927-tpm (D-A, correcting review finding I-1's residual): tags
+   *  a RUN-level give-up (the whole-run stall bound below) so it can be
+   *  told apart from a per-FILE failure without splitting this array in
+   *  two — the array shape and every existing reader
+   *  (canWriteFullOwnership, the post-loop verdicts, the error-path entry
+   *  gate below) stay byte-for-byte unchanged (D-B); only
+   *  formatDownloadFailureSummary partitions on this field, to correct the
+   *  aggregate log line's file count. Absent means file-level, the
+   *  overwhelmingly common case — so every existing producer of this
+   *  interface (the per-file catch below, healReconciledFileModes) needs
+   *  no change. A string union of one value, not a boolean, so a future
+   *  second run-level reason (if one is ever needed) is expressible
+   *  without a second boolean fighting this one. */
+  scope?: 'run'
 }
 
 interface DepotDownloadResult {
@@ -2695,7 +2709,13 @@ export async function downloadDepotFiles(
                   // carries the run-level sentinel unconditionally.
                   file: '(run)',
                   error: stalledErr.message,
-                  cause: stalledErr
+                  cause: stalledErr,
+                  // Quick 260927-tpm (D-A): tags this record as run-level so
+                  // formatDownloadFailureSummary can partition it out of the
+                  // per-file count without this array losing the record —
+                  // it still belongs in `failures` (D-B) and every other
+                  // reader keeps counting it exactly as before.
+                  scope: 'run'
                 })
                 logWarning(
                   `downloadDepotFiles: appId=${plan.appId} ${stalledErr.message}`,
@@ -2786,8 +2806,17 @@ export async function downloadDepotFiles(
               // `reason=` line anywhere: a decode-stage failure rethrows and
               // is logged upstream, but an fs/HTTP error at open/write time
               // was swallowed HERE. Capped so a 19k-file title cannot flood
-              // the log — the aggregate at the throw site always reports the
-              // true total.
+              // the log — the aggregate at the throw site reports the true
+              // per-FILE total as of quick 260927-tpm (formatDownloadFailureSummary
+              // partitions the run-level record, if any, out of this count).
+              // Named residual (D-D, not fixed here): this cap is compared
+              // against `failures.length` — the UNFILTERED array — so on a
+              // run that both hits this cap AND later stalls, the "further
+              // failures suppressed" line at the cap boundary can be off by
+              // one against the per-file count this comment now describes.
+              // Tracked as a new pending todo (260927-tpm Task 2) rather than
+              // fixed here — this quick task's scope is the aggregate line
+              // only.
               if (failures.length <= FAILURE_LOG_CAP) {
                 logWarning(
                   `downloadDepotFiles: appId=${plan.appId} depot=${job.depotId} ` +
@@ -3276,6 +3305,51 @@ interface DepotDownloadOutcome {
 }
 
 /**
+ * Quick 260927-tpm (D-A/D-C): the aggregate download-failed log line's sole
+ * formatter, factored out so the fix and its RED/GREEN tests share one
+ * definition instead of the call site re-deriving the count inline. Reports
+ * the FILE-level failure count only — a run-level give-up (tagged
+ * `scope: 'run'`, see DepotDownloadFailure) is excluded from that count and
+ * surfaced instead as its own trailing fragment, so N file failures always
+ * reads as N, never N+1, while the run-level reason is still visible in the
+ * same line. `failures` itself is untouched (D-B): every completeness-gate
+ * reader upstream of this call keeps counting the unfiltered array exactly
+ * as before — this function only changes how the array is DESCRIBED, not
+ * what it contains.
+ *
+ * `first:` stays byte-for-byte D-C: it reports `failures[0]`'s cause/error,
+ * exactly as classifyDepotError was fed (the plan declines to fix the
+ * `failures[0]` ordering ambiguity here — tracked as a new residual, Task
+ * 2). When `failures[0]` happens to BE the run-level record (case C: a run
+ * that stalls with zero files ever having failed individually), there is no
+ * file-level record to prefer, so `first:` falls back to that same
+ * `failures[0]` — this is the one case where `first:` and the run fragment
+ * describe the same underlying record from two angles, which is expected,
+ * not a duplication bug.
+ */
+export function formatDownloadFailureSummary(
+  appId: string,
+  failures: DepotDownloadFailure[],
+  classificationKey: string
+): string {
+  const fileFailures = failures.filter((f) => f.scope !== 'run')
+  const runFailure = failures.find((f) => f.scope === 'run')
+  // D-C: unchanged input to describeDepotFailure below — still
+  // `failures[0].cause ?? failures[0].error`, not re-derived from
+  // `fileFailures`. The ordering ambiguity this inherits is the named
+  // residual, not something this function silently resolves.
+  const first = failures[0]
+  const runFragment = runFailure ? `; run: ${runFailure.error}` : ''
+  return (
+    `downloadSteamDepots: appId=${appId} download failed — ` +
+    `${fileFailures.length} file failure(s), classified as ` +
+    `${classificationKey}; first: file="${first.file}" ` +
+    `${describeDepotFailure(first.cause ?? first.error)}` +
+    runFragment
+  )
+}
+
+/**
  * The public depot-download orchestrator — Plan 07's SteamGame.install() call
  * site. Builds the DepotPlan (buildDepotPlan), resolves content-server hosts,
  * streams every file to disk (downloadDepotFiles), and ALWAYS converges on
@@ -3441,13 +3515,16 @@ export async function downloadSteamDepots(
       // whether the generic fallback was reached (nothing matched) or a real
       // signature matched — the user-facing string cannot distinguish a
       // classified failure from an unclassified one.
+      //
+      // Quick 260927-tpm (D-A/D-C): the count below used to be
+      // `result.failures.length` — every entry in the unfiltered array,
+      // including a run-level stall give-up, so N failed files logged as
+      // N+1. formatDownloadFailureSummary partitions the run-level record
+      // out of the count (and surfaces it as its own trailing fragment)
+      // without changing what feeds classifyDepotError above, which is
+      // untouched and still reads `result.failures[0]` unfiltered.
       logError(
-        `downloadSteamDepots: appId=${appId} download failed — ` +
-          `${result.failures.length} file failure(s), classified as ` +
-          `${classified.key}; first: file="${result.failures[0].file}" ` +
-          `${describeDepotFailure(
-            result.failures[0].cause ?? result.failures[0].error
-          )}`,
+        formatDownloadFailureSummary(appId, result.failures, classified.key),
         LogPrefix.Steam
       )
       return {
