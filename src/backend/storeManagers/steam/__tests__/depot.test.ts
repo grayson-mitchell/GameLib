@@ -59,6 +59,7 @@ import {
   FAILURE_LOG_CAP,
   describeDepotFailure,
   formatDownloadFailureSummary,
+  selectPrimaryDepotFailure,
   type DepotPlan,
   type DepotPlanFile,
   type DepotDownloadFailure,
@@ -1963,6 +1964,98 @@ describe('formatDownloadFailureSummary (quick 260927-tpm)', () => {
     )
     expect(summary).toContain('1 file failure(s)')
     expect(summary).not.toContain('; run:')
+  })
+})
+
+/**
+ * Quick 260927-v8i (D-01/D-02/D-03/D-05): unit tests for
+ * selectPrimaryDepotFailure, the shared deterministic-selection helper that
+ * replaces the two independent `failures[0]` reads
+ * (formatDownloadFailureSummary's `first:` fragment and downloadSteamDepots'
+ * error-path classifier argument) with ONE call, read twice. Before this
+ * task, the same underlying condition — a run that both had a real per-file
+ * failure and then stalled — could present two different classified
+ * messages depending on which of `FILE_CONCURRENCY` workers' catches
+ * happened to run first (a race, not a decision). B1 is the arm that would
+ * have caught it.
+ */
+describe('selectPrimaryDepotFailure (quick 260927-v8i)', () => {
+  const fileFailure = (
+    file: string,
+    error = 'boom',
+    cause?: unknown
+  ): DepotDownloadFailure => ({ file, error, cause })
+
+  // The run-level builder needs a StallError-shaped cause (`isStall: true`,
+  // numeric `msSinceProgress`) so classifyDepotError reaches its stall
+  // branch (depotErrors.ts:283) via `isStallError`'s PROPERTY check, not
+  // via text — a fixture carrying only a message string would land in the
+  // generic bucket and every arm below would assert the wrong key while
+  // still passing.
+  const runFailure = (
+    error = 'download stalled: no forward progress for 180000ms across the whole run — giving up with 3 file(s) unattempted'
+  ): DepotDownloadFailure => ({
+    file: '(run)',
+    error,
+    cause: Object.assign(new Error(error), {
+      isStall: true as const,
+      msSinceProgress: 180000
+    }),
+    scope: 'run'
+  })
+
+  // B1: ordering A (the race, and the deliberate change). A file-level
+  // failure at index 0, the run-level record appended after it — the exact
+  // shape a real run produces when a per-file worker's catch happens to run
+  // BEFORE the run-scoped stall give-up is recorded. Fails today on all
+  // three expectations: unmodified `failures[0]` reads the file record.
+  it('B1: ordering A (file first, run second) selects the run-level record, deterministically', () => {
+    const fileRecord = fileFailure('a.bin', 'sha1 mismatch')
+    const runRecord = runFailure()
+    const failures = [fileRecord, runRecord]
+
+    const selected = selectPrimaryDepotFailure(failures)
+    expect(selected).toBe(runRecord)
+
+    const summary = formatDownloadFailureSummary(
+      '480',
+      failures,
+      'steam.download.error.stalled'
+    )
+    expect(summary).toContain('first: file="(run)"')
+    expect(summary).not.toContain('first: file="a.bin"')
+
+    expect(classifyDepotError(selected.cause ?? selected.error).key).toBe(
+      'steam.download.error.stalled'
+    )
+    expect(classifyDepotError(selected.cause ?? selected.error).key).not.toBe(
+      'steam.download.error.verifyFailed'
+    )
+  })
+
+  // B2: ordering B — the run-level record already sits at index 0 today, so
+  // this ordering is already deterministic. Asserted so the fix is provably
+  // a determinism fix for ordering A, not a rewrite of an already-correct
+  // case. Passes today.
+  it('B2: ordering B (run first, file second) — already deterministic today, unchanged by the fix', () => {
+    const fileRecord = fileFailure('a.bin', 'sha1 mismatch')
+    const runRecord = runFailure()
+    const failures = [runRecord, fileRecord]
+
+    const selected = selectPrimaryDepotFailure(failures)
+    expect(selected).toBe(runRecord)
+
+    const summary = formatDownloadFailureSummary(
+      '480',
+      failures,
+      'steam.download.error.stalled'
+    )
+    expect(summary).toContain('first: file="(run)"')
+    expect(summary).not.toContain('first: file="a.bin"')
+
+    expect(classifyDepotError(selected.cause ?? selected.error).key).toBe(
+      'steam.download.error.stalled'
+    )
   })
 })
 

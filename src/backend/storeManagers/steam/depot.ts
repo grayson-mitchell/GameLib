@@ -3305,6 +3305,65 @@ interface DepotDownloadOutcome {
 }
 
 /**
+ * Quick 260927-v8i (D-01/D-02/D-03/D-05): the ONE shared, deterministic
+ * selection this quick task exists to add. Both `formatDownloadFailureSummary`'s
+ * `first:` fragment below and `downloadSteamDepots`' error-path classifier
+ * argument now call this single function over the SAME `failures` array —
+ * one call, one const, read twice — so the two can no longer independently
+ * pick different records and describe/classify the same failed run two
+ * different ways.
+ *
+ * (a) Why this needs to be deterministic at all: `failures` is populated by
+ * `FILE_CONCURRENCY` workers racing to push onto the same array as each
+ * fails, plus the run-level stall give-up appended whenever the whole run's
+ * no-progress bound trips. Array order is real async completion order, not
+ * semantic priority — reading `failures[0]` (what both consumers used to do,
+ * independently) picked whichever failure happened to land first: a race,
+ * not a decision.
+ *
+ * (b) Why the run-level record wins when both kinds of failure are present:
+ * the run gave up — a single file failure alongside that give-up is usually
+ * a symptom of the same dying run, not an independent cause the user should
+ * be told to inspect. `classifyDepotError` reaches `isStallError`
+ * (depotErrors.ts:283) for the run-level record and returns the real
+ * localised `steam.download.error.stalled` copy with the actionable
+ * `action: 'retry'` — a stronger diagnosis than an arbitrary file-level
+ * failure such as a `sha1 mismatch`, classified `verifyFailed` with
+ * `action: 'none'`.
+ *
+ * (c) Tier 1 — a preference for a NON-RETRYABLE file-level cause ahead of
+ * the run-level record — was considered and DROPPED, on a measurement, not
+ * an assumption: no file-level `DepotDownloadFailure` can carry a `.cause`
+ * for which `isNonRetryableDepotError` (depotErrors.ts:81) returns true. The
+ * only two sites in all of `src/` that ever stamp a numeric `.eresult`
+ * property (`wrapDepotKeyError` here at depot.ts:610-612, and depot.ts:897)
+ * both live inside `buildDepotPlan`, whose throws are caught by
+ * `downloadSteamDepots`'s own OUTER catch and classified directly — they
+ * never enter this array at all. So the shipped rule is two-tier, not
+ * three, and no tier-1 mechanism or test exists for a case that cannot
+ * happen today.
+ *
+ * (d) The residual this measurement leaves, named where the next reader
+ * will see it: if a FUTURE change ever stamps a numeric `.eresult` onto
+ * something thrown out of `downloadSingleFile` or `healReconciledFileModes`,
+ * a permanent, non-retryable cause could be masked behind this function's
+ * retryable-looking stalled copy — telling a user to retry something that
+ * can never succeed. Nothing detects that today; a source gate over
+ * `.eresult` assignment sites was considered and declined as too broad and
+ * fragile to be worth the false confidence it would look like it bought.
+ *
+ * D-05: the non-empty precondition is inherited unchanged from the
+ * `failures[0]` read this replaces — this function is not made total, and
+ * its only production caller stays guarded by the entry gate at
+ * depot.ts:3498 (`if (result.failures.length)`).
+ */
+export function selectPrimaryDepotFailure(
+  failures: DepotDownloadFailure[]
+): DepotDownloadFailure {
+  return failures.find((f) => f.scope === 'run') ?? failures[0]
+}
+
+/**
  * Quick 260927-tpm (D-A/D-C): the aggregate download-failed log line's sole
  * formatter, factored out so the fix and its RED/GREEN tests share one
  * definition instead of the call site re-deriving the count inline. Reports
@@ -3317,15 +3376,15 @@ interface DepotDownloadOutcome {
  * as before — this function only changes how the array is DESCRIBED, not
  * what it contains.
  *
- * `first:` stays byte-for-byte D-C: it reports `failures[0]`'s cause/error,
- * exactly as classifyDepotError was fed (the plan declines to fix the
- * `failures[0]` ordering ambiguity here — tracked as a new residual, Task
- * 2). When `failures[0]` happens to BE the run-level record (case C: a run
- * that stalls with zero files ever having failed individually), there is no
- * file-level record to prefer, so `first:` falls back to that same
- * `failures[0]` — this is the one case where `first:` and the run fragment
- * describe the same underlying record from two angles, which is expected,
- * not a duplication bug.
+ * Quick 260927-v8i (D-01, superseding D-C): `first:` no longer reads
+ * `failures[0]` directly — it reports whichever record
+ * `selectPrimaryDepotFailure` selects above, which is the SAME record the
+ * error-path classifier is fed (one shared call, D-03). Case C (a run that
+ * stalls with zero files ever having failed individually) used to be
+ * described as "the one case where `first:` and the run fragment describe
+ * the same underlying record from two angles" — under D-01 that is now the
+ * NORMAL case whenever any run-level record exists at all, not a coincidence
+ * of array order.
  */
 export function formatDownloadFailureSummary(
   appId: string,
@@ -3334,11 +3393,7 @@ export function formatDownloadFailureSummary(
 ): string {
   const fileFailures = failures.filter((f) => f.scope !== 'run')
   const runFailure = failures.find((f) => f.scope === 'run')
-  // D-C: unchanged input to describeDepotFailure below — still
-  // `failures[0].cause ?? failures[0].error`, not re-derived from
-  // `fileFailures`. The ordering ambiguity this inherits is the named
-  // residual, not something this function silently resolves.
-  const first = failures[0]
+  const first = selectPrimaryDepotFailure(failures)
   const runFragment = runFailure ? `; run: ${runFailure.error}` : ''
   return (
     `downloadSteamDepots: appId=${appId} download failed — ` +
@@ -3503,8 +3558,15 @@ export async function downloadSteamDepots(
       // 37-02 (D-08): pass the preserved cause object (falls back to the
       // pre-flattened string only if no cause was captured), so
       // classifyDepotError can read `.code`/`.eresult` off it directly.
+      // Quick 260927-v8i (D-01/D-03): ONE call to selectPrimaryDepotFailure
+      // over the unfiltered array, read twice below — so the record fed to
+      // the classifier and the record formatDownloadFailureSummary's
+      // `first:` fragment describes are the same object by construction,
+      // never two independent index-0 reads that could disagree on which
+      // worker's failure happened to land first.
+      const selectedFailure = selectPrimaryDepotFailure(result.failures)
       const classified = classifyDepotError(
-        result.failures[0].cause ?? result.failures[0].error
+        selectedFailure.cause ?? selectedFailure.error
       )
       // debug/steam-depot-unclassified-generic-error (F2): the classified
       // message is all the UI ever shows, and for the generic bucket that is
@@ -3520,9 +3582,12 @@ export async function downloadSteamDepots(
       // `result.failures.length` — every entry in the unfiltered array,
       // including a run-level stall give-up, so N failed files logged as
       // N+1. formatDownloadFailureSummary partitions the run-level record
-      // out of the count (and surfaces it as its own trailing fragment)
-      // without changing what feeds classifyDepotError above, which is
-      // untouched and still reads `result.failures[0]` unfiltered.
+      // out of the count (and surfaces it as its own trailing fragment).
+      // Quick 260927-v8i: both this classifier input above and that
+      // formatter's `first:` fragment now come from the ONE shared
+      // selection (D-01) — this is exactly what that quick task changed.
+      // `result.failures` itself stays unfiltered for every OTHER reader:
+      // the file-COUNT partition is still 260927-tpm's, untouched here.
       logError(
         formatDownloadFailureSummary(appId, result.failures, classified.key),
         LogPrefix.Steam
