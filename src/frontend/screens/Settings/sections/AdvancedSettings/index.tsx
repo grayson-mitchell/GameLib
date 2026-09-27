@@ -159,10 +159,8 @@ export default function AdvancedSetting() {
         'The EOS Overlay is unavailable in this build'
       )
     if (eosOverlayInstalled && eosOverlayInstallingOrUpdating)
-      return t(
-        'setting.eosOverlay.updating',
-        'The EOS Overlay is being updated...'
-      )
+      // Shared key: catalog 'Updating...' wins; a fuller wording is filed as a todo.
+      return t('setting.eosOverlay.updating', 'Updating...')
     if (eosOverlayInstalled && !eosOverlayInstallingOrUpdating)
       return t('setting.eosOverlay.installed', 'The EOS Overlay is installed')
     if (!eosOverlayInstalled && eosOverlayInstallingOrUpdating)

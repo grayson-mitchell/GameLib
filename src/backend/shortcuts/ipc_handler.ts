@@ -70,7 +70,8 @@ addListener('removeShortcut', async (event, appName, runner) => {
 
   notify({
     body: isMac ? bodyMac : body,
-    title: i18next.t('box.shortcuts.title', 'Shortcuts Removed')
+    // Shared key: catalog 'Shortcuts' wins; the body names the removal.
+    title: i18next.t('box.shortcuts.title', 'Shortcuts')
   })
 })
 

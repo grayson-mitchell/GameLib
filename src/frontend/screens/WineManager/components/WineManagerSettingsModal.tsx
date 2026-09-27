@@ -28,7 +28,8 @@ export default function WineManagerSettingsModal({ onClose }: Props) {
     <SettingsContext.Provider value={contextValues}>
       <Dialog onClose={onClose} showCloseButton={true}>
         <DialogHeader>
-          <h3>{t('wine.manager.settings', 'Wine Manager Settings')}</h3>
+          {/* Shared key: catalog 'Settings' wins, as on the tab that opens this. */}
+          <h3>{t('wine.manager.settings', 'Settings')}</h3>
         </DialogHeader>
         <DialogContent className="wineManagerSettingsContent">
           <div className="wineSettingsModalWrapper">
