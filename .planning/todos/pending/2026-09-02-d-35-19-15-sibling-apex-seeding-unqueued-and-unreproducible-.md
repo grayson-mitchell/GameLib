@@ -6,7 +6,14 @@ status: pending
 severity: medium
 platform: any
 ready: live-gate
-blocked_by: "needs the OPERATOR to log into Epic once (real credentials/2FA) — and nothing else.
+blocked_by: "BLOCKED on another defect as of 2026-09-28: a fresh Epic sign-in cannot complete on
+  a cold cookie jar (300s timeout, single nav host — see
+  2026-09-28-epic-pre-auth-login-times-out-on-a-cold-cookie-jar.md), so the seeding step cannot
+  be performed by ANYONE, with or without credentials. Separately measured the same day: a login
+  that DOES complete on a warm jar seeds NONE of the four apexes, contradicting 35-AB-RETEST
+  Item 7. The sweep itself is now PROVEN to work end-to-end on 8 real live Epic cookies (in-memory
+  before/after delta), so the code under test is not the problem. Previously this field read
+  'needs the OPERATOR to log into Epic once (real credentials/2FA) and nothing else',
   The credential-free alternative was tried and MEASURED NEGATIVE 2026-09-28: a pre-auth
   WKWebView navigation to EPIC_LOGIN_URL sets 9 cookies, ALL on epicgames.com, NONE on any of
   the four apexes (SIBLING_APEX_SEEDED=NO), and a response from epicgames.com cannot set a
@@ -164,6 +171,46 @@ That closes the credential-free path, and cookie semantics say it was never open
 `epicgames.com` cannot set a cookie for `fortnite.com` — different registrable domains — so only a
 request served BY one of the four apexes can seed one. Item 7's sibling cookies therefore came from
 Epic's **authenticated** SSO cookie-sync.
+
+## CORRECTION 2026-09-28 (second update, after the live gate was actually driven)
+
+**The live gate was run with the operator's real account, and it did not discharge this todo — it
+blocked on a different defect and refuted a premise this todo has carried since Phase 35.**
+
+1. **The sweep WORKS, proven end-to-end for the first time.** The logout's own in-memory per-host
+   census (a live `WKWebsiteDataStore` re-read, not the lagging jar and not the removal call's own
+   return) reported `cleared 8 epicgames.com cookie(s)`, `before(matched=8) after(matched=0)`, and
+   `cleared 0` for each of the four sibling apexes with `before(matched=0)`. Outside unit tests,
+   nothing had previously shown this sweep removing a real Epic cookie.
+
+2. **A genuine authenticated login seeded NONE of the four apexes.** Login confirmed by
+   `legendary status --json` (account present, 6 games, `user.json` rewritten 10:38); the app was
+   then quit to force a jar flush (mtime moved to 2026-09-28 10:39:08, so the flush happened); the
+   flushed jar held 8 cookies on `epicgames.com` and **0** on every sibling apex, with a whole-jar
+   inventory returning only `.epicgames.com` and `.www.epicgames.com`. This **contradicts
+   `35-AB-RETEST.md` Item 7**, which found `EPIC_DEVICE` (value length 32) on all four on
+   2026-08-29. Either Epic's cross-property cookie-sync changed, or Item 7's session had also
+   visited those properties.
+
+3. **The seeding step is now unreachable by anyone.** Immediately after that logout cleared the 8
+   cookies, signing back in failed: one `nav host=www.epicgames.com`, a blurred skeleton form, and
+   `status=timeout` after exactly 300s. That is `F-34.5-G6-01` reproducing on the PRE-AUTH half its
+   own resolved session says was never verified, with the cause its Branch B arm already named (a
+   deterministic Talon anti-bot 403). Filed as
+   `2026-09-28-epic-pre-auth-login-times-out-on-a-cold-cookie-jar.md`.
+
+**So this todo is blocked, not dischargeable, and still NOT closed.** Its own discharge condition
+rules out closing on a `matched=0`, and that ruling is respected here: the four apexes read 0 in both
+instruments, and that remains evidence of nothing being there rather than evidence of clearing.
+
+**One gap stated rather than glossed:** the login and the logout were in different app sessions (a
+quit between them was required to force the flush), so a **session-scoped** sibling-apex cookie would
+have been discarded at quit and seen by neither instrument. Formally unexcluded. Moot in practice
+only because the login needed to create one can no longer be driven.
+
+**What changed for the better:** point 1 means the code this todo guards is no longer unverified in
+its working half. What remains unproven is narrowly the four sibling hosts, and they are now unprovable
+for an external reason.
 
 **So the gate needs exactly one thing: the operator logging into Epic once.** And thanks to the
 sweep being per-host invocable, they do NOT need to log out afterwards — see the procedure in

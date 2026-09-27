@@ -167,6 +167,96 @@ environment variables, and any probe that drives a `WKWebView`, `WKWebsiteDataSt
 storage API escapes that containment silently. Anything of this shape needs either a sandboxed
 container or explicit post-run cleanup of `~/Library/{HTTPStorages,Caches,WebKit}/<procname>`.
 
+### E-7 — the sweep WORKS end-to-end on live Epic cookies, and a real login seeded NO sibling apex
+
+The operator ran a live gate 2026-09-28: logged into Epic (authenticated login confirmed by
+`legendary status --json` — account present, 6 games available, `user.json` rewritten 10:38), quit
+the app to force a jar flush, then relaunched and logged out.
+
+Post-login jar read, after the quit forced a flush (jar mtime moved 09-25 12:49 -> **09-28
+10:39:08**, so the flush demonstrably happened):
+
+| host | count |
+| ---- | ----- |
+| `epicgames.com` | 8 (`EPIC_DEVICE`, `EPIC_LOGIN_ID`, `EPIC_RECEIPT_*`, `EPIC_SESSION_AP`, `__cf_bm`, `_epicSID`, `_tald`, `cf_clearance`) |
+| `fortnite.com` | **0** |
+| `unrealengine.com` | **0** |
+| `twinmotion.com` | **0** |
+| `metahuman.com` | **0** |
+
+Whole-jar domain inventory for anything Epic-ish returned exactly two domains: `.epicgames.com` and
+`.www.epicgames.com`.
+
+Then the logout's own **in-memory** per-host before/after census — the instrument that does not lag,
+because it is a live `WKWebsiteDataStore` re-read rather than a file read:
+
+```
+cleared 8 epicgames.com cookie(s)  before(total=70, matched=8) after(total=62, matched=0)
+cleared 0 fortnite.com    cookie(s)  before(matched=0) after(matched=0)
+cleared 0 unrealengine.com cookie(s) before(matched=0) after(matched=0)
+cleared 0 twinmotion.com  cookie(s)  before(matched=0) after(matched=0)
+cleared 0 metahuman.com   cookie(s)  before(matched=0) after(matched=0)
+Epic cookie clear removed 8 cookie(s) across 5 Epic-owned domain(s)
+post-clear verification — 0 Epic-owned cookie(s) remain across 5 domain(s)
+```
+
+**Two results, and the first one is new.**
+
+1. **The `EPIC_COOKIE_HOSTS` sweep is proven to work end-to-end on real, live Epic cookies** — 8
+   removed, measured as an in-memory delta (`matched=8` -> `matched=0`), not asserted from the
+   removal call's own return. No prior test or gate had shown that; the `epicgames.com` suffix half
+   was previously only unit-exercised.
+2. **A genuine authenticated Epic login seeded NONE of the four sibling apexes**, contradicting
+   `35-AB-RETEST.md` Item 7 (2026-08-29), which found `EPIC_DEVICE` present with value length 32 on
+   all four. Either Epic's cross-property cookie-sync changed between 2026-08-29 and 2026-09-28, or
+   Item 7's session had also visited those properties. Not resolved here; what matters for this
+   session is that the seeding step no longer produces the fixture.
+
+**Honest limit: measurement B never ran.** The login and the logout were in different app sessions
+(a quit between them, needed to force the flush), so a **session-scoped** sibling cookie would have
+been discarded at quit and would not appear in either instrument. That gap is now moot in practice —
+see E-8, the login that would create one can no longer be driven — but it is a gap, not a proof of
+absence.
+
+### E-8 — the seeding step is BLOCKED by a separate, known defect: Epic pre-auth login times out
+
+Immediately after the logout in E-7 cleared all 8 `epicgames.com` cookies, the operator attempted to
+sign back in. It failed:
+
+```
+10:45:52  [oauthLoginCapture] runner=legendary label=loginwin-1-...
+10:45:53  [oauthLoginCapture] runner=legendary nav host=www.epicgames.com
+10:50:52  [oauthLoginCapture] runner=legendary status=timeout
+```
+
+Exactly 300s, a single `nav host=`, and a blurred skeleton form — operator verbatim: *"window was
+blank (white for a few seconds, now is sitting on preloaded login page)"*.
+
+This is `F-34.5-G6-01` reproducing on the half its own resolved session says was never verified.
+`.planning/debug/resolved/epic-login-non-interactive.md` is `finding_status: CLOSED`, but its
+`root_cause_scope` states the fix covers the POST-AUTHENTICATION half only and that the pre-auth half
+"is UNVERIFIED… nobody has ever driven this shell through a fresh, logged-out Epic sign-in", and its
+Branch B arm already identified the cause as *"the deterministic Talon anti-bot 403"*. That
+diagnosis was never filed as a tracked item; it is now
+`.planning/todos/pending/2026-09-28-epic-pre-auth-login-times-out-on-a-cold-cookie-jar.md`.
+
+Warm jar vs cold jar, same build, ~7 minutes apart, is the discriminator:
+
+| time | Epic cookies before the attempt | outcome |
+| ---- | ------------------------------- | ------- |
+| 10:38 | 5 stale (created 2026-09-13, incl. `cf_clearance`) | login SUCCEEDED |
+| 10:45:52 | 0 (the logout removed all 8) | `status=timeout` after 300s |
+
+Note the contrast with E-5: a bare standalone `WKWebView` on a cold store was **not** blocked that
+same morning — it obtained `cf_clearance` and `EPIC_SESSION_AP`. So this is not "WKWebView cannot
+pass Talon"; something about GameLib's login window differs, and that asymmetry is the live
+diagnostic lead recorded in the new todo.
+
+**Cost incurred, recorded rather than buried:** the operator was signed into Epic before this gate
+and is signed out after it, with no working way back in. The instruction to log out was given without
+first checking this repo's own evidence that the pre-auth path was unverified — the evidence was
+present and was not consulted.
+
 ## Eliminated
 
 - hypothesis: "The sweep half of the discharge condition requires an authenticated Epic session."
@@ -182,43 +272,54 @@ container or explicit post-run cleanup of `~/Library/{HTTPStorages,Caches,WebKit
     epicgames.com cannot set a cookie for a different registrable domain, so no navigation of
     that page could ever seed them. The Item 7 sibling cookies come from Epic's AUTHENTICATED
     SSO cookie-sync. timestamp: 2026-09-28
+- hypothesis: "An authenticated Epic login seeds the four sibling apexes on this build, as
+  35-AB-RETEST Item 7 measured on 2026-08-29."
+  evidence: E-7 — a confirmed authenticated login (status --json: account present, 6 games) left
+    0 cookies on all four apexes in the flushed jar, and the logout's in-memory census reported
+    matched=0 for all four while correctly clearing 8 on epicgames.com. The sweep works; the
+    fixture no longer appears. timestamp: 2026-09-28
+- hypothesis: "The gate can be completed now that we know only an authenticated login is needed."
+  evidence: E-8 — a cold-jar Epic sign-in cannot complete at all (300s timeout, single nav host),
+    which is F-34.5-G6-01's never-verified pre-auth half and a separate tracked defect as of
+    2026-09-28. The seeding step is unreachable, so the discharge condition is unsatisfiable on
+    this build. timestamp: 2026-09-28
 
-## Current Focus
+## Resolution
 
-**The credential-free path is closed (E-5). The gate now reduces to exactly one step that only the
-operator can perform: an authenticated Epic login.**
+status: "investigating -> BLOCKED on an external defect, D-35-19-15 NOT closed"
 
-Post-E-5 status of the four steps:
+outcome: "D-35-19-15's discharge condition is UNSATISFIABLE on this build, for a THIRD distinct
+  reason from the two already on record. It is not 'no seeding vehicle exists' (the filing premise,
+  corrected 2026-09-26) and it is not 'needs real credentials/2FA' (this session's own starting
+  framing, refuted by E-1/E-3 and then made moot): it is that a fresh Epic sign-in cannot complete
+  on a cold cookie jar at all (E-8), and a login that DOES complete on a warm jar seeds none of the
+  four sibling apexes (E-7). The todo stays OPEN and is NOT closed on a zero — a bare matched=0 was
+  explicitly ruled insufficient by its own discharge condition, and that ruling still holds."
 
-| step | status |
-| ---- | ------ |
-| Instrument an independent jar read | DONE — already existed (E-4) |
-| Seed a sibling apex without credentials | **IMPOSSIBLE by this vehicle (E-5)** |
-| Sweep one host non-destructively | AVAILABLE — `humble_login_clear_cookies` by channel name (E-3) |
-| Seed a sibling apex WITH an authenticated login | **the only remaining step; needs the operator** |
+what_this_session_did_establish:
+  - "E-1/E-3: the sweep half was never credential-gated, and is invocable per-host without logout.
+    `legendary auth --delete` exits 0 unauthenticated; humble_login_clear_cookies is a
+    dispatch_rust_channel arm reachable by name."
+  - "E-4: the independent jar-read instrument already existed; nothing needed building."
+  - "E-5: a credential-free seed is impossible by the login-window vehicle — measured, and required
+    by the cookie-domain rule regardless."
+  - "E-7 (NEW, and the most valuable result here): the EPIC_COOKIE_HOSTS sweep is proven to work
+    end-to-end on 8 real live Epic cookies, measured as an in-memory before/after delta. That had
+    never been shown outside unit tests."
+  - "E-8: the pre-auth Epic login defect — F-34.5-G6-01's unverified half — reproduced with a real
+    account, and filed as its own todo. It is materially more important than D-35-19-15: a
+    logged-out user cannot add an Epic account on macOS."
 
-The remaining procedure, if the operator chooses to run it:
+blocked_on: ".planning/todos/pending/2026-09-28-epic-pre-auth-login-times-out-on-a-cold-cookie-jar.md
+  — until a cold-jar Epic sign-in can complete, the seeding step of D-35-19-15 cannot be performed by
+  anyone, with or without credentials."
 
-1. Operator logs into Epic through GameLib's own OAuth login window (real credentials/2FA).
-2. Independent jar read, counts only, for the four apexes — expect ≥1 present (that is what
-   `35-AB-RETEST.md` Item 7 measured). This is the "confirmed PRESENT" half.
-3. Sweep that ONE host via E-3's channel (`humble_login_clear_cookies` with `[<sentinel-label>, '<apex>']`)
-   — **not** `logout()`, so the operator's freshly-created Epic session survives the test.
-4. Independent jar read again — expect that host at 0. This is the "confirmed ABSENT" half, and it
-   discharges D-35-19-15.
+residual_gap: "Measurement B (login and logout within ONE app session, so the in-memory census sees
+  session-scoped cookies) was never run, because the login required for it can no longer be driven.
+  A session-scoped sibling-apex cookie is therefore formally unexcluded. State it as unexcluded; do
+  not record E-7 as proving absence in memory as well as on disk."
 
-Step 3 is what E-1 and E-3 bought: the discharge no longer requires signing out. The operator logs
-in once and stays logged in.
-
-`ready:` stays `live-gate`.
-
-## Operator decision required
-
-Step 1 above is safe and non-destructive. It is not yet run because it needs a live app run, and
-because the branch beyond it touches the operator's own account:
-
-- **A full login+logout gate would sign the operator out of Epic.** A live session exists (E-2).
-  `LegendaryUser.logout()` runs `auth --delete`, which destroys it. That has NOT been run and must
-  not be, without explicit confirmation.
-- Whether to spend real credentials/2FA on this at all is the operator's call, and per E-3 it may
-  not be necessary.
+files_changed:
+  - ".planning/debug/epic-sibling-apex-non-destructive-discharge.md"
+  - ".planning/todos/pending/2026-09-02-d-35-19-15-sibling-apex-seeding-unqueued-and-unreproducible-.md"
+  - ".planning/todos/pending/2026-09-28-epic-pre-auth-login-times-out-on-a-cold-cookie-jar.md"
