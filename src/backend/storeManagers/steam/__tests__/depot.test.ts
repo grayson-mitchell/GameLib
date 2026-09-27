@@ -1889,23 +1889,32 @@ describe('formatDownloadFailureSummary (quick 260927-tpm)', () => {
     expect(summary).not.toContain('2 file failure(s)')
   })
 
-  // A2: D-C — first: must still read failures[0] verbatim (byte-for-byte
-  // the same input classifyDepotError was fed), regardless of the file
-  // failure being present. Case A ordering: file first, run second.
-  it('A2: "first:" still reports failures[0] verbatim (D-C, case A ordering)', () => {
+  // A2 (case A ordering, REWRITTEN by quick 260927-v8i): this arm used to
+  // assert `first: file="a.bin"` on D-C's rationale — "first: must still
+  // read failures[0] verbatim, regardless of the file failure being
+  // present." 260927-v8i's D-01 supersedes D-C: the run-level record is now
+  // PREFERRED wherever it sits in the array, deterministically, because a
+  // single file failure alongside a run give-up is usually a symptom of the
+  // same dying run and the stall branch carries the actionable
+  // `action: 'retry'` copy (see selectPrimaryDepotFailure's doc comment).
+  // See the `selectPrimaryDepotFailure (quick 260927-v8i)` describe block
+  // below for the full ordering matrix (B1-B6).
+  it('A2: "first:" now prefers the run-scoped record over an earlier file failure (D-01 supersedes D-C, case A ordering)', () => {
     const summary = formatDownloadFailureSummary(
       '480',
       [fileFailure('a.bin', 'sha1 mismatch'), runFailure()],
-      'steam.download.error.verifyFailed'
+      'steam.download.error.stalled'
     )
-    expect(summary).toContain('first: file="a.bin"')
-    expect(summary).toContain('sha1 mismatch')
+    expect(summary).toContain('first: file="(run)"')
+    expect(summary).not.toContain('first: file="a.bin"')
   })
 
   // A2 (case C ordering): if the run-level record happens to sit at
   // failures[0] (a stall that overtakes a file failure still resolving),
-  // "first:" reads THAT record — unchanged, D-C-mandated behaviour, not a
-  // new bug introduced by this fix.
+  // "first:" reads THAT record. Unchanged in outcome by 260927-v8i, but for
+  // a different and stronger reason than D-C's "byte-for-byte failures[0]":
+  // under D-01 the run-level record is preferred wherever it sits in the
+  // array, not merely tolerated when array order happens to put it first.
   it('A2: "first:" reads the run-scoped record verbatim when it sits at failures[0] (D-C, case C ordering)', () => {
     const summary = formatDownloadFailureSummary(
       '480',
@@ -2056,6 +2065,136 @@ describe('selectPrimaryDepotFailure (quick 260927-v8i)', () => {
     expect(classifyDepotError(selected.cause ?? selected.error).key).toBe(
       'steam.download.error.stalled'
     )
+  })
+
+  // B3: ordering C (run-level only, no file-level failure at all) — already
+  // deterministic today (there is nothing else to pick), asserted rather
+  // than assumed so the matrix is complete.
+  it('B3: ordering C (run-level only) — unchanged from today', () => {
+    const runRecord = runFailure()
+    const failures = [runRecord]
+
+    const selected = selectPrimaryDepotFailure(failures)
+    expect(selected).toBe(runRecord)
+
+    const summary = formatDownloadFailureSummary(
+      '480',
+      failures,
+      'steam.download.error.stalled'
+    )
+    expect(summary).toContain('first: file="(run)"')
+
+    expect(classifyDepotError(selected.cause ?? selected.error).key).toBe(
+      'steam.download.error.stalled'
+    )
+  })
+
+  // B4: no run-level record at all — the tier-2 fallback. Pins that the
+  // fallback is index 0 SPECIFICALLY, not "any file failure", by using two
+  // distinct file failures and asserting on the first one by identity.
+  it('B4: no run-level record — the tier-2 fallback is index 0 specifically, not "any file failure"', () => {
+    const first = fileFailure('a.bin', 'sha1 mismatch')
+    const second = fileFailure('b.bin', 'sha1 mismatch')
+    const failures = [first, second]
+
+    const selected = selectPrimaryDepotFailure(failures)
+    expect(selected).toBe(first)
+
+    const summary = formatDownloadFailureSummary(
+      '480',
+      failures,
+      'steam.download.error.verifyFailed'
+    )
+    expect(summary).toContain('first: file="a.bin"')
+    expect(summary).not.toContain('b.bin')
+  })
+
+  // B5: the classifier input and the "first:" fragment select the SAME
+  // record, in every ordering — table-driven over all four fixture shapes
+  // from B1-B4. Non-vacuity lives in the sibling test below: at least one
+  // ordering here selects a record that is NOT failures[0], or this arm
+  // would pass unchanged against the old code and prove nothing.
+  describe('B5: mutual consistency across every ordering', () => {
+    const orderings: Array<{
+      name: string
+      build: () => DepotDownloadFailure[]
+    }> = [
+      {
+        name: 'ordering A: file first, run second',
+        build: () => [fileFailure('a.bin', 'sha1 mismatch'), runFailure()]
+      },
+      {
+        name: 'ordering B: run first, file second',
+        build: () => [runFailure(), fileFailure('a.bin', 'sha1 mismatch')]
+      },
+      {
+        name: 'ordering C: run-level only',
+        build: () => [runFailure()]
+      },
+      {
+        name: 'ordering D: no run-level record (tier-2 fallback)',
+        build: () => [fileFailure('a.bin'), fileFailure('b.bin')]
+      }
+    ]
+
+    it.each(orderings)(
+      '$name: the "first:" fragment names the same record the classifier was fed',
+      ({ build }) => {
+        const failures = build()
+
+        const selectedForClassifier = selectPrimaryDepotFailure(failures)
+        const classifiedKey = classifyDepotError(
+          selectedForClassifier.cause ?? selectedForClassifier.error
+        ).key
+        const summary = formatDownloadFailureSummary(
+          '480',
+          failures,
+          classifiedKey
+        )
+
+        // The formatter re-derives its OWN selection internally (over the
+        // same failures array) rather than being handed
+        // selectedForClassifier — so this is what actually proves the two
+        // call sites cannot diverge, not a tautology.
+        expect(summary).toContain(`first: file="${selectedForClassifier.file}"`)
+        expect(summary).toContain(`classified as ${classifiedKey}`)
+      }
+    )
+
+    it('B5 non-vacuity: at least one ordering selects a record that is NOT failures[0]', () => {
+      const anyNonIndexZero = orderings.some(({ build }) => {
+        const failures = build()
+        return selectPrimaryDepotFailure(failures) !== failures[0]
+      })
+      expect(anyNonIndexZero).toBe(true)
+    })
+  })
+
+  // B6: the single-call shape, structurally (D-03) — reads depot.ts's own
+  // source, strips comments, and counts code-level occurrences directly,
+  // rather than trusting the behavioural arms above alone to prove there is
+  // only ONE call site feeding both consumers.
+  it("B6: exactly one shared selectPrimaryDepotFailure call feeds both consumers — the only failures[0] read left is the helper's own tier-2 fallback", () => {
+    const source = stripSourceComments(
+      readFileSync(join(__dirname, '..', 'depot.ts'), 'utf8')
+    )
+
+    // Non-vacuity: a broken read path or an over-eager strip cannot make the
+    // counts below pass by measuring nothing.
+    expect(source.length).toBeGreaterThan(0)
+    expect(source).toContain('export function selectPrimaryDepotFailure')
+
+    // Baseline measured at HEAD 97d8fc391: 3 and 2 respectively.
+    const bracketZeroFailuresReads = (source.match(/\bfailures\[0\]/g) ?? [])
+      .length
+    const orchestratorIndexZeroReads = (
+      source.match(/result\.failures\[0\]/g) ?? []
+    ).length
+
+    expect(bracketZeroFailuresReads).toBe(1)
+    expect(orchestratorIndexZeroReads).toBe(0)
+
+    expect(source).toMatch(/selectPrimaryDepotFailure\(result\.failures\)/)
   })
 })
 
