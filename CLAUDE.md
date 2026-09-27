@@ -342,19 +342,26 @@ records for the plan template.
 ### A formatter check belongs in every task's `<verify>`
 
 **If a task writes a file that prettier actually sees, its `<verify>` block must run `npx prettier
---check` over the exact paths it wrote.** "Sees" means the probe below reports `"ignored":false`.
-Scope to explicit paths, never `.` — a bare `.` drags in unrelated repo debt and
+--check` over the exact paths it wrote.** "Sees" means the probe below reports that path as **not
+ignored**. Scope to explicit paths, never `.` — a bare `.` drags in unrelated repo debt and
 `src/preload/.prettierrc` sets `printWidth: 120` against the root's default 80, so the directory a
 path sits in changes the correct answer.
 
 **Decide which case a path is in with `npx prettier --file-info <path>`** — do not guess from
-`.prettierignore` alone. A path prettier sees reports `{"ignored":false,...}` with a real
-`inferredParser`; a path prettier ignores reports `{"ignored":true,"inferredParser":null}` and
-matches nothing. Measured on this machine 2026-09-26 under prettier 3.7.4: `src/preload/index.ts`
-and `src/backend/utils/uninstaller.ts` both report `{"ignored":false,"inferredParser":"typescript"}`;
-`package.json` reports `{"ignored":false,"inferredParser":"json-stringify"}`; `CLAUDE.md` reports
-`{"ignored":false,"inferredParser":"markdown"}`; `.planning/STATE.md` and
-`public/locales/en/gamelib.json` both report `{"ignored":true,"inferredParser":null}`.
+`.prettierignore` alone. A path prettier sees reports `{ "ignored": false, ... }` with a real
+`inferredParser`; a path prettier ignores reports `{ "ignored": true, "inferredParser": null }` and
+matches nothing. Measured on this machine 2026-09-26 and re-measured 2026-09-27, both under
+prettier 3.7.4: `src/preload/index.ts` and `src/backend/utils/uninstaller.ts` both report
+`{ "ignored": false, "inferredParser": "typescript" }`; `package.json` reports
+`{ "ignored": false, "inferredParser": "json-stringify" }`; `CLAUDE.md` reports
+`{ "ignored": false, "inferredParser": "markdown" }`; `.planning/STATE.md` and
+`public/locales/en/gamelib.json` both report `{ "ignored": true, "inferredParser": null }`.
+
+**The spacing inside those braces is load-bearing.** prettier prints a space after each colon and
+inside the braces. Until 2026-09-27 this section quoted a hand-normalised unspaced form — wrong
+under the very 3.7.4 it cited, so a fixed-string grep for that spelling scored 0 against a correct
+result. Do not flatten them back; match with a space-tolerant pattern such as
+`grep -Eq '"ignored":[[:space:]]*false'`.
 
 **Over an ignored path, `--check` is vacuous and must NOT be written into a `<verify>` block as
 though it were assurance.** On 2026-09-26, `.planning/STATE.md`, `public/locales/en/gamelib.json`
