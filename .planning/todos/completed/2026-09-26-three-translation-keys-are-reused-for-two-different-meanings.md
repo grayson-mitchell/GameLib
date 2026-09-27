@@ -65,3 +65,31 @@ worth translating.
 three are resolved (the other five are already cleared). Keep the other reported keys as a
 non-vacuity control — if the whole warning class vanishes at once, the check was muted rather than
 satisfied.
+
+## Resolution
+
+**Option A taken on all three keys**, by `quick-260927-p4a`, 2026-09-27. Each divergent `t()` /
+`i18next.t()` default was edited to match its English catalog value byte-for-byte:
+`box.shortcuts.title` -> `'Shortcuts'` at both `removeShortcut` arms, `wine.manager.settings` ->
+`'Settings'`, `setting.eosOverlay.updating` -> `'Updating...'`. This is free and already the
+shipped state, so no user-visible text changed — the catalog value was already winning at every
+site before this edit; only the source stopped claiming otherwise.
+
+Option B was rejected on the costs this todo itself measured: a new `gamelib.json` key is gated
+(`lint-translations:gamelib` holds a clean `totalPairs: 0` baseline, an English-only key measures
+48 hard failures, and `machine-fill-gamelib` cannot run under a gateway-scoped key), so it would
+mean producing 47 real translations; a new legacy-`translation` key is ungated and would ship
+English-only debt, which this todo's own "Do not take option B ... just because it is ungated"
+line warns against.
+
+**Accepted copy cost, carried forward rather than absorbed silently:** `setting.eosOverlay.updating`
+now reads `Updating...` where its `installed` / `installing` / `notInstalled` siblings are full
+sentences (`'The EOS Overlay is installed'`, etc.). This is `minor` — less specific, not wrong —
+and is filed as
+`.planning/todos/pending/2026-09-27-eos-overlay-updating-is-terser-than-its-three-sibling-status-lines.md`,
+proposing Option B for that one key only.
+
+Verified `pnpm i18n` now reports zero `Found same keys with different values` lines (was 5, three
+distinct keys). See `260927-p4a-SUMMARY.md` for the full verification record, including the two
+replacement controls used in place of the `already mapped to a map or parent` residue this todo's
+sibling class relied on, which was independently dissolved by `e71757335` before this task ran.
