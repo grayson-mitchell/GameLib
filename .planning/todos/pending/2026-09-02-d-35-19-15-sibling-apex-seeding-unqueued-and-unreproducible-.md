@@ -6,9 +6,20 @@ status: pending
 severity: medium
 platform: any
 ready: live-gate
-blocked_by: "nothing external — needs a live, human-run Epic login (real credentials/2FA) followed
-  by an independent jar read, then a logout followed by another independent jar read; unscheduled,
-  not blocked. CORRECTED 2026-09-26 (debug session epic-sibling-apex-seeding): the 'no seeding
+blocked_by: "nothing external — needs ONE live app run to attempt a CREDENTIAL-FREE seed of a
+  sibling apex, then an independent jar read. CORRECTED AGAIN 2026-09-28 (debug session
+  epic-sibling-apex-non-destructive-discharge): the 'then a logout' half of the sentence this
+  field used to carry is MEASURABLY FALSE, and 'real credentials/2FA' is not yet known to be
+  required. (a) `legendary auth --delete` exits 0 with NO session (measured against the bundled
+  binary in an isolated 0700 fake profile), so logout() does not take its early return and the
+  sweep was never credential-gated; (b) the domain-scoped sweep is independently invocable by
+  channel name — `humble_login_clear_cookies` is a `dispatch_rust_channel` arm (main.rs:5657,
+  arm :7128) taking [label, domain], answered for sidecar-initiated rustInvoke at :10203 — so
+  ONE host can be swept without calling logout() and without destroying the operator's live
+  Epic session; (c) the independent reader already exists and needs no building (see the
+  2026-09-28 section in the body). What is left is ONLY whether a cookie can be placed on one of
+  the four apexes without an authenticated Epic login — untested, and the one thing that still
+  needs a live run. Unscheduled, not blocked. (SUPERSEDED HISTORY FOLLOWS, retained deliberately: where it disagrees with the 2026-09-28 text above, the 2026-09-28 text is the measured one.) CORRECTED 2026-09-26 (debug session epic-sibling-apex-seeding): the 'no seeding
   vehicle exists' claim below is stale/false. The Epic OAuth login window
   (src/frontend/screens/WebView/useTauriOAuthLogin.ts, Phase 34.5, landed 2026-08-20 — 13 days
   BEFORE this todo was filed) navigates to the exact same URL
@@ -84,6 +95,61 @@ record of the reasoning that led here.
    are not available in this sandboxed debugging environment. That gate is not being faked, mocked,
    or skipped; it is why `ready` is now `live-gate` rather than `blocked`. Some human with real Epic
    credentials, on a machine that can run the packaged app, still needs to perform this.
+
+## CORRECTION 2026-09-28 (debug session `epic-sibling-apex-non-destructive-discharge`)
+
+**The 2026-09-26 correction above got the structural picture right and the EXECUTION picture wrong.**
+It concluded that "what remains blocking full discharge is executional" and that the discharge
+condition "requires a live app run with a real, human-driven Epic login". Two of the three steps it
+bundled into that sentence turn out not to need credentials at all. Measured 2026-09-28 at HEAD
+`023e10346`; full evidence in
+`.planning/debug/epic-sibling-apex-non-destructive-discharge.md`.
+
+1. **The SWEEP half was never credential-gated.** `logout()` (`legendary/user.ts:150`) runs
+   `legendary auth --delete` first and returns early on `res.error || res.abort`. Measured against
+   the bundled binary `./build/bin/arm64/darwin/legendary/legendary` in an isolated `mkdtemp` 0700
+   fake profile (all eight containment variables set, profile shredded after — required, since the
+   same command against the real profile would have destroyed a live session): with NO session it
+   prints `[cli] INFO: User data deleted.` and exits **0**. So `res.error` is falsy, the early
+   return is not taken, and `clearEpicCookies` is reached without any authenticated session.
+
+2. **The sweep does not even need `logout()`, and does not have to be destructive.**
+   `EPIC_COOKIE_HOSTS` sweeps by HOST, not by cookie name, so ANY cookie on one of the four apexes
+   is a valid fixture. `humble_login_clear_cookies` is an arm of `dispatch_rust_channel`
+   (`src-tauri/src/main.rs:5657`, arm at `:7128`) taking `[label, domain]`, answered for
+   sidecar-initiated `rustInvoke` at `:10203`; the domain-scoped implementation is
+   `clear_default_data_store_cookies_for_domain` (`:4181`) and `:3567` records that
+   `EPIC_COOKIE_HOSTS`' values are exactly what get passed as `domain`. Its default-data-store path
+   is gated on `existing_window.is_none() && epic_cookie_domain_matches(domain)`, and
+   `EPIC_LOGOUT_WINDOW_LABEL` resolves to `None` for the life of the process by construction. So one
+   host can be swept on its own, without signing the operator out of Epic.
+
+3. **No instrument needs building.** The "independent jar read" the discharge condition demands
+   already exists:
+   `.planning/quick/260909-p4m-correct-the-stale-record-on-the-gog-amaz/gate-evidence/binarycookies-index-walk.py`
+   (48 lines, jar path as `argv[1]`, extracts NO cookie values).
+
+4. **The current "before" is a vacuous zero, measured.** Read in place, counts only (never copied —
+   a copy attempt was correctly refused as PII handling): the dev jar
+   (`~/Library/HTTPStorages/gamelib-shell.binarycookies`, 76 records) has `epicgames.com`=5 and all
+   four sibling apexes at **0**; the packaged jar (`com.gamelib.shell.binarycookies`, 42 records) has
+   all five hosts at 0. A live Epic session nonetheless exists in `legendaryConfig/legendary/user.json`
+   — so a past login left no surviving sibling-apex cookies.
+
+**What actually remains — one step, and it is not the one this todo has claimed since 2026-09-02.**
+Whether a cookie can be placed on one of the four apexes WITHOUT an authenticated Epic login.
+`legendary/user.ts:27-39` records that merely building a `WKWebView` on the Epic login URL is a
+navigation that Epic + Cloudflare answer with `__cf_bm`/`EPIC_DEVICE`/`EPIC_LOGIN_ID`/`_epicSID`/`_tald`
+— but never establishes which HOSTS those land on. The credential-free probe (open the Epic login
+window, do NOT authenticate, re-read the jars) has never been run. If it seeds any sibling apex, the
+whole gate discharges with no credentials and no logout. If it does not, only then does this need the
+operator's real Epic credentials.
+
+`ready:` stays `live-gate`: the remaining step needs a live app run. It is not `code`, not `blocked`.
+
+**Not done, deliberately:** no logout and no `auth --delete` has been run against the real profile.
+A live Epic session exists and that would destroy it; it requires the operator's explicit
+confirmation.
 
 ## Why this is being filed on 2026-09-02, and why filing it is not optional
 
