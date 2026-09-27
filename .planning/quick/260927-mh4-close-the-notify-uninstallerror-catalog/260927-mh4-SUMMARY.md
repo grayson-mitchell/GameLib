@@ -88,3 +88,15 @@ None.
 ## Threat Flags
 
 None — this closure introduces no new network endpoint, auth path, file-access pattern, or schema change. It is a documentation-only edit confined to `.planning/`.
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/todos/completed/2026-09-26-notify-uninstallerror-has-no-catalog-home-and-blocks-pre-push.md`
+- CONFIRMED ABSENT: `.planning/todos/pending/2026-09-26-notify-uninstallerror-has-no-catalog-home-and-blocks-pre-push.md`
+- FOUND: `.planning/quick/260927-mh4-close-the-notify-uninstallerror-catalog/260927-mh4-SUMMARY.md`
+- FOUND commit `05f9305e4` (todo closure)
+- FOUND commit `72613d07e` (STATE.md record)
+- `pnpm planning-gates` → 12/12
+- `pending/` → 16 files, `completed/` → 235 files
+- `git rev-list --left-right --count origin/main...HEAD` → `0 2` (two local commits ahead, nothing pushed)
+- `git status --porcelain` → empty
