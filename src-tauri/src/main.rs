@@ -6393,11 +6393,16 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                 //
                 // This is deliberately the WEAKER of the two guarantees: it establishes only
                 // that the bar is never the framework default. The document title still
-                // arrives via `on_document_title_changed` below and replaces this, which is
-                // WR-07's actual requirement. The recorded asymmetry stands and is why this
-                // comment exists: a grep gate proving `.title(` is never hard-coded can only
-                // establish the ABSENCE of the prohibited value -- it structurally cannot
-                // establish the PRESENCE of the required one. Only the live gate can.
+                // arrives via `on_document_title_changed` below and is APPENDED after this
+                // origin -- `origin — document title` (`login_window_title`, main.rs:2083,
+                // T-34.5-G6-23) -- never a replacement of it, which is WR-07's actual
+                // requirement. That composed title now SURVIVES `PageLoadEvent::Finished`: the
+                // `on_page_load` `set_title` refresh below is guarded `Started`-only (quick
+                // 260927-o3h); before that guard, the `Finished` pass overwrote it with the
+                // bare origin again. The recorded asymmetry stands and is why this comment
+                // exists: a grep gate proving `.title(` is never hard-coded can only establish
+                // the ABSENCE of the prohibited value -- it structurally cannot establish the
+                // PRESENCE of the required one. Only the live gate can.
                 //
                 // Scoped to `if visible` on purpose: the same arm builds the hidden
                 // reveal/clear windows, which have no title bar for a title to matter on
@@ -6582,9 +6587,9 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             let app_for_cancel = app.clone();
             let window = builder
                 .on_page_load(move |window, payload| {
-                    let kind = match payload.event() {
-                        tauri::webview::PageLoadEvent::Started => "started",
-                        tauri::webview::PageLoadEvent::Finished => "finished",
+                    let (kind, is_started) = match payload.event() {
+                        tauri::webview::PageLoadEvent::Started => ("started", true),
+                        tauri::webview::PageLoadEvent::Finished => ("finished", false),
                     };
                     let event = login_event_value(kind, payload.url().as_str());
                     push_login_window_event(&event_label, event);
@@ -6600,7 +6605,23 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                         if let Ok(mut guard) = page_load_origin.lock() {
                             *guard = new_origin.clone();
                         }
-                        let _ = window.set_title(&login_window_title(&new_origin, None));
+                        // `Started`-only guard (quick 260927-o3h; D-01, D-02, D-05). Before
+                        // this guard, the `Finished` pass through this closure called
+                        // `set_title(&login_window_title(&new_origin, None))` again with
+                        // `None` for the document title, overwriting the composed `origin —
+                        // document title` that `on_document_title_changed` had already set --
+                        // Windows and Linux showed the bare origin forever. Filed and accepted
+                        // as a deviation during the Phase 38 Windows sitting (`38-W03`) before
+                        // being fixed here by quick task 260927-o3h.
+                        //
+                        // The guard sits on this ONE line, not on the enclosing `if visible {`
+                        // block: the `page_load_origin` write above and the macOS
+                        // `login_origin_banner_update_script` eval below both still need to
+                        // run on `Finished`, to keep the trusted main-frame origin and the
+                        // origin banner current.
+                        if is_started {
+                            let _ = window.set_title(&login_window_title(&new_origin, None));
+                        }
                         // Origin banner re-text on main-frame origin change (Phase 34.5 Plan
                         // 52, F-34.5-G6-16, D-CYCLE7-A). KEPT alongside, never replacing, the
                         // `set_title` call above -- Windows/Linux still render the OS title;
