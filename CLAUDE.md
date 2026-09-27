@@ -341,10 +341,45 @@ records for the plan template.
 
 ### A formatter check belongs in every task's `<verify>`
 
-**If a task writes a file, its `<verify>` block must run `npx prettier --check` over the exact
-paths it wrote.** Scope to explicit paths, never `.` — a bare `.` drags in unrelated repo debt and
+**If a task writes a file that prettier actually sees, its `<verify>` block must run `npx prettier
+--check` over the exact paths it wrote.** "Sees" means the probe below reports `"ignored":false`.
+Scope to explicit paths, never `.` — a bare `.` drags in unrelated repo debt and
 `src/preload/.prettierrc` sets `printWidth: 120` against the root's default 80, so the directory a
 path sits in changes the correct answer.
+
+**Decide which case a path is in with `npx prettier --file-info <path>`** — do not guess from
+`.prettierignore` alone. A path prettier sees reports `{"ignored":false,...}` with a real
+`inferredParser`; a path prettier ignores reports `{"ignored":true,"inferredParser":null}` and
+matches nothing. Measured on this machine 2026-09-26 under prettier 3.7.4: `src/preload/index.ts`
+and `src/backend/utils/uninstaller.ts` both report `{"ignored":false,"inferredParser":"typescript"}`;
+`package.json` reports `{"ignored":false,"inferredParser":"json-stringify"}`; `CLAUDE.md` reports
+`{"ignored":false,"inferredParser":"markdown"}`; `.planning/STATE.md` and
+`public/locales/en/gamelib.json` both report `{"ignored":true,"inferredParser":null}`.
+
+**Over an ignored path, `--check` is vacuous and must NOT be written into a `<verify>` block as
+though it were assurance.** On 2026-09-26, `.planning/STATE.md`, `public/locales/en/gamelib.json`
+and `CLAUDE.md` each printed `Checking formatting...` then
+`All matched files use Prettier code style!` and exited 0 — byte-identical output and identical
+exit code for the two ignored paths and the real one, zero files matched in the ignored cases.
+Nothing in the output or the exit code distinguishes them; `.husky/pre-commit:20-22` already
+records the same fact from the hook's own side. A task that writes only ignored paths should say
+so in its verify block and omit the check,
+rather than carry a green that proves nothing — this is what surfaced the problem: two consecutive
+quick tasks, `260926-mja` and `260927-mh4`, had to hand-annotate their verify blocks as vacuous by
+design to stay honest.
+
+**The ignored trees tasks here actually write to** include at minimum `.planning` (every PLAN,
+SUMMARY, STATE, todo and debug artifact), `public/locales/` (every l10n catalogue change),
+`.claude`, and `graphify-out`. `public/locales/` matters most and has been the case actually
+missed: unlike the others it is shipped source, not tooling state, so the mandated check has been
+silently vacuous for every catalogue change and not just for planning artifacts. `.prettierignore`
+is the full list (18 entries at time of writing) — treat this paragraph as a shortcut for the
+common cases, not a second copy to keep in sync.
+
+**Nothing mechanical keeps ignored files consistent, and no gate will.** What keeps them
+consistent is hand-matching the surrounding corpus — the wrap, indentation and key order already
+in the file being edited. That is weaker than a formatter, not equivalent to one; it is what there
+is.
 
 **Why this is a rule and not a nicety: no other gate in this repo sees formatting.** An executor
 can run `pnpm codecheck` (exit 0), `pnpm lint` (both ceilings PASS), its jest project,
@@ -378,8 +413,8 @@ baseline had to be reconstructed from the npm tarball and hash-validated. That i
 limit, at equal weight: reapply is a MANUAL step the operator must run after every upgrade —
 nothing runs it automatically — and **those gsd-core files remain outside this repo, unversioned,
 shared by every project on the machine, and a `gsd-core` upgrade will overwrite them** — the same
-caveat this file already records for the UAT template. This section is the durable copy of the
-requirement; treat the template text as a convenience, not as the requirement.
+caveat this file already records for the UAT template. This section is the durable copy of the requirement;
+treat the template text as a convenience, not as the requirement.
 
 <!-- GSD:conventions-end -->
 
