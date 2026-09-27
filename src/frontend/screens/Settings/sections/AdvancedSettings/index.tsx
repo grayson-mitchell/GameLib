@@ -155,12 +155,12 @@ export default function AdvancedSetting() {
   function getMainEosText() {
     if (eosOverlayUnavailable)
       return tGamelib(
-        'setting.eosOverlay.unavailable',
+        'gamelib:setting.eosOverlay.unavailable',
         'The EOS Overlay is unavailable in this build'
       )
     if (eosOverlayInstalled && eosOverlayInstallingOrUpdating)
       return tGamelib(
-        'setting.eosOverlay.updatingStatus',
+        'gamelib:setting.eosOverlay.updatingStatus',
         'The EOS Overlay is being updated...'
       )
     if (eosOverlayInstalled && !eosOverlayInstallingOrUpdating)
@@ -533,7 +533,7 @@ export default function AdvancedSetting() {
           {eosOverlayUnavailable && (
             <div>
               {tGamelib(
-                'setting.eosOverlay.unavailableDetail',
+                'gamelib:setting.eosOverlay.unavailableDetail',
                 'EOS Overlay support is deferred to a future release (D-03, Phase 34.6) and cannot be installed, updated, or removed from this build.'
               )}
             </div>
