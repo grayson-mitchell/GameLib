@@ -1,6 +1,7 @@
 ---
 created: 2026-09-25T00:00:00+13:00
-title: "Migrate off deprecated get-shit-done-cc 1.42.3 to @opengsd/gsd-core at the Linux repo setup"
+title: "Migrated off deprecated get-shit-done-cc 1.42.3 to @opengsd/gsd-core 1.14.0 - done on the Mac 2026-09-26, ahead of the planned ordering"
+status: "Closed by quick task 260926-mja, 2026-09-26: @opengsd/gsd-core 1.14.0 is installed; steps 1 and 3 were satisfied by outcome, not by the procedure they specified; step 2's fallback snapshot was never taken and is accepted risk."
 area: tooling
 severity: medium
 platform: any
@@ -9,13 +10,20 @@ found_by: "Research on 2026-09-25 during quick task 260925-o9b, while closing .p
 files: []
 ---
 
-# Migrate off deprecated get-shit-done-cc 1.42.3 to @opengsd/gsd-core at the Linux repo setup
+# Migrated off deprecated get-shit-done-cc 1.42.3 to @opengsd/gsd-core 1.14.0 - done on the Mac 2026-09-26, ahead of the planned ordering
 
-## What GameLib pins
+## What GameLib pinned, and no longer does
 
-`get-shit-done-cc` **1.42.3**. CLAUDE.md records this pin itself, in its UAT-shape convention
-section, describing `get-shit-done-cc` as "pinned `v1.42.3`"; the SDK is installed at
-`~/AppData/Roaming/npm/node_modules/get-shit-done-cc`.
+`get-shit-done-cc` **1.42.3** used to be pinned. CLAUDE.md's UAT-shape convention section used to
+describe it as "pinned `v1.42.3`"; that wording is gone from CLAUDE.md now (its five surviving
+1.42.3 mentions are all historical provenance, correct as written).
+
+The pin itself is gone from this machine. Measured 2026-09-26: `npm ls -g --depth=0` lists only
+`gsd-pi@3.0.0` and `npm@11.13.0` - no `get-shit-done-cc`. `~/.claude/get-shit-done/` still exists
+but survives only as an empty skeleton: a `find -type f` count of 0 across all five of its
+subdirectories (`bin`, `contexts`, `references`, `templates`, `workflows`). `~/.claude/gsd-core/VERSION`
+reads `1.14.0`. The `~/AppData/Roaming/npm/node_modules/get-shit-done-cc` path this section used to
+cite was always the operator's OTHER machine's path - it never existed on this one.
 
 ## Why that pin is now a dead end
 
@@ -60,7 +68,7 @@ stays installable from npm indefinitely.
 | npm maintainers                  | 1                             | 3                            |
 
 The star gap is legacy accumulation; the download numbers show many users still on the frozen
-package, as GameLib is.
+package, as GameLib was.
 
 **Other forks — none is a credible alternative for Claude Code:** `open-gsd/gsd-pi` (1.2k stars)
 is a sibling product on the Pi agent harness, not a drop-in. `toonight/get-shit-done-for-antigravity`
@@ -85,27 +93,41 @@ redundant); roughly weekly releases mean churn in exchange for fixes.
 Fork-and-pin was judged not worth it: GameLib would become sole maintainer of a large prompt
 system while forgoing fixes the official successor has already landed.
 
-## The decision, and its blast radius
+## The decision, and its outcome
 
-**Decided 2026-09-26: migrate to `@opengsd/gsd-core`, timed to the new local repo on Linux**
-that the operator will set up once the Windows-side tasks are done. Fork-and-pin and
-stay-frozen were both rejected (see above).
+**Decided 2026-09-26: migrate to `@opengsd/gsd-core`.** Fork-and-pin and stay-frozen were both
+rejected (see above); that call stands and was right.
 
-The Linux setup is the right moment because `~/.claude` starts empty there: no other project
-shares the install and there is no legacy install to clean out, which removes the machine-wide
-half of the blast radius. What does NOT go away travels with the repo: every `/gsd-*` workflow,
-all 13 planning gates, the shapes of the documents under `.planning/`, and the upstream templates
-CLAUDE.md flags as unversioned and overwritten by a `gsd` upgrade (UAT and phase-prompt).
+What did not hold is the timing. The install happened here, on the Mac, instead - not deferred to
+a future repo setup on a second machine - so the machine-wide half of the blast radius this todo
+originally hoped to avoid by waiting was simply taken on: `~/.claude` here was not empty, and the
+legacy 1.42.3 install had to be cleaned out of a machine that already had other projects on it.
 
-## Steps
+Nothing closed this todo at the time the install happened. Why it went unnoticed: measured with a
+recursive `grep -rln` for this todo's filename slug across `.planning/`, the only hits are
+STATE.md, the creating task 260925-o9b's own PLAN and SUMMARY, and the completed todo it was spun
+out of — no downstream quick task referenced it, so there was no autoclose. And its own
+`ready: human` kept it off the desk-ready sweep that `grep -l 'ready: code' .planning/todos/pending/*.md`
+drives, so it sat unpicked-up rather than surfaced as stale.
 
-1. **Before leaving Windows (near the end of the Windows tasks)** — separate the gsd-core change
-   from the OS change, so a failure on Linux is attributable to one variable, not two:
-   - `npx @opengsd/gsd-core@latest --dry-run` to see what it would write and remove;
-   - install into a scratch `--config-dir` so the real `~/.claude` (1.42.3) is untouched;
-   - run `pnpm planning-gates` and `audit-uat` under it against the real `.planning/` tree, and
-     record per gate: passes / breaks / now redundant.
-2. **Snapshot 1.42.3 as a fallback** in case npm pulls it: `~/.claude/get-shit-done/` plus the
-   global `~/AppData/Roaming/npm/node_modules/get-shit-done-cc`.
-3. **At the Linux repo setup:** install `@opengsd/gsd-core` directly; fix or retire the gates per
-   step 1's record; re-check the CLAUDE.md template caveats and the "pinned `v1.42.3`" wording.
+## Steps: real disposition
+
+1. **Satisfied by OUTCOME, not by the procedure specified.** No `npx @opengsd/gsd-core@latest
+   --dry-run` was ever run. No scratch `--config-dir` install was trialled alongside the real
+   `~/.claude`. The per-gate record this step asked for - passes / breaks / now redundant - was
+   never produced. What exists instead is the outcome: `pnpm planning-gates` reports 12/12 under
+   gsd-core, and exactly one gate was resolved rather than ported. Quick task 260926-kkt retired
+   the UAT visibility gate on the finding that it copied 1.42.3's `parseUatItems` regex verbatim
+   and so, after the migration, was counting against a parser nobody runs; the anti-vacuity floor
+   in `meta/runPlanningGates.py` moved 13 to 12, the first lowering in its history, with the reason
+   recorded in that file.
+2. **Never taken, and accepted risk rather than spun out as a new todo.** There is no
+   local action left: the legacy tree is an empty skeleton and the global package is gone, so
+   there is nothing on this machine to snapshot, and a todo for something that cannot be done
+   locally would be a rotten blocker. Recorded honestly: recovering 1.42.3 now depends entirely on
+   it remaining published on npm, which this same todo's own research section warns against
+   assuming, because the deprecation is npm's generic staff-set message and staff-set
+   deprecations sometimes precede removal.
+3. **Already done.** The "pinned `v1.42.3`" wording this step targeted is gone from CLAUDE.md,
+   whose five surviving 1.42.3 mentions are all historical provenance and correct as written.
+   Gates were fixed or retired per step 1's outcome above, not per a pre-recorded per-gate plan.
