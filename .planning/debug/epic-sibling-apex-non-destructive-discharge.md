@@ -105,6 +105,68 @@ session. The gate does not have to be destructive.
 domain/name/path/flags/expiry/created. It extracts **no cookie values**. The todo's "independent jar
 read rather than the product's own census" requirement is already instrumented.
 
+### E-5 — the credential-free probe is NEGATIVE, decisively (run 2026-09-28)
+
+Built a minimal standalone `WKWebView` probe (Swift 6.4, `WKWebsiteDataStore.default()`, offscreen
+`NSWindow` so JS and subresources actually run), navigated it to the byte-identical
+`EPIC_LOGIN_URL`, let it settle 30s, and read `WKHTTPCookieStore.getAllCookies` filtered to the five
+Epic hosts. **No credentials were entered and no authentication occurred.**
+
+```
+total cookies in store: 9
+  epicgames.com      count=9 names=[EPIC_DEVICE,EPIC_LOGIN_ID,EPIC_SESSION_AP,XSRF-TOKEN,
+                                    __cf_bm,__cf_bm,_epicSID,_tald,cf_clearance]
+  fortnite.com       count=0
+  unrealengine.com   count=0
+  twinmotion.com     count=0
+  metahuman.com      count=0
+SIBLING_APEX_SEEDED=NO
+```
+
+The main navigation reached `didFinish`. The cookie set is a superset of exactly what
+`legendary/user.ts:27-39` predicted from its own live measurement (`__cf_bm`, `EPIC_DEVICE`,
+`EPIC_LOGIN_ID`, `_epicSID`, `_tald`), which is good evidence the probe faithfully reproduced the
+pre-auth navigation rather than being blocked — note `cf_clearance` is present, so Cloudflare was
+satisfied, unlike a plain `curl` of the same URL which gets **HTTP 403** and only `__cf_bm`.
+
+**Every one of the 9 cookies is on `epicgames.com`. None is on any sibling apex.** This is also what
+cookie semantics require: a response from `epicgames.com` cannot set a cookie for `fortnite.com` —
+different registrable domains — so a sibling-apex cookie can only come from a request served BY one
+of those four domains, and merely loading the login page issues none.
+
+**Conclusion.** The sibling-apex cookies `35-AB-RETEST.md` Item 7 observed came from Epic's
+**authenticated** SSO cookie-sync across its properties, not from loading the login page. A
+credential-free seed is therefore impossible by this vehicle, and the seeding half of the discharge
+condition genuinely does require an authenticated Epic login.
+
+**Scope limit, stated rather than glossed:** this was a bare `WKWebView`, not GameLib's own
+`open_pristine_epic_login_window`. It navigates the identical URL on the identical engine, so it is
+a faithful stand-in for the PRE-AUTH step, but it is not proof about GameLib's window specifically.
+That distinction does not change the conclusion, because the negative rests on the cookie-domain
+rule above, which is engine-independent.
+
+### E-6 — the eight-variable fake HOME does NOT contain WebKit storage on macOS
+
+The probe was launched via `env -i` with all eight containment variables from
+`jest.setupContainment.ts` pointed at a `mkdtemp` 0700 profile. **WebKit ignored them.** Zero
+`*.binarycookies` appeared under the fake HOME, and three artifacts appeared in the REAL profile:
+
+```
+~/Library/HTTPStorages/epicprobe.binarycookies
+~/Library/Caches/epicprobe
+~/Library/WebKit/epicprobe
+```
+
+macOS resolves those via `NSHomeDirectory()`/the app container, not the `HOME` environment variable,
+for a non-sandboxed binary. All three were removed immediately and their absence re-verified; the
+operator's own two GameLib jars were confirmed untouched by mtime (`gamelib-shell` Sep 25 12:49,
+`com.gamelib.shell` Sep 24 12:59, both unchanged across the probe).
+
+**This is a real gap in the two-profile rule as written** — it is stated in terms of eight
+environment variables, and any probe that drives a `WKWebView`, `WKWebsiteDataStore` or any WebKit
+storage API escapes that containment silently. Anything of this shape needs either a sandboxed
+container or explicit post-run cleanup of `~/Library/{HTTPStorages,Caches,WebKit}/<procname>`.
+
 ## Eliminated
 
 - hypothesis: "The sweep half of the discharge condition requires an authenticated Epic session."
@@ -113,34 +175,42 @@ read rather than the product's own census" requirement is already instrumented.
   `logout()` entirely. timestamp: 2026-09-28
 - hypothesis: "An independent jar-read instrument has to be written before the gate can run."
   evidence: E-4 — it exists in-repo and extracts no values. timestamp: 2026-09-28
+- hypothesis: "A sibling apex can be seeded WITHOUT Epic credentials, by opening the login window
+  and not authenticating."
+  evidence: E-5 — measured NEGATIVE. A pre-auth WKWebView navigation to EPIC_LOGIN_URL sets 9
+    cookies, all on epicgames.com, none on any of the four apexes; and a response from
+    epicgames.com cannot set a cookie for a different registrable domain, so no navigation of
+    that page could ever seed them. The Item 7 sibling cookies come from Epic's AUTHENTICATED
+    SSO cookie-sync. timestamp: 2026-09-28
 
 ## Current Focus
 
-**The gate has been reduced to exactly one unresolved question: can a cookie be placed on one of
-the four sibling apexes without the operator's Epic credentials?**
+**The credential-free path is closed (E-5). The gate now reduces to exactly one step that only the
+operator can perform: an authenticated Epic login.**
 
-Everything else is now either measured or non-destructively executable.
+Post-E-5 status of the four steps:
 
-`legendary/user.ts:27-39` records, from a prior live measurement in both a dev and a packaged jar,
-that merely *building* a `WKWebView` on `https://www.epicgames.com/id/login?responseType=code` IS a
-navigation, and that Epic + Cloudflare answer it by setting `__cf_bm`, `EPIC_DEVICE`,
-`EPIC_LOGIN_ID`, `_epicSID` and `_tald` — with `created` timestamps landing on the exact second of
-the clear that was supposedly removing them. What that note does NOT establish is which HOSTS those
-land on. E-2's `epicgames.com=5` is consistent with `.epicgames.com` only.
+| step | status |
+| ---- | ------ |
+| Instrument an independent jar read | DONE — already existed (E-4) |
+| Seed a sibling apex without credentials | **IMPOSSIBLE by this vehicle (E-5)** |
+| Sweep one host non-destructively | AVAILABLE — `humble_login_clear_cookies` by channel name (E-3) |
+| Seed a sibling apex WITH an authenticated login | **the only remaining step; needs the operator** |
 
-So the next step is a **credential-free live probe**, never yet run:
+The remaining procedure, if the operator chooses to run it:
 
-1. Launch the app; open the Epic OAuth login window; **do not authenticate**.
-2. Re-read both jars in place, counts only, for the five Epic hosts.
-3. If any of the four sibling apexes becomes non-zero → a credential-free seeding vehicle exists.
-   Drive the domain-scoped clear for that one host via E-3's channel, re-read, and the gate
-   discharges today with no credentials and no logout.
-4. If all four stay zero → seeding genuinely requires an authenticated Epic login (Epic's own SSO
-   propagation to its sibling properties), and only the operator can perform it. `ready: live-gate`
-   stays correct, but the blocker narrows to that single step.
+1. Operator logs into Epic through GameLib's own OAuth login window (real credentials/2FA).
+2. Independent jar read, counts only, for the four apexes — expect ≥1 present (that is what
+   `35-AB-RETEST.md` Item 7 measured). This is the "confirmed PRESENT" half.
+3. Sweep that ONE host via E-3's channel (`humble_login_clear_cookies` with `[<sentinel-label>, '<apex>']`)
+   — **not** `logout()`, so the operator's freshly-created Epic session survives the test.
+4. Independent jar read again — expect that host at 0. This is the "confirmed ABSENT" half, and it
+   discharges D-35-19-15.
 
-`ready:` stays `live-gate` either way — step 1 needs a live app run. It is not `code`, and it is not
-`blocked`.
+Step 3 is what E-1 and E-3 bought: the discharge no longer requires signing out. The operator logs
+in once and stays logged in.
+
+`ready:` stays `live-gate`.
 
 ## Operator decision required
 

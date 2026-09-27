@@ -6,8 +6,15 @@ status: pending
 severity: medium
 platform: any
 ready: live-gate
-blocked_by: "nothing external — needs ONE live app run to attempt a CREDENTIAL-FREE seed of a
-  sibling apex, then an independent jar read. CORRECTED AGAIN 2026-09-28 (debug session
+blocked_by: "needs the OPERATOR to log into Epic once (real credentials/2FA) — and nothing else.
+  The credential-free alternative was tried and MEASURED NEGATIVE 2026-09-28: a pre-auth
+  WKWebView navigation to EPIC_LOGIN_URL sets 9 cookies, ALL on epicgames.com, NONE on any of
+  the four apexes (SIBLING_APEX_SEEDED=NO), and a response from epicgames.com cannot set a
+  cookie for a different registrable domain anyway — so no navigation of that page can ever
+  seed them. Item 7's sibling cookies come from Epic's AUTHENTICATED SSO cookie-sync.
+  IMPORTANTLY the operator does NOT have to log out: the sweep half is invocable per-host via
+  the humble_login_clear_cookies dispatch_rust_channel arm, so they log in once and STAY logged
+  in. CORRECTED AGAIN 2026-09-28 (debug session
   epic-sibling-apex-non-destructive-discharge): the 'then a logout' half of the sentence this
   field used to carry is MEASURABLY FALSE, and 'real credentials/2FA' is not yet known to be
   required. (a) `legendary auth --delete` exits 0 with NO session (measured against the bundled
@@ -144,6 +151,23 @@ navigation that Epic + Cloudflare answer with `__cf_bm`/`EPIC_DEVICE`/`EPIC_LOGI
 window, do NOT authenticate, re-read the jars) has never been run. If it seeds any sibling apex, the
 whole gate discharges with no credentials and no logout. If it does not, only then does this need the
 operator's real Epic credentials.
+
+**UPDATE later the same day — the credential-free probe was RUN, and is NEGATIVE.** A standalone
+`WKWebView` (Swift, `WKWebsiteDataStore.default()`, offscreen window so JS runs) navigated to the
+byte-identical `EPIC_LOGIN_URL` with no credentials and settled 30s. Result: **9 cookies, every one
+on `epicgames.com`** (`EPIC_DEVICE`, `EPIC_LOGIN_ID`, `EPIC_SESSION_AP`, `XSRF-TOKEN`, `__cf_bm` x2,
+`_epicSID`, `_tald`, `cf_clearance` — a superset of what `user.ts:27-39` predicted, and
+`cf_clearance` proves Cloudflare was satisfied rather than the probe being 403'd as a bare `curl`
+is), and **0 on all four sibling apexes**. `SIBLING_APEX_SEEDED=NO`.
+
+That closes the credential-free path, and cookie semantics say it was never open: a response from
+`epicgames.com` cannot set a cookie for `fortnite.com` — different registrable domains — so only a
+request served BY one of the four apexes can seed one. Item 7's sibling cookies therefore came from
+Epic's **authenticated** SSO cookie-sync.
+
+**So the gate needs exactly one thing: the operator logging into Epic once.** And thanks to the
+sweep being per-host invocable, they do NOT need to log out afterwards — see the procedure in
+`.planning/debug/epic-sibling-apex-non-destructive-discharge.md` § Current Focus.
 
 `ready:` stays `live-gate`: the remaining step needs a live app run. It is not `code`, not `blocked`.
 
