@@ -1282,6 +1282,35 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
     return code.slice(armStart, armEnd)
   }
 
+  // Quick 260927-o3h: finds the FIRST `{` at or after `headerIdx` and walks forward tracking
+  // brace depth, returning the substring strictly between that `{` and its matching `}`.
+  // Throws on unbalanced input rather than returning a partial slice, so a malformed source
+  // fails loudly instead of producing a silently-wrong region for the assertions below to run
+  // against. Brace-counting is safe over this region: the only nearby string literal carrying
+  // braces is the origin-banner `eprintln!`'s `len={}` format, which is itself balanced.
+  function sliceBracedBlock(body: string, headerIdx: number): string {
+    const openIdx = body.indexOf('{', headerIdx)
+    if (openIdx === -1) {
+      throw new Error(
+        'sliceBracedBlock: no opening brace found at or after headerIdx'
+      )
+    }
+    let depth = 0
+    for (let i = openIdx; i < body.length; i++) {
+      if (body[i] === '{') {
+        depth++
+      } else if (body[i] === '}') {
+        depth--
+        if (depth === 0) {
+          return body.slice(openIdx + 1, i)
+        }
+      }
+    }
+    throw new Error(
+      'sliceBracedBlock: unbalanced braces -- no matching closing brace found'
+    )
+  }
+
   test("POSITIVE: the title-refresh call (set_title) lives inside the arm's .on_page_load( hook body", () => {
     const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
     const pageLoadStart = armBody.indexOf('.on_page_load(')
@@ -1290,6 +1319,51 @@ describe('F-34.5-G6-04 (Plan 27) login window origin title driven from on_page_l
     expect(pageLoadEnd).toBeGreaterThan(pageLoadStart)
     const pageLoadBlock = armBody.slice(pageLoadStart, pageLoadEnd)
     expect(pageLoadBlock).toContain('set_title(')
+  })
+
+  // Quick 260927-o3h REGRESSION (D-01, D-02). Without this test, nothing notices the guard
+  // being deleted: the POSITIVE test above asserts only that `set_title(` appears SOMEWHERE
+  // in the slice to `.build()`, which a fully unguarded call satisfies identically. This test
+  // is two-sided: it pins both that `set_title` sits INSIDE the `is_started` guard, and that
+  // the two statements D-02 protects (the `page_load_origin` write and the macOS
+  // `login_origin_banner_update_script` eval) sit OUTSIDE it -- with anti-vacuity controls
+  // proving those two statements still exist in the closure at all, so deleting them outright
+  // could not turn the negative assertions green for the wrong reason.
+  //
+  // Scoped narrower than the POSITIVE test above: that test slices to `.build()`, which also
+  // spans the `.on_navigation(` closure below `on_page_load` -- looser than it reads. This
+  // test needs the `on_page_load` closure ALONE, or the nesting assertions below would be
+  // measured against the wrong region, so it slices to the NEXT `.on_navigation(` instead.
+  //
+  // What turns this red once landed: (1) the guard is deleted and the call runs on both
+  // events again -- the guard header is absent; (2) the guard is widened to the whole
+  // `if visible {` block -- the origin write and the macOS banner fall inside the guarded
+  // slice and the two negative assertions fire; (3) `set_title` is moved out of the guard --
+  // the positive assertion fires; (4) the origin write or the banner is deleted to satisfy
+  // the negatives -- the two control assertions fire. What it does NOT cover: this is a
+  // source-shape gate, not a behavioural one -- it cannot observe a title bar.
+  test('quick 260927-o3h REGRESSION: the on_page_load set_title refresh is guarded to PageLoadEvent::Started only, while the page_load_origin write and the macOS origin banner keep running on both events', () => {
+    const armBody = extractHumbleLoginOpenArmBody(loadMainRsCode())
+    const pageLoadStart = armBody.indexOf('.on_page_load(')
+    expect(pageLoadStart).toBeGreaterThan(-1)
+    const onNavigationStart = armBody.indexOf('.on_navigation(', pageLoadStart)
+    expect(onNavigationStart).toBeGreaterThan(pageLoadStart)
+    const onPageLoadClosure = armBody.slice(pageLoadStart, onNavigationStart)
+
+    // Anti-vacuity control: proves both protected statements still exist in the closure
+    // BEFORE checking that neither sits inside the guard below. Without this, deleting
+    // `page_load_origin.lock()` or `login_origin_banner_update_script` outright would make
+    // the two negative assertions pass for the wrong reason.
+    expect(onPageLoadClosure).toContain('page_load_origin.lock()')
+    expect(onPageLoadClosure).toContain('login_origin_banner_update_script')
+
+    const guardHeaderIdx = onPageLoadClosure.indexOf('if is_started {')
+    expect(guardHeaderIdx).toBeGreaterThan(-1)
+    const guardedBlock = sliceBracedBlock(onPageLoadClosure, guardHeaderIdx)
+
+    expect(guardedBlock).toContain('set_title(')
+    expect(guardedBlock).not.toContain('page_load_origin.lock()')
+    expect(guardedBlock).not.toContain('login_origin_banner_update_script')
   })
 
   // RETIGHTENED (Phase 34.4.2 Plan 08, REQ-34.4.2-03/04/08), not deleted: this used to be a
