@@ -265,6 +265,9 @@ manager, dialog, launcher.
 | 017 | child-webview-bounds-sync | standard | Given an embedded child webview, when the window resizes and JS reports a new content rect, then the child's bounds track it acceptably, and it can be hidden/shown/destroyed on route change | ✓ VALIDATED (JS `getBoundingClientRect` → `set_position/set_size` lands exactly; fractional px round to whole logical px; hide/show/close work) — **two geometry writers = silent last-write-wins; the renderer must be the ONLY bounds owner**; retina + drag-resize latency unmeasured | tauri, webview, bounds, resize, lifecycle |
 | 018 | child-webview-coexistence | standard | Given main + child webviews in one window, when cookies and events are exercised, then `cookies()` works on the child handle, `on_page_load` fires for it, and jar sharing/isolation matches spike 015's window-level findings | ✓ VALIDATED (cookies()/on_page_load/on_navigation all work per-child; **ONE default jar per process across all windows AND children**; `data_store_identifier` partitions a child jar for real) — surprise: Secure-over-http-localhost control cookies absent this session, contra 014a's note | tauri, webview, cookies, events, isolation, data-store-identifier |
 | 024 | epic-store-in-embedded-child-webview | standard | Given a Tauri-managed child webview (`Window::add_child`, spike 016's harness) pointed at `store.epicgames.com`, when the page loads with the injected `window.isTauri`/`__TAURI_INTERNALS__`/`window.ipc`/`__TAURI_PLUGIN_*` globals present (the confirmed, root-caused Talon fingerprint from 2026-08-03), then observe whether Talon blocks STORE browsing the way it blocks the `/id/api/email/exists` LOGIN endpoint, or whether the block is login-scoped only | ⚠️ PARTIAL 2026-09-05, 3 runs — **the store is NOT reliably browsable.** Run 1 (fresh container, this IP's first contact): store RENDERED, 0 Cloudflare navs, `bodyLen=89181`, header painted (`shot-epic-store.png`). Runs 2 AND 3: **Cloudflare Turnstile** — `Just a moment...`, `bodyLen=18450`, empty text, `challenges.cloudflare.com/.../turnstile/...` (`shot-epic-CHALLENGED-run2.png`). Run 3 used a BRAND-NEW container and was still challenged, which **falsifies the cookie-state explanation**; surviving candidate is IP/behaviour reputation accrued across the session. Steam positive control rendered in ALL THREE runs, so no run is a broken harness. **ESTABLISHED:** the injected globals were present in all three INCLUDING the run that passed, so the login-endpoint Talon fingerprint does NOT explain the store gate; the store CAN render in a Tauri-managed child webview; and `www.epicgames.com/store/en-US/` 302s onto `store.epicgames.com`, so the host distinction is not a variable. **NOT ESTABLISHED — the key open question:** whether a HUMAN can click through the Turnstile widget. All three runs were unattended and never clicked, so 'challenged' does NOT mean 'a user cannot browse'. ⚠️ An earlier revision of this row read VALIDATED on run 1 alone — generalising from one sample of a service whose posture is known to vary. `/store/epic` stays scoped out (D-05 unchanged); the follow-up is now 'can a user clear the challenge in-app', filed as a todo. | tauri, webview, epic, talon, cloudflare, turnstile, anti-bot, embed, store-browser, partial |
+| 025 | linux-add-child-compile | standard | Given spike 016's unmodified `add_child` harness, when built and run NATIVELY on a real Linux desktop (this session's own environment, not a hypothetical machine), then does it compile against real webkit2gtk/GTK and does `add_child` succeed at all | ✓ VALIDATED (zero source changes; full native build in 48.8s incl. webkit2gtk-sys/gtk-sys; `add_child` OK in 2ms — faster than macOS's 42–51ms; real Steam store page loaded, navigated, and set/read real cookies through the identical API) | tauri, webview, multiwebview, unstable, embed, linux, webkit2gtk, phase-38 |
+| 026 | linux-add-child-runtime | standard | Given spike 025's compiling Linux embed, when its geometry (017) and cookie-jar isolation (018) are exercised the same way as macOS, then do those same behaviours carry over | ⚠ PARTIAL — **two silent structural no-ops, source-confirmed, plus one reproducible native crash**: (1) `set_position`/`set_size` never write on Linux because `add_child` always packs into a `GtkBox` (`tauri-runtime-wry:5189` `default_vbox()`), and wry's `set_bounds` only mutates `if is_in_fixed_parent` (`wry webkitgtk/mod.rs:963-983`) — both webviews split the window 50/50 regardless of requested rect; (2) `data_store_identifier` isolation is a no-op on Linux — `wry lib.rs:2479` hardcodes it to the macOS `wkwebview` backend only, so an "isolated" child saw the full shared jar (all 10 cookies, not just its own 2); (3) a second `Window` with two child webviews segfaults natively in `libwebkit2gtk-4.1.so.0.19.7`, reproduced 2/2 at the identical offset — isolated away from, and absent in, the primary single-embed-on-main-window shape this project needs | tauri, webview, multiwebview, unstable, embed, linux, webkit2gtk, gtkbox, gtkfixed, data-store-identifier, segfault, phase-38 |
+| 027 | windows-add-child-crosscheck | standard | Given no Windows machine reachable from this Linux session, when spike 016's harness is `cargo check`-ed cross-target against `x86_64-pc-windows-{gnu,msvc}`, then does it at least type-check against the WebView2 backend | ⚠ PARTIAL — `cargo check --target x86_64-pc-windows-gnu` SUCCEEDED (main.rs, incl. every `add_child`/`data_store_identifier`/`on_page_load` call, type-checks against real `webview2-com`/`windows` crates); `-msvc` (the triple actually shipped) blocked on a missing `llvm-rc`, not on the code; source read of `wry webview2/mod.rs` shows Windows uses real `WS_CHILD`+`SetWindowPos` absolute positioning (same family as macOS, NOT Linux's GtkBox packing) — narrows but does not close 38-E01, which still needs a live Windows run | tauri, webview, multiwebview, unstable, embed, windows, webview2, cross-compile, phase-38 |
 
 > **Overall Idea C feasibility (spikes 009–012):** A Rust/Tauri rearchitecture is **FEASIBLE but is
 > a deliberate reshape, not a free lunch** — and the divorce from Heroic upstream is its dominant
@@ -376,6 +379,38 @@ multiwebview API. All macOS-only evidence, like 013–015.
   anti-bot posture inside an embed (its pre-auth 403 is a known parked blocker). *(016–018.)*
   Retina/drag-resize/Windows/Linux filed as Phase 38 ledger items `38-E01`..`38-E04` (D-04,
   Phase 40 Plan 10); Epic's anti-bot posture probed by spike 024 (3 runs, 2026-09-05): the store RENDERED once on first contact but was Cloudflare-Turnstile-challenged on both later runs including from a fresh container, so it is NOT reliably browsable. D-05's scope-out stands.
+- **Linux's embed geometry model is fundamentally different from macOS/Windows, not just
+  unmeasured.** `Window::add_child`'s `WindowChild` webviews always pack into the window's
+  shared `GtkBox` on Linux (`tauri-runtime-wry` hardcodes `default_vbox()` for this kind on
+  every non-Windows/macOS/iOS/Android target — the SAME box the main webview itself uses) —
+  never a `GtkFixed`. wry's `set_bounds` only writes when the parent is a `GtkFixed`
+  (`is_in_fixed_parent`), so on Linux it silently no-ops: every `set_position`/`set_size` call
+  in spike 025/026 returned `Ok` while leaving both webviews pinned at an even 50/50 window
+  split. **017's entire "renderer measures a rect, backend places the child there" design has
+  no floor on Linux** — this is a layer below the retina/drag-resize refinement `38-E03`/
+  `38-E04` already asked about; it is whether positioning works AT ALL. Windows, by contrast,
+  uses real `WS_CHILD` + unconditional `SetWindowPos` (same family as macOS's NSView subview) —
+  a live Windows run is still needed, but the source is NOT the Linux shape. *(025/026, 027 for
+  the Windows contrast.)*
+- **`data_store_identifier` per-store cookie isolation is ALSO a silent no-op on Linux** — wry's
+  GTK backend never reads the field at all (`fetch_data_store_identifiers` is hardcoded to the
+  macOS `wkwebview` module); every webview shares one `WebKitWebContext`. An "isolated" child in
+  spike 026 saw the full 10-cookie shared jar, not just its own 2. This resolves spike 015/018's
+  own "Windows/Linux parity unverified" caveat, for Linux, in the negative. *(026.)*
+- **A second `Window` with two child webviews segfaults natively on Linux, reproducibly.**
+  `libwebkit2gtk-4.1.so.0.19.7` crashed at the identical instruction offset in 2/2 runs of spike
+  016's "Probe B" shape (bare `Window` + an app-origin panel child + an externally-navigating
+  store child), with no Rust panic — only visible via `journalctl`. Isolated by a one-line
+  skip-flag: the primary single-embed-on-the-existing-main-window shape (what GameLib's in-app
+  store tab actually needs) completed cleanly with the same flag set, 0 segfaults. Treat any
+  future design that opens a SEPARATE window per embedded store as unproven on Linux until this
+  is root-caused; the shape already in use (one embed on the main window) is not implicated.
+  *(026.)*
+- **Compile/runtime feasibility itself is no longer unmeasured for either platform, only
+  incomplete.** `38-E01`/`38-E02`'s recorded premise — "no implementation exists yet" — is
+  superseded: Linux compiles AND runs (with the three caveats above); Windows type-checks
+  cleanly against `webview2-com`/`windows` via cross-target `cargo check` from this Linux host,
+  though no live Windows run has happened yet. *(025/026/027.)*
 
 ---
 

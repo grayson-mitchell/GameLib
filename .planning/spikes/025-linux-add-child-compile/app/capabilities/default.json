@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Control panel (main window webview) and probe B's panel child webview. The store embed itself gets NO capability — it is a remote origin and must stay IPC-dead (spike 014b showed remote invoke is ACL-refused anyway; we do not grant it a thing).",
+  "windows": ["main", "multi"],
+  "webviews": ["multi-panel"],
+  "permissions": ["core:default"]
+}

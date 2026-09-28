@@ -1,2 +1,48 @@
 #!/bin/bash
 pnpm codecheck && pnpm lint && pnpm prettier && pnpm i18n --fail-on-update && pnpm find-deadcode
+checks_status=$?
+
+# Best-effort refresh of the gitignored graphify-out/ knowledge graph after a
+# passing push. This step is NEVER a gate: line 2's chain above is the only
+# thing that decides the push, and checks_status (captured immediately after
+# it, before anything else can overwrite $?) is what this hook ultimately
+# exits with.
+#
+# It runs only when checks_status is 0, so a red push never pays the rebuild
+# and graphify's own progress output can't bury the failing check's error.
+#
+# This hook has no errexit -- git runs it straight through its #!/bin/bash
+# shebang (husky 8.0.3, core.hooksPath=.husky, and it does not source
+# .husky/_/husky.sh), so nothing wraps it in an errexit shell either. Turning
+# errexit on here would let a graphify failure end the hook early and block
+# the push, which is exactly what this step must never do.
+#
+# `command -v graphify` is the probe because graphify is a per-developer
+# `pip install --user` binary (this machine: ~/.local/bin/graphify), absent
+# in CI, on other contributors' machines, and from PATH for non-login shells
+# and GUI git clients.
+#
+# stdin is redirected from /dev/null because git writes the pushed-ref list
+# to this hook's stdin, and graphify has no business reading it.
+#
+# Measured cost (graphify 0.9.70, 2026-09-28): ~39s on a no-change rerun,
+# ~79s with a cold AST cache. `graphify update` also waits on graphify's own
+# per-repo rebuild lock, so a concurrent rebuild delays the push rather than
+# failing it.
+#
+# The chain stays on line 2 because meta/__tests__/tsconfigMeta.test.ts:94
+# cites .husky/pre-push:2.
+if [ "$checks_status" -eq 0 ]; then
+  if command -v graphify >/dev/null 2>&1; then
+    echo "pre-push: checks passed, refreshing graphify-out/ via 'graphify update .' (best-effort, cannot block the push)" >&2
+    graphify update . </dev/null
+    graphify_status=$?
+    if [ "$graphify_status" -ne 0 ]; then
+      echo "pre-push: 'graphify update .' exited $graphify_status, graphify-out/ may be stale (best-effort, the push continues)" >&2
+    fi
+  else
+    echo "pre-push: graphify not found on PATH, skipping the graphify-out/ refresh (best-effort, the push continues)" >&2
+  fi
+fi
+
+exit "$checks_status"

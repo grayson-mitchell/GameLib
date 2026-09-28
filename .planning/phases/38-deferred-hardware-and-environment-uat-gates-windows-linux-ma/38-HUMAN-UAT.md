@@ -1,9 +1,9 @@
 ---
 status: false
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
-source: [38-VERIFICATION.md, 34.1-HUMAN-UAT.md items 1a and 7, 34.10-VERIFICATION.md deferred[0]]
+source: ["38-VERIFICATION.md", "34.1-HUMAN-UAT.md items 1a and 7", "34.10-VERIFICATION.md deferred[0]"]
 created: 2026-08-22
-updated: 2026-09-26
+updated: 2026-09-28
 sessions:
   - "Session 1 -- 2026-09-23, Windows 11, tauri dev build `6ad1d7cd9` -- 38-S06 PASS; 38-S08 FAIL row 4; four new defects filed; controller leg not run (blocking defect fixed afterward)"
   - "Sitting 2 -- 2026-09-23, Windows 11, tauri dev build `2cf170c14` -- 38-S08 re-scored PASS on all four checks"
@@ -27,7 +27,10 @@ See the "## Sitting 4" and "## Sitting 5" sections below for the artifacts. `38-
 remains authoritative: as of 2026-09-26 it holds 11 open items, 15 discharged, 10 retired. The "6 items seeded, 0
 discharged" figure this paragraph used to carry was already stale before this reconciliation, for
 reasons unrelated to any of these sittings — see the `## Retired` section's note on that same
-staleness.]
+staleness. On 2026-09-28, quick `260928-raq` — which was NOT a sitting, no hardware was touched —
+discharged `38-E02` as ANSWERED on spike evidence, so the ledger now holds 10 open items, 16
+discharged, 10 retired. See the "Spike evidence — 2026-09-28 (not a sitting)" section below for
+the artifacts.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -659,3 +662,37 @@ One claim inside `38-W06` is explicitly an **inference, not a measurement**: a s
 vanished between Rust's post-removal re-read and the TypeScript one, which is _consistent with_ an
 asynchronous `delete_cookie` but does not establish it; two timestamps are not a mechanism. Four
 todos were filed from this sitting and **none is resolved by either PASS recorded here**.
+
+## Spike evidence — 2026-09-28 (not a sitting)
+
+**No operator sitting took place on 2026-09-28.** No hardware was booted, no controller was
+paired, and no entry was added to this file's `sessions:` list. What changed came from reading
+and running three existing spikes against a real Linux desktop and a cross-compiled Windows
+target, not from an operator observing GameLib on Windows or Linux hardware.
+
+**What changed, and how.** `38-E02` (Linux `add_child` backend feasibility) was discharged as
+ANSWERED in `38-VERIFICATION.md`: spike 025 showed attach, page load and cookie reads all work
+natively on Linux webkit2gtk; spike 026 showed positioning is a source-confirmed no-op there
+(Tauri packs the child into the window's shared `GtkBox`, and wry only writes bounds for a
+`GtkFixed` parent). `38-E01` (Windows `add_child` backend feasibility) was narrowed, not
+discharged: spike 027 type-checked the same harness against Tauri's Windows/WebView2 backend from
+a Linux host, which answers the compile-level question but not the runtime one. The Linux
+branches of `38-E03`/`38-E04` were re-gated onto a new design-decision todo instead of the
+superseded "no implementation exists" premise, since a Linux slot rect does not exist to measure
+retina scaling or drag-resize latency against until that decision lands.
+
+**Artifacts.** `.planning/spikes/025-linux-add-child-compile/README.md`,
+`.planning/spikes/026-linux-add-child-runtime/README.md`,
+`.planning/spikes/027-windows-add-child-crosscheck/README.md`, and spike 025's committed logs
+(`run-clean-probe-b-skipped.log`, `crash-segfault-journalctl.txt`, `crash-probe-b-stdout.log`,
+`events-export.json`), cited here by path only.
+
+**The ledger had also been invisible to gsd-core `audit-uat` since 2026-09-23**, because
+`38-VERIFICATION.md`'s frontmatter was invalid YAML (an unescaped colon-space sequence in
+`score:`, and six unescaped double quotes in `38-S08`'s `result:`). The same quick task repaired
+both syntax-only and confirmed the repair at the tool: `by_phase["38"]` moved from absent to 11,
+then from 11 to 10 once `38-E02` discharged.
+
+**`38-VERIFICATION.md` is authoritative**, exactly as the note above this section already says —
+this section is narrative and artifact pointers only, and records nothing that was not also
+moved in that file.
