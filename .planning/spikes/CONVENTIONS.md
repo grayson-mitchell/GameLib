@@ -142,3 +142,58 @@ question requires otherwise.
   coords → `convertPoint:toView:nil` is easy to get wrong by a title bar), and compare the
   result against the same probe driven by a REAL click. In 022 the same verified element
   yielded two DIFFERENT menus by event provenance. *(022)*
+- **Check the session's own `Platform:` line before assuming a spike needs "the other machine."**
+  Spikes 025–027 ran on a Linux session that turned out to be the operator's real, owned desktop
+  (`DISPLAY` set, two real monitors) — not a sandboxed CI runner. A macOS-authored Tauri spike
+  harness with no target-specific gate in its `Cargo.toml` (016's shape) is *already* a valid
+  Linux/Windows probe with **zero source changes**: only the one already-scoped platform-specific
+  dependency (`objc2`, used solely behind `#[cfg(target_os = "macos")]`) needs moving into
+  `[target.'cfg(target_os = "macos")'.dependencies]` so the other OS never has to resolve it.
+  *(025.)*
+- **Linux Tauri build deps are one `apt-get` away, and CI has never verified this repo needs
+  them.** `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf libgtk-3-dev
+  build-essential` — the exact list `release-tauri.yml:193` installs — plus `mingw-w64` (provides
+  `x86_64-w64-mingw32-windres`) if also cross-checking a `windows-gnu` target from the same host.
+  `rust-test.yml`'s own header comment records that this project's CI has **never** compiled
+  `src-tauri` on Linux for exactly this reason — a first local install is genuinely first
+  contact, not a formality. *(025.)*
+- **A missing `windres`/`llvm-rc` blocks a Windows `cargo check` at the resource-embed step, not
+  at your own code.** `tauri-build`'s Windows resource generation (icon embed) is unconditional
+  whenever `target_os == "windows"` — there is no `Attributes` flag to skip it — so a Windows
+  cross-check needs `icons/icon.ico` (reuse the real project's own, don't fabricate one) AND a
+  resource compiler for the chosen triple (`mingw-w64` for `-gnu`, an `llvm`/clang toolchain for
+  `-msvc`). A failure here says nothing about whether your `add_child`/webview code compiles —
+  don't let it read as a code-level blocker. *(027.)*
+- **`cargo check --target <other-os>` (no system linker needed) is a real, cheap signal — not
+  nothing, but not a live run either.** It exercises full trait resolution and proc-macro
+  expansion against the target's real crates (`webview2-com`, `windows`, etc.) without needing
+  that OS's linker at all. Treat a pass as "the API surface compiles here," never as "it works
+  here" — 026 found that even a *successful, source-confirmed* cross-platform builder field
+  (`data_store_identifier`) can be a silent runtime no-op on a backend that never reads it.
+  Source-reading the dependency (not just running the harness) is what turned that from a
+  suspicious log line into a citable, root-caused finding — grep the actual backend module
+  (`wry-X.Y.Z/src/<backend>/mod.rs`) for the API in question before trusting a builder-pattern
+  call "worked" just because it returned `Ok`. *(026/027.)*
+- **A full-desktop screenshot on a real (non-sandboxed) machine is a privacy incident, not just
+  noise.** `mss`/`import`/`scrot` grabbing the whole display on the operator's actual desktop
+  captures whatever else is on screen — their other windows, browser tabs, editor buffers.
+  Get the target window's exact geometry first (`xwininfo -id <id>` after `xdotool search --pid
+  <pid>`), region-capture only that rect, and if a stray full-desktop grab happens anyway
+  (e.g. because the process had already exited and the "hit" was really whatever window
+  happened to occupy that screen position), **delete it immediately** rather than inspect it
+  further — this extends 016's macOS `screencapture -l<id>` discipline to X11, where the
+  equivalent tool (`xdotool`/`xwininfo`/`mss` region grab) has to be assembled by hand and no
+  native per-window capture flag exists. A window's reported geometry can also go stale within
+  seconds if the process has already exited (`BadWindow` on `xdotool windowactivate` for an ID
+  that answered `xwininfo` moments earlier) — re-resolve the window id immediately before
+  capturing, don't cache it across several other tool calls. *(025.)*
+- **A silent native crash (no Rust panic, process just vanishes) means check `journalctl`/`dmesg`
+  for a segfault before assuming a clean exit or a hung process.** `libwebkit2gtk`'s crash in 026
+  produced zero output on stdout/stderr and no panic — only `journalctl --since ... | grep
+  segfault` revealed it, twice, at the identical instruction offset, which is what turned "the
+  window just closed" into a confirmed, reproducible native defect. *(026.)*
+- **Isolate a multi-phase autorun crash with a one-line env-gated skip, not a rewrite.** When
+  phase 6 of a shared multi-phase `autorun()` crashed, adding `if
+  std::env::var("SPIKE_SKIP_X").is_ok() { ...skip... } else { ...original... }` around just that
+  phase (leaving 1–5 and 7–8 untouched) isolated the defect to that phase in one rebuild
+  (1.95s incremental) without disturbing the evidence trail for everything else. *(026.)*
