@@ -10,6 +10,7 @@ sessions:
   - "Sitting 3 -- 2026-09-25, Windows 11, tauri dev build `cdf07ee95`/`959e5c01b` -- eight controller items (38-C01a, 38-C01b, 38-C02, 38-C03, 38-C04a, 38-C05, 38-C06, 38-C08) all discharged PASS"
   - "Sitting 4 -- 2026-09-26, Windows 11, INSTALLED shell v0.7.0 (built 2026-09-24 07:34 from `5b6201e26`) -- attribution INFERRED from commit dates, not measured; label corrected by quick 260926-bsl -- 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision"
   - "Sitting 5 -- 2026-09-26, Windows 11, INSTALLED shell v0.7.0 (built 2026-09-24 07:34 from `5b6201e26`) with the repo build/main sidecar; label corrected by quick 260926-b5r -- 38-S02 PASS, 38-W06 FAIL accepted; 38-S14 sub-case (a) PASS but item stays OPEN; 38-W04 not run (no CI artifact exists); four defects filed"
+  - "Sitting 6 -- 2026-09-28, Linux (Pop!_OS 22.04, X11), tauri dev build `54a931199`, identity proven by PID -- 38-S04 PASS"
 ---
 
 ## Current Test
@@ -30,7 +31,9 @@ reasons unrelated to any of these sittings — see the `## Retired` section's no
 staleness. On 2026-09-28, quick `260928-raq` — which was NOT a sitting, no hardware was touched —
 discharged `38-E02` as ANSWERED on spike evidence, so the ledger now holds 10 open items, 16
 discharged, 10 retired. See the "Spike evidence — 2026-09-28 (not a sitting)" section below for
-the artifacts.]
+the artifacts. Later the same day, Sitting 6 — the FIRST LINUX SITTING — discharged `38-S04` PASS,
+so the ledger now holds 9 open items, 17 discharged, 10 retired; see the "## Sitting 6" section
+below for the artifacts.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -696,3 +699,92 @@ then from 11 to 10 once `38-E02` discharged.
 **`38-VERIFICATION.md` is authoritative**, exactly as the note above this section already says —
 this section is narrative and artifact pointers only, and records nothing that was not also
 moved in that file.
+
+## Sitting 6 — 2026-09-28, Linux (Pop!_OS 22.04, X11), `pnpm tauri:dev` at `54a931199`
+
+**This is the FIRST LINUX SITTING Phase 38 has ever had.** The 2026-09-28 spike-evidence section
+above explicitly was not a sitting (no hardware was booted); this one is: `pnpm tauri:dev` was
+launched live on this Linux host under a synthetic X11/`xdotool`/`mss` capture instrument, and
+one item, `38-S04`, was scored.
+
+**Conditions.** Build identity was PROVEN, not labelled: the GameLib window's `_NET_WM_PID`
+resolved through `/proc/<pid>/exe` to `src-tauri/target/debug/gamelib-shell`, and
+`git status --porcelain -- src src-tauri package.json` was empty at launch (HEAD `54a931199`).
+This sitting ran under the operator's REAL `HOME`, DECLARED as a real-profile arm under CLAUDE.md's
+two-profile rule (half 2): `shell.openExternal(steam://install/<id>)` hands off through `xdg-open`
+to the real Steam client, and a faked `HOME` would have bootstrapped a second Steam install into a
+fake profile instead of using the operator's actual, signed-in Steam session. This was the FIRST
+GameLib Tauri run on this host, and it created `~/.config/GameLib/` as real, persistent profile
+state — left in place for the remaining Linux items (`38-S10`, `38-S12`, `38-S16`'s Linux half).
+Native Steam installs were OFF: `~/.config/GameLib/config.json` key
+`defaultSettings.enableSteamNativeInstall` was already `false` at session start (the runtime
+default), so no toggle was needed. The lowercase `~/.config/gamelib/` directory belongs to a
+stale, unrelated Electron-era deb build and is not read by this build. The Steam desktop client
+was confirmed running and signed in (`pgrep -x steam`) before the scored click, after the operator
+completed Task 2's sign-in — the GameLib in-app Steam login showed "Connected" and the Library
+listed 381 games including many Steam titles. The Linux log sink is
+`~/.local/state/GameLib/logs/gamelib.log` (NOT the `pnpm tauri:dev` terminal — sidecar log lines
+never reach it, per the live-gate contract).
+
+**Positive control.** Run BEFORE the scored click, per Test 4 (absence-observability), via the
+`SteamInstallCaret` menu's "Install with options…" item on the WazHack game page. Max
+changed-pixel fraction across the burst was 0.1090 (>= the 0.10 threshold), and the max-diff frame
+was viewed and confirmed to show the `contentLightNotice` dialog ("This installs through Steam's
+own client, so there's nothing to choose here..."). The dialog was closed via its own X button and
+a follow-up grab confirmed it was gone. This control proves the absence instrument CAN see a
+GameLib dialog before any scored observation is trusted; it does not itself score `38-S10` or
+`38-S16`.
+
+**The result — `38-S04` PASS.** Target: WazHack, Steam appId `264160` — owned (377 hours logged
+playtime), visible in the Library, and confirmed NOT installed (`appmanifest_264160.acf` absent
+from all four `libraryfolders.vdf` library paths on this host, matching the app's own
+`steam_library.json` cache, `is_installed: false`). The scored click landed on the PRIMARY half of
+the Install button (the button face, not the caret) at absolute coordinates (1778, 941), captured
+by a 6-second burst at fps=18.6, median inter-frame interval 50.6ms. The arming log line, read from
+`gamelib.log` at 07:27:34 — matching the click's epoch millisecond to the second — was:
+
+`SteamGame: delegating install for appId 264160 via steam://install/264160`
+
+(`src/backend/storeManagers/steam/games.ts:1194-1197`, reachable only when
+`isSteamNativeInstallEnabled()` is false at `:1185`). Its presence proves the no-target branch
+(`InstallGameModal.ts:245-253`) ran and the degrade branch (`:275`, the only quick-install route to
+a dialog) did not — the two are mutually exclusive at `:263-275`. No ERROR line and no `34.13
+installSteamGame: the install dispatch REJECTED` line appeared anywhere in the click-to-+20s
+window. The maximum changed-pixel fraction across the entire scored burst was 0.0209 — well under
+the flag threshold of half the positive control (0.0545) — and zero frames were flagged. Every
+frame VIEWED (the pre-click frame, the max-diff frame, the +10s still and the +20s still) shows
+only GameLib's own in-place "Installing…" progress-bar and button-label state change on the
+WazHack game page. No dialog, modal, overlay, picker, error dialog, or any partial or flashing one
+ever appeared.
+
+**Window attribution.** `clients` dumps taken at baseline, mid-burst, +10s and +20s recorded an
+IDENTICAL window-id set throughout — zero new top-level windows at any point. The only
+non-desktop windows present the whole time were the GameLib window itself (PID `23810`, this
+sitting's proven-identity build) and a PRE-EXISTING Steam client window (`steamwebhelper`, PID
+`34245`, `WM_CLASS` `"steamwebhelper","steam"`, title `"Steam"`). Per D-18 and the objective's
+SCORED SURFACE rule, that Steam-client window is the expected handoff — recorded here, and NOT
+scored against the item. No appmanifest for appId `264160` appeared at +20s+ on the Steam side
+either, so no download started and nothing needed cancelling.
+
+**Scope note.** With native installs OFF, the primary-half click never evaluates
+`resolveSteamSectionGating`. This PASS observes the Linux quick-install DISPATCH — the no-target
+branch, `installSteamGame`, `shell.openExternal` through `xdg-open` — not the
+`platformRow: 'absent'` absent-row render, which belongs to `38-S10` and to `38-S16`'s Linux half.
+
+**Honest-limits paragraph.** The measured ~50ms frame interval bounds the shortest flash this
+burst could see; a dialog that opened and closed faster than that would not have been caught. The
+structural argument from the arming-line/degrade-branch mutual exclusivity covers the quick-install
+dialog path specifically, and says nothing about an unrelated overlay elsewhere in the app. The
+evidence here is entirely machine-side — no operator eyeball was collected during the scored click
+itself, unlike sitting 5's `38-S02`/`38-W06`.
+
+**`38-S10`, `38-S12` and `38-S16`'s Linux half were NOT scored this sitting.** The positive
+control incidentally exercised the row-7 dialog surface those items cover, but nothing was
+recorded against them; the instrument built for this sitting (`linux_sitting_capture.py`) is
+reusable for them as cheap next candidates.
+
+**Artifacts.** `.planning/quick/260928-tvk-run-live-linux-sitting-for-phase-38-item/evidence/`:
+`positive-control-max.png`, `scored-pre-click.png`, `scored-max-diff.png`, `scored-plus10s.png`,
+`scored-plus20s.png`, `clients-new-windows.txt`, `log-excerpt.txt`. Capture instrument:
+`.planning/quick/260928-tvk-run-live-linux-sitting-for-phase-38-item/linux_sitting_capture.py`.
+quick `260928-tvk`.
