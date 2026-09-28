@@ -141,3 +141,41 @@ before assuming anything has changed.
     jar.
 - **Nothing else changes.** This todo stays `ready: code` in `pending/`, and its remaining work
   is unchanged. No code was written by quick 260929-9qr.
+
+## Addendum (2026-09-29, spike 028): the UNVERIFIED layout question has a real answer — and a bigger, unresolved one behind it
+
+The operator asked directly to spike the `## Decision (2026-09-28)` section's own "An UNVERIFIED
+question to record" bullet: can anything other than GTK's default even split be reached through
+the platform widget handle, without changing `tauri-runtime-wry`? Full evidence and Investigation
+Trail: `.planning/spikes/028-linux-add-child-gtkbox-packing-lever/README.md`. Verdict: **⚠ PARTIAL.**
+
+- **YES, a real lever exists, and it does not need `tauri-runtime-wry`/wry patched.**
+  `tauri::Window::default_vbox()` and `Webview::with_webview` -> `PlatformWebview::inner()` are
+  both PUBLIC, non-`unstable`-gated Tauri API (Linux-family only) that hand application code the
+  real GTK objects. Removing the embed's widget from the shared vbox, wrapping it in an
+  application-created `gtk::Fixed`, and positioning it with stock `gtk-rs` calls
+  (`gtk::Fixed::move_` + `WidgetExt::set_size_request`) achieved an EXACT, arbitrary, off-center
+  rect (`700x400`), confirmed on two independent oracles, surviving two window resizes — in the one
+  run it succeeded. This settles the "UNVERIFIED question" bullet: option (a)'s layout is not
+  limited to the forced 50/50 split spike 026 found; a real positioning escape hatch exists.
+- **A second, more severe, and genuinely UNRESOLVED finding was surfaced by the SAME spike, not
+  asked for, and it now matters more than the lever question:** in 10 of 11 total runs — across
+  four different variants (plain, a longer post-create sleep, an explicit GTK main-loop pump, and
+  a first-ever-create variant with no prior destroy/recreate history) — the embed webview received
+  NO GTK allocation at all, stuck at GTK's own "never laid out" sentinel, surviving pumps, sleeps,
+  and even a real window resize that itself silently failed to take visible effect. Visually
+  confirmed absent via a region-captured screenshot (no embed content rendered anywhere). Root
+  cause was NOT identified within the spike's scope — a window-focus/mapping hypothesis is
+  recorded as untested, not confirmed.
+- **What this changes for whoever builds the GTK-box-native layout.** The layout STRATEGY question
+  (option (a) vs (b)/(c)/(d)) is unaffected — still locked, per the 2026-09-28 decision above. But
+  the phase that builds it inherits a live reliability question this todo did not previously carry:
+  reliable webview allocation on Linux at all, independent of which packing/positioning approach is
+  used. Recommend a dedicated follow-up investigation (very likely another spike, scoped to the
+  focus/mapping hypothesis) BEFORE committing implementation effort to the `reparent_fixed` lever
+  or any other layout code — building against a mechanism that fails 10 of 11 times on this same
+  machine, for an unknown reason, is not yet a buildable foundation even though it worked once.
+- **Nothing else changes.** `ready: code` stands — the human-decision gate for the STRATEGY was
+  already satisfied by the 2026-09-28 decision, and this reliability question is new information
+  for the implementing phase, not a reopened decision. `severity: minor` stands too: the shipped
+  app is still macOS-gated (`src-tauri/Cargo.toml:114-128`), unaffected either way.
