@@ -7182,10 +7182,7 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // structurally always `None` for it, for every label, fresh or stale -- so this
             // branch is gated on BOTH "no such webview window" AND "the domain being cleared
             // is one of Epic's own", the only combination `legendary/user.ts`'s
-            // `clearEpicCookies` step can ever produce. Every other caller (Humble/GOG/Amazon,
-            // all still routed through a live Tauri-managed window at this point) fails the
-            // domain check and falls straight through to the existing `no-window` error below,
-            // completely unchanged.
+            // `clearEpicCookies` step can ever produce.
             //
             // Phase 35 plan 09 (D-09-CORRECTED): the domain check now spans the whole
             // `EPIC_COOKIE_DOMAINS` set, not the single `epicgames.com` literal it used to be,
@@ -7203,6 +7200,37 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // `gog/user.ts`/`nile/user.ts`) -- neither store opens a Tauri-managed window at
             // logout time, so `existing_window` is structurally `None` for them too, same as
             // Epic's pristine window. `EPIC_COOKIE_DOMAINS` itself is left untouched.
+            //
+            // Single caller-routing statement for BOTH cookie arms (this one and the sibling
+            // `humble_login_cookies_for_domain` census arm below, which points HERE instead of
+            // carrying its own copy -- a second copy drifting out of sync with this one is what
+            // produced the contradiction this note replaces, twice over). This arm has exactly
+            // four production callers, cited by symbol rather than line number because line
+            // numbers are what drifted last time:
+            //   * Humble's `disconnect()` (`humble/user.ts`) passes a REAL label, from its own
+            //     `seam.open()` call.
+            //   * Epic's `clearEpicCookies` (`legendary/user.ts`), GOG's
+            //     `clearGogCookiesForLogout` (`gog/user.ts`) and Amazon's
+            //     `clearAmazonCookiesForLogout` (`nile/user.ts`) all pass SENTINEL labels that
+            //     can never name a live window: `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL`,
+            //     `GOG_COOKIE_CLEAR_NO_WINDOW_LABEL`, `AMAZON_COOKIE_CLEAR_NO_WINDOW_LABEL`.
+            //
+            // On macOS: Humble ALONE reaches the window-based branch below, because it alone
+            // has a real Tauri-registered window -- `existing_window.is_none()` is already
+            // false for it, so it never depends on the domain check below at all. The other
+            // three all take THIS fallback instead: Epic via `epic_cookie_domain_matches`, GOG
+            // and Amazon via `store_logout_cookie_domain_matches`.
+            //
+            // On Windows/Linux: this whole fallback is compiled out
+            // (`#[cfg(target_os = "macos")]` below -- it never even runs there). GOG's and
+            // Amazon's helpers (`clearGogCookiesForLogout`, `clearAmazonCookiesForLogout`)
+            // return early before ever calling this arm off macOS, and `clearEpicCookies`'s own
+            // `isMac` ternary opens a REAL hidden window and passes ITS real label there
+            // instead of the sentinel. So off macOS every caller that reaches this arm at all
+            // carries a real window label, and no caller is expected to hit the
+            // `humble_login:no-window:{label}` error below by design -- this is NOT the same
+            // claim as the macOS paragraph above, and writing it as though it were is the exact
+            // drift this note replaces.
             #[cfg(target_os = "macos")]
             if existing_window.is_none()
                 && (epic_cookie_domain_matches(domain)
@@ -7895,16 +7923,22 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             // for the mechanism and the wry-round-trip accounting it preserves.
             //
             // Gated on BOTH "no such webview window" AND "the domain is one of Epic's own",
-            // the only combination `legendary/user.ts`'s census can ever produce. Every other
-            // caller (Humble/GOG/Amazon, all still routed through a live Tauri-managed window
-            // here) fails the domain check and falls straight through to the unchanged
-            // `no-window` error below.
+            // the only combination `legendary/user.ts`'s census can ever produce.
             //
             // Phase 40 plan 04 (D-15, T-40-04-07/-08): OR'd with
             // `store_logout_cookie_domain_matches`, mirroring the sibling widening in
             // `humble_login_clear_cookies` above -- GOG/Amazon's before/after cookie census
             // needs the SAME no-window path their clear already takes, or the census would
             // always read `no-window:{label}` and never prove the clear did anything.
+            //
+            // Caller routing (who reaches THIS branch vs. the window-based read below, on
+            // which platform) is NOT restated here -- it lives once, in
+            // `humble_login_clear_cookies`'s own "Single caller-routing statement" note above,
+            // to keep it from drifting out of sync the way it just did. This arm's callers are
+            // the SAME four, reached through `seam.cookiesForDomain` rather than
+            // `seam.clearCookies`, and Epic's census reuses the very same `label` binding
+            // `clearEpicCookies`'s `isMac` ternary already produced for the clear call -- so
+            // the routing is identical, not merely similar.
             #[cfg(target_os = "macos")]
             if existing_window.is_none()
                 && (epic_cookie_domain_matches(domain)
