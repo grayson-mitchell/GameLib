@@ -140,6 +140,101 @@ REQUIRED_STATE_KEYS: tuple[str, ...] = (
 # the narrative fields a future by-hand append is most likely to corrupt or delete.
 NON_EMPTY_STRING_KEYS: tuple[str, ...] = ("stopped_at", "last_activity")
 
+# ---------------------------------------------------------------------------
+# Phase VERIFICATION/UAT ledger walk (quick task 260928-sph). See the module docstring's
+# PHASE-LEDGER WALK section for the incident and the audit-uat mechanism this closes.
+# ---------------------------------------------------------------------------
+
+# Statuses at which gsd-core's audit-uat opens a VERIFICATION file and reads its
+# human_verification array. A parse failure at either status silently drops the whole
+# phase's open items from the audit -- this is the incident (uat.cjs:206-212, measured
+# against @opengsd/gsd-core 1.14.0; that file is outside this repo, unversioned, and moves
+# on the next gsd-core upgrade).
+OPEN_VERIFICATION_STATUSES: tuple[str, ...] = ("human_needed", "gaps_found")
+
+# 2026-09-28 census: 85 active ledgers under phases/*/ plus 4 archived under
+# milestones/v0.1-phases/*/ = 89. A walk below this floor means the glob broke (a directory
+# rename, a moved .planning tree), not that ledgers were legitimately deleted -- the same
+# tight-floor convention meta/runPlanningGates.py's MINIMUM_EXPECTED_GATES uses (DD-7).
+MINIMUM_PHASE_LEDGERS = 89
+
+# NEVER add a pin to either table below to make a real failure go away -- fix the ledger.
+# Pins only ever shrink; a stale pin (the file no longer exists, now parses, or now has a
+# fence) FAILS loudly rather than silently disappearing (DD-4).
+
+# (path relative to PLANNING_DIR as a posix string, reason). Ledgers with NO frontmatter
+# fence at all. audit-uat still reads UAT body items regardless of status (uat.cjs:137-
+# 139,155), so these two are not incidents today -- but a NEW no-fence file is not
+# automatically safe, hence pinned by name rather than exempted by shape.
+KNOWN_NO_FRONTMATTER: tuple[tuple[str, str], ...] = (
+    (
+        "phases/30-tauri-ipc-re-plumb-slice-1-install-uninstall-update-check/30-HUMAN-UAT.md",
+        "prose results doc; audit-uat reads its 15 items from the body regardless (uat.cjs:155)",
+    ),
+    (
+        "phases/40-in-app-store-and-wiki-browsing-under-tauri-embedded-child-we/40-EMBED-API-VERIFICATION.md",
+        "a D-25 crate-source verdict doc, not a verify-phase ledger",
+    ),
+)
+
+# (path relative to PLANNING_DIR as a posix string, pinned status). Ledgers whose
+# frontmatter does not parse but whose status is TERMINAL (never human_needed/gaps_found),
+# so audit-uat never opens them today. The pinned status is cross-checked against a SHAPE
+# READ of the file's own column-0 `status:` line -- a pinned file whose status silently
+# moves still FAILS (DD-2). This is the ledger analogue of REQUIRED_STATE_KEYS above.
+KNOWN_UNPARSEABLE_TERMINAL: tuple[tuple[str, str], ...] = (
+    (
+        "phases/34.13-steam-install-time-wine-bottle-form-gog-parity/34.13-UAT.md",
+        "complete",
+    ),
+    (
+        "phases/34.4.1-tauri-embedded-browser-login-seam-replace-the-electron-webvi/34.4.1-VERIFICATION.md",
+        "passed",
+    ),
+    (
+        "phases/39-repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec/39-VERIFICATION.md",
+        "passed",
+    ),
+)
+
+assert not any(status in OPEN_VERIFICATION_STATUSES for _, status in KNOWN_UNPARSEABLE_TERMINAL), (
+    "a pinned unparseable-terminal status must never be an OPEN status -- pinning an "
+    "open-status file as terminal would hide it exactly like the incident this gate exists "
+    "to close (DD-4)"
+)
+_LEDGER_NO_FM_PATHS = {p for p, _ in KNOWN_NO_FRONTMATTER}
+_LEDGER_UNPARSEABLE_PATHS = {p for p, _ in KNOWN_UNPARSEABLE_TERMINAL}
+assert not (_LEDGER_NO_FM_PATHS & _LEDGER_UNPARSEABLE_PATHS), (
+    "a path must not be pinned in both KNOWN_NO_FRONTMATTER and KNOWN_UNPARSEABLE_TERMINAL "
+    "-- a ledger either has no fence or has one that fails to parse, never both (DD-4)"
+)
+
+# Shape read (NOT a parser -- see read_status_line's own docstring) of a whole column-0
+# `status:` line: an optional matching single or double quote around an `[A-Za-z_]+` value,
+# tied to its opener via a backreference, and an optional trailing ` #comment`.
+STATUS_LINE_RE = re.compile(r'^status:\s*(?P<q>["\']?)(?P<value>[A-Za-z_]+)(?P=q)(?:\s+#.*)?$')
+
+# 90-byte windows sliced from the REAL pre-repair `38-VERIFICATION.md`
+# (`git show 0801e07eb^:.planning/phases/38-deferred-hardware-and-environment-uat-gates-windows-linux-ma/38-VERIFICATION.md`),
+# before quick `260928-raq`'s syntax repair. Extracted programmatically, never retyped --
+# see the docstring's note on HISTORICAL_EXCERPT above for why a hand-rendered dump of a
+# region like this is not to be trusted, and why both are sha256-guarded before use.
+#
+# Score excerpt: the first `score:` line's unquoted plain scalar, sliced starting at the
+# substring `11 relocated items OPEN`. Contains the `2026-09-23: ` colon-space shape (real
+# incident shape 1) and 0 double quotes.
+LEDGER_SCORE_EXCERPT = (
+    "11 relocated items OPEN, 15 discharged (sitting 1, 2026-09-23: `38-S06` PASS, `38-S08` FAI"
+)
+LEDGER_SCORE_EXCERPT_SHA256 = "d96828c5d2f03bf0081cdd1fe83feaa08d5f4800c66d395511cf7e8092bdc853"
+
+# Result excerpt: the `38-S08` `result:` line's double-quoted scalar, sliced starting at the
+# substring `the viewport centre as`. Contains 3 raw double quotes (real incident shape 2).
+LEDGER_RESULT_EXCERPT = (
+    'the viewport centre as `cls":"selectFieldWrapper Field "` (the library dropdown) where eve'
+)
+LEDGER_RESULT_EXCERPT_SHA256 = "07fa7b5a6a446b4867c45d1d544267a5954faf7bddda04ef8988893c2bf4fa6e"
+
 FENCE = "---"
 
 # 90-byte window sliced from the REAL pre-fix `last_activity` line (file line 8 of
@@ -379,6 +474,234 @@ def check_document(text: str, required: bool, node: str, label: str) -> tuple[bo
     )
 
 
+def find_phase_ledgers(planning_dir: Path) -> list[Path]:
+    """Walk phase-ledger directories and return every file gsd-core's audit-uat would treat
+    as a phase VERIFICATION/UAT ledger: name ends `.md` and contains `-UAT` or
+    `-VERIFICATION`, mirroring `uat.cjs:59`/`:203`'s substring selection. Walks BOTH
+    `phases/*/` and archived `milestones/*-phases/*/`, one level deep, because audit-uat
+    scans archives too (`uat.cjs:84-123`, DD-7). Takes `planning_dir` as a PARAMETER, never
+    the module global, so the self-test's scan-level floor case can point this at an empty
+    temp directory without touching the real tree."""
+    phase_dirs: list[Path] = []
+
+    phases_root = planning_dir / "phases"
+    if phases_root.is_dir():
+        phase_dirs.extend(p for p in phases_root.iterdir() if p.is_dir())
+
+    milestones_root = planning_dir / "milestones"
+    if milestones_root.is_dir():
+        for milestone_dir in milestones_root.iterdir():
+            if milestone_dir.is_dir() and milestone_dir.name.endswith("-phases"):
+                phase_dirs.extend(p for p in milestone_dir.iterdir() if p.is_dir())
+
+    found: list[Path] = []
+    for phase_dir in phase_dirs:
+        for candidate in phase_dir.iterdir():
+            if (
+                candidate.is_file()
+                and candidate.name.endswith(".md")
+                and ("-UAT" in candidate.name or "-VERIFICATION" in candidate.name)
+            ):
+                found.append(candidate)
+
+    return sorted(found)
+
+
+def read_status_line(frontmatter_text: str) -> str | None:
+    """SHAPE READ, not a parser: apply STATUS_LINE_RE to the frontmatter REGION line by
+    line (never the body -- callers must pass only the text between the fences). Returns
+    the lowercased value when EXACTLY ONE line matches. Returns None for zero matches or
+    for more than one -- an ambiguous status line must fail closed, never guess."""
+    matches = [
+        m.group("value").lower()
+        for line in frontmatter_text.split("\n")
+        for m in (STATUS_LINE_RE.match(line),)
+        if m is not None
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    return None
+
+
+def check_phase_ledger(
+    text: str,
+    node: str,
+    label: str,
+    pinned_no_frontmatter: bool = False,
+    pinned_status: str | None = None,
+) -> tuple[bool, str]:
+    """The SAME function used by the live phase-ledger walk (check_phase_ledgers) and every
+    `ledger:` self-test case -- never a reimplementation, echoing check_document's own rule
+    above. Returns (passed, one-line report message).
+
+    Verdict order:
+      (a) no opening `---` fence at all -> NOTE if pinned_no_frontmatter, else FAIL: audit-
+          uat reads no status from a fenceless file, and deleting the fence to silence a
+          parse failure is not a fix (DD-3).
+      (b) pinned_no_frontmatter but a fence now exists -> FAIL, stale pin.
+      (c) fence exists but the file does not open with a byte-exact `---\\n` or `---\\r\\n`
+          -> FAIL (DD-6): gsd-core's frontmatterRegion would read NO frontmatter here at all
+          -- a green-while-hidden divergence.
+      (d) opening fence with no closing fence before EOF (unterminated) -> FAIL. This NEVER
+          NOTEs: an unterminated block has no frontmatter region left to shape-read.
+      (e) parses as a mapping -> FAIL if pinned_status (it parses now, stale pin), else OK,
+          reporting the parsed status. Parses but is NOT a mapping -> FAIL regardless of pin.
+      (f) does not parse -> shape-read the status via read_status_line.
+          - not pinned: FAIL, including the js-yaml error and the shape-read status; if that
+            status is open, say explicitly this is the shape that hid Phase 38.
+          - pinned: shape status None or != the pin -> FAIL (a pinned file's status silently
+            moving is exactly the incident class). shape status == pin -> NOTE.
+
+    check_divergence_shapes is deliberately NEVER called here (DD-5): its premise is the
+    retired get-shit-done-cc hand-rolled parser, and applying it to ledgers would convict 10
+    of them (19 problems), including `38-VERIFICATION.md`'s own repair.
+    """
+    lines = text.split("\n")
+    has_opening_fence = bool(lines) and lines[0].strip() == FENCE
+
+    if not has_opening_fence:
+        if pinned_no_frontmatter:
+            return (
+                True,
+                f"NOTE: {label} — pinned no-frontmatter (audit-uat reads it by body content, "
+                "not by status).",
+            )
+        return (
+            False,
+            f"{label} — phase ledger has NO frontmatter block at all; audit-uat reads no "
+            "status from it, and deleting the fence to silence a parse failure is not a fix.",
+        )
+
+    if pinned_no_frontmatter:
+        return (
+            False,
+            f"{label} — pinned in KNOWN_NO_FRONTMATTER, but a `---` fence now exists in this "
+            "file -- stale pin, remove it.",
+        )
+
+    if not (text.startswith("---\n") or text.startswith("---\r\n")):
+        return (
+            False,
+            f"{label} — the opening fence does not begin the file with a byte-exact "
+            "`---\\n` or `---\\r\\n` -- gsd-core's frontmatterRegion would read NO "
+            "frontmatter here at all (a green-while-hidden divergence, DD-6).",
+        )
+
+    fm = extract_frontmatter(text)
+    if fm is None:
+        return (
+            False,
+            f"{label} — opening `---` fence with no closing fence before EOF (unterminated "
+            "frontmatter block).",
+        )
+
+    data = run_parser(node, fm)
+    if data.get("ok"):
+        value = data.get("value")
+        if not isinstance(value, dict):
+            return (
+                False,
+                f"{label} — frontmatter parsed but is NOT a mapping (got a "
+                f"{type(value).__name__ if value is not None else 'null/empty document'}).",
+            )
+        if pinned_status is not None:
+            return (
+                False,
+                f"{label} — pinned in KNOWN_UNPARSEABLE_TERMINAL as {pinned_status!r}, but "
+                "its frontmatter now parses -- stale pin, remove it.",
+            )
+        status = str(value.get("status")).lower()
+        return (True, f"OK: {label} — frontmatter parses as a mapping; status: {status}.")
+
+    # Does not parse. Shape-read the status from the frontmatter region only.
+    shape_status = read_status_line(fm)
+
+    if pinned_status is None:
+        open_note = ""
+        if shape_status in OPEN_VERIFICATION_STATUSES:
+            open_note = (
+                " This is the EXACT shape that hid Phase 38 from audit-uat (2026-09-23 "
+                "until quick 260928-raq's repair): an open-status ledger whose frontmatter "
+                "does not parse silently drops the whole phase from the audit."
+            )
+        return (
+            False,
+            f"{label} — frontmatter does NOT parse: {data.get('error')} (shape-read status: "
+            f"{shape_status!r}).{open_note}",
+        )
+
+    if shape_status is None or shape_status != pinned_status:
+        return (
+            False,
+            f"{label} — pinned in KNOWN_UNPARSEABLE_TERMINAL as {pinned_status!r}, but a "
+            f"shape read of its status now returns {shape_status!r} -- a pinned file whose "
+            "status silently moved is exactly the incident class this gate exists to close.",
+        )
+
+    return (
+        True,
+        f"NOTE: {label} — pinned unparseable-terminal at status {pinned_status!r}; "
+        "audit-uat never opens a VERIFICATION file at a terminal status.",
+    )
+
+
+def check_phase_ledgers(planning_dir: Path, node: str) -> list[tuple[bool, str]]:
+    """Scan-level driver. First checks that every pinned path still exists (a stale
+    existence pin fails loudly rather than silently vanishing from the walk); then walks the
+    tree via find_phase_ledgers and enforces the anti-vacuity floor (DD-7) -- a walk that
+    finds nothing must FAIL, not silently pass over zero files; then runs check_phase_ledger
+    per discovered file, looking pins up by POSIX path relative to planning_dir (never
+    basename, so a same-named file in a different phase directory cannot inherit a pin)."""
+    results: list[tuple[bool, str]] = []
+
+    for rel, _ in KNOWN_NO_FRONTMATTER:
+        if not (planning_dir / rel).is_file():
+            results.append(
+                (
+                    False,
+                    f"{rel} — pinned in KNOWN_NO_FRONTMATTER but the file no longer exists "
+                    "(stale pin -- remove it).",
+                )
+            )
+    for rel, _ in KNOWN_UNPARSEABLE_TERMINAL:
+        if not (planning_dir / rel).is_file():
+            results.append(
+                (
+                    False,
+                    f"{rel} — pinned in KNOWN_UNPARSEABLE_TERMINAL but the file no longer "
+                    "exists (stale pin -- remove it).",
+                )
+            )
+
+    ledgers = find_phase_ledgers(planning_dir)
+    if len(ledgers) < MINIMUM_PHASE_LEDGERS:
+        fail(
+            f"phase-ledger walk found only {len(ledgers)} file(s) under "
+            f"{planning_dir / 'phases'} and {planning_dir / 'milestones'}/*-phases, below "
+            f"the floor of {MINIMUM_PHASE_LEDGERS}. A walk that finds nothing (or too "
+            "little) must not pass -- either ledgers were deleted, or the discovery glob "
+            "no longer matches them."
+        )
+
+    no_fm_pins = dict(KNOWN_NO_FRONTMATTER)
+    unparseable_pins = dict(KNOWN_UNPARSEABLE_TERMINAL)
+
+    for path in ledgers:
+        rel = path.relative_to(planning_dir).as_posix()
+        text = path.read_text(encoding="utf-8")
+        results.append(
+            check_phase_ledger(
+                text,
+                node,
+                label=str(path),
+                pinned_no_frontmatter=rel in no_fm_pins,
+                pinned_status=unparseable_pins.get(rel),
+            )
+        )
+
+    return results
+
+
 # ---------------------------------------------------------------------------
 # Self-test. Every case is discharged through check_document / extract_frontmatter, the SAME
 # functions used against the real tree, never a reimplementation.
@@ -395,6 +718,29 @@ VALID_STATE_DOCUMENT = (
     "progress:\n"
     "  total_phases: 39\n"
     "  current_phase: 43\n"
+    "---\n"
+    "\n"
+    "# Body\n"
+)
+
+# The repaired form quick `260928-raq` actually shipped for `38-VERIFICATION.md`: a
+# single-quoted `score:`, a backslash-escaped double-quoted `result:`, and an `expected: |`
+# block scalar. It must ACCEPT -- and it proves DD-5, because `check_divergence_shapes`
+# above (STATE.md's own divergence check) would convict BOTH the backslash-escaped `\"` and
+# the bare `|` block-scalar indicator if it were ever run against this document. It is not.
+_LEDGER_RESULT_ESCAPED = LEDGER_RESULT_EXCERPT.replace('"', '\\"')
+
+VALID_LEDGER_DOCUMENT = (
+    "---\n"
+    "phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma\n"
+    "status: human_needed\n"
+    f"score: '{LEDGER_SCORE_EXCERPT}'\n"
+    "human_verification:\n"
+    '  - id: "38-S08"\n'
+    f'    result: "{_LEDGER_RESULT_ESCAPED}"\n'
+    "    expected: |\n"
+    "      A read-only platform row; library dropdown present; wine section absent; free-\n"
+    "      space line present. All four checked independently.\n"
     "---\n"
     "\n"
     "# Body\n"
@@ -438,6 +784,32 @@ def _case_accept(label: str, text: str, required: bool, node: str) -> None:
     print(f"  self-test OK: {label} correctly accepted ({message})")
 
 
+def _ledger_reject(label: str, text: str, node: str, **pins) -> None:
+    passed, message = check_phase_ledger(text, node, label=label, **pins)
+    if passed:
+        fail(
+            f"self-test FAILED: ledger: {label} did NOT reject bad input -- gate vacuous on "
+            "this check"
+        )
+    print(f"  self-test OK: ledger: {label} correctly rejected ({message})")
+
+
+def _ledger_accept(label: str, text: str, node: str, expect_prefix: str, **pins) -> None:
+    passed, message = check_phase_ledger(text, node, label=label, **pins)
+    if not passed:
+        fail(
+            f"self-test FAILED: ledger: {label} was WRONGLY rejected ({message!r}) -- gate "
+            "convicts correct input"
+        )
+    if not message.startswith(expect_prefix):
+        fail(
+            f"self-test FAILED: ledger: {label} passed but with an unexpected message shape "
+            f"({message!r}) -- expected it to start with {expect_prefix!r}. An OK where a "
+            "NOTE was expected (or vice versa) is a distinct regression, not a pass."
+        )
+    print(f"  self-test OK: ledger: {label} correctly accepted ({message})")
+
+
 def self_test() -> None:
     node = find_node()
 
@@ -461,6 +833,16 @@ def self_test() -> None:
         nonlocal case_count
         case_count += 1
         _case_accept(label, text, required, node)
+
+    def ledger_reject(label: str, text: str, **pins) -> None:
+        nonlocal case_count
+        case_count += 1
+        _ledger_reject(label, text, node, **pins)
+
+    def ledger_accept(label: str, text: str, expect_prefix: str, **pins) -> None:
+        nonlocal case_count
+        case_count += 1
+        _ledger_accept(label, text, node, expect_prefix, **pins)
 
     # Sanity: the base document must pass clean before it is mutated into bad input below.
     accept("sanity (base valid STATE-shaped document)", VALID_STATE_DOCUMENT)
@@ -615,6 +997,73 @@ def self_test() -> None:
         "last_updated: 2026-09-11\nprogress:\n  total_phases: 39\n---\n",
     )
 
+    # ---------------------------------------------------------------------------------
+    # Phase VERIFICATION/UAT ledger self-test (quick task 260928-sph). Every case below is
+    # discharged through check_phase_ledger -- the SAME function the live walk uses -- via
+    # the ledger_reject/ledger_accept closures above.
+    # ---------------------------------------------------------------------------------
+
+    case_count += 1
+    assert hashlib.sha256(LEDGER_SCORE_EXCERPT.encode("utf-8")).hexdigest() == (
+        LEDGER_SCORE_EXCERPT_SHA256
+    ), (
+        "LEDGER_SCORE_EXCERPT does not match its pinned sha256 -- re-extract the fixture "
+        "programmatically from `git show 0801e07eb^:...38-VERIFICATION.md`; do not retype it."
+    )
+    print(
+        "  self-test OK: ledger: LEDGER_SCORE_EXCERPT matches its pinned sha256 (fixture "
+        "not corrupted)"
+    )
+
+    case_count += 1
+    assert hashlib.sha256(LEDGER_RESULT_EXCERPT.encode("utf-8")).hexdigest() == (
+        LEDGER_RESULT_EXCERPT_SHA256
+    ), (
+        "LEDGER_RESULT_EXCERPT does not match its pinned sha256 -- re-extract the fixture "
+        "programmatically from `git show 0801e07eb^:...38-VERIFICATION.md`; do not retype it."
+    )
+    print(
+        "  self-test OK: ledger: LEDGER_RESULT_EXCERPT matches its pinned sha256 (fixture "
+        "not corrupted)"
+    )
+
+    # Case: the repaired form quick 260928-raq actually shipped -- single-quoted score,
+    # backslash-escaped double-quoted result, `expected: |` block scalar. Proves DD-5: this
+    # is the exact shape check_divergence_shapes would convict (bare `|` and `\"`), and this
+    # ledger walk never calls it.
+    ledger_accept(
+        "repaired form (0801e07eb): single-quoted score, backslash-escaped result, "
+        "`expected: |` block scalar -- proves DD-5",
+        VALID_LEDGER_DOCUMENT,
+        expect_prefix="OK:",
+    )
+
+    # Case: incident shape 1, real pre-repair bytes -- an unquoted plain `score:` scalar at
+    # column 0 containing a colon-space (`2026-09-23: `).
+    ledger_reject(
+        "incident shape 1 (real pre-repair bytes): unquoted plain `score:` scalar "
+        "containing a colon-space, column 0",
+        mutate(
+            VALID_LEDGER_DOCUMENT,
+            f"score: '{LEDGER_SCORE_EXCERPT}'\n",
+            f"score: {LEDGER_SCORE_EXCERPT}\n",
+            "ledger incident shape 1",
+        ),
+    )
+
+    # Case: incident shape 2, real pre-repair bytes -- a double-quoted, indented `result:`
+    # scalar with unescaped inner double quotes.
+    ledger_reject(
+        "incident shape 2 (real pre-repair bytes): double-quoted `result:` scalar with "
+        "unescaped inner double quotes, indented",
+        mutate(
+            VALID_LEDGER_DOCUMENT,
+            f'    result: "{_LEDGER_RESULT_ESCAPED}"\n',
+            f'    result: "{LEDGER_RESULT_EXCERPT}"\n',
+            "ledger incident shape 2",
+        ),
+    )
+
     # Case (scan-level): a missing target FILE. Exercised against check_document's caller
     # (check_target_file below), not check_document directly -- the missing-file case is an I/O
     # concern, not a parsing one. Its `GATE FAILED:` message is captured, not printed, so a
@@ -691,8 +1140,41 @@ def main() -> None:
         f"{len(failed)} target(s) failed."
     )
 
-    if failed:
-        fail("frontmatter check failed for: " + " | ".join(failed))
+    # Phase VERIFICATION/UAT ledger walk (quick task 260928-sph). Runs AFTER the TARGETS
+    # walk above; its failures join the SAME final fail() call below so a ledger failure
+    # alone still exits non-zero -- a printed-but-exit-0 failure is invisible to
+    # meta/runPlanningGates.py, which reads the exit code alone.
+    ledger_results = check_phase_ledgers(PLANNING_DIR, node)
+    for _, message in ledger_results:
+        print(message)
+
+    # A stale EXISTENCE pin (the file itself no longer exists) is reported by
+    # check_phase_ledgers before it ever walks the tree -- it is not one of the walked
+    # files, so it must not inflate the "walked" count below.
+    walked = [(ok, m) for ok, m in ledger_results if "no longer exists" not in m]
+
+    ledger_ok = sum(1 for ok, m in walked if ok and m.startswith("OK:"))
+    ledger_open = sum(
+        1
+        for ok, m in walked
+        if ok
+        and m.startswith("OK:")
+        and any(f"status: {s}" in m for s in OPEN_VERIFICATION_STATUSES)
+    )
+    ledger_nofm_note = sum(1 for ok, m in walked if ok and "pinned no-frontmatter" in m)
+    ledger_unp_note = sum(1 for ok, m in walked if ok and "pinned unparseable-terminal" in m)
+    ledger_failed = [m for ok, m in ledger_results if not ok]
+
+    print(
+        f"\nPHASE LEDGERS: {len(walked)} walked (floor {MINIMUM_PHASE_LEDGERS}); "
+        f"{ledger_ok} parsed as a mapping ({ledger_open} at an open status: "
+        f"human_needed/gaps_found); {ledger_nofm_note} pinned no-frontmatter NOTE; "
+        f"{ledger_unp_note} pinned unparseable-terminal NOTE; {len(ledger_failed)} failed."
+    )
+
+    all_failed = failed + ledger_failed
+    if all_failed:
+        fail("frontmatter check failed for: " + " | ".join(all_failed))
 
     sys.exit(0)
 
