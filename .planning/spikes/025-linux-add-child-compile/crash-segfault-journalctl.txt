@@ -1,0 +1,2 @@
+Sep 28 19:15:16 pop-os kernel: spike-025-linux[38847]: segfault at 48 ip 000076415b4b8102 sp 00007ffc378cab60 error 4 in libwebkit2gtk-4.1.so.0.19.7[eb8102,76415ace4000+38ce000] likely on CPU 3 (core 3, socket 0)
+Sep 28 19:18:23 pop-os kernel: spike-025-linux[42491]: segfault at 48 ip 0000727184cb8102 sp 00007ffc7353c2c0 error 4 in libwebkit2gtk-4.1.so.0.19.7[eb8102,7271844e4000+38ce000] likely on CPU 11 (core 1, socket 0)
