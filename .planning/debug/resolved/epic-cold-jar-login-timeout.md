@@ -27,7 +27,7 @@ reasoning_checkpoint:
     - "ENVIRONMENT: `open_pristine_epic_login_window` (main.rs:3286) attaches every fresh pristine login window to the SAME shared, process-wide, long-lived `WKWebsiteDataStore.default()` rather than a per-attempt or per-session store — this is the structural precondition that lets ANY earlier session's cache entry survive into a later, logically-unrelated sign-in attempt. Without this shared/persistent store, the collision could not occur regardless of the cookie-clear's scope."
   and_gate: "YES — this requires BOTH conditions simultaneously, a genuine AND-gate, not a single-cause chain: (a) the shared, long-lived `WKWebsiteDataStore.default()` (environment) must exist so a stale entry CAN persist across logically-distinct sessions, AND (b) the cookie-only clear scope (code) must leave that entry untouched. Removing either condition alone (a fresh per-attempt data store, OR a cache-inclusive clear) would prevent the defect from arming, even with the other condition unchanged. `root_cause` below is recorded as a joined set reflecting both contributing causes, per the RCA branching guidance."
 checkpoint_verdict: "MET. All seven fields above are filled with specific, concrete, falsifiable content. The 'reproduce reliably' bar is satisfied at the session/process-trigger level (understood precisely, per blind_spots) even though the exact WebKit caching sub-mechanism could not be flipped on demand in 10 desk experiments — that gap is disclosed, not hidden, and does not touch the two DIRECTLY-observed facts the root cause actually rests on (the real run's `foundCachedEntry=1` log line, and the source-confirmed cookie-only clear scope). Proceeding to fix_and_verify."
-hypothesis: "CONFIRMED, FIXED, and RECOVERY SUPPORTED BY INDEPENDENT FILESYSTEM EVIDENCE (see reasoning_checkpoint, Resolution, and Recovery Procedure below) — cookie-only clear scope (code) + shared persistent WKWebsiteDataStore.default() (environment) jointly allowed a stale disk-cache entry from an earlier authenticated session to be replayed on a later cold-cookie sign-in attempt. Fix applied to `src-tauri/src/main.rs`, Fix-Acceptance Guardrail verdict: accepted (all 5 signals pass or are honestly skipped/N/A). Live recovery on the operator's machine is supported by independently-verified filesystem artifacts (cookie jar size, freshly-written legendaryConfig/user.json, rebuilt binary newer than fixed source) rather than by taking any report at face value; the exact one-time eviction mechanism used is not confirmed (see Recovery Procedure)."
+hypothesis: "CONFIRMED, FIXED, and RECOVERY SUPPORTED BY INDEPENDENT FILESYSTEM EVIDENCE (see reasoning_checkpoint, Resolution, and Recovery Procedure below) — cookie-only clear scope (code) + shared persistent WKWebsiteDataStore.default() (environment) jointly allowed a stale disk-cache entry from an earlier authenticated session to be replayed on a later cold-cookie sign-in attempt. Fix applied to `src-tauri/src/main.rs`, Fix-Acceptance Guardrail verdict: accepted (all 5 signals pass or are honestly skipped/N/A). Live recovery on the operator's machine is supported by independently-verified filesystem artifacts (cookie jar size, freshly-written legendaryConfig/user.json, rebuilt binary newer than fixed source) rather than by taking any report at face value. The exact one-time eviction mechanism IS now confirmed and named in Recovery Procedure (direct on-disk NetworkCache deletion in the DEV store, measured 246 files removed, cookies verified unchanged) — an earlier revision of this field recorded it as unconfirmed, which is superseded."
 test: "n/a — guardrail complete, recovery evidence independently verified"
 expecting: "n/a — guardrail complete, recovery evidence independently verified"
 next_action: "RESOLVED 2026-09-28. Session-manager correction superseded and closed out below.
@@ -141,7 +141,7 @@ started: "The pre-auth half has NEVER been verified working on this shell — it
 - timestamp: 2026-09-28
   checked: "(session-manager, resuming after a checkpoint) A report reached this session claiming a live sign-in had succeeded post-fix. Per this session's own trust-but-verify discipline (every prior claim in this file was independently corroborated before acceptance), re-verified with fresh tool calls rather than taking the report on its word: (1) traced whether `clear_default_data_store_cookies_for_domain` or `seam.clearCookies`/`clearEpicCookies` has any invocation path outside `LegendaryUser.logout()`'s wipeSteps, via `graphify query` then direct source read; (2) checked filesystem state for independent evidence of a real post-fix sign-in."
   found: "(1) `clear_default_data_store_cookies_for_domain` (`main.rs:4184`) is called from exactly one site, `main.rs:7211`, itself inside the `humble_login_clear_cookies` dispatch-arm handler (`main.rs:7167`) as its no-window fallback branch. TS-side, every call to `seam.clearCookies` for Epic (`src/backend/storeManagers/legendary/user.ts:400`, and the wipe-step registration at `:263`) sits inside `LegendaryUser.logout()`'s `wipeSteps` — there is no separate, UI- or app-reachable entry point that runs just the cache eviction. (2) Filesystem, checked fresh: `git diff --numstat src-tauri/src/main.rs` still 187/7 (fix uncommitted, unchanged); `src-tauri/target/debug/gamelib-shell` mtime 14:00:48 is 3s newer than the fixed `main.rs` mtime 14:00:45 (consistent with a rebuild immediately after the fix); `~/Library/HTTPStorages/gamelib-shell.binarycookies` = 18270 bytes; `~/Library/Application Support/gamelib/legendaryConfig/legendary/user.json` (6055 bytes) written at the same later wall-clock time (18:48) as the cookie jar. `npx prettier --file-info src-tauri/src/main.rs` reconfirmed `{\"ignored\":false,\"inferredParser\":null}`, matching the already-recorded formatter_lint finding."
-  implication: "The claim that this session's own suggested standalone, non-destructive `dispatch_rust_channel` invocation could be used as written does NOT hold up — corrected in `next_action` above. Separately and independently, the filesystem evidence (freshly-written legendaryConfig/user.json and a cookie-jar size, both time-correlated, both produced only by a real authenticated flow) supports that a real post-fix Epic sign-in did occur on this machine, whatever the exact eviction mechanism used to get there (most plausibly: running the app's own post-fix Epic logout flow once, which is safe regardless of prior auth state and now includes the widened cache eviction as a wipeStep; or a direct on-disk NetworkCache deletion, mirroring the manual artifact cleanup already performed elsewhere in this session). The exact mechanism used is NOT independently confirmed and is recorded as such in Recovery Procedure below, rather than asserted as fact."
+  implication: "The claim that this session's own suggested standalone, non-destructive `dispatch_rust_channel` invocation could be used as written does NOT hold up — corrected in `next_action` above. Separately and independently, the filesystem evidence (freshly-written legendaryConfig/user.json and a cookie-jar size, both time-correlated, both produced only by a real authenticated flow) supports that a real post-fix Epic sign-in did occur on this machine, and the eviction mechanism is now CONFIRMED rather than guessed: it was a direct on-disk NetworkCache deletion in the DEV store, performed and measured by the orchestrator (246 files removed, 13430 → 13184 total, 505M → 483M, cookies verified byte-identical at 15609 bytes across it), with the app stopped. Recovery Procedure below now names it and drops the two-candidate hedge this entry originally carried. Note the store-path correction recorded there: the DEV store is `~/Library/Caches/gamelib-shell/…` (process name), NOT `com.gamelib.shell` (bundle id, packaged builds only) — this entry's own first revision pointed at the wrong tree."
 
 ## Constraints
 
@@ -161,29 +161,61 @@ The code fix alone does NOT self-heal a machine that already has a stale disk-ca
 Epic's login origin sitting in `WKWebsiteDataStore.default()` from an earlier authenticated
 session — that entry is durable and survives a `gamelib-shell` rebuild/restart untouched. Anyone
 who logged out of Epic on a pre-fix build needs a one-time eviction in addition to updating the
-binary. Two viable mechanisms, in order of preference:
+binary.
 
-1. **Rebuild, then run the app's own Epic logout flow once**, even if already signed out /
-   nothing to log out of. Post-fix, `LegendaryUser.logout()`'s `wipeSteps` (`clearEpicStorage`
-   then `clearEpicCookies`) now evict the HTTP disk/memory cache in addition to cookies for the
-   Epic origin — this is the shipped, app-level path and requires no custom tooling. (No standalone
-   frontend/IPC entry point runs just this eviction outside `logout()` — see the `next_action`
-   correction above; do not try to build a bespoke dispatch call for this.)
-2. **Direct on-disk eviction** of the WebKit NetworkCache records for `epicgames.com` domains
-   under `~/Library/Caches/com.gamelib.shell/WebKit/NetworkCache/Version 17/Records/`, bypassing
-   the app entirely — the same class of manual removal already used elsewhere in this session for
-   leftover probe artifacts. A post-recovery check in this session still found 10 files under that
-   tree matching `epicgames` content; this is NOT necessarily a problem — a successful post-fix
-   sign-in legitimately writes fresh, correctly-scoped cache entries for an authenticated session,
-   which is different from the stale pre-existing entry the defect exploited.
+**MECHANISM ACTUALLY USED, 2026-09-28 (this is no longer unconfirmed).** Direct on-disk eviction,
+run by the operator with the app stopped. An earlier revision of this section recorded the
+mechanism as not independently confirmed and offered two candidates; the orchestrator performed
+and measured the eviction itself, so the record now names it. Measured, in order:
 
-On the operator's own machine, independent filesystem evidence (a rebuilt binary newer than the
-fixed source, a cookie jar sized 18270 bytes, and a freshly-written
-`legendaryConfig/legendary/user.json` time-correlated with the cookie jar) supports that recovery
-and a real post-fix sign-in did occur on 2026-09-28. The EXACT mechanism used to perform the
-one-time eviction on this specific machine (option 1 vs. option 2 above) was NOT independently
-confirmed by this session and is not asserted as fact — only the outcome (recovery succeeded) is
-evidenced.
+1. **Stop the app.** `com.apple.WebKit.Networking` owns the cache; stopping also drops the
+   in-memory half. (Any lingering `com.apple.WebKit.*` XPC processes parented to `launchd` and
+   holding no `gamelib` paths belong to some OTHER WebKit client — leave them alone.)
+2. **Confirm the poisoned entries exist**, by content and timestamp rather than by inference:
+   records matching `epicgames` with mtimes `2026-09-28 10:38:35`, `10:38:52` and `10:38:53` — the
+   successful 10:38 login — were still on disk ~8 hours later, with 84 cache files in the
+   10:30–11:00 window, across record partitions `632964C9…` and `89025ED9…`. This is direct
+   observation of the stale entry, independent of the `foundCachedEntry=1` log correlation.
+3. **Delete only the matching Resource/Blob files.** Measured: `matched: 246`, `rm exit: 0`,
+   `remaining: 0`; total files 13430 → 13184 (= 246 removed); size 505M → 483M.
+4. **Leave cookies alone**, and prove it: `~/Library/HTTPStorages/gamelib-shell.binarycookies`
+   verified byte-identical at 15609 bytes across the eviction.
+
+**The store path depends on how the binary was launched, and the earlier revision named the wrong
+one.** A `tauri dev` run keys its data store off the PROCESS NAME —
+`~/Library/Caches/gamelib-shell/WebKit/NetworkCache` — while the packaged app uses the bundle
+identifier, `~/Library/Caches/com.gamelib.shell/…`. The operator's poisoning and recovery were
+both in the DEV store (66 apparent, 246 actual Epic-matching files) whereas the packaged store held
+only 6. Pick the one matching the build that did the logout; evicting the wrong tree measures clean
+and changes nothing.
+
+**Two measurement traps, both hit live here.** First, `grep -rlZ … | xargs -0 rm -f` **deletes
+nothing on macOS** — BSD grep emits no NUL separators for `-Z`, so `rm` receives one giant
+concatenated filename and errors, after printing a wall of paths that reads as success. Only the
+unchanged file count and directory size caught it. Use `grep -rl … | tr '\n' '\0' | xargs -0`
+(safe here: these filenames contain spaces, as in `Version 17`, but never newlines) and **always
+assert a before/after count**. Second, a compound `grep -r` over this tree aborted partway with
+`File name too long`, yielding a partial count of 66 that was reported as a total against a real
+246 — a gate asserting 66 would have failed against a correct run.
+
+**The app-level alternative remains UNVERIFIED and is not recommended on that basis.** In
+principle, rebuilding and running the Epic logout flow once should work, since post-fix
+`LegendaryUser.logout()`'s `wipeSteps` (`clearEpicStorage` then `clearEpicCookies`) now evict the
+HTTP disk/memory cache alongside cookies. It was never exercised, and for an already-signed-out
+user it is unclear whether `logout()` reaches `wipeSteps` at all. Note also that no standalone
+frontend/IPC entry point runs this eviction outside `logout()` — see the `next_action` correction
+above; do not build a bespoke dispatch call for it.
+
+**Recovery is confirmed by the outcome, not just the eviction.** The post-fix sign-in succeeded:
+cookie jar 15609 → 18270 bytes at 18:48, `cf_clearance` ×3 and `EPIC_DEVICE` present (names only,
+never values), `legendaryConfig/legendary/user.json` written at 18:48 at 6055 bytes. `cf_clearance`
+being ACQUIRED is the load-bearing detail — Talon's challenge was PASSED, not bypassed, under a
+genuinely cold jar. Eviction was the only variable changed between a 300s timeout and a completed
+sign-in.
+
+A post-recovery check finding files under the tree still matching `epicgames` is NOT a problem: a
+successful sign-in legitimately writes fresh, correctly-scoped entries for an authenticated
+session, which is a different thing from the stale pre-existing entry the defect replayed.
 
 ## Scope obligation for the write-up
 
@@ -224,7 +256,7 @@ verification: |
     result: pass
     evidence: "cargo check (src-tauri) finishes cleanly, no new warnings attributable to this change."
   guardrail_verdict: accepted
-  live_epic_verification: "SUPPORTED BY INDEPENDENT FILESYSTEM EVIDENCE, not by taking any report at face value. This session verified directly (fresh commands, not carried over from any prior claim): the fix remains uncommitted and unchanged (git diff --numstat 187/7); the compiled binary is 3s newer than the fixed main.rs (consistent with a post-fix rebuild); the cookie jar (~/Library/HTTPStorages/gamelib-shell.binarycookies) is 18270 bytes; legendaryConfig/legendary/user.json (6055 bytes) was written at the same later wall-clock time as the cookie jar. These are the kind of artifacts only a real authenticated Epic sign-in produces, and support that a genuine post-fix cold-jar sign-in succeeded on the operator's machine on 2026-09-28. What is NOT independently confirmed: the exact one-time eviction mechanism used to recover this already-poisoned machine before that sign-in (see Recovery Procedure) — a standalone non-destructive dispatch_rust_channel invocation, as this session originally proposed, was found on re-trace to have no actual standalone entry point outside LegendaryUser.logout(), so that specific proposed mechanism was corrected rather than confirmed. The desk-level fix mechanism (does evicting a same-shaped stale disk-cache entry restore a fresh network fetch on reload) was independently validated via epicprobe4/epicprobe5/epicprobe8 earlier in this session, and the regression test (Signal 1/5) proves the fix code itself widens the evicted type-set correctly."
+  live_epic_verification: "SUPPORTED BY INDEPENDENT FILESYSTEM EVIDENCE, not by taking any report at face value. This session verified directly (fresh commands, not carried over from any prior claim): the fix remains uncommitted and unchanged (git diff --numstat 187/7); the compiled binary is 3s newer than the fixed main.rs (consistent with a post-fix rebuild); the cookie jar (~/Library/HTTPStorages/gamelib-shell.binarycookies) is 18270 bytes; legendaryConfig/legendary/user.json (6055 bytes) was written at the same later wall-clock time as the cookie jar. These are the kind of artifacts only a real authenticated Epic sign-in produces, and support that a genuine post-fix cold-jar sign-in succeeded on the operator's machine on 2026-09-28. The one-time eviction mechanism is ALSO confirmed, and is named in Recovery Procedure: a direct on-disk NetworkCache deletion in the DEV store (~/Library/Caches/gamelib-shell/WebKit/NetworkCache), performed and measured by the orchestrator with the app stopped — 246 matching files removed, 13430 -> 13184 total, 505M -> 483M, cookies verified byte-identical at 15609 bytes across it, and the poisoned entries positively identified on disk beforehand by their 2026-09-28 10:38:35/10:38:52/10:38:53 mtimes. The post-sign-in jar carried cf_clearance x3, so Talon's challenge was PASSED on a genuinely cold jar, not bypassed. What was corrected rather than confirmed is the mechanism this session originally PROPOSED: a standalone non-destructive dispatch_rust_channel invocation, which re-tracing showed has no entry point outside LegendaryUser.logout(). The desk-level fix mechanism (does evicting a same-shaped stale disk-cache entry restore a fresh network fetch on reload) was independently validated via epicprobe4/epicprobe5/epicprobe8 earlier in this session, and the regression test (Signal 1/5) proves the fix code itself widens the evicted type-set correctly."
 oracle_type: "derived — a fresh in-page log trace showing a second `nav host=` line reaching a real login form (not the current single-nav-then-timeout signature) is the model-derived contract for correctness; the desk half is verified against a local-server harness and a static structural regression test, the live-Epic half requires human verification per the operator's own credentials"
 files_changed:
   - "src-tauri/src/main.rs"
