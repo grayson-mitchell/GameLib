@@ -1,0 +1,145 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>spike 016/017/018 — embedded store browser</title>
+<style>
+  /* Deliberately flexbox, not nested grids: WKWebView mis-resolves percentage
+     heights inside 1fr grid rows (the F-10 23323px gotcha). */
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body { display: flex; flex-direction: column; font: 13px ui-monospace, monospace; background: #14161b; color: #cfd3dc; }
+  header { flex: 0 0 44px; display: flex; align-items: center; gap: 12px; padding: 0 14px; background: #1c1f27; border-bottom: 1px solid #2a2e39; }
+  header b { color: #7fb4ff; }
+  header .hint { color: #6b7280; font-size: 11px; }
+  main { flex: 1 1 auto; display: flex; min-height: 0; }
+  nav { flex: 0 0 270px; display: flex; flex-direction: column; gap: 6px; padding: 12px; background: #191c23; border-right: 1px solid #2a2e39; overflow-y: auto; }
+  nav .item { padding: 8px 10px; border-radius: 6px; color: #9aa1ad; }
+  nav .item.active { background: #24304a; color: #cfe0ff; }
+  nav button { padding: 7px 10px; border: 1px solid #333a48; border-radius: 6px; background: #212633; color: #cfd3dc; cursor: pointer; text-align: left; }
+  nav button:hover { background: #2a3140; }
+  nav .grp { margin-top: 10px; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  label.chk { display: flex; gap: 6px; align-items: center; color: #9aa1ad; padding: 2px 10px; }
+  #stage { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+  #slot { flex: 1 1 auto; margin: 12px; border: 2px dashed #3b4560; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #59627a; font-size: 15px; text-align: center; line-height: 1.8; }
+  #logwrap { flex: 0 0 170px; display: flex; flex-direction: column; border-top: 1px solid #2a2e39; background: #101218; }
+  #logwrap .bar { flex: 0 0 24px; display: flex; align-items: center; gap: 10px; padding: 0 10px; color: #6b7280; font-size: 11px; }
+  #log { flex: 1 1 auto; overflow-y: auto; padding: 4px 10px; white-space: pre-wrap; word-break: break-all; font-size: 11px; }
+  #log .navigation { color: #8fd18f; } #log .embed { color: #7fb4ff; } #log .bounds { color: #e0b96a; }
+  #log .cookie-read { color: #d19fe8; } #log .control-server { color: #6ac7c7; } #log .autorun { color: #eee; }
+</style>
+<body>
+  <header>
+    <b>GameLib</b> <span>spike 016/017/018 — in-app store browser (child webview)</span>
+    <span class="hint">the dashed region is #slot — the embed should cover it exactly</span>
+  </header>
+  <main>
+    <nav>
+      <div class="item">Library</div>
+      <div class="item active">Store ▸ (embedded below)</div>
+      <div class="item">Downloads</div>
+      <div class="item">Settings</div>
+      <div class="grp">016 — create / destroy</div>
+      <button onclick="createEmbed(CONTROL + '/set')">Create embed → control origin</button>
+      <button onclick="createEmbed('https://store.steampowered.com/app/440/Team_Fortress_2/')">Create embed → Steam store</button>
+      <button onclick="createEmbed('https://www.gog.com/en/games')">Create embed → GOG store</button>
+      <button onclick="call('destroy_embed', {label: 'store-embed'})">Destroy embed</button>
+      <label class="chk"><input type="checkbox" id="spoofUa" checked> spoof Chrome UA</label>
+      <label class="chk"><input type="checkbox" id="isolated"> isolated data store</label>
+      <div class="grp">017 — bounds / visibility</div>
+      <label class="chk"><input type="checkbox" id="sync" checked> live bounds sync (ResizeObserver)</label>
+      <button onclick="syncBounds(true)">Sync bounds once</button>
+      <button onclick="call('set_embed_visible', {label: 'store-embed', visible: false})">Hide</button>
+      <button onclick="call('set_embed_visible', {label: 'store-embed', visible: true})">Show</button>
+      <div class="grp">018 — coexistence</div>
+      <button onclick="call('read_cookies', {label: 'store-embed'})">cookies() on child</button>
+      <button onclick="call('read_cookies', {label: 'main'})">cookies() on main</button>
+      <button onclick="call('list_webviews', {})">List webviews</button>
+      <div class="grp">probe B / misc</div>
+      <button onclick="call('create_multi_window', {})">Probe B: window + 2 children</button>
+      <button onclick="call('close_multi_window', {})">Close probe B</button>
+      <button onclick="exportLog()">Export events JSON</button>
+    </nav>
+    <div id="stage">
+      <div id="slot">the store embed renders here<br>(if you can read this while an embed exists, compositing failed)</div>
+      <div id="logwrap">
+        <div class="bar"><span>live event stream</span><span id="status"></span></div>
+        <div id="log"></div>
+      </div>
+    </div>
+  </main>
+<script>
+  const { invoke } = window.__TAURI__.core;
+  const { listen } = window.__TAURI__.event;
+  let CONTROL = 'http://localhost:17913';
+  const logEl = document.getElementById('log');
+  const statusEl = document.getElementById('status');
+
+  function append(cat, msg, data) {
+    const line = document.createElement('div');
+    line.className = cat;
+    const d = JSON.stringify(data);
+    line.textContent = `[${cat}] ${msg} ${d.length > 400 ? d.slice(0, 400) + '…' : d}`;
+    logEl.appendChild(line);
+    while (logEl.childElementCount > 400) logEl.removeChild(logEl.firstChild);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  listen('spike-log', (e) => {
+    const { category, message, data } = e.payload;
+    append(category, message, data);
+  });
+
+  async function call(cmd, args) {
+    try {
+      const r = await invoke(cmd, args);
+      statusEl.textContent = cmd + ' ok';
+      return r;
+    } catch (err) {
+      statusEl.textContent = cmd + ' FAILED';
+      append('embed', cmd + ' rejected', { error: String(err) });
+      throw err;
+    }
+  }
+
+  function slotRect() {
+    const r = document.getElementById('slot').getBoundingClientRect();
+    // Logical CSS px, relative to the main webview's viewport — the exact
+    // coordinate-space question spike 017 exists to answer.
+    return { x: r.x, y: r.y, w: r.width, h: r.height };
+  }
+
+  async function createEmbed(url) {
+    const r = slotRect();
+    await call('create_embed', {
+      url,
+      spoofUa: document.getElementById('spoofUa').checked,
+      isolatedStore: document.getElementById('isolated').checked,
+      ...r,
+    });
+  }
+
+  let syncTimer = null;
+  async function syncBounds(loud) {
+    const r = slotRect();
+    try {
+      await invoke('set_embed_bounds', { label: 'store-embed', ...r, quiet: !loud });
+      statusEl.textContent = `synced ${Math.round(r.w)}×${Math.round(r.h)} @ ${Math.round(r.x)},${Math.round(r.y)}`;
+    } catch (_) { /* no embed yet */ }
+  }
+  new ResizeObserver(() => {
+    if (!document.getElementById('sync').checked) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => syncBounds(false), 40);
+  }).observe(document.getElementById('slot'));
+
+  async function exportLog() {
+    const p = await call('export_log', {});
+    append('embed', 'exported', { path: p });
+  }
+
+  (async () => {
+    CONTROL = await invoke('control_origin');
+    await call('env_report', {});
+    append('embed', 'panel ready', { control: CONTROL });
+  })();
+</script>
+</body>
