@@ -7429,27 +7429,63 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                                 let _ = tx_fetch.send(());
                                 return;
                             }
-                            // Scoped to WKWebsiteDataTypeCookies ONLY (spike 016's own
-                            // finding) -- a matched record may carry localStorage/
-                            // IndexedDB/cache data for the same domain too, and
-                            // `removeDataOfTypes` removes only the types named here,
-                            // never the whole record. Plans 15/16's separate
-                            // origin-scoped storage clear owns those other categories;
-                            // widening this clear into them would be a silent scope
-                            // regression, not a fix.
-                            // SAFETY: `WKWebsiteDataTypeCookies` is a valid static
-                            // `NSString` this crate exposes; reading an extern static is
-                            // the only unsafe part of this line.
+                            // Scoped to WKWebsiteDataTypeCookies PLUS the native HTTP
+                            // disk/memory cache -- a matched record may also carry
+                            // localStorage/IndexedDB/Cache-Storage(fetch) data for the same
+                            // domain; `humble_login_clear_storage` (a separate,
+                            // already-shipped step) owns THOSE, via injected JS
+                            // (localStorage.clear()/indexedDB/`caches`/service-worker
+                            // unregister).
+                            //
+                            // CORRECTION (260928-qvr, the twin site
+                            // `epic-cold-jar-login-timeout` deliberately left unfixed --
+                            // `.planning/debug/resolved/epic-cold-jar-login-timeout.md`):
+                            // this comment previously read "cache data... Plans 15/16's
+                            // separate origin-scoped storage clear owns those other
+                            // categories", which conflated two distinct WebKit concepts.
+                            // The JS-observable `caches` Cache Storage API
+                            // (`WKWebsiteDataTypeFetchCache`) IS covered by
+                            // `humble_login_clear_storage`'s injected script. WebKit's own
+                            // native HTTP resource cache
+                            // (`WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache`)
+                            // is NOT -- there is no JS API for it, only this native
+                            // `removeDataOfTypes` call. Left uncovered here, this branch
+                            // would share the exact stale-authenticated-content replay gap
+                            // the default-store branch above was fixed for. Adding the two
+                            // disk/memory-cache types closes that gap for this branch's
+                            // sole confirmed caller (Humble's `disconnect()` -- see this
+                            // quick task's SUMMARY for the full caller audit), still scoped
+                            // to `matching_records` (this domain only) -- not a blanket
+                            // wipe (REQ-34.4.1-06). `removeDataOfTypes` still removes only
+                            // the types named here, never the whole record, so
+                            // localStorage/IndexedDB remain the storage-clear step's
+                            // business.
+                            //
+                            // SAFETY: `WKWebsiteDataTypeCookies`/
+                            // `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache`
+                            // are valid static `NSString`s this crate exposes; reading an
+                            // extern static is the only unsafe part of this line.
                             let cookies_type: &objc2_foundation::NSString =
                                 unsafe { objc2_web_kit::WKWebsiteDataTypeCookies };
-                            let cookies_type_set =
-                                objc2_foundation::NSSet::from_slice(&[cookies_type]);
+                            let disk_cache_type: &objc2_foundation::NSString =
+                                unsafe { objc2_web_kit::WKWebsiteDataTypeDiskCache };
+                            let memory_cache_type: &objc2_foundation::NSString =
+                                unsafe { objc2_web_kit::WKWebsiteDataTypeMemoryCache };
+                            let cookies_type_set = objc2_foundation::NSSet::from_slice(&[
+                                cookies_type,
+                                disk_cache_type,
+                                memory_cache_type,
+                            ]);
+                            let matched_record_count = matching_records.len();
                             let records_array =
                                 objc2_foundation::NSArray::from_slice(&matching_records);
                             let tx_remove = tx_fetch.clone();
                             let remove_completion = block2::RcBlock::new(move || {
                                 let _ = tx_remove.send(());
                             });
+                            eprintln!(
+                                "[shell] humble_login_clear_cookies: window branch evicting cookies + HTTP disk/memory cache for {matched_record_count} matching data record(s) (domain-scoped, count only)"
+                            );
                             // SAFETY: `data_store_for_removal` is a live object obtained
                             // on the main thread above; `cookies_type_set`/
                             // `records_array` are freshly built, live objects;
