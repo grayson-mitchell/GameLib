@@ -1,7 +1,7 @@
 ---
 status: false
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
-source: [38-VERIFICATION.md, 34.1-HUMAN-UAT.md items 1a and 7, 34.10-VERIFICATION.md deferred[0]]
+source: ["38-VERIFICATION.md", "34.1-HUMAN-UAT.md items 1a and 7", "34.10-VERIFICATION.md deferred[0]"]
 created: 2026-08-22
 updated: 2026-09-26
 sessions:
