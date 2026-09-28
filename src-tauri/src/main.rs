@@ -14293,6 +14293,38 @@ mod tests {
         // shape `window` / `.cookies()`, not only single-line prefixes.
         let mut found_split_line_shape = false;
 
+        // `guard_excludes_macos` is the PROPERTY this pin asserts -- not an exact-string
+        // comparison against one cfg spelling. Each half below is a deliberate choice a
+        // future reader will want to overturn; read both before touching it.
+        //
+        // `None` means the call site has no `#[cfg(...)]` between it and the enclosing `fn`
+        // or match-arm boundary: an unconditional call is macOS-reachable by definition, so
+        // this returns `false`.
+        //
+        // For `Some(g)`, the guard is accepted only if BOTH hold:
+        // - `g` contains `not(target_os = "macos")` -- this is what makes the ORIGINAL RED
+        //   shape, `#[cfg(target_os = "macos")]`, fail: it is rejected by this rule rather
+        //   than by a second special case, because that literal string does not contain
+        //   `not(target_os = "macos")`.
+        // - `g` does NOT contain `any(` -- this matcher deliberately does not evaluate cfg
+        //   algebra. A disjunction can silently restore macOS reachability (e.g.
+        //   `any(target_os = "macos", windows)`), and a matcher that tried to decide which
+        //   disjunctions are safe would be a small `cfg` interpreter that is wrong in a way
+        //   nobody notices. This fails closed instead.
+        //
+        // The known cost of failing closed: a semantically SAFE spelling such as
+        // `#[cfg(not(any(target_os = "macos", windows)))]` is rejected even though it does
+        // exclude macOS. That is intended, not a bug to quietly patch around. Admitting such
+        // a spelling is a deliberate, reviewed edit to this predicate AND to its fixture
+        // table below -- never a loosened rule. See CLAUDE.md's own standing warning: a
+        // vocabulary that grows to fit whatever was typed is free text with extra steps.
+        fn guard_excludes_macos(guard: Option<&str>) -> bool {
+            match guard {
+                None => false,
+                Some(g) => g.contains("not(target_os = \"macos\")") && !g.contains("any("),
+            }
+        }
+
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
@@ -14329,9 +14361,10 @@ mod tests {
 
             // Walk backward to the nearest preceding `#[cfg(...)]` attribute line. A
             // legitimate SURVIVING call site must be immediately (modulo blank/comment lines)
-            // gated behind exactly `#[cfg(not(target_os = "macos"))]` -- never unconditional,
-            // and never `#[cfg(target_os = "macos")]`. Stops at a function or match-arm
-            // boundary (no cfg found before it means the call is unconditional).
+            // gated by a cfg that PROVABLY excludes macOS -- see `guard_excludes_macos`,
+            // above, for the exact property (never unconditional, never bare
+            // `#[cfg(target_os = "macos")]`, never an `any(` disjunction). Stops at a function
+            // or match-arm boundary (no cfg found before it means the call is unconditional).
             let mut guard: Option<String> = None;
             for prior in lines[..i].iter().rev() {
                 let prior_trimmed = prior.trim();
@@ -14352,20 +14385,26 @@ mod tests {
             // shape apart from a genuine defect. `concat!` joins several COMPLETE,
             // self-contained (and therefore individually balanced) string literals at compile
             // time into the identical runtime message, with no `\`-continuation involved.
-            assert_eq!(
-                guard.as_deref(),
-                Some("#[cfg(not(target_os = \"macos\"))]"),
+            assert!(
+                guard_excludes_macos(guard.as_deref()),
                 concat!(
-                    "F-34.4.2-12 regression: `{}` has an unconditional (or macOS-reachable) ",
-                    "wry `.cookies()` call at main.rs line {} (`{}`). This getter blocks the ",
-                    "calling closure inside a reentrant NSRunLoop pump that can self-deadlock ",
-                    "against tao's EventLoopHandler mutex on macOS -- live-reproduced 2/2, see ",
-                    "`.planning/debug/resolved/humble-disconnect-main-wedge.md`. It must only ",
-                    "ever be reached via `#[cfg(not(target_os = \"macos\"))]`."
+                    "F-34.4.2-12 regression: `{}` has a wry `.cookies()` call at main.rs line ",
+                    "{} (`{}`) whose guard does not provably exclude macOS (guard found: {}). ",
+                    "This getter blocks the calling closure inside a reentrant NSRunLoop pump ",
+                    "that can self-deadlock against tao's EventLoopHandler mutex on macOS -- ",
+                    "live-reproduced 2/2, see ",
+                    "`.planning/debug/resolved/humble-disconnect-main-wedge.md`. The guard must ",
+                    "contain `not(target_os = \"macos\")` and must NOT contain `any(`. This ",
+                    "matcher is deliberately conservative and rejects some semantically-safe ",
+                    "spellings on purpose (e.g. `#[cfg(not(any(target_os = \"macos\", ",
+                    "windows)))]`) -- see `guard_excludes_macos`, above. Admitting such a ",
+                    "spelling requires a deliberate, reviewed edit to that predicate and its ",
+                    "fixture table -- never loosen this rule just to make the test pass."
                 ),
                 arm,
                 i + 1,
-                trimmed
+                trimmed,
+                guard.as_deref().unwrap_or("<none>")
             );
 
             found_sites.push((arm, guard.unwrap_or_default()));
@@ -14374,36 +14413,56 @@ mod tests {
         // EXACT structural expectation, not a floor (D-F2). "Three arms" and "four sites" are
         // DIFFERENT numbers and neither is a typo: `humble_login_clear_cookies` alone carries
         // TWO separately-guarded sites (the `count_matching` read and the deletion branch's
-        // split-line read), the other two arms carry one each. A floor (e.g. `>= 4`) cannot
-        // detect a site DISAPPEARING if the disappearance lands on the floor's own slack; exact
-        // equality on the full `(arm, guard)` multiset fails loudly on disappearance, on
-        // unreviewed addition, on a site MIGRATING between arms, and on a site silently LOSING
-        // its guard -- none of which necessarily changes the bare count. If this assertion ever
-        // fails because an arm was genuinely restructured (not because a call site regressed),
-        // the expected set below must be RE-DERIVED from a fresh measurement and re-reviewed --
-        // never widened or loosened just to make the test pass.
-        let guard_ok = "#[cfg(not(target_os = \"macos\"))]".to_string();
+        // split-line read), the other two arms carry one each. The four sites now carry TWO
+        // distinct guard spellings, not one: three sites are gated by the broad
+        // `#[cfg(not(target_os = "macos"))]`, and `humble_login_clear_cookies`'s deletion-
+        // branch site (main.rs:7705) alone is gated by the narrower
+        // `#[cfg(all(not(target_os = "macos"), not(windows)))]` -- `1a8e1827b` (2026-09-26)
+        // routed Windows through WebView2 directly instead of wry's broken `delete_cookie`
+        // (cookie-0.18's `domain()` drops the leading dot). Re-deriving this expected set to
+        // carry both spellings is NOT widening: the per-site `assert!` above already runs
+        // ahead of this census, inside the same scan loop, and would already have rejected
+        // any guard that is not provably macOS-excluding -- this census is a structural
+        // inventory sitting behind that safety check, not the safety check itself. A floor
+        // (e.g. `>= 4`) cannot detect a site DISAPPEARING if the disappearance lands on the
+        // floor's own slack; exact equality on the full `(arm, guard)` multiset fails loudly
+        // on disappearance, on unreviewed addition, on a site MIGRATING between arms, and on
+        // a site silently LOSING its guard -- none of which necessarily changes the bare
+        // count. If this assertion ever fails because an arm was genuinely restructured (not
+        // because a call site regressed), the expected set below must be RE-DERIVED from a
+        // fresh measurement and re-reviewed -- never widened or loosened just to make the
+        // test pass.
+        let guard_ok_broad = "#[cfg(not(target_os = \"macos\"))]".to_string();
+        // Diverges from the other three sites ON PURPOSE: named separately (never cloned from
+        // `guard_ok_broad`) so a reader scanning the vec below can see at a glance that one
+        // site is deliberately guarded differently, rather than hiding the difference behind
+        // a shared binding. See `main.rs:7692`'s own comment for the Windows rationale
+        // (`1a8e1827b`).
+        let guard_ok_not_windows =
+            "#[cfg(all(not(target_os = \"macos\"), not(windows)))]".to_string();
         let mut expected: Vec<(&str, String)> = vec![
-            ("humble_login_cookies", guard_ok.clone()),
-            ("humble_login_cookies_for_domain", guard_ok.clone()),
-            ("humble_login_clear_cookies", guard_ok.clone()),
-            ("humble_login_clear_cookies", guard_ok),
+            ("humble_login_cookies", guard_ok_broad.clone()),
+            ("humble_login_cookies_for_domain", guard_ok_broad.clone()),
+            ("humble_login_clear_cookies", guard_ok_broad),
+            ("humble_login_clear_cookies", guard_ok_not_windows),
         ];
         expected.sort();
         let mut actual = found_sites.clone();
         actual.sort();
-        // `concat!`, not a `\`-continued literal -- see the comment above the first `assert_eq!`
+        // `concat!`, not a `\`-continued literal -- see the comment above the first `assert!`
         // in this test for why (WR-08).
         assert_eq!(
             actual,
             expected,
             concat!(
-                "F-34.4.2-12 regression pin: the set of macOS-reachable-gated `.cookies()` ",
+                "F-34.4.2-12 regression pin: the set of macOS-excluded-guarded `.cookies()` ",
                 "call sites no longer matches the exact expected set (four sites across three ",
-                "arms -- `humble_login_clear_cookies` alone carries two, separately guarded; ",
-                "the other two arms carry one each; neither number is a typo). A mismatch ",
-                "means either a genuine regression (a new macOS-reachable blocking call) or ",
-                "that an arm was restructured; in the restructuring case, re-derive and ",
+                "arms, carrying TWO distinct guard spellings -- `humble_login_clear_cookies` ",
+                "alone carries two sites, separately guarded, one of them narrower than the ",
+                "other three; the other two arms carry one each; none of these numbers is a ",
+                "typo). A mismatch means either a genuine regression (a new macOS-reachable ",
+                "blocking call, which the per-site assertion above should already have caught) ",
+                "or that an arm was restructured; in the restructuring case, re-derive and ",
                 "re-review this expected set from a fresh measurement -- never widen it just ",
                 "to make this test pass."
             )
@@ -14413,7 +14472,7 @@ mod tests {
         // silently narrowed back to prefix matching and would once again miss the split-line
         // shape (`window` / `.cookies()`) that is the debug session's own recorded blind spot.
         // `concat!`, not a `\`-continued literal -- see the comment above the first
-        // `assert_eq!` in this test for why (WR-08).
+        // `assert!` in this test for why (WR-08).
         assert!(
             found_split_line_shape,
             concat!(
