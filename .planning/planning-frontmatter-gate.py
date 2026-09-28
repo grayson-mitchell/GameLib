@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""YAML-frontmatter parse gate over `.planning/STATE.md` and `.planning/ROADMAP.md`
-(quick task 260911-ayu).
+"""YAML-frontmatter parse gate over `.planning/STATE.md`, `.planning/ROADMAP.md` (quick task
+260911-ayu), and every phase VERIFICATION/UAT ledger `audit-uat` reads (quick task 260928-sph).
 
 Purpose (read this before "fixing" a future failure the wrong way): `.planning/STATE.md`'s
 frontmatter was not valid YAML for weeks. `last_activity` carried 2 raw, unescaped `"` characters
@@ -39,6 +39,63 @@ frontmatter at all, and a gate that silently skips an optional target is itself 
 check, so its absence is reported by an explicit `NOTE:` line and counted separately in the
 summary. "Skipped" must never be mistaken for "checked".
 
+PHASE-LEDGER WALK (quick task 260928-sph). `.planning/STATE.md` and `.planning/ROADMAP.md` were
+never the only frontmatter this project depends on: every phase `*-VERIFICATION.md`/`*-UAT.md`/
+`*-HUMAN-UAT.md` ledger under `.planning/phases/*/` and the archived `.planning/milestones/*-
+phases/*/` is read by `@opengsd/gsd-core`'s `audit-uat` (`~/.claude/gsd-core/bin/lib/`; outside
+this repo, unversioned, and overwritten by the next gsd-core upgrade -- cite findings as "measured
+against 1.14.0", not as a permanent fact). `38-VERIFICATION.md`'s frontmatter was invalid YAML from
+2026-09-23 (`e09fbc652`/`aaae8a1d2`) until quick `260928-raq` repaired it on 2026-09-28: `uat.cjs`'s
+`extractFrontmatter` returns `{}` on any parse error, so `status` read `undefined`, the
+`human_needed`/`gaps_found` gate `parseVerificationItems` checks (`uat.cjs:206-212`) never opened,
+and all 11 of that phase's open items silently vanished from `audit-uat`'s `by_phase` map -- no
+error, no `parse_gap`, nothing that turned red. `uat.cjs:59`/`:203` select files by substring
+(`-UAT`/`-VERIFICATION`), and `uat.cjs:84-123` scans the archived milestone dirs too -- this walk
+mirrors both (find_phase_ledgers, DD-7), and found 89 files at the 2026-09-28 census (85 active,
+4 archived). Unlike the UAT path (`uat.cjs:137-139,155`, which reads items from the BODY
+regardless of frontmatter status and therefore fails safe), the VERIFICATION path is the one where
+an unparseable frontmatter is silent data loss -- this is why the walk exists.
+
+Verdict rules (`check_phase_ledger`, DD-2/DD-3/DD-4/DD-6): parse first, and NEVER excuse a failure
+by status alone. A ledger that parses as a mapping is OK. A ledger that does not parse is FAIL,
+unless it is PINNED in `KNOWN_UNPARSEABLE_TERMINAL` AND a SHAPE READ (`read_status_line`, not a
+second parser) of its own column-0 `status:` line equals the pinned status -- then it is a `NOTE:`.
+A ledger with no frontmatter fence at all is FAIL, unless pinned in `KNOWN_NO_FRONTMATTER` --
+fix-by-deletion is exactly as cheap a way to silence a red gate as fix-by-relabel, and both are
+guarded. PINS ONLY EVER SHRINK: a pinned path that no longer exists, now parses, or now has a
+fence, FAILS with "stale pin -- remove it", and a pinned file whose shape-read status moves (even
+to a DIFFERENT terminal status) FAILS rather than silently re-matching. The opening fence must
+also be byte-exact (`---\n` or `---\r\n`, DD-6): a file whose first line strips to `---` but whose
+bytes do not open that way would read as NO frontmatter under gsd-core's `frontmatterRegion` while
+this gate's `.strip()`-based `extract_frontmatter` would still parse it -- a green-while-hidden
+divergence. It convicts 0 files today (measured), but the check exists because "no one has hit it
+yet" is not the same claim as "no one can".
+
+`check_divergence_shapes()` (the STATE.md/ROADMAP.md check above) is deliberately NEVER applied to
+ledgers (DD-5). Its premise is the retired get-shit-done-cc hand-rolled parser; gsd-core reads
+ledgers through vendored js-yaml (`frontmatter.cjs:33`), for which a backslash-escaped `\"` and a
+`|` block scalar read IDENTICALLY to this gate's own parse. Applying it would convict 10 ledgers
+(19 problems) that are correct under the parser that actually reads them -- including
+`38-VERIFICATION.md`'s own repair, which uses exactly the backslash-escaped-quote shape
+`check_divergence_shapes` exists to reject. A gate convicting correct code is worse than a gate
+that does not check that property at all.
+
+SHAPE (1) IS REJECTED EVEN THOUGH GSD-CORE SOMETIMES RESCUES IT (DD-8). An unquoted plain scalar
+containing a colon-space at COLUMN 0 -- the real `score:` shape from the incident -- is rescued by
+gsd-core's own `loadWithAmbiguousColonRepair`/`repairAmbiguousColonValues`, which retries a failed
+parse by double-quoting column-0 plain values containing `: `. Measured against the real pre-repair
+bytes: the score-only defect spliced alone reads `status: "human_needed"` under gsd-core -- it did
+NOT, by itself, hide Phase 38. The SAME shape one indentation level deeper (inside a list entry,
+e.g. `result:`) is NOT rescued -- `loadWithAmbiguousColonRepair` never touches indented lines, and
+it reads `undefined`. This is why the incident needed BOTH shapes: shape (1) alone was cosmetic;
+shape (2) (an indented double-quoted scalar with an unescaped inner `"`) is what actually hid the
+phase. This gate enforces the STRICT property -- parses under js-yaml 4, the same parser gsd-core
+itself uses before any repair -- not "parses under a consumer's repair crutch", so it rejects shape
+(1) at column 0 regardless of whether gsd-core would rescue that particular instance.
+`39-VERIFICATION.md` is the live example: its lone unescaped-colon `status:` line is rescued by
+gsd-core today, so it stays a pinned NOTE rather than being promoted to an OK -- a future session
+must not "discover" that this gate is stricter than audit-uat and loosen it to match.
+
 DIVERGENCE-SHAPE CHECK (quick task 260911-j88). Parsing under js-yaml is necessary but not
 sufficient: the SDK's own consumers (`sdk/dist/query/frontmatter.js`'s hand-rolled
 `parseFrontmatterYamlLines`, used by `gsd-sdk query frontmatter.get`, `audit-uat`, `progress`,
@@ -73,12 +130,21 @@ field today -- the entire price of this convention). Rejecting `''` would convic
 stands today for a one-character divergence with no `phase-lifecycle.js`-style data-loss
 consequence -- a gate can convict correct code, and this one must not.
 
-THE LIMIT, STATED EXPLICITLY: this check catches three known shapes on two named targets
-(`STATE.md`, `ROADMAP.md`). It CANNOT catch a divergence shape nobody has found yet, and it does
-not run against any of the other ~2400 frontmatter-bearing files under `.planning/` (that sweep is
-tracked separately as an open todo). A gate that implied it caught "frontmatter divergence" in
-general, rather than these specific known shapes on these specific targets, would overstate its
-own reach -- which is worse than a narrow, honestly-scoped check.
+THE LIMIT, STATED EXPLICITLY: `check_divergence_shapes` catches three known shapes on two named
+targets (`STATE.md`, `ROADMAP.md`) only -- it CANNOT catch a divergence shape nobody has found yet,
+and it deliberately does NOT run against the 89 phase ledgers (DD-5, above). The phase-ledger walk
+added by quick `260928-sph` is narrower still, by design: it checks parse validity, fence
+byte-exactness, and status (via a shape read, never a second parser) -- nothing more. It does NOT
+check ledger BODIES for divergence shapes; a UAT file's items are read from the body regardless of
+frontmatter status (`uat.cjs:137-139,155`), so that surface is audit-uat's own concern, not this
+gate's. It does NOT refuse YAML anchors, aliases, or the U+E000 sentinel the way gsd-core's own
+`parseGuardedYamlRegion` does (DD-9) -- measured 2026-09-28, no ledger uses any of the three today,
+and all 80 active parseable ledgers read the same `status` under both parsers, so this is a stated
+limit rather than an implemented one. And everything else under `.planning/` outside `STATE.md`,
+`ROADMAP.md`, and these 89 ledgers remains entirely unwalked by any gate in this file. A gate that
+implied it caught "frontmatter divergence" in general, rather than these specific known shapes on
+these specific targets, would overstate its own reach -- which is worse than a narrow, honestly-
+scoped check.
 
 THE SELF-TEST FIXTURE CARRIES REAL HISTORICAL BYTES, HASH-GUARDED. `HISTORICAL_EXCERPT` below is
 a 90-byte window sliced out of the actual pre-fix `last_activity` line (extracted
@@ -1053,15 +1119,177 @@ def self_test() -> None:
 
     # Case: incident shape 2, real pre-repair bytes -- a double-quoted, indented `result:`
     # scalar with unescaped inner double quotes.
+    _shape2_broken_human_needed = mutate(
+        VALID_LEDGER_DOCUMENT,
+        f'    result: "{_LEDGER_RESULT_ESCAPED}"\n',
+        f'    result: "{LEDGER_RESULT_EXCERPT}"\n',
+        "ledger incident shape 2",
+    )
     ledger_reject(
         "incident shape 2 (real pre-repair bytes): double-quoted `result:` scalar with "
         "unescaped inner double quotes, indented",
+        _shape2_broken_human_needed,
+    )
+
+    # Case: shape 1 INDENTED -- the score excerpt (carrying the same colon-space) as an
+    # unquoted plain `result:` value inside the list entry, rather than at column 0.
+    # Measured at planning time: gsd-core's column-0 repairAmbiguousColonValues does NOT
+    # rescue this indented variant (it reads `undefined`, DD-8) -- this case proves the
+    # gate rejects the shape even where gsd-core cannot read a status from it at all.
+    ledger_reject(
+        "shape 1 INDENTED: score excerpt as an unquoted plain `result:` value inside the "
+        "list entry (gsd-core's column-0 repair does NOT rescue this indented variant, "
+        "measured `undefined`)",
         mutate(
             VALID_LEDGER_DOCUMENT,
             f'    result: "{_LEDGER_RESULT_ESCAPED}"\n',
-            f'    result: "{LEDGER_RESULT_EXCERPT}"\n',
-            "ledger incident shape 2",
+            f"    result: {LEDGER_SCORE_EXCERPT}\n",
+            "shape 1 indented",
         ),
+    )
+
+    # Case: shape 2 broken, with `status: gaps_found` -- the second status audit-uat opens.
+    ledger_reject(
+        "shape 2 broken with status: gaps_found (the second status audit-uat opens)",
+        mutate(
+            _shape2_broken_human_needed,
+            "status: human_needed\n",
+            "status: gaps_found\n",
+            "status gaps_found swap",
+        ),
+    )
+
+    # Case: fix-by-relabel -- shape 2 broken relabeled `status: passed`, NOT pinned. An
+    # unpinned unparseable ledger must fail at ANY status; relabeling a broken file's status
+    # is the cheapest way someone could try to make a red gate go quiet.
+    _shape2_broken_passed = mutate(
+        _shape2_broken_human_needed,
+        "status: human_needed\n",
+        "status: passed\n",
+        "status passed swap",
+    )
+    ledger_reject(
+        "fix-by-relabel: shape 2 broken relabeled `status: passed`, NOT pinned -- an "
+        "unpinned unparseable ledger fails at any status",
+        _shape2_broken_passed,
+    )
+
+    # Case: the SAME document as above, but now pinned at status='passed'. This is what
+    # legitimizes the relabel above -- ONLY a real pin plus a matching shape-read status can
+    # turn an unparseable ledger into a NOTE, never a status change alone.
+    ledger_accept(
+        "pinned unparseable-terminal: shape 2 broken, status: passed, "
+        "pinned_status='passed'",
+        _shape2_broken_passed,
+        expect_prefix="NOTE:",
+        pinned_status="passed",
+    )
+
+    # Case: pinned flip -- shape 2 broken but status is human_needed (an OPEN status),
+    # pinned_status='passed'. A pinned file whose status silently moved to an open status is
+    # exactly the incident class this gate exists to close, so it must FAIL, not NOTE.
+    ledger_reject(
+        "pinned flip: shape 2 broken, status: human_needed, pinned_status='passed' -- a "
+        "pinned file whose status silently moved is the incident class",
+        _shape2_broken_human_needed,
+        pinned_status="passed",
+    )
+
+    # Case: pinned, status line removed -- a pinned file with NO readable status must not
+    # fall back to matching the pin; a missing status is not evidence the pin still holds.
+    ledger_reject(
+        "pinned, status line removed: shape 2 broken with `status:` deleted, "
+        "pinned_status='passed' -- a pinned file with no readable status must not match",
+        mutate(
+            _shape2_broken_human_needed,
+            "status: human_needed\n",
+            "",
+            "status line removed",
+        ),
+        pinned_status="passed",
+    )
+
+    # Case: pinned, ambiguous status -- a second column-0 `status: passed` line is added.
+    # read_status_line must fail closed (return None) on two matches, not accidentally agree
+    # with the pin because one of the two lines happens to match it.
+    ledger_reject(
+        "pinned, ambiguous status: shape 2 broken with a second column-0 `status: passed` "
+        "line added, pinned_status='passed' -- two status lines must fail closed",
+        mutate(
+            _shape2_broken_human_needed,
+            "status: human_needed\n",
+            "status: human_needed\nstatus: passed\n",
+            "ambiguous status line added",
+        ),
+        pinned_status="passed",
+    )
+
+    # Case: stale unparseable-terminal pin -- VALID_LEDGER_DOCUMENT (parses cleanly) pinned
+    # as unparseable at status='passed'. It parses now, so the pin is stale and must fail
+    # loudly rather than silently accepting a file the pin no longer describes.
+    ledger_reject(
+        "stale unparseable-terminal pin: VALID_LEDGER_DOCUMENT (parses cleanly) with "
+        "pinned_status='passed' -- it parses now, so the pin is stale",
+        VALID_LEDGER_DOCUMENT,
+        pinned_status="passed",
+    )
+
+    # Case: fix-by-deletion -- a body-only document with no frontmatter fence at all, not
+    # pinned. Deleting the fence is the cheapest way to silence a parse failure (DD-3).
+    _ledger_body_only_document = (
+        "# Phase 38 notes\n\nJust prose, no frontmatter fence at all.\n"
+    )
+    ledger_reject(
+        "fix-by-deletion: body-only document with no frontmatter fence at all, not pinned",
+        _ledger_body_only_document,
+    )
+
+    # Case: the SAME body-only document, but pinned in KNOWN_NO_FRONTMATTER. Only a real pin
+    # can turn a fenceless ledger into a NOTE, never the shape alone.
+    ledger_accept(
+        "pinned no-frontmatter: same body-only document, pinned_no_frontmatter=True",
+        _ledger_body_only_document,
+        expect_prefix="NOTE:",
+        pinned_no_frontmatter=True,
+    )
+
+    # Case: stale no-frontmatter pin -- VALID_LEDGER_DOCUMENT (has a fence) pinned as
+    # no-frontmatter. The fence now exists, so the pin is stale and must fail (DD-4).
+    ledger_reject(
+        "stale no-frontmatter pin: VALID_LEDGER_DOCUMENT (has a fence) with "
+        "pinned_no_frontmatter=True -- the fence now exists, so the pin is stale",
+        VALID_LEDGER_DOCUMENT,
+        pinned_no_frontmatter=True,
+    )
+
+    # Case: unterminated frontmatter -- an opening `---` and keys with no closing fence
+    # before EOF. This must never NOTE: an unterminated block has no status to shape-read.
+    ledger_reject(
+        "unterminated frontmatter: opening `---` and keys with no closing fence before EOF",
+        "---\nstatus: human_needed\nscore: something\n",
+    )
+
+    # Case: inexact opening fence -- VALID_LEDGER_DOCUMENT's first line changed to `--- `
+    # (trailing space). `.strip()` would still treat this as an opening fence, but
+    # gsd-core's frontmatterRegion requires a byte-exact `---\n` (DD-6) and would read NO
+    # frontmatter at all from this file -- a green-while-hidden divergence this gate must
+    # catch even though the document otherwise parses cleanly.
+    ledger_reject(
+        "inexact opening fence: VALID_LEDGER_DOCUMENT's first line changed to `--- ` "
+        "(trailing space) -- gsd-core's frontmatterRegion requires a byte-exact `---\\n` "
+        "(DD-6)",
+        mutate(
+            VALID_LEDGER_DOCUMENT,
+            "---\n",
+            "--- \n",
+            "inexact opening fence",
+        ),
+    )
+
+    # Case: parses but not a mapping -- a bare list between fences.
+    ledger_reject(
+        "parses but not a mapping: a bare list between fences",
+        "---\n- one\n- two\n---\n",
     )
 
     # Case (scan-level): a missing target FILE. Exercised against check_document's caller
@@ -1089,6 +1317,34 @@ def self_test() -> None:
         else:
             fail("self-test FAILED: a missing target FILE was reported green")
 
+    # Case (scan-level, ledger): the anti-vacuity floor. check_phase_ledgers pointed at an
+    # empty temp directory named `.planning` must exit through fail() -- a walk that finds
+    # zero files must not silently pass over them. Its GATE FAILED message is captured, not
+    # printed, matching the missing-target-file case's convention above.
+    case_count += 1
+    captured_ledger_floor = io.StringIO()
+    with tempfile.TemporaryDirectory() as tmp:
+        empty_planning = Path(tmp) / ".planning"
+        empty_planning.mkdir()
+        try:
+            with contextlib.redirect_stderr(captured_ledger_floor):
+                check_phase_ledgers(empty_planning, node)
+        except SystemExit:
+            if "floor" not in captured_ledger_floor.getvalue():
+                fail(
+                    "self-test FAILED: ledger: scan-level floor did not mention 'floor' in "
+                    f"its GATE FAILED message -- got {captured_ledger_floor.getvalue()!r}"
+                )
+            print(
+                "  self-test OK: ledger: scan-level floor correctly rejected an empty "
+                "directory (its GATE FAILED message captured, not printed)"
+            )
+        else:
+            fail(
+                "self-test FAILED: ledger: an empty .planning directory was reported green "
+                "-- the anti-vacuity floor is not enforced"
+            )
+
     print(
         f"\nAll REQUIRED_STATE_KEYS proved capable of catching deletion, `last_activity` proved "
         "incapable of being silenced by emptying, the historical raw-quote defect and a synthetic "
@@ -1096,7 +1352,11 @@ def self_test() -> None:
         "divergence-shape check rejects |-, >-, and backslash-escaped \\\" scalars on both "
         "required AND optional targets, and the positive control -- a single-line single-quoted "
         "document, the shape STATE.md ships today, apostrophes doubled as '' -- is correctly "
-        "accepted while that one deliberately-kept '' divergence is not convicted "
+        "accepted while that one deliberately-kept '' divergence is not convicted. Both "
+        "incident shapes are rejected from hash-pinned real history, the repaired form "
+        "(single-quoted score, backslash-escaped result, `expected: |` block scalar) is "
+        "accepted proving check_divergence_shapes is never applied to ledgers (DD-5), and "
+        "the ledger pin tables shrink-only and cross-check status against a shape read "
         f"({case_count} self-test case(s) total)."
     )
 
