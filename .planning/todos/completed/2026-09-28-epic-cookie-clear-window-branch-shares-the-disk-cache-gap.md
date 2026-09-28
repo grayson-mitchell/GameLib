@@ -64,4 +64,35 @@ Epic session.
 expected: `humble_login_clear_cookies`'s window-based branch evicts the HTTP disk/memory cache
 for a domain's matching records, the same as the now-fixed default-store branch, closing the
 identical stale-cache-replay gap for any caller that reaches this branch.
-result: pending
+result: pass — closed by quick task 260928-qvr (2026-09-28). The window-based branch's
+`cookies_type_set` now includes `WKWebsiteDataTypeDiskCache` + `WKWebsiteDataTypeMemoryCache`,
+still scoped to `matching_records` only (REQ-34.4.1-06 held — no blanket wipe, the
+`removeDataOfTypes_forDataRecords_completionHandler` call and record filter untouched). The
+misleading doc comment was rewritten to name the terminology collision explicitly: the
+JS-observable Cache Storage API (`WKWebsiteDataTypeFetchCache`) IS covered by
+`humble_login_clear_storage`'s injected script; WebKit's native HTTP disk/memory cache has no JS
+API and was covered by nothing.
+
+**The mandatory caller audit ran and did not halt.** Four `seam.clearCookies` sites, classified by
+label binding: Humble's `disconnect()` (`humble/user.ts:1010`) passes a real window label and is
+the SOLE caller reaching this branch; GOG (`gog/user.ts:69`), Amazon (`nile/user.ts:69`) and Epic
+(`legendary/user.ts:400`, via `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL`) all pass sentinel no-window
+labels and take the already-fixed default-store branch on macOS. On non-macOS the branch does not
+exist at all (`#[cfg(target_os = "macos")]`). No caller relies on the cache surviving a cookie
+clear — a disconnect/logout path wants precisely the opposite.
+
+Commits: `03a343405` (structural pin, observed RED first) and `d45e42d27` (fix + comment +
+count-only log). The pin uses an arm-terminator boundary rather than the precedent's `fn`-to-`fn`
+one — this site is a match arm — and asserts its scan window excludes the
+`clear_default_data_store_cookies_for_domain` declaration, so boundary drift cannot make it
+silently re-measure the already-fixed site and pass for the wrong reason. `cargo check` clean;
+288 passed / 1 failed / 2 ignored, the single failure
+(`f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated`) proven pre-existing by a recorded
+`git stash` A/B AND by the structural fact that neither commit adds any `.cookies()` call site,
+which is the only input that test scans.
+
+**One residual, deliberately not fixed here.** The arm's own comment at `main.rs:7185-7188` still
+claims "Humble/GOG/Amazon, all still routed through a live Tauri-managed window". That predates
+the Phase 40 plan 04 note at `:7200-7205` which moved GOG/Amazon to sentinel labels, so it is
+stale and contradicts the audit above. Correcting it was out of this task's scope; it is recorded
+here rather than absorbed silently.
