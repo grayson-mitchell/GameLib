@@ -1,6 +1,8 @@
 ---
 status: resolved
-root_cause_scope: 'SCOPED, READ THIS BEFORE TRUSTING `status` ABOVE. Root cause is CONFIRMED for the POST-AUTHENTICATION half of the Epic login flow ONLY: once Epic has already authorized the session, WKWebView silently refuses the client-side navigation to the localhost redirectUrl (full evidenced chain: Evidence 2026-08-02T05:05:00, Resolution.root_cause). The PRE-AUTHENTICATION half -- whether Epic''s real login form (email/password fields, hCaptcha) renders and accepts input for a genuinely LOGGED-OUT user under WKWebView -- is UNVERIFIED. Every single observation in this entire multi-cycle investigation came from an ALREADY-AUTHENTICATED webview (cookies persisted from an earlier manual login); nobody has ever driven this shell through a fresh, logged-out Epic sign-in. Do not read `root_cause_confirmed_*` as "the whole login flow is understood" -- see Current Focus, `pending_question`, for the live test that resolves this before implementation proceeds.'
+root_cause_scope: 'SCOPED, READ THIS BEFORE TRUSTING `status` ABOVE. Root cause is CONFIRMED for the POST-AUTHENTICATION half of the Epic login flow ONLY: once Epic has already authorized the session, WKWebView silently refuses the client-side navigation to the localhost redirectUrl (full evidenced chain: Evidence 2026-08-02T05:05:00, Resolution.root_cause). The PRE-AUTHENTICATION half -- whether Epic''s real login form (email/password fields, hCaptcha) renders and accepts input for a genuinely LOGGED-OUT user under WKWebView -- is UNVERIFIED. Every single observation in this entire multi-cycle investigation came from an ALREADY-AUTHENTICATED webview (cookies persisted from an earlier manual login); nobody has ever driven this shell through a fresh, logged-out Epic sign-in. Do not read `root_cause_confirmed_*` as "the whole login flow is understood" -- see Current Focus, `pending_question`, for the live test that resolves this before implementation proceeds.
+
+UPDATE 2026-09-28: the pre-authentication half above is NO LONGER UNVERIFIED. A separate debug session, `.planning/debug/resolved/epic-cold-jar-login-timeout.md`, drove a genuinely logged-out Epic sign-in end to end on this shell and found a DIFFERENT root cause than anything theorized in this file: a stale WebKit disk-cache entry from an earlier authenticated session, left behind by `humble_login_clear_cookies`/`clearEpicCookies`''s cookie-only removal scope, gets replayed on the next cold-jar sign-in attempt. No HTTP 403 was observed in that reproduction. This does not retroactively verify or refute every Talon-403 hypothesis explored below for the OLDER pre-auth incidents on file here -- that investigation is not re-litigated by this note -- but it does mean the pre-auth half is no longer an open, unverified gap: as of the fix in that session, a fresh logged-out sign-in has been independently confirmed to reach a real login form and complete, on a real account, on 2026-09-28. See that file''s Resolution section for the full root cause, fix, and verification.'
 trigger: "Tauri Epic login form renders but is non-interactive (F-34.5-G6-01). Discriminator verdict E1 (2026-08-01): the identical EPIC_LOGIN_URL is interactive under Electron (npm start, real login completed, 15 games) and non-interactive under Tauri (pnpm tauri:dev, two full 300s timeouts, single nav host=www.epicgames.com, title bar \"https://www.epicgames.com\", NO visible error text under the stock UA). E2 (Epic-side change independent of the port) is FALSIFIED. R1 (user-agent) was falsified in an earlier contract; R2 (a Chromium-only web API throwing under WKWebView) survives but is UNCONFIRMED because no one has ever seen the login window's JS console. LEAD HYPOTHESIS: main.rs:2476-2487 calls open_devtools() only for the \"main\" webview; the login window (separate WebviewWindowBuilder at main.rs:1387, label loginwin-N-*) never gets it, so its console has been invisible for four cycles. First move: add window.open_devtools() to the login window under #[cfg(debug_assertions)] only, then open Epic under pnpm tauri:dev and read the real console/script error. Prior art: queryLocalFonts is a CONFIRMED instance of a Chromium-only API throwing under WKWebView in this project (.claude/skills/spike-findings-gamelib/references/tauri-chromium-only-web-apis.md). Constraint: do NOT change USER_AGENTS, EPIC_LOGIN_URL, or matchOAuthRedirect - the discriminator's Routing section authorizes instrumentation/diagnosis only, no fix. Plans 34.5-29/30/31 remain HALTED by BINDING DECISION: fix-first; do not create 34.5-LIVE-GATE-RERUN-2.md."
 created: 2026-08-01
 updated: 2026-08-03T22:15:00
@@ -11,6 +13,25 @@ phase: 34.5
 ---
 
 # Epic login form non-interactive under Tauri
+
+## ADDENDUM 2026-09-28 — the pre-authentication half is now separately resolved
+
+This file's `root_cause_scope` (frontmatter) has always been explicit that its `CLOSED` status
+and root cause only ever covered the POST-authentication half of Epic login (the localhost
+OAuth-redirect navigation refusal). The PRE-authentication half — whether a genuinely
+logged-out user's Epic sign-in reaches a usable login form at all — was UNVERIFIED here: every
+observation in this file's whole investigation came from an already-authenticated webview.
+
+That gap is now closed by a separate debug session: `.planning/debug/resolved/epic-cold-jar-login-timeout.md`.
+It reproduced a real, genuinely-logged-out Epic sign-in end to end and found the actual root
+cause to be a stale WebKit HTTP disk-cache entry (written by an earlier authenticated session)
+surviving `humble_login_clear_cookies`/`clearEpicCookies`'s cookie-only removal scope and being
+replayed on the next cold-jar attempt — producing a silent 300s client-timeout, not an HTTP 403.
+No 403 was observed in that reproduction. This addendum deliberately does not re-litigate or
+re-score the extensive Talon-403 hypothesis work below for the earlier, already-recorded
+incidents on this file — that material is left as originally written — but readers should not
+treat the pre-auth half as still-open: it has its own separate root cause, fix, and verification,
+recorded in full in that file.
 
 ## Symptoms
 

@@ -4165,8 +4165,11 @@ fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
 ///
 /// Removal mechanism is the SAME one `humble_login_clear_cookies`'s existing per-window macOS
 /// branch already proved correct (Plan 23, F-6 Defect B): `WKWebsiteDataStore
-/// .removeDataOfTypes(forDataRecords:completionHandler:)`, scoped to `WKWebsiteDataTypeCookies`
-/// only and to records whose `displayName()` domain-suffix-matches `domain` -- never
+/// .removeDataOfTypes(forDataRecords:completionHandler:)`, scoped to
+/// `WKWebsiteDataTypeCookies` + `WKWebsiteDataTypeDiskCache` + `WKWebsiteDataTypeMemoryCache`
+/// (debug session `epic-cold-jar-login-timeout`, 2026-09-28 -- see the removal call site's own
+/// doc comment for why the disk/memory cache had to be added) and to records whose
+/// `displayName()` domain-suffix-matches `domain` -- never
 /// `WKHTTPCookieStore.deleteCookie()` (the filed WebKit defect, bugs.webkit.org #184938, that
 /// reports success while silently deleting nothing; see that branch's own doc comment). The
 /// measured count comes from `WKHTTPCookieStore.getAllCookies()` -- a real per-cookie read,
@@ -4287,19 +4290,55 @@ fn clear_default_data_store_cookies_for_domain(
                     let _ = tx_fetch.send(());
                     return;
                 }
-                // Scoped to WKWebsiteDataTypeCookies ONLY -- a matched record may carry
-                // localStorage/IndexedDB/cache data for the same domain too;
-                // `humble_login_clear_storage` (a separate, already-shipped step) owns those.
-                // SAFETY: `WKWebsiteDataTypeCookies` is a valid static `NSString` this crate
+                // Scoped to WKWebsiteDataTypeCookies PLUS the native HTTP disk/memory
+                // cache -- a matched record may also carry localStorage/IndexedDB/
+                // Cache-Storage(fetch) data for the same domain; `humble_login_clear_storage`
+                // (a separate, already-shipped step) owns THOSE, via injected JS
+                // (localStorage.clear()/indexedDB/`caches`/service-worker unregister).
+                //
+                // CORRECTION (debug session `epic-cold-jar-login-timeout`, 2026-09-28):
+                // this comment previously read "cache data... `humble_login_clear_storage`
+                // owns those", which conflated two distinct WebKit concepts. The JS-observable
+                // `caches` Cache Storage API (`WKWebsiteDataTypeFetchCache`) IS covered by
+                // `humble_login_clear_storage`'s injected script. WebKit's own native HTTP
+                // resource cache (`WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache`,
+                // the one backing `NetworkResourceLoader::retrieveCacheEntry`) is NOT --
+                // there is no JS API for it, only this native `removeDataOfTypes` call. Left
+                // uncovered, a disk-cache entry written by an earlier authenticated session
+                // (e.g. a real Epic login) survives this cookie-only clear indefinitely inside
+                // the shared, process-wide `WKWebsiteDataStore::defaultDataStore()`, and gets
+                // replayed verbatim (confirmed live: `retrieveCacheEntry: HTTP
+                // (foundCachedEntry=1)`, zero network round-trips, first-ever load of the page
+                // in the window) to the next cold-jar sign-in attempt -- serving
+                // authenticated-shaped markup to a webview with no cookies, which then polls
+                // session-dependent subresources that can never resolve for the full 300s
+                // client timeout. Adding the two disk/memory-cache types here closes that gap,
+                // still scoped to `matching_records` (this domain only) -- not a blanket wipe
+                // (REQ-34.4.1-06).
+                //
+                // SAFETY: `WKWebsiteDataTypeCookies`/`WKWebsiteDataTypeDiskCache`/
+                // `WKWebsiteDataTypeMemoryCache` are valid static `NSString`s this crate
                 // exposes; reading an extern static is the only unsafe part of this line.
                 let cookies_type: &objc2_foundation::NSString =
                     unsafe { objc2_web_kit::WKWebsiteDataTypeCookies };
-                let cookies_type_set = objc2_foundation::NSSet::from_slice(&[cookies_type]);
+                let disk_cache_type: &objc2_foundation::NSString =
+                    unsafe { objc2_web_kit::WKWebsiteDataTypeDiskCache };
+                let memory_cache_type: &objc2_foundation::NSString =
+                    unsafe { objc2_web_kit::WKWebsiteDataTypeMemoryCache };
+                let cookies_type_set = objc2_foundation::NSSet::from_slice(&[
+                    cookies_type,
+                    disk_cache_type,
+                    memory_cache_type,
+                ]);
+                let matched_record_count = matching_records.len();
                 let records_array = objc2_foundation::NSArray::from_slice(&matching_records);
                 let tx_remove = tx_fetch.clone();
                 let remove_completion = block2::RcBlock::new(move || {
                     let _ = tx_remove.send(());
                 });
+                eprintln!(
+                    "[shell] humble_login_clear_cookies: default-store evicting cookies + HTTP disk/memory cache for {matched_record_count} matching data record(s) (domain-scoped, count only)"
+                );
                 // SAFETY: `data_store_for_removal` is a live object obtained on the main
                 // thread above; `cookies_type_set`/`records_array` are freshly built, live
                 // objects; `remove_completion` outlives the call.
@@ -7390,27 +7429,63 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                                 let _ = tx_fetch.send(());
                                 return;
                             }
-                            // Scoped to WKWebsiteDataTypeCookies ONLY (spike 016's own
-                            // finding) -- a matched record may carry localStorage/
-                            // IndexedDB/cache data for the same domain too, and
-                            // `removeDataOfTypes` removes only the types named here,
-                            // never the whole record. Plans 15/16's separate
-                            // origin-scoped storage clear owns those other categories;
-                            // widening this clear into them would be a silent scope
-                            // regression, not a fix.
-                            // SAFETY: `WKWebsiteDataTypeCookies` is a valid static
-                            // `NSString` this crate exposes; reading an extern static is
-                            // the only unsafe part of this line.
+                            // Scoped to WKWebsiteDataTypeCookies PLUS the native HTTP
+                            // disk/memory cache -- a matched record may also carry
+                            // localStorage/IndexedDB/Cache-Storage(fetch) data for the same
+                            // domain; `humble_login_clear_storage` (a separate,
+                            // already-shipped step) owns THOSE, via injected JS
+                            // (localStorage.clear()/indexedDB/`caches`/service-worker
+                            // unregister).
+                            //
+                            // CORRECTION (260928-qvr, the twin site
+                            // `epic-cold-jar-login-timeout` deliberately left unfixed --
+                            // `.planning/debug/resolved/epic-cold-jar-login-timeout.md`):
+                            // this comment previously read "cache data... Plans 15/16's
+                            // separate origin-scoped storage clear owns those other
+                            // categories", which conflated two distinct WebKit concepts.
+                            // The JS-observable `caches` Cache Storage API
+                            // (`WKWebsiteDataTypeFetchCache`) IS covered by
+                            // `humble_login_clear_storage`'s injected script. WebKit's own
+                            // native HTTP resource cache
+                            // (`WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache`)
+                            // is NOT -- there is no JS API for it, only this native
+                            // `removeDataOfTypes` call. Left uncovered here, this branch
+                            // would share the exact stale-authenticated-content replay gap
+                            // the default-store branch above was fixed for. Adding the two
+                            // disk/memory-cache types closes that gap for this branch's
+                            // sole confirmed caller (Humble's `disconnect()` -- see this
+                            // quick task's SUMMARY for the full caller audit), still scoped
+                            // to `matching_records` (this domain only) -- not a blanket
+                            // wipe (REQ-34.4.1-06). `removeDataOfTypes` still removes only
+                            // the types named here, never the whole record, so
+                            // localStorage/IndexedDB remain the storage-clear step's
+                            // business.
+                            //
+                            // SAFETY: `WKWebsiteDataTypeCookies`/
+                            // `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache`
+                            // are valid static `NSString`s this crate exposes; reading an
+                            // extern static is the only unsafe part of this line.
                             let cookies_type: &objc2_foundation::NSString =
                                 unsafe { objc2_web_kit::WKWebsiteDataTypeCookies };
-                            let cookies_type_set =
-                                objc2_foundation::NSSet::from_slice(&[cookies_type]);
+                            let disk_cache_type: &objc2_foundation::NSString =
+                                unsafe { objc2_web_kit::WKWebsiteDataTypeDiskCache };
+                            let memory_cache_type: &objc2_foundation::NSString =
+                                unsafe { objc2_web_kit::WKWebsiteDataTypeMemoryCache };
+                            let cookies_type_set = objc2_foundation::NSSet::from_slice(&[
+                                cookies_type,
+                                disk_cache_type,
+                                memory_cache_type,
+                            ]);
+                            let matched_record_count = matching_records.len();
                             let records_array =
                                 objc2_foundation::NSArray::from_slice(&matching_records);
                             let tx_remove = tx_fetch.clone();
                             let remove_completion = block2::RcBlock::new(move || {
                                 let _ = tx_remove.send(());
                             });
+                            eprintln!(
+                                "[shell] humble_login_clear_cookies: window branch evicting cookies + HTTP disk/memory cache for {matched_record_count} matching data record(s) (domain-scoped, count only)"
+                            );
                             // SAFETY: `data_store_for_removal` is a live object obtained
                             // on the main thread above; `cookies_type_set`/
                             // `records_array` are freshly built, live objects;
@@ -14218,6 +14293,98 @@ mod tests {
         // shape `window` / `.cookies()`, not only single-line prefixes.
         let mut found_split_line_shape = false;
 
+        // `guard_excludes_macos` is the PROPERTY this pin asserts -- not an exact-string
+        // comparison against one cfg spelling. Each half below is a deliberate choice a
+        // future reader will want to overturn; read both before touching it.
+        //
+        // `None` means the call site has no `#[cfg(...)]` between it and the enclosing `fn`
+        // or match-arm boundary: an unconditional call is macOS-reachable by definition, so
+        // this returns `false`.
+        //
+        // For `Some(g)`, the guard is accepted only if BOTH hold:
+        // - `g` contains `not(target_os = "macos")` -- this is what makes the ORIGINAL RED
+        //   shape, `#[cfg(target_os = "macos")]`, fail: it is rejected by this rule rather
+        //   than by a second special case, because that literal string does not contain
+        //   `not(target_os = "macos")`.
+        // - `g` does NOT contain `any(` -- this matcher deliberately does not evaluate cfg
+        //   algebra. A disjunction can silently restore macOS reachability (e.g.
+        //   `any(target_os = "macos", windows)`), and a matcher that tried to decide which
+        //   disjunctions are safe would be a small `cfg` interpreter that is wrong in a way
+        //   nobody notices. This fails closed instead.
+        //
+        // The known cost of failing closed: a semantically SAFE spelling such as
+        // `#[cfg(not(any(target_os = "macos", windows)))]` is rejected even though it does
+        // exclude macOS. That is intended, not a bug to quietly patch around. Admitting such
+        // a spelling is a deliberate, reviewed edit to this predicate AND to its fixture
+        // table below -- never a loosened rule. See CLAUDE.md's own standing warning: a
+        // vocabulary that grows to fit whatever was typed is free text with extra steps.
+        fn guard_excludes_macos(guard: Option<&str>) -> bool {
+            match guard {
+                None => false,
+                Some(g) => g.contains("not(target_os = \"macos\")") && !g.contains("any("),
+            }
+        }
+
+        // Load-bearing self-test of `guard_excludes_macos` itself: a matcher that goes green
+        // but no longer discriminates is worse than the pin it replaces. Seven cases, all
+        // load-bearing -- each row's own reason is asserted into the failure message so the
+        // intent stays legible rather than incidental.
+        let fixture_cases: [(&str, Option<&str>, bool, &str); 7] = [
+            (
+                "#[cfg(not(target_os = \"macos\"))]",
+                Some("#[cfg(not(target_os = \"macos\"))]"),
+                true,
+                "the canonical exclusion; three of the four live sites",
+            ),
+            (
+                "#[cfg(all(not(target_os = \"macos\"), not(windows)))]",
+                Some("#[cfg(all(not(target_os = \"macos\"), not(windows)))]"),
+                true,
+                "the live guard at main.rs:7692 since `1a8e1827b` -- strictly narrower, and the whole reason this pin was red",
+            ),
+            (
+                "None",
+                None,
+                false,
+                "unconditional call site -- macOS-reachable",
+            ),
+            (
+                "#[cfg(target_os = \"macos\")]",
+                Some("#[cfg(target_os = \"macos\")]"),
+                false,
+                "the original RED shape the debug session recorded verbatim; rejected by the `not(target_os = \"macos\")` rule, asserted here deliberately so the intent is legible rather than incidental",
+            ),
+            (
+                "#[cfg(windows)]",
+                Some("#[cfg(windows)]"),
+                false,
+                "excludes macOS only incidentally -- the matcher does not evaluate cfg algebra and must not credit an accident",
+            ),
+            (
+                "#[cfg(any(target_os = \"macos\", windows))]",
+                Some("#[cfg(any(target_os = \"macos\", windows))]"),
+                false,
+                "a disjunction that makes the call macOS-reachable",
+            ),
+            (
+                "#[cfg(not(any(target_os = \"macos\", windows)))]",
+                Some("#[cfg(not(any(target_os = \"macos\", windows)))]"),
+                false,
+                "semantically SAFE and rejected anyway -- the documented false rejection; its presence here is the honest record that the conservatism is a decision, not an oversight, and admitting this spelling means editing the predicate AND this row, never loosening the rule",
+            ),
+        ];
+        for (label, guard, expected_verdict, reason) in fixture_cases {
+            assert_eq!(
+                guard_excludes_macos(guard),
+                expected_verdict,
+                "guard_excludes_macos fixture `{}` expected {} but the predicate returned {} -- {}",
+                label,
+                expected_verdict,
+                !expected_verdict,
+                reason
+            );
+        }
+
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
@@ -14254,9 +14421,10 @@ mod tests {
 
             // Walk backward to the nearest preceding `#[cfg(...)]` attribute line. A
             // legitimate SURVIVING call site must be immediately (modulo blank/comment lines)
-            // gated behind exactly `#[cfg(not(target_os = "macos"))]` -- never unconditional,
-            // and never `#[cfg(target_os = "macos")]`. Stops at a function or match-arm
-            // boundary (no cfg found before it means the call is unconditional).
+            // gated by a cfg that PROVABLY excludes macOS -- see `guard_excludes_macos`,
+            // above, for the exact property (never unconditional, never bare
+            // `#[cfg(target_os = "macos")]`, never an `any(` disjunction). Stops at a function
+            // or match-arm boundary (no cfg found before it means the call is unconditional).
             let mut guard: Option<String> = None;
             for prior in lines[..i].iter().rev() {
                 let prior_trimmed = prior.trim();
@@ -14277,20 +14445,26 @@ mod tests {
             // shape apart from a genuine defect. `concat!` joins several COMPLETE,
             // self-contained (and therefore individually balanced) string literals at compile
             // time into the identical runtime message, with no `\`-continuation involved.
-            assert_eq!(
-                guard.as_deref(),
-                Some("#[cfg(not(target_os = \"macos\"))]"),
+            assert!(
+                guard_excludes_macos(guard.as_deref()),
                 concat!(
-                    "F-34.4.2-12 regression: `{}` has an unconditional (or macOS-reachable) ",
-                    "wry `.cookies()` call at main.rs line {} (`{}`). This getter blocks the ",
-                    "calling closure inside a reentrant NSRunLoop pump that can self-deadlock ",
-                    "against tao's EventLoopHandler mutex on macOS -- live-reproduced 2/2, see ",
-                    "`.planning/debug/resolved/humble-disconnect-main-wedge.md`. It must only ",
-                    "ever be reached via `#[cfg(not(target_os = \"macos\"))]`."
+                    "F-34.4.2-12 regression: `{}` has a wry `.cookies()` call at main.rs line ",
+                    "{} (`{}`) whose guard does not provably exclude macOS (guard found: {}). ",
+                    "This getter blocks the calling closure inside a reentrant NSRunLoop pump ",
+                    "that can self-deadlock against tao's EventLoopHandler mutex on macOS -- ",
+                    "live-reproduced 2/2, see ",
+                    "`.planning/debug/resolved/humble-disconnect-main-wedge.md`. The guard must ",
+                    "contain `not(target_os = \"macos\")` and must NOT contain `any(`. This ",
+                    "matcher is deliberately conservative and rejects some semantically-safe ",
+                    "spellings on purpose (e.g. `#[cfg(not(any(target_os = \"macos\", ",
+                    "windows)))]`) -- see `guard_excludes_macos`, above. Admitting such a ",
+                    "spelling requires a deliberate, reviewed edit to that predicate and its ",
+                    "fixture table -- never loosen this rule just to make the test pass."
                 ),
                 arm,
                 i + 1,
-                trimmed
+                trimmed,
+                guard.as_deref().unwrap_or("<none>")
             );
 
             found_sites.push((arm, guard.unwrap_or_default()));
@@ -14299,36 +14473,56 @@ mod tests {
         // EXACT structural expectation, not a floor (D-F2). "Three arms" and "four sites" are
         // DIFFERENT numbers and neither is a typo: `humble_login_clear_cookies` alone carries
         // TWO separately-guarded sites (the `count_matching` read and the deletion branch's
-        // split-line read), the other two arms carry one each. A floor (e.g. `>= 4`) cannot
-        // detect a site DISAPPEARING if the disappearance lands on the floor's own slack; exact
-        // equality on the full `(arm, guard)` multiset fails loudly on disappearance, on
-        // unreviewed addition, on a site MIGRATING between arms, and on a site silently LOSING
-        // its guard -- none of which necessarily changes the bare count. If this assertion ever
-        // fails because an arm was genuinely restructured (not because a call site regressed),
-        // the expected set below must be RE-DERIVED from a fresh measurement and re-reviewed --
-        // never widened or loosened just to make the test pass.
-        let guard_ok = "#[cfg(not(target_os = \"macos\"))]".to_string();
+        // split-line read), the other two arms carry one each. The four sites now carry TWO
+        // distinct guard spellings, not one: three sites are gated by the broad
+        // `#[cfg(not(target_os = "macos"))]`, and `humble_login_clear_cookies`'s deletion-
+        // branch site (main.rs:7705) alone is gated by the narrower
+        // `#[cfg(all(not(target_os = "macos"), not(windows)))]` -- `1a8e1827b` (2026-09-26)
+        // routed Windows through WebView2 directly instead of wry's broken `delete_cookie`
+        // (cookie-0.18's `domain()` drops the leading dot). Re-deriving this expected set to
+        // carry both spellings is NOT widening: the per-site `assert!` above already runs
+        // ahead of this census, inside the same scan loop, and would already have rejected
+        // any guard that is not provably macOS-excluding -- this census is a structural
+        // inventory sitting behind that safety check, not the safety check itself. A floor
+        // (e.g. `>= 4`) cannot detect a site DISAPPEARING if the disappearance lands on the
+        // floor's own slack; exact equality on the full `(arm, guard)` multiset fails loudly
+        // on disappearance, on unreviewed addition, on a site MIGRATING between arms, and on
+        // a site silently LOSING its guard -- none of which necessarily changes the bare
+        // count. If this assertion ever fails because an arm was genuinely restructured (not
+        // because a call site regressed), the expected set below must be RE-DERIVED from a
+        // fresh measurement and re-reviewed -- never widened or loosened just to make the
+        // test pass.
+        let guard_ok_broad = "#[cfg(not(target_os = \"macos\"))]".to_string();
+        // Diverges from the other three sites ON PURPOSE: named separately (never cloned from
+        // `guard_ok_broad`) so a reader scanning the vec below can see at a glance that one
+        // site is deliberately guarded differently, rather than hiding the difference behind
+        // a shared binding. See `main.rs:7692`'s own comment for the Windows rationale
+        // (`1a8e1827b`).
+        let guard_ok_not_windows =
+            "#[cfg(all(not(target_os = \"macos\"), not(windows)))]".to_string();
         let mut expected: Vec<(&str, String)> = vec![
-            ("humble_login_cookies", guard_ok.clone()),
-            ("humble_login_cookies_for_domain", guard_ok.clone()),
-            ("humble_login_clear_cookies", guard_ok.clone()),
-            ("humble_login_clear_cookies", guard_ok),
+            ("humble_login_cookies", guard_ok_broad.clone()),
+            ("humble_login_cookies_for_domain", guard_ok_broad.clone()),
+            ("humble_login_clear_cookies", guard_ok_broad),
+            ("humble_login_clear_cookies", guard_ok_not_windows),
         ];
         expected.sort();
         let mut actual = found_sites.clone();
         actual.sort();
-        // `concat!`, not a `\`-continued literal -- see the comment above the first `assert_eq!`
+        // `concat!`, not a `\`-continued literal -- see the comment above the first `assert!`
         // in this test for why (WR-08).
         assert_eq!(
             actual,
             expected,
             concat!(
-                "F-34.4.2-12 regression pin: the set of macOS-reachable-gated `.cookies()` ",
+                "F-34.4.2-12 regression pin: the set of macOS-excluded-guarded `.cookies()` ",
                 "call sites no longer matches the exact expected set (four sites across three ",
-                "arms -- `humble_login_clear_cookies` alone carries two, separately guarded; ",
-                "the other two arms carry one each; neither number is a typo). A mismatch ",
-                "means either a genuine regression (a new macOS-reachable blocking call) or ",
-                "that an arm was restructured; in the restructuring case, re-derive and ",
+                "arms, carrying TWO distinct guard spellings -- `humble_login_clear_cookies` ",
+                "alone carries two sites, separately guarded, one of them narrower than the ",
+                "other three; the other two arms carry one each; none of these numbers is a ",
+                "typo). A mismatch means either a genuine regression (a new macOS-reachable ",
+                "blocking call, which the per-site assertion above should already have caught) ",
+                "or that an arm was restructured; in the restructuring case, re-derive and ",
                 "re-review this expected set from a fresh measurement -- never widen it just ",
                 "to make this test pass."
             )
@@ -14338,7 +14532,7 @@ mod tests {
         // silently narrowed back to prefix matching and would once again miss the split-line
         // shape (`window` / `.cookies()`) that is the debug session's own recorded blind spot.
         // `concat!`, not a `\`-continued literal -- see the comment above the first
-        // `assert_eq!` in this test for why (WR-08).
+        // `assert!` in this test for why (WR-08).
         assert!(
             found_split_line_shape,
             concat!(
@@ -14347,6 +14541,304 @@ mod tests {
                 "shape already present in `humble_login_clear_cookies`'s deletion branch). Its ",
                 "absence means the matcher has stopped recognising call sites split across ",
                 "lines."
+            )
+        );
+    }
+
+    // ---- epic-cold-jar-login-timeout regression pin: default-store cookie clear left the
+    // HTTP disk/memory cache untouched ----
+    //
+    // `.planning/debug/resolved/epic-cold-jar-login-timeout.md`. A stale WebKit HTTP
+    // disk-cache entry for `EPIC_LOGIN_URL`'s origin, written by an earlier authenticated Epic
+    // session inside the SAME long-lived `WKWebsiteDataStore::defaultDataStore()`, survived
+    // `clear_default_data_store_cookies_for_domain`'s cookie-ONLY removal call indefinitely
+    // and was replayed verbatim on the next cold-cookie-jar sign-in attempt (confirmed live:
+    // `retrieveCacheEntry: HTTP (foundCachedEntry=1)`, zero network round-trips, first-ever
+    // load of the page in the captured window) -- serving authenticated-shaped markup to a
+    // webview with no cookies, which then polled session-dependent subresources that could
+    // never resolve for the full 300s client timeout.
+    //
+    // A live end-to-end reproduction is NOT safely automatable here, for a STRONGER version of
+    // the reason `f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated` above already gives:
+    // it requires not only a real, contended AppKit/WebKit run loop, but ALSO a previously-
+    // authenticated, long-lived process state that 10 separate single-variable standalone-
+    // harness attempts (`epicprobe2` through `epicprobe10` -- UA, delegate presence,
+    // single-flight guard, process teardown, Set-Cookie, explicit vs absent Cache-Control,
+    // settle time, bundle identity, and reload API; see the debug session's own Evidence)
+    // could never reproduce, even with the run-loop constraint separately satisfied. This test
+    // instead pins the STRUCTURAL fix -- the same "prove it against the source" discipline
+    // used above -- scoped ONLY to `clear_default_data_store_cookies_for_domain`, the call
+    // site confirmed exercised by the real failing run (the `existing_window.is_none()`
+    // fallback path taken on macOS when `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL` resolves to
+    // `None`). An IDENTICAL, deliberately UNFIXED twin call site exists elsewhere in this file
+    // (the window-based `existing_window.is_some()` branch of the same shared
+    // `humble_login_clear_cookies` arm, used by other callers) -- see the debug session's
+    // Evidence for why fixing it was scoped out of this pass. This test does not check that
+    // site and must not be widened to without a fresh measurement confirming it is actually
+    // exercised by a failing run.
+    #[test]
+    fn epic_cold_jar_login_timeout_default_store_clear_evicts_disk_and_memory_cache() {
+        let source = include_str!("main.rs");
+        let lines: Vec<&str> = source.lines().collect();
+
+        let start = lines
+            .iter()
+            .position(|l| {
+                l.trim_start()
+                    .starts_with("fn clear_default_data_store_cookies_for_domain")
+            })
+            .expect(concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` not found by name in this file ",
+                "-- it was renamed or removed; re-derive this pin's scan boundary from a fresh ",
+                "measurement."
+            ));
+
+        // End boundary: the next top-level (column-0) `fn` declaration after `start`. Scopes
+        // the scan to exactly this one function so this pin can never accidentally pass or
+        // fail based on the deliberately-unfixed twin site elsewhere in this file.
+        let end = lines[start + 1..]
+            .iter()
+            .position(|l| l.starts_with("fn ") || l.starts_with("pub fn "))
+            .map(|offset| start + 1 + offset)
+            .expect(concat!(
+                "epic-cold-jar-login-timeout regression: could not find the end of ",
+                "`clear_default_data_store_cookies_for_domain` -- no subsequent top-level `fn` ",
+                "found after it."
+            ));
+
+        let body = &lines[start..end];
+        let non_comment_contains = |needle: &str| {
+            body.iter().any(|l| {
+                let t = l.trim();
+                !(t.starts_with("//") || t.starts_with('*')) && t.contains(needle)
+            })
+        };
+
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeCookies"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` no longer references ",
+                "`WKWebsiteDataTypeCookies` in a non-comment line -- its own cookie-clearing ",
+                "purpose has regressed."
+            )
+        );
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeDiskCache"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` no longer references ",
+                "`WKWebsiteDataTypeDiskCache` in a non-comment line -- the fix for a stale ",
+                "disk-cache entry surviving a cookie-only clear and being replayed on a later ",
+                "cold-jar Epic sign-in has regressed. See ",
+                "`.planning/debug/resolved/epic-cold-jar-login-timeout.md`."
+            )
+        );
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeMemoryCache"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` no longer references ",
+                "`WKWebsiteDataTypeMemoryCache` in a non-comment line. See ",
+                "`.planning/debug/resolved/epic-cold-jar-login-timeout.md`."
+            )
+        );
+
+        // Structural check, not just presence: the disk/memory cache types must be in the SAME
+        // set literal that is actually passed to
+        // `removeDataOfTypes_forDataRecords_completionHandler` -- not merely referenced
+        // decoratively (e.g. in a dead branch, or built but never passed to the removal call).
+        let set_construction_line = body
+            .iter()
+            .position(|l| l.contains("NSSet::from_slice"))
+            .expect(concat!(
+                "epic-cold-jar-login-timeout regression: no `NSSet::from_slice(...)` ",
+                "construction found in `clear_default_data_store_cookies_for_domain` -- the ",
+                "removal type-set is now built a different way; re-derive this pin from a ",
+                "fresh measurement rather than widening the match string."
+            ));
+        let set_literal_window =
+            body[set_construction_line..(set_construction_line + 8).min(body.len())].join("\n");
+        assert!(
+            set_literal_window.contains("cookies_type")
+                && set_literal_window.contains("disk_cache_type")
+                && set_literal_window.contains("memory_cache_type"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: the `NSSet::from_slice(...)` type-set ",
+                "literal in `clear_default_data_store_cookies_for_domain` no longer includes ",
+                "all three of `cookies_type`, `disk_cache_type`, `memory_cache_type` within 8 ",
+                "lines of its opening -- the widened removal scope has regressed back to a ",
+                "cookie-only clear."
+            )
+        );
+
+        assert!(
+            non_comment_contains("removeDataOfTypes_forDataRecords_completionHandler")
+                && non_comment_contains("&cookies_type_set"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` no longer calls ",
+                "`removeDataOfTypes_forDataRecords_completionHandler` with `&cookies_type_set` ",
+                "-- the widened type-set may have been built but never actually passed to the ",
+                "native removal call."
+            )
+        );
+    }
+
+    // ---- 260928-qvr regression pin: window-based cookie clear leaves the HTTP disk/memory
+    // cache untouched (the twin site the epic-cold-jar-login-timeout session deliberately left
+    // unfixed) ----
+    //
+    // `.planning/debug/resolved/epic-cold-jar-login-timeout.md` fixed
+    // `clear_default_data_store_cookies_for_domain` (the `existing_window.is_none()` fallback
+    // branch of the shared `humble_login_clear_cookies` arm, above) because it was the ONLY
+    // path confirmed exercised by the real failing Epic cold-jar run. An IDENTICAL construction
+    // sits in this arm's OTHER branch -- the `existing_window.is_some()` window-based path,
+    // taken when a caller passes a real Tauri-managed window label. `260928-qvr`'s own Task 1
+    // audit (see the quick task's SUMMARY) enumerated every `seam.clearCookies` call site and
+    // confirmed Humble's `disconnect()` (`humble/user.ts:1010`, a real `seam.open()` window
+    // label) is the sole caller reaching this branch -- GOG, Amazon and Epic all resolve to
+    // sentinel no-window labels that take the already-fixed default-store branch instead, and
+    // none of the four reaching-or-not callers has any reason to rely on the HTTP disk/memory
+    // cache surviving a cookie clear (a disconnect/logout wants the opposite: a genuinely fresh
+    // next login).
+    //
+    // A live end-to-end reproduction is NOT safely automatable here, for the same reason
+    // `epic_cold_jar_login_timeout_default_store_clear_evicts_disk_and_memory_cache` above
+    // gives: it needs a real, contended AppKit/WebKit run loop PLUS a previously-authenticated,
+    // long-lived process state that ten separate single-variable standalone-harness attempts
+    // could never reproduce (see the debug session's own Evidence). This test instead pins the
+    // STRUCTURAL fix, scoped ONLY to the window-based branch -- it must be blind to the
+    // already-fixed `clear_default_data_store_cookies_for_domain` site (asserted explicitly
+    // below), so a future boundary drift cannot let it silently re-measure the wrong site and
+    // pass for the wrong reason.
+    #[test]
+    fn epic_cold_jar_login_timeout_window_branch_clear_evicts_disk_and_memory_cache() {
+        let source = include_str!("main.rs");
+        let lines: Vec<&str> = source.lines().collect();
+
+        // This site is a `dispatch_rust_channel` MATCH ARM, not a top-level `fn` -- the
+        // precedent test's column-0 `fn`-to-`fn` boundary does not apply here. Reuse the
+        // arm-boundary shape `f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated` above
+        // already proves works on this file: a line whose trimmed form starts with a
+        // double-quote and ends with the arrow-and-open-brace arm terminator.
+        let is_arm_boundary = |l: &str| {
+            let t = l.trim();
+            t.starts_with('"') && t.ends_with("\" => {")
+        };
+
+        let start = lines
+            .iter()
+            .position(|l| l.trim() == "\"humble_login_clear_cookies\" => {")
+            .expect(concat!(
+                "260928-qvr regression: the `\"humble_login_clear_cookies\" => {` arm opener ",
+                "was not found by exact match in this file -- it was renamed, reformatted, or ",
+                "removed; re-derive this pin's scan boundary from a fresh measurement rather ",
+                "than loosening the match string."
+            ));
+
+        // End boundary: the next `dispatch_rust_channel` match arm opener after `start`. Scopes
+        // the scan to exactly this one arm (both its branches) so this pin can never
+        // accidentally measure a sibling arm.
+        let end = lines[start + 1..]
+            .iter()
+            .position(|l| is_arm_boundary(l))
+            .map(|offset| start + 1 + offset)
+            .expect(concat!(
+                "260928-qvr regression: could not find the next `dispatch_rust_channel` match ",
+                "arm opener after `humble_login_clear_cookies` -- re-derive this pin's scan ",
+                "boundary from a fresh measurement rather than loosening the match string."
+            ));
+
+        let body = &lines[start..end];
+        let non_comment_contains = |needle: &str| {
+            body.iter().any(|l| {
+                let t = l.trim();
+                !(t.starts_with("//") || t.starts_with('*')) && t.contains(needle)
+            })
+        };
+
+        // Blind-to-the-already-fixed-site check, ahead of everything else: if this ever fires,
+        // the arm boundary above has drifted wide enough to swallow
+        // `clear_default_data_store_cookies_for_domain`, and every assertion below could then
+        // pass by measuring the WRONG site.
+        assert!(
+            !body
+                .iter()
+                .any(|l| l.contains("fn clear_default_data_store_cookies_for_domain")),
+            concat!(
+                "260928-qvr regression: this pin's scan window contains the already-fixed ",
+                "`clear_default_data_store_cookies_for_domain` declaration -- the arm boundary ",
+                "has drifted wide enough to let this pin re-measure the wrong site. Re-derive ",
+                "the arm boundary from a fresh measurement; never widen the match to make this ",
+                "assertion pass."
+            )
+        );
+
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeCookies"),
+            concat!(
+                "260928-qvr regression: `humble_login_clear_cookies`'s window-based branch no ",
+                "longer references `WKWebsiteDataTypeCookies` in a non-comment line -- its own ",
+                "cookie-clearing purpose has regressed."
+            )
+        );
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeDiskCache"),
+            concat!(
+                "260928-qvr regression: `humble_login_clear_cookies`'s window-based branch no ",
+                "longer references `WKWebsiteDataTypeDiskCache` in a non-comment line -- the fix ",
+                "for a stale disk-cache entry surviving a cookie-only clear and being replayed ",
+                "on a later cold-jar sign-in has regressed. See ",
+                "`.planning/debug/resolved/epic-cold-jar-login-timeout.md`."
+            )
+        );
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeMemoryCache"),
+            concat!(
+                "260928-qvr regression: `humble_login_clear_cookies`'s window-based branch no ",
+                "longer references `WKWebsiteDataTypeMemoryCache` in a non-comment line. See ",
+                "`.planning/debug/resolved/epic-cold-jar-login-timeout.md`."
+            )
+        );
+
+        // Structural check, not just presence: the disk/memory cache types must be in the SAME
+        // set literal that is actually passed to
+        // `removeDataOfTypes_forDataRecords_completionHandler` -- not merely referenced
+        // decoratively, or built but never passed to the removal call.
+        let set_construction_line = body
+            .iter()
+            .position(|l| l.contains("NSSet::from_slice"))
+            .expect(concat!(
+                "260928-qvr regression: no `NSSet::from_slice(...)` construction found in ",
+                "`humble_login_clear_cookies`'s window-based branch -- the removal type-set is ",
+                "now built a different way; re-derive this pin from a fresh measurement rather ",
+                "than widening the match string."
+            ));
+        let set_literal_window =
+            body[set_construction_line..(set_construction_line + 8).min(body.len())].join("\n");
+        assert!(
+            set_literal_window.contains("cookies_type")
+                && set_literal_window.contains("disk_cache_type")
+                && set_literal_window.contains("memory_cache_type"),
+            concat!(
+                "260928-qvr regression: the `NSSet::from_slice(...)` type-set literal in ",
+                "`humble_login_clear_cookies`'s window-based branch no longer includes all ",
+                "three of `cookies_type`, `disk_cache_type`, `memory_cache_type` within 8 lines ",
+                "of its opening -- the widened removal scope has regressed back to a ",
+                "cookie-only clear."
+            )
+        );
+
+        assert!(
+            non_comment_contains("removeDataOfTypes_forDataRecords_completionHandler")
+                && non_comment_contains("&cookies_type_set"),
+            concat!(
+                "260928-qvr regression: `humble_login_clear_cookies`'s window-based branch no ",
+                "longer calls `removeDataOfTypes_forDataRecords_completionHandler` with ",
+                "`&cookies_type_set` -- the widened type-set may have been built but never ",
+                "actually passed to the native removal call."
             )
         );
     }
