@@ -4165,8 +4165,11 @@ fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
 ///
 /// Removal mechanism is the SAME one `humble_login_clear_cookies`'s existing per-window macOS
 /// branch already proved correct (Plan 23, F-6 Defect B): `WKWebsiteDataStore
-/// .removeDataOfTypes(forDataRecords:completionHandler:)`, scoped to `WKWebsiteDataTypeCookies`
-/// only and to records whose `displayName()` domain-suffix-matches `domain` -- never
+/// .removeDataOfTypes(forDataRecords:completionHandler:)`, scoped to
+/// `WKWebsiteDataTypeCookies` + `WKWebsiteDataTypeDiskCache` + `WKWebsiteDataTypeMemoryCache`
+/// (debug session `epic-cold-jar-login-timeout`, 2026-09-28 -- see the removal call site's own
+/// doc comment for why the disk/memory cache had to be added) and to records whose
+/// `displayName()` domain-suffix-matches `domain` -- never
 /// `WKHTTPCookieStore.deleteCookie()` (the filed WebKit defect, bugs.webkit.org #184938, that
 /// reports success while silently deleting nothing; see that branch's own doc comment). The
 /// measured count comes from `WKHTTPCookieStore.getAllCookies()` -- a real per-cookie read,
@@ -4287,19 +4290,55 @@ fn clear_default_data_store_cookies_for_domain(
                     let _ = tx_fetch.send(());
                     return;
                 }
-                // Scoped to WKWebsiteDataTypeCookies ONLY -- a matched record may carry
-                // localStorage/IndexedDB/cache data for the same domain too;
-                // `humble_login_clear_storage` (a separate, already-shipped step) owns those.
-                // SAFETY: `WKWebsiteDataTypeCookies` is a valid static `NSString` this crate
+                // Scoped to WKWebsiteDataTypeCookies PLUS the native HTTP disk/memory
+                // cache -- a matched record may also carry localStorage/IndexedDB/
+                // Cache-Storage(fetch) data for the same domain; `humble_login_clear_storage`
+                // (a separate, already-shipped step) owns THOSE, via injected JS
+                // (localStorage.clear()/indexedDB/`caches`/service-worker unregister).
+                //
+                // CORRECTION (debug session `epic-cold-jar-login-timeout`, 2026-09-28):
+                // this comment previously read "cache data... `humble_login_clear_storage`
+                // owns those", which conflated two distinct WebKit concepts. The JS-observable
+                // `caches` Cache Storage API (`WKWebsiteDataTypeFetchCache`) IS covered by
+                // `humble_login_clear_storage`'s injected script. WebKit's own native HTTP
+                // resource cache (`WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache`,
+                // the one backing `NetworkResourceLoader::retrieveCacheEntry`) is NOT --
+                // there is no JS API for it, only this native `removeDataOfTypes` call. Left
+                // uncovered, a disk-cache entry written by an earlier authenticated session
+                // (e.g. a real Epic login) survives this cookie-only clear indefinitely inside
+                // the shared, process-wide `WKWebsiteDataStore::defaultDataStore()`, and gets
+                // replayed verbatim (confirmed live: `retrieveCacheEntry: HTTP
+                // (foundCachedEntry=1)`, zero network round-trips, first-ever load of the page
+                // in the window) to the next cold-jar sign-in attempt -- serving
+                // authenticated-shaped markup to a webview with no cookies, which then polls
+                // session-dependent subresources that can never resolve for the full 300s
+                // client timeout. Adding the two disk/memory-cache types here closes that gap,
+                // still scoped to `matching_records` (this domain only) -- not a blanket wipe
+                // (REQ-34.4.1-06).
+                //
+                // SAFETY: `WKWebsiteDataTypeCookies`/`WKWebsiteDataTypeDiskCache`/
+                // `WKWebsiteDataTypeMemoryCache` are valid static `NSString`s this crate
                 // exposes; reading an extern static is the only unsafe part of this line.
                 let cookies_type: &objc2_foundation::NSString =
                     unsafe { objc2_web_kit::WKWebsiteDataTypeCookies };
-                let cookies_type_set = objc2_foundation::NSSet::from_slice(&[cookies_type]);
+                let disk_cache_type: &objc2_foundation::NSString =
+                    unsafe { objc2_web_kit::WKWebsiteDataTypeDiskCache };
+                let memory_cache_type: &objc2_foundation::NSString =
+                    unsafe { objc2_web_kit::WKWebsiteDataTypeMemoryCache };
+                let cookies_type_set = objc2_foundation::NSSet::from_slice(&[
+                    cookies_type,
+                    disk_cache_type,
+                    memory_cache_type,
+                ]);
+                let matched_record_count = matching_records.len();
                 let records_array = objc2_foundation::NSArray::from_slice(&matching_records);
                 let tx_remove = tx_fetch.clone();
                 let remove_completion = block2::RcBlock::new(move || {
                     let _ = tx_remove.send(());
                 });
+                eprintln!(
+                    "[shell] humble_login_clear_cookies: default-store evicting cookies + HTTP disk/memory cache for {matched_record_count} matching data record(s) (domain-scoped, count only)"
+                );
                 // SAFETY: `data_store_for_removal` is a live object obtained on the main
                 // thread above; `cookies_type_set`/`records_array` are freshly built, live
                 // objects; `remove_completion` outlives the call.
@@ -14347,6 +14386,147 @@ mod tests {
                 "shape already present in `humble_login_clear_cookies`'s deletion branch). Its ",
                 "absence means the matcher has stopped recognising call sites split across ",
                 "lines."
+            )
+        );
+    }
+
+    // ---- epic-cold-jar-login-timeout regression pin: default-store cookie clear left the
+    // HTTP disk/memory cache untouched ----
+    //
+    // `.planning/debug/resolved/epic-cold-jar-login-timeout.md`. A stale WebKit HTTP
+    // disk-cache entry for `EPIC_LOGIN_URL`'s origin, written by an earlier authenticated Epic
+    // session inside the SAME long-lived `WKWebsiteDataStore::defaultDataStore()`, survived
+    // `clear_default_data_store_cookies_for_domain`'s cookie-ONLY removal call indefinitely
+    // and was replayed verbatim on the next cold-cookie-jar sign-in attempt (confirmed live:
+    // `retrieveCacheEntry: HTTP (foundCachedEntry=1)`, zero network round-trips, first-ever
+    // load of the page in the captured window) -- serving authenticated-shaped markup to a
+    // webview with no cookies, which then polled session-dependent subresources that could
+    // never resolve for the full 300s client timeout.
+    //
+    // A live end-to-end reproduction is NOT safely automatable here, for a STRONGER version of
+    // the reason `f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated` above already gives:
+    // it requires not only a real, contended AppKit/WebKit run loop, but ALSO a previously-
+    // authenticated, long-lived process state that 10 separate single-variable standalone-
+    // harness attempts (`epicprobe2` through `epicprobe10` -- UA, delegate presence,
+    // single-flight guard, process teardown, Set-Cookie, explicit vs absent Cache-Control,
+    // settle time, bundle identity, and reload API; see the debug session's own Evidence)
+    // could never reproduce, even with the run-loop constraint separately satisfied. This test
+    // instead pins the STRUCTURAL fix -- the same "prove it against the source" discipline
+    // used above -- scoped ONLY to `clear_default_data_store_cookies_for_domain`, the call
+    // site confirmed exercised by the real failing run (the `existing_window.is_none()`
+    // fallback path taken on macOS when `EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL` resolves to
+    // `None`). An IDENTICAL, deliberately UNFIXED twin call site exists elsewhere in this file
+    // (the window-based `existing_window.is_some()` branch of the same shared
+    // `humble_login_clear_cookies` arm, used by other callers) -- see the debug session's
+    // Evidence for why fixing it was scoped out of this pass. This test does not check that
+    // site and must not be widened to without a fresh measurement confirming it is actually
+    // exercised by a failing run.
+    #[test]
+    fn epic_cold_jar_login_timeout_default_store_clear_evicts_disk_and_memory_cache() {
+        let source = include_str!("main.rs");
+        let lines: Vec<&str> = source.lines().collect();
+
+        let start = lines
+            .iter()
+            .position(|l| {
+                l.trim_start()
+                    .starts_with("fn clear_default_data_store_cookies_for_domain")
+            })
+            .expect(concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` not found by name in this file ",
+                "-- it was renamed or removed; re-derive this pin's scan boundary from a fresh ",
+                "measurement."
+            ));
+
+        // End boundary: the next top-level (column-0) `fn` declaration after `start`. Scopes
+        // the scan to exactly this one function so this pin can never accidentally pass or
+        // fail based on the deliberately-unfixed twin site elsewhere in this file.
+        let end = lines[start + 1..]
+            .iter()
+            .position(|l| l.starts_with("fn ") || l.starts_with("pub fn "))
+            .map(|offset| start + 1 + offset)
+            .expect(concat!(
+                "epic-cold-jar-login-timeout regression: could not find the end of ",
+                "`clear_default_data_store_cookies_for_domain` -- no subsequent top-level `fn` ",
+                "found after it."
+            ));
+
+        let body = &lines[start..end];
+        let non_comment_contains = |needle: &str| {
+            body.iter().any(|l| {
+                let t = l.trim();
+                !(t.starts_with("//") || t.starts_with('*')) && t.contains(needle)
+            })
+        };
+
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeCookies"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` no longer references ",
+                "`WKWebsiteDataTypeCookies` in a non-comment line -- its own cookie-clearing ",
+                "purpose has regressed."
+            )
+        );
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeDiskCache"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` no longer references ",
+                "`WKWebsiteDataTypeDiskCache` in a non-comment line -- the fix for a stale ",
+                "disk-cache entry surviving a cookie-only clear and being replayed on a later ",
+                "cold-jar Epic sign-in has regressed. See ",
+                "`.planning/debug/resolved/epic-cold-jar-login-timeout.md`."
+            )
+        );
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeMemoryCache"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` no longer references ",
+                "`WKWebsiteDataTypeMemoryCache` in a non-comment line. See ",
+                "`.planning/debug/resolved/epic-cold-jar-login-timeout.md`."
+            )
+        );
+
+        // Structural check, not just presence: the disk/memory cache types must be in the SAME
+        // set literal that is actually passed to
+        // `removeDataOfTypes_forDataRecords_completionHandler` -- not merely referenced
+        // decoratively (e.g. in a dead branch, or built but never passed to the removal call).
+        let set_construction_line = body
+            .iter()
+            .position(|l| l.contains("NSSet::from_slice"))
+            .expect(concat!(
+                "epic-cold-jar-login-timeout regression: no `NSSet::from_slice(...)` ",
+                "construction found in `clear_default_data_store_cookies_for_domain` -- the ",
+                "removal type-set is now built a different way; re-derive this pin from a ",
+                "fresh measurement rather than widening the match string."
+            ));
+        let set_literal_window =
+            body[set_construction_line..(set_construction_line + 8).min(body.len())].join("\n");
+        assert!(
+            set_literal_window.contains("cookies_type")
+                && set_literal_window.contains("disk_cache_type")
+                && set_literal_window.contains("memory_cache_type"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: the `NSSet::from_slice(...)` type-set ",
+                "literal in `clear_default_data_store_cookies_for_domain` no longer includes ",
+                "all three of `cookies_type`, `disk_cache_type`, `memory_cache_type` within 8 ",
+                "lines of its opening -- the widened removal scope has regressed back to a ",
+                "cookie-only clear."
+            )
+        );
+
+        assert!(
+            non_comment_contains("removeDataOfTypes_forDataRecords_completionHandler")
+                && non_comment_contains("&cookies_type_set"),
+            concat!(
+                "epic-cold-jar-login-timeout regression: ",
+                "`clear_default_data_store_cookies_for_domain` no longer calls ",
+                "`removeDataOfTypes_forDataRecords_completionHandler` with `&cookies_type_set` ",
+                "-- the widened type-set may have been built but never actually passed to the ",
+                "native removal call."
             )
         );
     }
