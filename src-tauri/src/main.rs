@@ -14531,6 +14531,163 @@ mod tests {
         );
     }
 
+    // ---- 260928-qvr regression pin: window-based cookie clear leaves the HTTP disk/memory
+    // cache untouched (the twin site the epic-cold-jar-login-timeout session deliberately left
+    // unfixed) ----
+    //
+    // `.planning/debug/resolved/epic-cold-jar-login-timeout.md` fixed
+    // `clear_default_data_store_cookies_for_domain` (the `existing_window.is_none()` fallback
+    // branch of the shared `humble_login_clear_cookies` arm, above) because it was the ONLY
+    // path confirmed exercised by the real failing Epic cold-jar run. An IDENTICAL construction
+    // sits in this arm's OTHER branch -- the `existing_window.is_some()` window-based path,
+    // taken when a caller passes a real Tauri-managed window label. `260928-qvr`'s own Task 1
+    // audit (see the quick task's SUMMARY) enumerated every `seam.clearCookies` call site and
+    // confirmed Humble's `disconnect()` (`humble/user.ts:1010`, a real `seam.open()` window
+    // label) is the sole caller reaching this branch -- GOG, Amazon and Epic all resolve to
+    // sentinel no-window labels that take the already-fixed default-store branch instead, and
+    // none of the four reaching-or-not callers has any reason to rely on the HTTP disk/memory
+    // cache surviving a cookie clear (a disconnect/logout wants the opposite: a genuinely fresh
+    // next login).
+    //
+    // A live end-to-end reproduction is NOT safely automatable here, for the same reason
+    // `epic_cold_jar_login_timeout_default_store_clear_evicts_disk_and_memory_cache` above
+    // gives: it needs a real, contended AppKit/WebKit run loop PLUS a previously-authenticated,
+    // long-lived process state that ten separate single-variable standalone-harness attempts
+    // could never reproduce (see the debug session's own Evidence). This test instead pins the
+    // STRUCTURAL fix, scoped ONLY to the window-based branch -- it must be blind to the
+    // already-fixed `clear_default_data_store_cookies_for_domain` site (asserted explicitly
+    // below), so a future boundary drift cannot let it silently re-measure the wrong site and
+    // pass for the wrong reason.
+    #[test]
+    fn epic_cold_jar_login_timeout_window_branch_clear_evicts_disk_and_memory_cache() {
+        let source = include_str!("main.rs");
+        let lines: Vec<&str> = source.lines().collect();
+
+        // This site is a `dispatch_rust_channel` MATCH ARM, not a top-level `fn` -- the
+        // precedent test's column-0 `fn`-to-`fn` boundary does not apply here. Reuse the
+        // arm-boundary shape `f_34_4_2_12_wry_blocking_cookies_calls_are_macos_gated` above
+        // already proves works on this file: a line whose trimmed form starts with a
+        // double-quote and ends with the arrow-and-open-brace arm terminator.
+        let is_arm_boundary = |l: &str| {
+            let t = l.trim();
+            t.starts_with('"') && t.ends_with("\" => {")
+        };
+
+        let start = lines
+            .iter()
+            .position(|l| l.trim() == "\"humble_login_clear_cookies\" => {")
+            .expect(concat!(
+                "260928-qvr regression: the `\"humble_login_clear_cookies\" => {` arm opener ",
+                "was not found by exact match in this file -- it was renamed, reformatted, or ",
+                "removed; re-derive this pin's scan boundary from a fresh measurement rather ",
+                "than loosening the match string."
+            ));
+
+        // End boundary: the next `dispatch_rust_channel` match arm opener after `start`. Scopes
+        // the scan to exactly this one arm (both its branches) so this pin can never
+        // accidentally measure a sibling arm.
+        let end = lines[start + 1..]
+            .iter()
+            .position(|l| is_arm_boundary(l))
+            .map(|offset| start + 1 + offset)
+            .expect(concat!(
+                "260928-qvr regression: could not find the next `dispatch_rust_channel` match ",
+                "arm opener after `humble_login_clear_cookies` -- re-derive this pin's scan ",
+                "boundary from a fresh measurement rather than loosening the match string."
+            ));
+
+        let body = &lines[start..end];
+        let non_comment_contains = |needle: &str| {
+            body.iter().any(|l| {
+                let t = l.trim();
+                !(t.starts_with("//") || t.starts_with('*')) && t.contains(needle)
+            })
+        };
+
+        // Blind-to-the-already-fixed-site check, ahead of everything else: if this ever fires,
+        // the arm boundary above has drifted wide enough to swallow
+        // `clear_default_data_store_cookies_for_domain`, and every assertion below could then
+        // pass by measuring the WRONG site.
+        assert!(
+            !body
+                .iter()
+                .any(|l| l.contains("fn clear_default_data_store_cookies_for_domain")),
+            concat!(
+                "260928-qvr regression: this pin's scan window contains the already-fixed ",
+                "`clear_default_data_store_cookies_for_domain` declaration -- the arm boundary ",
+                "has drifted wide enough to let this pin re-measure the wrong site. Re-derive ",
+                "the arm boundary from a fresh measurement; never widen the match to make this ",
+                "assertion pass."
+            )
+        );
+
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeCookies"),
+            concat!(
+                "260928-qvr regression: `humble_login_clear_cookies`'s window-based branch no ",
+                "longer references `WKWebsiteDataTypeCookies` in a non-comment line -- its own ",
+                "cookie-clearing purpose has regressed."
+            )
+        );
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeDiskCache"),
+            concat!(
+                "260928-qvr regression: `humble_login_clear_cookies`'s window-based branch no ",
+                "longer references `WKWebsiteDataTypeDiskCache` in a non-comment line -- the fix ",
+                "for a stale disk-cache entry surviving a cookie-only clear and being replayed ",
+                "on a later cold-jar sign-in has regressed. See ",
+                "`.planning/debug/resolved/epic-cold-jar-login-timeout.md`."
+            )
+        );
+        assert!(
+            non_comment_contains("WKWebsiteDataTypeMemoryCache"),
+            concat!(
+                "260928-qvr regression: `humble_login_clear_cookies`'s window-based branch no ",
+                "longer references `WKWebsiteDataTypeMemoryCache` in a non-comment line. See ",
+                "`.planning/debug/resolved/epic-cold-jar-login-timeout.md`."
+            )
+        );
+
+        // Structural check, not just presence: the disk/memory cache types must be in the SAME
+        // set literal that is actually passed to
+        // `removeDataOfTypes_forDataRecords_completionHandler` -- not merely referenced
+        // decoratively, or built but never passed to the removal call.
+        let set_construction_line = body
+            .iter()
+            .position(|l| l.contains("NSSet::from_slice"))
+            .expect(concat!(
+                "260928-qvr regression: no `NSSet::from_slice(...)` construction found in ",
+                "`humble_login_clear_cookies`'s window-based branch -- the removal type-set is ",
+                "now built a different way; re-derive this pin from a fresh measurement rather ",
+                "than widening the match string."
+            ));
+        let set_literal_window =
+            body[set_construction_line..(set_construction_line + 8).min(body.len())].join("\n");
+        assert!(
+            set_literal_window.contains("cookies_type")
+                && set_literal_window.contains("disk_cache_type")
+                && set_literal_window.contains("memory_cache_type"),
+            concat!(
+                "260928-qvr regression: the `NSSet::from_slice(...)` type-set literal in ",
+                "`humble_login_clear_cookies`'s window-based branch no longer includes all ",
+                "three of `cookies_type`, `disk_cache_type`, `memory_cache_type` within 8 lines ",
+                "of its opening -- the widened removal scope has regressed back to a ",
+                "cookie-only clear."
+            )
+        );
+
+        assert!(
+            non_comment_contains("removeDataOfTypes_forDataRecords_completionHandler")
+                && non_comment_contains("&cookies_type_set"),
+            concat!(
+                "260928-qvr regression: `humble_login_clear_cookies`'s window-based branch no ",
+                "longer calls `removeDataOfTypes_forDataRecords_completionHandler` with ",
+                "`&cookies_type_set` -- the widened type-set may have been built but never ",
+                "actually passed to the native removal call."
+            )
+        );
+    }
+
     // ---- deep-link argv helpers (Phase 34.5 gap cycle 6 plan 44, REQ-34.5-01/05/12,
     // F-34.5-G6-09) ----
     //
