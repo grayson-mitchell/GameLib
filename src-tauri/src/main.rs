@@ -14325,6 +14325,66 @@ mod tests {
             }
         }
 
+        // Load-bearing self-test of `guard_excludes_macos` itself: a matcher that goes green
+        // but no longer discriminates is worse than the pin it replaces. Seven cases, all
+        // load-bearing -- each row's own reason is asserted into the failure message so the
+        // intent stays legible rather than incidental.
+        let fixture_cases: [(&str, Option<&str>, bool, &str); 7] = [
+            (
+                "#[cfg(not(target_os = \"macos\"))]",
+                Some("#[cfg(not(target_os = \"macos\"))]"),
+                true,
+                "the canonical exclusion; three of the four live sites",
+            ),
+            (
+                "#[cfg(all(not(target_os = \"macos\"), not(windows)))]",
+                Some("#[cfg(all(not(target_os = \"macos\"), not(windows)))]"),
+                true,
+                "the live guard at main.rs:7692 since `1a8e1827b` -- strictly narrower, and the whole reason this pin was red",
+            ),
+            (
+                "None",
+                None,
+                false,
+                "unconditional call site -- macOS-reachable",
+            ),
+            (
+                "#[cfg(target_os = \"macos\")]",
+                Some("#[cfg(target_os = \"macos\")]"),
+                false,
+                "the original RED shape the debug session recorded verbatim; rejected by the `not(target_os = \"macos\")` rule, asserted here deliberately so the intent is legible rather than incidental",
+            ),
+            (
+                "#[cfg(windows)]",
+                Some("#[cfg(windows)]"),
+                false,
+                "excludes macOS only incidentally -- the matcher does not evaluate cfg algebra and must not credit an accident",
+            ),
+            (
+                "#[cfg(any(target_os = \"macos\", windows))]",
+                Some("#[cfg(any(target_os = \"macos\", windows))]"),
+                false,
+                "a disjunction that makes the call macOS-reachable",
+            ),
+            (
+                "#[cfg(not(any(target_os = \"macos\", windows)))]",
+                Some("#[cfg(not(any(target_os = \"macos\", windows)))]"),
+                false,
+                "semantically SAFE and rejected anyway -- the documented false rejection; its presence here is the honest record that the conservatism is a decision, not an oversight, and admitting this spelling means editing the predicate AND this row, never loosening the rule",
+            ),
+        ];
+        for (label, guard, expected_verdict, reason) in fixture_cases {
+            assert_eq!(
+                guard_excludes_macos(guard),
+                expected_verdict,
+                "guard_excludes_macos fixture `{}` expected {} but the predicate returned {} -- {}",
+                label,
+                expected_verdict,
+                !expected_verdict,
+                reason
+            );
+        }
+
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
