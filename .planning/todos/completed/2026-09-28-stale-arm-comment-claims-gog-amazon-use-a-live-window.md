@@ -62,4 +62,15 @@ statement about caller routing in this arm rather than two that can drift apart 
 
 expected: The arm's opening comment describes caller routing accurately — Humble via a real window
 label, GOG/Amazon/Epic via sentinel no-window labels — with no second comment contradicting it.
-result: pending
+result: pass — fixed in quick task 260928-tjj (`src-tauri/src/main.rs`, commit f760836a0). The
+re-audit corrected this todo's own table on two points before the fix was written: Epic's sentinel
+label is macOS-conditional, not unconditional — off macOS `clearEpicCookies`'s `isMac` ternary
+opens a real hidden window and passes its real label instead of
+`EPIC_COOKIE_CLEAR_NO_WINDOW_LABEL`. And GOG's/Amazon's `clearGogCookiesForLogout` /
+`clearAmazonCookiesForLogout` helpers both return early off macOS (`if (!isMac) { return }`) and
+never reach this Rust arm at all off that platform, so the corrected comment states a platform
+split rather than a single universal claim. Separately, the same stale sentence turned out to
+appear TWICE in `main.rs`, not once as this todo named: the sibling
+`humble_login_cookies_for_domain` census arm carried its own copy ~700 lines below, with the same
+contradiction against its own Phase 40 note, and was fixed in the same pass rather than left to
+drift again.
