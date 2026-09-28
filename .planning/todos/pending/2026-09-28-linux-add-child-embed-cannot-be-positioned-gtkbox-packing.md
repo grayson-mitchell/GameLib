@@ -119,3 +119,25 @@ before assuming anything has changed.
 - **Same-change note.** The Linux branches of `38-E03`/`38-E04` in `38-VERIFICATION.md` were
   re-scoped in the same commit, in fields named `linux_rescoped_2026_09_28`, together with a dated
   `deferral_note` amendment.
+
+## Addendum (2026-09-29): the isolation todo is decided, one shared cookie jar
+
+- **Decided.** The sibling isolation todo
+  (`.planning/todos/pending/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`)
+  is now DECIDED. The operator accepted one shared cookie jar on Linux on 2026-09-29, and quick
+  `260929-9qr` recorded it in that todo's `## Decision (2026-09-29)` section.
+  - The "sibling isolation todo is NOT decided here" bullet above stays as written, as history.
+    This addendum supersedes it.
+- **The tension is resolved.** The tension that bullet recorded is resolved in favour of
+  shipping, because keeping Linux off the embed was not chosen. The isolation todo no longer
+  gates whether a Linux embed ships. Option (a) above is unaffected.
+- **A constraint on whoever builds the GTK-box-native layout: build against one shared cookie
+  jar.**
+  - On Linux every webview in the process shares one `WebKitWebContext`, so a Linux store embed
+    can read every other store's cookies, and the login windows' cookies, in-process.
+  - `data_store_identifier` is a silent no-op on the GTK backend, so do not rely on it for
+    isolation there. Do not describe the Linux embed as per-store isolated.
+  - This matches the shipped macOS embed, which never sets an identifier and runs on the default
+    jar.
+- **Nothing else changes.** This todo stays `ready: code` in `pending/`, and its remaining work
+  is unchanged. No code was written by quick 260929-9qr.
