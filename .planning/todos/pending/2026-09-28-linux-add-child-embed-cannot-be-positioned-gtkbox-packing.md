@@ -4,7 +4,7 @@ title: 'On Linux an add_child store embed cannot be positioned — set_bounds is
 found_during: spikes 025/026 (2026-09-28; commits c54e047ca, 369f482a4), filed by quick 260928-raq
 severity: minor
 platform: linux
-ready: human
+ready: code
 area: store-embed
 files:
   - src-tauri/Cargo.toml
@@ -73,3 +73,49 @@ a standalone todo for it would have no trigger of its own.
 If a future `tauri-runtime-wry` stops packing `WindowChild` into `default_vbox()` on Linux, or
 wry's `set_bounds` drops the `is_in_fixed_parent` gate, re-run spike 025's bounds round-trip
 before assuming anything has changed.
+
+## Decision (2026-09-28): option (a), a GTK-box-native layout
+
+- **Who decided.** The operator decided this directly on 2026-09-28, and quick `260928-upj`
+  recorded it. It is final. Do not re-litigate it, and do not present option (a) as still open
+  anywhere.
+- **Why (a).** It is the lowest-risk option. It carries no upstream fork or patch. It has no
+  exposure to the unexplained native crash recorded above under option (c). It ships a real, if
+  less flexible, Linux embed instead of none.
+- **Why not (b).** A `tauri-runtime-wry` change, upstream or forked, would have to be carried
+  through every Tauri upgrade, with no guarantee upstream accepts it.
+- **Why not (c).** The second-`Window` shape segfaulted natively in 2 of 2 runs and has no root
+  cause. The standing "do not choose (c) until the crash is understood" constraint above still
+  applies.
+- **Why not (d).** It leaves Linux with no store embed at all. That runs against the project's
+  one-launcher core value.
+- **What this decides.** Only the strategy.
+- **What it does not decide.** The concrete layout shape: orientation, how the main webview and
+  the embed divide the shared `GtkBox`, and what share of the window each gets. That is design
+  work for whichever phase builds the Linux store tab.
+- **An UNVERIFIED question to record.** Spike 026 measured GTK's default even split (both
+  webviews at 1280x450). Can anything other than that split be reached through the platform
+  widget handle, for example GTK packing properties or size requests, without changing
+  `tauri-runtime-wry`? That question belongs to the implementing phase. If no usable layout turns
+  out to be reachable within box packing, bring that back to the operator as a finding rather
+  than switching to (b).
+- **What does not change.** `set_bounds` stays a no-op on Linux under this strategy, by design.
+  The renderer-measured slot-rect design that spike 017 validated on macOS does not apply on
+  Linux. The shipped app is unchanged, because `src-tauri/Cargo.toml:114-128` still gates
+  `unstable` to macOS. The `## Falsifiable re-open` section above still stands.
+- **The sibling isolation todo is NOT decided here.** That is
+  `.planning/todos/pending/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`,
+  still `ready: human`. By its own title it still gates whether a Linux embed ships at all. Its
+  third option, keeping Linux off the embed, is now in tension with this decision. That call is
+  the operator's, in that todo.
+- **Why `ready: code`.** The human-decision gate is satisfied. What remains is buildable: design
+  and build the GTK-box-native layout in `src-tauri`, and un-gate `unstable` for Linux.
+  No code was written by quick 260928-upj. `ready:` follows the next action, as in commit
+  `00bc6fa1f`. Once the layout is built, this todo's remaining work becomes a live Linux run and
+  `ready:` should move to `live-gate`.
+- **Why it stays in `pending/`.** The layout it tracks is not built. The `blocked_by` fields of
+  ledger items `38-E03`/`38-E04` cite this file by its `pending/` path. The two `completed/`
+  precedents with a recorded decision closed only once the chosen option had shipped.
+- **Same-change note.** The Linux branches of `38-E03`/`38-E04` in `38-VERIFICATION.md` were
+  re-scoped in the same commit, in fields named `linux_rescoped_2026_09_28`, together with a dated
+  `deferral_note` amendment.
