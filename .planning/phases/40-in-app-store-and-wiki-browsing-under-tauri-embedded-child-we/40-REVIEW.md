@@ -121,6 +121,40 @@ excludes Epic").
 **Fix:** gate the effect on embeddability and on `storeKey` identity — on a non-embeddable target,
 hide or close the embed instead of navigating it; on a store change, re-key rather than reuse.
 
+**Resolved 2026-09-29 (quick task 260929-qth), embeddability half.** The start-URL sync effect
+(`useStoreEmbedHost.ts:314-327` at review time) now checks `isEmbeddableOrigin(startUrl)` before
+calling `storeEmbedNavigate` — on a non-embeddable target it calls `storeEmbedHide()` instead and
+skips the navigate entirely, exactly as this finding's fix column specifies. This closes the D-05
+gap described above: the live embed can no longer be background-navigated into
+`https://www.epicgames.com/store/en-US/` (or any other non-embeddable origin) by a `store/:store`
+param-only route change. Two guards were added beyond the letter of this finding, both required by
+the same permanence CR-01 and CR-02 share (no remount on a param-only switch): the effect also
+skips `storeEmbedHide()` when the embed has never been opened (`!openedRef.current`), since hiding
+an embed that was never shown is a no-op IPC call with no defect to prevent; and the open/bounds
+effect (CR-02's effect, `[slotPresent]`-keyed as of this fix) re-checks embeddability before
+re-showing on a slot arriving late, so a cold start directly on `/store/epic` followed by a switch
+to `/store/gog` does not leave the embed hidden-forever once CR-02's late-slot recovery re-arms it.
+
+**Re-keying half — measured, declined, not deferred.** The re-keying half of this finding's Fix
+column ("on a store change, re-key rather than reuse") was investigated at HEAD on 2026-09-29 and
+found not applicable to how this embed is wired, not merely postponed:
+
+- `src-tauri/src/main.rs:5066` — `const STORE_EMBED_LABEL: &str = "store-embed"` is a single
+  constant. Every embed command (`set_bounds`, `hide`, `show`, `close`, `back`, `forward`,
+  `reload`, `navigate`) resolves that one label. There is one embed webview, globally, not one
+  per store.
+- `store_embed_open_args` (`main.rs:5265`) parses `{ url, x, y, w, h }` — there is no `storeKey`
+  parameter to re-key against.
+- `storeEmbedFlowRegistration.ts:189` — `async open(url, bounds, _storeKey)`, underscore-prefixed
+  and discarded before it reaches the IPC boundary.
+
+`storeKey` never crosses into the layer this finding's re-keying proposal would act on. There is no
+key-scoped session at that layer for a store→store switch to carry across — same-origin isolation
+already prevents one store's page from reading another's cookies, and `storeKey` remains meaningful
+only in the renderer, where it keys restore persistence (`localStorage.setItem('last-url-' +
+storeKey, …)`). Implementing a re-key arm against this architecture would have nothing to key.
+Declined as not-applicable; see `260929-qth-SUMMARY.md` for the full record.
+
 ---
 
 ### CR-02: A null slot on first render disables the embed for the rest of the component's life
@@ -158,6 +192,22 @@ back recovers it.
 
 **Fix:** re-run the effect when the slot becomes available — key it on slot presence, or attach via
 a callback ref — while keeping the observer's identity stable across same-store URL changes.
+
+**Resolved 2026-09-29 (quick task 260929-qth).** The slot is now attached via a callback ref
+(`slotCallbackRef` in `index.tsx`) that flips a one-way `slotPresent` state false → true the first
+time the slot div attaches, and never lowers it again on detach. The open/bounds effect's
+dependency array changed from `[]` to `[slotPresent]`, so it re-arms exactly once when the slot
+first appears — including on a cold start on `/store/epic` (or any route whose first render is a
+panel) followed by a navigation to `/store/gog`, the exact sequence this finding describes.
+`startUrl` was deliberately NOT added to the dependency array — that was the fix this finding did
+not ask for and plan 40-11's live gate exists specifically to catch: adding it would tear down and
+re-create the ResizeObserver on every same-store navigation, defeating the leading-edge throttle
+the `[]` array was protecting. A same-store start-URL change is now covered by a `flush()` seed
+into `previousUrlRef` (see `useStoreEmbedHost.ts`, the `!openedRef.current` branch) so a late open
+that lands after a start-URL change is not immediately followed by a redundant navigation to the
+URL it just opened at — measured directly by test 19 in
+`__tests__/useStoreEmbedHost.test.tsx`. See `260929-qth-SUMMARY.md` for the full red/green control
+record (tests 17-19).
 
 ---
 
