@@ -23,6 +23,7 @@ files_reviewed_list:
   - src/backend/storeManagers/legendary/user.ts
 findings:
   critical: 1
+  critical_resolved: 1
   warning: 2
   info: 2
   total: 5
@@ -91,6 +92,59 @@ if (fatalWipeFailure !== null) {
 ```
 
 If credential cleanup must stay physically in one place for readability, an equally correct alternative is to wrap only the seam acquisition + wipe-steps construction in its own try/catch that degrades to an empty `wipeSteps` array (with a logged warning) on a missing seam, so a throw there can never skip the two `configStore.delete`/`clearCache` lines regardless of where they're written. Either way, add a test that calls `setLoginWindowSeam(null)` and then `LegendaryUser.logout()` past the CLI-success point, asserting `configStore.delete`/`clearCache` still ran (mirroring the existing D-05 ordering-proof pattern already used for `humble/user.ts`'s `disconnect()` in `sidecar/__tests__/humbleFlows.test.ts`).
+
+**Resolution (2026-09-29, disposition pass during Phase 34.4.1 review cycle 2): FIXED — both halves,
+code and test. Verified at HEAD, not transcribed from a SUMMARY.**
+
+The fix taken is neither of the two this finding proposed, but a third that satisfies the invariant
+more directly: **the seam is acquired inside each individual wipe step**, not once before the loop.
+`getLoginWindowSeamOrThrow()` now sits inside each step's own closure (e.g. the `clearEpicStorage`
+step), so a missing seam throws *inside* the loop, where the existing per-step try/catch already
+captures it. The credential-side cleanup is therefore unreachable-by-throw from the seam, and no
+statement between CLI success and that cleanup can throw outside the guard. `src/backend/storeManagers/legendary/user.ts` records this in situ:
+
+> "Phase 39 CR-01 (T-34.5-19, ASVS V3): the seam is acquired inside EACH wipe step below, not once
+> here, so a missing seam is caught by the guarded loop's own try/catch and can never skip the
+> credential-side cleanup. Before this fix, a bare `const seam = getLoginWindowSeamOrThrow()` at
+> this exact spot threw outside the loop's guard, aborting logout() before the cleanup ran — the
+> pinned no-seam test above proves it."
+
+**The test this finding demanded exists and is not vacuous.** `src/backend/storeManagers/legendary/__tests__/user.test.ts:356`,
+`it('CR-01 (T-34.5-19): with NO seam installed, the credential-side cleanup still runs and the wiring diagnostic still reaches the caller')`.
+It installs nothing — the `beforeEach` already leaves `setLoginWindowSeam(null)` and arms
+`mockRunRunnerCommand` with a CLI-success result, which is precisely the "past the CLI-success point
+with no seam installed" condition this finding specified. It then asserts both halves:
+
+```js
+await expect(LegendaryUser.logout()).rejects.toThrow('no login-window seam is installed')
+expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+expect(clearCache).toHaveBeenCalledWith('legendary')
+```
+
+The diagnostic still reaches the caller **and** the credential wipe still ran. The test's own comment
+records why neither pre-existing instrument could have caught the defect: `seamBranchParity.test.ts`
+compares wipe-step capability *shape* by parsing source, and `loginWindowSeamPredicateRemoved.test.ts`
+matches predicate *text* — statement ordering is invisible to both, "which is why this defect shipped
+through a green Phase 39." That matches this finding's own "Confirmed uncaught by other gates"
+analysis exactly.
+
+**Measured, not assumed:** `npx jest src/backend/storeManagers/legendary/__tests__/user.test.ts`
+→ 12 passed, 12 total. The CR-01 test passes in isolation (`-t 'CR-01'`). Discrimination control:
+the sibling test at `:170` ("the CLI-error early return is unchanged — no cookie step or
+`configStore.delete` runs") asserts `mockConfigStore.delete` was **not** called, and also passes —
+so that mock is demonstrably observed in both states within this file, and the CR-01 test's
+assertion is not one that would pass regardless.
+
+**Not done:** a source-mutation negative control (reverting the seam acquisition back outside the
+loop to watch the test go red) was not run. The working tree had to stay clean for a concurrent
+quick task, and a mutate-and-revert carried a real risk of being absorbed into that task's commit.
+The discrimination control above is weaker than a mutation proof; it establishes that the assertion
+can fail, not that this specific regression turns it red. Stated rather than glossed.
+
+**Scope of this resolution:** CR-01 only. WR-01, WR-02, IN-01 and IN-02 below are **untouched and
+remain open** — this was a targeted disposition of the one critical, not a fix pass over the review.
+The frontmatter's `critical: 1` is left as the as-reviewed count, with `critical_resolved: 1` added
+alongside it, following `28-REVIEW.md`'s existing `warning_resolved:` convention.
 
 ## Warnings
 

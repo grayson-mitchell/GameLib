@@ -570,6 +570,10 @@ export class HumbleUser {
         () => void checkCookie(false),
         COOKIE_POLL_INTERVAL_MS
       )
+      // WR-01: the sidecar exits by event-loop drain at stdin EOF (CLAUDE.md) — this
+      // repeating interval must not be the reason it is still alive. See
+      // installedJsonWatcher.ts for the full statement of the contract.
+      pollInterval.unref?.()
 
       // WR-03: watch deadline — a watch orphaned by a renderer reload/crash
       // must never poll + re-validate against Humble indefinitely. Settling
@@ -581,6 +585,10 @@ export class HumbleUser {
           () => settle({ status: 'waiting' }),
           LOGIN_WATCH_TIMEOUT_MS
         )
+        // WR-01: guarded INSIDE armDeadline() — forceRevalidate() re-arms this deadline
+        // on every navigation relay, so a guard placed only after the first call below
+        // would leave every subsequent 10-minute window unguarded.
+        watchDeadline.unref?.()
       }
       armDeadline()
 

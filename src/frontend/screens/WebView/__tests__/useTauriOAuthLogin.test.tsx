@@ -1072,6 +1072,11 @@ describe('useTauriOAuthLogin — cancellation-window instrumentation (Plan 34.5-
       'authorization_code'
     ]
 
+    // D-WR-01: iterating an EMPTY call list runs the loop below zero times and passes while
+    // asserting nothing. This test's whole purpose is that no secret ever reaches a log line,
+    // so it must go red the moment this path stops logging, not quietly stop checking.
+    expect(mockApi.logInfo.mock.calls.length).toBeGreaterThan(0)
+
     for (const [line] of mockApi.logInfo.mock.calls) {
       expect(typeof line).toBe('string')
       for (const banned of forbidden) {

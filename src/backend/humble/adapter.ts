@@ -293,6 +293,11 @@ async function humblePostRequestViaSeam(
         )
       )
     }, REQUEST_TIMEOUT_MS)
+    // WR-01: the sidecar exits by event-loop drain at stdin EOF (CLAUDE.md), so this
+    // handle must not be the reason it is still alive. `unref?.()` does not stop the
+    // timer firing, it only withdraws this handle's own claim on the loop — see
+    // installedJsonWatcher.ts for the full statement of the contract.
+    timeoutHandle.unref?.()
   })
   try {
     const result = await Promise.race([

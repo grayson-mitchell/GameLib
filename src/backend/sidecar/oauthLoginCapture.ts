@@ -325,6 +325,10 @@ export function captureOAuthLogin(
     deadlineTimer = setTimeout(() => {
       void settle({ status: 'timeout' })
     }, deadlineMs)
+    // WR-01: the sidecar exits by event-loop drain at stdin EOF (CLAUDE.md), so this
+    // handle must not be the reason it is still alive — see installedJsonWatcher.ts for
+    // the full statement of the contract.
+    deadlineTimer.unref?.()
 
     seam
       .open(loginUrl, { visible: true, userAgent: resolveUserAgent(runner) })
@@ -349,6 +353,9 @@ export function captureOAuthLogin(
           LogPrefix.Backend
         )
         pollInterval = setInterval(() => void poll(), pollMs)
+        // WR-01: same contract as deadlineTimer above — this repeating interval must not
+        // be the reason the sidecar is still alive past stdin EOF.
+        pollInterval.unref?.()
         void poll()
       })
       .catch((err) => {
