@@ -1,0 +1,5 @@
+CHECK=TRACER VERDICT=PASS slot=204,82,1076x718 vbox=1280x800 effective_scale=1.000 dmabuf_var_present=no ld_preload_var=absent gdk_scale_var=absent webproc_lines=1 webproc_dmabuf=absent check_settled=pass
+CHECK=E4B VERDICT=PASS chrome_changed=0.0000 leftnav_changed=0.0000 slot_changed=0.1403 zero_area_lines=1 new_settled_line_after_return=no epic_panel=placeholder_no_embed
+CHECK=E5 VERDICT=RECORDED link_click_navigated=yes label_before=www.gog.com label_after=www.gog.com back_enabled=unclear back_moved_history=NO slot_ab=0.6215 slot_bc=0.0002 slot_ac=0.6214
+CHECK=S1_CONTROL VERDICT=FAIL in_run_s1_settled_lines_at_1100x650_1000x600=0 in_run_s1_zero_area_lines_during_resizes=4 in_run_s1_embed_stale_at_1100x650=yes clean_launch_s1b_settled_lines=6 clean_launch_s1b_pass=6 clean_launch_s1b_flush_dx=0 clean_launch_s1b_flush_dy=0 clean_launch_s1b_vboxes=1280x800,1100x650,1000x600
+LAUNCHES=2 BLANK_LAUNCHES=0 TASK=1

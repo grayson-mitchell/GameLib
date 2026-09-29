@@ -1,0 +1,13 @@
+HEAD=a8ec1e5eb835702198cb01f8a2dd832e9a4de54f
+BINARY_MTIME=2026-09-30 11:21:08.469699657 +1300
+XDG_SESSION_TYPE=x11
+--- xrandr connected
+eDP-1-0 connected 2560x1600+3440+0 (normal left inverted right x axis y axis) 340mm x 220mm
+DisplayPort-1-0 connected primary 3440x1440+0+0 (normal left inverted right x axis y axis) 800mm x 337mm
+GSETTINGS_SCALING_FACTOR=uint32 0
+WEBKITGTK=Version: 2.50.4-0ubuntu0.22.04.1
+NVIDIA_DRIVER=580.173.02
+GDK_SCALE=unset
+GDK_DPI_SCALE=unset
+WEBKIT_DISABLE_DMABUF_RENDERER=unset
+LD_PRELOAD=unset
