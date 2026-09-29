@@ -143,7 +143,17 @@ describe('NileUser.logout() credential cleanup runs first and unconditionally (D
     await expect(NileUser.logout()).resolves.toBeUndefined()
   })
 
-  it('does not attempt the cookie clear at all when runRunnerCommand reports an abort', async () => {
+  // INVERTED (Phase 40 CR-03): this test used to assert the opposite -- that
+  // an abort skipped both credential cleanup and the cookie clear -- while
+  // sitting inside a `describe` literally named "credential cleanup runs
+  // first and unconditionally". It was a green test encoding the defect the
+  // describe block's own name disclaimed. The flip is to match the spec and
+  // the house pattern (`gog/user.ts` has no abort branch at all -- its
+  // cleanup genuinely is unconditional), not a "fix" to prior behaviour. The
+  // file header's claim at :5-6 ("credential cleanup runs first and
+  // unconditionally") is TRUE as of this change and is deliberately left
+  // byte-identical rather than edited.
+  it('still clears credentials and still attempts the cookie clear when runRunnerCommand reports an abort', async () => {
     mockRunRunnerCommand.mockResolvedValue({
       abort: true,
       stdout: '',
@@ -152,10 +162,11 @@ describe('NileUser.logout() credential cleanup runs first and unconditionally (D
     const seam = makeMockSeam()
     setLoginWindowSeam(seam)
 
-    await NileUser.logout()
+    await expect(NileUser.logout()).resolves.toBeUndefined()
 
-    expect(seam.clearCookies).not.toHaveBeenCalled()
-    expect(mockConfigStoreDelete).not.toHaveBeenCalled()
+    expect(mockConfigStoreDelete).toHaveBeenCalledWith('userData')
+    expect(mockClearCache).toHaveBeenCalledWith('nile')
+    expect(seam.clearCookies).toHaveBeenCalled()
   })
 })
 

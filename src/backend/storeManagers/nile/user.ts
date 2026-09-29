@@ -253,16 +253,21 @@ export class NileUser {
     })
 
     if (res.abort) {
-      logError('Failed to logout: abort by user', LogPrefix.Nile)
-      return
+      logError(
+        'Failed to logout: CLI call aborted by app quit -- credential-side cleanup still ran',
+        LogPrefix.Nile
+      )
     }
 
-    // Credential-side cleanup runs FIRST and UNCONDITIONALLY relative to the
-    // cookie-side step below (D-15, Phase 40 plan 04) -- a sign-out that
+    // Credential-side cleanup runs FIRST and UNCONDITIONALLY -- with respect
+    // to the CLI call's reported outcome (Phase 40 CR-03: the guard that used
+    // to exit early on `res.abort` here is gone) as well as relative to the
+    // cookie-side step below (D-15, Phase 40 plan 04). A sign-out that
     // revoked the CLI session but left `userData` behind is worse than one
     // that left a stray cookie behind. The cookie step is wrapped in its own
     // try/catch below precisely so its failure can never retroactively skip
-    // this, and can never make `logout()` itself reject.
+    // this, and can never make `logout()` itself reject. This reword widens
+    // an already-accurate claim -- it does not correct a false one.
     configStore.delete('userData')
     clearCache('nile')
 
