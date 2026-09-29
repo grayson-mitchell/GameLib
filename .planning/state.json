@@ -1,0 +1,153 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": "v0.8 — Phase Details",
+  "phases": [
+    {
+      "number": "1",
+      "name": "Steam Authentication",
+      "status": "complete"
+    },
+    {
+      "number": "2",
+      "name": "Steam Library",
+      "status": "complete"
+    },
+    {
+      "number": "3",
+      "name": "Game Operations",
+      "status": "complete"
+    },
+    {
+      "number": "4",
+      "name": "Branding",
+      "status": "complete"
+    },
+    {
+      "number": "5",
+      "name": "Branding & About Polish",
+      "status": "complete"
+    },
+    {
+      "number": "6",
+      "name": "Library & Game Status UX",
+      "status": "complete"
+    },
+    {
+      "number": "7",
+      "name": "Game Details Enrichment",
+      "status": "complete"
+    },
+    {
+      "number": "8",
+      "name": "New Steam Surfaces",
+      "status": "complete"
+    },
+    {
+      "number": "08.1",
+      "name": "Steam Delisted Games & Library Filters",
+      "status": "complete"
+    },
+    {
+      "number": "9",
+      "name": "Quality Gate",
+      "status": "pending"
+    },
+    {
+      "number": "10",
+      "name": "Humble Auth + Adapter Scaffold",
+      "status": "complete"
+    },
+    {
+      "number": "11",
+      "name": "Library Sync + 5-State Key Model",
+      "status": "complete"
+    },
+    {
+      "number": "12",
+      "name": "Ownership Dedup",
+      "status": "complete"
+    },
+    {
+      "number": "13",
+      "name": "Keys-Waiting + Giftable-Spares Views",
+      "status": "pending"
+    },
+    {
+      "number": "14",
+      "name": "Guided Claim Flow",
+      "status": "complete"
+    },
+    {
+      "number": "15",
+      "name": "Store Overlay + Expiration Alerts",
+      "status": "complete"
+    },
+    {
+      "number": "16",
+      "name": "CrossOver Compatibility Rating (CodeWeavers)",
+      "status": "complete"
+    },
+    {
+      "number": "17",
+      "name": "Steam on macOS via CrossOver/Wine",
+      "status": "complete"
+    },
+    {
+      "number": "18",
+      "name": "macOS 32-bit detection, badge & CrossOver routing",
+      "status": "complete"
+    },
+    {
+      "number": "19",
+      "name": "CrossOver Compatibility Index (macOS)",
+      "status": "complete"
+    },
+    {
+      "number": "20",
+      "name": "Aggregated Store Search (CheapShark)",
+      "status": "complete"
+    },
+    {
+      "number": "21",
+      "name": "Steam Native Install (depot download)",
+      "status": "complete"
+    },
+    {
+      "number": "22",
+      "name": "Steam Game Families (multiple bottle configs)",
+      "status": "pending"
+    },
+    {
+      "number": "23",
+      "name": "Steam full-ownership install (StateFlags=4)",
+      "status": "pending"
+    },
+    {
+      "number": "24",
+      "name": "macOS native Steam bridge (out-of-process steam_api proxy)",
+      "status": "pending"
+    },
+    {
+      "number": "25",
+      "name": "Steam depot download multi-host fan-out (throughput)",
+      "status": "pending"
+    },
+    {
+      "number": "26",
+      "name": "Steam Key Redemption",
+      "status": "complete"
+    },
+    {
+      "number": "27",
+      "name": "Tauri Shell Walking Skeleton",
+      "status": "complete"
+    }
+  ],
+  "next": {
+    "command": "/gsd:progress --next",
+    "label": "Advance to the next step (verify)",
+    "reason": "Phase 46 of 42 · 86% · ready to verify"
+  },
+  "updated_at": "2026-09-29T08:35:25.610Z"
+}
