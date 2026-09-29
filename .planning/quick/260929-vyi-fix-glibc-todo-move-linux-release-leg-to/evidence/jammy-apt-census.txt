@@ -1,0 +1,56 @@
+Jammy (Ubuntu 22.04) archive census -- quick 260929-vyi
+Date: 2026-09-29
+Host: Pop!_OS 22.04 LTS
+      ldd (Ubuntu GLIBC 2.35-0ubuntu3.15) 2.35
+
+Question: is every package the release workflow's "Install Ubuntu system
+dependencies" step installs actually present in the real Ubuntu jammy archive?
+Method: download the six real archive indexes, decompress, and look for an exact
+"Package: <name>" stanza. Read-only: no sudo, no apt-get update, nothing installed.
+
+Package list, extracted by js-yaml from .github/workflows/release-tauri.yml (the
+tokens after -y on the apt-get install line of that step), NOT copied from the plan:
+  libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils
+
+Indexes (decompressed byte size, sha256 of the decompressed file):
+  http://archive.ubuntu.com/ubuntu/dists/jammy/main/binary-amd64/Packages.xz
+    6779186 bytes  12ce0797a6ed39a1fee1321985976c6b78872a8fe4c7ef2fb712f2364c9839a3
+  http://archive.ubuntu.com/ubuntu/dists/jammy/universe/binary-amd64/Packages.xz
+    64332414 bytes  6b8cc68643d18250ab297c4f6d427a8778b1d1534e1a3033fff0f221fa20a419
+  http://archive.ubuntu.com/ubuntu/dists/jammy-updates/main/binary-amd64/Packages.xz
+    21827723 bytes  8c02420afcb00797032f3369f092a5a7fdddca94a77e7107988dbfc4ba9205e7
+  http://archive.ubuntu.com/ubuntu/dists/jammy-updates/universe/binary-amd64/Packages.xz
+    7279029 bytes  0d1a72daff34b010295decc2d3403880def6b48c5562419bdc5c7e09f6a19052
+  http://archive.ubuntu.com/ubuntu/dists/jammy-security/main/binary-amd64/Packages.xz
+    20361686 bytes  65c96ba6aba7f2846a6d93b3d1f7327fa7232e656f8e46916213f296e2cfea19
+  http://archive.ubuntu.com/ubuntu/dists/jammy-security/universe/binary-amd64/Packages.xz
+    6200591 bytes  306063cec20e94262df3efce9a6299907f55f7232cf7ed69c07b1df97d79065a
+
+Result table: package | jammy archive hits (suite-component=version) | installed here (secondary) | verdict
+  libwebkit2gtk-4.1-dev        | jammy-universe=2.36.0-2ubuntu1 jammy-updates-universe=2.50.4-0ubuntu0.22.04.1 jammy-security-universe=2.50.4-0ubuntu0.22.04.1 | 2.50.4-0ubuntu0.22.04.1 | FOUND
+  libayatana-appindicator3-dev | jammy-main=0.5.90-7ubuntu2 | 0.5.90-7ubuntu2 | FOUND
+  librsvg2-dev                 | jammy-main=2.52.5+dfsg-3 jammy-updates-main=2.52.5+dfsg-3ubuntu0.2 jammy-security-main=2.52.5+dfsg-3ubuntu0.2 | 2.52.5+dfsg-3ubuntu0.2 | FOUND
+  patchelf                     | jammy-universe=0.14.3-1 | 0.14.3-1 | FOUND
+  xdg-utils                    | jammy-main=1.1.3-4.1ubuntu1 jammy-updates-main=1.1.3-4.1ubuntu3~22.04.1 | 1.1.3-4.1ubuntu3~22.04.1 | FOUND
+
+Verdict: 5/5 FOUND, 0 MISSING. Gate passes; the package list is unchanged.
+
+PREMISE CORRECTION -- `apt-cache policy` on this host is NOT a jammy-availability oracle.
+Verbatim output of `apt-cache policy libwebkit2gtk-4.1-dev` on this host:
+
+  libwebkit2gtk-4.1-dev:
+    Installed: 2.50.4-0ubuntu0.22.04.1
+    Candidate: 2.50.4-0ubuntu0.22.04.1
+    Version table:
+   *** 2.50.4-0ubuntu0.22.04.1 100
+          100 /var/lib/dpkg/status
+
+The only version-table source is /var/lib/dpkg/status. /var/lib/apt/lists/ holds a
+stale cache of `noble` indexes (apt.pop-os.org_release_dists_noble_*), while
+/etc/apt/sources.list.d/ points at `jammy` suites. So "Candidate" here simply equals
+the installed version and says nothing about what the jammy archive carries. That is
+why this census reads the real archive indexes and lists the installed version only as
+a secondary column.
+
+Note: the GitHub-hosted ubuntu-22.04 runner installs from Ubuntu's own archive mirror,
+not from apt.pop-os.org; the indexes above are therefore the correct reference.

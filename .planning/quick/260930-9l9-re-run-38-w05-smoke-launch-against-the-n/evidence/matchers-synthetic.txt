@@ -1,0 +1,16 @@
+FAKE_HOME=createFakeHomeProfile
+MODE=matchers
+SCORED=no
+EXTRA_ENV=(none)
+MATCHERS_INPUT=synthetic-streams.txt
+STDOUT_LINES=0
+STDERR_LINES=2
+GLIBC_NOT_FOUND_LINES=0
+GLIBCXX_NOT_FOUND_LINES=0
+MISSING_SO_LINES=1
+STREAM_MATCH MISSING_SO_LINES gamelib-shell: error while loading shared libraries: libnotreal.so.9: cannot open shared object file: No such file or directory
+EGL_CONFOUND_LINES=1
+STREAM_MATCH EGL_CONFOUND_LINES Could not create GBM EGL display: EGL_NOT_INITIALIZED. Aborting...
+PANIC_LINES=0
+DISPOSED=yes
+HARNESS_OK=1

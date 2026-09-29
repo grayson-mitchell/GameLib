@@ -1,0 +1,43 @@
+Task 3 step D/E: burst capture of the dialog-open transition.
+
+burst: frames=65 fps=10.8 median_interval=83.3ms, out=.../open/
+click: {"x": 426, "y": 833, "epoch_ms": 1790668860257} -- the live AT-SPI-derived
+  center of the "Install with options..." menu item (not the earlier, wrong,
+  screenshot-crop-estimated 372,713, which missed the item and just dismissed the
+  menu with no dialog opening -- that attempt's frames were discarded, not committed).
+
+diff (settle set: dialog-settled.png as frame_0000000000000.png baseline, plus every
+burst frame from 1790668860490 onward -- the first frame showing any dialog content):
+  max_fraction=0.1902 max_frame=frame_1790668860490.png
+  flagged (> 0.005):
+    frame_1790668860490.png: 0.1902  (dialog first visible,  +233ms after click)
+    frame_1790668860599.png: 0.1060  (dropdown populated,    +342ms after click)
+    frame_1790668860720.png: 0.0360  (free-space line shown, +463ms after click)
+  No frame after 1790668860720 is flagged (next unflagged frame: 1790668860812,
+  +555ms after click).
+
+Every flagged frame was individually viewed:
+  - 1790668860490: dialog visible mid-slide-up, library dropdown EMPTY (no value),
+    free-space line ABSENT. No platform row, no wine section, no "Checking install
+    options" row. Classified EXPECTED LATE MOUNT.
+  - 1790668860599: dialog fully positioned, library dropdown POPULATED
+    ("/home/graysonmitchell/.steam/debian-installation (default)"), free-space line
+    still ABSENT. No platform row, no wine section. Classified EXPECTED LATE MOUNT.
+  - 1790668860720: free-space line now PRESENT ("Space Available: 269.17 GiB free of
+    374.57 GiB"), matching the settled state. No platform row, no wine section.
+    Classified EXPECTED LATE MOUNT (last transitional frame).
+
+All three flagged frames fall within the ~500ms MUI Slide open-transition window (the
+last flagged frame is +463ms after click; the next frame, +555ms, is unflagged). NO
+SCORED TRANSIENT was found: at no point during the open transition or after did the
+platform row, any wine sub-signature (including a "Checking install options" row), or
+a dropdown/free-space line that vanished after appearing, ever render.
+
+Late-mount latencies (measured from the click epoch):
+  dialog first visible:        +233ms
+  library dropdown populated:  +342ms
+  free-space line appeared:    +463ms
+  fully settled (no more diff):+555ms (bounded by the unflagged next frame)
+
+clients.jsonl (both the caret-menu burst and this scored burst): new_windows=0 in both
+runs -- no new top-level window appeared. The dialog is in-webview, as expected.

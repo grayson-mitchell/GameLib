@@ -1,0 +1,100 @@
+FAKE_HOME=createFakeHomeProfile
+MODE=smoke
+SCORED=yes
+EXTRA_ENV=(none)
+DISPLAY=:1
+XAUTHORITY=/run/user/1000/gdm/Xauthority
+PRE_WINDOWS=0
+LAUNCH_ARGS=(none)
+APPIMAGE_MOUNTS_BEFORE=0
+LAUNCH_DATE=2026-09-29T18:18:00.145Z
+LAUNCH_PID=369284
+LAUNCH_PGID=369284
+LAUNCH_SID=369284
+SETSID_PROVEN=yes
+FIRST_NEW_APPIMAGE_MOUNT=/tmp/.mount_GameLidpgdAL fstype=fuse.GameLib_0.7.0_amd64-run36556473399.AppImage t_ms=258
+CHILD_EXIT_BEFORE_WINDOW=no
+OBSERVED_APPIMAGE_MOUNT=/tmp/.mount_GameLidpgdAL
+WINDOW_APPEARED=yes
+T_W_ISO=2026-09-29T18:18:00.415Z
+TIME_TO_WINDOW_MS=270
+WINDOW_ID=62914563
+PGID_MATCH=yes
+SHELL_PID=369284
+SHELL_PID_EQ_LAUNCH_PID=yes
+SHELL_EXE=/tmp/.mount_GameLidpgdAL/usr/bin/gamelib-shell
+MOUNT_DIR=/tmp/.mount_GameLidpgdAL
+MOUNT_FSTYPE=fuse.GameLib_0.7.0_amd64-run36556473399.AppImage
+MOUNT_IS_FUSE=yes
+DIRECT_LAUNCH=yes
+SAMPLE s=0 t_ms=12 shell_alive=y state=S window_visible=y same_pid=y
+SAMPLE s=1 t_ms=1007 shell_alive=n state=- window_visible=n same_pid=n
+SAMPLE s=2 t_ms=2007 shell_alive=n state=- window_visible=n same_pid=n
+SAMPLE s=3 t_ms=3008 shell_alive=n state=- window_visible=n same_pid=n
+CAP_FIND=NO WINDOW FOUND 
+CAP_FIND_PID_EQ_SHELL_PID=unparsed
+CAP_GRAB_1=NO WINDOW FOUND 
+SIDECAR_PID=-1
+SIDECAR_PGID=-1
+SIDECAR_EXE=
+SIDECAR_BUNDLED=no
+MOUNT_USR_BIN=ERR Error: ENOENT: no such file or directory, scandir '/tmp/.mount_GameLidpgdAL/usr/bin'
+SAMPLE s=4 t_ms=4007 shell_alive=n state=- window_visible=n same_pid=n
+SAMPLE s=5 t_ms=5007 shell_alive=n state=- window_visible=n same_pid=n
+SAMPLE s=6 t_ms=6007 shell_alive=n state=- window_visible=n same_pid=n
+SAMPLE s=7 t_ms=7007 shell_alive=n state=- window_visible=n same_pid=n
+SAMPLE s=8 t_ms=8008 shell_alive=n state=- window_visible=n same_pid=n
+SAMPLE s=9 t_ms=9008 shell_alive=n state=- window_visible=n same_pid=n
+SAMPLE s=10 t_ms=10007 shell_alive=n state=- window_visible=n same_pid=n
+CAP_GRAB_2=NO WINDOW FOUND 
+SIDECAR_ALIVE_S10=no
+ELAPSED_FROM_T0_AT_S10_MS=10278
+EXIT_EVENT_DURING_SURVIVAL=code=null signal=SIGABRT t_ms=364
+SURVIVED_10S=no
+WINDOW_PNG_COLOURS=ERR Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/home/graysonmitchell/.local/lib/python3.10/site-packages/PIL/Image.py", line 3639, in open
+    fp = builtins.open(filename, "rb")
+FileNotFoundError: [Errno 2] No such file or directory: '/home/graysonmitchell/GameLib/.planning/quick/260930-9l9-re-run-38-w05-smoke-launch-against-the-n/evidence/window.png'
+
+WINDOW_T10_PNG_COLOURS=ERR Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/home/graysonmitchell/.local/lib/python3.10/site-packages/PIL/Image.py", line 3639, in open
+    fp = builtins.open(filename, "rb")
+FileNotFoundError: [Errno 2] No such file or directory: '/home/graysonmitchell/GameLib/.planning/quick/260930-9l9-re-run-38-w05-smoke-launch-against-the-n/evidence/window-t10.png'
+
+SHELL_ALIVE_T30=no
+SIDECAR_ALIVE_T30=no
+WINDOW_VISIBLE_T30=no same_pid=no
+CAP_GRAB_3=NO WINDOW FOUND 
+WINDOW_T30_PNG_COLOURS=ERR Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+  File "/home/graysonmitchell/.local/lib/python3.10/site-packages/PIL/Image.py", line 3639, in open
+    fp = builtins.open(filename, "rb")
+FileNotFoundError: [Errno 2] No such file or directory: '/home/graysonmitchell/GameLib/.planning/quick/260930-9l9-re-run-38-w05-smoke-launch-against-the-n/evidence/window-t30.png'
+
+EXIT_EVENT_BEFORE_TEARDOWN=code=null signal=SIGABRT t_ms=364
+T_TERM_ISO=2026-09-29T18:18:30.580Z
+SIGTERM_TO_SHELL_PID=369284 not-sent
+SHELL_GONE_MS=0
+SIDECAR_GONE_MS=0
+SIDECAR_EXIT_S=0.00
+SIDECAR_ORPHAN=no
+SIDECAR_GROUP_DISTINCT_FROM_LAUNCH=no
+LAUNCH_GROUP_REMAINDER=none
+LAUNCH_GROUP_SELF_EXIT_MS=4
+MOUNT_GONE=yes
+LEFTOVER_PROCS=0
+NO_ORPHANS=yes
+MOUNT_DIR_EXISTS_ON_DISK=no
+POST_TEARDOWN_WINDOWS=0
+STDOUT_LINES=0
+STDERR_LINES=3
+GLIBC_NOT_FOUND_LINES=0
+GLIBCXX_NOT_FOUND_LINES=0
+MISSING_SO_LINES=0
+EGL_CONFOUND_LINES=1
+STREAM_MATCH EGL_CONFOUND_LINES Could not create GBM EGL display: EGL_NOT_INITIALIZED. Aborting...
+PANIC_LINES=0
+DISPOSED=yes
+HARNESS_OK=1

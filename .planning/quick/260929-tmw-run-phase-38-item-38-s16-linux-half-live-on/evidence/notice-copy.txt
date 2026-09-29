@@ -1,0 +1,135 @@
+# selftest 2026-09-29T09:09:22Z
+S_LEN=122
+  S[5] = U+0027 "'"
+  S[55] = U+0027 "'"
+  S[81] = U+2014 '—'
+O_LEN=185
+  O[27] = U+0027 "'"
+  O[50] = U+0027 "'"
+PASS case1_fffc_prefix_extracts_exact seg_ok=True fffc=1 result=EXACT detail={}
+PASS case2_curly_apostrophe_mismatch result=MISMATCH detail={'index': 5, 'segment_char': 'U+2019', 'expected_char': 'U+0027', 'segment_len': 122, 'expected_len': 122}
+PASS case3_em_dash_to_hyphen_mismatch result=MISMATCH detail={'index': 81, 'segment_char': 'U+002D', 'expected_char': 'U+2014', 'segment_len': 122, 'expected_len': 122}
+PASS case4_o_vs_s_mismatch_o_vs_o_exact o_vs_s=MISMATCH o_vs_o=EXACT
+PASS case5_newline_for_space_newline_only result=NEWLINE_ONLY detail={}
+PASS case6_multi_fffc_prefix_counts_one_before_segment seg_ok=True fffc=1
+PASS case7_truncated_mismatch_differing_lengths result=MISMATCH detail={'index': 121, 'segment_char': 'END', 'expected_char': 'U+002E', 'segment_len': 121, 'expected_len': 122}
+
+# Task 1 tracer summary
+EXPECTED_HITS=1
+DEEPEST_EXPECTED_COMPARE=EXACT
+ATTR_CLASS_EXPOSED=no
+
+SUBBRANCH=off
+## negative control (dialog closed)
+EXPECTED_HITS=0
+ALT_HITS=0
+REGIONS
+  platform_row: in_dialog=0 outside_dialog=0
+  library_dropdown: in_dialog=0 outside_dialog=0
+  wine_section: in_dialog=0 outside_dialog=0
+  free_space_line: in_dialog=0 outside_dialog=0
+  content_light_off: in_dialog=0 outside_dialog=0
+  content_light_single: in_dialog=0 outside_dialog=0
+  title: in_dialog=0 outside_dialog=3
+ROLE_HISTOGRAM (dialog subtree)
+COMBO_BOX_COUNT (dialog subtree): 0
+## settled copy read
+HIT kind=expected
+  path=0.0.0.0.0.0.0.0
+  depth=7
+  role=page
+  in_dialog=False
+  source=text
+  attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "generic", "xml-roles": "presentation"}
+  SEGMENT_REPR="This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib."
+  SEGMENT_LEN=185
+  FFFC_BEFORE_SEGMENT=1
+  COMPARE_EXPECTED=EXACT {}
+  COMPARE_ALT=MISMATCH {"index": 2, "segment_char": "U+0069", "expected_char": "U+0065", "segment_len": 185, "expected_len": 122}
+HIT kind=expected
+  path=0.0.0.0.0.0.0.0.0.2
+  depth=9
+  role=page
+  in_dialog=True
+  source=text
+  attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "generic"}
+  SEGMENT_REPR="This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib."
+  SEGMENT_LEN=185
+  FFFC_BEFORE_SEGMENT=1
+  COMPARE_EXPECTED=EXACT {}
+  COMPARE_ALT=MISMATCH {"index": 2, "segment_char": "U+0069", "expected_char": "U+0065", "segment_len": 185, "expected_len": 122}
+DEEPEST_EXPECTED_ANCESTORS
+ANCESTOR depth=0 role=application name='gamelib-shell' attrs={}
+ANCESTOR depth=1 role=frame name='GameLib' attrs={"toolkit": "gtk", "window-type": "normal"}
+ANCESTOR depth=2 role=filler name='' attrs={"toolkit": "gtk"}
+ANCESTOR depth=3 role=filler name='' attrs={}
+ANCESTOR depth=4 role=filler name='' attrs={"toolkit": "WebKitGTK"}
+ANCESTOR depth=5 role=scroll pane name='' attrs={"toolkit": "WebKitGTK"}
+ANCESTOR depth=6 role=document text name='GameLib' attrs={"toolkit": "WebKitGTK"}
+ANCESTOR depth=7 role=page name='' attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "generic", "xml-roles": "presentation"}
+ANCESTOR depth=8 role=dialog name='7 Days to Die' attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "dialog", "xml-roles": "dialog"}
+ANCESTOR depth=9 role=page name='' attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "generic"}
+EXPECTED_HITS=2
+ALT_HITS=0
+DEEPEST_EXPECTED_COMPARE=EXACT
+DIALOG_NODES=1
+DIALOG_HEADING_NODES=0
+THIRD_PARTY_HITS=0
+ATTR_CLASS_EXPOSED=no
+
+SUBBRANCH=on
+## negative control (dialog closed)
+EXPECTED_HITS=0
+ALT_HITS=0
+REGIONS
+  platform_row: in_dialog=0 outside_dialog=0
+  library_dropdown: in_dialog=0 outside_dialog=0
+  wine_section: in_dialog=0 outside_dialog=0
+  free_space_line: in_dialog=0 outside_dialog=0
+  content_light_off: in_dialog=0 outside_dialog=0
+  content_light_single: in_dialog=0 outside_dialog=0
+  title: in_dialog=0 outside_dialog=3
+ROLE_HISTOGRAM (dialog subtree)
+## settled copy read
+HIT kind=expected
+  path=0.0.0.0.0.0.0.0
+  depth=7
+  role=page
+  in_dialog=False
+  source=text
+  attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "generic", "xml-roles": "presentation"}
+  SEGMENT_REPR="There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it."
+  SEGMENT_LEN=122
+  FFFC_BEFORE_SEGMENT=1
+  COMPARE_EXPECTED=EXACT {}
+  COMPARE_ALT=MISMATCH {"index": 2, "segment_char": "U+0065", "expected_char": "U+0069", "segment_len": 122, "expected_len": 185}
+HIT kind=expected
+  path=0.0.0.0.0.0.0.0.0.2
+  depth=9
+  role=page
+  in_dialog=True
+  source=text
+  attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "generic"}
+  SEGMENT_REPR="There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it."
+  SEGMENT_LEN=122
+  FFFC_BEFORE_SEGMENT=1
+  COMPARE_EXPECTED=EXACT {}
+  COMPARE_ALT=MISMATCH {"index": 2, "segment_char": "U+0065", "expected_char": "U+0069", "segment_len": 122, "expected_len": 185}
+DEEPEST_EXPECTED_ANCESTORS
+ANCESTOR depth=0 role=application name='gamelib-shell' attrs={}
+ANCESTOR depth=1 role=frame name='GameLib' attrs={"toolkit": "gtk", "window-type": "normal"}
+ANCESTOR depth=2 role=filler name='' attrs={"toolkit": "gtk"}
+ANCESTOR depth=3 role=filler name='' attrs={}
+ANCESTOR depth=4 role=filler name='' attrs={"toolkit": "WebKitGTK"}
+ANCESTOR depth=5 role=scroll pane name='' attrs={"toolkit": "WebKitGTK"}
+ANCESTOR depth=6 role=document text name='GameLib' attrs={"toolkit": "WebKitGTK"}
+ANCESTOR depth=7 role=page name='' attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "generic", "xml-roles": "presentation"}
+ANCESTOR depth=8 role=dialog name='7 Days to Die' attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "dialog", "xml-roles": "dialog"}
+ANCESTOR depth=9 role=page name='' attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "generic"}
+EXPECTED_HITS=2
+ALT_HITS=0
+DEEPEST_EXPECTED_COMPARE=EXACT
+DIALOG_NODES=1
+DIALOG_HEADING_NODES=0
+THIRD_PARTY_HITS=0
+ATTR_CLASS_EXPOSED=no

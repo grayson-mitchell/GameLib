@@ -1,0 +1,40 @@
+38-S04 sitting 6 (quick 260928-tvk) -- new top-level window census
+====================================================================
+
+Scored click: epoch_ms=1790620054665, x=1778, y=941 (GameLib window primary Install button,
+Linux Pop!_OS 22.04 X11, DISPLAY=:1)
+
+Positive-control burst (Install with options... dialog, run BEFORE the scored click):
+  fps=16.8 median_interval=56.4ms
+  new_windows=0 (the dialog is an in-webview modal, not a separate top-level X11 window)
+
+Scored burst (--pre 0.5 --seconds 6 --click 1778,941):
+  fps=18.6 median_interval=50.6ms
+  new_windows=0 -- NO new top-level window was recorded during the 6-second burst window.
+
++10s and +20s `clients` dumps (post-burst, still window-region only):
+  Window id set at baseline, +10s and +20s is IDENTICAL in all three snapshots:
+    0x2600003  pid 23810  exe .../src-tauri/target/debug/gamelib-shell  GameLib window (this sitting's build)
+    0x660003b  pid 34245  exe .../steamwebhelper  wm_class "steamwebhelper","steam"  title "Steam"
+    0x2c0000f  pid 4328   exe /usr/bin/gnome-control-center  (operator's desktop, unrelated)
+    0x2e00004  pid 4414   exe /usr/share/code/code  (operator's desktop, unrelated)
+    0x3a00003  pid 8863   exe /usr/bin/gjs-console  (operator's desktop shell extension host, unrelated)
+    0x3a00007  pid 8863   exe /usr/bin/gjs-console  (operator's desktop shell extension host, unrelated)
+    0x600017   pid 3023   exe /usr/lib/firefox/firefox-bin  (operator's desktop, unrelated)
+    0x60073d   pid 3023   exe /usr/lib/firefox/firefox-bin  (operator's desktop, unrelated)
+
+Attribution:
+  - GameLib-owned: 0x2600003 (PID 23810, this task's proven-identity gamelib-shell). No NEW
+    GameLib-owned window appeared at any point from pre-click through +20s+.
+  - Steam-client-owned: 0x660003b (steamwebhelper, PID 34245). This window PRE-EXISTED the
+    scored click (present in the baseline `clients` dump taken before the burst) and its
+    window id, PID and title never changed across baseline / +10s / +20s. No NEW Steam-client
+    window was created either. Per the objective's SCORED SURFACE section, a Steam-client
+    window is the expected D-18 handoff and is recorded here, not scored against the item.
+  - All other windows are pre-existing operator-desktop applications (Firefox, VS Code,
+    gnome-control-center, GNOME Shell extension host), unrelated to this item, unchanged
+    throughout, and not scored.
+
+No appmanifest_264160.acf appeared in any Steam library path at +20s (checked across all 4
+`libraryfolders.vdf` library paths), so no install actually started on the Steam side; nothing
+required cancelling.

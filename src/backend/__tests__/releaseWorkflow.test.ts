@@ -90,15 +90,14 @@ describe('release-tauri.yml trigger shape (D-05, D-09)', () => {
   })
 })
 
-describe('release-tauri.yml matrix runners (D-05 -- windows-latest + ubuntu + macos-latest)', () => {
+// The Ubuntu leg is deliberately NOT asserted here. A raw-text regex over the
+// whole file is satisfied by comment prose (the header names the old runner as
+// history), so the Linux leg is pinned from the PARSED workflow in the
+// "Linux build base" describe block at the end of this file (quick 260929-vyi).
+describe('release-tauri.yml matrix runners (D-05 -- windows-latest + macos-latest)', () => {
   test('includes windows-latest', () => {
     const source = loadReleaseWorkflow()
     expect(source).toContain('windows-latest')
-  })
-
-  test('includes an ubuntu runner (24.04 or latest)', () => {
-    const source = loadReleaseWorkflow()
-    expect(source).toMatch(/ubuntu-(24\.04|latest)/)
   })
 
   test('includes macos-latest', () => {
@@ -1153,8 +1152,18 @@ interface ParsedReleaseWorkflow {
   }
   jobs: Record<
     string,
-    { env?: Record<string, unknown>; steps: ParsedReleaseStep[] }
+    {
+      env?: Record<string, unknown>
+      steps: ParsedReleaseStep[]
+      strategy?: { matrix?: { include?: ReleaseMatrixLeg[] } }
+    }
   >
+}
+
+interface ReleaseMatrixLeg {
+  platform?: string
+  args?: string
+  sidecar_triple?: string
 }
 
 function parseReleaseSteps(): ParsedReleaseStep[] {
@@ -1669,5 +1678,102 @@ describe('release-tauri.yml dry-run dispatch mode (260924-rbx)', () => {
 
       expect(offenders).toEqual([])
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Linux build base -- the AppImage's glibc floor (quick 260929-vyi / 38-W05).
+//
+// An AppImage does not bundle glibc, so the glibc of the runner that BUILDS it
+// is the floor for every user. 38-W05 sitting 10 (quick 260929-v1v) measured
+// `GLIBC_2.39 not found (required by gamelib-shell)` on Pop!_OS 22.04 (glibc
+// 2.35) against the AppImage built on ubuntu-24.04; see
+// .planning/todos/pending/2026-09-29-ci-linux-appimage-glibc-2-39-not-launchable-on-glibc-2-35.md.
+// Tauri's own AppImage guidance is to build "using the oldest base system you
+// intend to support that also provides Tauri v2's required WebKitGTK 4.1
+// packages", and it names Ubuntu 22.04 as a baseline.
+//
+// Every assertion below reads the PARSED workflow (comments are dropped by the
+// parse), so the header's prose about the old runner can neither satisfy nor
+// break them. The replaced raw-text `ubuntu-(24\.04|latest)` regex could be
+// satisfied by a comment alone.
+//
+// JAMMY_CENSUSED_APT_PACKAGES is the exact package set recorded as PRESENT in
+// the real Ubuntu jammy archive indexes (not merely installed on a host) in
+// .planning/quick/260929-vyi-fix-glibc-todo-move-linux-release-leg-to/evidence/jammy-apt-census.txt.
+// Changing the apt list means RE-RUNNING that census and updating the evidence
+// before this constant.
+// ---------------------------------------------------------------------------
+
+const LINUX_BUILD_BASE = 'ubuntu-22.04'
+const LINUX_SIDECAR_TRIPLE = 'x86_64-unknown-linux-gnu'
+const JAMMY_CENSUSED_APT_PACKAGES = [
+  'libwebkit2gtk-4.1-dev',
+  'libayatana-appindicator3-dev',
+  'librsvg2-dev',
+  'patchelf',
+  'xdg-utils'
+]
+
+describe('release-tauri.yml Linux build base (glibc floor -- quick 260929-vyi / 38-W05)', () => {
+  function linuxLeg(): ReleaseMatrixLeg {
+    const include =
+      parseReleaseWorkflow().jobs.release.strategy?.matrix?.include ?? []
+    const legs = include.filter(
+      (leg) => leg.sidecar_triple === LINUX_SIDECAR_TRIPLE
+    )
+    expect(legs).toHaveLength(1)
+    return legs[0]
+  }
+
+  function aptStep(): ParsedReleaseStep {
+    const steps = parseReleaseSteps().filter(
+      (s) => s.name === 'Install Ubuntu system dependencies'
+    )
+    expect(steps).toHaveLength(1)
+    return steps[0]
+  }
+
+  test('exactly one matrix leg targets Linux and it builds on ubuntu-22.04 (glibc 2.35 floor)', () => {
+    expect(linuxLeg().platform).toBe(LINUX_BUILD_BASE)
+
+    const include =
+      parseReleaseWorkflow().jobs.release.strategy?.matrix?.include ?? []
+    const ubuntuLegs = include.filter((leg) =>
+      (leg.platform ?? '').startsWith('ubuntu-')
+    )
+    expect(ubuntuLegs).toHaveLength(1)
+  })
+
+  test("the Ubuntu system-dependency step is guarded on exactly the Linux leg's platform", () => {
+    // Read the platform from the PARSED leg, not from the constant, so this
+    // coupling is tested independently of the base-version test above. A
+    // half-edit (leg moved, guard not) silently skips the apt step -- tauri-
+    // action's README: "This must match the platform value defined above".
+    const platform = linuxLeg().platform
+    expect(aptStep().if).toBe(`matrix.platform == '${platform}'`)
+  })
+
+  test('the Ubuntu system-dependency step installs exactly the jammy-censused package set', () => {
+    const installLine = (aptStep().run ?? '')
+      .split('\n')
+      .find((line) => line.includes('apt-get install'))
+    expect(installLine).toBeDefined()
+
+    const installed = (installLine ?? '')
+      .split(/\s+-y\s+/)[1]
+      ?.trim()
+      .split(/\s+/)
+      .sort()
+    expect(installed).toEqual([...JAMMY_CENSUSED_APT_PACKAGES].sort())
+  })
+
+  test('swatinem/rust-cache is keyed on matrix.platform so a cache built on another runner image cannot be prefix-restored', () => {
+    const cacheSteps = parseReleaseSteps().filter((s) =>
+      (s.uses ?? '').startsWith('swatinem/rust-cache@')
+    )
+    expect(cacheSteps).toHaveLength(1)
+    expect(cacheSteps[0]?.with?.key).toBe('${{ matrix.platform }}')
+    expect(cacheSteps[0]?.with?.workspaces).toBe('./src-tauri -> target')
   })
 })

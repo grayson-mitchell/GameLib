@@ -1,0 +1,7 @@
+=== stdout: 1 lines total; first 40 / last 40 ===
+
+=== stderr: 4 lines total; first 40 / last 40 ===
+Gtk-Message: 07:18:00.312: Failed to load module "canberra-gtk-module"
+Gtk-Message: 07:18:00.313: Failed to load module "canberra-gtk-module"
+Could not create GBM EGL display: EGL_NOT_INITIALIZED. Aborting...
+

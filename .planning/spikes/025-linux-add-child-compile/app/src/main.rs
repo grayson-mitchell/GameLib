@@ -363,6 +363,227 @@ fn destroy_embed(app: AppHandle, state: tauri::State<'_, State>, label: String) 
     Ok(())
 }
 
+// ─────────────────────── spike 028: GTK box-packing levers ───────────────────────
+//
+// Spike 026 found `add_child`'s child webview always lands in the window's
+// shared `GtkBox` on Linux, and wry's `set_bounds` only writes when the
+// parent is a `GtkFixed` (webkitgtk/mod.rs:963-983) — a silent, structural
+// no-op via wry's OWN positioning API. THE 028 QUESTION: reaching the real
+// GTK objects through `tauri::Window::default_vbox()` (tauri-2.12.0/src/
+// window/mod.rs:1809 — public, non-`unstable`-gated, Linux-family only) and
+// `Webview::with_webview` -> `PlatformWebview::inner()` (tauri-2.12.0/src/
+// webview/mod.rs:177) — both stock Tauri API, no wry/tauri-runtime-wry fork —
+// can raw `gtk-rs` calls achieve a non-50/50 split, where wry's own API
+// could not?
+//
+// One dead end ruled out by source-reading alone, not run: wry's own
+// `WebView::reparent` (webkitgtk/mod.rs:1218-1244) can move a webview into a
+// `GtkFixed`, but never updates the `is_in_fixed_parent` field `set_bounds`
+// gates on (set once at construction, `:341`, never revisited) — so
+// reparenting via wry's OWN method could not unlock wry's OWN `set_bounds`.
+// This module never calls wry's `reparent`; the "reparent_fixed" lever below
+// does the container surgery directly on the real GTK widget handle, then
+// positions it with raw `gtk::Fixed::move_` — never routing through wry's
+// `set_bounds` at all.
+#[cfg(any(
+    target_os = "linux",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd"
+))]
+mod gtk_lever {
+    use gtk::prelude::*;
+    use serde_json::json;
+
+    /// Ground-truth widget geometry, independent of wry's `bounds()` — whose
+    /// GTK-widget branch (webkitgtk/mod.rs:955-957) reads ONLY
+    /// `allocated_size()` and never sets `bounds.position` at all unless the
+    /// crate's `x11` cargo feature's separate XGetWindowAttributes branch is
+    /// compiled in. `translate_coordinates` gives an absolute,
+    /// window-relative position regardless of which branch wry took.
+    pub fn widget_geometry(w: &gtk::Widget, toplevel: &gtk::Widget) -> serde_json::Value {
+        let alloc = w.allocation();
+        let abs = w.translate_coordinates(toplevel, 0, 0);
+        json!({
+            "type": w.type_().name(),
+            "allocationOwnParent": { "x": alloc.x(), "y": alloc.y(), "w": alloc.width(), "h": alloc.height() },
+            "absoluteInWindow": abs.map(|(x, y)| json!({ "x": x, "y": y })),
+            "visible": w.is_visible(),
+            "hexpand": w.hexpands(),
+            "vexpand": w.vexpands(),
+        })
+    }
+
+    /// Force GTK's deferred (idle-priority, GTK_PRIORITY_RESIZE) layout
+    /// queue to actually run, rather than trusting it fired on its own
+    /// within a plain `thread::sleep`. Spike 028's Investigation Trail:
+    /// after many rapid successive Tauri IPC dispatches (as autorun does
+    /// through phases 0-8), a newly `add_child`-ed widget was repeatedly
+    /// observed stuck at GTK's "never allocated" sentinel ({-1,-1,1,1})
+    /// even after a real window resize — as if the resize queue itself
+    /// were starved, not just this one widget.
+    pub fn pump(iterations: u32) {
+        for _ in 0..iterations {
+            while gtk::events_pending() {
+                gtk::main_iteration();
+            }
+        }
+    }
+
+    pub fn box_snapshot(vbox: &gtk::Box) -> serde_json::Value {
+        let toplevel: gtk::Widget = vbox.clone().upcast();
+        let children: Vec<serde_json::Value> = vbox
+            .children()
+            .iter()
+            .map(|c| widget_geometry(c, &toplevel))
+            .collect();
+        json!({ "childCount": children.len(), "children": children })
+    }
+}
+
+#[cfg(any(
+    target_os = "linux",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd"
+))]
+#[tauri::command]
+fn gtk_pump(state: tauri::State<'_, State>) -> Result<(), String> {
+    gtk_lever::pump(50);
+    state.log.log("gtklever", "pump", serde_json::json!({ "iterations": 50 }));
+    Ok(())
+}
+
+#[cfg(any(
+    target_os = "linux",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd"
+))]
+#[tauri::command]
+fn gtkbox_snapshot(app: AppHandle, state: tauri::State<'_, State>) -> Result<serde_json::Value, String> {
+    let window = app.get_window("main").ok_or("no window 'main'")?;
+    let vbox = window.default_vbox().map_err(|e| e.to_string())?;
+    let v = gtk_lever::box_snapshot(&vbox);
+    state.log.log("gtklever", "gtkbox_snapshot", v.clone());
+    Ok(v)
+}
+
+/// Apply one GTK packing/positioning lever directly to a webview's real GTK
+/// widget, obtained via stock Tauri API (`Webview::with_webview` ->
+/// `PlatformWebview::inner()`), never via a wry/tauri-runtime-wry patch.
+///
+/// `lever`:
+/// - `"set_child_packing"` — `gtk::prelude::BoxExt::set_child_packing` on the
+///   shared vbox for this child (expand/fill/padding).
+/// - `"size_request"` — `WidgetExt::set_size_request` on the child's own
+///   widget (a minimum-size hint, independent of the box's packing args).
+/// - `"reparent_fixed"` — remove the widget from the shared vbox, wrap it in
+///   a freshly created `gtk::Fixed` packed into the vbox in its place. Pure
+///   GTK container surgery on OUR OWN reference to the widget; does not call
+///   wry's `reparent`.
+/// - `"fixed_move"` — `gtk::Fixed::move_` + `set_size_request` on the widget,
+///   assuming a prior `reparent_fixed` already made its parent a `GtkFixed`.
+///   Positions the widget directly; never calls wry's `set_bounds`.
+#[cfg(any(
+    target_os = "linux",
+    target_os = "dragonfly",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd"
+))]
+#[tauri::command]
+fn gtk_apply_lever(
+    app: AppHandle,
+    state: tauri::State<'_, State>,
+    label: String,
+    lever: String,
+    expand: Option<bool>,
+    fill: Option<bool>,
+    padding: Option<u32>,
+    request_w: Option<i32>,
+    request_h: Option<i32>,
+    fixed_x: Option<i32>,
+    fixed_y: Option<i32>,
+) -> Result<serde_json::Value, String> {
+    let webview = app
+        .get_webview(&label)
+        .ok_or_else(|| format!("no webview '{label}'"))?;
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    let app2 = app.clone();
+    let lever2 = lever.clone();
+    webview
+        .with_webview(move |pw| {
+            use gtk::prelude::*;
+            let widget = pw.inner(); // webkit2gtk::WebView — IsA<gtk::Widget> AND IsA<gtk::Container>
+            let result: serde_json::Value = (|| {
+                let window = match app2.get_window("main") {
+                    Some(w) => w,
+                    None => return serde_json::json!({ "error": "no window 'main' inside with_webview" }),
+                };
+                let vbox = match window.default_vbox() {
+                    Ok(b) => b,
+                    Err(e) => return serde_json::json!({ "error": format!("default_vbox: {e}") }),
+                };
+                match lever2.as_str() {
+                    "set_child_packing" => {
+                        vbox.set_child_packing(
+                            &widget,
+                            expand.unwrap_or(true),
+                            fill.unwrap_or(true),
+                            padding.unwrap_or(0),
+                            gtk::PackType::Start,
+                        );
+                        serde_json::json!({ "applied": "set_child_packing", "expand": expand, "fill": fill, "padding": padding })
+                    }
+                    "size_request" => {
+                        widget.set_size_request(request_w.unwrap_or(-1), request_h.unwrap_or(-1));
+                        serde_json::json!({ "applied": "size_request", "w": request_w, "h": request_h })
+                    }
+                    "reparent_fixed" => {
+                        let had_parent = widget.parent().is_some();
+                        vbox.remove(&widget);
+                        let fixed = gtk::Fixed::new();
+                        fixed.put(&widget, fixed_x.unwrap_or(0), fixed_y.unwrap_or(0));
+                        vbox.pack_start(&fixed, true, true, 0);
+                        fixed.show();
+                        serde_json::json!({ "applied": "reparent_fixed", "hadParentBefore": had_parent, "x": fixed_x, "y": fixed_y })
+                    }
+                    "fixed_move" => {
+                        let parent_type = widget.parent().map(|p| p.type_().name().to_string());
+                        if let Some(p) = widget.parent() {
+                            if let Ok(fixed) = p.downcast::<gtk::Fixed>() {
+                                fixed.move_(&widget, fixed_x.unwrap_or(0), fixed_y.unwrap_or(0));
+                                if let (Some(w), Some(h)) = (request_w, request_h) {
+                                    widget.set_size_request(w, h);
+                                }
+                            }
+                        }
+                        serde_json::json!({ "applied": "fixed_move", "parentTypeWas": parent_type, "x": fixed_x, "y": fixed_y, "w": request_w, "h": request_h })
+                    }
+                    other => serde_json::json!({ "error": format!("unknown lever '{other}'") }),
+                }
+            })();
+            let _ = tx.send(result);
+        })
+        .map_err(|e| e.to_string())?;
+
+    let applied = rx
+        .recv_timeout(Duration::from_secs(5))
+        .map_err(|e| format!("with_webview callback never returned: {e}"))?;
+
+    state.log.log(
+        "gtklever",
+        "apply",
+        serde_json::json!({ "label": label, "lever": lever, "result": applied }),
+    );
+    Ok(applied)
+}
+
 #[tauri::command]
 fn navigate_embed(app: AppHandle, state: tauri::State<'_, State>, label: String, url: String) -> Result<(), String> {
     let webview = app
@@ -538,6 +759,10 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
         log.log("autorun", name, v.clone());
     };
 
+    // Spike 028 diagnostic: does Phase 9's embed behave differently as the
+    // FIRST-EVER add_child in the process, vs. as a RECREATE after Phases
+    // 1-8's own create/destroy cycle? See 028's README Investigation Trail.
+    if std::env::var("SPIKE_ONLY_028").is_err() {
     log.log("autorun", "=== PHASE 0: baseline ===", serde_json::json!({}));
     let v = on_main(Box::new(|app| {
         let state = app.state::<State>();
@@ -736,6 +961,148 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
         }));
         step("8d destroy isolated embed", &v);
     }
+    } // end SPIKE_ONLY_028 skip gate around phases 0-8
+
+    log.log(
+        "autorun",
+        "=== PHASE 9 (028): GTK box-packing levers — can anything other than the default 50/50 split be reached? ===",
+        serde_json::json!({}),
+    );
+    {
+        let v = on_main(Box::new(|app| {
+            let state = app.state::<State>();
+            match create_embed(
+                app.clone(), state,
+                format!("{}/set", control_server::ORIGIN),
+                true, false,
+                290.0, 96.0, 760.0, 560.0,
+            ) {
+                Ok(v) => v,
+                Err(e) => serde_json::json!({ "error": e }),
+            }
+        }));
+        step("9a create_embed (fresh, non-isolated) for the packing-lever probes", &v);
+        std::thread::sleep(Duration::from_millis(500));
+        let _ = on_main(Box::new(|app| { let _ = gtk_pump(app.state::<State>()); serde_json::json!({}) }));
+
+        let v = on_main(Box::new(|app| gtkbox_snapshot(app.clone(), app.state::<State>()).unwrap_or_else(|e| serde_json::json!({ "error": e }))));
+        step("9b gtkbox_snapshot BASELINE, AFTER an explicit gtk_pump (expect 2 children, ~equal allocation — spike 026's 50/50)", &v);
+
+        // Lever 1: set_child_packing(expand=false, fill=false) on the embed
+        // ONLY. Main keeps its original expand=true from add_to_container's
+        // pack_start(webview, true, true, 0). If this lever works, GTK
+        // should give the expand=true sibling (main) the extra space and
+        // shrink the embed toward its natural/minimum size.
+        let v = on_main(Box::new(|app| {
+            let state = app.state::<State>();
+            gtk_apply_lever(app.clone(), state, EMBED_LABEL.into(), "set_child_packing".into(), Some(false), Some(false), Some(0), None, None, None, None)
+                .unwrap_or_else(|e| serde_json::json!({ "error": e }))
+        }));
+        step("9c lever=set_child_packing embed expand=false fill=false", &v);
+        std::thread::sleep(Duration::from_millis(500));
+        let v = on_main(Box::new(|app| gtkbox_snapshot(app.clone(), app.state::<State>()).unwrap_or_else(|e| serde_json::json!({ "error": e }))));
+        step("9d gtkbox_snapshot AFTER set_child_packing (compare embed's w/h against 9b baseline)", &v);
+
+        // Lever 2, layered on top of lever 1: size_request pins the embed's
+        // OWN minimum/natural size directly, independent of the box's
+        // packing args.
+        let v = on_main(Box::new(|app| {
+            let state = app.state::<State>();
+            gtk_apply_lever(app.clone(), state, EMBED_LABEL.into(), "size_request".into(), None, None, None, Some(300), Some(200), None, None)
+                .unwrap_or_else(|e| serde_json::json!({ "error": e }))
+        }));
+        step("9e lever=size_request embed 300x200 (layered on 9c's expand=false fill=false)", &v);
+        std::thread::sleep(Duration::from_millis(500));
+        let v = on_main(Box::new(|app| gtkbox_snapshot(app.clone(), app.state::<State>()).unwrap_or_else(|e| serde_json::json!({ "error": e }))));
+        step("9f gtkbox_snapshot AFTER size_request (does the embed now actually read back ~300x200?)", &v);
+
+        // Resize-survival: does whatever split 9c/9e achieved hold after a
+        // real window resize forces GTK to re-run box allocation, or does it
+        // revert to an even split?
+        let v = on_main(Box::new(|app| {
+            let result: Result<(), String> = (|| {
+                let window = app.get_window("main").ok_or_else(|| "no window 'main'".to_string())?;
+                window.set_size(LogicalSize::new(1280.0, 1100.0)).map_err(|e| e.to_string())?;
+                Ok(())
+            })();
+            match result {
+                Ok(()) => serde_json::json!({ "ok": true, "newHeight": 1100.0 }),
+                Err(e) => serde_json::json!({ "error": e }),
+            }
+        }));
+        step("9g resize window 900 -> 1100px height (does the custom packing survive re-layout?)", &v);
+        std::thread::sleep(Duration::from_millis(500));
+        let _ = on_main(Box::new(|app| { let _ = gtk_pump(app.state::<State>()); serde_json::json!({}) }));
+        let v = on_main(Box::new(|app| gtkbox_snapshot(app.clone(), app.state::<State>()).unwrap_or_else(|e| serde_json::json!({ "error": e }))));
+        step("9h gtkbox_snapshot AFTER resize + explicit gtk_pump (9d/9f's numbers should scale, or should revert to even split — either is a finding)", &v);
+
+        // Lever 3: pure GTK container surgery — remove the widget from the
+        // shared vbox, wrap it in OUR OWN gtk::Fixed, then position it with
+        // raw gtk::Fixed::move_ + set_size_request. Never calls wry's
+        // set_bounds or reparent — this tests whether the application can
+        // just do the fixed-positioning wry's Linux backend refuses to do,
+        // using nothing but the widget handle Tauri's own public API hands
+        // back.
+        let v = on_main(Box::new(|app| {
+            let state = app.state::<State>();
+            gtk_apply_lever(app.clone(), state, EMBED_LABEL.into(), "reparent_fixed".into(), None, None, None, None, None, Some(0), Some(0))
+                .unwrap_or_else(|e| serde_json::json!({ "error": e }))
+        }));
+        step("9i lever=reparent_fixed (embed's widget moved into a fresh gtk::Fixed we created)", &v);
+        std::thread::sleep(Duration::from_millis(500));
+        let v = on_main(Box::new(|app| {
+            let state = app.state::<State>();
+            gtk_apply_lever(app.clone(), state, EMBED_LABEL.into(), "fixed_move".into(), None, None, None, Some(700), Some(400), Some(150), Some(250))
+                .unwrap_or_else(|e| serde_json::json!({ "error": e }))
+        }));
+        step("9j lever=fixed_move x=150 y=250 w=700 h=400 (an arbitrary, deliberately-off-center rect)", &v);
+        std::thread::sleep(Duration::from_millis(500));
+        let _ = on_main(Box::new(|app| { let _ = gtk_pump(app.state::<State>()); serde_json::json!({}) }));
+        let v = on_main(Box::new(|app| gtkbox_snapshot(app.clone(), app.state::<State>()).unwrap_or_else(|e| serde_json::json!({ "error": e }))));
+        step("9k gtkbox_snapshot AFTER reparent_fixed+fixed_move + explicit gtk_pump (expect embed's allocation at x=150,y=250,w=700,h=400 if the lever works)", &v);
+
+        if let Ok(secs) = std::env::var("SPIKE_PAUSE_028") {
+            let secs: u64 = secs.parse().unwrap_or(15);
+            log.log("autorun", "PAUSING for visual/screenshot confirmation of the reparent_fixed+fixed_move rect", serde_json::json!({ "seconds": secs }));
+            std::thread::sleep(Duration::from_secs(secs));
+        }
+
+        // Resize-survival for the Fixed-based approach too.
+        let v = on_main(Box::new(|app| {
+            let result: Result<(), String> = (|| {
+                let window = app.get_window("main").ok_or_else(|| "no window 'main'".to_string())?;
+                window.set_size(LogicalSize::new(1280.0, 900.0)).map_err(|e| e.to_string())?;
+                Ok(())
+            })();
+            match result {
+                Ok(()) => serde_json::json!({ "ok": true, "restoredHeight": 900.0 }),
+                Err(e) => serde_json::json!({ "error": e }),
+            }
+        }));
+        step("9l resize window back 1100 -> 900px (does the Fixed-based rect survive a SECOND relayout?)", &v);
+        std::thread::sleep(Duration::from_millis(500));
+        let v = on_main(Box::new(|app| gtkbox_snapshot(app.clone(), app.state::<State>()).unwrap_or_else(|e| serde_json::json!({ "error": e }))));
+        step("9m gtkbox_snapshot AFTER second resize (Fixed children do not participate in box re-flow by design — expect the SAME rect as 9k, not a rescale)", &v);
+
+        // Cross-oracle: does wry's OWN bounds()/list_webviews API now report
+        // the new geometry too, or does it stay stuck at the stale
+        // pre-lever numbers because wry's internal state (is_in_fixed_parent,
+        // any cached bounds) never learned about our direct GTK surgery?
+        let v = on_main(Box::new(|app| {
+            let state = app.state::<State>();
+            list_webviews(app.clone(), state)
+        }));
+        step("9n list_webviews (wry's OWN oracle) — cross-check against 9k's raw-GTK allocation numbers", &v);
+
+        let v = on_main(Box::new(|app| {
+            let state = app.state::<State>();
+            match destroy_embed(app.clone(), state, EMBED_LABEL.into()) {
+                Ok(()) => serde_json::json!({ "ok": true }),
+                Err(e) => serde_json::json!({ "error": e }),
+            }
+        }));
+        step("9o destroy the packing-lever embed", &v);
+    }
 
     log.log("autorun", "=== COMPLETE ===", serde_json::json!({}));
 
@@ -780,6 +1147,14 @@ fn main() {
             log_from_ui,
             export_log,
             control_origin,
+            // Linux-family only (cfg-gated at their definitions below); this
+            // harness is not cross-target-checked for 028 the way 025/026's
+            // pre-existing code is (out of scope — see 028's README). Listing
+            // them unconditionally here is safe only because this whole file
+            // is built and run on Linux this session, never cross-compiled.
+            gtkbox_snapshot,
+            gtk_apply_lever,
+            gtk_pump,
         ])
         .setup(move |app| {
             let _ = MAIN_THREAD.set(std::thread::current().id());

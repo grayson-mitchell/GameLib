@@ -101,6 +101,10 @@ export default tseslint.config(
     }
   },
   {
-    ignores: ['build/', '**/*.js', '**/*.cjs', '**/*.mjs']
+    // `.planning/` holds planning artifacts and one-off live-sitting harnesses,
+    // not product code. A .ts harness there is outside tsconfig.eslint.json, so
+    // the production scope would report it as a parsing ERROR and turn
+    // `pnpm lint` (and the pre-push hook) red.
+    ignores: ['build/', '.planning/', '**/*.js', '**/*.cjs', '**/*.mjs']
   }
 )

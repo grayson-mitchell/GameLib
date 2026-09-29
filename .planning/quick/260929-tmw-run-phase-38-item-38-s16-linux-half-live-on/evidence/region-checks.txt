@@ -1,0 +1,35 @@
+# Phase 38 sitting 9, quick 260929-tmw -- 38-S16 Linux/row-7 half, scored 2026-09-29
+# Build: pnpm tauri:dev DEBUG at 55aa0d54b, identity proven (window PID 8091 -> /proc/8091/exe = src-tauri/target/debug/gamelib-shell)
+# Target: 7 Days to Die (251570), Library -> game page -> Install caret -> "Install with options..."
+FACT F1 off-copy VERDICT=PASS
+  DEEPEST_EXPECTED_COMPARE=EXACT (key steam.install.contentLightNotice, en/gamelib.json)
+  SEGMENT_LEN=185; U+0027 at indexes 27 and 50 matched (the compare is codepoint-exact, so both positions matched by EXACT)
+  COMPARE_ALT=MISMATCH at index 2 (U+0069 vs U+0065), lengths 185 vs 122; EXPECTED_HITS=2 (wrapper node + in-dialog node, same string) ALT_HITS=0
+  NEGATIVE CONTROL (dialog closed, before open): EXPECTED_HITS=0 ALT_HITS=0; shared probe content_light_off=0/0 content_light_single=0/0
+  SHARED PROBE (settled): content_light_off in_dialog=1 outside_dialog=1; content_light_single 0/0; title in_dialog=3
+  TRANSIENT: none. Notice present in the first dialog-visible frame (~314ms after click); flagged frames all inside the ~540ms MUI slide; nothing after.
+FACT F2 off-container VERDICT=PASS
+  BASIS=STRUCTURAL (DOM_ROUTE=none: the Settings-page right-click gave the app's own menu, no Inspect Element)
+  DOM read summary: n/a
+  DIALOG_HEADING_NODES=0 THIRD_PARTY_HITS=0 FFFC_BEFORE_SEGMENT=1
+  VISUAL (notice-crop-off.png): rounded dark-grey fill, warning-triangle icon INLINE at the start of the text, no 2px border, no checkmark icon, no bold header line, English.
+  SOURCE: container-source-census.txt -- the key has one render site, SteamDialog/index.tsx:545, inside the single div.infoBox opened at :531; ThirdPartyDialog references neither key.
+FACT F3 on-copy VERDICT=PASS
+  DEEPEST_EXPECTED_COMPARE=EXACT (key steam.install.contentLightSingleLibraryNotice, en/gamelib.json)
+  SEGMENT_LEN=122; U+0027 at 5 and 55 and U+2014 at 81 matched (EXACT)
+  COMPARE_ALT=MISMATCH at index 2 (U+0065 vs U+0069), lengths 122 vs 185; EXPECTED_HITS=2 ALT_HITS=0
+  NEGATIVE CONTROL (dialog closed, before open): EXPECTED_HITS=0 ALT_HITS=0; shared probe 0/0 on both
+  SHARED PROBE (settled): content_light_single in_dialog=1 outside_dialog=1; content_light_off 0/0; title in_dialog=3
+  TRANSIENT: none. Viewed 4 flagged frames (754/886/1014/139): single-library notice in every one, no O-shaped notice in any frame. First dialog-visible frame ~126ms after click.
+FACT F4 on-container VERDICT=PASS
+  BASIS=STRUCTURAL (DOM_ROUTE=none)
+  DOM read summary: n/a
+  DIALOG_HEADING_NODES=0 THIRD_PARTY_HITS=0 FFFC_BEFORE_SEGMENT=1
+  VISUAL (notice-crop-on.png): same rounded dark-grey box, inline warning-triangle icon, no border, no checkmark, no header, English.
+  SOURCE: container-source-census.txt -- one render site, SteamDialog/index.tsx:541, inside the div.infoBox at :531.
+ARMING off: enableSteamNativeInstall read False before open (config.json); replica COUNT=2 (both libraries mounted; off accepts any count)
+ARMING on: key toggled through the Settings UI, read back True (settings-native-on.png); replica BRANCH: PARSED COUNT=1, the only EXISTS path /home/graysonmitchell/.steam/debian-installation; findmnt for UUID 7ca4a725-... empty (drive unmounted by the operator, now node /dev/nvme1n1p3)
+ARMING restore: toggled back through the UI, key read back False == ORIG_NATIVE (settings-native-restored.png)
+CORROBORATION: COMBO_BOX_COUNT=0 in both dialogs (no library dropdown); free_space_line and wine_section 0/0; the other copy absent in both.
+ANOMALY: (1) after the off sub-branch, closing the dialog with its header X also delivered a click to the IGDB row beneath it and opened a GameLib child window "igdb.com"; closed via its own X. Not an install, no config change. (2) GNOME Settings (operator's app, pid 4453) surfaced over GameLib once during step D and one click landed on its "Region & Language" sidebar item; no setting was changed. (3) The first ON navigation opened Age of Wonders: Planetfall by mistake (grid order changed); nothing was opened from it, then 7 Days to Die was opened. (4) AT-SPI kept a stale SELECTED menu item after the Settings context menu closed.
+RESULT=PASS

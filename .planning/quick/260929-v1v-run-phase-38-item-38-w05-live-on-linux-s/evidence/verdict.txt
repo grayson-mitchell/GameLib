@@ -1,0 +1,20 @@
+VERDICT=FAIL
+CAUSE=GLIBC_INCOMPATIBLE as predicted: `gamelib-shell: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found (required by gamelib-shell)`, plus 46 more not-found lines (45 GLIBC_2.38, 1 GLIBC_2.36) across 37 bundled libraries (47 not-found lines, 38 distinct objects, in total; the raw stderr was 47 lines plus a trailing newline). The AppImage was built on ubuntu-24.04 (glibc 2.39); this host is Pop!_OS 22.04 (glibc 2.35); the AppImage bundles no libc.
+CENSUS_PREDICTION=GLIBC_INCOMPATIBLE (written to census.txt and session.txt before the scored launch)
+PREDICTION_MATCHED_OBSERVATION=yes
+LAUNCH_MADE=direct: chmod +x in place (MODE_BEFORE=664 MODE_AFTER=775), then exec'd, no install step, no extract-and-run; the type-2 runtime self-mounted via FUSE (stderr names /tmp/.mount_GameLiDknhOH/usr/lib/..., i.e. the libraries were loaded from the FUSE mount) and ran usr/bin/gamelib-shell, which the dynamic loader rejected.
+PRECONDITIONS_HELD=fresh createFakeHomeProfile (FAKE_HOME=createFakeHomeProfile, DISPOSED=yes); setsid proven (LAUNCH_PID=LAUNCH_PGID=LAUNCH_SID=163023); PRE_WINDOWS=0; DISPLAY=:1 with XAUTHORITY outside HOME; LockedHint=no; NoNewPrivs=0; libfuse2 present, /dev/fuse present, fusermount present
+EXIT=code=1 signal=null 65 ms after spawn
+WINDOW_APPEARED=no
+DIRECT_LAUNCH=unknown (the FUSE mount lived ~65 ms and was gone before the 250 ms mountinfo poll; the mount is evidenced by the stderr paths under /tmp/.mount_GameLiDknhOH, not by a mountinfo sighting or a window-pid-to-exe proof)
+PGID_MATCH=no (no window to match)
+SURVIVED_10S=no (no samples taken; the process was gone at 65 ms)
+SCREENSHOT_VIEWED=no
+SCREENSHOT_DESCRIPTION=none: no window ever appeared, so window.png and window-t10.png were never produced (nothing to view)
+OPERATOR_EYEBALL=no (the operator was asked not to click and did not volunteer anything; there was nothing on screen)
+SIDECAR_EXIT_S=not applicable: the shell died before it could spawn gamelib-sidecar, so no sidecar existed to observe
+SIDECAR_ORPHAN=no
+EXIT_OBSERVATION_LIMIT=cold-profile only; cannot see real-profile-armed handles (260913-901 class); here it saw nothing at all because the app never started
+NO_ORPHANS=yes
+DISPOSED=yes
+CLAIM_LIMIT=ONE host (Pop!_OS 22.04, glibc 2.35, X11, DISPLAY :1), ONE artifact (sha256 ac849f1b...b072c9, provenance operator-accepted, signature NOT verified), commit under gate 19b5e3a9e unproven from the bytes (COMMIT_BYTES_19b5e3a9=0 in usr/bin). This says nothing about a host with glibc >= 2.39 (e.g. Ubuntu 24.04) or a distro with newer libc, where the artifact may launch fine. What it does show: the CI-produced Linux AppImage is not launchable on glibc 2.35 hosts, so the D-16 Linux smoke-launch obligation is NOT satisfied by this artifact on this host, and 38-W04 (Windows) is untouched.

@@ -1,0 +1,38 @@
+VERDICT=CONFOUNDED
+CAUSE=`Could not create GBM EGL display: EGL_NOT_INITIALIZED. Aborting...` (the first and only STREAM_MATCH EGL_CONFOUND_LINES line in the SCORED stderr): the shell showed a window titled GameLib at 270 ms, then died with SIGABRT 364 ms after spawn, before the 1 s sample, while the host's NVIDIA kernel module (580.159.03) and NVML userspace (580.173.02) are mismatched (`nvidia-smi`: Failed to initialize NVML: Driver/library version mismatch). Census prediction was MISSING_LIBS by rule order, interpreted before launch as expected-to-launch (0 of 182 ELF above host glibc; the one unresolved NEEDED is an aarch64 loader inside an arm64 comet binary).
+RULE_APPLIED=pre-registered precedence: (1) loader FAIL did not fire (GLIBC_NOT_FOUND_LINES=0, GLIBCXX_NOT_FOUND_LINES=0, MISSING_SO_LINES=0); (2) CONFOUNDED fired: NVIDIA_MISMATCH_AT_LAUNCH=yes AND EGL_CONFOUND_LINES=1 in the scored streams.
+SCORED=yes
+EXTRA_ENV=(none)
+SCORED_LAUNCH_COUNT=1
+DIRECT_LAUNCH=yes (window pid 369284 exe /tmp/.mount_GameLidpgdAL/usr/bin/gamelib-shell, mount fstype fuse.GameLib_0.7.0_amd64-run36556473399.AppImage, pgrp = LAUNCH_PGID 369284)
+PGID_MATCH=yes
+WINDOW_APPEARED=yes (TIME_TO_WINDOW_MS=270)
+SURVIVED_10S=no (SAMPLE s=0 alive/visible/same-pid at 12 ms; SAMPLE s=1..10 shell gone, window gone; EXIT_EVENT signal=SIGABRT t_ms=364)
+SIDECAR_BUNDLED=no (no sidecar was ever seen: the shell was dead before the s=3 process scan; the scored stderr has no `[shell] spawning sidecar` line)
+SIDECAR_ALIVE_S10=no
+SHELL_ALIVE_T30=no
+EXIT_EVENT_BEFORE_TEARDOWN=code=null signal=SIGABRT t_ms=364
+GLIBC_NOT_FOUND_LINES=0
+MISSING_SO_LINES=0
+EGL_CONFOUND_LINES=1
+PANIC_LINES=0
+SCREENSHOT_VIEWED=no
+SCREENSHOT_DESCRIPTION=scored arm: none. No scored screenshot exists: the window was gone before the s=3 grab (capture tool: NO WINDOW FOUND), so window.png, window-t10.png and window-t30.png were never produced. The diag arm's window-diag.png and window-t10-diag.png and window-t30-diag.png were viewed (see DIAG_* below); they are not scored evidence.
+USABLE_UI=no (scored arm: the app never reached a UI frame that could be captured)
+USABLE_UI_DESCRIPTION=scored arm: no frame captured. Diag arm (NOT scored): window-t30-diag.png shows an interactive GameLib screen, the Library tab with Accounts/Library/Stores/Settings navigation, a search box, All games / Installed / Recently played / Favourites filters, an ADD GAME button, and the "GameLib 0.7.0" what's-new dialog over an empty (0 games) library; frames at s=3, s=10 and t=30 are pixel-identical (1575 colours each).
+OPERATOR_EYEBALL=no (the operator was asked not to click and volunteered nothing)
+PREDICTION_MATCHED_OBSERVATION=partly: the census predicted no glibc/GLIBCXX incompatibility and none occurred (GLIBC_NOT_FOUND_LINES=0, MISSING_SO_LINES=0, so sitting 10's cause is measured as cleared); the census cannot see GPU-stack state, and the launch aborted for that separate host-side reason.
+SIDECAR_EXIT_S=not applicable to the scored arm: the shell aborted before spawning a sidecar. (Diag arm, NOT scored: 0.26 s.)
+SIDECAR_ORPHAN=no
+SHELL_GONE_MS=0 (scored arm: the shell was already dead, SIGTERM not sent). LAUNCH_GROUP_REMAINDER=none (LAUNCH_GROUP_SELF_EXIT_MS=4)
+EXIT_OBSERVATION=scored arm: nothing to observe (shell already dead at 364 ms). Diag arm, not scored: a stdin-EOF drain after a SIGTERM to the shell alone: SHELL_GONE_MS=0, SIDECAR_GONE_MS=259, SIDECAR_EXIT_S=0.26, SIDECAR_ORPHAN=no, LAUNCH_GROUP_REMAINDER=none, cold profile.
+EXIT_OBSERVATION_LIMIT=cold-profile only; cannot see real-profile-armed handles (260913-901 class)
+GPU_STATE_AT_LAUNCH=NVIDIA_MISMATCH_AT_LAUNCH=yes: nvidia-smi `Failed to initialize NVML: Driver/library version mismatch`; kernel module 580.159.03 vs userspace libnvidia-glcore 580.173.02; kernel 7.0.11-76070011-generic; booted 2026-09-29 21:55:41; no WEBKIT_DISABLE_* set anywhere in src-tauri/src (count 0)
+NO_ORPHANS=yes
+POST_TEARDOWN_WINDOWS=0
+DISPOSED=yes
+DIAG_ARM=--tag diag --env WEBKIT_DISABLE_DMABUF_RENDERER=1, SCORED=no, fresh createFakeHomeProfile, evidence suffixed -diag
+DIAG_OUTCOME=launches-when-confound-bypassed
+DIAG_DETAIL=DIRECT_LAUNCH=yes, PGID_MATCH=yes, window at 277 ms, SURVIVED_10S=yes (11/11 samples alive, visible, same pid), SIDECAR_BUNDLED=yes (pid 370226 in its own pgrp, exe under the FUSE mount), SIDECAR_ALIVE_S10=yes, SHELL_ALIVE_T30=yes, SIDECAR_ALIVE_T30=yes, WINDOW_VISIBLE_T30=yes same_pid=yes, EXIT_EVENT_BEFORE_TEARDOWN=no, GLIBC_NOT_FOUND_LINES=0, MISSING_SO_LINES=0, EGL_CONFOUND_LINES=0, PANIC_LINES=0, window PNGs 1575 colours each and viewed (GameLib Library UI). Every PASS clause except SCORED/EXTRA_ENV was met. (stderr still carried `libEGL warning: egl: failed to create dri2 screen`, so the GPU stack remains broken; the workaround only avoids the GBM abort.)
+DIAG_IS_NOT_A_DISCHARGE=yes
+CLAIM_LIMIT=ONE host (Pop!_OS 22.04, glibc 2.35, X11, DISPLAY :1) in ONE GPU state (broken NVIDIA driver/library mismatch), ONE artifact (sha256 d7648c37...f35943, operator-downloaded, hash-pinned, signature NOT verified, run 36556473399 / tag v0.7.0-glibc-test1 / commit b48e8948f per the operator's account only). This does NOT say the artifact fails on a healthy GPU stack, and it does not discharge 38-W05: the scored launch, run as a user would (no workaround), aborted on the host's EGL/GBM initialisation. What it does show: the ubuntu-22.04 build clears sitting 10's glibc failure (0 not-found lines, 0 of 182 ELF above host glibc 2.35), and with WebKit's DMABUF renderer disabled (diagnostic only) it launches, survives 30 s and reaches an interactive Library UI. 38-W04 (Windows) is untouched.

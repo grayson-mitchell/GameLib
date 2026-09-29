@@ -1,0 +1,53 @@
+# Task 1 2026-09-29T08:49:31Z
+BRANCH: PARSED: vdf has libraryfolders, candidates filtered by existsSync
+0 MISSING /usr/share/steam
+1 EXISTS /home/graysonmitchell/.steam/debian-installation
+2 MISSING /media/graysonmitchell/Games/SteamLibrary
+3 MISSING /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary
+4 MISSING /mnt/PopGames/SteamLibrary
+PROBE /home/graysonmitchell/.steam/debian-installation/steamapps access=ok primary=true
+FLATPAK_ID=unset
+COUNT=1
+# Task 3 off pre-open 2026-09-29T09:07:10Z
+BRANCH: PARSED: vdf has libraryfolders, candidates filtered by existsSync
+0 MISSING /usr/share/steam
+1 EXISTS /home/graysonmitchell/.steam/debian-installation
+2 MISSING /media/graysonmitchell/Games/SteamLibrary
+3 MISSING /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary
+4 EXISTS /mnt/PopGames/SteamLibrary
+PROBE /home/graysonmitchell/.steam/debian-installation/steamapps access=ok primary=true
+PROBE /mnt/PopGames/SteamLibrary/steamapps access=ok primary=false
+FLATPAK_ID=unset
+COUNT=2
+# Task 3 on pre-open 2026-09-29T09:12:49Z
+BRANCH: PARSED: vdf has libraryfolders, candidates filtered by existsSync
+0 MISSING /usr/share/steam
+1 EXISTS /home/graysonmitchell/.steam/debian-installation
+2 MISSING /media/graysonmitchell/Games/SteamLibrary
+3 MISSING /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary
+4 MISSING /mnt/PopGames/SteamLibrary
+PROBE /home/graysonmitchell/.steam/debian-installation/steamapps access=ok primary=true
+FLATPAK_ID=unset
+COUNT=1
+# Task 3 on pre-open (post-toggle) 2026-09-29T09:13:43Z
+BRANCH: PARSED: vdf has libraryfolders, candidates filtered by existsSync
+0 MISSING /usr/share/steam
+1 EXISTS /home/graysonmitchell/.steam/debian-installation
+2 MISSING /media/graysonmitchell/Games/SteamLibrary
+3 MISSING /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary
+4 MISSING /mnt/PopGames/SteamLibrary
+PROBE /home/graysonmitchell/.steam/debian-installation/steamapps access=ok primary=true
+FLATPAK_ID=unset
+COUNT=1
+
+# Task 4 POST-REMOUNT 2026-09-29T09:19:10Z
+BRANCH: PARSED: vdf has libraryfolders, candidates filtered by existsSync
+0 MISSING /usr/share/steam
+1 EXISTS /home/graysonmitchell/.steam/debian-installation
+2 MISSING /media/graysonmitchell/Games/SteamLibrary
+3 MISSING /media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary
+4 EXISTS /mnt/PopGames/SteamLibrary
+PROBE /home/graysonmitchell/.steam/debian-installation/steamapps access=ok primary=true
+PROBE /mnt/PopGames/SteamLibrary/steamapps access=ok primary=false
+FLATPAK_ID=unset
+COUNT=2

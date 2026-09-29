@@ -1,0 +1,8 @@
+# Task 4 remount record, 2026-09-29
+PRE-CHECK: findmnt for UUID 7ca4a725-1bb4-4e38-8f76-bad1fc803309 empty (unmounted). Device node is /dev/nvme1n1p3 (it was nvme0n1p3 at planning; same UUID, moved across the reboot). fstab line still names /mnt/PopGames with nosuid,nodev,nofail.
+HISTORY: the operator unmounted at 21:19 before the sitting; the post-crash reboot remounted it via fstab; the operator unmounted it again (authenticated) to arm the ON sub-branch.
+NON-INTERACTIVE ATTEMPT: udisksctl mount -b /dev/nvme1n1p3 --no-user-interaction -> "Mounted /dev/nvme1n1p3 at /mnt/PopGames". It was NOT refused: the operator's earlier authentication was still cached as a temporary polkit authorization, so no operator action was needed for the remount.
+AFTER: findmnt TARGET=/mnt/PopGames OPTIONS=rw,nosuid,nodev,relatime (the fstab options, so the fstab entry was used; not the /media/... udisks path).
+REPLICA: BRANCH: PARSED, COUNT=2, both PROBE lines access=ok. EXISTS set: /home/graysonmitchell/.steam/debian-installation and /mnt/PopGames/SteamLibrary. The /media/.../7ca4a725-.../SteamLibrary path is MISSING.
+COMPARISON with sitting 8 (260929-hgm library-replica.txt): EXISTS sets identical.
+REMOUNT=restored
