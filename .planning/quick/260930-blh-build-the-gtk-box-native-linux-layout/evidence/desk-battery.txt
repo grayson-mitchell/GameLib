@@ -1,0 +1,28 @@
+== cargo test full ==
+test result: ok. 285 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.05s
+== cargo test store_embed ==
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 256 filtered out; finished in 0.00s
+== cargo fmt Diff-in count (baseline 75) ==
+75
+== cargo build warnings ==
+warning: `gamelib-shell` (bin "gamelib-shell") generated 5 warnings (run `cargo fix --bin "gamelib-shell" -p gamelib-shell` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.53s
+== prettier ==
+Checking formatting...
+All matched files use Prettier code style!
+== lock diff vs BASE ==
++ "gtk",
+== data_store_identifier non-comment ==
+0
+== windows arms ==
+10
+jest j1.json success=true numTotalTests=287 failed=0 suites=14
+jest j2.json success=true numTotalTests=234 failed=0 suites=2
+NOTE: the plan's jest form '--selectProjects X <paths>' makes --selectProjects swallow the paths and runs the WHOLE project (5094 Backend tests, 2 unrelated pre-existing failures in lzmaNativeSeaRealBuild.test.ts: two gamelib-sidecar-* binaries present in src-tauri/binaries). The rows above are the path-scoped form: paths first, --selectProjects last.
+pnpm codecheck exit=0
+x86_64-pc-windows-gnu
+x86_64-pc-windows-msvc
+x86_64-unknown-linux-gnu
+== windows compile (best effort) ==
+cargo check --target x86_64-pc-windows-msvc: FAILED in a build script's cc-rs (failed to find tool lib.exe) -- ENVIRONMENT LIMITATION, neither a pass nor a fail of this change.
+cargo check --target x86_64-pc-windows-gnu: FAILED in tauri-build (resource path binaries/gamelib-sidecar-x86_64-pc-windows-gnu.exe doesn't exist) -- ENVIRONMENT LIMITATION, before reaching src/main.rs. The Windows compile of this change is therefore NOT verified.

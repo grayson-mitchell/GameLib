@@ -5050,10 +5050,12 @@ fn wake_lock_release_all() {
 //
 // A single child webview, created via the `unstable`-gated child-window constructor (see the
 // one call site inside `store_embed_open` below) on the existing config-created `main` window
-// (no window restructuring -- D-01). Every symbol below
-// is macOS-only per D-03's target-gated `unstable` feature (`src-tauri/Cargo.toml`); non-macOS
-// dispatch arms below return a legible error rather than compiling this section out silently
-// (a silently-absent arm is indistinguishable from a dead channel).
+// (no window restructuring on macOS -- D-01). Every symbol below is macOS + Linux only per
+// D-03's target-gated `unstable` feature (`src-tauri/Cargo.toml`: a macOS table, and since quick
+// 260930-blh a Linux table); on Linux the layout is the application's own gtk Overlay/Fixed
+// (`linux_store_embed_layout`, todo decision (a), spikes 028/029). Windows dispatch arms below
+// return a legible error rather than compiling this section out silently (a silently-absent arm
+// is indistinguishable from a dead channel).
 //
 // The API surface this section is written against was verified from vendored crate source, not
 // documentation, in `40-EMBED-API-VERIFICATION.md` (D-25) -- most importantly: neither
@@ -5361,6 +5363,20 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let (url, x, y, w, h) = store_embed_open_args(args)?;
 
     if let Some(existing) = app.get_webview(STORE_EMBED_LABEL) {
+        // Linux only (quick 260930-blh, live-measured): the renderer remounts on every return to
+        // a store route and calls `store_embed_open` again, while the previous unmount left the
+        // embed HIDDEN and, via the slot's ResizeObserver, moved to a zero rect. Navigating alone
+        // (the macOS behaviour, unchanged below) would leave it hidden/zero-sized, so re-apply the
+        // rect this call carries and show it before navigating.
+        #[cfg(target_os = "linux")]
+        {
+            let rect = store_embed_linux_gtk_rect(x, y, w, h)
+                .map_err(|e| e.replacen("store_embed_set_bounds:", "store_embed_open:", 1))?;
+            linux_store_embed_layout::apply_bounds(&existing, rect)?;
+            existing
+                .show()
+                .map_err(|e| format!("store_embed_open:show-failed:{e}"))?;
+        }
         existing
             .navigate(url)
             .map_err(|e| format!("store_embed_open:navigate-failed:{e}"))?;
@@ -5553,6 +5569,16 @@ fn store_embed_linux_gtk_rect(
     Ok((xi, yi, wi, hi))
 }
 
+/// True when a slot rect has no area. The renderer's `ResizeObserver` reports `0,0,0x0` when the
+/// slot unmounts (a route change, or the Epic panel replacing the slot), and by then the embed is
+/// hidden. Applying that rect would park the embed at (0,0) with no usable size, and the next
+/// `show()` would draw it over the app chrome (measured live, quick 260930-blh). The Linux branch
+/// therefore keeps the last real geometry for a zero-area rect and logs that it did.
+#[cfg(target_os = "linux")]
+fn store_embed_linux_rect_is_zero_area(rect: (i32, i32, i32, i32)) -> bool {
+    rect.2 == 0 || rect.3 == 0
+}
+
 /// The one line the Linux layout logs once the embed's geometry has settled. Geometry only --
 /// never a URL. `requested` is what the renderer asked for (rounded); `embed` and `main` are the
 /// MEASURED GTK allocations (embed relative to main's origin, main relative to the overlay);
@@ -5608,6 +5634,13 @@ fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, Stri
         .ok_or_else(|| format!("store_embed_set_bounds:no-webview:{STORE_EMBED_LABEL}"))?;
     #[cfg(target_os = "linux")]
     {
+        if store_embed_linux_rect_is_zero_area(linux_rect) {
+            eprintln!(
+                "[shell] store_embed(linux): ignored zero-area bounds (slot unmounted); \
+                 keeping the last real geometry"
+            );
+            return Ok(Value::Null);
+        }
         linux_store_embed_layout::apply_bounds(&webview, linux_rect)?;
         return Ok(Value::Null);
     }
@@ -8434,10 +8467,10 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             wake_lock_stop(id as u32)?;
             Ok(Value::Null)
         }
-        // ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03). Every arm is macOS-only
-        // per D-03's target-gated `unstable` feature; the non-macOS branch returns a legible
-        // error rather than silently compiling this section out (see the section doc comment
-        // above `STORE_EMBED_LABEL` for the full rationale). ----
+        // ---- In-app store/wiki embed (Phase 40 Plan 02, D-01/D-03). Every arm is macOS + Linux
+        // (quick 260930-blh) per D-03's target-gated `unstable` feature; the Windows branch
+        // returns a legible error rather than silently compiling this section out (see the
+        // section doc comment above `STORE_EMBED_LABEL` for the full rationale). ----
         "store_embed_open" => {
             #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
@@ -12004,7 +12037,7 @@ mod tests {
             .clone()
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_wire_contract_open_parses_the_shipped_payload() {
         let (url, x, y, w, h) = store_embed_open_args(&wire_args("store_embed_open"))
@@ -12013,7 +12046,7 @@ mod tests {
         assert_eq!((x, y, w, h), (12.5, 64.0, 1280.25, 800.0));
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_wire_contract_set_bounds_parses_the_shipped_payload() {
         let (x, y, w, h) = store_embed_set_bounds_args(&wire_args("store_embed_set_bounds"))
@@ -12021,7 +12054,7 @@ mod tests {
         assert_eq!((x, y, w, h), (10.5, -3.0, 799.999, 0.0));
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_wire_contract_navigate_parses_the_shipped_payload() {
         let url = store_embed_navigate_args(&wire_args("store_embed_navigate"))
@@ -12031,7 +12064,7 @@ mod tests {
 
     // The regression direction: the POSITIONAL shape that actually shipped must be REJECTED, so a
     // revert to it cannot pass. A "does it parse" test alone would be blind to this.
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_wire_contract_rejects_the_positional_shape_that_shipped() {
         let positional = vec![
@@ -16279,7 +16312,7 @@ mod tests {
     // closure inside `store_embed_open`, not here -- this function is pure by construction so
     // it can be driven without a live `AppHandle`.
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_navigation_policy_blocks_the_apps_own_scheme() {
         // T-40-04-02: the sharpest edge in the phase. A store page must never be able to drive
@@ -16291,7 +16324,7 @@ mod tests {
         );
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_navigation_policy_allows_https_freely() {
         // D-28 forbids an origin allowlist -- ordinary https navigation (e.g. a GOG checkout
@@ -16310,7 +16343,7 @@ mod tests {
         }
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_navigation_policy_allows_http_freely() {
         let url = tauri::Url::parse("http://example.com/").unwrap();
@@ -16320,7 +16353,7 @@ mod tests {
         );
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_navigation_policy_hands_off_steam_scheme() {
         // A store page's own "launch"/"install" button can produce a steam:// URL. It must
@@ -16333,7 +16366,7 @@ mod tests {
         );
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_navigation_policy_default_denies_unknown_schemes() {
         // T-40-04-03: default-deny on anything outside the enumerated set, not an allowlist of
@@ -16361,7 +16394,7 @@ mod tests {
     // history API exists on either `tauri::webview::Webview` or `wry::WebView` -- this stack IS
     // the feature, not a convenience wrapper around one.
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_state_default_has_no_back_or_forward() {
         let state = StoreEmbedState::default();
@@ -16370,7 +16403,7 @@ mod tests {
         assert_eq!(state.current_url(), None);
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_state_push_three_then_back_twice_lands_on_first() {
         let mut state = StoreEmbedState::default();
@@ -16388,7 +16421,7 @@ mod tests {
         );
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_state_forward_once_after_back_returns_to_the_skipped_entry() {
         let mut state = StoreEmbedState::default();
@@ -16400,7 +16433,7 @@ mod tests {
         assert!(!state.can_go_forward());
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_state_push_from_middle_truncates_forward_entries() {
         // T-40-07-05: a fresh user-initiated push from a back-ed-up position (not a
@@ -16431,7 +16464,7 @@ mod tests {
         );
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_state_reload_does_not_push_a_duplicate_entry() {
         let mut state = StoreEmbedState::default();
@@ -16443,7 +16476,7 @@ mod tests {
         assert_eq!(state.current_url().as_deref(), Some("https://a.example/"));
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_state_back_moves_the_cursor_it_does_not_append_a_new_entry() {
         // Regression test for a defect class encountered while implementing this: a `go_back`
@@ -16473,7 +16506,7 @@ mod tests {
         );
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_nav_state_json_reports_full_url_host_and_availability() {
         let mut state = StoreEmbedState::default();
@@ -16492,7 +16525,7 @@ mod tests {
         assert_eq!(json["canGoForward"], true);
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_nav_state_json_on_empty_state_is_all_empty_never_panics() {
         let state = StoreEmbedState::default();
@@ -16511,7 +16544,7 @@ mod tests {
     // against the pre-fix code (no `pending_nav_events` field at all, so they did not compile
     // -- the strongest possible red for an absent mechanism).
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_push_enqueues_a_nav_event_carrying_the_post_push_cursor_state() {
         // THE GAP-D REGRESSION TEST. An in-embed link click reaches `push()` via
@@ -16543,7 +16576,7 @@ mod tests {
         assert_eq!(events[1]["canGoForward"], false);
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_suppressed_push_enqueues_nothing() {
         // The confirming Finished event of a back/forward/reload this process itself issued.
@@ -16562,7 +16595,7 @@ mod tests {
         );
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_take_nav_events_drains_rather_than_peeks() {
         let mut state = StoreEmbedState::default();
@@ -16576,7 +16609,7 @@ mod tests {
         );
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_nav_event_queue_is_capped_oldest_dropped() {
         // T-34.4.1-09's shape, restated for this queue: a page navigating in a loop must not
@@ -16599,7 +16632,7 @@ mod tests {
         );
     }
 
-    #[cfg(target_os = "macos")]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     #[test]
     fn store_embed_clear_empties_the_nav_event_queue() {
         // D-21 teardown: leaving events behind would let the NEXT embed drain a previous
@@ -16681,6 +16714,16 @@ mod tests {
     fn store_embed_linux_gtk_rect_errors_carry_the_op_prefix() {
         let e = store_embed_linux_gtk_rect(f64::NAN, 0.0, 1.0, 1.0).unwrap_err();
         assert!(e.starts_with("store_embed_set_bounds:"), "{e}");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_zero_area_rect_is_recognised() {
+        assert!(store_embed_linux_rect_is_zero_area((0, 0, 0, 0)));
+        assert!(store_embed_linux_rect_is_zero_area((204, 82, 0, 418)));
+        assert!(store_embed_linux_rect_is_zero_area((204, 82, 1076, 0)));
+        assert!(!store_embed_linux_rect_is_zero_area((0, 0, 1, 1)));
+        assert!(!store_embed_linux_rect_is_zero_area((-40, -40, 300, 200)));
     }
 
     #[cfg(target_os = "linux")]

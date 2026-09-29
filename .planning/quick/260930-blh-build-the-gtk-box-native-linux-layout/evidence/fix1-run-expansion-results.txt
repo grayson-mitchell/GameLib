@@ -1,0 +1,37 @@
+EXPANSION RESULTS (quick 260930-blh, Task 2) -- final binary, fresh createFakeHomeProfile, X11, 1280x800, dev build
+Run conditions: WEBKIT_DISABLE_DMABUF_RENDERER=1 (the unset arm never rendered -- see unset-dmabuf-attempt.txt),
+DEV binary loading vite, WebKit inspector auto-docked in the main webview (renderer viewport 1280x500 of 1280x800).
+Slot rect from the renderer: 204,82 1076x418 (logical px, integer after rounding).
+
+E1 PASS  resize 1280x800 -> 1100x700 -> 1280x800. settled lines: requested==embed on every line;
+         main == (0,0,vbox_w,vbox_h) on every line; vbox went 1280x800 -> 1100x700 -> 1280x800
+         (check_settled.py --min-lines 2 --expect-vbox-change: SETTLED_LINES=4 PASS=4 FAIL=0 ERRORS=0 DISTINCT_VBOX=2).
+         Capture expansion-e1-resized-1100x700.png.
+E2 PASS  5 wheel-down clicks at the embed's left third. Changed-pixel fraction (summed |dRGB| > 16 per pixel):
+         slot region 0.5024; chrome band above the slot (0,0,1280,82) 0.0000; left nav (0,82,204,500) 0.0000;
+         inspector strip (0,500,1280,800) 0.0000. Captures expansion-e2a-before-wheel.png / e2b-after-wheel.png.
+E3 PASS  click on the LIBRARY nav tab (outside the embed rect, under the full-size pass-through Fixed): the main
+         webview received it, the route changed, and NO GOG pixels remain where the slot was.
+         Capture expansion-e3-library-no-embed.png.
+E4 PASS  (after ONE fix attempt, see below) Stores -> GOG Store: the embed is shown again at the slot with GOG content
+         and the host label www.gog.com; a fresh settled line (requested==embed, main==vbox) was emitted on return.
+         Capture expansion-e4-route-return-embed-shown.png.
+         BEFORE the fix (prefix-run-* files): the embed stayed hidden on return (black slot), and after a
+         GOG -> Epic -> GOG round trip it was drawn at (0,0) instead of (204,82). Cause: the slot unmount sends a
+         zero rect to store_embed_set_bounds (settled line "requested=0,0,0x0" in prefix-run-expansion-settled.log)
+         which the Linux branch applied verbatim while the embed was hidden, and the renderer's remount calls
+         store_embed_open again, whose existing-embed path only navigates (no show, no bounds).
+         Fix attempt 1 of 2 (Linux-only, in the existing-embed branch of store_embed_open): re-apply the rect that
+         call carries, show the embed, then navigate.
+         NOT fixed and NOT re-measured after the fix: the GOG -> Epic -> GOG round trip (refused-target path). That path
+         calls store_embed_show + store_embed_navigate with no bounds, and the zero rect from the Epic panel's slot
+         unmount is the last rect applied, so the pre-fix (0,0) placement very likely still occurs there.
+E5 RECORDED (not gating)  A click on a link inside the embed ("Patrons") navigated the page: in-embed click input works
+         (page changed to GOG Patrons; expansion-e5-after-link-click-and-back.png). The URL label host did not change
+         (www.gog.com -> www.gog.com, same host), so "label changes" was not exercised. After Back clicks the page still
+         showed GOG Patrons with Forward enabled; whether Back moved the history is UNCONFIRMED (GOG is a SPA and the
+         Rust cursor tracks main-frame page loads). Consistent with Phase 40 Observable Truth 6 (back/forward, FAILED
+         on macOS itself). Not scored.
+RECORDED  first-open split frame: NOT observed -- no capture was taken inside the first 500 ms after open.
+RECORDED  keyboard focus after first open: NOT measured.
+RECORDED  boot stalls: 2 of 8 DMABUF=1 launches never rendered (pre-embed, known intermittent blank launch); relaunched.

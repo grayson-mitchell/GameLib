@@ -25,12 +25,13 @@ tauri-build = { version = "2", features = [] }
 #
 # Phase 40 Plan 02 (D-03): the `unstable` feature itself moved OUT of this unconditional
 # `tauri = {...}` line and into the macOS-only `tauri = {...}` declaration in
-# `[target.'cfg(target_os = "macos")'.dependencies]` below. D-01 already scopes the whole
+# `[target.'cfg(target_os = "macos")'.dependencies]` below. D-01 scoped the whole
 # in-app store/wiki embed (`Window::add_child`, also `unstable`-gated -- see
 # `tauri-2.11.5/src/window/mod.rs:1127`, verified in
-# `40-EMBED-API-VERIFICATION.md`) to macOS only; target-gating the feature itself means a
-# future Tauri release that breaks `unstable`'s API can only break the macOS build leg, never
-# the Windows/Linux legs that compile against neither `add_child` nor
+# `40-EMBED-API-VERIFICATION.md`) to macOS only; quick 260930-blh added a Linux table below that
+# unions `unstable` in for a Linux target too. Target-gating the feature itself means a
+# future Tauri release that breaks `unstable`'s API can only break the macOS and Linux build
+# legs, never the Windows leg, which compiles against neither `add_child` nor
 # `open_pristine_epic_login_window`'s webview-less `WindowBuilder`. This is compile-time
 # only and adds no binary payload on any platform -- see Task 2's `cargo tree -e features`
 # proof in `40-02-SUMMARY.md` for both a macOS and a non-macOS target.
@@ -115,7 +116,8 @@ tauri-plugin-deep-link = "2"
 # Phase 40 Plan 02 (D-03): the `unstable` feature, moved here from the unconditional
 # `[dependencies]` `tauri = {...}` line above (see that line's own comment for the full
 # rationale history -- pristine-webview `WindowBuilder` access, now also the in-app store/wiki
-# embed's `Window::add_child`). Cargo unifies a dependency declared in both `[dependencies]`
+# embed's `Window::add_child`; the Linux table further down repeats this declaration for a Linux
+# target). Cargo unifies a dependency declared in both `[dependencies]`
 # and a `[target.'cfg(...)'.dependencies]` table for the same crate: the base `tauri` request
 # above always resolves, and this table's `features` list is UNIONED into that resolution
 # only when the active target matches `cfg(target_os = "macos")` -- so a non-macOS build

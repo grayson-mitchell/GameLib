@@ -28,3 +28,13 @@ CONSEQUENCE for this plan: the "DMABUF unset" clause of the live gate cannot be 
 scored live run below therefore sets WEBKIT_DISABLE_DMABUF_RENDERER=1 (the same workaround every prior
 Linux sitting on this repo used, and spike 029's 30/30 arm). The clause is recorded as NOT MET, not
 as passed. The lever result is only proven for the DMABUF-DISABLED path here.
+
+ADDENDUM (measured after the first draft of this note, same binary, same harness, fresh profile per launch)
+  Boot-render census, "rendered" = the top-left pixel of the client area is not white AND the renderer wrote
+  its post-mount [BLANKPROBE] geometry samples:
+    WEBKIT_DISABLE_DMABUF_RENDERER ABSENT (unset):   0 of 6 launches rendered (attempts 1-2 + probes unset1-4)
+    WEBKIT_DISABLE_DMABUF_RENDERER=1:                6 of 8 launches rendered (2 of 8 stalled the same way)
+  So the stall is not exclusive to the unset arm: the 2-in-8 stall under =1 is the repo's known intermittent
+  blank-launch behaviour (todo 2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four), and
+  scored runs below were RELAUNCHED when a launch stalled at boot, before any embed action. The unset arm's
+  0/6 against =1's 6/8 is a real difference on this host, but it is a census of 14 launches, not a mechanism.
