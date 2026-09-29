@@ -553,6 +553,31 @@ describe('main.rs main-window devtools is gated on visibility (Phase 35 Plan 06 
   })
 })
 
+describe('main.rs debug devtools auto-open is skipped on Linux (quick 260930-ea0)', () => {
+  // Source-level because the call sites need a real webview. main.rs's own
+  // `devtools_auto_open_*` unit tests cover the predicate; this pin covers the WIRING: that
+  // both debug auto-open sites consult it, and that no third `open_devtools()` call site
+  // appears without going through it.
+  //
+  // The pre-existing `Ok(true) => { window.open_devtools();` pin above still guards the
+  // visibility gate, so the platform gate sits OUTSIDE that match.
+  const countOf = (haystack: string, needle: string) =>
+    haystack.split(needle).length - 1
+  const collapse = (s: string) => s.replace(/\s+/g, ' ')
+
+  test('both debug auto-open sites consult should_auto_open_devtools', () => {
+    const code = collapse(loadMainRsCode())
+    expect(
+      countOf(code, 'should_auto_open_devtools(std::env::consts::OS)')
+    ).toBe(2)
+  })
+
+  test('there are exactly two open_devtools() call sites', () => {
+    const code = collapse(loadMainRsCode())
+    expect(countOf(code, '.open_devtools()')).toBe(2)
+  })
+})
+
 describe('main.rs exitToTray is decided at close time (Phase 35 Plan 06 task 3, live-gate defect 1)', () => {
   // The defect: `exitToTray` was read from the `.setup()` startup snapshot and the close
   // handler was attached only when it was ALREADY true, so turning the setting on mid-session

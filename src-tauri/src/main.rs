@@ -1594,6 +1594,31 @@ const LOGIN_WINDOW_EVENTS_CAP: usize = 50;
 /// across the whole file regardless of which call sites end up using it on a given platform.
 const MAIN_WINDOW_LABEL: &str = "main";
 
+/// Whether a DEBUG build should force the webview devtools open at startup on `target_os`
+/// (a `std::env::consts::OS` value; taken as a `&str` so every OS arm is unit-testable on any
+/// host). False only for `"linux"`.
+///
+/// WHY Linux is excluded: auto-opening the docked Web Inspector from `.setup()` races the page's
+/// entry module (`src/frontend/index.tsx`). On WebKitGTK 2.50.4 the page's WebKitWebProcess
+/// aborts -- SIGABRT, a JavaScriptCore internal assertion reached from JIT code -- which leaves
+/// a white window with only the inspector's own process alive. Launches with the DMABUF renderer
+/// enabled hit it 6/6; `WEBKIT_DISABLE_DMABUF_RENDERER=1` only moves the attach instant and
+/// still crashed 2 of 8 with a 100-150 ms delay. See
+/// `.planning/debug/resolved/linux-dev-app-blank-without-dmabuf-workaround.md`.
+///
+/// WHY macOS keeps it: the dev webview exposes no right-click inspect there (the original
+/// reason for the auto-open). Windows keeps its current behaviour: out of scope, not measured.
+///
+/// On Linux the inspector stays reachable by hand: WebKitGTK offers "Inspect Element" in the
+/// page context menu when developer extras are on, and wry enables them in debug builds.
+///
+/// The login window's auto-open is gated through the same predicate on mechanism, not on a
+/// measurement of that window.
+#[cfg(any(debug_assertions, test))]
+fn should_auto_open_devtools(target_os: &str) -> bool {
+    target_os != "linux"
+}
+
 /// Dev-only pre-page-script diagnostic (epic-login-non-interactive investigation,
 /// 2026-08-02, F-34.5-G6-01): injected as a Tauri `initialization_script()` on the LOGIN
 /// window ONLY (see the `humble_login_open` arm below), gated identically to that arm's
@@ -7251,19 +7276,27 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             }
             // Dev-only diagnostic (epic-login-non-interactive investigation, 2026-08-01,
             // F-34.5-G6-01): `open_devtools()` is already forced for the "main" webview
-            // above (main.rs:2476-2487, guarded by the same #[cfg(debug_assertions)]), but
+            // above (the main-window devtools block in `main()`'s `.setup()`, guarded by the
+            // same #[cfg(debug_assertions)]), but
             // THIS arm builds the login window (`loginwin-N-*`) that all five runners share
             // -- and it has never had devtools wired up. That gap left the login page's own
             // JS console unread across four debug cycles despite it being the one webview
             // that renders third-party OAuth pages (Epic, GOG, Amazon, Humble). Gated on
             // `visible` to match every other presentation-only call in this arm (the hidden
             // reveal/clear windows built elsewhere in this file are unaffected) and on
-            // `#[cfg(debug_assertions)]` so it can never reach a packaged build.
+            // `#[cfg(debug_assertions)]` so it can never reach a packaged build. Skipped on
+            // Linux through `should_auto_open_devtools`: gated on mechanism (the docked-inspector
+            // attach races page boot there), not measured on this window, and applied because
+            // the race is not specific to our page.
             #[cfg(debug_assertions)]
-            if visible {
+            if visible && should_auto_open_devtools(std::env::consts::OS) {
                 window.open_devtools();
                 eprintln!(
                     "[shell] humble_login_open: devtools opened for '{label}' (debug build)"
+                );
+            } else if visible {
+                eprintln!(
+                    "[shell] humble_login_open: devtools NOT auto-opened for '{label}' on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
                 );
             }
             Ok(Value::String(label))
@@ -11903,8 +11936,14 @@ fn main() {
                 // window appears because noTrayIcon overrode startInTray" -- which, before this
                 // fix, was true whether or not the override worked. A test that cannot fail is
                 // not evidence.
+                //
+                // NOT on Linux (quick 260930-ea0): the docked inspector attached from here races
+                // the page's entry module and the page's WebKitWebProcess aborts, leaving a white
+                // window (`should_auto_open_devtools` documents the measurement; session
+                // `.planning/debug/resolved/linux-dev-app-blank-without-dmabuf-workaround.md`).
+                // The platform gate sits OUTSIDE the visibility match so that match is unchanged.
                 #[cfg(debug_assertions)]
-                {
+                if should_auto_open_devtools(std::env::consts::OS) {
                     match app.get_webview_window(MAIN_WINDOW_LABEL) {
                         Some(window) => match window.is_visible() {
                             Ok(true) => {
@@ -11927,6 +11966,10 @@ fn main() {
                             "[shell] WARN: no 'main' webview window found — devtools not opened"
                         ),
                     }
+                } else {
+                    eprintln!(
+                        "[shell] devtools NOT auto-opened for 'main' webview on linux (debug build) -- the inspector attach races page boot; right-click > Inspect Element opens it"
+                    );
                 }
             }
             Ok(())
@@ -16739,5 +16782,27 @@ mod tests {
             "[shell] store_embed(linux): settled requested=291,97,760x561 \
              embed=291,97,760x561 main=0,0,1280x800 vbox=1280x800"
         );
+    }
+
+    #[test]
+    fn devtools_auto_open_is_skipped_on_linux_only() {
+        assert!(!should_auto_open_devtools("linux"));
+        assert!(should_auto_open_devtools("macos"));
+        assert!(should_auto_open_devtools("windows"));
+    }
+
+    #[test]
+    fn devtools_auto_open_decision_matches_this_host() {
+        // Pins the spelling of `std::env::consts::OS` against the predicate's "linux"
+        // literal: a typo in either would pass the fixed-string test above and only show
+        // up on the one OS it matters on.
+        let host = std::env::consts::OS;
+        if cfg!(target_os = "linux") {
+            assert!(!should_auto_open_devtools(host));
+        } else if cfg!(target_os = "macos") {
+            assert!(should_auto_open_devtools(host));
+        } else if cfg!(target_os = "windows") {
+            assert!(should_auto_open_devtools(host));
+        }
     }
 }
