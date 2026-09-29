@@ -1,0 +1,38 @@
+src/backend/humble/__tests__/keyTypePresentation.test.ts:275  cites src/backend/humble/classify.ts:183
+   -> const KNOWN_GAME_KEY_TYPES = new Set([
+src/backend/humble/__tests__/userAgent.test.ts:5  cites userAgent.ts:26
+   -> export function standardBrowserUserAgent(): string {
+src/backend/humble/__tests__/userAgent.test.ts:29  cites userAgent.ts:35
+   -> return `Mozilla/5.0 (${platform}) AppleWebKit/537.36 (KHTML, like Geck
+src/backend/humble/__tests__/userAgent.test.ts:31  cites userAgent.ts:28
+   -> const platform = /^Mozilla\/5\.0 \(([^)]+)\)/.exec(fallback)?.[1]
+src/backend/humble/__tests__/library.test.ts:2861  cites classify.ts:409
+   -> const keys: HumbleKey[] = []
+src/backend/humble/__tests__/library.test.ts:3502  cites HumbleKeyRow/index.tsx:116
+   -> * and such a key is never `ownedElsewhere`, so it always has a
+src/frontend/screens/Humble/Keys/index.css:187  cites NavShell/__tests__/themeTokens.test.ts:285
+   -> it('census: --divider is declared in strictly fewer theme blocks than 
+src/frontend/screens/Humble/Keys/index.css:188  cites NavShell/__tests__/appShellLayout.test.ts:282
+   -> it('SANITY: the theme-universality checker itself correctly fails --di
+src/frontend/screens/Humble/Keys/components/HumbleKeyRow/__tests__/index.test.tsx:14  cites HumbleClaimWizard/__tests__/index.test.tsx:142
+   -> // HumbleOriginInfo.test.tsx for the same convention) so the component
+src/frontend/screens/Humble/Keys/components/HumbleKeyRow/__tests__/index.test.tsx:23  cites HumbleClaimWizard/__tests__/index.test.tsx:39
+   -> // Supports both call shapes used by this component: the plain
+src/frontend/screens/Humble/Keys/components/HumbleKeyRow/__tests__/index.test.tsx:1087  cites viewFilters.ts:62
+   -> * D-53: game keys the user does not yet own elsewhere AND are in a wai
+src/frontend/screens/Humble/Keys/components/HumbleKeyRow/__tests__/index.test.tsx:1105  cites library.ts:258
+   -> ownedElsewhere: priorKey?.ownedElsewhere ?? key.ownedElsewhere,
+src/frontend/screens/Humble/Keys/components/HumbleKeyRow/__tests__/index.test.tsx:1267  cites keyTypePresentation.ts:89
+   -> // QT-260908-UIC-01 (2026-09-08): GOG's direct-redeem entitlement shap
+src/frontend/screens/Humble/Keys/components/HumbleClaimWizard/__tests__/index.test.tsx:747  cites index.tsx:556
+   -> // D-43-10: search matches `key.title` only. D-43-06: "Expiring soones
+src/frontend/screens/Humble/Keys/__tests__/humbleKeysStylesheet.test.ts:29  cites src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts:285
+   -> it('census: --divider is declared in strictly fewer theme blocks than 
+src/frontend/screens/Humble/Keys/__tests__/humbleKeysStylesheet.test.ts:32  cites src/frontend/components/UI/NavShell/__tests__/appShellLayout.test.ts:282
+   -> it('SANITY: the theme-universality checker itself correctly fails --di
+src/frontend/screens/Humble/Keys/__tests__/humbleKeysStylesheet.test.ts:101  cites appShellLayout.test.ts:245
+   -> it('F-34.10-03 no no-fallback var(--divider) reintroduced into .NavShe
+src/frontend/screens/Humble/Keys/__tests__/humbleKeysStylesheet.test.ts:342  cites HumbleKeyRow/__tests__/index.test.tsx:962
+   -> ownedElsewhere: false,
+
+TOTAL: 18
