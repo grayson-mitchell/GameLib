@@ -2857,8 +2857,8 @@ describe('HumbleLibrary', () => {
     // the ONLY in-app claim path for a key the user owns and never received.
     // Rolling back surrenders nothing WR-06 was protecting: if the key
     // genuinely IS consumed server-side, the very next sync reports that
-    // itself via `redeemed_key_val` -> classifyTpk's server-truth arm
-    // (classify.ts:409, 56-60) — no local flag involved.
+    // itself via `redeemed_key_val` -> classifyTpk's server-truth branch in
+    // classify.ts — no local flag involved.
     test('DD-1 rejected_by_server: ROLLS BACK the write-ahead REVEALED flag, audits reveal_rejected, no cooldown, returns rejected_by_server', async () => {
       libraryData.set('gk1', makeRevealableEntry('gk1', { keyindex: 'idx-1' }))
       mockAdapterRevealKey.mockResolvedValue({ status: 'rejected_by_server' })
@@ -3498,8 +3498,9 @@ describe('HumbleLibrary', () => {
     })
 
     // REGRESSION PIN: redeemedAt must be identical regardless of provenance,
-    // so the existing HumbleKeyRow:116 Undo gate (redeemedAt !== null) keeps
-    // firing for both — checked directly against HumbleKeyRow/index.tsx:116.
+    // so the existing D-77 Undo gate (the `settleAction` prop, redeemedAt !==
+    // null) keeps firing for both — checked directly against the
+    // `settleAction` prop in HumbleKeyRow/index.tsx.
     test('redeemedAt is emitted with the same value regardless of source (D-77 Undo gate re-check)', () => {
       localRedeemedData.set('gk1:gk1_key', { redeemedAt: 789, source: 'user' })
       localRedeemedData.set('gk2:gk2_key', {

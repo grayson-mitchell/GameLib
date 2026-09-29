@@ -26,10 +26,10 @@
  * blocks in `themes.scss` -- universalising it is actively forbidden by two
  * existing NavShell gates, so a theme-side fix is not available here and
  * this file must not attempt one:
- *   src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts:285
+ *   src/frontend/components/UI/NavShell/__tests__/themeTokens.test.ts
  *     ("census: --divider is declared in strictly fewer theme blocks than
  *     the file defines")
- *   src/frontend/components/UI/NavShell/__tests__/appShellLayout.test.ts:282
+ *   src/frontend/components/UI/NavShell/__tests__/appShellLayout.test.ts
  *     ("SANITY: the theme-universality checker itself correctly fails
  *     --divider")
  *
@@ -338,9 +338,11 @@ const COLUMN_GAP_EM_RELATIVE = /column-gap:\s*var\(--space-md\)/
  *
  * This is a SOURCE census: it proves the string was written, nothing more.
  * The Frontend jest project runs `testEnvironment: 'node'` with no jsdom and
- * no CSS engine here (same framing as
- * `HumbleKeyRow/__tests__/index.test.tsx:962-968`), so nothing added here can
- * render anything or compute a used value. The 4.89px figure is arithmetic,
+ * no CSS engine here (same framing as the `it.each` in
+ * `HumbleKeyRow/__tests__/index.test.tsx` titled "a generic-platform key in
+ * %s state resolves to the same scenario a steam key in that state would
+ * (REQ-43-01)"), so nothing added here can render anything or compute a
+ * used value. The 4.89px figure is arithmetic,
  * not a measurement of the fixed build -- live adjudication is still
  * outstanding, tracked by the todo this plan closes:
  * .planning/todos/completed/2026-09-11-humble-keys-game-column-header-label-sits-5px-left-of-row-titles-unverified-live.md

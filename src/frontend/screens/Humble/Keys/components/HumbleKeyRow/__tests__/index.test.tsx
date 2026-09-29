@@ -10,8 +10,9 @@
  * HumbleKeyRow has no useState/useEffect (unlike HumbleClaimWizard/
  * HumbleKeysWaiting), so no 'react' hook-slot mock is needed here — the
  * component is invoked directly as a plain function (mirroring
- * `HumbleClaimWizard(props) as unknown as ReactElement` in
- * HumbleClaimWizard/__tests__/index.test.tsx:142) and its returned
+ * `HumbleClaimWizard(props) as unknown as ReactElement`, which follows the
+ * `import HumbleClaimWizard from '../index'` placed below the mocks in
+ * HumbleClaimWizard/__tests__/index.test.tsx) and its returned
  * React-element object graph is inspected without a DOM, following the
  * no-jsdom convention documented in src/frontend/jest.config.js.
  *
@@ -19,8 +20,9 @@
  * `useTranslation()` and `useTranslation('gamelib')` (for `t` and
  * `tGamelib` respectively) — the mock below ignores its namespace argument
  * entirely, so ONE implementation correctly serves both call sites; it
- * interpolates `{{...}}` into the supplied default string, mirroring
- * HumbleClaimWizard/__tests__/index.test.tsx:39-51.
+ * interpolates `{{...}}` into the supplied default string, mirroring the
+ * `jest.mock('react-i18next', …)` call in
+ * HumbleClaimWizard/__tests__/index.test.tsx.
  *
  * This suite lives in the Frontend jest project (not Backend, where the
  * pure common/humble/keyTypePresentation.test.ts already lives) because
@@ -1084,9 +1086,10 @@ describe('Humble Keys index.css column geometry (source census only, REQ-43-19 v
 
 // D-42-01 Exception 4 (Phase 42 plan 06): the reversal affordance for a key
 // settled from an exact-match Steam ownership signal. An `ownedElsewhere`
-// key never reaches Keys-waiting (viewFilters.ts:62), so `claimAction` is
-// never supplied for it — `settleAction` is the ONLY way this row can ever
-// render an Undo for such a key.
+// key never reaches Keys-waiting (the `selectKeysWaiting` filter in
+// viewFilters.ts), so `claimAction` is never supplied for it —
+// `settleAction` is the ONLY way this row can ever render an Undo for such
+// a key.
 describe('HumbleKeyRow settleAction (D-42-01 Exception 4, Phase 42 plan 06)', () => {
   function findUndoButtons(
     tree: ReactElement
@@ -1102,8 +1105,9 @@ describe('HumbleKeyRow settleAction (D-42-01 Exception 4, Phase 42 plan 06)', ()
   // 43-06 (D-43-17): `resolveKeyScenario` only reaches the 'settled'
   // scenario for `ownedElsewhere: true, matchConfidence: 'exact'` — the
   // exact shape D-48's keep-last-known behaviour actually leaves on a real
-  // auto-settled key (library.ts:258-259 carries `ownedElsewhere`/
-  // `matchConfidence` forward through the settle, never clearing them).
+  // auto-settled key (the settle-merge inside `fetchAndCommitOrder` in
+  // library.ts carries `ownedElsewhere`/`matchConfidence` forward through
+  // the settle, never clearing them).
   // These fixtures now set both explicitly, where the pre-scenario-resolver
   // version of this test did not need to.
   it('renders a humbleKeyUndoButton and calls onUndoSettle exactly once when clicked', () => {
@@ -1264,9 +1268,10 @@ describe('gog_keyless KEY destination (REQ-43-24, D-43-11)', () => {
   })
 
   // The destination choice is a KEY-column concern only. gog_keyless still
-  // presents as a branded GOG platform in TYPE (keyTypePresentation.ts:89)
-  // -- the identity of the entitlement and the destination of the claim
-  // click are two different facts, and this plan changes only the second.
+  // presents as a branded GOG platform in TYPE (the `gog_keyless` entry in
+  // `KEY_TYPE_PRESENTATIONS`, keyTypePresentation.ts) -- the identity of
+  // the entitlement and the destination of the claim click are two
+  // different facts, and this plan changes only the second.
   it('still renders the GOG branded logo in humbleKeyTypeCell -- the destination choice did not leak into platform identity', () => {
     const tree = makeGogKeylessRow()
     const typeCell = findByClassNamePart(tree, 'humbleKeyTypeCell')

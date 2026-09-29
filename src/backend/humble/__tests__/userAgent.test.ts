@@ -2,7 +2,7 @@
  * Pins `standardBrowserUserAgent()`'s behavior when running against the REAL sidecar
  * `electronStub.ts` (Phase 34.4.1 Plan 02, Task 4, DEFECT 3).
  *
- * `standardBrowserUserAgent()` (`../userAgent.ts:26-36`) reads `app.userAgentFallback`
+ * `standardBrowserUserAgent()` (declared in `../userAgent.ts`) reads `app.userAgentFallback`
  * unconditionally. Real Electron populates that property at startup; `electronStub.ts` (the
  * sidecar's `require('electron')` replacement, installed by `bootstrap.ts`'s `Module._load`
  * hook) previously left it `undefined`, so this function threw
@@ -26,9 +26,9 @@ describe('standardBrowserUserAgent() against the real sidecar electronStub', () 
   it('returns a Chrome-shaped UA string with no Electron/x.y.z token', () => {
     const ua = standardBrowserUserAgent()
 
-    // Happy-path shape produced by userAgent.ts:35 -- proves electronStub's
-    // `app.userAgentFallback` matched the platform/Chrome-version extraction regexes on
-    // userAgent.ts:28-29 directly, rather than falling through to the defensive
+    // Happy-path shape produced by the UA template string in userAgent.ts -- proves
+    // electronStub's `app.userAgentFallback` matched the platform-extraction regex in
+    // userAgent.ts directly, rather than falling through to the defensive
     // `fallback.replace(...)` branch on line 33 (which is what threw before this fix).
     expect(ua).toMatch(
       /^Mozilla\/5\.0 \([^)]+\) AppleWebKit\/537\.36 \(KHTML, like Gecko\) Chrome\/\S+ Safari\/537\.36$/

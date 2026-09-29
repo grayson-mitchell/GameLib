@@ -743,9 +743,9 @@ describe('HumbleClaimWizard', () => {
   // passes through, so a prior refusal is warned about at the moment of
   // decision rather than as passive row chrome. Zero new i18n strings — the
   // notice reuses the ALREADY-SHIPPED `humbleKeys.revealRejectedBody` copy
-  // (same key/default already rendered on the terminal 'rejected' step at
-  // index.tsx:556), so the 816-pair gamelib presence gap (R13) is not
-  // deepened.
+  // (same key/default already rendered by the `humbleClaimWizardRejectedNote`
+  // paragraph on the terminal `step === 'rejected'` branch of index.tsx), so
+  // the 816-pair gamelib presence gap (R13) is not deepened.
   describe('prior-refusal warning on the confirm step (DD-1/DD-4, quick 260911-ftc)', () => {
     const REJECTED_BODY =
       'Humble declined to reveal this key — it may already be redeemed or expired. Sync to check its current status.'

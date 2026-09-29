@@ -184,10 +184,10 @@
      0.08*(255-237) = 238.4; measured seam [238,240,245] vs background
      [237,239,244]) against the required >=3 -- effectively invisible.
      `--divider` itself is declared in only 2 of 11 `themes.scss` blocks
-     on purpose (NavShell/__tests__/themeTokens.test.ts:285's census
-     forbids universalising it; NavShell/__tests__/appShellLayout.test.ts:282
-     has a SANITY test asserting the token does NOT resolve in every
-     theme), so the fallback below is the load-bearing half for every
+     on purpose (NavShell/__tests__/themeTokens.test.ts's census forbids
+     universalising it; NavShell/__tests__/appShellLayout.test.ts has a
+     SANITY test asserting the token does NOT resolve in every theme),
+     so the fallback below is the load-bearing half for every
      theme that never defines the token. `currentColor` is a CSS-wide
      keyword, not a custom property, so it cannot be undefined in any
      theme -- the same class of failure this codebase already has scar

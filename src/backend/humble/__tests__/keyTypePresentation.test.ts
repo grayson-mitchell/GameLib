@@ -272,9 +272,9 @@ describe('getGameLibLoginStore (D-43-12/D-43-13, Phase 43 plan 06)', () => {
 
 describe('isKeylessKeyType (260925-j58)', () => {
   // Non-vacuity pin: these three are EXACTLY the three `_keyless` members of
-  // KNOWN_GAME_KEY_TYPES (src/backend/humble/classify.ts:183). Asserted one
-  // by one rather than looped, so a predicate that silently narrowed to two
-  // of them cannot hide behind a table this test also owns.
+  // the `KNOWN_GAME_KEY_TYPES` declaration in src/backend/humble/classify.ts.
+  // Asserted one by one rather than looped, so a predicate that silently
+  // narrowed to two of them cannot hide behind a table this test also owns.
   test("'gog_keyless' -> true", () => {
     expect(isKeylessKeyType('gog_keyless')).toBe(true)
   })
