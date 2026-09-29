@@ -59,6 +59,8 @@ resolution:
   IN-03: open (Info — out of fix scope)
   IN-04: open (Info — out of fix scope)
   IN-05: open (Info — out of fix scope)
+resolution_supersessions:
+  CR-06: "the deny-list mechanism was deleted by Phase 35 plan 16 (D-08 convergence) and replaced with the fail-closed isAllowedStoreField allow-list; the protection is intact and strictly stronger at HEAD; the cited symbol no longer exists in src/preload/api/misc.ts; see the supersession note on CR-06; status stays FIXED — this records a mechanism change, not a re-adjudication."
 ---
 
 # Phase 29: Code Review Report
@@ -82,7 +84,7 @@ at the end of the pass: `npx jest` 111/111 suites, 2027/2027 tests green;
 | CR-03 | FIXED | `bf349afd` | `setAtPath`/`deleteAtPath` added to `tauriTransport`, used by `snapshotSet`/`snapshotDelete` and the `STORE_CHANGED` echo |
 | CR-04 | FIXED | `9a7dd9f3` | `accessPropertiesByDotNotation` honoured; URL-key flat-on-disk test |
 | CR-05 | FIXED | `6997c606` | `load()` shape validation; parametrized test over `null`/string/number/boolean/array |
-| CR-06 | FIXED | `40823a5b` | additive deny-list extension; also made `isSecretStoreKey` total (same CR-02 hazard on the Electron path) |
+| CR-06 | FIXED | `40823a5b` | additive deny-list extension; also made `isSecretStoreKey` total (same CR-02 hazard on the Electron path) — **mechanism superseded, protection intact:** see the supersession note on CR-06 below |
 | WR-01 | FIXED | `e1a1a10c` | guard (a) now tests `RECOGNIZED_CACHE_STORE_NAMES`, not a regex that matched everything |
 | WR-02 | FIXED | `e1a1a10c` | `storeNew` restricted to recognized cache stores; junk-file regression test |
 | WR-03 | FIXED | `653f8992` | write pair gated + renderer-visible `console.warn` |
@@ -399,6 +401,44 @@ const SECRET_STORE_KEYS: Record<string, readonly string[]> = {
 
 This is a strictly additive deny-list extension — no allow-list flip, no Phase 35
 coupling.
+
+**Supersession (verified at HEAD 2026-09-29):**
+
+a. Commit `40823a5b` (`40823a5b9` in full) did land this fix exactly as described above.
+
+b. Phase 35 plan 16's D-08 convergence then deliberately **deleted** the deny-list, replacing it
+   with the fail-closed `isAllowedStoreField` allow-list in `src/common/types/storePolicy.ts`.
+
+c. The state at HEAD, re-provable by the commands cited: `grep -c SECRET_STORE_KEYS
+   src/preload/api/misc.ts` → `0`; `misc.ts:115` imports `isAllowedStoreField` from
+   `common/types/storePolicy`; `misc.ts:186` gates every `storeGet` on it; `storePolicy.ts:114-135`
+   record each secret field (`csrfToken`, both `credentials` blobs, `refreshToken`,
+   `sessionCookie`) as deliberately OMITTED from the allow-list.
+
+d. The regression pin: `src/common/types/__tests__/storePolicy.test.ts:96` — the
+   `describe('D-08 convergence: every SECRET_STORE_KEYS field, blocked by name AND by nested
+   path', ...)` block — covers all five secret field paths both by name and by nested path
+   (`credentials.accessToken`, `csrfToken.value`).
+
+e. **Net: strictly stronger than CR-06 asked for.** CR-06 asked for three more names added to a
+   deny-list — a shape that is fail-open by construction: the next secret field added to any store
+   is readable by default until someone remembers to deny-list it. `isAllowedStoreField` inverts
+   that: nothing is readable unless explicitly allow-listed, so the next secret field is denied by
+   default. The mechanism changed; the property CR-06 was actually protecting — renderer-readable
+   secrets — is strictly better protected than the fix CR-06 proposed.
+
+f. **The grep trap, stated explicitly.** A repo-wide `grep -rn SECRET_STORE_KEYS src/` still
+   returns hits — in `storePolicy.ts`'s header comment, in `storeApi.test.ts`'s docstring, and in
+   this pinning test's own `describe` name — all historical references to a deleted mechanism, not
+   the live one. The file CR-06 actually cites, `src/preload/api/misc.ts`, has zero. Grepping the
+   cited symbol and concluding on that basis that the fix was reverted is the wrong inference; this
+   note exists to stop it. The phase 29/41/24 critical-disposition audit (quick task 260929-lrh)
+   nearly drew exactly that conclusion before re-reading `misc.ts` directly.
+
+g. **Do not "restore" the deny-list.** Re-adding `SECRET_STORE_KEYS` to `misc.ts` would
+   re-introduce the fail-open shape D-08 deliberately deleted, weakening the protection in the name
+   of honouring CR-06's original wording. This is the one way a documentation edit here could
+   become a real security regression, so it is written down explicitly.
 
 ---
 
