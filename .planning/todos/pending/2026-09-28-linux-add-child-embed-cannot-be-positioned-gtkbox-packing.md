@@ -301,3 +301,55 @@ machine. This file stays in `pending/`; nothing is closed.
   abort. Not re-proven.
 - Still open: the operator live gate, Wayland, HiDPI, the packaged build. This is one host.
 - Frontmatter is unchanged on purpose: `ready: live-gate` stays because the operator gate is what remains.
+
+## Addendum (2026-09-30, quick 260930-feh): desk live gate — E4b, E5, HiDPI (GDK_SCALE=2), drag-resize
+
+- **Conditions.** Dev binary at base `a8ec1e5eb` (branch `quick-260930-feh`), X11, one host (NVIDIA 580.173.02,
+  WebKitGTK 2.50.4, primary 3440x1440), four launches, each under a fresh `createFakeHomeProfile()`. In every launch
+  `WEBKIT_DISABLE_DMABUF_RENDERER` was absent from the shell's environ and from the WebKitWebProcess (identity
+  files: `DMABUF_VAR_PRESENT=no`, `dmabuf=absent`), `LD_PRELOAD` absent, `GDK_SCALE` absent except the HiDPI run.
+  Evidence: `.planning/quick/260930-feh-desk-runnable-linux-embed-live-gate-e4b-/evidence/`. No blank launch. The
+  first captures of the first launch were black because GNOME had blanked the display after idle (a mouse move
+  woke it); that was the screen, not the app.
+- **Tracer: PASS.** `/store/gog` puts GOG in the slot, `requested=204,82,1076x718 embed=204,82,1076x718
+  main=0,0,1280x800 vbox=1280x800`, NavShell tabs above, effective scale 1.000.
+- **E4b: PASS.** After GOG -> Epic -> GOG the embed is back in the slot and not over the chrome: chrome band 0.0000
+  changed, left nav 0.0000, slot 0.1403 (the GOG carousel moved on). Epic has no in-app embed; its route shows the
+  "isn't available in-app yet" panel, and no GOG pixels were left in the slot. One `ignored zero-area bounds` line
+  on leaving GOG; no new settled line on the return.
+- **E5: RECORDED, not gating.** A link click (GOG GALAXY) navigated the embed; the URL label read `www.gog.com`
+  before and after (host only); the Back arrow looked enabled. Back did NOT return to page A: slot change b->c
+  0.0002, a->c 0.6214, so `back_moved_history=NO`. Consistent with Phase 40 Observable Truth 6 being FAILED on
+  macOS itself.
+- **FINDING (FAIL, not diagnosed, no fix taken): window resize after E4b plus a link click does not resize the
+  embed.** In that same launch, resizing 1280x800 -> 1100x650 -> 1000x600 -> 1280x800 produced ZERO settled lines
+  and four `ignored zero-area bounds (slot unmounted)` lines, one at each resize instant; at 1100x650 the embed
+  stayed at 204,82,1076x718 and overhung the window (`s1/resize-1100x650-after-e4b-e5.png`). A fresh launch that
+  went tracer -> the same three resizes gave 6 of 6 passing settled lines with flush 0,0 (`s1/s1b-*`), and the
+  drag and HiDPI launches resize correctly too. So the plain resize path is fine; the defect is in the state left
+  behind by the Epic round trip and/or the in-embed navigation. The two were not separated. Stop rule applied:
+  no diagnosis loop, no speculative fix, `FIX_TAKEN=no`. Scored as `S1_CONTROL VERDICT=FAIL`.
+- **HiDPI at GDK_SCALE=2: the scale took effect, and the renderer and GTK AGREE in logical px.** The shell and the
+  WebKitWebProcess both carry `GDK_SCALE=2`. Measured ratio = X client size / GTK vbox = 2200x1294 / 1100x647 =
+  2.000 on both axes (the window manager clamped the requested height 1600 -> 1294 and then 1300 -> 1294).
+  `requested=204,82,896x565`, `embed` equal, `main=0,0,1100x647`; the slot is flush with the vbox's right and
+  bottom edges (0,0), the same property measured at scale 1 at 1100x650 and 1000x600 (flush 0,0). Resize to
+  2000x1200 (vbox 1000x600) and back: flush 0,0 both times. Wheel (5 clicks at the slot centre) changed 48.7% of
+  the slot and 0.0% of chrome and left nav. A click on LIBRARY reached main and left no GOG pixels. Slot corner
+  aligned at device px. Text crispness RECORDED, not gated: glyph edges are anti-aliased at device pixels, no 2x2
+  blocks seen (one crop, one eye).
+- **Drag-resize (Linux branch of 38-E04), MEASURED as far as the harness can see.** Six scripted steps
+  (1250x784 .. 1100x700): 6 of 6 ended in a correct settled line, 0 missing, 0 stale, lag from the X size change
+  546-590 ms. That lag INCLUDES the shell's 500 ms settle debounce by design plus +-50 ms of poll granularity, so
+  the estimated apply time is about 90 ms or less. A 40-step burst (25 ms apart, 1100x700 -> 1280x800) fired NO
+  settled line mid-burst and one correct line 571 ms after the final size; captures at +100 ms and +1500 ms were
+  pixel-identical (no stale frame at the end). One best-effort pointer drag was achieved (1280x800 -> 1100x700,
+  matched, 570 ms, measured from mouse-up).
+- **NOT MEASURED.** Per-frame staleness or tearing during a continuous drag (no settled line fires mid-drag);
+  perceived responsiveness (the ledger's "no visible lag"); the renderer-to-GTK path separate from the debounce.
+- **NOT VERIFIED.** The packaged AppImage/release build; a real logged-in profile; Wayland; macOS; Windows;
+  mixed-DPI or per-monitor scaling; fractional scales; Tauri's own `scale_factor()` (never read: the scale is
+  inferred from X vs GTK sizes); keyboard focus and the first-open split frame; any host but this one.
+- **What remains.** The finding above. The operator live gate. `ready: live-gate` stays and the frontmatter is
+  unchanged on purpose. `38-VERIFICATION.md` is not edited; whether any of this discharges part of 38-E03/38-E04
+  is the operator's call in a ledger change.
