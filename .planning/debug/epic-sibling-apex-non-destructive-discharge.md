@@ -3,7 +3,7 @@ slug: epic-sibling-apex-non-destructive-discharge
 status: investigating
 trigger: "action todo: D-35-19-15 Epic sibling-apex — can the live gate be discharged WITHOUT the operator's Epic credentials, and without signing them out?"
 created: 2026-09-28
-updated: 2026-09-28
+updated: 2026-09-30
 origin: "Extends .planning/debug/resolved/epic-sibling-apex-seeding.md (2026-09-26), which corrected the todo's blocked_by/trigger_phase but was explicitly a DOCUMENTATION-only fix: its own verification records that the live login+logout jar re-test 'was NOT performed here'. That session never examined whether the sweep half needs credentials at all, nor whether a non-destructive invocation path exists. Both are new ground and both are now measured below."
 ---
 
@@ -257,6 +257,78 @@ and is signed out after it, with no working way back in. The instruction to log 
 first checking this repo's own evidence that the pre-auth path was unverified — the evidence was
 present and was not consulted.
 
+### E-9 — the seeding vehicle's full call chain confirmed, by source, to reach the shared process-wide store (2026-09-30)
+
+**Not run live — the honest scope of this entry.** This is a full source-level trace of every hop
+`window.api.oauthCaptureLogin({ runner: 'legendary', url: 'https://www.fortnite.com/' })` would
+take, cross-checked against an explicit prior-author doc comment that reasoned through the exact
+same mechanism while fixing a related defect. It is not a live measurement; why a live measurement
+was not attempted is recorded below the trace.
+
+**The chain, hop by hop:**
+
+1. `useTauriOAuthLogin.ts`'s React hook hardcodes `url = EPIC_LOGIN_URL` for the `legendary`
+   runner (`:209`) — but that hardcoding lives in the HOOK, not in the preload API it calls.
+   Calling `window.api.oauthCaptureLogin({ runner, url })` directly (bypassing the hook, e.g. from
+   DevTools) reaches `captureOAuthLogin(runner: OAuthRunner, loginUrl: string, ...)`
+   (`src/backend/sidecar/oauthLoginCapture.ts:207`), which takes `loginUrl` as a plain, unvalidated
+   string parameter — no runner-to-URL shape check exists at this layer.
+2. `captureOAuthLogin` calls `getLoginWindowSeamOrThrow().open(...)` (`loginWindowSeam.ts:125`),
+   documented at `:10` as "a handle reached only via a `rustInvoke` round-trip" and at `:51` as
+   pushing onto "the SAME `LOGIN_WINDOW_EVENTS` queue via the SAME... `humble_login_open` arm" —
+   i.e. this is the same dispatch surface E-3 already established as callable by channel name.
+3. In Rust, `"humble_login_open"` (`main.rs:6284`) computes `is_epic_login = url.host_str() ==
+   Some(EPIC_LOGIN_HOST)` (`:6291`), and `EPIC_LOGIN_HOST` is the exact string literal
+   `"www.epicgames.com"` (`:2976`) — a full-hostname equality check, not a suffix or wildcard
+   match. For `url = https://www.fortnite.com/`, `is_epic_login` is `false`.
+4. `#[cfg(target_os = "macos")] if is_epic_login { return open_pristine_epic_login_window(...) }`
+   (`:6314-6317`) is therefore NOT taken. Execution falls through to the arm's own, the comment
+   calls it, "existing, completely untouched code below" (`:6310-6311`) — the ordinary
+   `tauri::WebviewWindowBuilder::new(app, &label, tauri::WebviewUrl::External(url))` at `:6413`.
+5. That builder call sets `.user_agent(...)` and `.visible(...)` and, further down, `.title()` /
+   `.inner_size()` / positioning — **no `data_store_identifier`, no custom `websiteDataStore`, no
+   incognito/private flag, anywhere in the builder chain.** Confirmed by grep across the whole
+   file (`data_store_identifier`, `website_data_store`, `incognito` — zero hits) and across
+   `src-tauri/tauri.conf.json` (same three terms — zero hits): nothing in this codebase ever
+   requests a non-default WebKit data store for ANY window.
+6. The doc comment on `clear_default_data_store_cookies_for_domain` (`:4152-4182`), written by a
+   prior session fixing a real, live-observed Epic logout defect (F-6 Defect B) that required
+   reasoning through this exact mechanism, states it generally rather than narrowly: "the pristine
+   webview's `WKWebViewConfiguration::new(mtm)` uses no custom `websiteDataStore` override, so its
+   cookies live in the SAME process-wide `WKWebsiteDataStore::defaultDataStore()` **every
+   Tauri-managed window already shares**" (`:4159-4161`, emphasis on the generalizing clause). The
+   ordinary `WebviewWindowBuilder`-built window from step 4 is exactly such a window.
+7. `clear_default_data_store_cookies_for_domain` (`:4184`) and its read-only sibling
+   `default_data_store_cookies_for_domain` (`:4414`) both call
+   `objc2_web_kit::WKWebsiteDataStore::defaultDataStore(mtm)` directly (`:4198`, `:4263` per the
+   grep census) — the identical API surface a WKWebView falls back to when its configuration sets
+   no override. This is the same store E-1/E-3 already proved the non-destructive per-host sweep
+   (`humble_login_clear_cookies` with a sentinel label, gated `existing_window.is_none() &&
+   epic_cookie_domain_matches(domain)` at `:7235-7237`) reads and clears.
+
+**Conclusion:** every hop is confirmed structurally consistent — a plain navigation to
+`https://www.fortnite.com/` via `window.api.oauthCaptureLogin({ runner: 'legendary', url:
+'https://www.fortnite.com/' })` would write any cookies `fortnite.com` sets into the exact store
+the non-destructive sweep already reads. Item 4 of the 2026-09-30 re-open's "Current Focus" is
+CONFIRMED by source, not merely assumed.
+
+**Why the live DevTools run was not attempted.** `ax-is-blind-to-the-tauri-native-dialog`
+(project memory, 2026-09-24 addendum) measured that GameLib's own webview content is invisible to
+macOS accessibility (`get name of every UI element` returns 4 unnamed elements; a raw coordinate
+click fails with error -25208) and concluded "any live gate whose steps include 'click something
+inside GameLib' needs a person" — with the one exception being a *named, reusable bypass* (a deep
+link or an RPC entry point that reaches the same code without a UI hop). No such bypass exists for
+this specific action: `oauthCaptureLogin` is only reachable from JS running inside the actual
+renderer context (Tauri's IPC bridge is origin-scoped to that context), so triggering it requires
+either a human typing into DevTools, or driving WebKit's remote inspector — neither of which this
+session attempted, given (a) the source-level evidence above is already about as strong as
+non-live evidence gets — the identical mechanism, reasoned through by this codebase's own prior
+authors while fixing a real defect in this exact area — and (b) the action touches the live
+process whose defaultDataStore also holds the operator's real Epic session cookies, and this
+session's own E-8 record shows what an unreviewed live-gate mistake here has already cost once
+(an 8-hour Epic lockout). The literal empirical PRESENT-then-ABSENT measurement therefore still
+has not been run and the todo is being corrected, not closed, below.
+
 ## Eliminated
 
 - hypothesis: "The sweep half of the discharge condition requires an authenticated Epic session."
@@ -283,10 +355,21 @@ present and was not consulted.
     which is F-34.5-G6-01's never-verified pre-auth half and a separate tracked defect as of
     2026-09-28. The seeding step is unreachable, so the discharge condition is unsatisfiable on
     this build. timestamp: 2026-09-28
+- hypothesis: "The seeding half genuinely does require an authenticated Epic login, because a
+  credential-free navigation to the Epic login page seeds none of the four sibling apexes (E-5)."
+  evidence: E-9 (2026-09-30 re-open) — this was a non-sequitur from E-5's own correctly-derived
+    rule ("only a request served BY a sibling apex can set a cookie on it"). E-5 tested exactly
+    one vehicle (the epicgames.com login page) and wrongly generalised the negative result to
+    every vehicle. A plain navigation to https://www.fortnite.com/ itself IS a request served by
+    a sibling apex and needs no Epic credentials at all — confirmed by a full source-level trace
+    of window.api.oauthCaptureLogin -> captureOAuthLogin -> humble_login_open -> is_epic_login
+    (false for a fortnite.com URL) -> the ordinary WebviewWindowBuilder path, which shares the
+    process-wide WKWebsiteDataStore::defaultDataStore() the non-destructive sweep already reads.
+    timestamp: 2026-09-30
 
-## Resolution
+## Resolution (SUPERSEDED 2026-09-30 — see "Current Focus" at the end of this file)
 
-status: "investigating -> BLOCKED on an external defect, D-35-19-15 NOT closed"
+status: "investigating -> BLOCKED on an external defect, D-35-19-15 NOT closed (SUPERSEDED: the blocker closed, and the reasoning below contains a non-sequitur corrected in Current Focus)"
 
 outcome: "D-35-19-15's discharge condition is UNSATISFIABLE on this build, for a THIRD distinct
   reason from the two already on record. It is not 'no seeding vehicle exists' (the filing premise,
@@ -323,3 +406,145 @@ files_changed:
   - ".planning/debug/epic-sibling-apex-non-destructive-discharge.md"
   - ".planning/todos/pending/2026-09-02-d-35-19-15-sibling-apex-seeding-unqueued-and-unreproducible-.md"
   - ".planning/todos/pending/2026-09-28-epic-pre-auth-login-times-out-on-a-cold-cookie-jar.md"
+
+## Current Focus (re-opened 2026-09-30)
+
+hypothesis: "A sibling apex can be seeded with ZERO Epic credentials by navigating GameLib's own
+  login window to https://www.fortnite.com/ — a request served BY a sibling apex. E-5 derived the
+  correct rule and then drew a non-sequitur from it."
+
+test: "Dev run. From DevTools: window.api.oauthCaptureLogin({ runner: 'legendary', url:
+  'https://www.fortnite.com/' }). Let the navigation settle, cancel the window (the capture will
+  never resolve — the cookies are already written). Then read the per-host census."
+
+expecting: "fortnite.com count >= 1 in GameLib's own default WKWebsiteDataStore. Any cookie name
+  counts — EPIC_COOKIE_HOSTS sweeps by HOST, not by name (this session's own E-3)."
+
+next_action: "Confirm the seeding vehicle reaches the process-wide defaultDataStore, then decide the
+  sweep half: per-host non-destructive route preferred, logout only with explicit operator consent."
+
+### Why this session re-opened, and what is LOCKED
+
+**1. The blocker named in `blocked_on` above is CLOSED.** `2026-09-28-epic-pre-auth-login-times-out-on-a-cold-cookie-jar.md`
+is in `.planning/todos/completed/`, the widened eviction (`WKWebsiteDataTypeDiskCache` +
+`WKWebsiteDataTypeMemoryCache`) is in the tree at `src-tauri/src/main.rs:4325` and `:7499`, and the
+operator's `legendaryConfig/legendary/user.json` was rewritten **2026-09-28 18:48:34** — a cold-jar
+Epic sign-in demonstrably succeeded on this machine after the fix. E-8 no longer blocks anything.
+
+**2. E-5's conclusion is a NON-SEQUITUR from E-5's own correct rule.** The rule it established is
+sound and stands: *only a request served BY `fortnite.com` / `unrealengine.com` / `twinmotion.com` /
+`metahuman.com` can set a cookie on that apex, because a response from `epicgames.com` cannot set a
+cookie for a different registrable domain.* The inference drawn from it — "therefore the seeding
+half genuinely does require an authenticated Epic login" — does not follow. **Those four apexes are
+public, Epic-run websites.** A plain navigation to one of them IS a request served by a sibling
+apex, and needs no credentials, no 2FA, and no SSO cookie-sync. E-5 measured the wrong vehicle
+(the login page at `epicgames.com`) and generalised the result to all vehicles.
+
+**3. The fixture does not have to be `EPIC_DEVICE`.** E-3, in this same session, already established
+that `EPIC_COOKIE_HOSTS` sweeps **by host, not by cookie name**, so *any* cookie on one of the four
+apexes is a valid fixture. The chase for Item 7's specific SSO-synced `EPIC_DEVICE` cookie was never
+necessary.
+
+**4. A vehicle for an arbitrary-URL navigation already exists** — `window.api.oauthCaptureLogin({
+runner, url })` (`src/frontend/screens/WebView/useTauriOAuthLogin.ts:251`). The URL is validated
+https-only in Rust by `login_window_url_arg` (`main.rs:2055`), and `is_epic_login` (`main.rs:6291`)
+matches host `www.epicgames.com` ONLY — so a `fortnite.com` URL takes the ordinary visible Tauri
+window builder rather than `open_pristine_epic_login_window`. That builder shares the process-wide
+`WKWebsiteDataStore::defaultDataStore()`; the standing evidence is that `STORE_LOGOUT_COOKIE_DOMAINS`
+exists precisely to sweep GOG/Amazon cookies that ordinary Tauri login windows left in that store.
+**Verify this rather than assume it** — it is the one structural claim in this re-open that has not
+been measured.
+
+### Constraints carried forward (not re-litigated)
+
+- **Discharge condition is NOT relaxed.** PRESENT on a sibling apex in GameLib's own jar, then
+  ABSENT after the sweep, both by an independent read. A bare `matched=0` discharges nothing.
+- **Instrument, persistent-vs-session.** The disk jar LAGS (E-7 needed an app quit to flush), so a
+  session-scoped `fortnite.com` cookie would die at quit and be invisible to it. Prefer the sweep's
+  own in-memory `WKWebsiteDataStore` per-host census for the PRESENT/ABSENT pair **within one app
+  session**, with the disk-jar read as corroboration. Always say which instrument saw what.
+- **Reader already exists; build nothing.** `.planning/quick/260909-p4m-correct-the-stale-record-on-the-gog-amaz/gate-evidence/binarycookies-index-walk.py`.
+- **PII.** Read jars IN PLACE, never copy them, report per-domain COUNTS only, never cookie values.
+  This repo has a 103 MB unredacted-capture incident on record.
+- **E-6 still applies to any standalone probe:** WebKit storage escapes the eight-variable fake-HOME
+  containment (it resolves via `NSHomeDirectory()`/process name), so a probe leaves artifacts in the
+  REAL profile under `~/Library/{HTTPStorages,Caches,WebKit}/<procname>` that must be cleaned up by
+  hand and verified absent.
+
+### The sweep half — decide, and ASK before anything destructive
+
+Preferred: the **non-destructive per-host route**. `humble_login_clear_cookies` is a
+`dispatch_rust_channel` arm (`main.rs:5657`, arm `:7128`) taking `[label, domain]`, so
+`fortnite.com` alone can be swept, leaving the operator's live Epic session and their
+`epicgames.com` cookies untouched.
+
+Fallback, **requiring explicit operator consent**: the in-app Epic logout, which sweeps all five
+hosts — it destroys the live `epicgames.com` cookies AND runs `legendary auth --delete` against the
+REAL profile, killing the session in `user.json`. A live session exists right now
+(`user.json`, 6055 bytes, mtime 2026-09-28 18:48:34). When asking, state plainly that the cold-jar
+login path is now proven on this machine post-fix, so the logout is reversible — **that precondition
+is exactly what was missing on 2026-09-28, when this gate's logout step cost the operator an 8-hour
+Epic lockout.**
+
+Also price a third option honestly: a small dev-only or test-only route to the per-host arm may be
+cheaper and safer than either.
+
+### Deliverable when this closes
+
+Rewrite the todo's rotten `blocked_by` and discharge prose in
+`.planning/todos/pending/2026-09-02-d-35-19-15-sibling-apex-seeding-unqueued-and-unreproducible-.md`
+rather than merely ticking it, so the "needs an authenticated Epic login" premise does not outlive
+this session. Correct E-5's conclusion in place, above, too — its rule stays, its inference goes.
+
+## Resolution (2026-09-30 disposition — this re-open's own work, NOT a discharge of D-35-19-15)
+
+status: "investigating -> the re-open's two open questions (seeding-vehicle mechanism, sweep-half
+  choice) are answered by source; the todo's premise is corrected; D-35-19-15 itself remains OPEN
+  and un-discharged — the live PRESENT-then-ABSENT measurement has still never been run."
+
+outcome: "Item 4 (E-9) is CONFIRMED by a complete source-level trace, not live-measured: a plain
+  navigation to https://www.fortnite.com/ via window.api.oauthCaptureLogin reaches the ordinary
+  WebviewWindowBuilder path (is_epic_login is false for that host), which shares the SAME
+  process-wide WKWebsiteDataStore::defaultDataStore() the non-destructive sweep already reads and
+  clears — confirmed by tracing every hop, by grep showing no data-store override exists anywhere
+  in this codebase, and by a prior-author doc comment reasoning through the identical mechanism
+  while fixing a real, related defect. The sweep half is decided: PREFER the non-destructive
+  per-host route (humble_login_clear_cookies with the Epic sentinel label + domain='fortnite.com'
+  alone), already proven reachable without logout by E-1/E-3 in this same file — no new code is
+  needed for it. The live DevTools run itself (opening the window, letting the navigation settle,
+  reading the per-host census) was deliberately NOT attempted by this agent: GameLib's own webview
+  is AX-blind (project memory `ax-is-blind-to-the-tauri-native-dialog`), no named bypass exists for
+  this specific action (oauthCaptureLogin is only reachable from JS inside the real renderer
+  context), and the action touches the same live process whose defaultDataStore holds the
+  operator's real Epic session — the exact class of action E-8 already showed can go wrong
+  expensively when driven without care."
+
+what_this_session_did_establish:
+  - "E-9: the seeding-vehicle structural claim (item 4 of the 2026-09-30 re-open) is CONFIRMED by
+    a complete, hop-by-hop source trace — not assumed, and distinguished explicitly from a live
+    measurement."
+  - "E-5's non-sequitur is corrected in this file's Eliminated section and in the todo below: its
+    RULE stands (only a request served by a sibling apex can set a cookie there), its INFERENCE
+    that this requires authenticated Epic credentials does not — a plain public-site navigation
+    satisfies the rule with zero credentials."
+  - "The sweep-half decision is made: the non-destructive per-host route is preferred, requires no
+    new code, and leaves the operator's live Epic session and epicgames.com cookies untouched."
+  - "The todo's blocked_by/discharge prose is rewritten (see files_changed) so the 'needs an
+    authenticated Epic login' premise does not outlive this session, per the deliverable
+    instruction above."
+
+not_done_and_why: "The literal empirical live-gate run (open a window to a sibling apex, read the
+  per-host census, confirm PRESENT, sweep just that host, confirm ABSENT, both by the independent
+  reader) was not executed by this agent. It requires driving GameLib's own DevTools console, which
+  is a GUI action this project's own measured evidence says needs a person (AX cannot enumerate or
+  click inside GameLib's webview). The recipe is now fully specified, non-destructive, needs no
+  credentials, and needs no logout — cheap for the operator or a future session with explicit
+  consent to run."
+
+blocked_on: "NOTHING structural. D-35-19-15 is not blocked; it is a ready:live-gate item with a now
+  fully-specified, non-destructive, credential-free recipe (see the todo's rewritten body and this
+  file's 'The sweep half' section above)."
+
+files_changed:
+  - ".planning/debug/epic-sibling-apex-non-destructive-discharge.md"
+  - ".planning/todos/pending/2026-09-02-d-35-19-15-sibling-apex-seeding-unqueued-and-unreproducible-.md"
