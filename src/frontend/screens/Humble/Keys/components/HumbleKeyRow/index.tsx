@@ -114,8 +114,9 @@ type Props = {
    * deliberately: a key REDEEMED by the user's own "Mark as redeemed"
    * action already carries D-77's Undo in Keys-waiting via `claimAction`,
    * and such a key is never `ownedElsewhere`, so it always has a
-   * Keys-waiting home (`viewFilters.ts:62`). This prop exists only because
-   * an auto-settled key is `ownedElsewhere` and therefore CANNOT reach
+   * Keys-waiting home (`selectKeysWaiting`, `viewFilters.ts`). This prop
+   * exists only because an auto-settled key is `ownedElsewhere` and
+   * therefore CANNOT reach
    * Keys-waiting — it would otherwise have no Undo anywhere. */
   settleAction?: { settledAt: number; onUndoSettle: () => void }
   /** D-43-12 (Phase 43 plan 06): the caller's answer to "is GameLib
@@ -486,10 +487,11 @@ export default function HumbleKeyRow({
         // keyless entitlement. "Finish activation" routes to
         // openWizard(key, 'finish') — the reveal/redeem wizard — and there
         // is no code for it to work on: Humble redeems a direct-redeem
-        // entitlement straight to the linked store account
-        // (classify.ts:174-181). Same rule as T-UIC-01's omission from
-        // REDEEM_URL_BUILDERS and isGiftable's exclusion
-        // (viewFilters.ts:142); third site.
+        // entitlement straight to the linked store account (the
+        // `gog_keyless` direct-redeem note above `KNOWN_GAME_KEY_TYPES` in
+        // `classify.ts`). Same rule as T-UIC-01's omission from
+        // REDEEM_URL_BUILDERS and `isGiftable`'s exclusion (`viewFilters.ts`);
+        // third site.
         //
         // TWO CONSTRAINTS A LATER READER MUST NOT "SIMPLIFY" AWAY:
         //

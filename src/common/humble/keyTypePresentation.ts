@@ -4,12 +4,13 @@ import { GENERIC_KEY_PLATFORM } from './genericKeyPlatform'
  * Pure `key_type` -> (how it renders, where it redeems) table (D-42-03).
  * Kept in common/ (no React, no i18n, no I/O) so it is unit-testable from
  * the backend jest project. Feeds two frontend consumers: `HumbleKeyRow`'s
- * store-indicator caption and `HumbleClaimWizard`'s redeem action. It
- * subsumes three call sites that today spell platform interpretation ad hoc
- * and inconsistently: `HumbleKeyRow/index.tsx:230` (raw lowercase token in
- * the caption), `HumbleClaimWizard`'s "Redeem on {{platform}}" label, and
- * the wizard's Steam-vs-help URL fork at `HumbleClaimWizard/index.tsx:648`/
- * `:662`.
+ * store-indicator caption and `HumbleClaimWizard`'s redeem action. Before
+ * this table existed, those two call sites plus a third each spelled
+ * platform interpretation ad hoc and inconsistently: `HumbleKeyRow`'s
+ * caption read a raw lowercase token, `HumbleClaimWizard` built its own
+ * "Redeem on {{platform}}" label, and the wizard picked its Steam-vs-help
+ * URL fork independently. This table replaced all three with one shared
+ * source of truth.
  */
 
 // D-42-03: the true fallback for every platform with no evidenced deep
@@ -167,15 +168,14 @@ export function getRedeemTarget(
 // branded and has a login store and is NOT keyless. Reading any one of
 // these axes off another ships a wrong answer.
 //
-// The three literals are attested by KNOWN_GAME_KEY_TYPES
-// (src/backend/humble/classify.ts:183) — they are exactly its three
-// `_keyless` members. This is a CLOSED SET, in the same spirit as
-// REDEEM_URL_BUILDERS and GAMELIB_LOGIN_STORES above, and deliberately NOT
-// a `_keyless` suffix test (nor any regex): a suffix match would admit an
-// unrecognised, possibly hostile key_type into a UI branch that SUPPRESSES
-// an affordance. A miss here can only fall through to the keyed path,
-// which is the safe direction. Pinned by the `foo_keyless -> false`
-// assertion in the backend suite.
+// The three literals are attested by KNOWN_GAME_KEY_TYPES (`classify.ts`)
+// — they are exactly its three `_keyless` members. This is a CLOSED SET,
+// in the same spirit as REDEEM_URL_BUILDERS and GAMELIB_LOGIN_STORES
+// above, and deliberately NOT a `_keyless` suffix test (nor any regex): a
+// suffix match would admit an unrecognised, possibly hostile key_type into
+// a UI branch that SUPPRESSES an affordance. A miss here can only fall
+// through to the keyed path, which is the safe direction. Pinned by the
+// `foo_keyless -> false` assertion in the backend suite.
 const KEYLESS_KEY_TYPES: Record<string, true> = {
   gog_keyless: true,
   epic_keyless: true,
@@ -185,13 +185,14 @@ const KEYLESS_KEY_TYPES: Record<string, true> = {
 /**
  * True when a raw Humble `key_type` names a DIRECT-REDEEM entitlement —
  * one Humble grants straight to the linked store account, with no key code
- * ever existing (classify.ts:174-181).
+ * ever existing (the `gog_keyless` direct-redeem note above
+ * `KNOWN_GAME_KEY_TYPES` in `classify.ts`).
  *
  * This generalises two decisions already taken independently: T-UIC-01,
  * which omits `gog_keyless` from `REDEEM_URL_BUILDERS` because "a keyless
- * entitlement has no key code", and `isGiftable`'s exclusion of it
- * (viewFilters.ts:142) because offering a gift "would promise a hand-off
- * the user cannot complete". The rule both express is the same one: a
+ * entitlement has no key code", and `isGiftable` (`viewFilters.ts`)'s
+ * exclusion of it because offering a gift "would promise a hand-off the
+ * user cannot complete". The rule both express is the same one: a
  * code-assuming affordance is never offered to a keyless entitlement.
  * Callers use this to withhold such an affordance — never to withhold
  * INFORMATION, since a suppressed button must still leave the cell saying
@@ -237,8 +238,9 @@ const GAMELIB_LOGIN_STORES: Record<string, HumbleGameLibLoginStore> = {
  * **Read this return value honestly (D-43-12), because a future reader who
  * treats it as a session predicate will ship a lie in the UI:** a non-null
  * value names WHICH `ContextProvider` slice (`steam.username` /
- * `gog.username` / `epic.username`, `frontend/types.ts:90-121`) to check —
- * it does not itself observe anything. A truthy `username` on that slice
+ * `gog.username` / `epic.username`, the context slices in
+ * `frontend/types.ts`) to check — it does not itself observe anything. A
+ * truthy `username` on that slice
  * means GameLib's own connection to that store is live (e.g. a `steam-user`
  * CM session with a refresh token). It is NOT a guarantee that the user has
  * a live session on the store's OWN WEBSITE — the redeem URL opens in a

@@ -872,8 +872,8 @@ function deriveRevealRefusedAt(
  * value.
  *
  * D-42-01 re-check: `redeemedAt` is emitted identically regardless of
- * `redeemedSource` — the D-77 Undo affordance
- * (`HumbleKeyRow/index.tsx:116`, gated on `redeemedAt !== null`) therefore
+ * `redeemedSource` — the D-77 Undo affordance (`claimAction.redeemedAt`
+ * in `HumbleKeyRow/index.tsx`, gated on `redeemedAt !== null`) therefore
  * fires the same way for a user-marked and an ownership-inferred REDEEMED
  * key. Provenance is informational only, never gating.
  */
@@ -1417,8 +1417,8 @@ async function doRevealKey(
       //
       // Rolling back surrenders nothing WR-06 was protecting: if the key
       // genuinely IS consumed server-side, the very next sync reports that
-      // fact itself — classify.ts:409 sets redeemedKeyValuePresent from a
-      // truthy redeemed_key_val, and classifyTpk (classify.ts:56-60) returns
+      // fact itself — `redeemedKeyValuePresent` (`classify.ts`) is set from
+      // a truthy redeemed_key_val, and `classifyTpk` (`classify.ts`) returns
       // REVEALED on that server truth alone, with no local flag involved.
       // Never auto-resubmit (T-14-05) — only an explicit user retry (now
       // possible again) may call revealKey.

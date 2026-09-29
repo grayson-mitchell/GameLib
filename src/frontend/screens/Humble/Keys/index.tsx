@@ -77,10 +77,11 @@ const HUMBLE_CHOICE_URL = 'https://www.humblebundle.com/subscription/home'
 // embedded browser, never GameLib's own store connection and never the
 // system browser. The embed destination itself was measured live for
 // `gog_keyless` only (D-43-11); routing `epic_keyless`/`origin_keyless`
-// through the same URL rests on the structural fact at
-// `classify.ts:174-181` (all three share the identical no-key-code shape)
-// and on `humbleKeysEmbedPath()` targeting Humble's own platform-agnostic
-// keys page rather than a store-specific endpoint -- not on a second probe
+// through the same URL rests on the structural fact recorded in the
+// `gog_keyless` direct-redeem note above `KNOWN_GAME_KEY_TYPES` in
+// `classify.ts` (all three share the identical no-key-code shape) and on
+// `humbleKeysEmbedPath()` targeting Humble's own platform-agnostic keys
+// page rather than a store-specific endpoint -- not on a second probe
 // (260925-kt4 D1).
 const HUMBLE_KEYS_URL = 'https://www.humblebundle.com/home/keys'
 

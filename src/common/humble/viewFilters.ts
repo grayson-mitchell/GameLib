@@ -143,12 +143,13 @@ export function isGiftableSpare(
  *   UNREDEEMABLE (expired) and UNPICKED without naming them.
  * - every keyless key_type (`isKeylessKeyType`, `keyTypePresentation.ts`) is
  *   excluded because a direct-redeem entitlement redeems server-side to the
- *   linked store account and carries no code to transfer --
- *   `classify.ts:174-181` gives `gog_keyless`, `epic_keyless` and
- *   `origin_keyless` the identical no-key-code shape, and the same reason
- *   `REDEEM_URL_BUILDERS` (`keyTypePresentation.ts:121-125`) omits
- *   `gog_keyless` applies to all three. Offering "gift" there would promise
- *   a hand-off the user cannot complete.
+ *   linked store account and carries no code to transfer -- the
+ *   `gog_keyless` direct-redeem note above `KNOWN_GAME_KEY_TYPES` in
+ *   `classify.ts` gives `gog_keyless`, `epic_keyless` and `origin_keyless`
+ *   the identical no-key-code shape, and the same reason
+ *   `REDEEM_URL_BUILDERS` (`keyTypePresentation.ts`) omits `gog_keyless`
+ *   applies to all three. Offering "gift" there would promise a hand-off
+ *   the user cannot complete.
  *
  * Both predicates take the narrow `Pick` they actually read rather than a
  * whole `HumbleKey`, so `resolveKeyScenario` -- which itself receives only a
