@@ -42,3 +42,7 @@ RPATH/RUNPATH or dlopen'd libraries (it ignores both).
 
 `.planning/quick/260930-9l9-re-run-38-w05-smoke-launch-against-the-n/evidence/` (`census.txt`,
 `census-control.txt`, `smoke-run.txt`, `smoke-run-diag.txt`).
+
+## Resolution (2026-09-30, quick 260930-bif)
+
+Closed as inert bloat and removed: the Linux CI leg now prunes `build/bin/arm64/linux` before bundling. Runtime arch selection cannot pick it on x86_64, so the RPATH/dlopen question no longer applies. CI-only and unverified until the next `release-tauri.yml` run plus census shows `STATIC_NEEDED_UNRESOLVED=0`. The equivalent `arm64/win32` on the Windows leg is unexamined.

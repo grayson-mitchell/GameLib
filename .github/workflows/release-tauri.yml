@@ -559,6 +559,7 @@ jobs:
         shell: bash
         env:
           IS_MACOS: ${{ startsWith(matrix.platform, 'macos') }}
+          IS_LINUX: ${{ startsWith(matrix.platform, 'ubuntu') }}
         run: |
           rm -rf build/main build/preload build/node-dist
           rm -f build/sea-config.json build/sidecar-prep.blob
@@ -566,6 +567,18 @@ jobs:
           test -f build/renderer/index.html
           if [ "$IS_MACOS" = "true" ]; then
             test -d build/bin
+          fi
+          # Quick task 260930-bif. The Linux leg is x86_64-only, and
+          # archSpecificBinary() (src/backend/utils.ts) resolves
+          # bin/${process.arch}/linux, falling back to bin/x64/linux -- an
+          # x86_64 process can never select bin/arm64/linux. Its arm64 `comet`
+          # was inert bloat whose NEEDED loader (ld-linux-aarch64.so.1) tripped
+          # the AppImage census (STATIC_NEEDED_UNRESOLVED=1). The `test` first
+          # is the fail-loud guard: never prune unless the x64 tree that
+          # replaces it is present.
+          if [ "$IS_LINUX" = "true" ]; then
+            test -f build/bin/x64/linux/comet
+            rm -rf build/bin/arm64/linux
           fi
 
       # Quick task 260917-uik. Run 35223308954 (the first tag push this
