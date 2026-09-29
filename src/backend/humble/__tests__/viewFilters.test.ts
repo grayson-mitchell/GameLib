@@ -388,11 +388,11 @@ describe('isGiftableSpare (scenario 3)', () => {
  * unreachable for every key in every library.
  *
  * `claimGateHolds` below MIRRORS the real claim gate: the `claimAction`
- * condition inside `renderKeyRow` in
- * `screens/Humble/Keys/index.tsx:456-459`. Anchor on those two names --
- * `renderKeyRow` and `claimAction` -- first; the line range is a convenience
- * that has already drifted once and been corrected here (Phase 43 code
- * review finding WR-02), so re-find the gate by name when it drifts again.
+ * condition inside `renderKeyRow` in `screens/Humble/Keys/index.tsx`. Find
+ * it by those two names. No line number is cited deliberately: a line number
+ * is exactly what rotted here once already -- it drifted to a `.then()` chain
+ * 35 lines above the gate and sat there until Phase 43 code review finding
+ * WR-02 caught it -- and a symbol cannot rot the same way.
  * It is a mirror, not the article itself, because that gate is an inline
  * expression inside a React component closure with no exported form to
  * import. If the real gate is ever changed, this mirror must change with
