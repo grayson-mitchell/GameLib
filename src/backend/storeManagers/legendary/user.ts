@@ -160,7 +160,6 @@ export class LegendaryUser {
         ['Failed to logout:', res.error ?? 'abort by user'],
         LogPrefix.Legendary
       )
-      return
     }
 
     // Phase 34.5 Plan 06 (T-34.5-19, ASVS V3): the credential-side cleanup
@@ -171,6 +170,16 @@ export class LegendaryUser {
     // left `userInfo` behind is worse than one that left a stray cookie
     // behind. This is the same shape humble/user.ts's disconnect() uses
     // (Phase 34.4.1 Plan 06, D-08).
+    //
+    // Phase 40 CR-03: the guard above this function's body used to exit
+    // early on `res.error || res.abort`, before ever reaching this point.
+    // That guard is gone, so the credential-side cleanup is now
+    // unconditional with respect to the CLI call's reported outcome as well
+    // as the cookie-side steps described below -- widening an already-
+    // accurate claim, not correcting a false one. The `res.error` case can
+    // now also reach the fatal-step rethrow near the bottom of this
+    // function; the `res.abort` case deliberately never does (see the
+    // comment at that rethrow).
     //
     // A HIDDEN window opens on Epic's login origin and clears only Epic's
     // own cookies through the domain-scoped seam — never a blanket wipe
@@ -210,7 +219,10 @@ export class LegendaryUser {
     // Phase 39 CR-01 (T-34.5-19, ASVS V3): the seam is acquired inside EACH
     // wipe step below, not once here, so a missing seam is caught by the
     // guarded loop's own try/catch and can never skip the credential-side
-    // cleanup at :652-653. Before this fix, a bare `const seam =
+    // cleanup (`configStore.delete('userInfo')` / `clearCache('legendary')`
+    // below -- a symbolic reference on purpose: a hardcoded line number here
+    // has already gone stale once, per Phase 40 CR-03). Before this fix, a
+    // bare `const seam =
     // getLoginWindowSeamOrThrow()` at this exact spot threw outside the
     // loop's guard, aborting logout() before the cleanup ran — the pinned
     // no-seam test above proves it. This leaves the `wipeSteps` declaration
@@ -666,7 +678,13 @@ export class LegendaryUser {
     configStore.delete('userInfo')
     clearCache('legendary')
 
-    if (fatalWipeFailure !== null) {
+    // Phase 40 CR-03: gated on `!res.abort`. On abort the app is exiting --
+    // the renderer that would observe this rejection is being torn down, so
+    // rejecting here would be unobservable noise during shutdown and nothing
+    // else (the sidecar exit contract: the sidecar exits by event-loop
+    // drain, and nothing should be left waiting on a promise nobody is
+    // watching). Today's abort path resolves; it keeps resolving.
+    if (fatalWipeFailure !== null && !res.abort) {
       throw fatalWipeFailure
     }
   }

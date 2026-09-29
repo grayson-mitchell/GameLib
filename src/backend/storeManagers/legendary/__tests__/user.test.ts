@@ -167,7 +167,20 @@ describe('LegendaryUser.logout()', () => {
     setLoginWindowSeam(null)
   })
 
-  it('REQ-34.5-04: the CLI-error early return is unchanged — no cookie step or configStore.delete runs', async () => {
+  // INVERTED (Phase 40 CR-03): this test used to assert that a CLI-error
+  // result short-circuited logout() before the cookie step or
+  // configStore.delete ever ran. That was a green test encoding the defect
+  // CR-03 closes -- the early-exit guard it pinned is gone. The flip is to
+  // match the spec (a CLI `error` result must still leave the credential
+  // store clean), not a "fix" to prior behaviour. See the sibling inversion
+  // in `nile/__tests__/logoutCookies.test.ts`. A healthy `makeMockSeam()` is
+  // installed so the wipe steps succeed and the CLI-error result is the only
+  // variable under test -- without it, the no-seam default (CR-01's own
+  // subject, pinned separately below) would be what this test measures
+  // instead.
+  it('REQ-34.5-04 / CR-03: a CLI-error result still runs the wipe steps and still clears credentials', async () => {
+    const seam = makeMockSeam()
+    setLoginWindowSeam(seam)
     mockRunRunnerCommand.mockResolvedValue({
       stdout: '',
       stderr: '',
@@ -175,14 +188,59 @@ describe('LegendaryUser.logout()', () => {
       abort: false
     })
 
-    await LegendaryUser.logout()
+    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
 
     expect(logError).toHaveBeenCalledWith(
       ['Failed to logout:', 'boom'],
       'Legendary'
     )
-    expect(mockConfigStore.delete).not.toHaveBeenCalled()
-    expect(clearCache).not.toHaveBeenCalled()
+    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+    expect(clearCache).toHaveBeenCalledWith('legendary')
+  })
+
+  // ADDED (Phase 40 CR-03): the runner had no abort-case test at all before
+  // this fix, which is why CR-03 was invisible here. App quit via
+  // `callAllAbortControllers()` from `handleExit()` (`src/backend/utils.ts:318`)
+  // is the only reachable trigger for `res.abort`.
+  it('CR-03: a CLI-abort result still runs the wipe steps and still clears credentials', async () => {
+    const seam = makeMockSeam()
+    setLoginWindowSeam(seam)
+    mockRunRunnerCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      error: undefined,
+      abort: true
+    })
+
+    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+
+    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+    expect(clearCache).toHaveBeenCalledWith('legendary')
+  })
+
+  // ADDED (Phase 40 CR-03): pins the rethrow gate. The fatal cookie step
+  // stays fatal on every other path (see the F-6 twin below), but on abort
+  // the app is exiting and nothing can observe a rejection -- this is the
+  // one case where the fatal step must NOT surface as a rejected logout().
+  it('CR-03: on abort, a rejecting (fatal) clearEpicCookies still resolves logout() and still clears credentials', async () => {
+    const seam = makeMockSeam({
+      clearCookies: jest
+        .fn()
+        .mockRejectedValue(new Error('rust cookie clear failed'))
+    })
+    setLoginWindowSeam(seam)
+    mockRunRunnerCommand.mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      error: undefined,
+      abort: true
+    })
+
+    await expect(LegendaryUser.logout()).resolves.toBeUndefined()
+
+    expect(mockConfigStore.delete).toHaveBeenCalledWith('userInfo')
+    expect(clearCache).toHaveBeenCalledWith('legendary')
+    expect(logError).toHaveBeenCalled()
   })
 
   // Phase 39 Plan 04 Task 3: the test that used to live here — "with a session object exposing
