@@ -287,3 +287,17 @@ machine. This file stays in `pending/`; nothing is closed.
   inspector takes the bottom of the main webview, so the renderer viewport was 1280x500 in every run.
 - **What remains:** an operator live gate. The Linux branches of `38-E03`/`38-E04` still route to this file's
   `pending/` path. `38-VERIFICATION.md` is not edited.
+
+## Addendum (2026-09-30, quick 260930-ea0): DMABUF-unset boot-render clause met
+
+- Quick 260930-ea0 stopped the Linux debug build auto-opening the Web Inspector (commit `142cde2a5`). The
+  earlier "unset never paints" (0 of 6) was that inspector racing page boot and aborting the page's
+  WebKitWebProcess, not DMABUF/EGL. See `.planning/debug/resolved/linux-dev-app-blank-without-dmabuf-workaround.md`.
+- With `WEBKIT_DISABLE_DMABUF_RENDERER` genuinely absent (shell and page process), 6 of 6 fresh-profile dev
+  launches mounted at 1280x800 with 1 WebKitWebProcess. The 1280x500 viewport (old observation 5) is gone;
+  the slot is now 204,82 1076x718.
+- E1-E4 re-run with DMABUF unset (bonus): all PASS. E4b and E5 were NOT RUN.
+- The two `=1` stalls attributed to the 2026-09-17 blank-launch todo are probably the same inspector
+  abort. Not re-proven.
+- Still open: the operator live gate, Wayland, HiDPI, the packaged build. This is one host.
+- Frontmatter is unchanged on purpose: `ready: live-gate` stays because the operator gate is what remains.

@@ -144,3 +144,30 @@ Todo triage: `ready: code` -> `ready: live-gate`, one `## Addendum (2026-09-30, 
 - Created files exist: `embed_live.ts`, `check_settled.py`, `cap.py`, `evidence/expansion-results.txt`, `evidence/desk-battery.txt`, `evidence/tracer-gog-in-slot.png`.
 - Commits exist on `quick-260930-blh`: `e4d25138a`, `0e46c4372`, `704fa246b`, `0029d03f0`; `git rev-list --count 8925b22a2..HEAD` = 4, matching `commits: 4`.
 - Post-run: 0 `gamelib-shell` processes, no `/tmp/gl-blh-*` profile left, vite stopped.
+
+## Addendum (2026-09-30, quick 260930-ea0)
+
+Added after the fact; nothing above this line is edited. Evidence is in
+`.planning/quick/260930-ea0-stop-auto-opening-web-inspector-on-linux/evidence/`.
+
+- **The plan's "DMABUF absent" live-gate clause is now met for BOOT RENDER.** With
+  `WEBKIT_DISABLE_DMABUF_RENDERER` genuinely absent (shell and page WebKitWebProcess environments both
+  read `absent`, `LD_PRELOAD` absent) the dev app mounted in 6 of 6 fresh-profile launches, at viewport
+  1280x800, with 1 WebKitWebProcess and no auto-opened inspector. The earlier 0 of 6 is not reproduced.
+- **The earlier `=1` dependence (Deviation 1: 0/6 unset vs 6/8 with `=1`) was the debug build's
+  auto-opened Web Inspector racing page boot, not a DMABUF/EGL failure.** The page's WebKitWebProcess
+  aborted (SIGABRT, a JavaScriptCore internal assertion). Quick 260930-ea0 stops the Linux debug build
+  from auto-opening it (commit `142cde2a5`). Diagnosis:
+  `.planning/debug/resolved/linux-dev-app-blank-without-dmabuf-workaround.md`.
+- **Deviation 1's attribution of the two `=1` stalls to the 2026-09-17 intermittent blank-launch todo is
+  superseded.** The debug session predicts they were the same inspector abort. That is NOT re-proven: no
+  natural `=1` stall was caught by the investigation.
+- **Open observation (5), the 1280x500 renderer viewport, no longer holds on Linux.** The census measured
+  1280x800 in 6 of 6 launches (the docked inspector had taken the bottom 300 px). The embed slot is now
+  204,82 1076x718 instead of 1076x418.
+- **E1-E4 were re-run with DMABUF unset** (bonus, label `ea0-unset-expansion`,
+  `evidence/bonus-e1e4/` in the ea0 quick dir): E1 PASS (`check_settled.py`: 4 lines, 4 pass, 2 distinct
+  vbox), E2 PASS (slot 0.6639 changed, chrome band 0.0000, left nav 0.0000), E3 PASS, E4 PASS. E4b (the
+  Epic round trip) and E5 were NOT RUN. So the layout is no longer proven on the DMABUF-disabled path
+  only, for E1-E4. It is still one host (X11, NVIDIA 580.173.02, WebKitGTK 2.50.4), and the operator live
+  gate is still what remains.
