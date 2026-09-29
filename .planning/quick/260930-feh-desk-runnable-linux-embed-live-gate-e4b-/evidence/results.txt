@@ -3,3 +3,10 @@ CHECK=E4B VERDICT=PASS chrome_changed=0.0000 leftnav_changed=0.0000 slot_changed
 CHECK=E5 VERDICT=RECORDED link_click_navigated=yes label_before=www.gog.com label_after=www.gog.com back_enabled=unclear back_moved_history=NO slot_ab=0.6215 slot_bc=0.0002 slot_ac=0.6214
 CHECK=S1_CONTROL VERDICT=FAIL in_run_s1_settled_lines_at_1100x650_1000x600=0 in_run_s1_zero_area_lines_during_resizes=4 in_run_s1_embed_stale_at_1100x650=yes clean_launch_s1b_settled_lines=6 clean_launch_s1b_pass=6 clean_launch_s1b_flush_dx=0 clean_launch_s1b_flush_dy=0 clean_launch_s1b_vboxes=1280x800,1100x650,1000x600
 LAUNCHES=2 BLANK_LAUNCHES=0 TASK=1
+CHECK=HIDPI_SCALE VERDICT=PASS scale_w=2.000 scale_h=2.000 xwin=2200x1294 vbox=1100x647 initial_xwin=2560x1294 (wm clamped height from 1600) origin_monitor=DisplayPort-1-0 gdk_scale_var=2 webproc_gdk_scale=2 webproc_dmabuf=absent
+CHECK=HIDPI_FLUSH VERDICT=PASS renderer_vs_gtk_logical=agree requested=204,82,896x565 embed=204,82,896x565 flush_dx=0 flush_dy=0 scale1_control_s1b_1100x650=pass scale1_control_s1b_1000x600=pass corner_visual=aligned
+CHECK=HIDPI_RESIZE VERDICT=PASS step_b_xwin=2000x1200 step_b_vbox=1000x600 step_b_requested=204,82,796x518 step_b_flush=0,0 step_c_xwin=2200x1294 step_c_vbox=1100x647 step_c_requested=204,82,896x565 step_c_flush=0,0 clamp=restore_to_2200x1300_clamped_to_2200x1294
+CHECK=HIDPI_WHEEL VERDICT=PASS chrome_changed=0.0000 leftnav_changed=0.0000 slot_changed=0.4873 pointer_abs=1404,798 clicks=5 page_scrolled=yes
+CHECK=HIDPI_CLICKTHROUGH VERDICT=PASS library_route_shown=yes gog_pixels_left_in_slot=no zero_area_line_appeared=no
+CHECK=HIDPI_CRISP VERDICT=RECORDED glyph_edges=antialiased_at_device_px_no_2x2_blocks_seen zoom=hidpi-crisp-zoom.png (single 240x60 physical crop of the GOG hero text, one host, one eye)
+LAUNCHES=1 BLANK_LAUNCHES=0 TASK=2
