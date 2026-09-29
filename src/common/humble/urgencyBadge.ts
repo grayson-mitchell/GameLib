@@ -85,5 +85,6 @@ export function getUrgencyCountdownParts(
     return { kind: 'hours', value: Math.max(1, Math.ceil(hoursLeft)) }
   }
   const daysLeft = msLeft / MS_PER_DAY
-  return { kind: 'days', value: Math.ceil(daysLeft) }
+  // D-62/UI-SPEC: 24h-48h is "1 day left"; ceil only applies from 2 days up.
+  return { kind: 'days', value: daysLeft < 2 ? 1 : Math.ceil(daysLeft) }
 }
