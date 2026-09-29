@@ -88,12 +88,6 @@
   margin-bottom: var(--space-md);
 }
 
-.humbleKeysGroupList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
 .humbleKeysEmptyState {
   padding: var(--space-xl) 0;
   text-align: center;
@@ -111,78 +105,6 @@
   font-weight: var(--regular);
   color: var(--text-secondary);
   margin: 0;
-}
-
-.humbleKeyGroup {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-
-/* Collapsible group header: a real <button> so it is keyboard operable, but
-   styled to read as the section heading (--text-lg / --semibold, matching the
-   UI-SPEC group-heading role). Button chrome is reset; the default focus ring
-   is intentionally preserved for keyboard users. */
-.humbleKeyGroupHeading {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  font-size: var(--text-lg);
-  font-weight: var(--semibold);
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: inherit;
-  text-align: start;
-  cursor: pointer;
-  width: 100%;
-}
-
-.humbleKeyGroupLabel {
-  color: var(--text-default);
-}
-
-.humbleKeyGroupChevron {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  transition: transform 0.2s ease;
-}
-
-.humbleKeyGroupChevron--open {
-  transform: rotate(90deg);
-}
-
-.humbleKeyGroupCount {
-  font-size: var(--text-sm);
-  font-weight: var(--regular);
-  color: var(--text-secondary);
-  background: var(--input-background, var(--background));
-  padding: var(--space-3xs) var(--space-2xs);
-  border-radius: var(--space-3xs);
-}
-
-/* D-86 (Phase 15): the pinned "Expiring soon" heading clones
-   .humbleKeyGroupHeading's static parts only — it is a <div>, not a
-   <button>, so the interactive-only cursor/pointer affordance is reset. No
-   chevron, no aria-expanded, no onClick (UI-SPEC deviation from
-   HumbleKeyGroup's collapsible header). */
-.humbleKeyGroupHeading--static {
-  cursor: default;
-}
-
-/* --space-md vertical gap between the pinned section and the rest of the
-   Keys-waiting list (UI-SPEC Spacing Scale). */
-.humbleKeysPinnedSection {
-  margin-bottom: var(--space-md);
-}
-
-.humbleKeyGroupList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 /* 260908-vo4: single declared source for the title's line-box height, used
