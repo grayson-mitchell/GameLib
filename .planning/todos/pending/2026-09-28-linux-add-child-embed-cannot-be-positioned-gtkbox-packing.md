@@ -206,3 +206,15 @@ Full evidence: `.planning/spikes/029-linux-embed-allocation-reliability/README.m
   vbox SIBLING of the main webview. Measured: main is squeezed to 61-125px. Overlay it
   (`gtk::Overlay`) or set explicit expand on main, and assert the main webview's height in the live
   gate, not only the embed's.
+
+## Addendum (2026-09-30, quick 260930-aof): the NVIDIA mismatch prerequisite is measured cleared
+
+The kernel module and userspace driver versions now match (580.173.02 = 580.173.02, `nvidia-smi` runs,
+kernel 7.1.1-76070101-generic, booted 2026-09-30 07:38:36), so the operator prerequisite named in the
+spike-029 addendum above ("fix the NVIDIA mismatch") is met. The spike-029
+`run-variants.sh 10 plain reparent` re-run with `WEBKIT_DISABLE_DMABUF_RENDERER` unset was NOT performed
+here and is still the next action; `ready:` is left for triage. What sitting 12 observed of the packaged
+app's GPU path: the CI AppImage launched without the workaround, showed a window and reached an
+interactive Library UI with 0 EGL lines, so the packaged app's EGL/GBM path is healthy on the matched
+driver. That says nothing about the embed's GTK-box allocation, which the packaged Library screen does not
+exercise.

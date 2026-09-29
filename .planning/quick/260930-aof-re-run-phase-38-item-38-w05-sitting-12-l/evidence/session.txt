@@ -1,0 +1,28 @@
+SESSION_DATE=2026-09-30
+SESSION_START=2026-09-29T18:53:51Z
+CONTROL_VERDICT=PASS
+PREDICTION_RELIABILITY=proven-by-negative-control
+PREDICTION_WRITTEN_AT=2026-09-29T18:53:51Z PREDICTION=MISSING_LIBS (harness output by pre-registered order; census.txt: REQUIRED_GLIBC_MAX GLIBC_2.35 (usr/lib/libcairo.so.2), 0 of 182 ELF files above host glibc 2.35, GLIBCXX max 3.4.30 equals host, no libc bundled, so no glibc/glibcxx incompatibility; the single STATIC_NEEDED_UNRESOLVED is ld-linux-aarch64.so.1 required by usr/lib/GameLib/build/bin/arm64/linux/comet, an aarch64 binary that cannot execute on this x86_64 host; CENSUS_REPRODUCES_S11=yes (every compared key and the UNRESOLVED line identical to sitting 11's census of the same bytes); negative control PASS (sitting-10 artifact reproduces GLIBC_INCOMPATIBLE, 175 ELF, 50 above host, GLIBC_2.39); BUNDLED_GPU_LIBS=0 so the artifact ships no libEGL/libGL/libgbm/libdrm of its own)
+PREDICTION_READING=expected-to-launch
+CENSUS_FINDING_ALREADY_FILED=yes
+GPU_PREDICTION=no-EGL-abort-expected (mismatch cleared: 580.173.02 = 580.173.02)
+LOCKED_HINT=no
+INHIBIT_PID=17085
+INHIBIT_PGID=17085
+INHIBIT_SID=17085
+INHIBIT_COMM=gnome-session-i
+INHIBIT_LISTED=1
+PRE_WINDOWS=0
+GAMELIB_PROCS=0
+NVIDIA_MISMATCH_AT_LAUNCH=no
+NVRM_VERSION_AT_LAUNCH=580.173.02
+NVML_LIB_AT_LAUNCH=580.173.02
+NVIDIA_SMI_DRIVER_AT_LAUNCH=580.173.02
+STAMP=/tmp/claude-1000/-home-graysonmitchell-GameLib/af702073-88f2-4b71-906c-9b8305486695/scratchpad/w05-s12/stamp
+SCORED_LAUNCH_COUNT=1 (one valid scored run: SCORED=yes, EXTRA_ENV=(none), HARNESS_OK=1, no repeat, no extract-and-run, no workaround, no --tag)
+SCORED_RUN_SUMMARY=window titled GameLib at 265 ms, 11/11 samples alive, sidecar bundled and alive at s=10 and t=30, shell alive at t=30, 0 glibc/missing-so/EGL lines; sidecar signalled READY
+VERDICT_RULE_APPLIED=PASS: every clause met; precedence 2 (CONFOUNDED) and 3 (gpu-stack-non-mismatch) did not fire (EGL_CONFOUND_LINES=0)
+INHIBITOR_CLEANUP=SIGTERM to group -17085; group empty; gnome-session-inhibit -l no longer lists gamelib-38-W05-s12
+REAL_PROFILE_LEAKS=0 (find ~/.config ~/.local/share ~/.cache -maxdepth 2 -newer stamp, filtered to *gamelib*, mimeapps.list, applications: no hit)
+FINAL_LEAK_CHECK=process-group listings empty for LAUNCH_PGID 20055, SIDECAR_PGID 20114 and INHIBIT_PGID 17085; no /.mount_ entry in mountinfo; /proc exe scan for gamelib-shell/gamelib-sidecar = 0; POST_TEARDOWN_WINDOWS=0; no gl-w05s12-* directory in /tmp
+STAGED_DELETED=yes (and SCR/synthetic-streams.txt); ~/Downloads file mode 664 mtime 1790704421 sha256 d7648c37... unchanged; raw app streams shredded by the profile's registerCapture()/dispose()
