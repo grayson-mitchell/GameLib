@@ -1,0 +1,24 @@
+SESSION_DATE=2026-09-30
+SESSION_START=2026-09-29T18:17:12Z
+CONTROL_VERDICT=PASS
+PREDICTION_RELIABILITY=proven-by-negative-control
+PREDICTION_WRITTEN_AT=2026-09-29T18:17:12Z PREDICTION=MISSING_LIBS (harness output by pre-registered order; census.txt: REQUIRED_GLIBC_MAX GLIBC_2.35 (usr/lib/libcairo.so.2), 0 of 182 ELF files above host glibc 2.35, GLIBCXX max 3.4.30 equals host, no libc bundled, so no glibc/glibcxx incompatibility; the single STATIC_NEEDED_UNRESOLVED is ld-linux-aarch64.so.1 required by usr/lib/GameLib/build/bin/arm64/linux/comet, an aarch64 binary that cannot execute on this x86_64 host and that the census also finds, identically, in the sitting-10 control artifact; interpretation written before the launch: expected to pass the loader and launch, the score follows the observation, not this line; negative control PASS)
+CENSUS_FINDING_UNRESOLVED_NEEDED=ld-linux-aarch64.so.1 <- usr/lib/GameLib/build/bin/arm64/linux/comet (also present in the sitting-10 control artifact; the todo trigger STATIC_NEEDED_UNRESOLVED>0 fires mechanically)
+LOCKED_HINT=no
+INHIBIT_PID=365742
+INHIBIT_PGID=365742
+INHIBIT_SID=365742
+INHIBIT_COMM=gnome-session-i
+INHIBIT_LISTED=1
+PRE_WINDOWS=0
+GAMELIB_PROCS=0
+NVIDIA_MISMATCH_AT_LAUNCH=yes
+STAMP=/tmp/claude-1000/-home-graysonmitchell-GameLib/d1ab39a9-c0ce-4881-af4e-34f9da558bc6/scratchpad/w05-s11/stamp
+SCORED_LAUNCH_COUNT=1 (one valid scored run: SCORED=yes, EXTRA_ENV=(none), HARNESS_OK=1, no repeat, no extract-and-run, no workaround)
+SCORED_RUN_SUMMARY=window titled GameLib at 270 ms, then the shell died with SIGABRT 364 ms after spawn (EGL_NOT_INITIALIZED); 0 glibc/GLIBCXX/missing-so lines
+VERDICT_RULE_APPLIED=precedence 2 (CONFOUNDED): NVIDIA_MISMATCH_AT_LAUNCH=yes AND EGL_CONFOUND_LINES=1 in the scored streams; precedence 1 (loader) did not fire (GLIBC_NOT_FOUND_LINES=0, MISSING_SO_LINES=0)
+DIAG_ARM=run once after the scored verdict was CONFOUNDED: --tag diag --env WEBKIT_DISABLE_DMABUF_RENDERER=1, SCORED=no, fresh profile; it did not and cannot change the verdict
+INHIBITOR_CLEANUP=SIGTERM to group -365742; pgrep -g 365742 = 0; gnome-session-inhibit -l no longer lists gamelib-38-W05-s11
+REAL_PROFILE_LEAKS=0 (find ~/.config ~/.local/share ~/.cache -maxdepth 2 -newer stamp, filtered to *gamelib*, mimeapps.list, applications: no hit; com.gamelib.shell absent)
+FINAL_LEAK_CHECK=pgrep -g is empty for LAUNCH_PGID 369284 (scored), 370185 (diag), SIDECAR_PGID 370226 (diag), INHIBIT_PGID 365742; no /.mount_ entry in mountinfo; /proc exe scan for gamelib-shell/gamelib-sidecar = 0; POST_TEARDOWN_WINDOWS=0 in both arms; no gl-w05s11-* directory left in /tmp
+STAGED_DELETED=yes (and SCR/synthetic-streams.txt); ~/Downloads file mode 664 mtime 1790704421 unchanged; raw app streams shredded by the profile's registerCapture()/dispose()

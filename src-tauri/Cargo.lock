@@ -1268,6 +1268,7 @@ version = "0.7.0"
 dependencies = [
  "block2",
  "dispatch2",
+ "gtk",
  "keyring",
  "libc",
  "objc2",

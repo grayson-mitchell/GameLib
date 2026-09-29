@@ -1,0 +1,69 @@
+# PRE_SHA 55aa0d54b -- Task 1, 2026-09-29
+
+## Catalogue-key render sites (grep -rn, src/, excluding __tests__)
+
+`gamelib:steam.install.contentLightSingleLibraryNotice` (S): exactly ONE hit --
+  SteamDialog/index.tsx:541
+
+`gamelib:steam.install.contentLightNotice` (O): exactly ONE hit --
+  SteamDialog/index.tsx:545
+
+(A broader grep for the bare substring "contentLightNotice" also matches the
+`gating.contentLightNotice` BOOLEAN field name -- declared/typed in
+steamSectionGating.ts:161/293/300, documented in its comments at :42-43/286/290,
+consumed at SteamDialog/index.tsx:103/530, and referenced by
+steamEligibilityProbe.ts:203/263/283 where it is forced false on the pending
+branch. None of those are catalogue-key literals; the quoted-string catalogue
+key itself appears only at the two lines above.)
+
+## The `.infoBox` guard, quoted verbatim (SteamDialog/index.tsx:530-532)
+
+```
+        {gating.contentLightNotice && (
+          <div className="infoBox">
+            <FontAwesomeIcon icon={faWarning} />
+```
+
+This block (the `gating.contentLightNotice &&` guard, the `div.infoBox`, and the
+`faWarning` icon) closes at line 549 (`</div>`) / 550 (`)}`), not quoted here.
+
+## ThirdPartyDialog class references
+
+Files containing `noticeIcon` or `noticeInfo`: exactly two --
+  ThirdPartyDialog/index.tsx
+  ThirdPartyDialog/index.css
+
+Count of either catalogue key (`contentLightSingleLibraryNotice` or
+`contentLightNotice`) inside `ThirdPartyDialog/`: 0
+
+## InstallModal exclusive ternary arms
+
+InstallModal/index.tsx:646 -- `{isSteamManagedApp && gameInfo ? (` (SteamDialog arm)
+InstallModal/index.tsx:710 -- `) : isThirdPartyManagedApp ? (` (ThirdPartyDialog arm)
+
+These are exclusive arms of one ternary: SteamDialog and ThirdPartyDialog can
+never both render for the same InstallModal instance.
+
+## Catalogue values S and O, live read (public/locales/en/gamelib.json)
+
+S = steam.install.contentLightSingleLibraryNotice
+  LEN=122
+  "There's only one Steam library on this system, so there's nothing to choose here — GameLib will install this game into it."
+  non-ASCII / apostrophe-like codepoints: [5]=U+0027 "'", [55]=U+0027 "'", [81]=U+2014 "—"
+
+O = steam.install.contentLightNotice
+  LEN=185
+  "This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib."
+  non-ASCII / apostrophe-like codepoints: [27]=U+0027 "'", [50]=U+0027 "'"
+
+## t() default vs catalogue, byte-for-byte (Python read of both files)
+
+SteamDialog/index.tsx:542 default (nativeInstallOn branch, S) == catalogue S: TRUE
+SteamDialog/index.tsx:546 default (else branch, O) == catalogue O: TRUE
+
+## Outcome
+
+Every expectation from planning time held at execution time. The container
+analysis (source census, exclusive ternary, ThirdPartyDialog class isolation)
+matches the build at PRE_SHA 55aa0d54b. The STRUCTURAL basis is available for
+F2/F4 if the DOM-READ route is unavailable or fails for a recorded reason.

@@ -1,0 +1,31 @@
+38-S10 burst-summary — Phase 38 sitting 7, 2026-09-29, Linux (Pop!_OS 22.04, X11)
+Target: 7 Days to Die, Steam appId 251570. Route: SteamInstallCaret menu -> "Install with options...".
+
+Burst capture (linux_sitting_capture.py burst --out .../open --pre 0.5 --seconds 4 --click 2189,996):
+  frames=38
+  fps=9.3
+  median_interval=95.6ms
+  click={"x": 2189, "y": 996, "epoch_ms": 1790637346457}  (local time 2026-09-29 12:15:46.457 NZDT)
+  new_windows=0 (clients.jsonl empty -- zero new top-level windows appeared mid-burst)
+
+Settle-diff (linux_sitting_capture.py diff .../settle --flag 0.005; reference frame = dialog-settled.png, renamed frame_0000000000000.png so it sorts first):
+  max_fraction=0.3605  max_frame=frame_1790637346457.png (the click-epoch frame itself)
+  35 total frames compared (dialog-settled.png + 34 post-click-epoch burst frames)
+  5 frames flagged (> 0.005), all within the MUI Slide open-transition window (505ms of the click epoch):
+    frame_1790637346457.png: 0.3605  (t=0ms,   click frame -- caret menu still visible, dialog not yet appeared)
+    frame_1790637346603.png: 0.3434  (t=146ms, dialog beginning to slide in)
+    frame_1790637346739.png: 0.2132  (t=282ms, dialog mid-slide, notice box already showing full text)
+    frame_1790637346845.png: 0.1214  (t=388ms, dialog near-final position)
+    frame_1790637346962.png: 0.0231  (t=505ms, dialog essentially settled, tiny residual position diff)
+  0 frames flagged after t=505ms -- fully converged to the settled reference well within the 4-second burst window.
+  Every flagged frame was individually viewed (see region-checks.txt "Transient check summary"). None showed a
+  platform row, library dropdown, wine section (any of its 3 sub-signatures), free-space line, or an
+  "EligibilityLoadingRow" ("Checking install options...") row at any point during the open transition.
+
+Clients dumps (top-level window census):
+  Baseline (dialog closed, pre-open.png time): 8 windows -- Firefox x2, gnome-control-center, VS Code,
+    Steam (steamwebhelper, PID 34245, pre-existing), GameLib (PID 115840), gjs-console x2.
+  After dialog open + settled (dialog-settled.png time): IDENTICAL 8-window set, same PIDs/WM_CLASS/titles.
+  Zero new top-level windows at any point from pre-open through dialog close -- expected, because
+  SteamDialog renders entirely in-webview; nothing is handed off to any external process (Install was
+  never clicked).

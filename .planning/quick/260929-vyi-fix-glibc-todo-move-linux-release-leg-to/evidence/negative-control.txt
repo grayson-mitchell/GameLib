@@ -1,0 +1,52 @@
+Negative controls -- quick 260929-vyi
+Command for every arm (own call, output redirected, exit code echoed, not piped):
+  npx jest --selectProjects Backend --testPathPattern 'releaseWorkflow'
+
+Arm A -- pre-edit workflow (HEAD ef5638a7c, test file edited, workflow untouched)
+  Variant: `git diff --quiet -- .github` exit 0 (workflow byte-identical to HEAD); only
+           src/backend/__tests__/releaseWorkflow.test.ts carried the four new tests.
+  Ran all test suites matching /releaseWorkflow/i.
+  Failing tests (verbatim bullet headers, deduplicated):
+    ● release-tauri.yml Linux build base (glibc floor -- quick 260929-vyi / 38-W05) › exactly one matrix leg targets Linux and it builds on ubuntu-22.04 (glibc 2.35 floor)
+    ● release-tauri.yml Linux build base (glibc floor -- quick 260929-vyi / 38-W05) › swatinem/rust-cache is keyed on matrix.platform so a cache built on another runner image cannot be prefix-restored
+  Tests:       2 failed, 107 passed, 109 total
+  Exit code: 1
+  Expected set (a) and (d) exactly: MATCHED. (b) and (c) passed, as designed -- both
+  states of the workflow are internally coherent; their red arms are B and C below.
+
+Arm B -- guard-only half-edit against the committed tree (HEAD 09aab2b97)
+  Variant: `git show HEAD:.github/workflows/release-tauri.yml | sed` changing ONLY the apt
+           step's `if: matrix.platform == 'ubuntu-22.04'` line to ubuntu-24.04. This is the
+           mistake tauri-action's README warns about ("This must match the platform value
+           defined above"); in CI it would silently skip the apt step on the Linux leg.
+  git diff --numstat: 1 added, 1 deleted
+  Ran all test suites matching /releaseWorkflow/i.
+  Failing tests (verbatim bullet headers):
+    ● release-tauri.yml Linux build base (glibc floor -- quick 260929-vyi / 38-W05) › the Ubuntu system-dependency step is guarded on exactly the Linux leg's platform
+  Tests:       1 failed, 108 passed, 109 total
+  Exit code: 1
+  Expected set (b) exactly: MATCHED.
+  Restore: `git show HEAD:.github/workflows/release-tauri.yml > .github/workflows/release-tauri.yml`;
+           `git diff --quiet -- .github/workflows/release-tauri.yml` exit 0.
+
+Arm C -- apt-list drift without a re-census against the committed tree (HEAD 09aab2b97)
+  Variant: appended one extra package token (libfuse2) to the end of the
+           `apt-get install -y` line only.
+  git diff --numstat: 1 added, 1 deleted
+  Ran all test suites matching /releaseWorkflow/i.
+  Failing tests (verbatim bullet headers):
+    ● release-tauri.yml Linux build base (glibc floor -- quick 260929-vyi / 38-W05) › the Ubuntu system-dependency step installs exactly the jammy-censused package set
+  Tests:       1 failed, 108 passed, 109 total
+  Exit code: 1
+  Expected set (c) exactly: MATCHED.
+  Restore: same command; `git diff --quiet -- .github/workflows/release-tauri.yml` exit 0.
+  Tree state after C: `git status --porcelain -- .github src` printed nothing.
+
+Which arm turns each new test red
+  Test                                                              | Red arm
+  (a) one Linux leg, builds on ubuntu-22.04                         | Arm A
+  (b) apt step guarded on exactly the Linux leg's platform          | Arm B
+  (c) apt list equals the jammy-censused set                        | Arm C
+  (d) swatinem/rust-cache keyed on matrix.platform                  | Arm A
+  Every new test has a recorded red arm; none is a green check proving nothing.
+  git stash was never used.

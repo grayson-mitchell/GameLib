@@ -1,0 +1,8 @@
+WINDOW_ID=58720259
+WINDOW_AT_MS=517
+LAUNCH_PID=98818
+EXE=/home/graysonmitchell/GameLib/src-tauri/target/debug/gamelib-shell
+DMABUF_VAR=absent
+SET=LD_PRELOAD=/tmp/claude-1000/-home-graysonmitchell-GameLib/0c31a6a4-d4f5-4405-ba0c-0cf7075a8d8b/scratchpad/shim/noinspector.so
+UNSET=
+ARGS=

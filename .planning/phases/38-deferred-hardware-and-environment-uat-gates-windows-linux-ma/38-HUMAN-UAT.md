@@ -3,13 +3,20 @@ status: false
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 source: ["38-VERIFICATION.md", "34.1-HUMAN-UAT.md items 1a and 7", "34.10-VERIFICATION.md deferred[0]"]
 created: 2026-08-22
-updated: 2026-09-28
+updated: 2026-09-30
 sessions:
   - "Session 1 -- 2026-09-23, Windows 11, tauri dev build `6ad1d7cd9` -- 38-S06 PASS; 38-S08 FAIL row 4; four new defects filed; controller leg not run (blocking defect fixed afterward)"
   - "Sitting 2 -- 2026-09-23, Windows 11, tauri dev build `2cf170c14` -- 38-S08 re-scored PASS on all four checks"
   - "Sitting 3 -- 2026-09-25, Windows 11, tauri dev build `cdf07ee95`/`959e5c01b` -- eight controller items (38-C01a, 38-C01b, 38-C02, 38-C03, 38-C04a, 38-C05, 38-C06, 38-C08) all discharged PASS"
   - "Sitting 4 -- 2026-09-26, Windows 11, INSTALLED shell v0.7.0 (built 2026-09-24 07:34 from `5b6201e26`) -- attribution INFERRED from commit dates, not measured; label corrected by quick 260926-bsl -- 38-W01 PASS, 38-W02 PASS, 38-W03 FAIL accepted by operator decision"
   - "Sitting 5 -- 2026-09-26, Windows 11, INSTALLED shell v0.7.0 (built 2026-09-24 07:34 from `5b6201e26`) with the repo build/main sidecar; label corrected by quick 260926-b5r -- 38-S02 PASS, 38-W06 FAIL accepted; 38-S14 sub-case (a) PASS but item stays OPEN; 38-W04 not run (no CI artifact exists); four defects filed"
+  - "Sitting 6 -- 2026-09-28, Linux (Pop!_OS 22.04, X11), tauri dev build `54a931199`, identity proven by PID -- 38-S04 PASS"
+  - "Sitting 7 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `ecd214a6f`, identity proven by PID -- 38-S10 PASS"
+  - "Sitting 8 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `4a99e1d6b`, identity proven by PID -- 38-S12 PASS"
+  - "Sitting 9 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `55aa0d54b`, identity proven by PID -- 38-S16 Linux/row-7 half PASS, item stays OPEN (Windows/row-5 half not scored)"
+  - "Sitting 10 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 35942560790 (`19b5e3a9e`), signature not verified -- 38-W05 FAIL (GLIBC_2.39 not found, exit 1 at 65 ms, no window), item stays OPEN"
+  - "Sitting 11 -- 2026-09-30, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 36556473399 (`b48e8948f`, ubuntu-22.04 build), signature not verified -- 38-W05 CONFOUNDED (window at 270 ms then SIGABRT at 364 ms, EGL_NOT_INITIALIZED on a host with a broken NVIDIA driver/library pair; glibc failure of sitting 10 cleared), item stays OPEN"
+  - "Sitting 12 -- 2026-09-30, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 36556473399 (`b48e8948f`, ubuntu-22.04 build), signature not verified, NVIDIA driver/library matched at launch -- 38-W05 PASS (direct launch with no workaround, window at 265 ms, 11/11 samples, bundled sidecar alive, interactive Library UI, 0 glibc/EGL lines), discharged"
 ---
 
 ## Current Test
@@ -30,7 +37,25 @@ reasons unrelated to any of these sittings — see the `## Retired` section's no
 staleness. On 2026-09-28, quick `260928-raq` — which was NOT a sitting, no hardware was touched —
 discharged `38-E02` as ANSWERED on spike evidence, so the ledger now holds 10 open items, 16
 discharged, 10 retired. See the "Spike evidence — 2026-09-28 (not a sitting)" section below for
-the artifacts.]
+the artifacts. Later the same day, Sitting 6 — the FIRST LINUX SITTING — discharged `38-S04` PASS,
+so the ledger now holds 9 open items, 17 discharged, 10 retired; see the "## Sitting 6" section
+below for the artifacts. Sitting 7, the second Linux sitting, scored `38-S10` PASS; the ledger now
+holds 8 open items, 18 discharged, 10 retired; see the "## Sitting 7" section below. Sitting 8, the
+third Linux sitting, scored `38-S12` PASS, so the ledger now holds 7 open, 19 discharged and 10
+retired items; see the "## Sitting 8" section below. Sitting 9, the fourth Linux sitting, scored
+`38-S16`'s Linux/row-7 half PASS WITHOUT discharging it (the item also needs its Windows/row-5
+half), so the ledger still holds 7 open, 19 discharged and 10 retired items; see the "## Sitting
+9" section below. Sitting 10, the fifth Linux sitting, smoke-launched the CI-produced AppImage
+(`38-W05`) and scored it FAIL (the loader rejected it with `GLIBC_2.39` not found on this
+glibc 2.35 host; exit 1 after 65 ms, no window), so the ledger still holds 7 open, 19 discharged
+and 10 retired items and `38-W05` stays open; see the "## Sitting 10" section below. Sitting 11, the sixth Linux
+sitting, re-ran it against the ubuntu-22.04-built AppImage from run `36556473399` and scored it
+CONFOUNDED (the loader accepted it, a window appeared at 270 ms, then the shell aborted with
+`EGL_NOT_INITIALIZED` 364 ms after spawn on a host whose NVIDIA driver and library versions
+mismatch), so the ledger still holds 7 open, 19 discharged and 10 retired items and `38-W05` stays
+open; see the "## Sitting 11" section below. Sitting 12, the seventh Linux sitting, re-ran it with the host's NVIDIA mismatch cleared and scored it
+PASS (a direct launch with no workaround, a window at 265 ms, 11 of 11 samples, the bundled sidecar alive and an interactive Library
+UI at t=30), so the ledger now holds 6 open, 20 discharged and 10 retired items; see the "## Sitting 12" section below.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -696,3 +721,624 @@ then from 11 to 10 once `38-E02` discharged.
 **`38-VERIFICATION.md` is authoritative**, exactly as the note above this section already says —
 this section is narrative and artifact pointers only, and records nothing that was not also
 moved in that file.
+
+## Sitting 6 — 2026-09-28, Linux (Pop!_OS 22.04, X11), `pnpm tauri:dev` at `54a931199`
+
+**This is the FIRST LINUX SITTING Phase 38 has ever had.** The 2026-09-28 spike-evidence section
+above explicitly was not a sitting (no hardware was booted); this one is: `pnpm tauri:dev` was
+launched live on this Linux host under a synthetic X11/`xdotool`/`mss` capture instrument, and
+one item, `38-S04`, was scored.
+
+**Conditions.** Build identity was PROVEN, not labelled: the GameLib window's `_NET_WM_PID`
+resolved through `/proc/<pid>/exe` to `src-tauri/target/debug/gamelib-shell`, and
+`git status --porcelain -- src src-tauri package.json` was empty at launch (HEAD `54a931199`).
+This sitting ran under the operator's REAL `HOME`, DECLARED as a real-profile arm under CLAUDE.md's
+two-profile rule (half 2): `shell.openExternal(steam://install/<id>)` hands off through `xdg-open`
+to the real Steam client, and a faked `HOME` would have bootstrapped a second Steam install into a
+fake profile instead of using the operator's actual, signed-in Steam session. This was the FIRST
+GameLib Tauri run on this host, and it created `~/.config/GameLib/` as real, persistent profile
+state — left in place for the remaining Linux items (`38-S10`, `38-S12`, `38-S16`'s Linux half).
+Native Steam installs were OFF: `~/.config/GameLib/config.json` key
+`defaultSettings.enableSteamNativeInstall` was already `false` at session start (the runtime
+default), so no toggle was needed. The lowercase `~/.config/gamelib/` directory belongs to a
+stale, unrelated Electron-era deb build and is not read by this build. The Steam desktop client
+was confirmed running and signed in (`pgrep -x steam`) before the scored click, after the operator
+completed Task 2's sign-in — the GameLib in-app Steam login showed "Connected" and the Library
+listed 381 games including many Steam titles. The Linux log sink is
+`~/.local/state/GameLib/logs/gamelib.log` (NOT the `pnpm tauri:dev` terminal — sidecar log lines
+never reach it, per the live-gate contract).
+
+**Positive control.** Run BEFORE the scored click, per Test 4 (absence-observability), via the
+`SteamInstallCaret` menu's "Install with options…" item on the WazHack game page. Max
+changed-pixel fraction across the burst was 0.1090 (>= the 0.10 threshold), and the max-diff frame
+was viewed and confirmed to show the `contentLightNotice` dialog ("This installs through Steam's
+own client, so there's nothing to choose here..."). The dialog was closed via its own X button and
+a follow-up grab confirmed it was gone. This control proves the absence instrument CAN see a
+GameLib dialog before any scored observation is trusted; it does not itself score `38-S10` or
+`38-S16`.
+
+**The result — `38-S04` PASS.** Target: WazHack, Steam appId `264160` — owned (377 hours logged
+playtime), visible in the Library, and confirmed NOT installed (`appmanifest_264160.acf` absent
+from all four `libraryfolders.vdf` library paths on this host, matching the app's own
+`steam_library.json` cache, `is_installed: false`). The scored click landed on the PRIMARY half of
+the Install button (the button face, not the caret) at absolute coordinates (1778, 941), captured
+by a 6-second burst at fps=18.6, median inter-frame interval 50.6ms. The arming log line, read from
+`gamelib.log` at 07:27:34 — matching the click's epoch millisecond to the second — was:
+
+`SteamGame: delegating install for appId 264160 via steam://install/264160`
+
+(`src/backend/storeManagers/steam/games.ts:1194-1197`, reachable only when
+`isSteamNativeInstallEnabled()` is false at `:1185`). Its presence proves the no-target branch
+(`InstallGameModal.ts:245-253`) ran and the degrade branch (`:275`, the only quick-install route to
+a dialog) did not — the two are mutually exclusive at `:263-275`. No ERROR line and no `34.13
+installSteamGame: the install dispatch REJECTED` line appeared anywhere in the click-to-+20s
+window. The maximum changed-pixel fraction across the entire scored burst was 0.0209 — well under
+the flag threshold of half the positive control (0.0545) — and zero frames were flagged. Every
+frame VIEWED (the pre-click frame, the max-diff frame, the +10s still and the +20s still) shows
+only GameLib's own in-place "Installing…" progress-bar and button-label state change on the
+WazHack game page. No dialog, modal, overlay, picker, error dialog, or any partial or flashing one
+ever appeared.
+
+**Window attribution.** `clients` dumps taken at baseline, mid-burst, +10s and +20s recorded an
+IDENTICAL window-id set throughout — zero new top-level windows at any point. The only
+non-desktop windows present the whole time were the GameLib window itself (PID `23810`, this
+sitting's proven-identity build) and a PRE-EXISTING Steam client window (`steamwebhelper`, PID
+`34245`, `WM_CLASS` `"steamwebhelper","steam"`, title `"Steam"`). Per D-18 and the objective's
+SCORED SURFACE rule, that Steam-client window is the expected handoff — recorded here, and NOT
+scored against the item. No appmanifest for appId `264160` appeared at +20s+ on the Steam side
+either, so no download started and nothing needed cancelling.
+
+**Scope note.** With native installs OFF, the primary-half click never evaluates
+`resolveSteamSectionGating`. This PASS observes the Linux quick-install DISPATCH — the no-target
+branch, `installSteamGame`, `shell.openExternal` through `xdg-open` — not the
+`platformRow: 'absent'` absent-row render, which belongs to `38-S10` and to `38-S16`'s Linux half.
+
+**Honest-limits paragraph.** The measured ~50ms frame interval bounds the shortest flash this
+burst could see; a dialog that opened and closed faster than that would not have been caught. The
+structural argument from the arming-line/degrade-branch mutual exclusivity covers the quick-install
+dialog path specifically, and says nothing about an unrelated overlay elsewhere in the app. The
+evidence here is entirely machine-side — no operator eyeball was collected during the scored click
+itself, unlike sitting 5's `38-S02`/`38-W06`.
+
+**`38-S10`, `38-S12` and `38-S16`'s Linux half were NOT scored this sitting.** The positive
+control incidentally exercised the row-7 dialog surface those items cover, but nothing was
+recorded against them; the instrument built for this sitting (`linux_sitting_capture.py`) is
+reusable for them as cheap next candidates.
+
+**Artifacts.** `.planning/quick/260928-tvk-run-live-linux-sitting-for-phase-38-item/evidence/`:
+`positive-control-max.png`, `scored-pre-click.png`, `scored-max-diff.png`, `scored-plus10s.png`,
+`scored-plus20s.png`, `clients-new-windows.txt`, `log-excerpt.txt`. Capture instrument:
+`.planning/quick/260928-tvk-run-live-linux-sitting-for-phase-38-item/linux_sitting_capture.py`.
+quick `260928-tvk`.
+
+## Sitting 7 — 2026-09-29, Linux (Pop!_OS 22.04, X11), `pnpm tauri:dev` at `ecd214a6f`
+
+**This is the SECOND LINUX SITTING Phase 38 has had.** One item, `38-S10`, was scored: the
+section-gating matrix row-7 absent arm (native Steam installs OFF).
+
+**Conditions.** Build identity was re-proven, not labelled: the GameLib window's `_NET_WM_PID`
+(115840, after one relaunch — see the deviation note below) resolved through `/proc/115840/exe` to
+`src-tauri/target/debug/gamelib-shell`, and `git status --porcelain -- src src-tauri package.json`
+was empty at launch (HEAD `ecd214a6f`). DECLARED REAL-PROFILE ARM (CLAUDE.md two-profile rule,
+half 2), carried over from sitting 6: this sitting ran under the operator's real `HOME`, continuing
+sitting 6's persistent `~/.config/GameLib/` profile and its already-signed-in Steam session, which
+Task 1's live check confirmed was still usable (the Library listed 381 games including several
+owned-but-not-installed titles offering Install) — the Task 2 checkpoint therefore SELF-SKIPPED,
+no operator pause was needed. Unlike sitting 6, the `shell.openExternal` leg was NOT exercised this
+sitting, because this item only opens and closes the dialog and never clicks Install. Native Steam
+installs were OFF: `~/.config/GameLib/config.json` key `defaultSettings.enableSteamNativeInstall`
+was `false` at session start (the runtime default), corroborated a second way by the rendered
+notice string itself (see below). Of the 4 registered `libraryfolders.vdf` paths, only 2 currently
+exist on disk (`~/.steam/debian-installation` and `/mnt/PopGames/SteamLibrary`) — a `38-S12`
+readiness note, not scored here.
+
+**Deviation — one relaunch, unrelated to GameLib.** Partway through Task 3, clicking the target
+game's cover froze the captured window region into a static, byte-identical blurred frame across
+repeated grabs and mouse moves. A full-desktop screenshot resolved it: the X11 session had
+auto-locked from idle time during the long file-reading phase between Task 1 and Task 3
+(`loginctl … LockedHint=yes`), showing the GDM/GNOME lock-screen curtain over every window,
+including GameLib's. This was NOT a WebKitGTK rendering defect. The dev build was relaunched once
+under `WEBKIT_DISABLE_DMABUF_RENDERER=1` before the lock was diagnosed (a deviation that turned out
+unnecessary but harmless — the new build's identity was re-proven the same way), the operator was
+asked to unlock the machine, and execution resumed cleanly once `loginctl` reported
+`LockedHint=no` and a fresh grab showed normal Library rendering again.
+
+**Target.** 7 Days to Die, Steam appId `251570` — owned, visible in the Library, confirmed NOT
+installed (no `appmanifest_251570.acf` in either currently-mounted library path). WazHack (`264160`,
+sitting 6's target) was **disqualified**: its own sitting-6 PASS click had, by this sitting, gone on
+to complete a real Steam download, so `appmanifest_264160.acf` now exists for it. Route: the
+`SteamInstallCaret` menu beside Install on the game page, then "Install with options…".
+
+**The five region facts — all five scored INDEPENDENTLY, on two instruments.**
+
+| Region | Expected | Visual (crop) | Text-tree (in-dialog count) | Verdict |
+| --- | --- | --- | --- | --- |
+| Platform row | ABSENT | No `SelectField` (`platformPick`) anywhere in the dialog | 0 | ABSENT — PASS |
+| Library dropdown | ABSENT | No `SelectField` (`steamLibraryPick`); `COMBO_BOX_COUNT`=0 | 0 | ABSENT — PASS |
+| Wine section (3 sub-signatures) | ABSENT | No WineSelector labels, no `sharedBottleNotice`, no "Checking install options…" row | 0 | ABSENT — PASS |
+| Free-space line | ABSENT | Nested in the (absent) library dropdown's `afterSelect`; never rendered | 0 | ABSENT — PASS |
+| Content-light notice | PRESENT | `.infoBox` reads the `contentLightNotice` string verbatim | 1 | PRESENT — PASS |
+
+**Notice-string arming note.** The rendered notice was `gamelib:steam.install.contentLightNotice`
+(the native-OFF arm, containing "Turn on native Steam installs in Settings"), NOT
+`contentLightSingleLibraryNotice` (which would contain "only one Steam library on this system").
+This corroborates native installs OFF as the dialog itself saw it, independent of the `config.json`
+read.
+
+**Header-icons note.** Two decorative platform icons (Linux, Windows) render beside the dialog
+title via `InstallModal__platformIcon` — these are NOT the platform row and were recorded as seen,
+not scored.
+
+**Transient check.** Burst fps=9.3, median interval 95.6ms (bounding the shortest flash the
+instrument could see to roughly 96ms). `diff --flag 0.005` over 35 settle-diff frames (the settled
+dialog plus every post-click burst frame) flagged 5 frames, ALL within the 505ms MUI Slide
+open-transition window (max_fraction=0.3605 at the click-epoch frame), and 0 flagged after. Every
+flagged frame was individually viewed — none showed a platform row, library dropdown, wine section,
+free-space line, or "Checking install options…" row at any point; the only visible change across
+flagged frames was the dialog's own slide-in position.
+
+**Text-instrument validity — VALID.** Positive control (dialog open): at least one dialog-role node
+existed, `title` count 3 and `content_light_off` count 1 in-dialog, and the dialog-subtree role
+histogram included a push button named "INSTALL". Negative control (dialog closed, taken before the
+scored click): 0 dialog-role nodes anywhere, so trivially no dialog subtree carrying
+`content_light_off`. Both controls held, so the instrument counts above are trusted at face value.
+
+**The result — `38-S10` PASS.** All five checked independently on both instruments; native OFF
+proven twice; the whole dialog was in view (title, close X, body, footer Install button, no
+scrollbar); no transient render. Moved to `human_verification_discharged` in `38-VERIFICATION.md`
+(9 → 8 open, 17 → 18 discharged); `audit-uat` `by_phase["38"]` moved 9 → 8 and `total_items` 428 →
+427.
+
+**Row-7 arm scope.** Only the native-OFF arm of row 7 was run this sitting, per the objective's own
+ROW-7 ARM SCOPE note — this host currently mounts 2 of the 4 registered Steam library paths, so a
+native-ON arm here would very likely land on row 8 (`38-S12`), not row 7.
+
+**Honest-limits paragraph.** The free-space line check is an independent observation but not an
+independent code path (`freeSpaceLine === libraryDropdown` by construction). The wine-section
+verdict confirms a by-construction false (`wineSection` requires `isMac`). `hostPlatform` `'linux'`
+is established by source and by the host, not read from the running webview, though the observed
+absent platform row itself excludes `darwin`/`win32`. The 95.6ms median burst interval bounds the
+shortest detectable flash. The text instrument sees what WebKitGTK exposes to AT-SPI, not the DOM
+directly. There was no operator eyeball. The `shell.openExternal` leg was not exercised this
+sitting.
+
+**`38-S12`, `38-S14` and `38-S16`'s Linux half were NOT scored this sitting.** The capture and
+AT-SPI probe instruments are both reusable as-is for them as cheap next candidates.
+
+**Artifacts.**
+`.planning/quick/260929-ata-run-phase-38-item-38-s10-live-on-linux-h/evidence/`:
+`pre-open.png`, `dialog-settled.png`, `dialog-crop.png`, `region-checks.txt`,
+`atspi-dialog-subtree.txt`, `log-excerpt.txt`, `burst-summary.txt`, `baseline.env`. Capture
+instrument (reused as-is):
+`.planning/quick/260928-tvk-run-live-linux-sitting-for-phase-38-item/linux_sitting_capture.py`.
+New text-tree instrument:
+`.planning/quick/260929-ata-run-phase-38-item-38-s10-live-on-linux-h/atspi_dialog_probe.py`.
+quick `260929-ata`.
+
+## Sitting 8 — 2026-09-29, Linux (Pop!_OS 22.04, X11), `pnpm tauri:dev` at `4a99e1d6b`
+
+**This is the THIRD LINUX SITTING Phase 38 has had.** One item, `38-S12`, was scored: the
+section-gating matrix row-8 hasChoice arm (native Steam installs ON, more than one registered
+library).
+
+**Conditions.** Build identity was proven, not labelled: the GameLib window's `_NET_WM_PID`
+(213707) resolved through `/proc/213707/exe` to `src-tauri/target/debug/gamelib-shell`, and
+`git status --porcelain -- src src-tauri package.json` was empty at launch (HEAD `4a99e1d6b`).
+DECLARED REAL-PROFILE ARM (CLAUDE.md two-profile rule, half 2), justified for THIS item
+specifically: row 8's library conjunct IS the operator's real Steam state — the replica and the
+app both read the real `libraryfolders.vdf` through the real `defaultSteamPath`
+(`~/.steam/steam`) and the real mount state of the drives it names, and a fake HOME has no
+`config.json` and no `~/.steam`, so `getSteamLibraries()` would take its unfiltered early return,
+give a count of 1, and row 8 could never arm at all. Unlike sitting 6, the `shell.openExternal`
+leg was NOT exercised this sitting either, because this item never clicks Install; nothing was
+dispatched and nothing was installed. The screen was LOCKED at the start of this sitting
+(`loginctl … LockedHint=yes`, matching the state at planning time) — Task 1's own Step 0 stopped
+before launching anything and raised a blocking human-action checkpoint; the operator confirmed
+"screen is unlocked," which was independently re-verified (`LockedHint=no`) before anything was
+launched. An idle inhibitor (`gnome-session-inhibit --inhibit idle`) ran for the duration and was
+killed at cleanup. Task 2's checkpoint SELF-SKIPPED: a live check found Steam sign-in already
+usable (the Library listed 381 games including 7 Days to Die, owned and not installed) and the
+replica already reported `COUNT=2`, so no operator pause was needed for either precondition.
+
+**ARMING.** `enableSteamNativeInstall` was `false` at session start (unchanged through Task 1 and
+Task 2), toggled to `true` through the Settings UI as late as possible (Task 3 step A, immediately
+before the scored open), read back as `true`, and restored to `false` through the same UI toggle
+immediately after scoring, read back again to confirm. `steam_library_replica.cjs` (new, this
+sitting — a line-for-line, read-only replica of `getSteamLibraries()`/`listSteamLibraryTargets()`)
+reported `COUNT=2` both times it ran (Task 1 and immediately pre-open): the `/usr/share/steam`
+sentinel MISSING, `~/.steam/debian-installation` EXISTS (primary), the two external-drive paths
+MISSING, `/mnt/PopGames/SteamLibrary` EXISTS. **No library registration was needed to arm this
+item on this host — contrary to the item's own `blocked_by:` text** (preserved verbatim in the
+ledger as history): two of the four registered paths already existed on disk, already exceeding
+the `>1 library` threshold `hasChoice` reads.
+
+**Target.** 7 Days to Die, Steam appId `251570` (continuity with sitting 7) — owned, visible in
+the Library, confirmed NOT installed in either existing library. Route: the `SteamInstallCaret`
+menu beside Install on the game page, then "Install with options…" — its live AT-SPI-derived
+click position, not a screenshot-crop estimate (see the deviation note below).
+
+**The four region facts — all four scored INDEPENDENTLY, on two instruments.**
+
+| Region | Expected | Visual (crop) | Text-tree (in-dialog count) | Verdict |
+| --- | --- | --- | --- | --- |
+| Platform row | ABSENT | No `SelectField` (`platformPick`) anywhere in the dialog; only two decorative header icons, not scored | 0 | ABSENT — PASS |
+| Library dropdown | PRESENT | `SelectField` showing `/home/graysonmitchell/.steam/debian-installation (default)` | 1 (combo box) | PRESENT — PASS |
+| Wine section (3 sub-signatures) | ABSENT | No WineSelector labels, no `sharedBottleNotice`, no "Checking install options…" row | 0 | ABSENT — PASS |
+| Free-space line | PRESENT | "Space Available: 269.17 GiB free of 374.57 GiB", matching `df -h` (270G avail of 375G) | 0 (carve-out, see below) | PRESENT — PASS |
+
+**Free-space-line text-tree carve-out.** The text instrument's in-dialog count for this one fact
+was 0 despite the text existing verbatim on a WebKitGTK "page" role node the probe does not
+classify as inside the dialog subtree (full explanation and node dump in
+`atspi-dialog-subtree.txt`). Per the plan's own carve-out, a PRESENT region visible in the pixels
+with an in-dialog text-tree count of 0 on an otherwise-VALID instrument is NOT a fail of the item;
+it is scored on the visual instrument alone, and stated here as an honest limit.
+
+**Arming-corroboration notes.** Neither `contentLightNotice` nor `contentLightSingleLibraryNotice`
+rendered at any point (agreeing with `contentLightNotice = !isMac && !libraryDropdown`, false here
+since the dropdown is present). The library select's option list was opened once and read exactly
+the replica's two EXISTS paths, in the replica's order, the first suffixed "(default)" — an exact
+match to the replica. Closing the menu by re-clicking the already-selected option changed nothing
+(value and free-space line unchanged).
+
+**Header-icons note.** Two decorative platform icons (Linux, Windows) render beside the dialog
+title via `InstallModal__platformIcon` — these are NOT the platform row and were recorded as seen,
+not scored.
+
+**Transient check.** Burst fps=10.8, median interval 83.3ms. `diff --flag 0.005` over the settle
+set (the settled dialog plus every post-click burst frame) flagged 3 of 60 frames, ALL within the
+~500ms MUI Slide open-transition window (max_fraction=0.1902 at the first dialog-visible frame,
++233ms after the click; the next frame, +555ms, is unflagged), and 0 flagged after. Every flagged
+frame was individually viewed and classified EXPECTED LATE MOUNT: dialog first visible (+233ms,
+dropdown empty, free-space line absent), dropdown populated (+342ms, free-space line still
+absent), free-space line appeared (+463ms, matching the settled state). No platform row, wine
+sub-signature, or a region that vanished after appearing, was ever seen.
+
+**Text-instrument validity — VALID.** Positive control (dialog open): 1 dialog-role node existed,
+`title` in-dialog count 3, and the dialog-subtree role histogram included a push button named
+"INSTALL". Negative control (dialog closed, taken before the scored click, on the same game page):
+0 dialog-role nodes, and 0 in-dialog hits for `library_dropdown`/`free_space_line`. Both controls
+held, so the instrument's counts are trusted at face value, subject to the one carve-out above.
+
+**Methodology deviation, disclosed — a capture-region offset, corrected mid-sitting.**
+`linux_sitting_capture.py`'s own `find_window()` (and therefore its `grab`/`burst`/`selftest`)
+sourced a WRONG client-window origin for the whole first part of this sitting:
+`xdotool getwindowgeometry --shell` reported `x=60,y=164`, a stable but incorrect `(+10,+45)`
+offset from the window's true rendered top-left. This was proven two independent ways: `xwininfo`'s
+"Absolute upper-left" read `(50,119)`, stable across repeated reads; and an AT-SPI-derived click at
+the true screen position of the Settings tab (which the wrong region would have placed entirely
+outside the captured window) landed on and activated the real tab. A narrow, read-only correction
+wrapper, `capture_region_fix.py` (new, this sitting, this quick task's own directory — **not** a
+modification of the shared instrument), sourced the correct origin from `xwininfo` for every
+capture and click used in scoring from Task 1 onward; `linux_sitting_capture.py`'s own `diff`
+subcommand was still reused unchanged, since it only reads already-saved frames by path and never
+calls `find_window()`. Full detail: `region-offset-deviation.txt`. Root cause not conclusively
+identified — most likely a stale coordinate translation left over from this sitting's screen-lock
+cycle; not reproduced against sittings 6 or 7's own captures, out of scope to re-verify
+retroactively.
+
+**A second deviation, in-session:** the first attempt to click "Install with options…" used
+screenshot-crop-estimated coordinates and missed the menu item, dismissing the menu with no dialog
+opening (frames discarded, not committed). The retry used the live AT-SPI-derived center of the
+menu item and succeeded on the first click.
+
+**The result — `38-S12` PASS.** All four checked independently on both instruments (one carve-out,
+recorded above and not treated as a fail); arming proven independently of the dialog at the scored
+moment (config `true`, replica `COUNT` 2) and corroborated by the dialog itself (option list, no
+content-light notice); the whole dialog was in view (title, close X, body, footer Install button,
+no scrollbar); no scored transient. The native-install setting was restored to its original value
+and the restore was read back and confirmed. Moved to `human_verification_discharged` in
+`38-VERIFICATION.md` (8 → 7 open, 18 → 19 discharged); `audit-uat` `by_phase["38"]` moved 8 → 7 and
+`total_items` 427 → 426.
+
+**Honest-limits paragraph.** The free-space-line text-tree carve-out above.
+`freeSpaceLine === libraryDropdown` by construction, so it is a genuine second observation but not
+an independent gating path. The wine-section verdict confirms a by-construction false
+(`wineSection` requires `isMac`). `hostPlatform` `'linux'` is established by source and by the
+host, not read from the running webview, though the observed absent platform row itself excludes
+`darwin`/`win32`. `libraryCount` was corroborated by the replica and the rendered option list, not
+read from the webview directly. Only the default library selection was observed; per-library free
+space (D-08) and the two unmounted registered libraries were not exercised. The 83.3ms median
+burst interval bounds the shortest detectable flash. The text instrument sees what WebKitGTK
+exposes to AT-SPI, not the DOM directly. There was no operator eyeball beyond the unlock
+confirmation. Native installs were ON only for the scored step and were restored, read back and
+confirmed.
+
+**`38-S14` and `38-S16`'s Linux half were NOT scored this sitting.**
+
+**Artifacts.**
+`.planning/quick/260929-hgm-run-phase-38-item-38-s12-live-on-linux-h/evidence/`: `pre-open.png`,
+`dialog-settled.png`, `dialog-crop.png`, `dropdown-open.png`, `settings-native-on.png`,
+`settings-native-restored.png`, `region-checks.txt`, `atspi-dialog-subtree.txt`,
+`log-excerpt.txt`, `burst-summary.txt`, `library-replica.txt`, `baseline.env`,
+`region-offset-deviation.txt`, `task2-checkpoint-skip.txt`. Capture instrument (reused as-is):
+`.planning/quick/260928-tvk-run-live-linux-sitting-for-phase-38-item/linux_sitting_capture.py`.
+Text-tree instrument (reused as-is):
+`.planning/quick/260929-ata-run-phase-38-item-38-s10-live-on-linux-h/atspi_dialog_probe.py`. New
+arming instrument: `steam_library_replica.cjs`. New capture-region correction (this sitting only):
+`capture_region_fix.py`. quick `260929-hgm`.
+
+## Sitting 9 — 2026-09-29, Linux (Pop!_OS 22.04, X11), `pnpm tauri:dev` at `55aa0d54b`
+
+**This is the FOURTH LINUX SITTING Phase 38 has had.** It scored the LINUX/ROW-7 HALF of one item,
+`38-S16`. It is NOT a discharge: `38-S16` is scored on BOTH matrix row 5 (Windows) and row 7
+(Linux), its own `prior_state` says a single-branch run does not discharge it, and the
+Windows/row-5 half is still NOT SCORED (sitting 1). The item therefore stays in `human_verification`
+with one new dated key, the treatment `38-S14` received in sitting 5. The ledger is unchanged at 7
+open, 19 discharged and 10 retired.
+
+**Conditions.** The sitting crashed the operator's machine once mid-Task-1 (evidence files and the
+probe survived untracked) and was resumed from disk after a fresh baseline re-measure. Build identity
+was proven: the GameLib window's PID 8091 resolved through `/proc/8091/exe` to
+`src-tauri/target/debug/gamelib-shell`, and `git status --porcelain -- src src-tauri package.json`
+was empty. DECLARED REAL-PROFILE ARM (two-profile rule, half 2): the item needs the operator's real
+Steam library registration, mount state and signed-in session, so a fake HOME would give the wrong
+library count; the justification is the same one sitting 8 recorded. Nothing was dispatched and
+Install was never clicked. The screen was unlocked throughout (`LockedHint=no`) and an idle
+inhibitor ran for the duration and was killed at cleanup. The Steam client state was not examined.
+Capture geometry: `xdotool` and `xwininfo` disagreed by (+10,+45) on all three readings, so
+`capture_region_fix.py` was used and confirmed by a viewed grab against the Settings tab's AT-SPI
+extent. Instruments: `notice_copy_probe.py selftest` passed all seven cases against the live
+catalogue; the live copy tracer read the Settings toggle label EXACT; the DOM route probe found no
+Inspect Element item (the Settings page shows the app's own context menu), so `DOM_ROUTE=none` and
+the container verdicts rest on the STRUCTURAL basis.
+
+**Mount state and ARMING.** The operator had unmounted the games drive at 21:19; the reboot after
+the crash remounted it via fstab, so the sitting re-armed: the operator unmounted it again
+(authenticated; the device node had moved from `nvme0n1p3` to `nvme1n1p3`, same UUID). THE TRAP: the
+`libraryfolders.vdf` registers this same drive twice, as `/mnt/PopGames/SteamLibrary` and as the
+`/media/...` udisks path, so the remount must be checked by TARGET, not count; Task 4 does that in
+`evidence/remount.txt`. Off: `enableSteamNativeInstall` read `false` (replica `COUNT=2`). On: toggled
+through the Settings UI, read back `true`, replica `BRANCH: PARSED`, `COUNT=1`, the only EXISTS path
+`~/.steam/debian-installation`, `findmnt` empty. Restored through the UI and read back `false`. Task 2
+self-skipped: the screen was unlocked and Steam sign-in was usable (381 games). Target: 7 Days to Die,
+appId `251570`, confirmed not installed.
+
+**The catalogue.** S = `steam.install.contentLightSingleLibraryNotice`, 122 characters, U+0027 at
+5 and 55, U+2014 at 81. O = `steam.install.contentLightNotice`, 185 characters, U+0027 at 27 and
+50. The `t()` defaults at `SteamDialog/index.tsx:542`/`:546` are byte-identical to the catalogue.
+
+| Fact | Expected | Text-tree compare | Container basis and evidence | Visual | Verdict |
+| --- | --- | --- | --- | --- | --- |
+| F1 off-copy | O | EXACT, 185 chars; S is MISMATCH; alt hits 0 | n/a | O shown, English | PASS |
+| F2 off-container | `div.infoBox` | n/a | STRUCTURAL: one render site in the `infoBox` at `:531`, 0 heading nodes, 0 ThirdParty hits | rounded fill, inline warning icon, no border, checkmark or header | PASS |
+| F3 on-copy | S | EXACT, 122 chars; O is MISMATCH; alt hits 0 | n/a | S shown, English | PASS |
+| F4 on-container | `div.infoBox` | n/a | STRUCTURAL, same evidence | same shape | PASS |
+
+**Arming corroboration and anomalies.** No library dropdown in either dialog
+(`COMBO_BOX_COUNT` 0), and the other copy was absent in both. Both dialog-closed negative controls
+read 0/0. Anomalies, none scored: closing the dialog with its header X also clicked the IGDB row
+beneath it and opened a GameLib child window (closed by its own X, off sub-branch); GNOME Settings
+surfaced over GameLib once and one click selected its "Region & Language" item without changing
+anything; the first ON navigation opened another game by mistake and nothing was done there.
+
+**Transient and late-mount check.** OFF: 9.2 fps, median 96.8ms; ON: 9.4 fps, median 98.6ms. Every
+flagged frame fell inside the ~510-540ms MUI slide. In both branches the notice was already present in
+the first dialog-visible frame, with no late mount, no vanish and no wrong-copy frame.
+
+**Result: PASS on all four facts. ITEM STAYS OPEN.** Honest limits: an exact match cannot tell a
+served catalogue value from the identical `t()` default; the container basis is source plus structure,
+not a DOM read; `libraryCount` was corroborated by the replica and the absent dropdown, not read from
+the webview; the native-ON-with-zero-libraries residual was not exercised; the text tree is what
+WebKitGTK exposes to AT-SPI; the burst interval bounds the shortest detectable flash; there was no
+operator eyeball.
+
+The Windows/row-5 half, `38-S14` and every other item were NOT scored. The drive's remount is recorded
+in `evidence/remount.txt`, the record of Task 4's operator-authenticated remount.
+
+Artifacts: `.planning/quick/260929-tmw-run-phase-38-item-38-s16-linux-half-live-on/` (`notice_copy_probe.py`,
+`ledger_inplace_check.cjs`, `evidence/`).
+
+## Sitting 10 — 2026-09-29, Linux (Pop!_OS 22.04, X11), CI AppImage from run `35942560790` at `19b5e3a9e`
+
+**This is the FIFTH LINUX SITTING Phase 38 has had, and the first attempt at `38-W05`.** The item
+asks for the CI-produced Linux AppImage to launch directly, show a window and survive 10 seconds. It
+did none of those on this host: it FAILED, and the item stays in `human_verification`. The ledger is
+unchanged at 7 open, 19 discharged and 10 retired; `38-W05` gained one dated in-place key,
+`sitting_10_2026_09_29`, and nothing else in the frontmatter moved. One todo was filed.
+
+**Artifact and provenance.** PROVEN: `GameLib_0.7.0_amd64.AppImage`, 192399864 bytes, sha256
+`ac849f1b41204358f2d4689e10eda654edab5e25b47344ddc5640a6355b072c9`, downloaded by the operator in a
+logged-in browser from the DRAFT release `v0.7.0`, matched by sha256 against the operator's own
+record; an x86-64 static-pie ELF with the AppImage type-2 magic; the updater key committed at
+`19b5e3a9e` is `9A02F7E0C9FC04C7` and is unchanged at HEAD. NOT PROVEN, and this is a gap the sitting
+did not close: the `.sig` and `latest.json` were not downloaded (offered "download them, or tell me to
+skip the signature check", the operator replied "continue" with the files absent, read as skip), so
+no signature was verified. The binding to run `35942560790` rests on the operator's account alone; the
+commit `19b5e3a9e` is not provable from the bytes (`COMMIT_BYTES_19b5e3a9=0` in `usr/bin`); and it is
+not proven that the file was signed by the CI key at all. `PROVENANCE_OK=operator-accepted`.
+
+**Why the Actions artifact premise was wrong.** The item and the plan said "download from the workflow
+run". `release-tauri.yml` has no upload-artifact step (`releaseWorkflow.test.ts` bans it), and run
+`35942560790` was a tag push whose Linux leg uploaded into the DRAFT release `v0.7.0`. A draft asset
+404s for anonymous users, so the operator's logged-in browser was the only route.
+
+**Conditions.** Every execution ran under a fresh `createFakeHomeProfile()` (disposed, `DISPOSED=yes`),
+with NO real-profile arm: the item's bar does not depend on sign-in state, running a 5-day-old build
+against `~/.config/gamelib` risked a downgrade write, and the Linux single-instance socket lives under
+`$HOME/.config/gamelib`, so a fake HOME also stops a stray instance from absorbing the launch. The
+screen was unlocked (`LockedHint=no`), an idle inhibitor ran and was killed by its process group,
+`NoNewPrivs=0`, libfuse2, `/dev/fuse` and `fusermount` were all present. The static census ran
+BEFORE the launch, extracting with `--appimage-extract` (nothing from AppRun executes):
+`usr/bin/gamelib-shell` needs `GLIBC_2.39`, 50 of 175 ELF files reference glibc above the host's 2.35,
+no libc is bundled, `GLIBCXX` is fine (3.4.30 needed, 3.4.30 on the host). `PREDICTION=GLIBC_INCOMPATIBLE`
+was written to `census.txt` and `session.txt` before the launch.
+
+**Identity and survival.** There is none to report. The launch was direct (`chmod +x` in place, 664
+to 775, then exec; no install step, no extract-and-run) in its own session and process group
+(`SETSID_PROVEN=yes`, pid 163023). The type-2 runtime self-mounted through FUSE, the mount path
+`/tmp/.mount_GameLiDknhOH` appearing in the loader's own messages, and executed `gamelib-shell`,
+which the dynamic loader rejected: `libc.so.6: version GLIBC_2.39 not found (required by
+gamelib-shell)`, then 46 more GLIBC_2.38 / GLIBC_2.36 lines across 37 bundled libraries. The process
+exited with code 1, 65 ms after spawn. No window ever appeared, so there was no window pid, no pgid
+match, no 11-sample survival and no screenshot (`window.png` and `window-t10.png` were never
+produced). `DIRECT_LAUNCH` could not be proven by a mountinfo sighting because the mount was gone
+before the 250 ms poll; the stderr paths are the evidence.
+
+**Exit observation, secondary and not scored.** Not applicable: the shell died before it could spawn
+`gamelib-sidecar`, so no sidecar existed. `NO_ORPHANS=yes`, no process or mount was left, and the
+profile was disposed. A leak check found `~/.local/share/com.gamelib.spike029` newer than the stamp;
+its last write is 0.55 seconds BEFORE the launch and the artifact died at exec, so it belongs to
+another process on the desktop (contents not read), not to this run.
+
+**Result and honest limits.** FAIL, prediction and observation agreed. ONE host (glibc 2.35, X11) and
+ONE artifact with unverified provenance; the commit under gate is `19b5e3a9e`, 330 commits behind
+HEAD, not HEAD; no updater flow; no operator eyeball (there was nothing on screen). This does NOT say
+the AppImage fails on a glibc 2.39 or newer host. It does say the CI Linux leg, built on
+ubuntu-24.04, is not launchable on Ubuntu 22.04-class hosts, which is the todo filed. `38-W04`
+(Windows) was not touched.
+
+Artifacts: `.planning/quick/260929-v1v-run-phase-38-item-38-w05-live-on-linux-s/` (`appimage_provenance.cjs`,
+`appimage_smoke.ts`, `evidence/`).
+
+## Sitting 11 — 2026-09-30, Linux (Pop!_OS 22.04, X11), CI AppImage from run `36556473399` at `b48e8948f`
+
+**This is the SIXTH LINUX SITTING Phase 38 has had, and the second attempt at `38-W05`.** It asked
+whether quick `260929-vyi`'s move of the Linux leg to ubuntu-22.04 fixed sitting 10's failure. Half of
+that is answered: the glibc failure is gone. The item itself is NOT scored PASS or FAIL: the scored
+launch aborted on the host's broken GPU stack, which the pre-registered rule scores CONFOUNDED, and
+`38-W05` stays in `human_verification`. The ledger is unchanged at 7 open, 19 discharged and 10
+retired; `38-W05` gained one dated in-place key, `sitting_11_2026_09_30`, and nothing else in the
+frontmatter moved. Two todos were filed.
+
+**Artifact and provenance.** PROVEN: `GameLib_0.7.0_amd64(1).AppImage`, 195123704 bytes, sha256
+`d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943` (the operator's browser added the
+`(1)` because the sitting-10 file has the same asset name); an x86-64 ELF with the AppImage type-2
+magic; distinct from the sitting-10 artifact by hash and size; the updater key at `b48e8948f` is
+`9A02F7E0C9FC04C7`, unchanged at HEAD; the workflow at the gate commit builds the Linux leg on
+`ubuntu-22.04`; the Downloads file was never modified (mode and mtime identical before and after),
+the launch used a hash-identical scratchpad copy. NOT PROVEN: no signature was verified (`gh` is not
+installed and no `.sig` or `latest.json` was downloaded); no byte carries the run id or the tag, so the
+binding to run `36556473399`, tag `v0.7.0-glibc-test1` and commit `b48e8948f` rests on the operator's
+account and the orchestrator's record (`COMMIT_BYTES_HITS=0`); the ubuntu-22.04 build base is inferred
+from the workflow and from the glibc maximum; the shared draft release is overwritten by every
+throwaway-tag run, so the download timing is consistent with, not proof of, the run.
+`PROVENANCE_OK=operator-accepted`.
+
+**Conditions.** Every execution ran under a fresh `createFakeHomeProfile()` (disposed), with NO
+real-profile arm, for sitting 10's reasons. The screen was unlocked, an idle inhibitor ran and was
+killed by its process group, `NoNewPrivs=0`, libfuse2, `/dev/fuse` and `fusermount` were present. The
+host's GPU stack is broken: `nvidia-smi` reports `Failed to initialize NVML: Driver/library version
+mismatch` (kernel module 580.159.03, userspace 580.173.02, booted 2026-09-29 21:55), the state spike
+029 measured to abort WebKitGTK with `EGL_NOT_INITIALIZED`. The confound rule was pre-registered: the
+scored arm carries no workaround, and the verdict is CONFOUNDED only if the mismatch is present AND the
+EGL/GBM signature is in the scored streams. The static census ran before the launch, with a negative
+control that reproduced sitting 10's `GLIBC_INCOMPATIBLE` (175 ELF files, 50 above host glibc,
+`GLIBC_2.39` in `gamelib-shell`) on the old artifact. New artifact: maximum `GLIBC_2.35`, 0 of 182 ELF
+files above the host, `GLIBCXX` 3.4.30 equals the host, no libc bundled, and one unresolved NEEDED
+soname (`ld-linux-aarch64.so.1`, required by the arm64 `comet` binary, present identically in the
+sitting-10 artifact and not loadable on an x86_64 host). The harness's rule order printed
+`PREDICTION=MISSING_LIBS`; it was read before the launch as expected-to-launch.
+
+**Identity.** The launch was direct (a scratchpad copy made executable, then exec; no install step, no
+extraction, no environment workaround) in its own session and group (pid 369284). The window titled
+exactly `GameLib` appeared 270 ms after spawn, and its `_NET_WM_PID` is 369284, whose executable is
+`/tmp/.mount_GameLidpgdAL/usr/bin/gamelib-shell` on a `fuse.` mount, in the launch process group.
+
+**Survival.** It did not survive. Sample s=0 (12 ms after the window) found the shell alive and the
+window visible; the shell then died with SIGABRT 364 ms after spawn, and samples s=1 through s=10 and
+the t=30 observation found no shell and no window. The scored stderr is three lines: two harmless
+`canberra-gtk-module` messages and `Could not create GBM EGL display: EGL_NOT_INITIALIZED.
+Aborting...`. There were 0 GLIBC, GLIBCXX, missing-library and panic lines. No sidecar was ever seen,
+and no scored screenshot exists (the window was gone before the s=3 grab).
+
+**Diagnostic arm, not scored and not a discharge.** Run once, after the verdict, with
+`WEBKIT_DISABLE_DMABUF_RENDERER=1` and a fresh profile (`SCORED=no`): window at 277 ms, 11 of 11
+samples alive, visible and same-pid, bundled `gamelib-sidecar` (pid 370226, its own group, inside the
+mount) alive at s=10 and t=30, shell alive at t=30, 0 loader, EGL and panic lines, and three
+pixel-identical frames (1575 colours) showing the Library tab with the what's-new dialog over an empty
+library. It would have met every PASS clause except `SCORED` and `EXTRA_ENV`. It cannot change the
+verdict.
+
+**Exit observation, secondary and not scored.** Scored arm: nothing to observe. Diagnostic arm: after
+a SIGTERM to the shell pid alone the sidecar drained on stdin EOF in 0.26 s with no orphan, no launch
+group remainder and no mount left; cold profile only, so it cannot see the `260913-901` class of
+handles that arm under a populated profile.
+
+**Result and honest limits.** CONFOUNDED. ONE host in ONE broken GPU state and ONE artifact with
+unverified provenance; the gate commit `b48e8948f` is HEAD; no updater flow. This does NOT say the
+AppImage fails on a healthy GPU stack, and it does NOT discharge the item. It does say sitting 10's
+cause is cleared (0 not-found lines, 0 of 182 ELF above host glibc). The item can be re-run once the
+kernel-module/userspace mismatch is fixed, which is the first todo filed; the second records the
+arm64 binary the census found. `38-W04` (Windows) was not touched.
+
+Artifacts: `.planning/quick/260930-9l9-re-run-38-w05-smoke-launch-against-the-n/` (`appimage_smoke.ts`,
+`evidence/`).
+
+## Sitting 12 — 2026-09-30, Linux (Pop!_OS 22.04, X11), CI AppImage from run `36556473399` at `b48e8948f`
+
+**This is the SEVENTH LINUX SITTING Phase 38 has had, and the third attempt at `38-W05`.** It re-ran
+the artifact sitting 11 scored (the same bytes) after the operator rebooted the host, which cleared the
+NVIDIA kernel-module/userspace mismatch that CONFOUNDED sitting 11. With that one variable changed and
+NO workaround, the AppImage launched, showed a window, started its bundled sidecar, survived 30 seconds
+and reached an interactive Library UI. `38-W05` is scored PASS and DISCHARGED: the ledger moves from 7
+open, 19 discharged and 10 retired to 6 open, 20 discharged and 10 retired, and `gsd-core`'s `audit-uat`
+agrees (Phase 38 from 7 to 6 items, 426 to 425 in total). The glibc and NVIDIA-mismatch todos are closed.
+
+**Artifact and provenance.** PROVEN: `GameLib_0.7.0_amd64(1).AppImage`, 195123704 bytes, sha256
+`d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943`, re-hashed this sitting and equal to
+the value sitting 11 recorded; an x86-64 ELF with the AppImage type-2 magic; distinct from the sitting-10
+artifact by hash and size; the updater key at `b48e8948f` is `9A02F7E0C9FC04C7`, unchanged at HEAD; the
+workflow at the gate commit builds the Linux leg on `ubuntu-22.04`; the Downloads file was never
+modified (mode and mtime identical before and after), the launch used a hash-identical scratchpad copy.
+NOT PROVEN: no signature was verified (`gh` is not installed and no `.sig` or `latest.json` was
+downloaded); no byte carries the run id or the tag, so the binding to run `36556473399`, tag
+`v0.7.0-glibc-test1` and commit `b48e8948f` (41 commits behind HEAD) rests on the operator's account and
+the orchestrator's record; the ubuntu-22.04 build base is inferred from the workflow and the glibc
+maximum; the shared draft release is overwritten by every throwaway-tag run, so the download timing is
+consistent with, not proof of, the run. `PROVENANCE_OK=operator-accepted`.
+
+**What changed since sitting 11.** Only the host GPU state. Sitting 11 ran on kernel
+`7.0.11-76070011-generic` with the proprietary NVIDIA module 580.159.03 against userspace 580.173.02
+(`nvidia-smi`: `Driver/library version mismatch`). This sitting the host booted at 2026-09-30 07:38 on
+kernel `7.1.1-76070101-generic` with the NVIDIA open kernel module 580.173.02, equal to the userspace
+580.173.02, and `nvidia-smi` runs. The reboot therefore changed the kernel and the module flavour as
+well as the version. The mismatch was re-measured absent both at baseline and immediately before the
+launch. The EGL external platforms (wayland, gbm, xcb, xlib) and GBM backends (`dri_gbm`,
+`nvidia-drm_gbm`) are recorded in the baseline.
+
+**Conditions.** Every execution ran under a fresh `createFakeHomeProfile()` (disposed), with NO
+real-profile arm, for sitting 10's reasons. The screen was unlocked, an idle inhibitor ran and was
+killed by its process group, `NoNewPrivs=0`, libfuse2, `/dev/fuse` and `fusermount` were present. The
+verdict rules were pre-registered: loader FAIL, then CONFOUNDED only if the mismatch was present AND the
+EGL/GBM signature was in the scored streams, then a FAIL with its own cause if the signature appeared
+on a matched driver. A diagnostic arm would have run only for a GPU-class cause; none did. The static
+census ran before the launch, with a negative control that reproduced sitting 10's `GLIBC_INCOMPATIBLE`
+(175 ELF files, 50 above host glibc, `GLIBC_2.39`) on the old artifact, and reproduced sitting 11's
+census of these bytes exactly: maximum `GLIBC_2.35`, 0 of 182 ELF files above the host, `GLIBCXX` 3.4.30
+equals the host, no libc bundled, and one unresolved NEEDED soname (`ld-linux-aarch64.so.1`, required by
+the arm64 `comet` binary and not loadable on an x86_64 host). The artifact bundles no libEGL, libGL, libgbm
+or libdrm of its own. The harness printed `PREDICTION=MISSING_LIBS`, read before the launch as
+expected-to-launch, and the written GPU prediction was no EGL abort on a matched driver. Both held.
+
+**Identity.** The launch was direct (a scratchpad copy made executable, then exec; no install step, no
+extraction, no environment variable) in its own session and group (pid 20055). The window titled
+exactly `GameLib` appeared 265 ms after spawn, and its `_NET_WM_PID` is 20055, whose executable is
+`/tmp/.mount_GameLihcGIHB/usr/bin/gamelib-shell` on a `fuse.` mount, in the launch process group.
+
+**Survival.** All 11 one-second samples (t=0 to t=10) found the shell alive, the window visible and the
+same pid, none in state Z, with no exit event. The t=30 observation found the shell, the sidecar and the
+window all still alive. The scored stderr is 28 lines: `canberra-gtk-module` messages, the shell's
+`spawning sidecar (packaged)` lines, `sidecar signalled READY`, and sidecar deprecation and store notes.
+There were 0 GLIBC, GLIBCXX, missing-library, EGL-abort, `libEGL warning` and panic lines.
+
+**Sidecar and usable UI.** The bundled `gamelib-sidecar` (pid 20114, its own process group, executable
+inside the FUSE mount) was alive at s=10 and t=30. The three screenshots (s=3, s=10, t=30) were viewed:
+they are pixel-identical 1280x800 frames of 1575 colours showing the Library tab with
+Accounts/Library/Stores/Settings navigation, a search box, All games / Installed / Recently played /
+Favourites filters, an ADD GAME button, and the `GameLib 0.7.0` what's-new dialog over an empty (0 games)
+library. That is an interactive GameLib screen, not a blank or error frame. No click was made.
+
+**Exit observation, secondary and not scored.** After a SIGTERM to the shell pid alone the sidecar
+drained on stdin EOF in 0.26 s with no orphan, no launch-group remainder and no mount left; cold profile
+only, so it cannot see the `260913-901` class of handles that arm under a populated profile.
+
+**Result and honest limits.** PASS. ONE host (Pop!_OS 22.04, glibc 2.35, X11) in ONE GPU state (NVIDIA
+580.173.02 matched), ONE artifact with unverified provenance; the gate commit `b48e8948f` is 41 commits
+behind HEAD, so this certifies that artifact and not HEAD; no Wayland, no other distro, no glibc 2.39+
+host, no updater flow. It supersedes sitting 11's CONFOUNDED (the host mismatch, now cleared) and
+sitting 10's FAIL (fixed by quick `260929-vyi`). The `GTK-box` embed todo's spike-029 re-run with
+`WEBKIT_DISABLE_DMABUF_RENDERER` unset was NOT performed here and is still pending. `38-W04` (Windows)
+was not touched and stays open.
+
+Artifacts: `.planning/quick/260930-aof-re-run-phase-38-item-38-w05-sitting-12-l/` (`appimage_smoke.ts`,
+`evidence/`).

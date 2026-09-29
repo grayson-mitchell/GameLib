@@ -395,13 +395,25 @@ describe('REQ-34.1-07 main.rs tray_set_icon dispatch arm (Phase 34.1 Plan 06, D-
       // test named below is therefore HAND-RUN and CI-invisible, and THIS jest gate is the only
       // CI-visible proxy for these arms' existence. Read no green pipeline into any line here.
       //
-      // ALSO COMMON TO ALL TEN: each arm's non-macOS branch returns `:unsupported-platform`
-      // rather than compiling away, so a missing arm stays distinguishable from a dead channel.
-      // D-03's macOS-only `unstable` feature gating is proven by a `cargo tree --target` DIFF
-      // and NOT by a cross-target `cargo check`: only `aarch64-apple-darwin` is installed, and
-      // the attempted `--target x86_64-pc-windows-msvc` run failed `E0463` in unrelated crates
-      // before reaching this code. `40-02-SUMMARY.md` records that as an environment limitation,
-      // explicitly NOT a passed proof. Do not upgrade it to one.
+      // ALSO COMMON TO ALL TEN: each arm's non-macOS, non-Linux branch returns
+      // `:unsupported-platform` rather than compiling away, so a missing arm stays
+      // distinguishable from a dead channel. D-03's `unstable` feature gating (macOS, and since
+      // quick task `260930-blh` a Linux table too) was proven for macOS by a `cargo tree --target`
+      // DIFF and NOT by a cross-target `cargo check`: only `aarch64-apple-darwin` is installed,
+      // and the attempted `--target x86_64-pc-windows-msvc` run failed `E0463` in unrelated
+      // crates before reaching this code. `40-02-SUMMARY.md` records that as an environment
+      // limitation, explicitly NOT a passed proof. Do not upgrade it to one.
+      //
+      // LINUX (quick task `260930-blh`): the Linux `unstable` gating is COMPILED and EXERCISED on
+      // this Linux host, not inferred -- `cargo build` and `cargo test --bin gamelib-shell`
+      // ran there, and the live layout run's evidence is in
+      // `.planning/quick/260930-blh-build-the-gtk-box-native-linux-layout/evidence/`. The Rust
+      // `store_embed_*` unit tests (parsers, scheme policy, history, queue) now also RUN on
+      // Linux, but they are still HAND-RUN: CI runs no cargo step. The macOS build leg was NOT
+      // compiled by that change (no apple target is installed on the Linux host), so macOS is
+      // protected only by its statements being left inside their `#[cfg(target_os = "macos")]`
+      // blocks unchanged. The live Linux run used a dev binary, an X11 session and the
+      // DMABUF-DISABLED renderer path; the packaged AppImage, Wayland and HiDPI were not run.
 
       // Plan 40-02 (D-01/D-03/D-17/D-18/D-21, REQ-40-02). PROOF STATUS -- SPLIT.
       // PROVEN (pure): `store_embed_open_args` and `store_embed_set_bounds_args` are covered by
@@ -538,6 +550,31 @@ describe('main.rs main-window devtools is gated on visibility (Phase 35 Plan 06 
     // vacuous, because a visible window then appears whether or not the noTrayIcon override works.
     const code = collapse(loadMainRsCode())
     expect(code).not.toContain('Some(window) => { window.open_devtools();')
+  })
+})
+
+describe('main.rs debug devtools auto-open is skipped on Linux (quick 260930-ea0)', () => {
+  // Source-level because the call sites need a real webview. main.rs's own
+  // `devtools_auto_open_*` unit tests cover the predicate; this pin covers the WIRING: that
+  // both debug auto-open sites consult it, and that no third `open_devtools()` call site
+  // appears without going through it.
+  //
+  // The pre-existing `Ok(true) => { window.open_devtools();` pin above still guards the
+  // visibility gate, so the platform gate sits OUTSIDE that match.
+  const countOf = (haystack: string, needle: string) =>
+    haystack.split(needle).length - 1
+  const collapse = (s: string) => s.replace(/\s+/g, ' ')
+
+  test('both debug auto-open sites consult should_auto_open_devtools', () => {
+    const code = collapse(loadMainRsCode())
+    expect(
+      countOf(code, 'should_auto_open_devtools(std::env::consts::OS)')
+    ).toBe(2)
+  })
+
+  test('there are exactly two open_devtools() call sites', () => {
+    const code = collapse(loadMainRsCode())
+    expect(countOf(code, '.open_devtools()')).toBe(2)
   })
 })
 

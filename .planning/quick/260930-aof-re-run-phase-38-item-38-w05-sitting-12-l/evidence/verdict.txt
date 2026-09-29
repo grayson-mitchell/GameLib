@@ -1,0 +1,39 @@
+VERDICT=PASS
+CAUSE_CLASS=none
+CAUSE=not applicable (PASS)
+RULE_APPLIED=pre-registered PASS clauses, all met in the one scored run: DIRECT_LAUNCH=yes, PGID_MATCH=yes, WINDOW_APPEARED=yes (TIME_TO_WINDOW_MS=265), SURVIVED_10S=yes (11/11 SAMPLE lines alive, visible, same pid, none in Z), SIDECAR_BUNDLED=yes, SIDECAR_ALIVE_S10=yes, SHELL_ALIVE_T30=yes, EXIT_EVENT_BEFORE_TEARDOWN=no, GLIBC_NOT_FOUND_LINES=0, MISSING_SO_LINES=0, window.png and window-t10.png 1575 colours each and viewed, SCORED=yes, EXTRA_ENV=(none). The confound and gpu-stack rules (precedence 2 and 3) did not fire: EGL_CONFOUND_LINES=0 with NVIDIA_MISMATCH_AT_LAUNCH=no.
+SCORED=yes
+EXTRA_ENV=(none)
+SCORED_LAUNCH_COUNT=1
+DIRECT_LAUNCH=yes (window pid 20055 exe /tmp/.mount_GameLihcGIHB/usr/bin/gamelib-shell, mount fstype fuse.GameLib_0.7.0_amd64-run36556473399.AppImage, pgrp = LAUNCH_PGID 20055, SETSID_PROVEN=yes)
+PGID_MATCH=yes
+WINDOW_APPEARED=yes (TIME_TO_WINDOW_MS=265)
+SURVIVED_10S=yes (SAMPLE s=0..10 all shell_alive=y window_visible=y same_pid=y, t_ms 9..10010)
+SIDECAR_BUNDLED=yes (pid 20114, own pgrp 20114, exe /tmp/.mount_GameLihcGIHB/usr/bin/gamelib-sidecar)
+SIDECAR_ALIVE_S10=yes
+SHELL_ALIVE_T30=yes
+SIDECAR_ALIVE_T30=yes
+EXIT_EVENT_BEFORE_TEARDOWN=no
+GLIBC_NOT_FOUND_LINES=0
+MISSING_SO_LINES=0
+EGL_CONFOUND_LINES=0
+EGL_WARNING_LINES=0
+PANIC_LINES=0
+SCREENSHOT_VIEWED=yes
+SCREENSHOT_DESCRIPTION=window.png (s=3), window-t10.png (s=10) and window-t30.png (t=30) were each viewed with the Read tool; all three are pixel-identical, 1280x800, 1575 colours: GameLib-drawn UI, the Library tab with Accounts/Library/Stores/Settings navigation, a Search for Games box, All games / Installed / Recently played / Favourites filters, Collections/Store/Runnability/More filters, an "All Games 0" header with an ADD GAME button, and the "GameLib 0.7.0" what's-new dialog over an empty library. No blank, uniform or error frame.
+USABLE_UI=yes
+USABLE_UI_DESCRIPTION=an interactive GameLib screen at t=30: the Library tab with navigation, search, filters and an ADD GAME button, under the what's-new dialog; the sidecar signalled READY in the stderr stream (`[shell] sidecar signalled READY (__GAMELIB_SIDECAR_READY__)`). The frame did not change between s=3 and t=30, consistent with an idle empty library behind a dialog; no click was made.
+OPERATOR_EYEBALL=no (the operator was asked not to click and volunteered nothing)
+PREDICTION_MATCHED_OBSERVATION=yes: the census (0 of 182 ELF above host glibc 2.35, reproduced from sitting 11, negative control PASS) read as expected-to-launch; the loader passed with 0 not-found and 0 missing-library lines and the app launched. The literal PREDICTION token MISSING_LIBS (one unresolved NEEDED in an arm64 comet binary) proved inert, as read before launch.
+GPU_PREDICTION_MATCHED_OBSERVATION=yes: no-EGL-abort-expected (mismatch cleared: 580.173.02 = 580.173.02); EGL_CONFOUND_LINES=0 and EGL_WARNING_LINES=0 in the scored streams.
+SIDECAR_EXIT_S=0.26
+SIDECAR_ORPHAN=no
+SHELL_GONE_MS=0 (SIGTERM sent to the shell pid alone at T_TERM_ISO 2026-09-29T18:54:51.810Z). LAUNCH_GROUP_REMAINDER=none (LAUNCH_GROUP_SELF_EXIT_MS=3)
+EXIT_OBSERVATION=a stdin-EOF drain after a SIGTERM to the shell pid alone: SHELL_GONE_MS=0, SIDECAR_GONE_MS=258, SIDECAR_EXIT_S=0.26, SIDECAR_ORPHAN=no, LAUNCH_GROUP_REMAINDER=none, MOUNT_GONE=yes, cold profile
+EXIT_OBSERVATION_LIMIT=cold-profile only; cannot see real-profile-armed handles (260913-901 class)
+GPU_STATE_AT_LAUNCH=NVIDIA_MISMATCH_AT_LAUNCH=no: kernel module 580.173.02 (NVRM_FLAVOUR=open) = userspace libnvidia-glcore 580.173.02, nvidia-smi runs (Driver Version 580.173.02); kernel 7.1.1-76070101-generic; booted 2026-09-30 07:38:36; EGL external platforms 10_nvidia_wayland, 15_nvidia_gbm, 20_nvidia_xcb, 20_nvidia_xlib; GBM backends dri_gbm, nvidia-drm_gbm; no WEBKIT_DISABLE_* in src-tauri/src at the gate commit (count 0) and none set for the run
+NO_ORPHANS=yes
+POST_TEARDOWN_WINDOWS=0
+DISPOSED=yes
+CLAIM_LIMIT=ONE host (Pop!_OS 22.04, glibc 2.35, X11 on DISPLAY :1) in ONE GPU state (NVIDIA 580.173.02 open kernel module matched to userspace, after the reboot that cleared sitting 11's mismatch), ONE artifact (sha256 d7648c37...f35943, operator-downloaded, hash-pinned, signature NOT verified, run 36556473399 / tag v0.7.0-glibc-test1 / commit b48e8948f per the operator's account only, the same bytes sitting 11 scored). It launched directly with no workaround, showed a window at 265 ms, survived 30 s with its bundled sidecar up and reached an interactive Library UI, with 0 libEGL warnings. This says nothing about Wayland, other distros, glibc 2.39+ hosts, other GPU states or the updater flow. 38-W04 (Windows) is untouched.
+DIAG_ARM=not run (CAUSE_CLASS=none; the diagnostic arm exists only for a gpu-* cause)

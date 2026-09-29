@@ -1,0 +1,6 @@
+label=u1 mounted=yes probe_lines=12 webprocs=1 viewport=1280x800 stderr_opened=0 stderr_skipped=1 shim_lines=0 dmabuf_shell=absent ld_preload=absent dmabuf_webproc=absent teardown=0 verdict=PASS
+label=u2 mounted=yes probe_lines=12 webprocs=1 viewport=1280x800 stderr_opened=0 stderr_skipped=1 shim_lines=0 dmabuf_shell=absent ld_preload=absent dmabuf_webproc=absent teardown=0 verdict=PASS
+label=u3 mounted=yes probe_lines=12 webprocs=1 viewport=1280x800 stderr_opened=0 stderr_skipped=1 shim_lines=0 dmabuf_shell=absent ld_preload=absent dmabuf_webproc=absent teardown=0 verdict=PASS
+label=u4 mounted=yes probe_lines=12 webprocs=1 viewport=1280x800 stderr_opened=0 stderr_skipped=1 shim_lines=0 dmabuf_shell=absent ld_preload=absent dmabuf_webproc=absent teardown=0 verdict=PASS
+label=u5 mounted=yes probe_lines=12 webprocs=1 viewport=1280x800 stderr_opened=0 stderr_skipped=1 shim_lines=0 dmabuf_shell=absent ld_preload=absent dmabuf_webproc=absent teardown=0 verdict=PASS
+label=u6 mounted=yes probe_lines=12 webprocs=1 viewport=1280x800 stderr_opened=0 stderr_skipped=1 shim_lines=0 dmabuf_shell=absent ld_preload=absent dmabuf_webproc=absent teardown=0 verdict=PASS

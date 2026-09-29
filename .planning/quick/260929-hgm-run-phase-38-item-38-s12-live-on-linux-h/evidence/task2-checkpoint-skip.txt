@@ -1,0 +1,11 @@
+Task 2 (checkpoint:human-action, blocking): SKIPPED -- both preconditions verified
+satisfied live, no operator pause needed.
+
+- LockedHint: no
+- find: PID 213707, exe src-tauri/target/debug/gamelib-shell -- matches Task 1
+- steam_library_replica.cjs: COUNT=2
+- Library grab (Task 1 Step 10 / this check): lists 381 owned games including several
+  not-installed with an Install-caret affordance (e.g. 7 Days to Die, shown as
+  "DAYS TO DIE", with a download icon)
+
+Both preconditions satisfied live, checkpoint skipped. Continuing to Task 3.

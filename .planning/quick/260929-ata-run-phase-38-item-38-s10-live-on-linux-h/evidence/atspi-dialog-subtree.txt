@@ -1,0 +1,34 @@
+=== DIALOG-SUBTREE LINES (role + text), dump-open.jsonl, in_dialog=True only ===
+0.0.0.0.0.0.0.0.0 depth=8 role='dialog' name='7 Days to Die' text=''
+0.0.0.0.0.0.0.0.0.0 depth=9 role='push button' name='close' text=''
+0.0.0.0.0.0.0.0.0.1 depth=9 role='document frame' name='7 Days to Die' text='7 Days to Die￼￼\n'
+0.0.0.0.0.0.0.0.0.2 depth=9 role='page' name='' text="￼This installs through Steam's own client, so there's nothing to choose here. Turn on native Steam installs in Settings to manage install location and Windows compatibility from GameLib."
+0.0.0.0.0.0.0.0.0.3 depth=9 role='push button' name='INSTALL' text=''
+
+=== REGIONS TABLE — NEGATIVE CONTROL (dialog CLOSED, dump-closed.jsonl) ===
+REGIONS
+  platform_row: in_dialog=0 outside_dialog=0
+  library_dropdown: in_dialog=0 outside_dialog=0
+  wine_section: in_dialog=0 outside_dialog=0
+  free_space_line: in_dialog=0 outside_dialog=0
+  content_light_off: in_dialog=0 outside_dialog=0
+  content_light_single: in_dialog=0 outside_dialog=0
+  title: in_dialog=0 outside_dialog=3
+ROLE_HISTOGRAM (dialog subtree)
+COMBO_BOX_COUNT (dialog subtree): 0
+
+=== REGIONS TABLE — SCORED (dialog OPEN, dump-open.jsonl) ===
+REGIONS
+  platform_row: in_dialog=0 outside_dialog=0
+  library_dropdown: in_dialog=0 outside_dialog=0
+  wine_section: in_dialog=0 outside_dialog=0
+  free_space_line: in_dialog=0 outside_dialog=0
+  content_light_off: in_dialog=1 outside_dialog=1
+  content_light_single: in_dialog=0 outside_dialog=0
+  title: in_dialog=3 outside_dialog=1
+ROLE_HISTOGRAM (dialog subtree)
+  push button: 2
+  dialog: 1
+  document frame: 1
+  page: 1
+COMBO_BOX_COUNT (dialog subtree): 0

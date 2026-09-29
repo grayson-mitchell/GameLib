@@ -64,6 +64,45 @@
 # consume a large fraction of 60 minutes; if a cold leg ever trips this bound,
 # the correct response is to raise the number with the new measurement
 # recorded, not to remove the bound.
+#
+# 2026-09-29 (quick task 260929-vyi): the Linux leg now builds on ubuntu-22.04
+# (glibc 2.35) instead of ubuntu-24.04 (glibc 2.39). WHY: 38-W05 sitting 10 ran
+# the 0.7.0 AppImage from run 35942560790 on Pop!_OS 22.04 (glibc 2.35) and it
+# died in 65 ms with `GLIBC_2.39 not found (required by gamelib-shell)`. An
+# AppImage does not bundle glibc, so the glibc of the runner that BUILDS it is
+# the floor for every user -- and a leg built on ubuntu-24.04 cannot start on
+# any host older than that. Tauri's own AppImage guidance is to build on the
+# oldest base system you intend to support that also provides WebKitGTK 4.1,
+# and it names Ubuntu 22.04 as a baseline. The apt package list in the
+# "Install Ubuntu system dependencies" step is UNCHANGED and was verified
+# present in the real Ubuntu jammy archive indexes (not merely installed on a
+# host): .planning/quick/260929-vyi-fix-glibc-todo-move-linux-release-leg-to/
+# evidence/jammy-apt-census.txt. That step's if: must equal the Linux leg's
+# platform string exactly; releaseWorkflow.test.ts pins both from the parsed
+# workflow, so a half-edit turns it red instead of silently skipping the apt
+# step.
+#
+# swatinem/rust-cache is now keyed on matrix.platform. Its default key is only
+# the OS type and architecture (Linux-x64) plus a hash of rustc, env and
+# lockfiles, and it restores by PREFIX, so it cannot tell ubuntu-22.04 from
+# ubuntu-24.04 and could restore a target/ compiled against the newer glibc
+# into this leg. The consequence is that the first run after this change is a
+# COLD Rust cache on all three legs, which ties into the cold-cache sentence
+# above; the 60-minute bound has not been measured against a cold build.
+#
+# The 4m53s Linux figure above was measured on the old ubuntu-24.04 base and
+# has NOT been re-measured on ubuntu-22.04.
+#
+# UNPROVEN LIVE: no run has executed on ubuntu-22.04. A default
+# workflow_dispatch dry run (see the dry_run comment) proves the leg installs,
+# compiles and bundles, but yields a build LOG and no binary. Only a real tag
+# push yields an AppImage, and that writes the shared draft release. That the
+# rebuilt AppImage's highest GLIBC_ reference is at most 2.35 is expected by
+# construction, not measured.
+#
+# GitHub's ubuntu-22.04 hosted image is on a deprecation path (no date is
+# asserted here). When it retires the floor must be re-decided, because a newer
+# runner raises it again.
 name: Release Tauri
 
 on:
@@ -111,7 +150,9 @@ jobs:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
             sidecar_triple: 'aarch64-apple-darwin'
-          - platform: 'ubuntu-24.04'
+          # ubuntu-22.04 = glibc 2.35 floor for the AppImage; see the 260929-vyi
+          # header entry.
+          - platform: 'ubuntu-22.04'
             args: ''
             sidecar_triple: 'x86_64-unknown-linux-gnu'
           - platform: 'windows-latest'
@@ -186,8 +227,10 @@ jobs:
           echo "::error::TAURI_SIGNING_PRIVATE_KEY is not enrolled, but src-tauri/tauri.conf.json sets createUpdaterArtifacts: true and commits an updater pubkey. tauri build will fail on every matrix leg. Enrol the secret (with TAURI_SIGNING_PRIVATE_KEY_PASSWORD), or set createUpdaterArtifacts: false."
           exit 1
 
+      # This if: must equal the Linux leg's platform exactly (pinned by
+      # releaseWorkflow.test.ts).
       - name: Install Ubuntu system dependencies
-        if: matrix.platform == 'ubuntu-24.04'
+        if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf xdg-utils
@@ -271,6 +314,7 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
+          key: ${{ matrix.platform }}
 
       # Compiles build/main/sidecar.js (existing esbuild output) into a
       # self-contained per-OS executable (Node SEA) BEFORE tauri-action
@@ -515,6 +559,7 @@ jobs:
         shell: bash
         env:
           IS_MACOS: ${{ startsWith(matrix.platform, 'macos') }}
+          IS_LINUX: ${{ startsWith(matrix.platform, 'ubuntu') }}
         run: |
           rm -rf build/main build/preload build/node-dist
           rm -f build/sea-config.json build/sidecar-prep.blob
@@ -522,6 +567,18 @@ jobs:
           test -f build/renderer/index.html
           if [ "$IS_MACOS" = "true" ]; then
             test -d build/bin
+          fi
+          # Quick task 260930-bif. The Linux leg is x86_64-only, and
+          # archSpecificBinary() (src/backend/utils.ts) resolves
+          # bin/${process.arch}/linux, falling back to bin/x64/linux -- an
+          # x86_64 process can never select bin/arm64/linux. Its arm64 `comet`
+          # was inert bloat whose NEEDED loader (ld-linux-aarch64.so.1) tripped
+          # the AppImage census (STATIC_NEEDED_UNRESOLVED=1). The `test` first
+          # is the fail-loud guard: never prune unless the x64 tree that
+          # replaces it is present.
+          if [ "$IS_LINUX" = "true" ]; then
+            test -f build/bin/x64/linux/comet
+            rm -rf build/bin/arm64/linux
           fi
 
       # Quick task 260917-uik. Run 35223308954 (the first tag push this

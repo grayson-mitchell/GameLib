@@ -1,0 +1,39 @@
+# Task 1 2026-09-29T08:49:31Z
+
+findmnt -n -o TARGET,OPTIONS -S UUID=7ca4a725-1bb4-4e38-8f76-bad1fc803309
+(empty — device is mounted nowhere; MOUNT_TARGET=none)
+
+udisksctl info -b /dev/nvme0n1p3 (selected lines):
+    Device:                     /dev/nvme0n1p3
+    IdType:                     ext4
+    IdUUID:                     7ca4a725-1bb4-4e38-8f76-bad1fc803309
+    MountPoints:
+
+IdUUID matches the expected 7ca4a725-1bb4-4e38-8f76-bad1fc803309; the device node has not moved.
+
+/etc/fstab line for this UUID:
+/dev/disk/by-uuid/7ca4a725-1bb4-4e38-8f76-bad1fc803309 /mnt/PopGames auto nosuid,nodev,nofail,x-gvfs-show,x-gvfs-name=LinuxGames 0 0
+
+pkaction --verbose, implicit active values:
+- org.freedesktop.udisks2.filesystem-fstab: implicit active: auth_admin_keep
+- org.freedesktop.udisks2.filesystem-unmount-others: implicit active: auth_admin_keep
+
+journalctl -q --since '3 hours ago' --no-pager, lines naming nvme0n1p3:
+Sep 29 21:19:56 pop-os polkitd(authority=local)[974]: Operator of unix-session:2 successfully authenticated as unix-user:graysonmitchell to gain TEMPORARY authorization for action org.freedesktop.udisks2.filesystem-unmount-others for system-bus-name::1.379 [udisksctl unmount -b /dev/nvme0n1p3] (owned by unix-user:graysonmitchell)
+Sep 29 21:19:56 pop-os kernel: EXT4-fs (nvme0n1p3): unmounting filesystem 7ca4a725-1bb4-4e38-8f76-bad1fc803309.
+Sep 29 21:19:56 pop-os udisksd[984]: Unmounted /dev/nvme0n1p3 on behalf of uid 1000
+
+These lines show the operator authenticated (polkitd TEMPORARY authorization) before the quick
+orchestrator's pre-sitting `udisksctl unmount -b /dev/nvme0n1p3`, and the kernel/udisksd lines
+confirm the unmount completed at 21:19:56.
+
+THE TRAP (from the objective): the vdf registers this SAME drive twice — as
+/mnt/PopGames/SteamLibrary (candidate 4, the fstab mountpoint) AND as
+/media/graysonmitchell/7ca4a725-1bb4-4e38-8f76-bad1fc803309/SteamLibrary (candidate 3, the udisks
+default auto-mountpoint). A remount landing at the /media/... path would report COUNT=2 and look
+restored while holding the WRONG path set. Task 4 must check the findmnt TARGET, not the count
+alone.
+# Task 3 off pre-open 2026-09-29T09:07:10Z
+/mnt/PopGames
+# Task 3 on pre-open 2026-09-29T09:12:49Z (drive now /dev/nvme1n1p3, unmounted by operator)
+(empty)

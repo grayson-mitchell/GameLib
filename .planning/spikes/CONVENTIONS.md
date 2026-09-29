@@ -197,3 +197,39 @@ question requires otherwise.
   std::env::var("SPIKE_SKIP_X").is_ok() { ...skip... } else { ...original... }` around just that
   phase (leaving 1–5 and 7–8 untouched) isolated the defect to that phase in one rebuild
   (1.95s incremental) without disturbing the evidence trail for everything else. *(026.)*
+- **`tauri::Window::default_vbox()` and `Webview::with_webview` -> `PlatformWebview::inner()` are
+  PUBLIC, non-`unstable`-gated ways to reach the real GTK objects on Linux** — no
+  wry/tauri-runtime-wry fork needed for GTK-level layout experiments. Pin the harness's own direct
+  `gtk` dependency to the EXACT version wry already resolves transitively (check `Cargo.lock`), or
+  you get two incompatible `gtk::Box` types in one dependency graph. `webkit2gtk::WebView` already
+  `@extends gtk::Container, gtk::Widget`, so no upcast is needed to call `WidgetExt`/`ContainerExt`
+  methods on it directly. *(028.)*
+- **wry's own `bounds()` (Linux/GTK path) never sets `.position` at all** — only
+  `allocated_size()`, off the `x11` feature's separate branch. A `{x:0,y:0}` reading from this API
+  is NOT evidence a widget is at the origin; it is this method's own gap. Use
+  `gtk::Widget::translate_coordinates` against the toplevel for a real, absolute, window-relative
+  position instead. *(028.)*
+- **A GTK packing-property change (`set_child_packing`, `set_size_request`) can be real and still
+  read back unchanged immediately after the call** — GTK defers the visible consequence to its
+  next actual relayout pass, which a plain sleep does not force and which only became visible, in
+  one measured case, after a genuine window resize. Don't conclude a packing lever "did nothing"
+  from an immediate snapshot alone; force or wait for a real relayout before judging it. *(028.)*
+- **A `GtkFixed` your OWN code creates (not wry's own `reparent`, which never updates wry's
+  internal `is_in_fixed_parent` gate) is a real, working escape hatch for exact widget positioning
+  on Linux** — `vbox.remove(&widget)` + `gtk::Fixed::new()` + `fixed.put()` +
+  `gtk::Fixed::move_`/`WidgetExt::set_size_request`, all stock `gtk-rs`, confirmed to reach an
+  exact arbitrary rect and survive a window resize. But treat it as provisional: it was reliable
+  exactly ONCE across 11 measured runs on this same machine — see the next bullet. *(028.)*
+- **An `add_child`-ed Linux webview can fail to receive ANY `GtkBox` allocation at all — not just
+  the expected 50/50, nothing — and this was NOT explained by any cheap mechanism tried.** 10 of 11
+  runs (varying post-create sleep 500ms→2000ms, an explicit `gtk::main_iteration()` pump, and a
+  first-ever-create variant with no prior destroy/recreate history) got stuck at GTK's own
+  "never laid out" `{-1,-1,1,1}` sentinel through pumps, sleeps, AND a real window resize that
+  itself silently failed to take visible effect — confirmed visually via a region-capture
+  screenshot showing no embed content at all. Killing stray `WebKitNetworkProcess`/
+  `WebKitWebProcess` helpers first made no difference. **Root cause unresolved** — a window-
+  focus/mapping hypothesis (the one clean run was this X session's very first GUI window; every
+  later run launched while the driving tool session already held focus elsewhere) is recorded as
+  untested, not confirmed. Before trusting ANY Linux `add_child` layout result — this spike's or a
+  future one's — re-verify allocation reliability first; a single clean run is not enough evidence
+  on this specific mechanism. *(028.)*
