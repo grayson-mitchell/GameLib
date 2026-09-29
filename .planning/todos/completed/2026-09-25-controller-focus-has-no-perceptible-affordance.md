@@ -136,3 +136,25 @@ other `:focus-visible`-only rule across `src/frontend` not listed above.
    confirm they read as distinct states.
 7. Repeat steps 1, 3 and 5 on midnightMirage, gruvbox_dark, dracula-classic and nord-light (light
    theme).
+
+## Closure (quick 260930-hav)
+
+Quick task `260930-hav` was planned on the (re-verified, but by then already stale) premise that
+`260926-acw` — the plan whose desk fix is recorded immediately above — "was never executed (only
+its plan commit `21ee6feaa` exists; no SUMMARY, no code commits)". That premise no longer held by
+execution time: `260926-acw`'s three tasks (`4081e1f0b`, `c35d55bdf`, `00bc6fa1f`) had already
+landed on `origin/main`, complete with its own `260926-acw-SUMMARY.md`, before this task's changes
+were reconciled against `origin/main`. The two plans are near-identical in scope and mechanism
+(same shared `--focus-ring-*` tokens, the same canonical
+`X:focus-visible, X:focus:is(body.controllerLayout *)` selector pair, the same OUTSET/INSET
+recipes, the same game-card hover/focus split, the same cross-surface gate) — `260930-hav`'s own
+independently-written implementation was therefore NOT merged on top of `260926-acw`'s, to avoid
+landing a duplicate/conflicting diff over code that was already shipped and already gated green.
+`260930-hav`'s own commits remain preserved, unmerged, on branch `backup/260930-hav`
+(`583a13268`, `999a7182b`) for reference, in case a future comparison is useful.
+
+The one piece of `260930-hav`'s scope that `260926-acw` deliberately did NOT do is actioned here:
+per the operator's explicit request, this todo is moved to `completed/` rather than left in
+`pending/` at `ready: live-gate`. This is a bookkeeping decision, not a new verification — the
+**live controller sweep above has still not been performed**, and closing this todo does not
+change that. The checklist above remains the authoritative list of what a real sweep must cover.
