@@ -1,11 +1,11 @@
 ---
 created: 2026-09-02
-title: "D-35-19-15's four Epic sibling apexes were never proven cleared — CORRECTED 2026-09-30: a CREDENTIAL-FREE, NON-DESTRUCTIVE seeding+sweep recipe exists (a plain window.api.oauthCaptureLogin navigation to a sibling apex, then the per-host sweep alone) — no Epic login, no logout, needed"
+title: "D-35-19-15 — the four Epic sibling apexes: DISCHARGED LIVE 2026-09-30. A cookie on .fortnite.com was measured PRESENT (5) then ABSENT (0) in GameLib's own jar by an independent read, with NO Epic credentials, NO logout, and the operator's session intact. The 'needs an authenticated Epic login' premise was a non-sequitur."
 area: auth/webview
-status: pending
+status: complete
 severity: medium
 platform: any
-ready: live-gate
+ready: code
 blocked_by: "NOT BLOCKED — unscheduled, ready:live-gate. CORRECTED 2026-09-30 (debug session
   epic-sibling-apex-non-destructive-discharge, re-opened): the previous form of this field (below,
   retained as SUPERSEDED HISTORY) said the only remaining open question was 'whether a cookie can
@@ -22,7 +22,10 @@ blocked_by: "NOT BLOCKED — unscheduled, ready:live-gate. CORRECTED 2026-09-30 
   The vehicle for an arbitrary-URL navigation already exists:
   window.api.oauthCaptureLogin({ runner: 'legendary', url: 'https://www.fortnite.com/' }) (backend
   entry captureOAuthLogin, src/backend/sidecar/oauthLoginCapture.ts:207, which takes loginUrl as a
-  plain unvalidated string — the runner-hardcoded EPIC_LOGIN_URL lives only in the React hook,
+  plain string with no host allowlist — the channel handler above it
+  (oauthLoginFlowRegistration.ts:78) applies exactly two gates, isKnownRunner and isHttpsUrl
+  (:56-63, a scheme-only `new URL(value).protocol === 'https:'` test), both of which
+  { runner: 'legendary', url: 'https://www.fortnite.com/' } passes — the runner-hardcoded EPIC_LOGIN_URL lives only in the React hook,
   useTauriOAuthLogin.ts:209, not in the preload API itself). In Rust, humble_login_open
   (main.rs:6284) computes is_epic_login = url.host_str() == Some(EPIC_LOGIN_HOST) (:6291), and
   EPIC_LOGIN_HOST is the exact string 'www.epicgames.com' (:2976) — a full-hostname equality
@@ -128,6 +131,81 @@ files:
   - src-tauri/src/main.rs:4159
 ---
 
+# CLOSED 2026-09-30 — discharged live, credential-free, non-destructively
+
+**The discharge condition was MET as written, by the instrument it demanded.** Full evidence is
+E-10 in `.planning/debug/resolved/epic-sibling-apex-non-destructive-discharge.md`.
+
+| host | baseline | after seed | after per-host sweep |
+| ---- | -------- | ---------- | -------------------- |
+| `.fortnite.com` | **0** | **5** | **0** |
+| `.epicgames.com` | 5 | 5 | **5 — untouched** |
+
+Measured with the existing independent reader (`binarycookies-index-walk.py`) against
+`~/Library/HTTPStorages/gamelib-shell.binarycookies`, read in place, counts and cookie names only.
+**This is not the vacuous `matched=0` this todo spent two years' worth of adjudication warning
+about: the "before" was 5, measured.**
+
+## What this todo was wrong about, stated plainly so it does not get re-filed
+
+Its blocker was never a missing capability. From 2026-09-02 to 2026-09-30 it claimed, in four
+successive revisions, that discharging it required an authenticated Epic login. **That was a
+non-sequitur drawn from a correct rule.** The 2026-09-28 session (E-5) established, rightly, that
+only a request served BY `fortnite.com`/`unrealengine.com`/`twinmotion.com`/`metahuman.com` can set
+a cookie on that apex. It then tested exactly ONE vehicle for such a request — Epic's login page at
+`epicgames.com`, which by that very rule can never satisfy it — and generalised the negative to
+every vehicle. **The four apexes are public, Epic-run websites.** A plain
+`window.api.oauthCaptureLogin({ runner: 'legendary', url: 'https://www.fortnite.com/' })` satisfies
+the rule with zero credentials.
+
+The refutation was already inside the same file, two evidence entries earlier: **E-3 had established
+that `EPIC_COOKIE_HOSTS` sweeps by HOST, not by cookie name**, so any cookie on the apex was a valid
+fixture and Item 7's SSO-synced `EPIC_DEVICE` was never required.
+
+## What was added, and why it was needed
+
+No product defect existed — the sweep was correct all along, and is now proven against a real
+sibling-apex cookie rather than only unit-exercised. What was missing was a way to EXERCISE it
+without collateral damage: `clearEpicCookies` existed only as a step inside `LegendaryUser.logout()`
+(`legendary/user.ts:275`), which runs `legendary auth --delete` first and unconditionally, and
+sweeps all five hosts at once. So it could neither isolate one apex nor run without destroying a
+live session.
+
+Added `src/backend/sidecar/devEpicCookieSweepRegistration.ts` — a **dev-only** `devSweepEpicCookieDomain`
+channel. Not registered at all in a packaged sidecar; the Rust arm's own
+`epic_cookie_domain_matches(domain)` gate means no non-Epic domain can be cleared through it; and it
+clears cookies only, never credentials. Deliberately not on the preload surface (`sidecar_invoke`
+already reaches a channel by name, so a `window.api` entry would widen the documented renderer
+surface for a debugging instrument). Drive it with:
+
+```js
+await window.__TAURI_INTERNALS__.invoke('sidecar_invoke', {
+  channel: 'devSweepEpicCookieDomain', args: ['fortnite.com']
+})
+```
+
+## Scope of the close — what is NOT claimed
+
+- **Only `fortnite.com` was exercised live.** `unrealengine.com`, `twinmotion.com` and
+  `metahuman.com` were not individually seeded. They traverse the identical code path (one
+  `cookie_domain_matches` comparator over `EPIC_COOKIE_DOMAINS`) and all four are already pinned in
+  both directions by `epic_cookie_domain_matches_accepts_every_epic_owned_apex` and its
+  rejects-siblings counterpart. The discharge condition asks for "a non-primary Epic apex cookie
+  (one of the four)", and that is what was delivered — not four separate gates.
+- **`38-W06` is untouched.** Off-macOS (Windows/Linux) Epic logout remains its own open gap.
+- **REQ-35-07 is unaffected**, exactly as three prior adjudication passes ruled. This close is not
+  evidence about it in either direction.
+- The dev channel's own sidecar-side `logInfo` line was never observed in any log; the evidence
+  rests on the Rust arm's log line plus the two independent jar reads. Do not cite that line.
+
+## Cost to the operator
+
+**None.** No credentials entered, no logout, no re-login, no account risk — in deliberate contrast
+to the 2026-09-28 attempt at this same gate, which cost an 8-hour Epic lockout by instructing a
+logout before anyone had proven the login path worked from a cold jar.
+
+---
+
 # D-35-19-15 — the four sibling apexes, unqueued and unreproducible
 
 ## CORRECTION 2026-09-26 (debug session `epic-sibling-apex-seeding`)
@@ -178,7 +256,7 @@ It concluded that "what remains blocking full discharge is executional" and that
 condition "requires a live app run with a real, human-driven Epic login". Two of the three steps it
 bundled into that sentence turn out not to need credentials at all. Measured 2026-09-28 at HEAD
 `023e10346`; full evidence in
-`.planning/debug/epic-sibling-apex-non-destructive-discharge.md`.
+`.planning/debug/resolved/epic-sibling-apex-non-destructive-discharge.md`.
 
 1. **The SWEEP half was never credential-gated.** `logout()` (`legendary/user.ts:150`) runs
    `legendary auth --delete` first and returns early on `res.error || res.abort`. Measured against
@@ -275,7 +353,7 @@ for an external reason.
 
 **So the gate needs exactly one thing: the operator logging into Epic once.** And thanks to the
 sweep being per-host invocable, they do NOT need to log out afterwards — see the procedure in
-`.planning/debug/epic-sibling-apex-non-destructive-discharge.md` § Current Focus.
+`.planning/debug/resolved/epic-sibling-apex-non-destructive-discharge.md` § Current Focus.
 
 `ready:` stays `live-gate`: the remaining step needs a live app run. It is not `code`, not `blocked`.
 

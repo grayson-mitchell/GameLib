@@ -1,6 +1,6 @@
 ---
 slug: epic-sibling-apex-non-destructive-discharge
-status: investigating
+status: resolved
 trigger: "action todo: D-35-19-15 Epic sibling-apex — can the live gate be discharged WITHOUT the operator's Epic credentials, and without signing them out?"
 created: 2026-09-28
 updated: 2026-09-30
@@ -329,6 +329,101 @@ session's own E-8 record shows what an unreviewed live-gate mistake here has alr
 (an 8-hour Epic lockout). The literal empirical PRESENT-then-ABSENT measurement therefore still
 has not been run and the todo is being corrected, not closed, below.
 
+### E-10 — DISCHARGED LIVE, 2026-09-30: seeded credential-free, swept per-host, Epic session intact
+
+The full gate was driven end-to-end on this Mac at HEAD + the dev channel below. **No Epic
+credentials were used, no logout was run, and `legendary auth --delete` was never invoked.**
+
+**Seed.** From the main window's DevTools:
+`window.api.oauthCaptureLogin({ runner: 'legendary', url: 'https://www.fortnite.com/' })`.
+The shell log confirms the branch E-9 predicted by source — `humble_login_open: visible login
+window '...' armed`, plus the cancel-strip / origin-banner / chrome-CSS injections that fire in the
+VISIBLE builder's `if visible` block only, and **no `pristine` line at all**. So `is_epic_login`
+was false and `open_pristine_epic_login_window` was never entered. `origin banner updated len=24`
+matches `len('https://www.fortnite.com')` exactly, and `title change applied len=54` shows the page
+served its own `document.title` rather than stalling.
+
+**Instrument.** The existing independent reader,
+`.planning/quick/260909-p4m-correct-the-stale-record-on-the-gog-amaz/gate-evidence/binarycookies-index-walk.py`,
+against `~/Library/HTTPStorages/gamelib-shell.binarycookies`, read IN PLACE. Per-host counts and
+cookie NAMES only; no values were read or recorded anywhere.
+
+| host | baseline (Sep 28 jar) | after seed | after per-host sweep |
+| ---- | --------------------- | ---------- | -------------------- |
+| `.fortnite.com` | **0** | **5** | **0** |
+| `.epicgames.com` | 5 | 5 | **5 — untouched** |
+| `.www.epicgames.com` | 2 | 2 | 1 (see caveat) |
+| `.unrealengine.com` / `.twinmotion.com` / `.metahuman.com` | 0 | 0 | 0 |
+
+The five seeded `.fortnite.com` cookies were all PERSISTENT — they survived a full app quit and
+relaunch, so the disk jar was a valid instrument here and the session-scoped hazard the re-open
+flagged did not arm.
+
+**Sweep.** `sidecar_invoke` -> `devSweepEpicCookieDomain` with `['fortnite.com']` (the dev-only
+channel added by this session, below). Shell-side confirmation:
+
+```
+[shell] humble_login_clear_cookies: default-store evicting cookies + HTTP disk/memory cache
+        for 1 matching data record(s) (domain-scoped, count only)
+```
+
+`1 matching data record` is WebKit's per-DOMAIN data-record granularity, not a per-cookie count —
+one record carried all five `.fortnite.com` cookies.
+
+**Non-destructiveness, verified rather than assumed.** `.epicgames.com` still holds its 5 session
+cookies after the sweep, and `legendaryConfig/legendary/user.json` is still 6055 bytes and was
+never deleted (its mtime moved to Sep 30 10:14:38 at app start, when legendary refreshed the token
+— normal startup behaviour, not this sweep).
+
+**Two honest caveats, neither affecting the verdict.**
+
+1. `.www.epicgames.com` dropped from 2 to 1 (`__cf_bm` gone, `cf_clearance` remaining). This was
+   **not** the sweep: the arm reported exactly `1 matching data record`, and a domain-scoped
+   removal for `fortnite.com` cannot reach `.www.epicgames.com`. `__cf_bm` carries a ~30-minute
+   Cloudflare TTL and ~51 minutes elapsed between the two reads, so it expired on its own.
+2. The dev channel's own sidecar-side `logInfo` line was **never observed** — no `*.log` under
+   `~/Library/Application Support/gamelib` contains it, and `logInfo` does not reach the dev
+   harness's `[sidecar:err]` capture. The evidence above therefore rests on the Rust arm's own log
+   line plus the two independent jar reads, NOT on that line. Do not cite it as an instrument.
+
+**Verdict: D-35-19-15's discharge condition is MET.** A non-primary Epic apex cookie was confirmed
+PRESENT in GameLib's own jar by an independent read, then confirmed ABSENT after the
+`EPIC_COOKIE_HOSTS` sweep by the same independent read. This is not a `matched=0` — the "before"
+was 5, measured.
+
+### E-11 — the sweep had no non-destructive route until this session; one was added
+
+`clearEpicCookies` existed ONLY as a step inside `LegendaryUser.logout()`
+(`legendary/user.ts:275`), which runs `legendary auth --delete` first and unconditionally, and
+sweeps all five hosts at once. So exercising the sweep meant destroying the operator's real Epic
+session and could not isolate one apex. `dispatch_rust_channel` is deliberately NOT a
+`#[tauri::command]` (`main.rs:8077-8080`, D-02's zero-renderer-capability-grant stance), so the
+Rust arm is unreachable from the renderer directly.
+
+Added: `src/backend/sidecar/devEpicCookieSweepRegistration.ts` — a dev-only `ipcMain` channel,
+`devSweepEpicCookieDomain`, taking one domain and calling `seam.clearCookies()` with
+`legendary/user.ts:57`'s `'epic-cookie-clear-no-window'` sentinel label. Registered from
+`handlers.ts`. Three independent bounds: it is not registered at all in a packaged sidecar
+(`isPackagedSidecar()`); the Rust arm's own `epic_cookie_domain_matches(domain)` gate means a
+non-Epic domain cannot be cleared through it regardless of what is passed; and it clears cookies
+only, never credentials. Deliberately NOT on the preload surface — `sidecar_invoke` already reaches
+any registered channel by name, so a `window.api` entry would widen the documented renderer surface
+(and the `IPC-PORT-INVENTORY.md` reconciliation `preload-surface-gate.py` enforces) for a
+debugging instrument.
+
+**One defect found in the added code, by the suite, and worth recording:** the first draft logged a
+one-line "dev channel registered" banner at registration time. `handlers.ts` calls the registrar at
+module scope, so registration time IS import time, and under Jest `heroicLogWriter` is not yet
+initialised — it took **26 sidecar suites** down with
+`TypeError: Cannot read properties of undefined (reading 'logWarning')`. Removed; the module now
+documents the hazard. Same class as the import-time guard `appShellFlowRegistration.ts` documents.
+
+**Gate evidence for the code:** `pnpm codecheck` exit 0; `npx prettier --check` clean on both files
+with `--file-info` confirming `{ "ignored": false, "inferredParser": "typescript" }` for each (so
+the green is non-vacuous); `pnpm lint` exit 0, `production: PASS | tests: PASS`; `pnpm find-deadcode`
+exit 0 after dropping a dead `export` the gate correctly rejected; `pnpm jest src/backend/sidecar/__tests__`
+66/66 suites, 1461/1461 tests; `pnpm planning-gates` 12/12.
+
 ## Eliminated
 
 - hypothesis: "The sweep half of the discharge condition requires an authenticated Epic session."
@@ -548,3 +643,48 @@ blocked_on: "NOTHING structural. D-35-19-15 is not blocked; it is a ready:live-g
 files_changed:
   - ".planning/debug/epic-sibling-apex-non-destructive-discharge.md"
   - ".planning/todos/pending/2026-09-02-d-35-19-15-sibling-apex-seeding-unqueued-and-unreproducible-.md"
+
+## Resolution (FINAL, 2026-09-30)
+
+status: "resolved — D-35-19-15's discharge condition MET live, todo closed"
+
+root_cause: "The todo was never blocked by a missing capability. Its premise — that seeding a
+  sibling-apex cookie requires an authenticated Epic login — was a non-sequitur drawn from E-5's own
+  correct rule. E-5 established that only a request served BY one of the four apexes can set a cookie
+  there, tested exactly ONE vehicle for such a request (the Epic login page at epicgames.com, which
+  by that rule can never satisfy it), and generalised the negative to every vehicle. The four apexes
+  are public, Epic-run websites; navigating to one satisfies the rule with zero credentials. The
+  refutation was already in the same file two entries earlier: E-3 had established the sweep matches
+  by HOST, not by cookie name, so Item 7's SSO-synced EPIC_DEVICE was never required."
+
+fix: "Two parts. (1) No product defect existed — the EPIC_COOKIE_HOSTS sweep was correct all along
+  and is now proven on a real sibling-apex cookie (E-10). (2) The missing piece was a non-destructive
+  way to EXERCISE it: added src/backend/sidecar/devEpicCookieSweepRegistration.ts, a dev-only
+  single-host sweep channel, because clearEpicCookies previously existed only inside logout() behind
+  an unconditional `legendary auth --delete` (E-11)."
+
+verification: "E-10. .fortnite.com measured 0 -> 5 -> 0 by an independent binarycookies read, with
+  .epicgames.com's 5 cookies and user.json intact throughout. Not a vacuous zero: the 'before' was 5,
+  measured. Code gates in E-11."
+
+cost_to_the_operator: "None. No credentials entered, no logout, no re-login, no account risk — in
+  deliberate contrast to the 2026-09-28 attempt at this same gate, which cost an 8-hour Epic lockout."
+
+residual_gap: "The 2026-09-28 residual (measurement B — login and logout within ONE app session, so
+  a session-scoped sibling cookie would be visible) is now MOOT rather than open: the five seeded
+  .fortnite.com cookies were all persistent and survived a quit/relaunch, so the disk instrument was
+  valid for this fixture and the session-scoped hazard never armed. It remains formally unexcluded
+  for a hypothetical session-scoped cookie, which nothing now depends on."
+
+superseded_claims:
+  - "E-5's CONCLUSION ('a credential-free seed is impossible', 'the seeding half genuinely does
+    require an authenticated Epic login') — refuted by E-10. E-5's RULE stands unchanged."
+  - "`blocked_on` (the cold-jar login todo) — that todo is in completed/ and the eviction fix is in
+    the tree at main.rs:4325 and :7499."
+  - "The 2026-09-28 Resolution block's 'UNSATISFIABLE on this build' — marked SUPERSEDED in place."
+
+files_changed:
+  - "src/backend/sidecar/devEpicCookieSweepRegistration.ts (new, dev-only)"
+  - "src/backend/sidecar/handlers.ts (import + one guarded registration call)"
+  - ".planning/debug/epic-sibling-apex-non-destructive-discharge.md"
+  - ".planning/todos/completed/2026-09-02-d-35-19-15-sibling-apex-seeding-unqueued-and-unreproducible-.md (moved from pending/)"
