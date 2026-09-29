@@ -13,6 +13,7 @@ sessions:
   - "Sitting 6 -- 2026-09-28, Linux (Pop!_OS 22.04, X11), tauri dev build `54a931199`, identity proven by PID -- 38-S04 PASS"
   - "Sitting 7 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `ecd214a6f`, identity proven by PID -- 38-S10 PASS"
   - "Sitting 8 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `4a99e1d6b`, identity proven by PID -- 38-S12 PASS"
+  - "Sitting 9 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `55aa0d54b`, identity proven by PID -- 38-S16 Linux/row-7 half PASS, item stays OPEN (Windows/row-5 half not scored)"
 ---
 
 ## Current Test
@@ -38,7 +39,10 @@ so the ledger now holds 9 open items, 17 discharged, 10 retired; see the "## Sit
 below for the artifacts. Sitting 7, the second Linux sitting, scored `38-S10` PASS; the ledger now
 holds 8 open items, 18 discharged, 10 retired; see the "## Sitting 7" section below. Sitting 8, the
 third Linux sitting, scored `38-S12` PASS, so the ledger now holds 7 open, 19 discharged and 10
-retired items; see the "## Sitting 8" section below.]
+retired items; see the "## Sitting 8" section below. Sitting 9, the fourth Linux sitting, scored
+`38-S16`'s Linux/row-7 half PASS WITHOUT discharging it (the item also needs its Windows/row-5
+half), so the ledger still holds 7 open, 19 discharged and 10 retired items; see the "## Sitting
+9" section below.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -1039,3 +1043,74 @@ Text-tree instrument (reused as-is):
 `.planning/quick/260929-ata-run-phase-38-item-38-s10-live-on-linux-h/atspi_dialog_probe.py`. New
 arming instrument: `steam_library_replica.cjs`. New capture-region correction (this sitting only):
 `capture_region_fix.py`. quick `260929-hgm`.
+
+## Sitting 9 — 2026-09-29, Linux (Pop!_OS 22.04, X11), `pnpm tauri:dev` at `55aa0d54b`
+
+**This is the FOURTH LINUX SITTING Phase 38 has had.** It scored the LINUX/ROW-7 HALF of one item,
+`38-S16`. It is NOT a discharge: `38-S16` is scored on BOTH matrix row 5 (Windows) and row 7
+(Linux), its own `prior_state` says a single-branch run does not discharge it, and the
+Windows/row-5 half is still NOT SCORED (sitting 1). The item therefore stays in `human_verification`
+with one new dated key, the treatment `38-S14` received in sitting 5. The ledger is unchanged at 7
+open, 19 discharged and 10 retired.
+
+**Conditions.** The sitting crashed the operator's machine once mid-Task-1 (evidence files and the
+probe survived untracked) and was resumed from disk after a fresh baseline re-measure. Build identity
+was proven: the GameLib window's PID 8091 resolved through `/proc/8091/exe` to
+`src-tauri/target/debug/gamelib-shell`, and `git status --porcelain -- src src-tauri package.json`
+was empty. DECLARED REAL-PROFILE ARM (two-profile rule, half 2): the item needs the operator's real
+Steam library registration, mount state and signed-in session, so a fake HOME would give the wrong
+library count; the justification is the same one sitting 8 recorded. Nothing was dispatched and
+Install was never clicked. The screen was unlocked throughout (`LockedHint=no`) and an idle
+inhibitor ran for the duration and was killed at cleanup. The Steam client state was not examined.
+Capture geometry: `xdotool` and `xwininfo` disagreed by (+10,+45) on all three readings, so
+`capture_region_fix.py` was used and confirmed by a viewed grab against the Settings tab's AT-SPI
+extent. Instruments: `notice_copy_probe.py selftest` passed all seven cases against the live
+catalogue; the live copy tracer read the Settings toggle label EXACT; the DOM route probe found no
+Inspect Element item (the Settings page shows the app's own context menu), so `DOM_ROUTE=none` and
+the container verdicts rest on the STRUCTURAL basis.
+
+**Mount state and ARMING.** The operator had unmounted the games drive at 21:19; the reboot after
+the crash remounted it via fstab, so the sitting re-armed: the operator unmounted it again
+(authenticated; the device node had moved from `nvme0n1p3` to `nvme1n1p3`, same UUID). THE TRAP: the
+`libraryfolders.vdf` registers this same drive twice, as `/mnt/PopGames/SteamLibrary` and as the
+`/media/...` udisks path, so the remount must be checked by TARGET, not count; Task 4 does that in
+`evidence/remount.txt`. Off: `enableSteamNativeInstall` read `false` (replica `COUNT=2`). On: toggled
+through the Settings UI, read back `true`, replica `BRANCH: PARSED`, `COUNT=1`, the only EXISTS path
+`~/.steam/debian-installation`, `findmnt` empty. Restored through the UI and read back `false`. Task 2
+self-skipped: the screen was unlocked and Steam sign-in was usable (381 games). Target: 7 Days to Die,
+appId `251570`, confirmed not installed.
+
+**The catalogue.** S = `steam.install.contentLightSingleLibraryNotice`, 122 characters, U+0027 at
+5 and 55, U+2014 at 81. O = `steam.install.contentLightNotice`, 185 characters, U+0027 at 27 and
+50. The `t()` defaults at `SteamDialog/index.tsx:542`/`:546` are byte-identical to the catalogue.
+
+| Fact | Expected | Text-tree compare | Container basis and evidence | Visual | Verdict |
+| --- | --- | --- | --- | --- | --- |
+| F1 off-copy | O | EXACT, 185 chars; S is MISMATCH; alt hits 0 | n/a | O shown, English | PASS |
+| F2 off-container | `div.infoBox` | n/a | STRUCTURAL: one render site in the `infoBox` at `:531`, 0 heading nodes, 0 ThirdParty hits | rounded fill, inline warning icon, no border, checkmark or header | PASS |
+| F3 on-copy | S | EXACT, 122 chars; O is MISMATCH; alt hits 0 | n/a | S shown, English | PASS |
+| F4 on-container | `div.infoBox` | n/a | STRUCTURAL, same evidence | same shape | PASS |
+
+**Arming corroboration and anomalies.** No library dropdown in either dialog
+(`COMBO_BOX_COUNT` 0), and the other copy was absent in both. Both dialog-closed negative controls
+read 0/0. Anomalies, none scored: closing the dialog with its header X also clicked the IGDB row
+beneath it and opened a GameLib child window (closed by its own X, off sub-branch); GNOME Settings
+surfaced over GameLib once and one click selected its "Region & Language" item without changing
+anything; the first ON navigation opened another game by mistake and nothing was done there.
+
+**Transient and late-mount check.** OFF: 9.2 fps, median 96.8ms; ON: 9.4 fps, median 98.6ms. Every
+flagged frame fell inside the ~510-540ms MUI slide. In both branches the notice was already present in
+the first dialog-visible frame, with no late mount, no vanish and no wrong-copy frame.
+
+**Result: PASS on all four facts. ITEM STAYS OPEN.** Honest limits: an exact match cannot tell a
+served catalogue value from the identical `t()` default; the container basis is source plus structure,
+not a DOM read; `libraryCount` was corroborated by the replica and the absent dropdown, not read from
+the webview; the native-ON-with-zero-libraries residual was not exercised; the text tree is what
+WebKitGTK exposes to AT-SPI; the burst interval bounds the shortest detectable flash; there was no
+operator eyeball.
+
+The Windows/row-5 half, `38-S14` and every other item were NOT scored. The drive's remount is recorded
+in `evidence/remount.txt`, the record of Task 4's operator-authenticated remount.
+
+Artifacts: `.planning/quick/260929-tmw-run-phase-38-item-38-s16-linux-half-live-on/` (`notice_copy_probe.py`,
+`ledger_inplace_check.cjs`, `evidence/`).

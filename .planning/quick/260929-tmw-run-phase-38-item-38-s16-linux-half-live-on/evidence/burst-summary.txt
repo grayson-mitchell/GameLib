@@ -1,0 +1,17 @@
+SUBBRANCH=off
+capture: fix wrapper (origin 1909,132)
+frames=56 fps=9.2 median_interval=96.8ms click_epoch_ms=1790672856120 new_windows=0
+settle-diff max=0.3684 frame=frame_1790672856120.png (slide-in)
+flagged (all inside ~540ms MUI slide): 856120 0.3684, 856276 0.3500, 856434 0.2177, 856553 0.1233, 856656 0.0467
+classification: 856120/856276 dialog not yet visible (menu fading); 856434,856553,856656 dialog sliding up with the notice ALREADY PRESENT and identical; nothing flagged after 856656.
+late-mount latency: notice present in first dialog-visible frame (~314ms after click); no late mount, no transient, no vanish.
+clients new windows during burst: 0
+POST-SCORE DEVIATION: closing the dialog with its header X at image (962,306) also delivered a click to the page row beneath (IGDB), opening a GameLib child window 'igdb.com' (pid 8091). Closed via its own X. No install, no config change.
+
+SUBBRANCH=on
+frames=57 fps=9.4 median_interval=98.6ms click_epoch_ms=1790673278628 new_windows=0
+settle-diff max=0.3615 frame=frame_1790673278628.png (slide-in)
+flagged (all inside ~510ms MUI slide): 278628 0.3615, 278754 0.3333, 278886 0.1673, 279014 0.1011, 279139 0.0119
+classification: viewed 754/886/1014/139 -- dialog sliding up, single-library notice (S, 122ch shape, no 'Turn on native Steam installs' clause) present and identical in every one; frame 628 is the click frame (menu, no dialog), not viewed separately. Nothing flagged after 279139.
+late-mount latency: notice present in the first dialog-visible frame (~126ms after click); no late mount, no transient, no vanish, no O-shaped notice in any frame.
+clients new windows during burst: 0

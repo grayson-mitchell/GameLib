@@ -1,0 +1,10 @@
+# Task 1 2026-09-29T09:04:57Z
+xdotool: WINDOW=62914563 X=1919 Y=177 WIDTH=1280 HEIGHT=800 SCREEN=0 
+xwininfo:  Absolute upper-left X: 1909  Absolute upper-left Y: 132  Width: 1280  Height: 800 
+xdotool: WINDOW=62914563 X=1919 Y=177 WIDTH=1280 HEIGHT=800 SCREEN=0 
+xwininfo:  Absolute upper-left X: 1909  Absolute upper-left Y: 132  Width: 1280  Height: 800 
+xdotool: WINDOW=62914563 X=1919 Y=177 WIDTH=1280 HEIGHT=800 SCREEN=0 
+xwininfo:  Absolute upper-left X: 1909  Absolute upper-left Y: 132  Width: 1280  Height: 800 
+_NET_FRAME_EXTENTS(CARDINAL) = 0, 0, 37, 0
+DISAGREE: xdotool origin (1919,177) vs xwininfo absolute (1909,132): offset (+10,+45) on all 3 readings -> CAPTURE_TOOL=fix
+CAPTURE_CHECK: SETTINGS tab AT-SPI cx=2337,cy=155 minus origin (1909,132) = (428,23); viewed grab shows SETTINGS tab at that position. fix wrapper confirmed.

@@ -1,0 +1,31 @@
+# Task 1 2026-09-29T09:06:12Z live tracer (key setting.steam-native-install, translation.json)
+HIT kind=expected
+  path=0.0.0.0.0.0.0.2.0.27.0
+  depth=10
+  role=page
+  in_dialog=False
+  source=text
+  attrs={"toolkit": "WebKitGTK"}
+  SEGMENT_REPR='Download Steam games directly in GameLib'
+  SEGMENT_LEN=40
+  FFFC_BEFORE_SEGMENT=0
+  COMPARE_EXPECTED=EXACT {}
+DEEPEST_EXPECTED_ANCESTORS
+ANCESTOR depth=0 role=application name='gamelib-shell' attrs={}
+ANCESTOR depth=1 role=frame name='GameLib' attrs={"toolkit": "gtk", "window-type": "normal"}
+ANCESTOR depth=2 role=filler name='' attrs={"toolkit": "gtk"}
+ANCESTOR depth=3 role=filler name='' attrs={}
+ANCESTOR depth=4 role=filler name='' attrs={"toolkit": "WebKitGTK"}
+ANCESTOR depth=5 role=scroll pane name='' attrs={"toolkit": "WebKitGTK"}
+ANCESTOR depth=6 role=document text name='GameLib' attrs={"toolkit": "WebKitGTK"}
+ANCESTOR depth=7 role=article name='' attrs={"tag": "main", "toolkit": "WebKitGTK", "computed-role": "main", "xml-roles": "main"}
+ANCESTOR depth=8 role=panel name='' attrs={"tag": "div", "toolkit": "WebKitGTK", "computed-role": "group", "xml-roles": "list"}
+ANCESTOR depth=9 role=label name='' attrs={"tag": "label", "toolkit": "WebKitGTK"}
+ANCESTOR depth=10 role=page name='' attrs={"toolkit": "WebKitGTK"}
+EXPECTED_HITS=1
+ALT_HITS=0
+DEEPEST_EXPECTED_COMPARE=EXACT
+DIALOG_NODES=0
+DIALOG_HEADING_NODES=0
+THIRD_PARTY_HITS=0
+ATTR_CLASS_EXPOSED=no
