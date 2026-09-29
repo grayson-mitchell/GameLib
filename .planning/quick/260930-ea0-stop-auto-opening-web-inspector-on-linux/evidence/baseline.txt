@@ -1,0 +1,7 @@
+# baseline captured 2026-09-30 before any edit, branch quick-260930-ea0 (from main @ 37d983772)
+full: test result: ok. 285 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.05s
+rustfmt Diff in: 75
+open_devtools call sites (non-comment): 2
+# RED observations (tests added, predicate absent)
+RED rust: cargo test --bin gamelib-shell devtools_auto_open -> error[E0425]: cannot find function `should_auto_open_devtools` in this scope (x3)
+RED jest: tauriShellSource.test.ts -> 1 failed, 223 passed: "both debug auto-open sites consult should_auto_open_devtools" Expected: 2 Received: 0

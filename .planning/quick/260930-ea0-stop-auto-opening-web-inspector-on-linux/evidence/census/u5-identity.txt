@@ -1,0 +1,11 @@
+WINDOW_ID=58720259
+WINDOW_AT_MS=517
+LAUNCH_PID=146870
+EXE=/home/graysonmitchell/GameLib/src-tauri/target/debug/gamelib-shell
+DMABUF_VAR=absent
+LD_PRELOAD_VAR=absent
+SET=
+UNSET=
+ARGS=
+WEBPROC_PID=146893
+WEBPROC_DMABUF_VAR=absent

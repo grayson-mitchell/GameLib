@@ -1,0 +1,45 @@
+NOTES (quick 260930-ea0, Task 2) -- recorded, not gating. Host: X11 :1, NVIDIA 580.173.02, WebKitGTK 2.50.4, 2026-09-30.
+Binary: src-tauri/target/debug/gamelib-shell built from commit 142cde2a5 (the predicate change). Fresh createFakeHomeProfile per launch.
+
+(a) Screenshot u1.png (window capture by xwininfo origin, 1280x800, 15 s after launch)
+    Shows the full-height app UI: top NavShell tabs, left Library filter nav, and the "GameLib 0.7.0" release-notes modal
+    (the first-run About modal on a fresh profile). NO docked inspector panel: the app fills all 800 px, the bottom edge is app
+    background. Colour count via PIL getcolors = 1575, equal to the sitting-12 AppImage and the suppressed-inspector dev
+    launches (reference 1575). tracer1.png (Task 1) looked the same.
+
+(b) Context menu (label ctx1, --max-seconds 120, harness driven by hand)
+    Waited for blankprobe_lines >= 8 (was 11), closed the About modal, then right-clicked an EMPTY header area of the main
+    webview at window-relative (640,60) -- not a game card. ctx1-context-menu.png shows the WebKit context menu:
+        Back / Forward / Stop / Reload / Inspect Element
+    "Inspect Element" IS offered. The claim in the predicate doc comment, the main-window comment and both skip eprintln! tails
+    ("right-click > Inspect Element opens it") is therefore TRUE for the main window and needed no amendment.
+    The menu item was NOT clicked, so "Inspect Element then opens a working inspector" is not measured here.
+    The login window's context menu was not measured (its skip is gated on mechanism only).
+    Teardown: ctx1-teardown.txt POST_TEARDOWN_PROCS=0.
+
+(c) BONUS blh E1-E4 with DMABUF genuinely unset (label ea0-unset-expansion), evidence under evidence/bonus-e1e4/
+    Harness: blh embed_live.ts WITHOUT --diag-env (identity: EXE_MATCH=yes, DMABUF_VAR_PRESENT=no, fake HOME). The window
+    booted and mounted unset (no blank launch). Slot rect from the renderer: 204,82 1076x718 (was 1076x418 when the inspector
+    ate 300 px). Driven with xdotool; steps taken from expansion.sh in the debug-session scratchpad, with the modal-close and
+    tab coordinates re-read from a screenshot because the viewport is 800 px tall now.
+      E1 PASS  resize 1280x800 -> 1100x700 -> 1280x800. check_settled.py --min-lines 2 --expect-vbox-change:
+               SETTLED_LINES=4 PASS=4 FAIL=0 ERRORS=0 DISTINCT_VBOX=2. vbox went 1280x800 -> 1100x700 -> 1280x800; every
+               line embed == requested, main == (0,0,vbox). Capture e1-resized-1100x700.png (embed visibly reflowed to 896 px).
+      E2 PASS  5 wheel-down clicks at (320,300) inside the embed. Changed-pixel fraction (summed |dRGB| > 16): slot region
+               (204,82)-(1280,800) 0.6639; chrome band (0,0,1280,82) 0.0000; left nav (0,82,204,800) 0.0000.
+               Captures e2a-before-wheel.png / e2b-after-wheel.png. (Threshold and crop are this run's own; the blh run
+               measured 0.5024 over a different, 418-px-tall slot, so the two fractions are not comparable.)
+      E3 PASS  click on the LIBRARY tab (outside the embed rect): the Library route shows, no GOG pixels where the slot was.
+               Capture e3-library-no-embed.png.
+      E4 PASS  Stores -> GOG Store again: the embed is back in the slot showing GOG content, host label www.gog.com, and a new
+               settled line was logged (requested == embed, main == vbox). Capture e4-route-return-embed-shown.png.
+      E4b/E5 NOT RUN (Epic round trip and in-embed link click were outside this pass).
+    Teardown: ea0-unset-expansion-teardown.txt POST_TEARDOWN_PROCS=0.
+    Not recorded by this pass: first-open split frame, keyboard focus. The embed_live.ts harness does not record LD_PRELOAD;
+    the shell was launched from the same environment as the census, where LD_PRELOAD was measured absent.
+
+Housekeeping
+    The fake-profile temp directory names (/tmp/gl-ea0-XXXX, /tmp/gl-dbg-XXXX) that the app printed into its own log were
+    replaced with <FAKEHOME> in the committed copies (tracer-*, controls/*-gamelib.log). Nothing else in the controls was
+    altered. A grep of every committed capture for userId / username / galaxyUserId / real ~/.config / ~/.local paths found none.
+    vite was stopped by process group; no gamelib-shell process and no /tmp/gl-ea0-* directory remained.

@@ -1,0 +1,24 @@
+(09:52:27) [INFO]:    Applying migration "legendary-move-global-config-folder"
+(09:52:27) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/home/graysonmitchell/GameLib/src-tauri/target/debug/gamelib-shell
+(09:52:27) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/home/graysonmitchell/GameLib source=GAMELIB_APP_ROOT
+(09:52:27) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/home/graysonmitchell/GameLib/public exists=true
+(09:52:27) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/home/graysonmitchell/GameLib/public/bin/x64/linux/legendary exists=true
+(09:52:27) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/home/graysonmitchell/GameLib/public/bin/x64/linux/gogdl exists=true
+(09:52:27) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/home/graysonmitchell/GameLib/public/bin/x64/linux/nile exists=true
+(09:52:27) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/home/graysonmitchell/GameLib/public/bin/x64/linux/comet exists=true
+(09:52:27) [INFO]:    [Steam]:           Steam TokenStore implementation set to DevVaultTokenStore
+(09:52:27) [WARNING]: [Backend]:         [dev-secret-vault] INSTALLED — secrets are stored in PLAINTEXT at /tmp/gamelib-dev-secret-vault.json — NEVER use in production
+(09:52:27) [INFO]:    [Backend]:         [bootstrap] secret stores: dev-vault
+(09:52:27) [INFO]:    [Connection]:      Connectivity: check-online
+(09:52:27) [INFO]:    [Connection]:      Pinging external endpoints
+(09:52:27) [DEBUG]:   [Backend]:         Unable to load Steam Libraries, libraryfolders.vdf not found
+(09:52:27) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] before-hydrate t=242ms vis=visible rootKids=0
+(09:52:27) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not from this module — a persisted Steam queue head is still never auto-started, since the startup flag is itself the Steam suppression (downloadqueue.ts initQueue doc comment)
+(09:52:27) [INFO]:    Migration "legendary-move-global-config-folder" successfully applied
+(09:52:27) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] after-hydrate t=516ms vis=visible rootKids=0
+(09:52:27) [INFO]:    [Connection]:      Connectivity: online
+(09:52:27) [INFO]:    [Backend]:         User Not Found, removing it from Store
+(09:52:27) [ERROR]:   [Gog]:             Unable to syncQueued playtime, userData not present
+(09:52:27) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(09:52:27) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(09:52:27) [INFO]:    [Backend]:         AreWeAntiCheatYet data downloaded
