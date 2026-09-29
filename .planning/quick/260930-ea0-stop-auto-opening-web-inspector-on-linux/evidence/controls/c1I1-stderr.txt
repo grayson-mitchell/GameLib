@@ -1,0 +1,23 @@
+[shell] spawning sidecar (dev): "/home/graysonmitchell/.nvm/versions/node/v24.21.0/bin/node" "/home/graysonmitchell/GameLib/src-tauri/../build/main/sidecar.js"
+[shell]   cwd=/home/graysonmitchell/GameLib
+[shell]   entry_exists=true
+[shell]   GAMELIB_SHELL_EXE=/home/graysonmitchell/GameLib/src-tauri/target/debug/gamelib-shell
+[shell]   GAMELIB_APP_ROOT=/home/graysonmitchell/GameLib
+[shell]   forward_args=[]
+[shell] sidecar process spawned OK
+[shell] exitToTray: close handler attached; the setting is re-read on every close (no relaunch needed)
+[shell] window focus refresh: listener attached to 'main'
+[shell] tray recent games: seeded 0 entries from disk (limit 5)
+[shell] devtools opened for 'main' webview (debug build)
+[shell] sidecar signalled READY (__GAMELIB_SIDECAR_READY__)
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'legendary_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'gog_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'zoom_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'steam_library' — using the hardcoded cache-store shape
+[sidecar:err] [storeWriteHandlers] storeNew ignored renderer-supplied options for 'nile_library' — using the hardcoded cache-store shape
+[sidecar:err] [sidecar/handlers] no live store instance for 'gog_api_info' — returning {}
+[sidecar:err] [sidecar/handlers] no live store instance for 'gog_install_info' — returning {}
+[sidecar:err] [sidecar/handlers] no live store instance for 'gog_achievements' — returning {}
+[sidecar:err] [sidecar/handlers] no live store instance for 'legendary_install_info' — returning {}
+[sidecar:err] [sidecar/handlers] no live store instance for 'legendary_gameinfo' — returning {}
+[sidecar:err] [sidecar/handlers] no live store instance for 'nile_install_info' — returning {}

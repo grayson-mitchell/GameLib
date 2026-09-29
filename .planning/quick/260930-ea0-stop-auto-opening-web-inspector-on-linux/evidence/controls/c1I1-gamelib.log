@@ -1,0 +1,45 @@
+(09:52:44) [INFO]:    Applying migration "legendary-move-global-config-folder"
+(09:52:44) [INFO]:    [Backend]:         [bootstrap] GAMELIB_SHELL_EXE received=/home/graysonmitchell/GameLib/src-tauri/target/debug/gamelib-shell
+(09:52:44) [INFO]:    [Backend]:         [bootstrap] publicDir resolved=/home/graysonmitchell/GameLib/public exists=true
+(09:52:44) [INFO]:    [Backend]:         [bootstrap] runner binary legendary path=/home/graysonmitchell/GameLib/public/bin/x64/linux/legendary exists=true
+(09:52:44) [INFO]:    [Backend]:         [bootstrap] appRoot resolved=/home/graysonmitchell/GameLib source=GAMELIB_APP_ROOT
+(09:52:44) [INFO]:    [Backend]:         [bootstrap] runner binary gogdl path=/home/graysonmitchell/GameLib/public/bin/x64/linux/gogdl exists=true
+(09:52:44) [INFO]:    [Backend]:         [bootstrap] runner binary nile path=/home/graysonmitchell/GameLib/public/bin/x64/linux/nile exists=true
+(09:52:44) [INFO]:    [Backend]:         [bootstrap] runner binary comet path=/home/graysonmitchell/GameLib/public/bin/x64/linux/comet exists=true
+(09:52:44) [INFO]:    [Steam]:           Steam TokenStore implementation set to DevVaultTokenStore
+(09:52:44) [WARNING]: [Backend]:         [dev-secret-vault] INSTALLED — secrets are stored in PLAINTEXT at /tmp/gamelib-dev-secret-vault.json — NEVER use in production
+(09:52:44) [INFO]:    [Backend]:         [bootstrap] secret stores: dev-vault
+(09:52:44) [INFO]:    [Connection]:      Connectivity: check-online
+(09:52:44) [INFO]:    [Connection]:      Pinging external endpoints
+(09:52:44) [DEBUG]:   [Backend]:         Unable to load Steam Libraries, libraryfolders.vdf not found
+(09:52:44) [INFO]:    [DownloadManager]: sidecar: boot-time download-queue auto-resume (the startup-flagged initQueue call) is ENABLED as of Phase 35 plan 11 and runs from appShellFlowRegistration.ts frontendReady, not from this module — a persisted Steam queue head is still never auto-started, since the startup flag is itself the Steam suppression (downloadqueue.ts initQueue doc comment)
+(09:52:44) [INFO]:    Migration "legendary-move-global-config-folder" successfully applied
+(09:52:44) [INFO]:    [Connection]:      Connectivity: online
+(09:52:44) [INFO]:    [Backend]:         User Not Found, removing it from Store
+(09:52:44) [ERROR]:   [Gog]:             Unable to syncQueued playtime, userData not present
+(09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] before-hydrate t=195ms vis=visible rootKids=0
+(09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] after-hydrate t=200ms vis=visible rootKids=0
+(09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] before-root-render t=203ms vis=visible rootKids=0
+(09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-initialized t=215ms vis=visible rootKids=0
+(09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] after-root-render t=205ms vis=visible rootKids=0
+(09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=215ms vis=visible rootKids=0
+(09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] app-chunk-import-start t=219ms vis=visible rootKids=0
+(09:52:44) [INFO]:    [Backend]:         [GAMELIB_SIDECAR_SEND_HANDLER] frontendReady
+(09:52:44) [INFO]:    [Backend]:         Frontend Ready
+(09:52:45) [DEBUG]:   [Backend]:         Releases info ready, checking wine releases
+(09:52:45) [DEBUG]:   [Backend]:         Releases info ready, checking anticheat data
+(09:52:45) [INFO]:    [Backend]:         AreWeAntiCheatYet data downloaded
+(09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] app-chunk-import-done t=772ms vis=visible rootKids=1
+(09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=1172ms vis=visible rootKids=1
+(09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=1173ms vis=visible rootKids=1
+(09:52:45) [INFO]:    [Frontend]:        Updated to a new version, cleaaning up the cache.
+(09:52:46) [INFO]:    [Legendary]:       Running command: LEGENDARY_CONFIG_PATH=<FAKEHOME>/.config/GameLib/legendaryConfig/legendary /home/graysonmitchell/GameLib/public/bin/x64/linux/legendary cleanup
+(09:52:46) [DEBUG]:   [Backend]:         Logging to file(s) <FAKEHOME>/.local/state/GameLib/logs/runners/legendary.log
+(09:52:46) [INFO]:    [Frontend]:        [refreshLibrary] runner=all origin=push
+(09:52:46) [WARNING]: refresh not implemented on Sideload Library Manager
+(09:52:46) [INFO]:    [Legendary]:       Refreshing library...
+(09:52:46) [INFO]:    [Backend]:         refreshLibrary complete runner=all managers=6
+(09:52:46) [INFO]:    [Steam]:           Steam: library refresh deferred until a deliberate Steam action — no keyring_get issued (trigger=startup)
+(09:52:46) [INFO]:    [Frontend]:        [BLANKPROBE] {"at":"t+1500ms","viewport":"1280x500 dpr=1","doc":"complete/visible/focus=true","body":{"tag":"body","rect":"0,0 1280.00x500.00","vis":"block/visible/1/auto","cls":"midnightMirage"},"root":{"tag":"div","rect":"0,0 1280.00x500.00","vis":"block/visible/1/visible","id":"root"},"appGrid":{"rows":"0px 42px 458px 0px","cols":"204px 1076px","height":"500px"},"level1":[{"self":{"tag":"div","rect":"0,0 1280.00x500.00","vis":"grid/visible/1/hidden","id":"app","cls":"App"},"level2":[{"tag":"header","rect":"0,0 1280.00x42.00","vis":"flex/visible/1/visible","cls":"NavShell__navbar"},{"tag":"aside","rect":"0,42 204.00x458.00","vis":"block/visible/1/hidden","cls":"NavShell__tier2"},{"tag":"main","rect":"204,42 1076.00x458.00","vis":"flex/visible/1/auto","cls":"content"},{"tag":"div","rect":"204,500 1076.00x0.00","vis":"block/visible/1/visible","cls":"controller"}]}],"centre":{"tag":"div","rect":"190,251 900.00x436.00","vis":"block/visible/1/auto","cls":"MuiDialogContent-root css-ypiqx9-MuiDialogContent-root"}}
+(09:52:49) [INFO]:    [Backend]:         Starting the Download Queue
+(09:52:50) [INFO]:    [Frontend]:        [BLANKPROBE] {"at":"t+6000ms","viewport":"1280x500 dpr=1","doc":"complete/visible/focus=true","body":{"tag":"body","rect":"0,0 1280.00x500.00","vis":"block/visible/1/auto","cls":"midnightMirage"},"root":{"tag":"div","rect":"0,0 1280.00x500.00","vis":"block/visible/1/visible","id":"root"},"appGrid":{"rows":"0px 42px 458px 0px","cols":"204px 1076px","height":"500px"},"level1":[{"self":{"tag":"div","rect":"0,0 1280.00x500.00","vis":"grid/visible/1/hidden","id":"app","cls":"App"},"level2":[{"tag":"header","rect":"0,0 1280.00x42.00","vis":"flex/visible/1/visible","cls":"NavShell__navbar"},{"tag":"aside","rect":"0,42 204.00x458.00","vis":"block/visible/1/hidden","cls":"NavShell__tier2"},{"tag":"main","rect":"204,42 1076.00x458.00","vis":"flex/visible/1/auto","cls":"content"},{"tag":"div","rect":"204,500 1076.00x0.00","vis":"block/visible/1/visible","cls":"controller"}]}],"centre":{"tag":"li","rect":"254,229 802.00x57.00","vis":"list-item/visible/1/visible"}}

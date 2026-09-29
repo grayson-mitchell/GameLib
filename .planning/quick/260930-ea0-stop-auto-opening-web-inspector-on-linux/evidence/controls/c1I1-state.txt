@@ -1,0 +1,427 @@
+--- SNAP t=0.5s
+  pid=98421 ppid=98414 gamelib-shell st=S
+    tid=98421 gamelib-shell st=S wchan=futex_do_wait sysc=202
+    tid=98424 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98425 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98426 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98427 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98428 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=271
+    tid=98430 gamelib-shell st=S wchan=futex_do_wait sysc=202
+    tid=98431 ebsiteDataStore st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98434 PressureMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98436 pool-gamelib-sh st=S wchan=futex_do_wait sysc=202
+    tid=98437 pool-gamelib-sh st=S wchan=futex_do_wait sysc=202
+    tid=98447 gamelib-shell st=S wchan=anon_pipe_read sysc=0
+    tid=98448 gamelib-shell st=S wchan=anon_pipe_read sysc=0
+    tid=98449 gamelib-shell st=S wchan=__skb_wait_for_more_packets sysc=288
+    tid=98450 gamelib-shell st=S wchan=futex_do_wait sysc=202
+    tid=98464 ebsiteDataStore st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98468 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98470 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  pid=98433 ppid=98421 WebKitNetworkPr st=S
+    tid=98433 WebKitNetworkPr st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98440 WebKitNetworkPr st=S wchan=futex_do_wait sysc=202
+    tid=98441 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98442 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98443 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98471 persistent st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98476 Storage st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98477 background st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98479 erialBackground st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98480 pool st=S wchan=futex_do_wait sysc=202
+    tid=98482 dconf worker st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98483 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  pid=98438 ppid=98421 WebKitWebProces st=S
+    tid=98438 WebKitWebProces st=S wchan=futex_do_wait sysc=202
+    tid=98444 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98445 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98469 WebKitWebProces st=S wchan=futex_do_wait sysc=202
+    tid=98473 EventDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98475 rruptDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98478 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  pid=98446 ppid=98421 MainThread st=R
+  pid=98466 ppid=98421 WebKitWebProces st=S
+    tid=98466 WebKitWebProces st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98484 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98485 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98486 WebKitWebProces st=S wchan=futex_do_wait sysc=202
+    tid=98487 EventDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98488 rruptDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98489 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  LOG none yet
+--- SNAP t=4.5s
+  pid=98421 ppid=98414 gamelib-shell st=S
+    tid=98421 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98424 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98425 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98426 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98427 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98428 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=271
+    tid=98430 gamelib-shell st=S wchan=futex_do_wait sysc=202
+    tid=98431 ebsiteDataStore st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98434 PressureMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98436 pool-gamelib-sh st=S wchan=futex_do_wait sysc=202
+    tid=98447 gamelib-shell st=S wchan=anon_pipe_read sysc=0
+    tid=98448 gamelib-shell st=S wchan=anon_pipe_read sysc=0
+    tid=98449 gamelib-shell st=S wchan=__skb_wait_for_more_packets sysc=288
+    tid=98450 gamelib-shell st=S wchan=futex_do_wait sysc=202
+    tid=98464 ebsiteDataStore st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98468 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98470 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98493 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98497 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98510 VBlankMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98512 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98513 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98514 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98515 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98516 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98517 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98518 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98519 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98520 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98521 tokio-rt-worker st=S wchan=ep_poll sysc=232
+    tid=98522 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98523 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98524 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98525 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98526 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98527 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98528 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98529 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98530 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98531 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98533 VBlankMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98534 VBlankMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98554 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98556 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98557 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98583 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98584 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98585 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98587 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98588 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98589 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+  pid=98433 ppid=98421 WebKitNetworkPr st=S
+    tid=98433 WebKitNetworkPr st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98440 WebKitNetworkPr st=S wchan=futex_do_wait sysc=202
+    tid=98441 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98442 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98443 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98471 persistent st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98476 Storage st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98477 background st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98479 erialBackground st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98480 pool st=S wchan=futex_do_wait sysc=202
+    tid=98482 dconf worker st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98483 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  pid=98438 ppid=98421 WebKitWebProces st=S
+    tid=98438 WebKitWebProces st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98444 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98445 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98469 WebKitWebProces st=S wchan=futex_do_wait sysc=202
+    tid=98473 EventDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98475 rruptDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98478 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98494 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98495 pool-WebKitWebP st=S wchan=futex_do_wait sysc=202
+    tid=98511 CryptoQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98532 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98536 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98537 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98543 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98575 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98576 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98577 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98578 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98579 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98580 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98581 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98586 ollector Thread st=S wchan=futex_do_wait sysc=202
+  pid=98446 ppid=98421 MainThread st=S
+  pid=98466 ppid=98421 WebKitWebProces st=S
+    tid=98466 WebKitWebProces st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98484 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98485 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98486 WebKitWebProces st=S wchan=futex_do_wait sysc=202
+    tid=98487 EventDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98488 rruptDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98489 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98508 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98535 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98539 pool-WebKitWebP st=S wchan=futex_do_wait sysc=202
+    tid=98550 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98551 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98553 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98558 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98559 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98560 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98561 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98562 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98563 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98564 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98582 ollector Thread st=S wchan=futex_do_wait sysc=202
+  pid=98496 ppid=98421 WebKitNetworkPr st=S
+    tid=98496 WebKitNetworkPr st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98498 WebKitNetworkPr st=S wchan=futex_do_wait sysc=202
+    tid=98499 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98500 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98501 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98502 persistent st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98503 Storage st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98504 background st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98505 erialBackground st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98506 pool st=S wchan=futex_do_wait sysc=202
+    tid=98507 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  LOG <ROOT>/.local/state/GameLib/logs/gamelib.log bytes=5778 blankprobe_lines=11
+    (09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=215ms vis=visible rootKids=0
+    (09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] app-chunk-import-start t=219ms vis=visible rootKids=0
+    (09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] app-chunk-import-done t=772ms vis=visible rootKids=1
+    (09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=1172ms vis=visible rootKids=1
+    (09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=1173ms vis=visible rootKids=1
+    (09:52:46) [INFO]:    [Frontend]:        [BLANKPROBE] {"at":"t+1500ms","viewport":"1280x500 dpr=1","doc":"complete/visible/focus=true","body":{"tag":"body","rect":"0,0 1280.00x500.00","vis":"block/vis
+--- SNAP t=8.6s
+  pid=98421 ppid=98414 gamelib-shell st=S
+    tid=98421 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98424 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98425 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98426 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98427 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98428 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=271
+    tid=98430 gamelib-shell st=S wchan=futex_do_wait sysc=202
+    tid=98431 ebsiteDataStore st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98434 PressureMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98436 pool-gamelib-sh st=S wchan=futex_do_wait sysc=202
+    tid=98447 gamelib-shell st=S wchan=anon_pipe_read sysc=0
+    tid=98448 gamelib-shell st=S wchan=anon_pipe_read sysc=0
+    tid=98449 gamelib-shell st=S wchan=__skb_wait_for_more_packets sysc=288
+    tid=98450 gamelib-shell st=S wchan=futex_do_wait sysc=202
+    tid=98464 ebsiteDataStore st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98468 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98470 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98493 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98497 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98510 VBlankMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98512 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98513 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98514 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98515 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98516 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98517 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98518 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98519 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98520 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98521 tokio-rt-worker st=S wchan=ep_poll sysc=232
+    tid=98522 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98523 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98524 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98525 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98526 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98527 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98528 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98529 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98530 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98531 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98533 VBlankMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98534 VBlankMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98554 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98556 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98557 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98583 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98584 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98585 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98587 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98588 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98589 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+  pid=98433 ppid=98421 WebKitNetworkPr st=S
+    tid=98433 WebKitNetworkPr st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98440 WebKitNetworkPr st=S wchan=futex_do_wait sysc=202
+    tid=98441 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98442 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98443 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98471 persistent st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98476 Storage st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98477 background st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98479 erialBackground st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98480 pool st=S wchan=futex_do_wait sysc=202
+    tid=98482 dconf worker st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98483 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  pid=98438 ppid=98421 WebKitWebProces st=S
+    tid=98438 WebKitWebProces st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98444 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98445 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98469 WebKitWebProces st=S wchan=futex_do_wait sysc=202
+    tid=98473 EventDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98475 rruptDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98478 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98494 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98495 pool-WebKitWebP st=S wchan=futex_do_wait sysc=202
+    tid=98511 CryptoQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98532 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98536 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98537 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98543 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98575 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98576 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98577 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98578 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98579 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98580 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98581 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98586 ollector Thread st=S wchan=futex_do_wait sysc=202
+  pid=98446 ppid=98421 MainThread st=S
+  pid=98466 ppid=98421 WebKitWebProces st=S
+    tid=98466 WebKitWebProces st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98484 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98485 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98486 WebKitWebProces st=S wchan=futex_do_wait sysc=202
+    tid=98487 EventDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98488 rruptDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98489 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98508 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98535 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98539 pool-WebKitWebP st=S wchan=futex_do_wait sysc=202
+    tid=98550 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98551 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98553 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98558 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98559 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98560 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98561 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98562 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98563 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98564 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98582 ollector Thread st=S wchan=futex_do_wait sysc=202
+  pid=98496 ppid=98421 WebKitNetworkPr st=S
+    tid=98496 WebKitNetworkPr st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98498 WebKitNetworkPr st=S wchan=futex_do_wait sysc=202
+    tid=98499 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98500 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98501 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98502 persistent st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98503 Storage st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98504 background st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98505 erialBackground st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98506 pool st=S wchan=futex_do_wait sysc=202
+    tid=98507 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  LOG <ROOT>/.local/state/GameLib/logs/gamelib.log bytes=6855 blankprobe_lines=12
+    (09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] app-chunk-import-start t=219ms vis=visible rootKids=0
+    (09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] app-chunk-import-done t=772ms vis=visible rootKids=1
+    (09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=1172ms vis=visible rootKids=1
+    (09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=1173ms vis=visible rootKids=1
+    (09:52:46) [INFO]:    [Frontend]:        [BLANKPROBE] {"at":"t+1500ms","viewport":"1280x500 dpr=1","doc":"complete/visible/focus=true","body":{"tag":"body","rect":"0,0 1280.00x500.00","vis":"block/vis
+    (09:52:50) [INFO]:    [Frontend]:        [BLANKPROBE] {"at":"t+6000ms","viewport":"1280x500 dpr=1","doc":"complete/visible/focus=true","body":{"tag":"body","rect":"0,0 1280.00x500.00","vis":"block/vis
+--- SNAP t=12.6s
+  pid=98421 ppid=98414 gamelib-shell st=S
+    tid=98421 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98424 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98425 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98426 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98427 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98428 gamelib-shell st=S wchan=poll_schedule_timeout.constprop.0 sysc=271
+    tid=98430 gamelib-shell st=S wchan=futex_do_wait sysc=202
+    tid=98431 ebsiteDataStore st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98434 PressureMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98436 pool-gamelib-sh st=S wchan=futex_do_wait sysc=202
+    tid=98447 gamelib-shell st=S wchan=anon_pipe_read sysc=0
+    tid=98448 gamelib-shell st=S wchan=anon_pipe_read sysc=0
+    tid=98449 gamelib-shell st=S wchan=__skb_wait_for_more_packets sysc=288
+    tid=98450 gamelib-shell st=S wchan=futex_do_wait sysc=202
+    tid=98464 ebsiteDataStore st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98468 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98470 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98493 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98497 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98510 VBlankMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98512 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98513 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98514 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98515 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98516 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98517 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98518 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98519 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98520 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98521 tokio-rt-worker st=S wchan=ep_poll sysc=232
+    tid=98522 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98523 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98524 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98525 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98526 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98527 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98528 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98529 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98530 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98531 tokio-rt-worker st=S wchan=futex_do_wait sysc=202
+    tid=98533 VBlankMonitor st=S wchan=futex_do_wait sysc=202
+    tid=98534 VBlankMonitor st=S wchan=futex_do_wait sysc=202
+  pid=98433 ppid=98421 WebKitNetworkPr st=S
+    tid=98433 WebKitNetworkPr st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98440 WebKitNetworkPr st=S wchan=futex_do_wait sysc=202
+    tid=98441 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98442 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98443 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98471 persistent st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98476 Storage st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98477 background st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98479 erialBackground st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98480 pool st=S wchan=futex_do_wait sysc=202
+    tid=98482 dconf worker st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98483 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  pid=98438 ppid=98421 WebKitWebProces st=S
+    tid=98438 WebKitWebProces st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98444 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98445 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98469 WebKitWebProces st=S wchan=futex_do_wait sysc=202
+    tid=98473 EventDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98475 rruptDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98478 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98494 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98495 pool-WebKitWebP st=S wchan=futex_do_wait sysc=202
+    tid=98511 CryptoQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98532 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98536 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98543 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98575 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98576 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98577 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98578 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98579 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98580 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98581 HeapHelper st=S wchan=futex_do_wait sysc=202
+    tid=98586 ollector Thread st=S wchan=futex_do_wait sysc=202
+  pid=98446 ppid=98421 MainThread st=S
+  pid=98466 ppid=98421 WebKitWebProces st=S
+    tid=98466 WebKitWebProces st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98484 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98485 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98486 WebKitWebProces st=S wchan=futex_do_wait sysc=202
+    tid=98487 EventDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98488 rruptDispatcher st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98489 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98508 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98535 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98539 pool-WebKitWebP st=S wchan=futex_do_wait sysc=202
+    tid=98550 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98551 JITWorker st=S wchan=futex_do_wait sysc=202
+    tid=98553 JITWorker st=S wchan=futex_do_wait sysc=202
+  pid=98496 ppid=98421 WebKitNetworkPr st=S
+    tid=98496 WebKitNetworkPr st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98498 WebKitNetworkPr st=S wchan=futex_do_wait sysc=202
+    tid=98499 gmain st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98500 gdbus st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98501 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98502 persistent st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98503 Storage st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98504 background st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98505 erialBackground st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+    tid=98506 pool st=S wchan=futex_do_wait sysc=202
+    tid=98507 ReceiveQueue st=S wchan=poll_schedule_timeout.constprop.0 sysc=7
+  LOG <ROOT>/.local/state/GameLib/logs/gamelib.log bytes=6855 blankprobe_lines=12
+    (09:52:44) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] app-chunk-import-start t=219ms vis=visible rootKids=0
+    (09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] app-chunk-import-done t=772ms vis=visible rootKids=1
+    (09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=1172ms vis=visible rootKids=1
+    (09:52:45) [INFO]:    [Frontend]:        [BLANKPROBE-MARK] i18next-loaded t=1173ms vis=visible rootKids=1
+    (09:52:46) [INFO]:    [Frontend]:        [BLANKPROBE] {"at":"t+1500ms","viewport":"1280x500 dpr=1","doc":"complete/visible/focus=true","body":{"tag":"body","rect":"0,0 1280.00x500.00","vis":"block/vis
+    (09:52:50) [INFO]:    [Frontend]:        [BLANKPROBE] {"at":"t+6000ms","viewport":"1280x500 dpr=1","doc":"complete/visible/focus=true","body":{"tag":"body","rect":"0,0 1280.00x500.00","vis":"block/vis
+EXIT code=null sig=SIGTERM at +12630ms

@@ -1,0 +1,5 @@
+label=cUI1 mounted=no probe_lines=2 webprocs=1 viewport=none stderr_opened=1 stderr_skipped=0 shim_lines=0 dmabuf_shell=absent ld_preload=unseen dmabuf_webproc=unseen teardown=0 verdict=FAIL
+label=c1I1 mounted=yes probe_lines=12 webprocs=2 viewport=1280x500 stderr_opened=1 stderr_skipped=0 shim_lines=0 dmabuf_shell=WEBKIT_DISABLE_DMABUF_RENDERER=1 ld_preload=unseen dmabuf_webproc=unseen teardown=0 verdict=FAIL
+label=cUN1 mounted=yes probe_lines=12 webprocs=1 viewport=1280x800 stderr_opened=1 stderr_skipped=0 shim_lines=1 dmabuf_shell=absent ld_preload=unseen dmabuf_webproc=unseen teardown=0 verdict=FAIL
+label=synth mounted=yes probe_lines=12 webprocs=1 viewport=1280x800 stderr_opened=0 stderr_skipped=1 shim_lines=0 dmabuf_shell=absent ld_preload=absent dmabuf_webproc=absent teardown=0 verdict=PASS
+SELFTEST PASS
