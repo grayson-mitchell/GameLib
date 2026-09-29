@@ -1,0 +1,58 @@
+Task 3 step G: per-fact verdicts (region-checks.txt).
+
+Columns: region | expected | visual observation | text-tree in-dialog count | transient/late-mount | VERDICT
+
+1. Platform row | ABSENT | Looked for a MUI SelectField htmlId `platformPick`, label "Select
+   Platform Version to Install:" (gamepage.json). dialog-crop.png shows no such row anywhere in
+   the dialog body -- only the title row's two decorative platform icons (Linux tux, Windows),
+   which are `InstallModal__platformIcon`, NOT the platform row, and are noted separately below. |
+   0 (VALID instrument; role histogram has no SelectField/combo box besides the one library
+   dropdown) | never appeared at any point across all 65 burst frames, including the ~500ms open
+   transition | PASS (ABSENT, as expected)
+
+2. Library dropdown | PRESENT | dialog-crop.png shows "Choose Steam library:" label above a
+   SelectField showing "/home/graysonmitchell/.steam/debian-installation (default)". Opened once
+   (dropdown-open.png): exactly two options, "/home/graysonmitchell/.steam/debian-installation
+   (default)" and "/mnt/PopGames/SteamLibrary" -- matching the replica's two EXISTS paths, in the
+   replica's order, first one suffixed "(default)". Closed again by re-clicking the already-selected
+   option; value and free-space line unchanged afterward (after-reselect.png). | 1 in-dialog (combo
+   box role, name = the default path string) | populated at +342ms after click (late-mount, not a
+   failure -- see burst-summary.txt) | PASS (PRESENT, as expected, option list corroborates the
+   replica exactly)
+
+3. Wine section | ABSENT | Looked for all three sub-signatures: WineSelector labels ("Show Wine
+   settings", "WinePrefix", "CrossOver Bottle", "Wine version"), the sharedBottleNotice .infoBox
+   ("used for every Steam game that needs a bottle"), and an EligibilityLoadingRow "Checking install
+   options..." row. None of the three appeared in dialog-crop.png, dialog-settled.png, or any of the
+   65 burst frames. | 0 for all three sub-signature patterns (VALID instrument) | never appeared |
+   PASS (ABSENT, as expected -- confirms the by-construction false, `wineSection` requires `isMac`)
+
+4. Free-space line | PRESENT | dialog-crop.png shows "Space Available: 269.17 GiB free of 374.57
+   GiB" directly under the library select, matching `df -h` for the default library's mount
+   (/dev/nvme1n1p8: 375G size, 270G avail -- rounding-consistent with the rendered GiB figures). |
+   0 in-dialog -- CARVE-OUT: the text exists verbatim on a WebKitGTK "page" role node that the probe
+   does not classify as inside the dialog subtree (see atspi-dialog-subtree.txt for the full
+   explanation and the node dump). Per the plan's own carve-out (Task 3 step H), a PRESENT region
+   visible in the pixels with an in-dialog text-tree count of 0 on an otherwise-VALID instrument is
+   NOT a fail of the item -- scored on the visual instrument alone. | populated at +463ms after
+   click (late-mount, not a failure) | PASS (PRESENT, as expected, on the visual instrument; text
+   instrument did not expose this one fact -- see honest limits)
+
+ARMING CORROBORATION (not scored):
+- Content-light notice: NEITHER copy rendered on either instrument at any point
+  (content_light_off and content_light_single in-dialog counts are both 0 in the open dump, and
+  neither string is visible in any burst frame or dialog-crop.png). Agrees with
+  `steamSectionGating.ts:293` (`contentLightNotice = !isMac && !libraryDropdown` -- false here,
+  since libraryDropdown is true). No notice rendered ALONGSIDE the dropdown either (would have been
+  an unscored anomaly; not observed).
+- Option list: confirmed above under fact 2 -- exact match to the replica's EXISTS paths.
+- df -h of the default library's steamapps dir (/): 270G avail of 375G, beside the rendered "269.17
+  GiB free of 374.57 GiB" -- consistent (unit rounding, GiB vs G, and the small gap between the df
+  snapshot and the render timestamp).
+- Header platform icons (Linux tux, Windows) beside the dialog title: SEEN in dialog-crop.png, and
+  explicitly marked NOT the platform row (fact 1 above scores the SelectField's absence, not these
+  decorative icons).
+
+DIALOG-IN-VIEW: the whole dialog (title row, close X, the "Choose Steam library:" select, the
+"Space Available:" line under it, and the footer INSTALL button) was in view in dialog-settled.png
+and dialog-crop.png with no scrollbar inside the body -- not clipped.

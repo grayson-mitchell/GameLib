@@ -1,0 +1,48 @@
+DEVIATION (Task 1, discovered ~2026-09-29T20:48-20:51+13:00):
+
+linux_sitting_capture.py's find_window() sources x/y from `xdotool getwindowgeometry
+--shell <id>`, which reported a STABLE but WRONG client origin for this sitting:
+x=60, y=164 (width/height 1280x800 correct). Measured via two independent methods that
+this is off by (+10,+45) from the window's true rendered top-left:
+
+1. `xwininfo -id <id>` "Absolute upper-left" = (50, 119), stable across 3 repeated reads.
+2. pyatspi DESKTOP_COORDS extents for the NavTabs "SETTINGS" page-tab node: x=415, y=123,
+   width=126, height=38 -- entirely ABOVE y=164, i.e. outside the region grab/burst/
+   selftest were capturing.
+3. Empirical click test: xdotool click at ABSOLUTE screen (478,142) -- the AT-SPI-derived
+   center of the SETTINGS tab -- landed on and activated the real SETTINGS tab (confirmed
+   by a subsequent grab showing the Global Settings page). This coordinate is outside the
+   region the unmodified tool would have captured (its reported window top was y=164,
+   45px below this click).
+
+Effect: every grab/burst/selftest call made with the unmodified tool in this sitting
+before this file was written captured a region shifted 45px too low and 10px too far
+right -- missing the top NavTabs strip entirely, and running 45px past the window's true
+bottom edge into whatever sits behind/below it on the desktop (this explains an unrelated
+text overlay -- "todo-frontmatter-gate.py" / ".continue-here.md" -- bleeding into the
+bottom of early grabs; that text is NOT part of the GameLib window and was never GameLib
+content).
+
+Root cause not fully identified -- most likely a stale/incorrectly-translated
+XTranslateCoordinates result from xdotool after this session's screen lock/unlock cycle,
+since _NET_FRAME_EXTENTS read (0,0,37,0) at the same moment, which does not match the
+(10,45) delta either. Not reproduced against sitting 6/7's own captures (out of scope to
+re-verify retroactively); may be specific to this lock/unlock cycle.
+
+Correction used for the rest of this sitting: capture_region_fix.py (written this task,
+in this quick task's own directory), a narrow read-only wrapper providing `find`/`grab`/
+`burst` that source x/y from `xwininfo -id <id>` "Absolute upper-left" instead of
+`xdotool getwindowgeometry --shell`. It does NOT modify or replace
+linux_sitting_capture.py, which stays reusable as-is for other sittings/hosts where this
+offset may not reproduce. linux_sitting_capture.py's `diff` subcommand IS still reused
+unchanged for post-hoc frame comparison in Task 3, since it only reads already-saved PNGs
+by path and never calls find_window().
+
+Verified correct: a grab taken via capture_region_fix.py at the corrected origin (50,119)
+shows the complete window -- NavTabs strip (ACCOUNTS/LIBRARY/STORES/SETTINGS) at the true
+top, full content, no foreign desktop content bleeding in at the bottom.
+
+All grabs/bursts from this point in Task 1 onward, and all of Task 3's scored captures,
+use capture_region_fix.py, not linux_sitting_capture.py's own grab/burst/selftest. Task 1's
+own selftest/identity proof (pid/exe match) is UNAFFECTED by this bug (identity doesn't
+depend on x/y) and stays valid as already recorded.

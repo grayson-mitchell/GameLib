@@ -1,0 +1,21 @@
+Task 3 step G: gamelib.log excerpt for the scored dialog-open window
+(2026-09-29T21:01:00 to 21:01:10, the click epoch 1790668860257ms +/- 10s).
+
+no matching lines
+
+The log file's last write (mtime 2026-09-29 20:59:18) is BEFORE the scored dialog-open
+click (21:01:00) and stayed unchanged through the whole open/inspect/close sequence.
+grep for SteamDialog|SteamGame|InstallModal|34\.13|ERROR over the full file's tail
+finds nothing in this window. This is consistent with the code path exercised here:
+opening "Install with options..." and reading the rendered library list/free-space line
+does not call logInfo/logDebug anywhere in SteamDialog/index.tsx or
+steamSectionGating.ts (both are pure render/derive paths); the sidecar's
+installFlowRegistration.ts / listSteamLibraryTargets() IPC handlers it depends on are
+also silent on success. No ERROR line appeared either, so this is an absence of
+instrumentation on the render path, not evidence of a failure. The last logged activity
+before this window (20:59:17-18) was ExtraGameInfo's page-load fetches for 7 Days to
+Die (PCGamingWiki, GamesDB, CodeWeavers -- 403, HowLongToBeat, SteamDeck/ProtonDB data)
+plus a routine dev-secret-vault key read (Steam session credential, never printed or
+copied by this task), all triggered by
+navigating to the game page in step B, before the scored dialog was ever opened -- not
+by anything in the scored open/close sequence.

@@ -1,0 +1,66 @@
+Task 3 step F: AT-SPI text-tree check.
+
+Instrument VALIDITY (positive control, dialog open, this dump):
+  - at least one dialog-role node exists: YES (dialog_nodes_found=1)
+  - title in-dialog count >= 1: YES (3)
+  - dialog-subtree role histogram includes a push button named the Install label: YES ("INSTALL")
+  - negative control (dialog closed, step C) had no in-dialog library_dropdown/free_space_line hit: YES (both 0)
+  => VALID.
+
+Negative control (dialog CLOSED, step C, dump-closed.jsonl):
+  platform_row: in_dialog=0 outside_dialog=0
+  library_dropdown: in_dialog=0 outside_dialog=0
+  wine_section: in_dialog=0 outside_dialog=0
+  free_space_line: in_dialog=0 outside_dialog=0
+  content_light_off: in_dialog=0 outside_dialog=0
+  content_light_single: in_dialog=0 outside_dialog=0
+  title: in_dialog=0 outside_dialog=3
+  ROLE_HISTOGRAM (dialog subtree): (empty -- no dialog subtree)
+  COMBO_BOX_COUNT (dialog subtree): 0
+
+Open dialog (dump-open.jsonl):
+  platform_row: in_dialog=0 outside_dialog=0
+  library_dropdown: in_dialog=1 outside_dialog=1
+  wine_section: in_dialog=0 outside_dialog=0
+  free_space_line: in_dialog=0 outside_dialog=1
+  content_light_off: in_dialog=0 outside_dialog=0
+  content_light_single: in_dialog=0 outside_dialog=0
+  title: in_dialog=3 outside_dialog=1
+  ROLE_HISTOGRAM (dialog subtree):
+    push button: 2
+    dialog: 1
+    document frame: 1
+    label: 1
+    page: 1
+    combo box: 1
+  COMBO_BOX_COUNT (dialog subtree): 1
+
+Dialog-subtree lines (role, name, text), all in_dialog=true:
+  dialog '7 Days to Die' ''
+  push button 'close' ''
+  document frame '7 Days to Die' '7 Days to Die..' (embedded object chars)
+  label '' 'Choose Steam library:'
+  page '' '/home/graysonmitchell/.steam/debian-installation (default)...' (embedded object chars)
+  combo box '/home/graysonmitchell/.steam/debian-installation (default)' (same, as text)
+  push button 'INSTALL' ''
+
+CARVE-OUT (plan Task 3 step H): free_space_line's in-dialog text-tree count is 0, but the region
+IS visible in the pixels (dialog-crop.png: "Space Available: 269.17 GiB free of 374.57 GiB"). The
+underlying text exists in the accessibility tree -- a WebKitGTK "page" role node with in_dialog=false
+carries the full dialog text verbatim, INCLUDING "Space Available: 269.17 GiB free of 374.57 GiB"
+(found by full-text search, node path 0.0.0.0.0.0.0.0, role "page", in_dialog=false) -- but the
+probe's dialog-containment test does not classify that node as inside the "dialog" role subtree,
+apparently because WebKitGTK exposes this flattened whole-dialog-text "page" node as a sibling of
+the semantic dialog container rather than a descendant of it. Per the plan's own carve-out, this is
+NOT a fail of the item: the instrument did not expose this one fact, so it is scored on the visual
+instrument alone (PRESENT, confirmed twice -- burst frame 1790668860720 onward, and dialog-crop.png),
+and stated as an honest limit in the result.
+
+Supplementary counts (in-dialog only, from the open dump, NOT verdicts):
+  "free of" text: 0 in-dialog (see carve-out above; the full string exists on the out-of-dialog
+    "page" node)
+  "(default)" text: 2 in-dialog (the combo box's name and its text, matching)
+  "debian-installation" text: 2 in-dialog (same two nodes)
+  "PopGames" text: 0 in-dialog (the non-default library was never selected or exposed by name here,
+    consistent with only the default/primary library being shown closed; the option list is checked
+    separately in region-checks.txt / dropdown-open.png)

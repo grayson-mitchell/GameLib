@@ -12,6 +12,7 @@ sessions:
   - "Sitting 5 -- 2026-09-26, Windows 11, INSTALLED shell v0.7.0 (built 2026-09-24 07:34 from `5b6201e26`) with the repo build/main sidecar; label corrected by quick 260926-b5r -- 38-S02 PASS, 38-W06 FAIL accepted; 38-S14 sub-case (a) PASS but item stays OPEN; 38-W04 not run (no CI artifact exists); four defects filed"
   - "Sitting 6 -- 2026-09-28, Linux (Pop!_OS 22.04, X11), tauri dev build `54a931199`, identity proven by PID -- 38-S04 PASS"
   - "Sitting 7 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `ecd214a6f`, identity proven by PID -- 38-S10 PASS"
+  - "Sitting 8 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `4a99e1d6b`, identity proven by PID -- 38-S12 PASS"
 ---
 
 ## Current Test
@@ -35,7 +36,9 @@ discharged, 10 retired. See the "Spike evidence — 2026-09-28 (not a sitting)" 
 the artifacts. Later the same day, Sitting 6 — the FIRST LINUX SITTING — discharged `38-S04` PASS,
 so the ledger now holds 9 open items, 17 discharged, 10 retired; see the "## Sitting 6" section
 below for the artifacts. Sitting 7, the second Linux sitting, scored `38-S10` PASS; the ledger now
-holds the new counts; see the "## Sitting 7" section below.]
+holds 8 open items, 18 discharged, 10 retired; see the "## Sitting 7" section below. Sitting 8, the
+third Linux sitting, scored `38-S12` PASS, so the ledger now holds 7 open, 19 discharged and 10
+retired items; see the "## Sitting 8" section below.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -894,3 +897,145 @@ instrument (reused as-is):
 New text-tree instrument:
 `.planning/quick/260929-ata-run-phase-38-item-38-s10-live-on-linux-h/atspi_dialog_probe.py`.
 quick `260929-ata`.
+
+## Sitting 8 — 2026-09-29, Linux (Pop!_OS 22.04, X11), `pnpm tauri:dev` at `4a99e1d6b`
+
+**This is the THIRD LINUX SITTING Phase 38 has had.** One item, `38-S12`, was scored: the
+section-gating matrix row-8 hasChoice arm (native Steam installs ON, more than one registered
+library).
+
+**Conditions.** Build identity was proven, not labelled: the GameLib window's `_NET_WM_PID`
+(213707) resolved through `/proc/213707/exe` to `src-tauri/target/debug/gamelib-shell`, and
+`git status --porcelain -- src src-tauri package.json` was empty at launch (HEAD `4a99e1d6b`).
+DECLARED REAL-PROFILE ARM (CLAUDE.md two-profile rule, half 2), justified for THIS item
+specifically: row 8's library conjunct IS the operator's real Steam state — the replica and the
+app both read the real `libraryfolders.vdf` through the real `defaultSteamPath`
+(`~/.steam/steam`) and the real mount state of the drives it names, and a fake HOME has no
+`config.json` and no `~/.steam`, so `getSteamLibraries()` would take its unfiltered early return,
+give a count of 1, and row 8 could never arm at all. Unlike sitting 6, the `shell.openExternal`
+leg was NOT exercised this sitting either, because this item never clicks Install; nothing was
+dispatched and nothing was installed. The screen was LOCKED at the start of this sitting
+(`loginctl … LockedHint=yes`, matching the state at planning time) — Task 1's own Step 0 stopped
+before launching anything and raised a blocking human-action checkpoint; the operator confirmed
+"screen is unlocked," which was independently re-verified (`LockedHint=no`) before anything was
+launched. An idle inhibitor (`gnome-session-inhibit --inhibit idle`) ran for the duration and was
+killed at cleanup. Task 2's checkpoint SELF-SKIPPED: a live check found Steam sign-in already
+usable (the Library listed 381 games including 7 Days to Die, owned and not installed) and the
+replica already reported `COUNT=2`, so no operator pause was needed for either precondition.
+
+**ARMING.** `enableSteamNativeInstall` was `false` at session start (unchanged through Task 1 and
+Task 2), toggled to `true` through the Settings UI as late as possible (Task 3 step A, immediately
+before the scored open), read back as `true`, and restored to `false` through the same UI toggle
+immediately after scoring, read back again to confirm. `steam_library_replica.cjs` (new, this
+sitting — a line-for-line, read-only replica of `getSteamLibraries()`/`listSteamLibraryTargets()`)
+reported `COUNT=2` both times it ran (Task 1 and immediately pre-open): the `/usr/share/steam`
+sentinel MISSING, `~/.steam/debian-installation` EXISTS (primary), the two external-drive paths
+MISSING, `/mnt/PopGames/SteamLibrary` EXISTS. **No library registration was needed to arm this
+item on this host — contrary to the item's own `blocked_by:` text** (preserved verbatim in the
+ledger as history): two of the four registered paths already existed on disk, already exceeding
+the `>1 library` threshold `hasChoice` reads.
+
+**Target.** 7 Days to Die, Steam appId `251570` (continuity with sitting 7) — owned, visible in
+the Library, confirmed NOT installed in either existing library. Route: the `SteamInstallCaret`
+menu beside Install on the game page, then "Install with options…" — its live AT-SPI-derived
+click position, not a screenshot-crop estimate (see the deviation note below).
+
+**The four region facts — all four scored INDEPENDENTLY, on two instruments.**
+
+| Region | Expected | Visual (crop) | Text-tree (in-dialog count) | Verdict |
+| --- | --- | --- | --- | --- |
+| Platform row | ABSENT | No `SelectField` (`platformPick`) anywhere in the dialog; only two decorative header icons, not scored | 0 | ABSENT — PASS |
+| Library dropdown | PRESENT | `SelectField` showing `/home/graysonmitchell/.steam/debian-installation (default)` | 1 (combo box) | PRESENT — PASS |
+| Wine section (3 sub-signatures) | ABSENT | No WineSelector labels, no `sharedBottleNotice`, no "Checking install options…" row | 0 | ABSENT — PASS |
+| Free-space line | PRESENT | "Space Available: 269.17 GiB free of 374.57 GiB", matching `df -h` (270G avail of 375G) | 0 (carve-out, see below) | PRESENT — PASS |
+
+**Free-space-line text-tree carve-out.** The text instrument's in-dialog count for this one fact
+was 0 despite the text existing verbatim on a WebKitGTK "page" role node the probe does not
+classify as inside the dialog subtree (full explanation and node dump in
+`atspi-dialog-subtree.txt`). Per the plan's own carve-out, a PRESENT region visible in the pixels
+with an in-dialog text-tree count of 0 on an otherwise-VALID instrument is NOT a fail of the item;
+it is scored on the visual instrument alone, and stated here as an honest limit.
+
+**Arming-corroboration notes.** Neither `contentLightNotice` nor `contentLightSingleLibraryNotice`
+rendered at any point (agreeing with `contentLightNotice = !isMac && !libraryDropdown`, false here
+since the dropdown is present). The library select's option list was opened once and read exactly
+the replica's two EXISTS paths, in the replica's order, the first suffixed "(default)" — an exact
+match to the replica. Closing the menu by re-clicking the already-selected option changed nothing
+(value and free-space line unchanged).
+
+**Header-icons note.** Two decorative platform icons (Linux, Windows) render beside the dialog
+title via `InstallModal__platformIcon` — these are NOT the platform row and were recorded as seen,
+not scored.
+
+**Transient check.** Burst fps=10.8, median interval 83.3ms. `diff --flag 0.005` over the settle
+set (the settled dialog plus every post-click burst frame) flagged 3 of 60 frames, ALL within the
+~500ms MUI Slide open-transition window (max_fraction=0.1902 at the first dialog-visible frame,
++233ms after the click; the next frame, +555ms, is unflagged), and 0 flagged after. Every flagged
+frame was individually viewed and classified EXPECTED LATE MOUNT: dialog first visible (+233ms,
+dropdown empty, free-space line absent), dropdown populated (+342ms, free-space line still
+absent), free-space line appeared (+463ms, matching the settled state). No platform row, wine
+sub-signature, or a region that vanished after appearing, was ever seen.
+
+**Text-instrument validity — VALID.** Positive control (dialog open): 1 dialog-role node existed,
+`title` in-dialog count 3, and the dialog-subtree role histogram included a push button named
+"INSTALL". Negative control (dialog closed, taken before the scored click, on the same game page):
+0 dialog-role nodes, and 0 in-dialog hits for `library_dropdown`/`free_space_line`. Both controls
+held, so the instrument's counts are trusted at face value, subject to the one carve-out above.
+
+**Methodology deviation, disclosed — a capture-region offset, corrected mid-sitting.**
+`linux_sitting_capture.py`'s own `find_window()` (and therefore its `grab`/`burst`/`selftest`)
+sourced a WRONG client-window origin for the whole first part of this sitting:
+`xdotool getwindowgeometry --shell` reported `x=60,y=164`, a stable but incorrect `(+10,+45)`
+offset from the window's true rendered top-left. This was proven two independent ways: `xwininfo`'s
+"Absolute upper-left" read `(50,119)`, stable across repeated reads; and an AT-SPI-derived click at
+the true screen position of the Settings tab (which the wrong region would have placed entirely
+outside the captured window) landed on and activated the real tab. A narrow, read-only correction
+wrapper, `capture_region_fix.py` (new, this sitting, this quick task's own directory — **not** a
+modification of the shared instrument), sourced the correct origin from `xwininfo` for every
+capture and click used in scoring from Task 1 onward; `linux_sitting_capture.py`'s own `diff`
+subcommand was still reused unchanged, since it only reads already-saved frames by path and never
+calls `find_window()`. Full detail: `region-offset-deviation.txt`. Root cause not conclusively
+identified — most likely a stale coordinate translation left over from this sitting's screen-lock
+cycle; not reproduced against sittings 6 or 7's own captures, out of scope to re-verify
+retroactively.
+
+**A second deviation, in-session:** the first attempt to click "Install with options…" used
+screenshot-crop-estimated coordinates and missed the menu item, dismissing the menu with no dialog
+opening (frames discarded, not committed). The retry used the live AT-SPI-derived center of the
+menu item and succeeded on the first click.
+
+**The result — `38-S12` PASS.** All four checked independently on both instruments (one carve-out,
+recorded above and not treated as a fail); arming proven independently of the dialog at the scored
+moment (config `true`, replica `COUNT` 2) and corroborated by the dialog itself (option list, no
+content-light notice); the whole dialog was in view (title, close X, body, footer Install button,
+no scrollbar); no scored transient. The native-install setting was restored to its original value
+and the restore was read back and confirmed. Moved to `human_verification_discharged` in
+`38-VERIFICATION.md` (8 → 7 open, 18 → 19 discharged); `audit-uat` `by_phase["38"]` moved 8 → 7 and
+`total_items` 427 → 426.
+
+**Honest-limits paragraph.** The free-space-line text-tree carve-out above.
+`freeSpaceLine === libraryDropdown` by construction, so it is a genuine second observation but not
+an independent gating path. The wine-section verdict confirms a by-construction false
+(`wineSection` requires `isMac`). `hostPlatform` `'linux'` is established by source and by the
+host, not read from the running webview, though the observed absent platform row itself excludes
+`darwin`/`win32`. `libraryCount` was corroborated by the replica and the rendered option list, not
+read from the webview directly. Only the default library selection was observed; per-library free
+space (D-08) and the two unmounted registered libraries were not exercised. The 83.3ms median
+burst interval bounds the shortest detectable flash. The text instrument sees what WebKitGTK
+exposes to AT-SPI, not the DOM directly. There was no operator eyeball beyond the unlock
+confirmation. Native installs were ON only for the scored step and were restored, read back and
+confirmed.
+
+**`38-S14` and `38-S16`'s Linux half were NOT scored this sitting.**
+
+**Artifacts.**
+`.planning/quick/260929-hgm-run-phase-38-item-38-s12-live-on-linux-h/evidence/`: `pre-open.png`,
+`dialog-settled.png`, `dialog-crop.png`, `dropdown-open.png`, `settings-native-on.png`,
+`settings-native-restored.png`, `region-checks.txt`, `atspi-dialog-subtree.txt`,
+`log-excerpt.txt`, `burst-summary.txt`, `library-replica.txt`, `baseline.env`,
+`region-offset-deviation.txt`, `task2-checkpoint-skip.txt`. Capture instrument (reused as-is):
+`.planning/quick/260928-tvk-run-live-linux-sitting-for-phase-38-item/linux_sitting_capture.py`.
+Text-tree instrument (reused as-is):
+`.planning/quick/260929-ata-run-phase-38-item-38-s10-live-on-linux-h/atspi_dialog_probe.py`. New
+arming instrument: `steam_library_replica.cjs`. New capture-region correction (this sitting only):
+`capture_region_fix.py`. quick `260929-hgm`.
