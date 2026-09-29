@@ -4,12 +4,14 @@ title: 'On Linux an add_child store embed cannot be positioned — set_bounds is
 found_during: spikes 025/026 (2026-09-28; commits c54e047ca, 369f482a4), filed by quick 260928-raq
 severity: minor
 platform: linux
-ready: human
+ready: live-gate
 area: store-embed
 files:
   - src-tauri/Cargo.toml
   - .planning/spikes/026-linux-add-child-runtime/README.md
   - .planning/spikes/025-linux-add-child-compile/app/src/main.rs
+  - src-tauri/src/main.rs
+  - src/frontend/screens/WebView/index.tsx
 ---
 
 ## Mechanism
@@ -218,3 +220,70 @@ app's GPU path: the CI AppImage launched without the workaround, showed a window
 interactive Library UI with 0 EGL lines, so the packaged app's EGL/GBM path is healthy on the matched
 driver. That says nothing about the embed's GTK-box allocation, which the packaged Library screen does not
 exercise.
+
+## Addendum (2026-09-30): the spike-029 re-run with DMABUF UNSET — 20 of 20, the layout is buildable
+
+The re-run the previous addendum named as the next action was performed, on the matched NVIDIA driver
+(580.173.02 both sides), with `WEBKIT_DISABLE_DMABUF_RENDERER` UNSET (a scratchpad copy of
+`run-variants.sh` with the `export` line removed; the repo script is unchanged). Fresh fake profile per
+attempt. Raw results: `.planning/spikes/029-linux-embed-allocation-reliability/results-unset-dmabuf/`.
+
+- `plain` x10: 10 of 10 ALLOCATED. `reparent` x10: 10 of 10 EXACT. Zero DEGENERATE.
+- Reading: spike 028's 10-of-11 no-allocation result was an environment artefact of the broken NVIDIA
+  stack, not a property of the GTK-box mechanism. The `reparent_fixed` + `fixed_move` lever is a
+  buildable foundation. Caveat: this is the debug spike binary on one machine, not the packaged app.
+- `ready:` returns `human` -> `code`. Strategy (a) and the one-shared-cookie-jar constraint are unchanged;
+  the Overlay / main-height design constraint from the spike-029 addendum still applies.
+
+## Addendum (2026-09-30, quick 260930-blh): the GTK-box-native layout is built — what remains is a live gate
+
+Strategy (a) was built (quick `260930-blh`, commits `e4d25138a` and `0e46c4372`) and proven live on this
+machine. This file stays in `pending/`; nothing is closed.
+
+- **What was built.** `linux_store_embed_layout` in `src-tauri/src/main.rs`. On the FIRST `store_embed_open`,
+  the main webview moves out of `default_vbox()` into an application-created `gtk::Overlay` packed at its old
+  position; a `gtk::Fixed` is the Overlay's only overlay child (`set_overlay_pass_through(true)`); the embed
+  Tauri packed into the vbox is moved into that Fixed and positioned with `Fixed::move_` + `set_size_request`.
+  The Fixed is never a vbox sibling of main. Public Tauri Linux API plus gtk-rs only: no `tauri-runtime-wry` /
+  wry patch. `unstable` and `gtk = "0.18.2"` come in through a Linux-only Cargo target table; `Cargo.lock`
+  gained one `"gtk",` line and no crate name. The renderer gate now admits `linux`; Windows keeps the panel and
+  all ten `:unsupported-platform` arms. wry's `set_bounds` stays a silent no-op on Linux and is never called.
+- **The 2026-09-28 bullet is superseded (kept as history).** "set_bounds stays a no-op ... the renderer-measured
+  slot-rect design does not apply on Linux" no longer holds: the slot rect maps 1:1 into the Fixed, because the
+  Overlay's main child is the main webview, so the Fixed's coordinate space is the main viewport. The only
+  Linux-specific step is rounding to `i32` (GTK's integer API); D-18's no-rounding rule is a macOS statement.
+- **One shared cookie jar.** No per-store data-store identifier is set anywhere (non-comment count 0), and the
+  Linux embed is not isolated. That matches the 2026-09-29 decision.
+- **Measured live** (dev binary, fresh `createFakeHomeProfile()` per launch, X11, 1280x800, one machine;
+  `.planning/quick/260930-blh-build-the-gtk-box-native-linux-layout/evidence/`):
+  - tracer: `/store/gog` puts GOG inside the slot below the controls with the NavShell tabs above it;
+    `requested=204,82,1076x418 embed=204,82,1076x418 main=0,0,1280x800 vbox=1280x800`.
+  - final run, `check_settled.py --min-lines 2 --expect-vbox-change`: 4 settled lines, 4 pass, vbox 1280x800 ->
+    1100x700 -> 1280x800, main always the full vbox, embed always the requested rect.
+  - wheel input inside the embed changed 50.2% of the slot's pixels and 0.0% of the chrome band, left nav and
+    inspector strip; a click on the LIBRARY tab outside the embed reached main through the pass-through Fixed and
+    left no GOG pixels; returning to GOG showed it in the slot; GOG -> Epic -> GOG returned it to 204,82.
+  - two live-found defects were fixed inside the design (stop rule allows two): the renderer remount left the
+    embed hidden, and a zero-area rect from a slot unmount parked it at (0,0) over the chrome.
+  - E5 (recorded, not gating): a link click inside the embed navigated it; whether Back moved the history is
+    UNCONFIRMED, consistent with Phase 40 Observable Truth 6 being FAILED on macOS itself.
+- **DEVIATION from the plan: `WEBKIT_DISABLE_DMABUF_RENDERER` was NOT unset for the scored runs.** With it
+  unset the dev app's renderer never painted on this host: 0 of 6 launches rendered, against 6 of 8 with
+  `WEBKIT_DISABLE_DMABUF_RENDERER=1` (`evidence/unset-dmabuf-attempt.txt`; NVIDIA 580.173.02, no mismatch). The
+  spike-029 20/20 "unset" result measured GTK allocation and did not need a painting renderer. The layout is
+  therefore proven on the DMABUF-DISABLED path only. Whether a packaged app or another GPU stack paints with it
+  unset is unknown, and is a separate defect from this layout.
+- **NOT verified:** the packaged AppImage/release build; a real-profile run with logged-in stores; Wayland;
+  HiDPI scale != 1; the macOS build leg (not compiled here, protected only by leaving its statements inside their
+  `#[cfg(target_os = "macos")]` blocks); the Windows compile (best effort: `cargo check` for
+  `x86_64-pc-windows-msvc` failed on a missing `lib.exe` and for `-gnu` on a missing sidecar resource, both
+  environment limits, so it is neither a pass nor a fail); a first-open split frame and keyboard focus were not
+  measured.
+- **Open observations for the operator, NOT decided here.** (1) The embed's Chrome UA keeps its `Macintosh`
+  platform token on Linux. (2) The `platform` panel copy still names only macOS (true on Windows; no l10n churn
+  was taken). (3) The first open may show one frame of GTK's even split before `mount` runs (unobserved).
+  (4) The macOS path has the same shape as the two defects fixed here (the existing-embed open only navigates;
+  a zero rect is applied verbatim on unmount) and is UNMEASURED there. (5) The dev build's auto-docked WebKit
+  inspector takes the bottom of the main webview, so the renderer viewport was 1280x500 in every run.
+- **What remains:** an operator live gate. The Linux branches of `38-E03`/`38-E04` still route to this file's
+  `pending/` path. `38-VERIFICATION.md` is not edited.
