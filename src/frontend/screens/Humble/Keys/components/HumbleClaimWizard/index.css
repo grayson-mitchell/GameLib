@@ -44,8 +44,8 @@
 }
 
 /* Step 2 (D-73/UI-SPEC "Step 2 visual hierarchy"): the revealed key is the
-   PRIMARY visual anchor — pill chrome matching .humbleKeyGroupCount's family,
-   --text-xs/--semibold per the typography contract. */
+   PRIMARY visual anchor — pill chrome with an --input-background fill and
+   --space-3xs radius, --text-xs/--semibold per the typography contract. */
 .humbleClaimWizardKeyRow {
   display: flex;
   align-items: center;
