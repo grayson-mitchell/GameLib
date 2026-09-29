@@ -234,6 +234,26 @@ objc2-web-kit = { version = "0.3.2", default-features = false, features = [
 [target.'cfg(unix)'.dependencies]
 libc = "0.2.186"
 
+# Quick 260930-blh: the Linux half of the in-app store/wiki embed. The operator locked strategy (a)
+# on 2026-09-28 (`.planning/todos/pending/2026-09-28-linux-add-child-embed-cannot-be-positioned-
+# gtkbox-packing.md`): position the embed through the application's own gtk-rs container surgery,
+# reached only via Tauri's PUBLIC Linux API (`Window::default_vbox`, `Webview::with_webview` ->
+# `PlatformWebview::inner`), and patch neither `tauri-runtime-wry` nor `wry` (spikes 028/029 found
+# and measured the lever). `Window::add_child` and `Manager::get_window`/`get_webview` are
+# `unstable`-gated, exactly as on macOS above, so this table unions `unstable` into the base
+# `tauri` request for a Linux target only -- a Windows build still never sees it.
+#
+# `gtk` is pinned to the exact version `Cargo.lock` already resolves through `wry`, so this app's
+# `gtk::Widget` IS wry's `gtk::Widget` (one type, no conversion) and no new crate NAME enters the
+# tree: `cargoFeatures.test.ts`'s crate-name pin stays green and `Cargo.lock` gains at most one
+# `"gtk",` line inside this package's own dependency list. `webkit2gtk` is deliberately NOT
+# declared: `pw.inner().upcast::<gtk::Widget>()` needs only gtk's prelude, so its type is never
+# named. No per-store data-store identifier is set anywhere: Linux runs on the one shared cookie
+# jar (todo addendum 2026-09-29), and nothing here claims isolation.
+[target.'cfg(target_os = "linux")'.dependencies]
+tauri = { version = "2", features = ["unstable"] }
+gtk = "0.18.2"
+
 # Phase 46 (D-44-A's Windows half): the Windows single-instance guard (`CreateMutexW` decision,
 # `CreateNamedPipeW` transport, `ConvertStringSecurityDescriptorToSecurityDescriptorW` DACL) needs
 # a handful of Win32 FFI calls std has no equivalent for. ALREADY resolved in this workspace's

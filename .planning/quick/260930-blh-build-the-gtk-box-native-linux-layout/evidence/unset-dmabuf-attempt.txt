@@ -1,0 +1,30 @@
+UNSET-DMABUF ATTEMPT (quick 260930-blh, Task 1) -- environment finding, measured before any embed code ran
+
+Two launches of the dev binary under a fresh createFakeHomeProfile() with WEBKIT_DISABLE_DMABUF_RENDERER
+ABSENT from the child environment (tracer-identity.txt: DMABUF_VAR_PRESENT=no, EXE_MATCH=yes):
+
+  attempt 1 (pid 32504) and attempt 2 (pid 35444): the main webview NEVER rendered the app.
+  - The window painted white with the WebKit inspector docked at the bottom (unset-dmabuf-blank-window.png).
+    Elements panel: <div id="root"></div> with NO children, for the whole 2+ minute hold.
+  - The renderer log (gamelib.log) stopped after the two boot marks, and stayed stopped for 60s+:
+        [Frontend]: [BLANKPROBE-MARK] before-hydrate t=256ms vis=visible rootKids=0
+        [Frontend]: [BLANKPROBE-MARK] after-hydrate t=530ms vis=visible rootKids=0
+    No further renderer line, no window-error, no unhandled-rejection, and none of the 1.5s / 6s / 30s
+    [BLANKPROBE] geometry samples that a mounted app emits. The WebKitWebProcess stayed alive at ~1% CPU.
+  - Clicking into the inspector turned the whole 1280x800 client area uniform (48,48,48) grey.
+  - The sidecar was healthy (READY, migrations applied, store handlers initialised).
+
+Control, same binary, same harness, same fresh-profile discipline, one variable changed
+(--diag-env WEBKIT_DISABLE_DMABUF_RENDERER=1): the app rendered normally within 25s
+(dmabuf-disabled-app-renders.png -- NavShell tabs, Library, the release-notes dialog).
+
+Host: NVIDIA 580.173.02 (nvidia-smi healthy, no driver/library mismatch), X11 (GDK_BACKEND=x11).
+Reading: with the DMABUF renderer left enabled this host's WebKitWebProcess stops executing JS before
+the React tree mounts. That is independent of this change (the Overlay/Fixed restructure only runs on the
+FIRST store_embed_open, which cannot be reached when the app never paints). Spike 029's 20/20 "unset" arm
+measured GTK allocation geometry; it did not need a painting renderer.
+
+CONSEQUENCE for this plan: the "DMABUF unset" clause of the live gate cannot be met on this host. Every
+scored live run below therefore sets WEBKIT_DISABLE_DMABUF_RENDERER=1 (the same workaround every prior
+Linux sitting on this repo used, and spike 029's 30/30 arm). The clause is recorded as NOT MET, not
+as passed. The lever result is only proven for the DMABUF-DISABLED path here.

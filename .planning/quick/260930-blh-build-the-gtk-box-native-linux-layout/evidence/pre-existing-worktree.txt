@@ -1,0 +1,5 @@
+ M .planning/todos/pending/2026-09-28-linux-add-child-embed-cannot-be-positioned-gtkbox-packing.md
+?? .planning/quick/260930-blh-build-the-gtk-box-native-linux-layout/
+?? .planning/spikes/025-linux-add-child-compile/app/gen/
+?? .planning/spikes/025-linux-add-child-compile/run.log
+?? .planning/spikes/029-linux-embed-allocation-reliability/results-unset-dmabuf/

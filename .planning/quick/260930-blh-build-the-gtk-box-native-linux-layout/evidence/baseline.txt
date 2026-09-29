@@ -1,0 +1,4 @@
+full: test result: ok. 254 passed; 0 failed; 2 ignored
+store_embed filter: test result: ok. 0 passed; 0 failed; 0 ignored; 256 filtered out
+cargo fmt --check "Diff in" count: 75
+non-comment :unsupported-platform store_embed arms: 10

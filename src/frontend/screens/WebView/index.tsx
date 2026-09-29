@@ -475,15 +475,17 @@ export default function WebView() {
     return <WebviewUnavailablePanel url={deepLinkUrl ?? undefined} />
   }
 
-  // D-01/D-02: the live embed is macOS-only for now. Reuses `platform` from `ContextProvider`
-  // (the same source `App.tsx`'s own `isMac` check reads) rather than `process.platform` or
-  // `navigator.platform` -- both are wrong here: `process` is Node/main-process-only, and
-  // `navigator.platform` under WKWebView doesn't reflect the actual host OS this app runs on
-  // (`tauri-chromium-only-web-apis` project gotcha). Every other platform falls through to the
-  // `WebviewUnavailablePanel`, reworded by plan 40-10 (D-02) to name the platform reason.
-  if (platform !== 'darwin') {
+  // D-01/D-02: the live embed runs on macOS and Linux (Linux per the positioning todo's
+  // 2026-09-28 decision (a): a real GTK-box-native embed rather than none). Reuses `platform`
+  // from `ContextProvider` (the same source `App.tsx`'s own `isMac` check reads) rather than
+  // `process.platform` or `navigator.platform` -- both are wrong here: `process` is
+  // Node/main-process-only, and `navigator.platform` under WKWebView doesn't reflect the actual
+  // host OS this app runs on (`tauri-chromium-only-web-apis` project gotcha). Every other
+  // platform (Windows) falls through to the `WebviewUnavailablePanel`, reworded by plan 40-10
+  // (D-02) to name the platform reason.
+  if (platform !== 'darwin' && platform !== 'linux') {
     window.api.logInfo(
-      `[WebView] platform=${platform}: in-app store/wiki browsing is macOS-only (D-02)`
+      `[WebView] platform=${platform}: in-app store/wiki browsing is macOS and Linux only (D-02)`
     )
     return <WebviewUnavailablePanel url={startUrl} reason="platform" />
   }

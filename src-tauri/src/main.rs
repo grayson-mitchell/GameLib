@@ -5062,7 +5062,7 @@ fn wake_lock_release_all() {
 
 /// Fixed, non-`main`, non-`about` label for the store/wiki embed child webview (T-40-02-02:
 /// never derived from a caller-supplied URL).
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 const STORE_EMBED_LABEL: &str = "store-embed";
 
 /// Chrome UA sent by the store/wiki embed's child webview (D-17). MAINTAINED VALUE: this must
@@ -5071,7 +5071,7 @@ const STORE_EMBED_LABEL: &str = "store-embed";
 /// store/wiki origin doing UA sniffing. Reviewed: 2026-09-04. Matches the `Chrome/142.0`
 /// convention already used by this file's own reveal/clear-storage test fixtures
 /// (`valid_reveal_args`/`valid_clear_storage_args`).
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 const STORE_EMBED_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
      AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 
@@ -5081,7 +5081,7 @@ const STORE_EMBED_USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_
 /// `store_embed_take_nav_events` drains. Oldest-dropped rather than newest-dropped because the
 /// renderer only ever applies the LAST event -- discarding the freshest state to preserve a
 /// stale one would defeat the drain entirely.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 const STORE_EMBED_NAV_EVENTS_CAP: usize = 50;
 
 /// Ordered main-frame URL history for the store/wiki embed (D-22). Neither
@@ -5101,7 +5101,7 @@ const STORE_EMBED_NAV_EVENTS_CAP: usize = 50;
 /// `/store/gog`, which starts on `af.gog.com` and lands on `www.gog.com`). The queue lives
 /// INSIDE this struct, behind the same one `Mutex`, deliberately: an outboard queue would be a
 /// second source of truth for a cursor position this struct already owns.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 #[derive(Default)]
 struct StoreEmbedState {
     history: Vec<String>,
@@ -5122,7 +5122,7 @@ struct StoreEmbedState {
     suppress_next_push: bool,
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 impl StoreEmbedState {
     /// PURE: record a main-frame URL from `on_page_load`, OR consume a one-shot suppression
     /// armed by a history-driven navigation this code itself issued.
@@ -5236,7 +5236,7 @@ impl StoreEmbedState {
 /// to synchronously ask, so this state IS the read. Field names match
 /// `StoreEmbedNavEvent` (`src/backend/store/storeEmbedSeam.ts`) exactly: `url`, `host`,
 /// `canGoBack`, `canGoForward`.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_nav_state_json(state: &StoreEmbedState) -> Value {
     let url = state.current_url().unwrap_or_default();
     let host = tauri::Url::parse(&url)
@@ -5251,17 +5251,17 @@ fn store_embed_nav_state_json(state: &StoreEmbedState) -> Value {
     })
 }
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 static STORE_EMBED_STATE: OnceLock<Mutex<StoreEmbedState>> = OnceLock::new();
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_state() -> &'static Mutex<StoreEmbedState> {
     STORE_EMBED_STATE.get_or_init(|| Mutex::new(StoreEmbedState::default()))
 }
 
 /// Parse `store_embed_open`'s `{ url, x, y, w, h }` args. Extracted pure-parse, same discipline
 /// as `reveal_post_args`/`clear_storage_args` above: the decision is testable without a window.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_open_args(args: &[Value]) -> Result<(tauri::Url, f64, f64, f64, f64), String> {
     let obj = args
         .first()
@@ -5297,7 +5297,7 @@ fn store_embed_open_args(args: &[Value]) -> Result<(tauri::Url, f64, f64, f64, f
 /// enum rather than a bare `bool` so the `Handoff` case (steam://) is impossible to confuse with
 /// plain `Allow` at the call site -- both return `false` to `on_navigation`'s underlying `bool`
 /// contract, but only `Handoff` carries the side effect of opening the URL externally.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 #[derive(Debug, PartialEq, Eq)]
 enum StoreEmbedNavigationDecision {
     /// Allow the navigation to proceed inside the embed. Ordinary `http`/`https` (D-28): no
@@ -5327,7 +5327,7 @@ enum StoreEmbedNavigationDecision {
 /// a `Webview`. The caller (the `on_navigation` closure in `store_embed_open` below) is
 /// responsible for the one side effect the `Handoff` variant implies -- calling the existing
 /// `open_external` command function directly, never a second, duplicated opener call.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_navigation_policy(url: &tauri::Url) -> StoreEmbedNavigationDecision {
     let scheme = url.scheme();
     if scheme == "gamelib" {
@@ -5356,7 +5356,7 @@ fn store_embed_navigation_policy(url: &tauri::Url) -> StoreEmbedNavigationDecisi
 /// Create (or, if already open, navigate) the store/wiki embed child webview on `main`
 /// (D-01/D-25). Idempotent: a second `store_embed_open` while one already exists under
 /// `STORE_EMBED_LABEL` navigates it rather than creating a second child under the same label.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let (url, x, y, w, h) = store_embed_open_args(args)?;
 
@@ -5366,6 +5366,12 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
             .map_err(|e| format!("store_embed_open:navigate-failed:{e}"))?;
         return Ok(Value::Null);
     }
+
+    // Linux: convert the slot rect BEFORE creating anything, so a bad rect returns an error with
+    // no side effects. The other Linux-only step below restructures main's GTK hierarchy.
+    #[cfg(target_os = "linux")]
+    let linux_rect = store_embed_linux_gtk_rect(x, y, w, h)
+        .map_err(|e| e.replacen("store_embed_set_bounds:", "store_embed_open:", 1))?;
 
     let window = app.get_window(MAIN_WINDOW_LABEL).ok_or_else(|| {
         format!("store_embed_open:no-window:{MAIN_WINDOW_LABEL}")
@@ -5446,12 +5452,29 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
             }
         });
 
+    // Linux: main must already live in the Overlay BEFORE the embed is packed into the vbox, and
+    // the embed is moved into the Overlay's Fixed straight after `add_child` returns.
+    #[cfg(target_os = "linux")]
+    linux_store_embed_layout::ensure_overlay(app)?;
+
     match window.add_child(
         builder,
         tauri::LogicalPosition::new(x, y),
         tauri::LogicalSize::new(w, h),
     ) {
-        Ok(_webview) => Ok(Value::Null),
+        Ok(_webview) => {
+            #[cfg(target_os = "linux")]
+            if let Err(e) = linux_store_embed_layout::mount(app, &_webview, linux_rect) {
+                // Main must never be left sharing the vbox with an unmounted embed.
+                eprintln!("[shell] store_embed(linux): error mount: {e}");
+                let _ = _webview.close();
+                if let Ok(mut state) = store_embed_state().lock() {
+                    state.clear();
+                }
+                return Err(format!("store_embed_open:linux-mount-failed:{e}"));
+            }
+            Ok(Value::Null)
+        }
         Err(e) => {
             eprintln!("[shell] store_embed_open: child webview construction failed: {e}");
             Err(format!("store_embed_open:child-webview-failed:{e}"))
@@ -5460,7 +5483,7 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
 }
 
 /// Parse `store_embed_set_bounds`'s `{ x, y, w, h }` args, all logical px.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_set_bounds_args(args: &[Value]) -> Result<(f64, f64, f64, f64), String> {
     let obj = args
         .first()
@@ -5485,30 +5508,343 @@ fn store_embed_set_bounds_args(args: &[Value]) -> Result<(f64, f64, f64, f64), S
     Ok((x, y, w, h))
 }
 
+/// Convert the renderer's logical-px slot rect into the `i32` rect GTK's container API takes.
+///
+/// GTK's integer API FORCES rounding on Linux (`Fixed::move_` / `set_size_request` take `i32`).
+/// This is a Linux-only statement and is NOT a relaxation of D-18's no-rounding rule on macOS,
+/// where `set_position`/`set_size` still receive the renderer's `f64` verbatim. `f64::round`
+/// rounds half away from zero; spike 026's fractional slot rect (290.5, 96.5, 760.25, 560.75)
+/// becomes (291, 97, 760, 561).
+///
+/// Rejected, each with a named error rather than a clamp or a saturating `as i32`:
+/// - non-finite input (`NaN`, infinities);
+/// - a value that does not fit in `i32` after rounding;
+/// - a negative width or height, because GTK reads `-1` as "unset" and passing it through would
+///   silently change the meaning. A negative x/y IS legal (the slot is partly scrolled off, and
+///   `GtkFixed` accepts it).
+#[cfg(target_os = "linux")]
+fn store_embed_linux_gtk_rect(
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+) -> Result<(i32, i32, i32, i32), String> {
+    for (name, v) in [("x", x), ("y", y), ("w", w), ("h", h)] {
+        if !v.is_finite() {
+            return Err(format!("store_embed_set_bounds:non-finite:{name}"));
+        }
+    }
+    let to_i32 = |name: &str, v: f64| -> Result<i32, String> {
+        let r = v.round();
+        if r < f64::from(i32::MIN) || r > f64::from(i32::MAX) {
+            return Err(format!("store_embed_set_bounds:out-of-range:{name}"));
+        }
+        Ok(r as i32)
+    };
+    let (xi, yi, wi, hi) = (
+        to_i32("x", x)?,
+        to_i32("y", y)?,
+        to_i32("w", w)?,
+        to_i32("h", h)?,
+    );
+    if wi < 0 || hi < 0 {
+        return Err("store_embed_set_bounds:negative-size".to_string());
+    }
+    Ok((xi, yi, wi, hi))
+}
+
+/// The one line the Linux layout logs once the embed's geometry has settled. Geometry only --
+/// never a URL. `requested` is what the renderer asked for (rounded); `embed` and `main` are the
+/// MEASURED GTK allocations (embed relative to main's origin, main relative to the overlay);
+/// `vbox` is the measured size of the container holding the overlay. A live run is judged by
+/// `check_settled.py` over these lines: embed == requested AND main == (0, 0, vbox_w, vbox_h).
+#[cfg(target_os = "linux")]
+fn store_embed_linux_settled_line(
+    requested: (i32, i32, i32, i32),
+    embed: (i32, i32, i32, i32),
+    main: (i32, i32, i32, i32),
+    vbox: (i32, i32),
+) -> String {
+    format!(
+        "[shell] store_embed(linux): settled requested={},{},{}x{} embed={},{},{}x{} \
+         main={},{},{}x{} vbox={}x{}",
+        requested.0,
+        requested.1,
+        requested.2,
+        requested.3,
+        embed.0,
+        embed.1,
+        embed.2,
+        embed.3,
+        main.0,
+        main.1,
+        main.2,
+        main.3,
+        vbox.0,
+        vbox.1
+    )
+}
+
 /// D-18: the renderer is the SOLE geometry writer; this arm applies whatever it sends VERBATIM
 /// via `set_position`/`set_size` -- no clamping, offsetting, rounding, or default-supplying.
 /// Spike 017 measured that two geometry writers silently last-write-wins with no error, so this
 /// function is the ONLY place in the Rust tree that may call `Webview::set_position` or
 /// `Webview::set_size` on the embed (T-40-02-03). Do not add a second call site, and do not add
 /// a "sensible default bounds" fallback here -- that is exactly the second writer D-18 forbids.
-#[cfg(target_os = "macos")]
+///
+/// On Linux the sole writer is the `#[cfg(target_os = "linux")]` branch below
+/// (`linux_store_embed_layout::apply_bounds`, a `gtk::Fixed::move_` + `set_size_request`), plus
+/// the one initial `put` in `linux_store_embed_layout::mount` -- mirroring `add_child`'s initial
+/// rect on macOS. `Webview::set_position`/`set_size` are never called on Linux: wry's `set_bounds`
+/// is a silent no-op there unless the widget's parent is already a fixed container, so calling
+/// them would be both dead and a second writer.
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let (x, y, w, h) = store_embed_set_bounds_args(args)?;
+    #[cfg(target_os = "linux")]
+    let linux_rect = store_embed_linux_gtk_rect(x, y, w, h)?;
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
         .ok_or_else(|| format!("store_embed_set_bounds:no-webview:{STORE_EMBED_LABEL}"))?;
-    webview
-        .set_position(tauri::LogicalPosition::new(x, y))
-        .map_err(|e| format!("store_embed_set_bounds:set_position-failed:{e}"))?;
-    webview
-        .set_size(tauri::LogicalSize::new(w, h))
-        .map_err(|e| format!("store_embed_set_bounds:set_size-failed:{e}"))?;
-    Ok(Value::Null)
+    #[cfg(target_os = "linux")]
+    {
+        linux_store_embed_layout::apply_bounds(&webview, linux_rect)?;
+        return Ok(Value::Null);
+    }
+    #[cfg(target_os = "macos")]
+    {
+        webview
+            .set_position(tauri::LogicalPosition::new(x, y))
+            .map_err(|e| format!("store_embed_set_bounds:set_position-failed:{e}"))?;
+        webview
+            .set_size(tauri::LogicalSize::new(w, h))
+            .map_err(|e| format!("store_embed_set_bounds:set_size-failed:{e}"))?;
+        Ok(Value::Null)
+    }
+}
+
+/// Linux layout for the store/wiki embed (quick 260930-blh; strategy (a) of
+/// `.planning/todos/pending/2026-09-28-linux-add-child-embed-cannot-be-positioned-gtkbox-packing.md`,
+/// spikes 028/029). Public Tauri Linux API plus stock gtk-rs only -- no `tauri-runtime-wry`/wry
+/// patch.
+///
+/// The layout: on the FIRST open, the main webview's widget moves out of the shared
+/// `default_vbox()` into an application-created `gtk::Overlay`, packed into the vbox at main's old
+/// position with expand/fill. A `gtk::Fixed` is that Overlay's only overlay child
+/// (`set_overlay_pass_through(true)`, so clicks outside the embed reach main). The embed webview
+/// Tauri packed into the vbox is then moved into that Fixed and positioned with
+/// `Fixed::move_` + `set_size_request`. The Fixed is NEVER a vbox sibling of main (spike 029
+/// measured main squeezed to 61-125px when it was).
+///
+/// Every GTK call runs on the GTK main thread through `Webview::with_webview`; the callers are
+/// `rustInvoke` workers, so a bounded `recv_timeout` cannot deadlock.
+#[cfg(target_os = "linux")]
+mod linux_store_embed_layout {
+    use super::{store_embed_linux_settled_line, AppHandle, MAIN_WINDOW_LABEL};
+    use gtk::prelude::*;
+    use std::cell::Cell;
+    use std::time::Duration;
+    use tauri::Manager;
+
+    const OVERLAY_NAME: &str = "gamelib-store-embed-overlay";
+    const FIXED_NAME: &str = "gamelib-store-embed-fixed";
+    const GTK_DISPATCH_TIMEOUT: Duration = Duration::from_secs(10);
+    const SETTLE_MS: u64 = 500;
+
+    type Rect = (i32, i32, i32, i32);
+
+    thread_local! {
+        /// Bumped on every scheduled settled-log; a timer fires only if it is still current, so
+        /// sustained motion logs one line per settle rather than one per frame. GTK main thread only.
+        static SETTLE_GENERATION: Cell<u64> = const { Cell::new(0) };
+    }
+
+    /// Run `f` on the GTK main thread against one webview's widget. `with_webview`'s own `Ok` is
+    /// NOT proof the closure ran (the queued closure can be dropped), so the result is awaited
+    /// over a channel with a bounded timeout.
+    fn on_gtk_thread<T: Send + 'static>(
+        webview: &tauri::Webview,
+        op: &str,
+        f: impl FnOnce(gtk::Widget) -> Result<T, String> + Send + 'static,
+    ) -> Result<T, String> {
+        let (tx, rx) = std::sync::mpsc::channel();
+        webview
+            .with_webview(move |pw| {
+                let widget: gtk::Widget = pw.inner().upcast();
+                let _ = tx.send(f(widget));
+            })
+            .map_err(|e| format!("{op}:with-webview-failed:{e}"))?;
+        rx.recv_timeout(GTK_DISPATCH_TIMEOUT)
+            .map_err(|_| format!("{op}:gtk-dispatch-timeout"))?
+    }
+
+    fn find_child_named(container: &gtk::Container, name: &str) -> Option<gtk::Widget> {
+        container
+            .children()
+            .into_iter()
+            .find(|c| c.widget_name().as_str() == name)
+    }
+
+    /// Idempotently restructure the main window's GTK hierarchy: main -> Overlay(main, Fixed).
+    pub fn ensure_overlay(app: &AppHandle) -> Result<(), String> {
+        let main = app
+            .get_webview(MAIN_WINDOW_LABEL)
+            .ok_or_else(|| format!("store_embed_open:no-webview:{MAIN_WINDOW_LABEL}"))?;
+        let app2 = app.clone();
+        on_gtk_thread(&main, "store_embed_open", move |main_w| {
+            let parent = main_w
+                .parent()
+                .ok_or_else(|| "store_embed_open:linux-main-has-no-parent".to_string())?;
+            if parent.widget_name().as_str() == OVERLAY_NAME {
+                return Ok(());
+            }
+            let window = app2
+                .get_window(MAIN_WINDOW_LABEL)
+                .ok_or_else(|| format!("store_embed_open:no-window:{MAIN_WINDOW_LABEL}"))?;
+            let vbox = window
+                .default_vbox()
+                .map_err(|e| format!("store_embed_open:default-vbox-failed:{e}"))?;
+            let vbox_w: gtk::Widget = vbox.clone().upcast();
+            if parent != vbox_w {
+                // Never restructure a hierarchy we do not recognise.
+                return Err(format!(
+                    "store_embed_open:linux-unexpected-main-parent:{}",
+                    parent.type_().name()
+                ));
+            }
+            let pos = vbox.child_position(&main_w);
+            vbox.remove(&main_w);
+            let overlay = gtk::Overlay::new();
+            overlay.set_widget_name(OVERLAY_NAME);
+            overlay.add(&main_w);
+            let fixed = gtk::Fixed::new();
+            fixed.set_widget_name(FIXED_NAME);
+            overlay.add_overlay(&fixed);
+            overlay.set_overlay_pass_through(&fixed, true);
+            vbox.pack_start(&overlay, true, true, 0);
+            vbox.reorder_child(&overlay, pos);
+            overlay.show();
+            fixed.show();
+            main_w.show();
+            main_w.grab_focus();
+            Ok(())
+        })
+    }
+
+    /// Move the freshly `add_child`-ed embed out of the vbox and into the pass-through Fixed at
+    /// `rect`.
+    pub fn mount(app: &AppHandle, embed: &tauri::Webview, rect: Rect) -> Result<(), String> {
+        let app2 = app.clone();
+        on_gtk_thread(embed, "store_embed_open", move |embed_w| {
+            let window = app2
+                .get_window(MAIN_WINDOW_LABEL)
+                .ok_or_else(|| format!("store_embed_open:no-window:{MAIN_WINDOW_LABEL}"))?;
+            let vbox = window
+                .default_vbox()
+                .map_err(|e| format!("store_embed_open:default-vbox-failed:{e}"))?;
+            let overlay_w = find_child_named(vbox.upcast_ref(), OVERLAY_NAME)
+                .ok_or_else(|| "store_embed_open:linux-no-overlay".to_string())?;
+            let overlay = overlay_w
+                .clone()
+                .downcast::<gtk::Overlay>()
+                .map_err(|_| "store_embed_open:linux-no-overlay".to_string())?;
+            let fixed = find_child_named(overlay.upcast_ref(), FIXED_NAME)
+                .and_then(|w| w.downcast::<gtk::Fixed>().ok())
+                .ok_or_else(|| "store_embed_open:linux-no-fixed".to_string())?;
+            if let Some(old_parent) = embed_w
+                .parent()
+                .and_then(|p| p.downcast::<gtk::Container>().ok())
+            {
+                old_parent.remove(&embed_w);
+            }
+            fixed.put(&embed_w, rect.0, rect.1);
+            embed_w.set_size_request(rect.2, rect.3);
+            embed_w.show();
+            schedule_settled_log(&embed_w, rect);
+            Ok(())
+        })
+    }
+
+    /// The sole Linux geometry writer after the initial `put` in `mount` (D-18).
+    pub fn apply_bounds(embed: &tauri::Webview, rect: Rect) -> Result<(), String> {
+        on_gtk_thread(embed, "store_embed_set_bounds", move |embed_w| {
+            let fixed = embed_w
+                .parent()
+                .filter(|p| p.widget_name().as_str() == FIXED_NAME)
+                .and_then(|p| p.downcast::<gtk::Fixed>().ok())
+                // A set_bounds racing a first open lands here: distinguishable, never a silent Ok.
+                .ok_or_else(|| "store_embed_set_bounds:linux-not-mounted".to_string())?;
+            fixed.move_(&embed_w, rect.0, rect.1);
+            embed_w.set_size_request(rect.2, rect.3);
+            schedule_settled_log(&embed_w, rect);
+            Ok(())
+        })
+    }
+
+    /// Debounced measurement log. GTK main thread only.
+    fn schedule_settled_log(embed_w: &gtk::Widget, requested: Rect) {
+        let generation = SETTLE_GENERATION.with(|g| {
+            let next = g.get().wrapping_add(1);
+            g.set(next);
+            next
+        });
+        let embed_w = embed_w.clone();
+        gtk::glib::timeout_add_local_once(Duration::from_millis(SETTLE_MS), move || {
+            if SETTLE_GENERATION.with(|g| g.get()) != generation {
+                return;
+            }
+            // Closed since scheduling: nothing to measure.
+            let Some(fixed) = embed_w.parent() else {
+                return;
+            };
+            let Some(overlay) = fixed
+                .parent()
+                .and_then(|p| p.downcast::<gtk::Overlay>().ok())
+            else {
+                return;
+            };
+            let Some(main_w) = overlay.child() else {
+                eprintln!(
+                    "[shell] store_embed(linux): error settled-log: overlay has no main child"
+                );
+                return;
+            };
+            let (Some(embed_pos), Some(main_pos)) = (
+                embed_w.translate_coordinates(&main_w, 0, 0),
+                main_w.translate_coordinates(&overlay, 0, 0),
+            ) else {
+                eprintln!(
+                    "[shell] store_embed(linux): error settled-log: translate_coordinates failed"
+                );
+                return;
+            };
+            let Some(vbox) = overlay.parent() else { return };
+            eprintln!(
+                "{}",
+                store_embed_linux_settled_line(
+                    requested,
+                    (
+                        embed_pos.0,
+                        embed_pos.1,
+                        embed_w.allocated_width(),
+                        embed_w.allocated_height()
+                    ),
+                    (
+                        main_pos.0,
+                        main_pos.1,
+                        main_w.allocated_width(),
+                        main_w.allocated_height()
+                    ),
+                    (vbox.allocated_width(), vbox.allocated_height()),
+                )
+            );
+        });
+    }
 }
 
 /// D-21: hide on route leave, never close -- the embed's state and history registry survive.
 /// Returns a distinguishable error when the label is absent, never a silent `Ok`.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_hide(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -5521,7 +5857,7 @@ fn store_embed_hide(app: &AppHandle) -> Result<Value, String> {
 
 /// D-21: show after a prior hide. Returns a distinguishable error when the label is absent,
 /// never a silent `Ok`.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_show(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -5535,7 +5871,7 @@ fn store_embed_show(app: &AppHandle) -> Result<Value, String> {
 /// D-21: close only at teardown -- unlike `store_embed_hide`, this also clears the history
 /// registry (D-22), since a closed embed's history is not meant to survive into the next open.
 /// Returns a distinguishable error when the label is absent, never a silent `Ok`.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -5560,7 +5896,7 @@ fn store_embed_close(app: &AppHandle) -> Result<Value, String> {
 /// deliberate: a failed push loses one event, while a failed drain that resolved `[]` would be
 /// indistinguishable from a healthy idle channel -- exactly the F-34.4.2-19 defect class this
 /// seam's per-field coercion exists to prevent one layer up.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_take_nav_events() -> Result<Value, String> {
     let mut state = store_embed_state()
         .lock()
@@ -5569,7 +5905,7 @@ fn store_embed_take_nav_events() -> Result<Value, String> {
 }
 
 /// Parse `store_embed_navigate`'s `{ url }` arg.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_navigate_args(args: &[Value]) -> Result<tauri::Url, String> {
     let obj = args
         .first()
@@ -5593,7 +5929,7 @@ fn store_embed_navigate_args(args: &[Value]) -> Result<tauri::Url, String> {
 /// confirmed fingerprint vector -- D-22 makes avoiding it a hard rule for every arm in this
 /// section, not a preference, and this comment is the reason a future reader reaching for
 /// `eval` here should stop.
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_back(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -5617,7 +5953,7 @@ fn store_embed_back(app: &AppHandle) -> Result<Value, String> {
 
 /// The mirror of `store_embed_back` -- see its doc comment for the shared rationale (D-22/D-25,
 /// ZERO page-side JS injection via `Webview::navigate(Url)`, never `eval`).
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_forward(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -5644,7 +5980,7 @@ fn store_embed_forward(app: &AppHandle) -> Result<Value, String> {
 /// entry for the same URL -- reload must leave the stack unchanged. Calls `Webview::reload()`,
 /// never `eval('location.reload()')` (D-22's zero-page-side-JS-injection rule, see
 /// `store_embed_back`'s doc comment).
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_reload(app: &AppHandle) -> Result<Value, String> {
     let webview = app
         .get_webview(STORE_EMBED_LABEL)
@@ -5670,7 +6006,7 @@ fn store_embed_reload(app: &AppHandle) -> Result<Value, String> {
 /// flag so that same Finished event (which WILL still fire for this navigation) does not
 /// double-push the URL this call already recorded. Pushing truncates any forward entries past
 /// the cursor, exactly like a user-initiated navigation (D-22).
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
 fn store_embed_navigate(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let url = store_embed_navigate_args(args)?;
     let webview = app
@@ -8103,51 +8439,51 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // error rather than silently compiling this section out (see the section doc comment
         // above `STORE_EMBED_LABEL` for the full rationale). ----
         "store_embed_open" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_open(app, args)
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_open:unsupported-platform".to_string())
             }
         }
         "store_embed_set_bounds" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_set_bounds(app, args)
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_set_bounds:unsupported-platform".to_string())
             }
         }
         "store_embed_hide" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_hide(app)
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_hide:unsupported-platform".to_string())
             }
         }
         "store_embed_show" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_show(app)
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_show:unsupported-platform".to_string())
             }
         }
         "store_embed_close" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_close(app)
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_close:unsupported-platform".to_string())
             }
@@ -8158,11 +8494,11 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // embed moved this process's cursor while the renderer's `canGoBack` stayed false
         // forever. Drains, never peeks -- same contract as `humble_login_take_events` above.
         "store_embed_take_nav_events" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_take_nav_events()
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_take_nav_events:unsupported-platform".to_string())
             }
@@ -8172,41 +8508,41 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // no `canGoBack()`-style handle to query, so this pushed/returned state IS the read
         // (control inverts: Rust pushes, the frontend never polls).
         "store_embed_back" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_back(app)
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_back:unsupported-platform".to_string())
             }
         }
         "store_embed_forward" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_forward(app)
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_forward:unsupported-platform".to_string())
             }
         }
         "store_embed_reload" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_reload(app)
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_reload:unsupported-platform".to_string())
             }
         }
         "store_embed_navigate" => {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(target_os = "macos", target_os = "linux"))]
             {
                 store_embed_navigate(app, args)
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(any(target_os = "macos", target_os = "linux")))]
             {
                 Err("store_embed_navigate:unsupported-platform".to_string())
             }
@@ -16272,5 +16608,93 @@ mod tests {
         state.push("https://a.example/".to_string());
         state.clear();
         assert!(state.take_nav_events().is_empty());
+    }
+
+    // ---- Linux GTK-box-native store-embed layout (quick 260930-blh) -- pure helpers only ----
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_rounds_fractional_px_half_away_from_zero() {
+        // Spike 026's fractional slot rect.
+        assert_eq!(
+            store_embed_linux_gtk_rect(290.5, 96.5, 760.25, 560.75),
+            Ok((291, 97, 760, 561))
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_accepts_a_zero_rect() {
+        assert_eq!(
+            store_embed_linux_gtk_rect(0.0, 0.0, 0.0, 0.0),
+            Ok((0, 0, 0, 0))
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_accepts_a_negative_position() {
+        // A slot partly scrolled off is legal; GtkFixed accepts a negative position.
+        assert_eq!(
+            store_embed_linux_gtk_rect(10.0, -40.0, 300.0, 200.0),
+            Ok((10, -40, 300, 200))
+        );
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_rejects_a_negative_size() {
+        // GTK reads -1 as "unset", so passing it through would silently change the meaning.
+        let e = store_embed_linux_gtk_rect(0.0, 0.0, -1.0, 10.0).unwrap_err();
+        assert!(e.contains("negative-size"), "{e}");
+        let e = store_embed_linux_gtk_rect(0.0, 0.0, 10.0, -0.6).unwrap_err();
+        assert!(e.contains("negative-size"), "{e}");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_rejects_non_finite_input() {
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            for slot in 0..4 {
+                let mut v = [1.0_f64; 4];
+                v[slot] = bad;
+                let e = store_embed_linux_gtk_rect(v[0], v[1], v[2], v[3]).unwrap_err();
+                assert!(e.contains("non-finite"), "{e}");
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_rejects_out_of_range_input() {
+        // Never a saturating `as i32`.
+        let e = store_embed_linux_gtk_rect(3.0e10, 0.0, 1.0, 1.0).unwrap_err();
+        assert!(e.contains("out-of-range"), "{e}");
+        let e = store_embed_linux_gtk_rect(0.0, -3.0e10, 1.0, 1.0).unwrap_err();
+        assert!(e.contains("out-of-range"), "{e}");
+        let e = store_embed_linux_gtk_rect(0.0, 0.0, 1.0, 3.0e10).unwrap_err();
+        assert!(e.contains("out-of-range"), "{e}");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_gtk_rect_errors_carry_the_op_prefix() {
+        let e = store_embed_linux_gtk_rect(f64::NAN, 0.0, 1.0, 1.0).unwrap_err();
+        assert!(e.starts_with("store_embed_set_bounds:"), "{e}");
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn store_embed_linux_settled_line_has_the_pinned_format() {
+        assert_eq!(
+            store_embed_linux_settled_line(
+                (291, 97, 760, 561),
+                (291, 97, 760, 561),
+                (0, 0, 1280, 800),
+                (1280, 800)
+            ),
+            "[shell] store_embed(linux): settled requested=291,97,760x561 \
+             embed=291,97,760x561 main=0,0,1280x800 vbox=1280x800"
+        );
     }
 }
