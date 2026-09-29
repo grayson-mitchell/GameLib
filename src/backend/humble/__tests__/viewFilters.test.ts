@@ -387,12 +387,16 @@ describe('isGiftableSpare (scenario 3)', () => {
  * ever hold both and `43-UI-SPEC.md:313` scenario 2's Claim+Gift pair was
  * unreachable for every key in every library.
  *
- * `claimGateHolds` below MIRRORS the real claim gate at
- * `screens/Humble/Keys/index.tsx:421-424`. It is a mirror, not the article
- * itself, because that gate is an inline expression inside a React component
- * closure with no exported form to import. If the real gate is ever changed,
- * this mirror must change with it — the co-occurrence assertion is only as
- * honest as this copy.
+ * `claimGateHolds` below MIRRORS the real claim gate: the `claimAction`
+ * condition inside `renderKeyRow` in
+ * `screens/Humble/Keys/index.tsx:456-459`. Anchor on those two names --
+ * `renderKeyRow` and `claimAction` -- first; the line range is a convenience
+ * that has already drifted once and been corrected here (Phase 43 code
+ * review finding WR-02), so re-find the gate by name when it drifts again.
+ * It is a mirror, not the article itself, because that gate is an inline
+ * expression inside a React component closure with no exported form to
+ * import. If the real gate is ever changed, this mirror must change with
+ * it — the co-occurrence assertion is only as honest as this copy.
  */
 function claimGateHolds(key: HumbleKey): boolean {
   return (

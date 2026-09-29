@@ -127,7 +127,8 @@ export function isGiftableSpare(
  * this copy is surplus).
  *
  * Gating the affordance on the spare CLASSIFICATION was the defect: the claim
- * gate (`screens/Humble/Keys/index.tsx:421-424`) requires `!ownedElsewhere`
+ * gate (the `claimAction` condition inside `renderKeyRow`,
+ * `screens/Humble/Keys/index.tsx:456-459`) requires `!ownedElsewhere`
  * and the spare test requires `ownedElsewhere`, so no key could hold both and
  * `43-UI-SPEC.md:313` scenario 2's Claim+Gift pair was unreachable for every
  * key in every library. Owning a game elsewhere is not a precondition for
