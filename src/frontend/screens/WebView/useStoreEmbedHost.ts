@@ -92,6 +92,14 @@ interface UseStoreEmbedHostOptions {
    * already navigated away must not resurrect the embed on whatever screen they landed on next.
    */
   isStoreRoute: boolean
+  /**
+   * One-way latch (CR-02): false until the slot div this hook's callback ref is attached to has
+   * rendered for the first time, then true for the remainder of the mount. Some routes
+   * (deep-link/platform/Epic early returns in `index.tsx`) render no slot div on their first
+   * pass, so a cold start on one of those routes must not permanently strand the open/bounds
+   * effect below at its mount-time no-op -- this flag is what re-arms it once the slot arrives.
+   */
+  slotPresent: boolean
 }
 
 export interface StoreEmbedHostState {
@@ -109,7 +117,8 @@ export function useStoreEmbedHost({
   slotRef,
   startUrl,
   storeKey,
-  isStoreRoute
+  isStoreRoute,
+  slotPresent
 }: UseStoreEmbedHostOptions): StoreEmbedHostState {
   const [navState, setNavState] = useState<StoreEmbedNavState>(() => ({
     url: startUrl,
@@ -205,6 +214,10 @@ export function useStoreEmbedHost({
 
   // ── BOUNDS SYNC + OPEN — the single geometry oracle (D-18, T-40-08-01/03) ──────────────────
   const openedRef = useRef(false)
+  // Declared here (CR-02), ABOVE this effect, because `flush()` below seeds it on a late open —
+  // see the seed at the `!openedRef.current` branch. The start-url effect further down is the
+  // effect that actually CONSUMES this ref; it still reads/writes it the same way it always has.
+  const previousUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
     const slot = slotRef.current
@@ -228,6 +241,13 @@ export function useStoreEmbedHost({
       const bounds = { x: rect.x, y: rect.y, w: rect.width, h: rect.height }
       if (!openedRef.current) {
         openedRef.current = true
+        // CR-02: seed here so a slot that arrives AFTER a start-url change (e.g. cold start on
+        // `/store/epic`, then navigate to `/store/gog` before the slot ever attached) opens
+        // directly at the then-current `startUrl` and is not ALSO immediately re-navigated to
+        // the same URL by the start-url effect below -- that effect only fires on a startUrl it
+        // has not already recorded as current, and this line records it in the same render pass,
+        // before that effect's own equality check runs.
+        previousUrlRef.current = startUrl
         window.api.storeEmbedOpen(startUrl, bounds, storeKey).catch((error) => {
           logNavCallFailure('storeEmbedOpen', error)
         })
@@ -302,15 +322,26 @@ export function useStoreEmbedHost({
       window.removeEventListener('scroll', scheduleFlush, true)
       if (trailingHandle !== null) clearTimeout(trailingHandle)
     }
-    // Mount-once by design: this effect opens the embed exactly once (guarded by `openedRef`)
-    // and re-points it via `storeEmbedNavigate` on a `startUrl` change (the effect below), never
-    // by tearing down and re-attaching the observer — the observer's identity must outlive a
-    // same-store URL change or the throttle window above would be defeated on every navigation.
+    // Re-arms exactly on `slotPresent` (CR-02), NOT on every render and NOT on `startUrl`: the
+    // slot div is absent on the first render of some routes (the deep-link/platform/Epic early
+    // returns in `index.tsx` render no slot at all), so a cold start on one of those routes used
+    // to leave this effect's `!slot` branch above as a permanent no-op for the rest of the mount
+    // -- `openedRef` stayed false, `storeEmbedOpen` was never called, and no ResizeObserver ever
+    // attached. `slotPresent` is a ONE-WAY latch (see `index.tsx`'s callback ref) that flips
+    // false -> true exactly once, the first time the slot attaches, so this effect re-runs at
+    // most one extra time per mount, opens at whatever `startUrl` is current when the slot
+    // finally exists (seeded into `previousUrlRef` by `flush()` above, so the start-url effect
+    // below does not ALSO fire a redundant navigate to that same URL), and never tears down the
+    // observer again after that -- `slotPresent` does not flip back, so it cannot re-fire on a
+    // later re-attach. `startUrl` is deliberately EXCLUDED from these deps: adding it would
+    // re-create the observer on every same-store navigation, which is the plan 40-11 regression
+    // the deps array has protected against since before this fix (unchanged intent, see the
+    // dedicated start-url effect below for how a URL change is actually handled — a navigate,
+    // never a re-open).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [slotPresent])
 
   // ── SAME-STORE NAVIGATION ON A START-URL CHANGE — navigate, never re-open ──────────────────
-  const previousUrlRef = useRef<string | null>(null)
   // Latch set when a start-URL change was refused below (CR-01, D-05) because it targeted a
   // known-but-non-embeddable store. Cleared, and the embed re-shown, on the way back to an
   // embeddable target -- see the visibility-restore step in the effect below.

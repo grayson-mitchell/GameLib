@@ -251,6 +251,7 @@ interface MountOptions {
   startUrl?: string
   storeKey?: string
   isStoreRoute?: boolean
+  slotPresent?: boolean
 }
 
 function invoke(options: MountOptions): StoreEmbedHostState {
@@ -266,7 +267,8 @@ function invoke(options: MountOptions): StoreEmbedHostState {
     slotRef: options.slotRef,
     startUrl: options.startUrl ?? 'https://store.steampowered.com/',
     storeKey: options.storeKey ?? 'steam',
-    isStoreRoute: options.isStoreRoute ?? true
+    isStoreRoute: options.isStoreRoute ?? true,
+    slotPresent: options.slotPresent ?? true
   })
 }
 
@@ -799,5 +801,122 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(mockApi.storeEmbedNavigate).toHaveBeenCalledWith(
       'https://af.gog.com?as=1838482841'
     )
+  })
+
+  // ── CR-02 (quick task 260929-qth) ──────────────────────────────────────────────────────────
+  //
+  // The open/bounds effect used to be mount-once (`[]` deps) and early-return on a null slot.
+  // Some routes (deep-link/platform/Epic early returns in `index.tsx`) render no slot div on
+  // their first pass, so a cold start on one of those routes then a same-mount navigation to a
+  // store that DOES render a slot left the embed permanently unopened -- `App.tsx` registers one
+  // `path: 'store/:store'` route, and React Router does not remount on a param-only change.
+  // These three properties pin the `[slotPresent]`-keyed re-arm added to close that gap.
+
+  // Property 17. Observed-red mutation: revert the effect's dependency array from
+  // `[slotPresent]` back to `[]`. The effect then never re-runs once the slot attaches on the
+  // later render, so `storeEmbedOpen` stays uncalled -- reddening the "called once" assertion.
+  it('17. a slot that first attaches on a later render opens the embed exactly once at the then-current start URL', () => {
+    const nullRef = { current: null } as RefObject<HTMLDivElement>
+    const options: MountOptions = {
+      slotRef: nullRef,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic',
+      slotPresent: false
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    expect(mockApi.storeEmbedOpen).not.toHaveBeenCalled()
+    expect(mockApi.logInfo).toHaveBeenCalledWith(
+      expect.stringContaining('slot ref is null')
+    )
+
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    reinvoke({
+      ...options,
+      slotRef: ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog',
+      slotPresent: true
+    })
+    jest.advanceTimersByTime(40)
+
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledWith(
+      'https://af.gog.com?as=1838482841',
+      { x: 0, y: 0, w: 100, h: 100 },
+      'gog'
+    )
+  })
+
+  // Property 18. Observed-red mutation: add `startUrl` to the dependency array alongside
+  // `slotPresent` (i.e. `[slotPresent, startUrl]`). A same-store `startUrl`-only change then
+  // re-runs the effect, tearing down and re-creating the ResizeObserver and both window
+  // listeners on every navigation -- reddening the "counts unchanged" assertions. This is the
+  // Chesterton's-fence proof for the plan 40-11 live gate's fix: the observer's identity must
+  // outlive a same-store URL change or the leading-edge throttle is defeated on every
+  // navigation.
+  it('18. a same-store start-URL change leaves the observer instance and window listener counts unchanged', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://store.steampowered.com/',
+      storeKey: 'steam'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    const instanceCountBefore = MockResizeObserver.instances.length
+    const resizeListenerCountBefore = windowListeners.get('resize')?.size ?? 0
+    const scrollListenerCountBefore = windowListeners.get('scroll')?.size ?? 0
+
+    reinvoke({
+      ...options,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    })
+    jest.advanceTimersByTime(40)
+
+    expect(MockResizeObserver.instances.length).toBe(instanceCountBefore)
+    expect(windowListeners.get('resize')?.size ?? 0).toBe(
+      resizeListenerCountBefore
+    )
+    expect(windowListeners.get('scroll')?.size ?? 0).toBe(
+      scrollListenerCountBefore
+    )
+  })
+
+  // Property 19. Observed-red mutation: remove the `previousUrlRef.current = startUrl` seed line
+  // from `flush()`'s `!openedRef.current` branch. The start-url effect then sees its own
+  // `previousUrlRef.current` still at its initial `null` / stale value when the slot arrives
+  // late, treats the already-just-opened URL as a change, and issues a redundant
+  // `storeEmbedNavigate` call right after `storeEmbedOpen` -- reddening the "never called"
+  // assertion.
+  it('19. an open that lands after a start-URL change is not followed by a redundant navigation to the URL just opened', () => {
+    const nullRef = { current: null } as RefObject<HTMLDivElement>
+    const options: MountOptions = {
+      slotRef: nullRef,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic',
+      slotPresent: false
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    reinvoke({
+      ...options,
+      slotRef: ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog',
+      slotPresent: true
+    })
+    jest.advanceTimersByTime(40)
+
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
+    expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
   })
 })
