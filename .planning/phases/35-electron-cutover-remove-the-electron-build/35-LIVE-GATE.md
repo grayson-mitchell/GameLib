@@ -74,6 +74,19 @@ Both items name this plan (`35-19 Task 2, option-c`) as their origin, per the bi
 cross-reference Phase 38's relocation rules require. See `REQUIREMENTS.md` REQ-35-20 for the
 matching acknowledgment on the requirement-text side.
 
+**UPDATE 2026-09-29 (quick `260929-v1v`, Phase 38 sitting 10).** `38-W05` was attempted live on
+one Linux host (Pop!_OS 22.04, glibc 2.35, X11) and FAILED; it stays OPEN. The artifact was
+`GameLib_0.7.0_amd64.AppImage` (192399864 bytes, sha256 `ac849f1b...b072c9`), taken by the
+operator from the DRAFT release `v0.7.0` that run `35942560790` uploaded, commit under gate
+`19b5e3a9e`; its signature was NOT verified (no `.sig` was supplied), so that binding rests on
+the operator's account. Launched directly under a fake HOME, the AppImage self-mounted and then
+exited with code 1 after 65 ms and no window: `gamelib-shell` needs `GLIBC_2.39`, the Linux leg
+having been built on ubuntu-24.04. The smoke-launch half of D-16 is therefore NOT satisfied for
+Linux by this artifact on this host, and says nothing about a glibc 2.39 or newer host. `38-W04`
+(Windows) remains open and was not touched. No structured `human_verification_relocated`
+receipt exists on this branch, because `1c1f80704`, which wrote one, is only on the unmerged
+`fix/steam-native-install-stability`; so this paragraph is the origin-side record.
+
 ## Three log sinks — read before scoring any log-based criterion
 
 This project has three, not two, log destinations, and conflating them is the exact shape of

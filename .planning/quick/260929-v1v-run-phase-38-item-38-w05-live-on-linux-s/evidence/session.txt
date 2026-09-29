@@ -1,0 +1,18 @@
+SESSION_DATE=2026-09-29
+SESSION_START=2026-09-29T09:43:59Z
+LOCKED_HINT=no
+INHIBIT_PID=157266
+INHIBIT_PGID=157266
+INHIBIT_SID=157266
+INHIBIT_COMM=gnome-session-i
+INHIBIT_LISTED=1
+PRE_WINDOWS=0
+STAMP=/tmp/claude-1000/-home-graysonmitchell-GameLib/d1ab39a9-c0ce-4881-af4e-34f9da558bc6/scratchpad/stamp
+PREDICTION_WRITTEN_AT=2026-09-29T09:46:28Z PREDICTION=GLIBC_INCOMPATIBLE (census.txt: gamelib-shell needs GLIBC_2.39, host is 2.35, 50 ELF files above host; no libc bundled; expected the launch to exit at exec with a 'GLIBC_2.xx not found' message and no window; the score follows the observation, not this line)
+INHIBITOR_CLEANUP=SIGTERM to group -157266; pgrep -g 157266 = 0; gnome-session-inhibit -l no longer lists gamelib-38-W05
+SCORED_LAUNCH_COUNT=1 (no repeat; harness ran clean, HARNESS_OK=1)
+NO_WORKAROUND=no --appimage-extract-and-run, no LD tricks, no second launch
+REAL_PROFILE_LEAKS=1
+REAL_PROFILE_LEAK_PATH=/home/graysonmitchell/.local/share/com.gamelib.spike029 (directory; contents not read)
+REAL_PROFILE_LEAK_ATTRIBUTION=NOT this run: its last write was 22:46:34.10 NZDT, 0.55s BEFORE LAUNCH_DATE 22:46:34.658, and its earlier writes (22:46:26, 22:46:32) fall inside the census window, when no app was launched; the artifact's identifier is not com.gamelib.spike029, and the launched process died at exec (65 ms, code 1) before reading any config. It is the leftover of some other process that was running a spike-029 build on this desktop at the time (none running afterwards). Recorded as an isolation observation only; it does not change the verdict.
+FINAL_LEAK_CHECK=pgrep -g 163023 (launch) = 0; pgrep -g 157266 (inhibitor) = 0; no /tmp/.mount_* entry in mountinfo; no GameLib process; no visible GameLib window; fake profile disposed (DISPOSED=yes); no gl-w05-* dir left in /tmp

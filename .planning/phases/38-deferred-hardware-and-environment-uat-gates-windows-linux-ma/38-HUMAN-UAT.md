@@ -14,6 +14,7 @@ sessions:
   - "Sitting 7 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `ecd214a6f`, identity proven by PID -- 38-S10 PASS"
   - "Sitting 8 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `4a99e1d6b`, identity proven by PID -- 38-S12 PASS"
   - "Sitting 9 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `55aa0d54b`, identity proven by PID -- 38-S16 Linux/row-7 half PASS, item stays OPEN (Windows/row-5 half not scored)"
+  - "Sitting 10 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 35942560790 (`19b5e3a9e`), signature not verified -- 38-W05 FAIL (GLIBC_2.39 not found, exit 1 at 65 ms, no window), item stays OPEN"
 ---
 
 ## Current Test
@@ -42,7 +43,10 @@ third Linux sitting, scored `38-S12` PASS, so the ledger now holds 7 open, 19 di
 retired items; see the "## Sitting 8" section below. Sitting 9, the fourth Linux sitting, scored
 `38-S16`'s Linux/row-7 half PASS WITHOUT discharging it (the item also needs its Windows/row-5
 half), so the ledger still holds 7 open, 19 discharged and 10 retired items; see the "## Sitting
-9" section below.]
+9" section below. Sitting 10, the fifth Linux sitting, smoke-launched the CI-produced AppImage
+(`38-W05`) and scored it FAIL (the loader rejected it with `GLIBC_2.39` not found on this
+glibc 2.35 host; exit 1 after 65 ms, no window), so the ledger still holds 7 open, 19 discharged
+and 10 retired items and `38-W05` stays open; see the "## Sitting 10" section below.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -1114,3 +1118,65 @@ in `evidence/remount.txt`, the record of Task 4's operator-authenticated remount
 
 Artifacts: `.planning/quick/260929-tmw-run-phase-38-item-38-s16-linux-half-live-on/` (`notice_copy_probe.py`,
 `ledger_inplace_check.cjs`, `evidence/`).
+
+## Sitting 10 — 2026-09-29, Linux (Pop!_OS 22.04, X11), CI AppImage from run `35942560790` at `19b5e3a9e`
+
+**This is the FIFTH LINUX SITTING Phase 38 has had, and the first attempt at `38-W05`.** The item
+asks for the CI-produced Linux AppImage to launch directly, show a window and survive 10 seconds. It
+did none of those on this host: it FAILED, and the item stays in `human_verification`. The ledger is
+unchanged at 7 open, 19 discharged and 10 retired; `38-W05` gained one dated in-place key,
+`sitting_10_2026_09_29`, and nothing else in the frontmatter moved. One todo was filed.
+
+**Artifact and provenance.** PROVEN: `GameLib_0.7.0_amd64.AppImage`, 192399864 bytes, sha256
+`ac849f1b41204358f2d4689e10eda654edab5e25b47344ddc5640a6355b072c9`, downloaded by the operator in a
+logged-in browser from the DRAFT release `v0.7.0`, matched by sha256 against the operator's own
+record; an x86-64 static-pie ELF with the AppImage type-2 magic; the updater key committed at
+`19b5e3a9e` is `9A02F7E0C9FC04C7` and is unchanged at HEAD. NOT PROVEN, and this is a gap the sitting
+did not close: the `.sig` and `latest.json` were not downloaded (offered "download them, or tell me to
+skip the signature check", the operator replied "continue" with the files absent, read as skip), so
+no signature was verified. The binding to run `35942560790` rests on the operator's account alone; the
+commit `19b5e3a9e` is not provable from the bytes (`COMMIT_BYTES_19b5e3a9=0` in `usr/bin`); and it is
+not proven that the file was signed by the CI key at all. `PROVENANCE_OK=operator-accepted`.
+
+**Why the Actions artifact premise was wrong.** The item and the plan said "download from the workflow
+run". `release-tauri.yml` has no upload-artifact step (`releaseWorkflow.test.ts` bans it), and run
+`35942560790` was a tag push whose Linux leg uploaded into the DRAFT release `v0.7.0`. A draft asset
+404s for anonymous users, so the operator's logged-in browser was the only route.
+
+**Conditions.** Every execution ran under a fresh `createFakeHomeProfile()` (disposed, `DISPOSED=yes`),
+with NO real-profile arm: the item's bar does not depend on sign-in state, running a 5-day-old build
+against `~/.config/gamelib` risked a downgrade write, and the Linux single-instance socket lives under
+`$HOME/.config/gamelib`, so a fake HOME also stops a stray instance from absorbing the launch. The
+screen was unlocked (`LockedHint=no`), an idle inhibitor ran and was killed by its process group,
+`NoNewPrivs=0`, libfuse2, `/dev/fuse` and `fusermount` were all present. The static census ran
+BEFORE the launch, extracting with `--appimage-extract` (nothing from AppRun executes):
+`usr/bin/gamelib-shell` needs `GLIBC_2.39`, 50 of 175 ELF files reference glibc above the host's 2.35,
+no libc is bundled, `GLIBCXX` is fine (3.4.30 needed, 3.4.30 on the host). `PREDICTION=GLIBC_INCOMPATIBLE`
+was written to `census.txt` and `session.txt` before the launch.
+
+**Identity and survival.** There is none to report. The launch was direct (`chmod +x` in place, 664
+to 775, then exec; no install step, no extract-and-run) in its own session and process group
+(`SETSID_PROVEN=yes`, pid 163023). The type-2 runtime self-mounted through FUSE, the mount path
+`/tmp/.mount_GameLiDknhOH` appearing in the loader's own messages, and executed `gamelib-shell`,
+which the dynamic loader rejected: `libc.so.6: version GLIBC_2.39 not found (required by
+gamelib-shell)`, then 46 more GLIBC_2.38 / GLIBC_2.36 lines across 37 bundled libraries. The process
+exited with code 1, 65 ms after spawn. No window ever appeared, so there was no window pid, no pgid
+match, no 11-sample survival and no screenshot (`window.png` and `window-t10.png` were never
+produced). `DIRECT_LAUNCH` could not be proven by a mountinfo sighting because the mount was gone
+before the 250 ms poll; the stderr paths are the evidence.
+
+**Exit observation, secondary and not scored.** Not applicable: the shell died before it could spawn
+`gamelib-sidecar`, so no sidecar existed. `NO_ORPHANS=yes`, no process or mount was left, and the
+profile was disposed. A leak check found `~/.local/share/com.gamelib.spike029` newer than the stamp;
+its last write is 0.55 seconds BEFORE the launch and the artifact died at exec, so it belongs to
+another process on the desktop (contents not read), not to this run.
+
+**Result and honest limits.** FAIL, prediction and observation agreed. ONE host (glibc 2.35, X11) and
+ONE artifact with unverified provenance; the commit under gate is `19b5e3a9e`, 330 commits behind
+HEAD, not HEAD; no updater flow; no operator eyeball (there was nothing on screen). This does NOT say
+the AppImage fails on a glibc 2.39 or newer host. It does say the CI Linux leg, built on
+ubuntu-24.04, is not launchable on Ubuntu 22.04-class hosts, which is the todo filed. `38-W04`
+(Windows) was not touched.
+
+Artifacts: `.planning/quick/260929-v1v-run-phase-38-item-38-w05-live-on-linux-s/` (`appimage_provenance.cjs`,
+`appimage_smoke.ts`, `evidence/`).
