@@ -5,6 +5,8 @@ area: release
 severity: major
 platform: linux
 ready: live-gate
+status: RESOLVED
+resolved: 2026-09-30
 source: quick-260929-v1v
 files:
   - .github/workflows/release-tauri.yml
@@ -143,3 +145,28 @@ This todo stays open and its frontmatter is unchanged. Its closure waits on a `3
 orchestrator's scoping. UNVERIFIED items 3 through 7 are unchanged, item 3 (launch on this host) being
 only partly answered: the loader passed, the scored launch did not survive. Evidence:
 `.planning/quick/260930-9l9-re-run-38-w05-smoke-launch-against-the-n/evidence/`.
+
+## Closed 2026-09-30 (quick 260930-aof, Phase 38 sitting 12)
+
+`38-W05` was scored PASS this sitting, discharging the smoke-launch half of D-16 for Linux on one host.
+The ubuntu-22.04-built AppImage (run 36556473399, commit under gate b48e8948f, sha256
+d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943, signature NOT verified) launched
+directly with no workaround on Pop!_OS 22.04 (glibc 2.35), showed a window at 265 ms, kept all 11
+one-second samples and a t=30 observation alive with its bundled sidecar, and reached an interactive
+Library UI, with `GLIBC_NOT_FOUND_LINES=0`, `MISSING_SO_LINES=0` and no EGL lines.
+
+UNVERIFIED items answered with measured facts:
+
+1. A run did execute on ubuntu-22.04, per the operator's account (not provable from the bytes); the
+   artifact it produced exists, was censused and was launched. The apt install, Rust compile, SEA sidecar
+   build and AppImage bundling all produced a working artifact.
+2. The maximum `GLIBC_` reference is MEASURED, not just expected by construction: `GLIBC_2.35`
+   (usr/lib/libcairo.so.2), 0 of 182 ELF files above host glibc 2.35, GLIBCXX 3.4.30 equals the host. The
+   census was re-run this sitting and reproduced sitting 11's census of the same bytes exactly, with a
+   negative control that reproduced sitting 10's `GLIBC_INCOMPATIBLE` on the old artifact.
+3. Launch on this Pop!_OS 22.04 host: done, PASS (the `38-W05` re-run).
+
+Still open, not answered here: (4) launch on a glibc 2.39 or newer host; (5) the cold-cache 60-minute
+`tauri-action` bound; (6) the ubuntu-22.04 image deprecation path; (7) the glibc floors of the helper
+binaries and the SEA sidecar's Node. Evidence:
+`.planning/quick/260930-aof-re-run-phase-38-item-38-w05-sitting-12-l/evidence/`.

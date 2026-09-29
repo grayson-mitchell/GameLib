@@ -99,6 +99,16 @@ not a discharge. This supersedes the paragraph above as to current state: sittin
 cleared, the smoke-launch half of D-16 for Linux is still NOT discharged, and `38-W04` (Windows)
 remains open and untouched.
 
+**UPDATE 2026-09-30 (quick `260930-aof`, Phase 38 sitting 12).** `38-W05` was re-run live on the same
+Linux host (Pop!_OS 22.04, glibc 2.35, X11) against the same AppImage sitting 11 scored (run `36556473399`,
+commit under gate `b48e8948f`, ubuntu-22.04 build, signature NOT verified, binding resting on the operator's
+account), after a reboot cleared the NVIDIA kernel-module/userspace mismatch that had confounded that
+sitting. Outcome: DISCHARGED PASS on one host. With no workaround the AppImage launched directly, showed a
+window at 265 ms, survived 30 s with its bundled sidecar alive, and reached an interactive Library UI, with
+0 glibc, 0 missing-library and 0 EGL lines. This supersedes the paragraph above as to current state: the
+smoke-launch half of D-16 for Linux is now discharged on real evidence (one host, one GPU state, one
+artifact), and `38-W04` (Windows) remains open and untouched.
+
 ## Three log sinks — read before scoring any log-based criterion
 
 This project has three, not two, log destinations, and conflating them is the exact shape of

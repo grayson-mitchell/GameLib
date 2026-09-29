@@ -16,6 +16,7 @@ sessions:
   - "Sitting 9 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `55aa0d54b`, identity proven by PID -- 38-S16 Linux/row-7 half PASS, item stays OPEN (Windows/row-5 half not scored)"
   - "Sitting 10 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 35942560790 (`19b5e3a9e`), signature not verified -- 38-W05 FAIL (GLIBC_2.39 not found, exit 1 at 65 ms, no window), item stays OPEN"
   - "Sitting 11 -- 2026-09-30, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 36556473399 (`b48e8948f`, ubuntu-22.04 build), signature not verified -- 38-W05 CONFOUNDED (window at 270 ms then SIGABRT at 364 ms, EGL_NOT_INITIALIZED on a host with a broken NVIDIA driver/library pair; glibc failure of sitting 10 cleared), item stays OPEN"
+  - "Sitting 12 -- 2026-09-30, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 36556473399 (`b48e8948f`, ubuntu-22.04 build), signature not verified, NVIDIA driver/library matched at launch -- 38-W05 PASS (direct launch with no workaround, window at 265 ms, 11/11 samples, bundled sidecar alive, interactive Library UI, 0 glibc/EGL lines), discharged"
 ---
 
 ## Current Test
@@ -52,7 +53,9 @@ sitting, re-ran it against the ubuntu-22.04-built AppImage from run `36556473399
 CONFOUNDED (the loader accepted it, a window appeared at 270 ms, then the shell aborted with
 `EGL_NOT_INITIALIZED` 364 ms after spawn on a host whose NVIDIA driver and library versions
 mismatch), so the ledger still holds 7 open, 19 discharged and 10 retired items and `38-W05` stays
-open; see the "## Sitting 11" section below.]
+open; see the "## Sitting 11" section below. Sitting 12, the seventh Linux sitting, re-ran it with the host's NVIDIA mismatch cleared and scored it
+PASS (a direct launch with no workaround, a window at 265 ms, 11 of 11 samples, the bundled sidecar alive and an interactive Library
+UI at t=30), so the ledger now holds 6 open, 20 discharged and 10 retired items; see the "## Sitting 12" section below.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -1259,4 +1262,83 @@ kernel-module/userspace mismatch is fixed, which is the first todo filed; the se
 arm64 binary the census found. `38-W04` (Windows) was not touched.
 
 Artifacts: `.planning/quick/260930-9l9-re-run-38-w05-smoke-launch-against-the-n/` (`appimage_smoke.ts`,
+`evidence/`).
+
+## Sitting 12 — 2026-09-30, Linux (Pop!_OS 22.04, X11), CI AppImage from run `36556473399` at `b48e8948f`
+
+**This is the SEVENTH LINUX SITTING Phase 38 has had, and the third attempt at `38-W05`.** It re-ran
+the artifact sitting 11 scored (the same bytes) after the operator rebooted the host, which cleared the
+NVIDIA kernel-module/userspace mismatch that CONFOUNDED sitting 11. With that one variable changed and
+NO workaround, the AppImage launched, showed a window, started its bundled sidecar, survived 30 seconds
+and reached an interactive Library UI. `38-W05` is scored PASS and DISCHARGED: the ledger moves from 7
+open, 19 discharged and 10 retired to 6 open, 20 discharged and 10 retired, and `gsd-core`'s `audit-uat`
+agrees (Phase 38 from 7 to 6 items, 426 to 425 in total). The glibc and NVIDIA-mismatch todos are closed.
+
+**Artifact and provenance.** PROVEN: `GameLib_0.7.0_amd64(1).AppImage`, 195123704 bytes, sha256
+`d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943`, re-hashed this sitting and equal to
+the value sitting 11 recorded; an x86-64 ELF with the AppImage type-2 magic; distinct from the sitting-10
+artifact by hash and size; the updater key at `b48e8948f` is `9A02F7E0C9FC04C7`, unchanged at HEAD; the
+workflow at the gate commit builds the Linux leg on `ubuntu-22.04`; the Downloads file was never
+modified (mode and mtime identical before and after), the launch used a hash-identical scratchpad copy.
+NOT PROVEN: no signature was verified (`gh` is not installed and no `.sig` or `latest.json` was
+downloaded); no byte carries the run id or the tag, so the binding to run `36556473399`, tag
+`v0.7.0-glibc-test1` and commit `b48e8948f` (41 commits behind HEAD) rests on the operator's account and
+the orchestrator's record; the ubuntu-22.04 build base is inferred from the workflow and the glibc
+maximum; the shared draft release is overwritten by every throwaway-tag run, so the download timing is
+consistent with, not proof of, the run. `PROVENANCE_OK=operator-accepted`.
+
+**What changed since sitting 11.** Only the host GPU state. Sitting 11 ran on kernel
+`7.0.11-76070011-generic` with the proprietary NVIDIA module 580.159.03 against userspace 580.173.02
+(`nvidia-smi`: `Driver/library version mismatch`). This sitting the host booted at 2026-09-30 07:38 on
+kernel `7.1.1-76070101-generic` with the NVIDIA open kernel module 580.173.02, equal to the userspace
+580.173.02, and `nvidia-smi` runs. The reboot therefore changed the kernel and the module flavour as
+well as the version. The mismatch was re-measured absent both at baseline and immediately before the
+launch. The EGL external platforms (wayland, gbm, xcb, xlib) and GBM backends (`dri_gbm`,
+`nvidia-drm_gbm`) are recorded in the baseline.
+
+**Conditions.** Every execution ran under a fresh `createFakeHomeProfile()` (disposed), with NO
+real-profile arm, for sitting 10's reasons. The screen was unlocked, an idle inhibitor ran and was
+killed by its process group, `NoNewPrivs=0`, libfuse2, `/dev/fuse` and `fusermount` were present. The
+verdict rules were pre-registered: loader FAIL, then CONFOUNDED only if the mismatch was present AND the
+EGL/GBM signature was in the scored streams, then a FAIL with its own cause if the signature appeared
+on a matched driver. A diagnostic arm would have run only for a GPU-class cause; none did. The static
+census ran before the launch, with a negative control that reproduced sitting 10's `GLIBC_INCOMPATIBLE`
+(175 ELF files, 50 above host glibc, `GLIBC_2.39`) on the old artifact, and reproduced sitting 11's
+census of these bytes exactly: maximum `GLIBC_2.35`, 0 of 182 ELF files above the host, `GLIBCXX` 3.4.30
+equals the host, no libc bundled, and one unresolved NEEDED soname (`ld-linux-aarch64.so.1`, required by
+the arm64 `comet` binary and not loadable on an x86_64 host). The artifact bundles no libEGL, libGL, libgbm
+or libdrm of its own. The harness printed `PREDICTION=MISSING_LIBS`, read before the launch as
+expected-to-launch, and the written GPU prediction was no EGL abort on a matched driver. Both held.
+
+**Identity.** The launch was direct (a scratchpad copy made executable, then exec; no install step, no
+extraction, no environment variable) in its own session and group (pid 20055). The window titled
+exactly `GameLib` appeared 265 ms after spawn, and its `_NET_WM_PID` is 20055, whose executable is
+`/tmp/.mount_GameLihcGIHB/usr/bin/gamelib-shell` on a `fuse.` mount, in the launch process group.
+
+**Survival.** All 11 one-second samples (t=0 to t=10) found the shell alive, the window visible and the
+same pid, none in state Z, with no exit event. The t=30 observation found the shell, the sidecar and the
+window all still alive. The scored stderr is 28 lines: `canberra-gtk-module` messages, the shell's
+`spawning sidecar (packaged)` lines, `sidecar signalled READY`, and sidecar deprecation and store notes.
+There were 0 GLIBC, GLIBCXX, missing-library, EGL-abort, `libEGL warning` and panic lines.
+
+**Sidecar and usable UI.** The bundled `gamelib-sidecar` (pid 20114, its own process group, executable
+inside the FUSE mount) was alive at s=10 and t=30. The three screenshots (s=3, s=10, t=30) were viewed:
+they are pixel-identical 1280x800 frames of 1575 colours showing the Library tab with
+Accounts/Library/Stores/Settings navigation, a search box, All games / Installed / Recently played /
+Favourites filters, an ADD GAME button, and the `GameLib 0.7.0` what's-new dialog over an empty (0 games)
+library. That is an interactive GameLib screen, not a blank or error frame. No click was made.
+
+**Exit observation, secondary and not scored.** After a SIGTERM to the shell pid alone the sidecar
+drained on stdin EOF in 0.26 s with no orphan, no launch-group remainder and no mount left; cold profile
+only, so it cannot see the `260913-901` class of handles that arm under a populated profile.
+
+**Result and honest limits.** PASS. ONE host (Pop!_OS 22.04, glibc 2.35, X11) in ONE GPU state (NVIDIA
+580.173.02 matched), ONE artifact with unverified provenance; the gate commit `b48e8948f` is 41 commits
+behind HEAD, so this certifies that artifact and not HEAD; no Wayland, no other distro, no glibc 2.39+
+host, no updater flow. It supersedes sitting 11's CONFOUNDED (the host mismatch, now cleared) and
+sitting 10's FAIL (fixed by quick `260929-vyi`). The `GTK-box` embed todo's spike-029 re-run with
+`WEBKIT_DISABLE_DMABUF_RENDERER` unset was NOT performed here and is still pending. `38-W04` (Windows)
+was not touched and stays open.
+
+Artifacts: `.planning/quick/260930-aof-re-run-phase-38-item-38-w05-sitting-12-l/` (`appimage_smoke.ts`,
 `evidence/`).

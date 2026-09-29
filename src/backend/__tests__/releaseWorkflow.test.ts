@@ -1688,7 +1688,7 @@ describe('release-tauri.yml dry-run dispatch mode (260924-rbx)', () => {
 // is the floor for every user. 38-W05 sitting 10 (quick 260929-v1v) measured
 // `GLIBC_2.39 not found (required by gamelib-shell)` on Pop!_OS 22.04 (glibc
 // 2.35) against the AppImage built on ubuntu-24.04; see
-// .planning/todos/pending/2026-09-29-ci-linux-appimage-glibc-2-39-not-launchable-on-glibc-2-35.md.
+// .planning/todos/completed/2026-09-29-ci-linux-appimage-glibc-2-39-not-launchable-on-glibc-2-35.md.
 // Tauri's own AppImage guidance is to build "using the oldest base system you
 // intend to support that also provides Tauri v2's required WebKitGTK 4.1
 // packages", and it names Ubuntu 22.04 as a baseline.

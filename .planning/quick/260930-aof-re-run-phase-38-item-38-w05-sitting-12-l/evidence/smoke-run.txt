@@ -1,0 +1,88 @@
+FAKE_HOME=createFakeHomeProfile
+MODE=smoke
+SCORED=yes
+EXTRA_ENV=(none)
+DISPLAY=:1
+XAUTHORITY=/run/user/1000/gdm/Xauthority
+PRE_WINDOWS=0
+LAUNCH_ARGS=(none)
+APPIMAGE_MOUNTS_BEFORE=0
+LAUNCH_DATE=2026-09-29T18:54:21.155Z
+LAUNCH_PID=20055
+LAUNCH_PGID=20055
+LAUNCH_SID=20055
+SETSID_PROVEN=yes
+FIRST_NEW_APPIMAGE_MOUNT=/tmp/.mount_GameLihcGIHB fstype=fuse.GameLib_0.7.0_amd64-run36556473399.AppImage t_ms=256
+CHILD_EXIT_BEFORE_WINDOW=no
+OBSERVED_APPIMAGE_MOUNT=/tmp/.mount_GameLihcGIHB
+WINDOW_APPEARED=yes
+T_W_ISO=2026-09-29T18:54:21.420Z
+TIME_TO_WINDOW_MS=265
+WINDOW_ID=58720259
+PGID_MATCH=yes
+SHELL_PID=20055
+SHELL_PID_EQ_LAUNCH_PID=yes
+SHELL_EXE=/tmp/.mount_GameLihcGIHB/usr/bin/gamelib-shell
+MOUNT_DIR=/tmp/.mount_GameLihcGIHB
+MOUNT_FSTYPE=fuse.GameLib_0.7.0_amd64-run36556473399.AppImage
+MOUNT_IS_FUSE=yes
+DIRECT_LAUNCH=yes
+SAMPLE s=0 t_ms=9 shell_alive=y state=R window_visible=y same_pid=y
+SAMPLE s=1 t_ms=1008 shell_alive=y state=S window_visible=y same_pid=y
+SAMPLE s=2 t_ms=2009 shell_alive=y state=S window_visible=y same_pid=y
+SAMPLE s=3 t_ms=3010 shell_alive=y state=S window_visible=y same_pid=y
+CAP_FIND={ "window_id": "58720259", "pid": "20055", "exe": "/tmp/.mount_GameLihcGIHB/usr/bin/gamelib-shell", "x": 1720, "y": 69, "width": 1280, "height": 800 } 
+CAP_FIND_PID_EQ_SHELL_PID=yes
+CAP_GRAB_1=wrote /home/graysonmitchell/GameLib/.planning/quick/260930-aof-re-run-phase-38-item-38-w05-sitting-12-l/evidence/window.png (1280x800) /home/graysonmitchell/GameLib/.planning/quick/260929-hgm-run-phase-38-item-38-s12-live-on-linux-h/capture_region_fix.py:83: DeprecationWarning: mss.mss is deprecated and will be removed in a future release; use mss.MSS instead with mss.mss() as sct: 
+CHILD=pid=20080 ppid=20055 pgrp=20055 exe=/tmp/.mount_GameLihcGIHB/usr/lib/x86_64-linux-gnu/webkit2gtk-4.1/WebKitNetworkProcess
+CHILD=pid=20113 ppid=20055 pgrp=20055 exe=/tmp/.mount_GameLihcGIHB/usr/lib/x86_64-linux-gnu/webkit2gtk-4.1/WebKitWebProcess
+CHILD=pid=20114 ppid=20055 pgrp=20114 exe=/tmp/.mount_GameLihcGIHB/usr/bin/gamelib-sidecar
+SIDECAR_PID=20114
+SIDECAR_PGID=20114
+SIDECAR_EXE=/tmp/.mount_GameLihcGIHB/usr/bin/gamelib-sidecar
+SIDECAR_BUNDLED=yes
+MOUNT_USR_BIN=gamelib-shell,gamelib-sidecar,xdg-mime,xdg-open
+SAMPLE s=4 t_ms=4010 shell_alive=y state=S window_visible=y same_pid=y
+SAMPLE s=5 t_ms=5009 shell_alive=y state=S window_visible=y same_pid=y
+SAMPLE s=6 t_ms=6010 shell_alive=y state=S window_visible=y same_pid=y
+SAMPLE s=7 t_ms=7009 shell_alive=y state=S window_visible=y same_pid=y
+SAMPLE s=8 t_ms=8009 shell_alive=y state=S window_visible=y same_pid=y
+SAMPLE s=9 t_ms=9009 shell_alive=y state=S window_visible=y same_pid=y
+SAMPLE s=10 t_ms=10010 shell_alive=y state=S window_visible=y same_pid=y
+CAP_GRAB_2=wrote /home/graysonmitchell/GameLib/.planning/quick/260930-aof-re-run-phase-38-item-38-w05-sitting-12-l/evidence/window-t10.png (1280x800) /home/graysonmitchell/GameLib/.planning/quick/260929-hgm-run-phase-38-item-38-s12-live-on-linux-h/capture_region_fix.py:83: DeprecationWarning: mss.mss is deprecated and will be removed in a future release; use mss.MSS instead with mss.mss() as sct: 
+SIDECAR_ALIVE_S10=yes
+ELAPSED_FROM_T0_AT_S10_MS=10275
+EXIT_EVENT_DURING_SURVIVAL=no
+SURVIVED_10S=yes
+WINDOW_PNG_COLOURS=1575 38.53,46.69,48.55 1280 800
+WINDOW_T10_PNG_COLOURS=1575 38.53,46.69,48.55 1280 800
+SHELL_ALIVE_T30=yes
+SIDECAR_ALIVE_T30=yes
+WINDOW_VISIBLE_T30=yes same_pid=yes
+CAP_GRAB_3=wrote /home/graysonmitchell/GameLib/.planning/quick/260930-aof-re-run-phase-38-item-38-w05-sitting-12-l/evidence/window-t30.png (1280x800) /home/graysonmitchell/GameLib/.planning/quick/260929-hgm-run-phase-38-item-38-s12-live-on-linux-h/capture_region_fix.py:83: DeprecationWarning: mss.mss is deprecated and will be removed in a future release; use mss.MSS instead with mss.mss() as sct: 
+WINDOW_T30_PNG_COLOURS=1575 38.53,46.69,48.55 1280 800
+EXIT_EVENT_BEFORE_TEARDOWN=no
+T_TERM_ISO=2026-09-29T18:54:51.810Z
+SIGTERM_TO_SHELL_PID=20055 sent
+SHELL_GONE_MS=0
+SIDECAR_GONE_MS=258
+SIDECAR_EXIT_S=0.26
+SIDECAR_ORPHAN=no
+SIDECAR_GROUP_DISTINCT_FROM_LAUNCH=yes
+LAUNCH_GROUP_REMAINDER=none
+LAUNCH_GROUP_SELF_EXIT_MS=3
+MOUNT_GONE=yes
+LEFTOVER_PROCS=0
+NO_ORPHANS=yes
+MOUNT_DIR_EXISTS_ON_DISK=no
+POST_TEARDOWN_WINDOWS=0
+STDOUT_LINES=0
+STDERR_LINES=28
+GLIBC_NOT_FOUND_LINES=0
+GLIBCXX_NOT_FOUND_LINES=0
+MISSING_SO_LINES=0
+EGL_CONFOUND_LINES=0
+EGL_WARNING_LINES=0
+PANIC_LINES=0
+DISPOSED=yes
+HARNESS_OK=1
