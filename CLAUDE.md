@@ -294,15 +294,19 @@ result: pending
 
 **What changed, and when.** This section used to describe `get-shit-done-cc` 1.42.3's
 adjacency-matched `parseUatItems`, under which a single body `expected: |` block scalar hid every
-`### N.` item in its file. The machine has since moved to `@opengsd/gsd-core` 1.14.0
-(`~/.claude/gsd-core/bin/lib/uat.cjs`, `parseUatItemsWithStats`). Measured 2026-09-26: the new
+`### N.` item in its file. The machine has since moved to `@opengsd/gsd-core`
+(`~/.claude/gsd-core/bin/lib/uat.cjs`, `parseUatItemsWithStats`) — 1.14.0 when the measurement
+below was taken, 1.15.0 as of 2026-09-30. Measured 2026-09-26 under 1.14.0: the new
 parser slices each column-0 `### N.` heading to the next heading of any level and reads
 `expected: |` values dedented — probed directly with an in-memory fixture (a block-scalar
 `expected:` plus a separate `## Current Test` block scalar elsewhere in the document): the item
 was returned, its multi-line body dedented, `headingsSeen: 0`. Live `audit-uat --raw` reported 418
 outstanding items across 56 files, `parse_gap_files: 2` — against the attributed 1.42.3 comparison
 figure of 42 items across 13 files, measured by the 260926-kkt orchestrator before the old tool
-was removed (`~/.claude/get-shit-done/` no longer exists, so that figure cannot be re-measured).
+was removed. That figure cannot be re-measured: `~/.claude/get-shit-done/` survives only as an
+empty directory skeleton — re-measured 2026-09-30, it holds 17 entries, every one a directory and
+not one a file. This sentence used to claim the path no longer exists at all, which was wrong; the
+conclusion it supported still holds, because a tree with no files in it cannot be run.
 `34.3-UAT.md` (5 items) and `34.5-UAT.md` (17 items) were both 0 under 1.42.3 and are read in full
 now. Block scalars are no longer a visibility hazard. Inline `expected:` stays the preference
 because it is the shipped template's own `### N.` item shape and diffs cleanly — not because
