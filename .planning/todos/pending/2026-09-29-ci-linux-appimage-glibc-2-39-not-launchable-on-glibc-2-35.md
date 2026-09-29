@@ -9,6 +9,8 @@ source: quick-260929-v1v
 files:
   - .github/workflows/release-tauri.yml
   - .planning/quick/260929-v1v-run-phase-38-item-38-w05-live-on-linux-s/evidence/
+  - src/backend/__tests__/releaseWorkflow.test.ts
+  - .planning/quick/260929-vyi-fix-glibc-todo-move-linux-release-leg-to/evidence/
 ---
 
 ## What was observed
@@ -57,3 +59,65 @@ found this, `38-W05`, stays open until an AppImage that launches on the intended
 - `.planning/quick/260929-v1v-run-phase-38-item-38-w05-live-on-linux-s/evidence/app-output-excerpt.txt`
 - `.planning/quick/260929-v1v-run-phase-38-item-38-w05-live-on-linux-s/evidence/verdict.txt`
 - `.planning/quick/260929-v1v-run-phase-38-item-38-w05-live-on-linux-s/evidence/provenance.txt`
+
+## Change made 2026-09-29 (quick 260929-vyi)
+
+Commit `09aab2b97` (`fix(quick-260929-vyi)`) is the first candidate above, taken. It changes
+`.github/workflows/release-tauri.yml` and `src/backend/__tests__/releaseWorkflow.test.ts` only:
+
+- The Linux matrix leg moved from `ubuntu-24.04` (glibc 2.39) to `ubuntu-22.04` (glibc 2.35). The
+  `Install Ubuntu system dependencies` guard now equals it exactly, and its apt package list is
+  unchanged.
+- `swatinem/rust-cache` is now keyed on `matrix.platform`. Its default key is only OS type and
+  architecture (Linux-x64) plus a rustc/env/lockfile hash, and it restores by prefix, so it could not
+  tell 22.04 from 24.04 and could have restored a `target/` compiled against the newer glibc.
+- A dated header entry in the workflow states why, and what is unproven live.
+- Four parsed-YAML tests replace the raw-text `ubuntu-(24\.04|latest)` regex test, which a comment
+  alone could satisfy: one Linux leg on 22.04; the apt guard equals the leg's platform; the apt list
+  equals the jammy-censused set; the rust-cache key.
+
+Why this candidate and not the alternative. Stating a minimum supported glibc of 2.39 and no longer
+advertising the AppImage below it would leave every 22.04-era user with a download that does not
+start, including this project's own target host, the operator's Pop!_OS 22.04. Tauri's guidance is
+to build on the oldest supported base that provides WebKitGTK 4.1, and it names Ubuntu 22.04.
+
+Census: all 5 apt packages are FOUND in the real Ubuntu jammy archive indexes (six `Packages.xz`
+files, each with size and sha256), evidence
+`.planning/quick/260929-vyi-fix-glibc-todo-move-linux-release-leg-to/evidence/jammy-apt-census.txt`.
+Premise correction, stated plainly: on this host `apt-cache policy` lists only the installed
+version (its sole source is `/var/lib/dpkg/status`, and `/var/lib/apt/lists` holds a stale `noble`
+cache), so it cannot answer "is it in jammy". The census therefore reads the archive indexes.
+
+Negative controls, evidence
+`.planning/quick/260929-vyi-fix-glibc-todo-move-linux-release-leg-to/evidence/negative-control.txt`:
+
+    test                                       red arm
+    (a) one Linux leg on ubuntu-22.04          A: pre-edit workflow
+    (b) apt guard equals the leg's platform    B: guard-only half-edit
+    (c) apt list equals the censused set       C: one extra package appended
+    (d) rust-cache keyed on matrix.platform    A: pre-edit workflow
+
+Each arm failed exactly the expected test(s), and the workflow was restored byte-identical to HEAD
+after B and C.
+
+### UNVERIFIED -- until a CI run on the new base produces an AppImage and it is smoke-launched on this host
+
+1. No `release-tauri.yml` run has executed on `ubuntu-22.04`. The apt install, the Rust compile, the
+   SEA sidecar build, and AppImage bundling (linuxdeploy/appimagetool on the 22.04 image) are all
+   unobserved.
+2. The rebuilt AppImage's maximum `GLIBC_` reference being at most 2.35 is expected by construction,
+   not measured. Re-run the 260929-v1v static census method (its `evidence/census.txt`) on the new
+   artifact.
+3. Launch on this Pop!_OS 22.04 host is the `38-W05` re-run, which is out of scope here. A default
+   `workflow_dispatch` dry run is the SAFE way to prove item 1 without touching any release, but it
+   yields a build log and no binary. Only a real `v*` tag push yields an AppImage, and that writes
+   into the shared draft release `v0.7.0`, so it is the operator's call.
+4. Launch on a glibc 2.39 or newer host, the open item above, is unchanged.
+5. The first run after this change is a cold Rust cache on all three legs. The 60-minute
+   `tauri-action` bound has never been measured against a cold build.
+6. GitHub's `ubuntu-22.04` hosted image is on a deprecation path, and no date is asserted here. When
+   it retires, the floor must be re-decided.
+7. Helper binaries fetched by `pnpm download-helper-binaries`, and the SEA sidecar's official
+   nodejs.org Node, carry their own glibc floors that do not depend on the build base. The earlier
+   "What is not known" items (minisign provenance, sidecar exit in the packaged layout) are
+   untouched.
