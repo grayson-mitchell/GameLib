@@ -1,17 +1,21 @@
 ---
-gsd_state_version: 1.0
+gsd_state_version: "1.0"
 milestone: v0.8
-milestone_name: — Tauri Shell
-status: phase-complete
-stopped_at: Phase 46 complete -- 46-07 live re-gate PASS, verification passed 12/12
-last_updated: "2026-09-25T10:30:00.000Z"
-last_activity: "2026-09-25 -- Phase 46 complete: 46-07 Windows live re-gate PASS (3a/3b minimized-window restore measured), todo + U-34.5-18 + REQ-46-10 closed, verification passed 12/12, code review 0 critical / 2 warning"
+milestone_name: Phase Details
+current_phase: 46
+current_phase_name: windows-single-instance-guard-and-gamelib-deep-link-registra
+status: verifying
+stopped_at: Completed 260929-qth-01-PLAN.md
+last_updated: "2026-09-29T08:35:47.820Z"
+last_activity: 2026-09-29
+last_activity_desc: "Completed quick task 260929-okd: fixed Phase 40 CR-03 in BOTH the nile and legendary runners, closing the one class of open critical where a UI reported signed-out while credentials and a shared cookie jar survived. The semantics question the review left open was settled by measurement, not preference: the two logout abortIds appear ONLY at their own registration sites, so the sole trigger is app quit via `callAllAbortControllers()`/`handleExit()`, which makes 'propagate the abort to the renderer' inert and makes 'cleanup unconditional' correct -- and matches GOG, whose logout has no CLI round-trip and no abort branch at all. Both RED controls fired genuinely (nile 1 failed, legendary 3 failed against base source) so neither new assertion is vacuous, and the Phase 39 CR-01 seam pin was verified NOT among the failures. Phase 40's remaining open criticals are CR-01 (a store switch navigates the live embed into non-embeddable Epic, defeating D-05, with `isEmbeddableOrigin` written but never called) and CR-02 (a null slot on first render disables the embed for the component's life) -- they share the `store/:store` no-remount root cause and should be fixed together. Phase 13-CR-01 also remains open. Nothing is pushed; `origin/main` is behind."
+state_head: 7fefb1481238bced44390f10fb837ecc15c0d794
 progress:
-  total_phases: 43
+  total_phases: 42
   completed_phases: 36
   total_plans: 506
   completed_plans: 498
-  percent: 84
+  percent: 86
 ---
 
 # Project State
@@ -72,7 +76,7 @@ See: .planning/PROJECT.md (updated 2026-07-05)
 
 Phase: 46 (windows-single-instance-guard-and-gamelib-deep-link-registra) — COMPLETE (2026-09-25)
 Plan: 7 of 7 — all executed; 46-07 re-gate PASS, U-34.5-18 and REQ-46-10 closed
-Status: Phase 46 complete
+Status: Phase complete — ready for verification
 Last activity: 2026-09-29 -- Completed quick task 260929-okd: fixed Phase 40 CR-03 in BOTH the nile and legendary runners, closing the one class of open critical where a UI reported signed-out while credentials and a shared cookie jar survived. The semantics question the review left open was settled by measurement, not preference: the two logout abortIds appear ONLY at their own registration sites, so the sole trigger is app quit via `callAllAbortControllers()`/`handleExit()`, which makes 'propagate the abort to the renderer' inert and makes 'cleanup unconditional' correct -- and matches GOG, whose logout has no CLI round-trip and no abort branch at all. Both RED controls fired genuinely (nile 1 failed, legendary 3 failed against base source) so neither new assertion is vacuous, and the Phase 39 CR-01 seam pin was verified NOT among the failures. Phase 40's remaining open criticals are CR-01 (a store switch navigates the live embed into non-embeddable Epic, defeating D-05, with `isEmbeddableOrigin` written but never called) and CR-02 (a null slot on first render disables the embed for the component's life) -- they share the `store/:store` no-remount root cause and should be fixed together. Phase 13-CR-01 also remains open. Nothing is pushed; `origin/main` is behind.
 
 Previous activity: 2026-09-28 -- Completed quick task 260928-sph: closed the todo `260928-raq` filed by extending `.planning/planning-frontmatter-gate.py` to walk all 89 phase VERIFICATION/UAT ledgers `audit-uat` reads, strictly parsing each and shrink-only-pinning the 3 known-bad terminal ones, so an unparseable open-status ledger (the Phase 38 failure shape) now turns the gate red instead of silently vanishing from the audit. No new gate file; `MINIMUM_EXPECTED_GATES` stays 12. Corrected the todo's own root-cause claim by measurement: the quotes in `aaae8a1d2`, not the colon in `e09fbc652`, were what hid Phase 38. `pnpm planning-gates` 12/12.
@@ -82,7 +86,7 @@ Previous activity: 2026-09-28 -- Completed quick task 260928-sn8: ended a perman
 Previous activity: 2026-09-28 -- Completed quick task 260928-qvr: widened `humble_login_clear_cookies`' window-based branch to evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache` alongside cookies, closing the twin of the disk-cache gap fixed for the default-store branch in `9359883c7`. The caller audit ran first as a real gate: Humble's `disconnect()` is the sole caller reaching this macOS-gated branch, and no caller relies on the cache surviving a cookie clear. Pin observed RED before the fix and asserts its scan window excludes the already-fixed site, so boundary drift cannot make it pass for the wrong reason. 288 passed / 1 failed / 2 ignored, the single failure proven pre-existing two independent ways (stash A/B, plus neither commit adding any `.cookies()` call site -- the only input that test scans). Earlier the same day, debug session `epic-cold-jar-login-timeout` diagnosed and fixed the parent defect (a stale WebKit HTTP disk-cache entry replayed past a cookie-only clear, NOT the Talon 403 that F-34.5-G6-01's Branch B had left implied), recovered the operator's locked-out Epic account via a measured one-time on-disk eviction of 246 cache files, and unblocked D-35-19-15's live gate.
 
 Previous activity: 2026-09-27 -- Completed quick task 260927-v8i: replaced two independent racy `failures[0]` reads (the classifier argument and the `first:` log fragment) with one exported `selectPrimaryDepotFailure`, deterministically preferring a run-level stall record over an earlier per-file failure. Tier 1 (non-retryable file-level cause preference) shipped as nothing on a measured reachability negative -- both `.eresult`-stamping sites sit inside `buildDepotPlan` and never reach `failures`. Closed the sibling todo `260927-tpm` filed. Steam suites 1518 -> 1528 green, lint 638 of 638 both ceilings PASS, planning-gates 12/12.
-Progress: [████████░░] 84%
+Progress: [█████████░] 86%
 
 History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-HISTORY.md § Current Position archive.
 
@@ -464,6 +468,11 @@ History: the pre-2026-09-24 Current Position narrative lives verbatim in STATE-H
 | Phase 46 P02 | 45min | 2 tasks | 3 files |
 | Phase 46 P03 | 25min | 2 tasks | 3 files |
 | Phase 46 P04 | 11min | 2 tasks | 4 files |
+**Per-Plan Metrics:**
+
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| Phase 260929-qth P01 | ~16min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -1075,6 +1084,9 @@ Recent decisions affecting current work:
 - [Phase 46-02]: THE STANDING WHOLE-FILE CORRUPTION DEFECT RECURRED A THIRD TIME, this time from `state.advance-plan`/`state.record-session` (not `state.add-decision`, which is the only verb the 260816-qcn note above names) -- confirming the defect is not scoped to one verb. Symptom this time: two archived historical lines deep in this file (`Phase: 34.16 (macos-runner-onedir-x64-ci-leg) — EXECUTING` and `Plan: 5 of 6 — 34.16-06 LIVE GATE SCORED...`, both far below the real "Current Position" banner) were overwritten with the CURRENT position's `Phase:`/`Plan:` values, and a ~700-word historical "Last activity" narrative (THREE SESSIONS, 260923-p95/o2s/tip) was truncated to its own date stub -- i.e. some field-replace helper matches a bare `Phase: `/`Plan: `/`Last activity: ` prefix anywhere in the file rather than anchoring to the frontmatter or the single "Current Position" banner. No `cp` snapshot was taken before this session's calls (the earlier entry's own recommended protocol), so recovery used `git show HEAD:.planning/STATE.md` to pull back the exact original text for the three corrupted lines by hand (all three lines were untouched between the last commit and this session's pre-existing dirty state, confirmed by their content matching unrelated, older phase history that this plan's own work could not plausibly have touched). ROADMAP.md and REQUIREMENTS.md updates from the same session (`roadmap.update-plan-progress`, `requirements.mark-complete`) were verified clean -- the defect is STATE.md-specific. Future sessions: `cp .planning/STATE.md /tmp/state-pre-sdk.md` (or the Windows equivalent) BEFORE the first `state.*` mutation call of the session, every time, regardless of which verb -- and diff-review every `state.*`/`roadmap.*` call's actual effect before committing, not just the frontmatter fields you intended to change.
 - [Phase quick-260925-o9b]: Closed the report-upstream todo as obsolete rather than filing anything: the named repo was archived read-only 2026-06-26 with 0 open issues, and get-shit-done-cc on npm is deprecated and frozen at 1.42.3 -- no fix can ever land in the version GameLib runs.
 - [Phase quick-260925-o9b]: Opened a separate decision todo (2026-09-25-decide-whether-to-migrate-off-deprecated-get-shit-done-cc.md) rather than folding the live exposure into the closure, so migrate/fork-and-pin/stay-frozen stays visible and undissolved.
+- [Phase 46]: CR-01 guard narrowed to resolvedTarget !== null && !isEmbeddableOrigin(startUrl) (not the literal bare negation) because isEmbeddableOrigin alone returns false for the wiki route too, which would hide it; measured via a direct probe of storeEmbedOrigins.ts
+- [Phase 46]: CR-01's D-35 re-keying sub-claim declined as not-applicable, not deferred: store-embed IPC has one global label and no storeKey parameter at any layer (main.rs:5066/5265, storeEmbedFlowRegistration.ts:189)
+- [Phase 46]: GOG->Epic visibility hypothesis from CONTEXT.md was not verified on hardware; filed as a live-gate todo instead of claimed fixed
 
 ### Pending Todos
 
@@ -1603,8 +1615,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-09-25T05:38:07.755Z
-Stopped at: 46-05 live gate FAIL at Check 3 -- fix-forward via /gsd-plan-phase 46 --gaps
+Last session: 2026-09-29T08:35:45.806Z
+Stopped at: Completed 260929-qth-01-PLAN.md
 Resume file: None
 
 History: the pre-2026-09-24 Session Continuity narrative lives verbatim in STATE-HISTORY.md § Session Continuity archive.

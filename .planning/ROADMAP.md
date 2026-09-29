@@ -4986,7 +4986,7 @@ Phases 38 and 39** despite following them in number: 38 is a hardware collection
 debt, and neither gates a line of this work. The Windows/Linux backend questions above may generate
 items *for* Phase 38's ledger — that is a downstream contribution, not a dependency.
 
-**Plans:** 11 plans in 7 waves
+**Plans:** 11/11 plans executed in 7 waves
 
 Plans:
 
@@ -5592,6 +5592,7 @@ Plans:
 3. **Decide the shared-key strategy** — raised limit, optional user-supplied key, or a caching proxy. Depends on (2).
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 47 to break down)
 
 ---
