@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 
 import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
+import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
 
 /**
  * Store embed host hook (Phase 40 Plan 08, D-18/D-19/D-20/D-21, REQ-40-02/REQ-40-03).
@@ -310,6 +311,15 @@ export function useStoreEmbedHost({
 
   // ── SAME-STORE NAVIGATION ON A START-URL CHANGE — navigate, never re-open ──────────────────
   const previousUrlRef = useRef<string | null>(null)
+  // Latch set when a start-URL change was refused below (CR-01, D-05) because it targeted a
+  // known-but-non-embeddable store. Cleared, and the embed re-shown, on the way back to an
+  // embeddable target -- see the visibility-restore step in the effect below.
+  const refusedTargetRef = useRef(false)
+
+  // Read here, ABOVE the start-URL effect, because that effect consults it when deciding
+  // whether to restore visibility on a return to an embeddable target (D-19/D-20). Its OWN
+  // effect -- the suppression hide/show transition -- still lives further down, unchanged.
+  const suppressed = useStoreEmbedSuppressed()
 
   useEffect(() => {
     if (previousUrlRef.current === null) {
@@ -318,16 +328,58 @@ export function useStoreEmbedHost({
     }
     if (previousUrlRef.current === startUrl) return
     previousUrlRef.current = startUrl
+
+    // CR-01 (D-05) target guard: refuse to navigate the live embed into a KNOWN store this app
+    // has deliberately chosen not to embed (Epic) -- fingerprinting runs on page load, not on
+    // visibility, so hiding the route's render (`index.tsx`'s `WebviewUnavailablePanel`) does
+    // nothing to stop the background load this effect would otherwise still issue.
+    //
+    // Written as "a known store the app does not embed", NOT as the bare negation of
+    // `isEmbeddableOrigin`. Measured at plan time: the `/wiki` route's github start URL
+    // resolves to NO configured store at all (`resolveStoreForUrl` returns null), so the bare
+    // negation is true for the wiki too and would hide that route's embed instead of navigating
+    // it -- removing a shipped route's entire function. This app embeds the wiki deliberately
+    // and that route has no unavailable-panel fallback of its own.
+    const resolvedTarget = resolveStoreForUrl(startUrl)
+    const isRefusedTarget =
+      resolvedTarget !== null && !isEmbeddableOrigin(startUrl)
+
+    if (isRefusedTarget) {
+      refusedTargetRef.current = true
+      window.api.storeEmbedHide().catch((error) => {
+        logNavCallFailure('storeEmbedHide (non-embeddable target, D-05)', error)
+      })
+      return
+    }
+
+    // Nothing open yet to re-point -- the open effect above will open at whatever `startUrl`
+    // is current when the slot arrives (CR-02, Task 2 makes this reachable).
+    if (!openedRef.current) return
+
+    if (refusedTargetRef.current) {
+      refusedTargetRef.current = false
+      // D-19/D-20: only re-show when suppression is clear, so a hidden-then-restored embed
+      // cannot resurface over a modal. The suppression effect below owns the ordinary release
+      // transition; this is only the "returned from a refused target" transition.
+      if (!suppressed) {
+        window.api.storeEmbedShow().catch((error) => {
+          logNavCallFailure(
+            'storeEmbedShow (return from non-embeddable target)',
+            error
+          )
+        })
+      }
+    }
+
     window.api
       .storeEmbedNavigate(startUrl)
       .then(applyNavResult)
       .catch((error) => {
         logNavCallFailure('storeEmbedNavigate (start-url change)', error)
       })
-  }, [startUrl, applyNavResult])
+  }, [startUrl, applyNavResult, suppressed])
 
   // ── SUPPRESSION (D-19/D-20, T-40-08-02) ─────────────────────────────────────────────────────
-  const suppressed = useStoreEmbedSuppressed()
   const wasSuppressedRef = useRef(false)
 
   useEffect(() => {

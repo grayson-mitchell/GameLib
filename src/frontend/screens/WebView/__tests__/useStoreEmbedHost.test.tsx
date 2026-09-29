@@ -667,4 +667,137 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       callsWhileMounted
     )
   })
+
+  // ── CR-01 (quick task 260929-qth, D-05) ────────────────────────────────────────────────────
+  //
+  // The start-URL effect used to compare only the URL string -- a store->store switch (GOG ->
+  // Epic) navigated the live embed into a KNOWN-but-non-embeddable store, loading the page that
+  // carries the root-caused Talon fingerprint while hidden behind `WebviewUnavailablePanel`.
+  // These four properties pin the target guard added to close that gap, and its two supporting
+  // arms (the not-yet-open skip and the suppression-aware re-show).
+
+  // Property 13. Observed-red mutation: comment out the `if (isRefusedTarget) { ... return }`
+  // block. Falls through to the unconditional navigate at the end of the effect instead --
+  // `storeEmbedHide` stays uncalled and `storeEmbedNavigate` fires with the Epic URL.
+  it('13. a start-URL change to a known-non-embeddable store hides the embed and issues no navigation', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://store.steampowered.com/',
+      storeKey: 'steam'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    reinvoke({
+      ...options,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic'
+    })
+
+    expect(mockApi.storeEmbedHide).toHaveBeenCalledTimes(1)
+    expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
+  })
+
+  // Property 14. THE PLAN'S PIVOTAL CORRECTION. Observed-red mutation (orchestrator amendment,
+  // binding over the plan's own generic instruction): broaden the guard predicate to the literal
+  // `!isEmbeddableOrigin(startUrl)` -- i.e. drop the `resolvedTarget !== null &&` half of
+  // `isRefusedTarget`. `isEmbeddableOrigin` of the wiki's github URL is `false` (it resolves to
+  // no configured store at all), so the literal predicate is ALSO true for the wiki and would
+  // hide it instead of navigating it -- reddening this test's `storeEmbedNavigate` assertion.
+  it('14. a start-URL change to the wiki route still navigates and does not hide the embed', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://store.steampowered.com/',
+      storeKey: 'steam'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    reinvoke({
+      ...options,
+      startUrl:
+        'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki',
+      storeKey: 'wiki'
+    })
+
+    expect(mockApi.storeEmbedNavigate).toHaveBeenCalledWith(
+      'https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/wiki'
+    )
+    expect(mockApi.storeEmbedHide).not.toHaveBeenCalled()
+  })
+
+  // Property 15. Observed-red mutation: comment out the `if (refusedTargetRef.current) { ...
+  // }` visibility-restore block in its entirety. `storeEmbedShow` never fires, so the embed
+  // stays stranded hidden after a return to an embeddable target.
+  it('15. returning from a non-embeddable target to an embeddable one re-shows the embed then navigates', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://store.steampowered.com/',
+      storeKey: 'steam'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    reinvoke({
+      ...options,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic'
+    })
+    expect(mockApi.storeEmbedHide).toHaveBeenCalledTimes(1)
+
+    reinvoke({
+      ...options,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    })
+
+    expect(mockApi.storeEmbedShow).toHaveBeenCalledTimes(1)
+    expect(mockApi.storeEmbedNavigate).toHaveBeenCalledWith(
+      'https://af.gog.com?as=1838482841'
+    )
+  })
+
+  // Property 16. Observed-red mutation: comment out ONLY the nested `if (!suppressed)` guard
+  // around the restore's `storeEmbedShow` call (leaving the outer latch-clear in place), so the
+  // show call fires unconditionally -- reddening the "zero calls while suppressed" assertion.
+  it('16. returning from a non-embeddable target to an embeddable one while suppressed does not re-show, but still navigates', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://store.steampowered.com/',
+      storeKey: 'steam'
+    }
+
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    reinvoke({
+      ...options,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic'
+    })
+    expect(mockApi.storeEmbedHide).toHaveBeenCalledTimes(1)
+
+    suppressionContextValue = {
+      suppressed: true,
+      acquire: jest.fn(),
+      release: jest.fn()
+    }
+    reinvoke({
+      ...options,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    })
+
+    expect(mockApi.storeEmbedShow).not.toHaveBeenCalled()
+    expect(mockApi.storeEmbedNavigate).toHaveBeenCalledWith(
+      'https://af.gog.com?as=1838482841'
+    )
+  })
 })
