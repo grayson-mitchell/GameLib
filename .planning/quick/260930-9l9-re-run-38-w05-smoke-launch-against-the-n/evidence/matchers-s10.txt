@@ -1,0 +1,19 @@
+FAKE_HOME=createFakeHomeProfile
+MODE=matchers
+SCORED=no
+EXTRA_ENV=(none)
+MATCHERS_INPUT=app-output-excerpt.txt
+STDOUT_LINES=0
+STDERR_LINES=51
+GLIBC_NOT_FOUND_LINES=47
+STREAM_MATCH GLIBC_NOT_FOUND_LINES gamelib-shell: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.39' not found (required by gamelib-shell)
+STREAM_MATCH GLIBC_NOT_FOUND_LINES gamelib-shell: /lib/x86_64-linux-gnu/libm.so.6: version `GLIBC_2.38' not found (required by /tmp/.mount_GameLiDknhOH/usr/lib/libgdk-3.so.0)
+STREAM_MATCH GLIBC_NOT_FOUND_LINES gamelib-shell: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.38' not found (required by /tmp/.mount_GameLiDknhOH/usr/lib/libgdk-3.so.0)
+STREAM_MATCH GLIBC_NOT_FOUND_LINES gamelib-shell: /lib/x86_64-linux-gnu/libm.so.6: version `GLIBC_2.38' not found (required by /tmp/.mount_GameLiDknhOH/usr/lib/libcairo.so.2)
+STREAM_MATCH GLIBC_NOT_FOUND_LINES gamelib-shell: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.38' not found (required by /tmp/.mount_GameLiDknhOH/usr/lib/libcairo.so.2)
+GLIBCXX_NOT_FOUND_LINES=0
+MISSING_SO_LINES=0
+EGL_CONFOUND_LINES=0
+PANIC_LINES=0
+DISPOSED=yes
+HARNESS_OK=1

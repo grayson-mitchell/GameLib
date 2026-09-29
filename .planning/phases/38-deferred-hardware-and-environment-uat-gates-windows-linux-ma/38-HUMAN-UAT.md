@@ -3,7 +3,7 @@ status: false
 phase: 38-deferred-hardware-and-environment-uat-gates-windows-linux-ma
 source: ["38-VERIFICATION.md", "34.1-HUMAN-UAT.md items 1a and 7", "34.10-VERIFICATION.md deferred[0]"]
 created: 2026-08-22
-updated: 2026-09-29
+updated: 2026-09-30
 sessions:
   - "Session 1 -- 2026-09-23, Windows 11, tauri dev build `6ad1d7cd9` -- 38-S06 PASS; 38-S08 FAIL row 4; four new defects filed; controller leg not run (blocking defect fixed afterward)"
   - "Sitting 2 -- 2026-09-23, Windows 11, tauri dev build `2cf170c14` -- 38-S08 re-scored PASS on all four checks"
@@ -15,6 +15,7 @@ sessions:
   - "Sitting 8 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `4a99e1d6b`, identity proven by PID -- 38-S12 PASS"
   - "Sitting 9 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), tauri dev build `55aa0d54b`, identity proven by PID -- 38-S16 Linux/row-7 half PASS, item stays OPEN (Windows/row-5 half not scored)"
   - "Sitting 10 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 35942560790 (`19b5e3a9e`), signature not verified -- 38-W05 FAIL (GLIBC_2.39 not found, exit 1 at 65 ms, no window), item stays OPEN"
+  - "Sitting 11 -- 2026-09-30, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 36556473399 (`b48e8948f`, ubuntu-22.04 build), signature not verified -- 38-W05 CONFOUNDED (window at 270 ms then SIGABRT at 364 ms, EGL_NOT_INITIALIZED on a host with a broken NVIDIA driver/library pair; glibc failure of sitting 10 cleared), item stays OPEN"
 ---
 
 ## Current Test
@@ -46,7 +47,12 @@ half), so the ledger still holds 7 open, 19 discharged and 10 retired items; see
 9" section below. Sitting 10, the fifth Linux sitting, smoke-launched the CI-produced AppImage
 (`38-W05`) and scored it FAIL (the loader rejected it with `GLIBC_2.39` not found on this
 glibc 2.35 host; exit 1 after 65 ms, no window), so the ledger still holds 7 open, 19 discharged
-and 10 retired items and `38-W05` stays open; see the "## Sitting 10" section below.]
+and 10 retired items and `38-W05` stays open; see the "## Sitting 10" section below. Sitting 11, the sixth Linux
+sitting, re-ran it against the ubuntu-22.04-built AppImage from run `36556473399` and scored it
+CONFOUNDED (the loader accepted it, a window appeared at 270 ms, then the shell aborted with
+`EGL_NOT_INITIALIZED` 364 ms after spawn on a host whose NVIDIA driver and library versions
+mismatch), so the ledger still holds 7 open, 19 discharged and 10 retired items and `38-W05` stays
+open; see the "## Sitting 11" section below.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -1180,3 +1186,77 @@ ubuntu-24.04, is not launchable on Ubuntu 22.04-class hosts, which is the todo f
 
 Artifacts: `.planning/quick/260929-v1v-run-phase-38-item-38-w05-live-on-linux-s/` (`appimage_provenance.cjs`,
 `appimage_smoke.ts`, `evidence/`).
+
+## Sitting 11 — 2026-09-30, Linux (Pop!_OS 22.04, X11), CI AppImage from run `36556473399` at `b48e8948f`
+
+**This is the SIXTH LINUX SITTING Phase 38 has had, and the second attempt at `38-W05`.** It asked
+whether quick `260929-vyi`'s move of the Linux leg to ubuntu-22.04 fixed sitting 10's failure. Half of
+that is answered: the glibc failure is gone. The item itself is NOT scored PASS or FAIL: the scored
+launch aborted on the host's broken GPU stack, which the pre-registered rule scores CONFOUNDED, and
+`38-W05` stays in `human_verification`. The ledger is unchanged at 7 open, 19 discharged and 10
+retired; `38-W05` gained one dated in-place key, `sitting_11_2026_09_30`, and nothing else in the
+frontmatter moved. Two todos were filed.
+
+**Artifact and provenance.** PROVEN: `GameLib_0.7.0_amd64(1).AppImage`, 195123704 bytes, sha256
+`d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943` (the operator's browser added the
+`(1)` because the sitting-10 file has the same asset name); an x86-64 ELF with the AppImage type-2
+magic; distinct from the sitting-10 artifact by hash and size; the updater key at `b48e8948f` is
+`9A02F7E0C9FC04C7`, unchanged at HEAD; the workflow at the gate commit builds the Linux leg on
+`ubuntu-22.04`; the Downloads file was never modified (mode and mtime identical before and after),
+the launch used a hash-identical scratchpad copy. NOT PROVEN: no signature was verified (`gh` is not
+installed and no `.sig` or `latest.json` was downloaded); no byte carries the run id or the tag, so the
+binding to run `36556473399`, tag `v0.7.0-glibc-test1` and commit `b48e8948f` rests on the operator's
+account and the orchestrator's record (`COMMIT_BYTES_HITS=0`); the ubuntu-22.04 build base is inferred
+from the workflow and from the glibc maximum; the shared draft release is overwritten by every
+throwaway-tag run, so the download timing is consistent with, not proof of, the run.
+`PROVENANCE_OK=operator-accepted`.
+
+**Conditions.** Every execution ran under a fresh `createFakeHomeProfile()` (disposed), with NO
+real-profile arm, for sitting 10's reasons. The screen was unlocked, an idle inhibitor ran and was
+killed by its process group, `NoNewPrivs=0`, libfuse2, `/dev/fuse` and `fusermount` were present. The
+host's GPU stack is broken: `nvidia-smi` reports `Failed to initialize NVML: Driver/library version
+mismatch` (kernel module 580.159.03, userspace 580.173.02, booted 2026-09-29 21:55), the state spike
+029 measured to abort WebKitGTK with `EGL_NOT_INITIALIZED`. The confound rule was pre-registered: the
+scored arm carries no workaround, and the verdict is CONFOUNDED only if the mismatch is present AND the
+EGL/GBM signature is in the scored streams. The static census ran before the launch, with a negative
+control that reproduced sitting 10's `GLIBC_INCOMPATIBLE` (175 ELF files, 50 above host glibc,
+`GLIBC_2.39` in `gamelib-shell`) on the old artifact. New artifact: maximum `GLIBC_2.35`, 0 of 182 ELF
+files above the host, `GLIBCXX` 3.4.30 equals the host, no libc bundled, and one unresolved NEEDED
+soname (`ld-linux-aarch64.so.1`, required by the arm64 `comet` binary, present identically in the
+sitting-10 artifact and not loadable on an x86_64 host). The harness's rule order printed
+`PREDICTION=MISSING_LIBS`; it was read before the launch as expected-to-launch.
+
+**Identity.** The launch was direct (a scratchpad copy made executable, then exec; no install step, no
+extraction, no environment workaround) in its own session and group (pid 369284). The window titled
+exactly `GameLib` appeared 270 ms after spawn, and its `_NET_WM_PID` is 369284, whose executable is
+`/tmp/.mount_GameLidpgdAL/usr/bin/gamelib-shell` on a `fuse.` mount, in the launch process group.
+
+**Survival.** It did not survive. Sample s=0 (12 ms after the window) found the shell alive and the
+window visible; the shell then died with SIGABRT 364 ms after spawn, and samples s=1 through s=10 and
+the t=30 observation found no shell and no window. The scored stderr is three lines: two harmless
+`canberra-gtk-module` messages and `Could not create GBM EGL display: EGL_NOT_INITIALIZED.
+Aborting...`. There were 0 GLIBC, GLIBCXX, missing-library and panic lines. No sidecar was ever seen,
+and no scored screenshot exists (the window was gone before the s=3 grab).
+
+**Diagnostic arm, not scored and not a discharge.** Run once, after the verdict, with
+`WEBKIT_DISABLE_DMABUF_RENDERER=1` and a fresh profile (`SCORED=no`): window at 277 ms, 11 of 11
+samples alive, visible and same-pid, bundled `gamelib-sidecar` (pid 370226, its own group, inside the
+mount) alive at s=10 and t=30, shell alive at t=30, 0 loader, EGL and panic lines, and three
+pixel-identical frames (1575 colours) showing the Library tab with the what's-new dialog over an empty
+library. It would have met every PASS clause except `SCORED` and `EXTRA_ENV`. It cannot change the
+verdict.
+
+**Exit observation, secondary and not scored.** Scored arm: nothing to observe. Diagnostic arm: after
+a SIGTERM to the shell pid alone the sidecar drained on stdin EOF in 0.26 s with no orphan, no launch
+group remainder and no mount left; cold profile only, so it cannot see the `260913-901` class of
+handles that arm under a populated profile.
+
+**Result and honest limits.** CONFOUNDED. ONE host in ONE broken GPU state and ONE artifact with
+unverified provenance; the gate commit `b48e8948f` is HEAD; no updater flow. This does NOT say the
+AppImage fails on a healthy GPU stack, and it does NOT discharge the item. It does say sitting 10's
+cause is cleared (0 not-found lines, 0 of 182 ELF above host glibc). The item can be re-run once the
+kernel-module/userspace mismatch is fixed, which is the first todo filed; the second records the
+arm64 binary the census found. `38-W04` (Windows) was not touched.
+
+Artifacts: `.planning/quick/260930-9l9-re-run-38-w05-smoke-launch-against-the-n/` (`appimage_smoke.ts`,
+`evidence/`).

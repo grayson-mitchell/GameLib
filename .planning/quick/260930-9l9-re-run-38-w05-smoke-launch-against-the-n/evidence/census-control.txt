@@ -1,0 +1,74 @@
+CENSUS_EXTRACT_RC=0
+HOST_GLIBC=glibc 2.35
+ELF_FILES_SCANNED=175
+REQUIRED_GLIBC_MAX=GLIBC_2.39 (usr/bin/gamelib-shell)
+FILES_ABOVE_HOST_GLIBC=50
+ABOVE_HOST usr/bin/gamelib-shell GLIBC_2.39
+ABOVE_HOST usr/lib/gtk-3.0/3.0.0/printbackends/libprintbackend-cups.so GLIBC_2.38
+ABOVE_HOST usr/lib/libXcursor.so.1 GLIBC_2.38
+ABOVE_HOST usr/lib/libatk-bridge-2.0.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libavahi-common.so.3 GLIBC_2.38
+ABOVE_HOST usr/lib/libblkid.so.1 GLIBC_2.38
+ABOVE_HOST usr/lib/libbsd.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libcairo.so.2 GLIBC_2.38
+ABOVE_HOST usr/lib/libcap.so.2 GLIBC_2.38
+ABOVE_HOST usr/lib/libcups.so.2 GLIBC_2.38
+ABOVE_HOST usr/lib/libdbus-1.so.3 GLIBC_2.38
+ABOVE_HOST usr/lib/libdw.so.1 GLIBC_2.38
+ABOVE_HOST usr/lib/libelf.so.1 GLIBC_2.38
+ABOVE_HOST usr/lib/libgcrypt.so.20 GLIBC_2.38
+ABOVE_HOST usr/lib/libgdk-3.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libgio-2.0.so GLIBC_2.38
+ABOVE_HOST usr/lib/libgio-2.0.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libgio-2.0.so.0.8000.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libglib-2.0.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libgnutls.so.30 GLIBC_2.38
+ABOVE_HOST usr/lib/libgssapi_krb5.so.2 GLIBC_2.38
+ABOVE_HOST usr/lib/libgstreamer-1.0.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libgtk-3.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libicui18n.so.74 GLIBC_2.38
+ABOVE_HOST usr/lib/libicuuc.so.74 GLIBC_2.38
+ABOVE_HOST usr/lib/libjavascriptcoregtk-4.1.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libk5crypto.so.3 GLIBC_2.38
+ABOVE_HOST usr/lib/libkrb5.so.3 GLIBC_2.38
+ABOVE_HOST usr/lib/libkrb5support.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libmount.so.1 GLIBC_2.38
+ABOVE_HOST usr/lib/liborc-0.4.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libp11-kit.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libpango-1.0.so GLIBC_2.38
+ABOVE_HOST usr/lib/libpango-1.0.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libpango-1.0.so.0.5200.1 GLIBC_2.38
+ABOVE_HOST usr/lib/librsvg-2.so GLIBC_2.38
+ABOVE_HOST usr/lib/librsvg-2.so.2 GLIBC_2.38
+ABOVE_HOST usr/lib/librsvg-2.so.2.50.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libselinux.so.1 GLIBC_2.38
+ABOVE_HOST usr/lib/libsoup-3.0.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libsqlite3.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libsystemd.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libtasn1.so.6 GLIBC_2.38
+ABOVE_HOST usr/lib/libudev.so.1 GLIBC_2.38
+ABOVE_HOST usr/lib/libwayland-client.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libwayland-server.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libwebkit2gtk-4.1.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libxkbcommon.so.0 GLIBC_2.38
+ABOVE_HOST usr/lib/libxml2.so.2 GLIBC_2.38
+ABOVE_HOST usr/lib/libxslt.so.1 GLIBC_2.38
+HOST_GLIBCXX_MAX=GLIBCXX_3.4.30
+REQUIRED_GLIBCXX_MAX=GLIBCXX_3.4.30 (usr/lib/libicuuc.so.74)
+LIBSTDCXX_BUNDLED=no
+LIBC_BUNDLED=no
+USR_BIN=gamelib-shell,gamelib-sidecar,xdg-mime,xdg-open
+DESKTOP_NAME=GameLib
+DESKTOP_EXEC=gamelib-shell
+DESKTOP_VERSION=
+APPRUN_KIND=script
+APPRUN_EXEC_LINE=exec "$this_dir"/AppRun.wrapped "$@"
+COMMIT_NEEDLE=19b5e3a9
+COMMIT_BYTES_HITS=0
+STATIC_NEEDED_TOTAL=938
+STATIC_NEEDED_UNRESOLVED=1
+UNRESOLVED ld-linux-aarch64.so.1 usr/lib/GameLib/build/bin/arm64/linux/comet
+PREDICTION=GLIBC_INCOMPATIBLE
+CENSUS_CAVEAT=string scan of version-reference names; cannot separate a needed symbol from a defined one, and counts every ELF in the image whether or not the launch path loads it; the NEEDED check ignores RPATH/RUNPATH and dlopen'd libraries
+CONTROL_EXPECTED=PREDICTION GLIBC_INCOMPATIBLE; ELF_FILES_SCANNED 175; FILES_ABOVE_HOST_GLIBC 50; REQUIRED_GLIBC_MAX GLIBC_2.39 (usr/bin/gamelib-shell) -- sitting 10's census.txt
+CONTROL_VERDICT=PASS

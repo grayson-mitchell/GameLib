@@ -121,3 +121,25 @@ after B and C.
    nodejs.org Node, carry their own glibc floors that do not depend on the build base. The earlier
    "What is not known" items (minisign provenance, sidecar exit in the packaged layout) are
    untouched.
+
+## Sitting 11 re-run 2026-09-30 (quick 260930-9l9)
+
+Census of the ubuntu-22.04-built AppImage (run 36556473399, commit under gate b48e8948f, sha256
+d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943), taken before any launch, with a
+negative control that reproduced sitting 10's result on the old artifact: `REQUIRED_GLIBC_MAX`
+GLIBC_2.35 (usr/lib/libcairo.so.2), `FILES_ABOVE_HOST_GLIBC=0` of 182 ELF files, GLIBCXX 3.4.30 equals
+the host, no libc bundled. That answers UNVERIFIED items 1 and 2 above: a run did execute on
+ubuntu-22.04 (per the operator's account; not provable from the bytes) and the glibc maximum is now
+MEASURED at 2.35, not just expected by construction.
+
+Scored launch: `GLIBC_NOT_FOUND_LINES=0`, `GLIBCXX_NOT_FOUND_LINES=0`, `MISSING_SO_LINES=0`, so this
+todo's own cause (the GLIBC_2.39 loader rejection) is measured as CLEARED. Verdict: CONFOUNDED. The
+window appeared at 270 ms and the shell then died with SIGABRT at 364 ms on `Could not create GBM EGL
+display: EGL_NOT_INITIALIZED. Aborting...` while the host's NVIDIA driver/library pair mismatches. The
+blocking cause now sits on the todo `2026-09-30-host-nvidia-driver-library-mismatch-blocks-38-w05-scoring.md`;
+a diagnostic arm (`WEBKIT_DISABLE_DMABUF_RENDERER=1`, not scored) launched and reached a Library UI.
+
+This todo stays open and its frontmatter is unchanged. Its closure waits on a `38-W05` PASS, per the
+orchestrator's scoping. UNVERIFIED items 3 through 7 are unchanged, item 3 (launch on this host) being
+only partly answered: the loader passed, the scored launch did not survive. Evidence:
+`.planning/quick/260930-9l9-re-run-38-w05-smoke-launch-against-the-n/evidence/`.

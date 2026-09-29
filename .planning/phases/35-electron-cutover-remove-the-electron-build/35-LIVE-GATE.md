@@ -87,6 +87,18 @@ Linux by this artifact on this host, and says nothing about a glibc 2.39 or newe
 receipt exists on this branch, because `1c1f80704`, which wrote one, is only on the unmerged
 `fix/steam-native-install-stability`; so this paragraph is the origin-side record.
 
+**UPDATE 2026-09-30 (quick `260930-9l9`, Phase 38 sitting 11).** `38-W05` was re-run live on the same
+Linux host (Pop!_OS 22.04, glibc 2.35, X11) against the AppImage that `release-tauri.yml` run
+`36556473399` built on ubuntu-22.04 (commit under gate `b48e8948f`, signature NOT verified, binding
+resting on the operator's account). Outcome: CONFOUNDED, `38-W05` stays OPEN. The loader accepted the
+artifact (0 not-found lines, 0 of 182 ELF files above host glibc), a window appeared at 270 ms, and the
+shell then aborted with SIGABRT 364 ms after spawn on `EGL_NOT_INITIALIZED` while the host's NVIDIA
+kernel module and userspace library versions mismatch. A labelled diagnostic arm with
+`WEBKIT_DISABLE_DMABUF_RENDERER=1` launched, survived 30 s and reached an interactive Library UI, but is
+not a discharge. This supersedes the paragraph above as to current state: sitting 10's glibc cause is
+cleared, the smoke-launch half of D-16 for Linux is still NOT discharged, and `38-W04` (Windows)
+remains open and untouched.
+
 ## Three log sinks — read before scoring any log-based criterion
 
 This project has three, not two, log destinations, and conflating them is the exact shape of

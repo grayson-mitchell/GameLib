@@ -1,0 +1,51 @@
+OPERATOR_ACCOUNT=Per the orchestrator's relay (2026-09-30): the operator downloaded the file from the DRAFT release v0.7.0 in their logged-in browser, which saved it as GameLib_0.7.0_amd64(1).AppImage beside the sitting-10 file; it is from release-tauri run 36556473399, tag v0.7.0-glibc-test1, commit b48e8948f, Linux leg success 2026-09-29T10:43Z; no .sig or latest.json was downloaded.
+DOWNLOADS_NAME=GameLib_0.7.0_amd64(1).AppImage
+DOWNLOADS_SIZE=195123704
+DOWNLOADS_SHA256=d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943
+DOWNLOADS_MODE_BEFORE=664
+DOWNLOADS_MTIME_BEFORE=1790704421
+STAGED_PATH=/tmp/claude-1000/-home-graysonmitchell-GameLib/d1ab39a9-c0ce-4881-af4e-34f9da558bc6/scratchpad/w05-s11/GameLib_0.7.0_amd64-run36556473399.AppImage
+STAGED_SHA256=d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943
+STAGED_MODE=775
+DOWNLOADS_MODE_AFTER=664
+DOWNLOADS_MTIME_AFTER=1790704421
+CONTROL_ARTIFACT_NAME=GameLib_0.7.0_amd64.AppImage
+CONTROL_ARTIFACT_SHA256=ac849f1b41204358f2d4689e10eda654edab5e25b47344ddc5640a6355b072c9
+CONTROL_ARTIFACT_MODE=775
+--- appimage_provenance.cjs --appimage STAGED --rev b48e8948f (original 260929-v1v script, unedited; exit 0) ---
+APPIMAGE_NAME=GameLib_0.7.0_amd64-run36556473399.AppImage
+APPIMAGE_SIZE=195123704
+APPIMAGE_SHA256=d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943
+ELF_MAGIC=PASS
+APPIMAGE_TYPE2_MAGIC=PASS
+PUBKEY_KEYID=9A02F7E0C9FC04C7
+PUBKEY_ALG=Ed
+PUBKEY_COMMENT_KEYID=9A02F7E0C9FC04C7
+PUBKEY_SAME_AT_HEAD=yes
+SIG_KEYID_MATCH=SKIP
+SIGNATURE_VERIFY=SKIP
+NEGATIVE_CONTROL=SKIP
+GLOBAL_SIGNATURE_VERIFY=SKIP
+TRUSTED_COMMENT=SKIP
+SIGNED_AT=SKIP
+SIGNED_FILE=SKIP
+SIGNED_IN_RUN_WINDOW=SKIP
+LATEST_VERSION=SKIP
+LATEST_PUB_DATE=SKIP
+LATEST_PUB_DATE_MATCHES_RUN=SKIP
+LATEST_LINUX_SIG_EQUALS_SIG_FILE=SKIP
+LATEST_LINUX_URL_BASENAME=SKIP
+(every SKIP above is a SKIP, never a PASS: no .sig or latest.json was supplied)
+PROVENANCE_OK=operator-accepted
+PROVENANCE_BASIS=minisign NOT verified by orchestrator decision (no .sig/latest.json downloaded); hash-pinned; run/tag/commit cited
+PROVEN_1=size 195123704 bytes and sha256 d7648c37e7721bcb10fc56018b41e531b8cb6a649856d8daeffb24eddcf35943 match the orchestrator's pinned values, on the Downloads file and on the staged copy
+PROVEN_2=the file carries the ELF magic and the AppImage type-2 magic (checker ELF_MAGIC=PASS, APPIMAGE_TYPE2_MAGIC=PASS)
+PROVEN_3=the file is distinct from the sitting-10 artifact (sha256 ac849f1b...b072c9, 192399864 bytes): different hash and different size
+PROVEN_4=the updater key at b48e8948f is PUBKEY_KEYID 9A02F7E0C9FC04C7, PUBKEY_SAME_AT_HEAD=yes
+PROVEN_5=the workflow at the gate commit b48e8948f builds the Linux leg on ubuntu-22.04 (WORKFLOW_LINUX_BASE_AT_GATE)
+PROVEN_6=the Downloads file was not modified: mode 664 and mtime 1790704421 identical before and after staging
+NOT_PROVEN_1=No signature was verified, so it is not proven that the CI key signed this file.
+NOT_PROVEN_2=No byte carries the run id 36556473399 or the tag. The binding rests on the operator's account and the orchestrator's record, and gh is not installed on this host to corroborate it.
+NOT_PROVEN_3=Commit b48e8948f is not provable from the bytes unless the census COMMIT_BYTES_HITS is non-zero (see census.txt).
+NOT_PROVEN_4=That the file was BUILT on ubuntu-22.04 is inferred: from the workflow at the gate commit, and from the census glibc maximum being at most 2.35. Both are consistent with it; neither proves it.
+NOT_PROVEN_5=The draft release v0.7.0 is shared and overwritten by every throwaway-tag run. The file is whatever the draft held at download time (mtime 2026-09-30 06:53 NZDT, after the run's Linux leg at 2026-09-29T10:43Z = 23:43 NZDT). That timing is consistent, not proof.
