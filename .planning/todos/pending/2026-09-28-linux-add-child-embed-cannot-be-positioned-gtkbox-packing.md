@@ -4,7 +4,7 @@ title: 'On Linux an add_child store embed cannot be positioned — set_bounds is
 found_during: spikes 025/026 (2026-09-28; commits c54e047ca, 369f482a4), filed by quick 260928-raq
 severity: minor
 platform: linux
-ready: human
+ready: code
 area: store-embed
 files:
   - src-tauri/Cargo.toml
@@ -218,3 +218,17 @@ app's GPU path: the CI AppImage launched without the workaround, showed a window
 interactive Library UI with 0 EGL lines, so the packaged app's EGL/GBM path is healthy on the matched
 driver. That says nothing about the embed's GTK-box allocation, which the packaged Library screen does not
 exercise.
+
+## Addendum (2026-09-30): the spike-029 re-run with DMABUF UNSET — 20 of 20, the layout is buildable
+
+The re-run the previous addendum named as the next action was performed, on the matched NVIDIA driver
+(580.173.02 both sides), with `WEBKIT_DISABLE_DMABUF_RENDERER` UNSET (a scratchpad copy of
+`run-variants.sh` with the `export` line removed; the repo script is unchanged). Fresh fake profile per
+attempt. Raw results: `.planning/spikes/029-linux-embed-allocation-reliability/results-unset-dmabuf/`.
+
+- `plain` x10: 10 of 10 ALLOCATED. `reparent` x10: 10 of 10 EXACT. Zero DEGENERATE.
+- Reading: spike 028's 10-of-11 no-allocation result was an environment artefact of the broken NVIDIA
+  stack, not a property of the GTK-box mechanism. The `reparent_fixed` + `fixed_move` lever is a
+  buildable foundation. Caveat: this is the debug spike binary on one machine, not the packaged app.
+- `ready:` returns `human` -> `code`. Strategy (a) and the one-shared-cookie-jar constraint are unchanged;
+  the Overlay / main-height design constraint from the spike-029 addendum still applies.
