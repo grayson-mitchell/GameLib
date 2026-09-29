@@ -4,7 +4,7 @@ title: 'On Linux an add_child store embed cannot be positioned — set_bounds is
 found_during: spikes 025/026 (2026-09-28; commits c54e047ca, 369f482a4), filed by quick 260928-raq
 severity: minor
 platform: linux
-ready: code
+ready: human
 area: store-embed
 files:
   - src-tauri/Cargo.toml
@@ -179,3 +179,30 @@ Trail: `.planning/spikes/028-linux-add-child-gtkbox-packing-lever/README.md`. Ve
   already satisfied by the 2026-09-28 decision, and this reliability question is new information
   for the implementing phase, not a reopened decision. `severity: minor` stands too: the shipped
   app is still macOS-gated (`src-tauri/Cargo.toml:114-128`), unaffected either way.
+
+## Addendum (2026-09-29, spike 029): the reliability question does NOT reproduce — one confound left, and it needs the operator
+
+Full evidence: `.planning/spikes/029-linux-embed-allocation-reliability/README.md`. Verdict: **⚠ PARTIAL.**
+
+- **The focus/mapping hypothesis is refuted.** 10 attempts with the window explicitly UNFOCUSED
+  (`hasToplevelFocus:false`, `isActive:false` recorded) allocated 10 of 10. `present()`, wait-for-map,
+  `show_all()`, a nudge resize, `queue_resize()` and `add_child` from a non-main thread each went
+  10 of 10 too. 100 of 100 one-shot attempts allocated, fresh fake profile each.
+- **The `reparent_fixed` + `fixed_move` lever is reliable here:** 30 of 30 EXACT 700x400 (plain,
+  unfocused, and 028's own long sequence with two resizes).
+- **028's own code path no longer degenerates** (6 of 6 baseline allocated). Why 028 saw 10 of 11 is
+  still unidentified. The one changed variable is the GPU path: today's runs were forced onto
+  `WEBKIT_DISABLE_DMABUF_RENDERER=1` because the NVIDIA stack is broken
+  (`nvidia-smi`: `Driver/library version mismatch`, kernel module 580.159.03 vs library 580.173).
+  That is a candidate, not a finding.
+- **What this changes.** `ready:` moves `code` -> `human`. The next action is the operator's: fix the
+  NVIDIA mismatch, then run
+  `.planning/spikes/029-linux-embed-allocation-reliability/run-variants.sh 10 plain reparent`
+  with `WEBKIT_DISABLE_DMABUF_RENDERER` UNSET (delete that `export` line for the run). 100% allocated
+  = 028 was an environment artefact and the layout is buildable; any DEGENERATE = the fix is in the
+  renderer path and layout code waits on it. Then `ready:` returns to `code`. The strategy decision
+  (option (a)) is untouched.
+- **A design constraint that holds regardless:** do not pack the application's `gtk::Fixed` as a
+  vbox SIBLING of the main webview. Measured: main is squeezed to 61-125px. Overlay it
+  (`gtk::Overlay`) or set explicit expand on main, and assert the main webview's height in the live
+  gate, not only the embed's.
