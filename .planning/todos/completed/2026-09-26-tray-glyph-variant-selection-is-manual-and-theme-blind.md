@@ -102,3 +102,8 @@ confirm the `UseDarkTrayIcon.tsx:49` fallback string is updated to match the shi
 - The stale `(needs restart)` fallback is gone with the toggle it belonged to.
 - The ONLY outstanding item is the Verification paragraph above, run live on Windows. It stays as
   written.
+
+## Resolved (2026-09-30)
+
+The live Windows check passed. The operator reported, verbatim: "tested changing themes on auto, passed".
+The report does not name the exact theme combinations tried. Closed by quick task `260930-lyk`.

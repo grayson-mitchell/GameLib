@@ -116,9 +116,9 @@ None. The new surface (HKCU read, key-change watcher thread, `variant` arg parse
 
 ### 1. Windows Auto follows the TASKBAR theme, not the app theme
 expected: On Windows, set Personalization > Colors to Custom with the taskbar (Windows mode) set to the OPPOSITE of the app mode, select Tray Icon = Auto in Settings; the tray glyph matches the TASKBAR (black on a light taskbar, white on a dark one), and flipping only the Windows mode updates the glyph with no restart.
-result: pending
+result: pass — operator-reported 2026-09-30, verbatim: "tested changing themes on auto, passed".
 
-Nothing in this run exercised a real taskbar-theme change; this machine's taskbar is dark (`SystemUsesLightTheme` = 0) and only the registry READ was verified. The todo `.planning/todos/pending/2026-09-26-tray-glyph-variant-selection-is-manual-and-theme-blind.md` stays pending as `ready: live-gate`.
+The executor could not exercise a real taskbar-theme change, since this machine's taskbar is dark (`SystemUsesLightTheme` = 0) and only the registry READ was verified. The operator then ran the live check on this Windows 11 machine with Tray Icon = Auto and reported a pass. The report does not say which theme combinations were tried, so none are claimed here. The todo moved to `.planning/todos/completed/2026-09-26-tray-glyph-variant-selection-is-manual-and-theme-blind.md`.
 
 ## Self-Check: PASSED
 
