@@ -98,13 +98,20 @@ function Set-CommandValueRaw {
 }
 
 function Get-RegSnapshotText {
-    $lines = & reg.exe query $RootRegPathFull /s 2>&1
+    # NOTE (fixed live, 2026-09-30): do NOT merge stderr with 2>&1 here. Windows PowerShell 5.1
+    # wraps merged stderr lines from a native command as ErrorRecord objects, and
+    # $ErrorActionPreference = 'Stop' then turns them into a terminating NativeCommandError the
+    # instant one flows through the pipeline -- even though the command itself succeeded and the
+    # "error" text was informational. This key always exists at every call site that calls this
+    # function, so stderr is discarded rather than merged.
+    $lines = & reg.exe query $RootRegPathFull /s 2>$null
     $clean = $lines | ForEach-Object { [string]$_ -replace "`r", '' }
     return ($clean -join "`n")
 }
 
 function Get-CommandQueryVeLines {
-    $lines = & reg.exe query $CommandRegPathFull /ve 2>&1
+    # See Get-RegSnapshotText's note: stderr is discarded, not merged, for the same reason.
+    $lines = & reg.exe query $CommandRegPathFull /ve 2>$null
     return ($lines | ForEach-Object { [string]$_ -replace "`r", '' })
 }
 
@@ -446,64 +453,109 @@ if ($Mode -eq 'Live') {
     } catch {
         $liveLines.Add("EXCEPTION: $($_.Exception.Message)")
     } finally {
-        # 1. Restore the registry FIRST, through the restore function.
-        $restoreResult = Restore-CommandValue -PreStateValue $preStateValue
-        $restoreWriteNeeded = $restoreResult.WriteNeeded
-        $restoreMatchesPreState = $restoreResult.MatchesPreState
+        # 1. Restore the registry FIRST, through the restore function. Wrapped so that even an
+        # unexpected exception here cannot skip teardown below -- the safe default on exception is
+        # restoreWriteNeeded=true (forces FAIL, never a false PASS) and restoreMatchesPreState=false.
+        try {
+            $restoreResult = Restore-CommandValue -PreStateValue $preStateValue
+            $restoreWriteNeeded = $restoreResult.WriteNeeded
+            $restoreMatchesPreState = $restoreResult.MatchesPreState
+        } catch {
+            $restoreWriteNeeded = $true
+            $restoreMatchesPreState = $false
+            $liveLines.Add("restore_exception: $($_.Exception.Message)")
+        }
         $liveLines.Add("restore_write_needed: $(if ($restoreWriteNeeded) { 'yes' } else { 'no' })")
         $liveLines.Add("restore_matches_prestate: $restoreMatchesPreState")
 
         # 2. Then tear down.
+        #
+        # NOTE (fixed live, 2026-09-30): every native-command call below discards stderr with
+        # 2>$null rather than merging it with 2>&1. A first live run crashed HERE: taskkill wrote
+        # an informational "ERROR: ... could not be terminated" line to its own stderr for a
+        # child process that had already exited on its own (a benign race, not a defect), 2>&1
+        # merged that line into the success stream as a PowerShell ErrorRecord, and
+        # $ErrorActionPreference = 'Stop' turned it into a terminating NativeCommandError --
+        # aborting the finally block before the process sweep below ever ran. Each teardown step
+        # is ALSO wrapped in its own try/catch, so a genuinely unexpected exception here can never
+        # again skip the rest of teardown, the registry re-read, or evidence being written: this
+        # finally block is the operator's hard safety invariant (registry and processes restored
+        # in EVERY outcome), and only a caught, logged, non-fatal path honours that inside it.
         if ($null -ne $launchedPid) {
-            $launchedProcess.Refresh()
-            if (-not $launchedProcess.HasExited) {
-                & taskkill.exe /PID $launchedPid /T 2>&1 | Out-Null
-                $closeStart = Get-Date
-                while (((Get-Date) - $closeStart).TotalSeconds -lt $GracefulCloseBoundSeconds) {
-                    $launchedProcess.Refresh()
-                    if ($launchedProcess.HasExited) { break }
-                    Start-Sleep -Milliseconds 500
-                }
+            try {
                 $launchedProcess.Refresh()
                 if (-not $launchedProcess.HasExited) {
-                    & taskkill.exe /PID $launchedPid /T /F 2>&1 | Out-Null
+                    & taskkill.exe /PID $launchedPid /T 2>$null | Out-Null
+                    $closeStart = Get-Date
+                    while (((Get-Date) - $closeStart).TotalSeconds -lt $GracefulCloseBoundSeconds) {
+                        $launchedProcess.Refresh()
+                        if ($launchedProcess.HasExited) { break }
+                        Start-Sleep -Milliseconds 500
+                    }
+                    $launchedProcess.Refresh()
+                    if (-not $launchedProcess.HasExited) {
+                        & taskkill.exe /PID $launchedPid /T /F 2>$null | Out-Null
+                    }
                 }
+            } catch {
+                $liveLines.Add("teardown_graceful_exception: $($_.Exception.Message)")
             }
         }
 
         # Sweep any remaining gamelib-shell.exe / gamelib-sidecar.exe whose ExecutablePath is
         # under %LOCALAPPDATA%\GameLib\. P1 proved none existed before, so every one of these is
         # ours.
-        $installDirLower = $InstallDir.ToLowerInvariant()
-        $sweepStart = Get-Date
-        while (((Get-Date) - $sweepStart).TotalSeconds -lt $GracefulCloseBoundSeconds) {
-            $remaining = Get-CimInstance Win32_Process -Filter "Name='gamelib-shell.exe' OR Name='gamelib-sidecar.exe'"
-            $ours = @($remaining | Where-Object { ($null -ne $_.ExecutablePath) -and ($_.ExecutablePath.ToLowerInvariant().StartsWith($installDirLower)) })
-            if ($ours.Count -eq 0) { break }
-            foreach ($p in $ours) {
-                Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+        try {
+            $installDirLower = $InstallDir.ToLowerInvariant()
+            $sweepStart = Get-Date
+            while (((Get-Date) - $sweepStart).TotalSeconds -lt $GracefulCloseBoundSeconds) {
+                $remaining = Get-CimInstance Win32_Process -Filter "Name='gamelib-shell.exe' OR Name='gamelib-sidecar.exe'"
+                $ours = @($remaining | Where-Object { ($null -ne $_.ExecutablePath) -and ($_.ExecutablePath.ToLowerInvariant().StartsWith($installDirLower)) })
+                if ($ours.Count -eq 0) { break }
+                foreach ($p in $ours) {
+                    Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
+                }
+                Start-Sleep -Milliseconds 500
             }
-            Start-Sleep -Milliseconds 500
+        } catch {
+            $liveLines.Add("teardown_sweep_exception: $($_.Exception.Message)")
         }
 
-        $finalCheck = Get-CimInstance Win32_Process -Filter "Name='gamelib-shell.exe' OR Name='gamelib-sidecar.exe'"
-        $finalCount = @($finalCheck).Count
-        $c8Pass = ($finalCount -eq 0)
-        $liveLines.Add("c8_remaining_process_count: $finalCount")
+        try {
+            $finalCheck = Get-CimInstance Win32_Process -Filter "Name='gamelib-shell.exe' OR Name='gamelib-sidecar.exe'"
+            $finalCount = @($finalCheck).Count
+            $c8Pass = ($finalCount -eq 0)
+            $liveLines.Add("c8_remaining_process_count: $finalCount")
+        } catch {
+            $c8Pass = $false
+            $liveLines.Add("c8_check_exception: $($_.Exception.Message)")
+        }
 
         # Informational only.
-        $webviewProcs = Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'"
-        $webviewMatching = @($webviewProcs | Where-Object { ($null -ne $_.CommandLine) -and ($_.CommandLine.Contains('gamelib-shell.exe.WebView2')) })
-        $liveLines.Add("informational_webview2_count: $($webviewMatching.Count)")
+        try {
+            $webviewProcs = Get-CimInstance Win32_Process -Filter "Name='msedgewebview2.exe'"
+            $webviewMatching = @($webviewProcs | Where-Object { ($null -ne $_.CommandLine) -and ($_.CommandLine.Contains('gamelib-shell.exe.WebView2')) })
+            $liveLines.Add("informational_webview2_count: $($webviewMatching.Count)")
+        } catch {
+            $liveLines.Add("informational_webview2_exception: $($_.Exception.Message)")
+        }
 
-        # 3. Then re-read the registry.
-        $invNet = Get-CommandValueRaw
-        $invSnapshot = Get-RegSnapshotText
-        $invNetMatch = ($invNet.Value -eq $preStateValue) -and ($invNet.Kind -eq [Microsoft.Win32.RegistryValueKind]::String)
-        $invSnapshotMatch = ($invSnapshot -eq $preStateSnapshot)
-        $invPass = $invNetMatch -and $invSnapshotMatch
-        $liveLines.Add("inv_net_match: $invNetMatch")
-        $liveLines.Add("inv_snapshot_match: $invSnapshotMatch")
+        # 3. Then re-read the registry. Wrapped for the same reason as the restore step: an
+        # exception here must not skip the C1-C8/VERDICT lines or the exit-code logic below --
+        # the safe default on exception is invPass=false, which routes to exit 3, the loudest
+        # outcome, exactly what an unreadable post-state deserves.
+        try {
+            $invNet = Get-CommandValueRaw
+            $invSnapshot = Get-RegSnapshotText
+            $invNetMatch = ($invNet.Value -eq $preStateValue) -and ($invNet.Kind -eq [Microsoft.Win32.RegistryValueKind]::String)
+            $invSnapshotMatch = ($invSnapshot -eq $preStateSnapshot)
+            $invPass = $invNetMatch -and $invSnapshotMatch
+            $liveLines.Add("inv_net_match: $invNetMatch")
+            $liveLines.Add("inv_snapshot_match: $invSnapshotMatch")
+        } catch {
+            $invPass = $false
+            $liveLines.Add("inv_check_exception: $($_.Exception.Message)")
+        }
     }
 
     $liveLines.Add("C1: $(if ($c1Pass) { 'PASS' } else { 'FAIL' }) $c1Detail")

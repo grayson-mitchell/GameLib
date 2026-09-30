@@ -1,0 +1,33 @@
+P1: PASS process_count=0
+P2: PASS exists=True hash=5ADCE1BEB48CCC8F82695F98164062E6E53F45581DD0F188269015EBA6C63A9F hash_match=True
+P3: PASS value=["C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe" "%1"] kind=String
+P4: PASS HOME=[C:\Users\grays] USERPROFILE=[C:\Users\grays]
+P5: PASS CI=[]
+P6: PASS exists=False
+P7: PASS exists=True offset_bytes=13513 line_count=185 last_line_prefix=[epoch=1790750447 pid=8992]
+P8: PASS captured
+log_offset_bytes: 13513
+hijack_readback_net: value=["C:\gamelib-hijack-test\nope.exe" "%1"] kind=String match=True
+hijack_readback_reg: match=True
+launched_pid: 22308
+executable_path: C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe
+poll_repair_seen: True seconds=1.1
+poll_appup_seen: True seconds=0
+new_log_line_count: 1
+restore_write_needed: no
+restore_matches_prestate: True
+teardown_graceful_exception: ERROR: The process with PID 27848 (child process of PID 12028) could not be terminated.
+c8_remaining_process_count: 0
+informational_webview2_count: 0
+inv_net_match: True
+inv_snapshot_match: True
+C1: PASS net_match=True reg_match=True
+C2: PASS exec_path=[C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe] shell_count=1
+C3: PASS pid_matched_line_count=1
+C4: PASS value_matches_prestate=True kind=String
+C5: PASS snapshot_matches_prestate=True
+C6: PASS violation=False
+C7: PASS appup_seen=True seconds=0
+C8: PASS
+INV: PASS
+VERDICT: PASS
