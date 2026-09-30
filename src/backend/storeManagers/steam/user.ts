@@ -50,6 +50,14 @@ export class SteamUser {
     status: 'waiting' | 'done' | 'error'
     username?: string
   } = { status: 'waiting' }
+  // Tracks the last status pollQRLogin() actually LOGGED (not just observed),
+  // so the poll loop below can emit a line only on a CHANGE of status. The
+  // frontend polls on a timer (steamAuthFlowRegistration.ts:154), so a line
+  // per poll would flood gamelib.log and would itself be a defect (D-02).
+  // `null` means "nothing logged yet for this attempt" — reset alongside
+  // qrSessionState at both of its reset sites (startQRLogin, logout) so the
+  // two fields can never drift into an incoherent pair.
+  private static qrLastLoggedStatus: 'waiting' | 'done' | 'error' | null = null
 
   // Credential session completion state — parallel to qrSessionState.
   // Settled by the 'authenticated'/'error'/'timeout' listeners registered in
@@ -306,6 +314,7 @@ export class SteamUser {
     this.connectingPromise = null
     this.session = null
     this.qrSessionState = { status: 'waiting' }
+    this.qrLastLoggedStatus = null
     // Drain any pending credential session callbacks so callers don't hang
     // indefinitely if logout occurs while waiting for a guard code.
     const pendingCbs = SteamUser._credSettleCallbacks
@@ -518,6 +527,7 @@ export class SteamUser {
       session.loginTimeout = QR_LOGIN_TIMEOUT_MS
       this.session = session
       this.qrSessionState = { status: 'waiting' }
+      this.qrLastLoggedStatus = null
 
       const response = await session.startWithQR()
 
@@ -597,6 +607,13 @@ export class SteamUser {
     username?: string
   }> {
     const state = this.qrSessionState
+    if (state.status !== this.qrLastLoggedStatus) {
+      logInfo(
+        `Steam QR poll: status ${this.qrLastLoggedStatus ?? 'none'} -> ${state.status}`,
+        LogPrefix.Steam
+      )
+      this.qrLastLoggedStatus = state.status
+    }
     if (state.status === 'done') {
       // username is undefined until the background CM connection resolves the
       // persona name (see the QR 'authenticated' handler). The frontend picks
