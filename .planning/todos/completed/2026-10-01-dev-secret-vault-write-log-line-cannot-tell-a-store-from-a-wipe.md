@@ -6,6 +6,8 @@ severity: medium
 platform: any
 ready: code
 area: observability
+status: RESOLVED
+resolved: 2026-10-01
 files:
   - src/backend/sidecar/devSecretVault.ts
   - src/backend/storeManagers/steam/user.ts
@@ -97,3 +99,64 @@ the vault write line this todo describes is the first trace of any QR login anyw
 which is why that todo's gap is invisible and this one's line is ambiguous. The two gaps compound:
 a failed QR attempt leaves nothing, and a successful one's first trace cannot be told apart from a
 logout.
+
+## Resolution (quick 261001-fz5, 2026-10-01)
+
+**Direction chosen: Option B — a direction token on the existing line**, not a separate
+`[dev-secret-vault] clear key=<slot>` line. Reason, in one sentence: Option A silently narrows the
+established `grep 'dev-secret-vault] write'` habit — the only existing occurrences of `write
+key=` in shipped source are this module's own doc comment and log call — so a wipe would quietly
+stop matching that grep while it kept looking complete; Option B keeps the prefix stable, so the
+existing grep still returns every mutation, with `grep 'op=wipe'` and `grep 'op=store'` available
+as refinements.
+
+**Lines now emitted**, replacing the single collision-prone
+`[dev-secret-vault] write key=<slot>`:
+
+- `[dev-secret-vault] write key=<slot> op=store` — `setToken`, `setSecret`, `setApiKey`.
+- `[dev-secret-vault] write key=<slot> op=wipe` — `clearToken`, `clearSecrets` (both Humble
+  slots), `clearApiKey`.
+
+**How it is pinned.** `writeSlot()` (`devSecretVault.ts`) now takes a fourth, REQUIRED parameter
+typed as the two-member string-literal union `WriteDirection = 'store' | 'wipe'`, supplied by the
+caller and never derived from the value being written. Because the parameter is required and the
+union is closed, `tsc` — not a grep — is what proves no direction-free `writeSlot` call site
+survives; `pnpm codecheck` exits 0 with every call site updated. `clearSlot()` keeps its
+`writeSlot(path, slot, '', 'wipe')` delegation, so the on-disk write for a clear is byte-for-byte
+unchanged — pinned in `devSecretVault.test.ts` by reading the vault JSON off disk after a clear
+and asserting the slot key is present and holds the empty string, plus a `statSync` mode-0600
+check.
+
+Four slots are now pinned by strict string equality in `devSecretVault.test.ts`, mirroring the
+pre-existing read-line style at the equivalent assertion: the Steam slot's store line and wipe
+line in one test; both Humble slots' (`sessionCookie`, `csrfToken`) wipe lines, plus their
+present-and-empty on-disk state, in a second test; the SteamGridDB slot's wipe line in a third.
+The Steam test also pins that the old direction-free form (`[dev-secret-vault] write
+key=steam-refresh-token`, no `op=`) is no longer emitted by any path. The pre-existing leak-scan
+test (`devSecretVault.test.ts`, the "NO logged argument leaks" test) was re-run **unmodified** and
+stays green — it flattens every `logInfo`/`logWarning`/`logError` argument and scans for the
+secret, every 3-character window of it, and its decimal length, so the new `op=` token was already
+inside its scan surface by construction; nothing there needed to change.
+
+**Deviation from the plan's assumed call site.** The plan assumed a getter importable from
+`backend/steamgrid/secretStore` for the Task 2 SteamGridDB test. That assumption held exactly:
+`getSteamGridDbSecretStore()` is exported from that module (verified live) and was imported
+directly, reached the same way the neighbouring token/Humble tests reach their stores. No
+deviation was needed here.
+
+Guardrail (b)'s header text, `writeSlot`'s doc comment, and `clearSlot`'s doc comment were all
+updated in the same commit to describe the new line shape, so none of the three certifies
+behaviour the code has stopped having.
+
+**Honest limits, at equal weight with the fix:**
+
+1. Nothing in CI reads `gamelib.log`. This improvement is to a human reading path only — the pins
+   prove the text is emitted correctly, not that any log-reading habit actually changed.
+2. The cross-referenced sibling todo (a failed Steam QR login leaves no trace in `gamelib.log`) is
+   untouched and stays open. The compounding gap this todo's "How it misled a reading" section
+   describes is only half closed: a wipe is now unmistakable from a store, but a failed login
+   attempt is still invisible.
+
+The historical references to the old line text in `.planning/phases/34.5-.../34.5-36-PLAN.md`,
+`.../34.5-40-PLAN.md`, and `.planning/STATE.md` were deliberately left as written — they are the
+historical record of what was planned and filed then, not live specification.
