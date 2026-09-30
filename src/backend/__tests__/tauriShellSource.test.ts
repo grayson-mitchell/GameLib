@@ -3873,3 +3873,362 @@ describe('quick 260930-lyk: tray Auto reads the TASKBAR theme, never the app the
     expect(loadMainRsCode(raw)).not.toContain('AppsUseLightTheme')
   })
 })
+
+// Quick task 260930-q11 (closes `34.4.2-REVIEW.md`'s WR-02 at the desk; the live gate is the
+// operator's). Both login-sheet paths used to resolve two raw `NSWindow` addresses on the calling
+// WORKER thread, wrap them in a local Send-pointer shim, and dereference them inside a closure
+// that ran later -- 250ms later on the present path, measured at `deferred_elapsed=260.3ms` in
+// the debug session's round-3 live log. The addresses are now resolved INSIDE the main-thread
+// closure that uses them, via `login_window_ns_window_retained`, which retains immediately.
+//
+// The justification these gates protect is stronger than "the window might close mid-flight":
+// `tauri::Window::ns_window()` hands back an AUTORELEASED pointer
+// (`tauri-2.11.5/src/window/mod.rs:1642`), so its guaranteed validity is bounded by the
+// autorelease pool of the thread that resolved it, not by the window's lifetime -- the old shape
+// was out of contract UNCONDITIONALLY. Verification here is deliberately STRUCTURAL: a timing
+// test would pass on the defective code most of the time, which is exactly the property that let
+// this shape survive nine live-gate attempts.
+describe('quick 260930-q11: both login-sheet paths resolve their NSWindow handles inside the main-thread closure that uses them', () => {
+  /**
+   * Slices one of the two login-sheet fn bodies out of `code`, from `fn NAME(` (inclusive) to the
+   * next `#[cfg(target_os = "macos")]` attribute (exclusive). This is `extractPristineLoginFnBody`'s
+   * idiom (above) parameterized by name -- deliberately REUSED rather than a second extraction
+   * convention invented alongside it. Both bounds are `expect()`ed so an `indexOf` miss fails
+   * loudly instead of silently slicing from the file start.
+   *
+   * Re-confirmed against the POST-fix source (2026-09-30, after this quick task rewrote both
+   * bodies): neither body contains an inner `#[cfg(...)]` attribute, and the next top-level one
+   * after each is the attribute on the following item -- `register_presented_login_sheet` after
+   * present, `clear_default_data_store_cookies_for_domain` after dismiss.
+   */
+  function extractLoginSheetFnBody(code: string, fnName: string): string {
+    const start = code.indexOf(`fn ${fnName}(`)
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    return code.slice(start, end)
+  }
+
+  /**
+   * Local copy of the Plan 02 block's brace matcher, duplicated per this file's own stated
+   * convention there ("kept as a local copy rather than a shared export since neither block
+   * currently imports from the other"). Used to bound the DEFERRED GCD closure so the positive
+   * test can prove the resolution sits INSIDE it rather than merely after its marker. Safe over
+   * these bodies: every `{`/`}` in their `eprintln!` format strings is balanced, so depth
+   * counting is not confused by the string literals.
+   */
+  function extractBracedBlock(code: string, openMarker: string): string {
+    const markerIdx = code.indexOf(openMarker)
+    expect(markerIdx).toBeGreaterThan(-1)
+    const braceStart = code.indexOf('{', markerIdx)
+    expect(braceStart).toBeGreaterThan(-1)
+    let depth = 0
+    let i = braceStart
+    for (; i < code.length; i++) {
+      if (code[i] === '{') depth++
+      else if (code[i] === '}') {
+        depth--
+        if (depth === 0) break
+      }
+    }
+    expect(depth).toBe(0)
+    return code.slice(markerIdx, i + 1)
+  }
+
+  const LOGIN_SHEET_FNS = [
+    'present_login_window_as_sheet',
+    'dismiss_login_window_sheet'
+  ]
+
+  // The two literals this quick task deleted from BOTH bodies, taken from the pre-fix HEAD text
+  // (`git show c66d9a242:src-tauri/src/main.rs`, and unchanged at the 9f7cd017a this task ran
+  // against). Both are still legitimately present ELSEWHERE in the file, which is precisely why
+  // the negatives below are scoped to the two sliced bodies and never applied file-wide:
+  //   - the Send-pointer shim survives in `open_pristine_epic_login_window`, where it carries the
+  //     webview content-view pointer and the `NSEvent` monitor token;
+  //   - `as *const objc2_app_kit::NSWindow` survives in the Esc local monitor, where it runs the
+  //     OPPOSITE direction -- a reference cast TO a `usize` for an identity comparison that never
+  //     dereferences anything.
+  // A file-wide negative would false-fire on both.
+  const SEND_PTR_SHIM_IMPL = 'unsafe impl Send for SendPtr'
+  const RAW_NSWINDOW_CAST = 'as *const objc2_app_kit::NSWindow'
+
+  /**
+   * The predicate both negatives reduce to. Takes the comment-stripped source as an ARGUMENT (not
+   * reading main.rs itself) so the RED-direction self-tests below drive this exact code path with
+   * injected pre-fix source -- this file's `loadMainRsCode(source?)` convention -- rather than
+   * stashing or checking out `src-tauri/src/main.rs`. A working-tree swap would leave the pre-fix
+   * file in place if interrupted, and silently becomes a no-op once the fix is committed.
+   */
+  function loginSheetHandleHopProperties(
+    code: string,
+    fnName: string
+  ): {
+    hasSendPtrShim: boolean
+    hasRawNsWindowCast: boolean
+    hasRetainedResolver: boolean
+  } {
+    const body = extractLoginSheetFnBody(code, fnName)
+    return {
+      hasSendPtrShim: body.includes(SEND_PTR_SHIM_IMPL),
+      hasRawNsWindowCast: body.includes(RAW_NSWINDOW_CAST),
+      hasRetainedResolver: body.includes('login_window_ns_window_retained(')
+    }
+  }
+
+  // Faithful reproductions of the PRE-FIX HEAD shape for each function: resolution at the fn top,
+  // the local Send-pointer shim with its `unsafe impl`, the disjoint-capture rebindings, and the
+  // raw-address-to-`&NSWindow` reconstructions inside the closure. Each span ends with a trailing
+  // `#[cfg(target_os = "macos")]` so the slicer above finds a real end bound, exactly as it does
+  // in main.rs. Synthetic rather than a literal `git show` capture -- the convention the file's
+  // other `SELF-TEST (RED direction)` tests already follow -- but structurally identical on every
+  // property these gates assert.
+  const PRE_FIX_PRESENT_SPAN = [
+    '#[cfg(target_os = "macos")]',
+    'fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {',
+    '    let started = std::time::Instant::now();',
+    '    let Some(parent_addr) = login_window_ns_window(app, MAIN_WINDOW_LABEL) else {',
+    '        return false;',
+    '    };',
+    '    let Some(child_addr) = login_window_ns_window(app, label) else {',
+    '        return false;',
+    '    };',
+    '    struct SendPtr(*mut std::ffi::c_void);',
+    '    unsafe impl Send for SendPtr {}',
+    '    let parent_ptr = SendPtr(parent_addr as *mut std::ffi::c_void);',
+    '    let child_ptr = SendPtr(child_addr as *mut std::ffi::c_void);',
+    '    let (tx, rx) = mpsc_channel::<bool>();',
+    '    if let Err(e) = app.run_on_main_thread(move || {',
+    '        let parent_ptr = parent_ptr;',
+    '        let child_ptr = child_ptr;',
+    '        let _ = dispatch2::DispatchQueue::main().after(when, move || {',
+    '            let parent_ptr = parent_ptr;',
+    '            let child_ptr = child_ptr;',
+    '            let parent: &objc2_app_kit::NSWindow =',
+    '                unsafe { &*(parent_ptr.0 as *const objc2_app_kit::NSWindow) };',
+    '            let child: &objc2_app_kit::NSWindow =',
+    '                unsafe { &*(child_ptr.0 as *const objc2_app_kit::NSWindow) };',
+    '            parent.beginSheet_completionHandler(child, None);',
+    '            let _ = tx.send(child.isSheet());',
+    '        });',
+    '    }) {',
+    '        return false;',
+    '    }',
+    '    true',
+    '}',
+    '',
+    '#[cfg(target_os = "macos")]',
+    'fn register_presented_login_sheet(label: &str) {}'
+  ].join('\n')
+
+  const PRE_FIX_DISMISS_SPAN = [
+    '#[cfg(target_os = "macos")]',
+    'fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {',
+    '    let Some(parent_addr) = login_window_ns_window(app, MAIN_WINDOW_LABEL) else {',
+    '        return;',
+    '    };',
+    '    let Some(child_addr) = login_window_ns_window(app, label) else {',
+    '        return;',
+    '    };',
+    '    struct SendPtr(*mut std::ffi::c_void);',
+    '    unsafe impl Send for SendPtr {}',
+    '    let parent_ptr = SendPtr(parent_addr as *mut std::ffi::c_void);',
+    '    let child_ptr = SendPtr(child_addr as *mut std::ffi::c_void);',
+    '    let (tx, rx) = mpsc_channel::<()>();',
+    '    if let Err(e) = app.run_on_main_thread(move || {',
+    '        let parent_ptr = parent_ptr;',
+    '        let child_ptr = child_ptr;',
+    '        let parent: &objc2_app_kit::NSWindow =',
+    '            unsafe { &*(parent_ptr.0 as *const objc2_app_kit::NSWindow) };',
+    '        let child: &objc2_app_kit::NSWindow =',
+    '            unsafe { &*(child_ptr.0 as *const objc2_app_kit::NSWindow) };',
+    '        parent.endSheet(child);',
+    '        let _ = tx.send(());',
+    '    }) {',
+    '        return;',
+    '    }',
+    '}',
+    '',
+    '#[cfg(target_os = "macos")]',
+    'fn clear_default_data_store_cookies_for_domain(app: &AppHandle) {}'
+  ].join('\n')
+
+  test('NEGATIVE (D-01/D-03): neither login-sheet fn body carries a Send-pointer shim or a raw-address-to-&NSWindow reconstruction', () => {
+    const code = loadMainRsCode()
+    for (const fnName of LOGIN_SHEET_FNS) {
+      const props = loginSheetHandleHopProperties(code, fnName)
+      expect(props.hasSendPtrShim).toBe(false)
+      expect(props.hasRawNsWindowCast).toBe(false)
+    }
+  })
+
+  test('POSITIVE (D-05): each login-sheet fn body CALLS login_window_ns_window_retained -- deleting the resolution outright would otherwise satisfy the negatives above', () => {
+    const code = loadMainRsCode()
+    for (const fnName of LOGIN_SHEET_FNS) {
+      expect(
+        loginSheetHandleHopProperties(code, fnName).hasRetainedResolver
+      ).toBe(true)
+    }
+  })
+
+  test("POSITIVE (D-01, NESTING): the present path's resolutions sit INSIDE the deferred GCD closure, not at the function top -- hoisting them back out is what this quick task exists to prevent", () => {
+    const body = extractLoginSheetFnBody(
+      loadMainRsCode(),
+      'present_login_window_as_sheet'
+    )
+    // Brace-matched form (not a bare index ordering): proves containment in the deferred
+    // closure's own block rather than mere position after its marker, so a resolution reinstated
+    // AFTER the `.after(...)` call returns would still fail.
+    const deferredBlock = extractBracedBlock(
+      body,
+      'dispatch2::DispatchQueue::main().after('
+    )
+    const deferredResolutions =
+      deferredBlock.match(/login_window_ns_window_retained\(/g) ?? []
+    expect(deferredResolutions).toHaveLength(2)
+    // ...and NOTHING resolves outside that block, which is where the pre-fix code did it.
+    const bodyResolutions =
+      body.match(/login_window_ns_window_retained\(/g) ?? []
+    expect(bodyResolutions).toHaveLength(2)
+  })
+
+  test("POSITIVE (D-06, T-q11-03): the present path's two unresolvable-window arms SEND false rather than bare-returning -- a bare return strands the caller on rx.recv_timeout for the full 10s before the visible fallback can run", () => {
+    const body = extractLoginSheetFnBody(
+      loadMainRsCode(),
+      'present_login_window_as_sheet'
+    )
+    expect(body.match(/tx\.send\(false\)/g) ?? []).toHaveLength(2)
+  })
+
+  test('POSITIVE (D-06, WR-01 preserved): every arm of the dismiss closure signals on tx -- three sends, so the healthy "window already gone" path reports a CONFIRMED hop and is never re-registered', () => {
+    const body = extractLoginSheetFnBody(
+      loadMainRsCode(),
+      'dismiss_login_window_sheet'
+    )
+    expect(body.match(/tx\.send\(\(\)\)/g) ?? []).toHaveLength(3)
+  })
+
+  test('POSITIVE: exactly ONE unsafe impl Send for SendPtr survives in the comment-stripped source, and it is inside open_pristine_epic_login_window (3 at HEAD: pristine plus one per login-sheet path)', () => {
+    const code = loadMainRsCode()
+    expect(code.match(/unsafe impl Send for SendPtr/g) ?? []).toHaveLength(1)
+    const start = code.indexOf('fn open_pristine_epic_login_window(')
+    expect(start).toBeGreaterThan(-1)
+    const end = code.indexOf('#[cfg(target_os = "macos")]', start)
+    expect(end).toBeGreaterThan(start)
+    expect(code.slice(start, end)).toContain(SEND_PTR_SHIM_IMPL)
+  })
+
+  test("NON-VACUITY arm 1: both forbidden literals ARE still present in the comment-stripped source outside the two bodies -- a typo'd literal matching nothing anywhere would pass the negatives everywhere", () => {
+    const code = loadMainRsCode()
+    expect(code).toContain(SEND_PTR_SHIM_IMPL)
+    expect(code).toContain(RAW_NSWINDOW_CAST)
+    // And they are where this block claims: the shim in the pristine Epic arm, the cast in the
+    // Esc monitor's identity comparison (`(&*event_window) as *const ... as usize`), which casts
+    // a reference TO a usize -- the opposite direction from the deleted reconstructions.
+    expect(code).toContain('(&*event_window) as *const objc2_app_kit::NSWindow')
+  })
+
+  test('NON-VACUITY arm 2: the RAW main.rs names the deleted `SendPtr` wrapper in the replacement prose, and stripping removes it -- so the negatives above are genuinely comment-scoped, not accidentally true because the phrase left the file', () => {
+    const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+    // This exact phrase occurs ONLY in the doc-comment prose this quick task wrote on both
+    // login-sheet paths ("The `SendPtr` wrapper and the two raw-address ... casts this function
+    // used to carry are gone"), never in code. NOTE for a future reader: because
+    // `loadMainRsCode()` strips comments, a replacement comment that NAMES the deleted shim does
+    // not break the negatives above. Do not "fix" that prose -- it is fine, and this test is what
+    // proves it is fine.
+    expect(raw).toContain('`SendPtr` wrapper')
+    expect(loadMainRsCode(raw)).not.toContain('`SendPtr` wrapper')
+  })
+
+  test('SELF-TEST (RED direction): the pre-fix HEAD shape of BOTH paths -- resolution at the fn top, the SendPtr shim, the raw casts inside the closure -- is REJECTED by the q11 negatives and fails the positive, proven with injected source that mutates nothing', () => {
+    for (const [fnName, span] of [
+      ['present_login_window_as_sheet', PRE_FIX_PRESENT_SPAN],
+      ['dismiss_login_window_sheet', PRE_FIX_DISMISS_SPAN]
+    ] as const) {
+      const props = loginSheetHandleHopProperties(loadMainRsCode(span), fnName)
+      // Both negatives FIRE on the pre-fix shape -- this is the gate seeing the defect it exists
+      // for, which is the whole reason this arm is here rather than a green-only assertion.
+      expect(props.hasSendPtrShim).toBe(true)
+      expect(props.hasRawNsWindowCast).toBe(true)
+      // ...and the positive gate also fails, since the pre-fix code has no retaining resolver.
+      expect(props.hasRetainedResolver).toBe(false)
+    }
+  })
+
+  test('SELF-TEST (RED direction): a q11 body that passes both negatives by HOISTING the resolution back to the function top still fails the nesting assertion', () => {
+    const hoisted = [
+      '#[cfg(target_os = "macos")]',
+      'fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {',
+      '    let Some(parent) = login_window_ns_window_retained(app, MAIN_WINDOW_LABEL) else {',
+      '        return false;',
+      '    };',
+      '    let Some(child) = login_window_ns_window_retained(app, label) else {',
+      '        return false;',
+      '    };',
+      '    let (tx, rx) = mpsc_channel::<bool>();',
+      '    if let Err(e) = app.run_on_main_thread(move || {',
+      '        let _ = dispatch2::DispatchQueue::main().after(when, move || {',
+      '            parent.beginSheet_completionHandler(&child, None);',
+      '            let _ = tx.send(child.isSheet());',
+      '        });',
+      '    }) {',
+      '        return false;',
+      '    }',
+      '    true',
+      '}',
+      '',
+      '#[cfg(target_os = "macos")]',
+      'fn register_presented_login_sheet(label: &str) {}'
+    ].join('\n')
+    const code = loadMainRsCode(hoisted)
+    const props = loginSheetHandleHopProperties(
+      code,
+      'present_login_window_as_sheet'
+    )
+    // No shim, no raw cast, and it DOES call the retaining resolver -- so the negatives and the
+    // plain positive are both satisfied. Only the nesting assertion catches it.
+    expect(props.hasSendPtrShim).toBe(false)
+    expect(props.hasRawNsWindowCast).toBe(false)
+    expect(props.hasRetainedResolver).toBe(true)
+    const body = extractLoginSheetFnBody(code, 'present_login_window_as_sheet')
+    const deferredBlock = extractBracedBlock(
+      body,
+      'dispatch2::DispatchQueue::main().after('
+    )
+    expect(
+      deferredBlock.match(/login_window_ns_window_retained\(/g) ?? []
+    ).toHaveLength(0)
+  })
+
+  test('SELF-TEST (RED direction, comment-stripping is load-bearing): a doc comment merely naming the SendPtr shim and the raw NSWindow cast does not make the q11 negatives fire', () => {
+    const proseOnly = [
+      '#[cfg(target_os = "macos")]',
+      '/// The `SendPtr` wrapper and its `unsafe impl Send for SendPtr` are gone, along with the',
+      '/// `unsafe { &*(ptr as *const objc2_app_kit::NSWindow) }` reconstructions.',
+      'fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {',
+      '    let _ = dispatch2::DispatchQueue::main().after(when, move || {',
+      '        let Some(parent) = login_window_ns_window_retained(&app2, MAIN_WINDOW_LABEL) else {',
+      '            let _ = tx.send(false);',
+      '            return;',
+      '        };',
+      '        let Some(child) = login_window_ns_window_retained(&app2, &label2) else {',
+      '            let _ = tx.send(false);',
+      '            return;',
+      '        };',
+      '        parent.beginSheet_completionHandler(&child, None);',
+      '    });',
+      '    true',
+      '}',
+      '',
+      '#[cfg(target_os = "macos")]',
+      'fn register_presented_login_sheet(label: &str) {}'
+    ].join('\n')
+    const props = loginSheetHandleHopProperties(
+      loadMainRsCode(proseOnly),
+      'present_login_window_as_sheet'
+    )
+    expect(props.hasSendPtrShim).toBe(false)
+    expect(props.hasRawNsWindowCast).toBe(false)
+    expect(props.hasRetainedResolver).toBe(true)
+  })
+})
