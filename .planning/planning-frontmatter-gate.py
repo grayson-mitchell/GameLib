@@ -896,6 +896,50 @@ def self_test() -> None:
 
     case_count = 1  # the hash assertion above counts as case 1
 
+    # Transport pins: the node pipe must round-trip text exactly. Case A is a non-cp1252
+    # round-trip (U+2014 is cp1252-encodable, but used to reach node as invalid UTF-8); Case B is
+    # a stdin chunk-boundary round-trip (a multi-byte character split across ~64 KiB chunks).
+    # Only a non-UTF-8-locale host can see Case A fail; ubuntu CI encodes UTF-8 either way.
+    transport_chars = "\u2192 \u2715 \u2500 \u26a0 \u2014"
+    transport_doc = 'k: "' + transport_chars + '"\n'
+    case_count += 1
+    try:
+        transport_data = run_parser(node, transport_doc)
+    except UnicodeError as exc:
+        fail(
+            "self-test FAILED: parser transport (non-cp1252 round-trip) -- the node pipe is not "
+            f"declaring UTF-8 ({exc.__class__.__name__})."
+        )
+    if not transport_data.get("ok") or transport_data.get("value") != {"k": transport_chars}:
+        fail(
+            "self-test FAILED: parser transport (non-cp1252 round-trip) -- round-trip was not "
+            f"exact, got {ascii(transport_data.get('value', transport_data.get('error')))}."
+        )
+    print(
+        "  self-test OK: parser transport round-trips U+2192 U+2715 U+2500 U+26A0 U+2014 "
+        "exactly"
+    )
+
+    big_count = 100000
+    big_doc = 'k: "' + "\u2192" * big_count + '"\n'
+    case_count += 1
+    try:
+        big_data = run_parser(node, big_doc)
+    except UnicodeError as exc:
+        fail(
+            "self-test FAILED: parser transport (stdin chunk boundary) -- the node pipe is not "
+            f"declaring UTF-8 ({exc.__class__.__name__})."
+        )
+    big_value = (big_data.get("value") or {}).get("k") if big_data.get("ok") else None
+    if not isinstance(big_value, str) or len(big_value) != big_count or "\ufffd" in big_value:
+        big_len = len(big_value) if isinstance(big_value, str) else None
+        big_bad = big_value.count("\ufffd") if isinstance(big_value, str) else "n/a"
+        fail(
+            "self-test FAILED: parser transport (stdin chunk boundary) -- expected length "
+            f"{big_count} with 0 U+FFFD, got length {big_len} with {big_bad} U+FFFD."
+        )
+    print(f"  self-test OK: parser transport stdin chunk boundary ({big_count} x U+2192, 0 U+FFFD)")
+
     def reject(label: str, text: str, required: bool = True) -> None:
         nonlocal case_count
         case_count += 1
