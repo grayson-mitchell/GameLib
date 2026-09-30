@@ -13,6 +13,7 @@ import {
   isNintendoControllerId
 } from './gamepad_layouts'
 import { VirtualKeyboardController } from './virtualKeyboard'
+import { resolveHoveredCard, isDirectionalAction } from './gamepadHoverSeed'
 
 const SCROLL_REPEAT_DELAY = 50
 
@@ -157,7 +158,16 @@ export const initGamepad = () => {
       // update timestamps for repeaters
       data.triggeredAt[controllerIndex] = now
 
+      const controllerWasNotCurrent = currentController !== controllerIndex
       emitControllerEvent(controllerIndex)
+      // A handoff press: the mouse moved since the last controller input (or
+      // this is the first controller input since launch) AND the emit above
+      // actually made this controller current -- the `emitControllerEvent`
+      // bail-out guard (no gamepad at this index) must not count as a
+      // handoff, or every press on a phantom index would re-seed. See P-5,
+      // 260930-iws-PLAN.md.
+      const isHandoffPress =
+        controllerWasNotCurrent && currentController === controllerIndex
       const el = currentElement()
 
       // Guide / PS button toggles Console Mode. Many OSes (Steam, Game Bar)
@@ -177,6 +187,32 @@ export const initGamepad = () => {
           document.body.classList.contains('console-modal-open'))
       ) {
         return
+      }
+
+      // Mouse-to-controller handoff focus seed (closes
+      // 2026-09-25-mouse-highlight-does-not-confer-dom-focus.md). The
+      // operator's visible highlight is CSS `:hover`, not DOM focus, so on
+      // the first directional press after the mouse moved, land real focus
+      // on the card under the pointer instead of letting the press act on
+      // stale DOM focus (the search field) or the viewport-edge origin.
+      // Land-first: this press is CONSUMED and the NEXT press navigates from
+      // the seeded card, so the operator sees the focus ring land on the
+      // card they were looking at before anything moves. Directional-only:
+      // mainAction/altAction never seed, so Y can never play/install a
+      // merely-hovered card. The whole step sits in its own try/catch that
+      // falls through to the unchanged path -- `checkAction`'s only caller
+      // swallows exceptions, so a throw here must never silently drop the
+      // press.
+      if (isHandoffPress && isDirectionalAction(action)) {
+        try {
+          const hovered = resolveHoveredCard(document)
+          if (hovered) {
+            hovered.link.focus({ preventScroll: true })
+            return
+          }
+        } catch {
+          // fall through to the unchanged path
+        }
       }
 
       // check special cases for the different actions, more details on the wiki
