@@ -3845,3 +3845,31 @@ describe('quick 260907-9co -- tray About must RAISE the main window before mount
     expect(props.focusIdx).toBe(-1)
   })
 })
+
+describe('quick 260930-lyk: tray Auto reads the TASKBAR theme, never the app theme', () => {
+  test('main.rs reads SystemUsesLightTheme from the Personalize key', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('SystemUsesLightTheme')
+    expect(code).toContain('Themes\\Personalize')
+  })
+
+  test('the watcher is triggered by RegNotifyChangeKeyValue on value changes', () => {
+    const code = loadMainRsCode()
+    expect(code).toContain('RegNotifyChangeKeyValue')
+    expect(code).toContain('REG_NOTIFY_CHANGE_LAST_SET')
+  })
+
+  test('main.rs never reads the app-theme value or the window theme', () => {
+    const code = loadMainRsCode()
+    expect(code).not.toContain('AppsUseLightTheme')
+    // The no-argument window-theme getter. The `.theme(Some(...))` builder calls take an
+    // argument and do not match.
+    expect(code).not.toMatch(/\.theme\(\)/)
+  })
+
+  test('NON-VACUITY: the RAW main.rs does carry AppsUseLightTheme (the rationale comment), so the negative gate above is comment-scoped rather than trivially true', () => {
+    const raw = readFileSync(MAIN_RS_PATH, 'utf-8')
+    expect(raw).toContain('AppsUseLightTheme')
+    expect(loadMainRsCode(raw)).not.toContain('AppsUseLightTheme')
+  })
+})

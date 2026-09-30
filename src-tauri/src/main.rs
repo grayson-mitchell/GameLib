@@ -313,6 +313,102 @@ fn read_system_uses_light_theme() -> Option<u32> {
     None
 }
 
+/// Windows only: re-resolve the tray glyph whenever the Windows theme registry key changes, so
+/// Auto follows a TASKBAR-only theme change with no restart (quick 260930-lyk).
+///
+/// Why `RegNotifyChangeKeyValue` and NOT tao's `WindowEvent::ThemeChanged` (measured in the
+/// installed tao 0.35.3, `src/platform_impl/windows/event_loop.rs:2269-2291`): `update_theme`
+/// (reached from the `WM_SETTINGCHANGE` arm) recomputes the window theme from the APP-theme
+/// registry value (`AppsUseLightTheme`) and emits `ThemeChanged` ONLY when that value differs
+/// from the stored one -- and returns early with no event at all when a preferred theme is set.
+/// A taskbar-only change (Colors set to "Custom", only the Windows mode flipped) never changes
+/// the app-theme value, so ThemeChanged would never fire for exactly the scenario this task
+/// exists for. The app-theme value is therefore deliberately not read anywhere in this file, and
+/// neither is the window theme.
+///
+/// The key notification is only a TRIGGER: every glyph decision is recomputed from a fresh
+/// `SystemUsesLightTheme` read, and nothing from the notification is used as a value. Only acts
+/// when the mode in force is Auto. Every failure logs once and ends the thread -- a failing
+/// notify must never become a busy loop (T-260930-lyk-03) -- and nothing here can panic.
+#[cfg(windows)]
+fn spawn_taskbar_theme_watcher(app: tauri::AppHandle) {
+    let spawned = std::thread::Builder::new()
+        .name("tray-taskbar-theme".into())
+        .spawn(move || {
+            use windows_sys::Win32::Foundation::ERROR_SUCCESS;
+            use windows_sys::Win32::System::Registry::{
+                HKEY, HKEY_CURRENT_USER, KEY_NOTIFY, REG_NOTIFY_CHANGE_LAST_SET, RegCloseKey,
+                RegNotifyChangeKeyValue, RegOpenKeyExW,
+            };
+
+            let subkey = wide_nul(PERSONALIZE_SUBKEY);
+            let mut key: HKEY = std::ptr::null_mut();
+            // SAFETY: `subkey` is a NUL-terminated UTF-16 buffer that outlives the call, and
+            // `key` is a live local the callee writes the opened handle into.
+            let opened = unsafe {
+                RegOpenKeyExW(HKEY_CURRENT_USER, subkey.as_ptr(), 0, KEY_NOTIFY, &mut key)
+            };
+            if opened != ERROR_SUCCESS {
+                eprintln!(
+                    "[shell] WARN: taskbar theme watcher could not open the Personalize key (code {opened}) -- Auto keeps the value read at the last sync"
+                );
+                return;
+            }
+
+            loop {
+                // SAFETY: `key` is the handle opened above with KEY_NOTIFY; it is closed exactly
+                // once, after this loop, on every path out of it (no early `return` between the
+                // successful open and the close). No event handle is passed and the call is
+                // synchronous (`fasynchronous == 0`), so it blocks this dedicated thread until
+                // a value directly under the key changes; nothing else can invalidate `key`.
+                let status = unsafe {
+                    RegNotifyChangeKeyValue(
+                        key,
+                        0,
+                        REG_NOTIFY_CHANGE_LAST_SET,
+                        std::ptr::null_mut(),
+                        0,
+                    )
+                };
+                if status != ERROR_SUCCESS {
+                    eprintln!(
+                        "[shell] WARN: taskbar theme watcher stopped -- RegNotifyChangeKeyValue returned {status}"
+                    );
+                    break;
+                }
+                if current_tray_icon_mode() != TrayIconMode::Auto {
+                    continue;
+                }
+                let dark = resolve_tray_icon_dark(TrayIconMode::Auto, read_system_uses_light_theme());
+                match app.tray_by_id(TRAY_ICON_ID) {
+                    Some(tray) => {
+                        if let Err(e) =
+                            tray.set_icon_with_as_template(Some(tray_image(dark)), tray_is_template())
+                        {
+                            eprintln!(
+                                "[shell] WARN: taskbar theme watcher could not set the tray icon ({e})"
+                            );
+                        }
+                    }
+                    None => {
+                        eprintln!(
+                            "[shell] taskbar theme watcher: no tray with id {TRAY_ICON_ID:?} -- stopping"
+                        );
+                        break;
+                    }
+                }
+            }
+
+            // SAFETY: `key` is the still-open handle from the successful `RegOpenKeyExW` above.
+            unsafe {
+                RegCloseKey(key);
+            }
+        });
+    if let Err(e) = spawned {
+        eprintln!("[shell] WARN: could not spawn the taskbar theme watcher thread ({e})");
+    }
+}
+
 // ---- Tray recent-games / settings surface (Phase 35 Plan 06, D-05/D-06, REQ-35-04) ----
 //
 // Phase 34.1 Plan 06 shipped a DELIBERATELY bounded tray (tooltip, left-click show/focus, a
@@ -11909,10 +12005,17 @@ fn main() {
                                 }
                             })
                             .build(app);
-                        if let Err(e) = tray {
-                            eprintln!(
-                                "[shell] WARN: tray icon failed to build ({e}) -- continuing without a tray"
-                            );
+                        match tray {
+                            Ok(_) => {
+                                // Only when a tray exists: a `noTrayIcon` user gets no thread.
+                                #[cfg(windows)]
+                                spawn_taskbar_theme_watcher(app.handle().clone());
+                            }
+                            Err(e) => {
+                                eprintln!(
+                                    "[shell] WARN: tray icon failed to build ({e}) -- continuing without a tray"
+                                );
+                            }
                         }
                     }
                     None => eprintln!(

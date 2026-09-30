@@ -442,14 +442,16 @@ const TEMPLATE_PATH = join('public', 'icon-tray-template.png')
  *
  * macOS does NOT use these -- it uses the AppKit template above and lets the OS
  * do the tinting. Windows and Linux have no equivalent auto-invert, which is why
- * they need two real files and a user setting (`darkTrayIcon`) to choose between
- * them. That setting was a visual no-op for as long as the two files it selects
+ * they need two real files, chosen by the tri-state `trayIconVariant` setting.
+ * That choice was a visual no-op for as long as the two files it selects
  * between were byte-identical.
  *
- * Polarity, stated explicitly because it is trivial to ship inverted: "dark tray
- * icon" means a DARK-COLOURED GLYPH, which is what you want on a LIGHT taskbar.
- * So `dark` fills black and `light` fills white -- `getIcon()` picks `dark` when
- * `settings.darkTrayIcon` is true.
+ * Polarity, stated explicitly because it is trivial to ship inverted: the `dark`
+ * variant is a DARK-COLOURED GLYPH, which is what you want on a LIGHT taskbar.
+ * So `dark` fills black and `light` fills white. The shell picks `dark` for the
+ * `dark` setting, or for Auto on a light Windows taskbar; it picks `light` for the
+ * `light` setting, for Auto on Linux, and for Auto on a dark or unreadable
+ * Windows taskbar.
  *
  * All three scales are emitted, unlike the single-scale template: Electron's
  * `nativeImage.createFromPath` silently auto-adopts `@2x`/`@3x` siblings for
@@ -579,8 +581,8 @@ function runCli(): void {
       // generator itself can never reintroduce that, at any scale.
       if (written[0].equals(written[1])) {
         throw new Error(
-          `${paths.dark} and ${paths.light} are byte-identical -- the darkTrayIcon ` +
-            'setting would be a visual no-op again'
+          `${paths.dark} and ${paths.light} are byte-identical -- the tray icon ` +
+            'variant setting would be a visual no-op again'
         )
       }
     }

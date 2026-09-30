@@ -3,8 +3,8 @@ created: 2026-09-26
 title: 'Tray glyph variant selection is manual and theme-blind — no automatic Auto/Light/Dark detection, and the Windows registry key it would need to read is the wrong one'
 found_during: Phase 38 Windows sitting 4 (quick 260926-8j9 close-out)
 severity: minor
-platform: any
-ready: code
+platform: windows
+ready: live-gate
 area: tray
 files:
   - src-tauri/src/main.rs
@@ -87,3 +87,18 @@ the TASKBAR's theme, not the app's. If theme-agnostic artwork is built instead: 
 glyph reads legibly against both a light and a dark taskbar with the setting removed. Either way,
 confirm the `UseDarkTrayIcon.tsx:49` fallback string is updated to match the shipped translation
 (or removed if the setting itself is removed).
+
+## Status (quick 260930-lyk, 2026-09-30)
+
+- The tri-state Auto / Light / Dark tray icon setting shipped in quick task
+  `.planning/quick/260930-lyk-tray-glyph-tri-state-auto-light-dark-wit/` (Auto is the default; the
+  legacy `darkTrayIcon` boolean migrates to Dark/Light, and an absent value becomes Auto).
+- Windows Auto reads `SystemUsesLightTheme` (the TASKBAR value) and re-reads it on a
+  `RegNotifyChangeKeyValue` notification for the Personalize key, not on tao's ThemeChanged: tao
+  0.35.3's `update_theme` fires only when the APP-theme value changes, so a taskbar-only change would
+  never reach it.
+- Linux offers Light and Dark only; a stored Auto resolves to the white glyph and displays as
+  "Light icon". macOS still shows no control (D-05).
+- The stale `(needs restart)` fallback is gone with the toggle it belonged to.
+- The ONLY outstanding item is the Verification paragraph above, run live on Windows. It stays as
+  written.

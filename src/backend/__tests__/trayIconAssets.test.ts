@@ -24,9 +24,9 @@
  * wherever alpha is non-zero, shape carried entirely in alpha. `isMonochromeTemplate` below
  * tests exactly that, imported from the production generator rather than reimplemented here.
  *
- * darkTrayIcon IS VESTIGIAL ON MACOS BY DESIGN as of this fix (see main.rs's `tray_image` doc
- * comment) -- `getIcon()`'s dark/light selector still exists and still round-trips through the
- * sidecar, it simply has zero visible effect on macOS because the template ignores it.
+ * The tray icon variant setting IS VESTIGIAL ON MACOS BY DESIGN as of this fix (see main.rs's
+ * `tray_image` doc comment) -- the dark/light selector still exists and still round-trips through
+ * the sidecar, it simply has zero visible effect on macOS because the template ignores it.
  *
  * WINDOWS/LINUX ARE NOW FIXED TOO. `meta/trayIconVariants.ts` emits `icon-tray-dark*.png` and
  * `icon-tray-light*.png` at all three scales from the same hue-segmented mask as the macOS
@@ -100,7 +100,7 @@ describe('Windows/Linux tray icon dark/light asset distinctness (REQ-34.1-07, GA
   // cannot reintroduce an identical pair.
   // Every scale is checked, not just 1x: Electron's `nativeImage.createFromPath`
   // silently auto-adopts `@2x`/`@3x` siblings, so a pair that is distinct at 1x and
-  // identical at 2x would still leave `darkTrayIcon` a no-op on a retina display.
+  // identical at 2x would still leave the tray icon variant setting a no-op on a retina display.
   for (const scale of ['', '@2x', '@3x']) {
     it(`icon-tray-dark${scale}.png and icon-tray-light${scale}.png are NOT byte-identical`, () => {
       const darkPath = join(PUBLIC_DIR, `icon-tray-dark${scale}.png`)
