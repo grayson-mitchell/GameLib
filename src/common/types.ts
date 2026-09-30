@@ -9,6 +9,7 @@ import {
   LegendaryInstallInfo
 } from './types/legendary'
 import { NileInstallInfo, NileInstallPlatform } from './types/nile'
+import type { TrayIconVariant } from './trayIconVariant'
 import {
   ZoomInstallPlatform,
   ZoomInstalledInfo,
@@ -125,7 +126,7 @@ export interface AppSettings extends GameSettings {
   customCSS: string
   customThemesPath: string
   customWinePaths: string[]
-  darkTrayIcon: boolean
+  trayIconVariant: TrayIconVariant
   defaultInstallPath: string
   defaultSteamPath: string
   // Absolute path to a user-chosen image used as the Manage Accounts (Login)
