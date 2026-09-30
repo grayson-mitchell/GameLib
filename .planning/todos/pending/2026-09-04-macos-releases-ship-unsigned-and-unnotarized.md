@@ -626,6 +626,126 @@ items. `severity: minor` is unchanged and correct. This is deliberately NOT appl
 shape `## STATUS 2026-09-23` item 7 used for its two proposals, so the operator decides — the
 frontmatter was left untouched by quick-260930-m85.
 
+## STATUS 2026-09-30 (quick-260930-nt4) — consequence 2 MEASURED: the ACL honours the identity-based DR; mechanism SETTLED
+
+This section does not revise `## STATUS 2026-09-14`, `## STATUS 2026-09-17`, `## STATUS 2026-09-23`,
+`## STATUS 2026-09-24` or `## STATUS 2026-09-30 (quick-260930-m85)` above it. Each records what was
+measured on its own date and is left intact; this one adds what was measured on 2026-09-30. The
+frontmatter is unchanged, and `## Why it matters`, `## Direction` and `## Verification` are untouched.
+
+**1. Run context and the probe design — an ANALOGUE, built and signed three ways.** A purpose-built
+Rust binary, compiled in the session scratchpad OUTSIDE the repo, pinned to `keyring = "=3.6.3"` with
+feature `apple-native` — the exact version and feature `src-tauri/Cargo.lock` resolves (`keyring`
+3.6.3, pulling `security-framework` 3.7.0) — so it exercises the same Keychain API path as
+`keyring::Entry` in `src-tauri/src/main.rs`. Service `com.gamelib.acl-probe`, account `acl-probe`;
+service `com.gamelib.launcher` was never touched. All three variants were signed with
+`codesign --force --options runtime -s "Developer ID Application: grayson mitchell (S7U223QWXJ)"`.
+Variant B differs from A ONLY by `RUSTFLAGS="--cfg gamelib_acl_build_b"`, so a distinct cdhash was
+obtained WITHOUT editing any tracked source file. DECLARED REAL-PROFILE ARM, per the second half of
+CLAUDE.md's two-profile rule: this had to run against the operator's real login keychain, because a
+fake HOME yields a fresh EMPTY login keychain in which every read trivially succeeds — the experiment
+would have measured nothing. This is exactly the isolated-by-default failure mode that half of the
+rule exists to prevent.
+
+**2. THE HEADLINE — the ACL honours an identity-based designated requirement.**
+
+| probe | signature | cdhash | `get` on the item probeA created |
+| --- | --- | --- | --- |
+| A (creator) | Developer ID, hardened runtime (`flags=0x10000(runtime)`) | `4df1113bf5d4b9afa4ca8dc18010d757aa4bcb3f` | `RESULT=get-ok MATCHED=true`, rc=0, instant |
+| B | SAME Developer ID identity + SAME identifier, DIFFERENT build | `9df2b861ffc7b84715491f5835982c2763adf9d2` | `RESULT=get-ok MATCHED=true`, rc=0, `elapsed=0s` — SILENT |
+| C | ad-hoc (`Signature=adhoc`, `flags=0x2(adhoc)`), mimics the dev build | `073b7ed28a48f8146db901f20090d288edce3472` | BLOCKED the full 25s, `rc=142` (SIGALRM = 128+14) |
+
+Positive control ran FIRST: probeA `set` -> `RESULT=set-ok`; probeA `get` -> `RESULT=get-ok
+MATCHED=true`. Both arms were then REPRODUCED on a second pass — probeC blocked again under a 10s
+alarm (`rc=142`), probeB still `RESULT=get-ok MATCHED=true`. The reproduction is also the proof that
+no `Always Allow` leaked into the ACL between passes.
+
+**3. The dialog, verbatim — this is the prompt consequence 2 is about.**
+
+```
+probeC wants to use your confidential information stored in “com.gamelib.acl-probe” in your keychain.
+To allow this, enter the “login” keychain password.
+Password:
+```
+
+Buttons reported via AX: `missing value, Always Allow, Deny, Allow`. Independent corroboration that a
+prompt — not an unrelated hang — caused the block: `SecurityAgent` pid `87775` started `Wed Sep 30
+17:03:29 2026`, exactly when probeC ran, with 1 visible window. Worth one sentence and no more: AX CAN
+read this native dialog's static text and buttons — a NARROWER statement than the standing lesson that
+AX is blind to the Tauri webview, and it does not contradict that lesson.
+
+**4. Why it generalises — the real signed artifact's designated requirement carries NO cdhash.**
+Measured on `src-tauri/target/release/bundle/macos/GameLib.app`, a local Developer-ID-signed build
+dated Sep 23: `Identifier=com.gamelib.shell`, `CodeDirectory v=20500 flags=0x10000(runtime)`,
+`Authority=Developer ID Application: grayson mitchell (S7U223QWXJ)`, `TeamIdentifier=S7U223QWXJ`, main
+executable `Contents/MacOS/gamelib-shell`. Its designated requirement contains NO cdhash:
+
+```
+designated => identifier "com.gamelib.shell" and anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = S7U223QWXJ
+```
+
+NEGATIVE CONTROL on the unsigned builds, and it is WORSE than this todo has assumed: they differ from
+the signed build in BOTH identifier AND cdhash — two independent reasons to re-prompt.
+
+- `src-tauri/target/debug/gamelib-shell` -> `Identifier=gamelib_shell-2fe85375cd3218c8`,
+  `flags=0x20002(adhoc,linker-signed)`, `designated => cdhash H"29c161a308159f7b095a2a16e7fefa90d55e83dd"`
+- `/Applications/GameLib.app` -> `Identifier=gamelib_shell-7d8425d13eb797a2`, adhoc,
+  `designated => cdhash H"90c1289759531cd0ce3fb4b2c7802676bf6f0679"`
+
+The ad-hoc identifier is Cargo-derived (`gamelib_shell-<hash>`), NOT the bundle identifier
+`com.gamelib.shell`.
+
+**5. What this does NOT prove — three residuals, no claim made on any of them.** (a) This is an
+ANALOGUE, not the shipped artifact: the probe used identifier `com.gamelib.acl-probe` and its own
+binary, so a real `GameLib.app` -> `GameLib.app` read was NEVER run. Identical DR shape plus identical
+`keyring` version are why the mechanism transfers — an INFERENCE, not a measurement of the artifact.
+(b) The updater's replace-in-place path is untested. (c) A real release N -> N+1 sequence was never
+run, so any OTHER prompt source in an update is unexercised.
+
+**6. A correction to this session's own account.** The session stated out loud it was dismissing the
+dialog with `Deny`; that click did NOT land — `System Events` returned `-1719 Invalid index`, because
+the dialog had already SELF-DISMISSED when SIGALRM killed probeC. No dialog remained (window count 0),
+but the dismissal was not performed. Same shape as the orphan-pid near-miss in `## STATUS 2026-09-24`
+item 9 — a plausible UI claim that was wrong about what actually produced the state.
+
+**7. The cheaper route, designed and then not needed — use THIS if the artifact-level test is ever
+run.** `steamgrid-api-key` is ABSENT from the Keychain, is allowlisted in `keyring_account()` at
+`src-tauri/src/main.rs:1116`, routes through `SidecarKeyringSlotStore.setToken()` at
+`src/backend/sidecar/keyringTokenStore.ts:466` to the Rust `keyring_set`, and has a plain Settings
+field at `src/frontend/screens/Settings/components/SteamGridDbApiKey.tsx` — so the artifact-level test
+needs only an arbitrary string pasted there: no deletion of any live item, no Steam or Humble logout,
+no 2FA round-trip. The originally-planned route (clear the three contaminated items, re-login under
+build A) was REJECTED as strictly worse: it spends a 2FA round-trip BEFORE knowing whether the ACL is
+identity-stable.
+
+**8. Cleanup.** The probe keychain item was deleted through its own creator (`RESULT=delete-ok`,
+silent), then confirmed absent. Probe binaries and the scratch crate were removed. The operator's
+three real items under `com.gamelib.launcher` were NOT read, dumped, or deleted and remain PRESENT
+(`steam-refresh-token`, `humble-session`, `humble-csrf`); `steamgrid-api-key` remains ABSENT. Repo
+clean. `security find-generic-password`'s password-dumping `-w` form was never used at any point.
+
+**9. A concrete operator errand this unlocks — a consequence, not a task.** The three contaminated
+items now have a MEASURED consequence rather than a suspected one: their ACLs were created by an
+ad-hoc dev build whose bare-cdhash DR cannot match a signed build, so under a signed release each will
+prompt once. Clearing them and letting a SIGNED build recreate them fixes it permanently rather than
+per-update. Still the operator's call; still not done.
+
+**10. PROPOSAL AWAITING THE OPERATOR — close this todo. Frontmatter is NOT changed by this session.**
+Consequence 1 (Gatekeeper) closed 2026-09-24; consequence 3 was never a defect; (c-i)/(c-ii)/(c-iii)
+all closed green; and consequence 2 — the ORIGINAL reason this todo exists, per `found_by`'s question
+about what governs Keychain prompt COUNT — is now answered with a measured mechanism and a working
+negative control. What remains is confirmatory only; see item 5. Recommend moving `status: OPEN` to
+closed and relocating the file to `.planning/todos/completed/`, with item 5's three residuals carried
+into a NEW pending todo only if the operator wants them tracked — this task deliberately created no
+such todo, applied no frontmatter change, and did not move the file. Two further bookkeeping facts:
+(i) `## STATUS 2026-09-30 (quick-260930-m85)` item 6 proposed `ready: live-gate`; the live gate has
+now RUN, so that proposal is SUPERSEDED by this section rather than left standing. (ii) the parked
+sibling `2026-08-17-humble-slots-still-prompt-unattended-at-startup.md` is `ready: blocked` waiting on
+this arm specifically — its park note says shipped-build prompt count is governed by Apple code
+signing rather than read timing, and `## STATUS 2026-09-24` item 13 warned that closing without
+running consequence 2 would strand it. It is no longer stranded: the mechanism is measured. Unblocking
+it is a SEPARATE decision this task does not take.
+
 ## Related
 
 - Parked sibling: `2026-08-17-humble-slots-still-prompt-unattended-at-startup.md` — its park note's
