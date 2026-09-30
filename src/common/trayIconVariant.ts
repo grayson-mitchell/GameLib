@@ -30,7 +30,7 @@ export const TRAY_ICON_VARIANTS: readonly TrayIconVariant[] = [
  * Windows 11 default and the tray's historical startup variant. `resolve_tray_icon_dark` in
  * `src-tauri/src/main.rs` mirrors this.
  */
-export const TRAY_ICON_AUTO_FALLBACK: TrayIconVariant = 'light'
+const TRAY_ICON_AUTO_FALLBACK: TrayIconVariant = 'light'
 
 /** Exact, lowercase match only. */
 export function isTrayIconVariant(value: unknown): value is TrayIconVariant {

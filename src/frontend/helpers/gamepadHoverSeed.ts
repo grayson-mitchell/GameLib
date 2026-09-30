@@ -19,7 +19,7 @@ import { ValidGamepadAction } from 'common/types'
  * operator was looking at.
  */
 
-export interface HoveredCard {
+interface HoveredCard {
   card: Element
   link: HTMLElement
 }
