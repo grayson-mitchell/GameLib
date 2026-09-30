@@ -304,9 +304,14 @@ was returned, its multi-line body dedented, `headingsSeen: 0`. Live `audit-uat -
 outstanding items across 56 files, `parse_gap_files: 2` — against the attributed 1.42.3 comparison
 figure of 42 items across 13 files, measured by the 260926-kkt orchestrator before the old tool
 was removed. That figure cannot be re-measured: `~/.claude/get-shit-done/` survives only as an
-empty directory skeleton — re-measured 2026-09-30, it holds 17 entries, every one a directory and
-not one a file. This sentence used to claim the path no longer exists at all, which was wrong; the
-conclusion it supported still holds, because a tree with no files in it cannot be run.
+empty directory skeleton — re-measured 2026-09-30, `find ~/.claude/get-shit-done -type d | wc -l`
+returns 17: the root plus 5 top-level entries (`bin`, `contexts`, `references`, `templates`,
+`workflows`) and 16 descendants in all, every one of the 17 a directory, with 0 files and 0
+symlinks at any depth. Naming the command is the point: an unnamed count invited a real
+misread — a plain `ls` showing 5 was taken as contradicting the 17, when both are correct
+measurements of the same unchanged tree. This sentence
+used to claim the path no longer exists at all, which was wrong; the conclusion it supported
+still holds, because a tree with no files in it cannot be run.
 `34.3-UAT.md` (5 items) and `34.5-UAT.md` (17 items) were both 0 under 1.42.3 and are read in full
 now. Block scalars are no longer a visibility hazard. Inline `expected:` stays the preference
 because it is the shipped template's own `### N.` item shape and diffs cleanly — not because
@@ -417,15 +422,42 @@ both files as locally modified and parked them in `~/.claude/gsd-local-patches/`
 `/gsd-update --reapply` merged the reminder back into both, and
 `~/.claude/gsd-core/bin/verify-reapply-patches.cjs` reported 2 checked, 0 failures, 0 drifted.
 
-The upgrade path has genuinely improved: `~/.claude/gsd-pristine/` is now seeded with the
-untouched 1.14.0 originals at canonical `gsd-core/` paths, so the next upgrade can do a real
-three-way merge — this one had neither a git repo at `~/.claude` nor a pristine snapshot, and its
-baseline had to be reconstructed from the npm tarball and hash-validated. That improvement has a
-limit, at equal weight: reapply is a MANUAL step the operator must run after every upgrade —
-nothing runs it automatically — and **those gsd-core files remain outside this repo, unversioned,
-shared by every project on the machine, and a `gsd-core` upgrade will overwrite them** — the same
-caveat this file already records for the UAT template. This section is the durable copy of the requirement;
-treat the template text as a convenience, not as the requirement.
+`~/.claude/gsd-pristine/` exists and is not empty — `drwxr-xr-x@`, mtime `Sep 26 15:42`. It holds
+exactly 2 files under 5 directories (`find ~/.claude/gsd-pristine -type f | wc -l` returns 2;
+`-type d` returns 5): `gsd-core/templates/phase-prompt.md` (19412 bytes) and
+`gsd-core/bin/lib/template.cjs` (10781 bytes), both stamped `Sep 26 15:42`. Both are genuine
+untouched 1.14.0 originals, hash-verified: `shasum -a 256` yields `6e0068f3…` for
+`phase-prompt.md` and `b6585df7…` for `template.cjs`, matching `gsd-local-patches/
+backup-meta.json`'s `pristine_hashes` exactly (full 64-character values live there). Corroborating:
+a case-insensitive `grep -ic -E 'prettier|formatter'` returns 0 in each `gsd-pristine/` copy,
+against the live 7 and 1 the paragraph above already cites.
+
+**Load-bearing: this is a per-patched-file baseline, not a snapshot of the release.**
+`backup-meta.json`'s `files` array is exactly `["gsd-core/bin/lib/template.cjs",
+"gsd-core/templates/phase-prompt.md"]` — the same 2 paths the pristine tree contains — so it
+holds a baseline only for files already known to be locally modified. Any gsd-core file modified
+locally for the first time before the next upgrade therefore still has no baseline, which is the
+same hole the 1.42.3 -> 1.14.0 move fell into: that move had neither a git repo at `~/.claude` nor
+a pristine snapshot, and its baseline had to be reconstructed from the npm tarball and
+hash-validated.
+
+The 1.14.0 -> 1.15.0 upgrade is the first one that had pristine available (`backup-meta.json`
+`from_version` `1.14.0`, `backed_up_at 2026-09-29T19:21:40.467Z`; `gsd-file-manifest.json`
+`version: 1.15.0` at `19:21:40.713Z`; `gsd-core/VERSION` reads `1.15.0`). Its observable outcome is
+indistinguishable from a verbatim restore: the live installed files are byte-identical to the
+`gsd-local-patches/` backups (`e559c6e7…` for `template.cjs`, `e021d981…` for
+`phase-prompt.md`).
+That does not mean a three-way merge happened, and it does not mean one did not — a verbatim
+restore is harmless only if 1.15.0 shipped those two files unchanged from 1.14.0, and that cannot
+be checked from here because the live copies are patched.
+
+That improvement has a limit, at equal weight:
+reapply is a MANUAL step the operator must run after every upgrade —
+nothing runs it automatically — and **those `gsd-core` files remain outside this repo,
+unversioned, shared across every project on the machine, and a `gsd-core` upgrade will overwrite
+them** — the same caveat this file already records for the UAT template.
+This section is the durable copy of the requirement; treat the template text as a convenience,
+not as the requirement.
 
 <!-- GSD:conventions-end -->
 
