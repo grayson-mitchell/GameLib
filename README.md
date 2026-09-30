@@ -13,13 +13,13 @@ It supports games from:
 - Amazon Games
 - Steam
 
-GameLib is built with Web Technologies:  
+GameLib is built with:  
 [![Typescript](https://img.shields.io/badge/Typescript-3178c6?style=for-the-badge&logo=typescript&labelColor=gray)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-5fd9fb?style=for-the-badge&logo=react&labelColor=gray)](https://reactjs.org/)
 [![MUI](https://img.shields.io/badge/MUI-66b2ff?style=for-the-badge&logo=mui&labelColor=gray&logoColor=66b2ff)](https://mui.com/)
 [![NodeJS](https://img.shields.io/badge/NodeJS-689f63?style=for-the-badge&logo=nodedotjs&labelColor=gray)](https://nodejs.org/)
-[![Electron](https://img.shields.io/badge/Electron-4078c0?style=for-the-badge&logo=electron&labelColor=gray)](https://www.electronjs.org/)
-[![electron-builder](https://img.shields.io/badge/electron--builder-4078c0?style=for-the-badge&logo=electronbuilder&labelColor=gray&logoColor=4078c0)](https://www.electron.build/)
+[![Tauri](https://img.shields.io/badge/Tauri-24C8D8?style=for-the-badge&logo=tauri&labelColor=gray)](https://tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-CE422B?style=for-the-badge&logo=rust&labelColor=gray)](https://www.rust-lang.org/)
 [![Jest](https://img.shields.io/badge/Jest-18DF16?style=for-the-badge&logo=jest&labelColor=gray&logoColor=18DF16)](https://jestjs.io/)
 [![Vite](https://img.shields.io/badge/Vite-BD34FE?style=for-the-badge&logo=vite&labelColor=gray)](https://vitejs.dev/)
 
@@ -36,6 +36,8 @@ GameLib is built with Web Technologies:
     - [Prerequisites](#prerequisites)
     - [Linux](#linux)
     - [Windows / macOS](#windows--macos)
+  - [Code signing policy](#code-signing-policy)
+  - [Privacy](#privacy)
   - [Development environment](#development-environment)
     - [Building GameLib Binaries](#building-gamelib-binaries)
     - [Building with VS Code](#building-with-vs-code)
@@ -172,6 +174,51 @@ Follow the same clone → `pnpm install` → `pnpm download-helper-binaries` ste
 then build with `pnpm dist:win` or `pnpm dist:mac`. See
 [Building GameLib Binaries](#building-gamelib-binaries) for details.
 
+## Code signing policy
+
+**Windows:** GameLib release binaries are currently **not code-signed**, so Windows SmartScreen will
+warn when you run the installer.
+
+GameLib is applying to SignPath Foundation's free code-signing programme for open-source projects.
+Nothing is signed through SignPath today. If the application is approved, Windows release binaries
+will be signed through SignPath and the attribution SignPath Foundation requires will be added to
+this section at that time.
+
+**What gets signed:** only binaries built from this repository's source by the release workflow
+(`.github/workflows/release-tauri.yml`): the GameLib application executable, its Node.js sidecar
+and the installer. Third-party open-source tools bundled with GameLib on Windows (legendary, gogdl,
+nile and comet, plus small helper executables) ship as built by their upstream projects and are not
+signed by GameLib.
+
+**Update packages:** these are also signed with GameLib's own updater key, a separate mechanism from
+operating-system code signing. The public key is committed in `src-tauri/tauri.conf.json`, and the
+updater plugin verifies packages against it.
+
+**macOS:** builds produced by the release workflow are signed with an Apple Developer ID
+certificate and notarized by Apple. This was verified on the v0.7.0 build (Gatekeeper `accepted`,
+`source=Notarized Developer ID`). That release is still a draft, so no signed macOS release has been
+published yet.
+
+**Linux:** builds are not code-signed. The release workflow has no signing step for them.
+
+| Role     | Member                                            | Responsibility                                            |
+| -------- | ------------------------------------------------- | --------------------------------------------------------- |
+| Author   | Grayson Mitchell ([grayson-mitchell][maintainer]) | Modifies the source code without additional review        |
+| Reviewer | Grayson Mitchell ([grayson-mitchell][maintainer]) | Reviews changes proposed by contributors outside the team |
+| Approver | Grayson Mitchell ([grayson-mitchell][maintainer]) | Approves each signing request                             |
+
+GameLib currently has a single maintainer, who holds all three roles.
+
+**Privacy:** see the [privacy policy](PRIVACY.md).
+
+[maintainer]: https://github.com/grayson-mitchell
+
+## Privacy
+
+GameLib contains no telemetry, analytics or crash reporting, and it stores store credentials in your
+operating system's credential store where one is used. It does make network requests to the stores
+and data sources it needs. [PRIVACY.md](PRIVACY.md) lists what is stored, what is sent and to whom.
+
 ## Development environment
 
 This part will walk you through setting up a development environment so you can build GameLib binaries yourself or make changes to the code.
@@ -229,10 +276,6 @@ After cloning the repository, Nix users can use `nix-shell` to make Node.JS/pnpm
 Thanks [Weblate](https://weblate.org/en/) for hosting our translations
 
 ![weblate](https://s.weblate.org/cdn/Logo-Darktext-borders.png)
-
-Thanks [Signpath](https://signpath.io/?utm_source=foundation&utm_medium=github&utm_campaign=heroicgameslauncher) for providing free signing of Windows binaries
-
-[![signpath](https://user-images.githubusercontent.com/26871415/182468471-6ef4aac6-a4e2-4ae8-93ef-d638cd01627d.png)](https://signpath.io/?utm_source=foundation&utm_medium=github&utm_campaign=heroicgameslauncher)
 
 ## Screenshots
 
