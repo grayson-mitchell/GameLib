@@ -192,3 +192,20 @@ gate per
 `.planning/phases/34.4.2-macos-login-window-ux-modal-child-window-attachment-in-field/34.4.2-LIVE-GATE-RERUN-6.md`
 (its PASS 5/5 is the reference contract). The pass literal is
 `[shell] login-window sheet: read-back attached=true for '{label}'`.
+
+### RERUN-7 authored 2026-09-30 (quick task 260930-r22) — this todo's live gate is now contracted there
+
+The live gate for this todo is contracted at
+`.planning/phases/34.4.2-macos-login-window-ux-modal-child-window-attachment-in-field/34.4.2-LIVE-GATE-RERUN-7.md`,
+authored 2026-09-30 by quick task 260930-r22. RERUN-6 stays the reference contract — its PASS 5/5
+from 2026-08-19 is byte-unchanged. RERUN-7 exists because every one of RERUN-6's machine-evidence
+citations had drifted 1,700–3,600 lines in `main.rs` since planning, and because it adds the
+q11-specific assertion (D-G7): the `attached=true` read-back must be preceded, for the same window
+label, by the main-thread resolution line the q11 fix introduced inside the deferred closure.
+**Nothing in RERUN-7 is a hardware result and no live run has been performed** — the contract's
+result keys are unset, and this todo stays `ready: live-gate` in `pending/` until an operator runs
+it.
+
+For the operator: RERUN-7's operator-cost disclosure (top of the document) names item 6(a) as
+destructive of a live Humble session and item 4 as requiring real credentials, and its minimum-bar
+table marks item 1 as the strict requirement for closing this todo specifically.
