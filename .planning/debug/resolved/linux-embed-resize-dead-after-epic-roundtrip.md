@@ -117,3 +117,11 @@ clicks never reached Stores/GOG (0 settled AND 0 zero-area lines, tracer capture
 pixel (300,10) of `<label>-1-gog.png` equals (7,10,11) only when there is no banner. 9 of 16 launches were invalid,
 so the driver needs a banner guard before anyone reuses it; the banner's own cause was not investigated.
 Not verified: macOS (shares the defect's shape; the hook change is platform-neutral), Wayland, packaged build.
+
+### Driver banner guard (2026-10-01)
+
+The 9 invalid launches above were the app's own connectivity banner (`OfflineMessage`, 'Retrying (Ignore)'), shown while
+the boot connectivity check probes github.com, gog.com, store.epicgames.com and cloudflare-dns.com. It is a transient
+state, not an app defect, and it pushes the layout down 40 px. `driver/arm.py` now detects it (pixel (300,10) ==
+(176,152,226)), clicks '(Ignore)' (-> `setConnectivityOnline`), and exits the arm as INVALID if it survives. Validated:
+6 of 6 launches valid (banner hit and recovered in 3), all 6 Epic-round-trip arms PASS (3/3 settled, flush, 0 zero-area).

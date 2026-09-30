@@ -25,7 +25,19 @@ ident = open(f"{ev}/{label}-identity.txt").read()
 print("identity:", "EXE_MATCH=yes" in ident, "DMABUF_VAR_PRESENT=no" in ident)
 time.sleep(14)
 def log(): return open(f"{ev}/{label}-settled.log").read().strip().splitlines() if os.path.exists(f"{ev}/{label}-settled.log") else []
-drv("click", "1062", "133"); time.sleep(1.5)     # close release-notes dialog
+def banner():
+    """True while the connectivity banner ('Retrying (Ignore)', OfflineMessage) is showing: it pushes the whole
+    layout down 40 px, so every fixed-coordinate click below misses. Pixel (300,10) is the banner purple only then."""
+    drv("cap", f"{ev}/{label}-banner-probe.png")
+    from PIL import Image
+    return Image.open(f"{ev}/{label}-banner-probe.png").convert("RGB").getpixel((300, 10)) == (176, 152, 226)
+drv("click", "1062", "133"); time.sleep(1.5)     # close release-notes dialog (at banner-free coordinates)
+if banner():
+    drv("click", "667", "20"); time.sleep(1.5)   # '(Ignore)' -> window.api.setConnectivityOnline()
+    print("banner present: clicked Ignore")
+    if banner():
+        print(f"ARM={label} INVALID banner survived Ignore"); open(f"{RAW}/stop-{label}", "w").close(); p.wait(timeout=60); sys.exit(2)
+    drv("click", "1062", "133"); time.sleep(1.5)  # the dialog click above may have missed under the banner
 drv("click", "310", "21"); time.sleep(2.5)       # Stores tab (lands on Epic panel on a fresh profile)
 drv("click", "50", "59"); time.sleep(9); drv("park"); time.sleep(1)  # GOG
 drv("cap", f"{ev}/{label}-1-gog.png")
