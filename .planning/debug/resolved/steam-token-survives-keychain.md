@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: 'Clearing the Keychain does NOT revoke the Steam refresh token — a second copy lives in `steam_store/config.json` and something re-promotes it into the Keychain at boot, unprompted; whether that copy is plaintext is UNCONFIRMED'
 created: 2026-09-30
-updated: 2026-09-30T09:19:07Z
+updated: 2026-09-30T10:05:00Z
 source_todo: .planning/todos/completed/2026-09-30-clearing-the-keychain-does-not-revoke-the-steam-refresh-token.md
 ---
 
@@ -437,7 +437,37 @@ expecting: The operator's decision determines whether this session proceeds to `
 autonomous investigation is possible on this half without either operator input on remediation
 choice or explicit approval to settle the plaintext-vs-ciphertext question.
 
-next_action: **Fix implemented and self-verified; awaiting human verification — do not archive.**
+next_action: **CLOSED 2026-09-30 — live gate PASSED, both arms, on the real profile.** See
+`Resolution.verification`'s `live human verification` signal for the measured numbers (boot 1
+22:51:50: receipt count 1, key deleted; boot 2 22:53:09: count 0, stays absent; `secret stores:
+dev-vault` on both). Nothing further is required of this session. Two facts MUST travel with any
+future reference to it: (1) the plaintext-vs-ciphertext question is **permanently unanswerable**,
+not open — see the lost-evidence note below; (2) the `refreshToken` value on disk during boot 1 was
+a labelled synthetic fixture, never a credential.
+
+**Lost-evidence note (2026-09-30).** The original `refreshToken` value — the only remaining
+evidence for whether the pre-Tauri Electron build wrote that credential to disk as plaintext or as
+`safeStorage` ciphertext — was deleted from the live profile at **21:59:47**, roughly 45 seconds
+after the fix first hit disk (`tokenStore.ts` mtime 21:58:36, `bootstrap.ts` 21:59:02) and before
+any authorised gate ran. No actor claimed it: the implementing agent was instructed in writing not
+to hand-delete it and reported touching nothing, and three `gamelib-shell` pids (33421, 51533,
+51953) ran in the 21:55–22:05 window, so a dev boot picking up the freshly-written cleanup is an
+equally plausible mechanism. It cannot be settled: the `gamelib.log` covering that window was
+rotated out by the 22:15:54/22:16:11 launches, on both sessions' copies.
+Recovery avenues are exhausted, measured not assumed: the coordinator's backup
+(`config.json.bak-20260930-222549`) post-dates the delete by ~26 minutes and contains only
+`['provisioned','wineVersion','isLoggedIn','userData']` with no `refreshToken`; `tmutil
+destinationinfo` reports no destinations configured and `tmutil listlocalsnapshots /` returns none.
+**No filesystem copy of the original value exists anywhere.** The value was never read, decoded,
+hashed or shape-probed by any session — a permission classifier correctly denied that as
+Credential Materialization, and no session routed around the denial.
+Consequence for the operator, recorded because it outlives this session: a live Steam refresh token
+MAY have sat readable on disk from 2026-06-27 until 2026-09-30 (~3 months), and that can no longer
+be excluded. Revoking the Steam session is the prudent response regardless of which shape the value
+had; re-login is the only cost.
+
+Superseded pre-gate text follows, retained for the record:
+**Fix implemented and self-verified; awaiting human verification — do not archive.**
 `clearOrphanedElectronToken()` is implemented, wired into `bootstrap.ts`, covered by 8 new tests
 (4 unit, 4 integration), and every self-verification signal in `Resolution.verification` passed
 (full backend jest project: 221 suites / 5121 passed + 3 skipped; `pnpm codecheck`;
@@ -612,13 +642,40 @@ verification:
       new-test files caught mid-session. .planning/ paths (the debug file, the todo file) are
       prettier-ignored; no vacuous check was run or claimed over them.
   - signal: live human verification on the operator's real, populated profile
-    result: not yet performed
-    detail: This is a backgrounded session with no AskUserQuestion available. Every signal above is
-      self-verification against tests/mocks/the real store API, not a real launch of the packaged
-      app against the operator's actual ~/Library/Application Support/GameLib/ profile. Per the
-      debug-file protocol, status is set to awaiting_human_verify (NOT resolved) and this session is
-      NOT archived to resolved/ and NOT written to knowledge-base.md until that confirmation lands.
-  guardrail_verdict: accepted (pending human verification before archival)
+    result: pass (2026-09-30, two dev-build boots, operator-performed)
+    detail: |
+      Both arms confirmed live against the real ~/Library/Application Support/GameLib/ profile,
+      on the dev build (`pnpm tauri:dev`). Independently re-measured by the coordinator session
+      rather than taken on the running session's report:
+        boot 1 (22:51:50) — receipt line count 1 in gamelib.log (since rotated to gamelib.log.old);
+          `refreshToken` deleted; config.json back to 373 bytes, keys
+          ['isLoggedIn','provisioned','userData','wineVersion'], mtime 22:51:50.
+        boot 2 (22:53:09) — receipt line count 0 in the fresh gamelib.log; key stays absent.
+        Both boots logged `[bootstrap] secret stores: dev-vault`, proving init() reached the
+          secret-store install block and therefore the clearOrphanedElectronToken() call site
+          immediately after it on both runs.
+        No orphan processes afterwards (pgrep for gamelib-shell / sidecar.js / bin/tauri: none).
+      VENUE IS LOAD-BEARING: the gate had to run on the dev build. /Applications/GameLib.app is a
+      2026-09-23 bundle containing 0 occurrences of the receipt string, so a relaunch of the
+      installed app could not emit the line at all and would have produced a confident green
+      proving nothing. Equally load-bearing: the dev build runs the DEV-VAULT arm
+      (GAMELIB_DEV_SECRET_VAULT=1), and this gate is only valid there because
+      clearOrphanedElectronToken() is called unconditionally OUTSIDE both arms of the secret-store
+      branch. Had it been placed inside the keyring arm — an option that was on the table — this
+      gate would have been structurally blind and would have passed while proving nothing.
+      THE FIXTURE WAS SYNTHETIC. The `refreshToken` value present on disk for boot 1 was
+      'SYNTHETIC-FIXTURE-260930-clearOrphanedElectronToken-livegate-DO-NOT-USE', written
+      deliberately by the coordinator at 22:27:34 to re-arm the gate. It was NEVER a credential.
+      Any shape check run against tonight's config.json reads that string and says nothing about
+      the historical value. Re-seeding was necessary because the original key had already been
+      deleted at 21:59:47 — see the lost-evidence note below.
+  - signal: absent-arm behaviour, observed incidentally before the gate was designed
+    result: pass (2026-09-30 22:16 boot)
+    detail: The dev sidecar bundle built at 22:15:44 already contained the fix, and the 22:16:03
+      boot ran it against a profile whose key had been deleted at 21:59:47. It emitted zero
+      receipt lines and no error — the specified absent-branch behaviour, demonstrated live
+      before anyone set out to test it.
+  guardrail_verdict: accepted (live human verification complete)
 files_changed:
   - src/backend/storeManagers/steam/tokenStore.ts (pre-existing this session; clearOrphanedElectronToken() implementation)
   - src/backend/sidecar/bootstrap.ts (pre-existing this session; unconditional call-site wiring after the secret-store install block)

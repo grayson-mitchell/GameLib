@@ -111,9 +111,9 @@ credential *location* and *revocability*, not prompt count.
 
 ## CORRECTION 2026-09-30 (debug/steam-token-survives-keychain) — the stated MECHANISM was refuted; the actual defect was something else
 
-A full debug session (`.planning/debug/steam-token-survives-keychain.md` — `awaiting_human_verify`
-as of this writing; will move to `.planning/debug/resolved/` once the operator confirms the fix on
-their real profile) investigated
+A full debug session (`.planning/debug/resolved/steam-token-survives-keychain.md` — `resolved`;
+the operator's live gate passed on their real profile 2026-09-30, both arms, on the dev build)
+investigated
 this todo's title claim directly: "a second copy lives in `steam_store/config.json` and **something
 re-promotes it into the Keychain at boot, unprompted**." That specific mechanism is **REFUTED, not
 merely unconfirmed**.
@@ -214,11 +214,14 @@ is a separate, explicit decision — not something this closure quietly assumes.
 
 ## Related
 
-- `.planning/debug/steam-token-survives-keychain.md` — the full investigation and fix this closure
-  rests on: exhaustive source tracing, unified-log forensics, the fix implementation, and its test
-  coverage. Status `awaiting_human_verify` as of this writing (not yet archived to
-  `.planning/debug/resolved/` — that move happens only after the operator confirms the fix on their
-  real, populated profile).
+- `.planning/debug/resolved/steam-token-survives-keychain.md` — the full investigation and fix this
+  closure rests on: exhaustive source tracing, unified-log forensics, the fix implementation, and
+  its test coverage. Status `resolved`; the operator's live gate passed on their real, populated
+  profile 2026-09-30 (boot 1 receipt count 1 + key deleted, boot 2 count 0, dev build, both
+  secret-store arms irrelevant because the cleanup sits outside them). Its `next_action` carries the
+  lost-evidence note: the original on-disk token value was destroyed at 21:59:47 before any
+  authorised gate ran, no backup or filesystem snapshot of it exists, and the
+  plaintext-vs-ciphertext question is therefore **permanently unanswerable** rather than open.
 - `.planning/todos/completed/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md` — its
   `## STATUS 2026-09-30 (quick-260930-nt4)` section holds the ACL measurements, and its `## CLOSED`
   section named the Keychain-clearing errand that surfaced this.
