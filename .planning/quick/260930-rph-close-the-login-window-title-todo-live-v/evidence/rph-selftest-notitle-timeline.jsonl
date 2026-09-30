@@ -1,0 +1,10 @@
+{"ev":"meta","pid":4152,"launch_utc":"2026-09-30T08:07:00.581Z","quiescence_ms":4000,"tail_ms":1000,"hard_bound_ms":30000,"login_bound_ms":30000}
+{"ev":"appear","t_ms":348.7,"utc":"2026-09-30T08:07:00.930Z","hwnd":"0x210B26","vis":false,"title":".NET-BroadcastEventWindow.4.0.0.0.1d7ceb.0"}
+{"ev":"appear","t_ms":348.7,"utc":"2026-09-30T08:07:00.930Z","hwnd":"0x270A8C","vis":true,"title":"GameLib"}
+{"ev":"appear","t_ms":348.7,"utc":"2026-09-30T08:07:00.932Z","hwnd":"0x1E0B1E","vis":false,"title":"Default IME"}
+{"ev":"appear","t_ms":364.6,"utc":"2026-09-30T08:07:00.946Z","hwnd":"0x160D9A","vis":false,"title":"MSCTFIME UI"}
+{"ev":"appear","t_ms":380.1,"utc":"2026-09-30T08:07:00.962Z","hwnd":"0x1A0B5E","vis":false,"title":"GDI+ Window (powershell.exe)"}
+{"ev":"appear","t_ms":380.1,"utc":"2026-09-30T08:07:00.962Z","hwnd":"0x260BBC","vis":false,"title":"Default IME"}
+{"ev":"appear","t_ms":1392.6,"utc":"2026-09-30T08:07:01.974Z","hwnd":"0x1D0BE4","vis":true,"title":"https://selftest.invalid"}
+{"ev":"vanish","t_ms":5452.3,"utc":"2026-09-30T08:07:06.034Z","hwnd":"0x1D0BE4","vis":false,"title":"https://selftest.invalid"}
+{"ev":"end","t_ms":17034.6}

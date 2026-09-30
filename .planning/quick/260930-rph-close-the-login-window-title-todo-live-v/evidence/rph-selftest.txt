@@ -1,0 +1,22 @@
+shape_fix_verdict: PASS expected=PASS match=True
+shape_fix_transient_captured: True
+shape_fix_kept_stderr_count: 2 expected=2 match=True
+shape_fix_marker_dropped: True
+shape_fix_c0: PASS
+rescore_agrees_fix: yes
+shape_bug_verdict: FAIL expected=FAIL match=True
+shape_bug_c5: FAIL expected=FAIL match=True
+shape_bug_c4: FAIL expected=FAIL match=True
+shape_bug_transient_captured: True
+shape_bug_kept_stderr_count: 2 expected=2 match=True
+shape_bug_marker_dropped: True
+shape_bug_c0: PASS
+rescore_agrees_bug: yes
+shape_notitle_verdict: INCONCLUSIVE expected=INCONCLUSIVE match=True
+shape_notitle_c3_unmet: True
+shape_notitle_transient_captured: False
+shape_notitle_kept_stderr_count: 1 expected=1 match=True
+shape_notitle_marker_dropped: True
+shape_notitle_c0: PASS
+rescore_agrees_notitle: yes
+SELFTEST: PASS
