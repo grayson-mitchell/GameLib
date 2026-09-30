@@ -175,3 +175,30 @@ None - no external service configuration required.
 ---
 *Phase: quick-260930-juy*
 *Completed: 2026-09-30*
+
+## Correction 2026-09-30 — comment markers renumbered to #3926
+
+The two local patches were written citing `#4666` (260930-ivj) and `#4667` (260930-juy). Those
+numbers were verified unused across the local `gsd-core` / `gsd-pristine` / `gsd-local-patches`
+trees and that was wrongly treated as "free". The file's `#NNNN` convention denotes real
+`open-gsd/gsd-core` issue numbers — `#3503`, `#2989`, `#4460` all resolve to genuine past issues
+about this same file — and upstream both chosen numbers are real unrelated artifacts: `#4666` is a
+merged PR confining argv boundary joins, `#4667` a closed issue about install leaving 237
+`@~/.claude/` includes. A reader following either marker landed on unrelated work.
+
+Both patches are renumbered to **`#3926`**, the upstream issue that is this exact defect
+("code-review Tier-3 diffs to `HEAD` instead of the phase's own commits ... 248 files instead of 20
+— and silently downgraded `--depth=deep` to `standard`"). `#3926` is closed as a duplicate of
+`#4631`, which is superseded by the open epic `#5056`; the finding was filed there at
+https://github.com/open-gsd/gsd-core/issues/5056#issuecomment-5903122765 — so the
+"no upstream gsd-core issue filed" wording in both headers was removed as no longer true.
+
+Two sites needed judgement rather than a blind swap: the supersession line now names "the
+260930-juy union resolver below" instead of a self-referential `#3926`, and a directional error was
+fixed at the same time ("extends `#4666` below" — that block is *above*). The renumber is
+comments-only: stripping all comment lines from the before/after file yields a byte-identical
+result, and re-extracting and re-executing the two resolver functions reproduces union 9 / 42 / 69,
+drops 14 / 154 / 534, and phase 45's non-empty 426-file fallback.
+
+The committed PLAN artifacts still cite the old numbers; they are point-in-time records and were
+deliberately left alone. `.planning/STATE.md`, being the live index, was corrected.
