@@ -5,6 +5,8 @@ area: steam
 severity: medium
 platform: any
 ready: code
+status: RESOLVED
+resolved: 2026-09-30
 source: "quick task 260929-lrh (the phase 29/41/24 critical-disposition audit) — the audit confirmed both fixes intact and deliberately scoped the missing pin OUT, filing it here"
 files:
   - src/backend/storeManagers/steam/bridge/shimGenerate.ts
@@ -69,3 +71,40 @@ rather than importing anything from `meta/`.
 This todo describes a test. It does not contain one — no test file was created or modified by the
 audit that filed this. `ready: code` means desk-ready: editable and typecheckable with no live gate
 and no second operating system required.
+
+## 6. Resolution (quick 260930-vrb, 2026-09-30)
+
+Both criticals are now pinned. Re-introducing either one turns jest red, and each pin was proven
+by a mutation run (below), not asserted.
+
+- **24-CR-02** is pinned by two new tests in
+  `src/backend/storeManagers/steam/bridge/__tests__/shimGenerate.test.ts` (commit `a33fbfe3b`).
+  They anchor on the COMMITTED `steam_api.def`, because `buildShimCompileArgv` compiles that file
+  into the shipped shim. `SHIM_EXPORTED_SYMBOLS` is now exported and its only importer is that
+  test. `pnpm find-deadcode` is unchanged at `used-in-module: 0`.
+- **24-CR-01** is pinned by four new tests in `meta/__tests__/gen_vtables.test.ts` (commit
+  `88f3411ac`). They cover the generator output and the committed `steam_api_shim.c`
+  independently.
+
+Mutation evidence (every arm restored with `git checkout --`, then `git diff --exit-code` exit 0
+and a green re-run; no mutation was committed):
+
+| arm | what was mutated | numstat | jest `Tests:` | red tests |
+| --- | --- | --- | --- | --- |
+| CR02-a | deleted the SteamUser_v023 and SteamFriends_v018 entries from `SHIM_EXPORTED_SYMBOLS` | `0 2` | `2 failed, 12 passed, 14 total` | parity test (Received lists both accessors); placement test (`status: "error"`, "Shim does not export required symbol(s): SteamAPI_SteamUser_v023, SteamAPI_SteamFriends_v018") |
+| CR02-b | added a probe symbol absent from the .def | `1 0` | `1 failed, 13 passed, 14 total` | parity test only (`notInDef` Received names `SteamAPI_MutationProbe_NotInDef`) |
+| CR01-a | reverse-applied the `meta/gen_vtables.ts` hunk of `1e744d204` | `1 66` | `3 failed, 24 passed, 27 total` | `isStringReturn` routing (TypeError: undefined is not a function); `STRING_RETURN_BUF_BYTES` floor (Received has value: undefined); generator row (`not "retbuf[4]"`). The committed-shim row stayed GREEN, which is what shows the two rows are independent pins |
+| CR01-b | reverse-applied the `steam_api_shim.c` hunk of `1e744d204` | `5 17` | `1 failed, 26 passed, 27 total` | committed-shim row only (`not "retbuf[4]"`) |
+
+`git diff --quiet cf96b930a HEAD -- meta/gen_vtables.ts native/steam-bridge/generated/` exits 0.
+
+Honest limits, at equal weight:
+
+- (a) The CR-01 pins are structural assertions over C source text. Nothing compiles or runs the
+  shim on this machine; the shim is built with zig on the packaging path.
+- (b) `STRING_RETURN_BUF_BYTES` is pinned as a floor of at least 128, not as the exact 256.
+- (c) The byte identity between generator output and the committed `.def`/`.c` is still pinned by
+  NO test. It was measured identical at HEAD `cf96b930a` during planning, via a scratchpad probe
+  calling `generateDefFile` and `generateShimC`. Regenerating without committing, or committing
+  without regenerating, remains invisible to jest. That seam was outside this todo's scope and is
+  named here, not fixed.
