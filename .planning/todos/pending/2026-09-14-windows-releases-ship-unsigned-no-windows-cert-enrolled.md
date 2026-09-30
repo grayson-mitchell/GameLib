@@ -13,6 +13,84 @@ files:
   - .github/workflows/release-tauri.yml
 ---
 
+## STATUS 2026-09-30 (quick 260930-upo)
+
+This section does not revise anything below it. It records a read-only SignPath eligibility check
+and what was done about it the same day.
+
+**Eligibility check.** A read-only check against https://signpath.org/terms on 2026-09-30 found
+three blockers and one false claim.
+
+- (a) The only GameLib release, v0.7.0, is a Draft; nothing is published. `gh release list -R
+  grayson-mitchell/GameLib` returns `GameLib v0.7.0  Draft  v0.7.0  2026-08-28T21:59:17Z`, plus two
+  Pre-releases that hold data assets (`runners-onedir-macos`, `crossover-index`).
+- (b) No code signing policy was published.
+- (c) No privacy policy existed.
+- False claim: README.md carried a SignPath credit inherited from Heroic, its links bearing
+  Heroic's campaign tag (`utm_campaign=heroicgameslauncher`), although GameLib has no SignPath
+  relationship.
+
+**What quick 260930-upo closed.**
+
+- (b) is closed by README.md's "## Code signing policy" section (commit `3b909eaf3`): Windows stated
+  as unsigned, "is applying" wording, the roles table for the sole maintainer, what would be signed,
+  the macOS state as measured, a PRIVACY.md link. The section is in the README Index.
+- (c) is closed by PRIVACY.md (commit `a646c6a9e`), checked against source at `f32ad5aaa`.
+- The false credit, its links and its logo are removed in the README commit `3b909eaf3`.
+
+**Privacy choice.** The policy links PRIVACY.md and does not use SignPath's boilerplate "will not
+transfer any information ... unless specifically requested" sentence, because that sentence would be
+false for GameLib. The source census found requests made without an explicit per-request user
+action: a startup connectivity check to github.com, store.epicgames.com, gog.com and
+cloudflare-dns.com; GOG presence updates every 5 minutes while signed in; store library syncs;
+game-page metadata lookups; and, on Linux and macOS, startup fetches of community data files from
+GitHub. The census also found that the Tauri updater is configured (endpoint in
+`src-tauri/tauri.conf.json`) but that no source code triggers an update check, so PRIVACY.md says
+GameLib does not currently check for updates on its own.
+
+**Not in the policy yet.** SignPath Foundation's attribution sentence. On approval, copy it
+verbatim from https://signpath.org/terms as it reads then. Do not paraphrase it and do not copy it
+from memory.
+
+**Remaining operator steps.**
+
+1. Publish a real, non-Draft release, either the v0.7.0 draft or a new tag. SignPath requires the
+   project to be already released. The release notes must carry a link titled "Code signing
+   policy" pointing at the README section, because the terms require the policy on the
+   download/release pages as well as the home page.
+2. Confirm MFA on GitHub for every team member (sole maintainer), and on SignPath once the account
+   exists. The terms require MFA on both. It could not be measured from here: the `gh api user`
+   `two_factor_authentication` field is null for this token.
+3. Submit the application at https://signpath.org/apply.
+4. On approval, add the attribution (see "Not in the policy yet"), then do Direction step 2 (the
+   Finding 4 build, sign, re-sign, upload ordering) BEFORE wiring any credentials.
+
+**Open question, no answer asserted.** The terms bar signing modified upstream versions unless
+upstream publishes signed builds and the project is a visible fork. GameLib is a derivative of
+Heroic Games Launcher (README.md line 3, `UPSTREAM.md`). Whether SignPath's reviewers treat it as
+its own project or as a modified upstream is for the application to settle.
+
+**A second terms clause to answer.** The terms as re-read on 2026-09-30 also say software that
+transfers user data to systems the user did not specify must describe this in a privacy policy,
+display that policy during installation, and offer installation options to disable those
+functions. PRIVACY.md covers the first part. Not checked by this task: whether any installer step displays
+the policy, and whether the connectivity check or GOG presence can be switched off at install time
+(GOG presence has a Settings toggle). It is recorded here so it is not a surprise.
+
+**README residuals a SignPath reviewer will read.** These were deliberately not fixed by this task.
+Line numbers as of `3b909eaf3`:
+
+- README.md:162, 174, 246, 252, 257 reference `pnpm dist:linux`, `dist:win` and `dist:mac`. No
+  `dist*` script exists in `package.json` (only `clean:dist-*`).
+- README.md:227 carries an electron-builder note in the Development environment steps.
+- README.md:135 (and the Credits entry for Weblate) point at Heroic's Weblate project.
+- README.md:305 "Back to top" links `#heroic-games-launcher`, an anchor that no longer exists.
+
+**Pointer correction.** The macOS signing todo is at
+`.planning/todos/completed/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md`, not under
+`pending/`. The README's macOS statement rests on its STATUS 2026-09-23 and 2026-09-24 sections:
+signed and notarized build verified on the v0.7.0 draft, nothing published.
+
 ## STATUS 2026-09-24 (quick 260924-pm3)
 
 This section does not revise `## Problem` or `## Current behaviour` below it — both stay true as
