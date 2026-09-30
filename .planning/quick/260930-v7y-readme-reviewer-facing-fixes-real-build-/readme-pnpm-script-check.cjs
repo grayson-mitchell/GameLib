@@ -34,7 +34,9 @@ for (const line of lines) {
 const code = codeChunks.join('\n')
 const results = new Map()
 
-for (const m of code.matchAll(/\bpnpm\s+([A-Za-z][\w:.-]*)(?:\s+([A-Za-z][\w:.-]*))?/g)) {
+// The second word is only captured after `run`, on the same line. Capturing it unconditionally
+// would swallow the next line's `pnpm` and hide that command from the check.
+for (const m of code.matchAll(/\bpnpm[ \t]+([A-Za-z][\w:.-]*)(?:[ \t]+([A-Za-z][\w:.-]*))?/g)) {
   let name = m[1]
   if (name === 'run') {
     if (!m[2]) continue
