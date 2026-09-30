@@ -1,0 +1,16 @@
+{"ev":"meta","pid":30676,"launch_utc":"2026-09-30T08:50:07.842Z","quiescence_ms":90000,"tail_ms":5000,"hard_bound_ms":510000,"login_bound_ms":300000}
+{"ev":"appear","t_ms":22.2,"utc":"2026-09-30T08:50:07.865Z","hwnd":"0xAA0DD2","vis":true,"title":""}
+{"ev":"appear","t_ms":22.2,"utc":"2026-09-30T08:50:07.866Z","hwnd":"0x650BBC","vis":false,"title":"Default IME"}
+{"ev":"appear","t_ms":29.9,"utc":"2026-09-30T08:50:07.872Z","hwnd":"0x2C0B1E","vis":true,"title":"GameLib"}
+{"ev":"appear","t_ms":54.7,"utc":"2026-09-30T08:50:07.897Z","hwnd":"0x1D0B8C","vis":false,"title":"MSCTFIME UI"}
+{"ev":"appear","t_ms":394.8,"utc":"2026-09-30T08:50:08.238Z","hwnd":"0xF0EF4","vis":false,"title":""}
+{"ev":"appear","t_ms":64589.0,"utc":"2026-09-30T08:51:12.427Z","hwnd":"0x120CFC","vis":false,"title":"Tauri App"}
+{"ev":"appear","t_ms":64898.2,"utc":"2026-09-30T08:51:12.736Z","hwnd":"0x130CFC","vis":false,"title":"Tauri App"}
+{"ev":"vanish","t_ms":64898.2,"utc":"2026-09-30T08:51:12.736Z","hwnd":"0x120CFC","vis":false,"title":"Tauri App"}
+{"ev":"vanish","t_ms":65945.1,"utc":"2026-09-30T08:51:13.783Z","hwnd":"0x130CFC","vis":false,"title":"Tauri App"}
+{"ev":"appear","t_ms":65982.9,"utc":"2026-09-30T08:51:13.821Z","hwnd":"0x140CFC","vis":false,"title":"https://www.humblebundle.com"}
+{"ev":"vis","t_ms":65989.4,"utc":"2026-09-30T08:51:13.828Z","hwnd":"0x140CFC","vis":true,"title":"https://www.humblebundle.com"}
+{"ev":"change","t_ms":66608.2,"utc":"2026-09-30T08:51:14.446Z","hwnd":"0x140CFC","vis":true,"title":"https://www.humblebundle.com \u2014 Humble Bundle - Log In"}
+{"ev":"vis","t_ms":156619.4,"utc":"2026-09-30T08:52:44.453Z","hwnd":"0x140CFC","vis":false,"title":"https://www.humblebundle.com \u2014 Humble Bundle - Log In"}
+{"ev":"vanish","t_ms":156637.3,"utc":"2026-09-30T08:52:44.471Z","hwnd":"0x140CFC","vis":false,"title":"https://www.humblebundle.com \u2014 Humble Bundle - Log In"}
+{"ev":"end","t_ms":172310.4}

@@ -1,0 +1,2 @@
+65979.5 [shell] humble_login_open: presentation requested visible=true width=900 height=700 center=true focus_once=true persistent_pin=false light_theme_requested=true sheet_presented=false
+66607 [shell] humble_login_open: title change applied len=22
