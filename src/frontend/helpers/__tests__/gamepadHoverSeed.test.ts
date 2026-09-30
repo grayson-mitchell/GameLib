@@ -38,7 +38,10 @@ jest.mock('../virtualKeyboard', () => ({
 // statement order. Reset in `beforeEach` below.
 let mockVkActive = false
 
-// dpad indices on the standard layout (gamepad_layouts/standard.ts).
+// button indices on the standard layout (gamepad_layouts/standard.ts).
+const MAIN_ACTION = 0
+const ALT_ACTION = 3
+const PAD_DOWN = 13
 const PAD_LEFT = 14
 
 interface FakeElement {
@@ -206,6 +209,38 @@ describe('gamepadHoverSeed: resolveHoveredCard', () => {
 
     expect(resolveHoveredCard(doc)).toBeNull()
   })
+
+  it('R5: a hovered .gameListItem wrapper resolves to its direct-child A', () => {
+    const { card, link } = buildCard({ list: true })
+    const doc = fakeDocFromHoverChain([card])
+
+    const {
+      resolveHoveredCard
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+    } = require('../gamepadHoverSeed') as typeof import('../gamepadHoverSeed')
+
+    const result = resolveHoveredCard(doc)
+    expect(result?.card).toBe(card)
+    expect(result?.link).toBe(link)
+  })
+
+  it('R6: a deepest hovered element nested inside the card but not the link still resolves to the card link', () => {
+    const { card, link } = buildCard()
+    const iconButton = makeElement('BUTTON', ['icons'])
+    card.appendChild(iconButton)
+    const svg = makeElement('svg')
+    iconButton.appendChild(svg)
+    const doc = fakeDocFromHoverChain([card, iconButton, svg])
+
+    const {
+      resolveHoveredCard
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+    } = require('../gamepadHoverSeed') as typeof import('../gamepadHoverSeed')
+
+    const result = resolveHoveredCard(doc)
+    expect(result?.card).toBe(card)
+    expect(result?.link).toBe(link)
+  })
 })
 
 type Listener = (event: unknown) => void
@@ -353,8 +388,8 @@ function buildHarness(
     })
   }
 
-  function setFocused(el: FakeElement | null) {
-    focused = el
+  function setFocused(el: FakeElement | null | undefined) {
+    focused = el ?? null
   }
 
   function getFocused() {
@@ -482,6 +517,271 @@ describe('helpers/gamepad: mouse-to-controller handoff focus seed', () => {
 
     expect(link?.focus).not.toHaveBeenCalled()
     expect(harness.getFocused()).toBe(searchInput)
+  })
+
+  it('I4: a handoff press with the search input focused lands on the hovered card instead, without opening the virtual keyboard', () => {
+    jest.resetModules()
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const searchInput = harness.createElement('INPUT', [], { type: 'text' })
+    harness.setFocused(searchInput)
+    const { card, link } = harness.createCard()
+    harness.setHoverChain([card])
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    pad.buttons[PAD_DOWN].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).toHaveBeenCalledTimes(1)
+    expect(harness.gamepadAction).not.toHaveBeenCalled()
+    expect(harness.getFocused()).toBe(link)
+
+    pad.buttons[PAD_DOWN].pressed = false
+    harness.runFrame()
+
+    pad.buttons[PAD_DOWN].pressed = true
+    harness.runFrame()
+
+    expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padDown' })
+  })
+
+  it('I5: stale focus on a different card does not survive a handoff onto the hovered card', () => {
+    jest.resetModules()
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const { link: staleLinkB } = harness.createCard()
+    harness.setFocused(staleLinkB)
+    staleLinkB?.focus.mockClear()
+
+    const { card: cardA, link: linkA } = harness.createCard()
+    harness.setHoverChain([cardA])
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+
+    expect(linkA?.focus).toHaveBeenCalledTimes(1)
+    expect(staleLinkB?.focus).not.toHaveBeenCalled()
+    expect(harness.getFocused()).toBe(linkA)
+  })
+
+  it("I6a: no re-seed when focus is already on the hovered card's own link", () => {
+    jest.resetModules()
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const { card, link } = harness.createCard()
+    harness.setFocused(link)
+    link?.focus.mockClear()
+    harness.setHoverChain([card])
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).not.toHaveBeenCalled()
+    expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padLeft' })
+  })
+
+  it('I6b: no re-seed when focus is on an inner settings button inside the hovered card', () => {
+    jest.resetModules()
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const { card, link } = harness.createCard()
+    const settingsButton = harness.createElement('BUTTON', ['gameCardSettings'])
+    card.appendChild(settingsButton)
+    harness.setFocused(settingsButton)
+    harness.setHoverChain([card])
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).not.toHaveBeenCalled()
+    expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padLeft' })
+  })
+
+  it('I7: a mid-session press never reseeds without an intervening mousemove; a later mousemove re-arms it', () => {
+    jest.resetModules()
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const { card, link } = harness.createCard()
+    harness.setHoverChain([card])
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    // handoff press seeds the card
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+    expect(link?.focus).toHaveBeenCalledTimes(1)
+
+    pad.buttons[PAD_LEFT].pressed = false
+    harness.runFrame()
+
+    // focus moves to some unrelated element, with NO mousemove -- the
+    // pointer is still resting over the same card
+    const elementC = harness.createElement('DIV', ['somethingElse'])
+    harness.setFocused(elementC)
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+
+    // mid-session: this controller is already current, so it is not a
+    // handoff -- navigates normally, does not reseed the card
+    expect(link?.focus).toHaveBeenCalledTimes(1)
+    expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padLeft' })
+
+    pad.buttons[PAD_LEFT].pressed = false
+    harness.runFrame()
+
+    // the mouse actually moves now -- re-arms the handoff
+    harness.fireMouseMove()
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).toHaveBeenCalledTimes(2)
+  })
+
+  it('I8: no seed while the virtual keyboard is active', () => {
+    jest.resetModules()
+    mockVkActive = true
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const { card, link } = harness.createCard()
+    harness.setHoverChain([card])
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).not.toHaveBeenCalled()
+    expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padLeft' })
+  })
+
+  it('I9a: no seed when focus is inside a MuiDialog-root overlay', () => {
+    jest.resetModules()
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const dialog = harness.createElement('DIV', ['MuiDialog-root'])
+    const dialogButton = harness.createElement('BUTTON', [])
+    dialog.appendChild(dialogButton)
+    harness.setFocused(dialogButton)
+
+    const { card, link } = harness.createCard()
+    harness.setHoverChain([card])
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).not.toHaveBeenCalled()
+    expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padLeft' })
+  })
+
+  it('I9b: no seed when focus is inside a dropdown overlay', () => {
+    jest.resetModules()
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const dropdown = harness.createElement('DIV', ['dropdown'])
+    const dropdownButton = harness.createElement('BUTTON', [])
+    dropdown.appendChild(dropdownButton)
+    harness.setFocused(dropdownButton)
+
+    const { card, link } = harness.createCard()
+    harness.setHoverChain([card])
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    pad.buttons[PAD_LEFT].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).not.toHaveBeenCalled()
+    expect(harness.gamepadAction).toHaveBeenCalledWith({ action: 'padLeft' })
+  })
+
+  it('I10: mainAction and altAction never seed on a merely-hovered card', () => {
+    jest.resetModules()
+    const harness = buildHarness()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { initGamepad } = require('../gamepad') as typeof import('../gamepad')
+    initGamepad()
+
+    const { card, link } = harness.createCard()
+    harness.setHoverChain([card])
+
+    const pad = makePad(0)
+    harness.pads[0] = asGamepad(pad)
+    harness.fire('gamepadconnected', asGamepad(pad))
+    harness.runFrame()
+
+    pad.buttons[MAIN_ACTION].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).not.toHaveBeenCalled()
+    expect(link?.click).not.toHaveBeenCalled()
+
+    pad.buttons[MAIN_ACTION].pressed = false
+    harness.runFrame()
+
+    pad.buttons[ALT_ACTION].pressed = true
+    harness.runFrame()
+
+    expect(link?.focus).not.toHaveBeenCalled()
+    expect(link?.click).not.toHaveBeenCalled()
   })
 })
 

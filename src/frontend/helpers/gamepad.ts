@@ -203,10 +203,25 @@ export const initGamepad = () => {
       // falls through to the unchanged path -- `checkAction`'s only caller
       // swallows exceptions, so a throw here must never silently drop the
       // press.
+      //
+      // Guards (no seed, fall through to the unchanged path): the virtual
+      // keyboard owns directional input while active; the focused element
+      // sits inside a dialog/dropdown/MUI popover overlay; or focus is
+      // already inside the hovered card (`el`, computed above) -- the
+      // `.gameCard:focus-within` ring is already on the card the operator
+      // sees, so there is nothing to hand off. `hovered` is resolved FIRST
+      // so that with no card hovered, none of these guard checks ever run.
       if (isHandoffPress && isDirectionalAction(action)) {
         try {
           const hovered = resolveHoveredCard(document)
-          if (hovered) {
+          if (
+            hovered &&
+            !VirtualKeyboardController.isActive() &&
+            !insideDialog() &&
+            !insideDropdown() &&
+            !isInMuiPopover() &&
+            !(el && hovered.card.contains(el))
+          ) {
             hovered.link.focus({ preventScroll: true })
             return
           }
