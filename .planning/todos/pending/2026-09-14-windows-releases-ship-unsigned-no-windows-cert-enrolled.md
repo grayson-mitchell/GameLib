@@ -13,6 +13,38 @@ files:
   - .github/workflows/release-tauri.yml
 ---
 
+## STATUS 2026-09-30 (quick 260930-v7y)
+
+This section does not revise anything below it. It records which README residuals quick 260930-v7y
+closed and what remains.
+
+**Closed by 260930-v7y** (README commit `a85c447d7`). These are the four residuals the
+260930-upo section below listed.
+
+- The packaging-script references are replaced by the release workflow's Tauri build sequence
+  (`pnpm exec vite build`, `pnpm build:sidecar-sea`, `pnpm exec tauri build` with a `--config`
+  override that turns updater artifacts off).
+- The standalone-pnpm note is removed.
+- The Weblate text now credits Heroic's translators and states that GameLib has no Weblate project.
+  The Sponsors section and its Weblate logo are removed.
+- Back to top links `#gamelib` and is the last content in the file.
+
+**Also fixed in the same sweep.** The Heroic-hosted screenshots removed, Heroic's chat-server link
+removed, the SteamOS Discover line removed, the submodule clone flag dropped, the nonexistent dev
+script replaced by `pnpm tauri:dev`, the VS Code build-tasks subsection removed, the Nix paragraph
+corrected, and the dead Docker Index entry removed.
+
+**Remaining.**
+
+1. GameLib screenshots. This is an operator follow-up and needs a live app run. README has no
+   Screenshots section until then.
+2. The README build sequence is derived from `.github/workflows/release-tauri.yml` and was not run
+   end to end by this task.
+3. Uncertain claims left in place are listed in
+   `.planning/quick/260930-v7y-readme-reviewer-facing-fixes-real-build-/260930-v7y-SUMMARY.md`.
+4. In-app links in `src/backend/constants/urls.ts` still point at Heroic's chat server, Weblate,
+   sponsors page and wiki. A reviewer reading the README will not see them.
+
 ## STATUS 2026-09-30 (quick 260930-upo)
 
 This section does not revise anything below it. It records a read-only SignPath eligibility check
