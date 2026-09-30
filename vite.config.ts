@@ -116,13 +116,30 @@ export default defineConfig(({ mode }) => ({
     // killed the server for target/, and it is worse here: vite dies but the Tauri
     // window and sidecar stay alive, so the app looks healthy while HMR is gone.
     //
+    // Quick task 260930-ssf (2026-09-30): target-cache/ is the third member of
+    // this EBUSY defect class, found in Phase 38 sitting 13 (quick 260930-o75,
+    // Windows 11). A `cargo build` of spike 027 with CARGO_TARGET_DIR at its
+    // target-cache, the spike README's own recipe, killed a running
+    // `pnpm tauri:dev` with chokidar EBUSY on the spike exe the linker held
+    // open. The watcher held 519 dirs / 3846 entries under it on the pre-fix
+    // config. It is named as the directory, not as the whole planning tree: the
+    // renderer never imports from .planning, but a wider entry breaks the
+    // observation-only rule below. The glob reaches through the .planning
+    // dot-directory only because Vite's bundled chokidar matches ignore globs
+    // with `dot: true`; re-run 260930-ssf's watcherProbe.mjs after a Vite
+    // upgrade.
+    //
     // Each entry below is a MEASURED failure, named as a specific generated
     // directory. build/ and public/bin are watched too (169 dirs, and the same
     // written-while-serving shape) and are deliberately NOT here -- no crash has
     // been observed on them, and keeping this array observation-only is what makes
-    // it auditable. See 260925-re8-GATE.md.
+    // it auditable. See 260925-re8-GATE.md and 260930-ssf-GATE.md.
     watch: {
-      ignored: ['**/src-tauri/target/**', '**/graphify-out/**']
+      ignored: [
+        '**/src-tauri/target/**',
+        '**/graphify-out/**',
+        '**/target-cache/**'
+      ]
     }
   },
   build: {

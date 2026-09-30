@@ -109,6 +109,18 @@ window at 265 ms, survived 30 s with its bundled sidecar alive, and reached an i
 smoke-launch half of D-16 for Linux is now discharged on real evidence (one host, one GPU state, one
 artifact), and `38-W04` (Windows) remains open and untouched.
 
+**UPDATE 2026-09-30 (quick `260930-o75`, Phase 38 sitting 13).** `38-W04` was run live on the operator's
+Windows 11 machine against `GameLib_0.7.0_x64-setup.exe` (112419624 bytes, sha256 `61d59bfd...3d5281`),
+taken with `gh release download v0.7.0` from the DRAFT release; its upload time falls inside the Windows
+job window of the same run `36556473399` (commit under gate `b48e8948f`) whose AppImage discharged `38-W05`,
+which is strong evidence but not proof of the binding. Authenticode reports `NotSigned` and the updater
+`.sig` was not verified. Outcome: DISCHARGED PASS on one host. The silent install (`/S`, over the existing
+per-user v0.7.0) exited 0 in 8.4 s, and the installed shell, launched under a fresh fake profile, showed a
+`GameLib` window at 1618 ms and survived 12 of 12 one-second samples with its bundled sidecar and WebView2
+alive. With `38-W05` already discharged, the smoke-launch half of D-16 is now discharged on real evidence
+for BOTH the Windows and the Linux leg (one host, one artifact each). Limits: the NSIS pages were not
+exercised, and on Windows the fake profile redirects only the sidecar, not the shell's known-folder paths.
+
 ## Three log sinks — read before scoring any log-based criterion
 
 This project has three, not two, log destinations, and conflating them is the exact shape of

@@ -1,0 +1,15 @@
+{"ev":"meta","pid":27752,"launch_utc":"2026-09-30T08:06:23.620Z","quiescence_ms":4000,"tail_ms":1000,"hard_bound_ms":30000,"login_bound_ms":30000}
+{"ev":"appear","t_ms":290.2,"utc":"2026-09-30T08:06:23.912Z","hwnd":"0x490036","vis":false,"title":".NET-BroadcastEventWindow.4.0.0.0.1d7ceb.0"}
+{"ev":"appear","t_ms":290.2,"utc":"2026-09-30T08:06:23.912Z","hwnd":"0x900516","vis":false,"title":"GameLib"}
+{"ev":"appear","t_ms":290.2,"utc":"2026-09-30T08:06:23.912Z","hwnd":"0x250A8C","vis":false,"title":"Default IME"}
+{"ev":"vis","t_ms":297.8,"utc":"2026-09-30T08:06:23.918Z","hwnd":"0x900516","vis":true,"title":"GameLib"}
+{"ev":"appear","t_ms":304.8,"utc":"2026-09-30T08:06:23.925Z","hwnd":"0x1F0B26","vis":false,"title":"MSCTFIME UI"}
+{"ev":"appear","t_ms":322.0,"utc":"2026-09-30T08:06:23.942Z","hwnd":"0x180B5E","vis":false,"title":"GDI+ Window (powershell.exe)"}
+{"ev":"appear","t_ms":322.0,"utc":"2026-09-30T08:06:23.942Z","hwnd":"0x240BBC","vis":false,"title":"Default IME"}
+{"ev":"appear","t_ms":1315.7,"utc":"2026-09-30T08:06:24.936Z","hwnd":"0x1B0BE4","vis":false,"title":"https://selftest.invalid"}
+{"ev":"vis","t_ms":1321.7,"utc":"2026-09-30T08:06:24.942Z","hwnd":"0x1B0BE4","vis":true,"title":"https://selftest.invalid"}
+{"ev":"change","t_ms":1724.0,"utc":"2026-09-30T08:06:25.344Z","hwnd":"0x1B0BE4","vis":true,"title":"https://selftest.invalid \u2014 Synthetic Log In"}
+{"ev":"change","t_ms":2037.3,"utc":"2026-09-30T08:06:25.658Z","hwnd":"0x1B0BE4","vis":true,"title":"https://selftest.invalid \u2014 Transient"}
+{"ev":"change","t_ms":2096.4,"utc":"2026-09-30T08:06:25.717Z","hwnd":"0x1B0BE4","vis":true,"title":"https://selftest.invalid \u2014 Synthetic Log In"}
+{"ev":"vanish","t_ms":6169.6,"utc":"2026-09-30T08:06:29.790Z","hwnd":"0x1B0BE4","vis":false,"title":"https://selftest.invalid \u2014 Synthetic Log In"}
+{"ev":"end","t_ms":17825.0}

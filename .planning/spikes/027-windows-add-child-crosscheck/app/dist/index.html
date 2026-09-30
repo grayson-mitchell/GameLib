@@ -125,11 +125,28 @@
       statusEl.textContent = `synced ${Math.round(r.w)}×${Math.round(r.h)} @ ${Math.round(r.x)},${Math.round(r.y)}`;
     } catch (_) { /* no embed yet */ }
   }
-  new ResizeObserver(() => {
+  // Quick 260930-o75 (38-E04 branch b, sitting 13): ported from the shipped app's
+  // `useStoreEmbedHost.ts` `scheduleFlush` -- a leading-edge THROTTLE with a trailing flush,
+  // interval unchanged at 40 ms. The original here was a pure trailing debounce
+  // (clearTimeout + restart on every tick), the exact defect plan 40-11's live gate found:
+  // during a continuous drag it never flushes until the pointer pauses. Measuring drag latency
+  // against that would measure this harness, not WebView2. 38-E01 was scored BEFORE this edit.
+  let lastFlushAt = 0;
+  function scheduleFlush() {
     if (!document.getElementById('sync').checked) return;
-    clearTimeout(syncTimer);
-    syncTimer = setTimeout(() => syncBounds(false), 40);
-  }).observe(document.getElementById('slot'));
+    const now = Date.now();
+    const since = now - lastFlushAt;
+    if (since >= 40) {
+      if (syncTimer !== null) { clearTimeout(syncTimer); syncTimer = null; }
+      lastFlushAt = now;
+      syncBounds(false);
+      return;
+    }
+    if (syncTimer === null) {
+      syncTimer = setTimeout(() => { syncTimer = null; lastFlushAt = Date.now(); syncBounds(false); }, 40 - since);
+    }
+  }
+  new ResizeObserver(scheduleFlush).observe(document.getElementById('slot'));
 
   async function exportLog() {
     const p = await call('export_log', {});

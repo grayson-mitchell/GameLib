@@ -1,0 +1,9 @@
+C2: PASS
+C3: PASS
+C4: PASS
+C5: PASS
+HOLD_MS: 90029
+FINAL_TITLE: https://www.humblebundle.com \u2014 Humble Bundle - Log In
+FINAL_TITLE_COMPOSED: yes
+C9_RECOUNT: shell_log_offset_bytes=13683 humble_login_open_lines_after_offset=0 instrument=0 match=yes
+RESCORE_AGREES: yes

@@ -70,7 +70,10 @@ import {
   pushFrontendMessage,
   requestOpenExternal
 } from './sidecarRpc'
-import { setTokenStore as installTokenStore } from '../storeManagers/steam/tokenStore'
+import {
+  setTokenStore as installTokenStore,
+  clearOrphanedElectronToken
+} from '../storeManagers/steam/tokenStore'
 import { SidecarKeyringTokenStore } from './keyringTokenStore'
 import { installSidecarHumbleSecretStore } from './humbleSecretStore'
 import { installSidecarSteamGridDbSecretStore } from './steamgridSecretStore'
@@ -1122,6 +1125,22 @@ export function init(
     // startRpcServer() and inside this same keyring arm.
     installSidecarSteamGridDbSecretStore()
     logInfo('[bootstrap] secret stores: keyring', LogPrefix.Backend)
+  }
+  // Unconditional legacy-key cleanup (debug/steam-token-survives-keychain), OUTSIDE both arms
+  // above on purpose: by the time either arm finishes, `activeTokenStore` has already been
+  // swapped away from `ElectronTokenStore` (T-28-10 ordering — the block above), so the
+  // orphaned pre-Tauri `refreshToken` key in `steam_store/config.json` is dead under either
+  // arm, not just one. `clearOrphanedElectronToken()` itself lives in `tokenStore.ts`, not
+  // here — `bootstrap.ts` is banned by `electronUntouched.test.ts`'s D-04 binding gate from
+  // importing `configStore`/`TOKEN_STORE_KEY` directly, and that module is already the one
+  // place in the codebase permitted to touch them. Presence-only: never reads, logs, or
+  // measures the value, and this log line fires ONLY when the key was actually present and
+  // deleted (an absent key produces zero output, and stays that way on every later boot).
+  if (clearOrphanedElectronToken()) {
+    logInfo(
+      '[bootstrap] removed a legacy pre-Tauri `refreshToken` key from `steam_store/config.json`; the Keychain (`steam-refresh-token` slot) is the authoritative store',
+      LogPrefix.Backend
+    )
   }
   // Placement is load-bearing (fix/steam-native-install-stability, 33-05 live-gate gap): must
   // run AFTER startRpcServer()/bindTransport() so initOnlineMonitor()'s immediate

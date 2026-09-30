@@ -1,0 +1,9 @@
+installed_exe: C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe
+size_bytes: 16554496
+mtime: 2026-09-29T23:44:26
+sha256: 5adce1beb48ccc8f82695f98164062e6e53f45581dd0f188269015eba6c63a9f
+sha256_match: yes
+ancestor_28ff2c3e8_of_b48e8948f: yes
+literal_count: dev build running from its cargo target dir = 1
+literal_count: repaired the gamelib:// HKCU registration (prior value:  = 1
+literal_count: points-elsewhere = 1

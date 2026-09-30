@@ -1,0 +1,33 @@
+run: performed
+store: humble
+launched_pid: 30676
+P1: PASS process_count=0
+P2: PASS exists=True hash_match=True
+P3: PASS CI=[]
+P4: INFO home_set=True home_equals_userprofile=True
+P5: INFO exists=True offset_bytes=13683 line_count=186
+login_hwnd: 0x140CFC
+t_open: 65989.4
+t_last_change: 66608.2
+t_close: 156637.3
+close_posted_t_ms: 156613.4
+stderr_lines_total: 24
+stdout_lines_total: 0
+c9_new_line_count: 0
+c9_pid_matched_count: 0
+c9_humble_login_open_count: 0
+C0: PASS p99=6.59 max_near_open=22.03
+C1: PASS candidate_count=1
+C2: PASS first_title_bare=yes origin_mismatch=False
+C3: PASS t_comp=66608.1604
+C4: PASS nav_reset_episodes=0
+C5: PASS final_composed=True
+C6: PASS
+C7: PASS
+fin_path: B
+C8: PASS remaining=0
+nav_reset_episodes: 0
+first_title: https://www.humblebundle.com
+final_title: https://www.humblebundle.com \u2014 Humble Bundle - Log In
+hold_ms: 90029
+VERDICT: PASS

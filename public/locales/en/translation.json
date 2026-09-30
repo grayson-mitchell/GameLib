@@ -994,6 +994,12 @@
         "start-in-tray": "Start Minimized",
         "steam-native-install": "Download Steam games directly in GameLib",
         "steamruntime": "Use Steam Runtime",
+        "tray-icon-variant": {
+            "auto": "Auto (match the taskbar)",
+            "dark": "Dark icon (for light taskbars)",
+            "label": "Tray Icon",
+            "light": "Light icon (for dark taskbars)"
+        },
         "verboseLogs": {
             "description": "Enable verbose logs"
         },

@@ -98,6 +98,20 @@ describe('getUrgencyCountdownParts', () => {
   test('exactly-1-day range yields value 1', () => {
     expect(getUrgencyCountdownParts(hoursFromNow(30), NOW)).toEqual({
       kind: 'days',
+      value: 1
+    })
+  })
+
+  test('just inside the 1-day band upper edge (47.9h) still yields value 1', () => {
+    expect(getUrgencyCountdownParts(hoursFromNow(47.9), NOW)).toEqual({
+      kind: 'days',
+      value: 1
+    })
+  })
+
+  test('at exactly 48h yields value 2, the first tier above the 1-day band', () => {
+    expect(getUrgencyCountdownParts(hoursFromNow(48), NOW)).toEqual({
+      kind: 'days',
       value: 2
     })
   })

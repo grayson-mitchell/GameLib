@@ -1,0 +1,23 @@
+P1: PASS process_count=0
+P2: PASS exists=True hash_match=True
+P3: PASS CI=[]
+P4: INFO home_set=True home_equals_userprofile=True
+P5: INFO exists=True offset_bytes=13683 line_count=186
+main_window_seen: True
+main_window_title: GameLib
+t_main_ms: 43.6
+stderr_lines_total: 18
+stderr_kept: 0
+stdout_lines_total: 0
+stderr_channel: available
+c0_p99: 6.7
+c0_max: 16.52
+c8_remaining: 0
+webview2_informational: 0
+probe_plumbing: ok
+probe_found: True
+probe_errored: False
+probe_error_msg: 
+probe_busy: False
+probe_name_len: 20
+SMOKE: PASS

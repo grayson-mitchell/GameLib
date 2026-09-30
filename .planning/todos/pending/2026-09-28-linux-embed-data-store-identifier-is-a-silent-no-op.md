@@ -3,8 +3,8 @@ created: 2026-09-28
 title: 'On Linux, data_store_identifier per-store cookie isolation is a silent no-op, and every webview shares one WebKitWebContext. Decide the Linux isolation story before an embed ships there. Windows parity is unverified.'
 found_during: spikes 025/026 (2026-09-28; commits c54e047ca, 369f482a4), filed by quick 260928-raq
 severity: minor
-platform: windows
-ready: live-gate
+platform: any
+ready: human
 area: store-embed
 files:
   - .planning/spikes/026-linux-add-child-runtime/README.md
@@ -109,3 +109,35 @@ against `38-E01`, whose own `test:` is scoped to attach/placement/geometry, not 
   `linux_isolation_decided_2026_09_29`, with a dated `deferral_note` amendment. It also appended
   `## Addendum (2026-09-29)` to
   `2026-09-28-linux-add-child-embed-cannot-be-positioned-gtkbox-packing.md`.
+
+## Windows addendum (sitting 13, 2026-09-30)
+
+- **Result: a silent no-op on Windows too.** Phase 38 sitting 13 (quick `260930-o75`) ran the spike
+  027 harness's autorun, Phase 8 included, natively on the operator's Windows 11 machine (MSVC
+  build, `Cargo.lock` wry 0.57.0). On WebView2 the "isolated" child's jar reported all 15 cookies,
+  including the Steam and GOG cookies from the shared jar. The same `data_store_identifier` that
+  spike 026 measured as a no-op on Linux does nothing on Windows either.
+- **Source agrees.** wry 0.57.0 defines `with_data_store_identifier`, and the field that carries
+  it, only under `#[cfg(any(target_os = "macos", target_os = "ios"))]` (`src/lib.rs:1579`,
+  `:1612`). So per-store isolation through this field exists on macOS/iOS only.
+- **Not scored against `38-E01`**, per that item's own routing. `38-E01` was discharged PASS on
+  attach/placement/geometry, and its `result:` notes this finding as unscored.
+- **Scope of the claim.** One host, and the spike harness, not the shipped app. The shipped app
+  compiles no embed on Windows and never sets `data_store_identifier` on any platform (see the
+  Decision section above).
+- **Status is unchanged by this addendum.** This section records the result, as the Windows
+  section above asked. It does not decide a Windows isolation story, and this file's frontmatter
+  and `pending/` location were deliberately left as they were. Evidence:
+  `.planning/quick/260930-o75-phase-38-sitting-13-windows-38-e01-38-w0/evidence/e01-verdict.md`
+  (phase 8 paragraph) and `e01-run.log` / `e01-events-export.json` (cookie values redacted).
+
+## Re-triage (quick 260930-o75, 2026-09-30)
+
+- The Windows result is recorded (see the addendum above): isolation is a silent no-op on WebView2
+  too. So the live gate this file was waiting on is done.
+- It does **not** close. The Windows result turns "Windows parity is unverified" into an open
+  **decision**: accept one shared cookie jar on Windows (the Linux choice of 2026-09-29), or build
+  per-embed isolation another way before an embed ships there. For example, a separate WebView2
+  user-data folder or profile per store. This is untested here, a direction and not a finding.
+- Hence `platform: any` and `ready: human`: the next action is the operator's decision, not a
+  machine sitting.

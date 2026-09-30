@@ -67,8 +67,16 @@ the event loop. `AppHandle` is `Send + Clone`. That also removes the `SendPtr` s
 `unsafe` casts from this path entirely.
 
 Note the dismiss path (`:4103`/`:4109`/`:4124`) has the same shape but is narrower — WR-02 records
-its callers as already being on the main thread, so its closure runs inline. Confirm that still holds
-before deciding whether to fix one path or both.
+its callers as already being on the main thread, so its closure runs inline.
+
+**CORRECTED 2026-09-30 (quick task 260930-q11, locked decision D-03).** This section used to end
+"Confirm that still holds before deciding whether to fix one path or both." That confirmation was
+NOT a precondition and was not made: **both paths were fixed**, deliberately, so the two have one
+shape rather than a shape with an exception — which is also what lets the structural gate be a
+single clean rule. And the premise behind treating the dismiss path as merely "narrower" was itself
+incomplete: per finding A below, the hazard is the autorelease pool, not the thread hop, so a
+closure that runs inline on an already-main thread still carries an address resolved into a pool
+that is not guaranteed to outlive the hop.
 
 ## Why `ready: live-gate`
 
@@ -81,3 +89,123 @@ source text. Re-running the phase's sheet-attachment live gate after the change 
 Do **not** attempt to prove the fix with a timing test. The useful assertion is structural — that no
 raw `NSWindow` address crosses the dispatch boundary on this path — plus the existing
 `attachedSheet`/`isSheet` read-back (CR-02's fix) continuing to report `attached=true` on hardware.
+
+## Desk fix landed 2026-09-30 (quick task 260930-q11) — STILL OPEN, live gate pending
+
+**This todo stays in `pending/` and keeps `ready: live-gate` / `severity: major`. Closure to
+`completed/` is gated on the operator's live gate and HAS NOT HAPPENED.** Nothing below is a
+hardware result; no live run was performed by the executor. Every number is a desk measurement.
+
+### What changed in both paths
+
+WR-02's option 1, applied to `present_login_window_as_sheet` *and* `dismiss_login_window_sheet`
+(commit `bb567faf3`, `src-tauri/src/main.rs`):
+
+- New `login_window_ns_window_retained(app, label) -> Option<Retained<NSWindow>>`: a main-thread-only
+  wrapper that delegates to the single existing `login_window_ns_window` resolver (so the file keeps
+  ONE resolver, not a second competing one) and immediately retains via `Retained::retain` —
+  `objc_retain`, null-safe by contract, deliberately not `retain_autoreleased`. This is now the only
+  `unsafe` block on either login-sheet path.
+- **Present:** both resolutions moved to the top of the **deferred GCD closure** — the innermost one,
+  the one that calls `beginSheet:` — not the outer `run_on_main_thread` closure, which still runs
+  250ms too early. A window that no longer resolves there WARNs and then **sends `false` down the
+  existing channel**; a bare `return` would have left the worker blocked on `rx.recv_timeout` for the
+  full 10s before `humble_login_open`'s `attached == false` visible-fallback arm could run.
+- **Dismiss:** same restructure inside its `run_on_main_thread` closure. Every arm now signals on
+  `tx`, including the two that never touch AppKit, so the channel answers "did the hop run" rather
+  than "did `endSheet:` run" — which is what keeps WR-01's re-registration scoped to a hop that
+  genuinely did not run, and keeps the healthy "window already gone" path from re-registering (a
+  silent early `return` would drop the sender, `recv_timeout` would report `Disconnected`, and the
+  label would be stranded in the registry for the process lifetime).
+- Deleted: both `SendPtr` shims with their `unsafe impl Send`, both Rust-2021 disjoint-capture
+  rebinding pairs and the comments explaining them, and all four raw-address-to-`&NSWindow`
+  reconstructions with their "resolved moments ago" SAFETY comments.
+- `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY` is **unchanged** in value (250ms) and still unconditional,
+  still armed via `dispatch2::DispatchQueue::main().after()`. This makes the deferral safe; it does
+  not revert it.
+- `LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT`'s doc comment was rewritten: its former justification (the
+  two `.ns_window()` calls running before the inner bound, on `getter!`'s unbounded `rx.recv()`) is
+  now false on **both** halves. Verdict recorded in the comment: the constant is **KEPT** — the inner
+  10s bound still does not cover the entry `eprintln!`, `run_on_main_thread`'s own cross-thread send
+  into tao's event proxy, or `register_presented_login_sheet`'s mutex after the bound returns; and
+  `PENDING_VISIBLE_LOGIN_WINDOW_TTL` is derived from it with a Rust test asserting TTL > watchdog, so
+  deleting it would be a change to `humble_login_open` and that test, not a comment edit.
+
+### Finding A — the handle is AUTORELEASED, so the hazard was UNCONDITIONAL
+
+`~/.cargo/registry/src/index.crates.io-*/tauri-2.11.5/src/window/mod.rs:1642`, read directly:
+
+```rust
+Ok(objc2::rc::Retained::autorelease_ptr(ns_window).cast())
+```
+
+The address `ns_window()` hands back is **autoreleased**. Its guaranteed validity is bounded by the
+autorelease pool of the thread that *resolved* it — not by the login window's lifetime. Carrying it
+across a GCD deferral into a later run-loop turn was therefore outside the API's contract
+**independent of whether the user closes the window**. This is the strongest justification for the
+change, and **it appears in neither this todo's original text nor in WR-02**: both framed the defect
+as a race against a window close, which understates it. It also means the "dismiss is narrower"
+framing above was not the whole picture.
+
+### Finding B — the AppKit accessor and the autorelease both ran on the WORKER thread
+
+Same file, `ns_window()`'s body: `window_handle()` is the dispatcher getter that crosses to the main
+thread, but the `.and_then` closure that follows runs on the **caller's** thread. So at HEAD both
+`view.window()` — a plain AppKit accessor — and the autorelease registration executed on a worker
+thread, onto a pool that is not the main thread's. Moving resolution into the main-thread closure
+fixes this too. Also absent from this todo and from WR-02; a second, independent gain.
+
+### The structural gate added
+
+A new `describe` block in `src/backend/__tests__/tauriShellSource.test.ts` (11 tests), scoped to the
+two function **bodies** rather than file-wide — deliberately, because a Send-pointer shim
+legitimately survives in `open_pristine_epic_login_window` and an
+`as *const objc2_app_kit::NSWindow` cast legitimately survives in the Esc local monitor running the
+*opposite* direction (reference → `usize`, never dereferenced). A file-wide negative would
+false-fire on both. It carries: two body-scoped negatives; a positive that the retaining resolver is
+still called (so deleting the resolution cannot satisfy the gate); a brace-matched nesting assertion
+that the present path's two resolutions sit *inside* the deferred closure; assertions that the
+present arms send `false` and that all three dismiss arms send; a two-arm non-vacuity test; and
+three `SELF-TEST (RED direction)` tests proving the negatives **reject** the pre-fix shape via
+injected source (`loadMainRsCode(source)`) rather than any working-tree mutation.
+
+### Desk gates, measured (baselines re-measured at `9f7cd017a` before editing)
+
+| gate | before | after |
+|---|---|---|
+| `cargo check --bin gamelib-shell` | exit 0, clean | exit 0, clean |
+| `cargo test --bin gamelib-shell` | 297 passed, 0 failed, 2 ignored | 297 passed, 0 failed, 2 ignored |
+| clippy warnings in `main.rs` (count) | 15 | 15 |
+| `cargo fmt --check` hunks (count) | 76 | 76 |
+| `tauriShellSource` jest (1 suite) | 228 passed | 239 passed |
+| `SELF-TEST (RED direction).*q11` tests | 0 | 2 |
+| `unsafe impl Send for SendPtr` in `main.rs` | 3 | 1 |
+
+`cargo fmt --check` is red at HEAD on 76 pre-existing hunks, all in `main.rs`, none inside either
+target body — so the count is scored, never the exit code, and `cargo fmt` was never run.
+
+### What only hardware can tell us
+
+Whether AppKit still actually attaches the sheet. The gates above prove the shape is right and that
+it compiles; they cannot prove `beginSheet:` still works. Re-run the phase's sheet-attachment live
+gate per
+`.planning/phases/34.4.2-macos-login-window-ux-modal-child-window-attachment-in-field/34.4.2-LIVE-GATE-RERUN-6.md`
+(its PASS 5/5 is the reference contract). The pass literal is
+`[shell] login-window sheet: read-back attached=true for '{label}'`.
+
+### RERUN-7 authored 2026-09-30 (quick task 260930-r22) — this todo's live gate is now contracted there
+
+The live gate for this todo is contracted at
+`.planning/phases/34.4.2-macos-login-window-ux-modal-child-window-attachment-in-field/34.4.2-LIVE-GATE-RERUN-7.md`,
+authored 2026-09-30 by quick task 260930-r22. RERUN-6 stays the reference contract — its PASS 5/5
+from 2026-08-19 is byte-unchanged. RERUN-7 exists because every one of RERUN-6's machine-evidence
+citations had drifted 1,700–3,600 lines in `main.rs` since planning, and because it adds the
+q11-specific assertion (D-G7): the `attached=true` read-back must be preceded, for the same window
+label, by the main-thread resolution line the q11 fix introduced inside the deferred closure.
+**Nothing in RERUN-7 is a hardware result and no live run has been performed** — the contract's
+result keys are unset, and this todo stays `ready: live-gate` in `pending/` until an operator runs
+it.
+
+For the operator: RERUN-7's operator-cost disclosure (top of the document) names item 6(a) as
+destructive of a live Humble session and item 4 as requiring real credentials, and its minimum-bar
+table marks item 1 as the strict requirement for closing this todo specifically.

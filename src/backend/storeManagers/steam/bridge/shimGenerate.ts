@@ -60,7 +60,13 @@ const BRIDGE_SHIM_FILENAME = 'steam_api.dll'
 // source diff) -- including adding/renaming an interface accessor -- must
 // update this list in the same review pass (CR-02: a stale copy here
 // wrongly rejects every game that imports an interface accessor).
-const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
+//
+// Exported solely so __tests__/shimGenerate.test.ts can assert this set
+// equals the committed native/steam-bridge/generated/steam_api.def export
+// list in both directions (the 24-CR-02 pin from quick 260930-vrb). Drift in
+// this hand-synced copy is now a red test rather than a silent placement
+// rejection.
+export const SHIM_EXPORTED_SYMBOLS: ReadonlySet<string> = new Set([
   'SteamAPI_Init',
   'SteamAPI_InitFlat',
   'SteamAPI_Shutdown',

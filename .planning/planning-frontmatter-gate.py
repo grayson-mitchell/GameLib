@@ -311,13 +311,17 @@ HISTORICAL_EXCERPT = 'terion 3: the arm64 leg concluded failure at "Build the th
 HISTORICAL_EXCERPT_SHA256 = "013b12366fdb0eb74fe955da8e76b3d97d9a9b811aa8bccf2e18027fc11087fb"
 
 # Invoked via `subprocess.run([node, "-e", NODE_YAML_PARSE_JS], input=<frontmatter text>,
-# capture_output=True, text=True)` -- argv list, no shell, frontmatter text on stdin, one JSON
-# object on stdout. Taking the document on stdin (rather than as an argv string or a temp file)
+# capture_output=True, text=True, encoding="utf-8", errors="strict")` -- argv list, no shell,
+# frontmatter text on stdin, one JSON object on stdout. Both ends of the pipe declare UTF-8:
+# Windows' text-mode default is the ANSI code page (cp1252), which would crash on or silently
+# mangle non-ASCII in either direction, and the node end uses setEncoding so a character split
+# across a stdin chunk boundary is carried over rather than replaced with U+FFFD. Taking the document on stdin (rather than as an argv string or a temp file)
 # is what lets the self-test's synthetic documents go through the exact same parse path as the
 # real target files -- there is no separate "test mode" in the parser itself.
 NODE_YAML_PARSE_JS = r"""
 const y = require("js-yaml");
 let s = "";
+process.stdin.setEncoding("utf8");
 process.stdin.on("data", d => { s += d; });
 process.stdin.on("end", () => {
   let version = "<unresolved>";
@@ -367,6 +371,8 @@ def run_parser(node: str, frontmatter_text: str) -> dict:
         input=frontmatter_text,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="strict",
     )
     try:
         data = json.loads(result.stdout)
@@ -890,6 +896,50 @@ def self_test() -> None:
 
     case_count = 1  # the hash assertion above counts as case 1
 
+    # Transport pins: the node pipe must round-trip text exactly. Case A is a non-cp1252
+    # round-trip (U+2014 is cp1252-encodable, but used to reach node as invalid UTF-8); Case B is
+    # a stdin chunk-boundary round-trip (a multi-byte character split across ~64 KiB chunks).
+    # Only a non-UTF-8-locale host can see Case A fail; ubuntu CI encodes UTF-8 either way.
+    transport_chars = "\u2192 \u2715 \u2500 \u26a0 \u2014"
+    transport_doc = 'k: "' + transport_chars + '"\n'
+    case_count += 1
+    try:
+        transport_data = run_parser(node, transport_doc)
+    except UnicodeError as exc:
+        fail(
+            "self-test FAILED: parser transport (non-cp1252 round-trip) -- the node pipe is not "
+            f"declaring UTF-8 ({exc.__class__.__name__})."
+        )
+    if not transport_data.get("ok") or transport_data.get("value") != {"k": transport_chars}:
+        fail(
+            "self-test FAILED: parser transport (non-cp1252 round-trip) -- round-trip was not "
+            f"exact, got {ascii(transport_data.get('value', transport_data.get('error')))}."
+        )
+    print(
+        "  self-test OK: parser transport round-trips U+2192 U+2715 U+2500 U+26A0 U+2014 "
+        "exactly"
+    )
+
+    big_count = 100000
+    big_doc = 'k: "' + "\u2192" * big_count + '"\n'
+    case_count += 1
+    try:
+        big_data = run_parser(node, big_doc)
+    except UnicodeError as exc:
+        fail(
+            "self-test FAILED: parser transport (stdin chunk boundary) -- the node pipe is not "
+            f"declaring UTF-8 ({exc.__class__.__name__})."
+        )
+    big_value = (big_data.get("value") or {}).get("k") if big_data.get("ok") else None
+    if not isinstance(big_value, str) or len(big_value) != big_count or "\ufffd" in big_value:
+        big_len = len(big_value) if isinstance(big_value, str) else None
+        big_bad = big_value.count("\ufffd") if isinstance(big_value, str) else "n/a"
+        fail(
+            "self-test FAILED: parser transport (stdin chunk boundary) -- expected length "
+            f"{big_count} with 0 U+FFFD, got length {big_len} with {big_bad} U+FFFD."
+        )
+    print(f"  self-test OK: parser transport stdin chunk boundary ({big_count} x U+2192, 0 U+FFFD)")
+
     def reject(label: str, text: str, required: bool = True) -> None:
         nonlocal case_count
         case_count += 1
@@ -1372,6 +1422,15 @@ def check_target_file(path: Path, required: bool, node: str) -> tuple[bool, str]
 
 
 def main() -> None:
+    # js-yaml error messages embed document text and render a TAB as U+2192. This gate prints
+    # them to stdout, and under meta/runPlanningGates.py that stdout is a cp1252 pipe on Windows.
+    # The encoding is deliberately NOT changed: the runner decodes every gate's output in the
+    # locale code page and every other gate writes in it, so changing only this gate's encoding
+    # would make the runner mojibake or crash on it. Only the error handler changes, to
+    # backslashreplace, which is what Python already applies to stderr by default. The
+    # reconfigure call is unconditional: this is a CLI entry point, so stdout is always a
+    # TextIOWrapper.
+    sys.stdout.reconfigure(errors="backslashreplace")
     self_test()
     if "--self-test" in sys.argv:
         print(

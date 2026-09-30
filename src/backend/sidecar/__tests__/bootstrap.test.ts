@@ -74,6 +74,8 @@ import { init } from '../bootstrap'
 import { handlerRegistry } from '../../platform'
 import { getLogFilePath } from '../../logger/paths'
 import * as loggerModule from '../../logger'
+import * as storeWriteHandlersModule from '../storeWriteHandlers'
+import { configStore as steamConfigStore } from '../../storeManagers/steam/electronStores'
 import {
   READY_SENTINEL,
   UNPORTED_CHANNEL_MARKER
@@ -415,6 +417,118 @@ describe('sidecar bootstrap (headless boot)', () => {
           process.env.GAMELIB_APP_ROOT = savedAppRoot
         }
       }
+    })
+  })
+
+  // debug/steam-token-survives-keychain: `clearOrphanedElectronToken()`
+  // (tokenStore.ts) is now called unconditionally from `init()`, right after
+  // the devSecretVaultInstalled if/else secret-store install block, to retire
+  // a frozen pre-Tauri Electron-era `refreshToken` key from
+  // `steam_store/config.json`. These tests exercise it at the real-boot
+  // level, against the REAL (unmocked) `steamConfigStore` -- following
+  // `skeletonFlows.test.ts`'s established precedent for touching this exact
+  // store directly in a sidecar test.
+  describe('boot-time orphaned Steam token cleanup (debug/steam-token-survives-keychain)', () => {
+    afterEach(() => {
+      steamConfigStore.clear()
+    })
+
+    it('present: deletes the key and logs exactly the one receipt line, key name only, never the value', () => {
+      steamConfigStore.set(
+        'refreshToken',
+        'steam:v1:some-ciphertext-or-legacy-plaintext'
+      )
+      const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
+
+      const input = new PassThrough()
+      const output = new PassThrough()
+      collectLines(output)
+
+      init(input, output)
+
+      expect(steamConfigStore.get_nodefault('refreshToken')).toBeUndefined()
+      expect(
+        logInfoSpy.mock.calls.some(
+          ([message]) =>
+            message ===
+            '[bootstrap] removed a legacy pre-Tauri `refreshToken` key from `steam_store/config.json`; the Keychain (`steam-refresh-token` slot) is the authoritative store'
+        )
+      ).toBe(true)
+
+      logInfoSpy.mockRestore()
+    })
+
+    it('absent: no-op, and the receipt line is never logged', () => {
+      // afterEach's steamConfigStore.clear() guarantees this arm starts absent.
+      const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
+
+      const input = new PassThrough()
+      const output = new PassThrough()
+      collectLines(output)
+
+      init(input, output)
+
+      expect(
+        logInfoSpy.mock.calls.some(([message]) =>
+          String(message).includes(
+            'removed a legacy pre-Tauri `refreshToken` key'
+          )
+        )
+      ).toBe(false)
+
+      logInfoSpy.mockRestore()
+    })
+
+    it('idempotent: a second real boot after the key is already gone logs nothing further', () => {
+      steamConfigStore.set(
+        'refreshToken',
+        'steam:v1:some-ciphertext-or-legacy-plaintext'
+      )
+
+      const firstInput = new PassThrough()
+      const firstOutput = new PassThrough()
+      collectLines(firstOutput)
+      init(firstInput, firstOutput)
+
+      expect(steamConfigStore.get_nodefault('refreshToken')).toBeUndefined()
+
+      const logInfoSpy = jest.spyOn(loggerModule, 'logInfo')
+      const secondInput = new PassThrough()
+      const secondOutput = new PassThrough()
+      collectLines(secondOutput)
+      init(secondInput, secondOutput)
+
+      expect(
+        logInfoSpy.mock.calls.some(([message]) =>
+          String(message).includes(
+            'removed a legacy pre-Tauri `refreshToken` key'
+          )
+        )
+      ).toBe(false)
+
+      logInfoSpy.mockRestore()
+    })
+
+    it('does NOT route through applyStoreWrite -- the D-04 write guard is never invoked, yet the key is still gone', () => {
+      steamConfigStore.set(
+        'refreshToken',
+        'steam:v1:some-ciphertext-or-legacy-plaintext'
+      )
+      const applyStoreWriteSpy = jest.spyOn(
+        storeWriteHandlersModule,
+        'applyStoreWrite'
+      )
+
+      const input = new PassThrough()
+      const output = new PassThrough()
+      collectLines(output)
+
+      init(input, output)
+
+      expect(steamConfigStore.get_nodefault('refreshToken')).toBeUndefined()
+      expect(applyStoreWriteSpy).not.toHaveBeenCalled()
+
+      applyStoreWriteSpy.mockRestore()
     })
   })
 })

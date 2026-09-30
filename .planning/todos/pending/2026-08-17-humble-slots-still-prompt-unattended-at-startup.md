@@ -119,6 +119,43 @@ not a prompt-context problem, and `260817-d61` retired that measurement as ill-p
 justification here is solely the UX property: on a production build the prompt fires once, and it
 should fire attached to something the user did.
 
+## UPDATE 2026-09-30 — finding 2's open action is CLOSED; this todo stays PARKED
+
+This section does not revise `## PARKED 2026-09-04` above it. That section records what was known
+on its own date and is left intact; this one adds what was measured on 2026-09-30.
+
+**Finding 2's "Open action, not yet done: confirm those secrets are enrolled" is DONE, and went
+past confirmation.** All six Apple secrets were enrolled 2026-09-14, and on 2026-09-30 the
+mechanism itself was measured rather than assumed. The evidence lives in section
+`## STATUS 2026-09-30 (quick-260930-nt4)` of
+`.planning/todos/completed/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md`.
+Treat finding 2's closing sentence as spent — do not re-run it as an open action.
+
+**Finding 2's mechanism claim was CORRECT, and if anything understated.** It said an unsigned build
+"gets a fresh code identity per release, so the Keychain ACL never matches". Measured: the signed
+bundle's designated requirement carries NO cdhash at all — it is identifier plus Apple anchor plus
+Team OU — whereas the ad-hoc dev builds carry bare cdhash DRs AND Cargo-derived identifiers
+(`gamelib_shell-<hash>`, not `com.gamelib.shell`). That is two independent reasons a dev rebuild
+re-prompts, not one. A probe pinned to the same `keyring` version read an item silently across a
+different build sharing one identity, and blocked behind a password prompt under an ad-hoc
+signature.
+
+**THIS DOES NOT UNPARK THIS TODO, and `ready: blocked` is deliberately unchanged.** The unpark
+condition above is about Phase 999.1, not about signing — finding 2 says in its own words that it
+is "independent of everything else in this file". Re-measured 2026-09-30: ROADMAP still carries
+`### Phase 999.1: Cross-store signed-out / offline mode (BACKLOG)`, Goal
+"[Captured for future planning]", Requirements TBD, 0 plans, and the same shape that needs
+boot-time auth state to render its banner. The conflict that parked this file stands untouched.
+
+**One new data point that IS about these two slots.** On 2026-09-30 all three live
+`com.gamelib.launcher` items were deleted and confirmed absent. After one launch of a signed build
+with no login, `steam-refresh-token` came back, but `humble-session` and `humble-csrf` stayed
+ABSENT. So the Humble credentials appear to be Keychain-only, with no second on-disk home — unlike
+Steam's, now tracked separately in
+`.planning/todos/pending/2026-09-30-clearing-the-keychain-does-not-revoke-the-steam-refresh-token.md`.
+That asymmetry was not known when this file was written, and it may matter to the remedy: a
+deferral design for these two slots cannot lean on a non-Keychain fallback, because there is none.
+
 ## Related
 
 - `260817-d61` live gate: `.planning/quick/260817-d61-.../260817-d61-LIVE-GATE.md`

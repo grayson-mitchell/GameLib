@@ -6,6 +6,7 @@ import {
   WineInstallation
 } from 'common/types'
 import { currentGlobalConfigVersion } from 'backend/constants/others'
+import { migrateTrayIconVariant } from 'common/trayIconVariant'
 
 import { logError, logInfo, LogPrefix } from './logger'
 import {
@@ -314,7 +315,13 @@ class GlobalConfigV0 extends GlobalConfig {
     settings = {
       ...this.getFactoryDefaults(),
       ...defaultSettings,
-      winePrefix
+      winePrefix,
+      // Backwards-compat fix-up, same pattern as `defaultWinePrefixDir` above: derive the
+      // tri-state tray glyph from the RAW on-disk `defaultSettings` (legacy `darkTrayIcon`
+      // true -> 'dark', false -> 'light', neither -> 'auto'). It must be the LAST property and
+      // must read the raw object, never the merge: the factory default is 'auto', so migrating
+      // the merged object would always return that and discard a legacy `darkTrayIcon: true`.
+      trayIconVariant: migrateTrayIconVariant(defaultSettings)
     } as AppSettings
 
     return settings
@@ -340,6 +347,7 @@ class GlobalConfigV0 extends GlobalConfig {
       customWinePaths: [],
       defaultInstallPath: heroicInstallPath,
       libraryTopSection: 'disabled',
+      trayIconVariant: 'auto',
       defaultSteamPath: getSteamCompatFolder(),
       loginBackgroundPath: '',
       defaultWinePrefix: defaultWinePrefixDir,

@@ -52,6 +52,8 @@ However, the phase's headline UI element — the urgency countdown badge — ren
 
 ### CR-01: "1 day left" badge is unreachable — keys expiring in 24h–48h render "2 days left"
 
+**Status:** FIXED — commit `ce623790b`. `getUrgencyCountdownParts` now carves out the 24h–48h band (`daysLeft < 2 ? 1 : Math.ceil(daysLeft)`) instead of applying `Math.ceil` unconditionally; `Math.ceil` is retained as the rule from 2 days up per `13-UI-SPEC.md:106`, proven unchanged by the pre-existing `multi-day span returns ceil of days left` test staying green. The 30h assertion at `urgencyBadge.test.ts:98-103` (titled "exactly-1-day range yields value 1") was corrected from `value: 2` to `value: 1`, and two new boundary tests were added: 47.9h → 1, 48h → 2.
+
 **File:** `src/common/humble/urgencyBadge.ts:81-82`
 **Issue:** `getUrgencyCountdownParts` computes `value: Math.ceil(daysLeft)` for everything ≥24h. For any expiration strictly between 24h and 48h, `daysLeft` is in (1, 2), so `Math.ceil` yields **2** and the badge reads "2 days left". The locked UI-SPEC copy table (13-UI-SPEC.md, "Urgency badge, exactly 1 day left (24h–48h) → **'1 day left'**") requires "1 day left" for that entire range. As written, the `parts.value === 1` branch in `UrgencyBadge/index.tsx:34-35` and the `humbleKeys.urgencyOneDayLeft` translation string are dead code except for an expiration landing on the exact 24.000h boundary — a measure-zero case. The effect is user-facing and material: at the most urgent tier, the badge overstates remaining time by nearly 2x (a key expiring in 25 hours claims 2 days), which is precisely the "silently-expiring deadline" failure this phase exists to prevent.
 
@@ -132,6 +134,8 @@ Alternatively (better), change `humbleRecordGiftLinkOpened` to return `Promise<b
 **Fix:** Add a one-line comment documenting why clear needs no validation, or mirror the setter's existence check for consistency.
 
 ### IN-06: Misleading test name and missing unmount guard (minor test/consistency items)
+
+**Status:** FIXED (a only) — commit `ce623790b`. The "exactly-1-day range yields value 1" test now asserts `value: 1`, matching its title, as part of CR-01's fix. (b) — the missing `cancelled`-flag unmount guard in `Keys/index.tsx` — remains OPEN and is out of scope for this fix.
 
 **File:** `src/backend/humble/__tests__/urgencyBadge.test.ts:98`, `src/frontend/screens/Humble/Keys/index.tsx:57-61`
 **Issue:** (a) The test "exactly-1-day range yields value 1" asserts `value: 2` — resolved as part of CR-01's fix, listed here so it isn't lost if CR-01's code fix is deferred. (b) The parent shell's mount-time and sync-end `humbleGetSyncState()` fetches call `setCooldownUntil` with no cancelled-flag guard, while the sibling Spares tab carefully guards its equivalent fetch — harmless in React 18 (post-unmount setState is a no-op) but inconsistent within the same phase's code.

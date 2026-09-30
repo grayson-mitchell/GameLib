@@ -107,9 +107,10 @@ type Props = {
    * override button's own direct-call pattern) rather than taking a
    * caller-supplied callback. */
   undoOverride?: boolean
-  /** D-42-01 (Phase 42): All-keys' Redeemed group ONLY — omitted
-   * (undefined) everywhere else. Renders the reversal affordance for a key
-   * the app settled from an exact-match Steam ownership signal
+  /** D-42-01 (Phase 42), threaded by Keys/index.tsx's settleActionFor() for
+   * any row in the unified list — omitted (undefined) everywhere else.
+   * Renders the reversal affordance for a key the app settled from an
+   * exact-match Steam ownership signal
    * (`ClaimAnnotation.redeemedSource === 'ownership-exact'`). Scoped
    * deliberately: a key REDEEMED by the user's own "Mark as redeemed"
    * action already carries D-77's Undo in Keys-waiting via `claimAction`,

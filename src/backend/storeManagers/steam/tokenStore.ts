@@ -214,3 +214,56 @@ export function setTokenStore(next: TokenStore): void {
 export function getTokenStore(): TokenStore {
   return activeTokenStore
 }
+
+// ── One-time legacy-key cleanup (debug/steam-token-survives-keychain) ───────
+
+/**
+ * Removes a pre-Tauri Electron-era `TOKEN_STORE_KEY` value from `configStore`
+ * (`steam_store/config.json`), if present. Called unconditionally from the
+ * sidecar's `bootstrap.ts`, AFTER both arms of `init()`'s secret-store install
+ * block (keyring or dev-vault) have already run — under either arm,
+ * `activeTokenStore` has already been swapped away from `ElectronTokenStore`
+ * (T-28-10 ordering), so this key is fully dead under the current sidecar:
+ * `ElectronTokenStore.getToken()` is its only reader and is never the active
+ * store, and `storeWriteHandlers.ts`'s D-04 guard rejects any renderer-driven
+ * write to it.
+ *
+ * The value is a frozen artifact of the pre-rearchitecture Electron build's
+ * original `finishAuth()` (`configStore.set(TOKEN_STORE_KEY,
+ * encryptToken(refreshToken))`, commit `7b82c5ea0`, 2026-06-27) — written
+ * three weeks before the Tauri scaffold and nearly a month before this seam
+ * existed to wall the key off. Keychain deletion cannot revoke it (it lives in
+ * a different store entirely, and the Keychain remains the sole authoritative
+ * credential store — this function never touches it), and nothing in current
+ * code retires it on its own; this is that retirement, run once per boot
+ * (idempotent: a second boot finds the key already gone and no-ops silently).
+ *
+ * PRESENCE-ONLY, by design: never calls `get()`/`get_nodefault()` on this key
+ * and never decodes, hashes, or measures the value in any way — only `has()`
+ * and `delete()`. Returns whether the key was present (and has just been
+ * deleted) so the caller can decide whether to log; this function itself
+ * never logs, so the caller's single line is the one and only receipt
+ * (T-28-04: never log the value — and here, never even log unconditionally,
+ * since an absent key must produce zero output).
+ *
+ * Lives HERE, not in `bootstrap.ts` itself, even though `bootstrap.ts` is the
+ * call site: `electronUntouched.test.ts`'s by-construction D-04 binding gate
+ * (quick-260909-iz2) forbids `bootstrap.ts` from binding `configStore` or
+ * `TOKEN_STORE_KEY` directly from the Steam token surface. This module is
+ * already the one place in the codebase permitted to touch those two symbols
+ * (see this file's header, item (a)) — exposing a single named function is
+ * the sanctioned indirection, not a workaround of the gate.
+ *
+ * Deliberately does NOT go through `applyStoreWrite`
+ * (`sidecar/storeWriteHandlers.ts`): that dispatcher's own D-04 guard rejects
+ * every write — including a delete — to this exact key, by design, for
+ * renderer-initiated writes. This is a sidecar-initiated boot-time cleanup of
+ * a dead key, not a write the guard was ever meant to arbitrate, so it calls
+ * `configStore` directly, the same way `ElectronTokenStore` itself already
+ * does for this store.
+ */
+export function clearOrphanedElectronToken(): boolean {
+  if (!configStore.has(TOKEN_STORE_KEY)) return false
+  configStore.delete(TOKEN_STORE_KEY)
+  return true
+}

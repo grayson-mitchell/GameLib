@@ -1,0 +1,13 @@
+installed_exe: C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe
+size_bytes: 16554496
+mtime: 2026-09-29T23:44:26
+sha256: 5adce1beb48ccc8f82695f98164062e6e53f45581dd0f188269015eba6c63a9f
+sha256_match: yes
+ancestor_ae5968b07_of_b48e8948f: yes
+ancestor_b48e8948f_of_head: yes
+title_path_identical_b48e8948f_vs_head: yes
+wry_version_b48e8948f: 0.55.1
+wry_version_head: 0.55.1
+literal_count: humble_login_open: title change applied len= = 1
+literal_count: humble_login_open: title change SKIPPED len=0 = 1
+literal_count: humble_login_open: presentation requested visible=true = 1

@@ -1,0 +1,11 @@
+P1: PASS process_count=0
+P2: PASS exists=True hash=5ADCE1BEB48CCC8F82695F98164062E6E53F45581DD0F188269015EBA6C63A9F hash_match=True
+P3: PASS value=["C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe" "%1"] kind=String
+P4: PASS HOME=[C:\Users\grays] USERPROFILE=[C:\Users\grays]
+P5: PASS CI=[]
+P6: PASS exists=False
+P7: PASS exists=True offset_bytes=13513 line_count=185 last_line_prefix=[epoch=1790750447 pid=8992]
+P8: PASS captured
+round_trip_net_match: True
+round_trip_snapshot_match: True
+PREFLIGHT: PASS

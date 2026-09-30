@@ -80,6 +80,7 @@ import { registerSteamFlows } from './steamFlowRegistration'
 import { registerSteamAuthFlows } from './steamAuthFlowRegistration'
 import { registerInstallFlows } from './installFlowRegistration'
 import { registerSettingsFlows } from './settingsFlowRegistration'
+import { registerDevEpicCookieSweepFlow } from './devEpicCookieSweepRegistration'
 import { registerDialogFlows } from './dialogFlowRegistration'
 import { registerDownloadQueueFlows } from './downloadQueueFlowRegistration'
 import { registerAppShellFlows } from './appShellFlowRegistration'
@@ -122,6 +123,12 @@ registerSteamFlows()
 registerSteamAuthFlows()
 registerInstallFlows()
 registerSettingsFlows()
+// D-35-19-15's live gate: a DEV-ONLY single-host Epic cookie sweep, so the
+// `EPIC_COOKIE_HOSTS` sweep can be exercised against ONE sibling apex without
+// `LegendaryUser.logout()` destroying the operator's real Epic session. Self-gated —
+// `registerDevEpicCookieSweepFlow()` no-ops in a packaged sidecar, so the channel does not
+// exist in a shipped build. Not on the preload surface by design; see that module's docstring.
+registerDevEpicCookieSweepFlow()
 // WR-02: without this, plan 30-03's native picker chain was unreachable — `openDialog`
 // is the only backend channel that reaches `dialog.showOpenDialog`, and its sole other
 // caller (`main.ts`) is not in the sidecar's import graph.

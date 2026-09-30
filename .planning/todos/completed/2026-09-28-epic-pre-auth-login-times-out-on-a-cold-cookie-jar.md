@@ -6,7 +6,7 @@ severity: major
 platform: macos
 ready: live-gate
 status: "RESOLVED 2026-09-28 via debug session `.planning/debug/resolved/epic-cold-jar-login-timeout.md`. Root cause was an AND-gate: `humble_login_clear_cookies`/`clearEpicCookies`'s cookie-only removal scope (code) + the shared, persistent `WKWebsiteDataStore.default()` (environment) let a stale HTTP disk-cache entry from an earlier authenticated session survive a cookie clear and get replayed on the next cold-jar sign-in — NOT the Talon-403 theory this todo's Solution section led with. Fixed in `src-tauri/src/main.rs` by widening the native removal type-set to also evict `WKWebsiteDataTypeDiskCache`/`WKWebsiteDataTypeMemoryCache`. Fix-Acceptance Guardrail: accepted (target test pass, no-op/deletion pass, adjacent tests pass 287/290 Rust + 52/52 Jest, revert-and-reconfirm pass, mutation check honestly skipped — no Rust mutation tool in this repo, formatter check honestly not_applicable — no Rust parser in prettier). Live recovery/sign-in on the operator's machine is supported by independently-verified filesystem evidence (see the debug session's Recovery Procedure and Resolution.verification.live_epic_verification), not asserted on a report's word alone. An identical, unconfirmed-exercised twin call site was deliberately left unfixed and filed separately: `.planning/todos/pending/2026-09-28-epic-cookie-clear-window-branch-shares-the-disk-cache-gap.md`. `.planning/debug/resolved/epic-login-non-interactive.md` (F-34.5-G6-01) was updated the same day so its pre-auth gap no longer silently inherits a CLOSED green."
-source: "debug/epic-sibling-apex-non-destructive-discharge, 2026-09-28 — reproduced live while driving D-35-19-15's seeding step; it is the reason that gate could not be completed"
+source: "debug/resolved/epic-sibling-apex-non-destructive-discharge, 2026-09-28 — reproduced live while driving D-35-19-15's seeding step; it is the reason that gate could not be completed"
 files:
   - src/frontend/screens/WebView/useTauriOAuthLogin.ts
   - src/frontend/screens/WebView/loginRoutes.ts
@@ -75,7 +75,7 @@ the next login needs.
 **Not established, and worth knowing before designing a fix:** a bare standalone `WKWebView`
 navigating the identical `EPIC_LOGIN_URL` with an empty store the same morning was **not** blocked —
 it acquired 9 cookies including `cf_clearance` and `EPIC_SESSION_AP` (recorded as E-5 in
-`debug/epic-sibling-apex-non-destructive-discharge.md`). So the block is not "WKWebView cannot pass
+`debug/resolved/epic-sibling-apex-non-destructive-discharge.md`). So the block is not "WKWebView cannot pass
 Talon" in general; something about GameLib's login-window configuration differs. That asymmetry is
 the most promising diagnostic lead and it has not been chased.
 

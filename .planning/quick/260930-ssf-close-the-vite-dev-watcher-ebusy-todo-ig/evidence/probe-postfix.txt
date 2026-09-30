@@ -1,0 +1,15 @@
+label: postfix
+vite_version: 6.3.5
+listened: no
+settled: yes
+settle_trajectory: 1002,1498,1498,1498
+total_dirs: 1498
+total_entries: 9265
+target_cache_dirs: 0
+target_cache_entries: 0
+src_tauri_target_dirs: 0
+graphify_out_dirs: 0
+planning_dirs: 717
+watcher_errors: 0
+ignored_resolved: **/.git/** | **/node_modules/** | **/test-results/** | {repo}/node_modules/.vite/** | **/src-tauri/target/** | **/graphify-out/** | **/target-cache/**
+has_target_cache_entry: yes
