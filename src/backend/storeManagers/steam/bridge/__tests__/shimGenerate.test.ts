@@ -35,7 +35,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { placeShimForGame } from '../shimGenerate'
+import { placeShimForGame, SHIM_EXPORTED_SYMBOLS } from '../shimGenerate'
 import { scanSteamApiImports } from '../importScan'
 import { getBottleDir } from '../../bottle'
 
@@ -82,6 +82,39 @@ jest.mock('../../bottle', () => ({
 
 const mockedScanSteamApiImports = scanSteamApiImports as jest.Mock
 const mockedGetBottleDir = getBottleDir as jest.Mock
+
+// 24-CR-02 pin (quick 260930-vrb). SHIM_EXPORTED_SYMBOLS is a hand-synced copy
+// of the export list in the COMMITTED native/steam-bridge/generated/steam_api.def
+// -- tsconfig.json's `include` is ["src"] only, so src/ cannot import the
+// generator that produces it, and only a test can hold the two together. The
+// anchor is the committed .def (not generateDefFile output) because
+// buildShimCompileArgv (meta/buildSteamBridgeShims.ts) compiles exactly that
+// file into the shipped shim. This test deliberately imports nothing from meta/.
+const REPO_ROOT = join(__dirname, '..', '..', '..', '..', '..', '..')
+const STEAM_API_DEF_PATH = join(
+  REPO_ROOT,
+  'native',
+  'steam-bridge',
+  'generated',
+  'steam_api.def'
+)
+
+function readDef(): { header: string; hasExports: boolean; symbols: string[] } {
+  const lines = readFileSync(STEAM_API_DEF_PATH, 'utf-8')
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+  const exportsIdx = lines.indexOf('EXPORTS')
+  const symbols =
+    exportsIdx === -1
+      ? []
+      : lines
+          .slice(exportsIdx + 1)
+          .filter((l) => l !== '' && !l.startsWith(';'))
+          .map((l) => l.split(/\s+/)[0])
+  return { header: lines[0], hasExports: exportsIdx !== -1, symbols }
+}
+
+const readDefExports = (): string[] => readDef().symbols
 
 describe('shimGenerate', () => {
   let root: string
@@ -305,5 +338,34 @@ describe('shimGenerate', () => {
     for (const literal of dllStringLiterals) {
       expect(literal).toBe("'steam_api.dll'")
     }
+  })
+
+  it('24-CR-02: SHIM_EXPORTED_SYMBOLS set-equals the export list of the committed native/steam-bridge/generated/steam_api.def, in both directions', () => {
+    const def = readDef()
+    expect(def.header).toBe('LIBRARY steam_api')
+    expect(def.hasExports).toBe(true)
+    expect(def.symbols.length).toBeGreaterThan(0)
+    expect(new Set(def.symbols).size).toBe(def.symbols.length)
+
+    const defSet = new Set(def.symbols)
+    const missingFromShim = def.symbols.filter(
+      (s) => !SHIM_EXPORTED_SYMBOLS.has(s)
+    )
+    const notInDef = [...SHIM_EXPORTED_SYMBOLS].filter((s) => !defSet.has(s))
+    expect(missingFromShim).toEqual([])
+    expect(notInDef).toEqual([])
+  })
+
+  it('24-CR-02: a game importing every symbol steam_api.def exports (including the SteamUser/SteamFriends interface accessors) is placed, not rejected', async () => {
+    mockedScanSteamApiImports.mockResolvedValue({
+      status: 'ok',
+      symbols: readDefExports()
+    })
+
+    const result = await placeShimForGame('1234', gameExePath, {
+      shimSourcePath: realShimSourcePath
+    })
+
+    expect(result).toEqual({ status: 'placed', shimPath: shimDestPath() })
   })
 })
