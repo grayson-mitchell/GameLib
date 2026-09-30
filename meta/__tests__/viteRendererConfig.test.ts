@@ -274,7 +274,8 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
         const ignored = (config.server?.watch?.ignored ?? []) as string[]
         expect(ignored).toEqual([
           '**/src-tauri/target/**',
-          '**/graphify-out/**'
+          '**/graphify-out/**',
+          '**/target-cache/**'
         ])
       })
 

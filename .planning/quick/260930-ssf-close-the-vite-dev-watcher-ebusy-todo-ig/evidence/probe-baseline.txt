@@ -1,0 +1,15 @@
+label: baseline
+vite_version: 6.3.5
+listened: no
+settled: yes
+settle_trajectory: 1002,1829,2016,2016,2016
+total_dirs: 2016
+total_entries: 13110
+target_cache_dirs: 519
+target_cache_entries: 3846
+src_tauri_target_dirs: 0
+graphify_out_dirs: 0
+planning_dirs: 716
+watcher_errors: 0
+ignored_resolved: **/.git/** | **/node_modules/** | **/test-results/** | {repo}/node_modules/.vite/** | **/src-tauri/target/** | **/graphify-out/**
+has_target_cache_entry: no
