@@ -61,12 +61,14 @@ established here as either a fix or a regression.
 ## Cross-reference
 
 See the sibling todo filed the same day,
-`.planning/todos/pending/2026-09-25-mouse-highlight-does-not-confer-dom-focus.md` (Todo B) — related
-but distinct: this todo (A) is "focus is invisible even when it IS DOM focus"; Todo B is "what
-LOOKS focused under the mouse often is not DOM focus at all". With `controllerLayout` active, a
-clicked element now shows the shared focus ring (quick 260926-acw), which makes "what looks
+`.planning/todos/completed/2026-09-25-mouse-highlight-does-not-confer-dom-focus.md` (Todo B) —
+related but distinct: this todo (A) is "focus is invisible even when it IS DOM focus"; Todo B is
+"what LOOKS focused under the mouse often is not DOM focus at all". With `controllerLayout` active,
+a clicked element now shows the shared focus ring (quick 260926-acw), which makes "what looks
 focused" more truthful than before this fix — but Todo B's underlying defect (real DOM focus not
-moving to the visually-highlighted card at all) is still separate and unaddressed by this fix.
+moving to the visually-highlighted card at all) is still separate and unaddressed by this fix. Todo
+B was desk-fixed by quick `260930-iws` (the controller handoff press now seeds focus from the
+hovered card) and moved to `completed/`; its live handoff check is still outstanding.
 
 ## Verification (once fixed)
 
