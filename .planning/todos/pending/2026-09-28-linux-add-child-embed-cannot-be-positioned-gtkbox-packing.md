@@ -366,3 +366,13 @@ machine. This file stays in `pending/`; nothing is closed.
 - The 2026-09-30 finding "FAIL, not diagnosed" above is superseded. The E5 Back-button result stands.
 - Still open: the operator live gate, Wayland, packaged build, macOS re-check of the shared hook. `ready: live-gate`
   stays. `38-VERIFICATION.md` is not edited.
+
+## Addendum (2026-10-01): macOS re-check of the shared `useStoreEmbedHost` fix — operator-reported PASS
+
+- The operator ran branch `quick-260930-feh` (fix `d71269c2a`) on their Mac: the WebView jest suite, then `pnpm tauri:dev`.
+  GOG -> Epic -> GOG, then window resizes: the embed followed the slot with no overhang. The two extra checks
+  (GOG <-> Steam without Epic in between, and in-embed navigation) also passed, with no flicker or position reset.
+- Reported by the operator in conversation, not captured by a harness: no pixel measurement, no log, no launch count,
+  and the Mac model/display were not recorded. Treat it as a desk sanity check, not a scored gate.
+- This closes the "macOS re-check of the shared hook" item from the 2026-10-01 addendum above. Still open: the operator
+  live gate on the packaged Linux build, Wayland, non-2.0 scales. `ready: live-gate` stays.
