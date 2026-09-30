@@ -95,3 +95,24 @@ If they agree, the venue question is answered by measurement rather than by argu
 feh run becomes comparable. If they DISAGREE on `main`, then slot-element replacement affects
 drag tracking even without `d71269c2a`, which is a finding in its own right and must not be
 folded into the M1 verdict.
+
+**Prior art on the feh arm — registered BEFORE this sitting so its result cannot be misreported as
+novel.** `0ed4ee4ce` (2026-10-01 07:03:05, published on `quick-260930-feh`) records that the
+operator ALREADY ran the feh build — `d71269c2a` — on their Mac, under substantially the M5
+gesture: the WebView jest suite, then `pnpm tauri:dev`, then GOG -> Epic -> GOG followed by window
+resizes, with the embed following the slot and **no overhang**; GOG <-> Steam without Epic between,
+and in-embed navigation, also passed with no flicker or position reset.
+
+That commit disclaims itself correctly and this file inherits the disclaimer verbatim: "Reported by
+the operator in conversation, not captured by a harness: no pixel measurement, no log, no launch
+count, and the Mac model/display were not recorded. Treat it as a desk sanity check, not a scored
+gate." So it scores nothing, discharges nothing, and does not touch any `pending` result here.
+
+Its consequence is on how M5's outcome may be written up, which is exactly why it is registered
+now rather than discovered afterwards:
+
+- If M5 on `main` DOES show drag tracking degrading after a store switch, that contrast is **not a
+  discovery** — an unmeasured prior already reports the feh build showing no overhang under this
+  gesture. Report it as a contrast with a known, unmeasured observation.
+- If M5 on `main` shows NO disagreement, this is a **weak convergence with an unmeasured prior**,
+  not a clean independent finding, and the write-up must say so in those words.
