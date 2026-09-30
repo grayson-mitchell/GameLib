@@ -376,3 +376,33 @@ machine. This file stays in `pending/`; nothing is closed.
   and the Mac model/display were not recorded. Treat it as a desk sanity check, not a scored gate.
 - This closes the "macOS re-check of the shared hook" item from the 2026-10-01 addendum above. Still open: the operator
   live gate on the packaged Linux build, Wayland, non-2.0 scales. `ready: live-gate` stays.
+
+## Addendum (2026-10-01): packaged-build desk gate — the resize fix holds in the release build and the real AppImage
+
+- **Build.** `pnpm download-helper-binaries`, `vite build`, `build:sidecar-sea`, `tauri build --config
+  '{"bundle":{"createUpdaterArtifacts":false}}'` (the README sequence) on this host (Ubuntu glibc 2.35, x86_64), from
+  tree `a2b22a3a4` (tracked files clean). Output `GameLib_0.7.0_amd64.AppImage`, sha256 prefix `a89ac8bb3b713ae4`.
+  A local build, NOT the CI artifact and NOT the `release-tauri.yml` leg; nothing was published or tagged.
+- **Identity.** Sampled from `/proc` during the AppImage runs: the shell, `WebKitNetworkProcess`, `WebKitWebProcess` and
+  the bundled `gamelib-sidecar` (the SEA; a release build does not take the dev node path) all ran from
+  `/tmp/.mount_GameLib*/usr/...`. The harness's own `EXE_MATCH` reads `no` for the AppImage, which is expected: the
+  process lives under the mount, not at the path handed to it.
+- **Method.** Same dev-gate driver, resizes 1280x800 -> 1100x650 -> 1000x600 -> 1280x800, fresh
+  `createFakeHomeProfile()` per launch, DMABUF unset, X11, one host. Pass = 1 settled line per resize, embed == requested,
+  flush with the window edge, 0 zero-area lines.
+- **Release binary (`target/release/gamelib-shell`): 6 of 6 valid launches PASS** (Epic round trip x3, round trip +
+  in-embed link click x2, neither x1).
+- **AppImage: 10 of 10 valid launches PASS** (round trip x5, round trip + link x3, neither x2), each 3/3 resizes settled.
+- **One AppImage launch (`a4`) never left the "Loading" splash, and one release-binary launch (`r1`, 14 s ceiling only)
+  was still on it when the driver started clicking.** Both are excluded (they measured nothing about the embed) and NOT
+  explained. `a4` was still on the splash roughly 85 s in. Whether that is a slow cold boot or a stall was not
+  established, and it is 1 of 12 AppImage launches, so the rate is unmeasured. Related prior records: cold sidecar boots
+  of 27-39 s (260913-m9c) and the 2026-09-17 blank-launch todo. The driver now polls for the splash to clear (ceiling
+  `GL_BOOT_WAIT`, default 14 s) and marks such an arm INVALID instead of scoring it.
+- **NOT verified:** the CI-built artifact (this is a local build), a real logged-in profile, Wayland, non-2.0 scales,
+  another host or GPU, per-frame staleness/tearing during a continuous drag and perceived lag (the operator-judgement
+  half of 38-E04), keyboard focus, the first-open split frame. The Linux branches of 38-E03/38-E04 are not discharged.
+- **What remains.** The operator's own sitting on the packaged build (a real profile, a human drag). `ready: live-gate`
+  stays. `38-VERIFICATION.md` is not edited by this addendum.
+- Harness changes: `gate_live.ts` gained `--no-vite` (a release binary serves its embedded frontend);
+  `arm.py` gained the `GL_BOOT_WAIT` readiness poll.

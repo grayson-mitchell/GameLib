@@ -187,7 +187,8 @@ async function main(): Promise<number> {
       /* raced away */
     }
   }
-  if (!(await vitePing())) {
+  // `--no-vite`: a RELEASE binary serves its embedded frontend, so the dev-server ping is not a precondition.
+  if (!process.argv.includes('--no-vite') && !(await vitePing())) {
     console.error('PREFLIGHT REFUSED: http://localhost:5173/ did not answer within 3s')
     return 2
   }

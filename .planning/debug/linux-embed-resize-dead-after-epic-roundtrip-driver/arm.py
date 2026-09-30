@@ -23,7 +23,26 @@ while time.time() - t0 < 90:
 assert wid, "no window id"
 ident = open(f"{ev}/{label}-identity.txt").read()
 print("identity:", "EXE_MATCH=yes" in ident, "DMABUF_VAR_PRESENT=no" in ident)
-time.sleep(14)
+def boot_ready(max_s):
+    """Poll until the splash ('Loading', ~all background pixels) is gone; GL_BOOT_WAIT is the ceiling in seconds.
+    Returns the seconds it took, or None on timeout. A release build's cold SEA sidecar takes 27-39 s; dev ~14 s."""
+    from PIL import Image
+    t = time.time()
+    while time.time() - t < max_s:
+        drv("cap", f"{ev}/{label}-boot-probe.png")
+        im = Image.open(f"{ev}/{label}-boot-probe.png").convert("RGB")
+        w, h = im.size
+        pts = [(x, y) for x in range(20, w, 32) for y in range(20, h, 32) if not (w // 2 - 120 < x < w // 2 + 120 and h // 2 - 90 < y < h // 2 + 90)]
+        diff = sum(1 for xy in pts if im.getpixel(xy) != (7, 10, 11)) / len(pts)
+        if diff > 0.05:
+            return round(time.time() - t, 1)
+        time.sleep(2)
+    return None
+ready_after = boot_ready(float(os.environ.get("GL_BOOT_WAIT", "14")))
+print("boot_ready_after_s:", ready_after)
+if ready_after is None:
+    print(f"ARM={label} INVALID app still on the Loading splash after GL_BOOT_WAIT"); open(f"{RAW}/stop-{label}", "w").close(); p.wait(timeout=60); sys.exit(3)
+time.sleep(3)
 def log(): return open(f"{ev}/{label}-settled.log").read().strip().splitlines() if os.path.exists(f"{ev}/{label}-settled.log") else []
 def banner():
     """True while the connectivity banner ('Retrying (Ignore)', OfflineMessage) is showing: it pushes the whole
