@@ -353,3 +353,16 @@ machine. This file stays in `pending/`; nothing is closed.
 - **What remains.** The finding above. The operator live gate. `ready: live-gate` stays and the frontmatter is
   unchanged on purpose. `38-VERIFICATION.md` is not edited; whether any of this discharges part of 38-E03/38-E04
   is the operator's call in a ledger change.
+
+## Addendum (2026-10-01): the 260930-feh `S1_CONTROL` finding is FIXED and live-verified
+
+- Root cause and fix: debug session `.planning/debug/resolved/linux-embed-resize-dead-after-epic-roundtrip.md`,
+  commit `d71269c2a`. `useStoreEmbedHost`'s bounds effect was keyed on a one-way latch, so after GOG -> Epic -> GOG
+  (one `store/:store` route, no remount) the ResizeObserver and listeners stayed bound to the detached slot. It now
+  keys on the slot element itself. Not Linux-specific code: the renderer hook is shared with macOS.
+- Live re-run (dev build, X11, one host): 7 of 7 valid launches pass (Epic round trip x4, round trip + link click
+  x2, neither x1), each 3/3 resizes settled, embed == requested, flush, 0 zero-area lines. 9 further launches were
+  discarded because a "Retrying" banner on the Accounts screen blocked the driver; they measured nothing.
+- The 2026-09-30 finding "FAIL, not diagnosed" above is superseded. The E5 Back-button result stands.
+- Still open: the operator live gate, Wayland, packaged build, macOS re-check of the shared hook. `ready: live-gate`
+  stays. `38-VERIFICATION.md` is not edited.
