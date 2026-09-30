@@ -5,6 +5,8 @@ found_during: phase 46 post-fix live check (46-POSTFIX-LIVE-CHECK.md, 2026-09-26
 severity: medium
 platform: windows
 ready: live-gate
+status: RESOLVED
+resolved: 2026-09-30
 area: src-tauri/shell
 files:
   - src-tauri/src/main.rs
@@ -105,3 +107,45 @@ read-registry-only, never a write): launch the installed
 `gamelib-shell.log` shows a `repaired ... (prior value: points-elsewhere)` line and HKCU names the
 installed exe again afterward (46-POSTFIX R4). The todo moves to `completed/` only once that step
 is confirmed live.
+
+## Result (quick-260930-qmu, 2026-09-30)
+
+Verify step 2 run live against `%LOCALAPPDATA%\GameLib\gamelib-shell.exe` -- RELEASE CI build,
+run `36556473399` / `b48e8948f` (descendant of `28ff2c3e8`), sha256 `5adce1be...63a9f` (matches
+quick-260930-o75). 46-POSTFIX R4 used a debug NSIS build; this is the release build's first live
+check.
+
+Real-profile arm (declared): runs against the operator's real HOME/USERPROFILE because
+`HKCU\Software\Classes\gamelib` is the operator's own hive -- no fake-HOME variable can redirect
+it. Detail: `evidence/r4-prediction.md`.
+
+Pre-state: `"C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe" "%1"`. Hijack:
+`"C:\gamelib-hijack-test\nope.exe" "%1"` -- both readbacks confirmed before launch (C1 PASS).
+Launched pid 22308, ExecutablePath matched, single instance (C2 PASS).
+
+New log line, 1.1s after launch (verbatim, `evidence/r4-new-log-lines.txt`):
+`1790750649 pid=22308 repaired the gamelib:// HKCU registration (prior value: points-elsewhere)
+-- 4/4 installer-shaped values written under HKCU\Software\Classes\gamelib` (C3 PASS). App-up at
+0s (C7 PASS). C4/C5 PASS: command value and full `/s` snapshot matched pre-state while the app
+was still running, before any harness restore. `restore_write_needed: no` -- the APP repaired
+the key, not the harness (T-QMU-02). C6 PASS: hijack value absent from new log lines. C8 PASS:
+zero gamelib-shell.exe/gamelib-sidecar.exe after teardown. Independent bash post-checks (registry
+diff, tasklist, offset+pid-scoped log grep) reproduced every fact above via a different process
+and API. Full record: `evidence/r4-live.txt`.
+
+Honest limits: one host, one launch. The log line depends on `HOME` (inherited from Git Bash
+here); a Start-menu launch has none, so the line reaches no file (46-POSTFIX Note 2 still stands
+-- the registry result does not depend on `HOME`). A `gamelib://` deep-link delivery after repair
+was not exercised (this todo's step 2 asks only for the repair).
+
+A first live attempt hit an instrument bug, not a product defect: PowerShell 5.1 turned a benign
+`taskkill` stderr line into a terminating error mid-teardown, after the registry restore had
+already completed. Harness verified zero drift, cleared the two orphaned processes, fixed the
+instrument, and re-ran. Detail: `260930-qmu-SUMMARY.md`.
+
+## Resolution
+
+Both verify steps confirmed live: (1) `pnpm tauri:dev` leaves HKCU naming the installed exe --
+quick-260926-f3l, 2026-09-26; (2) the installed app repairs a hijacked key -- quick-260930-qmu,
+2026-09-30 (above). Fix commits: `28ff2c3e8` (predicate + wiring), `4a6f92bdf` (Gate 5 source gate
++ RED self-tests).

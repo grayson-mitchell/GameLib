@@ -1,0 +1,1 @@
+1790750649 pid=22308 repaired the gamelib:// HKCU registration (prior value: points-elsewhere) -- 4/4 installer-shaped values written under HKCU\Software\Classes\gamelib

@@ -1,0 +1,15 @@
+
+HKEY_CURRENT_USER\Software\Classes\gamelib
+    URL Protocol    REG_SZ    
+    (Default)    REG_SZ    URL:com.gamelib.shell protocol
+
+HKEY_CURRENT_USER\Software\Classes\gamelib\DefaultIcon
+    (Default)    REG_SZ    "C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe",0
+
+HKEY_CURRENT_USER\Software\Classes\gamelib\shell
+
+HKEY_CURRENT_USER\Software\Classes\gamelib\shell\open
+
+HKEY_CURRENT_USER\Software\Classes\gamelib\shell\open\command
+    (Default)    REG_SZ    "C:\Users\grays\AppData\Local\GameLib\gamelib-shell.exe" "%1"
+

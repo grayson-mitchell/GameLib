@@ -2759,7 +2759,7 @@ describe('quick-260925-uok Windows gamelib:// HKCU self-heal on launch', () => {
   // ---- Gate 5: dev builds skip the repair (quick-260926-f3l) -------------------------------
   //
   // Closes the code half of
-  // `.planning/todos/pending/2026-09-26-gamelib-self-heal-lets-dev-builds-take-over-gamelib-scheme.md`:
+  // `.planning/todos/completed/2026-09-26-gamelib-self-heal-lets-dev-builds-take-over-gamelib-scheme.md`:
   // every `pnpm tauri:dev` run was rewriting HKCU to point at `src-tauri\target\debug\...`,
   // last-launch-wins hijacking the scheme away from an installed build. As with every other gate
   // in this describe, this is a SOURCE gate: it proves the skip sits after the CI=e2e guard and
