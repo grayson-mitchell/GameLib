@@ -35,7 +35,8 @@
  * an operator, that it is legible against any given theme's contrast, or
  * that `:focus-within`/`:focus-visible` fire for a given real input path.
  * Perceptibility is the operator's live controller sweep
- * (`.planning/todos/pending/2026-09-25-controller-focus-has-no-perceptible-affordance.md`),
+ * (`.planning/todos/completed/2026-09-25-controller-focus-has-no-perceptible-affordance.md`,
+ * moved from `pending/` by quick 260930-hav),
  * not this gate's job -- a gate that appears to cover more than it does is
  * worse than no gate at all.
  */

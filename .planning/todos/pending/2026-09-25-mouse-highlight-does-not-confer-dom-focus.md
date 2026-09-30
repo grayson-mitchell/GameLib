@@ -39,10 +39,14 @@ element.
 
 ## Cross-references
 
-- **Todo A** (`.planning/todos/pending/2026-09-25-controller-focus-has-no-perceptible-affordance.md`)
+- **Todo A** (`.planning/todos/completed/2026-09-25-controller-focus-has-no-perceptible-affordance.md`)
   is related but distinct: A is "focus is invisible [even when it correctly IS DOM focus]"; this
   todo (B) is "what LOOKS focused under the mouse often ISN'T DOM focus at all". A card can fail
-  both, either, or neither independently.
+  both, either, or neither independently. Todo A was moved to `completed/` by quick `260930-hav`
+  (desk fix landed earlier by `260926-acw`): with `controllerLayout` active a clicked element now
+  also shows the focus ring (it matches `:focus`), which makes "what looks focused" more truthful,
+  but this todo's defect — mouse hover does not move DOM focus at all — is separate and remains
+  unaddressed.
 - **`38-C01a`'s cold-start disposition** (`38-VERIFICATION.md`, sitting 3 discharge) records this
   exact behaviour from the other side: attempt (b) of that item's cold-start clause was blocked by
   precisely this mechanism — two `padLeft` presses on the library route both logged `tag=none`
