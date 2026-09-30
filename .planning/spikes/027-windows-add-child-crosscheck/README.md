@@ -130,7 +130,7 @@ panel's slot sync reading a momentary layout. That is probable, not proven. It r
 all 15 cookies, including the Steam and GOG cookies from the shared jar. wry 0.57.0 defines
 `with_data_store_identifier` and its field only under
 `#[cfg(any(target_os = "macos", target_os = "ios"))]` (`src/lib.rs:1579`, `:1612`). Recorded in
-`.planning/todos/pending/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`.
+`.planning/todos/completed/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`.
 
 **Two harness changes, made AFTER `38-E01` was scored on the unmodified source** (for `38-E03`(b)
 and `38-E04`(b)):

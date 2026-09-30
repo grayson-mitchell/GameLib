@@ -106,7 +106,7 @@ before assuming anything has changed.
   Linux. The shipped app is unchanged, because `src-tauri/Cargo.toml:114-128` still gates
   `unstable` to macOS. The `## Falsifiable re-open` section above still stands.
 - **The sibling isolation todo is NOT decided here.** That is
-  `.planning/todos/pending/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`,
+  `.planning/todos/completed/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`,
   still `ready: human`. By its own title it still gates whether a Linux embed ships at all. Its
   third option, keeping Linux off the embed, is now in tension with this decision. That call is
   the operator's, in that todo.
@@ -125,7 +125,7 @@ before assuming anything has changed.
 ## Addendum (2026-09-29): the isolation todo is decided, one shared cookie jar
 
 - **Decided.** The sibling isolation todo
-  (`.planning/todos/pending/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`)
+  (`.planning/todos/completed/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`)
   is now DECIDED. The operator accepted one shared cookie jar on Linux on 2026-09-29, and quick
   `260929-9qr` recorded it in that todo's `## Decision (2026-09-29)` section.
   - The "sibling isolation todo is NOT decided here" bullet above stays as written, as history.
