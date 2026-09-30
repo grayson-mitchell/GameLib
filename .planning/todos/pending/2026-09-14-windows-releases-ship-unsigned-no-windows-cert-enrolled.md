@@ -13,6 +13,78 @@ files:
   - .github/workflows/release-tauri.yml
 ---
 
+## STATUS 2026-10-01 (quick 261001-c2r)
+
+This section does not revise anything below it. It records the operator's 2026-10-01 decision on
+the second SignPath terms clause raised in the 260930-upo section below, plus two re-measurements
+taken the same day.
+
+**Operator decision (2026-10-01).** The clause is the one the 260930-upo section calls "A second
+terms clause to answer": software that transfers user data to systems the user did not specify must
+describe this in a privacy policy, show that policy during installation, and offer installation
+options to disable those functions. That wording is the 260930-upo section's paraphrase of the
+terms as re-read on 2026-09-30. It is not a verbatim quotation, and this task did not re-read the
+terms. The decision: do not add an installer privacy page pre-emptively.
+
+**Why.** PRIVACY.md states that the maintainer operates no server that receives user data, and
+GameLib contains no telemetry, analytics or crash reporting. Store library sync and game metadata
+requests go to the stores the user signed in to (PRIVACY.md's store table), so they go to systems
+the user chose by signing in. The 260930-upo census below counts them among requests made without
+a per-request click, and this section agrees with it. Apart from those library sync requests,
+GameLib makes three kinds of request without a user click to systems the user did not pick:
+
+- (a) The connectivity check. GameLib sends HEAD requests to github.com, store.epicgames.com,
+  gog.com and cloudflare-dns.com at startup and again while offline. No account data is sent.
+  `src/backend/online_monitor.ts:83` is the cloudflare-dns ping. That file reads no setting.
+- (b) GOG presence. While the user is signed in to GOG, GameLib sends three things to
+  presence.gog.com every 5 minutes: the GOG access token (as the Authorization header), the GOG
+  user id (in the request path), and the identifier of the game being played. See
+  `src/backend/storeManagers/gog/presence.ts:81`. A Settings toggle disables it: the
+  `disableGOGPresence` setting, rendered by
+  `src/frontend/screens/Settings/components/DisableGOGPresence.tsx`.
+- (c) Community data files, on Linux and macOS only. These are startup fetches of Heroic community
+  data files from raw.githubusercontent.com. Windows, the platform being signed, skips them:
+  `src/backend/utils/releases.ts:11` and `src/backend/anticheat/utils.ts:25` each return early on
+  `isWindows`.
+
+GOG presence is the only one of the three that carries account data, and its Settings toggle
+plausibly answers the clause's requirement for an option to disable. That is
+the operator's reading, not SignPath's ruling. The limit has equal weight: the toggle is an in-app
+Settings option available after install, not an installation option, and the clause as recorded
+speaks of installation options. That is the point on which a reviewer could rule the other way.
+This list of requests is not claimed to be complete. It is drawn from PRIVACY.md and the
+260930-upo census, not from a fresh source census, and PRIVACY.md's own "Limits of this document"
+section applies to it.
+
+**What to say in the application.** No user data goes to the maintainer. Name GOG presence
+(presence.gog.com) and its Settings toggle. Point to PRIVACY.md.
+
+**If reviewers require install-time display.** Address it at that point. It is expected to be a
+small change, but that is an expectation, not a measurement. The measured state today: the NSIS
+installer shows no license or privacy page. The bundle `targets` in `src-tauri/tauri.conf.json`
+include `nsis` (line 31). Neither that file nor `src-tauri/tauri.windows.conf.json` configures a
+`licenseFile` or any NSIS installer page.
+
+**Re-measured 2026-10-01.**
+
+- `gh release list -R grayson-mitchell/GameLib` still shows the GameLib row as
+  `GameLib v0.7.0  Draft  v0.7.0  2026-08-28T21:59:17Z`, plus the same two Pre-releases. Nothing is
+  published.
+- `gh api user --jq '.two_factor_authentication | tostring'` returned `null`, and
+  `gh api user --jq 'has("two_factor_authentication")'` returned `false`. The
+  `two_factor_authentication` key is absent from this token's response, which is why the field
+  reads as null. MFA still cannot be measured from here. This refines the 260930-upo section's
+  "null for this token" wording without revising it.
+
+**Remaining operator steps.** Unchanged from the 260930-upo section below.
+
+1. Publish a non-Draft release, with a link titled "Code signing policy" in its release notes
+   pointing at the README section.
+2. Confirm MFA on GitHub, and on SignPath once the account exists.
+3. Apply at https://signpath.org/apply.
+
+Step 4 of that section (attribution and the Finding 4 ordering, on approval) is also unchanged.
+
 ## STATUS 2026-09-30 (quick 260930-v7y)
 
 This section does not revise anything below it. It records which README residuals quick 260930-v7y
