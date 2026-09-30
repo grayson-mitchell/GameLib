@@ -164,4 +164,4 @@ evidence below. Both items stay open for their other branches.
 `CARGO_TARGET_DIR=.planning/spikes/027-windows-add-child-crosscheck/target-cache` while
 `pnpm tauri:dev` is running crashed the Vite dev server. chokidar hit `EBUSY` on the fresh `.exe`
 under `target-cache`. See
-`.planning/todos/pending/2026-09-30-vite-dev-watcher-crashes-on-spike-target-cache-ebusy.md`.
+`.planning/todos/completed/2026-09-30-vite-dev-watcher-crashes-on-spike-target-cache-ebusy.md`.
