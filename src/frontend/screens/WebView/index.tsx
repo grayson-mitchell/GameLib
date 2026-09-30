@@ -255,49 +255,43 @@ export default function WebView() {
   // earlier occurrence of that exact call shape (even one that means something different) would
   // make the gate extract the wrong block as "the login arm" and fail for a reason that has
   // nothing to do with an actual regression.
-  // CR-02 (quick task 260929-qth): `slotRef` is a MutableRefObject (`| null` on the initializer)
-  // rather than the single-argument `useRef<HTMLDivElement>(null)` form, because the latter's
-  // `current` is `readonly` under @types/react 18.3.21 and cannot be assigned through by the
-  // callback ref below. The mutable form is still assignable to `useStoreEmbedHost`'s existing
-  // `RefObject<HTMLDivElement>` option type (probed with `tsc --strict` at plan time).
-  const slotRef = useRef<HTMLDivElement | null>(null)
   const storeKey =
     store ??
     (pathname === '/wiki' ? 'wiki' : (deepLinkConfig?.key ?? 'store-page'))
   const isStoreRoute =
     !LOGIN_PATHNAMES.includes(pathname) && runner !== 'humble'
   // CR-02 (quick task 260929-qth): deliberately placed AFTER `isStoreRoute` above, not
-  // immediately below `slotRef`'s own declaration -- `WebViewDeepLinkAndRestore.test.ts` extracts
+  // immediately below `storeKey`'s own declaration -- `WebViewDeepLinkAndRestore.test.ts` extracts
   // the RAW source slice between the `isStorePageDeepLink` and `isStoreRoute` markers above and
-  // compiles it standalone with only `useRef` (not `useState`/`useCallback`) in scope, to prove
+  // compiles it standalone with no `useState`/`useCallback` in scope, to prove
   // the real D-34/D-35 deep-link logic against the real `resolveStoreForUrl`. A `useState`/
   // `useCallback` call inside that slice would break that harness for a reason unrelated to any
   // actual regression in either the deep-link logic or this fix.
   //
-  // One-way latch: flips false -> true the first time the slot div attaches, and is NEVER
-  // lowered back on detach. Feeds `useStoreEmbedHost`'s open/bounds effect (CR-02) so it re-arms
-  // exactly once when the slot arrives late -- a cold start on `/store/epic` (or any route that
-  // takes one of the early returns below) renders no slot div on the first render at all, so the
-  // effect's old `[]` deps left `openedRef` false and the embed permanently unopened for that
-  // mount. Lowering the flag on detach would re-arm the effect on a later re-attach and tear down
-  // the very ResizeObserver whose identity plan 40-11's live gate protects (same-store URL
-  // changes must never re-create it).
-  const [slotPresent, setSlotPresent] = useState(false)
+  // The slot div currently attached, or null while this route renders none. Set on EVERY attach
+  // AND detach, so its identity follows the element: `useStoreEmbedHost` keys its open/bounds
+  // effect on it, which is what makes that effect (a) re-arm once when a slot arrives late -- a
+  // cold start on `/store/epic` (or any route that takes one of the early returns below) renders
+  // no slot div on the first render at all (CR-02) -- and (b) re-arm again when the slot is
+  // REPLACED by a new element while this component stays mounted. (b) is the Linux dead-resize
+  // fix: `store/:store` is one route, so GOG -> Epic -> GOG does not remount `WebView`; the Epic
+  // early return unmounts the slot and the return mounts a new one. The previous one-way
+  // "a slot has attached" latch never lowered, so the hook's ResizeObserver and window listeners
+  // stayed bound to the DETACHED element (rect all zero) and the embed never followed a window
+  // resize again. A same-store URL change does not change the element, so plan 40-11's
+  // "same-store URL changes must never re-create the observer" property is preserved.
+  const [slotNode, setSlotNode] = useState<HTMLDivElement | null>(null)
   // Deliberately stable (empty deps) so React does not detach and re-attach this callback on
-  // every render -- an unstable ref identity would itself tear down/re-create the DOM node's
-  // ref wiring on every re-render, independent of the one-way latch above.
+  // every render -- an unstable ref identity would itself null and re-set `slotNode` on every
+  // re-render, re-creating the hook's observer each time.
   const slotCallbackRef = useCallback((node: HTMLDivElement | null) => {
-    slotRef.current = node
-    if (node) {
-      setSlotPresent(true)
-    }
+    setSlotNode(node)
   }, [])
   const embedHost = useStoreEmbedHost({
-    slotRef,
+    slotNode,
     startUrl,
     storeKey,
-    isStoreRoute,
-    slotPresent
+    isStoreRoute
   })
   const embedSuppressed = useStoreEmbedSuppressed()
 

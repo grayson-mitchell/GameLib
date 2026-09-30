@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { RefObject } from 'react'
 
 import { useStoreEmbedSuppressed } from 'frontend/components/UI/NavShell/StoreEmbedSuppressionContext'
 import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
@@ -19,7 +18,7 @@ import { resolveStoreForUrl, isEmbeddableOrigin } from './storeEmbedOrigins'
  * silently, so the only defence is structural, not a runtime check. This hook contains the ONE
  * `storeEmbedSetBounds` call site in the entire renderer (T-40-08-03), fed by nothing but
  * `slot.getBoundingClientRect()`. There is no fallback rect anywhere in this file: a missing slot
- * ref sends nothing at all and only logs — computing a rect from `window.innerWidth/innerHeight`,
+ * element sends nothing at all and only logs — computing a rect from `window.innerWidth/innerHeight`,
  * a CSS custom property, or a parent element's box would be a second writer wearing a disguise.
  */
 
@@ -80,8 +79,6 @@ function logNavCallFailure(label: string, error: unknown): void {
 // flagged the previously-exported form as a used-in-module finding -- there
 // is no external consumer, so the export served no purpose).
 interface UseStoreEmbedHostOptions {
-  /** The slot div's ref — the single geometry oracle. Read, never written, by this hook. */
-  slotRef: RefObject<HTMLDivElement>
   /** The route's resolved start URL (from `WebView/index.tsx`'s existing `urls` map/session restore). */
   startUrl: string
   /** Which store the caller is opening (e.g. `'steam'`) — bookkeeping only, per `storeEmbedSeam.open`'s own doc comment. */
@@ -93,13 +90,19 @@ interface UseStoreEmbedHostOptions {
    */
   isStoreRoute: boolean
   /**
-   * One-way latch (CR-02): false until the slot div this hook's callback ref is attached to has
-   * rendered for the first time, then true for the remainder of the mount. Some routes
-   * (deep-link/platform/Epic early returns in `index.tsx`) render no slot div on their first
-   * pass, so a cold start on one of those routes must not permanently strand the open/bounds
-   * effect below at its mount-time no-op -- this flag is what re-arms it once the slot arrives.
+   * The slot div currently attached, or null while the route renders none -- the single geometry
+   * oracle. Read, never written, by this hook. `index.tsx`'s callback ref sets it on EVERY attach
+   * and detach, so its IDENTITY is what keys the open/bounds effect below.
+   *
+   * Some routes (deep-link/platform/Epic early returns in `index.tsx`) render no slot div at all,
+   * so (CR-02) a cold start on one of those must not strand the effect at a no-op: the effect
+   * re-arms when the slot arrives. And (quick 260930 Linux dead-resize) the slot is ALSO replaced
+   * by a brand-new element when the same mounted `WebView` goes GOG -> Epic -> GOG (`store/:store`
+   * is one route, so nothing remounts): a hook keyed on "has a slot ever attached" would keep its
+   * ResizeObserver, `resize`/`scroll` listeners and `flush()` bound to the DETACHED element, whose
+   * rect is all zero, and the embed would never follow a window resize again.
    */
-  slotPresent: boolean
+  slotNode: HTMLDivElement | null
 }
 
 export interface StoreEmbedHostState {
@@ -114,11 +117,10 @@ export interface StoreEmbedHostState {
 }
 
 export function useStoreEmbedHost({
-  slotRef,
+  slotNode,
   startUrl,
   storeKey,
-  isStoreRoute,
-  slotPresent
+  isStoreRoute
 }: UseStoreEmbedHostOptions): StoreEmbedHostState {
   const [navState, setNavState] = useState<StoreEmbedNavState>(() => ({
     url: startUrl,
@@ -220,10 +222,10 @@ export function useStoreEmbedHost({
   const previousUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const slot = slotRef.current
+    const slot = slotNode
     if (!slot) {
       window.api.logInfo(
-        '[useStoreEmbedHost] slot ref is null on mount -- no ResizeObserver attached, no bounds sent (D-18: no fallback rect)'
+        '[useStoreEmbedHost] slot ref is null (no slot element attached) -- no ResizeObserver attached, no bounds sent (D-18: no fallback rect)'
       )
       return undefined
     }
@@ -322,24 +324,28 @@ export function useStoreEmbedHost({
       window.removeEventListener('scroll', scheduleFlush, true)
       if (trailingHandle !== null) clearTimeout(trailingHandle)
     }
-    // Re-arms exactly on `slotPresent` (CR-02), NOT on every render and NOT on `startUrl`: the
-    // slot div is absent on the first render of some routes (the deep-link/platform/Epic early
-    // returns in `index.tsx` render no slot at all), so a cold start on one of those routes used
-    // to leave this effect's `!slot` branch above as a permanent no-op for the rest of the mount
-    // -- `openedRef` stayed false, `storeEmbedOpen` was never called, and no ResizeObserver ever
-    // attached. `slotPresent` is a ONE-WAY latch (see `index.tsx`'s callback ref) that flips
-    // false -> true exactly once, the first time the slot attaches, so this effect re-runs at
-    // most one extra time per mount, opens at whatever `startUrl` is current when the slot
-    // finally exists (seeded into `previousUrlRef` by `flush()` above, so the start-url effect
-    // below does not ALSO fire a redundant navigate to that same URL), and never tears down the
-    // observer again after that -- `slotPresent` does not flip back, so it cannot re-fire on a
-    // later re-attach. `startUrl` is deliberately EXCLUDED from these deps: adding it would
-    // re-create the observer on every same-store navigation, which is the plan 40-11 regression
-    // the deps array has protected against since before this fix (unchanged intent, see the
-    // dedicated start-url effect below for how a URL change is actually handled — a navigate,
-    // never a re-open).
+    // Re-arms exactly when the slot ELEMENT changes identity, NOT on every render and NOT on
+    // `startUrl`. Two things need this, and a one-way "a slot has attached once" latch (this
+    // effect's previous key) served only the first:
+    //   * CR-02: the slot div is absent on the first render of some routes (the deep-link/
+    //     platform/Epic early returns in `index.tsx` render no slot at all), so a cold start on
+    //     one of those routes left this effect's `!slot` branch a permanent no-op -- `openedRef`
+    //     stayed false, `storeEmbedOpen` was never called and no ResizeObserver ever attached.
+    //     The null -> element change re-runs the effect once the slot finally exists (opening at
+    //     whatever `startUrl` is current, seeded into `previousUrlRef` by `flush()` so the
+    //     start-url effect below does not ALSO fire a redundant navigate).
+    //   * Element REPLACEMENT while `WebView` stays mounted (GOG -> Epic -> GOG): the Epic early
+    //     return unmounts the slot (element -> null) and the return mounts a NEW element. The
+    //     cleanup below disconnects the observer bound to the dead element and removes its
+    //     listeners; the re-run observes the new one, whose first observation reports the real
+    //     rect straight away via `flush()`'s `setBounds` branch (the embed is already open).
+    // The plan 40-11 property is preserved: `startUrl` is deliberately EXCLUDED from these deps,
+    // because adding it would re-create the observer on every same-store navigation. A same-store
+    // URL change does not change the slot element's identity, so it never re-runs this effect (a
+    // URL change is handled by the dedicated start-url effect below -- a navigate, never a
+    // re-open).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slotPresent])
+  }, [slotNode])
 
   // ── SAME-STORE NAVIGATION ON A START-URL CHANGE — navigate, never re-open ──────────────────
   // Latch set when a start-URL change was refused below (CR-01, D-05) because it targeted a
