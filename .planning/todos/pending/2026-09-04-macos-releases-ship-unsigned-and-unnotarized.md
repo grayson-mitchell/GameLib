@@ -519,6 +519,113 @@ has been restated a second time — it had gone false again by naming the store 
 remaining work. Consequence 2 is now the only thing standing between this todo and closure, and it
 cannot start until a second signed release exists.
 
+## STATUS 2026-09-30 (quick-260930-m85) — consequence 2 REFRAMED: the second-signed-release premise is over-strict
+
+This section does not revise `## STATUS 2026-09-14`, `## STATUS 2026-09-17`, `## STATUS 2026-09-23`
+or `## STATUS 2026-09-24` above it. Each records what was measured on its own date and is left
+intact; this one adds what was measured on 2026-09-30, following the same convention the two most
+recent sections already state about themselves. The frontmatter is unchanged, and `## Why it
+matters`, `## Direction` and `## Verification` are untouched.
+
+**1. The block as written is REAL — the todo is not actionable in the form its own title and
+`needs:` describe.** `gh release list --limit 20` returned exactly three entries, tab-separated as
+`gh` emits them, of which only one is a GameLib version release:
+
+```
+GameLib v0.7.0	Draft	v0.7.0	2026-08-28T21:59:17Z
+macOS onedir runner builds	Pre-release	runners-onedir-macos	2026-08-25T06:27:57Z
+CrossOver compatibility index	Pre-release	crossover-index	2026-07-14T04:13:39Z
+```
+
+So `## STATUS 2026-09-24` item 13 is unchanged: one `v0.7.0` draft, still a draft, no second signed
+release. `git ls-remote --tags origin` shows the only remaining `v*` remote tags are
+`v0.7.0-glibc-test1` and `gamelib-v0.1` — the `v0.7.0-notarize-test1` / `-test3` throwaway tags have
+gone from origin, as `## STATUS 2026-09-17` and `## STATUS 2026-09-23` each already record. Cutting
+a second release is operator-only: pushing a `v*` tag is blocked by the auto-mode classifier, so an
+agent cannot produce release N+1 by itself. Publishing the existing draft is still gated by
+`2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md`, still in
+`.planning/todos/pending/`, which is why `## STATUS 2026-09-24` item 2 rejected publishing.
+
+**2. A trap this todo has never named — the throwaway-tag route is DESTRUCTIVE to artifact N.** The
+release workflow uses `tagName: v__VERSION__`, so a second throwaway-tag run overwrites the existing
+`v0.7.0` draft release and its assets. The obvious cheap route to a second signed artifact would
+therefore DESTROY artifact N in the act of building N+1 — and consequence 2's test is inherently
+N -> N+1 and needs both artifacts at once. Artifact N, named here so it can be preserved:
+`GameLib_0.7.0_aarch64.dmg`, sha256
+`c74717b59421119eaacce55c51ff153222c9e03296f87d817ed422423dba669c`, 97083599 bytes, draft release
+`378785323`. It would have to be pulled to disk and KEPT before any second tag run — a precondition,
+not a footnote.
+
+**3. THE REFRAMING — the "needs a SECOND signed release" premise is over-strict.** What consequence
+2 actually asserts is a claim about the Keychain ACL's designated requirement, not about the
+updater. An item created by build N stays trusted by build N+1 if and only if the DR is
+identity-based — `identifier "com.gamelib.shell"` plus Team `S7U223QWXJ` — rather than
+cdhash-pinned, which is what an unsigned or ad-hoc-signed build gets and is the mechanism behind the
+dev-mode pester recorded in memory `keyring-timeout-races-keychain-approval`. That claim needs TWO
+distinct Developer-ID-signed bundles, and needs NEITHER notarization, NOR a published release, NOR
+the updater path at all. `security find-identity -v -p codesigning` returned:
+
+```
+  1) DEE5DB1B281F95E35EA0D710B52CC11F7B507BCF "Developer ID Application: grayson mitchell (S7U223QWXJ)"
+     1 valid identities found
+```
+
+`## STATUS 2026-09-14` already records a local signed build measuring `flags=0x10000(runtime)` on
+both the outer `.app` and `Contents/MacOS/gamelib-sidecar`, so local signing with the real identity
+is a known-working path on this machine, not a new idea. The runnable shape: sign build A, create
+the Keychain item under it, sign build B (a different cdhash, same identity and same bundle id),
+read the item under build B, count prompts.
+
+**4. Three prerequisites that path carries — each one a real trap, not a caveat.**
+
+- **(a) The three existing Keychain items are CONTAMINATED.** Presence was measured with
+  `security find-generic-password -s com.gamelib.launcher -a <account>` (presence only — the
+  password-dumping `-w` form was NOT used and MUST NOT be run):
+
+| account | present? |
+| --- | --- |
+| `steam-refresh-token` | PRESENT (`"svce"<blob>="com.gamelib.launcher"`) |
+| `humble-session` | PRESENT |
+| `humble-csrf` | PRESENT |
+| `steamgrid-api-key` | ABSENT — `SecKeychainSearchCopyNext: The specified item could not be found in the keychain.` |
+
+  These are the live slots from `keyring_account()` at `src-tauri/src/main.rs:1111-1119`; the
+  service constant is `KEYRING_SERVICE = "com.gamelib.launcher"` at `src-tauri/src/main.rs:1058`.
+  They were created by unsigned/dev builds, so their ACLs are cdhash-pinned to a binary that no
+  longer exists — measuring the signed -> signed case against them would measure the DEV-PESTER case
+  instead, and return a prompt that proves nothing about release cadence. They were deliberately NOT
+  touched in this session: deleting them logs the operator out of Steam and Humble, so it is the
+  operator's call.
+- **(b) A launch alone is NOT a trigger.** `## STATUS 2026-09-24` item 14's "one weak signal"
+  paragraph already records that launching the signed build produced no Keychain prompt, and why —
+  the store sessions read at boot live in JSON files under Application Support, not in the Keychain.
+  The prompt channel is a real read of a PRESENT slot: `keyringTokenStore.readToken()` at
+  `src/backend/sidecar/keyringTokenStore.ts:331`, whose Steam callers live in
+  `src/backend/storeManagers/steam/user.ts`. `keyring_available` is explicitly NOT a usable trigger:
+  its doc comment at `src-tauri/src/main.rs:1061-1080` records that it probes an account
+  deliberately kept OUTSIDE `keyring_account()`'s allowlist precisely so it returns
+  `errSecItemNotFound` (-25300 -> `keyring::Error::NoEntry`) immediately without raising a dialog. A
+  test leaning on the boot probe will measure zero prompts and be wrong.
+- **(c) Build A and build B must be signed IDENTICALLY to the release.** Same identity,
+  `Identifier=com.gamelib.shell`, hardened runtime, and `src-tauri/entitlements.plist` wired through
+  `bundle.macOS.entitlements` in `src-tauri/tauri.macos.conf.json` — the overlay, per
+  `## STATUS 2026-09-14`, because the base config has no `macOS` key at all. Any deviation changes
+  the designated requirement, so the experiment would be measuring a different DR than the one that
+  ships.
+
+**5. What this reframing does NOT claim.** The local test settles the ACL-stability mechanism,
+which is the whole of consequence 2's claim. It does not exercise the updater's replace-in-place
+path, and it does not prove that a real `v0.7.0 -> v0.7.1` update sequence produces no prompt. If
+those matter independently they should be named as a separate, cheaper ride-along on whenever a
+second release genuinely ships — not as the gate on this arm.
+
+**6. PROPOSAL AWAITING THE OPERATOR — frontmatter is NOT changed by this session.** `ready: human`
+is arguably now `ready: live-gate`: the arm no longer needs a decision, a credential, or a second
+release — it needs a live run on this Mac, plus the operator's consent to delete three Keychain
+items. `severity: minor` is unchanged and correct. This is deliberately NOT applied, in the same
+shape `## STATUS 2026-09-23` item 7 used for its two proposals, so the operator decides — the
+frontmatter was left untouched by quick-260930-m85.
+
 ## Related
 
 - Parked sibling: `2026-08-17-humble-slots-still-prompt-unattended-at-startup.md` — its park note's
