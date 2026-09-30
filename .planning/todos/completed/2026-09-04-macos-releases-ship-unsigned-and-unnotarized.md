@@ -6,7 +6,7 @@ severity: minor
 platform: macos
 ready: human
 needs: keychain-prompt-count-across-two-signed-releases
-status: OPEN
+status: RESOLVED
 found_by: 'Reconsideration of the two keyring-deferral todos, 2026-09-04 — asked "what actually governs Keychain prompt COUNT?" rather than "how do I implement this todo?"'
 source: '.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md (park note, finding 2)'
 files:
@@ -745,6 +745,32 @@ this arm specifically — its park note says shipped-build prompt count is gover
 signing rather than read timing, and `## STATUS 2026-09-24` item 13 warned that closing without
 running consequence 2 would strand it. It is no longer stranded: the mechanism is measured. Unblocking
 it is a SEPARATE decision this task does not take.
+
+## CLOSED 2026-09-30 (quick-260930-ol5) — and what closing DROPS
+
+**Closed on the strength of `## STATUS 2026-09-30 (quick-260930-nt4)`'s measured ACL result**, with
+`status:` moved `OPEN` -> `RESOLVED` and the file moved to `.planning/todos/completed/`. `severity`,
+`platform` and `ready` are deliberately left STALE: that is what the three freshest closures in this
+repo did, and `.planning/todos/todo-frontmatter-gate.py`'s scope is `pending/` only, so `completed/`
+is exempt. `RESOLVED` is the PLURALITY of a ragged vocabulary, not a schema — measured across
+`completed/` at closure time: 48 `RESOLVED`, 31 `completed`, 25 `CLOSED`, 11 `OPEN` (closed todos
+whose status was never updated), 6 `resolved`, 2 `complete`, and 3 with prose appended to the value.
+A `status: OPEN` census over `completed/` was therefore already wrong by 11 before this change.
+
+**TWO THINGS BECOME UNTRACKED, named because that is the real cost of closing.** Neither is
+recorded anywhere else, and closing this file is what drops them:
+
+1. **`nt4` item 5's three residuals** — the artifact-level `GameLib.app` -> `GameLib.app` read is an
+   INFERENCE from identical DR shape plus identical keyring version, not a measurement; the
+   updater's replace-in-place path is untested; no real release N -> N+1 sequence was ever run.
+   Accepted as confirmatory-only.
+2. **The operator errand from `nt4` item 9** — the three contaminated Keychain items
+   (`steam-refresh-token`, `humble-session`, `humble-csrf` under service `com.gamelib.launcher`)
+   are still PRESENT with ad-hoc-created ACLs, so each will prompt once under a signed release.
+   Clearing them and letting a signed build recreate them is a permanent fix, and it is NOT DONE.
+
+No follow-up todo was created for either, deliberately. If they should be tracked, that is a new
+todo and an explicit decision — not something this closure quietly assumes.
 
 ## Related
 
