@@ -1,0 +1,2 @@
+﻿2026-09-30T04:43:02.5723418Z RENAME D:\SteamLibrary -> D:\SteamLibrary.s13-hidden (steam client processes: 0; steamservice=0)
+2026-09-30T05:09:17.1720561Z RESTORE D:\SteamLibrary.s13-hidden -> D:\SteamLibrary

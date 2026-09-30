@@ -17,6 +17,7 @@ sessions:
   - "Sitting 10 -- 2026-09-29, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 35942560790 (`19b5e3a9e`), signature not verified -- 38-W05 FAIL (GLIBC_2.39 not found, exit 1 at 65 ms, no window), item stays OPEN"
   - "Sitting 11 -- 2026-09-30, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 36556473399 (`b48e8948f`, ubuntu-22.04 build), signature not verified -- 38-W05 CONFOUNDED (window at 270 ms then SIGABRT at 364 ms, EGL_NOT_INITIALIZED on a host with a broken NVIDIA driver/library pair; glibc failure of sitting 10 cleared), item stays OPEN"
   - "Sitting 12 -- 2026-09-30, Linux (Pop!_OS 22.04, X11), CI-produced AppImage from release-tauri.yml run 36556473399 (`b48e8948f`, ubuntu-22.04 build), signature not verified, NVIDIA driver/library matched at launch -- 38-W05 PASS (direct launch with no workaround, window at 265 ms, 11/11 samples, bundled sidecar alive, interactive Library UI, 0 glibc/EGL lines), discharged"
+  - "Sitting 13 -- 2026-09-30, Windows 11 (operator's machine), CI-produced NSIS installer from release-tauri.yml run 36556473399 (`b48e8948f`, timing-bound, Authenticode NotSigned, updater .sig not verified), `pnpm tauri:dev` at `64bf2bfb4` (real-profile arm), and the spike 027 harness (native MSVC build) -- 38-W04 PASS, 38-S14 PASS (sub-case b incl. a real ADOM install), 38-S16 PASS (Windows/row-5 half), 38-E01 PASS, all four discharged; 38-E03 and 38-E04 branch (b) PASS on a modified harness, both items stay OPEN"
 ---
 
 ## Current Test
@@ -55,7 +56,12 @@ CONFOUNDED (the loader accepted it, a window appeared at 270 ms, then the shell 
 mismatch), so the ledger still holds 7 open, 19 discharged and 10 retired items and `38-W05` stays
 open; see the "## Sitting 11" section below. Sitting 12, the seventh Linux sitting, re-ran it with the host's NVIDIA mismatch cleared and scored it
 PASS (a direct launch with no workaround, a window at 265 ms, 11 of 11 samples, the bundled sidecar alive and an interactive Library
-UI at t=30), so the ledger now holds 6 open, 20 discharged and 10 retired items; see the "## Sitting 12" section below.]
+UI at t=30), so the ledger now holds 6 open, 20 discharged and 10 retired items; see the "## Sitting 12" section below.
+Sitting 13, back on the operator's Windows 11 machine, scored `38-W04` PASS (the CI-produced NSIS installer
+installed and the shell survived 12 of 12 samples), `38-S16`'s Windows/row-5 half PASS, `38-S14`'s sub-case (b)
+PASS including a real install, and `38-E01` PASS on the spike 027 harness, discharging all four; it also scored
+`38-E03` and `38-E04` branch (b) PASS on a modified harness without discharging either, so the ledger now holds
+2 open, 24 discharged and 10 retired items; see the "## Sitting 13" section below.]
 
 > **`38-VERIFICATION.md` is the authoritative item list, not this file.** `gsd-sdk query
 > audit-uat` reads that file's `human_verification` array and **cannot see `*-HUMAN-UAT.md`
@@ -1342,3 +1348,173 @@ was not touched and stays open.
 
 Artifacts: `.planning/quick/260930-aof-re-run-phase-38-item-38-w05-sitting-12-l/` (`appimage_smoke.ts`,
 `evidence/`).
+
+## Sitting 13 — 2026-09-30, Windows 11 (operator's machine), CI NSIS from run `36556473399`, `pnpm tauri:dev` at `64bf2bfb4`, spike 027 harness
+
+**This is the first Windows sitting since sitting 5, and it scored six items.** Four were
+DISCHARGED PASS: `38-W04`, `38-S14`, `38-S16` and `38-E01`. Two, `38-E03` and `38-E04`, passed
+their Windows branch (b) and stay OPEN for branches (a) and (c), each with one dated in-place key,
+`sitting_13_2026_09_30`. The ledger moves from 6 open, 20 discharged and 10 retired to 2 open, 24
+discharged and 10 retired, and `gsd-core`'s `audit-uat` agrees (Phase 38 from 6 to 2 items, 425 to
+421 in total). Host: Windows 11 Home 10.0.26200, one 3440×1440 display at DPI 120 (scale factor
+1.25) except where stated. Quick task `260930-o75`.
+
+**Three builds, kept apart.** Each item was scored on the artifact its own `test:` names:
+
+- `38-W04`: the CI-produced NSIS installer `GameLib_0.7.0_x64-setup.exe` (112419624 bytes, sha256
+  `61d59bfddfb9fb56c26a3cdb6ff27af008fc9ee8a540f11e81842324c03d5281`), downloaded with
+  `gh release download v0.7.0` from the DRAFT release. The local hash equals the digest GitHub
+  records. The asset was uploaded at `2026-09-29T10:46:19Z`, inside the Windows job window
+  (`10:35:12Z`–`10:47:23Z`) of `release-tauri.yml` run `36556473399`, `headSha b48e8948f`, the
+  run whose AppImage discharged `38-W05` in sitting 12. The draft is shared and overwritten by later
+  runs, so that timing is strong evidence, not proof; no byte in the artifact names the run.
+  Authenticode reports `NotSigned`; the updater `.sig` (416 bytes) was downloaded but not checked.
+- `38-S14` and `38-S16`: `pnpm tauri:dev` at HEAD `64bf2bfb4`, clean tracked tree. Window PID
+  12004, path `src-tauri\target\debug\gamelib-shell.exe`, exe mtime 17:18:42+13:00, after the last
+  `main.rs` commit (`9ad2f4e74`, 17:18:31+13:00); cargo reported the build up to date
+  (`Finished … in 0.50s`). This is the named REAL-PROFILE arm of the two-profile rule, needed for
+  the operator's signed-in Steam library as in sitting 9. No app stdout was captured.
+- `38-E01`, `38-E03`, `38-E04`: the spike 027 feasibility harness, built natively with `cargo build`
+  on `x86_64-pc-windows-msvc` (rustc 1.98.1), clean in 1m17s. Its lockfile resolves tauri 2.12.0,
+  tao 0.37.1, wry 0.57.0 and webview2-com 0.39.1; the harness's `[env]` log line still says
+  "tauri 2.11.5 / wry 0.55.1", a stale hard-coded label. This is NOT the shipped app:
+  `src-tauri/Cargo.toml` target-gates `unstable` to macOS and Linux, so GameLib's own Windows build
+  compiles no embed.
+
+**Operator decisions this sitting.** (1) `38-W04` was installed OVER the existing per-user v0.7.0
+install rather than into a clean profile. (2) For `38-S14`(b)/`38-S16`'s ON arm, Steam was exited
+(0 `steam*` processes confirmed) and `D:\SteamLibrary` was temporarily renamed to
+`D:\SteamLibrary.s13-hidden` (04:43:02Z), then renamed back (05:09:17Z); Steam was not running at
+any point while it was hidden. (3) ADOM (333300) was really installed for `38-S14`'s install clause
+and stays installed on C:. (4) For `38-E03`(b) the display was set to 200% scaling and restored
+afterwards.
+
+### 38-W04 — Windows NSIS smoke launch: PASS, discharged
+
+The bar is `35-LIVE-GATE.md` criterion 1: the installer completes without error, a window
+appears, and the process survives at least 10 seconds. Before: shell mtime 2026-09-25, 33668608
+bytes. `GameLib_0.7.0_x64-setup.exe /S` exited 0 in 8.4 s with no elevation prompt. After:
+`gamelib-shell.exe` 16554496 bytes, mtime 2026-09-29T23:44:26+13:00 (inside the CI job window),
+`gamelib-sidecar.exe` 121496576 bytes; DisplayVersion still 0.7.0. The silent install did not
+launch the app.
+
+The smoke harness (`win_smoke.ts`) spawned the installed shell under a fresh
+`createFakeHomeProfile()` (prefix `gl-w04s13-`, disposed), with no GameLib process running
+beforehand (the operator closed the dev build: the single-instance mutex is keyed on the user SID).
+A top-level `GameLib` window was present at the first sample (1618 ms), handle `0x70AD2`
+throughout; the shell was alive at 12 of 12 one-second samples; the bundled `gamelib-sidecar.exe`
+(PID 21276, from the install directory) and WebView2 `msedgewebview2.exe` 154.0.4258.37 were present
+at every sample. `w04-t12-window.png` shows the tab bar, Library with All Games 0, and the GameLib
+0.7.0 what's-new dialog. `taskkill /T /F` left no `gamelib-*` process.
+
+**Honest limits.** ONE host, ONE artifact, ONE launch, ONE DPI. Fake-profile isolation is PARTIAL
+on Windows: the eight env variables redirect the Node sidecar, but the Tauri shell resolves app data
+and the WebView2 user-data folder through the Windows known-folder API, which ignores them, so the
+shell side very likely ran against the operator's real `%LOCALAPPDATA%`/`%APPDATA%`. That is
+structural to Windows, and worth a line in CLAUDE.md's two-profile section. No app output was
+captured. The NSIS pages were not exercised (`/S`); SmartScreen and updater-signature checks are out
+of scope.
+
+### 38-S16 (Windows/row-5 half) and 38-S14 (sub-case b): PASS, both discharged
+
+**Instrument.** `uia_dump.ps1` reads WebView2's accessibility tree through UI Automation (the
+Windows analogue of sitting 9's AT-SPI); `uia_score.cjs` compares node names to
+`public/locales/en/gamelib.json` by EXACT string equality. WebView2 exposes each DOM node's CSS
+class list as the UIA ClassName, so the container is OBSERVED here, where on Linux it was only
+inferred from source.
+
+- **OFF arm, Aloft** (`enableSteamNativeInstall=false` read before the open; two libraries on
+  disk): F1 copy PASS, `EXACT_OFF=1` (185 chars, `steam.install.contentLightNotice`), `EXACT_ON=0`,
+  both partial checks 0. F2 container PASS: parent ClassName `infoBox`, whose parent is
+  `InstallModal__dialog`; no `noticeIcon`/`noticeInfo`/ThirdPartyDialog class anywhere. The dialog
+  held only the title, the close button, "Select Platform Version to Install:", ONE disabled
+  "Windows" select, the notice and INSTALL (`s16-off.png`).
+- **ON arm with one library, Aloft then ADOM**: with `D:\SteamLibrary` hidden,
+  `C:\Program Files (x86)\Steam` was the only existing library, and "Download Steam games in
+  GameLib" was turned ON (read back `true`). F3 copy PASS, `EXACT_ON=1` (122 chars, including the em
+  dash and both apostrophes), `EXACT_OFF=0`, identical on Aloft and ADOM. F4 container PASS,
+  `infoBox` inside `InstallModal__dialog`. No library dropdown and no free-space line (`s16-on.png`).
+- **S14(b) install clause**: INSTALL for ADOM planned depot 333301 (Windows/64/english/public,
+  578116871 bytes, 16128 entries). `Finished Installation of 333300` came 85.4 s after the click;
+  `appmanifest_333300.acf` reads `StateFlags 4`, `SizeOnDisk 578116871`, `buildid 5820078`;
+  `steamapps\common\ADOM` holds 15103 files (16128 − 1025 directory entries); the badge flipped to
+  installed.
+- **Restore**: the setting was turned OFF (read back `false`), and `D:\SteamLibrary` was renamed
+  back with `steamapps` and 22 manifests present (`s16-library-rename.txt`).
+
+`38-S16`: with sitting 9's Linux/row-7 half, both halves pass. `38-S14`: with sitting 5's (a), both
+sub-cases pass, and they render DIFFERENT copy (185 vs 122 chars, each matched exactly), which is
+the item's own FAIL condition turned PASS.
+
+**Specification correction, not an app defect.** `38-S14`'s `expected:` listed "Cancel + Install".
+The Steam dialog renders no Cancel button, only the ✕ close button plus INSTALL, and
+`SteamDialog/index.tsx` contains none; its last change (`ad2cd1fe4`, 2026-09-23) predates sitting
+5's build, so sitting 5's "Cancel + Install" was almost certainly restated from `expected:`, not
+observed. The ledger records it as a SPECIFICATION CORRECTION in `text_corrected_at_discharge`, with
+the pre-change text verbatim, the treatment `38-C03` and `38-W03` received.
+
+### 38-E01 — Windows `add_child` feasibility: PASS, discharged
+
+Pre-registered in `e01-prediction.md` before the run, on the UNMODIFIED harness source, with two
+independent instruments: the harness's own API log, and `hwnd_sampler.ps1`, a separate process
+recording every descendant HWND (class, visibility, physical client rect, DPI) at 50 ms, 35
+distinct states. `SPIKE_AUTORUN=1 SPIKE_AUTORUN_EXIT=1` exited on its own after 30 s at
+`=== COMPLETE ===`.
+
+| criterion | result |
+|---|---|
+| P1 attach | `add_child OK` in 95 ms; `["store-embed","main"]`; new `WRY_WEBVIEW` child of the main window |
+| P2 1a / 4a / 4b at ×1.25 | `363,120 950×700` / `363,120 1125×875` / `13,500 500×375`, API and OS identical, 0 px |
+| P3 hide/show | 4d container `HIDDEN`; 4e visible, rect unchanged |
+| P4 destroy | container subtree gone at 04:28:27.684Z |
+| P5 content | shot-017 store exactly covers `#slot`; shot-020 store only at the 4b rect |
+
+Geometry tracking, by proxy as pre-registered: the container and the renderer HWND inside it
+followed the `#slot` ResizeObserver within about 100 ms (1233×647 → … → 72 physical height), the
+renderer within 1 px of the container. The page's own `innerWidth` was not instrumented. Probe B
+placed two children side by side in a bare window as requested. An unscored anomaly — the main
+embed moving to a narrow slot-edge rect while probe B's window was created — is most likely the
+panel's slot sync reading a momentary layout; probable, not proven.
+
+Phase 8, NOT scored: the "isolated" child's jar reported all 15 cookies, including the shared
+jar's Steam and GOG cookies, so `data_store_identifier` is a SILENT NO-OP on WebView2 too. wry
+0.57.0 defines `with_data_store_identifier` only under
+`#[cfg(any(target_os = "macos", target_os = "ios"))]` (`src/lib.rs:1579`, `:1612`). Recorded in the
+isolation todo's Windows addendum.
+
+**Claim limit.** ONE host, ONE DPI, ONE monitor, the spike's lockfile, NOT the shipped app.
+
+### 38-E03 branch (b) and 38-E04 branch (b): PASS, both items stay OPEN
+
+**Harness changes, made after `38-E01` was scored.** (1) The slot sync in `dist/index.html` was
+ported from a pure trailing debounce to the shipped app's `useStoreEmbedHost.ts` `scheduleFlush`
+(leading-edge throttle with a trailing flush, 40 ms); the debounce is the exact defect plan 40-11's
+live gate found. (2) From the panel, the SYNC `create_embed` command hung on Windows
+(`[embed] add_child` with no `OK`/`FAILED`, window `Responding=True`); Tauri documents creating
+webviews from sync commands as a Windows deadlock. `create_embed` and `create_multi_window` became
+`async` wrappers over `_impl` bodies, which the autorun still calls through `run_on_main_thread`.
+The shipped `store_embed_open` is reached through the sidecar RPC dispatch, not a Tauri command, so
+it does not have this shape; a Windows un-gating must keep it that way.
+
+- **`38-E04`(b), drag-resize at 1.25**: pre-registered in `e04b-prediction.md`. The operator
+  drag-resized the window corner for about 8.4 s (sampler `-NoShots`, cadence median 28 ms) and
+  reported "kept up fine, no tearing or spilling". M1: 187 embed-rect updates, gap median 43 ms,
+  p90 61 ms, max 245 ms (one outlier). M2 settle: 0 ms at sampler resolution. M3: 47 of 334 samples
+  transiently past the client edge by up to 32 px while shrinking, not seen by the operator, not
+  scored. Limit: the sampler cannot see sub-28 ms frames.
+- **`38-E03`(b), HiDPI at 2.0**: pre-registered in `e03b-prediction.md`. The display was set to
+  200% (1720×720 logical). H1: `scaleFactor` 2.0 (6 readbacks), DPI 192. H2: 1a `580,192 1520×1120`,
+  4a `580,192 1800×1400` (bottom clipped by the 1399-px client, recorded), 4b `20,800 800×600`, all
+  exactly ×2, 0 px; 4c `581,193 1521×1122` is ×2 rounded half up. H3: slot sync landed at `564,112`,
+  the slot's 282,56 ×2. H4: at 1:1 (`e03b-hwnd/e03b-4b-crop-1to1.png`) the embed's text is
+  device-resolution sharp, with its top-left exactly at 20,800. The probe-B anomaly reproduced at 2.0
+  (`564,181 22×602`). Not covered: mixed-DPI multi-monitor setups and external displays.
+
+Both items stay in `human_verification` for their branch (a), other macOS displays/hardware, and
+branch (c), the unbuilt GTK-box-native Linux layout. Both scores are on the spike harness, not the
+shipped app.
+
+Artifacts: `.planning/quick/260930-o75-phase-38-sitting-13-windows-38-e01-38-w0/` (`win_smoke.ts`,
+`uia_dump.ps1`, `uia_score.cjs`, `hwnd_sampler.ps1`, `evidence/` — `w04-verdict.md`,
+`s16-s14-verdict.md`, `e01-prediction.md`, `e01-verdict.md`, `e03b-prediction.md`,
+`e04b-prediction.md`, `e03b-e04b-verdict.md` and their captures).

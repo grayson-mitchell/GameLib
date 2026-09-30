@@ -1,0 +1,20 @@
+﻿[
+    {
+        "name":  "gamelib-shell.exe",
+        "len":  33668608,
+        "mtime":  "2026-09-25T22:54:38",
+        "sha":  "ABEAA9824A46FFCBD3CDFA5BBB1FB08BA13D54AE28A6FCDA467D9D1D00DBE7AE"
+    },
+    {
+        "name":  "gamelib-sidecar.exe",
+        "len":  120675328,
+        "mtime":  "2026-09-07T18:13:06",
+        "sha":  "E28D874E27B342932620CCB5F1E49D9C747547BBBAFC1B675955265BB333825D"
+    },
+    {
+        "name":  "uninstall.exe",
+        "len":  80344,
+        "mtime":  "2026-09-26T09:31:03",
+        "sha":  "CFBE449EA7D24E12DB5AA84B3BF4F1462B333C15138DEDBE9609ADEC4C73FF7D"
+    }
+]
