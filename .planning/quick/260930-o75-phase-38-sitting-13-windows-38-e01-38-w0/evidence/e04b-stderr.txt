@@ -1,0 +1,8 @@
+[control-server] listening {"origin":"http://localhost:17913"}
+[app] started {"controlOrigin":"http://localhost:17913","mainThread":"ThreadId(1)","unstableFeature":true}
+[env] environment {"controlOrigin":"http://localhost:17913","gogStoreUrl":"https://www.gog.com/en/games","steamStoreUrl":"https://store.steampowered.com/app/440/Team_Fortress_2/","tauri":"2.11.5 (Cargo.lock-pinned, matches src-tauri) + `unstable` feature","wry":"0.55.1"}
+[embed] add_child {"isolatedStore":false,"requested":{"h":662.0,"w":986.0,"x":282.0,"y":56.0},"spoofUa":true,"thread":"worker","url":"https://store.steampowered.com/app/440/Team_Fortress_2/"}
+[embed] add_child OK {"boundsReadback":"Rect { position: Physical(PhysicalPosition { x: 353, y: 70 }), size: Physical(PhysicalSize { width: 1233, height: 828 }) }","elapsedMs":105,"label":"store-embed","windowNumber":null,"windowWebviews":["main","store-embed"]}
+[navigation] embed on_navigation {"url":"https://store.steampowered.com/app/440/Team_Fortress_2/"}
+[navigation] embed on_page_load {"event":"started","url":"https://store.steampowered.com/app/440/Team_Fortress_2/"}
+[navigation] embed on_page_load {"event":"finished","url":"https://store.steampowered.com/app/440/Team_Fortress_2/"}

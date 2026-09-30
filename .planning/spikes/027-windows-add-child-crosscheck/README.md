@@ -87,3 +87,81 @@ suggests" is not a live measurement — spike 026 found Linux's *own* source-lev
 exactly the trap of trusting source over a live run), and the MSVC target specifically (the one
 actually shipped) was never even type-checked, only its GNU sibling. A real Windows sitting
 remains the only way to close `38-E01`.
+
+## Live Windows run — sitting 13 (2026-09-30)
+
+**PASS on a real Windows host.** This answers the runtime question the Results section above left
+open, and `38-E01` was discharged on it (Phase 38 sitting 13, quick `260930-o75`). The frontmatter
+`verdict: PARTIAL` is left as written because it scores this spike's own cross-check question, which
+this Linux session could only half answer. The live run below is a separate measurement on a
+different host.
+
+**Host and build.** Windows 11 Home 10.0.26200, one display at DPI 120 (scale factor 1.25). A native
+`cargo build` on `x86_64-pc-windows-msvc` (rustc 1.98.1) of the UNMODIFIED `app/` source finished
+clean in 1m17s, which answers the MSVC type-check this spike could not reach (the `llvm-rc` gap was a
+Linux-host tooling gap, as recorded). `Cargo.lock` resolves tauri 2.12.0, tao 0.37.1, wry 0.57.0 and
+webview2-com 0.39.1. The harness's `[env]` log line (`main.rs:188-189`) and the header comment
+(`main.rs:3`) still say "tauri 2.11.5 / wry 0.55.1": that is a stale hard-coded label, not a
+measurement.
+
+**Instruments.** The harness's own API log, and an independent OS instrument (`hwnd_sampler.ps1`, a
+separate process sampling every descendant HWND's class, visibility and physical client rect at
+50 ms; 35 distinct states). Criteria P1–P5 were written before the run.
+
+**Geometry at ×1.25, 0 px error** (API readback and OS rect identical, physical px):
+
+| step | requested (logical) | OS container rect |
+|---|---|---|
+| 1a | 290,96 760×560 | 363,120 950×700 |
+| 4a | 290,96 900×700 | 363,120 1125×875 |
+| 4b | 10,400 400×300 | 13,500 500×375 |
+| 4c (fractional, not scored) | — | 363,121 950×701 |
+
+`add_child` returned `OK` in 95 ms and attached a real `WS_CHILD` `WRY_WEBVIEW` container to the
+main window. It hid and showed with its rect unchanged, and its subtree was gone after destroy. The
+slot's ResizeObserver drove the container, with the cross-process `Chrome_RenderWidgetHostHWND`
+inside it, within about 100 ms per step (renderer within 1 px of the container). Probe B (a bare
+Window with two children) placed them side by side as requested. An unscored anomaly, in which the
+main embed moved to a narrow slot-edge rect while probe B's window was created, is most likely the
+panel's slot sync reading a momentary layout. That is probable, not proven. It reproduced at scale
+2.0.
+
+**`data_store_identifier` is a silent no-op on WebView2 too.** The "isolated" child's jar reported
+all 15 cookies, including the Steam and GOG cookies from the shared jar. wry 0.57.0 defines
+`with_data_store_identifier` and its field only under
+`#[cfg(any(target_os = "macos", target_os = "ios"))]` (`src/lib.rs:1579`, `:1612`). Recorded in
+`.planning/todos/pending/2026-09-28-linux-embed-data-store-identifier-is-a-silent-no-op.md`.
+
+**Two harness changes, made AFTER `38-E01` was scored on the unmodified source** (for `38-E03`(b)
+and `38-E04`(b)):
+
+1. `app/dist/index.html`: the slot sync was ported from a pure trailing debounce (`clearTimeout` +
+   restart, 40 ms) to the shipped app's `useStoreEmbedHost.ts` `scheduleFlush`, a leading-edge
+   throttle with a trailing flush. The debounce is the defect plan 40-11's live gate found, and
+   drag-latency numbers taken against it would measure the harness.
+2. `app/src/main.rs`: `create_embed` and `create_multi_window` are now `async` commands wrapping
+   `create_embed_impl`/`create_multi_window_impl`. **Finding:** as SYNC `#[tauri::command]`s they
+   run on the main thread, and from the panel `create_embed` hung on Windows. The log showed
+   `[embed] add_child` with no `OK`/`FAILED` while the window kept pumping messages
+   (`Responding=True`). Tauri documents creating webviews from sync commands as a Windows
+   deadlock. The autorun still calls the `_impl` bodies through `run_on_main_thread`, so the E01
+   path is unchanged. GameLib's shipped `store_embed_open` is reached through the sidecar RPC
+   dispatch, not a Tauri command. A Windows un-gating must keep it that way.
+
+With those changes, `38-E03`(b) at scale 2.0 and `38-E04`(b) drag-resize both PASSED; see the
+evidence below. Both items stay open for their other branches.
+
+**Claim limit.** One host, one monitor, and this harness's lockfile, NOT the shipped app:
+`src-tauri/Cargo.toml` still target-gates `unstable` away from Windows.
+
+**Evidence:** `.planning/quick/260930-o75-phase-38-sitting-13-windows-38-e01-38-w0/evidence/`
+(`e01-prediction.md`, `e01-verdict.md`, `e03b-prediction.md`, `e04b-prediction.md`,
+`e03b-e04b-verdict.md`, run logs, event exports and `*-hwnd/` sampler captures), and
+`38-VERIFICATION.md`'s `38-E01` `result:` plus the `sitting_13_2026_09_30` keys on `38-E03` and
+`38-E04`.
+
+**Side effect worth knowing:** building this spike with
+`CARGO_TARGET_DIR=.planning/spikes/027-windows-add-child-crosscheck/target-cache` while
+`pnpm tauri:dev` is running crashed the Vite dev server. chokidar hit `EBUSY` on the fresh `.exe`
+under `target-cache`. See
+`.planning/todos/pending/2026-09-30-vite-dev-watcher-crashes-on-spike-target-cache-ebusy.md`.

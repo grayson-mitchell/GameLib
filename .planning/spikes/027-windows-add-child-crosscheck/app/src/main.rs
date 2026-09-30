@@ -196,8 +196,7 @@ fn env_report(state: tauri::State<'_, State>) -> serde_json::Value {
 }
 
 /// THE 016 QUESTION: add a child webview to the (config-created) main window.
-#[tauri::command]
-fn create_embed(
+fn create_embed_impl(
     app: AppHandle,
     state: tauri::State<'_, State>,
     url: String,
@@ -433,8 +432,32 @@ fn read_cookies(
 
 /// Probe B: the "documented" multiwebview shape — a bare Window (no webview)
 /// plus TWO children: an app-origin panel and an external store webview.
+// Quick 260930-o75 (sitting 13): the UI-facing commands are ASYNC wrappers. As SYNC commands
+// they run on the main thread, and on Windows WebView2 `add_child` called from inside one never
+// returned (logged `add_child` with no `OK`/`FAILED`, window still pumping). Tauri documents
+// creating webviews from sync commands as a Windows deadlock. The autorun keeps calling the
+// `_impl` bodies through `run_on_main_thread`, which is how 38-E01 was scored.
 #[tauri::command]
-fn create_multi_window(app: AppHandle, state: tauri::State<'_, State>) -> Result<serde_json::Value, String> {
+async fn create_embed(
+    app: AppHandle,
+    state: tauri::State<'_, State>,
+    url: String,
+    spoof_ua: bool,
+    isolated_store: bool,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+) -> Result<serde_json::Value, String> {
+    create_embed_impl(app, state, url, spoof_ua, isolated_store, x, y, w, h)
+}
+
+#[tauri::command]
+async fn create_multi_window(app: AppHandle, state: tauri::State<'_, State>) -> Result<serde_json::Value, String> {
+    create_multi_window_impl(app, state)
+}
+
+fn create_multi_window_impl(app: AppHandle, state: tauri::State<'_, State>) -> Result<serde_json::Value, String> {
     if let Some(w) = app.get_window("multi") {
         let _ = w.close();
         std::thread::sleep(Duration::from_millis(250));
@@ -548,7 +571,7 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
     log.log("autorun", "=== PHASE 1 (016 KILL-SHOT): add_child on the config-created main window ===", serde_json::json!({}));
     let v = on_main(Box::new(|app| {
         let state = app.state::<State>();
-        match create_embed(
+        match create_embed_impl(
             app.clone(), state,
             format!("{}/set", control_server::ORIGIN),
             true, false,
@@ -651,7 +674,7 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
     log.log("autorun", "=== PHASE 6 (016 probe B): bare Window + two children ===", serde_json::json!({}));
     let v = on_main(Box::new(|app| {
         let state = app.state::<State>();
-        match create_multi_window(app.clone(), state) {
+        match create_multi_window_impl(app.clone(), state) {
             Ok(v) => v,
             Err(e) => serde_json::json!({ "error": e }),
         }
@@ -701,7 +724,7 @@ fn autorun(app: AppHandle, log: Arc<Logger>) {
         // cookies its own /set visit installs but NOT the Steam cookies.
         let v = on_main(Box::new(|app| {
             let state = app.state::<State>();
-            match create_embed(
+            match create_embed_impl(
                 app.clone(), state,
                 format!("{}/set", control_server::ORIGIN),
                 true, true,
