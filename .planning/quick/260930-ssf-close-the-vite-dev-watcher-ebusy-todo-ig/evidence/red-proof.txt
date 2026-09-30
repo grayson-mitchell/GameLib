@@ -1,0 +1,8 @@
+removed: the target-cache element line of server.watch.ignored (numstat 0 1)
+● vite.config.ts -- renderer config lifted off electron-vite › mode: development (invariants that hold in both modes) › ignores spike target-cache dirs in the dev-server watcher
+● vite.config.ts -- renderer config lifted off electron-vite › mode: development (invariants that hold in both modes) › keeps the watcher ignore list to measured failures only
+● vite.config.ts -- renderer config lifted off electron-vite › mode: production (invariants that hold in both modes) › ignores spike target-cache dirs in the dev-server watcher
+● vite.config.ts -- renderer config lifted off electron-vite › mode: production (invariants that hold in both modes) › keeps the watcher ignore list to measured failures only
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 42 passed, 46 total
+restored: yes (git diff --quiet -- vite.config.ts exit 0)

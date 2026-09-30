@@ -35,6 +35,10 @@
  *      unmeasured one (quick task 260925-re8). Same EBUSY class as 6, on a
  *      directory CLAUDE.md instructs you to rewrite; the list is asserted
  *      exactly so `build/` and `public/bin` cannot be added on reasoning alone.
+ *   8. `server.watch.ignored` losing its `target-cache` entry (quick task
+ *      260930-ssf). Same EBUSY class as 6 and 7, measured in Phase 38 sitting 13:
+ *      a `cargo build` of spike 027 into its `target-cache` killed a running
+ *      `pnpm tauri:dev`.
  *
  * The assertions run against the RESOLVED config object returned by the
  * exported callback, under both `mode: 'production'` and `mode: 'development'`
@@ -266,6 +270,17 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
         expect(ignored).toContain('**/graphify-out/**')
       })
 
+      // Quick task 260930-ssf: third member of the same defect class. Measured
+      // on the pre-fix config, the dev watcher held 519 dirs / 3846 entries under
+      // the spike 027 target-cache -- a `cargo build` there killed a running
+      // `pnpm tauri:dev`. The named directory, not the planning tree (OD-1).
+      it('ignores spike target-cache dirs in the dev-server watcher', () => {
+        const ignored = config.server?.watch?.ignored
+        expect(Array.isArray(ignored)).toBe(true)
+        expect(ignored).toContain('**/target-cache/**')
+        expect(ignored).not.toContain('**/.planning/**')
+      })
+
       // The array is observation-only: every entry is a measured failure. build/
       // and public/bin are watched (169 dirs) and have the same
       // written-while-serving shape, but no crash has been observed on them, so
@@ -370,6 +385,15 @@ describe('vite.config.ts -- renderer config lifted off electron-vite', () => {
       expect(source).toContain('260925-re8')
       expect(source).toContain('graphify-out')
       expect(source).toMatch(/HMR is gone|HMR/)
+    })
+
+    // 260930-ssf: the entry only works through the .planning dot-directory
+    // because Vite's bundled chokidar matches ignore globs with `dot: true`. A
+    // reader upgrading Vite/chokidar needs that to know to re-run the probe.
+    it('keeps the 260930-ssf rationale next to the target-cache ignore', () => {
+      expect(source).toContain('260930-ssf')
+      expect(source).toContain('target-cache')
+      expect(source).toContain('dot: true')
     })
   })
 })
