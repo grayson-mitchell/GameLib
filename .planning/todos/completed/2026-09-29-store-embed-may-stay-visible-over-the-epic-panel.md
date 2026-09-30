@@ -48,3 +48,30 @@ There is no further code change proposed here — the CR-01 fix already lands th
 resolve this hypothesis if it is real. What remains is exclusively the live macOS observation above;
 writing more code against an unmeasured hypothesis risks solving a problem that may not exist, or
 missing the actual one.
+
+## Closed 2026-10-01 (quick task 261001-svm)
+
+**Refuted — the todo's own branch was taken.** The live check above named two outcomes; the
+orchestrating session ran it on macOS hardware and reached "no native content visible at any point
+during or after the switch," not the re-triage branch.
+
+**Positive control:** driving to the GOG store route first painted `www.gog.com` (read as an
+image), proving the capture pipeline CAN see native embed content when it is actually present.
+
+**Measurement:** a 24-frame burst at ~100 ms spacing was armed before switching to Epic. Pre-switch
+frames ran ~1.10 MB; from the first post-switch frame they drop to ~579 KB and stay there. That
+first frame, read as an image, shows the unavailable panel clean — no GOG or Epic content, no
+native surface anywhere. All 13 post-switch frames (~1.1 s) differ only by the console caret blink;
+a settled capture seconds later is likewise clean. Reproduced a second time later in the same
+session.
+
+**Scope, not widened:** refuted POST-CR-01-fix only — the pre-fix state was never run on hardware,
+so this cannot distinguish "CR-01 closed a real defect" from "the hypothesis was never real"; both
+readings stay open. Measured on the macOS dev/debug build (`pnpm tauri dev`) via the docked Web
+Inspector console; the packaged build was not re-measured. Frames are NOT committed — the GOG page
+was signed in, so they carry account UI, and they live only in the measuring session's scratchpad.
+
+**Forward pointer:** the same gate run found a different, `major` macOS defect — the embed stays
+HIDDEN (not too visible) after any return to a store route — filed separately at
+`.planning/todos/pending/2026-10-01-macos-store-embed-stays-hidden-on-every-return-to-a-store-route.md`
+and fixed in this same quick task.

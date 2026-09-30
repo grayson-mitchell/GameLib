@@ -5799,20 +5799,25 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let (url, x, y, w, h) = store_embed_open_args(args)?;
 
     if let Some(existing) = app.get_webview(STORE_EMBED_LABEL) {
-        // Linux only (quick 260930-blh, live-measured): the renderer remounts on every return to
-        // a store route and calls `store_embed_open` again, while the previous unmount left the
-        // embed HIDDEN and, via the slot's ResizeObserver, moved to a zero rect. Navigating alone
-        // (the macOS behaviour, unchanged below) would leave it hidden/zero-sized, so re-apply the
-        // rect this call carries and show it before navigating.
+        // 260930-blh (2026-09-30, Linux) + 261001-svm (2026-10-01, macOS), both live-measured:
+        // the renderer remounts on every return to a store route and calls `store_embed_open`
+        // again, while the previous unmount left the embed HIDDEN and, via the slot's
+        // ResizeObserver, moved to a zero rect on Linux. The SHOW step below is now shared across
+        // platforms: navigating alone would leave the embed hidden on macOS too, exactly as the
+        // 2026-10-01 measurement found. The rect re-apply stays Linux-only: macOS bounds were
+        // measured already correct on this path (`storeEmbedShow()` alone repainted the embed
+        // with no bounds flush), so re-applying a rect here would import the zero-rect hazard
+        // `store_embed_linux_rect_is_zero_area` exists to contain, onto a platform with no
+        // measured need for it.
         #[cfg(target_os = "linux")]
         {
             let rect = store_embed_linux_gtk_rect(x, y, w, h)
                 .map_err(|e| e.replacen("store_embed_set_bounds:", "store_embed_open:", 1))?;
             linux_store_embed_layout::apply_bounds(&existing, rect)?;
-            existing
-                .show()
-                .map_err(|e| format!("store_embed_open:show-failed:{e}"))?;
         }
+        existing
+            .show()
+            .map_err(|e| format!("store_embed_open:show-failed:{e}"))?;
         existing
             .navigate(url)
             .map_err(|e| format!("store_embed_open:navigate-failed:{e}"))?;
@@ -6015,6 +6020,33 @@ fn store_embed_linux_rect_is_zero_area(rect: (i32, i32, i32, i32)) -> bool {
     rect.2 == 0 || rect.3 == 0
 }
 
+/// The macOS sibling of the guard above, on the renderer's `f64` logical rect rather than a
+/// converted `i32` one (macOS takes the rect verbatim -- see `store_embed_linux_gtk_rect`'s own
+/// note that rounding is a Linux-only consequence of GTK's integer API).
+///
+/// Measured live on macOS 2026-10-01 (quick 261001-svm), AFTER that task's `show()` fix had
+/// already landed: `/store/gog` -> `/store/epic` -> `/store/gog` left the embed invisible even
+/// though it was by then being SHOWN. `window.api.storeEmbedShow()` did not bring it back and a
+/// bounds flush alone DID, which is what identifies the surviving cause as geometry, not
+/// visibility. The Epic panel replaces the slot while the hook stays mounted, so the slot's
+/// ResizeObserver reports a final 0x0 rect that this function's caller used to apply verbatim;
+/// nothing on macOS re-applies a real rect afterwards, so the embed stayed 0x0 until a genuine
+/// window resize. Once in that state even a `/library` round trip stayed blank -- also measured.
+///
+/// This is the same deliberate deviation from D-18's "apply the oracle's rect verbatim" that the
+/// Linux branch took on 2026-09-30, and it carries the same accepted edge: a slot that genuinely
+/// collapses to zero area WHILE VISIBLE now keeps its old geometry instead of vanishing. That
+/// edge remains unmeasured on both platforms.
+/// Non-finite input is folded into the same "not a usable geometry" answer rather than given its
+/// own error: Linux rejects `NaN`/infinities during its `i32` conversion, and macOS has no
+/// conversion step to reject them in, so this is where they stop. Spelled with `is_finite` and
+/// `<=` rather than the shorter `!(w > 0.0)` -- that form also catches `NaN`, but clippy's
+/// `neg_cmp_op_on_partial_ord` fires on it twice and the crate's warning ceiling is pinned.
+#[cfg(target_os = "macos")]
+fn store_embed_rect_is_zero_area(w: f64, h: f64) -> bool {
+    !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0
+}
+
 /// The one line the Linux layout logs once the embed's geometry has settled. Geometry only --
 /// never a URL. `requested` is what the renderer asked for (rounded); `embed` and `main` are the
 /// MEASURED GTK allocations (embed relative to main's origin, main relative to the overlay);
@@ -6082,6 +6114,13 @@ fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, Stri
     }
     #[cfg(target_os = "macos")]
     {
+        if store_embed_rect_is_zero_area(w, h) {
+            eprintln!(
+                "[shell] store_embed(macos): ignored zero-area bounds (slot unmounted); \
+                 keeping the last real geometry"
+            );
+            return Ok(Value::Null);
+        }
         webview
             .set_position(tauri::LogicalPosition::new(x, y))
             .map_err(|e| format!("store_embed_set_bounds:set_position-failed:{e}"))?;
@@ -17478,6 +17517,36 @@ mod tests {
         assert!(!store_embed_linux_rect_is_zero_area((-40, -40, 300, 200)));
     }
 
+    /// macOS sibling of the test above (quick 261001-svm). The 0x0 case is the one actually
+    /// measured live -- the slot's final ResizeObserver report once the Epic panel has replaced
+    /// it -- and before this guard existed it was applied verbatim and left the embed invisible
+    /// at zero size until a genuine window resize.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_macos_zero_area_rect_is_recognised() {
+        // The measured case: slot unmounted, every field zero.
+        assert!(store_embed_rect_is_zero_area(0.0, 0.0));
+        // One collapsed axis is still unusable.
+        assert!(store_embed_rect_is_zero_area(0.0, 418.0));
+        assert!(store_embed_rect_is_zero_area(1076.0, 0.0));
+        // Negative extents are not a geometry this can honour either; GTK's branch rejects them
+        // outright in conversion, and macOS has no conversion step to reject them in.
+        assert!(store_embed_rect_is_zero_area(-1.0, 200.0));
+        assert!(store_embed_rect_is_zero_area(300.0, -1.0));
+        // Non-finite input stops here rather than reaching `set_size`. A bare `w <= 0.0` test
+        // would let NaN THROUGH (every comparison with NaN is false), so these two cases are the
+        // ones that turn red if the `is_finite` half is ever dropped as redundant.
+        assert!(store_embed_rect_is_zero_area(f64::NAN, 200.0));
+        assert!(store_embed_rect_is_zero_area(300.0, f64::NAN));
+        assert!(store_embed_rect_is_zero_area(f64::INFINITY, 200.0));
+        assert!(store_embed_rect_is_zero_area(300.0, f64::NEG_INFINITY));
+        // Real geometry, including the fractional rects a logical-px slot rect actually carries,
+        // must pass through untouched -- D-18's verbatim rule still holds for every usable rect.
+        assert!(!store_embed_rect_is_zero_area(1076.0, 418.0));
+        assert!(!store_embed_rect_is_zero_area(760.25, 560.75));
+        assert!(!store_embed_rect_is_zero_area(0.5, 0.5));
+    }
+
     #[cfg(target_os = "linux")]
     #[test]
     fn store_embed_linux_settled_line_has_the_pinned_format() {
@@ -17490,6 +17559,86 @@ mod tests {
             ),
             "[shell] store_embed(linux): settled requested=291,97,760x561 \
              embed=291,97,760x561 main=0,0,1280x800 vbox=1280x800"
+        );
+    }
+
+    // ---- macOS store-embed show-before-navigate convergence (quick 261001-svm) ----
+    //
+    // `store_embed_open` cannot be driven from a `#[test]` -- it takes `&AppHandle`, which a
+    // unit test structurally cannot construct, exactly as this file's own comments already say
+    // of `open_external`. Measured: all 31 other `store_embed_*` test functions in this module
+    // sit over `AppHandle`-free helpers for exactly that reason. This test is the honest
+    // substitute, in the discipline of the five other `include_str!("main.rs")` tests already in
+    // this file: it reads the command's own source at test time and asserts STRUCTURE -- that
+    // the `existing.show()` call in the existing-webview branch sits outside the
+    // `#[cfg(target_os = "linux")]` sub-block and precedes `existing.navigate(url)` -- not a
+    // claim about native visibility, which nothing in this crate can reach.
+    //
+    // RED-proof (recorded verbatim, matching `open_external_command_body_calls_the_scheme_check_
+    // before_opening`'s own discipline): moving the `existing.show()` statement back INSIDE the
+    // `#[cfg(target_os = "linux")]` block -- the exact mutation this test exists to catch, since
+    // `cargo check`/`clippy`/every other test would still pass unchanged against that mutation --
+    // makes this test fail, because `show_pos` would then land `cfg_close_pos` or earlier.
+    #[test]
+    fn store_embed_open_shows_the_existing_webview_on_every_platform_before_navigating() {
+        // Bound the slice to JUST `store_embed_open`'s body, ending at the function's closing
+        // brace (`^}` at column 0, the next top-level item). Without this bound, `.find()` on the
+        // unbounded remainder of the file could match this very test's own doc comment above (it
+        // quotes the literals being searched for) or a later unrelated mention, and produce a
+        // false PASS or a false FAIL for the wrong reason instead of failing because the
+        // structure actually moved.
+        let source = include_str!("main.rs");
+        let fn_start = source
+            .find("fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {")
+            .expect("store_embed_open definition not found in main.rs");
+        let body_after_start = &source[fn_start..];
+        let fn_end = body_after_start[1..]
+            .find("\n}\n")
+            .map(|p| p + 1)
+            .expect("store_embed_open's closing brace not found");
+        let body = &body_after_start[..fn_end];
+
+        // Anti-vacuity: the slice must be non-empty and must actually contain the branch under
+        // test, so a boundary drift (e.g. the function signature changing) fails loudly here
+        // rather than passing over a slice that silently stopped containing anything relevant.
+        assert!(!body.is_empty(), "store_embed_open's bounded slice must not be empty");
+        let cfg_open_pos = body
+            .find("#[cfg(target_os = \"linux\")]")
+            .expect("the Linux-only cfg sub-block was not located inside store_embed_open");
+
+        // The cfg sub-block's closing brace: the first `^        }$`-shaped line after the cfg
+        // attribute. Matched textually rather than by brace-counting, same discipline as the
+        // plan's own verify block, since this function has no other 8-space-indented lone `}`
+        // between the cfg attribute and the show call in the fixed branch.
+        let cfg_close_pos = body[cfg_open_pos..]
+            .find("\n        }\n")
+            .map(|p| p + cfg_open_pos)
+            .expect("the Linux-only cfg sub-block's closing brace was not located");
+
+        let show_pos = body
+            .find(".show()")
+            .expect("store_embed_open must still call .show() on the existing webview");
+        let navigate_pos = body
+            .find(".navigate(url)")
+            .expect("store_embed_open must still call .navigate(url) on the existing webview");
+        let bounds_pos = body
+            .find("linux_store_embed_layout::apply_bounds")
+            .expect("the Linux rect re-apply must still exist inside store_embed_open");
+
+        assert!(
+            show_pos > cfg_close_pos,
+            "the show() call must sit AFTER the #[cfg(target_os = \"linux\")] block closes -- \
+             unconditional and macOS-reachable, not Linux-only"
+        );
+        assert!(
+            show_pos < navigate_pos,
+            "the show() call must PRECEDE navigate() -- showing after navigating would leave \
+             the first paint on a hidden surface"
+        );
+        assert!(
+            bounds_pos > cfg_open_pos && bounds_pos < cfg_close_pos,
+            "the Linux rect re-apply must stay INSIDE the #[cfg(target_os = \"linux\")] block -- \
+             this fix converges the show step only, not the rect handling"
         );
     }
 
