@@ -6,10 +6,12 @@ import {
   generateDefFile,
   generateShimC,
   isSretReturn,
+  isStringReturn,
   is64BitRegisterReturn,
   paramWidth,
   toVersionedAccessorSuffix,
   FLAT_EXPORTS_SUPERSET,
+  STRING_RETURN_BUF_BYTES,
   type InterfaceManifest
 } from '../gen_vtables'
 
@@ -225,5 +227,88 @@ describe('gen_vtables', () => {
         expect(FLAT_EXPORTS_SUPERSET).toContain(symbol)
       }
     })
+  })
+
+  // 24-CR-01 (fixed in 1e744d204): the defect routed a `const char*` return
+  // through the generic register-return path, which memcpy'd a 4-byte wire
+  // value into a pointer and returned it -- a pointer into the bridge helper's
+  // address space. These tests pin BOTH the generator and the committed
+  // artifact, because the shim is compiled from the committed .c
+  // (`buildShimCompileArgv`).
+  describe('string-return marshaling (24-CR-01 -- GetPersonaName shim-owned buffer)', () => {
+    const SHIM_C_PATH = join(
+      __dirname,
+      '..',
+      '..',
+      'native',
+      'steam-bridge',
+      'generated',
+      'steam_api_shim.c'
+    )
+
+    it('24-CR-01: isStringReturn routes exactly GetPersonaName across both pinned manifests (a const char* PARAMETER is not a string return)', () => {
+      const methods = [...isteamuser.methods, ...isteamfriends.methods]
+      expect(methods.filter(isStringReturn).map((m) => m.name)).toEqual([
+        'GetPersonaName'
+      ])
+      const setName = methods.find(
+        (m) => m.name === 'SetPersonaNameTest_TESTONLY'
+      )
+      expect(setName).toBeDefined()
+      expect(isStringReturn(setName!)).toBe(false)
+    })
+
+    it('24-CR-01: STRING_RETURN_BUF_BYTES leaves headroom over k_cchPersonaNameMax (128 incl. NUL) and is emitted verbatim as the shim #define', () => {
+      expect(STRING_RETURN_BUF_BYTES).toBeGreaterThanOrEqual(128)
+      const source = generateShimC([isteamuser, isteamfriends])
+      expect(source).toContain(
+        `#define STRING_RETURN_BUF_BYTES ${STRING_RETURN_BUF_BYTES}`
+      )
+    })
+
+    it.each<[string, () => string]>([
+      [
+        'generateShimC output',
+        () => generateShimC([isteamuser, isteamfriends])
+      ],
+      [
+        'committed native/steam-bridge/generated/steam_api_shim.c',
+        () => readFileSync(SHIM_C_PATH, 'utf-8')
+      ]
+    ])(
+      '24-CR-01 (%s): GetPersonaName copies the wire bytes into a shim-owned static buffer and returns a pointer into it, never a wire-received pointer value',
+      (_label, getSource) => {
+        const source = getSource()
+        const stub = source.match(
+          /vt_SteamFriends018_GetPersonaName\(void \*self\) \{[\s\S]*?\n\}/
+        )
+        expect(stub).not.toBeNull()
+        const body = stub![0]
+
+        // The defect signature.
+        expect(body).not.toContain('retbuf[4]')
+        expect(body).not.toContain('memcpy(&ret, retbuf')
+
+        // The shim-owned-buffer copy-and-return.
+        expect(body).toContain('uint8_t retbuf[STRING_RETURN_BUF_BYTES - 1]')
+        expect(body).toContain(
+          "vt_SteamFriends018_GetPersonaName_buf[0] = '\\0';"
+        )
+        expect(body).toContain(
+          'memcpy(vt_SteamFriends018_GetPersonaName_buf, retbuf, retlen);'
+        )
+        expect(body).toContain(
+          "vt_SteamFriends018_GetPersonaName_buf[retlen] = '\\0';"
+        )
+        expect(body).toContain('return vt_SteamFriends018_GetPersonaName_buf;')
+
+        expect(source).toContain(
+          'static char vt_SteamFriends018_GetPersonaName_buf[STRING_RETURN_BUF_BYTES];'
+        )
+        const define = source.match(/^#define STRING_RETURN_BUF_BYTES (\d+)$/m)
+        expect(define).not.toBeNull()
+        expect(Number(define![1])).toBeGreaterThanOrEqual(128)
+      }
+    )
   })
 })
