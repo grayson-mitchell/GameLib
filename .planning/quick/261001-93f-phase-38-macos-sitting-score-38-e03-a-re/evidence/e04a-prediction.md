@@ -61,5 +61,37 @@ supporting evidence recorded alongside that judgment, never a substitute for it.
 "looks like" settings, NO external display attached. **Mixed-DPI multi-monitor setups and external
 displays stay NOT COVERED** — a genuinely different monitor would be a stronger claim and was not
 available for this sitting. This scores branch (a) only. Branch (b) already passed on the spike 027
-harness in sitting 13. Branch (c) stays blocked on the unbuilt GTK-box-native Linux layout. Neither
-`38-E03` nor `38-E04` discharges on this sitting alone.
+harness in sitting 13. Branch (c) is Linux and is not touched here; note that the Phase 38 ledger's
+branch-(c) text differs between trees — `04ceb476e`, published on `quick-260930-feh`, adds a dated
+`linux_built_2026_10_01` field to `38-VERIFICATION.md` recording that the GTK-box layout WAS built,
+explicitly not as a discharge. Neither `38-E03` nor `38-E04` discharges on this sitting alone.
+
+## Tree under test — AMENDED 2026-10-01, BEFORE any measurement
+
+This amendment was made while every `result:` in `e03a-e04a-verdict.md` was still the bare word
+`pending`; nothing had been measured, so the pre-registration is intact rather than revised after
+the fact. It exists because the original file named the fix but never named the tree — and on this
+repo the venue has twice decided what a gate could see.
+
+**Run this sitting with `main` checked out, and record the exact HEAD sha in the verdict.**
+
+- `b4517366e` ("fix(40-08): track live drag-resize — leading-edge throttle, not a debounce"), the
+  fix `38-E04(a)` re-measures, is an ancestor of BOTH `origin/main` and `quick-260930-feh`
+  (verified with `git merge-base --is-ancestor`). So it is present either way.
+- `d71269c2a` ("fix(quick-260930-feh): re-arm store-embed bounds effect when the slot element is
+  replaced") is feh-ONLY and rewrites the very effect under test: `slotRef: RefObject` plus a
+  one-way `slotPresent` latch becomes `slotNode: HTMLDivElement | null` keyed on element identity,
+  and that effect owns the ResizeObserver, the `resize`/`scroll` listeners, `flush()`, and the sole
+  `storeEmbedSetBounds` call site (T-40-08-03).
+- Measuring on `main` therefore scores `38-E04(a)` as its own text specifies — `b4517366e` alone.
+  Measuring on feh would score `b4517366e` + `d71269c2a`, which is a different claim.
+
+**M5: negative control for the venue question.** `d71269c2a`'s behavioural change is expected to
+arm ONLY when the slot element is replaced — a store-to-store navigation on the single
+`store/:store` route. That expectation is a PREDICTION, not a measured fact, and this M exists so it
+is not taken on trust. Run the M1 gesture twice on the same tree: (i) a drag with NO intervening
+store switch, and (ii) a drag immediately after GOG -> Epic -> GOG. Record both distributions.
+If they agree, the venue question is answered by measurement rather than by argument, and a later
+feh run becomes comparable. If they DISAGREE on `main`, then slot-element replacement affects
+drag tracking even without `d71269c2a`, which is a finding in its own right and must not be
+folded into the M1 verdict.

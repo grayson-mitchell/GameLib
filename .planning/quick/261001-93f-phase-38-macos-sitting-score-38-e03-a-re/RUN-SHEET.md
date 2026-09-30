@@ -10,6 +10,28 @@ command by hand, in a terminal, and every gesture by hand, in the GameLib app or
 `evidence/instrument-selfproof.md` already proved the instrument against generated ground truth;
 this run-sheet is what points that proven instrument at the real embed.
 
+## Step 0a — Confirm the tree under test, BEFORE launching anything
+
+Added 2026-10-01, before any measurement. The venue decides what this gate can see, and on this
+repo it has already done so twice: a Phase 38 sitting nearly ran against a 2026-09-23
+`/Applications` bundle that could not emit the line it was looking for, and this task's own commits
+briefly landed on `quick-260930-feh`, a branch whose `d71269c2a` rewrites the exact effect being
+measured.
+
+1. `git rev-parse --abbrev-ref HEAD` — this MUST print `main`. If it prints anything else, STOP and
+   switch; do not score a run taken on another branch.
+2. `git rev-parse --short HEAD` — write the sha into the verdict's header. The claim is about THAT
+   commit, not about "the app".
+3. `git log --oneline -1 --format=%h b4517366e` must resolve, and
+   `git merge-base --is-ancestor b4517366e HEAD` must exit 0 — this confirms the drag-resize fix
+   `38-E04(a)` re-measures is actually present in the tree you are about to build.
+4. `git merge-base --is-ancestor d71269c2a HEAD` must exit **non-zero** — this confirms the
+   feh-only re-arm commit is ABSENT, which is what makes this the `main` arm rather than a
+   mixed one.
+5. Build from this tree. A stale `build/main/sidecar.js` or an installed `/Applications/GameLib.app`
+   is NOT this tree — `pnpm tauri:dev` rebuilds the sidecar on launch, which is why step 1 below
+   launches the dev app and not the installed one.
+
 ## Step 0 — Live positive control, BEFORE anything is scored
 
 1. Launch the GameLib app by hand.

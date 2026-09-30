@@ -52,5 +52,20 @@ justified from that same measured `worst_error_px`, not chosen freely.
 "looks like" settings, NO external display attached. **Mixed-DPI multi-monitor setups and external
 displays stay NOT COVERED** — a genuinely different monitor would be a stronger claim and was not
 available for this sitting. This scores branch (a) only. Branch (b) already passed on the spike 027
-harness in sitting 13. Branch (c) stays blocked on the unbuilt GTK-box-native Linux layout. Neither
-`38-E03` nor `38-E04` discharges on this sitting alone.
+harness in sitting 13. Branch (c) is Linux and is not touched here; note that the Phase 38 ledger's
+branch-(c) text differs between trees — `04ceb476e`, published on `quick-260930-feh`, adds a dated
+`linux_built_2026_10_01` field to `38-VERIFICATION.md` recording that the GTK-box layout WAS built,
+explicitly not as a discharge. Neither `38-E03` nor `38-E04` discharges on this sitting alone.
+
+## Tree under test — AMENDED 2026-10-01, BEFORE any measurement
+
+Amended while every `result:` in `e03a-e04a-verdict.md` was still the bare word `pending` — nothing
+had been measured, so the pre-registration stands rather than having been revised after the fact.
+The original file never named the tree, and on this repo the venue has twice decided what a gate
+could see.
+
+**Run with `main` checked out, and record the exact HEAD sha in the verdict.** The slot geometry
+`38-E03(a)` measures is produced by the same effect that `d71269c2a` rewrites on
+`quick-260930-feh` — that commit is feh-ONLY and absent from `main`, and it owns the
+ResizeObserver, `flush()`, and the sole `storeEmbedSetBounds` call site (T-40-08-03). A run on feh
+would be measuring different code and must be recorded as a separate arm, not merged into this one.
