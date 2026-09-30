@@ -481,9 +481,11 @@ function generateMarkdown(results) {
     lines.push("Result: **OK**");
     lines.push(`- samples: ${arm4.samples}`);
     lines.push(`- duration_ms: ${arm4.duration_ms}`);
-    lines.push(`- cadence_ms: ${fmtJSON(arm4.cadence_ms)}`);
     lines.push(`- unresolved_count: ${arm4.unresolved_count}`);
     lines.push(`- backend: ${arm4.backend}`);
+    lines.push("- cadence_ms:");
+    lines.push("");
+    lines.push(fmtJSON(arm4.cadence_ms));
   }
   lines.push("");
 
