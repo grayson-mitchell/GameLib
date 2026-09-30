@@ -1503,8 +1503,8 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
       jest.useRealTimers()
     })
 
-    it('REQ-34.1-07 invokes nothing before 500ms have elapsed, then RUST_TRAY_SET_ICON with [{ dark: true }] after exactly 500ms when darkTrayIcon is true', () => {
-      mockAppSettings({ darkTrayIcon: true })
+    it("REQ-34.1-07 invokes nothing before 500ms have elapsed, then RUST_TRAY_SET_ICON with [{ variant: 'dark' }] after exactly 500ms when trayIconVariant is dark", () => {
+      mockAppSettings({ trayIconVariant: 'dark' })
 
       fireChangeTrayColor()
       expect(mockRequestRustInvoke).not.toHaveBeenCalled()
@@ -1514,34 +1514,56 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
 
       jest.advanceTimersByTime(1)
       expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
-        { dark: true }
+        { variant: 'dark' }
       ])
     })
 
-    it('REQ-34.1-07 invokes RUST_TRAY_SET_ICON with [{ dark: false }] after 500ms when darkTrayIcon is false', () => {
-      mockAppSettings({ darkTrayIcon: false })
+    it("REQ-34.1-07 invokes RUST_TRAY_SET_ICON with [{ variant: 'light' }] after 500ms when trayIconVariant is light", () => {
+      mockAppSettings({ trayIconVariant: 'light' })
 
       fireChangeTrayColor()
       jest.advanceTimersByTime(500)
 
       expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
-        { dark: false }
+        { variant: 'light' }
       ])
     })
 
-    it('REQ-34.1-07 invokes RUST_TRAY_SET_ICON with [{ dark: false }] when darkTrayIcon is absent from settings', () => {
+    it("REQ-34.1-07 invokes RUST_TRAY_SET_ICON with [{ variant: 'auto' }] when trayIconVariant is absent from settings (absent-to-Auto)", () => {
       mockAppSettings({})
 
       fireChangeTrayColor()
       jest.advanceTimersByTime(500)
 
       expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
-        { dark: false }
+        { variant: 'auto' }
+      ])
+    })
+
+    it("REQ-34.1-07 a legacy darkTrayIcon: true migrates to [{ variant: 'dark' }]", () => {
+      mockAppSettings({ darkTrayIcon: true })
+
+      fireChangeTrayColor()
+      jest.advanceTimersByTime(500)
+
+      expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
+        { variant: 'dark' }
+      ])
+    })
+
+    it("REQ-34.1-07 a legacy darkTrayIcon: false migrates to [{ variant: 'light' }]", () => {
+      mockAppSettings({ darkTrayIcon: false })
+
+      fireChangeTrayColor()
+      jest.advanceTimersByTime(500)
+
+      expect(mockRequestRustInvoke).toHaveBeenCalledWith(RUST_TRAY_SET_ICON, [
+        { variant: 'light' }
       ])
     })
 
     it('REQ-34.1-07 a rejected requestRustInvoke is caught and logged via console.warn, never an unhandled rejection', async () => {
-      mockAppSettings({ darkTrayIcon: true })
+      mockAppSettings({ trayIconVariant: 'dark' })
       mockRequestRustInvoke.mockRejectedValueOnce(new Error('rust unreachable'))
 
       fireChangeTrayColor()
@@ -1559,7 +1581,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
     })
 
     it('REQ-34.1-07 repeated changeTrayColor sends within the 500ms window collapse to a single invoke (T-34.1-23)', () => {
-      mockAppSettings({ darkTrayIcon: true })
+      mockAppSettings({ trayIconVariant: 'dark' })
 
       fireChangeTrayColor()
       jest.advanceTimersByTime(200)
@@ -1585,7 +1607,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         const isolatedConfigGet = require('backend/config').GlobalConfig
           .get as jest.Mock
         isolatedConfigGet.mockReturnValue({
-          getSettings: () => ({ darkTrayIcon: false }),
+          getSettings: () => ({ trayIconVariant: 'light' }),
           setSetting: jest.fn(),
           set: jest.fn(),
           flush: jest.fn()
@@ -1605,7 +1627,7 @@ describe('sidecar app-shell flows (Phase 34.1 Plan 04 — REQ-34.1-05/REQ-34.1-0
         expect(isolatedRequestRustInvoke).toHaveBeenCalledTimes(1)
         expect(isolatedRequestRustInvoke).toHaveBeenCalledWith(
           RUST_TRAY_SET_ICON,
-          [{ dark: false }]
+          [{ variant: 'light' }]
         )
       })
     })

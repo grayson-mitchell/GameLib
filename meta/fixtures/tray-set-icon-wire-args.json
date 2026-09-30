@@ -1,0 +1,13 @@
+{
+  "_comment": [
+    "Single shared artifact for the `tray_set_icon` rustInvoke arm's argument shape.",
+    "TS side (emit): src/common/__tests__/trayIconVariant.test.ts asserts trayIconWireArgs(v) equals each entry.",
+    "Rust side (accept): src-tauri/src/main.rs mod tests (tray_variant_wire_contract_*) asserts tray_set_icon_mode_from_args parses each entry.",
+    "The payload changed on 2026-09-30 from `{ dark: boolean }` to `{ variant }`."
+  ],
+  "tray_set_icon": {
+    "auto": [{ "variant": "auto" }],
+    "light": [{ "variant": "light" }],
+    "dark": [{ "variant": "dark" }]
+  }
+}

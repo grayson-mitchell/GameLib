@@ -69,8 +69,8 @@
  * was cross-checked against `main.ts`'s own `addHandler`/`addListener` call
  * for that exact channel before being written.
  *
- *   - `changeTrayColor` (Plan 06, D-11) -> reads `darkTrayIcon` from
- *     `GlobalConfig` and forwards `{ dark }` to the real Tauri tray via the
+ *   - `changeTrayColor` (Plan 06, D-11) -> reads `trayIconVariant` from
+ *     `GlobalConfig` and forwards `{ variant }` to the real Tauri tray via the
  *     `tray_set_icon` rustInvoke arm -- THE SLICE'S ONLY NEW RUST ARM. Mirrors
  *     `tray_icon.ts:51`'s 500ms settle delay and its own module-level timer
  *     (never stacks unbounded timers, T-34.1-23). `registerAppShellFlows()`
@@ -184,6 +184,10 @@ import { logInfo, LogPrefix } from '../logger'
 import { initQueue } from '../downloadmanager/downloadqueue'
 import { requestRustInvoke } from './sidecarRpc'
 import { RUST_TRAY_SET_ICON } from '../../common/types/sidecarTransport'
+import {
+  migrateTrayIconVariant,
+  trayIconWireArgs
+} from '../../common/trayIconVariant'
 import { logSendHandlerReached } from './sendChannelObservable'
 
 function logSendFailure(channel: string, error: unknown): void {
@@ -227,17 +231,18 @@ let trayColorTimer: NodeJS.Timeout | undefined
 let frontendReadyBootWorkDone = false
 
 /**
- * Read `darkTrayIcon` from `GlobalConfig` and forward it to the real Tauri tray via the
- * `tray_set_icon` rustInvoke arm (Plan 06, D-11). Fully guarded: a `GlobalConfig` read
+ * Read `trayIconVariant` from `GlobalConfig` (migrated from the legacy `darkTrayIcon` boolean
+ * when absent) and forward it as `{ variant }` to the real Tauri tray via the
+ * `tray_set_icon` rustInvoke arm (Plan 06, D-11; quick 260930-lyk). Fully guarded: a `GlobalConfig` read
  * failure or a rejected `requestRustInvoke` both log and return — a tray sync must never
  * crash the sidecar (the `sidecar-dialog-reject-crashes` precedent).
  */
 function syncTrayIcon(): void {
   try {
-    const { darkTrayIcon } = GlobalConfig.get().getSettings()
-    requestRustInvoke(RUST_TRAY_SET_ICON, [
-      { dark: Boolean(darkTrayIcon) }
-    ]).catch((error) => logSendFailure('changeTrayColor', error))
+    const variant = migrateTrayIconVariant(GlobalConfig.get().getSettings())
+    requestRustInvoke(RUST_TRAY_SET_ICON, trayIconWireArgs(variant)).catch(
+      (error) => logSendFailure('changeTrayColor', error)
+    )
   } catch (error) {
     logSendFailure('changeTrayColor', error)
   }
@@ -609,7 +614,7 @@ export function registerAppShellFlows(
   // Mirrors tray_icon.ts:51 exactly -- log immediately (safe: only reachable at
   // runtime, well after the sidecar has booted and initLogger() has run), then a
   // 500ms settle delay before the actual sync so a rapid theme-setting change
-  // doesn't race a still-updating `darkTrayIcon` value.
+  // doesn't race a still-updating `trayIconVariant` value.
   ipcMain.on('changeTrayColor', () => {
     logInfo('Changing Tray icon Color...', LogPrefix.Backend)
     if (trayColorTimer) {
@@ -618,9 +623,8 @@ export function registerAppShellFlows(
     trayColorTimer = setTimeout(syncTrayIcon, 500)
   })
 
-  // Initial sync: correct the tray's startup light-variant default (main.rs's
-  // `.setup()` always starts with `tray_image(false)`) to the user's actual
-  // `darkTrayIcon` setting. Deferred via `setImmediate` (Rule 3 fix, same shape as
+  // Initial sync: correct the tray's startup image (main.rs's `.setup()` builds the tray with
+  // the RESOLVED Auto variant) to the user's stored `trayIconVariant` mode. Deferred via `setImmediate` (Rule 3 fix, same shape as
   // `downloadQueueFlowRegistration.ts`'s D-05 precedent): `registerAppShellFlows()`
   // runs synchronously at `handlers.ts`'s top-level `import './handlers'`
   // (`bootstrap.ts` Step 2), BEFORE `initLogger()` (Step 3) has run -- and

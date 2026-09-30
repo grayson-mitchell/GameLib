@@ -252,10 +252,12 @@ export const RUST_CLIPBOARD_WRITE_TEXT = 'clipboard_write_text' as const
 export const RUST_CLIPBOARD_READ_TEXT = 'clipboard_read_text' as const
 
 /**
- * Rust-side channel name: swap the real Tauri tray's icon between the dark/light variants
- * (Phase 34.1 Plan 06, D-11). Backs the sidecar's `changeTrayColor` registration
- * (`appShellFlowRegistration.ts`), which reads `darkTrayIcon` from `GlobalConfig` and forwards
- * it here. Takes a single `{ dark: boolean }` object arg; resolves `Value::Null` whether or not
+ * Rust-side channel name: swap the real Tauri tray's icon (Phase 34.1 Plan 06, D-11; tri-state
+ * since quick 260930-lyk). Backs the sidecar's `changeTrayColor` registration
+ * (`appShellFlowRegistration.ts`), which reads `trayIconVariant` from `GlobalConfig` (migrated
+ * from the legacy `darkTrayIcon`) and forwards it here. Takes a single
+ * `{ variant: 'auto' | 'light' | 'dark' }` object arg, built by `trayIconWireArgs` and pinned by
+ * `meta/fixtures/tray-set-icon-wire-args.json`; resolves `Value::Null` whether or not
  * a tray currently exists (a missing tray is not an error condition — it may have legitimately
  * failed to build at startup). This is the ONLY new `dispatch_rust_channel` arm added across the
  * entire Phase 34.1 slice (D-01 keeps window chrome renderer-side, with zero new Rust arms).
