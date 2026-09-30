@@ -79,6 +79,9 @@ const mockSessionInstance = {
   once: jest.fn((event: string, cb: (...args: any[]) => any) => {
     sessionOnHandlers[event] = cb
   }),
+  // Mirrors the real LoginSession's writable loginTimeout field — startQRLogin()
+  // assigns QR_LOGIN_TIMEOUT_MS here, and tests pin the assigned value.
+  loginTimeout: 0,
   get refreshToken() {
     return 'mock-refresh-token'
   },
@@ -436,6 +439,104 @@ describe('SteamUser', () => {
       )
       const result = await SteamUser.startQRLogin()
       expect(result.status).toBe('error')
+    })
+
+    // ── T-HD0: observability lines (todo: a failed Steam QR login leaves no
+    // trace in gamelib.log) ────────────────────────────────────────────────
+
+    test('emits a logInfo line when a login attempt starts', async () => {
+      await SteamUser.startQRLogin()
+
+      const lines = jest
+        .mocked(logInfo)
+        .mock.calls.flat(Infinity)
+        .map((arg) => String(arg))
+      expect(
+        lines.some(
+          (line) =>
+            line.includes('Steam QR login:') &&
+            line.includes('attempt starting')
+        )
+      ).toBe(true)
+    })
+
+    test('emits a logInfo line when cancelling a previous login session', async () => {
+      await SteamUser.startQRLogin()
+      await SteamUser.startQRLogin()
+
+      const lines = jest
+        .mocked(logInfo)
+        .mock.calls.flat(Infinity)
+        .map((arg) => String(arg))
+      expect(
+        lines.some((line) =>
+          line.includes('cancelling a previous login session')
+        )
+      ).toBe(true)
+      expect(mockSessionInstance.cancelLoginAttempt).toHaveBeenCalled()
+    })
+
+    test('emits a logInfo line naming the loginTimeout when the challenge is issued', async () => {
+      await SteamUser.startQRLogin()
+
+      expect(mockSessionInstance.loginTimeout).toBe(120000)
+      const lines = jest
+        .mocked(logInfo)
+        .mock.calls.flat(Infinity)
+        .map((arg) => String(arg))
+      expect(
+        lines.some(
+          (line) => line.includes('challenge issued') && line.includes('120000')
+        )
+      ).toBe(true)
+    })
+
+    test('emits a logInfo line when the authenticated event is received', async () => {
+      await SteamUser.startQRLogin()
+      await sessionOnHandlers['authenticated']()
+
+      const lines = jest
+        .mocked(logInfo)
+        .mock.calls.flat(Infinity)
+        .map((arg) => String(arg))
+      expect(
+        lines.some((line) => line.includes('authenticated event received'))
+      ).toBe(true)
+    })
+
+    test('never logs the QR challenge URL or the refresh token across the whole QR flow', async () => {
+      await SteamUser.startQRLogin()
+      await sessionOnHandlers['authenticated']()
+      await SteamUser.pollQRLogin()
+      await SteamUser.pollQRLogin()
+
+      const allLogArgs = [
+        ...jest.mocked(logInfo).mock.calls,
+        ...jest.mocked(logWarning).mock.calls,
+        ...jest.mocked(logError).mock.calls
+      ]
+        .flat(Infinity)
+        .map((arg) => String(arg))
+
+      expect(
+        allLogArgs.some((arg) => arg.includes('steam://...qr_url_here'))
+      ).toBe(false)
+      expect(allLogArgs.some((arg) => arg.includes('mock-refresh-token'))).toBe(
+        false
+      )
+    })
+
+    test('still logs a warning when the session times out (regression, D-01)', async () => {
+      await SteamUser.startQRLogin()
+      sessionOnHandlers['timeout']?.()
+
+      const lines = jest
+        .mocked(logWarning)
+        .mock.calls.flat(Infinity)
+        .map((arg) => String(arg))
+      expect(
+        lines.some((line) => line.includes('Steam QR session timed out'))
+      ).toBe(true)
     })
   })
 

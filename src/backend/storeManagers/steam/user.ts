@@ -34,6 +34,12 @@ const CANARY_APP_ID = 753
 const CANARY_TIMEOUT_MS = 5000
 const RELOG_GRACE_MS = 20000
 
+// QR_LOGIN_TIMEOUT_MS is the single source of truth for the QR session's
+// loginTimeout. The challenge-issued log line below interpolates this same
+// constant (never a second hand-typed 120000) so the logged value cannot
+// drift from the value actually set on the session.
+const QR_LOGIN_TIMEOUT_MS = 120000
+
 // ── SteamUser static class ────────────────────────────────────────────────────
 
 export class SteamUser {
@@ -494,8 +500,14 @@ export class SteamUser {
     challengeUrl?: string
   }> {
     try {
+      logInfo('Steam QR login: attempt starting', LogPrefix.Steam)
+
       // Tear down previous session before replacing it
       if (this.session) {
+        logInfo(
+          'Steam QR login: cancelling a previous login session before starting a new one',
+          LogPrefix.Steam
+        )
         this.session.cancelLoginAttempt()
         this.session = null
       }
@@ -503,7 +515,7 @@ export class SteamUser {
       const session = new LoginSession(EAuthTokenPlatformType.SteamClient)
       // Give the user 2 minutes to scan and approve. The default 30 s kills the
       // session before the phone's approval round-trip completes.
-      session.loginTimeout = 120000
+      session.loginTimeout = QR_LOGIN_TIMEOUT_MS
       this.session = session
       this.qrSessionState = { status: 'waiting' }
 
@@ -511,6 +523,10 @@ export class SteamUser {
 
       session.once('authenticated', async () => {
         try {
+          logInfo(
+            'Steam QR login: authenticated event received — finalizing session',
+            LogPrefix.Steam
+          )
           await getTokenStore().setToken(session.refreshToken)
           configStore.set('isLoggedIn', true)
           configStore.delete('credentialsMissing')
@@ -563,6 +579,10 @@ export class SteamUser {
         this.qrSessionState = { status: 'error' }
       })
 
+      logInfo(
+        `Steam QR login: challenge issued — waiting for phone approval (loginTimeout=${QR_LOGIN_TIMEOUT_MS}ms)`,
+        LogPrefix.Steam
+      )
       return { status: 'done', challengeUrl: response.qrChallengeUrl }
     } catch (err) {
       logError(['Steam startQRLogin failed:', err], LogPrefix.Steam)
