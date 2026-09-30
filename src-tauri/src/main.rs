@@ -3924,11 +3924,24 @@ fn store_logout_cookie_domain_matches(domain: &str) -> bool {
 /// Resolves the `NSWindow` handle for a Tauri-managed login window (Humble/GOG/Amazon --
 /// REQ-34.4.2-10's locked scope; see this file's module-level scope note on
 /// `open_pristine_epic_login_window`, above, for the full boundary). Returns the raw address as
-/// `usize` rather than a live `Retained<NSWindow>` so the value is `Send`: callers reconstruct
-/// it inside their own main-thread closure using this file's existing `SendPtr` convention (see
-/// that struct's own doc comment on `open_pristine_epic_login_window`, above). `None` when no
-/// Tauri-managed window carries `label` -- a missing window is never an error in this file (the
-/// `humble_login_close` "already closed is healthy" convention).
+/// `usize` rather than a live `Retained<NSWindow>` so the value is `Send` and so it can serve as
+/// a bare IDENTITY that is compared but never dereferenced -- the Esc local monitor's
+/// presented-sheet match in `main()`'s `.setup()` is exactly that use, and it is the reason this
+/// `usize` contract stays. `None` when no Tauri-managed window carries `label` -- a missing
+/// window is never an error in this file (the `humble_login_close` "already closed is healthy"
+/// convention).
+///
+/// **Never dereference this address across a thread or a run-loop boundary** (quick task
+/// 260930-q11, measured by direct read of the vendored crate): the pointer
+/// `tauri::Window::ns_window()` hands back is AUTORELEASED --
+/// `tauri-2.11.5/src/window/mod.rs:1642` is literally
+/// `Ok(objc2::rc::Retained::autorelease_ptr(ns_window).cast())` -- so its guaranteed validity is
+/// bounded by the autorelease pool of the thread that RESOLVED it, not by the login window's
+/// lifetime. Carrying it into a later run-loop turn is therefore outside the API's contract
+/// unconditionally, independent of whether the user closes the window mid-flight. A caller that
+/// needs a live `&NSWindow` must go through `login_window_ns_window_retained`, below, from the
+/// main thread; the `SendPtr`-across-the-hop shape both login-sheet paths used to carry has been
+/// deleted for this reason.
 ///
 /// Deliberately resolves ONLY through `app.get_webview_window(label)`. A future Epic phase
 /// would extend this with an `app.get_window(label)` fallback -- the pristine shell
@@ -3940,13 +3953,65 @@ fn store_logout_cookie_domain_matches(domain: &str) -> bool {
 ///
 /// Side-effect free: never logs a label's URL or any page content.
 ///
-/// Callers: `present_login_window_as_sheet`/`dismiss_login_window_sheet` (Phase 34.4.2
-/// Plan 07, below); plan 34.4.2-04 is a further caller.
+/// Callers: `login_window_ns_window_retained` (immediately below -- the retaining wrapper both
+/// login-sheet paths go through) and the Esc local monitor's presented-sheet address comparison
+/// in `main()`'s `.setup()`, which compares the `usize` and never dereferences it.
 #[cfg(target_os = "macos")]
 fn login_window_ns_window(app: &AppHandle, label: &str) -> Option<usize> {
     app.get_webview_window(label)
         .and_then(|w| w.ns_window().ok())
         .map(|ptr| ptr as usize)
+}
+
+/// Main-thread-only companion to `login_window_ns_window`, above: resolves the SAME handle and
+/// immediately RETAINS it, so the caller holds an owned `Retained<NSWindow>` rather than a bare
+/// address with a timing assumption attached to it. Delegates to `login_window_ns_window` for the
+/// resolution itself so this file keeps exactly ONE resolver rather than gaining a second,
+/// competing one -- the standing rule `store_logout_cookie_domain_matches`'s own doc comment
+/// states for comparators, applied here to handle resolution.
+///
+/// **Every caller MUST already be on the main thread.** Two independent reasons, both read
+/// directly out of `tauri-2.11.5/src/window/mod.rs` during quick task 260930-q11's planning and
+/// neither of them recorded in the todo or in `34.4.2-REVIEW.md`'s WR-02:
+///
+/// 1. The address `ns_window()` returns is AUTORELEASED (`:1642`,
+///    `Ok(objc2::rc::Retained::autorelease_ptr(ns_window).cast())`), so its guaranteed validity is
+///    bounded by the autorelease pool of the thread that resolved it. Retaining in the same
+///    expression as the resolution -- which is all this helper does -- is what converts that into
+///    an owned handle valid for as long as it is held. That is the point of this function, not a
+///    nicety.
+/// 2. `ns_window()`'s own `.and_then` closure runs on the CALLING thread: only the inner
+///    `window_handle()` getter crosses to the main thread (tauri-runtime-wry-2.11.4's
+///    `window_getter!`). So `view.window()` -- a plain AppKit accessor -- and the autorelease
+///    registration both execute wherever the caller is. Resolved from a worker thread, that is an
+///    AppKit call off the main thread onto a pool that is not the main thread's.
+///
+/// Resolving from the main thread is safe on both counts: `send_user_message`
+/// (tauri-runtime-wry-2.11.4/src/lib.rs:239-248) short-circuits to `handle_user_message` INLINE
+/// when the caller is already on the main thread, so `getter!`'s unbounded `rx.recv()` is never
+/// reached and this cannot self-deadlock; and `Message::Task(task) => task()` sits at the top
+/// level of that match (`:3335`), outside any `windows.0.borrow()` scope, so a nested resolution
+/// from inside a `run_on_main_thread` closure cannot panic on a `RefCell` double-borrow.
+///
+/// `None` when no Tauri-managed window carries `label` -- a missing window is never an error in
+/// this file (the `humble_login_close` "already closed is healthy" convention).
+#[cfg(target_os = "macos")]
+fn login_window_ns_window_retained(
+    app: &AppHandle,
+    label: &str,
+) -> Option<Retained<objc2_app_kit::NSWindow>> {
+    let addr = login_window_ns_window(app, label)?;
+    // SAFETY: `addr` is the address `login_window_ns_window` resolved for a live Tauri-managed
+    // `NSWindow` on the line above -- nothing runs in between that could release it -- and the
+    // caller is on the main thread (this function's doc comment makes that a precondition; every
+    // call site is inside a `run_on_main_thread` or GCD-main-queue closure). `Retained::retain`
+    // is plain `objc_retain` and is null-safe by contract (objc2-0.6.4 `src/rc/retained.rs:428`),
+    // so no hand-rolled null check is added here. Deliberately NOT `retain_autoreleased`
+    // (`:457`): its `objc_retainAutoreleasedReturnValue` optimization requires the call be
+    // immediately adjacent to the returning message send, which it is not here. The returned
+    // handle is RETAINED, so -- unlike `login_window_ns_window`'s bare address -- it is valid for
+    // as long as it is held, with no "resolved moments ago" timing assumption of any kind.
+    unsafe { Retained::retain(addr as *mut objc2_app_kit::NSWindow) }
 }
 
 /// Cap on `PRESENTED_LOGIN_SHEETS`, below -- mirrors `LOGIN_WINDOW_EVENTS_CAP`'s discipline
@@ -3973,14 +4038,31 @@ static PRESENTED_LOGIN_SHEETS: Mutex<Option<Vec<String>>> = Mutex::new(None);
 
 /// F-34.4.2-04 (checkpoint response, 2026-08-04): the OUTER bound `humble_login_open` places
 /// on the entire sheet-attach attempt, not just `present_login_window_as_sheet`'s own internal
-/// 10s `rx.recv_timeout` around its main-thread dispatch. `login_window_ns_window`'s two
-/// `.ns_window()` calls at that function's own top run BEFORE its internal bound even starts,
-/// and each is tauri-runtime-wry's own `window_getter!`/`getter!` machinery, confirmed by
-/// direct read of that crate's vendored source to block on an UNBOUNDED `rx.recv()` -- no
-/// timeout parameter exists there at all. Set comfortably above the inner 10s bound (not
-/// merely equal to it) so `present_login_window_as_sheet` is given every chance to finish
-/// normally; this constant exists purely as the caller-side backstop for the part of that
-/// function's own critical path it cannot itself bound.
+/// 10s `rx.recv_timeout` around its main-thread dispatch.
+///
+/// **Justification rewritten by quick task 260930-q11 -- the original one is now false.** It
+/// said `login_window_ns_window`'s two `.ns_window()` calls run at the top of
+/// `present_login_window_as_sheet`, BEFORE its internal bound starts, on `getter!`'s UNBOUNDED
+/// `rx.recv()`. Both halves stopped describing the code: those resolutions now happen inside the
+/// deferred GCD closure, which sits INSIDE the inner `rx.recv_timeout(10s)` window, and they run
+/// on the main thread, where `send_user_message` short-circuits to `handle_user_message` inline
+/// (tauri-runtime-wry-2.11.4/src/lib.rs:239-248, confirmed by direct read) so the reply is already
+/// delivered before `recv()` is ever reached. The inner 10s bound therefore now covers the whole
+/// critical path: both resolutions, the 250ms `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY` deferral,
+/// `beginSheet:` itself, and the CR-02 read-back.
+///
+/// **Verdict: the constant still earns its keep and is KEPT.** What the inner bound still does
+/// not cover, between function entry and `recv_timeout` being armed: the entry `eprintln!`, on a
+/// stderr a stalled consumer can block; `app.run_on_main_thread`'s own cross-thread send into
+/// tao's event proxy, which nothing in this file bounds; `register_presented_login_sheet`'s
+/// `PRESENTED_LOGIN_SHEETS` mutex acquisition, which runs after the inner bound has returned; and
+/// whatever a future edit inserts on either side of that bound. Set comfortably above the inner
+/// 10s bound (not merely equal to it) so `present_login_window_as_sheet` is given every chance to
+/// finish normally. Independently load-bearing: `PENDING_VISIBLE_LOGIN_WINDOW_TTL` below is
+/// DERIVED from this constant, and the Rust test
+/// `pending_login_window_ttl_is_derived_from_the_watchdog_timeout_with_a_margin` asserts that TTL
+/// is strictly greater than it -- so deleting this constant would be a change to
+/// `humble_login_open` and to that test, not a comment edit.
 #[cfg(target_os = "macos")]
 const LOGIN_SHEET_PRESENT_WATCHDOG_TIMEOUT: Duration = Duration::from_secs(15);
 
@@ -4125,10 +4207,19 @@ fn clear_pending_visible_login_window(label: &str) {
 /// Never logs the URL, origin, or title -- only the label and a fixed reason string
 /// (T-34.4.1-21/-106 discipline).
 ///
-/// Crosses the `run_on_main_thread` boundary with this file's existing `SendPtr` convention
-/// (see `open_pristine_epic_login_window`'s own `SendPtr` doc comment, above), moving the
-/// WHOLE wrapper into the closure and rebinding it inside (the Rust-2021 disjoint-capture
-/// rebinding this file already documents twice) -- not a second pointer-passing convention.
+/// Crosses the `run_on_main_thread` boundary carrying only `Send` values -- an `AppHandle`
+/// clone and owned `String` labels. **Both `NSWindow` handles are resolved INSIDE the deferred
+/// closure that dereferences them** (quick task 260930-q11, WR-02's option 1), via
+/// `login_window_ns_window_retained`, so resolution and use are atomic with respect to the run
+/// loop and no address is ever carried across a thread or run-loop boundary. This is not merely
+/// closing a "window closes mid-flight" race: the pointer `ns_window()` returns is autoreleased
+/// on the resolving thread's pool (`tauri-2.11.5/src/window/mod.rs:1642`), so the prior
+/// resolve-early/dereference-250ms-later shape was outside the API's contract unconditionally.
+/// See `login_window_ns_window_retained`'s own doc comment, above, for both substrate findings
+/// and for why resolving from the main thread cannot deadlock. The `SendPtr` wrapper and the two
+/// raw-address-to-`&NSWindow` casts this function used to carry are gone; the only remaining
+/// `unsafe` on this path is the single retain inside that helper.
+///
 /// Blocks on the dispatch via `mpsc_channel` + `rx.recv_timeout`, the same
 /// worker-blocks-on-a-channel shape `open_pristine_epic_login_window` and
 /// `clear_default_data_store_cookies_for_domain` both already use for this exact
@@ -4144,35 +4235,14 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
     // hardware run of the CR-01/CR-02 fix (commit 751521663) reported a SYMPTOM CHANGE --
     // no window at all (not even the pre-fix free-standing one) plus a stuck spinner that
     // never cleared -- with no captured `[shell]` stdout to say WHERE time was spent. This
-    // `Instant` and the `eprintln!`s below it (entry, both `ns_window` resolutions, the
-    // main-thread closure's own entry/exit) exist so the NEXT live run's captured
-    // `tauri:dev` stdout can localize a stall to a specific leg of this function instead of
-    // guessing again. Never fatal, never logs URL/origin/title (T-34.4.1-21/-106
-    // discipline unchanged) -- only elapsed durations and the fixed label.
+    // `Instant` and the `eprintln!`s below it (entry, the main-thread closure's own entry, the
+    // deferred closure's entry, both handle resolutions, the AppKit call's return and the
+    // read-back) exist so the NEXT live run's captured `tauri:dev` stdout can localize a stall
+    // to a specific leg of this function instead of guessing again. Never fatal, never logs
+    // URL/origin/title (T-34.4.1-21/-106 discipline unchanged) -- only elapsed durations and
+    // the fixed label.
     let started = std::time::Instant::now();
     eprintln!("[shell] login-window sheet: present_login_window_as_sheet entered for '{label}'");
-    let Some(parent_addr) = login_window_ns_window(app, MAIN_WINDOW_LABEL) else {
-        eprintln!(
-            "[shell] WARN: login-window sheet: no NSWindow for '{MAIN_WINDOW_LABEL}' -- skipping"
-        );
-        return false;
-    };
-    let Some(child_addr) = login_window_ns_window(app, label) else {
-        eprintln!("[shell] WARN: login-window sheet: no NSWindow for '{label}' -- skipping");
-        return false;
-    };
-    eprintln!(
-        "[shell] login-window sheet: both NSWindow addresses resolved for '{label}' (elapsed={:?})",
-        started.elapsed()
-    );
-
-    // SAFETY: see `SendPtr`'s doc comment on `open_pristine_epic_login_window`, above -- a
-    // bare address is not normally `Send`, but this wrapper is reconstructed into a live
-    // reference only from within the main-thread closure below.
-    struct SendPtr(*mut std::ffi::c_void);
-    unsafe impl Send for SendPtr {}
-    let parent_ptr = SendPtr(parent_addr as *mut std::ffi::c_void);
-    let child_ptr = SendPtr(child_addr as *mut std::ffi::c_void);
 
     // CR-02 fix (gap cycle following 34.4.2-LIVE-GATE-RERUN.md's FAIL 0/6): the channel now
     // carries a `bool` -- whether AppKit itself confirms the attachment -- rather than `()`.
@@ -4182,13 +4252,9 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
     // `attachedSheet()`/`isSheet()` immediately after the call, on the SAME main-thread hop,
     // turns "did the dispatch return" into "did AppKit actually attach the sheet".
     let (tx, rx) = mpsc_channel::<bool>();
+    let closure_app = app.clone();
     let closure_label = label.to_string();
     if let Err(e) = app.run_on_main_thread(move || {
-        // Forces Rust 2021 disjoint closure capture to move in the WHOLE `SendPtr` wrapper
-        // for each address, not just its inner raw-pointer field, which would bypass
-        // `SendPtr`'s `Send` impl entirely and fail to compile.
-        let parent_ptr = parent_ptr;
-        let child_ptr = child_ptr;
         // Live-evidence gap (see this function's own entry comment): proves the QUEUED
         // main-thread closure actually STARTED running, distinguishing "never got
         // scheduled" from "started and stalled inside the AppKit call below" -- the two
@@ -4198,30 +4264,22 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
             "[shell] login-window sheet: main-thread closure entered for '{closure_label}'"
         );
         // F-34.4.2-05 fix (see `SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY`'s own doc comment for
-        // the full live-evidence mechanism): the actual `beginSheet:completionHandler:`
-        // call and its read-back are deferred onto GCD's main queue, `WARMUP_DELAY` in the
-        // future, rather than invoked synchronously right here. This is deliberately NOT a
-        // second `run_on_main_thread` call -- `send_user_message` executes synchronously
-        // inline when already on the main thread (confirmed by direct read of
-        // tauri-runtime-wry's vendored source), so it would not yield a single run-loop
-        // turn and would reproduce exactly the wedge this fix targets.
+        // the full live-evidence mechanism): both handle resolutions, the actual
+        // `beginSheet:completionHandler:` call and its read-back are deferred onto GCD's main
+        // queue, `WARMUP_DELAY` in the future, rather than invoked synchronously right here.
+        // This is deliberately NOT a second `run_on_main_thread` call -- `send_user_message`
+        // executes synchronously inline when already on the main thread (confirmed by direct
+        // read of tauri-runtime-wry's vendored source), so it would not yield a single
+        // run-loop turn and would reproduce exactly the wedge this fix targets.
         eprintln!(
             "[shell] login-window sheet: deferring beginSheet dispatch by {SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY:?} via DispatchQueue::main().after() for '{closure_label}'"
         );
+        let deferred_app = closure_app;
         let deferred_label = closure_label.clone();
         let deferred_started = std::time::Instant::now();
         let when = dispatch2::DispatchTime::NOW
             .time(SHEET_PRESENT_WKWEBVIEW_WARMUP_DELAY.as_nanos() as i64);
         let _ = dispatch2::DispatchQueue::main().after(when, move || {
-            // Forces Rust 2021 disjoint closure capture to move in the WHOLE `SendPtr`
-            // wrapper for each address (same discipline as the outer closure, above) --
-            // this closure's own field access below (`parent_ptr.0`/`child_ptr.0`) would
-            // otherwise let disjoint capture pull in only the bare `*mut c_void` field,
-            // bypassing `SendPtr`'s `Send` impl and failing `DispatchQueue::after`'s own
-            // `F: Send` bound (confirmed by a real `cargo check` E0277 before this line was
-            // added).
-            let parent_ptr = parent_ptr;
-            let child_ptr = child_ptr;
             // Live-evidence gap: proves the deferred closure actually ran (as opposed to
             // GCD silently dropping/never scheduling it), and how much real wall-clock
             // time elapsed since it was scheduled -- should be >= WARMUP_DELAY, confirming
@@ -4230,19 +4288,53 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
                 "[shell] login-window sheet: deferred beginSheet closure entered for '{deferred_label}' (deferred_elapsed={:?})",
                 deferred_started.elapsed()
             );
-            // SAFETY: both addresses were resolved moments ago via `login_window_ns_window`,
-            // which only returns `Some` for a live Tauri-managed `NSWindow`; reconstructed
-            // into live references only here, on the main thread (GCD's main queue always
-            // runs work on the OS main thread, same as `run_on_main_thread`'s own closures).
-            let parent: &objc2_app_kit::NSWindow =
-                unsafe { &*(parent_ptr.0 as *const objc2_app_kit::NSWindow) };
-            let child: &objc2_app_kit::NSWindow =
-                unsafe { &*(child_ptr.0 as *const objc2_app_kit::NSWindow) };
+            // Quick task 260930-q11 (WR-02 option 1): BOTH handles are resolved right here, in
+            // the same run-loop turn that dereferences them, rather than on the calling worker
+            // thread before the 250ms deferral was even armed. Nothing suspends between these
+            // resolutions and the AppKit calls below, and each handle is RETAINED (see
+            // `login_window_ns_window_retained`'s doc comment for the autoreleased-pointer and
+            // worker-thread-AppKit findings that make this the only in-contract shape). GCD's
+            // main queue always runs work on the OS main thread, which is that helper's own
+            // precondition.
+            //
+            // A window that does not resolve HERE is healthy, not an error -- the login window
+            // can legitimately be gone by now (user Cmd+W, `captureOAuthLogin` settling,
+            // `humble_login_close`). Each arm therefore WARNs and then sends `false` down the
+            // channel. The send is load-bearing, not tidiness: a bare `return` from inside this
+            // closure would leave the worker blocked on its own `rx.recv_timeout` below for the
+            // full 10s before `humble_login_open`'s `attached == false` visible-fallback arm
+            // could run, so the user would stare at nothing for ten seconds instead of seeing
+            // the window shown normally straight away.
+            let Some(parent) =
+                login_window_ns_window_retained(&deferred_app, MAIN_WINDOW_LABEL)
+            else {
+                eprintln!(
+                    "[shell] WARN: login-window sheet: no NSWindow for '{MAIN_WINDOW_LABEL}' -- skipping"
+                );
+                let _ = tx.send(false);
+                return;
+            };
+            let Some(child) = login_window_ns_window_retained(&deferred_app, &deferred_label)
+            else {
+                eprintln!(
+                    "[shell] WARN: login-window sheet: no NSWindow for '{deferred_label}' -- skipping"
+                );
+                let _ = tx.send(false);
+                return;
+            };
+            // Live-evidence gap: the successor to the old pre-dispatch "both NSWindow
+            // addresses resolved" line, which no longer has a pre-dispatch leg to sit in.
+            // Keeps a future live gate able to localize a stall to the resolution leg
+            // specifically, now measured from inside the deferred closure.
+            eprintln!(
+                "[shell] login-window sheet: both NSWindow handles resolved on the main thread for '{deferred_label}' (deferred_elapsed={:?})",
+                deferred_started.elapsed()
+            );
             // `beginSheet:completionHandler:` is a safe binding (no `unsafe fn` in the
-            // generated bindings) -- `parent`/`child` are both live `NSWindow`s
-            // reconstructed above via the `unsafe` pointer casts, but the call itself needs
-            // no further `unsafe` block.
-            parent.beginSheet_completionHandler(child, None);
+            // generated bindings), and `parent`/`child` are now owned `Retained<NSWindow>`
+            // handles rather than references reconstructed from raw addresses, so this call
+            // needs no `unsafe` block and no pointer cast at all.
+            parent.beginSheet_completionHandler(&child, None);
             // Live-evidence gap: proves the AppKit sheet-begin call itself RETURNED (as
             // opposed to blocking the main thread inside AppKit, which would mean this
             // line -- and every other main-thread message queued behind it, including the
@@ -4259,9 +4351,9 @@ fn present_login_window_as_sheet(app: &AppHandle, label: &str) -> bool {
             // previous presentation); both together are the strongest falsifiable signal
             // this binding exposes.
             let attached = child.isSheet()
-                && parent
-                    .attachedSheet()
-                    .is_some_and(|sheet| std::ptr::eq(&*sheet as *const _, child as *const _));
+                && parent.attachedSheet().is_some_and(|sheet| {
+                    std::ptr::eq(&*sheet as *const _, &*child as *const _)
+                });
             eprintln!(
                 "[shell] login-window sheet: read-back attached={attached} for '{deferred_label}'"
             );
@@ -4344,6 +4436,14 @@ fn register_presented_login_sheet(label: &str) {
 /// already healthy (this file's existing `humble_login_close` "already closed is healthy"
 /// convention).
 ///
+/// Quick task 260930-q11 (WR-02's option 1, applied to this path as well as the present path so
+/// both have ONE shape rather than a shape with an exception): both `NSWindow` handles are
+/// resolved INSIDE the `run_on_main_thread` closure that uses them, via
+/// `login_window_ns_window_retained`, so no raw address crosses the dispatch boundary here
+/// either. See that helper's doc comment for the autoreleased-pointer finding that makes the
+/// prior shape out of contract unconditionally rather than only when a window closes mid-flight.
+/// The `SendPtr` wrapper and the two raw-address casts this function used to carry are gone.
+///
 /// Never fatal, never logs URL/origin/title content -- same discipline as
 /// `present_login_window_as_sheet`, above.
 ///
@@ -4353,8 +4453,15 @@ fn register_presented_login_sheet(label: &str) {
 /// before this function returns -- otherwise both cancel routes (the strip, the Esc monitor)
 /// and any retry would be permanently membership-gated shut against a sheet that may still be
 /// presented, stranding the parent window for the process lifetime with no remaining dismissal
-/// route. The healthy `child_addr == None` path below ("already gone by the time Destroyed
-/// fires") deliberately does NOT re-register -- that path means the window is genuinely gone.
+/// route. The healthy "child no longer resolves" path -- now inside the main-thread closure,
+/// since that is where resolution happens (quick task 260930-q11) -- deliberately does NOT
+/// re-register: that path means the window is genuinely gone ("already gone by the time
+/// Destroyed fires"). Preserving that distinction is why the closure signals on `tx` from EVERY
+/// arm, including the two that never touch AppKit: the channel answers "did the main-thread hop
+/// run", and only a hop that did NOT run may re-register. A silent early `return` would drop the
+/// sender, `recv_timeout` would report `Disconnected`, and the healthy path would wrongly
+/// re-register a window that is already gone -- stranding its label in the registry for the
+/// process lifetime, the exact failure WR-01's re-registration exists to prevent.
 #[cfg(target_os = "macos")]
 fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
     let was_presented = if let Ok(mut guard) = PRESENTED_LOGIN_SHEETS.lock() {
@@ -4372,34 +4479,35 @@ fn dismiss_login_window_sheet(app: &AppHandle, label: &str) {
         return;
     }
 
-    let Some(parent_addr) = login_window_ns_window(app, MAIN_WINDOW_LABEL) else {
-        eprintln!(
-            "[shell] WARN: login-window dismiss: no NSWindow for '{MAIN_WINDOW_LABEL}' -- skipping"
-        );
-        return;
-    };
-    let Some(child_addr) = login_window_ns_window(app, label) else {
-        // Already gone by the time Destroyed fires -- healthy, not an error (see doc
-        // comment above).
-        return;
-    };
-
-    struct SendPtr(*mut std::ffi::c_void);
-    unsafe impl Send for SendPtr {}
-    let parent_ptr = SendPtr(parent_addr as *mut std::ffi::c_void);
-    let child_ptr = SendPtr(child_addr as *mut std::ffi::c_void);
-
     let (tx, rx) = mpsc_channel::<()>();
+    let closure_app = app.clone();
+    let closure_label = label.to_string();
     if let Err(e) = app.run_on_main_thread(move || {
-        let parent_ptr = parent_ptr;
-        let child_ptr = child_ptr;
-        // SAFETY: both addresses were resolved moments ago via `login_window_ns_window`,
-        // reconstructed into live references only here, on the main thread.
-        let parent: &objc2_app_kit::NSWindow =
-            unsafe { &*(parent_ptr.0 as *const objc2_app_kit::NSWindow) };
-        let child: &objc2_app_kit::NSWindow =
-            unsafe { &*(child_ptr.0 as *const objc2_app_kit::NSWindow) };
-        parent.endSheet(child);
+        // Quick task 260930-q11 (WR-02 option 1): both handles are resolved HERE, inside the
+        // main-thread closure that uses them, and each is RETAINED -- no raw address crosses the
+        // dispatch boundary. See `login_window_ns_window_retained`'s doc comment for why that is
+        // the only in-contract shape (the address `ns_window()` returns is autoreleased on the
+        // resolving thread's pool) and for why resolving from the main thread cannot deadlock.
+        //
+        // Every arm below signals on `tx` -- including the two that never touch AppKit -- so the
+        // channel answers "did the hop run" rather than "did `endSheet:` run". That is what keeps
+        // WR-01's re-registration scoped to a hop that genuinely did not run: see this function's
+        // own doc comment for why re-registering on the healthy "window is already gone" path
+        // would strand the label instead of rescuing it.
+        let Some(parent) = login_window_ns_window_retained(&closure_app, MAIN_WINDOW_LABEL) else {
+            eprintln!(
+                "[shell] WARN: login-window dismiss: no NSWindow for '{MAIN_WINDOW_LABEL}' -- skipping"
+            );
+            let _ = tx.send(());
+            return;
+        };
+        let Some(child) = login_window_ns_window_retained(&closure_app, &closure_label) else {
+            // Already gone by the time Destroyed fires -- healthy, not an error (see doc
+            // comment above). No AppKit call, and deliberately no re-registration.
+            let _ = tx.send(());
+            return;
+        };
+        parent.endSheet(&child);
         let _ = tx.send(());
     }) {
         // WR-01: the dispatch never ran at all -- re-register so both cancel routes (strip,
