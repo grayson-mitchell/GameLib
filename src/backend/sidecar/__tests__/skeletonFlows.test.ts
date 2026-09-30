@@ -400,11 +400,24 @@ describe('sidecar Steam skeleton flows (read + action, end to end)', () => {
     // be rejected — the real, on-disk token must stay byte-identical, and no
     // storeChanged frame may be emitted for it. A plaintext write here would be
     // Keychain-decrypt-failed by Electron and would silently sign the real user out.
+    //
+    // Seed AFTER `startSidecar()`, not before (debug/steam-token-survives-keychain): `init()`
+    // now runs `clearOrphanedElectronToken()` unconditionally and SYNCHRONOUSLY (`init()` is
+    // not `async`) as part of booting, deleting whatever legacy value sits in this exact key
+    // at boot time — by design, that cleanup is what this fix authorizes. Seeding before
+    // `startSidecar()` would have the boot-time cleanup (not the attacker's `storeSet`) remove
+    // the value, which would still make `after` undefined and pass, but for the wrong reason —
+    // it would stop distinguishing "the guard rejected the attacker" from "cleanup already
+    // deleted it before the attacker's frame ever arrived". Seeding after boot places a value
+    // in the key the SAME way a real credential would exist post-cleanup (nothing currently
+    // writes it, but the guard must hold regardless of how a value got there), isolating this
+    // test back to the one thing it exists to prove: `storeWriteHandlers.ts`'s guard, not the
+    // cleanup, rejects the attacker's write.
     it('PHASE 28 D-04 regression: a storeSet into steamConfigStore.refreshToken is rejected and leaves the real token byte-identical', async () => {
+      const { input, frames } = startSidecar()
       steamConfigStore.set('refreshToken', 'REAL-TOKEN-DO-NOT-OVERWRITE')
       const before = steamConfigStore.get_nodefault('refreshToken')
 
-      const { input, frames } = startSidecar()
       writeSend(input, 'set-attacker-1', 'storeSet', [
         'steamConfigStore',
         'refreshToken',

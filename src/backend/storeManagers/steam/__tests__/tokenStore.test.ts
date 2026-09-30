@@ -64,6 +64,7 @@ jest.mock('backend/logger', () => ({
 // ── electronStores mock — in-memory map standing in for configStore ─────────
 let backingStore: Record<string, unknown> = {}
 const mockConfigStore = {
+  has: jest.fn((key: string) => key in backingStore),
   get_nodefault: jest.fn((key: string) => backingStore[key]),
   set: jest.fn((key: string, value: unknown) => {
     backingStore[key] = value
@@ -93,7 +94,8 @@ import {
   ElectronTokenStore,
   setTokenStore,
   getTokenStore,
-  readTokenOutcome
+  readTokenOutcome,
+  clearOrphanedElectronToken
 } from '../tokenStore'
 import { SteamUser } from '../user'
 
@@ -108,6 +110,7 @@ describe('tokenStore', () => {
     // initial implementation before every test — re-establish the in-memory
     // configStore backing so get_nodefault/set/delete/clear are genuinely
     // wired to `backingStore`, not silently no-op stubs that only record calls.
+    mockConfigStore.has.mockImplementation((key: string) => key in backingStore)
     mockConfigStore.get_nodefault.mockImplementation(
       (key: string) => backingStore[key]
     )
@@ -295,6 +298,58 @@ describe('tokenStore', () => {
       // with readToken? absent — tsc would fail this file if it did not.
       const store: TokenStore = new ElectronTokenStore()
       expect('readToken' in store).toBe(false)
+    })
+  })
+
+  // debug/steam-token-survives-keychain: `clearOrphanedElectronToken()` retires a
+  // frozen pre-Tauri Electron-era `refreshToken` key from `configStore`
+  // (`steam_store/config.json`). Unit-level coverage against the mocked
+  // `configStore` — presence-only has()/delete(), never a read of the value
+  // itself. Boot-time log-line and real-store coverage lives in
+  // `bootstrap.test.ts` (the caller decides whether to log; this function never
+  // does).
+  describe('clearOrphanedElectronToken (debug/steam-token-survives-keychain)', () => {
+    it('present: deletes the key, returns true, and never reads the value in any form', () => {
+      backingStore['refreshToken'] =
+        'steam:v1:some-ciphertext-or-legacy-plaintext'
+
+      const result = clearOrphanedElectronToken()
+
+      expect(result).toBe(true)
+      expect(mockConfigStore.delete).toHaveBeenCalledWith('refreshToken')
+      expect(backingStore['refreshToken']).toBeUndefined()
+      // PRESENCE-ONLY by design: has()+delete() only, never get()/get_nodefault().
+      expect(mockConfigStore.get_nodefault).not.toHaveBeenCalled()
+    })
+
+    it('absent: no-op, returns false, and delete() is never called', () => {
+      const result = clearOrphanedElectronToken()
+
+      expect(result).toBe(false)
+      expect(mockConfigStore.delete).not.toHaveBeenCalled()
+    })
+
+    it('idempotent: a second call after the key is already gone is a silent no-op', () => {
+      backingStore['refreshToken'] =
+        'steam:v1:some-ciphertext-or-legacy-plaintext'
+
+      expect(clearOrphanedElectronToken()).toBe(true)
+      expect(mockConfigStore.delete).toHaveBeenCalledTimes(1)
+
+      expect(clearOrphanedElectronToken()).toBe(false)
+      // Still exactly once — the second call never touches delete() at all.
+      expect(mockConfigStore.delete).toHaveBeenCalledTimes(1)
+    })
+
+    it('tokenStore.ts source contains no import of storeWriteHandlers — the delete structurally cannot route through the D-04 write guard', () => {
+      const src = readFileSync(join(__dirname, '../tokenStore.ts'), 'utf-8')
+      const importLines = src
+        .split('\n')
+        .filter((line) => /^\s*import\b/.test(line))
+      for (const line of importLines) {
+        expect(line).not.toMatch(/storeWriteHandlers/i)
+      }
+      expect(importLines.length).toBeGreaterThan(0)
     })
   })
 
