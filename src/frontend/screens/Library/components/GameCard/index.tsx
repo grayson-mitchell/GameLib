@@ -563,7 +563,6 @@ const GameCard = ({
               { '--installing-effect': installingGrayscale } as CSSProperties
             }
           >
-            <StoreLogos runner={runner} />
             {justPlayed ? (
               <CachedImage
                 src={art_cover || fallBackImage}
@@ -643,6 +642,14 @@ const GameCard = ({
                 </>
               )}
               {renderIcon()}
+              {/* Moved out of the <Link> above so it can be a direct grid
+                  child of this bar -- a grid only lays out its own children,
+                  so CSS alone could not place it here. Side effect, and it is
+                  the intended one: the badge is no longer inside the link, so
+                  clicking it no longer navigates to the game page. It is a
+                  store indicator sitting among action buttons now, not a
+                  second route into the card. */}
+              <StoreLogos runner={runner} />
             </span>
           </>
         </div>

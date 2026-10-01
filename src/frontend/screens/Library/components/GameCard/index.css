@@ -193,26 +193,45 @@ body:not(.controllerLayout) .gameList:hover .gameCard:focus-within:not(:hover) {
   transform: translateY(0);
 }
 
+/* `play` leads and `store` trails: the play/download control sits at the
+   leading edge, and the store badge takes the trailing slot play used to
+   hold. Only the grid-card variants below are reordered -- the list layout
+   (`.gameListItem > .icons`) deliberately keeps the original
+   'update settings play' order. */
 .gameCard > .icons {
   background: var(--icons-background);
   justify-content: space-around;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-areas: 'update settings play';
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-areas: 'play update settings store';
   padding: var(--space-xs-fixed);
 }
 
 .gameCard.justPlayed > .icons {
   justify-content: right;
-  grid-template-columns: 0.3fr 1fr 0.4fr 0.5fr;
-  grid-template-areas: 'update gap settings play';
+  grid-template-columns: 0.5fr 0.3fr 1fr 0.4fr 0.5fr;
+  grid-template-areas: 'play update gap settings store';
 }
 
 .gameCard.justPlayed.hidden .justPlayedImg {
   opacity: 0.2;
 }
 
+/* Controller active. This used to `display: none` the whole bar, which was
+   correct while the bar held nothing but hover actions -- the stick drives
+   selection, so those buttons are noise. The store badge now lives in this
+   bar too, and it is INFORMATION rather than an action, so hiding the bar
+   outright would have made every store badge in the library vanish the
+   moment a controller was plugged in. The bar therefore survives, flattened
+   to nothing but the badge: the action buttons go, and the bar's own
+   background and padding go with them so no new strip appears across the
+   bottom of every card. */
 .gameCard.gamepad > .icons {
+  background: transparent;
+  padding: 0;
+}
+
+.gameCard.gamepad > .icons > .svg-button {
   display: none;
 }
 
@@ -220,12 +239,16 @@ body:not(.controllerLayout) .gameList:hover .gameCard:focus-within:not(:hover) {
   justify-self: center;
 }
 
+/* In flow as the icons bar's trailing grid cell, not absolutely positioned
+   against the card. The old `position: absolute; right/top` pinned it to the
+   card's top-right corner; `z-index: 2` went with that, and is dropped
+   because the bar (z-index 4) is now this element's own stacking parent --
+   keeping it would have placed the badge BEHIND the bar's background. */
 .gameCard .store-icon {
   border-radius: 10px;
-  position: absolute;
-  right: 5px;
-  top: 4px;
-  z-index: 2;
+  grid-area: store;
+  justify-self: center;
+  align-self: center;
   padding: var(--space-3xs);
   width: 35px;
   height: 35px;
