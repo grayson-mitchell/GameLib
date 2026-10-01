@@ -467,3 +467,20 @@ on a REAL profile (the named real-profile arm of the two-profile rule), X11, two
 - **Does not edit `38-VERIFICATION.md`.** Whether this discharges the Linux branches of 38-E03 and 38-E04 is the operator's call in
   a ledger change. `ready: live-gate` is left for that call; the todo stays in `pending/` because its `38-E03`/`38-E04` routes
   still cite this path.
+
+## Addendum (2026-10-01, quick 261001-g3k): operator live gate COMPLETE — checks 1-9 PASS, 10 n/a
+
+The operator reported the whole `261001-pez` checklist on the local `GameLib_0.7.0_amd64.AppImage` (sha256 prefix
+`a89ac8bb3b71`, not the CI artifact), X11, a real profile, DMABUF unset, one host. The report was a blanket "1-9 pass, 10
+n/a", NOT per-check detail, so nothing below is finer-grained than that.
+
+- **Checks 1-9: PASS**, as reported: boot, embed in the slot, logged-in store (check 3), tab round trip, input,
+  grow-drag (acceptable), shrink-drag (no overhang), maximise/restore and second monitor, keyboard focus.
+- **Check 10: n/a** (shared cookie jar is the decided behaviour, 2026-09-29).
+- **This supersedes** the "not scored" lists in the two addenda above (`261001-e4l` and `261001-apg`).
+- **Not recorded:** boot time, monitor scale, GPU mode, and what was seen in check 3 (which store, whether sign-in survived
+  an app restart as well as a tab switch). Treat check 3's restart clause as asserted by the operator, not observed here.
+- **Not covered, unchanged:** Wayland, fractional scales, mixed-DPI, the CI-built AppImage, and HiDPI on the packaged build.
+  The Linux HiDPI branch of `38-E03` is a separate question and is still un-run on the packaged build.
+- **Effect on this todo:** the live gate it was waiting on is done. The todo is NOT moved to `completed/` by this
+  addendum, and `38-VERIFICATION.md` is not edited.
