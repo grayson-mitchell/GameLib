@@ -6,6 +6,8 @@ severity: medium
 platform: any
 ready: code
 area: observability
+status: RESOLVED
+resolved: 2026-10-01
 files:
   - src/backend/storeManagers/steam/user.ts
   - src-tauri/src/main.rs
@@ -106,3 +108,34 @@ Whatever instrumentation is added must not log the challenge URL, the refresh to
 session material — slot/state names only, matching the discipline the sibling dev-vault todo
 already applies. The shape of the fix (entry/exit logging in `startQRLogin`, status-transition
 logging in `pollQRLogin`, or both) is left open.
+
+## Resolution (quick 261001-hd0, 2026-10-01)
+
+Both previously un-instrumented paths now log. `startQRLogin()` gained four `logInfo` lines
+(`LogPrefix.Steam`): on entry ("attempt starting"), when a previous login session is cancelled
+before starting a new one, when the QR challenge is issued (naming the new `QR_LOGIN_TIMEOUT_MS`
+constant and its numeric value), and when the `authenticated` event is received and the session is
+being finalized. `pollQRLogin()` gained one change-only transition line ("Steam QR poll: status
+X -> Y") that fires exactly once per status change rather than once per poll — the frontend polls
+on a timer, so a per-poll line would itself have been a defect (flooding the log on every tick
+while sitting in `waiting`). This is pinned by a flood-guard test asserting exactly one line across
+three consecutive same-status polls.
+
+None of the new lines carry the QR challenge URL, the refresh token, or the persona name — pinned
+at runtime by a leak-scan test modeled on the existing precedent at `user.test.ts:1441`
+("never logs the raw key value"), which inspects every mock call argument across the whole flow
+rather than grepping the log text for a known secret. Only state/slot names and the numeric
+timeout are logged, per this todo's own direction.
+
+The five pre-existing error branches (`:545-548`, `:551`, `:557`, `:562`, `:568` in the file's
+pre-change line numbering) are untouched byte-for-byte — this todo's own "Correction to the
+original briefing" section already established they were never silent, and that correction stands;
+nothing here contradicts it.
+
+Honest limits, at equal weight with the above: nothing in CI reads `gamelib.log`, so this is a
+human-reading-path improvement only, not a new automated signal. The root cause of the specific
+2026-10-01 failed attempt that originally motivated this todo remains UNKNOWN — reproducing or
+explaining that one incident was explicitly out of scope, and still is. The three keyring RPC arms
+in `src-tauri/src/main.rs` (`keyring_get`, `keyring_set`, `keyring_delete`) remain success-silent
+and `eprintln!`-based; `src-tauri/src/main.rs` was out of scope for this quick task by locked
+decision (never touched), so that cross-referenced gap is still open and tracked separately.
