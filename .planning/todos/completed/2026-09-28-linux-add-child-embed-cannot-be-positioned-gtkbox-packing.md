@@ -503,3 +503,11 @@ instance was stopped and the build relaunched.
 - **Not covered, unchanged:** Wayland, fractional scales, mixed-DPI or per-monitor scaling, external displays, a native
   GNOME 200% setting, Tauri's own `scale_factor()`, the CI-built AppImage.
 - **Does not discharge 38-E03.** Its macOS branch (a) is un-run and not descoped. `38-VERIFICATION.md` is not edited.
+
+## Resolution (2026-10-01, quick 261001-k4w): moved to `completed/`
+
+The work this todo tracked is done: the GTK-box-native layout is built, desk-gated, and the operator live gate on the packaged
+build is recorded (checks 1-9 PASS, 10 n/a; `38-E03`/`38-E04` Linux branches PASS, both discharged on 2026-10-01). Moved by
+the operator's instruction. Open claim limits are in the addenda above (X11 only, `GDK_SCALE=2` not a native display scale,
+local AppImage not the CI build). Frontmatter is left as it was at filing, including `ready: live-gate`, which is now stale.
+Older files cite the `pending/` path; they are historical records and were not rewritten.

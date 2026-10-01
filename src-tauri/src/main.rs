@@ -6037,7 +6037,7 @@ fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, Stri
 }
 
 /// Linux layout for the store/wiki embed (quick 260930-blh; strategy (a) of
-/// `.planning/todos/pending/2026-09-28-linux-add-child-embed-cannot-be-positioned-gtkbox-packing.md`,
+/// `.planning/todos/completed/2026-09-28-linux-add-child-embed-cannot-be-positioned-gtkbox-packing.md`,
 /// spikes 028/029). Public Tauri Linux API plus stock gtk-rs only -- no `tauri-runtime-wry`/wry
 /// patch.
 ///
