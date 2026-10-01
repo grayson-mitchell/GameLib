@@ -79,3 +79,23 @@ symptom. It did not — the Epic panel is clean both before and after the fix.
 - Single window size (1280x800, devtools docked). No HiDPI-scale or resize-during-transition cases.
 - The accepted edge both platforms now carry is unmeasured on both: a slot that genuinely collapses
   to zero area while visible keeps its last real geometry instead of vanishing.
+
+## Run 3 — merged tree (`30a9c4dc7`), relaunched pid 50044
+
+The push was rejected: `origin/main` had moved on by ~25 commits from other sessions, including two
+renderer-side store-embed fixes (`d71269c2a` re-arms the bounds effect when the slot element is
+replaced; `22fcf15e1` stops a last-url restore feedback loop). Neither of this task's Rust fixes was
+present there — no duplicated work — but `d71269c2a` addresses the same slot-replacement geometry
+problem from the renderer end, so the merged tree is a different system from the one Run 2 measured
+and the gate was re-run against it rather than assumed.
+
+Merged with `git merge` rather than rebased, deliberately: a rebase would rewrite the commit SHAs
+this task's todo, SUMMARY and STATE row all cite by name. Only `.planning/STATE.md` conflicted (both
+sides appended a Quick Tasks row); both rows were kept. `src-tauri/src/main.rs` auto-merged and both
+fixes were re-verified present in the merged file by position, not assumed.
+
+Merged binary birth 21:58:28, relaunched shell pid **50044** started 22:00:10. All five steps PASS,
+same sequence as Run 2, Epic panel clean at step 4 with no native content over it.
+
+Post-merge gates: `cargo test --bin gamelib-shell` 305 passed / 0 failed / 2 ignored; `cargo clippy`
+exit 0 with the pinned 15-warning ceiling held.
