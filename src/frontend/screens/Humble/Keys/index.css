@@ -27,8 +27,8 @@
 
 /* 260911-t0p: without these two declarations the h4 is a default flex item
    (`flex-shrink: 1`) inside `.humbleKeysHeaderTop`'s flex row, and its
-   sibling SearchBar (`components/UI/SearchBar/index.scss:3`) sets
-   `width: 100%` — a 100% flex-basis on one child squeezes every other
+   sibling SearchBar's `.SearchBar` rule (`components/UI/SearchBar/index.scss`)
+   sets `width: 100%` — a 100% flex-basis on one child squeezes every other
    child toward its min-content size, which for text is the width of its
    longest word, so the title wraps onto two lines. `flex-shrink: 0` stops
    this item from yielding any space at all; `white-space: nowrap` is the
@@ -112,8 +112,8 @@
    (to size the icon against the title's box, not the caption's — the icon
    is no longer a caption descendant). Must be a declared ratio, not `1lh`:
    the app sets no body line-height (src/frontend/index.scss's `body` rule
-   declares none; the only `--line-height` token is button-scoped,
-   _buttons.scss:13), so today the title's line box is the font's UA
+   declares none; the only `--line-height` token is button-scoped, declared
+   on `.button` in `_buttons.scss`), so today the title's line box is the font's UA
    `normal` and is not expressible in CSS at all without this. `1lh` would
    also be wrong even if declared: WebKitGTK (Linux) support for the `lh`
    unit is version-risky, and `1lh` on the LOGO element resolves against
@@ -193,7 +193,8 @@
      theme that never defines the token. `currentColor` is a CSS-wide
      keyword, not a custom property, so it cannot be undefined in any
      theme -- the same class of failure this codebase already has scar
-     tissue for (see NavShell/index.scss:101-159). See
+     tissue for (see the `--divider` no-fallback incident recorded on
+     `.NavShell__navbar` in `NavShell/index.scss`). See
      .planning/todos/pending/2026-09-11-humble-key-row-separator-is-invisible-in-light-themes.md. */
   border-bottom: 1px solid
     var(--divider, color-mix(in srgb, currentColor 14%, transparent));
@@ -374,8 +375,8 @@
 }
 
 /* Scoped escape for the GOG store logo only: `gog-logo.svg`'s root
-   `<svg>` carries `class="gogIcon"`, and `styles/_colors.scss:101`'s
-   global `.gogIcon { fill: var(--text-default) }` matches that element
+   `<svg>` carries `class="gogIcon"`, and the global `.gogIcon` rule in
+   `styles/_colors.scss` (`.gogIcon { fill: var(--text-default) }`) matches that element
    DIRECTLY, which beats the `fill: currentColor` `.humbleKeyRowStoreLogo`
    supplies only by INHERITANCE -- a directly-matching declaration wins
    over an inherited value regardless of specificity. This descendant
