@@ -120,18 +120,23 @@ let suppressionContextValue = {
 class MockResizeObserver {
   static instances: MockResizeObserver[] = []
   callback: () => void
+  // Recorded so a test can prove WHICH element a live observer is bound to (property 20/21): an
+  // observer still bound to a detached element is the Linux dead-resize defect.
+  observed: unknown = null
+  disconnected = false
   constructor(callback: () => void) {
     this.callback = callback
     MockResizeObserver.instances.push(this)
   }
-  observe(): void {
+  observe(target?: unknown): void {
+    this.observed = target ?? null
     this.callback()
   }
   unobserve(): void {
     /* not used by this hook */
   }
   disconnect(): void {
-    /* observed via the fake window's removeEventListener count instead */
+    this.disconnected = true
   }
   trigger(): void {
     this.callback()
@@ -251,7 +256,6 @@ interface MountOptions {
   startUrl?: string
   storeKey?: string
   isStoreRoute?: boolean
-  slotPresent?: boolean
 }
 
 function invoke(options: MountOptions): StoreEmbedHostState {
@@ -264,11 +268,13 @@ function invoke(options: MountOptions): StoreEmbedHostState {
   // acceptance criteria for this plan requires `pnpm lint` to exit 0 without raising it.
   // eslint-disable-next-line react-hooks/rules-of-hooks
   return useStoreEmbedHost({
-    slotRef: options.slotRef,
+    // The hook is keyed on the slot ELEMENT (`index.tsx`'s callback ref sets it on every attach
+    // and detach), so the test's `slotRef` is only a carrier: its `.current` at render time is the
+    // element the hook receives, null while the route renders no slot.
+    slotNode: options.slotRef.current,
     startUrl: options.startUrl ?? 'https://store.steampowered.com/',
     storeKey: options.storeKey ?? 'steam',
-    isStoreRoute: options.isStoreRoute ?? true,
-    slotPresent: options.slotPresent ?? true
+    isStoreRoute: options.isStoreRoute ?? true
   })
 }
 
@@ -810,18 +816,19 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
   // their first pass, so a cold start on one of those routes then a same-mount navigation to a
   // store that DOES render a slot left the embed permanently unopened -- `App.tsx` registers one
   // `path: 'store/:store'` route, and React Router does not remount on a param-only change.
-  // These three properties pin the `[slotPresent]`-keyed re-arm added to close that gap.
+  // These three properties pin the slot-element-keyed re-arm added to close that gap (originally
+  // keyed on a one-way `slotPresent` latch; re-keyed on the element itself for the Linux
+  // dead-resize fix, see properties 20/21).
 
   // Property 17. Observed-red mutation: revert the effect's dependency array from
-  // `[slotPresent]` back to `[]`. The effect then never re-runs once the slot attaches on the
+  // `[slotNode]` back to `[]`. The effect then never re-runs once the slot attaches on the
   // later render, so `storeEmbedOpen` stays uncalled -- reddening the "called once" assertion.
   it('17. a slot that first attaches on a later render opens the embed exactly once at the then-current start URL', () => {
     const nullRef = { current: null } as RefObject<HTMLDivElement>
     const options: MountOptions = {
       slotRef: nullRef,
       startUrl: 'https://www.epicgames.com/store/en-US/',
-      storeKey: 'epic',
-      slotPresent: false
+      storeKey: 'epic'
     }
 
     mount(options)
@@ -837,8 +844,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       ...options,
       slotRef: ref,
       startUrl: 'https://af.gog.com?as=1838482841',
-      storeKey: 'gog',
-      slotPresent: true
+      storeKey: 'gog'
     })
     jest.advanceTimersByTime(40)
 
@@ -851,7 +857,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
   })
 
   // Property 18. Observed-red mutation: add `startUrl` to the dependency array alongside
-  // `slotPresent` (i.e. `[slotPresent, startUrl]`). A same-store `startUrl`-only change then
+  // `slotNode` (i.e. `[slotNode, startUrl]`). A same-store `startUrl`-only change then
   // re-runs the effect, tearing down and re-creating the ResizeObserver and both window
   // listeners on every navigation -- reddening the "counts unchanged" assertions. This is the
   // Chesterton's-fence proof for the plan 40-11 live gate's fix: the observer's identity must
@@ -899,8 +905,7 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     const options: MountOptions = {
       slotRef: nullRef,
       startUrl: 'https://www.epicgames.com/store/en-US/',
-      storeKey: 'epic',
-      slotPresent: false
+      storeKey: 'epic'
     }
 
     mount(options)
@@ -911,12 +916,238 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
       ...options,
       slotRef: ref,
       startUrl: 'https://af.gog.com?as=1838482841',
-      storeKey: 'gog',
-      slotPresent: true
+      storeKey: 'gog'
     })
     jest.advanceTimersByTime(40)
 
     expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
     expect(mockApi.storeEmbedNavigate).not.toHaveBeenCalled()
+  })
+
+  // ── Linux dead-resize after the Epic round trip (debug session
+  //    linux-embed-resize-dead-after-epic-roundtrip) ─────────────────────────────────────────
+  //
+  // `App.tsx` registers ONE `store/:store` route, so GOG -> Epic -> GOG does not remount
+  // `WebView`. Only its `store === 'epic'` early return swaps the slot element out (ref -> null)
+  // and, on the way back, a BRAND-NEW slot element in. `index.tsx`'s old latch stayed high
+  // throughout (it was one-way), so a hook keyed on the latch alone never re-armed: the ResizeObserver, the
+  // `resize`/`scroll` listeners and `flush()`'s closed-over element all stay bound to the DETACHED
+  // element, whose rect is all zero. Live: 0 settled lines, one "ignored zero-area bounds" line per
+  // window resize, the embed left overhanging the window (s1 launch of quick 260930-feh).
+  //
+  // These two tests model that exact sequence: the ref goes element A -> null -> element B (the
+  // old latch stayed TRUE the whole time, which is why it never re-armed).
+
+  // Property 20. Observed-red mutation: key the bounds effect on a ONE-WAY latch that never
+  // lowers (a ref set true the first time `slotNode` is non-null, deps `[latchRef.current]`) --
+  // the pre-fix behaviour. The observer then stays bound to A, and the resize below sends A's
+  // zero rect instead of B's. (Keying on `[!!slotNode]` is NOT that mutation: it lowers on the
+  // Epic leg and re-arms, so it stays green.) Observed red both against the pre-fix hook and
+  // against the latch mutation.
+  it('20. after the slot element is replaced (Epic round trip) the new element is observed and later bounds come from it', () => {
+    const a = makeSlot({ x: 204, y: 82, width: 1076, height: 718 })
+    const options: MountOptions = {
+      slotRef: a.ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
+
+    // GOG -> Epic: the slot element is unmounted; a detached element measures all zero.
+    a.setRect({ x: 0, y: 0, width: 0, height: 0 })
+    reinvoke({
+      ...options,
+      slotRef: { current: null } as RefObject<HTMLDivElement>
+    })
+    jest.advanceTimersByTime(40)
+
+    // Epic -> GOG: a brand-new slot element, same route instance, latch still true.
+    const b = makeSlot({ x: 204, y: 82, width: 1076, height: 718 })
+    reinvoke({ ...options, slotRef: b.ref })
+    jest.advanceTimersByTime(40)
+
+    // Exactly one live observer, and it is bound to B (never to the detached A).
+    const live = MockResizeObserver.instances.filter((o) => !o.disconnected)
+    expect(live).toHaveLength(1)
+    expect(live[0].observed).toBe(b.ref.current)
+
+    // The window is resized: the bounds sent must be B's rect, not A's zero rect.
+    b.setRect({ x: 204, y: 82, width: 896, height: 568 })
+    mockApi.storeEmbedSetBounds.mockClear()
+    dispatchWindowEvent('resize')
+    jest.advanceTimersByTime(40)
+    expect(mockApi.storeEmbedSetBounds).toHaveBeenLastCalledWith({
+      x: 204,
+      y: 82,
+      w: 896,
+      h: 568
+    })
+
+    // ...and the observer path (not only the window listener) also reports B.
+    b.setRect({ x: 204, y: 82, width: 796, height: 518 })
+    live[0].trigger()
+    jest.advanceTimersByTime(40)
+    expect(mockApi.storeEmbedSetBounds).toHaveBeenLastCalledWith({
+      x: 204,
+      y: 82,
+      w: 796,
+      h: 518
+    })
+    // The embed was opened once, at mount, and never re-opened by the round trip.
+    expect(mockApi.storeEmbedOpen).toHaveBeenCalledTimes(1)
+  })
+
+  // Property 21. Observed-red mutation: same as 20. While the route renders no slot (Epic
+  // panel), a window resize must not read the detached element and send its zero rect to the
+  // shell, and the old observer/listeners must be gone.
+  it('21. while the slot element is unmounted a window resize sends nothing and the old observer is disconnected', () => {
+    const a = makeSlot({ x: 204, y: 82, width: 1076, height: 718 })
+    const options: MountOptions = {
+      slotRef: a.ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    a.setRect({ x: 0, y: 0, width: 0, height: 0 })
+    reinvoke({
+      ...options,
+      slotRef: { current: null } as RefObject<HTMLDivElement>
+    })
+    jest.advanceTimersByTime(40)
+
+    mockApi.storeEmbedSetBounds.mockClear()
+    dispatchWindowEvent('resize')
+    dispatchWindowEvent('scroll')
+    jest.advanceTimersByTime(80)
+
+    expect(mockApi.storeEmbedSetBounds).not.toHaveBeenCalled()
+    expect(
+      MockResizeObserver.instances.filter((o) => !o.disconnected)
+    ).toHaveLength(0)
+    expect(windowListeners.get('resize')?.size ?? 0).toBe(0)
+    expect(windowListeners.get('scroll')?.size ?? 0).toBe(0)
+  })
+
+  // ── Validated persist (debug session linux-embed-gog-reload-loop-real-profile) ─────────────
+  //
+  // `last-url-<storeKey>` is the app-restart restore value, and `index.tsx` throws away anything
+  // that does not resolve to the ROUTE's own store. The persist effect used to write whatever the
+  // embed's last main-frame URL was, so it poisoned that key with values the read side then had
+  // to reject: the tracker interstitial GOG's affiliate start URL redirects through, and -- on a
+  // store switch, because the effect is also keyed on `storeKey` -- the PREVIOUS store's URL under
+  // the NEW store's key. These tests pin that the write side now accepts exactly what the read
+  // side accepts. Properties 8-9 above still pin that a real, valid navigation persists.
+
+  /** Drains one queued in-embed navigation through the 250 ms poll and re-renders, as a page load does. */
+  async function drainNavigation(
+    options: MountOptions,
+    url: string
+  ): Promise<void> {
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([
+      { url, host: new URL(url).host, canGoBack: true, canGoForward: false }
+    ])
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+    reinvoke(options)
+  }
+
+  // Property 22. Observed-red mutation: delete the `resolveStoreForUrl(navState.url)` ownership
+  // check in the persist effect (write unconditionally, the pre-fix behaviour). The tracker URL
+  // below is then stored under `last-url-gog` and the first assertion fails.
+  it('22. a redirect-chain page that belongs to no store (the tracker interstitial) is NOT persisted; the landing page is', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    await drainNavigation(
+      options,
+      'https://track.adtraction.com/t/t?a=1&as=1838482841&t=2&tk=1&url=http://www.gog.com'
+    )
+    expect(fakeLocalStorage.has('last-url-gog')).toBe(false)
+
+    // The same chain's landing page IS a gog.com page and is what a restart should restore.
+    await drainNavigation(
+      options,
+      'https://www.gog.com/en/?utm_source=adtraction&utm_medium=affiliate'
+    )
+    expect(fakeLocalStorage.get('last-url-gog')).toBe(
+      'https://www.gog.com/en/?utm_source=adtraction&utm_medium=affiliate'
+    )
+  })
+
+  // Property 23. Observed-red mutation: same as 22. The pre-fix effect re-ran on the `storeKey`
+  // change below with the previous store's `navState.url` and wrote the Epic URL under
+  // `last-url-gog` -- deterministic, so the restore was lost on every Epic -> GOG.
+  it('23. a store switch does not write the PREVIOUS store’s URL under the NEW store’s key', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const epicOptions: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic'
+    }
+    mount(epicOptions)
+    jest.advanceTimersByTime(40)
+
+    reinvoke({
+      ...epicOptions,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    })
+    jest.advanceTimersByTime(40)
+
+    expect(fakeLocalStorage.has('last-url-gog')).toBe(false)
+    // Nor is the Epic URL left behind under its own key: nothing navigated, so nothing persists.
+    expect(fakeLocalStorage.has('last-url-epic')).toBe(false)
+  })
+
+  // Property 24. Observed-red mutation: same as 22. A link inside the GOG embed that lands on
+  // another configured store is a real navigation but not a GOG page; it must not become GOG's
+  // restore value (the read side would reject it and clear the key).
+  it('24. a navigation that lands on a DIFFERENT configured store is not persisted under this store’s key', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    await drainNavigation(options, 'https://store.steampowered.com/app/220/')
+
+    expect(fakeLocalStorage.has('last-url-gog')).toBe(false)
+  })
+
+  // Property 25. A page of the route's own store keeps being persisted after a rejected one: a
+  // rejected URL must not latch the effect or clear a previously stored good value.
+  it('25. a rejected navigation leaves the previously persisted good value in place', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    await drainNavigation(options, 'https://www.gog.com/en/game/foo')
+    expect(fakeLocalStorage.get('last-url-gog')).toBe(
+      'https://www.gog.com/en/game/foo'
+    )
+
+    await drainNavigation(options, 'https://track.adtraction.com/t/t?a=1')
+    expect(fakeLocalStorage.get('last-url-gog')).toBe(
+      'https://www.gog.com/en/game/foo'
+    )
   })
 })

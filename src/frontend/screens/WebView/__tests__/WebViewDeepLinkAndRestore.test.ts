@@ -34,22 +34,6 @@ import { resolveStoreForUrl } from '../storeEmbedOrigins'
 const indexPath = join(__dirname, '..', 'index.tsx')
 const rawSource = readFileSync(indexPath, 'utf-8')
 
-/** Extracts the RAW (comments intact) balanced-brace block whose opening `{` follows `marker`. */
-function extractRawBlock(source: string, marker: string): string {
-  const markerIdx = source.indexOf(marker)
-  if (markerIdx === -1) throw new Error(`marker not found: ${marker}`)
-  const braceStart = source.indexOf('{', markerIdx)
-  let depth = 0
-  for (let i = braceStart; i < source.length; i++) {
-    if (source[i] === '{') depth++
-    else if (source[i] === '}') {
-      depth--
-      if (depth === 0) return source.slice(braceStart, i + 1)
-    }
-  }
-  throw new Error(`unbalanced braces after: ${marker}`)
-}
-
 /** Extracts raw source between two markers, exclusive of the end marker. */
 function extractRawBetween(
   source: string,
@@ -116,39 +100,126 @@ function runDeepLink(
   ) as DeepLinkResult
 }
 
-// ── RESTORE derivation (D-30) — stale-value drop on READ ─────────────────────────────────────
+// ── RESTORE derivation (D-30) — stale-value drop on READ, read ONCE per store entry ──────────────
+// Extracted from `let startUrl = urls[pathname]` through to the deep-link marker -- the exact
+// statements that turn the route's own start URL plus localStorage into `startUrl`. The slice now
+// contains two hooks (`useMemo` for the once-per-store read, `useEffect` for the stale-key clear),
+// so they are passed in as parameters, the way the deep-link slice above is handed `useRef`.
+//
+// WHY the slice changed shape: the restore used to be an inline `if (store) { getItem; ...;
+// removeItem }` evaluated on EVERY render. That re-read whatever page the embed had last
+// persisted and re-pointed the live embed at it, which against a redirecting GOG page was an
+// unbounded navigation loop (debug session `linux-embed-gog-reload-loop-real-profile`). The read
+// is now memoised on `store` and the removal is an effect. This suite pins both halves.
 const lastUrlStorageKeyLine = rawSource.match(
   /const lastUrlStorageKey = .+/
 )?.[0]
 if (!lastUrlStorageKeyLine)
   throw new Error('lastUrlStorageKey definition not found')
-const restoreBlock = extractRawBlock(rawSource, 'if (store) {')
+const restoreStatements = extractRawBetween(
+  rawSource,
+  'let startUrl = urls[pathname]',
+  'const isStorePageDeepLink = pathname.match(/store-page/) !== null'
+)
 
 const computeRestore = compileToFunction(
-  `${lastUrlStorageKeyLine}\nlet startUrl = startUrlInitial;\n${restoreBlock}`,
-  ['store', 'startUrlInitial', 'localStorage', 'resolveStoreForUrl'],
+  `${lastUrlStorageKeyLine}\n${restoreStatements}`,
+  [
+    'pathname',
+    'urls',
+    'store',
+    'localStorage',
+    'resolveStoreForUrl',
+    'useMemo',
+    'useEffect'
+  ],
   'startUrl'
 )
+
+/**
+ * A tiny stateful stand-in for the two hooks the slice uses: ONE render-persistent memo slot and
+ * ONE effect slot (the slice has exactly one of each), both recomputing only when their deps
+ * change, as React's do. Effects are queued by a render and run only when the test says the commit
+ * has happened -- so "what render did" and "what an effect did afterwards" are observable
+ * separately.
+ */
+function makeRestoreRenderer(
+  initialStorage: string | null,
+  storedUnder = 'gog'
+) {
+  // Key-aware, like the real `localStorage`: a value stored for one store is invisible to
+  // another store's read.
+  const storage = new Map<string, string>()
+  if (initialStorage !== null) {
+    storage.set(`last-url-${storedUnder}`, initialStorage)
+  }
+  let removed = false
+  const depsChanged = (prev: unknown[] | null, next: unknown[]) =>
+    prev === null || prev.some((d, i) => !Object.is(d, next[i]))
+  let memo: { deps: unknown[]; value: unknown } | null = null
+  let effectDeps: unknown[] | null = null
+  let queued: (() => void)[] = []
+  const localStorageStub = {
+    getItem: (key: string) => storage.get(key) ?? null,
+    removeItem: (key: string) => {
+      removed = true
+      storage.delete(key)
+    }
+  }
+  const useMemo = (fn: () => unknown, deps: unknown[]) => {
+    if (memo === null || depsChanged(memo.deps, deps)) {
+      memo = { deps, value: fn() }
+    }
+    return memo.value
+  }
+  const useEffect = (fn: () => void, deps: unknown[]) => {
+    if (depsChanged(effectDeps, deps)) {
+      effectDeps = deps
+      queued.push(fn)
+    }
+  }
+  return {
+    /** One render. Effects are queued, not run. */
+    render(store: string | undefined, startUrlInitial: string): string {
+      const pathname = store ? `/store/${store}` : '/wiki'
+      queued = []
+      return computeRestore(
+        pathname,
+        { [pathname]: startUrlInitial },
+        store,
+        localStorageStub,
+        resolveStoreForUrl,
+        useMemo,
+        useEffect
+      ) as string
+    },
+    /** The commit: run the effects the last render queued. */
+    commit(): void {
+      const run = queued
+      queued = []
+      run.forEach((fn) => fn())
+    },
+    /** What the page-side persist writes between renders. */
+    setStored(value: string | null, store = storedUnder): void {
+      if (value === null) storage.delete(`last-url-${store}`)
+      else storage.set(`last-url-${store}`, value)
+    },
+    get removed(): boolean {
+      return removed
+    }
+  }
+}
 
 function runRestore(
   store: string | undefined,
   startUrlInitial: string,
   storedValue: string | null
-): { startUrl: string; removed: boolean } {
-  let removed = false
-  const localStorageStub = {
-    getItem: (_key: string) => storedValue,
-    removeItem: (_key: string) => {
-      removed = true
-    }
-  }
-  const startUrl = computeRestore(
-    store,
-    startUrlInitial,
-    localStorageStub,
-    resolveStoreForUrl
-  ) as string
-  return { startUrl, removed }
+): { startUrl: string; removed: boolean; removedDuringRender: boolean } {
+  const renderer = makeRestoreRenderer(storedValue)
+  const startUrl = renderer.render(store, startUrlInitial)
+  const removedDuringRender = renderer.removed
+  renderer.commit()
+  return { startUrl, removed: renderer.removed, removedDuringRender }
 }
 
 describe('WebView deep-link origin gating (D-34/D-35, T-40-09-02)', () => {
@@ -234,6 +305,63 @@ describe('WebView restore stale-value drop on READ (D-30, T-40-09-03)', () => {
     )
     expect(startUrl).toBe('https://af.gog.com?as=1838482841')
     expect(removed).toBe(true)
+  })
+
+  it('the stale-key clear is a COMMIT-time effect: render itself never calls removeItem', () => {
+    // Removing a key during render made the render's own input unstable -- a write in one render,
+    // a removal in the next, each flipping `startUrl` (debug session
+    // `linux-embed-gog-reload-loop-real-profile`). The read is pure; only the effect clears.
+    const { removedDuringRender, removed } = runRestore(
+      'gog',
+      'https://af.gog.com?as=1838482841',
+      'https://attacker.net/'
+    )
+    expect(removedDuringRender).toBe(false)
+    expect(removed).toBe(true)
+  })
+
+  it('READ ONCE: a later render of the SAME store does not re-read storage, however the stored value moved', () => {
+    // The page-side persist rewrites `last-url-gog` on every in-embed navigation. Before the
+    // fix every render re-read it, so an unrelated re-render re-pointed the live embed at
+    // whatever page it had last reported -- the reload loop.
+    const restored = 'https://www.gog.com/en/?utm_source=adtraction&cid=4'
+    const renderer = makeRestoreRenderer(restored)
+    const first = renderer.render('gog', 'https://af.gog.com?as=1838482841')
+    renderer.commit()
+    expect(first).toBe(restored)
+
+    // The hook persists another valid GOG page; then a later render happens.
+    renderer.setStored('https://www.gog.com/en/?utm_source=adtraction&cid=2')
+    const second = renderer.render('gog', 'https://af.gog.com?as=1838482841')
+    renderer.commit()
+    expect(second).toBe(restored)
+
+    // ...and a stored value that has since gone invalid is not re-read either.
+    renderer.setStored('https://track.adtraction.com/t/t?a=1')
+    expect(renderer.render('gog', 'https://af.gog.com?as=1838482841')).toBe(
+      restored
+    )
+    renderer.commit()
+    expect(renderer.removed).toBe(false)
+  })
+
+  it('a STORE CHANGE re-reads the restore (GOG -> Epic -> GOG sees the latest persisted value)', () => {
+    const first = 'https://www.gog.com/en/?utm_source=adtraction&cid=4'
+    const latest = 'https://www.gog.com/en/game/foo'
+    const renderer = makeRestoreRenderer(first)
+    expect(renderer.render('gog', 'https://af.gog.com?as=1838482841')).toBe(
+      first
+    )
+    renderer.commit()
+
+    renderer.setStored(latest)
+    // Epic has no stored value of its own here -- what matters is that `store` changing
+    // recomputes the memo, so the return to GOG reads storage afresh.
+    renderer.render('epic', 'https://www.epicgames.com/store/en-US/')
+    renderer.commit()
+    expect(renderer.render('gog', 'https://af.gog.com?as=1838482841')).toBe(
+      latest
+    )
   })
 
   it('a restored URL that DOES still resolve to the route’s own store is used, and nothing is removed', () => {

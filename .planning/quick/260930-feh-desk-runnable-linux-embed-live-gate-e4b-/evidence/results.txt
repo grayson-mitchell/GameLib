@@ -1,0 +1,30 @@
+CHECK=TRACER VERDICT=PASS slot=204,82,1076x718 vbox=1280x800 effective_scale=1.000 dmabuf_var_present=no ld_preload_var=absent gdk_scale_var=absent webproc_lines=1 webproc_dmabuf=absent check_settled=pass
+CHECK=E4B VERDICT=PASS chrome_changed=0.0000 leftnav_changed=0.0000 slot_changed=0.1403 zero_area_lines=1 new_settled_line_after_return=no epic_panel=placeholder_no_embed
+CHECK=E5 VERDICT=RECORDED link_click_navigated=yes label_before=www.gog.com label_after=www.gog.com back_enabled=unclear back_moved_history=NO slot_ab=0.6215 slot_bc=0.0002 slot_ac=0.6214
+CHECK=S1_CONTROL VERDICT=FAIL in_run_s1_settled_lines_at_1100x650_1000x600=0 in_run_s1_zero_area_lines_during_resizes=4 in_run_s1_embed_stale_at_1100x650=yes clean_launch_s1b_settled_lines=6 clean_launch_s1b_pass=6 clean_launch_s1b_flush_dx=0 clean_launch_s1b_flush_dy=0 clean_launch_s1b_vboxes=1280x800,1100x650,1000x600
+LAUNCHES=2 BLANK_LAUNCHES=0 TASK=1
+CHECK=HIDPI_SCALE VERDICT=PASS scale_w=2.000 scale_h=2.000 xwin=2200x1294 vbox=1100x647 initial_xwin=2560x1294 (wm clamped height from 1600) origin_monitor=DisplayPort-1-0 gdk_scale_var=2 webproc_gdk_scale=2 webproc_dmabuf=absent
+CHECK=HIDPI_FLUSH VERDICT=PASS renderer_vs_gtk_logical=agree requested=204,82,896x565 embed=204,82,896x565 flush_dx=0 flush_dy=0 scale1_control_s1b_1100x650=pass scale1_control_s1b_1000x600=pass corner_visual=aligned
+CHECK=HIDPI_RESIZE VERDICT=PASS step_b_xwin=2000x1200 step_b_vbox=1000x600 step_b_requested=204,82,796x518 step_b_flush=0,0 step_c_xwin=2200x1294 step_c_vbox=1100x647 step_c_requested=204,82,896x565 step_c_flush=0,0 clamp=restore_to_2200x1300_clamped_to_2200x1294
+CHECK=HIDPI_WHEEL VERDICT=PASS chrome_changed=0.0000 leftnav_changed=0.0000 slot_changed=0.4873 pointer_abs=1404,798 clicks=5 page_scrolled=yes
+CHECK=HIDPI_CLICKTHROUGH VERDICT=PASS library_route_shown=yes gog_pixels_left_in_slot=no zero_area_line_appeared=no
+CHECK=HIDPI_CRISP VERDICT=RECORDED glyph_edges=antialiased_at_device_px_no_2x2_blocks_seen zoom=hidpi-crisp-zoom.png (single 240x60 physical crop of the GOG hero text, one host, one eye)
+LAUNCHES=1 BLANK_LAUNCHES=0 TASK=2
+CHECK=DRAG_PERSTEP VERDICT=PASS steps=6 matched=6 missing=0 stale=0 fail=0 errors=0 min_lag_ms=546 max_lag_ms=590 max_est_apply_ms=90 debounce_ms=500 poll_ms=50 zero_area=0 sizes=1250x784..1100x700 gap_ms=1500
+CHECK=DRAG_BURST VERDICT=PASS steps_sent=40 interval_ms=25 from=1100x700 to=1280x800 lines_during_burst=0 matched=1 lag_ms=571 est_apply_ms=71 burst_end_stale_frame_visible=no (100ms and 1500ms captures identical: chrome=0.0000 leftnav=0.0000 slot=0.0000)
+CHECK=DRAG_POINTER VERDICT=PASS achieved=yes start=1280x800 end=1100x700 attempts=1 matched=1 lag_ms=570 lines_during_drag=0 caveat=t_x_final_is_first_poll_after_mouseup_so_lag_is_from_mouseup_not_from_last_X_size_change
+LAUNCHES=1 BLANK_LAUNCHES=0 TASK=3
+MEASURED=whether each scripted resize step (perstep 6 steps; burst final; one pointer drag) ends in a correct settled line (vbox equals the X size, embed equals requested, main fills the vbox, slot flush with right and bottom edges) and how long after the X size change that line arrived. Lag includes the 500 ms SETTLE_MS debounce by design and +-50 ms of poll granularity (T stamp is the 50 ms drain time)
+NOT_MEASURED=per-frame staleness or tearing during a continuous drag (no settled line fires mid-drag; the only in-drag observation is two burst-end captures compared by pixel diff); perceived responsiveness (the ledger's no visible lag); the renderer-to-GTK path separately from the debounce (only estimated as lag minus 500); whether the embed tracked the slot frame-by-frame during the burst
+NOT_VERIFIED=packaged AppImage or release build (dev binary against vite only)
+NOT_VERIFIED=real logged-in profile (the two-profile rule's real-profile arm; every launch used a fresh fake profile with no store session)
+NOT_VERIFIED=Wayland (X11 session only)
+NOT_VERIFIED=macOS
+NOT_VERIFIED=Windows
+NOT_VERIFIED=mixed-DPI or per-monitor scaling (X11 GDK_SCALE is global; both monitors are scale 1 in the desktop settings)
+NOT_VERIFIED=fractional scales (only GDK_SCALE=2 and the desktop default of 1)
+NOT_VERIFIED=Tauri scale_factor() value (never read; the scale is inferred from X client size over GTK vbox)
+NOT_VERIFIED=keyboard focus and the first-open split frame
+NOT_VERIFIED=one host only (NVIDIA 580.173.02, WebKitGTK 2.50.4, one 3440x1440 primary)
+NOT_VERIFIED=cause of the S1_CONTROL failure: which of GOG-Epic-GOG or the link click triggers it was not separated and the mechanism was not diagnosed (stop rule)
+FIX_TAKEN=no

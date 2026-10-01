@@ -1,0 +1,3 @@
+T=1790834215372 [shell] store_embed(linux): settled requested=204,82,1076x718 embed=204,82,1076x718 main=0,0,1280x800 vbox=1280x800
+T=1790834225751 [shell] store_embed(linux): settled requested=204,82,896x568 embed=204,82,896x568 main=0,0,1100x650 vbox=1100x650
+T=1790834230668 [shell] store_embed(linux): settled requested=204,82,1076x688 embed=204,82,1076x688 main=0,0,1280x770 vbox=1280x770

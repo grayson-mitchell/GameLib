@@ -141,3 +141,28 @@ against `38-E01`, whose own `test:` is scoped to attach/placement/geometry, not 
   user-data folder or profile per store. This is untested here, a direction and not a finding.
 - Hence `platform: any` and `ready: human`: the next action is the operator's decision, not a
   machine sitting.
+
+## Decision (2026-10-01): accept one shared cookie jar on Windows
+
+- **Decided.** Windows gets the same answer as Linux: one shared cookie jar. This closes the
+  decision the re-triage above left open. (Operator's `action todo:` instruction, 2026-10-01.)
+- **Evidence.**
+  - Sitting 13 (quick `260930-o75`) measured `data_store_identifier` as a silent no-op on WebView2
+    (the "isolated" child saw all 15 cookies).
+  - wry 0.57.0 defines `with_data_store_identifier` only under macOS/iOS (`src/lib.rs:1579`,
+    `:1612`).
+  - The shipped macOS embed never sets it and runs on one default jar per process, deliberately
+    (ROADMAP Phase 40, spike 018). Windows and Linux now match macOS as shipped.
+- **Rejected.**
+  - A separate WebView2 user-data folder or profile per store: an untested direction that would
+    fork the embed design per OS, with no shipped Windows embed to justify it.
+  - Keeping Windows off the embed: contradicts the one-launcher core value, and was already
+    rejected for Linux.
+- **Hygiene cost.** Any embed on Windows can read any other embed's cookies, and the login
+  windows' cookies, in-process. Whoever builds the Windows embed must not pass
+  `data_store_identifier` expecting isolation, and must not describe the Windows embed as
+  per-store isolated.
+- **Re-open trigger.** A wry whose Windows backend honours an isolation field. Re-run spike 027
+  Phase 8's cookie probe before assuming isolation exists.
+- **Status.** Linux and Windows are both decided; nothing is left to record. The file moves to
+  `todos/completed/` in this change. No code changed.

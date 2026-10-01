@@ -1,0 +1,10 @@
+WINDOW_ID=35651587
+LAUNCH_PID=184719
+EXE_MATCH=yes
+DMABUF_VAR_PRESENT=no
+LD_PRELOAD_VAR=absent
+GDK_SCALE_VAR=absent
+FAKE_HOME=createFakeHomeProfile
+SET=
+WEBPROC pid=184744 dmabuf=absent gdk_scale=absent
+WEBPROC pid=185196 dmabuf=absent gdk_scale=absent

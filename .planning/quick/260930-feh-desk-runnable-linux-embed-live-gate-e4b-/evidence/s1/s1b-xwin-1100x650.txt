@@ -1,0 +1,24 @@
+
+xwininfo: Window id: 0x2200003 "GameLib"
+
+  Absolute upper-left X:  50
+  Absolute upper-left Y:  119
+  Relative upper-left X:  10
+  Relative upper-left Y:  45
+  Width: 1100
+  Height: 650
+  Depth: 24
+  Visual: 0x2b
+  Visual Class: TrueColor
+  Border width: 0
+  Class: InputOutput
+  Colormap: 0x2200002 (not installed)
+  Bit Gravity State: NorthWestGravity
+  Window Gravity State: NorthWestGravity
+  Backing Store State: NotUseful
+  Save Under State: no
+  Map State: IsViewable
+  Override Redirect State: no
+  Corners:  +50+119  -4850+119  -4850-831  +50-831
+  -geometry 1100x650+40+74
+
