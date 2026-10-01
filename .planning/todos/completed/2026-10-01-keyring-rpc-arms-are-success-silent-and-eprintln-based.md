@@ -82,7 +82,7 @@ without a test failing first.
 **Measured, not assumed, at every gate:** the keyring arm region (comment-stripped,
 `"keyring_get" => {` through `"dialog_open" => {`) now carries exactly 0 bare `eprintln!`, 14
 `shell_diag(` call sites, and 5 `keyring_outcome_message(` call sites — verified against the
-pre-change source too (the real pre-Task-1 commit `bb567faf3` measures 9 bare `eprintln!`, 0
+pre-change source too (`bb567faf3` measures 9 bare `eprintln!`, 0
 `shell_diag(`, 0 `keyring_outcome_message(` over the same region, confirming the new gate is
 non-vacuous rather than trivially satisfied). `cargo fmt --check`'s pre-existing 76-hunk baseline
 and `cargo clippy`'s pre-existing 15-warning baseline are both unchanged by this change, and
@@ -117,3 +117,17 @@ and its two pure helpers (`keyring_outcome_message`, `keyring_get_outcome`).
    UNKNOWN, and whether a keyring success/failure line would have helped diagnose that particular
    incident is unverified. This todo closes the general observability gap across all four arms,
    not that one incident.
+
+## Correction to the sha cited above (orchestrator, 2026-10-01)
+
+`bb567faf3` is **not** the pre-Task-1 parent — it is an older ancestor, the fix commit of quick
+`260930-q11`. The true parent of this task's first commit is `f90ed6f73`.
+
+The RED-proof still holds, and it was re-measured rather than argued: the extracted keyring region
+(`"keyring_get" => {` to `"dialog_open"`, whole-line `//` comments stripped) is **byte-identical at
+both shas** — 3523 chars, 9 bare `eprintln!`, 0 `shell_diag(`, 0 `keyring_outcome_message(` at each
+— against 4929 chars and 0 / 14 / 5 at HEAD. So the gate is non-vacuous either way; only the
+commit's description of which sha it measured was wrong.
+
+Recorded as a correction rather than silently edited, because a measurement attributed to the wrong
+commit is a failure mode this repo has paid for repeatedly.
