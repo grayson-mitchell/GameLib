@@ -5799,20 +5799,25 @@ fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {
     let (url, x, y, w, h) = store_embed_open_args(args)?;
 
     if let Some(existing) = app.get_webview(STORE_EMBED_LABEL) {
-        // Linux only (quick 260930-blh, live-measured): the renderer remounts on every return to
-        // a store route and calls `store_embed_open` again, while the previous unmount left the
-        // embed HIDDEN and, via the slot's ResizeObserver, moved to a zero rect. Navigating alone
-        // (the macOS behaviour, unchanged below) would leave it hidden/zero-sized, so re-apply the
-        // rect this call carries and show it before navigating.
+        // 260930-blh (2026-09-30, Linux) + 261001-svm (2026-10-01, macOS), both live-measured:
+        // the renderer remounts on every return to a store route and calls `store_embed_open`
+        // again, while the previous unmount left the embed HIDDEN and, via the slot's
+        // ResizeObserver, moved to a zero rect on Linux. The SHOW step below is now shared across
+        // platforms: navigating alone would leave the embed hidden on macOS too, exactly as the
+        // 2026-10-01 measurement found. The rect re-apply stays Linux-only: macOS bounds were
+        // measured already correct on this path (`storeEmbedShow()` alone repainted the embed
+        // with no bounds flush), so re-applying a rect here would import the zero-rect hazard
+        // `store_embed_linux_rect_is_zero_area` exists to contain, onto a platform with no
+        // measured need for it.
         #[cfg(target_os = "linux")]
         {
             let rect = store_embed_linux_gtk_rect(x, y, w, h)
                 .map_err(|e| e.replacen("store_embed_set_bounds:", "store_embed_open:", 1))?;
             linux_store_embed_layout::apply_bounds(&existing, rect)?;
-            existing
-                .show()
-                .map_err(|e| format!("store_embed_open:show-failed:{e}"))?;
         }
+        existing
+            .show()
+            .map_err(|e| format!("store_embed_open:show-failed:{e}"))?;
         existing
             .navigate(url)
             .map_err(|e| format!("store_embed_open:navigate-failed:{e}"))?;
@@ -17490,6 +17495,86 @@ mod tests {
             ),
             "[shell] store_embed(linux): settled requested=291,97,760x561 \
              embed=291,97,760x561 main=0,0,1280x800 vbox=1280x800"
+        );
+    }
+
+    // ---- macOS store-embed show-before-navigate convergence (quick 261001-svm) ----
+    //
+    // `store_embed_open` cannot be driven from a `#[test]` -- it takes `&AppHandle`, which a
+    // unit test structurally cannot construct, exactly as this file's own comments already say
+    // of `open_external`. Measured: all 31 other `store_embed_*` test functions in this module
+    // sit over `AppHandle`-free helpers for exactly that reason. This test is the honest
+    // substitute, in the discipline of the five other `include_str!("main.rs")` tests already in
+    // this file: it reads the command's own source at test time and asserts STRUCTURE -- that
+    // the `existing.show()` call in the existing-webview branch sits outside the
+    // `#[cfg(target_os = "linux")]` sub-block and precedes `existing.navigate(url)` -- not a
+    // claim about native visibility, which nothing in this crate can reach.
+    //
+    // RED-proof (recorded verbatim, matching `open_external_command_body_calls_the_scheme_check_
+    // before_opening`'s own discipline): moving the `existing.show()` statement back INSIDE the
+    // `#[cfg(target_os = "linux")]` block -- the exact mutation this test exists to catch, since
+    // `cargo check`/`clippy`/every other test would still pass unchanged against that mutation --
+    // makes this test fail, because `show_pos` would then land `cfg_close_pos` or earlier.
+    #[test]
+    fn store_embed_open_shows_the_existing_webview_on_every_platform_before_navigating() {
+        // Bound the slice to JUST `store_embed_open`'s body, ending at the function's closing
+        // brace (`^}` at column 0, the next top-level item). Without this bound, `.find()` on the
+        // unbounded remainder of the file could match this very test's own doc comment above (it
+        // quotes the literals being searched for) or a later unrelated mention, and produce a
+        // false PASS or a false FAIL for the wrong reason instead of failing because the
+        // structure actually moved.
+        let source = include_str!("main.rs");
+        let fn_start = source
+            .find("fn store_embed_open(app: &AppHandle, args: &[Value]) -> Result<Value, String> {")
+            .expect("store_embed_open definition not found in main.rs");
+        let body_after_start = &source[fn_start..];
+        let fn_end = body_after_start[1..]
+            .find("\n}\n")
+            .map(|p| p + 1)
+            .expect("store_embed_open's closing brace not found");
+        let body = &body_after_start[..fn_end];
+
+        // Anti-vacuity: the slice must be non-empty and must actually contain the branch under
+        // test, so a boundary drift (e.g. the function signature changing) fails loudly here
+        // rather than passing over a slice that silently stopped containing anything relevant.
+        assert!(!body.is_empty(), "store_embed_open's bounded slice must not be empty");
+        let cfg_open_pos = body
+            .find("#[cfg(target_os = \"linux\")]")
+            .expect("the Linux-only cfg sub-block was not located inside store_embed_open");
+
+        // The cfg sub-block's closing brace: the first `^        }$`-shaped line after the cfg
+        // attribute. Matched textually rather than by brace-counting, same discipline as the
+        // plan's own verify block, since this function has no other 8-space-indented lone `}`
+        // between the cfg attribute and the show call in the fixed branch.
+        let cfg_close_pos = body[cfg_open_pos..]
+            .find("\n        }\n")
+            .map(|p| p + cfg_open_pos)
+            .expect("the Linux-only cfg sub-block's closing brace was not located");
+
+        let show_pos = body
+            .find(".show()")
+            .expect("store_embed_open must still call .show() on the existing webview");
+        let navigate_pos = body
+            .find(".navigate(url)")
+            .expect("store_embed_open must still call .navigate(url) on the existing webview");
+        let bounds_pos = body
+            .find("linux_store_embed_layout::apply_bounds")
+            .expect("the Linux rect re-apply must still exist inside store_embed_open");
+
+        assert!(
+            show_pos > cfg_close_pos,
+            "the show() call must sit AFTER the #[cfg(target_os = \"linux\")] block closes -- \
+             unconditional and macOS-reachable, not Linux-only"
+        );
+        assert!(
+            show_pos < navigate_pos,
+            "the show() call must PRECEDE navigate() -- showing after navigating would leave \
+             the first paint on a hidden surface"
+        );
+        assert!(
+            bounds_pos > cfg_open_pos && bounds_pos < cfg_close_pos,
+            "the Linux rect re-apply must stay INSIDE the #[cfg(target_os = \"linux\")] block -- \
+             this fix converges the show step only, not the rect handling"
         );
     }
 
