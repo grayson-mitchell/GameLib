@@ -1118,17 +1118,13 @@ Recent decisions affecting current work:
 
 - [2026-08-17] [auth] "Humble's two keyring slots still read unattended at bootstrap — 260817-d61 deferred one slot of three, so the boot-… — [todo file](.planning/todos/pending/2026-08-17-humble-slots-still-prompt-unattended-at-startup.md)
 - [2026-08-23] [general] "F-9 — a generic RPC timeout fired live; co-occurrence with a cookie op is UNDETERMINED" — [todo file](.planning/todos/pending/2026-08-23-f9-generic-rpc-timeout-cooccurrence-undetermined.md)
-- [2026-09-02] [auth/webview] "D-35-19-15's four Epic sibling apexes were never proven cleared — CORRECTED 2026-09-26: a seed… — [todo file](.planning/todos/pending/2026-09-02-d-35-19-15-sibling-apex-seeding-unqueued-and-unreproducible-.md)
-- [2026-09-04] [build] 'macOS signing and notarization are VERIFIED end-to-end on a published artifact — Gatekeeper, and all three store help… — [todo file](.planning/todos/pending/2026-09-04-macos-releases-ship-unsigned-and-unnotarized.md)
 - [2026-09-11] [planning-records] "`audit-uat` reads YAML blocks in document BODIES too — the 652-field body population is MEASURED (51 f… — [todo file](.planning/todos/pending/2026-09-11-audit-uat-reads-block-scalars-in-document-bodies.md)
 - [2026-09-14] [build] 'Windows releases ship UNSIGNED — no Windows code-signing cert is enrolled, so SmartScreen warns on every d… — [todo file](.planning/todos/pending/2026-09-14-windows-releases-ship-unsigned-no-windows-cert-enrolled.md)
 - [2026-09-15] [webview/store-embed] 'Epic''s in-embed "Sign in" button has no decided behaviour — intercept and hand off, fail visi… — [todo file](.planning/todos/pending/2026-09-15-epic-in-embed-sign-in-button-has-no-decided-behaviour.md)
 - [2026-09-17] [build] "Packaged .app renders blank — FIXED: the data router rendered its initial-load state as nothing; empty-ro… — [todo file](.planning/todos/pending/2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md)
 - [2026-09-21] [test] 'Confirm on the next pull_request run that the five guarded/parameterised suites (shortcutsExistsFa… — [todo file](.planning/todos/pending/2026-09-21-confirm-the-five-guarded-suites-run-green-on-the-linux-ci-runner.md)
-- [2026-09-26] [src-tauri/shell] "The gamelib:// HKCU self-heal runs in dev builds, so every `pnpm tauri:dev` takes the scheme … — [todo file](.planning/todos/pending/2026-09-26-gamelib-self-heal-lets-dev-builds-take-over-gamelib-scheme.md)
-- [2026-09-26] [tray] 'Tray glyph variant selection is manual and theme-blind — no automatic Auto/Light/Dark detection, and the Win… — [todo file](.planning/todos/pending/2026-09-26-tray-glyph-variant-selection-is-manual-and-theme-blind.md)
-- [2026-09-27] [login-window] 'Live-verify the login window title bar shows <origin> — <document tit… — [todo file](.planning/todos/pending/2026-09-27-login-window-title-bar-composed-title-survives-finished-needs-a-windows-linux-sitting.md)
-- [2026-09-28] [auth/webview] "humble_login_clear_cookies' arm comment (main.rs:7185-7188) still claims GOG/Amazon route through a l… — [todo file](.planning/todos/pending/2026-09-28-stale-arm-comment-claims-gog-amazon-use-a-live-window.md)
+- [2026-10-01] [ui] Library game tiles stretch with window width — consider a fixed or user-selectable tile size — [todo file](.planning/todos/pending/2026-10-01-library-tiles-stretch-with-window-width-consider-a-set-size.md)
+- [2026-10-01] [store-embed] "Re-verify the macOS store-embed route-return fix on a PACKAGED build — all three scored runs used th… — [todo file](.planning/todos/pending/2026-10-01-re-verify-the-macos-store-embed-fix-on-a-packaged-build.md)
 
 ### Blockers/Concerns
 
