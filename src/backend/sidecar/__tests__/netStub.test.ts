@@ -21,9 +21,10 @@
  * original stub's own async-emission timing) with a named cause, and asserts that cause -- not
  * the pre-fix timeout message -- reaches `revealKey`'s caller, with `REQUEST_TIMEOUT_MS`'s
  * fake timer never advanced. Group 1 (below) is UNCHANGED: it still pins
- * `electronStub.net.request()`'s own isolated contract directly, independent of whether
- * `humblePostRequest` ever calls it -- `backend/platform`'s `net` export is unrelated to this
- * plan's login-window-seam collapse.
+ * `electronStub.net.request()`'s own isolated contract directly. The two are now fully
+ * unrelated, not merely decoupled: `humblePostRequest` has no electron-net transport left to
+ * call it through, and `backend/platform`'s `net` export sits outside this plan's
+ * login-window-seam collapse entirely.
  *
  * `backend/logger` is mocked (mirrors `adapter.test.ts`'s own mock boundary) purely to avoid a
  * real log write from `mapAxiosError`'s `logError` call on the "genuinely unexpected error"

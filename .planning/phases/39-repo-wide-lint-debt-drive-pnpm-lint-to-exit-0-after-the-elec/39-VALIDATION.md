@@ -3,7 +3,7 @@ phase: 39
 slug: repo-wide-lint-debt-drive-pnpm-lint-to-exit-0-after-the-elec
 status: approved
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-09-02
 ---
 

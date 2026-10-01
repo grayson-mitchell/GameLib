@@ -4728,7 +4728,7 @@ Plans:
 
 ---
 
-### Phase 39: Post-cutover CI honesty — lint debt, the two red planning gates, and the dead `getLoginWindowSeam` branches
+### Phase 39: Post-cutover CI honesty — lint debt, the two red planning gates, and the dead `getLoginWindowSeam` branches — ✅ COMPLETE 2026-09-02
 
 **Goal:** Close phase-34.9 deferred **item 20**, the last of that phase's 24 ledger items with no
 owner at all. `pnpm lint` exits non-zero repo-wide, so no phase can honestly use it as a gate —
