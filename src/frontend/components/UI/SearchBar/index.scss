@@ -20,9 +20,33 @@
   // Do not "tidy" this back to a token without re-measuring both controls.
   padding: 5px var(--space-2xs);
 
+  // Resting definition, so the field reads as a control rather than as a
+  // tinted patch of the panel. `outline` NOT `border`: outline sits outside
+  // the box model, so the deliberately-measured 34px above is untouched. A
+  // 1px border would have made it 36px and broken the SelectField match the
+  // comment above is protecting.
+  outline: 1px solid var(--search-bar-border, var(--border-color));
+
+  // Was `box-shadow: 0 0 0 3px var(--search-bar-border, var(--input-background))`,
+  // which was INVISIBLE in every theme but midnightMirage: that token was
+  // declared in one theme block only, so the fallback painted the ring in
+  // --input-background -- the bar's own background. themes.scss now declares
+  // it on base `body`, and this rule moves to the repo's canonical focus-ring
+  // tokens so focus is louder than, and distinct from, the resting outline.
+  //
+  // Inset (negative offset), matching UI/Header's console control: this bar
+  // renders inside the scroll-clipped tier-2 column, where an outward ring
+  // gets cut off.
+  //
+  // Stays `:focus-within` rather than the canonical
+  // `:focus-visible, :focus:is(body.controllerLayout *)` pair, deliberately:
+  // this is a wrapper div and the focus actually lands on the inner input,
+  // which that pair cannot see from here.
   &:focus-within {
-    box-shadow: 0px 0px 0px 3px
-      var(--search-bar-border, var(--input-background));
+    outline: var(--focus-ring-width, 3px) solid
+      var(--focus-ring-color, var(--accent, #0080ff));
+    outline-offset: calc(-1 * var(--focus-ring-width, 3px));
+    background: var(--focus-ring-fill);
   }
 
   // This rule was DEAD until 260815-mk1: an inline style on the same element
@@ -57,6 +81,22 @@
     background: transparent;
     font-family: var(--secondary-font-family);
     font-weight: var(--medium);
+    // Matches the tier-2 panel's own rows (`--text-md`, NavItem/index.scss).
+    // This element set font-family and font-weight but never font-size, and
+    // an <input> does NOT inherit font-size from its ancestors -- it takes
+    // the UA default (~13.3px in Chromium) unless told otherwise. So the
+    // placeholder was rendering a third smaller than every label beside it,
+    // which is the gap this closes.
+    //
+    // No compensating change to `.SearchBar`'s 5px padding was needed, and
+    // that is load-bearing rather than an omission: the control's 34px is
+    // governed by its TALLEST flex item, which is the search button (a 16px
+    // icon plus 2x4px padding = 24px), not the input. At 1.25 x 16px = 20px
+    // the input stays under that, so the measured 34px survives untouched.
+    // The explicit line-height is what makes that arithmetic checkable
+    // instead of leaving it to the UA's `normal`.
+    font-size: var(--text-md);
+    line-height: 1.25;
     // Inline-start is 0, not --space-2xs: the icon's own 6px trailing padding
     // already separates the glyph from the text, and stacking both put 18px
     // between them. The end side keeps its 6px -- that one buffers the text

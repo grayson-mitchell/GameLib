@@ -15,6 +15,19 @@ body {
      universal. Themes may now override. */
   --border-color: var(--divider, var(--neutral-03));
 
+  /* Same defect as --border-color directly above, same fix. This was
+     declared in exactly ONE theme block (body.midnightMirage), so everywhere
+     else `var(--search-bar-border, var(--input-background))` in
+     UI/SearchBar/index.scss fell through to the search bar's OWN background
+     and drew the focus highlight in the colour it was drawn against -- a
+     declaration that never breaks and always resolves, to something
+     invisible. It is the worked example in cssTokenSweep.test.ts's blind
+     spot B ("this gate checks NAMES, not SCOPES"), which is exactly why that
+     gate could not see it. Basing it on --border-color makes it universal;
+     midnightMirage's own value still wins there, since that block is later
+     in this file at equal specificity. */
+  --search-bar-border: var(--border-color);
+
   --anticheat-denied: #a25d21;
   --anticheat-broken: var(--status-warning);
   --anticheat-running: var(--status-default);

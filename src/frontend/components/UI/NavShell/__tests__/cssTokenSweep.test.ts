@@ -53,12 +53,25 @@
  *      top -- do NOT hand-roll a stripper here.
  *   B. This gate checks NAMES, not SCOPES. A declaration found ANYWHERE in
  *      ANY file counts as declared, so a token declared under one narrow
- *      selector reads as universally available. `--search-bar-border` is the
- *      worked example: it is declared exactly once, at `themes.scss:58`
- *      inside `body.midnightMirage`, and on the other 10 themes it resolves
- *      to nothing. This gate would not have caught that, and did not; the
+ *      selector reads as universally available. `--search-bar-border` was
+ *      the worked example: it was declared exactly once, inside
+ *      `body.midnightMirage`, and on every other theme it resolved to
+ *      nothing. This gate would not have caught that, and did not; the
  *      `260912-it4` sweep found it only via the misspelled fallback arm
  *      sitting behind it. A scope-aware sweep is a different, harder gate.
+ *
+ *      That token is NO LONGER an example of the blind spot -- it was fixed
+ *      on 2026-10-02, and `themes.scss` now declares it on base `body` as
+ *      `var(--border-color)` (the same shape, and for the same reason, as
+ *      `--border-color` itself one line above it there). The blind spot is
+ *      unchanged and still real; only this illustration of it is spent. It
+ *      is kept rather than swapped for a live example deliberately: naming a
+ *      CURRENTLY-broken token here would make this header a to-do list that
+ *      rots the moment someone fixes it, which is what just happened. The
+ *      line number this used to cite ("themes.scss:58") was already stale
+ *      against the pre-fix tree -- the declaration sat at :93 -- so it is
+ *      dropped rather than re-pinned; a scope-aware gate is the fix, not a
+ *      hand-maintained line reference.
  */
 import { execFileSync } from 'child_process'
 import { readFileSync } from 'fs'
