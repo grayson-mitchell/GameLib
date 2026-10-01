@@ -60,6 +60,7 @@ function readRawCss(relativePath: string): string {
 const themesScss = readRawCss('themes.scss')
 const consoleModeCss = compileScss('screens/ConsoleMode/index.scss')
 const gamePageCss = readRawCss('screens/Game/GamePage/index.css')
+const headerCss = readRawCss('components/UI/Header/index.css')
 const filterFacetGroupCss = compileScss(
   'components/UI/NavShell/components/FilterFacetGroup/index.scss'
 )
@@ -102,7 +103,9 @@ const TARGETED_RULES: Record<string, RegExp> = {
     /\.FilterFacetGroup \.FilterFacetRow:focus-visible,[^{]*\{[^}]*\}/,
   '.FilterMoreGroup__only':
     /\.FilterMoreGroup__only:focus-visible,[^{]*\{[^}]*\}/,
-  '.NavItem': /\.NavItem:focus-visible,[^{]*\{[^}]*\}/
+  '.NavItem': /\.NavItem:focus-visible,[^{]*\{[^}]*\}/,
+  '.Header__consoleButton':
+    /\.Header__consoleButton:focus-visible,[^{]*\{[^}]*\}/
 }
 
 function sourceForSurface(name: string): string {
@@ -116,6 +119,7 @@ function sourceForSurface(name: string): string {
     return filterFacetGroupCss
   if (name === '.FilterMoreGroup__only') return filterMoreGroupCss
   if (name === '.NavItem') return navItemCss
+  if (name === '.Header__consoleButton') return headerCss
   throw new Error(`no source mapped for surface ${name}`)
 }
 
@@ -187,6 +191,16 @@ describe('Hover and focus are never grouped in one selector list on targeted sur
     expect(gamePageCss).not.toMatch(groupedPattern)
   })
 
+  // headerCss (raw CSS, like gamePageCss above) is deliberately excluded from
+  // NAVSHELL_COMPILED_CSS -- that list is compiled SCSS by name, and
+  // gamePageCss is the standing precedent for a raw-CSS surface staying out
+  // and carrying its own assertion-d test instead.
+  it('Header: no selector list mixes :hover and :focus for .Header__consoleButton', () => {
+    const groupedPattern =
+      /\.Header__consoleButton[^{,]*:hover[^{]*,[^{]*:focus[^{]*\{|\.Header__consoleButton[^{,]*:focus[^{]*,[^{]*:hover[^{]*\{/
+    expect(headerCss).not.toMatch(groupedPattern)
+  })
+
   it('NavShell tier-2 files: no selector list mixes :hover and :focus for any targeted class', () => {
     for (const css of NAVSHELL_COMPILED_CSS) {
       const groupedPattern = /[^{,]*:hover[^{]*,[^{]*:focus[^{]*\{/
@@ -195,6 +209,12 @@ describe('Hover and focus are never grouped in one selector list on targeted sur
   })
 })
 
+// `.Header__consoleButton` (headerCss, raw CSS) is deliberately NOT iterated
+// by assertion e's loops below, which only walk NAVSHELL_COMPILED_CSS. Its
+// protection is still covered: assertion b (above) already requires the
+// literal ":focus:is(body.controllerLayout *)" substring for every
+// TARGETED_RULES entry including this one, which IS the :is()-wrapped form
+// assertion e exists to enforce -- so this exclusion is not a coverage hole.
 describe('No prefix-form controllerLayout selector leaked into the NavShell files (assertion e)', () => {
   it('every "body.controllerLayout" occurrence sits inside :is(body.controllerLayout *), never as a preceding ancestor', () => {
     for (const css of NAVSHELL_COMPILED_CSS) {

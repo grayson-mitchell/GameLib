@@ -1,3 +1,7 @@
+import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faTv } from '@fortawesome/free-solid-svg-icons'
 import LibrarySearchBar from '../LibrarySearchBar'
 import FilterViewList from '../NavShell/components/FilterViewList'
 import FilterCollectionList from '../NavShell/components/FilterCollectionList'
@@ -7,8 +11,21 @@ import FilterMoreGroup from '../NavShell/components/FilterMoreGroup'
 import './index.css'
 
 export default function Header() {
+  const { t } = useTranslation()
+  const consoleModeLabel = t('sidebar.console', 'Console Mode')
+
   return (
     <div className="Header">
+      <div className="Header__utilities">
+        <Link
+          to="/console"
+          className="Header__consoleButton"
+          aria-label={consoleModeLabel}
+          title={consoleModeLabel}
+        >
+          <FontAwesomeIcon icon={faTv} />
+        </Link>
+      </div>
       <div className="Header__search">
         <LibrarySearchBar />
       </div>

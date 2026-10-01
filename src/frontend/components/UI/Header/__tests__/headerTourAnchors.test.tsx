@@ -1,13 +1,16 @@
 /**
  * Structural tests for `Header`, the Games tier-2 filter panel's top-level
- * layout (34.12-02 Task 1, D-09) -- proves the two new `data-tour` wrapper
- * divs (`library-views-collections`, `library-facets`) carry the right
- * children by IDENTITY, that `.Header` is left with exactly three direct
- * children, and that both wrappers restate the `.Header` gap they
- * intercepted -- without this CSS gate the vertical spacing between Views
- * and Collections, and between the three facet groups, silently collapses
- * to zero, because `gap` is a property of the flex CONTAINER and the new
- * wrappers just removed five elements from `.Header`'s direct-child list.
+ * layout (34.12-02 Task 1, D-09; extended by quick 261002-b63) -- proves the
+ * two `data-tour` wrapper divs (`library-views-collections`, `library-facets`)
+ * carry the right children by IDENTITY, that `.Header` now returns FOUR direct
+ * children (a leading `Header__utilities` row holding the Console Mode link,
+ * ahead of the pre-existing `Header__search`, `library-views-collections` and
+ * `library-facets` children), and that all of `.Header`'s CSS-gated wrappers
+ * restate the `.Header` gap they intercepted -- without this CSS gate the
+ * vertical spacing between Views and Collections, and between the three facet
+ * groups, silently collapses to zero, because `gap` is a property of the flex
+ * CONTAINER and the new wrappers just removed five elements from `.Header`'s
+ * direct-child list.
  *
  * No jsdom / react-test-renderer is installed in this project (see
  * `src/frontend/jest.config.js` docstring) -- `Header` is invoked directly
@@ -22,6 +25,26 @@ import { join } from 'path'
 import type { ReactElement, ReactNode } from 'react'
 
 jest.mock('../index.css', () => ({}))
+
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (_key: string, defaultValue: string): string => defaultValue
+  })
+}))
+
+jest.mock('react-router-dom', () => ({
+  Link: (props: Record<string, unknown>) => ({
+    type: 'mock-link',
+    props
+  })
+}))
+
+jest.mock('@fortawesome/react-fontawesome', () => ({
+  FontAwesomeIcon: (props: Record<string, unknown>) => ({
+    type: 'mock-fontawesome-icon',
+    props
+  })
+}))
 
 jest.mock('../../LibrarySearchBar', () => ({
   __esModule: true,
@@ -80,6 +103,8 @@ jest.mock('../../NavShell/components/FilterMoreGroup', () => ({
 // `FilterStoreFacet` rendering `null` for zero connected stores, which is
 // exactly why this plan wraps groups rather than picking one representative
 // element).
+import { Link } from 'react-router-dom'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import FilterViewList from '../../NavShell/components/FilterViewList'
 import FilterCollectionList from '../../NavShell/components/FilterCollectionList'
 import FilterStoreFacet from '../../NavShell/components/FilterStoreFacet'
@@ -180,11 +205,44 @@ describe('Header tour anchors (34.12-02, D-09)', () => {
     expect(childTypes).toContain(FilterMoreGroup)
   })
 
-  it('.Header has exactly three direct children, the first still carrying className Header__search', () => {
+  it('.Header has exactly four direct children: a leading Header__utilities row, then Header__search', () => {
     const tree = Header() as unknown as ReactElement
     const children = topLevelChildren(tree)
-    expect(children).toHaveLength(3)
-    expect(children[0].props?.className).toBe('Header__search')
+    expect(children).toHaveLength(4)
+    expect(children[0].props?.className).toBe('Header__utilities')
+    expect(children[1].props?.className).toBe('Header__search')
+  })
+
+  it('Header__utilities holds exactly one Console Mode Link, by identity, with an accessible name and no visible text', () => {
+    const tree = Header() as unknown as ReactElement
+    const children = topLevelChildren(tree)
+    const utilities = children[0]
+
+    const linkEls = collectElements(utilities.props.children).filter(
+      (el) => el.type === Link
+    )
+    expect(linkEls).toHaveLength(1)
+
+    const link = linkEls[0]
+    expect(link.props.to).toBe('/console')
+    expect(link.props['aria-label']).toBe('Console Mode')
+    expect(link.props.title).toBe('Console Mode')
+
+    const iconEls = collectElements(link.props.children).filter(
+      (el) => el.type === FontAwesomeIcon
+    )
+    expect(iconEls).toHaveLength(1)
+  })
+
+  it('the Console Mode Link carries no data-tour, so the two findByDataTour uniqueness assertions above stay meaningful', () => {
+    const tree = Header() as unknown as ReactElement
+    const children = topLevelChildren(tree)
+    const utilities = children[0]
+
+    const linkEls = collectElements(utilities.props.children).filter(
+      (el) => el.type === Link
+    )
+    expect(linkEls[0].props['data-tour']).toBeUndefined()
   })
 
   it('both new wrappers restate the .Header gap they intercepted, scoped per wrapper block', () => {
