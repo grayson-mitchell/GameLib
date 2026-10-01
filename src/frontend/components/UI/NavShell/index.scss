@@ -14,7 +14,15 @@
   // judged against -- 218px appears only in the filter sketch, which is
   // 34.11's scope. Declared exactly once (see shellTokens.test.ts) so
   // 34.11 can retune it in one place.
-  --tier2-width: 204px;
+  //
+  // Retuned 204px -> 256px on 2026-10-02 (+52), operator's call, to give the
+  // panel room for the library controls moving into it. 52 and not the 50
+  // originally asked for: the device-pixel reasoning in the divider comment
+  // further down this file requires the width to be divisible by 4 (1.25x and
+  // 1.75x are 5/4 and 7/4), and 254 is not -- it goes fractional at both,
+  // reintroducing the exact hairline-divider bug that comment took four
+  // attempts to settle. 252 and 256 both qualify; 256 was chosen.
+  --tier2-width: 256px;
 
   // 260815-j24: retuned from 56px to 42px, an arithmetic value, not a
   // design-sketch one. Derivation (F5 in the plan):
@@ -323,15 +331,19 @@
   // solid var(--color-border)`) was investigated and rejected: the
   // fractional boundary comes from the DEVICE PIXEL RATIO, not from any
   // length value this file controls. For a boundary to land on a whole
-  // device pixel, `--tier2-width * DPR` must be an integer. 204px already
-  // satisfies that for every *integer* DPR (1x, 2x, 3x) and even most common
+  // device pixel, `--tier2-width * DPR` must be an integer. 256px (204px
+  // until 2026-10-02; the reasoning is unchanged by the retune because both
+  // values are divisible by 4, which is what the common fractional DPRs
+  // 5/4 and 7/4 require) satisfies that for every *integer* DPR (1x, 2x, 3x)
+  // and even most common
   // *fractional* DPRs (1.25, 1.5, 1.75 -- all give whole numbers), which is
   // consistent with this repro never reproducing the defect in Chromium at
   // DPR 1 or 2. But macOS's "scaled resolution" display modes routinely use
-  // OTHER fractional backing-scale factors (e.g. 1.8x: 204*1.8 = 367.2,
+  // OTHER fractional backing-scale factors (e.g. 1.8x: 256*1.8 = 460.8,
   // genuinely fractional) that no single fixed width can satisfy
-  // simultaneously with the common ones above -- 205px fixes 1.8x
-  // (205*1.8=369) but breaks 1.5x (205*1.5=307.5). There is no CSS length
+  // simultaneously with the common ones above -- 205px fixes 1.8x for the
+  // old 204px width (205*1.8=369) but breaks 1.5x (205*1.5=307.5); the same
+  // trade exists at any width. There is no CSS length
   // choice that guarantees an integer device-pixel boundary across an
   // unknown, environment-chosen DPR; this is a property of the runtime, not
   // a bug this stylesheet can pin away. Switching `.App`'s grid-template-
