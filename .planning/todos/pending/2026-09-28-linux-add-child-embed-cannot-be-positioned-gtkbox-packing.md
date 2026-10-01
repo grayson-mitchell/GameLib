@@ -484,3 +484,22 @@ n/a", NOT per-check detail, so nothing below is finer-grained than that.
   The Linux HiDPI branch of `38-E03` is a separate question and is still un-run on the packaged build.
 - **Effect on this todo:** the live gate it was waiting on is done. The todo is NOT moved to `completed/` by this
   addendum, and `38-VERIFICATION.md` is not edited.
+
+## Addendum (2026-10-01, quick 261001-h8m): 38-E03 Linux branch (c), packaged AppImage at GDK_SCALE=2 — operator PASS
+
+The operator sat the HiDPI checks on the local `GameLib_0.7.0_amd64.AppImage` (sha256 prefix `a89ac8bb3b71`, not the CI
+artifact), X11, a real profile, DMABUF unset, launched with `GDK_SCALE=2` (shell PID 158838, started 20:37). Identity was
+proven by PID: the shell and the WebKitWebProcess both carried `GDK_SCALE=2`, and the main window's X client size was
+2560x1290 (about 1280x645 logical). A first launch was absorbed by a stale single instance and was discarded; the stale
+instance was stopped and the build relaunched.
+
+- **PASS (operator):** the embed fills its slot with no gap and no overlap of the tabs or left nav; the embed's text is
+  sharp; a corner drag larger and smaller still works with the embed following. Reported as "1-3 pass", NOT per-check detail.
+- **PASS (operator):** GOG stayed signed in across the restart. This is also the restart clause of check 3.
+- **CLAIM LIMIT, important:** `GDK_SCALE=2` is a toolkit scale override, NOT a native display scale (GNOME's own scaling
+  was left at 100% on both monitors). It is the same method as the dev-build desk gate, now on the packaged build.
+- **Not measured:** no embed-rect-vs-slot number was taken on this launch (the harness runs its own instance on a fake
+  profile). The 2.000 ratio and 0 px alignment remain the dev-build desk numbers above. Crispness is the operator's eye.
+- **Not covered, unchanged:** Wayland, fractional scales, mixed-DPI or per-monitor scaling, external displays, a native
+  GNOME 200% setting, Tauri's own `scale_factor()`, the CI-built AppImage.
+- **Does not discharge 38-E03.** Its macOS branch (a) is un-run and not descoped. `38-VERIFICATION.md` is not edited.
