@@ -406,3 +406,24 @@ machine. This file stays in `pending/`; nothing is closed.
   stays. `38-VERIFICATION.md` is not edited by this addendum.
 - Harness changes: `gate_live.ts` gained `--no-vite` (a release binary serves its embedded frontend);
   `arm.py` gained the `GL_BOOT_WAIT` readiness poll.
+
+## Addendum (2026-10-01, quick 261001-apg): AppImage desk run of the live-gate checklist — automatable half only
+
+Ran the machine-checkable part of `.planning/quick/261001-pez-mid-drag-frame-capture-for-the-linux-sto/LIVE-GATE-CHECKLIST.md`
+on the local `GameLib_0.7.0_amd64.AppImage` (sha256 prefix `a89ac8bb3b713ae4`, the same build as the packaged-build addendum
+above; local, not the CI artifact). Fresh `createFakeHomeProfile()` per launch, X11, DMABUF unset, NVIDIA 580.173.02, one
+host, graphics mode `compute`, nothing logged in. Evidence: `.planning/quick/261001-apg-appimage-desk-run-of-the-linux-embed-live/evidence/`.
+
+- **Check 2 (embed in slot): PASS.** `settled requested=204,82,1076x718 embed=204,82,1076x718 main=0,0,1280x800`.
+- **Check 6 (grow-drag), 3 of 3 VALID** (pre-drag and final frames both flush): scripted grow strip up to 48 px right / 40 px
+  bottom, exposed 921 ms, converged 123 ms after the last resize event; real pointer drag up to 42 / 28 px, exposed 740 ms,
+  converged 118 ms. Matches the release-binary numbers in `261001-pez-SUMMARY.md` (33-54 / 22-45 px). The embed trails the
+  live chrome while growing and snaps flush shortly after; whether that is acceptable is the operator's call.
+- **Check 7 (shrink-drag): final state only.** The embed ends exactly at the requested rect (`896x568` at 1100x650). Overhang
+  DURING the shrink is not visible to the scorer (the window clips it) and remains unmeasured.
+- **Check 1 (boot): not timed.** The harness finds the window but does not time boot from launch, so there is no boot figure.
+- **Not run on the AppImage in this pass:** check 4 (tab round trip) and check 5 (wheel, click-outside, typing); both passed on
+  this same build in the packaged-build addendum above.
+- **Needs the operator, NOT done:** check 3 (a logged-in store; needs credentials and a real profile), checks 8-9 (maximise,
+  second monitor, keyboard focus), and the judgement half of check 6.
+- **Does not discharge the Linux branches of 38-E03/38-E04.** `ready: live-gate` stays; `38-VERIFICATION.md` is not edited.
