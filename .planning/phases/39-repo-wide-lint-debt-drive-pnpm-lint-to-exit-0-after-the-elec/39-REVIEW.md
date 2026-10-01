@@ -25,6 +25,7 @@ findings:
   critical: 1
   critical_resolved: 1
   warning: 2
+  warning_resolved: 1
   info: 2
   total: 5
 status: issues_found
@@ -163,6 +164,19 @@ alongside it, following `28-REVIEW.md`'s existing `warning_resolved:` convention
 **Issue:** The updated header comment (lines 1-45) is otherwise a careful, accurate rewrite of the file's rationale for the Phase 39 re-point (fake seam with async-rejecting `revealPost`, installed/torn down in a `finally`). However, the retained sentence "Group 1 (below) is UNCHANGED: it still pins `electronStub.net.request()`'s own isolated contract directly, independent of whether `humblePostRequest` ever calls it" is now describing test coverage of a code path (`electronStub.net.request()`) that `humblePostRequest` no longer calls under any circumstance (the electron-net fallback was deleted outright in this phase, not merely made conditionally unreachable). The comment is technically accurate (Group 1 tests the stub in isolation, and always has), but its framing ("independent of whether `humblePostRequest` ever calls it") now reads as though there remains some live conditional relationship between the two, which is no longer true — the two are now fully unrelated, not merely decoupled.
 
 **Fix:** Minor wording tightening, e.g.: "Group 1 (below) is UNCHANGED: it pins `electronStub.net.request()`'s own isolated contract directly — this is now entirely unrelated to `humblePostRequest`, which has no electron-net transport left to call it through." Not load-bearing; does not affect test correctness.
+
+**Resolution (2026-10-02, quick 261002-9h3): FIXED — comment text only, no behavioural change.**
+The stale clause is gone. Lines 23-27 of the header comment now say that Group 1 still pins
+`electronStub.net.request()`'s own isolated contract and that the two are fully unrelated, not
+merely decoupled, because `humblePostRequest` has no electron-net transport left to call it
+through. `npx prettier --check src/backend/sidecar/__tests__/netStub.test.ts` exits 0 and
+`npx jest src/backend/sidecar/__tests__/netStub.test.ts` reports 6 passed, 6 total after the edit;
+both were green before it too, so neither is evidence of anything beyond "the edit broke nothing" —
+a comment-only change cannot. **Scope of this resolution:** WR-02 only. WR-01, IN-01 and IN-02
+remain open by design, each recorded above as no change required or as a disclosed, accepted
+limitation. Frontmatter therefore keeps `status: issues_found` and leaves `warning: 2` as the
+as-reviewed count, adding `warning_resolved: 1` alongside it exactly as the CR-01 pass added
+`critical_resolved: 1`.
 
 ## Info
 
