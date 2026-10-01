@@ -1124,7 +1124,6 @@ Recent decisions affecting current work:
 - [2026-09-17] [build] "Packaged .app renders blank — FIXED: the data router rendered its initial-load state as nothing; empty-ro… — [todo file](.planning/todos/pending/2026-09-17-packaged-app-renders-blank-on-roughly-one-launch-in-four.md)
 - [2026-09-21] [test] 'Confirm on the next pull_request run that the five guarded/parameterised suites (shortcutsExistsFa… — [todo file](.planning/todos/pending/2026-09-21-confirm-the-five-guarded-suites-run-green-on-the-linux-ci-runner.md)
 - [2026-10-01] [ui] Library game tiles stretch with window width — consider a fixed or user-selectable tile size — [todo file](.planning/todos/pending/2026-10-01-library-tiles-stretch-with-window-width-consider-a-set-size.md)
-- [2026-10-01] [store-embed] "Re-verify the macOS store-embed route-return fix on a PACKAGED build — all three scored runs used th… — [todo file](.planning/todos/pending/2026-10-01-re-verify-the-macos-store-embed-fix-on-a-packaged-build.md)
 
 ### Blockers/Concerns
 
