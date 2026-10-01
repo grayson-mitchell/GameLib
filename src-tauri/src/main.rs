@@ -6020,6 +6020,33 @@ fn store_embed_linux_rect_is_zero_area(rect: (i32, i32, i32, i32)) -> bool {
     rect.2 == 0 || rect.3 == 0
 }
 
+/// The macOS sibling of the guard above, on the renderer's `f64` logical rect rather than a
+/// converted `i32` one (macOS takes the rect verbatim -- see `store_embed_linux_gtk_rect`'s own
+/// note that rounding is a Linux-only consequence of GTK's integer API).
+///
+/// Measured live on macOS 2026-10-01 (quick 261001-svm), AFTER that task's `show()` fix had
+/// already landed: `/store/gog` -> `/store/epic` -> `/store/gog` left the embed invisible even
+/// though it was by then being SHOWN. `window.api.storeEmbedShow()` did not bring it back and a
+/// bounds flush alone DID, which is what identifies the surviving cause as geometry, not
+/// visibility. The Epic panel replaces the slot while the hook stays mounted, so the slot's
+/// ResizeObserver reports a final 0x0 rect that this function's caller used to apply verbatim;
+/// nothing on macOS re-applies a real rect afterwards, so the embed stayed 0x0 until a genuine
+/// window resize. Once in that state even a `/library` round trip stayed blank -- also measured.
+///
+/// This is the same deliberate deviation from D-18's "apply the oracle's rect verbatim" that the
+/// Linux branch took on 2026-09-30, and it carries the same accepted edge: a slot that genuinely
+/// collapses to zero area WHILE VISIBLE now keeps its old geometry instead of vanishing. That
+/// edge remains unmeasured on both platforms.
+/// Non-finite input is folded into the same "not a usable geometry" answer rather than given its
+/// own error: Linux rejects `NaN`/infinities during its `i32` conversion, and macOS has no
+/// conversion step to reject them in, so this is where they stop. Spelled with `is_finite` and
+/// `<=` rather than the shorter `!(w > 0.0)` -- that form also catches `NaN`, but clippy's
+/// `neg_cmp_op_on_partial_ord` fires on it twice and the crate's warning ceiling is pinned.
+#[cfg(target_os = "macos")]
+fn store_embed_rect_is_zero_area(w: f64, h: f64) -> bool {
+    !w.is_finite() || !h.is_finite() || w <= 0.0 || h <= 0.0
+}
+
 /// The one line the Linux layout logs once the embed's geometry has settled. Geometry only --
 /// never a URL. `requested` is what the renderer asked for (rounded); `embed` and `main` are the
 /// MEASURED GTK allocations (embed relative to main's origin, main relative to the overlay);
@@ -6087,6 +6114,13 @@ fn store_embed_set_bounds(app: &AppHandle, args: &[Value]) -> Result<Value, Stri
     }
     #[cfg(target_os = "macos")]
     {
+        if store_embed_rect_is_zero_area(w, h) {
+            eprintln!(
+                "[shell] store_embed(macos): ignored zero-area bounds (slot unmounted); \
+                 keeping the last real geometry"
+            );
+            return Ok(Value::Null);
+        }
         webview
             .set_position(tauri::LogicalPosition::new(x, y))
             .map_err(|e| format!("store_embed_set_bounds:set_position-failed:{e}"))?;
@@ -17481,6 +17515,36 @@ mod tests {
         assert!(store_embed_linux_rect_is_zero_area((204, 82, 1076, 0)));
         assert!(!store_embed_linux_rect_is_zero_area((0, 0, 1, 1)));
         assert!(!store_embed_linux_rect_is_zero_area((-40, -40, 300, 200)));
+    }
+
+    /// macOS sibling of the test above (quick 261001-svm). The 0x0 case is the one actually
+    /// measured live -- the slot's final ResizeObserver report once the Epic panel has replaced
+    /// it -- and before this guard existed it was applied verbatim and left the embed invisible
+    /// at zero size until a genuine window resize.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn store_embed_macos_zero_area_rect_is_recognised() {
+        // The measured case: slot unmounted, every field zero.
+        assert!(store_embed_rect_is_zero_area(0.0, 0.0));
+        // One collapsed axis is still unusable.
+        assert!(store_embed_rect_is_zero_area(0.0, 418.0));
+        assert!(store_embed_rect_is_zero_area(1076.0, 0.0));
+        // Negative extents are not a geometry this can honour either; GTK's branch rejects them
+        // outright in conversion, and macOS has no conversion step to reject them in.
+        assert!(store_embed_rect_is_zero_area(-1.0, 200.0));
+        assert!(store_embed_rect_is_zero_area(300.0, -1.0));
+        // Non-finite input stops here rather than reaching `set_size`. A bare `w <= 0.0` test
+        // would let NaN THROUGH (every comparison with NaN is false), so these two cases are the
+        // ones that turn red if the `is_finite` half is ever dropped as redundant.
+        assert!(store_embed_rect_is_zero_area(f64::NAN, 200.0));
+        assert!(store_embed_rect_is_zero_area(300.0, f64::NAN));
+        assert!(store_embed_rect_is_zero_area(f64::INFINITY, 200.0));
+        assert!(store_embed_rect_is_zero_area(300.0, f64::NEG_INFINITY));
+        // Real geometry, including the fractional rects a logical-px slot rect actually carries,
+        // must pass through untouched -- D-18's verbatim rule still holds for every usable rect.
+        assert!(!store_embed_rect_is_zero_area(1076.0, 418.0));
+        assert!(!store_embed_rect_is_zero_area(760.25, 560.75));
+        assert!(!store_embed_rect_is_zero_area(0.5, 0.5));
     }
 
     #[cfg(target_os = "linux")]
