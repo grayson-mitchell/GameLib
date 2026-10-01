@@ -21,7 +21,9 @@
  *   (a) opt-in via `GAMELIB_DEV_SECRET_VAULT === '1'` ONLY — an exact string match, never a
  *       truthiness check (a stray `=0`/`=false` must never enable this), and read at INSTALL
  *       time only, never cached at module scope.
- *   (b) a LOUD warning on install and on every read/write, naming only the slot/key identifier —
+ *   (b) a LOUD warning on install and on every read/write, naming only the slot/key identifier
+ *       and — for a write — a closed-set direction token (`op=store`/`op=wipe`) distinguishing a
+ *       credential store from a credential wipe —
  *       never a secret value, never a substring of one, never a length.
  *   (c) REFUSED in a packaged build, and REFUSED whenever the build kind cannot be determined
  *       (fail CLOSED) — enforced by reusing `isPackagedSidecar.ts`'s `isPackagedSidecar()`
@@ -93,6 +95,14 @@ type VaultSlot =
 const STEAM_SLOT: VaultSlot = 'steam-refresh-token'
 const STEAMGRID_SLOT: VaultSlot = 'steamGridDbApiKey'
 
+/** The write direction logged alongside a slot identifier (guardrail (b)/T-fz5-02). A closed
+ * two-member set, never a free string — mirrors `VaultSlot`'s own closed-union discipline one
+ * layer up. `writeSlot`'s direction parameter is REQUIRED (no default): the direction is always
+ * CHOSEN by the call site, never DERIVED from the value being written. Deriving it (e.g. from
+ * `value === ''`) would make the log token a function of the secret value, which is exactly the
+ * property guardrail (b) forbids, and would also mislabel a legitimate `setToken('')` as a wipe. */
+type WriteDirection = 'store' | 'wipe'
+
 type VaultFileShape = Partial<Record<VaultSlot, string>>
 
 function errorMessage(error: unknown): string {
@@ -159,21 +169,32 @@ function readSlot(path: string, slot: VaultSlot): string {
   return typeof value === 'string' ? value : ''
 }
 
-/** Writes one slot, emitting the mandated `[dev-secret-vault] write key=<slot>` line — the slot
- * name only, never the value (guardrail (b)/T-34.5-C4-42). */
-function writeSlot(path: string, slot: VaultSlot, value: string): void {
-  logWarning(`[dev-secret-vault] write key=${slot}`, LogPrefix.Backend)
+/** Writes one slot, emitting the mandated `[dev-secret-vault] write key=<slot> op=<direction>`
+ * line — the slot name and the closed-set direction token only, never the value (guardrail
+ * (b)/T-34.5-C4-42/T-fz5-02). `direction` is REQUIRED and chosen by the caller — see
+ * `WriteDirection`'s own doc comment for why it is never derived from `value`. */
+function writeSlot(
+  path: string,
+  slot: VaultSlot,
+  value: string,
+  direction: WriteDirection
+): void {
+  logWarning(
+    `[dev-secret-vault] write key=${slot} op=${direction}`,
+    LogPrefix.Backend
+  )
   const data = readVaultFile(path)
   data[slot] = value
   writeVaultFile(path, data)
 }
 
-/** Clears one slot. Treated as a write for logging purposes (guardrail (b)) — it mutates the
+/** Clears one slot. Still logged through the write line (guardrail (b)), now carrying the
+ * `wipe` direction rather than collapsing into the same line a store would emit — it mutates the
  * on-disk vault exactly as `writeSlot` does, just to the empty string, which is indistinguishable
  * from "never stored" on the next `readSlot` (matches `TokenStore.getToken()`'s own documented
  * "''" == "none stored OR unavailable" semantics). */
 function clearSlot(path: string, slot: VaultSlot): void {
-  writeSlot(path, slot, '')
+  writeSlot(path, slot, '', 'wipe')
 }
 
 /** The Steam `TokenStore` half of the vault, bound to the fixed `steam-refresh-token` slot. */
@@ -189,7 +210,7 @@ class DevVaultTokenStore implements TokenStore {
   }
 
   async setToken(token: string): Promise<void> {
-    writeSlot(this.path, STEAM_SLOT, token)
+    writeSlot(this.path, STEAM_SLOT, token, 'store')
   }
 
   async clearToken(): Promise<void> {
@@ -212,7 +233,7 @@ class DevVaultHumbleSecretStore implements HumbleSecretStore {
   }
 
   async setSecret(key: HumbleSecretKey, value: string): Promise<void> {
-    writeSlot(this.path, key, value)
+    writeSlot(this.path, key, value, 'store')
   }
 
   async clearSecrets(): Promise<void> {
@@ -245,7 +266,7 @@ class DevVaultSteamGridDbSecretStore implements SteamGridDbSecretStore {
   }
 
   async setApiKey(value: string): Promise<void> {
-    writeSlot(this.path, STEAMGRID_SLOT, value)
+    writeSlot(this.path, STEAMGRID_SLOT, value, 'store')
   }
 
   async clearApiKey(): Promise<void> {

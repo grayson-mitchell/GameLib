@@ -121,6 +121,7 @@ import * as devSecretVaultModule from '../devSecretVault'
 import * as tokenStoreModule from 'backend/storeManagers/steam/tokenStore'
 import * as secretStoreModule from 'backend/humble/secretStore'
 import * as humbleSecretStoreModule from '../humbleSecretStore'
+import * as steamGridDbSecretStoreModule from 'backend/steamgrid/secretStore'
 import { init } from '../bootstrap'
 
 const ENV_VAR = 'GAMELIB_DEV_SECRET_VAULT'
@@ -347,6 +348,96 @@ describe('devSecretVault', () => {
       mockLogWarning.mock.calls.some(
         ([message]) =>
           message === '[dev-secret-vault] read key=steam-refresh-token'
+      )
+    ).toBe(true)
+  })
+
+  it('a store and a wipe of the Steam slot emit distinct, strictly-pinned direction lines, and the wipe leaves the slot present-and-empty on disk at mode 0600', async () => {
+    process.env[ENV_VAR] = '1'
+    mockIsPackagedSidecar.mockReturnValue(false)
+    expect(installDevSecretVault()).toBe(true)
+
+    // Deliberately random, no natural-language overlap with this module's own log vocabulary —
+    // see the sibling round-trip test above for why that matters.
+    const secretValue = 'hT3kN7cQ1wE9mX5jR2vY'
+    const tokenStore = tokenStoreModule.getTokenStore()
+    await tokenStore.setToken(secretValue)
+    await tokenStore.clearToken()
+
+    expect(
+      mockLogWarning.mock.calls.some(
+        ([message]) =>
+          message ===
+          '[dev-secret-vault] write key=steam-refresh-token op=store'
+      )
+    ).toBe(true)
+    expect(
+      mockLogWarning.mock.calls.some(
+        ([message]) =>
+          message === '[dev-secret-vault] write key=steam-refresh-token op=wipe'
+      )
+    ).toBe(true)
+    expect(
+      mockLogWarning.mock.calls.some(
+        ([message]) =>
+          message === '[dev-secret-vault] write key=steam-refresh-token'
+      )
+    ).toBe(false)
+
+    const vaultPath = join(vaultDir, 'gamelib-dev-secret-vault.json')
+    const onDisk: Record<string, unknown> = JSON.parse(
+      readFileSync(vaultPath, 'utf-8')
+    )
+    expect(onDisk['steam-refresh-token']).toBe('')
+    const mode = statSync(vaultPath).mode & 0o777
+    expect(mode).toBe(0o600)
+  })
+
+  it('clearing both Humble secrets emits a strictly-pinned wipe line for each slot, and leaves both present-and-empty on disk', async () => {
+    process.env[ENV_VAR] = '1'
+    mockIsPackagedSidecar.mockReturnValue(false)
+    expect(installDevSecretVault()).toBe(true)
+
+    const humbleStore = secretStoreModule.getHumbleSecretStore()
+    await humbleStore.setSecret('sessionCookie', 'kR8mT2vN5wQ9cX1jH4pL')
+    await humbleStore.setSecret('csrfToken', 'gY6bW3fD8sA1nZ7uE2qJ')
+    await humbleStore.clearSecrets()
+
+    expect(
+      mockLogWarning.mock.calls.some(
+        ([message]) =>
+          message === '[dev-secret-vault] write key=sessionCookie op=wipe'
+      )
+    ).toBe(true)
+    expect(
+      mockLogWarning.mock.calls.some(
+        ([message]) =>
+          message === '[dev-secret-vault] write key=csrfToken op=wipe'
+      )
+    ).toBe(true)
+
+    const vaultPath = join(vaultDir, 'gamelib-dev-secret-vault.json')
+    const onDisk: Record<string, unknown> = JSON.parse(
+      readFileSync(vaultPath, 'utf-8')
+    )
+    expect(onDisk['sessionCookie']).toBe('')
+    expect(onDisk['csrfToken']).toBe('')
+  })
+
+  it('clearing the SteamGridDB API key emits a strictly-pinned wipe line', async () => {
+    process.env[ENV_VAR] = '1'
+    mockIsPackagedSidecar.mockReturnValue(false)
+    expect(installDevSecretVault()).toBe(true)
+
+    const steamGridDbStore =
+      steamGridDbSecretStoreModule.getSteamGridDbSecretStore()
+    await steamGridDbStore.setApiKey('pV4tK9nC6yB2mR8gS5wE')
+    await steamGridDbStore.clearApiKey()
+
+    expect(
+      mockLogWarning.mock.calls.some(
+        ([message]) =>
+          message === '[dev-secret-vault] write key=steamGridDbApiKey op=wipe'
       )
     ).toBe(true)
   })

@@ -209,3 +209,39 @@ it.
 For the operator: RERUN-7's operator-cost disclosure (top of the document) names item 6(a) as
 destructive of a live Humble session and item 4 as requiring real credentials, and its minimum-bar
 table marks item 1 as the strict requirement for closing this todo specifically.
+
+## CLOSED 2026-09-30 — live gate PASSED (RERUN-7 item 1)
+
+The desk fix landed in quick task `260930-q11` (`bb567faf3`, structural gate `3488a8c0b`) and the
+live gate this todo's own `ready: live-gate` demanded was run the same day and **PASSED**.
+
+Scored against `34.4.2-LIVE-GATE-RERUN-7.md` **item 1** — the one row that contract's minimum-bar
+table marks **STRICTLY REQUIRED** for this todo's closure — not against an improvised bar. That
+distinction was nearly lost: the orchestrating session first ran a weaker ad-hoc check of its own
+devising (presentation + `attached=true` + both dismissal routes) and was about to close this todo
+on it, before finding RERUN-7 and discovering that item 1 additionally requires the
+**minimize/restore cycle** — the exact failure mode that sank the predecessor child-window
+mechanism (F-34.4.2-01/-02), and the half the ad-hoc check had no coverage of at all.
+
+**Human half.** All five of item 1's sub-checks (a)-(e) observed as specified on a single reused
+login form (preparatory-sequence branch (b) — the form rendered on first open, no auto-login).
+Operator's verdict, verbatim: *"all pass"*.
+
+**Machine half**, from the LAUNCH-1 `tee -a` transcript segment: the D-G7 pairing holds — the
+`read-back attached=true` line is preceded, for the same window label, by the
+`both NSWindow handles resolved on the main thread` line the fix introduced inside the deferred
+closure; `attached=false` 0; `sheet_presented=true` present; both forbidden lines
+(`parent deminiaturized, re-raising …`, and the q11-deleted `both NSWindow addresses resolved`)
+0 and 0.
+
+**Corroborating, and recorded as intermittency evidence only** — this earlier unscored pass did NOT
+perform sub-checks (a)-(e) and is not item-1 evidence: 4 presentations, `attached=true` 4/4,
+D-G7 pairing 4/4, `deferred_elapsed` 255.5-261.1 ms every time (so the deferral never collapsed
+inline), Esc and cancel-strip dismissals once each, and 0 occurrences of `dispatch failed`,
+`unconfirmed within 10s`, `re-registered as still presented`, or any panic/`EXC_BAD_ACCESS`. That
+matters against this area's history, whose failures ran 5/6 and 1/6 rather than 0/6.
+
+**What this does NOT close.** REQ-34.4.2-09 is untouched: RERUN-7's items 2, 3(a), 4 and 6(a) were
+not run, its contract `verdict` is deliberately still unset, and no requirement box moved. Items 4
+and 6(a) carry costs (live credentials; destruction of a live Humble session) that this todo never
+required anyone to pay.
