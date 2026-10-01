@@ -30,8 +30,11 @@ concurrency:
 # .planning/todos/completed/2026-09-22-windows-rust-tests-not-run-in-ci.md).
 #
 # Measured baseline: `cd src-tauri && cargo test --bin gamelib-shell` on this Windows machine,
-# 2026-09-23 -- 234 passed; 0 failed; 2 ignored. The break the todo describes is already fixed, so
-# this job lands green on day one, not red.
+# 2026-09-23 -- 234 passed; 0 failed; 2 ignored. The break the todo describes is already fixed.
+# CORRECTION: "so this job lands green on day one" was wrong. That machine already had a built
+# sidecar sitting in the gitignored src-tauri/binaries/, which a clean CI checkout does not, so the
+# baseline did not predict CI: every run from the first (2026-09-23) failed at tauri-build's
+# externalBin check until the "Stage placeholder sidecar" step below was added.
 #
 # Why the vite build is a real step and not overhead: src-tauri/src/main.rs calls
 # `tauri::generate_context!()`, which embeds `frontendDist` (`../build/renderer` per
@@ -52,6 +55,10 @@ concurrency:
 #       from a Rust release with no repo change at all.
 #   (d) The 2 `#[ignore]`d tests in the 234-test baseline above still run nowhere, in this job or
 #       any other.
+#   (e) The sidecar is a placeholder (see the "Stage placeholder sidecar" step), so this job proves
+#       nothing about the real SEA sidecar or its externalBin naming/packaging -- a sidecar build
+#       that stopped emitting `gamelib-sidecar-<triple>` would still pass here and surface only in
+#       release-tauri.yml.
 # And: passing here does not make this a "required check" on `main`. That is a GitHub
 # branch-protection/ruleset setting under Settings -> Branches, performed by a repo admin, and is
 # NOT established by this file.
@@ -73,6 +80,37 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
+      # Why this step exists: src-tauri/build.rs calls `tauri_build::build()`, which validates at
+      # BUILD-SCRIPT time -- so for `cargo test` exactly as for a release build -- that every
+      # `bundle.externalBin` file exists, named for the cargo TARGET triple. tauri.conf.json declares
+      # `binaries/gamelib-sidecar`, so a missing
+      # `src-tauri/binaries/gamelib-sidecar-<triple>[.exe]` fails the whole crate with
+      # "resource path `binaries/gamelib-sidecar-<triple>` doesn't exist" before one test compiles.
+      # That file is a CI-built artifact, never committed (src-tauri/binaries/.gitignore);
+      # release-tauri.yml produces the real one with `pnpm build:sidecar-sea`. This job went red on
+      # every run from its first (2026-09-23) for exactly this reason on macOS, and on Windows too
+      # once install-deps stopped failing ahead of it -- it only ever "passed" on a developer
+      # machine that already had a built sidecar lying in that directory.
+      #
+      # A placeholder, not the real SEA build, deliberately: tauri-build only checks that the path
+      # is an existing regular file and copies it into target/ (no content, signature or exec-bit
+      # check), and nothing in `cargo test --bin gamelib-shell` ever spawns the sidecar. Building
+      # the real one would download a Node distribution and a ~120 MB SEA binary on both legs to
+      # satisfy an existence check. This keeps tauri's validation fully intact -- only the file it
+      # looks for is supplied -- and the real sidecar's integrity stays with release-tauri.yml and
+      # test.yml's `smoke:sidecar`. The triple is the rustc host triple because this job passes no
+      # `--target`, so cargo's TARGET equals the host.
+      - name: Stage placeholder sidecar (tauri-build externalBin check)
+        shell: bash
+        run: |
+          triple="$(rustc -vV | sed -n 's/^host: //p' | tr -d '\r')"
+          case "$triple" in
+            *windows*) ext='.exe' ;;
+            *) ext='' ;;
+          esac
+          placeholder="src-tauri/binaries/gamelib-sidecar-${triple}${ext}"
+          echo 'placeholder sidecar staged by rust-test.yml so tauri-build finds its externalBin; not a real sidecar' > "$placeholder"
+          echo "staged ${placeholder}"
       - name: cargo test (Tauri shell crate)
         shell: bash
         working-directory: src-tauri
