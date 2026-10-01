@@ -437,11 +437,14 @@
    independently; measured 7.35:1 against nord-light, 8.53:1 against the
    old-school theme). This is the one `Keys/index.css` site that renders
    text on the screen's own background; the badge/fill sites (`:465`,
-   `StoreSearch/index.css:183`, `DiscountCard/index.css:96`,
-   `GameCard/index.css:259`) paint the raw status-success token as a solid
-   fill behind `--neutral-01` text and are not affected by this contrast
-   defect, so they are intentionally left unchanged. This comment
-   deliberately never spells out the full `var(...)` form of the raw
+   `StoreSearch/index.css:183`, `DiscountCard/index.css:96`) paint the raw
+   status-success token as a solid fill behind `--neutral-01` text and are
+   not affected by this contrast defect, so they are intentionally left
+   unchanged. The `.gameCardCrossoverBadge--gold` dot (`GameCard/index.css`)
+   is a further such fill site, but for a different reason: it has no text
+   content at all -- a 10x10px circular marker with no text to suffer a
+   contrast defect in the first place. This comment deliberately never
+   spells out the full `var(...)` form of the raw
    status-success token: that exact substring is what the file-wide raw
    grep and the stylesheet test's file-wide count both key on, and writing
    it out here would be a false second occurrence of both. */
