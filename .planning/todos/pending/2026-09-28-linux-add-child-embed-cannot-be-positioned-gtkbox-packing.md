@@ -427,3 +427,21 @@ host, graphics mode `compute`, nothing logged in. Evidence: `.planning/quick/261
 - **Needs the operator, NOT done:** check 3 (a logged-in store; needs credentials and a real profile), checks 8-9 (maximise,
   second monitor, keyboard focus), and the judgement half of check 6.
 - **Does not discharge the Linux branches of 38-E03/38-E04.** `ready: live-gate` stays; `38-VERIFICATION.md` is not edited.
+
+## Addendum (2026-10-01, quick 261001-e4l): operator live gate, E04 half — grow strip ACCEPTABLE, no shrink overhang
+
+The operator sat the E04 checks on the local `GameLib_0.7.0_amd64.AppImage` (sha256 prefix `a89ac8bb3b71`, not the CI
+artifact), X11, a real profile (not a fake HOME), DMABUF unset. A stale instance (PID 86918) was killed and the app
+relaunched fresh (shell PID 89895, window confirmed owned by that PID). One host, one human, one sitting.
+
+- **Check 6 (drag-resize, grow): ACCEPTABLE.** The operator judged the trailing black strip acceptable. This is the
+  judgement the harness numbers in the addenda above could not make. No new todo for the strip is needed.
+- **Check 7 (drag-resize, shrink): no overhang.** The embed did not hang past the window edge or cover the chrome. This is
+  the half the scorer could not see.
+- **Not scored in this sitting:** checks 1-5 and 8-10, including an explicit "GOG page fills the slot" confirmation (the
+  embed-in-slot result stands on the desk runs above). Monitor scale and GPU mode were not recorded.
+- **E03 check 3 (a logged-in store) was NOT run.** `ready: live-gate` stays for it.
+- **Side finding, out of scope here:** library tiles stretch with window width. Filed as
+  `2026-10-01-library-tiles-stretch-with-window-width-consider-a-set-size.md`.
+- **Does not discharge 38-E04.** This closes the Linux branch (c) judgement only. Branch (a), other macOS displays and
+  hardware, stays open. Any `38-VERIFICATION.md` ledger change is the operator's to approve and is NOT made here.
