@@ -200,6 +200,21 @@ export function useStoreEmbedHost({
   // (back/forward/reload/navigate -- navigations the chrome initiated) or the drain effect
   // (in-embed link clicks -- navigations the page initiated). Before GAP-D was fixed the second
   // writer did not exist, so an in-embed click was never persisted; it is now.
+  //
+  // VALIDATED ON WRITE, against THIS route's own store (debug session
+  // `linux-embed-gog-reload-loop-real-profile`). `navState.url` is whatever the embed's last
+  // main-frame Finished reported, and that is not always a page of the route's own store:
+  //   * a redirect chain's intermediate hop -- GOG's affiliate start URL goes
+  //     `af.gog.com` -> `track.adtraction.com` -> `www.gog.com`, and the tracker interstitial IS
+  //     reported as a Finished main-frame URL while it sits there;
+  //   * a store switch -- this effect is keyed on `storeKey` too, so on GOG -> Epic -> GOG (one
+  //     mounted `WebView`, `store/:store` is a single route) it re-runs with the NEW key but the
+  //     PREVIOUS store's `navState.url`, and used to write the Epic URL under `last-url-gog`.
+  // Persisting either poisoned the restore key: the read side in `index.tsx` throws such a value
+  // away, so the next session's restore was lost, and (before that read was made once-per-entry)
+  // the write/clear flip-flopped `startUrl` and drove a re-navigation loop. Writing only what the
+  // read side would itself accept keeps the two halves of the restore agreeing on what a valid
+  // value is -- both use `resolveStoreForUrl(url).key === storeKey`.
   const hasNavigatedRef = useRef(false)
 
   useEffect(() => {
@@ -207,6 +222,8 @@ export function useStoreEmbedHost({
       hasNavigatedRef.current = true
       return
     }
+    const owner = resolveStoreForUrl(navState.url)
+    if (owner === null || owner.key !== storeKey) return
     try {
       localStorage.setItem(`last-url-${storeKey}`, navState.url)
     } catch (error) {

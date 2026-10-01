@@ -1,4 +1,11 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation, useParams } from 'react-router-dom'
 
@@ -192,16 +199,43 @@ export default function WebView() {
   // shape must not silently feed the embed's first navigation after the table changes. The read
   // key requires the resolved store to match the ROUTE's own store, not merely "some known
   // store" -- otherwise a value that drifted to a different store's origin would still pass.
-  if (store) {
+  // `useStoreEmbedHost` validates the same predicate on the WRITE side, so neither half can
+  // leave the other a value it would reject.
+  //
+  // READ ONCE PER STORE ENTRY, not once per render (debug session
+  // `linux-embed-gog-reload-loop-real-profile`). `startUrl` is the input of the embed host's
+  // start-URL effect, which turns every change of it into a real `webview.navigate()`. This used
+  // to be recomputed from `localStorage` on EVERY render, and the hook writes that same key on
+  // every in-embed navigation -- so any unrelated re-render of this component (a context update,
+  // a progress event) re-read whatever page the embed had last reported and re-pointed the live
+  // embed at it. Against a redirecting page that is an unbounded loop: GOG's affiliate start URL
+  // bounces through a tracker, each bounce persisted a new value and each re-render navigated to
+  // it. The operator saw the URL label flick `af.gog.com` <-> `track.adtraction.com` forever.
+  //
+  // Keyed on `store`, so the restore is still re-read when the user switches store (GOG ->
+  // Epic -> GOG), which is the only moment it should be. It is a function of `store` and of
+  // storage at entry, never of how often this component happens to render.
+  //
+  // The stale-value CLEAR is an effect, not part of the read: removing a key is a side effect,
+  // and doing it during render made the render's own input unstable (a write in one render,
+  // a removal in the next, each flipping `startUrl`).
+  const restoredLastUrl = useMemo(() => {
+    if (!store) return null
     const lastUrl = localStorage.getItem(lastUrlStorageKey(store))
-    if (lastUrl) {
-      const resolved = resolveStoreForUrl(lastUrl)
-      if (resolved && resolved.key === store) {
-        startUrl = lastUrl
-      } else {
-        localStorage.removeItem(lastUrlStorageKey(store))
-      }
+    if (!lastUrl) return null
+    const resolved = resolveStoreForUrl(lastUrl)
+    if (resolved && resolved.key === store) {
+      return { url: lastUrl, stale: false }
     }
+    return { url: null, stale: true }
+  }, [store])
+  useEffect(() => {
+    if (store && restoredLastUrl?.stale) {
+      localStorage.removeItem(lastUrlStorageKey(store))
+    }
+  }, [store, restoredLastUrl])
+  if (restoredLastUrl?.url) {
+    startUrl = restoredLastUrl.url
   }
 
   // DEEP LINK (D-34, D-35, T-40-09-02). `store-page?store-url=` arrives from third-party deal

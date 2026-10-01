@@ -1031,4 +1031,123 @@ describe('useStoreEmbedHost (Phase 40 Plan 08, D-18/D-19/D-20/D-21)', () => {
     expect(windowListeners.get('resize')?.size ?? 0).toBe(0)
     expect(windowListeners.get('scroll')?.size ?? 0).toBe(0)
   })
+
+  // ── Validated persist (debug session linux-embed-gog-reload-loop-real-profile) ─────────────
+  //
+  // `last-url-<storeKey>` is the app-restart restore value, and `index.tsx` throws away anything
+  // that does not resolve to the ROUTE's own store. The persist effect used to write whatever the
+  // embed's last main-frame URL was, so it poisoned that key with values the read side then had
+  // to reject: the tracker interstitial GOG's affiliate start URL redirects through, and -- on a
+  // store switch, because the effect is also keyed on `storeKey` -- the PREVIOUS store's URL under
+  // the NEW store's key. These tests pin that the write side now accepts exactly what the read
+  // side accepts. Properties 8-9 above still pin that a real, valid navigation persists.
+
+  /** Drains one queued in-embed navigation through the 250 ms poll and re-renders, as a page load does. */
+  async function drainNavigation(
+    options: MountOptions,
+    url: string
+  ): Promise<void> {
+    mockApi.storeEmbedTakeNavEvents.mockResolvedValueOnce([
+      { url, host: new URL(url).host, canGoBack: true, canGoForward: false }
+    ])
+    jest.advanceTimersByTime(250)
+    await Promise.resolve()
+    await Promise.resolve()
+    reinvoke(options)
+  }
+
+  // Property 22. Observed-red mutation: delete the `resolveStoreForUrl(navState.url)` ownership
+  // check in the persist effect (write unconditionally, the pre-fix behaviour). The tracker URL
+  // below is then stored under `last-url-gog` and the first assertion fails.
+  it('22. a redirect-chain page that belongs to no store (the tracker interstitial) is NOT persisted; the landing page is', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    await drainNavigation(
+      options,
+      'https://track.adtraction.com/t/t?a=1&as=1838482841&t=2&tk=1&url=http://www.gog.com'
+    )
+    expect(fakeLocalStorage.has('last-url-gog')).toBe(false)
+
+    // The same chain's landing page IS a gog.com page and is what a restart should restore.
+    await drainNavigation(
+      options,
+      'https://www.gog.com/en/?utm_source=adtraction&utm_medium=affiliate'
+    )
+    expect(fakeLocalStorage.get('last-url-gog')).toBe(
+      'https://www.gog.com/en/?utm_source=adtraction&utm_medium=affiliate'
+    )
+  })
+
+  // Property 23. Observed-red mutation: same as 22. The pre-fix effect re-ran on the `storeKey`
+  // change below with the previous store's `navState.url` and wrote the Epic URL under
+  // `last-url-gog` -- deterministic, so the restore was lost on every Epic -> GOG.
+  it('23. a store switch does not write the PREVIOUS store’s URL under the NEW store’s key', () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const epicOptions: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://www.epicgames.com/store/en-US/',
+      storeKey: 'epic'
+    }
+    mount(epicOptions)
+    jest.advanceTimersByTime(40)
+
+    reinvoke({
+      ...epicOptions,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    })
+    jest.advanceTimersByTime(40)
+
+    expect(fakeLocalStorage.has('last-url-gog')).toBe(false)
+    // Nor is the Epic URL left behind under its own key: nothing navigated, so nothing persists.
+    expect(fakeLocalStorage.has('last-url-epic')).toBe(false)
+  })
+
+  // Property 24. Observed-red mutation: same as 22. A link inside the GOG embed that lands on
+  // another configured store is a real navigation but not a GOG page; it must not become GOG's
+  // restore value (the read side would reject it and clear the key).
+  it('24. a navigation that lands on a DIFFERENT configured store is not persisted under this store’s key', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    await drainNavigation(options, 'https://store.steampowered.com/app/220/')
+
+    expect(fakeLocalStorage.has('last-url-gog')).toBe(false)
+  })
+
+  // Property 25. A page of the route's own store keeps being persisted after a rejected one: a
+  // rejected URL must not latch the effect or clear a previously stored good value.
+  it('25. a rejected navigation leaves the previously persisted good value in place', async () => {
+    const { ref } = makeSlot({ x: 0, y: 0, width: 100, height: 100 })
+    const options: MountOptions = {
+      slotRef: ref,
+      startUrl: 'https://af.gog.com?as=1838482841',
+      storeKey: 'gog'
+    }
+    mount(options)
+    jest.advanceTimersByTime(40)
+
+    await drainNavigation(options, 'https://www.gog.com/en/game/foo')
+    expect(fakeLocalStorage.get('last-url-gog')).toBe(
+      'https://www.gog.com/en/game/foo'
+    )
+
+    await drainNavigation(options, 'https://track.adtraction.com/t/t?a=1')
+    expect(fakeLocalStorage.get('last-url-gog')).toBe(
+      'https://www.gog.com/en/game/foo'
+    )
+  })
 })
