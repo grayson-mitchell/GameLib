@@ -60,3 +60,36 @@ Found while running the live gate for
 `.planning/todos/completed/2026-09-29-store-embed-may-stay-visible-over-the-epic-panel.md`. The two
 are opposite symptoms: that todo hypothesized the embed being too VISIBLE after a GOG -> Epic
 switch (refuted); this one is the embed being too HIDDEN after any later return to a store route.
+
+## Fixed 2026-10-01 (quick task 261001-svm)
+
+**It took two commits, because it was two defects wearing one symptom.** The first fix closed one
+return path and left the other broken, and only a live re-run found that out.
+
+1. `d890fe689` — **visibility.** `existing.show()` in `store_embed_open`'s existing-webview branch
+   was lifted out of its `#[cfg(target_os = "linux")]` sub-block so it runs before `navigate()` on
+   every platform. This is the mechanism named in the section above.
+2. `a9bc3f8f0` — **geometry.** A zero-area rect is now ignored on macOS as it already was on Linux
+   (`260930-blh` fix 2), keeping the last real geometry and logging that it did. Non-finite input
+   folds into the same answer, since Linux rejects it during `i32` conversion and macOS has no
+   conversion step to reject it in.
+
+The second was found by running the live gate on the first: `/store/gog` -> `/store/epic` ->
+`/store/gog` was still black, but `storeEmbedShow()` no longer restored it while a bounds flush
+alone did — a show call failing where a bounds flush succeeds is what separates the two causes.
+The Epic panel replaces the slot while the hook stays mounted, so the slot's ResizeObserver reports
+a final 0x0 rect that macOS applied verbatim; nothing re-applies a real rect afterwards, so the
+embed sat at 0x0 until a genuine window resize. Once in that state even a `/library` round trip
+stayed blank.
+
+**This file's own "hidden, not mis-positioned" verdict was right for the path it measured and wrong
+as a generalisation.** On the `/library` path the embed is merely hidden and `show()` alone repairs
+it, exactly as recorded. The Epic round trip also degrades the geometry, and that was not measured
+when this todo was written.
+
+Live verification (both return paths green, Epic panel still clean, no manual API calls in the
+scored sequence) is recorded in
+`.planning/quick/261001-svm-close-epic-panel-gate-file-macos-embed/261001-svm-LIVE.md`. Measured on
+the dev/debug build on this Mac only; the packaged build and Linux were not re-run. Rust gates at
+the closing commit: `cargo check` 0, `cargo clippy` 0 with the pinned 15-warning ceiling held,
+`cargo test --bin gamelib-shell` 305 passed / 0 failed / 2 ignored.
