@@ -113,15 +113,15 @@
    is no longer a caption descendant). Must be a declared ratio, not `1lh`:
    the app sets no body line-height (src/frontend/index.scss's `body` rule
    declares none; the only `--line-height` token is button-scoped, declared
-   on `.button` in `_buttons.scss`), so today the title's line box is the font's UA
-   `normal` and is not expressible in CSS at all without this. `1lh` would
-   also be wrong even if declared: WebKitGTK (Linux) support for the `lh`
-   unit is version-risky, and `1lh` on the LOGO element resolves against
-   the logo's own line-height, not the title's — the font-size would have
-   to be copied onto it anyway, so `lh` buys nothing here. 1.2 is chosen to
-   sit as close to the font's UA `normal` as a declared number can, so the
-   title's own rendering does not visibly shift while its box becomes
-   expressible. */
+   on `.button` in `_buttons.scss`), so today the title's line box is the
+   font's UA `normal` and is not expressible in CSS at all without this.
+   `1lh` would also be wrong even if declared: WebKitGTK (Linux) support for
+   the `lh` unit is version-risky, and `1lh` on the LOGO element resolves
+   against the logo's own line-height, not the title's — the font-size would
+   have to be copied onto it anyway, so `lh` buys nothing here. 1.2 is
+   chosen to sit as close to the font's UA `normal` as a declared number
+   can, so the title's own rendering does not visibly shift while its box
+   becomes expressible. */
 
 /* 43-UI-SPEC "Column Geometry Contract": ONE combined selector governs
    both the column-header row (`.humbleKeysColumnHeader`, rendered by plan
@@ -374,16 +374,16 @@
   height: 100%;
 }
 
-/* Scoped escape for the GOG store logo only: `gog-logo.svg`'s root
-   `<svg>` carries `class="gogIcon"`, and the global `.gogIcon` rule in
-   `styles/_colors.scss` (`.gogIcon { fill: var(--text-default) }`) matches that element
-   DIRECTLY, which beats the `fill: currentColor` `.humbleKeyRowStoreLogo`
-   supplies only by INHERITANCE -- a directly-matching declaration wins
-   over an inherited value regardless of specificity. This descendant
-   selector is `0,2,0` and out-specifies the global rule's `0,1,0` while
-   leaving every other `.gogIcon` consumer (styles/_colors.scss,
-   Game/GamePage/index.css) untouched. Steam and Epic carry no class on
-   their root <svg> and never needed this. Do not change
+/* Scoped escape for the GOG store logo only: `gog-logo.svg`'s root `<svg>`
+   carries `class="gogIcon"`, and the global `.gogIcon` rule in
+   `styles/_colors.scss` (`.gogIcon { fill: var(--text-default) }`) matches
+   that element DIRECTLY, which beats the `fill: currentColor`
+   `.humbleKeyRowStoreLogo` supplies only by INHERITANCE -- a
+   directly-matching declaration wins over an inherited value regardless of
+   specificity. This descendant selector is `0,2,0` and out-specifies the
+   global rule's `0,1,0` while leaving every other `.gogIcon` consumer
+   (styles/_colors.scss, Game/GamePage/index.css) untouched. Steam and Epic
+   carry no class on their root <svg> and never needed this. Do not change
    .humbleKeyRowStoreLogo's own `color`/`fill` declarations above. See
    .planning/todos/pending/2026-09-08-humble-key-row-store-logo-fill-currentcolor-unverified-live.md. */
 .humbleKeyRowStoreLogo .gogIcon {
