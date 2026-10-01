@@ -445,3 +445,25 @@ relaunched fresh (shell PID 89895, window confirmed owned by that PID). One host
   `2026-10-01-library-tiles-stretch-with-window-width-consider-a-set-size.md`.
 - **Does not discharge 38-E04.** This closes the Linux branch (c) judgement only. Branch (a), other macOS displays and
   hardware, stays open. Any `38-VERIFICATION.md` ledger change is the operator's to approve and is NOT made here.
+
+## Addendum (2026-10-01, quick 261001-lgc): operator live gate on the rebuilt AppImage — checks 1-9 PASS, after a real-profile reload bug was found and fixed
+
+The operator sat the checklist (`.planning/quick/261001-pez-mid-drag-frame-capture-for-the-linux-sto/LIVE-GATE-CHECKLIST.md`)
+on a REAL profile (the named real-profile arm of the two-profile rule), X11, two monitors, DMABUF unset, on a local
+`GameLib_0.7.0_amd64.AppImage` rebuilt from branch `quick-260930-feh` at `baa8e8e54`, sha256 prefix `8dc406b3d3198b36`
+(not the CI artifact). Reported by the operator in conversation; no harness, no pixel measurement.
+
+- **A real bug surfaced and was fixed first.** On the earlier build (`a89ac8bb`) the GOG embed reloaded endlessly on the real
+  profile, the URL label flicking between `af.gog.com` and `track.adtraction.com`, so check 2 FAILED. No fake-profile run had
+  shown it. Debug session `.planning/debug/resolved/linux-embed-gog-reload-loop-real-profile.md`, commit `22fcf15e1`: a renderer
+  feedback loop through the saved `last-url-<store>` value (shared with macOS); the `about:` block was only an accompaniment.
+  After the rebuild the label settled and the page stopped reloading.
+- **Rebuilt build: checks 1-9 PASS.** 1 boot (well under 40 s, not timed); 2 embed in slot and layout fine; 3 logged-in store
+  (sign-in completes, survives a store switch and an app restart); 4 tab round trip incl. Epic -> GOG; 5 input; 6 grow-drag
+  (the trailing strip judged acceptable, already recorded by quick 261001-e4l on `a89ac8bb`); 7 shrink-drag, no overhang; 8
+  maximise/restore and the second monitor; 9 keyboard focus. Check 10 (one shared cookie jar) is the decided behaviour, not a test.
+- **Not verified:** Wayland, scales other than the operator's, the CI-built artifact, the real-profile logged-in state of stores
+  other than GOG, and macOS after the shared-hook change (`22fcf15e1` is not run on a Mac).
+- **Does not edit `38-VERIFICATION.md`.** Whether this discharges the Linux branches of 38-E03 and 38-E04 is the operator's call in
+  a ledger change. `ready: live-gate` is left for that call; the todo stays in `pending/` because its `38-E03`/`38-E04` routes
+  still cite this path.

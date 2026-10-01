@@ -1,8 +1,8 @@
 ---
-status: awaiting_human_verify
+status: resolved
 trigger: "Stores -> GOG Store in the packaged Linux AppImage on the operator's REAL profile keeps reloading continuously (see symptoms). Fake-profile runs of the same AppImage are stable."
 created: 2026-10-01T00:00:00Z
-updated: 2026-10-01T07:03:19Z
+updated: 2026-10-01T20:40:00+13:00
 ---
 
 ## Current Focus
@@ -192,3 +192,12 @@ blind_spots:
   - the independent re-render source on the real profile was not identified (candidates: GlobalState updates from a populated/logged-in profile, e.g. download or install progress events)
   - macOS was not run; the renderer files are shared so the defect is cross-platform in principle, but whether the page hop happens there is unknown
   - the packaged-AppImage second-launch "Loading" hang seen on an empty fake profile (no `[refreshLibrary]`) was a fake-profile artefact and was not investigated
+
+## Operator verification (2026-10-01)
+
+The operator rebuilt-AppImage re-test PASSED. Build: local `GameLib_0.7.0_amd64.AppImage`, sha256 prefix `8dc406b3d3198b36`
+(branch `quick-260930-feh` at `baa8e8e54`, includes fix `22fcf15e1`), real profile, X11, two monitors. Stores -> GOG Store:
+the URL label settled on a www.gog.com page and the page stopped reloading; the falsifier (label still flicking with a constant
+startUrl) did NOT occur, so the renderer-side diagnosis holds. The operator then passed checks 2-9 of
+`.planning/quick/261001-pez-mid-drag-frame-capture-for-the-linux-sto/LIVE-GATE-CHECKLIST.md` on the same build. macOS was not run.
+
