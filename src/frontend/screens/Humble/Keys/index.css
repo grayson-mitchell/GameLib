@@ -225,7 +225,7 @@
    Operator decided left-alignment on 2026-09-11 (quick task 260911-r8u),
    resolving the `ready: human` fork the alignment todo posed. `align-items:
    flex-start` below exists ONLY to defend against the inherited
-   `src/frontend/App.css:24` `.App { text-align: center }` rule -- it is NOT
+   `.App { text-align: center }` rule (`src/frontend/App.css`) -- it is NOT
    redundant with any default, and deleting it silently re-centres the
    title. This places the title BOX at the track start; it shrink-wraps a
    single-line title so centring inside the box becomes a no-op, but it does
@@ -293,7 +293,7 @@
 }
 
 /* 260911-r8u: defends against inherited `.App { text-align: center }`
-   (`src/frontend/App.css:24`) reaching a WRAPPED two-line title. The
+   (`src/frontend/App.css`) reaching a WRAPPED two-line title. The
    `.humbleKeyGameCell` `align-items: flex-start` above only shrink-wraps the
    title box to its longest line -- the shorter of two wrapped lines would
    still be centred inside that box without this declaration. */
@@ -429,19 +429,25 @@
    not participate in D-21 layout ordering (no dimming, no re-sort). Reuses
    the same typography as .humbleKeyRowCaption so it reads as a secondary
    line rather than a competing state badge. */
-/* 260911-t0p: the raw status-success token (`styles/_colors.scss:26`)
-   fails contrast against `body.nord-light`'s background (measured
-   1.46:1) -- `--success` is the fixed-contrast token every theme resolves
-   for on-background text (`themes.scss:100` declares it in terms of the
-   raw token for the default theme, but nord-light overrides it
-   independently; measured 7.35:1 against nord-light, 8.53:1 against the
-   old-school theme). This is the one `Keys/index.css` site that renders
-   text on the screen's own background; the badge/fill sites (`:465`,
-   `StoreSearch/index.css:183`, `DiscountCard/index.css:96`,
-   `GameCard/index.css:259`) paint the raw status-success token as a solid
-   fill behind `--neutral-01` text and are not affected by this contrast
-   defect, so they are intentionally left unchanged. This comment
-   deliberately never spells out the full `var(...)` form of the raw
+/* 260911-t0p: the raw status-success token declaration
+   (`styles/_colors.scss`) fails contrast against `body.nord-light`'s
+   background (measured 1.46:1) -- `--success` is the fixed-contrast token
+   every theme resolves for on-background text (`body.midnightMirage`,
+   the default theme, declares it in terms of the raw token, in
+   `themes.scss`, but nord-light overrides it independently; measured
+   7.35:1 against nord-light, 8.53:1 against the old-school theme). This is
+   the one `Keys/index.css` site that renders text on the screen's own
+   background;
+   the badge/fill sites (`.humbleKeyStateBadge--REDEEMED`;
+   `.discountCard__badge--owned` in `StoreSearch/index.css` and
+   `DiscountCard/index.css`) paint the raw status-success token as a solid
+   fill behind `--neutral-01` text and are
+   not affected by this contrast defect, so they are intentionally left
+   unchanged. The `.gameCardCrossoverBadge--gold` dot (`GameCard/index.css`)
+   is a further such fill site, but for a different reason: it has no text
+   content at all -- a 10x10px circular marker with no text to suffer a
+   contrast defect in the first place. This comment deliberately never
+   spells out the full `var(...)` form of the raw
    status-success token: that exact substring is what the file-wide raw
    grep and the stylesheet test's file-wide count both key on, and writing
    it out here would be a false second occurrence of both. */
@@ -604,7 +610,7 @@
    block adds only its own typography, not layout.
 
    260911-r8u: `text-align: start` below defends against inherited
-   `.App { text-align: center }` (`src/frontend/App.css:24`) reaching the
+   `.App { text-align: center }` (`src/frontend/App.css`) reaching the
    three label grid-items (Type / Game / Key). This container is GRID, not
    flex, so the flex-only `align-items: flex-start` instrument used on
    `.humbleKeyGameCell` does not apply here -- the labels stretch to their
@@ -645,17 +651,17 @@
    override the UI-SPEC calls for is shipped here instead, scoped by the
    `extraClass="humbleKeysSortPicker"` `SelectField` call site passes. */
 /* 260911-t0p: `.selectFieldWrapper`'s default `grid-template-areas: 'label'
-   'select'` (SelectField/index.css:1-4) stacks the label above the picker
+   'select'` (`SelectField/index.css`) stacks the label above the picker
    by design; this screen wants them side by side instead. The explicit
    column-track sizing below is load-bearing, not cosmetic: the select
    column has no intrinsic content to size an implicit track from --
-   `.selectFieldWrapper .MuiOutlinedInput-root` (SelectField/index.css:7-11)
+   `.selectFieldWrapper .MuiOutlinedInput-root` (`SelectField/index.css`)
    sets `width: 100%` against whatever track it is given, and would collapse
    to its own `min-width: 100px` floor without an explicit width here. Sized
    to fit the longer of the two shipped options ("Expiring soonest",
    "Alphabetical") plus the select's own chrome; the label column stays
-   `max-content` since `.selectFieldWrapper label` (SelectField/index.css:
-   60-64) already carries `grid-area: label` and needs no rule of its own.
+   `max-content` since `.selectFieldWrapper label` (`SelectField/index.css`)
+   already carries `grid-area: label` and needs no rule of its own.
    Deliberately not spelling out the CSS property name for that track
    sizing here: the pre-existing column-geometry census test in
    `HumbleKeyRow/__tests__/index.test.tsx` does a raw, un-stripped grep for

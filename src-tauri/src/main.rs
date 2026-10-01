@@ -4889,6 +4889,62 @@ fn keyring_get_result(result: Result<String, keyring::Error>) -> Result<Value, S
     }
 }
 
+/// The closed set of successful keyring-operation outcomes a `shell_diag()` line may report
+/// (quick 261001-p0s, closing the "keyring RPC arms are success-silent" todo). A closed enum
+/// rather than a free `&str` parameter: a free string would make it possible to pass a secret
+/// as the token, which this type cannot do by construction -- mirrors `afb0fe744`'s
+/// `WriteDirection` reasoning in `devSecretVault.ts`, ported to Rust.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum KeyringOutcome {
+    Found,
+    Absent,
+    Stored,
+    Deleted,
+}
+
+impl KeyringOutcome {
+    fn token(self) -> &'static str {
+        match self {
+            KeyringOutcome::Found => "found",
+            KeyringOutcome::Absent => "absent",
+            KeyringOutcome::Stored => "stored",
+            KeyringOutcome::Deleted => "deleted",
+        }
+    }
+}
+
+/// Renders one keyring success line. Pure and side-effect-free -- same split as
+/// `format_panic_record` above, so a test can assert what the line carries without writing to
+/// the operator's real log file. No `[shell] ` prefix: `shell_diag` prepends that itself, and a
+/// second copy here would double it.
+///
+/// `account: &'static str` is load-bearing, not a style choice: any secret value is a
+/// runtime-derived `String`, which does not coerce to `&'static str`, so the compiler -- not a
+/// reviewer -- forbids passing one here. Only `keyring_account()`'s allowlisted return satisfies
+/// this parameter; the raw, caller-supplied `keyring_slot_arg()` text never does.
+fn keyring_outcome_message(
+    channel: &str,
+    account: &'static str,
+    outcome: KeyringOutcome,
+) -> String {
+    format!(
+        "keyring {channel} account={account} outcome={}",
+        outcome.token()
+    )
+}
+
+/// Classifies a `keyring_get` result into `Found`/`Absent` by reading the `Value`
+/// DISCRIMINANT only -- never the payload. That is the whole reason this takes `&Value` and
+/// returns an enum rather than formatting anything itself: even the fact of which secret was
+/// read must never carry any part of the secret.
+fn keyring_get_outcome(value: &Value) -> KeyringOutcome {
+    if value.is_null() {
+        KeyringOutcome::Absent
+    } else {
+        KeyringOutcome::Found
+    }
+}
+
 /// Runs `read` on a worker thread and bounds the wait for its result at `bound`, returning
 /// `Err("keyring:timeout")` if `read` has not completed in time (34.4.1 gap cycle 2 plan 26,
 /// T-34.4.1-114/T-34.4.1-115). Follows `humble_reveal_post`'s existing `mpsc_channel` +
@@ -6475,13 +6531,32 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     Entry::new(KEYRING_SERVICE, account).and_then(|entry| entry.get_password());
                 keyring_get_result(outcome)
             });
-            if let Err(ref e) = result {
-                if e == "keyring:timeout" {
-                    eprintln!(
-                        "[shell] keyring {channel} timed out after {KEYRING_READ_TIMEOUT:?} (worker thread abandoned, not cancelled -- see KEYRING_READ_TIMEOUT's doc comment)"
-                    );
-                } else {
-                    eprintln!("[shell] keyring {channel} failed: {e}");
+            // Four explicit branches, each emitting exactly one line: the Ok arm is split on
+            // `keyring_get_outcome()`'s own discriminant (Found vs. Absent) rather than folded
+            // into one dynamically-dispatched call, so the Found/Absent distinction is visible
+            // at this call site and not just inside the pure classifier it delegates to.
+            match &result {
+                Ok(v) if keyring_get_outcome(v) == KeyringOutcome::Found => {
+                    shell_diag(&keyring_outcome_message(
+                        channel,
+                        account,
+                        KeyringOutcome::Found,
+                    ));
+                }
+                Ok(_) => {
+                    shell_diag(&keyring_outcome_message(
+                        channel,
+                        account,
+                        KeyringOutcome::Absent,
+                    ));
+                }
+                Err(e) if e == "keyring:timeout" => {
+                    shell_diag(&format!(
+                        "keyring {channel} timed out after {KEYRING_READ_TIMEOUT:?} (worker thread abandoned, not cancelled -- see KEYRING_READ_TIMEOUT's doc comment)"
+                    ));
+                }
+                Err(e) => {
+                    shell_diag(&format!("keyring {channel} failed: {e}"));
                 }
             }
             result
@@ -6494,15 +6569,25 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             let account = keyring_account(keyring_slot_arg(args, 1))?;
             match Entry::new(KEYRING_SERVICE, account) {
                 Ok(entry) => match entry.set_password(secret) {
-                    Ok(()) => Ok(Value::Bool(true)),
+                    Ok(()) => {
+                        shell_diag(&keyring_outcome_message(
+                            channel,
+                            account,
+                            KeyringOutcome::Stored,
+                        ));
+                        Ok(Value::Bool(true))
+                    }
                     Err(e) => {
-                        // Never log the secret itself (threat T-28-04) — channel + error only.
-                        eprintln!("[shell] keyring {channel} failed: {e:?}");
+                        // The emitter has no parameter capable of carrying the secret
+                        // (threat T-28-04): `keyring_outcome_message`'s types forbid it,
+                        // and `secret` is never passed to it -- channel + error only,
+                        // enforced by construction rather than by this comment alone.
+                        shell_diag(&format!("keyring {channel} failed: {e:?}"));
                         Err(format!("keyring:unavailable:{e}"))
                     }
                 },
                 Err(e) => {
-                    eprintln!("[shell] keyring {channel} failed: {e:?}");
+                    shell_diag(&format!("keyring {channel} failed: {e:?}"));
                     Err(format!("keyring:unavailable:{e}"))
                 }
             }
@@ -6511,15 +6596,32 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
             let account = keyring_account(keyring_slot_arg(args, 0))?;
             match Entry::new(KEYRING_SERVICE, account) {
                 Ok(entry) => match entry.delete_credential() {
-                    // Deleting an already-absent entry is success, not an error.
-                    Ok(()) | Err(keyring::Error::NoEntry) => Ok(Value::Bool(true)),
+                    // Deleting an already-absent entry is success, not an error -- and the
+                    // two arms below now differ in their logged token while remaining
+                    // identical in their returned result.
+                    Ok(()) => {
+                        shell_diag(&keyring_outcome_message(
+                            channel,
+                            account,
+                            KeyringOutcome::Deleted,
+                        ));
+                        Ok(Value::Bool(true))
+                    }
+                    Err(keyring::Error::NoEntry) => {
+                        shell_diag(&keyring_outcome_message(
+                            channel,
+                            account,
+                            KeyringOutcome::Absent,
+                        ));
+                        Ok(Value::Bool(true))
+                    }
                     Err(e) => {
-                        eprintln!("[shell] keyring {channel} failed: {e:?}");
+                        shell_diag(&format!("keyring {channel} failed: {e:?}"));
                         Err(format!("keyring:unavailable:{e}"))
                     }
                 },
                 Err(e) => {
-                    eprintln!("[shell] keyring {channel} failed: {e:?}");
+                    shell_diag(&format!("keyring {channel} failed: {e:?}"));
                     Err(format!("keyring:unavailable:{e}"))
                 }
             }
@@ -6543,6 +6645,13 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
         // `humble/user.ts`'s `encryptionDegraded` flag; a failed write is reported by
         // `setSecret()`'s own error handling, not by this probe.
         "keyring_available" => {
+            // Conversion-only (quick 261001-p0s), deliberately: a capability probe against a
+            // never-written account has no slot-scoped outcome worth a `KeyringOutcome`
+            // token, unlike the three arms above. Its `Ok(_)` branch already emits a loud
+            // WARNING, which is the one event here worth reading; this does not re-create
+            // the blind spot being closed elsewhere in this `match`, it just carries no
+            // success emission of its own.
+            //
             // Validated for its rejection contract, intentionally unused for the lookup.
             let _validated_slot = keyring_account(keyring_slot_arg(args, 0))?;
             match Entry::new(KEYRING_SERVICE, KEYRING_REACHABILITY_PROBE_ACCOUNT) {
@@ -6555,21 +6664,21 @@ fn dispatch_rust_channel(channel: &str, args: &[Value], app: &AppHandle) -> Resu
                     // demonstrably up so the honest answer is still `true`, but this must be loud:
                     // an item here means the probe has re-acquired an ACL and may prompt again.
                     Ok(_) => {
-                        eprintln!(
-                            "[shell] keyring {channel}: WARNING -- a value exists at the reserved probe account; the reachability probe may raise an authorization prompt again (see KEYRING_REACHABILITY_PROBE_ACCOUNT)"
-                        );
+                        shell_diag(&format!(
+                            "keyring {channel}: WARNING -- a value exists at the reserved probe account; the reachability probe may raise an authorization prompt again (see KEYRING_REACHABILITY_PROBE_ACCOUNT)"
+                        ));
                         Ok(Value::Bool(true))
                     }
                     // A *successful* report of unavailability (D-06's honest-unavailable signal),
                     // not an error — the caller asked "is it available", and the honest answer
                     // here is "no".
                     Err(e) => {
-                        eprintln!("[shell] keyring {channel} failed: {e:?}");
+                        shell_diag(&format!("keyring {channel} failed: {e:?}"));
                         Ok(Value::Bool(false))
                     }
                 },
                 Err(e) => {
-                    eprintln!("[shell] keyring {channel} failed: {e:?}");
+                    shell_diag(&format!("keyring {channel} failed: {e:?}"));
                     Ok(Value::Bool(false))
                 }
             }
@@ -14843,6 +14952,115 @@ mod tests {
         )));
         assert!(result.is_err());
         assert!(result.unwrap_err().starts_with("keyring:unavailable:"));
+    }
+
+    // ---- keyring_outcome_message / keyring_get_outcome / KeyringOutcome (quick 261001-p0s,
+    // closing the "keyring RPC arms are success-silent and eprintln!-based" todo) ----
+    //
+    // Pure formatter and pure discriminant-only classifier, mirroring keyring_get_result's own
+    // "pure function, directly testable" precedent immediately above. These tests exercise the
+    // RENDERED LINE and the TOKEN MAPPING without touching a real Keychain or `shell_diag()`'s
+    // own file I/O -- per CLAUDE.md's two-profile rule, nothing here spawns a process or writes
+    // to the operator's real HOME.
+
+    #[test]
+    fn keyring_outcome_message_renders_channel_account_and_token_for_a_representative_arm() {
+        assert_eq!(
+            keyring_outcome_message("keyring_set", "humble-session", KeyringOutcome::Stored),
+            "keyring keyring_set account=humble-session outcome=stored"
+        );
+    }
+
+    #[test]
+    fn keyring_outcome_message_renders_each_tokens_exact_literal() {
+        assert!(keyring_outcome_message(
+            "keyring_get",
+            "steam-refresh-token",
+            KeyringOutcome::Found
+        )
+        .ends_with("outcome=found"));
+        assert!(keyring_outcome_message(
+            "keyring_get",
+            "steam-refresh-token",
+            KeyringOutcome::Absent
+        )
+        .ends_with("outcome=absent"));
+        assert!(keyring_outcome_message(
+            "keyring_set",
+            "steam-refresh-token",
+            KeyringOutcome::Stored
+        )
+        .ends_with("outcome=stored"));
+        assert!(keyring_outcome_message(
+            "keyring_delete",
+            "steam-refresh-token",
+            KeyringOutcome::Deleted
+        )
+        .ends_with("outcome=deleted"));
+    }
+
+    #[test]
+    fn keyring_outcome_tokens_are_pairwise_distinct() {
+        // So a future refactor cannot collapse e.g. `found` into `absent` without this test
+        // catching it.
+        let tokens = [
+            KeyringOutcome::Found.token(),
+            KeyringOutcome::Absent.token(),
+            KeyringOutcome::Stored.token(),
+            KeyringOutcome::Deleted.token(),
+        ];
+        for i in 0..tokens.len() {
+            for j in 0..tokens.len() {
+                if i != j {
+                    assert_ne!(
+                        tokens[i], tokens[j],
+                        "token at index {i} collides with token at index {j}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn keyring_outcome_message_does_not_carry_the_shell_diag_prefix_itself() {
+        // shell_diag() prepends "[shell] " -- a second copy here would double it.
+        let rendered =
+            keyring_outcome_message("keyring_get", "steam-refresh-token", KeyringOutcome::Found);
+        assert!(!rendered.starts_with("[shell] "));
+    }
+
+    #[test]
+    fn keyring_get_outcome_message_never_carries_the_retrieved_value() {
+        // Runtime leak assertion, modelled on the `user.test.ts:1441` "never logs the raw key
+        // value" precedent: proves absence by inspecting the emitted text, not by trusting the
+        // signature.
+        let sentinel = "sk_live_test_sentinel_never_logged";
+        let value = Value::String(sentinel.to_string());
+
+        // Negative control FIRST: the sentinel really is present in the value passed in, so the
+        // absence assertion below is not vacuously true against an empty haystack.
+        assert_eq!(value.as_str(), Some(sentinel));
+
+        let outcome = keyring_get_outcome(&value);
+        assert!(matches!(outcome, KeyringOutcome::Found));
+
+        let rendered = keyring_outcome_message("keyring_get", "steam-refresh-token", outcome);
+        assert!(
+            !rendered.contains(sentinel),
+            "the rendered line must never carry any substring of the retrieved value"
+        );
+    }
+
+    #[test]
+    fn keyring_get_outcome_maps_null_to_absent_and_non_null_to_found() {
+        assert!(matches!(
+            keyring_get_outcome(&Value::Null),
+            KeyringOutcome::Absent
+        ));
+        assert!(matches!(
+            keyring_get_outcome(&Value::String("anything".to_string())),
+            KeyringOutcome::Found
+        ));
     }
 
     // ---- bounded_keyring_read (34.4.1 gap cycle 2 plan 26, T-34.4.1-114/T-34.4.1-115) ----
