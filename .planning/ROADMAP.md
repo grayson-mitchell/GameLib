@@ -4633,7 +4633,7 @@ the self-sealing `nonAvailableGames` list) and is left OPEN only pending a **ful
 paint. 37-01's root-cause repro needs a live `pnpm tauri:dev` session anyway; discharge both in the
 same run. Note that 37-03 explains **9** of those 22 games and closing it will NOT close that item.
 
-### Phase 38: Deferred hardware and environment UAT gates — Windows/Linux machine and game controller
+### Phase 38: Deferred hardware and environment UAT gates — Windows/Linux machine and game controller — ✅ COMPLETE 2026-10-01
 
 **Goal:** Discharge, in one deliberate sweep, every UAT item across the project that cannot be observed on the macOS development machine because it needs a different OS or a game controller — so that individual phases can close on their runnable items instead of each carrying a deferred row.
 
