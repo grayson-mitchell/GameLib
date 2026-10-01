@@ -1,6 +1,6 @@
 ---
 created: 2026-09-28
-title: 'On Linux an add_child store embed cannot be positioned — set_bounds is a silent no-op because Tauri packs WindowChild webviews into the window''s shared GtkBox. The Linux layout strategy must be decided before the embed is un-gated there.'
+title: 'Linux add_child store embed: the GTK-box-native layout is built and desk-gated; only the operator live gate on the packaged build remains (set_bounds is a silent no-op on Linux because Tauri packs WindowChild webviews into the shared GtkBox)'
 found_during: spikes 025/026 (2026-09-28; commits c54e047ca, 369f482a4), filed by quick 260928-raq
 severity: minor
 platform: linux
