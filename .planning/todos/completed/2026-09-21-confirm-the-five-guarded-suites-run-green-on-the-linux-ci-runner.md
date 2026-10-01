@@ -5,6 +5,8 @@ area: test
 severity: minor
 platform: linux
 ready: blocked
+status: RESOLVED
+resolved: 2026-10-01
 source: quick-260921-o95
 files:
   - src/backend/shortcuts/__tests__/shortcutsExistsFallback.test.ts
@@ -84,3 +86,18 @@ nothing about whether this todo's confirmation succeeded.
   still unproven, so the todo stays open. No PR exists for the branch, as far as is known (`gh` is not installed here to check).
 - **`ready: blocked` stays, for a corrected reason:** externally gated on a `pull_request` CI run, not on hardware. The next such run
   should still be read against `## What to check on the next pull_request run`; a local pass makes a surprise unlikely, not impossible.
+
+## Resolution (2026-10-01, quick 261001-ci6): the `ci` job is green on a real `pull_request` run — CLOSED
+
+- **The confirmation this todo asked for is met, with one caveat.** A `pull_request` run against `main` (the docs-only branch
+  `quick-260930-feh` at `9109d01da`) ran the `ci` job (`pnpm test:ci`, `ubuntu-latest`) and it concluded **success**
+  (check-run 110276032387, read from the public GitHub API). `lint` and `codecheck` also passed. So the five suites, including the 30
+  tests that had never run on Linux, passed on the runner.
+- **Caveat: the per-suite skip counts (9 in `nativeImageShim`, 4 in `shortcutsFlows`) were NOT read from the runner.** Job logs need a
+  GitHub login, so only the job's overall conclusion was seen. The local Linux x86_64 run (addendum above) measured exactly 13 skipped.
+  A green `ci` job means nothing failed; it does not by itself prove no other test was skipped. Reading the job log would settle it.
+- **Not part of this todo:** `cargo-test (macos-latest)` and `cargo-test (windows-latest)` FAILED on the same run, and also fail on
+  `origin/main`'s own tip (`d97a21a2b`), so they predate this PR and a docs-only PR cannot have caused them. The macOS annotation is
+  "Process completed with exit code 101"; neither was diagnosed here. They are not one of this todo's five suites.
+- Closed by moving to `completed/` with `status: RESOLVED`; the Phase 46 plan that cites the old `pending/` path (46-06) was already
+  executed, so no live reference breaks.
