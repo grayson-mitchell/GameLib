@@ -66,3 +66,56 @@ was untouched) but was likewise not re-run; it has its own live-gate history und
 Full dev-build evidence, including the per-step records for all three runs and the binary-provenance
 method, is in
 `.planning/quick/261001-svm-close-epic-panel-gate-file-macos-embed/261001-svm-LIVE.md`.
+
+## Verified 2026-10-01 — the fix holds in the packaged build
+
+**Result: PASS on every step. The dev-build inference was correct.**
+
+### What was actually run
+
+A real release bundle built from `d3e6473b2` with a clean tree:
+`pnpm exec vite build && pnpm build:sidecar-sea && pnpm build:decompress-worker-dev && pnpm exec tauri build`.
+The build exits **1**, but only on the final updater-signing step (`TAURI_SIGNING_PRIVATE_KEY` absent);
+both bundles are written before that. A side effect worth recording: that error aborts the run
+*before* the `Cleaning .../GameLib.app` step, so this time `bundle/macos/GameLib.app` SURVIVED --
+the opposite of the hazard `tauri-build-deletes-the-app-after-bundling-the-dmg` records. Do not
+read this as the hazard being gone; it is the signing failure that spared the `.app`.
+
+Provenance was tied by hash, not timestamp: `Contents/MacOS/gamelib-shell` in the bundle and
+`src-tauri/target/release/gamelib-shell` are both SHA-256 `85872ac2…`. The bundled child process
+observed at runtime was `gamelib-sidecar` (the SEA binary), **not** `node`, confirming the release
+sidecar path rather than the dev one.
+
+The orphaned `tauri dev` rig was stopped by the operator before launching (an agent attempt to kill
+the process group was refused by the permission classifier). Launched by explicit bundle path. The
+app ran as pid **55348** for the entire sequence -- same pid in every capture, so nothing was
+absorbed by another instance or silently relaunched.
+
+### Steps
+
+| step | action | result |
+| --- | --- | --- |
+| 0 | launch | library renders 394 tiles -- the one-launch-in-four blank-render confound is ruled out for this run |
+| 1 | Stores | restores the last route (`/store/epic`); panel clean |
+| 2 | GOG Store (first visit) | embed paints `www.gog.com` full height |
+| 3 | Library | leaves the store route |
+| 4 | Stores -> GOG Store | **PASS** -- embed repaints unaided; Back is enabled, so it is the same webview re-shown, not a fresh create |
+| 5 | Epic Store | **PASS** -- unavailable panel clean, no native content over it |
+| 6 | GOG Store | **PASS** -- embed repaints unaided (the trip the first fix alone did not close) |
+| 7 | Library -> Stores -> GOG Store | **PASS** -- no poisoned state left behind by the Epic trip |
+
+### Method note for the next packaged gate
+
+The trap this file predicted was real and the recorded workaround was wrong in one detail.
+There is no Web Inspector in a release build, as expected -- but **CGEvent clicks on the tab row do
+not register** (that strip overlaps the window's title-bar drag region) and **AX `click at {x, y}`
+fails with error -25208**. What works is AX **by name**: `entire contents of window 1` exposes
+`AXRadioButton :: STORES`, `AXButton :: GOG Store` and so on, and clicking the element directly
+drives the app reliably. Scripts kept at `scratchpad/axclick.scpt` + `pdrive.sh` for the pattern;
+they are session-scratch, not committed.
+
+### Scope still not covered
+
+Signed/notarized distribution (this bundle is unsigned, built without Apple credentials), a
+machine other than this one, HiDPI scale factors other than the current display, and window sizes
+other than 1280x800. Linux and Windows are unchanged and were not re-run.
