@@ -1,9 +1,12 @@
 /**
  * Structural tests for `SettingsPanel`, the tier-2 Settings nav list
  * (34.10-05 Task 2, REQ-34.10-11/14) -- carries every Settings-related
- * destination the retired left navigation held, including the three
+ * destination the retired left navigation held, including the two
  * destinations reparented off top-level sibling items (Wine Manager,
- * Accessibility, Console Mode) and the relocated `QuitButton`.
+ * Accessibility) and the relocated `QuitButton`. Console Mode, a third
+ * former sibling, moved here briefly and has since moved again (quick
+ * 261002-b63) to an icon-only control in the Games tier-2 filter panel's
+ * `Header`; its absence from this panel is asserted explicitly below.
  *
  * No jsdom / react-test-renderer is installed in this project (see
  * `src/frontend/jest.config.js` docstring) -- `SettingsPanel` is invoked
@@ -211,7 +214,7 @@ describe('SettingsPanel', () => {
     )
   })
 
-  it('renders all thirteen entries in the settled order for a non-Windows context', () => {
+  it('renders all twelve entries in the settled order for a non-Windows context, and does not render Console Mode', () => {
     contextValue = makeContextValue({ platform: 'linux' })
 
     const tree = SettingsPanel() as unknown as ReactElement
@@ -223,7 +226,6 @@ describe('SettingsPanel', () => {
       'Advanced',
       'Wine Manager',
       'Accessibility',
-      'Console Mode',
       'Log',
       'System Information',
       'Documentation',
@@ -231,12 +233,13 @@ describe('SettingsPanel', () => {
       'Donate',
       'App Tour'
     ])
+    expect(labels).not.toContain('Console Mode')
 
     const children = topLevelChildren(tree)
     expect(children[children.length - 1].type).toBe(QuitButton)
   })
 
-  it('omits Game Defaults and Wine Manager on win32 while keeping Advanced and Console Mode', () => {
+  it('omits Game Defaults, Wine Manager and Console Mode on win32 while keeping Advanced', () => {
     contextValue = makeContextValue({ platform: 'win32' })
 
     const tree = SettingsPanel() as unknown as ReactElement
@@ -245,7 +248,7 @@ describe('SettingsPanel', () => {
     expect(labels).not.toContain('Game Defaults')
     expect(labels).not.toContain('Wine Manager')
     expect(labels).toContain('Advanced')
-    expect(labels).toContain('Console Mode')
+    expect(labels).not.toContain('Console Mode')
   })
 
   it('places System Information immediately after Log', () => {

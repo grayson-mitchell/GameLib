@@ -31,6 +31,13 @@
  * The Redeem-a-Steam-key gating claim (button element, onClick calls
  * `handleRedeemKeyDialog(true)`, hidden without a Steam session) is already
  * asserted directly by `StoresPanel.test.tsx` and is not duplicated here.
+ *
+ * Console Mode is ALSO deliberately absent from the union below (quick
+ * 261002-b63): it moved out of the Settings tier-2 panel into an icon-only
+ * control in the Games tier-2 filter panel's `Header` component, which this
+ * suite's union (tabs + Stores + Settings) does not collect. Its absence
+ * here is a recorded move, not a lost destination -- the route itself is
+ * still live, just reached from a surface this suite never assembles.
  */
 import type { ReactElement, ReactNode } from 'react'
 
@@ -276,7 +283,6 @@ describe('Destination coverage -- the settled tree', () => {
       'Advanced',
       'Wine Manager',
       'Accessibility',
-      'Console Mode',
       'Log',
       'System Information',
       'Documentation',
@@ -284,6 +290,10 @@ describe('Destination coverage -- the settled tree', () => {
       'Donate',
       'App Tour'
     ])
+    // Console Mode is deliberately absent -- it moved to an icon-only control
+    // in the Games tier-2 filter panel's Header (quick 261002-b63), a surface
+    // this suite's union does not collect. See the file docstring.
+    expect(union).not.toContain('Console Mode')
   })
 
   it('no element anywhere in the union renders the label "Zoom Store", even with an enabled, logged-in Zoom session', () => {
