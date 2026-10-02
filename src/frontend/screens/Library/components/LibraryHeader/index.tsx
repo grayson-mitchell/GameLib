@@ -8,7 +8,7 @@ import LibraryContext from '../../LibraryContext'
 import ContextProvider from 'frontend/state/ContextProvider'
 import './index.css'
 import AddGameButton from '../AddGameButton'
-import { countGamesExcludingDlc } from './gameCount'
+import { countGamesExcludingDlc } from '../../gameCount'
 
 type Props = {
   list: GameInfo[]

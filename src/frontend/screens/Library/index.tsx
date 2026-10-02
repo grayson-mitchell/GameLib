@@ -23,10 +23,7 @@ import GamesList from './components/GamesList'
 import { FavouriteGame, GameInfo, HiddenGame, Runner } from 'common/types'
 import ErrorComponent from 'frontend/components/UI/ErrorComponent'
 import LibraryHeader from './components/LibraryHeader'
-import {
-  countUnfilteredGames,
-  findSilentlyExcludedGames
-} from './components/LibraryHeader/gameCount'
+import { countUnfilteredGames, findSilentlyExcludedGames } from './gameCount'
 import { normalizeTitle } from 'frontend/helpers/library'
 import RecentlyPlayed from './components/RecentlyPlayed'
 import LibraryContext from './LibraryContext'

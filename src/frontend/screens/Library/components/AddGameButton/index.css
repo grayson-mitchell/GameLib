@@ -1,0 +1,24 @@
+/*
+ * Imported by AddGameButton itself, not by any single call site's
+ * stylesheet: EmptyLibrary also renders this exact button
+ * (EmptyLibrary/index.tsx), so the base declaration cannot live in a
+ * stylesheet only one of its two mount points imports.
+ */
+.sideloadGameButton {
+  font-family: var(--secondary-font-family);
+  border-radius: var(--space-md);
+  color: var(--text-tertiary);
+  background: var(--primary-button, var(--accent));
+  padding: var(--space-xs) var(--space-md);
+  border: none;
+  margin: 0 var(--space-lg);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: 300ms;
+}
+
+.sideloadGameButton:hover,
+.sideloadGameButton:focus-within {
+  background: var(--primary-button, var(--accent-overlay));
+  box-shadow: 0px 0px 0px 3px var(--button-stroke, var(--text-default));
+}

@@ -1,6 +1,7 @@
 import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 import LibraryContext from '../../LibraryContext'
+import './index.css'
 
 interface AddGameButtonProps {
   'data-tour'?: string

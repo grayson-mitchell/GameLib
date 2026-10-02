@@ -43,7 +43,7 @@ import {
   countGamesExcludingDlc,
   countUnfilteredGames,
   findSilentlyExcludedGames
-} from '../components/LibraryHeader/gameCount'
+} from '../gameCount'
 
 function makeGame(overrides: Partial<GameInfo> = {}): GameInfo {
   return {
