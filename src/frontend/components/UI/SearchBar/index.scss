@@ -25,7 +25,32 @@
   // the box model, so the deliberately-measured 34px above is untouched. A
   // 1px border would have made it 36px and broken the SelectField match the
   // comment above is protecting.
-  outline: 1px solid var(--search-bar-border, var(--border-color));
+  //
+  // A QUIETER VERSION OF THE FOCUS RING, not a separate grey. Operator report
+  // on zombie-classic 2026-10-02: focus looked right, rest "blends into the
+  // background". It did -- the previous `var(--border-color)` chain resolved
+  // to #272f31 in nearly every theme and measured 1.07:1 there against
+  // --navbar-background (1.04:1 at worst, on gruvbox_dark). --search-bar-border
+  // is now the theme's --accent, so rest and focus are the same hue and the
+  // difference is weight.
+  //
+  // 90% is a MEASURED floor, not a feel: worst theme is 3.10:1 at 90% against
+  // the 3:1 WCAG non-text bar, and 80% would drop gruvbox_dark to 2.74:1.
+  // Mixing toward `transparent` composites over whatever sits behind, so the
+  // fade costs contrast in exactly the themes with the least to spare -- do
+  // not push it further without re-measuring every theme.
+  //
+  // TWO declarations, deliberately. color-mix() is unsupported in some
+  // webviews, where the second is invalid at computed-value time and dropped
+  // WHOLE -- the first then survives at full strength. Degrading to a slightly
+  // louder outline is fine; degrading to no outline is the bug being fixed.
+  outline: 1px solid var(--search-bar-border, var(--accent, #0080ff));
+  outline: 1px solid
+    color-mix(
+      in srgb,
+      var(--search-bar-border, var(--accent, #0080ff)) 90%,
+      transparent
+    );
 
   // Was `box-shadow: 0 0 0 3px var(--search-bar-border, var(--input-background))`,
   // which was INVISIBLE in every theme but midnightMirage: that token was

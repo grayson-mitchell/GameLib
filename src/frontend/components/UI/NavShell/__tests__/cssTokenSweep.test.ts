@@ -62,8 +62,15 @@
  *
  *      That token is NO LONGER an example of the blind spot -- it was fixed
  *      on 2026-10-02, and `themes.scss` now declares it on base `body` as
- *      `var(--border-color)` (the same shape, and for the same reason, as
- *      `--border-color` itself one line above it there). The blind spot is
+ *      `var(--accent, #0080ff)`. It was briefly `var(--border-color)` the
+ *      same day, which is worth recording because it is a SECOND, subtler
+ *      instance of the same family: that chain resolved in every theme and
+ *      still rendered nothing, because `--border-color` is
+ *      `var(--divider, var(--neutral-03))` and both arms are near-universally
+ *      undeclared, landing on `_colors.scss`'s #272f31 -- measured at 1.07:1
+ *      against `--navbar-background` on zombie-classic. Name-scope checking
+ *      cannot see that either; only measuring the rendered pair can. The
+ *      blind spot is
  *      unchanged and still real; only this illustration of it is spent. It
  *      is kept rather than swapped for a live example deliberately: naming a
  *      CURRENTLY-broken token here would make this header a to-do list that

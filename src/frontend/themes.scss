@@ -15,18 +15,32 @@ body {
      universal. Themes may now override. */
   --border-color: var(--divider, var(--neutral-03));
 
-  /* Same defect as --border-color directly above, same fix. This was
-     declared in exactly ONE theme block (body.midnightMirage), so everywhere
-     else `var(--search-bar-border, var(--input-background))` in
-     UI/SearchBar/index.scss fell through to the search bar's OWN background
-     and drew the focus highlight in the colour it was drawn against -- a
-     declaration that never breaks and always resolves, to something
-     invisible. It is the worked example in cssTokenSweep.test.ts's blind
-     spot B ("this gate checks NAMES, not SCOPES"), which is exactly why that
-     gate could not see it. Basing it on --border-color makes it universal;
-     midnightMirage's own value still wins there, since that block is later
-     in this file at equal specificity. */
-  --search-bar-border: var(--border-color);
+  /* The search bar's RESTING outline. Deliberately the theme's own --accent,
+     which is what the focus ring already spends -- UI/SearchBar/index.scss
+     fades it to 90% so rest reads as a quieter version of focus rather than
+     an unrelated grey.
+
+     It was `var(--border-color)` for a few hours on 2026-10-02 and that was
+     WRONG, in a way that resolved perfectly and rendered nothing. The chain
+     is --border-color -> `var(--divider, var(--neutral-03))`, and --divider
+     is declared in only two theme blocks while --neutral-03 is declared in
+     only one plus styles/_colors.scss's #272f31 -- so nearly every theme
+     landed on #272f31 against its own dark chrome. MEASURED, outline over
+     --navbar-background: 1.04:1 on gruvbox_dark, 1.07:1 on zombie/
+     zombie-classic and old-school, 1.09:1 nord-dark, 1.26:1 midnightMirage.
+     Only classic/cyberSpaceOasis were ever visible, at 4.11:1.
+
+     --accent is the right token precisely because every theme defines one and
+     designs it to carry against that theme's chrome: worst case over
+     --navbar-background is 3.48:1 at full strength and 3.10:1 at the 90% the
+     stylesheet uses, versus the 3:1 WCAG non-text floor. Fading further is
+     NOT safe -- 80% drops gruvbox_dark to 2.74:1.
+
+     NOTE for anyone adding a theme override here: this is one of the few
+     tokens where a muted grey is the WRONG instinct. midnightMirage used to
+     override it to --neutral-03 and that override was REMOVED in the same
+     change, because it measured 1.26:1 where inheriting measures 14.64:1. */
+  --search-bar-border: var(--accent, #0080ff);
 
   --anticheat-denied: #a25d21;
   --anticheat-broken: var(--status-warning);
@@ -103,7 +117,10 @@ body.midnightMirage {
   --osk-button-background: var(--input-background);
   --osk-button-border: var(--navbar-background);
   --search-bar-background: var(--neutral-02);
-  --search-bar-border: var(--neutral-03);
+  /* --search-bar-border deliberately NOT overridden here: this theme's own
+     --neutral-03 value measured 1.26:1 against its --navbar-background, so
+     inheriting the base --accent (14.64:1) is what makes the resting search
+     outline visible. See the base declaration's note. */
 
   /* Action Icons */
   --action-icon: var(--neutral-05);
