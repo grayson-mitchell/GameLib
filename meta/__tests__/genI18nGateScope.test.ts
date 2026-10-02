@@ -289,7 +289,6 @@ const FIXTURE_DIFF_LINES = [
 const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/__mocks__/svgReactStub.tsx',
   'src/frontend/components/Tour/Tour.tsx',
-  'src/frontend/components/UI/ActionIcons/index.tsx',
   'src/frontend/components/UI/Dialog/components/Dialog.tsx',
   'src/frontend/components/UI/DialogHandler/index.tsx',
   'src/frontend/components/UI/LanguageSelector/index.tsx',
@@ -309,7 +308,8 @@ const DECLARED_UNSCANNED_DEBT = [
   'src/frontend/screens/Library/components/CategoriesManager/index.tsx',
   'src/frontend/screens/Library/components/GamesList/index.tsx',
   'src/frontend/screens/Library/components/InstallModal/defaultPlatform.ts',
-  'src/frontend/screens/Library/components/LibraryHeader/gameCount.ts',
+  'src/frontend/screens/Library/components/AddGameButton/index.tsx',
+  'src/frontend/screens/Library/gameCount.ts',
   'src/frontend/screens/Library/engineWiring.ts',
   'src/frontend/screens/Library/filterEngine.ts',
   'src/frontend/screens/Login/components/HumbleLogin/index.tsx',
@@ -934,9 +934,9 @@ describe('--rewrite-scope guard', () => {
     }
   })
 
-  it('A0 fixture sanity: the seeded scope is the REAL 174-file hand-curated snapshot and the fresh snapshot is the REAL 215', () => {
-    expect(scopeSnapshot.files.length).toBe(174)
-    expect(forkTouchedSnapshot.files.length).toBe(215)
+  it('A0 fixture sanity: the seeded scope is the REAL 173-file hand-curated snapshot, the committed fork-touched snapshot is 214, and the FRESH live derivation is pinned at 215', () => {
+    expect(scopeSnapshot.files.length).toBe(173)
+    expect(forkTouchedSnapshot.files.length).toBe(214)
     expect(freshSnapshot().files.length).toBe(215)
     expect(isHandCuratedProvenance(scopeSnapshot.generatedBy)).toBe(true)
   })
