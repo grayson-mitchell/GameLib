@@ -6,7 +6,8 @@
  * IDENTITY, that `.Header` now returns SIX direct children in the locked
  * panel order (`Header__utilities`, `Header__sortRow`, `Header__search`,
  * `Header__categoriesGroup`, `Header__filtersGroup`, `Header__footer`) --
- * `LibraryHeader` and `ActionIcons` were dissolved into this single
+ * The former per-panel heading component and the former hand-rolled
+ * icon-button row were dissolved into this single
  * component by 261002-hx0, which is why `Header` now also carries a sort
  * row and a bottom-pinned footer that neither predecessor owned -- and that
  * all of `.Header`'s CSS-gated wrappers restate the `.Header` gap they
@@ -24,7 +25,7 @@
  *
  * 261002-hx0 gave `Header` real hook usage of its own (`useContext` against
  * BOTH `LibraryContext` and `ContextProvider`, plus `useState`/`useEffect`/
- * `useMemo`) that `LibraryHeader`/`ActionIcons` previously carried. Calling
+ * `useMemo`) that its two dissolved predecessors previously carried. Calling
  * a function component directly, outside of any renderer, means there is no
  * hook dispatcher -- a real `useContext`/`useState`/etc. call would throw
  * "Invalid hook call". `react` is therefore partially mocked below, the same

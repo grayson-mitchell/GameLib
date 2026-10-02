@@ -9,8 +9,10 @@
  * wrong. Routing both through here makes that arithmetic impossible rather
  * than merely unlikely.
  *
- * The predicate is TRANSCRIBED VERBATIM from `LibraryHeader`'s previous
- * inline `numberOfGames` memo, including its quirk that a `sideload` entry
+ * The predicate is TRANSCRIBED VERBATIM from the tier-2 panel `Header`'s
+ * previous inline `numberOfGames` memo (this module's former home, before
+ * 261002-hx0's dissolve of the per-library heading component into the
+ * panel), including its quirk that a `sideload` entry
  * flagged `is_dlc` is COUNTED (`lib.runner !== 'sideload' && lib.install.is_dlc`).
  * That quirk is deliberately preserved, not "fixed": changing it here would
  * silently change the unfiltered count the header has always shown, which is

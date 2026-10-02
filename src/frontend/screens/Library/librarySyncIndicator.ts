@@ -110,8 +110,8 @@ export function resolveSteamSyncIndicator(
   // Branch 3: this preserves the SHIPPED intent of the old guard's
   // `library.length === 0` term -- show the sync indicator only when there
   // is nothing else to look at. A refresh of an already-populated library
-  // is covered by the `steamMetadataSyncing` indicator in `LibraryHeader`
-  // and does not need a second surface.
+  // is covered by the `steamMetadataSyncing` indicator in the Games tier-2
+  // panel's `Header` and does not need a second surface.
   if (input.steamSyncStatus === 'syncing' && input.steamLibraryCount === 0) {
     return { mode: 'syncing' }
   }

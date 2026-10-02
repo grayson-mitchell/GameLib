@@ -2,7 +2,8 @@
  * Gates for the library header's filtered-vs-total count (quick task
  * 260815-opt Task 3).
  *
- * The problem: `Header` (formerly `LibraryHeader`) renders `numberOfGames` -- the size of the
+ * The problem: `Header` (which absorbed the former per-panel heading
+ * component, 261002-hx0) renders `numberOfGames` -- the size of the
  * ALREADY-FILTERED list -- beside a title that always reads "All Games". A
  * bare `42` there is indistinguishable from a 42-game library, so the header
  * cannot answer "why am I looking at 6 games instead of 214?". The

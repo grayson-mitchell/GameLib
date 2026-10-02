@@ -39,7 +39,7 @@ import {
 import HumbleKeyRow from './components/HumbleKeyRow'
 import HumbleClaimWizard from './components/HumbleClaimWizard'
 
-// Local formatRelativeTime (mirrors LibraryHeader's, returns the bare
+// Local formatRelativeTime (mirrors components/UI/Header/index.tsx's, returns the bare
 // duration phrase — the "ago"/"showing data from" wrapper lives in the
 // caller's i18n string). 4 buckets: <1 minute / minutes / hours / days.
 function formatRelativeTime(ms: number, t: TFunction): string {

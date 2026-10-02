@@ -38,8 +38,10 @@
   // Quick task 260815-qf0 (the hoist to first-child of `.listing`).
   //
   // INLINE: `.listing` supplies no padding of its own, so every child insets
-  // itself, and they all agree on the same gutter -- `.libraryHeader`
-  // `padding: var(--space-md-fixed)`, `.gameList`
+  // itself, and they all agree on the same gutter -- `.libraryHeader` (now
+  // exclusively the Favourites/Recently-Played lane heading; its
+  // `padding: var(--space-md-fixed)` is NOT derived from the retired top
+  // line, which never shared this token), `.gameList`
   // `padding: 0 var(--space-md-fixed) ...`, `.gameListLayout`
   // `margin: 0 var(--space-md-fixed)`, `.alphabet-filter-container`
   // `margin: 8px var(--space-md-fixed)`. This row carried NO inline inset,
