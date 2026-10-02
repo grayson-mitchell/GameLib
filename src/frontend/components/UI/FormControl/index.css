@@ -80,9 +80,46 @@
   color: var(--action-icon-hover);
 }
 
-.FormControl--segmented > button:not(.non-important):active,
-.FormControl--segmented > button:not(.non-important).active {
+/* Momentary press. Colour only, and SPLIT from the latched `.active` state
+   below deliberately: these two used to share one declaration block, so
+   giving the latched state a background there would have made EVERY
+   segmented button in the app flash an accent fill on every mouse-down --
+   the A-Z and alphabet-filter buttons in UI/Header and DiscountFilters'
+   OS/PEGI segments included. */
+.FormControl--segmented > button:not(.non-important):active {
   color: var(--action-icon-active);
+}
+
+/* Latched ON state, for a segmented button that is a toggle rather than a
+   one-shot action. First consumer, 2026-10-03: the library panel's
+   sort-by-status button. Previously colour-only, which left an icon-only
+   toggle signalling its state with nothing but the solid-vs-regular weight
+   of its own glyph.
+
+   The foreground is --text-tertiary and NOT the --action-icon-active that
+   the press state keeps, because --action-icon-active resolves to
+   `var(--accent)` in 7 of the 11 theme blocks: on an accent fill that pairing
+   measures 1:1 and the glyph vanishes. That is this repo's wrong-CHOICE-of-
+   token class -- the declaration resolves perfectly, to an invisible value --
+   the same family as the search bar's resting outline (fixed 5a847e830) and
+   the open --border-color todo.
+
+   --text-tertiary is the house pairing for an accent-filled toggle, matching
+   `.alphabet-filter-button--active` (AlphabetFilter/index.css:67-69) and
+   `.discountFilters__segment--active` (DiscountFilters/index.css:342-344).
+   Measured against each theme's resolved --accent by walking the real
+   cascade: it resolves in all 11 theme blocks, worst case 5.26:1 on
+   gruvbox_dark (then 7.41 sweet-dark, 8.23 dracula, 9.07 cyberSpaceOasisAlt,
+   16.88 midnightMirage) -- clear of both the 3:1 non-text floor and the 4.5:1
+   text floor. The accent chip itself measures 3.48:1 at worst against
+   --navbar-background. Re-measure both pairs before changing either token.
+
+   The radius matches .Header__consoleButton / .Header__utilityButton
+   (Header/index.css:34,116), the panel row directly above this one. */
+.FormControl--segmented > button:not(.non-important).active {
+  background-color: var(--accent);
+  color: var(--text-tertiary);
+  border-radius: var(--space-3xs);
 }
 
 .FormControl--segmented > button:not(:first-child) {

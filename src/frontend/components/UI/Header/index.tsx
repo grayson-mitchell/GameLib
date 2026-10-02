@@ -208,7 +208,24 @@ export default function Header({ list, totalGames }: Props) {
             />
           </button>
           <button
-            className="FormControl__button"
+            className={classNames('FormControl__button', {
+              active: sortInstalled
+            })}
+            // This button is ON by default (`sortInstalled` initialises to
+            // true, Library/index.tsx:486), so without aria-pressed its state
+            // was exposed to assistive tech not at all, and visually only as
+            // the solid-vs-regular weight of a 16px glyph.
+            //
+            // The title stays STATELESS on purpose, unlike the two buttons
+            // either side of it. A stateful one needs a new catalogue string,
+            // and `meta/i18nCatalogPresenceBaseline.json` records 0 missing
+            // pairs with its own reason saying the file is "a known gap, not
+            // permission to grow it" -- so a new key means filling all 49
+            // locales, which is its own task. aria-pressed plus the latched
+            // `.active` fill already carry the state to both sighted and
+            // assistive users, which a tooltip does less well anyway: an
+            // accessible name should name the control, not narrate its state.
+            aria-pressed={sortInstalled}
             title={t('library.sortByStatus', 'Sort by Status')}
             onClick={() => setSortInstalled(!sortInstalled)}
           >
